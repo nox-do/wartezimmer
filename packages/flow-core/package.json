@@ -1,0 +1,35 @@
+{
+  "name": "@praxis-flow/flow-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    }
+  },
+  "scripts": {
+    "dev": "npm run build && node dist/server/http.js",
+    "start": "npm run build && node dist/server/http.js",
+    "reset-db": "npm run build && node dist/server/reset-db.js",
+    "dump": "node scripts/dump-context.mjs",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --import tsx --test 'test/**/*.test.ts'"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "tsx": "^4.22.3",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,588 @@
+openapi: 3.1.0
+info:
+  title: Praxis Flow Auth API
+  version: 0.1.0
+components:
+  securitySchemes:
+    staffSessionCookie:
+      type: apiKey
+      in: cookie
+      name: pf_staff_session
+  schemas:
+    StaffRole:
+      type: string
+      enum:
+        - mfa
+        - ops
+    StaffLoginRequest:
+      type: object
+      required:
+        - pin
+      additionalProperties: false
+      properties:
+        pin:
+          type: string
+          minLength: 1
+          maxLength: 128
+        role:
+          $ref: '#/components/schemas/StaffRole'
+          default: mfa
+    StaffSessionResponse:
+      type: object
+      required:
+        - ok
+        - sessionId
+        - role
+        - expiresAt
+      properties:
+        ok:
+          type: boolean
+          const: true
+        sessionId:
+          type: string
+        role:
+          $ref: '#/components/schemas/StaffRole'
+        expiresAt:
+          type: string
+          format: date-time
+    RoomPanelMode:
+      type: string
+      enum:
+        - display_only
+        - arrival
+        - staff_full
+    RoomPanelPlacement:
+      type: string
+      enum:
+        - outside
+        - inside
+    RoomPanelRoom:
+      type: object
+      additionalProperties: false
+      required:
+        - roomId
+        - roomLabel
+        - placement
+        - mode
+        - requiresPin
+      properties:
+        roomId:
+          type: string
+        roomLabel:
+          type: string
+        placement:
+          $ref: '#/components/schemas/RoomPanelPlacement'
+        mode:
+          $ref: '#/components/schemas/RoomPanelMode'
+        requiresPin:
+          type: boolean
+    RoomPanelRoomsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - rooms
+      properties:
+        rooms:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomPanelRoom'
+    RoomPanelLoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - roomId
+        - pin
+      properties:
+        roomId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        pin:
+          type: string
+          minLength: 0
+          maxLength: 128
+    RoomPanelSessionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - ok
+        - sessionId
+        - role
+        - roomId
+        - placement
+        - expiresAt
+      properties:
+        ok:
+          type: boolean
+          const: true
+        sessionId:
+          type: string
+        role:
+          type: string
+          const: room-panel
+        roomId:
+          type: string
+        placement:
+          $ref: '#/components/schemas/RoomPanelPlacement'
+        expiresAt:
+          type: string
+          format: date-time
+    AuthPinTarget:
+      type: string
+      enum:
+        - mfa
+        - ops
+        - room-panel
+    ChangePinRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - currentPin
+        - newPin
+        - target
+      properties:
+        currentPin:
+          type: string
+          minLength: 1
+          maxLength: 128
+        newPin:
+          type: string
+          minLength: 4
+          maxLength: 32
+        target:
+          $ref: '#/components/schemas/AuthPinTarget'
+    ChangePinResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - ok
+        - target
+        - updatedAt
+      properties:
+        ok:
+          type: boolean
+          const: true
+        target:
+          $ref: '#/components/schemas/AuthPinTarget'
+        updatedAt:
+          type: string
+          format: date-time
+    LogoutResponse:
+      type: object
+      required:
+        - ok
+      properties:
+        ok:
+          type: boolean
+          const: true
+    DevicePairingStartRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        displayId:
+          type: string
+          minLength: 1
+          maxLength: 80
+    DevicePairingStartResponse:
+      type: object
+      required:
+        - pairingId
+        - code
+        - expiresAt
+        - status
+      properties:
+        pairingId:
+          type: string
+        code:
+          type: string
+          pattern: '^[0-9]{4}$'
+        expiresAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          const: pending
+    DevicePairingStatusResponse:
+      type: object
+      required:
+        - pairingId
+        - status
+        - paired
+      properties:
+        pairingId:
+          type: string
+        status:
+          type: string
+          enum:
+            - pending
+            - paired
+            - expired
+        paired:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+        sessionId:
+          type: string
+    DevicePairingConfirmRequest:
+      type: object
+      required:
+        - code
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: '^[0-9]{4}$'
+    DevicePairingConfirmResponse:
+      type: object
+      required:
+        - ok
+        - pairingId
+        - status
+      properties:
+        ok:
+          type: boolean
+          const: true
+        pairingId:
+          type: string
+        status:
+          type: string
+          enum:
+            - paired
+            - already_paired
+paths:
+  /api/v1/auth/login:
+    post:
+      operationId: loginStaffSession
+      summary: Create a staff session from a PIN.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffLoginRequest'
+      responses:
+        '200':
+          description: Staff session created.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: HttpOnly SameSite=Strict staff session cookie.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffSessionResponse'
+        '401':
+          description: PIN is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '429':
+          description: Login rate limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/auth/me:
+    get:
+      operationId: getStaffSessionMe
+      summary: Return the active staff session.
+      security:
+        - staffSessionCookie: []
+      responses:
+        '200':
+          description: Current staff session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffSessionResponse'
+        '401':
+          description: Staff session is missing or expired.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/auth/room-panel/rooms:
+    get:
+      operationId: listRoomPanelRooms
+      summary: List rooms where the room panel is enabled.
+      security: []
+      responses:
+        '200':
+          description: Enabled room panel rooms.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomPanelRoomsResponse'
+  /api/v1/auth/room-panel/login:
+    post:
+      operationId: loginRoomPanel
+      summary: Create a room panel session; panels inside the room require the shared panel PIN.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomPanelLoginRequest'
+      responses:
+        '200':
+          description: Room panel session created.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: HttpOnly SameSite=Strict room panel session cookie.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomPanelSessionResponse'
+        '401':
+          description: PIN is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '404':
+          description: Room has no enabled room panel.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '429':
+          description: Login rate limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/auth/pin/change:
+    post:
+      operationId: changeAuthPin
+      summary: Change staff PIN (MFA, Ops, or room panel) after verifying the current PIN for that target.
+      security:
+        - staffSessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePinRequest'
+      responses:
+        '200':
+          description: PIN updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangePinResponse'
+        '400':
+          description: Invalid target or PIN length.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '401':
+          description: Current PIN is invalid for the requested target.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '403':
+          description: Wrong staff session role for the requested target (Ops session for Ops PIN; MFA session for MFA or room panel PIN).
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '429':
+          description: PIN change rate limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/auth/logout:
+    post:
+      operationId: logoutStaffSession
+      summary: Revoke the current staff session if present.
+      security: []
+      responses:
+        '200':
+          description: Session cookie cleared.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: Expired staff session cookie.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+  /api/v1/auth/tv/pairing/start:
+    post:
+      operationId: startTvPairing
+      summary: Start TV device pairing and return the code shown on the TV.
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevicePairingStartRequest'
+      responses:
+        '200':
+          description: TV pairing code created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicePairingStartResponse'
+        '429':
+          description: Too many TV pairing start attempts.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/auth/tv/pairing/{pairingId}:
+    get:
+      operationId: getTvPairingStatus
+      summary: Poll TV pairing status; sets the TV device cookie once paired.
+      security: []
+      parameters:
+        - name: pairingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current TV pairing status.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: HttpOnly SameSite=Strict TV device session cookie when paired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicePairingStatusResponse'
+        '404':
+          description: Pairing request not found.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/auth/tv/pairing/confirm:
+    post:
+      operationId: confirmTvPairing
+      summary: Confirm a TV pairing code from an authenticated MFA session.
+      security:
+        - staffSessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevicePairingConfirmRequest'
+      responses:
+        '200':
+          description: TV pairing confirmed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicePairingConfirmResponse'
+        '404':
+          description: Pairing code not found or expired.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '429':
+          description: Too many TV pairing confirmation attempts.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/auth/terminal/pairing/start:
+    post:
+      operationId: startTerminalPairing
+      summary: Start terminal device pairing and return the code shown on the terminal.
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevicePairingStartRequest'
+      responses:
+        '200':
+          description: Terminal pairing code created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicePairingStartResponse'
+        '429':
+          description: Too many terminal pairing start attempts.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/auth/terminal/pairing/{pairingId}:
+    get:
+      operationId: getTerminalPairingStatus
+      summary: Poll terminal pairing status; sets the terminal device cookie once paired.
+      security: []
+      parameters:
+        - name: pairingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current terminal pairing status.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: HttpOnly SameSite=Strict terminal device session cookie when paired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicePairingStatusResponse'
+        '404':
+          description: Pairing request not found.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/auth/terminal/pairing/confirm:
+    post:
+      operationId: confirmTerminalPairing
+      summary: Confirm a terminal pairing code from an authenticated MFA session.
+      security:
+        - staffSessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevicePairingConfirmRequest'
+      responses:
+        '200':
+          description: Terminal pairing confirmed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicePairingConfirmResponse'
+        '404':
+          description: Pairing code not found or expired.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '429':
+          description: Too many terminal pairing confirmation attempts.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'

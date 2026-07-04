@@ -1,0 +1,102 @@
+# Container logs: stdout → json-file driver with rotation (see docs/deployment-docker.md).
+name: praxis-flow
+
+x-docker-logging: &docker-logging
+  driver: json-file
+  options:
+    max-size: ${DOCKER_LOG_MAX_SIZE:-10m}
+    max-file: ${DOCKER_LOG_MAX_FILE:-5}
+
+services:
+  app:
+    logging: *docker-logging
+    image: praxis-flow/app:local
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+      args:
+        VITE_API_BASE: ''
+      sbom: true
+      provenance: mode=max
+    container_name: praxis-flow-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-}
+      HOST: 0.0.0.0
+      PORT: 8080
+      EXPORT_BASE_PATH: ${EXPORT_BASE_PATH:-/exports}
+      AUTH_ENABLED: ${AUTH_ENABLED:-true}
+      AUTH_KEY_CAPTIVE: ${AUTH_KEY_CAPTIVE:?AUTH_KEY_CAPTIVE is required}
+      STAFF_SESSION_TTL_MS: ${STAFF_SESSION_TTL_MS:-43200000}
+      STAFF_SESSION_IDLE_TTL_MS: ${STAFF_SESSION_IDLE_TTL_MS:-7200000}
+      SANDBOX_INTERNAL_TOKEN: ${SANDBOX_INTERNAL_TOKEN:?SANDBOX_INTERNAL_TOKEN is required}
+      SANDBOX_BASE_URL: ${SANDBOX_BASE_URL:-http://sandbox:8081}
+      SANDBOX_DOCS_BASE_PATH: ${SANDBOX_DOCS_BASE_PATH:-/var/lib/praxis-flow/docs}
+      CONTACT_LOOKUP_BASE_PATH: ${CONTACT_LOOKUP_BASE_PATH:-/imports}
+      GATEWAY_AUTH_BRIDGE_URL: ${GATEWAY_AUTH_BRIDGE_URL:-}
+      PRACTICE_DISPLAY_NAME: ${PRACTICE_DISPLAY_NAME:-}
+      PRACTICE_ADDRESS: ${PRACTICE_ADDRESS:-}
+      PRACTICE_POSTAL_CODE: ${PRACTICE_POSTAL_CODE:-}
+      PRACTICE_CITY: ${PRACTICE_CITY:-}
+      PRACTICE_PHONE: ${PRACTICE_PHONE:-}
+      PRACTICE_EMAIL: ${PRACTICE_EMAIL:-}
+      PRACTICE_DPO: ${PRACTICE_DPO:-}
+      PRACTICE_WEBSITE: ${PRACTICE_WEBSITE:-}
+      # Deprecated — one-time DB seed via migration 007 if PRACTICE_* unset (remove after upgrade)
+      VITE_PRACTICE_DISPLAY_NAME: ${VITE_PRACTICE_DISPLAY_NAME:-}
+      VITE_PRACTICE_ADDRESS: ${VITE_PRACTICE_ADDRESS:-}
+      VITE_PRACTICE_PHONE: ${VITE_PRACTICE_PHONE:-}
+      VITE_PRACTICE_EMAIL: ${VITE_PRACTICE_EMAIL:-}
+      VITE_PRACTICE_DPO: ${VITE_PRACTICE_DPO:-}
+    ports:
+      - '8080:8080'
+    volumes:
+      - app_data:/var/lib/praxis-flow/app
+      - ${EXPORTS_HOST_PATH:-~/praxis-flow-exports}:/exports
+      - ${IMPORTS_HOST_PATH:-~/praxis-flow-imports}:/imports
+    depends_on:
+      sandbox:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8080/api/v1/ops/health']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  sandbox:
+    logging: *docker-logging
+    image: praxis-flow/sandbox:local
+    build:
+      context: .
+      dockerfile: sandbox/Dockerfile
+      sbom: true
+      provenance: mode=max
+    container_name: praxis-flow-sandbox
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8081
+      LOG_LEVEL: ${LOG_LEVEL:-}
+      SANDBOX_AUTH_ENABLED: ${SANDBOX_AUTH_ENABLED:-true}
+      SANDBOX_INTERNAL_TOKEN: ${SANDBOX_INTERNAL_TOKEN:?SANDBOX_INTERNAL_TOKEN is required}
+      SANDBOX_SCAN_ENABLED: ${SANDBOX_SCAN_ENABLED:-true}
+      SANDBOX_SCAN_TIMEOUT_MS: ${SANDBOX_SCAN_TIMEOUT_MS:-15000}
+      CLAMAV_DB_PATH: ${CLAMAV_DB_PATH:-/var/lib/clamav}
+      CLAMAV_MAX_SIGNATURE_AGE_HOURS: ${CLAMAV_MAX_SIGNATURE_AGE_HOURS:-24}
+      CLAMAV_AUTO_UPDATE_ON_START: ${CLAMAV_AUTO_UPDATE_ON_START:-true}
+    expose:
+      - '8081'
+    volumes:
+      - sandbox_intake_data:/var/lib/praxis-flow/sandbox-intake
+      - clamav_db:/var/lib/clamav
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8081/internal/health/ready']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  app_data:
+  sandbox_intake_data:
+  clamav_db:

@@ -1,0 +1,69 @@
+{
+  "name": "@praxis-flow/manager",
+  "private": true,
+  "version": "0.1.0",
+  "productName": "Praxis Flow Manager",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "node scripts/patch-electron-macos-name.mjs && cross-env ELECTRON_RUN_AS_NODE= electron-vite dev",
+    "build": "cross-env ELECTRON_RUN_AS_NODE= electron-vite build",
+    "prepare:packaged": "npm run --prefix .. build:server-shared && npm run --prefix ../setup build && node scripts/prepare-packaged-resources.mjs",
+    "dist:mac": "npm run prepare:packaged && npm run build && electron-builder --mac dmg",
+    "lint": "eslint src --ext .ts",
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit"
+  },
+  "dependencies": {
+    "@praxis-flow/server-shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "cross-env": "^7.0.3",
+    "electron": "^35.1.5",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^3.1.0",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
+    "vite": "^6.3.5"
+  },
+  "build": {
+    "appId": "de.praxisflow.manager",
+    "productName": "Praxis Flow Manager",
+    "electronVersion": "35.1.5",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build-resources/setup",
+        "to": "setup",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "build-resources/templates",
+        "to": "templates",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.business",
+      "identity": null,
+      "target": [
+        "dmg"
+      ]
+    },
+    "dmg": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    }
+  }
+}

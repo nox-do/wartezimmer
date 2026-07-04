@@ -1,0 +1,79 @@
+export const topics = [
+  ['general', 'Allgemeine Sprechstunde', 'sprechstunde', '#2f6fed', 'normal', 15, 1, 10, 'A'],
+  ['infection', 'Erkaeltung / Infekt', 'akut', '#d64545', 'high', 12, 1, 20, 'I'],
+  ['blood', 'Blutabnahme', 'labor', '#7b4ab8', 'normal', 8, 1, 30, 'L'],
+  ['vaccine', 'Impfung', 'behandlung', '#16856a', 'normal', 10, 1, 40, 'X'],
+  ['prescription', 'Rezept abholen', 'empfang', '#9a6a2f', 'low', 5, 1, 50, 'R'],
+  ['op_prep', 'OP-Vorbereitung', 'behandlung', '#51606f', 'high', 20, 1, 60, 'A'],
+  ['lab_question', 'Rueckfrage Labor', 'labor', '#0f7c95', 'normal', 8, 1, 70, 'L'],
+  ['mfa', 'Zur MFA', 'system', '#18181b', 'urgent', 5, 1, 90, 'M']
+];
+
+export const locations = [
+  ['entrance', 'Eingangsbereich', 'entrance', 1, 0, 1, 0, 'Eingang', 1, 10],
+  ['waiting_general', 'Allgemeines Wartezimmer', 'waiting_area', 1, 0, 0, 0, 'Wartezimmer', 1, 20],
+  ['waiting_infection', 'Infekt-Wartebereich', 'waiting_area', 1, 0, 0, 0, 'Infekt-Bereich', 1, 30],
+  ['reception', 'Empfang', 'reception', 1, 0, 1, 0, 'Empfang', 1, 40],
+  ['lab', 'Labor', 'lab', 0, 1, 0, 0, 'Labor', 1, 50],
+  ['vaccine_room', 'Impfraum', 'treatment_room', 0, 1, 0, 0, 'Impfraum', 1, 60],
+  ['room_1', 'Raum 1', 'treatment_room', 0, 1, 0, 0, 'Raum 1', 1, 70],
+  ['room_2', 'Raum 2', 'treatment_room', 0, 1, 0, 0, 'Raum 2', 1, 80]
+];
+
+export const queues = [
+  ['general_queue', 'Allgemeine Warteliste', 'waiting_general', 'location', 'checkin_time', 'manual', 'call', 1, 10],
+  ['reception_queue', 'Empfangsliste', 'reception', 'reception', 'checkin_time', 'manual', 'self_go', 1, 20],
+  ['infection_queue', 'Infektliste', 'waiting_infection', 'service', 'priority_then_time', 'manual', 'pickup', 1, 30],
+  ['lab_queue', 'Laborliste', 'lab', 'service', 'checkin_time', 'manual', 'call', 1, 40],
+  ['vaccine_queue', 'Impfliste', 'vaccine_room', 'service', 'checkin_time', 'manual', 'self_go', 1, 50]
+];
+
+export const surfaces = [
+  ['terminal_1', 'entrance', 'Terminal 1 Eingang', 'terminal', 'patient', 0, 0, 0, 0, 1],
+  ['terminal_2', 'lab', 'Terminal 2 Labor', 'terminal', 'patient', 0, 0, 0, 0, 1],
+  ['mfa_dashboard', 'reception', 'MFA Dashboard', 'dashboard', 'staff', 1, 1, 1, 1, 1],
+  ['waiting_tv', 'waiting_general', 'Wartezimmer-TV', 'public_display', 'public', 1, 0, 0, 0, 1],
+  ['panel_lab', 'lab', 'Room Panel Labor', 'staff_panel', 'staff', 1, 0, 1, 0, 1],
+  ['panel_vaccine', 'vaccine_room', 'Room Panel Impfraum', 'staff_panel', 'staff', 1, 0, 1, 0, 1],
+  ['panel_room_1', 'room_1', 'Room Panel Raum 1', 'staff_panel', 'staff', 1, 0, 1, 0, 1]
+];
+
+export const surfaceDisplayRules = [
+  ['tv_general_visible', 'waiting_tv', 'general_queue', null, null, 'visible', 10],
+  ['tv_infection_hidden', 'waiting_tv', 'infection_queue', null, null, 'hidden', 20],
+  ['tv_reception_hidden', 'waiting_tv', 'reception_queue', null, null, 'hidden', 30],
+  ['panel_lab_target', 'panel_lab', 'lab_queue', 'lab', null, 'visible', 10],
+  ['panel_vaccine_target', 'panel_vaccine', 'vaccine_queue', 'vaccine_room', null, 'visible', 10],
+  ['panel_room_1_target', 'panel_room_1', null, 'room_1', null, 'visible', 10]
+];
+
+/**
+ * publicDisplayMode in RoutingRules:
+ * - Default fuer Warten am oeffentlichen Display: visible (Patient sieht sich auf dem TV)
+ * - hidden nur als Ausnahme (Direktwege, Infekt aus Datenschutz)
+ * allowedSurfaceIds: null = alle Terminals; sonst JSON-Liste (z. B. Labor-Themen nur terminal_2)
+ */
+export const routingRules = [
+  ['rule_general', 'general', 'Allgemeine Sprechstunde', 'waiting_general', 'reception', 'general_queue', 'call', 'assumed', 'visible', 'Bitte nehmen Sie im Wartezimmer Platz. Sie werden aufgerufen.', 0, 'none', 1, '["terminal_1"]', 'journey_general', 1],
+  ['rule_infection', 'infection', 'Erkaeltung / Infekt', 'waiting_infection', 'waiting_infection', 'infection_queue', 'pickup', 'assumed', 'hidden', 'Bitte warten Sie im Infekt-Wartebereich. Sie werden abgeholt.', 0, 'required', 1, '["terminal_1"]', null, 1],
+  ['rule_blood', 'blood', 'Blutabnahme', 'lab', 'lab', 'lab_queue', 'call', 'instructed', 'visible', 'Bitte warten Sie am Labor-Terminal. Sie werden aufgerufen.', 0, 'none', 1, '["terminal_2"]', null, 1],
+  ['rule_vaccine', 'vaccine', 'Impfung', 'entrance', 'vaccine_room', 'vaccine_queue', 'self_go', 'instructed', 'hidden', 'Bitte gehen Sie direkt zum Impfraum.', 0, 'none', 1, '["terminal_1"]', null, 1],
+  ['rule_prescription', 'prescription', 'Rezept abholen', 'entrance', 'reception', 'reception_queue', 'self_go', 'instructed', 'hidden', 'Bitte melden Sie sich am Empfang.', 1, 'none', 1, '["terminal_1"]', null, 1],
+  ['rule_op_prep', 'op_prep', 'OP-Vorbereitung', 'waiting_general', 'room_1', 'general_queue', 'call', 'assumed', 'visible', 'Bitte nehmen Sie im Wartezimmer Platz. Sie werden zur OP-Vorbereitung aufgerufen.', 0, 'recommended', 1, '["terminal_1"]', null, 1],
+  ['rule_lab_question', 'lab_question', 'Rueckfrage Labor', 'lab', 'lab', 'lab_queue', 'call', 'instructed', 'hidden', 'Bitte warten Sie am Labor. Sie werden aufgerufen.', 0, 'none', 1, '["terminal_2"]', null, 1],
+  ['rule_mfa', 'mfa', 'Zur MFA', 'waiting_general', 'reception', 'general_queue', 'call', 'assumed', 'visible', 'Bitte nehmen Sie im Wartezimmer Platz. Sie werden aufgerufen.', 0, 'none', 0, null, null, 1]
+];
+
+/** Allgemeine Sprechstunde: Terminal → WZ → Empfang → Raum 1 → Ende */
+export const journeyTemplates = [
+  ['journey_general', 'Terminal → WZ → Empfang → Raum 1', 'general', 1]
+];
+
+export const journeySteps = [
+  // Schritt 1/3: Check-in → Patient im WZ, Aufruf zum Empfang
+  ['step_general_0', 'journey_general', 0, 'reception', 'general_queue', 'call', 'visible', 'arrive', null],
+  // Schritt 2/3: am Empfang, Aufruf zu Raum 1
+  ['step_general_1', 'journey_general', 1, 'room_1', 'reception_queue', 'call', 'hidden', 'arrive', null],
+  // Schritt 3/3: im Raum — Start beendet Journey (kein erneuter call-Zyklus im selben Raum, H7)
+  ['step_general_2', 'journey_general', 2, 'room_1', null, 'pickup', 'hidden', 'start', null]
+];

@@ -1,0 +1,249 @@
+/**
+ * Design tokens — single source of truth for all UI surfaces.
+ * Components should use semantic var(--*) tokens, not raw hex values.
+ */
+
+:root {
+  --zinc-50: #fafafa;
+  --zinc-100: #f4f4f5;
+  --zinc-200: #e4e4e7;
+  --zinc-300: #d4d4d8;
+  --zinc-400: #a1a1aa;
+  --zinc-500: #71717a;
+  --zinc-600: #52525b;
+  --zinc-650: #57534e;
+  --zinc-700: #3f3f46;
+  --zinc-800: #27272a;
+  --zinc-900: #18181b;
+
+  --slate-100: #eef2f6;
+  --slate-200: #e2e8f0;
+  --slate-300: #d7dee8;
+  --slate-500: #64748b;
+  --slate-800: #15202b;
+
+  --green-brand: #0f6e56;
+  --green-brand-hover: #0c5c48;
+  --green-success: #059669;
+  --green-success-emphasis: #065f46;
+  --green-success-bg: #ecfdf5;
+  --green-success-border: #6ee7b7;
+  --green-success-border-strong: #a7f3d0;
+  --green-success-light: color-mix(in srgb, var(--green-success) 12%, transparent);
+  --green-drop-active: #d1fae5;
+  --green-chip-bg: #dcfce7;
+  --green-chip-ink: #166534;
+  --green-step-done: #86efac;
+
+  --amber-warning: #d97706;
+  --amber-warning-bg: #fffbeb;
+  --amber-warning-border: #fcd34d;
+  --amber-warning-border-soft: #fde68a;
+  --amber-warning-ink: #92400e;
+  --amber-warning-ink-deep: #713f12;
+  --amber-warning-ink-muted: #a16207;
+  --amber-chip-bg: #fef3c7;
+
+  --triage-yellow: #facc15;
+  --triage-yellow-border: #eab308;
+
+  --orange-chip-bg: #ffedd5;
+  --orange-chip-ink: #c2410c;
+
+  --red-error: #dc2626;
+  --red-error-soft: #f87171;
+  --red-destructive: #b91c1c;
+  --red-destructive-foreground: #ffffff;
+  --red-destructive-light: #fef2f2;
+  --red-error-bg: #fff5f5;
+  --red-error-border: #fecaca;
+  --red-error-border-strong: #fca5a5;
+  --red-error-bg-soft: #fee2e2;
+  --red-error-ink: #7f1d1d;
+  --red-error-ink-alt: #991b1b;
+
+  --blue-info: #2563eb;
+  --blue-info-deep: #1d4ed8;
+  --blue-info-ink: #1e40af;
+  --blue-info-bg: #eff6ff;
+  --blue-info-bg-strong: #dbeafe;
+  --blue-info-border: #93c5fd;
+  --blue-info-border-hover: #60a5fa;
+  --blue-link: #1a5fb4;
+  --blue-ops-primary: #175cd3;
+
+  --teal-pairing: #0f766e;
+  --slate-pairing-ink: #0f172a;
+  --slate-700-text: #334155;
+  --slate-50-bg: #f8fafc;
+
+  --amber-ticket-border: #ca8a04;
+
+  --blue-wlan-border: #bfdbfe;
+
+  --green-terminal-success-bg: #d7eee6;
+  --green-terminal-success-ink: #0b5e49;
+
+  /* Ops (gray-blue form chrome — distinct from staff MFA) */
+  --ops-border: #d0d5dd;
+  --ops-surface-muted: #f9fafb;
+  --ops-surface-alt: #f8fafc;
+  --ops-muted: #667085;
+  --ops-text: #101828;
+  --ops-danger: #b42318;
+
+  --background: var(--slate-100);
+  --foreground: var(--slate-800);
+  --muted: var(--slate-200);
+  --muted-foreground: var(--slate-500);
+  --card: #ffffff;
+  --border: var(--slate-300);
+  --accent: var(--green-brand);
+  --accent-foreground: var(--card);
+  --accent-hover: var(--green-brand-hover);
+  --success: var(--green-success);
+  --success-light: var(--green-success-light);
+  --warning: var(--amber-warning);
+  --error: var(--red-error);
+  --destructive: var(--red-destructive);
+  --destructive-foreground: var(--red-destructive-foreground);
+  --destructive-alpha: color-mix(in srgb, var(--red-error) 12%, transparent);
+  --destructive-light: var(--red-destructive-light);
+
+  --accent-border-alpha: color-mix(in srgb, var(--accent) 20%, transparent);
+  --accent-bg-alpha: color-mix(in srgb, var(--accent) 8%, transparent);
+  --error-border-alpha: color-mix(in srgb, var(--error) 25%, transparent);
+  --success-border-alpha: color-mix(in srgb, var(--success) 25%, transparent);
+  --success-ring-alpha: color-mix(in srgb, var(--success) 35%, transparent);
+  --success-glow-alpha: color-mix(in srgb, var(--success) 35%, transparent);
+  --blue-info-ring-alpha: color-mix(in srgb, var(--blue-info) 30%, transparent);
+  --blue-info-glow-alpha: color-mix(in srgb, var(--blue-info-deep) 35%, transparent);
+  --card-glass-65: color-mix(in srgb, var(--card) 65%, transparent);
+  --card-glass-12: color-mix(in srgb, var(--card) 12%, transparent);
+  --amber-warning-bg-glass: color-mix(in srgb, var(--amber-warning-bg) 85%, transparent);
+  --destructive-light-glass: color-mix(in srgb, var(--destructive-light) 75%, transparent);
+  --green-drop-banner: color-mix(in srgb, var(--green-drop-active) 94%, transparent);
+  --blue-info-banner: color-mix(in srgb, var(--blue-info-bg-strong) 94%, transparent);
+  --overlay-backdrop: color-mix(in srgb, var(--foreground) 35%, transparent);
+  --overlay-backdrop-dim: color-mix(in srgb, var(--foreground) 55%, transparent);
+  --shadow-color-sm: color-mix(in srgb, var(--zinc-900) 12%, transparent);
+  --shadow-color-md: color-mix(in srgb, var(--zinc-900) 15%, transparent);
+  --shadow-color-lg: color-mix(in srgb, var(--foreground) 6%, transparent);
+  --shadow-color-modal: color-mix(in srgb, var(--foreground) 18%, transparent);
+  --shadow-color-pairing: color-mix(in srgb, var(--foreground) 12%, transparent);
+
+  --radius: 12px;
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-xs: calc(var(--radius) - 4px);
+  --radius-2xs: calc(var(--radius-xs) - 2px);
+  --radius-3xs: calc(var(--radius-xs) - 4px);
+  --radius-pill: 999px;
+  --radius-full: 50%;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --text-2xs: 0.65rem;
+  --text-xs: 0.72rem;
+  --text-sm: 0.82rem;
+  --text-base: 0.875rem;
+  --text-md: 0.95rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.75rem;
+  --spacing-2: 1rem;
+  --spacing-3: 1.5rem;
+  --panel-padding: 14px 16px;
+  --panel-padding-sm: 10px 12px;
+  --panel-padding-inset: 12px 14px;
+  --hero-gradient-start: var(--green-brand);
+  --hero-gradient-end: var(--green-brand-hover);
+
+  --pairing-page-bg: var(--zinc-50);
+  --pairing-radius: 2rem;
+  --pairing-code-ink: var(--slate-pairing-ink);
+
+  --preview-bg: #202124;
+  --preview-surface: #2d2e30;
+  --preview-ink: #e8eaed;
+  --preview-muted: #bdc1c6;
+  --preview-accent: #1a73e8;
+  --preview-accent-hover: #1765cc;
+  --preview-divider: color-mix(in srgb, var(--card) 8%, transparent);
+  --preview-field-border: color-mix(in srgb, var(--card) 18%, transparent);
+  --preview-field-bg: color-mix(in srgb, var(--card) 8%, transparent);
+  --preview-field-bg-faint: color-mix(in srgb, var(--card) 4%, transparent);
+  --preview-muted-dim: color-mix(in srgb, var(--preview-muted) 55%, transparent);
+  --preview-muted-strong: color-mix(in srgb, var(--preview-muted) 90%, transparent);
+  --preview-hover-bg: color-mix(in srgb, var(--card) 10%, transparent);
+  --preview-canvas-shadow: 0 12px 48px color-mix(in srgb, black 55%, transparent);
+  --preview-state-bg: color-mix(in srgb, var(--card) 6%, transparent);
+}
+
+/* MFA staff UI — :root:has() mirrors tokens for portaled modals under body */
+.mfa-page,
+:root:has(.mfa-page) {
+  --mfa-border: var(--zinc-200);
+  --mfa-ink: var(--zinc-900);
+  --mfa-muted: var(--zinc-500);
+  --mfa-surface: var(--zinc-100);
+  --mfa-success: var(--success);
+  --mfa-accent: var(--blue-info);
+}
+
+.terminal-page {
+  --terminal-bg: var(--zinc-50);
+  --terminal-ink: var(--zinc-900);
+  --terminal-muted: var(--zinc-500);
+  --terminal-subtext: var(--zinc-600);
+  --terminal-emphasis: var(--zinc-700);
+  --terminal-surface: var(--zinc-100);
+  --terminal-border: var(--zinc-200);
+  --terminal-border-dim: var(--zinc-400);
+  --terminal-lang-rail: 4.5rem;
+  --terminal-content-max: 640px;
+  --terminal-numpad-max: var(--terminal-content-max);
+  --terminal-numpad-wide-max: min(1440px, calc(100vw - 2.5rem - var(--terminal-lang-rail)));
+  --terminal-key-gap: 10px;
+  /* Kiosk typography — tuned for touch; not the staff --text-* scale */
+  --terminal-text-hero: var(--text-2xl);
+  --terminal-text-flow-title: 1.6rem;
+  --terminal-text-head: 1.4rem;
+  --terminal-text-welcome: 1.15rem;
+  --terminal-text-field: 1.1rem;
+  --terminal-text-ui: 1rem;
+  --terminal-text-emergency-count: 2rem;
+  --terminal-text-ticket: 2.4rem;
+  --terminal-text-room: 2rem;
+  --terminal-text-locked-title: clamp(1.45rem, 4vw, 1.75rem);
+  --terminal-text-key: var(--text-2xl);
+  --terminal-text-key-back: var(--text-xl);
+  --terminal-success-bg: var(--green-terminal-success-bg);
+  --terminal-success-ink: var(--green-terminal-success-ink);
+  --terminal-ticket-bg: var(--amber-warning-bg);
+  --terminal-ticket-border: var(--amber-ticket-border);
+  --terminal-ticket-label: var(--amber-warning-ink);
+  --terminal-ticket-num: var(--amber-warning-ink-deep);
+  --terminal-destructive-ink: var(--red-error-ink);
+  --terminal-destructive-text: var(--red-error-ink-alt);
+  --terminal-wlan-border: var(--blue-wlan-border);
+  --terminal-wlan-bg-top: var(--blue-info-bg);
+  --terminal-wlan-bg-bottom: var(--slate-50-bg);
+  --terminal-wlan-kicker: var(--blue-info-deep);
+  --terminal-wlan-text: var(--slate-700-text);
+  --terminal-wlan-strong: var(--slate-pairing-ink);
+  --terminal-egk-accent: var(--blue-info);
+  --terminal-egk-bg: var(--blue-info-bg);
+}
+
+.tv-page {
+  --tv-ink: var(--zinc-900);
+  --tv-muted: var(--zinc-500);
+  --tv-subtext: var(--zinc-600);
+  --tv-border: var(--zinc-200);
+  --tv-border-dim: var(--zinc-400);
+  --tv-heading: var(--zinc-800);
+  --tv-call: var(--red-error);
+}
+
+.portal-page {
+  --portal-link: var(--blue-link);
+}

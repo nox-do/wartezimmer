@@ -1,0 +1,107 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { openFlowCoreSpikeDb } from './flow-core-spike-db.js';
+import {
+  PF_FLOW_LOC_WAITING,
+  PF_FLOW_QUEUE_GENERAL,
+  PF_FLOW_SURFACE_TV,
+  syncCatalogFromOpsSettings,
+} from './sync-catalog-from-ops-settings.js';
+import type { OpsSettings } from '../db/db-types.js';
+import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS } from '../checkin-topic-settings.js';
+
+function sampleOpsSettings(): OpsSettings {
+  return {
+    returnWindowMinutes: 15,
+    practiceOpenFrom: '08:00',
+    practiceOpenTo: '18:00',
+    practiceProfileJson: '{}',
+    topics: DEFAULT_TERMINAL_TOPIC_DEFINITIONS,
+    rooms: [
+      {
+        roomId: 'mfa-tresen',
+        roomLabel: 'Empfang',
+        enabled: true,
+        defaultCallTarget: true,
+        maxOccupancy: null,
+      },
+      {
+        roomId: 'labor',
+        roomLabel: 'Labor',
+        enabled: true,
+        defaultCallTarget: false,
+        maxOccupancy: null,
+        panel: {
+          enabled: true,
+          placement: 'outside',
+          mode: 'arrival',
+          showPatientNames: false,
+          calledTextPreset: 'please_enter',
+          calledTextCustom: null,
+          arrivedTextPreset: 'please_wait_here',
+          arrivedTextCustom: null,
+        },
+      },
+    ],
+    contactLookupFolderPath: null,
+    contactLookupDelimiterMode: 'auto',
+    contactLookupHasHeader: true,
+    contactLookupMappingJson: '{}',
+    emergencyEnabled: false,
+    terminalWlanPromoEnabled: false,
+    terminalAuthPhoneEnabled: true,
+    terminalAuthNameDobEnabled: true,
+    terminalAuthEgkEnabled: false,
+    terminalPatientLocales: [],
+    smsProvider: 'vonage',
+    exportBasePath: '/tmp',
+    updatedAt: '2026-07-04T12:00:00.000Z',
+  };
+}
+
+test('syncCatalogFromOpsSettings maps PF topics and rooms into a valid flow-core catalog', () => {
+  const db = openFlowCoreSpikeDb({ path: ':memory:' });
+  const summary = syncCatalogFromOpsSettings(db, sampleOpsSettings());
+
+  assert.ok(summary.topics >= DEFAULT_TERMINAL_TOPIC_DEFINITIONS.length);
+  assert.equal(summary.queues, 1);
+  assert.ok(summary.routingRules >= 1);
+  assert.ok(summary.displayRules >= 2);
+
+  const topicCount = (
+    db.prepare('SELECT COUNT(*) AS count FROM topics WHERE active = 1').get() as { count: number }
+  ).count;
+  assert.ok(topicCount >= 1);
+
+  const blutRule = db
+    .prepare('SELECT initial_target_location_id AS target FROM routing_rules WHERE topic_id = ?')
+    .get('blut') as { target: string } | undefined;
+  assert.ok(blutRule);
+  assert.equal(blutRule.target, 'mfa-tresen');
+
+  const tvRule = db
+    .prepare('SELECT display_mode AS mode FROM surface_display_rules WHERE surface_id = ?')
+    .get(PF_FLOW_SURFACE_TV) as { mode: string } | undefined;
+  assert.equal(tvRule?.mode, 'visible');
+
+  const waitingLocation = db
+    .prepare('SELECT type FROM locations WHERE id = ?')
+    .get(PF_FLOW_LOC_WAITING) as { type: string } | undefined;
+  assert.equal(waitingLocation?.type, 'waiting_area');
+
+  const generalQueue = db
+    .prepare('SELECT home_location_id AS home FROM queues WHERE id = ?')
+    .get(PF_FLOW_QUEUE_GENERAL) as { home: string } | undefined;
+  assert.equal(generalQueue?.home, PF_FLOW_LOC_WAITING);
+});
+
+test('syncCatalogFromOpsSettings creates room panel surfaces for enabled panels', () => {
+  const db = openFlowCoreSpikeDb({ path: ':memory:' });
+  const summary = syncCatalogFromOpsSettings(db, sampleOpsSettings());
+
+  const panelSurface = db
+    .prepare('SELECT id FROM surfaces WHERE id = ?')
+    .get('pf_panel_labor') as { id: string } | undefined;
+  assert.ok(panelSurface);
+  assert.equal(summary.surfaces, 4);
+});

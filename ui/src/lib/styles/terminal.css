@@ -1,0 +1,1031 @@
+/* Terminal patient kiosk — all styles scoped under .terminal-page */
+
+.terminal-page {
+  min-height: 100vh;
+  padding: 0;
+  background: var(--terminal-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.terminal-page .terminal-body {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--terminal-content-max);
+  margin: 0 auto;
+  padding: 24px 20px 32px;
+  padding-right: max(20px, calc(20px + var(--terminal-lang-rail)));
+}
+
+.terminal-page .terminal-body--flow h1 {
+  font-size: var(--terminal-text-flow-title);
+}
+
+.terminal-page .terminal-body--start {
+  padding-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 100dvh;
+}
+
+.terminal-page .terminal-body--locked {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 100dvh;
+  padding: clamp(48px, 12vh, 96px) 24px 40px;
+}
+
+.terminal-page .terminal-body--numpad {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: var(--terminal-numpad-max);
+  margin: 0 auto;
+  padding: 16px 20px max(20px, env(safe-area-inset-bottom));
+  background: var(--terminal-bg);
+}
+
+.terminal-page .terminal-body--numpad-wide {
+  max-width: var(--terminal-numpad-wide-max);
+}
+
+.terminal-page .terminal-loading {
+  margin: 0;
+  text-align: center;
+  color: var(--terminal-muted);
+  font-size: var(--terminal-text-ui);
+  padding: 48px 0;
+}
+
+.terminal-page .terminal-intro {
+  margin-bottom: 20px;
+}
+
+.terminal-page .terminal-intro h1 {
+  margin: 0 0 6px;
+  font-size: var(--terminal-text-hero);
+}
+
+.terminal-page .terminal-intro-welcome {
+  margin: 0;
+  color: var(--terminal-emphasis);
+  font-size: var(--terminal-text-welcome);
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.terminal-page .terminal-privacy-voluntary {
+  margin: 14px 0 0;
+  color: var(--terminal-subtext);
+  font-size: var(--text-base);
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+.terminal-page .terminal-privacy-link {
+  margin: 8px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--terminal-subtext);
+  font: inherit;
+  font-size: var(--text-base);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.terminal-page .terminal-privacy-link:hover {
+  color: var(--terminal-emphasis);
+}
+
+.terminal-page .terminal-lead {
+  margin: 0 0 16px;
+  color: var(--terminal-subtext);
+  line-height: 1.45;
+}
+
+.terminal-page .terminal-nav {
+  margin-top: 20px;
+  font-size: var(--text-base);
+}
+
+.terminal-page .terminal-nav a {
+  color: var(--terminal-subtext);
+}
+
+.terminal-page .terminal-card-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.terminal-page .terminal-card-grid--start {
+  margin-bottom: 0;
+}
+
+.terminal-page a.terminal-card,
+.terminal-page button.terminal-card,
+.terminal-page span.terminal-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 80px;
+  padding: 16px;
+  border: 2px solid var(--terminal-ink);
+  border-radius: var(--radius);
+  background: var(--card);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease;
+  box-sizing: border-box;
+}
+
+.terminal-page button.terminal-card {
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.terminal-page a.terminal-card:hover,
+.terminal-page button.terminal-card:hover:not(:disabled) {
+  background: var(--terminal-surface);
+}
+
+.terminal-page button.terminal-card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.terminal-page span.terminal-card--disabled {
+  opacity: 0.42;
+  border-color: var(--border);
+  cursor: not-allowed;
+  user-select: none;
+}
+
+.terminal-page span.terminal-card--disabled .terminal-card__icon {
+  background: var(--terminal-border-dim);
+}
+
+.terminal-page span.terminal-card--disabled .terminal-card__text strong,
+.terminal-page span.terminal-card--disabled .terminal-card__text span {
+  color: var(--terminal-muted);
+}
+
+.terminal-page .terminal-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  background: var(--terminal-ink);
+  color: var(--accent-foreground);
+  flex-shrink: 0;
+}
+
+.terminal-page .terminal-card__icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.terminal-page .terminal-card__icon--topic {
+  width: auto;
+  height: auto;
+  background: transparent;
+}
+
+.terminal-page .terminal-card__icon--topic .topic-icon-display--accent {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.terminal-page .terminal-card__icon--topic .topic-icon-display--accent svg {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+.terminal-page .terminal-card__icon--topic .topic-icon-display__letter {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--terminal-text-ui);
+}
+
+.terminal-page .terminal-card__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.terminal-page .terminal-card__text strong {
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.terminal-page .terminal-card__text > span:not(.terminal-card__meta) {
+  font-size: var(--text-base);
+  color: var(--terminal-subtext);
+}
+
+.terminal-page .terminal-card__meta {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--terminal-muted);
+}
+
+.terminal-page .terminal-card__chevron {
+  width: 20px;
+  height: 20px;
+  color: var(--terminal-muted);
+  flex-shrink: 0;
+}
+
+.terminal-page button.terminal-card--busy:disabled {
+  cursor: wait;
+}
+
+/* Emergency card variant */
+.terminal-page .terminal-emergency {
+  margin-top: auto;
+  padding-top: 3rem;
+}
+
+.terminal-page .terminal-emergency-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.terminal-page button.terminal-card--emergency {
+  border-color: var(--destructive);
+  background: var(--destructive-alpha);
+  color: var(--terminal-destructive-ink);
+}
+
+.terminal-page button.terminal-card--emergency:hover:not(:disabled),
+.terminal-page .terminal-emergency-cancel:hover {
+  background: var(--destructive-light);
+}
+
+.terminal-page button.terminal-card--emergency-counting {
+  justify-content: center;
+  background: var(--card);
+}
+
+.terminal-page .terminal-card__icon--emergency {
+  background: var(--destructive) !important;
+}
+
+.terminal-page .terminal-card__emergency-count {
+  font-size: var(--terminal-text-emergency-count);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--destructive);
+}
+
+.terminal-page button.terminal-card--emergency .terminal-card__text span {
+  color: var(--terminal-destructive-text);
+}
+
+.terminal-page .terminal-emergency-cancel {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 12px 14px;
+  border: 2px solid var(--terminal-destructive-text);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--terminal-destructive-text);
+  font-size: var(--text-base);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.terminal-page .terminal-emergency-done {
+  margin: 0 0 10px;
+  color: var(--terminal-destructive-ink);
+}
+
+.terminal-page .terminal-emergency-done svg {
+  color: var(--destructive);
+}
+
+/* Phone / numpad page */
+.terminal-page .terminal-numpad-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.terminal-page .terminal-numpad-head h1 {
+  margin: 0;
+  font-size: var(--terminal-text-head);
+}
+
+.terminal-page .terminal-numpad-back {
+  flex-shrink: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--terminal-subtext);
+  text-decoration: none;
+}
+
+.terminal-page .terminal-numpad-back:hover {
+  color: var(--terminal-ink);
+  text-decoration: underline;
+}
+
+.terminal-page .field-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--terminal-subtext);
+  margin-bottom: 6px;
+}
+
+.terminal-page .numpad-screen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.terminal-page .numpad-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: clamp(12px, 2vw, 20px);
+  background: var(--card);
+  border: 2px solid var(--terminal-border);
+  border-radius: var(--radius-lg);
+}
+
+.terminal-page .numpad-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.terminal-page .numpad-fields-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.terminal-page .numpad-field-group {
+  margin: 0;
+  min-width: 0;
+}
+
+.terminal-page button.numpad-field-display {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 3.25rem;
+  margin: 0;
+  padding: 14px 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  font: inherit;
+  font-size: var(--terminal-text-field);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--terminal-ink);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.terminal-page button.numpad-field-display:hover {
+  border-color: var(--terminal-border-dim);
+  background: var(--terminal-bg);
+}
+
+.terminal-page button.numpad-field-display.is-active {
+  border: 3px solid var(--terminal-ink);
+  padding: 13px 11px;
+  background: var(--card);
+  box-shadow: none;
+}
+
+.terminal-page button.numpad-field-display.has-error {
+  border-color: var(--red-error-soft);
+}
+
+.terminal-page button.numpad-field-display.has-error.is-active {
+  border-color: var(--red-error);
+}
+
+.terminal-page .numpad-field-error {
+  margin: 4px 0 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--destructive);
+}
+
+.terminal-page button.numpad-field-display.field-display-empty {
+  color: var(--terminal-border-dim);
+  font-weight: 500;
+}
+
+.terminal-page .numpad-submit,
+.terminal-page .terminal-btn--primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  margin: 0;
+  padding: 16px 20px;
+  border: 2px solid var(--terminal-ink);
+  border-radius: var(--radius);
+  background: var(--terminal-ink);
+  color: var(--accent-foreground);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  box-sizing: border-box;
+  transition:
+    background 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.terminal-page .numpad-submit {
+  font-size: var(--terminal-text-field);
+}
+
+.terminal-page .numpad-submit:hover:not(:disabled),
+.terminal-page .terminal-btn--primary:hover:not(:disabled) {
+  background: var(--zinc-800);
+  border-color: var(--zinc-800);
+}
+
+.terminal-page .numpad-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.terminal-page .numpad {
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--terminal-surface);
+  background: transparent;
+}
+
+.terminal-page .numpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--terminal-key-gap);
+  width: 100%;
+}
+
+.terminal-page .numpad-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.5rem;
+  height: clamp(3.25rem, 12vmin, 4.25rem);
+  padding: 8px 6px;
+  border: 3px solid var(--terminal-ink);
+  border-radius: var(--radius);
+  background: var(--card);
+  font-size: var(--terminal-text-key);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--terminal-ink);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transform-origin: bottom center;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
+}
+
+.terminal-page .numpad-key:hover:not(:disabled) {
+  transform: scaleY(0.99) translateY(1px);
+}
+
+.terminal-page .numpad-key:active:not(:disabled) {
+  background: var(--terminal-surface);
+  transform: scaleY(0.96) translateY(3px);
+}
+
+.terminal-page .numpad-key--clear {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background: var(--destructive-light);
+  border-color: var(--red-error-soft);
+  color: var(--destructive);
+}
+
+.terminal-page .numpad-key--clear:active:not(:disabled) {
+  background: var(--red-error-bg-soft);
+  transform: scaleY(0.96) translateY(3px);
+}
+
+.terminal-page .numpad-key--back {
+  font-size: var(--terminal-text-key-back);
+}
+
+.terminal-page button.numpad-field-display--text {
+  letter-spacing: 0.02em;
+  font-variant-numeric: normal;
+}
+
+.terminal-page .name-keyboard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--terminal-key-gap);
+  width: 100%;
+  margin-top: 2px;
+  padding: 14px 4px 6px;
+  border-top: 1px solid var(--terminal-surface);
+  border-radius: var(--radius);
+  background: linear-gradient(
+    to right bottom,
+    var(--card),
+    var(--terminal-bg),
+    var(--terminal-surface)
+  );
+  --terminal-key-unit: calc(
+    (100% - (var(--terminal-name-top-key-count) - 1) * var(--terminal-key-gap)) /
+      var(--terminal-name-top-key-count)
+  );
+}
+
+.terminal-page .name-keyboard-row {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: var(--terminal-key-gap);
+  width: 100%;
+}
+
+.terminal-page .name-keyboard-row--space {
+  justify-content: center;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--terminal-border) 80%, transparent);
+}
+
+.terminal-page .name-key {
+  flex: 0 1 var(--terminal-key-unit);
+  width: var(--terminal-key-unit);
+  max-width: var(--terminal-key-unit);
+  min-width: 0;
+  padding-inline: 4px;
+  font-size: var(--terminal-text-key);
+  letter-spacing: 0.02em;
+}
+
+.terminal-page .name-key--utility {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.terminal-page .name-key--space {
+  flex: 0 1 auto;
+  width: calc(
+    var(--terminal-name-space-key-count) * var(--terminal-key-unit) +
+      (var(--terminal-name-space-key-count) - 1) * var(--terminal-key-gap)
+  );
+  max-width: 100%;
+  letter-spacing: 0;
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.terminal-page .name-key--ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Confirmed check-in */
+.terminal-page .pill.pill--ok {
+  background: var(--terminal-success-bg);
+  color: var(--terminal-success-ink);
+}
+
+.terminal-page .terminal-confirmed-destination {
+  margin: 0 0 12px;
+  color: var(--terminal-emphasis);
+  font-size: var(--text-lg);
+  line-height: 1.4;
+}
+
+.terminal-page .terminal-confirmed-destination strong {
+  font-weight: 700;
+}
+
+.terminal-page .terminal-confirmed-summary {
+  margin: 16px 0 12px;
+  padding: 20px 18px;
+  text-align: center;
+}
+
+.terminal-page .terminal-confirmed-summary__ticket,
+.terminal-page .terminal-confirmed-summary__room {
+  padding: 4px 0;
+}
+
+.terminal-page .terminal-confirmed-summary__divider {
+  margin: 16px 0;
+  border-top: 2px dashed var(--terminal-ticket-border);
+  opacity: 0.85;
+}
+
+.terminal-page .terminal-confirmed-room-name {
+  margin: 0;
+  font-size: var(--terminal-text-room);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  color: var(--terminal-ink);
+}
+
+.terminal-page .terminal-confirmed-room-fallback {
+  margin: 0;
+  font-size: var(--terminal-text-ui);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--terminal-emphasis);
+}
+
+.terminal-page .terminal-confirmed-lead {
+  margin: 0 0 12px;
+  color: var(--terminal-emphasis);
+  font-size: var(--text-md);
+  line-height: 1.45;
+}
+
+.terminal-page .terminal-confirmed-topic {
+  margin: 0 0 8px;
+  color: var(--terminal-subtext);
+  font-size: var(--text-sm);
+}
+
+.terminal-page .terminal-callout {
+  margin: 20px 0;
+  padding: 18px 16px;
+  border-radius: var(--radius);
+  background: var(--card);
+  border: 2px solid var(--terminal-ink);
+}
+
+.terminal-page .terminal-callout--panel {
+  width: 100%;
+  margin: 0 0 20px;
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  text-align: left;
+}
+
+.terminal-page .terminal-callout__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: var(--terminal-ink);
+}
+
+.terminal-page .terminal-callout__head strong {
+  font-size: var(--terminal-text-field);
+  font-weight: 800;
+}
+
+.terminal-page .terminal-callout--panel > p {
+  margin: 0;
+  color: var(--terminal-subtext);
+  font-size: var(--text-base);
+  line-height: 1.45;
+}
+
+.terminal-page .terminal-callout--ticket {
+  background: var(--terminal-ticket-bg);
+  border: 2px dashed var(--terminal-ticket-border);
+}
+
+.terminal-page .terminal-callout-label {
+  margin: 0 0 6px;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--terminal-muted);
+  font-weight: 700;
+}
+
+.terminal-page .terminal-callout--ticket .terminal-callout-label {
+  color: var(--terminal-ticket-label);
+}
+
+.terminal-page .terminal-callout-ticket-num {
+  margin: 0;
+  font-size: var(--terminal-text-ticket);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  color: var(--terminal-ticket-num);
+}
+
+.terminal-page .terminal-btn-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 12px;
+  padding: 16px;
+  border: 2px solid var(--terminal-border-dim);
+  border-radius: var(--radius);
+  background: var(--terminal-surface);
+  color: var(--terminal-emphasis);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.terminal-page .terminal-btn-close:hover {
+  background: var(--terminal-border);
+}
+
+.terminal-page .terminal-btn-close-count {
+  font-weight: 600;
+  color: var(--terminal-muted);
+}
+
+/* Locked screen */
+.terminal-page .terminal-off-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.terminal-page .terminal-off-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  margin-bottom: 20px;
+  border-radius: var(--radius-full);
+  background: var(--terminal-surface);
+  border: 2px solid var(--terminal-border);
+  color: var(--terminal-subtext);
+}
+
+.terminal-page .terminal-off-badge {
+  margin-bottom: 12px;
+  padding: 6px 14px;
+  font-size: var(--text-xs);
+}
+
+.terminal-page .terminal-off-badge.pill--neutral {
+  background: var(--terminal-border);
+  color: var(--terminal-emphasis);
+}
+
+.terminal-page .terminal-off-title {
+  margin: 0 0 12px;
+  font-size: var(--terminal-text-locked-title);
+  line-height: 1.2;
+  color: var(--terminal-ink);
+}
+
+.terminal-page .terminal-off-lead {
+  margin: 0 0 24px;
+  max-width: 36ch;
+  color: var(--terminal-subtext);
+  font-size: var(--terminal-text-ui);
+  line-height: 1.5;
+}
+
+.terminal-page .terminal-off-emergency {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--terminal-destructive-text);
+}
+
+.terminal-page .terminal-off-emergency strong {
+  color: var(--terminal-destructive-ink);
+}
+
+/* WLAN promo */
+.terminal-page .terminal-wlan-promo {
+  width: 100%;
+  max-width: 520px;
+  margin-top: 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--terminal-wlan-border);
+  background: linear-gradient(
+    180deg,
+    var(--terminal-wlan-bg-top) 0%,
+    var(--terminal-wlan-bg-bottom) 100%
+  );
+}
+
+.terminal-page .terminal-wlan-promo-kicker {
+  margin: 0 0 0.35rem;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--terminal-wlan-kicker);
+}
+
+.terminal-page .terminal-wlan-promo-text {
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: 1.45;
+  color: var(--terminal-wlan-text);
+}
+
+.terminal-page .terminal-wlan-promo-text strong {
+  color: var(--terminal-wlan-strong);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* eGK mock slot */
+.terminal-page .terminal-egk-slot {
+  height: 100px;
+  border: 2px dashed var(--terminal-border-dim);
+  border-radius: var(--radius);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--terminal-muted);
+  margin: 16px 0;
+}
+
+.terminal-page .terminal-egk-slot--active {
+  border-color: var(--terminal-egk-accent);
+  background: var(--terminal-egk-bg);
+}
+
+.terminal-page .terminal-egk-slot svg {
+  color: var(--terminal-egk-accent);
+}
+
+.terminal-page .terminal-egk-hint {
+  font-size: var(--text-base);
+  color: var(--terminal-muted);
+  margin-top: 16px;
+  line-height: 1.45;
+}
+
+/* Receipt bon — kiosk window.print(), width from terminal print settings */
+@media screen {
+  .terminal-receipt-print-layer {
+    position: fixed;
+    left: -10000px;
+    top: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+}
+
+.terminal-receipt-bon {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0;
+  color: var(--zinc-900);
+  font-family: system-ui, sans-serif;
+  text-align: center;
+}
+
+.terminal-receipt-bon__practice {
+  margin: 0 0 2mm;
+  font-size: 4mm;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.terminal-receipt-bon__rule {
+  margin: 1mm 0;
+  font-size: 3mm;
+  line-height: 1;
+}
+
+.terminal-receipt-bon__ticket {
+  margin: 2mm 0;
+  font-size: 12mm;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.terminal-receipt-bon__room-label {
+  margin: 1.5mm 0 0;
+  font-size: 3.5mm;
+  line-height: 1.25;
+}
+
+.terminal-receipt-bon__room {
+  margin: 0.75mm 0 0;
+  font-size: 4mm;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.terminal-receipt-bon__topic,
+.terminal-receipt-bon__time,
+.terminal-receipt-bon__footer,
+.terminal-receipt-bon__test {
+  margin: 1.5mm 0 0;
+  font-size: 3.5mm;
+  line-height: 1.25;
+}
+
+.terminal-receipt-bon__test {
+  font-weight: 700;
+}
+
+@media print {
+  body.terminal-receipt-print-active > :not(.terminal-receipt-print-portal) {
+    display: none !important;
+  }
+
+  body.terminal-receipt-print-active .terminal-receipt-print-portal {
+    display: block !important;
+    position: static !important;
+    z-index: auto !important;
+  }
+
+  body.terminal-receipt-print-active .terminal-receipt-print-layer {
+    position: static;
+    left: 0;
+    top: 0;
+    width: 100%;
+    overflow: visible;
+  }
+}
+
+/* IT hotspot — portaled to document.body, always viewport-fixed */
+.terminal-print-setup-hotspot-wrap {
+  pointer-events: none;
+}
+
+.terminal-print-setup-hotspot {
+  position: fixed;
+  left: max(0px, env(safe-area-inset-left));
+  bottom: max(0px, env(safe-area-inset-bottom));
+  z-index: 9990;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: default;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+  pointer-events: auto;
+}

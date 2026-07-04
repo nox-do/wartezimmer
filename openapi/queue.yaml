@@ -1,0 +1,811 @@
+openapi: 3.1.0
+info:
+  title: Praxis Flow Queue API
+  version: 0.3.0
+security:
+  - staffSessionCookie: []
+  - tvDeviceSessionCookie: []
+  - roomPanelSessionCookie: []
+components:
+  securitySchemes:
+    staffSessionCookie:
+      type: apiKey
+      in: cookie
+      name: pf_staff_session
+    tvDeviceSessionCookie:
+      type: apiKey
+      in: cookie
+      name: pf_tv_device_session
+    roomPanelSessionCookie:
+      type: apiKey
+      in: cookie
+      name: pf_room_panel_session
+  schemas:
+    QueueItem:
+      type: object
+      additionalProperties: false
+      required:
+        - ticketId
+        - laneCode
+        - number
+        - topicId
+        - status
+        - arrivedAt
+        - waitMs
+        - documentCount
+        - hasMobilePhone
+      properties:
+        ticketId:
+          type: string
+          example: '20260530-A-001'
+        laneCode:
+          type: string
+        number:
+          type: integer
+        topicId:
+          type: string
+        topicLabel:
+          type: string
+        destinationRoomId:
+          type: string
+          nullable: true
+          description: Room snapshot from check-in (patient wayfinding / default call target).
+        destinationRoomLabel:
+          type: string
+          nullable: true
+        status:
+          $ref: './common.yaml#/components/schemas/QueueStatus'
+        roomId:
+          type: string
+          nullable: true
+        roomLabel:
+          type: string
+          nullable: true
+        arrivedAt:
+          type: string
+          format: date-time
+        waitMs:
+          type: integer
+        documentCount:
+          type: integer
+        hasMobilePhone:
+          type: boolean
+        checkinPhone:
+          type: string
+          nullable: true
+          description: Terminal check-in phone (staff queue only, not on TV)
+        callbackPhone:
+          type: string
+          nullable: true
+          description: Phone captured for absence/recall SMS (staff queue only)
+        identityRef:
+          type: string
+          nullable: true
+          description: Display name for MFA (CSV/eGK lookup or manual entry; staff queue only, not on TV; cleared on day reset)
+        returnUntil:
+          type: string
+          format: date-time
+          nullable: true
+        recallNotifyErrorCode:
+          type: string
+          nullable: true
+          description: Set when recall SMS/WhatsApp failed; enables MFA retry (staff queue only)
+        recallNotifySent:
+          type: boolean
+          description: True when recall SMS/WhatsApp was successfully sent for the current return window (staff queue only)
+        triageLevel:
+          type: string
+          nullable: true
+          enum:
+            - red
+            - yellow
+            - green
+          description: MFA-only visual marker (staff triage); not shown on TV
+    QueueTriageResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - resultType
+        - ticketId
+        - triageLevel
+        - updatedAt
+      properties:
+        resultType:
+          type: string
+          const: triage
+        ticketId:
+          type: string
+        triageLevel:
+          type: string
+          nullable: true
+          enum:
+            - red
+            - yellow
+            - green
+        updatedAt:
+          type: string
+          format: date-time
+    QueueMessageDispatch:
+      type: object
+      additionalProperties: false
+      required:
+        - provider
+        - attempted
+        - sent
+      properties:
+        provider:
+          type: string
+        attempted:
+          type: boolean
+        sent:
+          type: boolean
+        messageId:
+          type: string
+        errorCode:
+          type: string
+    QueueRecallRetryNotifyResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - resultType
+        - ticketId
+        - returnUntil
+        - recallNotifyErrorCode
+        - smsDispatch
+      properties:
+        resultType:
+          type: string
+          const: recall_notify_retry
+        ticketId:
+          type: string
+        returnUntil:
+          type: string
+          format: date-time
+        recallNotifyErrorCode:
+          type: string
+          nullable: true
+        smsDispatch:
+          $ref: '#/components/schemas/QueueMessageDispatch'
+    QueueCallbackPhoneResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - ticketId
+        - callbackPhone
+        - updatedAt
+      properties:
+        ticketId:
+          type: string
+        callbackPhone:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+    QueueCallbackPhoneClearResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - ticketId
+        - updatedAt
+      properties:
+        ticketId:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+    QueueIdentityRefResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - ticketId
+        - identityRef
+        - updatedAt
+      properties:
+        ticketId:
+          type: string
+        identityRef:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+    QueueListMfaResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - view
+        - revision
+        - items
+        - checkinLocked
+        - serverTime
+      properties:
+        view:
+          type: string
+          const: mfa
+        revision:
+          type: integer
+          minimum: 0
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueueItem'
+        checkinLocked:
+          type: boolean
+        serverTime:
+          type: string
+          format: date-time
+    QueueTvItem:
+      type: object
+      additionalProperties: false
+      required:
+        - laneCode
+        - number
+        - status
+        - roomLabel
+      properties:
+        laneCode:
+          type: string
+        number:
+          type: integer
+        status:
+          $ref: './common.yaml#/components/schemas/QueueStatus'
+        roomLabel:
+          type: string
+          nullable: true
+    QueueListTvResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - view
+        - revision
+        - items
+        - checkinLocked
+        - serverTime
+      properties:
+        view:
+          type: string
+          const: tv
+        revision:
+          type: integer
+          minimum: 0
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueueTvItem'
+        checkinLocked:
+          type: boolean
+        serverTime:
+          type: string
+          format: date-time
+    RoomPanelItem:
+      type: object
+      additionalProperties: false
+      required:
+        - ticketId
+        - laneCode
+        - number
+        - status
+        - roomId
+        - roomLabel
+      properties:
+        ticketId:
+          type: string
+        laneCode:
+          type: string
+        number:
+          type: integer
+        status:
+          type: string
+          enum:
+            - called
+            - in_room
+        calledAt:
+          type: string
+          format: date-time
+        roomId:
+          type: string
+        roomLabel:
+          type: string
+        identityRef:
+          type: string
+          nullable: true
+          description: Only present for inside panels when showPatientNames is enabled.
+    RoomPanelSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - view
+        - roomId
+        - roomLabel
+        - revision
+        - serverTime
+        - panel
+        - items
+      properties:
+        view:
+          type: string
+          const: room-panel
+        roomId:
+          type: string
+        roomLabel:
+          type: string
+        revision:
+          type: integer
+          minimum: 0
+        serverTime:
+          type: string
+          format: date-time
+        panel:
+          type: object
+          additionalProperties: false
+          required:
+            - placement
+            - mode
+            - showPatientNames
+            - calledText
+            - arrivedText
+          properties:
+            placement:
+              type: string
+              enum:
+                - outside
+                - inside
+            mode:
+              type: string
+              enum:
+                - display_only
+                - arrival
+                - staff_full
+            showPatientNames:
+              type: boolean
+            calledText:
+              type: string
+            arrivedText:
+              type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomPanelItem'
+    QueueListResponse:
+      oneOf:
+        - $ref: '#/components/schemas/QueueListMfaResponse'
+        - $ref: '#/components/schemas/QueueListTvResponse'
+        - $ref: '#/components/schemas/RoomPanelSnapshot'
+    QueueSummaryResponse:
+      type: object
+      required:
+        - waitingNow
+        - calledNow
+        - inRoomNow
+        - absentNow
+        - processedToday
+        - checkinLocked
+        - dayClosePhase
+        - serverTime
+      properties:
+        waitingNow:
+          type: integer
+        calledNow:
+          type: integer
+        inRoomNow:
+          type: integer
+        absentNow:
+          type: integer
+        processedToday:
+          type: integer
+        checkinLocked:
+          type: boolean
+        dayClosePhase:
+          type: string
+          enum:
+            - open
+            - started
+        serverTime:
+          type: string
+          format: date-time
+    QueueCallResponse:
+      type: object
+      required:
+        - ticketId
+        - fromStatus
+        - toStatus
+        - updatedAt
+        - roomId
+        - roomLabel
+      properties:
+        ticketId:
+          type: string
+        fromStatus:
+          $ref: './common.yaml#/components/schemas/QueueStatus'
+        toStatus:
+          $ref: './common.yaml#/components/schemas/QueueStatus'
+        updatedAt:
+          type: string
+          format: date-time
+        roomId:
+          type: string
+          nullable: true
+        roomLabel:
+          type: string
+          nullable: true
+    QueueRoomActionBody:
+      type: object
+      additionalProperties: false
+      properties:
+        roomId:
+          type: string
+        roomLabel:
+          type: string
+        actingRoomId:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: >-
+            When set, check-in/out only succeeds if the ticket's assigned room_id matches
+            (room panel). Omit for MFA staff actions without room scope.
+    QueueTicketTransitionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - call
+            - check_in_room
+            - reassign_room
+            - check_out_room
+            - return_to_waiting
+            - cycle_triage
+            - set_absence
+            - recall
+            - retry_recall_notify
+        roomId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        roomLabel:
+          type: string
+          minLength: 1
+          maxLength: 128
+        actingRoomId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        mode:
+          $ref: '#/components/schemas/AbsenceMode'
+        returnWindowMinutes:
+          type: integer
+          minimum: 1
+          maximum: 240
+        notifyChannel:
+          type: string
+          enum:
+            - sms
+            - whatsapp
+    QueueTicketTransitionResponse:
+      oneOf:
+        - $ref: '#/components/schemas/QueueTransitionResponse'
+        - $ref: '#/components/schemas/QueueTriageResponse'
+        - $ref: '#/components/schemas/QueueRecallResponse'
+        - $ref: '#/components/schemas/QueueRecallRetryNotifyResponse'
+    QueueTransitionResponse:
+      type: object
+      required:
+        - resultType
+        - ticketId
+        - fromStatus
+        - toStatus
+        - updatedAt
+        - roomId
+        - roomLabel
+      properties:
+        resultType:
+          type: string
+          const: transition
+        ticketId:
+          type: string
+        fromStatus:
+          $ref: './common.yaml#/components/schemas/QueueStatus'
+        toStatus:
+          $ref: './common.yaml#/components/schemas/QueueStatus'
+        updatedAt:
+          type: string
+          format: date-time
+        roomId:
+          type: string
+          nullable: true
+        roomLabel:
+          type: string
+          nullable: true
+    QueueRecallResponse:
+      type: object
+      required:
+        - resultType
+        - ticketId
+        - fromStatus
+        - toStatus
+        - updatedAt
+        - returnUntil
+        - smsDispatch
+      properties:
+        resultType:
+          type: string
+          const: recall
+        ticketId:
+          type: string
+        fromStatus:
+          $ref: './common.yaml#/components/schemas/QueueStatus'
+        toStatus:
+          $ref: './common.yaml#/components/schemas/QueueStatus'
+        updatedAt:
+          type: string
+          format: date-time
+        returnUntil:
+          type: string
+          format: date-time
+        smsDispatch:
+          nullable: true
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required:
+                - provider
+                - attempted
+                - sent
+              properties:
+                provider:
+                  type: string
+                attempted:
+                  type: boolean
+                sent:
+                  type: boolean
+                messageId:
+                  type: string
+                errorCode:
+                  type: string
+    AbsenceMode:
+      type: string
+      enum:
+        - wait_here
+        - return_later
+    MarkAbsenceLookupRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        phoneNumber:
+          type: string
+          minLength: 3
+          maxLength: 64
+        ticketCode:
+          type: string
+          minLength: 3
+          maxLength: 16
+        mode:
+          type: string
+          enum:
+            - wait_here
+            - return_later
+paths:
+  /api/v1/queue:
+    get:
+      summary: Get current queue list (role-filtered payload)
+      responses:
+        '200':
+          description: Queue list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueListResponse'
+  /api/v1/queue/summary:
+    get:
+      summary: Get queue and daily progress summary for dashboard
+      responses:
+        '200':
+          description: Summary counters for MFA overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueSummaryResponse'
+  /api/v1/queue/mark-absence:
+    post:
+      summary: Mark patient absent by phone number or ticket code lookup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkAbsenceLookupRequest'
+      responses:
+        '200':
+          description: Ticket marked absent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueTransitionResponse'
+        '400':
+          description: Invalid request or ticket code required
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Invalid transition or ambiguous lookup
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/queue/{ticket}/transition:
+    post:
+      summary: Apply a typed workflow transition to a queue ticket
+      parameters:
+        - in: path
+          name: ticket
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueueTicketTransitionRequest'
+      responses:
+        '200':
+          description: Ticket transition applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueTicketTransitionResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Invalid transition
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/queue/{ticket}/callback-phone:
+    put:
+      summary: Set MFA callback phone for recall SMS (separate from terminal check-in phone)
+      parameters:
+        - in: path
+          name: ticket
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - callbackPhone
+              properties:
+                callbackPhone:
+                  type: string
+                  minLength: 3
+                  maxLength: 32
+      responses:
+        '200':
+          description: Callback phone stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueCallbackPhoneResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Ticket not in a state that allows updating callback phone
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+    delete:
+      summary: Clear MFA callback phone (recall falls back to terminal check-in phone)
+      parameters:
+        - in: path
+          name: ticket
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Callback phone cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueCallbackPhoneClearResponse'
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Ticket not in a state that allows updating callback phone
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/queue/{ticket}/identity-ref:
+    patch:
+      summary: Set MFA display name for a ticket without identity (manual entry in waiting list)
+      parameters:
+        - in: path
+          name: ticket
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - identityRef
+              properties:
+                identityRef:
+                  type: string
+                  minLength: 1
+                  maxLength: 160
+      responses:
+        '200':
+          description: Display name stored on ticket
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueIdentityRefResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Ticket not in waiting list or already has a display name
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'

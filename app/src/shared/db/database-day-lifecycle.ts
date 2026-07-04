@@ -1,0 +1,156 @@
+import type { StatementSync } from 'node:sqlite';
+import type { DayClosePhase, DayLifecycleState } from './db-types.js';
+import { getEmergencyStateFromDb } from './database-emergency.js';
+import { getBusinessDayTicketStatsFromDb } from './database-business-day-stats.js';
+import { domainError } from '../errors/domain-error.js';
+
+type DayCloseStateRow =
+  | { locked?: number; phase?: string; lastResetBusinessDay?: string }
+  | undefined;
+
+type DayLifecycleStatements = {
+  dayCloseStateStmt: StatementSync;
+  updateCheckinLockStmt: StatementSync;
+  updateDayClosePhaseStmt: StatementSync;
+  updateLastResetBusinessDayStmt: StatementSync;
+  deleteAllTicketsStmt: StatementSync;
+  deleteAllOutboxEventsStmt: StatementSync;
+  clearEmergencyStateStmt: StatementSync;
+  emergencyStateStmt: StatementSync;
+  countAllTicketsStmt: StatementSync;
+  countTicketsByBusinessDayStmt: StatementSync;
+  maxWaitMsByBusinessDayStmt: StatementSync;
+  topicCountsByBusinessDayStmt: StatementSync;
+  listOpenTicketsByBusinessDayStmt: StatementSync;
+};
+
+type DayLifecycleHelpers = {
+  nowIso: () => string;
+  getBusinessDay: () => string;
+  normalizeDayClosePhase: (phase: string | undefined) => DayClosePhase;
+  emitOutboxEvent: (
+    eventType: string,
+    aggregateId: string,
+    payload: Record<string, unknown>,
+  ) => void;
+};
+
+type DayLifecycleDeps = DayLifecycleStatements & DayLifecycleHelpers;
+
+type DayResetResult = {
+  dayClosePhase: DayClosePhase;
+  resetTicketCount: number;
+  updatedAt: string;
+  lastResetBusinessDay: string;
+  emergencyCleared: boolean;
+  sandboxRestartRequired: true;
+};
+
+function resolveNeedsDayStartHint(
+  deps: Pick<DayLifecycleHelpers, 'getBusinessDay'>,
+  row: DayCloseStateRow,
+): boolean {
+  const businessDay = deps.getBusinessDay();
+  const lastResetBusinessDay = row?.lastResetBusinessDay ?? businessDay;
+  return businessDay !== lastResetBusinessDay;
+}
+
+export function needsDayStartHintFromRow(
+  deps: Pick<DayLifecycleHelpers, 'getBusinessDay'>,
+  row: DayCloseStateRow,
+): boolean {
+  return resolveNeedsDayStartHint(deps, row);
+}
+
+export function isEffectiveCheckinLockedFromRow(
+  deps: Pick<DayLifecycleHelpers, 'getBusinessDay'>,
+  row: DayCloseStateRow,
+): boolean {
+  return row?.locked === 1 || needsDayStartHintFromRow(deps, row);
+}
+
+/** Patient check-in blocked until MFA resets the business day or unlocks after reset. */
+export function isEffectiveCheckinLockedFromDb(deps: DayLifecycleDeps): boolean {
+  const row = deps.dayCloseStateStmt.get() as DayCloseStateRow;
+  return isEffectiveCheckinLockedFromRow(deps, row);
+}
+
+function executeBusinessDayReset(deps: DayLifecycleDeps, resetTicketCount: number): DayResetResult {
+  const updatedAt = deps.nowIso();
+  const lastResetBusinessDay = deps.getBusinessDay();
+
+  const emergencyBefore = getEmergencyStateFromDb(deps);
+  deps.deleteAllTicketsStmt.run();
+  deps.deleteAllOutboxEventsStmt.run();
+  if (emergencyBefore.active) {
+    deps.clearEmergencyStateStmt.run(updatedAt);
+  }
+  deps.updateCheckinLockStmt.run(1, updatedAt);
+  deps.updateDayClosePhaseStmt.run('open', updatedAt);
+  deps.updateLastResetBusinessDayStmt.run(lastResetBusinessDay, updatedAt);
+  deps.emitOutboxEvent('BusinessDayReset', 'ops', {
+    updatedAt,
+    dayClosePhase: 'open',
+    resetTicketCount,
+    lastResetBusinessDay,
+    sandboxRestartRequired: true,
+  });
+  return {
+    dayClosePhase: 'open',
+    resetTicketCount,
+    updatedAt,
+    lastResetBusinessDay,
+    emergencyCleared: emergencyBefore.active,
+    sandboxRestartRequired: true,
+  };
+}
+
+export function getDayLifecycleStateFromDb(deps: DayLifecycleDeps): DayLifecycleState {
+  const businessDay = deps.getBusinessDay();
+  const row = deps.dayCloseStateStmt.get() as DayCloseStateRow;
+  const lastResetBusinessDay = row?.lastResetBusinessDay ?? businessDay;
+
+  const needsDayStartHint = resolveNeedsDayStartHint(deps, row);
+  const lastDayStats = needsDayStartHint
+    ? getBusinessDayTicketStatsFromDb(deps, lastResetBusinessDay)
+    : null;
+
+  return {
+    businessDay,
+    lastResetBusinessDay,
+    needsDayStartHint,
+    checkinLocked: row?.locked === 1,
+    dayClosePhase: deps.normalizeDayClosePhase(row?.phase),
+    lastDayStats,
+  };
+}
+
+export function startDayCloseInDb(deps: DayLifecycleDeps): {
+  dayClosePhase: DayClosePhase;
+  updatedAt: string;
+} {
+  const state = deps.dayCloseStateStmt.get() as DayCloseStateRow;
+  const dayClosePhase = deps.normalizeDayClosePhase(state?.phase);
+  const checkinLocked = state?.locked === 1;
+
+  if (!checkinLocked) {
+    throw domainError('CHECKIN_LOCK_REQUIRED');
+  }
+  if (dayClosePhase !== 'open') {
+    throw domainError('INVALID_DAY_CLOSE_PHASE');
+  }
+
+  const updatedAt = deps.nowIso();
+  deps.updateDayClosePhaseStmt.run('started', updatedAt);
+  deps.emitOutboxEvent('DayCloseStarted', 'ops', {
+    updatedAt,
+    dayClosePhase: 'started',
+  });
+  return { dayClosePhase: 'started', updatedAt };
+}
+
+export function resetBusinessDayInDb(deps: DayLifecycleDeps): DayResetResult {
+  const totalRow = deps.countAllTicketsStmt.get() as { count?: number } | undefined;
+  const resetTicketCount = totalRow?.count ?? 0;
+  return executeBusinessDayReset(deps, resetTicketCount);
+}

@@ -1,0 +1,39 @@
+# Build context is the repo root (see docker-compose.yml). This file applies to all Dockerfiles.
+
+# Dependencies and build outputs (rebuilt inside the image)
+**/node_modules
+**/dist
+**/coverage
+ui/build
+ui/.svelte-kit
+
+# Secrets and local env (Compose injects .env at runtime; never bake into images)
+.env
+.env.*
+!.env.example
+ui/.env
+
+# VCS and editor
+.git
+.gitattributes
+.editorconfig
+.prettierignore
+.DS_Store
+
+# Local/runtime data not needed for image builds
+data
+logs
+docs_data
+.tmp
+.exports-host
+seed
+
+# Docs and project notes
+docs
+*.md
+todo.md
+
+# Host setup sources (only setup/package.json is copied for workspace npm ci)
+setup/src
+
+# Electron/installer work happens outside container builds for now

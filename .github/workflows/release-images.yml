@@ -1,0 +1,43 @@
+name: Release images
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.4.2, without v prefix)'
+        required: true
+        type: string
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and pack release images
+        env:
+          PRAXIS_FLOW_RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: npm run release:images
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: praxis-flow-release-${{ steps.version.outputs.value }}
+          path: dist/releases/praxis-flow-${{ steps.version.outputs.value }}/
+          retention-days: 90

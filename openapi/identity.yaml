@@ -1,0 +1,202 @@
+openapi: 3.1.0
+info:
+  title: Praxis Flow Identity API
+  version: 0.1.0
+security:
+  - staffSessionCookie: []
+components:
+  securitySchemes:
+    staffSessionCookie:
+      type: apiKey
+      in: cookie
+      name: pf_staff_session
+  schemas:
+    MfaLookupCandidate:
+      type: object
+      required:
+        - identityRef
+        - firstName
+        - lastName
+        - birthDate
+        - phoneNumberMasked
+      properties:
+        identityRef:
+          type: string
+          maxLength: 160
+        firstName:
+          type: string
+          nullable: true
+          maxLength: 160
+        lastName:
+          type: string
+          nullable: true
+          maxLength: 160
+        birthDate:
+          type: string
+          nullable: true
+          maxLength: 32
+        phoneNumberMasked:
+          type: string
+          nullable: true
+          maxLength: 32
+        phoneNumberExact:
+          type: string
+          nullable: true
+          maxLength: 32
+paths:
+  /api/v1/identity/phone-dob-lookup:
+    post:
+      summary: Resolve minimal identity reference by phone number and date of birth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phoneNumber
+                - birthDate
+              additionalProperties: false
+              properties:
+                phoneNumber:
+                  type: string
+                  minLength: 3
+                  maxLength: 64
+                birthDate:
+                  type: string
+                  pattern: '^\d{4}-\d{2}-\d{2}$'
+      responses:
+        '200':
+          description: Lookup result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - found
+                  - identityRef
+                properties:
+                  found:
+                    type: boolean
+                  identityRef:
+                    type: string
+                    nullable: true
+                    maxLength: 160
+        '400':
+          description: Invalid request or lookup preconditions
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/identity/mfa-lookup:
+    post:
+      summary: Lookup identity candidates for MFA-assisted check-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              description: At least one of name or phoneNumber must be non-empty; birthDate is only an additional filter.
+              properties:
+                name:
+                  type: string
+                  minLength: 3
+                  maxLength: 160
+                birthDate:
+                  type: string
+                  minLength: 8
+                  maxLength: 32
+                phoneNumber:
+                  type: string
+                  minLength: 3
+                  maxLength: 64
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
+      responses:
+        '200':
+          description: Candidate list
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - candidates
+                properties:
+                  candidates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MfaLookupCandidate'
+        '400':
+          description: Invalid request or lookup preconditions
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '429':
+          description: Too many lookup requests
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/identity/{ticket}:
+    get:
+      summary: Read identity-related ticket details for MFA context
+      parameters:
+        - in: path
+          name: ticket
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Ticket identity details
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - ticketId
+                  - laneCode
+                  - topicLabel
+                  - number
+                  - topicId
+                  - authPath
+                  - identityRef
+                  - status
+                  - createdAt
+                  - updatedAt
+                properties:
+                  ticketId:
+                    type: string
+                  laneCode:
+                    type: string
+                  topicLabel:
+                    type: string
+                  number:
+                    type: integer
+                  topicId:
+                    type: string
+                  authPath:
+                    type: string
+                  identityRef:
+                    type: string
+                    nullable: true
+                  status:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'

@@ -1,0 +1,149 @@
+import type { FastifyInstance } from 'fastify';
+import type { CoreDatabase } from '../../shared/db/database.js';
+import type { BusinessDayResetBody, CheckinLockBody } from '../../api/ops-openapi-types.js';
+import { opsSchemas } from '../../api/generated/ops.fastify-schemas.js';
+import { notifyEmergencyChanged } from '../../shared/ops/ops-emergency-events.js';
+import { publishTvQueueUpdate } from '../../shared/queue/queue-stream-hub.js';
+import { resyncRecallWindowExpiryScheduler } from '../../shared/queue/recall-window-expiry-scheduler.js';
+import { scheduleContactLookupCacheRefreshAfterBusinessDayReset } from '../../shared/contacts/contact-lookup-day-refresh.js';
+import { handleOpsRouteError } from './ops-errors.js';
+import { requestSandboxRestartForDayReset } from './ops-sandbox-restart.js';
+
+function notifyTvQueueChanged(db: CoreDatabase): void {
+  publishTvQueueUpdate(db);
+}
+
+function completeBusinessDayReset(
+  app: FastifyInstance,
+  db: CoreDatabase,
+  trigger: 'day-lifecycle-reset',
+) {
+  const reset = db.resetBusinessDay();
+  if (reset.emergencyCleared) {
+    notifyEmergencyChanged(db);
+  }
+  notifyTvQueueChanged(db);
+  resyncRecallWindowExpiryScheduler(db);
+  scheduleContactLookupCacheRefreshAfterBusinessDayReset(db, app.log);
+  void requestSandboxRestartForDayReset(app, trigger).then((restartOk) => {
+    if (!restartOk) {
+      app.log.warn(`Sandbox restart after ${trigger} was not confirmed.`);
+    }
+  });
+  return {
+    ...reset,
+    sandboxRestartInitiated: true as const,
+  };
+}
+
+export function registerOpsDayLifecycleRoutes(app: FastifyInstance, db: CoreDatabase): void {
+  app.get(
+    '/api/v1/ops/day-lifecycle',
+    {
+      schema: {
+        response: {
+          200: opsSchemas.GET_api_v1_ops_day_lifecycleResponse200,
+        },
+      },
+    },
+    async () => {
+      return db.getDayLifecycleState();
+    },
+  );
+
+  app.post<{ Body: BusinessDayResetBody }>(
+    '/api/v1/ops/day-lifecycle/reset',
+    {
+      schema: {
+        body: opsSchemas.POST_api_v1_ops_day_lifecycle_resetRequestBody,
+        response: {
+          200: opsSchemas.POST_api_v1_ops_day_lifecycle_resetResponse200,
+          400: opsSchemas.POST_api_v1_ops_day_lifecycle_resetResponse400,
+        },
+      },
+    },
+    async (_request, reply) => {
+      try {
+        return completeBusinessDayReset(app, db, 'day-lifecycle-reset');
+      } catch (error) {
+        const handled = handleOpsRouteError(reply, error, {});
+        if (handled) {
+          return;
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Body: CheckinLockBody }>(
+    '/api/v1/ops/checkin-lock',
+    {
+      schema: {
+        body: opsSchemas.POST_api_v1_ops_checkin_lockRequestBody,
+        response: {
+          200: opsSchemas.POST_api_v1_ops_checkin_lockResponse200,
+          400: opsSchemas.POST_api_v1_ops_checkin_lockResponse400,
+          409: opsSchemas.POST_api_v1_ops_checkin_lockResponse409,
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const next = request.body.locked;
+        const state = db.setCheckinLock(next);
+        notifyTvQueueChanged(db);
+        const ops = db.getOpsState();
+        return {
+          checkinLocked: state.checkinLocked,
+          dayClosePhase: ops.dayClosePhase,
+          updatedAt: state.updatedAt,
+        };
+      } catch (error) {
+        const handled = handleOpsRouteError(reply, error, {
+          dayCloseInProgressMessage:
+            'Check-in kann waehrend laufendem Day-close nicht entsperrt werden.',
+        });
+        if (handled) {
+          return;
+        }
+
+        throw error;
+      }
+    },
+  );
+
+  app.post(
+    '/api/v1/ops/day-close/start',
+    {
+      schema: {
+        response: {
+          200: opsSchemas.POST_api_v1_ops_day_close_startResponse200,
+          400: opsSchemas.POST_api_v1_ops_day_close_startResponse400,
+          409: opsSchemas.POST_api_v1_ops_day_close_startResponse409,
+        },
+      },
+    },
+    async (_request, reply) => {
+      try {
+        const state = db.startDayClose();
+        const ops = db.getOpsState();
+        return {
+          checkinLocked: ops.checkinLocked,
+          dayClosePhase: state.dayClosePhase,
+          updatedAt: state.updatedAt,
+        };
+      } catch (error) {
+        const handled = handleOpsRouteError(reply, error, {
+          checkinLockRequiredMessage:
+            'Day-close kann nur bei aktivem Check-in-Lock gestartet werden.',
+          invalidDayClosePhaseMessage: 'Day-close wurde bereits gestartet.',
+        });
+        if (handled) {
+          return;
+        }
+
+        throw error;
+      }
+    },
+  );
+}

@@ -1,0 +1,104 @@
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+/* Secondary / explanatory copy */
+.text-desc,
+.page-lead,
+.modal-form-hint,
+.field-hint {
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: 1.45;
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+
+.page-lead {
+  margin-bottom: var(--spacing-3);
+}
+
+.mfa-page .staff-settings .text-desc,
+.qs-panel-desc,
+.mfa-page .pairing-confirm .page-lead {
+  color: var(--mfa-muted);
+}
+
+.text-desc--tight {
+  margin-bottom: 0.5rem;
+}
+
+.text-desc--xs,
+.modal-form-hint,
+.field-hint {
+  font-size: var(--text-xs);
+  line-height: 1.35;
+}
+
+.modal-form-hint {
+  line-height: 1.4;
+}
+
+.qs-panel-desc {
+  margin-bottom: 8px;
+  font-size: var(--text-xs);
+  line-height: 1.35;
+}
+
+.staff-settings .mfa-editor-head .text-desc {
+  margin-bottom: 0;
+}
+
+.text-link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.text-link:hover {
+  text-decoration: underline;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-2 {
+  gap: var(--spacing-2);
+}
+
+.mt-2 {
+  margin-top: var(--spacing-2);
+}
+
+.mb-2 {
+  margin-bottom: var(--spacing-2);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

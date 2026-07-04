@@ -1,0 +1,48 @@
+import type { DatabaseSync } from 'node:sqlite';
+import type { AuthPath } from '@praxis-flow/flow-core';
+import type { CreateTicketCallerInput } from '../db/db-types.js';
+import type { CheckinSessionDeps } from '../db/database-checkin-sessions.js';
+import { assertCheckInAllowed } from '../db/database-checkin-sessions.js';
+import { resolveTopicLabelFromSettings } from '../checkin-topic-settings.js';
+import { getFlowCoreRuntime } from './flow-core-runtime.js';
+import { PF_FLOW_SURFACE_TERMINAL } from './sync-catalog-from-ops-settings.js';
+
+export function createVisitCheckInInDb(
+  deps: CheckinSessionDeps & { db: DatabaseSync },
+  input: CreateTicketCallerInput,
+): { ticketId: string; number: number; createdAt: string } {
+  assertCheckInAllowed(deps, input.topicId);
+
+  const settings = deps.getOpsSettings();
+  const runtime = getFlowCoreRuntime(deps.db);
+
+  const visit = runtime.checkIn({
+    topicId: input.topicId,
+    authPath: input.authPath as AuthPath,
+    surfaceId: PF_FLOW_SURFACE_TERMINAL,
+    displayName: input.identityRef?.trim() || undefined,
+  });
+  if (!visit) {
+    throw new Error('CHECKIN_FAILED');
+  }
+
+  const topicLabel = visit.topic?.name ?? resolveTopicLabelFromSettings(settings, input.topicId);
+  const createdAt = visit.checkedInAt ?? visit.createdAt;
+
+  deps.emitOutboxEvent('CheckinCreated', visit.id, {
+    ticketId: visit.id,
+    visitId: visit.id,
+    topicId: input.topicId,
+    topicLabel,
+    authPath: input.authPath,
+    laneCode: visit.queueLaneCode,
+    number: visit.queueSequence,
+    createdAt,
+  });
+
+  return {
+    ticketId: visit.id,
+    number: visit.queueSequence,
+    createdAt,
+  };
+}

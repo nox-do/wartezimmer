@@ -1,0 +1,24 @@
+{
+  "name": "@praxis-flow/setup",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test src/*.test.ts",
+    "cli": "tsx src/cli.ts",
+    "serve": "tsx src/server.ts",
+    "reset": "tsx src/reset-cli.ts"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.10.1",
+    "@praxis-flow/server-shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  }
+}

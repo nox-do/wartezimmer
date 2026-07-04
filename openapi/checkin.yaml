@@ -1,0 +1,232 @@
+openapi: 3.1.0
+info:
+  title: Praxis Flow Check-in API
+  version: 0.2.0
+security:
+  - staffSessionCookie: []
+  - terminalDeviceSessionCookie: []
+components:
+  securitySchemes:
+    staffSessionCookie:
+      type: apiKey
+      in: cookie
+      name: pf_staff_session
+    terminalDeviceSessionCookie:
+      type: apiKey
+      in: cookie
+      name: pf_terminal_device_session
+  schemas:
+    TicketCreated:
+      type: object
+      required:
+        - ticketId
+        - laneCode
+        - number
+        - queueStatus
+        - createdAt
+      properties:
+        ticketId:
+          type: string
+          description: Internal unique ticket id.
+          example: '20260530-A-001'
+        laneCode:
+          type: string
+          example: 'A'
+        number:
+          type: integer
+          example: 1
+        queueStatus:
+          $ref: './common.yaml#/components/schemas/QueueStatus'
+        createdAt:
+          type: string
+          format: date-time
+        destinationRoomLabel:
+          type: string
+          nullable: true
+          description: Patient-facing hint — default room for the chosen topic (wayfinding at check-in).
+    TerminalTopic:
+      type: object
+      required:
+        - topicId
+        - label
+        - sortOrder
+        - iconId
+        - accentColor
+        - availableFrom
+        - availableTo
+      properties:
+        topicId:
+          type: string
+        label:
+          type: string
+        sortOrder:
+          type: integer
+        iconId:
+          type: string
+          nullable: true
+        accentColor:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          description: Badge color for lane letter and terminal tile accent.
+        availableFrom:
+          type: string
+          nullable: true
+        availableTo:
+          type: string
+          nullable: true
+paths:
+  /api/v1/checkins/topics:
+    get:
+      summary: List enabled terminal topics for check-in UI
+      responses:
+        '200':
+          description: Terminal topic catalog
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - topics
+                properties:
+                  topics:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TerminalTopic'
+  /api/v1/checkins:
+    post:
+      summary: Create check-in ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - topicId
+                - authPath
+              properties:
+                topicId:
+                  type: string
+                  minLength: 1
+                  maxLength: 64
+                  pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+                  description: Configured terminal topic id from ops settings.
+                authPath:
+                  type: string
+                  enum:
+                    - phone_dob
+                    - name_dob
+                    - egk
+                    - mfa_assist
+                identityRef:
+                  type: string
+                phoneNumber:
+                  type: string
+                  description: Optional phone number for CSV identity lookup; stored on the ticket when authPath is phone_dob (portal anamnese prefill).
+                lastName:
+                  type: string
+                  minLength: 1
+                  maxLength: 160
+                  description: Last name for CSV identity lookup when authPath is name_dob (case-insensitive exact match on the CSV lastName column).
+                birthDate:
+                  type: string
+                  minLength: 8
+                  maxLength: 32
+                  description: Birth date for CSV identity lookup when authPath is phone_dob (optional) or name_dob (required), e.g. DD.MM.YYYY or YYYY-MM-DD.
+      responses:
+        '201':
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketCreated'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Check-in rejected by configured opening-hour guardrails
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+              examples:
+                checkinClosed:
+                  summary: Practice currently closed
+                  value:
+                    code: CHECKIN_CLOSED
+                    message: Check-in ist ausserhalb der Praxiszeiten nicht verfuegbar.
+                topicDisabled:
+                  summary: Topic currently disabled (e.g. open consultation / offen)
+                  value:
+                    code: TOPIC_DISABLED
+                    message: Thema ist derzeit deaktiviert.
+                topicClosed:
+                  summary: Topic currently outside configured topic window
+                  value:
+                    code: TOPIC_CLOSED
+                    message: Thema ist aktuell ausserhalb des konfigurierten Zeitfensters.
+                checkinLocked:
+                  summary: Check-in locked by MFA/ops
+                  value:
+                    code: CHECKIN_LOCKED
+                    message: Check-in ist derzeit gesperrt.
+        '500':
+          description: Invalid opening-hour configuration
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+              examples:
+                opsSettingsInvalid:
+                  summary: Invalid practice-hour settings
+                  value:
+                    code: OPS_SETTINGS_INVALID
+                    message: Praxiszeiten sind ungueltig konfiguriert.
+  /api/v1/checkins/mfa-assist:
+    post:
+      summary: Create check-in via direct MFA path
+      responses:
+        '201':
+          description: MFA ticket created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketCreated'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Check-in rejected by configured opening-hour guardrails
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+              examples:
+                checkinClosed:
+                  summary: Practice currently closed
+                  value:
+                    code: CHECKIN_CLOSED
+                    message: Check-in ist ausserhalb der Praxiszeiten nicht verfuegbar.
+                checkinLocked:
+                  summary: Check-in locked by MFA/ops
+                  value:
+                    code: CHECKIN_LOCKED
+                    message: Check-in ist derzeit gesperrt.
+        '500':
+          description: Invalid opening-hour configuration
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+              examples:
+                opsSettingsInvalid:
+                  summary: Invalid practice-hour settings
+                  value:
+                    code: OPS_SETTINGS_INVALID
+                    message: Praxiszeiten sind ungueltig konfiguriert.

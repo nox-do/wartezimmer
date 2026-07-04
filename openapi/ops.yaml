@@ -1,0 +1,1819 @@
+openapi: 3.1.0
+info:
+  title: Praxis Flow Ops API
+  version: 0.2.0
+security:
+  - staffSessionCookie: []
+  - tvDeviceSessionCookie: []
+  - terminalDeviceSessionCookie: []
+components:
+  securitySchemes:
+    staffSessionCookie:
+      type: apiKey
+      in: cookie
+      name: pf_staff_session
+    tvDeviceSessionCookie:
+      type: apiKey
+      in: cookie
+      name: pf_tv_device_session
+    terminalDeviceSessionCookie:
+      type: apiKey
+      in: cookie
+      name: pf_terminal_device_session
+  schemas:
+    OpsStateResponse:
+      type: object
+      required:
+        - checkinLocked
+        - dayClosePhase
+        - updatedAt
+      properties:
+        checkinLocked:
+          type: boolean
+        dayClosePhase:
+          type: string
+          enum:
+            - open
+            - started
+        updatedAt:
+          type: string
+          format: date-time
+    BusinessDayResetResponse:
+      type: object
+      required:
+        - dayClosePhase
+        - resetTicketCount
+        - updatedAt
+        - lastResetBusinessDay
+        - sandboxRestartRequired
+        - sandboxRestartInitiated
+      properties:
+        dayClosePhase:
+          type: string
+          enum:
+            - open
+            - started
+          description: Always open after a successful business-day reset.
+        resetTicketCount:
+          type: integer
+          description: Tickets cleared during the reset (runtime queue data only).
+        updatedAt:
+          type: string
+          format: date-time
+        lastResetBusinessDay:
+          type: string
+          description: Business day stamped by the reset (BUSINESS_TZ).
+        sandboxRestartRequired:
+          type: boolean
+          const: true
+        sandboxRestartInitiated:
+          type: boolean
+          const: true
+          description: Sandbox purge/restart was queued asynchronously (not a success guarantee).
+    BusinessDayResetRequest:
+      type: object
+      required:
+        - confirmBusinessDayReset
+      additionalProperties: false
+      properties:
+        confirmBusinessDayReset:
+          type: boolean
+          const: true
+    RuntimeResetPreviewResponse:
+      type: object
+      required:
+        - ticketCount
+        - outboxEventCount
+        - emergencyActive
+        - preservedTopicCount
+        - preservedRoomCount
+        - confirmPhrase
+        - serverTime
+      properties:
+        ticketCount:
+          type: integer
+          minimum: 0
+        outboxEventCount:
+          type: integer
+          minimum: 0
+        emergencyActive:
+          type: boolean
+        preservedTopicCount:
+          type: integer
+          minimum: 0
+        preservedRoomCount:
+          type: integer
+          minimum: 0
+        confirmPhrase:
+          type: string
+        serverTime:
+          type: string
+          format: date-time
+    RuntimeResetRequest:
+      type: object
+      required:
+        - confirmPhrase
+      additionalProperties: false
+      properties:
+        confirmPhrase:
+          type: string
+          minLength: 1
+          maxLength: 64
+    RuntimeResetResponse:
+      type: object
+      required:
+        - resetTicketCount
+        - clearedOutboxCount
+        - emergencyCleared
+        - preservedTopicCount
+        - preservedRoomCount
+        - checkinLocked
+        - dayClosePhase
+        - lastResetBusinessDay
+        - updatedAt
+        - sandboxRestartRequired
+        - sandboxRestartInitiated
+      properties:
+        resetTicketCount:
+          type: integer
+          minimum: 0
+        clearedOutboxCount:
+          type: integer
+          minimum: 0
+        emergencyCleared:
+          type: boolean
+        preservedTopicCount:
+          type: integer
+          minimum: 0
+        preservedRoomCount:
+          type: integer
+          minimum: 0
+        checkinLocked:
+          type: boolean
+          const: true
+        dayClosePhase:
+          type: string
+          enum:
+            - open
+            - started
+        lastResetBusinessDay:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        sandboxRestartRequired:
+          type: boolean
+          const: true
+        sandboxRestartInitiated:
+          type: boolean
+          const: true
+    TerminalPatientLocale:
+      type: string
+      enum:
+        - de-DE
+        - en-GB
+        - tr-TR
+        - ru-RU
+        - uk-UA
+    TerminalPatientLocales:
+      type: array
+      items:
+        $ref: '#/components/schemas/TerminalPatientLocale'
+      minItems: 1
+      uniqueItems: true
+      description: Patient-facing languages on terminal and portal. de-DE is always included.
+    OpsPatientLocalesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - terminalPatientLocales
+        - portalEnabled
+      properties:
+        terminalPatientLocales:
+          $ref: '#/components/schemas/TerminalPatientLocales'
+        portalEnabled:
+          type: boolean
+          description: Whether the patient portal is offered by this practice (ops onboarding setting).
+    OpsHeartbeatResponse:
+      type: object
+      required:
+        - status
+        - service
+        - serverTime
+        - uptimeSeconds
+        - checkinLocked
+        - dayClosePhase
+        - emergencyEnabled
+        - terminalWlanPromoEnabled
+        - terminalAuthPhoneEnabled
+        - terminalAuthNameDobEnabled
+        - terminalAuthEgkEnabled
+        - terminalPatientLocales
+        - emergencyActive
+      properties:
+        status:
+          type: string
+          const: ok
+        service:
+          type: string
+          const: app
+        serverTime:
+          type: string
+          format: date-time
+        uptimeSeconds:
+          type: integer
+        checkinLocked:
+          type: boolean
+        dayClosePhase:
+          type: string
+          enum:
+            - open
+            - started
+        emergencyEnabled:
+          type: boolean
+        terminalWlanPromoEnabled:
+          type: boolean
+        terminalAuthPhoneEnabled:
+          type: boolean
+          description: Show phone + date-of-birth check-in on the terminal start screen.
+        terminalAuthNameDobEnabled:
+          type: boolean
+          description: Show last name + date-of-birth check-in on the terminal start screen.
+        terminalAuthEgkEnabled:
+          type: boolean
+          description: Show eGK check-in on the terminal start screen.
+        terminalPatientLocales:
+          $ref: '#/components/schemas/TerminalPatientLocales'
+        emergencyActive:
+          type: boolean
+    OpsOnboardingStatus:
+      type: object
+      required:
+        - phase
+        - setupCompletedAt
+        - setupLastStep
+        - portalEnabled
+        - setupContactMode
+        - checks
+        - userFolders
+        - requiredChecksOk
+        - checksVerified
+      properties:
+        phase:
+          type: string
+          enum:
+            - pristine
+            - wizard_in_progress
+            - completed
+        setupCompletedAt:
+          type: string
+          nullable: true
+          format: date-time
+        setupLastStep:
+          type: string
+          enum:
+            - welcome
+            - practice
+            - storage
+            - contacts
+            - messaging
+            - portal
+            - summary
+            - verify
+        portalEnabled:
+          type: boolean
+          description: Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Praxis Flow Manager.
+        setupContactMode:
+          type: string
+          enum:
+            - unset
+            - sample
+            - own
+        checks:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - ok
+              - required
+              - hint
+            properties:
+              id:
+                type: string
+              ok:
+                type: boolean
+              required:
+                type: boolean
+              hint:
+                type: string
+                nullable: true
+        userFolders:
+          type: object
+          required:
+            - imports
+            - exports
+          properties:
+            imports:
+              type: string
+            exports:
+              type: string
+        requiredChecksOk:
+          type: boolean
+        checksVerified:
+          type: boolean
+          description: True after expensive storage and CSV probes.
+    PracticeProfile:
+      type: object
+      required:
+        - displayName
+        - street
+        - postalCode
+        - city
+        - phone
+        - email
+        - dataProtectionOfficer
+        - website
+      additionalProperties: false
+      properties:
+        displayName:
+          type: string
+          maxLength: 160
+          description: Public practice name shown on terminal, TV, and privacy notices.
+        street:
+          type: string
+          maxLength: 160
+        postalCode:
+          type: string
+          maxLength: 16
+        city:
+          type: string
+          maxLength: 120
+        phone:
+          type: string
+          maxLength: 64
+        email:
+          type: string
+          maxLength: 160
+        dataProtectionOfficer:
+          type: string
+          maxLength: 160
+          description: Name or contact of the data protection officer, if appointed.
+        website:
+          type: string
+          maxLength: 200
+    OpsSettingsResponse:
+      type: object
+      required:
+        - returnWindowMinutes
+        - practiceOpenFrom
+        - practiceOpenTo
+        - topics
+        - rooms
+        - contactLookupFolderPath
+        - contactLookupDelimiterMode
+        - contactLookupHasHeader
+        - contactLookupMapping
+        - emergencyEnabled
+        - terminalWlanPromoEnabled
+        - terminalAuthPhoneEnabled
+        - terminalAuthNameDobEnabled
+        - terminalAuthEgkEnabled
+        - terminalPatientLocales
+        - smsProvider
+        - exportBasePath
+        - practiceProfile
+        - updatedAt
+      properties:
+        returnWindowMinutes:
+          type: integer
+          minimum: 1
+          maximum: 240
+          description: Single recall window for countdown, SMS text, and return with/without phone. MFA-editable under Betrieb settings.
+        practiceOpenFrom:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: Daily check-in window start (BUSINESS_TZ local time, HH:mm).
+        practiceOpenTo:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: Daily check-in window end (BUSINESS_TZ local time, HH:mm).
+        topics:
+          type: array
+          items:
+            type: object
+            required:
+              - topicId
+              - label
+              - laneCode
+              - defaultRoomId
+              - iconId
+              - accentColor
+              - enabled
+              - availableFrom
+              - availableTo
+              - sortOrder
+            additionalProperties: false
+            properties:
+              topicId:
+                type: string
+                minLength: 1
+                maxLength: 64
+                pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+              label:
+                type: string
+                minLength: 1
+                maxLength: 128
+              laneCode:
+                type: string
+                pattern: '^[A-Z]$'
+                description: Ticket number series letter for this topic (A–Z).
+              defaultRoomId:
+                type: string
+                minLength: 1
+                maxLength: 64
+              iconId:
+                type: string
+                nullable: true
+                description: Optional curated Lucide icon id; null uses first letter of label on terminal.
+              accentColor:
+                type: string
+                pattern: '^#[0-9A-Fa-f]{6}$'
+                description: Badge and terminal tile accent (hex).
+              enabled:
+                type: boolean
+              availableFrom:
+                type: string
+                nullable: true
+                pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+              availableTo:
+                type: string
+                nullable: true
+                pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+              sortOrder:
+                type: integer
+                minimum: 0
+                maximum: 99
+        rooms:
+          type: array
+          items:
+            type: object
+            required:
+              - roomId
+              - roomLabel
+              - enabled
+            additionalProperties: false
+            properties:
+              roomId:
+                type: string
+                minLength: 1
+                maxLength: 64
+              roomLabel:
+                type: string
+                minLength: 1
+                maxLength: 128
+              enabled:
+                type: boolean
+              defaultCallTarget:
+                type: boolean
+                description: Default MFA call destination when Quicksettings have no session override. Exactly one enabled room should be marked.
+              maxOccupancy:
+                type: integer
+                nullable: true
+                minimum: 1
+                description: Maximum concurrent called or in-room tickets assigned to this room. Null or omitted means unlimited.
+              panel:
+                type: object
+                required:
+                  - enabled
+                  - placement
+                  - mode
+                  - showPatientNames
+                  - calledTextPreset
+                  - calledTextCustom
+                  - arrivedTextPreset
+                  - arrivedTextCustom
+                additionalProperties: false
+                properties:
+                  enabled:
+                    type: boolean
+                  placement:
+                    type: string
+                    enum:
+                      - outside
+                      - inside
+                  mode:
+                    type: string
+                    enum:
+                      - display_only
+                      - arrival
+                      - staff_full
+                  showPatientNames:
+                    type: boolean
+                    description: Patient names are only allowed for panels placed inside the room and when explicitly enabled.
+                  calledTextPreset:
+                    type: string
+                    enum:
+                      - you_are_right
+                      - please_wait_here
+                      - please_enter
+                      - go_to_reception
+                      - custom
+                  calledTextCustom:
+                    type: string
+                    nullable: true
+                    maxLength: 80
+                  arrivedTextPreset:
+                    type: string
+                    enum:
+                      - you_are_right
+                      - please_wait_here
+                      - please_enter
+                      - go_to_reception
+                      - custom
+                  arrivedTextCustom:
+                    type: string
+                    nullable: true
+                    maxLength: 80
+        contactLookupFolderPath:
+          type: string
+          nullable: true
+          maxLength: 4096
+          description: Absolute path to patient/contact import folder inside CONTACT_LOOKUP_BASE_PATH (e.g. /imports or /imports/pvs when IMPORTS_HOST_PATH is mounted). CSV files are scanned recursively.
+        contactLookupDelimiterMode:
+          type: string
+          enum:
+            - auto
+            - semicolon
+            - comma
+            - tab
+        contactLookupHasHeader:
+          type: boolean
+        contactLookupMapping:
+          type: object
+          required:
+            - mobile
+          additionalProperties: false
+          properties:
+            mobile:
+              oneOf:
+                - type: string
+                  minLength: 1
+                  maxLength: 128
+                - type: integer
+                  minimum: 0
+                  maximum: 512
+            lastName:
+              oneOf:
+                - type: string
+                  minLength: 1
+                  maxLength: 128
+                - type: integer
+                  minimum: 0
+                  maximum: 512
+            firstName:
+              oneOf:
+                - type: string
+                  minLength: 1
+                  maxLength: 128
+                - type: integer
+                  minimum: 0
+                  maximum: 512
+            birthDate:
+              oneOf:
+                - type: string
+                  minLength: 1
+                  maxLength: 128
+                - type: integer
+                  minimum: 0
+                  maximum: 512
+        emergencyEnabled:
+          type: boolean
+        terminalWlanPromoEnabled:
+          type: boolean
+          description: Show WLAN promo banner on check-in terminal (start + after ticket).
+        terminalAuthPhoneEnabled:
+          type: boolean
+          description: Allow terminal check-in via mobile number and date of birth.
+        terminalAuthNameDobEnabled:
+          type: boolean
+          description: Allow terminal check-in via last name and date of birth.
+        terminalAuthEgkEnabled:
+          type: boolean
+          description: Allow terminal check-in via eGK card reader flow.
+        terminalPatientLocales:
+          $ref: '#/components/schemas/TerminalPatientLocales'
+        smsProvider:
+          type: string
+          enum:
+            - mock
+            - seven
+        exportBasePath:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Effective export base path from deployment configuration (EXPORT_BASE_PATH).
+        practiceProfile:
+          $ref: '#/components/schemas/PracticeProfile'
+        updatedAt:
+          type: string
+          format: date-time
+    DeploymentVolumeStatus:
+      type: object
+      required:
+        - containerPath
+        - userFolderLabel
+        - ready
+        - hint
+        - csvFiles
+        - importFolders
+      properties:
+        containerPath:
+          type: string
+        userFolderLabel:
+          type: string
+        ready:
+          type: boolean
+        hint:
+          type: string
+          nullable: true
+        csvFiles:
+          type: array
+          items:
+            type: object
+            required:
+              - fileName
+              - containerPath
+              - sizeBytes
+              - updatedAt
+            properties:
+              fileName:
+                type: string
+              containerPath:
+                type: string
+              sizeBytes:
+                type: integer
+                minimum: 0
+              updatedAt:
+                type: string
+                format: date-time
+        importFolders:
+          type: array
+          items:
+            type: object
+            required:
+              - label
+              - containerPath
+            properties:
+              label:
+                type: string
+              containerPath:
+                type: string
+    DeploymentStorageResponse:
+      type: object
+      required:
+        - imports
+        - exports
+        - serverTime
+      properties:
+        imports:
+          $ref: '#/components/schemas/DeploymentVolumeStatus'
+        exports:
+          $ref: '#/components/schemas/DeploymentVolumeStatus'
+        serverTime:
+          type: string
+          format: date-time
+    ContactLookupValidateRequest:
+      type: object
+      required:
+        - contactLookupFolderPath
+        - contactLookupDelimiterMode
+        - contactLookupHasHeader
+        - contactLookupMapping
+      additionalProperties: false
+      properties:
+        contactLookupFolderPath:
+          type: string
+          minLength: 1
+          maxLength: 4096
+        contactLookupDelimiterMode:
+          type: string
+          enum:
+            - auto
+            - semicolon
+            - comma
+            - tab
+        contactLookupHasHeader:
+          type: boolean
+        contactLookupMapping:
+          type: object
+          required:
+            - mobile
+          additionalProperties: false
+          properties:
+            mobile:
+              oneOf:
+                - type: string
+                  minLength: 1
+                  maxLength: 128
+                - type: integer
+                  minimum: 0
+                  maximum: 512
+            lastName:
+              oneOf:
+                - type: string
+                  minLength: 1
+                  maxLength: 128
+                - type: integer
+                  minimum: 0
+                  maximum: 512
+            firstName:
+              oneOf:
+                - type: string
+                  minLength: 1
+                  maxLength: 128
+                - type: integer
+                  minimum: 0
+                  maximum: 512
+            birthDate:
+              oneOf:
+                - type: string
+                  minLength: 1
+                  maxLength: 128
+                - type: integer
+                  minimum: 0
+                  maximum: 512
+    ContactLookupValidateResponse:
+      type: object
+      required:
+        - ok
+        - detectedDelimiterMode
+        - layout
+        - csvFileCount
+        - patientCount
+        - sampleRows
+      properties:
+        ok:
+          type: boolean
+          const: true
+        detectedDelimiterMode:
+          type: string
+          enum:
+            - semicolon
+            - comma
+            - tab
+        layout:
+          type: string
+          enum:
+            - list
+            - per_patient
+            - mixed
+        csvFileCount:
+          type: integer
+          minimum: 0
+        patientCount:
+          type: integer
+          minimum: 0
+        sampleRows:
+          type: integer
+          minimum: 0
+    ContactLookupPreviewResponse:
+      type: object
+      required:
+        - detectedDelimiterMode
+        - layout
+        - csvFileCount
+        - patientCount
+        - columns
+        - sampleRows
+        - sampleSourceFile
+        - suggestedMapping
+        - scannedAt
+      properties:
+        detectedDelimiterMode:
+          type: string
+          enum:
+            - semicolon
+            - comma
+            - tab
+        layout:
+          type: string
+          enum:
+            - list
+            - per_patient
+            - mixed
+        csvFileCount:
+          type: integer
+          minimum: 0
+        patientCount:
+          type: integer
+          minimum: 0
+        columns:
+          type: array
+          items:
+            type: string
+        sampleRows:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        sampleSourceFile:
+          type: string
+        scannedAt:
+          type: string
+          format: date-time
+        suggestedMapping:
+          type: object
+          additionalProperties: false
+          properties:
+            mobile:
+              oneOf:
+                - type: string
+                - type: integer
+            lastName:
+              oneOf:
+                - type: string
+                - type: integer
+            firstName:
+              oneOf:
+                - type: string
+                - type: integer
+            birthDate:
+              oneOf:
+                - type: string
+                - type: integer
+    OutboxStatusResponse:
+      type: object
+      required:
+        - readyCount
+        - retryScheduledCount
+        - deadLetterCount
+        - oldestPendingCreatedAt
+        - serverTime
+      properties:
+        readyCount:
+          type: integer
+        retryScheduledCount:
+          type: integer
+        deadLetterCount:
+          type: integer
+        oldestPendingCreatedAt:
+          type: string
+          nullable: true
+          format: date-time
+        serverTime:
+          type: string
+          format: date-time
+    DayLifecycleResponse:
+      type: object
+      required:
+        - businessDay
+        - lastResetBusinessDay
+        - needsDayStartHint
+        - checkinLocked
+        - dayClosePhase
+        - lastDayStats
+      properties:
+        businessDay:
+          type: string
+          description: Current business day computed in BUSINESS_TZ.
+        lastResetBusinessDay:
+          type: string
+          description: Business day of the last successful business-day reset (MFA „Neuen Tag starten“).
+        needsDayStartHint:
+          type: boolean
+        checkinLocked:
+          type: boolean
+        dayClosePhase:
+          type: string
+          enum:
+            - open
+            - started
+        lastDayStats:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required:
+                - businessDay
+                - totalTickets
+                - maxWaitMs
+                - byTopic
+                - openTickets
+              properties:
+                businessDay:
+                  type: string
+                totalTickets:
+                  type: integer
+                maxWaitMs:
+                  type: integer
+                  description: Longest wait from arrival until call (ms), among tickets that were called.
+                byTopic:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - topicId
+                      - topicLabel
+                      - count
+                    properties:
+                      topicId:
+                        type: string
+                      topicLabel:
+                        type: string
+                      count:
+                        type: integer
+                openTickets:
+                  type: array
+                  description: Non-closed tickets from that business day (shown read-only before day start reset).
+                  items:
+                    type: object
+                    required:
+                      - ticketId
+                      - laneCode
+                      - number
+                      - topicLabel
+                      - identityRef
+                      - status
+                    properties:
+                      ticketId:
+                        type: string
+                      laneCode:
+                        type: string
+                      number:
+                        type: integer
+                      topicLabel:
+                        type: string
+                      identityRef:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        enum:
+                          - waiting
+                          - called
+                          - in_room
+                          - absent_wait_here
+                          - absent_return_later
+    DevicePresenceRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        clientTime:
+          type: string
+          format: date-time
+        lastRevision:
+          type: integer
+          minimum: 0
+    EmergencyRaiseResponse:
+      type: object
+      required:
+        - emergencyId
+        - status
+        - raisedAt
+        - alreadyActive
+      properties:
+        emergencyId:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          const: raised
+        raisedAt:
+          type: string
+          format: date-time
+        alreadyActive:
+          type: boolean
+    EmergencyAcknowledgeRequest:
+      type: object
+      required:
+        - emergencyId
+        - uiDisplayed
+      additionalProperties: false
+      properties:
+        emergencyId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        uiDisplayed:
+          type: boolean
+          const: true
+    EmergencyAcknowledgeResponse:
+      type: object
+      required:
+        - emergencyId
+        - status
+        - raisedAt
+        - acknowledgedAt
+        - uiDisplayed
+      properties:
+        emergencyId:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          const: acknowledged
+        raisedAt:
+          type: string
+          format: date-time
+        acknowledgedAt:
+          type: string
+          format: date-time
+        uiDisplayed:
+          type: boolean
+          const: true
+    MessagingProviderCatalogResponse:
+      type: object
+      required:
+        - channels
+      properties:
+        channels:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - providers
+            properties:
+              id:
+                type: string
+                enum:
+                  - sms
+                  - messenger
+              providers:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - id
+                    - label
+                    - channel
+                    - configured
+                    - enabled
+                    - requires
+                  properties:
+                    id:
+                      type: string
+                    label:
+                      type: string
+                    channel:
+                      type: string
+                      enum:
+                        - sms
+                        - messenger
+                    configured:
+                      type: boolean
+                    enabled:
+                      type: boolean
+                    requires:
+                      type: array
+                      items:
+                        type: string
+paths:
+  /api/v1/ops/health:
+    get:
+      summary: Service health endpoint
+      security: []
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - service
+                  - timestamp
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+  /api/v1/practice/profile:
+    get:
+      summary: Public practice profile for patient-facing UIs
+      description: Returns resolved practice contact data for privacy notices and display labels.
+      responses:
+        '200':
+          description: Practice profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeProfile'
+  /api/v1/ops/patient-locales:
+    get:
+      summary: Enabled patient-facing languages (terminal and portal)
+      description: Public snapshot of languages patients may choose. German is always included.
+      responses:
+        '200':
+          description: Enabled patient locales
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsPatientLocalesResponse'
+  /api/v1/ops/heartbeat:
+    get:
+      summary: Heartbeat for polling clients (e.g. waiting-room TV browser)
+      responses:
+        '200':
+          description: Heartbeat with runtime status snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsHeartbeatResponse'
+  /api/v1/ops/settings:
+    get:
+      summary: Read operations settings
+      responses:
+        '200':
+          description: Current operations settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsSettingsResponse'
+    patch:
+      summary: Update operations settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              additionalProperties: false
+              properties:
+                returnWindowMinutes:
+                  type: integer
+                  minimum: 1
+                  maximum: 240
+                practiceOpenFrom:
+                  type: string
+                  pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+                practiceOpenTo:
+                  type: string
+                  pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+                topics:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - topicId
+                    additionalProperties: false
+                    properties:
+                      topicId:
+                        type: string
+                        minLength: 1
+                        maxLength: 64
+                        pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+                      label:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                      laneCode:
+                        type: string
+                        pattern: '^[A-Z]$'
+                      defaultRoomId:
+                        type: string
+                        minLength: 1
+                        maxLength: 64
+                      iconId:
+                        type: string
+                        nullable: true
+                      accentColor:
+                        type: string
+                        pattern: '^#[0-9A-Fa-f]{6}$'
+                      enabled:
+                        type: boolean
+                      availableFrom:
+                        type: string
+                        nullable: true
+                        pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+                      availableTo:
+                        type: string
+                        nullable: true
+                        pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+                      sortOrder:
+                        type: integer
+                        minimum: 0
+                        maximum: 99
+                rooms:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - roomId
+                      - roomLabel
+                    additionalProperties: false
+                    properties:
+                      roomId:
+                        type: string
+                        minLength: 1
+                        maxLength: 64
+                      roomLabel:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                      enabled:
+                        type: boolean
+                      defaultCallTarget:
+                        type: boolean
+                      maxOccupancy:
+                        type: integer
+                        nullable: true
+                        minimum: 1
+                      panel:
+                        type: object
+                        additionalProperties: false
+                        properties:
+                          enabled:
+                            type: boolean
+                          placement:
+                            type: string
+                            enum:
+                              - outside
+                              - inside
+                          mode:
+                            type: string
+                            enum:
+                              - display_only
+                              - arrival
+                              - staff_full
+                          showPatientNames:
+                            type: boolean
+                          calledTextPreset:
+                            type: string
+                            enum:
+                              - you_are_right
+                              - please_wait_here
+                              - please_enter
+                              - go_to_reception
+                              - custom
+                          calledTextCustom:
+                            type: string
+                            nullable: true
+                            maxLength: 80
+                          arrivedTextPreset:
+                            type: string
+                            enum:
+                              - you_are_right
+                              - please_wait_here
+                              - please_enter
+                              - go_to_reception
+                              - custom
+                          arrivedTextCustom:
+                            type: string
+                            nullable: true
+                            maxLength: 80
+                contactLookupFolderPath:
+                  type: string
+                  nullable: true
+                  maxLength: 4096
+                contactLookupDelimiterMode:
+                  type: string
+                  enum:
+                    - auto
+                    - semicolon
+                    - comma
+                    - tab
+                contactLookupHasHeader:
+                  type: boolean
+                contactLookupMapping:
+                  type: object
+                  required:
+                    - mobile
+                  additionalProperties: false
+                  properties:
+                    mobile:
+                      oneOf:
+                        - type: string
+                          minLength: 1
+                          maxLength: 128
+                        - type: integer
+                          minimum: 0
+                          maximum: 512
+                    lastName:
+                      oneOf:
+                        - type: string
+                          minLength: 1
+                          maxLength: 128
+                        - type: integer
+                          minimum: 0
+                          maximum: 512
+                    firstName:
+                      oneOf:
+                        - type: string
+                          minLength: 1
+                          maxLength: 128
+                        - type: integer
+                          minimum: 0
+                          maximum: 512
+                    birthDate:
+                      oneOf:
+                        - type: string
+                          minLength: 1
+                          maxLength: 128
+                        - type: integer
+                          minimum: 0
+                          maximum: 512
+                emergencyEnabled:
+                  type: boolean
+                terminalWlanPromoEnabled:
+                  type: boolean
+                terminalAuthPhoneEnabled:
+                  type: boolean
+                terminalAuthNameDobEnabled:
+                  type: boolean
+                terminalAuthEgkEnabled:
+                  type: boolean
+                terminalPatientLocales:
+                  $ref: '#/components/schemas/TerminalPatientLocales'
+                smsProvider:
+                  type: string
+                  enum:
+                    - mock
+                    - seven
+                practiceProfile:
+                  $ref: '#/components/schemas/PracticeProfile'
+      responses:
+        '200':
+          description: Updated operations settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsSettingsResponse'
+        '400':
+          description: >-
+            Invalid request. Room guard failures return ROOM_BLOCKED_TOPICS (details.topics),
+            ROOM_BLOCKED_QUEUE (details.tickets), or ROOM_BLOCKED_CAPACITY (details.tickets)
+            when removing, renaming, deactivating, or lowering maxOccupancy below current use.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '403':
+          description: Role is not allowed to patch the requested settings fields
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/settings/onboarding/verify:
+    post:
+      summary: Verify setup checks (expensive probes)
+      description: Requires authenticated ops client key. Runs storage and CSV health checks.
+      responses:
+        '200':
+          description: Verified onboarding snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsOnboardingStatus'
+        '403':
+          description: Onboarding verify requires ops role
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/settings/onboarding:
+    get:
+      summary: Read setup onboarding progress (lightweight)
+      description: Returns wizard progress and cheap checks only. Run POST …/onboarding/verify for storage and CSV probes.
+      responses:
+        '200':
+          description: Onboarding snapshot for the setup wizard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsOnboardingStatus'
+    patch:
+      summary: Update onboarding progress or complete/reopen setup
+      description: Requires authenticated ops client key. Progress fields are ops-only; MFA receives 403.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              additionalProperties: false
+              properties:
+                setupLastStep:
+                  type: string
+                  enum:
+                    - welcome
+                    - practice
+                    - storage
+                    - contacts
+                    - messaging
+                    - portal
+                    - summary
+                    - verify
+                portalEnabled:
+                  type: boolean
+                setupContactMode:
+                  type: string
+                  enum:
+                    - unset
+                    - sample
+                    - own
+                reopenOnboarding:
+                  type: boolean
+                  const: true
+                completeOnboarding:
+                  type: boolean
+                  const: true
+      responses:
+        '200':
+          description: Updated onboarding snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsOnboardingStatus'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '403':
+          description: Onboarding patch requires ops role
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Setup incomplete or already completed
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/deployment/storage:
+    get:
+      summary: Read deployment import/export volume readiness
+      description: Requires authenticated ops client key.
+      responses:
+        '200':
+          description: Storage volume snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentStorageResponse'
+  /api/v1/ops/contact-lookup/preview:
+    post:
+      summary: Preview CSV contact lookup folder scan and suggest column mapping
+      description: Requires authenticated ops client key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactLookupValidateRequest'
+      responses:
+        '200':
+          description: Preview succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactLookupPreviewResponse'
+        '400':
+          description: Invalid mapping or unreadable folder
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/contact-lookup/validate:
+    post:
+      summary: Validate CSV contact lookup settings
+      description: Requires authenticated ops client key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactLookupValidateRequest'
+      responses:
+        '200':
+          description: Validation succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactLookupValidateResponse'
+        '400':
+          description: Invalid mapping or unreadable import folder
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/contact-lookup/apply-demo:
+    post:
+      summary: Apply demo contact CSV for setup wizard
+      description: Requires authenticated ops client key.
+      responses:
+        '200':
+          description: Updated onboarding snapshot after applying demo contacts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsOnboardingStatus'
+  /api/v1/ops/messaging/providers:
+    get:
+      summary: List messaging providers and channel availability for UI settings
+      description: Requires authenticated MFA client key in v1.
+      responses:
+        '200':
+          description: Available providers grouped by channel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagingProviderCatalogResponse'
+  /api/v1/ops/messaging/providers/{providerId}:
+    patch:
+      summary: Update messaging provider settings and credentials
+      description: Requires authenticated MFA client key in v1.
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - mock
+              - seven
+              - seven_whatsapp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              additionalProperties: false
+              properties:
+                enabled:
+                  type: boolean
+                credentials:
+                  type: object
+                  additionalProperties:
+                    type: string
+                    minLength: 1
+                    maxLength: 2048
+      responses:
+        '200':
+          description: Updated provider descriptor
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - label
+                  - channel
+                  - configured
+                  - enabled
+                  - requires
+                properties:
+                  id:
+                    type: string
+                    enum:
+                      - mock
+                      - seven
+                      - seven_whatsapp
+                  label:
+                    type: string
+                  channel:
+                    type: string
+                    enum:
+                      - sms
+                      - messenger
+                  configured:
+                    type: boolean
+                  enabled:
+                    type: boolean
+                  requires:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/maintenance/runtime-reset/preview:
+    get:
+      summary: Preview ops runtime reset impact (ops role)
+      description: Requires authenticated ops client key. Returns counts and confirm phrase for POST.
+      responses:
+        '200':
+          description: Preview snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeResetPreviewResponse'
+  /api/v1/ops/maintenance/runtime-reset:
+    post:
+      summary: Execute ops runtime reset (ops role)
+      description: Clears tickets, outbox, active emergency; preserves practice settings and messaging credentials.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RuntimeResetRequest'
+      responses:
+        '200':
+          description: Runtime reset completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeResetResponse'
+        '400':
+          description: Invalid confirm phrase or request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/outbox-status:
+    get:
+      summary: Read outbox delivery status (ready, retry, dead-letter)
+      description: Requires authenticated MFA client key in v1.
+      responses:
+        '200':
+          description: Current outbox processing state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutboxStatusResponse'
+  /api/v1/ops/day-lifecycle:
+    get:
+      summary: Read day lifecycle state and day-change warning hint
+      description: Requires authenticated MFA client key in v1.
+      responses:
+        '200':
+          description: Current business day status for MFA operation lifecycle
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DayLifecycleResponse'
+  /api/v1/ops/day-lifecycle/reset:
+    post:
+      summary: Reset runtime for a new business day
+      description: >-
+        Clears tickets and outbox runtime data, locks check-in, stamps lastResetBusinessDay,
+        and queues sandbox purge/restart. Settings are preserved. This is the MFA „Neuen Tag starten“
+        action — not the same as starting day-close (Tagesabschluss).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessDayResetRequest'
+      responses:
+        '200':
+          description: Business-day reset completed, sandbox restart requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessDayResetResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/device/presence:
+    post:
+      summary: Device heartbeat (presence)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevicePresenceRequest'
+      responses:
+        '204':
+          description: Presence recorded
+  /api/v1/ops/device/stream:
+    get:
+      summary: Device presence stream (SSE keepalive)
+      description: >-
+        Lightweight SSE for paired TV/terminal liveness. TV may use queue/stream instead;
+        terminal uses this channel for immediate offline detection at MFA.
+      responses:
+        '200':
+          description: SSE stream open
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/emergency/raise:
+    post:
+      summary: Raise emergency from terminal or MFA client
+      description: Requires authenticated terminal or MFA client key in v1.
+      responses:
+        '200':
+          description: Emergency is active (or already active)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmergencyRaiseResponse'
+        '409':
+          description: Emergency is disabled or terminal is currently locked
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/emergency/ack:
+    post:
+      summary: Acknowledge emergency after UI displayed emergency state
+      description: Requires authenticated MFA client key in v1.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmergencyAcknowledgeRequest'
+      responses:
+        '200':
+          description: Emergency acknowledgement persisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmergencyAcknowledgeResponse'
+        '404':
+          description: Emergency id not found
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/checkin-lock:
+    post:
+      summary: Lock or unlock check-in creation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - locked
+              properties:
+                locked:
+                  type: boolean
+      responses:
+        '200':
+          description: Lock state updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsStateResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Lock state conflict during day-close
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/day-close/start:
+    post:
+      summary: Start day-close phase (Tagesabschluss)
+      description: >-
+        Future use: explicit end-of-day phase before export/archiving. Locks check-in creation
+        while phase is started. Does not reset runtime data — use POST /ops/day-lifecycle/reset for that.
+      responses:
+        '200':
+          description: Day-close started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsStateResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Precondition failed or phase conflict
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'

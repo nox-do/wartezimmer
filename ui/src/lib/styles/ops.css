@@ -1,0 +1,330 @@
+.staff-page .alert--info {
+  border-color: color-mix(in srgb, var(--blue-ops-primary) 20%, transparent);
+  background: color-mix(in srgb, var(--blue-ops-primary) 6%, transparent);
+  color: var(--ops-text);
+}
+
+.staff-settings .ops-folder-block {
+  margin: 0 0 12px;
+}
+
+.staff-settings .ops-folder-block code {
+  font-size: var(--text-sm);
+}
+
+.staff-settings .panel--inset-zinc .panel__title {
+  margin: 0 0 8px;
+  font-size: var(--text-md);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.staff-settings .ops-setup-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: var(--text-base);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.staff-settings .ops-setup-toggle input {
+  width: auto;
+  max-width: none;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.ops-setup-process {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+}
+
+.ops-setup-process__item {
+  flex: 1 1 0;
+  min-width: 4.25rem;
+  position: relative;
+  text-align: center;
+  padding: 0;
+}
+
+.ops-setup-process__item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--border);
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+.ops-setup-process__item--done:not(:last-child)::after {
+  background: var(--green-step-done);
+}
+
+.ops-setup-process__num {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 6px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  background: var(--card);
+  color: var(--muted-foreground);
+  box-sizing: border-box;
+}
+
+.ops-setup-process__item--active .ops-setup-process__num {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.ops-setup-process__item--done .ops-setup-process__num {
+  border-color: var(--success);
+  background: var(--green-success-bg);
+  color: var(--success);
+}
+
+.ops-setup-process__label {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--muted-foreground);
+}
+
+.ops-setup-process__item--active .ops-setup-process__label {
+  color: var(--foreground);
+}
+
+.ops-setup-flow-diagram {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+}
+
+.ops-setup-host-hint {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.ops-setup-list {
+  margin: 0 0 12px;
+  padding-left: 1.2rem;
+  line-height: 1.5;
+}
+
+.ops-setup-fieldset {
+  border: 0;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ops-setup-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-base);
+}
+
+.ops-setup-snippet {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-xs);
+  background: var(--muted);
+  font-size: var(--text-xs);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.ops-setup-nav {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  justify-content: space-between;
+}
+
+.ops-setup-nav__primary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.contact-lookup-warning {
+  color: var(--ops-danger);
+  margin: 0.75rem 0 0;
+}
+
+.contact-lookup-scan {
+  margin: 1rem 0 0.75rem;
+}
+
+.contact-lookup-mapping {
+  margin: 1rem 0;
+}
+
+.contact-lookup-mapping__title {
+  margin: 0 0 0.35rem;
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.contact-lookup-folder-hint {
+  margin: 0 0 0.35rem;
+}
+
+.contact-lookup-folder-hint code {
+  font-size: 0.88em;
+}
+
+.contact-lookup-mapping-actions {
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.contact-lookup-map {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.contact-lookup-map__header,
+.contact-lookup-map__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.5rem minmax(0, 1.4fr);
+  align-items: stretch;
+}
+
+.contact-lookup-map__header {
+  background: var(--ops-surface-muted);
+  border-bottom: 1px solid var(--ops-border);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ops-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.contact-lookup-map__row:not(:last-child) {
+  border-bottom: 1px solid var(--ops-border);
+}
+
+.contact-lookup-map__cell {
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.contact-lookup-map__cell--system {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  background: var(--card);
+}
+
+.contact-lookup-map__cell--arrow {
+  justify-content: center;
+  padding-inline: 0;
+  color: var(--ops-muted);
+  background: var(--card);
+}
+
+.contact-lookup-map__cell--source {
+  background: var(--ops-surface-alt);
+  border-left: 1px solid var(--ops-border);
+}
+
+.contact-lookup-map__field-name {
+  font-weight: 600;
+}
+
+.contact-lookup-map__field-meta {
+  font-size: var(--text-xs);
+  color: var(--ops-muted);
+}
+
+.contact-lookup-map__field-meta--required {
+  color: var(--blue-ops-primary);
+  font-weight: 600;
+}
+
+.contact-lookup-map__arrow {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.contact-lookup-preview-wrap {
+  overflow: auto;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--radius-xs);
+}
+
+.contact-lookup-preview {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-base);
+}
+
+.contact-lookup-preview th,
+.contact-lookup-preview td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--ops-border);
+  vertical-align: top;
+  text-align: left;
+}
+
+.contact-lookup-preview th {
+  padding-bottom: 0.4rem;
+}
+
+.contact-lookup-preview td {
+  padding-top: 0.55rem;
+}
+
+.contact-lookup-preview__col--mapped {
+  background: color-mix(in srgb, var(--blue-ops-primary) 6%, transparent);
+}
+
+.contact-lookup-preview__head {
+  display: grid;
+  gap: 0.3rem;
+  justify-items: start;
+  align-content: start;
+}
+
+.contact-lookup-preview__column {
+  font-weight: 600;
+  line-height: 1.25;
+}

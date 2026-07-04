@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "allowImportingTsExtensions": true,
+    "strict": false,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.js"]
+}

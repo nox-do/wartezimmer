@@ -1,0 +1,165 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import type { HostNetworkInput } from '@praxis-flow/server-shared';
+import {
+  normalizeApplySetupInput,
+  normalizeGatewayPlan,
+  normalizeHostNetworkInput,
+  normalizeSetupPlanInput,
+  SetupApiValidationError,
+} from './setup-api-normalize.js';
+
+test('normalizeGatewayPlan applies defaults when gateway enabled', () => {
+  assert.deepEqual(
+    normalizeGatewayPlan({ enabled: true }, '192.168.1.10'),
+    {
+      enabled: true,
+      gatewayInterface: 'eth1',
+      gatewayIp: '192.168.88.1',
+      portalAppIp: '192.168.1.10',
+      authBridgeUrl: '',
+    },
+  );
+});
+
+test('normalizeHostNetworkInput rejects missing gateway payload', () => {
+  assert.throws(
+    () => normalizeHostNetworkInput({ lanAppIp: '10.0.0.5' } as HostNetworkInput),
+    SetupApiValidationError,
+  );
+});
+
+test('normalizeGatewayPlan keeps disabled gateway without inventing NIC values', () => {
+  assert.deepEqual(
+    normalizeGatewayPlan({ enabled: false }, '192.168.1.10'),
+    {
+      enabled: false,
+      gatewayInterface: 'eth1',
+      gatewayIp: '192.168.88.1',
+      portalAppIp: '192.168.1.10',
+      authBridgeUrl: '',
+    },
+  );
+});
+
+test('normalizeSetupPlanInput fills practice default and trims LAN', () => {
+  assert.deepEqual(
+    normalizeSetupPlanInput({
+      lanAppIp: ' 192.168.1.20 ',
+      practiceDisplayName: '  Praxis Süd ',
+      gateway: { enabled: true, gatewayInterface: 'eth2' },
+    }),
+    {
+      lanAppIp: '192.168.1.20',
+      practiceDisplayName: 'Praxis Süd',
+      portalAppIp: undefined,
+      gateway: {
+        enabled: true,
+        gatewayInterface: 'eth2',
+        gatewayIp: '192.168.88.1',
+        portalAppIp: '192.168.1.20',
+        authBridgeUrl: '',
+      },
+    },
+  );
+});
+
+test('normalizeSetupPlanInput rejects missing lanAppIp', () => {
+  assert.throws(
+    () => normalizeSetupPlanInput({ lanAppIp: ' ', practiceDisplayName: 'X' }),
+    SetupApiValidationError,
+  );
+});
+
+test('normalizeApplySetupInput parses optional folders', () => {
+  assert.deepEqual(
+    normalizeApplySetupInput({
+      lanAppIp: '192.168.1.10',
+      practiceDisplayName: 'Praxis',
+      folders: { imports: ' /a ', exports: '/b' },
+      runCompose: true,
+    }).folders,
+    { imports: '/a', exports: '/b' },
+  );
+});
+
+test('normalizeHostNetworkInput normalizes gateway for maintenance route', () => {
+  assert.deepEqual(
+    normalizeHostNetworkInput({
+      lanAppIp: '10.0.0.5',
+      restartCompose: true,
+      gateway: { enabled: true, portalAppIp: '10.0.0.9' },
+    }),
+    {
+      lanAppIp: '10.0.0.5',
+      restartCompose: true,
+      gateway: {
+        enabled: true,
+        gatewayInterface: 'eth1',
+        gatewayIp: '192.168.88.1',
+        portalAppIp: '10.0.0.9',
+        authBridgeUrl: '',
+      },
+    },
+  );
+});
+
+test('normalizeHostNetworkInput keeps explicit gateway bridge URL', () => {
+  assert.deepEqual(
+    normalizeHostNetworkInput({
+      lanAppIp: '10.0.0.5',
+      gateway: {
+        enabled: true,
+        authBridgeUrl: ' http://10.0.0.2:9100 ',
+      },
+    }),
+    {
+      lanAppIp: '10.0.0.5',
+      restartCompose: false,
+      gateway: {
+        enabled: true,
+        gatewayInterface: 'eth1',
+        gatewayIp: '192.168.88.1',
+        portalAppIp: '10.0.0.5',
+        authBridgeUrl: 'http://10.0.0.2:9100',
+      },
+    },
+  );
+});
+
+test('normalizeHostNetworkInput rejects invalid gateway bridge URL', () => {
+  assert.throws(
+    () =>
+      normalizeHostNetworkInput({
+        lanAppIp: '10.0.0.5',
+        gateway: {
+          enabled: true,
+          authBridgeUrl: '10.0.0.2:9100',
+        },
+      }),
+    SetupApiValidationError,
+  );
+});
+
+test('normalizeHostNetworkInput ignores gateway bridge URL when gateway is disabled', () => {
+  assert.deepEqual(
+    normalizeHostNetworkInput({
+      lanAppIp: '10.0.0.5',
+      gateway: {
+        enabled: false,
+        authBridgeUrl: 'not-a-url',
+      },
+    }),
+    {
+      lanAppIp: '10.0.0.5',
+      restartCompose: false,
+      gateway: {
+        enabled: false,
+        gatewayInterface: 'eth1',
+        gatewayIp: '192.168.88.1',
+        portalAppIp: '10.0.0.5',
+        authBridgeUrl: '',
+      },
+    },
+  );
+});

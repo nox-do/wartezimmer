@@ -1,0 +1,1 @@
+export const PATIENT_UPLOAD_MAX_BYTES = 25_000_000;

@@ -1,0 +1,14 @@
+# Generated at container start — DHCP for guest WLAN clients.
+
+interface=${GATEWAY_INTERFACE}
+bind-dynamic
+except-interface=lo
+
+dhcp-range=${GATEWAY_DHCP_RANGE_START},${GATEWAY_DHCP_RANGE_END},255.255.255.0,12h
+dhcp-option=option:router,${GATEWAY_IP}
+dhcp-option=option:dns-server,${GATEWAY_IP}
+
+# DNS is handled by openNDS; dnsmasq only assigns addresses.
+port=0
+
+log-dhcp
