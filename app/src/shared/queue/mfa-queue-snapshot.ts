@@ -1,4 +1,5 @@
 import type { CoreDatabase } from '../db/database.js';
+import { toAssistPendingItem, type TerminalAssistPendingItem } from '../checkin/terminal-assist-pending.js';
 
 export type MfaQueueSnapshot = {
   revision: number;
@@ -25,7 +26,9 @@ export type MfaQueueSnapshot = {
     identityRef: string | null;
     returnUntil: string | null;
     triageLevel: string | null;
+    needsAssistance: boolean;
   }>;
+  assistPending: TerminalAssistPendingItem[];
   checkinLocked: boolean;
   serverTime: string;
 };
@@ -67,13 +70,17 @@ export function buildMfaQueueSnapshot(
       identityRef,
       returnUntil,
       triageLevel: item.triageLevel?.trim() || null,
+      needsAssistance: item.needsAssistance,
     };
   });
+
+  const assistPending = db.listActiveTerminalAssistPending(nowMs).map((row) => toAssistPendingItem(row, nowMs));
 
   return {
     revision,
     view: 'mfa',
     items,
+    assistPending,
     checkinLocked: db.isEffectiveCheckinLocked(),
     serverTime: new Date(nowMs).toISOString(),
   };

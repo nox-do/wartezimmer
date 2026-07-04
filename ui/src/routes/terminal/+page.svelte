@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
   import { ChevronRight, CreditCard, IdCard, Smartphone, Users } from '@lucide/svelte';
   import { getContext } from 'svelte';
   import TerminalEmergencyBar from '$lib/components/terminal/TerminalEmergencyBar.svelte';
@@ -18,11 +17,11 @@
     type TerminalOpsSnapshot,
   } from '$lib/terminal/terminal-ops-context';
   import {
-    createMfaAssistCheckin,
     mapCheckinErrorMessage,
+    pressTerminalAssist,
   } from '$lib/terminal/terminal-api';
   import { getTerminalPrivacyNotice } from '$lib/privacy/terminal-notice';
-  import { resetTerminalFlow, writeCheckinResult } from '$lib/terminal/terminal-session';
+  import { readAssistMode, writeAssistMode } from '$lib/terminal/terminal-session';
   import { toastStore } from '$lib/stores/toastStore';
 
   const terminalOps = getContext<TerminalOpsSnapshot>(TERMINAL_OPS_CONTEXT_KEY);
@@ -30,6 +29,7 @@
   let busy = $state(false);
   let privacyModalOpen = $state(false);
   let practiceProfile = $state(getPracticeProfileFallback());
+  let assistActive = $state(readAssistMode());
 
   const privacyNotice = $derived(getTerminalPrivacyNotice(practiceProfile));
   const practiceName = $derived(practiceDisplayLabel(practiceProfile, t('terminal.practiceFallback')));
@@ -42,32 +42,32 @@
   const authEgkEnabled = $derived(terminalOps?.terminalAuthEgkEnabled ?? false);
 
   onMount(() => {
-    return mountPracticeProfileSync((profile) => {
+    const stopProfile = mountPracticeProfileSync((profile) => {
       practiceProfile = profile;
     });
+    const timer = window.setInterval(() => {
+      assistActive = readAssistMode();
+    }, 500);
+    return () => {
+      stopProfile();
+      window.clearInterval(timer);
+    };
   });
 
   async function onMfaAssist() {
+    if (assistActive || busy) {
+      return;
+    }
     busy = true;
-    const result = await createMfaAssistCheckin();
+    const result = await pressTerminalAssist();
     busy = false;
     if (!result.ok) {
       toastStore.error(mapCheckinErrorMessage(result.error.code, result.error.message));
       return;
     }
 
-    resetTerminalFlow();
-    writeCheckinResult({
-      ticketId: result.data.ticketId,
-      laneCode: result.data.laneCode,
-      number: result.data.number,
-      topicId: 'mfa',
-      topicLabel: t('terminal.receiptTopicEmpfang'),
-      destinationRoomLabel: result.data.destinationRoomLabel ?? null,
-      authPath: 'mfa_assist',
-      createdAt: result.data.createdAt,
-    });
-    void goto('/terminal/confirmed');
+    writeAssistMode(result.data.expiresAt);
+    assistActive = true;
   }
 </script>
 
@@ -89,6 +89,10 @@
         {t('terminal.privacyOpenLink')}
       </button>
     </header>
+
+    {#if assistActive}
+      <p class="terminal-lead terminal-lead--assist">{t('terminal.startAssistHint')}</p>
+    {/if}
 
     <div class="terminal-card-grid terminal-card-grid--start">
       {#if authPhoneEnabled}
@@ -130,13 +134,20 @@
         </a>
       {/if}
 
-      <button type="button" class="terminal-card" disabled={busy} onclick={onMfaAssist}>
+      <button
+        type="button"
+        class="terminal-card"
+        class:terminal-card--assist-pressed={assistActive}
+        disabled={busy}
+        aria-pressed={assistActive}
+        onclick={onMfaAssist}
+      >
         <span class="terminal-card__icon" aria-hidden="true">
           <Users size={26} />
         </span>
         <span class="terminal-card__text">
           <strong>{t('terminal.authMfaTitle')}</strong>
-          <span>{t('terminal.authMfaSubtitle')}</span>
+          <span>{assistActive ? t('terminal.authMfaPressedSubtitle') : t('terminal.authMfaSubtitle')}</span>
         </span>
         <ChevronRight class="terminal-card__chevron" aria-hidden="true" />
       </button>

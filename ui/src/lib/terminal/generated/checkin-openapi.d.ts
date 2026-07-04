@@ -65,7 +65,7 @@ export interface paths {
             /** @description Configured terminal topic id from ops settings. */
             topicId: string;
             /** @enum {string} */
-            authPath: 'phone_dob' | 'name_dob' | 'egk' | 'mfa_assist';
+            authPath: 'phone_dob' | 'name_dob' | 'egk';
             identityRef?: string;
             /** @description Optional phone number for CSV identity lookup; stored on the ticket when authPath is phone_dob (portal anamnese prefill). */
             phoneNumber?: string;
@@ -121,7 +121,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/checkins/mfa-assist': {
+  '/api/v1/checkins/assist/press': {
     parameters: {
       query?: never;
       header?: never;
@@ -130,7 +130,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Create check-in via direct MFA path */
+    /** Terminal help button pressed — ephemeral assist pending (no visit) */
     post: {
       parameters: {
         query?: never;
@@ -140,13 +140,153 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description MFA ticket created */
+        /** @description Assist pending registered */
         201: {
           headers: {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['TicketCreated'];
+            'application/json': components['schemas']['TerminalAssistPressed'];
+          };
+        };
+        /** @description Invalid request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+        /** @description Check-in rejected by configured opening-hour guardrails */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+        /** @description Invalid opening-hour configuration */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/checkins/assist/release': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Clear terminal assist pending (manual or timeout) */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Released or already inactive */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/checkins/assist/pending': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List active terminal assist pending signals (MFA) */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Active assist pending entries */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              items: components['schemas']['TerminalAssistPendingItem'][];
+              /** Format: date-time */
+              serverTime: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/checkins/mfa-assist': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Deprecated — cutover to assist press (no ticket)
+     * @deprecated
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Assist pending registered (legacy cutover) */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['TerminalAssistPressed'];
           };
         };
         /** @description Invalid request */
@@ -213,6 +353,23 @@ export interface components {
       accentColor: string;
       availableFrom: string | null;
       availableTo: string | null;
+    };
+    TerminalAssistPendingItem: {
+      deviceId: string;
+      deviceLabel: string;
+      /** Format: date-time */
+      pressedAt: string;
+      /** Format: date-time */
+      expiresAt: string;
+      remainingMs: number;
+    };
+    TerminalAssistPressed: {
+      /** Format: date-time */
+      pressedAt: string;
+      /** Format: date-time */
+      expiresAt: string;
+      /** @description True when returned from deprecated /mfa-assist cutover endpoint. */
+      legacyCutover: boolean;
     };
     /** @enum {string} */
     QueueStatus:

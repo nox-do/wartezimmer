@@ -409,7 +409,9 @@ export const dict = {
     emergencyAck: 'Quittieren',
     emergencyAckBusy: '…',
     emergencyAckError: 'Notfall konnte nicht quittiert werden.',
-    entryCalled: 'Aufgerufen',
+    assistTitle: 'Hilfe am Terminal',
+    assistLine: '{device} · seit {time} · noch {seconds} Sek.',
+    entryNeedsAssistance: 'Hilfe am Terminal',
     entryArrived: 'Angekommen',
     entryArrivedHere: 'OK · {room}',
     entryRecallActive: '{topic} · Rückholung aktiv',
@@ -919,6 +921,12 @@ export const dict = {
     egkBack: '← Zurück zur Anmeldung',
     topicTitle: 'Worum geht es heute?',
     topicLead: 'Bitte wählen Sie ein Anliegen.',
+    topicAssistHint:
+      'Das Praxisteam wurde informiert. Sie können auch direkt zum Empfang gehen — eine Anmeldung am Terminal ist freiwillig.',
+    startAssistHint:
+      'Das Praxisteam wurde informiert. Bitte wählen Sie eine Anmeldung — oder gehen Sie direkt zum Empfang.',
+    authMfaPressedSubtitle: 'Praxisteam informiert — bitte Anmeldung wählen',
+    topicAssistBack: 'Zurück',
     topicLoading: 'Themen werden geladen…',
     topicEmptyReception: 'Bitte gehen Sie direkt zum Empfang.',
     topicLoadError: 'Themen konnten nicht geladen werden.',

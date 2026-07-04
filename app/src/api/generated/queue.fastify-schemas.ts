@@ -16,6 +16,7 @@ export const QueueItem = {
     'waitMs',
     'documentCount',
     'hasMobilePhone',
+    'needsAssistance',
   ],
   properties: {
     ticketId: {
@@ -92,6 +93,35 @@ export const QueueItem = {
     triageLevel: {
       type: ['string', 'null'],
       enum: ['red', 'yellow', 'green', null],
+    },
+    needsAssistance: {
+      type: 'boolean',
+    },
+  },
+} as const;
+
+export const TerminalAssistPendingItem = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['deviceId', 'deviceLabel', 'pressedAt', 'expiresAt', 'remainingMs'],
+  properties: {
+    deviceId: {
+      type: 'string',
+    },
+    deviceLabel: {
+      type: 'string',
+    },
+    pressedAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    expiresAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    remainingMs: {
+      type: 'integer',
+      minimum: 0,
     },
   },
 } as const;
@@ -240,7 +270,7 @@ export const QueueIdentityRefResponse = {
 export const QueueListMfaResponse = {
   type: 'object',
   additionalProperties: false,
-  required: ['view', 'revision', 'items', 'checkinLocked', 'serverTime'],
+  required: ['view', 'revision', 'items', 'assistPending', 'checkinLocked', 'serverTime'],
   properties: {
     view: {
       type: 'string',
@@ -265,6 +295,7 @@ export const QueueListMfaResponse = {
           'waitMs',
           'documentCount',
           'hasMobilePhone',
+          'needsAssistance',
         ],
         properties: {
           ticketId: {
@@ -341,6 +372,37 @@ export const QueueListMfaResponse = {
           triageLevel: {
             type: ['string', 'null'],
             enum: ['red', 'yellow', 'green', null],
+          },
+          needsAssistance: {
+            type: 'boolean',
+          },
+        },
+      },
+    },
+    assistPending: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['deviceId', 'deviceLabel', 'pressedAt', 'expiresAt', 'remainingMs'],
+        properties: {
+          deviceId: {
+            type: 'string',
+          },
+          deviceLabel: {
+            type: 'string',
+          },
+          pressedAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          expiresAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          remainingMs: {
+            type: 'integer',
+            minimum: 0,
           },
         },
       },
@@ -563,7 +625,7 @@ export const QueueListResponse = {
     {
       type: 'object',
       additionalProperties: false,
-      required: ['view', 'revision', 'items', 'checkinLocked', 'serverTime'],
+      required: ['view', 'revision', 'items', 'assistPending', 'checkinLocked', 'serverTime'],
       properties: {
         view: {
           type: 'string',
@@ -588,6 +650,7 @@ export const QueueListResponse = {
               'waitMs',
               'documentCount',
               'hasMobilePhone',
+              'needsAssistance',
             ],
             properties: {
               ticketId: {
@@ -664,6 +727,37 @@ export const QueueListResponse = {
               triageLevel: {
                 type: ['string', 'null'],
                 enum: ['red', 'yellow', 'green', null],
+              },
+              needsAssistance: {
+                type: 'boolean',
+              },
+            },
+          },
+        },
+        assistPending: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['deviceId', 'deviceLabel', 'pressedAt', 'expiresAt', 'remainingMs'],
+            properties: {
+              deviceId: {
+                type: 'string',
+              },
+              deviceLabel: {
+                type: 'string',
+              },
+              pressedAt: {
+                type: 'string',
+                format: 'date-time',
+              },
+              expiresAt: {
+                type: 'string',
+                format: 'date-time',
+              },
+              remainingMs: {
+                type: 'integer',
+                minimum: 0,
               },
             },
           },
@@ -1349,7 +1443,7 @@ export const GET_api_v1_queueResponse200 = {
     {
       type: 'object',
       additionalProperties: false,
-      required: ['view', 'revision', 'items', 'checkinLocked', 'serverTime'],
+      required: ['view', 'revision', 'items', 'assistPending', 'checkinLocked', 'serverTime'],
       properties: {
         view: {
           type: 'string',
@@ -1374,6 +1468,7 @@ export const GET_api_v1_queueResponse200 = {
               'waitMs',
               'documentCount',
               'hasMobilePhone',
+              'needsAssistance',
             ],
             properties: {
               ticketId: {
@@ -1450,6 +1545,37 @@ export const GET_api_v1_queueResponse200 = {
               triageLevel: {
                 type: ['string', 'null'],
                 enum: ['red', 'yellow', 'green', null],
+              },
+              needsAssistance: {
+                type: 'boolean',
+              },
+            },
+          },
+        },
+        assistPending: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['deviceId', 'deviceLabel', 'pressedAt', 'expiresAt', 'remainingMs'],
+            properties: {
+              deviceId: {
+                type: 'string',
+              },
+              deviceLabel: {
+                type: 'string',
+              },
+              pressedAt: {
+                type: 'string',
+                format: 'date-time',
+              },
+              expiresAt: {
+                type: 'string',
+                format: 'date-time',
+              },
+              remainingMs: {
+                type: 'integer',
+                minimum: 0,
               },
             },
           },
@@ -3115,6 +3241,7 @@ export const PATCH_api_v1_queue_ticket_identity_refResponse409 = {
 
 export const queueSchemas = {
   QueueItem,
+  TerminalAssistPendingItem,
   QueueTriageResponse,
   QueueMessageDispatch,
   QueueRecallRetryNotifyResponse,

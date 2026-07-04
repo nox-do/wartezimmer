@@ -7,6 +7,12 @@ export type TerminalAuthPath = 'phone_dob' | 'name_dob' | 'egk' | 'mfa_assist';
 export type CheckinCreated = TicketCreated;
 export type TerminalTopicOption = TerminalTopic;
 
+export type TerminalAssistPressed = {
+  pressedAt: string;
+  expiresAt: string;
+  legacyCutover?: boolean;
+};
+
 import type { TerminalPatientLocale } from '@praxis-flow/domain';
 
 export type TerminalHeartbeat = {
@@ -63,8 +69,25 @@ export async function createCheckin(input: {
   });
 }
 
+export async function pressTerminalAssist() {
+  return cookieAuthFetch<TerminalAssistPressed>('/api/v1/checkins/assist/press', {
+    method: 'POST',
+    headers: terminalDeviceHeaders,
+    body: JSON.stringify({}),
+  });
+}
+
+/** @deprecated Legacy cutover — same as pressTerminalAssist. */
 export async function createMfaAssistCheckin() {
-  return cookieAuthFetch<CheckinCreated>('/api/v1/checkins/mfa-assist', {
+  return cookieAuthFetch<TerminalAssistPressed>('/api/v1/checkins/mfa-assist', {
+    method: 'POST',
+    headers: terminalDeviceHeaders,
+    body: JSON.stringify({}),
+  });
+}
+
+export async function releaseTerminalAssist() {
+  return cookieAuthFetch<null>('/api/v1/checkins/assist/release', {
     method: 'POST',
     headers: terminalDeviceHeaders,
     body: JSON.stringify({}),

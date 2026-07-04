@@ -20,6 +20,7 @@ import { resolveDomainError } from './http/domain-error-mapper.js';
 import { registerOpenApiDocs } from './openapi/register-openapi-docs.js';
 import { PATIENT_UPLOAD_MAX_BYTES } from './shared/documents/patient-upload-limits.js';
 import { resyncRecallWindowExpiryScheduler } from './shared/queue/recall-window-expiry-scheduler.js';
+import { resyncTerminalAssistPendingExpiryScheduler } from './shared/checkin/terminal-assist-pending-expiry-scheduler.js';
 import { buildFastifyLoggerOptions } from '@praxis-flow/server-shared';
 import { toStaffPinHashConfig } from './shared/db/database-auth-settings.js';
 import { registerSecurityHeaders } from './http/security-headers.js';
@@ -86,6 +87,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   app.addHook('onReady', async () => {
     resyncRecallWindowExpiryScheduler(db);
+    resyncTerminalAssistPendingExpiryScheduler(db);
     outboxWorker.start();
   });
   app.addHook('onClose', async () => {

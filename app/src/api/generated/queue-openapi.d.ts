@@ -433,6 +433,17 @@ export interface components {
        * @enum {string|null}
        */
       triageLevel?: 'red' | 'yellow' | 'green' | null;
+      /** @description Patient requested help at terminal before topic check-in (MFA marker only) */
+      needsAssistance: boolean;
+    };
+    TerminalAssistPendingItem: {
+      deviceId: string;
+      deviceLabel: string;
+      /** Format: date-time */
+      pressedAt: string;
+      /** Format: date-time */
+      expiresAt: string;
+      remainingMs: number;
     };
     QueueTriageResponse: {
       /** @constant */
@@ -481,6 +492,7 @@ export interface components {
       view: 'mfa';
       revision: number;
       items: components['schemas']['QueueItem'][];
+      assistPending: components['schemas']['TerminalAssistPendingItem'][];
       checkinLocked: boolean;
       /** Format: date-time */
       serverTime: string;

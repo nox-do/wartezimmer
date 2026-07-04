@@ -34,6 +34,7 @@ components:
         - waitMs
         - documentCount
         - hasMobilePhone
+        - needsAssistance
       properties:
         ticketId:
           type: string
@@ -101,6 +102,32 @@ components:
             - yellow
             - green
           description: MFA-only visual marker (staff triage); not shown on TV
+        needsAssistance:
+          type: boolean
+          description: Patient requested help at terminal before topic check-in (MFA marker only)
+    TerminalAssistPendingItem:
+      type: object
+      additionalProperties: false
+      required:
+        - deviceId
+        - deviceLabel
+        - pressedAt
+        - expiresAt
+        - remainingMs
+      properties:
+        deviceId:
+          type: string
+        deviceLabel:
+          type: string
+        pressedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        remainingMs:
+          type: integer
+          minimum: 0
     QueueTriageResponse:
       type: object
       additionalProperties: false
@@ -215,6 +242,7 @@ components:
         - view
         - revision
         - items
+        - assistPending
         - checkinLocked
         - serverTime
       properties:
@@ -228,6 +256,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/QueueItem'
+        assistPending:
+          type: array
+          items:
+            $ref: '#/components/schemas/TerminalAssistPendingItem'
         checkinLocked:
           type: boolean
         serverTime:

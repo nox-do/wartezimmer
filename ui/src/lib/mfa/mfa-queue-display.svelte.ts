@@ -9,6 +9,7 @@ export const mfaQueueDisplay = $state({
   errorMessage: null as string | null,
   backendUnreachable: false,
   queue: null as QueueResponse | null,
+  assistPending: [] as NonNullable<QueueResponse['assistPending']>,
   countdownNowMs: Date.now(),
 });
 
@@ -77,6 +78,7 @@ export function resetMfaQueueDisplay() {
   mfaQueueDisplay.errorMessage = null;
   mfaQueueDisplay.backendUnreachable = false;
   mfaQueueDisplay.queue = null;
+  mfaQueueDisplay.assistPending = [];
   mfaQueueDisplay.countdownNowMs = Date.now();
   lastQueueRevision = null;
 }
@@ -94,9 +96,11 @@ export function applyMfaQueueSnapshot(data: MfaQueueStreamSnapshot) {
       view: 'mfa',
       revision: data.revision,
       items: data.items,
+      assistPending: data.assistPending ?? [],
       checkinLocked: data.checkinLocked,
       serverTime: data.serverTime,
     };
+    mfaQueueDisplay.assistPending = data.assistPending ?? [];
     mfaQueueDisplay.countdownNowMs = Date.now();
     mfaQueueDisplay.loading = false;
     mfaQueueDisplay.errorMessage = null;

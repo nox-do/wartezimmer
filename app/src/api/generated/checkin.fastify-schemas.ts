@@ -75,6 +75,51 @@ export const TerminalTopic = {
   },
 } as const;
 
+export const TerminalAssistPendingItem = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['deviceId', 'deviceLabel', 'pressedAt', 'expiresAt', 'remainingMs'],
+  properties: {
+    deviceId: {
+      type: 'string',
+    },
+    deviceLabel: {
+      type: 'string',
+    },
+    pressedAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    expiresAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    remainingMs: {
+      type: 'integer',
+      minimum: 0,
+    },
+  },
+} as const;
+
+export const TerminalAssistPressed = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['pressedAt', 'expiresAt', 'legacyCutover'],
+  properties: {
+    pressedAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    expiresAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    legacyCutover: {
+      type: 'boolean',
+    },
+  },
+} as const;
+
 export const GET_api_v1_checkins_topicsResponse200 = {
   type: 'object',
   required: ['topics'],
@@ -133,7 +178,7 @@ export const POST_api_v1_checkinsRequestBody = {
     },
     authPath: {
       type: 'string',
-      enum: ['phone_dob', 'name_dob', 'egk', 'mfa_assist'],
+      enum: ['phone_dob', 'name_dob', 'egk'],
     },
     identityRef: {
       type: 'string',
@@ -405,37 +450,295 @@ export const POST_api_v1_checkinsResponse500 = {
   },
 } as const;
 
-export const POST_api_v1_checkins_mfa_assistResponse201 = {
+export const POST_api_v1_checkins_assist_pressResponse201 = {
   type: 'object',
-  required: ['ticketId', 'laneCode', 'number', 'queueStatus', 'createdAt'],
+  additionalProperties: false,
+  required: ['pressedAt', 'expiresAt', 'legacyCutover'],
   properties: {
-    ticketId: {
-      type: 'string',
-    },
-    laneCode: {
-      type: 'string',
-    },
-    number: {
-      type: 'integer',
-    },
-    queueStatus: {
-      type: 'string',
-      enum: [
-        'waiting',
-        'called',
-        'in_room',
-        'done',
-        'absent_wait_here',
-        'absent_return_later',
-        'cancelled',
-      ],
-    },
-    createdAt: {
+    pressedAt: {
       type: 'string',
       format: 'date-time',
     },
-    destinationRoomLabel: {
-      type: ['string', 'null'],
+    expiresAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    legacyCutover: {
+      type: 'boolean',
+    },
+  },
+} as const;
+
+export const POST_api_v1_checkins_assist_pressResponse400 = {
+  type: 'object',
+  required: ['code', 'message'],
+  properties: {
+    code: {
+      type: 'string',
+      enum: [
+        'INVALID_ARGUMENT',
+        'INTERNAL_ERROR',
+        'NOT_FOUND',
+        'AUTH_UNAUTHORIZED',
+        'AUTH_FORBIDDEN',
+        'RATE_LIMITED',
+        'TICKET_NOT_FOUND',
+        'DOCUMENT_NOT_FOUND',
+        'DOCUMENT_FORBIDDEN',
+        'INVALID_TRANSITION',
+        'ROOM_REQUIRED',
+        'MISSING_CALLBACK_PHONE',
+        'CHECKIN_LOCK_REQUIRED',
+        'DAY_CLOSE_IN_PROGRESS',
+        'INVALID_DAY_CLOSE_PHASE',
+        'DAY_CLOSE_NOT_STARTED',
+        'UNKNOWN_MESSAGING_PROVIDER',
+        'CHECKIN_LOCKED',
+        'CHECKIN_AUTH_PATH_DISABLED',
+        'CHECKIN_CLOSED',
+        'TOPIC_DISABLED',
+        'TOPIC_CLOSED',
+        'DOCUMENT_NOT_SCANNED',
+        'EXPORT_BLOCKED_MALWARE',
+        'OPS_SETTINGS_INVALID',
+        'EMERGENCY_DISABLED',
+        'EMERGENCY_NOT_FOUND',
+        'SETUP_INCOMPLETE',
+        'SETUP_ALREADY_COMPLETED',
+        'SESSION_INVALID_TICKET',
+        'SESSION_TICKET_NOT_ACTIVE',
+        'SESSION_ALREADY_ACTIVE',
+        'SESSION_UNAUTHORIZED',
+        'SESSION_EXPIRED',
+        'FORM_TEMPLATE_NOT_FOUND',
+        'DOCUMENT_INTAKE_BLOCKED',
+        'DOCUMENT_TEMPLATE_METADATA_INVALID',
+        'DOCUMENT_SCHEMA_OUTDATED',
+        'SANDBOX_UNAVAILABLE',
+        'CAPTIVE_CLIENT_MISSING',
+        'CAPTIVE_AUTH_FAILED',
+        'CALL_ANNOUNCEMENT_OFFLINE',
+        'ROOM_AT_CAPACITY',
+        'ROOM_BLOCKED_TOPICS',
+        'ROOM_BLOCKED_QUEUE',
+        'ROOM_BLOCKED_CAPACITY',
+        'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+        'RECALL_WINDOW_EXPIRED',
+        'UNKNOWN_TOPIC',
+        'TERMINAL_OFFLINE',
+        'TERMINAL_PHONE_INVALID',
+        'TERMINAL_BIRTH_DATE_INVALID',
+        'TERMINAL_LAST_NAME_INVALID',
+      ],
+    },
+    message: {
+      type: 'string',
+    },
+    details: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+} as const;
+
+export const POST_api_v1_checkins_assist_pressResponse409 = {
+  type: 'object',
+  required: ['code', 'message'],
+  properties: {
+    code: {
+      type: 'string',
+      enum: [
+        'INVALID_ARGUMENT',
+        'INTERNAL_ERROR',
+        'NOT_FOUND',
+        'AUTH_UNAUTHORIZED',
+        'AUTH_FORBIDDEN',
+        'RATE_LIMITED',
+        'TICKET_NOT_FOUND',
+        'DOCUMENT_NOT_FOUND',
+        'DOCUMENT_FORBIDDEN',
+        'INVALID_TRANSITION',
+        'ROOM_REQUIRED',
+        'MISSING_CALLBACK_PHONE',
+        'CHECKIN_LOCK_REQUIRED',
+        'DAY_CLOSE_IN_PROGRESS',
+        'INVALID_DAY_CLOSE_PHASE',
+        'DAY_CLOSE_NOT_STARTED',
+        'UNKNOWN_MESSAGING_PROVIDER',
+        'CHECKIN_LOCKED',
+        'CHECKIN_AUTH_PATH_DISABLED',
+        'CHECKIN_CLOSED',
+        'TOPIC_DISABLED',
+        'TOPIC_CLOSED',
+        'DOCUMENT_NOT_SCANNED',
+        'EXPORT_BLOCKED_MALWARE',
+        'OPS_SETTINGS_INVALID',
+        'EMERGENCY_DISABLED',
+        'EMERGENCY_NOT_FOUND',
+        'SETUP_INCOMPLETE',
+        'SETUP_ALREADY_COMPLETED',
+        'SESSION_INVALID_TICKET',
+        'SESSION_TICKET_NOT_ACTIVE',
+        'SESSION_ALREADY_ACTIVE',
+        'SESSION_UNAUTHORIZED',
+        'SESSION_EXPIRED',
+        'FORM_TEMPLATE_NOT_FOUND',
+        'DOCUMENT_INTAKE_BLOCKED',
+        'DOCUMENT_TEMPLATE_METADATA_INVALID',
+        'DOCUMENT_SCHEMA_OUTDATED',
+        'SANDBOX_UNAVAILABLE',
+        'CAPTIVE_CLIENT_MISSING',
+        'CAPTIVE_AUTH_FAILED',
+        'CALL_ANNOUNCEMENT_OFFLINE',
+        'ROOM_AT_CAPACITY',
+        'ROOM_BLOCKED_TOPICS',
+        'ROOM_BLOCKED_QUEUE',
+        'ROOM_BLOCKED_CAPACITY',
+        'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+        'RECALL_WINDOW_EXPIRED',
+        'UNKNOWN_TOPIC',
+        'TERMINAL_OFFLINE',
+        'TERMINAL_PHONE_INVALID',
+        'TERMINAL_BIRTH_DATE_INVALID',
+        'TERMINAL_LAST_NAME_INVALID',
+      ],
+    },
+    message: {
+      type: 'string',
+    },
+    details: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+} as const;
+
+export const POST_api_v1_checkins_assist_pressResponse500 = {
+  type: 'object',
+  required: ['code', 'message'],
+  properties: {
+    code: {
+      type: 'string',
+      enum: [
+        'INVALID_ARGUMENT',
+        'INTERNAL_ERROR',
+        'NOT_FOUND',
+        'AUTH_UNAUTHORIZED',
+        'AUTH_FORBIDDEN',
+        'RATE_LIMITED',
+        'TICKET_NOT_FOUND',
+        'DOCUMENT_NOT_FOUND',
+        'DOCUMENT_FORBIDDEN',
+        'INVALID_TRANSITION',
+        'ROOM_REQUIRED',
+        'MISSING_CALLBACK_PHONE',
+        'CHECKIN_LOCK_REQUIRED',
+        'DAY_CLOSE_IN_PROGRESS',
+        'INVALID_DAY_CLOSE_PHASE',
+        'DAY_CLOSE_NOT_STARTED',
+        'UNKNOWN_MESSAGING_PROVIDER',
+        'CHECKIN_LOCKED',
+        'CHECKIN_AUTH_PATH_DISABLED',
+        'CHECKIN_CLOSED',
+        'TOPIC_DISABLED',
+        'TOPIC_CLOSED',
+        'DOCUMENT_NOT_SCANNED',
+        'EXPORT_BLOCKED_MALWARE',
+        'OPS_SETTINGS_INVALID',
+        'EMERGENCY_DISABLED',
+        'EMERGENCY_NOT_FOUND',
+        'SETUP_INCOMPLETE',
+        'SETUP_ALREADY_COMPLETED',
+        'SESSION_INVALID_TICKET',
+        'SESSION_TICKET_NOT_ACTIVE',
+        'SESSION_ALREADY_ACTIVE',
+        'SESSION_UNAUTHORIZED',
+        'SESSION_EXPIRED',
+        'FORM_TEMPLATE_NOT_FOUND',
+        'DOCUMENT_INTAKE_BLOCKED',
+        'DOCUMENT_TEMPLATE_METADATA_INVALID',
+        'DOCUMENT_SCHEMA_OUTDATED',
+        'SANDBOX_UNAVAILABLE',
+        'CAPTIVE_CLIENT_MISSING',
+        'CAPTIVE_AUTH_FAILED',
+        'CALL_ANNOUNCEMENT_OFFLINE',
+        'ROOM_AT_CAPACITY',
+        'ROOM_BLOCKED_TOPICS',
+        'ROOM_BLOCKED_QUEUE',
+        'ROOM_BLOCKED_CAPACITY',
+        'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+        'RECALL_WINDOW_EXPIRED',
+        'UNKNOWN_TOPIC',
+        'TERMINAL_OFFLINE',
+        'TERMINAL_PHONE_INVALID',
+        'TERMINAL_BIRTH_DATE_INVALID',
+        'TERMINAL_LAST_NAME_INVALID',
+      ],
+    },
+    message: {
+      type: 'string',
+    },
+    details: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+} as const;
+
+export const GET_api_v1_checkins_assist_pendingResponse200 = {
+  type: 'object',
+  required: ['items', 'serverTime'],
+  properties: {
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['deviceId', 'deviceLabel', 'pressedAt', 'expiresAt', 'remainingMs'],
+        properties: {
+          deviceId: {
+            type: 'string',
+          },
+          deviceLabel: {
+            type: 'string',
+          },
+          pressedAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          expiresAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          remainingMs: {
+            type: 'integer',
+            minimum: 0,
+          },
+        },
+      },
+    },
+    serverTime: {
+      type: 'string',
+      format: 'date-time',
+    },
+  },
+} as const;
+
+export const POST_api_v1_checkins_mfa_assistResponse201 = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['pressedAt', 'expiresAt', 'legacyCutover'],
+  properties: {
+    pressedAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    expiresAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    legacyCutover: {
+      type: 'boolean',
     },
   },
 } as const;
@@ -659,12 +962,19 @@ export const POST_api_v1_checkins_mfa_assistResponse500 = {
 export const checkinSchemas = {
   TicketCreated,
   TerminalTopic,
+  TerminalAssistPendingItem,
+  TerminalAssistPressed,
   GET_api_v1_checkins_topicsResponse200,
   POST_api_v1_checkinsRequestBody,
   POST_api_v1_checkinsResponse201,
   POST_api_v1_checkinsResponse400,
   POST_api_v1_checkinsResponse409,
   POST_api_v1_checkinsResponse500,
+  POST_api_v1_checkins_assist_pressResponse201,
+  POST_api_v1_checkins_assist_pressResponse400,
+  POST_api_v1_checkins_assist_pressResponse409,
+  POST_api_v1_checkins_assist_pressResponse500,
+  GET_api_v1_checkins_assist_pendingResponse200,
   POST_api_v1_checkins_mfa_assistResponse201,
   POST_api_v1_checkins_mfa_assistResponse400,
   POST_api_v1_checkins_mfa_assistResponse409,

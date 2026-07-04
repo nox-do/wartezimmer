@@ -383,6 +383,32 @@
   font-size: var(--text-md);
 }
 
+.alert--assist {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-color: color-mix(in srgb, var(--blue-500, #3b82f6) 45%, transparent);
+  background: color-mix(in srgb, var(--blue-500, #3b82f6) 12%, var(--card));
+  color: var(--blue-900, #1e3a8a);
+}
+
+.alert--assist strong {
+  display: block;
+  font-size: var(--text-md);
+}
+
+.alert--assist p {
+  margin-top: 0.35rem;
+  font-size: var(--text-md);
+}
+
+.alert__assist-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
 .alert__action,
 .alert__action--emphasis {
   flex-shrink: 0;

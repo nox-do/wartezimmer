@@ -132,6 +132,7 @@ export function visitToQueueTicketRow(visit: VisitView, settings: OpsSettings): 
     returnUntil: null,
     triageLevel: null,
     documentCount: 0,
+    needsAssistance: visit.needsAssistance,
   };
 }
 

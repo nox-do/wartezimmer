@@ -74,6 +74,46 @@ components:
         availableTo:
           type: string
           nullable: true
+    TerminalAssistPendingItem:
+      type: object
+      additionalProperties: false
+      required:
+        - deviceId
+        - deviceLabel
+        - pressedAt
+        - expiresAt
+        - remainingMs
+      properties:
+        deviceId:
+          type: string
+        deviceLabel:
+          type: string
+        pressedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        remainingMs:
+          type: integer
+          minimum: 0
+    TerminalAssistPressed:
+      type: object
+      additionalProperties: false
+      required:
+        - pressedAt
+        - expiresAt
+        - legacyCutover
+      properties:
+        pressedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        legacyCutover:
+          type: boolean
+          description: True when returned from deprecated /mfa-assist cutover endpoint.
 paths:
   /api/v1/checkins/topics:
     get:
@@ -117,7 +157,6 @@ paths:
                     - phone_dob
                     - name_dob
                     - egk
-                    - mfa_assist
                 identityRef:
                   type: string
                 phoneNumber:
@@ -185,16 +224,72 @@ paths:
                   value:
                     code: OPS_SETTINGS_INVALID
                     message: Praxiszeiten sind ungueltig konfiguriert.
-  /api/v1/checkins/mfa-assist:
+  /api/v1/checkins/assist/press:
     post:
-      summary: Create check-in via direct MFA path
+      summary: Terminal help button pressed — ephemeral assist pending (no visit)
       responses:
         '201':
-          description: MFA ticket created
+          description: Assist pending registered
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TicketCreated'
+                $ref: '#/components/schemas/TerminalAssistPressed'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Check-in rejected by configured opening-hour guardrails
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '500':
+          description: Invalid opening-hour configuration
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/checkins/assist/release:
+    post:
+      summary: Clear terminal assist pending (manual or timeout)
+      responses:
+        '204':
+          description: Released or already inactive
+  /api/v1/checkins/assist/pending:
+    get:
+      summary: List active terminal assist pending signals (MFA)
+      responses:
+        '200':
+          description: Active assist pending entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - serverTime
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TerminalAssistPendingItem'
+                  serverTime:
+                    type: string
+                    format: date-time
+  /api/v1/checkins/mfa-assist:
+    post:
+      summary: Deprecated — cutover to assist press (no ticket)
+      deprecated: true
+      responses:
+        '201':
+          description: Assist pending registered (legacy cutover)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminalAssistPressed'
         '400':
           description: Invalid request
           content:

@@ -112,6 +112,14 @@
   line-height: 1.45;
 }
 
+.terminal-page .terminal-lead--assist {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--blue-500, #3b82f6) 35%, transparent);
+  background: color-mix(in srgb, var(--blue-500, #3b82f6) 10%, var(--card));
+  color: var(--terminal-emphasis);
+}
+
 .terminal-page .terminal-nav {
   margin-top: 20px;
   font-size: var(--text-base);
@@ -162,6 +170,15 @@
 .terminal-page button.terminal-card:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.terminal-page button.terminal-card--assist-pressed {
+  border-color: color-mix(in srgb, var(--blue-500, #3b82f6) 55%, var(--terminal-ink));
+  background: color-mix(in srgb, var(--blue-500, #3b82f6) 8%, var(--card));
+}
+
+.terminal-page button.terminal-card--assist-pressed .terminal-card__icon {
+  background: color-mix(in srgb, var(--blue-500, #3b82f6) 85%, var(--terminal-ink));
 }
 
 .terminal-page span.terminal-card--disabled {

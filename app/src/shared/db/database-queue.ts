@@ -163,6 +163,7 @@ export function listQueueFromDb(deps: QueueDeps): QueueTicketRow[] {
   return rows.map((row) => ({
     ...row,
     recallNotifySent: Boolean(row.recallNotifySent),
+    needsAssistance: row.needsAssistance ?? false,
   }));
 }
 

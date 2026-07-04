@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { isTerminalPatientLocale, type TerminalPatientLocale } from '@praxis-flow/domain';
 import type { CoreDatabase } from '../shared/db/database.js';
 import type { CreateCheckinBody } from '../api/checkin-openapi-types.js';
@@ -17,6 +17,8 @@ import {
   assertKnownCheckinAuthPath,
   assertTerminalAuthPathEnabled,
 } from '../shared/checkin/terminal-auth-path.js';
+import { toAssistPendingItem } from '../shared/checkin/terminal-assist-pending.js';
+import { TERMINAL_DEVICE_ID } from '../shared/ops/device-ids.js';
 import {
   resolveTicketLaneCodeFromSettings,
   resolveDestinationRoomLabelForTopic,
@@ -56,6 +58,23 @@ function resolveCheckinLocaleFromHeader(value: string | string[] | undefined): T
   return normalized && isTerminalPatientLocale(normalized) ? normalized : null;
 }
 
+function resolveTerminalDeviceId(request: FastifyRequest): string {
+  if (request.authSession?.kind === 'device' && request.authSession.role === 'terminal') {
+    return request.authSession.deviceId;
+  }
+  return TERMINAL_DEVICE_ID;
+}
+
+function runAssistPress(db: CoreDatabase, deviceId: string, legacyCutover: boolean) {
+  const row = db.pressTerminalAssist(deviceId);
+  notifyTvQueueChanged(db);
+  return {
+    pressedAt: row.pressedAt,
+    expiresAt: row.expiresAt,
+    legacyCutover,
+  };
+}
+
 export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): void {
   app.get(
     '/api/v1/checkins/topics',
@@ -84,6 +103,68 @@ export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): v
     },
   );
 
+  app.post(
+    '/api/v1/checkins/assist/press',
+    {
+      schema: {
+        response: {
+          201: checkinSchemas.POST_api_v1_checkins_assist_pressResponse201,
+          400: checkinErrorResponse,
+          409: checkinErrorResponse,
+          500: checkinErrorResponse,
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const payload = runAssistPress(db, resolveTerminalDeviceId(request), false);
+        return reply.code(201).send(payload);
+      } catch (error) {
+        if (sendResolvedDomainError(reply, error, CHECKIN_ERROR_MESSAGES)) {
+          return;
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post(
+    '/api/v1/checkins/assist/release',
+    {
+      schema: {
+        response: {
+          204: { type: 'null' },
+          400: checkinErrorResponse,
+        },
+      },
+    },
+    async (request, reply) => {
+      const released = db.releaseTerminalAssist(resolveTerminalDeviceId(request));
+      if (released) {
+        notifyTvQueueChanged(db);
+      }
+      return reply.code(204).send();
+    },
+  );
+
+  app.get(
+    '/api/v1/checkins/assist/pending',
+    {
+      schema: {
+        response: {
+          200: checkinSchemas.GET_api_v1_checkins_assist_pendingResponse200,
+        },
+      },
+    },
+    async () => {
+      const nowMs = Date.now();
+      return {
+        items: db.listActiveTerminalAssistPending(nowMs).map((row) => toAssistPendingItem(row, nowMs)),
+        serverTime: new Date(nowMs).toISOString(),
+      };
+    },
+  );
+
   app.post<{ Body: CreateCheckinBody }>(
     '/api/v1/checkins',
     {
@@ -105,8 +186,13 @@ export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): v
       const phoneNumber = request.body.phoneNumber?.trim() ?? '';
       const lastName = request.body.lastName?.trim() ?? '';
       const birthDate = request.body.birthDate?.trim() ?? '';
+      const deviceId = resolveTerminalDeviceId(request);
+      const assistActive = db.isTerminalAssistPendingActive(deviceId);
 
       try {
+        if (authPath === 'mfa_assist') {
+          throw domainError('INVALID_ARGUMENT');
+        }
         assertKnownCheckinAuthPath(authPath);
         assertTerminalAuthPathEnabled(db.getOpsSettings(), authPath);
 
@@ -185,7 +271,11 @@ export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): v
           identityRef,
           checkinPhone: resolveCheckinPhoneForTicket(authPath, phoneNumber),
           checkinLocale,
+          needsAssistance: assistActive,
         });
+        if (assistActive) {
+          db.releaseTerminalAssist(deviceId);
+        }
         const laneCode = resolveTicketLaneCodeFromSettings(db.getOpsSettings(), topicId);
         const settings = db.getOpsSettings();
         const destinationRoomLabel = resolveDestinationRoomLabelForTopic(settings, topicId);
@@ -213,29 +303,17 @@ export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): v
     {
       schema: {
         response: {
-          201: checkinSchemas.POST_api_v1_checkins_mfa_assistResponse201,
+          201: checkinSchemas.POST_api_v1_checkins_assist_pressResponse201,
           400: checkinErrorResponse,
           409: checkinErrorResponse,
           500: checkinErrorResponse,
         },
       },
     },
-    async (_request, reply) => {
+    async (request, reply) => {
       try {
-        const created = db.createMfaAssistTicket();
-
-        const settings = db.getOpsSettings();
-        const destinationRoomLabel = resolveDestinationRoomLabelForTopic(settings, 'mfa');
-
-        notifyTvQueueChanged(db);
-        return reply.code(201).send({
-          ticketId: created.ticketId,
-          laneCode: 'M',
-          number: created.number,
-          queueStatus: 'waiting',
-          createdAt: created.createdAt,
-          destinationRoomLabel,
-        });
+        const payload = runAssistPress(db, resolveTerminalDeviceId(request), true);
+        return reply.code(201).send(payload);
       } catch (error) {
         if (sendResolvedDomainError(reply, error, CHECKIN_ERROR_MESSAGES)) {
           return;

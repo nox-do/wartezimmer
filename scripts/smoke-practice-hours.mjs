@@ -122,11 +122,13 @@ async function main() {
       expectedStatus: 201,
     });
 
-    console.log('4) mfa-assist funktioniert innerhalb Praxiszeiten');
-    await requestJson(baseUrl, 'POST', '/api/v1/checkins/mfa-assist', {
+    console.log('4) mfa-assist cutover liefert assist press innerhalb Praxiszeiten');
+    const assistPress = await requestJson(baseUrl, 'POST', '/api/v1/checkins/mfa-assist', {
       auth: terminalAuth,
       expectedStatus: 201,
     });
+    assert(assistPress.body?.pressedAt, 'Expected pressedAt in assist cutover response');
+    assert(assistPress.body?.expiresAt, 'Expected expiresAt in assist cutover response');
 
     console.log('5) Praxisfenster auf wahrscheinlich geschlossenen Ein-Minuten-Slot setzen');
     await requestJson(baseUrl, 'PATCH', '/api/v1/ops/settings', {

@@ -166,6 +166,34 @@ export function assertCheckInAllowed(
   }
 }
 
+export function assertTerminalAssistPressAllowed(
+  deps: Pick<
+    CheckinSessionDeps,
+    'dayCloseStateStmt' | 'normalizeDayClosePhase' | 'getBusinessDay' | 'getBusinessTimeZone' | 'getOpsSettings' | 'checkinLockStmt'
+  >,
+): void {
+  const state = deps.dayCloseStateStmt.get() as
+    | { locked?: number; phase?: string; lastResetBusinessDay?: string }
+    | undefined;
+  const dayClosePhase = deps.normalizeDayClosePhase(state?.phase);
+  if (isEffectiveCheckinLockedFromRow(deps, state) || dayClosePhase !== 'open') {
+    throw domainError('CHECKIN_LOCKED');
+  }
+
+  const opsSettings = deps.getOpsSettings();
+  const nowMinutes = getBusinessMinutesOfDay(deps.getBusinessTimeZone());
+  try {
+    if (!isPracticeOpenAt(opsSettings, nowMinutes)) {
+      throw domainError('CHECKIN_CLOSED');
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === 'CHECKIN_CLOSED') {
+      throw error;
+    }
+    throw domainError('OPS_SETTINGS_INVALID', { cause: error });
+  }
+}
+
 export function createTicketInDb(
   deps: CheckinSessionDeps,
   input: CreateTicketInput,

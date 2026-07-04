@@ -2,6 +2,7 @@ import type { TerminalAuthPath } from './terminal-api';
 
 export type TerminalSession = {
   authPath: TerminalAuthPath;
+  assistMode?: boolean;
   phoneNumber?: string;
   lastName?: string;
   dobDisplay?: string;
@@ -20,6 +21,31 @@ export type TerminalCheckinResult = {
 
 const SESSION_KEY = 'terminal:session';
 const RESULT_KEY = 'terminal:checkin-result';
+const ASSIST_EXPIRES_KEY = 'terminal:assist-expires-at';
+
+export function writeAssistMode(expiresAt: string): void {
+  sessionStorage.setItem(ASSIST_EXPIRES_KEY, expiresAt);
+}
+
+export function readAssistMode(): boolean {
+  const expiresAt = sessionStorage.getItem(ASSIST_EXPIRES_KEY);
+  if (!expiresAt) {
+    return false;
+  }
+  if (Date.parse(expiresAt) <= Date.now()) {
+    clearAssistMode();
+    return false;
+  }
+  return true;
+}
+
+export function readAssistExpiresAt(): string | null {
+  return sessionStorage.getItem(ASSIST_EXPIRES_KEY);
+}
+
+export function clearAssistMode(): void {
+  sessionStorage.removeItem(ASSIST_EXPIRES_KEY);
+}
 
 export function terminalAuthEntryPath(authPath: TerminalAuthPath): string {
   if (authPath === 'egk') {
@@ -44,7 +70,8 @@ export function readTerminalSession(): TerminalSession | null {
 }
 
 export function writeTerminalSession(session: TerminalSession): void {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  const payload: TerminalSession = readAssistMode() ? { ...session, assistMode: true } : session;
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(payload));
 }
 
 export function clearTerminalSession(): void {
@@ -74,4 +101,5 @@ export function clearCheckinResult(): void {
 export function resetTerminalFlow(): void {
   clearTerminalSession();
   clearCheckinResult();
+  clearAssistMode();
 }

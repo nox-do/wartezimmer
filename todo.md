@@ -41,14 +41,36 @@
 - [x] Transitions: `checkInRoom`/`checkOutRoom`/`reassignRoom` → Visit-Bridge (`arrive`/`done`)
 - [x] Tests: Visit call → arrive → done + scoped Raum-Panel (409 bei falschem Raum)
 - [x] Catalog-Sync: nur konfigurierbare `ops_settings.topics` (kein System-Topic)
-- [ ] Hilfe-Button (`/checkins/mfa-assist`) noch Legacy-Ticket — Core: `mfaAssist` / `needsAssistance` am Visit (kein Katalog-Thema)
+- [x] Hilfe-Button: Pressed-State + `needsAssistance` (kein Lane-M-Sofort-Ticket mehr)
 - [x] Flow-Core-Kommentare: kein „System-Topic“ — Hilfe via `mfaAssist`/`needsAssistance`, PoC-Seed nur intern
 - [ ] TV: verbleibende Legacy-Tickets ohne Visit-Zeile weiter aus `listQueue` (ohne `explainVisibility`)
 - [x] Raum-Panel: Queue-Snapshot mit `explainVisibility` (`pf_panel_*`), Status `called`/`in_room` aus Visits
 - [x] Fix: SSE-Verbindungs-Leak (Browser-Connection-Pool voll → Reassign hängt auf „Wird zugewiesen…“)
 - [x] Fix: Raum-Panel `?room=` vs. Session-Cookie — falsches Panel bei URL-Wechsel / alter Session
 
-## Integration (Reihenfolge)
+## Design: Terminal-Hilfe-Button (2026-07-04)
+
+**Zielbild:** Pressed-State (ephemeral, Host) → direkt Topic-Auswahl → Check-in mit `needsAssistance: true`.
+
+**Entscheidungen (User):**
+- Timeout **10 s** (`TERMINAL_ASSIST_PENDING_TIMEOUT_MS`)
+- MFA: **blaues Banner** wie Notfall (`TerminalAssistAlert` + Queue-SSE `assistPending[]`)
+- Legacy **`POST /mfa-assist`**: Cutover → gleiche Antwort wie `assist/press` (`TerminalAssistPressed`)
+- Terminal: Hilfe-Press → **bleibt auf Startseite**, dann normale Auth (phone/name/egk) → Topic; `needsAssistance` serverseitig bei active press; kein `authPath`-Fake mehr
+
+**Storage:** A1 — `terminal_assist_pending` (DB) + TTL-Scheduler
+
+**Implementiert:**
+- [x] Host: `terminal_assist_pending` + 10s TTL-Scheduler
+- [x] API: `assist/press|release|pending` + Check-in setzt `needsAssistance` bei active press
+- [x] Bridge/Snapshot/OpenAPI: `needsAssistance` + `assistPending`
+- [x] Terminal UI: Press → Topic + Empfang-Hinweis
+- [x] MFA UI: blaues Banner + `Users`-Symbol auf QueueEntry
+- [x] Tests (278 app + core)
+- [x] Legacy `createMfaAssistTicket` entfernt; `/mfa-assist` → press cutover
+
+- [ ] Hilfe-Button Legacy-Ticket abgehakt (oben)
+
 
 - [x] Spike: `createRuntime` hinter Dev-Endpoints in `app`
 - [x] Catalog-Sync: `ops_settings` → Topics/Locations/Queues/RoutingRules (Haupt-DB)

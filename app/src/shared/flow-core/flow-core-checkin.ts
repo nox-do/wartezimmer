@@ -21,6 +21,7 @@ export function createVisitCheckInInDb(
     authPath: input.authPath as AuthPath,
     surfaceId: PF_FLOW_SURFACE_TERMINAL,
     displayName: input.identityRef?.trim() || undefined,
+    needsAssistance: input.needsAssistance === true,
   });
   if (!visit) {
     throw new Error('CHECKIN_FAILED');

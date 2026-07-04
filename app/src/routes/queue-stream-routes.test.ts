@@ -46,6 +46,7 @@ function enableTestAuth(): void {
 function fakeQueueDb(): CoreDatabase {
   return {
     listQueue: () => [],
+    listActiveTerminalAssistPending: () => [],
     getOpsSettings: () => ({
       rooms: [
         {

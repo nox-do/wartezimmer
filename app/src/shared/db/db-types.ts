@@ -23,6 +23,7 @@ export type CreateTicketCallerInput = {
   identityRef?: string;
   checkinPhone?: string | null;
   checkinLocale?: TerminalPatientLocale | null;
+  needsAssistance?: boolean;
 };
 
 export type CreateTicketInput = CreateTicketCallerInput & {
@@ -60,6 +61,7 @@ export type QueueTicketRow = {
   returnUntil: string | null;
   triageLevel: string | null;
   documentCount: number;
+  needsAssistance: boolean;
 };
 
 export type TicketIdentityView = {

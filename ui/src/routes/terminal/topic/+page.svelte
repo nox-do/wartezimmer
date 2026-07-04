@@ -16,7 +16,7 @@
   } from '$lib/terminal/terminal-api';
   import { mountTerminalAuthRouteGuard } from '$lib/terminal/terminal-auth-route-guard.svelte';
   import { TERMINAL_OPS_CONTEXT_KEY, type TerminalOpsSnapshot } from '$lib/terminal/terminal-ops-context';
-  import { readTerminalSession, terminalAuthEntryPath, writeCheckinResult } from '$lib/terminal/terminal-session';
+  import { readAssistMode, readTerminalSession, terminalAuthEntryPath, writeCheckinResult } from '$lib/terminal/terminal-session';
   import { toastStore } from '$lib/stores/toastStore';
 
   const terminalOps = getContext<TerminalOpsSnapshot>(TERMINAL_OPS_CONTEXT_KEY);
@@ -28,12 +28,9 @@
   let busyTopicId = $state<string | null>(null);
   let labelTranslations = $state<Map<string, string>>(new Map());
 
-  mountTerminalAuthRouteGuard(() => terminalOps, () => {
-    if (!session || session.authPath === 'mfa_assist') {
-      return null;
-    }
-    return session.authPath;
-  });
+  mountTerminalAuthRouteGuard(() => terminalOps, () => session?.authPath ?? null);
+
+  const showAssistHint = $derived(Boolean(session?.assistMode && readAssistMode()));
 
   function displayLabel(label: string): string {
     return labelTranslations.get(label) ?? label;
@@ -129,7 +126,11 @@
       <h1>{t('terminal.topicEmptyReception')}</h1>
     {:else}
       <h1>{t('terminal.topicTitle')}</h1>
-      <p class="terminal-lead">{t('terminal.topicLead')}</p>
+      {#if showAssistHint}
+        <p class="terminal-lead terminal-lead--assist">{t('terminal.topicAssistHint')}</p>
+      {:else}
+        <p class="terminal-lead">{t('terminal.topicLead')}</p>
+      {/if}
     {/if}
 
     {#if loading}
@@ -168,7 +169,9 @@
     {/if}
 
     <nav class="terminal-nav">
-      <a href={terminalAuthEntryPath(session.authPath)}>{t('terminal.topicBack')}</a>
+      <a href={showAssistHint ? '/terminal' : terminalAuthEntryPath(session.authPath)}>
+        {showAssistHint ? t('terminal.topicAssistBack') : t('terminal.topicBack')}
+      </a>
     </nav>
   </div>
 {/if}

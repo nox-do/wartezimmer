@@ -66,6 +66,22 @@ import {
   scheduleRecallWindowExpiry,
 } from '../queue/recall-window-expiry-scheduler.js';
 import {
+  cancelTerminalAssistPendingExpiry,
+  clearAllTerminalAssistPendingExpiries,
+  scheduleTerminalAssistPendingExpiry,
+} from '../checkin/terminal-assist-pending-expiry-scheduler.js';
+import {
+  clearAllTerminalAssistPending,
+  clearTerminalAssistPending,
+  ensureTerminalAssistPendingSchema,
+  expireTerminalAssistPending,
+  getTerminalAssistPending as getTerminalAssistPendingRow,
+  isTerminalAssistPendingActive,
+  listActiveTerminalAssistPending,
+  upsertTerminalAssistPending,
+  type TerminalAssistPendingRow,
+} from '../checkin/terminal-assist-pending.js';
+import {
   callTicketInDb,
   checkInRoomInDb,
   reassignRoomInDb,
@@ -111,8 +127,6 @@ import {
   type DocumentDeps,
 } from './database-documents.js';
 import {
-  buildCreateTicketInput,
-  createTicketInDb,
   getPatientSessionMeFromDb,
   getOpsStateFromDb,
   getTicketIdentityViewFromDb,
@@ -123,6 +137,8 @@ import {
   setCheckinLockInDb,
   submitPatientSessionInDb,
   verifyTicketCodeInDb,
+import {
+  assertTerminalAssistPressAllowed,
   type CheckinSessionDeps,
 } from './database-checkin-sessions.js';
 import {
@@ -299,6 +315,7 @@ export class CoreDatabase {
 
     runMigrations(this.db);
     ensureOpsSetupSchema(this.db);
+    ensureTerminalAssistPendingSchema(this.db);
     ensureAuthSettingsSchema(this.db);
     ensureDemoContactLookupSeed(this.db);
     ensurePracticeProfileSeedFromEnv(this.db);
@@ -610,14 +627,42 @@ export class CoreDatabase {
     );
   }
 
-  /** Hilfe-Button: noch Legacy-Ticket. Ziel: runtime.checkIn({ mfaAssist: true }) — Visit mit checkInPath/authPath, kein Katalog-Thema. */
-  createMfaAssistTicket(): { ticketId: string; number: number; createdAt: string } {
-    return this.withTransaction('createMfaAssistTicket', () => {
-      const fullInput = buildCreateTicketInput(this.getOpsSettings(), {
-        topicId: 'mfa',
-        authPath: 'mfa_assist',
-      });
-      return createTicketInDb(this.checkinSessionDeps(), fullInput);
+  pressTerminalAssist(deviceId: string): TerminalAssistPendingRow {
+    return this.withTransaction('pressTerminalAssist', () => {
+      assertTerminalAssistPressAllowed(this.checkinSessionDeps());
+      const row = upsertTerminalAssistPending(this.db, deviceId);
+      scheduleTerminalAssistPendingExpiry(this.db, row.deviceId, Date.parse(row.expiresAt));
+      return row;
+    });
+  }
+
+  releaseTerminalAssist(deviceId: string): boolean {
+    return this.withTransaction('releaseTerminalAssist', () => {
+      cancelTerminalAssistPendingExpiry(deviceId);
+      return clearTerminalAssistPending(this.db, deviceId);
+    });
+  }
+
+  getTerminalAssistPending(deviceId: string, nowMs = Date.now()): TerminalAssistPendingRow | null {
+    return getTerminalAssistPendingRow(this.db, deviceId, nowMs);
+  }
+
+  listActiveTerminalAssistPending(nowMs = Date.now()): TerminalAssistPendingRow[] {
+    return listActiveTerminalAssistPending(this.db, nowMs);
+  }
+
+  isTerminalAssistPendingActive(deviceId: string, nowMs = Date.now()): boolean {
+    return isTerminalAssistPendingActive(this.db, deviceId, nowMs);
+  }
+
+  expireTerminalAssistPending(deviceId: string, nowMs = Date.now()): boolean {
+    return expireTerminalAssistPending(this.db, deviceId, nowMs);
+  }
+
+  clearAllTerminalAssistPending(): number {
+    return this.withTransaction('clearAllTerminalAssistPending', () => {
+      clearAllTerminalAssistPendingExpiries();
+      return clearAllTerminalAssistPending(this.db);
     });
   }
 
@@ -1187,6 +1232,8 @@ export class CoreDatabase {
   } {
     return this.withTransaction('resetBusinessDay', () => {
       const result = resetBusinessDayInDb(this.dayLifecycleDeps());
+      clearAllTerminalAssistPendingExpiries();
+      clearAllTerminalAssistPending(this.db);
       clearFlowCoreVisitRuntime(this.db);
       resetFlowCoreRuntimeForTests();
       return result;

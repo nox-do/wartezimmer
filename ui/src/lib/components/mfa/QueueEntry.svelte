@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createDraggable } from '@dnd-kit/svelte';
   import type { Snippet } from 'svelte';
-  import { ArrowRight, FileText, LogOut, MapPin, Megaphone, RotateCcw, Send, TreePalm } from '@lucide/svelte';
+  import { ArrowRight, FileText, LogOut, MapPin, Megaphone, RotateCcw, Send, TreePalm, Users } from '@lucide/svelte';
   import MfaActionButton from '$lib/components/mfa/MfaActionButton.svelte';
   import QueueTriageButton from '$lib/components/mfa/QueueTriageButton.svelte';
   import { setIdentityRefTicket } from '$lib/queue/queue-actions';
@@ -88,6 +88,7 @@
       ? item.triageLevel
       : null,
   );
+  const showNeedsAssistance = $derived(Boolean(item.needsAssistance));
 
   const canDrag = $derived(dragEnabled && dragZone != null && !busy && !nameEditing);
 
@@ -192,6 +193,11 @@
   <div class="queue-ticket">
     <TopicLaneBadge laneCode={item.laneCode} accentColor={laneAccentColor} title={item.laneCode} />
     <span class="queue-num">{String(item.number).padStart(3, '0')}</span>
+    {#if showNeedsAssistance}
+      <span class="queue-assist-mark" title={t('mfa.entryNeedsAssistance')} aria-label={t('mfa.entryNeedsAssistance')}>
+        <Users size={16} aria-hidden="true" />
+      </span>
+    {/if}
   </div>
 {/snippet}
 

@@ -2201,7 +2201,7 @@
                   },
                   "authPath": {
                     "type": "string",
-                    "enum": ["phone_dob", "name_dob", "egk", "mfa_assist"]
+                    "enum": ["phone_dob", "name_dob", "egk"]
                   },
                   "identityRef": {
                     "type": "string"
@@ -2557,51 +2557,372 @@
         }
       }
     },
-    "/api/v1/checkins/mfa-assist": {
+    "/api/v1/checkins/assist/press": {
       "post": {
-        "summary": "Create check-in via direct MFA path",
+        "summary": "Terminal help button pressed — ephemeral assist pending (no visit)",
         "responses": {
           "201": {
-            "description": "MFA ticket created",
+            "description": "Assist pending registered",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["ticketId", "laneCode", "number", "queueStatus", "createdAt"],
+                  "additionalProperties": false,
+                  "required": ["pressedAt", "expiresAt", "legacyCutover"],
                   "properties": {
-                    "ticketId": {
-                      "type": "string",
-                      "description": "Internal unique ticket id.",
-                      "example": "20260530-A-001"
-                    },
-                    "laneCode": {
-                      "type": "string",
-                      "example": "A"
-                    },
-                    "number": {
-                      "type": "integer",
-                      "example": 1
-                    },
-                    "queueStatus": {
-                      "type": "string",
-                      "enum": [
-                        "waiting",
-                        "called",
-                        "in_room",
-                        "done",
-                        "absent_wait_here",
-                        "absent_return_later",
-                        "cancelled"
-                      ]
-                    },
-                    "createdAt": {
+                    "pressedAt": {
                       "type": "string",
                       "format": "date-time"
                     },
-                    "destinationRoomLabel": {
+                    "expiresAt": {
                       "type": "string",
-                      "nullable": true,
-                      "description": "Patient-facing hint — default room for the chosen topic (wayfinding at check-in)."
+                      "format": "date-time"
+                    },
+                    "legacyCutover": {
+                      "type": "boolean",
+                      "description": "True when returned from deprecated /mfa-assist cutover endpoint."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "TICKET_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Check-in rejected by configured opening-hour guardrails",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "TICKET_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Invalid opening-hour configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "TICKET_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/checkins/assist/release": {
+      "post": {
+        "summary": "Clear terminal assist pending (manual or timeout)",
+        "responses": {
+          "204": {
+            "description": "Released or already inactive"
+          }
+        }
+      }
+    },
+    "/api/v1/checkins/assist/pending": {
+      "get": {
+        "summary": "List active terminal assist pending signals (MFA)",
+        "responses": {
+          "200": {
+            "description": "Active assist pending entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["items", "serverTime"],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "deviceId",
+                          "deviceLabel",
+                          "pressedAt",
+                          "expiresAt",
+                          "remainingMs"
+                        ],
+                        "properties": {
+                          "deviceId": {
+                            "type": "string"
+                          },
+                          "deviceLabel": {
+                            "type": "string"
+                          },
+                          "pressedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "expiresAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "remainingMs": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        }
+                      }
+                    },
+                    "serverTime": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/checkins/mfa-assist": {
+      "post": {
+        "summary": "Deprecated — cutover to assist press (no ticket)",
+        "deprecated": true,
+        "responses": {
+          "201": {
+            "description": "Assist pending registered (legacy cutover)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["pressedAt", "expiresAt", "legacyCutover"],
+                  "properties": {
+                    "pressedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "legacyCutover": {
+                      "type": "boolean",
+                      "description": "True when returned from deprecated /mfa-assist cutover endpoint."
                     }
                   }
                 }
@@ -3433,7 +3754,14 @@
                     {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": ["view", "revision", "items", "checkinLocked", "serverTime"],
+                      "required": [
+                        "view",
+                        "revision",
+                        "items",
+                        "assistPending",
+                        "checkinLocked",
+                        "serverTime"
+                      ],
                       "properties": {
                         "view": {
                           "type": "string",
@@ -3457,7 +3785,8 @@
                               "arrivedAt",
                               "waitMs",
                               "documentCount",
-                              "hasMobilePhone"
+                              "hasMobilePhone",
+                              "needsAssistance"
                             ],
                             "properties": {
                               "ticketId": {
@@ -3552,6 +3881,44 @@
                                 "nullable": true,
                                 "enum": ["red", "yellow", "green"],
                                 "description": "MFA-only visual marker (staff triage); not shown on TV"
+                              },
+                              "needsAssistance": {
+                                "type": "boolean",
+                                "description": "Patient requested help at terminal before topic check-in (MFA marker only)"
+                              }
+                            }
+                          }
+                        },
+                        "assistPending": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "deviceId",
+                              "deviceLabel",
+                              "pressedAt",
+                              "expiresAt",
+                              "remainingMs"
+                            ],
+                            "properties": {
+                              "deviceId": {
+                                "type": "string"
+                              },
+                              "deviceLabel": {
+                                "type": "string"
+                              },
+                              "pressedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "remainingMs": {
+                                "type": "integer",
+                                "minimum": 0
                               }
                             }
                           }
@@ -14781,6 +15148,50 @@
           }
         }
       },
+      "TerminalAssistPendingItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["deviceId", "deviceLabel", "pressedAt", "expiresAt", "remainingMs"],
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "deviceLabel": {
+            "type": "string"
+          },
+          "pressedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "remainingMs": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "TerminalAssistPressed": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pressedAt", "expiresAt", "legacyCutover"],
+        "properties": {
+          "pressedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "legacyCutover": {
+            "type": "boolean",
+            "description": "True when returned from deprecated /mfa-assist cutover endpoint."
+          }
+        }
+      },
       "MfaLookupCandidate": {
         "type": "object",
         "required": ["identityRef", "firstName", "lastName", "birthDate", "phoneNumberMasked"],
@@ -14828,7 +15239,8 @@
           "arrivedAt",
           "waitMs",
           "documentCount",
-          "hasMobilePhone"
+          "hasMobilePhone",
+          "needsAssistance"
         ],
         "properties": {
           "ticketId": {
@@ -14923,6 +15335,10 @@
             "nullable": true,
             "enum": ["red", "yellow", "green"],
             "description": "MFA-only visual marker (staff triage); not shown on TV"
+          },
+          "needsAssistance": {
+            "type": "boolean",
+            "description": "Patient requested help at terminal before topic check-in (MFA marker only)"
           }
         }
       },
@@ -15072,7 +15488,7 @@
       "QueueListMfaResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["view", "revision", "items", "checkinLocked", "serverTime"],
+        "required": ["view", "revision", "items", "assistPending", "checkinLocked", "serverTime"],
         "properties": {
           "view": {
             "type": "string",
@@ -15096,7 +15512,8 @@
                 "arrivedAt",
                 "waitMs",
                 "documentCount",
-                "hasMobilePhone"
+                "hasMobilePhone",
+                "needsAssistance"
               ],
               "properties": {
                 "ticketId": {
@@ -15191,6 +15608,38 @@
                   "nullable": true,
                   "enum": ["red", "yellow", "green"],
                   "description": "MFA-only visual marker (staff triage); not shown on TV"
+                },
+                "needsAssistance": {
+                  "type": "boolean",
+                  "description": "Patient requested help at terminal before topic check-in (MFA marker only)"
+                }
+              }
+            }
+          },
+          "assistPending": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["deviceId", "deviceLabel", "pressedAt", "expiresAt", "remainingMs"],
+              "properties": {
+                "deviceId": {
+                  "type": "string"
+                },
+                "deviceLabel": {
+                  "type": "string"
+                },
+                "pressedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "expiresAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "remainingMs": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               }
             }
@@ -15414,7 +15863,14 @@
           {
             "type": "object",
             "additionalProperties": false,
-            "required": ["view", "revision", "items", "checkinLocked", "serverTime"],
+            "required": [
+              "view",
+              "revision",
+              "items",
+              "assistPending",
+              "checkinLocked",
+              "serverTime"
+            ],
             "properties": {
               "view": {
                 "type": "string",
@@ -15438,7 +15894,8 @@
                     "arrivedAt",
                     "waitMs",
                     "documentCount",
-                    "hasMobilePhone"
+                    "hasMobilePhone",
+                    "needsAssistance"
                   ],
                   "properties": {
                     "ticketId": {
@@ -15533,6 +15990,38 @@
                       "nullable": true,
                       "enum": ["red", "yellow", "green"],
                       "description": "MFA-only visual marker (staff triage); not shown on TV"
+                    },
+                    "needsAssistance": {
+                      "type": "boolean",
+                      "description": "Patient requested help at terminal before topic check-in (MFA marker only)"
+                    }
+                  }
+                }
+              },
+              "assistPending": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["deviceId", "deviceLabel", "pressedAt", "expiresAt", "remainingMs"],
+                  "properties": {
+                    "deviceId": {
+                      "type": "string"
+                    },
+                    "deviceLabel": {
+                      "type": "string"
+                    },
+                    "pressedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "remainingMs": {
+                      "type": "integer",
+                      "minimum": 0
                     }
                   }
                 }

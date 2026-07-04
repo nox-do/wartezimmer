@@ -143,6 +143,12 @@
   text-align: right;
 }
 
+.queue-assist-mark {
+  display: inline-flex;
+  align-items: center;
+  color: var(--blue-700, #1d4ed8);
+}
+
 .queue-info {
   display: flex;
   flex-direction: column;
@@ -1023,6 +1029,13 @@
   position: sticky;
   top: 0;
   z-index: 100;
+  margin-bottom: 12px;
+}
+
+.mfa-assist-banner {
+  position: sticky;
+  top: 0;
+  z-index: 99;
   margin-bottom: 12px;
 }
 
