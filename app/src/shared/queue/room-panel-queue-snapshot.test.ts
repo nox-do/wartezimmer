@@ -14,6 +14,7 @@ import {
   callVisitTicket,
   doneVisitTicket,
   listVisitQueueRows,
+  returnToWaitingVisitTicket,
 } from '../flow-core/visit-queue-bridge.js';
 import {
   buildRoomPanelQueueSnapshot,
@@ -433,6 +434,31 @@ test('buildRoomPanelQueueSnapshot hides visit after done', () => {
   );
 
   assert.equal(snapshot.items.length, 0);
+});
+
+test('buildRoomPanelQueueSnapshot hides visit after return_to_waiting', () => {
+  const { db, sqlite, settings, visitId, runtime, listQueue } = setupPanelVisitFlow();
+  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+
+  const before = buildRoomPanelQueueSnapshotForSqlite(
+    db,
+    sqlite,
+    listQueue,
+    14,
+    { roomId: 'labor', placement: 'outside' },
+  );
+  assert.equal(before.items.length, 1);
+
+  returnToWaitingVisitTicket(runtime, visitId);
+
+  const after = buildRoomPanelQueueSnapshotForSqlite(
+    db,
+    sqlite,
+    listQueue,
+    15,
+    { roomId: 'labor', placement: 'outside' },
+  );
+  assert.equal(after.items.length, 0);
 });
 
 test('buildRoomPanelQueueSnapshot excludes visits called to another room', () => {

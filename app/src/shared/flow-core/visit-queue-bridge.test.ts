@@ -13,6 +13,7 @@ import {
   doneVisitTicket,
   listVisitQueueRows,
   returnToWaitingVisitTicket,
+  startVisitTicket,
   visitStatusToTicketStatus,
 } from './visit-queue-bridge.js';
 import { getBusinessDay } from '../db/database-time.js';
@@ -220,9 +221,55 @@ test('scoped done succeeds when acting room matches target', () => {
   assert.deepEqual(done, { fromStatus: 'in_room', toStatus: 'done' });
 });
 
-test('returnToWaitingVisitTicket is blocked for visits', () => {
-  assert.throws(
-    () => returnToWaitingVisitTicket(),
-    (error: unknown) => error instanceof DomainError && error.domainCode === 'INVALID_TRANSITION',
+test('returnToWaitingVisitTicket: call → waiting clears room', () => {
+  const { visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+
+  const result = returnToWaitingVisitTicket(runtime, visitId);
+  assert.deepEqual(result, { fromStatus: 'called', toStatus: 'waiting' });
+
+  const visit = runtime.visits().find((entry) => entry.id === visitId);
+  assert.equal(visit?.status, 'waiting');
+  assert.equal(visit?.targetLocationId, undefined);
+  assert.equal(visit?.calledAt, undefined);
+});
+
+test('returnToWaitingVisitTicket: call → arrive → waiting', () => {
+  const { visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisitTicket(runtime, visitId, 'labor');
+
+  const result = returnToWaitingVisitTicket(runtime, visitId);
+  assert.deepEqual(result, { fromStatus: 'in_room', toStatus: 'waiting' });
+
+  const visit = runtime.visits().find((entry) => entry.id === visitId);
+  assert.equal(visit?.status, 'waiting');
+  assert.equal(visit?.targetLocationId, undefined);
+});
+
+test('returnToWaitingVisitTicket: start (in_progress) → waiting', () => {
+  const { visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisitTicket(runtime, visitId, 'labor');
+  startVisitTicket(runtime, visitId, 'labor');
+
+  const result = returnToWaitingVisitTicket(runtime, visitId);
+  assert.deepEqual(result, { fromStatus: 'in_room', toStatus: 'waiting' });
+
+  const visit = runtime.visits().find((entry) => entry.id === visitId);
+  assert.equal(visit?.status, 'waiting');
+  assert.equal(visit?.targetLocationId, undefined);
+  assert.equal(visit?.startedAt, undefined);
+});
+
+test('returnToWaitingVisitTicket: recall emits no journey_abandoned event', () => {
+  const { visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+
+  returnToWaitingVisitTicket(runtime, visitId);
+
+  assert.ok(
+    !runtime.events(visitId).some((event) => event.type === 'journey_abandoned'),
+    'recall must not abandon journey',
   );
 });

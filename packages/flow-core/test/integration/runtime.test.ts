@@ -360,3 +360,75 @@ test('transition done: Raum-Panel darf direkt nach arrive abschliessen', () => {
   assert.equal(done.status, 'done');
   assert.ok(done.startedAt);
 });
+
+test('transition return_to_waiting: called → waiting, Raum und Timestamps gelöscht', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({ topicId: 'general', displayName: 'Recall', surfaceId: 'terminal_1' });
+  runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
+
+  const after = runtime.transition(created.id, 'return_to_waiting');
+
+  assert.equal(after.status, 'waiting');
+  assert.equal(after.targetLocationId, undefined);
+  assert.equal(after.calledAt, undefined);
+  assert.equal(after.arrivedAt, undefined);
+  assert.equal(after.startedAt, undefined);
+  assert.equal(after.lastKnownLocationId, 'waiting_general');
+  const events = runtime.events(created.id);
+  assert.ok(events.some((event) => event.type === 'returned_to_waiting'));
+});
+
+test('transition return_to_waiting: arrive → waiting', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({ topicId: 'general', displayName: 'Recall2', surfaceId: 'terminal_1' });
+  runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
+  runtime.transition(created.id, 'arrive', { actingLocationId: 'room_1' });
+
+  const after = runtime.transition(created.id, 'return_to_waiting');
+
+  assert.equal(after.status, 'waiting');
+  assert.equal(after.targetLocationId, undefined);
+  assert.equal(after.lastKnownLocationId, 'waiting_general');
+  assert.equal(after.queueId, 'general_queue');
+});
+
+test('transition return_to_waiting: in_progress → waiting', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({ topicId: 'general', displayName: 'Recall3', surfaceId: 'terminal_1' });
+  runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
+  runtime.transition(created.id, 'arrive', { actingLocationId: 'room_1' });
+  runtime.transition(created.id, 'start', { actingLocationId: 'room_1' });
+
+  const after = runtime.transition(created.id, 'return_to_waiting');
+
+  assert.equal(after.status, 'waiting');
+  assert.equal(after.targetLocationId, undefined);
+  assert.equal(after.startedAt, undefined);
+  assert.equal(after.lastKnownLocationId, 'waiting_general');
+});
+
+test('transition return_to_waiting: Journey bleibt aktiv', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({ topicId: 'general', displayName: 'Journey', surfaceId: 'terminal_1' });
+  runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
+
+  const after = runtime.transition(created.id, 'return_to_waiting');
+
+  assert.equal(after.journeyTemplateId, 'journey_general');
+  assert.equal(after.journeyStepIndex, 0);
+  assert.equal(after.journeyState, 'active');
+  assert.ok(!runtime.events(created.id).some((event) => event.type === 'journey_abandoned'));
+});
+
+test('transition return_to_waiting: done blockiert', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({ topicId: 'general', displayName: 'Done', surfaceId: 'terminal_1' });
+  runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
+  runtime.transition(created.id, 'arrive', { actingLocationId: 'room_1' });
+  runtime.transition(created.id, 'done', { actingLocationId: 'room_1' });
+
+  assert.throws(
+    () => runtime.transition(created.id, 'return_to_waiting'),
+    /RETURN_TO_WAITING_NOT_ALLOWED/,
+  );
+});

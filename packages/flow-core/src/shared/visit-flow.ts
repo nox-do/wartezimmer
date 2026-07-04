@@ -1,5 +1,6 @@
 import type {
   ActiveVisitStatus,
+  Catalog,
   MovementMode,
   OpenVisitStatus,
   TerminalVisitStatus,
@@ -68,6 +69,11 @@ export function assertTransitionAllowed(
       if (visit.status === 'in_progress') return;
       if (context.actingLocationId && visit.status === 'arrived') return;
       throw new Error('DONE_ONLY_WHEN_IN_PROGRESS');
+    case 'return_to_waiting':
+      if (!['called', 'arrived', 'in_progress'].includes(visit.status)) {
+        throw new Error('RETURN_TO_WAITING_NOT_ALLOWED');
+      }
+      return;
     default:
       throw new Error('UNKNOWN_ACTION');
   }
@@ -80,4 +86,31 @@ export function canTransition(visit: Visit, action: TransitionAction, context: T
   } catch {
     return false;
   }
+}
+
+/**
+ * Patch fuer return_to_waiting: Warteliste + Wartebereich aus RoutingRule, Raum/Timestamps geloescht.
+ * Bewusst kein Redirect — Journey bleibt active (Patient verlaesst nur den Aufruf-Zyklus, nicht die Route).
+ */
+export function resolveReturnToWaitingVisitPatch(visit: Visit, catalog: Catalog): Partial<Visit> {
+  const rule = catalog.routingRules.find((item) => item.id === visit.appliedRoutingRuleId);
+  const waitingQueueId = rule?.initialQueueId ?? visit.queueId;
+  const waitingQueue = catalog.queues.find((item) => item.id === waitingQueueId);
+  const waitingLocationId =
+    rule?.initialLastKnownLocationId ??
+    (waitingQueue?.homeLocationId &&
+    catalog.locations.find((item) => item.id === waitingQueue.homeLocationId)?.type === 'waiting_area'
+      ? waitingQueue.homeLocationId
+      : undefined);
+
+  return {
+    status: statusForMovementMode(visit.movementMode),
+    targetLocationId: undefined,
+    queueId: waitingQueueId ?? undefined,
+    lastKnownLocationId: waitingLocationId ?? undefined,
+    locationConfidence: 'assumed',
+    calledAt: undefined,
+    arrivedAt: undefined,
+    startedAt: undefined,
+  };
 }

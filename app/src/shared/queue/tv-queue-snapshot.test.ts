@@ -11,6 +11,7 @@ import {
   arriveVisitTicket,
   callVisitTicket,
   listVisitQueueRows,
+  returnToWaitingVisitTicket,
 } from '../flow-core/visit-queue-bridge.js';
 import { buildTvQueueSnapshotForSqlite, buildTvQueueSnapshotFromFlowCore } from './tv-queue-snapshot.js';
 import type { CheckinSessionDeps } from '../db/database-checkin-sessions.js';
@@ -163,6 +164,22 @@ test('buildTvQueueSnapshotFromFlowCore hides visit after arrive (not at Wartezim
   const snapshot = buildTvQueueSnapshotForSqlite(db, settings, listQueue, false, 3);
 
   assert.equal(snapshot.items.length, 0);
+});
+
+test('buildTvQueueSnapshotFromFlowCore shows visit again after return_to_waiting', () => {
+  const { db, settings, visitId, runtime, listQueue } = setupVisitFlow();
+  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisitTicket(runtime, visitId, 'labor');
+
+  const hidden = buildTvQueueSnapshotForSqlite(db, settings, listQueue, false, 3);
+  assert.equal(hidden.items.length, 0);
+
+  returnToWaitingVisitTicket(runtime, visitId);
+
+  const visibleAgain = buildTvQueueSnapshotForSqlite(db, settings, listQueue, false, 4);
+  assert.equal(visibleAgain.items.length, 1);
+  assert.equal(visibleAgain.items[0]?.status, 'waiting');
+  assert.equal(visibleAgain.items[0]?.roomLabel, null);
 });
 
 test('buildTvQueueSnapshotFromFlowCore appends legacy tickets without visit rows', () => {

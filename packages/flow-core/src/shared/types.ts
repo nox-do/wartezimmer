@@ -207,7 +207,7 @@ export interface Visit {
 export interface VisitEvent {
   id: string;
   visitId: string;
-  type: 'checked_in' | 'routed' | 'called' | 'arrived' | 'started' | 'redirected' | 'journey_completed' | 'journey_abandoned' | 'blocked' | 'done' | 'cancelled' | 'no_show';
+  type: 'checked_in' | 'routed' | 'called' | 'arrived' | 'started' | 'returned_to_waiting' | 'redirected' | 'journey_completed' | 'journey_abandoned' | 'blocked' | 'done' | 'cancelled' | 'no_show';
   fromStatus?: string;
   toStatus?: string;
   fromLocationId?: string;

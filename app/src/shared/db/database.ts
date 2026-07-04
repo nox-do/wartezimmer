@@ -894,8 +894,20 @@ export class CoreDatabase {
   returnToWaiting(ticketId: string): { fromStatus: string; toStatus: string } {
     cancelRecallWindowExpiry(ticketId);
     return this.withTransaction('returnToWaiting', () => {
+      // Visits: Core recall (Journey bleibt active). absent_* nur Legacy ohne Visit-Zeile.
+      // Recall-Notify-State wird bewusst nicht geleert — wie returnToWaitingInDb, anders als recallTicket.
       if (visitExistsInDb(this.db, ticketId)) {
-        returnToWaitingVisitTicket();
+        const updatedAt = this.commonHelperDeps().nowIso();
+        const transition = returnToWaitingVisitTicket(getFlowCoreRuntime(this.db), ticketId);
+        this.emitOutboxEvent('QueueStatusChanged', ticketId, {
+          ticketId,
+          fromStatus: transition.fromStatus,
+          toStatus: transition.toStatus,
+          updatedAt,
+          roomId: null,
+          roomLabel: null,
+        });
+        return transition;
       }
       return returnToWaitingInDb(this.queueDeps(), ticketId);
     });

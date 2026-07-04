@@ -29,6 +29,7 @@ const INVALID_TRANSITION_CORE_CODES = new Set([
   'ARRIVE_NOT_ALLOWED',
   'START_ONLY_WHEN_ARRIVED',
   'DONE_ONLY_WHEN_IN_PROGRESS',
+  'RETURN_TO_WAITING_NOT_ALLOWED',
   'UNKNOWN_ACTION',
 ]);
 
@@ -225,9 +226,22 @@ export function doneVisitTicket(
   return { fromStatus, toStatus: 'done' };
 }
 
-/** Core has no return-to-waiting transition — visits cannot use PF return_to_waiting. */
-export function returnToWaitingVisitTicket(): never {
-  throw domainError('INVALID_TRANSITION');
+/**
+ * MFA zieht Patient aus grüner Zone zurück ins Wartezimmer (Core: return_to_waiting).
+ * Nur called/arrived/in_progress — absent_* hat keinen Visit-Status und bleibt auf returnToWaitingInDb.
+ */
+export function returnToWaitingVisitTicket(
+  runtime: Runtime,
+  visitId: string,
+): { fromStatus: TicketStatus; toStatus: TicketStatus } {
+  const visit = requireVisit(runtime, visitId);
+  if (!['called', 'arrived', 'in_progress'].includes(visit.status)) {
+    throw domainError('INVALID_TRANSITION');
+  }
+
+  const fromStatus = visitStatusToTicketStatus(visit.status);
+  runVisitTransition(runtime, visitId, 'return_to_waiting');
+  return { fromStatus, toStatus: 'waiting' };
 }
 
 export function reassignVisitTicket(

@@ -22,7 +22,22 @@
 - [x] Cutover: Terminal-Check-in → `runtime.checkIn()` (Visit statt Ticket)
 - [x] Cutover: MFA-Queue liest Visits + `callTicket` → `runtime.transition`
 - [x] Smoke-Endpoint entfernt (nicht mehr nötig)
-- [ ] Manuell: Terminal-Anmeldung → MFA-Aufruf → Raum-Panel eintreten/fertig auf Visit-Basis
+- [ ] Manuell: MFA DnD aktiv → WZ, TV zeigt Nummer wieder, Raum-Panel leert Spalte (return_to_waiting)
+
+## Design: return_to_waiting (2026-07-04)
+
+**Entscheidung: Option A** — neue Core-Transition `return_to_waiting` (nicht Redirect, nicht Host-Patch).
+
+**Begründung:** Redirect würde Journey `abandoned` setzen und `allowRedirect` erfordern; außerdem bleibt `lastKnownLocationId` am Raum → TV unsichtbar. Host-Patch würde Invarianten duplizieren. Neue Action: von `called|arrived|in_progress` → `waiting`, löscht `targetLocationId` + Call-Timestamps, setzt `lastKnownLocationId` auf RoutingRule-Home (`pf_waiting`), Journey bleibt `active`.
+
+**Bewusste Invarianten (nicht ändern ohne Rücksprache):**
+- **Journey bei Recall:** Patient springt aus dem Aufruf-Zyklus, nicht aus der Route — kein `journey_abandoned`
+- **`absent_*`:** kein Visit-Status — weiter nur `returnToWaitingInDb` (Legacy ohne Visit-Zeile)
+- **Recall-Notify:** bei `return_to_waiting` nicht clearen — wie bisheriges Legacy, anders als `recallTicket`
+
+**TV nach Recall:** `explainVisibility` auf `pf_waiting_tv` braucht `lastKnownLocationId === pf_waiting` (Surface-Standort) + passende DisplayRule; Status `waiting` ist typisches Ergebnis, nicht pauschal Voraussetzung.
+
+**Tests:** Core + App automatisiert (Bridge, Legacy absent_*, Recall-Notify, TV/Panel-Snapshots). Manuell MFA-DnD offen.
 - [x] Transitions: `checkInRoom`/`checkOutRoom`/`reassignRoom` → Visit-Bridge (`arrive`/`done`)
 - [x] Tests: Visit call → arrive → done + scoped Raum-Panel (409 bei falschem Raum)
 - [x] Catalog-Sync: nur konfigurierbare `ops_settings.topics` (kein System-Topic)
@@ -40,7 +55,7 @@
 - [x] Schema: `visits` + Catalog-Tabellen parallel zu `tickets` (additive, `ensureFlowCoreSchema`)
 - [x] Check-in schreibt Visit statt Ticket
 - [x] Transitions: restliche PF-API → `runtime.transition` (call, arrive, done, reassign)
-- [ ] Transitions: `return_to_waiting` für Visits (Core hat kein Äquivalent — blockiert)
+- [x] Transitions: `return_to_waiting` für Visits (Core-Action `return_to_waiting`, Journey bleibt aktiv)
 - [x] TV-Snapshot mit Surface-Visibility (`buildTvQueueSnapshot` + `explainVisibility`)
 - [x] Raum-Panel: Queue-Snapshot mit Surface-Visibility (`buildRoomPanelQueueSnapshot` + `explainVisibility`)
 - [ ] MFA-UI auf Visit-Modell

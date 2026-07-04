@@ -19,6 +19,7 @@ import {
   formatVisitId,
   assertActingLocationScope,
   assertCallTargetLocation,
+  resolveReturnToWaitingVisitPatch,
 } from '@praxis-flow/flow-core';
 import type { RedirectRequestBody } from '@praxis-flow/flow-core';
 import { resolveCheckInRouting } from './escort.js';
@@ -349,6 +350,26 @@ export function createVisitService(params: {
           current.targetLocationId,
           current.queueId,
           current.queueId,
+          'mfa',
+        );
+      } else if (action === 'return_to_waiting') {
+        // Recall, kein Redirect: journeyState bleibt unveraendert (applyJourneyAdvance no-op ohne passendes advanceOn).
+        const data = loadCatalog();
+        const returnPatch = resolveReturnToWaitingVisitPatch(current, data);
+        const nextStatus = returnPatch.status!;
+        maybeFail('transition:update');
+        updateVisit(current, returnPatch);
+        const afterReturn = visitById(visitId)!;
+        maybeFail('transition:event');
+        addEvent(
+          visitId,
+          'returned_to_waiting',
+          current.status,
+          nextStatus,
+          current.targetLocationId,
+          afterReturn.lastKnownLocationId,
+          current.queueId,
+          afterReturn.queueId,
           'mfa',
         );
       } else {

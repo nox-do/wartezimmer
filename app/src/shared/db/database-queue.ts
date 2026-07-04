@@ -414,6 +414,7 @@ export function checkOutRoomInDb(
   return { fromStatus: ticket.status, toStatus: nextStatus };
 }
 
+/** Legacy queue path — inkl. absent_* (kein Core-Visit-Status). Cleart keinen Recall-Notify-State. */
 export function returnToWaitingInDb(deps: QueueDeps, ticketId: string): StatusTransitionResult {
   const ticket = requireTicketFromDb(deps, ticketId);
   assertTransition(ticket.status, ['called', 'in_room', 'absent_wait_here', 'absent_return_later']);
