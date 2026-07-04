@@ -1,3 +1,4 @@
+/** Reservierte ID — nicht als konfigurierbares Praxis-Thema (Hilfe: mfaAssist / needsAssistance am Visit). */
 export const MFA_ASSIST_TOPIC_ID = 'mfa';
 
 export const TOPIC_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

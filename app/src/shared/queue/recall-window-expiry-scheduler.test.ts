@@ -19,6 +19,7 @@ test('scheduleRecallWindowExpiry moves only the scheduled ticket at returnUntil'
   const processed: string[] = [];
   const db = {
     listQueue: () => [],
+    getOpsSettings: () => ({ rooms: [] }),
     processExpiredRecallWindows: () => [],
     processExpiredRecallWindowForTicket: (ticketId: string) => {
       processed.push(ticketId);
@@ -65,6 +66,7 @@ test('scheduleRecallWindowExpiry reschedules when expiry transition is not yet a
   let processCalls = 0;
   const db = {
     listQueue: () => [queueItem],
+    getOpsSettings: () => ({ rooms: [] }),
     processExpiredRecallWindows: () => [],
     processExpiredRecallWindowForTicket: () => {
       processCalls += 1;

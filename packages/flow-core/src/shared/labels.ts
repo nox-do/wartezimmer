@@ -103,6 +103,6 @@ export const errorLabels: Record<string, string> = {
   TOPIC_INACTIVE_OR_MISSING: 'Topic fehlt oder ist inaktiv.',
   TOPIC_NOT_ACTIVE: 'Topic ist nicht aktiv.',
   INVALID_LANE_CODE: 'Ungültiger Nummernkreis (laneCode).',
-  RESERVED_LANE_CODE: 'Lane M ist für das MFA-System-Topic reserviert.',
+  RESERVED_LANE_CODE: 'Nummernkreis M ist in PoC-Seed fuer Hilfe-Check-in reserviert — kein konfigurierbares Thema.',
   UNKNOWN_ACTION: 'Unbekannte Aktion.',
 };

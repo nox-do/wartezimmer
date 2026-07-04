@@ -69,6 +69,13 @@ function fakeQueueDb(): CoreDatabase {
     processExpiredRecallWindowForTicket: () => false,
     isCheckinLocked: () => false,
     isEffectiveCheckinLocked: () => false,
+    getFlowCoreRuntimeInstance: () =>
+      ({
+        catalog: () => ({ surfaces: [], surfaceDisplayRules: [] }),
+        visits: () => [],
+      }) as unknown as ReturnType<
+        import('../shared/flow-core/flow-core-runtime.js').getFlowCoreRuntime
+      >,
   } as unknown as CoreDatabase;
 }
 

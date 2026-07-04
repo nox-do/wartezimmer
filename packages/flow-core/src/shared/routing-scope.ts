@@ -25,6 +25,7 @@ export function ruleForTopicAtSurface(
 
 export function topicsForTerminal(catalog: Catalog, surfaceId: string) {
   return catalog.topics.filter((topic) => {
+    // Hilfe-Button: mfaAssist am Check-in, nicht in Terminal-Themenliste.
     if (topic.id === MFA_ASSIST_TOPIC_ID) return false;
     if (!topic.active) return false;
     return Boolean(ruleForTopicAtSurface(catalog, topic.id, surfaceId));

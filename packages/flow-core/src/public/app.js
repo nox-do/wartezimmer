@@ -275,7 +275,7 @@ function renderCheckinPanel() {
     <section class="journey-step">
       <h4>Schritt 2 · Anmeldgrund + Routing</h4>
       ${needsAssistance && topicId ? `<p class="muted">Thema + <code>needsAssistance</code> — nur MFA-Markierung, Routing unverändert.</p>` : ''}
-      ${!topicId ? `<p class="muted">Hilfe-Button sendet <code>mfaAssist: true</code> — Routing über System-Topic <code>mfa</code>.</p>` : ''}
+      ${!topicId ? `<p class="muted">Hilfe-Button sendet <code>mfaAssist: true</code> — <code>checkInPath: mfa_assist</code>, Routing über PoC-RoutingRule (kein Terminal-Thema).</p>` : ''}
       ${rule ? `<dl>
         ${fieldRow('topicId', catalog.topics.find((item) => item.id === topicId)?.name || topicId || '—')}
         ${fieldRow('allowedSurfaceIds', formatAllowedSurfaceIds(rule.allowedSurfaceIds, terminalSurfaces()))}
@@ -470,7 +470,7 @@ function renderRuleForm({ journeyTemplateIdOverride } = {}) {
         </label>
         <label class="check rule-field">
           <input id="ruleRedirect" type="checkbox" ${rule.allowRedirect !== false ? 'checked' : ''} />
-          ${ruleFieldLabel('allowRedirect', 'MFA darf umleiten', 'Standard: true; false z. B. rule_mfa (Hilfe-Button)')}
+          ${ruleFieldLabel('allowRedirect', 'MFA darf umleiten', 'Standard: true; false z. B. Hilfe-RoutingRule (allowRedirect=0)')}
         </label>
       </div>
     </section>

@@ -12,6 +12,10 @@ export const PF_FLOW_SURFACE_TERMINAL = 'pf_terminal_1';
 export const PF_FLOW_SURFACE_TV = 'pf_waiting_tv';
 export const PF_FLOW_SURFACE_MFA = 'pf_mfa_dashboard';
 
+export function panelFlowSurfaceId(roomId: string): string {
+  return `pf_panel_${roomId}`;
+}
+
 export type CatalogSyncSummary = {
   topics: number;
   locations: number;
@@ -389,7 +393,7 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
   let panelIndex = 0;
   for (const room of settings.rooms) {
     if (!room.enabled || !room.panel?.enabled) continue;
-    const surfaceId = `pf_panel_${room.roomId}`;
+    const surfaceId = panelFlowSurfaceId(room.roomId);
     insertSurface(db, {
       id: surfaceId,
       locationId: room.roomId,

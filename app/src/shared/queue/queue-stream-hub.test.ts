@@ -13,6 +13,13 @@ function fakeDb(): CoreDatabase {
     isCheckinLocked: () => false,
     isEffectiveCheckinLocked: () => false,
     getOpsSettings: () => ({ rooms: [] }),
+    getFlowCoreRuntimeInstance: () =>
+      ({
+        catalog: () => ({ surfaces: [], surfaceDisplayRules: [] }),
+        visits: () => [],
+      }) as unknown as ReturnType<
+        import('../flow-core/flow-core-runtime.js').getFlowCoreRuntime
+      >,
   } as unknown as CoreDatabase;
 }
 

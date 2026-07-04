@@ -610,7 +610,7 @@ export class CoreDatabase {
     );
   }
 
-  /** Hilfe-Button am Terminal — bis needsAssistance am Visit existiert: Legacy-Ticket, kein Flow-Core-Topic. */
+  /** Hilfe-Button: noch Legacy-Ticket. Ziel: runtime.checkIn({ mfaAssist: true }) — Visit mit checkInPath/authPath, kein Katalog-Thema. */
   createMfaAssistTicket(): { ticketId: string; number: number; createdAt: string } {
     return this.withTransaction('createMfaAssistTicket', () => {
       const fullInput = buildCreateTicketInput(this.getOpsSettings(), {
@@ -748,6 +748,10 @@ export class CoreDatabase {
     return this.withTransaction('rollbackDocumentExportRequest', () =>
       rollbackDocumentExportRequestInDb(this.documentDeps(), documentId),
     );
+  }
+
+  getFlowCoreRuntimeInstance(): ReturnType<typeof getFlowCoreRuntime> {
+    return getFlowCoreRuntime(this.db);
   }
 
   listQueue(): QueueTicketRow[] {

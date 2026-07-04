@@ -30,7 +30,7 @@ test('checkIn needsAssistance: Topic und Route unveraendert, nur Flag gesetzt', 
   assert.equal(visit.journeyTemplateId, baseline.journeyTemplateId);
 });
 
-test('checkIn mfaAssist: System-Topic, normale Warteschlange, kein needsAssistance', () => {
+test('checkIn mfaAssist: checkInPath mfa_assist, normale Warteschlange, kein needsAssistance', () => {
   const { runtime } = testRuntime();
   const visit = runtime.checkIn({
     mfaAssist: true,

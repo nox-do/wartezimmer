@@ -25,8 +25,11 @@
 - [ ] Manuell: Terminal-Anmeldung → MFA-Aufruf → Raum-Panel eintreten/fertig auf Visit-Basis
 - [x] Transitions: `checkInRoom`/`checkOutRoom`/`reassignRoom` → Visit-Bridge (`arrive`/`done`)
 - [x] Tests: Visit call → arrive → done + scoped Raum-Panel (409 bei falschem Raum)
-- [x] Catalog-Sync: nur konfigurierbare `ops_settings.topics` (kein synthetisches System-Topic)
-- [ ] Bridge: Hilfe-Button (`/checkins/mfa-assist`) noch Legacy-Ticket bis `needsAssistance`-Flag am Terminal
+- [x] Catalog-Sync: nur konfigurierbare `ops_settings.topics` (kein System-Topic)
+- [ ] Hilfe-Button (`/checkins/mfa-assist`) noch Legacy-Ticket — Core: `mfaAssist` / `needsAssistance` am Visit (kein Katalog-Thema)
+- [x] Flow-Core-Kommentare: kein „System-Topic“ — Hilfe via `mfaAssist`/`needsAssistance`, PoC-Seed nur intern
+- [ ] TV: verbleibende Legacy-Tickets ohne Visit-Zeile weiter aus `listQueue` (ohne `explainVisibility`)
+- [x] Raum-Panel: Queue-Snapshot mit `explainVisibility` (`pf_panel_*`), Status `called`/`in_room` aus Visits
 - [x] Fix: SSE-Verbindungs-Leak (Browser-Connection-Pool voll → Reassign hängt auf „Wird zugewiesen…“)
 - [x] Fix: Raum-Panel `?room=` vs. Session-Cookie — falsches Panel bei URL-Wechsel / alter Session
 
@@ -38,8 +41,8 @@
 - [x] Check-in schreibt Visit statt Ticket
 - [x] Transitions: restliche PF-API → `runtime.transition` (call, arrive, done, reassign)
 - [ ] Transitions: `return_to_waiting` für Visits (Core hat kein Äquivalent — blockiert)
-- [ ] TV-Snapshot mit Surface-Visibility
-- [ ] Raum-Panel: Status-Mapping (`in_room` → `arrived`/`in_progress`) — Queue-Liste nutzt gemapptes `in_room` + `roomId`
+- [x] TV-Snapshot mit Surface-Visibility (`buildTvQueueSnapshot` + `explainVisibility`)
+- [x] Raum-Panel: Queue-Snapshot mit Surface-Visibility (`buildRoomPanelQueueSnapshot` + `explainVisibility`)
 - [ ] MFA-UI auf Visit-Modell
 - [ ] OpenAPI Breaking + Codegen
 - [ ] `tickets`/`queue_entries` entfernen

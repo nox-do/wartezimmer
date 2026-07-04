@@ -126,7 +126,7 @@ npm run typecheck  # tsc ohne Emit
 - **Impfung** — direkt Impfraum, nicht im WZ-TV
 - **Redirect** — MFA kann operative Wahrheit ändern
 - **Begleitung** — `escortPolicy` aus Rule; `needsAssistance` ist reine MFA-Markierung ohne Routing-Effekt
-- **Terminal-Hilfe** — Hilfe-Button (`mfaAssist`) → System-Topic `mfa` + `checkInPath: mfa_assist`; Checkbox `needsAssistance` nur additiv zum gewählten Thema
+- **Terminal-Hilfe** — Hilfe-Button (`mfaAssist: true`) → `checkInPath: mfa_assist`, `authPath: mfa_assist`; Routing über PoC-RoutingRule (kein Praxis-Katalog-Thema). `needsAssistance` am Visit: reine MFA-Markierung additiv zum gewählten Thema
 
 ## Integration ins Host-Projekt
 

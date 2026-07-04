@@ -1,6 +1,6 @@
 import { MFA_ASSIST_TOPIC_ID } from './check-in-path.js';
 
-/** Reserviert fuer System-Topic mfa / Hilfe-Button. */
+/** PoC-Seed: reservierter Nummernkreis fuer Hilfe-Check-in — Host ohne System-Topic. */
 export const MFA_ASSIST_LANE_CODE = 'M';
 
 export function normalizeLaneCode(value: string): string {

@@ -1,3 +1,5 @@
+import { explainVisibility } from '@praxis-flow/flow-core';
+import type { Runtime } from '@praxis-flow/flow-core/server';
 import type {
   QueueTicketRow,
   RoomPanelMode,
@@ -6,6 +8,10 @@ import type {
 } from '../db/db-types.js';
 import type { CoreDatabase } from '../db/database.js';
 import type { RoomPanelSession } from '../../auth/staff-session-auth.js';
+import { getBusinessDay } from '../db/database-time.js';
+import { getFlowCoreRuntime } from '../flow-core/flow-core-runtime.js';
+import { panelFlowSurfaceId } from '../flow-core/sync-catalog-from-ops-settings.js';
+import { visitToQueueTicketRow } from '../flow-core/visit-queue-bridge.js';
 import {
   resolveRoomPanelForSession,
   roomPanelMayShowPatientNames,
@@ -44,6 +50,17 @@ export type RoomPanelQueueSnapshot = {
   serverTime: string;
 };
 
+type RoomPanelItem = RoomPanelQueueSnapshot['items'][number];
+
+export type BuildRoomPanelQueueSnapshotInput = {
+  db: CoreDatabase;
+  runtime: Runtime;
+  businessDay: string;
+  listQueue: () => QueueTicketRow[];
+  revision: number;
+  session: Pick<RoomPanelSession, 'roomId' | 'placement'>;
+};
+
 function panelText(
   preset: RoomPanelTextPreset,
   custom: string | null,
@@ -72,36 +89,79 @@ export function compareRoomPanelCallOrder(
   return Date.parse(left.createdAt) - Date.parse(right.createdAt);
 }
 
-export function buildRoomPanelQueueSnapshot(
-  db: CoreDatabase,
-  revision: number,
-  session: Pick<RoomPanelSession, 'roomId' | 'placement'>,
+function isRoomPanelStatus(status: string): status is 'called' | 'in_room' {
+  return status === 'called' || status === 'in_room';
+}
+
+function mapQueueRowToPanelItem(
+  row: QueueTicketRow,
+  sessionRoomId: string,
+  fallbackRoomLabel: string,
+  showPatientNames: boolean,
+): RoomPanelItem | null {
+  if (!isRoomPanelStatus(row.status) || row.roomId !== sessionRoomId) {
+    return null;
+  }
+  return {
+    ticketId: row.id,
+    laneCode: row.laneCode,
+    number: row.number,
+    status: row.status,
+    ...(row.calledAt ? { calledAt: row.calledAt } : {}),
+    roomId: sessionRoomId,
+    roomLabel: row.roomLabel?.trim() || fallbackRoomLabel,
+    ...(showPatientNames ? { identityRef: row.identityRef?.trim() || null } : {}),
+  };
+}
+
+/** Room-panel items from Visits (explainVisibility + called/in_room); legacy rows without visit from listQueue. */
+export function buildRoomPanelQueueSnapshotFromFlowCore(
+  input: BuildRoomPanelQueueSnapshotInput,
 ): RoomPanelQueueSnapshot {
+  const { db, runtime, businessDay, listQueue, revision, session } = input;
   const active = resolveRoomPanelForSession(db, session);
   if (!active) {
     throw new Error('ROOM_PANEL_SESSION_INVALID');
   }
   const { room, panel } = active;
+  const settings = db.getOpsSettings();
   const roomLabel = room.roomLabel;
   const showPatientNames = roomPanelMayShowPatientNames(panel);
 
-  const items = db
-    .listQueue()
-    .filter(
-      (item): item is QueueTicketRow & { status: 'called' | 'in_room' } =>
-        item.roomId === session.roomId && (item.status === 'called' || item.status === 'in_room'),
-    )
-    .sort(compareRoomPanelCallOrder)
-    .map((item) => ({
-      ticketId: item.id,
-      laneCode: item.laneCode,
-      number: item.number,
-      status: item.status,
-      ...(item.calledAt ? { calledAt: item.calledAt } : {}),
-      roomId: session.roomId,
-      roomLabel: item.roomLabel?.trim() || roomLabel,
-      ...(showPatientNames ? { identityRef: item.identityRef?.trim() || null } : {}),
-    }));
+  const catalog = runtime.catalog();
+  const surfaceId = panelFlowSurfaceId(session.roomId);
+  const surface = catalog.surfaces.find((entry) => entry.id === surfaceId);
+  const rules = catalog.surfaceDisplayRules.filter((rule) => rule.surfaceId === surfaceId);
+
+  const businessDayVisits = runtime
+    .visits()
+    .filter((visit) => visit.queueNumberDate === businessDay);
+  const visitIds = new Set(businessDayVisits.map((visit) => visit.id));
+
+  const scored: Array<{
+    item: RoomPanelItem;
+    sortRow: Pick<QueueTicketRow, 'calledAt' | 'createdAt'>;
+  }> = [];
+
+  for (const visit of businessDayVisits) {
+    const explanation = explainVisibility(visit, surface, rules);
+    if (!explanation.visible) continue;
+    const row = visitToQueueTicketRow(visit, settings);
+    const item = mapQueueRowToPanelItem(row, session.roomId, roomLabel, showPatientNames);
+    if (item) {
+      scored.push({ item, sortRow: row });
+    }
+  }
+
+  for (const row of listQueue()) {
+    if (visitIds.has(row.id)) continue;
+    const item = mapQueueRowToPanelItem(row, session.roomId, roomLabel, showPatientNames);
+    if (item) {
+      scored.push({ item, sortRow: row });
+    }
+  }
+
+  scored.sort((left, right) => compareRoomPanelCallOrder(left.sortRow, right.sortRow));
 
   return {
     revision,
@@ -115,7 +175,54 @@ export function buildRoomPanelQueueSnapshot(
       calledText: panelText(panel.calledTextPreset, panel.calledTextCustom, 'please_enter'),
       arrivedText: panelText(panel.arrivedTextPreset, panel.arrivedTextCustom, 'please_wait_here'),
     },
-    items,
+    items: scored.map((entry) => entry.item),
     serverTime: new Date().toISOString(),
   };
+}
+
+function emptyFlowCoreRuntimeForMocks(): Runtime {
+  return {
+    catalog: () => ({ surfaces: [], surfaceDisplayRules: [] }),
+    visits: () => [],
+  } as unknown as Runtime;
+}
+
+function resolveFlowCoreRuntime(db: CoreDatabase): Runtime {
+  if (typeof db.getFlowCoreRuntimeInstance === 'function') {
+    return db.getFlowCoreRuntimeInstance();
+  }
+  return emptyFlowCoreRuntimeForMocks();
+}
+
+export function buildRoomPanelQueueSnapshot(
+  db: CoreDatabase,
+  revision: number,
+  session: Pick<RoomPanelSession, 'roomId' | 'placement'>,
+): RoomPanelQueueSnapshot {
+  return buildRoomPanelQueueSnapshotFromFlowCore({
+    db,
+    runtime: resolveFlowCoreRuntime(db),
+    businessDay: getBusinessDay(),
+    listQueue: () => db.listQueue(),
+    revision,
+    session,
+  });
+}
+
+/** @internal For tests with a raw sqlite handle. */
+export function buildRoomPanelQueueSnapshotForSqlite(
+  db: CoreDatabase,
+  sqlite: Parameters<typeof getFlowCoreRuntime>[0],
+  listQueue: () => QueueTicketRow[],
+  revision: number,
+  session: Pick<RoomPanelSession, 'roomId' | 'placement'>,
+): RoomPanelQueueSnapshot {
+  return buildRoomPanelQueueSnapshotFromFlowCore({
+    db,
+    runtime: getFlowCoreRuntime(sqlite),
+    businessDay: getBusinessDay(),
+    listQueue,
+    revision,
+    session,
+  });
 }
