@@ -1,8 +1,8 @@
 import type { StatementSync } from 'node:sqlite';
 import type { DayClosePhase, DayLifecycleState } from './db-types.js';
-import { getEmergencyStateFromDb } from './database-emergency.js';
 import { getBusinessDayVisitStatsFromDb } from './database-business-day-stats.js';
 import { domainError } from '../errors/domain-error.js';
+import { executeResetKernel } from './database-reset-kernel.js';
 
 type DayCloseStateRow =
   | { locked?: number; phase?: string; lastResetBusinessDay?: string }
@@ -75,31 +75,21 @@ export function isEffectiveCheckinLockedFromDb(deps: DayLifecycleDeps): boolean 
 }
 
 function executeBusinessDayReset(deps: DayLifecycleDeps, resetVisitCount: number): DayResetResult {
-  const updatedAt = deps.nowIso();
-  const lastResetBusinessDay = deps.getBusinessDay();
-
-  const emergencyBefore = getEmergencyStateFromDb(deps);
-  deps.deleteAllOutboxEventsStmt.run();
-  if (emergencyBefore.active) {
-    deps.clearEmergencyStateStmt.run(updatedAt);
-  }
-  deps.updateCheckinLockStmt.run(1, updatedAt);
-  deps.updateDayClosePhaseStmt.run('open', updatedAt);
-  deps.updateLastResetBusinessDayStmt.run(lastResetBusinessDay, updatedAt);
+  const resetState = executeResetKernel(deps);
   deps.emitOutboxEvent('BusinessDayReset', 'ops', {
-    updatedAt,
-    dayClosePhase: 'open',
+    updatedAt: resetState.updatedAt,
+    dayClosePhase: resetState.dayClosePhase,
     resetVisitCount,
-    lastResetBusinessDay,
-    sandboxRestartRequired: true,
+    lastResetBusinessDay: resetState.lastResetBusinessDay,
+    sandboxRestartRequired: resetState.sandboxRestartRequired,
   });
   return {
-    dayClosePhase: 'open',
+    dayClosePhase: resetState.dayClosePhase,
     resetVisitCount,
-    updatedAt,
-    lastResetBusinessDay,
-    emergencyCleared: emergencyBefore.active,
-    sandboxRestartRequired: true,
+    updatedAt: resetState.updatedAt,
+    lastResetBusinessDay: resetState.lastResetBusinessDay,
+    emergencyCleared: resetState.emergencyCleared,
+    sandboxRestartRequired: resetState.sandboxRestartRequired,
   };
 }
 

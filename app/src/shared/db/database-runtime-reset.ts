@@ -8,6 +8,7 @@ import {
   type OpsSettingsPatch,
 } from './database-ops-settings.js';
 import { updateMessagingProviderConfigInDb, type MessagingDeps } from './database-messaging.js';
+import { executeResetKernel } from './database-reset-kernel.js';
 
 type MessagingSnapshotRow = {
   providerId: string;
@@ -175,21 +176,10 @@ export function executeRuntimeResetInDb(deps: RuntimeResetDeps): RuntimeResetRes
   });
   const settingsPatch = settingsToPatch(settings);
   const messagingSnapshots = snapshotMessagingProviders(deps);
-  const emergencyBefore = getEmergencyStateFromDb(deps);
 
   const resetVisitCount = countFromStmt(deps.countAllVisitsStmt);
   const clearedOutboxCount = countFromStmt(deps.countAllOutboxEventsStmt);
-  const updatedAt = deps.nowIso();
-  const lastResetBusinessDay = deps.getBusinessDay();
-
-  deps.deleteAllOutboxEventsStmt.run();
-  if (emergencyBefore.active) {
-    deps.clearEmergencyStateStmt.run(updatedAt);
-  }
-
-  deps.updateCheckinLockStmt.run(1, updatedAt);
-  deps.updateDayClosePhaseStmt.run('open', updatedAt);
-  deps.updateLastResetBusinessDayStmt.run(lastResetBusinessDay, updatedAt);
+  const resetState = executeResetKernel(deps);
 
   updateOpsSettingsInDb(
     {
@@ -203,25 +193,25 @@ export function executeRuntimeResetInDb(deps: RuntimeResetDeps): RuntimeResetRes
   restoreMessagingProviders(deps, messagingSnapshots);
 
   deps.emitOutboxEvent('OpsRuntimeReset', 'ops', {
-    updatedAt,
+    updatedAt: resetState.updatedAt,
     resetVisitCount,
     clearedOutboxCount,
-    emergencyCleared: emergencyBefore.active,
+    emergencyCleared: resetState.emergencyCleared,
     preservedTopicCount: settings.topics.length,
     preservedRoomCount: settings.rooms.length,
-    lastResetBusinessDay,
+    lastResetBusinessDay: resetState.lastResetBusinessDay,
   });
 
   return {
     resetVisitCount: resetVisitCount,
     clearedOutboxCount,
-    emergencyCleared: emergencyBefore.active,
+    emergencyCleared: resetState.emergencyCleared,
     preservedTopicCount: settings.topics.length,
     preservedRoomCount: settings.rooms.length,
-    checkinLocked: true,
-    dayClosePhase: 'open',
-    lastResetBusinessDay,
-    updatedAt,
-    sandboxRestartRequired: true,
+    checkinLocked: resetState.checkinLocked,
+    dayClosePhase: resetState.dayClosePhase,
+    lastResetBusinessDay: resetState.lastResetBusinessDay,
+    updatedAt: resetState.updatedAt,
+    sandboxRestartRequired: resetState.sandboxRestartRequired,
   };
 }
