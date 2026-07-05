@@ -165,6 +165,12 @@ export const dict = {
     egkBack: '← Back to check-in',
     topicTitle: 'What brings you in today?',
     topicLead: 'Please select one reason for your visit.',
+    topicAssistHint:
+      'The practice team has been notified. You can also go straight to reception — check-in at the terminal is optional.',
+    startAssistHint:
+      'The practice team has been notified. Please choose a check-in method — or go straight to reception.',
+    authMfaPressedSubtitle: 'Practice team notified — please choose check-in',
+    topicAssistBack: 'Back',
     topicLoading: 'Loading topics…',
     topicEmptyReception: 'Please go directly to reception.',
     topicLoadError: 'Topics could not be loaded.',

@@ -165,6 +165,12 @@ export const dict = {
     egkBack: '← Kayda dön',
     topicTitle: 'Bugün ne için geldiniz?',
     topicLead: 'Lütfen bir konu seçin.',
+    topicAssistHint:
+      'Pratik ekibi bilgilendirildi. Doğrudan resepsiyona da gidebilirsiniz — terminalde kayıt isteğe bağlıdır.',
+    startAssistHint:
+      'Pratik ekibi bilgilendirildi. Lütfen bir kayıt yöntemi seçin — veya doğrudan resepsiyona gidin.',
+    authMfaPressedSubtitle: 'Pratik ekibi bilgilendirildi — lütfen kayıt yöntemini seçin',
+    topicAssistBack: 'Geri',
     topicLoading: 'Konular yükleniyor…',
     topicEmptyReception: 'Lütfen doğrudan resepsiyona gidin.',
     topicLoadError: 'Konular yüklenemedi.',

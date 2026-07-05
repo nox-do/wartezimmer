@@ -204,7 +204,6 @@ export function executeRuntimeResetInDb(deps: RuntimeResetDeps): RuntimeResetRes
 
   deps.emitOutboxEvent('OpsRuntimeReset', 'ops', {
     updatedAt,
-    resetVisitCount: resetVisitCount,
     resetVisitCount,
     clearedOutboxCount,
     emergencyCleared: emergencyBefore.active,

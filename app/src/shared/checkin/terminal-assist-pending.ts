@@ -67,7 +67,7 @@ export function clearTerminalAssistPending(db: DatabaseSync, deviceId: string): 
 
 export function clearAllTerminalAssistPending(db: DatabaseSync): number {
   const result = db.prepare('DELETE FROM terminal_assist_pending').run();
-  return result.changes;
+  return Number(result.changes);
 }
 
 export function getTerminalAssistPending(

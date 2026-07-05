@@ -556,7 +556,7 @@ export class CoreDatabase {
     return this.withTransaction('pressTerminalAssist', () => {
       assertTerminalAssistPressAllowed(this.checkinSessionDeps());
       const row = upsertTerminalAssistPending(this.db, deviceId);
-      scheduleTerminalAssistPendingExpiry(this.db, row.deviceId, Date.parse(row.expiresAt));
+      scheduleTerminalAssistPendingExpiry(this, row.deviceId, Date.parse(row.expiresAt));
       return row;
     });
   }

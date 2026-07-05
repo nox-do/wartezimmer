@@ -136,7 +136,7 @@ export function prepareFormDocumentBatch(
   }
 
   const sessionMe = db.getPatientSessionMe(sessionToken);
-  const ticket = db.getTicketIdentityView(sessionMe.ticketId);
+  const ticket = db.getTicketIdentityView(sessionMe.visitId);
   const context: FormBatchContext = {
     sessionToken,
     submittedAt: new Date().toISOString(),

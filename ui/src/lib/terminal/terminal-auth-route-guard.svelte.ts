@@ -5,19 +5,23 @@ import {
   shouldRedirectFromTerminalAuthRoute,
   type TerminalAuthRoutePath,
 } from './terminal-auth-route-guard';
+import type { TerminalAuthPath } from './terminal-api';
 import type { TerminalOpsSnapshot } from './terminal-ops-context';
 import { clearTerminalSession } from './terminal-session';
 
 function resolveAuthPath(
-  authPath: TerminalAuthRoutePath | (() => TerminalAuthRoutePath | null),
+  authPath: TerminalAuthPath | (() => TerminalAuthPath | null),
 ): TerminalAuthRoutePath | null {
   const resolved = typeof authPath === 'function' ? authPath() : authPath;
+  if (resolved === 'mfa_assist') {
+    return null;
+  }
   return resolved;
 }
 
 export function mountTerminalAuthRouteGuard(
   getOps: () => TerminalOpsSnapshot,
-  authPath: TerminalAuthRoutePath | (() => TerminalAuthRoutePath | null),
+  authPath: TerminalAuthPath | (() => TerminalAuthPath | null),
 ): void {
   let redirected = false;
 

@@ -126,8 +126,9 @@ Breaking API rename: `ticketId` → `visitId`, Pfade `{ticket}` → `{visitId}`.
 - [x] App-Tests: **270 grün**
 - [x] UI Queue-Tests: **38 grün** (`src/lib/queue/`)
 - [x] `npm run check:drift` — Codegen/Bundle/Schemas OK (nach Stage der generierten Dateien)
-- [ ] `check-openapi-route-sync` — dev flow-core-Routes fehlen in OpenAPI (vorbestehend)
-- [ ] UI typecheck grün (4 fehlende i18n-Keys + TerminalAuthPath — vorbestehend, nicht B4)
+- [x] `check-openapi-route-sync` — dev flow-core-Routes als interne Ausnahme
+- [x] App typecheck grün (visitId in form-intake, OpsRuntimeReset duplicate, assist scheduler CoreDatabase)
+- [x] UI typecheck grün (Assist-i18n en/tr/ru/uk + TerminalAuthPath Guard)
 - [ ] Manuell: Smoke optional (`smoke:openapi-contract`, `smoke:doc-flow`)
 
 **Breaking (PR):** API fields `ticketId` → `visitId`; paths `/queue/{ticket}/…` → `/queue/{visitId}/…`. Event payloads analog. Werte unverändert.
