@@ -1,5 +1,5 @@
 import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
-import type { TerminalTopic, TicketCreated } from '$lib/terminal/openapi-types';
+import type { TerminalTopic, VisitCreated } from '$lib/terminal/openapi-types';
 
 export type MfaLookupCandidate = {
   identityRef: string;
@@ -30,7 +30,7 @@ export async function createMfaCheckin(input: {
   topicId: string;
   identityRef?: string;
 }) {
-  return cookieAuthFetch<TicketCreated>('/api/v1/checkins', {
+  return cookieAuthFetch<VisitCreated>('/api/v1/checkins', {
     method: 'POST',
     body: JSON.stringify({
       topicId: input.topicId,

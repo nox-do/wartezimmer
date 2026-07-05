@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { Runtime } from '@praxis-flow/flow-core/server';
 import type { VisitStatus } from '@praxis-flow/flow-core';
-import type { AbsenceMode, QueueSummary, TicketStatus } from './db-types.js';
+import type { AbsenceMode, QueueSummary, QueueDisplayStatus } from './db-types.js';
 import { canonicalizePhone } from '../phone/canonicalize-phone.js';
 import { domainError } from '../errors/domain-error.js';
 import { cycleTriageLevel, type TriageLevel } from '../queue/queue-triage.js';
@@ -70,7 +70,7 @@ function mapHostStateRow(row: Record<string, unknown> | undefined): VisitHostSta
   };
 }
 
-export function absentModeToTicketStatus(absentMode: AbsenceMode): TicketStatus {
+export function absentModeToQueueDisplayStatus(absentMode: AbsenceMode): QueueDisplayStatus {
   return absentMode === 'wait_here' ? 'absent_wait_here' : 'absent_return_later';
 }
 

@@ -37,9 +37,9 @@
 - [x] Veraltete `.mjs`-Verweise in Kommentaren/Docs bereinigt (`types.ts`, `journey-admin.js`, `HANDOVER.md`, `todo.md`)
 - [x] `runtime.ts` aufgeteilt (open-db, seed, catalog/visit-repository, visit/admin-service, Composition Root)
 - [x] `npm run dump` wiederhergestellt — 11 Dateien Runtime-Refactoring in `dump.txt`
-- [ ] Host-Projekt: PoC-Runtime → DB-Adapter + API-Schicht
-- [ ] Host-Projekt: Schema-Migration
-- [ ] Migrations-Readiness (2026-07-04): Puzzle-Analyse PF ↔ Core — siehe Chat; SSR kein Blocker (PF `ssr:false`); Hürden: Surfaces/TV-Filter, Status-Mapping, Catalog-Sync, Room-Panel-Transitions
+- [x] Host-Projekt: PoC-Runtime → DB-Adapter + API-Schicht (Cutover in praxis_flow_merge)
+- [x] Host-Projekt: Schema-Migration (visits/catalog, Legacy-Drop B3)
+- [x] Migrations-Readiness: Surfaces/TV, Status-Mapping, Catalog-Sync, Room-Panel — erledigt
 - [ ] Host-Projekt: UI-Muster aus `public/` cherry-picken (journey-admin, redirect, surface-preview)
 - [ ] Auth, Rollen, PVS-Anbindung (bewusst out of scope hier)
 

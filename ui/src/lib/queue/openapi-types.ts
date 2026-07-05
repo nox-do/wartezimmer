@@ -26,7 +26,3 @@ export type TriageLevel = NonNullable<QueueItem['triageLevel']>;
 export type QueueSummaryResponse = QueueSchemas['QueueSummaryResponse'];
 export type AbsenceMode = QueueSchemas['AbsenceMode'];
 
-/** @deprecated Use QueueVisitTransitionBody */
-export type QueueTicketTransitionBody = QueueVisitTransitionBody;
-/** @deprecated Use QueueVisitTransitionResponse */
-export type QueueTicketTransitionResponse = QueueVisitTransitionResponse;

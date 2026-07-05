@@ -1,27 +1,27 @@
 import type { CoreDatabase } from '../db/database.js';
 import {
-  publishExpiredRecallWindowForTicket,
+  publishExpiredRecallWindowForVisit,
   publishExpiredRecallWindows,
 } from './queue-stream-hub.js';
 
 const expiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-function clearRecallWindowExpiryTimer(ticketId: string): void {
-  const timer = expiryTimers.get(ticketId);
+function clearRecallWindowExpiryTimer(visitId: string): void {
+  const timer = expiryTimers.get(visitId);
   if (!timer) {
     return;
   }
   clearTimeout(timer);
-  expiryTimers.delete(ticketId);
+  expiryTimers.delete(visitId);
 }
 
-export function cancelRecallWindowExpiry(ticketId: string): void {
-  clearRecallWindowExpiryTimer(ticketId.trim());
+export function cancelRecallWindowExpiry(visitId: string): void {
+  clearRecallWindowExpiryTimer(visitId.trim());
 }
 
 export function clearAllRecallWindowExpiries(): void {
-  for (const ticketId of expiryTimers.keys()) {
-    clearRecallWindowExpiryTimer(ticketId);
+  for (const visitId of expiryTimers.keys()) {
+    clearRecallWindowExpiryTimer(visitId);
   }
 }
 
@@ -45,14 +45,14 @@ function syncPendingRecallWindowTimers(db: CoreDatabase): void {
   }
 }
 
-function runRecallWindowExpiry(db: CoreDatabase, ticketId: string): void {
+function runRecallWindowExpiry(db: CoreDatabase, visitId: string): void {
   const nowMs = Date.now();
-  clearRecallWindowExpiryTimer(ticketId);
-  if (publishExpiredRecallWindowForTicket(db, ticketId)) {
+  clearRecallWindowExpiryTimer(visitId);
+  if (publishExpiredRecallWindowForVisit(db, visitId)) {
     return;
   }
 
-  const item = db.listQueue().find((entry) => entry.id === ticketId);
+  const item = db.listQueue().find((entry) => entry.id === visitId);
   if (item?.status !== 'absent_return_later' || !item.returnUntil?.trim()) {
     return;
   }
@@ -63,34 +63,34 @@ function runRecallWindowExpiry(db: CoreDatabase, ticketId: string): void {
   }
 
   if (returnUntilMs > nowMs) {
-    scheduleRecallWindowExpiry(db, ticketId, returnUntilMs);
+    scheduleRecallWindowExpiry(db, visitId, returnUntilMs);
     return;
   }
 
   const retryTimer = setTimeout(() => {
-    runRecallWindowExpiry(db, ticketId);
+    runRecallWindowExpiry(db, visitId);
   }, 1_000);
   retryTimer.unref();
-  expiryTimers.set(ticketId, retryTimer);
+  expiryTimers.set(visitId, retryTimer);
 }
 
 export function scheduleRecallWindowExpiry(
   db: CoreDatabase,
-  ticketId: string,
+  visitId: string,
   returnUntilMs: number,
 ): void {
-  const normalizedTicketId = ticketId.trim();
-  if (!normalizedTicketId || Number.isNaN(returnUntilMs)) {
+  const normalizedVisitId = visitId.trim();
+  if (!normalizedVisitId || Number.isNaN(returnUntilMs)) {
     return;
   }
 
-  clearRecallWindowExpiryTimer(normalizedTicketId);
+  clearRecallWindowExpiryTimer(normalizedVisitId);
   const delayMs = Math.max(0, returnUntilMs - Date.now());
   const timer = setTimeout(() => {
-    runRecallWindowExpiry(db, normalizedTicketId);
+    runRecallWindowExpiry(db, normalizedVisitId);
   }, delayMs);
   timer.unref();
-  expiryTimers.set(normalizedTicketId, timer);
+  expiryTimers.set(normalizedVisitId, timer);
 }
 
 export function resyncRecallWindowExpiryScheduler(db: CoreDatabase): void {

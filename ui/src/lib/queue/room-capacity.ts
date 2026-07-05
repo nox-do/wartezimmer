@@ -43,18 +43,18 @@ export function countRoomOccupants(items: readonly RoomOccupantItem[], roomId: s
 export function countRoomOccupantsExcluding(
   items: readonly RoomOccupantItemWithId[],
   roomId: string,
-  excludeTicketId: string,
+  excludeVisitId: string,
 ): number {
-  return domainCountRoomOccupantsExcluding(toDomainOccupants(items), roomId, excludeTicketId);
+  return domainCountRoomOccupantsExcluding(toDomainOccupants(items), roomId, excludeVisitId);
 }
 
 export function roomHasCapacity(
   rooms: PracticeRoom[],
   items: readonly RoomOccupantItemWithId[],
   roomId: string,
-  excludeTicketId?: string,
+  excludeVisitId?: string,
 ): boolean {
-  return domainRoomHasCapacity(rooms, toDomainOccupants(items), roomId, excludeTicketId);
+  return domainRoomHasCapacity(rooms, toDomainOccupants(items), roomId, excludeVisitId);
 }
 
 export function isRoomAtCapacity(

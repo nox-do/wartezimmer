@@ -19,14 +19,6 @@ export const OPENAPI_INTERNAL_ROUTES = new Set([
   'GET /api/v1/queue/stream',
   'GET /api/v1/ops/stream',
   'GET /api/v1/ops/device/stream',
-  // Spike / dev-only Flow-Core introspection (not part of public OpenAPI contract)
-  'GET /api/v1/dev/flow-core/catalog',
-  'GET /api/v1/dev/flow-core/health',
-  'GET /api/v1/dev/flow-core/tv-snapshot',
-  'GET /api/v1/dev/flow-core/visits',
-  'POST /api/v1/dev/flow-core/check-in',
-  'POST /api/v1/dev/flow-core/sync-catalog',
-  'POST /api/v1/dev/flow-core/visits/{visitId}/{action}',
 ]);
 
 export function repoRootFromImportMeta(importMetaUrl) {

@@ -1,5 +1,5 @@
 import { domainError } from '../errors/domain-error.js';
-import type { OpsSettings, QueueTicketRow } from '../db/db-types.js';
+import type { OpsSettings, QueueVisitRow } from '../db/db-types.js';
 import { formatTicketCode } from '../queue/ticket-code.js';
 import {
   ROOM_AT_CAPACITY,
@@ -25,10 +25,10 @@ export {
   resolveRoomMaxOccupancy,
 };
 
-export type RoomOccupantTicket = Pick<QueueTicketRow, 'roomId' | 'status'>;
-export type RoomOccupantTicketWithId = RoomOccupantTicket & Pick<QueueTicketRow, 'id'>;
+export type RoomOccupantVisit = Pick<QueueVisitRow, 'roomId' | 'status'>;
+export type RoomOccupantVisitWithId = RoomOccupantVisit & Pick<QueueVisitRow, 'id'>;
 
-function toDomainOccupants(tickets: readonly RoomOccupantTicketWithId[]): RoomOccupantWithId[] {
+function toDomainOccupants(tickets: readonly RoomOccupantVisitWithId[]): RoomOccupantWithId[] {
   return tickets.map((ticket) => ({
     roomId: ticket.roomId,
     status: ticket.status,
@@ -36,41 +36,41 @@ function toDomainOccupants(tickets: readonly RoomOccupantTicketWithId[]): RoomOc
   }));
 }
 
-export function countRoomOccupants(tickets: readonly RoomOccupantTicket[], roomId: string): number {
+export function countRoomOccupants(tickets: readonly RoomOccupantVisit[], roomId: string): number {
   return domainCountRoomOccupants(tickets, roomId);
 }
 
 export function countRoomOccupantsExcluding(
-  tickets: readonly RoomOccupantTicketWithId[],
+  tickets: readonly RoomOccupantVisitWithId[],
   roomId: string,
-  excludeTicketId: string,
+  excludeVisitId: string,
 ): number {
-  return domainCountRoomOccupantsExcluding(toDomainOccupants(tickets), roomId, excludeTicketId);
+  return domainCountRoomOccupantsExcluding(toDomainOccupants(tickets), roomId, excludeVisitId);
 }
 
 export function roomHasCapacity(
   settings: Pick<OpsSettings, 'rooms'>,
-  tickets: readonly RoomOccupantTicketWithId[],
+  tickets: readonly RoomOccupantVisitWithId[],
   roomId: string,
-  excludeTicketId?: string,
+  excludeVisitId?: string,
 ): boolean {
-  return domainRoomHasCapacity(settings.rooms, toDomainOccupants(tickets), roomId, excludeTicketId);
+  return domainRoomHasCapacity(settings.rooms, toDomainOccupants(tickets), roomId, excludeVisitId);
 }
 
 export function assertRoomHasCapacity(
   settings: Pick<OpsSettings, 'rooms'>,
-  tickets: readonly RoomOccupantTicketWithId[],
+  tickets: readonly RoomOccupantVisitWithId[],
   roomId: string,
-  excludeTicketId?: string,
+  excludeVisitId?: string,
 ): void {
-  if (roomHasCapacity(settings, tickets, roomId, excludeTicketId)) {
+  if (roomHasCapacity(settings, tickets, roomId, excludeVisitId)) {
     return;
   }
   throw domainError(ROOM_AT_CAPACITY);
 }
 
 export function occupyingTicketCodesForRoom(
-  tickets: readonly Pick<QueueTicketRow, 'laneCode' | 'number' | 'roomId' | 'status'>[],
+  tickets: readonly Pick<QueueVisitRow, 'laneCode' | 'number' | 'roomId' | 'status'>[],
   roomId: string,
 ): string[] {
   return tickets
@@ -80,7 +80,7 @@ export function occupyingTicketCodesForRoom(
 
 export function validateRoomCapacitySettingsChange(input: {
   nextRooms: OpsSettings['rooms'];
-  queueTickets: readonly Pick<QueueTicketRow, 'laneCode' | 'number' | 'roomId' | 'status'>[];
+  queueTickets: readonly Pick<QueueVisitRow, 'laneCode' | 'number' | 'roomId' | 'status'>[];
 }):
   | { ok: true }
   | {

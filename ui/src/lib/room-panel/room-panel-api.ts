@@ -4,7 +4,7 @@ import { httpFetch } from '$lib/api/http-fetch';
 import { SSE_CLIENT_ERROR, connectMultiEventSseStream } from '$lib/api/sse-client';
 import { t } from '$lib/i18n/i18nStore.svelte';
 import type { RoomPanelMode, RoomPanelPlacement } from '$lib/queue/ops-settings-api';
-import type { QueueTicketTransitionResponse, RoomPanelSnapshot } from '$lib/queue/openapi-types';
+import type { QueueVisitTransitionResponse, RoomPanelSnapshot } from '$lib/queue/openapi-types';
 import type { Result, SimpleResult } from '$lib/types/result';
 import { isRoomPanelSessionExpiredError } from './room-panel-stream-error';
 
@@ -90,7 +90,7 @@ export async function fetchRoomPanelQueue(): Promise<Result<RoomPanelSnapshot>> 
 }
 
 function transitionRoomPanelVisit(visitId: string, type: 'check_in_room' | 'check_out_room') {
-  return httpFetch<QueueTicketTransitionResponse>(
+  return httpFetch<QueueVisitTransitionResponse>(
     `/api/v1/queue/${encodeURIComponent(visitId)}/transition`,
     withRoomPanelRole({
       method: 'POST',

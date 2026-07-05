@@ -64,10 +64,10 @@ function buildQueueRouteDb(overrides: QueueRouteDbOverrides = {}): CoreDatabase 
       processedToday: 0,
     }),
     getOpsState: () => ({ checkinLocked: false, dayClosePhase: 'open' }),
-    callTicket: () => transition('waiting', 'called'),
+    callVisit: () => transition('waiting', 'called'),
     reassignRoom: () => transition('called', 'called'),
     setAbsence: () => transition('waiting', 'absent_wait_here'),
-    recallTicket: () => ({
+    recallVisit: () => ({
       ...transition('absent_wait_here', 'called'),
       returnUntil: '2026-06-18T08:15:00.000Z',
       callbackPhone: null,
@@ -90,7 +90,7 @@ test('POST /api/v1/queue/:visitId/transition dispatches call transitions with ro
   registerQueueRoutes(
     app,
     buildQueueRouteDb({
-      callTicket: (visitId: string, roomId?: string, roomLabel?: string) => {
+      callVisit: (visitId: string, roomId?: string, roomLabel?: string) => {
         calls.push({ visitId, roomId, roomLabel });
         return transition('waiting', 'called');
       },
@@ -259,7 +259,7 @@ test('POST /api/v1/queue/:visitId/transition dispatches recall without notify ph
   registerQueueRoutes(
     app,
     buildQueueRouteDb({
-      recallTicket: (visitId: string, returnWindowMinutes?: number) => {
+      recallVisit: (visitId: string, returnWindowMinutes?: number) => {
         recalls.push({ visitId, returnWindowMinutes });
         return {
           ...transition('absent_wait_here', 'called'),
@@ -552,8 +552,8 @@ function buildTvQueueRouteDb(): { db: CoreDatabase; visitId: string } {
       'SELECT checkin_locked AS locked, day_close_phase AS phase, last_reset_business_day AS lastResetBusinessDay FROM ops_state WHERE id = 1',
     ),
     updateCheckinLockStmt: sqlite.prepare('SELECT 1'),
-    getTicketIdentityViewStmt: sqlite.prepare('SELECT 1'),
-    getTicketPortalContextStmt: sqlite.prepare('SELECT 1'),
+    getVisitIdentityViewStmt: sqlite.prepare('SELECT 1'),
+    getVisitPortalContextStmt: sqlite.prepare('SELECT 1'),
     insertPatientSessionStmt: sqlite.prepare('SELECT 1'),
     expireActiveSessionsByTicketStmt: sqlite.prepare('SELECT 1'),
     getActiveSessionByTicketStmt: sqlite.prepare('SELECT 1'),
@@ -593,7 +593,7 @@ function buildTvQueueRouteDb(): { db: CoreDatabase; visitId: string } {
     }),
     getOpsState: () => ({ checkinLocked: false, dayClosePhase: 'open' }),
     getFlowCoreRuntimeInstance: () => runtime,
-    callTicket: (visitId: string, roomId?: string, roomLabel?: string) =>
+    callVisit: (visitId: string, roomId?: string, roomLabel?: string) =>
       callVisitTicket(sqlite, runtime, settings, listQueue, visitId, roomId, roomLabel),
   } as unknown as CoreDatabase;
 
@@ -620,7 +620,7 @@ test('GET /api/v1/queue with tv role returns explainVisibility-filtered items', 
   assert.equal(waiting.json().items[0].status, 'waiting');
   assert.equal(waiting.json().items[0].laneCode, 'L');
 
-  db.callTicket(visitId, 'labor', 'Labor');
+  db.callVisit(visitId, 'labor', 'Labor');
   const called = await app.inject({
     method: 'GET',
     url: '/api/v1/queue',

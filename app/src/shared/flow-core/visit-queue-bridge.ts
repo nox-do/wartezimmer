@@ -2,9 +2,9 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { Runtime } from '@praxis-flow/flow-core/server';
 import { addEvent, updateVisit } from '@praxis-flow/flow-core/server';
 import type { TransitionAction, Visit, VisitView, VisitStatus } from '@praxis-flow/flow-core';
-import type { AbsenceMode, OpsSettings, QueueTicketRow, TicketStatus } from '../db/db-types.js';
+import type { AbsenceMode, OpsSettings, QueueVisitRow, QueueDisplayStatus } from '../db/db-types.js';
 import {
-  absentModeToTicketStatus,
+  absentModeToQueueDisplayStatus,
   applyVisitRecall,
   clearAbsentMode,
   clearVisitCallbackPhone,
@@ -20,7 +20,7 @@ import {
 } from '../db/visit-host-state.js';
 import { DomainError, domainError } from '../errors/domain-error.js';
 import { QUEUE_ROOM_MISMATCH } from '../queue/queue-room-scope.js';
-import { resolveCallRoomForTicket } from '../queue/resolve-call-room.js';
+import { resolveCallRoomForVisit } from '../queue/resolve-call-room.js';
 import { resolveRecallNotifyPhone } from '../queue/recall-notify-phone.js';
 import { assertRoomHasCapacity } from '../ops/room-capacity.js';
 import { resolveDestinationRoomLabelForTopic, resolveTopicLabelFromSettings } from '../checkin-topic-settings.js';
@@ -58,11 +58,11 @@ export function visitExistsInDb(db: DatabaseSync, visitId: string): boolean {
 
 export function requireVisitExistsInDb(db: DatabaseSync, visitId: string): void {
   if (!visitExistsInDb(db, visitId)) {
-    throw domainError('TICKET_NOT_FOUND');
+    throw domainError('VISIT_NOT_FOUND');
   }
 }
 
-export function visitStatusToTicketStatus(status: VisitStatus): TicketStatus {
+export function visitStatusToQueueDisplayStatus(status: VisitStatus): QueueDisplayStatus {
   if (status === 'called') return 'called';
   if (status === 'arrived' || status === 'in_progress') return 'in_room';
   if (status === 'waiting' || status === 'directed' || status === 'blocked') return 'waiting';
@@ -76,7 +76,7 @@ export function mapFlowCoreTransitionError(error: unknown): never {
   }
   const message = error instanceof Error ? error.message : String(error);
   if (message === 'VISIT_NOT_FOUND') {
-    throw domainError('TICKET_NOT_FOUND');
+    throw domainError('VISIT_NOT_FOUND');
   }
   if (message === 'VISIT_LOCATION_MISMATCH') {
     throw domainError(QUEUE_ROOM_MISMATCH);
@@ -99,7 +99,7 @@ function resolveLocationLabel(settings: OpsSettings, locationId: string | null |
 function requireVisit(runtime: Runtime, visitId: string): VisitView {
   const visit = runtime.visits().find((entry) => entry.id === visitId);
   if (!visit) {
-    throw domainError('TICKET_NOT_FOUND');
+    throw domainError('VISIT_NOT_FOUND');
   }
   return visit;
 }
@@ -113,7 +113,7 @@ function runVisitTransition(
   try {
     const updated = runtime.transition(visitId, action, context);
     if (!updated) {
-      throw domainError('TICKET_NOT_FOUND');
+      throw domainError('VISIT_NOT_FOUND');
     }
     return updated;
   } catch (error) {
@@ -121,22 +121,22 @@ function runVisitTransition(
   }
 }
 
-function resolveEffectiveTicketStatus(
+function resolveEffectiveQueueDisplayStatus(
   visit: VisitView,
   hostState: VisitHostStateRow | null | undefined,
-): TicketStatus {
+): QueueDisplayStatus {
   if (hostState?.absentMode) {
-    return absentModeToTicketStatus(hostState.absentMode);
+    return absentModeToQueueDisplayStatus(hostState.absentMode);
   }
-  return visitStatusToTicketStatus(visit.status);
+  return visitStatusToQueueDisplayStatus(visit.status);
 }
 
-export function visitToQueueTicketRow(
+export function visitToQueueVisitRow(
   visit: VisitView,
   settings: OpsSettings,
   hostState?: VisitHostStateRow | null,
   documentCount = 0,
-): QueueTicketRow {
+): QueueVisitRow {
   const topicId = visit.primaryTopicId ?? 'unknown';
   const destinationRoomId = visit.targetLocationId ?? '';
   const destinationRoomLabel =
@@ -158,7 +158,7 @@ export function visitToQueueTicketRow(
     topicLabel: visit.topic?.name ?? resolveTopicLabelFromSettings(settings, topicId),
     destinationRoomId,
     destinationRoomLabel,
-    status: resolveEffectiveTicketStatus(visit, hostState),
+    status: resolveEffectiveQueueDisplayStatus(visit, hostState),
     createdAt: visit.checkedInAt ?? visit.createdAt,
     calledAt: visit.calledAt ?? null,
     identityRef: hostState?.identityRefOverride ?? visit.patientDisplayName ?? null,
@@ -180,7 +180,7 @@ export function listVisitQueueRows(
   settings: OpsSettings,
   businessDay: string,
   db?: DatabaseSync,
-): QueueTicketRow[] {
+): QueueVisitRow[] {
   const visits = runtime
     .visits()
     .filter((visit) => visit.queueNumberDate === businessDay)
@@ -196,7 +196,7 @@ export function listVisitQueueRows(
 
   return visits
     .map((visit) =>
-      visitToQueueTicketRow(
+      visitToQueueVisitRow(
         visit,
         settings,
         hostStates.get(visit.id),
@@ -207,25 +207,25 @@ export function listVisitQueueRows(
 }
 
 const ABSENCE_ELIGIBLE_VISIT_STATUSES = new Set<VisitStatus>(['waiting', 'called']);
-const CALLBACK_PHONE_ELIGIBLE_STATUSES: TicketStatus[] = [
+const CALLBACK_PHONE_ELIGIBLE_STATUSES: QueueDisplayStatus[] = [
   'waiting',
   'called',
   'absent_wait_here',
   'absent_return_later',
 ];
-const TRIAGE_ELIGIBLE_STATUSES: TicketStatus[] = [
+const TRIAGE_ELIGIBLE_STATUSES: QueueDisplayStatus[] = [
   'waiting',
   'called',
   'in_room',
   'absent_wait_here',
   'absent_return_later',
 ];
-const RECALL_ELIGIBLE_STATUSES: TicketStatus[] = ['absent_wait_here', 'absent_return_later'];
+const RECALL_ELIGIBLE_STATUSES: QueueDisplayStatus[] = ['absent_wait_here', 'absent_return_later'];
 
 function requireVisitForQueueOp(runtime: Runtime, visitId: string): VisitView {
   const visit = runtime.visits().find((entry) => entry.id === visitId);
   if (!visit) {
-    throw domainError('TICKET_NOT_FOUND');
+    throw domainError('VISIT_NOT_FOUND');
   }
   return visit;
 }
@@ -233,9 +233,9 @@ function requireVisitForQueueOp(runtime: Runtime, visitId: string): VisitView {
 function assertEffectiveStatus(
   visit: VisitView,
   hostState: VisitHostStateRow | null,
-  allowed: TicketStatus[],
-): TicketStatus {
-  const status = resolveEffectiveTicketStatus(visit, hostState);
+  allowed: QueueDisplayStatus[],
+): QueueDisplayStatus {
+  const status = resolveEffectiveQueueDisplayStatus(visit, hostState);
   if (!allowed.includes(status)) {
     throw domainError('INVALID_TRANSITION');
   }
@@ -257,16 +257,16 @@ export function setAbsenceVisitTicket(
   visitId: string,
   mode: AbsenceMode,
   updatedAt: string,
-): { fromStatus: TicketStatus; toStatus: TicketStatus } {
+): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisitForQueueOp(runtime, visitId);
   if (!ABSENCE_ELIGIBLE_VISIT_STATUSES.has(visit.status)) {
     throw domainError('INVALID_TRANSITION');
   }
 
   const hostState = getVisitHostState(db, visitId);
-  const fromStatus = resolveEffectiveTicketStatus(visit, hostState);
+  const fromStatus = resolveEffectiveQueueDisplayStatus(visit, hostState);
   setVisitAbsentMode(db, visitId, mode, updatedAt);
-  const toStatus = absentModeToTicketStatus(mode);
+  const toStatus = absentModeToQueueDisplayStatus(mode);
   return { fromStatus, toStatus };
 }
 
@@ -278,8 +278,8 @@ export function recallVisitTicket(
   returnWindowMinutes: number,
   updatedAt: string,
 ): {
-  fromStatus: TicketStatus;
-  toStatus: TicketStatus;
+  fromStatus: QueueDisplayStatus;
+  toStatus: QueueDisplayStatus;
   returnUntil: string;
   returnWindowMinutes: number;
   callbackPhone: string | null;
@@ -370,7 +370,7 @@ export function processExpiredRecallWindowForVisit(
   runtime: Runtime,
   visitId: string,
   nowIso: string,
-): { transitioned: boolean; fromStatus: TicketStatus; toStatus: TicketStatus } | null {
+): { transitioned: boolean; fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } | null {
   const hostState = getVisitHostState(db, visitId);
   if (!hostState || !isVisitRecallWindowExpired(hostState, nowIso)) {
     return null;
@@ -381,9 +381,9 @@ export function processExpiredRecallWindowForVisit(
     return null;
   }
 
-  const fromStatus = absentModeToTicketStatus('return_later');
+  const fromStatus = absentModeToQueueDisplayStatus('return_later');
   clearAbsentMode(db, visitId, nowIso);
-  const toStatus = visitStatusToTicketStatus(visit.status);
+  const toStatus = visitStatusToQueueDisplayStatus(visit.status);
   return { transitioned: true, fromStatus, toStatus };
 }
 
@@ -396,16 +396,16 @@ export function returnAbsentVisitToQueue(
   runtime: Runtime,
   visitId: string,
   updatedAt: string,
-): { fromStatus: TicketStatus; toStatus: TicketStatus } | null {
+): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } | null {
   const hostState = getVisitHostState(db, visitId);
   if (!hostState?.absentMode) {
     return null;
   }
 
   const visit = requireVisitForQueueOp(runtime, visitId);
-  const fromStatus = absentModeToTicketStatus(hostState.absentMode);
+  const fromStatus = absentModeToQueueDisplayStatus(hostState.absentMode);
   clearAbsentMode(db, visitId, updatedAt);
-  const toStatus = visitStatusToTicketStatus(visit.status);
+  const toStatus = visitStatusToQueueDisplayStatus(visit.status);
   return { fromStatus, toStatus };
 }
 
@@ -413,19 +413,19 @@ export function callVisitTicket(
   db: DatabaseSync,
   runtime: Runtime,
   settings: OpsSettings,
-  listQueue: () => QueueTicketRow[],
+  listQueue: () => QueueVisitRow[],
   visitId: string,
   roomId?: string,
   roomLabel?: string,
-): { fromStatus: TicketStatus; toStatus: TicketStatus } {
+): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
   if (visit.status !== 'waiting' && visit.status !== 'directed') {
     throw domainError('INVALID_TRANSITION');
   }
   assertNoAbsentHostOverlay(db, visitId);
 
-  const queueRow = visitToQueueTicketRow(visit, settings);
-  const resolvedRoom = resolveCallRoomForTicket(settings, roomId, roomLabel, {
+  const queueRow = visitToQueueVisitRow(visit, settings);
+  const resolvedRoom = resolveCallRoomForVisit(settings, roomId, roomLabel, {
     roomId: queueRow.destinationRoomId,
     roomLabel: queueRow.destinationRoomLabel,
   });
@@ -433,7 +433,7 @@ export function callVisitTicket(
     assertRoomHasCapacity(settings, listQueue(), resolvedRoom.roomId);
   }
 
-  const fromStatus = visitStatusToTicketStatus(visit.status);
+  const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
   runVisitTransition(runtime, visitId, 'call', {
     targetLocationId: resolvedRoom?.roomId ?? visit.targetLocationId ?? undefined,
   });
@@ -446,14 +446,14 @@ export function arriveVisitTicket(
   runtime: Runtime,
   visitId: string,
   actingLocationId?: string,
-): { fromStatus: TicketStatus; toStatus: TicketStatus } {
+): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
   if (visit.status !== 'called') {
     throw domainError('INVALID_TRANSITION');
   }
   assertNoAbsentHostOverlay(db, visitId);
 
-  const fromStatus = visitStatusToTicketStatus(visit.status);
+  const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
   runVisitTransition(runtime, visitId, 'arrive', { actingLocationId });
   return { fromStatus, toStatus: 'in_room' };
 }
@@ -462,13 +462,13 @@ export function startVisitTicket(
   runtime: Runtime,
   visitId: string,
   actingLocationId?: string,
-): { fromStatus: TicketStatus; toStatus: TicketStatus } {
+): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
   if (visit.status !== 'arrived') {
     throw domainError('INVALID_TRANSITION');
   }
 
-  const fromStatus = visitStatusToTicketStatus(visit.status);
+  const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
   runVisitTransition(runtime, visitId, 'start', { actingLocationId });
   return { fromStatus, toStatus: 'in_room' };
 }
@@ -477,13 +477,13 @@ export function doneVisitTicket(
   runtime: Runtime,
   visitId: string,
   actingLocationId?: string,
-): { fromStatus: TicketStatus; toStatus: TicketStatus } {
+): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
   if (visit.status !== 'arrived' && visit.status !== 'in_progress') {
     throw domainError('INVALID_TRANSITION');
   }
 
-  const fromStatus = visitStatusToTicketStatus(visit.status);
+  const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
   if (!actingLocationId && visit.status === 'arrived') {
     runVisitTransition(runtime, visitId, 'start', {});
   }
@@ -498,13 +498,13 @@ export function doneVisitTicket(
 export function returnToWaitingVisitTicket(
   runtime: Runtime,
   visitId: string,
-): { fromStatus: TicketStatus; toStatus: TicketStatus } {
+): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
   if (!['called', 'arrived', 'in_progress'].includes(visit.status)) {
     throw domainError('INVALID_TRANSITION');
   }
 
-  const fromStatus = visitStatusToTicketStatus(visit.status);
+  const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
   runVisitTransition(runtime, visitId, 'return_to_waiting');
   return { fromStatus, toStatus: 'waiting' };
 }
@@ -513,20 +513,20 @@ export function reassignVisitTicket(
   db: DatabaseSync,
   runtime: Runtime,
   settings: OpsSettings,
-  listQueue: () => QueueTicketRow[],
+  listQueue: () => QueueVisitRow[],
   visitId: string,
   roomId?: string,
   roomLabel?: string,
-): { fromStatus: TicketStatus; toStatus: TicketStatus } {
+): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visitView = requireVisit(runtime, visitId);
   if (!['called', 'arrived', 'in_progress'].includes(visitView.status)) {
     throw domainError('INVALID_TRANSITION');
   }
   assertNoAbsentHostOverlay(db, visitId);
 
-  const fromStatus = visitStatusToTicketStatus(visitView.status);
-  const queueRow = visitToQueueTicketRow(visitView, settings);
-  const resolvedRoom = resolveCallRoomForTicket(settings, roomId, roomLabel, {
+  const fromStatus = visitStatusToQueueDisplayStatus(visitView.status);
+  const queueRow = visitToQueueVisitRow(visitView, settings);
+  const resolvedRoom = resolveCallRoomForVisit(settings, roomId, roomLabel, {
     roomId: queueRow.destinationRoomId,
     roomLabel: queueRow.destinationRoomLabel,
   });
@@ -540,7 +540,7 @@ export function reassignVisitTicket(
     assertRoomHasCapacity(settings, listQueue(), resolvedRoom.roomId, visitId);
   }
 
-  let toStatus: TicketStatus = fromStatus;
+  let toStatus: QueueDisplayStatus = fromStatus;
   const patch: Partial<Visit> = {
     targetLocationId: resolvedRoom.roomId,
   };

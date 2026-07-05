@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { openFlowCoreSpikeDb } from './flow-core-spike-db.js';
+import { DatabaseSync } from 'node:sqlite';
+import { ensureFlowCoreSchema } from './flow-core-schema.js';
 import {
   PF_FLOW_LOC_WAITING,
   PF_FLOW_QUEUE_GENERAL,
@@ -59,8 +60,15 @@ function sampleOpsSettings(): OpsSettings {
   };
 }
 
+function openTestFlowCoreDb(): DatabaseSync {
+  const db = new DatabaseSync(':memory:');
+  db.exec('PRAGMA foreign_keys = ON');
+  ensureFlowCoreSchema(db);
+  return db;
+}
+
 test('syncCatalogFromOpsSettings maps PF topics and rooms into a valid flow-core catalog', () => {
-  const db = openFlowCoreSpikeDb({ path: ':memory:' });
+  const db = openTestFlowCoreDb();
   const summary = syncCatalogFromOpsSettings(db, sampleOpsSettings());
 
   assert.ok(summary.topics >= DEFAULT_TERMINAL_TOPIC_DEFINITIONS.length);
@@ -96,7 +104,7 @@ test('syncCatalogFromOpsSettings maps PF topics and rooms into a valid flow-core
 });
 
 test('syncCatalogFromOpsSettings creates room panel surfaces for enabled panels', () => {
-  const db = openFlowCoreSpikeDb({ path: ':memory:' });
+  const db = openTestFlowCoreDb();
   const summary = syncCatalogFromOpsSettings(db, sampleOpsSettings());
 
   const panelSurface = db

@@ -195,7 +195,7 @@ paths:
                     type: string
                     format: date-time
         '404':
-          description: Ticket not found
+          description: Visit not found
           content:
             application/json:
               schema:

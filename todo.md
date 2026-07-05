@@ -12,15 +12,11 @@
 - [x] `packages/flow-core` eingebunden, Workspace in `package.json`
 - [x] `npm install` + `npm run build:flow-core` + `npm -w @praxis-flow/flow-core test`
 - [x] Eigenes Git-Repo initialisiert
-- [x] Spike 1: `createRuntime` + Catalog-Sync + Dev-Endpoints (`/api/v1/dev/flow-core/*`)
-- [ ] Spike 1 manuell: MFA-Login → `POST /api/v1/dev/flow-core/sync-catalog` → `GET .../catalog`
-- [x] Spike 2: `POST /api/v1/dev/flow-core/check-in` via `runtime.checkIn()` (Visit-ID + `terminalInstruction`)
-- [x] Spike 2: `GET /api/v1/dev/flow-core/tv-snapshot` mit `explainVisibility`
-- [x] Spike 3: `POST /api/v1/dev/flow-core/visits/:visitId/:action` (call/arrive/start/done)
+- [x] Spike 1–3 Dev-Endpoints (entfernt in Phase C — produktiver Cutover abgeschlossen)
 - [x] Cutover: Flow-Core-Schema in Haupt-DB (`ensureFlowCoreSchema` beim Start)
 - [x] Cutover: Catalog-Sync bei App-Start + Settings-Update
 - [x] Cutover: Terminal-Check-in → `runtime.checkIn()` (Visit statt Ticket)
-- [x] Cutover: MFA-Queue liest Visits + `callTicket` → `runtime.transition`
+- [x] Cutover: MFA-Queue liest Visits + `callVisit` → `runtime.transition`
 - [x] Smoke-Endpoint entfernt (nicht mehr nötig)
 - [ ] Manuell: MFA DnD aktiv → WZ, TV zeigt Nummer wieder, Raum-Panel leert Spalte (return_to_waiting)
 
@@ -31,7 +27,20 @@
 - [x] Raum-Panel-Snapshot: kein Legacy-Loop über `listQueue()`
 - [x] Toten Check-in-Pfad `createTicketInDb` / `buildCreateTicketInput` entfernt
 
-**Offen (Phase B):** Schema-Drop `tickets`/`queue_entries`, absent/recall, Portal, OpenAPI
+## Phase C — Kampfspuren (2026-07-05)
+
+Migration-Cleanup nach Core-Integration:
+
+- [x] Dev-Spike entfernt (`/api/v1/dev/flow-core/*`, `flow-core-spike-*`, separate Spike-DB)
+- [x] MFA-Assist Cutover entfernt (`POST /mfa-assist`, `legacyCutover`, `createMfaAssistCheckin`)
+- [x] `clearFlowCoreCatalog` nach `flow-core-schema.ts` (kein Spike-DB-Modul mehr)
+- [x] Intern: `createTicket` → `createVisitCheckIn`, `CreateVisitCheckInInput`
+- [x] Intern: queue-routes `visitId`-Naming, deprecated OpenAPI-Aliases entfernt
+- [x] OpenAPI checkin: Visit-Copy, `TerminalAssistPressed` ohne `legacyCutover`
+- [x] Smoke `smoke-practice-hours.mjs` auf `assist/press`
+- [x] Optional Renames: `TICKET_NOT_FOUND` → `VISIT_NOT_FOUND`, `callTicket` → `callVisit`, `QueueTicketRow` → `QueueVisitRow`
+
+**Offen (Phase B):** ~~Schema-Drop~~ erledigt; manuelle Smokes (MFA DnD, Portal, Day-Reset)
 
 ## Design: return_to_waiting (2026-07-04)
 
@@ -42,7 +51,7 @@
 **Bewusste Invarianten (nicht ändern ohne Rücksprache):**
 - **Journey bei Recall:** Patient springt aus dem Aufruf-Zyklus, nicht aus der Route — kein `journey_abandoned`
 - **`absent_*`:** kein Visit-Status — weiter nur `returnToWaitingInDb` (Legacy ohne Visit-Zeile)
-- **Recall-Notify:** bei `return_to_waiting` nicht clearen — wie bisheriges Legacy, anders als `recallTicket`
+- **Recall-Notify:** bei `return_to_waiting` nicht clearen — wie bisheriges Legacy, anders als `recallVisit`
 
 **TV nach Recall:** `explainVisibility` auf `pf_waiting_tv` braucht `lastKnownLocationId === pf_waiting` (Surface-Standort) + passende DisplayRule; Status `waiting` ist typisches Ergebnis, nicht pauschal Voraussetzung.
 
@@ -66,7 +75,7 @@
 **Entscheidungen (User):**
 - Timeout **10 s** (`TERMINAL_ASSIST_PENDING_TIMEOUT_MS`)
 - MFA: **blaues Banner** wie Notfall (`TerminalAssistAlert` + Queue-SSE `assistPending[]`)
-- Legacy **`POST /mfa-assist`**: Cutover → gleiche Antwort wie `assist/press` (`TerminalAssistPressed`)
+- [x] Legacy `/mfa-assist` Cutover entfernt (Phase C — nur noch `assist/press`)
 - Terminal: Hilfe-Press → **bleibt auf Startseite**, dann normale Auth (phone/name/egk) → Topic; `needsAssistance` serverseitig bei active press; kein `authPath`-Fake mehr
 
 **Storage:** A1 — `terminal_assist_pending` (DB) + TTL-Scheduler
@@ -78,7 +87,7 @@
 - [x] Terminal UI: Press → Topic + Empfang-Hinweis
 - [x] MFA UI: blaues Banner + `Users`-Symbol auf QueueEntry
 - [x] Tests (278 app + core)
-- [x] Legacy `createMfaAssistTicket` entfernt; `/mfa-assist` → press cutover
+- [x] Legacy `createMfaAssistTicket` + `/mfa-assist` entfernt (Phase C)
 
 - [ ] Hilfe-Button Legacy-Ticket abgehakt (oben)
 
@@ -133,15 +142,15 @@ Breaking API rename: `ticketId` → `visitId`, Pfade `{ticket}` → `{visitId}`.
 
 **Breaking (PR):** API fields `ticketId` → `visitId`; paths `/queue/{ticket}/…` → `/queue/{visitId}/…`. Event payloads analog. Werte unverändert.
 
-**Bewusst belassen:** `TICKET_NOT_FOUND` Error-Code; interne DB-Methoden `callTicket`, `listDocumentsForTicket`; User-facing „Ticket“-Texte (Wartenummer).
+**Bewusst belassen:** User-facing „Ticket“-Texte / `ticketCode` (Wartenummer).
 
 ## Phase B1 — Host Queue-Metadaten an Visits (2026-07-05)
 
 - [x] Schema `visit_host_state` (+ FK CASCADE) in `ensureFlowCoreSchema`
 - [x] DB-Layer `visit-host-state.ts` (upsert, recall, summary, expired windows)
 - [x] Check-in schreibt `checkin_phone` / `checkin_locale` in Host-State
-- [x] `visitToQueueTicketRow` / `listVisitQueueRows` Batch-Enrichment (Host-State + Document-Count)
-- [x] `database.ts`-Bridges: setAbsence, recallTicket, callback, triage, identityRef, getQueueSummary, returnToWaiting (+ absent clear)
+- [x] `visitToQueueVisitRow` / `listVisitQueueRows` Batch-Enrichment (Host-State + Document-Count)
+- [x] `database.ts`-Bridges: setAbsence, recallVisit, callback, triage, identityRef, getQueueSummary, returnToWaiting (+ absent clear)
 - [x] Recall-Scheduler: Visit-Pfad via `listExpiredVisitRecallWindows` + `processExpiredRecallWindowForVisit`
 - [x] Mark-Absence-Lookup auf Visits + Host-State (findByCode, listAbsenceLookup, checkinPhone-Match)
 - [x] Tests: `visit-host-state.test.ts`, `visit-queue-bridge.test.ts` erweitert (289 app tests grün)
@@ -151,7 +160,7 @@ Breaking API rename: `ticketId` → `visitId`, Pfade `{ticket}` → `{visitId}`.
 **Design (festgehalten):**
 - `absent_*` = Host-Overlay (`absent_mode`), Core-Status bleibt waiting/called
 - `return_to_waiting` / abgelaufenes Recall-Fenster: `absent_mode` clearen, Recall-Notify **nicht** clearen
-- `recallTicket`: `absent_mode=return_later`, `return_until`, Callback clearen, Notify-State clearen (wie Legacy)
+- `recallVisit`: `absent_mode=return_later`, `return_until`, Callback clearen, Notify-State clearen (wie Legacy)
 - `setIdentityRef`: Host `identity_ref_override` (Core `patientDisplayName` unverändert)
 - Document-Count: `documents.ticket_id = visit.id` (Phase B2: FK-Migration)
 
@@ -162,7 +171,7 @@ End-to-end Visit-Patienten: Portal-Code → Session → Dokument-Upload; Identit
 - [x] Migration `ticket_id` → `visit_id` (patient_sessions, documents) via `ensureVisitPortalSchema`
 - [x] Statements: Portal-Context, Identity-View, Sessions, Documents auf visits + visit_host_state
 - [x] Check-in-Sessions: Visit-Status-Block (done/cancelled/no_show), visit_id in Sessions
-- [x] Documents: FK visits, `listDocumentsForTicket` via `visitExists`
+- [x] Documents: FK visits, `listDocumentsForVisit` via `visitExists`
 - [x] `countPendingDocumentsByVisitIds` auf `documents.visit_id`
 - [x] Tests: `database-visit-portal.test.ts` (Migration, Portal, Docs, Identity absent)
 - [ ] Manuell: Terminal Check-in → Portal Code → Upload; MFA Document-Badge + Preview

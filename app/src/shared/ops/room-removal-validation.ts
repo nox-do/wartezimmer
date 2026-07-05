@@ -1,5 +1,5 @@
 import type { TopicSetting } from '../checkin-topic-settings.js';
-import type { OpsSettings, QueueTicketRow } from '../db/db-types.js';
+import type { OpsSettings, QueueVisitRow } from '../db/db-types.js';
 import { formatTicketCode } from '../queue/ticket-code.js';
 import { validateRoomCapacitySettingsChange, ROOM_BLOCKED_CAPACITY } from './room-capacity.js';
 
@@ -27,7 +27,7 @@ export function disabledRoomIds(
 
 function queueTicketsForRoomIds(
   roomIds: ReadonlySet<string>,
-  queueTickets: readonly Pick<QueueTicketRow, 'laneCode' | 'number' | 'roomId' | 'status'>[],
+  queueTickets: readonly Pick<QueueVisitRow, 'laneCode' | 'number' | 'roomId' | 'status'>[],
 ): string[] {
   return queueTickets
     .filter((ticket) => ticket.roomId && roomIds.has(ticket.roomId))
@@ -45,7 +45,7 @@ export function validateRoomSettingsChange(input: {
   currentRooms: OpsSettings['rooms'];
   nextRooms: OpsSettings['rooms'];
   topics: readonly TopicSetting[];
-  queueTickets: readonly Pick<QueueTicketRow, 'laneCode' | 'number' | 'roomId' | 'status'>[];
+  queueTickets: readonly Pick<QueueVisitRow, 'laneCode' | 'number' | 'roomId' | 'status'>[];
 }): { ok: true } | RoomSettingsGuardFailure {
   const removed = removedRoomIds(input.currentRooms, input.nextRooms);
   if (removed.length > 0) {

@@ -111,11 +111,11 @@ export function registerDocumentRoutes(app: FastifyInstance, db: CoreDatabase): 
     async (request, reply) => {
       const visitId = request.params.visitId.trim();
       try {
-        return { items: db.listDocumentsForTicket(visitId) };
+        return { items: db.listDocumentsForVisit(visitId) };
       } catch (error) {
         if (
           sendResolvedDomainError(reply, error, {
-            byApiCode: { TICKET_NOT_FOUND: `Ticket ${visitId} wurde nicht gefunden.` },
+            byApiCode: { VISIT_NOT_FOUND: `Visit ${visitId} wurde nicht gefunden.` },
           })
         ) {
           return;

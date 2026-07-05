@@ -7,7 +7,7 @@ import { PF_FLOW_SURFACE_TERMINAL } from '../flow-core/sync-catalog-from-ops-set
 import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS } from '../checkin-topic-settings.js';
 import type { OpsSettings } from './db-types.js';
 import {
-  absentModeToTicketStatus,
+  absentModeToQueueDisplayStatus,
   applyVisitRecall,
   clearAbsentMode,
   countVisitQueueSummary,
@@ -90,9 +90,9 @@ test('ensureVisitHostStateSchema creates visit_host_state with FK cascade', () =
   assert.equal(getVisitHostState(db, visit.id), null);
 });
 
-test('absentModeToTicketStatus maps host overlay to queue pseudo-status', () => {
-  assert.equal(absentModeToTicketStatus('wait_here'), 'absent_wait_here');
-  assert.equal(absentModeToTicketStatus('return_later'), 'absent_return_later');
+test('absentModeToQueueDisplayStatus maps host overlay to queue pseudo-status', () => {
+  assert.equal(absentModeToQueueDisplayStatus('wait_here'), 'absent_wait_here');
+  assert.equal(absentModeToQueueDisplayStatus('return_later'), 'absent_return_later');
 });
 
 test('applyVisitRecall sets return_later window and clears callback', () => {

@@ -789,7 +789,7 @@ export interface paths {
             'application/json': components['schemas']['MfaDocumentListResponse'];
           };
         };
-        /** @description Ticket not found */
+        /** @description Visit not found */
         404: {
           headers: {
             [name: string]: unknown;
@@ -1158,7 +1158,7 @@ export interface components {
       | 'AUTH_UNAUTHORIZED'
       | 'AUTH_FORBIDDEN'
       | 'RATE_LIMITED'
-      | 'TICKET_NOT_FOUND'
+      | 'VISIT_NOT_FOUND'
       | 'DOCUMENT_NOT_FOUND'
       | 'DOCUMENT_FORBIDDEN'
       | 'INVALID_TRANSITION'

@@ -225,12 +225,12 @@ export function discardPatientDocumentInDb(
   };
 }
 
-export function listDocumentsForTicketFromDb(
+export function listDocumentsForVisitFromDb(
   deps: DocumentDeps,
   visitId: string,
 ): MfaDocumentRow[] {
   if (!deps.visitExists(visitId)) {
-    throw domainError('TICKET_NOT_FOUND');
+    throw domainError('VISIT_NOT_FOUND');
   }
   return deps.listDocumentsByVisitStmt.all(visitId) as MfaDocumentRow[];
 }

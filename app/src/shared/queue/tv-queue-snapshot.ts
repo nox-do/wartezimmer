@@ -5,7 +5,7 @@ import type { OpsSettings } from '../db/db-types.js';
 import { getBusinessDay } from '../db/database-time.js';
 import { getFlowCoreRuntime } from '../flow-core/flow-core-runtime.js';
 import { PF_FLOW_SURFACE_TV } from '../flow-core/sync-catalog-from-ops-settings.js';
-import { visitToQueueTicketRow } from '../flow-core/visit-queue-bridge.js';
+import { visitToQueueVisitRow } from '../flow-core/visit-queue-bridge.js';
 
 export type TvQueueSnapshot = {
   revision: number;
@@ -31,7 +31,7 @@ export type BuildTvQueueSnapshotInput = {
 };
 
 function mapVisitToTvItem(visit: ReturnType<Runtime['visits']>[number], settings: OpsSettings): TvQueueItem {
-  const row = visitToQueueTicketRow(visit, settings);
+  const row = visitToQueueVisitRow(visit, settings);
   return {
     laneCode: row.laneCode,
     number: row.number,

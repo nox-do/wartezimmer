@@ -15,7 +15,7 @@ Diese Datei ergänzt OpenAPI um **Rollen**, **fachliche Regeln** und **Nicht-Off
 
 | Rolle                 | Client         | API-Bereiche                                                                                              |
 | --------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
-| `terminal`            | Check-in       | `checkins`, `checkins/mfa-assist`, `ops/heartbeat`, `ops/device/presence`, optional `ops/emergency/raise` |
+| `terminal`            | Check-in       | `checkins`, `checkins/assist/*`, `ops/heartbeat`, `ops/device/presence`, optional `ops/emergency/raise` |
 | `mfa`                 | MFA-Dashboard  | `queue` (+ SSE), `identity`, `documents`, `ops` (+ Stream, Day-Lifecycle, Check-in-Lock)                  |
 | `tv`                  | Wartezimmer    | `GET /queue`, `GET /queue/stream`, `ops/device/presence`                                                  |
 | `captive`             | Gateway-Bridge | `sessions/verify-ticket-code`                                                                             |

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveCallRoomForTicket } from './resolve-call-room.js';
+import { resolveCallRoomForVisit } from './resolve-call-room.js';
 
 const settings = {
   rooms: [
@@ -21,9 +21,9 @@ const settings = {
   ],
 };
 
-test('resolveCallRoomForTicket uses ticket destination snapshot when body is empty', () => {
+test('resolveCallRoomForVisit uses ticket destination snapshot when body is empty', () => {
   assert.deepEqual(
-    resolveCallRoomForTicket(settings, undefined, undefined, {
+    resolveCallRoomForVisit(settings, undefined, undefined, {
       roomId: 'labor',
       roomLabel: 'Labor',
     }),
@@ -31,13 +31,13 @@ test('resolveCallRoomForTicket uses ticket destination snapshot when body is emp
   );
 });
 
-test('resolveCallRoomForTicket uses explicit room from client when provided', () => {
-  assert.deepEqual(resolveCallRoomForTicket(settings, 'labor', 'Labor'), {
+test('resolveCallRoomForVisit uses explicit room from client when provided', () => {
+  assert.deepEqual(resolveCallRoomForVisit(settings, 'labor', 'Labor'), {
     roomId: 'labor',
     roomLabel: 'Labor',
   });
 });
 
-test('resolveCallRoomForTicket returns null without snapshot or explicit body', () => {
-  assert.equal(resolveCallRoomForTicket(settings), null);
+test('resolveCallRoomForVisit returns null without snapshot or explicit body', () => {
+  assert.equal(resolveCallRoomForVisit(settings), null);
 });

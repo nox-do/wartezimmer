@@ -192,8 +192,8 @@ async function main() {
     },
   );
   assert(
-    oldTicketCall.body?.code === 'TICKET_NOT_FOUND',
-    'Expected TICKET_NOT_FOUND for old ticket',
+    oldTicketCall.body?.code === 'VISIT_NOT_FOUND',
+    'Expected VISIT_NOT_FOUND for old ticket',
   );
 
   console.log('5) Outbox ist nach Reset geleert (nur frisches BusinessDayReset)');

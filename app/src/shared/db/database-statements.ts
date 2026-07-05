@@ -26,8 +26,8 @@ export type CoreDatabaseStatements = {
   topicCountsByBusinessDayStmt: StatementSync;
   listOpenVisitsByBusinessDayStmt: StatementSync;
   listAbsenceLookupTicketsStmt: StatementSync;
-  getTicketIdentityViewStmt: StatementSync;
-  getTicketPortalContextStmt: StatementSync;
+  getVisitIdentityViewStmt: StatementSync;
+  getVisitPortalContextStmt: StatementSync;
   insertOutboxEventStmt: StatementSync;
   listPendingOutboxEventsStmt: StatementSync;
   claimOutboxEventStmt: StatementSync;
@@ -62,7 +62,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
       ORDER BY v.created_at DESC
       LIMIT 1`,
     ),
-    getTicketPortalContextStmt: db.prepare(
+    getVisitPortalContextStmt: db.prepare(
       `SELECT
         v.auth_path AS authPath,
         h.checkin_phone AS checkinPhone
@@ -294,7 +294,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
         AND v.status IN ('waiting', 'called')
       ORDER BY v.checked_in_at ASC`,
     ),
-    getTicketIdentityViewStmt: db.prepare(
+    getVisitIdentityViewStmt: db.prepare(
       `SELECT
         v.id AS visitId,
         v.queue_lane_code AS laneCode,

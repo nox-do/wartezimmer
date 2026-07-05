@@ -13,8 +13,8 @@ import { formatTicketCode } from '../queue/ticket-code.js';
 import { getBusinessDay, normalizeDayClosePhase } from './database-time.js';
 import type { CheckinSessionDeps } from './database-checkin-sessions.js';
 import {
-  getTicketIdentityViewFromDb,
-  getTicketPortalContextFromDb,
+  getVisitIdentityViewFromDb,
+  getVisitPortalContextFromDb,
   requirePatientSessionFromDb,
   resolvePatientSessionInDb,
   verifyTicketCodeInDb,
@@ -178,11 +178,11 @@ test('visit portal: verify code, resolve session, identity view with host-state'
   assert.equal(session.visitId, visitId);
   assert.ok(session.sessionToken);
 
-  const portal = getTicketPortalContextFromDb(checkinDeps, visitId);
+  const portal = getVisitPortalContextFromDb(checkinDeps, visitId);
   assert.equal(portal.authPath, 'phone_dob');
   assert.equal(portal.checkinPhone, '+49172111111');
 
-  const identity = getTicketIdentityViewFromDb(checkinDeps, visitId);
+  const identity = getVisitIdentityViewFromDb(checkinDeps, visitId);
   assert.equal(identity.visitId, visitId);
   assert.equal(identity.status, 'waiting');
   assert.equal(identity.identityRef, 'Portal Patient');
@@ -216,6 +216,6 @@ test('identity view reflects absent host overlay', () => {
     '2026-07-05T12:10:00.000Z',
   );
 
-  const identity = getTicketIdentityViewFromDb(checkinDeps, visitId);
+  const identity = getVisitIdentityViewFromDb(checkinDeps, visitId);
   assert.equal(identity.status, 'absent_wait_here');
 });

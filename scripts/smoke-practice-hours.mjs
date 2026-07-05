@@ -122,13 +122,13 @@ async function main() {
       expectedStatus: 201,
     });
 
-    console.log('4) mfa-assist cutover liefert assist press innerhalb Praxiszeiten');
-    const assistPress = await requestJson(baseUrl, 'POST', '/api/v1/checkins/mfa-assist', {
+    console.log('4) assist press innerhalb Praxiszeiten');
+    const assistPress = await requestJson(baseUrl, 'POST', '/api/v1/checkins/assist/press', {
       auth: terminalAuth,
       expectedStatus: 201,
     });
-    assert(assistPress.body?.pressedAt, 'Expected pressedAt in assist cutover response');
-    assert(assistPress.body?.expiresAt, 'Expected expiresAt in assist cutover response');
+    assert(assistPress.body?.pressedAt, 'Expected pressedAt in assist press response');
+    assert(assistPress.body?.expiresAt, 'Expected expiresAt in assist press response');
 
     console.log('5) Praxisfenster auf wahrscheinlich geschlossenen Ein-Minuten-Slot setzen');
     await requestJson(baseUrl, 'PATCH', '/api/v1/ops/settings', {
@@ -151,14 +151,14 @@ async function main() {
       'Expected CHECKIN_CLOSED for closed practice window',
     );
 
-    console.log('7) mfa-assist wird ebenfalls mit CHECKIN_CLOSED abgewiesen');
-    const closedMfaAssist = await requestJson(baseUrl, 'POST', '/api/v1/checkins/mfa-assist', {
+    console.log('7) assist press wird ebenfalls mit CHECKIN_CLOSED abgewiesen');
+    const closedAssistPress = await requestJson(baseUrl, 'POST', '/api/v1/checkins/assist/press', {
       auth: terminalAuth,
       expectedStatus: 409,
     });
     assert(
-      closedMfaAssist.body?.code === 'CHECKIN_CLOSED',
-      'Expected CHECKIN_CLOSED for mfa-assist outside practice',
+      closedAssistPress.body?.code === 'CHECKIN_CLOSED',
+      'Expected CHECKIN_CLOSED for assist press outside practice',
     );
 
     console.log('\nSmoke test erfolgreich: Praxiszeiten-Guardrails sind konsistent.');

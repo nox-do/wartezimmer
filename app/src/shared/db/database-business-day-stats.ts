@@ -1,5 +1,5 @@
 import type { StatementSync } from 'node:sqlite';
-import type { BusinessDayVisitStats, TicketStatus } from './db-types.js';
+import type { BusinessDayVisitStats, QueueDisplayStatus } from './db-types.js';
 
 type BusinessDayStatsStatements = {
   countVisitsByBusinessDayStmt: StatementSync;
@@ -29,7 +29,7 @@ export function getBusinessDayVisitStatsFromDb(
     number?: number;
     topicLabel?: string;
     identityRef?: string | null;
-    status?: TicketStatus;
+    status?: QueueDisplayStatus;
   }>;
 
   return {
@@ -53,6 +53,3 @@ export function getBusinessDayVisitStatsFromDb(
       })),
   };
 }
-
-/** @deprecated Use getBusinessDayVisitStatsFromDb */
-export const getBusinessDayTicketStatsFromDb = getBusinessDayVisitStatsFromDb;

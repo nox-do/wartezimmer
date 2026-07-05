@@ -94,7 +94,7 @@ Entkoppelt von Check-in und Thema:
 
 ### Entscheidung offen: Server vs. Client
 
-**Ist:** MFA sendet `roomId`/`roomLabel` aus Quicksettings (Session-Override oder `defaultCallTarget`). Backend `resolveCallRoomForTicket` fällt ohne Body auf Themen-`defaultRoomId` zurück. MFA-Client `resolveCallRoomTarget`: Quicksettings-Raum → `defaultCallTarget` → Themen-Default.
+**Ist:** MFA sendet `roomId`/`roomLabel` aus Quicksettings (Session-Override oder `defaultCallTarget`). Backend `resolveCallRoomForVisit` fällt ohne Body auf Themen-`defaultRoomId` zurück. MFA-Client `resolveCallRoomTarget`: Quicksettings-Raum → `defaultCallTarget` → Themen-Default.
 
 ### `type: check_in_room` / `type: check_out_room`
 
@@ -186,7 +186,7 @@ Reihenfolge für kohärente Basis; jeweils Docs/OpenAPI mitziehen.
 - [x] Legacy `openConsultation*` aus API/Types entfernt; DB-Spalten nur noch intern gespiegelt
 - [x] `validateTopicSettings`: reserviertes `laneCode` `M` für konfigurierbare Themen
 - [x] Topics-Parse und Rooms-Parse: gleiche Strenge
-- [x] Server-Resolver für Aufrufziel in `callTicketInDb` (`resolve-call-room.ts`)
+- [x] Server-Resolver für Aufrufziel in `createVisitCheckInInDb` (`resolve-call-room.ts`)
 
 ### C — UI
 
@@ -235,7 +235,7 @@ Vollständiger Review-Bericht: Agent-Transcript / Chat 2026-06-02.
 
 | Ziel                       | Ist (Stand 2026-06-02)                       |
 | -------------------------- | -------------------------------------------- |
-| Raum erst bei Aufruf       | ✅ `callTicketInDb` setzt Room-Snapshot      |
+| Raum erst bei Aufruf       | ✅ `createVisitCheckInInDb` setzt Room-Snapshot      |
 | Themen-Default-Raum        | ✅ `defaultRoomId` + `resolveCallRoomTarget` |
 | MFA überschreibt Raum      | ✅ Quicksettings `selectedRoom` vor Default  |
 | `topicLabel` am Ticket     | ❌ nur `topicId`                             |

@@ -196,16 +196,17 @@ http.ts                   — PoC-HTTP (Host ersetzt durch Fastify)
 
 ## Offen im Host (Merge-Arbeit)
 
-1. Package als `packages/flow-core` ins PF-Monorepo (Workspace-Dependency)  
-2. `createRuntime` hinter Fastify-Routes (`/api/v1/...`)  
-3. Schema-Migration (Baseline ersetzen, nicht nur `reset-db`)  
-4. MFA-UI: Arbeitslisten / Orte / Themen (Muster aus `public/app.js`)  
-5. Journey-Admin, Redirect-Formular (aus `public/journey-admin.js`)  
-6. OpenAPI neu — intern Visit, Breaking Changes akzeptiert  
-7. PF-Features auf Visit-Ebene: Abwesenheit, Recall, Triage, Portal, Dokumente  
-8. Outbox/SSE-Event-Mapping  
-9. Day-Close / Check-in-Lock an Visit-Reset koppeln  
-10. README/HANDOVER-Pfade in PF-Docs verlinken  
+**Stand 2026-07-05:** Kern-Migration in `praxis_flow_merge` abgeschlossen (Schema, Check-in, Queue, Portal, OpenAPI). Verbleibend:
+
+1. ~~Package als `packages/flow-core`~~ erledigt
+2. ~~`createRuntime` hinter Fastify-Routes~~ erledigt
+3. ~~Schema-Migration~~ erledigt (`ensureFlowCoreSchema`, Legacy-Drop)
+4. Journey-Admin, Redirect-Formular (aus `public/journey-admin.js`) — UI noch offen
+5. ~~OpenAPI Visit-Breaking~~ erledigt
+6. ~~PF-Features auf Visit-Ebene~~ erledigt (absent/recall/portal)
+7. ~~Outbox/SSE-Event-Mapping~~ erledigt
+8. ~~Day-Close / Check-in-Lock an Visit-Reset~~ erledigt
+9. Produktions-Deploy — out of scope hier
 
 ---
 

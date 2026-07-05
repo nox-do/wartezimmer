@@ -11,9 +11,9 @@ import {
   type PatientSession,
   type PatientSessionMe,
   type SessionResolveResult,
-  type TicketIdentityView,
-  type TicketPortalContext,
-  type TicketStatus,
+  type VisitIdentityView,
+  type VisitPortalContext,
+  type QueueDisplayStatus,
 } from './db-types.js';
 import { parseTicketCode, formatTicketCode } from '../queue/ticket-code.js';
 import {
@@ -28,12 +28,12 @@ type CheckinSessionStatements = {
   checkinLockStmt: StatementSync;
   dayCloseStateStmt: StatementSync;
   updateCheckinLockStmt: StatementSync;
-  getTicketIdentityViewStmt: StatementSync;
+  getVisitIdentityViewStmt: StatementSync;
   insertPatientSessionStmt: StatementSync;
   expireActiveSessionsByVisitStmt: StatementSync;
   getActiveSessionByVisitStmt: StatementSync;
   getPatientSessionByTokenStmt: StatementSync;
-  getTicketPortalContextStmt: StatementSync;
+  getVisitPortalContextStmt: StatementSync;
   touchPatientSessionStmt: StatementSync;
   expirePatientSessionStmt: StatementSync;
   revokePatientSessionStmt: StatementSync;
@@ -175,15 +175,15 @@ export function assertTerminalAssistPressAllowed(
   }
 }
 
-export function getTicketPortalContextFromDb(
-  deps: Pick<CheckinSessionDeps, 'getTicketPortalContextStmt'>,
+export function getVisitPortalContextFromDb(
+  deps: Pick<CheckinSessionDeps, 'getVisitPortalContextStmt'>,
   visitId: string,
-): TicketPortalContext {
-  const row = deps.getTicketPortalContextStmt.get(visitId.trim()) as
+): VisitPortalContext {
+  const row = deps.getVisitPortalContextStmt.get(visitId.trim()) as
     | { authPath?: string; checkinPhone?: string | null }
     | undefined;
   if (!row?.authPath) {
-    throw domainError('TICKET_NOT_FOUND');
+    throw domainError('VISIT_NOT_FOUND');
   }
   const storedPhone = row.checkinPhone?.trim() || null;
   return {
@@ -197,10 +197,10 @@ export function getPatientSessionMeFromDb(
   sessionToken: string,
 ): PatientSessionMe {
   const session = requirePatientSessionFromDb(deps, sessionToken);
-  const ticket = getTicketPortalContextFromDb(deps, session.visitId);
+  const portal = getVisitPortalContextFromDb(deps, session.visitId);
   return {
     ...session,
-    ...ticket,
+    ...portal,
   };
 }
 
@@ -283,7 +283,7 @@ export function verifyTicketCodeInDb(
 }
 
 export function getTicketCodeByTicketIdFromDb(deps: CheckinSessionDeps, visitId: string): string {
-  const view = getTicketIdentityViewFromDb(deps, visitId);
+  const view = getVisitIdentityViewFromDb(deps, visitId);
   return formatTicketCode(view.laneCode, view.number);
 }
 
@@ -350,12 +350,12 @@ export function submitPatientSessionInDb(
 }
 
 /** Identity view: Core visit fields + effective queue status via visit_host_state absent overlay. */
-export function getTicketIdentityViewFromDb(
+export function getVisitIdentityViewFromDb(
   deps: CheckinSessionDeps,
   visitIdRaw: string,
-): TicketIdentityView {
+): VisitIdentityView {
   const visitId = visitIdRaw.trim();
-  const row = deps.getTicketIdentityViewStmt.get(visitId) as
+  const row = deps.getVisitIdentityViewStmt.get(visitId) as
     | {
         visitId?: string;
         laneCode?: string;
@@ -364,7 +364,7 @@ export function getTicketIdentityViewFromDb(
         topicLabel?: string;
         authPath?: string;
         identityRef?: string | null;
-        status?: TicketStatus;
+        status?: QueueDisplayStatus;
         createdAt?: string;
         updatedAt?: string;
       }
@@ -381,7 +381,7 @@ export function getTicketIdentityViewFromDb(
     !row.createdAt ||
     !row.updatedAt
   ) {
-    throw domainError('TICKET_NOT_FOUND');
+    throw domainError('VISIT_NOT_FOUND');
   }
   const number: number = row.number;
   return {

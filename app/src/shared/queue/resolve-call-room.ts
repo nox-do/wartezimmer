@@ -5,16 +5,16 @@ export type ResolvedCallRoom = {
   roomLabel: string;
 };
 
-export type TicketDestinationRoom = {
+export type VisitDestinationRoom = {
   roomId: string;
   roomLabel: string;
 };
 
-export function resolveCallRoomForTicket(
+export function resolveCallRoomForVisit(
   settings: Pick<OpsSettings, 'rooms'>,
   roomId?: string,
   roomLabel?: string,
-  ticketDestination?: TicketDestinationRoom | null,
+  ticketDestination?: VisitDestinationRoom | null,
 ): ResolvedCallRoom | null {
   const trimmedId = roomId?.trim();
   const trimmedLabel = roomLabel?.trim();

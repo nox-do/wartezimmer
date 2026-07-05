@@ -2,7 +2,7 @@ import type { StatementSync } from 'node:sqlite';
 import { settingsFromOpsRow } from '../contacts/contact-lookup-config.js';
 import { lookupIdentityRefByPhoneFromContactLookup } from '../contacts/contact-lookup-runtime.js';
 import { canonicalizePhone, phonesMatch } from '../phone/canonicalize-phone.js';
-import type { AbsenceMode, OpsSettings, TicketStatus } from '../db/db-types.js';
+import type { AbsenceMode, OpsSettings, QueueDisplayStatus } from '../db/db-types.js';
 import { parseTicketCode } from './ticket-code.js';
 import { domainError } from '../errors/domain-error.js';
 
@@ -10,7 +10,7 @@ export type AbsenceLookupTicketRow = {
   id: string;
   laneCode: string;
   number: number;
-  status: TicketStatus;
+  status: QueueDisplayStatus;
   identityRef: string | null;
   callbackPhone: string | null;
   checkinPhone: string | null;
@@ -29,7 +29,7 @@ export type MarkAbsenceLookupDeps = {
   listAbsenceLookupTicketsStmt: StatementSync;
 };
 
-const ABSENCE_ELIGIBLE: TicketStatus[] = ['waiting', 'called'];
+const ABSENCE_ELIGIBLE: QueueDisplayStatus[] = ['waiting', 'called'];
 
 function listAbsenceLookupTickets(deps: MarkAbsenceLookupDeps): AbsenceLookupTicketRow[] {
   const rows = deps.listAbsenceLookupTicketsStmt.all(deps.getBusinessDay()) as Array<{
@@ -49,13 +49,13 @@ function listAbsenceLookupTickets(deps: MarkAbsenceLookupDeps): AbsenceLookupTic
         typeof row.laneCode === 'string' &&
         typeof row.number === 'number' &&
         typeof row.status === 'string' &&
-        ABSENCE_ELIGIBLE.includes(row.status as TicketStatus),
+        ABSENCE_ELIGIBLE.includes(row.status as QueueDisplayStatus),
     )
     .map((row) => ({
       id: row.id,
       laneCode: row.laneCode,
       number: row.number,
-      status: row.status as TicketStatus,
+      status: row.status as QueueDisplayStatus,
       identityRef: row.identityRef ?? null,
       callbackPhone: row.callbackPhone ?? null,
       checkinPhone: row.checkinPhone ?? null,
@@ -82,7 +82,7 @@ function findByTicketCode(
       }
     | undefined;
 
-  if (!row?.id || !row.status || !ABSENCE_ELIGIBLE.includes(row.status as TicketStatus)) {
+  if (!row?.id || !row.status || !ABSENCE_ELIGIBLE.includes(row.status as QueueDisplayStatus)) {
     return null;
   }
 
@@ -90,7 +90,7 @@ function findByTicketCode(
     id: row.id,
     laneCode: parsed.laneCode,
     number: parsed.number,
-    status: row.status as TicketStatus,
+    status: row.status as QueueDisplayStatus,
     identityRef: null,
     callbackPhone: null,
     checkinPhone: null,
@@ -168,7 +168,7 @@ export async function resolveMarkAbsenceTicket(
 
   const byCode = findByTicketCode(deps, ticketCode);
   if (!byCode) {
-    throw domainError('TICKET_NOT_FOUND');
+    throw domainError('VISIT_NOT_FOUND');
   }
 
   return byCode;

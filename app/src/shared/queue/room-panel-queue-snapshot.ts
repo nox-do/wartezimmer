@@ -1,7 +1,7 @@
 import { explainVisibility } from '@praxis-flow/flow-core';
 import type { Runtime } from '@praxis-flow/flow-core/server';
 import type {
-  QueueTicketRow,
+  QueueVisitRow,
   RoomPanelMode,
   RoomPanelSettings,
   RoomPanelTextPreset,
@@ -11,7 +11,7 @@ import type { RoomPanelSession } from '../../auth/staff-session-auth.js';
 import { getBusinessDay } from '../db/database-time.js';
 import { getFlowCoreRuntime } from '../flow-core/flow-core-runtime.js';
 import { panelFlowSurfaceId } from '../flow-core/sync-catalog-from-ops-settings.js';
-import { visitToQueueTicketRow } from '../flow-core/visit-queue-bridge.js';
+import { visitToQueueVisitRow } from '../flow-core/visit-queue-bridge.js';
 import {
   resolveRoomPanelForSession,
   roomPanelMayShowPatientNames,
@@ -68,7 +68,7 @@ function panelText(
   return preset === 'custom' ? custom?.trim() || PRESET_TEXT[fallbackPreset] : PRESET_TEXT[preset];
 }
 
-function roomPanelCallSortMs(item: Pick<QueueTicketRow, 'calledAt' | 'createdAt'>): number {
+function roomPanelCallSortMs(item: Pick<QueueVisitRow, 'calledAt' | 'createdAt'>): number {
   const calledMs = item.calledAt ? Date.parse(item.calledAt) : Number.NaN;
   if (!Number.isNaN(calledMs)) {
     return calledMs;
@@ -78,8 +78,8 @@ function roomPanelCallSortMs(item: Pick<QueueTicketRow, 'calledAt' | 'createdAt'
 
 /** Oldest room call first; falls back to check-in time when calledAt is missing. */
 export function compareRoomPanelCallOrder(
-  left: Pick<QueueTicketRow, 'calledAt' | 'createdAt'>,
-  right: Pick<QueueTicketRow, 'calledAt' | 'createdAt'>,
+  left: Pick<QueueVisitRow, 'calledAt' | 'createdAt'>,
+  right: Pick<QueueVisitRow, 'calledAt' | 'createdAt'>,
 ): number {
   const byCall = roomPanelCallSortMs(left) - roomPanelCallSortMs(right);
   if (byCall !== 0) {
@@ -93,7 +93,7 @@ function isRoomPanelStatus(status: string): status is 'called' | 'in_room' {
 }
 
 function mapQueueRowToPanelItem(
-  row: QueueTicketRow,
+  row: QueueVisitRow,
   sessionRoomId: string,
   fallbackRoomLabel: string,
   showPatientNames: boolean,
@@ -138,13 +138,13 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
 
   const scored: Array<{
     item: RoomPanelItem;
-    sortRow: Pick<QueueTicketRow, 'calledAt' | 'createdAt'>;
+    sortRow: Pick<QueueVisitRow, 'calledAt' | 'createdAt'>;
   }> = [];
 
   for (const visit of businessDayVisits) {
     const explanation = explainVisibility(visit, surface, rules);
     if (!explanation.visible) continue;
-    const row = visitToQueueTicketRow(visit, settings);
+    const row = visitToQueueVisitRow(visit, settings);
     const item = mapQueueRowToPanelItem(row, session.roomId, roomLabel, showPatientNames);
     if (item) {
       scored.push({ item, sortRow: row });

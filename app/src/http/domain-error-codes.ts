@@ -9,7 +9,7 @@ type DomainErrorHttpSpec = {
 };
 
 const DOMAIN_ERROR_HTTP = {
-  TICKET_NOT_FOUND: { status: 404, code: 'TICKET_NOT_FOUND', message: 'Ticket not found.' },
+  VISIT_NOT_FOUND: { status: 404, code: 'VISIT_NOT_FOUND', message: 'Visit not found.' },
   DOCUMENT_NOT_FOUND: { status: 404, code: 'DOCUMENT_NOT_FOUND', message: 'Document not found.' },
   DOCUMENT_FORBIDDEN: {
     status: 403,

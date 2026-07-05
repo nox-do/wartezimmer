@@ -22,9 +22,9 @@ export function handleQueueRouteError(
 ): boolean {
   const resolved = resolveDomainError(error);
 
-  if (resolved?.code === 'TICKET_NOT_FOUND') {
+  if (resolved?.code === 'VISIT_NOT_FOUND') {
     sendApiError(reply, 404, {
-      code: 'TICKET_NOT_FOUND',
+      code: 'VISIT_NOT_FOUND',
       message: `Ticket ${ticketId} wurde nicht gefunden.`,
     });
     return true;

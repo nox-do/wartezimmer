@@ -20,7 +20,7 @@ import {
   setAbsenceVisitTicket,
   setCallbackPhoneVisitTicket,
   startVisitTicket,
-  visitStatusToTicketStatus,
+  visitStatusToQueueDisplayStatus,
 } from './visit-queue-bridge.js';
 import { setVisitAbsentMode, upsertVisitHostState } from '../db/visit-host-state.js';
 import { getBusinessDay } from '../db/database-time.js';
@@ -101,8 +101,8 @@ function buildDeps(db: DatabaseSync, settings: OpsSettings): CheckinSessionDeps 
     checkinLockStmt,
     dayCloseStateStmt,
     updateCheckinLockStmt: db.prepare('SELECT 1'),
-    getTicketIdentityViewStmt: db.prepare('SELECT 1'),
-    getTicketPortalContextStmt: db.prepare('SELECT 1'),
+    getVisitIdentityViewStmt: db.prepare('SELECT 1'),
+    getVisitPortalContextStmt: db.prepare('SELECT 1'),
     insertPatientSessionStmt: db.prepare('SELECT 1'),
     expireActiveSessionsByTicketStmt: db.prepare('SELECT 1'),
     getActiveSessionByTicketStmt: db.prepare('SELECT 1'),
@@ -141,10 +141,10 @@ function setupVisitFlow(): {
   return { db, settings, visitId: created.visitId, runtime, listQueue };
 }
 
-test('visitStatusToTicketStatus maps arrived and in_progress to in_room', () => {
-  assert.equal(visitStatusToTicketStatus('arrived'), 'in_room');
-  assert.equal(visitStatusToTicketStatus('in_progress'), 'in_room');
-  assert.equal(visitStatusToTicketStatus('done'), 'done');
+test('visitStatusToQueueDisplayStatus maps arrived and in_progress to in_room', () => {
+  assert.equal(visitStatusToQueueDisplayStatus('arrived'), 'in_room');
+  assert.equal(visitStatusToQueueDisplayStatus('in_progress'), 'in_room');
+  assert.equal(visitStatusToQueueDisplayStatus('done'), 'done');
 });
 
 test('visit flow call → arrive → done end-to-end', () => {

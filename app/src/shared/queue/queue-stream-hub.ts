@@ -86,8 +86,8 @@ export function publishExpiredRecallWindows(db: CoreDatabase): string[] {
   return changed;
 }
 
-export function publishExpiredRecallWindowForTicket(db: CoreDatabase, ticketId: string): boolean {
-  const changed = db.processExpiredRecallWindowForTicket(ticketId);
+export function publishExpiredRecallWindowForVisit(db: CoreDatabase, visitId: string): boolean {
+  const changed = db.processExpiredRecallWindowForVisit(visitId);
   if (changed) {
     publishTvQueueUpdate(db);
   }

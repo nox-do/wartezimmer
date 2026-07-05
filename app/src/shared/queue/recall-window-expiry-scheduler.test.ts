@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test, { afterEach, mock } from 'node:test';
 import type { CoreDatabase } from '../db/database.js';
-import type { QueueTicketRow } from '../db/db-types.js';
+import type { QueueVisitRow } from '../db/db-types.js';
 import {
   resetRecallWindowExpirySchedulerForTests,
   scheduleRecallWindowExpiry,
@@ -22,7 +22,7 @@ test('scheduleRecallWindowExpiry moves only the scheduled ticket at returnUntil'
     listActiveTerminalAssistPending: () => [],
     getOpsSettings: () => ({ rooms: [] }),
     processExpiredRecallWindows: () => [],
-    processExpiredRecallWindowForTicket: (visitId: string) => {
+    processExpiredRecallWindowForVisit: (visitId: string) => {
       processed.push(visitId);
       return visitId === 'ticket-1';
     },
@@ -42,7 +42,7 @@ test('scheduleRecallWindowExpiry reschedules when expiry transition is not yet a
   mock.timers.setTime(Date.parse('2026-06-10T10:00:00.000Z'));
 
   const returnUntil = '2026-06-10T10:00:05.000Z';
-  const queueItem: QueueTicketRow = {
+  const queueItem: QueueVisitRow = {
     id: 'ticket-1',
     laneCode: 'A',
     number: 1,
@@ -69,7 +69,7 @@ test('scheduleRecallWindowExpiry reschedules when expiry transition is not yet a
     listQueue: () => [queueItem],
     getOpsSettings: () => ({ rooms: [] }),
     processExpiredRecallWindows: () => [],
-    processExpiredRecallWindowForTicket: () => {
+    processExpiredRecallWindowForVisit: () => {
       processCalls += 1;
       return false;
     },

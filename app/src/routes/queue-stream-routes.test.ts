@@ -67,7 +67,7 @@ function fakeQueueDb(): CoreDatabase {
       ],
     }),
     processExpiredRecallWindows: () => [],
-    processExpiredRecallWindowForTicket: () => false,
+    processExpiredRecallWindowForVisit: () => false,
     isCheckinLocked: () => false,
     isEffectiveCheckinLocked: () => false,
     getFlowCoreRuntimeInstance: () =>

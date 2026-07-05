@@ -25,10 +25,3 @@ export type QueueCallbackPhoneClearResponse =
 export type QueueIdentityRefResponse = components['schemas']['QueueIdentityRefResponse'];
 export type QueueRecallRetryNotifyResponse =
   components['schemas']['QueueRecallRetryNotifyResponse'];
-
-/** @deprecated Use QueueVisitTransitionBody */
-export type QueueTicketTransitionBody = QueueVisitTransitionBody;
-/** @deprecated Use QueueVisitTransitionResponse */
-export type QueueTicketTransitionResponse = QueueVisitTransitionResponse;
-/** @deprecated Use VisitParams */
-export type TicketParams = VisitParams;

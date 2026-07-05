@@ -15,7 +15,6 @@ import { OutboxWorker, readOutboxWorkerOptionsFromEnv } from './shared/outbox/ou
 import { registerIdentityRoutes } from './routes/identity-routes.js';
 import { registerSandboxEmbedProxyRoutes } from './routes/sandbox-embed-proxy-routes.js';
 import { registerPracticeRoutes } from './routes/practice-routes.js';
-import { registerFlowCoreSpikeRoutes } from './routes/flow-core-spike-routes.js';
 import { resolveDomainError } from './http/domain-error-mapper.js';
 import { registerOpenApiDocs } from './openapi/register-openapi-docs.js';
 import { PATIENT_UPLOAD_MAX_BYTES } from './shared/documents/patient-upload-limits.js';
@@ -75,7 +74,6 @@ export async function buildApp(): Promise<FastifyInstance> {
   registerAuthRoutes(app, staffSessions, db);
   registerOpsRoutes(app, db, staffSessions);
   registerPracticeRoutes(app, db);
-  registerFlowCoreSpikeRoutes(app, db);
   registerCheckinRoutes(app, db);
   registerQueueRoutes(app, db);
   registerQueueStreamRoutes(app, db, staffSessions);

@@ -1,7 +1,7 @@
 import type { StatementSync } from 'node:sqlite';
 import type { DayClosePhase, DayLifecycleState } from './db-types.js';
 import { getEmergencyStateFromDb } from './database-emergency.js';
-import { getBusinessDayTicketStatsFromDb } from './database-business-day-stats.js';
+import { getBusinessDayVisitStatsFromDb } from './database-business-day-stats.js';
 import { domainError } from '../errors/domain-error.js';
 
 type DayCloseStateRow =
@@ -110,7 +110,7 @@ export function getDayLifecycleStateFromDb(deps: DayLifecycleDeps): DayLifecycle
 
   const needsDayStartHint = resolveNeedsDayStartHint(deps, row);
   const lastDayStats = needsDayStartHint
-    ? getBusinessDayTicketStatsFromDb(deps, lastResetBusinessDay)
+    ? getBusinessDayVisitStatsFromDb(deps, lastResetBusinessDay)
     : null;
 
   return {

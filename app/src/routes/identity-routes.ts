@@ -219,7 +219,7 @@ export function registerIdentityRoutes(app: FastifyInstance, db: CoreDatabase): 
     },
     async (request, reply) => {
       try {
-        return db.getTicketIdentityView(request.params.visitId);
+        return db.getVisitIdentityView(request.params.visitId);
       } catch (error) {
         if (sendResolvedDomainError(reply, error)) {
           return;

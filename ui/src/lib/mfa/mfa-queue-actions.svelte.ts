@@ -77,8 +77,8 @@ function queueItems() {
   return mfaQueueDisplay.queue?.items ?? [];
 }
 
-function ensureRoomCapacity(roomId: string, excludeTicketId?: string): boolean {
-  if (roomHasCapacity(mfaPracticeContext.practiceRooms, queueItems(), roomId, excludeTicketId)) {
+function ensureRoomCapacity(roomId: string, excludeVisitId?: string): boolean {
+  if (roomHasCapacity(mfaPracticeContext.practiceRooms, queueItems(), roomId, excludeVisitId)) {
     return true;
   }
   toastStore.error(t('mfa.roomAtCapacity'));
