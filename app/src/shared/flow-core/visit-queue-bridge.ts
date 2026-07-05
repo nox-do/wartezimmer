@@ -7,14 +7,14 @@ import {
   absentModeToQueueDisplayStatus,
   applyVisitRecall,
   clearAbsentMode,
-  clearVisitCallbackPhone,
+  clearVisitCallbackPhone as clearVisitCallbackPhoneInHostState,
   countPendingDocumentsByVisitIds,
   cycleVisitTriage,
   getVisitHostState,
   isVisitRecallWindowExpired,
   listVisitHostStatesForBusinessDay,
   setVisitAbsentMode,
-  setVisitCallbackPhone,
+  setVisitCallbackPhone as setVisitCallbackPhoneInHostState,
   setVisitIdentityRefOverride,
   type VisitHostStateRow,
 } from '../db/visit-host-state.js';
@@ -250,7 +250,7 @@ function assertNoAbsentHostOverlay(db: DatabaseSync, visitId: string): void {
   }
 }
 
-export function setAbsenceVisitTicket(
+export function setVisitAbsent(
   db: DatabaseSync,
   runtime: Runtime,
   settings: OpsSettings,
@@ -270,7 +270,7 @@ export function setAbsenceVisitTicket(
   return { fromStatus, toStatus };
 }
 
-export function recallVisitTicket(
+export function recallVisit(
   db: DatabaseSync,
   runtime: Runtime,
   settings: OpsSettings,
@@ -303,7 +303,7 @@ export function recallVisitTicket(
   };
 }
 
-export function setCallbackPhoneVisitTicket(
+export function setVisitCallbackPhone(
   db: DatabaseSync,
   runtime: Runtime,
   settings: OpsSettings,
@@ -314,11 +314,11 @@ export function setCallbackPhoneVisitTicket(
   const visit = requireVisitForQueueOp(runtime, visitId);
   const hostState = getVisitHostState(db, visitId);
   assertEffectiveStatus(visit, hostState, CALLBACK_PHONE_ELIGIBLE_STATUSES);
-  const canonical = setVisitCallbackPhone(db, visitId, callbackPhone, updatedAt);
+  const canonical = setVisitCallbackPhoneInHostState(db, visitId, callbackPhone, updatedAt);
   return { callbackPhone: canonical, updatedAt };
 }
 
-export function clearCallbackPhoneVisitTicket(
+export function clearVisitCallbackPhone(
   db: DatabaseSync,
   runtime: Runtime,
   settings: OpsSettings,
@@ -328,11 +328,11 @@ export function clearCallbackPhoneVisitTicket(
   const visit = requireVisitForQueueOp(runtime, visitId);
   const hostState = getVisitHostState(db, visitId);
   assertEffectiveStatus(visit, hostState, CALLBACK_PHONE_ELIGIBLE_STATUSES);
-  clearVisitCallbackPhone(db, visitId, updatedAt);
+  clearVisitCallbackPhoneInHostState(db, visitId, updatedAt);
   return { updatedAt };
 }
 
-export function setIdentityRefVisitTicket(
+export function setVisitIdentityRef(
   db: DatabaseSync,
   runtime: Runtime,
   visitId: string,
@@ -351,7 +351,7 @@ export function setIdentityRefVisitTicket(
   return { identityRef: trimmed, updatedAt };
 }
 
-export function cycleTriageVisitTicket(
+export function cycleVisitTriageLevel(
   db: DatabaseSync,
   runtime: Runtime,
   settings: OpsSettings,
@@ -409,7 +409,7 @@ export function returnAbsentVisitToQueue(
   return { fromStatus, toStatus };
 }
 
-export function callVisitTicket(
+export function callVisit(
   db: DatabaseSync,
   runtime: Runtime,
   settings: OpsSettings,
@@ -441,7 +441,7 @@ export function callVisitTicket(
   return { fromStatus, toStatus: 'called' };
 }
 
-export function arriveVisitTicket(
+export function arriveVisit(
   db: DatabaseSync,
   runtime: Runtime,
   visitId: string,
@@ -458,7 +458,7 @@ export function arriveVisitTicket(
   return { fromStatus, toStatus: 'in_room' };
 }
 
-export function startVisitTicket(
+export function startVisit(
   runtime: Runtime,
   visitId: string,
   actingLocationId?: string,
@@ -473,7 +473,7 @@ export function startVisitTicket(
   return { fromStatus, toStatus: 'in_room' };
 }
 
-export function doneVisitTicket(
+export function completeVisit(
   runtime: Runtime,
   visitId: string,
   actingLocationId?: string,
@@ -495,7 +495,7 @@ export function doneVisitTicket(
  * MFA zieht Patient aus grüner Zone zurück ins Wartezimmer (Core: return_to_waiting).
  * Nur called/arrived/in_progress — absent_* hat keinen Visit-Status und bleibt auf returnToWaitingInDb.
  */
-export function returnToWaitingVisitTicket(
+export function returnVisitToWaiting(
   runtime: Runtime,
   visitId: string,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
@@ -509,7 +509,7 @@ export function returnToWaitingVisitTicket(
   return { fromStatus, toStatus: 'waiting' };
 }
 
-export function reassignVisitTicket(
+export function reassignVisitRoom(
   db: DatabaseSync,
   runtime: Runtime,
   settings: OpsSettings,

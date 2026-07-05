@@ -8,7 +8,7 @@ import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS } from '../checkin-topic-settings.js
 import { ensureFlowCoreSchema } from '../flow-core/flow-core-schema.js';
 import { syncFlowCoreCatalog, getFlowCoreRuntime } from '../flow-core/flow-core-runtime.js';
 import { createVisitCheckInInDb } from '../flow-core/flow-core-checkin.js';
-import { setAbsenceVisitTicket } from '../flow-core/visit-queue-bridge.js';
+import { setVisitAbsent } from '../flow-core/visit-queue-bridge.js';
 import { formatTicketCode } from '../queue/ticket-code.js';
 import { getBusinessDay, normalizeDayClosePhase } from './database-time.js';
 import type { CheckinSessionDeps } from './database-checkin-sessions.js';
@@ -207,7 +207,7 @@ test('visit portal: document intake uses visit_id FK', () => {
 test('identity view reflects absent host overlay', () => {
   const { db, checkinDeps, settings, visitId } = setupVisitPortalFlow();
   const runtime = getFlowCoreRuntime(db);
-  setAbsenceVisitTicket(
+  setVisitAbsent(
     db,
     runtime,
     settings,

@@ -3,7 +3,6 @@ import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
 import { loadCatalog } from '@praxis-flow/flow-core/server';
 import type { OpsSettings } from '../db/db-types.js';
 import { MFA_ASSIST_TOPIC_ID } from '../checkin-topic-settings.js';
-import { clearFlowCoreCatalog } from './flow-core-spike-db.js';
 
 export const PF_FLOW_LOC_ENTRANCE = 'pf_entrance';
 export const PF_FLOW_LOC_WAITING = 'pf_waiting';
@@ -25,7 +24,11 @@ export type CatalogSyncSummary = {
   displayRules: number;
 };
 
-function insertTopic(
+function bindList(values: string[]): string {
+  return values.map(() => '?').join(', ');
+}
+
+function upsertTopic(
   db: DatabaseSync,
   row: {
     id: string;
@@ -40,7 +43,15 @@ function insertTopic(
 ): void {
   db.prepare(
     `INSERT INTO topics (id, name, category, color, default_priority, estimated_duration_min, active, sort_order, lane_code)
-     VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       name = excluded.name,
+       category = excluded.category,
+       color = excluded.color,
+       default_priority = excluded.default_priority,
+       active = excluded.active,
+       sort_order = excluded.sort_order,
+       lane_code = excluded.lane_code`,
   ).run(
     row.id,
     row.name,
@@ -53,7 +64,7 @@ function insertTopic(
   );
 }
 
-function insertLocation(
+function upsertLocation(
   db: DatabaseSync,
   row: {
     id: string;
@@ -70,7 +81,17 @@ function insertLocation(
 ): void {
   db.prepare(
     `INSERT INTO locations (id, name, type, can_wait, can_treat, can_check_in, staff_only, public_name, active, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       name = excluded.name,
+       type = excluded.type,
+       can_wait = excluded.can_wait,
+       can_treat = excluded.can_treat,
+       can_check_in = excluded.can_check_in,
+       staff_only = excluded.staff_only,
+       public_name = excluded.public_name,
+       active = excluded.active,
+       sort_order = excluded.sort_order`,
   ).run(
     row.id,
     row.name,
@@ -85,7 +106,7 @@ function insertLocation(
   );
 }
 
-function insertQueue(
+function upsertQueue(
   db: DatabaseSync,
   row: {
     id: string;
@@ -101,7 +122,16 @@ function insertQueue(
 ): void {
   db.prepare(
     `INSERT INTO queues (id, name, home_location_id, type, sort_policy, call_policy, default_movement_mode, active, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       name = excluded.name,
+       home_location_id = excluded.home_location_id,
+       type = excluded.type,
+       sort_policy = excluded.sort_policy,
+       call_policy = excluded.call_policy,
+       default_movement_mode = excluded.default_movement_mode,
+       active = excluded.active,
+       sort_order = excluded.sort_order`,
   ).run(
     row.id,
     row.name,
@@ -115,7 +145,7 @@ function insertQueue(
   );
 }
 
-function insertSurface(
+function upsertSurface(
   db: DatabaseSync,
   row: {
     id: string;
@@ -132,7 +162,17 @@ function insertSurface(
 ): void {
   db.prepare(
     `INSERT INTO surfaces (id, location_id, name, type, audience, shows_queue, supports_calling, supports_confirmation, supports_redirect, enabled)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       location_id = excluded.location_id,
+       name = excluded.name,
+       type = excluded.type,
+       audience = excluded.audience,
+       shows_queue = excluded.shows_queue,
+       supports_calling = excluded.supports_calling,
+       supports_confirmation = excluded.supports_confirmation,
+       supports_redirect = excluded.supports_redirect,
+       enabled = excluded.enabled`,
   ).run(
     row.id,
     row.locationId,
@@ -173,7 +213,7 @@ function insertDisplayRule(
   );
 }
 
-function insertRoutingRule(
+function upsertRoutingRule(
   db: DatabaseSync,
   row: {
     id: string;
@@ -201,7 +241,23 @@ function insertRoutingRule(
       initial_movement_mode, initial_location_confidence, public_display_mode,
       terminal_instruction_template, requires_reception_confirmation,
       escort_policy, allow_redirect, allowed_surface_ids, journey_template_id, active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      topic_id = excluded.topic_id,
+      name = excluded.name,
+      initial_last_known_location_id = excluded.initial_last_known_location_id,
+      initial_target_location_id = excluded.initial_target_location_id,
+      initial_queue_id = excluded.initial_queue_id,
+      initial_movement_mode = excluded.initial_movement_mode,
+      initial_location_confidence = excluded.initial_location_confidence,
+      public_display_mode = excluded.public_display_mode,
+      terminal_instruction_template = excluded.terminal_instruction_template,
+      requires_reception_confirmation = excluded.requires_reception_confirmation,
+      escort_policy = excluded.escort_policy,
+      allow_redirect = excluded.allow_redirect,
+      allowed_surface_ids = excluded.allowed_surface_ids,
+      journey_template_id = excluded.journey_template_id,
+      active = excluded.active`,
   ).run(
     row.id,
     row.topicId,
@@ -239,12 +295,57 @@ function terminalInstructionForTopic(label: string): string {
   return `Bitte nehmen Sie im Wartezimmer Platz. Sie werden für „${label}“ aufgerufen.`;
 }
 
+function deactivateTopicsOutside(db: DatabaseSync, topicIds: string[]): void {
+  db.prepare(`UPDATE topics SET active = 0 WHERE id NOT IN (${bindList(topicIds)})`).run(...topicIds);
+}
+
+function deactivateLocationsOutside(db: DatabaseSync, locationIds: string[]): void {
+  db.prepare(`UPDATE locations SET active = 0 WHERE id NOT IN (${bindList(locationIds)})`).run(
+    ...locationIds,
+  );
+}
+
+function deactivateRoutingRulesOutside(db: DatabaseSync, topicIds: string[]): void {
+  db.prepare(`UPDATE routing_rules SET active = 0 WHERE topic_id NOT IN (${bindList(topicIds)})`).run(
+    ...topicIds,
+  );
+}
+
+function deactivatePanelSurfacesOutside(db: DatabaseSync, surfaceIds: string[]): void {
+  if (surfaceIds.length === 0) {
+    db.prepare("UPDATE surfaces SET enabled = 0 WHERE id LIKE 'pf_panel_%'").run();
+    return;
+  }
+
+  db.prepare(
+    `UPDATE surfaces SET enabled = 0 WHERE id LIKE 'pf_panel_%' AND id NOT IN (${bindList(surfaceIds)})`,
+  ).run(...surfaceIds);
+}
+
+function replaceGeneratedDisplayRules(db: DatabaseSync): void {
+  db.prepare("DELETE FROM surface_display_rules WHERE id = 'tv_general_visible' OR id LIKE 'panel_%_target'").run();
+}
+
 export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettings): CatalogSyncSummary {
-  clearFlowCoreCatalog(db);
+  const desiredTopicIds = settings.topics.map((topic) => topic.topicId);
+  const desiredLocationIds = [
+    PF_FLOW_LOC_ENTRANCE,
+    PF_FLOW_LOC_WAITING,
+    ...settings.rooms.map((room) => room.roomId),
+  ];
+  const desiredPanelSurfaceIds = settings.rooms
+    .filter((room) => room.enabled && room.panel?.enabled)
+    .map((room) => panelFlowSurfaceId(room.roomId));
+
+  deactivateTopicsOutside(db, desiredTopicIds);
+  deactivateLocationsOutside(db, desiredLocationIds);
+  deactivateRoutingRulesOutside(db, desiredTopicIds);
+  deactivatePanelSurfacesOutside(db, desiredPanelSurfaceIds);
+  replaceGeneratedDisplayRules(db);
 
   const receptionRoomId = resolveReceptionRoomId(settings);
 
-  insertLocation(db, {
+  upsertLocation(db, {
     id: PF_FLOW_LOC_ENTRANCE,
     name: 'Eingang',
     type: 'entrance',
@@ -256,7 +357,7 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
     active: 1,
     sortOrder: 10,
   });
-  insertLocation(db, {
+  upsertLocation(db, {
     id: PF_FLOW_LOC_WAITING,
     name: 'Wartezimmer',
     type: 'waiting_area',
@@ -272,7 +373,7 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
   let roomSort = 30;
   for (const room of settings.rooms) {
     const isReception = room.roomId === 'mfa-tresen';
-    insertLocation(db, {
+    upsertLocation(db, {
       id: room.roomId,
       name: room.roomLabel,
       type: isReception ? 'reception' : 'treatment_room',
@@ -287,7 +388,7 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
     roomSort += 10;
   }
 
-  insertQueue(db, {
+  upsertQueue(db, {
     id: PF_FLOW_QUEUE_GENERAL,
     name: 'Allgemeine Warteliste',
     homeLocationId: PF_FLOW_LOC_WAITING,
@@ -301,7 +402,7 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
 
   let topicCount = 0;
   for (const topic of settings.topics) {
-    insertTopic(db, {
+    upsertTopic(db, {
       id: topic.topicId,
       name: topic.label,
       category: topic.iconId ?? 'general',
@@ -313,13 +414,11 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
     });
     topicCount += 1;
 
-    if (!topic.enabled) continue;
-
     const targetLocationId = resolveTargetLocationId(topic.defaultRoomId, settings);
     const movementMode = topic.topicId === 'rezept' ? 'self_go' : 'call';
     const publicDisplayMode = topic.topicId === MFA_ASSIST_TOPIC_ID ? 'visible' : 'visible';
 
-    insertRoutingRule(db, {
+    upsertRoutingRule(db, {
       id: `rule_${topic.topicId}`,
       topicId: topic.topicId,
       name: topic.label,
@@ -335,11 +434,11 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
       allowRedirect: topic.topicId === MFA_ASSIST_TOPIC_ID ? 0 : 1,
       allowedSurfaceIds: JSON.stringify([PF_FLOW_SURFACE_TERMINAL]),
       journeyTemplateId: null,
-      active: 1,
+      active: topic.enabled ? 1 : 0,
     });
   }
 
-  insertSurface(db, {
+  upsertSurface(db, {
     id: PF_FLOW_SURFACE_TERMINAL,
     locationId: PF_FLOW_LOC_ENTRANCE,
     name: 'Terminal Eingang',
@@ -351,7 +450,7 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
     supportsRedirect: 0,
     enabled: 1,
   });
-  insertSurface(db, {
+  upsertSurface(db, {
     id: PF_FLOW_SURFACE_TV,
     locationId: PF_FLOW_LOC_WAITING,
     name: 'Wartezimmer-TV',
@@ -363,7 +462,7 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
     supportsRedirect: 0,
     enabled: 1,
   });
-  insertSurface(db, {
+  upsertSurface(db, {
     id: PF_FLOW_SURFACE_MFA,
     locationId: receptionRoomId,
     name: 'MFA Dashboard',
@@ -394,7 +493,7 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
   for (const room of settings.rooms) {
     if (!room.enabled || !room.panel?.enabled) continue;
     const surfaceId = panelFlowSurfaceId(room.roomId);
-    insertSurface(db, {
+    upsertSurface(db, {
       id: surfaceId,
       locationId: room.roomId,
       name: `Raum-Panel ${room.roomLabel}`,

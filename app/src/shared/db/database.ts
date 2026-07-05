@@ -30,20 +30,20 @@ import {
 } from '../flow-core/flow-core-runtime.js';
 import { clearFlowCoreVisitRuntime, ensureFlowCoreSchema } from '../flow-core/flow-core-schema.js';
 import {
-  arriveVisitTicket,
-  callVisitTicket,
-  clearCallbackPhoneVisitTicket,
-  cycleTriageVisitTicket,
-  doneVisitTicket,
+  arriveVisit,
+  callVisit,
+  clearVisitCallbackPhone,
+  completeVisit,
+  cycleVisitTriageLevel,
   listVisitQueueRows,
   processExpiredRecallWindowForVisit,
-  recallVisitTicket,
-  reassignVisitTicket,
-  returnToWaitingVisitTicket,
+  reassignVisitRoom,
+  recallVisit,
+  returnVisitToWaiting,
   returnAbsentVisitToQueue,
-  setAbsenceVisitTicket,
-  setCallbackPhoneVisitTicket,
-  setIdentityRefVisitTicket,
+  setVisitAbsent,
+  setVisitCallbackPhone,
+  setVisitIdentityRef,
   visitExistsInDb,
   requireVisitExistsInDb,
 } from '../flow-core/visit-queue-bridge.js';
@@ -115,7 +115,7 @@ import {
   intakeFormDocumentsInDb,
   intakePatientDocumentInDb,
   type FormDocumentIntakeInput,
-  listDocumentsForTicketFromDb,
+  listDocumentsForVisitFromDb,
   listPatientDocumentsInDb,
   requestDocumentExportInDb,
   requestDocumentPreviewInDb,
@@ -125,8 +125,8 @@ import {
 import {
   getPatientSessionMeFromDb,
   getOpsStateFromDb,
-  getTicketIdentityViewFromDb,
-  getTicketCodeByTicketIdFromDb,
+  getTicketCodeByVisitIdFromDb,
+  getVisitIdentityViewFromDb,
   isCheckinLockedFromDb,
   requirePatientSessionFromDb,
   resolvePatientSessionInDb,
@@ -192,9 +192,9 @@ import type {
   PatientSession,
   PatientSessionMe,
   QueueSummary,
-  QueueTicketRow,
+  QueueVisitRow,
   SessionResolveResult,
-  TicketIdentityView,
+  VisitIdentityView,
 } from './db-types.js';
 
 export type {
@@ -217,11 +217,11 @@ export type {
   PatientSession,
   PatientSessionMe,
   QueueSummary,
-  QueueTicketRow,
+  QueueVisitRow,
   SessionResolveResult,
   SessionStatus,
   TicketStatus,
-  TicketIdentityView,
+  VisitIdentityView,
 } from './db-types.js';
 
 const log = createLogger('db.core');
@@ -258,8 +258,8 @@ export class CoreDatabase {
   private readonly topicCountsByBusinessDayStmt: StatementSync;
   private readonly listOpenVisitsByBusinessDayStmt: StatementSync;
   private readonly listAbsenceLookupTicketsStmt: StatementSync;
-  private readonly getTicketIdentityViewStmt: StatementSync;
-  private readonly getTicketPortalContextStmt: StatementSync;
+  private readonly getVisitIdentityViewStmt: StatementSync;
+  private readonly getVisitPortalContextStmt: StatementSync;
   private readonly insertOutboxEventStmt: StatementSync;
   private readonly listPendingOutboxEventsStmt: StatementSync;
   private readonly claimOutboxEventStmt: StatementSync;
@@ -322,8 +322,8 @@ export class CoreDatabase {
       topicCountsByBusinessDayStmt: this.topicCountsByBusinessDayStmt,
       listOpenVisitsByBusinessDayStmt: this.listOpenVisitsByBusinessDayStmt,
       listAbsenceLookupTicketsStmt: this.listAbsenceLookupTicketsStmt,
-      getTicketIdentityViewStmt: this.getTicketIdentityViewStmt,
-      getTicketPortalContextStmt: this.getTicketPortalContextStmt,
+      getVisitIdentityViewStmt: this.getVisitIdentityViewStmt,
+      getVisitPortalContextStmt: this.getVisitPortalContextStmt,
       insertOutboxEventStmt: this.insertOutboxEventStmt,
       listPendingOutboxEventsStmt: this.listPendingOutboxEventsStmt,
       claimOutboxEventStmt: this.claimOutboxEventStmt,
@@ -497,8 +497,8 @@ export class CoreDatabase {
       checkinLockStmt: this.checkinLockStmt,
       dayCloseStateStmt: this.dayCloseStateStmt,
       updateCheckinLockStmt: this.updateCheckinLockStmt,
-      getTicketIdentityViewStmt: this.getTicketIdentityViewStmt,
-      getTicketPortalContextStmt: this.getTicketPortalContextStmt,
+      getVisitIdentityViewStmt: this.getVisitIdentityViewStmt,
+      getVisitPortalContextStmt: this.getVisitPortalContextStmt,
       insertPatientSessionStmt: this.insertPatientSessionStmt,
       expireActiveSessionsByVisitStmt: this.expireActiveSessionsByVisitStmt,
       getActiveSessionByVisitStmt: this.getActiveSessionByVisitStmt,
@@ -601,8 +601,8 @@ export class CoreDatabase {
     return verifyTicketCodeInDb(this.checkinSessionDeps(), ticketCode);
   }
 
-  getTicketCodeByTicketId(visitId: string): string {
-    return getTicketCodeByTicketIdFromDb(this.checkinSessionDeps(), visitId);
+  getTicketCodeByVisitId(visitId: string): string {
+    return getTicketCodeByVisitIdFromDb(this.checkinSessionDeps(), visitId);
   }
 
   getPatientSession(sessionToken: string): PatientSession {
@@ -674,8 +674,8 @@ export class CoreDatabase {
     return getDocumentForPreviewRequestFromDb(this.documentDeps(), documentId);
   }
 
-  listDocumentsForTicket(visitId: string): MfaDocumentRow[] {
-    return listDocumentsForTicketFromDb(this.documentDeps(), visitId);
+  listDocumentsForVisit(visitId: string): MfaDocumentRow[] {
+    return listDocumentsForVisitFromDb(this.documentDeps(), visitId);
   }
 
   requestDocumentPreview(documentId: string): MfaDocumentRow {
@@ -725,7 +725,7 @@ export class CoreDatabase {
   }
 
   /** Visit-only queue (Phase A). Legacy ticket merge removed — Phase B drops tickets/queue_entries. */
-  listQueue(): QueueTicketRow[] {
+  listQueue(): QueueVisitRow[] {
     return listVisitQueueRows(
       getFlowCoreRuntime(this.db),
       this.getOpsSettings(),
@@ -750,8 +750,8 @@ export class CoreDatabase {
     });
   }
 
-  processExpiredRecallWindowForTicket(visitId: string): boolean {
-    return this.withTransaction('processExpiredRecallWindowForTicket', () => {
+  processExpiredRecallWindowForVisit(visitId: string): boolean {
+    return this.withTransaction('processExpiredRecallWindowForVisit', () => {
       requireVisitExistsInDb(this.db, visitId);
       const runtime = getFlowCoreRuntime(this.db);
       const nowIso = this.commonHelperDeps().nowIso();
@@ -786,15 +786,15 @@ export class CoreDatabase {
     );
   }
 
-  callTicket(
+  callVisit(
     visitId: string,
     roomId?: string,
     roomLabel?: string,
   ): { fromStatus: string; toStatus: string } {
-    return this.withTransaction('callTicket', () => {
+    return this.withTransaction('callVisit', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const transition = callVisitTicket(
+      const transition = callVisit(
         this.db,
         getFlowCoreRuntime(this.db),
         this.getOpsSettings(),
@@ -824,7 +824,7 @@ export class CoreDatabase {
     return this.withTransaction('checkInRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const transition = arriveVisitTicket(
+      const transition = arriveVisit(
         this.db,
         getFlowCoreRuntime(this.db),
         visitId,
@@ -850,7 +850,7 @@ export class CoreDatabase {
     return this.withTransaction('reassignRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const transition = reassignVisitTicket(
+      const transition = reassignVisitRoom(
         this.db,
         getFlowCoreRuntime(this.db),
         this.getOpsSettings(),
@@ -875,7 +875,7 @@ export class CoreDatabase {
     return this.withTransaction('checkOutRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const transition = doneVisitTicket(getFlowCoreRuntime(this.db), visitId, actingRoomId);
+      const transition = completeVisit(getFlowCoreRuntime(this.db), visitId, actingRoomId);
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
         fromStatus: transition.fromStatus,
@@ -895,7 +895,7 @@ export class CoreDatabase {
       const updatedAt = this.commonHelperDeps().nowIso();
       const runtime = getFlowCoreRuntime(this.db);
       const absentTransition = returnAbsentVisitToQueue(this.db, runtime, visitId, updatedAt);
-      const transition = absentTransition ?? returnToWaitingVisitTicket(runtime, visitId);
+      const transition = absentTransition ?? returnVisitToWaiting(runtime, visitId);
       if (!absentTransition) {
         clearAbsentMode(this.db, visitId, updatedAt);
       }
@@ -915,7 +915,7 @@ export class CoreDatabase {
     return this.withTransaction('setAbsence', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const transition = setAbsenceVisitTicket(
+      const transition = setVisitAbsent(
         this.db,
         getFlowCoreRuntime(this.db),
         this.getOpsSettings(),
@@ -942,7 +942,7 @@ export class CoreDatabase {
   ): { callbackPhone: string; updatedAt: string } {
     return this.withTransaction('setCallbackPhone', () => {
       requireVisitExistsInDb(this.db, visitId);
-      return setCallbackPhoneVisitTicket(
+      return setVisitCallbackPhone(
         this.db,
         getFlowCoreRuntime(this.db),
         this.getOpsSettings(),
@@ -956,7 +956,7 @@ export class CoreDatabase {
   clearCallbackPhone(visitId: string): { updatedAt: string } {
     return this.withTransaction('clearCallbackPhone', () => {
       requireVisitExistsInDb(this.db, visitId);
-      return clearCallbackPhoneVisitTicket(
+      return clearVisitCallbackPhone(
         this.db,
         getFlowCoreRuntime(this.db),
         this.getOpsSettings(),
@@ -972,7 +972,7 @@ export class CoreDatabase {
   ): { identityRef: string; updatedAt: string } {
     return this.withTransaction('setIdentityRef', () => {
       requireVisitExistsInDb(this.db, visitId);
-      return setIdentityRefVisitTicket(
+      return setVisitIdentityRef(
         this.db,
         getFlowCoreRuntime(this.db),
         visitId,
@@ -985,7 +985,7 @@ export class CoreDatabase {
   cycleTriage(visitId: string): { triageLevel: string | null; updatedAt: string } {
     return this.withTransaction('cycleTriage', () => {
       requireVisitExistsInDb(this.db, visitId);
-      return cycleTriageVisitTicket(
+      return cycleVisitTriageLevel(
         this.db,
         getFlowCoreRuntime(this.db),
         this.getOpsSettings(),
@@ -1007,7 +1007,7 @@ export class CoreDatabase {
     };
   }
 
-  recallTicket(
+  recallVisit(
     visitId: string,
     returnWindowMinutes?: number,
   ): {
@@ -1018,12 +1018,12 @@ export class CoreDatabase {
     callbackPhone: string | null;
     checkinLocale: string | null;
   } {
-    const result = this.withTransaction('recallTicket', () => {
+    const result = this.withTransaction('recallVisit', () => {
       requireVisitExistsInDb(this.db, visitId);
       const settings = this.getOpsSettings();
       const windowMinutes = returnWindowMinutes ?? settings.returnWindowMinutes;
       const updatedAt = this.commonHelperDeps().nowIso();
-      const recall = recallVisitTicket(
+      const recall = recallVisit(
         this.db,
         getFlowCoreRuntime(this.db),
         settings,
@@ -1108,8 +1108,8 @@ export class CoreDatabase {
     return getOpsStateFromDb(this.checkinSessionDeps());
   }
 
-  getTicketIdentityView(ticketIdRaw: string): TicketIdentityView {
-    return getTicketIdentityViewFromDb(this.checkinSessionDeps(), ticketIdRaw);
+  getVisitIdentityView(visitIdRaw: string): VisitIdentityView {
+    return getVisitIdentityViewFromDb(this.checkinSessionDeps(), visitIdRaw);
   }
 
   getEmergencyState(): EmergencyState {

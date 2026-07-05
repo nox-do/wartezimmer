@@ -68,7 +68,7 @@ export function validateCatalogIntegrity(catalog: Catalog): void {
     validateSurfaceDisplayRules(catalog, catalog.surfaceDisplayRules);
   }
 
-  for (const rule of catalog.routingRules) {
+  for (const rule of catalog.routingRules.filter((item) => item.active)) {
     validateRoutingRuleDraft(catalog, rule, { ruleId: rule.id });
   }
 

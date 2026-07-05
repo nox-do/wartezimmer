@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
+import { createRuntime } from '@praxis-flow/flow-core/server';
 import { ensureFlowCoreSchema } from './flow-core-schema.js';
 import {
   PF_FLOW_LOC_WAITING,
   PF_FLOW_QUEUE_GENERAL,
+  PF_FLOW_SURFACE_TERMINAL,
   PF_FLOW_SURFACE_TV,
   syncCatalogFromOpsSettings,
 } from './sync-catalog-from-ops-settings.js';
@@ -112,4 +114,78 @@ test('syncCatalogFromOpsSettings creates room panel surfaces for enabled panels'
     .get('pf_panel_labor') as { id: string } | undefined;
   assert.ok(panelSurface);
   assert.equal(summary.surfaces, 4);
+});
+
+test('syncCatalogFromOpsSettings deactivates removed topics and routing rules instead of deleting them', () => {
+  const db = openTestFlowCoreDb();
+  const settings = sampleOpsSettings();
+  syncCatalogFromOpsSettings(db, settings);
+
+  const removedTopicId = 'rezept';
+  syncCatalogFromOpsSettings(db, {
+    ...settings,
+    topics: settings.topics.filter((topic) => topic.topicId !== removedTopicId),
+  });
+
+  const topic = db.prepare('SELECT active FROM topics WHERE id = ?').get(removedTopicId) as
+    | { active: number }
+    | undefined;
+  assert.equal(topic?.active, 0);
+
+  const rule = db
+    .prepare('SELECT active FROM routing_rules WHERE id = ?')
+    .get(`rule_${removedTopicId}`) as { active: number } | undefined;
+  assert.equal(rule?.active, 0);
+});
+
+test('syncCatalogFromOpsSettings deactivates removed room locations and panel surfaces instead of deleting them', () => {
+  const db = openTestFlowCoreDb();
+  const settings = sampleOpsSettings();
+  syncCatalogFromOpsSettings(db, settings);
+
+  syncCatalogFromOpsSettings(db, {
+    ...settings,
+    rooms: settings.rooms.filter((room) => room.roomId !== 'labor'),
+  });
+
+  const location = db.prepare('SELECT active FROM locations WHERE id = ?').get('labor') as
+    | { active: number }
+    | undefined;
+  assert.equal(location?.active, 0);
+
+  const panelSurface = db.prepare('SELECT enabled FROM surfaces WHERE id = ?').get('pf_panel_labor') as
+    | { enabled: number }
+    | undefined;
+  assert.equal(panelSurface?.enabled, 0);
+
+  const panelRule = db.prepare('SELECT id FROM surface_display_rules WHERE id = ?').get('panel_labor_target');
+  assert.equal(panelRule, undefined);
+});
+
+test('syncCatalogFromOpsSettings rebuilds catalog inside a transaction with existing visits', () => {
+  const db = openTestFlowCoreDb();
+  const settings = sampleOpsSettings();
+  syncCatalogFromOpsSettings(db, settings);
+
+  const runtime = createRuntime(db, { resolveBusinessDay: () => '20260705' });
+  runtime.checkIn({
+    topicId: 'blut',
+    authPath: 'phone_dob',
+    surfaceId: PF_FLOW_SURFACE_TERMINAL,
+  });
+
+  db.exec('BEGIN');
+  syncCatalogFromOpsSettings(db, {
+    ...settings,
+    topics: settings.topics.map((topic) =>
+      topic.topicId === 'blut' ? { ...topic, label: 'Blutabnahme Labor' } : topic,
+    ),
+  });
+  db.exec('COMMIT');
+
+  const topic = db.prepare('SELECT name FROM topics WHERE id = ?').get('blut') as
+    | { name: string }
+    | undefined;
+  assert.equal(topic?.name, 'Blutabnahme Labor');
+  assert.equal(runtime.visits().length, 1);
 });

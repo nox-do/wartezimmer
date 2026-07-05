@@ -20,25 +20,6 @@ export function ensureFlowCoreSchema(db: DatabaseSync): void {
   ensureVisitLegacyDropSchema(db);
 }
 
-const CATALOG_TABLES = [
-  'surface_display_rules',
-  'routing_rules',
-  'journey_steps',
-  'journey_templates',
-  'surfaces',
-  'queues',
-  'locations',
-  'topics',
-] as const;
-
-export function clearFlowCoreCatalog(db: DatabaseSync): void {
-  db.exec('PRAGMA foreign_keys = OFF');
-  for (const table of CATALOG_TABLES) {
-    db.exec(`DELETE FROM ${table}`);
-  }
-  db.exec('PRAGMA foreign_keys = ON');
-}
-
 export function clearFlowCoreVisitRuntime(db: DatabaseSync): void {
   db.exec('PRAGMA foreign_keys = OFF');
   db.exec('DELETE FROM visit_events');

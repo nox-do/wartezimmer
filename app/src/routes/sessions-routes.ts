@@ -152,7 +152,7 @@ export function registerSessionRoutes(app: FastifyInstance, db: CoreDatabase): v
         }
 
         const bridgeResult = await authorizePatientOnGateway({
-          ticketCode: db.getTicketCodeByTicketId(sessionMe.visitId),
+          ticketCode: db.getTicketCodeByVisitId(sessionMe.visitId),
           clientIp: clientIp || undefined,
           clientMac: clientMac || undefined,
           redirectUrl: defaultRedirect,

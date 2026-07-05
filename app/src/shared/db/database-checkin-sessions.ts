@@ -249,7 +249,7 @@ export function requirePatientSessionFromDb(
   };
 }
 
-function findActiveTicketByCodeInDb(
+function findActiveVisitByTicketCodeInDb(
   deps: CheckinSessionDeps,
   ticketCode: string,
 ): { visitId: string } {
@@ -279,10 +279,10 @@ export function verifyTicketCodeInDb(
   deps: CheckinSessionDeps,
   ticketCode: string,
 ): { visitId: string } {
-  return findActiveTicketByCodeInDb(deps, ticketCode);
+  return findActiveVisitByTicketCodeInDb(deps, ticketCode);
 }
 
-export function getTicketCodeByTicketIdFromDb(deps: CheckinSessionDeps, visitId: string): string {
+export function getTicketCodeByVisitIdFromDb(deps: CheckinSessionDeps, visitId: string): string {
   const view = getVisitIdentityViewFromDb(deps, visitId);
   return formatTicketCode(view.laneCode, view.number);
 }
@@ -292,7 +292,7 @@ export function resolvePatientSessionInDb(
   ticketCode: string,
   ttlMinutes = 30,
 ): SessionResolveResult {
-  const { visitId } = findActiveTicketByCodeInDb(deps, ticketCode);
+  const { visitId } = findActiveVisitByTicketCodeInDb(deps, ticketCode);
 
   const timestamp = deps.nowIso();
   deps.expireActiveSessionsByVisitStmt.run(timestamp, visitId);

@@ -33,14 +33,14 @@ export type CreateTicketInput = CreateTicketCallerInput & {
   destinationRoomLabel: string;
 };
 
-export type TicketPortalContext = {
+export type VisitPortalContext = {
   authPath: string;
   checkinPhone: string | null;
 };
 
-export type PatientSessionMe = PatientSession & TicketPortalContext;
+export type PatientSessionMe = PatientSession & VisitPortalContext;
 
-export type QueueTicketRow = {
+export type QueueVisitRow = {
   id: string;
   laneCode: string;
   number: number;
@@ -64,7 +64,9 @@ export type QueueTicketRow = {
   needsAssistance: boolean;
 };
 
-export type TicketIdentityView = {
+export type QueueDisplayStatus = TicketStatus;
+
+export type VisitIdentityView = {
   visitId: string;
   laneCode: string;
   number: number;

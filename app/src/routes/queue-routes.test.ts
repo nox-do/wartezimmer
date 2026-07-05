@@ -12,8 +12,8 @@ import { createVisitCheckInInDb } from '../shared/flow-core/flow-core-checkin.js
 import { syncFlowCoreCatalog, getFlowCoreRuntime } from '../shared/flow-core/flow-core-runtime.js';
 import { ensureFlowCoreSchema } from '../shared/flow-core/flow-core-schema.js';
 import {
-  arriveVisitTicket,
-  callVisitTicket,
+  arriveVisit,
+  callVisit,
   listVisitQueueRows,
 } from '../shared/flow-core/visit-queue-bridge.js';
 import { WAITING_ROOM_DEVICE_ID } from '../shared/ops/device-ids.js';
@@ -594,7 +594,7 @@ function buildTvQueueRouteDb(): { db: CoreDatabase; visitId: string } {
     getOpsState: () => ({ checkinLocked: false, dayClosePhase: 'open' }),
     getFlowCoreRuntimeInstance: () => runtime,
     callVisit: (visitId: string, roomId?: string, roomLabel?: string) =>
-      callVisitTicket(sqlite, runtime, settings, listQueue, visitId, roomId, roomLabel),
+      callVisit(sqlite, runtime, settings, listQueue, visitId, roomId, roomLabel),
   } as unknown as CoreDatabase;
 
   return { db, sqlite, visitId: created.visitId };
@@ -630,7 +630,7 @@ test('GET /api/v1/queue with tv role returns explainVisibility-filtered items', 
   assert.equal(called.json().items[0].status, 'called');
   assert.equal(called.json().items[0].roomLabel, 'Labor');
 
-  arriveVisitTicket(sqlite, db.getFlowCoreRuntimeInstance(), visitId, 'labor');
+  arriveVisit(sqlite, db.getFlowCoreRuntimeInstance(), visitId, 'labor');
   const arrived = await app.inject({
     method: 'GET',
     url: '/api/v1/queue',

@@ -8,10 +8,10 @@ import { createVisitCheckInInDb } from '../flow-core/flow-core-checkin.js';
 import { syncFlowCoreCatalog, getFlowCoreRuntime } from '../flow-core/flow-core-runtime.js';
 import { ensureFlowCoreSchema } from '../flow-core/flow-core-schema.js';
 import {
-  arriveVisitTicket,
-  callVisitTicket,
+  arriveVisit,
+  callVisit,
   listVisitQueueRows,
-  returnToWaitingVisitTicket,
+  returnVisitToWaiting,
 } from '../flow-core/visit-queue-bridge.js';
 import { buildTvQueueSnapshotForSqlite } from './tv-queue-snapshot.js';
 import type { CheckinSessionDeps } from '../db/database-checkin-sessions.js';
@@ -143,7 +143,7 @@ test('buildTvQueueSnapshotFromFlowCore shows waiting visit when explainVisibilit
 test('buildTvQueueSnapshotFromFlowCore includes called visit with room label', () => {
   const { db, settings, visitId, runtime } = setupVisitFlow();
   const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay());
-  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
 
   const snapshot = buildTvQueueSnapshotForSqlite(db, settings, false, 2);
 
@@ -155,8 +155,8 @@ test('buildTvQueueSnapshotFromFlowCore includes called visit with room label', (
 test('buildTvQueueSnapshotFromFlowCore hides visit after arrive (not at Wartezimmer surface)', () => {
   const { db, settings, visitId, runtime } = setupVisitFlow();
   const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay());
-  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  arriveVisitTicket(db, runtime, visitId, 'labor');
+  callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisit(db, runtime, visitId, 'labor');
 
   const snapshot = buildTvQueueSnapshotForSqlite(db, settings, false, 3);
 
@@ -166,13 +166,13 @@ test('buildTvQueueSnapshotFromFlowCore hides visit after arrive (not at Wartezim
 test('buildTvQueueSnapshotFromFlowCore shows visit again after return_to_waiting', () => {
   const { db, settings, visitId, runtime } = setupVisitFlow();
   const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay());
-  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  arriveVisitTicket(db, runtime, visitId, 'labor');
+  callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisit(db, runtime, visitId, 'labor');
 
   const hidden = buildTvQueueSnapshotForSqlite(db, settings, false, 3);
   assert.equal(hidden.items.length, 0);
 
-  returnToWaitingVisitTicket(runtime, visitId);
+  returnVisitToWaiting(runtime, visitId);
 
   const visibleAgain = buildTvQueueSnapshotForSqlite(db, settings, false, 4);
   assert.equal(visibleAgain.items.length, 1);
