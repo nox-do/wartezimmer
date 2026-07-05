@@ -30,7 +30,7 @@ function resolveMigrationDirectory(): string {
 export function runMigrations(db: DatabaseSync): void {
   const initialized = db
     .prepare(
-      "SELECT 1 AS exists_flag FROM sqlite_master WHERE type = 'table' AND name = 'tickets' LIMIT 1",
+      "SELECT 1 AS exists_flag FROM sqlite_master WHERE type = 'table' AND name = 'ops_state' LIMIT 1",
     )
     .get() as { exists_flag?: number } | undefined;
 

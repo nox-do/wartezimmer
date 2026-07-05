@@ -25,9 +25,6 @@ import { domainError } from '../errors/domain-error.js';
 
 type CheckinSessionStatements = {
   findTicketByCodeStmt: StatementSync;
-  getNextTicketNumberStmt: StatementSync;
-  insertTicketStmt: StatementSync;
-  insertQueueEntryStmt: StatementSync;
   checkinLockStmt: StatementSync;
   dayCloseStateStmt: StatementSync;
   updateCheckinLockStmt: StatementSync;

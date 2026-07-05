@@ -2,17 +2,17 @@ import type { StatementSync } from 'node:sqlite';
 import type { BusinessDayTicketStats, TicketStatus } from './db-types.js';
 
 type BusinessDayStatsStatements = {
-  countTicketsByBusinessDayStmt: StatementSync;
+  countVisitsByBusinessDayStmt: StatementSync;
   maxWaitMsByBusinessDayStmt: StatementSync;
   topicCountsByBusinessDayStmt: StatementSync;
-  listOpenTicketsByBusinessDayStmt: StatementSync;
+  listOpenVisitsByBusinessDayStmt: StatementSync;
 };
 
 export function getBusinessDayTicketStatsFromDb(
   deps: BusinessDayStatsStatements,
   businessDay: string,
 ): BusinessDayTicketStats {
-  const totalRow = deps.countTicketsByBusinessDayStmt.get(businessDay) as
+  const totalRow = deps.countVisitsByBusinessDayStmt.get(businessDay) as
     | { count?: number }
     | undefined;
   const maxWaitRow = deps.maxWaitMsByBusinessDayStmt.get(businessDay) as
@@ -23,7 +23,7 @@ export function getBusinessDayTicketStatsFromDb(
     topicLabel?: string;
     count?: number;
   }>;
-  const openTicketRows = deps.listOpenTicketsByBusinessDayStmt.all(businessDay) as Array<{
+  const openTicketRows = deps.listOpenVisitsByBusinessDayStmt.all(businessDay) as Array<{
     ticketId?: string;
     laneCode?: string;
     number?: number;

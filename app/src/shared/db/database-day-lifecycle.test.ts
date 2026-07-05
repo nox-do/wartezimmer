@@ -21,12 +21,11 @@ type MutableDayCloseRow = {
 
 function createDayLifecycleDeps(overrides?: {
   row?: MutableDayCloseRow;
-  ticketCount?: number;
+  visitCount?: number;
   businessDay?: string;
 }): DayLifecycleDeps & {
   row: MutableDayCloseRow;
   outboxEvents: Array<{ type: string; payload: Record<string, unknown> }>;
-  ticketsDeleted: boolean;
   outboxDeleted: boolean;
 } {
   const row: MutableDayCloseRow = {
@@ -36,13 +35,11 @@ function createDayLifecycleDeps(overrides?: {
     ...overrides?.row,
   };
   const outboxEvents: Array<{ type: string; payload: Record<string, unknown> }> = [];
-  let ticketsDeleted = false;
   let outboxDeleted = false;
 
   return {
     row,
     outboxEvents,
-    ticketsDeleted,
     outboxDeleted,
     dayCloseStateStmt: { get: () => row },
     updateCheckinLockStmt: {
@@ -60,11 +57,6 @@ function createDayLifecycleDeps(overrides?: {
         row.lastResetBusinessDay = businessDay;
       },
     },
-    deleteAllTicketsStmt: {
-      run: () => {
-        ticketsDeleted = true;
-      },
-    },
     deleteAllOutboxEventsStmt: {
       run: () => {
         outboxDeleted = true;
@@ -72,22 +64,16 @@ function createDayLifecycleDeps(overrides?: {
     },
     clearEmergencyStateStmt: { run: () => undefined },
     emergencyStateStmt: { get: () => ({ active: 0 }) },
-    countAllTicketsStmt: { get: () => ({ count: overrides?.ticketCount ?? 3 }) },
-    countTicketsByBusinessDayStmt: { get: () => ({ count: 0 }) },
+    countAllVisitsStmt: { get: () => ({ count: overrides?.visitCount ?? 3 }) },
+    countVisitsByBusinessDayStmt: { get: () => ({ count: 0 }) },
     maxWaitMsByBusinessDayStmt: { get: () => ({ maxWaitMs: 0 }) },
     topicCountsByBusinessDayStmt: { all: () => [] },
-    listOpenTicketsByBusinessDayStmt: { all: () => [] },
+    listOpenVisitsByBusinessDayStmt: { all: () => [] },
     nowIso: () => '2026-06-15T06:00:00.000Z',
     getBusinessDay: () => overrides?.businessDay ?? '2026-06-15',
     normalizeDayClosePhase,
     emitOutboxEvent: (eventType, _aggregateId, payload) => {
       outboxEvents.push({ type: eventType, payload });
-    },
-    get ticketsDeleted() {
-      return ticketsDeleted;
-    },
-    set ticketsDeleted(value: boolean) {
-      ticketsDeleted = value;
     },
     get outboxDeleted() {
       return outboxDeleted;
@@ -98,17 +84,15 @@ function createDayLifecycleDeps(overrides?: {
   } as unknown as DayLifecycleDeps & {
     row: MutableDayCloseRow;
     outboxEvents: Array<{ type: string; payload: Record<string, unknown> }>;
-    ticketsDeleted: boolean;
     outboxDeleted: boolean;
   };
 }
 
-test('resetBusinessDayInDb clears runtime data and emits BusinessDayReset', () => {
-  const deps = createDayLifecycleDeps({ ticketCount: 2 });
+test('resetBusinessDayInDb clears outbox and emits BusinessDayReset with visit count', () => {
+  const deps = createDayLifecycleDeps({ visitCount: 2 });
 
   const result = resetBusinessDayInDb(deps);
 
-  assert.equal(deps.ticketsDeleted, true);
   assert.equal(deps.outboxDeleted, true);
   assert.equal(result.dayClosePhase, 'open');
   assert.equal(result.resetTicketCount, 2);
@@ -118,16 +102,16 @@ test('resetBusinessDayInDb clears runtime data and emits BusinessDayReset', () =
   assert.equal(deps.row.lastResetBusinessDay, '2026-06-15');
   assert.equal(deps.outboxEvents.length, 1);
   assert.equal(deps.outboxEvents[0]?.type, 'BusinessDayReset');
+  assert.equal(deps.outboxEvents[0]?.payload.resetVisitCount, 2);
 });
 
-test('startDayCloseInDb sets phase without clearing tickets or outbox', () => {
+test('startDayCloseInDb sets phase without clearing outbox', () => {
   const deps = createDayLifecycleDeps({ row: { locked: 1, phase: 'open' } });
 
   const result = startDayCloseInDb(deps);
 
   assert.equal(result.dayClosePhase, 'started');
   assert.equal(deps.row.phase, 'started');
-  assert.equal(deps.ticketsDeleted, false);
   assert.equal(deps.outboxDeleted, false);
   assert.equal(deps.outboxEvents.length, 1);
   assert.equal(deps.outboxEvents[0]?.type, 'DayCloseStarted');

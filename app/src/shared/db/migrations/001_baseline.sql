@@ -1,47 +1,6 @@
 -- praxis_flow schema baseline (2026-06): Wartezimmer / Patientenfluss
 -- Fresh databases only. Schema change = delete SQLite file / Docker volume and restart (no in-place upgrades).
-
-CREATE TABLE IF NOT EXISTS tickets (
-  id TEXT PRIMARY KEY,
-  business_day TEXT NOT NULL,
-  lane_code TEXT NOT NULL,
-  number INTEGER NOT NULL,
-  topic_id TEXT NOT NULL,
-  topic_label TEXT NOT NULL,
-  destination_room_id TEXT NOT NULL,
-  destination_room_label TEXT NOT NULL,
-  auth_path TEXT NOT NULL,
-  identity_ref TEXT,
-  checkin_phone TEXT,
-  checkin_locale TEXT,
-  status TEXT NOT NULL CHECK (
-    status IN (
-      'waiting',
-      'called',
-      'in_room',
-      'done',
-      'absent_wait_here',
-      'absent_return_later',
-      'cancelled'
-    )
-  ),
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  UNIQUE (business_day, lane_code, number)
-);
-
-CREATE TABLE IF NOT EXISTS queue_entries (
-  ticket_id TEXT PRIMARY KEY REFERENCES tickets(id) ON DELETE CASCADE,
-  arrived_at TEXT NOT NULL,
-  called_at TEXT,
-  room_id TEXT,
-  room_label TEXT,
-  return_until TEXT,
-  callback_phone TEXT,
-  recall_notify_error_code TEXT,
-  recall_notify_sent INTEGER NOT NULL DEFAULT 0,
-  triage_level TEXT CHECK (triage_level IS NULL OR triage_level IN ('red', 'yellow', 'green'))
-);
+-- Phase B3: tickets/queue_entries removed; portal tables use visit_id (FK added at runtime via ensureVisitPortalSchema).
 
 CREATE TABLE IF NOT EXISTS ops_state (
   id TEXT PRIMARY KEY,
@@ -82,7 +41,7 @@ CREATE TABLE IF NOT EXISTS outbox_events (
 
 CREATE TABLE IF NOT EXISTS patient_sessions (
   id TEXT PRIMARY KEY,
-  ticket_id TEXT NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+  visit_id TEXT NOT NULL,
   token_hash TEXT NOT NULL UNIQUE,
   status TEXT NOT NULL CHECK (status IN ('active', 'expired', 'revoked')),
   expires_at TEXT NOT NULL,
@@ -93,7 +52,7 @@ CREATE TABLE IF NOT EXISTS patient_sessions (
 
 CREATE TABLE IF NOT EXISTS documents (
   id TEXT PRIMARY KEY,
-  ticket_id TEXT NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+  visit_id TEXT NOT NULL,
   session_id TEXT NOT NULL REFERENCES patient_sessions(id) ON DELETE CASCADE,
   source TEXT NOT NULL CHECK (source IN ('upload', 'form')),
   file_name TEXT NOT NULL,
@@ -218,20 +177,18 @@ INSERT INTO messaging_provider_configs (provider_id, channel, enabled, credentia
 SELECT 'seven_whatsapp', 'messenger', 0, '{}', strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 WHERE NOT EXISTS (SELECT 1 FROM messaging_provider_configs WHERE provider_id = 'seven_whatsapp');
 
-CREATE INDEX IF NOT EXISTS idx_tickets_status_created ON tickets(status, created_at);
-
 CREATE INDEX IF NOT EXISTS idx_outbox_events_created ON outbox_events(created_at);
 CREATE INDEX IF NOT EXISTS idx_outbox_events_created_id ON outbox_events(created_at, id);
 CREATE INDEX IF NOT EXISTS idx_outbox_pending_delivery
   ON outbox_events(published_at, dead_lettered_at, next_attempt_at, created_at, id);
 
-CREATE INDEX IF NOT EXISTS idx_patient_sessions_ticket ON patient_sessions(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_patient_sessions_visit ON patient_sessions(visit_id);
 CREATE INDEX IF NOT EXISTS idx_patient_sessions_status_expires ON patient_sessions(status, expires_at);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_patient_sessions_one_active_ticket
-  ON patient_sessions(ticket_id)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_patient_sessions_one_active_visit
+  ON patient_sessions(visit_id)
   WHERE status = 'active';
 
-CREATE INDEX IF NOT EXISTS idx_documents_ticket ON documents(ticket_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_documents_visit ON documents(visit_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_documents_session ON documents(session_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status, created_at);
 

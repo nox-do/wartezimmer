@@ -87,9 +87,6 @@ function buildDeps(db: DatabaseSync, settings: OpsSettings): CheckinSessionDeps 
   return {
     db,
     findTicketByCodeStmt: db.prepare('SELECT 1'),
-    getNextTicketNumberStmt: db.prepare('SELECT 1'),
-    insertTicketStmt: db.prepare('SELECT 1'),
-    insertQueueEntryStmt: db.prepare('SELECT 1'),
     checkinLockStmt,
     dayCloseStateStmt,
     updateCheckinLockStmt: db.prepare('SELECT 1'),

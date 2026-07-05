@@ -56,6 +56,12 @@ export function visitExistsInDb(db: DatabaseSync, visitId: string): boolean {
   return row?.exists_flag === 1;
 }
 
+export function requireVisitExistsInDb(db: DatabaseSync, visitId: string): void {
+  if (!visitExistsInDb(db, visitId)) {
+    throw domainError('TICKET_NOT_FOUND');
+  }
+}
+
 export function visitStatusToTicketStatus(status: VisitStatus): TicketStatus {
   if (status === 'called') return 'called';
   if (status === 'arrived' || status === 'in_progress') return 'in_room';

@@ -156,7 +156,7 @@ function setupVisitPortalFlow(): {
   };
 }
 
-test('ensureVisitPortalSchema migrates ticket_id columns to visit_id with FK to visits', () => {
+test('ensureVisitPortalSchema ensures visit_id columns with FK to visits on fresh baseline', () => {
   const db = new DatabaseSync(':memory:');
   db.exec('PRAGMA foreign_keys = ON');
   db.exec(readFileSync(join(migrationsDir, '001_baseline.sql'), 'utf8'));

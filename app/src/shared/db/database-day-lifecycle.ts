@@ -13,15 +13,14 @@ type DayLifecycleStatements = {
   updateCheckinLockStmt: StatementSync;
   updateDayClosePhaseStmt: StatementSync;
   updateLastResetBusinessDayStmt: StatementSync;
-  deleteAllTicketsStmt: StatementSync;
   deleteAllOutboxEventsStmt: StatementSync;
   clearEmergencyStateStmt: StatementSync;
   emergencyStateStmt: StatementSync;
-  countAllTicketsStmt: StatementSync;
-  countTicketsByBusinessDayStmt: StatementSync;
+  countAllVisitsStmt: StatementSync;
+  countVisitsByBusinessDayStmt: StatementSync;
   maxWaitMsByBusinessDayStmt: StatementSync;
   topicCountsByBusinessDayStmt: StatementSync;
-  listOpenTicketsByBusinessDayStmt: StatementSync;
+  listOpenVisitsByBusinessDayStmt: StatementSync;
 };
 
 type DayLifecycleHelpers = {
@@ -75,12 +74,11 @@ export function isEffectiveCheckinLockedFromDb(deps: DayLifecycleDeps): boolean 
   return isEffectiveCheckinLockedFromRow(deps, row);
 }
 
-function executeBusinessDayReset(deps: DayLifecycleDeps, resetTicketCount: number): DayResetResult {
+function executeBusinessDayReset(deps: DayLifecycleDeps, resetVisitCount: number): DayResetResult {
   const updatedAt = deps.nowIso();
   const lastResetBusinessDay = deps.getBusinessDay();
 
   const emergencyBefore = getEmergencyStateFromDb(deps);
-  deps.deleteAllTicketsStmt.run();
   deps.deleteAllOutboxEventsStmt.run();
   if (emergencyBefore.active) {
     deps.clearEmergencyStateStmt.run(updatedAt);
@@ -91,13 +89,14 @@ function executeBusinessDayReset(deps: DayLifecycleDeps, resetTicketCount: numbe
   deps.emitOutboxEvent('BusinessDayReset', 'ops', {
     updatedAt,
     dayClosePhase: 'open',
-    resetTicketCount,
+    resetTicketCount: resetVisitCount,
+    resetVisitCount,
     lastResetBusinessDay,
     sandboxRestartRequired: true,
   });
   return {
     dayClosePhase: 'open',
-    resetTicketCount,
+    resetTicketCount: resetVisitCount,
     updatedAt,
     lastResetBusinessDay,
     emergencyCleared: emergencyBefore.active,
@@ -150,7 +149,7 @@ export function startDayCloseInDb(deps: DayLifecycleDeps): {
 }
 
 export function resetBusinessDayInDb(deps: DayLifecycleDeps): DayResetResult {
-  const totalRow = deps.countAllTicketsStmt.get() as { count?: number } | undefined;
-  const resetTicketCount = totalRow?.count ?? 0;
-  return executeBusinessDayReset(deps, resetTicketCount);
+  const totalRow = deps.countAllVisitsStmt.get() as { count?: number } | undefined;
+  const resetVisitCount = totalRow?.count ?? 0;
+  return executeBusinessDayReset(deps, resetVisitCount);
 }

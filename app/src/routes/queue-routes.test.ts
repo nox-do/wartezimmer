@@ -547,9 +547,6 @@ function buildTvQueueRouteDb(): { db: CoreDatabase; visitId: string } {
   const deps: CheckinSessionDeps & { db: DatabaseSync } = {
     db: sqlite,
     findTicketByCodeStmt: sqlite.prepare('SELECT 1'),
-    getNextTicketNumberStmt: sqlite.prepare('SELECT 1'),
-    insertTicketStmt: sqlite.prepare('SELECT 1'),
-    insertQueueEntryStmt: sqlite.prepare('SELECT 1'),
     checkinLockStmt: sqlite.prepare('SELECT checkin_locked AS locked FROM ops_state WHERE id = 1'),
     dayCloseStateStmt: sqlite.prepare(
       'SELECT checkin_locked AS locked, day_close_phase AS phase, last_reset_business_day AS lastResetBusinessDay FROM ops_state WHERE id = 1',

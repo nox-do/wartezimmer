@@ -45,6 +45,7 @@ import {
   setCallbackPhoneVisitTicket,
   setIdentityRefVisitTicket,
   visitExistsInDb,
+  requireVisitExistsInDb,
 } from '../flow-core/visit-queue-bridge.js';
 import {
   clearAbsentMode,
@@ -97,25 +98,6 @@ import {
   upsertTerminalAssistPending,
   type TerminalAssistPendingRow,
 } from '../checkin/terminal-assist-pending.js';
-import {
-  callTicketInDb,
-  checkInRoomInDb,
-  reassignRoomInDb,
-  checkOutRoomInDb,
-  processExpiredRecallWindowsInDb,
-  processExpiredRecallWindowForTicketInDb,
-  recallTicketInDb,
-  retryRecallNotifyInDb,
-  returnToWaitingInDb,
-  setAbsenceInDb,
-  setCallbackPhoneInDb,
-  clearCallbackPhoneInDb,
-  setIdentityRefInDb,
-  cycleTriageInDb,
-  setRecallNotifyErrorInDb,
-  setRecallNotifySentInDb,
-  type QueueDeps,
-} from './database-queue.js';
 import {
   resolveMarkAbsenceTicket,
   type MarkAbsenceLookupDeps,
@@ -248,9 +230,6 @@ export class CoreDatabase {
   private readonly boundEmitOutboxEvent: EmitOutboxEventFn;
   private readonly db: DatabaseSync;
   private readonly findTicketByCodeStmt: StatementSync;
-  private readonly getNextTicketNumberStmt: StatementSync;
-  private readonly insertTicketStmt: StatementSync;
-  private readonly insertQueueEntryStmt: StatementSync;
   private readonly checkinLockStmt: StatementSync;
   private readonly dayCloseStateStmt: StatementSync;
   private readonly emergencyStateStmt: StatementSync;
@@ -270,33 +249,17 @@ export class CoreDatabase {
   private readonly listMessagingProviderConfigsStmt: StatementSync;
   private readonly getMessagingProviderConfigByIdStmt: StatementSync;
   private readonly upsertMessagingProviderConfigStmt: StatementSync;
-  private readonly deleteAllTicketsStmt: StatementSync;
   private readonly deleteAllOutboxEventsStmt: StatementSync;
   private readonly countAllOutboxEventsStmt: StatementSync;
   private readonly clearEmergencyStateStmt: StatementSync;
-  private readonly countAllTicketsStmt: StatementSync;
-  private readonly countTicketsByBusinessDayStmt: StatementSync;
+  private readonly countAllVisitsStmt: StatementSync;
+  private readonly countVisitsByBusinessDayStmt: StatementSync;
   private readonly maxWaitMsByBusinessDayStmt: StatementSync;
   private readonly topicCountsByBusinessDayStmt: StatementSync;
-  private readonly listOpenTicketsByBusinessDayStmt: StatementSync;
-  private readonly listQueueStmt: StatementSync;
-  private readonly listExpiredRecallWindowsStmt: StatementSync;
+  private readonly listOpenVisitsByBusinessDayStmt: StatementSync;
   private readonly listAbsenceLookupTicketsStmt: StatementSync;
-  private readonly queueSummaryStmt: StatementSync;
-  private readonly getTicketByIdStmt: StatementSync;
-  private readonly getTicketDetailStmt: StatementSync;
   private readonly getTicketIdentityViewStmt: StatementSync;
   private readonly getTicketPortalContextStmt: StatementSync;
-  private readonly updateTicketCalledStmt: StatementSync;
-  private readonly updateQueueCalledStmt: StatementSync;
-  private readonly updateTicketStatusStmt: StatementSync;
-  private readonly updateTicketIdentityRefStmt: StatementSync;
-  private readonly updateQueueReturnUntilStmt: StatementSync;
-  private readonly updateQueueCallbackPhoneStmt: StatementSync;
-  private readonly updateQueueRecallNotifyErrorStmt: StatementSync;
-  private readonly updateQueueRecallNotifySentStmt: StatementSync;
-  private readonly updateQueueTriageLevelStmt: StatementSync;
-  private readonly clearQueueRoomStmt: StatementSync;
   private readonly insertOutboxEventStmt: StatementSync;
   private readonly listPendingOutboxEventsStmt: StatementSync;
   private readonly claimOutboxEventStmt: StatementSync;
@@ -335,9 +298,6 @@ export class CoreDatabase {
     ensureFlowCoreSchema(this.db);
     ({
       findTicketByCodeStmt: this.findTicketByCodeStmt,
-      getNextTicketNumberStmt: this.getNextTicketNumberStmt,
-      insertTicketStmt: this.insertTicketStmt,
-      insertQueueEntryStmt: this.insertQueueEntryStmt,
       checkinLockStmt: this.checkinLockStmt,
       dayCloseStateStmt: this.dayCloseStateStmt,
       emergencyStateStmt: this.emergencyStateStmt,
@@ -353,33 +313,17 @@ export class CoreDatabase {
       listMessagingProviderConfigsStmt: this.listMessagingProviderConfigsStmt,
       getMessagingProviderConfigByIdStmt: this.getMessagingProviderConfigByIdStmt,
       upsertMessagingProviderConfigStmt: this.upsertMessagingProviderConfigStmt,
-      deleteAllTicketsStmt: this.deleteAllTicketsStmt,
       deleteAllOutboxEventsStmt: this.deleteAllOutboxEventsStmt,
       countAllOutboxEventsStmt: this.countAllOutboxEventsStmt,
       clearEmergencyStateStmt: this.clearEmergencyStateStmt,
-      countAllTicketsStmt: this.countAllTicketsStmt,
-      countTicketsByBusinessDayStmt: this.countTicketsByBusinessDayStmt,
+      countAllVisitsStmt: this.countAllVisitsStmt,
+      countVisitsByBusinessDayStmt: this.countVisitsByBusinessDayStmt,
       maxWaitMsByBusinessDayStmt: this.maxWaitMsByBusinessDayStmt,
       topicCountsByBusinessDayStmt: this.topicCountsByBusinessDayStmt,
-      listOpenTicketsByBusinessDayStmt: this.listOpenTicketsByBusinessDayStmt,
-      listQueueStmt: this.listQueueStmt,
-      listExpiredRecallWindowsStmt: this.listExpiredRecallWindowsStmt,
+      listOpenVisitsByBusinessDayStmt: this.listOpenVisitsByBusinessDayStmt,
       listAbsenceLookupTicketsStmt: this.listAbsenceLookupTicketsStmt,
-      queueSummaryStmt: this.queueSummaryStmt,
-      getTicketByIdStmt: this.getTicketByIdStmt,
-      getTicketDetailStmt: this.getTicketDetailStmt,
       getTicketIdentityViewStmt: this.getTicketIdentityViewStmt,
       getTicketPortalContextStmt: this.getTicketPortalContextStmt,
-      updateTicketCalledStmt: this.updateTicketCalledStmt,
-      updateQueueCalledStmt: this.updateQueueCalledStmt,
-      updateTicketStatusStmt: this.updateTicketStatusStmt,
-      updateTicketIdentityRefStmt: this.updateTicketIdentityRefStmt,
-      updateQueueReturnUntilStmt: this.updateQueueReturnUntilStmt,
-      updateQueueCallbackPhoneStmt: this.updateQueueCallbackPhoneStmt,
-      updateQueueRecallNotifyErrorStmt: this.updateQueueRecallNotifyErrorStmt,
-      updateQueueRecallNotifySentStmt: this.updateQueueRecallNotifySentStmt,
-      updateQueueTriageLevelStmt: this.updateQueueTriageLevelStmt,
-      clearQueueRoomStmt: this.clearQueueRoomStmt,
       insertOutboxEventStmt: this.insertOutboxEventStmt,
       listPendingOutboxEventsStmt: this.listPendingOutboxEventsStmt,
       claimOutboxEventStmt: this.claimOutboxEventStmt,
@@ -481,9 +425,8 @@ export class CoreDatabase {
     return {
       ...this.messagingDeps(),
       emergencyStateStmt: this.emergencyStateStmt,
-      countAllTicketsStmt: this.countAllTicketsStmt,
+      countAllVisitsStmt: this.countAllVisitsStmt,
       countAllOutboxEventsStmt: this.countAllOutboxEventsStmt,
-      deleteAllTicketsStmt: this.deleteAllTicketsStmt,
       deleteAllOutboxEventsStmt: this.deleteAllOutboxEventsStmt,
       clearEmergencyStateStmt: this.clearEmergencyStateStmt,
       updateCheckinLockStmt: this.updateCheckinLockStmt,
@@ -505,15 +448,14 @@ export class CoreDatabase {
       updateCheckinLockStmt: this.updateCheckinLockStmt,
       updateDayClosePhaseStmt: this.updateDayClosePhaseStmt,
       updateLastResetBusinessDayStmt: this.updateLastResetBusinessDayStmt,
-      deleteAllTicketsStmt: this.deleteAllTicketsStmt,
       deleteAllOutboxEventsStmt: this.deleteAllOutboxEventsStmt,
       clearEmergencyStateStmt: this.clearEmergencyStateStmt,
       emergencyStateStmt: this.emergencyStateStmt,
-      countAllTicketsStmt: this.countAllTicketsStmt,
-      countTicketsByBusinessDayStmt: this.countTicketsByBusinessDayStmt,
+      countAllVisitsStmt: this.countAllVisitsStmt,
+      countVisitsByBusinessDayStmt: this.countVisitsByBusinessDayStmt,
       maxWaitMsByBusinessDayStmt: this.maxWaitMsByBusinessDayStmt,
       topicCountsByBusinessDayStmt: this.topicCountsByBusinessDayStmt,
-      listOpenTicketsByBusinessDayStmt: this.listOpenTicketsByBusinessDayStmt,
+      listOpenVisitsByBusinessDayStmt: this.listOpenVisitsByBusinessDayStmt,
       nowIso: common.nowIso,
       getBusinessDay: common.getBusinessDay,
       normalizeDayClosePhase,
@@ -548,40 +490,10 @@ export class CoreDatabase {
     };
   }
 
-  private queueDeps(): QueueDeps {
-    const common = this.commonHelperDeps();
-    return {
-      listQueueStmt: this.listQueueStmt,
-      listExpiredRecallWindowsStmt: this.listExpiredRecallWindowsStmt,
-      queueSummaryStmt: this.queueSummaryStmt,
-      getTicketByIdStmt: this.getTicketByIdStmt,
-      getTicketDetailStmt: this.getTicketDetailStmt,
-      getTicketIdentityViewStmt: this.getTicketIdentityViewStmt,
-      updateTicketCalledStmt: this.updateTicketCalledStmt,
-      updateQueueCalledStmt: this.updateQueueCalledStmt,
-      updateTicketStatusStmt: this.updateTicketStatusStmt,
-      updateTicketIdentityRefStmt: this.updateTicketIdentityRefStmt,
-      updateQueueReturnUntilStmt: this.updateQueueReturnUntilStmt,
-      updateQueueCallbackPhoneStmt: this.updateQueueCallbackPhoneStmt,
-      updateQueueRecallNotifyErrorStmt: this.updateQueueRecallNotifyErrorStmt,
-      updateQueueRecallNotifySentStmt: this.updateQueueRecallNotifySentStmt,
-      updateQueueTriageLevelStmt: this.updateQueueTriageLevelStmt,
-      clearQueueRoomStmt: this.clearQueueRoomStmt,
-      nowIso: common.nowIso,
-      getBusinessDay: common.getBusinessDay,
-      getReturnWindowMinutes: () => common.getOpsSettings().returnWindowMinutes,
-      getOpsSettings: common.getOpsSettings,
-      emitOutboxEvent: common.emitOutboxEvent,
-    };
-  }
-
   private checkinSessionDeps(): CheckinSessionDeps {
     const common = this.commonHelperDeps();
     return {
       findTicketByCodeStmt: this.findTicketByCodeStmt,
-      getNextTicketNumberStmt: this.getNextTicketNumberStmt,
-      insertTicketStmt: this.insertTicketStmt,
-      insertQueueEntryStmt: this.insertQueueEntryStmt,
       checkinLockStmt: this.checkinLockStmt,
       dayCloseStateStmt: this.dayCloseStateStmt,
       updateCheckinLockStmt: this.updateCheckinLockStmt,
@@ -824,7 +736,6 @@ export class CoreDatabase {
 
   processExpiredRecallWindows(): string[] {
     return this.withTransaction('processExpiredRecallWindows', () => {
-      const legacy = processExpiredRecallWindowsInDb(this.queueDeps());
       const runtime = getFlowCoreRuntime(this.db);
       const businessDay = this.commonHelperDeps().getBusinessDay();
       const nowIso = this.commonHelperDeps().nowIso();
@@ -835,18 +746,16 @@ export class CoreDatabase {
           transitioned.push(visitId);
         }
       }
-      return [...legacy, ...transitioned];
+      return transitioned;
     });
   }
 
   processExpiredRecallWindowForTicket(ticketId: string): boolean {
     return this.withTransaction('processExpiredRecallWindowForTicket', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        const runtime = getFlowCoreRuntime(this.db);
-        const nowIso = this.commonHelperDeps().nowIso();
-        return this.processExpiredRecallWindowForVisitInTransaction(ticketId, runtime, nowIso);
-      }
-      return processExpiredRecallWindowForTicketInDb(this.queueDeps(), ticketId);
+      requireVisitExistsInDb(this.db, ticketId);
+      const runtime = getFlowCoreRuntime(this.db);
+      const nowIso = this.commonHelperDeps().nowIso();
+      return this.processExpiredRecallWindowForVisitInTransaction(ticketId, runtime, nowIso);
     });
   }
 
@@ -883,28 +792,26 @@ export class CoreDatabase {
     roomLabel?: string,
   ): { fromStatus: string; toStatus: string } {
     return this.withTransaction('callTicket', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        const updatedAt = this.commonHelperDeps().nowIso();
-        const transition = callVisitTicket(
-          this.db,
-          getFlowCoreRuntime(this.db),
-          this.getOpsSettings(),
-          () => this.listQueue(),
-          ticketId,
-          roomId,
-          roomLabel,
-        );
-        this.emitOutboxEvent('QueueStatusChanged', ticketId, {
-          ticketId,
-          fromStatus: transition.fromStatus,
-          toStatus: transition.toStatus,
-          updatedAt,
-          roomId: roomId ?? null,
-          roomLabel: roomLabel ?? null,
-        });
-        return transition;
-      }
-      return callTicketInDb(this.queueDeps(), ticketId, roomId, roomLabel);
+      requireVisitExistsInDb(this.db, ticketId);
+      const updatedAt = this.commonHelperDeps().nowIso();
+      const transition = callVisitTicket(
+        this.db,
+        getFlowCoreRuntime(this.db),
+        this.getOpsSettings(),
+        () => this.listQueue(),
+        ticketId,
+        roomId,
+        roomLabel,
+      );
+      this.emitOutboxEvent('QueueStatusChanged', ticketId, {
+        ticketId,
+        fromStatus: transition.fromStatus,
+        toStatus: transition.toStatus,
+        updatedAt,
+        roomId: roomId ?? null,
+        roomLabel: roomLabel ?? null,
+      });
+      return transition;
     });
   }
 
@@ -915,25 +822,23 @@ export class CoreDatabase {
     actingRoomId?: string,
   ): { fromStatus: string; toStatus: string } {
     return this.withTransaction('checkInRoom', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        const updatedAt = this.commonHelperDeps().nowIso();
-        const transition = arriveVisitTicket(
-          this.db,
-          getFlowCoreRuntime(this.db),
-          ticketId,
-          actingRoomId,
-        );
-        this.emitOutboxEvent('QueueStatusChanged', ticketId, {
-          ticketId,
-          fromStatus: transition.fromStatus,
-          toStatus: transition.toStatus,
-          updatedAt,
-          roomId: roomId ?? null,
-          roomLabel: roomLabel ?? null,
-        });
-        return transition;
-      }
-      return checkInRoomInDb(this.queueDeps(), ticketId, roomId, roomLabel, actingRoomId);
+      requireVisitExistsInDb(this.db, ticketId);
+      const updatedAt = this.commonHelperDeps().nowIso();
+      const transition = arriveVisitTicket(
+        this.db,
+        getFlowCoreRuntime(this.db),
+        ticketId,
+        actingRoomId,
+      );
+      this.emitOutboxEvent('QueueStatusChanged', ticketId, {
+        ticketId,
+        fromStatus: transition.fromStatus,
+        toStatus: transition.toStatus,
+        updatedAt,
+        roomId: roomId ?? null,
+        roomLabel: roomLabel ?? null,
+      });
+      return transition;
     });
   }
 
@@ -943,107 +848,91 @@ export class CoreDatabase {
     roomLabel?: string,
   ): { fromStatus: string; toStatus: string } {
     return this.withTransaction('reassignRoom', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        const updatedAt = this.commonHelperDeps().nowIso();
-        const transition = reassignVisitTicket(
-          this.db,
-          getFlowCoreRuntime(this.db),
-          this.getOpsSettings(),
-          () => this.listQueue(),
-          ticketId,
-          roomId,
-          roomLabel,
-        );
-        this.emitOutboxEvent('QueueStatusChanged', ticketId, {
-          ticketId,
-          fromStatus: transition.fromStatus,
-          toStatus: transition.toStatus,
-          updatedAt,
-          roomId: roomId ?? null,
-          roomLabel: roomLabel ?? null,
-        });
-        return transition;
-      }
-      return reassignRoomInDb(this.queueDeps(), ticketId, roomId, roomLabel);
+      requireVisitExistsInDb(this.db, ticketId);
+      const updatedAt = this.commonHelperDeps().nowIso();
+      const transition = reassignVisitTicket(
+        this.db,
+        getFlowCoreRuntime(this.db),
+        this.getOpsSettings(),
+        () => this.listQueue(),
+        ticketId,
+        roomId,
+        roomLabel,
+      );
+      this.emitOutboxEvent('QueueStatusChanged', ticketId, {
+        ticketId,
+        fromStatus: transition.fromStatus,
+        toStatus: transition.toStatus,
+        updatedAt,
+        roomId: roomId ?? null,
+        roomLabel: roomLabel ?? null,
+      });
+      return transition;
     });
   }
 
   checkOutRoom(ticketId: string, actingRoomId?: string): { fromStatus: string; toStatus: string } {
     return this.withTransaction('checkOutRoom', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        const updatedAt = this.commonHelperDeps().nowIso();
-        const transition = doneVisitTicket(getFlowCoreRuntime(this.db), ticketId, actingRoomId);
-        this.emitOutboxEvent('QueueStatusChanged', ticketId, {
-          ticketId,
-          fromStatus: transition.fromStatus,
-          toStatus: transition.toStatus,
-          updatedAt,
-          roomId: null,
-          roomLabel: null,
-        });
-        return transition;
-      }
-      return checkOutRoomInDb(this.queueDeps(), ticketId, actingRoomId);
+      requireVisitExistsInDb(this.db, ticketId);
+      const updatedAt = this.commonHelperDeps().nowIso();
+      const transition = doneVisitTicket(getFlowCoreRuntime(this.db), ticketId, actingRoomId);
+      this.emitOutboxEvent('QueueStatusChanged', ticketId, {
+        ticketId,
+        fromStatus: transition.fromStatus,
+        toStatus: transition.toStatus,
+        updatedAt,
+        roomId: null,
+        roomLabel: null,
+      });
+      return transition;
     });
   }
 
   returnToWaiting(ticketId: string): { fromStatus: string; toStatus: string } {
     cancelRecallWindowExpiry(ticketId);
     return this.withTransaction('returnToWaiting', () => {
-      // Visits: Core recall (Journey bleibt active). absent_mode wird in Host-State geleert.
-      // Recall-Notify-State wird bewusst nicht geleert — wie returnToWaitingInDb, anders als recallTicket.
-      if (visitExistsInDb(this.db, ticketId)) {
-        const updatedAt = this.commonHelperDeps().nowIso();
-        const runtime = getFlowCoreRuntime(this.db);
-        const absentTransition = returnAbsentVisitToQueue(
-          this.db,
-          runtime,
-          ticketId,
-          updatedAt,
-        );
-        const transition =
-          absentTransition ?? returnToWaitingVisitTicket(runtime, ticketId);
-        if (!absentTransition) {
-          clearAbsentMode(this.db, ticketId, updatedAt);
-        }
-        this.emitOutboxEvent('QueueStatusChanged', ticketId, {
-          ticketId,
-          fromStatus: transition.fromStatus,
-          toStatus: transition.toStatus,
-          updatedAt,
-          roomId: null,
-          roomLabel: null,
-        });
-        return transition;
+      requireVisitExistsInDb(this.db, ticketId);
+      const updatedAt = this.commonHelperDeps().nowIso();
+      const runtime = getFlowCoreRuntime(this.db);
+      const absentTransition = returnAbsentVisitToQueue(this.db, runtime, ticketId, updatedAt);
+      const transition = absentTransition ?? returnToWaitingVisitTicket(runtime, ticketId);
+      if (!absentTransition) {
+        clearAbsentMode(this.db, ticketId, updatedAt);
       }
-      return returnToWaitingInDb(this.queueDeps(), ticketId);
+      this.emitOutboxEvent('QueueStatusChanged', ticketId, {
+        ticketId,
+        fromStatus: transition.fromStatus,
+        toStatus: transition.toStatus,
+        updatedAt,
+        roomId: null,
+        roomLabel: null,
+      });
+      return transition;
     });
   }
 
   setAbsence(ticketId: string, mode: AbsenceMode): { fromStatus: string; toStatus: string } {
     return this.withTransaction('setAbsence', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        const updatedAt = this.commonHelperDeps().nowIso();
-        const transition = setAbsenceVisitTicket(
-          this.db,
-          getFlowCoreRuntime(this.db),
-          this.getOpsSettings(),
-          ticketId,
-          mode,
-          updatedAt,
-        );
-        this.emitOutboxEvent('QueueStatusChanged', ticketId, {
-          ticketId,
-          fromStatus: transition.fromStatus,
-          toStatus: transition.toStatus,
-          updatedAt,
-          absenceMode: mode,
-          roomId: null,
-          roomLabel: null,
-        });
-        return transition;
-      }
-      return setAbsenceInDb(this.queueDeps(), ticketId, mode);
+      requireVisitExistsInDb(this.db, ticketId);
+      const updatedAt = this.commonHelperDeps().nowIso();
+      const transition = setAbsenceVisitTicket(
+        this.db,
+        getFlowCoreRuntime(this.db),
+        this.getOpsSettings(),
+        ticketId,
+        mode,
+        updatedAt,
+      );
+      this.emitOutboxEvent('QueueStatusChanged', ticketId, {
+        ticketId,
+        fromStatus: transition.fromStatus,
+        toStatus: transition.toStatus,
+        updatedAt,
+        absenceMode: mode,
+        roomId: null,
+        roomLabel: null,
+      });
+      return transition;
     });
   }
 
@@ -1052,32 +941,28 @@ export class CoreDatabase {
     callbackPhone: string,
   ): { callbackPhone: string; updatedAt: string } {
     return this.withTransaction('setCallbackPhone', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        return setCallbackPhoneVisitTicket(
-          this.db,
-          getFlowCoreRuntime(this.db),
-          this.getOpsSettings(),
-          ticketId,
-          callbackPhone,
-          this.commonHelperDeps().nowIso(),
-        );
-      }
-      return setCallbackPhoneInDb(this.queueDeps(), ticketId, callbackPhone);
+      requireVisitExistsInDb(this.db, ticketId);
+      return setCallbackPhoneVisitTicket(
+        this.db,
+        getFlowCoreRuntime(this.db),
+        this.getOpsSettings(),
+        ticketId,
+        callbackPhone,
+        this.commonHelperDeps().nowIso(),
+      );
     });
   }
 
   clearCallbackPhone(ticketId: string): { updatedAt: string } {
     return this.withTransaction('clearCallbackPhone', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        return clearCallbackPhoneVisitTicket(
-          this.db,
-          getFlowCoreRuntime(this.db),
-          this.getOpsSettings(),
-          ticketId,
-          this.commonHelperDeps().nowIso(),
-        );
-      }
-      return clearCallbackPhoneInDb(this.queueDeps(), ticketId);
+      requireVisitExistsInDb(this.db, ticketId);
+      return clearCallbackPhoneVisitTicket(
+        this.db,
+        getFlowCoreRuntime(this.db),
+        this.getOpsSettings(),
+        ticketId,
+        this.commonHelperDeps().nowIso(),
+      );
     });
   }
 
@@ -1086,31 +971,27 @@ export class CoreDatabase {
     identityRef: string,
   ): { identityRef: string; updatedAt: string } {
     return this.withTransaction('setIdentityRef', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        return setIdentityRefVisitTicket(
-          this.db,
-          getFlowCoreRuntime(this.db),
-          ticketId,
-          identityRef,
-          this.commonHelperDeps().nowIso(),
-        );
-      }
-      return setIdentityRefInDb(this.queueDeps(), ticketId, identityRef);
+      requireVisitExistsInDb(this.db, ticketId);
+      return setIdentityRefVisitTicket(
+        this.db,
+        getFlowCoreRuntime(this.db),
+        ticketId,
+        identityRef,
+        this.commonHelperDeps().nowIso(),
+      );
     });
   }
 
   cycleTriage(ticketId: string): { triageLevel: string | null; updatedAt: string } {
     return this.withTransaction('cycleTriage', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        return cycleTriageVisitTicket(
-          this.db,
-          getFlowCoreRuntime(this.db),
-          this.getOpsSettings(),
-          ticketId,
-          this.commonHelperDeps().nowIso(),
-        );
-      }
-      return cycleTriageInDb(this.queueDeps(), ticketId);
+      requireVisitExistsInDb(this.db, ticketId);
+      return cycleTriageVisitTicket(
+        this.db,
+        getFlowCoreRuntime(this.db),
+        this.getOpsSettings(),
+        ticketId,
+        this.commonHelperDeps().nowIso(),
+      );
     });
   }
 
@@ -1138,28 +1019,26 @@ export class CoreDatabase {
     checkinLocale: string | null;
   } {
     const result = this.withTransaction('recallTicket', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        const settings = this.getOpsSettings();
-        const windowMinutes = returnWindowMinutes ?? settings.returnWindowMinutes;
-        const updatedAt = this.commonHelperDeps().nowIso();
-        const recall = recallVisitTicket(
-          this.db,
-          getFlowCoreRuntime(this.db),
-          settings,
-          ticketId,
-          windowMinutes,
-          updatedAt,
-        );
-        this.emitOutboxEvent('QueueStatusChanged', ticketId, {
-          ticketId,
-          fromStatus: recall.fromStatus,
-          toStatus: recall.toStatus,
-          updatedAt,
-          returnUntil: recall.returnUntil,
-        });
-        return recall;
-      }
-      return recallTicketInDb(this.queueDeps(), ticketId, returnWindowMinutes);
+      requireVisitExistsInDb(this.db, ticketId);
+      const settings = this.getOpsSettings();
+      const windowMinutes = returnWindowMinutes ?? settings.returnWindowMinutes;
+      const updatedAt = this.commonHelperDeps().nowIso();
+      const recall = recallVisitTicket(
+        this.db,
+        getFlowCoreRuntime(this.db),
+        settings,
+        ticketId,
+        windowMinutes,
+        updatedAt,
+      );
+      this.emitOutboxEvent('QueueStatusChanged', ticketId, {
+        ticketId,
+        fromStatus: recall.fromStatus,
+        toStatus: recall.toStatus,
+        updatedAt,
+        returnUntil: recall.returnUntil,
+      });
+      return recall;
     });
     scheduleRecallWindowExpiry(this, ticketId, Date.parse(result.returnUntil));
     return result;
@@ -1167,26 +1046,15 @@ export class CoreDatabase {
 
   setRecallNotifyError(ticketId: string, errorCode: string | null): void {
     this.withTransaction('setRecallNotifyError', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        setVisitRecallNotifyError(
-          this.db,
-          ticketId,
-          errorCode,
-          this.commonHelperDeps().nowIso(),
-        );
-        return;
-      }
-      setRecallNotifyErrorInDb(this.queueDeps(), ticketId, errorCode);
+      requireVisitExistsInDb(this.db, ticketId);
+      setVisitRecallNotifyError(this.db, ticketId, errorCode, this.commonHelperDeps().nowIso());
     });
   }
 
   setRecallNotifySent(ticketId: string, sent: boolean): void {
     this.withTransaction('setRecallNotifySent', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        setVisitRecallNotifySent(this.db, ticketId, sent, this.commonHelperDeps().nowIso());
-        return;
-      }
-      setRecallNotifySentInDb(this.queueDeps(), ticketId, sent);
+      requireVisitExistsInDb(this.db, ticketId);
+      setVisitRecallNotifySent(this.db, ticketId, sent, this.commonHelperDeps().nowIso());
     });
   }
 
@@ -1197,14 +1065,8 @@ export class CoreDatabase {
     checkinLocale: string | null;
   } {
     return this.withTransaction('retryRecallNotify', () => {
-      if (visitExistsInDb(this.db, ticketId)) {
-        return readVisitRecallNotifyRetryContext(
-          this.db,
-          ticketId,
-          this.commonHelperDeps().nowIso(),
-        );
-      }
-      return retryRecallNotifyInDb(this.queueDeps(), ticketId);
+      requireVisitExistsInDb(this.db, ticketId);
+      return readVisitRecallNotifyRetryContext(this.db, ticketId, this.commonHelperDeps().nowIso());
     });
   }
 
@@ -1406,9 +1268,14 @@ export class CoreDatabase {
   }
 
   executeRuntimeReset(): RuntimeResetResult {
-    return this.withTransaction('executeRuntimeReset', () =>
-      executeRuntimeResetInDb(this.runtimeResetDeps()),
-    );
+    return this.withTransaction('executeRuntimeReset', () => {
+      const result = executeRuntimeResetInDb(this.runtimeResetDeps());
+      clearAllTerminalAssistPendingExpiries();
+      clearAllTerminalAssistPending(this.db);
+      clearFlowCoreVisitRuntime(this.db);
+      resetFlowCoreRuntimeForTests();
+      return result;
+    });
   }
 }
 

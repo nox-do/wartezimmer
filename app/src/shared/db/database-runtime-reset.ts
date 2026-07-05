@@ -16,9 +16,8 @@ type MessagingSnapshotRow = {
 };
 
 type RuntimeResetStatements = {
-  countAllTicketsStmt: StatementSync;
+  countAllVisitsStmt: StatementSync;
   countAllOutboxEventsStmt: StatementSync;
-  deleteAllTicketsStmt: StatementSync;
   deleteAllOutboxEventsStmt: StatementSync;
   clearEmergencyStateStmt: StatementSync;
   updateCheckinLockStmt: StatementSync;
@@ -160,7 +159,7 @@ export function getRuntimeResetPreviewFromDb(
   const emergency = getEmergencyStateFromDb(deps);
 
   return {
-    ticketCount: countFromStmt(deps.countAllTicketsStmt),
+    ticketCount: countFromStmt(deps.countAllVisitsStmt),
     outboxEventCount: countFromStmt(deps.countAllOutboxEventsStmt),
     emergencyActive: emergency.active,
     preservedTopicCount: settings.topics.length,
@@ -178,12 +177,11 @@ export function executeRuntimeResetInDb(deps: RuntimeResetDeps): RuntimeResetRes
   const messagingSnapshots = snapshotMessagingProviders(deps);
   const emergencyBefore = getEmergencyStateFromDb(deps);
 
-  const resetTicketCount = countFromStmt(deps.countAllTicketsStmt);
+  const resetVisitCount = countFromStmt(deps.countAllVisitsStmt);
   const clearedOutboxCount = countFromStmt(deps.countAllOutboxEventsStmt);
   const updatedAt = deps.nowIso();
   const lastResetBusinessDay = deps.getBusinessDay();
 
-  deps.deleteAllTicketsStmt.run();
   deps.deleteAllOutboxEventsStmt.run();
   if (emergencyBefore.active) {
     deps.clearEmergencyStateStmt.run(updatedAt);
@@ -206,7 +204,8 @@ export function executeRuntimeResetInDb(deps: RuntimeResetDeps): RuntimeResetRes
 
   deps.emitOutboxEvent('OpsRuntimeReset', 'ops', {
     updatedAt,
-    resetTicketCount,
+    resetTicketCount: resetVisitCount,
+    resetVisitCount,
     clearedOutboxCount,
     emergencyCleared: emergencyBefore.active,
     preservedTopicCount: settings.topics.length,
@@ -215,7 +214,7 @@ export function executeRuntimeResetInDb(deps: RuntimeResetDeps): RuntimeResetRes
   });
 
   return {
-    resetTicketCount,
+    resetTicketCount: resetVisitCount,
     clearedOutboxCount,
     emergencyCleared: emergencyBefore.active,
     preservedTopicCount: settings.topics.length,

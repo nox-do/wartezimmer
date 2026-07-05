@@ -92,9 +92,27 @@
 - [x] TV-Snapshot mit Surface-Visibility (`buildTvQueueSnapshot` + `explainVisibility`)
 - [x] Raum-Panel: Queue-Snapshot mit Surface-Visibility (`buildRoomPanelQueueSnapshot` + `explainVisibility`)
 - [ ] MFA-UI auf Visit-Modell
-- [ ] OpenAPI Breaking + Codegen
-- [ ] `tickets`/`queue_entries` entfernen (Phase B)
-- [ ] absent/recall, Portal, OpenAPI (Phase B)
+- [ ] OpenAPI Breaking + Codegen (ticketId → visitId, Phase B4)
+- [x] `tickets`/`queue_entries` entfernen (Phase B3)
+
+## Phase B3 — Legacy-Schema entfernen (2026-07-05)
+
+Schema-Cutover: Tabellen `tickets` / `queue_entries` und Legacy-*InDb-Schicht entfernt. Öffentliche ID bleibt `visits.id` (= bisherige Ticket-ID).
+
+- [x] `database.ts` — nur Visit-Pfade (`requireVisitExistsInDb`, keine `*InDb`-Fallbacks)
+- [x] `database-queue.ts` gelöscht (+ 7 Legacy-Testdateien)
+- [x] `database-statements.ts` — Ticket/Queue-Statements entfernt, Visit-Day-Stats
+- [x] Day-Reset / Runtime-Reset auf Visit-Counts (`countAllVisitsStmt`); Visits via `clearFlowCoreVisitRuntime`
+- [x] `ensureVisitLegacyDropSchema` — DROP `queue_entries`, `tickets` (Runtime-Migration)
+- [x] `001_baseline.sql` — keine tickets/queue_entries; portal mit `visit_id`
+- [x] `visit-portal-schema` — FK auf visits für frische Baseline
+- [x] CheckinSessionDeps ohne insertTicket/insertQueueEntry/getNextTicketNumber
+- [x] Recall-Scheduler nur Visit-Pfad
+- [x] Tests: `visit-legacy-drop-schema.test.ts`, Day-Lifecycle Visit-Counts; **270 app tests grün**
+- [x] Grep-Guard: kein `FROM tickets` / `INTO tickets` / `queue_entries` im App-Code (außer Drop/Migration/Kommentare)
+- [ ] Manuell: Check-in → MFA Call → Done; Mark away + Recall; Portal Upload; Day-Reset
+
+**Out of scope (B4):** OpenAPI `ticketId` → `visitId`, Codegen, MFA-UI Naming, Core-Package
 
 ## Phase B1 — Host Queue-Metadaten an Visits (2026-07-05)
 
@@ -132,7 +150,7 @@ End-to-end Visit-Patienten: Portal-Code → Session → Dokument-Upload; Identit
 
 **API:** DB intern `visit_id`, Response weiter `ticketId` (= visit.id) bis B4 OpenAPI-Breaking.
 
-**Out of scope (B3/B4):** DROP tickets, Legacy *InDb entfernen, OpenAPI visitId, Day-Reset Visit-Count
+**Out of scope (B3 erledigt / B4):** OpenAPI visitId, MFA-UI Naming, Core-Package
 
 
 ## Bewusst nicht hier
