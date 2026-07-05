@@ -2,13 +2,15 @@ import type { DatabaseSync } from 'node:sqlite';
 
 /** Führt `fn` in einer SQLite-Transaktion aus. Bei Fehler: vollständiger Rollback. */
 export function runInTransaction<T>(db: DatabaseSync, fn: () => T): T {
-  db.exec('BEGIN IMMEDIATE');
+  const savepointName = `flow_core_tx_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  db.exec(`SAVEPOINT ${savepointName}`);
   try {
     const result = fn();
-    db.exec('COMMIT');
+    db.exec(`RELEASE SAVEPOINT ${savepointName}`);
     return result;
   } catch (error) {
-    db.exec('ROLLBACK');
+    db.exec(`ROLLBACK TO SAVEPOINT ${savepointName}`);
+    db.exec(`RELEASE SAVEPOINT ${savepointName}`);
     throw error;
   }
 }
