@@ -13,6 +13,7 @@ export type AbsenceLookupTicketRow = {
   status: TicketStatus;
   identityRef: string | null;
   callbackPhone: string | null;
+  checkinPhone: string | null;
 };
 
 export type MarkAbsenceLookupInput = {
@@ -38,6 +39,7 @@ function listAbsenceLookupTickets(deps: MarkAbsenceLookupDeps): AbsenceLookupTic
     status?: string;
     identityRef?: string | null;
     callbackPhone?: string | null;
+    checkinPhone?: string | null;
   }>;
 
   return rows
@@ -56,6 +58,7 @@ function listAbsenceLookupTickets(deps: MarkAbsenceLookupDeps): AbsenceLookupTic
       status: row.status as TicketStatus,
       identityRef: row.identityRef ?? null,
       callbackPhone: row.callbackPhone ?? null,
+      checkinPhone: row.checkinPhone ?? null,
     }));
 }
 
@@ -90,6 +93,7 @@ function findByTicketCode(
     status: row.status as TicketStatus,
     identityRef: null,
     callbackPhone: null,
+    checkinPhone: null,
   };
 }
 
@@ -107,6 +111,9 @@ async function findByPhoneNumber(
 
   for (const ticket of tickets) {
     if (ticket.callbackPhone && phonesMatch(ticket.callbackPhone, normalizedPhone)) {
+      matches.set(ticket.id, ticket);
+    }
+    if (ticket.checkinPhone && phonesMatch(ticket.checkinPhone, normalizedPhone)) {
       matches.set(ticket.id, ticket);
     }
   }

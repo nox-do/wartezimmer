@@ -96,6 +96,30 @@
 - [ ] `tickets`/`queue_entries` entfernen (Phase B)
 - [ ] absent/recall, Portal, OpenAPI (Phase B)
 
+## Phase B1 — Host Queue-Metadaten an Visits (2026-07-05)
+
+Host-persistierte Queue-Felder (absent, recall, triage, callback, checkin_phone) in `visit_host_state`; MFA-APIs über Visit-Pfad, Legacy-*InDb nur ohne Visit-Zeile.
+
+- [x] Schema `visit_host_state` (+ FK CASCADE) in `ensureFlowCoreSchema`
+- [x] DB-Layer `visit-host-state.ts` (upsert, recall, summary, expired windows)
+- [x] Check-in schreibt `checkin_phone` / `checkin_locale` in Host-State
+- [x] `visitToQueueTicketRow` / `listVisitQueueRows` Batch-Enrichment (Host-State + Document-Count)
+- [x] `database.ts`-Bridges: setAbsence, recallTicket, callback, triage, identityRef, getQueueSummary, returnToWaiting (+ absent clear)
+- [x] Recall-Scheduler: Visit-Pfad via `listExpiredVisitRecallWindows` + `processExpiredRecallWindowForVisit`
+- [x] Mark-Absence-Lookup auf Visits + Host-State (findByCode, listAbsenceLookup, checkinPhone-Match)
+- [x] Tests: `visit-host-state.test.ts`, `visit-queue-bridge.test.ts` erweitert (289 app tests grün)
+- [x] Fix: call/arrive/reassign blockiert bei `absent_mode`-Overlay (Legacy-Parity)
+- [ ] Manuell: Check-in → MFA Phone; Mark away; Recall + Fenster; return_to_waiting DnD
+
+**Design (festgehalten):**
+- `absent_*` = Host-Overlay (`absent_mode`), Core-Status bleibt waiting/called
+- `return_to_waiting` / abgelaufenes Recall-Fenster: `absent_mode` clearen, Recall-Notify **nicht** clearen
+- `recallTicket`: `absent_mode=return_later`, `return_until`, Callback clearen, Notify-State clearen (wie Legacy)
+- `setIdentityRef`: Host `identity_ref_override` (Core `patientDisplayName` unverändert)
+- Document-Count: `documents.ticket_id = visit.id` (Phase B2: FK-Migration)
+
+**Out of scope (B2/B3/B4):** DROP tickets, Portal auf Visits, documents FK, OpenAPI visitId, Day-Reset Visit-Count, Core absent-Status
+
 ## Bewusst nicht hier
 
 - Produktions-Deploy, Docker-Release, Manager-Installer

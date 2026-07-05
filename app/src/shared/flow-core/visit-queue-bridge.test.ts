@@ -10,12 +10,19 @@ import { createVisitCheckInInDb } from './flow-core-checkin.js';
 import {
   arriveVisitTicket,
   callVisitTicket,
+  clearCallbackPhoneVisitTicket,
+  cycleTriageVisitTicket,
   doneVisitTicket,
   listVisitQueueRows,
+  recallVisitTicket,
+  returnAbsentVisitToQueue,
   returnToWaitingVisitTicket,
+  setAbsenceVisitTicket,
+  setCallbackPhoneVisitTicket,
   startVisitTicket,
   visitStatusToTicketStatus,
 } from './visit-queue-bridge.js';
+import { setVisitAbsentMode, upsertVisitHostState } from '../db/visit-host-state.js';
 import { getBusinessDay } from '../db/database-time.js';
 import type { CheckinSessionDeps } from '../db/database-checkin-sessions.js';
 import type { OpsSettings } from '../db/db-types.js';
@@ -133,7 +140,7 @@ function setupVisitFlow(): {
     identityRef: 'Transition Test',
   });
   const runtime = getFlowCoreRuntime(db);
-  const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay());
+  const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay(), db);
   return { db, settings, visitId: created.ticketId, runtime, listQueue };
 }
 
@@ -144,9 +151,9 @@ test('visitStatusToTicketStatus maps arrived and in_progress to in_room', () => 
 });
 
 test('visit flow call → arrive → done end-to-end', () => {
-  const { settings, visitId, runtime, listQueue } = setupVisitFlow();
+  const { db, settings, visitId, runtime, listQueue } = setupVisitFlow();
 
-  const call = callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  const call = callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
   assert.deepEqual(call, { fromStatus: 'waiting', toStatus: 'called' });
 
   let rows = listQueue();
@@ -154,7 +161,7 @@ test('visit flow call → arrive → done end-to-end', () => {
   assert.equal(rows[0]?.status, 'called');
   assert.equal(rows[0]?.roomId, 'labor');
 
-  const arrive = arriveVisitTicket(runtime, visitId);
+  const arrive = arriveVisitTicket(db, runtime, visitId);
   assert.deepEqual(arrive, { fromStatus: 'called', toStatus: 'in_room' });
 
   rows = listQueue();
@@ -170,8 +177,8 @@ test('visit flow call → arrive → done end-to-end', () => {
 
 test('MFA done from arrived auto-starts before completing', () => {
   const { visitId, runtime, settings, listQueue, db } = setupVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  arriveVisitTicket(runtime, visitId);
+  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisitTicket(db, runtime, visitId);
 
   const done = doneVisitTicket(runtime, visitId);
   assert.deepEqual(done, { fromStatus: 'in_room', toStatus: 'done' });
@@ -184,27 +191,27 @@ test('MFA done from arrived auto-starts before completing', () => {
 });
 
 test('scoped arrive succeeds when acting room matches target', () => {
-  const { visitId, runtime, settings, listQueue } = setupVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
 
-  const arrive = arriveVisitTicket(runtime, visitId, 'labor');
+  const arrive = arriveVisitTicket(db, runtime, visitId, 'labor');
   assert.deepEqual(arrive, { fromStatus: 'called', toStatus: 'in_room' });
 });
 
 test('scoped arrive rejects wrong room with QUEUE_ROOM_MISMATCH', () => {
-  const { visitId, runtime, settings, listQueue } = setupVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
 
   assert.throws(
-    () => arriveVisitTicket(runtime, visitId, 'mfa-tresen'),
+    () => arriveVisitTicket(db, runtime, visitId, 'mfa-tresen'),
     (error: unknown) => error instanceof DomainError && error.domainCode === QUEUE_ROOM_MISMATCH,
   );
 });
 
 test('scoped done rejects wrong room with QUEUE_ROOM_MISMATCH', () => {
-  const { visitId, runtime, settings, listQueue } = setupVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  arriveVisitTicket(runtime, visitId, 'labor');
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisitTicket(db, runtime, visitId, 'labor');
 
   assert.throws(
     () => doneVisitTicket(runtime, visitId, 'mfa-tresen'),
@@ -213,17 +220,17 @@ test('scoped done rejects wrong room with QUEUE_ROOM_MISMATCH', () => {
 });
 
 test('scoped done succeeds when acting room matches target', () => {
-  const { visitId, runtime, settings, listQueue } = setupVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  arriveVisitTicket(runtime, visitId, 'labor');
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisitTicket(db, runtime, visitId, 'labor');
 
   const done = doneVisitTicket(runtime, visitId, 'labor');
   assert.deepEqual(done, { fromStatus: 'in_room', toStatus: 'done' });
 });
 
 test('returnToWaitingVisitTicket: call → waiting clears room', () => {
-  const { visitId, runtime, settings, listQueue } = setupVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
 
   const result = returnToWaitingVisitTicket(runtime, visitId);
   assert.deepEqual(result, { fromStatus: 'called', toStatus: 'waiting' });
@@ -235,9 +242,9 @@ test('returnToWaitingVisitTicket: call → waiting clears room', () => {
 });
 
 test('returnToWaitingVisitTicket: call → arrive → waiting', () => {
-  const { visitId, runtime, settings, listQueue } = setupVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  arriveVisitTicket(runtime, visitId, 'labor');
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisitTicket(db, runtime, visitId, 'labor');
 
   const result = returnToWaitingVisitTicket(runtime, visitId);
   assert.deepEqual(result, { fromStatus: 'in_room', toStatus: 'waiting' });
@@ -248,9 +255,9 @@ test('returnToWaitingVisitTicket: call → arrive → waiting', () => {
 });
 
 test('returnToWaitingVisitTicket: start (in_progress) → waiting', () => {
-  const { visitId, runtime, settings, listQueue } = setupVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  arriveVisitTicket(runtime, visitId, 'labor');
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisitTicket(db, runtime, visitId, 'labor');
   startVisitTicket(runtime, visitId, 'labor');
 
   const result = returnToWaitingVisitTicket(runtime, visitId);
@@ -263,8 +270,8 @@ test('returnToWaitingVisitTicket: start (in_progress) → waiting', () => {
 });
 
 test('returnToWaitingVisitTicket: recall emits no journey_abandoned event', () => {
-  const { visitId, runtime, settings, listQueue } = setupVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
 
   returnToWaitingVisitTicket(runtime, visitId);
 
@@ -272,4 +279,134 @@ test('returnToWaitingVisitTicket: recall emits no journey_abandoned event', () =
     !runtime.events(visitId).some((event) => event.type === 'journey_abandoned'),
     'recall must not abandon journey',
   );
+});
+
+test('setAbsenceVisitTicket overlays absent_wait_here on waiting visit', () => {
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+
+  const transition = setAbsenceVisitTicket(
+    db,
+    runtime,
+    settings,
+    visitId,
+    'wait_here',
+    '2026-07-04T12:05:00.000Z',
+  );
+  assert.deepEqual(transition, { fromStatus: 'waiting', toStatus: 'absent_wait_here' });
+
+  const row = listQueue()[0];
+  assert.equal(row?.status, 'absent_wait_here');
+  assert.equal(runtime.visits().find((v) => v.id === visitId)?.status, 'waiting');
+});
+
+test('callVisitTicket rejects waiting visit with absent host overlay', () => {
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  setAbsenceVisitTicket(
+    db,
+    runtime,
+    settings,
+    visitId,
+    'wait_here',
+    '2026-07-04T12:05:00.000Z',
+  );
+
+  assert.throws(
+    () => callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor'),
+    (error: unknown) => error instanceof DomainError && error.domainCode === 'INVALID_TRANSITION',
+  );
+});
+
+test('arriveVisitTicket rejects called visit with absent host overlay', () => {
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  setAbsenceVisitTicket(
+    db,
+    runtime,
+    settings,
+    visitId,
+    'wait_here',
+    '2026-07-04T12:05:00.000Z',
+  );
+
+  assert.throws(
+    () => arriveVisitTicket(db, runtime, visitId, 'labor'),
+    (error: unknown) => error instanceof DomainError && error.domainCode === 'INVALID_TRANSITION',
+  );
+});
+
+test('recallVisitTicket sets return_later with notify phone from checkinPhone', () => {
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  upsertVisitHostState(
+    db,
+    visitId,
+    { checkinPhone: '+49172111111' },
+    '2026-07-04T12:00:00.000Z',
+  );
+  setVisitAbsentMode(db, visitId, 'wait_here', '2026-07-04T12:01:00.000Z');
+
+  const recall = recallVisitTicket(
+    db,
+    runtime,
+    settings,
+    visitId,
+    15,
+    '2026-07-04T12:02:00.000Z',
+  );
+
+  assert.equal(recall.toStatus, 'absent_return_later');
+  assert.equal(recall.callbackPhone, '+49172111111');
+  assert.ok(recall.returnUntil);
+
+  const row = listQueue()[0];
+  assert.equal(row?.status, 'absent_return_later');
+  assert.equal(row?.returnUntil, recall.returnUntil);
+});
+
+test('setCallbackPhoneVisitTicket stores canonical phone in host state', () => {
+  const { db, visitId, runtime, settings } = setupVisitFlow();
+
+  const result = setCallbackPhoneVisitTicket(
+    db,
+    runtime,
+    settings,
+    visitId,
+    ' 0172111111 ',
+    '2026-07-04T12:03:00.000Z',
+  );
+  assert.equal(result.callbackPhone, '+49172111111');
+});
+
+test('cycleTriageVisitTicket cycles triage in host state', () => {
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+
+  const first = cycleTriageVisitTicket(
+    db,
+    runtime,
+    settings,
+    visitId,
+    '2026-07-04T12:04:00.000Z',
+  );
+  assert.equal(first.triageLevel, 'green');
+  assert.equal(listQueue()[0]?.triageLevel, 'green');
+});
+
+test('returnAbsentVisitToQueue clears absent overlay without core transition', () => {
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  setAbsenceVisitTicket(
+    db,
+    runtime,
+    settings,
+    visitId,
+    'return_later',
+    '2026-07-04T12:05:00.000Z',
+  );
+
+  const result = returnAbsentVisitToQueue(
+    db,
+    runtime,
+    visitId,
+    '2026-07-04T12:06:00.000Z',
+  );
+  assert.deepEqual(result, { fromStatus: 'absent_return_later', toStatus: 'waiting' });
+  assert.equal(listQueue()[0]?.status, 'waiting');
 });

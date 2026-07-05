@@ -157,8 +157,8 @@ test('buildRoomPanelQueueSnapshot filters to session room and hides names by def
     authPath: 'phone_dob',
     identityRef: 'Other Room',
   });
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  callVisitTicket(runtime, settings, listQueue, otherVisit.ticketId, 'mfa-tresen', 'Empfang');
+  callVisitTicket(sqlite, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  callVisitTicket(sqlite, runtime, settings, listQueue, otherVisit.ticketId, 'mfa-tresen', 'Empfang');
 
   const snapshot = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 7, {
     roomId: 'labor',
@@ -235,7 +235,7 @@ test('buildRoomPanelQueueSnapshot includes identityRef only when room setting al
     getFlowCoreRuntimeInstance: () => runtime,
   } as unknown as CoreDatabase;
 
-  callVisitTicket(runtime, settings, listQueue, created.ticketId, 'labor', 'Labor');
+  callVisitTicket(sqlite, runtime, settings, listQueue, created.ticketId, 'labor', 'Labor');
 
   const snapshot = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 8, {
     roomId: 'labor',
@@ -247,7 +247,7 @@ test('buildRoomPanelQueueSnapshot includes identityRef only when room setting al
 
 test('buildRoomPanelQueueSnapshot shows called visit for panel room via explainVisibility', () => {
   const { db, sqlite, settings, visitId, runtime, listQueue } = setupPanelVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  callVisitTicket(sqlite, runtime, settings, listQueue, visitId, 'labor', 'Labor');
 
   const snapshot = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 10, {
     roomId: 'labor',
@@ -261,8 +261,8 @@ test('buildRoomPanelQueueSnapshot shows called visit for panel room via explainV
 
 test('buildRoomPanelQueueSnapshot maps arrived visit to in_room for panel room', () => {
   const { db, sqlite, settings, visitId, runtime, listQueue } = setupPanelVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  arriveVisitTicket(runtime, visitId, 'labor');
+  callVisitTicket(sqlite, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisitTicket(sqlite, runtime, visitId, 'labor');
 
   const snapshot = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 11, {
     roomId: 'labor',
@@ -275,8 +275,8 @@ test('buildRoomPanelQueueSnapshot maps arrived visit to in_room for panel room',
 
 test('buildRoomPanelQueueSnapshot hides visit after done', () => {
   const { db, sqlite, settings, visitId, runtime, listQueue } = setupPanelVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  arriveVisitTicket(runtime, visitId, 'labor');
+  callVisitTicket(sqlite, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisitTicket(sqlite, runtime, visitId, 'labor');
   doneVisitTicket(runtime, visitId, 'labor');
 
   const snapshot = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 12, {
@@ -289,7 +289,7 @@ test('buildRoomPanelQueueSnapshot hides visit after done', () => {
 
 test('buildRoomPanelQueueSnapshot hides visit after return_to_waiting', () => {
   const { db, sqlite, settings, visitId, runtime, listQueue } = setupPanelVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  callVisitTicket(sqlite, runtime, settings, listQueue, visitId, 'labor', 'Labor');
 
   const before = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 14, {
     roomId: 'labor',
@@ -308,7 +308,7 @@ test('buildRoomPanelQueueSnapshot hides visit after return_to_waiting', () => {
 
 test('buildRoomPanelQueueSnapshot excludes visits called to another room', () => {
   const { db, sqlite, settings, visitId, runtime, listQueue } = setupPanelVisitFlow();
-  callVisitTicket(runtime, settings, listQueue, visitId, 'mfa-tresen', 'Empfang');
+  callVisitTicket(sqlite, runtime, settings, listQueue, visitId, 'mfa-tresen', 'Empfang');
 
   const snapshot = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 13, {
     roomId: 'labor',

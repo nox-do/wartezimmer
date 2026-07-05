@@ -597,14 +597,14 @@ function buildTvQueueRouteDb(): { db: CoreDatabase; visitId: string } {
     getOpsState: () => ({ checkinLocked: false, dayClosePhase: 'open' }),
     getFlowCoreRuntimeInstance: () => runtime,
     callTicket: (ticketId: string, roomId?: string, roomLabel?: string) =>
-      callVisitTicket(runtime, settings, listQueue, ticketId, roomId, roomLabel),
+      callVisitTicket(sqlite, runtime, settings, listQueue, ticketId, roomId, roomLabel),
   } as unknown as CoreDatabase;
 
-  return { db, visitId: created.ticketId };
+  return { db, sqlite, visitId: created.ticketId };
 }
 
 test('GET /api/v1/queue with tv role returns explainVisibility-filtered items', async () => {
-  const { db, visitId } = buildTvQueueRouteDb();
+  const { db, sqlite, visitId } = buildTvQueueRouteDb();
   const app = Fastify({ logger: false });
   app.addHook('preHandler', async (request) => {
     request.clientRole = 'tv';
@@ -633,7 +633,7 @@ test('GET /api/v1/queue with tv role returns explainVisibility-filtered items', 
   assert.equal(called.json().items[0].status, 'called');
   assert.equal(called.json().items[0].roomLabel, 'Labor');
 
-  arriveVisitTicket(db.getFlowCoreRuntimeInstance(), visitId, 'labor');
+  arriveVisitTicket(sqlite, db.getFlowCoreRuntimeInstance(), visitId, 'labor');
   const arrived = await app.inject({
     method: 'GET',
     url: '/api/v1/queue',

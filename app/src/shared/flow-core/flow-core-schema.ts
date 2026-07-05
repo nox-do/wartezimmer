@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ensureVisitHostStateSchema } from '../db/visit-host-state.js';
 
 const flowCoreRoot = join(fileURLToPath(import.meta.url), '../../../../../packages/flow-core');
 const schemaPath = join(flowCoreRoot, 'db/schema.sql');
@@ -12,6 +13,7 @@ export function flowCoreSchemaSql(): string {
 
 export function ensureFlowCoreSchema(db: DatabaseSync): void {
   db.exec(flowCoreSchemaSql());
+  ensureVisitHostStateSchema(db);
 }
 
 export function clearFlowCoreVisitRuntime(db: DatabaseSync): void {

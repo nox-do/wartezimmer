@@ -146,7 +146,7 @@ test('buildTvQueueSnapshotFromFlowCore shows waiting visit when explainVisibilit
 test('buildTvQueueSnapshotFromFlowCore includes called visit with room label', () => {
   const { db, settings, visitId, runtime } = setupVisitFlow();
   const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay());
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
 
   const snapshot = buildTvQueueSnapshotForSqlite(db, settings, false, 2);
 
@@ -158,8 +158,8 @@ test('buildTvQueueSnapshotFromFlowCore includes called visit with room label', (
 test('buildTvQueueSnapshotFromFlowCore hides visit after arrive (not at Wartezimmer surface)', () => {
   const { db, settings, visitId, runtime } = setupVisitFlow();
   const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay());
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  arriveVisitTicket(runtime, visitId, 'labor');
+  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisitTicket(db, runtime, visitId, 'labor');
 
   const snapshot = buildTvQueueSnapshotForSqlite(db, settings, false, 3);
 
@@ -169,8 +169,8 @@ test('buildTvQueueSnapshotFromFlowCore hides visit after arrive (not at Wartezim
 test('buildTvQueueSnapshotFromFlowCore shows visit again after return_to_waiting', () => {
   const { db, settings, visitId, runtime } = setupVisitFlow();
   const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay());
-  callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  arriveVisitTicket(runtime, visitId, 'labor');
+  callVisitTicket(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisitTicket(db, runtime, visitId, 'labor');
 
   const hidden = buildTvQueueSnapshotForSqlite(db, settings, false, 3);
   assert.equal(hidden.items.length, 0);

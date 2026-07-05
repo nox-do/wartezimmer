@@ -74,10 +74,10 @@ export type CoreDatabaseStatements = {
 export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseStatements {
   return {
     findTicketByCodeStmt: db.prepare(
-      `SELECT id, status
-      FROM tickets
-      WHERE business_day = ? AND lane_code = ? AND number = ?
-      ORDER BY created_at DESC
+      `SELECT v.id, v.status
+      FROM visits v
+      WHERE v.queue_number_date = ? AND v.queue_lane_code = ? AND v.queue_sequence = ?
+      ORDER BY v.created_at DESC
       LIMIT 1`,
     ),
     getNextTicketNumberStmt: db.prepare(
@@ -350,17 +350,19 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     ),
     listAbsenceLookupTicketsStmt: db.prepare(
       `SELECT
-        t.id,
-        t.lane_code AS laneCode,
-        t.number,
-        t.status,
-        t.identity_ref AS identityRef,
-        q.callback_phone AS callbackPhone
-      FROM tickets t
-      JOIN queue_entries q ON q.ticket_id = t.id
-      WHERE t.business_day = ?
-        AND t.status IN ('waiting', 'called')
-      ORDER BY t.created_at ASC`,
+        v.id,
+        v.queue_lane_code AS laneCode,
+        v.queue_sequence AS number,
+        v.status,
+        COALESCE(h.identity_ref_override, p.display_name) AS identityRef,
+        h.callback_phone AS callbackPhone,
+        h.checkin_phone AS checkinPhone
+      FROM visits v
+      LEFT JOIN patients p ON p.id = v.patient_id
+      LEFT JOIN visit_host_state h ON h.visit_id = v.id
+      WHERE v.queue_number_date = ?
+        AND v.status IN ('waiting', 'called')
+      ORDER BY v.checked_in_at ASC`,
     ),
     queueSummaryStmt: db.prepare(
       `SELECT
