@@ -131,6 +131,7 @@ export function validateRoutingRuleDraft(
 }
 
 export type JourneyStepDraft = {
+  id?: string;
   sortOrder: number;
   targetLocationId?: string | null;
   queueId?: string | null;
@@ -159,12 +160,17 @@ export function validateJourneyTemplateDraft(catalog: Catalog, templateDraft: Jo
   if (templateDraft.active && steps.length === 0) throw new Error('JOURNEY_STEPS_EMPTY');
 
   const sortOrders = new Set<number>();
+  const stepIds = new Set<string>();
   for (const step of steps) {
     if (!MOVEMENT_MODES.includes(step.movementMode)) throw new Error('INVALID_MOVEMENT_MODE');
     if (!ADVANCE_ON_VALUES.includes(step.advanceOn)) throw new Error('INVALID_ADVANCE_ON');
     if (!PUBLIC_DISPLAY_MODES.includes(step.publicDisplayMode)) throw new Error('INVALID_PUBLIC_DISPLAY_MODE');
     if (sortOrders.has(step.sortOrder)) throw new Error('DUPLICATE_JOURNEY_SORT_ORDER');
     sortOrders.add(step.sortOrder);
+    if (step.id) {
+      if (stepIds.has(step.id)) throw new Error('DUPLICATE_JOURNEY_STEP_ID');
+      stepIds.add(step.id);
+    }
     assertActiveLocation(catalog, step.targetLocationId);
     assertActiveQueue(catalog, step.queueId);
   }

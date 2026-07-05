@@ -23,6 +23,7 @@ test('saveJourneyTemplate: bei offenen Visits nicht speicherbar', () => {
       topicId: 'general',
       active: true,
       steps: steps.map((step) => ({
+        id: step.id,
         sortOrder: step.sortOrder,
         targetLocationId: step.targetLocationId,
         queueId: step.queueId,
@@ -38,14 +39,16 @@ test('saveJourneyTemplate: bei offenen Visits nicht speicherbar', () => {
 
 test('saveJourneyTemplate: ohne offene Visits erlaubt', () => {
   const runtime = createRuntime(openDb({ path: ':memory:' }));
+  const catalog = runtime.catalog();
+  const steps = catalog.journeySteps.filter((step) => step.templateId === 'journey_general');
 
   const result = runtime.saveJourneyTemplate('journey_general', {
     name: 'Geaendert',
     topicId: 'general',
     active: true,
     steps: [
-      { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
-      { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'pickup', publicDisplayMode: 'hidden', advanceOn: 'start' }
+      { id: steps[0].id, sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
+      { id: steps[1].id, sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'pickup', publicDisplayMode: 'hidden', advanceOn: 'start' }
     ]
   });
 

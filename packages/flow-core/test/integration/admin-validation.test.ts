@@ -51,10 +51,11 @@ test('parseSaveRuleBody und parseSaveJourneyTemplateBody', () => {
     name: 'Test',
     active: true,
     steps: [
-      { sortOrder: 0, movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' }
+      { id: 'step_1', sortOrder: 0, movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' }
     ]
   });
   assert.equal(template.steps.length, 1);
+  assert.equal(template.steps[0].id, 'step_1');
 });
 
 test('saveRule: unbekannte Rule liefert ROUTING_RULE_NOT_FOUND', () => {

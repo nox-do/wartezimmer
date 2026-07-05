@@ -104,7 +104,7 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
 
   function renderStep(step, index) {
     return `
-      <article class="journey-admin-step" data-step-index="${index}">
+      <article class="journey-admin-step" data-step-index="${index}" data-step-id="${escapeHtml(step.id || '')}">
         <header>
           <strong>Schritt ${index + 1}</strong>
           <button type="button" class="ghost" data-action="remove-step" data-step-index="${index}" title="Schritt entfernen">×</button>
@@ -166,6 +166,7 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
 
     const stepNodes = [...root.querySelectorAll('[data-role="steps"] .journey-admin-step')];
     const steps = stepNodes.map((node, index) => ({
+      id: node.dataset.stepId && !node.dataset.stepId.startsWith('draft_') ? node.dataset.stepId : undefined,
       sortOrder: index,
       targetLocationId: node.querySelector('[data-field="targetLocationId"]')?.value || null,
       queueId: node.querySelector('[data-field="queueId"]')?.value || null,
@@ -228,7 +229,11 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
         ...catalog,
         journeySteps: [
           ...catalog.journeySteps.filter((step) => step.templateId !== selectedTemplateId),
-          ...steps.map((step, index) => ({ ...step, id: `draft_${index}`, templateId: selectedTemplateId }))
+          ...steps.map((step, index) => ({
+            ...step,
+            id: step.id && !step.id.startsWith('draft_') ? step.id : `draft_${index}`,
+            templateId: selectedTemplateId,
+          }))
         ]
       };
       render();
@@ -243,7 +248,12 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
         ...catalog,
         journeySteps: [
           ...catalog.journeySteps.filter((step) => step.templateId !== selectedTemplateId),
-          ...steps.map((step, i) => ({ ...step, sortOrder: i, id: step.id || `draft_${i}`, templateId: selectedTemplateId }))
+          ...steps.map((step, i) => ({
+            ...step,
+            sortOrder: i,
+            id: step.id && !step.id.startsWith('draft_') ? step.id : `draft_${i}`,
+            templateId: selectedTemplateId,
+          }))
         ]
       };
       render();

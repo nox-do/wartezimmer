@@ -185,6 +185,7 @@ function parseJourneyStepDraft(step: unknown, _index: number) {
   }
 
   return {
+    id: optionalId(raw.id),
     sortOrder: raw.sortOrder,
     targetLocationId: nullableId(raw.targetLocationId),
     queueId: nullableId(raw.queueId),
@@ -204,4 +205,11 @@ function nullableId(value: unknown): string | null | undefined {
   if (value == null || value === '') return null;
   if (!isString(value)) throw new Error('INVALID_REQUEST_BODY');
   return value.trim();
+}
+
+function optionalId(value: unknown): string | undefined {
+  if (value == null || value === '') return undefined;
+  if (!isString(value)) throw new Error('INVALID_REQUEST_BODY');
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
 }

@@ -76,6 +76,23 @@ test('validateJourneyTemplateDraft: doppelte sortOrder wird verhindert', () => {
   );
 });
 
+test('validateJourneyTemplateDraft: doppelte Step-IDs werden verhindert', () => {
+  const catalog = baseCatalog();
+
+  assert.throws(
+    () => validateJourneyTemplateDraft(catalog, {
+      name: 'DupIds',
+      topicId: 'general',
+      active: true,
+      steps: [
+        { id: 'step_same', sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
+        { id: 'step_same', sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', advanceOn: 'start' }
+      ]
+    }),
+    /DUPLICATE_JOURNEY_STEP_ID/
+  );
+});
+
 test('validateJourneyTemplateDraft: ungültige movementMode werden abgelehnt', () => {
   const catalog = baseCatalog();
 

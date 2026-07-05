@@ -74,6 +74,9 @@ test('redirect rollback: Event-Fehler rollt Visit-Update zurück', () => {
 
 test('saveJourneyTemplate rollback: Insert-Fehler behält alte Steps', () => {
   const { db, runtime } = testRuntime({ testHooks: { failAfter: 'journeyTemplate:insertStep' } });
+  const existing = db
+    .prepare('SELECT id, sort_order FROM journey_steps WHERE template_id = ? ORDER BY sort_order')
+    .all('journey_general') as Array<{ id: string; sort_order: number }>;
   const beforeSteps = db.prepare('SELECT COUNT(*) AS count FROM journey_steps WHERE template_id = ?').get('journey_general').count;
   const beforeName = db.prepare('SELECT name FROM journey_templates WHERE id = ?').get('journey_general').name;
 
@@ -83,8 +86,9 @@ test('saveJourneyTemplate rollback: Insert-Fehler behält alte Steps', () => {
       topicId: 'general',
       active: true,
       steps: [
-        { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
-        { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', advanceOn: 'start' }
+        { id: existing[0].id, sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
+        { id: existing[1].id, sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', advanceOn: 'start' },
+        { sortOrder: 3, targetLocationId: 'lab', queueId: null, movementMode: 'self_go', publicDisplayMode: 'hidden', advanceOn: 'done' }
       ]
     }),
     /TEST_FAILURE:journeyTemplate:insertStep/
@@ -97,6 +101,96 @@ test('saveJourneyTemplate rollback: Insert-Fehler behält alte Steps', () => {
   assert.equal(
     db.prepare('SELECT name FROM journey_templates WHERE id = ?').get('journey_general').name,
     beforeName
+  );
+});
+
+test('saveJourneyTemplate: bestehende Steps werden fortgeschrieben statt komplett ersetzt', () => {
+  const { db, runtime } = testRuntime();
+  const before = db
+    .prepare('SELECT id, sort_order FROM journey_steps WHERE template_id = ? ORDER BY sort_order')
+    .all('journey_general') as Array<{ id: string; sort_order: number }>;
+
+  runtime.saveJourneyTemplate('journey_general', {
+    name: 'Sprechstunde Standard',
+    topicId: 'general',
+    active: true,
+    steps: [
+      {
+        id: before[1].id,
+        sortOrder: 1,
+        targetLocationId: 'room_2',
+        queueId: null,
+        movementMode: 'call',
+        publicDisplayMode: 'hidden',
+        advanceOn: 'arrive',
+      },
+      {
+        id: before[2].id,
+        sortOrder: 2,
+        targetLocationId: 'room_1',
+        queueId: null,
+        movementMode: 'pickup',
+        publicDisplayMode: 'hidden',
+        advanceOn: 'start',
+      },
+      {
+        sortOrder: 3,
+        targetLocationId: 'lab',
+        queueId: null,
+        movementMode: 'self_go',
+        publicDisplayMode: 'hidden',
+        advanceOn: 'done',
+      },
+    ],
+  });
+
+  const after = db
+    .prepare('SELECT id, sort_order, target_location_id FROM journey_steps WHERE template_id = ? ORDER BY sort_order')
+    .all('journey_general') as Array<{ id: string; sort_order: number; target_location_id: string | null }>;
+
+  assert.equal(after.length, 3);
+  assert.equal(after[0].sort_order, 1);
+  assert.equal(after[0].id, before[1].id);
+  assert.equal(after[1].sort_order, 2);
+  assert.equal(after[1].id, before[2].id);
+  assert.equal(after[2].sort_order, 3);
+  assert.equal(after[2].target_location_id, 'lab');
+  assert.ok(!before.some((step) => step.id === after[2].id));
+});
+
+test('saveJourneyTemplate: fremde Step-ID wird abgelehnt', () => {
+  const { db, runtime } = testRuntime();
+  db.prepare('INSERT INTO journey_templates VALUES (?, ?, ?, ?)').run('journey_other', 'Andere Journey', 'general', 1);
+  db.prepare('INSERT INTO journey_steps VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+    'step_other_0',
+    'journey_other',
+    0,
+    'lab',
+    null,
+    'self_go',
+    'hidden',
+    'done',
+    null,
+  );
+
+  assert.throws(
+    () => runtime.saveJourneyTemplate('journey_general', {
+      name: 'Sprechstunde Standard',
+      topicId: 'general',
+      active: true,
+      steps: [
+        {
+          id: 'step_other_0',
+          sortOrder: 0,
+          targetLocationId: 'reception',
+          queueId: 'general_queue',
+          movementMode: 'call',
+          publicDisplayMode: 'visible',
+          advanceOn: 'arrive',
+        },
+      ],
+    }),
+    /JOURNEY_STEP_TEMPLATE_MISMATCH/
   );
 });
 

@@ -96,14 +96,45 @@ export function createAdminService(params: {
         body.active ? 1 : 0,
         id,
       );
-      maybeFail('journeyTemplate:deleteSteps');
-      db.prepare('DELETE FROM journey_steps WHERE template_id = ?').run(id);
+      const existingSteps = db
+        .prepare('SELECT id, sort_order FROM journey_steps WHERE template_id = ?')
+        .all(id) as Array<{ id: string; sort_order: number }>;
+      const existingById = new Set(existingSteps.map((step) => step.id));
+      const retainedStepIds = new Set((body.steps ?? []).flatMap((step) => (step.id ? [step.id] : [])));
 
-      const insert = db.prepare('INSERT INTO journey_steps VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      const upsertStep = db.prepare(
+        `INSERT INTO journey_steps (
+          id, template_id, sort_order, target_location_id, queue_id, movement_mode, public_display_mode, advance_on, instruction_text
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          template_id = excluded.template_id,
+          sort_order = excluded.sort_order,
+          target_location_id = excluded.target_location_id,
+          queue_id = excluded.queue_id,
+          movement_mode = excluded.movement_mode,
+          public_display_mode = excluded.public_display_mode,
+          advance_on = excluded.advance_on,
+          instruction_text = excluded.instruction_text`,
+      );
+      const deleteStep = db.prepare('DELETE FROM journey_steps WHERE id = ?');
+      const lookupAnyStep = db.prepare('SELECT template_id FROM journey_steps WHERE id = ?');
+
+      for (const existingStep of existingSteps) {
+        if (retainedStepIds.has(existingStep.id)) continue;
+        maybeFail('journeyTemplate:deleteStep');
+        deleteStep.run(existingStep.id);
+      }
+
       for (const step of body.steps ?? []) {
-        maybeFail('journeyTemplate:insertStep');
-        insert.run(
-          crypto.randomUUID(),
+        if (step.id && !existingById.has(step.id)) {
+            const foreign = lookupAnyStep.get(step.id) as { template_id: string } | undefined;
+            if (foreign?.template_id) throw new Error('JOURNEY_STEP_TEMPLATE_MISMATCH');
+            throw new Error('JOURNEY_STEP_NOT_FOUND');
+        }
+
+        maybeFail(step.id ? 'journeyTemplate:updateStep' : 'journeyTemplate:insertStep');
+        upsertStep.run(
+          step.id ?? crypto.randomUUID(),
           id,
           step.sortOrder,
           step.targetLocationId ?? null,
