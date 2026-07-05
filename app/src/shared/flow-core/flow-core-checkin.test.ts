@@ -11,6 +11,7 @@ import { getFlowCoreRuntime } from './flow-core-runtime.js';
 import type { CheckinSessionDeps } from '../db/database-checkin-sessions.js';
 import type { OpsSettings } from '../db/db-types.js';
 import { normalizeDayClosePhase } from '../db/database-time.js';
+import { MFA_ASSIST_TOPIC_ID } from '../checkin-topic-settings.js';
 
 function sampleSettings(): OpsSettings {
   return {
@@ -110,4 +111,29 @@ test('createVisitCheckInInDb writes a visit and exposes it in the queue list', (
   assert.equal(queueRows[0]?.id, created.visitId);
   assert.equal(queueRows[0]?.status, 'waiting');
   assert.equal(queueRows[0]?.topicId, 'blut');
+});
+
+test('syncFlowCoreCatalog seeds reserved mfa topic and direct mfa check-in works', () => {
+  const db = new DatabaseSync(':memory:');
+  db.exec('PRAGMA foreign_keys = ON');
+  ensureFlowCoreSchema(db);
+  const settings = sampleSettings();
+  syncFlowCoreCatalog(db, settings);
+
+  const catalog = getFlowCoreRuntime(db).catalog();
+  assert.equal(catalog.topics.some((topic) => topic.id === MFA_ASSIST_TOPIC_ID), true);
+  assert.equal(catalog.routingRules.some((rule) => rule.topicId === MFA_ASSIST_TOPIC_ID), true);
+
+  const created = createVisitCheckInInDb(buildDeps(db, settings), {
+    topicId: MFA_ASSIST_TOPIC_ID,
+    authPath: 'none',
+    identityRef: 'Empfang',
+  });
+
+  assert.match(created.visitId, /^\d{8}-M-\d{3}$/);
+
+  const queueRows = listVisitQueueRows(getFlowCoreRuntime(db), settings, getBusinessDay());
+  assert.equal(queueRows.length, 1);
+  assert.equal(queueRows[0]?.id, created.visitId);
+  assert.equal(queueRows[0]?.topicId, MFA_ASSIST_TOPIC_ID);
 });

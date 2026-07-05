@@ -2,7 +2,11 @@ import type { DatabaseSync } from 'node:sqlite';
 import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
 import { loadCatalog } from '@praxis-flow/flow-core/server';
 import type { OpsSettings } from '../db/db-types.js';
-import { MFA_ASSIST_TOPIC_ID } from '../checkin-topic-settings.js';
+import {
+  MFA_ASSIST_LANE_CODE,
+  MFA_ASSIST_TOPIC_ID,
+  resolveTopicLabelFromSettings,
+} from '../checkin-topic-settings.js';
 
 export const PF_FLOW_LOC_ENTRANCE = 'pf_entrance';
 export const PF_FLOW_LOC_WAITING = 'pf_waiting';
@@ -327,7 +331,7 @@ function replaceGeneratedDisplayRules(db: DatabaseSync): void {
 }
 
 export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettings): CatalogSyncSummary {
-  const desiredTopicIds = settings.topics.map((topic) => topic.topicId);
+  const desiredTopicIds = [MFA_ASSIST_TOPIC_ID, ...settings.topics.map((topic) => topic.topicId)];
   const desiredLocationIds = [
     PF_FLOW_LOC_ENTRANCE,
     PF_FLOW_LOC_WAITING,
@@ -400,7 +404,39 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
     sortOrder: 10,
   });
 
-  let topicCount = 0;
+  const mfaTopicLabel = resolveTopicLabelFromSettings(settings, MFA_ASSIST_TOPIC_ID);
+
+  upsertTopic(db, {
+    id: MFA_ASSIST_TOPIC_ID,
+    name: mfaTopicLabel,
+    category: 'mfa_assist',
+    color: '#2563eb',
+    defaultPriority: 'urgent',
+    active: 1,
+    sortOrder: 0,
+    laneCode: MFA_ASSIST_LANE_CODE,
+  });
+
+  upsertRoutingRule(db, {
+    id: `rule_${MFA_ASSIST_TOPIC_ID}`,
+    topicId: MFA_ASSIST_TOPIC_ID,
+    name: mfaTopicLabel,
+    initialLastKnownLocationId: PF_FLOW_LOC_WAITING,
+    initialTargetLocationId: receptionRoomId,
+    initialQueueId: PF_FLOW_QUEUE_GENERAL,
+    initialMovementMode: 'call',
+    initialLocationConfidence: 'assumed',
+    publicDisplayMode: 'visible',
+    terminalInstructionTemplate: 'Bitte nehmen Sie im Wartezimmer Platz. Sie werden aufgerufen.',
+    requiresReceptionConfirmation: 0,
+    escortPolicy: 'none',
+    allowRedirect: 0,
+    allowedSurfaceIds: JSON.stringify([PF_FLOW_SURFACE_TERMINAL]),
+    journeyTemplateId: null,
+    active: 1,
+  });
+
+  let topicCount = 1;
   for (const topic of settings.topics) {
     upsertTopic(db, {
       id: topic.topicId,
