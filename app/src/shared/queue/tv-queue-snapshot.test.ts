@@ -3,7 +3,7 @@ import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS } from '../checkin-topic-settings.js';
 import { getBusinessDay } from '../db/database-time.js';
-import type { OpsSettings, QueueTicketRow } from '../db/db-types.js';
+import type { OpsSettings } from '../db/db-types.js';
 import { createVisitCheckInInDb } from '../flow-core/flow-core-checkin.js';
 import { syncFlowCoreCatalog, getFlowCoreRuntime } from '../flow-core/flow-core-runtime.js';
 import { ensureFlowCoreSchema } from '../flow-core/flow-core-schema.js';
@@ -13,7 +13,7 @@ import {
   listVisitQueueRows,
   returnToWaitingVisitTicket,
 } from '../flow-core/visit-queue-bridge.js';
-import { buildTvQueueSnapshotForSqlite, buildTvQueueSnapshotFromFlowCore } from './tv-queue-snapshot.js';
+import { buildTvQueueSnapshotForSqlite } from './tv-queue-snapshot.js';
 import type { CheckinSessionDeps } from '../db/database-checkin-sessions.js';
 import { normalizeDayClosePhase } from '../db/database-time.js';
 
@@ -116,7 +116,6 @@ function setupVisitFlow(): {
   settings: OpsSettings;
   visitId: string;
   runtime: ReturnType<typeof getFlowCoreRuntime>;
-  listQueue: () => QueueTicketRow[];
 } {
   const db = new DatabaseSync(':memory:');
   db.exec('PRAGMA foreign_keys = ON');
@@ -129,14 +128,13 @@ function setupVisitFlow(): {
     identityRef: 'TV Snapshot Test',
   });
   const runtime = getFlowCoreRuntime(db);
-  const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay());
-  return { db, settings, visitId: created.ticketId, runtime, listQueue };
+  return { db, settings, visitId: created.ticketId, runtime };
 }
 
 test('buildTvQueueSnapshotFromFlowCore shows waiting visit when explainVisibility allows', () => {
-  const { db, settings, runtime, listQueue } = setupVisitFlow();
+  const { db, settings } = setupVisitFlow();
 
-  const snapshot = buildTvQueueSnapshotForSqlite(db, settings, listQueue, false, 1);
+  const snapshot = buildTvQueueSnapshotForSqlite(db, settings, false, 1);
 
   assert.equal(snapshot.view, 'tv');
   assert.equal(snapshot.items.length, 1);
@@ -146,10 +144,11 @@ test('buildTvQueueSnapshotFromFlowCore shows waiting visit when explainVisibilit
 });
 
 test('buildTvQueueSnapshotFromFlowCore includes called visit with room label', () => {
-  const { db, settings, visitId, runtime, listQueue } = setupVisitFlow();
+  const { db, settings, visitId, runtime } = setupVisitFlow();
+  const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay());
   callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
 
-  const snapshot = buildTvQueueSnapshotForSqlite(db, settings, listQueue, false, 2);
+  const snapshot = buildTvQueueSnapshotForSqlite(db, settings, false, 2);
 
   assert.equal(snapshot.items.length, 1);
   assert.equal(snapshot.items[0]?.status, 'called');
@@ -157,67 +156,29 @@ test('buildTvQueueSnapshotFromFlowCore includes called visit with room label', (
 });
 
 test('buildTvQueueSnapshotFromFlowCore hides visit after arrive (not at Wartezimmer surface)', () => {
-  const { db, settings, visitId, runtime, listQueue } = setupVisitFlow();
+  const { db, settings, visitId, runtime } = setupVisitFlow();
+  const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay());
   callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
   arriveVisitTicket(runtime, visitId, 'labor');
 
-  const snapshot = buildTvQueueSnapshotForSqlite(db, settings, listQueue, false, 3);
+  const snapshot = buildTvQueueSnapshotForSqlite(db, settings, false, 3);
 
   assert.equal(snapshot.items.length, 0);
 });
 
 test('buildTvQueueSnapshotFromFlowCore shows visit again after return_to_waiting', () => {
-  const { db, settings, visitId, runtime, listQueue } = setupVisitFlow();
+  const { db, settings, visitId, runtime } = setupVisitFlow();
+  const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay());
   callVisitTicket(runtime, settings, listQueue, visitId, 'labor', 'Labor');
   arriveVisitTicket(runtime, visitId, 'labor');
 
-  const hidden = buildTvQueueSnapshotForSqlite(db, settings, listQueue, false, 3);
+  const hidden = buildTvQueueSnapshotForSqlite(db, settings, false, 3);
   assert.equal(hidden.items.length, 0);
 
   returnToWaitingVisitTicket(runtime, visitId);
 
-  const visibleAgain = buildTvQueueSnapshotForSqlite(db, settings, listQueue, false, 4);
+  const visibleAgain = buildTvQueueSnapshotForSqlite(db, settings, false, 4);
   assert.equal(visibleAgain.items.length, 1);
   assert.equal(visibleAgain.items[0]?.status, 'waiting');
   assert.equal(visibleAgain.items[0]?.roomLabel, null);
-});
-
-test('buildTvQueueSnapshotFromFlowCore appends legacy tickets without visit rows', () => {
-  const { db, settings, runtime, listQueue } = setupVisitFlow();
-  const legacyTicket: QueueTicketRow = {
-    id: 'legacy-ticket-1',
-    laneCode: 'A',
-    number: 7,
-    topicId: 'termin-habe',
-    topicLabel: 'Ich habe einen Termin',
-    destinationRoomId: 'mfa-tresen',
-    destinationRoomLabel: 'Empfang',
-    status: 'waiting',
-    createdAt: '2026-07-04T12:05:00.000Z',
-    calledAt: null,
-    identityRef: null,
-    checkinPhone: null,
-    roomId: null,
-    roomLabel: null,
-    callbackPhone: null,
-    recallNotifyErrorCode: null,
-    recallNotifySent: false,
-    returnUntil: null,
-    triageLevel: null,
-    documentCount: 0,
-  };
-
-  const snapshot = buildTvQueueSnapshotFromFlowCore({
-    runtime,
-    settings,
-    businessDay: getBusinessDay(),
-    listQueue: () => [...listQueue(), legacyTicket],
-    checkinLocked: false,
-    revision: 4,
-  });
-
-  assert.equal(snapshot.items.length, 2);
-  assert.equal(snapshot.items[0]?.laneCode, 'L');
-  assert.equal(snapshot.items[1]?.laneCode, 'A');
-  assert.equal(snapshot.items[1]?.number, 7);
 });

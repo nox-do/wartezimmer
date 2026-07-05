@@ -24,6 +24,15 @@
 - [x] Smoke-Endpoint entfernt (nicht mehr nötig)
 - [ ] Manuell: MFA DnD aktiv → WZ, TV zeigt Nummer wieder, Raum-Panel leert Spalte (return_to_waiting)
 
+## Phase A — Display-Cutover (2026-07-04)
+
+- [x] `listQueue()` liefert nur Visit-Zeilen (`listVisitQueueRows`)
+- [x] TV-Snapshot: kein Legacy-Loop / `mapLegacyTicketToTvItem`
+- [x] Raum-Panel-Snapshot: kein Legacy-Loop über `listQueue()`
+- [x] Toten Check-in-Pfad `createTicketInDb` / `buildCreateTicketInput` entfernt
+
+**Offen (Phase B):** Schema-Drop `tickets`/`queue_entries`, absent/recall, Portal, OpenAPI
+
 ## Design: return_to_waiting (2026-07-04)
 
 **Entscheidung: Option A** — neue Core-Transition `return_to_waiting` (nicht Redirect, nicht Host-Patch).
@@ -43,7 +52,9 @@
 - [x] Catalog-Sync: nur konfigurierbare `ops_settings.topics` (kein System-Topic)
 - [x] Hilfe-Button: Pressed-State + `needsAssistance` (kein Lane-M-Sofort-Ticket mehr)
 - [x] Flow-Core-Kommentare: kein „System-Topic“ — Hilfe via `mfaAssist`/`needsAssistance`, PoC-Seed nur intern
-- [ ] TV: verbleibende Legacy-Tickets ohne Visit-Zeile weiter aus `listQueue` (ohne `explainVisibility`)
+- [x] TV: Legacy-Append aus listQueue entfernt (Phase A Display-Cutover)
+- [x] Raum-Panel: Legacy-Append entfernt (Phase A Display-Cutover)
+- [x] listQueue() visit-only (Phase A Display-Cutover)
 - [x] Raum-Panel: Queue-Snapshot mit `explainVisibility` (`pf_panel_*`), Status `called`/`in_room` aus Visits
 - [x] Fix: SSE-Verbindungs-Leak (Browser-Connection-Pool voll → Reassign hängt auf „Wird zugewiesen…“)
 - [x] Fix: Raum-Panel `?room=` vs. Session-Cookie — falsches Panel bei URL-Wechsel / alter Session
@@ -82,7 +93,8 @@
 - [x] Raum-Panel: Queue-Snapshot mit Surface-Visibility (`buildRoomPanelQueueSnapshot` + `explainVisibility`)
 - [ ] MFA-UI auf Visit-Modell
 - [ ] OpenAPI Breaking + Codegen
-- [ ] `tickets`/`queue_entries` entfernen
+- [ ] `tickets`/`queue_entries` entfernen (Phase B)
+- [ ] absent/recall, Portal, OpenAPI (Phase B)
 
 ## Bewusst nicht hier
 

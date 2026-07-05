@@ -56,7 +56,6 @@ export type BuildRoomPanelQueueSnapshotInput = {
   db: CoreDatabase;
   runtime: Runtime;
   businessDay: string;
-  listQueue: () => QueueTicketRow[];
   revision: number;
   session: Pick<RoomPanelSession, 'roomId' | 'placement'>;
 };
@@ -114,11 +113,11 @@ function mapQueueRowToPanelItem(
   };
 }
 
-/** Room-panel items from Visits (explainVisibility + called/in_room); legacy rows without visit from listQueue. */
+/** Room-panel items from Visits via explainVisibility (Phase A — no legacy ticket fallback). */
 export function buildRoomPanelQueueSnapshotFromFlowCore(
   input: BuildRoomPanelQueueSnapshotInput,
 ): RoomPanelQueueSnapshot {
-  const { db, runtime, businessDay, listQueue, revision, session } = input;
+  const { db, runtime, businessDay, revision, session } = input;
   const active = resolveRoomPanelForSession(db, session);
   if (!active) {
     throw new Error('ROOM_PANEL_SESSION_INVALID');
@@ -136,7 +135,6 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
   const businessDayVisits = runtime
     .visits()
     .filter((visit) => visit.queueNumberDate === businessDay);
-  const visitIds = new Set(businessDayVisits.map((visit) => visit.id));
 
   const scored: Array<{
     item: RoomPanelItem;
@@ -147,14 +145,6 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
     const explanation = explainVisibility(visit, surface, rules);
     if (!explanation.visible) continue;
     const row = visitToQueueTicketRow(visit, settings);
-    const item = mapQueueRowToPanelItem(row, session.roomId, roomLabel, showPatientNames);
-    if (item) {
-      scored.push({ item, sortRow: row });
-    }
-  }
-
-  for (const row of listQueue()) {
-    if (visitIds.has(row.id)) continue;
     const item = mapQueueRowToPanelItem(row, session.roomId, roomLabel, showPatientNames);
     if (item) {
       scored.push({ item, sortRow: row });
@@ -203,7 +193,6 @@ export function buildRoomPanelQueueSnapshot(
     db,
     runtime: resolveFlowCoreRuntime(db),
     businessDay: getBusinessDay(),
-    listQueue: () => db.listQueue(),
     revision,
     session,
   });
@@ -213,7 +202,6 @@ export function buildRoomPanelQueueSnapshot(
 export function buildRoomPanelQueueSnapshotForSqlite(
   db: CoreDatabase,
   sqlite: Parameters<typeof getFlowCoreRuntime>[0],
-  listQueue: () => QueueTicketRow[],
   revision: number,
   session: Pick<RoomPanelSession, 'roomId' | 'placement'>,
 ): RoomPanelQueueSnapshot {
@@ -221,7 +209,6 @@ export function buildRoomPanelQueueSnapshotForSqlite(
     db,
     runtime: getFlowCoreRuntime(sqlite),
     businessDay: getBusinessDay(),
-    listQueue,
     revision,
     session,
   });

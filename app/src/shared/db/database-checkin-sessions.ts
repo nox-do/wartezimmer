@@ -7,8 +7,6 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import {
   isSessionStatus,
   isTicketStatus,
-  type CreateTicketCallerInput,
-  type CreateTicketInput,
   type DayClosePhase,
   type OpsSettings,
   type PatientSession,
@@ -19,11 +17,6 @@ import {
   type TicketStatus,
 } from './db-types.js';
 import { parseTicketCode, formatTicketCode } from '../queue/ticket-code.js';
-import {
-  resolveTopicLabelFromSettings,
-  resolveTicketLaneCodeFromSettings,
-  resolveDestinationRoomForTopic,
-} from '../checkin-topic-settings.js';
 import {
   getBusinessMinutesOfDay,
   isPracticeOpenAt,
@@ -67,14 +60,6 @@ export type CheckinSessionDeps = CheckinSessionStatements & CheckinSessionHelper
 
 function hashToken(value: string): string {
   return createHash('sha256').update(value).digest('hex');
-}
-
-function padTicketNumber(value: number): string {
-  return String(value).padStart(3, '0');
-}
-
-function compactBusinessDay(value: string): string {
-  return value.replaceAll('-', '');
 }
 
 export function isCheckinLockedFromDb(deps: Pick<CheckinSessionDeps, 'checkinLockStmt'>): boolean {
@@ -192,75 +177,6 @@ export function assertTerminalAssistPressAllowed(
     }
     throw domainError('OPS_SETTINGS_INVALID', { cause: error });
   }
-}
-
-export function createTicketInDb(
-  deps: CheckinSessionDeps,
-  input: CreateTicketInput,
-): { ticketId: string; number: number; createdAt: string } {
-  assertCheckInAllowed(deps, input.topicId);
-
-  const businessDay = deps.getBusinessDay();
-  const createdAt = deps.nowIso();
-  const updatedAt = createdAt;
-
-  const laneCode = input.laneCode;
-  const topicLabel = input.topicLabel.trim();
-  const nextNumberRow = deps.getNextTicketNumberStmt.get(businessDay, laneCode) as
-    | { next_number?: number }
-    | undefined;
-  const number = nextNumberRow?.next_number ?? 1;
-  const ticketId = `${compactBusinessDay(businessDay)}-${laneCode}-${padTicketNumber(number)}`;
-
-  const checkinPhone = input.checkinPhone?.trim() || null;
-  const checkinLocale = input.checkinLocale?.trim() || null;
-  deps.insertTicketStmt.run(
-    ticketId,
-    businessDay,
-    laneCode,
-    number,
-    input.topicId,
-    topicLabel,
-    input.destinationRoomId,
-    input.destinationRoomLabel,
-    input.authPath,
-    input.identityRef ?? null,
-    checkinPhone,
-    checkinLocale,
-    'waiting',
-    createdAt,
-    updatedAt,
-  );
-  deps.insertQueueEntryStmt.run(ticketId, createdAt);
-  deps.emitOutboxEvent('CheckinCreated', ticketId, {
-    ticketId,
-    topicId: input.topicId,
-    topicLabel,
-    authPath: input.authPath,
-    laneCode,
-    number,
-    createdAt,
-  });
-  return { ticketId, number, createdAt };
-}
-
-export function buildCreateTicketInput(
-  settings: OpsSettings,
-  input: CreateTicketCallerInput,
-): CreateTicketInput {
-  const destination = resolveDestinationRoomForTopic(settings, input.topicId);
-  if (!destination) {
-    throw new Error('OPS_SETTINGS_INVALID', {
-      cause: new Error('Check-in destination room could not be resolved.'),
-    });
-  }
-  return {
-    ...input,
-    laneCode: resolveTicketLaneCodeFromSettings(settings, input.topicId),
-    topicLabel: resolveTopicLabelFromSettings(settings, input.topicId),
-    destinationRoomId: destination.roomId,
-    destinationRoomLabel: destination.roomLabel,
-  };
 }
 
 export function getTicketPortalContextFromDb(

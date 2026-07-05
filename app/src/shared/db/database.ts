@@ -87,7 +87,6 @@ import {
   reassignRoomInDb,
   checkOutRoomInDb,
   getQueueSummaryFromDb,
-  listQueueFromDb,
   processExpiredRecallWindowsInDb,
   processExpiredRecallWindowForTicketInDb,
   recallTicketInDb,
@@ -137,7 +136,6 @@ import {
   setCheckinLockInDb,
   submitPatientSessionInDb,
   verifyTicketCodeInDb,
-import {
   assertTerminalAssistPressAllowed,
   type CheckinSessionDeps,
 } from './database-checkin-sessions.js';
@@ -799,16 +797,12 @@ export class CoreDatabase {
     return getFlowCoreRuntime(this.db);
   }
 
+  /** Visit-only queue (Phase A). Legacy ticket merge removed — Phase B drops tickets/queue_entries. */
   listQueue(): QueueTicketRow[] {
-    const ticketRows = listQueueFromDb(this.queueDeps());
-    const visitRows = listVisitQueueRows(
+    return listVisitQueueRows(
       getFlowCoreRuntime(this.db),
       this.getOpsSettings(),
       this.commonHelperDeps().getBusinessDay(),
-    );
-    const visitIds = new Set(visitRows.map((row) => row.id));
-    return [...ticketRows.filter((row) => !visitIds.has(row.id)), ...visitRows].sort((left, right) =>
-      left.createdAt.localeCompare(right.createdAt),
     );
   }
 
