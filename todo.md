@@ -118,7 +118,22 @@ Host-persistierte Queue-Felder (absent, recall, triage, callback, checkin_phone)
 - `setIdentityRef`: Host `identity_ref_override` (Core `patientDisplayName` unverändert)
 - Document-Count: `documents.ticket_id = visit.id` (Phase B2: FK-Migration)
 
-**Out of scope (B2/B3/B4):** DROP tickets, Portal auf Visits, documents FK, OpenAPI visitId, Day-Reset Visit-Count, Core absent-Status
+## Phase B2 — Portal/Dokumente auf visit_id (2026-07-05)
+
+End-to-end Visit-Patienten: Portal-Code → Session → Dokument-Upload; Identity + Document-Count über visits FK.
+
+- [x] Migration `ticket_id` → `visit_id` (patient_sessions, documents) via `ensureVisitPortalSchema`
+- [x] Statements: Portal-Context, Identity-View, Sessions, Documents auf visits + visit_host_state
+- [x] Check-in-Sessions: Visit-Status-Block (done/cancelled/no_show), visit_id in Sessions
+- [x] Documents: FK visits, `listDocumentsForTicket` via `visitExists`
+- [x] `countPendingDocumentsByVisitIds` auf `documents.visit_id`
+- [x] Tests: `database-visit-portal.test.ts` (Migration, Portal, Docs, Identity absent)
+- [ ] Manuell: Terminal Check-in → Portal Code → Upload; MFA Document-Badge + Preview
+
+**API:** DB intern `visit_id`, Response weiter `ticketId` (= visit.id) bis B4 OpenAPI-Breaking.
+
+**Out of scope (B3/B4):** DROP tickets, Legacy *InDb entfernen, OpenAPI visitId, Day-Reset Visit-Count
+
 
 ## Bewusst nicht hier
 

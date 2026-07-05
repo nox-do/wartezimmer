@@ -1,8 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import type { StatementSync } from 'node:sqlite';
-import { requireTicketFromDb } from './database-queue.js';
-import { isDocumentPreviewable } from '../documents/document-status-rules.js';
-import { buildDocumentFileNameFromBase } from '../documents/document-rename.js';
 import type {
   DocumentExportInfo,
   DocumentStatus,
@@ -10,6 +7,8 @@ import type {
   PatientDocumentRow,
   PatientSession,
 } from './db-types.js';
+import { isDocumentPreviewable } from '../documents/document-status-rules.js';
+import { buildDocumentFileNameFromBase } from '../documents/document-rename.js';
 import { domainError } from '../errors/domain-error.js';
 
 type DocumentStatements = {
@@ -20,8 +19,8 @@ type DocumentStatements = {
   getDocumentExportInfoStmt: StatementSync;
   updateDocumentStatusStmt: StatementSync;
   updateDocumentFileNameStmt: StatementSync;
-  listDocumentsByTicketStmt: StatementSync;
-  getTicketByIdStmt: StatementSync;
+  listDocumentsByVisitStmt: StatementSync;
+  visitExists: (visitId: string) => boolean;
 };
 
 type DocumentHelpers = {
@@ -230,8 +229,10 @@ export function listDocumentsForTicketFromDb(
   deps: DocumentDeps,
   ticketId: string,
 ): MfaDocumentRow[] {
-  requireTicketFromDb(deps, ticketId);
-  return deps.listDocumentsByTicketStmt.all(ticketId) as MfaDocumentRow[];
+  if (!deps.visitExists(ticketId)) {
+    throw domainError('TICKET_NOT_FOUND');
+  }
+  return deps.listDocumentsByVisitStmt.all(ticketId) as MfaDocumentRow[];
 }
 
 export function requestDocumentPreviewInDb(deps: DocumentDeps, documentId: string): MfaDocumentRow {

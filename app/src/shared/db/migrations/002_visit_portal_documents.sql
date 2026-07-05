@@ -1,0 +1,3 @@
+-- Phase B2: patient_sessions + documents reference visits(id).
+-- Applied at runtime via ensureVisitPortalSchema() (table rebuild for FK change).
+-- Existing rows: visit_id = former ticket_id (same UUID as Visit.id).

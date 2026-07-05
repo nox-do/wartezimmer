@@ -314,7 +314,7 @@ export function listVisitHostStatesForBusinessDay(
   return map;
 }
 
-/** Phase B2 migrates documents.ticket_id → visit_id; until then visit.id equals ticket_id. */
+/** Pending document count by visit_id (Phase B2 portal FK). */
 export function countPendingDocumentsByVisitIds(
   db: DatabaseSync,
   visitIds: string[],
@@ -331,15 +331,23 @@ export function countPendingDocumentsByVisitIds(
     return counts;
   }
 
+  const hasVisitIdColumn = db
+    .prepare('PRAGMA table_info(documents)')
+    .all()
+    .some((row) => (row as { name?: string }).name === 'visit_id');
+  if (!hasVisitIdColumn) {
+    return counts;
+  }
+
   const placeholders = visitIds.map(() => '?').join(', ');
   const statusPlaceholders = PENDING_DOCUMENT_STATUSES.map(() => '?').join(', ');
   const rows = db
     .prepare(
-      `SELECT ticket_id AS visitId, COUNT(1) AS pendingCount
+      `SELECT visit_id AS visitId, COUNT(1) AS pendingCount
       FROM documents
-      WHERE ticket_id IN (${placeholders})
+      WHERE visit_id IN (${placeholders})
         AND status IN (${statusPlaceholders})
-      GROUP BY ticket_id`,
+      GROUP BY visit_id`,
     )
     .all(...visitIds, ...PENDING_DOCUMENT_STATUSES) as Array<{
     visitId?: string;

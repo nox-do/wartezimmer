@@ -6,7 +6,6 @@ import {
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import {
   isSessionStatus,
-  isTicketStatus,
   type DayClosePhase,
   type OpsSettings,
   type PatientSession,
@@ -34,8 +33,8 @@ type CheckinSessionStatements = {
   updateCheckinLockStmt: StatementSync;
   getTicketIdentityViewStmt: StatementSync;
   insertPatientSessionStmt: StatementSync;
-  expireActiveSessionsByTicketStmt: StatementSync;
-  getActiveSessionByTicketStmt: StatementSync;
+  expireActiveSessionsByVisitStmt: StatementSync;
+  getActiveSessionByVisitStmt: StatementSync;
   getPatientSessionByTokenStmt: StatementSync;
   getTicketPortalContextStmt: StatementSync;
   touchPatientSessionStmt: StatementSync;
@@ -271,8 +270,8 @@ function findActiveTicketByCodeInDb(
     throw domainError('SESSION_INVALID_TICKET');
   }
 
-  const blockedStatuses: TicketStatus[] = ['done', 'cancelled'];
-  if (isTicketStatus(ticket.status) && blockedStatuses.includes(ticket.status)) {
+  const blockedVisitStatuses = new Set(['done', 'cancelled', 'no_show']);
+  if (blockedVisitStatuses.has(ticket.status)) {
     throw domainError('SESSION_TICKET_NOT_ACTIVE');
   }
 
@@ -299,7 +298,7 @@ export function resolvePatientSessionInDb(
   const { ticketId } = findActiveTicketByCodeInDb(deps, ticketCode);
 
   const timestamp = deps.nowIso();
-  deps.expireActiveSessionsByTicketStmt.run(timestamp, ticketId);
+  deps.expireActiveSessionsByVisitStmt.run(timestamp, ticketId);
 
   const createdAt = deps.nowIso();
   const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString();
@@ -319,7 +318,7 @@ export function resolvePatientSessionInDb(
   } catch (error) {
     if (
       error instanceof Error &&
-      error.message.includes('UNIQUE constraint failed: patient_sessions.ticket_id')
+      error.message.includes('UNIQUE constraint failed: patient_sessions.visit_id')
     ) {
       throw domainError('SESSION_ALREADY_ACTIVE');
     }
@@ -353,6 +352,7 @@ export function submitPatientSessionInDb(
   };
 }
 
+/** Identity view: Core visit fields + effective queue status via visit_host_state absent overlay. */
 export function getTicketIdentityViewFromDb(
   deps: CheckinSessionDeps,
   ticketIdRaw: string,

@@ -305,8 +305,8 @@ export class CoreDatabase {
   private readonly markOutboxDeadLetterStmt: StatementSync;
   private readonly getOutboxStatusStmt: StatementSync;
   private readonly insertPatientSessionStmt: StatementSync;
-  private readonly expireActiveSessionsByTicketStmt: StatementSync;
-  private readonly getActiveSessionByTicketStmt: StatementSync;
+  private readonly expireActiveSessionsByVisitStmt: StatementSync;
+  private readonly getActiveSessionByVisitStmt: StatementSync;
   private readonly getPatientSessionByTokenStmt: StatementSync;
   private readonly touchPatientSessionStmt: StatementSync;
   private readonly expirePatientSessionStmt: StatementSync;
@@ -318,7 +318,7 @@ export class CoreDatabase {
   private readonly getDocumentExportInfoStmt: StatementSync;
   private readonly updateDocumentStatusStmt: StatementSync;
   private readonly updateDocumentFileNameStmt: StatementSync;
-  private readonly listDocumentsByTicketStmt: StatementSync;
+  private readonly listDocumentsByVisitStmt: StatementSync;
 
   constructor(dbPath: string) {
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -332,6 +332,7 @@ export class CoreDatabase {
     ensureAuthSettingsSchema(this.db);
     ensureDemoContactLookupSeed(this.db);
     ensurePracticeProfileSeedFromEnv(this.db);
+    ensureFlowCoreSchema(this.db);
     ({
       findTicketByCodeStmt: this.findTicketByCodeStmt,
       getNextTicketNumberStmt: this.getNextTicketNumberStmt,
@@ -387,8 +388,8 @@ export class CoreDatabase {
       markOutboxDeadLetterStmt: this.markOutboxDeadLetterStmt,
       getOutboxStatusStmt: this.getOutboxStatusStmt,
       insertPatientSessionStmt: this.insertPatientSessionStmt,
-      expireActiveSessionsByTicketStmt: this.expireActiveSessionsByTicketStmt,
-      getActiveSessionByTicketStmt: this.getActiveSessionByTicketStmt,
+      expireActiveSessionsByVisitStmt: this.expireActiveSessionsByVisitStmt,
+      getActiveSessionByVisitStmt: this.getActiveSessionByVisitStmt,
       getPatientSessionByTokenStmt: this.getPatientSessionByTokenStmt,
       touchPatientSessionStmt: this.touchPatientSessionStmt,
       expirePatientSessionStmt: this.expirePatientSessionStmt,
@@ -400,7 +401,7 @@ export class CoreDatabase {
       getDocumentExportInfoStmt: this.getDocumentExportInfoStmt,
       updateDocumentStatusStmt: this.updateDocumentStatusStmt,
       updateDocumentFileNameStmt: this.updateDocumentFileNameStmt,
-      listDocumentsByTicketStmt: this.listDocumentsByTicketStmt,
+      listDocumentsByVisitStmt: this.listDocumentsByVisitStmt,
     } = prepareCoreDatabaseStatements(this.db));
 
     const setupStatements = createOpsSetupStatements(this.db);
@@ -413,7 +414,6 @@ export class CoreDatabase {
   }
 
   private initializeFlowCore(): void {
-    ensureFlowCoreSchema(this.db);
     syncFlowCoreCatalog(this.db, getOpsSettingsFromDb(buildOpsSettingsReadParams(this.getOpsSettingsStmt)));
   }
 
@@ -588,8 +588,8 @@ export class CoreDatabase {
       getTicketIdentityViewStmt: this.getTicketIdentityViewStmt,
       getTicketPortalContextStmt: this.getTicketPortalContextStmt,
       insertPatientSessionStmt: this.insertPatientSessionStmt,
-      expireActiveSessionsByTicketStmt: this.expireActiveSessionsByTicketStmt,
-      getActiveSessionByTicketStmt: this.getActiveSessionByTicketStmt,
+      expireActiveSessionsByVisitStmt: this.expireActiveSessionsByVisitStmt,
+      getActiveSessionByVisitStmt: this.getActiveSessionByVisitStmt,
       getPatientSessionByTokenStmt: this.getPatientSessionByTokenStmt,
       touchPatientSessionStmt: this.touchPatientSessionStmt,
       expirePatientSessionStmt: this.expirePatientSessionStmt,
@@ -613,8 +613,8 @@ export class CoreDatabase {
       getDocumentExportInfoStmt: this.getDocumentExportInfoStmt,
       updateDocumentStatusStmt: this.updateDocumentStatusStmt,
       updateDocumentFileNameStmt: this.updateDocumentFileNameStmt,
-      listDocumentsByTicketStmt: this.listDocumentsByTicketStmt,
-      getTicketByIdStmt: this.getTicketByIdStmt,
+      listDocumentsByVisitStmt: this.listDocumentsByVisitStmt,
+      visitExists: (visitId) => visitExistsInDb(this.db, visitId),
       nowIso: common.nowIso,
       emitOutboxEvent: common.emitOutboxEvent,
       requirePatientSession: (sessionToken) =>

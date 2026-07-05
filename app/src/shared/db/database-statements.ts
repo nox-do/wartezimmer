@@ -55,8 +55,8 @@ export type CoreDatabaseStatements = {
   markOutboxDeadLetterStmt: StatementSync;
   getOutboxStatusStmt: StatementSync;
   insertPatientSessionStmt: StatementSync;
-  expireActiveSessionsByTicketStmt: StatementSync;
-  getActiveSessionByTicketStmt: StatementSync;
+  expireActiveSessionsByVisitStmt: StatementSync;
+  getActiveSessionByVisitStmt: StatementSync;
   getPatientSessionByTokenStmt: StatementSync;
   touchPatientSessionStmt: StatementSync;
   expirePatientSessionStmt: StatementSync;
@@ -68,7 +68,7 @@ export type CoreDatabaseStatements = {
   getDocumentExportInfoStmt: StatementSync;
   updateDocumentStatusStmt: StatementSync;
   updateDocumentFileNameStmt: StatementSync;
-  listDocumentsByTicketStmt: StatementSync;
+  listDocumentsByVisitStmt: StatementSync;
 };
 
 export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseStatements {
@@ -77,6 +77,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
       `SELECT v.id, v.status
       FROM visits v
       WHERE v.queue_number_date = ? AND v.queue_lane_code = ? AND v.queue_sequence = ?
+        AND v.status NOT IN ('done', 'cancelled', 'no_show')
       ORDER BY v.created_at DESC
       LIMIT 1`,
     ),
@@ -89,9 +90,12 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ),
     getTicketPortalContextStmt: db.prepare(
-      `SELECT auth_path AS authPath, checkin_phone AS checkinPhone
-      FROM tickets
-      WHERE id = ?
+      `SELECT
+        v.auth_path AS authPath,
+        h.checkin_phone AS checkinPhone
+      FROM visits v
+      LEFT JOIN visit_host_state h ON h.visit_id = v.id
+      WHERE v.id = ?
       LIMIT 1`,
     ),
     insertQueueEntryStmt: db.prepare(
@@ -322,11 +326,11 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
       FROM tickets t
       JOIN queue_entries q ON q.ticket_id = t.id
       LEFT JOIN (
-        SELECT ticket_id, COUNT(1) AS pendingCount
+        SELECT visit_id, COUNT(1) AS pendingCount
         FROM documents
         WHERE status IN ('scan_clean', 'preview_requested', 'export_requested')
-        GROUP BY ticket_id
-      ) doc ON doc.ticket_id = t.id
+        GROUP BY visit_id
+      ) doc ON doc.visit_id = t.id
       WHERE t.business_day = ?
         AND t.status IN (
           'waiting',
@@ -414,18 +418,30 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     ),
     getTicketIdentityViewStmt: db.prepare(
       `SELECT
-        id AS ticketId,
-        lane_code AS laneCode,
-        number,
-        topic_id AS topicId,
-        topic_label AS topicLabel,
-        auth_path AS authPath,
-        identity_ref AS identityRef,
-        status,
-        created_at AS createdAt,
-        updated_at AS updatedAt
-      FROM tickets
-      WHERE id = ?
+        v.id AS ticketId,
+        v.queue_lane_code AS laneCode,
+        v.queue_sequence AS number,
+        v.primary_topic_id AS topicId,
+        COALESCE(top.name, v.primary_topic_id) AS topicLabel,
+        v.auth_path AS authPath,
+        COALESCE(h.identity_ref_override, p.display_name) AS identityRef,
+        CASE
+          WHEN h.absent_mode = 'wait_here' THEN 'absent_wait_here'
+          WHEN h.absent_mode = 'return_later' THEN 'absent_return_later'
+          WHEN v.status IN ('arrived', 'in_progress') THEN 'in_room'
+          WHEN v.status = 'called' THEN 'called'
+          WHEN v.status IN ('waiting', 'directed', 'blocked') THEN 'waiting'
+          WHEN v.status = 'done' THEN 'done'
+          WHEN v.status IN ('cancelled', 'no_show') THEN 'cancelled'
+          ELSE 'waiting'
+        END AS status,
+        COALESCE(v.checked_in_at, v.created_at) AS createdAt,
+        v.updated_at AS updatedAt
+      FROM visits v
+      LEFT JOIN patients p ON p.id = v.patient_id
+      LEFT JOIN visit_host_state h ON h.visit_id = v.id
+      LEFT JOIN topics top ON top.id = v.primary_topic_id
+      WHERE v.id = ?
       LIMIT 1`,
     ),
     updateTicketCalledStmt: db.prepare(
@@ -542,20 +558,20 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
       FROM outbox_events`,
     ),
     insertPatientSessionStmt: db.prepare(
-      `INSERT INTO patient_sessions (id, ticket_id, token_hash, status, expires_at, last_seen_at, created_at, updated_at)
+      `INSERT INTO patient_sessions (id, visit_id, token_hash, status, expires_at, last_seen_at, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
     ),
-    expireActiveSessionsByTicketStmt: db.prepare(
-      "UPDATE patient_sessions SET status = 'revoked', updated_at = ? WHERE ticket_id = ? AND status = 'active'",
+    expireActiveSessionsByVisitStmt: db.prepare(
+      "UPDATE patient_sessions SET status = 'revoked', updated_at = ? WHERE visit_id = ? AND status = 'active'",
     ),
-    getActiveSessionByTicketStmt: db.prepare(
+    getActiveSessionByVisitStmt: db.prepare(
       `SELECT id
       FROM patient_sessions
-      WHERE ticket_id = ? AND status = 'active' AND expires_at > ?
+      WHERE visit_id = ? AND status = 'active' AND expires_at > ?
       LIMIT 1`,
     ),
     getPatientSessionByTokenStmt: db.prepare(
-      `SELECT id AS sessionId, ticket_id AS ticketId, expires_at AS expiresAt, status, created_at AS createdAt
+      `SELECT id AS sessionId, visit_id AS ticketId, expires_at AS expiresAt, status, created_at AS createdAt
       FROM patient_sessions
       WHERE token_hash = ?
       LIMIT 1`,
@@ -571,13 +587,13 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     ),
     insertDocumentStmt: db.prepare(
       `INSERT INTO documents (
-        id, ticket_id, session_id, source, file_name, mime_type, size_bytes, status, template_id, template_version, created_at, updated_at
+        id, visit_id, session_id, source, file_name, mime_type, size_bytes, status, template_id, template_version, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ),
     listPatientDocumentsStmt: db.prepare(
       `SELECT
         id,
-        ticket_id AS ticketId,
+        visit_id AS ticketId,
         file_name AS fileName,
         mime_type AS mimeType,
         size_bytes AS sizeBytes,
@@ -594,7 +610,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     getDocumentByIdStmt: db.prepare(
       `SELECT
         id,
-        ticket_id AS ticketId,
+        visit_id AS ticketId,
         session_id AS sessionId,
         source,
         file_name AS fileName,
@@ -610,16 +626,18 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     getDocumentExportInfoStmt: db.prepare(
       `SELECT
         d.id AS documentId,
-        d.ticket_id AS ticketId,
-        t.lane_code AS ticketLaneCode,
-        t.number AS ticketNumber,
-        t.identity_ref AS identityRef,
+        d.visit_id AS ticketId,
+        v.queue_lane_code AS ticketLaneCode,
+        v.queue_sequence AS ticketNumber,
+        COALESCE(h.identity_ref_override, p.display_name) AS identityRef,
         d.file_name AS fileName,
         d.mime_type AS mimeType,
         d.source AS source,
         d.status AS status
       FROM documents d
-      JOIN tickets t ON t.id = d.ticket_id
+      JOIN visits v ON v.id = d.visit_id
+      LEFT JOIN patients p ON p.id = v.patient_id
+      LEFT JOIN visit_host_state h ON h.visit_id = v.id
       WHERE d.id = ?
       LIMIT 1`,
     ),
@@ -629,10 +647,10 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     updateDocumentFileNameStmt: db.prepare(
       'UPDATE documents SET file_name = ?, updated_at = ? WHERE id = ?',
     ),
-    listDocumentsByTicketStmt: db.prepare(
+    listDocumentsByVisitStmt: db.prepare(
       `SELECT
         id,
-        ticket_id AS ticketId,
+        visit_id AS ticketId,
         session_id AS sessionId,
         source,
         file_name AS fileName,
@@ -642,7 +660,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
         created_at AS createdAt,
         updated_at AS updatedAt
       FROM documents
-      WHERE ticket_id = ?
+      WHERE visit_id = ?
         AND status IN ('scan_clean', 'preview_requested', 'export_requested')
       ORDER BY created_at DESC`,
     ),
