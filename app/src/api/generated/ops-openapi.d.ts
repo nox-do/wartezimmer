@@ -1293,7 +1293,7 @@ export interface components {
        */
       dayClosePhase: 'open' | 'started';
       /** @description Tickets cleared during the reset (runtime queue data only). */
-      resetTicketCount: number;
+      resetVisitCount: number;
       /** Format: date-time */
       updatedAt: string;
       /** @description Business day stamped by the reset (BUSINESS_TZ). */
@@ -1311,7 +1311,7 @@ export interface components {
       confirmBusinessDayReset: true;
     };
     RuntimeResetPreviewResponse: {
-      ticketCount: number;
+      visitCount?: number;
       outboxEventCount: number;
       emergencyActive: boolean;
       preservedTopicCount: number;
@@ -1324,7 +1324,7 @@ export interface components {
       confirmPhrase: string;
     };
     RuntimeResetResponse: {
-      resetTicketCount: number;
+      resetVisitCount: number;
       clearedOutboxCount: number;
       emergencyCleared: boolean;
       preservedTopicCount: number;
@@ -1587,7 +1587,7 @@ export interface components {
       dayClosePhase: 'open' | 'started';
       lastDayStats: null | {
         businessDay: string;
-        totalTickets: number;
+        totalVisits: number;
         /** @description Longest wait from arrival until call (ms), among tickets that were called. */
         maxWaitMs: number;
         byTopic: {
@@ -1596,8 +1596,8 @@ export interface components {
           count: number;
         }[];
         /** @description Non-closed tickets from that business day (shown read-only before day start reset). */
-        openTickets: {
-          ticketId: string;
+        openVisits: {
+          visitId: string;
           laneCode: string;
           number: number;
           topicLabel: string;

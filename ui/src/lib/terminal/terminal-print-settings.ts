@@ -32,16 +32,16 @@ export function writeTerminalPrintWidthMm(widthMm: TerminalPrintWidthMm): void {
   localStorage.setItem(PRINT_WIDTH_STORAGE_KEY, String(widthMm));
 }
 
-export function shouldAutoPrintTicket(ticketId: string): boolean {
+export function shouldAutoPrintTicket(visitId: string): boolean {
   if (typeof sessionStorage === 'undefined') {
     return true;
   }
-  return sessionStorage.getItem(PRINTED_TICKET_SESSION_KEY) !== ticketId;
+  return sessionStorage.getItem(PRINTED_TICKET_SESSION_KEY) !== visitId;
 }
 
-export function markTicketPrinted(ticketId: string): void {
+export function markTicketPrinted(visitId: string): void {
   if (typeof sessionStorage === 'undefined') {
     return;
   }
-  sessionStorage.setItem(PRINTED_TICKET_SESSION_KEY, ticketId);
+  sessionStorage.setItem(PRINTED_TICKET_SESSION_KEY, visitId);
 }

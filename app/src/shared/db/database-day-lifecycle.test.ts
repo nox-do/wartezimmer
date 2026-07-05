@@ -95,7 +95,7 @@ test('resetBusinessDayInDb clears outbox and emits BusinessDayReset with visit c
 
   assert.equal(deps.outboxDeleted, true);
   assert.equal(result.dayClosePhase, 'open');
-  assert.equal(result.resetTicketCount, 2);
+  assert.equal(result.resetVisitCount, 2);
   assert.equal(result.lastResetBusinessDay, '2026-06-15');
   assert.equal(deps.row.locked, 1);
   assert.equal(deps.row.phase, 'open');

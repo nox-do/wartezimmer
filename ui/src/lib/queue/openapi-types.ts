@@ -14,8 +14,8 @@ export type TvQueueResponse = QueueSchemas['QueueListTvResponse'];
 export type RoomPanelItem = QueueSchemas['RoomPanelItem'];
 export type RoomPanelSnapshot = QueueSchemas['RoomPanelSnapshot'];
 export type QueueTransitionResponse = QueueSchemas['QueueTransitionResponse'];
-export type QueueTicketTransitionBody = QueueSchemas['QueueTicketTransitionRequest'];
-export type QueueTicketTransitionResponse = QueueSchemas['QueueTicketTransitionResponse'];
+export type QueueVisitTransitionBody = QueueSchemas['QueueVisitTransitionRequest'];
+export type QueueVisitTransitionResponse = QueueSchemas['QueueVisitTransitionResponse'];
 export type QueueRecallResponse = QueueSchemas['QueueRecallResponse'];
 export type QueueRecallRetryNotifyResponse = QueueSchemas['QueueRecallRetryNotifyResponse'];
 export type QueueCallbackPhoneResponse = QueueSchemas['QueueCallbackPhoneResponse'];
@@ -25,3 +25,8 @@ export type QueueTriageResponse = QueueSchemas['QueueTriageResponse'];
 export type TriageLevel = NonNullable<QueueItem['triageLevel']>;
 export type QueueSummaryResponse = QueueSchemas['QueueSummaryResponse'];
 export type AbsenceMode = QueueSchemas['AbsenceMode'];
+
+/** @deprecated Use QueueVisitTransitionBody */
+export type QueueTicketTransitionBody = QueueVisitTransitionBody;
+/** @deprecated Use QueueVisitTransitionResponse */
+export type QueueTicketTransitionResponse = QueueVisitTransitionResponse;

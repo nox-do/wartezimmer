@@ -111,7 +111,7 @@ export function intakePatientDocumentInDb(
 
   deps.insertDocumentStmt.run(
     documentId,
-    session.ticketId,
+    session.visitId,
     session.sessionId,
     input.source,
     input.fileName,
@@ -126,7 +126,7 @@ export function intakePatientDocumentInDb(
 
   deps.emitOutboxEvent('DocumentIntakeReceived', documentId, {
     documentId,
-    ticketId: session.ticketId,
+    visitId: session.visitId,
     sessionId: session.sessionId,
     source: input.source,
     templateId: templateId ?? undefined,
@@ -139,7 +139,7 @@ export function intakePatientDocumentInDb(
 
   return {
     id: documentId,
-    ticketId: session.ticketId,
+    visitId: session.visitId,
     fileName: input.fileName,
     mimeType: input.mimeType,
     sizeBytes: input.sizeBytes,
@@ -204,7 +204,7 @@ export function discardPatientDocumentInDb(
     eventType: 'DocumentLifecycleChanged',
     eventPayload: {
       documentId,
-      ticketId: session.ticketId,
+      visitId: session.visitId,
       sessionId: session.sessionId,
       fromStatus: document.status,
       toStatus: 'discarded_by_patient',
@@ -215,7 +215,7 @@ export function discardPatientDocumentInDb(
   const updated = requireDocumentByIdFromDb(deps, documentId);
   return {
     id: updated.id,
-    ticketId: updated.ticketId,
+    visitId: updated.visitId,
     fileName: updated.fileName,
     mimeType: updated.mimeType,
     sizeBytes: updated.sizeBytes,
@@ -227,12 +227,12 @@ export function discardPatientDocumentInDb(
 
 export function listDocumentsForTicketFromDb(
   deps: DocumentDeps,
-  ticketId: string,
+  visitId: string,
 ): MfaDocumentRow[] {
-  if (!deps.visitExists(ticketId)) {
+  if (!deps.visitExists(visitId)) {
     throw domainError('TICKET_NOT_FOUND');
   }
-  return deps.listDocumentsByVisitStmt.all(ticketId) as MfaDocumentRow[];
+  return deps.listDocumentsByVisitStmt.all(visitId) as MfaDocumentRow[];
 }
 
 export function requestDocumentPreviewInDb(deps: DocumentDeps, documentId: string): MfaDocumentRow {
@@ -251,7 +251,7 @@ export function requestDocumentPreviewInDb(deps: DocumentDeps, documentId: strin
     eventType: 'DocumentPreviewRequested',
     eventPayload: {
       documentId,
-      ticketId: document.ticketId,
+      visitId: document.visitId,
       sessionId: document.sessionId,
       updatedAt,
     },
@@ -280,7 +280,7 @@ export function discardDocumentByMfaInDb(deps: DocumentDeps, documentId: string)
     eventType: 'DocumentLifecycleChanged',
     eventPayload: {
       documentId,
-      ticketId: document.ticketId,
+      visitId: document.visitId,
       sessionId: document.sessionId,
       fromStatus: document.status,
       toStatus: 'discarded_by_mfa',
@@ -316,7 +316,7 @@ export function discardDocumentAfterMalwareInDb(
     eventType: 'DocumentLifecycleChanged',
     eventPayload: {
       documentId,
-      ticketId: document.ticketId,
+      visitId: document.visitId,
       sessionId: document.sessionId,
       fromStatus: document.status,
       toStatus: 'discarded_by_mfa',
@@ -340,7 +340,7 @@ export function requestDocumentExportInDb(deps: DocumentDeps, documentId: string
     eventType: 'DocumentLifecycleChanged',
     eventPayload: {
       documentId,
-      ticketId: document.ticketId,
+      visitId: document.visitId,
       sessionId: document.sessionId,
       fromStatus: document.status,
       toStatus: 'export_requested',
@@ -366,7 +366,7 @@ export function completeDocumentExportInDb(deps: DocumentDeps, documentId: strin
     eventType: 'DocumentLifecycleChanged',
     eventPayload: {
       documentId,
-      ticketId: document.ticketId,
+      visitId: document.visitId,
       sessionId: document.sessionId,
       fromStatus: document.status,
       toStatus: 'exported',
@@ -393,7 +393,7 @@ export function rollbackDocumentExportRequestInDb(
     eventType: 'DocumentLifecycleChanged',
     eventPayload: {
       documentId,
-      ticketId: document.ticketId,
+      visitId: document.visitId,
       sessionId: document.sessionId,
       fromStatus: 'export_requested',
       toStatus: 'preview_requested',
@@ -432,7 +432,7 @@ export function renameDocumentFileNameInDb(
   deps.updateDocumentFileNameStmt.run(nextFileName, updatedAt, documentId);
   deps.emitOutboxEvent('DocumentRenamed', documentId, {
     documentId,
-    ticketId: document.ticketId,
+    visitId: document.visitId,
     sessionId: document.sessionId,
     fromFileName: document.fileName,
     toFileName: nextFileName,

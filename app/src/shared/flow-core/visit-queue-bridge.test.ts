@@ -138,7 +138,7 @@ function setupVisitFlow(): {
   });
   const runtime = getFlowCoreRuntime(db);
   const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay(), db);
-  return { db, settings, visitId: created.ticketId, runtime, listQueue };
+  return { db, settings, visitId: created.visitId, runtime, listQueue };
 }
 
 test('visitStatusToTicketStatus maps arrived and in_progress to in_room', () => {

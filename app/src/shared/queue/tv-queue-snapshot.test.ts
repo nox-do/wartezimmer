@@ -125,7 +125,7 @@ function setupVisitFlow(): {
     identityRef: 'TV Snapshot Test',
   });
   const runtime = getFlowCoreRuntime(db);
-  return { db, settings, visitId: created.ticketId, runtime };
+  return { db, settings, visitId: created.visitId, runtime };
 }
 
 test('buildTvQueueSnapshotFromFlowCore shows waiting visit when explainVisibility allows', () => {

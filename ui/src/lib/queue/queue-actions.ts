@@ -6,18 +6,18 @@ import type {
   QueueIdentityRefResponse,
   QueueRecallResponse,
   QueueRecallRetryNotifyResponse,
-  QueueTicketTransitionBody,
+  QueueVisitTransitionBody,
   QueueTransitionResponse,
   QueueTriageResponse,
 } from './openapi-types';
 import type { RoomTarget } from './room-target';
 
-function ticketPath(ticketId: string, action: string): string {
-  return `/api/v1/queue/${encodeURIComponent(ticketId)}/${action}`;
+function visitPath(visitId: string, action: string): string {
+  return `/api/v1/queue/${encodeURIComponent(visitId)}/${action}`;
 }
 
-function transitionTicket<T>(ticketId: string, body: QueueTicketTransitionBody) {
-  return cookieAuthFetch<T>(ticketPath(ticketId, 'transition'), {
+function transitionVisit<T>(visitId: string, body: QueueVisitTransitionBody) {
+  return cookieAuthFetch<T>(visitPath(visitId, 'transition'), {
     method: 'POST',
     body: JSON.stringify(body),
   });
@@ -32,73 +32,73 @@ function roomActionBody(room?: RoomTarget) {
     : {};
 }
 
-export async function callTicket(ticketId: string, room?: RoomTarget) {
-  return transitionTicket<QueueTransitionResponse>(ticketId, {
+export async function callVisit(visitId: string, room?: RoomTarget) {
+  return transitionVisit<QueueTransitionResponse>(visitId, {
     type: 'call',
     ...roomActionBody(room),
   });
 }
 
-export async function checkInTicket(ticketId: string, room?: RoomTarget) {
-  return transitionTicket<QueueTransitionResponse>(ticketId, {
+export async function checkInVisit(visitId: string, room?: RoomTarget) {
+  return transitionVisit<QueueTransitionResponse>(visitId, {
     type: 'check_in_room',
     ...roomActionBody(room),
   });
 }
 
-export async function reassignRoomTicket(ticketId: string, room: RoomTarget) {
-  return transitionTicket<QueueTransitionResponse>(ticketId, {
+export async function reassignRoomVisit(visitId: string, room: RoomTarget) {
+  return transitionVisit<QueueTransitionResponse>(visitId, {
     type: 'reassign_room',
     roomId: room.roomId,
     roomLabel: room.roomLabel,
   });
 }
 
-export async function checkOutTicket(ticketId: string) {
-  return transitionTicket<QueueTransitionResponse>(ticketId, { type: 'check_out_room' });
+export async function checkOutVisit(visitId: string) {
+  return transitionVisit<QueueTransitionResponse>(visitId, { type: 'check_out_room' });
 }
 
-export async function cycleTriageTicket(ticketId: string) {
-  return transitionTicket<QueueTriageResponse>(ticketId, { type: 'cycle_triage' });
+export async function cycleTriageVisit(visitId: string) {
+  return transitionVisit<QueueTriageResponse>(visitId, { type: 'cycle_triage' });
 }
 
-export async function returnTicketToWaiting(ticketId: string) {
-  return transitionTicket<QueueTransitionResponse>(ticketId, { type: 'return_to_waiting' });
+export async function returnVisitToWaiting(visitId: string) {
+  return transitionVisit<QueueTransitionResponse>(visitId, { type: 'return_to_waiting' });
 }
 
-export async function recallTicket(ticketId: string) {
-  return transitionTicket<QueueRecallResponse>(ticketId, { type: 'recall' });
+export async function recallVisit(visitId: string) {
+  return transitionVisit<QueueRecallResponse>(visitId, { type: 'recall' });
 }
 
-export async function retryRecallNotifyTicket(ticketId: string) {
-  return transitionTicket<QueueRecallRetryNotifyResponse>(ticketId, {
+export async function retryRecallNotifyVisit(visitId: string) {
+  return transitionVisit<QueueRecallRetryNotifyResponse>(visitId, {
     type: 'retry_recall_notify',
   });
 }
 
-export async function clearCallbackPhoneTicket(ticketId: string) {
-  return cookieAuthFetch<QueueCallbackPhoneClearResponse>(ticketPath(ticketId, 'callback-phone'), {
+export async function clearCallbackPhoneVisit(visitId: string) {
+  return cookieAuthFetch<QueueCallbackPhoneClearResponse>(visitPath(visitId, 'callback-phone'), {
     method: 'DELETE',
   });
 }
 
-export async function setCallbackPhoneTicket(ticketId: string, callbackPhone: string) {
-  return cookieAuthFetch<QueueCallbackPhoneResponse>(ticketPath(ticketId, 'callback-phone'), {
+export async function setCallbackPhoneVisit(visitId: string, callbackPhone: string) {
+  return cookieAuthFetch<QueueCallbackPhoneResponse>(visitPath(visitId, 'callback-phone'), {
     method: 'PUT',
     body: JSON.stringify({ callbackPhone: callbackPhone.trim() }),
   });
 }
 
-export async function setIdentityRefTicket(ticketId: string, identityRef: string) {
-  return cookieAuthFetch<QueueIdentityRefResponse>(ticketPath(ticketId, 'identity-ref'), {
+export async function setIdentityRefVisit(visitId: string, identityRef: string) {
+  return cookieAuthFetch<QueueIdentityRefResponse>(visitPath(visitId, 'identity-ref'), {
     method: 'PATCH',
     body: JSON.stringify({ identityRef: identityRef.trim() }),
   });
 }
 
-export async function setAbsenceTicket(
-  ticketId: string,
+export async function setAbsenceVisit(
+  visitId: string,
   mode: Extract<AbsenceMode, 'wait_here' | 'return_later'> = 'wait_here',
 ) {
-  return transitionTicket<QueueTransitionResponse>(ticketId, { type: 'set_absence', mode });
+  return transitionVisit<QueueTransitionResponse>(visitId, { type: 'set_absence', mode });
 }

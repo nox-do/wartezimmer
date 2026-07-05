@@ -10,7 +10,7 @@ function job(seq: number, ticketCode: string): ReceiptPrintJob {
       topicLabel: 'Termin',
       printedAtLabel: '01.01.2026 10:00',
       kind: 'ticket',
-      ticketId: `ticket-${seq}`,
+      visitId: `ticket-${seq}`,
     },
   };
 }

@@ -12,7 +12,7 @@ import { PF_FLOW_SURFACE_TERMINAL } from './sync-catalog-from-ops-settings.js';
 export function createVisitCheckInInDb(
   deps: CheckinSessionDeps & { db: DatabaseSync },
   input: CreateTicketCallerInput,
-): { ticketId: string; number: number; createdAt: string } {
+): { visitId: string; number: number; createdAt: string } {
   assertCheckInAllowed(deps, input.topicId);
 
   const settings = deps.getOpsSettings();
@@ -46,7 +46,6 @@ export function createVisitCheckInInDb(
   );
 
   deps.emitOutboxEvent('CheckinCreated', visit.id, {
-    ticketId: visit.id,
     visitId: visit.id,
     topicId: input.topicId,
     topicLabel,
@@ -57,7 +56,7 @@ export function createVisitCheckInInDb(
   });
 
   return {
-    ticketId: visit.id,
+    visitId: visit.id,
     number: visit.queueSequence,
     createdAt,
   };

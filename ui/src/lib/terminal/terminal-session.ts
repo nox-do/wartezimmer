@@ -9,7 +9,7 @@ export type TerminalSession = {
 };
 
 export type TerminalCheckinResult = {
-  ticketId: string;
+  visitId: string;
   laneCode: string;
   number: number;
   topicId: string;

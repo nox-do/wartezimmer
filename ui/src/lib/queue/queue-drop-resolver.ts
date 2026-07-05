@@ -4,7 +4,7 @@ import type { RoomTarget } from './room-target';
 export type QueueDragZone = 'waiting' | 'active';
 
 export type QueueDragSource = {
-  ticketId: string;
+  visitId: string;
   zone: QueueDragZone;
   status: QueueStatus;
   roomId: string | null;
@@ -15,9 +15,9 @@ export type QueueDropTarget =
   | { kind: 'waiting' };
 
 export type QueueDropCommand =
-  | { action: 'call'; ticketId: string; room: RoomTarget }
-  | { action: 'reassign'; ticketId: string; room: RoomTarget }
-  | { action: 'return-to-waiting'; ticketId: string };
+  | { action: 'call'; visitId: string; room: RoomTarget }
+  | { action: 'reassign'; visitId: string; room: RoomTarget }
+  | { action: 'return-to-waiting'; visitId: string };
 
 function normalizeRoomId(roomId: string | null | undefined): string | null {
   const trimmed = roomId?.trim();
@@ -37,7 +37,7 @@ export function resolveQueueDrop(
     if (source.zone !== 'active') {
       return null;
     }
-    return { action: 'return-to-waiting', ticketId: source.ticketId };
+    return { action: 'return-to-waiting', visitId: source.visitId };
   }
 
   const targetRoom: RoomTarget = {
@@ -46,7 +46,7 @@ export function resolveQueueDrop(
   };
 
   if (source.zone === 'waiting') {
-    return { action: 'call', ticketId: source.ticketId, room: targetRoom };
+    return { action: 'call', visitId: source.visitId, room: targetRoom };
   }
 
   if (source.zone === 'active') {
@@ -54,18 +54,18 @@ export function resolveQueueDrop(
     if (sourceRoomId === target.roomId) {
       return null;
     }
-    return { action: 'reassign', ticketId: source.ticketId, room: targetRoom };
+    return { action: 'reassign', visitId: source.visitId, room: targetRoom };
   }
 
   return null;
 }
 
 export function queueDragSourceFromItem(
-  item: { ticketId: string; status: QueueStatus; roomId?: string | null },
+  item: { visitId: string; status: QueueStatus; roomId?: string | null },
   zone: QueueDragZone,
 ): QueueDragSource {
   return {
-    ticketId: item.ticketId,
+    visitId: item.visitId,
     zone,
     status: item.status,
     roomId: normalizeRoomId(item.roomId),

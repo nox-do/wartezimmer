@@ -10,7 +10,7 @@ import {
 
 const activeSession: PatientSession = {
   sessionId: 'session-1',
-  ticketId: 'ticket-1',
+  visitId: 'ticket-1',
   expiresAt: '2099-01-01T00:00:00.000Z',
   createdAt: '2026-01-01T00:00:00.000Z',
   status: 'active',

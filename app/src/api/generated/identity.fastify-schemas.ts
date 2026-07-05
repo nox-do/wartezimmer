@@ -348,22 +348,22 @@ export const POST_api_v1_identity_mfa_lookupResponse429 = {
   },
 } as const;
 
-export const GET_api_v1_identity_ticket_Params = {
+export const GET_api_v1_identity_visitId_Params = {
   type: 'object',
-  required: ['ticket'],
+  required: ['visitId'],
   additionalProperties: false,
   properties: {
-    ticket: {
+    visitId: {
       type: 'string',
       minLength: 1,
     },
   },
 } as const;
 
-export const GET_api_v1_identity_ticket_Response200 = {
+export const GET_api_v1_identity_visitId_Response200 = {
   type: 'object',
   required: [
-    'ticketId',
+    'visitId',
     'laneCode',
     'topicLabel',
     'number',
@@ -375,7 +375,7 @@ export const GET_api_v1_identity_ticket_Response200 = {
     'updatedAt',
   ],
   properties: {
-    ticketId: {
+    visitId: {
       type: 'string',
     },
     laneCode: {
@@ -410,7 +410,7 @@ export const GET_api_v1_identity_ticket_Response200 = {
   },
 } as const;
 
-export const GET_api_v1_identity_ticket_Response404 = {
+export const GET_api_v1_identity_visitId_Response404 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -491,7 +491,7 @@ export const identitySchemas = {
   POST_api_v1_identity_mfa_lookupResponse200,
   POST_api_v1_identity_mfa_lookupResponse400,
   POST_api_v1_identity_mfa_lookupResponse429,
-  GET_api_v1_identity_ticket_Params,
-  GET_api_v1_identity_ticket_Response200,
-  GET_api_v1_identity_ticket_Response404,
+  GET_api_v1_identity_visitId_Params,
+  GET_api_v1_identity_visitId_Response200,
+  GET_api_v1_identity_visitId_Response404,
 } as const;

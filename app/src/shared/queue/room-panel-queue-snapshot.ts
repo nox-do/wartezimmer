@@ -38,7 +38,7 @@ export type RoomPanelQueueSnapshot = {
     arrivedText: string;
   };
   items: Array<{
-    ticketId: string;
+    visitId: string;
     laneCode: string;
     number: number;
     status: 'called' | 'in_room';
@@ -102,7 +102,7 @@ function mapQueueRowToPanelItem(
     return null;
   }
   return {
-    ticketId: row.id,
+    visitId: row.id,
     laneCode: row.laneCode,
     number: row.number,
     status: row.status,

@@ -132,11 +132,11 @@ async function main() {
     },
     expectedStatus: 201,
   });
-  const ticketId = checkin.body?.ticketId;
-  assert(typeof ticketId === 'string' && ticketId.length > 0, 'Missing ticketId');
+  const visitId = checkin.body?.visitId;
+  assert(typeof visitId === 'string' && visitId.length > 0, 'Missing visitId');
 
   console.log('4b) wait_here + recall nutzt checkin_phone fuer SMS');
-  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`, {
+  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
     auth: mfaAuth,
     jsonBody: { type: 'set_absence', mode: 'wait_here' },
     expectedStatus: 200,
@@ -144,7 +144,7 @@ async function main() {
   const recallWaitHere = await requestJson(
     baseUrl,
     'POST',
-    `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`,
+    `/api/v1/queue/${encodeURIComponent(visitId)}/transition`,
     {
       auth: mfaAuth,
       jsonBody: { type: 'recall' },
@@ -160,14 +160,14 @@ async function main() {
     'Expected smsDispatch sent=true for wait_here recall',
   );
 
-  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`, {
+  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
     auth: mfaAuth,
     jsonBody: { type: 'return_to_waiting' },
     expectedStatus: 200,
   });
 
   console.log('5) wait_here + callback-phone + recall (MFA-Nummer)');
-  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`, {
+  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
     auth: mfaAuth,
     jsonBody: { type: 'set_absence', mode: 'wait_here' },
     expectedStatus: 200,
@@ -175,7 +175,7 @@ async function main() {
   await requestJson(
     baseUrl,
     'PUT',
-    `/api/v1/queue/${encodeURIComponent(ticketId)}/callback-phone`,
+    `/api/v1/queue/${encodeURIComponent(visitId)}/callback-phone`,
     {
       auth: mfaAuth,
       jsonBody: { callbackPhone: '4917612345678' },
@@ -185,7 +185,7 @@ async function main() {
   const recallSms = await requestJson(
     baseUrl,
     'POST',
-    `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`,
+    `/api/v1/queue/${encodeURIComponent(visitId)}/transition`,
     {
       auth: mfaAuth,
       jsonBody: { type: 'recall' },
@@ -196,14 +196,14 @@ async function main() {
   assert(recallSms.body?.smsDispatch?.sent === true, 'Expected mock smsDispatch sent=true');
 
   console.log('6) return-to-waiting (zurueck nach waiting)');
-  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`, {
+  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
     auth: mfaAuth,
     jsonBody: { type: 'return_to_waiting' },
     expectedStatus: 200,
   });
 
   console.log('7) wait_here + callback-phone erneut fuer WhatsApp-Fallback');
-  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`, {
+  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
     auth: mfaAuth,
     jsonBody: { type: 'set_absence', mode: 'wait_here' },
     expectedStatus: 200,
@@ -211,7 +211,7 @@ async function main() {
   await requestJson(
     baseUrl,
     'PUT',
-    `/api/v1/queue/${encodeURIComponent(ticketId)}/callback-phone`,
+    `/api/v1/queue/${encodeURIComponent(visitId)}/callback-phone`,
     {
       auth: mfaAuth,
       jsonBody: { callbackPhone: '4917612345678' },
@@ -223,7 +223,7 @@ async function main() {
   const recallWhatsApp = await requestJson(
     baseUrl,
     'POST',
-    `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`,
+    `/api/v1/queue/${encodeURIComponent(visitId)}/transition`,
     {
       auth: mfaAuth,
       jsonBody: { type: 'recall', notifyChannel: 'whatsapp' },

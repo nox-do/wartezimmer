@@ -2234,9 +2234,9 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["ticketId", "laneCode", "number", "queueStatus", "createdAt"],
+                  "required": ["visitId", "laneCode", "number", "queueStatus", "createdAt"],
                   "properties": {
-                    "ticketId": {
+                    "visitId": {
                       "type": "string",
                       "description": "Internal unique ticket id.",
                       "example": "20260530-A-001"
@@ -3586,13 +3586,13 @@
         }
       }
     },
-    "/api/v1/identity/{ticket}": {
+    "/api/v1/identity/{visitId}": {
       "get": {
         "summary": "Read identity-related ticket details for MFA context",
         "parameters": [
           {
             "in": "path",
-            "name": "ticket",
+            "name": "visitId",
             "required": true,
             "schema": {
               "type": "string",
@@ -3608,7 +3608,7 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "ticketId",
+                    "visitId",
                     "laneCode",
                     "topicLabel",
                     "number",
@@ -3620,7 +3620,7 @@
                     "updatedAt"
                   ],
                   "properties": {
-                    "ticketId": {
+                    "visitId": {
                       "type": "string"
                     },
                     "laneCode": {
@@ -3777,7 +3777,7 @@
                             "type": "object",
                             "additionalProperties": false,
                             "required": [
-                              "ticketId",
+                              "visitId",
                               "laneCode",
                               "number",
                               "topicId",
@@ -3789,7 +3789,7 @@
                               "needsAssistance"
                             ],
                             "properties": {
-                              "ticketId": {
+                              "visitId": {
                                 "type": "string",
                                 "example": "20260530-A-001"
                               },
@@ -4053,7 +4053,7 @@
                             "type": "object",
                             "additionalProperties": false,
                             "required": [
-                              "ticketId",
+                              "visitId",
                               "laneCode",
                               "number",
                               "status",
@@ -4061,7 +4061,7 @@
                               "roomLabel"
                             ],
                             "properties": {
-                              "ticketId": {
+                              "visitId": {
                                 "type": "string"
                               },
                               "laneCode": {
@@ -4196,7 +4196,7 @@
                   "type": "object",
                   "required": [
                     "resultType",
-                    "ticketId",
+                    "visitId",
                     "fromStatus",
                     "toStatus",
                     "updatedAt",
@@ -4208,7 +4208,7 @@
                       "type": "string",
                       "const": "transition"
                     },
-                    "ticketId": {
+                    "visitId": {
                       "type": "string"
                     },
                     "fromStatus": {
@@ -4495,13 +4495,13 @@
         }
       }
     },
-    "/api/v1/queue/{ticket}/transition": {
+    "/api/v1/queue/{visitId}/transition": {
       "post": {
         "summary": "Apply a typed workflow transition to a queue ticket",
         "parameters": [
           {
             "in": "path",
-            "name": "ticket",
+            "name": "visitId",
             "required": true,
             "schema": {
               "type": "string",
@@ -4576,7 +4576,7 @@
                       "type": "object",
                       "required": [
                         "resultType",
-                        "ticketId",
+                        "visitId",
                         "fromStatus",
                         "toStatus",
                         "updatedAt",
@@ -4588,7 +4588,7 @@
                           "type": "string",
                           "const": "transition"
                         },
-                        "ticketId": {
+                        "visitId": {
                           "type": "string"
                         },
                         "fromStatus": {
@@ -4632,13 +4632,13 @@
                     {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": ["resultType", "ticketId", "triageLevel", "updatedAt"],
+                      "required": ["resultType", "visitId", "triageLevel", "updatedAt"],
                       "properties": {
                         "resultType": {
                           "type": "string",
                           "const": "triage"
                         },
-                        "ticketId": {
+                        "visitId": {
                           "type": "string"
                         },
                         "triageLevel": {
@@ -4656,7 +4656,7 @@
                       "type": "object",
                       "required": [
                         "resultType",
-                        "ticketId",
+                        "visitId",
                         "fromStatus",
                         "toStatus",
                         "updatedAt",
@@ -4668,7 +4668,7 @@
                           "type": "string",
                           "const": "recall"
                         },
-                        "ticketId": {
+                        "visitId": {
                           "type": "string"
                         },
                         "fromStatus": {
@@ -4740,7 +4740,7 @@
                       "additionalProperties": false,
                       "required": [
                         "resultType",
-                        "ticketId",
+                        "visitId",
                         "returnUntil",
                         "recallNotifyErrorCode",
                         "smsDispatch"
@@ -4750,7 +4750,7 @@
                           "type": "string",
                           "const": "recall_notify_retry"
                         },
-                        "ticketId": {
+                        "visitId": {
                           "type": "string"
                         },
                         "returnUntil": {
@@ -5033,13 +5033,13 @@
         }
       }
     },
-    "/api/v1/queue/{ticket}/callback-phone": {
+    "/api/v1/queue/{visitId}/callback-phone": {
       "put": {
         "summary": "Set MFA callback phone for recall SMS (separate from terminal check-in phone)",
         "parameters": [
           {
             "in": "path",
-            "name": "ticket",
+            "name": "visitId",
             "required": true,
             "schema": {
               "type": "string",
@@ -5074,9 +5074,9 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["ticketId", "callbackPhone", "updatedAt"],
+                  "required": ["visitId", "callbackPhone", "updatedAt"],
                   "properties": {
-                    "ticketId": {
+                    "visitId": {
                       "type": "string"
                     },
                     "callbackPhone": {
@@ -5338,7 +5338,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "ticket",
+            "name": "visitId",
             "required": true,
             "schema": {
               "type": "string",
@@ -5354,9 +5354,9 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["ticketId", "updatedAt"],
+                  "required": ["visitId", "updatedAt"],
                   "properties": {
-                    "ticketId": {
+                    "visitId": {
                       "type": "string"
                     },
                     "updatedAt": {
@@ -5531,13 +5531,13 @@
         }
       }
     },
-    "/api/v1/queue/{ticket}/identity-ref": {
+    "/api/v1/queue/{visitId}/identity-ref": {
       "patch": {
         "summary": "Set MFA display name for a ticket without identity (manual entry in waiting list)",
         "parameters": [
           {
             "in": "path",
-            "name": "ticket",
+            "name": "visitId",
             "required": true,
             "schema": {
               "type": "string",
@@ -5572,9 +5572,9 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["ticketId", "identityRef", "updatedAt"],
+                  "required": ["visitId", "identityRef", "updatedAt"],
                   "properties": {
-                    "ticketId": {
+                    "visitId": {
                       "type": "string"
                     },
                     "identityRef": {
@@ -6493,7 +6493,7 @@
                         "type": "object",
                         "required": [
                           "id",
-                          "ticketId",
+                          "visitId",
                           "fileName",
                           "mimeType",
                           "sizeBytes",
@@ -6505,7 +6505,7 @@
                           "id": {
                             "type": "string"
                           },
-                          "ticketId": {
+                          "visitId": {
                             "type": "string"
                           },
                           "fileName": {
@@ -6969,7 +6969,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["sessionId", "sessionToken", "expiresAt", "ticketId"],
+                  "required": ["sessionId", "sessionToken", "expiresAt", "visitId"],
                   "properties": {
                     "sessionId": {
                       "type": "string"
@@ -6981,7 +6981,7 @@
                       "type": "string",
                       "format": "date-time"
                     },
-                    "ticketId": {
+                    "visitId": {
                       "type": "string"
                     }
                   }
@@ -7571,13 +7571,13 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["ok", "ticketId"],
+                  "required": ["ok", "visitId"],
                   "properties": {
                     "ok": {
                       "type": "boolean",
                       "const": true
                     },
-                    "ticketId": {
+                    "visitId": {
                       "type": "string"
                     }
                   }
@@ -7765,7 +7765,7 @@
                   "type": "object",
                   "required": [
                     "sessionId",
-                    "ticketId",
+                    "visitId",
                     "status",
                     "expiresAt",
                     "createdAt",
@@ -7776,7 +7776,7 @@
                     "sessionId": {
                       "type": "string"
                     },
-                    "ticketId": {
+                    "visitId": {
                       "type": "string"
                     },
                     "status": {
@@ -8036,7 +8036,7 @@
                   "type": "object",
                   "required": [
                     "id",
-                    "ticketId",
+                    "visitId",
                     "fileName",
                     "mimeType",
                     "sizeBytes",
@@ -8048,7 +8048,7 @@
                     "id": {
                       "type": "string"
                     },
-                    "ticketId": {
+                    "visitId": {
                       "type": "string"
                     },
                     "fileName": {
@@ -8267,7 +8267,7 @@
                         "type": "object",
                         "required": [
                           "id",
-                          "ticketId",
+                          "visitId",
                           "fileName",
                           "mimeType",
                           "sizeBytes",
@@ -8279,7 +8279,7 @@
                           "id": {
                             "type": "string"
                           },
-                          "ticketId": {
+                          "visitId": {
                             "type": "string"
                           },
                           "fileName": {
@@ -8421,7 +8421,7 @@
                   "type": "object",
                   "required": [
                     "id",
-                    "ticketId",
+                    "visitId",
                     "fileName",
                     "mimeType",
                     "sizeBytes",
@@ -8433,7 +8433,7 @@
                     "id": {
                       "type": "string"
                     },
-                    "ticketId": {
+                    "visitId": {
                       "type": "string"
                     },
                     "fileName": {
@@ -8784,7 +8784,7 @@
         }
       }
     },
-    "/api/v1/documents/{ticket}": {
+    "/api/v1/documents/{visitId}": {
       "get": {
         "summary": "List documents for MFA processing by ticket",
         "security": [
@@ -8795,7 +8795,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "ticket",
+            "name": "visitId",
             "required": true,
             "schema": {
               "type": "string",
@@ -8820,7 +8820,7 @@
                             "type": "object",
                             "required": [
                               "id",
-                              "ticketId",
+                              "visitId",
                               "fileName",
                               "mimeType",
                               "sizeBytes",
@@ -8832,7 +8832,7 @@
                               "id": {
                                 "type": "string"
                               },
-                              "ticketId": {
+                              "visitId": {
                                 "type": "string"
                               },
                               "fileName": {
@@ -8993,7 +8993,7 @@
                           "type": "object",
                           "required": [
                             "id",
-                            "ticketId",
+                            "visitId",
                             "fileName",
                             "mimeType",
                             "sizeBytes",
@@ -9005,7 +9005,7 @@
                             "id": {
                               "type": "string"
                             },
-                            "ticketId": {
+                            "visitId": {
                               "type": "string"
                             },
                             "fileName": {
@@ -9374,7 +9374,7 @@
                       "type": "object",
                       "required": [
                         "id",
-                        "ticketId",
+                        "visitId",
                         "fileName",
                         "mimeType",
                         "sizeBytes",
@@ -9386,7 +9386,7 @@
                         "id": {
                           "type": "string"
                         },
-                        "ticketId": {
+                        "visitId": {
                           "type": "string"
                         },
                         "fileName": {
@@ -9702,7 +9702,7 @@
                       "type": "object",
                       "required": [
                         "id",
-                        "ticketId",
+                        "visitId",
                         "fileName",
                         "mimeType",
                         "sizeBytes",
@@ -9714,7 +9714,7 @@
                         "id": {
                           "type": "string"
                         },
-                        "ticketId": {
+                        "visitId": {
                           "type": "string"
                         },
                         "fileName": {
@@ -9950,7 +9950,7 @@
                       "type": "object",
                       "required": [
                         "id",
-                        "ticketId",
+                        "visitId",
                         "fileName",
                         "mimeType",
                         "sizeBytes",
@@ -9962,7 +9962,7 @@
                         "id": {
                           "type": "string"
                         },
-                        "ticketId": {
+                        "visitId": {
                           "type": "string"
                         },
                         "fileName": {
@@ -13346,7 +13346,7 @@
                     "serverTime"
                   ],
                   "properties": {
-                    "ticketCount": {
+                    "visitCount": {
                       "type": "integer",
                       "minimum": 0
                     },
@@ -13411,7 +13411,7 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "resetTicketCount",
+                    "resetVisitCount",
                     "clearedOutboxCount",
                     "emergencyCleared",
                     "preservedTopicCount",
@@ -13424,7 +13424,7 @@
                     "sandboxRestartInitiated"
                   ],
                   "properties": {
-                    "resetTicketCount": {
+                    "resetVisitCount": {
                       "type": "integer",
                       "minimum": 0
                     },
@@ -13646,16 +13646,16 @@
                           "type": "object",
                           "required": [
                             "businessDay",
-                            "totalTickets",
+                            "totalVisits",
                             "maxWaitMs",
                             "byTopic",
-                            "openTickets"
+                            "openVisits"
                           ],
                           "properties": {
                             "businessDay": {
                               "type": "string"
                             },
-                            "totalTickets": {
+                            "totalVisits": {
                               "type": "integer"
                             },
                             "maxWaitMs": {
@@ -13680,13 +13680,13 @@
                                 }
                               }
                             },
-                            "openTickets": {
+                            "openVisits": {
                               "type": "array",
                               "description": "Non-closed tickets from that business day (shown read-only before day start reset).",
                               "items": {
                                 "type": "object",
                                 "required": [
-                                  "ticketId",
+                                  "visitId",
                                   "laneCode",
                                   "number",
                                   "topicLabel",
@@ -13694,7 +13694,7 @@
                                   "status"
                                 ],
                                 "properties": {
-                                  "ticketId": {
+                                  "visitId": {
                                     "type": "string"
                                   },
                                   "laneCode": {
@@ -13766,7 +13766,7 @@
                   "type": "object",
                   "required": [
                     "dayClosePhase",
-                    "resetTicketCount",
+                    "resetVisitCount",
                     "updatedAt",
                     "lastResetBusinessDay",
                     "sandboxRestartRequired",
@@ -13778,7 +13778,7 @@
                       "enum": ["open", "started"],
                       "description": "Always open after a successful business-day reset."
                     },
-                    "resetTicketCount": {
+                    "resetVisitCount": {
                       "type": "integer",
                       "description": "Tickets cleared during the reset (runtime queue data only)."
                     },
@@ -15068,11 +15068,11 @@
           }
         }
       },
-      "TicketCreated": {
+      "VisitCreated": {
         "type": "object",
-        "required": ["ticketId", "laneCode", "number", "queueStatus", "createdAt"],
+        "required": ["visitId", "laneCode", "number", "queueStatus", "createdAt"],
         "properties": {
-          "ticketId": {
+          "visitId": {
             "type": "string",
             "description": "Internal unique ticket id.",
             "example": "20260530-A-001"
@@ -15231,7 +15231,7 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "ticketId",
+          "visitId",
           "laneCode",
           "number",
           "topicId",
@@ -15243,7 +15243,7 @@
           "needsAssistance"
         ],
         "properties": {
-          "ticketId": {
+          "visitId": {
             "type": "string",
             "example": "20260530-A-001"
           },
@@ -15345,13 +15345,13 @@
       "QueueTriageResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["resultType", "ticketId", "triageLevel", "updatedAt"],
+        "required": ["resultType", "visitId", "triageLevel", "updatedAt"],
         "properties": {
           "resultType": {
             "type": "string",
             "const": "triage"
           },
-          "ticketId": {
+          "visitId": {
             "type": "string"
           },
           "triageLevel": {
@@ -15392,7 +15392,7 @@
         "additionalProperties": false,
         "required": [
           "resultType",
-          "ticketId",
+          "visitId",
           "returnUntil",
           "recallNotifyErrorCode",
           "smsDispatch"
@@ -15402,7 +15402,7 @@
             "type": "string",
             "const": "recall_notify_retry"
           },
-          "ticketId": {
+          "visitId": {
             "type": "string"
           },
           "returnUntil": {
@@ -15440,9 +15440,9 @@
       "QueueCallbackPhoneResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["ticketId", "callbackPhone", "updatedAt"],
+        "required": ["visitId", "callbackPhone", "updatedAt"],
         "properties": {
-          "ticketId": {
+          "visitId": {
             "type": "string"
           },
           "callbackPhone": {
@@ -15457,9 +15457,9 @@
       "QueueCallbackPhoneClearResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["ticketId", "updatedAt"],
+        "required": ["visitId", "updatedAt"],
         "properties": {
-          "ticketId": {
+          "visitId": {
             "type": "string"
           },
           "updatedAt": {
@@ -15471,9 +15471,9 @@
       "QueueIdentityRefResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["ticketId", "identityRef", "updatedAt"],
+        "required": ["visitId", "identityRef", "updatedAt"],
         "properties": {
-          "ticketId": {
+          "visitId": {
             "type": "string"
           },
           "identityRef": {
@@ -15504,7 +15504,7 @@
               "type": "object",
               "additionalProperties": false,
               "required": [
-                "ticketId",
+                "visitId",
                 "laneCode",
                 "number",
                 "topicId",
@@ -15516,7 +15516,7 @@
                 "needsAssistance"
               ],
               "properties": {
-                "ticketId": {
+                "visitId": {
                   "type": "string",
                   "example": "20260530-A-001"
                 },
@@ -15739,9 +15739,9 @@
       "RoomPanelItem": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["ticketId", "laneCode", "number", "status", "roomId", "roomLabel"],
+        "required": ["visitId", "laneCode", "number", "status", "roomId", "roomLabel"],
         "properties": {
-          "ticketId": {
+          "visitId": {
             "type": "string"
           },
           "laneCode": {
@@ -15823,9 +15823,9 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["ticketId", "laneCode", "number", "status", "roomId", "roomLabel"],
+              "required": ["visitId", "laneCode", "number", "status", "roomId", "roomLabel"],
               "properties": {
-                "ticketId": {
+                "visitId": {
                   "type": "string"
                 },
                 "laneCode": {
@@ -15886,7 +15886,7 @@
                   "type": "object",
                   "additionalProperties": false,
                   "required": [
-                    "ticketId",
+                    "visitId",
                     "laneCode",
                     "number",
                     "topicId",
@@ -15898,7 +15898,7 @@
                     "needsAssistance"
                   ],
                   "properties": {
-                    "ticketId": {
+                    "visitId": {
                       "type": "string",
                       "example": "20260530-A-001"
                     },
@@ -16141,9 +16141,9 @@
                 "items": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["ticketId", "laneCode", "number", "status", "roomId", "roomLabel"],
+                  "required": ["visitId", "laneCode", "number", "status", "roomId", "roomLabel"],
                   "properties": {
-                    "ticketId": {
+                    "visitId": {
                       "type": "string"
                     },
                     "laneCode": {
@@ -16221,9 +16221,9 @@
       },
       "QueueCallResponse": {
         "type": "object",
-        "required": ["ticketId", "fromStatus", "toStatus", "updatedAt", "roomId", "roomLabel"],
+        "required": ["visitId", "fromStatus", "toStatus", "updatedAt", "roomId", "roomLabel"],
         "properties": {
-          "ticketId": {
+          "visitId": {
             "type": "string"
           },
           "fromStatus": {
@@ -16282,7 +16282,7 @@
           }
         }
       },
-      "QueueTicketTransitionRequest": {
+      "QueueVisitTransitionRequest": {
         "type": "object",
         "additionalProperties": false,
         "required": ["type"],
@@ -16331,13 +16331,13 @@
           }
         }
       },
-      "QueueTicketTransitionResponse": {
+      "QueueVisitTransitionResponse": {
         "oneOf": [
           {
             "type": "object",
             "required": [
               "resultType",
-              "ticketId",
+              "visitId",
               "fromStatus",
               "toStatus",
               "updatedAt",
@@ -16349,7 +16349,7 @@
                 "type": "string",
                 "const": "transition"
               },
-              "ticketId": {
+              "visitId": {
                 "type": "string"
               },
               "fromStatus": {
@@ -16393,13 +16393,13 @@
           {
             "type": "object",
             "additionalProperties": false,
-            "required": ["resultType", "ticketId", "triageLevel", "updatedAt"],
+            "required": ["resultType", "visitId", "triageLevel", "updatedAt"],
             "properties": {
               "resultType": {
                 "type": "string",
                 "const": "triage"
               },
-              "ticketId": {
+              "visitId": {
                 "type": "string"
               },
               "triageLevel": {
@@ -16417,7 +16417,7 @@
             "type": "object",
             "required": [
               "resultType",
-              "ticketId",
+              "visitId",
               "fromStatus",
               "toStatus",
               "updatedAt",
@@ -16429,7 +16429,7 @@
                 "type": "string",
                 "const": "recall"
               },
-              "ticketId": {
+              "visitId": {
                 "type": "string"
               },
               "fromStatus": {
@@ -16501,7 +16501,7 @@
             "additionalProperties": false,
             "required": [
               "resultType",
-              "ticketId",
+              "visitId",
               "returnUntil",
               "recallNotifyErrorCode",
               "smsDispatch"
@@ -16511,7 +16511,7 @@
                 "type": "string",
                 "const": "recall_notify_retry"
               },
-              "ticketId": {
+              "visitId": {
                 "type": "string"
               },
               "returnUntil": {
@@ -16552,7 +16552,7 @@
         "type": "object",
         "required": [
           "resultType",
-          "ticketId",
+          "visitId",
           "fromStatus",
           "toStatus",
           "updatedAt",
@@ -16564,7 +16564,7 @@
             "type": "string",
             "const": "transition"
           },
-          "ticketId": {
+          "visitId": {
             "type": "string"
           },
           "fromStatus": {
@@ -16609,7 +16609,7 @@
         "type": "object",
         "required": [
           "resultType",
-          "ticketId",
+          "visitId",
           "fromStatus",
           "toStatus",
           "updatedAt",
@@ -16621,7 +16621,7 @@
             "type": "string",
             "const": "recall"
           },
-          "ticketId": {
+          "visitId": {
             "type": "string"
           },
           "fromStatus": {
@@ -16716,7 +16716,7 @@
         "type": "object",
         "required": [
           "id",
-          "ticketId",
+          "visitId",
           "fileName",
           "mimeType",
           "sizeBytes",
@@ -16728,7 +16728,7 @@
           "id": {
             "type": "string"
           },
-          "ticketId": {
+          "visitId": {
             "type": "string"
           },
           "fileName": {
@@ -16759,7 +16759,7 @@
             "type": "object",
             "required": [
               "id",
-              "ticketId",
+              "visitId",
               "fileName",
               "mimeType",
               "sizeBytes",
@@ -16771,7 +16771,7 @@
               "id": {
                 "type": "string"
               },
-              "ticketId": {
+              "visitId": {
                 "type": "string"
               },
               "fileName": {
@@ -17017,7 +17017,7 @@
               "type": "object",
               "required": [
                 "id",
-                "ticketId",
+                "visitId",
                 "fileName",
                 "mimeType",
                 "sizeBytes",
@@ -17029,7 +17029,7 @@
                 "id": {
                   "type": "string"
                 },
-                "ticketId": {
+                "visitId": {
                   "type": "string"
                 },
                 "fileName": {
@@ -17067,7 +17067,7 @@
               "type": "object",
               "required": [
                 "id",
-                "ticketId",
+                "visitId",
                 "fileName",
                 "mimeType",
                 "sizeBytes",
@@ -17079,7 +17079,7 @@
                 "id": {
                   "type": "string"
                 },
-                "ticketId": {
+                "visitId": {
                   "type": "string"
                 },
                 "fileName": {
@@ -17119,7 +17119,7 @@
                   "type": "object",
                   "required": [
                     "id",
-                    "ticketId",
+                    "visitId",
                     "fileName",
                     "mimeType",
                     "sizeBytes",
@@ -17131,7 +17131,7 @@
                     "id": {
                       "type": "string"
                     },
-                    "ticketId": {
+                    "visitId": {
                       "type": "string"
                     },
                     "fileName": {
@@ -17182,7 +17182,7 @@
                 "type": "object",
                 "required": [
                   "id",
-                  "ticketId",
+                  "visitId",
                   "fileName",
                   "mimeType",
                   "sizeBytes",
@@ -17194,7 +17194,7 @@
                   "id": {
                     "type": "string"
                   },
-                  "ticketId": {
+                  "visitId": {
                     "type": "string"
                   },
                   "fileName": {
@@ -17289,7 +17289,7 @@
         "type": "object",
         "required": [
           "dayClosePhase",
-          "resetTicketCount",
+          "resetVisitCount",
           "updatedAt",
           "lastResetBusinessDay",
           "sandboxRestartRequired",
@@ -17301,7 +17301,7 @@
             "enum": ["open", "started"],
             "description": "Always open after a successful business-day reset."
           },
-          "resetTicketCount": {
+          "resetVisitCount": {
             "type": "integer",
             "description": "Tickets cleared during the reset (runtime queue data only)."
           },
@@ -17347,7 +17347,7 @@
           "serverTime"
         ],
         "properties": {
-          "ticketCount": {
+          "visitCount": {
             "type": "integer",
             "minimum": 0
           },
@@ -17390,7 +17390,7 @@
       "RuntimeResetResponse": {
         "type": "object",
         "required": [
-          "resetTicketCount",
+          "resetVisitCount",
           "clearedOutboxCount",
           "emergencyCleared",
           "preservedTopicCount",
@@ -17403,7 +17403,7 @@
           "sandboxRestartInitiated"
         ],
         "properties": {
-          "resetTicketCount": {
+          "resetVisitCount": {
             "type": "integer",
             "minimum": 0
           },
@@ -18559,12 +18559,12 @@
               },
               {
                 "type": "object",
-                "required": ["businessDay", "totalTickets", "maxWaitMs", "byTopic", "openTickets"],
+                "required": ["businessDay", "totalVisits", "maxWaitMs", "byTopic", "openVisits"],
                 "properties": {
                   "businessDay": {
                     "type": "string"
                   },
-                  "totalTickets": {
+                  "totalVisits": {
                     "type": "integer"
                   },
                   "maxWaitMs": {
@@ -18589,13 +18589,13 @@
                       }
                     }
                   },
-                  "openTickets": {
+                  "openVisits": {
                     "type": "array",
                     "description": "Non-closed tickets from that business day (shown read-only before day start reset).",
                     "items": {
                       "type": "object",
                       "required": [
-                        "ticketId",
+                        "visitId",
                         "laneCode",
                         "number",
                         "topicLabel",
@@ -18603,7 +18603,7 @@
                         "status"
                       ],
                       "properties": {
-                        "ticketId": {
+                        "visitId": {
                           "type": "string"
                         },
                         "laneCode": {

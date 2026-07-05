@@ -3,7 +3,7 @@ import type { QueueItem, QueueResponse } from '$lib/queue/types';
 
 export type MfaDocumentContext = Pick<
   QueueItem,
-  'ticketId' | 'laneCode' | 'number' | 'topicId' | 'topicLabel'
+  'visitId' | 'laneCode' | 'number' | 'topicId' | 'topicLabel'
 >;
 
 export type MfaPreviewContext = MfaDocumentContext & {
@@ -38,7 +38,7 @@ export function readMfaDocumentContext(): MfaDocumentContext | null {
     const number = parseNumber(parsed.number);
     const laneCode = typeof parsed.laneCode === 'string' ? parsed.laneCode : parsed.prefix;
     if (
-      typeof parsed.ticketId !== 'string' ||
+      typeof parsed.visitId !== 'string' ||
       typeof laneCode !== 'string' ||
       typeof parsed.topicId !== 'string' ||
       number == null
@@ -46,7 +46,7 @@ export function readMfaDocumentContext(): MfaDocumentContext | null {
       return null;
     }
     return {
-      ticketId: parsed.ticketId,
+      visitId: parsed.visitId,
       laneCode,
       number,
       topicId: parsed.topicId,
@@ -63,7 +63,7 @@ export function rememberMfaDocumentContext(item: MfaDocumentContext): void {
 
 function queueItemToContext(item: QueueItem): MfaDocumentContext {
   return {
-    ticketId: item.ticketId,
+    visitId: item.visitId,
     laneCode: item.laneCode,
     number: item.number,
     topicId: item.topicId,
@@ -72,16 +72,16 @@ function queueItemToContext(item: QueueItem): MfaDocumentContext {
 }
 
 export async function resolveMfaDocumentContext(
-  ticketIdOverride?: string | null,
+  visitIdOverride?: string | null,
 ): Promise<MfaDocumentContext | null> {
-  const ticketId =
-    ticketIdOverride?.trim() ||
-    new URL(window.location.href).searchParams.get('ticketId')?.trim() ||
+  const visitId =
+    visitIdOverride?.trim() ||
+    new URL(window.location.href).searchParams.get('visitId')?.trim() ||
     null;
-  if (ticketId) {
+  if (visitId) {
     const result = await cookieAuthFetch<QueueResponse>('/api/v1/queue');
     if (result.ok) {
-      const item = result.data.items.find((entry) => entry.ticketId === ticketId);
+      const item = result.data.items.find((entry) => entry.visitId === visitId);
       if (item) {
         const context = queueItemToContext(item);
         storeMfaDocumentContext(context);
@@ -90,7 +90,7 @@ export async function resolveMfaDocumentContext(
     }
 
     const stored = readMfaDocumentContext();
-    if (stored?.ticketId === ticketId) {
+    if (stored?.visitId === visitId) {
       return stored;
     }
     return null;
@@ -99,13 +99,13 @@ export async function resolveMfaDocumentContext(
   return readMfaDocumentContext();
 }
 
-/** Build `/mfa` search from legacy `/mfa/documents` URL, filling ticketId from session when missing. */
+/** Build `/mfa` search from legacy `/mfa/documents` URL, filling visitId from session when missing. */
 export function buildMfaDocumentDeepLinkSearch(rawSearch: string): string {
   const params = new URLSearchParams(rawSearch);
-  if (!params.get('ticketId')?.trim()) {
+  if (!params.get('visitId')?.trim()) {
     const stored = readMfaDocumentContext();
     if (stored) {
-      params.set('ticketId', stored.ticketId);
+      params.set('visitId', stored.visitId);
     }
   }
   const next = params.toString();

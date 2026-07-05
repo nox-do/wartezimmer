@@ -7,7 +7,7 @@ export type BusinessDayTopicCount = {
 };
 
 export type BusinessDayOpenTicket = {
-  ticketId: string;
+  visitId: string;
   laneCode: string;
   number: number;
   topicLabel: string;

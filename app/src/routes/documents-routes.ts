@@ -15,7 +15,7 @@ const mfaDocumentSchema = {
   type: 'object',
   required: [
     'id',
-    'ticketId',
+    'visitId',
     'sessionId',
     'source',
     'fileName',
@@ -27,7 +27,7 @@ const mfaDocumentSchema = {
   ],
   properties: {
     id: { type: 'string' },
-    ticketId: { type: 'string' },
+    visitId: { type: 'string' },
     sessionId: { type: 'string' },
     source: { type: 'string', enum: ['upload', 'form'] },
     fileName: { type: 'string' },
@@ -84,16 +84,16 @@ function withSecuredEmbedUrl<
 }
 
 export function registerDocumentRoutes(app: FastifyInstance, db: CoreDatabase): void {
-  app.get<{ Params: { ticket: string } }>(
-    '/api/v1/documents/:ticket',
+  app.get<{ Params: { visitId: string } }>(
+    '/api/v1/documents/:visitId',
     {
       schema: {
         params: {
           type: 'object',
-          required: ['ticket'],
+          required: ['visitId'],
           additionalProperties: false,
           properties: {
-            ticket: { type: 'string', minLength: 1 },
+            visitId: { type: 'string', minLength: 1 },
           },
         },
         response: {
@@ -109,13 +109,13 @@ export function registerDocumentRoutes(app: FastifyInstance, db: CoreDatabase): 
       },
     },
     async (request, reply) => {
-      const ticketId = request.params.ticket.trim();
+      const visitId = request.params.visitId.trim();
       try {
-        return { items: db.listDocumentsForTicket(ticketId) };
+        return { items: db.listDocumentsForTicket(visitId) };
       } catch (error) {
         if (
           sendResolvedDomainError(reply, error, {
-            byApiCode: { TICKET_NOT_FOUND: `Ticket ${ticketId} wurde nicht gefunden.` },
+            byApiCode: { TICKET_NOT_FOUND: `Ticket ${visitId} wurde nicht gefunden.` },
           })
         ) {
           return;

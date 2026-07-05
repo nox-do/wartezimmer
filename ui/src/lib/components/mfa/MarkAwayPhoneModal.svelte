@@ -7,7 +7,7 @@
   import { compactPhoneForApi, formatStoredPhoneForDisplay } from '$lib/phone/format-phone-display';
 
   interface TicketRef {
-    ticketId: string;
+    visitId: string;
     laneCode: string;
     number: number;
     initialPhone?: string;

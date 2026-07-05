@@ -38,7 +38,7 @@ type DayLifecycleDeps = DayLifecycleStatements & DayLifecycleHelpers;
 
 type DayResetResult = {
   dayClosePhase: DayClosePhase;
-  resetTicketCount: number;
+  resetVisitCount: number;
   updatedAt: string;
   lastResetBusinessDay: string;
   emergencyCleared: boolean;
@@ -89,14 +89,13 @@ function executeBusinessDayReset(deps: DayLifecycleDeps, resetVisitCount: number
   deps.emitOutboxEvent('BusinessDayReset', 'ops', {
     updatedAt,
     dayClosePhase: 'open',
-    resetTicketCount: resetVisitCount,
     resetVisitCount,
     lastResetBusinessDay,
     sandboxRestartRequired: true,
   });
   return {
     dayClosePhase: 'open',
-    resetTicketCount: resetVisitCount,
+    resetVisitCount,
     updatedAt,
     lastResetBusinessDay,
     emergencyCleared: emergencyBefore.active,

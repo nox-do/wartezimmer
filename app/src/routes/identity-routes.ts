@@ -206,20 +206,20 @@ export function registerIdentityRoutes(app: FastifyInstance, db: CoreDatabase): 
     },
   );
 
-  app.get<{ Params: { ticket: string } }>(
-    '/api/v1/identity/:ticket',
+  app.get<{ Params: { visitId: string } }>(
+    '/api/v1/identity/:visitId',
     {
       schema: {
-        params: identitySchemas.GET_api_v1_identity_ticket_Params,
+        params: identitySchemas.GET_api_v1_identity_visitId_Params,
         response: {
-          200: identitySchemas.GET_api_v1_identity_ticket_Response200,
+          200: identitySchemas.GET_api_v1_identity_visitId_Response200,
           404: identityErrorResponse,
         },
       },
     },
     async (request, reply) => {
       try {
-        return db.getTicketIdentityView(request.params.ticket);
+        return db.getTicketIdentityView(request.params.visitId);
       } catch (error) {
         if (sendResolvedDomainError(reply, error)) {
           return;

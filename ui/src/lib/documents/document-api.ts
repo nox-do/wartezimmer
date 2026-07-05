@@ -13,9 +13,9 @@ function postDocumentAction<T>(documentId: string, action: string, body: object 
   });
 }
 
-export async function fetchDocumentsForTicket(ticketId: string) {
+export async function fetchDocumentsForVisit(visitId: string) {
   return cookieAuthFetch<MfaDocumentListResponse>(
-    `/api/v1/documents/${encodeURIComponent(ticketId)}`,
+    `/api/v1/documents/${encodeURIComponent(visitId)}`,
   );
 }
 

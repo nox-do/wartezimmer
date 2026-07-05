@@ -5,7 +5,7 @@ export type MfaQueueSnapshot = {
   revision: number;
   view: 'mfa';
   items: Array<{
-    ticketId: string;
+    visitId: string;
     laneCode: string;
     number: number;
     topicId: string;
@@ -49,7 +49,7 @@ export function buildMfaQueueSnapshot(
     const returnUntil = item.returnUntil?.trim() || null;
 
     return {
-      ticketId: item.id,
+      visitId: item.id,
       laneCode: item.laneCode,
       number: item.number,
       topicId: item.topicId,

@@ -93,7 +93,7 @@
       waiting={mfaZones.waiting}
       rooms={mfaPracticeContext.practiceRooms}
       callRoomOverrideId={mfaPracticeContext.callRoomOverrideId}
-      busyTicketId={mfaQueueActions.busyTicketId}
+      busyVisitId={mfaQueueActions.busyVisitId}
       nowMs={mfaQueueDisplay.countdownNowMs}
       callAnnouncementReachable={callAnnouncementReachable}
       onCall={callMfaTicket}
@@ -101,7 +101,7 @@
       onReassign={handleMfaReassign}
       onCheckOut={handleMfaCheckOut}
       onReturnToWaiting={returnMfaTicketToWaiting}
-      onRecall={(ticketId) => void handleMfaRecall(ticketId)}
+      onRecall={(visitId) => void handleMfaRecall(visitId)}
       onFixRecallNotify={handleMfaFixRecallNotify}
       onMarkAway={handleMfaMarkAway}
       onOpenDocuments={openMfaDocumentPreview}
@@ -131,13 +131,13 @@
     onConfirm={() => void confirmMfaDayStart()}
   />
 
-  {@const phoneModalTicket = mfaQueueActions.fixRecallNotifyTicket ?? mfaQueueActions.markAwayTicket}
-  {@const phoneModalPurpose = mfaQueueActions.fixRecallNotifyTicket ? 'fixRecallNotify' : 'markAway'}
+  {@const phoneModalVisit = mfaQueueActions.fixRecallNotifyVisit ?? mfaQueueActions.markAwayVisit}
+  {@const phoneModalPurpose = mfaQueueActions.fixRecallNotifyVisit ? 'fixRecallNotify' : 'markAway'}
 
   <MarkAwayPhoneModal
-    ticket={phoneModalTicket}
+    ticket={phoneModalVisit}
     purpose={phoneModalPurpose}
-    busy={phoneModalTicket != null && mfaQueueActions.busyTicketId === phoneModalTicket.ticketId}
+    busy={phoneModalVisit != null && mfaQueueActions.busyVisitId === phoneModalVisit.visitId}
     onConfirm={(phoneNumber) =>
       phoneModalPurpose === 'fixRecallNotify'
         ? void confirmMfaFixRecallNotifyWithPhone(phoneNumber)
@@ -152,17 +152,17 @@
   />
 
   <ReassignRoomModal
-    ticket={mfaQueueActions.reassignTicket}
+    ticket={mfaQueueActions.reassignVisit}
     rooms={mfaPracticeContext.practiceRooms}
     activeItems={mfaZones.active}
-    busy={mfaQueueActions.reassignTicket != null && mfaQueueActions.busyTicketId === mfaQueueActions.reassignTicket.ticketId}
+    busy={mfaQueueActions.reassignVisit != null && mfaQueueActions.busyVisitId === mfaQueueActions.reassignVisit.visitId}
     onConfirm={(roomId, roomLabel) => void confirmMfaReassign(roomId, roomLabel)}
     onCancel={cancelMfaReassign}
   />
 
   <CheckOutConfirmModal
-    ticket={mfaQueueActions.checkOutTicket}
-    busy={mfaQueueActions.checkOutTicket != null && mfaQueueActions.busyTicketId === mfaQueueActions.checkOutTicket.ticketId}
+    ticket={mfaQueueActions.checkOutVisit}
+    busy={mfaQueueActions.checkOutVisit != null && mfaQueueActions.busyVisitId === mfaQueueActions.checkOutVisit.visitId}
     onConfirm={() => void confirmMfaCheckOut()}
     onCancel={cancelMfaCheckOut}
   />

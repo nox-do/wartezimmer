@@ -56,7 +56,7 @@ export type RuntimeResetPreview = {
 };
 
 export type RuntimeResetResult = {
-  resetTicketCount: number;
+  resetVisitCount: number;
   clearedOutboxCount: number;
   emergencyCleared: boolean;
   preservedTopicCount: number;
@@ -204,7 +204,7 @@ export function executeRuntimeResetInDb(deps: RuntimeResetDeps): RuntimeResetRes
 
   deps.emitOutboxEvent('OpsRuntimeReset', 'ops', {
     updatedAt,
-    resetTicketCount: resetVisitCount,
+    resetVisitCount: resetVisitCount,
     resetVisitCount,
     clearedOutboxCount,
     emergencyCleared: emergencyBefore.active,
@@ -214,7 +214,7 @@ export function executeRuntimeResetInDb(deps: RuntimeResetDeps): RuntimeResetRes
   });
 
   return {
-    resetTicketCount: resetVisitCount,
+    resetVisitCount: resetVisitCount,
     clearedOutboxCount,
     emergencyCleared: emergencyBefore.active,
     preservedTopicCount: settings.topics.length,

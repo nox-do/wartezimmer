@@ -55,19 +55,19 @@ async function requestJson(
   return { status: response.status, body };
 }
 
-async function finishTicketToDone(baseUrl, mfaAuth, ticketId, status) {
+async function finishTicketToDone(baseUrl, mfaAuth, visitId, status) {
   if (status === 'waiting') {
-    await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`, {
+    await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
       auth: mfaAuth,
       jsonBody: { type: 'call' },
       expectedStatus: 200,
     });
-    await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`, {
+    await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
       auth: mfaAuth,
       jsonBody: { type: 'check_in_room' },
       expectedStatus: 200,
     });
-    await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`, {
+    await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
       auth: mfaAuth,
       jsonBody: { type: 'check_out_room' },
       expectedStatus: 200,
@@ -76,12 +76,12 @@ async function finishTicketToDone(baseUrl, mfaAuth, ticketId, status) {
   }
 
   if (status === 'called') {
-    await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`, {
+    await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
       auth: mfaAuth,
       jsonBody: { type: 'check_in_room' },
       expectedStatus: 200,
     });
-    await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`, {
+    await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
       auth: mfaAuth,
       jsonBody: { type: 'check_out_room' },
       expectedStatus: 200,
@@ -90,7 +90,7 @@ async function finishTicketToDone(baseUrl, mfaAuth, ticketId, status) {
   }
 
   if (status === 'in_room') {
-    await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`, {
+    await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
       auth: mfaAuth,
       jsonBody: { type: 'check_out_room' },
       expectedStatus: 200,
@@ -105,8 +105,8 @@ async function drainVisibleQueue(baseUrl, mfaAuth) {
   });
   const items = Array.isArray(queue.body?.items) ? queue.body.items : [];
   for (const item of items) {
-    if (typeof item.ticketId === 'string' && typeof item.status === 'string') {
-      await finishTicketToDone(baseUrl, mfaAuth, item.ticketId, item.status);
+    if (typeof item.visitId === 'string' && typeof item.status === 'string') {
+      await finishTicketToDone(baseUrl, mfaAuth, item.visitId, item.status);
     }
   }
 }
@@ -143,8 +143,8 @@ async function main() {
     },
     expectedStatus: 201,
   });
-  const ticketId = checkin.body?.ticketId;
-  assert(ticketId, 'Missing ticketId');
+  const visitId = checkin.body?.visitId;
+  assert(visitId, 'Missing visitId');
 
   console.log('2b) Day-close/start loescht keine Queue-Daten');
   await requestJson(baseUrl, 'POST', '/api/v1/ops/checkin-lock', {
@@ -178,13 +178,13 @@ async function main() {
   assert(started.body?.sandboxRestartRequired === true, 'Expected sandboxRestartRequired=true');
   assert(started.body?.sandboxRestartInitiated === true, 'Expected sandboxRestartInitiated=true');
   assert(started.body?.dayClosePhase === 'open', 'Expected dayClosePhase=open');
-  assert(typeof started.body?.resetTicketCount === 'number', 'Expected resetTicketCount');
+  assert(typeof started.body?.resetVisitCount === 'number', 'Expected resetVisitCount');
 
   console.log('4) Alte Ticket-ID ist nach Reset ungueltig');
   const oldTicketCall = await requestJson(
     baseUrl,
     'POST',
-    `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`,
+    `/api/v1/queue/${encodeURIComponent(visitId)}/transition`,
     {
       auth: mfaAuth,
       jsonBody: { type: 'call' },

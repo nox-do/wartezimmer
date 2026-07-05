@@ -59,7 +59,7 @@
             {tf('mfa.settings.dayHintOpenTicketsLead', { lastReset: lastResetFormatted })}
           </p>
           <ul class="alert__topics alert__topics--open-tickets">
-            {#each visibleOpenTickets as ticket (ticket.ticketId)}
+            {#each visibleOpenTickets as ticket (ticket.visitId)}
               <li>
                 {tf('mfa.settings.dayHintOpenTicketItem', {
                   ticket: formatTicketCode(ticket.laneCode, ticket.number),

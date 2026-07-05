@@ -40,7 +40,7 @@ const patientDocumentSchema = {
   type: 'object',
   required: [
     'id',
-    'ticketId',
+    'visitId',
     'fileName',
     'mimeType',
     'sizeBytes',
@@ -50,7 +50,7 @@ const patientDocumentSchema = {
   ],
   properties: {
     id: { type: 'string' },
-    ticketId: { type: 'string' },
+    visitId: { type: 'string' },
     fileName: { type: 'string' },
     mimeType: { type: 'string' },
     sizeBytes: { type: 'integer' },

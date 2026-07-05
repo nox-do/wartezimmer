@@ -6,17 +6,17 @@ import { roomHasCapacity } from '$lib/queue/room-capacity';
 import { formatClockTime } from '$lib/queue/format-time';
 import { formatTicketCode } from '@praxis-flow/domain';
 import {
-  callTicket,
-  checkInTicket,
-  checkOutTicket,
-  cycleTriageTicket,
-  recallTicket,
-  retryRecallNotifyTicket,
-  reassignRoomTicket,
-  returnTicketToWaiting,
-  setAbsenceTicket,
-  setCallbackPhoneTicket,
-  clearCallbackPhoneTicket,
+  callVisit,
+  checkInVisit,
+  checkOutVisit,
+  cycleTriageVisit,
+  recallVisit,
+  retryRecallNotifyVisit,
+  reassignRoomVisit,
+  returnVisitToWaiting,
+  setAbsenceVisit,
+  setCallbackPhoneVisit,
+  clearCallbackPhoneVisit,
 } from '$lib/queue/queue-actions';
 import { getQueueZone } from '$lib/queue/queue-zones';
 import {
@@ -32,7 +32,7 @@ import { returnCountdownRemainingMs } from '$lib/queue/format-return-countdown';
 import type { Result } from '$lib/types/result';
 
 export type MarkAwayTicket = {
-  ticketId: string;
+  visitId: string;
   laneCode: string;
   number: number;
   initialPhone: string;
@@ -41,36 +41,36 @@ export type MarkAwayTicket = {
 };
 
 export type ReassignTicket = {
-  ticketId: string;
+  visitId: string;
   laneCode: string;
   number: number;
   roomId?: string | null;
 };
 
 export type CheckOutTicket = {
-  ticketId: string;
+  visitId: string;
   laneCode: string;
   number: number;
 };
 
 export const mfaQueueActions = $state({
-  busyTicketId: null as string | null,
-  markAwayTicket: null as MarkAwayTicket | null,
-  fixRecallNotifyTicket: null as MarkAwayTicket | null,
-  reassignTicket: null as ReassignTicket | null,
-  checkOutTicket: null as CheckOutTicket | null,
+  busyVisitId: null as string | null,
+  markAwayVisit: null as MarkAwayTicket | null,
+  fixRecallNotifyVisit: null as MarkAwayTicket | null,
+  reassignVisit: null as ReassignTicket | null,
+  checkOutVisit: null as CheckOutTicket | null,
 });
 
 export function resetMfaQueueActions() {
-  mfaQueueActions.busyTicketId = null;
-  mfaQueueActions.markAwayTicket = null;
-  mfaQueueActions.fixRecallNotifyTicket = null;
-  mfaQueueActions.reassignTicket = null;
-  mfaQueueActions.checkOutTicket = null;
+  mfaQueueActions.busyVisitId = null;
+  mfaQueueActions.markAwayVisit = null;
+  mfaQueueActions.fixRecallNotifyVisit = null;
+  mfaQueueActions.reassignVisit = null;
+  mfaQueueActions.checkOutVisit = null;
 }
 
-function queueItem(ticketId: string) {
-  return mfaQueueDisplay.queue?.items.find((item) => item.ticketId === ticketId);
+function queueItem(visitId: string) {
+  return mfaQueueDisplay.queue?.items.find((item) => item.visitId === visitId);
 }
 
 function queueItems() {
@@ -85,10 +85,10 @@ function ensureRoomCapacity(roomId: string, excludeTicketId?: string): boolean {
   return false;
 }
 
-export async function runMfaQueueAction<T>(ticketId: string, action: () => Promise<Result<T>>) {
-  mfaQueueActions.busyTicketId = ticketId;
+export async function runMfaQueueAction<T>(visitId: string, action: () => Promise<Result<T>>) {
+  mfaQueueActions.busyVisitId = visitId;
   const result = await action();
-  mfaQueueActions.busyTicketId = null;
+  mfaQueueActions.busyVisitId = null;
 
   if (!result.ok) {
     toastStore.error(result.error.message);
@@ -96,14 +96,14 @@ export async function runMfaQueueAction<T>(ticketId: string, action: () => Promi
   return result;
 }
 
-export function handleMfaReassign(ticketId: string) {
-  const item = queueItem(ticketId);
+export function handleMfaReassign(visitId: string) {
+  const item = queueItem(visitId);
   if (!item) {
     return;
   }
 
-  mfaQueueActions.reassignTicket = {
-    ticketId: item.ticketId,
+  mfaQueueActions.reassignVisit = {
+    visitId: item.visitId,
     laneCode: item.laneCode,
     number: item.number,
     roomId: item.roomId,
@@ -111,29 +111,29 @@ export function handleMfaReassign(ticketId: string) {
 }
 
 export function cancelMfaReassign() {
-  mfaQueueActions.reassignTicket = null;
+  mfaQueueActions.reassignVisit = null;
 }
 
 export async function confirmMfaReassign(roomId: string, roomLabel: string) {
-  const ticketId = mfaQueueActions.reassignTicket?.ticketId;
-  if (!ticketId) {
+  const visitId = mfaQueueActions.reassignVisit?.visitId;
+  if (!visitId) {
     return;
   }
 
-  await runMfaQueueAction(ticketId, () => reassignRoomTicket(ticketId, { roomId, roomLabel }));
-  mfaQueueActions.reassignTicket = null;
+  await runMfaQueueAction(visitId, () => reassignRoomVisit(visitId, { roomId, roomLabel }));
+  mfaQueueActions.reassignVisit = null;
 }
 
-export function handleMfaMarkAway(ticketId: string) {
-  const item = queueItem(ticketId);
+export function handleMfaMarkAway(visitId: string) {
+  const item = queueItem(visitId);
   if (!item) {
     return;
   }
 
   const initialPhone = item.callbackPhone?.trim() || item.checkinPhone?.trim() || '';
 
-  mfaQueueActions.markAwayTicket = {
-    ticketId: item.ticketId,
+  mfaQueueActions.markAwayVisit = {
+    visitId: item.visitId,
     laneCode: item.laneCode,
     number: item.number,
     initialPhone,
@@ -142,43 +142,43 @@ export function handleMfaMarkAway(ticketId: string) {
 }
 
 export function cancelMfaMarkAway() {
-  mfaQueueActions.markAwayTicket = null;
+  mfaQueueActions.markAwayVisit = null;
 }
 
 export async function confirmMfaMarkAwayWithPhone(phoneNumber: string) {
-  const markAway = mfaQueueActions.markAwayTicket;
+  const markAway = mfaQueueActions.markAwayVisit;
   if (!markAway) {
     return;
   }
 
-  const { ticketId } = markAway;
+  const { visitId } = markAway;
   const trimmedPhone = phoneNumber.trim();
-  mfaQueueActions.busyTicketId = ticketId;
+  mfaQueueActions.busyVisitId = visitId;
 
   if (!markAway.absenceConfirmed) {
-    const result = await setAbsenceTicket(ticketId, 'wait_here');
+    const result = await setAbsenceVisit(visitId, 'wait_here');
     if (!result.ok) {
-      const alreadyAway = queueItem(ticketId)?.status === 'absent_wait_here';
+      const alreadyAway = queueItem(visitId)?.status === 'absent_wait_here';
       if (!alreadyAway) {
-        mfaQueueActions.busyTicketId = null;
+        mfaQueueActions.busyVisitId = null;
         toastStore.error(result.error.message);
         return;
       }
     }
-    mfaQueueActions.markAwayTicket = { ...markAway, absenceConfirmed: true };
+    mfaQueueActions.markAwayVisit = { ...markAway, absenceConfirmed: true };
   }
 
   if (trimmedPhone.length > 0) {
-    const phoneResult = await setCallbackPhoneTicket(ticketId, trimmedPhone);
+    const phoneResult = await setCallbackPhoneVisit(visitId, trimmedPhone);
     if (!phoneResult.ok) {
-      mfaQueueActions.busyTicketId = null;
+      mfaQueueActions.busyVisitId = null;
       toastStore.error(phoneResult.error.message);
       return;
     }
   }
 
-  mfaQueueActions.busyTicketId = null;
-  mfaQueueActions.markAwayTicket = null;
+  mfaQueueActions.busyVisitId = null;
+  mfaQueueActions.markAwayVisit = null;
   toastStore.success(t('mfa.markAwaySuccess'));
 }
 
@@ -189,7 +189,7 @@ type RecallSmsDispatch = {
 } | null;
 
 function showRecallSmsFailureToast(
-  ticketId: string,
+  visitId: string,
   dispatch: RecallSmsDispatch,
   item?: { laneCode: string; number: number },
 ) {
@@ -197,7 +197,7 @@ function showRecallSmsFailureToast(
     return;
   }
 
-  const ticketLabel = item != null ? formatTicketCode(item.laneCode, item.number) : ticketId;
+  const ticketLabel = item != null ? formatTicketCode(item.laneCode, item.number) : visitId;
   const errorKey = resolveRecallDispatchErrorKey(dispatch.errorCode);
   const errorMessage =
     errorKey === 'mfa.recallSmsErrorGeneric'
@@ -210,8 +210,8 @@ function showRecallSmsFailureToast(
   });
 }
 
-export function handleMfaFixRecallNotify(ticketId: string) {
-  const item = queueItem(ticketId);
+export function handleMfaFixRecallNotify(visitId: string) {
+  const item = queueItem(visitId);
   if (!item?.recallNotifyErrorCode) {
     return;
   }
@@ -221,8 +221,8 @@ export function handleMfaFixRecallNotify(ticketId: string) {
 
   const initialPhone = item.callbackPhone?.trim() || item.checkinPhone?.trim() || '';
 
-  mfaQueueActions.fixRecallNotifyTicket = {
-    ticketId: item.ticketId,
+  mfaQueueActions.fixRecallNotifyVisit = {
+    visitId: item.visitId,
     laneCode: item.laneCode,
     number: item.number,
     initialPhone,
@@ -231,58 +231,58 @@ export function handleMfaFixRecallNotify(ticketId: string) {
 }
 
 export function cancelMfaFixRecallNotify() {
-  mfaQueueActions.fixRecallNotifyTicket = null;
+  mfaQueueActions.fixRecallNotifyVisit = null;
 }
 
 export async function confirmMfaFixRecallNotifyWithPhone(phoneNumber: string) {
-  if (!mfaQueueActions.fixRecallNotifyTicket) {
+  if (!mfaQueueActions.fixRecallNotifyVisit) {
     return;
   }
 
-  const { ticketId, laneCode, number } = mfaQueueActions.fixRecallNotifyTicket;
+  const { visitId, laneCode, number } = mfaQueueActions.fixRecallNotifyVisit;
   const trimmedPhone = phoneNumber.trim();
-  const storedCallback = queueItem(ticketId)?.callbackPhone?.trim() ?? '';
-  mfaQueueActions.busyTicketId = ticketId;
+  const storedCallback = queueItem(visitId)?.callbackPhone?.trim() ?? '';
+  mfaQueueActions.busyVisitId = visitId;
 
   if (trimmedPhone.length > 0) {
-    const phoneResult = await setCallbackPhoneTicket(ticketId, trimmedPhone);
+    const phoneResult = await setCallbackPhoneVisit(visitId, trimmedPhone);
     if (!phoneResult.ok) {
-      mfaQueueActions.busyTicketId = null;
+      mfaQueueActions.busyVisitId = null;
       toastStore.error(phoneResult.error.message);
       return;
     }
   } else if (storedCallback.length > 0) {
-    const clearResult = await clearCallbackPhoneTicket(ticketId);
+    const clearResult = await clearCallbackPhoneVisit(visitId);
     if (!clearResult.ok) {
-      mfaQueueActions.busyTicketId = null;
+      mfaQueueActions.busyVisitId = null;
       toastStore.error(clearResult.error.message);
       return;
     }
   }
 
-  const result = await retryRecallNotifyTicket(ticketId);
-  mfaQueueActions.busyTicketId = null;
+  const result = await retryRecallNotifyVisit(visitId);
+  mfaQueueActions.busyVisitId = null;
 
   if (!result.ok) {
     toastStore.error(result.error.message);
     return;
   }
 
-  mfaQueueActions.fixRecallNotifyTicket = null;
+  mfaQueueActions.fixRecallNotifyVisit = null;
 
   if (result.data.smsDispatch.sent) {
     toastStore.success(t('mfa.recallNotifyRetrySuccess'));
     return;
   }
 
-  showRecallSmsFailureToast(ticketId, result.data.smsDispatch, { laneCode, number });
+  showRecallSmsFailureToast(visitId, result.data.smsDispatch, { laneCode, number });
 }
 
-export async function handleMfaRecall(ticketId: string) {
-  const item = queueItem(ticketId);
-  mfaQueueActions.busyTicketId = ticketId;
-  const result = await recallTicket(ticketId);
-  mfaQueueActions.busyTicketId = null;
+export async function handleMfaRecall(visitId: string) {
+  const item = queueItem(visitId);
+  mfaQueueActions.busyVisitId = visitId;
+  const result = await recallVisit(visitId);
+  mfaQueueActions.busyVisitId = null;
 
   if (!result.ok) {
     toastStore.error(result.error.message);
@@ -290,75 +290,75 @@ export async function handleMfaRecall(ticketId: string) {
   }
 
   toastStore.success(tf('mfa.recallStarted', { time: formatClockTime(result.data.returnUntil) }));
-  showRecallSmsFailureToast(ticketId, result.data.smsDispatch, item ?? undefined);
+  showRecallSmsFailureToast(visitId, result.data.smsDispatch, item ?? undefined);
 }
 
-export function callMfaTicket(ticketId: string) {
+export function callMfaTicket(visitId: string) {
   if (!isQueueCallAnnouncementReachable()) {
     toastStore.error(t('mfa.callAnnouncementOffline'));
     return Promise.resolve();
   }
 
-  const room = resolveCallRoomTarget(queueItem(ticketId), getMfaCallRoomOverride());
+  const room = resolveCallRoomTarget(queueItem(visitId), getMfaCallRoomOverride());
   if (room && !ensureRoomCapacity(room.roomId)) {
     return Promise.resolve();
   }
 
-  return runMfaQueueAction(ticketId, () => callTicket(ticketId, room));
+  return runMfaQueueAction(visitId, () => callVisit(visitId, room));
 }
 
-export function checkInMfaTicket(ticketId: string) {
-  const target = resolveRoomTargetForCheckIn(queueItem(ticketId), getMfaCallRoomOverride());
-  if (target?.roomId && !ensureRoomCapacity(target.roomId, ticketId)) {
+export function checkInMfaTicket(visitId: string) {
+  const target = resolveRoomTargetForCheckIn(queueItem(visitId), getMfaCallRoomOverride());
+  if (target?.roomId && !ensureRoomCapacity(target.roomId, visitId)) {
     return Promise.resolve();
   }
 
-  return runMfaQueueAction(ticketId, () => checkInTicket(ticketId, target));
+  return runMfaQueueAction(visitId, () => checkInVisit(visitId, target));
 }
 
-export function cycleMfaTriage(ticketId: string) {
-  return runMfaQueueAction(ticketId, async () => {
-    const result = await cycleTriageTicket(ticketId);
+export function cycleMfaTriage(visitId: string) {
+  return runMfaQueueAction(visitId, async () => {
+    const result = await cycleTriageVisit(visitId);
     if (result.ok) {
-      applyMfaQueueTriageLevel(ticketId, result.data.triageLevel ?? null);
+      applyMfaQueueTriageLevel(visitId, result.data.triageLevel ?? null);
     }
     return result;
   });
 }
 
-export function handleMfaCheckOut(ticketId: string) {
-  const item = queueItem(ticketId);
+export function handleMfaCheckOut(visitId: string) {
+  const item = queueItem(visitId);
   if (!item) {
     return;
   }
 
-  mfaQueueActions.checkOutTicket = {
-    ticketId: item.ticketId,
+  mfaQueueActions.checkOutVisit = {
+    visitId: item.visitId,
     laneCode: item.laneCode,
     number: item.number,
   };
 }
 
 export function cancelMfaCheckOut() {
-  mfaQueueActions.checkOutTicket = null;
+  mfaQueueActions.checkOutVisit = null;
 }
 
 export async function confirmMfaCheckOut() {
-  const ticketId = mfaQueueActions.checkOutTicket?.ticketId;
-  if (!ticketId) {
+  const visitId = mfaQueueActions.checkOutVisit?.visitId;
+  if (!visitId) {
     return;
   }
 
-  await runMfaQueueAction(ticketId, () => checkOutTicket(ticketId));
-  mfaQueueActions.checkOutTicket = null;
+  await runMfaQueueAction(visitId, () => checkOutVisit(visitId));
+  mfaQueueActions.checkOutVisit = null;
 }
 
-export function returnMfaTicketToWaiting(ticketId: string) {
-  return runMfaQueueAction(ticketId, () => returnTicketToWaiting(ticketId));
+export function returnMfaTicketToWaiting(visitId: string) {
+  return runMfaQueueAction(visitId, () => returnVisitToWaiting(visitId));
 }
 
-export function handleMfaQueueDrop(ticketId: string, target: QueueDropTarget) {
-  const item = queueItem(ticketId);
+export function handleMfaQueueDrop(visitId: string, target: QueueDropTarget) {
+  const item = queueItem(visitId);
   if (!item) {
     return;
   }
@@ -382,19 +382,19 @@ export function handleMfaQueueDrop(ticketId: string, target: QueueDropTarget) {
     if (!ensureRoomCapacity(command.room.roomId)) {
       return;
     }
-    void runMfaQueueAction(command.ticketId, () => callTicket(command.ticketId, command.room));
+    void runMfaQueueAction(command.visitId, () => callVisit(command.visitId, command.room));
     return;
   }
 
   if (command.action === 'reassign') {
-    if (!ensureRoomCapacity(command.room.roomId, command.ticketId)) {
+    if (!ensureRoomCapacity(command.room.roomId, command.visitId)) {
       return;
     }
-    void runMfaQueueAction(command.ticketId, () =>
-      reassignRoomTicket(command.ticketId, command.room),
+    void runMfaQueueAction(command.visitId, () =>
+      reassignRoomVisit(command.visitId, command.room),
     );
     return;
   }
 
-  void runMfaQueueAction(command.ticketId, () => returnTicketToWaiting(command.ticketId));
+  void runMfaQueueAction(command.visitId, () => returnVisitToWaiting(command.visitId));
 }

@@ -91,8 +91,8 @@
 - [x] Transitions: `return_to_waiting` für Visits (Core-Action `return_to_waiting`, Journey bleibt aktiv)
 - [x] TV-Snapshot mit Surface-Visibility (`buildTvQueueSnapshot` + `explainVisibility`)
 - [x] Raum-Panel: Queue-Snapshot mit Surface-Visibility (`buildRoomPanelQueueSnapshot` + `explainVisibility`)
-- [ ] MFA-UI auf Visit-Modell
-- [ ] OpenAPI Breaking + Codegen (ticketId → visitId, Phase B4)
+- [x] MFA-UI auf Visit-Modell (Naming visitId, Phase B4)
+- [x] OpenAPI Breaking + Codegen (ticketId → visitId, Phase B4)
 - [x] `tickets`/`queue_entries` entfernen (Phase B3)
 
 ## Phase B3 — Legacy-Schema entfernen (2026-07-05)
@@ -112,11 +112,29 @@ Schema-Cutover: Tabellen `tickets` / `queue_entries` und Legacy-*InDb-Schicht en
 - [x] Grep-Guard: kein `FROM tickets` / `INTO tickets` / `queue_entries` im App-Code (außer Drop/Migration/Kommentare)
 - [ ] Manuell: Check-in → MFA Call → Done; Mark away + Recall; Portal Upload; Day-Reset
 
-**Out of scope (B4):** OpenAPI `ticketId` → `visitId`, Codegen, MFA-UI Naming, Core-Package
+## Phase B4 — OpenAPI, Naming & Docs (2026-07-05)
+
+Breaking API rename: `ticketId` → `visitId`, Pfade `{ticket}` → `{visitId}`. Kein Schema-Change, gleiche ID-Werte (`visits.id`).
+
+- [x] OpenAPI: `openapi/*.yaml` — Queue, Check-in, Identity, Documents, Ops, common (`ticketCode` Display bleibt)
+- [x] Codegen: `npm run generate:api` (Fastify-Schemas, app/ui generated types)
+- [x] App-Routes: `:visitId`, Responses `visitId`; route-access-rules + Tests
+- [x] DB/Outbox: `QueueStatusChanged`/`CheckinCreated` Payload `visitId`; Public-API-Parameter `visitId`
+- [x] UI: queue/mfa/portal/terminal auf generierte Types (`visitId`, `VisitCreated`, Ops `openVisits`/`resetVisitCount`)
+- [x] Docs: `architecture.md`, `events.md`, `flows.md`, `plan-room-panel.md`
+- [x] Kleinkram: `events.md` Emitter `flow-core-checkin.ts`; Test-Mocks `visitId`; `DocumentExportInfo`/`PatientSession` in Tests
+- [x] App-Tests: **270 grün**
+- [x] UI Queue-Tests: **38 grün** (`src/lib/queue/`)
+- [x] `npm run check:drift` — Codegen/Bundle/Schemas OK (nach Stage der generierten Dateien)
+- [ ] `check-openapi-route-sync` — dev flow-core-Routes fehlen in OpenAPI (vorbestehend)
+- [ ] UI typecheck grün (4 fehlende i18n-Keys + TerminalAuthPath — vorbestehend, nicht B4)
+- [ ] Manuell: Smoke optional (`smoke:openapi-contract`, `smoke:doc-flow`)
+
+**Breaking (PR):** API fields `ticketId` → `visitId`; paths `/queue/{ticket}/…` → `/queue/{visitId}/…`. Event payloads analog. Werte unverändert.
+
+**Bewusst belassen:** `TICKET_NOT_FOUND` Error-Code; interne DB-Methoden `callTicket`, `listDocumentsForTicket`; User-facing „Ticket“-Texte (Wartenummer).
 
 ## Phase B1 — Host Queue-Metadaten an Visits (2026-07-05)
-
-Host-persistierte Queue-Felder (absent, recall, triage, callback, checkin_phone) in `visit_host_state`; MFA-APIs über Visit-Pfad, Legacy-*InDb nur ohne Visit-Zeile.
 
 - [x] Schema `visit_host_state` (+ FK CASCADE) in `ensureFlowCoreSchema`
 - [x] DB-Layer `visit-host-state.ts` (upsert, recall, summary, expired windows)
@@ -148,9 +166,9 @@ End-to-end Visit-Patienten: Portal-Code → Session → Dokument-Upload; Identit
 - [x] Tests: `database-visit-portal.test.ts` (Migration, Portal, Docs, Identity absent)
 - [ ] Manuell: Terminal Check-in → Portal Code → Upload; MFA Document-Badge + Preview
 
-**API:** DB intern `visit_id`, Response weiter `ticketId` (= visit.id) bis B4 OpenAPI-Breaking.
+**API:** Responses nutzen `visitId` (= visit.id) seit B4.
 
-**Out of scope (B3 erledigt / B4):** OpenAPI visitId, MFA-UI Naming, Core-Package
+**Out of scope:** Core-Package
 
 
 ## Bewusst nicht hier

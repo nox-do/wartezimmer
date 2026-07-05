@@ -16,20 +16,20 @@
     waiting: QueueItem[];
     rooms?: PracticeRoom[];
     callRoomOverrideId?: string | null;
-    busyTicketId?: string | null;
+    busyVisitId?: string | null;
     nowMs?: number;
     callAnnouncementReachable?: boolean;
-    onCall: (ticketId: string) => void;
-    onCheckIn: (ticketId: string) => void;
-    onReassign: (ticketId: string) => void;
-    onCheckOut: (ticketId: string) => void;
-    onReturnToWaiting: (ticketId: string) => void;
-    onRecall: (ticketId: string) => void;
-    onFixRecallNotify: (ticketId: string) => void;
-    onMarkAway: (ticketId: string) => void;
+    onCall: (visitId: string) => void;
+    onCheckIn: (visitId: string) => void;
+    onReassign: (visitId: string) => void;
+    onCheckOut: (visitId: string) => void;
+    onReturnToWaiting: (visitId: string) => void;
+    onRecall: (visitId: string) => void;
+    onFixRecallNotify: (visitId: string) => void;
+    onMarkAway: (visitId: string) => void;
     onOpenDocuments: (item: QueueItem) => void;
-    onCycleTriage: (ticketId: string) => void;
-    onQueueDrop: (ticketId: string, target: QueueDropTarget) => void;
+    onCycleTriage: (visitId: string) => void;
+    onQueueDrop: (visitId: string, target: QueueDropTarget) => void;
   }
 
   let {
@@ -38,7 +38,7 @@
     waiting,
     rooms = [],
     callRoomOverrideId = null,
-    busyTicketId = null,
+    busyVisitId = null,
     nowMs = Date.now(),
     callAnnouncementReachable = true,
     onCall,
@@ -58,8 +58,8 @@
   const queueDragEnabled = $derived(enabledRooms.length > 0);
   const waitingDropLabel = $derived(t('mfa.zoneWaitingTitle'));
 
-  function isBusy(ticketId: string): boolean {
-    return busyTicketId === ticketId;
+  function isBusy(visitId: string): boolean {
+    return busyVisitId === visitId;
   }
 
   type WaitingRow =
@@ -131,14 +131,14 @@
   }
 
   function readTicketIdFromDragSource(source: { id?: string; data?: unknown }): string | null {
-    const data = source.data as { ticketId?: string } | undefined;
-    if (typeof data?.ticketId === 'string') {
-      return data.ticketId;
+    const data = source.data as { visitId?: string } | undefined;
+    if (typeof data?.visitId === 'string') {
+      return data.visitId;
     }
-    if (source.id?.startsWith('ticket:')) {
-      const rest = source.id.slice('ticket:'.length);
-      const ticketId = rest.split(':')[0]?.trim();
-      return ticketId ? ticketId : null;
+    if (source.id?.startsWith('visit:')) {
+      const rest = source.id.slice('visit:'.length);
+      const visitId = rest.split(':')[0]?.trim();
+      return visitId ? visitId : null;
     }
     return null;
   }
@@ -161,16 +161,16 @@
         return;
       }
 
-      const ticketId = readTicketIdFromDragSource({
+      const visitId = readTicketIdFromDragSource({
         id: typeof source.id === 'string' ? source.id : String(source.id ?? ''),
         data: source.data,
       });
       const dropTarget = readQueueDropTarget(target.data);
-      if (!ticketId || !dropTarget) {
+      if (!visitId || !dropTarget) {
         return;
       }
 
-      onQueueDrop(ticketId, dropTarget);
+      onQueueDrop(visitId, dropTarget);
     } finally {
       isQueueDragging = false;
       activeDropTargetId = null;
@@ -201,7 +201,7 @@
             <p class="wait-zone-empty">{t('mfa.zoneWaitingEmpty')}</p>
           {:else}
             <ul class="queue-list">
-              {#each waitingRows as row, index (row.kind === 'divider' ? `divider-${index}` : row.item.ticketId)}
+              {#each waitingRows as row, index (row.kind === 'divider' ? `divider-${index}` : row.item.visitId)}
                 {#if row.kind === 'divider'}
                   <li
                     class="wait-soll-divider"
@@ -217,16 +217,16 @@
                   <QueueEntry
                     item={row.item}
                     zone="waiting"
-                    dragEnabled={!isBusy(row.item.ticketId)}
+                    dragEnabled={!isBusy(row.item.visitId)}
                     dragZone="waiting"
                     queueDragging={isQueueDragging}
                     {nowMs}
-                    busy={isBusy(row.item.ticketId)}
+                    busy={isBusy(row.item.visitId)}
                     callDisabled={!callAnnouncementReachable}
-                    onCall={() => onCall(row.item.ticketId)}
-                    onMarkAway={() => onMarkAway(row.item.ticketId)}
+                    onCall={() => onCall(row.item.visitId)}
+                    onMarkAway={() => onMarkAway(row.item.visitId)}
                     onOpenDocuments={onOpenDocuments}
-                    onCycleTriage={() => onCycleTriage(row.item.ticketId)}
+                    onCycleTriage={() => onCycleTriage(row.item.visitId)}
                   />
                 {/if}
               {/each}
@@ -241,7 +241,7 @@
             <p class="wait-zone-empty">{t('mfa.zoneWaitingEmpty')}</p>
           {:else}
             <ul class="queue-list">
-              {#each waitingRows as row, index (row.kind === 'divider' ? `divider-${index}` : row.item.ticketId)}
+              {#each waitingRows as row, index (row.kind === 'divider' ? `divider-${index}` : row.item.visitId)}
                 {#if row.kind === 'divider'}
                   <li
                     class="wait-soll-divider"
@@ -259,12 +259,12 @@
                     zone="waiting"
                     queueDragging={isQueueDragging}
                     {nowMs}
-                    busy={isBusy(row.item.ticketId)}
+                    busy={isBusy(row.item.visitId)}
                     callDisabled={!callAnnouncementReachable}
-                    onCall={() => onCall(row.item.ticketId)}
-                    onMarkAway={() => onMarkAway(row.item.ticketId)}
+                    onCall={() => onCall(row.item.visitId)}
+                    onMarkAway={() => onMarkAway(row.item.visitId)}
                     onOpenDocuments={onOpenDocuments}
-                    onCycleTriage={() => onCycleTriage(row.item.ticketId)}
+                    onCycleTriage={() => onCycleTriage(row.item.visitId)}
                   />
                 {/if}
               {/each}
@@ -280,16 +280,16 @@
           <p class="wait-zone-empty">{t('mfa.zoneAwayEmpty')}</p>
         {:else}
           <ul class="queue-list">
-            {#each away as item (item.ticketId)}
+            {#each away as item (item.visitId)}
               <QueueEntry
                 {item}
                 zone="away"
                 {nowMs}
-                busy={isBusy(item.ticketId)}
-                onRecall={() => onRecall(item.ticketId)}
-                onFixRecallNotify={() => onFixRecallNotify(item.ticketId)}
+                busy={isBusy(item.visitId)}
+                onRecall={() => onRecall(item.visitId)}
+                onFixRecallNotify={() => onFixRecallNotify(item.visitId)}
                 onOpenDocuments={onOpenDocuments}
-                onCycleTriage={() => onCycleTriage(item.ticketId)}
+                onCycleTriage={() => onCycleTriage(item.visitId)}
               />
             {/each}
           </ul>
@@ -305,19 +305,19 @@
           <p class="wait-zone-empty">{t('mfa.zoneActiveEmpty')}</p>
         {:else}
           <ul class="queue-list">
-            {#each active as item (`${item.ticketId}:${item.roomId ?? 'none'}`)}
+            {#each active as item (`${item.visitId}:${item.roomId ?? 'none'}`)}
               <QueueEntry
                 {item}
                 zone="active"
                 queueDragging={isQueueDragging}
                 {nowMs}
-                busy={isBusy(item.ticketId)}
-                onCheckIn={() => onCheckIn(item.ticketId)}
-                onReassign={() => onReassign(item.ticketId)}
-                onCheckOut={() => onCheckOut(item.ticketId)}
-                onReturnToWaiting={() => onReturnToWaiting(item.ticketId)}
+                busy={isBusy(item.visitId)}
+                onCheckIn={() => onCheckIn(item.visitId)}
+                onReassign={() => onReassign(item.visitId)}
+                onCheckOut={() => onCheckOut(item.visitId)}
+                onReturnToWaiting={() => onReturnToWaiting(item.visitId)}
                 onOpenDocuments={onOpenDocuments}
-                onCycleTriage={() => onCycleTriage(item.ticketId)}
+                onCycleTriage={() => onCycleTriage(item.visitId)}
               />
             {/each}
           </ul>
@@ -330,7 +330,7 @@
           dragEnabled={queueDragEnabled}
           {activeDropTargetId}
           queueDragging={isQueueDragging}
-          {busyTicketId}
+          {busyVisitId}
           {nowMs}
           {onCheckIn}
           {onReassign}

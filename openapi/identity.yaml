@@ -142,12 +142,12 @@ paths:
             application/json:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
-  /api/v1/identity/{ticket}:
+  /api/v1/identity/{visitId}:
     get:
       summary: Read identity-related ticket details for MFA context
       parameters:
         - in: path
-          name: ticket
+          name: visitId
           required: true
           schema:
             type: string
@@ -160,7 +160,7 @@ paths:
               schema:
                 type: object
                 required:
-                  - ticketId
+                  - visitId
                   - laneCode
                   - topicLabel
                   - number
@@ -171,7 +171,7 @@ paths:
                   - createdAt
                   - updatedAt
                 properties:
-                  ticketId:
+                  visitId:
                     type: string
                   laneCode:
                     type: string

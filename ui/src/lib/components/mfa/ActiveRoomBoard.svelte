@@ -14,14 +14,14 @@
     dragEnabled?: boolean;
     activeDropTargetId?: string | null;
     queueDragging?: boolean;
-    busyTicketId?: string | null;
+    busyVisitId?: string | null;
     nowMs?: number;
-    onCheckIn: (ticketId: string) => void;
-    onReassign: (ticketId: string) => void;
-    onCheckOut: (ticketId: string) => void;
-    onReturnToWaiting: (ticketId: string) => void;
+    onCheckIn: (visitId: string) => void;
+    onReassign: (visitId: string) => void;
+    onCheckOut: (visitId: string) => void;
+    onReturnToWaiting: (visitId: string) => void;
     onOpenDocuments: (item: QueueItem) => void;
-    onCycleTriage: (ticketId: string) => void;
+    onCycleTriage: (visitId: string) => void;
   }
 
   let {
@@ -31,7 +31,7 @@
     dragEnabled = false,
     activeDropTargetId = null,
     queueDragging = false,
-    busyTicketId = null,
+    busyVisitId = null,
     nowMs = Date.now(),
     onCheckIn,
     onReassign,
@@ -43,8 +43,8 @@
 
   const board = $derived(buildActiveRoomBoard(active, rooms));
 
-  function isBusy(ticketId: string): boolean {
-    return busyTicketId === ticketId;
+  function isBusy(visitId: string): boolean {
+    return busyVisitId === visitId;
   }
 </script>
 
@@ -70,21 +70,21 @@
         <p class="active-room-group-empty">{t('mfa.zoneActiveRoomEmpty')}</p>
       {:else}
         <ul class="queue-list">
-          {#each group.tickets as item (`${item.ticketId}:${item.roomId ?? 'none'}`)}
+          {#each group.tickets as item (`${item.visitId}:${item.roomId ?? 'none'}`)}
             <QueueEntry
               {item}
               zone="active"
-              dragEnabled={dragEnabled && !isBusy(item.ticketId)}
+              dragEnabled={dragEnabled && !isBusy(item.visitId)}
               dragZone="active"
               {queueDragging}
               {nowMs}
-              busy={isBusy(item.ticketId)}
-              onCheckIn={() => onCheckIn(item.ticketId)}
-              onReassign={() => onReassign(item.ticketId)}
-              onCheckOut={() => onCheckOut(item.ticketId)}
-              onReturnToWaiting={() => onReturnToWaiting(item.ticketId)}
+              busy={isBusy(item.visitId)}
+              onCheckIn={() => onCheckIn(item.visitId)}
+              onReassign={() => onReassign(item.visitId)}
+              onCheckOut={() => onCheckOut(item.visitId)}
+              onReturnToWaiting={() => onReturnToWaiting(item.visitId)}
               onOpenDocuments={onOpenDocuments}
-              onCycleTriage={() => onCycleTriage(item.ticketId)}
+              onCycleTriage={() => onCycleTriage(item.visitId)}
             />
           {/each}
         </ul>
@@ -96,21 +96,21 @@
     <section class="active-room-group active-room-group--unassigned" aria-label={t('mfa.zoneActiveUnassigned')}>
       <h3 class="active-room-group-title">{t('mfa.zoneActiveUnassigned')}</h3>
       <ul class="queue-list">
-        {#each board.unassigned as item (`${item.ticketId}:${item.roomId ?? 'none'}`)}
+        {#each board.unassigned as item (`${item.visitId}:${item.roomId ?? 'none'}`)}
           <QueueEntry
             {item}
             zone="active"
-            dragEnabled={dragEnabled && !isBusy(item.ticketId)}
+            dragEnabled={dragEnabled && !isBusy(item.visitId)}
             dragZone="active"
             {queueDragging}
             {nowMs}
-            busy={isBusy(item.ticketId)}
-            onCheckIn={() => onCheckIn(item.ticketId)}
-            onReassign={() => onReassign(item.ticketId)}
-            onCheckOut={() => onCheckOut(item.ticketId)}
-            onReturnToWaiting={() => onReturnToWaiting(item.ticketId)}
+            busy={isBusy(item.visitId)}
+            onCheckIn={() => onCheckIn(item.visitId)}
+            onReassign={() => onReassign(item.visitId)}
+            onCheckOut={() => onCheckOut(item.visitId)}
+            onReturnToWaiting={() => onReturnToWaiting(item.visitId)}
             onOpenDocuments={onOpenDocuments}
-            onCycleTriage={() => onCycleTriage(item.ticketId)}
+            onCycleTriage={() => onCycleTriage(item.visitId)}
           />
         {/each}
       </ul>

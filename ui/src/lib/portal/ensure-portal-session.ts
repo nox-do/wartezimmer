@@ -34,7 +34,7 @@ export async function ensurePortalSession(
     const session = await activatePortalSession({
       sessionToken: resolved.data.sessionToken,
       ticketCode: normalized,
-      ticketId: resolved.data.ticketId,
+      visitId: resolved.data.visitId,
     });
     if (options.replacePath) {
       replaceState(options.replacePath, {});

@@ -25,7 +25,7 @@ components:
       type: object
       additionalProperties: false
       required:
-        - ticketId
+        - visitId
         - laneCode
         - number
         - topicId
@@ -36,7 +36,7 @@ components:
         - hasMobilePhone
         - needsAssistance
       properties:
-        ticketId:
+        visitId:
           type: string
           example: '20260530-A-001'
         laneCode:
@@ -133,14 +133,14 @@ components:
       additionalProperties: false
       required:
         - resultType
-        - ticketId
+        - visitId
         - triageLevel
         - updatedAt
       properties:
         resultType:
           type: string
           const: triage
-        ticketId:
+        visitId:
           type: string
         triageLevel:
           type: string
@@ -175,7 +175,7 @@ components:
       additionalProperties: false
       required:
         - resultType
-        - ticketId
+        - visitId
         - returnUntil
         - recallNotifyErrorCode
         - smsDispatch
@@ -183,7 +183,7 @@ components:
         resultType:
           type: string
           const: recall_notify_retry
-        ticketId:
+        visitId:
           type: string
         returnUntil:
           type: string
@@ -197,11 +197,11 @@ components:
       type: object
       additionalProperties: false
       required:
-        - ticketId
+        - visitId
         - callbackPhone
         - updatedAt
       properties:
-        ticketId:
+        visitId:
           type: string
         callbackPhone:
           type: string
@@ -212,10 +212,10 @@ components:
       type: object
       additionalProperties: false
       required:
-        - ticketId
+        - visitId
         - updatedAt
       properties:
-        ticketId:
+        visitId:
           type: string
         updatedAt:
           type: string
@@ -224,11 +224,11 @@ components:
       type: object
       additionalProperties: false
       required:
-        - ticketId
+        - visitId
         - identityRef
         - updatedAt
       properties:
-        ticketId:
+        visitId:
           type: string
         identityRef:
           type: string
@@ -312,14 +312,14 @@ components:
       type: object
       additionalProperties: false
       required:
-        - ticketId
+        - visitId
         - laneCode
         - number
         - status
         - roomId
         - roomLabel
       properties:
-        ticketId:
+        visitId:
           type: string
         laneCode:
           type: string
@@ -437,14 +437,14 @@ components:
     QueueCallResponse:
       type: object
       required:
-        - ticketId
+        - visitId
         - fromStatus
         - toStatus
         - updatedAt
         - roomId
         - roomLabel
       properties:
-        ticketId:
+        visitId:
           type: string
         fromStatus:
           $ref: './common.yaml#/components/schemas/QueueStatus'
@@ -474,7 +474,7 @@ components:
           description: >-
             When set, check-in/out only succeeds if the ticket's assigned room_id matches
             (room panel). Omit for MFA staff actions without room scope.
-    QueueTicketTransitionRequest:
+    QueueVisitTransitionRequest:
       type: object
       additionalProperties: false
       required:
@@ -515,7 +515,7 @@ components:
           enum:
             - sms
             - whatsapp
-    QueueTicketTransitionResponse:
+    QueueVisitTransitionResponse:
       oneOf:
         - $ref: '#/components/schemas/QueueTransitionResponse'
         - $ref: '#/components/schemas/QueueTriageResponse'
@@ -525,7 +525,7 @@ components:
       type: object
       required:
         - resultType
-        - ticketId
+        - visitId
         - fromStatus
         - toStatus
         - updatedAt
@@ -535,7 +535,7 @@ components:
         resultType:
           type: string
           const: transition
-        ticketId:
+        visitId:
           type: string
         fromStatus:
           $ref: './common.yaml#/components/schemas/QueueStatus'
@@ -554,7 +554,7 @@ components:
       type: object
       required:
         - resultType
-        - ticketId
+        - visitId
         - fromStatus
         - toStatus
         - updatedAt
@@ -564,7 +564,7 @@ components:
         resultType:
           type: string
           const: recall
-        ticketId:
+        visitId:
           type: string
         fromStatus:
           $ref: './common.yaml#/components/schemas/QueueStatus'
@@ -674,12 +674,12 @@ paths:
             application/json:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
-  /api/v1/queue/{ticket}/transition:
+  /api/v1/queue/{visitId}/transition:
     post:
       summary: Apply a typed workflow transition to a queue ticket
       parameters:
         - in: path
-          name: ticket
+          name: visitId
           required: true
           schema:
             type: string
@@ -689,14 +689,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/QueueTicketTransitionRequest'
+              $ref: '#/components/schemas/QueueVisitTransitionRequest'
       responses:
         '200':
           description: Ticket transition applied
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/QueueTicketTransitionResponse'
+                $ref: '#/components/schemas/QueueVisitTransitionResponse'
         '400':
           description: Invalid request
           content:
@@ -715,12 +715,12 @@ paths:
             application/json:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
-  /api/v1/queue/{ticket}/callback-phone:
+  /api/v1/queue/{visitId}/callback-phone:
     put:
       summary: Set MFA callback phone for recall SMS (separate from terminal check-in phone)
       parameters:
         - in: path
-          name: ticket
+          name: visitId
           required: true
           schema:
             type: string
@@ -768,7 +768,7 @@ paths:
       summary: Clear MFA callback phone (recall falls back to terminal check-in phone)
       parameters:
         - in: path
-          name: ticket
+          name: visitId
           required: true
           schema:
             type: string
@@ -792,12 +792,12 @@ paths:
             application/json:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
-  /api/v1/queue/{ticket}/identity-ref:
+  /api/v1/queue/{visitId}/identity-ref:
     patch:
       summary: Set MFA display name for a ticket without identity (manual entry in waiting list)
       parameters:
         - in: path
-          name: ticket
+          name: visitId
           required: true
           schema:
             type: string

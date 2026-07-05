@@ -299,7 +299,7 @@ Patient kann den **generierten** Bogen im Portal **nicht** erneut öffnen oder s
 
 **Anzeigename:** Doppelklick auf Name in der Warteliste → `PATCH …/identity-ref`; persistiert technisch in `identityRef` (gleicher Anzeigename wie CSV/eGK), überlebt Refresh, Tagesreset.
 
-**Upload-Symbol:** deutliches blaues Dokument-Icon mit Anzahl — Dateien über WLAN **oder** Erstanamnese nach Absenden (Flow 2). Klick → **Dokumente bearbeiten** (Vorschau Sandbox, ins PVS speichern, löschen). Deep-Link `/mfa?ticketId=…&documentId=…` öffnet Vorschau-Overlay direkt. Symbol verschwindet nach Verarbeitung.
+**Upload-Symbol:** deutliches blaues Dokument-Icon mit Anzahl — Dateien über WLAN **oder** Erstanamnese nach Absenden (Flow 2). Klick → **Dokumente bearbeiten** (Vorschau Sandbox, ins PVS speichern, löschen). Deep-Link `/mfa?visitId=…&documentId=…` öffnet Vorschau-Overlay direkt. Symbol verschwindet nach Verarbeitung.
 
 **Notfall-Alarm:** rotes Banner oben (Terminal-Meldung) — MFA **quittiert** nach Reaktion; Banner verschwindet (neuer Alarm am Terminal würde erneut erscheinen). Notfall am Terminal ist nur aktiv, wenn das Feature in den Einstellungen aktiviert ist und das Terminal nicht deaktiviert wurde.
 

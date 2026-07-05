@@ -143,7 +143,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/queue/{ticket}/transition': {
+  '/api/v1/queue/{visitId}/transition': {
     parameters: {
       query?: never;
       header?: never;
@@ -158,13 +158,13 @@ export interface paths {
         query?: never;
         header?: never;
         path: {
-          ticket: string;
+          visitId: string;
         };
         cookie?: never;
       };
       requestBody: {
         content: {
-          'application/json': components['schemas']['QueueTicketTransitionRequest'];
+          'application/json': components['schemas']['QueueVisitTransitionRequest'];
         };
       };
       responses: {
@@ -174,7 +174,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['QueueTicketTransitionResponse'];
+            'application/json': components['schemas']['QueueVisitTransitionResponse'];
           };
         };
         /** @description Invalid request */
@@ -212,7 +212,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/queue/{ticket}/callback-phone': {
+  '/api/v1/queue/{visitId}/callback-phone': {
     parameters: {
       query?: never;
       header?: never;
@@ -226,7 +226,7 @@ export interface paths {
         query?: never;
         header?: never;
         path: {
-          ticket: string;
+          visitId: string;
         };
         cookie?: never;
       };
@@ -283,7 +283,7 @@ export interface paths {
         query?: never;
         header?: never;
         path: {
-          ticket: string;
+          visitId: string;
         };
         cookie?: never;
       };
@@ -323,7 +323,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/queue/{ticket}/identity-ref': {
+  '/api/v1/queue/{visitId}/identity-ref': {
     parameters: {
       query?: never;
       header?: never;
@@ -342,7 +342,7 @@ export interface paths {
         query?: never;
         header?: never;
         path: {
-          ticket: string;
+          visitId: string;
         };
         cookie?: never;
       };
@@ -400,7 +400,7 @@ export interface components {
   schemas: {
     QueueItem: {
       /** @example 20260530-A-001 */
-      ticketId: string;
+      visitId: string;
       laneCode: string;
       number: number;
       topicId: string;
@@ -448,7 +448,7 @@ export interface components {
     QueueTriageResponse: {
       /** @constant */
       resultType: 'triage';
-      ticketId: string;
+      visitId: string;
       /** @enum {string|null} */
       triageLevel: 'red' | 'yellow' | 'green' | null;
       /** Format: date-time */
@@ -464,25 +464,25 @@ export interface components {
     QueueRecallRetryNotifyResponse: {
       /** @constant */
       resultType: 'recall_notify_retry';
-      ticketId: string;
+      visitId: string;
       /** Format: date-time */
       returnUntil: string;
       recallNotifyErrorCode: string | null;
       smsDispatch: components['schemas']['QueueMessageDispatch'];
     };
     QueueCallbackPhoneResponse: {
-      ticketId: string;
+      visitId: string;
       callbackPhone: string;
       /** Format: date-time */
       updatedAt: string;
     };
     QueueCallbackPhoneClearResponse: {
-      ticketId: string;
+      visitId: string;
       /** Format: date-time */
       updatedAt: string;
     };
     QueueIdentityRefResponse: {
-      ticketId: string;
+      visitId: string;
       identityRef: string;
       /** Format: date-time */
       updatedAt: string;
@@ -513,7 +513,7 @@ export interface components {
       serverTime: string;
     };
     RoomPanelItem: {
-      ticketId: string;
+      visitId: string;
       laneCode: string;
       number: number;
       /** @enum {string} */
@@ -561,7 +561,7 @@ export interface components {
       serverTime: string;
     };
     QueueCallResponse: {
-      ticketId: string;
+      visitId: string;
       fromStatus: components['schemas']['QueueStatus'];
       toStatus: components['schemas']['QueueStatus'];
       /** Format: date-time */
@@ -575,7 +575,7 @@ export interface components {
       /** @description When set, check-in/out only succeeds if the ticket's assigned room_id matches (room panel). Omit for MFA staff actions without room scope. */
       actingRoomId?: string;
     };
-    QueueTicketTransitionRequest: {
+    QueueVisitTransitionRequest: {
       /** @enum {string} */
       type:
         | 'call'
@@ -595,7 +595,7 @@ export interface components {
       /** @enum {string} */
       notifyChannel?: 'sms' | 'whatsapp';
     };
-    QueueTicketTransitionResponse:
+    QueueVisitTransitionResponse:
       | components['schemas']['QueueTransitionResponse']
       | components['schemas']['QueueTriageResponse']
       | components['schemas']['QueueRecallResponse']
@@ -603,7 +603,7 @@ export interface components {
     QueueTransitionResponse: {
       /** @constant */
       resultType: 'transition';
-      ticketId: string;
+      visitId: string;
       fromStatus: components['schemas']['QueueStatus'];
       toStatus: components['schemas']['QueueStatus'];
       /** Format: date-time */
@@ -614,7 +614,7 @@ export interface components {
     QueueRecallResponse: {
       /** @constant */
       resultType: 'recall';
-      ticketId: string;
+      visitId: string;
       fromStatus: components['schemas']['QueueStatus'];
       toStatus: components['schemas']['QueueStatus'];
       /** Format: date-time */

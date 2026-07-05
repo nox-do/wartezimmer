@@ -176,9 +176,9 @@ async function main() {
     'Invalid check-in response',
   );
   const ticketCode = formatTicketCode(checkin.body.laneCode, checkin.body.number);
-  const ticketId = checkin.body.ticketId;
+  const visitId = checkin.body.visitId;
 
-  console.log(`   -> Ticket ${ticketCode} (${ticketId})`);
+  console.log(`   -> Ticket ${ticketCode} (${visitId})`);
 
   console.log('2) Session aus Wartenummer aufloesen');
   const resolved = await requestJson(baseUrl, 'POST', '/api/v1/sessions/resolve-ticket', {
@@ -285,7 +285,7 @@ async function main() {
   const mfaList = await requestJson(
     baseUrl,
     'GET',
-    `/api/v1/documents/${encodeURIComponent(ticketId)}`,
+    `/api/v1/documents/${encodeURIComponent(visitId)}`,
     {
       auth: mfaAuth,
       expectedStatus: 200,
@@ -383,7 +383,7 @@ async function main() {
   });
   assert(queue.body?.view === 'mfa', 'Expected MFA queue view');
   const queueItem = Array.isArray(queue.body?.items)
-    ? queue.body.items.find((item) => item.ticketId === ticketId)
+    ? queue.body.items.find((item) => item.visitId === visitId)
     : null;
   assert(queueItem, 'Expected queue item for ticket');
   assert(typeof queueItem.documentCount === 'number', 'Queue item should expose documentCount');

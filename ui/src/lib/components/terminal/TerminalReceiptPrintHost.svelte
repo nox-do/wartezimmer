@@ -53,10 +53,10 @@
 
     if (
       finished?.payload.kind === 'ticket' &&
-      finished.payload.ticketId &&
-      finished.payload.ticketId.trim()
+      finished.payload.visitId &&
+      finished.payload.visitId.trim()
     ) {
-      markTicketPrinted(finished.payload.ticketId);
+      markTicketPrinted(finished.payload.visitId);
     }
 
     drainQueue();

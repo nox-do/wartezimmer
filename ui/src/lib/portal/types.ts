@@ -4,12 +4,12 @@ export type SessionResolveResponse = {
   sessionId: string;
   sessionToken: string;
   expiresAt: string;
-  ticketId: string;
+  visitId: string;
 };
 
 export type SessionMeResponse = {
   sessionId: string;
-  ticketId: string;
+  visitId: string;
   status: 'active' | 'expired' | 'revoked';
   expiresAt: string;
   createdAt: string;

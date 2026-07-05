@@ -18,7 +18,7 @@ export const POST_api_v1_sessions_resolve_ticketRequestBody = {
 
 export const POST_api_v1_sessions_resolve_ticketResponse201 = {
   type: 'object',
-  required: ['sessionId', 'sessionToken', 'expiresAt', 'ticketId'],
+  required: ['sessionId', 'sessionToken', 'expiresAt', 'visitId'],
   properties: {
     sessionId: {
       type: 'string',
@@ -30,7 +30,7 @@ export const POST_api_v1_sessions_resolve_ticketResponse201 = {
       type: 'string',
       format: 'date-time',
     },
-    ticketId: {
+    visitId: {
       type: 'string',
     },
   },
@@ -522,13 +522,13 @@ export const POST_api_v1_sessions_verify_ticket_codeRequestBody = {
 
 export const POST_api_v1_sessions_verify_ticket_codeResponse200 = {
   type: 'object',
-  required: ['ok', 'ticketId'],
+  required: ['ok', 'visitId'],
   properties: {
     ok: {
       type: 'boolean',
       const: true,
     },
-    ticketId: {
+    visitId: {
       type: 'string',
     },
   },
@@ -682,7 +682,7 @@ export const GET_api_v1_sessions_meResponse200 = {
   type: 'object',
   required: [
     'sessionId',
-    'ticketId',
+    'visitId',
     'status',
     'expiresAt',
     'createdAt',
@@ -693,7 +693,7 @@ export const GET_api_v1_sessions_meResponse200 = {
     sessionId: {
       type: 'string',
     },
-    ticketId: {
+    visitId: {
       type: 'string',
     },
     status: {

@@ -4,7 +4,7 @@ import { resolveCallRoomTarget } from './call-room-target';
 
 function waitingTicket(overrides: Partial<QueueItem> = {}): QueueItem {
   return {
-    ticketId: 't1',
+    visitId: 't1',
     topicId: 'offen',
     laneCode: 'O',
     number: 1,
@@ -15,6 +15,7 @@ function waitingTicket(overrides: Partial<QueueItem> = {}): QueueItem {
     hasMobilePhone: false,
     destinationRoomId: 'empfang',
     destinationRoomLabel: 'Empfang',
+    needsAssistance: false,
     ...overrides,
   };
 }

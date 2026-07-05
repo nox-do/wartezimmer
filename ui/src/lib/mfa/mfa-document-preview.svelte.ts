@@ -1,5 +1,5 @@
 import { authSession } from '$lib/auth/session-state.svelte';
-import { fetchDocumentsForTicket } from '$lib/documents/document-api';
+import { fetchDocumentsForVisit } from '$lib/documents/document-api';
 import {
   rememberMfaDocumentContext,
   resolveMfaDocumentContext,
@@ -41,11 +41,11 @@ export function isRenameGenerationCurrent(generation: number): boolean {
 }
 
 export function openMfaDocumentPreview(
-  item: Pick<QueueItem, 'ticketId' | 'laneCode' | 'number' | 'topicId' | 'topicLabel'>,
+  item: Pick<QueueItem, 'visitId' | 'laneCode' | 'number' | 'topicId' | 'topicLabel'>,
   activeDocumentId = '',
 ): void {
   const base = {
-    ticketId: item.ticketId,
+    visitId: item.visitId,
     laneCode: item.laneCode,
     number: item.number,
     topicId: item.topicId,
@@ -58,27 +58,27 @@ export function openMfaDocumentPreview(
 }
 
 export function closeMfaDocumentPreview(): void {
-  const ticketId = mfaDocumentPreview.context?.ticketId;
+  const visitId = mfaDocumentPreview.context?.visitId;
   invalidateDocumentRename();
   mfaDocumentPreview.open = false;
   mfaDocumentPreview.context = null;
-  if (ticketId) {
-    queueDocumentCounts.delete(ticketId);
+  if (visitId) {
+    queueDocumentCounts.delete(visitId);
   }
 }
 
 export function syncMfaDocumentPreviewWithQueue(
-  items: readonly Pick<QueueItem, 'ticketId' | 'documentCount'>[],
+  items: readonly Pick<QueueItem, 'visitId' | 'documentCount'>[],
 ): void {
   if (!mfaDocumentPreview.open || !mfaDocumentPreview.context) {
     return;
   }
   const ctx = mfaDocumentPreview.context;
-  const queueItem = items.find((item) => item.ticketId === ctx.ticketId);
+  const queueItem = items.find((item) => item.visitId === ctx.visitId);
   if (!queueItem) {
     return;
   }
-  const prev = queueDocumentCounts.get(ctx.ticketId);
+  const prev = queueDocumentCounts.get(ctx.visitId);
   const next = queueItem.documentCount;
   if (next === 0) {
     if (prev === SEEN_ZERO_DOCUMENT_COUNT) {
@@ -86,7 +86,7 @@ export function syncMfaDocumentPreviewWithQueue(
       return;
     }
     if (prev === undefined) {
-      queueDocumentCounts.set(ctx.ticketId, SEEN_ZERO_DOCUMENT_COUNT);
+      queueDocumentCounts.set(ctx.visitId, SEEN_ZERO_DOCUMENT_COUNT);
       return;
     }
     if (prev > 0) {
@@ -94,14 +94,14 @@ export function syncMfaDocumentPreviewWithQueue(
       return;
     }
   }
-  queueDocumentCounts.set(ctx.ticketId, next);
+  queueDocumentCounts.set(ctx.visitId, next);
 }
 
-function isDeepLinkBootstrapStillActive(ticketId: string): boolean {
+function isDeepLinkBootstrapStillActive(visitId: string): boolean {
   if (window.location.pathname !== '/mfa') {
     return false;
   }
-  return new URL(window.location.href).searchParams.get('ticketId')?.trim() === ticketId;
+  return new URL(window.location.href).searchParams.get('visitId')?.trim() === visitId;
 }
 
 export async function bootstrapMfaDocumentPreviewFromUrl(
@@ -114,15 +114,15 @@ export async function bootstrapMfaDocumentPreviewFromUrl(
   }
 
   const params = new URLSearchParams(search);
-  const ticketId = params.get('ticketId')?.trim();
+  const visitId = params.get('visitId')?.trim();
   const documentId = params.get('documentId')?.trim();
-  if (!ticketId) {
+  if (!visitId) {
     return;
   }
   if (mfaDocumentPreview.open) {
     const current = mfaDocumentPreview.context;
     if (
-      current?.ticketId === ticketId &&
+      current?.visitId === visitId &&
       (!documentId || documentId === current.activeDocumentId)
     ) {
       clearQueryParams();
@@ -138,11 +138,11 @@ export async function bootstrapMfaDocumentPreviewFromUrl(
   bootstrapInflight = search;
 
   try {
-    const context = (await resolveMfaDocumentContext(ticketId)) ?? null;
+    const context = (await resolveMfaDocumentContext(visitId)) ?? null;
     if (!isBootstrapCurrent(generation)) {
       return;
     }
-    if (!context || context.ticketId !== ticketId) {
+    if (!context || context.visitId !== visitId) {
       if (!mfaDocumentPreview.open) {
         toastStore.error(t('mfa.documentsContextMissing'));
       }
@@ -150,7 +150,7 @@ export async function bootstrapMfaDocumentPreviewFromUrl(
       return;
     }
 
-    const result = await fetchDocumentsForTicket(context.ticketId);
+    const result = await fetchDocumentsForVisit(context.visitId);
     if (!isBootstrapCurrent(generation)) {
       return;
     }
@@ -168,7 +168,7 @@ export async function bootstrapMfaDocumentPreviewFromUrl(
       return;
     }
 
-    if (mfaDocumentPreview.open || !isDeepLinkBootstrapStillActive(ticketId)) {
+    if (mfaDocumentPreview.open || !isDeepLinkBootstrapStillActive(visitId)) {
       if (isBootstrapCurrent(generation)) {
         clearQueryParams();
       }
@@ -183,7 +183,7 @@ export async function bootstrapMfaDocumentPreviewFromUrl(
     if (
       !isMfaAuthenticated() ||
       !isBootstrapCurrent(generation) ||
-      !isDeepLinkBootstrapStillActive(ticketId)
+      !isDeepLinkBootstrapStillActive(visitId)
     ) {
       return;
     }

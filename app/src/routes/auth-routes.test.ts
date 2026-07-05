@@ -184,13 +184,13 @@ async function buildAuthApp(): Promise<ReturnType<typeof Fastify>> {
     role: request.clientRole ?? null,
   }));
   app.get('/api/v1/queue', async (request) => ({ role: request.clientRole ?? null }));
-  app.post('/api/v1/queue/:ticket/transition', async () => ({ transitioned: true }));
+  app.post('/api/v1/queue/:visitId/transition', async () => ({ transitioned: true }));
   app.get('/api/v1/checkins/topics', async (request) => ({
     role: request.clientRole ?? null,
     topics: [],
   }));
   app.post('/api/v1/checkins', async (request, reply) =>
-    reply.code(201).send({ role: request.clientRole ?? null, ticketId: 'ticket-1' }),
+    reply.code(201).send({ role: request.clientRole ?? null, visitId: 'ticket-1' }),
   );
   await app.ready();
   return app;

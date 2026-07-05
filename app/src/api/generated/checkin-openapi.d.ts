@@ -83,7 +83,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['TicketCreated'];
+            'application/json': components['schemas']['VisitCreated'];
           };
         };
         /** @description Invalid request */
@@ -328,12 +328,12 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
-    TicketCreated: {
+    VisitCreated: {
       /**
        * @description Internal unique ticket id.
        * @example 20260530-A-001
        */
-      ticketId: string;
+      visitId: string;
       /** @example A */
       laneCode: string;
       /** @example 1 */

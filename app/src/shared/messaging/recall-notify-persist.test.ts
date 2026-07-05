@@ -14,10 +14,10 @@ function createDbStub(): CoreDatabase & {
   return {
     errors,
     sentFlags,
-    setRecallNotifyError(_ticketId: string, errorCode: string | null) {
+    setRecallNotifyError(_visitId: string, errorCode: string | null) {
       errors.push(errorCode);
     },
-    setRecallNotifySent(_ticketId: string, sent: boolean) {
+    setRecallNotifySent(_visitId: string, sent: boolean) {
       sentFlags.push(sent);
     },
   } as unknown as CoreDatabase & { errors: Array<string | null>; sentFlags: boolean[] };

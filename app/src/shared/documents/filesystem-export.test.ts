@@ -8,7 +8,7 @@ import { exportDocumentToFilesystem, resolveDocumentExportPaths } from './filesy
 
 const baseInfo: DocumentExportInfo = {
   documentId: 'doc-abc',
-  ticketId: 'ticket-1',
+  visitId: 'ticket-1',
   ticketLaneCode: 'A',
   ticketNumber: 7,
   identityRef: 'Max Mustermann',

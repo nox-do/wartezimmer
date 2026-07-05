@@ -88,7 +88,7 @@ async function main() {
   });
   assertResponseSchema(bundle, 'POST', '/api/v1/checkins', 201, created, 'checkin create');
 
-  const ticketId = created.ticketId;
+  const visitId = created.visitId;
   const ticketCode = formatTicketCode(created.laneCode, created.number);
 
   console.log('identity) POST /api/v1/identity/phone-dob-lookup');
@@ -108,16 +108,16 @@ async function main() {
     'identity phone-dob lookup',
   );
 
-  console.log(`identity) GET /api/v1/identity/${ticketId}`);
+  console.log(`identity) GET /api/v1/identity/${visitId}`);
   const identity = await requestJson(
     baseUrl,
-    `/api/v1/identity/${encodeURIComponent(ticketId)}`,
+    `/api/v1/identity/${encodeURIComponent(visitId)}`,
     mfaAuth,
   );
   assertResponseSchema(
     bundle,
     'GET',
-    '/api/v1/identity/{ticket}',
+    '/api/v1/identity/{visitId}',
     200,
     identity,
     'identity ticket view',
@@ -178,10 +178,10 @@ async function main() {
     'session resolve not found',
   );
 
-  console.log(`queue) POST /api/v1/queue/${ticketId}/transition`);
+  console.log(`queue) POST /api/v1/queue/${visitId}/transition`);
   const called = await requestJson(
     baseUrl,
-    `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`,
+    `/api/v1/queue/${encodeURIComponent(visitId)}/transition`,
     mfaAuth,
     {
       method: 'POST',
@@ -191,7 +191,7 @@ async function main() {
   assertResponseSchema(
     bundle,
     'POST',
-    '/api/v1/queue/{ticket}/transition',
+    '/api/v1/queue/{visitId}/transition',
     200,
     called,
     'queue transition',

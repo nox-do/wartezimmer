@@ -9,7 +9,7 @@
   onMount(() => {
     const search = buildMfaDocumentDeepLinkSearch(window.location.search);
     const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
-    if (!params.get('ticketId')?.trim()) {
+    if (!params.get('visitId')?.trim()) {
       errorMessage = t('mfa.documentsContextMissing');
       return;
     }

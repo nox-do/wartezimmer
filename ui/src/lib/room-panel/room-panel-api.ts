@@ -89,9 +89,9 @@ export async function fetchRoomPanelQueue(): Promise<Result<RoomPanelSnapshot>> 
   );
 }
 
-function transitionRoomPanelTicket(ticketId: string, type: 'check_in_room' | 'check_out_room') {
+function transitionRoomPanelVisit(visitId: string, type: 'check_in_room' | 'check_out_room') {
   return httpFetch<QueueTicketTransitionResponse>(
-    `/api/v1/queue/${encodeURIComponent(ticketId)}/transition`,
+    `/api/v1/queue/${encodeURIComponent(visitId)}/transition`,
     withRoomPanelRole({
       method: 'POST',
       credentials: 'include',
@@ -101,12 +101,12 @@ function transitionRoomPanelTicket(ticketId: string, type: 'check_in_room' | 'ch
   );
 }
 
-export async function checkInRoomPanelTicket(ticketId: string) {
-  return transitionRoomPanelTicket(ticketId, 'check_in_room');
+export async function checkInRoomPanelVisit(visitId: string) {
+  return transitionRoomPanelVisit(visitId, 'check_in_room');
 }
 
-export async function checkOutRoomPanelTicket(ticketId: string) {
-  return transitionRoomPanelTicket(ticketId, 'check_out_room');
+export async function checkOutRoomPanelVisit(visitId: string) {
+  return transitionRoomPanelVisit(visitId, 'check_out_room');
 }
 
 function resolveRoomPanelStreamError(message: string): RoomPanelStreamError {

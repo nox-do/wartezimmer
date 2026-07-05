@@ -102,12 +102,12 @@ test('createVisitCheckInInDb writes a visit and exposes it in the queue list', (
     identityRef: 'Integration Test',
   });
 
-  assert.match(created.ticketId, /^\d{8}-L-\d{3}$/);
+  assert.match(created.visitId, /^\d{8}-L-\d{3}$/);
   assert.ok(created.number >= 1);
 
   const queueRows = listVisitQueueRows(getFlowCoreRuntime(db), settings, getBusinessDay());
   assert.equal(queueRows.length, 1);
-  assert.equal(queueRows[0]?.id, created.ticketId);
+  assert.equal(queueRows[0]?.id, created.visitId);
   assert.equal(queueRows[0]?.status, 'waiting');
   assert.equal(queueRows[0]?.topicId, 'blut');
 });

@@ -3,6 +3,8 @@
  */
 import type { components, paths } from './generated/checkin-openapi.js';
 
-export type TicketCreated = components['schemas']['TicketCreated'];
+export type VisitCreated = components['schemas']['VisitCreated'];
+/** @deprecated Use VisitCreated */
+export type TicketCreated = VisitCreated;
 export type CreateCheckinBody =
   paths['/api/v1/checkins']['post']['requestBody']['content']['application/json'];

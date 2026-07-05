@@ -11,7 +11,7 @@ import type { QueueItem } from './types';
 
 function baseItem(overrides: Partial<QueueItem> = {}): QueueItem {
   return {
-    ticketId: '20260614-A-001',
+    visitId: '20260614-A-001',
     laneCode: 'A',
     number: 1,
     topicId: 'blut',
@@ -29,6 +29,7 @@ function baseItem(overrides: Partial<QueueItem> = {}): QueueItem {
     hasMobilePhone: true,
     identityRef: 'Max Mustermann',
     returnUntil: null,
+    needsAssistance: false,
     ...overrides,
   };
 }

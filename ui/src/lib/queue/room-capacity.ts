@@ -23,13 +23,13 @@ export {
 };
 
 export type RoomOccupantItem = Pick<QueueItem, 'roomId' | 'status'>;
-export type RoomOccupantItemWithId = RoomOccupantItem & Pick<QueueItem, 'ticketId'>;
+export type RoomOccupantItemWithId = RoomOccupantItem & Pick<QueueItem, 'visitId'>;
 
 function toDomainOccupants(items: readonly RoomOccupantItemWithId[]): RoomOccupantWithId[] {
   return items.map((item) => ({
     roomId: item.roomId ?? null,
     status: item.status,
-    occupantId: item.ticketId,
+    occupantId: item.visitId,
   }));
 }
 

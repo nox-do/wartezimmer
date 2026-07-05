@@ -8,7 +8,7 @@ const rooms: PracticeRoom[] = [
   { roomId: 'kirche', roomLabel: 'kirche', enabled: true, defaultCallTarget: false },
 ];
 
-function ticket(overrides: Partial<QueueItem> & Pick<QueueItem, 'ticketId' | 'roomId'>): QueueItem {
+function ticket(overrides: Partial<QueueItem> & Pick<QueueItem, 'visitId' | 'roomId'>): QueueItem {
   return {
     laneCode: 'M',
     number: 1,
@@ -24,6 +24,7 @@ function ticket(overrides: Partial<QueueItem> & Pick<QueueItem, 'ticketId' | 'ro
     recallNotifySent: false,
     hasMobilePhone: false,
     returnUntil: null,
+    needsAssistance: false,
     ...overrides,
   };
 }
@@ -39,16 +40,16 @@ describe('buildActiveRoomBoard', () => {
   it('groups tickets by roomId and collects unknown roomIds as unassigned', () => {
     const board = buildActiveRoomBoard(
       [
-        ticket({ ticketId: 'a', roomId: 'empfang', status: 'called' }),
-        ticket({ ticketId: 'b', roomId: 'kirche', status: 'in_room' }),
-        ticket({ ticketId: 'c', roomId: 'unknown', status: 'called' }),
-        ticket({ ticketId: 'd', roomId: null, status: 'called' }),
+        ticket({ visitId: 'a', roomId: 'empfang', status: 'called' }),
+        ticket({ visitId: 'b', roomId: 'kirche', status: 'in_room' }),
+        ticket({ visitId: 'c', roomId: 'unknown', status: 'called' }),
+        ticket({ visitId: 'd', roomId: null, status: 'called' }),
       ],
       rooms,
     );
 
-    expect(board.groups[0]?.tickets.map((item) => item.ticketId)).toEqual(['a']);
-    expect(board.groups[1]?.tickets.map((item) => item.ticketId)).toEqual(['b']);
-    expect(board.unassigned.map((item) => item.ticketId)).toEqual(['c', 'd']);
+    expect(board.groups[0]?.tickets.map((item) => item.visitId)).toEqual(['a']);
+    expect(board.groups[1]?.tickets.map((item) => item.visitId)).toEqual(['b']);
+    expect(board.unassigned.map((item) => item.visitId)).toEqual(['c', 'd']);
   });
 });

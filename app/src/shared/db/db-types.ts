@@ -65,7 +65,7 @@ export type QueueTicketRow = {
 };
 
 export type TicketIdentityView = {
-  ticketId: string;
+  visitId: string;
   laneCode: string;
   number: number;
   topicId: string;
@@ -98,7 +98,7 @@ export function isSessionStatus(value: string): value is SessionStatus {
 
 export type PatientSession = {
   sessionId: string;
-  ticketId: string;
+  visitId: string;
   expiresAt: string;
   createdAt: string;
   status: SessionStatus;
@@ -108,7 +108,7 @@ export type SessionResolveResult = {
   sessionId: string;
   sessionToken: string;
   expiresAt: string;
-  ticketId: string;
+  visitId: string;
 };
 
 export type DocumentSource = 'upload' | 'form';
@@ -126,7 +126,7 @@ export type DocumentStatus =
 
 export type PatientDocumentRow = {
   id: string;
-  ticketId: string;
+  visitId: string;
   fileName: string;
   mimeType: string;
   sizeBytes: number;
@@ -220,7 +220,7 @@ export type OutboxStatus = {
 
 export type DocumentExportInfo = {
   documentId: string;
-  ticketId: string;
+  visitId: string;
   ticketLaneCode: string;
   ticketNumber: number;
   identityRef: string | null;
@@ -236,7 +236,7 @@ export type DayLifecycleState = {
   needsDayStartHint: boolean;
   checkinLocked: boolean;
   dayClosePhase: DayClosePhase;
-  lastDayStats: BusinessDayTicketStats | null;
+  lastDayStats: BusinessDayVisitStats | null;
 };
 
 export type BusinessDayTopicCount = {
@@ -245,8 +245,8 @@ export type BusinessDayTopicCount = {
   count: number;
 };
 
-export type BusinessDayOpenTicket = {
-  ticketId: string;
+export type BusinessDayOpenVisit = {
+  visitId: string;
   laneCode: string;
   number: number;
   topicLabel: string;
@@ -254,13 +254,18 @@ export type BusinessDayOpenTicket = {
   status: TicketStatus;
 };
 
-export type BusinessDayTicketStats = {
+export type BusinessDayVisitStats = {
   businessDay: string;
-  totalTickets: number;
+  totalVisits: number;
   maxWaitMs: number;
   byTopic: BusinessDayTopicCount[];
-  openTickets: BusinessDayOpenTicket[];
+  openVisits: BusinessDayOpenVisit[];
 };
+
+/** @deprecated Use BusinessDayVisitStats */
+export type BusinessDayTicketStats = BusinessDayVisitStats;
+/** @deprecated Use BusinessDayOpenVisit */
+export type BusinessDayOpenTicket = BusinessDayOpenVisit;
 
 export type EmergencyState = {
   active: boolean;

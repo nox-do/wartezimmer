@@ -17,7 +17,7 @@ components:
       type: object
       required:
         - id
-        - ticketId
+        - visitId
         - fileName
         - mimeType
         - sizeBytes
@@ -27,7 +27,7 @@ components:
       properties:
         id:
           type: string
-        ticketId:
+        visitId:
           type: string
         fileName:
           type: string
@@ -417,7 +417,7 @@ paths:
                   - sessionId
                   - sessionToken
                   - expiresAt
-                  - ticketId
+                  - visitId
                 properties:
                   sessionId:
                     type: string
@@ -426,7 +426,7 @@ paths:
                   expiresAt:
                     type: string
                     format: date-time
-                  ticketId:
+                  visitId:
                     type: string
         '400':
           description: Invalid request or rate limited
@@ -540,12 +540,12 @@ paths:
                 type: object
                 required:
                   - ok
-                  - ticketId
+                  - visitId
                 properties:
                   ok:
                     type: boolean
                     const: true
-                  ticketId:
+                  visitId:
                     type: string
         '404':
           description: Ticket code not found
@@ -573,7 +573,7 @@ paths:
                 type: object
                 required:
                   - sessionId
-                  - ticketId
+                  - visitId
                   - status
                   - expiresAt
                   - createdAt
@@ -582,7 +582,7 @@ paths:
                 properties:
                   sessionId:
                     type: string
-                  ticketId:
+                  visitId:
                     type: string
                   status:
                     type: string
@@ -735,14 +735,14 @@ paths:
             application/json:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
-  /api/v1/documents/{ticket}:
+  /api/v1/documents/{visitId}:
     get:
       summary: List documents for MFA processing by ticket
       security:
         - clientApiKeyBearer: []
       parameters:
         - in: path
-          name: ticket
+          name: visitId
           required: true
           schema:
             type: string

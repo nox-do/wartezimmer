@@ -154,7 +154,7 @@ test('terminal assist pending: check-in with active press sets needsAssistance',
   });
   clearTerminalAssistPending(db, TERMINAL_DEVICE_ID);
 
-  const visit = getFlowCoreRuntime(db).visits().find((entry) => entry.id === created.ticketId);
+  const visit = getFlowCoreRuntime(db).visits().find((entry) => entry.id === created.visitId);
   assert.equal(visit?.needsAssistance, true);
   assert.equal(visit?.primaryTopicId, 'blut');
   assert.equal(isTerminalAssistPendingActive(db, TERMINAL_DEVICE_ID), false);

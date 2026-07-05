@@ -254,7 +254,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     ),
     listOpenVisitsByBusinessDayStmt: db.prepare(
       `SELECT
-        v.id AS ticketId,
+        v.id AS visitId,
         v.queue_lane_code AS laneCode,
         v.queue_sequence AS number,
         COALESCE(top.name, v.primary_topic_id) AS topicLabel,
@@ -296,7 +296,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     ),
     getTicketIdentityViewStmt: db.prepare(
       `SELECT
-        v.id AS ticketId,
+        v.id AS visitId,
         v.queue_lane_code AS laneCode,
         v.queue_sequence AS number,
         v.primary_topic_id AS topicId,
@@ -419,7 +419,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
       LIMIT 1`,
     ),
     getPatientSessionByTokenStmt: db.prepare(
-      `SELECT id AS sessionId, visit_id AS ticketId, expires_at AS expiresAt, status, created_at AS createdAt
+      `SELECT id AS sessionId, visit_id AS visitId, expires_at AS expiresAt, status, created_at AS createdAt
       FROM patient_sessions
       WHERE token_hash = ?
       LIMIT 1`,
@@ -441,7 +441,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     listPatientDocumentsStmt: db.prepare(
       `SELECT
         id,
-        visit_id AS ticketId,
+        visit_id AS visitId,
         file_name AS fileName,
         mime_type AS mimeType,
         size_bytes AS sizeBytes,
@@ -458,7 +458,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     getDocumentByIdStmt: db.prepare(
       `SELECT
         id,
-        visit_id AS ticketId,
+        visit_id AS visitId,
         session_id AS sessionId,
         source,
         file_name AS fileName,
@@ -474,7 +474,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     getDocumentExportInfoStmt: db.prepare(
       `SELECT
         d.id AS documentId,
-        d.visit_id AS ticketId,
+        d.visit_id AS visitId,
         v.queue_lane_code AS ticketLaneCode,
         v.queue_sequence AS ticketNumber,
         COALESCE(h.identity_ref_override, p.display_name) AS identityRef,
@@ -498,7 +498,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     listDocumentsByVisitStmt: db.prepare(
       `SELECT
         id,
-        visit_id AS ticketId,
+        visit_id AS visitId,
         session_id AS sessionId,
         source,
         file_name AS fileName,

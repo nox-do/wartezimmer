@@ -124,7 +124,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/identity/{ticket}': {
+  '/api/v1/identity/{visitId}': {
     parameters: {
       query?: never;
       header?: never;
@@ -137,7 +137,7 @@ export interface paths {
         query?: never;
         header?: never;
         path: {
-          ticket: string;
+          visitId: string;
         };
         cookie?: never;
       };
@@ -150,7 +150,7 @@ export interface paths {
           };
           content: {
             'application/json': {
-              ticketId: string;
+              visitId: string;
               laneCode: string;
               topicLabel: string;
               number: number;

@@ -144,7 +144,7 @@ function setupPanelVisitFlow(showPatientNames = false): {
     getFlowCoreRuntimeInstance: () => runtime,
   } as unknown as CoreDatabase;
 
-  return { sqlite, db, settings, visitId: created.ticketId, runtime, listQueue, deps };
+  return { sqlite, db, settings, visitId: created.visitId, runtime, listQueue, deps };
 }
 
 test('buildRoomPanelQueueSnapshot filters to session room and hides names by default', () => {
@@ -155,7 +155,7 @@ test('buildRoomPanelQueueSnapshot filters to session room and hides names by def
     identityRef: 'Other Room',
   });
   callVisitTicket(sqlite, runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  callVisitTicket(sqlite, runtime, settings, listQueue, otherVisit.ticketId, 'mfa-tresen', 'Empfang');
+  callVisitTicket(sqlite, runtime, settings, listQueue, otherVisit.visitId, 'mfa-tresen', 'Empfang');
 
   const snapshot = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 7, {
     roomId: 'labor',
@@ -167,7 +167,7 @@ test('buildRoomPanelQueueSnapshot filters to session room and hides names by def
   assert.equal(snapshot.roomId, 'labor');
   assert.equal(snapshot.roomLabel, 'Labor');
   assert.equal(snapshot.items.length, 1);
-  assert.equal(snapshot.items[0]?.ticketId, visitId);
+  assert.equal(snapshot.items[0]?.visitId, visitId);
   assert.equal('identityRef' in snapshot.items[0]!, false);
 });
 
@@ -229,7 +229,7 @@ test('buildRoomPanelQueueSnapshot includes identityRef only when room setting al
     getFlowCoreRuntimeInstance: () => runtime,
   } as unknown as CoreDatabase;
 
-  callVisitTicket(sqlite, runtime, settings, listQueue, created.ticketId, 'labor', 'Labor');
+  callVisitTicket(sqlite, runtime, settings, listQueue, created.visitId, 'labor', 'Labor');
 
   const snapshot = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 8, {
     roomId: 'labor',

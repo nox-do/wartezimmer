@@ -3,11 +3,11 @@
  * Run: npm run generate:api-schemas
  */
 
-export const TicketCreated = {
+export const VisitCreated = {
   type: 'object',
-  required: ['ticketId', 'laneCode', 'number', 'queueStatus', 'createdAt'],
+  required: ['visitId', 'laneCode', 'number', 'queueStatus', 'createdAt'],
   properties: {
-    ticketId: {
+    visitId: {
       type: 'string',
     },
     laneCode: {
@@ -201,9 +201,9 @@ export const POST_api_v1_checkinsRequestBody = {
 
 export const POST_api_v1_checkinsResponse201 = {
   type: 'object',
-  required: ['ticketId', 'laneCode', 'number', 'queueStatus', 'createdAt'],
+  required: ['visitId', 'laneCode', 'number', 'queueStatus', 'createdAt'],
   properties: {
-    ticketId: {
+    visitId: {
       type: 'string',
     },
     laneCode: {
@@ -960,7 +960,7 @@ export const POST_api_v1_checkins_mfa_assistResponse500 = {
 } as const;
 
 export const checkinSchemas = {
-  TicketCreated,
+  VisitCreated,
   TerminalTopic,
   TerminalAssistPendingItem,
   TerminalAssistPressed,

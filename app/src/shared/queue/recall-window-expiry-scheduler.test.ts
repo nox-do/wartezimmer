@@ -22,9 +22,9 @@ test('scheduleRecallWindowExpiry moves only the scheduled ticket at returnUntil'
     listActiveTerminalAssistPending: () => [],
     getOpsSettings: () => ({ rooms: [] }),
     processExpiredRecallWindows: () => [],
-    processExpiredRecallWindowForTicket: (ticketId: string) => {
-      processed.push(ticketId);
-      return ticketId === 'ticket-1';
+    processExpiredRecallWindowForTicket: (visitId: string) => {
+      processed.push(visitId);
+      return visitId === 'ticket-1';
     },
     isCheckinLocked: () => false,
     isEffectiveCheckinLocked: () => false,

@@ -167,7 +167,7 @@
   }
 
   async function printCreatedTicket(result: {
-    ticketId: string;
+    visitId: string;
     laneCode: string;
     number: number;
     destinationRoomLabel?: string | null;
@@ -187,7 +187,7 @@
       destinationRoomLabel: result.destinationRoomLabel ?? null,
       printedAtLabel: formatReceiptTimestamp(),
       kind: 'ticket',
-      ticketId: result.ticketId,
+      visitId: result.visitId,
     });
   }
 

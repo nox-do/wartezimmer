@@ -5,7 +5,7 @@
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
 
   interface TicketRef {
-    ticketId: string;
+    visitId: string;
     laneCode: string;
     number: number;
   }

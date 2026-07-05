@@ -4,7 +4,7 @@
   import { ArrowRight, FileText, LogOut, MapPin, Megaphone, RotateCcw, Send, TreePalm, Users } from '@lucide/svelte';
   import MfaActionButton from '$lib/components/mfa/MfaActionButton.svelte';
   import QueueTriageButton from '$lib/components/mfa/QueueTriageButton.svelte';
-  import { setIdentityRefTicket } from '$lib/queue/queue-actions';
+  import { setIdentityRefVisit } from '$lib/queue/queue-actions';
   import { applyMfaQueueIdentityRef } from '$lib/mfa/mfa-queue-display.svelte';
   import { toastStore } from '$lib/stores/toastStore';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
@@ -95,10 +95,10 @@
   const { attach, attachHandle, isDragging } = createDraggable({
     get id() {
       const roomKey = item.roomId?.trim() || 'none';
-      return `ticket:${item.ticketId}:${zone}:${roomKey}`;
+      return `ticket:${item.visitId}:${zone}:${roomKey}`;
     },
     get data() {
-      return { ticketId: item.ticketId };
+      return { visitId: item.visitId };
     },
     get disabled() {
       return !canDrag;
@@ -136,13 +136,13 @@
       return;
     }
     nameSaving = true;
-    const result = await setIdentityRefTicket(item.ticketId, trimmed);
+    const result = await setIdentityRefVisit(item.visitId, trimmed);
     nameSaving = false;
     if (result.error) {
       toastStore.error(result.error.message);
       return;
     }
-    applyMfaQueueIdentityRef(item.ticketId, result.data.identityRef);
+    applyMfaQueueIdentityRef(item.visitId, result.data.identityRef);
     nameEditing = false;
   }
 

@@ -16,16 +16,16 @@ components:
       in: cookie
       name: pf_terminal_device_session
   schemas:
-    TicketCreated:
+    VisitCreated:
       type: object
       required:
-        - ticketId
+        - visitId
         - laneCode
         - number
         - queueStatus
         - createdAt
       properties:
-        ticketId:
+        visitId:
           type: string
           description: Internal unique ticket id.
           example: '20260530-A-001'
@@ -178,7 +178,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TicketCreated'
+                $ref: '#/components/schemas/VisitCreated'
         '400':
           description: Invalid request
           content:

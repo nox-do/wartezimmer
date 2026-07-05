@@ -99,7 +99,7 @@ export function registerSessionRoutes(app: FastifyInstance, db: CoreDatabase): v
       try {
         const ticketCode = request.body.ticketCode?.trim() ?? '';
         const verified = db.verifyTicketCode(ticketCode);
-        return reply.send({ ok: true, ticketId: verified.ticketId });
+        return reply.send({ ok: true, visitId: verified.visitId });
       } catch (error) {
         const resolved = error instanceof Error ? resolveDomainError(error) : null;
         const message = resolved ? verifyTicketCodeMessages[resolved.rawMessage] : undefined;
@@ -152,7 +152,7 @@ export function registerSessionRoutes(app: FastifyInstance, db: CoreDatabase): v
         }
 
         const bridgeResult = await authorizePatientOnGateway({
-          ticketCode: db.getTicketCodeByTicketId(sessionMe.ticketId),
+          ticketCode: db.getTicketCodeByTicketId(sessionMe.visitId),
           clientIp: clientIp || undefined,
           clientMac: clientMac || undefined,
           redirectUrl: defaultRedirect,

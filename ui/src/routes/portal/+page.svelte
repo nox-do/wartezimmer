@@ -77,7 +77,7 @@
       await activatePortalSession({
         sessionToken: resolved.data.sessionToken,
         ticketCode: normalized,
-        ticketId: resolved.data.ticketId,
+        visitId: resolved.data.visitId,
       });
 
       const captiveContext = readCaptivePortalContext();

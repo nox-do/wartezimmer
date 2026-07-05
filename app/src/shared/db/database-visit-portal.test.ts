@@ -143,13 +143,13 @@ function setupVisitPortalFlow(): {
     checkinLocale: 'de',
     identityRef: 'Portal Patient',
   });
-  const visit = getFlowCoreRuntime(db).visits().find((entry) => entry.id === created.ticketId);
+  const visit = getFlowCoreRuntime(db).visits().find((entry) => entry.id === created.visitId);
   assert.ok(visit);
   const ticketCode = formatTicketCode(visit.queueLaneCode, created.number);
   return {
     db,
     settings,
-    visitId: created.ticketId,
+    visitId: created.visitId,
     ticketCode,
     checkinDeps,
     documentDeps,
@@ -172,10 +172,10 @@ test('visit portal: verify code, resolve session, identity view with host-state'
   const { checkinDeps, visitId, ticketCode } = setupVisitPortalFlow();
 
   const verified = verifyTicketCodeInDb(checkinDeps, ticketCode);
-  assert.equal(verified.ticketId, visitId);
+  assert.equal(verified.visitId, visitId);
 
   const session = resolvePatientSessionInDb(checkinDeps, ticketCode);
-  assert.equal(session.ticketId, visitId);
+  assert.equal(session.visitId, visitId);
   assert.ok(session.sessionToken);
 
   const portal = getTicketPortalContextFromDb(checkinDeps, visitId);
@@ -183,7 +183,7 @@ test('visit portal: verify code, resolve session, identity view with host-state'
   assert.equal(portal.checkinPhone, '+49172111111');
 
   const identity = getTicketIdentityViewFromDb(checkinDeps, visitId);
-  assert.equal(identity.ticketId, visitId);
+  assert.equal(identity.visitId, visitId);
   assert.equal(identity.status, 'waiting');
   assert.equal(identity.identityRef, 'Portal Patient');
 });
@@ -200,7 +200,7 @@ test('visit portal: document intake uses visit_id FK', () => {
     status: 'received',
   });
 
-  assert.equal(doc.ticketId, session.ticketId);
+  assert.equal(doc.visitId, session.visitId);
   assert.equal(doc.fileName, 'befund.pdf');
 });
 

@@ -282,7 +282,7 @@ export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): v
 
         notifyTvQueueChanged(db);
         return reply.code(201).send({
-          ticketId: created.ticketId,
+          visitId: created.visitId,
           laneCode,
           number: created.number,
           queueStatus: 'waiting',

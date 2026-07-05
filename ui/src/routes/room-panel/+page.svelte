@@ -12,8 +12,8 @@
   } from '$lib/queue/ops-settings-api';
   import type { RoomPanelItem, RoomPanelSnapshot } from '$lib/queue/openapi-types';
   import {
-    checkInRoomPanelTicket,
-    checkOutRoomPanelTicket,
+    checkInRoomPanelVisit,
+    checkOutRoomPanelVisit,
     connectRoomPanelQueueStream,
     fetchRoomPanelQueue,
     fetchRoomPanelRooms,
@@ -37,8 +37,8 @@
   let streamError = $state<string | null>(null);
   let submitting = $state(false);
   let recoveringSession = $state(false);
-  let busyTicketId = $state<string | null>(null);
-  let checkOutTicket = $state<RoomPanelItem | null>(null);
+  let busyVisitId = $state<string | null>(null);
+  let checkOutVisit = $state<RoomPanelItem | null>(null);
   let forceLoginScreen = $state(false);
   let disconnectStream: (() => void) | null = null;
   let practiceProfile = $state(getPracticeProfileFallback());
@@ -54,7 +54,7 @@
   const panelItems = $derived(snapshot?.items ?? []);
   const queueEntries = $derived(
     panelItems.map((item) => ({
-      ticketId: item.ticketId,
+      visitId: item.visitId,
       ticketCode: formatTicketCode(item.laneCode, item.number),
       patientName: item.identityRef,
       status: item.status,
@@ -305,7 +305,7 @@
     disconnectStream = null;
     snapshot = null;
     streamError = null;
-    busyTicketId = null;
+    busyVisitId = null;
     rooms = [];
     await logoutRoomPanel();
     await bootstrapPanel();
@@ -359,12 +359,12 @@
       return;
     }
 
-    busyTicketId = item.ticketId;
+    busyVisitId = item.visitId;
     const result =
       action === 'check_in'
-        ? await checkInRoomPanelTicket(item.ticketId)
-        : await checkOutRoomPanelTicket(item.ticketId);
-    busyTicketId = null;
+        ? await checkInRoomPanelVisit(item.visitId)
+        : await checkOutRoomPanelVisit(item.visitId);
+    busyVisitId = null;
 
     if (!result.ok) {
       if (result.error.status === 401 || result.error.status === 403) {
@@ -378,21 +378,21 @@
     await refreshSnapshot();
   }
 
-  function requestCheckOut(ticketId: string) {
-    checkOutTicket = findPanelItem(ticketId) ?? null;
+  function requestCheckOut(visitId: string) {
+    checkOutVisit = findPanelItem(visitId) ?? null;
   }
 
   async function confirmCheckOut() {
-    const item = checkOutTicket;
+    const item = checkOutVisit;
     if (!item) {
       return;
     }
     await runTicketAction(item, 'check_out');
-    checkOutTicket = null;
+    checkOutVisit = null;
   }
 
   function cancelCheckOut() {
-    checkOutTicket = null;
+    checkOutVisit = null;
   }
 
   let reloginTimer: ReturnType<typeof setTimeout> | null = null;
@@ -412,8 +412,8 @@
   async function forceRelogin() {
     clearReloginTimer();
     forceLoginScreen = true;
-    checkOutTicket = null;
-    busyTicketId = null;
+    checkOutVisit = null;
+    busyVisitId = null;
     disconnectStream?.();
     disconnectStream = null;
     snapshot = null;
@@ -423,8 +423,8 @@
     await bootstrapPanel();
   }
 
-  function findPanelItem(ticketId: string): RoomPanelItem | undefined {
-    return panelItems.find((item) => item.ticketId === ticketId);
+  function findPanelItem(visitId: string): RoomPanelItem | undefined {
+    return panelItems.find((item) => item.visitId === visitId);
   }
 </script>
 
@@ -436,13 +436,13 @@
       state={liveState}
       stateLabelOverride={liveStateLabel}
       preview={false}
-      {busyTicketId}
-      onCheckIn={(ticketId) => void runTicketAction(findPanelItem(ticketId), 'check_in')}
+      {busyVisitId}
+      onCheckIn={(visitId) => void runTicketAction(findPanelItem(visitId), 'check_in')}
       onCheckOut={requestCheckOut}
     />
     <CheckOutConfirmModal
-      ticket={checkOutTicket}
-      busy={checkOutTicket !== null && busyTicketId === checkOutTicket.ticketId}
+      ticket={checkOutVisit}
+      busy={checkOutVisit !== null && busyVisitId === checkOutVisit.visitId}
       onConfirm={() => void confirmCheckOut()}
       onCancel={cancelCheckOut}
     />

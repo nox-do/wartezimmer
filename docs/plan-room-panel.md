@@ -238,7 +238,7 @@ type RoomPanelQueueSnapshot = {
     arrivedText: string;
   };
   items: Array<{
-    ticketId: string;
+    visitId: string;
     laneCode: string;
     number: number;
     status: 'called' | 'in_room';

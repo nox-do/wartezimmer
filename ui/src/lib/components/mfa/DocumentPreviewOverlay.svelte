@@ -4,7 +4,7 @@
   import { onMount } from 'svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import Modal from '$lib/components/Modal.svelte';
-  import { discardDocument, exportDocument, fetchDocumentsForTicket, previewDocument, renameDocument } from '$lib/documents/document-api';
+  import { discardDocument, exportDocument, fetchDocumentsForVisit, previewDocument, renameDocument } from '$lib/documents/document-api';
   import { resolveSandboxEmbedUrl } from '$lib/documents/resolve-embed-url';
   import { previewSandboxStatusMessage } from '$lib/documents/preview-sandbox-status';
   import { splitFileName } from '$lib/documents/split-file-name';
@@ -122,7 +122,7 @@
 
   async function loadDocuments(options?: { afterRemovedId?: string; previousItems?: MfaDocument[] }) {
     listLoading = true;
-    const result = await fetchDocumentsForTicket(activeContext.ticketId);
+    const result = await fetchDocumentsForVisit(activeContext.visitId);
     listLoading = false;
 
     if (!result.ok) {

@@ -14,7 +14,7 @@
   } from '$lib/room-panel/room-panel-queue-layout.svelte';
 
   export type RoomPanelQueueEntry = {
-    ticketId: string;
+    visitId: string;
     ticketCode: string;
     patientName?: string | null;
     status: 'called' | 'in_room';
@@ -26,16 +26,16 @@
     state?: 'waiting' | 'enter' | 'arrival';
     stateLabelOverride?: string;
     preview?: boolean;
-    busyTicketId?: string | null;
-    onCheckIn?: (ticketId: string) => void;
-    onCheckOut?: (ticketId: string) => void;
+    busyVisitId?: string | null;
+    onCheckIn?: (visitId: string) => void;
+    onCheckOut?: (visitId: string) => void;
   }
 
   let {
     room,
     queueEntries = [
       {
-        ticketId: 'preview',
+        visitId: 'preview',
         ticketCode: 'A-042',
         patientName: 'Muster',
         status: 'called',
@@ -44,7 +44,7 @@
     state: panelState = 'waiting',
     stateLabelOverride,
     preview = true,
-    busyTicketId = null,
+    busyVisitId = null,
     onCheckIn,
     onCheckOut,
   }: Props = $props();
@@ -137,7 +137,7 @@
           class:room-panel-preview__queue--paginated={paginated}
           aria-label={t('roomPanel.moreTicketsAria')}
         >
-          {#each visibleEntries as entry (entry.ticketId)}
+          {#each visibleEntries as entry (entry.visitId)}
             <li
               class="room-panel-preview__queue-item"
               class:room-panel-preview__queue-item--next={entry.status === 'called'}
@@ -154,8 +154,8 @@
                   class="room-panel-preview__queue-action"
                   variant="primary"
                   fullWidth
-                  loading={busyTicketId === entry.ticketId}
-                  onclick={() => onCheckIn?.(entry.ticketId)}
+                  loading={busyVisitId === entry.visitId}
+                  onclick={() => onCheckIn?.(entry.visitId)}
                 >
                   <UserCheck size={18} aria-hidden="true" />
                   {panel.placement === 'outside'
@@ -168,8 +168,8 @@
                   class="room-panel-preview__queue-action"
                   variant="secondary"
                   fullWidth
-                  loading={busyTicketId === entry.ticketId}
-                  onclick={() => onCheckOut?.(entry.ticketId)}
+                  loading={busyVisitId === entry.visitId}
+                  onclick={() => onCheckOut?.(entry.visitId)}
                 >
                   <UserX size={18} aria-hidden="true" />
                   {t('roomPanel.actionDone')}

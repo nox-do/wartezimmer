@@ -73,8 +73,8 @@ function buildQueueRouteDb(overrides: QueueRouteDbOverrides = {}): CoreDatabase 
       callbackPhone: null,
       returnWindowMinutes: 15,
     }),
-    cycleTriage: (ticketId: string) => ({
-      ticketId,
+    cycleTriage: (visitId: string) => ({
+      visitId,
       triageLevel: 'green',
       updatedAt: '2026-06-18T08:00:00.000Z',
     }),
@@ -82,16 +82,16 @@ function buildQueueRouteDb(overrides: QueueRouteDbOverrides = {}): CoreDatabase 
   } as unknown as CoreDatabase;
 }
 
-test('POST /api/v1/queue/:ticket/transition dispatches call transitions with room target', async () => {
+test('POST /api/v1/queue/:visitId/transition dispatches call transitions with room target', async () => {
   resetDevicePresenceForTests();
   markDeviceStreamConnected({ deviceId: WAITING_ROOM_DEVICE_ID, kind: 'tv' });
-  const calls: Array<{ ticketId: string; roomId?: string; roomLabel?: string }> = [];
+  const calls: Array<{ visitId: string; roomId?: string; roomLabel?: string }> = [];
   const app = Fastify({ logger: false });
   registerQueueRoutes(
     app,
     buildQueueRouteDb({
-      callTicket: (ticketId: string, roomId?: string, roomLabel?: string) => {
-        calls.push({ ticketId, roomId, roomLabel });
+      callTicket: (visitId: string, roomId?: string, roomLabel?: string) => {
+        calls.push({ visitId, roomId, roomLabel });
         return transition('waiting', 'called');
       },
     }),
@@ -107,7 +107,7 @@ test('POST /api/v1/queue/:ticket/transition dispatches call transitions with roo
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().toStatus, 'called');
   assert.equal(response.json().roomId, 'room-1');
-  assert.deepEqual(calls, [{ ticketId: 'A-001', roomId: 'room-1', roomLabel: 'Raum 1' }]);
+  assert.deepEqual(calls, [{ visitId: 'A-001', roomId: 'room-1', roomLabel: 'Raum 1' }]);
 
   await app.close();
   resetDevicePresenceForTests();
@@ -184,14 +184,14 @@ test('GET /api/v1/queue serializes MFA items with empty triage marker', async ()
   await app.close();
 });
 
-test('POST /api/v1/queue/:ticket/transition dispatches reassign_room with required room', async () => {
-  const reassigns: Array<{ ticketId: string; roomId?: string; roomLabel?: string }> = [];
+test('POST /api/v1/queue/:visitId/transition dispatches reassign_room with required room', async () => {
+  const reassigns: Array<{ visitId: string; roomId?: string; roomLabel?: string }> = [];
   const app = Fastify({ logger: false });
   registerQueueRoutes(
     app,
     buildQueueRouteDb({
-      reassignRoom: (ticketId: string, roomId?: string, roomLabel?: string) => {
-        reassigns.push({ ticketId, roomId, roomLabel });
+      reassignRoom: (visitId: string, roomId?: string, roomLabel?: string) => {
+        reassigns.push({ visitId, roomId, roomLabel });
         return transition('called', 'called');
       },
     }),
@@ -205,12 +205,12 @@ test('POST /api/v1/queue/:ticket/transition dispatches reassign_room with requir
   });
 
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(reassigns, [{ ticketId: 'A-001', roomId: 'room-2', roomLabel: 'Raum 2' }]);
+  assert.deepEqual(reassigns, [{ visitId: 'A-001', roomId: 'room-2', roomLabel: 'Raum 2' }]);
 
   await app.close();
 });
 
-test('POST /api/v1/queue/:ticket/transition rejects missing required variant fields', async () => {
+test('POST /api/v1/queue/:visitId/transition rejects missing required variant fields', async () => {
   const app = Fastify({ logger: false });
   registerQueueRoutes(app, buildQueueRouteDb());
   await app.ready();
@@ -226,14 +226,14 @@ test('POST /api/v1/queue/:ticket/transition rejects missing required variant fie
   await app.close();
 });
 
-test('POST /api/v1/queue/:ticket/transition dispatches set_absence mode', async () => {
-  const absences: Array<{ ticketId: string; mode: string }> = [];
+test('POST /api/v1/queue/:visitId/transition dispatches set_absence mode', async () => {
+  const absences: Array<{ visitId: string; mode: string }> = [];
   const app = Fastify({ logger: false });
   registerQueueRoutes(
     app,
     buildQueueRouteDb({
-      setAbsence: (ticketId: string, mode: string) => {
-        absences.push({ ticketId, mode });
+      setAbsence: (visitId: string, mode: string) => {
+        absences.push({ visitId, mode });
         return transition('waiting', 'absent_wait_here');
       },
     }),
@@ -248,19 +248,19 @@ test('POST /api/v1/queue/:ticket/transition dispatches set_absence mode', async 
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().toStatus, 'absent_wait_here');
-  assert.deepEqual(absences, [{ ticketId: 'A-001', mode: 'wait_here' }]);
+  assert.deepEqual(absences, [{ visitId: 'A-001', mode: 'wait_here' }]);
 
   await app.close();
 });
 
-test('POST /api/v1/queue/:ticket/transition dispatches recall without notify phone', async () => {
-  const recalls: Array<{ ticketId: string; returnWindowMinutes?: number }> = [];
+test('POST /api/v1/queue/:visitId/transition dispatches recall without notify phone', async () => {
+  const recalls: Array<{ visitId: string; returnWindowMinutes?: number }> = [];
   const app = Fastify({ logger: false });
   registerQueueRoutes(
     app,
     buildQueueRouteDb({
-      recallTicket: (ticketId: string, returnWindowMinutes?: number) => {
-        recalls.push({ ticketId, returnWindowMinutes });
+      recallTicket: (visitId: string, returnWindowMinutes?: number) => {
+        recalls.push({ visitId, returnWindowMinutes });
         return {
           ...transition('absent_wait_here', 'called'),
           returnUntil: '2026-06-18T08:15:00.000Z',
@@ -281,12 +281,12 @@ test('POST /api/v1/queue/:ticket/transition dispatches recall without notify pho
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().returnUntil, '2026-06-18T08:15:00.000Z');
   assert.equal(response.json().smsDispatch, null);
-  assert.deepEqual(recalls, [{ ticketId: 'A-001', returnWindowMinutes: 20 }]);
+  assert.deepEqual(recalls, [{ visitId: 'A-001', returnWindowMinutes: 20 }]);
 
   await app.close();
 });
 
-test('POST /api/v1/queue/:ticket/transition dispatches triage marker updates', async () => {
+test('POST /api/v1/queue/:visitId/transition dispatches triage marker updates', async () => {
   const app = Fastify({ logger: false });
   registerQueueRoutes(app, buildQueueRouteDb());
   await app.ready();
@@ -300,7 +300,7 @@ test('POST /api/v1/queue/:ticket/transition dispatches triage marker updates', a
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.json(), {
     resultType: 'triage',
-    ticketId: 'A-001',
+    visitId: 'A-001',
     triageLevel: 'green',
     updatedAt: '2026-06-18T08:00:00.000Z',
   });
@@ -308,7 +308,7 @@ test('POST /api/v1/queue/:ticket/transition dispatches triage marker updates', a
   await app.close();
 });
 
-test('POST /api/v1/queue/:ticket/transition rejects unknown transition type', async () => {
+test('POST /api/v1/queue/:visitId/transition rejects unknown transition type', async () => {
   const app = Fastify({ logger: false });
   registerQueueRoutes(app, buildQueueRouteDb());
   await app.ready();
@@ -342,7 +342,7 @@ test('legacy per-action queue ticket routes are removed', async () => {
 
 test('room-panel transition uses session room for check_in_room and ignores body actingRoomId', async () => {
   const checkIns: Array<{
-    ticketId: string;
+    visitId: string;
     roomId?: string;
     roomLabel?: string;
     actingRoomId?: string;
@@ -366,12 +366,12 @@ test('room-panel transition uses session room for check_in_room and ignores body
     app,
     buildQueueRouteDb({
       checkInRoom: (
-        ticketId: string,
+        visitId: string,
         roomId?: string,
         roomLabel?: string,
         actingRoomId?: string,
       ) => {
-        checkIns.push({ ticketId, roomId, roomLabel, actingRoomId });
+        checkIns.push({ visitId, roomId, roomLabel, actingRoomId });
         return transition('called', 'in_room');
       },
     }),
@@ -386,7 +386,7 @@ test('room-panel transition uses session room for check_in_room and ignores body
 
   assert.equal(response.statusCode, 200);
   assert.deepEqual(checkIns, [
-    { ticketId: 'A-001', roomId: undefined, roomLabel: undefined, actingRoomId: 'labor' },
+    { visitId: 'A-001', roomId: undefined, roomLabel: undefined, actingRoomId: 'labor' },
   ]);
 
   await app.close();
@@ -593,11 +593,11 @@ function buildTvQueueRouteDb(): { db: CoreDatabase; visitId: string } {
     }),
     getOpsState: () => ({ checkinLocked: false, dayClosePhase: 'open' }),
     getFlowCoreRuntimeInstance: () => runtime,
-    callTicket: (ticketId: string, roomId?: string, roomLabel?: string) =>
-      callVisitTicket(sqlite, runtime, settings, listQueue, ticketId, roomId, roomLabel),
+    callTicket: (visitId: string, roomId?: string, roomLabel?: string) =>
+      callVisitTicket(sqlite, runtime, settings, listQueue, visitId, roomId, roomLabel),
   } as unknown as CoreDatabase;
 
-  return { db, sqlite, visitId: created.ticketId };
+  return { db, sqlite, visitId: created.visitId };
 }
 
 test('GET /api/v1/queue with tv role returns explainVisibility-filtered items', async () => {

@@ -15,7 +15,7 @@ export type TerminalReceiptPrintPayload = {
   printedAtLabel: string;
   kind: TerminalReceiptPrintKind;
   /** Set for check-in bons — used to mark auto-print after spool attempt. */
-  ticketId?: string;
+  visitId?: string;
 };
 
 let requestSeq = 0;

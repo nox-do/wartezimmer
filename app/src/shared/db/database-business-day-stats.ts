@@ -1,5 +1,5 @@
 import type { StatementSync } from 'node:sqlite';
-import type { BusinessDayTicketStats, TicketStatus } from './db-types.js';
+import type { BusinessDayVisitStats, TicketStatus } from './db-types.js';
 
 type BusinessDayStatsStatements = {
   countVisitsByBusinessDayStmt: StatementSync;
@@ -8,10 +8,10 @@ type BusinessDayStatsStatements = {
   listOpenVisitsByBusinessDayStmt: StatementSync;
 };
 
-export function getBusinessDayTicketStatsFromDb(
+export function getBusinessDayVisitStatsFromDb(
   deps: BusinessDayStatsStatements,
   businessDay: string,
-): BusinessDayTicketStats {
+): BusinessDayVisitStats {
   const totalRow = deps.countVisitsByBusinessDayStmt.get(businessDay) as
     | { count?: number }
     | undefined;
@@ -23,8 +23,8 @@ export function getBusinessDayTicketStatsFromDb(
     topicLabel?: string;
     count?: number;
   }>;
-  const openTicketRows = deps.listOpenVisitsByBusinessDayStmt.all(businessDay) as Array<{
-    ticketId?: string;
+  const openVisitRows = deps.listOpenVisitsByBusinessDayStmt.all(businessDay) as Array<{
+    visitId?: string;
     laneCode?: string;
     number?: number;
     topicLabel?: string;
@@ -34,17 +34,17 @@ export function getBusinessDayTicketStatsFromDb(
 
   return {
     businessDay,
-    totalTickets: totalRow?.count ?? 0,
+    totalVisits: totalRow?.count ?? 0,
     maxWaitMs: maxWaitRow?.maxWaitMs ?? 0,
     byTopic: topicRows.map((row) => ({
       topicId: row.topicId ?? '',
       topicLabel: row.topicLabel ?? '',
       count: row.count ?? 0,
     })),
-    openTickets: openTicketRows
-      .filter((row) => row.ticketId && row.laneCode && typeof row.number === 'number' && row.status)
+    openVisits: openVisitRows
+      .filter((row) => row.visitId && row.laneCode && typeof row.number === 'number' && row.status)
       .map((row) => ({
-        ticketId: row.ticketId!,
+        visitId: row.visitId!,
         laneCode: row.laneCode!,
         number: row.number!,
         topicLabel: row.topicLabel ?? '',
@@ -53,3 +53,6 @@ export function getBusinessDayTicketStatsFromDb(
       })),
   };
 }
+
+/** @deprecated Use getBusinessDayVisitStatsFromDb */
+export const getBusinessDayTicketStatsFromDb = getBusinessDayVisitStatsFromDb;

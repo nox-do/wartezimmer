@@ -37,27 +37,27 @@ const queueErrorResponse = commonSchemas.Error;
 const roomAtCapacityMessage = 'Raum ist voll — bitte anderes Aufrufziel wählen.';
 
 const queueTicketTransitionResponses = {
-  200: queueSchemas.POST_api_v1_queue_ticket_transitionResponse200,
+  200: queueSchemas.POST_api_v1_queue_visitId_transitionResponse200,
   400: queueErrorResponse,
   404: queueErrorResponse,
   409: queueErrorResponse,
 } as const;
 
 const queueCallbackPhoneResponses = {
-  200: queueSchemas.PUT_api_v1_queue_ticket_callback_phoneResponse200,
+  200: queueSchemas.PUT_api_v1_queue_visitId_callback_phoneResponse200,
   400: queueErrorResponse,
   404: queueErrorResponse,
   409: queueErrorResponse,
 } as const;
 
 const queueCallbackPhoneClearResponses = {
-  200: queueSchemas.DELETE_api_v1_queue_ticket_callback_phoneResponse200,
+  200: queueSchemas.DELETE_api_v1_queue_visitId_callback_phoneResponse200,
   404: queueErrorResponse,
   409: queueErrorResponse,
 } as const;
 
 const queueIdentityRefResponses = {
-  200: queueSchemas.PATCH_api_v1_queue_ticket_identity_refResponse200,
+  200: queueSchemas.PATCH_api_v1_queue_visitId_identity_refResponse200,
   400: queueErrorResponse,
   404: queueErrorResponse,
   409: queueErrorResponse,
@@ -69,10 +69,10 @@ function notifyTvQueueChanged(db: CoreDatabase): void {
 
 function transitionBody(
   transition: { fromStatus: string; toStatus: string },
-  ticketId: string,
+  visitId: string,
 ): {
   resultType: 'transition';
-  ticketId: string;
+  visitId: string;
   fromStatus: QueueTransitionResponse['fromStatus'];
   toStatus: QueueTransitionResponse['toStatus'];
   updatedAt: string;
@@ -81,7 +81,7 @@ function transitionBody(
 } {
   return {
     resultType: 'transition',
-    ticketId,
+    visitId,
     fromStatus: transition.fromStatus as QueueTransitionResponse['fromStatus'],
     toStatus: transition.toStatus as QueueTransitionResponse['toStatus'],
     updatedAt: new Date().toISOString(),
@@ -236,7 +236,7 @@ async function applyQueueTicketTransition(
         const result = db.cycleTriage(ticketId);
         return {
           resultType: 'triage',
-          ticketId,
+          visitId: ticketId,
           triageLevel: result.triageLevel as QueueTriageResponse['triageLevel'],
           updatedAt: result.updatedAt,
         };
@@ -288,7 +288,7 @@ async function applyQueueTicketTransition(
         }
         return {
           resultType: 'recall',
-          ticketId,
+          visitId: ticketId,
           fromStatus: transition.fromStatus as QueueTransitionResponse['fromStatus'],
           toStatus: transition.toStatus as QueueTransitionResponse['toStatus'],
           updatedAt: new Date().toISOString(),
@@ -323,7 +323,7 @@ async function applyQueueTicketTransition(
         );
         return {
           resultType: 'recall_notify_retry',
-          ticketId,
+          visitId: ticketId,
           returnUntil: retry.returnUntil,
           recallNotifyErrorCode: smsDispatch.sent ? null : (smsDispatch.errorCode ?? 'UNKNOWN'),
           smsDispatch,
@@ -482,16 +482,16 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
   );
 
   app.post<{ Params: TicketParams; Body: QueueTicketTransitionBody }>(
-    '/api/v1/queue/:ticket/transition',
+    '/api/v1/queue/:visitId/transition',
     {
       schema: {
-        params: queueSchemas.POST_api_v1_queue_ticket_transitionParams,
-        body: queueSchemas.POST_api_v1_queue_ticket_transitionRequestBody,
+        params: queueSchemas.POST_api_v1_queue_visitId_transitionParams,
+        body: queueSchemas.POST_api_v1_queue_visitId_transitionRequestBody,
         response: queueTicketTransitionResponses,
       },
     },
     async (request, reply) => {
-      const ticketId = request.params.ticket.trim();
+      const ticketId = request.params.visitId.trim();
       const response = await applyQueueTicketTransition(
         db,
         reply,
@@ -536,7 +536,7 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
           mode: request.body.mode,
         });
         notifyTvQueueChanged(db);
-        return transitionBody(result, result.ticketId);
+        return transitionBody(result, result.visitId);
       } catch (error) {
         if (
           sendDomainError(reply, error, {
@@ -570,21 +570,21 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
   );
 
   app.put<{ Params: TicketParams; Body: SetCallbackPhoneBody }>(
-    '/api/v1/queue/:ticket/callback-phone',
+    '/api/v1/queue/:visitId/callback-phone',
     {
       schema: {
-        params: queueSchemas.PUT_api_v1_queue_ticket_callback_phoneParams,
-        body: queueSchemas.PUT_api_v1_queue_ticket_callback_phoneRequestBody,
+        params: queueSchemas.PUT_api_v1_queue_visitId_callback_phoneParams,
+        body: queueSchemas.PUT_api_v1_queue_visitId_callback_phoneRequestBody,
         response: queueCallbackPhoneResponses,
       },
     },
     async (request, reply) => {
-      const ticketId = request.params.ticket.trim();
+      const ticketId = request.params.visitId.trim();
       try {
         const result = db.setCallbackPhone(ticketId, request.body.callbackPhone);
         notifyTvQueueChanged(db);
         return {
-          ticketId,
+          visitId: ticketId,
           callbackPhone: result.callbackPhone,
           updatedAt: result.updatedAt,
         };
@@ -601,20 +601,20 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
   );
 
   app.delete<{ Params: TicketParams }>(
-    '/api/v1/queue/:ticket/callback-phone',
+    '/api/v1/queue/:visitId/callback-phone',
     {
       schema: {
-        params: queueSchemas.DELETE_api_v1_queue_ticket_callback_phoneParams,
+        params: queueSchemas.DELETE_api_v1_queue_visitId_callback_phoneParams,
         response: queueCallbackPhoneClearResponses,
       },
     },
     async (request, reply) => {
-      const ticketId = request.params.ticket.trim();
+      const ticketId = request.params.visitId.trim();
       try {
         const result = db.clearCallbackPhone(ticketId);
         notifyTvQueueChanged(db);
         return {
-          ticketId,
+          visitId: ticketId,
           updatedAt: result.updatedAt,
         };
       } catch (error) {
@@ -630,21 +630,21 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
   );
 
   app.patch<{ Params: TicketParams; Body: SetIdentityRefBody }>(
-    '/api/v1/queue/:ticket/identity-ref',
+    '/api/v1/queue/:visitId/identity-ref',
     {
       schema: {
-        params: queueSchemas.PATCH_api_v1_queue_ticket_identity_refParams,
-        body: queueSchemas.PATCH_api_v1_queue_ticket_identity_refRequestBody,
+        params: queueSchemas.PATCH_api_v1_queue_visitId_identity_refParams,
+        body: queueSchemas.PATCH_api_v1_queue_visitId_identity_refRequestBody,
         response: queueIdentityRefResponses,
       },
     },
     async (request, reply) => {
-      const ticketId = request.params.ticket.trim();
+      const ticketId = request.params.visitId.trim();
       try {
         const result = db.setIdentityRef(ticketId, request.body.identityRef);
         notifyTvQueueChanged(db);
         return {
-          ticketId,
+          visitId: ticketId,
           identityRef: result.identityRef,
           updatedAt: result.updatedAt,
         };

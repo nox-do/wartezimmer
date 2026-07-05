@@ -36,7 +36,7 @@
   }
 
   function maybePrintReceipt(checkin: NonNullable<ReturnType<typeof readCheckinResult>>) {
-    if (!shouldAutoPrintTicket(checkin.ticketId)) {
+    if (!shouldAutoPrintTicket(checkin.visitId)) {
       return;
     }
     const profile = getPracticeProfileFallback();
@@ -47,7 +47,7 @@
       destinationRoomLabel: checkin.destinationRoomLabel,
       printedAtLabel: formatReceiptTimestamp(),
       kind: 'ticket',
-      ticketId: checkin.ticketId,
+      visitId: checkin.visitId,
     });
   }
 

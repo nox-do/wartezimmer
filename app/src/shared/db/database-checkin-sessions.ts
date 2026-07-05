@@ -177,9 +177,9 @@ export function assertTerminalAssistPressAllowed(
 
 export function getTicketPortalContextFromDb(
   deps: Pick<CheckinSessionDeps, 'getTicketPortalContextStmt'>,
-  ticketId: string,
+  visitId: string,
 ): TicketPortalContext {
-  const row = deps.getTicketPortalContextStmt.get(ticketId.trim()) as
+  const row = deps.getTicketPortalContextStmt.get(visitId.trim()) as
     | { authPath?: string; checkinPhone?: string | null }
     | undefined;
   if (!row?.authPath) {
@@ -197,7 +197,7 @@ export function getPatientSessionMeFromDb(
   sessionToken: string,
 ): PatientSessionMe {
   const session = requirePatientSessionFromDb(deps, sessionToken);
-  const ticket = getTicketPortalContextFromDb(deps, session.ticketId);
+  const ticket = getTicketPortalContextFromDb(deps, session.visitId);
   return {
     ...session,
     ...ticket,
@@ -212,7 +212,7 @@ export function requirePatientSessionFromDb(
   const session = deps.getPatientSessionByTokenStmt.get(tokenHash) as
     | {
         sessionId?: string;
-        ticketId?: string;
+        visitId?: string;
         expiresAt?: string;
         status?: string;
         createdAt?: string;
@@ -220,7 +220,7 @@ export function requirePatientSessionFromDb(
     | undefined;
   if (
     !session?.sessionId ||
-    !session.ticketId ||
+    !session.visitId ||
     !session.expiresAt ||
     !session.status ||
     !session.createdAt
@@ -242,7 +242,7 @@ export function requirePatientSessionFromDb(
 
   return {
     sessionId: session.sessionId,
-    ticketId: session.ticketId,
+    visitId: session.visitId,
     expiresAt: session.expiresAt,
     createdAt: session.createdAt,
     status: session.status,
@@ -252,7 +252,7 @@ export function requirePatientSessionFromDb(
 function findActiveTicketByCodeInDb(
   deps: CheckinSessionDeps,
   ticketCode: string,
-): { ticketId: string } {
+): { visitId: string } {
   const parsedCode = parseTicketCode(ticketCode);
   if (!parsedCode) {
     throw domainError('SESSION_INVALID_TICKET');
@@ -272,18 +272,18 @@ function findActiveTicketByCodeInDb(
     throw domainError('SESSION_TICKET_NOT_ACTIVE');
   }
 
-  return { ticketId: ticket.id };
+  return { visitId: ticket.id };
 }
 
 export function verifyTicketCodeInDb(
   deps: CheckinSessionDeps,
   ticketCode: string,
-): { ticketId: string } {
+): { visitId: string } {
   return findActiveTicketByCodeInDb(deps, ticketCode);
 }
 
-export function getTicketCodeByTicketIdFromDb(deps: CheckinSessionDeps, ticketId: string): string {
-  const view = getTicketIdentityViewFromDb(deps, ticketId);
+export function getTicketCodeByTicketIdFromDb(deps: CheckinSessionDeps, visitId: string): string {
+  const view = getTicketIdentityViewFromDb(deps, visitId);
   return formatTicketCode(view.laneCode, view.number);
 }
 
@@ -292,10 +292,10 @@ export function resolvePatientSessionInDb(
   ticketCode: string,
   ttlMinutes = 30,
 ): SessionResolveResult {
-  const { ticketId } = findActiveTicketByCodeInDb(deps, ticketCode);
+  const { visitId } = findActiveTicketByCodeInDb(deps, ticketCode);
 
   const timestamp = deps.nowIso();
-  deps.expireActiveSessionsByVisitStmt.run(timestamp, ticketId);
+  deps.expireActiveSessionsByVisitStmt.run(timestamp, visitId);
 
   const createdAt = deps.nowIso();
   const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString();
@@ -305,7 +305,7 @@ export function resolvePatientSessionInDb(
   try {
     deps.insertPatientSessionStmt.run(
       sessionId,
-      ticketId,
+      visitId,
       tokenHash,
       'active',
       expiresAt,
@@ -325,7 +325,7 @@ export function resolvePatientSessionInDb(
     sessionId,
     sessionToken,
     expiresAt,
-    ticketId,
+    visitId,
   };
 }
 
@@ -338,7 +338,7 @@ export function submitPatientSessionInDb(
   deps.revokePatientSessionStmt.run(closedAt, session.sessionId);
   deps.emitOutboxEvent('PatientSessionClosed', session.sessionId, {
     sessionId: session.sessionId,
-    ticketId: session.ticketId,
+    visitId: session.visitId,
     closedAt,
     reason: 'patient_submit',
   });
@@ -352,12 +352,12 @@ export function submitPatientSessionInDb(
 /** Identity view: Core visit fields + effective queue status via visit_host_state absent overlay. */
 export function getTicketIdentityViewFromDb(
   deps: CheckinSessionDeps,
-  ticketIdRaw: string,
+  visitIdRaw: string,
 ): TicketIdentityView {
-  const ticketId = ticketIdRaw.trim();
-  const row = deps.getTicketIdentityViewStmt.get(ticketId) as
+  const visitId = visitIdRaw.trim();
+  const row = deps.getTicketIdentityViewStmt.get(visitId) as
     | {
-        ticketId?: string;
+        visitId?: string;
         laneCode?: string;
         number?: number;
         topicId?: string;
@@ -370,7 +370,7 @@ export function getTicketIdentityViewFromDb(
       }
     | undefined;
   if (
-    !row?.ticketId ||
+    !row?.visitId ||
     !row.laneCode ||
     row.number == null ||
     !Number.isInteger(row.number) ||
@@ -385,7 +385,7 @@ export function getTicketIdentityViewFromDb(
   }
   const number: number = row.number;
   return {
-    ticketId: row.ticketId,
+    visitId: row.visitId,
     laneCode: row.laneCode,
     number,
     topicId: row.topicId,

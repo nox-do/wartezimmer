@@ -50,7 +50,7 @@
         return;
       }
       const next = new URL(window.location.href);
-      next.searchParams.delete('ticketId');
+      next.searchParams.delete('visitId');
       next.searchParams.delete('documentId');
       const nextSearch = next.searchParams.toString();
       void goto(`${next.pathname}${nextSearch ? `?${nextSearch}` : ''}`, { replaceState: true });

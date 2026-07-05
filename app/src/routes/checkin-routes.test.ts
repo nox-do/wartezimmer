@@ -48,7 +48,7 @@ function fakeCheckinDb(overrides?: {
     createTicket: (input) => {
       overrides?.onCreateTicket?.(input);
       return {
-        ticketId: '20260617-O-001',
+        visitId: '20260617-O-001',
         number: 1,
         createdAt: '2026-06-17T12:00:00.000Z',
       };

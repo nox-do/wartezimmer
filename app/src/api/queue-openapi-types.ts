@@ -7,17 +7,17 @@ export type QueueSummaryResponse = components['schemas']['QueueSummaryResponse']
 export type QueueTransitionResponse = components['schemas']['QueueTransitionResponse'];
 export type QueueTriageResponse = components['schemas']['QueueTriageResponse'];
 export type QueueRecallResponse = components['schemas']['QueueRecallResponse'];
-export type QueueTicketTransitionBody = components['schemas']['QueueTicketTransitionRequest'];
-export type QueueTicketTransitionResponse = components['schemas']['QueueTicketTransitionResponse'];
+export type QueueVisitTransitionBody = components['schemas']['QueueVisitTransitionRequest'];
+export type QueueVisitTransitionResponse = components['schemas']['QueueVisitTransitionResponse'];
 export type QueueRoomActionBody = components['schemas']['QueueRoomActionBody'];
 export type AbsenceMode = components['schemas']['AbsenceMode'];
 export type MarkAbsenceLookupBody = components['schemas']['MarkAbsenceLookupRequest'];
-export type TicketParams = paths['/api/v1/queue/{ticket}/transition']['post']['parameters']['path'];
+export type VisitParams = paths['/api/v1/queue/{visitId}/transition']['post']['parameters']['path'];
 export type SetCallbackPhoneBody = NonNullable<
-  paths['/api/v1/queue/{ticket}/callback-phone']['put']['requestBody']
+  paths['/api/v1/queue/{visitId}/callback-phone']['put']['requestBody']
 >['content']['application/json'];
 export type SetIdentityRefBody = NonNullable<
-  paths['/api/v1/queue/{ticket}/identity-ref']['patch']['requestBody']
+  paths['/api/v1/queue/{visitId}/identity-ref']['patch']['requestBody']
 >['content']['application/json'];
 export type QueueCallbackPhoneResponse = components['schemas']['QueueCallbackPhoneResponse'];
 export type QueueCallbackPhoneClearResponse =
@@ -25,3 +25,10 @@ export type QueueCallbackPhoneClearResponse =
 export type QueueIdentityRefResponse = components['schemas']['QueueIdentityRefResponse'];
 export type QueueRecallRetryNotifyResponse =
   components['schemas']['QueueRecallRetryNotifyResponse'];
+
+/** @deprecated Use QueueVisitTransitionBody */
+export type QueueTicketTransitionBody = QueueVisitTransitionBody;
+/** @deprecated Use QueueVisitTransitionResponse */
+export type QueueTicketTransitionResponse = QueueVisitTransitionResponse;
+/** @deprecated Use VisitParams */
+export type TicketParams = VisitParams;

@@ -15,7 +15,7 @@ export const mfaQueueDisplay = $state({
 
 let lastQueueRevision = $state<number | null>(null);
 
-export function applyMfaQueueIdentityRef(ticketId: string, identityRef: string): void {
+export function applyMfaQueueIdentityRef(visitId: string, identityRef: string): void {
   const queue = mfaQueueDisplay.queue;
   if (!queue) {
     return;
@@ -26,7 +26,7 @@ export function applyMfaQueueIdentityRef(ticketId: string, identityRef: string):
     return;
   }
 
-  const index = queue.items.findIndex((item) => item.ticketId === ticketId);
+  const index = queue.items.findIndex((item) => item.visitId === visitId);
   if (index < 0) {
     return;
   }
@@ -49,7 +49,7 @@ export function applyMfaQueueIdentityRef(ticketId: string, identityRef: string):
 }
 
 export function applyMfaQueueTriageLevel(
-  ticketId: string,
+  visitId: string,
   triageLevel: 'red' | 'yellow' | 'green' | null,
 ): void {
   const queue = mfaQueueDisplay.queue;
@@ -57,7 +57,7 @@ export function applyMfaQueueTriageLevel(
     return;
   }
 
-  const index = queue.items.findIndex((item) => item.ticketId === ticketId);
+  const index = queue.items.findIndex((item) => item.visitId === visitId);
   if (index < 0) {
     return;
   }

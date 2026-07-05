@@ -42,7 +42,7 @@ components:
       type: object
       required:
         - dayClosePhase
-        - resetTicketCount
+        - resetVisitCount
         - updatedAt
         - lastResetBusinessDay
         - sandboxRestartRequired
@@ -54,7 +54,7 @@ components:
             - open
             - started
           description: Always open after a successful business-day reset.
-        resetTicketCount:
+        resetVisitCount:
           type: integer
           description: Tickets cleared during the reset (runtime queue data only).
         updatedAt:
@@ -90,7 +90,7 @@ components:
         - confirmPhrase
         - serverTime
       properties:
-        ticketCount:
+        visitCount:
           type: integer
           minimum: 0
         outboxEventCount:
@@ -122,7 +122,7 @@ components:
     RuntimeResetResponse:
       type: object
       required:
-        - resetTicketCount
+        - resetVisitCount
         - clearedOutboxCount
         - emergencyCleared
         - preservedTopicCount
@@ -134,7 +134,7 @@ components:
         - sandboxRestartRequired
         - sandboxRestartInitiated
       properties:
-        resetTicketCount:
+        resetVisitCount:
           type: integer
           minimum: 0
         clearedOutboxCount:
@@ -896,14 +896,14 @@ components:
             - type: object
               required:
                 - businessDay
-                - totalTickets
+                - totalVisits
                 - maxWaitMs
                 - byTopic
-                - openTickets
+                - openVisits
               properties:
                 businessDay:
                   type: string
-                totalTickets:
+                totalVisits:
                   type: integer
                 maxWaitMs:
                   type: integer
@@ -923,20 +923,20 @@ components:
                         type: string
                       count:
                         type: integer
-                openTickets:
+                openVisits:
                   type: array
                   description: Non-closed tickets from that business day (shown read-only before day start reset).
                   items:
                     type: object
                     required:
-                      - ticketId
+                      - visitId
                       - laneCode
                       - number
                       - topicLabel
                       - identityRef
                       - status
                     properties:
-                      ticketId:
+                      visitId:
                         type: string
                       laneCode:
                         type: string

@@ -25,7 +25,7 @@ export const BusinessDayResetResponse = {
   type: 'object',
   required: [
     'dayClosePhase',
-    'resetTicketCount',
+    'resetVisitCount',
     'updatedAt',
     'lastResetBusinessDay',
     'sandboxRestartRequired',
@@ -36,7 +36,7 @@ export const BusinessDayResetResponse = {
       type: 'string',
       enum: ['open', 'started'],
     },
-    resetTicketCount: {
+    resetVisitCount: {
       type: 'integer',
     },
     updatedAt: {
@@ -81,7 +81,7 @@ export const RuntimeResetPreviewResponse = {
     'serverTime',
   ],
   properties: {
-    ticketCount: {
+    visitCount: {
       type: 'integer',
       minimum: 0,
     },
@@ -126,7 +126,7 @@ export const RuntimeResetRequest = {
 export const RuntimeResetResponse = {
   type: 'object',
   required: [
-    'resetTicketCount',
+    'resetVisitCount',
     'clearedOutboxCount',
     'emergencyCleared',
     'preservedTopicCount',
@@ -139,7 +139,7 @@ export const RuntimeResetResponse = {
     'sandboxRestartInitiated',
   ],
   properties: {
-    resetTicketCount: {
+    resetVisitCount: {
       type: 'integer',
       minimum: 0,
     },
@@ -1237,12 +1237,12 @@ export const DayLifecycleResponse = {
         },
         {
           type: 'object',
-          required: ['businessDay', 'totalTickets', 'maxWaitMs', 'byTopic', 'openTickets'],
+          required: ['businessDay', 'totalVisits', 'maxWaitMs', 'byTopic', 'openVisits'],
           properties: {
             businessDay: {
               type: 'string',
             },
-            totalTickets: {
+            totalVisits: {
               type: 'integer',
             },
             maxWaitMs: {
@@ -1266,13 +1266,13 @@ export const DayLifecycleResponse = {
                 },
               },
             },
-            openTickets: {
+            openVisits: {
               type: 'array',
               items: {
                 type: 'object',
-                required: ['ticketId', 'laneCode', 'number', 'topicLabel', 'identityRef', 'status'],
+                required: ['visitId', 'laneCode', 'number', 'topicLabel', 'identityRef', 'status'],
                 properties: {
-                  ticketId: {
+                  visitId: {
                     type: 'string',
                   },
                   laneCode: {
@@ -4179,7 +4179,7 @@ export const GET_api_v1_ops_maintenance_runtime_reset_previewResponse200 = {
     'serverTime',
   ],
   properties: {
-    ticketCount: {
+    visitCount: {
       type: 'integer',
       minimum: 0,
     },
@@ -4224,7 +4224,7 @@ export const POST_api_v1_ops_maintenance_runtime_resetRequestBody = {
 export const POST_api_v1_ops_maintenance_runtime_resetResponse200 = {
   type: 'object',
   required: [
-    'resetTicketCount',
+    'resetVisitCount',
     'clearedOutboxCount',
     'emergencyCleared',
     'preservedTopicCount',
@@ -4237,7 +4237,7 @@ export const POST_api_v1_ops_maintenance_runtime_resetResponse200 = {
     'sandboxRestartInitiated',
   ],
   properties: {
-    resetTicketCount: {
+    resetVisitCount: {
       type: 'integer',
       minimum: 0,
     },
@@ -4418,12 +4418,12 @@ export const GET_api_v1_ops_day_lifecycleResponse200 = {
         },
         {
           type: 'object',
-          required: ['businessDay', 'totalTickets', 'maxWaitMs', 'byTopic', 'openTickets'],
+          required: ['businessDay', 'totalVisits', 'maxWaitMs', 'byTopic', 'openVisits'],
           properties: {
             businessDay: {
               type: 'string',
             },
-            totalTickets: {
+            totalVisits: {
               type: 'integer',
             },
             maxWaitMs: {
@@ -4447,13 +4447,13 @@ export const GET_api_v1_ops_day_lifecycleResponse200 = {
                 },
               },
             },
-            openTickets: {
+            openVisits: {
               type: 'array',
               items: {
                 type: 'object',
-                required: ['ticketId', 'laneCode', 'number', 'topicLabel', 'identityRef', 'status'],
+                required: ['visitId', 'laneCode', 'number', 'topicLabel', 'identityRef', 'status'],
                 properties: {
-                  ticketId: {
+                  visitId: {
                     type: 'string',
                   },
                   laneCode: {
@@ -4504,7 +4504,7 @@ export const POST_api_v1_ops_day_lifecycle_resetResponse200 = {
   type: 'object',
   required: [
     'dayClosePhase',
-    'resetTicketCount',
+    'resetVisitCount',
     'updatedAt',
     'lastResetBusinessDay',
     'sandboxRestartRequired',
@@ -4515,7 +4515,7 @@ export const POST_api_v1_ops_day_lifecycle_resetResponse200 = {
       type: 'string',
       enum: ['open', 'started'],
     },
-    resetTicketCount: {
+    resetVisitCount: {
       type: 'integer',
     },
     updatedAt: {

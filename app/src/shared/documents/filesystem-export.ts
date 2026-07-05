@@ -129,7 +129,7 @@ export async function exportDocumentToFilesystem(
     const waitingNumber = buildWaitingNumber(info.ticketLaneCode, info.ticketNumber);
     const metadata = {
       documentId: info.documentId,
-      ticketId: info.ticketId,
+      visitId: info.visitId,
       waitingNumber,
       patientRef: info.identityRef,
       fileName: info.fileName,

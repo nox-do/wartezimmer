@@ -64,7 +64,7 @@
     }
 
     writeCheckinResult({
-      ticketId: result.data.ticketId,
+      visitId: result.data.visitId,
       laneCode: result.data.laneCode,
       number: result.data.number,
       topicId: topic.topicId,

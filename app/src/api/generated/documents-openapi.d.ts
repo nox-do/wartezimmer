@@ -286,7 +286,7 @@ export interface paths {
               sessionToken: string;
               /** Format: date-time */
               expiresAt: string;
-              ticketId: string;
+              visitId: string;
             };
           };
         };
@@ -441,7 +441,7 @@ export interface paths {
             'application/json': {
               /** @constant */
               ok: true;
-              ticketId: string;
+              visitId: string;
             };
           };
         };
@@ -496,7 +496,7 @@ export interface paths {
           content: {
             'application/json': {
               sessionId: string;
-              ticketId: string;
+              visitId: string;
               /** @enum {string} */
               status: 'active' | 'expired' | 'revoked';
               /** Format: date-time */
@@ -761,7 +761,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/documents/{ticket}': {
+  '/api/v1/documents/{visitId}': {
     parameters: {
       query?: never;
       header?: never;
@@ -774,7 +774,7 @@ export interface paths {
         query?: never;
         header?: never;
         path: {
-          ticket: string;
+          visitId: string;
         };
         cookie?: never;
       };
@@ -1062,7 +1062,7 @@ export interface components {
   schemas: {
     PatientDocument: {
       id: string;
-      ticketId: string;
+      visitId: string;
       fileName: string;
       mimeType: string;
       sizeBytes: number;

@@ -135,8 +135,8 @@ Monorepo (npm workspaces): `app`, `ui`, `sandbox`, `setup`.
 
 | Komponente           | Routes                                                             | Shared / DB                                                            |
 | -------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| Check-in & Ticket    | `routes/checkin-routes.ts`, `routes/sessions-routes.ts`            | `shared/checkin*`, `shared/db/database-checkin-sessions.ts`            |
-| Queue & Aufruf       | `routes/queue-routes.ts`                                           | `shared/queue/`, `shared/db/database-queue.ts`                         |
+| Check-in & Visit     | `routes/checkin-routes.ts`, `routes/sessions-routes.ts`            | `shared/flow-core/flow-core-checkin.ts`, `shared/db/database-checkin-sessions.ts` |
+| Queue & Aufruf       | `routes/queue-routes.ts`                                           | `shared/queue/`, `shared/db/database.ts` (Visit-Bridge via `visit-queue-bridge.ts`) |
 | Identity             | `routes/identity-routes.ts`                                        | Check-in/Sessions-DB, Contacts                                         |
 | Dokumente            | `routes/documents-routes.ts`, `routes/patient-documents-routes.ts` | `shared/documents/`, `shared/forms/`, `database-documents.ts`          |
 | Tagesbetrieb & Reset | `routes/ops/*`                                                     | `shared/ops/`, `database-day-lifecycle.ts`, `database-ops-settings.ts` |

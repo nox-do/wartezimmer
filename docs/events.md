@@ -31,8 +31,8 @@ Alle unten stehenden Typen sind **audit-only** (Worker setzt `published_at`, kei
 
 | Event                      | Emitter (Auszug)                                            | Zweck                                                                                                       |
 | -------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `CheckinCreated`           | `database-checkin-sessions.ts`                              | Audit Check-in                                                                                              |
-| `QueueStatusChanged`       | `database-queue.ts`                                         | Audit Queue-Transition                                                                                      |
+| `CheckinCreated`           | `flow-core-checkin.ts` (via `database.ts` / `runtime.checkIn()`) | Audit Check-in                                                                                         |
+| `QueueStatusChanged`       | `database.ts` (Visit-Transitions)                           | Audit Queue-Transition                                                                                      |
 | `EmergencyRaised`          | `database-emergency.ts`                                     | Audit Terminal-Notfall                                                                                      |
 | `EmergencyAcknowledged`    | `database-emergency.ts`                                     | Audit MFA-Quittierung                                                                                       |
 | `PatientSessionClosed`     | `database-checkin-sessions.ts` (via `submitPatientSession`) | Audit Session-Ende; v1 ausgeloest nach Formular-Intake (`patient-documents/forms`), nicht nach Datei-Upload |
@@ -88,9 +88,9 @@ Outbox-Events und SSE-Push sind **verschiedene Transporte**: Outbox = persistier
   "eventId": "uuid",
   "eventType": "QueueStatusChanged",
   "occurredAt": "2026-05-29T09:00:00Z",
-  "aggregateId": "ticket-id",
+  "aggregateId": "visit-id",
   "payload": {
-    "ticketId": "A-042",
+    "visitId": "20260705-L-001",
     "status": "called"
   }
 }
