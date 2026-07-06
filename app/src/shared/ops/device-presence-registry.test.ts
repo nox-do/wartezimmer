@@ -24,22 +24,33 @@ afterEach(() => {
   mock.timers.reset();
 });
 
-test('paired TV without SSE stream is offline immediately', () => {
+test('paired TV without SSE stream is online while heartbeat is fresh', () => {
+  mock.timers.enable({ apis: ['Date', 'setTimeout'] });
+  mock.timers.setTime(Date.parse('2026-06-09T12:00:00.000Z'));
+
   recordDevicePresence({ deviceId: WAITING_ROOM_DEVICE_ID, kind: 'tv' });
 
   const waitingRoom = listDevicePresence().find(
     (entry) => entry.deviceId === WAITING_ROOM_DEVICE_ID,
   );
 
-  assert.equal(waitingRoom?.status, 'offline');
+  assert.equal(waitingRoom?.status, 'online');
   assert.equal(waitingRoom?.streamConnected, false);
 });
 
-test('paired terminal without SSE stream is offline immediately', () => {
+test('paired terminal without SSE stream ages from heartbeat to offline', () => {
+  mock.timers.enable({ apis: ['Date', 'setTimeout'] });
+  mock.timers.setTime(Date.parse('2026-06-09T12:00:00.000Z'));
+
   recordDevicePresence({ deviceId: TERMINAL_DEVICE_ID, kind: 'terminal' });
 
-  const terminal = listDevicePresence().find((entry) => entry.deviceId === TERMINAL_DEVICE_ID);
+  let terminal = listDevicePresence().find((entry) => entry.deviceId === TERMINAL_DEVICE_ID);
 
+  assert.equal(terminal?.status, 'online');
+  assert.equal(terminal?.streamConnected, false);
+
+  mock.timers.tick(10_000);
+  terminal = listDevicePresence().find((entry) => entry.deviceId === TERMINAL_DEVICE_ID);
   assert.equal(terminal?.status, 'offline');
   assert.equal(terminal?.streamConnected, false);
 });
@@ -74,7 +85,7 @@ test('streamConnected tracks active SSE connections directly', () => {
   markDeviceStreamDisconnected(WAITING_ROOM_DEVICE_ID);
   waitingRoom = listDevicePresence().find((entry) => entry.deviceId === WAITING_ROOM_DEVICE_ID);
   assert.equal(waitingRoom?.streamConnected, false);
-  assert.equal(waitingRoom?.status, 'offline');
+  assert.equal(waitingRoom?.status, 'online');
 });
 
 test('room panel stream presence uses room-panel kind without pairing semantics', () => {

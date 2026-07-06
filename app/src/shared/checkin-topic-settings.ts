@@ -17,7 +17,10 @@ export type TopicSetting = OpsSettings['topics'][number];
 
 export { MFA_ASSIST_TOPIC_ID };
 
-/** Legacy/PoC: reservierte ID und Nummernkreis fuer Hilfe-Pfad — kein konfigurierbares Thema. */
+/**
+ * Reservierte interne MFA-Topic-ID und Nummernkreis fuer den Empfangs-/Assist-Pfad.
+ * Darf nicht in der Themenverwaltung auftauchen oder als normales Terminal-Thema gespeichert werden.
+ */
 export const MFA_ASSIST_LANE_CODE = 'M';
 
 const DEFAULT_CENTRAL_ROOM_ID = 'mfa-tresen';

@@ -1,7 +1,7 @@
 import type { TerminalAuthPath } from './terminal-api';
 import type { TerminalOpsSnapshot } from './terminal-ops-context';
 
-export type TerminalAuthRoutePath = Exclude<TerminalAuthPath, 'mfa_assist'>;
+export type TerminalAuthRoutePath = Exclude<TerminalAuthPath, 'none'>;
 
 export function shouldRedirectFromTerminalAuthRoute(
   ops: TerminalOpsSnapshot,

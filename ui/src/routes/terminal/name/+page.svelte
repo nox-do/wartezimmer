@@ -21,7 +21,7 @@
   }
 </script>
 
-<div class="terminal-body terminal-body--flow terminal-body--numpad terminal-body--numpad-wide">
+<div class="terminal-body terminal-body--flow terminal-body--numpad terminal-body--keyboard">
   <div class="terminal-numpad-head">
     <h1>{t('terminal.nameTitle')}</h1>
     <a class="terminal-numpad-back" href="/terminal">{t('terminal.nameBack')}</a>

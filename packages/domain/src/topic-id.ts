@@ -1,4 +1,8 @@
-/** Reservierte ID — nicht als konfigurierbares Praxis-Thema (Hilfe: mfaAssist / needsAssistance am Visit). */
+/**
+ * Reservierte interne Topic-ID fuer den MFA-/Empfangs-Pfad.
+ * Sie ist absichtlich nicht in der Themenverwaltung konfigurierbar, damit
+ * das Produkt-Topic-Set kein zweites "mfa" neben dem Systempfad anlegen kann.
+ */
 export const MFA_ASSIST_TOPIC_ID = 'mfa';
 
 export const TOPIC_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

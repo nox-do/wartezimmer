@@ -35,7 +35,7 @@ Lokale PoC-DB: `db/flow-core.sqlite`.
 
 | Feld | Bedeutung | Werte |
 |------|-----------|-------|
-| `authPath` | Wie hat sich der Patient am Terminal identifiziert? | `phone_dob`, `name_dob`, `egk`, `mfa_assist` |
+| `authPath` | Wie hat sich der Patient am Terminal identifiziert? | `phone_dob`, `name_dob`, `egk`, `none` |
 | `checkInPath` | Routing-Kontext beim Check-in | `topic`, `mfa_assist` |
 
 Nicht vermischen. PF `authPath` mappt 1:1 auf `visits.auth_path`.

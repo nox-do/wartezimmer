@@ -13,7 +13,7 @@ function resolveAuthPath(
   authPath: TerminalAuthPath | (() => TerminalAuthPath | null),
 ): TerminalAuthRoutePath | null {
   const resolved = typeof authPath === 'function' ? authPath() : authPath;
-  if (resolved === 'mfa_assist') {
+  if (resolved === 'none') {
     return null;
   }
   return resolved;

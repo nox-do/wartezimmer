@@ -201,7 +201,7 @@
   --terminal-lang-rail: 4.5rem;
   --terminal-content-max: 640px;
   --terminal-numpad-max: var(--terminal-content-max);
-  --terminal-numpad-wide-max: min(1440px, calc(100vw - 2.5rem - var(--terminal-lang-rail)));
+  --terminal-keyboard-max: min(1440px, calc(100vw - 2.5rem - var(--terminal-lang-rail)));
   --terminal-key-gap: 10px;
   /* Kiosk typography — tuned for touch; not the staff --text-* scale */
   --terminal-text-hero: var(--text-2xl);

@@ -84,8 +84,12 @@ function pairedDeviceExpectsStream(state: DeviceState): boolean {
 }
 
 function computeStatus(state: DeviceState, nowMs: number): DevicePresenceStatus {
-  if (pairedDeviceExpectsStream(state)) {
+  if (state.kind === 'room-panel') {
     return state.activeStreamConnections > 0 ? 'online' : 'offline';
+  }
+
+  if (pairedDeviceExpectsStream(state) && state.activeStreamConnections > 0) {
+    return 'online';
   }
 
   const presenceAgeMs = state.lastSeenAt

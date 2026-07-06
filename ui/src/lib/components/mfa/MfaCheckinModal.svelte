@@ -178,7 +178,7 @@
       ticketCode: formatTicketCode(result.laneCode, result.number),
       topicLabel: resolveReceiptTopicLabel(
         {
-          authPath: 'mfa_assist',
+          authPath: 'none',
           topicId,
           topicLabel: selectedTopic?.label,
         },

@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS visits (
   queue_sequence INTEGER NOT NULL,
   needs_assistance INTEGER NOT NULL,
   check_in_path TEXT NOT NULL DEFAULT 'topic' CHECK (check_in_path IN ('topic', 'mfa_assist')),
-  auth_path TEXT NOT NULL DEFAULT 'phone_dob' CHECK (auth_path IN ('phone_dob', 'name_dob', 'egk', 'mfa_assist')),
+  auth_path TEXT NOT NULL DEFAULT 'phone_dob' CHECK (auth_path IN ('phone_dob', 'name_dob', 'egk', 'none')),
   configured_escort_policy TEXT NOT NULL,
   effective_escort_policy TEXT NOT NULL,
   allow_redirect INTEGER NOT NULL,

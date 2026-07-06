@@ -190,9 +190,6 @@ export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): v
       const assistActive = db.isTerminalAssistPendingActive(deviceId);
 
       try {
-        if (authPath === 'mfa_assist') {
-          throw domainError('INVALID_ARGUMENT');
-        }
         assertKnownCheckinAuthPath(authPath);
         assertTerminalAuthPathEnabled(db.getOpsSettings(), authPath);
 

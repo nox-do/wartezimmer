@@ -2,7 +2,7 @@ import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
 import { t } from '$lib/i18n/i18nStore.svelte';
 import type { TerminalTopic, TicketCreated } from '$lib/terminal/openapi-types';
 
-export type TerminalAuthPath = 'phone_dob' | 'name_dob' | 'egk' | 'mfa_assist';
+export type TerminalAuthPath = 'phone_dob' | 'name_dob' | 'egk' | 'none';
 
 export type CheckinCreated = TicketCreated;
 export type TerminalTopicOption = TerminalTopic;

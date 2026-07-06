@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import type { StatementSync } from 'node:sqlite';
 import test from 'node:test';
 import { ensureSingleDefaultCallTarget, getOpsSettingsFromDb } from './database-ops-settings.js';
+import { OpsSettingsValidationError } from './ops-settings-errors.js';
 
 function minimalOpsSettingsRow(overrides?: Record<string, unknown>) {
   return {
@@ -154,4 +155,21 @@ test('ensureSingleDefaultCallTarget re-export matches domain package', () => {
 
   assert.equal(rooms.find((room) => room.roomId === 'labor')?.defaultCallTarget, true);
   assert.equal(rooms.find((room) => room.roomId === 'empfang')?.defaultCallTarget, false);
+});
+
+test('getOpsSettingsFromDb rejects reserved mfa topic id in configurable topic settings', () => {
+  assert.throws(
+    () =>
+      getOpsSettingsFromDb({
+        getOpsSettingsStmt: {
+          get: () =>
+            minimalOpsSettingsRow({
+              topicSettingsJson:
+                '[{"topicId":"mfa","label":"Zur MFA","laneCode":"M","defaultRoomId":"empfang","enabled":true,"sortOrder":1}]',
+            }),
+        } as StatementSync,
+        configuredExportBasePath: null,
+      }),
+    (error: unknown) => error instanceof OpsSettingsValidationError,
+  );
 });

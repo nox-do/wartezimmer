@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { ChevronRight, CreditCard, IdCard, Smartphone, Users } from '@lucide/svelte';
   import { getContext } from 'svelte';
@@ -17,11 +18,11 @@
     type TerminalOpsSnapshot,
   } from '$lib/terminal/terminal-ops-context';
   import {
+    createCheckin,
     mapCheckinErrorMessage,
-    pressTerminalAssist,
   } from '$lib/terminal/terminal-api';
   import { getTerminalPrivacyNotice } from '$lib/privacy/terminal-notice';
-  import { readAssistMode, writeAssistMode } from '$lib/terminal/terminal-session';
+  import { clearAssistMode, writeCheckinResult } from '$lib/terminal/terminal-session';
   import { toastStore } from '$lib/stores/toastStore';
 
   const terminalOps = getContext<TerminalOpsSnapshot>(TERMINAL_OPS_CONTEXT_KEY);
@@ -29,7 +30,6 @@
   let busy = $state(false);
   let privacyModalOpen = $state(false);
   let practiceProfile = $state(getPracticeProfileFallback());
-  let assistActive = $state(readAssistMode());
 
   const privacyNotice = $derived(getTerminalPrivacyNotice(practiceProfile));
   const practiceName = $derived(practiceDisplayLabel(practiceProfile, t('terminal.practiceFallback')));
@@ -45,29 +45,38 @@
     const stopProfile = mountPracticeProfileSync((profile) => {
       practiceProfile = profile;
     });
-    const timer = window.setInterval(() => {
-      assistActive = readAssistMode();
-    }, 500);
     return () => {
       stopProfile();
-      window.clearInterval(timer);
     };
   });
 
   async function onMfaAssist() {
-    if (assistActive || busy) {
+    if (busy) {
       return;
     }
     busy = true;
-    const result = await pressTerminalAssist();
+    const result = await createCheckin({
+      topicId: 'mfa',
+      authPath: 'none',
+    });
     busy = false;
     if (!result.ok) {
       toastStore.error(mapCheckinErrorMessage(result.error.code, result.error.message));
       return;
     }
 
-    writeAssistMode(result.data.expiresAt);
-    assistActive = true;
+    clearAssistMode();
+    writeCheckinResult({
+      visitId: result.data.visitId,
+      laneCode: result.data.laneCode,
+      number: result.data.number,
+      topicId: 'mfa',
+      topicLabel: t('terminal.receiptTopicEmpfang'),
+      destinationRoomLabel: result.data.destinationRoomLabel ?? null,
+      authPath: 'none',
+      createdAt: result.data.createdAt,
+    });
+    void goto('/terminal/confirmed');
   }
 </script>
 
@@ -89,10 +98,6 @@
         {t('terminal.privacyOpenLink')}
       </button>
     </header>
-
-    {#if assistActive}
-      <p class="terminal-lead terminal-lead--assist">{t('terminal.startAssistHint')}</p>
-    {/if}
 
     <div class="terminal-card-grid terminal-card-grid--start">
       {#if authPhoneEnabled}
@@ -137,9 +142,7 @@
       <button
         type="button"
         class="terminal-card"
-        class:terminal-card--assist-pressed={assistActive}
         disabled={busy}
-        aria-pressed={assistActive}
         onclick={onMfaAssist}
       >
         <span class="terminal-card__icon" aria-hidden="true">
@@ -147,7 +150,7 @@
         </span>
         <span class="terminal-card__text">
           <strong>{t('terminal.authMfaTitle')}</strong>
-          <span>{assistActive ? t('terminal.authMfaPressedSubtitle') : t('terminal.authMfaSubtitle')}</span>
+          <span>{t('terminal.authMfaSubtitle')}</span>
         </span>
         <ChevronRight class="terminal-card__chevron" aria-hidden="true" />
       </button>

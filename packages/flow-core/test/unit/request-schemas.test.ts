@@ -16,7 +16,7 @@ test('parseCheckInBody: topicId oder mfaAssist', () => {
   assert.deepEqual(parseCheckInBody({ mfaAssist: true }), {
     topicId: undefined,
     mfaAssist: true,
-    authPath: 'mfa_assist',
+    authPath: 'none',
     surfaceId: 'terminal_1',
     displayName: undefined,
     needsAssistance: false,

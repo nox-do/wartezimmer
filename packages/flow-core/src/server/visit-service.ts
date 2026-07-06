@@ -145,7 +145,7 @@ export function createVisitService(params: {
       });
       const queueNumber = formatTicketCode(queueLaneCode, queueSequence);
       const visitId = formatVisitId(businessDay, queueLaneCode, queueSequence);
-      const authPath = body.authPath ?? (mfaAssist ? 'mfa_assist' : 'phone_dob');
+      const authPath = body.authPath ?? (mfaAssist ? 'none' : 'phone_dob');
       const patientId = crypto.randomUUID();
 
       const configuredEscortPolicy = selectedRule.escortPolicy;

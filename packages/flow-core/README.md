@@ -40,7 +40,7 @@ Dieses Repo ist der **extrahierte Kern** für die Übernahme in die Praxissoftwa
 | `queueNumberScope` | immer `lane_day` |
 | `needsAssistance` | MFA-Markierung — **kein** Routing/Escort/Lane-Effekt |
 | `checkInPath` | `topic` (Standard) oder `mfa_assist` (Hilfe-Button) |
-| `authPath` | `phone_dob`, `name_dob`, `egk`, `mfa_assist` — Terminal-Anmeldeweg |
+| `authPath` | `phone_dob`, `name_dob`, `egk`, `none` — Terminal-Anmeldeweg |
 | `id` (Visit) | `formatVisitId(businessDay, laneCode, sequence)` → `20260602-A-017` |
 
 **Wichtig für Adapter:** Ticket-Anzeige und Sortierung über `queueLaneCode` + `queueSequence` (oder `parseTicketCode(queueNumber)`). `visit.topic.laneCode` ist Live-Katalog und kann vom Snapshot abweichen.
@@ -126,7 +126,7 @@ npm run typecheck  # tsc ohne Emit
 - **Impfung** — direkt Impfraum, nicht im WZ-TV
 - **Redirect** — MFA kann operative Wahrheit ändern
 - **Begleitung** — `escortPolicy` aus Rule; `needsAssistance` ist reine MFA-Markierung ohne Routing-Effekt
-- **Terminal-Hilfe** — Hilfe-Button (`mfaAssist: true`) → `checkInPath: mfa_assist`, `authPath: mfa_assist`; Routing über PoC-RoutingRule (kein Praxis-Katalog-Thema). `needsAssistance` am Visit: reine MFA-Markierung additiv zum gewählten Thema
+- **Terminal-Hilfe** — Hilfe-Button (`mfaAssist: true`) → `checkInPath: mfa_assist`, `authPath: none`; Routing über PoC-RoutingRule (kein Praxis-Katalog-Thema). `needsAssistance` am Visit: reine MFA-Markierung additiv zum gewählten Thema
 
 ## Integration ins Host-Projekt
 
@@ -158,7 +158,7 @@ Shared-Module (Domain, ohne DB) — vollständige Liste siehe `src/index.ts`.
 |---|---|---|
 | `checkInPath: 'topic'` | Routing-Kontext Standard-Themen-Check-in | |
 | `checkInPath: 'mfa_assist'` | Routing-Kontext Hilfe-Button | |
-| `authPath` | `phone_dob`, `name_dob`, `egk`, `mfa_assist` | Terminal-Identifikation |
+| `authPath` | `phone_dob`, `name_dob`, `egk`, `none` | Terminal-Identifikation |
 | `id` / Visit-ID | `formatVisitId(...)` | wie PF Ticket-ID |
 | `queueLaneCode` + `queueSequence` | `laneCode` + `number` | strukturiert bevorzugen |
 | `queueNumber` | `formatTicketCode(...)` | `A-017`; Legacy-Consumer nicht als Zahl parsen |

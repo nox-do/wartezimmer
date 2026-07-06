@@ -34,7 +34,7 @@ export async function createMfaCheckin(input: {
     method: 'POST',
     body: JSON.stringify({
       topicId: input.topicId,
-      authPath: 'mfa_assist',
+      authPath: 'none',
       identityRef: input.identityRef,
     }),
   });

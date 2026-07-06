@@ -41,7 +41,7 @@ export function parseCheckInBody(body: unknown) {
   if (!mfaAssist && !topicId) throw new Error('CHECKIN_TOPIC_OR_MFA_ASSIST_REQUIRED');
 
   const authPath: AuthPath = mfaAssist
-    ? 'mfa_assist'
+    ? 'none'
     : assertEnum(raw.authPath ?? 'phone_dob', [...AUTH_PATHS], 'INVALID_AUTH_PATH');
 
   return {

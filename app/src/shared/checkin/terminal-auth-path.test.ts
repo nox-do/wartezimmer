@@ -19,8 +19,8 @@ test('isTerminalAuthPathEnabled respects ops settings for guarded paths', () => 
   assert.equal(isTerminalAuthPathEnabled(settings, 'egk'), true);
 });
 
-test('isTerminalAuthPathEnabled allows mfa_assist', () => {
-  assert.equal(isTerminalAuthPathEnabled(settings, 'mfa_assist'), true);
+test('isTerminalAuthPathEnabled allows none', () => {
+  assert.equal(isTerminalAuthPathEnabled(settings, 'none'), true);
 });
 
 test('assertKnownCheckinAuthPath rejects unknown auth paths', () => {
@@ -36,7 +36,7 @@ test('assertKnownCheckinAuthPath rejects unknown auth paths', () => {
 
 test('assertKnownCheckinAuthPath accepts known auth paths', () => {
   assert.doesNotThrow(() => assertKnownCheckinAuthPath('phone_dob'));
-  assert.doesNotThrow(() => assertKnownCheckinAuthPath('mfa_assist'));
+  assert.doesNotThrow(() => assertKnownCheckinAuthPath('none'));
 });
 
 test('assertTerminalAuthPathEnabled throws when path is disabled', () => {

@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { resolveReceiptTopicLabel } from './terminal-receipt-topic-label';
 
 describe('resolveReceiptTopicLabel', () => {
-  it('uses Empfang label for MFA-assist path', () => {
+  it('uses Empfang label for no-auth reception path', () => {
     expect(
       resolveReceiptTopicLabel(
-        { authPath: 'mfa_assist', topicId: 'mfa', topicLabel: undefined },
+        { authPath: 'none', topicId: 'mfa', topicLabel: undefined },
         'Empfang',
       ),
     ).toBe('Empfang');

@@ -2,7 +2,7 @@ import type { OpsSettings } from '../db/db-types.js';
 import { domainError } from '../errors/domain-error.js';
 
 const GUARDED_TERMINAL_AUTH_PATHS = ['phone_dob', 'name_dob', 'egk'] as const;
-export const CHECKIN_AUTH_PATHS = [...GUARDED_TERMINAL_AUTH_PATHS, 'mfa_assist'] as const;
+export const CHECKIN_AUTH_PATHS = [...GUARDED_TERMINAL_AUTH_PATHS, 'none'] as const;
 
 export type GuardedTerminalAuthPath = (typeof GUARDED_TERMINAL_AUTH_PATHS)[number];
 export type CheckinAuthPath = (typeof CHECKIN_AUTH_PATHS)[number];

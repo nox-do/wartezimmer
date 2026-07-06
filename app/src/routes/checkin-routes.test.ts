@@ -9,11 +9,13 @@ function fakeCheckinDb(overrides?: {
   terminalAuthNameDobEnabled?: boolean;
   isTerminalAssistPendingActive?: () => boolean;
   onCreateTicket?: (input: {
+    topicId: string;
     identityRef?: string;
     authPath: string;
     checkinLocale?: string | null;
     needsAssistance?: boolean;
   }) => void;
+  onReleaseTerminalAssist?: () => void;
 }): CoreDatabase {
   return {
     getOpsSettings: () => ({
@@ -54,7 +56,10 @@ function fakeCheckinDb(overrides?: {
       };
     },
     isTerminalAssistPendingActive: overrides?.isTerminalAssistPendingActive ?? (() => false),
-    releaseTerminalAssist: () => true,
+    releaseTerminalAssist: () => {
+      overrides?.onReleaseTerminalAssist?.();
+      return true;
+    },
     pressTerminalAssist: () => ({
       deviceId: 'checkin-terminal',
       pressedAt: '2026-06-17T12:00:00.000Z',
@@ -252,5 +257,53 @@ test('POST /api/v1/checkins sets needsAssistance when terminal assist press is a
 
   assert.equal(response.statusCode, 201);
   assert.equal(capturedNeedsAssistance, true);
+  await app.close();
+});
+
+test('POST /api/v1/checkins accepts none auth path for direct MFA topic check-in', async () => {
+  let capturedAuthPath: string | undefined;
+  let capturedTopicId: string | undefined;
+  let capturedNeedsAssistance: boolean | undefined;
+  const app = Fastify({ logger: false });
+  registerCheckinRoutes(
+    app,
+    fakeCheckinDb({
+      onCreateTicket: (input) => {
+        capturedAuthPath = input.authPath;
+        capturedTopicId = input.topicId;
+        capturedNeedsAssistance = input.needsAssistance;
+      },
+    }),
+  );
+
+  await app.ready();
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/checkins',
+    payload: {
+      topicId: 'mfa',
+      authPath: 'none',
+    },
+  });
+
+  assert.equal(response.statusCode, 201);
+  assert.equal(capturedAuthPath, 'none');
+  assert.equal(capturedTopicId, 'mfa');
+  assert.equal(capturedNeedsAssistance, false);
+  await app.close();
+});
+
+test('POST /api/v1/checkins/mfa-assist keeps legacy assist-pending behavior', async () => {
+  const app = Fastify({ logger: false });
+  registerCheckinRoutes(app, fakeCheckinDb());
+
+  await app.ready();
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/checkins/mfa-assist',
+  });
+
+  assert.equal(response.statusCode, 201);
+  assert.equal(response.json().legacyCutover, true);
   await app.close();
 });

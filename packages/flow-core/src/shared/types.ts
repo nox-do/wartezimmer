@@ -25,7 +25,8 @@ export type LocationConfidence = 'instructed' | 'assumed' | 'confirmed';
 export type PublicDisplayMode = 'visible' | 'hidden' | 'call_only';
 export type Priority = 'low' | 'normal' | 'high' | 'urgent';
 export type CheckInPath = 'topic' | 'mfa_assist';
-export type AuthPath = 'phone_dob' | 'name_dob' | 'egk' | 'mfa_assist';
+/** `none` = direkte persoenliche Anmeldung ohne vorgelagerte Terminal-Identifikation. */
+export type AuthPath = 'phone_dob' | 'name_dob' | 'egk' | 'none';
 
 export interface Topic {
   id: string;
@@ -179,9 +180,9 @@ export interface Visit {
   queueSequence: number;
   /** MFA-Markierung: Patient braucht Begleitung — aendert Routing nicht. */
   needsAssistance: boolean;
-  /** topic = Standard-Check-in; mfa_assist = Hilfe-Button ohne Anmeldgrund. */
+  /** topic = Standard-Check-in; mfa_assist = interner Assist-/Empfangs-Pfad. */
   checkInPath: CheckInPath;
-  /** Terminal-Anmeldeweg — unabhaengig vom Routing-Kontext. */
+  /** Terminal-Anmeldeweg — unabhaengig vom Routing-Kontext; `none` = ohne Identifikation. */
   authPath: AuthPath;
   configuredEscortPolicy: EscortPolicy;
   effectiveEscortPolicy: EscortPolicy;

@@ -65,7 +65,7 @@ export interface paths {
             /** @description Configured terminal topic id from ops settings. */
             topicId: string;
             /** @enum {string} */
-            authPath: 'phone_dob' | 'name_dob' | 'egk';
+            authPath: 'phone_dob' | 'name_dob' | 'egk' | 'none';
             identityRef?: string;
             /** @description Optional phone number for CSV identity lookup; stored on the ticket when authPath is phone_dob (portal anamnese prefill). */
             phoneNumber?: string;
@@ -391,7 +391,7 @@ export interface components {
       | 'AUTH_UNAUTHORIZED'
       | 'AUTH_FORBIDDEN'
       | 'RATE_LIMITED'
-      | 'TICKET_NOT_FOUND'
+      | 'VISIT_NOT_FOUND'
       | 'DOCUMENT_NOT_FOUND'
       | 'DOCUMENT_FORBIDDEN'
       | 'INVALID_TRANSITION'

@@ -99,28 +99,7 @@ export function connectMultiEventSseStream(options: MultiEventSseStreamOptions):
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let abortController: AbortController | null = null;
   let reconnectDelayMs = 1000;
-  let wasHidden = false;
   const slotKey = streamSlotKey(options.url, options.clientRole);
-
-  const onVisibilityChange = () => {
-    if (closed || typeof document === 'undefined') {
-      return;
-    }
-
-    if (document.visibilityState === 'hidden') {
-      wasHidden = true;
-      abortController?.abort();
-      return;
-    }
-
-    if (!wasHidden) {
-      return;
-    }
-
-    wasHidden = false;
-    reconnectDelayMs = 1000;
-    void connect();
-  };
 
   const scheduleReconnect = () => {
     if (closed) {
@@ -228,19 +207,12 @@ export function connectMultiEventSseStream(options: MultiEventSseStreamOptions):
     }
   };
 
-  if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', onVisibilityChange);
-  }
-
   const disconnect = () => {
     closed = true;
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
     }
     abortController?.abort();
-    if (typeof document !== 'undefined') {
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-    }
     releaseStreamSlot(slotKey, disconnect);
   };
 
@@ -268,28 +240,7 @@ export function connectSseStream<T>(options: SseStreamOptions<T>): () => void {
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let abortController: AbortController | null = null;
   let reconnectDelayMs = 1000;
-  let wasHidden = false;
   const slotKey = streamSlotKey(options.url, options.clientRole);
-
-  const onVisibilityChange = () => {
-    if (closed || typeof document === 'undefined') {
-      return;
-    }
-
-    if (document.visibilityState === 'hidden') {
-      wasHidden = true;
-      abortController?.abort();
-      return;
-    }
-
-    if (!wasHidden) {
-      return;
-    }
-
-    wasHidden = false;
-    reconnectDelayMs = 1000;
-    void connect();
-  };
 
   const scheduleReconnect = () => {
     if (closed) {
@@ -398,19 +349,12 @@ export function connectSseStream<T>(options: SseStreamOptions<T>): () => void {
     }
   };
 
-  if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', onVisibilityChange);
-  }
-
   const disconnect = () => {
     closed = true;
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
     }
     abortController?.abort();
-    if (typeof document !== 'undefined') {
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-    }
     releaseStreamSlot(slotKey, disconnect);
   };
 

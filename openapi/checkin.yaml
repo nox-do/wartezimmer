@@ -157,6 +157,7 @@ paths:
                     - phone_dob
                     - name_dob
                     - egk
+                    - none
                 identityRef:
                   type: string
                 phoneNumber:

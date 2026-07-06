@@ -253,7 +253,14 @@
         </div>
       </div>
     {:else}
-      <TerminalDobNumpad disabled={disabled} onDigit={appendDigit} onClear={clearActive} onBackspace={backspace} />
+      <div class="name-dob-numpad">
+        <TerminalDobNumpad
+          disabled={disabled}
+          onDigit={appendDigit}
+          onClear={clearActive}
+          onBackspace={backspace}
+        />
+      </div>
     {/if}
   </div>
 </div>

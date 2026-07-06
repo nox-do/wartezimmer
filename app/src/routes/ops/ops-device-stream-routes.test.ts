@@ -65,7 +65,7 @@ afterEach(() => {
   resetDevicePresenceForTests();
 });
 
-test('terminal device stream marks streamConnected and offline on disconnect', async () => {
+test('terminal device stream clears streamConnected but keeps fresh heartbeat online on disconnect', async () => {
   enableTestAuth();
   const app = Fastify({ logger: false });
   const sessions = createStaffSessionManager({ sessionTtlMs: 60 * 60 * 1000 });
@@ -95,7 +95,7 @@ test('terminal device stream marks streamConnected and offline on disconnect', a
   await waitForStreamDisconnected(500);
 
   assert.equal(terminalPresence()?.streamConnected, false);
-  assert.equal(terminalPresence()?.status, 'offline');
+  assert.equal(terminalPresence()?.status, 'online');
 
   app.server.closeAllConnections();
   await app.close();

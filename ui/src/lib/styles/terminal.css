@@ -52,8 +52,8 @@
   background: var(--terminal-bg);
 }
 
-.terminal-page .terminal-body--numpad-wide {
-  max-width: var(--terminal-numpad-wide-max);
+.terminal-page .terminal-body--keyboard {
+  max-width: var(--terminal-keyboard-max);
 }
 
 .terminal-page .terminal-loading {
@@ -605,6 +605,11 @@
     (100% - (var(--terminal-name-top-key-count) - 1) * var(--terminal-key-gap)) /
       var(--terminal-name-top-key-count)
   );
+}
+
+.terminal-page .name-dob-numpad {
+  align-self: center;
+  width: min(100%, 24rem);
 }
 
 .terminal-page .name-keyboard-row {
