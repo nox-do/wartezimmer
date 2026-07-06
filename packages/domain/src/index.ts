@@ -1,22 +1,6 @@
 export { formatTicketCode } from './ticket-code.js';
 export type { PracticeProfile } from './practice-profile-types.js';
 export {
-  formatConsentWithdrawalParagraph,
-  formatControllerParagraph,
-  formatDeviceStorageParagraph,
-  formatLegalBasisAnamnese,
-  formatLegalBasisCheckin,
-  formatLegalBasisPortal,
-  formatLegalBasisUpload,
-  formatPracticeAddress,
-  formatPrivacyObjectionParagraph,
-  formatPrivacyRightsContactRef,
-  formatPrivacyRightsParagraph,
-  PRIVACY_LOCAL_PROCESSING,
-  PRIVACY_RETENTION_DAY,
-  PRIVACY_SCOPE_INTRO,
-} from './practice-privacy-copy.js';
-export {
   DEFAULT_TOPIC_ACCENT,
   defaultAccentForLane,
   isValidTopicAccentColor,

@@ -12,8 +12,8 @@ app/src/shared/forms/
   templates/
     definitions/
       index.ts                  # export const allTemplates = [...]
-      neupatient-basis.v1.ts    # Felder + Metadaten (id, name, version, category)
       allgemeinmedizin-erstanamnese.v1.ts
+      datenschutz-einwilligung.v1.ts
     sections/
       <template-id>.sections.ts # Eine Quelle: titleKey (Portal) + pdfTitle (MFA-PDF) + fieldIds
     reference/

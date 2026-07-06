@@ -91,7 +91,7 @@ Anmeldung (Start) ──┬── Rufnummer + Geburtsdatum ──┐
 - **Sprachauswahl:** DE / EN / TR über Flaggen (`PatientLangPicker`); Terminal- und Portal-Texte über i18n (en/tr partiell); Themen-Labels aus MFA-Settings (Deutsch), optional per Browser-Translator
 - **Rufnummer + Geburtsdatum**, **Nachname + Geburtsdatum**, **Gesundheitskarte** oder **Zur MFA** (welche Kacheln sichtbar sind, steuert MFA unter Betrieb → Terminal-Anmeldung)
 - Kein vorgeschalteter Willkommens-Screen (redundant)
-- **Datenschutzhinweis** auf Start-Screen (Kurz + Modal): Verantwortlicher und Betroffenenrechte aus Ops-Praxisprofil (`practice-privacy-copy.ts`, geladen via `/practice/profile`)
+- **Datenschutzhinweis** auf Start-Screen (Kurz + Modal): Verantwortlicher und Betroffenenrechte aus Ops-Praxisprofil (`ui/src/lib/privacy/practice-privacy-copy.ts`, geladen via `/practice/profile`)
 
 **Ausstieg Mensch (jederzeit auf den Eingabe-Screens):**
 

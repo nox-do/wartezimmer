@@ -7,11 +7,9 @@ import {
 } from '../shared/docker-file-sharing-hint.js';
 import { formatEnvBackupLabel } from '@praxis-flow/server-shared';
 import { createFolderPathField } from './folder-path-field.js';
-import {
-  deliveryImagesSummary,
-  pickAndLoadReleaseArchive,
-} from './delivery-images-flow.js';
+import { deliveryImagesSummary, pickAndLoadReleaseArchive } from './delivery-images-flow.js';
 import { queryRequired } from './dom.js';
+import { setButtonIcon } from './lucide-icons.js';
 import { createViewLoadingOverlay } from './view-loading.js';
 
 export type MaintenanceCallbacks = {
@@ -76,6 +74,11 @@ export function createMaintenanceView(
   const refreshLogsBtn = queryRequired<HTMLButtonElement>(
     root,
     '#maintenance-refresh-logs',
+    'Maintenance-UI',
+  );
+  const backupTipBtn = queryRequired<HTMLButtonElement>(
+    root,
+    '[aria-describedby="maintenance-backup-tip"]',
     'Maintenance-UI',
   );
   const backupBtn = queryRequired<HTMLButtonElement>(root, '#maintenance-backup', 'Maintenance-UI');
@@ -176,6 +179,8 @@ export function createMaintenanceView(
   );
 
   const viewLoading = createViewLoadingOverlay(root);
+  setButtonIcon(refreshLogsBtn, 'rotate-cw');
+  setButtonIcon(backupTipBtn, 'info');
 
   const state: MaintenanceState = {
     status: null,
@@ -269,9 +274,7 @@ export function createMaintenanceView(
       return;
     }
 
-    const rows: Array<[string, string]> = [
-      ['Aktuell', deliveryImagesSummary(status)],
-    ];
+    const rows: Array<[string, string]> = [['Aktuell', deliveryImagesSummary(status)]];
     if (status.deliveryImages.appImage) {
       rows.push(['app', status.deliveryImages.appImage]);
     }
@@ -633,7 +636,9 @@ export function createMaintenanceView(
         state.softwareUpdateStatusText = '';
         renderSoftwareUpdateSection();
         setError(
-          error instanceof Error ? error.message : 'Software-Update konnte nicht importiert werden.',
+          error instanceof Error
+            ? error.message
+            : 'Software-Update konnte nicht importiert werden.',
         );
       })
       .finally(() => setBusy(false));
