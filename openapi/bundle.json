@@ -11673,6 +11673,47 @@
         }
       }
     },
+    "/api/v1/ops/settings/capabilities": {
+      "get": {
+        "summary": "Read routing capabilities for UI and guards",
+        "responses": {
+          "200": {
+            "description": "Current routing capabilities derived from settings and feature state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["routingMode", "features"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "routingMode": {
+                      "type": "string",
+                      "enum": ["simple", "complex"]
+                    },
+                    "features": {
+                      "type": "object",
+                      "required": ["complexRouting", "journeyDesigner", "routingSimulator"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "complexRouting": {
+                          "type": "boolean"
+                        },
+                        "journeyDesigner": {
+                          "type": "boolean"
+                        },
+                        "routingSimulator": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ops/settings/onboarding/verify": {
       "post": {
         "summary": "Verify setup checks (expensive probes)",
@@ -18086,6 +18127,33 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "RoutingCapabilitiesResponse": {
+        "type": "object",
+        "required": ["routingMode", "features"],
+        "additionalProperties": false,
+        "properties": {
+          "routingMode": {
+            "type": "string",
+            "enum": ["simple", "complex"]
+          },
+          "features": {
+            "type": "object",
+            "required": ["complexRouting", "journeyDesigner", "routingSimulator"],
+            "additionalProperties": false,
+            "properties": {
+              "complexRouting": {
+                "type": "boolean"
+              },
+              "journeyDesigner": {
+                "type": "boolean"
+              },
+              "routingSimulator": {
+                "type": "boolean"
+              }
+            }
           }
         }
       },

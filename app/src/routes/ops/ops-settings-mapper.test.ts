@@ -7,6 +7,7 @@ import { buildOpsSettingsUpdate } from './ops-settings-mapper.js';
 function mockDb(): CoreDatabase {
   return {
     getOpsSettings: () => ({
+      routingMode: 'simple',
       returnWindowMinutes: 15,
       practiceOpenFrom: '00:00',
       practiceOpenTo: '23:59',

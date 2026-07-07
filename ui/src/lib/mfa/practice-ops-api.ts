@@ -23,6 +23,15 @@ export type BusinessDayTicketStats = {
   openTickets: BusinessDayOpenTicket[];
 };
 
+export type RoutingCapabilities = {
+  routingMode: 'simple' | 'complex';
+  features: {
+    complexRouting: boolean;
+    journeyDesigner: boolean;
+    routingSimulator: boolean;
+  };
+};
+
 export type DayLifecycleState = {
   businessDay: string;
   lastResetBusinessDay: string;
@@ -49,6 +58,10 @@ export type BusinessDayResetResult = {
 
 export async function fetchDayLifecycle() {
   return cookieAuthFetch<DayLifecycleState>('/api/v1/ops/day-lifecycle');
+}
+
+export async function fetchRoutingCapabilities() {
+  return cookieAuthFetch<RoutingCapabilities>('/api/v1/ops/settings/capabilities');
 }
 
 export async function setCheckinLock(locked: boolean) {

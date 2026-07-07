@@ -22,6 +22,10 @@ import {
   type RuntimeResetResult,
 } from './database-runtime-reset.js';
 import { RUNTIME_RESET_CONFIRM_PHRASE } from '../ops/runtime-reset-constants.js';
+import {
+  resolveRoutingCapabilities,
+  type RoutingCapabilities,
+} from '../ops/routing-capabilities.js';
 import { createVisitCheckInInDb } from '../flow-core/flow-core-checkin.js';
 import {
   getFlowCoreRuntime,
@@ -1176,6 +1180,10 @@ export class CoreDatabase {
 
   getOpsSettings(): OpsSettings {
     return getOpsSettingsFromDb(buildOpsSettingsReadParams(this.getOpsSettingsStmt));
+  }
+
+  getRoutingCapabilities(): RoutingCapabilities {
+    return resolveRoutingCapabilities(this.getOpsSettings());
   }
 
   updateOpsSettings(patch: OpsSettingsPatch): OpsSettings {

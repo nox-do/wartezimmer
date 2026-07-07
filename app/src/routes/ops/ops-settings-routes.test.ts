@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createSerializedExecutor } from './ops-settings-routes.js';
+import Fastify from 'fastify';
+import type { CoreDatabase } from '../../shared/db/database.js';
+import { createSerializedExecutor, registerOpsSettingsRoutes } from './ops-settings-routes.js';
 
 test('settings updates execute sequentially even while an earlier update awaits', async () => {
   const serialize = createSerializedExecutor();
@@ -35,4 +37,72 @@ test('a failed settings update does not block the next update', async () => {
 
   await assert.rejects(failed, /expected/);
   assert.equal(await next, 'completed');
+});
+
+test('GET /api/v1/ops/settings/capabilities returns simple routing capabilities', async () => {
+  const app = Fastify({ logger: false });
+  registerOpsSettingsRoutes(
+    app,
+    {
+      getRoutingCapabilities: () => ({
+        routingMode: 'simple',
+        features: {
+          complexRouting: false,
+          journeyDesigner: false,
+          routingSimulator: true,
+        },
+      }),
+    } as unknown as CoreDatabase,
+    {},
+  );
+
+  await app.ready();
+  const response = await app.inject({
+    method: 'GET',
+    url: '/api/v1/ops/settings/capabilities',
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json(), {
+    routingMode: 'simple',
+    features: {
+      complexRouting: false,
+      journeyDesigner: false,
+      routingSimulator: true,
+    },
+  });
+  await app.close();
+});
+
+test('GET /api/v1/ops/settings/capabilities returns complex routing capabilities', async () => {
+  const app = Fastify({ logger: false });
+  registerOpsSettingsRoutes(
+    app,
+    {
+      getRoutingCapabilities: () => ({
+        routingMode: 'complex',
+        features: {
+          complexRouting: true,
+          journeyDesigner: true,
+          routingSimulator: true,
+        },
+      }),
+    } as unknown as CoreDatabase,
+    {},
+  );
+
+  await app.ready();
+  const response = await app.inject({
+    method: 'GET',
+    url: '/api/v1/ops/settings/capabilities',
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json(), {
+    routingMode: 'complex',
+    features: {
+      complexRouting: true,
+      journeyDesigner: true,
+      routingSimulator: true,
+    },
+  });
+  await app.close();
 });

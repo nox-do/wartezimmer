@@ -778,6 +778,34 @@ export const OpsSettingsResponse = {
   },
 } as const;
 
+export const RoutingCapabilitiesResponse = {
+  type: 'object',
+  required: ['routingMode', 'features'],
+  additionalProperties: false,
+  properties: {
+    routingMode: {
+      type: 'string',
+      enum: ['simple', 'complex'],
+    },
+    features: {
+      type: 'object',
+      required: ['complexRouting', 'journeyDesigner', 'routingSimulator'],
+      additionalProperties: false,
+      properties: {
+        complexRouting: {
+          type: 'boolean',
+        },
+        journeyDesigner: {
+          type: 'boolean',
+        },
+        routingSimulator: {
+          type: 'boolean',
+        },
+      },
+    },
+  },
+} as const;
+
 export const DeploymentVolumeStatus = {
   type: 'object',
   required: ['containerPath', 'userFolderLabel', 'ready', 'hint', 'csvFiles', 'importFolders'],
@@ -2763,6 +2791,34 @@ export const PATCH_api_v1_ops_settingsResponse403 = {
     details: {
       type: 'object',
       additionalProperties: true,
+    },
+  },
+} as const;
+
+export const GET_api_v1_ops_settings_capabilitiesResponse200 = {
+  type: 'object',
+  required: ['routingMode', 'features'],
+  additionalProperties: false,
+  properties: {
+    routingMode: {
+      type: 'string',
+      enum: ['simple', 'complex'],
+    },
+    features: {
+      type: 'object',
+      required: ['complexRouting', 'journeyDesigner', 'routingSimulator'],
+      additionalProperties: false,
+      properties: {
+        complexRouting: {
+          type: 'boolean',
+        },
+        journeyDesigner: {
+          type: 'boolean',
+        },
+        routingSimulator: {
+          type: 'boolean',
+        },
+      },
     },
   },
 } as const;
@@ -5277,6 +5333,7 @@ export const opsSchemas = {
   OpsOnboardingStatus,
   PracticeProfile,
   OpsSettingsResponse,
+  RoutingCapabilitiesResponse,
   DeploymentVolumeStatus,
   DeploymentStorageResponse,
   ContactLookupValidateRequest,
@@ -5298,6 +5355,7 @@ export const opsSchemas = {
   PATCH_api_v1_ops_settingsResponse200,
   PATCH_api_v1_ops_settingsResponse400,
   PATCH_api_v1_ops_settingsResponse403,
+  GET_api_v1_ops_settings_capabilitiesResponse200,
   POST_api_v1_ops_settings_onboarding_verifyResponse200,
   POST_api_v1_ops_settings_onboarding_verifyResponse403,
   GET_api_v1_ops_settings_onboardingResponse200,

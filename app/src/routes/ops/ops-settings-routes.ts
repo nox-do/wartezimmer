@@ -128,6 +128,18 @@ export function registerOpsSettingsRoutes(
   );
 
   app.get(
+    '/api/v1/ops/settings/capabilities',
+    {
+      schema: {
+        response: {
+          200: opsSchemas.GET_api_v1_ops_settings_capabilitiesResponse200,
+        },
+      },
+    },
+    async () => db.getRoutingCapabilities(),
+  );
+
+  app.get(
     '/api/v1/ops/settings',
     {
       schema: {
