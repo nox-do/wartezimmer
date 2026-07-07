@@ -11889,7 +11889,87 @@
             }
           },
           "403": {
-            "description": "Role is not allowed to patch the requested settings fields",
+            "description": "Role is not allowed to patch the requested settings fields, or complex routing is not licensed (COMPLEX_ROUTING_NOT_LICENSED).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Routing mode change blocked while visits have an active journey",
             "content": {
               "application/json": {
                 "schema": {
@@ -11990,7 +12070,12 @@
                     },
                     "features": {
                       "type": "object",
-                      "required": ["complexRouting", "journeyDesigner", "routingSimulator"],
+                      "required": [
+                        "complexRouting",
+                        "journeyDesigner",
+                        "routingSimulator",
+                        "complexRoutingLicensed"
+                      ],
                       "additionalProperties": false,
                       "properties": {
                         "complexRouting": {
@@ -12000,6 +12085,9 @@
                           "type": "boolean"
                         },
                         "routingSimulator": {
+                          "type": "boolean"
+                        },
+                        "complexRoutingLicensed": {
                           "type": "boolean"
                         }
                       }
@@ -18753,7 +18841,12 @@
           },
           "features": {
             "type": "object",
-            "required": ["complexRouting", "journeyDesigner", "routingSimulator"],
+            "required": [
+              "complexRouting",
+              "journeyDesigner",
+              "routingSimulator",
+              "complexRoutingLicensed"
+            ],
             "additionalProperties": false,
             "properties": {
               "complexRouting": {
@@ -18763,6 +18856,9 @@
                 "type": "boolean"
               },
               "routingSimulator": {
+                "type": "boolean"
+              },
+              "complexRoutingLicensed": {
                 "type": "boolean"
               }
             }

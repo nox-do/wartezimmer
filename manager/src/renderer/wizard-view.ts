@@ -21,6 +21,7 @@ import {
   dockerReady,
   loadWizardNetwork,
   loadWizardPlan,
+  persistWizardRoutingMode,
   planWizardAdvance,
   previousWizardStep,
   refreshWizardStatus,
@@ -33,6 +34,7 @@ import {
   type WizardFlowState,
   type WizardStep,
 } from './wizard-flow.js';
+import { formatRoutingModeError, renderRoutingModePanel } from './routing-mode-ui.js';
 import { queryRequired } from './dom.js';
 
 export type WizardCallbacks = {
@@ -358,10 +360,56 @@ export function createWizardView(
     input.type = 'text';
     input.className = 'wizard-input';
     input.value = state.practiceDisplayName;
+    input.disabled = state.busy;
     input.addEventListener('input', () => {
       state = { ...state, practiceDisplayName: input.value };
     });
     panel.append(input);
+
+    const routingTitle = document.createElement('h3');
+    routingTitle.className = 'routing-mode-subheading';
+    routingTitle.textContent = 'Routing-Modus';
+    panel.append(routingTitle);
+
+    const routingHost = document.createElement('div');
+    panel.append(routingHost);
+
+    const paintRoutingPanel = (complexRoutingLicensed: boolean) => {
+      renderRoutingModePanel(
+        routingHost,
+        {
+          routingMode: state.routingMode,
+          complexRoutingLicensed,
+          busy: state.busy,
+        },
+        {
+          disabled: state.busy,
+          onChange: (routingMode) => {
+            state = { ...state, routingMode };
+            paintRoutingPanel(complexRoutingLicensed);
+          },
+        },
+      );
+    };
+
+    paintRoutingPanel(true);
+    void api
+      .getRoutingMode()
+      .then((capabilities) => {
+        if (state.step !== 3) {
+          return;
+        }
+        state = {
+          ...state,
+          routingMode: capabilities.routingMode,
+        };
+        paintRoutingPanel(capabilities.features.complexRoutingLicensed);
+      })
+      .catch(() => {
+        if (state.step === 3) {
+          paintRoutingPanel(true);
+        }
+      });
 
     content.replaceChildren(panel);
     nextBtn.textContent = 'Weiter';
@@ -688,6 +736,15 @@ export function createWizardView(
       status: await refreshWizardStatusAfterApply(api),
       probeStatusText: null,
     };
+    try {
+      await persistWizardRoutingMode(api, state);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Routing-Modus konnte nach der Einrichtung nicht gespeichert werden.',
+      );
+    }
   }
 
   async function goNext(): Promise<void> {

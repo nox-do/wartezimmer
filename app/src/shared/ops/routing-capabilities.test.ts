@@ -9,6 +9,7 @@ test('resolveRoutingCapabilities disables complex and journey features in simple
       complexRouting: false,
       journeyDesigner: false,
       routingSimulator: true,
+      complexRoutingLicensed: true,
     },
   });
 });
@@ -20,6 +21,7 @@ test('resolveRoutingCapabilities enables complex and journey features in complex
       complexRouting: true,
       journeyDesigner: true,
       routingSimulator: true,
+      complexRoutingLicensed: true,
     },
   });
 });

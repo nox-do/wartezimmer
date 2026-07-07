@@ -29,6 +29,7 @@ export type RoutingCapabilities = {
     complexRouting: boolean;
     journeyDesigner: boolean;
     routingSimulator: boolean;
+    complexRoutingLicensed: boolean;
   };
 };
 

@@ -74,6 +74,10 @@ import {
   GATEWAY_ENV_KEYS,
 } from './urls.js';
 import type { SetupContext } from './setup-context.js';
+import {
+  getRoutingModeCapabilities as readRoutingModeCapabilities,
+  setRoutingMode as persistRoutingMode,
+} from './routing-mode.js';
 
 export type {
   ApplySetupOptions,
@@ -750,4 +754,15 @@ export async function saveStorageFolders(
     compose,
     restartLog,
   };
+}
+
+export async function getHostRoutingModeCapabilities(ctx: SetupContext) {
+  return readRoutingModeCapabilities(ctx.composeProjectName);
+}
+
+export async function setHostRoutingMode(
+  ctx: SetupContext,
+  input: { routingMode: 'simple' | 'complex' },
+) {
+  return persistRoutingMode(ctx.composeProjectName, input.routingMode);
 }

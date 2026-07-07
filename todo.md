@@ -1,6 +1,6 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-07
+Stand: 2026-07-07 (Release **0.2.0** — Journey/Routing, non-breaking API/DB)
 
 ## Erledigt
 
@@ -15,6 +15,14 @@ Stand: 2026-07-07
 ## In Arbeit / Review
 
 - **MFA Settings UI** – Branch `feat/mfa-settings-sidebar`: Sidebar, Topics/Journeys-Routen
+
+## Erledigt (Fortsetzung)
+
+- **Paket 8 – Manager Routing Mode** (2026-07-07): Setup-API `GET|POST /routing-mode`, Manager-Trust-Header, `complexRoutingLicensed` in Capabilities, Wizard Schritt 3 + Wartung-UI, Lizenz-Guard-Stub
+
+## Geplant
+
+- _(keine offenen Routing-Mode-Pakete)_
 
 ## Referenzen
 

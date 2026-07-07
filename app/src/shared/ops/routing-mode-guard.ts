@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { TERMINAL_VISIT_STATUSES } from '@praxis-flow/flow-core';
 import type { RoutingMode } from '../db/db-types.js';
+import { isComplexRoutingLicensed } from './routing-license.js';
 
 export function countActiveJourneyVisits(db: DatabaseSync): number {
   const terminalStatuses = [...TERMINAL_VISIT_STATUSES];
@@ -34,4 +35,22 @@ export function validateRoutingModeChange(input: {
   }
 
   return { ok: true };
+}
+
+export function validateComplexRoutingLicenseChange(input: {
+  nextMode: RoutingMode;
+}): { ok: true } | { ok: false; code: string; message: string } {
+  if (input.nextMode !== 'complex') {
+    return { ok: true };
+  }
+
+  if (isComplexRoutingLicensed()) {
+    return { ok: true };
+  }
+
+  return {
+    ok: false,
+    code: 'COMPLEX_ROUTING_NOT_LICENSED',
+    message: 'Complex routing is not included in your license.',
+  };
 }

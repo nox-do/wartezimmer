@@ -50,6 +50,7 @@ test('GET /api/v1/ops/settings/capabilities returns simple routing capabilities'
           complexRouting: false,
           journeyDesigner: false,
           routingSimulator: true,
+          complexRoutingLicensed: true,
         },
       }),
     } as unknown as CoreDatabase,
@@ -68,6 +69,7 @@ test('GET /api/v1/ops/settings/capabilities returns simple routing capabilities'
       complexRouting: false,
       journeyDesigner: false,
       routingSimulator: true,
+      complexRoutingLicensed: true,
     },
   });
   await app.close();
@@ -84,6 +86,7 @@ test('GET /api/v1/ops/settings/capabilities returns complex routing capabilities
           complexRouting: true,
           journeyDesigner: true,
           routingSimulator: true,
+          complexRoutingLicensed: true,
         },
       }),
     } as unknown as CoreDatabase,
@@ -102,6 +105,7 @@ test('GET /api/v1/ops/settings/capabilities returns complex routing capabilities
       complexRouting: true,
       journeyDesigner: true,
       routingSimulator: true,
+      complexRoutingLicensed: true,
     },
   });
   await app.close();

@@ -59,7 +59,16 @@ npm run dev:manager
 - `.env`-Backup (`POST /backup { target: "env" }`) — keine DB/Staff-PINs
 - Import-/Export-Hostordner (`POST /storage`) — `.env`-Backup, Ordner anlegen, optional Stack neu anwenden
 - Staff-PIN-Reset MFA/Ops (`POST /reset-staff-pins`)
+- **Routing-Modus** Simple/Complex (`GET|POST /routing-mode`) — Wizard Schritt „Praxis“ + Wartung; kein Ops-PIN (Manager-Vertrauenskanal)
 - Probes erneut (`POST /probes`) — automatisch alle 5s in der Wartungs-View
+
+### Routing-Modus
+
+- **Konfigurationsoberfläche:** Praxis Flow Manager (nicht MFA/Ops-Web-UI).
+- **Auth:** Kein Ops-PIN im Manager — Setup-API auf localhost; App akzeptiert `X-Praxis-Manager-Local: 1` nur von loopback für `routingMode`-PATCH.
+- **Wizard:** Schritt 3 (Praxis) — Initialwahl; nach `apply` persistiert.
+- **Wartung:** Sektion „Routing-Modus“ mit Speichern.
+- **Lizenz:** `features.complexRoutingLicensed` in Capabilities (Stub: Dev erlaubt, Prod bis Lizenz-Infrastruktur).
 
 Setup-API (localhost `:9190`):
 
@@ -73,6 +82,8 @@ Setup-API (localhost `:9190`):
 | POST | `/api/setup/host/storage` | `{ importsHostPath, exportsHostPath, restartCompose? }` |
 | POST | `/api/setup/host/network` | `{ lanAppIp, gateway, restartCompose? }` — Wartung LAN/Gateway |
 | POST | `/api/setup/host/reset-staff-pins` | MFA- & Ops-PIN auf Default `0000` (DB), Stack stop → reset → start |
+| GET | `/api/setup/host/routing-mode` | Capabilities inkl. `routingMode`, `complexRoutingLicensed` |
+| POST | `/api/setup/host/routing-mode` | `{ routingMode: "simple"\|"complex" }` — proxied zur App-API mit Manager-Trust |
 
 Vollständiger Install-Reset bleibt CLI: `npm run setup:reset`.
 

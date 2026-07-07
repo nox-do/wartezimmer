@@ -1,4 +1,4 @@
-import type { GatewayPlanInput, HostStatus, NetworkSnapshot } from '../shared/host-status.js';
+import type { GatewayPlanInput, HostStatus, NetworkSnapshot, RoutingMode } from '../shared/host-status.js';
 import {
   SETUP_DEFAULT_GATEWAY_INTERFACE,
   SETUP_DEFAULT_GATEWAY_IP,
@@ -16,6 +16,7 @@ export type WizardInitialFields = {
   gatewayIp: string;
   portalAppIp: string;
   authBridgeUrl: string;
+  routingMode: RoutingMode;
 };
 
 export function initialStorageFolderPaths(status: HostStatus | null): {
@@ -90,6 +91,7 @@ export function createInitialWizardFields(status: HostStatus | null): WizardInit
     practiceDisplayName: initialPracticeDisplayName(status),
     ...initialStorageFolderPaths(status),
     ...initialGatewayFields(status, lan.lanAppIp, lan.customLanIp),
+    routingMode: 'simple',
   };
 }
 

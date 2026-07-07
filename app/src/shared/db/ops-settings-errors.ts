@@ -17,6 +17,7 @@ export class OpsSettingsValidationError extends Error {
 
 const OPS_SETTINGS_ERROR_HTTP_STATUS: Record<string, number> = {
   ROUTING_MODE_CHANGE_BLOCKED: 409,
+  COMPLEX_ROUTING_NOT_LICENSED: 403,
 };
 
 export function opsSettingsInvalidHttpStatus(code: string): number {

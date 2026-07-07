@@ -1,5 +1,5 @@
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-import type { ComposeStatus, HostStatus } from '../shared/host-status.js';
+import type { ComposeStatus, HostStatus, RoutingMode } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import {
   DOCKER_FILE_SHARING_HINT,
@@ -11,6 +11,7 @@ import { deliveryImagesSummary, pickAndLoadReleaseArchive } from './delivery-ima
 import { queryRequired } from './dom.js';
 import { setButtonIcon } from './lucide-icons.js';
 import { createViewLoadingOverlay } from './view-loading.js';
+import { formatRoutingModeError, renderRoutingModePanel } from './routing-mode-ui.js';
 
 export type MaintenanceCallbacks = {
   onBack: () => void;
@@ -27,6 +28,10 @@ type MaintenanceState = {
   exportsHostPath: string;
   storageStatusText: string;
   softwareUpdateStatusText: string;
+  routingMode: RoutingMode;
+  routingModeSaved: RoutingMode;
+  complexRoutingLicensed: boolean;
+  routingModeStatusText: string;
   busy: boolean;
   error: string | null;
 };
@@ -177,6 +182,21 @@ export function createMaintenanceView(
     '#maintenance-software-status',
     'Maintenance-UI',
   );
+  const routingModePanel = queryRequired<HTMLElement>(
+    root,
+    '#maintenance-routing-mode-panel',
+    'Maintenance-UI',
+  );
+  const routingModeSaveBtn = queryRequired<HTMLButtonElement>(
+    root,
+    '#maintenance-routing-mode-save',
+    'Maintenance-UI',
+  );
+  const routingModeStatus = queryRequired<HTMLElement>(
+    root,
+    '#maintenance-routing-mode-status',
+    'Maintenance-UI',
+  );
 
   const viewLoading = createViewLoadingOverlay(root);
   setButtonIcon(refreshLogsBtn, 'rotate-cw');
@@ -192,6 +212,10 @@ export function createMaintenanceView(
     exportsHostPath: '',
     storageStatusText: '',
     softwareUpdateStatusText: '',
+    routingMode: 'simple',
+    routingModeSaved: 'simple',
+    complexRoutingLicensed: true,
+    routingModeStatusText: '',
     busy: false,
     error: null,
   };
@@ -209,6 +233,7 @@ export function createMaintenanceView(
       pinResetBtn,
       storageApplyBtn,
       softwareImportBtn,
+      routingModeSaveBtn,
       confirmOk,
       confirmCancel,
       pinResetOk,
@@ -294,11 +319,33 @@ export function createMaintenanceView(
     softwareStatus.textContent = state.softwareUpdateStatusText;
   }
 
+  function renderRoutingMode(): void {
+    routingModeStatus.textContent = state.routingModeStatusText;
+    routingModeSaveBtn.disabled =
+      state.busy || state.routingMode === state.routingModeSaved;
+    renderRoutingModePanel(
+      routingModePanel,
+      {
+        routingMode: state.routingMode,
+        complexRoutingLicensed: state.complexRoutingLicensed,
+        busy: state.busy,
+      },
+      {
+        disabled: state.busy,
+        onChange: (routingMode) => {
+          state.routingMode = routingMode;
+          renderRoutingMode();
+        },
+      },
+    );
+  }
+
   function renderAll(): void {
     renderFileSharingHint();
     renderStackToggle();
     renderSoftwareUpdateSection();
     renderStorageFields();
+    renderRoutingMode();
     renderLogs();
     renderBackupInfo();
   }
@@ -680,6 +727,35 @@ export function createMaintenanceView(
     pinResetDialog.showModal();
   });
 
+  routingModeSaveBtn.addEventListener('click', () => {
+    setBusy(true);
+    setError(null);
+    routingModeStatus.textContent = 'Speichern …';
+    void api
+      .setRoutingMode({ routingMode: state.routingMode })
+      .then((result) => {
+        if (!result.ok) {
+          routingModeStatus.textContent = '';
+          setError(formatRoutingModeError(result));
+          return;
+        }
+        state.routingMode = result.routingMode;
+        state.routingModeSaved = result.routingMode;
+        state.complexRoutingLicensed = result.features.complexRoutingLicensed;
+        routingModeStatus.textContent =
+          result.routingMode === 'complex'
+            ? 'Complex Routing aktiv — Journey-UI in MFA nach Reload sichtbar.'
+            : 'Simple Routing aktiv.';
+        renderRoutingMode();
+        callbacks.onAfterMutation?.();
+      })
+      .catch((error) => {
+        routingModeStatus.textContent = '';
+        setError(error instanceof Error ? error.message : 'Routing-Modus konnte nicht gespeichert werden.');
+      })
+      .finally(() => setBusy(false));
+  });
+
   pinResetCancel.addEventListener('click', () => {
     pinResetDialog.close();
   });
@@ -743,6 +819,7 @@ export function createMaintenanceView(
       state.exportsHostPath = status.folders.exports;
       state.storageStatusText = '';
       state.softwareUpdateStatusText = '';
+      state.routingModeStatusText = '';
       state.error = null;
       pinResetStatus.textContent = '';
 
@@ -758,10 +835,14 @@ export function createMaintenanceView(
 
       renderAll();
       setBusy(true);
-      void Promise.all([refreshLogs(), api.getEnvBackupInfo()])
-        .then(([, backupInfoResult]) => {
+      void Promise.all([refreshLogs(), api.getEnvBackupInfo(), api.getRoutingMode()])
+        .then(([, backupInfoResult, routingCapabilities]) => {
           state.latestBackupPath = backupInfoResult.latestBackupPath;
+          state.routingMode = routingCapabilities.routingMode;
+          state.routingModeSaved = routingCapabilities.routingMode;
+          state.complexRoutingLicensed = routingCapabilities.features.complexRoutingLicensed;
           renderBackupInfo();
+          renderRoutingMode();
         })
         .catch((error) => {
           setError(

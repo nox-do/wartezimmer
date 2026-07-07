@@ -119,6 +119,35 @@ export type ResetStaffPinsResult = {
   compose: ComposeStatus;
 };
 
+export type RoutingMode = 'simple' | 'complex';
+
+export type RoutingModeCapabilities = {
+  routingMode: RoutingMode;
+  features: {
+    complexRouting: boolean;
+    journeyDesigner: boolean;
+    routingSimulator: boolean;
+    complexRoutingLicensed: boolean;
+  };
+};
+
+export type SetRoutingModeInput = {
+  routingMode: RoutingMode;
+};
+
+export type SetRoutingModeResult =
+  | {
+      ok: true;
+      routingMode: RoutingMode;
+      features: RoutingModeCapabilities['features'];
+    }
+  | {
+      ok: false;
+      code?: string;
+      error: string;
+      details?: Record<string, unknown>;
+    };
+
 export type SetupProbesResult = {
   probes: ProbeResult[];
 };

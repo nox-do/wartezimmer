@@ -160,10 +160,23 @@ export function registerOpsSettingsRoutes(
           200: opsSchemas.PATCH_api_v1_ops_settingsResponse200,
           400: opsSchemas.PATCH_api_v1_ops_settingsResponse400,
           403: opsSchemas.PATCH_api_v1_ops_settingsResponse403,
+          409: opsSchemas.PATCH_api_v1_ops_settingsResponse409,
         },
       },
     },
     async (request, reply) => {
+      if (request.managerLocalTrusted) {
+        const keys = Object.keys(request.body ?? {}).filter(
+          (key) => request.body[key as keyof typeof request.body] !== undefined,
+        );
+        if (keys.length !== 1 || keys[0] !== 'routingMode') {
+          return reply.code(403).send({
+            code: 'AUTH_FORBIDDEN',
+            message: 'Manager may only patch routingMode.',
+          });
+        }
+      }
+
       const roleCheck = assertPatchOpsSettingsAllowedForRole(request.clientRole, request.body);
       if (!roleCheck.ok) {
         return reply.code(403).send({

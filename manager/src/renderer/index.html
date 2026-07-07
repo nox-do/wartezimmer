@@ -199,6 +199,21 @@
           <button type="button" id="maintenance-backup" class="btn-secondary">.env sichern</button>
         </section>
 
+        <section class="maintenance-section" id="maintenance-routing-mode-section">
+          <h2>Routing-Modus</h2>
+          <p class="maintenance-hint">
+            Simple: Topics mit Standard-Aufrufziel. Complex: Journeys und Mixed Routing pro Topic
+            (MFA-UI).
+          </p>
+          <div id="maintenance-routing-mode-panel"></div>
+          <div class="maintenance-actions">
+            <button type="button" id="maintenance-routing-mode-save" class="btn-secondary">
+              Routing-Modus speichern
+            </button>
+          </div>
+          <p id="maintenance-routing-mode-status" class="maintenance-backup-status"></p>
+        </section>
+
         <section class="maintenance-section">
           <h2>Staff-PINs (MFA &amp; Ops)</h2>
           <p class="maintenance-hint">

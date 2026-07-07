@@ -728,6 +728,7 @@ components:
             - complexRouting
             - journeyDesigner
             - routingSimulator
+            - complexRoutingLicensed
           additionalProperties: false
           properties:
             complexRouting:
@@ -735,6 +736,8 @@ components:
             journeyDesigner:
               type: boolean
             routingSimulator:
+              type: boolean
+            complexRoutingLicensed:
               type: boolean
     DeploymentVolumeStatus:
       type: object
@@ -1487,7 +1490,15 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
         '403':
-          description: Role is not allowed to patch the requested settings fields
+          description: >-
+            Role is not allowed to patch the requested settings fields, or complex routing
+            is not licensed (COMPLEX_ROUTING_NOT_LICENSED).
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Routing mode change blocked while visits have an active journey
           content:
             application/json:
               schema:

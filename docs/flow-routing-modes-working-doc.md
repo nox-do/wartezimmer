@@ -672,4 +672,5 @@ Diese Punkte muessen vor oder waehrend der konkreten Umsetzung entschieden werde
   Journey-Locks geschuetzt.
 - Flow Core bleibt die gemeinsame Engine.
 - UI-Verfuegbarkeit wird ueber Ops Setting und Capabilities gesteuert.
+- **Modus-Umschaltung:** Praxis Flow Manager (Setup-API, kein Ops-PIN) — nicht MFA/Ops-Web-UI.
 - Guards muessen vor dem UI-Ausbau stehen.

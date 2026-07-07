@@ -1,3 +1,4 @@
+export { isComplexRoutingLicensed } from './routing-license-stub.js';
 export {
   DEFAULT_ROOM_PANEL_PIN_HASH,
   DEFAULT_STAFF_PIN,
@@ -63,6 +64,10 @@ export {
   type NormalizedSetupPlanInput,
   type ProbeResult,
   type ResetStaffPinsResult,
+  type RoutingMode,
+  type RoutingModeCapabilities,
+  type SetRoutingModeInput,
+  type SetRoutingModeResult,
   type SetupPlan,
   type SetupPlanInput,
   type SetupProbesResult,

@@ -1,9 +1,11 @@
 import type { OpsSettings, RoutingMode } from '../db/db-types.js';
+import { isComplexRoutingLicensed } from './routing-license.js';
 
 export type RoutingCapabilityFeatures = {
   complexRouting: boolean;
   journeyDesigner: boolean;
   routingSimulator: boolean;
+  complexRoutingLicensed: boolean;
 };
 
 export type RoutingCapabilities = {
@@ -11,27 +13,19 @@ export type RoutingCapabilities = {
   features: RoutingCapabilityFeatures;
 };
 
-type LicenseRoutingCapabilityOverrides = Partial<RoutingCapabilityFeatures>;
-
-function resolveLicenseRoutingCapabilityOverrides(): LicenseRoutingCapabilityOverrides {
-  return {};
-}
-
 export function resolveRoutingCapabilities(
   settings: Pick<OpsSettings, 'routingMode'>,
 ): RoutingCapabilities {
-  const modeAllowsComplexRouting = settings.routingMode === 'complex';
-  const baseFeatures: RoutingCapabilityFeatures = {
-    complexRouting: modeAllowsComplexRouting,
-    journeyDesigner: modeAllowsComplexRouting,
-    routingSimulator: true,
-  };
+  const licensed = isComplexRoutingLicensed();
+  const complexActive = settings.routingMode === 'complex' && licensed;
 
   return {
     routingMode: settings.routingMode,
     features: {
-      ...baseFeatures,
-      ...resolveLicenseRoutingCapabilityOverrides(),
+      complexRouting: complexActive,
+      journeyDesigner: complexActive,
+      routingSimulator: true,
+      complexRoutingLicensed: licensed,
     },
   };
 }

@@ -8,12 +8,14 @@ import {
   getEnvBackupInfo,
   getHostRuntimeHealth,
   getHostStatus,
+  getHostRoutingModeCapabilities,
   getNetworkSnapshot,
   loadDeliveryImages,
   resetStaffPinsAndRestart,
   runComposeAction,
   saveHostNetwork,
   saveStorageFolders,
+  setHostRoutingMode,
   type ComposeAction,
 } from './host-state.js';
 import { resolveSetupApiError } from './api-error.js';
@@ -144,6 +146,29 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
       if (method === 'POST' && url.pathname === '/api/setup/host/reset-staff-pins') {
         const result = await resetStaffPinsAndRestart(ctx);
         return sendJson(res, result.ok ? 200 : 500, result);
+      }
+
+      if (method === 'GET' && url.pathname === '/api/setup/host/routing-mode') {
+        return sendJson(res, 200, await getHostRoutingModeCapabilities(ctx));
+      }
+
+      if (method === 'POST' && url.pathname === '/api/setup/host/routing-mode') {
+        const body = (await readJsonBody(req)) as { routingMode?: string };
+        const routingMode = body.routingMode?.trim();
+        if (routingMode !== 'simple' && routingMode !== 'complex') {
+          return sendJson(res, 400, { error: 'routingMode must be simple or complex' });
+        }
+        const result = await setHostRoutingMode(ctx, { routingMode });
+        if (!result.ok) {
+          const status =
+            result.code === 'ROUTING_MODE_CHANGE_BLOCKED'
+              ? 409
+              : result.code === 'COMPLEX_ROUTING_NOT_LICENSED'
+                ? 403
+                : 400;
+          return sendJson(res, status, result);
+        }
+        return sendJson(res, 200, result);
       }
 
       if (method === 'POST' && url.pathname === '/api/setup/host/plan') {

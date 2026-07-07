@@ -850,6 +850,50 @@ button:disabled {
   margin-top: 1rem;
 }
 
+.routing-mode-subheading {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.routing-mode-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.routing-mode-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.65rem;
+  align-items: start;
+}
+
+.routing-mode-option-text {
+  font-weight: 600;
+}
+
+.routing-mode-option-hint {
+  grid-column: 2;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.routing-mode-pro-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--accent-soft, #e8f0ff);
+  color: var(--accent, #1d4ed8);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
 .maintenance-section {
   margin-bottom: 1.25rem;
 }

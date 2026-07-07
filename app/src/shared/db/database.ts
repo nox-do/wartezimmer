@@ -66,7 +66,7 @@ import {
   type OpsSettingsPatch,
 } from './database-ops-settings.js';
 import { validateRoomSettingsChange } from '../ops/room-removal-validation.js';
-import { validateRoutingModeChange } from '../ops/routing-mode-guard.js';
+import { validateComplexRoutingLicenseChange, validateRoutingModeChange } from '../ops/routing-mode-guard.js';
 import { validateJourneySettingsEditable } from '../ops/journey-template-guard.js';
 import { OpsSettingsValidationError } from './ops-settings-errors.js';
 import {
@@ -1209,6 +1209,15 @@ export class CoreDatabase {
 
       const nextRoutingMode = patch.routingMode ?? current.routingMode;
       if (nextRoutingMode !== current.routingMode) {
+        const licenseGuard = validateComplexRoutingLicenseChange({
+          nextMode: nextRoutingMode,
+        });
+        if (!licenseGuard.ok) {
+          throw new OpsSettingsValidationError(licenseGuard.message, {
+            apiCode: licenseGuard.code,
+          });
+        }
+
         const modeGuard = validateRoutingModeChange({
           currentMode: current.routingMode,
           nextMode: nextRoutingMode,

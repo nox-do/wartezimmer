@@ -294,8 +294,17 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
-        /** @description Role is not allowed to patch the requested settings fields */
+        /** @description Role is not allowed to patch the requested settings fields, or complex routing is not licensed (COMPLEX_ROUTING_NOT_LICENSED). */
         403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+        /** @description Routing mode change blocked while visits have an active journey */
+        409: {
           headers: {
             [name: string]: unknown;
           };
@@ -1580,6 +1589,7 @@ export interface components {
         complexRouting: boolean;
         journeyDesigner: boolean;
         routingSimulator: boolean;
+        complexRoutingLicensed: boolean;
       };
     };
     DeploymentVolumeStatus: {
