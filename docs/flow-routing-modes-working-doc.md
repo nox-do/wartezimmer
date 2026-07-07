@@ -150,8 +150,8 @@ RoutingRule:
 Im Simple Mode erzeugt `syncSimpleRoutingRulesFromOpsSettings` fuer jedes
 konfigurierte Topic sowie `rule_mfa` eine RoutingRule mit `journeyTemplateId: null`.
 `active` spiegelt `topic.enabled`; deaktivierte Topics behalten ihre Rule, werden
-aber inaktiv. Der Einstieg ist `syncRoutingRulesFromOpsSettings`; Complex-Journey-Sync
-folgt in Paket 5.
+aber inaktiv. Der Einstieg ist `syncRoutingRulesFromOpsSettings`; im Complex Mode folgen
+`syncJourneyTemplatesFromOpsSettings` und `syncComplexRoutingRulesFromOpsSettings`.
 
 **Aus OpsSettings abgeleitet (pro Topic):**
 
@@ -199,6 +199,10 @@ UI:
 - Kein Journey Template Designer.
 - Simulator kann als "Routing testen" sichtbar sein.
 
+Im Simple Mode bleiben gespeicherte Journey-Templates in OpsSettings und im
+Flow-Core-Katalog bestehen; Sync nutzt sie nicht. UI und Capabilities sollen im
+Simple Mode nicht auf Journey-Konfiguration zugreifen.
+
 ### Complex Routing
 
 Advanced Feature fuer grosse Praxen, MVZs, Diagnostik, Labor-/OP-Vorbereitung oder
@@ -239,6 +243,25 @@ UI:
 - Routing-Abschnitt zeigt Journey-Zuordnung.
 - Journey Template Designer wird verfuegbar.
 - Simulator zeigt Step-by-Step-Verhalten ueber Terminal, MFA, TV und Raum-Panel.
+
+#### Complex Routing Config (Host, Paket 5)
+
+OpsSettings speichern Journey-Konfiguration getrennt von Topics:
+
+- `journey_settings_json` — Journey-Templates inkl. Steps
+- optional `topic.journeyTemplateId` pro Topic fuer Mixed Mode
+
+Sync bei `routingMode: complex`:
+
+- Topic mit Journey-Zuordnung → `routingRule.journeyTemplateId`
+- Topic ohne Journey → Simple Rule (`journeyTemplateId: null`)
+- Check-in nutzt bei Journey Step 0 als operative Route
+
+#### RoutingMode-Wechsel
+
+`routingMode` darf nur geaendert werden, wenn kein Visit `journey_state: active`
+hat. Gilt symmetrisch fuer simple↔complex. Fehlercode: `ROUTING_MODE_CHANGE_BLOCKED`
+(HTTP 409).
 
 ## API-Grenzen
 

@@ -78,6 +78,11 @@ export function ensureOpsSetupSchema(db: DatabaseSync): void {
   if (!columns.has('setup_contact_mode')) {
     db.exec("ALTER TABLE ops_settings ADD COLUMN setup_contact_mode TEXT NOT NULL DEFAULT 'unset'");
   }
+  if (!columns.has('journey_settings_json')) {
+    db.exec(
+      "ALTER TABLE ops_settings ADD COLUMN journey_settings_json TEXT NOT NULL DEFAULT '{\"templates\":[]}'",
+    );
+  }
 }
 
 export function getOpsSetupFromDb(deps: SetupStatements): OpsSetupRow & {

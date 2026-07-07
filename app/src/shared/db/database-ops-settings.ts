@@ -18,6 +18,10 @@ import type {
 import { domainError } from '../errors/domain-error.js';
 import { ensureSingleDefaultCallTarget } from '@praxis-flow/domain';
 import { parseMaxOccupancy } from '../ops/room-capacity.js';
+import {
+  parseJourneySettingsJson,
+  validateTopicJourneyAssignments,
+} from '../journey-settings.js';
 
 export { ensureSingleDefaultCallTarget };
 
@@ -32,6 +36,7 @@ type OpsSettingsRow = {
   practiceOpenTo?: string;
   practiceProfileJson?: string;
   topicSettingsJson?: string;
+  journeySettingsJson?: string;
   roomsJson?: string;
   contactLookupFolderPath?: string | null;
   contactLookupDelimiterMode?: 'auto' | 'semicolon' | 'comma' | 'tab';
@@ -57,6 +62,7 @@ export type OpsSettingsPatch = Partial<
     | 'practiceOpenTo'
     | 'practiceProfileJson'
     | 'topics'
+    | 'journeySettings'
     | 'rooms'
     | 'contactLookupFolderPath'
     | 'contactLookupDelimiterMode'
@@ -158,6 +164,12 @@ function parseTopicSettingsRaw(raw: string | undefined): OpsSettings['topics'] {
             ? null
             : undefined,
       sortOrder: typeof entry.sortOrder === 'number' ? entry.sortOrder : undefined,
+      journeyTemplateId:
+        typeof entry.journeyTemplateId === 'string'
+          ? entry.journeyTemplateId
+          : entry.journeyTemplateId === null
+            ? null
+            : undefined,
     });
   }
 
@@ -354,6 +366,7 @@ export function getOpsSettingsFromDb(params: {
 
   const rooms = parseRoomSettings(row.roomsJson);
   const topics = parseTopicSettingsRaw(row.topicSettingsJson);
+  const journeySettings = parseJourneySettingsJson(row.journeySettingsJson);
 
   return {
     routingMode: normalizeRoutingMode(row.routingMode),
@@ -362,6 +375,7 @@ export function getOpsSettingsFromDb(params: {
     practiceOpenTo: row.practiceOpenTo,
     practiceProfileJson: row.practiceProfileJson ?? '{}',
     topics,
+    journeySettings,
     rooms,
     contactLookupFolderPath: row.contactLookupFolderPath ?? null,
     contactLookupDelimiterMode: row.contactLookupDelimiterMode,
@@ -394,19 +408,29 @@ export function updateOpsSettingsInDb(
   });
 
   const topics = patch.topics ?? current.topics;
+  const journeySettings = patch.journeySettings ?? current.journeySettings;
   const rooms = ensureSingleDefaultCallTarget(patch.rooms ?? current.rooms);
   const topicValidation = validateTopicSettings(topics, rooms);
   if (!topicValidation.ok) {
     throw new OpsSettingsValidationError(topicValidation.message);
   }
 
+  const nextRoutingMode = patch.routingMode ?? current.routingMode;
+  if (nextRoutingMode === 'complex') {
+    const journeyAssignmentValidation = validateTopicJourneyAssignments(topics, journeySettings);
+    if (!journeyAssignmentValidation.ok) {
+      throw new OpsSettingsValidationError(journeyAssignmentValidation.message);
+    }
+  }
+
   const next: OpsSettings = {
-    routingMode: patch.routingMode ?? current.routingMode,
+    routingMode: nextRoutingMode,
     returnWindowMinutes: patch.returnWindowMinutes ?? current.returnWindowMinutes,
     practiceOpenFrom: patch.practiceOpenFrom ?? current.practiceOpenFrom,
     practiceOpenTo: patch.practiceOpenTo ?? current.practiceOpenTo,
     practiceProfileJson: patch.practiceProfileJson ?? current.practiceProfileJson,
     topics,
+    journeySettings,
     rooms,
     contactLookupFolderPath: patch.contactLookupFolderPath ?? current.contactLookupFolderPath,
     contactLookupDelimiterMode:
@@ -435,6 +459,7 @@ export function updateOpsSettingsInDb(
     next.practiceOpenTo,
     next.practiceProfileJson,
     JSON.stringify(next.topics),
+    JSON.stringify(next.journeySettings),
     JSON.stringify(next.rooms),
     next.contactLookupFolderPath,
     next.contactLookupDelimiterMode,

@@ -124,6 +124,7 @@ function settingsToPatch(settings: OpsSettings): OpsSettingsPatch {
     practiceOpenTo: settings.practiceOpenTo,
     practiceProfileJson: settings.practiceProfileJson,
     topics: settings.topics,
+    journeySettings: settings.journeySettings,
     rooms: settings.rooms,
     contactLookupFolderPath: settings.contactLookupFolderPath,
     contactLookupDelimiterMode: settings.contactLookupDelimiterMode,

@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
 import { loadCatalog } from '@praxis-flow/flow-core/server';
 import type { OpsSettings } from '../db/db-types.js';
+import { EMPTY_JOURNEY_SETTINGS } from '../journey-settings.js';
 import {
   MFA_ASSIST_LANE_CODE,
   MFA_ASSIST_TOPIC_ID,
@@ -35,7 +36,7 @@ export type SimpleRoutingRuleRow = {
   escortPolicy: string;
   allowRedirect: number;
   allowedSurfaceIds: string | null;
-  journeyTemplateId: null;
+  journeyTemplateId: string | null;
   active: number;
 };
 
@@ -269,6 +270,207 @@ function insertDisplayRule(
   );
 }
 
+function upsertJourneyTemplate(
+  db: DatabaseSync,
+  row: {
+    id: string;
+    name: string;
+    topicId: string | null;
+    active: number;
+  },
+): void {
+  db.prepare(
+    `INSERT INTO journey_templates (id, name, topic_id, active)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       name = excluded.name,
+       topic_id = excluded.topic_id,
+       active = excluded.active`,
+  ).run(row.id, row.name, row.topicId, row.active);
+}
+
+function upsertJourneyStep(
+  db: DatabaseSync,
+  row: {
+    id: string;
+    templateId: string;
+    sortOrder: number;
+    targetLocationId: string | null;
+    queueId: string | null;
+    movementMode: string;
+    publicDisplayMode: string;
+    advanceOn: string;
+    instructionText: string | null;
+  },
+): void {
+  db.prepare(
+    `INSERT INTO journey_steps (
+      id, template_id, sort_order, target_location_id, queue_id,
+      movement_mode, public_display_mode, advance_on, instruction_text
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      template_id = excluded.template_id,
+      sort_order = excluded.sort_order,
+      target_location_id = excluded.target_location_id,
+      queue_id = excluded.queue_id,
+      movement_mode = excluded.movement_mode,
+      public_display_mode = excluded.public_display_mode,
+      advance_on = excluded.advance_on,
+      instruction_text = excluded.instruction_text`,
+  ).run(
+    row.id,
+    row.templateId,
+    row.sortOrder,
+    row.targetLocationId,
+    row.queueId,
+    row.movementMode,
+    row.publicDisplayMode,
+    row.advanceOn,
+    row.instructionText,
+  );
+}
+
+function deactivateJourneyTemplatesOutside(db: DatabaseSync, templateIds: string[]): void {
+  if (templateIds.length === 0) {
+    db.prepare('UPDATE journey_templates SET active = 0').run();
+    return;
+  }
+  db.prepare(`UPDATE journey_templates SET active = 0 WHERE id NOT IN (${bindList(templateIds)})`).run(
+    ...templateIds,
+  );
+}
+
+function deactivateJourneyStepsOutside(db: DatabaseSync, stepIds: string[]): void {
+  if (stepIds.length === 0) {
+    db.prepare('DELETE FROM journey_steps').run();
+    return;
+  }
+  db.prepare(`DELETE FROM journey_steps WHERE id NOT IN (${bindList(stepIds)})`).run(...stepIds);
+}
+
+function journeySettingsFrom(settings: Pick<OpsSettings, 'journeySettings'>): OpsSettings['journeySettings'] {
+  return settings.journeySettings ?? EMPTY_JOURNEY_SETTINGS;
+}
+
+export function syncJourneyTemplatesFromOpsSettings(db: DatabaseSync, settings: OpsSettings): void {
+  const desiredTemplateIds: string[] = [];
+  const desiredStepIds: string[] = [];
+
+  for (const template of journeySettingsFrom(settings).templates) {
+    desiredTemplateIds.push(template.id);
+    upsertJourneyTemplate(db, {
+      id: template.id,
+      name: template.name,
+      topicId: template.topicId,
+      active: template.active ? 1 : 0,
+    });
+    for (const step of template.steps) {
+      desiredStepIds.push(step.id);
+      upsertJourneyStep(db, {
+        id: step.id,
+        templateId: template.id,
+        sortOrder: step.sortOrder,
+        targetLocationId: step.targetLocationId,
+        queueId: step.queueId,
+        movementMode: step.movementMode,
+        publicDisplayMode: step.publicDisplayMode,
+        advanceOn: step.advanceOn,
+        instructionText: step.instructionText,
+      });
+    }
+  }
+
+  deactivateJourneyStepsOutside(db, desiredStepIds);
+  deactivateJourneyTemplatesOutside(db, desiredTemplateIds);
+}
+
+export function buildJourneyRoutingRuleRow(input: {
+  topicId: string;
+  name: string;
+  journeyTemplateId: string;
+  targetLocationId: string;
+  terminalInstructionTemplate: string;
+  allowRedirect: boolean;
+  active: boolean;
+}): SimpleRoutingRuleRow {
+  return {
+    ...buildSimpleRoutingRuleRow({
+      topicId: input.topicId,
+      name: input.name,
+      targetLocationId: input.targetLocationId,
+      terminalInstructionTemplate: input.terminalInstructionTemplate,
+      allowRedirect: input.allowRedirect,
+      active: input.active,
+    }),
+    journeyTemplateId: input.journeyTemplateId,
+  };
+}
+
+function resolveTopicJourneyTemplateId(
+  topic: OpsSettings['topics'][number],
+  settings: OpsSettings,
+): string | null {
+  const journeyTemplateId = topic.journeyTemplateId ?? null;
+  if (!journeyTemplateId) return null;
+  const template = journeySettingsFrom(settings).templates.find((entry) => entry.id === journeyTemplateId);
+  return template?.active ? journeyTemplateId : null;
+}
+
+export function syncComplexRoutingRulesFromOpsSettings(
+  db: DatabaseSync,
+  settings: OpsSettings,
+  receptionRoomId: string,
+): void {
+  const mfaTopicLabel = resolveTopicLabelFromSettings(settings, MFA_ASSIST_TOPIC_ID);
+
+  upsertRoutingRule(
+    db,
+    buildSimpleRoutingRuleRow({
+      topicId: MFA_ASSIST_TOPIC_ID,
+      name: mfaTopicLabel,
+      targetLocationId: receptionRoomId,
+      terminalInstructionTemplate: 'Bitte nehmen Sie im Wartezimmer Platz. Sie werden aufgerufen.',
+      allowRedirect: false,
+      active: true,
+    }),
+  );
+
+  for (const topic of settings.topics) {
+    const journeyTemplateId = resolveTopicJourneyTemplateId(topic, settings);
+    const targetLocationId = resolveTargetLocationId(topic.defaultRoomId, settings);
+    const terminalInstruction = terminalInstructionForTopic(topic.label);
+    const allowRedirect = topic.topicId !== MFA_ASSIST_TOPIC_ID;
+
+    if (journeyTemplateId) {
+      upsertRoutingRule(
+        db,
+        buildJourneyRoutingRuleRow({
+          topicId: topic.topicId,
+          name: topic.label,
+          journeyTemplateId,
+          targetLocationId,
+          terminalInstructionTemplate: terminalInstruction,
+          allowRedirect,
+          active: topic.enabled,
+        }),
+      );
+      continue;
+    }
+
+    upsertRoutingRule(
+      db,
+      buildSimpleRoutingRuleRow({
+        topicId: topic.topicId,
+        name: topic.label,
+        targetLocationId,
+        terminalInstructionTemplate: terminalInstruction,
+        allowRedirect,
+        active: topic.enabled,
+      }),
+    );
+  }
+}
+
 function upsertRoutingRule(
   db: DatabaseSync,
   row: {
@@ -421,11 +623,13 @@ export function syncRoutingRulesFromOpsSettings(
   settings: OpsSettings,
   receptionRoomId: string,
 ): void {
-  if (!isSimpleRoutingMode(settings)) {
-    // Paket 5: per-topic journey assignment when routingMode is complex.
-    // Interim: simple rules (journeyTemplateId null) until journey sync exists.
+  if (isSimpleRoutingMode(settings)) {
+    syncSimpleRoutingRulesFromOpsSettings(db, settings, receptionRoomId);
+    return;
   }
-  syncSimpleRoutingRulesFromOpsSettings(db, settings, receptionRoomId);
+
+  syncJourneyTemplatesFromOpsSettings(db, settings);
+  syncComplexRoutingRulesFromOpsSettings(db, settings, receptionRoomId);
 }
 
 export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettings): CatalogSyncSummary {

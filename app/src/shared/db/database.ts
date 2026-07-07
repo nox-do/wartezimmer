@@ -66,6 +66,7 @@ import {
   type OpsSettingsPatch,
 } from './database-ops-settings.js';
 import { validateRoomSettingsChange } from '../ops/room-removal-validation.js';
+import { validateRoutingModeChange } from '../ops/routing-mode-guard.js';
 import { OpsSettingsValidationError } from './ops-settings-errors.js';
 import {
   createOpsSetupStatements,
@@ -1201,6 +1202,21 @@ export class CoreDatabase {
           throw new OpsSettingsValidationError(guard.message, {
             apiCode: guard.code,
             details: guard.details,
+          });
+        }
+      }
+
+      const nextRoutingMode = patch.routingMode ?? current.routingMode;
+      if (nextRoutingMode !== current.routingMode) {
+        const modeGuard = validateRoutingModeChange({
+          currentMode: current.routingMode,
+          nextMode: nextRoutingMode,
+          db: this.db,
+        });
+        if (!modeGuard.ok) {
+          throw new OpsSettingsValidationError(modeGuard.message, {
+            apiCode: modeGuard.code,
+            details: { activeJourneyVisitCount: modeGuard.activeJourneyVisitCount },
           });
         }
       }

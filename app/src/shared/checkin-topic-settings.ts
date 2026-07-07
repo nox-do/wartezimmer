@@ -164,6 +164,12 @@ function normalizeSingleTopic(
     availableFrom,
     availableTo,
     sortOrder: typeof entry.sortOrder === 'number' ? entry.sortOrder : (defaults?.sortOrder ?? 99),
+    journeyTemplateId:
+      entry.journeyTemplateId === null
+        ? null
+        : typeof entry.journeyTemplateId === 'string' && entry.journeyTemplateId.trim().length > 0
+          ? entry.journeyTemplateId.trim()
+          : (defaults?.journeyTemplateId ?? null),
   };
 }
 

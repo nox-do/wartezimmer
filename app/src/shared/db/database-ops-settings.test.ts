@@ -6,7 +6,7 @@ import {
   getOpsSettingsFromDb,
   updateOpsSettingsInDb,
 } from './database-ops-settings.js';
-import { OpsSettingsValidationError } from './ops-settings-errors.js';
+import { OpsSettingsValidationError, opsSettingsInvalidHttpStatus } from './ops-settings-errors.js';
 
 function minimalOpsSettingsRow(overrides?: Record<string, unknown>) {
   return {
@@ -92,6 +92,11 @@ test('updateOpsSettingsInDb persists routingMode and returns the saved value', (
   assert.equal(settings.routingMode, 'complex');
   assert.equal(savedArgs.length, 1);
   assert.equal(savedArgs[0]?.[1], 'complex');
+});
+
+test('opsSettingsInvalidHttpStatus maps routing mode guard to 409', () => {
+  assert.equal(opsSettingsInvalidHttpStatus('ROUTING_MODE_CHANGE_BLOCKED'), 409);
+  assert.equal(opsSettingsInvalidHttpStatus('INVALID_ARGUMENT'), 400);
 });
 
 test('getOpsSettingsFromDb treats only 1 as enabled for terminal auth flags', () => {

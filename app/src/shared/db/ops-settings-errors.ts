@@ -15,6 +15,14 @@ export class OpsSettingsValidationError extends Error {
   }
 }
 
+const OPS_SETTINGS_ERROR_HTTP_STATUS: Record<string, number> = {
+  ROUTING_MODE_CHANGE_BLOCKED: 409,
+};
+
+export function opsSettingsInvalidHttpStatus(code: string): number {
+  return OPS_SETTINGS_ERROR_HTTP_STATUS[code] ?? 400;
+}
+
 export function opsSettingsInvalidResponse(
   error: unknown,
 ): { message: string; code: string; details?: Record<string, unknown> } | undefined {

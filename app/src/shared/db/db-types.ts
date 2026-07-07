@@ -1,4 +1,5 @@
 import type { TerminalPatientLocale } from '@praxis-flow/domain';
+import type { JourneySettings } from '../journey-settings.js';
 
 export const TICKET_STATUSES = [
   'waiting',
@@ -161,7 +162,10 @@ export type OpsSettings = {
     availableFrom: string | null;
     availableTo: string | null;
     sortOrder: number;
+    /** Complex routing only — sync sets routingRule.journeyTemplateId when set. */
+    journeyTemplateId?: string | null;
   }>;
+  journeySettings: JourneySettings;
   rooms: Array<{
     roomId: string;
     roomLabel: string;

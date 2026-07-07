@@ -15,7 +15,9 @@ import {
   syncCatalogFromOpsSettings,
 } from './sync-catalog-from-ops-settings.js';
 import type { OpsSettings } from '../db/db-types.js';
+import { EMPTY_JOURNEY_SETTINGS } from '../journey-settings.js';
 import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS, MFA_ASSIST_TOPIC_ID } from '../checkin-topic-settings.js';
+import { getFlowCoreRuntime } from './flow-core-runtime.js';
 
 function sampleOpsSettings(): OpsSettings {
   return {
@@ -25,6 +27,7 @@ function sampleOpsSettings(): OpsSettings {
     practiceOpenTo: '18:00',
     practiceProfileJson: '{}',
     topics: DEFAULT_TERMINAL_TOPIC_DEFINITIONS,
+    journeySettings: EMPTY_JOURNEY_SETTINGS,
     rooms: [
       {
         roomId: 'mfa-tresen',
@@ -262,7 +265,44 @@ test('syncCatalogFromOpsSettings in simple mode: alle RoutingRules ohne Journey'
   validateCatalogIntegrity(loadCatalog(db));
 });
 
-test('syncCatalogFromOpsSettings in complex mode: interim weiterhin Simple-Rules ohne Journey', () => {
+test('syncCatalogFromOpsSettings in simple mode ignores stored topic journeyTemplateId', () => {
+  const db = openTestFlowCoreDb();
+  syncCatalogFromOpsSettings(db, {
+    ...sampleOpsSettings(),
+    topics: sampleOpsSettings().topics.map((topic) =>
+      topic.topicId === 'blut' ? { ...topic, journeyTemplateId: 'journey_blut' } : topic,
+    ),
+    journeySettings: {
+      templates: [
+        {
+          id: 'journey_blut',
+          name: 'Blut',
+          topicId: 'blut',
+          active: true,
+          steps: [
+            {
+              id: 'step_blut_0',
+              sortOrder: 0,
+              targetLocationId: 'labor',
+              queueId: PF_FLOW_QUEUE_GENERAL,
+              movementMode: 'call',
+              publicDisplayMode: 'visible',
+              advanceOn: 'arrive',
+              instructionText: null,
+            },
+          ],
+        },
+      ],
+    },
+  });
+
+  const blutRule = db
+    .prepare('SELECT journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?')
+    .get('blut') as { journeyTemplateId: string | null } | undefined;
+  assert.equal(blutRule?.journeyTemplateId, null);
+});
+
+test('syncCatalogFromOpsSettings in complex mode without journeys keeps simple rules', () => {
   const db = openTestFlowCoreDb();
   syncCatalogFromOpsSettings(db, { ...sampleOpsSettings(), routingMode: 'complex' });
 
@@ -271,6 +311,101 @@ test('syncCatalogFromOpsSettings in complex mode: interim weiterhin Simple-Rules
     .all() as Array<{ journeyTemplateId: string | null }>;
   assert.ok(rules.length > 0);
   assert.ok(rules.every((rule) => rule.journeyTemplateId === null));
+});
+
+test('syncCatalogFromOpsSettings in complex mode: mixed topics with and without journey', () => {
+  const db = openTestFlowCoreDb();
+  const settings: OpsSettings = {
+    ...sampleOpsSettings(),
+    routingMode: 'complex',
+    topics: sampleOpsSettings().topics.map((topic) =>
+      topic.topicId === 'blut'
+        ? { ...topic, journeyTemplateId: 'journey_blut' }
+        : topic,
+    ),
+    journeySettings: {
+      templates: [
+        {
+          id: 'journey_blut',
+          name: 'Blut → Labor',
+          topicId: 'blut',
+          active: true,
+          steps: [
+            {
+              id: 'step_blut_0',
+              sortOrder: 0,
+              targetLocationId: 'labor',
+              queueId: PF_FLOW_QUEUE_GENERAL,
+              movementMode: 'call',
+              publicDisplayMode: 'visible',
+              advanceOn: 'arrive',
+              instructionText: null,
+            },
+          ],
+        },
+      ],
+    },
+  };
+  syncCatalogFromOpsSettings(db, settings);
+
+  const blutRule = db
+    .prepare('SELECT journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?')
+    .get('blut') as { journeyTemplateId: string | null } | undefined;
+  assert.equal(blutRule?.journeyTemplateId, 'journey_blut');
+
+  const rezeptRule = db
+    .prepare('SELECT journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?')
+    .get('rezept') as { journeyTemplateId: string | null } | undefined;
+  assert.equal(rezeptRule?.journeyTemplateId, null);
+
+  validateCatalogIntegrity(loadCatalog(db));
+});
+
+test('complex mixed mode check-in uses journey step 0 for journey topic', () => {
+  const db = openTestFlowCoreDb();
+  const settings: OpsSettings = {
+    ...sampleOpsSettings(),
+    routingMode: 'complex',
+    topics: sampleOpsSettings().topics.map((topic) =>
+      topic.topicId === 'blut'
+        ? { ...topic, journeyTemplateId: 'journey_blut' }
+        : topic,
+    ),
+    journeySettings: {
+      templates: [
+        {
+          id: 'journey_blut',
+          name: 'Blut → Labor',
+          topicId: 'blut',
+          active: true,
+          steps: [
+            {
+              id: 'step_blut_0',
+              sortOrder: 0,
+              targetLocationId: 'labor',
+              queueId: PF_FLOW_QUEUE_GENERAL,
+              movementMode: 'call',
+              publicDisplayMode: 'visible',
+              advanceOn: 'arrive',
+              instructionText: null,
+            },
+          ],
+        },
+      ],
+    },
+  };
+  syncCatalogFromOpsSettings(db, settings);
+
+  const runtime = getFlowCoreRuntime(db);
+  const visit = runtime.checkIn({
+    topicId: 'blut',
+    authPath: 'phone_dob',
+    surfaceId: PF_FLOW_SURFACE_TERMINAL,
+  });
+  assert.equal(visit.journeyTemplateId, 'journey_blut');
+  assert.equal(visit.journeyStepIndex, 0);
+  assert.equal(visit.journeyState, 'active');
+  assert.equal(visit.targetLocationId, 'labor');
 });
 
 test('syncCatalogFromOpsSettings maps defaultRoomId to routing target location', () => {
