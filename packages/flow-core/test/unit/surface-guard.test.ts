@@ -32,18 +32,38 @@ const catalog = {
   ],
 };
 
-test('surfaceReferences: findet Display-, Routing- und Visit-Referenzen', () => {
+test('surfaceReferences: findet Display-, Routing- und offene Visit-Referenzen', () => {
   assert.deepEqual(surfaceReferences(catalog, 'waiting_tv'), [{ kind: 'display_rule', id: 'tv_rule' }]);
   assert.deepEqual(surfaceReferences(catalog, 'terminal_1'), [{ kind: 'routing_rule', id: 'rule_general' }]);
-  assert.deepEqual(surfaceReferences(catalog, 'terminal_2', [{ id: 'v1', lastSurfaceId: 'terminal_2' }]), [
-    { kind: 'visit', id: 'v1' },
-  ]);
+  assert.deepEqual(
+    surfaceReferences(catalog, 'terminal_2', [{ id: 'v1', status: 'waiting', lastSurfaceId: 'terminal_2' }]),
+    [{ kind: 'visit', id: 'v1' }],
+  );
+});
+
+test('surfaceReferences: ignoriert abgeschlossene Visits', () => {
+  assert.deepEqual(
+    surfaceReferences(catalog, 'terminal_2', [{ id: 'v_done', status: 'done', lastSurfaceId: 'terminal_2' }]),
+    [],
+  );
+});
+
+test('surfaceReferences: zaehlt blocked Visits als offen', () => {
+  assert.deepEqual(
+    surfaceReferences(catalog, 'terminal_2', [{ id: 'v_blocked', status: 'blocked', lastSurfaceId: 'terminal_2' }]),
+    [{ kind: 'visit', id: 'v_blocked' }],
+  );
 });
 
 test('assertSurfaceRemovable: blockiert verwendete Surfaces', () => {
   assert.throws(() => assertSurfaceRemovable({ catalog, surfaceId: 'waiting_tv' }), /SURFACE_IN_USE/);
   assert.throws(
-    () => assertSurfaceRemovable({ catalog, surfaceId: 'terminal_2', visits: [{ id: 'v1', lastSurfaceId: 'terminal_2' }] }),
+    () =>
+      assertSurfaceRemovable({
+        catalog,
+        surfaceId: 'terminal_2',
+        visits: [{ id: 'v1', status: 'waiting', lastSurfaceId: 'terminal_2' }],
+      }),
     /SURFACE_IN_USE/,
   );
   assert.doesNotThrow(() => assertSurfaceRemovable({ catalog, surfaceId: 'unused_surface' }));

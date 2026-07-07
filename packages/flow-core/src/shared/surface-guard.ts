@@ -1,4 +1,5 @@
 import type { Catalog, Visit } from './types.js';
+import { isOpenVisitStatus } from './visit-flow.js';
 
 export type SurfaceReferenceKind = 'display_rule' | 'routing_rule' | 'visit';
 
@@ -7,10 +8,16 @@ export type SurfaceReference = {
   id: string;
 };
 
+type SurfaceGuardVisit = Pick<Visit, 'id' | 'status' | 'lastSurfaceId'>;
+
+function openSurfaceGuardVisits(visits: SurfaceGuardVisit[] = []): SurfaceGuardVisit[] {
+  return visits.filter((visit) => isOpenVisitStatus(visit.status));
+}
+
 export function surfaceReferences(
   catalog: Pick<Catalog, 'surfaceDisplayRules' | 'routingRules'>,
   surfaceId: string,
-  visits: Array<Pick<Visit, 'id' | 'lastSurfaceId'>> = [],
+  visits: SurfaceGuardVisit[] = [],
 ): SurfaceReference[] {
   const references: SurfaceReference[] = [];
 
@@ -26,7 +33,7 @@ export function surfaceReferences(
     }
   }
 
-  for (const visit of visits) {
+  for (const visit of openSurfaceGuardVisits(visits)) {
     if (visit.lastSurfaceId === surfaceId) {
       references.push({ kind: 'visit', id: visit.id });
     }
@@ -38,7 +45,7 @@ export function surfaceReferences(
 export function assertSurfaceRemovable(params: {
   catalog: Pick<Catalog, 'surfaceDisplayRules' | 'routingRules'>;
   surfaceId: string;
-  visits?: Array<Pick<Visit, 'id' | 'lastSurfaceId'>>;
+  visits?: SurfaceGuardVisit[];
 }): void {
   if (surfaceReferences(params.catalog, params.surfaceId, params.visits ?? []).length > 0) {
     throw new Error('SURFACE_IN_USE');

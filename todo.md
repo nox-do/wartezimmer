@@ -6,14 +6,11 @@ Stand: 2026-07-07
 
 - **Paket 1** – `routingMode` in OpsSettings modelliert (simple default, complex optional)
 - **Paket 2** – Capabilities-Resolver + API `GET /api/v1/ops/settings/capabilities` + UI-Client `fetchRoutingCapabilities()`
+- **Paket 3** – Surface/Location/Queue-Guards in flow-core (committed)
 
 ## In Arbeit / Review
 
-- Paket 2 committed; `mfa-assist` Auth-Regel nachgezogen
-
-## Nächste Schritte
-
-- Paket 3 – Surface/Location/Queue-Guards fertigziehen (`packages/flow-core/src/shared/surface-guard.ts` begonnen)
+- Paket 4 – Simple Routing explizit benennen
 
 ## Referenzen
 

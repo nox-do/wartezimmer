@@ -23,6 +23,8 @@ export * from './shared/ticket-code.js';
 export * from './shared/journey-guard.js';
 export * from './shared/topic-guard.js';
 export * from './shared/surface-guard.js';
+export * from './shared/location-guard.js';
+export * from './shared/queue-guard.js';
 export * from './shared/transition-scope.js';
 export * from './shared/visit-flow.js';
 export * from './shared/escort.js';

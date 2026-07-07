@@ -31,6 +31,10 @@ export const OPEN_VISIT_STATUSES = new Set<OpenVisitStatus>([
   'blocked',
 ]);
 
+export function isOpenVisitStatus(status: VisitStatus): status is OpenVisitStatus {
+  return OPEN_VISIT_STATUSES.has(status as OpenVisitStatus);
+}
+
 export function statusForMovementMode(movementMode: MovementMode): VisitStatus {
   if (movementMode === 'self_go') return 'directed';
   return 'waiting';
