@@ -297,7 +297,12 @@ export async function setRoutingMode(
     return viaApp;
   }
 
-  if (viaApp.error !== 'Praxis Flow App ist nicht erreichbar (Port 8080).') {
+  const fallbackToDatabase =
+    viaApp.error === 'Praxis Flow App ist nicht erreichbar (Port 8080).' ||
+    viaApp.code === 'AUTH_UNAUTHORIZED' ||
+    viaApp.error === 'Unauthorized.';
+
+  if (!fallbackToDatabase) {
     return viaApp;
   }
 

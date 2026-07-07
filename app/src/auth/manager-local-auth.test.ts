@@ -100,3 +100,44 @@ test('manager-local patch rejects non-routingMode fields', async (t) => {
   assert.equal(response.json().code, 'AUTH_FORBIDDEN');
   await app.close();
 });
+
+test('manager-local trusts Host-bound access from docker bridge remote address', async (t) => {
+  saveEnv();
+  t.after(restoreEnv);
+  process.env.NODE_ENV = 'test';
+  process.env.AUTH_ENABLED = 'true';
+  process.env.AUTH_KEY_CAPTIVE = 'test-captive-key-with-sufficient-length-32';
+
+  const app = Fastify({ logger: false });
+  registerClientAuth(app);
+  registerOpsSettingsRoutes(
+    app,
+    {
+      getRoutingCapabilities: () => ({
+        routingMode: 'complex',
+        features: {
+          complexRouting: true,
+          journeyDesigner: true,
+          routingSimulator: true,
+          complexRoutingLicensed: true,
+        },
+      }),
+    } as unknown as CoreDatabase,
+    {},
+  );
+
+  await app.ready();
+  const response = await app.inject({
+    method: 'GET',
+    url: '/api/v1/ops/settings/capabilities',
+    headers: {
+      'x-praxis-manager-local': '1',
+      host: '127.0.0.1:8080',
+    },
+    remoteAddress: '172.18.0.1',
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().routingMode, 'complex');
+  await app.close();
+});
