@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import Button from '$lib/components/forms/Button.svelte';
   import PrivacyNoticeModal from '$lib/components/shared/PrivacyNoticeModal.svelte';
   import { formatFileSize } from '$lib/documents/format-file-size';
@@ -35,6 +36,10 @@
   let practiceProfile = $state(getPracticeProfileFallback());
 
   const privacyNotice = $derived(getUploadPrivacyNotice(practiceProfile));
+
+  function backToPortal() {
+    void goto('/portal');
+  }
 
   async function loadDocuments(activeSession: PortalSessionContext) {
     const result = await fetchPatientDocuments(activeSession.sessionToken);
@@ -157,6 +162,10 @@
     <section class="card flex flex-col gap-2">
       <div class="alert alert--error">{errorMessage}</div>
       <p class="text-muted">{t('portal.sessionMissingHint')}</p>
+      {#if errorMessage === t('portal.sessionExpired')}
+        <p class="text-muted">{t('portal.sessionExpiredHint')}</p>
+        <Button variant="primary" onclick={backToPortal}>{t('portal.backToPortal')}</Button>
+      {/if}
     </section>
   {:else if session}
     <section class="card flex flex-col gap-2">
@@ -169,10 +178,12 @@
         <p class="portal-kicker">{t('portal.uploadKicker')}</p>
         <h1 class="page-title" style="margin-bottom: 0.5rem;">{t('portal.uploadTitle')}</h1>
         <p class="page-lead" style="margin-bottom: 0;">{t('portal.uploadLead')}</p>
-        <p class="portal-privacy-note">{t('portal.uploadPrivacyNote')}</p>
-        <button type="button" class="portal-text-button" onclick={() => (privacyModalOpen = true)}>
-          {t('portal.uploadPrivacyOpen')}
-        </button>
+        <p class="portal-privacy-note">
+          {t('portal.uploadPrivacyNote')}
+          <button type="button" class="portal-inline-link" onclick={() => (privacyModalOpen = true)}>
+            {t('portal.indexPrivacyOpen')}
+          </button>
+        </p>
       </div>
 
       <input
@@ -237,4 +248,3 @@
 </div>
 
 <PrivacyNoticeModal bind:open={privacyModalOpen} notice={privacyNotice} />
-

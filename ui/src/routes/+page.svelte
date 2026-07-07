@@ -27,6 +27,11 @@
   function roomPanelHref(roomId: string): string {
     return `/room-panel?room=${encodeURIComponent(roomId)}`;
   }
+
+  const newTabLink = {
+    target: '_blank',
+    rel: 'noopener noreferrer',
+  } as const;
 </script>
 
 <section class="card scaffold-home">
@@ -42,11 +47,11 @@
     <h2 id="quick-actions-title">Schnellzugriffe</h2>
     <p>Direkter Einstieg in die wichtigsten Bereiche für Empfangsteam, MFA und Wartezimmer-Anzeige.</p>
     <nav class="home-nav" aria-label={t('ui.mainNavAria')}>
-      <Button href="/mfa" variant="primary">{t('nav.mfa')}</Button>
-      <Button href="/terminal" variant="secondary">{t('nav.terminal')}</Button>
-      <Button href="/tv" variant="secondary">{t('nav.tv')}</Button>
-      <Button href="/portal" variant="secondary">{t('nav.portal')}</Button>
-      <Button href="/ops" variant="secondary">{t('nav.ops')}</Button>
+      <Button href="/mfa" variant="primary" {...newTabLink}>{t('nav.mfa')}</Button>
+      <Button href="/terminal" variant="secondary" {...newTabLink}>{t('nav.terminal')}</Button>
+      <Button href="/tv" variant="secondary" {...newTabLink}>{t('nav.tv')}</Button>
+      <Button href="/portal" variant="secondary" {...newTabLink}>{t('nav.portal')}</Button>
+      <Button href="/ops" variant="secondary" {...newTabLink}>{t('nav.ops')}</Button>
     </nav>
   </section>
 
@@ -65,7 +70,7 @@
     {:else}
       <div class="panel-links__list">
         {#each panelRooms as room (room.roomId)}
-          <Button href={roomPanelHref(room.roomId)} variant="outline">{room.roomLabel}</Button>
+          <Button href={roomPanelHref(room.roomId)} variant="outline" {...newTabLink}>{room.roomLabel}</Button>
         {/each}
       </div>
     {/if}

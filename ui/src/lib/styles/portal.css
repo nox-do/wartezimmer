@@ -136,11 +136,39 @@
   font: inherit;
 }
 
+.portal-inline-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--portal-link);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.92em;
+  line-height: 1.2;
+}
+
+.portal-terms-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.portal-terms-label span {
+  display: inline;
+}
+
 .portal-privacy-note {
   margin: 0.75rem 0 0.35rem;
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   line-height: 1.45;
   color: var(--muted-foreground);
+}
+
+.portal-privacy-note .portal-inline-link {
+  margin-left: 0.35rem;
 }
 
 .portal-ticket-input {

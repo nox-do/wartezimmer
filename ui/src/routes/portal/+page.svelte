@@ -5,6 +5,7 @@
   import PrivacyNoticeModal from '$lib/components/shared/PrivacyNoticeModal.svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { getPortalEntryPrivacyNotice } from '$lib/privacy/portal-entry-notice';
+  import { getWlanTermsNotice } from '$lib/privacy/wlan-terms-notice';
   import { getPracticeProfileFallback, mountPracticeProfileSync } from '$lib/practice/practice-profile-client';
   import {
     clearCaptivePortalContext,
@@ -20,9 +21,13 @@
   let ticketInput = $state('');
   let termsAccepted = $state(false);
   let privacyModalOpen = $state(false);
+  let termsModalOpen = $state(false);
   let practiceProfile = $state(getPracticeProfileFallback());
 
   const privacyNotice = $derived(getPortalEntryPrivacyNotice(practiceProfile));
+  const termsNotice = $derived(getWlanTermsNotice(practiceProfile));
+  const termsText = $derived(t('portal.indexTermsLabel'));
+  const termsLinkText = $derived(t('portal.indexTermsLink'));
 
   function handleTicketInput(event: Event) {
     const input = event.currentTarget as HTMLInputElement;
@@ -120,15 +125,16 @@
 
   <form class="modal-form" onsubmit={startPortal}>
     <div class="portal-terms">
-      <label>
+      <label class="portal-terms-label">
         <input type="checkbox" bind:checked={termsAccepted} disabled={submitting} />
-        <span>{t('portal.indexTermsLabel')}</span>
+        <span>
+          {termsText.split('<<terms>>')[0]}
+          <button type="button" class="portal-inline-link" onclick={() => (termsModalOpen = true)}>
+            {termsLinkText}
+          </button>
+          {termsText.split('<<terms>>')[1]}
+        </span>
       </label>
-      <p class="mb-2" style="margin-left: 1.75rem;">
-        <button type="button" class="portal-text-button" onclick={() => (privacyModalOpen = true)}>
-          {t('portal.indexPrivacyOpen')}
-        </button>
-      </p>
     </div>
 
     <label class="modal-form-field" for="portal-ticket-input">
@@ -160,4 +166,4 @@
 </section>
 
 <PrivacyNoticeModal bind:open={privacyModalOpen} notice={privacyNotice} />
-
+<PrivacyNoticeModal bind:open={termsModalOpen} notice={termsNotice} />

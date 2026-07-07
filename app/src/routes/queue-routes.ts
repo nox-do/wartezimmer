@@ -151,7 +151,7 @@ async function applyQueueVisitTransition(
           roomLabel: roomLabel ?? null,
         }),
         errorOptions: {
-          invalidTransitionMessage: `Ticket ${visitId} kann nicht aufgerufen werden.`,
+          invalidTransitionMessage: `Ticket ${visitId} kann im aktuellen Routing nicht aufgerufen werden.`,
           roomAtCapacityMessage,
           callAnnouncementOfflineMessage:
             'Aufruf nicht möglich — Wartezimmer-Anzeige ist offline. Bitte TV prüfen oder koppeln.',
@@ -201,7 +201,7 @@ async function applyQueueVisitTransition(
           roomLabel: roomLabel ?? null,
         }),
         errorOptions: {
-          invalidTransitionMessage: `Ticket ${visitId} kann nicht umgeleitet werden.`,
+          invalidTransitionMessage: `Ticket ${visitId} kann im aktuellen Routing nicht umgeleitet werden.`,
           roomRequiredMessage: 'Bitte ein gültiges Aufrufziel angeben.',
           roomAtCapacityMessage,
         },

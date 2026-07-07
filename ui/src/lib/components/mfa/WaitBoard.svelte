@@ -15,7 +15,6 @@
     away: QueueItem[];
     waiting: QueueItem[];
     rooms?: PracticeRoom[];
-    callRoomOverrideId?: string | null;
     busyVisitId?: string | null;
     nowMs?: number;
     callAnnouncementReachable?: boolean;
@@ -37,7 +36,6 @@
     away,
     waiting,
     rooms = [],
-    callRoomOverrideId = null,
     busyVisitId = null,
     nowMs = Date.now(),
     callAnnouncementReachable = true,
@@ -326,7 +324,6 @@
         <ActiveRoomBoard
           {active}
           rooms={enabledRooms}
-          {callRoomOverrideId}
           dragEnabled={queueDragEnabled}
           {activeDropTargetId}
           queueDragging={isQueueDragging}
@@ -343,4 +340,3 @@
     </section>
   </div>
 </DragDropProvider>
-

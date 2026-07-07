@@ -1,4 +1,4 @@
-import { mfaPracticeContext, getMfaCallRoomOverride } from '$lib/mfa/mfa-practice-context.svelte';
+import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
 import { applyMfaQueueTriageLevel, mfaQueueDisplay } from '$lib/mfa/mfa-queue-display.svelte';
 import { isQueueCallAnnouncementReachable } from '$lib/queue/call-announcement';
 import { resolveCallRoomTarget } from '$lib/queue/call-room-target';
@@ -299,7 +299,7 @@ export function callMfaTicket(visitId: string) {
     return Promise.resolve();
   }
 
-  const room = resolveCallRoomTarget(queueItem(visitId), getMfaCallRoomOverride());
+  const room = resolveCallRoomTarget(queueItem(visitId));
   if (room && !ensureRoomCapacity(room.roomId)) {
     return Promise.resolve();
   }
@@ -308,7 +308,7 @@ export function callMfaTicket(visitId: string) {
 }
 
 export function checkInMfaTicket(visitId: string) {
-  const target = resolveRoomTargetForCheckIn(queueItem(visitId), getMfaCallRoomOverride());
+  const target = resolveRoomTargetForCheckIn(queueItem(visitId));
   if (target?.roomId && !ensureRoomCapacity(target.roomId, visitId)) {
     return Promise.resolve();
   }

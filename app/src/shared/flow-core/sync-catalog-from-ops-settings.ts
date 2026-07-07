@@ -451,8 +451,8 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
     topicCount += 1;
 
     const targetLocationId = resolveTargetLocationId(topic.defaultRoomId, settings);
-    const movementMode = topic.topicId === 'rezept' ? 'self_go' : 'call';
-    const publicDisplayMode = topic.topicId === MFA_ASSIST_TOPIC_ID ? 'visible' : 'visible';
+    const movementMode = 'call';
+    const publicDisplayMode = 'visible';
 
     upsertRoutingRule(db, {
       id: `rule_${topic.topicId}`,

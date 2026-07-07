@@ -4,10 +4,6 @@ import { roomTargetFromTicketDestination } from './room-target';
 
 export function resolveCallRoomTarget(
   item: QueueItem | undefined,
-  sessionOverride?: RoomTarget | null,
 ): RoomTarget | undefined {
-  if (sessionOverride) {
-    return sessionOverride;
-  }
   return roomTargetFromTicketDestination(item);
 }

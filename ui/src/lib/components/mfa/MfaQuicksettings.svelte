@@ -4,7 +4,6 @@
   import PairingConfirmForm from '$lib/components/auth/PairingConfirmForm.svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { toastStore } from '$lib/stores/toastStore';
-  import type { PracticeRoom } from '$lib/queue/ops-settings-api';
   import {
     getDevicePresenceStatus,
     getDeviceQuicksettingsPhase,
@@ -20,9 +19,6 @@
     checkinLocked: boolean;
     terminalLockBusy?: boolean;
     needsDayStartHint?: boolean;
-    rooms?: PracticeRoom[];
-    callRoomOverrideId?: string | null;
-    onToggleRoom?: (roomId: string) => void;
     onTerminalLockToggle?: (nextLocked: boolean) => void;
     onOpenMfaCheckin?: () => void;
   }
@@ -32,14 +28,10 @@
     checkinLocked,
     terminalLockBusy = false,
     needsDayStartHint = false,
-    rooms = [],
-    callRoomOverrideId = null,
-    onToggleRoom,
     onTerminalLockToggle,
     onOpenMfaCheckin,
   }: Props = $props();
 
-  const enabledRooms = $derived(rooms.filter((room) => room.enabled));
   const terminalDisplayLocked = $derived(needsDayStartHint || checkinLocked);
 
   const tvStatus = $derived(getDevicePresenceStatus(WAITING_ROOM_DEVICE_ID));
@@ -170,24 +162,4 @@
     {/if}
   </section>
 
-  {#if enabledRooms.length > 0}
-    <section class="panel panel--sm panel--muted">
-      <h3 class="panel__title panel__title--compact">{t('mfa.qsCallTarget')}</h3>
-      <p class="qs-panel-desc">{t('mfa.qsCallTargetDesc')}</p>
-      <div class="qs-room-list" role="group" aria-label={t('mfa.qsRoomListAria')}>
-        {#each enabledRooms as room (room.roomId)}
-          <button
-            type="button"
-            class="qs-room-chip"
-            class:qs-room-chip--pressed={room.roomId === callRoomOverrideId}
-            aria-pressed={room.roomId === callRoomOverrideId}
-            onclick={() => onToggleRoom?.(room.roomId)}
-          >
-            {room.roomLabel}
-          </button>
-        {/each}
-      </div>
-    </section>
-  {/if}
 </aside>
-

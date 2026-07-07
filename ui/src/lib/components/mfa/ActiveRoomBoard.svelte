@@ -10,7 +10,6 @@
   interface Props {
     active: QueueItem[];
     rooms: PracticeRoom[];
-    callRoomOverrideId?: string | null;
     dragEnabled?: boolean;
     activeDropTargetId?: string | null;
     queueDragging?: boolean;
@@ -27,7 +26,6 @@
   let {
     active,
     rooms,
-    callRoomOverrideId = null,
     dragEnabled = false,
     activeDropTargetId = null,
     queueDragging = false,
@@ -56,7 +54,7 @@
       dropLabel={group.roomLabel}
       dropDisabled={group.isAtCapacity}
       highlighted={activeDropTargetId === `room:${group.roomId}`}
-      class="active-room-group{callRoomOverrideId === group.roomId ? ' active-room-group--selected' : ''}{group.isAtCapacity ? ' active-room-group--full' : ''}"
+      class="active-room-group{group.isAtCapacity ? ' active-room-group--full' : ''}"
     >
       <div class="active-room-group-head">
         <h3 class="active-room-group-title">{group.roomLabel}</h3>
@@ -117,4 +115,3 @@
     </section>
   {/if}
 </div>
-

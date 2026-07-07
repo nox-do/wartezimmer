@@ -89,6 +89,18 @@ test('syncCatalogFromOpsSettings maps PF topics and rooms into a valid flow-core
   assert.ok(blutRule);
   assert.equal(blutRule.target, 'mfa-tresen');
 
+  const rezeptRule = db
+    .prepare(
+      'SELECT initial_target_location_id AS target, initial_movement_mode AS movementMode, public_display_mode AS displayMode FROM routing_rules WHERE topic_id = ?',
+    )
+    .get('rezept') as
+    | { target: string; movementMode: string; displayMode: string }
+    | undefined;
+  assert.ok(rezeptRule);
+  assert.equal(rezeptRule.target, 'mfa-tresen');
+  assert.equal(rezeptRule.movementMode, 'call');
+  assert.equal(rezeptRule.displayMode, 'visible');
+
   const tvRule = db
     .prepare('SELECT display_mode AS mode FROM surface_display_rules WHERE surface_id = ?')
     .get(PF_FLOW_SURFACE_TV) as { mode: string } | undefined;

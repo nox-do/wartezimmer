@@ -21,7 +21,7 @@
     openMfaDayStartConfirm,
   } from '$lib/mfa/mfa-day-ops.svelte';
   import { mountMfaDashboard } from '$lib/mfa/mfa-dashboard.svelte';
-  import { mfaPracticeContext, toggleMfaCallRoomOverride } from '$lib/mfa/mfa-practice-context.svelte';
+  import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
   import {
     callMfaTicket,
     cancelMfaMarkAway,
@@ -92,7 +92,6 @@
       away={mfaZones.away}
       waiting={mfaZones.waiting}
       rooms={mfaPracticeContext.practiceRooms}
-      callRoomOverrideId={mfaPracticeContext.callRoomOverrideId}
       busyVisitId={mfaQueueActions.busyVisitId}
       nowMs={mfaQueueDisplay.countdownNowMs}
       callAnnouncementReachable={callAnnouncementReachable}
@@ -114,9 +113,6 @@
       checkinLocked={mfaQueueDisplay.queue.checkinLocked}
       terminalLockBusy={mfaDayOps.terminalLockBusy}
       needsDayStartHint={mfaDayOps.dayLifecycle?.needsDayStartHint ?? false}
-      rooms={mfaPracticeContext.practiceRooms}
-      callRoomOverrideId={mfaPracticeContext.callRoomOverrideId}
-      onToggleRoom={toggleMfaCallRoomOverride}
       onTerminalLockToggle={(nextLocked) => void handleMfaTerminalLockToggle(nextLocked)}
       onOpenMfaCheckin={() => (mfaCheckinModalOpen = true)}
     />
@@ -168,4 +164,3 @@
   />
 
 {/if}
-

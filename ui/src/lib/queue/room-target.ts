@@ -39,7 +39,6 @@ export function roomTargetFromTicketDestination(
 
 export function resolveRoomTargetForCheckIn(
   item: QueueItem | undefined,
-  sessionOverride: RoomTarget | undefined,
 ): RoomTarget | undefined {
-  return roomTargetFromQueueItem(item) ?? sessionOverride ?? roomTargetFromTicketDestination(item);
+  return roomTargetFromQueueItem(item) ?? roomTargetFromTicketDestination(item);
 }

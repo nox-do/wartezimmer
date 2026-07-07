@@ -18,10 +18,11 @@ export const dict = {
     disabledTitle: 'Patient portal is not active',
     disabledLead:
       'Your practice is not using the patient portal at the moment. Please contact reception if you want to hand in documents or fill in forms.',
-    indexLeadPart1: 'You receive your queue number ',
-    indexLeadBold: 'only at the check-in terminal',
-    indexLeadPart2: ' (screen or receipt). Enter the same number here on your phone.',
-    indexTermsLabel: 'I accept the practice Wi-Fi terms of use.',
+    indexLeadPart1: 'Please sign in with your ',
+    indexLeadBold: 'queue number',
+    indexLeadPart2: '. You receive the number at the terminal.',
+    indexTermsLabel: 'I accept the <<terms>>.',
+    indexTermsLink: 'terms of use',
     indexTermsRequired: 'Please confirm the terms of use.',
     indexPrivacyOpen: 'Read privacy notice',
     indexContinue: 'Continue',
@@ -31,7 +32,7 @@ export const dict = {
     ticketInputPlaceholder: 'e.g. A-042',
     uploadKicker: 'Documents',
     uploadTitle: 'Upload files',
-    uploadLead: 'Linked to your queue number — no further login required.',
+    uploadLead: 'Linked to your queue number.',
     uploadPrivacyNote:
       'You are voluntarily submitting files to your medical practice. Files are processed locally at the practice only. If files contain health data (e.g. test results, prescriptions), we process them to prepare for your visit.',
     uploadPrivacyOpen: 'Privacy notice for uploads',
@@ -51,6 +52,7 @@ export const dict = {
     sessionMissingHint:
       'Please start via the patient portal with your queue number or follow the Wi-Fi redirect.',
     sessionExpired: 'Your session has expired or was ended.',
+    sessionExpiredHint: 'You can go back to the portal here and try again.',
     sessionResolveError: 'Queue number could not be resolved.',
     sessionLabel: 'Queue number',
     invalidTicket: 'Invalid queue number (format e.g. O-001).',
@@ -60,6 +62,7 @@ export const dict = {
     menuAnamneseTitle: 'Fill in medical history form',
     menuAnamneseSubtitle: 'If reception asked you to complete the form.',
     backToMenu: '← Back to menu',
+    backToPortal: '← Back to portal',
     anamneseKicker: 'New patient',
     anamneseLead:
       'Thank you for using your waiting time. This information helps us assist you faster and better.',

@@ -22,23 +22,16 @@ function waitingTicket(overrides: Partial<QueueItem> = {}): QueueItem {
 
 describe('resolveCallRoomTarget', () => {
   it('uses ticket destination when quicksettings override is off', () => {
-    expect(resolveCallRoomTarget(waitingTicket(), undefined)).toEqual({
+    expect(resolveCallRoomTarget(waitingTicket())).toEqual({
       roomId: 'empfang',
       roomLabel: 'Empfang',
     });
-  });
-
-  it('uses session override when a room toggle is pressed', () => {
-    expect(resolveCallRoomTarget(waitingTicket(), { roomId: 'labor', roomLabel: 'Labor' })).toEqual(
-      { roomId: 'labor', roomLabel: 'Labor' },
-    );
   });
 
   it('returns undefined when ticket has no destination snapshot', () => {
     expect(
       resolveCallRoomTarget(
         waitingTicket({ destinationRoomId: undefined, destinationRoomLabel: undefined }),
-        undefined,
       ),
     ).toBeUndefined();
   });

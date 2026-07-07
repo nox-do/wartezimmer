@@ -18,10 +18,11 @@ export const dict = {
     disabledTitle: 'Hasta portalı aktif değil',
     disabledLead:
       'Muayenehaneniz şu anda hasta portalını kullanmıyor. Belge teslim etmek veya form doldurmak istiyorsanız lütfen danışmaya başvurun.',
-    indexLeadPart1: 'Sıra numaranızı ',
-    indexLeadBold: 'yalnızca kayıt terminalinden',
-    indexLeadPart2: ' alırsınız (ekran veya fiş). Aynı numarayı burada telefonunuzdan girin.',
-    indexTermsLabel: 'Praxis-WLAN kullanım şartlarını kabul ediyorum.',
+    indexLeadPart1: 'Lütfen ',
+    indexLeadBold: 'sıra numaranızla',
+    indexLeadPart2: ' giriş yapın. Numaranızı terminalden alırsınız.',
+    indexTermsLabel: '<<terms>> kabul ediyorum.',
+    indexTermsLink: 'Kullanım şartlarını',
     indexTermsRequired: 'Lütfen kullanım şartlarını onaylayın.',
     indexPrivacyOpen: 'Gizlilik bildirimini oku',
     indexContinue: 'Devam',
@@ -31,7 +32,7 @@ export const dict = {
     ticketInputPlaceholder: 'örn. A-042',
     uploadKicker: 'Belgeler',
     uploadTitle: 'Dosya yükle',
-    uploadLead: 'Sıra numaranıza bağlı — ek giriş gerekmez.',
+    uploadLead: 'Sıra numaranıza bağlı.',
     uploadPrivacyNote:
       'Dosyaları gönüllü olarak muayenehanenize iletiyorsunuz. Dosyalar yalnızca muayenehanede yerel olarak işlenir. Sağlık verisi içeren dosyalar (ör. sonuçlar, reçeteler) ziyaretinizin organizasyonel hazırlığı için işlenir.',
     uploadPrivacyOpen: 'Yükleme için gizlilik bildirimi',
@@ -51,6 +52,7 @@ export const dict = {
     sessionMissingHint:
       'Lütfen sıra numaranızla hasta portalından başlayın veya Wi-Fi yönlendirmesini kullanın.',
     sessionExpired: 'Oturumunuz sona erdi veya kapatıldı.',
+    sessionExpiredHint: 'Buradan portala geri dönebilir ve tekrar deneyebilirsiniz.',
     sessionResolveError: 'Sıra numarası çözümlenemedi.',
     sessionLabel: 'Sıra numarası',
     invalidTicket: 'Geçersiz sıra numarası (örn. O-001).',
@@ -60,6 +62,7 @@ export const dict = {
     menuAnamneseTitle: 'Anamnez formunu doldur',
     menuAnamneseSubtitle: 'Resepsiyon formu doldurmanızı istediyse.',
     backToMenu: '← Menüye dön',
+    backToPortal: '← Portala dön',
     anamneseKicker: 'Yeni hasta',
     anamneseLead:
       'Bekleme sürenizi kullandığınız için teşekkürler. Bu bilgiler size daha hızlı ve iyi yardım etmemize yardımcı olur.',
