@@ -188,6 +188,78 @@
   margin-top: 0.875rem;
 }
 
+.journey-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.journey-admin__toolbar,
+.journey-admin__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.journey-admin__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.journey-admin__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.journey-admin__field--wide {
+  grid-column: 1 / -1;
+}
+
+.journey-admin__check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.journey-admin__preview {
+  margin: 0;
+  color: var(--mfa-muted);
+  font-size: var(--text-sm);
+}
+
+.journey-admin__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.journey-admin__steps-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.journey-admin__step {
+  border: 1px solid var(--mfa-border);
+  border-radius: var(--radius-md);
+  padding: 0.875rem;
+  background: var(--mfa-surface);
+}
+
+.journey-admin__step-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
 @media (max-width: 48rem) {
   .app-main:has(.mfa-settings-layout) {
     height: auto;

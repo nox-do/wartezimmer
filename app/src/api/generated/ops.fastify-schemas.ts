@@ -422,6 +422,206 @@ export const PracticeProfile = {
   },
 } as const;
 
+export const JourneyStepSetting = {
+  type: 'object',
+  required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+  additionalProperties: false,
+  properties: {
+    id: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 128,
+    },
+    sortOrder: {
+      type: 'integer',
+      minimum: 0,
+      maximum: 99,
+    },
+    targetLocationId: {
+      type: ['string', 'null'],
+      minLength: 1,
+      maxLength: 64,
+    },
+    queueId: {
+      type: ['string', 'null'],
+      minLength: 1,
+      maxLength: 64,
+    },
+    movementMode: {
+      type: 'string',
+      enum: ['call', 'self_go', 'pickup'],
+    },
+    publicDisplayMode: {
+      type: 'string',
+      enum: ['visible', 'hidden', 'call_only'],
+    },
+    advanceOn: {
+      type: 'string',
+      enum: ['arrive', 'start', 'done'],
+    },
+    instructionText: {
+      type: ['string', 'null'],
+      maxLength: 256,
+    },
+  },
+} as const;
+
+export const JourneyTemplateSetting = {
+  type: 'object',
+  required: ['id', 'name', 'active', 'steps'],
+  additionalProperties: false,
+  properties: {
+    id: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 128,
+      pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$',
+    },
+    name: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 128,
+    },
+    topicId: {
+      type: ['string', 'null'],
+      minLength: 1,
+      maxLength: 64,
+    },
+    active: {
+      type: 'boolean',
+    },
+    steps: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+        additionalProperties: false,
+        properties: {
+          id: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 128,
+          },
+          sortOrder: {
+            type: 'integer',
+            minimum: 0,
+            maximum: 99,
+          },
+          targetLocationId: {
+            type: ['string', 'null'],
+            minLength: 1,
+            maxLength: 64,
+          },
+          queueId: {
+            type: ['string', 'null'],
+            minLength: 1,
+            maxLength: 64,
+          },
+          movementMode: {
+            type: 'string',
+            enum: ['call', 'self_go', 'pickup'],
+          },
+          publicDisplayMode: {
+            type: 'string',
+            enum: ['visible', 'hidden', 'call_only'],
+          },
+          advanceOn: {
+            type: 'string',
+            enum: ['arrive', 'start', 'done'],
+          },
+          instructionText: {
+            type: ['string', 'null'],
+            maxLength: 256,
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+export const JourneySettings = {
+  type: 'object',
+  required: ['templates'],
+  additionalProperties: false,
+  properties: {
+    templates: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'name', 'active', 'steps'],
+        additionalProperties: false,
+        properties: {
+          id: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 128,
+            pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$',
+          },
+          name: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 128,
+          },
+          topicId: {
+            type: ['string', 'null'],
+            minLength: 1,
+            maxLength: 64,
+          },
+          active: {
+            type: 'boolean',
+          },
+          steps: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+              additionalProperties: false,
+              properties: {
+                id: {
+                  type: 'string',
+                  minLength: 1,
+                  maxLength: 128,
+                },
+                sortOrder: {
+                  type: 'integer',
+                  minimum: 0,
+                  maximum: 99,
+                },
+                targetLocationId: {
+                  type: ['string', 'null'],
+                  minLength: 1,
+                  maxLength: 64,
+                },
+                queueId: {
+                  type: ['string', 'null'],
+                  minLength: 1,
+                  maxLength: 64,
+                },
+                movementMode: {
+                  type: 'string',
+                  enum: ['call', 'self_go', 'pickup'],
+                },
+                publicDisplayMode: {
+                  type: 'string',
+                  enum: ['visible', 'hidden', 'call_only'],
+                },
+                advanceOn: {
+                  type: 'string',
+                  enum: ['arrive', 'start', 'done'],
+                },
+                instructionText: {
+                  type: ['string', 'null'],
+                  maxLength: 256,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
 export const OpsSettingsResponse = {
   type: 'object',
   required: [
@@ -430,6 +630,7 @@ export const OpsSettingsResponse = {
     'practiceOpenFrom',
     'practiceOpenTo',
     'topics',
+    'journeySettings',
     'rooms',
     'contactLookupFolderPath',
     'contactLookupDelimiterMode',
@@ -529,6 +730,88 @@ export const OpsSettingsResponse = {
             type: 'integer',
             minimum: 0,
             maximum: 99,
+          },
+        },
+      },
+    },
+    journeySettings: {
+      type: 'object',
+      required: ['templates'],
+      additionalProperties: false,
+      properties: {
+        templates: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['id', 'name', 'active', 'steps'],
+            additionalProperties: false,
+            properties: {
+              id: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 128,
+                pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$',
+              },
+              name: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 128,
+              },
+              topicId: {
+                type: ['string', 'null'],
+                minLength: 1,
+                maxLength: 64,
+              },
+              active: {
+                type: 'boolean',
+              },
+              steps: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+                  additionalProperties: false,
+                  properties: {
+                    id: {
+                      type: 'string',
+                      minLength: 1,
+                      maxLength: 128,
+                    },
+                    sortOrder: {
+                      type: 'integer',
+                      minimum: 0,
+                      maximum: 99,
+                    },
+                    targetLocationId: {
+                      type: ['string', 'null'],
+                      minLength: 1,
+                      maxLength: 64,
+                    },
+                    queueId: {
+                      type: ['string', 'null'],
+                      minLength: 1,
+                      maxLength: 64,
+                    },
+                    movementMode: {
+                      type: 'string',
+                      enum: ['call', 'self_go', 'pickup'],
+                    },
+                    publicDisplayMode: {
+                      type: 'string',
+                      enum: ['visible', 'hidden', 'call_only'],
+                    },
+                    advanceOn: {
+                      type: 'string',
+                      enum: ['arrive', 'start', 'done'],
+                    },
+                    instructionText: {
+                      type: ['string', 'null'],
+                      maxLength: 256,
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -1646,6 +1929,7 @@ export const GET_api_v1_ops_settingsResponse200 = {
     'practiceOpenFrom',
     'practiceOpenTo',
     'topics',
+    'journeySettings',
     'rooms',
     'contactLookupFolderPath',
     'contactLookupDelimiterMode',
@@ -1745,6 +2029,88 @@ export const GET_api_v1_ops_settingsResponse200 = {
             type: 'integer',
             minimum: 0,
             maximum: 99,
+          },
+        },
+      },
+    },
+    journeySettings: {
+      type: 'object',
+      required: ['templates'],
+      additionalProperties: false,
+      properties: {
+        templates: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['id', 'name', 'active', 'steps'],
+            additionalProperties: false,
+            properties: {
+              id: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 128,
+                pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$',
+              },
+              name: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 128,
+              },
+              topicId: {
+                type: ['string', 'null'],
+                minLength: 1,
+                maxLength: 64,
+              },
+              active: {
+                type: 'boolean',
+              },
+              steps: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+                  additionalProperties: false,
+                  properties: {
+                    id: {
+                      type: 'string',
+                      minLength: 1,
+                      maxLength: 128,
+                    },
+                    sortOrder: {
+                      type: 'integer',
+                      minimum: 0,
+                      maximum: 99,
+                    },
+                    targetLocationId: {
+                      type: ['string', 'null'],
+                      minLength: 1,
+                      maxLength: 64,
+                    },
+                    queueId: {
+                      type: ['string', 'null'],
+                      minLength: 1,
+                      maxLength: 64,
+                    },
+                    movementMode: {
+                      type: 'string',
+                      enum: ['call', 'self_go', 'pickup'],
+                    },
+                    publicDisplayMode: {
+                      type: 'string',
+                      enum: ['visible', 'hidden', 'call_only'],
+                    },
+                    advanceOn: {
+                      type: 'string',
+                      enum: ['arrive', 'start', 'done'],
+                    },
+                    instructionText: {
+                      type: ['string', 'null'],
+                      maxLength: 256,
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -2255,6 +2621,88 @@ export const PATCH_api_v1_ops_settingsRequestBody = {
       minItems: 1,
       uniqueItems: true,
     },
+    journeySettings: {
+      type: 'object',
+      required: ['templates'],
+      additionalProperties: false,
+      properties: {
+        templates: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['id', 'name', 'active', 'steps'],
+            additionalProperties: false,
+            properties: {
+              id: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 128,
+                pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$',
+              },
+              name: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 128,
+              },
+              topicId: {
+                type: ['string', 'null'],
+                minLength: 1,
+                maxLength: 64,
+              },
+              active: {
+                type: 'boolean',
+              },
+              steps: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+                  additionalProperties: false,
+                  properties: {
+                    id: {
+                      type: 'string',
+                      minLength: 1,
+                      maxLength: 128,
+                    },
+                    sortOrder: {
+                      type: 'integer',
+                      minimum: 0,
+                      maximum: 99,
+                    },
+                    targetLocationId: {
+                      type: ['string', 'null'],
+                      minLength: 1,
+                      maxLength: 64,
+                    },
+                    queueId: {
+                      type: ['string', 'null'],
+                      minLength: 1,
+                      maxLength: 64,
+                    },
+                    movementMode: {
+                      type: 'string',
+                      enum: ['call', 'self_go', 'pickup'],
+                    },
+                    publicDisplayMode: {
+                      type: 'string',
+                      enum: ['visible', 'hidden', 'call_only'],
+                    },
+                    advanceOn: {
+                      type: 'string',
+                      enum: ['arrive', 'start', 'done'],
+                    },
+                    instructionText: {
+                      type: ['string', 'null'],
+                      maxLength: 256,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     smsProvider: {
       type: 'string',
       enum: ['mock', 'seven'],
@@ -2318,6 +2766,7 @@ export const PATCH_api_v1_ops_settingsResponse200 = {
     'practiceOpenFrom',
     'practiceOpenTo',
     'topics',
+    'journeySettings',
     'rooms',
     'contactLookupFolderPath',
     'contactLookupDelimiterMode',
@@ -2417,6 +2866,88 @@ export const PATCH_api_v1_ops_settingsResponse200 = {
             type: 'integer',
             minimum: 0,
             maximum: 99,
+          },
+        },
+      },
+    },
+    journeySettings: {
+      type: 'object',
+      required: ['templates'],
+      additionalProperties: false,
+      properties: {
+        templates: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['id', 'name', 'active', 'steps'],
+            additionalProperties: false,
+            properties: {
+              id: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 128,
+                pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$',
+              },
+              name: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 128,
+              },
+              topicId: {
+                type: ['string', 'null'],
+                minLength: 1,
+                maxLength: 64,
+              },
+              active: {
+                type: 'boolean',
+              },
+              steps: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+                  additionalProperties: false,
+                  properties: {
+                    id: {
+                      type: 'string',
+                      minLength: 1,
+                      maxLength: 128,
+                    },
+                    sortOrder: {
+                      type: 'integer',
+                      minimum: 0,
+                      maximum: 99,
+                    },
+                    targetLocationId: {
+                      type: ['string', 'null'],
+                      minLength: 1,
+                      maxLength: 64,
+                    },
+                    queueId: {
+                      type: ['string', 'null'],
+                      minLength: 1,
+                      maxLength: 64,
+                    },
+                    movementMode: {
+                      type: 'string',
+                      enum: ['call', 'self_go', 'pickup'],
+                    },
+                    publicDisplayMode: {
+                      type: 'string',
+                      enum: ['visible', 'hidden', 'call_only'],
+                    },
+                    advanceOn: {
+                      type: 'string',
+                      enum: ['arrive', 'start', 'done'],
+                    },
+                    instructionText: {
+                      type: ['string', 'null'],
+                      maxLength: 256,
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -5352,6 +5883,9 @@ export const opsSchemas = {
   OpsHeartbeatResponse,
   OpsOnboardingStatus,
   PracticeProfile,
+  JourneyStepSetting,
+  JourneyTemplateSetting,
+  JourneySettings,
   OpsSettingsResponse,
   RoutingCapabilitiesResponse,
   DeploymentVolumeStatus,

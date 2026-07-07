@@ -6,6 +6,7 @@
   import TopicIconPickerModal from '$lib/components/mfa/TopicIconPickerModal.svelte';
   import TopicLaneBadge from '$lib/components/topics/TopicLaneBadge.svelte';
   import type { RoutingCapabilities } from '$lib/mfa/practice-ops-api';
+  import type { JourneyTemplateSetting } from '$lib/ops/openapi-types';
   import type { PracticeRoom, PracticeTopicSetting } from '$lib/queue/ops-settings-api';
   import { slugifyTopicId } from '$lib/queue/ops-settings-api';
   import { isReservedLaneCode } from '$lib/queue/topic-settings-form';
@@ -19,6 +20,7 @@
     mode?: 'add' | 'edit';
     draft?: PracticeTopicSetting;
     enabledRooms?: PracticeRoom[];
+    journeyTemplates?: JourneyTemplateSetting[];
     routingCapabilities?: RoutingCapabilities | null;
     autoSyncTopicId?: boolean;
     topicIdsTaken?: Set<string>;
@@ -45,6 +47,7 @@
       sortOrder: 1,
     }),
     enabledRooms = [],
+    journeyTemplates = [],
     routingCapabilities = null,
     autoSyncTopicId = true,
     topicIdsTaken = new Set<string>(),
@@ -72,6 +75,17 @@
   const topicUsesJourney = $derived(complexRoutingVisible && Boolean(draftJourneyTemplateId));
   const showSimpleRoutingSection = $derived(!topicUsesJourney);
   const showComplexRoutingSection = $derived(complexRoutingVisible);
+  const journeySelectOptions = $derived.by(() => {
+    const active = journeyTemplates.filter((template) => template.active);
+    const currentId = draft.journeyTemplateId;
+    if (currentId && !active.some((template) => template.id === currentId)) {
+      const current = journeyTemplates.find((template) => template.id === currentId);
+      if (current) {
+        return [...active, current];
+      }
+    }
+    return active;
+  });
 
   function updateLabel(label: string) {
     const patch: Partial<PracticeTopicSetting> = { label };
@@ -260,19 +274,29 @@
       {/if}
 
       {#if showComplexRoutingSection}
-        <div class="modal-form-journey">
-          <span>{t('mfa.settings.topicJourneyTitle')}</span>
-          <strong>
-            {draftJourneyTemplateId
-              ? tf('mfa.settings.topicJourneySelected', { journey: draftJourneyTemplateId })
-              : t('mfa.settings.topicJourneySimpleFallback')}
-          </strong>
-          <p class="modal-form-hint">
-            {draftJourneyTemplateId
-              ? t('mfa.settings.topicJourneyReadOnlyHint')
-              : t('mfa.settings.topicJourneyFallbackHint')}
-          </p>
-        </div>
+        <label class="modal-form-field">
+          <span>{t('mfa.settings.topicJourneySelect')}</span>
+          <select
+            class="form-input"
+            disabled={busy}
+            value={draftJourneyTemplateId ?? ''}
+            onchange={(event) => {
+              const value = (event.currentTarget as HTMLSelectElement).value;
+              draft = {
+                ...draft,
+                journeyTemplateId: value.length > 0 ? value : null,
+              };
+            }}
+          >
+            <option value="">{t('mfa.settings.topicJourneySelectNone')}</option>
+            {#each journeySelectOptions as template (template.id)}
+              <option value={template.id}>{template.name}</option>
+            {/each}
+          </select>
+          {#if !draftJourneyTemplateId}
+            <p class="modal-form-hint">{t('mfa.settings.topicJourneyFallbackHint')}</p>
+          {/if}
+        </label>
       {/if}
     </fieldset>
 

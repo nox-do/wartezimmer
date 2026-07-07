@@ -67,6 +67,7 @@ import {
 } from './database-ops-settings.js';
 import { validateRoomSettingsChange } from '../ops/room-removal-validation.js';
 import { validateRoutingModeChange } from '../ops/routing-mode-guard.js';
+import { validateJourneySettingsEditable } from '../ops/journey-template-guard.js';
 import { OpsSettingsValidationError } from './ops-settings-errors.js';
 import {
   createOpsSetupStatements,
@@ -1217,6 +1218,24 @@ export class CoreDatabase {
           throw new OpsSettingsValidationError(modeGuard.message, {
             apiCode: modeGuard.code,
             details: { activeJourneyVisitCount: modeGuard.activeJourneyVisitCount },
+          });
+        }
+      }
+
+      const nextJourneySettings = patch.journeySettings ?? current.journeySettings;
+      if (patch.journeySettings) {
+        const journeyGuard = validateJourneySettingsEditable(
+          this.db,
+          current.journeySettings,
+          nextJourneySettings,
+        );
+        if (!journeyGuard.ok) {
+          throw new OpsSettingsValidationError(journeyGuard.message, {
+            apiCode: journeyGuard.code,
+            details: {
+              templateId: journeyGuard.templateId,
+              openVisitCount: journeyGuard.openVisitCount,
+            },
           });
         }
       }

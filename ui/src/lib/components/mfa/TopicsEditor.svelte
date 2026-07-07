@@ -5,6 +5,7 @@
   import TopicEditorModal from '$lib/components/mfa/TopicEditorModal.svelte';
   import TopicSortableRow from '$lib/components/mfa/TopicSortableRow.svelte';
   import { DEFAULT_TOPIC_ACCENT } from '$lib/topics/topic-accent';
+  import type { JourneyTemplateSetting } from '$lib/ops/openapi-types';
   import type { RoutingCapabilities } from '$lib/mfa/practice-ops-api';
   import type { PracticeRoom, PracticeTopicSetting } from '$lib/queue/ops-settings-api';
   import {
@@ -23,6 +24,7 @@
     topics: PracticeTopicSetting[];
     enabledRooms: PracticeRoom[];
     savedTopicIds: Set<string>;
+    journeyTemplates?: JourneyTemplateSetting[];
     routingCapabilities?: RoutingCapabilities | null;
     busy?: boolean;
     onChange?: (topics: PracticeTopicSetting[]) => void;
@@ -33,6 +35,7 @@
     topics,
     enabledRooms,
     savedTopicIds,
+    journeyTemplates = [],
     routingCapabilities = null,
     busy = false,
     onChange,
@@ -326,6 +329,7 @@
   mode={editorMode}
   bind:draft
   {enabledRooms}
+  {journeyTemplates}
   {routingCapabilities}
   {autoSyncTopicId}
   topicIdsTaken={editorTopicIdsTaken}

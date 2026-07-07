@@ -6,6 +6,7 @@ const MFA_PATCH_KEYS = new Set([
   'practiceOpenFrom',
   'practiceOpenTo',
   'topics',
+  'journeySettings',
   'rooms',
   'emergencyEnabled',
   'terminalWlanPromoEnabled',

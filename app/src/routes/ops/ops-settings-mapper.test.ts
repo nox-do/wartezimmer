@@ -39,10 +39,81 @@ function mockDb(): CoreDatabase {
       terminalAuthEgkEnabled: false,
       smsProvider: 'mock',
       exportBasePath: '/tmp',
+      journeySettings: { templates: [] },
       updatedAt: '2026-01-01T00:00:00.000Z',
     }),
   } as unknown as CoreDatabase;
 }
+
+test('buildOpsSettingsUpdate normalizes journeySettings patch', async () => {
+  const result = await buildOpsSettingsUpdate(mockDb(), {
+    journeySettings: {
+      templates: [
+        {
+          id: 'journey_labor',
+          name: 'Labor',
+          topicId: null,
+          active: true,
+          steps: [
+            {
+              id: 'step-1',
+              sortOrder: 0,
+              targetLocationId: 'empfang',
+              queueId: null,
+              movementMode: 'call',
+              publicDisplayMode: 'visible',
+              advanceOn: 'arrive',
+              instructionText: null,
+            },
+          ],
+        },
+      ],
+    },
+  });
+
+  assert.ok(result && !('code' in result));
+  if ('code' in result) {
+    return;
+  }
+
+  assert.equal(result.journeySettings?.templates.length, 1);
+  assert.equal(result.journeySettings?.templates[0]?.id, 'journey_labor');
+  assert.equal(result.journeySettings?.templates[0]?.steps[0]?.movementMode, 'call');
+});
+
+test('buildOpsSettingsUpdate rejects invalid journeySettings patch', async () => {
+  const result = await buildOpsSettingsUpdate(mockDb(), {
+    journeySettings: {
+      templates: [
+        {
+          id: 'journey_labor',
+          name: 'Labor',
+          topicId: null,
+          active: true,
+          steps: [
+            {
+              id: 'step-1',
+              sortOrder: 0,
+              targetLocationId: 'empfang',
+              queueId: null,
+              movementMode: 'invalid-mode',
+              publicDisplayMode: 'visible',
+              advanceOn: 'arrive',
+              instructionText: null,
+            },
+          ],
+        },
+      ],
+    },
+  });
+
+  assert.ok(result && 'code' in result);
+  if (!result || !('code' in result)) {
+    return;
+  }
+  assert.equal(result.code, 'INVALID_ARGUMENT');
+  assert.match(result.message, /journeySettings/i);
+});
 
 test('buildOpsSettingsUpdate preserves maxOccupancy on rooms patch', async () => {
   const result = await buildOpsSettingsUpdate(mockDb(), {

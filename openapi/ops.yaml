@@ -362,6 +362,86 @@ components:
         website:
           type: string
           maxLength: 200
+    JourneyStepSetting:
+      type: object
+      required:
+        - id
+        - sortOrder
+        - movementMode
+        - publicDisplayMode
+        - advanceOn
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        sortOrder:
+          type: integer
+          minimum: 0
+          maximum: 99
+        targetLocationId:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 64
+        queueId:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 64
+        movementMode:
+          type: string
+          enum: [call, self_go, pickup]
+        publicDisplayMode:
+          type: string
+          enum: [visible, hidden, call_only]
+        advanceOn:
+          type: string
+          enum: [arrive, start, done]
+        instructionText:
+          type: string
+          nullable: true
+          maxLength: 256
+    JourneyTemplateSetting:
+      type: object
+      required:
+        - id
+        - name
+        - active
+        - steps
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+        topicId:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 64
+        active:
+          type: boolean
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/JourneyStepSetting'
+    JourneySettings:
+      type: object
+      required:
+        - templates
+      additionalProperties: false
+      properties:
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/JourneyTemplateSetting'
     OpsSettingsResponse:
       type: object
       required:
@@ -370,6 +450,7 @@ components:
         - practiceOpenFrom
         - practiceOpenTo
         - topics
+        - journeySettings
         - rooms
         - contactLookupFolderPath
         - contactLookupDelimiterMode
@@ -465,6 +546,8 @@ components:
                 type: integer
                 minimum: 0
                 maximum: 99
+        journeySettings:
+          $ref: '#/components/schemas/JourneySettings'
         rooms:
           type: array
           items:
@@ -1378,6 +1461,8 @@ paths:
                   type: boolean
                 terminalPatientLocales:
                   $ref: '#/components/schemas/TerminalPatientLocales'
+                journeySettings:
+                  $ref: '#/components/schemas/JourneySettings'
                 smsProvider:
                   type: string
                   enum:

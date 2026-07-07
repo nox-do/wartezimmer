@@ -18,6 +18,10 @@ import {
   serializePracticeProfile,
 } from '../../shared/practice/practice-profile.js';
 import type { RoomPanelSettings } from '../../shared/db/db-types.js';
+import {
+  normalizeJourneySettings,
+  type JourneySettings,
+} from '../../shared/journey-settings.js';
 
 export function toPracticeProfileResponse(practiceProfileJson: string) {
   return resolvePracticeProfile(parsePracticeProfileJson(practiceProfileJson));
@@ -30,6 +34,7 @@ export function toOpsSettingsResponse(settings: ReturnType<CoreDatabase['getOpsS
     practiceOpenFrom: settings.practiceOpenFrom,
     practiceOpenTo: settings.practiceOpenTo,
     topics: settings.topics,
+    journeySettings: settings.journeySettings,
     rooms: settings.rooms,
     contactLookupFolderPath: settings.contactLookupFolderPath,
     contactLookupDelimiterMode: settings.contactLookupDelimiterMode,
@@ -301,6 +306,18 @@ export async function buildOpsSettingsUpdate(
     };
   }
 
+  let journeySettings: JourneySettings | undefined;
+  if (body.journeySettings != null) {
+    try {
+      journeySettings = normalizeJourneySettings(body.journeySettings);
+    } catch {
+      return {
+        code: 'INVALID_ARGUMENT',
+        message: 'journeySettings is invalid.',
+      };
+    }
+  }
+
   return {
     routingMode: body.routingMode,
     returnWindowMinutes: body.returnWindowMinutes,
@@ -308,6 +325,7 @@ export async function buildOpsSettingsUpdate(
     practiceOpenTo: body.practiceOpenTo,
     practiceProfileJson,
     topics: nextTopics,
+    journeySettings,
     rooms: nextRooms,
     contactLookupFolderPath: body.contactLookupFolderPath,
     contactLookupDelimiterMode: body.contactLookupDelimiterMode,

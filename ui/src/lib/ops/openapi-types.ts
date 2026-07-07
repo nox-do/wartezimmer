@@ -17,6 +17,7 @@ export type MfaPatchOpsSettingsBody = Pick<
   | 'practiceOpenFrom'
   | 'practiceOpenTo'
   | 'topics'
+  | 'journeySettings'
   | 'rooms'
   | 'emergencyEnabled'
   | 'terminalWlanPromoEnabled'
@@ -51,6 +52,9 @@ export type SetupContactMode = OpsOnboardingStatus['setupContactMode'];
 
 export type PracticeRoom = OpsSettingsResponse['rooms'][number];
 export type PracticeTopicSetting = OpsSettingsResponse['topics'][number];
+export type JourneySettings = OpsSettingsResponse['journeySettings'];
+export type JourneyTemplateSetting = JourneySettings['templates'][number];
+export type JourneyStepSetting = JourneyTemplateSetting['steps'][number];
 export type CsvContactDelimiterMode = OpsSettingsResponse['contactLookupDelimiterMode'];
 export type CsvContactLookupMapping = OpsSettingsResponse['contactLookupMapping'];
 

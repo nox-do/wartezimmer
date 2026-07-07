@@ -268,6 +268,7 @@ export interface paths {
             terminalAuthNameDobEnabled?: boolean;
             terminalAuthEgkEnabled?: boolean;
             terminalPatientLocales?: components['schemas']['TerminalPatientLocales'];
+            journeySettings?: components['schemas']['JourneySettings'];
             /** @enum {string} */
             smsProvider?: 'mock' | 'seven';
             practiceProfile?: components['schemas']['PracticeProfile'];
@@ -1456,6 +1457,29 @@ export interface components {
       dataProtectionOfficer: string;
       website: string;
     };
+    JourneyStepSetting: {
+      id: string;
+      sortOrder: number;
+      targetLocationId?: string | null;
+      queueId?: string | null;
+      /** @enum {string} */
+      movementMode: 'call' | 'self_go' | 'pickup';
+      /** @enum {string} */
+      publicDisplayMode: 'visible' | 'hidden' | 'call_only';
+      /** @enum {string} */
+      advanceOn: 'arrive' | 'start' | 'done';
+      instructionText?: string | null;
+    };
+    JourneyTemplateSetting: {
+      id: string;
+      name: string;
+      topicId?: string | null;
+      active: boolean;
+      steps: components['schemas']['JourneyStepSetting'][];
+    };
+    JourneySettings: {
+      templates: components['schemas']['JourneyTemplateSetting'][];
+    };
     OpsSettingsResponse: {
       /**
        * @description Practice-wide routing mode. simple preserves RoutingRules-only behavior; complex allows mixed topics with journeys later.
@@ -1485,6 +1509,7 @@ export interface components {
         availableTo: string | null;
         sortOrder: number;
       }[];
+      journeySettings: components['schemas']['JourneySettings'];
       rooms: {
         roomId: string;
         roomLabel: string;

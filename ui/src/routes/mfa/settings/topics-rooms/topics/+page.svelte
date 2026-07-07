@@ -4,6 +4,7 @@
   import TopicsEditor from '$lib/components/mfa/TopicsEditor.svelte';
   import { loadTopicsRoomsSettings, persistTopicsRoomsSettings } from '$lib/mfa/topics-rooms-settings';
   import { listEnabledRooms } from '$lib/queue/ops-settings-api';
+  import type { JourneySettings } from '$lib/ops/openapi-types';
   import type { PracticeRoomWithPanel, PracticeTopicSetting } from '$lib/queue/ops-settings-api';
   import type { RoutingCapabilities } from '$lib/mfa/practice-ops-api';
   import { t } from '$lib/i18n/i18nStore.svelte';
@@ -12,6 +13,7 @@
   let saving = $state(false);
   let rooms = $state<PracticeRoomWithPanel[]>([]);
   let topics = $state<PracticeTopicSetting[]>([]);
+  let journeySettings = $state<JourneySettings>({ templates: [] });
   let routingCapabilities = $state<RoutingCapabilities | null>(null);
   let savedTopicsSnapshot = $state('');
 
@@ -30,6 +32,7 @@
     }
     rooms = result.rooms;
     topics = result.topics;
+    journeySettings = result.journeySettings;
     routingCapabilities = result.routingCapabilities;
     savedTopicsSnapshot = result.savedTopicsSnapshot;
   }
@@ -47,6 +50,7 @@
     }
     rooms = result.rooms;
     topics = result.topics;
+    journeySettings = result.journeySettings;
     routingCapabilities = result.routingCapabilities;
     savedTopicsSnapshot = result.savedTopicsSnapshot;
     return true;
@@ -66,6 +70,7 @@
     {topics}
     {enabledRooms}
     {savedTopicIds}
+    journeyTemplates={journeySettings.templates}
     {routingCapabilities}
     busy={saving}
     onChange={(next) => {

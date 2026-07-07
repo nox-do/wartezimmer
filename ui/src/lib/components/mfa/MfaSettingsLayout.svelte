@@ -1,10 +1,12 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { onMount } from 'svelte';
   import { afterNavigate } from '$app/navigation';
   import { page } from '$app/state';
   import { t } from '$lib/i18n/i18nStore.svelte';
+  import { fetchRoutingCapabilities, type RoutingCapabilities } from '$lib/mfa/practice-ops-api';
   import {
-    MFA_SETTINGS_NAV,
+    buildMfaSettingsNav,
     isMfaSettingsItemActive,
   } from '$lib/mfa/settings-nav';
 
@@ -14,8 +16,18 @@
 
   let { children }: Props = $props();
   let mainEl = $state<HTMLElement | null>(null);
+  let routingCapabilities = $state<RoutingCapabilities | null>(null);
 
   const pathname = $derived(page.url.pathname);
+  const settingsNav = $derived(buildMfaSettingsNav(routingCapabilities));
+
+  onMount(() => {
+    void fetchRoutingCapabilities().then((result) => {
+      if (result.ok) {
+        routingCapabilities = result.data;
+      }
+    });
+  });
 
   afterNavigate(({ to, from }) => {
     if (!mainEl || !to || to.url.pathname === from?.url.pathname) {
@@ -43,7 +55,7 @@
     </header>
 
     <nav class="mfa-settings-nav">
-      {#each MFA_SETTINGS_NAV as group (group.id)}
+      {#each settingsNav as group (group.id)}
         <div class="mfa-settings-nav__group">
           <a
             class="mfa-settings-nav__group-link"

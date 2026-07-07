@@ -2,6 +2,7 @@ import {
   fetchRoutingCapabilities,
   type RoutingCapabilities,
 } from '$lib/mfa/practice-ops-api';
+import type { JourneySettings } from '$lib/ops/openapi-types';
 import {
   fetchOpsSettings,
   isValidRoomId,
@@ -26,6 +27,7 @@ import { toastStore } from '$lib/stores/toastStore';
 export type TopicsRoomsSettings = {
   rooms: PracticeRoomWithPanel[];
   topics: PracticeTopicSetting[];
+  journeySettings: JourneySettings;
   routingCapabilities: RoutingCapabilities;
   savedTopicsSnapshot: string;
 };
@@ -53,6 +55,7 @@ export async function loadTopicsRoomsSettings(): Promise<TopicsRoomsSettings | n
   return {
     rooms: [...result.data.rooms],
     topics,
+    journeySettings: structuredClone(result.data.journeySettings),
     routingCapabilities: capabilitiesResult.data,
     savedTopicsSnapshot: JSON.stringify(normalizeTopicsForSave(topics)),
   };
@@ -138,6 +141,7 @@ export async function persistTopicsRoomsSettings(
   return {
     rooms: [...result.data.rooms],
     topics: nextTopics,
+    journeySettings: structuredClone(result.data.journeySettings),
     routingCapabilities: await loadRoutingCapabilitiesAfterSave(options?.routingCapabilities ?? null),
     savedTopicsSnapshot: JSON.stringify(normalizeTopicsForSave(nextTopics)),
   };
