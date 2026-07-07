@@ -10,11 +10,10 @@ Stand: 2026-07-07
 - **Paket 4** – Simple Routing explizit benennen (committed)
 - **Paket 5** – Complex Routing Config ohne UI (committed)
 - **Paket 6** – Topic UI RoutingMode-Schnitt (committed)
-- **Paket 7** – Journey Admin UI + Ops-Settings-API (uncommitted): Review-Fix: `terminalWlanPromoEnabled` in MfaPatch, Journeys-Nav capability-gated
+- **Paket 7** – Journey Admin UI + Ops-Settings-API (committed `d03485a`): Review-Fix: `terminalWlanPromoEnabled` in MfaPatch, Journeys-Nav capability-gated
 
 ## In Arbeit / Review
 
-- **Paket 7** – Commit ausstehend nach Testlauf
 - **MFA Settings UI** – Branch `feat/mfa-settings-sidebar`: Sidebar, Topics/Journeys-Routen
 
 ## Referenzen
