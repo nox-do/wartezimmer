@@ -15,6 +15,58 @@ export const PF_FLOW_SURFACE_TERMINAL = 'pf_terminal_1';
 export const PF_FLOW_SURFACE_TV = 'pf_waiting_tv';
 export const PF_FLOW_SURFACE_MFA = 'pf_mfa_dashboard';
 
+/** Simple routing only — complex journey sync is Paket 5. */
+export function isSimpleRoutingMode(settings: Pick<OpsSettings, 'routingMode'>): boolean {
+  return settings.routingMode === 'simple';
+}
+
+export type SimpleRoutingRuleRow = {
+  id: string;
+  topicId: string;
+  name: string;
+  initialLastKnownLocationId: string;
+  initialTargetLocationId: string;
+  initialQueueId: string;
+  initialMovementMode: string;
+  initialLocationConfidence: string;
+  publicDisplayMode: string;
+  terminalInstructionTemplate: string;
+  requiresReceptionConfirmation: number;
+  escortPolicy: string;
+  allowRedirect: number;
+  allowedSurfaceIds: string | null;
+  journeyTemplateId: null;
+  active: number;
+};
+
+export function buildSimpleRoutingRuleRow(input: {
+  topicId: string;
+  name: string;
+  targetLocationId: string;
+  terminalInstructionTemplate: string;
+  allowRedirect: boolean;
+  active: boolean;
+}): SimpleRoutingRuleRow {
+  return {
+    id: `rule_${input.topicId}`,
+    topicId: input.topicId,
+    name: input.name,
+    initialLastKnownLocationId: PF_FLOW_LOC_WAITING,
+    initialTargetLocationId: input.targetLocationId,
+    initialQueueId: PF_FLOW_QUEUE_GENERAL,
+    initialMovementMode: 'call',
+    initialLocationConfidence: 'assumed',
+    publicDisplayMode: 'visible',
+    terminalInstructionTemplate: input.terminalInstructionTemplate,
+    requiresReceptionConfirmation: 0,
+    escortPolicy: 'none',
+    allowRedirect: input.allowRedirect ? 1 : 0,
+    allowedSurfaceIds: JSON.stringify([PF_FLOW_SURFACE_TERMINAL]),
+    journeyTemplateId: null,
+    active: input.active ? 1 : 0,
+  };
+}
+
 export function panelFlowSurfaceId(roomId: string): string {
   return `pf_panel_${roomId}`;
 }
@@ -330,6 +382,52 @@ function replaceGeneratedDisplayRules(db: DatabaseSync): void {
   db.prepare("DELETE FROM surface_display_rules WHERE id = 'tv_general_visible' OR id LIKE 'panel_%_target'").run();
 }
 
+export function syncSimpleRoutingRulesFromOpsSettings(
+  db: DatabaseSync,
+  settings: OpsSettings,
+  receptionRoomId: string,
+): void {
+  const mfaTopicLabel = resolveTopicLabelFromSettings(settings, MFA_ASSIST_TOPIC_ID);
+
+  upsertRoutingRule(
+    db,
+    buildSimpleRoutingRuleRow({
+      topicId: MFA_ASSIST_TOPIC_ID,
+      name: mfaTopicLabel,
+      targetLocationId: receptionRoomId,
+      terminalInstructionTemplate: 'Bitte nehmen Sie im Wartezimmer Platz. Sie werden aufgerufen.',
+      allowRedirect: false,
+      active: true,
+    }),
+  );
+
+  for (const topic of settings.topics) {
+    upsertRoutingRule(
+      db,
+      buildSimpleRoutingRuleRow({
+        topicId: topic.topicId,
+        name: topic.label,
+        targetLocationId: resolveTargetLocationId(topic.defaultRoomId, settings),
+        terminalInstructionTemplate: terminalInstructionForTopic(topic.label),
+        allowRedirect: topic.topicId !== MFA_ASSIST_TOPIC_ID,
+        active: topic.enabled,
+      }),
+    );
+  }
+}
+
+export function syncRoutingRulesFromOpsSettings(
+  db: DatabaseSync,
+  settings: OpsSettings,
+  receptionRoomId: string,
+): void {
+  if (!isSimpleRoutingMode(settings)) {
+    // Paket 5: per-topic journey assignment when routingMode is complex.
+    // Interim: simple rules (journeyTemplateId null) until journey sync exists.
+  }
+  syncSimpleRoutingRulesFromOpsSettings(db, settings, receptionRoomId);
+}
+
 export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettings): CatalogSyncSummary {
   const desiredTopicIds = [MFA_ASSIST_TOPIC_ID, ...settings.topics.map((topic) => topic.topicId)];
   const desiredLocationIds = [
@@ -404,36 +502,15 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
     sortOrder: 10,
   });
 
-  const mfaTopicLabel = resolveTopicLabelFromSettings(settings, MFA_ASSIST_TOPIC_ID);
-
   upsertTopic(db, {
     id: MFA_ASSIST_TOPIC_ID,
-    name: mfaTopicLabel,
+    name: resolveTopicLabelFromSettings(settings, MFA_ASSIST_TOPIC_ID),
     category: 'mfa_assist',
     color: '#2563eb',
     defaultPriority: 'urgent',
     active: 1,
     sortOrder: 0,
     laneCode: MFA_ASSIST_LANE_CODE,
-  });
-
-  upsertRoutingRule(db, {
-    id: `rule_${MFA_ASSIST_TOPIC_ID}`,
-    topicId: MFA_ASSIST_TOPIC_ID,
-    name: mfaTopicLabel,
-    initialLastKnownLocationId: PF_FLOW_LOC_WAITING,
-    initialTargetLocationId: receptionRoomId,
-    initialQueueId: PF_FLOW_QUEUE_GENERAL,
-    initialMovementMode: 'call',
-    initialLocationConfidence: 'assumed',
-    publicDisplayMode: 'visible',
-    terminalInstructionTemplate: 'Bitte nehmen Sie im Wartezimmer Platz. Sie werden aufgerufen.',
-    requiresReceptionConfirmation: 0,
-    escortPolicy: 'none',
-    allowRedirect: 0,
-    allowedSurfaceIds: JSON.stringify([PF_FLOW_SURFACE_TERMINAL]),
-    journeyTemplateId: null,
-    active: 1,
   });
 
   let topicCount = 1;
@@ -449,30 +526,9 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
       laneCode: topic.laneCode,
     });
     topicCount += 1;
-
-    const targetLocationId = resolveTargetLocationId(topic.defaultRoomId, settings);
-    const movementMode = 'call';
-    const publicDisplayMode = 'visible';
-
-    upsertRoutingRule(db, {
-      id: `rule_${topic.topicId}`,
-      topicId: topic.topicId,
-      name: topic.label,
-      initialLastKnownLocationId: PF_FLOW_LOC_WAITING,
-      initialTargetLocationId: targetLocationId,
-      initialQueueId: PF_FLOW_QUEUE_GENERAL,
-      initialMovementMode: movementMode,
-      initialLocationConfidence: 'assumed',
-      publicDisplayMode,
-      terminalInstructionTemplate: terminalInstructionForTopic(topic.label),
-      requiresReceptionConfirmation: 0,
-      escortPolicy: 'none',
-      allowRedirect: topic.topicId === MFA_ASSIST_TOPIC_ID ? 0 : 1,
-      allowedSurfaceIds: JSON.stringify([PF_FLOW_SURFACE_TERMINAL]),
-      journeyTemplateId: null,
-      active: topic.enabled ? 1 : 0,
-    });
   }
+
+  syncRoutingRulesFromOpsSettings(db, settings, receptionRoomId);
 
   upsertSurface(db, {
     id: PF_FLOW_SURFACE_TERMINAL,
@@ -563,7 +619,7 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
     locations: 2 + settings.rooms.length,
     queues: 1,
     surfaces: surfaceCount,
-    routingRules: settings.topics.filter((topic) => topic.enabled).length,
+    routingRules: 1 + settings.topics.length,
     displayRules: displayRuleCount,
   };
 }

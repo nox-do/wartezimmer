@@ -14,6 +14,7 @@ import {
 } from '@praxis-flow/domain';
 
 export type TopicSetting = OpsSettings['topics'][number];
+/** `defaultRoomId` wird im Simple-Routing-Sync zu `RoutingRule.initialTargetLocationId`. */
 
 export { MFA_ASSIST_TOPIC_ID };
 

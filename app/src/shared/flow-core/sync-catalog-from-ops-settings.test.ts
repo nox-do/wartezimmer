@@ -1,17 +1,21 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
-import { createRuntime } from '@praxis-flow/flow-core/server';
+import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
+import { createRuntime, loadCatalog } from '@praxis-flow/flow-core/server';
 import { ensureFlowCoreSchema } from './flow-core-schema.js';
 import {
   PF_FLOW_LOC_WAITING,
   PF_FLOW_QUEUE_GENERAL,
+  PF_FLOW_SURFACE_MFA,
   PF_FLOW_SURFACE_TERMINAL,
   PF_FLOW_SURFACE_TV,
+  buildSimpleRoutingRuleRow,
+  isSimpleRoutingMode,
   syncCatalogFromOpsSettings,
 } from './sync-catalog-from-ops-settings.js';
 import type { OpsSettings } from '../db/db-types.js';
-import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS } from '../checkin-topic-settings.js';
+import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS, MFA_ASSIST_TOPIC_ID } from '../checkin-topic-settings.js';
 
 function sampleOpsSettings(): OpsSettings {
   return {
@@ -76,7 +80,7 @@ test('syncCatalogFromOpsSettings maps PF topics and rooms into a valid flow-core
 
   assert.ok(summary.topics >= DEFAULT_TERMINAL_TOPIC_DEFINITIONS.length);
   assert.equal(summary.queues, 1);
-  assert.ok(summary.routingRules >= 1);
+  assert.equal(summary.routingRules, 1 + DEFAULT_TERMINAL_TOPIC_DEFINITIONS.length);
   assert.ok(summary.displayRules >= 2);
 
   const topicCount = (
@@ -104,6 +108,24 @@ test('syncCatalogFromOpsSettings maps PF topics and rooms into a valid flow-core
   assert.equal(rezeptRule.target, 'mfa-tresen');
   assert.equal(rezeptRule.movementMode, 'call');
   assert.equal(rezeptRule.displayMode, 'visible');
+
+  const mfaRule = db
+    .prepare(
+      'SELECT initial_target_location_id AS target, allow_redirect AS allowRedirect, journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?',
+    )
+    .get(MFA_ASSIST_TOPIC_ID) as
+    | { target: string; allowRedirect: number; journeyTemplateId: string | null }
+    | undefined;
+  assert.ok(mfaRule);
+  assert.equal(mfaRule.target, 'mfa-tresen');
+  assert.equal(mfaRule.allowRedirect, 0);
+  assert.equal(mfaRule.journeyTemplateId, null);
+
+  const mfaDashboard = db
+    .prepare('SELECT type, supports_redirect AS supportsRedirect FROM surfaces WHERE id = ?')
+    .get(PF_FLOW_SURFACE_MFA) as { type: string; supportsRedirect: number } | undefined;
+  assert.equal(mfaDashboard?.type, 'dashboard');
+  assert.equal(mfaDashboard?.supportsRedirect, 1);
 
   const tvRule = db
     .prepare('SELECT display_mode AS mode FROM surface_display_rules WHERE surface_id = ?')
@@ -204,4 +226,65 @@ test('syncCatalogFromOpsSettings rebuilds catalog inside a transaction with exis
     | undefined;
   assert.equal(topic?.name, 'Blutabnahme Labor');
   assert.equal(runtime.visits().length, 1);
+});
+
+test('buildSimpleRoutingRuleRow: erzeugt Simple-Routing ohne Journey', () => {
+  const row = buildSimpleRoutingRuleRow({
+    topicId: 'blut',
+    name: 'Blutabnahme',
+    targetLocationId: 'labor',
+    terminalInstructionTemplate: 'Bitte warten.',
+    allowRedirect: true,
+    active: true,
+  });
+
+  assert.equal(row.id, 'rule_blut');
+  assert.equal(row.initialTargetLocationId, 'labor');
+  assert.equal(row.initialQueueId, PF_FLOW_QUEUE_GENERAL);
+  assert.equal(row.initialLastKnownLocationId, PF_FLOW_LOC_WAITING);
+  assert.equal(row.journeyTemplateId, null);
+  assert.equal(row.initialMovementMode, 'call');
+});
+
+test('syncCatalogFromOpsSettings in simple mode: alle RoutingRules ohne Journey', () => {
+  const settings = sampleOpsSettings();
+  assert.equal(isSimpleRoutingMode(settings), true);
+
+  const db = openTestFlowCoreDb();
+  syncCatalogFromOpsSettings(db, settings);
+
+  const rules = db
+    .prepare('SELECT topic_id AS topicId, journey_template_id AS journeyTemplateId FROM routing_rules')
+    .all() as Array<{ topicId: string; journeyTemplateId: string | null }>;
+  assert.ok(rules.length > 0);
+  assert.ok(rules.every((rule) => rule.journeyTemplateId === null));
+
+  validateCatalogIntegrity(loadCatalog(db));
+});
+
+test('syncCatalogFromOpsSettings in complex mode: interim weiterhin Simple-Rules ohne Journey', () => {
+  const db = openTestFlowCoreDb();
+  syncCatalogFromOpsSettings(db, { ...sampleOpsSettings(), routingMode: 'complex' });
+
+  const rules = db
+    .prepare('SELECT journey_template_id AS journeyTemplateId FROM routing_rules')
+    .all() as Array<{ journeyTemplateId: string | null }>;
+  assert.ok(rules.length > 0);
+  assert.ok(rules.every((rule) => rule.journeyTemplateId === null));
+});
+
+test('syncCatalogFromOpsSettings maps defaultRoomId to routing target location', () => {
+  const db = openTestFlowCoreDb();
+  const settings = {
+    ...sampleOpsSettings(),
+    topics: sampleOpsSettings().topics.map((topic) =>
+      topic.topicId === 'blut' ? { ...topic, defaultRoomId: 'labor' } : topic,
+    ),
+  };
+  syncCatalogFromOpsSettings(db, settings);
+
+  const rule = db
+    .prepare('SELECT initial_target_location_id AS target FROM routing_rules WHERE topic_id = ?')
+    .get('blut') as { target: string } | undefined;
+  assert.equal(rule?.target, 'labor');
 });

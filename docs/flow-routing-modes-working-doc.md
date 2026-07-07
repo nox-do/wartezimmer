@@ -145,6 +145,52 @@ RoutingRule:
   journeyTemplateId = null
 ```
 
+#### Simple Routing Sync (`syncCatalogFromOpsSettings`)
+
+Im Simple Mode erzeugt `syncSimpleRoutingRulesFromOpsSettings` fuer jedes
+konfigurierte Topic sowie `rule_mfa` eine RoutingRule mit `journeyTemplateId: null`.
+`active` spiegelt `topic.enabled`; deaktivierte Topics behalten ihre Rule, werden
+aber inaktiv. Der Einstieg ist `syncRoutingRulesFromOpsSettings`; Complex-Journey-Sync
+folgt in Paket 5.
+
+**Aus OpsSettings abgeleitet (pro Topic):**
+
+| RoutingRule-Feld | Quelle |
+|----------------|--------|
+| `id` | `rule_{topicId}` |
+| `topicId` | `topic.topicId` |
+| `name` | `topic.label` |
+| `active` | `topic.enabled` |
+| `initialTargetLocationId` | `topic.defaultRoomId` → aufloesen auf enabled Room, sonst Empfang |
+| `terminalInstructionTemplate` | generiert aus `topic.label` |
+| `allowRedirect` | `0` fuer `mfa`, sonst `1` |
+
+**Fest generiert (Simple Routing Konstanten):**
+
+| RoutingRule-Feld | Wert |
+|------------------|------|
+| `initialLastKnownLocationId` | `pf_waiting` |
+| `initialQueueId` | `pf_general_queue` |
+| `initialMovementMode` | `call` |
+| `initialLocationConfidence` | `assumed` |
+| `publicDisplayMode` | `visible` |
+| `requiresReceptionConfirmation` | `false` |
+| `escortPolicy` | `none` |
+| `allowedSurfaceIds` | `[pf_terminal_1]` |
+| `journeyTemplateId` | `null` |
+
+Zusaetzlich wird immer eine MFA-Assist-Rule (`rule_mfa`) mit Empfangsziel und
+`allowRedirect: 0` synchronisiert.
+
+**Weitere generierte Katalog-Entitaeten (nicht RoutingRule):**
+
+- Locations: `pf_entrance`, `pf_waiting`, plus alle `settings.rooms`
+- Queue: `pf_general_queue` (Home: Wartezimmer)
+- Surfaces: Terminal, Wartezimmer-TV, MFA-Dashboard, optionale Raum-Panels
+- Display Rules: `tv_general_visible`, `panel_{roomId}_target`
+
+Nach dem Sync validiert `validateCatalogIntegrity` den Katalog.
+
 UI:
 
 - Topic Editor bleibt sichtbar.
