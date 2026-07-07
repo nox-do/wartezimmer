@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS documents (
 CREATE TABLE IF NOT EXISTS ops_settings (
   id TEXT PRIMARY KEY,
   waiting_room_full INTEGER NOT NULL DEFAULT 0,
+  routing_mode TEXT NOT NULL DEFAULT 'simple' CHECK (routing_mode IN ('simple', 'complex')),
   return_window_minutes INTEGER NOT NULL DEFAULT 15,
   practice_open_from TEXT NOT NULL DEFAULT '00:00',
   practice_open_to TEXT NOT NULL DEFAULT '23:59',
@@ -109,6 +110,7 @@ CREATE TABLE IF NOT EXISTS ops_settings (
 INSERT INTO ops_settings (
   id,
   waiting_room_full,
+  routing_mode,
   return_window_minutes,
   practice_open_from,
   practice_open_to,
@@ -134,6 +136,7 @@ INSERT INTO ops_settings (
 SELECT
   'singleton',
   0,
+  'simple',
   15,
   '00:00',
   '23:59',

@@ -32,6 +32,7 @@ test('compareRoomPanelCallOrder falls back to createdAt when calledAt is missing
 
 function panelTestSettings(showPatientNames = false): OpsSettings {
   return {
+    routingMode: 'simple',
     returnWindowMinutes: 15,
     practiceOpenFrom: '00:00',
     practiceOpenTo: '23:59',

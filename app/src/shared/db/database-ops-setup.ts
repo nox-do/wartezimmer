@@ -64,6 +64,11 @@ export function ensureOpsSetupSchema(db: DatabaseSync): void {
   if (!columns.has('setup_completed_at')) {
     db.exec('ALTER TABLE ops_settings ADD COLUMN setup_completed_at TEXT');
   }
+  if (!columns.has('routing_mode')) {
+    db.exec(
+      "ALTER TABLE ops_settings ADD COLUMN routing_mode TEXT NOT NULL DEFAULT 'simple' CHECK (routing_mode IN ('simple', 'complex'))",
+    );
+  }
   if (!columns.has('setup_last_step')) {
     db.exec("ALTER TABLE ops_settings ADD COLUMN setup_last_step TEXT NOT NULL DEFAULT 'welcome'");
   }

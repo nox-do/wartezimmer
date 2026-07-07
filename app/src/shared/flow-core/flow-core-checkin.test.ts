@@ -15,6 +15,7 @@ import { MFA_ASSIST_TOPIC_ID } from '../checkin-topic-settings.js';
 
 function sampleSettings(): OpsSettings {
   return {
+    routingMode: 'simple',
     returnWindowMinutes: 15,
     practiceOpenFrom: '00:00',
     practiceOpenTo: '23:59',

@@ -10,6 +10,7 @@ import { isRecord } from '../type-guards.js';
 import { OpsSettingsValidationError } from './ops-settings-errors.js';
 import type {
   OpsSettings,
+  RoutingMode,
   RoomPanelMode,
   RoomPanelPlacement,
   RoomPanelTextPreset,
@@ -25,6 +26,7 @@ function isStringSetMember<T extends string>(values: ReadonlySet<T>, value: unkn
 }
 
 type OpsSettingsRow = {
+  routingMode?: string;
   returnWindowMinutes?: number;
   practiceOpenFrom?: string;
   practiceOpenTo?: string;
@@ -49,6 +51,7 @@ type OpsSettingsRow = {
 export type OpsSettingsPatch = Partial<
   Pick<
     OpsSettings,
+    | 'routingMode'
     | 'returnWindowMinutes'
     | 'practiceOpenFrom'
     | 'practiceOpenTo'
@@ -68,6 +71,12 @@ export type OpsSettingsPatch = Partial<
     | 'smsProvider'
   >
 >;
+
+const ROUTING_MODES = new Set<RoutingMode>(['simple', 'complex']);
+
+function normalizeRoutingMode(raw: unknown): RoutingMode {
+  return isStringSetMember(ROUTING_MODES, raw) ? raw : 'simple';
+}
 
 function parseTerminalPatientLocalesRaw(
   raw: string | undefined,
@@ -347,6 +356,7 @@ export function getOpsSettingsFromDb(params: {
   const topics = parseTopicSettingsRaw(row.topicSettingsJson);
 
   return {
+    routingMode: normalizeRoutingMode(row.routingMode),
     returnWindowMinutes: row.returnWindowMinutes ?? 15,
     practiceOpenFrom: row.practiceOpenFrom,
     practiceOpenTo: row.practiceOpenTo,
@@ -391,6 +401,7 @@ export function updateOpsSettingsInDb(
   }
 
   const next: OpsSettings = {
+    routingMode: patch.routingMode ?? current.routingMode,
     returnWindowMinutes: patch.returnWindowMinutes ?? current.returnWindowMinutes,
     practiceOpenFrom: patch.practiceOpenFrom ?? current.practiceOpenFrom,
     practiceOpenTo: patch.practiceOpenTo ?? current.practiceOpenTo,
@@ -418,6 +429,7 @@ export function updateOpsSettingsInDb(
 
   params.updateOpsSettingsStmt.run(
     0,
+    next.routingMode,
     next.returnWindowMinutes,
     next.practiceOpenFrom,
     next.practiceOpenTo,

@@ -5,6 +5,7 @@ import { buildSetupStatusSnapshot } from './setup-status.js';
 
 function baseSettings(overrides: Partial<OpsSettings> = {}): OpsSettings {
   return {
+    routingMode: 'simple',
     returnWindowMinutes: 15,
     practiceOpenFrom: '00:00',
     practiceOpenTo: '23:59',

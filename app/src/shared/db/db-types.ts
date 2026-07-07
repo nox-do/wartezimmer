@@ -142,7 +142,10 @@ export type MfaDocumentRow = PatientDocumentRow & {
   sessionId: string;
 };
 
+export type RoutingMode = 'simple' | 'complex';
+
 export type OpsSettings = {
+  routingMode: RoutingMode;
   returnWindowMinutes: number;
   practiceOpenFrom: string;
   practiceOpenTo: string;

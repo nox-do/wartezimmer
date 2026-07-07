@@ -29,6 +29,7 @@ export type MfaPatchOpsSettingsBody = Pick<
 /** Ops-editable subset — mirrors app `OPS_PATCH_KEYS`. */
 export type OpsPatchSystemSettingsBody = Pick<
   OpsPatchSettingsBody,
+  | 'routingMode'
   | 'contactLookupFolderPath'
   | 'contactLookupDelimiterMode'
   | 'contactLookupHasHeader'

@@ -203,6 +203,8 @@ export interface paths {
       requestBody: {
         content: {
           'application/json': {
+            /** @enum {string} */
+            routingMode?: 'simple' | 'complex';
             returnWindowMinutes?: number;
             practiceOpenFrom?: string;
             practiceOpenTo?: string;
@@ -1418,6 +1420,11 @@ export interface components {
       website: string;
     };
     OpsSettingsResponse: {
+      /**
+       * @description Practice-wide routing mode. simple preserves RoutingRules-only behavior; complex allows mixed topics with journeys later.
+       * @enum {string}
+       */
+      routingMode: 'simple' | 'complex';
       /** @description Single recall window for countdown, SMS text, and return with/without phone. MFA-editable under Betrieb settings. */
       returnWindowMinutes: number;
       /** @description Daily check-in window start (BUSINESS_TZ local time, HH:mm). */

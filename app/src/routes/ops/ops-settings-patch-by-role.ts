@@ -16,6 +16,7 @@ const MFA_PATCH_KEYS = new Set([
 ]);
 
 const OPS_PATCH_KEYS = new Set([
+  'routingMode',
   'contactLookupFolderPath',
   'contactLookupDelimiterMode',
   'contactLookupHasHeader',

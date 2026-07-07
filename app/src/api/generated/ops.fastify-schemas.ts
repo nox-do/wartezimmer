@@ -425,6 +425,7 @@ export const PracticeProfile = {
 export const OpsSettingsResponse = {
   type: 'object',
   required: [
+    'routingMode',
     'returnWindowMinutes',
     'practiceOpenFrom',
     'practiceOpenTo',
@@ -446,6 +447,10 @@ export const OpsSettingsResponse = {
     'updatedAt',
   ],
   properties: {
+    routingMode: {
+      type: 'string',
+      enum: ['simple', 'complex'],
+    },
     returnWindowMinutes: {
       type: 'integer',
       minimum: 1,
@@ -1603,6 +1608,7 @@ export const GET_api_v1_ops_heartbeatResponse200 = {
 export const GET_api_v1_ops_settingsResponse200 = {
   type: 'object',
   required: [
+    'routingMode',
     'returnWindowMinutes',
     'practiceOpenFrom',
     'practiceOpenTo',
@@ -1624,6 +1630,10 @@ export const GET_api_v1_ops_settingsResponse200 = {
     'updatedAt',
   ],
   properties: {
+    routingMode: {
+      type: 'string',
+      enum: ['simple', 'complex'],
+    },
     returnWindowMinutes: {
       type: 'integer',
       minimum: 1,
@@ -1956,6 +1966,10 @@ export const PATCH_api_v1_ops_settingsRequestBody = {
   minProperties: 1,
   additionalProperties: false,
   properties: {
+    routingMode: {
+      type: 'string',
+      enum: ['simple', 'complex'],
+    },
     returnWindowMinutes: {
       type: 'integer',
       minimum: 1,
@@ -2256,6 +2270,7 @@ export const PATCH_api_v1_ops_settingsRequestBody = {
 export const PATCH_api_v1_ops_settingsResponse200 = {
   type: 'object',
   required: [
+    'routingMode',
     'returnWindowMinutes',
     'practiceOpenFrom',
     'practiceOpenTo',
@@ -2277,6 +2292,10 @@ export const PATCH_api_v1_ops_settingsResponse200 = {
     'updatedAt',
   ],
   properties: {
+    routingMode: {
+      type: 'string',
+      enum: ['simple', 'complex'],
+    },
     returnWindowMinutes: {
       type: 'integer',
       minimum: 1,

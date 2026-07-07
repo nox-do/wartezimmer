@@ -122,6 +122,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     getOpsSettingsStmt: db.prepare(
       `SELECT
         waiting_room_full AS waitingRoomFull,
+        routing_mode AS routingMode,
         return_window_minutes AS returnWindowMinutes,
         practice_open_from AS practiceOpenFrom,
         practice_open_to AS practiceOpenTo,
@@ -148,6 +149,7 @@ export function prepareCoreDatabaseStatements(db: DatabaseSync): CoreDatabaseSta
     updateOpsSettingsStmt: db.prepare(
       `UPDATE ops_settings
       SET waiting_room_full = ?,
+          routing_mode = ?,
           return_window_minutes = ?,
           practice_open_from = ?,
           practice_open_to = ?,

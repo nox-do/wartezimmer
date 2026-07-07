@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import type { StatementSync } from 'node:sqlite';
 import test from 'node:test';
-import { ensureSingleDefaultCallTarget, getOpsSettingsFromDb } from './database-ops-settings.js';
+import {
+  ensureSingleDefaultCallTarget,
+  getOpsSettingsFromDb,
+  updateOpsSettingsInDb,
+} from './database-ops-settings.js';
 import { OpsSettingsValidationError } from './ops-settings-errors.js';
 
 function minimalOpsSettingsRow(overrides?: Record<string, unknown>) {
@@ -43,6 +47,51 @@ test('getOpsSettingsFromDb maps sqlite booleans strictly as value === 1', () => 
   assert.equal(settings.terminalAuthPhoneEnabled, false);
   assert.equal(settings.terminalAuthNameDobEnabled, false);
   assert.equal(settings.terminalAuthEgkEnabled, false);
+});
+
+test('getOpsSettingsFromDb defaults missing routingMode to simple', () => {
+  const settings = getOpsSettingsFromDb({
+    getOpsSettingsStmt: {
+      get: () => minimalOpsSettingsRow(),
+    } as StatementSync,
+    configuredExportBasePath: null,
+  });
+
+  assert.equal(settings.routingMode, 'simple');
+});
+
+test('getOpsSettingsFromDb reads stored complex routingMode', () => {
+  const settings = getOpsSettingsFromDb({
+    getOpsSettingsStmt: {
+      get: () => minimalOpsSettingsRow({ routingMode: 'complex' }),
+    } as StatementSync,
+    configuredExportBasePath: null,
+  });
+
+  assert.equal(settings.routingMode, 'complex');
+});
+
+test('updateOpsSettingsInDb persists routingMode and returns the saved value', () => {
+  const savedArgs: unknown[][] = [];
+  const settings = updateOpsSettingsInDb(
+    {
+      getOpsSettingsStmt: {
+        get: () => minimalOpsSettingsRow(),
+      } as StatementSync,
+      updateOpsSettingsStmt: {
+        run: (...args: unknown[]) => {
+          savedArgs.push(args);
+        },
+      } as StatementSync,
+      nowIso: () => '2026-01-01T01:00:00.000Z',
+      configuredExportBasePath: null,
+    },
+    { routingMode: 'complex' },
+  );
+
+  assert.equal(settings.routingMode, 'complex');
+  assert.equal(savedArgs.length, 1);
+  assert.equal(savedArgs[0]?.[1], 'complex');
 });
 
 test('getOpsSettingsFromDb treats only 1 as enabled for terminal auth flags', () => {

@@ -10414,6 +10414,7 @@
                 "schema": {
                   "type": "object",
                   "required": [
+                    "routingMode",
                     "returnWindowMinutes",
                     "practiceOpenFrom",
                     "practiceOpenTo",
@@ -10435,6 +10436,11 @@
                     "updatedAt"
                   ],
                   "properties": {
+                    "routingMode": {
+                      "type": "string",
+                      "enum": ["simple", "complex"],
+                      "description": "Practice-wide routing mode. simple preserves RoutingRules-only behavior; complex allows mixed topics with journeys later."
+                    },
                     "returnWindowMinutes": {
                       "type": "integer",
                       "minimum": 1,
@@ -10802,6 +10808,10 @@
                 "minProperties": 1,
                 "additionalProperties": false,
                 "properties": {
+                  "routingMode": {
+                    "type": "string",
+                    "enum": ["simple", "complex"]
+                  },
                   "returnWindowMinutes": {
                     "type": "integer",
                     "minimum": 1,
@@ -11119,6 +11129,7 @@
                 "schema": {
                   "type": "object",
                   "required": [
+                    "routingMode",
                     "returnWindowMinutes",
                     "practiceOpenFrom",
                     "practiceOpenTo",
@@ -11140,6 +11151,11 @@
                     "updatedAt"
                   ],
                   "properties": {
+                    "routingMode": {
+                      "type": "string",
+                      "enum": ["simple", "complex"],
+                      "description": "Practice-wide routing mode. simple preserves RoutingRules-only behavior; complex allows mixed topics with journeys later."
+                    },
                     "returnWindowMinutes": {
                       "type": "integer",
                       "minimum": 1,
@@ -17695,6 +17711,7 @@
       "OpsSettingsResponse": {
         "type": "object",
         "required": [
+          "routingMode",
           "returnWindowMinutes",
           "practiceOpenFrom",
           "practiceOpenTo",
@@ -17716,6 +17733,11 @@
           "updatedAt"
         ],
         "properties": {
+          "routingMode": {
+            "type": "string",
+            "enum": ["simple", "complex"],
+            "description": "Practice-wide routing mode. simple preserves RoutingRules-only behavior; complex allows mixed topics with journeys later."
+          },
           "returnWindowMinutes": {
             "type": "integer",
             "minimum": 1,

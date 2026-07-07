@@ -32,6 +32,7 @@ function tableHasColumn(db: DatabaseSync, table: string, column: string): boolea
 
 function sampleSettings(): OpsSettings {
   return {
+    routingMode: 'simple',
     returnWindowMinutes: 15,
     practiceOpenFrom: '00:00',
     practiceOpenTo: '23:59',

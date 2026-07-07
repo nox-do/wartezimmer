@@ -25,6 +25,7 @@ export function toPracticeProfileResponse(practiceProfileJson: string) {
 
 export function toOpsSettingsResponse(settings: ReturnType<CoreDatabase['getOpsSettings']>) {
   return {
+    routingMode: settings.routingMode,
     returnWindowMinutes: settings.returnWindowMinutes,
     practiceOpenFrom: settings.practiceOpenFrom,
     practiceOpenTo: settings.practiceOpenTo,
@@ -290,7 +291,15 @@ export async function buildOpsSettingsUpdate(
     }
   }
 
+  if (body.routingMode != null && body.routingMode !== 'simple' && body.routingMode !== 'complex') {
+    return {
+      code: 'INVALID_ARGUMENT',
+      message: 'routingMode must be simple or complex.',
+    };
+  }
+
   return {
+    routingMode: body.routingMode,
     returnWindowMinutes: body.returnWindowMinutes,
     practiceOpenFrom: body.practiceOpenFrom,
     practiceOpenTo: body.practiceOpenTo,

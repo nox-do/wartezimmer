@@ -65,6 +65,7 @@ function createRuntimeResetDeps(): RuntimeResetDeps & {
     getOpsSettingsStmt: {
       get: () => ({
         updatedAt: '2026-06-14T18:00:00.000Z',
+        routingMode: 'complex',
         returnWindowMinutes: 30,
         exportBasePath: '/tmp/exports',
         practiceOpenFrom: '08:00',

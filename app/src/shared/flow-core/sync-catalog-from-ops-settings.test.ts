@@ -15,6 +15,7 @@ import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS } from '../checkin-topic-settings.js
 
 function sampleOpsSettings(): OpsSettings {
   return {
+    routingMode: 'simple',
     returnWindowMinutes: 15,
     practiceOpenFrom: '08:00',
     practiceOpenTo: '18:00',
@@ -84,10 +85,13 @@ test('syncCatalogFromOpsSettings maps PF topics and rooms into a valid flow-core
   assert.ok(topicCount >= 1);
 
   const blutRule = db
-    .prepare('SELECT initial_target_location_id AS target FROM routing_rules WHERE topic_id = ?')
-    .get('blut') as { target: string } | undefined;
+    .prepare(
+      'SELECT initial_target_location_id AS target, journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?',
+    )
+    .get('blut') as { target: string; journeyTemplateId: string | null } | undefined;
   assert.ok(blutRule);
   assert.equal(blutRule.target, 'mfa-tresen');
+  assert.equal(blutRule.journeyTemplateId, null);
 
   const rezeptRule = db
     .prepare(
