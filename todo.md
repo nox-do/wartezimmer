@@ -13,6 +13,7 @@ Stand: 2026-07-07
 ## In Arbeit / Review
 
 - **Paket 6** – Topic UI mit RoutingMode-Schnitt
+- **MFA Settings UI** – Branch `feat/mfa-settings-sidebar`: Sidebar, Topics-Route, i18n/CSS-Leichen entfernt
 
 ## Referenzen
 

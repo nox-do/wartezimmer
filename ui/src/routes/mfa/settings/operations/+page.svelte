@@ -3,7 +3,7 @@
   import Modal from '$lib/components/Modal.svelte';
   import MfaBooleanSettingToggle from '$lib/components/mfa/MfaBooleanSettingToggle.svelte';
   import Button from '$lib/components/forms/Button.svelte';
-  import StaffSettingsShell from '$lib/components/shared/StaffSettingsShell.svelte';
+  import MfaSettingsPageHeader from '$lib/components/mfa/MfaSettingsPageHeader.svelte';
   import { changeAuthPin, type AuthPinTarget } from '$lib/auth/session-client';
   import { fetchOpsSettings, patchOpsSettings } from '$lib/queue/ops-settings-api';
   import { t } from '$lib/i18n/i18nStore.svelte';
@@ -252,12 +252,13 @@
   });
 </script>
 
-<StaffSettingsShell surface="mfa" title={t('mfa.settings.betriebTitle')}>
-  {#if loading}
-    <p class="text-muted">{t('ui.loading')}</p>
-  {:else}
-    <div class="panel">
-      <h2 class="panel__title">{t('mfa.settings.returnWindowPanelTitle')}</h2>
+<MfaSettingsPageHeader title={t('mfa.settings.betriebTitle')} lead={t('mfa.settings.betriebLead')} />
+
+{#if loading}
+  <p class="text-muted">{t('ui.loading')}</p>
+{:else}
+  <div class="panel">
+    <h2 class="panel__title">{t('mfa.settings.returnWindowPanelTitle')}</h2>
       <p class="text-desc">{t('mfa.settings.returnWindowPanelDesc')}</p>
       <label class="modal-form-field modal-form-field--narrow">
         {t('mfa.settings.returnWindowLabel')}
@@ -276,8 +277,8 @@
       </label>
     </div>
 
-    <div class="panel">
-      <h2 class="panel__title">{t('mfa.settings.pinSecurityPanelTitle')}</h2>
+  <div class="panel">
+    <h2 class="panel__title">{t('mfa.settings.pinSecurityPanelTitle')}</h2>
       <p class="text-desc">{t('mfa.settings.pinSecurityPanelDesc')}</p>
       <div class="pin-change-actions">
         <div class="pin-change-card">
@@ -308,8 +309,8 @@
       </div>
     </div>
 
-    <div class="panel">
-      <h2 class="panel__title">{t('mfa.settings.terminalAuthPanelTitle')}</h2>
+  <div class="panel">
+    <h2 class="panel__title">{t('mfa.settings.terminalAuthPanelTitle')}</h2>
       <p class="text-desc">{t('mfa.settings.terminalAuthPanelDesc')}</p>
       <MfaBooleanSettingToggle
         label={t('mfa.settings.terminalAuthPhoneLabel')}
@@ -334,8 +335,8 @@
       />
     </div>
 
-    <div class="panel">
-      <h2 class="panel__title">{t('mfa.settings.terminalPatientLocalesPanelTitle')}</h2>
+  <div class="panel">
+    <h2 class="panel__title">{t('mfa.settings.terminalPatientLocalesPanelTitle')}</h2>
       <p class="text-desc">{t('mfa.settings.terminalPatientLocalesPanelDesc')}</p>
       <MfaBooleanSettingToggle
         label={t('mfa.settings.terminalPatientLocaleDeLabel')}
@@ -355,8 +356,8 @@
       {/each}
     </div>
 
-    <div class="panel">
-      <h2 class="panel__title">{t('mfa.settings.terminalWlanPromoPanelTitle')}</h2>
+  <div class="panel">
+    <h2 class="panel__title">{t('mfa.settings.terminalWlanPromoPanelTitle')}</h2>
       <p class="text-desc">{t('mfa.settings.terminalWlanPromoPanelDesc')}</p>
       <MfaBooleanSettingToggle
         label={t('mfa.settings.terminalWlanPromoLabel')}
@@ -365,9 +366,8 @@
         busy={promoBusy}
         onChange={(next) => void handleWlanPromoToggle(next)}
       />
-    </div>
-  {/if}
-</StaffSettingsShell>
+  </div>
+{/if}
 
 <Modal
   open={pinDialogTarget != null}

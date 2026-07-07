@@ -72,8 +72,8 @@
     <a
       class="qs-settings-icon-btn"
       href="/mfa/settings"
-      aria-label={t('mfa.settings.openHub')}
-      title={t('mfa.settings.openHub')}
+      aria-label={t('mfa.settings.hubTitle')}
+      title={t('mfa.settings.hubTitle')}
     >
       <Settings size={18} aria-hidden="true" />
     </a>

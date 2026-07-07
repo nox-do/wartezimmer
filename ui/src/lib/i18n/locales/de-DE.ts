@@ -451,14 +451,11 @@ export const dict = {
     documentExported: 'Dokument ins PVS exportiert.',
     documentExportFailed: 'Export konnte nicht abgeschlossen werden.',
     settings: {
-      openHub: 'Praxis-Einstellungen',
       hubTitle: 'Praxis-Einstellungen',
       hubOpsLink: 'Systemeinstellungen',
       hubOpsLinkAria: 'Systemeinstellungen in neuem Tab öffnen',
-      cardBetriebTitle: 'Betrieb',
-      cardBetriebDesc: 'WLAN-Hinweis am Terminal und Rückkehr-Fenster nach Rückholung',
-      cardThemesRoomsTitle: 'Themen & Räume',
-      cardThemesRoomsDesc: 'Terminal-Themen, Nummernkreise und Standard-Aufrufziele',
+      navBack: 'Zurück',
+      navTopics: 'Themen',
       themesRoomsTitle: 'Themen & Räume',
       themesRoomsLead:
         'Räume sind Aufrufziele für TV und MFA. Jedes Terminal-Thema hat einen Nummernkreis (Buchstabe) und ein Standard-Aufrufziel.',
