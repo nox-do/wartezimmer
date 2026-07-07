@@ -359,10 +359,18 @@ export class SandboxClient {
     }
   }
 
-  async fetchPreviewEmbed(previewSessionId: string): Promise<Response> {
+  async fetchPreviewEmbed(
+    previewSessionId: string,
+    options: { raw?: boolean } = {},
+  ): Promise<Response> {
+    const params = new URLSearchParams();
+    if (options.raw) {
+      params.set('raw', '1');
+    }
+    const query = params.size > 0 ? `?${params.toString()}` : '';
     try {
       return await this.fetchWithTimeout(
-        `${this.baseUrl}/internal/preview/embed/${encodeURIComponent(previewSessionId)}`,
+        `${this.baseUrl}/internal/preview/embed/${encodeURIComponent(previewSessionId)}${query}`,
         {
           method: 'GET',
           headers: this.requestHeaders(),

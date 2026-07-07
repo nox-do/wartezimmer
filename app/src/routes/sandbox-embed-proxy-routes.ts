@@ -28,7 +28,7 @@ function streamWebBody(body: ReadableStream<Uint8Array>): Readable {
 export function registerSandboxEmbedProxyRoutes(app: FastifyInstance): void {
   app.get<{
     Params: { previewSessionId: string };
-    Querystring: { access?: string; documentId?: string };
+    Querystring: { access?: string; documentId?: string; raw?: string };
   }>('/internal/preview/embed/:previewSessionId', async (request, reply) => {
     const previewSessionId = request.params.previewSessionId.trim();
     if (!previewSessionId) {
@@ -50,7 +50,9 @@ export function registerSandboxEmbedProxyRoutes(app: FastifyInstance): void {
 
     try {
       const sandbox = getSandboxClient();
-      const response = await sandbox.fetchPreviewEmbed(previewSessionId);
+      const response = await sandbox.fetchPreviewEmbed(previewSessionId, {
+        raw: request.query.raw === '1',
+      });
       const contentType = response.headers.get('content-type') ?? 'application/octet-stream';
 
       if (!response.ok) {
