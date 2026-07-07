@@ -77,7 +77,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Ticket/api/v1/checkins/assist/press created */
+        /** @description Ticket created */
         201: {
           headers: {
             [name: string]: unknown;
@@ -121,7 +121,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '': {
+  '/api/v1/checkins/assist/press': {
     parameters: {
       query?: never;
       header?: never;
