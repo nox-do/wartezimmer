@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const managerRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = path.resolve(managerRoot, '..');
+const stripScript = path.join(repoRoot, 'scripts', 'strip-production-artifacts.mjs');
 const outputRoot = path.join(managerRoot, 'build-resources');
 const setupOutput = path.join(outputRoot, 'setup');
 const templatesOutput = path.join(outputRoot, 'templates');
@@ -52,6 +54,20 @@ fs.cpSync(path.join(repoRoot, 'setup', 'dist'), path.join(setupOutput, 'dist'), 
 fs.cpSync(path.join(repoRoot, 'packages', 'server-shared', 'dist'), path.join(serverSharedOutput, 'dist'), {
   recursive: true,
 });
+
+function stripPackagedDist(relativeDistPath) {
+  const result = spawnSync(process.execPath, [stripScript, `dist:${relativeDistPath}`], {
+    cwd: repoRoot,
+    stdio: 'inherit',
+  });
+  if (result.status !== 0) {
+    throw new Error(`strip-production-artifacts failed for ${relativeDistPath}`);
+  }
+}
+
+stripPackagedDist(path.join('manager', 'build-resources', 'setup', 'dist'));
+stripPackagedDist(path.join('manager', 'build-resources', 'setup', 'vendor', 'server-shared', 'dist'));
+
 for (const fileName of fs.readdirSync(path.join(serverSharedOutput, 'dist'))) {
   fs.renameSync(
     path.join(serverSharedOutput, 'dist', fileName),

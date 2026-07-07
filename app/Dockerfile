@@ -20,6 +20,7 @@ COPY packages/flow-core/package.json ./packages/flow-core/package.json
 RUN npm ci --foreground-scripts
 
 COPY scripts/copy-ui-static.mjs ./scripts/copy-ui-static.mjs
+COPY scripts/strip-production-artifacts.mjs ./scripts/strip-production-artifacts.mjs
 COPY scripts/bundle-openapi.mjs ./scripts/bundle-openapi.mjs
 COPY scripts/generate-fastify-schemas.mjs ./scripts/generate-fastify-schemas.mjs
 COPY scripts/generate-openapi-types.mjs ./scripts/generate-openapi-types.mjs
@@ -52,6 +53,11 @@ RUN npm exec -w @praxis-flow/ui -- svelte-kit sync
 RUN npm run -w @praxis-flow/ui build
 RUN npm run -w @praxis-flow/app build
 RUN node scripts/copy-ui-static.mjs
+RUN node scripts/strip-production-artifacts.mjs \
+  packages/domain \
+  packages/server-shared \
+  packages/flow-core \
+  dist:app/dist
 RUN npm prune --omit=dev --foreground-scripts
 
 FROM node:22-alpine AS runtime
@@ -64,9 +70,13 @@ RUN rm -rf /usr/local/lib/node_modules/npm \
 COPY package.json ./
 COPY app/package.json ./app/package.json
 COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/packages/domain ./packages/domain
-COPY --from=build /app/packages/server-shared ./packages/server-shared
-COPY --from=build /app/packages/flow-core ./packages/flow-core
+COPY --from=build /app/packages/domain/package.json ./packages/domain/package.json
+COPY --from=build /app/packages/domain/dist ./packages/domain/dist
+COPY --from=build /app/packages/server-shared/package.json ./packages/server-shared/package.json
+COPY --from=build /app/packages/server-shared/dist ./packages/server-shared/dist
+COPY --from=build /app/packages/flow-core/package.json ./packages/flow-core/package.json
+COPY --from=build /app/packages/flow-core/dist ./packages/flow-core/dist
+COPY --from=build /app/packages/flow-core/db ./packages/flow-core/db
 COPY --from=build /app/app/dist ./app/dist
 COPY --from=build /app/openapi/bundle.json ./openapi/bundle.json
 
