@@ -213,6 +213,7 @@ export interface paths {
               label?: string;
               laneCode?: string;
               defaultRoomId?: string;
+              journeyTemplateId?: string | null;
               iconId?: string | null;
               accentColor?: string;
               enabled?: boolean;
@@ -1473,6 +1474,8 @@ export interface components {
         /** @description Ticket number series letter for this topic (A–Z). */
         laneCode: string;
         defaultRoomId: string;
+        /** @description Complex routing only. When set, the topic routes via this JourneyTemplate instead of the simple default room. */
+        journeyTemplateId?: string | null;
         /** @description Optional curated Lucide icon id; null uses first letter of label on terminal. */
         iconId: string | null;
         /** @description Badge and terminal tile accent (hex). */

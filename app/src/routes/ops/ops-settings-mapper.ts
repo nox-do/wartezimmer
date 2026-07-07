@@ -128,6 +128,8 @@ function mergeTopicPatch(
     availableFrom: patch.availableFrom !== undefined ? patch.availableFrom : current.availableFrom,
     availableTo: patch.availableTo !== undefined ? patch.availableTo : current.availableTo,
     sortOrder: patch.sortOrder ?? index + 1,
+    journeyTemplateId:
+      patch.journeyTemplateId !== undefined ? patch.journeyTemplateId : current.journeyTemplateId,
   };
 }
 
@@ -167,6 +169,7 @@ function buildNextTopics(
       availableFrom: topic.availableFrom ?? null,
       availableTo: topic.availableTo ?? null,
       sortOrder: topic.sortOrder ?? index + 1,
+      journeyTemplateId: topic.journeyTemplateId ?? null,
     });
   }
 

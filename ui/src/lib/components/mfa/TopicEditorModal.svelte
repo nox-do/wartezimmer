@@ -5,6 +5,7 @@
   import TopicAccentPicker from '$lib/components/mfa/TopicAccentPicker.svelte';
   import TopicIconPickerModal from '$lib/components/mfa/TopicIconPickerModal.svelte';
   import TopicLaneBadge from '$lib/components/topics/TopicLaneBadge.svelte';
+  import type { RoutingCapabilities } from '$lib/mfa/practice-ops-api';
   import type { PracticeRoom, PracticeTopicSetting } from '$lib/queue/ops-settings-api';
   import { slugifyTopicId } from '$lib/queue/ops-settings-api';
   import { isReservedLaneCode } from '$lib/queue/topic-settings-form';
@@ -18,6 +19,7 @@
     mode?: 'add' | 'edit';
     draft?: PracticeTopicSetting;
     enabledRooms?: PracticeRoom[];
+    routingCapabilities?: RoutingCapabilities | null;
     autoSyncTopicId?: boolean;
     topicIdsTaken?: Set<string>;
     canDelete?: boolean;
@@ -43,6 +45,7 @@
       sortOrder: 1,
     }),
     enabledRooms = [],
+    routingCapabilities = null,
     autoSyncTopicId = true,
     topicIdsTaken = new Set<string>(),
     canDelete = false,
@@ -61,6 +64,14 @@
   const modalTitle = $derived(
     mode === 'add' ? t('mfa.settings.topicModalAddTitle') : t('mfa.settings.topicModalEditTitle'),
   );
+  const routingMode = $derived(routingCapabilities?.routingMode ?? 'simple');
+  const complexRoutingVisible = $derived(
+    routingCapabilities?.features.complexRouting === true && routingMode === 'complex',
+  );
+  const draftJourneyTemplateId = $derived(draft.journeyTemplateId ?? null);
+  const topicUsesJourney = $derived(complexRoutingVisible && Boolean(draftJourneyTemplateId));
+  const showSimpleRoutingSection = $derived(!topicUsesJourney);
+  const showComplexRoutingSection = $derived(complexRoutingVisible);
 
   function updateLabel(label: string) {
     const patch: Partial<PracticeTopicSetting> = { label };
@@ -93,8 +104,9 @@
     }
 
     if (
-      enabledRooms.length === 0 ||
-      !enabledRooms.some((room) => room.roomId === draft.defaultRoomId && room.enabled)
+      showSimpleRoutingSection &&
+      (enabledRooms.length === 0 ||
+        !enabledRooms.some((room) => room.roomId === draft.defaultRoomId && room.enabled))
     ) {
       roomError = t('mfa.settings.topicNoActiveRoom');
       return false;
@@ -123,6 +135,7 @@
       laneCode: draft.laneCode.trim().toUpperCase().slice(0, 1),
       accentColor: draft.accentColor,
       defaultRoomId: draft.defaultRoomId.trim(),
+      journeyTemplateId: draft.journeyTemplateId ?? null,
       availableFrom: draft.availableFrom?.trim() || null,
       availableTo: draft.availableTo?.trim() || null,
     });
@@ -217,29 +230,51 @@
       />
     </div>
 
-    <label class="modal-form-field">
-      <span>{t('mfa.settings.colDefaultRoom')}</span>
-      {#if enabledRooms.length === 0}
-        <span class="modal-form-error">{t('mfa.settings.topicNoActiveRoom')}</span>
-      {:else}
-        <select
-          class="form-input"
-          value={draft.defaultRoomId}
-          disabled={busy}
-          onchange={(event) => {
-            draft = { ...draft, defaultRoomId: (event.currentTarget as HTMLSelectElement).value };
-            roomError = '';
-          }}
-        >
-          {#each enabledRooms as room (room.roomId)}
-            <option value={room.roomId}>{room.roomLabel}</option>
-          {/each}
-        </select>
+    <fieldset class="modal-form-field modal-form-routing">
+      <legend>{t('mfa.settings.topicRoutingTitle')}</legend>
+
+      {#if showSimpleRoutingSection}
+        <label class="modal-form-field modal-form-field--nested">
+          <span>{t('mfa.settings.colDefaultRoom')}</span>
+          {#if enabledRooms.length === 0}
+            <span class="modal-form-error">{t('mfa.settings.topicNoActiveRoom')}</span>
+          {:else}
+            <select
+              class="form-input"
+              value={draft.defaultRoomId}
+              disabled={busy}
+              onchange={(event) => {
+                draft = { ...draft, defaultRoomId: (event.currentTarget as HTMLSelectElement).value };
+                roomError = '';
+              }}
+            >
+              {#each enabledRooms as room (room.roomId)}
+                <option value={room.roomId}>{room.roomLabel}</option>
+              {/each}
+            </select>
+          {/if}
+          {#if roomError}
+            <span class="modal-form-error">{roomError}</span>
+          {/if}
+        </label>
       {/if}
-      {#if roomError}
-        <span class="modal-form-error">{roomError}</span>
+
+      {#if showComplexRoutingSection}
+        <div class="modal-form-journey">
+          <span>{t('mfa.settings.topicJourneyTitle')}</span>
+          <strong>
+            {draftJourneyTemplateId
+              ? tf('mfa.settings.topicJourneySelected', { journey: draftJourneyTemplateId })
+              : t('mfa.settings.topicJourneySimpleFallback')}
+          </strong>
+          <p class="modal-form-hint">
+            {draftJourneyTemplateId
+              ? t('mfa.settings.topicJourneyReadOnlyHint')
+              : t('mfa.settings.topicJourneyFallbackHint')}
+          </p>
+        </div>
       {/if}
-    </label>
+    </fieldset>
 
     <label class="modal-form-check">
       <input

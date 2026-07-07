@@ -1,4 +1,8 @@
 import {
+  fetchRoutingCapabilities,
+  type RoutingCapabilities,
+} from '$lib/mfa/practice-ops-api';
+import {
   fetchOpsSettings,
   isValidRoomId,
   isValidTopicId,
@@ -10,7 +14,11 @@ import {
 } from '$lib/queue/ops-settings-api';
 import { setPracticeTopicCatalog } from '$lib/queue/practice-catalog';
 import { roomGuardErrorMessage } from '$lib/queue/room-removal-guard';
-import { isReservedLaneCode, reconcileTopicsWithRooms } from '$lib/queue/topic-settings-form';
+import {
+  isReservedLaneCode,
+  reconcileTopicsWithRooms,
+  syncTopicDefaultRooms,
+} from '$lib/queue/topic-settings-form';
 import { validateTopicTimeWindow } from '$lib/queue/time-of-day';
 import { t, tf } from '$lib/i18n/i18nStore.svelte';
 import { toastStore } from '$lib/stores/toastStore';
@@ -18,13 +26,21 @@ import { toastStore } from '$lib/stores/toastStore';
 export type TopicsRoomsSettings = {
   rooms: PracticeRoomWithPanel[];
   topics: PracticeTopicSetting[];
+  routingCapabilities: RoutingCapabilities;
   savedTopicsSnapshot: string;
 };
 
 export async function loadTopicsRoomsSettings(): Promise<TopicsRoomsSettings | null> {
-  const result = await fetchOpsSettings();
+  const [result, capabilitiesResult] = await Promise.all([
+    fetchOpsSettings(),
+    fetchRoutingCapabilities(),
+  ]);
   if (!result.ok) {
     toastStore.error(result.error.message || t('mfa.settings.settingsLoadError'));
+    return null;
+  }
+  if (!capabilitiesResult.ok) {
+    toastStore.error(capabilitiesResult.error.message || t('mfa.settings.settingsLoadError'));
     return null;
   }
 
@@ -37,6 +53,7 @@ export async function loadTopicsRoomsSettings(): Promise<TopicsRoomsSettings | n
   return {
     rooms: [...result.data.rooms],
     topics,
+    routingCapabilities: capabilitiesResult.data,
     savedTopicsSnapshot: JSON.stringify(normalizeTopicsForSave(topics)),
   };
 }
@@ -44,10 +61,10 @@ export async function loadTopicsRoomsSettings(): Promise<TopicsRoomsSettings | n
 export async function persistTopicsRoomsSettings(
   rooms: PracticeRoomWithPanel[],
   topics: PracticeTopicSetting[],
-  options?: { silent?: boolean },
+  options?: { silent?: boolean; routingCapabilities?: RoutingCapabilities | null },
 ): Promise<TopicsRoomsSettings | null> {
   const normalizedRooms = normalizeRoomsForSave(rooms);
-  const normalizedTopics = normalizeTopicsForSave(topics);
+  const normalizedTopics = syncTopicDefaultRooms(normalizeTopicsForSave(topics), normalizedRooms);
 
   if (normalizedRooms.length === 0) {
     toastStore.error(t('mfa.settings.roomsSaveNeedOne'));
@@ -121,6 +138,28 @@ export async function persistTopicsRoomsSettings(
   return {
     rooms: [...result.data.rooms],
     topics: nextTopics,
+    routingCapabilities: await loadRoutingCapabilitiesAfterSave(options?.routingCapabilities ?? null),
     savedTopicsSnapshot: JSON.stringify(normalizeTopicsForSave(nextTopics)),
   };
+}
+
+async function loadRoutingCapabilitiesAfterSave(
+  fallback: RoutingCapabilities | null,
+): Promise<RoutingCapabilities> {
+  const capabilitiesResult = await fetchRoutingCapabilities();
+  if (!capabilitiesResult.ok) {
+    toastStore.error(capabilitiesResult.error.message || t('mfa.settings.settingsLoadError'));
+    if (fallback) {
+      return fallback;
+    }
+    return {
+      routingMode: 'simple',
+      features: {
+        complexRouting: false,
+        journeyDesigner: false,
+        routingSimulator: false,
+      },
+    };
+  }
+  return capabilitiesResult.data;
 }

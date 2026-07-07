@@ -491,6 +491,7 @@ export const dict = {
       topicTimeWindowIncompleteForTopic:
         'Thema „{label}“: bitte Start- und Endzeit angeben oder beide leer lassen.',
       topicMetaLane: 'Nr.-Kreis {lane}',
+      topicMetaJourney: 'Journey {journey}',
       topicRemove: 'Entfernen',
       topicDefaultLabel: 'Neues Thema',
       topicIconChoose: 'Icon wählen',
@@ -502,6 +503,14 @@ export const dict = {
       topicsInvalid:
         'Bitte für jedes Thema ein Label und genau einen Buchstaben A–Z als Nummernkreis angeben.',
       topicRoomInvalid: 'Jedes Thema braucht ein aktives Standard-Aufrufziel aus der Raumliste.',
+      topicRoutingTitle: 'Routing',
+      topicJourneyTitle: 'Journey',
+      topicJourneySelected: 'Verknüpft: {journey}',
+      topicJourneySimpleFallback: 'Keine Journey verknüpft',
+      topicJourneyReadOnlyHint:
+        'Die Journey-Zuordnung ist vorbereitet und bleibt beim Bearbeiten der Basisdaten erhalten. Bearbeiten folgt im Journey-Designer.',
+      topicJourneyFallbackHint:
+        'Dieses Thema nutzt im Complex Mode weiterhin das einfache Standardziel.',
       colLaneCode: 'Nr.-Kreis',
       colDefaultRoom: 'Standard-Aufrufziel',
       colEnabled: 'Aktiv',

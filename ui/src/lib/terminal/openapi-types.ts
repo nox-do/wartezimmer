@@ -4,4 +4,5 @@
 import type { components } from './generated/checkin-openapi';
 
 export type VisitCreated = components['schemas']['VisitCreated'];
+export type TicketCreated = VisitCreated;
 export type TerminalTopic = components['schemas']['TerminalTopic'];

@@ -502,6 +502,11 @@ export const OpsSettingsResponse = {
             minLength: 1,
             maxLength: 64,
           },
+          journeyTemplateId: {
+            type: ['string', 'null'],
+            minLength: 1,
+            maxLength: 128,
+          },
           iconId: {
             type: ['string', 'null'],
           },
@@ -1713,6 +1718,11 @@ export const GET_api_v1_ops_settingsResponse200 = {
             minLength: 1,
             maxLength: 64,
           },
+          journeyTemplateId: {
+            type: ['string', 'null'],
+            minLength: 1,
+            maxLength: 128,
+          },
           iconId: {
             type: ['string', 'null'],
           },
@@ -2037,6 +2047,11 @@ export const PATCH_api_v1_ops_settingsRequestBody = {
             type: 'string',
             minLength: 1,
             maxLength: 64,
+          },
+          journeyTemplateId: {
+            type: ['string', 'null'],
+            minLength: 1,
+            maxLength: 128,
           },
           iconId: {
             type: ['string', 'null'],
@@ -2374,6 +2389,11 @@ export const PATCH_api_v1_ops_settingsResponse200 = {
             type: 'string',
             minLength: 1,
             maxLength: 64,
+          },
+          journeyTemplateId: {
+            type: ['string', 'null'],
+            minLength: 1,
+            maxLength: 128,
           },
           iconId: {
             type: ['string', 'null'],

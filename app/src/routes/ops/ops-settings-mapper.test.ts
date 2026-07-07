@@ -65,6 +65,74 @@ test('buildOpsSettingsUpdate preserves maxOccupancy on rooms patch', async () =>
   assert.equal(result.rooms?.[0]?.maxOccupancy, 1);
 });
 
+test('buildOpsSettingsUpdate preserves topic journeyTemplateId on topic base-data patch', async () => {
+  const db = {
+    getOpsSettings: () => ({
+      ...mockDb().getOpsSettings(),
+      topics: [
+        {
+          ...mockDb().getOpsSettings().topics[0]!,
+          journeyTemplateId: 'journey_labor',
+        },
+      ],
+    }),
+  } as unknown as CoreDatabase;
+
+  const result = await buildOpsSettingsUpdate(db, {
+    topics: [
+      {
+        topicId: 'offen',
+        label: 'Offen aktualisiert',
+        laneCode: 'O',
+        defaultRoomId: 'empfang',
+        iconId: null,
+        accentColor: '#000000',
+        enabled: true,
+        availableFrom: null,
+        availableTo: null,
+        sortOrder: 1,
+      },
+    ],
+  });
+
+  assert.ok(result && !('code' in result));
+  if ('code' in result) {
+    return;
+  }
+
+  assert.equal(result.topics?.[0]?.journeyTemplateId, 'journey_labor');
+});
+
+test('buildOpsSettingsUpdate allows clearing topic journeyTemplateId explicitly', async () => {
+  const db = {
+    getOpsSettings: () => ({
+      ...mockDb().getOpsSettings(),
+      topics: [
+        {
+          ...mockDb().getOpsSettings().topics[0]!,
+          journeyTemplateId: 'journey_labor',
+        },
+      ],
+    }),
+  } as unknown as CoreDatabase;
+
+  const result = await buildOpsSettingsUpdate(db, {
+    topics: [
+      {
+        topicId: 'offen',
+        journeyTemplateId: null,
+      },
+    ],
+  });
+
+  assert.ok(result && !('code' in result));
+  if ('code' in result) {
+    return;
+  }
+
+  assert.equal(result.topics?.[0]?.journeyTemplateId, null);
+});
+
 test('buildOpsSettingsUpdate preserves defaultCallTarget on rooms patch', async () => {
   const result = await buildOpsSettingsUpdate(mockDb(), {
     rooms: [

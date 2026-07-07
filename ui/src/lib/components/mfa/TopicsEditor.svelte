@@ -5,6 +5,7 @@
   import TopicEditorModal from '$lib/components/mfa/TopicEditorModal.svelte';
   import TopicSortableRow from '$lib/components/mfa/TopicSortableRow.svelte';
   import { DEFAULT_TOPIC_ACCENT } from '$lib/topics/topic-accent';
+  import type { RoutingCapabilities } from '$lib/mfa/practice-ops-api';
   import type { PracticeRoom, PracticeTopicSetting } from '$lib/queue/ops-settings-api';
   import {
     arrayMoveToInsertBefore,
@@ -22,12 +23,21 @@
     topics: PracticeTopicSetting[];
     enabledRooms: PracticeRoom[];
     savedTopicIds: Set<string>;
+    routingCapabilities?: RoutingCapabilities | null;
     busy?: boolean;
     onChange?: (topics: PracticeTopicSetting[]) => void;
     onPersist?: (options?: { silent?: boolean }) => void | Promise<boolean>;
   }
 
-  let { topics, enabledRooms, savedTopicIds, busy = false, onChange, onPersist }: Props = $props();
+  let {
+    topics,
+    enabledRooms,
+    savedTopicIds,
+    routingCapabilities = null,
+    busy = false,
+    onChange,
+    onPersist,
+  }: Props = $props();
 
   let editorOpen = $state(false);
   let editorMode = $state<'add' | 'edit'>('add');
@@ -43,6 +53,9 @@
   let removeSortPointerListener: (() => void) | null = null;
 
   const sortDragEnabled = $derived(topics.length > 1 && !busy);
+  const complexRoutingVisible = $derived(
+    routingCapabilities?.features.complexRouting === true && routingCapabilities?.routingMode === 'complex',
+  );
 
   const sortLineOffsetPx = $derived.by(() => {
     const insertBefore = sortInsertBeforeIndex;
@@ -146,9 +159,13 @@
   }
 
   function topicMeta(topic: PracticeTopicSetting): string {
+    const routeLabel =
+      complexRoutingVisible && topic.journeyTemplateId
+        ? tf('mfa.settings.topicMetaJourney', { journey: topic.journeyTemplateId })
+        : roomLabelById(enabledRooms, topic.defaultRoomId);
     const parts = [
       tf('mfa.settings.topicMetaLane', { lane: topic.laneCode.trim().toUpperCase() }),
-      roomLabelById(enabledRooms, topic.defaultRoomId),
+      routeLabel,
     ];
     const time = topicTimeWindowLabel(topic);
     if (time !== '—') {
@@ -309,6 +326,7 @@
   mode={editorMode}
   bind:draft
   {enabledRooms}
+  {routingCapabilities}
   {autoSyncTopicId}
   topicIdsTaken={editorTopicIdsTaken}
   canDelete={editorMode === 'edit' && topics.length > 1}

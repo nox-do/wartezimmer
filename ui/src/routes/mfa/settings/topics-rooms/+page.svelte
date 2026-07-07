@@ -5,12 +5,14 @@
   import { loadTopicsRoomsSettings, persistTopicsRoomsSettings } from '$lib/mfa/topics-rooms-settings';
   import { reconcileTopicsWithRooms } from '$lib/queue/topic-settings-form';
   import type { PracticeRoomWithPanel, PracticeTopicSetting } from '$lib/queue/ops-settings-api';
+  import type { RoutingCapabilities } from '$lib/mfa/practice-ops-api';
   import { t } from '$lib/i18n/i18nStore.svelte';
 
   let loading = $state(true);
   let saving = $state(false);
   let rooms = $state<PracticeRoomWithPanel[]>([]);
   let topics = $state<PracticeTopicSetting[]>([]);
+  let routingCapabilities = $state<RoutingCapabilities | null>(null);
 
   function handleRoomsChange(nextRooms: PracticeRoomWithPanel[]) {
     rooms = nextRooms;
@@ -25,11 +27,15 @@
     }
     rooms = result.rooms;
     topics = result.topics;
+    routingCapabilities = result.routingCapabilities;
   }
 
   async function persistSettings(options?: { silent?: boolean }): Promise<boolean> {
     saving = true;
-    const result = await persistTopicsRoomsSettings(rooms, topics, options);
+    const result = await persistTopicsRoomsSettings(rooms, topics, {
+      ...options,
+      routingCapabilities,
+    });
     saving = false;
     if (!result) {
       await loadSettings();

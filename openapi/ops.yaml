@@ -437,6 +437,12 @@ components:
                 type: string
                 minLength: 1
                 maxLength: 64
+              journeyTemplateId:
+                type: string
+                nullable: true
+                minLength: 1
+                maxLength: 128
+                description: Complex routing only. When set, the topic routes via this JourneyTemplate instead of the simple default room.
               iconId:
                 type: string
                 nullable: true
@@ -1216,6 +1222,11 @@ paths:
                         type: string
                         minLength: 1
                         maxLength: 64
+                      journeyTemplateId:
+                        type: string
+                        nullable: true
+                        minLength: 1
+                        maxLength: 128
                       iconId:
                         type: string
                         nullable: true
