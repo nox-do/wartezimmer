@@ -4,6 +4,7 @@
   import LegacyViewContainers from './LegacyViewContainers.svelte';
   import MainNav from './MainNav.svelte';
   import StatusView from './StatusView.svelte';
+  import MaintenanceView from './MaintenanceView.svelte';
   import { managerShell, showChrome, wizardFullscreen } from './manager-shell-state.svelte.js';
 
   let {
@@ -32,6 +33,7 @@
         onLoadReleaseArchive={onStatusLoadReleaseArchive}
         onOpenUrl={onStatusOpenUrl}
       />
+      <MaintenanceView />
       <LegacyViewContainers />
     </div>
   </div>

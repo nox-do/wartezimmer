@@ -4,11 +4,12 @@ import {
   defaultWizardPresentation,
 } from './manager-navigation.js';
 import type { NavigateOptions } from './manager-navigation.js';
-import { createMaintenanceView } from './maintenance-view.js';
 import { createNetworkView } from './network-view.js';
 import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
 import { createWizardView } from './wizard-view.js';
 import { queryRequired } from './dom.js';
+import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
+import type { HostStatus } from '../shared/host-status.js';
 import type { ManagerView } from './host-refresh-controller.js';
 import {
   applyHostStatus,
@@ -17,6 +18,11 @@ import {
   applyShellNavigation,
   applyStatusError,
 } from './manager-shell-state.svelte.js';
+import {
+  getMaintenanceViewAdapter,
+  setMaintenanceCallbacks,
+  tryGetMaintenanceViewAdapter,
+} from './maintenance-view-adapter.js';
 
 export type ManagerAppController = {
   navigateTab: (tab: ManagerView) => void;
@@ -28,7 +34,6 @@ export type ManagerAppController = {
 export function createManagerAppController(doc: Document = document): ManagerAppController {
   const networkViewEl = queryRequired<HTMLElement>(doc, '#network-view', 'Manager-UI');
   const wizardView = queryRequired<HTMLElement>(doc, '#wizard-view', 'Manager-UI');
-  const maintenanceViewEl = queryRequired<HTMLElement>(doc, '#maintenance-view', 'Manager-UI');
 
   function requirePraxisManager(): Window['praxisManager'] {
     const api = window.praxisManager;
@@ -41,19 +46,16 @@ export function createManagerAppController(doc: Document = document): ManagerApp
   }
 
   function setDomView(view: ManagerView): void {
-    if (view !== 'maintenance') {
-      maintenance.hide();
-    }
     if (view !== 'network') {
       network.hide();
     }
     if (view !== 'wizard') {
       wizard.hide();
     }
-
-    if (view === 'maintenance') {
-      maintenanceViewEl.hidden = false;
+    if (view !== 'maintenance') {
+      tryGetMaintenanceViewAdapter()?.hide();
     }
+
     if (view === 'network') {
       networkViewEl.hidden = false;
     }
@@ -89,11 +91,23 @@ export function createManagerAppController(doc: Document = document): ManagerApp
     navigation.navigateTo('wizard', { wizardPresentation: 'fullscreen' });
   }
 
-  const maintenance = createMaintenanceView(maintenanceViewEl, requirePraxisManager(), {
-    onAfterMutation: () => {
-      void hostRefresh.refresh({ scope: 'full', immediate: true });
+  const maintenance = {
+    show: (status: HostStatus) => {
+      getMaintenanceViewAdapter().show(status);
     },
-  });
+    hide: () => {
+      tryGetMaintenanceViewAdapter()?.hide();
+    },
+    setLoading: (loading: boolean) => {
+      tryGetMaintenanceViewAdapter()?.setLoading(loading);
+    },
+    applyConfigSnapshot: (status: HostStatus) => {
+      getMaintenanceViewAdapter().applyConfigSnapshot(status);
+    },
+    applyRuntimeHealth: (health: HostRuntimeHealth) => {
+      getMaintenanceViewAdapter().applyRuntimeHealth(health);
+    },
+  };
 
   const network = createNetworkView(networkViewEl, requirePraxisManager(), {
     onAfterMutation: () => {
@@ -125,6 +139,12 @@ export function createManagerAppController(doc: Document = document): ManagerApp
     },
     onError(message) {
       applyRuntimeError(message);
+    },
+  });
+
+  setMaintenanceCallbacks({
+    onAfterMutation: () => {
+      void hostRefresh.refresh({ scope: 'full', immediate: true });
     },
   });
 
