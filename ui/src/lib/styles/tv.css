@@ -46,7 +46,8 @@
   min-height: 0;
 }
 
-.tv-page .tv-panel--waiting {
+.tv-page .tv-panel--waiting,
+.tv-page .tv-panel--calls {
   display: flex;
   flex-direction: column;
   max-height: calc(100dvh - clamp(72px, 10vh, 120px));
@@ -95,13 +96,14 @@
   padding: clamp(8px, 1.2vh, 14px) 0;
 }
 
-.tv-page .tv-waiting-viewport {
+.tv-page .tv-panel-viewport {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
 }
 
-.tv-page .tv-num-list--waiting {
+.tv-page .tv-num-list--waiting,
+.tv-page .tv-num-list--calls {
   height: 100%;
 }
 
@@ -116,7 +118,7 @@
   font-size: var(--tv-ticket-size-cols-2);
 }
 
-.tv-page .tv-waiting-pages {
+.tv-page .tv-panel-pages {
   margin: clamp(8px, 1.2vh, 14px) 0 0;
   text-align: center;
   font-size: clamp(0.75rem, 1.2vw, 0.9rem);

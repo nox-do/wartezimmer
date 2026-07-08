@@ -409,6 +409,7 @@ export const dict = {
     assistTitle: 'Hilfe am Terminal',
     assistLine: '{device} · seit {time} · noch {seconds} Sek.',
     entryNeedsAssistance: 'Hilfe am Terminal',
+    entryCalled: 'Aufgerufen',
     entryArrived: 'Angekommen',
     entryArrivedHere: 'OK · {room}',
     entryRecallActive: '{topic} · Rückholung aktiv',
