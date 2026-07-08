@@ -29,7 +29,7 @@ export type ManagerNavigationViews = {
 export type ManagerNavigationDeps = {
   hostRefresh: HostRefreshController;
   syncShell: (view: ManagerView, options?: NavigateOptions) => void;
-  setDomView: (view: ManagerView, options?: NavigateOptions) => void;
+  setDomView: (view: ManagerView) => void;
   views: ManagerNavigationViews;
   fetchSetupStatus: () => Promise<HostStatus>;
 };
@@ -45,7 +45,7 @@ export function createManagerNavigation(deps: ManagerNavigationDeps) {
 
   function navigateTo(view: ManagerView, options: NavigateOptions = {}): void {
     deps.hostRefresh.setView(view);
-    deps.setDomView(view, options);
+    deps.setDomView(view);
     deps.syncShell(view, options);
 
     if (view === 'wizard') {

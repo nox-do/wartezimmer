@@ -38,13 +38,8 @@ function isWizardFullscreen(): boolean {
   return wizardPresentation === 'fullscreen';
 }
 
-function setDomView(view: ManagerView, options: NavigateOptions = {}): void {
-  if (options.wizardPresentation) {
-    wizardPresentation = options.wizardPresentation;
-  }
-
+function setDomView(view: ManagerView): void {
   statusView.hidden = view !== 'status';
-  appShellEl.classList.toggle('is-wizard-fullscreen', view === 'wizard' && isWizardFullscreen());
 
   if (view !== 'maintenance') {
     maintenance.hide();
