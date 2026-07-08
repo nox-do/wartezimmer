@@ -1,11 +1,17 @@
 import type { HostRefreshController, ManagerView } from './host-refresh-controller.js';
 import type { HostStatus } from '../shared/host-status.js';
 
+export type WizardPresentation = 'fullscreen' | 'embedded';
+
+export type NavigateOptions = {
+  wizardPresentation?: WizardPresentation;
+};
+
 export type DeferredView = 'maintenance' | 'network';
 
 export type ManagerNavigationViews = {
   wizard: {
-    show: (status: HostStatus | null) => void;
+    show: (status: HostStatus | null, presentation: WizardPresentation) => void;
     hide: () => void;
   };
   maintenance: {
@@ -22,9 +28,8 @@ export type ManagerNavigationViews = {
 
 export type ManagerNavigationDeps = {
   hostRefresh: HostRefreshController;
-  healthHeader: { hide: () => void };
-  syncHealthHeaderVisibility: (view: ManagerView, config: HostStatus | null) => void;
-  setDomView: (view: ManagerView) => void;
+  syncShell: (view: ManagerView, options?: NavigateOptions) => void;
+  setDomView: (view: ManagerView, options?: NavigateOptions) => void;
   views: ManagerNavigationViews;
   fetchSetupStatus: () => Promise<HostStatus>;
 };
@@ -38,31 +43,29 @@ export function createManagerNavigation(deps: ManagerNavigationDeps) {
     deps.views[view].setLoading(loading);
   }
 
-  function navigateTo(view: ManagerView): void {
+  function navigateTo(view: ManagerView, options: NavigateOptions = {}): void {
     deps.hostRefresh.setView(view);
-    deps.setDomView(view);
+    deps.setDomView(view, options);
+    deps.syncShell(view, options);
 
     if (view === 'wizard') {
-      deps.healthHeader.hide();
+      const presentation = options.wizardPresentation ?? 'embedded';
       void (async () => {
         try {
           const status = await deps.fetchSetupStatus();
           if (deps.hostRefresh.getView() !== 'wizard') {
             return;
           }
-          deps.views.wizard.show(status);
+          deps.views.wizard.show(status, presentation);
         } catch {
           if (deps.hostRefresh.getView() !== 'wizard') {
             return;
           }
-          deps.views.wizard.show(null);
+          deps.views.wizard.show(null, presentation);
         }
       })();
       return;
     }
-
-    const config = deps.hostRefresh.getLastConfig();
-    deps.syncHealthHeaderVisibility(view, config);
 
     if (isDeferredView(view)) {
       setDeferredViewLoading(view, true);

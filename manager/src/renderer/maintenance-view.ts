@@ -11,10 +11,10 @@ import { deliveryImagesSummary, pickAndLoadReleaseArchive } from './delivery-ima
 import { queryRequired } from './dom.js';
 import { setButtonIcon } from './lucide-icons.js';
 import { createViewLoadingOverlay } from './view-loading.js';
+import { createMaintenanceAccordion } from './maintenance-accordion.js';
 import { formatRoutingModeError, renderRoutingModePanel } from './routing-mode-ui.js';
 
 export type MaintenanceCallbacks = {
-  onBack: () => void;
   onAfterMutation?: () => void;
 };
 
@@ -55,7 +55,6 @@ export function createMaintenanceView(
   const logsPre = queryRequired<HTMLPreElement>(root, '#maintenance-logs', 'Maintenance-UI');
   const backupInfo = queryRequired<HTMLElement>(root, '#maintenance-backup-info', 'Maintenance-UI');
   const errorEl = queryRequired<HTMLElement>(root, '#maintenance-error', 'Maintenance-UI');
-  const backBtn = queryRequired<HTMLButtonElement>(root, '#maintenance-back', 'Maintenance-UI');
   const stackToggle = queryRequired<HTMLInputElement>(
     root,
     '#maintenance-stack-toggle',
@@ -199,6 +198,10 @@ export function createMaintenanceView(
   );
 
   const viewLoading = createViewLoadingOverlay(root);
+  createMaintenanceAccordion(
+    queryRequired<HTMLElement>(root, '#maintenance-accordion', 'Maintenance-UI'),
+    'practice',
+  );
   setButtonIcon(refreshLogsBtn, 'rotate-cw');
   setButtonIcon(backupTipBtn, 'info');
 
@@ -225,7 +228,6 @@ export function createMaintenanceView(
   function setBusy(busy: boolean): void {
     state.busy = busy;
     for (const button of [
-      backBtn,
       restartBuildBtn,
       restartBtn,
       refreshLogsBtn,
@@ -332,6 +334,7 @@ export function createMaintenanceView(
       },
       {
         disabled: state.busy,
+        context: 'maintenance',
         onChange: (routingMode) => {
           state.routingMode = routingMode;
           renderRoutingMode();
@@ -785,10 +788,6 @@ export function createMaintenanceView(
         setError(error instanceof Error ? error.message : 'PIN-Reset fehlgeschlagen.');
       })
       .finally(() => setBusy(false));
-  });
-
-  backBtn.addEventListener('click', () => {
-    callbacks.onBack();
   });
 
   return {

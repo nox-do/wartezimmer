@@ -1,6 +1,5 @@
 import type { HostStatus } from '../shared/host-status.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-import { deriveOverallStatus } from './health-header.js';
 import { deliveryImagesSummary, needsDeliveryImages } from './delivery-images-flow.js';
 import { createLucideIcon, setButtonIcon } from './lucide-icons.js';
 import { buildTvKioskLinuxCommand, buildTvKioskWindowsCommand } from './tv-kiosk-commands.js';
@@ -64,9 +63,6 @@ async function copyText(text: string, button: HTMLButtonElement): Promise<void> 
   }
 }
 
-function canShowMaintenance(status: HostStatus): boolean {
-  return status.envExists && status.docker.installed && status.docker.daemonRunning;
-}
 
 function setupChecklistItems(
   status: HostStatus,
@@ -102,6 +98,7 @@ function setupChecklistItems(
 function renderSetupEntry(
   root: HTMLElement,
   status: HostStatus,
+  onSetupClick?: () => void,
   onLoadReleaseArchive?: () => void,
 ): void {
   const entry = root.querySelector<HTMLElement>('#setup-entry');
@@ -110,8 +107,9 @@ function renderSetupEntry(
   const copy = root.querySelector<HTMLElement>('#setup-entry-copy');
   const checklist = root.querySelector<HTMLElement>('#setup-entry-checklist');
   const note = root.querySelector<HTMLElement>('#setup-entry-note');
+  const startBtn = root.querySelector<HTMLButtonElement>('#setup-entry-start');
 
-  if (!entry || !eyebrow || !title || !copy || !checklist || !note) {
+  if (!entry || !eyebrow || !title || !copy || !checklist || !note || !startBtn) {
     return;
   }
 
@@ -175,6 +173,16 @@ function renderSetupEntry(
       : 'Docker Desktop installieren und danach den Manager erneut öffnen.';
   } else {
     note.textContent = '';
+  }
+
+  if (onSetupClick) {
+    startBtn.hidden = false;
+    startBtn.textContent =
+      tone === 'fresh' ? 'Einrichtung starten' : 'Einrichtung fortsetzen';
+    startBtn.onclick = onSetupClick;
+  } else {
+    startBtn.hidden = true;
+    startBtn.onclick = null;
   }
 }
 
@@ -243,11 +251,9 @@ export function renderStatusView(
   root: HTMLElement,
   status: HostStatus,
   onSetupClick: () => void,
-  onMaintenanceClick?: () => void,
-  onNetworkClick?: () => void,
-  onOpenUrl?: (url: string) => void,
-  onLoadReleaseArchive?: () => void,
   runtime?: HostRuntimeHealth | null,
+  onLoadReleaseArchive?: () => void,
+  onOpenUrl?: (url: string) => void,
 ): void {
   const grid = root.querySelector<HTMLElement>('#status-grid');
   const gridHeading = root.querySelector<HTMLElement>('#status-grid-heading');
@@ -256,9 +262,6 @@ export function renderStatusView(
   const deviceUrlsSection = root.querySelector<HTMLElement>('#device-urls-section');
   const deviceUrlsList = root.querySelector<HTMLElement>('#device-urls-list');
   const errorMessage = root.querySelector<HTMLElement>('#error-message');
-  const setupBtn = root.querySelector<HTMLButtonElement>('#setup-btn');
-  const networkBtn = root.querySelector<HTMLButtonElement>('#network-btn');
-  const maintenanceBtn = root.querySelector<HTMLButtonElement>('#maintenance-btn');
 
   if (
     !grid ||
@@ -267,17 +270,14 @@ export function renderStatusView(
     !lanWarning ||
     !deviceUrlsSection ||
     !deviceUrlsList ||
-    !errorMessage ||
-    !setupBtn ||
-    !networkBtn ||
-    !maintenanceBtn
+    !errorMessage
   ) {
     return;
   }
 
   errorMessage.hidden = true;
   errorMessage.textContent = '';
-  renderSetupEntry(root, status, onLoadReleaseArchive);
+  renderSetupEntry(root, status, onSetupClick, onLoadReleaseArchive);
   const setupEntry = isSetupEntryStatus(status);
 
   const wlan = currentWlanLabel(status);
@@ -300,9 +300,8 @@ export function renderStatusView(
     rows.push(['Software-Paket', deliveryImagesSummary(status)]);
   }
 
-  gridHeading.hidden = setupEntry;
+  gridHeading.hidden = true;
   grid.hidden = setupEntry;
-  gridHeading.textContent = setupEntry ? 'Technische Diagnose' : 'Status';
   grid.classList.toggle('is-setup-diagnostics', setupEntry);
 
   if (setupEntry) {
@@ -395,42 +394,6 @@ export function renderStatusView(
     }
   } else {
     deviceUrlsSection.hidden = true;
-  }
-
-  const incomplete = runtime
-    ? deriveOverallStatus(runtime).level !== 'ok'
-    : deriveOverallStatus({
-        checkedAt: '',
-        envExists: status.envExists,
-        configuredLanIp: status.network.configuredLanIp,
-        docker: status.docker,
-        compose: status.compose,
-        probes: status.probes,
-        sandboxScanner: status.sandboxScanner,
-      }).level !== 'ok';
-  setupBtn.hidden = false;
-  setupBtn.className = setupEntry ? '' : 'btn-secondary';
-  setupBtn.textContent = setupEntry
-    ? 'Einrichtung starten'
-    : incomplete
-      ? 'Einrichtung fortsetzen…'
-      : 'Einrichtung erneut…';
-  setupBtn.onclick = onSetupClick;
-
-  if (status.envExists && onNetworkClick) {
-    networkBtn.hidden = false;
-    networkBtn.onclick = onNetworkClick;
-  } else {
-    networkBtn.hidden = true;
-    networkBtn.onclick = null;
-  }
-
-  if (canShowMaintenance(status) && onMaintenanceClick) {
-    maintenanceBtn.hidden = false;
-    maintenanceBtn.onclick = onMaintenanceClick;
-  } else {
-    maintenanceBtn.hidden = true;
-    maintenanceBtn.onclick = null;
   }
 }
 

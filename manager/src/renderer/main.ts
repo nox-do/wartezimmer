@@ -1,19 +1,26 @@
 import { createHealthHeader } from './health-header.js';
 import { createHostRefreshController } from './host-refresh-controller.js';
 import { createManagerNavigation } from './manager-navigation.js';
+import type { NavigateOptions, WizardPresentation } from './manager-navigation.js';
+import { createManagerMainNav } from './manager-main-nav.js';
 import { createMaintenanceView } from './maintenance-view.js';
 import { createNetworkView } from './network-view.js';
-import { isSetupEntryStatus, renderStatusError, renderStatusView } from './status-view.js';
+import { renderStatusError, renderStatusView } from './status-view.js';
 import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
 import { createWizardView } from './wizard-view.js';
 import { queryRequired } from './dom.js';
 import type { ManagerView } from './host-refresh-controller.js';
 
+const appShellEl = queryRequired<HTMLElement>(document, '#app-shell', 'Manager-UI');
+const appChromeEl = queryRequired<HTMLElement>(document, '#app-chrome', 'Manager-UI');
 const healthHeaderEl = queryRequired<HTMLElement>(document, '#health-header', 'Manager-UI');
+const mainNavEl = queryRequired<HTMLElement>(document, '#main-nav', 'Manager-UI');
 const statusView = queryRequired<HTMLElement>(document, '#status-view', 'Manager-UI');
 const networkViewEl = queryRequired<HTMLElement>(document, '#network-view', 'Manager-UI');
 const wizardView = queryRequired<HTMLElement>(document, '#wizard-view', 'Manager-UI');
 const maintenanceViewEl = queryRequired<HTMLElement>(document, '#maintenance-view', 'Manager-UI');
+
+let wizardPresentation: WizardPresentation = 'embedded';
 
 function requirePraxisManager(): Window['praxisManager'] {
   const api = window.praxisManager;
@@ -27,8 +34,17 @@ function requirePraxisManager(): Window['praxisManager'] {
 
 const healthHeader = createHealthHeader(healthHeaderEl);
 
-function setDomView(view: ManagerView): void {
+function isWizardFullscreen(): boolean {
+  return wizardPresentation === 'fullscreen';
+}
+
+function setDomView(view: ManagerView, options: NavigateOptions = {}): void {
+  if (options.wizardPresentation) {
+    wizardPresentation = options.wizardPresentation;
+  }
+
   statusView.hidden = view !== 'status';
+  appShellEl.classList.toggle('is-wizard-fullscreen', view === 'wizard' && isWizardFullscreen());
 
   if (view !== 'maintenance') {
     maintenance.hide();
@@ -51,21 +67,41 @@ function setDomView(view: ManagerView): void {
   }
 }
 
-function syncHealthHeaderVisibility(
-  view: ManagerView,
-  config: ReturnType<typeof hostRefresh.getLastConfig>,
-): void {
-  if (view === 'wizard') {
+function syncShell(view: ManagerView, options: NavigateOptions = {}): void {
+  if (options.wizardPresentation) {
+    wizardPresentation = options.wizardPresentation;
+  }
+
+  const fullscreenWizard = view === 'wizard' && isWizardFullscreen();
+  appShellEl.classList.toggle('is-wizard-fullscreen', fullscreenWizard);
+  appChromeEl.hidden = fullscreenWizard;
+
+  if (fullscreenWizard) {
     healthHeader.hide();
+    mainNav.hide();
     return;
   }
+
+  appChromeEl.hidden = false;
   healthHeader.show();
-  if (view === 'status' && config && isSetupEntryStatus(config)) {
-    healthHeaderEl.hidden = true;
+  healthHeaderEl.hidden = false;
+  mainNav.show();
+  mainNav.render({
+    active: view,
+    status: hostRefresh.getLastConfig(),
+  });
+}
+
+const mainNav = createManagerMainNav(mainNavEl, (tab) => {
+  if (tab === 'wizard') {
+    const status = hostRefresh.getLastConfig();
+    navigation.navigateTo('wizard', {
+      wizardPresentation: status?.envExists ? 'embedded' : 'fullscreen',
+    });
     return;
   }
-  healthHeaderEl.hidden = false;
-}
+  navigation.navigateTo(tab);
+});
 
 async function loadReleaseArchiveFromStatus(): Promise<void> {
   try {
@@ -86,6 +122,10 @@ async function loadReleaseArchiveFromStatus(): Promise<void> {
   }
 }
 
+function startFullscreenWizard(): void {
+  navigation.navigateTo('wizard', { wizardPresentation: 'fullscreen' });
+}
+
 function renderStatusFromConfig(): void {
   const status = hostRefresh.getLastConfig();
   if (!status) {
@@ -95,32 +135,24 @@ function renderStatusFromConfig(): void {
   renderStatusView(
     statusView,
     status,
-    () => navigation.navigateTo('wizard'),
-    () => navigation.navigateTo('maintenance'),
-    () => navigation.navigateTo('network'),
-    (url) => {
-      void api.openExternalUrl(url);
-    },
+    startFullscreenWizard,
+    hostRefresh.getLastRuntime(),
     () => {
       void loadReleaseArchiveFromStatus();
     },
-    hostRefresh.getLastRuntime(),
+    (url) => {
+      void api.openExternalUrl(url);
+    },
   );
 }
 
 const maintenance = createMaintenanceView(maintenanceViewEl, requirePraxisManager(), {
-  onBack: () => {
-    navigation.navigateTo('status');
-  },
   onAfterMutation: () => {
     void hostRefresh.refresh({ scope: 'full', immediate: true });
   },
 });
 
 const network = createNetworkView(networkViewEl, requirePraxisManager(), {
-  onBack: () => {
-    navigation.navigateTo('status');
-  },
   onAfterMutation: () => {
     void hostRefresh.refresh({ scope: 'full', immediate: true });
   },
@@ -137,9 +169,15 @@ const hostRefresh = createHostRefreshController({
     if (view === 'network') {
       network.applyRuntimeHealth(runtime);
     }
+    if (!isWizardFullscreen()) {
+      mainNav.render({
+        active: view,
+        status: hostRefresh.getLastConfig(),
+      });
+    }
   },
   onConfig(status, view) {
-    syncHealthHeaderVisibility(view, status);
+    syncShell(view);
     if (view === 'status') {
       renderStatusFromConfig();
     }
@@ -169,8 +207,7 @@ const wizard = createWizardView(wizardView, requirePraxisManager(), {
 
 const navigation = createManagerNavigation({
   hostRefresh,
-  healthHeader,
-  syncHealthHeaderVisibility,
+  syncShell,
   setDomView,
   views: {
     wizard,

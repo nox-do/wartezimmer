@@ -71,8 +71,7 @@ test('deferred view shows loading until refresh completes', async () => {
         await refreshGate;
       },
     }),
-    healthHeader: { hide: () => {} },
-    syncHealthHeaderVisibility: () => {},
+    syncShell: () => {},
     setDomView: () => {},
     views: {
       wizard: { show: () => {}, hide: () => {} },
@@ -120,8 +119,7 @@ test('does not show maintenance after navigating to network before refresh resol
       getLastConfig: () => minimalStatus({ practiceDisplayName: 'Fresh' }),
       getLastRuntime: () => null,
     },
-    healthHeader: { hide: () => {} },
-    syncHealthHeaderVisibility: () => {},
+    syncShell: () => {},
     setDomView: () => {},
     views: {
       wizard: { show: () => {}, hide: () => {} },
@@ -156,18 +154,17 @@ test('does not show wizard after leaving wizard before fetch resolves', async ()
     resolveFetch = resolve;
   });
 
-  const wizardShown: Array<HostStatus | null> = [];
+  const wizardShown: Array<{ status: HostStatus | null; presentation: string }> = [];
 
   const navigation = createManagerNavigation({
     hostRefresh: createMockHostRefresh({
       getView: () => currentView,
     }),
-    healthHeader: { hide: () => {} },
-    syncHealthHeaderVisibility: () => {},
+    syncShell: () => {},
     setDomView: () => {},
     views: {
       wizard: {
-        show: (status) => wizardShown.push(status),
+        show: (status, presentation) => wizardShown.push({ status, presentation }),
         hide: () => {},
       },
       maintenance: {

@@ -16,7 +16,6 @@ import { queryRequired } from './dom.js';
 import { createViewLoadingOverlay } from './view-loading.js';
 
 export type NetworkViewCallbacks = {
-  onBack: () => void;
   onAfterMutation?: () => void;
 };
 
@@ -53,7 +52,6 @@ export function createNetworkView(
   const networkApplyBtn = queryRequired<HTMLButtonElement>(root, '#network-apply', 'Netzwerk-UI');
   const networkStatus = queryRequired<HTMLElement>(root, '#network-status', 'Netzwerk-UI');
   const errorEl = queryRequired<HTMLElement>(root, '#network-error', 'Netzwerk-UI');
-  const backBtn = queryRequired<HTMLButtonElement>(root, '#network-back', 'Netzwerk-UI');
   const confirmDialog = queryRequired<HTMLDialogElement>(root, '#network-confirm', 'Netzwerk-UI');
   const confirmMessage = queryRequired<HTMLElement>(
     root,
@@ -89,7 +87,7 @@ export function createNetworkView(
 
   function setBusy(busy: boolean): void {
     state.busy = busy;
-    for (const button of [backBtn, networkApplyBtn, confirmOk, confirmCancel]) {
+    for (const button of [networkApplyBtn, confirmOk, confirmCancel]) {
       button.disabled = busy;
     }
     renderPanels();
@@ -269,10 +267,6 @@ export function createNetworkView(
     }
 
     applyHostNetwork(false);
-  });
-
-  backBtn.addEventListener('click', () => {
-    callbacks.onBack();
   });
 
   return {

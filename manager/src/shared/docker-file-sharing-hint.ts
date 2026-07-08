@@ -3,4 +3,4 @@ export function needsDockerFileSharingHint(platform: string): boolean {
 }
 
 export const DOCKER_FILE_SHARING_HINT =
-  'macOS/Windows: Die gewählten Ordner in Docker Desktop unter Settings → Resources → File sharing freigeben. Ohne Freigabe sind /imports und /exports im Container leer oder Compose startet nicht zuverlässig.';
+  'Ordner liegen normalerweise in Ihrem Benutzerprofil — dann ist keine extra Docker-Freigabe nötig. Nur bei Pfaden auf anderen Laufwerken: in Docker Desktop unter Settings → Resources → File sharing freigeben.';

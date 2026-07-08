@@ -1,5 +1,6 @@
 import type { HostStatus } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WizardPresentation } from './manager-navigation.js';
 import { dockerPrerequisitesHints } from '../shared/docker-prerequisites-ui.js';
 import {
   DOCKER_FILE_SHARING_HINT,
@@ -34,7 +35,12 @@ import {
   type WizardFlowState,
   type WizardStep,
 } from './wizard-flow.js';
-import { formatRoutingModeError, renderRoutingModePanel } from './routing-mode-ui.js';
+import {
+  formatRoutingModeError,
+  ROUTING_MODE_WIZARD_INTRO_DETAIL,
+  ROUTING_MODE_WIZARD_INTRO_LEAD,
+  renderRoutingModePanel,
+} from './routing-mode-ui.js';
 import { queryRequired } from './dom.js';
 
 export type WizardCallbacks = {
@@ -147,21 +153,68 @@ export function createWizardView(
   root: HTMLElement,
   api: PraxisManagerApi,
   callbacks: WizardCallbacks,
-): { show: (status: HostStatus | null) => void; hide: () => void } {
+): {
+  show: (status: HostStatus | null, presentation?: WizardPresentation) => void;
+  hide: () => void;
+} {
+  const wizardPageHeader = queryRequired<HTMLElement>(root, '#wizard-page-header', 'Wizard-UI');
+  const wizardTitle = queryRequired<HTMLElement>(root, '#wizard-title', 'Wizard-UI');
   const stepIndicator = queryRequired<HTMLElement>(root, '#wizard-steps', 'Wizard-UI');
   const content = queryRequired<HTMLElement>(root, '#wizard-content', 'Wizard-UI');
   const errorBox = queryRequired<HTMLElement>(root, '#wizard-error', 'Wizard-UI');
+  const wizardActions = queryRequired<HTMLElement>(root, '#wizard-actions', 'Wizard-UI');
+  const wizardCompletionActions = queryRequired<HTMLElement>(
+    root,
+    '#wizard-completion-actions',
+    'Wizard-UI',
+  );
   const backBtn = queryRequired<HTMLButtonElement>(root, '#wizard-back', 'Wizard-UI');
   const nextBtn = queryRequired<HTMLButtonElement>(root, '#wizard-next', 'Wizard-UI');
   const cancelBtn = queryRequired<HTMLButtonElement>(root, '#wizard-cancel', 'Wizard-UI');
+  const completeStatusBtn = queryRequired<HTMLButtonElement>(
+    root,
+    '#wizard-complete-status',
+    'Wizard-UI',
+  );
+  const completeItSettingsBtn = queryRequired<HTMLButtonElement>(
+    root,
+    '#wizard-complete-it-settings',
+    'Wizard-UI',
+  );
 
   let state = createInitialState(null);
+  let presentation: WizardPresentation = 'embedded';
+  let completionItSettingsUrl: string | null = null;
+
+  function updateWizardChrome(): void {
+    const embedded = presentation === 'embedded';
+    root.classList.toggle('is-embedded', embedded);
+    wizardPageHeader.hidden = embedded;
+    if (!embedded) {
+      wizardTitle.textContent = 'Einrichtung';
+    }
+  }
+
+  function syncWizardFooters(): void {
+    const completed = state.step === 7 && Boolean(state.applyResult);
+    wizardActions.hidden = completed;
+    wizardCompletionActions.hidden = !completed;
+    cancelBtn.hidden = completed;
+    if (completed) {
+      backBtn.hidden = true;
+      nextBtn.hidden = true;
+    }
+    completeItSettingsBtn.disabled = !completionItSettingsUrl || state.busy;
+    completeStatusBtn.disabled = state.busy;
+  }
 
   function setBusy(busy: boolean): void {
     state = { ...state, busy };
     backBtn.disabled = busy;
     nextBtn.disabled = busy;
     cancelBtn.disabled = busy;
+    completeStatusBtn.disabled = busy;
+    completeItSettingsBtn.disabled = busy || !completionItSettingsUrl;
   }
 
   function setError(message: string | null): void {
@@ -371,6 +424,17 @@ export function createWizardView(
     routingTitle.textContent = 'Routing-Modus';
     panel.append(routingTitle);
 
+    const routingIntro = document.createElement('div');
+    routingIntro.className = 'routing-mode-intro';
+    const routingIntroLead = document.createElement('p');
+    const routingIntroLeadStrong = document.createElement('strong');
+    routingIntroLeadStrong.textContent = ROUTING_MODE_WIZARD_INTRO_LEAD;
+    routingIntroLead.append(routingIntroLeadStrong);
+    const routingIntroDetail = document.createElement('p');
+    routingIntroDetail.textContent = ROUTING_MODE_WIZARD_INTRO_DETAIL;
+    routingIntro.append(routingIntroLead, routingIntroDetail);
+    panel.append(routingIntro);
+
     const routingHost = document.createElement('div');
     panel.append(routingHost);
 
@@ -383,6 +447,7 @@ export function createWizardView(
           busy: state.busy,
         },
         {
+          context: 'wizard',
           disabled: state.busy,
           onChange: (routingMode) => {
             state = { ...state, routingMode };
@@ -577,6 +642,7 @@ export function createWizardView(
           'Bestehende technische Werte werden übernommen, soweit sie gültig sind. Platzhalter-Secrets werden ersetzt; Staff-PINs liegen in der Datenbank und werden nicht überschrieben.',
         );
       }
+      completionItSettingsUrl = null;
     } else {
       const applyTitle = document.createElement('h3');
       applyTitle.className = 'wizard-subheading';
@@ -656,33 +722,20 @@ export function createWizardView(
         'MFA-, Ops- und Panel-PIN: Standard 0000 — MFA/Panel in MFA → Betrieb, Ops in System → PIN & Sicherheit. Vergessene MFA- oder Ops-PIN: Manager → Wartung.',
       );
 
-      const actions = document.createElement('div');
-      actions.className = 'wizard-done-actions';
-
-      const setupUrl = status?.deviceUrls?.opsSetup ?? state.plan?.deviceUrls.opsSetup;
-      const itSettingsBtn = document.createElement('button');
-      itSettingsBtn.type = 'button';
-      itSettingsBtn.className = 'btn-secondary';
-      itSettingsBtn.textContent = 'IT-Einstellungen in Praxis Flow öffnen';
-      itSettingsBtn.disabled = !setupUrl || state.busy;
-      itSettingsBtn.addEventListener('click', () => {
-        if (setupUrl) {
-          void api.openExternalUrl(setupUrl);
-        }
-      });
-      actions.append(itSettingsBtn);
-      panel.append(actions);
+      completionItSettingsUrl = status?.deviceUrls?.opsSetup ?? state.plan?.deviceUrls.opsSetup ?? null;
     }
 
     content.replaceChildren(panel);
     nextBtn.textContent = result ? 'Zum Status' : 'Bitte warten …';
     nextBtn.disabled = !result || state.busy;
     backBtn.hidden = Boolean(result);
+    syncWizardFooters();
   }
 
   function render(): void {
     renderStepIndicator(stepIndicator, state.step);
     renderError(errorBox, state.error);
+    syncWizardFooters();
 
     switch (state.step) {
       case 1:
@@ -796,16 +849,34 @@ export function createWizardView(
       callbacks.onCancel();
     }
   });
+  completeStatusBtn.addEventListener('click', () => {
+    if (!state.busy) {
+      callbacks.onComplete();
+    }
+  });
+  completeItSettingsBtn.addEventListener('click', () => {
+    if (completionItSettingsUrl && !state.busy) {
+      void api.openExternalUrl(completionItSettingsUrl);
+    }
+  });
 
   return {
-    show(status: HostStatus | null) {
+    show(status: HostStatus | null, nextPresentation: WizardPresentation = 'embedded') {
+      presentation = nextPresentation;
       state = createInitialState(status);
+      completionItSettingsUrl = null;
+      updateWizardChrome();
       root.hidden = false;
       render();
     },
     hide() {
       root.hidden = true;
+      root.classList.remove('is-embedded');
       state = createInitialState(null);
+      completionItSettingsUrl = null;
+      wizardActions.hidden = false;
+      wizardCompletionActions.hidden = true;
+      wizardPageHeader.hidden = false;
     },
   };
 }
