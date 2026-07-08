@@ -16,7 +16,9 @@
   onMount(() => {
     const disconnectOpsStream = connectOpsStream();
     const stopEmergency = mountMfaEmergency();
-    const stopQueueDisplay = mountMfaQueueDisplay();
+    const stopQueueDisplay = mountMfaQueueDisplay({
+      onBackendRecovered: () => window.location.reload(),
+    });
 
     return () => {
       disconnectOpsStream();
@@ -43,4 +45,3 @@
 {/if}
 
 {@render children?.()}
-

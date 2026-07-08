@@ -67,7 +67,7 @@
   });
 </script>
 
-{#if mfaDayOps.dayLifecycle?.needsDayStartHint}
+{#if mfaDayOps.dayLifecycle?.needsDayStartHint && !mfaQueueDisplay.backendUnreachable}
   <DayStartBanner
     lastResetBusinessDay={mfaDayOps.dayLifecycle.lastResetBusinessDay}
     lastDayStats={mfaDayOps.dayLifecycle.lastDayStats}

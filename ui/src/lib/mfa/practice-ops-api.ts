@@ -6,7 +6,7 @@ export type BusinessDayTopicCount = {
   count: number;
 };
 
-export type BusinessDayOpenTicket = {
+export type BusinessDayOpenVisit = {
   visitId: string;
   laneCode: string;
   number: number;
@@ -15,13 +15,18 @@ export type BusinessDayOpenTicket = {
   status: 'waiting' | 'called' | 'in_room' | 'absent_wait_here' | 'absent_return_later';
 };
 
-export type BusinessDayTicketStats = {
+export type BusinessDayVisitStats = {
   businessDay: string;
-  totalTickets: number;
+  totalVisits: number;
   maxWaitMs: number;
   byTopic: BusinessDayTopicCount[];
-  openTickets: BusinessDayOpenTicket[];
+  openVisits: BusinessDayOpenVisit[];
 };
+
+/** @deprecated Use BusinessDayOpenVisit */
+export type BusinessDayOpenTicket = BusinessDayOpenVisit;
+/** @deprecated Use BusinessDayVisitStats */
+export type BusinessDayTicketStats = BusinessDayVisitStats;
 
 export type RoutingCapabilities = {
   routingMode: 'simple' | 'complex';
@@ -39,7 +44,7 @@ export type DayLifecycleState = {
   needsDayStartHint: boolean;
   checkinLocked: boolean;
   dayClosePhase: 'open' | 'started';
-  lastDayStats: BusinessDayTicketStats | null;
+  lastDayStats: BusinessDayVisitStats | null;
 };
 
 export type CheckinLockState = {

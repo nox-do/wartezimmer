@@ -83,12 +83,27 @@ export function resetMfaQueueDisplay() {
   lastQueueRevision = null;
 }
 
-export function applyMfaQueueSnapshot(data: MfaQueueStreamSnapshot) {
+export type MfaQueueDisplayHandlers = {
+  onBackendRecovered?: () => void;
+};
+
+export function applyMfaQueueSnapshot(
+  data: MfaQueueStreamSnapshot,
+  handlers: MfaQueueDisplayHandlers = {},
+) {
   if (lastQueueRevision !== null && data.revision < lastQueueRevision) {
     return;
   }
 
+  const wasUnreachable = mfaQueueDisplay.backendUnreachable;
   const revisionAdvanced = lastQueueRevision === null || data.revision > lastQueueRevision;
+
+  mfaQueueDisplay.loading = false;
+  mfaQueueDisplay.errorMessage = null;
+  mfaQueueDisplay.backendUnreachable = false;
+  if (wasUnreachable) {
+    handlers.onBackendRecovered?.();
+  }
 
   if (revisionAdvanced) {
     lastQueueRevision = data.revision;
@@ -102,9 +117,6 @@ export function applyMfaQueueSnapshot(data: MfaQueueStreamSnapshot) {
     };
     mfaQueueDisplay.assistPending = data.assistPending ?? [];
     mfaQueueDisplay.countdownNowMs = Date.now();
-    mfaQueueDisplay.loading = false;
-    mfaQueueDisplay.errorMessage = null;
-    mfaQueueDisplay.backendUnreachable = false;
     return;
   }
 
@@ -133,9 +145,9 @@ export function getMfaClockLabel() {
     : '';
 }
 
-export function mountMfaQueueDisplay(): () => void {
+export function mountMfaQueueDisplay(handlers: MfaQueueDisplayHandlers = {}): () => void {
   const disconnectQueueStream = connectMfaQueueStream({
-    onSnapshot: applyMfaQueueSnapshot,
+    onSnapshot: (data) => applyMfaQueueSnapshot(data, handlers),
     onError: (error) => {
       mfaQueueDisplay.errorMessage = error.message;
       mfaQueueDisplay.backendUnreachable = error.backendUnreachable;
