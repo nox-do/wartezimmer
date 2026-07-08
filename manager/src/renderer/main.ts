@@ -1,3 +1,5 @@
+import { mount } from 'svelte';
+import App from './App.svelte';
 import { createHealthHeader } from './health-header.js';
 import { createHostRefreshController } from './host-refresh-controller.js';
 import { createManagerNavigation } from './manager-navigation.js';
@@ -11,6 +13,7 @@ import { createWizardView } from './wizard-view.js';
 import { queryRequired } from './dom.js';
 import type { ManagerView } from './host-refresh-controller.js';
 
+function mountLegacyManager(): void {
 const appShellEl = queryRequired<HTMLElement>(document, '#app-shell', 'Manager-UI');
 const appChromeEl = queryRequired<HTMLElement>(document, '#app-chrome', 'Manager-UI');
 const healthHeaderEl = queryRequired<HTMLElement>(document, '#health-header', 'Manager-UI');
@@ -213,3 +216,12 @@ const navigation = createManagerNavigation({
 });
 
 navigation.navigateTo('status');
+}
+
+const svelteRoot = document.getElementById('svelte-app');
+if (!svelteRoot) {
+  throw new Error('Svelte mount point #svelte-app missing');
+}
+
+mount(App, { target: svelteRoot });
+mountLegacyManager();
