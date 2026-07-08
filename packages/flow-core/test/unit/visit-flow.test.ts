@@ -2,11 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   assertTransitionAllowed,
+  resolveReturnToWaitingTargetLocationId,
+  resolveReturnToWaitingVisitPatch,
   statusForMovementMode,
   ACTIVE_VISIT_STATUSES,
   OPEN_VISIT_STATUSES,
   TERMINAL_VISIT_STATUSES
 } from '@praxis-flow/flow-core';
+import type { Catalog, RoutingRule, Visit } from '@praxis-flow/flow-core';
 
 test('Visit-Status-Sets: disjunkt und kanonisch', () => {
   for (const status of ACTIVE_VISIT_STATUSES) {
@@ -56,4 +59,127 @@ test('assertTransitionAllowed: return_to_waiting nur aus called/arrived/in_progr
     () => assertTransitionAllowed({ ...base, status: 'done' }, 'return_to_waiting'),
     /RETURN_TO_WAITING_NOT_ALLOWED/,
   );
+});
+
+const simpleRule: RoutingRule = {
+  id: 'rule_general',
+  topicId: 'general',
+  name: 'General',
+  initialTargetLocationId: 'reception',
+  initialQueueId: 'general_queue',
+  initialMovementMode: 'call',
+  initialLocationConfidence: 'assumed',
+  publicDisplayMode: 'visible',
+  terminalInstructionTemplate: 'Bitte warten.',
+  requiresReceptionConfirmation: false,
+  escortPolicy: 'none',
+  allowRedirect: true,
+  active: true,
+};
+
+const journeyRule: RoutingRule = {
+  ...simpleRule,
+  id: 'rule_journey',
+  journeyTemplateId: 'journey_general',
+};
+
+const catalogFixture: Catalog = {
+  topics: [],
+  locations: [],
+  queues: [],
+  surfaces: [],
+  surfaceDisplayRules: [],
+  journeyTemplates: [],
+  journeySteps: [
+    {
+      id: 'step_0',
+      templateId: 'journey_general',
+      sortOrder: 0,
+      targetLocationId: 'reception',
+      queueId: 'general_queue',
+      movementMode: 'call',
+      publicDisplayMode: 'visible',
+      advanceOn: 'arrive',
+    },
+    {
+      id: 'step_1',
+      templateId: 'journey_general',
+      sortOrder: 1,
+      targetLocationId: 'room_1',
+      queueId: 'reception_queue',
+      movementMode: 'call',
+      publicDisplayMode: 'hidden',
+      advanceOn: 'arrive',
+    },
+  ],
+  routingRules: [simpleRule, journeyRule],
+  patients: [],
+};
+
+test('resolveReturnToWaitingTargetLocationId: Simple behaelt Aufrufziel', () => {
+  const visit = {
+    targetLocationId: 'room_1',
+    appliedRoutingRuleId: 'rule_general',
+  } as Visit;
+
+  assert.equal(
+    resolveReturnToWaitingTargetLocationId(visit, simpleRule, catalogFixture),
+    'room_1',
+  );
+});
+
+test('resolveReturnToWaitingTargetLocationId: Simple Fallback auf Rule-Default', () => {
+  const visit = {
+    appliedRoutingRuleId: 'rule_general',
+  } as Visit;
+
+  assert.equal(
+    resolveReturnToWaitingTargetLocationId(visit, simpleRule, catalogFixture),
+    'reception',
+  );
+});
+
+test('resolveReturnToWaitingTargetLocationId: Complex rehydriert aus Journey-Step', () => {
+  const visit = {
+    targetLocationId: 'room_1',
+    appliedRoutingRuleId: 'rule_journey',
+    journeyTemplateId: 'journey_general',
+    journeyStepIndex: 0,
+  } as Visit;
+
+  assert.equal(
+    resolveReturnToWaitingTargetLocationId(visit, journeyRule, catalogFixture),
+    'reception',
+  );
+});
+
+test('resolveReturnToWaitingTargetLocationId: Complex rehydriert auch wenn Rule nicht mehr Journey ist', () => {
+  const visit = {
+    targetLocationId: 'room_1',
+    appliedRoutingRuleId: 'rule_general',
+    journeyTemplateId: 'journey_general',
+    journeyStepIndex: 0,
+  } as Visit;
+
+  assert.equal(
+    resolveReturnToWaitingTargetLocationId(visit, simpleRule, catalogFixture),
+    'reception',
+  );
+});
+
+test('resolveReturnToWaitingVisitPatch setzt targetLocationId nicht auf undefined', () => {
+  const visit = {
+    status: 'called',
+    movementMode: 'call',
+    appliedRoutingRuleId: 'rule_general',
+    targetLocationId: 'room_1',
+    queueId: 'general_queue',
+    lastKnownLocationId: 'room_1',
+  } as Visit;
+
+  const patch = resolveReturnToWaitingVisitPatch(visit, catalogFixture);
+
+  assert.equal(patch.targetLocationId, 'room_1');
+  assert.equal(patch.status, 'waiting');
+  assert.equal(patch.calledAt, undefined);
 });

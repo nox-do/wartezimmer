@@ -3,11 +3,13 @@ import type {
   Catalog,
   MovementMode,
   OpenVisitStatus,
+  RoutingRule,
   TerminalVisitStatus,
   Visit,
   VisitStatus,
 } from './types.js';
 import type { TransitionAction } from './domain-enums.js';
+import { stepsForJourneyTemplate } from './visit-context.js';
 
 /** Operativ steuerbar — Dashboard, Arbeitslisten, Surface-Filter. */
 export const ACTIVE_VISIT_STATUSES = new Set<ActiveVisitStatus>([
@@ -93,7 +95,25 @@ export function canTransition(visit: Visit, action: TransitionAction, context: T
 }
 
 /**
- * Patch fuer return_to_waiting: Warteliste + Wartebereich aus RoutingRule, Raum/Timestamps geloescht.
+ * Aufrufziel nach return_to_waiting: Simple behaelt visit.targetLocationId; Complex rehydriert aus dem
+ * aktiven Journey-Step (Wahrheit der Route). Fallback: Rule initial_* wenn Snapshot fehlt.
+ */
+export function resolveReturnToWaitingTargetLocationId(
+  visit: Visit,
+  rule: RoutingRule | undefined,
+  catalog: Catalog,
+): string | undefined {
+  if (visit.journeyTemplateId != null && visit.journeyStepIndex != null) {
+    const steps = stepsForJourneyTemplate(visit.journeyTemplateId, catalog.journeySteps);
+    const step = steps[visit.journeyStepIndex];
+    return step?.targetLocationId ?? visit.targetLocationId ?? rule?.initialTargetLocationId;
+  }
+
+  return visit.targetLocationId ?? rule?.initialTargetLocationId;
+}
+
+/**
+ * Patch fuer return_to_waiting: Warteliste + Wartebereich aus RoutingRule, Aufruf-Timestamps geloescht.
  * Bewusst kein Redirect — Journey bleibt active (Patient verlaesst nur den Aufruf-Zyklus, nicht die Route).
  */
 export function resolveReturnToWaitingVisitPatch(visit: Visit, catalog: Catalog): Partial<Visit> {
@@ -109,7 +129,7 @@ export function resolveReturnToWaitingVisitPatch(visit: Visit, catalog: Catalog)
 
   return {
     status: statusForMovementMode(visit.movementMode),
-    targetLocationId: undefined,
+    targetLocationId: resolveReturnToWaitingTargetLocationId(visit, rule, catalog),
     queueId: waitingQueueId ?? undefined,
     lastKnownLocationId: waitingLocationId ?? undefined,
     locationConfidence: 'assumed',

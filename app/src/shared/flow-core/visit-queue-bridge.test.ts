@@ -21,6 +21,7 @@ import {
   setVisitCallbackPhone,
   startVisit,
   visitStatusToQueueDisplayStatus,
+  visitToQueueVisitRow,
 } from './visit-queue-bridge.js';
 import { setVisitAbsentMode, upsertVisitHostState } from '../db/visit-host-state.js';
 import { getBusinessDay } from '../db/database-time.js';
@@ -226,7 +227,7 @@ test('scoped done succeeds when acting room matches target', () => {
   assert.deepEqual(done, { fromStatus: 'in_room', toStatus: 'done' });
 });
 
-test('returnVisitToWaiting: call → waiting clears room', () => {
+test('returnVisitToWaiting: call → waiting keeps target room', () => {
   const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
   callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
 
@@ -235,11 +236,14 @@ test('returnVisitToWaiting: call → waiting clears room', () => {
 
   const visit = runtime.visits().find((entry) => entry.id === visitId);
   assert.equal(visit?.status, 'waiting');
-  assert.equal(visit?.targetLocationId, undefined);
+  assert.equal(visit?.targetLocationId, 'labor');
   assert.equal(visit?.calledAt, undefined);
+
+  const row = visitToQueueVisitRow(visit!, settings);
+  assert.equal(row.destinationRoomId, 'labor');
 });
 
-test('returnVisitToWaiting: call → arrive → waiting', () => {
+test('returnVisitToWaiting: call → arrive → waiting keeps target room', () => {
   const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
   callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
   arriveVisit(db, runtime, visitId, 'labor');
@@ -249,10 +253,11 @@ test('returnVisitToWaiting: call → arrive → waiting', () => {
 
   const visit = runtime.visits().find((entry) => entry.id === visitId);
   assert.equal(visit?.status, 'waiting');
-  assert.equal(visit?.targetLocationId, undefined);
+  assert.equal(visit?.targetLocationId, 'labor');
+  assert.equal(visitToQueueVisitRow(visit!, settings).destinationRoomId, 'labor');
 });
 
-test('returnVisitToWaiting: start (in_progress) → waiting', () => {
+test('returnVisitToWaiting: start (in_progress) → waiting keeps target room', () => {
   const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
   callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
   arriveVisit(db, runtime, visitId, 'labor');
@@ -263,8 +268,9 @@ test('returnVisitToWaiting: start (in_progress) → waiting', () => {
 
   const visit = runtime.visits().find((entry) => entry.id === visitId);
   assert.equal(visit?.status, 'waiting');
-  assert.equal(visit?.targetLocationId, undefined);
+  assert.equal(visit?.targetLocationId, 'labor');
   assert.equal(visit?.startedAt, undefined);
+  assert.equal(visitToQueueVisitRow(visit!, settings).destinationRoomId, 'labor');
 });
 
 test('returnVisitToWaiting: recall emits no journey_abandoned event', () => {

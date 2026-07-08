@@ -363,53 +363,53 @@ test('transition done: Raum-Panel darf direkt nach arrive abschliessen', () => {
   assert.ok(done.startedAt);
 });
 
-test('transition return_to_waiting: called → waiting, Raum und Timestamps gelöscht', () => {
+test('transition return_to_waiting: called → waiting, Aufrufziel bleibt, Timestamps gelöscht', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Recall', surfaceId: 'terminal_1' });
-  runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
+  const created = runtime.checkIn({ topicId: 'blood', displayName: 'Recall', surfaceId: 'terminal_2' });
+  runtime.transition(created.id, 'call', { targetLocationId: 'lab' });
 
   const after = runtime.transition(created.id, 'return_to_waiting');
 
   assert.equal(after.status, 'waiting');
-  assert.equal(after.targetLocationId, undefined);
+  assert.equal(after.targetLocationId, 'lab');
   assert.equal(after.calledAt, undefined);
   assert.equal(after.arrivedAt, undefined);
   assert.equal(after.startedAt, undefined);
-  assert.equal(after.lastKnownLocationId, 'waiting_general');
+  assert.equal(after.lastKnownLocationId, 'lab');
   const events = runtime.events(created.id);
   assert.ok(events.some((event) => event.type === 'returned_to_waiting'));
 });
 
 test('transition return_to_waiting: arrive → waiting', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Recall2', surfaceId: 'terminal_1' });
-  runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
-  runtime.transition(created.id, 'arrive', { actingLocationId: 'room_1' });
+  const created = runtime.checkIn({ topicId: 'blood', displayName: 'Recall2', surfaceId: 'terminal_2' });
+  runtime.transition(created.id, 'call', { targetLocationId: 'lab' });
+  runtime.transition(created.id, 'arrive', { actingLocationId: 'lab' });
 
   const after = runtime.transition(created.id, 'return_to_waiting');
 
   assert.equal(after.status, 'waiting');
-  assert.equal(after.targetLocationId, undefined);
-  assert.equal(after.lastKnownLocationId, 'waiting_general');
-  assert.equal(after.queueId, 'general_queue');
+  assert.equal(after.targetLocationId, 'lab');
+  assert.equal(after.lastKnownLocationId, 'lab');
+  assert.equal(after.queueId, 'lab_queue');
 });
 
 test('transition return_to_waiting: in_progress → waiting', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Recall3', surfaceId: 'terminal_1' });
-  runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
-  runtime.transition(created.id, 'arrive', { actingLocationId: 'room_1' });
-  runtime.transition(created.id, 'start', { actingLocationId: 'room_1' });
+  const created = runtime.checkIn({ topicId: 'blood', displayName: 'Recall3', surfaceId: 'terminal_2' });
+  runtime.transition(created.id, 'call', { targetLocationId: 'lab' });
+  runtime.transition(created.id, 'arrive', { actingLocationId: 'lab' });
+  runtime.transition(created.id, 'start', { actingLocationId: 'lab' });
 
   const after = runtime.transition(created.id, 'return_to_waiting');
 
   assert.equal(after.status, 'waiting');
-  assert.equal(after.targetLocationId, undefined);
+  assert.equal(after.targetLocationId, 'lab');
   assert.equal(after.startedAt, undefined);
-  assert.equal(after.lastKnownLocationId, 'waiting_general');
+  assert.equal(after.lastKnownLocationId, 'lab');
 });
 
-test('transition return_to_waiting: Journey bleibt aktiv', () => {
+test('transition return_to_waiting: Journey rehydriert Aufrufziel aus aktivem Step', () => {
   const { runtime } = testRuntime();
   const created = runtime.checkIn({ topicId: 'general', displayName: 'Journey', surfaceId: 'terminal_1' });
   runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
@@ -419,6 +419,7 @@ test('transition return_to_waiting: Journey bleibt aktiv', () => {
   assert.equal(after.journeyTemplateId, 'journey_general');
   assert.equal(after.journeyStepIndex, 0);
   assert.equal(after.journeyState, 'active');
+  assert.equal(after.targetLocationId, 'reception');
   assert.ok(!runtime.events(created.id).some((event) => event.type === 'journey_abandoned'));
 });
 
