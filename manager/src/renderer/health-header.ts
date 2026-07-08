@@ -143,22 +143,22 @@ function serviceDetail(
   return aggregatedServiceStateLabel(service, scanner);
 }
 
-type ChipSpec = { label: string; ok: boolean | null; neutral?: boolean };
+export type HealthTileChip = { label: string; ok: boolean | null; neutral?: boolean };
 
-type TileSpec = {
+export type HealthTileSpec = {
   name: string;
   detail: string;
   status: ReachabilityStatus;
-  chips?: ChipSpec[];
+  chips?: HealthTileChip[];
 };
 
-function collectTiles(runtime: HostRuntimeHealth): TileSpec[] {
+export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[] {
   const services = runtime.compose?.services ?? [];
   const probes = runtime.probes;
   const probesById = new Map(probes.map((probe) => [probe.id, probe]));
   const probesPending = probes.length === 0 && runtime.docker.daemonRunning;
   const scanner = runtime.sandboxScanner;
-  const tiles: TileSpec[] = [];
+  const tiles: HealthTileSpec[] = [];
 
   if (services.length === 0) {
     tiles.push({
@@ -199,93 +199,3 @@ function collectTiles(runtime: HostRuntimeHealth): TileSpec[] {
   return tiles;
 }
 
-function appendTile(container: HTMLElement, tile: TileSpec): void {
-  const el = document.createElement('article');
-  el.className = 'health-tile';
-
-  const head = document.createElement('div');
-  head.className = 'health-tile-head';
-
-  const dot = document.createElement('span');
-  dot.className = tile.status === null ? 'probe-dot' : `probe-dot ${tile.status}`;
-  dot.setAttribute('aria-hidden', 'true');
-
-  const name = document.createElement('span');
-  name.className = 'health-tile-name';
-  name.textContent = tile.name;
-
-  head.append(dot, name);
-
-  const detail = document.createElement('p');
-  detail.className =
-    tile.status === 'warn' ? 'health-tile-detail is-warn' : 'health-tile-detail';
-  detail.textContent = tile.detail;
-
-  el.append(head, detail);
-
-  if (tile.chips && tile.chips.length > 0) {
-    const chips = document.createElement('div');
-    chips.className = 'health-tile-chips';
-    for (const chip of tile.chips) {
-      const badge = document.createElement('span');
-      if (chip.neutral) {
-        badge.className = 'reachability-chip is-neutral';
-        badge.textContent = chip.label;
-      } else {
-        badge.className =
-          chip.ok === null
-            ? 'reachability-chip is-pending'
-            : `reachability-chip ${chip.ok ? 'is-ok' : 'is-bad'}`;
-        badge.textContent = chip.ok === null ? `${chip.label} …` : chip.label;
-      }
-      chips.append(badge);
-    }
-    el.append(chips);
-  }
-
-  container.append(el);
-}
-
-export function createHealthHeader(root: HTMLElement) {
-  const banner = root.querySelector<HTMLElement>('#health-banner');
-  const tiles = root.querySelector<HTMLElement>('#health-tiles');
-
-  if (!banner || !tiles) {
-    throw new Error('Health-Header: Banner oder Kacheln fehlen.');
-  }
-
-  const bannerEl = banner;
-  const tilesEl = tiles;
-
-  function render(runtime: HostRuntimeHealth): void {
-    const overall = deriveOverallStatus(runtime);
-    bannerEl.textContent = overall.text;
-    bannerEl.className = `health-banner is-${overall.level}`;
-
-    tilesEl.replaceChildren();
-    for (const tile of collectTiles(runtime)) {
-      appendTile(tilesEl, tile);
-    }
-  }
-
-  function renderError(message: string): void {
-    bannerEl.textContent = 'Unbekannt';
-    bannerEl.className = 'health-banner is-bad';
-    tilesEl.replaceChildren();
-    const tile = document.createElement('article');
-    tile.className = 'health-tile health-tile-error';
-    tile.textContent = message || 'Setup-API nicht erreichbar — bitte Manager neu starten.';
-    tilesEl.append(tile);
-  }
-
-  return {
-    render,
-    renderError,
-    show(): void {
-      root.hidden = false;
-    },
-    hide(): void {
-      root.hidden = true;
-    },
-  };
-}
