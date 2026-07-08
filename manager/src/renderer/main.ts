@@ -13,14 +13,27 @@ if (!svelteRoot) {
 
 let controller: ManagerAppController | null = null;
 
+function requireController(): ManagerAppController {
+  if (!controller) {
+    throw new Error('Manager-Navigation noch nicht initialisiert.');
+  }
+  return controller;
+}
+
 mount(App, {
   target: svelteRoot,
   props: {
     onNavigateTab: (tab: ManagerView) => {
-      if (!controller) {
-        throw new Error('Manager-Navigation noch nicht initialisiert.');
-      }
-      controller.navigateTab(tab);
+      requireController().navigateTab(tab);
+    },
+    onStatusSetupClick: () => {
+      requireController().onStatusSetupClick();
+    },
+    onStatusLoadReleaseArchive: () => {
+      requireController().onStatusLoadReleaseArchive();
+    },
+    onStatusOpenUrl: (url: string) => {
+      requireController().onStatusOpenUrl(url);
     },
   },
 });

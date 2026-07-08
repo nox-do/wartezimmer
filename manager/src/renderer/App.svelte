@@ -3,9 +3,20 @@
   import HealthHeader from './HealthHeader.svelte';
   import LegacyViewContainers from './LegacyViewContainers.svelte';
   import MainNav from './MainNav.svelte';
+  import StatusView from './StatusView.svelte';
   import { managerShell, showChrome, wizardFullscreen } from './manager-shell-state.svelte.js';
 
-  let { onNavigateTab }: { onNavigateTab: (tab: ManagerView) => void } = $props();
+  let {
+    onNavigateTab,
+    onStatusSetupClick,
+    onStatusLoadReleaseArchive,
+    onStatusOpenUrl,
+  }: {
+    onNavigateTab: (tab: ManagerView) => void;
+    onStatusSetupClick: () => void;
+    onStatusLoadReleaseArchive: () => void;
+    onStatusOpenUrl: (url: string) => void;
+  } = $props();
 </script>
 
 <div class="app-root" id="app-shell" class:is-wizard-fullscreen={wizardFullscreen(managerShell)}>
@@ -16,6 +27,11 @@
 
   <div class="app-shell">
     <div class="app-content">
+      <StatusView
+        onSetupClick={onStatusSetupClick}
+        onLoadReleaseArchive={onStatusLoadReleaseArchive}
+        onOpenUrl={onStatusOpenUrl}
+      />
       <LegacyViewContainers />
     </div>
   </div>

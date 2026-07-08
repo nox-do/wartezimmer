@@ -6,7 +6,6 @@ import {
 import type { NavigateOptions } from './manager-navigation.js';
 import { createMaintenanceView } from './maintenance-view.js';
 import { createNetworkView } from './network-view.js';
-import { renderStatusError, renderStatusView } from './status-view.js';
 import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
 import { createWizardView } from './wizard-view.js';
 import { queryRequired } from './dom.js';
@@ -16,14 +15,17 @@ import {
   applyRuntimeError,
   applyRuntimeHealth,
   applyShellNavigation,
+  applyStatusError,
 } from './manager-shell-state.svelte.js';
 
 export type ManagerAppController = {
   navigateTab: (tab: ManagerView) => void;
+  onStatusSetupClick: () => void;
+  onStatusLoadReleaseArchive: () => void;
+  onStatusOpenUrl: (url: string) => void;
 };
 
 export function createManagerAppController(doc: Document = document): ManagerAppController {
-  const statusView = queryRequired<HTMLElement>(doc, '#status-view', 'Manager-UI');
   const networkViewEl = queryRequired<HTMLElement>(doc, '#network-view', 'Manager-UI');
   const wizardView = queryRequired<HTMLElement>(doc, '#wizard-view', 'Manager-UI');
   const maintenanceViewEl = queryRequired<HTMLElement>(doc, '#maintenance-view', 'Manager-UI');
@@ -39,8 +41,6 @@ export function createManagerAppController(doc: Document = document): ManagerApp
   }
 
   function setDomView(view: ManagerView): void {
-    statusView.hidden = view !== 'status';
-
     if (view !== 'maintenance') {
       maintenance.hide();
     }
@@ -74,39 +74,19 @@ export function createManagerAppController(doc: Document = document): ManagerApp
         return;
       }
       if (!result.ok) {
-        renderStatusError(statusView, result.error ?? 'Release-Paket konnte nicht importiert werden.');
+        applyStatusError(result.error ?? 'Release-Paket konnte nicht importiert werden.');
         return;
       }
       await hostRefresh.refresh({ scope: 'full', immediate: true });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Release-Paket konnte nicht importiert werden.';
-      renderStatusError(statusView, message);
+      applyStatusError(message);
     }
   }
 
   function startFullscreenWizard(): void {
     navigation.navigateTo('wizard', { wizardPresentation: 'fullscreen' });
-  }
-
-  function renderStatusFromConfig(): void {
-    const status = hostRefresh.getLastConfig();
-    if (!status) {
-      return;
-    }
-    const api = requirePraxisManager();
-    renderStatusView(
-      statusView,
-      status,
-      startFullscreenWizard,
-      hostRefresh.getLastRuntime(),
-      () => {
-        void loadReleaseArchiveFromStatus();
-      },
-      (url) => {
-        void api.openExternalUrl(url);
-      },
-    );
   }
 
   const maintenance = createMaintenanceView(maintenanceViewEl, requirePraxisManager(), {
@@ -136,9 +116,6 @@ export function createManagerAppController(doc: Document = document): ManagerApp
     onConfig(status, view) {
       applyHostStatus(status);
       syncShell(view);
-      if (view === 'status') {
-        renderStatusFromConfig();
-      }
       if (view === 'maintenance') {
         maintenance.applyConfigSnapshot(status);
       }
@@ -146,11 +123,8 @@ export function createManagerAppController(doc: Document = document): ManagerApp
         network.applyConfigSnapshot(status);
       }
     },
-    onError(message, view) {
+    onError(message) {
       applyRuntimeError(message);
-      if (view === 'status') {
-        renderStatusError(statusView, message);
-      }
     },
   });
 
@@ -188,5 +162,14 @@ export function createManagerAppController(doc: Document = document): ManagerApp
 
   navigation.navigateTo('status');
 
-  return { navigateTab };
+  return {
+    navigateTab,
+    onStatusSetupClick: startFullscreenWizard,
+    onStatusLoadReleaseArchive: () => {
+      void loadReleaseArchiveFromStatus();
+    },
+    onStatusOpenUrl: (url: string) => {
+      void requirePraxisManager().openExternalUrl(url);
+    },
+  };
 }

@@ -1,30 +1,4 @@
 <!-- Legacy view containers — imperative views mount against these IDs. -->
-      <div id="status-view" class="app">
-        <section id="setup-entry" class="setup-entry" hidden>
-          <p id="setup-entry-eyebrow" class="setup-entry-eyebrow">Praxis Flow Manager</p>
-          <h1 id="setup-entry-title">Willkommen zur Einrichtung</h1>
-          <p id="setup-entry-copy" class="setup-entry-copy"></p>
-          <ul id="setup-entry-checklist" class="setup-entry-checklist"></ul>
-          <p id="setup-entry-note" class="setup-entry-note"></p>
-          <button type="button" id="setup-entry-start" class="setup-entry-start" hidden>
-            Einrichtung starten
-          </button>
-        </section>
-
-        <p id="delivery-images-warning" class="lan-warning" hidden></p>
-        <p id="lan-warning" class="lan-warning" hidden></p>
-
-        <h2 id="status-grid-heading" class="status-grid-heading">Diagnose</h2>
-        <dl class="status-grid" id="status-grid"></dl>
-
-        <section class="device-urls" id="device-urls-section" hidden>
-          <h2>Geräte-URLs</h2>
-          <ul id="device-urls-list" class="device-urls-list"></ul>
-        </section>
-
-        <p id="error-message" class="error" hidden></p>
-      </div>
-
       <div id="network-view" class="app network" hidden>
 
         <section class="network-section">

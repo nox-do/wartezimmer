@@ -9,6 +9,7 @@ export type ManagerShellState = {
   hostStatus: HostStatus | null;
   runtimeHealth: HostRuntimeHealth | null;
   runtimeError: string | null;
+  statusError: string | null;
 };
 
 export const managerShell = $state<ManagerShellState>({
@@ -17,6 +18,7 @@ export const managerShell = $state<ManagerShellState>({
   hostStatus: null,
   runtimeHealth: null,
   runtimeError: null,
+  statusError: null,
 });
 
 export function wizardFullscreen(shell: ManagerShellState = managerShell): boolean {
@@ -44,8 +46,17 @@ export function applyRuntimeHealth(runtime: HostRuntimeHealth): void {
 
 export function applyHostStatus(status: HostStatus): void {
   managerShell.hostStatus = status;
+  clearStatusError();
 }
 
 export function applyRuntimeError(message: string): void {
   managerShell.runtimeError = message;
+}
+
+export function applyStatusError(message: string): void {
+  managerShell.statusError = message;
+}
+
+export function clearStatusError(): void {
+  managerShell.statusError = null;
 }
