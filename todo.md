@@ -37,6 +37,9 @@ Stand: 2026-07-07 (Release **0.2.0** — Journey/Routing, non-breaking API/DB)
 - **Manager Maintenance Controller** (2026-07-08): `maintenance-controller.ts` — State/Actions/Confirm-Flows; `maintenance-view.ts` nur DOM-Wrapper; API unverändert
 - **Manager MaintenanceView → Svelte** (2026-07-08): `MaintenanceView.svelte` + Panels; Shared `ConfirmDialog`/`LoadingOverlay`/`FolderPathField`/`IconButton`; `maintenance-view-adapter.ts`; Legacy-HTML + `maintenance-view.ts` + `maintenance-accordion.ts` entfernt; Stack-Toggle-Fix (wantRunning vor checked-Reset)
 - **Manager NetworkView → Svelte** (2026-07-08): `NetworkView.svelte` + `LanIpPanel`/`GatewayPanel`/`NetworkTopologyDiagram`/`NetworkBindingChecks`; `network-controller.ts` + `network-view-model.ts` + `network-view-adapter.ts`; Legacy-HTML + `network-view.ts` + `network-binding-checks.ts` entfernt
+- **Manager WizardView → Svelte** (2026-07-08): `WizardView.svelte` + `WizardSteps`/`WizardStepIndicator`/`WizardRoutingModePanel`; `wizard-controller.ts` + `wizard-view-model.ts` + `wizard-view-adapter.ts`; `LegacyViewContainers.svelte` + `wizard-view.ts` + `folder-path-field.ts` entfernt; `LanIpPanel`/`GatewayPanel` um Wizard-Varianten erweitert
+- **Manager Legacy-DOM-Cleanup** (2026-07-08): tote `renderLanIpPanel`/`renderGatewayPanel`/`renderRoutingModePanel` entfernt; `view-loading.ts` + `dom.ts` gelöscht (ersetzt durch Svelte `LoadingOverlay` / Shell-State)
+- **Manager NetworkView Layout** (2026-07-09): LAN + Gateway in eine „Host-Konfiguration“-Karte; Button „Netzwerk-Einstellungen übernehmen“ unten für beides; Netzwerk-Tab bietet manuelle LAN-IP immer an
 
 ## Geplant
 

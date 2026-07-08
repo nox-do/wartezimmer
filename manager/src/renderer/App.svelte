@@ -1,11 +1,11 @@
 <script lang="ts">
   import type { ManagerView } from './host-refresh-controller.js';
   import HealthHeader from './HealthHeader.svelte';
-  import LegacyViewContainers from './LegacyViewContainers.svelte';
   import MainNav from './MainNav.svelte';
   import StatusView from './StatusView.svelte';
   import MaintenanceView from './MaintenanceView.svelte';
   import NetworkView from './NetworkView.svelte';
+  import WizardView from './WizardView.svelte';
   import { managerShell, showChrome, wizardFullscreen } from './manager-shell-state.svelte.js';
 
   let {
@@ -36,7 +36,7 @@
       />
       <MaintenanceView />
       <NetworkView />
-      <LegacyViewContainers />
+      <WizardView />
     </div>
   </div>
 </div>

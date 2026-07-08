@@ -172,7 +172,7 @@ export function showDeliveryImagesWarning(status: HostStatus, setupEntry: boolea
 
 export function lanWarningText(status: HostStatus, setupEntry: boolean): string | null {
   if (status.network.lanIpStale && status.network.configuredLanIp) {
-    return `⚠ LAN in .env (${status.network.configuredLanIp}) passt nicht zur aktuellen WLAN-IP — in Wartung → Netzwerk & Gast-WLAN anpassen.`;
+    return `⚠ LAN in .env (${status.network.configuredLanIp}) passt nicht zur aktuellen WLAN-IP — unter Netzwerk anpassen und übernehmen.`;
   }
   if (!status.network.configuredLanIp && !setupEntry) {
     return 'LAN noch nicht konfiguriert — Einrichtung ausführen, damit Terminal, TV und MFA den Host im WLAN erreichen.';

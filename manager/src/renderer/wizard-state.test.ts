@@ -93,8 +93,22 @@ test('initialLanIpSelection uses custom field for stale configured IP', () => {
     },
   });
   assert.deepEqual(initialLanIpSelection(status), {
-    lanAppIp: '__custom__',
-    customLanIp: '192.168.1.50',
+    lanAppIp: '192.168.1.13',
+    customLanIp: '',
+  });
+});
+
+test('initialLanIpSelection prefers live candidate when configured LAN is stale', () => {
+  const status = minimalStatus({
+    network: {
+      configuredLanIp: '192.168.1.13',
+      currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
+      lanIpStale: true,
+    },
+  });
+  assert.deepEqual(initialLanIpSelection(status), {
+    lanAppIp: '192.168.1.10',
+    customLanIp: '',
   });
 });
 
@@ -110,15 +124,15 @@ test('createInitialWizardFields combines LAN, practice and storage defaults', ()
     },
   });
   assert.deepEqual(createInitialWizardFields(status), {
-    lanAppIp: '__custom__',
-    customLanIp: '192.168.1.50',
+    lanAppIp: '192.168.1.13',
+    customLanIp: '',
     practiceDisplayName: 'Praxis Sonnenschein',
     importsHostPath: '/data/imports',
     exportsHostPath: '/data/exports',
     gatewayEnabled: false,
     gatewayInterface: 'eth1',
     gatewayIp: '192.168.88.1',
-    portalAppIp: '192.168.1.50',
+    portalAppIp: '192.168.1.13',
     authBridgeUrl: '',
     routingMode: 'simple',
   });

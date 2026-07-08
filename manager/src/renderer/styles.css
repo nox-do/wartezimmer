@@ -1147,6 +1147,31 @@ button:disabled {
   margin: 0 0 0.35rem;
 }
 
+.network-config-section {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised, rgba(255, 255, 255, 0.02));
+}
+
+.network-config-block + .network-config-block {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.network-config-subheading {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.network-config-actions {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
 .network-diagram-intro {
   margin: 0 0 0.85rem;
   color: var(--muted);

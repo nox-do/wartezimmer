@@ -8,22 +8,35 @@
     network,
     status,
     disabled = false,
+    variant = 'maintenance',
+    radioName = 'network-lan-ip',
+    idPrefix = 'network',
     onChange,
   }: {
     state: LanIpFieldState;
     network: NetworkSnapshot | null;
     status: HostStatus | null;
     disabled?: boolean;
+    variant?: 'wizard' | 'maintenance';
+    radioName?: string;
+    idPrefix?: string;
     onChange: (patch: Partial<LanIpFieldState>) => void;
   } = $props();
+
+  const customLanIpId = $derived(`${idPrefix}-lan-ip-custom`);
 
   const configuredLanIp = $derived(status?.network.configuredLanIp?.trim());
   const stale = $derived(status?.network.lanIpStale ?? false);
   const candidates = $derived(network?.lanCandidates ?? []);
   const useCustom = $derived(state.lanAppIp === '__custom__');
-  const offerManualEntry = $derived(shouldOfferManualLanIpEntry(candidates.length, stale));
+  const offerManualEntry = $derived(
+    variant === 'maintenance' || shouldOfferManualLanIpEntry(candidates.length, stale),
+  );
   const hasEnv = $derived(Boolean(status?.envExists && configuredLanIp));
-  const showStatusSummary = $derived(hasEnv || candidates.length > 0);
+  const showStatusSummary = $derived(variant === 'maintenance' && (hasEnv || candidates.length > 0));
+  const showWizardStaleHint = $derived(
+    variant === 'wizard' && stale && configuredLanIp,
+  );
 
   function candidateMatchesConfigured(): boolean {
     return Boolean(
@@ -31,6 +44,13 @@
     );
   }
 </script>
+
+{#if showWizardStaleHint && configuredLanIp}
+  <p class="wizard-hint">
+    Die konfigurierte IP ({configuredLanIp}) passt nicht zu einer aktuellen Host-Adresse — bitte
+    aktualisieren.
+  </p>
+{/if}
 
 {#if showStatusSummary}
   <div class="lan-ip-status">
@@ -81,7 +101,7 @@
         <label class="wizard-radio">
           <input
             type="radio"
-            name="network-lan-ip"
+            name={radioName}
             value={candidate.address}
             checked={state.lanAppIp === candidate.address}
             {disabled}
@@ -110,9 +130,9 @@
     </button>
   {/if}
 {:else}
-  <label class="wizard-field-label" for="network-lan-ip-custom">LAN-IP (manuell)</label>
+  <label class="wizard-field-label" for={customLanIpId}>LAN-IP (manuell)</label>
   <input
-    id="network-lan-ip-custom"
+    id={customLanIpId}
     type="text"
     class="wizard-input"
     placeholder="192.168.1.50"

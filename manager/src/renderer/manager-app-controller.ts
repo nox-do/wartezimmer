@@ -5,8 +5,6 @@ import {
 } from './manager-navigation.js';
 import type { NavigateOptions } from './manager-navigation.js';
 import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
-import { createWizardView } from './wizard-view.js';
-import { queryRequired } from './dom.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import type { HostStatus } from '../shared/host-status.js';
 import type { ManagerView } from './host-refresh-controller.js';
@@ -27,6 +25,12 @@ import {
   setNetworkCallbacks,
   tryGetNetworkViewAdapter,
 } from './network-view-adapter.js';
+import {
+  getWizardViewAdapter,
+  setWizardCallbacks,
+  tryGetWizardViewAdapter,
+} from './wizard-view-adapter.js';
+import type { WizardPresentation } from './manager-navigation.js';
 
 export type ManagerAppController = {
   navigateTab: (tab: ManagerView) => void;
@@ -35,9 +39,7 @@ export type ManagerAppController = {
   onStatusOpenUrl: (url: string) => void;
 };
 
-export function createManagerAppController(doc: Document = document): ManagerAppController {
-  const wizardView = queryRequired<HTMLElement>(doc, '#wizard-view', 'Manager-UI');
-
+export function createManagerAppController(): ManagerAppController {
   function requirePraxisManager(): Window['praxisManager'] {
     const api = window.praxisManager;
     if (!api) {
@@ -50,17 +52,13 @@ export function createManagerAppController(doc: Document = document): ManagerApp
 
   function setDomView(view: ManagerView): void {
     if (view !== 'wizard') {
-      wizard.hide();
+      tryGetWizardViewAdapter()?.hide();
     }
     if (view !== 'maintenance') {
       tryGetMaintenanceViewAdapter()?.hide();
     }
     if (view !== 'network') {
       tryGetNetworkViewAdapter()?.hide();
-    }
-
-    if (view === 'wizard') {
-      wizardView.hidden = false;
     }
   }
 
@@ -166,7 +164,16 @@ export function createManagerAppController(doc: Document = document): ManagerApp
     },
   });
 
-  const wizard = createWizardView(wizardView, requirePraxisManager(), {
+  const wizard = {
+    show: (status: HostStatus | null, presentation: WizardPresentation) => {
+      getWizardViewAdapter().show(status, presentation);
+    },
+    hide: () => {
+      tryGetWizardViewAdapter()?.hide();
+    },
+  };
+
+  setWizardCallbacks({
     onComplete: () => {
       navigation.navigateTo('status');
     },

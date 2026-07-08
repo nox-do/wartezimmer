@@ -53,13 +53,15 @@ export function initialLanIpSelection(
   if (configured && candidateAddresses.has(configured)) {
     return { lanAppIp: configured, customLanIp: '' };
   }
-  if (configured) {
-    return { lanAppIp: '__custom__', customLanIp: configured };
-  }
 
   const first = candidates[0]?.address;
   if (first) {
+    // Stale/missing .env IP: prefer a live host candidate over keeping the old value.
     return { lanAppIp: first, customLanIp: '' };
+  }
+
+  if (configured) {
+    return { lanAppIp: '__custom__', customLanIp: configured };
   }
 
   return { lanAppIp: '__custom__', customLanIp: '' };

@@ -7,14 +7,24 @@
     network,
     lanIpFallback,
     disabled = false,
+    showIntro = false,
+    radioName = 'network-gateway-interface',
+    idPrefix = 'network',
     onChange,
   }: {
     state: GatewayFieldState;
     network: NetworkSnapshot | null;
     lanIpFallback: string;
     disabled?: boolean;
+    showIntro?: boolean;
+    radioName?: string;
+    idPrefix?: string;
     onChange: (patch: Partial<GatewayFieldState>) => void;
   } = $props();
+
+  const gatewayIpId = $derived(`${idPrefix}-gateway-ip`);
+  const portalIpId = $derived(`${idPrefix}-portal-ip`);
+  const authBridgeUrlId = $derived(`${idPrefix}-auth-bridge-url`);
 
   const composeSupported = $derived(network?.gatewayComposeSupported ?? true);
   const interfaceNames = $derived(new Set((network?.interfaces ?? []).map((iface) => iface.name)));
@@ -26,6 +36,24 @@
     ),
   );
 </script>
+
+{#if showIntro}
+  <div class="wizard-gateway-intro">
+    <p><strong>Wofür ist dieser Schritt?</strong></p>
+    <p>
+      Sie entscheiden, ob Praxis Flow Einstellungen für ein Gast-WLAN mit Captive Portal vorbereiten
+      soll.
+    </p>
+    <ul class="wizard-gateway-intro-list">
+      <li><strong>Aus:</strong> Kein Gast-WLAN — Normalfall für den Start.</li>
+      <li>
+        <strong>An:</strong> Werte für Gateway und Portal-URL werden gespeichert; Router und ggf.
+        Gateway-Hardware richtet die IT separat ein.
+      </li>
+    </ul>
+    <p>Das Patientenportal selbst aktivieren Sie später in Praxis Flow (Betrieb).</p>
+  </div>
+{/if}
 
 <label class="wizard-radio">
   <input
@@ -66,7 +94,7 @@
       <label class="wizard-radio">
         <input
           type="radio"
-          name="network-gateway-interface"
+          name={radioName}
           value={iface.name}
           checked={state.gatewayInterface === iface.name}
           {disabled}
@@ -82,7 +110,7 @@
       <label class="wizard-radio">
         <input
           type="radio"
-          name="network-gateway-interface"
+          name={radioName}
           value="eth1"
           checked={state.gatewayInterface === 'eth1'}
           {disabled}
@@ -96,7 +124,7 @@
       <label class="wizard-radio">
         <input
           type="radio"
-          name="network-gateway-interface"
+          name={radioName}
           value={state.gatewayInterface}
           checked
           {disabled}
@@ -107,9 +135,9 @@
     {/if}
   </fieldset>
 
-  <label class="wizard-field-label" for="network-gateway-ip">IP des Gateways im Gast-Netz</label>
+  <label class="wizard-field-label" for={gatewayIpId}>IP des Gateways im Gast-Netz</label>
   <input
-    id="network-gateway-ip"
+    id={gatewayIpId}
     type="text"
     class="wizard-input"
     placeholder="192.168.88.1"
@@ -118,9 +146,9 @@
     oninput={(event) => onChange({ gatewayIp: event.currentTarget.value })}
   />
 
-  <label class="wizard-field-label" for="network-portal-ip">IP der Praxis-App für Patienten im Gast-WLAN</label>
+  <label class="wizard-field-label" for={portalIpId}>IP der Praxis-App für Patienten im Gast-WLAN</label>
   <input
-    id="network-portal-ip"
+    id={portalIpId}
     type="text"
     class="wizard-input"
     placeholder={lanIpFallback || '192.168.1.50'}
@@ -129,9 +157,9 @@
     oninput={(event) => onChange({ portalAppIp: event.currentTarget.value })}
   />
 
-  <label class="wizard-field-label" for="network-auth-bridge-url">Adresse der Gateway-Bridge für die app</label>
+  <label class="wizard-field-label" for={authBridgeUrlId}>Adresse der Gateway-Bridge für die app</label>
   <input
-    id="network-auth-bridge-url"
+    id={authBridgeUrlId}
     type="text"
     class="wizard-input"
     placeholder={network?.defaultGatewayBridgeUrl ?? 'http://<gateway-host>:9100'}

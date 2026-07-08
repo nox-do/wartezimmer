@@ -134,13 +134,19 @@
       <NetworkBindingChecks checks={snapshot.status?.networkBindings} />
     </section>
 
-    <section class="network-section">
-      <h2 class="wizard-subheading">Netzwerk Praxis intern</h2>
+    <section class="network-section network-config-section">
+      <h2 class="wizard-subheading">Host-Konfiguration</h2>
       <p class="maintenance-hint">
-        Host-Adresse für Terminal, TV, MFA und Ops im Praxis-LAN/-WLAN
-        (<code>SETUP_LAN_APP_IP</code>). Geräte-URLs stehen auf dem Status-Screen.
+        LAN-IP und Gateway werden gemeinsam in der Host-<code>.env</code> gespeichert. Geräte-URLs
+        stehen auf dem Status-Screen.
       </p>
-      <div id="network-lan-panel">
+
+      <div class="network-config-block" id="network-lan-panel">
+        <h3 class="network-config-subheading">LAN-IP (Praxis intern)</h3>
+        <p class="maintenance-hint">
+          Host-Adresse für Terminal, TV, MFA und Ops im Praxis-LAN/-WLAN
+          (<code>SETUP_LAN_APP_IP</code>).
+        </p>
         <LanIpPanel
           state={snapshot}
           network={snapshot.network}
@@ -149,15 +155,13 @@
           onChange={patchFields}
         />
       </div>
-    </section>
 
-    <section class="network-section">
-      <h2 class="wizard-subheading">Gateway</h2>
-      <p class="maintenance-hint">
-        Für Gast-WLAN mit Captive Portal: Gateway-Werte in der Host-Konfiguration speichern. Die
-        fachliche Portal-Aktivierung passiert in Praxis Flow.
-      </p>
-      <div id="network-gateway-panel">
+      <div class="network-config-block" id="network-gateway-panel">
+        <h3 class="network-config-subheading">Gateway (optional)</h3>
+        <p class="maintenance-hint">
+          Für Gast-WLAN mit Captive Portal: Gateway-Werte in der Host-Konfiguration speichern. Die
+          fachliche Portal-Aktivierung passiert in Praxis Flow.
+        </p>
         <GatewayPanel
           state={snapshot}
           network={snapshot.network}
@@ -166,17 +170,18 @@
           onChange={patchFields}
         />
       </div>
+
       {#if warningText}
         <p class="wizard-hint">{warningText}</p>
       {/if}
-      <div class="maintenance-actions">
+      <div class="maintenance-actions network-config-actions">
         <button
           type="button"
           class="btn-secondary"
           disabled={snapshot.busy}
           onclick={() => controller?.apply()}
         >
-          Übernehmen
+          Netzwerk-Einstellungen übernehmen
         </button>
       </div>
       {#if snapshot.networkStatusText}
