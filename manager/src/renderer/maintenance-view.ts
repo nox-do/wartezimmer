@@ -1,63 +1,31 @@
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-import type { ComposeStatus, HostStatus, RoutingMode } from '../shared/host-status.js';
+import type { HostStatus } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { createFolderPathField } from './folder-path-field.js';
-import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
 import {
   MAINTENANCE_LOG_SERVICES,
-  PIN_RESET_PROGRESS_TEXT,
-  ROUTING_MODE_SAVE_PROGRESS_TEXT,
-  SOFTWARE_UPDATE_CONFIRM_MESSAGE,
-  SOFTWARE_UPDATE_LOADING_TEXT,
-  STACK_OFFLINE_CONFIRM_MESSAGE,
-  STORAGE_PATHS_RESTART_CONFIRM_MESSAGE,
-  STORAGE_PATHS_VALIDATION_ERROR,
-  STORAGE_SAVE_PROGRESS_TEXT,
   backupInfoText,
-  composeActionErrorMessage,
   fileSharingHintText,
   logsDisplayText,
-  pinResetSuccessText,
   routingModeSaveDisabled,
-  routingModeSuccessText,
   showRestartBuildButton,
-  softwareUpdateErrorText,
   softwareUpdateInfoRows,
   softwareUpdateSectionVisible,
-  softwareUpdateStatusText,
   stackStatusLabel,
-  storagePathsChanged as draftStoragePathsChanged,
-  storageSaveErrorText,
-  storageSaveStatusText,
+  storagePathsChanged,
   storageWarningText,
 } from './maintenance-view-model.js';
+import {
+  createMaintenanceController,
+  type MaintenanceCallbacks,
+} from './maintenance-controller.js';
 import { queryRequired } from './dom.js';
 import { setButtonIcon } from './lucide-icons.js';
 import { createViewLoadingOverlay } from './view-loading.js';
 import { createMaintenanceAccordion } from './maintenance-accordion.js';
-import { formatRoutingModeError, renderRoutingModePanel } from './routing-mode-ui.js';
+import { renderRoutingModePanel } from './routing-mode-ui.js';
 
-export type MaintenanceCallbacks = {
-  onAfterMutation?: () => void;
-};
-
-type MaintenanceState = {
-  status: HostStatus | null;
-  compose: ComposeStatus | null;
-  logsService: string;
-  logsText: string;
-  latestBackupPath: string | null;
-  importsHostPath: string;
-  exportsHostPath: string;
-  storageStatusText: string;
-  softwareUpdateStatusText: string;
-  routingMode: RoutingMode;
-  routingModeSaved: RoutingMode;
-  complexRoutingLicensed: boolean;
-  routingModeStatusText: string;
-  busy: boolean;
-  error: string | null;
-};
+export type { MaintenanceCallbacks };
 
 export function createMaintenanceView(
   root: HTMLElement,
@@ -222,28 +190,15 @@ export function createMaintenanceView(
   setButtonIcon(refreshLogsBtn, 'rotate-cw');
   setButtonIcon(backupTipBtn, 'info');
 
-  const state: MaintenanceState = {
-    status: null,
-    compose: null,
-    logsService: 'app',
-    logsText: '',
-    latestBackupPath: null,
-    importsHostPath: '',
-    exportsHostPath: '',
-    storageStatusText: '',
-    softwareUpdateStatusText: '',
-    routingMode: 'simple',
-    routingModeSaved: 'simple',
-    complexRoutingLicensed: true,
-    routingModeStatusText: '',
-    busy: false,
-    error: null,
-  };
-
   let pendingConfirmAction: (() => void) | null = null;
 
-  function setBusy(busy: boolean): void {
-    state.busy = busy;
+  function openConfirm(message: string, onConfirm: () => void): void {
+    pendingConfirmAction = onConfirm;
+    confirmMessage.textContent = message;
+    confirmDialog.showModal();
+  }
+
+  function setControlsDisabled(busy: boolean): void {
     for (const button of [
       restartBuildBtn,
       restartBtn,
@@ -262,11 +217,10 @@ export function createMaintenanceView(
     }
     stackToggle.disabled = busy;
     logsSelect.disabled = busy;
-    renderStorageFields();
   }
 
-  function setError(message: string | null): void {
-    state.error = message;
+  function renderError(): void {
+    const message = controller.getState().error;
     if (message) {
       errorEl.hidden = false;
       errorEl.textContent = message;
@@ -277,29 +231,24 @@ export function createMaintenanceView(
   }
 
   function renderLogs(): void {
-    logsPre.textContent = logsDisplayText(state.logsText);
+    logsPre.textContent = logsDisplayText(controller.getState().logsText);
   }
 
   function renderBackupInfo(): void {
+    const state = controller.getState();
     backupInfo.textContent = backupInfoText(state.latestBackupPath, state.status?.envExists);
   }
 
   function renderStackToggle(): void {
+    const state = controller.getState();
     const running = state.compose?.running ?? false;
     stackToggle.checked = running;
     stackStatus.textContent = stackStatusLabel(running);
     restartBuildBtn.hidden = !showRestartBuildButton(state.status?.mode);
   }
 
-  function storagePathsChanged(): boolean {
-    return draftStoragePathsChanged(
-      state.importsHostPath,
-      state.exportsHostPath,
-      state.status?.folders,
-    );
-  }
-
   function renderSoftwareUpdateSection(): void {
+    const state = controller.getState();
     const status = state.status;
     const required = softwareUpdateSectionVisible(status);
     softwareUpdateSection.hidden = !required;
@@ -322,6 +271,7 @@ export function createMaintenanceView(
   }
 
   function renderRoutingMode(): void {
+    const state = controller.getState();
     routingModeStatus.textContent = state.routingModeStatusText;
     routingModeSaveBtn.disabled = routingModeSaveDisabled(
       state.busy,
@@ -339,43 +289,24 @@ export function createMaintenanceView(
         disabled: state.busy,
         context: 'maintenance',
         onChange: (routingMode) => {
-          state.routingMode = routingMode;
-          renderRoutingMode();
+          controller.setRoutingMode(routingMode);
         },
       },
     );
   }
 
-  function renderAll(): void {
-    renderFileSharingHint();
-    renderStackToggle();
-    renderSoftwareUpdateSection();
-    renderStorageFields();
-    renderRoutingMode();
-    renderLogs();
-    renderBackupInfo();
-  }
-
   function renderStorageFields(): void {
+    const state = controller.getState();
     importsFieldHost.replaceChildren(
       createFolderPathField({
         label: 'Importordner',
         value: state.importsHostPath,
         disabled: state.busy,
         onChange: (value) => {
-          state.importsHostPath = value;
+          controller.setImportsPath(value);
           renderStorageWarning();
         },
-        onBrowse: async () => {
-          const result = await api.selectFolder(state.importsHostPath.trim() || undefined);
-          if (!result.canceled && result.path) {
-            state.importsHostPath = result.path;
-            renderStorageFields();
-            renderStorageWarning();
-            return result.path;
-          }
-          return null;
-        },
+        onBrowse: () => controller.browseImportsFolder(),
       }),
     );
 
@@ -385,19 +316,10 @@ export function createMaintenanceView(
         value: state.exportsHostPath,
         disabled: state.busy,
         onChange: (value) => {
-          state.exportsHostPath = value;
+          controller.setExportsPath(value);
           renderStorageWarning();
         },
-        onBrowse: async () => {
-          const result = await api.selectFolder(state.exportsHostPath.trim() || undefined);
-          if (!result.canceled && result.path) {
-            state.exportsHostPath = result.path;
-            renderStorageFields();
-            renderStorageWarning();
-            return result.path;
-          }
-          return null;
-        },
+        onBrowse: () => controller.browseExportsFolder(),
       }),
     );
 
@@ -406,7 +328,11 @@ export function createMaintenanceView(
   }
 
   function renderStorageWarning(): void {
-    const warning = storageWarningText(state.compose?.running ?? false, storagePathsChanged());
+    const state = controller.getState();
+    const warning = storageWarningText(
+      state.compose?.running ?? false,
+      storagePathsChanged(state.importsHostPath, state.exportsHostPath, state.status?.folders),
+    );
     storageWarning.hidden = warning === null;
     storageWarning.textContent = warning ?? '';
   }
@@ -417,40 +343,42 @@ export function createMaintenanceView(
     fileSharingHint.textContent = hint ?? '';
   }
 
-  async function refreshLogs(): Promise<void> {
-    const service = logsSelect.value || state.logsService;
-    state.logsService = service;
-    const result = await api.getComposeLogs(service, 200);
-    state.logsText = result.log;
+  function renderPinResetStatus(): void {
+    pinResetStatus.textContent = controller.getState().pinResetStatusText;
+  }
+
+  function renderAll(): void {
+    const { busy } = controller.getState();
+    setControlsDisabled(busy);
+    renderError();
+    renderFileSharingHint();
+    renderStackToggle();
+    renderSoftwareUpdateSection();
+    renderStorageFields();
+    renderRoutingMode();
     renderLogs();
+    renderBackupInfo();
+    renderPinResetStatus();
   }
 
-  async function runAction(action: 'start' | 'stop' | 'restart', build = false): Promise<void> {
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await api.runComposeAction(action, build);
-      state.compose = result.compose;
-      renderStackToggle();
-      if (!result.ok) {
-        setError(composeActionErrorMessage(action, result.log));
-      }
-      if (action !== 'stop') {
-        await refreshLogs();
-      }
-      callbacks.onAfterMutation?.();
-    } catch (error) {
-      setError(error instanceof Error ? error.message : `Aktion „${action}“ fehlgeschlagen.`);
-    } finally {
-      setBusy(false);
-    }
+  function setupLogsSelect(): void {
+    logsSelect.replaceChildren(
+      ...MAINTENANCE_LOG_SERVICES.map((service) => {
+        const option = document.createElement('option');
+        option.value = service.value;
+        option.textContent = service.label;
+        return option;
+      }),
+    );
+    logsSelect.value = 'app';
   }
 
-  function openConfirm(message: string, onConfirm: () => void): void {
-    pendingConfirmAction = onConfirm;
-    confirmMessage.textContent = message;
-    confirmDialog.showModal();
-  }
+  const controller = createMaintenanceController({
+    api,
+    onAfterMutation: callbacks.onAfterMutation,
+    requestConfirm: openConfirm,
+    onStateChange: renderAll,
+  });
 
   confirmCancel.addEventListener('click', () => {
     pendingConfirmAction = null;
@@ -467,213 +395,39 @@ export function createMaintenanceView(
   });
 
   stackToggle.addEventListener('change', () => {
-    if (stackToggle.checked) {
-      void runAction('start').then(() => {
-        if (!state.compose?.running) {
-          renderStackToggle();
-        }
-      });
-      return;
+    const wantRunning = stackToggle.checked;
+    if (!wantRunning) {
+      stackToggle.checked = true;
     }
-
-    stackToggle.checked = true;
-    openConfirm(STACK_OFFLINE_CONFIRM_MESSAGE, () => {
-      void runAction('stop');
-    });
+    controller.handleStackToggle(wantRunning);
   });
 
   restartBuildBtn.addEventListener('click', () => {
-    void runAction('restart', true);
+    controller.restartBuild();
   });
 
   restartBtn.addEventListener('click', () => {
-    openConfirm(STACK_OFFLINE_CONFIRM_MESSAGE, () => {
-      void runAction('restart');
-    });
+    controller.restart();
   });
 
   logsSelect.addEventListener('change', () => {
-    setBusy(true);
-    void refreshLogs()
-      .catch((error) => {
-        setError(error instanceof Error ? error.message : 'Logs konnten nicht geladen werden.');
-      })
-      .finally(() => setBusy(false));
+    controller.requestLogsRefresh(logsSelect.value);
   });
 
   refreshLogsBtn.addEventListener('click', () => {
-    setBusy(true);
-    void refreshLogs()
-      .catch((error) => {
-        setError(error instanceof Error ? error.message : 'Logs konnten nicht geladen werden.');
-      })
-      .finally(() => setBusy(false));
+    controller.requestLogsRefresh(logsSelect.value);
   });
 
   backupBtn.addEventListener('click', () => {
-    setBusy(true);
-    setError(null);
-    void api
-      .backupEnv()
-      .then(async (result) => {
-        state.latestBackupPath = result.backupPath;
-        renderBackupInfo();
-        const saveResult = await api.saveEnvBackup(result.backupPath);
-        if (!saveResult.canceled && !saveResult.saved) {
-          setError('Download fehlgeschlagen.');
-        }
-      })
-      .catch((error) => {
-        setError(error instanceof Error ? error.message : '.env-Backup fehlgeschlagen.');
-      })
-      .finally(() => setBusy(false));
+    controller.backupEnv();
   });
 
-  function saveStorageFolders(restartCompose: boolean): void {
-    const importsHostPath = state.importsHostPath.trim();
-    const exportsHostPath = state.exportsHostPath.trim();
-    if (!importsHostPath || !exportsHostPath) {
-      setError(STORAGE_PATHS_VALIDATION_ERROR);
-      return;
-    }
-
-    setBusy(true);
-    setError(null);
-    state.storageStatusText = STORAGE_SAVE_PROGRESS_TEXT;
-    renderStorageFields();
-
-    void api
-      .saveStorageFolders({
-        importsHostPath,
-        exportsHostPath,
-        restartCompose,
-      })
-      .then((result) => {
-        state.importsHostPath = result.folders.imports;
-        state.exportsHostPath = result.folders.exports;
-        if (state.status) {
-          state.status = {
-            ...state.status,
-            folders: result.folders,
-          };
-        }
-        state.latestBackupPath = result.backupPath;
-        if (result.compose) {
-          state.compose = result.compose;
-          renderStackToggle();
-        }
-        state.storageStatusText = storageSaveStatusText(result, restartCompose);
-        const storageError = storageSaveErrorText(result, restartCompose);
-        if (storageError) {
-          setError(storageError);
-        }
-        renderBackupInfo();
-        renderStorageFields();
-        callbacks.onAfterMutation?.();
-      })
-      .catch((error) => {
-        state.storageStatusText = '';
-        renderStorageFields();
-        setError(error instanceof Error ? error.message : 'Speichern der Ordner fehlgeschlagen.');
-      })
-      .finally(() => {
-        setBusy(false);
-        renderStorageFields();
-      });
-  }
-
-  function runSoftwareUpdate(restartCompose: boolean): void {
-    setBusy(true);
-    setError(null);
-    state.softwareUpdateStatusText = SOFTWARE_UPDATE_LOADING_TEXT;
-    renderSoftwareUpdateSection();
-
-    void pickAndLoadReleaseArchive(api, {
-      restartCompose,
-      loadingMessage: SOFTWARE_UPDATE_LOADING_TEXT,
-      onProgress: (progress) => {
-        if (progress.phase === 'loading') {
-          state.softwareUpdateStatusText = progress.statusText;
-          renderSoftwareUpdateSection();
-        }
-      },
-    })
-      .then(async (pickResult) => {
-        if (pickResult.canceled) {
-          state.softwareUpdateStatusText = '';
-          renderSoftwareUpdateSection();
-          return;
-        }
-        if (!pickResult.ok || !pickResult.result) {
-          state.softwareUpdateStatusText = '';
-          renderSoftwareUpdateSection();
-          if (pickResult.error) {
-            setError(pickResult.error);
-          }
-          return;
-        }
-
-        const result = pickResult.result;
-        if (state.status) {
-          state.status = {
-            ...state.status,
-            envExists: true,
-            deliveryImages: result.deliveryImages,
-            compose: result.compose ?? state.status.compose,
-          };
-        }
-        if (result.compose) {
-          state.compose = result.compose;
-          renderStackToggle();
-        }
-
-        state.softwareUpdateStatusText = softwareUpdateStatusText(result, restartCompose);
-        const updateError = softwareUpdateErrorText(result, restartCompose);
-        if (updateError) {
-          setError(updateError);
-        }
-        renderSoftwareUpdateSection();
-        callbacks.onAfterMutation?.();
-        if (restartCompose && result.composeRestarted) {
-          await refreshLogs();
-        }
-      })
-      .catch((error) => {
-        state.softwareUpdateStatusText = '';
-        renderSoftwareUpdateSection();
-        setError(
-          error instanceof Error
-            ? error.message
-            : 'Software-Update konnte nicht importiert werden.',
-        );
-      })
-      .finally(() => setBusy(false));
-  }
-
   softwareImportBtn.addEventListener('click', () => {
-    const stackRunning = state.compose?.running ?? false;
-    const proceed = () => runSoftwareUpdate(stackRunning);
-
-    if (stackRunning) {
-      openConfirm(SOFTWARE_UPDATE_CONFIRM_MESSAGE, proceed);
-      return;
-    }
-
-    proceed();
+    controller.importSoftware();
   });
 
   storageApplyBtn.addEventListener('click', () => {
-    if (!state.importsHostPath.trim() || !state.exportsHostPath.trim()) {
-      setError(STORAGE_PATHS_VALIDATION_ERROR);
-      return;
-    }
-
-    if ((state.compose?.running ?? false) && storagePathsChanged()) {
-      openConfirm(STORAGE_PATHS_RESTART_CONFIRM_MESSAGE, () => saveStorageFolders(true));
-      return;
-    }
-
-    saveStorageFolders(false);
+    controller.applyStorage();
   });
 
   pinResetBtn.addEventListener('click', () => {
@@ -681,29 +435,7 @@ export function createMaintenanceView(
   });
 
   routingModeSaveBtn.addEventListener('click', () => {
-    setBusy(true);
-    setError(null);
-    routingModeStatus.textContent = ROUTING_MODE_SAVE_PROGRESS_TEXT;
-    void api
-      .setRoutingMode({ routingMode: state.routingMode })
-      .then((result) => {
-        if (!result.ok) {
-          routingModeStatus.textContent = '';
-          setError(formatRoutingModeError(result));
-          return;
-        }
-        state.routingMode = result.routingMode;
-        state.routingModeSaved = result.routingMode;
-        state.complexRoutingLicensed = result.features.complexRoutingLicensed;
-        routingModeStatus.textContent = routingModeSuccessText(result.routingMode);
-        renderRoutingMode();
-        callbacks.onAfterMutation?.();
-      })
-      .catch((error) => {
-        routingModeStatus.textContent = '';
-        setError(error instanceof Error ? error.message : 'Routing-Modus konnte nicht gespeichert werden.');
-      })
-      .finally(() => setBusy(false));
+    controller.saveRoutingMode();
   });
 
   pinResetCancel.addEventListener('click', () => {
@@ -712,95 +444,25 @@ export function createMaintenanceView(
 
   pinResetOk.addEventListener('click', () => {
     pinResetDialog.close();
-    setBusy(true);
-    setError(null);
-    pinResetStatus.textContent = PIN_RESET_PROGRESS_TEXT;
-    void api
-      .resetStaffPins()
-      .then((result) => {
-        state.compose = result.compose;
-        renderStackToggle();
-        renderStorageWarning();
-        if (result.ok) {
-          pinResetStatus.textContent = pinResetSuccessText(result.defaultPin);
-          void refreshLogs();
-          callbacks.onAfterMutation?.();
-        } else {
-          pinResetStatus.textContent = '';
-          setError(result.log || 'PIN-Reset fehlgeschlagen.');
-        }
-      })
-      .catch((error) => {
-        pinResetStatus.textContent = '';
-        setError(error instanceof Error ? error.message : 'PIN-Reset fehlgeschlagen.');
-      })
-      .finally(() => setBusy(false));
+    controller.executePinReset();
   });
 
   return {
     applyRuntimeHealth(health: HostRuntimeHealth): void {
-      state.compose = health.compose;
-      renderStackToggle();
-      renderStorageWarning();
+      controller.applyRuntimeHealth(health);
     },
     applyConfigSnapshot(status: HostStatus): void {
-      state.status = status;
-      if (!state.busy) {
-        state.importsHostPath = status.folders.imports;
-        state.exportsHostPath = status.folders.exports;
-      }
-      renderSoftwareUpdateSection();
-      renderStorageFields();
-      renderStorageWarning();
-      renderBackupInfo();
+      controller.applyConfigSnapshot(status);
     },
     show(status: HostStatus): void {
       root.hidden = false;
-      state.status = status;
-      state.compose = status.compose;
-      state.logsService = 'app';
-      state.logsText = '';
-      state.latestBackupPath = null;
-      state.importsHostPath = status.folders.imports;
-      state.exportsHostPath = status.folders.exports;
-      state.storageStatusText = '';
-      state.softwareUpdateStatusText = '';
-      state.routingModeStatusText = '';
-      state.error = null;
-      pinResetStatus.textContent = '';
-
-      logsSelect.replaceChildren(
-        ...MAINTENANCE_LOG_SERVICES.map((service) => {
-          const option = document.createElement('option');
-          option.value = service.value;
-          option.textContent = service.label;
-          return option;
-        }),
-      );
-      logsSelect.value = 'app';
-
-      renderAll();
-      setBusy(true);
-      void Promise.all([refreshLogs(), api.getEnvBackupInfo(), api.getRoutingMode()])
-        .then(([, backupInfoResult, routingCapabilities]) => {
-          state.latestBackupPath = backupInfoResult.latestBackupPath;
-          state.routingMode = routingCapabilities.routingMode;
-          state.routingModeSaved = routingCapabilities.routingMode;
-          state.complexRoutingLicensed = routingCapabilities.features.complexRoutingLicensed;
-          renderBackupInfo();
-          renderRoutingMode();
-        })
-        .catch((error) => {
-          setError(
-            error instanceof Error ? error.message : 'Wartungsdaten konnten nicht geladen werden.',
-          );
-        })
-        .finally(() => setBusy(false));
+      setupLogsSelect();
+      controller.show(status);
     },
     hide(): void {
       root.hidden = true;
       viewLoading.setLoading(false);
-      setError(null);
+      controller.clearError();
     },
     setLoading: viewLoading.setLoading,
   };
