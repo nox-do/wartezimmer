@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { formatRoutingModeError } from './routing-mode-ui.js';
+import { buildRoutingModeOptions, formatRoutingModeError } from './routing-mode-ui.js';
 
 test('formatRoutingModeError maps active journey blockade', () => {
   assert.equal(
@@ -30,4 +30,12 @@ test('formatRoutingModeError maps unreachable app', () => {
     }),
     'Praxis Flow läuft nicht — Stack starten oder später erneut versuchen.',
   );
+});
+
+test('buildRoutingModeOptions marks complex as disabled without license in wizard', () => {
+  const options = buildRoutingModeOptions('wizard', false);
+  const complex = options.find((option) => option.value === 'complex');
+  assert.equal(complex?.disabled, true);
+  assert.equal(complex?.pro, true);
+  assert.equal(options.find((option) => option.value === 'simple')?.recommended, true);
 });

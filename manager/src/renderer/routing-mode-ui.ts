@@ -34,17 +34,19 @@ export function formatRoutingModeError(
   return input.error;
 }
 
-function routingModeOptions(
-  context: RoutingModePanelContext,
-  complexRoutingLicensed: boolean,
-): Array<{
+export type RoutingModeOption = {
   value: RoutingMode;
   label: string;
   hint: string;
   recommended?: boolean;
   pro?: boolean;
   disabled?: boolean;
-}> {
+};
+
+export function buildRoutingModeOptions(
+  context: RoutingModePanelContext,
+  complexRoutingLicensed: boolean,
+): RoutingModeOption[] {
   if (context === 'wizard') {
     return [
       {
@@ -96,7 +98,7 @@ export function renderRoutingModePanel(
   fieldset.className = 'routing-mode-card-fieldset';
   fieldset.disabled = Boolean(state.busy || callbacks.disabled);
 
-  const options = routingModeOptions(context, state.complexRoutingLicensed);
+  const options = buildRoutingModeOptions(context, state.complexRoutingLicensed);
 
   for (const option of options) {
     const card = document.createElement('label');

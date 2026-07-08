@@ -3,6 +3,10 @@ import type { HostStatus } from '../shared/host-status.js';
 
 export type WizardPresentation = 'fullscreen' | 'embedded';
 
+export function defaultWizardPresentation(status: HostStatus | null): WizardPresentation {
+  return status?.envExists ? 'embedded' : 'fullscreen';
+}
+
 export type NavigateOptions = {
   wizardPresentation?: WizardPresentation;
 };

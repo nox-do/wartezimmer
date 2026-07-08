@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { HostRefreshController } from './host-refresh-controller.js';
-import { createManagerNavigation } from './manager-navigation.js';
+import { createManagerNavigation, defaultWizardPresentation } from './manager-navigation.js';
 import type { HostStatus } from '../shared/host-status.js';
 
 function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
@@ -188,4 +188,13 @@ test('does not show wizard after leaving wizard before fetch resolves', async ()
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   assert.equal(wizardShown.length, 0);
+});
+
+test('defaultWizardPresentation uses fullscreen before env exists', () => {
+  assert.equal(defaultWizardPresentation(null), 'fullscreen');
+  assert.equal(
+    defaultWizardPresentation(minimalStatus({ envExists: false })),
+    'fullscreen',
+  );
+  assert.equal(defaultWizardPresentation(minimalStatus({ envExists: true })), 'embedded');
 });

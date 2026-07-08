@@ -1,53 +1,21 @@
 import type { HostStatus } from '../shared/host-status.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-import { deliveryImagesSummary, needsDeliveryImages } from './delivery-images-flow.js';
 import { createLucideIcon, setButtonIcon } from './lucide-icons.js';
 import { buildTvKioskLinuxCommand, buildTvKioskWindowsCommand } from './tv-kiosk-commands.js';
 import { mountFloatingPanel } from './floating-panel.js';
+import {
+  DELIVERY_IMAGES_WARNING_TEXT,
+  deviceUrlEntries,
+  isSetupEntryStatus,
+  lanWarningText,
+  setupChecklistItems,
+  setupEntryContent,
+  setupEntryTone,
+  showDeliveryImagesWarning,
+  statusGridRows,
+} from './status-view-model.js';
 
-function mark(ok: boolean): string {
-  return ok ? '✓' : '✗';
-}
-
-type SetupEntryTone = 'fresh' | 'needs-docker' | 'needs-release' | 'needs-lan' | 'maintenance';
-
-function setupEntryTone(status: HostStatus): SetupEntryTone {
-  if (!status.envExists) {
-    return 'fresh';
-  }
-  if (!status.docker.installed || !status.docker.daemonRunning || !status.docker.composeAvailable) {
-    return 'needs-docker';
-  }
-  if (needsDeliveryImages(status)) {
-    return 'needs-release';
-  }
-  if (!status.network.configuredLanIp) {
-    return 'needs-lan';
-  }
-  return 'maintenance';
-}
-
-export function isSetupEntryStatus(status: HostStatus): boolean {
-  return setupEntryTone(status) !== 'maintenance';
-}
-
-function dockerSummary(status: HostStatus): string {
-  const parts = [
-    `${mark(status.docker.installed)} installiert`,
-    `${mark(status.docker.daemonRunning)} Daemon`,
-    `${mark(status.docker.composeAvailable)} Compose`,
-  ];
-  return parts.join(', ');
-}
-
-function currentWlanLabel(status: HostStatus): string | null {
-  const candidates = status.network.currentLanCandidates;
-  if (candidates.length === 0) {
-    return null;
-  }
-  const primary = candidates[0];
-  return `${primary.address} (${primary.interfaceName})`;
-}
+export { isSetupEntryStatus } from './status-view-model.js';
 
 async function copyText(text: string, button: HTMLButtonElement): Promise<void> {
   try {
@@ -61,38 +29,6 @@ async function copyText(text: string, button: HTMLButtonElement): Promise<void> 
   } catch {
     button.setAttribute('aria-label', 'Kopieren fehlgeschlagen');
   }
-}
-
-
-function setupChecklistItems(
-  status: HostStatus,
-): Array<{ label: string; done: boolean; muted?: boolean }> {
-  return [
-    {
-      label: status.docker.installed
-        ? status.docker.daemonRunning && status.docker.composeAvailable
-          ? 'Docker ist bereit'
-          : 'Docker Desktop starten'
-        : 'Docker Desktop installieren',
-      done:
-        status.docker.installed && status.docker.daemonRunning && status.docker.composeAvailable,
-    },
-    {
-      label: status.deliveryImages.required
-        ? status.deliveryImages.ready
-          ? 'Software-Paket ist importiert'
-          : 'Software-Paket aus dem Release-Ordner importieren'
-        : 'Software-Paket im Dev-Modus nicht erforderlich',
-      done: !status.deliveryImages.required || status.deliveryImages.ready,
-      muted: !status.deliveryImages.required,
-    },
-    {
-      label: status.network.configuredLanIp
-        ? `Host-Adresse ist konfiguriert (${status.network.configuredLanIp})`
-        : 'Host-Adresse auswählen',
-      done: Boolean(status.network.configuredLanIp),
-    },
-  ];
 }
 
 function renderSetupEntry(
@@ -119,26 +55,11 @@ function renderSetupEntry(
     return;
   }
 
+  const content = setupEntryContent(status, tone);
   entry.className = `setup-entry is-${tone}`;
-  eyebrow.textContent = status.mode === 'install' ? 'Ersteinrichtung' : 'Entwicklungsmodus';
-
-  if (tone === 'fresh') {
-    title.textContent = 'Praxis Flow einrichten';
-    copy.textContent =
-      'Wir führen Schritt für Schritt durch Docker, Software-Paket, Host-Adresse im Praxisnetz und Start des lokalen Praxis-Stacks.';
-  } else if (tone === 'needs-docker') {
-    title.textContent = 'Docker vorbereiten';
-    copy.textContent =
-      'Praxis Flow nutzt Docker Desktop für die lokalen Dienste. Sobald Docker läuft, kann die Einrichtung fortgesetzt werden.';
-  } else if (tone === 'needs-release') {
-    title.textContent = 'Software-Paket fehlt';
-    copy.textContent =
-      'Die App ist installiert. Jetzt fehlt nur das Release-Paket aus dem Praxis-Flow-Ordner, damit app und sandbox lokal geladen werden.';
-  } else {
-    title.textContent = 'Einrichtung fortsetzen';
-    copy.textContent =
-      'Die Grundlagen sind da. Als Nächstes wird die erreichbare Host-Adresse für Terminal, TV und MFA festgelegt.';
-  }
+  eyebrow.textContent = content.eyebrow;
+  title.textContent = content.title;
+  copy.textContent = content.copy;
 
   checklist.replaceChildren();
   for (const item of setupChecklistItems(status)) {
@@ -154,7 +75,7 @@ function renderSetupEntry(
   }
 
   note.replaceChildren();
-  if (tone === 'needs-release' && status.docker.daemonRunning && onLoadReleaseArchive) {
+  if (content.showReleasePicker && onLoadReleaseArchive) {
     const text = document.createElement('span');
     text.textContent = 'Release-Ordner vollständig herunterladen, dann die ';
     const code = document.createElement('code');
@@ -167,18 +88,15 @@ function renderSetupEntry(
     loadBtn.textContent = 'Release-Paket wählen';
     loadBtn.addEventListener('click', onLoadReleaseArchive);
     note.append(text, code, tail, document.createTextNode(' '), loadBtn);
-  } else if (tone === 'needs-docker') {
-    note.textContent = status.docker.installed
-      ? 'Docker Desktop ist installiert, der Daemon antwortet aber noch nicht. Kurz warten oder Docker Desktop öffnen.'
-      : 'Docker Desktop installieren und danach den Manager erneut öffnen.';
+  } else if (content.note) {
+    note.textContent = content.note;
   } else {
     note.textContent = '';
   }
 
   if (onSetupClick) {
     startBtn.hidden = false;
-    startBtn.textContent =
-      tone === 'fresh' ? 'Einrichtung starten' : 'Einrichtung fortsetzen';
+    startBtn.textContent = content.startButtonLabel;
     startBtn.onclick = onSetupClick;
   } else {
     startBtn.hidden = true;
@@ -280,26 +198,6 @@ export function renderStatusView(
   renderSetupEntry(root, status, onSetupClick, onLoadReleaseArchive);
   const setupEntry = isSetupEntryStatus(status);
 
-  const wlan = currentWlanLabel(status);
-  const rows: Array<[string, string]> = [
-    ['Install-Home', `${status.installHome} (${status.mode})`],
-    ['Compose', status.composeProjectName],
-    ['Docker', dockerSummary(status)],
-    ['.env', status.envExists ? '✓ vorhanden' : '✗ fehlt'],
-  ];
-
-  if (wlan) {
-    rows.push(['WLAN aktuell', wlan]);
-  }
-
-  if (status.network.configuredLanIp) {
-    rows.push(['LAN in .env', status.network.configuredLanIp]);
-  }
-
-  if (status.deliveryImages.required) {
-    rows.push(['Software-Paket', deliveryImagesSummary(status)]);
-  }
-
   gridHeading.hidden = true;
   grid.hidden = setupEntry;
   grid.classList.toggle('is-setup-diagnostics', setupEntry);
@@ -308,7 +206,7 @@ export function renderStatusView(
     grid.replaceChildren();
   } else {
     grid.replaceChildren(
-      ...rows.flatMap(([label, value]) => {
+      ...statusGridRows(status).flatMap(({ label, value }) => {
         const dt = document.createElement('dt');
         dt.textContent = label;
         const dd = document.createElement('dd');
@@ -318,14 +216,11 @@ export function renderStatusView(
     );
   }
 
-  const showReleaseWarning =
-    !setupEntry && needsDeliveryImages(status) && status.docker.daemonRunning;
-  if (showReleaseWarning) {
+  if (showDeliveryImagesWarning(status, setupEntry)) {
     deliveryImagesWarning.hidden = false;
     deliveryImagesWarning.replaceChildren();
     const text = document.createElement('span');
-    text.textContent =
-      '⚠ Release-Paket fehlt — Software-Images (app + sandbox) importieren, bevor die Einrichtung startet. manifest.json oder SHA256SUMS.txt muss im selben Ordner wie die .tar.gz liegen.';
+    text.textContent = DELIVERY_IMAGES_WARNING_TEXT;
     deliveryImagesWarning.append(text);
     if (onLoadReleaseArchive) {
       const loadBtn = document.createElement('button');
@@ -340,33 +235,24 @@ export function renderStatusView(
     deliveryImagesWarning.textContent = '';
   }
 
-  if (status.network.lanIpStale && status.network.configuredLanIp) {
+  const lanWarningMessage = lanWarningText(status, setupEntry);
+  if (lanWarningMessage) {
     lanWarning.hidden = false;
-    lanWarning.textContent = `⚠ LAN in .env (${status.network.configuredLanIp}) passt nicht zur aktuellen WLAN-IP — in Wartung → Netzwerk & Gast-WLAN anpassen.`;
-  } else if (!status.network.configuredLanIp && !setupEntry) {
-    lanWarning.hidden = false;
-    lanWarning.textContent =
-      'LAN noch nicht konfiguriert — Einrichtung ausführen, damit Terminal, TV und MFA den Host im WLAN erreichen.';
+    lanWarning.textContent = lanWarningMessage;
   } else {
     lanWarning.hidden = true;
     lanWarning.textContent = '';
   }
 
   deviceUrlsList.replaceChildren();
-  if (status.deviceUrls && !setupEntry) {
+  const urls = deviceUrlEntries(status);
+  if (urls && !setupEntry) {
     deviceUrlsSection.hidden = false;
     for (const orphan of document.querySelectorAll('.device-url-kiosk-tip.is-floating')) {
       orphan.remove();
     }
-    const entries: Array<[string, string]> = [
-      ['Terminal', status.deviceUrls.terminal],
-      ['TV', status.deviceUrls.tv],
-      ['MFA', status.deviceUrls.mfa],
-      ['Portal', status.deviceUrls.portal],
-      ['Ops', status.deviceUrls.ops],
-    ];
 
-    for (const [label, url] of entries) {
+    for (const { label, url, showKioskTip } of urls) {
       const item = document.createElement('li');
       item.className = 'device-url-item';
       if (label === 'TV') {
@@ -389,7 +275,7 @@ export function renderStatusView(
         onOpenUrl?.(url);
       });
 
-      item.append(name, link, createDeviceUrlActions(url, label === 'TV'));
+      item.append(name, link, createDeviceUrlActions(url, showKioskTip));
       deviceUrlsList.append(item);
     }
   } else {
