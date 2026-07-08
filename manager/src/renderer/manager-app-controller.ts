@@ -4,7 +4,6 @@ import {
   defaultWizardPresentation,
 } from './manager-navigation.js';
 import type { NavigateOptions } from './manager-navigation.js';
-import { createNetworkView } from './network-view.js';
 import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
 import { createWizardView } from './wizard-view.js';
 import { queryRequired } from './dom.js';
@@ -23,6 +22,11 @@ import {
   setMaintenanceCallbacks,
   tryGetMaintenanceViewAdapter,
 } from './maintenance-view-adapter.js';
+import {
+  getNetworkViewAdapter,
+  setNetworkCallbacks,
+  tryGetNetworkViewAdapter,
+} from './network-view-adapter.js';
 
 export type ManagerAppController = {
   navigateTab: (tab: ManagerView) => void;
@@ -32,7 +36,6 @@ export type ManagerAppController = {
 };
 
 export function createManagerAppController(doc: Document = document): ManagerAppController {
-  const networkViewEl = queryRequired<HTMLElement>(doc, '#network-view', 'Manager-UI');
   const wizardView = queryRequired<HTMLElement>(doc, '#wizard-view', 'Manager-UI');
 
   function requirePraxisManager(): Window['praxisManager'] {
@@ -46,19 +49,16 @@ export function createManagerAppController(doc: Document = document): ManagerApp
   }
 
   function setDomView(view: ManagerView): void {
-    if (view !== 'network') {
-      network.hide();
-    }
     if (view !== 'wizard') {
       wizard.hide();
     }
     if (view !== 'maintenance') {
       tryGetMaintenanceViewAdapter()?.hide();
     }
-
-    if (view === 'network') {
-      networkViewEl.hidden = false;
+    if (view !== 'network') {
+      tryGetNetworkViewAdapter()?.hide();
     }
+
     if (view === 'wizard') {
       wizardView.hidden = false;
     }
@@ -109,11 +109,23 @@ export function createManagerAppController(doc: Document = document): ManagerApp
     },
   };
 
-  const network = createNetworkView(networkViewEl, requirePraxisManager(), {
-    onAfterMutation: () => {
-      void hostRefresh.refresh({ scope: 'full', immediate: true });
+  const network = {
+    show: (status: HostStatus) => {
+      getNetworkViewAdapter().show(status);
     },
-  });
+    hide: () => {
+      tryGetNetworkViewAdapter()?.hide();
+    },
+    setLoading: (loading: boolean) => {
+      tryGetNetworkViewAdapter()?.setLoading(loading);
+    },
+    applyConfigSnapshot: (status: HostStatus) => {
+      getNetworkViewAdapter().applyConfigSnapshot(status);
+    },
+    applyRuntimeHealth: (health: HostRuntimeHealth) => {
+      getNetworkViewAdapter().applyRuntimeHealth(health);
+    },
+  };
 
   const hostRefresh = createHostRefreshController({
     api: requirePraxisManager,
@@ -143,6 +155,12 @@ export function createManagerAppController(doc: Document = document): ManagerApp
   });
 
   setMaintenanceCallbacks({
+    onAfterMutation: () => {
+      void hostRefresh.refresh({ scope: 'full', immediate: true });
+    },
+  });
+
+  setNetworkCallbacks({
     onAfterMutation: () => {
       void hostRefresh.refresh({ scope: 'full', immediate: true });
     },

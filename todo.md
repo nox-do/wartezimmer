@@ -36,6 +36,7 @@ Stand: 2026-07-07 (Release **0.2.0** — Journey/Routing, non-breaking API/DB)
 - **Manager Maintenance ViewModel** (2026-07-08): `maintenance-view-model.ts` — reine Labels/Warnings/Disabled/Status-Texte; `maintenance-view.ts` nutzt Helper; Tests
 - **Manager Maintenance Controller** (2026-07-08): `maintenance-controller.ts` — State/Actions/Confirm-Flows; `maintenance-view.ts` nur DOM-Wrapper; API unverändert
 - **Manager MaintenanceView → Svelte** (2026-07-08): `MaintenanceView.svelte` + Panels; Shared `ConfirmDialog`/`LoadingOverlay`/`FolderPathField`/`IconButton`; `maintenance-view-adapter.ts`; Legacy-HTML + `maintenance-view.ts` + `maintenance-accordion.ts` entfernt; Stack-Toggle-Fix (wantRunning vor checked-Reset)
+- **Manager NetworkView → Svelte** (2026-07-08): `NetworkView.svelte` + `LanIpPanel`/`GatewayPanel`/`NetworkTopologyDiagram`/`NetworkBindingChecks`; `network-controller.ts` + `network-view-model.ts` + `network-view-adapter.ts`; Legacy-HTML + `network-view.ts` + `network-binding-checks.ts` entfernt
 
 ## Geplant
 
