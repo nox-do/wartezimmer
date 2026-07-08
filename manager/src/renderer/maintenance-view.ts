@@ -1,13 +1,36 @@
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import type { ComposeStatus, HostStatus, RoutingMode } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
-import {
-  DOCKER_FILE_SHARING_HINT,
-  needsDockerFileSharingHint,
-} from '../shared/docker-file-sharing-hint.js';
-import { formatEnvBackupLabel } from '@praxis-flow/server-shared';
 import { createFolderPathField } from './folder-path-field.js';
-import { deliveryImagesSummary, pickAndLoadReleaseArchive } from './delivery-images-flow.js';
+import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
+import {
+  MAINTENANCE_LOG_SERVICES,
+  PIN_RESET_PROGRESS_TEXT,
+  ROUTING_MODE_SAVE_PROGRESS_TEXT,
+  SOFTWARE_UPDATE_CONFIRM_MESSAGE,
+  SOFTWARE_UPDATE_LOADING_TEXT,
+  STACK_OFFLINE_CONFIRM_MESSAGE,
+  STORAGE_PATHS_RESTART_CONFIRM_MESSAGE,
+  STORAGE_PATHS_VALIDATION_ERROR,
+  STORAGE_SAVE_PROGRESS_TEXT,
+  backupInfoText,
+  composeActionErrorMessage,
+  fileSharingHintText,
+  logsDisplayText,
+  pinResetSuccessText,
+  routingModeSaveDisabled,
+  routingModeSuccessText,
+  showRestartBuildButton,
+  softwareUpdateErrorText,
+  softwareUpdateInfoRows,
+  softwareUpdateSectionVisible,
+  softwareUpdateStatusText,
+  stackStatusLabel,
+  storagePathsChanged as draftStoragePathsChanged,
+  storageSaveErrorText,
+  storageSaveStatusText,
+  storageWarningText,
+} from './maintenance-view-model.js';
 import { queryRequired } from './dom.js';
 import { setButtonIcon } from './lucide-icons.js';
 import { createViewLoadingOverlay } from './view-loading.js';
@@ -35,12 +58,6 @@ type MaintenanceState = {
   busy: boolean;
   error: string | null;
 };
-
-const LOG_SERVICES = [
-  { value: 'app', label: 'app' },
-  { value: 'sandbox', label: 'sandbox' },
-  { value: 'gateway', label: 'gateway' },
-] as const;
 
 export function createMaintenanceView(
   root: HTMLElement,
@@ -260,40 +277,31 @@ export function createMaintenanceView(
   }
 
   function renderLogs(): void {
-    logsPre.textContent = state.logsText || '(keine Logs)';
+    logsPre.textContent = logsDisplayText(state.logsText);
   }
 
   function renderBackupInfo(): void {
-    if (state.latestBackupPath) {
-      backupInfo.textContent = `Letztes Backup: ${formatEnvBackupLabel(state.latestBackupPath)}`;
-    } else if (state.status?.envExists) {
-      backupInfo.textContent = 'Noch kein Backup vorhanden.';
-    } else {
-      backupInfo.textContent = 'Keine .env vorhanden.';
-    }
+    backupInfo.textContent = backupInfoText(state.latestBackupPath, state.status?.envExists);
   }
 
   function renderStackToggle(): void {
     const running = state.compose?.running ?? false;
     stackToggle.checked = running;
-    stackStatus.textContent = running ? 'Läuft' : 'Gestoppt';
-    restartBuildBtn.hidden = state.status?.mode !== 'repo';
+    stackStatus.textContent = stackStatusLabel(running);
+    restartBuildBtn.hidden = !showRestartBuildButton(state.status?.mode);
   }
 
   function storagePathsChanged(): boolean {
-    const current = state.status?.folders;
-    if (!current) {
-      return false;
-    }
-    return (
-      state.importsHostPath.trim() !== current.imports ||
-      state.exportsHostPath.trim() !== current.exports
+    return draftStoragePathsChanged(
+      state.importsHostPath,
+      state.exportsHostPath,
+      state.status?.folders,
     );
   }
 
   function renderSoftwareUpdateSection(): void {
     const status = state.status;
-    const required = status?.deliveryImages.required ?? false;
+    const required = softwareUpdateSectionVisible(status);
     softwareUpdateSection.hidden = !required;
     if (!required || !status) {
       softwareInfo.replaceChildren();
@@ -301,16 +309,8 @@ export function createMaintenanceView(
       return;
     }
 
-    const rows: Array<[string, string]> = [['Aktuell', deliveryImagesSummary(status)]];
-    if (status.deliveryImages.appImage) {
-      rows.push(['app', status.deliveryImages.appImage]);
-    }
-    if (status.deliveryImages.sandboxImage) {
-      rows.push(['sandbox', status.deliveryImages.sandboxImage]);
-    }
-
     softwareInfo.replaceChildren(
-      ...rows.flatMap(([label, value]) => {
+      ...softwareUpdateInfoRows(status).flatMap(({ label, value }) => {
         const dt = document.createElement('dt');
         dt.textContent = label;
         const dd = document.createElement('dd');
@@ -323,8 +323,11 @@ export function createMaintenanceView(
 
   function renderRoutingMode(): void {
     routingModeStatus.textContent = state.routingModeStatusText;
-    routingModeSaveBtn.disabled =
-      state.busy || state.routingMode === state.routingModeSaved;
+    routingModeSaveBtn.disabled = routingModeSaveDisabled(
+      state.busy,
+      state.routingMode,
+      state.routingModeSaved,
+    );
     renderRoutingModePanel(
       routingModePanel,
       {
@@ -403,26 +406,15 @@ export function createMaintenanceView(
   }
 
   function renderStorageWarning(): void {
-    const running = state.compose?.running ?? false;
-    const changed = storagePathsChanged();
-    if (running && changed) {
-      storageWarning.hidden = false;
-      storageWarning.textContent =
-        'Neue Mounts werden erst nach einem Stack-Neustart aktiv. Beim Übernehmen wird danach gefragt.';
-      return;
-    }
-    storageWarning.hidden = true;
-    storageWarning.textContent = '';
+    const warning = storageWarningText(state.compose?.running ?? false, storagePathsChanged());
+    storageWarning.hidden = warning === null;
+    storageWarning.textContent = warning ?? '';
   }
 
   function renderFileSharingHint(): void {
-    if (needsDockerFileSharingHint(api.hostPlatform)) {
-      fileSharingHint.hidden = false;
-      fileSharingHint.textContent = DOCKER_FILE_SHARING_HINT;
-    } else {
-      fileSharingHint.hidden = true;
-      fileSharingHint.textContent = '';
-    }
+    const hint = fileSharingHintText(api.hostPlatform);
+    fileSharingHint.hidden = hint === null;
+    fileSharingHint.textContent = hint ?? '';
   }
 
   async function refreshLogs(): Promise<void> {
@@ -441,7 +433,7 @@ export function createMaintenanceView(
       state.compose = result.compose;
       renderStackToggle();
       if (!result.ok) {
-        setError(result.log || `Aktion „${action}“ fehlgeschlagen.`);
+        setError(composeActionErrorMessage(action, result.log));
       }
       if (action !== 'stop') {
         await refreshLogs();
@@ -485,12 +477,9 @@ export function createMaintenanceView(
     }
 
     stackToggle.checked = true;
-    openConfirm(
-      'Praxis offline — Terminal und MFA sind während Stop/Neustart nicht erreichbar. Fortfahren?',
-      () => {
-        void runAction('stop');
-      },
-    );
+    openConfirm(STACK_OFFLINE_CONFIRM_MESSAGE, () => {
+      void runAction('stop');
+    });
   });
 
   restartBuildBtn.addEventListener('click', () => {
@@ -498,12 +487,9 @@ export function createMaintenanceView(
   });
 
   restartBtn.addEventListener('click', () => {
-    openConfirm(
-      'Praxis offline — Terminal und MFA sind während Stop/Neustart nicht erreichbar. Fortfahren?',
-      () => {
-        void runAction('restart');
-      },
-    );
+    openConfirm(STACK_OFFLINE_CONFIRM_MESSAGE, () => {
+      void runAction('restart');
+    });
   });
 
   logsSelect.addEventListener('change', () => {
@@ -547,13 +533,13 @@ export function createMaintenanceView(
     const importsHostPath = state.importsHostPath.trim();
     const exportsHostPath = state.exportsHostPath.trim();
     if (!importsHostPath || !exportsHostPath) {
-      setError('Bitte Import- und Exportordner angeben.');
+      setError(STORAGE_PATHS_VALIDATION_ERROR);
       return;
     }
 
     setBusy(true);
     setError(null);
-    state.storageStatusText = 'Speichern …';
+    state.storageStatusText = STORAGE_SAVE_PROGRESS_TEXT;
     renderStorageFields();
 
     void api
@@ -572,26 +558,15 @@ export function createMaintenanceView(
           };
         }
         state.latestBackupPath = result.backupPath;
-        const parts = ['Pfade gespeichert.'];
-        if (result.created.length > 0) {
-          parts.push(`Ordner angelegt: ${result.created.join(', ')}`);
-        }
-        if (result.backupPath) {
-          parts.push(`Backup: ${formatEnvBackupLabel(result.backupPath)}`);
-        }
         if (result.compose) {
           state.compose = result.compose;
           renderStackToggle();
         }
-        if (result.composeRestarted) {
-          parts.push('Stack neu gestartet.');
-        } else if (result.stackWasRunning && restartCompose) {
-          parts.push('Stack-Neustart fehlgeschlagen — bitte manuell neu starten.');
-          setError(result.restartLog || 'Stack-Neustart fehlgeschlagen.');
-        } else if (result.stackWasRunning) {
-          parts.push('Stack läuft noch mit alten Mounts — Neustart empfohlen.');
+        state.storageStatusText = storageSaveStatusText(result, restartCompose);
+        const storageError = storageSaveErrorText(result, restartCompose);
+        if (storageError) {
+          setError(storageError);
         }
-        state.storageStatusText = parts.join(' ');
         renderBackupInfo();
         renderStorageFields();
         callbacks.onAfterMutation?.();
@@ -610,12 +585,12 @@ export function createMaintenanceView(
   function runSoftwareUpdate(restartCompose: boolean): void {
     setBusy(true);
     setError(null);
-    state.softwareUpdateStatusText = 'Prüfsumme und Import …';
+    state.softwareUpdateStatusText = SOFTWARE_UPDATE_LOADING_TEXT;
     renderSoftwareUpdateSection();
 
     void pickAndLoadReleaseArchive(api, {
       restartCompose,
-      loadingMessage: 'Prüfsumme und Import …',
+      loadingMessage: SOFTWARE_UPDATE_LOADING_TEXT,
       onProgress: (progress) => {
         if (progress.phase === 'loading') {
           state.softwareUpdateStatusText = progress.statusText;
@@ -652,30 +627,11 @@ export function createMaintenanceView(
           renderStackToggle();
         }
 
-        const parts = [
-          `Import OK — SHA256 (${result.sha256Source}) verifiziert.`,
-          `app: ${result.appImage}`,
-          `sandbox: ${result.sandboxImage}`,
-        ];
-        if (result.releaseVersion) {
-          parts.push(`Version: ${result.releaseVersion}`);
+        state.softwareUpdateStatusText = softwareUpdateStatusText(result, restartCompose);
+        const updateError = softwareUpdateErrorText(result, restartCompose);
+        if (updateError) {
+          setError(updateError);
         }
-        if (result.backupPath) {
-          parts.push(`Backup: ${formatEnvBackupLabel(result.backupPath)}`);
-        }
-        if (restartCompose) {
-          parts.push(
-            result.composeRestarted
-              ? 'Stack mit neuen Images neu gestartet.'
-              : 'Stack-Neustart fehlgeschlagen — bitte manuell neu starten.',
-          );
-          if (!result.composeRestarted && result.restartLog) {
-            setError(result.restartLog);
-          }
-        } else {
-          parts.push('Stack unverändert — bei laufendem Betrieb Neustart ausführen.');
-        }
-        state.softwareUpdateStatusText = parts.join(' ');
         renderSoftwareUpdateSection();
         callbacks.onAfterMutation?.();
         if (restartCompose && result.composeRestarted) {
@@ -699,10 +655,7 @@ export function createMaintenanceView(
     const proceed = () => runSoftwareUpdate(stackRunning);
 
     if (stackRunning) {
-      openConfirm(
-        'Praxis offline — während des Updates sind Terminal und MFA kurz nicht erreichbar. Fortfahren?',
-        proceed,
-      );
+      openConfirm(SOFTWARE_UPDATE_CONFIRM_MESSAGE, proceed);
       return;
     }
 
@@ -711,15 +664,12 @@ export function createMaintenanceView(
 
   storageApplyBtn.addEventListener('click', () => {
     if (!state.importsHostPath.trim() || !state.exportsHostPath.trim()) {
-      setError('Bitte Import- und Exportordner angeben.');
+      setError(STORAGE_PATHS_VALIDATION_ERROR);
       return;
     }
 
     if ((state.compose?.running ?? false) && storagePathsChanged()) {
-      openConfirm(
-        'Die neuen Import-/Export-Ordner werden erst nach einem Stack-Neustart aktiv. Pfade speichern und Stack jetzt neu starten?',
-        () => saveStorageFolders(true),
-      );
+      openConfirm(STORAGE_PATHS_RESTART_CONFIRM_MESSAGE, () => saveStorageFolders(true));
       return;
     }
 
@@ -733,7 +683,7 @@ export function createMaintenanceView(
   routingModeSaveBtn.addEventListener('click', () => {
     setBusy(true);
     setError(null);
-    routingModeStatus.textContent = 'Speichern …';
+    routingModeStatus.textContent = ROUTING_MODE_SAVE_PROGRESS_TEXT;
     void api
       .setRoutingMode({ routingMode: state.routingMode })
       .then((result) => {
@@ -745,10 +695,7 @@ export function createMaintenanceView(
         state.routingMode = result.routingMode;
         state.routingModeSaved = result.routingMode;
         state.complexRoutingLicensed = result.features.complexRoutingLicensed;
-        routingModeStatus.textContent =
-          result.routingMode === 'complex'
-            ? 'Complex Routing aktiv — Journey-UI in MFA nach Reload sichtbar.'
-            : 'Simple Routing aktiv.';
+        routingModeStatus.textContent = routingModeSuccessText(result.routingMode);
         renderRoutingMode();
         callbacks.onAfterMutation?.();
       })
@@ -767,7 +714,7 @@ export function createMaintenanceView(
     pinResetDialog.close();
     setBusy(true);
     setError(null);
-    pinResetStatus.textContent = 'PIN-Reset läuft …';
+    pinResetStatus.textContent = PIN_RESET_PROGRESS_TEXT;
     void api
       .resetStaffPins()
       .then((result) => {
@@ -775,7 +722,7 @@ export function createMaintenanceView(
         renderStackToggle();
         renderStorageWarning();
         if (result.ok) {
-          pinResetStatus.textContent = `Erfolgreich — MFA- und Ops-PIN ist jetzt ${result.defaultPin}. MFA-PIN in MFA → Betrieb, Ops-PIN in System → PIN & Sicherheit ändern.`;
+          pinResetStatus.textContent = pinResetSuccessText(result.defaultPin);
           void refreshLogs();
           callbacks.onAfterMutation?.();
         } else {
@@ -823,7 +770,7 @@ export function createMaintenanceView(
       pinResetStatus.textContent = '';
 
       logsSelect.replaceChildren(
-        ...LOG_SERVICES.map((service) => {
+        ...MAINTENANCE_LOG_SERVICES.map((service) => {
           const option = document.createElement('option');
           option.value = service.value;
           option.textContent = service.label;
