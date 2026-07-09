@@ -49,7 +49,7 @@ test('networkSaveStatusText summarizes save and restart outcome', () => {
 
 test('networkSaveStatusText notes skipped gateway compose on macOS', () => {
   const text = networkSaveStatusText(minimalSaveResult({ gatewayComposeSkipped: true }), false);
-  assert.match(text, /Gateway-Dienst auf diesem Praxis-PC übersprungen/);
+  assert.match(text, /Gateway auf diesem Rechner übersprungen/);
 });
 
 test('networkSaveErrorText surfaces restart failure log', () => {

@@ -4,10 +4,10 @@ import type { HostNetworkResult } from '../shared/host-status.js';
 export const NETWORK_SAVE_PROGRESS_TEXT = 'Speichern …';
 export const NETWORK_NO_CHANGES_ERROR = 'Keine Änderungen an LAN oder Gateway.';
 export const NETWORK_RESTART_CONFIRM_MESSAGE =
-  'Einstellungen werden in die .env geschrieben. Stack jetzt neu starten, damit Container und URLs greifen?';
-export const NETWORK_LAN_REQUIRED_ERROR = 'Bitte eine LAN-IP wählen oder eingeben.';
+  'Einstellungen werden gespeichert. Stack jetzt neu starten, damit die Änderungen greifen?';
+export const NETWORK_LAN_REQUIRED_ERROR = 'Bitte eine LAN-Adresse wählen oder eingeben.';
 export const NETWORK_GATEWAY_INTERFACE_ERROR =
-  'Bitte ein Netzwerk-Interface für das Gast-LAN wählen.';
+  'Bitte eine Netzwerkkarte für das Gast-Netz wählen.';
 
 export function networkWarningText(running: boolean, changed: boolean): string | null {
   if (running && changed) {
@@ -26,7 +26,7 @@ export function networkSaveStatusText(
   }
   if (result.gatewayComposeSkipped) {
     parts.push(
-      'Gateway-Dienst auf diesem Praxis-PC übersprungen; Werte für separates Linux-Gateway gespeichert.',
+      'Gateway auf diesem Rechner übersprungen; Werte für separates Linux-Gateway gespeichert.',
     );
   }
   if (result.composeRestarted) {

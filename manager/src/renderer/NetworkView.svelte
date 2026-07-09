@@ -173,18 +173,15 @@
     </section>
 
     <section class="panel-section panel-section--network network-config-section">
-      <h2 class="wizard-subheading">Host-Konfiguration</h2>
+      <h2 class="wizard-subheading">Netzwerk-Einstellungen</h2>
       <p class="hint">
-        LAN-IP und Gateway werden gemeinsam in der Host-<code>.env</code> gespeichert. Geräte-URLs
-        stehen auf dem Status-Screen.
+        Adresse für Praxis-Geräte und optionale Gast-WLAN-Werte. Geräte-URLs stehen auf dem
+        Status-Screen.
       </p>
 
       <div class="network-config-block" id="network-lan-panel">
-        <h3 class="network-config-subheading">LAN-IP (Praxis intern)</h3>
-        <p class="hint">
-          Host-Adresse für Terminal, TV, MFA und Ops im Praxis-LAN/-WLAN
-          (<code>SETUP_LAN_APP_IP</code>).
-        </p>
+        <h3 class="network-config-subheading">LAN-Adresse (Praxis intern)</h3>
+        <p class="hint">Adresse dieses Rechners für Terminal, TV, MFA und Ops.</p>
         <LanIpPanel
           state={snapshot}
           network={snapshot.network}
@@ -195,10 +192,10 @@
       </div>
 
       <div class="network-config-block" id="network-gateway-panel">
-        <h3 class="network-config-subheading">Gateway (optional)</h3>
+        <h3 class="network-config-subheading">Gast-WLAN (optional)</h3>
         <p class="hint">
-          Für Gast-WLAN mit Captive Portal: Gateway-Werte in der Host-Konfiguration speichern. Die
-          fachliche Portal-Aktivierung passiert in Praxis Flow.
+          Technische Werte für Captive Portal speichern. Das Portal selbst aktivieren Sie später in
+          Praxis Flow (Betrieb).
         </p>
         <GatewayPanel
           state={snapshot}

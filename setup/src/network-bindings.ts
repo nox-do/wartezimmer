@@ -106,9 +106,9 @@ export async function auditNetworkBindings(input: {
       id: 'app.port',
       ok: appListenOk,
       message: appListenOk
-        ? 'app lauscht auf Host-Port 8080'
-        : 'Host-Port 8080 nicht erreichbar',
-      detail: 'Docker veröffentlicht 0.0.0.0:8080 — Terminal/TV/MFA nutzen die LAN-IP.',
+        ? 'Praxis Flow erreichbar auf Port 8080'
+        : 'Port 8080 am Rechner nicht erreichbar',
+      detail: 'Terminal, TV und MFA nutzen die LAN-Adresse dieses Rechners.',
     });
   }
 
@@ -118,11 +118,11 @@ export async function auditNetworkBindings(input: {
       id: 'lan.ip-on-host',
       ok: lanOnHost,
       message: lanOnHost
-        ? `LAN-IP ${input.configuredLanIp} ist am Host vergeben`
-        : `LAN-IP ${input.configuredLanIp} ist am Host nicht vergeben`,
+        ? `LAN-Adresse ${input.configuredLanIp} ist an diesem Rechner vergeben`
+        : `LAN-Adresse ${input.configuredLanIp} ist an diesem Rechner nicht vergeben`,
       detail: lanOnHost
         ? undefined
-        : 'DHCP-Wechsel oder falsche IP in .env — unten anpassen.',
+        : 'IP hat sich geändert oder ist falsch — unten anpassen und übernehmen.',
     });
   }
 
@@ -137,8 +137,8 @@ export async function auditNetworkBindings(input: {
     checks.push({
       id: 'gateway.platform',
       ok: true,
-      message: 'Gateway-Container nur auf Linux — keine Gast-NIC-Prüfung auf macOS/Windows',
-      detail: `.env vorbereitet (${ifaceName}, ${gatewayIp}). Am Produktions-PC mit zweiter Netzwerkkarte konfigurieren — nicht die WLAN-IP dieses Rechners.`,
+      message: 'Gateway-Dienst startet nur auf Linux',
+      detail: `Werte gespeichert (${ifaceName}, ${gatewayIp}). Am Linux-Gateway mit zweiter Netzwerkkarte einrichten — nicht die WLAN-Adresse dieses Rechners.`,
     });
     return checks;
   }
@@ -148,11 +148,11 @@ export async function auditNetworkBindings(input: {
     id: 'gateway.interface',
     ok: ifaceOk,
     message: ifaceOk
-      ? `Interface ${ifaceName} am Host vorhanden`
-      : `Interface ${ifaceName} am Host nicht gefunden`,
+      ? `Netzwerkkarte ${ifaceName} am Gateway vorhanden`
+      : `Netzwerkkarte ${ifaceName} am Gateway nicht gefunden`,
     detail: ifaceOk
-      ? 'openNDS und dnsmasq binden an GATEWAY_INTERFACE.'
-      : 'GATEWAY_INTERFACE in .env prüfen — Container startet sonst nicht.',
+      ? 'Darüber laufen DHCP und Captive Portal für das Gast-Netz.'
+      : 'Netzwerkkarte in der Gateway-Konfiguration prüfen — sonst startet der Dienst nicht.',
   });
 
   if (ifaceOk && gatewayIp) {
@@ -165,7 +165,7 @@ export async function auditNetworkBindings(input: {
         : `${gatewayIp} fehlt auf ${ifaceName}`,
       detail: ipOk
         ? undefined
-        : 'Gateway-IP muss auf der Gast-NIC konfiguriert sein (Praxis-IT oder Host).',
+        : 'Gateway-IP muss auf der Gast-Netzwerkkarte gesetzt sein (Praxis-IT oder Host).',
     });
   }
 
@@ -177,18 +177,18 @@ export async function auditNetworkBindings(input: {
       id: 'gateway.bridge-port',
       ok: bridgeOk,
       message: bridgeOk
-        ? `Auth-Bridge lauscht auf ${bridgeBind}:${bridgePort}`
-        : `Auth-Bridge (${bridgeBind}:${bridgePort}) nicht erreichbar`,
+        ? `Internetfreigabe erreichbar auf Port ${bridgePort}`
+        : `Internetfreigabe (Port ${bridgePort}) nicht erreichbar`,
       detail: bridgeOk
-        ? 'Lauscht auf allen Interfaces (0.0.0.0) — app erreicht sie über Docker-Host-IP.'
-        : 'gateway-Container läuft, aber Port nicht offen.',
+        ? 'Praxis Flow kann nach gültiger Wartenummer die Freigabe auslösen.'
+        : 'Gateway läuft, aber der Freigabe-Port ist nicht offen.',
     });
   } else if (gateway.enabled) {
     checks.push({
       id: 'gateway.compose',
       ok: false,
-      message: 'gateway-Container läuft nicht',
-      detail: 'Stack mit Gateway-Profil starten (Linux-Host mit zweiter NIC).',
+      message: 'Gateway-Dienst läuft nicht',
+      detail: 'Auf dem Linux-Gateway mit zweiter Netzwerkkarte starten.',
     });
   }
 

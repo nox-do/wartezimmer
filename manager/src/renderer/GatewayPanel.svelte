@@ -66,20 +66,20 @@
       onChange(gatewayEnabledPatch(state, enabled, network, lanIpFallback));
     }}
   />
-  <span>Gast-WLAN vorbereiten (Captive-Portal-Einstellungen in der Host-Konfiguration speichern)</span>
+  <span>Gast-WLAN / Patientenportal vorbereiten</span>
 </label>
 
 {#if state.gatewayEnabled && !composeSupported}
   <p class="hint">
-    Hinweis: Auf diesem Rechner (macOS/Windows) startet kein Gateway-Dienst. Die Werte werden nur in
-    die Konfiguration geschrieben — für ein separates Linux-Gateway oder den späteren Feldtest.
+    Auf diesem Rechner (macOS/Windows) startet kein Gateway — Werte nur speichern, für ein separates
+    Linux-Gateway oder den späteren Feldtest.
   </p>
 {/if}
 
 {#if state.gatewayEnabled}
   <p class="hint">
-    Netzwerk-Schnittstelle am Gateway-Rechner für das Gast-Netz (z. B. eth1). Darüber laufen DHCP und
-    Captive Portal. Ihre IT leitet den Gast-WLAN-Traffic dorthin.
+    Netzwerkkarte am Gateway für das Gast-Netz (z. B. eth1). Ihre IT leitet den Gast-WLAN-Traffic
+    dorthin.
   </p>
 
   <fieldset class="wizard-fieldset">
@@ -123,7 +123,7 @@
           {disabled}
           onchange={() => onChange({ gatewayInterface: state.gatewayInterface })}
         />
-        <span>{state.gatewayInterface} (aus .env)</span>
+        <span>{state.gatewayInterface} (gespeichert)</span>
       </label>
     {/if}
   </fieldset>
@@ -139,7 +139,7 @@
     oninput={(event) => onChange({ gatewayIp: event.currentTarget.value })}
   />
 
-  <label class="wizard-field-label" for={portalIpId}>IP der Praxis-App für Patienten im Gast-WLAN</label>
+  <label class="wizard-field-label" for={portalIpId}>Adresse der Praxis-App für Patienten</label>
   <input
     id={portalIpId}
     type="text"
@@ -150,7 +150,7 @@
     oninput={(event) => onChange({ portalAppIp: event.currentTarget.value })}
   />
 
-  <label class="wizard-field-label" for={authBridgeUrlId}>Adresse der Gateway-Bridge für die app</label>
+  <label class="wizard-field-label" for={authBridgeUrlId}>Adresse für Internetfreigabe</label>
   <input
     id={authBridgeUrlId}
     type="text"
@@ -162,14 +162,12 @@
   />
 
   <p class="hint">
-    Die app ruft diese Adresse auf, um nach gültiger Wartenummer die Internetfreigabe am Gateway
-    auszulösen. Bei separatem Linux-Gateway muss hier dessen aus der app erreichbare Bridge-Adresse
-    stehen.
+    Nach gültiger Wartenummer löst Praxis Flow darüber die Internetfreigabe aus. Bei separatem
+    Linux-Gateway: dessen von hier erreichbare Adresse eintragen.
   </p>
 
   <p class="hint">
-    Was der Wizard hier macht: Er trägt die technischen Werte in die Host-Konfiguration ein. Was
-    noch fehlt: Access Point / Gast-WLAN in der Praxis, Routing zum Gateway und — falls nötig — das
+    Noch nötig in der Praxis: Access Point / Gast-WLAN, Routing zum Gateway und ggf. das
     Linux-Gateway-Gerät. Details: Dokumentation „Guest-WLAN & Captive Portal“.
   </p>
 {/if}

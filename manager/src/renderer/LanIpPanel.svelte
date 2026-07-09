@@ -47,8 +47,8 @@
 
 {#if showWizardStaleHint && configuredLanIp}
   <p class="hint">
-    Die konfigurierte IP ({configuredLanIp}) passt nicht zu einer aktuellen Host-Adresse — bitte
-    aktualisieren.
+    Die konfigurierte Adresse ({configuredLanIp}) passt nicht zu einer aktuellen Rechner-Adresse —
+    bitte aktualisieren.
   </p>
 {/if}
 
@@ -56,7 +56,7 @@
   <div class="lan-ip-status">
     {#if hasEnv && configuredLanIp}
       <div class="lan-ip-status-row">
-        <span class="lan-ip-status-label">In .env</span>
+        <span class="lan-ip-status-label">Gespeichert</span>
         <span class="lan-ip-status-value">{configuredLanIp}</span>
         {#if stale}
           <span class="lan-ip-status-badge lan-ip-status-badge-warn">abweichend</span>
@@ -65,7 +65,7 @@
     {/if}
     {#if candidates.length > 0}
       <div class="lan-ip-status-row">
-        <span class="lan-ip-status-label">Host jetzt</span>
+        <span class="lan-ip-status-label">Aktuell am Rechner</span>
         <span class="lan-ip-status-value">{candidates.map((c) => c.label).join(' · ')}</span>
         {#if stale}
           <span class="lan-ip-status-badge lan-ip-status-badge-warn">abweichend</span>
@@ -75,15 +75,15 @@
       </div>
     {:else if hasEnv}
       <div class="lan-ip-status-row">
-        <span class="lan-ip-status-label">Host jetzt</span>
+        <span class="lan-ip-status-label">Aktuell am Rechner</span>
         <span class="lan-ip-status-value">keine LAN-Adresse erkannt</span>
         <span class="lan-ip-status-badge lan-ip-status-badge-warn">abweichend</span>
       </div>
     {/if}
     {#if stale && configuredLanIp}
       <p class="lan-ip-status-hint">
-        Die .env-IP passt zu keiner aktuellen Host-Adresse — unten die richtige IP wählen und
-        übernehmen.
+        Die gespeicherte Adresse passt zu keiner aktuellen Rechner-Adresse — unten die richtige
+        wählen und übernehmen.
       </p>
     {/if}
   </div>
@@ -93,8 +93,8 @@
   {#if candidates.length > 0}
     <p class="lan-ip-prompt">
       {candidates.length === 1
-        ? 'Eine Host-Adresse gefunden — für Geräte-URLs verwenden:'
-        : 'Host-Adresse wählen, unter der Terminal, TV und MFA die app erreichen:'}
+        ? 'Eine Adresse gefunden — für Terminal, TV und MFA verwenden:'
+        : 'Adresse wählen, unter der Terminal, TV und MFA Praxis Flow erreichen:'}
     </p>
     <fieldset class="wizard-fieldset">
       {#each candidates as candidate (candidate.address)}

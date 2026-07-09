@@ -6,11 +6,10 @@
 
 {#if checks && checks.length > 0}
   <div id="network-bindings-panel">
-    <h3 class="wizard-subheading network-bindings-title">Bindung & Listener (Host)</h3>
+    <h3 class="wizard-subheading network-bindings-title">Prüfungen am Rechner</h3>
     <p class="hint">
-      Prüft am Host Interfaces, IPs und Ports — ob die Konfiguration zum laufenden Stack passt. Kein
-      Test, ob Patienten-Traffic wirklich nur über den Gast-Anschluss kommt (dafür VLAN/Routing in
-      der Praxis).
+      Ob Port und Adresse an diesem Rechner passen — nicht, ob das Gast-WLAN in der Praxis richtig
+      geroutet ist.
     </p>
     <ul class="checklist network-bindings-list">
       {#each checks as check (check.message)}

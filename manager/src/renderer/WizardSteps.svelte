@@ -128,8 +128,8 @@
       {/if}
     {:else if snapshot.step === 2}
       <p>
-        Die App lauscht auf allen Interfaces (Port 8080). Hier legen Sie fest, unter welcher
-        Host-Adresse Terminal, TV und MFA die app im Praxis-LAN/-WLAN erreichen — nicht localhost.
+        Unter welcher Adresse erreichen Terminal, TV und MFA Praxis Flow im Praxis-Netz? Nicht
+        localhost — die Geräte brauchen die LAN-Adresse dieses Rechners (Port 8080).
       </p>
       <LanIpPanel
         state={snapshot}
@@ -237,13 +237,13 @@
         </dl>
 
         {#if snapshot.gatewayEnabled && Object.keys(snapshot.plan.gatewayEnv).length > 0}
-          <h3 class="wizard-subheading">Gast-WLAN (Gateway)</h3>
+          <h3 class="wizard-subheading">Gast-WLAN</h3>
           <dl class="status-grid wizard-summary-grid">
-            <dt>Interface</dt><dd>{snapshot.plan.gatewayEnv.GATEWAY_INTERFACE ?? snapshot.gatewayInterface}</dd>
+            <dt>Netzwerkkarte</dt><dd>{snapshot.plan.gatewayEnv.GATEWAY_INTERFACE ?? snapshot.gatewayInterface}</dd>
             <dt>Gateway-IP</dt><dd>{snapshot.plan.gatewayEnv.GATEWAY_IP ?? snapshot.gatewayIp}</dd>
             <dt>Portal-URL</dt><dd>{snapshot.plan.gatewayEnv.APP_PORTAL_URL ?? ''}</dd>
-            <dt>App-API für Gateway</dt><dd>{snapshot.plan.gatewayEnv.APP_API_URL ?? ''}</dd>
-            <dt>Gateway-Bridge für app</dt><dd>{snapshot.plan.gatewayEnv.GATEWAY_AUTH_BRIDGE_URL ?? ''}</dd>
+            <dt>App für Gateway</dt><dd>{snapshot.plan.gatewayEnv.APP_API_URL ?? ''}</dd>
+            <dt>Internetfreigabe</dt><dd>{snapshot.plan.gatewayEnv.GATEWAY_AUTH_BRIDGE_URL ?? ''}</dd>
           </dl>
         {/if}
 

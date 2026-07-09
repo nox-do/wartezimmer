@@ -62,7 +62,7 @@ export function wizardApplyResultItems(result: ApplySetupResult): string[] {
   const items = [`✓ .env geschrieben (${result.envPath})`, `${wizardCheckMark(composeOk)} Docker Compose`];
   if (result.gatewayComposeSkipped) {
     items.push(
-      'Gateway-Dienst auf diesem Praxis-PC übersprungen; Werte für separates Linux-Gateway gespeichert',
+      'Gateway auf diesem Rechner übersprungen; Werte für separates Linux-Gateway gespeichert',
     );
   }
   return items;

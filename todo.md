@@ -9,7 +9,8 @@ Stand: 2026-07-09
 - Einstieg: `GatewayPanel.svelte`, `NetworkView.svelte`, `docs/gateway-captive-portal.md`
 - **Erledigt:** Topology-Betriebsarten — Szenario 1: dediziertes Gast-Netz + Firewall + Risiko-Hinweis; Szenario 2: Portal-Kasten durchgestrichen (nicht produktiv)
 - Accordion-Subtitle: „Betrieb mit oder ohne Patientenportal“; Intro-Text feature-orientiert
-- Noch offen: weitere Text-/UX-Änderungen am Gateway-Panel (folgt)
+- **Erledigt:** Netzwerk-UI-Texte IT-freundlicher (Prüfungen, LAN, Gast-WLAN, Binding-Messages) — Layout unverändert
+- Noch offen: ggf. Reihenfolge Checks nach unten; weitere UX-Feinschliffe
 
 ---
 
