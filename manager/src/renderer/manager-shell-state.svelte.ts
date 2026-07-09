@@ -79,6 +79,24 @@ export function applyShellNavigation(
 export function applyRuntimeHealth(runtime: HostRuntimeHealth): void {
   managerShell.runtimeHealth = runtime;
   managerShell.runtimeError = null;
+
+  // Keep Status/Maintenance/Network config snapshots aligned with the 12s runtime poll
+  // for overlapping live fields (compose, probes, docker, …).
+  const status = managerShell.hostStatus;
+  if (status) {
+    managerShell.hostStatus = {
+      ...status,
+      envExists: runtime.envExists,
+      docker: runtime.docker,
+      compose: runtime.compose,
+      probes: runtime.probes,
+      sandboxScanner: runtime.sandboxScanner,
+      network: {
+        ...status.network,
+        configuredLanIp: runtime.configuredLanIp,
+      },
+    };
+  }
 }
 
 export function applyHostStatus(status: HostStatus): void {

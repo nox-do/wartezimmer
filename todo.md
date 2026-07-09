@@ -69,6 +69,12 @@ Review-Canvas: `~/.cursor/projects/.../canvases/manager-svelte5-review.canvas.ts
 - Kein sichtbares Fake-`simple`; Next/Save geblockt bis hydrated
 - Konvention für async Extra-Settings: Wert `T | null` bis ready, UI disabled/Loading
 
+## Erledigt: Manager Hygiene F9/F12/F13 (2026-07-09)
+
+- F9: Runtime-Poll merged live Felder (compose/probes/docker/…) in `hostStatus`
+- F12: `compilerOptions.runes: true` in `svelte.config.js`
+- F13: `manager/README.md` an Shell/Svelte, Wizard-Schritte, 12s-Poll angepasst
+
 ## Referenzen
 
 - `docs/flow-routing-modes-working-doc.md`
