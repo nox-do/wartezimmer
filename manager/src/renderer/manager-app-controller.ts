@@ -20,6 +20,7 @@ import {
 } from './manager-shell-state.svelte.js';
 
 export type ManagerAppController = {
+  start: () => void;
   navigateTab: (tab: ManagerView) => void;
   onStatusSetupClick: () => void;
   onStatusLoadReleaseArchive: () => void;
@@ -113,9 +114,10 @@ export function createManagerAppController(): ManagerAppController {
     navigation.navigateTo('status');
   }
 
-  navigation.navigateTo('status');
-
   return {
+    start: () => {
+      navigation.navigateTo('status');
+    },
     navigateTab,
     onStatusSetupClick: startFullscreenWizard,
     onStatusLoadReleaseArchive: () => {

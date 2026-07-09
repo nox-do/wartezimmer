@@ -62,7 +62,7 @@ Review-Canvas: `~/.cursor/projects/.../canvases/manager-svelte5-review.canvas.ts
 - Navigation/App-Controller schreiben Sessions statt Adapter; Callbacks als Props
 - Views: `$effect` auf Session/`hostStatus`/`runtimeHealth`; lokale Controller behalten
 - `*-view-adapter.ts` gelöscht; Race-Tests auf Session-API umgestellt
-- **Optional Folge:** `createManagerAppController().start()` statt implizitem `navigateTo('status')` am Ende (Mount-Reihenfolge langweilig machen)
+- `createManagerAppController().start()` nach `mount(App)` — keine Init-Navigation mehr im Factory-Konstruktor
 
 ## Referenzen
 
