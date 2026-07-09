@@ -1,4 +1,9 @@
-import type { HostStatus } from '../shared/host-status.js';
+import type { HostStatus, NetworkSnapshot } from '../shared/host-status.js';
+import {
+  draftCanonicalBaseUrl,
+  effectiveCanonicalBaseUrl,
+  type ReachabilityFieldState,
+} from './reachability.js';
 import { resolvedLanIp } from './wizard-state.js';
 
 export type LanIpFieldState = {
@@ -13,6 +18,8 @@ export type GatewayFieldState = {
   portalAppIp: string;
   authBridgeUrl: string;
 };
+
+export type { ReachabilityFieldState, ReachabilityMode } from './reachability.js';
 
 /** Manual LAN IP is only needed when auto-detection is ambiguous or insufficient. */
 export function shouldOfferManualLanIpEntry(
@@ -29,8 +36,9 @@ export function shouldOfferManualLanIpEntry(
 }
 
 export function hostNetworkChanged(
-  fields: LanIpFieldState & GatewayFieldState,
+  fields: LanIpFieldState & GatewayFieldState & ReachabilityFieldState,
   status: HostStatus | null,
+  network: Pick<NetworkSnapshot, 'machineHostname'> | null = null,
 ): boolean {
   if (!status) {
     return false;
@@ -38,6 +46,12 @@ export function hostNetworkChanged(
   const lanIp = resolvedLanIp(fields);
   const configuredLan = status.network.configuredLanIp?.trim() ?? '';
   if (lanIp && lanIp !== configuredLan) {
+    return true;
+  }
+
+  const draftCanonical = draftCanonicalBaseUrl(fields, network);
+  const configuredCanonical = effectiveCanonicalBaseUrl(status);
+  if (draftCanonical && draftCanonical !== configuredCanonical) {
     return true;
   }
 

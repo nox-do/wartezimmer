@@ -21,6 +21,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     },
     folders: { imports: '/imports', exports: '/exports' },
     appBaseUrl: 'http://192.168.1.10:8080',
+    configuredCanonicalBaseUrl: null,
     network: {
       configuredLanIp: '192.168.1.10',
       currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
@@ -38,6 +39,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     compose: { running: false, services: [] },
     sandboxScanner: null,
     networkBindings: [],
+    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
     deliveryImages: {
       required: false,
       configured: false,
@@ -72,6 +74,7 @@ test('createNetworkController sets busy during show bootstrap', async () => {
   resolveNetwork({
     lanCandidates: [{ address: '192.168.1.10', label: 'en0 — 192.168.1.10' }],
     interfaces: [],
+    machineHostname: 'praxis-mac',
     gatewayComposeSupported: true,
     defaultGatewayBridgeUrl: 'http://172.17.0.1:9100',
   });
@@ -115,6 +118,7 @@ test('network bootstrap fills gateway portal IP from selected LAN IP', async () 
   resolveNetwork({
     lanCandidates: [{ address: '192.168.1.10', label: 'en0 — 192.168.1.10' }],
     interfaces: [],
+    machineHostname: 'praxis-mac',
     gatewayComposeSupported: true,
     defaultGatewayBridgeUrl: 'http://172.17.0.1:9100',
   });
@@ -132,6 +136,7 @@ function mockApi(overrides: Partial<{ fetchSetupNetwork: () => Promise<unknown> 
       Promise.resolve({
         lanCandidates: [],
         interfaces: [],
+        machineHostname: 'praxis-mac',
         gatewayComposeSupported: true,
         defaultGatewayBridgeUrl: 'http://172.17.0.1:9100',
       }),

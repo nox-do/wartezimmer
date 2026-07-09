@@ -1,5 +1,6 @@
 import type { HostStatus, ProbeResult } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import { lanProbeBaseUrl } from './reachability.js';
 
 export const DEFAULT_PROBE_WAIT_MS = 45_000;
 export const DEFAULT_PROBE_INTERVAL_MS = 2_500;
@@ -23,15 +24,14 @@ export function connectionProbesReady(probes: ProbeResult[]): boolean {
 }
 
 export function buildSetupProbeInput(
-  status: Pick<HostStatus, 'network'>,
+  status: Pick<HostStatus, 'network' | 'deviceUrls' | 'configuredCanonicalBaseUrl'>,
 ): {
   localAppBaseUrl: string;
   lanAppBaseUrl: string | undefined;
 } {
-  const configuredLanIp = status.network.configuredLanIp;
   return {
     localAppBaseUrl: 'http://127.0.0.1:8080',
-    lanAppBaseUrl: configuredLanIp ? `http://${configuredLanIp}:8080` : undefined,
+    lanAppBaseUrl: lanProbeBaseUrl(status),
   };
 }
 

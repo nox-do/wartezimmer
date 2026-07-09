@@ -95,6 +95,7 @@ export function applyRuntimeHealth(runtime: HostRuntimeHealth): void {
         ...status.network,
         configuredLanIp: runtime.configuredLanIp,
       },
+      appBaseUrl: runtime.appBaseUrl ?? status.appBaseUrl,
     };
   }
 }

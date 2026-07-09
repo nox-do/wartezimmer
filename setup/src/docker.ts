@@ -135,6 +135,11 @@ export async function composeUp(options: ComposeUpOptions): Promise<{
   return { ok: result.code === 0, log, gatewaySkipped };
 }
 
+type ComposePsPublisher = {
+  PublishedPort?: number;
+  publishedPort?: number;
+};
+
 type ComposePsJsonRow = {
   Name?: string;
   name?: string;
@@ -144,6 +149,8 @@ type ComposePsJsonRow = {
   state?: string;
   Health?: string;
   health?: string;
+  Publishers?: ComposePsPublisher[] | null;
+  publishers?: ComposePsPublisher[] | null;
 };
 
 export function parseComposePsOutput(stdout: string): ComposeServiceStatus[] {
@@ -175,6 +182,21 @@ export function parseComposePsOutput(stdout: string): ComposeServiceStatus[] {
   return services;
 }
 
+function publishedPortsFromRow(row: ComposePsJsonRow): number[] {
+  const publishers = row.Publishers ?? row.publishers;
+  if (!Array.isArray(publishers)) {
+    return [];
+  }
+  const ports: number[] = [];
+  for (const entry of publishers) {
+    const port = entry.PublishedPort ?? entry.publishedPort;
+    if (typeof port === 'number' && Number.isFinite(port) && port > 0) {
+      ports.push(port);
+    }
+  }
+  return ports;
+}
+
 function mapComposePsRow(row: ComposePsJsonRow): ComposeServiceStatus {
   const state = (row.State ?? row.state ?? 'unknown').trim();
   const healthRaw = row.Health ?? row.health;
@@ -184,6 +206,7 @@ function mapComposePsRow(row: ComposePsJsonRow): ComposeServiceStatus {
     service: (row.Service ?? row.service ?? row.Name ?? row.name ?? '').trim(),
     state,
     health,
+    publishedPorts: publishedPortsFromRow(row),
   };
 }
 

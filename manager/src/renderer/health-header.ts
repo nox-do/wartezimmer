@@ -186,8 +186,9 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
       continue;
     }
     let detail = probe.message;
-    if (probe.id === 'app.health.lan' && runtime.configuredLanIp) {
-      detail = `${probe.message} — ${runtime.configuredLanIp}:8080`;
+    if (probe.id === 'app.health.lan' && (runtime.appBaseUrl || runtime.configuredLanIp)) {
+      const target = runtime.appBaseUrl ?? `${runtime.configuredLanIp}:8080`;
+      detail = `${probe.message} — ${target}`;
     }
     tiles.push({
       name: probeLabel(probe.id),

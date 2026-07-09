@@ -12,6 +12,7 @@ import {
   SETUP_DEFAULT_GATEWAY_IP,
   SETUP_DEFAULT_PRACTICE_NAME,
 } from '@praxis-flow/server-shared';
+import { parseHttpBaseUrl } from './urls.js';
 
 export class SetupApiValidationError extends Error {
   constructor(message: string) {
@@ -83,6 +84,7 @@ export function normalizeSetupPlanInput(body: SetupPlanInput): NormalizedSetupPl
     lanAppIp,
     practiceDisplayName: body.practiceDisplayName?.trim() || SETUP_DEFAULT_PRACTICE_NAME,
     portalAppIp: body.gateway?.portalAppIp?.trim() || undefined,
+    canonicalBaseUrl: normalizeOptionalCanonicalBaseUrl(body.canonicalBaseUrl),
     gateway: normalizeGatewayPlan(body.gateway, lanAppIp),
   };
 }
@@ -107,15 +109,34 @@ export function normalizeApplySetupInput(
   };
 }
 
+function normalizeOptionalCanonicalBaseUrl(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const parsed = parseHttpBaseUrl(trimmed);
+  if (!parsed) {
+    throw new SetupApiValidationError(
+      'canonicalBaseUrl muss eine http(s)-Origin sein (ohne Pfad/Query), z. B. http://192.168.1.10:8080',
+    );
+  }
+  return parsed;
+}
+
 export function normalizeHostNetworkInput(body: HostNetworkInput): {
   lanAppIp: string;
   gateway: GatewayPlan;
   restartCompose: boolean;
+  canonicalBaseUrl?: string;
 } {
   const lanAppIp = requireTrimmedLanAppIp(body.lanAppIp);
   return {
     lanAppIp,
     restartCompose: Boolean(body.restartCompose),
     gateway: normalizeGatewayPlan(requireHostNetworkGateway(body.gateway), lanAppIp),
+    canonicalBaseUrl: normalizeOptionalCanonicalBaseUrl(body.canonicalBaseUrl),
   };
 }

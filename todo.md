@@ -2,7 +2,42 @@
 
 Stand: 2026-07-09
 
-## Heute: Manager Gateway-UI / Konfigurationstexte
+## Heute: Branch `reverse_proxy` — P0 URL-Modell vor Proxy
+
+- **Reihenfolge:** erst URL-Autorität (Setup-Kern), danach Manager/Wizard-UI (Schritt 2), danach Proxy-Compose
+- **Produktmodell:** `CANONICAL_BASE_URL` = Wahrheit für Menschen-/Geräte-URLs (nicht Proxy-Konfig)
+- **URL-Klassen (nicht vermischen):**
+  - User/Geräte: Terminal, TV, MFA, Ops, Portal → aus `CANONICAL_BASE_URL`
+  - Setup-local: `http://127.0.0.1:8080` Probes über Docker-Publish ok
+  - Intern: `SANDBOX_BASE_URL=http://sandbox:8081` bleibt intern
+  - Gateway/Captive: Sonderfall (`portalAppIp` / später ggf. `PORTAL_PUBLIC_BASE_URL`)
+  - Same-origin UI: `window.location.origin` oft korrekt
+- **LAN-Erreichbarkeit:** Hostname = Komfortpfad; IP = zuverlässiger Fallback (UI-Probe = Schritt 2)
+- **P0 erledigt (Setup-Kern):**
+  - `buildDeviceUrlsFromBaseUrl` + `resolveCanonicalBaseUrl` in `setup/src/urls.ts`
+  - HostStatus / SetupPlan / Apply / saveHostNetwork / Probes auf Resolver
+  - `.env` schreibt `CANONICAL_BASE_URL`; Custom-Hostname bleibt bei LAN-Wechsel
+  - Fallback ohne Env unverändert `http://<lan-ip>:8080`
+  - Review-Nachzug: Plan/Apply/saveHostNetwork teilen `resolveCanonicalBaseUrlForLanPlan`; nur http(s) Origin; Rewrite nur Exact-Match `http://<old-ip>:8080`; CLI nutzt `result.deviceUrls`
+  - Gateway/Captive bleibt Sonderfall (`portalAppIp` ≠ Canonical) — in Schritt-2-UI explizit halten
+
+- **Schritt 2 — Manager/Wizard UI (in Arbeit):**
+  - Netzwerk-Tab: Akkordeon **Erreichbarkeit im Praxisnetz** (LAN-IP / Hostname / eigene URL + Probe)
+  - API: `configuredCanonicalBaseUrl`, `canonicalBaseUrl` auf saveHostNetwork, `machineHostname`, Runtime `appBaseUrl`
+  - Review-Reste: setup-probes / wizard-copy / health-header auf Canonical
+  - Custom-Modus: Hostname/Domain only → intern `http://<name>:8080` (kein Port im UI)
+  - Proxy/TLS weiter später
+
+- **Erledigt: Netzwerkvoraussetzungen-Preflight (Setup/Wizard)** — 2026-07-09
+  - Wizard Schritt 1: Checkliste **„Netzwerkvoraussetzungen prüfen / ok“**; Gate in `canLeaveWizardStep1`
+  - Setup: `auditNetworkPrerequisites` → `HostStatus.networkPrerequisites` (8080; +9100 wenn Gateway in `.env`)
+  - „Unser Port“ nur wenn Compose-Service den Host-Port wirklich published (`Publishers` aus `compose ps`)
+  - Belegt sonst → Blocker; Owner nur best effort via `lsof` (Copy: Prozesshinweis, kein Container-Name)
+  - Leere/fehlende Checks: Wizard-Fallback „konnten noch nicht geprüft werden“
+  - Keine zweite Absicherung vor Apply; Status-Pills lokal/LAN unverändert
+  - Später mit Proxy: 80/443 in denselben generischen Check
+
+## Zuvor: Manager Gateway-UI / Konfigurationstexte
 
 - Fokus: Electron Manager → Netzwerk → Gateway (optional) + Wizard Gast-WLAN
 - Ziel: UI-Texte und Konfiguration für Host-`.env` (technisch) vs. Praxis Flow `portalEnabled` (fachlich)
@@ -26,11 +61,9 @@ Stand zuvor: 2026-07-07 (Release **0.2.0** — Journey/Routing, non-breaking API
 - **Paket 6** – Topic UI RoutingMode-Schnitt (committed)
 - **Paket 7** – Journey Admin UI + Ops-Settings-API (committed `d03485a`): Review-Fix: `terminalWlanPromoEnabled` in MfaPatch, Journeys-Nav capability-gated
 
-## In Arbeit / Review
-
-- **MFA Settings UI** – Branch `feat/mfa-settings-sidebar`: Sidebar, Topics/Journeys-Routen
-
 ## Erledigt (Fortsetzung)
+
+- **MFA Settings UI** – Branch `feat/mfa-settings-sidebar` nach `master` gemerged (2026-07-09, FF → `df8f9da`)
 
 - **TV Aufrufe-Pagination** (2026-07-08): Rechte Spalte paginiert; Refactor zu `TvPaginatedPanel` + `tv-panel-layout.svelte.ts` (shared, Svelte-5-Snippets)
 - **return_to_waiting Aufrufziel** (2026-07-08): Simple behält `targetLocationId`; Complex rehydriert aus aktivem Journey-Step (`resolveReturnToWaitingTargetLocationId`)

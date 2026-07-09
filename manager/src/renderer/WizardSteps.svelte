@@ -6,6 +6,8 @@
   } from '../shared/docker-file-sharing-hint.js';
   import {
     dockerReady,
+    networkPrerequisitesFailed,
+    networkPrerequisitesReady,
     wizardProbeFailureHint,
   } from './wizard-flow.js';
   import { deliveryImagesReady, needsDeliveryImages } from './delivery-images-flow.js';
@@ -25,6 +27,7 @@
   import FolderPathField from './FolderPathField.svelte';
   import LanIpPanel from './LanIpPanel.svelte';
   import GatewayPanel from './GatewayPanel.svelte';
+  import ReachabilityPanel from './ReachabilityPanel.svelte';
   import WizardRoutingModePanel from './WizardRoutingModePanel.svelte';
 
   let {
@@ -66,6 +69,12 @@
             <span class="checklist-mark">{snapshot.status.docker.composeAvailable ? '✓' : '○'}</span>
             <span>Docker Compose verfügbar</span>
           </li>
+          <li class={networkPrerequisitesReady(snapshot.status) ? 'is-done' : 'is-open'}>
+            <span class="checklist-mark"
+              >{networkPrerequisitesReady(snapshot.status) ? '✓' : '○'}</span
+            >
+            <span>Netzwerkvoraussetzungen prüfen / ok</span>
+          </li>
           {#if snapshot.status.deliveryImages.required}
             <li class={deliveryImagesReady(snapshot.status) ? 'is-done' : 'is-open'}>
               <span class="checklist-mark">{deliveryImagesReady(snapshot.status) ? '✓' : '○'}</span>
@@ -90,6 +99,27 @@
             >
               {hints.installLink.buttonLabel}
             </button>
+          {/if}
+          <button
+            type="button"
+            class="btn-secondary wizard-install-link"
+            disabled={snapshot.busy}
+            onclick={() => {
+              void controller.refreshPrerequisites().then(onPatch);
+            }}
+          >
+            {snapshot.busy ? 'Prüfe …' : 'Erneut prüfen'}
+          </button>
+        {:else if !networkPrerequisitesReady(snapshot.status)}
+          {#if networkPrerequisitesFailed(snapshot.status).length > 0}
+            {#each networkPrerequisitesFailed(snapshot.status) as check (check.id)}
+              <p class="hint">{check.message}</p>
+              {#if check.detail}
+                <p class="hint">{check.detail}</p>
+              {/if}
+            {/each}
+          {:else}
+            <p class="hint">Netzwerkvoraussetzungen konnten noch nicht geprüft werden.</p>
           {/if}
           <button
             type="button"
@@ -128,19 +158,39 @@
       {/if}
     {:else if snapshot.step === 2}
       <p>
-        Unter welcher Adresse erreichen Terminal, TV und MFA Praxis Flow im Praxis-Netz? Nicht
-        localhost — die Geräte brauchen die LAN-Adresse dieses Rechners (Port 8080).
+        Unter welcher Adresse erreichen Terminal, TV und MFA Praxis Flow im Praxisnetz? Zuerst die
+        Host-Adresse (LAN-IP), danach die Basis-URL für Geräte.
       </p>
+      <h3 class="network-config-subheading">LAN-Adresse (Host / Binding)</h3>
+      <p class="hint">Adresse dieses Rechners im Praxisnetz — Fallback, wenn ein Hostname nicht auflöst.</p>
       <LanIpPanel
         state={snapshot}
         network={snapshot.network}
         status={snapshot.status}
-        disabled={snapshot.busy}
+        disabled={snapshot.busy || snapshot.reachabilityProbeBusy}
         variant="wizard"
         radioName="wizard-lan-ip"
         idPrefix="wizard"
         onChange={patchFields}
       />
+
+      <h3 class="network-config-subheading">Erreichbarkeit im Praxisnetz</h3>
+      <ReachabilityPanel
+        state={snapshot}
+        network={snapshot.network}
+        disabled={snapshot.busy}
+        probeBusy={snapshot.reachabilityProbeBusy}
+        probeMessage={snapshot.reachabilityProbeMessage}
+        probeOk={snapshot.reachabilityProbeOk}
+        onChange={patchFields}
+        onTest={() => {
+          void controller.testReachability().then(onPatch);
+        }}
+      />
+      <p class="hint">
+        Später optional: Zugang über Port 80/443 (Reverse Proxy). Aktuell läuft Praxis Flow auf Port
+        8080.
+      </p>
     {:else if snapshot.step === 3}
       <p>
         Dieser Name wird an verschiedenen Stellen in Praxis Flow verwendet, um den Namen Ihrer

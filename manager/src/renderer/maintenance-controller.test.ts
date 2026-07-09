@@ -27,6 +27,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     },
     folders: { imports: '/data/imports', exports: '/data/exports' },
     appBaseUrl: 'http://192.168.1.10:8080',
+    configuredCanonicalBaseUrl: null,
     network: { configuredLanIp: '192.168.1.10', currentLanCandidates: [], lanIpStale: false },
     gateway: null,
     deviceUrls: null,
@@ -34,6 +35,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     compose: { running: true, services: [] },
     sandboxScanner: null,
     networkBindings: [],
+    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
     deliveryImages: {
       required: false,
       configured: true,

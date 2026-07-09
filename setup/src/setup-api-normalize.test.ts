@@ -53,6 +53,7 @@ test('normalizeSetupPlanInput fills practice default and trims LAN', () => {
       lanAppIp: '192.168.1.20',
       practiceDisplayName: 'Praxis Süd',
       portalAppIp: undefined,
+      canonicalBaseUrl: undefined,
       gateway: {
         enabled: true,
         gatewayInterface: 'eth2',
@@ -93,6 +94,7 @@ test('normalizeHostNetworkInput normalizes gateway for maintenance route', () =>
     {
       lanAppIp: '10.0.0.5',
       restartCompose: true,
+      canonicalBaseUrl: undefined,
       gateway: {
         enabled: true,
         gatewayInterface: 'eth1',
@@ -116,6 +118,7 @@ test('normalizeHostNetworkInput keeps explicit gateway bridge URL', () => {
     {
       lanAppIp: '10.0.0.5',
       restartCompose: false,
+      canonicalBaseUrl: undefined,
       gateway: {
         enabled: true,
         gatewayInterface: 'eth1',
@@ -124,6 +127,40 @@ test('normalizeHostNetworkInput keeps explicit gateway bridge URL', () => {
         authBridgeUrl: 'http://10.0.0.2:9100',
       },
     },
+  );
+});
+
+test('normalizeHostNetworkInput accepts optional canonicalBaseUrl origin', () => {
+  assert.deepEqual(
+    normalizeHostNetworkInput({
+      lanAppIp: '10.0.0.5',
+      canonicalBaseUrl: ' http://praxis-flow.local:8080/ ',
+      gateway: { enabled: false },
+    }),
+    {
+      lanAppIp: '10.0.0.5',
+      restartCompose: false,
+      canonicalBaseUrl: 'http://praxis-flow.local:8080',
+      gateway: {
+        enabled: false,
+        gatewayInterface: 'eth1',
+        gatewayIp: '192.168.88.1',
+        portalAppIp: '10.0.0.5',
+        authBridgeUrl: '',
+      },
+    },
+  );
+});
+
+test('normalizeHostNetworkInput rejects non-origin canonicalBaseUrl', () => {
+  assert.throws(
+    () =>
+      normalizeHostNetworkInput({
+        lanAppIp: '10.0.0.5',
+        canonicalBaseUrl: 'http://praxis.local/base',
+        gateway: { enabled: false },
+      }),
+    SetupApiValidationError,
   );
 });
 
@@ -153,6 +190,7 @@ test('normalizeHostNetworkInput ignores gateway bridge URL when gateway is disab
     {
       lanAppIp: '10.0.0.5',
       restartCompose: false,
+      canonicalBaseUrl: undefined,
       gateway: {
         enabled: false,
         gatewayInterface: 'eth1',

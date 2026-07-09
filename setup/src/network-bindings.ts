@@ -1,13 +1,16 @@
 import net from 'node:net';
 import type { ComposeStatus, NetworkBindingCheck } from '@praxis-flow/server-shared';
+import { runProcessCommand } from './command-runner.js';
 import { canRunGatewayCompose } from './docker.js';
 import {
   listNetworkInterfaces,
   type NetworkInterfaceInfo,
 } from './network.js';
-
+import { DEFAULT_APP_PORT } from './urls.js';
 
 export type { NetworkBindingCheck } from '@praxis-flow/server-shared';
+
+export const DEFAULT_GATEWAY_BRIDGE_PORT = 9100;
 
 export function interfaceExists(interfaces: NetworkInterfaceInfo[], name: string): boolean {
   return interfaces.some((iface) => iface.name === name);
@@ -49,22 +52,102 @@ export function probeTcpPort(
   });
 }
 
-function gatewayServiceRunning(compose: ComposeStatus | null): boolean {
+function composeServiceRunning(compose: ComposeStatus | null, serviceName: string): boolean {
   return (
     compose?.services.some((service) => {
       const name = service.service || service.name;
-      return name === 'gateway' && service.state.toLowerCase().includes('running');
+      return name === serviceName && service.state.toLowerCase().includes('running');
     }) ?? false
   );
 }
 
-function appServiceRunning(compose: ComposeStatus | null): boolean {
+/** True only when a running compose service actually publishes this host port. */
+export function composeServicePublishesHostPort(
+  compose: ComposeStatus | null,
+  serviceName: string,
+  port: number,
+): boolean {
   return (
     compose?.services.some((service) => {
       const name = service.service || service.name;
-      return name === 'app' && service.state.toLowerCase().includes('running');
+      if (name !== serviceName || !service.state.toLowerCase().includes('running')) {
+        return false;
+      }
+      return (service.publishedPorts ?? []).includes(port);
     }) ?? false
   );
+}
+
+/** Best-effort host process hint via lsof (often generic under Docker Desktop). */
+async function portOwnerHint(port: number): Promise<string | null> {
+  if (process.platform === 'win32') {
+    return null;
+  }
+  const result = await runProcessCommand('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN']);
+  const line = result.stdout
+    .split('\n')
+    .map((entry) => entry.trim())
+    .find((entry) => entry && !entry.startsWith('COMMAND'));
+  if (!line) {
+    return null;
+  }
+  const [command, pid] = line.split(/\s+/);
+  return command && pid ? `${command} (PID ${pid})` : null;
+}
+
+async function checkHostPortFree(input: {
+  id: string;
+  port: number;
+  ourPublish: boolean;
+}): Promise<NetworkBindingCheck> {
+  const inUse = await probeTcpPort('127.0.0.1', input.port);
+  if (!inUse) {
+    return { id: input.id, ok: true, message: `Port ${input.port} ist frei` };
+  }
+  if (input.ourPublish) {
+    return {
+      id: input.id,
+      ok: true,
+      message: `Port ${input.port} wird von Praxis Flow genutzt`,
+    };
+  }
+  const owner = await portOwnerHint(input.port);
+  return {
+    id: input.id,
+    ok: false,
+    message: `Port ${input.port} ist bereits belegt. Praxis Flow kann die App so nicht starten.`,
+    detail: owner
+      ? `Prozesshinweis: ${owner}. Bitte den anderen Dienst beenden und erneut prüfen.`
+      : 'Bitte den anderen Dienst auf diesem Port beenden und erneut prüfen.',
+  };
+}
+
+/** Preflight: required host ports free, or published by our running compose service. */
+export async function auditNetworkPrerequisites(input: {
+  compose: ComposeStatus | null;
+  gatewayEnabled?: boolean;
+  gatewayBridgePort?: number;
+  appPort?: number;
+}): Promise<NetworkBindingCheck[]> {
+  const appPort = input.appPort ?? DEFAULT_APP_PORT;
+  const checks = [
+    await checkHostPortFree({
+      id: 'preflight.app-port',
+      port: appPort,
+      ourPublish: composeServicePublishesHostPort(input.compose, 'app', appPort),
+    }),
+  ];
+  if (input.gatewayEnabled) {
+    const bridgePort = input.gatewayBridgePort ?? DEFAULT_GATEWAY_BRIDGE_PORT;
+    checks.push(
+      await checkHostPortFree({
+        id: 'preflight.gateway-bridge-port',
+        port: bridgePort,
+        ourPublish: composeServicePublishesHostPort(input.compose, 'gateway', bridgePort),
+      }),
+    );
+  }
+  return checks;
 }
 
 function readGatewayFromEnv(env: Map<string, string>): {
@@ -93,12 +176,12 @@ export async function auditNetworkBindings(input: {
   const gateway = readGatewayFromEnv(input.env);
   const gatewaySupported = input.gatewayComposeSupported ?? canRunGatewayCompose();
   const bridgePort = Number.parseInt(
-    input.env.get('GATEWAY_AUTH_BRIDGE_PORT')?.trim() || '9100',
+    input.env.get('GATEWAY_AUTH_BRIDGE_PORT')?.trim() || String(DEFAULT_GATEWAY_BRIDGE_PORT),
     10,
   );
   const bridgeBind = input.env.get('GATEWAY_AUTH_BRIDGE_BIND')?.trim() || '0.0.0.0';
-  const appRunning = appServiceRunning(input.compose);
-  const gatewayRunning = gatewayServiceRunning(input.compose);
+  const appRunning = composeServiceRunning(input.compose, 'app');
+  const gatewayRunning = composeServiceRunning(input.compose, 'gateway');
 
   if (appRunning) {
     const appListenOk = await probeTcpPort('127.0.0.1', 8080);

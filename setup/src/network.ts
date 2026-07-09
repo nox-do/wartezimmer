@@ -76,3 +76,8 @@ export function defaultGatewayBridgeUrl(): string {
   }
   return 'http://172.17.0.1:9100';
 }
+
+/** Host machine hostname for LAN reachability comfort path. */
+export function machineHostname(): string {
+  return os.hostname().trim();
+}

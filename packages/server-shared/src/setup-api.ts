@@ -41,6 +41,8 @@ export type ComposeServiceStatus = {
   service: string;
   state: string;
   health: string | null;
+  /** Host ports published by this container (from compose ps Publishers). */
+  publishedPorts?: number[];
 };
 
 export type ComposeStatus = {
@@ -96,6 +98,8 @@ export type StorageFoldersResult = {
 export type HostNetworkInput = {
   lanAppIp: string;
   restartCompose?: boolean;
+  /** Optional product base override (http(s) origin). When omitted, setup derives from LAN plan. */
+  canonicalBaseUrl?: string;
   gateway: GatewayPlanInput;
 };
 
@@ -235,6 +239,8 @@ export type NetworkSnapshot = {
     address: string;
     interfaceName: string;
   }>;
+  /** Host machine hostname (comfort path for LAN reachability). */
+  machineHostname: string;
   defaultGatewayBridgeUrl: string;
   gatewayComposeSupported: boolean;
 };
@@ -250,6 +256,8 @@ export type HostStatus = {
   docker: DockerStatus;
   folders: StorageFolderPaths;
   appBaseUrl: string;
+  /** Raw CANONICAL_BASE_URL from .env when valid http(s) origin; null if unset/invalid. */
+  configuredCanonicalBaseUrl: string | null;
   network: HostNetworkStatus;
   gateway: HostGatewayStatus | null;
   deviceUrls: DeviceUrls | null;
@@ -257,6 +265,11 @@ export type HostStatus = {
   compose: ComposeStatus | null;
   sandboxScanner: SandboxScannerStatus | null;
   networkBindings: NetworkBindingCheck[];
+  /**
+   * Preflight before compose up: required host ports free (or already used by our stack).
+   * Today: app publish 8080; gateway bridge 9100 when gateway is enabled.
+   */
+  networkPrerequisites: NetworkBindingCheck[];
   deliveryImages: DeliveryImagesStatus;
 };
 
@@ -265,6 +278,8 @@ export type HostRuntimeHealth = {
   checkedAt: string;
   envExists: boolean;
   configuredLanIp: string | null;
+  /** Effective product base used for LAN probes (canonical or IP fallback). */
+  appBaseUrl: string | null;
   docker: DockerStatus;
   compose: ComposeStatus | null;
   probes: ProbeResult[];
@@ -286,6 +301,8 @@ export type SetupPlan = {
 export type SetupPlanInput = {
   lanAppIp: string;
   practiceDisplayName: string;
+  /** Optional product base override (http(s) origin). When omitted, setup derives from LAN plan. */
+  canonicalBaseUrl?: string;
   gateway?: GatewayPlanInput;
 };
 
@@ -321,6 +338,7 @@ export type NormalizedSetupPlanInput = {
   practiceDisplayName: string;
   gateway: GatewayPlan;
   portalAppIp?: string;
+  canonicalBaseUrl?: string;
   delivery?: boolean;
   folders?: StorageFolderPaths;
 };

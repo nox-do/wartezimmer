@@ -2,6 +2,7 @@ import type {
   ApplySetupInput,
   ApplySetupResult,
   HostStatus,
+  NetworkBindingCheck,
   NetworkSnapshot,
   ProbeResult,
   SetupPlan,
@@ -9,6 +10,11 @@ import type {
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { deliveryImagesReady } from './delivery-images-flow.js';
 import { buildSetupProbeInput, pollSetupProbes } from './setup-probes.js';
+import {
+  draftCanonicalBaseUrl,
+  isHttpOrigin,
+  matchesHostnameModeBase,
+} from './reachability.js';
 import {
   buildGatewayPlanInput,
   createInitialWizardFields,
@@ -37,6 +43,9 @@ export type WizardFlowState = ReturnType<typeof createInitialWizardFields> & {
   plan: SetupPlan | null;
   applyResult: ApplySetupResult | null;
   releaseImportStatus: string | null;
+  reachabilityProbeBusy: boolean;
+  reachabilityProbeMessage: string | null;
+  reachabilityProbeOk: boolean | null;
 };
 
 export type WizardAdvanceAfter = 'loadNetwork' | 'loadPlan' | 'apply-and-refresh';
@@ -63,6 +72,9 @@ export function createWizardFlowState(
     plan: null,
     applyResult: null,
     releaseImportStatus: null,
+    reachabilityProbeBusy: false,
+    reachabilityProbeMessage: null,
+    reachabilityProbeOk: null,
   };
 }
 
@@ -82,8 +94,27 @@ export function dockerReady(status: HostStatus | null): boolean {
   return status.docker.installed && status.docker.daemonRunning && status.docker.composeAvailable;
 }
 
+export function networkPrerequisitesReady(status: HostStatus | null): boolean {
+  if (!status) {
+    return false;
+  }
+  const checks = status.networkPrerequisites ?? [];
+  return checks.length > 0 && checks.every((check) => check.ok);
+}
+
+export function networkPrerequisitesFailed(
+  status: HostStatus | null,
+): NetworkBindingCheck[] {
+  return (status?.networkPrerequisites ?? []).filter((check) => !check.ok);
+}
+
 export function canLeaveWizardStep1(status: HostStatus | null, busy: boolean): boolean {
-  return dockerReady(status) && deliveryImagesReady(status) && !busy;
+  return (
+    dockerReady(status) &&
+    deliveryImagesReady(status) &&
+    networkPrerequisitesReady(status) &&
+    !busy
+  );
 }
 
 export function planWizardAdvance(step: WizardStep, state: WizardFlowState): WizardAdvanceAction {
@@ -94,6 +125,13 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
   if (step === 2) {
     if (!resolvedLanIp(state)) {
       return { type: 'validate-error', message: 'Bitte eine LAN-IP wählen oder eingeben.' };
+    }
+    const canonical = draftCanonicalBaseUrl(state, state.network);
+    if (!canonical || !isHttpOrigin(canonical)) {
+      return {
+        type: 'validate-error',
+        message: 'Bitte eine gültige Erreichbarkeit wählen (LAN-IP, Rechnername oder eigener Hostname).',
+      };
     }
     return { type: 'goto', step: 3 };
   }
@@ -155,12 +193,37 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
 export function buildWizardPlanInput(state: WizardFlowState): {
   lanAppIp: string;
   practiceDisplayName: string;
+  canonicalBaseUrl?: string;
   gateway: ReturnType<typeof buildGatewayPlanInput>;
 } {
+  const canonicalBaseUrl = draftCanonicalBaseUrl(state, state.network) ?? undefined;
   return {
     lanAppIp: resolvedLanIp(state),
     practiceDisplayName: state.practiceDisplayName.trim(),
+    ...(canonicalBaseUrl ? { canonicalBaseUrl } : {}),
     gateway: buildGatewayPlanInput(state),
+  };
+}
+
+/** After network snapshot loads: prefer hostname mode only for exact http://host:8080. */
+export function wizardReachabilityAfterNetworkLoad(
+  state: WizardFlowState,
+  network: NetworkSnapshot,
+): Partial<WizardFlowState> {
+  const configured = state.status?.configuredCanonicalBaseUrl?.trim();
+  if (matchesHostnameModeBase(configured, network.machineHostname)) {
+    return {
+      network,
+      reachabilityMode: 'hostname',
+      customHostname: '',
+      reachabilityProbeMessage: null,
+      reachabilityProbeOk: null,
+    };
+  }
+  return {
+    network,
+    reachabilityProbeMessage: null,
+    reachabilityProbeOk: null,
   };
 }
 
@@ -224,10 +287,10 @@ export function wizardCompletionLead(probes: ProbeResult[]): string {
   }
 
   if (!localOk) {
-    return 'Stack wurde gestartet, die App antwortet auf Port 8080 noch nicht. Im Status in Kürze erneut prüfen — direkt nach dem ersten Start kann das eine Minute dauern.';
+    return 'Stack wurde gestartet, die App antwortet lokal noch nicht. Im Status in Kürze erneut prüfen — direkt nach dem ersten Start kann das eine Minute dauern.';
   }
 
-  return 'Stack läuft lokal, Geräte im WLAN erreichen den Host noch nicht. LAN-IP und Port 8080 prüfen.';
+  return 'Stack läuft lokal, Geräte im Praxisnetz erreichen die konfigurierte Basis-URL noch nicht. Erreichbarkeit unter Netzwerk prüfen.';
 }
 
 export function wizardProbeFailureHint(probes: ProbeResult[]): string | null {
@@ -244,7 +307,7 @@ export function wizardProbeFailureHint(probes: ProbeResult[]): string | null {
   }
 
   if (lanProbe && !lanOk) {
-    return 'Wenn LAN rot bleibt: gleiche IP wie aktuelles WLAN wählen, Port 8080 muss am Host erreichbar sein. Nach DHCP-Wechsel Einrichtung erneut ausführen.';
+    return 'Wenn die Praxisnetz-Prüfung rot bleibt: unter Netzwerk die Erreichbarkeit (LAN-IP oder Hostname) prüfen und erneut testen. Nach DHCP-Wechsel Einstellungen übernehmen.';
   }
 
   return null;

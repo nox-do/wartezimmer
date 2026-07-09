@@ -80,7 +80,7 @@ export function wizardStepTitle(step: WizardStep): string {
     case 1:
       return 'Voraussetzungen';
     case 2:
-      return 'Netzwerk — LAN-IP wählen';
+      return 'Netzwerk — Erreichbarkeit';
     case 3:
       return 'Praxis — Anzeigename';
     case 4:

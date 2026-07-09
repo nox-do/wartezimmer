@@ -26,6 +26,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     },
     folders: { imports: '/imports', exports: '/exports' },
     appBaseUrl: 'http://127.0.0.1:8080',
+    configuredCanonicalBaseUrl: null,
     network: {
       configuredLanIp: null,
       currentLanCandidates: [],
@@ -43,6 +44,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     compose: null,
     sandboxScanner: null,
     networkBindings: [],
+    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
     deliveryImages: {
       required: false,
       configured: false,
@@ -131,6 +133,7 @@ test('network load fills gateway portal IP from selected LAN IP', async () => {
       fetchSetupNetwork: async () => ({
         lanCandidates: [],
         interfaces: [],
+        machineHostname: 'praxis-mac',
         gatewayComposeSupported: true,
         defaultGatewayBridgeUrl: 'http://172.17.0.1:9100',
       }),

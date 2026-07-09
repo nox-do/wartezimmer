@@ -1,7 +1,16 @@
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-import type { ComposeStatus, HostStatus, NetworkSnapshot } from '../shared/host-status.js';
+import type {
+  ComposeStatus,
+  HostStatus,
+  NetworkSnapshot,
+  ProbeResult,
+} from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
-import type { GatewayFieldState, LanIpFieldState } from './host-network-panels.js';
+import type {
+  GatewayFieldState,
+  LanIpFieldState,
+  ReachabilityFieldState,
+} from './host-network-panels.js';
 import { hostNetworkChanged } from './host-network-panels.js';
 import {
   NETWORK_GATEWAY_INTERFACE_ERROR,
@@ -12,6 +21,12 @@ import {
   networkSaveErrorText,
   networkSaveStatusText,
 } from './network-view-model.js';
+import {
+  draftCanonicalBaseUrl,
+  isHttpOrigin,
+  matchesHostnameModeBase,
+  type ReachabilityMode,
+} from './reachability.js';
 import {
   buildGatewayPlanInput,
   createHostNetworkFields,
@@ -25,13 +40,17 @@ export type NetworkCallbacks = {
 };
 
 export type NetworkState = LanIpFieldState &
-  GatewayFieldState & {
+  GatewayFieldState &
+  ReachabilityFieldState & {
     status: HostStatus | null;
     network: NetworkSnapshot | null;
     compose: ComposeStatus | null;
     networkStatusText: string;
     busy: boolean;
     error: string | null;
+    reachabilityProbeBusy: boolean;
+    reachabilityProbeMessage: string | null;
+    reachabilityProbeOk: boolean | null;
   };
 
 export type NetworkControllerDeps = NetworkCallbacks & {
@@ -42,8 +61,11 @@ export type NetworkControllerDeps = NetworkCallbacks & {
 
 export type NetworkController = {
   getState: () => Readonly<NetworkState>;
-  patchFields: (patch: Partial<LanIpFieldState & GatewayFieldState>) => void;
+  patchFields: (
+    patch: Partial<LanIpFieldState & GatewayFieldState & ReachabilityFieldState>,
+  ) => void;
   apply: () => void;
+  testReachability: () => void;
   show: (status: HostStatus) => void;
   hide: () => void;
   clearError: () => void;
@@ -64,9 +86,22 @@ function createInitialState(): NetworkState {
     gatewayIp: '192.168.88.1',
     portalAppIp: '',
     authBridgeUrl: '',
+    reachabilityMode: 'lan-ip',
+    customHostname: '',
     busy: false,
     error: null,
+    reachabilityProbeBusy: false,
+    reachabilityProbeMessage: null,
+    reachabilityProbeOk: null,
   };
+}
+
+function lanProbeSummary(probes: ProbeResult[]): { ok: boolean | null; message: string | null } {
+  const lan = probes.find((probe) => probe.id === 'app.health.lan');
+  if (!lan) {
+    return { ok: null, message: 'Keine Praxisnetz-Prüfung möglich (keine Basis-URL).' };
+  }
+  return { ok: lan.ok, message: lan.message };
 }
 
 export function createNetworkController(deps: NetworkControllerDeps): NetworkController {
@@ -89,6 +124,10 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     patch({ error: message });
   }
 
+  function resolveCanonicalForSave(): string | null {
+    return draftCanonicalBaseUrl(state, state.network);
+  }
+
   function saveHostNetwork(restartCompose: boolean): void {
     const lanAppIp = resolvedLanIp(state);
     if (!lanAppIp) {
@@ -105,6 +144,14 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       return;
     }
 
+    const canonicalBaseUrl = resolveCanonicalForSave();
+    if (!canonicalBaseUrl || !isHttpOrigin(canonicalBaseUrl)) {
+      setError(
+        'Erreichbarkeit: bitte LAN-IP, Rechnername oder eigenen Hostnamen wählen.',
+      );
+      return;
+    }
+
     if (!state.status) {
       return;
     }
@@ -117,6 +164,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       .saveHostNetwork({
         lanAppIp,
         restartCompose,
+        canonicalBaseUrl,
         gateway: buildGatewayPlanInput(state),
       })
       .then((result) => {
@@ -144,20 +192,86 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
 
     patchFields(patchFields) {
       patch(patchFields);
+      if (
+        'reachabilityMode' in patchFields ||
+        'customHostname' in patchFields ||
+        'lanAppIp' in patchFields ||
+        'customLanIp' in patchFields
+      ) {
+        patch({
+          reachabilityProbeMessage: null,
+          reachabilityProbeOk: null,
+        });
+      }
     },
 
     apply() {
-      if (!hostNetworkChanged(state, state.status)) {
+      if (!hostNetworkChanged(state, state.status, state.network)) {
         setError(NETWORK_NO_CHANGES_ERROR);
         return;
       }
 
-      if ((state.compose?.running ?? false) && hostNetworkChanged(state, state.status)) {
+      if ((state.compose?.running ?? false) && hostNetworkChanged(state, state.status, state.network)) {
         deps.requestConfirm(NETWORK_RESTART_CONFIRM_MESSAGE, () => saveHostNetwork(true));
         return;
       }
 
       saveHostNetwork(false);
+    },
+
+    testReachability() {
+      const lanAppBaseUrl = resolveCanonicalForSave();
+      if (!lanAppBaseUrl) {
+        patch({
+          reachabilityProbeOk: false,
+          reachabilityProbeMessage:
+            'Keine Basis-URL — LAN-IP wählen oder Hostname/Domain eintragen.',
+        });
+        return;
+      }
+
+      patch({
+        reachabilityProbeBusy: true,
+        reachabilityProbeMessage: `Prüfe ${lanAppBaseUrl} …`,
+        reachabilityProbeOk: null,
+        error: null,
+      });
+
+      void deps.api
+        .runSetupProbes({
+          localAppBaseUrl: 'http://127.0.0.1:8080',
+          lanAppBaseUrl,
+        })
+        .then((result) => {
+          const summary = lanProbeSummary(result.probes);
+          const local = result.probes.find((probe) => probe.id === 'app.health.local');
+          if (local && !local.ok) {
+            patch({
+              reachabilityProbeOk: false,
+              reachabilityProbeMessage: `Lokal nicht erreichbar — ${local.message}`,
+            });
+            return;
+          }
+          if (summary.ok === false) {
+            patch({
+              reachabilityProbeOk: false,
+              reachabilityProbeMessage: `${summary.message ?? 'Nicht erreichbar'} — bei Hostname-Problemen LAN-IP verwenden.`,
+            });
+            return;
+          }
+          patch({
+            reachabilityProbeOk: true,
+            reachabilityProbeMessage: summary.message ?? `Erreichbar: ${lanAppBaseUrl}`,
+          });
+        })
+        .catch((error) => {
+          patch({
+            reachabilityProbeOk: false,
+            reachabilityProbeMessage:
+              error instanceof Error ? error.message : 'Erreichbarkeitstest fehlgeschlagen.',
+          });
+        })
+        .finally(() => patch({ reachabilityProbeBusy: false }));
     },
 
     show(status) {
@@ -166,14 +280,28 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
         compose: status.compose,
         networkStatusText: '',
         error: null,
+        reachabilityProbeMessage: null,
+        reachabilityProbeOk: null,
         ...createHostNetworkFields(status),
       });
       setBusy(true);
       void deps.api
         .fetchSetupNetwork()
         .then((network) => {
+          const fields = { ...state, ...createHostNetworkFields(status) };
+          // Prefer hostname mode only for the exact hostname-mode URL (http://host:8080).
+          let reachabilityMode: ReachabilityMode = fields.reachabilityMode;
+          let customHostname = fields.customHostname;
+          const host = network.machineHostname?.trim();
+          const configured = status.configuredCanonicalBaseUrl?.trim();
+          if (matchesHostnameModeBase(configured, host)) {
+            reachabilityMode = 'hostname';
+            customHostname = '';
+          }
           patch({
             network,
+            reachabilityMode,
+            customHostname,
             ...gatewayDraftDefaults(state, network, resolvedLanIp(state)),
           });
         })
@@ -194,7 +322,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     },
 
     applyConfigSnapshot(status) {
-      const dirty = hostNetworkChanged(state, state.status);
+      const dirty = hostNetworkChanged(state, state.status, state.network);
       patch({ status });
       if (!dirty && !state.busy) {
         patch(createHostNetworkFields(status));

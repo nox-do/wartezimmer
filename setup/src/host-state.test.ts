@@ -6,6 +6,7 @@ import test from 'node:test';
 import { readEnvMap } from './env-file.js';
 import {
   applySetupPlan,
+  buildSetupPlan,
   isLanIpStale,
   pickLanIpFromEnv,
   pickPracticeDisplayNameFromEnv,
@@ -68,6 +69,50 @@ test('resolveComposeBuild skips build for delivery images', () => {
   assert.equal(resolveComposeBuild({ preserveEnv: false, delivery: true }), false);
 });
 
+test('buildSetupPlan rewrites IP-derived canonical preview when LAN IP changes', () => {
+  const env = new Map([
+    ['SETUP_LAN_APP_IP', '192.168.1.10'],
+    ['CANONICAL_BASE_URL', 'http://192.168.1.10:8080'],
+  ]);
+  const plan = buildSetupPlan(
+    {
+      lanAppIp: '192.168.1.20',
+      practiceDisplayName: 'Praxis Nord',
+      gateway: {
+        enabled: false,
+        gatewayInterface: 'eth1',
+        gatewayIp: '192.168.88.1',
+        portalAppIp: '192.168.1.20',
+        authBridgeUrl: '',
+      },
+    },
+    env,
+  );
+  assert.equal(plan.deviceUrls.appBaseUrl, 'http://192.168.1.20:8080');
+});
+
+test('buildSetupPlan keeps custom hostname in preview when LAN IP changes', () => {
+  const env = new Map([
+    ['SETUP_LAN_APP_IP', '192.168.1.10'],
+    ['CANONICAL_BASE_URL', 'http://praxis-flow.local:8080'],
+  ]);
+  const plan = buildSetupPlan(
+    {
+      lanAppIp: '192.168.1.20',
+      practiceDisplayName: 'Praxis Nord',
+      gateway: {
+        enabled: false,
+        gatewayInterface: 'eth1',
+        gatewayIp: '192.168.88.1',
+        portalAppIp: '192.168.1.20',
+        authBridgeUrl: '',
+      },
+    },
+    env,
+  );
+  assert.equal(plan.deviceUrls.appBaseUrl, 'http://praxis-flow.local:8080');
+});
+
 test('applySetupPlan materializes imported release images from manager state into env', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-apply-release-state-'));
   try {
@@ -117,6 +162,8 @@ test('applySetupPlan materializes imported release images from manager state int
     assert.equal(env.get('PRACTICE_DISPLAY_NAME'), 'Praxis Nord');
     assert.equal(env.get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:1.4.2');
     assert.equal(env.get('PRAXIS_FLOW_SANDBOX_IMAGE'), 'praxis-flow/sandbox:1.4.2');
+    assert.equal(env.get('SETUP_LAN_APP_IP'), '192.168.1.10');
+    assert.equal(env.get('CANONICAL_BASE_URL'), 'http://192.168.1.10:8080');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -161,6 +208,7 @@ test('saveHostNetwork updates LAN and gateway keys without touching practice nam
     const env = readEnvMap(path.join(root, '.env'));
     assert.equal(env.get('PRACTICE_DISPLAY_NAME'), 'Praxis Süd');
     assert.equal(env.get('SETUP_LAN_APP_IP'), '192.168.1.20');
+    assert.equal(env.get('CANONICAL_BASE_URL'), 'http://192.168.1.20:8080');
     assert.equal(env.get('GATEWAY_INTERFACE'), 'eth2');
     assert.equal(env.get('GATEWAY_IP'), '192.168.99.1');
     assert.equal(env.get('APP_PORTAL_URL'), 'http://192.168.1.20:8080/portal');
@@ -206,9 +254,92 @@ test('saveHostNetwork removes gateway keys when gateway is disabled', async () =
 
     const env = readEnvMap(path.join(root, '.env'));
     assert.equal(env.get('SETUP_LAN_APP_IP'), '192.168.1.13');
+    assert.equal(env.get('CANONICAL_BASE_URL'), 'http://192.168.1.13:8080');
     assert.equal(env.get('GATEWAY_INTERFACE'), undefined);
     assert.equal(env.get('APP_PORTAL_URL'), undefined);
     assert.equal(env.get('PRACTICE_DISPLAY_NAME'), 'Praxis Nord');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('saveHostNetwork keeps custom CANONICAL_BASE_URL hostname when LAN IP changes', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-save-network-canonical-'));
+  try {
+    fs.writeFileSync(
+      path.join(root, '.env'),
+      [
+        'PRACTICE_DISPLAY_NAME=Praxis Nord',
+        'SETUP_LAN_APP_IP=192.168.1.10',
+        'CANONICAL_BASE_URL=http://praxis-flow.local:8080',
+        '',
+      ].join('\n'),
+    );
+
+    const result = await saveHostNetwork(
+      {
+        home: root,
+        mode: 'install',
+        composeProjectName: 'pf-test',
+        templateRoot: root,
+      },
+      {
+        lanAppIp: '192.168.1.20',
+        gateway: {
+          enabled: false,
+          gatewayInterface: 'eth1',
+          gatewayIp: '192.168.88.1',
+          portalAppIp: '192.168.1.20',
+          authBridgeUrl: '',
+        },
+      },
+    );
+
+    const env = readEnvMap(path.join(root, '.env'));
+    assert.equal(env.get('SETUP_LAN_APP_IP'), '192.168.1.20');
+    assert.equal(env.get('CANONICAL_BASE_URL'), 'http://praxis-flow.local:8080');
+    assert.equal(result.deviceUrls.appBaseUrl, 'http://praxis-flow.local:8080');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('saveHostNetwork writes explicit canonicalBaseUrl override', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-save-network-override-'));
+  try {
+    fs.writeFileSync(
+      path.join(root, '.env'),
+      [
+        'PRACTICE_DISPLAY_NAME=Praxis Nord',
+        'SETUP_LAN_APP_IP=192.168.1.10',
+        'CANONICAL_BASE_URL=http://192.168.1.10:8080',
+        '',
+      ].join('\n'),
+    );
+
+    const result = await saveHostNetwork(
+      {
+        home: root,
+        mode: 'install',
+        composeProjectName: 'pf-test',
+        templateRoot: root,
+      },
+      {
+        lanAppIp: '192.168.1.10',
+        canonicalBaseUrl: 'http://praxis-flow.local:8080',
+        gateway: {
+          enabled: false,
+          gatewayInterface: 'eth1',
+          gatewayIp: '192.168.88.1',
+          portalAppIp: '192.168.1.10',
+          authBridgeUrl: '',
+        },
+      },
+    );
+
+    const env = readEnvMap(path.join(root, '.env'));
+    assert.equal(env.get('CANONICAL_BASE_URL'), 'http://praxis-flow.local:8080');
+    assert.equal(result.deviceUrls.appBaseUrl, 'http://praxis-flow.local:8080');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

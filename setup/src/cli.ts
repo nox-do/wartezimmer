@@ -4,7 +4,6 @@ import { applySetupPlan, getHostStatus } from './host-state.js';
 import { canRunGatewayCompose, dockerInstallHints, detectDocker } from './docker.js';
 import { listLanIpv4Candidates, listNetworkInterfaces } from './network.js';
 import { resolveSetupContext } from './setup-context.js';
-import { buildDeviceUrls } from './urls.js';
 
 function isCancel<T>(value: T | symbol): value is symbol {
   return typeof value === 'symbol';
@@ -199,7 +198,7 @@ async function main() {
       p.log.success('Container gestartet');
     }
 
-    const urls = buildDeviceUrls(lanAppIp);
+    const urls = result.deviceUrls;
     p.note(
       [
         `Terminal:  ${urls.terminal}`,

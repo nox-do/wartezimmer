@@ -9,8 +9,8 @@ test('parseComposePsOutput handles empty stdout', () => {
 
 test('parseComposePsOutput parses line-delimited json rows', () => {
   const stdout = [
-    '{"Name":"pf-dev-001-app-1","Service":"app","State":"running","Health":"healthy"}',
-    '{"Name":"pf-dev-001-sandbox-1","Service":"sandbox","State":"exited","Health":""}',
+    '{"Name":"pf-dev-001-app-1","Service":"app","State":"running","Health":"healthy","Publishers":[{"URL":"0.0.0.0","TargetPort":8080,"PublishedPort":8080,"Protocol":"tcp"}]}',
+    '{"Name":"pf-dev-001-sandbox-1","Service":"sandbox","State":"exited","Health":"","Publishers":null}',
   ].join('\n');
 
   assert.deepEqual(parseComposePsOutput(stdout), [
@@ -19,12 +19,14 @@ test('parseComposePsOutput parses line-delimited json rows', () => {
       service: 'app',
       state: 'running',
       health: 'healthy',
+      publishedPorts: [8080],
     },
     {
       name: 'pf-dev-001-sandbox-1',
       service: 'sandbox',
       state: 'exited',
       health: null,
+      publishedPorts: [],
     },
   ]);
 });
@@ -36,8 +38,14 @@ test('parseComposePsOutput parses json array payload', () => {
   ]);
 
   assert.deepEqual(parseComposePsOutput(stdout), [
-    { name: 'app-1', service: 'app', state: 'running', health: null },
-    { name: 'sandbox-1', service: 'sandbox', state: 'running', health: 'starting' },
+    { name: 'app-1', service: 'app', state: 'running', health: null, publishedPorts: [] },
+    {
+      name: 'sandbox-1',
+      service: 'sandbox',
+      state: 'running',
+      health: 'starting',
+      publishedPorts: [],
+    },
   ]);
 });
 

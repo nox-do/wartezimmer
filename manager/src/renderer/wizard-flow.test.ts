@@ -27,6 +27,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     },
     folders: { imports: '/tmp/imports', exports: '/tmp/exports' },
     appBaseUrl: 'http://127.0.0.1:8080',
+    configuredCanonicalBaseUrl: null,
     network: {
       configuredLanIp: null,
       currentLanCandidates: [],
@@ -38,6 +39,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     compose: null,
     sandboxScanner: null,
     networkBindings: [],
+    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
     deliveryImages: {
       required: false,
       configured: false,
@@ -59,7 +61,7 @@ test('previousWizardStep walks back through wizard steps', () => {
   assert.equal(previousWizardStep(7), 6);
 });
 
-test('canLeaveWizardStep1 requires docker and delivery images when busy is false', () => {
+test('canLeaveWizardStep1 requires docker, network prerequisites and delivery images', () => {
   const status = minimalStatus();
   assert.equal(canLeaveWizardStep1(status, false), true);
   assert.equal(
@@ -83,8 +85,50 @@ test('canLeaveWizardStep1 requires docker and delivery images when busy is false
   );
 });
 
+test('canLeaveWizardStep1 blocks when network prerequisites fail', () => {
+  assert.equal(
+    canLeaveWizardStep1(
+      minimalStatus({
+        networkPrerequisites: [
+          {
+            id: 'preflight.app-port',
+            ok: false,
+            message: 'Port 8080 ist bereits belegt. Praxis Flow kann die App so nicht starten.',
+            detail: 'Belegt durch: Docker-Container other-app',
+          },
+        ],
+      }),
+      false,
+    ),
+    false,
+  );
+  assert.equal(
+    canLeaveWizardStep1(
+      minimalStatus({
+        networkPrerequisites: [],
+      }),
+      false,
+    ),
+    false,
+  );
+});
+
 test('planWizardAdvance validates LAN IP on step 2', () => {
   const state = createWizardFlowState(minimalStatus(), 2);
+  assert.equal(planWizardAdvance(2, state).type, 'validate-error');
+});
+
+test('planWizardAdvance advances from step 2 when LAN and reachability are set', () => {
+  const state = createWizardFlowState(minimalStatus(), 2);
+  state.lanAppIp = '192.168.1.10';
+  state.reachabilityMode = 'lan-ip';
+  assert.deepEqual(planWizardAdvance(2, state), { type: 'goto', step: 3 });
+});
+
+test('planWizardAdvance rejects hostname reachability without network snapshot', () => {
+  const state = createWizardFlowState(minimalStatus(), 2);
+  state.lanAppIp = '192.168.1.10';
+  state.reachabilityMode = 'hostname';
   assert.equal(planWizardAdvance(2, state).type, 'validate-error');
 });
 
@@ -121,6 +165,7 @@ test('planWizardAdvance prefills gateway bridge URL when entering step 4', () =>
     interfaces: [],
     lanCandidates: [],
     defaultGatewayBridgeUrl: 'http://host.docker.internal:9100',
+    machineHostname: 'praxis-mac',
     gatewayComposeSupported: false,
   };
 
@@ -144,6 +189,7 @@ test('planWizardAdvance keeps explicit gateway bridge URL when entering step 4',
     interfaces: [],
     lanCandidates: [],
     defaultGatewayBridgeUrl: 'http://host.docker.internal:9100',
+    machineHostname: 'praxis-mac',
     gatewayComposeSupported: false,
   };
 
@@ -183,7 +229,7 @@ test('wizardProbeFailureHint distinguishes local startup from LAN issues', () =>
       { id: 'app.health.local', ok: true, message: 'ok' },
       { id: 'app.health.lan', ok: false, message: 'down' },
     ]) ?? '',
-    /WLAN/,
+    /Erreichbarkeit|Netzwerk/,
   );
   assert.equal(
     wizardProbeFailureHint([

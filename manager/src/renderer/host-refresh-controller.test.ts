@@ -21,6 +21,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     },
     folders: { imports: '/tmp/imports', exports: '/tmp/exports' },
     appBaseUrl: 'http://192.168.1.10:8080',
+    configuredCanonicalBaseUrl: null,
     network: { configuredLanIp: '192.168.1.10', currentLanCandidates: [], lanIpStale: false },
     gateway: null,
     deviceUrls: null,
@@ -28,6 +29,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     compose: { running: true, services: [] },
     sandboxScanner: null,
     networkBindings: [],
+    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
     deliveryImages: {
       required: false,
       configured: true,
@@ -49,6 +51,7 @@ function minimalRuntime(overrides: Partial<HostRuntimeHealth> = {}): HostRuntime
     checkedAt: '2026-06-30T12:00:00.000Z',
     envExists: status.envExists,
     configuredLanIp: status.network.configuredLanIp,
+    appBaseUrl: status.appBaseUrl,
     docker: status.docker,
     compose: status.compose,
     probes: [{ id: 'app.health.local', ok: true, message: 'ok' }],

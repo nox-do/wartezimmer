@@ -30,16 +30,46 @@ test('connectionProbesReady requires local probe and optional lan probe', () => 
   assert.equal(connectionProbesReady(lanFail), false);
 });
 
-test('buildSetupProbeInput maps configured LAN IP to probe URL', () => {
+test('buildSetupProbeInput prefers canonical / deviceUrls over raw LAN IP', () => {
   assert.deepEqual(
-    buildSetupProbeInput({ network: { configuredLanIp: '192.168.1.10', currentLanCandidates: [], lanIpStale: false } }),
+    buildSetupProbeInput({
+      network: { configuredLanIp: '192.168.1.10', currentLanCandidates: [], lanIpStale: false },
+      configuredCanonicalBaseUrl: 'http://praxis-flow.local:8080',
+      deviceUrls: {
+        appBaseUrl: 'http://praxis-flow.local:8080',
+        terminal: '',
+        mfa: '',
+        tv: '',
+        ops: '',
+        opsSetup: '',
+        portal: '',
+      },
+    }),
+    {
+      localAppBaseUrl: 'http://127.0.0.1:8080',
+      lanAppBaseUrl: 'http://praxis-flow.local:8080',
+    },
+  );
+  assert.deepEqual(
+    buildSetupProbeInput({
+      network: { configuredLanIp: '192.168.1.10', currentLanCandidates: [], lanIpStale: false },
+      configuredCanonicalBaseUrl: null,
+      deviceUrls: null,
+    }),
     {
       localAppBaseUrl: 'http://127.0.0.1:8080',
       lanAppBaseUrl: 'http://192.168.1.10:8080',
     },
   );
+});
+
+test('buildSetupProbeInput omits LAN probe when only local appBaseUrl fallback would apply', () => {
   assert.deepEqual(
-    buildSetupProbeInput({ network: { configuredLanIp: null, currentLanCandidates: [], lanIpStale: false } }),
+    buildSetupProbeInput({
+      network: { configuredLanIp: null, currentLanCandidates: [], lanIpStale: false },
+      configuredCanonicalBaseUrl: null,
+      deviceUrls: null,
+    }),
     {
       localAppBaseUrl: 'http://127.0.0.1:8080',
       lanAppBaseUrl: undefined,

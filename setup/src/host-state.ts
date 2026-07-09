@@ -29,9 +29,10 @@ import {
   listLanIpv4Candidates,
   listNetworkInterfaces,
   defaultGatewayBridgeUrl,
+  machineHostname,
 } from './network.js';
 import { runConnectionProbes } from './probes.js';
-import { auditNetworkBindings } from './network-bindings.js';
+import { auditNetworkBindings, auditNetworkPrerequisites } from './network-bindings.js';
 import {
   auditDeliveryImages,
   loadDeliveryImagesFromArchive,
@@ -69,9 +70,14 @@ import type {
 import { resolveSecretsForEnv } from './secrets.js';
 import { resetStaffPinsInAppDatabase } from './staff-pin-reset.js';
 import {
-  buildDeviceUrls,
+  buildDeviceUrlsFromBaseUrl,
   buildGatewayEnv,
+  fallbackCanonicalBaseUrl,
   GATEWAY_ENV_KEYS,
+  LOCAL_SETUP_APP_BASE_URL,
+  parseHttpBaseUrl,
+  resolveCanonicalBaseUrl,
+  resolveCanonicalBaseUrlForLanPlan,
 } from './urls.js';
 import type { SetupContext } from './setup-context.js';
 import {
@@ -382,14 +388,14 @@ export async function getHostRuntimeHealth(ctx: SetupContext): Promise<HostRunti
   const docker = await detectDocker();
   const envMap = envExists ? readEnvMap(envPath) : new Map<string, string>();
   const configuredLanIp = pickLanIpFromEnv(envMap);
-  const lanAppBaseUrl = configuredLanIp ? `http://${configuredLanIp}:8080` : undefined;
+  const lanAppBaseUrl = resolveCanonicalBaseUrl(envMap, configuredLanIp) ?? undefined;
 
   const compose = await readComposeForHost(ctx, envExists, docker, envMap);
 
   let probes: ProbeResult[] = [];
   if (docker.daemonRunning) {
     probes = await runConnectionProbes({
-      localAppBaseUrl: 'http://127.0.0.1:8080',
+      localAppBaseUrl: LOCAL_SETUP_APP_BASE_URL,
       lanAppBaseUrl,
     });
   }
@@ -403,6 +409,7 @@ export async function getHostRuntimeHealth(ctx: SetupContext): Promise<HostRunti
     checkedAt,
     envExists,
     configuredLanIp,
+    appBaseUrl: lanAppBaseUrl ?? null,
     docker,
     compose,
     probes,
@@ -420,9 +427,12 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
   const envMap = envExists ? readEnvMap(envPath) : new Map<string, string>();
   const network = buildHostNetworkStatus(envMap);
   const configuredLanIp = network.configuredLanIp;
-  const lanIp = configuredLanIp ?? '127.0.0.1';
-  const appBaseUrl = `http://${lanIp}:8080`;
-  const deviceUrls: DeviceUrls | null = configuredLanIp ? buildDeviceUrls(configuredLanIp) : null;
+  const configuredCanonicalBaseUrl = parseHttpBaseUrl(envMap.get('CANONICAL_BASE_URL'));
+  const canonicalBaseUrl = resolveCanonicalBaseUrl(envMap, configuredLanIp);
+  const appBaseUrl = canonicalBaseUrl ?? fallbackCanonicalBaseUrl(configuredLanIp ?? '127.0.0.1');
+  const deviceUrls: DeviceUrls | null = canonicalBaseUrl
+    ? buildDeviceUrlsFromBaseUrl(canonicalBaseUrl)
+    : null;
   const folders = resolveHomeFolders(root);
 
   const compose = await readComposeForHost(ctx, envExists, docker, envMap);
@@ -430,8 +440,8 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
   let probes: ProbeResult[] = [];
   if (includeProbes && docker.daemonRunning) {
     probes = await runConnectionProbes({
-      localAppBaseUrl: 'http://127.0.0.1:8080',
-      lanAppBaseUrl: configuredLanIp ? appBaseUrl : undefined,
+      localAppBaseUrl: LOCAL_SETUP_APP_BASE_URL,
+      lanAppBaseUrl: canonicalBaseUrl ?? undefined,
     });
   }
 
@@ -440,6 +450,7 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     sandboxScanner = await fetchSandboxScannerStatus(resolveMaxSignatureAgeHours(envMap));
   }
 
+  const gateway = envExists ? readGatewayStatusFromEnv(envMap) : null;
   const networkBindings = envExists
     ? await auditNetworkBindings({
         env: envMap,
@@ -448,6 +459,15 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
         gatewayComposeSupported: canRunGatewayCompose(),
       })
     : [];
+  const bridgePort = Number.parseInt(
+    envMap.get('GATEWAY_AUTH_BRIDGE_PORT')?.trim() || '9100',
+    10,
+  );
+  const networkPrerequisites = await auditNetworkPrerequisites({
+    compose,
+    gatewayEnabled: Boolean(gateway?.enabled),
+    gatewayBridgePort: Number.isFinite(bridgePort) ? bridgePort : undefined,
+  });
 
   const deliveryImages = await auditDeliveryImages({
     projectRoot: root,
@@ -466,19 +486,33 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     docker,
     folders,
     appBaseUrl,
+    configuredCanonicalBaseUrl,
     network,
-    gateway: envExists ? readGatewayStatusFromEnv(envMap) : null,
+    gateway,
     deviceUrls,
     probes,
     compose,
     sandboxScanner,
     networkBindings,
+    networkPrerequisites,
     deliveryImages,
   };
 }
 
-export function buildSetupPlan(input: NormalizedSetupPlanInput): SetupPlan {
-  const deviceUrls = buildDeviceUrls(input.lanAppIp);
+export function buildSetupPlan(
+  input: NormalizedSetupPlanInput,
+  env: Map<string, string> | null = null,
+): SetupPlan {
+  const previousLanIp = env ? pickLanIpFromEnv(env) : null;
+  const overrideCanonical = parseHttpBaseUrl(input.canonicalBaseUrl);
+  const canonicalBaseUrl =
+    overrideCanonical ??
+    resolveCanonicalBaseUrlForLanPlan({
+      existingCanonical: env?.get('CANONICAL_BASE_URL'),
+      previousLanIp,
+      nextLanIp: input.lanAppIp.trim(),
+    });
+  const deviceUrls = buildDeviceUrlsFromBaseUrl(canonicalBaseUrl);
   const gateway: GatewayPlan = {
     ...input.gateway,
     portalAppIp: input.portalAppIp?.trim() || input.lanAppIp,
@@ -503,7 +537,8 @@ export async function applySetupPlan(
   input: NormalizedSetupPlanInput & ApplySetupOptions,
 ) {
   const projectRoot = ctx.home;
-  const plan = buildSetupPlan(input);
+  const envPathExisting = path.join(projectRoot, '.env');
+  const existingBefore = readEnvMap(envPathExisting);
   const preparedStorage = input.folders ? prepareStorageFoldersOnDisk(input.folders) : null;
   const preserveExistingKeys = input.preserveEnv
     ? [
@@ -513,8 +548,6 @@ export async function applySetupPlan(
         ...(preparedStorage ? [] : ['IMPORTS_HOST_PATH', 'EXPORTS_HOST_PATH']),
       ]
     : undefined;
-  const envPathExisting = path.join(projectRoot, '.env');
-  const existingBefore = readEnvMap(envPathExisting);
   const {
     secrets,
     generated: secretsGenerated,
@@ -523,6 +556,21 @@ export async function applySetupPlan(
     preserve: Boolean(input.preserveEnv),
   });
   const releaseEnv = releaseEnvFromManagerState(readManagerState(projectRoot));
+  const previousLanIp = pickLanIpFromEnv(existingBefore);
+  const overrideCanonical = parseHttpBaseUrl(input.canonicalBaseUrl);
+  const canonicalToWrite =
+    overrideCanonical ??
+    resolveCanonicalBaseUrlForLanPlan({
+      existingCanonical: existingBefore.get('CANONICAL_BASE_URL'),
+      previousLanIp,
+      nextLanIp: input.lanAppIp.trim(),
+    });
+  const deviceUrls = buildDeviceUrlsFromBaseUrl(canonicalToWrite);
+  const gateway: GatewayPlan = {
+    ...input.gateway,
+    portalAppIp: input.portalAppIp?.trim() || input.lanAppIp,
+  };
+  const gatewayEnv = buildGatewayEnv(gateway, deviceUrls, defaultGatewayBridgeUrl());
   const { envPath, backupPath, keysWritten } = writeEnvFromExample(
     projectRoot,
     {
@@ -530,8 +578,9 @@ export async function applySetupPlan(
       secrets,
       extra: {
         ...releaseEnv,
-        ...plan.gatewayEnv,
+        ...gatewayEnv,
         SETUP_LAN_APP_IP: input.lanAppIp.trim(),
+        CANONICAL_BASE_URL: canonicalToWrite,
         ...(preparedStorage
           ? {
               IMPORTS_HOST_PATH: preparedStorage.folders.imports,
@@ -569,11 +618,10 @@ export async function applySetupPlan(
     });
   }
 
-  const deviceUrls = plan.deviceUrls;
   const probes =
     input.runProbes !== false && input.runCompose
       ? await runConnectionProbes({
-          localAppBaseUrl: 'http://127.0.0.1:8080',
+          localAppBaseUrl: LOCAL_SETUP_APP_BASE_URL,
           lanAppBaseUrl: deviceUrls.appBaseUrl,
         })
       : [];
@@ -596,6 +644,7 @@ export function getNetworkSnapshot() {
   return {
     interfaces: listNetworkInterfaces(),
     lanCandidates: listLanIpv4Candidates(),
+    machineHostname: machineHostname(),
     defaultGatewayBridgeUrl: defaultGatewayBridgeUrl(),
     gatewayComposeSupported: canRunGatewayCompose(),
   };
@@ -642,6 +691,7 @@ export type SaveHostNetworkInput = {
   lanAppIp: string;
   gateway: GatewayPlan;
   restartCompose?: boolean;
+  canonicalBaseUrl?: string;
 };
 
 export async function saveHostNetwork(
@@ -664,9 +714,19 @@ export async function saveHostNetwork(
   const stackWasRunning = composeBefore.running;
 
   const backup = backupEnvFile(ctx.home);
-  const deviceUrls = buildDeviceUrls(lanAppIp);
+  const previousLanIp = pickLanIpFromEnv(existing);
+  const overrideCanonical = parseHttpBaseUrl(input.canonicalBaseUrl);
+  const canonicalBaseUrl =
+    overrideCanonical ??
+    resolveCanonicalBaseUrlForLanPlan({
+      existingCanonical: existing.get('CANONICAL_BASE_URL'),
+      previousLanIp,
+      nextLanIp: lanAppIp,
+    });
+  const deviceUrls = buildDeviceUrlsFromBaseUrl(canonicalBaseUrl);
   const updates: Record<string, string> = {
     SETUP_LAN_APP_IP: lanAppIp,
+    CANONICAL_BASE_URL: canonicalBaseUrl,
   };
 
   if (gateway.enabled) {

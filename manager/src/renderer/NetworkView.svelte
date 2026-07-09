@@ -17,6 +17,7 @@
   import NetworkBindingChecks from './NetworkBindingChecks.svelte';
   import LanIpPanel from './LanIpPanel.svelte';
   import GatewayPanel from './GatewayPanel.svelte';
+  import ReachabilityPanel from './ReachabilityPanel.svelte';
 
   let {
     onAfterMutation,
@@ -29,6 +30,7 @@
   let confirmMessage = $state('');
   let confirmAction: (() => void) | null = null;
   let topologyOpen = $state(false);
+  let reachabilityOpen = $state(true);
 
   let controller = $state<NetworkController | null>(null);
   let lastSessionGeneration = $state<number | null>(null);
@@ -169,19 +171,40 @@
           gatewayEnabled={snapshot.gatewayEnabled}
         />
       </MaintenanceSection>
+      <MaintenanceSection
+        open={reachabilityOpen}
+        title="Erreichbarkeit im Praxisnetz"
+        subtitle={snapshot.status?.configuredCanonicalBaseUrl ||
+          snapshot.status?.appBaseUrl ||
+          'Basis-URL für Geräte wählen'}
+        onToggle={() => {
+          reachabilityOpen = !reachabilityOpen;
+        }}
+      >
+        <ReachabilityPanel
+          state={snapshot}
+          network={snapshot.network}
+          disabled={snapshot.busy}
+          probeBusy={snapshot.reachabilityProbeBusy}
+          probeMessage={snapshot.reachabilityProbeMessage}
+          probeOk={snapshot.reachabilityProbeOk}
+          onChange={patchFields}
+          onTest={() => controller?.testReachability()}
+        />
+      </MaintenanceSection>
       <NetworkBindingChecks checks={snapshot.status?.networkBindings} />
     </section>
 
     <section class="panel-section panel-section--network network-config-section">
       <h2 class="wizard-subheading">Netzwerk-Einstellungen</h2>
       <p class="hint">
-        Adresse für Praxis-Geräte und optionale Gast-WLAN-Werte. Geräte-URLs stehen auf dem
-        Status-Screen.
+        Host-Adresse für Binding und optionale Gast-WLAN-Werte. Geräte-URLs folgen der Basis unter
+        „Erreichbarkeit“.
       </p>
 
       <div class="network-config-block" id="network-lan-panel">
-        <h3 class="network-config-subheading">LAN-Adresse (Praxis intern)</h3>
-        <p class="hint">Adresse dieses Rechners für Terminal, TV, MFA und Ops.</p>
+        <h3 class="network-config-subheading">LAN-Adresse (Host / Binding)</h3>
+        <p class="hint">Adresse dieses Rechners im Praxisnetz (für Stale-Check und Fallback).</p>
         <LanIpPanel
           state={snapshot}
           network={snapshot.network}

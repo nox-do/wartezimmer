@@ -4,6 +4,7 @@ import {
   SETUP_DEFAULT_GATEWAY_IP,
   SETUP_DEFAULT_PRACTICE_NAME,
 } from '@praxis-flow/server-shared';
+import { inferReachabilityFields, type ReachabilityFieldState, type ReachabilityMode } from './reachability.js';
 
 export type WizardInitialFields = {
   lanAppIp: string;
@@ -16,6 +17,8 @@ export type WizardInitialFields = {
   gatewayIp: string;
   portalAppIp: string;
   authBridgeUrl: string;
+  reachabilityMode: ReachabilityMode;
+  customHostname: string;
   /** null until getRoutingMode() hydrates — never show a fake default. */
   routingMode: RoutingMode | null;
 };
@@ -136,11 +139,12 @@ export function createInitialWizardFields(status: HostStatus | null): WizardInit
     practiceDisplayName: initialPracticeDisplayName(status),
     ...initialStorageFolderPaths(status),
     ...initialGatewayFields(status, lan.lanAppIp, lan.customLanIp),
+    ...inferReachabilityFields(status),
     routingMode: null,
   };
 }
 
-/** LAN + Gateway fields for maintenance (no practice/storage). */
+/** LAN + Gateway + reachability fields for maintenance (no practice/storage). */
 export function createHostNetworkFields(status: HostStatus | null): Pick<
   WizardInitialFields,
   | 'lanAppIp'
@@ -150,11 +154,13 @@ export function createHostNetworkFields(status: HostStatus | null): Pick<
   | 'gatewayIp'
   | 'portalAppIp'
   | 'authBridgeUrl'
-> {
+> &
+  ReachabilityFieldState {
   const lan = initialLanIpSelection(status);
   return {
     ...lan,
     ...initialGatewayFields(status, lan.lanAppIp, lan.customLanIp),
+    ...inferReachabilityFields(status),
   };
 }
 

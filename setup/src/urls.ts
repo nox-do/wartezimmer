@@ -2,6 +2,11 @@ import type { DeviceUrls, GatewayPlan } from '@praxis-flow/server-shared';
 
 export type { DeviceUrls, GatewayPlan } from '@praxis-flow/server-shared';
 
+export const DEFAULT_APP_PORT = 8080;
+
+/** Local Docker-publish probe target — not a user/device URL. */
+export const LOCAL_SETUP_APP_BASE_URL = `http://127.0.0.1:${DEFAULT_APP_PORT}`;
+
 /** Keys written by `buildGatewayEnv` — removed from `.env` when gateway is disabled. */
 export const GATEWAY_ENV_KEYS = [
   'GATEWAY_INTERFACE',
@@ -17,8 +22,85 @@ export const GATEWAY_ENV_KEYS = [
   'GATEWAY_AUTH_BRIDGE_BIND',
 ] as const;
 
-export function buildDeviceUrls(lanAppIp: string, port = 8080): DeviceUrls {
-  const appBaseUrl = `http://${lanAppIp}:${port}`;
+type EnvLike = Map<string, string> | Record<string, string | undefined> | null | undefined;
+
+function readEnvValue(env: EnvLike, key: string): string | undefined {
+  if (!env) {
+    return undefined;
+  }
+  if (env instanceof Map) {
+    return env.get(key);
+  }
+  return env[key];
+}
+
+/** Strip trailing slashes so path joins stay stable. */
+export function normalizeBaseUrl(baseUrl: string): string {
+  return baseUrl.trim().replace(/\/+$/, '');
+}
+
+/**
+ * Accept only an http(s) origin as product base:
+ * protocol + host + optional port. No path, query, hash, or userinfo.
+ * Trailing slash is allowed and stripped.
+ */
+export function parseHttpBaseUrl(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+    if (parsed.username || parsed.password) {
+      return null;
+    }
+    if (parsed.search || parsed.hash) {
+      return null;
+    }
+    // Allow only empty path or a single trailing slash (origin form).
+    if (parsed.pathname !== '/' && parsed.pathname !== '') {
+      return null;
+    }
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
+export function fallbackCanonicalBaseUrl(
+  lanAppIp: string,
+  port = DEFAULT_APP_PORT,
+): string {
+  return `http://${lanAppIp.trim()}:${port}`;
+}
+
+/**
+ * Product URL authority for humans/devices (Terminal, TV, MFA, Ops, Portal).
+ * Prefers CANONICAL_BASE_URL; falls back to http://<lan-ip>:8080.
+ * Returns null when neither is available.
+ */
+export function resolveCanonicalBaseUrl(
+  env: EnvLike,
+  configuredLanIp: string | null | undefined,
+  port = DEFAULT_APP_PORT,
+): string | null {
+  const configured = parseHttpBaseUrl(readEnvValue(env, 'CANONICAL_BASE_URL'));
+  if (configured) {
+    return configured;
+  }
+
+  const lanIp = configuredLanIp?.trim();
+  if (!lanIp) {
+    return null;
+  }
+  return fallbackCanonicalBaseUrl(lanIp, port);
+}
+
+export function buildDeviceUrlsFromBaseUrl(baseUrl: string): DeviceUrls {
+  const appBaseUrl = normalizeBaseUrl(baseUrl);
   return {
     appBaseUrl,
     terminal: `${appBaseUrl}/terminal`,
@@ -28,6 +110,56 @@ export function buildDeviceUrls(lanAppIp: string, port = 8080): DeviceUrls {
     opsSetup: `${appBaseUrl}/ops/setup`,
     portal: `${appBaseUrl}/portal`,
   };
+}
+
+/** @deprecated Prefer buildDeviceUrlsFromBaseUrl / resolveCanonicalBaseUrl. */
+export function buildDeviceUrls(lanAppIp: string, port = DEFAULT_APP_PORT): DeviceUrls {
+  return buildDeviceUrlsFromBaseUrl(fallbackCanonicalBaseUrl(lanAppIp, port));
+}
+
+/**
+ * When LAN IP changes, rewrite CANONICAL_BASE_URL only if it was missing
+ * or exactly equal to the previous IP fallback (`http://<previous-ip>:8080`).
+ * Hostnames, TLS, alternate ports, and other IP forms stay unchanged.
+ * Returns null when the existing base should be kept.
+ */
+export function nextCanonicalBaseUrlForLanChange(input: {
+  existingCanonical: string | null | undefined;
+  previousLanIp: string | null | undefined;
+  nextLanIp: string;
+  port?: number;
+}): string | null {
+  const nextFallback = fallbackCanonicalBaseUrl(input.nextLanIp, input.port);
+  const existing = parseHttpBaseUrl(input.existingCanonical);
+  if (!existing) {
+    return nextFallback;
+  }
+
+  const previousLan = input.previousLanIp?.trim();
+  if (previousLan && existing === fallbackCanonicalBaseUrl(previousLan, input.port)) {
+    return nextFallback;
+  }
+  return null;
+}
+
+/**
+ * Canonical base that Plan/Apply/saveHostNetwork should show and write
+ * for a planned LAN IP (same derivation everywhere).
+ */
+export function resolveCanonicalBaseUrlForLanPlan(input: {
+  existingCanonical: string | null | undefined;
+  previousLanIp: string | null | undefined;
+  nextLanIp: string;
+  port?: number;
+}): string {
+  const existing = parseHttpBaseUrl(input.existingCanonical);
+  const nextCanonical = nextCanonicalBaseUrlForLanChange({
+    existingCanonical: existing,
+    previousLanIp: input.previousLanIp,
+    nextLanIp: input.nextLanIp,
+    port: input.port,
+  });
+  return nextCanonical ?? existing ?? fallbackCanonicalBaseUrl(input.nextLanIp, input.port);
 }
 
 export function buildGatewayEnv(
@@ -41,7 +173,7 @@ export function buildGatewayEnv(
 
   const portalBase =
     gateway.portalAppIp.trim().length > 0
-      ? `http://${gateway.portalAppIp.trim()}:8080`
+      ? `http://${gateway.portalAppIp.trim()}:${DEFAULT_APP_PORT}`
       : deviceUrls.appBaseUrl;
 
   return {

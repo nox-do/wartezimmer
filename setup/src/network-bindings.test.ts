@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
+import { createServer } from 'node:net';
 import test from 'node:test';
 import type { NetworkInterfaceInfo } from './network.js';
 import {
   auditNetworkBindings,
+  auditNetworkPrerequisites,
   hostHasLanIp,
   interfaceExists,
   interfaceHasIpv4,
@@ -50,4 +52,100 @@ test('auditNetworkBindings skips gateway NIC checks when compose unsupported', a
   assert.ok(checks.some((check) => check.id === 'gateway.platform' && check.ok));
   assert.ok(!checks.some((check) => check.id === 'gateway.ip-on-interface'));
   assert.ok(!checks.some((check) => check.id === 'gateway.compose'));
+});
+
+async function listenEphemeral(): Promise<{ port: number; close: () => Promise<void> }> {
+  const server = createServer();
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => resolve());
+  });
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+  return {
+    port: address.port,
+    close: () =>
+      new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      }),
+  };
+}
+
+test('auditNetworkPrerequisites reports free app port when nothing listens', async () => {
+  const checks = await auditNetworkPrerequisites({ compose: null, appPort: 59_999 });
+  assert.equal(checks.length, 1);
+  assert.equal(checks[0]?.ok, true);
+  assert.equal(checks[0]?.message, 'Port 59999 ist frei');
+});
+
+test('auditNetworkPrerequisites blocks when foreign process holds the port', async () => {
+  const listener = await listenEphemeral();
+  try {
+    const checks = await auditNetworkPrerequisites({ compose: null, appPort: listener.port });
+    assert.equal(checks[0]?.ok, false);
+    assert.match(checks[0]?.message ?? '', /bereits belegt/);
+  } finally {
+    await listener.close();
+  }
+});
+
+test('auditNetworkPrerequisites blocks foreign listener even when app is running without publish', async () => {
+  const listener = await listenEphemeral();
+  try {
+    const checks = await auditNetworkPrerequisites({
+      compose: {
+        running: true,
+        services: [
+          {
+            name: 'app',
+            service: 'app',
+            state: 'running',
+            health: 'healthy',
+            publishedPorts: [],
+          },
+        ],
+      },
+      appPort: listener.port,
+    });
+    assert.equal(checks[0]?.ok, false);
+    assert.match(checks[0]?.message ?? '', /bereits belegt/);
+  } finally {
+    await listener.close();
+  }
+});
+
+test('auditNetworkPrerequisites accepts occupied port when our app publishes it', async () => {
+  const listener = await listenEphemeral();
+  try {
+    const checks = await auditNetworkPrerequisites({
+      compose: {
+        running: true,
+        services: [
+          {
+            name: 'app',
+            service: 'app',
+            state: 'running',
+            health: 'healthy',
+            publishedPorts: [listener.port],
+          },
+        ],
+      },
+      appPort: listener.port,
+    });
+    assert.equal(checks[0]?.ok, true);
+    assert.match(checks[0]?.message ?? '', /Praxis Flow genutzt/);
+  } finally {
+    await listener.close();
+  }
+});
+
+test('auditNetworkPrerequisites includes gateway bridge when enabled', async () => {
+  const checks = await auditNetworkPrerequisites({
+    compose: null,
+    gatewayEnabled: true,
+    gatewayBridgePort: 59_997,
+    appPort: 59_996,
+  });
+  assert.equal(checks.length, 2);
+  assert.ok(checks.every((check) => check.ok));
 });

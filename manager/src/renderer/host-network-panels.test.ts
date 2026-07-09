@@ -20,6 +20,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     },
     folders: { imports: '/imports', exports: '/exports' },
     appBaseUrl: 'http://192.168.1.10:8080',
+    configuredCanonicalBaseUrl: null,
     network: {
       configuredLanIp: '192.168.1.10',
       currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
@@ -37,6 +38,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     compose: null,
     sandboxScanner: null,
     networkBindings: [],
+    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
     deliveryImages: {
       required: false,
       configured: false,
@@ -64,6 +66,8 @@ test('hostNetworkChanged detects LAN IP change', () => {
         gatewayIp: '192.168.88.1',
         portalAppIp: '192.168.1.10',
         authBridgeUrl: 'http://172.17.0.1:9100',
+        reachabilityMode: 'lan-ip',
+        customHostname: '',
       },
       status,
     ),
@@ -72,7 +76,7 @@ test('hostNetworkChanged detects LAN IP change', () => {
 });
 
 test('hostNetworkChanged is false when fields match status', () => {
-  const status = minimalStatus();
+  const status = minimalStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' });
   assert.equal(
     hostNetworkChanged(
       {
@@ -83,6 +87,8 @@ test('hostNetworkChanged is false when fields match status', () => {
         gatewayIp: '192.168.88.1',
         portalAppIp: '192.168.1.10',
         authBridgeUrl: 'http://172.17.0.1:9100',
+        reachabilityMode: 'lan-ip',
+        customHostname: '',
       },
       status,
     ),
@@ -90,8 +96,29 @@ test('hostNetworkChanged is false when fields match status', () => {
   );
 });
 
+test('hostNetworkChanged detects canonical reachability change', () => {
+  const status = minimalStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' });
+  assert.equal(
+    hostNetworkChanged(
+      {
+        lanAppIp: '192.168.1.10',
+        customLanIp: '',
+        gatewayEnabled: true,
+        gatewayInterface: 'eth1',
+        gatewayIp: '192.168.88.1',
+        portalAppIp: '192.168.1.10',
+        authBridgeUrl: 'http://172.17.0.1:9100',
+        reachabilityMode: 'custom',
+        customHostname: 'praxis-flow.local',
+      },
+      status,
+    ),
+    true,
+  );
+});
+
 test('hostNetworkChanged detects gateway bridge URL change', () => {
-  const status = minimalStatus();
+  const status = minimalStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' });
   assert.equal(
     hostNetworkChanged(
       {
@@ -102,6 +129,8 @@ test('hostNetworkChanged detects gateway bridge URL change', () => {
         gatewayIp: '192.168.88.1',
         portalAppIp: '192.168.1.10',
         authBridgeUrl: 'http://10.0.0.2:9100',
+        reachabilityMode: 'lan-ip',
+        customHostname: '',
       },
       status,
     ),

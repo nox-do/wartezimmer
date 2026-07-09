@@ -619,6 +619,41 @@ Empfohlener Uebergang:
 
 ## Implementierungsphasen
 
+### P0 — URL-Modell / URL-Autoritaet (vor Proxy)
+
+Ziel: `CANONICAL_BASE_URL` als Produktmodell etablieren, **bevor** Proxy-Compose kommt.
+
+URL-Klassen (nicht vermischen):
+
+- **User-/Geraete-URLs** (Terminal, TV, MFA, Ops, Portal): aus `CANONICAL_BASE_URL`
+- **Setup-local Probes**: `http://127.0.0.1:8080` (Docker-Publish) bleiben erlaubt
+- **Interne Service-URLs**: `SANDBOX_BASE_URL=http://sandbox:8081` bleibt intern
+- **Gateway/Captive**: Sonderfall (`portalAppIp` / spaeter ggf. `PORTAL_PUBLIC_BASE_URL`)
+- **Same-origin UI**: `window.location.origin` oft korrekt
+
+LAN-Erreichbarkeit:
+
+- Hostname = Komfortpfad; IP = zuverlaessiger Fallback
+- Setup fragt/testet spaeter (Manager/Wizard Schritt 2); bei Fail klar warnen und IP setzen
+- keine magische mDNS/NetBIOS-Reparatur
+
+Code-Schnitt (Setup-Kern, ohne Manager-UI):
+
+- `buildDeviceUrlsFromBaseUrl(baseUrl)` + `resolveCanonicalBaseUrl(env, lanIp)`
+- Fallback ohne Env: `http://<lan-ip>:8080` (Verhalten unveraendert)
+- `getHostStatus` / `buildSetupPlan` / Apply / `saveHostNetwork` / LAN-Probes nutzen den Resolver
+- `.env` schreibt `CANONICAL_BASE_URL`; Custom-Hostname bleibt bei LAN-IP-Wechsel erhalten
+
+Danach erst P2 Proxy-Compose. Manager/Wizard-UI fuer Hostname-Probe = Schritt 2 nach P0.
+
+Schritt-2-UI (Manager, vor Proxy):
+
+- Netzwerk-Tab: neues Akkordeon **Erreichbarkeit im Praxisnetz** (getrennt vom Topology-Akkordeon „Betriebsarten“ Portal/Gastnetz)
+- Modi v0: LAN-IP (Default) | Hostname versuchen | eigener Name/Domain
+- DNS + HTTP-Health testen; Fail → IP-Fallback + klare Warnung
+- Wizard teilt dasselbe Panel; Probe-/Copy-Reste (`setup-probes`, Wizard-Texte, Health-Header) mitziehen
+- Gateway/Captive bleibt eigener Block (`portalAppIp`)
+
 ### P1 — Arbeitsdokument und Modell
 
 - Dieses Dokument.

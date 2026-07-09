@@ -28,6 +28,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     },
     folders: { imports: '/tmp/imports', exports: '/tmp/exports' },
     appBaseUrl: 'http://127.0.0.1:8080',
+    configuredCanonicalBaseUrl: null,
     network: {
       configuredLanIp: null,
       currentLanCandidates: [],
@@ -39,6 +40,7 @@ function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
     compose: null,
     sandboxScanner: null,
     networkBindings: [],
+    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
     deliveryImages: {
       required: false,
       configured: false,
@@ -135,6 +137,8 @@ test('createInitialWizardFields combines LAN, practice and storage defaults', ()
     gatewayIp: '192.168.88.1',
     portalAppIp: '192.168.1.13',
     authBridgeUrl: '',
+    reachabilityMode: 'lan-ip',
+    customHostname: '',
     routingMode: null,
   });
 });
@@ -214,6 +218,7 @@ test('gatewayDraftDefaults fills portal and bridge without overwriting user valu
     interfaces: [],
     lanCandidates: [],
     defaultGatewayBridgeUrl: 'http://host.docker.internal:9100',
+    machineHostname: 'praxis-mac',
     gatewayComposeSupported: false,
   };
 
@@ -247,6 +252,7 @@ test('gatewayEnabledPatch applies defaults only when enabling gateway', () => {
     interfaces: [],
     lanCandidates: [],
     defaultGatewayBridgeUrl: 'http://host.docker.internal:9100',
+    machineHostname: 'praxis-mac',
     gatewayComposeSupported: false,
   };
 

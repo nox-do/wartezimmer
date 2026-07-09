@@ -1,4 +1,6 @@
 import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   applySetupPlan,
   backupEnv,
@@ -18,6 +20,7 @@ import {
   setHostRoutingMode,
   type ComposeAction,
 } from './host-state.js';
+import { readEnvMap } from './env-file.js';
 import { resolveSetupApiError } from './api-error.js';
 import {
   normalizeApplySetupInput,
@@ -173,7 +176,9 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
 
       if (method === 'POST' && url.pathname === '/api/setup/host/plan') {
         const body = (await readJsonBody(req)) as SetupPlanInput;
-        const plan = buildSetupPlan(normalizeSetupPlanInput(body));
+        const envPath = path.join(ctx.home, '.env');
+        const envMap = fs.existsSync(envPath) ? readEnvMap(envPath) : null;
+        const plan = buildSetupPlan(normalizeSetupPlanInput(body), envMap);
         return sendJson(res, 200, plan);
       }
 
