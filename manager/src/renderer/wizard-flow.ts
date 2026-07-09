@@ -202,6 +202,9 @@ export async function persistWizardRoutingMode(
   api: PraxisManagerApi,
   state: WizardFlowState,
 ): Promise<void> {
+  if (!state.routingMode) {
+    throw new Error('Routing-Modus ist noch nicht geladen.');
+  }
   await api.setRoutingMode({ routingMode: state.routingMode });
 }
 

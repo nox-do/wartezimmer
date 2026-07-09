@@ -13,7 +13,7 @@
     busy = false,
     onChange,
   }: {
-    routingMode: RoutingMode;
+    routingMode: RoutingMode | null;
     complexRoutingLicensed: boolean;
     busy?: boolean;
     onChange: (routingMode: RoutingMode) => void;

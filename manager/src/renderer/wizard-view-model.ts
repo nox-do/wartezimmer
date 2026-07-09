@@ -38,7 +38,10 @@ export function wizardNextButtonDisabled(state: WizardControllerState): boolean 
   if (state.busy) {
     return true;
   }
-  if (state.step === 3 && state.routingCapabilitiesStatus !== 'ready') {
+  if (
+    state.step === 3 &&
+    (state.routingCapabilitiesStatus !== 'ready' || state.routingMode === null)
+  ) {
     return true;
   }
   if (state.step === 1) {

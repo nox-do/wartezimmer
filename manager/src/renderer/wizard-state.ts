@@ -16,7 +16,8 @@ export type WizardInitialFields = {
   gatewayIp: string;
   portalAppIp: string;
   authBridgeUrl: string;
-  routingMode: RoutingMode;
+  /** null until getRoutingMode() hydrates — never show a fake default. */
+  routingMode: RoutingMode | null;
 };
 
 export function initialStorageFolderPaths(status: HostStatus | null): {
@@ -135,7 +136,7 @@ export function createInitialWizardFields(status: HostStatus | null): WizardInit
     practiceDisplayName: initialPracticeDisplayName(status),
     ...initialStorageFolderPaths(status),
     ...initialGatewayFields(status, lan.lanAppIp, lan.customLanIp),
-    routingMode: 'simple',
+    routingMode: null,
   };
 }
 

@@ -169,8 +169,10 @@ test('softwareUpdateInfoRows includes summary and configured images', () => {
   );
 });
 
-test('routingModeSaveDisabled blocks while busy or unchanged', () => {
+test('routingModeSaveDisabled blocks while busy, unknown, or unchanged', () => {
   assert.equal(routingModeSaveDisabled(true, 'simple', 'complex'), true);
+  assert.equal(routingModeSaveDisabled(false, null, 'simple'), true);
+  assert.equal(routingModeSaveDisabled(false, 'simple', null), true);
   assert.equal(routingModeSaveDisabled(false, 'simple', 'simple'), true);
   assert.equal(routingModeSaveDisabled(false, 'complex', 'simple'), false);
 });

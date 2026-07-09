@@ -210,7 +210,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       try {
         if (state.step === 3) {
           await ensureRoutingCapabilities();
-          if (state.routingCapabilitiesStatus !== 'ready') {
+          if (state.routingCapabilitiesStatus !== 'ready' || state.routingMode === null) {
             setError('Routing-Modus konnte nicht geladen werden. Bitte erneut versuchen.');
             return;
           }

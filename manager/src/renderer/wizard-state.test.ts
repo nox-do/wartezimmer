@@ -135,7 +135,7 @@ test('createInitialWizardFields combines LAN, practice and storage defaults', ()
     gatewayIp: '192.168.88.1',
     portalAppIp: '192.168.1.13',
     authBridgeUrl: '',
-    routingMode: 'simple',
+    routingMode: null,
   });
 });
 

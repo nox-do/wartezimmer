@@ -173,6 +173,7 @@ test('entering routing step waits for server routing mode', async () => {
   assert.equal(controller.getState().step, 3);
   assert.equal(controller.getState().busy, true);
   assert.equal(controller.getState().routingCapabilitiesStatus, 'loading');
+  assert.equal(controller.getState().routingMode, null);
 
   routingMode.resolve({
     routingMode: 'complex',
@@ -253,5 +254,41 @@ test('wizardNextButtonDisabled blocks step 1 until prerequisites ready', () => {
       }),
     }),
     true,
+  );
+});
+
+test('wizardNextButtonDisabled blocks routing step until mode is hydrated', () => {
+  const base = createWizardController({
+    api: {} as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  }).getState();
+
+  assert.equal(
+    wizardNextButtonDisabled({
+      ...base,
+      step: 3,
+      routingCapabilitiesStatus: 'loading',
+      routingMode: null,
+    }),
+    true,
+  );
+  assert.equal(
+    wizardNextButtonDisabled({
+      ...base,
+      step: 3,
+      routingCapabilitiesStatus: 'ready',
+      routingMode: null,
+    }),
+    true,
+  );
+  assert.equal(
+    wizardNextButtonDisabled({
+      ...base,
+      step: 3,
+      routingCapabilitiesStatus: 'ready',
+      routingMode: 'simple',
+    }),
+    false,
   );
 });

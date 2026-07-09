@@ -15,8 +15,8 @@
     onChange,
     onSave,
   }: {
-    routingMode: RoutingMode;
-    routingModeSaved: RoutingMode;
+    routingMode: RoutingMode | null;
+    routingModeSaved: RoutingMode | null;
     complexRoutingLicensed: boolean;
     statusText?: string;
     busy?: boolean;

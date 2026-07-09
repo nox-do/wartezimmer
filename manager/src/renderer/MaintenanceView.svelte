@@ -204,6 +204,12 @@
           }}
           onSave={() => controller?.saveRoutingMode()}
         />
+        {#if snapshot.busy && snapshot.routingMode === null}
+          <p class="wizard-progress is-active" role="status">
+            <span class="spinner" aria-hidden="true"></span>
+            Routing-Modus wird geladen …
+          </p>
+        {/if}
         <StoragePathsPanel
           {hostPlatform}
           status={snapshot.status}

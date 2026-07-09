@@ -97,10 +97,10 @@ export function softwareUpdateInfoRows(status: HostStatus): MaintenanceInfoRow[]
 
 export function routingModeSaveDisabled(
   busy: boolean,
-  draft: RoutingMode,
-  saved: RoutingMode,
+  draft: RoutingMode | null,
+  saved: RoutingMode | null,
 ): boolean {
-  return busy || draft === saved;
+  return busy || draft === null || saved === null || draft === saved;
 }
 
 export function routingModeSuccessText(routingMode: RoutingMode): string {

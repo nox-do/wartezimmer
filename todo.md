@@ -50,7 +50,6 @@ Stand: 2026-07-07 (Release **0.2.0** — Journey/Routing, non-breaking API/DB)
 Review-Canvas: `~/.cursor/projects/.../canvases/manager-svelte5-review.canvas.tsx`
 
 **Top-Funde (noch offen):**
-- Wizard Routing-Default-Race (`simple` bis async Capabilities) — Bug-Risiko bei Re-Run
 - Snapshot-Shallow-Copy statt reaktiver Controller-State — Svelte-5-Migrationsmuster
 - Topology-Diagramm remountet bei jedem Keystroke
 - Tote Flächen: `getComposeStatus`, `maintenance.subscribe`, `setButtonIcon`
@@ -63,6 +62,12 @@ Review-Canvas: `~/.cursor/projects/.../canvases/manager-svelte5-review.canvas.ts
 - Views: `$effect` auf Session/`hostStatus`/`runtimeHealth`; lokale Controller behalten
 - `*-view-adapter.ts` gelöscht; Race-Tests auf Session-API umgestellt
 - `createManagerAppController().start()` nach `mount(App)` — keine Init-Navigation mehr im Factory-Konstruktor
+
+## Erledigt: Routing-Mode Hydrate ohne Fake-Default (2026-07-09)
+
+- Wizard + Wartung: `routingMode`/`routingModeSaved` starten als `null` bis `getRoutingMode()` fertig
+- Kein sichtbares Fake-`simple`; Next/Save geblockt bis hydrated
+- Konvention für async Extra-Settings: Wert `T | null` bis ready, UI disabled/Loading
 
 ## Referenzen
 

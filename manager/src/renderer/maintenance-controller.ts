@@ -36,8 +36,9 @@ export type MaintenanceState = {
   exportsHostPath: string;
   storageStatusText: string;
   softwareUpdateStatusText: string;
-  routingMode: RoutingMode;
-  routingModeSaved: RoutingMode;
+  /** null until getRoutingMode() hydrates — never show a fake default. */
+  routingMode: RoutingMode | null;
+  routingModeSaved: RoutingMode | null;
   complexRoutingLicensed: boolean;
   routingModeStatusText: string;
   pinResetStatusText: string;
@@ -86,8 +87,8 @@ function createInitialState(): MaintenanceState {
     exportsHostPath: '',
     storageStatusText: '',
     softwareUpdateStatusText: '',
-    routingMode: 'simple',
-    routingModeSaved: 'simple',
+    routingMode: null,
+    routingModeSaved: null,
     complexRoutingLicensed: true,
     routingModeStatusText: '',
     pinResetStatusText: '',
@@ -362,11 +363,16 @@ export function createMaintenanceController(deps: MaintenanceControllerDeps): Ma
       proceed();
     },
     saveRoutingMode() {
+      if (!state.routingMode) {
+        setError('Routing-Modus ist noch nicht geladen.');
+        return;
+      }
+      const routingMode = state.routingMode;
       setBusy(true);
       setError(null);
       patch({ routingModeStatusText: ROUTING_MODE_SAVE_PROGRESS_TEXT });
       void deps.api
-        .setRoutingMode({ routingMode: state.routingMode })
+        .setRoutingMode({ routingMode })
         .then((result) => {
           if (!result.ok) {
             patch({ routingModeStatusText: '' });
