@@ -53,9 +53,9 @@
     </label>
   {/each}
   {#if !complexRoutingLicensed}
-    <p class="wizard-hint">
+    <p class="hint">
       Complex Routing erfordert eine Pro-Lizenz. Simple ist der Standard für normale Praxen.
     </p>
   {/if}
 </fieldset>
-<p class="wizard-hint routing-mode-footnote">{ROUTING_MODE_WIZARD_FOOTNOTE}</p>
+<p class="hint routing-mode-footnote">{ROUTING_MODE_WIZARD_FOOTNOTE}</p>

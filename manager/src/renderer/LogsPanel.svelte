@@ -17,7 +17,7 @@
   } = $props();
 </script>
 
-<div class="maintenance-section">
+<div class="panel-section">
   <h2>Logs</h2>
   <div class="maintenance-logs-toolbar">
     <label>

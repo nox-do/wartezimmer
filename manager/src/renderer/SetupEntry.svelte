@@ -27,10 +27,10 @@
     <p id="setup-entry-eyebrow" class="setup-entry-eyebrow">{content.eyebrow}</p>
     <h1 id="setup-entry-title">{content.title}</h1>
     <p id="setup-entry-copy" class="setup-entry-copy">{content.copy}</p>
-    <ul id="setup-entry-checklist" class="setup-entry-checklist">
+    <ul id="setup-entry-checklist" class="checklist checklist--setup">
       {#each checklist as item (item.label)}
         <li class={item.done ? 'is-done' : item.muted ? 'is-muted' : 'is-open'}>
-          <span class="setup-entry-check">{item.done ? '✓' : '○'}</span>
+          <span class="checklist-mark">{item.done ? '✓' : '○'}</span>
           <span>{item.label}</span>
         </li>
       {/each}

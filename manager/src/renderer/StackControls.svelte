@@ -25,9 +25,9 @@
   const running = $derived(compose?.running ?? false);
 </script>
 
-<div class="maintenance-section">
+<div class="panel-section">
   <h2>Stack</h2>
-  <div class="maintenance-actions">
+  <div class="actions-row">
     <label class="stack-toggle">
       <span class="toggle-switch">
         <input
@@ -56,5 +56,5 @@
     {/if}
     <button type="button" class="btn-secondary" disabled={busy} onclick={onRestart}>Neustart</button>
   </div>
-  <p class="wizard-hint">Ist der Stack gestoppt, entspricht Neustart einem Start.</p>
+  <p class="hint">Ist der Stack gestoppt, entspricht Neustart einem Start.</p>
 </div>

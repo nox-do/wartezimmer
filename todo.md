@@ -45,6 +45,21 @@ Stand: 2026-07-07 (Release **0.2.0** — Journey/Routing, non-breaking API/DB)
 
 - _(keine offenen Routing-Mode-Pakete)_
 
+## Erledigt: Manager CSS-Konsolidierung (2026-07-09)
+
+- Tote Selektoren entfernt: `.actions`, `.wizard-url-list*`, `.wizard-advanced`
+- Shared Primitives: `.hint`, `.actions-row` (+ `--footer`/`--dialog`), `.checklist`/`checklist-mark`, `.panel-section`
+- Topology-CSS ausgelagert nach `network-topology.css` (~279 Zeilen); `styles.css` ~1402 Zeilen
+- Markup in Wizard/Wartung/Netzwerk/Setup auf neue Klassen umgestellt
+
+**Review-Fokus (visuell prüfen):**
+1. Hint-Abstände (Wizard-Schritte, Netzwerk-Hinweise, Wartung-Texte) — früher `.wizard-hint` ohne Margin vs `.maintenance-hint` mit Margin, jetzt einheitlich `.hint`
+2. Checklisten Setup-Entry + Wizard Schritt 1/Abschluss — Mark-Größe/Gewicht leicht vereinheitlicht
+3. Wizard-Footer (Zurück/Weiter/Abbrechen) + Completion-Buttons
+4. Wartung Action-Rows + Confirm-Dialog Buttons
+5. Netzwerk „Host-Konfiguration“-Überschrift + Panel-Abstände
+6. Topology-Diagramm (nur Datei-Split, sollte pixelgleich sein)
+
 ## Manager Svelte-5 Review (2026-07-09)
 
 Review-Canvas: `~/.cursor/projects/.../canvases/manager-svelte5-review.canvas.tsx`

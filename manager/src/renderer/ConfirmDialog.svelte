@@ -55,7 +55,7 @@
   {#if children}
     {@render children()}
   {/if}
-  <div class="maintenance-dialog-actions">
+  <div class="actions-row actions-row--dialog">
     <button type="button" onclick={handleConfirm}>{confirmLabel}</button>
     <button type="button" class="btn-secondary" onclick={handleCancel}>{cancelLabel}</button>
   </div>

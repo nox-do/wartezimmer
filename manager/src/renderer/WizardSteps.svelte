@@ -53,22 +53,22 @@
       {#if !snapshot.status}
         <p>Status wird geladen …</p>
       {:else}
-        <ul class="wizard-checklist">
+        <ul class="checklist">
           <li class={snapshot.status.docker.installed ? 'is-done' : 'is-open'}>
-            <span class="wizard-check">{snapshot.status.docker.installed ? '✓' : '○'}</span>
+            <span class="checklist-mark">{snapshot.status.docker.installed ? '✓' : '○'}</span>
             <span>Docker installiert</span>
           </li>
           <li class={snapshot.status.docker.daemonRunning ? 'is-done' : 'is-open'}>
-            <span class="wizard-check">{snapshot.status.docker.daemonRunning ? '✓' : '○'}</span>
+            <span class="checklist-mark">{snapshot.status.docker.daemonRunning ? '✓' : '○'}</span>
             <span>Docker-Daemon läuft</span>
           </li>
           <li class={snapshot.status.docker.composeAvailable ? 'is-done' : 'is-open'}>
-            <span class="wizard-check">{snapshot.status.docker.composeAvailable ? '✓' : '○'}</span>
+            <span class="checklist-mark">{snapshot.status.docker.composeAvailable ? '✓' : '○'}</span>
             <span>docker compose verfügbar</span>
           </li>
           {#if snapshot.status.deliveryImages.required}
             <li class={deliveryImagesReady(snapshot.status) ? 'is-done' : 'is-open'}>
-              <span class="wizard-check">{deliveryImagesReady(snapshot.status) ? '✓' : '○'}</span>
+              <span class="checklist-mark">{deliveryImagesReady(snapshot.status) ? '✓' : '○'}</span>
               <span>Software-Paket (app + sandbox)</span>
             </li>
           {/if}
@@ -77,7 +77,7 @@
         {#if !dockerReady(snapshot.status)}
           {@const hints = dockerPrerequisitesHints(snapshot.status.docker, hostPlatform)}
           {#each hints.hints as hint (hint)}
-            <p class="wizard-hint">{hint}</p>
+            <p class="hint">{hint}</p>
           {/each}
           {#if hints.installLink}
             <button
@@ -102,7 +102,7 @@
             {snapshot.busy ? 'Prüfe …' : 'Erneut prüfen'}
           </button>
         {:else if needsDeliveryImages(snapshot.status)}
-          <p class="wizard-hint">
+          <p class="hint">
             Release-Paket aus Ihrer Praxis-Flow-Freigabe wählen (eine .tar.gz-Datei mit app- und
             sandbox-Image). manifest.json oder SHA256SUMS.txt muss im selben Ordner liegen — SHA256
             wird vor dem Import geprüft.
@@ -147,7 +147,7 @@
         Praxis anzuzeigen.
       </p>
       {#if snapshot.status?.envExists && snapshot.practiceDisplayName.trim()}
-        <p class="wizard-hint">Aktueller Wert aus .env: {snapshot.practiceDisplayName.trim()}</p>
+        <p class="hint">Aktueller Wert aus .env: {snapshot.practiceDisplayName.trim()}</p>
       {/if}
       <input
         type="text"
@@ -186,7 +186,7 @@
         onChange={patchFields}
       />
       {#if snapshot.status?.gateway?.enabled && snapshot.status.envExists}
-        <p class="wizard-hint">Bestehende Gast-WLAN-Einstellungen aus der Konfiguration übernommen.</p>
+        <p class="hint">Bestehende Gast-WLAN-Einstellungen aus der Konfiguration übernommen.</p>
       {/if}
     {:else if snapshot.step === 5}
       <p>
@@ -194,10 +194,10 @@
         verbunden — für Kontakt-CSV und MFA-Exporte.
       </p>
       {#if needsDockerFileSharingHint(hostPlatform)}
-        <p class="wizard-hint">{DOCKER_FILE_SHARING_HINT}</p>
+        <p class="hint">{DOCKER_FILE_SHARING_HINT}</p>
       {/if}
       {#if snapshot.status?.envExists}
-        <p class="wizard-hint">
+        <p class="hint">
           Aktuelle Pfade aus .env sind vorausgefüllt. Beim Anwenden werden sie in die Konfiguration
           übernommen.
         </p>
@@ -260,7 +260,7 @@
           startet den lokalen Stack.
         </p>
         {#if snapshot.status?.envExists}
-          <p class="wizard-hint">
+          <p class="hint">
             Bestehende technische Werte werden übernommen, soweit sie gültig sind.
             Platzhalter-Secrets werden ersetzt; Staff-PINs liegen in der Datenbank und werden nicht
             überschrieben.
@@ -268,13 +268,13 @@
         {/if}
       {:else}
         <h3 class="wizard-subheading">Anwenden</h3>
-        <ul class="wizard-checklist">
+        <ul class="checklist">
           {#each wizardApplyResultItems(snapshot.applyResult) as item (item)}
             <li>{item}</li>
           {/each}
         </ul>
         {#if !snapshot.applyResult.compose?.ok && snapshot.applyResult.compose?.detail}
-          <p class="wizard-hint">{snapshot.applyResult.compose.detail}</p>
+          <p class="hint">{snapshot.applyResult.compose.detail}</p>
         {/if}
 
         <h3 class="wizard-subheading">Prüfen</h3>
@@ -284,21 +284,21 @@
             {snapshot.probeStatusText}
           </p>
         {:else if snapshot.status}
-          <ul class="wizard-checklist">
+          <ul class="checklist">
             {#each snapshot.status.probes as probe (probe.id)}
               <li>{wizardCheckMark(probe.ok)} {probe.message}</li>
             {/each}
           </ul>
           {@const failureHint = wizardProbeFailureHint(snapshot.status.probes)}
           {#if failureHint}
-            <p class="wizard-hint">{failureHint}</p>
+            <p class="hint">{failureHint}</p>
           {/if}
         {:else}
           <p>Probes werden geladen …</p>
         {/if}
 
         <p>{wizardCompletionLeadText(snapshot)}</p>
-        <p class="wizard-hint">
+        <p class="hint">
           MFA-, Ops- und Panel-PIN: Standard 0000 — MFA/Panel in MFA → Betrieb, Ops in System → PIN
           &amp; Sicherheit. Vergessene MFA- oder Ops-PIN: Manager → Wartung.
         </p>

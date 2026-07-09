@@ -22,9 +22,9 @@
 </script>
 
 {#if visible && status}
-  <div class="maintenance-section">
+  <div class="panel-section">
     <h2>Software-Update</h2>
-    <p class="maintenance-hint">
+    <p class="hint">
       Release-Paket aus Ihrer Praxis-Flow-Freigabe importieren. Im selben Ordner wie die
       <code>.tar.gz</code> müssen <code>manifest.json</code> oder <code>SHA256SUMS.txt</code> liegen
       — die Prüfsumme wird vor dem Import verifiziert.
@@ -35,7 +35,7 @@
         <dd>{row.value}</dd>
       {/each}
     </dl>
-    <div class="maintenance-actions">
+    <div class="actions-row">
       <button type="button" class="btn-secondary" disabled={busy} onclick={onImport}>
         Release-Paket importieren …
       </button>

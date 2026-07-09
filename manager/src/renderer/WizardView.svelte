@@ -107,7 +107,7 @@
       <WizardSteps {snapshot} {controller} {hostPlatform} onPatch={syncSnapshot} />
     {/if}
 
-    <footer class="wizard-actions" id="wizard-actions" hidden={completed}>
+    <footer class="actions-row actions-row--footer" id="wizard-actions" hidden={completed}>
       <button
         type="button"
         id="wizard-back"

@@ -70,14 +70,14 @@
 </label>
 
 {#if state.gatewayEnabled && !composeSupported}
-  <p class="wizard-hint">
+  <p class="hint">
     Hinweis: Auf diesem Rechner (macOS/Windows) startet kein Gateway-Dienst. Die Werte werden nur in
     die Konfiguration geschrieben — für ein separates Linux-Gateway oder den späteren Feldtest.
   </p>
 {/if}
 
 {#if state.gatewayEnabled}
-  <p class="wizard-hint">
+  <p class="hint">
     Netzwerk-Schnittstelle am Gateway-Rechner für das Gast-Netz (z. B. eth1). Darüber laufen DHCP und
     Captive Portal. Ihre IT leitet den Gast-WLAN-Traffic dorthin.
   </p>
@@ -161,13 +161,13 @@
     oninput={(event) => onChange({ authBridgeUrl: event.currentTarget.value })}
   />
 
-  <p class="wizard-hint">
+  <p class="hint">
     Die app ruft diese Adresse auf, um nach gültiger Wartenummer die Internetfreigabe am Gateway
     auszulösen. Bei separatem Linux-Gateway muss hier dessen aus der app erreichbare Bridge-Adresse
     stehen.
   </p>
 
-  <p class="wizard-hint">
+  <p class="hint">
     Was der Wizard hier macht: Er trägt die technischen Werte in die Host-Konfiguration ein. Was
     noch fehlt: Access Point / Gast-WLAN in der Praxis, Routing zum Gateway und — falls nötig — das
     Linux-Gateway-Gerät. Details: Dokumentation „Guest-WLAN & Captive Portal“.

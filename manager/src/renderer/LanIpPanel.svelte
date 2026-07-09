@@ -46,7 +46,7 @@
 </script>
 
 {#if showWizardStaleHint && configuredLanIp}
-  <p class="wizard-hint">
+  <p class="hint">
     Die konfigurierte IP ({configuredLanIp}) passt nicht zu einer aktuellen Host-Adresse — bitte
     aktualisieren.
   </p>
@@ -112,7 +112,7 @@
       {/each}
     </fieldset>
   {:else}
-    <p class="wizard-hint">Keine LAN-Adresse am Host erkannt — bitte IP manuell eingeben.</p>
+    <p class="hint">Keine LAN-Adresse am Host erkannt — bitte IP manuell eingeben.</p>
   {/if}
 
   {#if offerManualEntry}

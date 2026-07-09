@@ -40,14 +40,14 @@
   );
 </script>
 
-<div class="maintenance-section">
+<div class="panel-section">
   <h2>Import &amp; Export</h2>
-  <p class="maintenance-hint">
+  <p class="hint">
     Host-Ordner für Docker-Bind-Mounts (<code>/imports</code>, <code>/exports</code>). Kontakt-CSV und
     MFA-Exporte landen hier auf dem Rechner.
   </p>
   {#if fileSharingHint}
-    <p class="wizard-hint maintenance-hint">{fileSharingHint}</p>
+    <p class="hint">{fileSharingHint}</p>
   {/if}
   <FolderPathField
     label="Importordner"
@@ -64,9 +64,9 @@
     onBrowse={onBrowseExports}
   />
   {#if warning}
-    <p class="wizard-hint">{warning}</p>
+    <p class="hint">{warning}</p>
   {/if}
-  <div class="maintenance-actions">
+  <div class="actions-row">
     <button type="button" class="btn-secondary" disabled={busy} onclick={onApply}>Übernehmen</button>
   </div>
   {#if storageStatusText}

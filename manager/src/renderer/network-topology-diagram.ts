@@ -204,7 +204,7 @@ function flowGatewayDecision(lanIp: string): string {
 
 function buildChecklist(items: string[]): HTMLElement {
   const list = document.createElement('ul');
-  list.className = 'net-scenario-checklist wizard-hint';
+  list.className = 'net-scenario-checklist hint';
   for (const text of items) {
     const li = document.createElement('li');
     li.textContent = text;

@@ -154,7 +154,7 @@
   <LoadingOverlay loading={viewLoading} />
 
   {#if snapshot}
-    <section class="network-section">
+    <section class="panel-section panel-section--network">
       <MaintenanceSection
         open={topologyOpen}
         title="Erläuterung zu den Betriebsarten"
@@ -172,16 +172,16 @@
       <NetworkBindingChecks checks={snapshot.status?.networkBindings} />
     </section>
 
-    <section class="network-section network-config-section">
+    <section class="panel-section panel-section--network network-config-section">
       <h2 class="wizard-subheading">Host-Konfiguration</h2>
-      <p class="maintenance-hint">
+      <p class="hint">
         LAN-IP und Gateway werden gemeinsam in der Host-<code>.env</code> gespeichert. Geräte-URLs
         stehen auf dem Status-Screen.
       </p>
 
       <div class="network-config-block" id="network-lan-panel">
         <h3 class="network-config-subheading">LAN-IP (Praxis intern)</h3>
-        <p class="maintenance-hint">
+        <p class="hint">
           Host-Adresse für Terminal, TV, MFA und Ops im Praxis-LAN/-WLAN
           (<code>SETUP_LAN_APP_IP</code>).
         </p>
@@ -196,7 +196,7 @@
 
       <div class="network-config-block" id="network-gateway-panel">
         <h3 class="network-config-subheading">Gateway (optional)</h3>
-        <p class="maintenance-hint">
+        <p class="hint">
           Für Gast-WLAN mit Captive Portal: Gateway-Werte in der Host-Konfiguration speichern. Die
           fachliche Portal-Aktivierung passiert in Praxis Flow.
         </p>
@@ -210,9 +210,9 @@
       </div>
 
       {#if warningText}
-        <p class="wizard-hint">{warningText}</p>
+        <p class="hint">{warningText}</p>
       {/if}
-      <div class="maintenance-actions network-config-actions">
+      <div class="actions-row network-config-actions">
         <button
           type="button"
           class="btn-secondary"

@@ -19,8 +19,8 @@
   } = $props();
 </script>
 
-<div class="maintenance-section">
-  <div class="maintenance-section-heading">
+<div class="panel-section">
+  <div class="panel-section-heading">
     <h2>Sicherung (.env)</h2>
     <IconButton
       icon="info"
@@ -45,9 +45,9 @@
   <button type="button" class="btn-secondary" disabled={busy} onclick={onBackup}>.env sichern</button>
 </div>
 
-<div class="maintenance-section">
+<div class="panel-section">
   <h2>Staff-PINs (MFA &amp; Ops)</h2>
-  <p class="maintenance-hint">
+  <p class="hint">
     Setzt MFA- und Ops-PIN auf den Default <strong>0000</strong> zurück (nur Datenbank).
     Raum-Panel-PIN bleibt unverändert. Stack wird gestoppt, PINs zurückgesetzt und neu gestartet.
     Danach MFA-PIN in MFA → Betrieb, Ops-PIN in System → PIN &amp; Sicherheit vergeben.

@@ -28,7 +28,7 @@
   const saveDisabled = $derived(routingModeSaveDisabled(busy, routingMode, routingModeSaved));
 </script>
 
-<div class="maintenance-section">
+<div class="panel-section">
   <p class="maintenance-kicker">Routing-Modus</p>
   <div class="routing-mode-intro">
     <p><strong>Wohin soll der Patient nach dem Check-in?</strong></p>
@@ -67,13 +67,13 @@
       </label>
     {/each}
     {#if !complexRoutingLicensed}
-      <p class="wizard-hint">
+      <p class="hint">
         Complex Routing erfordert eine Pro-Lizenz. Simple ist der Standard für normale Praxen.
       </p>
     {/if}
   </fieldset>
-  <p class="wizard-hint routing-mode-footnote">{ROUTING_MODE_MAINTENANCE_FOOTNOTE}</p>
-  <div class="maintenance-actions">
+  <p class="hint routing-mode-footnote">{ROUTING_MODE_MAINTENANCE_FOOTNOTE}</p>
+  <div class="actions-row">
     <button type="button" class="btn-secondary" disabled={saveDisabled} onclick={onSave}>
       Routing-Modus speichern
     </button>
