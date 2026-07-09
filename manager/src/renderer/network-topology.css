@@ -6,6 +6,19 @@
   line-height: 1.45;
 }
 
+.network-diagram-intro > p {
+  margin: 0 0 0.35rem;
+}
+
+.network-diagram-intro-list {
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.network-diagram-intro-list li + li {
+  margin-top: 0.2rem;
+}
+
 .net-scenario {
   margin-bottom: 1rem;
   padding: 0.85rem 0.9rem;
@@ -71,6 +84,15 @@
   line-height: 1.45;
 }
 
+.net-scenario-security {
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.65rem;
+  border-left: 3px solid color-mix(in srgb, var(--accent, #3b82f6) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent, #3b82f6) 6%, transparent);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
 .net-flow {
   display: flex;
   flex-direction: column;
@@ -78,6 +100,13 @@
   gap: 0.15rem;
   max-width: 22rem;
   margin: 0 auto 0.5rem;
+}
+
+.net-flow-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  width: 100%;
 }
 
 .net-flow-step {
@@ -99,6 +128,19 @@
 .net-flow-step--ours {
   border-color: color-mix(in srgb, var(--accent, #3b82f6) 40%, var(--border));
   background: color-mix(in srgb, var(--accent, #3b82f6) 8%, var(--surface, rgba(0, 0, 0, 0.08)));
+}
+
+.net-flow-step--struck {
+  border-color: #dc2626;
+  color: var(--text, #111);
+  background:
+    linear-gradient(to top left, transparent 46%, #dc2626 46%, #dc2626 54%, transparent 54%),
+    linear-gradient(to top right, transparent 46%, #dc2626 46%, #dc2626 54%, transparent 54%),
+    var(--surface, rgba(0, 0, 0, 0.08));
+}
+
+.net-flow-step--struck .net-flow-step-note {
+  color: var(--text, #111);
 }
 
 .net-flow-step-label {

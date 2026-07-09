@@ -1,6 +1,19 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-07 (Release **0.2.0** — Journey/Routing, non-breaking API/DB)
+Stand: 2026-07-09
+
+## Heute: Manager Gateway-UI / Konfigurationstexte
+
+- Fokus: Electron Manager → Netzwerk → Gateway (optional) + Wizard Gast-WLAN
+- Ziel: UI-Texte und Konfiguration für Host-`.env` (technisch) vs. Praxis Flow `portalEnabled` (fachlich)
+- Einstieg: `GatewayPanel.svelte`, `NetworkView.svelte`, `docs/gateway-captive-portal.md`
+- **Erledigt:** Topology-Betriebsarten — Szenario 1: dediziertes Gast-Netz + Firewall + Risiko-Hinweis; Szenario 2: Portal-Kasten durchgestrichen (nicht produktiv)
+- Accordion-Subtitle: „Betrieb mit oder ohne Patientenportal“; Intro-Text feature-orientiert
+- Noch offen: weitere Text-/UX-Änderungen am Gateway-Panel (folgt)
+
+---
+
+Stand zuvor: 2026-07-07 (Release **0.2.0** — Journey/Routing, non-breaking API/DB)
 
 ## Erledigt
 

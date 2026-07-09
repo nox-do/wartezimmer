@@ -35,7 +35,25 @@ flowchart LR
 5. App: `POST /api/v1/sessions/captive-authorize` → Gateway-Bridge → `ndsctl auth` → Internet frei.
 6. Portal-Menü: Upload, Erstanamnese, Surfen.
 
-Ohne Gateway (nur `app`/`sandbox`): Schritte 1–2 entfallen; `/portal` direkt im Browser nutzbar (Entwicklung).
+Ohne Gateway (nur `app`/`sandbox`): Schritte 1–2 entfallen; `/portal` direkt im Browser nutzbar (**nur Entwicklung/Test**). Für den Praxisbetrieb mit Patientenportal: Szenario 1 (Gast-WLAN + Gateway) — siehe unten.
+
+## Betriebsarten (Empfehlung)
+
+### Szenario 1 — Gast-WLAN mit Captive Portal
+
+Empfohlen, wenn Patienten das Portal über Gast-WLAN nutzen sollen:
+
+- **Dediziertes Gast-Netz / VLAN** für Gast-Traffic und die vom Portal erreichbaren Dienste
+- **Firewall / ACL** der Praxis-IT: Gäste nur zum Portal (typisch App-Adresse/`/portal` + nötige API), nicht zu Ops, MFA, Terminal-Admin, Docker-Ports oder Host-Shares
+- Praxis Flow ist nach bestem Wissen für den Praxisbetrieb entwickelt — es **ersetzt keine Netzwerksicherheit** und ist kein gehärtetes Perimeter-Produkt
+
+Access Point / Router bleiben Sache der Praxis-IT (nicht unser Produkt).
+
+### Szenario 2 — Nur Praxis-intern
+
+Terminal, TV und MFA im Praxis-LAN; kein Gast-WLAN, kein `gateway`-Container.
+
+**Patientenportal hier nicht produktiv nutzen.** `/portal` höchstens zur Entwicklung/zum Test im Browser. Wer Portal für Patienten will → Szenario 1.
 
 ## Voraussetzungen
 
@@ -205,6 +223,8 @@ Details: `gateway/README.md`.
 ```
 
 Praxis-AP muss Gast-Clients die Route `192.168.88.1` als Gateway geben (DHCP durch unser dnsmasq oder AP-DHCP mit Gateway-Option). Das Gateway muss `APP_PORTAL_URL`/`APP_API_URL` erreichen; die app muss die Gateway-Bridge über `GATEWAY_AUTH_BRIDGE_URL` erreichen.
+
+**Absicherung (Praxis-IT):** Gast-Netz vom Praxis-LAN trennen; Firewall so setzen, dass Gäste nur das Portal erreichen. Der Stack ersetzt keine Perimeter-Absicherung.
 
 ## Bekannte Grenzen (v1)
 

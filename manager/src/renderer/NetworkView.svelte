@@ -158,7 +158,7 @@
       <MaintenanceSection
         open={topologyOpen}
         title="Erläuterung zu den Betriebsarten"
-        subtitle="Gast-WLAN mit Portal · nur Praxis-intern"
+        subtitle="Betrieb mit oder ohne Patientenportal"
         onToggle={() => {
           topologyOpen = !topologyOpen;
         }}

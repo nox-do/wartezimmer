@@ -17,10 +17,15 @@ export function mountNetworkTopologyDiagram(
 
   host.replaceChildren();
 
-  const intro = document.createElement('p');
+  const intro = document.createElement('div');
   intro.className = 'network-diagram-intro';
-  intro.textContent =
-    'Zwei Betriebsarten im Überblick. Wenn das Patientenportal über ein Gast-WLAN angeboten werden soll, empfehlen wir Szenario 1 mit getrenntem Gateway-Gerät im Gast-LAN.';
+  intro.innerHTML = `
+    <p>Zwei Betriebsarten im Überblick.</p>
+    <ul class="network-diagram-intro-list">
+      <li><strong>Szenario 1:</strong> Patienten können Dokumente hochladen, Formulare ausfüllen und optional das Internet nutzen.</li>
+      <li><strong>Szenario 2:</strong> Praxis Flow ohne diese Features nutzen.</li>
+    </ul>
+  `;
   host.append(intro);
 
   host.append(
@@ -48,6 +53,12 @@ function buildPortalScenario(input: {
     <p class="net-scenario-lead">
       Der Praxis-Flow-Stack läuft typischerweise auf dem Praxis-PC (oft Windows). Das Gast-WLAN hängt
       an einem kleinen Linux-Mini-PC als Gateway; die Portal-Oberfläche läuft weiter in der <strong>app</strong>.
+    </p>
+    <p class="net-scenario-security hint">
+      <strong>Netz &amp; Sicherheit:</strong> Empfohlen ist ein dediziertes Gast-Netz (VLAN) und eine
+      Firewall, die den Zugriff von Gästen auf das Portal begrenzt und den übrigen Traffic steuert.
+      Praxis Flow ist nach bestem Wissen für den Praxisbetrieb entwickelt — es ersetzt aber keine
+      Netzwerksicherheit und ist kein gehärtetes Perimeter-Produkt.
     </p>
   `;
 
@@ -78,6 +89,7 @@ function buildPortalScenario(input: {
 
   section.append(buildChecklist([
     'Router/AP: nur Gast-WLAN/VLAN; kein Access Point im Lieferumfang.',
+    'Dediziertes Gast-Netz + Firewall: Gäste nur zum Portal, nicht zu Ops/MFA/Host-Diensten.',
     'GATEWAY_INTERFACE/GATEWAY_IP: Gastseite des Mini-PCs; DHCP setzt diese IP als Default-Route und DNS.',
     'APP_PORTAL_URL/PORTAL_FQDN: Portal-Ziel der app für den Captive-Portal-Redirect.',
     'Patienten geben immer zuerst ihre Wartenummer im Portal ein.',
@@ -111,17 +123,18 @@ function buildInternalScenario(input: { lanIp: string; isCurrent: boolean }): HT
   flow.className = 'net-flow';
   flow.setAttribute('aria-label', 'Datenpfad Praxis-intern');
   flow.innerHTML = `
-    ${flowStep('Terminal · TV · MFA · Ops', { variant: 'neutral' })}
+    <div class="net-flow-row">
+      ${flowStep('Terminal · TV · MFA · Ops', { variant: 'neutral' })}
+      ${flowStep('Portal im Browser', {
+        variant: 'struck',
+        note: 'nicht in diesem Szenario',
+      })}
+    </div>
     ${flowArrow('Praxis-LAN')}
     ${flowStep('Praxis-Flow-Host', {
       variant: 'ours',
       detail: 'app · sandbox',
       note: `LAN-IP ${escapeHtml(input.lanIp)} :8080`,
-    })}
-    ${flowArrow()}
-    ${flowStep('Portal im Browser', {
-      variant: 'neutral',
-      note: 'ohne Gast-WLAN — z. B. Entwicklung',
     })}
   `;
   section.append(flow);
@@ -129,6 +142,7 @@ function buildInternalScenario(input: { lanIp: string; isCurrent: boolean }): HT
   section.append(
     buildChecklist([
       'Geräte-URLs und Erreichbarkeit stehen auf dem Status-Screen.',
+      'Patientenportal hier nicht produktiv nutzen — dafür Szenario 1.',
       'Für Gast-WLAN mit Captive Portal: Szenario 1 — Gateway unten aktivieren.',
     ]),
   );
@@ -139,7 +153,7 @@ function buildInternalScenario(input: { lanIp: string; isCurrent: boolean }): HT
 function flowStep(
   label: string,
   options: {
-    variant?: 'neutral' | 'extern' | 'ours';
+    variant?: 'neutral' | 'extern' | 'ours' | 'struck';
     detail?: string;
     note?: string;
   } = {},
