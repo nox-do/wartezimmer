@@ -5,8 +5,6 @@ import {
 } from './manager-navigation.js';
 import type { NavigateOptions } from './manager-navigation.js';
 import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
-import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-import type { HostStatus } from '../shared/host-status.js';
 import type { ManagerView } from './host-refresh-controller.js';
 import {
   applyHostStatus,
@@ -14,29 +12,21 @@ import {
   applyRuntimeHealth,
   applyShellNavigation,
   applyStatusError,
+  beginMaintenanceSession,
+  beginNetworkSession,
+  beginWizardSession,
+  clearInactiveViewSessions,
+  setDeferredViewLoading,
 } from './manager-shell-state.svelte.js';
-import {
-  getMaintenanceViewAdapter,
-  setMaintenanceCallbacks,
-  tryGetMaintenanceViewAdapter,
-} from './maintenance-view-adapter.js';
-import {
-  getNetworkViewAdapter,
-  setNetworkCallbacks,
-  tryGetNetworkViewAdapter,
-} from './network-view-adapter.js';
-import {
-  getWizardViewAdapter,
-  setWizardCallbacks,
-  tryGetWizardViewAdapter,
-} from './wizard-view-adapter.js';
-import type { WizardPresentation } from './manager-navigation.js';
 
 export type ManagerAppController = {
   navigateTab: (tab: ManagerView) => void;
   onStatusSetupClick: () => void;
   onStatusLoadReleaseArchive: () => void;
   onStatusOpenUrl: (url: string) => void;
+  onAfterMutation: () => void;
+  onWizardComplete: () => void;
+  onWizardCancel: () => void;
 };
 
 export function createManagerAppController(): ManagerAppController {
@@ -48,18 +38,6 @@ export function createManagerAppController(): ManagerAppController {
       );
     }
     return api;
-  }
-
-  function setDomView(view: ManagerView): void {
-    if (view !== 'wizard') {
-      tryGetWizardViewAdapter()?.hide();
-    }
-    if (view !== 'maintenance') {
-      tryGetMaintenanceViewAdapter()?.hide();
-    }
-    if (view !== 'network') {
-      tryGetNetworkViewAdapter()?.hide();
-    }
   }
 
   function syncShell(view: ManagerView, options: NavigateOptions = {}): void {
@@ -89,107 +67,29 @@ export function createManagerAppController(): ManagerAppController {
     navigation.navigateTo('wizard', { wizardPresentation: 'fullscreen' });
   }
 
-  const maintenance = {
-    show: (status: HostStatus) => {
-      getMaintenanceViewAdapter().show(status);
-    },
-    hide: () => {
-      tryGetMaintenanceViewAdapter()?.hide();
-    },
-    setLoading: (loading: boolean) => {
-      tryGetMaintenanceViewAdapter()?.setLoading(loading);
-    },
-    applyConfigSnapshot: (status: HostStatus) => {
-      getMaintenanceViewAdapter().applyConfigSnapshot(status);
-    },
-    applyRuntimeHealth: (health: HostRuntimeHealth) => {
-      getMaintenanceViewAdapter().applyRuntimeHealth(health);
-    },
-  };
-
-  const network = {
-    show: (status: HostStatus) => {
-      getNetworkViewAdapter().show(status);
-    },
-    hide: () => {
-      tryGetNetworkViewAdapter()?.hide();
-    },
-    setLoading: (loading: boolean) => {
-      tryGetNetworkViewAdapter()?.setLoading(loading);
-    },
-    applyConfigSnapshot: (status: HostStatus) => {
-      getNetworkViewAdapter().applyConfigSnapshot(status);
-    },
-    applyRuntimeHealth: (health: HostRuntimeHealth) => {
-      getNetworkViewAdapter().applyRuntimeHealth(health);
-    },
-  };
-
   const hostRefresh = createHostRefreshController({
     api: requirePraxisManager,
     onRuntime(runtime) {
       applyRuntimeHealth(runtime);
-      const view = hostRefresh.getView();
-      if (view === 'maintenance') {
-        maintenance.applyRuntimeHealth(runtime);
-      }
-      if (view === 'network') {
-        network.applyRuntimeHealth(runtime);
-      }
     },
     onConfig(status, view) {
       applyHostStatus(status);
       syncShell(view);
-      if (view === 'maintenance') {
-        maintenance.applyConfigSnapshot(status);
-      }
-      if (view === 'network') {
-        network.applyConfigSnapshot(status);
-      }
     },
     onError(message) {
       applyRuntimeError(message);
     },
   });
 
-  setMaintenanceCallbacks({
-    onAfterMutation: () => {
-      void hostRefresh.refresh({ scope: 'full', immediate: true });
-    },
-  });
-
-  setNetworkCallbacks({
-    onAfterMutation: () => {
-      void hostRefresh.refresh({ scope: 'full', immediate: true });
-    },
-  });
-
-  const wizard = {
-    show: (status: HostStatus | null, presentation: WizardPresentation) => {
-      getWizardViewAdapter().show(status, presentation);
-    },
-    hide: () => {
-      tryGetWizardViewAdapter()?.hide();
-    },
-  };
-
-  setWizardCallbacks({
-    onComplete: () => {
-      navigation.navigateTo('status');
-    },
-    onCancel: () => {
-      navigation.navigateTo('status');
-    },
-  });
-
   const navigation = createManagerNavigation({
     hostRefresh,
     syncShell,
-    setDomView,
-    views: {
-      wizard,
-      maintenance,
-      network,
+    sessions: {
+      clearInactive: clearInactiveViewSessions,
+      setDeferredLoading: setDeferredViewLoading,
+      beginMaintenance: beginMaintenanceSession,
+      beginNetwork: beginNetworkSession,
+      beginWizard: beginWizardSession,
     },
     fetchSetupStatus: () => requirePraxisManager().fetchSetupStatus(),
   });
@@ -205,6 +105,14 @@ export function createManagerAppController(): ManagerAppController {
     navigation.navigateTo(tab);
   }
 
+  function onAfterMutation(): void {
+    void hostRefresh.refresh({ scope: 'full', immediate: true });
+  }
+
+  function onWizardLeave(): void {
+    navigation.navigateTo('status');
+  }
+
   navigation.navigateTo('status');
 
   return {
@@ -216,5 +124,8 @@ export function createManagerAppController(): ManagerAppController {
     onStatusOpenUrl: (url: string) => {
       void requirePraxisManager().openExternalUrl(url);
     },
+    onAfterMutation,
+    onWizardComplete: onWizardLeave,
+    onWizardCancel: onWizardLeave,
   };
 }

@@ -1,7 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-  import type { HostStatus } from '../shared/host-status.js';
   import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
   import { managerShell } from './manager-shell-state.svelte.js';
   import {
@@ -9,10 +7,6 @@
     type MaintenanceController,
     type MaintenanceState,
   } from './maintenance-controller.js';
-  import {
-    getMaintenanceCallbacks,
-    registerMaintenanceViewAdapter,
-  } from './maintenance-view-adapter.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import LoadingOverlay from './LoadingOverlay.svelte';
   import MaintenanceSection from './MaintenanceSection.svelte';
@@ -25,16 +19,24 @@
 
   type MaintenanceExpanderId = 'operations' | 'practice' | 'security' | 'diagnostics';
 
+  let {
+    onAfterMutation,
+  }: {
+    onAfterMutation: () => void;
+  } = $props();
+
   let snapshot = $state<MaintenanceState | null>(null);
-  let viewLoading = $state(false);
   let openSection = $state<MaintenanceExpanderId | null>('practice');
   let confirmOpen = $state(false);
   let confirmMessage = $state('');
   let confirmAction: (() => void) | null = null;
   let pinResetOpen = $state(false);
 
-  let controller: MaintenanceController | null = null;
+  let controller = $state<MaintenanceController | null>(null);
   let hostPlatform = $state('linux');
+  let lastSessionGeneration = $state<number | null>(null);
+
+  const viewLoading = $derived(managerShell.viewLoading.maintenance);
 
   function requireApi(): PraxisManagerApi {
     const api = window.praxisManager;
@@ -88,35 +90,60 @@
 
     controller = createMaintenanceController({
       api,
-      onAfterMutation: () => getMaintenanceCallbacks().onAfterMutation?.(),
+      onAfterMutation,
       requestConfirm,
       onStateChange: syncSnapshot,
     });
     syncSnapshot();
+  });
 
-    const unregister = registerMaintenanceViewAdapter({
-      show(status: HostStatus) {
-        controller?.show(status);
-        syncSnapshot();
-      },
-      hide() {
-        controller?.clearError();
-        syncSnapshot();
-      },
-      setLoading(loading: boolean) {
-        viewLoading = loading;
-      },
-      applyConfigSnapshot(status: HostStatus) {
-        controller?.applyConfigSnapshot(status);
-        syncSnapshot();
-      },
-      applyRuntimeHealth(health: HostRuntimeHealth) {
-        controller?.applyRuntimeHealth(health);
-        syncSnapshot();
-      },
-    });
+  $effect(() => {
+    const c = controller;
+    const session = managerShell.maintenanceSession;
+    if (!c) {
+      return;
+    }
 
-    return unregister;
+    if (!session) {
+      if (lastSessionGeneration !== null) {
+        c.clearError();
+        syncSnapshot();
+        lastSessionGeneration = null;
+      }
+      return;
+    }
+
+    if (session.generation !== lastSessionGeneration) {
+      lastSessionGeneration = session.generation;
+      c.show(session.status);
+      syncSnapshot();
+    }
+  });
+
+  $effect(() => {
+    const c = controller;
+    const status = managerShell.hostStatus;
+    const session = managerShell.maintenanceSession;
+    if (!c || !status || !session) {
+      return;
+    }
+    // Session-Start wendet denselben Snapshot bereits in show() an.
+    if (status === session.status) {
+      return;
+    }
+    c.applyConfigSnapshot(status);
+    syncSnapshot();
+  });
+
+  $effect(() => {
+    const c = controller;
+    const health = managerShell.runtimeHealth;
+    const session = managerShell.maintenanceSession;
+    if (!c || !health || !session || managerShell.activeView !== 'maintenance') {
+      return;
+    }
+    c.applyRuntimeHealth(health);
+    syncSnapshot();
   });
 </script>
 

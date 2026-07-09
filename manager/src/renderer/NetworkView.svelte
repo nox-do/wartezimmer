@@ -1,7 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-  import type { HostStatus } from '../shared/host-status.js';
   import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
   import { hostNetworkChanged } from './host-network-panels.js';
   import {
@@ -9,10 +7,6 @@
     type NetworkController,
     type NetworkState,
   } from './network-controller.js';
-  import {
-    getNetworkCallbacks,
-    registerNetworkViewAdapter,
-  } from './network-view-adapter.js';
   import { networkWarningText } from './network-view-model.js';
   import { resolvedLanIp } from './wizard-state.js';
   import { managerShell } from './manager-shell-state.svelte.js';
@@ -23,13 +17,21 @@
   import LanIpPanel from './LanIpPanel.svelte';
   import GatewayPanel from './GatewayPanel.svelte';
 
+  let {
+    onAfterMutation,
+  }: {
+    onAfterMutation: () => void;
+  } = $props();
+
   let snapshot = $state<NetworkState | null>(null);
-  let viewLoading = $state(false);
   let confirmOpen = $state(false);
   let confirmMessage = $state('');
   let confirmAction: (() => void) | null = null;
 
-  let controller: NetworkController | null = null;
+  let controller = $state<NetworkController | null>(null);
+  let lastSessionGeneration = $state<number | null>(null);
+
+  const viewLoading = $derived(managerShell.viewLoading.network);
 
   function requireApi(): PraxisManagerApi {
     const api = window.praxisManager;
@@ -84,35 +86,60 @@
   onMount(() => {
     controller = createNetworkController({
       api: requireApi(),
-      onAfterMutation: () => getNetworkCallbacks().onAfterMutation?.(),
+      onAfterMutation,
       requestConfirm,
       onStateChange: syncSnapshot,
     });
     syncSnapshot();
+  });
 
-    const unregister = registerNetworkViewAdapter({
-      show(status: HostStatus) {
-        controller?.show(status);
-        syncSnapshot();
-      },
-      hide() {
-        controller?.hide();
-        syncSnapshot();
-      },
-      setLoading(loading: boolean) {
-        viewLoading = loading;
-      },
-      applyConfigSnapshot(status: HostStatus) {
-        controller?.applyConfigSnapshot(status);
-        syncSnapshot();
-      },
-      applyRuntimeHealth(health: HostRuntimeHealth) {
-        controller?.applyRuntimeHealth(health);
-        syncSnapshot();
-      },
-    });
+  $effect(() => {
+    const c = controller;
+    const session = managerShell.networkSession;
+    if (!c) {
+      return;
+    }
 
-    return unregister;
+    if (!session) {
+      if (lastSessionGeneration !== null) {
+        c.hide();
+        syncSnapshot();
+        lastSessionGeneration = null;
+      }
+      return;
+    }
+
+    if (session.generation !== lastSessionGeneration) {
+      lastSessionGeneration = session.generation;
+      c.show(session.status);
+      syncSnapshot();
+    }
+  });
+
+  $effect(() => {
+    const c = controller;
+    const status = managerShell.hostStatus;
+    const session = managerShell.networkSession;
+    if (!c || !status || !session) {
+      return;
+    }
+    // Session-Start wendet denselben Snapshot bereits in show() an.
+    if (status === session.status) {
+      return;
+    }
+    c.applyConfigSnapshot(status);
+    syncSnapshot();
+  });
+
+  $effect(() => {
+    const c = controller;
+    const health = managerShell.runtimeHealth;
+    const session = managerShell.networkSession;
+    if (!c || !health || !session || managerShell.activeView !== 'network') {
+      return;
+    }
+    c.applyRuntimeHealth(health);
+    syncSnapshot();
   });
 </script>
 

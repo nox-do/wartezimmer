@@ -35,6 +35,15 @@ mount(App, {
     onStatusOpenUrl: (url: string) => {
       requireController().onStatusOpenUrl(url);
     },
+    onAfterMutation: () => {
+      requireController().onAfterMutation();
+    },
+    onWizardComplete: () => {
+      requireController().onWizardComplete();
+    },
+    onWizardCancel: () => {
+      requireController().onWizardCancel();
+    },
   },
 });
 

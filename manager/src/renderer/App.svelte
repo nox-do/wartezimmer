@@ -13,11 +13,17 @@
     onStatusSetupClick,
     onStatusLoadReleaseArchive,
     onStatusOpenUrl,
+    onAfterMutation,
+    onWizardComplete,
+    onWizardCancel,
   }: {
     onNavigateTab: (tab: ManagerView) => void;
     onStatusSetupClick: () => void;
     onStatusLoadReleaseArchive: () => void;
     onStatusOpenUrl: (url: string) => void;
+    onAfterMutation: () => void;
+    onWizardComplete: () => void;
+    onWizardCancel: () => void;
   } = $props();
 </script>
 
@@ -34,9 +40,9 @@
         onLoadReleaseArchive={onStatusLoadReleaseArchive}
         onOpenUrl={onStatusOpenUrl}
       />
-      <MaintenanceView />
-      <NetworkView />
-      <WizardView />
+      <MaintenanceView {onAfterMutation} />
+      <NetworkView {onAfterMutation} />
+      <WizardView onComplete={onWizardComplete} onCancel={onWizardCancel} />
     </div>
   </div>
 </div>

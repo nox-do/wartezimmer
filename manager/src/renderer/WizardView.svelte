@@ -1,18 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { HostStatus } from '../shared/host-status.js';
   import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
-  import type { WizardPresentation } from './manager-navigation.js';
-  import { managerShell, wizardFullscreen } from './manager-shell-state.svelte.js';
+  import { managerShell } from './manager-shell-state.svelte.js';
   import {
     createWizardController,
     type WizardController,
     type WizardControllerState,
   } from './wizard-controller.js';
-  import {
-    getWizardCallbacks,
-    registerWizardViewAdapter,
-  } from './wizard-view-adapter.js';
   import {
     wizardBackHidden,
     wizardCompletionItSettingsUrl,
@@ -23,9 +17,18 @@
   import WizardStepIndicator from './WizardStepIndicator.svelte';
   import WizardSteps from './WizardSteps.svelte';
 
+  let {
+    onComplete,
+    onCancel,
+  }: {
+    onComplete: () => void;
+    onCancel: () => void;
+  } = $props();
+
   let snapshot = $state<WizardControllerState | null>(null);
   let controller = $state<WizardController | null>(null);
   let hostPlatform = $state('linux');
+  let lastSessionGeneration = $state<number | null>(null);
 
   function requireApi(): PraxisManagerApi {
     const api = window.praxisManager;
@@ -51,24 +54,34 @@
 
     controller = createWizardController({
       api,
-      onComplete: () => getWizardCallbacks().onComplete?.(),
-      onCancel: () => getWizardCallbacks().onCancel?.(),
+      onComplete,
+      onCancel,
       onStateChange: syncSnapshot,
     });
     syncSnapshot();
+  });
 
-    const unregister = registerWizardViewAdapter({
-      show(status: HostStatus | null, presentation: WizardPresentation) {
-        controller?.show(status, presentation);
-        syncSnapshot();
-      },
-      hide() {
-        controller?.hide();
-        syncSnapshot();
-      },
-    });
+  $effect(() => {
+    const c = controller;
+    const session = managerShell.wizardSession;
+    if (!c) {
+      return;
+    }
 
-    return unregister;
+    if (!session) {
+      if (lastSessionGeneration !== null) {
+        c.hide();
+        syncSnapshot();
+        lastSessionGeneration = null;
+      }
+      return;
+    }
+
+    if (session.generation !== lastSessionGeneration) {
+      lastSessionGeneration = session.generation;
+      c.show(session.status, session.presentation);
+      syncSnapshot();
+    }
   });
 </script>
 

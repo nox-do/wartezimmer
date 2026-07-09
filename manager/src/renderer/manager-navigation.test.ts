@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { HostRefreshController } from './host-refresh-controller.js';
 import { createManagerNavigation, defaultWizardPresentation } from './manager-navigation.js';
+import type { ManagerNavigationSessions } from './manager-navigation.js';
 import type { HostStatus } from '../shared/host-status.js';
+import type { WizardPresentation } from './manager-navigation.js';
 
 function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
   return {
@@ -56,13 +58,50 @@ function createMockHostRefresh(options: {
   };
 }
 
+function createSessionRecorder(): ManagerNavigationSessions & {
+  loading: boolean[];
+  maintenanceShown: HostStatus[];
+  networkShown: HostStatus[];
+  wizardShown: Array<{ status: HostStatus | null; presentation: WizardPresentation }>;
+  cleared: Array<'status' | 'maintenance' | 'network' | 'wizard'>;
+} {
+  const loading: boolean[] = [];
+  const maintenanceShown: HostStatus[] = [];
+  const networkShown: HostStatus[] = [];
+  const wizardShown: Array<{ status: HostStatus | null; presentation: WizardPresentation }> = [];
+  const cleared: Array<'status' | 'maintenance' | 'network' | 'wizard'> = [];
+
+  return {
+    loading,
+    maintenanceShown,
+    networkShown,
+    wizardShown,
+    cleared,
+    clearInactive: (active) => {
+      cleared.push(active);
+    },
+    setDeferredLoading: (_view, value) => {
+      loading.push(value);
+    },
+    beginMaintenance: (status) => {
+      maintenanceShown.push(status);
+    },
+    beginNetwork: (status) => {
+      networkShown.push(status);
+    },
+    beginWizard: (status, presentation) => {
+      wizardShown.push({ status, presentation });
+    },
+  };
+}
+
 test('deferred view shows loading until refresh completes', async () => {
   let resolveRefresh!: () => void;
   const refreshGate = new Promise<void>((resolve) => {
     resolveRefresh = resolve;
   });
 
-  const loading: boolean[] = [];
+  const sessions = createSessionRecorder();
 
   const navigation = createManagerNavigation({
     hostRefresh: createMockHostRefresh({
@@ -72,29 +111,17 @@ test('deferred view shows loading until refresh completes', async () => {
       },
     }),
     syncShell: () => {},
-    setDomView: () => {},
-    views: {
-      wizard: { show: () => {}, hide: () => {} },
-      maintenance: {
-        show: () => {},
-        hide: () => {},
-        setLoading: (value) => loading.push(value),
-      },
-      network: {
-        show: () => {},
-        hide: () => {},
-        setLoading: () => {},
-      },
-    },
+    sessions,
     fetchSetupStatus: async () => minimalStatus(),
   });
 
   navigation.navigateTo('maintenance');
-  assert.deepEqual(loading, [true]);
+  assert.deepEqual(sessions.loading, [true]);
   resolveRefresh();
   await refreshGate;
   await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.deepEqual(loading, [true, false]);
+  assert.deepEqual(sessions.loading, [true, false]);
+  assert.equal(sessions.maintenanceShown.length, 1);
 });
 
 test('does not show maintenance after navigating to network before refresh resolves', async () => {
@@ -104,8 +131,7 @@ test('does not show maintenance after navigating to network before refresh resol
     resolveRefresh = resolve;
   });
 
-  const maintenanceShown: HostStatus[] = [];
-  const networkShown: HostStatus[] = [];
+  const sessions = createSessionRecorder();
 
   const navigation = createManagerNavigation({
     hostRefresh: {
@@ -120,20 +146,7 @@ test('does not show maintenance after navigating to network before refresh resol
       getLastRuntime: () => null,
     },
     syncShell: () => {},
-    setDomView: () => {},
-    views: {
-      wizard: { show: () => {}, hide: () => {} },
-      maintenance: {
-        show: (status) => maintenanceShown.push(status),
-        hide: () => {},
-        setLoading: () => {},
-      },
-      network: {
-        show: (status) => networkShown.push(status),
-        hide: () => {},
-        setLoading: () => {},
-      },
-    },
+    sessions,
     fetchSetupStatus: async () => minimalStatus(),
   });
 
@@ -143,8 +156,9 @@ test('does not show maintenance after navigating to network before refresh resol
   await refreshGate;
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  assert.equal(maintenanceShown.length, 0);
-  assert.equal(networkShown.length, 1);
+  assert.equal(sessions.maintenanceShown.length, 0);
+  assert.equal(sessions.networkShown.length, 1);
+  assert.deepEqual(sessions.cleared, ['maintenance', 'network']);
 });
 
 test('does not show wizard after leaving wizard before fetch resolves', async () => {
@@ -154,30 +168,14 @@ test('does not show wizard after leaving wizard before fetch resolves', async ()
     resolveFetch = resolve;
   });
 
-  const wizardShown: Array<{ status: HostStatus | null; presentation: string }> = [];
+  const sessions = createSessionRecorder();
 
   const navigation = createManagerNavigation({
     hostRefresh: createMockHostRefresh({
       getView: () => currentView,
     }),
     syncShell: () => {},
-    setDomView: () => {},
-    views: {
-      wizard: {
-        show: (status, presentation) => wizardShown.push({ status, presentation }),
-        hide: () => {},
-      },
-      maintenance: {
-        show: () => {},
-        hide: () => {},
-        setLoading: () => {},
-      },
-      network: {
-        show: () => {},
-        hide: () => {},
-        setLoading: () => {},
-      },
-    },
+    sessions,
     fetchSetupStatus: () => fetchGate,
   });
 
@@ -187,7 +185,7 @@ test('does not show wizard after leaving wizard before fetch resolves', async ()
   await fetchGate;
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  assert.equal(wizardShown.length, 0);
+  assert.equal(sessions.wizardShown.length, 0);
 });
 
 test('defaultWizardPresentation uses fullscreen before env exists', () => {

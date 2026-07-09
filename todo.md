@@ -51,12 +51,18 @@ Review-Canvas: `~/.cursor/projects/.../canvases/manager-svelte5-review.canvas.ts
 
 **Top-Funde (noch offen):**
 - Wizard Routing-Default-Race (`simple` bis async Capabilities) — Bug-Risiko bei Re-Run
-- Adapter-Singletons (`*-view-adapter.ts`) als Legacy-Brücke — SoC/Architektur
 - Snapshot-Shallow-Copy statt reaktiver Controller-State — Svelte-5-Migrationsmuster
 - Topology-Diagramm remountet bei jedem Keystroke
 - Tote Flächen: `getComposeStatus`, `maintenance.subscribe`, `setButtonIcon`
 - Routing-Panel-Markup doppelt (Wizard vs Wartung); `wizard-state` von Network mitgenutzt
 
+## Erledigt: Adapter-Singletons entfernt (2026-07-09)
+
+- Shell: `viewLoading` + `maintenanceSession` / `networkSession` / `wizardSession` (monotone `generation`)
+- Navigation/App-Controller schreiben Sessions statt Adapter; Callbacks als Props
+- Views: `$effect` auf Session/`hostStatus`/`runtimeHealth`; lokale Controller behalten
+- `*-view-adapter.ts` gelöscht; Race-Tests auf Session-API umgestellt
+- **Optional Folge:** `createManagerAppController().start()` statt implizitem `navigateTo('status')` am Ende (Mount-Reihenfolge langweilig machen)
 
 ## Referenzen
 

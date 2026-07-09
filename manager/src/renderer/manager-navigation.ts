@@ -13,28 +13,18 @@ export type NavigateOptions = {
 
 export type DeferredView = 'maintenance' | 'network';
 
-export type ManagerNavigationViews = {
-  wizard: {
-    show: (status: HostStatus | null, presentation: WizardPresentation) => void;
-    hide: () => void;
-  };
-  maintenance: {
-    show: (status: HostStatus) => void;
-    hide: () => void;
-    setLoading: (loading: boolean) => void;
-  };
-  network: {
-    show: (status: HostStatus) => void;
-    hide: () => void;
-    setLoading: (loading: boolean) => void;
-  };
+export type ManagerNavigationSessions = {
+  clearInactive: (active: ManagerView) => void;
+  setDeferredLoading: (view: DeferredView, loading: boolean) => void;
+  beginMaintenance: (status: HostStatus) => void;
+  beginNetwork: (status: HostStatus) => void;
+  beginWizard: (status: HostStatus | null, presentation: WizardPresentation) => void;
 };
 
 export type ManagerNavigationDeps = {
   hostRefresh: HostRefreshController;
   syncShell: (view: ManagerView, options?: NavigateOptions) => void;
-  setDomView: (view: ManagerView) => void;
-  views: ManagerNavigationViews;
+  sessions: ManagerNavigationSessions;
   fetchSetupStatus: () => Promise<HostStatus>;
 };
 
@@ -43,13 +33,9 @@ function isDeferredView(view: ManagerView): view is DeferredView {
 }
 
 export function createManagerNavigation(deps: ManagerNavigationDeps) {
-  function setDeferredViewLoading(view: DeferredView, loading: boolean): void {
-    deps.views[view].setLoading(loading);
-  }
-
   function navigateTo(view: ManagerView, options: NavigateOptions = {}): void {
     deps.hostRefresh.setView(view);
-    deps.setDomView(view);
+    deps.sessions.clearInactive(view);
     deps.syncShell(view, options);
 
     if (view === 'wizard') {
@@ -60,25 +46,25 @@ export function createManagerNavigation(deps: ManagerNavigationDeps) {
           if (deps.hostRefresh.getView() !== 'wizard') {
             return;
           }
-          deps.views.wizard.show(status, presentation);
+          deps.sessions.beginWizard(status, presentation);
         } catch {
           if (deps.hostRefresh.getView() !== 'wizard') {
             return;
           }
-          deps.views.wizard.show(null, presentation);
+          deps.sessions.beginWizard(null, presentation);
         }
       })();
       return;
     }
 
     if (isDeferredView(view)) {
-      setDeferredViewLoading(view, true);
+      deps.sessions.setDeferredLoading(view, true);
     }
 
     void deps.hostRefresh.refresh({ scope: 'full', immediate: true }).then(() => {
       if (deps.hostRefresh.getView() !== view) {
         if (isDeferredView(view)) {
-          setDeferredViewLoading(view, false);
+          deps.sessions.setDeferredLoading(view, false);
         }
         return;
       }
@@ -87,9 +73,13 @@ export function createManagerNavigation(deps: ManagerNavigationDeps) {
       }
       const refreshed = deps.hostRefresh.getLastConfig();
       if (refreshed) {
-        deps.views[view].show(refreshed);
+        if (view === 'maintenance') {
+          deps.sessions.beginMaintenance(refreshed);
+        } else {
+          deps.sessions.beginNetwork(refreshed);
+        }
       }
-      setDeferredViewLoading(view, false);
+      deps.sessions.setDeferredLoading(view, false);
     });
   }
 
