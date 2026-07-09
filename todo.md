@@ -75,6 +75,10 @@ Review-Canvas: `~/.cursor/projects/.../canvases/manager-svelte5-review.canvas.ts
 - F12: `compilerOptions.runes: true` in `svelte.config.js`
 - F13: `manager/README.md` an Shell/Svelte, Wizard-Schritte, 12s-Poll angepasst
 
+## Erledigt: Netzwerk Topology in Expander (2026-07-09)
+
+- Betriebsarten-Diagramm unter „Erläuterung zu den Betriebsarten“ (default zu)
+
 ## Referenzen
 
 - `docs/flow-routing-modes-working-doc.md`

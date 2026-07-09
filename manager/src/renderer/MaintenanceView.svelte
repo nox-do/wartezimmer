@@ -26,7 +26,7 @@
   } = $props();
 
   let snapshot = $state<MaintenanceState | null>(null);
-  let openSection = $state<MaintenanceExpanderId | null>('practice');
+  let openSection = $state<MaintenanceExpanderId | null>(null);
   let confirmOpen = $state(false);
   let confirmMessage = $state('');
   let confirmAction: (() => void) | null = null;

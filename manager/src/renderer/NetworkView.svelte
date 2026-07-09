@@ -12,6 +12,7 @@
   import { managerShell } from './manager-shell-state.svelte.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import LoadingOverlay from './LoadingOverlay.svelte';
+  import MaintenanceSection from './MaintenanceSection.svelte';
   import NetworkTopologyDiagram from './NetworkTopologyDiagram.svelte';
   import NetworkBindingChecks from './NetworkBindingChecks.svelte';
   import LanIpPanel from './LanIpPanel.svelte';
@@ -27,6 +28,7 @@
   let confirmOpen = $state(false);
   let confirmMessage = $state('');
   let confirmAction: (() => void) | null = null;
+  let topologyOpen = $state(false);
 
   let controller = $state<NetworkController | null>(null);
   let lastSessionGeneration = $state<number | null>(null);
@@ -153,11 +155,20 @@
 
   {#if snapshot}
     <section class="network-section">
-      <NetworkTopologyDiagram
-        lanIp={diagramLanIp}
-        gatewayIp={snapshot.gatewayEnabled ? snapshot.gatewayIp : null}
-        gatewayEnabled={snapshot.gatewayEnabled}
-      />
+      <MaintenanceSection
+        open={topologyOpen}
+        title="Erläuterung zu den Betriebsarten"
+        subtitle="Gast-WLAN mit Portal · nur Praxis-intern"
+        onToggle={() => {
+          topologyOpen = !topologyOpen;
+        }}
+      >
+        <NetworkTopologyDiagram
+          lanIp={diagramLanIp}
+          gatewayIp={snapshot.gatewayEnabled ? snapshot.gatewayIp : null}
+          gatewayEnabled={snapshot.gatewayEnabled}
+        />
+      </MaintenanceSection>
       <NetworkBindingChecks checks={snapshot.status?.networkBindings} />
     </section>
 

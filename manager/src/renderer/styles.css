@@ -992,6 +992,17 @@ button:disabled {
   color: inherit;
 }
 
+.maintenance-expander-trigger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  color: var(--text);
+}
+
+.maintenance-expander-trigger:hover:not(:disabled) .maintenance-expander-subtitle,
+.maintenance-expander-trigger:hover:not(:disabled) .maintenance-expander-copy,
+.maintenance-expander-trigger:hover:not(:disabled) .maintenance-expander-chevron {
+  color: color-mix(in srgb, var(--text) 72%, var(--muted));
+}
+
 .maintenance-expander-text {
   display: grid;
   gap: 0.2rem;

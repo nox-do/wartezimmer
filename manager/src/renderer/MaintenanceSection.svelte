@@ -12,7 +12,7 @@
     open?: boolean;
     title: string;
     subtitle: string;
-    copy: string;
+    copy?: string;
     onToggle: () => void;
     children?: Snippet;
   } = $props();
@@ -28,7 +28,9 @@
     <span class="maintenance-expander-text">
       <span class="maintenance-expander-title">{title}</span>
       <span class="maintenance-expander-subtitle">{subtitle}</span>
-      <span class="maintenance-expander-copy">{copy}</span>
+      {#if copy}
+        <span class="maintenance-expander-copy">{copy}</span>
+      {/if}
     </span>
     <span class="maintenance-expander-chevron" aria-hidden="true">⌄</span>
   </button>
