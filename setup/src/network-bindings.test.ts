@@ -149,3 +149,74 @@ test('auditNetworkPrerequisites includes gateway bridge when enabled', async () 
   assert.equal(checks.length, 2);
   assert.ok(checks.every((check) => check.ok));
 });
+
+test('auditNetworkPrerequisites includes proxy HTTP port when proxy is enabled', async () => {
+  const checks = await auditNetworkPrerequisites({
+    compose: null,
+    appPort: 59_995,
+    proxyEnabled: true,
+    proxyHttpPort: 59_994,
+  });
+  assert.deepEqual(
+    checks.map((check) => check.id),
+    ['preflight.app-port', 'preflight.proxy-http-port'],
+  );
+  assert.ok(checks.every((check) => check.ok));
+});
+
+test('auditNetworkPrerequisites includes proxy HTTPS port only for TLS modes', async () => {
+  const checks = await auditNetworkPrerequisites({
+    compose: null,
+    appPort: 59_993,
+    proxyEnabled: true,
+    proxyHttpPort: 59_992,
+    proxyHttpsEnabled: true,
+    proxyHttpsPort: 59_991,
+  });
+  assert.deepEqual(
+    checks.map((check) => check.id),
+    ['preflight.app-port', 'preflight.proxy-http-port', 'preflight.proxy-https-port'],
+  );
+  assert.ok(checks.every((check) => check.ok));
+});
+
+test('auditNetworkPrerequisites accepts occupied proxy port when proxy publishes it', async () => {
+  const listener = await listenEphemeral();
+  try {
+    const checks = await auditNetworkPrerequisites({
+      compose: {
+        running: true,
+        services: [
+          {
+            name: 'proxy',
+            service: 'proxy',
+            state: 'running',
+            health: 'healthy',
+            publishedPorts: [listener.port],
+          },
+        ],
+      },
+      appPort: 59_990,
+      proxyEnabled: true,
+      proxyHttpPort: listener.port,
+    });
+    const proxyCheck = checks.find((check) => check.id === 'preflight.proxy-http-port');
+    assert.equal(proxyCheck?.ok, true);
+    assert.match(proxyCheck?.message ?? '', /Praxis Flow genutzt/);
+  } finally {
+    await listener.close();
+  }
+});
+
+test('auditNetworkPrerequisites can skip direct app publish port', async () => {
+  const checks = await auditNetworkPrerequisites({
+    compose: null,
+    appPublishEnabled: false,
+    proxyEnabled: true,
+    proxyHttpPort: 59_989,
+  });
+  assert.deepEqual(
+    checks.map((check) => check.id),
+    ['preflight.proxy-http-port'],
+  );
+});

@@ -11,6 +11,8 @@ import { DEFAULT_APP_PORT } from './urls.js';
 export type { NetworkBindingCheck } from '@praxis-flow/server-shared';
 
 export const DEFAULT_GATEWAY_BRIDGE_PORT = 9100;
+export const DEFAULT_PROXY_HTTP_PORT = 80;
+export const DEFAULT_PROXY_HTTPS_PORT = 443;
 
 export function interfaceExists(interfaces: NetworkInterfaceInfo[], name: string): boolean {
   return interfaces.some((iface) => iface.name === name);
@@ -122,28 +124,70 @@ async function checkHostPortFree(input: {
   };
 }
 
+type RequiredHostPort = {
+  id: string;
+  port: number;
+  serviceName: string;
+  enabled: boolean;
+};
+
 /** Preflight: required host ports free, or published by our running compose service. */
 export async function auditNetworkPrerequisites(input: {
   compose: ComposeStatus | null;
   gatewayEnabled?: boolean;
   gatewayBridgePort?: number;
   appPort?: number;
+  appPublishEnabled?: boolean;
+  proxyEnabled?: boolean;
+  proxyHttpPort?: number;
+  proxyHttpsPort?: number;
+  proxyHttpsEnabled?: boolean;
 }): Promise<NetworkBindingCheck[]> {
   const appPort = input.appPort ?? DEFAULT_APP_PORT;
-  const checks = [
-    await checkHostPortFree({
+  const gatewayBridgePort = input.gatewayBridgePort ?? DEFAULT_GATEWAY_BRIDGE_PORT;
+  const proxyHttpPort = input.proxyHttpPort ?? DEFAULT_PROXY_HTTP_PORT;
+  const proxyHttpsPort = input.proxyHttpsPort ?? DEFAULT_PROXY_HTTPS_PORT;
+  const requiredPorts: RequiredHostPort[] = [
+    {
       id: 'preflight.app-port',
       port: appPort,
-      ourPublish: composeServicePublishesHostPort(input.compose, 'app', appPort),
-    }),
+      serviceName: 'app',
+      enabled: input.appPublishEnabled ?? true,
+    },
+    {
+      id: 'preflight.proxy-http-port',
+      port: proxyHttpPort,
+      serviceName: 'proxy',
+      enabled: Boolean(input.proxyEnabled),
+    },
+    {
+      id: 'preflight.proxy-https-port',
+      port: proxyHttpsPort,
+      serviceName: 'proxy',
+      enabled: Boolean(input.proxyEnabled && input.proxyHttpsEnabled),
+    },
+    {
+      id: 'preflight.gateway-bridge-port',
+      port: gatewayBridgePort,
+      serviceName: 'gateway',
+      enabled: Boolean(input.gatewayEnabled),
+    },
   ];
-  if (input.gatewayEnabled) {
-    const bridgePort = input.gatewayBridgePort ?? DEFAULT_GATEWAY_BRIDGE_PORT;
+
+  const checks: NetworkBindingCheck[] = [];
+  for (const requiredPort of requiredPorts) {
+    if (!requiredPort.enabled) {
+      continue;
+    }
     checks.push(
       await checkHostPortFree({
-        id: 'preflight.gateway-bridge-port',
-        port: bridgePort,
-        ourPublish: composeServicePublishesHostPort(input.compose, 'gateway', bridgePort),
+        id: requiredPort.id,
+        port: requiredPort.port,
+        ourPublish: composeServicePublishesHostPort(
+          input.compose,
+          requiredPort.serviceName,
+          requiredPort.port,
+        ),
       }),
     );
   }

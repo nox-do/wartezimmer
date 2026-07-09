@@ -267,7 +267,7 @@ export type HostStatus = {
   networkBindings: NetworkBindingCheck[];
   /**
    * Preflight before compose up: required host ports free (or already used by our stack).
-   * Today: app publish 8080; gateway bridge 9100 when gateway is enabled.
+   * Examples: app publish 8080, proxy 80/443, gateway bridge 9100 when enabled.
    */
   networkPrerequisites: NetworkBindingCheck[];
   deliveryImages: DeliveryImagesStatus;

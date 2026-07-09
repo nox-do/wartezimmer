@@ -32,7 +32,13 @@ import {
   machineHostname,
 } from './network.js';
 import { runConnectionProbes } from './probes.js';
-import { auditNetworkBindings, auditNetworkPrerequisites } from './network-bindings.js';
+import {
+  DEFAULT_GATEWAY_BRIDGE_PORT,
+  DEFAULT_PROXY_HTTP_PORT,
+  DEFAULT_PROXY_HTTPS_PORT,
+  auditNetworkBindings,
+  auditNetworkPrerequisites,
+} from './network-bindings.js';
 import {
   auditDeliveryImages,
   loadDeliveryImagesFromArchive,
@@ -313,6 +319,23 @@ export function pickPracticeDisplayNameFromEnv(env: Map<string, string>): string
   return name || null;
 }
 
+function readBooleanEnv(env: Map<string, string>, key: string, fallback: boolean): boolean {
+  const raw = env.get(key)?.trim().toLowerCase();
+  if (!raw) {
+    return fallback;
+  }
+  return ['1', 'true', 'yes', 'on'].includes(raw);
+}
+
+function readPortEnv(env: Map<string, string>, key: string, fallback: number): number {
+  const parsed = Number.parseInt(env.get(key)?.trim() || String(fallback), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function proxyModeUsesHttps(mode: string): boolean {
+  return mode === 'tls-custom' || mode === 'tls-managed';
+}
+
 export function pickLanIpFromEnv(env: Map<string, string>): string | null {
   const setupLan = env.get('SETUP_LAN_APP_IP')?.trim();
   if (setupLan) {
@@ -459,14 +482,18 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
         gatewayComposeSupported: canRunGatewayCompose(),
       })
     : [];
-  const bridgePort = Number.parseInt(
-    envMap.get('GATEWAY_AUTH_BRIDGE_PORT')?.trim() || '9100',
-    10,
-  );
+  const bridgePort = readPortEnv(envMap, 'GATEWAY_AUTH_BRIDGE_PORT', DEFAULT_GATEWAY_BRIDGE_PORT);
+  const proxyEnabled = readBooleanEnv(envMap, 'PROXY_ENABLED', false);
+  const proxyMode = envMap.get('PROXY_MODE')?.trim() || 'off';
   const networkPrerequisites = await auditNetworkPrerequisites({
     compose,
+    appPublishEnabled: readBooleanEnv(envMap, 'APP_PUBLISH_PORT', true),
     gatewayEnabled: Boolean(gateway?.enabled),
-    gatewayBridgePort: Number.isFinite(bridgePort) ? bridgePort : undefined,
+    gatewayBridgePort: bridgePort,
+    proxyEnabled,
+    proxyHttpPort: readPortEnv(envMap, 'PROXY_HTTP_PORT', DEFAULT_PROXY_HTTP_PORT),
+    proxyHttpsPort: readPortEnv(envMap, 'PROXY_HTTPS_PORT', DEFAULT_PROXY_HTTPS_PORT),
+    proxyHttpsEnabled: proxyModeUsesHttps(proxyMode),
   });
 
   const deliveryImages = await auditDeliveryImages({
