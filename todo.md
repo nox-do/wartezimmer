@@ -45,6 +45,19 @@ Stand: 2026-07-07 (Release **0.2.0** — Journey/Routing, non-breaking API/DB)
 
 - _(keine offenen Routing-Mode-Pakete)_
 
+## Manager Svelte-5 Review (2026-07-09)
+
+Review-Canvas: `~/.cursor/projects/.../canvases/manager-svelte5-review.canvas.tsx`
+
+**Top-Funde (noch offen):**
+- Wizard Routing-Default-Race (`simple` bis async Capabilities) — Bug-Risiko bei Re-Run
+- Adapter-Singletons (`*-view-adapter.ts`) als Legacy-Brücke — SoC/Architektur
+- Snapshot-Shallow-Copy statt reaktiver Controller-State — Svelte-5-Migrationsmuster
+- Topology-Diagramm remountet bei jedem Keystroke
+- Tote Flächen: `getComposeStatus`, `maintenance.subscribe`, `setButtonIcon`
+- Routing-Panel-Markup doppelt (Wizard vs Wartung); `wizard-state` von Network mitgenutzt
+
+
 ## Referenzen
 
 - `docs/flow-routing-modes-working-doc.md`

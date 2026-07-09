@@ -12,7 +12,7 @@ import { buildSetupProbeInput, pollSetupProbes } from './setup-probes.js';
 import {
   buildGatewayPlanInput,
   createInitialWizardFields,
-  gatewayBridgeDefaultsFromNetwork,
+  gatewayDraftDefaults,
   resolvedLanIp,
   validateGatewayAuthBridgeUrl,
 } from './wizard-state.js';
@@ -107,8 +107,7 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
       type: 'goto',
       step: 4,
       patch: {
-        portalAppIp: state.portalAppIp.trim() || lanIp,
-        ...gatewayBridgeDefaultsFromNetwork(state, state.network),
+        ...gatewayDraftDefaults(state, state.network, lanIp),
       },
     };
   }

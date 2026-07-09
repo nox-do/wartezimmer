@@ -15,7 +15,7 @@ import {
 import {
   buildGatewayPlanInput,
   createHostNetworkFields,
-  gatewayBridgeDefaultsFromNetwork,
+  gatewayDraftDefaults,
   resolvedLanIp,
   validateGatewayAuthBridgeUrl,
 } from './wizard-state.js';
@@ -174,7 +174,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
         .then((network) => {
           patch({
             network,
-            ...gatewayBridgeDefaultsFromNetwork(state, network),
+            ...gatewayDraftDefaults(state, network, resolvedLanIp(state)),
           });
         })
         .catch((error) => {

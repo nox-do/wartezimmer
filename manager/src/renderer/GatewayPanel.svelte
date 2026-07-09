@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { HostStatus, NetworkSnapshot } from '../shared/host-status.js';
+  import type { NetworkSnapshot } from '../shared/host-status.js';
   import type { GatewayFieldState } from './host-network-panels.js';
+  import { gatewayEnabledPatch } from './wizard-state.js';
 
   let {
     state,
@@ -62,15 +63,7 @@
     {disabled}
     onchange={(event) => {
       const enabled = event.currentTarget.checked;
-      onChange({
-        gatewayEnabled: enabled,
-        portalAppIp:
-          enabled && !state.portalAppIp.trim() ? lanIpFallback : state.portalAppIp,
-        authBridgeUrl:
-          enabled && !state.authBridgeUrl.trim()
-            ? (network?.defaultGatewayBridgeUrl ?? '')
-            : state.authBridgeUrl,
-      });
+      onChange(gatewayEnabledPatch(state, enabled, network, lanIpFallback));
     }}
   />
   <span>Gast-WLAN vorbereiten (Captive-Portal-Einstellungen in der Host-Konfiguration speichern)</span>

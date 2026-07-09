@@ -165,9 +165,15 @@
       <WizardRoutingModePanel
         routingMode={snapshot.routingMode}
         complexRoutingLicensed={snapshot.complexRoutingLicensed}
-        busy={snapshot.busy}
+        busy={snapshot.busy || snapshot.routingCapabilitiesStatus !== 'ready'}
         onChange={(routingMode) => patchFields({ routingMode })}
       />
+      {#if snapshot.routingCapabilitiesStatus === 'loading'}
+        <p class="wizard-progress is-active" role="status">
+          <span class="spinner" aria-hidden="true"></span>
+          Routing-Modus wird geladen …
+        </p>
+      {/if}
     {:else if snapshot.step === 4}
       <GatewayPanel
         state={snapshot}

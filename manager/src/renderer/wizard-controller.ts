@@ -1,7 +1,7 @@
 import type { HostStatus } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import type { WizardPresentation } from './manager-navigation.js';
-import { gatewayBridgeDefaultsFromNetwork } from './wizard-state.js';
+import { gatewayDraftDefaults, resolvedLanIp } from './wizard-state.js';
 import {
   pickAndLoadReleaseArchive,
   WIZARD_RELEASE_IMPORT_LOADING_MESSAGE,
@@ -33,6 +33,7 @@ export type WizardControllerState = WizardFlowState & {
   error: string | null;
   presentation: WizardPresentation;
   complexRoutingLicensed: boolean;
+  routingCapabilitiesStatus: 'idle' | 'loading' | 'ready' | 'error';
 };
 
 export type WizardControllerDeps = WizardCallbacks & {
@@ -67,11 +68,15 @@ function createInitialState(
     error: null,
     presentation,
     complexRoutingLicensed: true,
+    routingCapabilitiesStatus: 'idle',
   };
 }
 
 export function createWizardController(deps: WizardControllerDeps): WizardController {
   let state = createInitialState(null);
+  let routingCapabilitiesRequestId = 0;
+  let routingCapabilitiesPromise: Promise<void> | null = null;
+  let routingModeTouched = false;
 
   function notify(): void {
     deps.onStateChange?.();
@@ -107,7 +112,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       const network = await loadWizardNetwork(deps.api);
       patch({
         network,
-        ...gatewayBridgeDefaultsFromNetwork(state, network),
+        ...gatewayDraftDefaults(state, network, resolvedLanIp(state)),
       });
       return;
     }
@@ -134,28 +139,42 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     }
   }
 
-  function ensureRoutingCapabilities(): void {
-    void deps.api
+  async function ensureRoutingCapabilities(): Promise<void> {
+    if (state.routingCapabilitiesStatus === 'ready') {
+      return;
+    }
+    if (state.routingCapabilitiesStatus === 'loading' && routingCapabilitiesPromise) {
+      await routingCapabilitiesPromise;
+      return;
+    }
+
+    const requestId = ++routingCapabilitiesRequestId;
+    patch({ routingCapabilitiesStatus: 'loading' });
+
+    routingCapabilitiesPromise = deps.api
       .getRoutingMode()
       .then((capabilities) => {
-        if (state.step !== 3) {
+        if (requestId !== routingCapabilitiesRequestId || state.step !== 3) {
           return;
         }
         patch({
-          routingMode: capabilities.routingMode,
+          ...(routingModeTouched ? {} : { routingMode: capabilities.routingMode }),
           complexRoutingLicensed: capabilities.features.complexRoutingLicensed,
+          routingCapabilitiesStatus: 'ready',
         });
       })
       .catch(() => {
-        if (state.step === 3) {
-          patch({ complexRoutingLicensed: true });
+        if (requestId === routingCapabilitiesRequestId && state.step === 3) {
+          patch({ complexRoutingLicensed: true, routingCapabilitiesStatus: 'error' });
         }
       });
+
+    await routingCapabilitiesPromise;
   }
 
-  function enterStep(step: WizardStep): void {
+  async function enterStep(step: WizardStep): Promise<void> {
     if (step === 3) {
-      ensureRoutingCapabilities();
+      await ensureRoutingCapabilities();
     }
   }
 
@@ -163,15 +182,24 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     getState: () => state,
 
     patchFields(partial) {
+      if (Object.prototype.hasOwnProperty.call(partial, 'routingMode')) {
+        routingModeTouched = true;
+      }
       patch(partial);
     },
 
     show(status, presentation = 'embedded') {
+      routingCapabilitiesRequestId++;
+      routingCapabilitiesPromise = null;
+      routingModeTouched = false;
       state = createInitialState(status, presentation);
       notify();
     },
 
     hide() {
+      routingCapabilitiesRequestId++;
+      routingCapabilitiesPromise = null;
+      routingModeTouched = false;
       state = createInitialState(null);
       notify();
     },
@@ -180,6 +208,14 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       setError(null);
       setBusy(true);
       try {
+        if (state.step === 3) {
+          await ensureRoutingCapabilities();
+          if (state.routingCapabilitiesStatus !== 'ready') {
+            setError('Routing-Modus konnte nicht geladen werden. Bitte erneut versuchen.');
+            return;
+          }
+        }
+
         const action = planWizardAdvance(state.step, state);
         if (action.type === 'validate-error') {
           setError(action.message);
@@ -191,7 +227,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
         }
 
         patch({ step: action.step, ...action.patch });
-        enterStep(action.step);
+        await enterStep(action.step);
         if (action.after) {
           await runWizardAfterAction(action.after);
         }
@@ -212,7 +248,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       setError(null);
       const step = previousWizardStep(state.step);
       patch({ step });
-      enterStep(step);
+      void enterStep(step);
     },
 
     cancel() {

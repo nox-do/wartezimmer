@@ -86,6 +86,48 @@ export function initialGatewayFields(
   };
 }
 
+type GatewayDefaultFields = Pick<
+  WizardInitialFields,
+  'gatewayEnabled' | 'portalAppIp' | 'authBridgeUrl'
+>;
+
+export function gatewayDraftDefaults(
+  fields: GatewayDefaultFields,
+  network: NetworkSnapshot | null,
+  lanIpFallback = '',
+): Partial<Pick<WizardInitialFields, 'portalAppIp' | 'authBridgeUrl'>> {
+  if (!fields.gatewayEnabled) {
+    return {};
+  }
+
+  const patch: Partial<Pick<WizardInitialFields, 'portalAppIp' | 'authBridgeUrl'>> = {};
+  const fallbackPortalIp = lanIpFallback.trim();
+  const fallbackBridgeUrl = network?.defaultGatewayBridgeUrl?.trim();
+
+  if (!fields.portalAppIp.trim() && fallbackPortalIp) {
+    patch.portalAppIp = fallbackPortalIp;
+  }
+  if (!fields.authBridgeUrl.trim() && fallbackBridgeUrl) {
+    patch.authBridgeUrl = fallbackBridgeUrl;
+  }
+
+  return patch;
+}
+
+export function gatewayEnabledPatch(
+  fields: GatewayDefaultFields,
+  enabled: boolean,
+  network: NetworkSnapshot | null,
+  lanIpFallback = '',
+): Pick<WizardInitialFields, 'gatewayEnabled'> &
+  Partial<Pick<WizardInitialFields, 'portalAppIp' | 'authBridgeUrl'>> {
+  const base = { ...fields, gatewayEnabled: enabled };
+  return {
+    gatewayEnabled: enabled,
+    ...gatewayDraftDefaults(base, network, lanIpFallback),
+  };
+}
+
 export function createInitialWizardFields(status: HostStatus | null): WizardInitialFields {
   const lan = initialLanIpSelection(status);
   return {
@@ -161,15 +203,4 @@ export function validateGatewayAuthBridgeUrl(value: string): string | null {
     // handled by common message below
   }
   return 'Bitte eine gültige Gateway-Bridge-URL mit http:// oder https:// eingeben.';
-}
-
-export function gatewayBridgeDefaultsFromNetwork(
-  fields: Pick<WizardInitialFields, 'gatewayEnabled' | 'authBridgeUrl'>,
-  network: NetworkSnapshot | null,
-): Partial<Pick<WizardInitialFields, 'authBridgeUrl'>> {
-  const defaultBridgeUrl = network?.defaultGatewayBridgeUrl?.trim();
-  if (fields.gatewayEnabled && !fields.authBridgeUrl.trim() && defaultBridgeUrl) {
-    return { authBridgeUrl: defaultBridgeUrl };
-  }
-  return {};
 }

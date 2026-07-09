@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostStatus } from '../shared/host-status.js';
+import type { HostStatus, RoutingModeCapabilities } from '../shared/host-status.js';
 import { createWizardController } from './wizard-controller.js';
 import {
   wizardBackHidden,
@@ -94,6 +94,20 @@ function minimalApplyResult(): import('../shared/host-status.js').ApplySetupResu
   };
 }
 
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: unknown) => void;
+} {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 test('goBack does not leave completed wizard', () => {
   const controller = createWizardController({
     api: {} as never,
@@ -109,6 +123,72 @@ test('goBack does not leave completed wizard', () => {
 
   controller.goBack();
   assert.equal(controller.getState().step, 7);
+});
+
+test('network load fills gateway portal IP from selected LAN IP', async () => {
+  const controller = createWizardController({
+    api: {
+      fetchSetupNetwork: async () => ({
+        lanCandidates: [],
+        interfaces: [],
+        gatewayComposeSupported: true,
+        defaultGatewayBridgeUrl: 'http://172.17.0.1:9100',
+      }),
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalStatus(), 'embedded');
+  controller.patchFields({
+    gatewayEnabled: true,
+    lanAppIp: '192.168.1.10',
+    portalAppIp: '',
+    authBridgeUrl: '',
+  });
+
+  await controller.goNext();
+
+  assert.equal(controller.getState().step, 2);
+  assert.equal(controller.getState().portalAppIp, '192.168.1.10');
+  assert.equal(controller.getState().authBridgeUrl, 'http://172.17.0.1:9100');
+});
+
+test('entering routing step waits for server routing mode', async () => {
+  const routingMode = deferred<RoutingModeCapabilities>();
+  const controller = createWizardController({
+    api: {
+      getRoutingMode: () => routingMode.promise,
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalStatus(), 'embedded');
+  controller.patchFields({ step: 2, lanAppIp: '10.0.0.2' });
+
+  const advance = controller.goNext();
+  await Promise.resolve();
+
+  assert.equal(controller.getState().step, 3);
+  assert.equal(controller.getState().busy, true);
+  assert.equal(controller.getState().routingCapabilitiesStatus, 'loading');
+
+  routingMode.resolve({
+    routingMode: 'complex',
+    features: {
+      complexRouting: true,
+      journeyDesigner: true,
+      routingSimulator: true,
+      complexRoutingLicensed: true,
+    },
+  });
+  await advance;
+
+  assert.equal(controller.getState().step, 3);
+  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().routingCapabilitiesStatus, 'ready');
+  assert.equal(controller.getState().routingMode, 'complex');
 });
 
 test('wizardNextButtonLabel adapts to step', () => {

@@ -4,7 +4,8 @@ import type { HostStatus } from '../shared/host-status.js';
 import {
   buildGatewayPlanInput,
   createInitialWizardFields,
-  gatewayBridgeDefaultsFromNetwork,
+  gatewayDraftDefaults,
+  gatewayEnabledPatch,
   initialLanIpSelection,
   initialPracticeDisplayName,
   validateGatewayAuthBridgeUrl,
@@ -208,7 +209,7 @@ test('validateGatewayAuthBridgeUrl rejects non-http URLs', () => {
   assert.match(validateGatewayAuthBridgeUrl('ftp://10.0.0.2:9100') ?? '', /http/);
 });
 
-test('gatewayBridgeDefaultsFromNetwork fills bridge URL only when gateway is active and empty', () => {
+test('gatewayDraftDefaults fills portal and bridge without overwriting user values', () => {
   const network = {
     interfaces: [],
     lanCandidates: [],
@@ -217,24 +218,58 @@ test('gatewayBridgeDefaultsFromNetwork fills bridge URL only when gateway is act
   };
 
   assert.deepEqual(
-    gatewayBridgeDefaultsFromNetwork(
-      { gatewayEnabled: true, authBridgeUrl: '' },
+    gatewayDraftDefaults(
+      { gatewayEnabled: true, portalAppIp: '', authBridgeUrl: '' },
       network,
+      '192.168.1.10',
     ),
-    { authBridgeUrl: 'http://host.docker.internal:9100' },
+    {
+      portalAppIp: '192.168.1.10',
+      authBridgeUrl: 'http://host.docker.internal:9100',
+    },
   );
   assert.deepEqual(
-    gatewayBridgeDefaultsFromNetwork(
-      { gatewayEnabled: false, authBridgeUrl: '' },
+    gatewayDraftDefaults(
+      {
+        gatewayEnabled: true,
+        portalAppIp: '10.0.0.5',
+        authBridgeUrl: 'http://10.0.0.2:9100',
+      },
       network,
+      '192.168.1.10',
     ),
     {},
   );
+});
+
+test('gatewayEnabledPatch applies defaults only when enabling gateway', () => {
+  const network = {
+    interfaces: [],
+    lanCandidates: [],
+    defaultGatewayBridgeUrl: 'http://host.docker.internal:9100',
+    gatewayComposeSupported: false,
+  };
+
   assert.deepEqual(
-    gatewayBridgeDefaultsFromNetwork(
-      { gatewayEnabled: true, authBridgeUrl: 'http://10.0.0.2:9100' },
+    gatewayEnabledPatch(
+      { gatewayEnabled: false, portalAppIp: '', authBridgeUrl: '' },
+      true,
       network,
+      '192.168.1.10',
     ),
-    {},
+    {
+      gatewayEnabled: true,
+      portalAppIp: '192.168.1.10',
+      authBridgeUrl: 'http://host.docker.internal:9100',
+    },
+  );
+  assert.deepEqual(
+    gatewayEnabledPatch(
+      { gatewayEnabled: true, portalAppIp: '', authBridgeUrl: '' },
+      false,
+      network,
+      '192.168.1.10',
+    ),
+    { gatewayEnabled: false },
   );
 });
