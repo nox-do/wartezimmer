@@ -172,31 +172,6 @@
   cursor: not-allowed;
 }
 
-.terminal-page button.terminal-card--assist-pressed {
-  border-color: color-mix(in srgb, var(--blue-500, #3b82f6) 55%, var(--terminal-ink));
-  background: color-mix(in srgb, var(--blue-500, #3b82f6) 8%, var(--card));
-}
-
-.terminal-page button.terminal-card--assist-pressed .terminal-card__icon {
-  background: color-mix(in srgb, var(--blue-500, #3b82f6) 85%, var(--terminal-ink));
-}
-
-.terminal-page span.terminal-card--disabled {
-  opacity: 0.42;
-  border-color: var(--border);
-  cursor: not-allowed;
-  user-select: none;
-}
-
-.terminal-page span.terminal-card--disabled .terminal-card__icon {
-  background: var(--terminal-border-dim);
-}
-
-.terminal-page span.terminal-card--disabled .terminal-card__text strong,
-.terminal-page span.terminal-card--disabled .terminal-card__text span {
-  color: var(--terminal-muted);
-}
-
 .terminal-page .terminal-card__icon {
   display: flex;
   align-items: center;
@@ -665,17 +640,6 @@
 .terminal-page .pill.pill--ok {
   background: var(--terminal-success-bg);
   color: var(--terminal-success-ink);
-}
-
-.terminal-page .terminal-confirmed-destination {
-  margin: 0 0 12px;
-  color: var(--terminal-emphasis);
-  font-size: var(--text-lg);
-  line-height: 1.4;
-}
-
-.terminal-page .terminal-confirmed-destination strong {
-  font-weight: 700;
 }
 
 .terminal-page .terminal-confirmed-summary {

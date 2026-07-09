@@ -94,6 +94,14 @@ Review-Canvas: `~/.cursor/projects/.../canvases/manager-svelte5-review.canvas.ts
 
 - Betriebsarten-Diagramm unter „Erläuterung zu den Betriebsarten“ (default zu)
 
+## Erledigt: Unused-CSS Lint (2026-07-09)
+
+- Stylelint (`stylelint-config-recommended`) für Manager/UI-CSS
+- `scripts/check-unused-css.mjs` (PurgeCSS) erkennt tote Selektoren in globalen Sheets
+- `npm run lint:css` in Root-`lint` eingehängt
+- UI-Baseline aufgeräumt: 31 tote Selektoren entfernt (app-header/nav, modal-form-journey, MFA/Terminal/Ops/Staff-Reste, Utilities)
+- `scripts/unused-css-allowlist.json` wieder leer
+
 ## Referenzen
 
 - `docs/flow-routing-modes-working-doc.md`

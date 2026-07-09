@@ -41,32 +41,6 @@ textarea {
   flex-direction: column;
 }
 
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-2);
-  padding: var(--spacing-2) var(--spacing-3);
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-}
-
-.app-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.app-nav a {
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.app-nav a[aria-current='page'] {
-  color: var(--foreground);
-  text-decoration: underline;
-}
-
 .app-main {
   flex: 1;
   padding: var(--spacing-3);

@@ -47,22 +47,6 @@
   color: var(--mfa-muted);
 }
 
-.staff-settings__hub-aside {
-  margin: -8px 0 16px;
-  font-size: var(--text-base);
-  line-height: 1.45;
-}
-
-.staff-settings__hub-aside a {
-  color: var(--accent);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.staff-settings__hub-aside a:hover {
-  text-decoration: underline;
-}
-
 .staff-settings .panel .text-desc {
   margin-bottom: 12px;
 }
