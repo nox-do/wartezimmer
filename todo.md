@@ -116,6 +116,19 @@ Review-Canvas: `~/.cursor/projects/.../canvases/manager-svelte5-review.canvas.ts
 - UI-Baseline aufgeräumt: 31 tote Selektoren entfernt (app-header/nav, modal-form-journey, MFA/Terminal/Ops/Staff-Reste, Utilities)
 - `scripts/unused-css-allowlist.json` wieder leer
 
+## Erledigt: Wartung Logs UX (2026-07-09)
+
+- Hinweis „Neueste Einträge unten“, Auto-Scroll nach unten bei Refresh
+- Blinkender Cursor am Log-Ende (ohne bei leerem Platzhalter; reduced-motion: statisch)
+
+## Erledigt: Praxis-Einstellungen Trennung (2026-07-09)
+
+- Routing-Modus als `h2` wie Import/Export; Trennlinie dazwischen
+
+## Erledigt: Wizard Docker-Compose Label (2026-07-09)
+
+- Checkliste: „Docker Compose verfügbar“ (Produktname, nicht CLI-Schreibweise)
+
 ## Referenzen
 
 - `docs/flow-routing-modes-working-doc.md`

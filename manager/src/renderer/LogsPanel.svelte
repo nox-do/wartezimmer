@@ -15,6 +15,19 @@
     onServiceChange: (service: string) => void;
     onRefresh: () => void;
   } = $props();
+
+  let logsEl: HTMLPreElement | undefined = $state();
+  const hasLogs = $derived(Boolean(logsText.trim()));
+
+  $effect(() => {
+    // Scroll to newest lines (bottom) whenever the log payload changes.
+    void logsText;
+    const el = logsEl;
+    if (!el) return;
+    queueMicrotask(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  });
 </script>
 
 <div class="panel-section">
@@ -41,5 +54,9 @@
       onclick={onRefresh}
     />
   </div>
-  <pre class="maintenance-logs">{logsDisplayText(logsText)}</pre>
+  <p class="hint maintenance-logs-order">Neueste Einträge unten</p>
+  <pre bind:this={logsEl} class="maintenance-logs" aria-live="polite"
+    ><span class="maintenance-logs-body">{logsDisplayText(logsText)}</span
+    >{#if hasLogs}<span class="maintenance-logs-cursor" aria-hidden="true"></span>{/if}</pre
+  >
 </div>

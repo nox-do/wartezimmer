@@ -438,8 +438,14 @@ body {
 }
 
 .panel-section h2 {
-  margin: 0;
+  margin: 0 0 0.65rem;
   font-size: 1rem;
+}
+
+.panel-section-divider {
+  margin: 0.25rem 0 1.25rem;
+  border: 0;
+  border-top: 1px solid var(--border);
 }
 
 .panel-section--network h2 {
@@ -1002,15 +1008,6 @@ button:disabled {
   border-top: 1px solid var(--border);
 }
 
-.maintenance-kicker {
-  margin: 0 0 0.65rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
 .routing-mode-card-fieldset {
   border: none;
   padding: 0;
@@ -1375,6 +1372,10 @@ button:disabled {
   pointer-events: auto;
 }
 
+.maintenance-logs-order {
+  margin: 0 0 0.45rem;
+}
+
 .maintenance-logs {
   margin: 0;
   max-height: 14rem;
@@ -1387,6 +1388,38 @@ button:disabled {
   line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.maintenance-logs-body {
+  font: inherit;
+}
+
+.maintenance-logs-cursor {
+  display: inline-block;
+  width: 0.55ch;
+  height: 1.05em;
+  margin-left: 0.1ch;
+  vertical-align: text-bottom;
+  background: #7dffa8;
+  animation: maintenance-logs-cursor-blink 1.1s steps(1, end) infinite;
+}
+
+@keyframes maintenance-logs-cursor-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .maintenance-logs-cursor {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 .maintenance-dialog {

@@ -29,7 +29,7 @@
 </script>
 
 <div class="panel-section">
-  <p class="maintenance-kicker">Routing-Modus</p>
+  <h2>Routing-Modus</h2>
   <div class="routing-mode-intro">
     <p><strong>Wohin soll der Patient nach dem Check-in?</strong></p>
     <p>

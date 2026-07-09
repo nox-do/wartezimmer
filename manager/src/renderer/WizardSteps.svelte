@@ -64,7 +64,7 @@
           </li>
           <li class={snapshot.status.docker.composeAvailable ? 'is-done' : 'is-open'}>
             <span class="checklist-mark">{snapshot.status.docker.composeAvailable ? '✓' : '○'}</span>
-            <span>docker compose verfügbar</span>
+            <span>Docker Compose verfügbar</span>
           </li>
           {#if snapshot.status.deliveryImages.required}
             <li class={deliveryImagesReady(snapshot.status) ? 'is-done' : 'is-open'}>

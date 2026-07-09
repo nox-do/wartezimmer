@@ -210,6 +210,7 @@
             Routing-Modus wird geladen …
           </p>
         {/if}
+        <hr class="panel-section-divider" />
         <StoragePathsPanel
           {hostPlatform}
           status={snapshot.status}
