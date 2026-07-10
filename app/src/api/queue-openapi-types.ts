@@ -23,5 +23,9 @@ export type QueueCallbackPhoneResponse = components['schemas']['QueueCallbackPho
 export type QueueCallbackPhoneClearResponse =
   components['schemas']['QueueCallbackPhoneClearResponse'];
 export type QueueIdentityRefResponse = components['schemas']['QueueIdentityRefResponse'];
+export type QueueSupersedeResponse = components['schemas']['QueueSupersedeResponse'];
+export type QueueSupersedeBody = NonNullable<
+  paths['/api/v1/queue/{visitId}/supersede']['post']['requestBody']
+>['content']['application/json'];
 export type QueueRecallRetryNotifyResponse =
   components['schemas']['QueueRecallRetryNotifyResponse'];

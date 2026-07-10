@@ -26,6 +26,7 @@ export const AUDIT_ONLY_EVENT_TYPES = new Set([
   'EmergencyRaised',
   'EmergencyAcknowledged',
   'PatientSessionClosed',
+  'VisitSuperseded',
 ]);
 
 function readPositiveIntEnv(name: string, fallback: number): number {

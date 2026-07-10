@@ -48,6 +48,7 @@ export const ROUTE_ACCESS_RULES: RouteAccessRule[] = [
   { method: 'PUT', path: '/api/v1/queue/:visitId/callback-phone', roles: ['mfa'] },
   { method: 'DELETE', path: '/api/v1/queue/:visitId/callback-phone', roles: ['mfa'] },
   { method: 'PATCH', path: '/api/v1/queue/:visitId/identity-ref', roles: ['mfa'] },
+  { method: 'POST', path: '/api/v1/queue/:visitId/supersede', roles: ['mfa'] },
   { method: 'POST', path: '/api/v1/queue/mark-absence', roles: ['mfa'] },
   { method: 'GET', path: '/api/v1/practice/profile', public: true },
   { method: 'GET', path: '/api/v1/ops/health', public: true },

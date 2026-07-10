@@ -9,10 +9,12 @@ export {
   cancelMfaMarkAway,
   cancelMfaPhoneCorrection,
   cancelMfaReassign,
+  cancelMfaSupersede,
   handleMfaCheckOut,
   handleMfaFixRecallNotify,
   handleMfaMarkAway,
   handleMfaReassign,
+  handleMfaSupersede,
   mfaQueueActions,
   resetMfaQueueActions,
   type CheckOutTicket,
@@ -20,6 +22,7 @@ export {
   type PhoneCorrectionPurpose,
   type PhoneCorrectionTicket,
   type ReassignTicket,
+  type SupersedeTicket,
 } from '$lib/mfa/mfa-queue-modals.svelte';
 
 export {

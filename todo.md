@@ -42,20 +42,19 @@ Stand: 2026-07-10
 ### Nächster Schritt
 - Produktregeln Topic-Wechsel klären, dann Feature bauen
 
-## Heute: MFA — Topic nachträglich wechseln (Kontext gesammelt)
+## Heute: MFA — Topic-Supersede (umgesetzt)
 
-- **Idee:** Am MFA-Dashboard Topic am Ticket ändern (Klick/Doppelklick auf Topic-Quadrat) → neues Topic wählen → neue Wartenummer + Bondruck; altes Ticket löschen, Daten/Attribute übernehmen; **Original-Wartezeit/`arrivedAt` behalten**
-- **Einschränkung:** nicht alle Topic-Wechsel erlauben (Policy noch offen)
-- **UX-Risiko:** Drag-Zone vs. Klick/Doppelklick auf demselben Element
-- **Ist-Zustand:** `laneCode` / `sequence` / `topicLabel` sind nach Check-in **immutable** (`docs/domain-model.md`); Queue-Transitions kennen nur Raum/Status, kein `change_topic`
-- **Kern-Dateien (Einstieg):**
-  - `packages/flow-core/src/shared/check-in-path.ts` — `MFA_ASSIST_TOPIC_ID = 'mfa'`
-  - `app/src/shared/checkin-topic-settings.ts` — festes Label „Zur MFA“
-  - `ui/src/lib/components/mfa/QueueEntry.svelte` / `WaitBoard.svelte` / DnD (`QueueDropZone`, `resolveQueueDrop`)
-  - `packages/flow-core/src/server/visit-service.ts` + `visit-queue-bridge.ts` — Check-in / Transitions
-  - `ui/src/lib/components/mfa/MfaCheckinModal.svelte` — manuelle MFA-Anmeldung + Bon
-  - Docs: `docs/flows.md`, `docs/domain-model.md`
-- **Nächster Schritt:** Produktregeln (welche Wechsel erlaubt?) + UX (Klick vs. DnD) klären, dann Design
+### Fachlich
+- Generischer Topic-Wechsel per Supersede-Kette; Policy v1 weit (`waiting`|`directed`, Ziel ≠ Quelle, aktiv); `arrivedAt`/`checkedInAt` behalten.
+- UI: Doppelklick Lane-Badge+Nummer → Modal → neue Nummer + Bon. DnD bleibt.
+- Docs umhängen alt→neu nur im Supersede-Paar; MFA-Checkin unverändert.
+
+### Implementiert
+- flow-core: `runtime.supersede()`, Link-Spalten via `ensureVisitSupersedeColumns`, Tests
+- Host: Policy, Bridge, Doc-Rebind, Outbox `VisitSuperseded`, `POST /api/v1/queue/:visitId/supersede`
+- UI: `MfaSupersedeModal`, QueueEntry Doppelklick
+- **Review-Fixes:** Check-in named INSERT (37-Spalten-kompatibel); Policy auf Core-`waiting`|`directed` + Absent-Guard; Doc-Rebind nur bei Successor-Link; Policy/Rebind-Tests
+- **Review-Nachzug:** Host-E2E (State/Docs/Session/Wartezeit-Sort), Route-Smoke supersede, Core-Actor default `system` (Host `mfa`), Link-Spalten in `schema.sql`, Lane-Badge Keyboard Enter/Space
 
 ## Zuvor: Branch `reverse_proxy` — P0 URL-Modell vor Proxy
 

@@ -21,6 +21,7 @@ export type QueueRecallRetryNotifyResponse = QueueSchemas['QueueRecallRetryNotif
 export type QueueCallbackPhoneResponse = QueueSchemas['QueueCallbackPhoneResponse'];
 export type QueueCallbackPhoneClearResponse = QueueSchemas['QueueCallbackPhoneClearResponse'];
 export type QueueIdentityRefResponse = QueueSchemas['QueueIdentityRefResponse'];
+export type QueueSupersedeResponse = QueueSchemas['QueueSupersedeResponse'];
 export type QueueTriageResponse = QueueSchemas['QueueTriageResponse'];
 export type TriageLevel = NonNullable<QueueItem['triageLevel']>;
 export type QueueSummaryResponse = QueueSchemas['QueueSummaryResponse'];

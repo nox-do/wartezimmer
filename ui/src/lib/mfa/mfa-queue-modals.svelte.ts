@@ -23,6 +23,14 @@ export type ReassignTicket = {
   roomId?: string | null;
 };
 
+export type SupersedeTicket = {
+  visitId: string;
+  laneCode: string;
+  number: number;
+  topicId: string;
+  topicLabel: string;
+};
+
 export type CheckOutTicket = {
   visitId: string;
   laneCode: string;
@@ -33,6 +41,7 @@ export const mfaQueueActions = $state({
   busyVisitId: null as string | null,
   phoneCorrectionVisit: null as PhoneCorrectionTicket | null,
   reassignVisit: null as ReassignTicket | null,
+  supersedeVisit: null as SupersedeTicket | null,
   checkOutVisit: null as CheckOutTicket | null,
 });
 
@@ -40,6 +49,7 @@ export function resetMfaQueueActions() {
   mfaQueueActions.busyVisitId = null;
   mfaQueueActions.phoneCorrectionVisit = null;
   mfaQueueActions.reassignVisit = null;
+  mfaQueueActions.supersedeVisit = null;
   mfaQueueActions.checkOutVisit = null;
 }
 
@@ -63,6 +73,27 @@ export function handleMfaReassign(visitId: string) {
 
 export function cancelMfaReassign() {
   mfaQueueActions.reassignVisit = null;
+}
+
+export function handleMfaSupersede(visitId: string) {
+  const item = queueItem(visitId);
+  if (!item) {
+    return;
+  }
+  if (item.status !== 'waiting') {
+    return;
+  }
+  mfaQueueActions.supersedeVisit = {
+    visitId: item.visitId,
+    laneCode: item.laneCode,
+    number: item.number,
+    topicId: item.topicId ?? '',
+    topicLabel: item.topicLabel ?? '',
+  };
+}
+
+export function cancelMfaSupersede() {
+  mfaQueueActions.supersedeVisit = null;
 }
 
 export function handleMfaMarkAway(visitId: string) {

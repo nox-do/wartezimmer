@@ -6,6 +6,7 @@ import type {
   MarkAbsenceLookupBody,
   SetCallbackPhoneBody,
   SetIdentityRefBody,
+  QueueSupersedeBody,
   VisitParams,
   QueueVisitTransitionBody,
   QueueVisitTransitionResponse,
@@ -59,6 +60,14 @@ const queueCallbackPhoneClearResponses = {
 const queueIdentityRefResponses = {
   200: queueSchemas.PATCH_api_v1_queue_visitId_identity_refResponse200,
   400: queueErrorResponse,
+  404: queueErrorResponse,
+  409: queueErrorResponse,
+} as const;
+
+const queueSupersedeResponses = {
+  200: queueSchemas.POST_api_v1_queue_visitId_supersedeResponse200,
+  400: queueErrorResponse,
+  403: queueErrorResponse,
   404: queueErrorResponse,
   409: queueErrorResponse,
 } as const;
@@ -651,6 +660,44 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
       } catch (error) {
         const handled = handleQueueRouteError(reply, visitId, error, {
           invalidTransitionMessage: `Fuer Ticket ${visitId} kann kein Anzeigename gesetzt werden.`,
+        });
+        if (handled) {
+          return;
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.post<{ Params: VisitParams; Body: QueueSupersedeBody }>(
+    '/api/v1/queue/:visitId/supersede',
+    {
+      schema: {
+        params: queueSchemas.POST_api_v1_queue_visitId_supersedeParams,
+        body: queueSchemas.POST_api_v1_queue_visitId_supersedeRequestBody,
+        response: queueSupersedeResponses,
+      },
+    },
+    async (request, reply) => {
+      const visitId = request.params.visitId.trim();
+      try {
+        const result = db.supersedeVisit(visitId, request.body.topicId);
+        notifyTvQueueChanged(db);
+        return {
+          resultType: 'supersede' as const,
+          supersededVisitId: result.supersededVisitId,
+          visitId: result.visitId,
+          laneCode: result.laneCode,
+          number: result.number,
+          topicId: result.topicId,
+          topicLabel: result.topicLabel,
+          destinationRoomLabel: result.destinationRoomLabel,
+          checkedInAt: result.checkedInAt,
+          documentsRebound: result.documentsRebound,
+        };
+      } catch (error) {
+        const handled = handleQueueRouteError(reply, visitId, error, {
+          invalidTransitionMessage: `Ticket ${visitId} kann nicht auf ein anderes Thema umgebucht werden.`,
         });
         if (handled) {
           return;

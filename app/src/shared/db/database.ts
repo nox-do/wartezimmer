@@ -51,6 +51,7 @@ import {
   visitExistsInDb,
   requireVisitExistsInDb,
 } from '../flow-core/visit-queue-bridge.js';
+import { supersedeVisitTopic } from '../flow-core/visit-supersede-bridge.js';
 import {
   clearAbsentMode,
   countVisitQueueSummary,
@@ -985,6 +986,52 @@ export class CoreDatabase {
         identityRef,
         this.commonHelperDeps().nowIso(),
       );
+    });
+  }
+
+  supersedeVisit(
+    visitId: string,
+    topicId: string,
+  ): {
+    supersededVisitId: string;
+    visitId: string;
+    laneCode: string;
+    number: number;
+    topicId: string;
+    topicLabel: string;
+    destinationRoomLabel: string | null;
+    checkedInAt: string;
+    documentsRebound: number;
+  } {
+    return this.withTransaction('supersedeVisit', () => {
+      requireVisitExistsInDb(this.db, visitId);
+      const result = supersedeVisitTopic({
+        db: this.db,
+        runtime: getFlowCoreRuntime(this.db),
+        settings: this.getOpsSettings(),
+        visitId,
+        topicId,
+      });
+      this.emitOutboxEvent('VisitSuperseded', result.visitId, {
+        supersededVisitId: result.supersededVisitId,
+        visitId: result.visitId,
+        topicId: result.topicId,
+        laneCode: result.laneCode,
+        number: result.number,
+        correlationId: result.correlationId,
+        documentsRebound: result.documentsRebound,
+      });
+      return {
+        supersededVisitId: result.supersededVisitId,
+        visitId: result.visitId,
+        laneCode: result.laneCode,
+        number: result.number,
+        topicId: result.topicId,
+        topicLabel: result.topicLabel,
+        destinationRoomLabel: result.destinationRoomLabel,
+        checkedInAt: result.checkedInAt,
+        documentsRebound: result.documentsRebound,
+      };
     });
   }
 

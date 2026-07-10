@@ -38,6 +38,8 @@
     handleMfaQueueDrop,
     handleMfaRecall,
     handleMfaReassign,
+    handleMfaSupersede,
+    cancelMfaSupersede,
     mfaQueueActions,
     returnMfaTicketToWaiting,
   } from '$lib/mfa/mfa-queue-actions.svelte';
@@ -48,6 +50,8 @@
   } from '$lib/mfa/mfa-queue-display.svelte';
   import { isQueueCallAnnouncementReachable } from '$lib/queue/call-announcement';
   import { t } from '$lib/i18n/i18nStore.svelte';
+  import MfaSupersedeModal from '$lib/components/mfa/MfaSupersedeModal.svelte';
+  import type { QueueItem } from '$lib/queue/types';
 
   onMount(mountMfaDashboard);
 
@@ -103,6 +107,7 @@
       onMarkAway={handleMfaMarkAway}
       onOpenDocuments={openMfaDocumentPreview}
       onCycleTriage={cycleMfaTriage}
+      onSupersedeTopic={handleMfaSupersede}
       onQueueDrop={handleMfaQueueDrop}
     />
 
@@ -117,6 +122,17 @@
   </div>
 
   <MfaCheckinModal open={mfaCheckinModalOpen} onClose={() => (mfaCheckinModalOpen = false)} />
+
+  {@const supersedeItem = mfaQueueActions.supersedeVisit
+    ? ({
+        visitId: mfaQueueActions.supersedeVisit.visitId,
+        laneCode: mfaQueueActions.supersedeVisit.laneCode,
+        number: mfaQueueActions.supersedeVisit.number,
+        topicId: mfaQueueActions.supersedeVisit.topicId,
+        topicLabel: mfaQueueActions.supersedeVisit.topicLabel,
+      } as QueueItem)
+    : null}
+  <MfaSupersedeModal item={supersedeItem} onClose={cancelMfaSupersede} />
 
   <DayStartConfirmModal
     open={mfaDayOps.dayStartConfirmOpen}

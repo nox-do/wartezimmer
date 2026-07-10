@@ -105,4 +105,8 @@ export const errorLabels: Record<string, string> = {
   INVALID_LANE_CODE: 'Ungültiger Nummernkreis (laneCode).',
   RESERVED_LANE_CODE: 'Nummernkreis M ist in PoC-Seed fuer Hilfe-Check-in reserviert — kein konfigurierbares Thema.',
   UNKNOWN_ACTION: 'Unbekannte Aktion.',
+  SUPERSEDE_SOURCE_TERMINAL: 'Abgeschlossene Tickets können nicht umgebucht werden.',
+  SUPERSEDE_ALREADY_SUPERSEDED: 'Dieses Ticket wurde bereits umgebucht.',
+  SUPERSEDE_SAME_TOPIC: 'Ziel-Thema ist identisch mit dem aktuellen Thema.',
+  SUPERSEDE_TOPIC_REQUIRED: 'Ziel-Thema fehlt.',
 };

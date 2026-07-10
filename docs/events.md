@@ -32,6 +32,7 @@ Alle unten stehenden Typen sind **audit-only** (Worker setzt `published_at`, kei
 | Event                      | Emitter (Auszug)                                            | Zweck                                                                                                       |
 | -------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `CheckinCreated`           | `flow-core-checkin.ts` (via `database.ts` / `runtime.checkIn()`) | Audit Check-in                                                                                         |
+| `VisitSuperseded`          | `database.ts` (`supersedeVisit`)                                | Audit Topic-Supersede (alte/neue visitId, topicId, lane)                                              |
 | `QueueStatusChanged`       | `database.ts` (Visit-Transitions)                           | Audit Queue-Transition                                                                                      |
 | `EmergencyRaised`          | `database-emergency.ts`                                     | Audit Terminal-Notfall                                                                                      |
 | `EmergencyAcknowledged`    | `database-emergency.ts`                                     | Audit MFA-Quittierung                                                                                       |

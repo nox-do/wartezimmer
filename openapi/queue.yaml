@@ -235,6 +235,45 @@ components:
         updatedAt:
           type: string
           format: date-time
+    QueueSupersedeResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - resultType
+        - supersededVisitId
+        - visitId
+        - laneCode
+        - number
+        - topicId
+        - topicLabel
+        - checkedInAt
+        - documentsRebound
+      properties:
+        resultType:
+          type: string
+          const: supersede
+        supersededVisitId:
+          type: string
+        visitId:
+          type: string
+        laneCode:
+          type: string
+        number:
+          type: integer
+          minimum: 1
+        topicId:
+          type: string
+        topicLabel:
+          type: string
+        destinationRoomLabel:
+          type: string
+          nullable: true
+        checkedInAt:
+          type: string
+          format: date-time
+        documentsRebound:
+          type: integer
+          minimum: 0
     QueueListMfaResponse:
       type: object
       additionalProperties: false
@@ -837,6 +876,61 @@ paths:
                 $ref: './common.yaml#/components/schemas/Error'
         '409':
           description: Ticket not in waiting list or already has a display name
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/queue/{visitId}/supersede:
+    post:
+      summary: Supersede a waiting/directed visit with a new topic (new ticket number, chain link, preserve wait clock)
+      parameters:
+        - in: path
+          name: visitId
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - topicId
+              properties:
+                topicId:
+                  type: string
+                  minLength: 1
+                  maxLength: 64
+      responses:
+        '200':
+          description: Visit superseded; new ticket created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueSupersedeResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '403':
+          description: Document rebind rejected (successor link mismatch)
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '404':
+          description: Visit not found
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Supersede not allowed for this visit/topic
           content:
             application/json:
               schema:

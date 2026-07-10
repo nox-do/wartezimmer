@@ -361,6 +361,13 @@ export const dict = {
     checkinCreateError: 'Anmeldung konnte nicht angelegt werden.',
     checkinCreated: 'Wartenummer {ticket} wurde angelegt.',
     checkinCreatedWithReceipt: 'Wartenummer {ticket} wurde angelegt. Bon wird gedruckt.',
+    supersedeTitle: 'Thema ändern',
+    supersedeHint:
+      '{ticket} ({topic}) erhält eine neue Wartenummer. Die bisherige Wartezeit bleibt erhalten. Bon wird gedruckt.',
+    supersedeTopicLabel: 'Neues Thema',
+    supersedeConfirm: 'Umbuchen und Bon drucken',
+    supersedeCreatedWithReceipt: 'Neue Wartenummer {ticket}. Bon wird gedruckt.',
+    supersedeTicketAria: 'Thema ändern (Doppelklick)',
     returnUntilTitle: 'Rückkehr bis {time}',
     markAwayModalTitle: 'Außer Haus setzen',
     markAwayModalDesc:

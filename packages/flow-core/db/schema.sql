@@ -154,6 +154,8 @@ CREATE TABLE IF NOT EXISTS visits (
   journey_template_id TEXT,
   journey_step_index INTEGER,
   journey_state TEXT,
+  supersedes_visit_id TEXT,
+  superseded_by_visit_id TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   FOREIGN KEY(patient_id) REFERENCES patients(id),

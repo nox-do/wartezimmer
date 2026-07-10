@@ -134,6 +134,16 @@
   flex-shrink: 0;
 }
 
+.queue-ticket--supersede {
+  cursor: pointer;
+  border-radius: var(--radius-xs);
+}
+
+.queue-ticket--supersede:hover {
+  outline: 1px dashed color-mix(in srgb, currentColor 35%, transparent);
+  outline-offset: 2px;
+}
+
 .queue-num {
   font-size: var(--text-md);
   font-weight: 800;

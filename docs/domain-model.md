@@ -49,6 +49,7 @@ Vor der Einführung konfigurierbarer **Themen** (`topics[]`) und **Räume** (`ro
 4. **Aufrufziel-Snapshot** am Queue-Eintrag: primär bei **Aufruf** (`called`); optional bei **Check-in im Raum** (`type: check_in_room`), wenn noch kein Ziel gesetzt — kein Raum am Ticket bei Terminal-Check-in.
 5. Reserviert: Anmeldgrund `mfa` / Nummernkreis `M` für MFA-Hilfe — nicht im Themen-Editor; konfigurierbare Themen dürfen `M` nicht als `laneCode` wählen.
 6. **Immutabilität am Ticket:** `laneCode`, `sequence`, `topicLabel` werden beim Check-in gesetzt und ändern sich nicht, wenn der Katalog später geändert wird.
+7. **Topic-Supersede (MFA):** Falsches/zu klärendes Thema → neues Ticket mit neuer Nummer, altes soft `cancelled`, 1:1-Verkettung (`supersedes`/`superseded_by`). Erlaubt bei Core-`waiting`|`directed` (Wartelogik vor Ankunft). Wartezeit-Anker (`checkedInAt`) bleibt. Kein In-Place-Update von Lane/Seq.
 
 ---
 

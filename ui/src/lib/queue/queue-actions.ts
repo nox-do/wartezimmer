@@ -4,6 +4,7 @@ import type {
   QueueCallbackPhoneResponse,
   QueueCallbackPhoneClearResponse,
   QueueIdentityRefResponse,
+  QueueSupersedeResponse,
   QueueRecallResponse,
   QueueRecallRetryNotifyResponse,
   QueueVisitTransitionBody,
@@ -93,6 +94,13 @@ export async function setIdentityRefVisit(visitId: string, identityRef: string) 
   return cookieAuthFetch<QueueIdentityRefResponse>(visitPath(visitId, 'identity-ref'), {
     method: 'PATCH',
     body: JSON.stringify({ identityRef: identityRef.trim() }),
+  });
+}
+
+export async function supersedeVisitTopic(visitId: string, topicId: string) {
+  return cookieAuthFetch<QueueSupersedeResponse>(visitPath(visitId, 'supersede'), {
+    method: 'POST',
+    body: JSON.stringify({ topicId }),
   });
 }
 

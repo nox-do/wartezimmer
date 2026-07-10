@@ -28,6 +28,24 @@ import { allocateQueueSequence } from './queue-counter.js';
 import type { CatalogRepository } from './catalog-repository.js';
 import type { VisitRepository } from './visit-repository.js';
 import { runInTransaction } from './unit-of-work.js';
+import { supersedeVisit, type SupersedeRequest, type SupersedeResult } from './visit-supersede.js';
+import { ensureVisitSupersedeColumns } from './visit-supersede-schema.js';
+
+export type { SupersedeRequest, SupersedeResult } from './visit-supersede.js';
+
+/** Check-in ohne Supersede-Spalten — funktioniert vor und nach ensureVisitSupersedeColumns. */
+const CHECKIN_VISIT_INSERT_SQL = `INSERT INTO visits (
+  id, patient_id, status, primary_topic_id, applied_routing_rule_id,
+  last_known_location_id, target_location_id, queue_id, last_surface_id,
+  movement_mode, location_confidence, public_display_mode,
+  queue_number, queue_number_date, queue_number_scope, queue_lane_code, queue_sequence,
+  needs_assistance, check_in_path, auth_path,
+  configured_escort_policy, effective_escort_policy, allow_redirect,
+  terminal_instruction, staff_note,
+  checked_in_at, called_at, arrived_at, started_at, finished_at,
+  journey_template_id, journey_step_index, journey_state,
+  created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 type CheckInBody = {
   topicId?: string;
@@ -211,9 +229,7 @@ export function createVisitService(params: {
       maybeFail('checkIn:patient');
       db.prepare('INSERT INTO patients VALUES (?, ?, ?, ?)').run(patientId, body.displayName || null, body.displayName ? 0 : 1, now);
       maybeFail('checkIn:visit');
-      db.prepare(
-        'INSERT INTO visits VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      ).run(
+      db.prepare(CHECKIN_VISIT_INSERT_SQL).run(
         visitId,
         patientId,
         visitStatus,
@@ -258,6 +274,19 @@ export function createVisitService(params: {
       addEvent(visitId, 'routed', null, visitStatus, null, visitTarget, null, visitQueue, 'system', routeNote);
       return visitById(visitId);
     });
+
+  const supersede = (id: string, body: SupersedeRequest): SupersedeResult => {
+    ensureVisitSupersedeColumns(db);
+    return supersedeVisit({
+      db,
+      catalogRepository,
+      visitRepository,
+      maybeFail,
+      resolveBusinessDay,
+      visitId: id,
+      body,
+    });
+  };
 
   const transition = (visitId: string, action: TransitionAction, context: TransitionContext = {}): VisitView | undefined =>
     runInTransaction(db, () => {
@@ -441,7 +470,7 @@ export function createVisitService(params: {
       return visitById(visitId);
     });
 
-  return { checkIn, transition, redirect };
+  return { checkIn, supersede, transition, redirect };
 }
 
 export type VisitService = ReturnType<typeof createVisitService>;

@@ -21,6 +21,7 @@ import {
   markDeviceStreamConnected,
   resetDevicePresenceForTests,
 } from '../shared/ops/device-presence-registry.js';
+import { DomainError } from '../shared/errors/domain-error.js';
 
 type QueueRouteDbOverrides = Partial<Record<keyof CoreDatabase, unknown>>;
 
@@ -304,6 +305,78 @@ test('POST /api/v1/queue/:visitId/transition dispatches triage marker updates', 
     triageLevel: 'green',
     updatedAt: '2026-06-18T08:00:00.000Z',
   });
+
+  await app.close();
+});
+
+test('POST /api/v1/queue/:visitId/supersede returns new ticket payload', async () => {
+  const calls: Array<{ visitId: string; topicId: string }> = [];
+  const app = Fastify({ logger: false });
+  registerQueueRoutes(
+    app,
+    buildQueueRouteDb({
+      supersedeVisit: (visitId: string, topicId: string) => {
+        calls.push({ visitId, topicId });
+        return {
+          supersededVisitId: visitId,
+          visitId: 'L-002',
+          laneCode: 'L',
+          number: 2,
+          topicId,
+          topicLabel: 'Blutabnahme',
+          destinationRoomLabel: 'Empfang',
+          checkedInAt: '2026-06-18T08:00:00.000Z',
+          documentsRebound: 1,
+        };
+      },
+    }),
+  );
+  await app.ready();
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/queue/M-001/supersede',
+    payload: { topicId: 'blut' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json(), {
+    resultType: 'supersede',
+    supersededVisitId: 'M-001',
+    visitId: 'L-002',
+    laneCode: 'L',
+    number: 2,
+    topicId: 'blut',
+    topicLabel: 'Blutabnahme',
+    destinationRoomLabel: 'Empfang',
+    checkedInAt: '2026-06-18T08:00:00.000Z',
+    documentsRebound: 1,
+  });
+  assert.deepEqual(calls, [{ visitId: 'M-001', topicId: 'blut' }]);
+
+  await app.close();
+});
+
+test('POST /api/v1/queue/:visitId/supersede maps INVALID_TRANSITION to 409', async () => {
+  const app = Fastify({ logger: false });
+  registerQueueRoutes(
+    app,
+    buildQueueRouteDb({
+      supersedeVisit: () => {
+        throw new DomainError('INVALID_TRANSITION');
+      },
+    }),
+  );
+  await app.ready();
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/queue/M-001/supersede',
+    payload: { topicId: 'blut' },
+  });
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.json().code, 'INVALID_TRANSITION');
 
   await app.close();
 });

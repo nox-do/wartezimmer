@@ -49,6 +49,8 @@ function visit(row: SqlRow): Visit {
     journeyTemplateId: opt(row.journey_template_id as string | null),
     journeyStepIndex: row.journey_step_index != null ? Number(row.journey_step_index) : undefined,
     journeyState: opt(row.journey_state as Visit['journeyState'] | null),
+    supersedesVisitId: opt(row.supersedes_visit_id as string | null),
+    supersededByVisitId: opt(row.superseded_by_visit_id as string | null),
     createdAt: str(row.created_at),
     updatedAt: str(row.updated_at),
   };
@@ -78,14 +80,25 @@ function patchField<K extends keyof Visit>(patch: Partial<Visit>, current: Visit
 }
 
 export function updateVisit(db: DatabaseSync, current: Visit, patch: Partial<Visit>): void {
-  db.prepare(
-    `UPDATE visits SET status = ?, last_known_location_id = ?, target_location_id = ?, queue_id = ?,
-      movement_mode = ?, location_confidence = ?, public_display_mode = ?, staff_note = ?,
-      terminal_instruction = ?,
-      called_at = ?, arrived_at = ?, started_at = ?, finished_at = ?,
-      journey_template_id = ?, journey_step_index = ?, journey_state = ?, updated_at = ?
-     WHERE id = ?`,
-  ).run(
+  const sets = [
+    'status = ?',
+    'last_known_location_id = ?',
+    'target_location_id = ?',
+    'queue_id = ?',
+    'movement_mode = ?',
+    'location_confidence = ?',
+    'public_display_mode = ?',
+    'staff_note = ?',
+    'terminal_instruction = ?',
+    'called_at = ?',
+    'arrived_at = ?',
+    'started_at = ?',
+    'finished_at = ?',
+    'journey_template_id = ?',
+    'journey_step_index = ?',
+    'journey_state = ?',
+  ];
+  const values: Array<string | number | null> = [
     patch.status ?? current.status,
     patchField(patch, current, 'lastKnownLocationId') ?? null,
     patchField(patch, current, 'targetLocationId') ?? null,
@@ -102,9 +115,18 @@ export function updateVisit(db: DatabaseSync, current: Visit, patch: Partial<Vis
     patch.journeyTemplateId ?? current.journeyTemplateId ?? null,
     patchField(patch, current, 'journeyStepIndex') ?? null,
     patchField(patch, current, 'journeyState') ?? null,
-    new Date().toISOString(),
-    current.id,
-  );
+  ];
+
+  if ('supersededByVisitId' in patch) {
+    sets.push('superseded_by_visit_id = ?');
+    values.push(patch.supersededByVisitId ?? null);
+  }
+
+  sets.push('updated_at = ?');
+  values.push(new Date().toISOString());
+  values.push(current.id);
+
+  db.prepare(`UPDATE visits SET ${sets.join(', ')} WHERE id = ?`).run(...values);
 }
 
 export function addEvent(

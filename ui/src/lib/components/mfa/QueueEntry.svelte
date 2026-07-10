@@ -40,6 +40,7 @@
     onFixRecallNotify?: () => void;
     onOpenDocuments?: (item: QueueItem) => void;
     onCycleTriage?: () => void;
+    onSupersedeTopic?: () => void;
   }
 
   let {
@@ -61,6 +62,7 @@
     onFixRecallNotify,
     onOpenDocuments,
     onCycleTriage,
+    onSupersedeTopic,
   }: Props = $props();
 
   let nameEditing = $state(false);
@@ -96,6 +98,38 @@
   const showNeedsAssistance = $derived(Boolean(item.needsAssistance));
 
   const canDrag = $derived(dragEnabled && dragZone != null && !busy && !nameEditing);
+  const canSupersedeTopic = $derived(
+    zone === 'waiting' && Boolean(onSupersedeTopic) && !busy && !nameEditing,
+  );
+
+  function handleSupersedeDoubleClick(event: MouseEvent) {
+    if (!canSupersedeTopic) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    onSupersedeTopic?.();
+  }
+
+  function handleSupersedePointerDown(event: PointerEvent) {
+    if (!canSupersedeTopic || event.detail < 2) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function handleSupersedeKeydown(event: KeyboardEvent) {
+    if (!canSupersedeTopic) {
+      return;
+    }
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    onSupersedeTopic?.();
+  }
 
   const { attach, attachHandle, isDragging } = createDraggable({
     get id() {
@@ -195,7 +229,17 @@
 </script>
 
 {#snippet queueTicket()}
-  <div class="queue-ticket">
+  <div
+    class="queue-ticket"
+    class:queue-ticket--supersede={canSupersedeTopic}
+    role={canSupersedeTopic ? 'button' : undefined}
+    tabindex={canSupersedeTopic ? 0 : undefined}
+    title={canSupersedeTopic ? t('mfa.supersedeTicketAria') : undefined}
+    aria-label={canSupersedeTopic ? t('mfa.supersedeTicketAria') : undefined}
+    ondblclick={canSupersedeTopic ? handleSupersedeDoubleClick : undefined}
+    onpointerdown={canSupersedeTopic ? handleSupersedePointerDown : undefined}
+    onkeydown={canSupersedeTopic ? handleSupersedeKeydown : undefined}
+  >
     <TopicLaneBadge laneCode={item.laneCode} accentColor={laneAccentColor} title={item.laneCode} />
     <span class="queue-num">{String(item.number).padStart(3, '0')}</span>
     {#if showNeedsAssistance}

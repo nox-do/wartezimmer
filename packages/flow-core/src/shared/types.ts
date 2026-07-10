@@ -201,6 +201,10 @@ export interface Visit {
   journeyStepIndex?: number;
   /** active | completed | abandoned; fehlt wenn keine Journey. */
   journeyState?: JourneyState;
+  /** Vorgänger-Visit bei Topic-Supersede (1:1-Kette). */
+  supersedesVisitId?: string;
+  /** Nachfolger-Visit wenn dieses Visit supersedet wurde. */
+  supersededByVisitId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -208,7 +212,7 @@ export interface Visit {
 export interface VisitEvent {
   id: string;
   visitId: string;
-  type: 'checked_in' | 'routed' | 'called' | 'arrived' | 'started' | 'returned_to_waiting' | 'redirected' | 'journey_completed' | 'journey_abandoned' | 'blocked' | 'done' | 'cancelled' | 'no_show';
+  type: 'checked_in' | 'routed' | 'called' | 'arrived' | 'started' | 'returned_to_waiting' | 'redirected' | 'journey_completed' | 'journey_abandoned' | 'blocked' | 'done' | 'cancelled' | 'no_show' | 'superseded';
   fromStatus?: string;
   toStatus?: string;
   fromLocationId?: string;

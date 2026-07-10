@@ -34,6 +34,7 @@ export function createRuntime(
     visits: visitRepository.visits,
     events: visitRepository.events,
     checkIn: visitService.checkIn,
+    supersede: visitService.supersede,
     transition: visitService.transition,
     redirect: visitService.redirect,
     saveRule: adminService.saveRule,

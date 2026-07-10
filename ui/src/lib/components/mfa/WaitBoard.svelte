@@ -28,6 +28,7 @@
     onMarkAway: (visitId: string) => void;
     onOpenDocuments: (item: QueueItem) => void;
     onCycleTriage: (visitId: string) => void;
+    onSupersedeTopic: (visitId: string) => void;
     onQueueDrop: (visitId: string, target: QueueDropTarget) => void;
   }
 
@@ -49,6 +50,7 @@
     onMarkAway,
     onOpenDocuments,
     onCycleTriage,
+    onSupersedeTopic,
     onQueueDrop,
   }: Props = $props();
 
@@ -225,6 +227,7 @@
                     onMarkAway={() => onMarkAway(row.item.visitId)}
                     onOpenDocuments={onOpenDocuments}
                     onCycleTriage={() => onCycleTriage(row.item.visitId)}
+                    onSupersedeTopic={() => onSupersedeTopic(row.item.visitId)}
                   />
                 {/if}
               {/each}
@@ -263,6 +266,7 @@
                     onMarkAway={() => onMarkAway(row.item.visitId)}
                     onOpenDocuments={onOpenDocuments}
                     onCycleTriage={() => onCycleTriage(row.item.visitId)}
+                    onSupersedeTopic={() => onSupersedeTopic(row.item.visitId)}
                   />
                 {/if}
               {/each}
