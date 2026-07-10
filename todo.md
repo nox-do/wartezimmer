@@ -6,7 +6,8 @@ Stand: 2026-07-10
 
 1. **Call-Announcement** — ✅ SSE nur noch UX-Hinweis (Button enabled + title/aria); Commands blocken nicht mehr; Server Presence bleibt autoritativ (`CALL_ANNOUNCEMENT_OFFLINE` Toast via API)
 2. **Terminal-Validation** — ✅ Phone/DOB/LastName-Regeln in `@praxis-flow/domain` (`terminal-phone`, `birth-date`, `terminal-last-name`); App-Asserts thin; UI nur Format/i18n-Mapping + Locale-Keyboard
-3. Später: Room-Guards optimistic, Icon-Allowlist/Settings-Normalize teilen
+3. **Room-Guards** — ✅ RoomsEditor speichert optimistic (keine Queue-Prechecks); Server autoritativ; `roomGuardErrorMessage` inkl. disable-Context; **kein Topic-Auto-Remap** — Remove/Rename mit Topic-Bezug → Toast `roomRemoveBlockedTopics` + Abort
+4. Später: Icon-Allowlist/Settings-Normalize teilen
 
 ## Heute: MFA Dashboard P0-Refactor (erledigt)
 

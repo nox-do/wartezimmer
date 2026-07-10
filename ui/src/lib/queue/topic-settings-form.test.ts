@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_TOPIC_ACCENT } from '$lib/topics/topic-accent';
-import { syncTopicDefaultRooms } from './topic-settings-form';
+import { formatTopicLabels, topicsReferencingMissingRooms } from './topic-settings-form';
 
-describe('syncTopicDefaultRooms', () => {
-  it('falls back to defaultCallTarget room when topic default is unavailable', () => {
+describe('topicsReferencingMissingRooms', () => {
+  it('returns topics whose defaultRoomId was removed or renamed away', () => {
     const rooms = [
-      { roomId: 'empfang', roomLabel: 'Empfang', enabled: false, defaultCallTarget: false },
       { roomId: 'labor', roomLabel: 'Labor', enabled: true, defaultCallTarget: true },
     ];
     const topics = [
@@ -21,13 +20,26 @@ describe('syncTopicDefaultRooms', () => {
         availableTo: null,
         sortOrder: 1,
       },
+      {
+        topicId: 'blut',
+        label: 'Blutabnahme',
+        laneCode: 'L',
+        defaultRoomId: 'labor',
+        iconId: null,
+        accentColor: DEFAULT_TOPIC_ACCENT,
+        enabled: true,
+        availableFrom: null,
+        availableTo: null,
+        sortOrder: 2,
+      },
     ];
 
-    const next = syncTopicDefaultRooms(topics, rooms);
-    expect(next[0]?.defaultRoomId).toBe('labor');
+    const blocked = topicsReferencingMissingRooms(topics, rooms);
+    expect(blocked.map((topic) => topic.topicId)).toEqual(['offen']);
+    expect(formatTopicLabels(blocked)).toBe('Offen');
   });
 
-  it('reconciles stale defaultRoomId for journey topics when room is disabled', () => {
+  it('does not treat a disabled-but-present room as missing', () => {
     const rooms = [
       { roomId: 'labor', roomLabel: 'Labor', enabled: false, defaultCallTarget: false },
       { roomId: 'empfang', roomLabel: 'Empfang', enabled: true, defaultCallTarget: true },
@@ -48,8 +60,6 @@ describe('syncTopicDefaultRooms', () => {
       },
     ];
 
-    const next = syncTopicDefaultRooms(topics, rooms);
-    expect(next[0]?.defaultRoomId).toBe('empfang');
-    expect(next[0]?.journeyTemplateId).toBe('journey_blut');
+    expect(topicsReferencingMissingRooms(topics, rooms)).toEqual([]);
   });
 });

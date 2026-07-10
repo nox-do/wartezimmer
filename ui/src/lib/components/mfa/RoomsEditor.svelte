@@ -1,34 +1,25 @@
 <script lang="ts">
   import Button from '$lib/components/forms/Button.svelte';
   import RoomEditorModal from '$lib/components/mfa/RoomEditorModal.svelte';
-  import { fetchMfaQueue } from '$lib/mfa/queue-stream';
-  import type { PracticeRoomWithPanel, PracticeTopicSetting, RoomPanelMode } from '$lib/queue/ops-settings-api';
+  import type { PracticeRoomWithPanel, RoomPanelMode } from '$lib/queue/ops-settings-api';
   import { ensureSingleDefaultCallTarget, generateRoomId, roomPanelSettingsOrDefault } from '$lib/queue/ops-settings-api';
-  import {
-    formatQueueTicketLabels,
-    formatTopicLabels,
-    queueTicketsOccupyingRoom,
-    queueTicketsUsingRoom,
-    topicsUsingRoom,
-  } from '$lib/queue/room-removal-guard';
   import { getDevicePresenceStatus } from '$lib/mfa/ops-stream-store.svelte';
   import { deviceStatusLabel } from '$lib/ops/device-presence-labels';
   import { roomPanelDeviceId } from '$lib/ops/device-presence-api';
   import { resolveRoomMaxOccupancy } from '$lib/queue/room-capacity';
+  import type { RoomQueueGuardContext } from '$lib/queue/room-removal-guard';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
-  import { toastStore } from '$lib/stores/toastStore';
 
   interface Props {
     rooms: PracticeRoomWithPanel[];
-    topics?: PracticeTopicSetting[];
     busy?: boolean;
     onChange?: (rooms: PracticeRoomWithPanel[]) => void;
-    onPersist?: () => void | Promise<boolean>;
+    /** Persist is authoritative for room remove/disable/capacity guards (server). */
+    onPersist?: (options?: { roomQueueGuardContext?: RoomQueueGuardContext }) => void | Promise<boolean>;
   }
 
   let {
     rooms,
-    topics = [],
     busy = false,
     onChange,
     onPersist,
@@ -78,89 +69,31 @@
     editorOpen = true;
   }
 
-  async function guardRoomRelease(
-    roomId: string,
-    options: { checkTopics: boolean; queueContext: 'remove' | 'disable' },
-  ): Promise<boolean> {
-    if (options.checkTopics) {
-      const linkedTopics = topicsUsingRoom(topics, roomId);
-      if (linkedTopics.length > 0) {
-        toastStore.error(
-          tf('mfa.settings.roomRemoveBlockedTopics', { topics: formatTopicLabels(linkedTopics) }),
-        );
-        return false;
-      }
+  function roomQueueGuardContextForEdit(
+    previous: PracticeRoomWithPanel,
+    next: PracticeRoomWithPanel,
+  ): RoomQueueGuardContext | undefined {
+    if (next.roomId !== previous.roomId) {
+      return 'remove';
     }
-
-    const queueResult = await fetchMfaQueue();
-    if (!queueResult.ok) {
-      toastStore.error(queueResult.error.message || t('mfa.settings.roomRemoveQueueCheckError'));
-      return false;
+    if (!next.enabled && previous.enabled) {
+      return 'disable';
     }
-
-    const linkedTickets = queueTicketsUsingRoom(queueResult.data.items, roomId);
-    if (linkedTickets.length > 0) {
-      const messageKey =
-        options.queueContext === 'disable'
-          ? 'mfa.settings.roomDisableBlockedQueue'
-          : 'mfa.settings.roomRemoveBlockedQueue';
-      toastStore.error(tf(messageKey, { tickets: formatQueueTicketLabels(linkedTickets) }));
-      return false;
-    }
-
-    return true;
-  }
-
-  async function guardRoomCapacity(roomId: string, maxOccupancy: number | null | undefined): Promise<boolean> {
-    if (maxOccupancy == null) {
-      return true;
-    }
-
-    const queueResult = await fetchMfaQueue();
-    if (!queueResult.ok) {
-      toastStore.error(queueResult.error.message || t('mfa.settings.roomRemoveQueueCheckError'));
-      return false;
-    }
-
-    const linkedTickets = queueTicketsOccupyingRoom(queueResult.data.items, roomId);
-    if (linkedTickets.length > maxOccupancy) {
-      toastStore.error(
-        tf('mfa.settings.roomCapacityBlockedQueue', {
-          tickets: formatQueueTicketLabels(linkedTickets),
-        }),
-      );
-      return false;
-    }
-
-    return true;
+    return undefined;
   }
 
   async function applyDraft(next: PracticeRoomWithPanel) {
-    if (editorMode === 'edit' && editorIndex != null) {
-      const previous = rooms[editorIndex];
-      if (previous) {
-        if (!next.enabled && previous.enabled) {
-          if (!(await guardRoomRelease(previous.roomId, { checkTopics: false, queueContext: 'disable' }))) {
-            return;
-          }
-        }
-        if (next.roomId !== previous.roomId) {
-          if (!(await guardRoomRelease(previous.roomId, { checkTopics: true, queueContext: 'remove' }))) {
-            return;
-          }
-        }
-      }
-    }
-
-    if (!(await guardRoomCapacity(next.roomId, next.maxOccupancy))) {
-      return;
-    }
-
     const preferredDefaultId = next.defaultCallTarget ? next.roomId : null;
     let updated: PracticeRoomWithPanel[];
+    let roomQueueGuardContext: RoomQueueGuardContext | undefined;
+
     if (editorMode === 'add') {
       updated = ensureSingleDefaultCallTarget([...rooms, next], preferredDefaultId);
     } else if (editorIndex != null) {
+      const previous = rooms[editorIndex];
+      if (previous) {
+        roomQueueGuardContext = roomQueueGuardContextForEdit(previous, next);
+      }
       updated = ensureSingleDefaultCallTarget(
         rooms.map((room, i) => (i === editorIndex ? next : room)),
         preferredDefaultId,
@@ -168,8 +101,9 @@
     } else {
       return;
     }
+
     onChange?.(updated);
-    await onPersist?.();
+    await onPersist?.(roomQueueGuardContext ? { roomQueueGuardContext } : undefined);
   }
 
   async function deleteFromModal() {
@@ -181,14 +115,10 @@
       return;
     }
 
-    if (!(await guardRoomRelease(room.roomId, { checkTopics: true, queueContext: 'remove' }))) {
-      return;
-    }
-
     onChange?.(ensureSingleDefaultCallTarget(rooms.filter((_, i) => i !== editorIndex)));
     editorOpen = false;
     editorIndex = null;
-    await onPersist?.();
+    await onPersist?.({ roomQueueGuardContext: 'remove' });
   }
 
   function roomPanelModeLabel(panelMode: RoomPanelMode): string {

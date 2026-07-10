@@ -1,35 +1,11 @@
-import { formatTicketCode } from '@praxis-flow/domain';
 import { tf } from '$lib/i18n/i18nStore.svelte';
-import type { PracticeTopicSetting } from '$lib/queue/ops-settings-api';
-import { isRoomOccupyingStatus, ROOM_BLOCKED_CAPACITY } from '$lib/queue/room-capacity';
-import type { QueueItem } from '$lib/queue/types';
+import { ROOM_BLOCKED_CAPACITY } from '$lib/queue/room-capacity';
 
 export const ROOM_BLOCKED_TOPICS = 'ROOM_BLOCKED_TOPICS';
 export const ROOM_BLOCKED_QUEUE = 'ROOM_BLOCKED_QUEUE';
 export { ROOM_BLOCKED_CAPACITY } from '$lib/queue/room-capacity';
 
-export function topicsUsingRoom(
-  topics: PracticeTopicSetting[],
-  roomId: string,
-): PracticeTopicSetting[] {
-  return topics.filter((topic) => topic.defaultRoomId === roomId);
-}
-
-export function queueTicketsOccupyingRoom(items: QueueItem[], roomId: string): QueueItem[] {
-  return items.filter((item) => item.roomId === roomId && isRoomOccupyingStatus(item.status));
-}
-
-export function queueTicketsUsingRoom(items: QueueItem[], roomId: string): QueueItem[] {
-  return items.filter((item) => item.roomId === roomId);
-}
-
-export function formatTopicLabels(topics: PracticeTopicSetting[]): string {
-  return topics.map((topic) => topic.label).join(', ');
-}
-
-export function formatQueueTicketLabels(items: QueueItem[]): string {
-  return items.map((item) => formatTicketCode(item.laneCode, item.number)).join(', ');
-}
+export type RoomQueueGuardContext = 'remove' | 'disable';
 
 type RoomGuardError = {
   code?: string;
@@ -49,9 +25,10 @@ function guardDetails(error: RoomGuardError): { topics?: string; tickets?: strin
   };
 }
 
+/** Map server room-guard API errors to staff-facing German copy. */
 export function roomGuardErrorMessage(
   error: RoomGuardError,
-  context: 'remove' | 'disable' = 'remove',
+  context: RoomQueueGuardContext = 'remove',
 ): string {
   const { topics, tickets } = guardDetails(error);
   if (error.code === ROOM_BLOCKED_TOPICS && topics) {

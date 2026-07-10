@@ -13,11 +13,11 @@ import {
   type PracticeRoomWithPanel,
   type PracticeTopicSetting,
 } from '$lib/queue/ops-settings-api';
-import { roomGuardErrorMessage } from '$lib/queue/room-removal-guard';
+import { roomGuardErrorMessage, type RoomQueueGuardContext } from '$lib/queue/room-removal-guard';
 import {
+  formatTopicLabels,
   isReservedLaneCode,
-  reconcileTopicsWithRooms,
-  syncTopicDefaultRooms,
+  topicsReferencingMissingRooms,
 } from '$lib/queue/topic-settings-form';
 import { isValidLaneCode } from '@praxis-flow/domain';
 import { validateTopicTimeWindow } from '$lib/queue/time-of-day';
@@ -36,6 +36,18 @@ export type TopicsRoomsSettings = {
   savedTopicsSnapshot: string;
 };
 
+export type PersistTopicsRoomsOptions = {
+  silent?: boolean;
+  routingCapabilities?: RoutingCapabilities | null;
+  roomQueueGuardContext?: RoomQueueGuardContext;
+};
+
+function sortedTopics(topics: PracticeTopicSetting[]): PracticeTopicSetting[] {
+  return [...topics].sort(
+    (a, b) => a.sortOrder - b.sortOrder || a.topicId.localeCompare(b.topicId),
+  );
+}
+
 export async function loadTopicsRoomsSettings(): Promise<TopicsRoomsSettings | null> {
   const [result, capabilitiesResult] = await Promise.all([
     fetchOpsSettings(),
@@ -50,10 +62,7 @@ export async function loadTopicsRoomsSettings(): Promise<TopicsRoomsSettings | n
     return null;
   }
 
-  const topics = reconcileTopicsWithRooms(
-    [...result.data.topics].sort((a, b) => a.sortOrder - b.sortOrder || a.topicId.localeCompare(b.topicId)),
-    result.data.rooms,
-  );
+  const topics = sortedTopics(result.data.topics);
   applyMfaPracticeRooms(result.data.rooms);
   applyMfaPracticeTopics(topics);
 
@@ -69,10 +78,10 @@ export async function loadTopicsRoomsSettings(): Promise<TopicsRoomsSettings | n
 export async function persistTopicsRoomsSettings(
   rooms: PracticeRoomWithPanel[],
   topics: PracticeTopicSetting[],
-  options?: { silent?: boolean; routingCapabilities?: RoutingCapabilities | null },
+  options?: PersistTopicsRoomsOptions,
 ): Promise<TopicsRoomsSettings | null> {
   const normalizedRooms = normalizeRoomsForSave(rooms);
-  const normalizedTopics = syncTopicDefaultRooms(normalizeTopicsForSave(topics), normalizedRooms);
+  const normalizedTopics = normalizeTopicsForSave(topics);
 
   if (normalizedRooms.length === 0) {
     toastStore.error(t('mfa.settings.roomsSaveNeedOne'));
@@ -94,6 +103,17 @@ export async function persistTopicsRoomsSettings(
 
   if (normalizedTopics.length === 0) {
     toastStore.error(t('mfa.settings.topicsNeedOne'));
+    return null;
+  }
+
+  // Do not auto-reassign topic default rooms — block remove/rename while topics still point here.
+  const topicsOnMissingRooms = topicsReferencingMissingRooms(normalizedTopics, normalizedRooms);
+  if (topicsOnMissingRooms.length > 0) {
+    toastStore.error(
+      tf('mfa.settings.roomRemoveBlockedTopics', {
+        topics: formatTopicLabels(topicsOnMissingRooms),
+      }),
+    );
     return null;
   }
 
@@ -130,14 +150,11 @@ export async function persistTopicsRoomsSettings(
 
   const result = await patchOpsSettings({ rooms: normalizedRooms, topics: normalizedTopics });
   if (!result.ok) {
-    toastStore.error(roomGuardErrorMessage(result.error));
+    toastStore.error(roomGuardErrorMessage(result.error, options?.roomQueueGuardContext ?? 'remove'));
     return loadTopicsRoomsSettings();
   }
 
-  const nextTopics = reconcileTopicsWithRooms(
-    [...result.data.topics].sort((a, b) => a.sortOrder - b.sortOrder || a.topicId.localeCompare(b.topicId)),
-    result.data.rooms,
-  );
+  const nextTopics = sortedTopics(result.data.topics);
   applyMfaPracticeRooms(result.data.rooms);
   applyMfaPracticeTopics(nextTopics);
 
