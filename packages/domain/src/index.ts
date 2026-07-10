@@ -80,3 +80,23 @@ export {
   TERMINAL_LAST_NAME_MAX_LENGTH,
   type TerminalLastNameIssue,
 } from './terminal-last-name.js';
+export {
+  isValidTopicIconId,
+  normalizeTopicIconId,
+  TOPIC_ICON_IDS,
+  type TopicIconId,
+} from './topic-icon-ids.js';
+export {
+  applyRoomPanelPlacement,
+  DEFAULT_ROOM_PANEL_SETTINGS,
+  normalizeRoomPanelCustomText,
+  normalizeRoomPanelSettings,
+  ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
+  ROOM_PANEL_MODES,
+  ROOM_PANEL_PLACEMENTS,
+  ROOM_PANEL_TEXT_PRESETS,
+  type RoomPanelMode,
+  type RoomPanelPlacement,
+  type RoomPanelSettings,
+  type RoomPanelTextPreset,
+} from './room-panel-settings.js';

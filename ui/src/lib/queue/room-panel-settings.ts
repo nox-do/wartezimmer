@@ -1,13 +1,12 @@
-import type { RoomPanelPlacement, RoomPanelSettings } from './ops-settings-api';
+import {
+  applyRoomPanelPlacement as applyRoomPanelPlacementDomain,
+  type RoomPanelPlacement,
+  type RoomPanelSettings,
+} from '@praxis-flow/domain';
 
 export function applyRoomPanelPlacement(
   settings: RoomPanelSettings,
   placement: RoomPanelPlacement,
 ): RoomPanelSettings {
-  return {
-    ...settings,
-    placement,
-    mode: placement === 'outside' && settings.mode === 'staff_full' ? 'arrival' : settings.mode,
-    showPatientNames: placement === 'inside' ? settings.showPatientNames : false,
-  };
+  return applyRoomPanelPlacementDomain(settings, placement);
 }

@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-function readIdsFromAppAllowlist(filePath) {
+function readIdsFromDomainAllowlist(filePath) {
   const source = fs.readFileSync(filePath, 'utf8');
   const match = source.match(/export const TOPIC_ICON_IDS = \[([\s\S]*?)\] as const;/);
   if (!match) {
@@ -18,21 +18,23 @@ function readIdsFromUiCatalog(filePath) {
 }
 
 const root = process.cwd();
-const appIds = readIdsFromAppAllowlist(path.join(root, 'app/src/shared/topic-icon-ids.ts'));
+const domainIds = readIdsFromDomainAllowlist(
+  path.join(root, 'packages/domain/src/topic-icon-ids.ts'),
+);
 const uiIds = readIdsFromUiCatalog(path.join(root, 'ui/src/lib/topics/topic-icon-catalog.ts'));
 
-const onlyInApp = appIds.filter((id) => !uiIds.includes(id));
-const onlyInUi = uiIds.filter((id) => !appIds.includes(id));
+const onlyInDomain = domainIds.filter((id) => !uiIds.includes(id));
+const onlyInUi = uiIds.filter((id) => !domainIds.includes(id));
 
-if (onlyInApp.length > 0 || onlyInUi.length > 0) {
+if (onlyInDomain.length > 0 || onlyInUi.length > 0) {
   console.error('Topic icon allowlist drift detected.');
-  if (onlyInApp.length > 0) {
-    console.error('Only in app:', onlyInApp.join(', '));
+  if (onlyInDomain.length > 0) {
+    console.error('Only in domain:', onlyInDomain.join(', '));
   }
   if (onlyInUi.length > 0) {
-    console.error('Only in ui:', onlyInUi.join(', '));
+    console.error('Only in ui catalog:', onlyInUi.join(', '));
   }
   process.exit(1);
 }
 
-console.log(`Topic icon allowlists in sync (${appIds.length} ids).`);
+console.log(`Topic icon allowlists in sync (${domainIds.length} ids).`);

@@ -1,5 +1,16 @@
 import type { StatementSync } from 'node:sqlite';
-import { normalizeTerminalPatientLocales } from '@praxis-flow/domain';
+import {
+  DEFAULT_ROOM_PANEL_SETTINGS,
+  ensureSingleDefaultCallTarget,
+  normalizeRoomPanelSettings,
+  normalizeTerminalPatientLocales,
+  ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
+  ROOM_PANEL_MODES,
+  ROOM_PANEL_PLACEMENTS,
+  ROOM_PANEL_TEXT_PRESETS,
+  type RoomPanelPlacement,
+  type RoomPanelTextPreset,
+} from '@praxis-flow/domain';
 import { isValidConfigurableTopicId } from '../checkin-topics.js';
 import {
   normalizeTopicSettingsList,
@@ -8,15 +19,8 @@ import {
 } from '../checkin-topic-settings.js';
 import { isRecord } from '../type-guards.js';
 import { OpsSettingsValidationError } from './ops-settings-errors.js';
-import type {
-  OpsSettings,
-  RoutingMode,
-  RoomPanelMode,
-  RoomPanelPlacement,
-  RoomPanelTextPreset,
-} from './db-types.js';
+import type { OpsSettings, RoutingMode } from './db-types.js';
 import { domainError } from '../errors/domain-error.js';
-import { ensureSingleDefaultCallTarget } from '@praxis-flow/domain';
 import { parseMaxOccupancy } from '../ops/room-capacity.js';
 import {
   parseJourneySettingsJson,
@@ -26,7 +30,7 @@ import {
 export { ensureSingleDefaultCallTarget };
 
 function isStringSetMember<T extends string>(values: ReadonlySet<T>, value: unknown): value is T {
-  return typeof value === 'string' && [...values].some((candidate) => candidate === value);
+  return typeof value === 'string' && values.has(value as T);
 }
 
 type OpsSettingsRow = {
@@ -188,18 +192,7 @@ export function resolveDefaultCallRoom(
   return enabled.find((room) => room.defaultCallTarget) ?? enabled[0];
 }
 
-const ROOM_PANEL_PLACEMENTS = new Set<RoomPanelPlacement>(['outside', 'inside']);
-const ROOM_PANEL_MODES = new Set<RoomPanelMode>(['display_only', 'arrival', 'staff_full']);
-const ROOM_PANEL_TEXT_PRESETS = new Set<RoomPanelTextPreset>([
-  'you_are_right',
-  'please_wait_here',
-  'please_enter',
-  'go_to_reception',
-  'custom',
-]);
-const ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH = 80;
-
-function normalizeRoomPanelCustomText(
+function normalizeRoomPanelCustomTextStrict(
   value: unknown,
   fieldName: string,
   index: number,
@@ -221,63 +214,57 @@ function normalizeRoomPanelCustomText(
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function normalizeRoomPanelSettings(
+const ROOM_PANEL_PLACEMENT_SET = new Set<RoomPanelPlacement>(ROOM_PANEL_PLACEMENTS);
+const ROOM_PANEL_MODE_SET = new Set(ROOM_PANEL_MODES);
+const ROOM_PANEL_TEXT_PRESET_SET = new Set<RoomPanelTextPreset>(ROOM_PANEL_TEXT_PRESETS);
+
+function normalizeRoomPanelSettingsFromDb(
   raw: unknown,
   index: number,
 ): OpsSettings['rooms'][number]['panel'] {
   if (raw == null) {
-    return {
-      enabled: false,
-      placement: 'outside',
-      mode: 'display_only',
-      showPatientNames: false,
-      calledTextPreset: 'please_enter',
-      calledTextCustom: null,
-      arrivedTextPreset: 'please_wait_here',
-      arrivedTextCustom: null,
-    };
+    return { ...DEFAULT_ROOM_PANEL_SETTINGS };
   }
 
   if (!isRecord(raw)) {
     throw new OpsSettingsValidationError(`rooms_json entry at index ${index} has invalid panel.`);
   }
 
+  // Legacy DB shapes only — then canonical domain normalize.
   const legacyMode = raw.mode === 'patient_arrival' ? 'arrival' : raw.mode;
-  const mode = isStringSetMember(ROOM_PANEL_MODES, legacyMode) ? legacyMode : 'display_only';
+  const mode = isStringSetMember(ROOM_PANEL_MODE_SET, legacyMode) ? legacyMode : 'display_only';
   const inferredPlacement: RoomPanelPlacement =
     mode !== 'display_only' || raw.showPatientNames === true ? 'inside' : 'outside';
-  const placement = isStringSetMember(ROOM_PANEL_PLACEMENTS, raw.placement)
+  const placement = isStringSetMember(ROOM_PANEL_PLACEMENT_SET, raw.placement)
     ? raw.placement
     : inferredPlacement;
-  const normalizedMode: RoomPanelMode =
-    placement === 'outside' && mode === 'staff_full' ? 'arrival' : mode;
   const calledTextPresetRaw = raw.calledTextPreset ?? raw.arrivalTextPreset;
-  const calledTextPreset = isStringSetMember(ROOM_PANEL_TEXT_PRESETS, calledTextPresetRaw)
+  const calledTextPreset = isStringSetMember(ROOM_PANEL_TEXT_PRESET_SET, calledTextPresetRaw)
     ? calledTextPresetRaw
     : 'please_enter';
   const arrivedTextPresetRaw = raw.arrivedTextPreset ?? raw.waitingTextPreset;
-  const arrivedTextPreset = isStringSetMember(ROOM_PANEL_TEXT_PRESETS, arrivedTextPresetRaw)
+  const arrivedTextPreset = isStringSetMember(ROOM_PANEL_TEXT_PRESET_SET, arrivedTextPresetRaw)
     ? arrivedTextPresetRaw
     : 'please_wait_here';
 
-  return {
+  return normalizeRoomPanelSettings({
     enabled: raw.enabled === true,
     placement,
-    mode: normalizedMode,
-    showPatientNames: placement === 'inside' && raw.showPatientNames === true,
+    mode,
+    showPatientNames: raw.showPatientNames === true,
     calledTextPreset,
-    calledTextCustom: normalizeRoomPanelCustomText(
+    calledTextCustom: normalizeRoomPanelCustomTextStrict(
       raw.calledTextCustom ?? raw.arrivalTextCustom,
       'panel.calledTextCustom',
       index,
     ),
     arrivedTextPreset,
-    arrivedTextCustom: normalizeRoomPanelCustomText(
+    arrivedTextCustom: normalizeRoomPanelCustomTextStrict(
       raw.arrivedTextCustom ?? raw.waitingTextCustom,
       'panel.arrivedTextCustom',
       index,
     ),
-  };
+  });
 }
 
 function parseRoomSettings(raw: string | undefined): OpsSettings['rooms'] {
@@ -332,7 +319,7 @@ function parseRoomSettings(raw: string | undefined): OpsSettings['rooms'] {
       enabled: typeof entry.enabled === 'boolean' ? entry.enabled : true,
       defaultCallTarget: entry.defaultCallTarget === true,
       maxOccupancy: parseMaxOccupancy(maxOccupancyRaw),
-      panel: normalizeRoomPanelSettings(entry.panel, index),
+      panel: normalizeRoomPanelSettingsFromDb(entry.panel, index),
     });
   }
 

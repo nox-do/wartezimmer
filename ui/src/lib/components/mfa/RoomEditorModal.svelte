@@ -8,6 +8,7 @@
     RoomPanelTextPreset,
   } from '$lib/queue/ops-settings-api';
   import {
+    ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
     ROOM_PANEL_MODES,
     ROOM_PANEL_PLACEMENTS,
     ROOM_PANEL_TEXT_PRESETS,
@@ -16,6 +17,7 @@
   } from '$lib/queue/ops-settings-api';
   import { normalizeMaxOccupancy } from '$lib/queue/room-capacity';
   import { applyRoomPanelPlacement } from '$lib/queue/room-panel-settings';
+  import { normalizeRoomPanelCustomText } from '@praxis-flow/domain';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { toastStore } from '$lib/stores/toastStore';
 
@@ -179,8 +181,8 @@
       maxOccupancy,
       panel: {
         ...panelDraft,
-        calledTextCustom: panelDraft.calledTextCustom?.trim().slice(0, 80) || null,
-        arrivedTextCustom: panelDraft.arrivedTextCustom?.trim().slice(0, 80) || null,
+        calledTextCustom: normalizeRoomPanelCustomText(panelDraft.calledTextCustom),
+        arrivedTextCustom: normalizeRoomPanelCustomText(panelDraft.arrivedTextCustom),
       },
     });
     open = false;
@@ -367,7 +369,7 @@
               type="text"
               value={panelDraft.calledTextCustom ?? ''}
               disabled={busy || !panelDraft.enabled}
-              maxlength="80"
+              maxlength={ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH}
               placeholder={t('mfa.settings.roomPanelCustomTextPlaceholder')}
               oninput={(event) => updatePanel({ calledTextCustom: (event.currentTarget as HTMLInputElement).value })}
             />
@@ -392,7 +394,7 @@
               type="text"
               value={panelDraft.arrivedTextCustom ?? ''}
               disabled={busy || !panelDraft.enabled}
-              maxlength="80"
+              maxlength={ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH}
               placeholder={t('mfa.settings.roomPanelCustomTextPlaceholder')}
               oninput={(event) => updatePanel({ arrivedTextCustom: (event.currentTarget as HTMLInputElement).value })}
             />

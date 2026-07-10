@@ -10,14 +10,20 @@ import { validateCsvContactLookupSettings } from '../../shared/contacts/contact-
 import { validateTopicSettings, type TopicSetting } from '../../shared/checkin-topic-settings.js';
 import { ensureSingleDefaultCallTarget } from '../../shared/db/database-ops-settings.js';
 import { normalizeMaxOccupancy } from '../../shared/ops/room-capacity.js';
-import { defaultAccentForLane, normalizeTopicAccentColor } from '@praxis-flow/domain';
+import {
+  defaultAccentForLane,
+  DEFAULT_ROOM_PANEL_SETTINGS,
+  normalizeRoomPanelCustomText,
+  normalizeRoomPanelSettings,
+  normalizeTopicAccentColor,
+  type RoomPanelSettings,
+} from '@praxis-flow/domain';
 import {
   mergePracticeProfile,
   parsePracticeProfileJson,
   resolvePracticeProfile,
   serializePracticeProfile,
 } from '../../shared/practice/practice-profile.js';
-import type { RoomPanelSettings } from '../../shared/db/db-types.js';
 import {
   normalizeJourneySettings,
   type JourneySettings,
@@ -60,22 +66,6 @@ type SettingsPatchError = {
 
 type RoomPatch = NonNullable<PatchOpsSettingsBody['rooms']>[number];
 
-const DEFAULT_ROOM_PANEL_SETTINGS: RoomPanelSettings = {
-  enabled: false,
-  placement: 'outside',
-  mode: 'display_only',
-  showPatientNames: false,
-  calledTextPreset: 'please_enter',
-  calledTextCustom: null,
-  arrivedTextPreset: 'please_wait_here',
-  arrivedTextCustom: null,
-};
-
-function normalizeRoomPanelText(value: string | null | undefined): string | null {
-  const trimmed = value?.trim() ?? '';
-  return trimmed.length > 0 ? trimmed.slice(0, 80) : null;
-}
-
 function mergeRoomPanelPatch(
   current: RoomPanelSettings | undefined,
   patch: RoomPatch['panel'],
@@ -85,7 +75,7 @@ function mergeRoomPanelPatch(
     return base;
   }
 
-  const next: RoomPanelSettings = {
+  return normalizeRoomPanelSettings({
     enabled: patch.enabled ?? base.enabled,
     placement: patch.placement ?? base.placement,
     mode: patch.mode ?? base.mode,
@@ -93,24 +83,14 @@ function mergeRoomPanelPatch(
     calledTextPreset: patch.calledTextPreset ?? base.calledTextPreset,
     calledTextCustom:
       patch.calledTextCustom !== undefined
-        ? normalizeRoomPanelText(patch.calledTextCustom)
+        ? normalizeRoomPanelCustomText(patch.calledTextCustom)
         : base.calledTextCustom,
     arrivedTextPreset: patch.arrivedTextPreset ?? base.arrivedTextPreset,
     arrivedTextCustom:
       patch.arrivedTextCustom !== undefined
-        ? normalizeRoomPanelText(patch.arrivedTextCustom)
+        ? normalizeRoomPanelCustomText(patch.arrivedTextCustom)
         : base.arrivedTextCustom,
-  };
-
-  if (next.placement === 'outside') {
-    return {
-      ...next,
-      mode: next.mode === 'staff_full' ? 'arrival' : next.mode,
-      showPatientNames: false,
-    };
-  }
-
-  return next;
+  });
 }
 
 function mergeTopicPatch(

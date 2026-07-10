@@ -8,7 +8,20 @@ import type {
 } from '$lib/ops/openapi-types';
 import { ensureSingleDefaultCallTarget } from './room-default-call-target';
 import { normalizeMaxOccupancy } from './room-capacity';
-import { isValidConfigurableTopicId as isValidTopicId, slugifyTopicId } from '@praxis-flow/domain';
+import {
+  DEFAULT_ROOM_PANEL_SETTINGS,
+  isValidConfigurableTopicId as isValidTopicId,
+  normalizeRoomPanelSettings,
+  ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
+  ROOM_PANEL_MODES,
+  ROOM_PANEL_PLACEMENTS,
+  ROOM_PANEL_TEXT_PRESETS,
+  slugifyTopicId,
+  type RoomPanelMode,
+  type RoomPanelPlacement,
+  type RoomPanelSettings,
+  type RoomPanelTextPreset,
+} from '@praxis-flow/domain';
 
 export type {
   MfaPatchOpsSettingsBody as PatchOpsSettingsBody,
@@ -18,20 +31,18 @@ export type {
 } from '$lib/ops/openapi-types';
 export { isValidTopicId, slugifyTopicId };
 
-export const ROOM_PANEL_PLACEMENTS = ['outside', 'inside'] as const;
-export const ROOM_PANEL_MODES = ['display_only', 'arrival', 'staff_full'] as const;
-export const ROOM_PANEL_TEXT_PRESETS = [
-  'you_are_right',
-  'please_wait_here',
-  'please_enter',
-  'go_to_reception',
-  'custom',
-] as const;
+export {
+  DEFAULT_ROOM_PANEL_SETTINGS,
+  ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
+  ROOM_PANEL_MODES,
+  ROOM_PANEL_PLACEMENTS,
+  ROOM_PANEL_TEXT_PRESETS,
+  type RoomPanelMode,
+  type RoomPanelPlacement,
+  type RoomPanelSettings,
+  type RoomPanelTextPreset,
+};
 
-export type RoomPanelSettings = NonNullable<PracticeRoom['panel']>;
-export type RoomPanelMode = RoomPanelSettings['mode'];
-export type RoomPanelPlacement = RoomPanelSettings['placement'];
-export type RoomPanelTextPreset = RoomPanelSettings['calledTextPreset'];
 export type PracticeRoomWithPanel = PracticeRoom;
 
 export async function fetchOpsSettings() {
@@ -66,17 +77,6 @@ const ROOM_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ROOM_ID_PREFIX = 'r';
 const ROOM_ID_RANDOM_LENGTH = 6;
 const ROOM_ID_RANDOM_ATTEMPTS = 32;
-
-export const DEFAULT_ROOM_PANEL_SETTINGS: RoomPanelSettings = {
-  enabled: false,
-  placement: 'outside',
-  mode: 'display_only',
-  showPatientNames: false,
-  calledTextPreset: 'please_enter',
-  calledTextCustom: null,
-  arrivedTextPreset: 'please_wait_here',
-  arrivedTextCustom: null,
-};
 
 export function isValidRoomId(value: string): boolean {
   const trimmed = value.trim();
@@ -122,34 +122,6 @@ export function generateRoomId(roomIdsTaken: ReadonlySet<string>): string {
 
 export function normalizeRoomIdInput(value: string): string {
   return value.trim().toLowerCase();
-}
-
-function normalizeRoomPanelSettings(
-  panel: RoomPanelSettings | null | undefined,
-): RoomPanelSettings {
-  const source = panel ?? DEFAULT_ROOM_PANEL_SETTINGS;
-  const normalized: RoomPanelSettings = {
-    enabled: source.enabled === true,
-    placement: ROOM_PANEL_PLACEMENTS.includes(source.placement)
-      ? source.placement
-      : DEFAULT_ROOM_PANEL_SETTINGS.placement,
-    mode: ROOM_PANEL_MODES.includes(source.mode) ? source.mode : DEFAULT_ROOM_PANEL_SETTINGS.mode,
-    showPatientNames: source.placement === 'inside' && source.showPatientNames === true,
-    calledTextPreset: ROOM_PANEL_TEXT_PRESETS.includes(source.calledTextPreset)
-      ? source.calledTextPreset
-      : DEFAULT_ROOM_PANEL_SETTINGS.calledTextPreset,
-    calledTextCustom: source.calledTextCustom?.trim().slice(0, 80) || null,
-    arrivedTextPreset: ROOM_PANEL_TEXT_PRESETS.includes(source.arrivedTextPreset)
-      ? source.arrivedTextPreset
-      : DEFAULT_ROOM_PANEL_SETTINGS.arrivedTextPreset,
-    arrivedTextCustom: source.arrivedTextCustom?.trim().slice(0, 80) || null,
-  };
-
-  if (normalized.placement === 'outside' && normalized.mode === 'staff_full') {
-    normalized.mode = 'arrival';
-  }
-
-  return normalized;
 }
 
 export function roomPanelSettingsOrDefault(room: PracticeRoomWithPanel): RoomPanelSettings {

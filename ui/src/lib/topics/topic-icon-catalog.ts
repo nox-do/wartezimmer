@@ -1,5 +1,9 @@
 import type { Component } from 'svelte';
 import {
+  isValidTopicIconId,
+  type TopicIconId,
+} from '@praxis-flow/domain';
+import {
   Activity,
   Ambulance,
   Baby,
@@ -48,53 +52,7 @@ import {
   Accessibility,
 } from '@lucide/svelte';
 
-export type TopicIconId =
-  | 'activity'
-  | 'ambulance'
-  | 'baby'
-  | 'bandage'
-  | 'bone'
-  | 'brain'
-  | 'briefcase-medical'
-  | 'calendar-check'
-  | 'calendar-heart'
-  | 'calendar-plus'
-  | 'clipboard-list'
-  | 'clipboard-plus'
-  | 'clock'
-  | 'cross'
-  | 'dna'
-  | 'droplet'
-  | 'ear'
-  | 'eye'
-  | 'file-heart'
-  | 'file-text'
-  | 'flask-conical'
-  | 'hand-heart'
-  | 'hand-helping'
-  | 'heart-handshake'
-  | 'heart-pulse'
-  | 'hospital'
-  | 'message-circle'
-  | 'microscope'
-  | 'phone'
-  | 'pill'
-  | 'pill-bottle'
-  | 'radiation'
-  | 'scan'
-  | 'scan-heart'
-  | 'scissors'
-  | 'shield-plus'
-  | 'smile'
-  | 'speech'
-  | 'stethoscope'
-  | 'syringe'
-  | 'tablets'
-  | 'test-tubes'
-  | 'thermometer'
-  | 'user-round'
-  | 'users'
-  | 'accessibility';
+export type { TopicIconId };
 
 type TopicIconEntry = {
   id: TopicIconId;
@@ -153,8 +111,9 @@ export const TOPIC_ICON_CATALOG: TopicIconEntry[] = [
 
 const ICON_BY_ID = new Map(TOPIC_ICON_CATALOG.map((entry) => [entry.id, entry.component]));
 
+/** True when the id is allowlisted and has a Lucide component in the UI catalog. */
 export function isKnownTopicIconId(value: string | null | undefined): value is TopicIconId {
-  return typeof value === 'string' && ICON_BY_ID.has(value as TopicIconId);
+  return typeof value === 'string' && isValidTopicIconId(value) && ICON_BY_ID.has(value);
 }
 
 export function resolveTopicIconComponent(iconId: string | null | undefined) {

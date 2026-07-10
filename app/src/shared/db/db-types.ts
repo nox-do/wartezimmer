@@ -189,27 +189,13 @@ export type OpsSettings = {
   updatedAt: string;
 };
 
-export type RoomPanelPlacement = 'outside' | 'inside';
+export type RoomPanelPlacement = import('@praxis-flow/domain').RoomPanelPlacement;
 
-export type RoomPanelMode = 'display_only' | 'arrival' | 'staff_full';
+export type RoomPanelMode = import('@praxis-flow/domain').RoomPanelMode;
 
-export type RoomPanelTextPreset =
-  | 'you_are_right'
-  | 'please_wait_here'
-  | 'please_enter'
-  | 'go_to_reception'
-  | 'custom';
+export type RoomPanelTextPreset = import('@praxis-flow/domain').RoomPanelTextPreset;
 
-export type RoomPanelSettings = {
-  enabled: boolean;
-  placement: RoomPanelPlacement;
-  mode: RoomPanelMode;
-  showPatientNames: boolean;
-  calledTextPreset: RoomPanelTextPreset;
-  calledTextCustom: string | null;
-  arrivedTextPreset: RoomPanelTextPreset;
-  arrivedTextCustom: string | null;
-};
+export type RoomPanelSettings = import('@praxis-flow/domain').RoomPanelSettings;
 
 export type OutboxEventRow = {
   id: string;
