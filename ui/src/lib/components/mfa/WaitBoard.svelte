@@ -5,9 +5,10 @@
   import QueueDropZone from './QueueDropZone.svelte';
   import QueueEntry from './QueueEntry.svelte';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
-  import { computeWaitMs, isLongWait, LONG_WAIT_THRESHOLD_MINUTES } from '$lib/queue/format-wait-duration';
+  import { LONG_WAIT_THRESHOLD_MINUTES } from '$lib/queue/format-wait-duration';
   import { listEnabledRooms, type PracticeRoom } from '$lib/queue/ops-settings-api';
   import { readQueueDropTarget, type QueueDropTarget } from '$lib/queue/queue-drop-resolver';
+  import { buildWaitingRows } from '$lib/queue/waiting-list-filter';
   import type { QueueItem } from '$lib/queue/types';
 
   interface Props {
@@ -18,6 +19,8 @@
     busyVisitId?: string | null;
     nowMs?: number;
     callAnnouncementReachable?: boolean;
+    /** True when sidebar search/lane filter is active (empty copy). */
+    queueFilterActive?: boolean;
     onCall: (visitId: string) => void;
     onCheckIn: (visitId: string) => void;
     onReassign: (visitId: string) => void;
@@ -40,6 +43,7 @@
     busyVisitId = null,
     nowMs = Date.now(),
     callAnnouncementReachable = true,
+    queueFilterActive = false,
     onCall,
     onCheckIn,
     onReassign,
@@ -57,36 +61,17 @@
   const enabledRooms = $derived(listEnabledRooms(rooms));
   const queueDragEnabled = $derived(enabledRooms.length > 0);
   const waitingDropLabel = $derived(t('mfa.zoneWaitingTitle'));
+  const awayDropLabel = $derived(t('mfa.zoneAwayTitle'));
 
   function isBusy(visitId: string): boolean {
     return busyVisitId === visitId;
   }
 
-  type WaitingRow =
-    | { kind: 'item'; item: QueueItem }
-    | { kind: 'divider' };
+  function zoneEmptyMessage(fallbackKey: 'mfa.zoneWaitingEmpty' | 'mfa.zoneAwayEmpty' | 'mfa.zoneActiveEmpty') {
+    return queueFilterActive ? t('mfa.waitingFilterEmpty') : t(fallbackKey);
+  }
 
-  const waitingRows = $derived.by((): WaitingRow[] => {
-    const longWait = waiting.filter((item) =>
-      isLongWait(computeWaitMs(item.arrivedAt, nowMs)),
-    );
-    const shortWait = waiting.filter(
-      (item) => !isLongWait(computeWaitMs(item.arrivedAt, nowMs)),
-    );
-    const rows: WaitingRow[] = [];
-
-    for (const item of longWait) {
-      rows.push({ kind: 'item', item });
-    }
-    if (longWait.length > 0 && shortWait.length > 0) {
-      rows.push({ kind: 'divider' });
-    }
-    for (const item of shortWait) {
-      rows.push({ kind: 'item', item });
-    }
-
-    return rows;
-  });
+  const waitingRows = $derived(buildWaitingRows(waiting, nowMs));
 
   const waitThresholdMinutes = LONG_WAIT_THRESHOLD_MINUTES;
 
@@ -178,6 +163,47 @@
   }
 </script>
 
+{#snippet waitingZoneBody(entryDragEnabled: boolean)}
+  <h2 class="wait-zone-title">{t('mfa.zoneWaitingTitle')}</h2>
+  <p class="wait-zone-desc">{t('mfa.zoneWaitingDesc')}</p>
+  {#if waiting.length === 0}
+    <p class="wait-zone-empty">{zoneEmptyMessage('mfa.zoneWaitingEmpty')}</p>
+  {:else}
+    <ul class="queue-list">
+      {#each waitingRows as row, index (row.kind === 'divider' ? `divider-${index}` : row.item.visitId)}
+        {#if row.kind === 'divider'}
+          <li
+            class="wait-soll-divider"
+            aria-label={tf('mfa.waitThresholdAria', { minutes: waitThresholdMinutes })}
+          >
+            <span class="wait-soll-divider-line"></span>
+            <span class="wait-soll-divider-label">
+              {tf('mfa.waitThresholdDivider', { minutes: waitThresholdMinutes })}
+            </span>
+            <span class="wait-soll-divider-line"></span>
+          </li>
+        {:else}
+          <QueueEntry
+            item={row.item}
+            zone="waiting"
+            dragEnabled={entryDragEnabled && !isBusy(row.item.visitId)}
+            dragZone={entryDragEnabled ? 'waiting' : null}
+            queueDragging={isQueueDragging}
+            {nowMs}
+            busy={isBusy(row.item.visitId)}
+            callAnnouncementOffline={!callAnnouncementReachable}
+            onCall={() => onCall(row.item.visitId)}
+            onMarkAway={() => onMarkAway(row.item.visitId)}
+            onOpenDocuments={onOpenDocuments}
+            onCycleTriage={() => onCycleTriage(row.item.visitId)}
+            onSupersedeTopic={() => onSupersedeTopic(row.item.visitId)}
+          />
+        {/if}
+      {/each}
+    </ul>
+  {/if}
+{/snippet}
+
 <DragDropProvider
   sensors={queueDragSensors}
   onDragStart={handleDragStart}
@@ -195,108 +221,68 @@
           variant="waiting"
           class="wait-zone wait-zone--waiting"
         >
-          <h2 class="wait-zone-title">{t('mfa.zoneWaitingTitle')}</h2>
-          <p class="wait-zone-desc">{t('mfa.zoneWaitingDesc')}</p>
-          {#if waiting.length === 0}
-            <p class="wait-zone-empty">{t('mfa.zoneWaitingEmpty')}</p>
+          {@render waitingZoneBody(true)}
+        </QueueDropZone>
+      {:else}
+        <section class="wait-zone wait-zone--waiting">
+          {@render waitingZoneBody(false)}
+        </section>
+      {/if}
+
+      {#if queueDragEnabled}
+        <QueueDropZone
+          dropId="zone:away"
+          target={{ kind: 'away' }}
+          dropLabel={awayDropLabel}
+          highlighted={activeDropTargetId === 'zone:away'}
+          variant="away"
+          class="wait-zone wait-zone--away"
+        >
+          <h2 class="wait-zone-title">{t('mfa.zoneAwayTitle')}</h2>
+          <p class="wait-zone-desc">{t('mfa.zoneAwayDesc')}</p>
+          {#if away.length === 0}
+            <p class="wait-zone-empty">{zoneEmptyMessage('mfa.zoneAwayEmpty')}</p>
           {:else}
             <ul class="queue-list">
-              {#each waitingRows as row, index (row.kind === 'divider' ? `divider-${index}` : row.item.visitId)}
-                {#if row.kind === 'divider'}
-                  <li
-                    class="wait-soll-divider"
-                    aria-label={tf('mfa.waitThresholdAria', { minutes: waitThresholdMinutes })}
-                  >
-                    <span class="wait-soll-divider-line"></span>
-                    <span class="wait-soll-divider-label">
-                      {tf('mfa.waitThresholdDivider', { minutes: waitThresholdMinutes })}
-                    </span>
-                    <span class="wait-soll-divider-line"></span>
-                  </li>
-                {:else}
-                  <QueueEntry
-                    item={row.item}
-                    zone="waiting"
-                    dragEnabled={!isBusy(row.item.visitId)}
-                    dragZone="waiting"
-                    queueDragging={isQueueDragging}
-                    {nowMs}
-                    busy={isBusy(row.item.visitId)}
-                    callAnnouncementOffline={!callAnnouncementReachable}
-                    onCall={() => onCall(row.item.visitId)}
-                    onMarkAway={() => onMarkAway(row.item.visitId)}
-                    onOpenDocuments={onOpenDocuments}
-                    onCycleTriage={() => onCycleTriage(row.item.visitId)}
-                    onSupersedeTopic={() => onSupersedeTopic(row.item.visitId)}
-                  />
-                {/if}
+              {#each away as item (item.visitId)}
+                <QueueEntry
+                  {item}
+                  zone="away"
+                  {nowMs}
+                  busy={isBusy(item.visitId)}
+                  onRecall={() => onRecall(item.visitId)}
+                  onFixRecallNotify={() => onFixRecallNotify(item.visitId)}
+                  onOpenDocuments={onOpenDocuments}
+                  onCycleTriage={() => onCycleTriage(item.visitId)}
+                />
               {/each}
             </ul>
           {/if}
         </QueueDropZone>
       {:else}
-        <section class="wait-zone wait-zone--waiting">
-          <h2 class="wait-zone-title">{t('mfa.zoneWaitingTitle')}</h2>
-          <p class="wait-zone-desc">{t('mfa.zoneWaitingDesc')}</p>
-          {#if waiting.length === 0}
-            <p class="wait-zone-empty">{t('mfa.zoneWaitingEmpty')}</p>
+        <section class="wait-zone wait-zone--away">
+          <h2 class="wait-zone-title">{t('mfa.zoneAwayTitle')}</h2>
+          <p class="wait-zone-desc">{t('mfa.zoneAwayDesc')}</p>
+          {#if away.length === 0}
+            <p class="wait-zone-empty">{zoneEmptyMessage('mfa.zoneAwayEmpty')}</p>
           {:else}
             <ul class="queue-list">
-              {#each waitingRows as row, index (row.kind === 'divider' ? `divider-${index}` : row.item.visitId)}
-                {#if row.kind === 'divider'}
-                  <li
-                    class="wait-soll-divider"
-                    aria-label={tf('mfa.waitThresholdAria', { minutes: waitThresholdMinutes })}
-                  >
-                    <span class="wait-soll-divider-line"></span>
-                    <span class="wait-soll-divider-label">
-                      {tf('mfa.waitThresholdDivider', { minutes: waitThresholdMinutes })}
-                    </span>
-                    <span class="wait-soll-divider-line"></span>
-                  </li>
-                {:else}
-                  <QueueEntry
-                    item={row.item}
-                    zone="waiting"
-                    queueDragging={isQueueDragging}
-                    {nowMs}
-                    busy={isBusy(row.item.visitId)}
-                    callAnnouncementOffline={!callAnnouncementReachable}
-                    onCall={() => onCall(row.item.visitId)}
-                    onMarkAway={() => onMarkAway(row.item.visitId)}
-                    onOpenDocuments={onOpenDocuments}
-                    onCycleTriage={() => onCycleTriage(row.item.visitId)}
-                    onSupersedeTopic={() => onSupersedeTopic(row.item.visitId)}
-                  />
-                {/if}
+              {#each away as item (item.visitId)}
+                <QueueEntry
+                  {item}
+                  zone="away"
+                  {nowMs}
+                  busy={isBusy(item.visitId)}
+                  onRecall={() => onRecall(item.visitId)}
+                  onFixRecallNotify={() => onFixRecallNotify(item.visitId)}
+                  onOpenDocuments={onOpenDocuments}
+                  onCycleTriage={() => onCycleTriage(item.visitId)}
+                />
               {/each}
             </ul>
           {/if}
         </section>
       {/if}
-
-      <section class="wait-zone wait-zone--away">
-        <h2 class="wait-zone-title">{t('mfa.zoneAwayTitle')}</h2>
-        <p class="wait-zone-desc">{t('mfa.zoneAwayDesc')}</p>
-        {#if away.length === 0}
-          <p class="wait-zone-empty">{t('mfa.zoneAwayEmpty')}</p>
-        {:else}
-          <ul class="queue-list">
-            {#each away as item (item.visitId)}
-              <QueueEntry
-                {item}
-                zone="away"
-                {nowMs}
-                busy={isBusy(item.visitId)}
-                onRecall={() => onRecall(item.visitId)}
-                onFixRecallNotify={() => onFixRecallNotify(item.visitId)}
-                onOpenDocuments={onOpenDocuments}
-                onCycleTriage={() => onCycleTriage(item.visitId)}
-              />
-            {/each}
-          </ul>
-        {/if}
-      </section>
     </div>
 
     <section class="wait-zone wait-zone--active">
@@ -304,7 +290,7 @@
       <p class="wait-zone-desc">{t('mfa.zoneActiveDesc')}</p>
       {#if enabledRooms.length === 0}
         {#if active.length === 0}
-          <p class="wait-zone-empty">{t('mfa.zoneActiveEmpty')}</p>
+          <p class="wait-zone-empty">{zoneEmptyMessage('mfa.zoneActiveEmpty')}</p>
         {:else}
           <ul class="queue-list">
             {#each active as item (`${item.visitId}:${item.roomId ?? 'none'}`)}

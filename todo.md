@@ -50,6 +50,8 @@ Stand: 2026-07-10
 - **Fix Drag vs Supersede:** DnD-Handle nur noch am Grip (nicht Ticket); Ticket bleibt klickbar für Topic-Wechsel (wie Name-Edit außerhalb der Drag-Zone).
 - **Fix Supersede-Modal:** Shared `Modal`+`Button` wie Check-in; 3 Actions Abbrechen / Umbuchen / Umbuchen & Bon.
 - **Fix Topic-Pflicht:** UI kein Auto-Select mehr (Placeholder); Backend-Guard gleiches Topic bleibt (`assertSupersedeAllowed` + Core `SUPERSEDE_SAME_TOPIC`).
+- **DnD → Abwesend:** Drop aus Wartezimmer auf gelbe Zone öffnet dasselbe Mark-Away-Modal wie Palm-Button (nur `waiting`→`away`).
+- **Warteliste Filter/Suche (lokal):** `waiting-list-filter.ts` + `WaitingListFilters.svelte` in Quicksettings; Suche XOR Lane; global über waiting/away/active; QS-Reihenfolge Lock → Terminal → TV → Trenner → Anmelden → Suche → Lanes (~4–5/Zeile in 12.5rem).
 - Docs umhängen alt→neu nur im Supersede-Paar; MFA-Checkin unverändert.
 
 ### Implementiert

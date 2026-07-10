@@ -10,7 +10,7 @@
     dropLabel: string;
     highlighted?: boolean;
     dropDisabled?: boolean;
-    variant?: 'room' | 'waiting';
+    variant?: 'room' | 'waiting' | 'away';
     class?: string;
     children?: Snippet;
   }

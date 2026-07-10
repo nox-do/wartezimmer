@@ -2,6 +2,7 @@
   import { Settings, UserPlus } from '@lucide/svelte';
   import { confirmDevicePairing } from '$lib/auth/device-pairing-client';
   import PairingConfirmForm from '$lib/components/auth/PairingConfirmForm.svelte';
+  import WaitingListFilters from '$lib/components/mfa/WaitingListFilters.svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { toastStore } from '$lib/stores/toastStore';
   import {
@@ -13,12 +14,16 @@
   import TerminalLockToggle from '$lib/components/mfa/TerminalLockToggle.svelte';
   import { handleClockEasterEggClick } from '$lib/mfa/clock-easter-egg';
   import { spawnMfaEsheep } from '$lib/mfa/esheep';
+  import type { QueueItem } from '$lib/queue/types';
 
   interface Props {
     clockLabel?: string | null;
     checkinLocked: boolean;
     terminalLockBusy?: boolean;
     needsDayStartHint?: boolean;
+    filterItems?: QueueItem[];
+    searchQuery?: string;
+    laneCode?: string | null;
     onTerminalLockToggle?: (nextLocked: boolean) => void;
     onOpenMfaCheckin?: () => void;
   }
@@ -28,6 +33,9 @@
     checkinLocked,
     terminalLockBusy = false,
     needsDayStartHint = false,
+    filterItems = [],
+    searchQuery = $bindable(''),
+    laneCode = $bindable<string | null>(null),
     onTerminalLockToggle,
     onOpenMfaCheckin,
   }: Props = $props();
@@ -79,10 +87,6 @@
     </a>
   </div>
 
-  <button type="button" class="qs-action-btn" onclick={handleOpenMfaCheckin}>
-    <UserPlus size={18} aria-hidden="true" />
-    <span>{t('mfa.checkinQuickAction')}</span>
-  </button>
   <TerminalLockToggle
     checkinLocked={terminalDisplayLocked}
     busy={terminalLockBusy}
@@ -91,6 +95,7 @@
     toggleDisabled={needsDayStartHint}
     onToggle={onTerminalLockToggle}
   />
+
   <section class="panel panel--sm panel--muted">
     <h3 class="panel__title panel__title--compact">{t('mfa.qsTerminal')}</h3>
     <span
@@ -162,4 +167,18 @@
     {/if}
   </section>
 
+  <div class="qs-divider" role="separator"></div>
+
+  <button type="button" class="qs-action-btn" onclick={handleOpenMfaCheckin}>
+    <UserPlus size={18} aria-hidden="true" />
+    <span>{t('mfa.checkinQuickAction')}</span>
+  </button>
+
+  <WaitingListFilters
+    items={filterItems}
+    bind:searchQuery
+    bind:laneCode
+    alwaysShow={true}
+    compact={true}
+  />
 </aside>

@@ -49,6 +49,7 @@
     mfaQueueDisplay,
   } from '$lib/mfa/mfa-queue-display.svelte';
   import { isQueueCallAnnouncementReachable } from '$lib/queue/call-announcement';
+  import { filterWaitingList } from '$lib/queue/waiting-list-filter';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import MfaSupersedeModal from '$lib/components/mfa/MfaSupersedeModal.svelte';
   import type { QueueItem } from '$lib/queue/types';
@@ -59,6 +60,24 @@
   const mfaClockLabel = $derived(getMfaClockLabel());
   const callAnnouncementReachable = $derived(isQueueCallAnnouncementReachable());
   let mfaCheckinModalOpen = $state(false);
+  let queueSearchQuery = $state('');
+  let queueLaneCode = $state<string | null>(null);
+
+  const queueFilter = $derived({
+    searchQuery: queueSearchQuery,
+    laneCode: queueLaneCode,
+  });
+  const queueFilterActive = $derived(
+    Boolean(queueSearchQuery.trim() || queueLaneCode),
+  );
+  const filteredWaiting = $derived(filterWaitingList(mfaZones.waiting, queueFilter));
+  const filteredAway = $derived(filterWaitingList(mfaZones.away, queueFilter));
+  const filteredActive = $derived(filterWaitingList(mfaZones.active, queueFilter));
+  const queueFilterItems = $derived([
+    ...mfaZones.waiting,
+    ...mfaZones.away,
+    ...mfaZones.active,
+  ]);
 
   $effect(() => {
     const queue = mfaQueueDisplay.queue;
@@ -90,13 +109,14 @@
 {:else if mfaQueueDisplay.queue}
   <div class="mfa-dashboard-layout">
     <WaitBoard
-      active={mfaZones.active}
-      away={mfaZones.away}
-      waiting={mfaZones.waiting}
+      active={filteredActive}
+      away={filteredAway}
+      waiting={filteredWaiting}
       rooms={mfaPracticeContext.practiceRooms}
       busyVisitId={mfaQueueActions.busyVisitId}
       nowMs={mfaQueueDisplay.countdownNowMs}
       callAnnouncementReachable={callAnnouncementReachable}
+      queueFilterActive={queueFilterActive}
       onCall={callMfaTicket}
       onCheckIn={checkInMfaTicket}
       onReassign={handleMfaReassign}
@@ -116,6 +136,9 @@
       checkinLocked={mfaQueueDisplay.queue.checkinLocked}
       terminalLockBusy={mfaDayOps.terminalLockBusy}
       needsDayStartHint={mfaDayOps.dayLifecycle?.needsDayStartHint ?? false}
+      filterItems={queueFilterItems}
+      bind:searchQuery={queueSearchQuery}
+      bind:laneCode={queueLaneCode}
       onTerminalLockToggle={(nextLocked) => void handleMfaTerminalLockToggle(nextLocked)}
       onOpenMfaCheckin={() => (mfaCheckinModalOpen = true)}
     />

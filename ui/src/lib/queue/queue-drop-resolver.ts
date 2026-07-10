@@ -12,12 +12,14 @@ export type QueueDragSource = {
 
 export type QueueDropTarget =
   | { kind: 'room'; roomId: string; roomLabel: string }
-  | { kind: 'waiting' };
+  | { kind: 'waiting' }
+  | { kind: 'away' };
 
 export type QueueDropCommand =
   | { action: 'call'; visitId: string; room: RoomTarget }
   | { action: 'reassign'; visitId: string; room: RoomTarget }
-  | { action: 'return-to-waiting'; visitId: string };
+  | { action: 'return-to-waiting'; visitId: string }
+  | { action: 'mark-away'; visitId: string };
 
 function normalizeRoomId(roomId: string | null | undefined): string | null {
   const trimmed = roomId?.trim();
@@ -31,6 +33,14 @@ export function resolveQueueDrop(
 ): QueueDropCommand | null {
   if (!target) {
     return null;
+  }
+
+  if (target.kind === 'away') {
+    // Same entry point as the waiting-zone palm button → open mark-away modal.
+    if (source.zone !== 'waiting') {
+      return null;
+    }
+    return { action: 'mark-away', visitId: source.visitId };
   }
 
   if (target.kind === 'waiting') {
@@ -80,6 +90,10 @@ export function readQueueDropTarget(data: unknown): QueueDropTarget | null {
   const record = data as Record<string, unknown>;
   if (record.kind === 'waiting') {
     return { kind: 'waiting' };
+  }
+
+  if (record.kind === 'away') {
+    return { kind: 'away' };
   }
 
   if (

@@ -37,6 +37,24 @@ describe('resolveQueueDrop', () => {
     ).toEqual({ action: 'return-to-waiting', visitId: 't3' });
   });
 
+  it('opens mark-away when waiting ticket is dropped on away zone', () => {
+    expect(
+      resolveQueueDrop(
+        { visitId: 't6', zone: 'waiting', status: 'waiting', roomId: null },
+        { kind: 'away' },
+      ),
+    ).toEqual({ action: 'mark-away', visitId: 't6' });
+  });
+
+  it('ignores active-to-away drops', () => {
+    expect(
+      resolveQueueDrop(
+        { visitId: 't7', zone: 'active', status: 'called', roomId: 'empfang' },
+        { kind: 'away' },
+      ),
+    ).toBeNull();
+  });
+
   it('ignores same-room drops and waiting-to-waiting', () => {
     expect(
       resolveQueueDrop(

@@ -2,6 +2,7 @@ import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
 import { applyMfaQueueTriageLevel, mfaQueueDisplay } from '$lib/mfa/mfa-queue-display.svelte';
 import {
   cancelMfaPhoneCorrection,
+  handleMfaMarkAway,
   mfaQueueActions,
 } from '$lib/mfa/mfa-queue-modals.svelte';
 import { resolveCallRoomTarget } from '$lib/queue/call-room-target';
@@ -292,6 +293,11 @@ export function handleMfaQueueDrop(visitId: string, target: QueueDropTarget) {
     void runMfaQueueAction(command.visitId, () =>
       reassignRoomVisit(command.visitId, command.room),
     );
+    return;
+  }
+
+  if (command.action === 'mark-away') {
+    handleMfaMarkAway(command.visitId);
     return;
   }
 
