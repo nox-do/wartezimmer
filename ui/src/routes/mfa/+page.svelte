@@ -24,15 +24,13 @@
   import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
   import {
     callMfaTicket,
-    cancelMfaMarkAway,
-    cancelMfaFixRecallNotify,
+    cancelMfaPhoneCorrection,
     cancelMfaReassign,
     checkInMfaTicket,
     cancelMfaCheckOut,
     confirmMfaCheckOut,
     handleMfaCheckOut,
-    confirmMfaFixRecallNotifyWithPhone,
-    confirmMfaMarkAwayWithPhone,
+    confirmMfaPhoneCorrection,
     confirmMfaReassign,
     cycleMfaTriage,
     handleMfaFixRecallNotify,
@@ -127,24 +125,15 @@
     onConfirm={() => void confirmMfaDayStart()}
   />
 
-  {@const phoneModalVisit = mfaQueueActions.fixRecallNotifyVisit ?? mfaQueueActions.markAwayVisit}
-  {@const phoneModalPurpose = mfaQueueActions.fixRecallNotifyVisit ? 'fixRecallNotify' : 'markAway'}
+  {@const phoneModalVisit = mfaQueueActions.phoneCorrectionVisit}
+  {@const phoneModalPurpose = phoneModalVisit?.purpose ?? 'markAway'}
 
   <MarkAwayPhoneModal
     ticket={phoneModalVisit}
     purpose={phoneModalPurpose}
     busy={phoneModalVisit != null && mfaQueueActions.busyVisitId === phoneModalVisit.visitId}
-    onConfirm={(phoneNumber) =>
-      phoneModalPurpose === 'fixRecallNotify'
-        ? void confirmMfaFixRecallNotifyWithPhone(phoneNumber)
-        : void confirmMfaMarkAwayWithPhone(phoneNumber)}
-    onCancel={() => {
-      if (phoneModalPurpose === 'fixRecallNotify') {
-        cancelMfaFixRecallNotify();
-      } else {
-        cancelMfaMarkAway();
-      }
-    }}
+    onConfirm={(phoneNumber) => void confirmMfaPhoneCorrection(phoneNumber)}
+    onCancel={cancelMfaPhoneCorrection}
   />
 
   <ReassignRoomModal

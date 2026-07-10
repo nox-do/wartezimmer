@@ -77,6 +77,7 @@
     if (topicsLoaded || topicsLoading) {
       return;
     }
+
     topicsLoading = true;
     const result = await fetchMfaCheckinTopics();
     topicsLoading = false;
@@ -221,6 +222,9 @@
       lookupRunId += 1;
       return;
     }
+
+    // Check-in eligibility (practice open / topic windows) stays on the server —
+    // always load the picker list from `/api/v1/checkins/topics`.
     void ensureTopicsLoaded();
   });
 

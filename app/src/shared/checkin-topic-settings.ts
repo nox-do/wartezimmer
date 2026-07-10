@@ -9,20 +9,18 @@ import {
 import { isValidTopicIconId, normalizeTopicIconId } from './topic-icon-ids.js';
 import {
   defaultAccentForLane,
+  isReservedLaneCode,
+  isValidLaneCode,
   isValidTopicAccentColor,
+  MFA_ASSIST_LANE_CODE,
+  normalizeLaneCode,
   normalizeTopicAccentColor,
 } from '@praxis-flow/domain';
 
 export type TopicSetting = OpsSettings['topics'][number];
 /** `defaultRoomId` wird im Simple-Routing-Sync zu `RoutingRule.initialTargetLocationId`. */
 
-export { MFA_ASSIST_TOPIC_ID };
-
-/**
- * Reservierte interne MFA-Topic-ID und Nummernkreis fuer den Empfangs-/Assist-Pfad.
- * Darf nicht in der Themenverwaltung auftauchen oder als normales Terminal-Thema gespeichert werden.
- */
-export const MFA_ASSIST_LANE_CODE = 'M';
+export { MFA_ASSIST_TOPIC_ID, MFA_ASSIST_LANE_CODE, isReservedLaneCode, isValidLaneCode, normalizeLaneCode };
 
 const DEFAULT_CENTRAL_ROOM_ID = 'mfa-tresen';
 
@@ -92,18 +90,6 @@ export const DEFAULT_TERMINAL_TOPIC_DEFINITIONS: TopicSetting[] = [
 const DEFAULT_BY_TOPIC_ID = new Map(
   DEFAULT_TERMINAL_TOPIC_DEFINITIONS.map((topic) => [topic.topicId, topic]),
 );
-
-export function normalizeLaneCode(value: string): string {
-  return value.trim().toUpperCase();
-}
-
-export function isValidLaneCode(value: string): boolean {
-  return /^[A-Z]$/.test(normalizeLaneCode(value));
-}
-
-export function isReservedLaneCode(value: string): boolean {
-  return normalizeLaneCode(value) === MFA_ASSIST_LANE_CODE;
-}
 
 function readLaneCodeFromPartial(
   entry: Partial<TopicSetting> & { prefix?: string },
@@ -300,6 +286,7 @@ export function validateTopicSettings(
   topics: TopicSetting[],
   rooms: OpsSettings['rooms'],
 ): { ok: true } | { ok: false; message: string } {
+  // Authoritative topic-settings validation (client UX prechecks mirror lane/time-window rules only).
   if (topics.length === 0) {
     return { ok: false, message: 'At least one topic is required.' };
   }

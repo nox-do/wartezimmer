@@ -1,7 +1,7 @@
 import {
-  fetchRoutingCapabilities,
-  type RoutingCapabilities,
-} from '$lib/mfa/practice-ops-api';
+  applyMfaPracticeRooms,
+  applyMfaPracticeTopics,
+} from '$lib/mfa/mfa-practice-context.svelte';
 import type { JourneySettings } from '$lib/ops/openapi-types';
 import {
   fetchOpsSettings,
@@ -13,14 +13,18 @@ import {
   type PracticeRoomWithPanel,
   type PracticeTopicSetting,
 } from '$lib/queue/ops-settings-api';
-import { setPracticeTopicCatalog } from '$lib/queue/practice-catalog';
 import { roomGuardErrorMessage } from '$lib/queue/room-removal-guard';
 import {
   isReservedLaneCode,
   reconcileTopicsWithRooms,
   syncTopicDefaultRooms,
 } from '$lib/queue/topic-settings-form';
+import { isValidLaneCode } from '@praxis-flow/domain';
 import { validateTopicTimeWindow } from '$lib/queue/time-of-day';
+import {
+  fetchRoutingCapabilities,
+  type RoutingCapabilities,
+} from '$lib/mfa/practice-ops-api';
 import { t, tf } from '$lib/i18n/i18nStore.svelte';
 import { toastStore } from '$lib/stores/toastStore';
 
@@ -50,7 +54,8 @@ export async function loadTopicsRoomsSettings(): Promise<TopicsRoomsSettings | n
     [...result.data.topics].sort((a, b) => a.sortOrder - b.sortOrder || a.topicId.localeCompare(b.topicId)),
     result.data.rooms,
   );
-  setPracticeTopicCatalog(topics);
+  applyMfaPracticeRooms(result.data.rooms);
+  applyMfaPracticeTopics(topics);
 
   return {
     rooms: [...result.data.rooms],
@@ -92,12 +97,13 @@ export async function persistTopicsRoomsSettings(
     return null;
   }
 
+  // UX-only precheck — server `validateTopicSettings` remains authoritative.
   for (const topic of normalizedTopics) {
     if (!isValidTopicId(topic.topicId)) {
       toastStore.error(t('mfa.settings.topicIdInvalid'));
       return null;
     }
-    if (!topic.label || !/^[A-Z]$/.test(topic.laneCode)) {
+    if (!topic.label || !isValidLaneCode(topic.laneCode)) {
       toastStore.error(t('mfa.settings.topicsInvalid'));
       return null;
     }
@@ -132,7 +138,8 @@ export async function persistTopicsRoomsSettings(
     [...result.data.topics].sort((a, b) => a.sortOrder - b.sortOrder || a.topicId.localeCompare(b.topicId)),
     result.data.rooms,
   );
-  setPracticeTopicCatalog(nextTopics);
+  applyMfaPracticeRooms(result.data.rooms);
+  applyMfaPracticeTopics(nextTopics);
 
   if (!options?.silent) {
     toastStore.success(t('mfa.settings.saveSuccess'));
@@ -162,6 +169,7 @@ async function loadRoutingCapabilitiesAfterSave(
         complexRouting: false,
         journeyDesigner: false,
         routingSimulator: false,
+        complexRoutingLicensed: false,
       },
     };
   }

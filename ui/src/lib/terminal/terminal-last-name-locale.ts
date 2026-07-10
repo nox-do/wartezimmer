@@ -1,10 +1,11 @@
+import { getTerminalLastNameIssue, TERMINAL_LAST_NAME_MAX_LENGTH } from '@praxis-flow/domain';
 import type { NameKeyboardLocale } from './terminal-name-keyboard-layout';
 
-/** Keep in sync with `app/src/shared/contacts/normalize-last-name.ts`. */
-export const TERMINAL_LAST_NAME_MAX_LENGTH = 160;
+export { TERMINAL_LAST_NAME_MAX_LENGTH };
 
 export type LastNameFieldErrorKey = 'terminal.nameRequired' | 'terminal.nameTooLong';
 
+/** Locale keyboard filters (UX). Server accepts the domain union charset. */
 const LAST_NAME_CHAR_PATTERN: Record<NameKeyboardLocale, RegExp> = {
   'de-DE': /^[a-zA-ZäöüÄÖÜß -]$/,
   'en-GB': /^[a-zA-Z -]$/,
@@ -60,14 +61,15 @@ export function normalizeLastNameForSubmit(raw: string, locale: string): string 
 }
 
 export function getLastNameFieldError(raw: string): LastNameFieldErrorKey | null {
-  const trimmed = raw.trim();
-  if (trimmed.length === 0) {
-    return 'terminal.nameRequired';
+  const issue = getTerminalLastNameIssue(raw);
+  if (issue === null) {
+    return null;
   }
-  if (trimmed.length > TERMINAL_LAST_NAME_MAX_LENGTH) {
+  if (issue === 'too_long') {
     return 'terminal.nameTooLong';
   }
-  return null;
+  // empty | invalid_chars — no dedicated invalid_chars i18n key (keyboard filters charset).
+  return 'terminal.nameRequired';
 }
 
 export function isLastNameInputValid(raw: string): boolean {

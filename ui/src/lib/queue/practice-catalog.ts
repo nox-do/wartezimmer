@@ -1,11 +1,20 @@
+import { MFA_ASSIST_LANE_CODE, MFA_ASSIST_TOPIC_ID } from '@praxis-flow/domain';
 import { t } from '$lib/i18n/i18nStore.svelte';
 import { defaultAccentForLane, normalizeTopicAccentColor } from '$lib/topics/topic-accent';
 import type { PracticeTopicSetting } from './ops-settings-api';
 
+/**
+ * Module cache synced from MFA Practice-Context / Settings (`applyMfaPracticeTopics`).
+ * For reactive UI, also read `mfaPracticeContext.practiceTopics` in `$derived`.
+ */
 let topics: PracticeTopicSetting[] = [];
 
 export function setPracticeTopicCatalog(nextTopics: PracticeTopicSetting[]): void {
   topics = [...nextTopics];
+}
+
+export function getPracticeTopicCatalog(): PracticeTopicSetting[] {
+  return topics;
 }
 
 export function getTopicLabel(topicId: string, snapshotLabel?: string): string {
@@ -18,7 +27,7 @@ export function getTopicLabel(topicId: string, snapshotLabel?: string): string {
     return fromCatalog;
   }
 
-  if (topicId === 'mfa') {
+  if (topicId === MFA_ASSIST_TOPIC_ID) {
     return t('mfa.topics.mfa');
   }
 
@@ -30,8 +39,8 @@ export function getTopicAccentColor(topicId: string, laneCode?: string): string 
   if (topic?.accentColor) {
     return normalizeTopicAccentColor(topic.accentColor);
   }
-  if (topicId === 'mfa') {
-    return defaultAccentForLane('M');
+  if (topicId === MFA_ASSIST_TOPIC_ID) {
+    return defaultAccentForLane(MFA_ASSIST_LANE_CODE);
   }
   if (laneCode) {
     return defaultAccentForLane(laneCode);

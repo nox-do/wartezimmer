@@ -16,6 +16,13 @@ export {
   TOPIC_ID_PATTERN,
 } from './topic-id.js';
 export {
+  isReservedLaneCode,
+  isValidLaneCode,
+  LANE_CODE_PATTERN,
+  MFA_ASSIST_LANE_CODE,
+  normalizeLaneCode,
+} from './lane-code.js';
+export {
   ensureSingleDefaultCallTarget,
   listEnabledRooms,
   resolveDefaultCallRoomId,
@@ -48,3 +55,28 @@ export {
   toggleTerminalPatientLocale,
   type TerminalPatientLocale,
 } from './terminal-patient-locales.js';
+export {
+  birthDatesMatch,
+  canonicalizeBirthDate,
+  getBirthDateIssue,
+  isValidBirthDate,
+  type BirthDateIssue,
+} from './birth-date.js';
+export {
+  getTerminalPhoneSuffixIssue,
+  isValidTerminalPhoneNumber,
+  isValidTerminalPhoneSuffix,
+  terminalPhoneSuffixDigits,
+  TERMINAL_PHONE_PREFIX,
+  TERMINAL_PHONE_SUFFIX_MAX,
+  TERMINAL_PHONE_SUFFIX_MIN,
+  type TerminalPhoneSuffixIssue,
+} from './terminal-phone.js';
+export {
+  getTerminalLastNameIssue,
+  hasValidTerminalLastNameChars,
+  isAllowedTerminalLastNameChar,
+  isValidTerminalLastName,
+  TERMINAL_LAST_NAME_MAX_LENGTH,
+  type TerminalLastNameIssue,
+} from './terminal-last-name.js';

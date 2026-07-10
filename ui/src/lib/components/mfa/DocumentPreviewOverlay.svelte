@@ -17,6 +17,7 @@
   } from '$lib/mfa/mfa-document-preview.svelte';
   import { type MfaPreviewContext } from '$lib/mfa/document-context';
   import { formatTicketCode } from '@praxis-flow/domain';
+  import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
   import { getTopicLabel } from '$lib/queue/practice-catalog';
   import { toastStore } from '$lib/stores/toastStore';
 
@@ -57,7 +58,10 @@
   const canExport = $derived(activeDocument?.status === 'preview_requested');
   const canRename = $derived(activeDocument?.status === 'preview_requested');
   const ticketLabel = $derived(formatTicketCode(context.laneCode, context.number));
-  const topicLabel = $derived(getTopicLabel(context.topicId, context.topicLabel));
+  const topicLabel = $derived.by(() => {
+    void mfaPracticeContext.practiceTopics;
+    return getTopicLabel(context.topicId, context.topicLabel);
+  });
 
   function handleClose() {
     if (!open) {

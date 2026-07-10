@@ -13,22 +13,8 @@
     mfaDocumentPreview,
   } from '$lib/mfa/mfa-document-preview.svelte';
   import { authSession } from '$lib/auth/session-state.svelte';
-  import { fetchOpsSettingsDeduped } from '$lib/queue/ops-settings-api';
-  import { setPracticeTopicCatalog } from '$lib/queue/practice-catalog';
-  import { onMount } from 'svelte';
 
   let { children } = $props();
-
-  onMount(() => {
-    if ($page.url.pathname !== '/mfa/login') {
-      void (async () => {
-        const result = await fetchOpsSettingsDeduped();
-        if (result.ok) {
-          setPracticeTopicCatalog(result.data.topics);
-        }
-      })();
-    }
-  });
 
   const mfaAuthenticated = $derived(
     authSession.status === 'authenticated' && authSession.user?.roles.includes('mfa'),

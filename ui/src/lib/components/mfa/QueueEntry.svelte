@@ -9,6 +9,7 @@
   import { toastStore } from '$lib/stores/toastStore';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
   import { queueEntryPrimary, queueEntrySecondary } from '$lib/queue/entry-copy';
+  import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
   import { getTopicAccentColor } from '$lib/queue/practice-catalog';
   import TopicLaneBadge from '$lib/components/topics/TopicLaneBadge.svelte';
   import { formatReturnCountdown, returnCountdownRemainingMs } from '$lib/queue/format-return-countdown';
@@ -27,7 +28,8 @@
     queueDragging?: boolean;
     nowMs?: number;
     busy?: boolean;
-    callDisabled?: boolean;
+    /** SSE hint only — button stays enabled; server decides on call. */
+    callAnnouncementOffline?: boolean;
     onCall?: () => void;
     onCheckIn?: () => void;
     onReassign?: () => void;
@@ -48,7 +50,7 @@
     queueDragging = false,
     nowMs = Date.now(),
     busy = false,
-    callDisabled = false,
+    callAnnouncementOffline = false,
     onCall,
     onCheckIn,
     onReassign,
@@ -82,7 +84,10 @@
   );
   const returnUntilLabel = $derived(item.returnUntil ? formatClockTime(item.returnUntil) : '–');
   const recallNotifyFailed = $derived(Boolean(item.recallNotifyErrorCode?.trim()));
-  const laneAccentColor = $derived(getTopicAccentColor(item.topicId, item.laneCode));
+  const laneAccentColor = $derived.by(() => {
+    void mfaPracticeContext.practiceTopics;
+    return getTopicAccentColor(item.topicId, item.laneCode);
+  });
   const triageLevel = $derived(
     item.triageLevel === 'red' || item.triageLevel === 'yellow' || item.triageLevel === 'green'
       ? item.triageLevel
@@ -321,9 +326,9 @@
     {#if zone === 'waiting' && onCall}
       <MfaActionButton
         icon
-        disabled={busy || callDisabled}
-        ariaLabel={callDisabled ? t('mfa.actionCallDisabledOffline') : t('mfa.actionCall')}
-        title={callDisabled ? t('mfa.callAnnouncementOffline') : undefined}
+        disabled={busy}
+        ariaLabel={callAnnouncementOffline ? t('mfa.actionCallOfflineHint') : t('mfa.actionCall')}
+        title={callAnnouncementOffline ? t('mfa.callAnnouncementOffline') : undefined}
         onclick={onCall}
       >
         {#snippet children()}<Megaphone aria-hidden="true" />{/snippet}

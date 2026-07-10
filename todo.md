@@ -1,8 +1,62 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-09
+Stand: 2026-07-10
 
-## Heute: Branch `reverse_proxy` — P0 URL-Modell vor Proxy
+## Heute: UI↔BE Drift-Aufräumen (Runde 1)
+
+1. **Call-Announcement** — ✅ SSE nur noch UX-Hinweis (Button enabled + title/aria); Commands blocken nicht mehr; Server Presence bleibt autoritativ (`CALL_ANNOUNCEMENT_OFFLINE` Toast via API)
+2. **Terminal-Validation** — ✅ Phone/DOB/LastName-Regeln in `@praxis-flow/domain` (`terminal-phone`, `birth-date`, `terminal-last-name`); App-Asserts thin; UI nur Format/i18n-Mapping + Locale-Keyboard
+3. Später: Room-Guards optimistic, Icon-Allowlist/Settings-Normalize teilen
+
+## Heute: MFA Dashboard P0-Refactor (erledigt)
+
+1. **P0.1 Topic-Validierung** — `MFA_ASSIST_LANE_CODE` / `isReservedLaneCode` / `isValidLaneCode` kanonisch in `@praxis-flow/domain` (`lane-code.ts`); flow-core, app, UI re-exporten/importieren; Client-Checks als UX-only kommentiert
+2. **P0.3 Topic-Catalog** — Layout-Bootstrap entfernt; `applyMfaPracticeTopics` als Schreibstelle; Catalog als Adapter-Cache; Check-in-Modal nutzt Practice-Context (Fetch nur Fallback); Label/Accent tracken `practiceTopics`
+3. **P0.2 Queue-Actions** — Split in `mfa-queue-modals` + `mfa-queue-commands`; Phone-Flows über `phoneCorrectionVisit.purpose` + `confirmMfaPhoneCorrection`; Barrel `mfa-queue-actions` bleibt Public API
+
+### Review (manuell, 2026-07-10)
+- **OK:** Lane-Kanon, Actions-Split/Barrel, Phone-Unify, Catalog-Schreibstelle, Domain-Tests grün
+- **Medium:** Check-in-Verfügbarkeit bleibt Server (`terminalTopicsForUi` via `/api/v1/checkins/topics`); UI-Spiegel (`filterTopicsForCheckinUi` / Practice-Open im Context) wieder entfernt — Catalog nur Display
+- **Low:** `busyVisitId` lebt in Modal-State; `setPracticeTopicCatalog` noch öffentlich; `void practiceTopics`-Subscribe-Hack; `entry-copy` ohne Reactive-Track
+- **Audit UI↔BE (2026-07-10):** Top-Risiken — Call-Announcement-Signal (SSE vs Presence), Room-Guards in RoomsEditor, Terminal Phone/DOB/Name-Validierung, Settings-Normalize/Icon-Allowlist; Capacity/Recall-Gates = OK als UX auf Snapshot
+
+## Zuvor: MFA-Dashboard Refactoring-Check (vor weiteren Features)
+
+**Verdict:** kein Big-Bang nötig, aber 3 Hotspots vor Topic-Wechsel / neuen Queue-Actions angehen.
+
+### P0 — vor Topic-Wechsel / neuen Queue-Actions
+1. **Topic-Validierung FE/BE driftet** — ✅ erledigt (siehe oben)
+2. **`mfa-queue-actions.svelte.ts` (~400)** — ✅ erledigt (Split + Phone-Unify)
+3. **Topic-Catalog 3× geladen** — ✅ erledigt (ein Bootstrap + Settings-Update)
+
+### P1 — wenn man die Dateien sowieso anfasst
+- `+page.svelte` Orchestrator (20+ Imports / Callbacks) → Controller bündeln
+- `QueueEntry.svelte` (~386) — UI + Inline-Edit + DnD + Actions mischen
+- Settings-Boilerplate Topics/Rooms (load/persist copy-paste)
+- `queue-routes.ts` (~662) Backend nur bei Queue-API-Änderungen splitten
+
+### Schon ok
+- `mfa-dashboard.svelte.ts` dünn; `MfaOpsStreamHost`; `queue-actions.ts` getrennt von MFA-Orchestrierung; Domain-Paket teilweise genutzt
+
+### Nächster Schritt
+- Produktregeln Topic-Wechsel klären, dann Feature bauen
+
+## Heute: MFA — Topic nachträglich wechseln (Kontext gesammelt)
+
+- **Idee:** Am MFA-Dashboard Topic am Ticket ändern (Klick/Doppelklick auf Topic-Quadrat) → neues Topic wählen → neue Wartenummer + Bondruck; altes Ticket löschen, Daten/Attribute übernehmen; **Original-Wartezeit/`arrivedAt` behalten**
+- **Einschränkung:** nicht alle Topic-Wechsel erlauben (Policy noch offen)
+- **UX-Risiko:** Drag-Zone vs. Klick/Doppelklick auf demselben Element
+- **Ist-Zustand:** `laneCode` / `sequence` / `topicLabel` sind nach Check-in **immutable** (`docs/domain-model.md`); Queue-Transitions kennen nur Raum/Status, kein `change_topic`
+- **Kern-Dateien (Einstieg):**
+  - `packages/flow-core/src/shared/check-in-path.ts` — `MFA_ASSIST_TOPIC_ID = 'mfa'`
+  - `app/src/shared/checkin-topic-settings.ts` — festes Label „Zur MFA“
+  - `ui/src/lib/components/mfa/QueueEntry.svelte` / `WaitBoard.svelte` / DnD (`QueueDropZone`, `resolveQueueDrop`)
+  - `packages/flow-core/src/server/visit-service.ts` + `visit-queue-bridge.ts` — Check-in / Transitions
+  - `ui/src/lib/components/mfa/MfaCheckinModal.svelte` — manuelle MFA-Anmeldung + Bon
+  - Docs: `docs/flows.md`, `docs/domain-model.md`
+- **Nächster Schritt:** Produktregeln (welche Wechsel erlaubt?) + UX (Klick vs. DnD) klären, dann Design
+
+## Zuvor: Branch `reverse_proxy` — P0 URL-Modell vor Proxy
 
 - **Reihenfolge:** erst URL-Autorität (Setup-Kern), danach Manager/Wizard-UI (Schritt 2), danach Proxy-Compose
 - **Produktmodell:** `CANONICAL_BASE_URL` = Wahrheit für Menschen-/Geräte-URLs (nicht Proxy-Konfig)

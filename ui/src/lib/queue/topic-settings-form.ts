@@ -1,11 +1,12 @@
+import {
+  isReservedLaneCode,
+  MFA_ASSIST_LANE_CODE,
+} from '@praxis-flow/domain';
 import type { PracticeRoom, PracticeTopicSetting } from './ops-settings-api';
 import { defaultCallRoom, listEnabledRooms } from './room-default-call-target';
 
-export const MFA_ASSIST_LANE_CODE = 'M';
-
-export function isReservedLaneCode(value: string): boolean {
-  return value.trim().toUpperCase() === MFA_ASSIST_LANE_CODE;
-}
+/** Re-export canonical reserved-lane helpers from `@praxis-flow/domain`. */
+export { MFA_ASSIST_LANE_CODE, isReservedLaneCode };
 
 export function syncTopicDefaultRooms(
   topics: PracticeTopicSetting[],

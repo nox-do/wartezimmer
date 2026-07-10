@@ -1,19 +1,17 @@
+import {
+  isReservedLaneCode,
+  isValidLaneCode,
+  MFA_ASSIST_LANE_CODE,
+  normalizeLaneCode,
+} from '@praxis-flow/domain';
 import { MFA_ASSIST_TOPIC_ID } from './check-in-path.js';
 
-/** PoC-Seed: reservierter Nummernkreis fuer Hilfe-Check-in — Host ohne System-Topic. */
-export const MFA_ASSIST_LANE_CODE = 'M';
-
-export function normalizeLaneCode(value: string): string {
-  return value.trim().toUpperCase();
-}
-
-export function isValidLaneCode(value: string): boolean {
-  return /^[A-Z]$/.test(normalizeLaneCode(value));
-}
-
-export function isReservedLaneCode(value: string): boolean {
-  return normalizeLaneCode(value) === MFA_ASSIST_LANE_CODE;
-}
+export {
+  isReservedLaneCode,
+  isValidLaneCode,
+  MFA_ASSIST_LANE_CODE,
+  normalizeLaneCode,
+};
 
 export function laneCounterScope(laneCode: string): string {
   return `lane:${normalizeLaneCode(laneCode)}`;

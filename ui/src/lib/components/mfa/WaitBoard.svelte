@@ -220,7 +220,7 @@
                     queueDragging={isQueueDragging}
                     {nowMs}
                     busy={isBusy(row.item.visitId)}
-                    callDisabled={!callAnnouncementReachable}
+                    callAnnouncementOffline={!callAnnouncementReachable}
                     onCall={() => onCall(row.item.visitId)}
                     onMarkAway={() => onMarkAway(row.item.visitId)}
                     onOpenDocuments={onOpenDocuments}
@@ -258,7 +258,7 @@
                     queueDragging={isQueueDragging}
                     {nowMs}
                     busy={isBusy(row.item.visitId)}
-                    callDisabled={!callAnnouncementReachable}
+                    callAnnouncementOffline={!callAnnouncementReachable}
                     onCall={() => onCall(row.item.visitId)}
                     onMarkAway={() => onMarkAway(row.item.visitId)}
                     onOpenDocuments={onOpenDocuments}

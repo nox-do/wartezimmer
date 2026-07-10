@@ -13,6 +13,16 @@ export const mfaPracticeContext = $state({
   returnWindowMinutes: 15,
 });
 
+/** Single write path for MFA topic catalog + practice context topics. */
+export function applyMfaPracticeTopics(topics: PracticeTopicSetting[]) {
+  mfaPracticeContext.practiceTopics = [...topics];
+  setPracticeTopicCatalog(topics);
+}
+
+export function applyMfaPracticeRooms(rooms: PracticeRoom[]) {
+  mfaPracticeContext.practiceRooms = [...rooms];
+}
+
 export function resetMfaPracticeContext() {
   mfaPracticeContext.practiceRooms = [];
   mfaPracticeContext.practiceTopics = [];
@@ -27,8 +37,7 @@ export async function loadMfaPracticeContext() {
     return;
   }
 
-  mfaPracticeContext.practiceRooms = settingsResult.data.rooms ?? [];
-  mfaPracticeContext.practiceTopics = settingsResult.data.topics ?? [];
+  applyMfaPracticeRooms(settingsResult.data.rooms ?? []);
+  applyMfaPracticeTopics(settingsResult.data.topics ?? []);
   mfaPracticeContext.returnWindowMinutes = settingsResult.data.returnWindowMinutes ?? 15;
-  setPracticeTopicCatalog(mfaPracticeContext.practiceTopics);
 }

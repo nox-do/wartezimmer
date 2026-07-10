@@ -10,6 +10,7 @@
   import type { PracticeRoom, PracticeTopicSetting } from '$lib/queue/ops-settings-api';
   import { slugifyTopicId } from '$lib/queue/ops-settings-api';
   import { isReservedLaneCode } from '$lib/queue/topic-settings-form';
+  import { isValidLaneCode } from '@praxis-flow/domain';
   import { validateTopicTimeWindow } from '$lib/queue/time-of-day';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
   import type { TopicIconId } from '$lib/topics/topic-icon-catalog';
@@ -97,6 +98,7 @@
   }
 
   function validate(): boolean {
+    // UX-only precheck — server `validateTopicSettings` remains authoritative.
     labelError = '';
     laneError = '';
     roomError = '';
@@ -108,7 +110,7 @@
     }
 
     const lane = draft.laneCode.trim().toUpperCase();
-    if (!/^[A-Z]$/.test(lane)) {
+    if (!isValidLaneCode(lane)) {
       laneError = t('mfa.settings.topicModalLaneRequired');
       return false;
     }

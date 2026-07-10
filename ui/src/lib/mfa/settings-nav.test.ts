@@ -20,6 +20,7 @@ describe('MFA settings nav', () => {
         complexRouting: false,
         journeyDesigner: false,
         routingSimulator: false,
+        complexRoutingLicensed: false,
       },
     });
 
@@ -34,6 +35,7 @@ describe('MFA settings nav', () => {
           complexRouting: true,
           journeyDesigner: true,
           routingSimulator: false,
+          complexRoutingLicensed: true,
         },
       }),
     ).toBe(true);
@@ -45,6 +47,7 @@ describe('MFA settings nav', () => {
           complexRouting: true,
           journeyDesigner: false,
           routingSimulator: false,
+          complexRoutingLicensed: true,
         },
       }),
     ).toBe(false);
@@ -55,6 +58,7 @@ describe('MFA settings nav', () => {
         complexRouting: true,
         journeyDesigner: true,
         routingSimulator: false,
+        complexRoutingLicensed: true,
       },
     });
     expect(nav[1].children.map((item) => item.id)).toEqual(['topics', 'journeys']);

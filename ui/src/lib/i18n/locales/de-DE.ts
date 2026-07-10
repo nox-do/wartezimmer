@@ -320,9 +320,9 @@ export const dict = {
     waitThresholdAria:
       'Patienten oberhalb dieser Linie warten länger als {minutes} Minuten; darunter kürzer',
     actionCall: 'Aufrufen',
-    actionCallDisabledOffline: 'Aufruf nicht möglich — Wartezimmer-TV offline',
+    actionCallOfflineHint: 'Aufrufen — Wartezimmer-TV scheint offline',
     callAnnouncementOffline:
-      'Aufruf nicht möglich — Wartezimmer-TV ist offline. Bitte Gerät prüfen oder koppeln.',
+      'Wartezimmer-TV scheint offline. Aufruf wird vom Server geprüft — bitte Gerät prüfen oder koppeln.',
     roomAtCapacity: 'Raum ist voll — bitte anderes Aufrufziel wählen.',
     actionMarkAway: 'Außer Haus setzen',
     actionCheckIn: 'Angekommen',
