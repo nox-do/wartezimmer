@@ -9,6 +9,7 @@ Stand: 2026-07-10
 - Capabilities liefern `openVisitCount`; Manager Wartung disabled + eine adaptive Footnote.
 - Fehlercode bleibt `ROUTING_MODE_CHANGE_BLOCKED`, Details: `openVisitCount`.
 - Fix: Journey-Step-IDs via `randomId()` (LAN-HTTP ohne `crypto.randomUUID`).
+- Fix: Check-in/Bon `destinationRoomLabel` nur aus Visit-Ziel (kein Topic-Default-Fallback).
 
 ## Heute: UI↔BE Drift-Aufräumen (Runde 1)
 

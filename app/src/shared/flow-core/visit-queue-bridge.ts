@@ -23,7 +23,7 @@ import { QUEUE_ROOM_MISMATCH } from '../queue/queue-room-scope.js';
 import { resolveCallRoomForVisit } from '../queue/resolve-call-room.js';
 import { resolveRecallNotifyPhone } from '../queue/recall-notify-phone.js';
 import { assertRoomHasCapacity } from '../ops/room-capacity.js';
-import { resolveDestinationRoomLabelForTopic, resolveTopicLabelFromSettings } from '../checkin-topic-settings.js';
+import { resolveCheckInDestinationRoomLabel, resolveTopicLabelFromSettings } from '../checkin-topic-settings.js';
 
 const VISIT_QUEUE_STATUSES = new Set<VisitStatus>([
   'waiting',
@@ -146,11 +146,7 @@ export function visitToQueueVisitRow(
 ): QueueVisitRow {
   const topicId = visit.primaryTopicId ?? 'unknown';
   const destinationRoomId = visit.targetLocationId ?? '';
-  const destinationRoomLabel =
-    visit.targetLocation?.publicName ??
-    visit.targetLocation?.name ??
-    resolveDestinationRoomLabelForTopic(settings, topicId) ??
-    '';
+  const destinationRoomLabel = resolveCheckInDestinationRoomLabel(visit.targetLocation) ?? '';
   const hasAbsentOverlay = Boolean(hostState?.absentMode);
   const assignedRoomId =
     !hasAbsentOverlay && ROOM_ASSIGNED_VISIT_STATUSES.has(visit.status)

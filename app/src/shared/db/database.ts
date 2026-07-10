@@ -557,6 +557,7 @@ export class CoreDatabase {
     visitId: string;
     number: number;
     createdAt: string;
+    destinationRoomLabel: string | null;
   } {
     return this.withTransaction('createTicket', () =>
       createVisitCheckInInDb({ ...this.checkinSessionDeps(), db: this.db }, input),

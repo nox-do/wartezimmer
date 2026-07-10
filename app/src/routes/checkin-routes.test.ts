@@ -53,6 +53,7 @@ function fakeCheckinDb(overrides?: {
         visitId: '20260617-O-001',
         number: 1,
         createdAt: '2026-06-17T12:00:00.000Z',
+        destinationRoomLabel: 'Empfang',
       };
     },
     isTerminalAssistPendingActive: overrides?.isTerminalAssistPendingActive ?? (() => false),

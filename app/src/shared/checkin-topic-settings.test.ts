@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveDestinationRoomLabelForTopic } from './checkin-topic-settings.js';
+import {
+  resolveDestinationRoomLabelForTopic,
+  resolveCheckInDestinationRoomLabel,
+} from './checkin-topic-settings.js';
 
 const settings = {
   topics: [
@@ -49,4 +52,17 @@ test('resolveDestinationRoomLabelForTopic falls back to default call target when
     topics: [{ ...settings.topics[0], defaultRoomId: 'unknown-room' }],
   };
   assert.equal(resolveDestinationRoomLabelForTopic(staleTopicSettings, 'blut'), 'Empfang');
+});
+
+test('resolveCheckInDestinationRoomLabel uses visit target only', () => {
+  assert.equal(
+    resolveCheckInDestinationRoomLabel({
+      publicName: 'Empfang',
+      name: 'Empfang',
+    }),
+    'Empfang',
+  );
+  assert.equal(resolveCheckInDestinationRoomLabel({ name: 'Labor' }), 'Labor');
+  assert.equal(resolveCheckInDestinationRoomLabel(null), null);
+  assert.equal(resolveCheckInDestinationRoomLabel({}), null);
 });

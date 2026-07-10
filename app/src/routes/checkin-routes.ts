@@ -21,7 +21,6 @@ import { toAssistPendingItem } from '../shared/checkin/terminal-assist-pending.j
 import { TERMINAL_DEVICE_ID } from '../shared/ops/device-ids.js';
 import {
   resolveTicketLaneCodeFromSettings,
-  resolveDestinationRoomLabelForTopic,
   terminalTopicsForUi,
 } from '../shared/checkin-topic-settings.js';
 import {
@@ -274,8 +273,7 @@ export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): v
           db.releaseTerminalAssist(deviceId);
         }
         const laneCode = resolveTicketLaneCodeFromSettings(db.getOpsSettings(), topicId);
-        const settings = db.getOpsSettings();
-        const destinationRoomLabel = resolveDestinationRoomLabelForTopic(settings, topicId);
+        const destinationRoomLabel = created.destinationRoomLabel;
 
         notifyTvQueueChanged(db);
         return reply.code(201).send({

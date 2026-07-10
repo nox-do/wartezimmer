@@ -282,6 +282,16 @@ export function resolveDestinationRoomLabelForTopic(
   return room?.roomLabel.trim() || resolveDefaultCallRoomLabel(settings);
 }
 
+/**
+ * Room label from the visit's operative target (journey step / routing rule).
+ * No topic-default fallback — that can disagree with the actual route.
+ */
+export function resolveCheckInDestinationRoomLabel(
+  visitTarget?: { publicName?: string | null; name?: string | null } | null,
+): string | null {
+  return visitTarget?.publicName?.trim() || visitTarget?.name?.trim() || null;
+}
+
 export function validateTopicSettings(
   topics: TopicSetting[],
   rooms: OpsSettings['rooms'],
