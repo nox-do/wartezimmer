@@ -31,6 +31,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  padding-left: 2px;
 }
 
 .queue-entry--zone-active .queue-entry-card {
@@ -46,10 +47,6 @@
   background: var(--destructive-light);
 }
 
-.queue-entry-drag-surface--enabled {
-  padding-left: 2px;
-}
-
 /* Drag only from the grip — ticket stays free for supersede double-click. */
 .queue-drag-grip {
   flex-shrink: 0;
@@ -62,6 +59,13 @@
   opacity: 0.92;
   cursor: grab;
   touch-action: none;
+}
+
+.queue-drag-grip--spacer {
+  visibility: hidden;
+  pointer-events: none;
+  cursor: default;
+  touch-action: auto;
 }
 
 .queue-drag-grip:active {
@@ -242,6 +246,29 @@
   padding: 4px 4px 4px 0;
   cursor: default;
   touch-action: auto;
+}
+
+.queue-entry-actions-hover {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Hide repetitive flow actions until card hover/focus; keep triage + docs visible. */
+@media (hover: hover) {
+  .queue-entry-actions-hover {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+  }
+
+  .queue-entry-card:hover .queue-entry-actions-hover,
+  .queue-entry-card:focus-within .queue-entry-actions-hover {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .mfa-page .btn-staff-sm:not(.btn-staff-sm--doc):not(.btn-staff-sm--triage) {

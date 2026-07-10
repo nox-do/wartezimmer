@@ -332,6 +332,9 @@
         >
           <span></span><span></span><span></span><span></span>
         </span>
+      {:else}
+        <!-- Keep lane badge aligned with draggable rows (e.g. away zone). -->
+        <span class="queue-drag-grip queue-drag-grip--spacer" aria-hidden="true"></span>
       {/if}
 
       {@render queueTicket()}
@@ -364,44 +367,50 @@
     {/if}
 
     {#if zone === 'waiting' && onCall}
-      <MfaActionButton
-        icon
-        disabled={busy}
-        ariaLabel={callAnnouncementOffline ? t('mfa.actionCallOfflineHint') : t('mfa.actionCall')}
-        title={callAnnouncementOffline ? t('mfa.callAnnouncementOffline') : undefined}
-        onclick={onCall}
-      >
-        {#snippet children()}<Megaphone aria-hidden="true" />{/snippet}
-      </MfaActionButton>
-      {#if onMarkAway}
+      <div class="queue-entry-actions-hover">
         <MfaActionButton
-          variant="ghost"
           icon
           disabled={busy}
-          ariaLabel={t('mfa.actionMarkAway')}
-          onclick={onMarkAway}
+          ariaLabel={callAnnouncementOffline ? t('mfa.actionCallOfflineHint') : t('mfa.actionCall')}
+          title={callAnnouncementOffline ? t('mfa.callAnnouncementOffline') : undefined}
+          onclick={onCall}
         >
-          {#snippet children()}<TreePalm aria-hidden="true" />{/snippet}
+          {#snippet children()}<Megaphone aria-hidden="true" />{/snippet}
         </MfaActionButton>
-      {/if}
+        {#if onMarkAway}
+          <MfaActionButton
+            variant="ghost"
+            icon
+            disabled={busy}
+            ariaLabel={t('mfa.actionMarkAway')}
+            onclick={onMarkAway}
+          >
+            {#snippet children()}<TreePalm aria-hidden="true" />{/snippet}
+          </MfaActionButton>
+        {/if}
+      </div>
     {:else if zone === 'active' && item.status === 'called' && onCheckIn}
-      <MfaActionButton icon disabled={busy} ariaLabel={t('mfa.actionCheckIn')} onclick={onCheckIn}>
-        {#snippet children()}<MapPin aria-hidden="true" />{/snippet}
-      </MfaActionButton>
-      {@render roomManagementActions()}
-    {:else if zone === 'active' && item.status === 'in_room'}
-      {#if onCheckOut}
-        <MfaActionButton
-          variant="ghost"
-          icon
-          disabled={busy}
-          ariaLabel={t('mfa.actionCheckOut')}
-          onclick={onCheckOut}
-        >
-          {#snippet children()}<LogOut aria-hidden="true" />{/snippet}
+      <div class="queue-entry-actions-hover">
+        <MfaActionButton icon disabled={busy} ariaLabel={t('mfa.actionCheckIn')} onclick={onCheckIn}>
+          {#snippet children()}<MapPin aria-hidden="true" />{/snippet}
         </MfaActionButton>
-      {/if}
-      {@render roomManagementActions()}
+        {@render roomManagementActions()}
+      </div>
+    {:else if zone === 'active' && item.status === 'in_room'}
+      <div class="queue-entry-actions-hover">
+        {#if onCheckOut}
+          <MfaActionButton
+            variant="ghost"
+            icon
+            disabled={busy}
+            ariaLabel={t('mfa.actionCheckOut')}
+            onclick={onCheckOut}
+          >
+            {#snippet children()}<LogOut aria-hidden="true" />{/snippet}
+          </MfaActionButton>
+        {/if}
+        {@render roomManagementActions()}
+      </div>
     {:else if zone === 'away' && returnActive}
       <div class="queue-entry-away-active">
         <span
