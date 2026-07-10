@@ -1,5 +1,8 @@
 <script lang="ts">
+  import { ArrowRightLeft } from '@lucide/svelte';
   import { formatTicketCode } from '@praxis-flow/domain';
+  import Modal from '$lib/components/Modal.svelte';
+  import Button from '$lib/components/forms/Button.svelte';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
   import { toastStore } from '$lib/stores/toastStore';
   import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
@@ -29,16 +32,20 @@
     ),
   );
   const selectedTopic = $derived(topics.find((topic) => topic.topicId === topicId) ?? null);
+  const submitDisabled = $derived(submitBusy || !selectedTopic || topics.length === 0);
 
   $effect(() => {
-    if (!item) {
-      topicId = '';
+    // Reset on open/close — do not auto-pick a topic; user must choose explicitly.
+    void item?.visitId;
+    topicId = '';
+  });
+
+  function handleClose() {
+    if (submitBusy) {
       return;
     }
-    if (!topicId && topics.length > 0) {
-      topicId = topics[0]!.topicId;
-    }
-  });
+    onClose();
+  }
 
   function formatReceiptTimestamp(): string {
     return new Date().toLocaleString('de-DE', {
@@ -77,28 +84,31 @@
     });
   }
 
-  async function submit(event: Event) {
+  async function submit(event: Event, printReceipt = false) {
     event.preventDefault();
     if (!item || !topicId || submitBusy) {
       return;
     }
     submitBusy = true;
     const result = await supersedeVisitTopic(item.visitId, topicId);
-    submitBusy = false;
     if (result.error) {
+      submitBusy = false;
       toastStore.error(result.error.message);
       return;
     }
-    await printTicket({
-      visitId: result.data.visitId,
-      laneCode: result.data.laneCode,
-      number: result.data.number,
-      topicId: result.data.topicId,
-      topicLabel: result.data.topicLabel,
-      destinationRoomLabel: result.data.destinationRoomLabel,
-    });
+    if (printReceipt) {
+      await printTicket({
+        visitId: result.data.visitId,
+        laneCode: result.data.laneCode,
+        number: result.data.number,
+        topicId: result.data.topicId,
+        topicLabel: result.data.topicLabel,
+        destinationRoomLabel: result.data.destinationRoomLabel,
+      });
+    }
+    submitBusy = false;
     toastStore.success(
-      tf('mfa.supersedeCreatedWithReceipt', {
+      tf(printReceipt ? 'mfa.supersedeCreatedWithReceipt' : 'mfa.supersedeCreated', {
         ticket: formatTicketCode(result.data.laneCode, result.data.number),
       }),
     );
@@ -106,43 +116,67 @@
   }
 </script>
 
-{#if open && item}
-  <div class="modal-backdrop" role="presentation" onclick={onClose}>
-    <div
-      class="modal-card"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="mfa-supersede-title"
-      onclick={(event) => event.stopPropagation()}
-    >
-      <h2 id="mfa-supersede-title">{t('mfa.supersedeTitle')}</h2>
-      <p class="hint">
+<Modal
+  {open}
+  dimBackdrop={true}
+  maxWidth="560px"
+  headerClass="modal-header--hero bg-gradient-primary"
+  closeOnEscape={!submitBusy}
+  onClose={handleClose}
+>
+  {#snippet header()}
+    <div class="modal-header__left">
+      <div class="modal-header__icon">
+        <ArrowRightLeft size={18} aria-hidden="true" />
+      </div>
+      <div class="modal-header__texts">
+        <h2 id="modal-title" class="modal-title">{t('mfa.supersedeTitle')}</h2>
+      </div>
+    </div>
+  {/snippet}
+
+  {#if item}
+    <form class="modal-form" onsubmit={(event) => void submit(event, false)}>
+      <p class="modal-subtitle">
         {tf('mfa.supersedeHint', {
           ticket: formatTicketCode(item.laneCode, item.number),
           topic: item.topicLabel ?? '',
         })}
       </p>
-      <form onsubmit={submit}>
-        <label class="form-label" for="mfa-supersede-topic">{t('mfa.supersedeTopicLabel')}</label>
-        <select
-          id="mfa-supersede-topic"
-          class="form-select"
-          bind:value={topicId}
-          disabled={submitBusy || topics.length === 0}
-        >
-          {#each topics as topic (topic.topicId)}
-            <option value={topic.topicId}>{topic.label}</option>
-          {/each}
-        </select>
-        <div class="actions-row actions-row--footer">
-          <button type="button" class="btn btn-ghost" disabled={submitBusy} onclick={onClose}>
-            {t('ui.cancel')}
-          </button>
-          <button type="submit" class="btn btn-primary" disabled={submitBusy || !selectedTopic}>
-            {t('mfa.supersedeConfirm')}
-          </button>
+
+      {#if topics.length === 0}
+        <p class="text-muted">{t('mfa.supersedeNoTopics')}</p>
+      {:else}
+        <label class="modal-form-field">
+          <span>{t('mfa.supersedeTopicLabel')}</span>
+          <select class="form-select" bind:value={topicId} disabled={submitBusy} required>
+            <option value="" disabled>{t('mfa.supersedeTopicPlaceholder')}</option>
+            {#each topics as topic (topic.topicId)}
+              <option value={topic.topicId}>{topic.label}</option>
+            {/each}
+          </select>
+        </label>
+      {/if}
+
+      <div class="form-actions form-actions--split form-actions--nowrap">
+        <Button type="button" variant="outline" disabled={submitBusy} onclick={handleClose}>
+          {t('ui.cancel')}
+        </Button>
+        <div class="form-actions__end">
+          <Button type="submit" variant="primary" loading={submitBusy} disabled={submitDisabled}>
+            {submitBusy ? t('mfa.supersedeSubmitting') : t('mfa.supersedeConfirm')}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            loading={submitBusy}
+            disabled={submitDisabled}
+            onclick={(event) => void submit(event, true)}
+          >
+            {submitBusy ? t('mfa.supersedeSubmitting') : t('mfa.supersedeConfirmWithReceipt')}
+          </Button>
         </div>
-      </form>
-    </div>
-  </div>
-{/if}
+      </div>
+    </form>
+  {/if}
+</Modal>

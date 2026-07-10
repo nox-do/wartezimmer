@@ -47,23 +47,25 @@
 }
 
 .queue-entry-drag-surface--enabled {
-  cursor: grab;
-  touch-action: none;
-  padding-left: 6px;
+  padding-left: 2px;
 }
 
-.queue-entry-drag-surface--enabled:active {
-  cursor: grabbing;
-}
-
+/* Drag only from the grip — ticket stays free for supersede double-click. */
 .queue-drag-grip {
   flex-shrink: 0;
   display: grid;
   grid-template-columns: repeat(2, 2px);
   gap: 2px;
+  align-content: center;
+  padding: 10px 6px;
   color: var(--zinc-500);
   opacity: 0.92;
-  pointer-events: none;
+  cursor: grab;
+  touch-action: none;
+}
+
+.queue-drag-grip:active {
+  cursor: grabbing;
 }
 
 .queue-entry-drag-surface--enabled:hover .queue-drag-grip {

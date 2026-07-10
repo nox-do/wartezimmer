@@ -146,15 +146,6 @@
 
   const showDragging = $derived(isDragging && queueDragging);
 
-  function attachDragSurface(node: HTMLElement) {
-    const cleanupElement = attach(node);
-    const cleanupHandle = attachHandle(node);
-    return () => {
-      cleanupElement();
-      cleanupHandle();
-    };
-  }
-
   function handleOpenDocuments(event: MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
@@ -330,10 +321,15 @@
     <div
       class="queue-entry-drag-surface"
       class:queue-entry-drag-surface--enabled={canDrag}
-      {@attach attachDragSurface}
+      {@attach attach}
     >
       {#if canDrag}
-        <span class="queue-drag-grip" aria-hidden="true" title={t('mfa.dragHandleAria')}>
+        <span
+          class="queue-drag-grip"
+          aria-hidden="true"
+          title={t('mfa.dragHandleAria')}
+          {@attach attachHandle}
+        >
           <span></span><span></span><span></span><span></span>
         </span>
       {/if}

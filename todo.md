@@ -47,6 +47,9 @@ Stand: 2026-07-10
 ### Fachlich
 - Generischer Topic-Wechsel per Supersede-Kette; Policy v1 weit (`waiting`|`directed`, Ziel ≠ Quelle, aktiv); `arrivedAt`/`checkedInAt` behalten.
 - UI: Doppelklick Lane-Badge+Nummer → Modal → neue Nummer + Bon. DnD bleibt.
+- **Fix Drag vs Supersede:** DnD-Handle nur noch am Grip (nicht Ticket); Ticket bleibt klickbar für Topic-Wechsel (wie Name-Edit außerhalb der Drag-Zone).
+- **Fix Supersede-Modal:** Shared `Modal`+`Button` wie Check-in; 3 Actions Abbrechen / Umbuchen / Umbuchen & Bon.
+- **Fix Topic-Pflicht:** UI kein Auto-Select mehr (Placeholder); Backend-Guard gleiches Topic bleibt (`assertSupersedeAllowed` + Core `SUPERSEDE_SAME_TOPIC`).
 - Docs umhängen alt→neu nur im Supersede-Paar; MFA-Checkin unverändert.
 
 ### Implementiert

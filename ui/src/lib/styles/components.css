@@ -277,6 +277,11 @@
   margin-left: auto;
 }
 
+.form-actions--nowrap,
+.form-actions--nowrap .form-actions__end {
+  flex-wrap: nowrap;
+}
+
 /* Alerts — base + variants used in app */
 .alert {
   padding: 0.875rem 1rem;
