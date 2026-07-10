@@ -303,7 +303,7 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
-        /** @description Routing mode change blocked while visits have an active journey */
+        /** @description Routing mode change blocked while waiting numbers are still open */
         409: {
           headers: {
             [name: string]: unknown;
@@ -1585,6 +1585,8 @@ export interface components {
     RoutingCapabilitiesResponse: {
       /** @enum {string} */
       routingMode: 'simple' | 'complex';
+      /** @description Open waiting numbers (non-terminal visits). Routing mode changes are blocked while this is greater than zero. */
+      openVisitCount: number;
       features: {
         complexRouting: boolean;
         journeyDesigner: boolean;

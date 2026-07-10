@@ -1068,12 +1068,16 @@ export const OpsSettingsResponse = {
 
 export const RoutingCapabilitiesResponse = {
   type: 'object',
-  required: ['routingMode', 'features'],
+  required: ['routingMode', 'openVisitCount', 'features'],
   additionalProperties: false,
   properties: {
     routingMode: {
       type: 'string',
       enum: ['simple', 'complex'],
+    },
+    openVisitCount: {
+      type: 'integer',
+      minimum: 0,
     },
     features: {
       type: 'object',
@@ -3423,12 +3427,16 @@ export const PATCH_api_v1_ops_settingsResponse409 = {
 
 export const GET_api_v1_ops_settings_capabilitiesResponse200 = {
   type: 'object',
-  required: ['routingMode', 'features'],
+  required: ['routingMode', 'openVisitCount', 'features'],
   additionalProperties: false,
   properties: {
     routingMode: {
       type: 'string',
       enum: ['simple', 'complex'],
+    },
+    openVisitCount: {
+      type: 'integer',
+      minimum: 0,
     },
     features: {
       type: 'object',

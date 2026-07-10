@@ -5,6 +5,7 @@ import type {
   PracticeRoom,
   PracticeTopicSetting,
 } from '$lib/ops/openapi-types';
+import { randomId } from '$lib/utils/random-id';
 
 export const PF_GENERAL_QUEUE_ID = 'pf_general_queue';
 
@@ -35,7 +36,7 @@ export function createDefaultJourneyStep(
   previous?: JourneyStepSetting,
 ): JourneyStepSetting {
   return {
-    id: `step_${crypto.randomUUID().slice(0, 8)}`,
+    id: `step_${randomId().slice(0, 8)}`,
     sortOrder,
     targetLocationId: previous?.targetLocationId ?? fallbackLocationId,
     queueId: previous?.queueId ?? PF_GENERAL_QUEUE_ID,

@@ -127,6 +127,8 @@ export type RoutingMode = 'simple' | 'complex';
 
 export type RoutingModeCapabilities = {
   routingMode: RoutingMode;
+  /** Offene Wartenummern (nicht-terminale Visits). */
+  openVisitCount: number;
   features: {
     complexRouting: boolean;
     journeyDesigner: boolean;

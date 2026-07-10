@@ -2,6 +2,14 @@
 
 Stand: 2026-07-10
 
+## Hinweis: RoutingMode-Guard vs. offene Wartenummern (2026-07-10)
+
+- ✅ Guard umgestellt: Wechsel blockiert bei offenen Wartenummern (`status NOT IN terminal`), beide Richtungen.
+- Alter Journey-Guard (`journey_state = active`) entfernt/obsolet.
+- Capabilities liefern `openVisitCount`; Manager Wartung disabled + eine adaptive Footnote.
+- Fehlercode bleibt `ROUTING_MODE_CHANGE_BLOCKED`, Details: `openVisitCount`.
+- Fix: Journey-Step-IDs via `randomId()` (LAN-HTTP ohne `crypto.randomUUID`).
+
 ## Heute: UI↔BE Drift-Aufräumen (Runde 1)
 
 1. **Call-Announcement** — ✅ SSE nur noch UX-Hinweis (Button enabled + title/aria); Commands blocken nicht mehr; Server Presence bleibt autoritativ (`CALL_ANNOUNCEMENT_OFFLINE` Toast via API)
@@ -52,6 +60,7 @@ Stand: 2026-07-10
 - **Fix Topic-Pflicht:** UI kein Auto-Select mehr (Placeholder); Backend-Guard gleiches Topic bleibt (`assertSupersedeAllowed` + Core `SUPERSEDE_SAME_TOPIC`).
 - **DnD → Abwesend:** Drop aus Wartezimmer auf gelbe Zone öffnet dasselbe Mark-Away-Modal wie Palm-Button (nur `waiting`→`away`).
 - **Warteliste Filter/Suche (lokal):** `waiting-list-filter.ts` + `WaitingListFilters.svelte` in Quicksettings; Suche XOR Lane; global über waiting/away/active; QS-Reihenfolge Lock → Terminal → TV → Trenner → Anmelden → Suche → Lanes (~4–5/Zeile in 12.5rem).
+- **Card-Actions:** Aufrufen/Außer Haus/Ankommen/Entlassen/Raum/Zurück erst bei Card-Hover (`focus-within` + Touch immer sichtbar); Triage + Docs bleiben.
 - Docs umhängen alt→neu nur im Supersede-Paar; MFA-Checkin unverändert.
 
 ### Implementiert

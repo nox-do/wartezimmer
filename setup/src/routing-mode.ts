@@ -6,11 +6,12 @@ import { runDockerCommand } from './docker-cli.js';
 export const MANAGER_LOCAL_HEADER = 'x-praxis-manager-local';
 const DEFAULT_LOCAL_APP = 'http://127.0.0.1:8080';
 
-function buildCapabilities(routingMode: RoutingMode): RoutingModeCapabilities {
+function buildCapabilities(routingMode: RoutingMode, openVisitCount = 0): RoutingModeCapabilities {
   const licensed = isComplexRoutingLicensed();
   const complexActive = routingMode === 'complex' && licensed;
   return {
     routingMode,
+    openVisitCount,
     features: {
       complexRouting: complexActive,
       journeyDesigner: complexActive,
@@ -27,7 +28,13 @@ const dbPath = '/var/lib/praxis-flow/app/praxis-flow.db';
 const db = new DatabaseSync(dbPath);
 const row = db.prepare("SELECT routing_mode AS routingMode FROM ops_settings WHERE id = 'singleton'").get();
 const routingMode = row?.routingMode === 'complex' ? 'complex' : 'simple';
-console.log(JSON.stringify({ routingMode }));
+const terminalStatuses = ['done', 'cancelled', 'no_show'];
+const placeholders = terminalStatuses.map(() => '?').join(', ');
+const open = db
+  .prepare(\`SELECT COUNT(*) AS count FROM visits WHERE status NOT IN (\${placeholders})\`)
+  .get(...terminalStatuses);
+const openVisitCount = Number(open?.count ?? 0);
+console.log(JSON.stringify({ routingMode, openVisitCount }));
 `.trim();
 
 const WRITE_ROUTING_MODE_SCRIPT = `
@@ -50,20 +57,19 @@ if (!current) {
 if (current.routingMode !== nextMode) {
   const terminalStatuses = ['done', 'cancelled', 'no_show'];
   const placeholders = terminalStatuses.map(() => '?').join(', ');
-  const active = db
+  const open = db
     .prepare(
       \`SELECT COUNT(*) AS count FROM visits
-       WHERE journey_state = 'active'
-       AND status NOT IN (\${placeholders})\`,
+       WHERE status NOT IN (\${placeholders})\`,
     )
     .get(...terminalStatuses);
-  const activeCount = Number(active?.count ?? 0);
-  if (activeCount > 0) {
+  const openVisitCount = Number(open?.count ?? 0);
+  if (openVisitCount > 0) {
     console.log(JSON.stringify({
       ok: false,
       code: 'ROUTING_MODE_CHANGE_BLOCKED',
-      error: \`Routing mode cannot be changed while \${activeCount} visit(s) have an active journey.\`,
-      details: { activeJourneyVisitCount: activeCount },
+      error: \`Routing mode cannot be changed while \${openVisitCount} waiting number(s) are still open.\`,
+      details: { openVisitCount },
     }));
     process.exit(0);
   }
@@ -85,7 +91,7 @@ console.log(JSON.stringify({ ok: true, routingMode: nextMode }));
 
 async function readRoutingModeFromDatabase(
   composeProjectName: string,
-): Promise<RoutingMode | null> {
+): Promise<{ routingMode: RoutingMode; openVisitCount: number } | null> {
   const volume = appDataVolumeName(composeProjectName);
   const exists = await runDockerCommand([
     'run',
@@ -117,8 +123,14 @@ async function readRoutingModeFromDatabase(
   }
 
   try {
-    const parsed = JSON.parse(result.stdout.trim()) as { routingMode?: RoutingMode };
-    return parsed.routingMode === 'complex' ? 'complex' : 'simple';
+    const parsed = JSON.parse(result.stdout.trim()) as {
+      routingMode?: RoutingMode;
+      openVisitCount?: number;
+    };
+    return {
+      routingMode: parsed.routingMode === 'complex' ? 'complex' : 'simple',
+      openVisitCount: Number(parsed.openVisitCount ?? 0),
+    };
   } catch {
     return null;
   }
@@ -268,11 +280,17 @@ export async function getRoutingModeCapabilities(
 ): Promise<RoutingModeCapabilities> {
   const fromApp = await fetchCapabilitiesFromApp(localAppBaseUrl);
   if (fromApp) {
-    return fromApp;
+    return {
+      ...fromApp,
+      openVisitCount: Number(fromApp.openVisitCount ?? 0),
+    };
   }
 
   const fromDb = await readRoutingModeFromDatabase(composeProjectName);
-  return buildCapabilities(fromDb ?? 'simple');
+  if (fromDb) {
+    return buildCapabilities(fromDb.routingMode, fromDb.openVisitCount);
+  }
+  return buildCapabilities('simple');
 }
 
 export async function setRoutingMode(

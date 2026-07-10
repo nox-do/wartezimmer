@@ -67,7 +67,11 @@ import {
   type OpsSettingsPatch,
 } from './database-ops-settings.js';
 import { validateRoomSettingsChange } from '../ops/room-removal-validation.js';
-import { validateComplexRoutingLicenseChange, validateRoutingModeChange } from '../ops/routing-mode-guard.js';
+import {
+  countOpenVisits,
+  validateComplexRoutingLicenseChange,
+  validateRoutingModeChange,
+} from '../ops/routing-mode-guard.js';
 import { validateJourneySettingsEditable } from '../ops/journey-template-guard.js';
 import { OpsSettingsValidationError } from './ops-settings-errors.js';
 import {
@@ -1232,7 +1236,7 @@ export class CoreDatabase {
   }
 
   getRoutingCapabilities(): RoutingCapabilities {
-    return resolveRoutingCapabilities(this.getOpsSettings());
+    return resolveRoutingCapabilities(this.getOpsSettings(), countOpenVisits(this.db));
   }
 
   updateOpsSettings(patch: OpsSettingsPatch): OpsSettings {
@@ -1273,7 +1277,7 @@ export class CoreDatabase {
         if (!modeGuard.ok) {
           throw new OpsSettingsValidationError(modeGuard.message, {
             apiCode: modeGuard.code,
-            details: { activeJourneyVisitCount: modeGuard.activeJourneyVisitCount },
+            details: { openVisitCount: modeGuard.openVisitCount },
           });
         }
       }

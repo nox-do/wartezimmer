@@ -1,15 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildRoutingModeOptions, formatRoutingModeError } from './routing-mode-ui.js';
+import {
+  buildRoutingModeOptions,
+  formatRoutingModeError,
+  formatRoutingModeMaintenanceFootnote,
+} from './routing-mode-ui.js';
 
-test('formatRoutingModeError maps active journey blockade', () => {
+test('formatRoutingModeError maps open waiting-number blockade', () => {
   assert.equal(
     formatRoutingModeError({
       code: 'ROUTING_MODE_CHANGE_BLOCKED',
       error: 'blocked',
-      details: { activeJourneyVisitCount: 2 },
+      details: { openVisitCount: 2 },
     }),
-    'Wechsel nicht möglich: 2 Besuche mit aktiver Journey.',
+    'Wechsel nicht möglich: 2 Wartenummern noch aktiv.',
   );
 });
 
@@ -32,10 +36,34 @@ test('formatRoutingModeError maps unreachable app', () => {
   );
 });
 
+test('formatRoutingModeMaintenanceFootnote uses rule when empty', () => {
+  assert.equal(
+    formatRoutingModeMaintenanceFootnote(0),
+    'Modus gilt praxisweit. Wechsel nur möglich, wenn keine Wartenummern aktiv sind.',
+  );
+});
+
+test('formatRoutingModeMaintenanceFootnote includes count when blocked', () => {
+  assert.equal(
+    formatRoutingModeMaintenanceFootnote(8),
+    'Modus gilt praxisweit. Wechsel gesperrt: 8 Wartenummern noch aktiv.',
+  );
+  assert.equal(
+    formatRoutingModeMaintenanceFootnote(1),
+    'Modus gilt praxisweit. Wechsel gesperrt: 1 Wartenummer noch aktiv.',
+  );
+});
+
 test('buildRoutingModeOptions marks complex as disabled without license in wizard', () => {
   const options = buildRoutingModeOptions('wizard', false);
   const complex = options.find((option) => option.value === 'complex');
   assert.equal(complex?.disabled, true);
   assert.equal(complex?.pro, true);
   assert.equal(options.find((option) => option.value === 'simple')?.recommended, true);
+});
+
+test('buildRoutingModeOptions disables only the other mode while waiting numbers are open', () => {
+  const options = buildRoutingModeOptions('maintenance', true, 3, 'simple');
+  assert.equal(options.find((option) => option.value === 'simple')?.disabled, false);
+  assert.equal(options.find((option) => option.value === 'complex')?.disabled, true);
 });

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
-import { validateRoutingModeChange, countActiveJourneyVisits } from './routing-mode-guard.js';
+import { validateRoutingModeChange, countOpenVisits } from './routing-mode-guard.js';
 import { ensureFlowCoreSchema } from '../flow-core/flow-core-schema.js';
 
 function openDb(): DatabaseSync {
@@ -11,9 +11,9 @@ function openDb(): DatabaseSync {
   return db;
 }
 
-function insertActiveJourneyVisit(db: DatabaseSync): void {
+function insertVisit(db: DatabaseSync, id: string, status: string, journeyState: string | null = null, sequence = 1): void {
   db.exec('PRAGMA foreign_keys = OFF');
-  db.prepare('INSERT INTO patients VALUES (?, ?, ?, ?)').run('p1', null, 1, '2026-07-07T10:00:00.000Z');
+  db.prepare('INSERT INTO patients VALUES (?, ?, ?, ?)').run(`p-${id}`, null, 1, '2026-07-07T10:00:00.000Z');
   db.prepare(
     `INSERT INTO visits (
       id, patient_id, status, primary_topic_id, applied_routing_rule_id,
@@ -25,32 +25,34 @@ function insertActiveJourneyVisit(db: DatabaseSync): void {
       checked_in_at, called_at, arrived_at, started_at, finished_at,
       journey_template_id, journey_step_index, journey_state, created_at, updated_at
     ) VALUES (
-      'visit-1', 'p1', 'waiting', NULL, NULL,
+      ?, ?, ?, NULL, NULL,
       NULL, NULL, NULL, NULL,
-      'call', 'assumed', 'visible', 'L-001',
-      '20260707', 'lane_day', 'L', 1,
+      'call', 'assumed', 'visible', ?,
+      '20260707', 'lane_day', 'L', ?,
       0, 'topic', 'phone_dob', 'none', 'none', 1, 'Bitte warten.', NULL,
       '2026-07-07T10:00:00.000Z', NULL, NULL, NULL, NULL,
-      NULL, 0, 'active', '2026-07-07T10:00:00.000Z', '2026-07-07T10:00:00.000Z'
+      NULL, 0, ?, '2026-07-07T10:00:00.000Z', '2026-07-07T10:00:00.000Z'
     )`,
-  ).run();
+  ).run(id, `p-${id}`, status, id, sequence, journeyState);
   db.exec('PRAGMA foreign_keys = ON');
 }
 
-test('countActiveJourneyVisits returns 0 without active journeys', () => {
+test('countOpenVisits returns 0 without open visits', () => {
   const db = openDb();
-  assert.equal(countActiveJourneyVisits(db), 0);
+  assert.equal(countOpenVisits(db), 0);
 });
 
-test('countActiveJourneyVisits counts non-terminal visits with journey_state active', () => {
+test('countOpenVisits counts non-terminal visits regardless of journey_state', () => {
   const db = openDb();
-  insertActiveJourneyVisit(db);
-  assert.equal(countActiveJourneyVisits(db), 1);
+  insertVisit(db, 'visit-1', 'waiting', null, 1);
+  insertVisit(db, 'visit-2', 'arrived', null, 2);
+  insertVisit(db, 'visit-3', 'done', null, 3);
+  assert.equal(countOpenVisits(db), 2);
 });
 
-test('validateRoutingModeChange blocks simple to complex when journey is active', () => {
+test('validateRoutingModeChange blocks simple to complex when waiting numbers are open', () => {
   const db = openDb();
-  insertActiveJourneyVisit(db);
+  insertVisit(db, 'visit-1', 'waiting', null);
   const result = validateRoutingModeChange({
     currentMode: 'simple',
     nextMode: 'complex',
@@ -59,13 +61,13 @@ test('validateRoutingModeChange blocks simple to complex when journey is active'
   assert.equal(result.ok, false);
   if (!result.ok) {
     assert.equal(result.code, 'ROUTING_MODE_CHANGE_BLOCKED');
-    assert.equal(result.activeJourneyVisitCount, 1);
+    assert.equal(result.openVisitCount, 1);
   }
 });
 
-test('validateRoutingModeChange blocks complex to simple when journey is active', () => {
+test('validateRoutingModeChange blocks complex to simple when waiting numbers are open', () => {
   const db = openDb();
-  insertActiveJourneyVisit(db);
+  insertVisit(db, 'visit-1', 'called', null);
   const result = validateRoutingModeChange({
     currentMode: 'complex',
     nextMode: 'simple',
@@ -74,8 +76,9 @@ test('validateRoutingModeChange blocks complex to simple when journey is active'
   assert.equal(result.ok, false);
 });
 
-test('validateRoutingModeChange allows mode switch when no active journey visits', () => {
+test('validateRoutingModeChange allows mode switch when no open waiting numbers', () => {
   const db = openDb();
+  insertVisit(db, 'visit-1', 'done', 'active');
   assert.deepEqual(
     validateRoutingModeChange({ currentMode: 'simple', nextMode: 'complex', db }),
     { ok: true },
@@ -88,7 +91,7 @@ test('validateRoutingModeChange allows mode switch when no active journey visits
 
 test('validateRoutingModeChange is no-op when mode unchanged', () => {
   const db = openDb();
-  insertActiveJourneyVisit(db);
+  insertVisit(db, 'visit-1', 'waiting', null);
   assert.deepEqual(
     validateRoutingModeChange({ currentMode: 'complex', nextMode: 'complex', db }),
     { ok: true },

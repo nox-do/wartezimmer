@@ -182,6 +182,7 @@ async function loadRoutingCapabilitiesAfterSave(
     }
     return {
       routingMode: 'simple',
+      openVisitCount: 0,
       features: {
         complexRouting: false,
         journeyDesigner: false,

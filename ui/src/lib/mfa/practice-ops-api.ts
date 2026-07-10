@@ -30,6 +30,7 @@ export type BusinessDayTicketStats = BusinessDayVisitStats;
 
 export type RoutingCapabilities = {
   routingMode: 'simple' | 'complex';
+  openVisitCount: number;
   features: {
     complexRouting: boolean;
     journeyDesigner: boolean;

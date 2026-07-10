@@ -76,6 +76,7 @@ function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManager
     getEnvBackupInfo: async () => ({ envPath: '/tmp/pf/.env', latestBackupPath: null }),
     getRoutingMode: async () => ({
       routingMode: 'simple',
+      openVisitCount: 0,
       features: {
         complexRouting: false,
         journeyDesigner: false,

@@ -259,9 +259,10 @@ Sync bei `routingMode: complex`:
 
 #### RoutingMode-Wechsel
 
-`routingMode` darf nur geaendert werden, wenn kein Visit `journey_state: active`
-hat. Gilt symmetrisch fuer simple↔complex. Fehlercode: `ROUTING_MODE_CHANGE_BLOCKED`
-(HTTP 409).
+`routingMode` darf nur geaendert werden, wenn keine offenen Wartenummern
+existieren (Visits mit nicht-terminalem Status). Gilt symmetrisch fuer
+simple↔complex. Fehlercode: `ROUTING_MODE_CHANGE_BLOCKED` (HTTP 409).
+Details: `openVisitCount`.
 
 ## API-Grenzen
 
@@ -507,7 +508,7 @@ Noetige Guards:
   - Wenn historische Referenzen erhalten bleiben muessen, ist Deaktivieren statt
     Loeschen der bevorzugte Weg.
 - Beim Wechsel von Complex zu Simple:
-  - Wechsel ist blockiert, solange offene aktive Journey-Visits existieren.
+  - Wechsel ist blockiert, solange offene Wartenummern existieren.
   - Bestehende JourneyTemplates bleiben erhalten, werden aber in Simple UI nicht
     aktiv bearbeitet.
   - RoutingRules muessen fuer neue Check-ins wieder eine valide Simple Route haben.
@@ -528,24 +529,26 @@ Das ist dasselbe Grundmuster wie bei `TOPIC_LOCKED` und
 
 Moegliche Auswirkungen:
 
+- Wechsel ist blockiert, solange offene Wartenummern existieren.
 - Bestehende Topics behalten Basisdaten.
 - Bestehende Simple-RoutingRules koennen als Fallback erhalten bleiben.
 - Pro Topic kann entschieden werden, ob eine Journey zugeordnet wird.
 - Bis zur Journey-Zuordnung kann ein Topic weiter Simple Routing nutzen.
 - Mixed Mode ist im Complex-Setup erlaubt: einige Topics koennen Journeys nutzen,
   andere bleiben simple.
+- Laufende Visits werden nicht migriert; neue Config gilt fuer neue Check-ins.
 
 ### Wechsel Complex -> Simple
 
 Risiken:
 
-- Aktive Visits koennen noch `journeyState: active` haben.
+- Aktive Visits koennen noch offen sein (Wartenummern).
 - JourneyTemplates koennen noch von RoutingRules referenziert werden.
 - UI wuerde Journey-Kontext verstecken, obwohl Runtime ihn noch braucht.
 
 Regel:
 
-- Wechsel blockieren, solange offene aktive Journey-Visits existieren.
+- Wechsel blockieren, solange offene Wartenummern existieren (nicht-terminale Visits).
 - Danach RoutingRules auf Simple-Routing zuruecksetzen oder Journey-Zuordnung nur
   deaktivieren, wenn ein valider `defaultRoomId` pro Topic existiert.
 

@@ -180,6 +180,7 @@ test('entering routing step waits for server routing mode', async () => {
 
   routingMode.resolve({
     routingMode: 'complex',
+    openVisitCount: 0,
     features: {
       complexRouting: true,
       journeyDesigner: true,

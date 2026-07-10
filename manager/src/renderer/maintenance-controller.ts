@@ -40,6 +40,7 @@ export type MaintenanceState = {
   routingMode: RoutingMode | null;
   routingModeSaved: RoutingMode | null;
   complexRoutingLicensed: boolean;
+  openVisitCount: number;
   routingModeStatusText: string;
   pinResetStatusText: string;
   busy: boolean;
@@ -90,6 +91,7 @@ function createInitialState(): MaintenanceState {
     routingMode: null,
     routingModeSaved: null,
     complexRoutingLicensed: true,
+    openVisitCount: 0,
     routingModeStatusText: '',
     pinResetStatusText: '',
     busy: false,
@@ -383,6 +385,7 @@ export function createMaintenanceController(deps: MaintenanceControllerDeps): Ma
             routingMode: result.routingMode,
             routingModeSaved: result.routingMode,
             complexRoutingLicensed: result.features.complexRoutingLicensed,
+            openVisitCount: 0,
             routingModeStatusText: routingModeSuccessText(result.routingMode),
           });
           deps.onAfterMutation?.();
@@ -457,6 +460,7 @@ export function createMaintenanceController(deps: MaintenanceControllerDeps): Ma
             routingMode: routingCapabilities.routingMode,
             routingModeSaved: routingCapabilities.routingMode,
             complexRoutingLicensed: routingCapabilities.features.complexRoutingLicensed,
+            openVisitCount: Number(routingCapabilities.openVisitCount ?? 0),
           });
         })
         .catch((error) => {

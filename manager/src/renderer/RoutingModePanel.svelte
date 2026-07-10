@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
-    ROUTING_MODE_MAINTENANCE_FOOTNOTE,
     buildRoutingModeOptions,
+    formatRoutingModeMaintenanceFootnote,
   } from './routing-mode-ui.js';
   import type { RoutingMode } from '../shared/host-status.js';
   import { routingModeSaveDisabled } from './maintenance-view-model.js';
@@ -10,6 +10,7 @@
     routingMode,
     routingModeSaved,
     complexRoutingLicensed,
+    openVisitCount = 0,
     statusText = '',
     busy = false,
     onChange,
@@ -18,14 +19,20 @@
     routingMode: RoutingMode | null;
     routingModeSaved: RoutingMode | null;
     complexRoutingLicensed: boolean;
+    openVisitCount?: number;
     statusText?: string;
     busy?: boolean;
     onChange: (routingMode: RoutingMode) => void;
     onSave: () => void;
   } = $props();
 
-  const options = $derived(buildRoutingModeOptions('maintenance', complexRoutingLicensed));
-  const saveDisabled = $derived(routingModeSaveDisabled(busy, routingMode, routingModeSaved));
+  const options = $derived(
+    buildRoutingModeOptions('maintenance', complexRoutingLicensed, openVisitCount, routingModeSaved),
+  );
+  const saveDisabled = $derived(
+    routingModeSaveDisabled(busy, routingMode, routingModeSaved, openVisitCount),
+  );
+  const footnote = $derived(formatRoutingModeMaintenanceFootnote(openVisitCount));
 </script>
 
 <div class="panel-section">
@@ -72,7 +79,7 @@
       </p>
     {/if}
   </fieldset>
-  <p class="hint routing-mode-footnote">{ROUTING_MODE_MAINTENANCE_FOOTNOTE}</p>
+  <p class="hint routing-mode-footnote" role="status">{footnote}</p>
   <div class="actions-row">
     <button type="button" class="btn-secondary" disabled={saveDisabled} onclick={onSave}>
       Routing-Modus speichern

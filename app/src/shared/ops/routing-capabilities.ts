@@ -10,17 +10,21 @@ export type RoutingCapabilityFeatures = {
 
 export type RoutingCapabilities = {
   routingMode: RoutingMode;
+  /** Offene Wartenummern (nicht-terminale Visits). */
+  openVisitCount: number;
   features: RoutingCapabilityFeatures;
 };
 
 export function resolveRoutingCapabilities(
   settings: Pick<OpsSettings, 'routingMode'>,
+  openVisitCount = 0,
 ): RoutingCapabilities {
   const licensed = isComplexRoutingLicensed();
   const complexActive = settings.routingMode === 'complex' && licensed;
 
   return {
     routingMode: settings.routingMode,
+    openVisitCount,
     features: {
       complexRouting: complexActive,
       journeyDesigner: complexActive,

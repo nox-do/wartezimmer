@@ -39,6 +39,7 @@ test('manager-local header grants ops access to routing capabilities without ses
     {
       getRoutingCapabilities: () => ({
         routingMode: 'simple',
+        openVisitCount: 0,
         features: {
           complexRouting: false,
           journeyDesigner: false,
@@ -115,6 +116,7 @@ test('manager-local trusts Host-bound access from docker bridge remote address',
     {
       getRoutingCapabilities: () => ({
         routingMode: 'complex',
+        openVisitCount: 0,
         features: {
           complexRouting: true,
           journeyDesigner: true,

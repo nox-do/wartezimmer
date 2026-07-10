@@ -5,6 +5,7 @@ import { resolveRoutingCapabilities } from './routing-capabilities.js';
 test('resolveRoutingCapabilities disables complex and journey features in simple mode', () => {
   assert.deepEqual(resolveRoutingCapabilities({ routingMode: 'simple' }), {
     routingMode: 'simple',
+    openVisitCount: 0,
     features: {
       complexRouting: false,
       journeyDesigner: false,
@@ -15,8 +16,9 @@ test('resolveRoutingCapabilities disables complex and journey features in simple
 });
 
 test('resolveRoutingCapabilities enables complex and journey features in complex mode', () => {
-  assert.deepEqual(resolveRoutingCapabilities({ routingMode: 'complex' }), {
+  assert.deepEqual(resolveRoutingCapabilities({ routingMode: 'complex' }, 3), {
     routingMode: 'complex',
+    openVisitCount: 3,
     features: {
       complexRouting: true,
       journeyDesigner: true,

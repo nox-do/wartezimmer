@@ -196,6 +196,7 @@
           routingMode={snapshot.routingMode}
           routingModeSaved={snapshot.routingModeSaved}
           complexRoutingLicensed={snapshot.complexRoutingLicensed}
+          openVisitCount={snapshot.openVisitCount}
           statusText={snapshot.routingModeStatusText}
           busy={snapshot.busy}
           onChange={(routingMode) => {

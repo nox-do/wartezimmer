@@ -16,6 +16,7 @@ describe('MFA settings nav', () => {
   it('hides journeys in simple mode', () => {
     const nav = buildMfaSettingsNav({
       routingMode: 'simple',
+      openVisitCount: 0,
       features: {
         complexRouting: false,
         journeyDesigner: false,
@@ -31,6 +32,7 @@ describe('MFA settings nav', () => {
     expect(
       isJourneyDesignerNavVisible({
         routingMode: 'complex',
+        openVisitCount: 0,
         features: {
           complexRouting: true,
           journeyDesigner: true,
@@ -43,6 +45,7 @@ describe('MFA settings nav', () => {
     expect(
       isJourneyDesignerNavVisible({
         routingMode: 'complex',
+        openVisitCount: 0,
         features: {
           complexRouting: true,
           journeyDesigner: false,
@@ -54,6 +57,7 @@ describe('MFA settings nav', () => {
 
     const nav = buildMfaSettingsNav({
       routingMode: 'complex',
+      openVisitCount: 0,
       features: {
         complexRouting: true,
         journeyDesigner: true,

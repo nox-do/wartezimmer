@@ -716,12 +716,17 @@ components:
       type: object
       required:
         - routingMode
+        - openVisitCount
         - features
       additionalProperties: false
       properties:
         routingMode:
           type: string
           enum: [simple, complex]
+        openVisitCount:
+          type: integer
+          minimum: 0
+          description: Open waiting numbers (non-terminal visits). Routing mode changes are blocked while this is greater than zero.
         features:
           type: object
           required:
@@ -1498,7 +1503,7 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
         '409':
-          description: Routing mode change blocked while visits have an active journey
+          description: Routing mode change blocked while waiting numbers are still open
           content:
             application/json:
               schema:

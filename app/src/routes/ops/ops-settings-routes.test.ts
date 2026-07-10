@@ -46,6 +46,7 @@ test('GET /api/v1/ops/settings/capabilities returns simple routing capabilities'
     {
       getRoutingCapabilities: () => ({
         routingMode: 'simple',
+        openVisitCount: 0,
         features: {
           complexRouting: false,
           journeyDesigner: false,
@@ -65,6 +66,7 @@ test('GET /api/v1/ops/settings/capabilities returns simple routing capabilities'
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.json(), {
     routingMode: 'simple',
+    openVisitCount: 0,
     features: {
       complexRouting: false,
       journeyDesigner: false,
@@ -82,6 +84,7 @@ test('GET /api/v1/ops/settings/capabilities returns complex routing capabilities
     {
       getRoutingCapabilities: () => ({
         routingMode: 'complex',
+        openVisitCount: 2,
         features: {
           complexRouting: true,
           journeyDesigner: true,
@@ -101,6 +104,7 @@ test('GET /api/v1/ops/settings/capabilities returns complex routing capabilities
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.json(), {
     routingMode: 'complex',
+    openVisitCount: 2,
     features: {
       complexRouting: true,
       journeyDesigner: true,

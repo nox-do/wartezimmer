@@ -171,12 +171,13 @@ test('softwareUpdateInfoRows includes summary and configured images', () => {
   );
 });
 
-test('routingModeSaveDisabled blocks while busy, unknown, or unchanged', () => {
+test('routingModeSaveDisabled blocks while busy, unknown, unchanged, or open waiting numbers', () => {
   assert.equal(routingModeSaveDisabled(true, 'simple', 'complex'), true);
   assert.equal(routingModeSaveDisabled(false, null, 'simple'), true);
   assert.equal(routingModeSaveDisabled(false, 'simple', null), true);
   assert.equal(routingModeSaveDisabled(false, 'simple', 'simple'), true);
   assert.equal(routingModeSaveDisabled(false, 'complex', 'simple'), false);
+  assert.equal(routingModeSaveDisabled(false, 'complex', 'simple', 2), true);
 });
 
 test('routingModeSuccessText names active routing mode', () => {
