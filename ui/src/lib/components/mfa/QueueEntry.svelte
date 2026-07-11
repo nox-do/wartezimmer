@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createDraggable } from '@dnd-kit/svelte';
   import type { Snippet } from 'svelte';
-  import { ArrowRight, FileText, LogOut, MapPin, Megaphone, RotateCcw, Send, TreePalm, Users } from '@lucide/svelte';
+  import { ArrowRight, FileText, LogOut, MapPin, Megaphone, Navigation, Play, RotateCcw, Send, Trash2, TreePalm, Users } from '@lucide/svelte';
   import MfaActionButton from '$lib/components/mfa/MfaActionButton.svelte';
   import QueueTriageButton from '$lib/components/mfa/QueueTriageButton.svelte';
   import { setIdentityRefVisit } from '$lib/queue/queue-actions';
@@ -15,6 +15,8 @@
   import { formatReturnCountdown, returnCountdownRemainingMs } from '$lib/queue/format-return-countdown';
   import { computeWaitMs, formatWaitDuration, isLongWait } from '$lib/queue/format-wait-duration';
   import { formatClockTime } from '$lib/queue/format-time';
+  import { canMfaCallVisit, resolveMfaCallBlockedReason } from '$lib/queue/mfa-call-gate';
+  import { resolveMfaInRoomPrimaryAction } from '$lib/queue/mfa-primary-action';
   import type { QueueItem } from '$lib/queue/types';
   import type { QueueDragZone } from '$lib/queue/queue-drop-resolver';
 
@@ -32,8 +34,11 @@
     callAnnouncementOffline?: boolean;
     onCall?: () => void;
     onCheckIn?: () => void;
+    onStart?: () => void;
+    onContinue?: () => void;
     onReassign?: () => void;
     onCheckOut?: () => void;
+    onCancelVisit?: () => void;
     onReturnToWaiting?: () => void;
     onRecall?: () => void;
     onMarkAway?: () => void;
@@ -54,8 +59,11 @@
     callAnnouncementOffline = false,
     onCall,
     onCheckIn,
+    onStart,
+    onContinue,
     onReassign,
     onCheckOut,
+    onCancelVisit,
     onReturnToWaiting,
     onRecall,
     onMarkAway,
@@ -77,6 +85,33 @@
     zone === 'waiting' && isLongWait(liveWaitMs),
   );
   const hasDocuments = $derived(item.documentCount > 0);
+  const inRoomPrimary = $derived(resolveMfaInRoomPrimaryAction(item));
+  const callAllowed = $derived(canMfaCallVisit(item));
+  const callBlockedReason = $derived(resolveMfaCallBlockedReason(item));
+  const callBlockedTitle = $derived.by(() => {
+    const reason = callBlockedReason;
+    if (!reason) {
+      return undefined;
+    }
+    if (reason.kind === 'directed') {
+      return reason.roomLabel
+        ? tf('mfa.callBlockedDirected', { room: reason.roomLabel })
+        : t('mfa.callBlockedDirectedNoRoom');
+    }
+    if (reason.kind === 'pickup') {
+      return reason.roomLabel
+        ? tf('mfa.callBlockedPickup', { room: reason.roomLabel })
+        : t('mfa.callBlockedPickupNoRoom');
+    }
+    return t('mfa.callBlockedOther');
+  });
+  const callButtonTitle = $derived(
+    callBlockedTitle ?? (callAnnouncementOffline ? t('mfa.callAnnouncementOffline') : undefined),
+  );
+  const showCall = $derived(zone === 'waiting' && Boolean(onCall));
+  const showCancelVisit = $derived(
+    (zone === 'waiting' || zone === 'away') && Boolean(onCancelVisit),
+  );
   const returnActive = $derived(zone === 'away' && item.status === 'absent_return_later' && !!item.returnUntil);
   const recallPending = $derived(
     zone === 'away' && (item.status !== 'absent_return_later' || !item.returnUntil),
@@ -96,6 +131,28 @@
       : null,
   );
   const showNeedsAssistance = $derived(Boolean(item.needsAssistance));
+  const showPickupMark = $derived(
+    zone === 'waiting' && item.status === 'waiting' && item.movementMode === 'pickup',
+  );
+  /** Blue staff-attention mark: terminal help and pickup both mean someone must go to the patient. */
+  const showStaffAttentionMark = $derived(showNeedsAssistance || showPickupMark);
+  const showDirectedMark = $derived(zone === 'waiting' && item.status === 'directed');
+  const movementRoomLabel = $derived(
+    item.destinationRoomLabel?.trim() || item.roomLabel?.trim() || '',
+  );
+  const staffAttentionTitle = $derived.by(() => {
+    if (showPickupMark) {
+      return movementRoomLabel
+        ? tf('mfa.entryPickupMark', { room: movementRoomLabel })
+        : t('mfa.entryPickupMarkNoRoom');
+    }
+    return t('mfa.entryNeedsAssistance');
+  });
+  const directedMarkTitle = $derived(
+    movementRoomLabel
+      ? tf('mfa.entryDirectedMark', { room: movementRoomLabel })
+      : t('mfa.entryDirectedMarkNoRoom'),
+  );
 
   const canDrag = $derived(dragEnabled && dragZone != null && !busy && !nameEditing);
   const canSupersedeTopic = $derived(
@@ -233,9 +290,14 @@
   >
     <TopicLaneBadge laneCode={item.laneCode} accentColor={laneAccentColor} title={item.laneCode} />
     <span class="queue-num">{String(item.number).padStart(3, '0')}</span>
-    {#if showNeedsAssistance}
-      <span class="queue-assist-mark" title={t('mfa.entryNeedsAssistance')} aria-label={t('mfa.entryNeedsAssistance')}>
+    {#if showStaffAttentionMark}
+      <span class="queue-assist-mark" title={staffAttentionTitle} aria-label={staffAttentionTitle}>
         <Users size={16} aria-hidden="true" />
+      </span>
+    {/if}
+    {#if showDirectedMark}
+      <span class="queue-directed-mark" title={directedMarkTitle} aria-label={directedMarkTitle}>
+        <Navigation size={16} aria-hidden="true" />
       </span>
     {/if}
   </div>
@@ -366,17 +428,25 @@
       </MfaActionButton>
     {/if}
 
-    {#if zone === 'waiting' && onCall}
+    {#if zone === 'waiting' && (showCall || onMarkAway || showCancelVisit)}
       <div class="queue-entry-actions-hover">
-        <MfaActionButton
-          icon
-          disabled={busy}
-          ariaLabel={callAnnouncementOffline ? t('mfa.actionCallOfflineHint') : t('mfa.actionCall')}
-          title={callAnnouncementOffline ? t('mfa.callAnnouncementOffline') : undefined}
-          onclick={onCall}
-        >
-          {#snippet children()}<Megaphone aria-hidden="true" />{/snippet}
-        </MfaActionButton>
+        {#if showCall}
+          <span class="mfa-action-tooltip" title={callButtonTitle}>
+            <MfaActionButton
+              icon
+              disabled={busy || !callAllowed}
+              ariaLabel={callBlockedTitle
+                ? callBlockedTitle
+                : callAnnouncementOffline
+                  ? t('mfa.actionCallOfflineHint')
+                  : t('mfa.actionCall')}
+              title={callButtonTitle}
+              onclick={onCall}
+            >
+              {#snippet children()}<Megaphone aria-hidden="true" />{/snippet}
+            </MfaActionButton>
+          </span>
+        {/if}
         {#if onMarkAway}
           <MfaActionButton
             variant="ghost"
@@ -386,6 +456,17 @@
             onclick={onMarkAway}
           >
             {#snippet children()}<TreePalm aria-hidden="true" />{/snippet}
+          </MfaActionButton>
+        {/if}
+        {#if showCancelVisit}
+          <MfaActionButton
+            variant="danger"
+            icon
+            disabled={busy}
+            ariaLabel={t('mfa.actionCancelVisit')}
+            onclick={onCancelVisit}
+          >
+            {#snippet children()}<Trash2 aria-hidden="true" />{/snippet}
           </MfaActionButton>
         {/if}
       </div>
@@ -398,7 +479,15 @@
       </div>
     {:else if zone === 'active' && item.status === 'in_room'}
       <div class="queue-entry-actions-hover">
-        {#if onCheckOut}
+        {#if inRoomPrimary === 'continue' && onContinue}
+          <MfaActionButton icon disabled={busy} ariaLabel={t('mfa.actionContinue')} onclick={onContinue}>
+            {#snippet children()}<ArrowRight aria-hidden="true" />{/snippet}
+          </MfaActionButton>
+        {:else if inRoomPrimary === 'start' && onStart}
+          <MfaActionButton icon disabled={busy} ariaLabel={t('mfa.actionStart')} onclick={onStart}>
+            {#snippet children()}<Play aria-hidden="true" />{/snippet}
+          </MfaActionButton>
+        {:else if inRoomPrimary === 'checkout' && onCheckOut}
           <MfaActionButton
             variant="ghost"
             icon
@@ -426,14 +515,40 @@
             {/snippet}
           </MfaActionButton>
         {/if}
+        {#if showCancelVisit}
+          <MfaActionButton
+            variant="danger"
+            icon
+            disabled={busy}
+            ariaLabel={t('mfa.actionCancelVisit')}
+            onclick={onCancelVisit}
+          >
+            {#snippet children()}<Trash2 aria-hidden="true" />{/snippet}
+          </MfaActionButton>
+        {/if}
       </div>
-    {:else if zone === 'away' && recallPending && onRecall}
-      <MfaActionButton disabled={busy} onclick={onRecall}>
-        {#snippet children()}
-          <Send aria-hidden="true" />
-          {t('mfa.actionRecall')}
-        {/snippet}
-      </MfaActionButton>
+    {:else if zone === 'away' && (recallPending || showCancelVisit)}
+      <div class="queue-entry-actions-hover">
+        {#if recallPending && onRecall}
+          <MfaActionButton disabled={busy} onclick={onRecall}>
+            {#snippet children()}
+              <Send aria-hidden="true" />
+              {t('mfa.actionRecall')}
+            {/snippet}
+          </MfaActionButton>
+        {/if}
+        {#if showCancelVisit}
+          <MfaActionButton
+            variant="danger"
+            icon
+            disabled={busy}
+            ariaLabel={t('mfa.actionCancelVisit')}
+            onclick={onCancelVisit}
+          >
+            {#snippet children()}<Trash2 aria-hidden="true" />{/snippet}
+          </MfaActionButton>
+        {/if}
+      </div>
     {/if}
     </div>
   </div>

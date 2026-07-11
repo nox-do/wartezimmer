@@ -41,7 +41,7 @@ export type RoomPanelQueueSnapshot = {
     visitId: string;
     laneCode: string;
     number: number;
-    status: 'called' | 'in_room';
+    status: 'called' | 'in_room' | 'directed';
     calledAt?: string;
     roomId: string;
     roomLabel: string;
@@ -88,8 +88,8 @@ export function compareRoomPanelCallOrder(
   return Date.parse(left.createdAt) - Date.parse(right.createdAt);
 }
 
-function isRoomPanelStatus(status: string): status is 'called' | 'in_room' {
-  return status === 'called' || status === 'in_room';
+function isRoomPanelStatus(status: string): status is 'called' | 'in_room' | 'directed' {
+  return status === 'called' || status === 'in_room' || status === 'directed';
 }
 
 function mapQueueRowToPanelItem(
@@ -98,7 +98,12 @@ function mapQueueRowToPanelItem(
   fallbackRoomLabel: string,
   showPatientNames: boolean,
 ): RoomPanelItem | null {
-  if (!isRoomPanelStatus(row.status) || row.roomId !== sessionRoomId) {
+  if (!isRoomPanelStatus(row.status)) {
+    return null;
+  }
+  const panelRoomId =
+    row.status === 'directed' ? row.destinationRoomId || null : row.roomId;
+  if (panelRoomId !== sessionRoomId) {
     return null;
   }
   return {
@@ -108,7 +113,7 @@ function mapQueueRowToPanelItem(
     status: row.status,
     ...(row.calledAt ? { calledAt: row.calledAt } : {}),
     roomId: sessionRoomId,
-    roomLabel: row.roomLabel?.trim() || fallbackRoomLabel,
+    roomLabel: row.roomLabel?.trim() || row.destinationRoomLabel?.trim() || fallbackRoomLabel,
     ...(showPatientNames ? { identityRef: row.identityRef?.trim() || null } : {}),
   };
 }

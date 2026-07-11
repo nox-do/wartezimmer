@@ -73,8 +73,10 @@ export function requireVisitExistsInDb(db: DatabaseSync, visitId: string): void 
 export function visitStatusToQueueDisplayStatus(status: VisitStatus): QueueDisplayStatus {
   if (status === 'called') return 'called';
   if (status === 'arrived' || status === 'in_progress') return 'in_room';
-  if (status === 'waiting' || status === 'directed' || status === 'blocked') return 'waiting';
+  if (status === 'directed') return 'directed';
+  if (status === 'waiting' || status === 'blocked') return 'waiting';
   if (status === 'done') return 'done';
+  if (status === 'cancelled' || status === 'no_show') return 'cancelled';
   throw domainError('INVALID_TRANSITION');
 }
 
@@ -170,6 +172,8 @@ export function visitToQueueVisitRow(
     roomId: assignedRoomId,
     roomLabel: assignedRoomId ? resolveLocationLabel(settings, assignedRoomId) : null,
     journeyStepCompletedAt: visit.journeyStepCompletedAt ?? null,
+    startedAt: visit.startedAt ?? null,
+    movementMode: visit.movementMode ?? null,
     callbackPhone: hostState?.callbackPhone ?? null,
     recallNotifyErrorCode: hostState?.recallNotifyErrorCode ?? null,
     recallNotifySent: hostState?.recallNotifySent ?? false,
@@ -211,15 +215,17 @@ export function listVisitQueueRows(
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
 }
 
-const ABSENCE_ELIGIBLE_VISIT_STATUSES = new Set<VisitStatus>(['waiting', 'called']);
+const ABSENCE_ELIGIBLE_VISIT_STATUSES = new Set<VisitStatus>(['waiting', 'directed', 'called']);
 const CALLBACK_PHONE_ELIGIBLE_STATUSES: QueueDisplayStatus[] = [
   'waiting',
+  'directed',
   'called',
   'absent_wait_here',
   'absent_return_later',
 ];
 const TRIAGE_ELIGIBLE_STATUSES: QueueDisplayStatus[] = [
   'waiting',
+  'directed',
   'called',
   'in_room',
   'absent_wait_here',
@@ -457,7 +463,7 @@ export function arriveVisit(
   actingLocationId?: string,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
-  if (visit.status !== 'called') {
+  if (visit.status !== 'called' && visit.status !== 'directed') {
     throw domainError('INVALID_TRANSITION');
   }
   assertNoAbsentHostOverlay(db, visitId);
@@ -482,6 +488,20 @@ export function startVisit(
   return { fromStatus, toStatus: 'in_room' };
 }
 
+export function continueJourneyVisit(
+  runtime: Runtime,
+  visitId: string,
+): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
+  const visit = requireVisit(runtime, visitId);
+  if (!visit.journeyStepCompletedAt) {
+    throw domainError('INVALID_TRANSITION');
+  }
+
+  const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
+  const after = runVisitTransition(runtime, visitId, 'start_next_journey_step');
+  return { fromStatus, toStatus: visitStatusToQueueDisplayStatus(after.status) };
+}
+
 export function completeVisit(
   runtime: Runtime,
   visitId: string,
@@ -498,6 +518,59 @@ export function completeVisit(
   }
   const afterDone = runVisitTransition(runtime, visitId, 'done', { actingLocationId });
   return { fromStatus, toStatus: visitStatusToQueueDisplayStatus(afterDone.status) };
+}
+
+const CANCELABLE_VISIT_STATUSES = new Set<VisitStatus>([
+  'waiting',
+  'directed',
+  'called',
+  'arrived',
+  'in_progress',
+  'blocked',
+]);
+
+/** MFA „Wartenummer löschen“ — Visit terminal `cancelled` (kein Hard-Delete). */
+export function cancelVisit(
+  db: DatabaseSync,
+  runtime: Runtime,
+  visitId: string,
+): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
+  const visitView = requireVisit(runtime, visitId);
+  if (!CANCELABLE_VISIT_STATUSES.has(visitView.status)) {
+    throw domainError('INVALID_TRANSITION');
+  }
+
+  const hostState = getVisitHostState(db, visitId);
+  const fromStatus = resolveEffectiveQueueDisplayStatus(visitView, hostState);
+  const now = new Date().toISOString();
+  const visit = visitView as Visit;
+  const patch: Partial<Visit> = {
+    status: 'cancelled',
+    finishedAt: now,
+  };
+  if (visit.journeyState === 'active' || visit.journeyStepIndex != null) {
+    patch.journeyState = 'abandoned';
+  }
+
+  updateVisit(db, visit, patch);
+  addEvent(
+    db,
+    visitId,
+    'cancelled',
+    visit.status,
+    'cancelled',
+    visit.lastKnownLocationId,
+    visit.targetLocationId,
+    visit.queueId,
+    visit.queueId,
+    'mfa',
+    'Wartenummer gelöscht',
+  );
+  if (hostState?.absentMode) {
+    clearAbsentMode(db, visitId, now);
+  }
+
+  return { fromStatus, toStatus: 'cancelled' };
 }
 
 /**

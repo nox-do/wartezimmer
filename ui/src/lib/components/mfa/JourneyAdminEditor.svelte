@@ -143,35 +143,7 @@
             updateSelectedTemplate({ name: (event.currentTarget as HTMLInputElement).value })}
         />
       </label>
-
-      <label class="journey-admin__field">
-        <span>{t('mfa.settings.journeyTemplateTopic')}</span>
-        <select
-          class="form-input"
-          value={selectedTemplate.topicId ?? ''}
-          disabled={busy}
-          onchange={(event) =>
-            updateSelectedTemplate({
-              topicId: (event.currentTarget as HTMLSelectElement).value || null,
-            })}
-        >
-          <option value="">{t('mfa.settings.journeyTemplateTopicNone')}</option>
-          {#each topics.filter((topic) => topic.enabled) as topic (topic.topicId)}
-            <option value={topic.topicId}>{topic.label}</option>
-          {/each}
-        </select>
-      </label>
-
-      <label class="journey-admin__check">
-        <input
-          type="checkbox"
-          checked={selectedTemplate.active}
-          disabled={busy}
-          onchange={(event) =>
-            updateSelectedTemplate({ active: (event.currentTarget as HTMLInputElement).checked })}
-        />
-        <span>{t('mfa.settings.colEnabled')}</span>
-      </label>
+      <!-- topicId + active: bewusst ausgeblendet — Zuordnung/Aktivierung am Topic. Siehe JourneyTemplateSetting in OpenAPI / journey-admin-helpers. -->
     </div>
 
     <section class="journey-admin__steps">

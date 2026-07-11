@@ -79,6 +79,7 @@ components:
       type: string
       enum:
         - waiting
+        - directed
         - called
         - in_room
         - done

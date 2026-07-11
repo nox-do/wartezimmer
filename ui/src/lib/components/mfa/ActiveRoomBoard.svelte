@@ -16,6 +16,8 @@
     busyVisitId?: string | null;
     nowMs?: number;
     onCheckIn: (visitId: string) => void;
+    onStart: (visitId: string) => void;
+    onContinue: (visitId: string) => void;
     onReassign: (visitId: string) => void;
     onCheckOut: (visitId: string) => void;
     onReturnToWaiting: (visitId: string) => void;
@@ -32,6 +34,8 @@
     busyVisitId = null,
     nowMs = Date.now(),
     onCheckIn,
+    onStart,
+    onContinue,
     onReassign,
     onCheckOut,
     onReturnToWaiting,
@@ -78,6 +82,8 @@
               {nowMs}
               busy={isBusy(item.visitId)}
               onCheckIn={() => onCheckIn(item.visitId)}
+              onStart={() => onStart(item.visitId)}
+              onContinue={() => onContinue(item.visitId)}
               onReassign={() => onReassign(item.visitId)}
               onCheckOut={() => onCheckOut(item.visitId)}
               onReturnToWaiting={() => onReturnToWaiting(item.visitId)}
@@ -104,6 +110,8 @@
             {nowMs}
             busy={isBusy(item.visitId)}
             onCheckIn={() => onCheckIn(item.visitId)}
+            onStart={() => onStart(item.visitId)}
+            onContinue={() => onContinue(item.visitId)}
             onReassign={() => onReassign(item.visitId)}
             onCheckOut={() => onCheckOut(item.visitId)}
             onReturnToWaiting={() => onReturnToWaiting(item.visitId)}

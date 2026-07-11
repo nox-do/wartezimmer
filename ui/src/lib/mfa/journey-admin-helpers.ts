@@ -47,6 +47,13 @@ export function createDefaultJourneyStep(
   };
 }
 
+/**
+ * Defaults for new journey templates.
+ *
+ * `topicId` / `active` stay in the model for API/sync compatibility, but the Journey
+ * admin UI no longer edits them. Activation belongs on the topic (`journeyTemplateId`).
+ * These fields may turn out unnecessary and could be removed later.
+ */
 export function createJourneyTemplate(
   name: string,
   taken: Set<string>,
@@ -64,10 +71,9 @@ export function createJourneyTemplate(
 
 export function buildJourneyPreview(
   template: JourneyTemplateSetting,
-  topics: PracticeTopicSetting[],
+  _topics: PracticeTopicSetting[],
   rooms: PracticeRoom[],
 ): string {
-  const topic = topics.find((entry) => entry.topicId === template.topicId);
   const hopLabels = template.steps
     .slice()
     .sort((left, right) => left.sortOrder - right.sortOrder)
@@ -78,8 +84,7 @@ export function buildJourneyPreview(
         '?';
       return `${index + 1}: ${target}`;
     });
-  const topicLabel = topic?.label ?? template.topicId ?? 'ohne Thema';
-  return `${template.name} · ${topicLabel} · ${hopLabels.join(' → ') || 'keine Schritte'}`;
+  return `${template.name} · ${hopLabels.join(' → ') || 'keine Schritte'}`;
 }
 
 export function normalizeJourneySettingsForSave(settings: JourneySettings): JourneySettings {

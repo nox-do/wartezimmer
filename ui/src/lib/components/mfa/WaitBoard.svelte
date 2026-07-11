@@ -23,8 +23,11 @@
     queueFilterActive?: boolean;
     onCall: (visitId: string) => void;
     onCheckIn: (visitId: string) => void;
+    onStart: (visitId: string) => void;
+    onContinue: (visitId: string) => void;
     onReassign: (visitId: string) => void;
     onCheckOut: (visitId: string) => void;
+    onCancelVisit: (visitId: string) => void;
     onReturnToWaiting: (visitId: string) => void;
     onRecall: (visitId: string) => void;
     onFixRecallNotify: (visitId: string) => void;
@@ -46,8 +49,11 @@
     queueFilterActive = false,
     onCall,
     onCheckIn,
+    onStart,
+    onContinue,
     onReassign,
     onCheckOut,
+    onCancelVisit,
     onReturnToWaiting,
     onRecall,
     onFixRecallNotify,
@@ -194,6 +200,7 @@
             callAnnouncementOffline={!callAnnouncementReachable}
             onCall={() => onCall(row.item.visitId)}
             onMarkAway={() => onMarkAway(row.item.visitId)}
+            onCancelVisit={() => onCancelVisit(row.item.visitId)}
             onOpenDocuments={onOpenDocuments}
             onCycleTriage={() => onCycleTriage(row.item.visitId)}
             onSupersedeTopic={() => onSupersedeTopic(row.item.visitId)}
@@ -252,6 +259,7 @@
                   busy={isBusy(item.visitId)}
                   onRecall={() => onRecall(item.visitId)}
                   onFixRecallNotify={() => onFixRecallNotify(item.visitId)}
+                  onCancelVisit={() => onCancelVisit(item.visitId)}
                   onOpenDocuments={onOpenDocuments}
                   onCycleTriage={() => onCycleTriage(item.visitId)}
                 />
@@ -275,6 +283,7 @@
                   busy={isBusy(item.visitId)}
                   onRecall={() => onRecall(item.visitId)}
                   onFixRecallNotify={() => onFixRecallNotify(item.visitId)}
+                  onCancelVisit={() => onCancelVisit(item.visitId)}
                   onOpenDocuments={onOpenDocuments}
                   onCycleTriage={() => onCycleTriage(item.visitId)}
                 />
@@ -301,6 +310,8 @@
                 {nowMs}
                 busy={isBusy(item.visitId)}
                 onCheckIn={() => onCheckIn(item.visitId)}
+                onStart={() => onStart(item.visitId)}
+                onContinue={() => onContinue(item.visitId)}
                 onReassign={() => onReassign(item.visitId)}
                 onCheckOut={() => onCheckOut(item.visitId)}
                 onReturnToWaiting={() => onReturnToWaiting(item.visitId)}
@@ -320,6 +331,8 @@
           {busyVisitId}
           {nowMs}
           {onCheckIn}
+          {onStart}
+          {onContinue}
           {onReassign}
           {onCheckOut}
           {onReturnToWaiting}

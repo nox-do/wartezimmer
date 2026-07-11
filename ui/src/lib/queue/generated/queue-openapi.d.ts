@@ -493,6 +493,11 @@ export interface components {
       roomLabel?: string | null;
       /** Format: date-time */
       journeyStepCompletedAt?: string | null;
+      /**
+       * Format: date-time
+       * @description Core treatment start (`arrived` → `in_progress`). Null while status is in_room means MFA should offer Starten before Entlassen/Weiter.
+       */
+      startedAt?: string | null;
       /** Format: date-time */
       arrivedAt: string;
       waitMs: number;
@@ -517,6 +522,11 @@ export interface components {
       triageLevel?: 'red' | 'yellow' | 'green' | null;
       /** @description Patient requested help at terminal before topic check-in (MFA marker only) */
       needsAssistance: boolean;
+      /**
+       * @description Visit movement mode. MFA shows Aufrufen only for waiting + call; directed/self_go and pickup stay visible without Call.
+       * @enum {string|null}
+       */
+      movementMode?: 'call' | 'self_go' | 'pickup' | null;
     };
     TerminalAssistPendingItem: {
       deviceId: string;
@@ -597,7 +607,13 @@ export interface components {
       laneCode: string;
       number: number;
       status: components['schemas']['QueueStatus'];
+      /** @description Assigned call room, or wayfinding target for directed/self_go and pickup (TV "Bitte weiter zu" / pickup copy). */
       roomLabel: string | null;
+      /**
+       * @description Visit movement mode. TV uses pickup (+ waiting) for "Sie werden abgeholt" and directed + self_go for wayfinding.
+       * @enum {string|null}
+       */
+      movementMode?: 'call' | 'self_go' | 'pickup' | null;
     };
     QueueListTvResponse: {
       /** @constant */
@@ -612,8 +628,11 @@ export interface components {
       visitId: string;
       laneCode: string;
       number: number;
-      /** @enum {string} */
-      status: 'called' | 'in_room';
+      /**
+       * @description called/in_room as today. directed = self_go underwegs zum Panel-Raum (Patient kann „Ich bin da“ / Angekommen quittieren).
+       * @enum {string}
+       */
+      status: 'called' | 'in_room' | 'directed';
       /** Format: date-time */
       calledAt?: string;
       roomId: string;
@@ -676,8 +695,11 @@ export interface components {
       type:
         | 'call'
         | 'check_in_room'
+        | 'start_treatment'
+        | 'continue_journey'
         | 'reassign_room'
         | 'check_out_room'
+        | 'cancel'
         | 'return_to_waiting'
         | 'cycle_triage'
         | 'set_absence'
@@ -738,6 +760,7 @@ export interface components {
     /** @enum {string} */
     QueueStatus:
       | 'waiting'
+      | 'directed'
       | 'called'
       | 'in_room'
       | 'done'

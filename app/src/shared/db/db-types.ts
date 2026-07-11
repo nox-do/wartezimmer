@@ -3,6 +3,7 @@ import type { JourneySettings } from '../journey-settings.js';
 
 export const TICKET_STATUSES = [
   'waiting',
+  'directed',
   'called',
   'in_room',
   'done',
@@ -57,6 +58,8 @@ export type QueueVisitRow = {
   roomId: string | null;
   roomLabel: string | null;
   journeyStepCompletedAt: string | null;
+  startedAt: string | null;
+  movementMode: 'call' | 'self_go' | 'pickup' | null;
   callbackPhone: string | null;
   recallNotifyErrorCode: string | null;
   recallNotifySent: boolean;

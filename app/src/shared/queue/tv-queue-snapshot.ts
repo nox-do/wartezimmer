@@ -15,6 +15,7 @@ export type TvQueueSnapshot = {
     number: number;
     status: string;
     roomLabel: string | null;
+    movementMode: 'call' | 'self_go' | 'pickup' | null;
   }>;
   checkinLocked: boolean;
   serverTime: string;
@@ -32,11 +33,15 @@ export type BuildTvQueueSnapshotInput = {
 
 function mapVisitToTvItem(visit: ReturnType<Runtime['visits']>[number], settings: OpsSettings): TvQueueItem {
   const row = visitToQueueVisitRow(visit, settings);
+  const wayfinding = row.status === 'directed' || (row.status === 'waiting' && row.movementMode === 'pickup');
   return {
     laneCode: row.laneCode,
     number: row.number,
     status: row.status,
-    roomLabel: row.roomLabel,
+    roomLabel: wayfinding
+      ? row.destinationRoomLabel?.trim() || row.roomLabel
+      : row.roomLabel,
+    movementMode: row.movementMode,
   };
 }
 

@@ -44,6 +44,7 @@ export const QueueItem = {
       type: 'string',
       enum: [
         'waiting',
+        'directed',
         'called',
         'in_room',
         'done',
@@ -59,6 +60,10 @@ export const QueueItem = {
       type: ['string', 'null'],
     },
     journeyStepCompletedAt: {
+      type: ['string', 'null'],
+      format: 'date-time',
+    },
+    startedAt: {
       type: ['string', 'null'],
       format: 'date-time',
     },
@@ -100,6 +105,10 @@ export const QueueItem = {
     },
     needsAssistance: {
       type: 'boolean',
+    },
+    movementMode: {
+      type: ['string', 'null'],
+      enum: ['call', 'self_go', 'pickup', null],
     },
   },
 } as const;
@@ -379,6 +388,7 @@ export const QueueListMfaResponse = {
             type: 'string',
             enum: [
               'waiting',
+              'directed',
               'called',
               'in_room',
               'done',
@@ -394,6 +404,10 @@ export const QueueListMfaResponse = {
             type: ['string', 'null'],
           },
           journeyStepCompletedAt: {
+            type: ['string', 'null'],
+            format: 'date-time',
+          },
+          startedAt: {
             type: ['string', 'null'],
             format: 'date-time',
           },
@@ -435,6 +449,10 @@ export const QueueListMfaResponse = {
           },
           needsAssistance: {
             type: 'boolean',
+          },
+          movementMode: {
+            type: ['string', 'null'],
+            enum: ['call', 'self_go', 'pickup', null],
           },
         },
       },
@@ -492,6 +510,7 @@ export const QueueTvItem = {
       type: 'string',
       enum: [
         'waiting',
+        'directed',
         'called',
         'in_room',
         'done',
@@ -502,6 +521,10 @@ export const QueueTvItem = {
     },
     roomLabel: {
       type: ['string', 'null'],
+    },
+    movementMode: {
+      type: ['string', 'null'],
+      enum: ['call', 'self_go', 'pickup', null],
     },
   },
 } as const;
@@ -536,6 +559,7 @@ export const QueueListTvResponse = {
             type: 'string',
             enum: [
               'waiting',
+              'directed',
               'called',
               'in_room',
               'done',
@@ -546,6 +570,10 @@ export const QueueListTvResponse = {
           },
           roomLabel: {
             type: ['string', 'null'],
+          },
+          movementMode: {
+            type: ['string', 'null'],
+            enum: ['call', 'self_go', 'pickup', null],
           },
         },
       },
@@ -576,7 +604,7 @@ export const RoomPanelItem = {
     },
     status: {
       type: 'string',
-      enum: ['called', 'in_room'],
+      enum: ['called', 'in_room', 'directed'],
     },
     calledAt: {
       type: 'string',
@@ -659,7 +687,7 @@ export const RoomPanelSnapshot = {
           },
           status: {
             type: 'string',
-            enum: ['called', 'in_room'],
+            enum: ['called', 'in_room', 'directed'],
           },
           calledAt: {
             type: 'string',
@@ -738,6 +766,7 @@ export const QueueListResponse = {
                 type: 'string',
                 enum: [
                   'waiting',
+                  'directed',
                   'called',
                   'in_room',
                   'done',
@@ -753,6 +782,10 @@ export const QueueListResponse = {
                 type: ['string', 'null'],
               },
               journeyStepCompletedAt: {
+                type: ['string', 'null'],
+                format: 'date-time',
+              },
+              startedAt: {
                 type: ['string', 'null'],
                 format: 'date-time',
               },
@@ -794,6 +827,10 @@ export const QueueListResponse = {
               },
               needsAssistance: {
                 type: 'boolean',
+              },
+              movementMode: {
+                type: ['string', 'null'],
+                enum: ['call', 'self_go', 'pickup', null],
               },
             },
           },
@@ -865,6 +902,7 @@ export const QueueListResponse = {
                 type: 'string',
                 enum: [
                   'waiting',
+                  'directed',
                   'called',
                   'in_room',
                   'done',
@@ -875,6 +913,10 @@ export const QueueListResponse = {
               },
               roomLabel: {
                 type: ['string', 'null'],
+              },
+              movementMode: {
+                type: ['string', 'null'],
+                enum: ['call', 'self_go', 'pickup', null],
               },
             },
           },
@@ -953,7 +995,7 @@ export const QueueListResponse = {
               },
               status: {
                 type: 'string',
-                enum: ['called', 'in_room'],
+                enum: ['called', 'in_room', 'directed'],
               },
               calledAt: {
                 type: 'string',
@@ -1029,6 +1071,7 @@ export const QueueCallResponse = {
       type: 'string',
       enum: [
         'waiting',
+        'directed',
         'called',
         'in_room',
         'done',
@@ -1041,6 +1084,7 @@ export const QueueCallResponse = {
       type: 'string',
       enum: [
         'waiting',
+        'directed',
         'called',
         'in_room',
         'done',
@@ -1090,8 +1134,11 @@ export const QueueVisitTransitionRequest = {
       enum: [
         'call',
         'check_in_room',
+        'start_treatment',
+        'continue_journey',
         'reassign_room',
         'check_out_room',
+        'cancel',
         'return_to_waiting',
         'cycle_triage',
         'set_absence',
@@ -1155,6 +1202,7 @@ export const QueueVisitTransitionResponse = {
           type: 'string',
           enum: [
             'waiting',
+            'directed',
             'called',
             'in_room',
             'done',
@@ -1167,6 +1215,7 @@ export const QueueVisitTransitionResponse = {
           type: 'string',
           enum: [
             'waiting',
+            'directed',
             'called',
             'in_room',
             'done',
@@ -1232,6 +1281,7 @@ export const QueueVisitTransitionResponse = {
           type: 'string',
           enum: [
             'waiting',
+            'directed',
             'called',
             'in_room',
             'done',
@@ -1244,6 +1294,7 @@ export const QueueVisitTransitionResponse = {
           type: 'string',
           enum: [
             'waiting',
+            'directed',
             'called',
             'in_room',
             'done',
@@ -1352,6 +1403,7 @@ export const QueueTransitionResponse = {
       type: 'string',
       enum: [
         'waiting',
+        'directed',
         'called',
         'in_room',
         'done',
@@ -1364,6 +1416,7 @@ export const QueueTransitionResponse = {
       type: 'string',
       enum: [
         'waiting',
+        'directed',
         'called',
         'in_room',
         'done',
@@ -1408,6 +1461,7 @@ export const QueueRecallResponse = {
       type: 'string',
       enum: [
         'waiting',
+        'directed',
         'called',
         'in_room',
         'done',
@@ -1420,6 +1474,7 @@ export const QueueRecallResponse = {
       type: 'string',
       enum: [
         'waiting',
+        'directed',
         'called',
         'in_room',
         'done',
@@ -1552,6 +1607,7 @@ export const GET_api_v1_queueResponse200 = {
                 type: 'string',
                 enum: [
                   'waiting',
+                  'directed',
                   'called',
                   'in_room',
                   'done',
@@ -1567,6 +1623,10 @@ export const GET_api_v1_queueResponse200 = {
                 type: ['string', 'null'],
               },
               journeyStepCompletedAt: {
+                type: ['string', 'null'],
+                format: 'date-time',
+              },
+              startedAt: {
                 type: ['string', 'null'],
                 format: 'date-time',
               },
@@ -1608,6 +1668,10 @@ export const GET_api_v1_queueResponse200 = {
               },
               needsAssistance: {
                 type: 'boolean',
+              },
+              movementMode: {
+                type: ['string', 'null'],
+                enum: ['call', 'self_go', 'pickup', null],
               },
             },
           },
@@ -1679,6 +1743,7 @@ export const GET_api_v1_queueResponse200 = {
                 type: 'string',
                 enum: [
                   'waiting',
+                  'directed',
                   'called',
                   'in_room',
                   'done',
@@ -1689,6 +1754,10 @@ export const GET_api_v1_queueResponse200 = {
               },
               roomLabel: {
                 type: ['string', 'null'],
+              },
+              movementMode: {
+                type: ['string', 'null'],
+                enum: ['call', 'self_go', 'pickup', null],
               },
             },
           },
@@ -1767,7 +1836,7 @@ export const GET_api_v1_queueResponse200 = {
               },
               status: {
                 type: 'string',
-                enum: ['called', 'in_room'],
+                enum: ['called', 'in_room', 'directed'],
               },
               calledAt: {
                 type: 'string',
@@ -1868,6 +1937,7 @@ export const POST_api_v1_queue_mark_absenceResponse200 = {
       type: 'string',
       enum: [
         'waiting',
+        'directed',
         'called',
         'in_room',
         'done',
@@ -1880,6 +1950,7 @@ export const POST_api_v1_queue_mark_absenceResponse200 = {
       type: 'string',
       enum: [
         'waiting',
+        'directed',
         'called',
         'in_room',
         'done',
@@ -2139,8 +2210,11 @@ export const POST_api_v1_queue_visitId_transitionRequestBody = {
       enum: [
         'call',
         'check_in_room',
+        'start_treatment',
+        'continue_journey',
         'reassign_room',
         'check_out_room',
+        'cancel',
         'return_to_waiting',
         'cycle_triage',
         'set_absence',
@@ -2204,6 +2278,7 @@ export const POST_api_v1_queue_visitId_transitionResponse200 = {
           type: 'string',
           enum: [
             'waiting',
+            'directed',
             'called',
             'in_room',
             'done',
@@ -2216,6 +2291,7 @@ export const POST_api_v1_queue_visitId_transitionResponse200 = {
           type: 'string',
           enum: [
             'waiting',
+            'directed',
             'called',
             'in_room',
             'done',
@@ -2281,6 +2357,7 @@ export const POST_api_v1_queue_visitId_transitionResponse200 = {
           type: 'string',
           enum: [
             'waiting',
+            'directed',
             'called',
             'in_room',
             'done',
@@ -2293,6 +2370,7 @@ export const POST_api_v1_queue_visitId_transitionResponse200 = {
           type: 'string',
           enum: [
             'waiting',
+            'directed',
             'called',
             'in_room',
             'done',

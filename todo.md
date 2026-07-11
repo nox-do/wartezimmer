@@ -10,17 +10,22 @@ Stand: 2026-07-10
 - Fehlercode bleibt `ROUTING_MODE_CHANGE_BLOCKED`, Details: `openVisitCount`.
 - Fix: Journey-Step-IDs via `randomId()` (LAN-HTTP ohne `crypto.randomUUID`).
 - Fix: Check-in/Bon `destinationRoomLabel` nur aus Visit-Ziel (kein Topic-Default-Fallback).
-- **Offen:** MFA Active-Zone Primary-Button implementieren (Plan fixiert 2026-07-11).
+- ✅ MFA Active-Zone Primary-Button (2026-07-11): `startedAt` + `start_treatment`/`continue_journey`; Resolver Starten/Weiter/Entlassen; Simple+Complex angeglichen.
+- Journey-Admin: Standard-Thema + Aktiv ausgeblendet (2026-07-11); Aktivierung bleibt am Topic; Felder ggf. später entfernbar.
+- ✅ TV Wayfinding (2026-07-11): QueueStatus `directed`; Visibility `directed`/`pickup`+`visible`; TV-Spalte „Bitte weiter zu“ (+ Pickup-Copy „Sie werden abgeholt“).
+- ✅ Room-Panel self_go (2026-07-11): Snapshot zeigt `directed` wenn Ziel = Panel-Raum; Quittieren („Ich bin da“/Angekommen) = `arrive` aus directed; OpenAPI RoomPanelItem.status + Preview/Live-UI.
+- ✅ MFA Call-Gate + Löschen (2026-07-11): Aufrufen disabled+Tooltip (directed/pickup); Trash danger-Style; Modal → `cancelled`.
+- ✅ MFA Card-Marken (2026-07-11): pickup = blaues Users-Mark; directed = Navigation (teal). Away-Löschen in einer Zeile mit Rückkehr-Countdown.
 
 ### MFA Primary-Button — fixierter Plan (2026-07-11)
 
-**Was wir machen:** MFA Active-Zone Primary-Button journey-bewusst machen. Simple und Complex teilen Aufrufen→Angekommen→**Starten**→Entlassen; Complex ergänzt **Weiter** zwischen Hops. Ohne Room-Panel bedient MFA den ganzen Flow. Backend-Fundament liegt (`completedWhen`, `journeyStepCompletedAt`, `start_next_journey_step`, Call-Bridge).
+**Umgesetzt:** Queue `startedAt` + Transitions `start_treatment` / `continue_journey`; Resolver `resolveMfaInRoomPrimaryAction`; MFA Buttons Starten/Weiter/Entlassen. Room-Panel unverändert (Arrive/Done, Auto-Start bei Checkout).
 
 **Regeln:**
 - Angekommen = Anwesenheit; Starten = Behandlung beginnt; Weiter = Routing anwenden; Entlassen = Visit-Ende.
 - Simple bekommt sichtbares **Starten** (nicht mehr still beim Entlassen) — an Core/`in_progress` und Complex angeglichen.
-- Dafür braucht die Queue `arrived` vs `in_progress` (heute beides nur `in_room`).
-- Weiter nur bei Folgeschritt `call`/`pickup` (self_go schon beim Complete).
+- Signal: `in_room` + `startedAt` / `journeyStepCompletedAt` (Status bleibt `in_room` für Zone/Capacity).
+- Weiter nur bei Folgeschritt `call`/`pickup` (self_go schon beim Complete → kein Flag).
 - Kein Folgeschritt (auch letzter Hop = Empfang) → Entlassen.
 - Kein bedienbares Panel → MFA zeigt alle nötigen Primary-Actions.
 

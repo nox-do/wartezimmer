@@ -8,7 +8,17 @@ export type QueueDragSource = {
   zone: QueueDragZone;
   status: QueueStatus;
   roomId: string | null;
+  movementMode?: QueueItemMovementMode | null;
 };
+
+type QueueItemMovementMode = 'call' | 'self_go' | 'pickup';
+
+function canCallFromWaiting(source: QueueDragSource): boolean {
+  if (source.status !== 'waiting') {
+    return false;
+  }
+  return source.movementMode === 'call' || source.movementMode == null;
+}
 
 export type QueueDropTarget =
   | { kind: 'room'; roomId: string; roomLabel: string }
@@ -56,6 +66,9 @@ export function resolveQueueDrop(
   };
 
   if (source.zone === 'waiting') {
+    if (!canCallFromWaiting(source)) {
+      return null;
+    }
     return { action: 'call', visitId: source.visitId, room: targetRoom };
   }
 
@@ -71,7 +84,12 @@ export function resolveQueueDrop(
 }
 
 export function queueDragSourceFromItem(
-  item: { visitId: string; status: QueueStatus; roomId?: string | null },
+  item: {
+    visitId: string;
+    status: QueueStatus;
+    roomId?: string | null;
+    movementMode?: QueueItemMovementMode | null;
+  },
   zone: QueueDragZone,
 ): QueueDragSource {
   return {
@@ -79,6 +97,7 @@ export function queueDragSourceFromItem(
     zone,
     status: item.status,
     roomId: normalizeRoomId(item.roomId),
+    movementMode: item.movementMode ?? null,
   };
 }
 

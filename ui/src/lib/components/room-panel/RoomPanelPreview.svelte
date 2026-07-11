@@ -17,7 +17,7 @@
     visitId: string;
     ticketCode: string;
     patientName?: string | null;
-    status: 'called' | 'in_room';
+    status: 'called' | 'in_room' | 'directed';
   };
 
   interface Props {
@@ -140,7 +140,7 @@
           {#each visibleEntries as entry (entry.visitId)}
             <li
               class="room-panel-preview__queue-item"
-              class:room-panel-preview__queue-item--next={entry.status === 'called'}
+              class:room-panel-preview__queue-item--next={entry.status === 'called' || entry.status === 'directed'}
             >
               <span class="room-panel-preview__queue-code">{entry.ticketCode}</span>
               {#if showNames && entry.patientName?.trim()}
@@ -149,7 +149,7 @@
                   <span>{entry.patientName}</span>
                 </span>
               {/if}
-              {#if showCheckIn && entry.status === 'called'}
+              {#if showCheckIn && (entry.status === 'called' || entry.status === 'directed')}
                 <Button
                   class="room-panel-preview__queue-action"
                   variant="primary"

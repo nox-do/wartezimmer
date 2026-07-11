@@ -14,6 +14,10 @@ export type TvCallRow = {
   where: string;
 };
 
+function isPickupWaiting(item: TvQueueItem): boolean {
+  return item.status === 'waiting' && item.movementMode === 'pickup';
+}
+
 export function partitionTvQueue(items: TvQueueItem[]): {
   waiting: TvWaitingRow[];
   calls: TvCallRow[];
@@ -24,11 +28,11 @@ export function partitionTvQueue(items: TvQueueItem[]): {
   for (const item of items) {
     const ticketCode = formatTicketCode(item.laneCode, item.number);
 
-    if (item.status === 'called') {
-      calls.push({
-        ticketCode,
-        where: item.roomLabel?.trim() || t('tv.callTargetFallback'),
-      });
+    if (item.status === 'called' || item.status === 'directed' || isPickupWaiting(item)) {
+      const where = isPickupWaiting(item)
+        ? t('tv.pickupHint')
+        : item.roomLabel?.trim() || t('tv.callTargetFallback');
+      calls.push({ ticketCode, where });
       continue;
     }
 

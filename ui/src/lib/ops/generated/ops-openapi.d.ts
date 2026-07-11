@@ -1482,7 +1482,9 @@ export interface components {
     JourneyTemplateSetting: {
       id: string;
       name: string;
+      /** @description Optional legacy binding hint (which topic this template is "for"). Not the activation switch — topics opt in via journeyTemplateId. UI currently hidden; may be removable if topic assignment alone is enough. */
       topicId?: string | null;
+      /** @description Soft enable for the template catalog. Inactive templates are omitted from topic pickers and ignored at sync even if a topic still references them. UI currently hidden; may be redundant with topic.journeyTemplateId selection. */
       active: boolean;
       steps: components['schemas']['JourneyStepSetting'][];
     };

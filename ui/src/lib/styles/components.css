@@ -586,6 +586,23 @@
   height: 0.75rem;
 }
 
+.btn-staff-sm--danger {
+  border-color: var(--red-error-border-strong);
+  background: var(--red-error-bg);
+  color: var(--red-error-ink-alt);
+}
+
+.btn-staff-sm--danger:hover:not(:disabled) {
+  border-color: var(--red-error);
+  background: var(--red-error-bg-soft);
+  color: var(--red-error-ink);
+}
+
+.mfa-action-tooltip {
+  display: inline-flex;
+  line-height: 0;
+}
+
 .btn-staff-sm__count {
   position: absolute;
   right: -3px;

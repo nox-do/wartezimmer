@@ -20,6 +20,7 @@ export const VisitCreated = {
       type: 'string',
       enum: [
         'waiting',
+        'directed',
         'called',
         'in_room',
         'done',
@@ -216,6 +217,7 @@ export const POST_api_v1_checkinsResponse201 = {
       type: 'string',
       enum: [
         'waiting',
+        'directed',
         'called',
         'in_room',
         'done',

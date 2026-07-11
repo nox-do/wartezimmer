@@ -312,3 +312,64 @@ test('buildRoomPanelQueueSnapshot excludes visits called to another room', () =>
 
   assert.equal(snapshot.items.length, 0);
 });
+
+test('buildRoomPanelQueueSnapshot shows directed self_go visit for target room', () => {
+  const { db, sqlite, visitId, runtime } = setupPanelVisitFlow();
+  const redirected = runtime.redirect(visitId, {
+    queueId: null,
+    targetLocationId: 'labor',
+    movementMode: 'self_go',
+    publicDisplayMode: 'visible',
+    actorSurfaceId: 'pf_mfa_dashboard',
+  });
+  assert.equal(redirected?.status, 'directed');
+
+  const snapshot = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 16, {
+    roomId: 'labor',
+    placement: 'outside',
+  });
+
+  assert.equal(snapshot.items.length, 1);
+  assert.equal(snapshot.items[0]?.visitId, visitId);
+  assert.equal(snapshot.items[0]?.status, 'directed');
+  assert.equal(snapshot.items[0]?.roomId, 'labor');
+});
+
+test('buildRoomPanelQueueSnapshot hides directed visit for other rooms', () => {
+  const { db, sqlite, visitId, runtime } = setupPanelVisitFlow();
+  runtime.redirect(visitId, {
+    queueId: null,
+    targetLocationId: 'mfa-tresen',
+    movementMode: 'self_go',
+    publicDisplayMode: 'visible',
+    actorSurfaceId: 'pf_mfa_dashboard',
+  });
+
+  const snapshot = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 17, {
+    roomId: 'labor',
+    placement: 'outside',
+  });
+
+  assert.equal(snapshot.items.length, 0);
+});
+
+test('arriveVisit from directed maps to in_room on room panel', () => {
+  const { db, sqlite, visitId, runtime } = setupPanelVisitFlow();
+  runtime.redirect(visitId, {
+    queueId: null,
+    targetLocationId: 'labor',
+    movementMode: 'self_go',
+    publicDisplayMode: 'visible',
+    actorSurfaceId: 'pf_mfa_dashboard',
+  });
+
+  const arrive = arriveVisit(sqlite, runtime, visitId, 'labor');
+  assert.deepEqual(arrive, { fromStatus: 'directed', toStatus: 'in_room' });
+
+  const snapshot = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 18, {
+    roomId: 'labor',
+    placement: 'outside',
+  });
+  assert.equal(snapshot.items.length, 1);
+  assert.equal(snapshot.items[0]?.status, 'in_room');
+});

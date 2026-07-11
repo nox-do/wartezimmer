@@ -189,6 +189,30 @@ async function applyQueueVisitTransition(
         },
       });
     }
+    case 'start_treatment': {
+      const actingRoomId = body.actingRoomId?.trim();
+      return runVisitTransition({
+        reply,
+        visitId,
+        execute: () => db.startTreatment(visitId, actingRoomId),
+        mapSuccess: (transition) => transitionBody(transition, visitId),
+        errorOptions: {
+          invalidTransitionMessage: `Ticket ${visitId} kann nicht gestartet werden.`,
+          roomScopeMismatchMessage:
+            'Start nur im aktuell zugewiesenen Raum möglich — bitte am richtigen Raum-Panel oder MFA nutzen.',
+        },
+      });
+    }
+    case 'continue_journey':
+      return runVisitTransition({
+        reply,
+        visitId,
+        execute: () => db.continueJourney(visitId),
+        mapSuccess: (transition) => transitionBody(transition, visitId),
+        errorOptions: {
+          invalidTransitionMessage: `Ticket ${visitId} kann nicht zum nächsten Journey-Schritt weitergeleitet werden.`,
+        },
+      });
     case 'reassign_room': {
       const roomId = body.roomId?.trim();
       const roomLabel = body.roomLabel?.trim();
@@ -230,6 +254,16 @@ async function applyQueueVisitTransition(
         },
       });
     }
+    case 'cancel':
+      return runVisitTransition({
+        reply,
+        visitId,
+        execute: () => db.cancelQueueVisit(visitId),
+        mapSuccess: (transition) => transitionBody(transition, visitId),
+        errorOptions: {
+          invalidTransitionMessage: `Ticket ${visitId} kann nicht gelöscht werden.`,
+        },
+      });
     case 'return_to_waiting':
       return runVisitTransition({
         reply,

@@ -57,11 +57,16 @@ test('scheduleRecallWindowExpiry reschedules when expiry transition is not yet a
     checkinPhone: null,
     roomId: null,
     roomLabel: null,
+    journeyStepCompletedAt: null,
+    startedAt: null,
+    movementMode: null,
     callbackPhone: null,
     recallNotifyErrorCode: null,
     recallNotifySent: false,
     returnUntil,
+    triageLevel: null,
     documentCount: 0,
+    needsAssistance: false,
   };
 
   let processCalls = 0;

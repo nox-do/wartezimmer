@@ -5,7 +5,7 @@ describe('resolveQueueDrop', () => {
   it('calls ticket when dropped from waiting onto a room', () => {
     expect(
       resolveQueueDrop(
-        { visitId: 't1', zone: 'waiting', status: 'waiting', roomId: null },
+        { visitId: 't1', zone: 'waiting', status: 'waiting', roomId: null, movementMode: 'call' },
         { kind: 'room', roomId: 'empfang', roomLabel: 'Empfang' },
       ),
     ).toEqual({
@@ -13,6 +13,21 @@ describe('resolveQueueDrop', () => {
       visitId: 't1',
       room: { roomId: 'empfang', roomLabel: 'Empfang' },
     });
+  });
+
+  it('does not call directed or pickup tickets dropped onto a room', () => {
+    expect(
+      resolveQueueDrop(
+        { visitId: 't1d', zone: 'waiting', status: 'directed', roomId: null, movementMode: 'self_go' },
+        { kind: 'room', roomId: 'labor', roomLabel: 'Labor' },
+      ),
+    ).toBeNull();
+    expect(
+      resolveQueueDrop(
+        { visitId: 't1p', zone: 'waiting', status: 'waiting', roomId: null, movementMode: 'pickup' },
+        { kind: 'room', roomId: 'labor', roomLabel: 'Labor' },
+      ),
+    ).toBeNull();
   });
 
   it('reassigns when active ticket moves to another room', () => {

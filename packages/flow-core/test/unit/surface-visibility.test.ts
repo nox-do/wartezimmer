@@ -185,3 +185,47 @@ test('Konfliktaufloesung: spezifisch schlaegt allgemein', () => {
   assert.ok(ruleSpecificity(specific) > ruleSpecificity(general));
   assert.equal(resolveSurfaceDisplayRule([general, specific])?.id, 'narrow');
 });
+
+test('directed + visible: auf waiting_tv auch ohne Queue und ohne lastKnown im Wartezimmer', () => {
+  const visit = {
+    primaryTopicId: 'blood',
+    queueId: null,
+    targetLocationId: 'lab',
+    lastKnownLocationId: 'reception',
+    status: 'directed',
+    movementMode: 'self_go',
+    publicDisplayMode: 'visible',
+  };
+
+  const explanation = explainVisibility(visit, surfaces.waiting_tv, rules.waiting_tv);
+  assert.equal(explanation.visible, true);
+  assert.match(explanation.reason, /Wayfinding|publicDisplayMode/);
+});
+
+test('directed + hidden: nicht auf waiting_tv', () => {
+  const visit = {
+    primaryTopicId: 'blood',
+    queueId: null,
+    targetLocationId: 'lab',
+    lastKnownLocationId: 'reception',
+    status: 'directed',
+    movementMode: 'self_go',
+    publicDisplayMode: 'hidden',
+  };
+
+  assert.equal(isVisitVisibleOnSurface(visit, surfaces.waiting_tv, rules.waiting_tv), false);
+});
+
+test('pickup + visible: auf waiting_tv auch wenn lastKnown nicht Wartezimmer', () => {
+  const visit = {
+    primaryTopicId: 'blood',
+    queueId: null,
+    targetLocationId: 'lab',
+    lastKnownLocationId: 'reception',
+    status: 'waiting',
+    movementMode: 'pickup',
+    publicDisplayMode: 'visible',
+  };
+
+  assert.equal(isVisitVisibleOnSurface(visit, surfaces.waiting_tv, rules.waiting_tv), true);
+});

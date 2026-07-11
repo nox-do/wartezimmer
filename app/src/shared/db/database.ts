@@ -36,8 +36,10 @@ import { clearFlowCoreVisitRuntime, ensureFlowCoreSchema } from '../flow-core/fl
 import {
   arriveVisit,
   callVisit,
+  cancelVisit,
   clearVisitCallbackPhone,
   completeVisit,
+  continueJourneyVisit,
   cycleVisitTriageLevel,
   listVisitQueueRows,
   processExpiredRecallWindowForVisit,
@@ -48,6 +50,7 @@ import {
   setVisitAbsent,
   setVisitCallbackPhone,
   setVisitIdentityRef,
+  startVisit,
   visitExistsInDb,
   requireVisitExistsInDb,
 } from '../flow-core/visit-queue-bridge.js';
@@ -854,6 +857,40 @@ export class CoreDatabase {
     });
   }
 
+  startTreatment(visitId: string, actingRoomId?: string): { fromStatus: string; toStatus: string } {
+    return this.withTransaction('startTreatment', () => {
+      requireVisitExistsInDb(this.db, visitId);
+      const updatedAt = this.commonHelperDeps().nowIso();
+      const transition = startVisit(getFlowCoreRuntime(this.db), visitId, actingRoomId);
+      this.emitOutboxEvent('QueueStatusChanged', visitId, {
+        visitId: visitId,
+        fromStatus: transition.fromStatus,
+        toStatus: transition.toStatus,
+        updatedAt,
+        roomId: null,
+        roomLabel: null,
+      });
+      return transition;
+    });
+  }
+
+  continueJourney(visitId: string): { fromStatus: string; toStatus: string } {
+    return this.withTransaction('continueJourney', () => {
+      requireVisitExistsInDb(this.db, visitId);
+      const updatedAt = this.commonHelperDeps().nowIso();
+      const transition = continueJourneyVisit(getFlowCoreRuntime(this.db), visitId);
+      this.emitOutboxEvent('QueueStatusChanged', visitId, {
+        visitId: visitId,
+        fromStatus: transition.fromStatus,
+        toStatus: transition.toStatus,
+        updatedAt,
+        roomId: null,
+        roomLabel: null,
+      });
+      return transition;
+    });
+  }
+
   reassignRoom(
     visitId: string,
     roomId?: string,
@@ -888,6 +925,23 @@ export class CoreDatabase {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
       const transition = completeVisit(getFlowCoreRuntime(this.db), visitId, actingRoomId);
+      this.emitOutboxEvent('QueueStatusChanged', visitId, {
+        visitId: visitId,
+        fromStatus: transition.fromStatus,
+        toStatus: transition.toStatus,
+        updatedAt,
+        roomId: null,
+        roomLabel: null,
+      });
+      return transition;
+    });
+  }
+
+  cancelQueueVisit(visitId: string): { fromStatus: string; toStatus: string } {
+    return this.withTransaction('cancelQueueVisit', () => {
+      requireVisitExistsInDb(this.db, visitId);
+      const updatedAt = this.commonHelperDeps().nowIso();
+      const transition = cancelVisit(this.db, getFlowCoreRuntime(this.db), visitId);
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
         fromStatus: transition.fromStatus,

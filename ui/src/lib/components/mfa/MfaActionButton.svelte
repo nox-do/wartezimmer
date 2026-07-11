@@ -2,7 +2,7 @@
   import type { Snippet } from 'svelte';
 
   interface Props {
-    variant?: 'primary' | 'ghost' | 'doc';
+    variant?: 'primary' | 'ghost' | 'doc' | 'danger';
     icon?: boolean;
     href?: string;
     count?: number;
@@ -31,6 +31,7 @@
       icon ? 'btn-staff-sm--icon icon-btn' : '',
       variant === 'ghost' ? 'btn-staff-sm--ghost' : '',
       variant === 'doc' ? 'btn-staff-sm--doc' : '',
+      variant === 'danger' ? 'btn-staff-sm--danger' : '',
     ]
       .filter(Boolean)
       .join(' '),

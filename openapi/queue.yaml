@@ -66,6 +66,13 @@ components:
           type: string
           format: date-time
           nullable: true
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: >-
+            Core treatment start (`arrived` → `in_progress`). Null while status is in_room
+            means MFA should offer Starten before Entlassen/Weiter.
         arrivedAt:
           type: string
           format: date-time
@@ -109,6 +116,16 @@ components:
         needsAssistance:
           type: boolean
           description: Patient requested help at terminal before topic check-in (MFA marker only)
+        movementMode:
+          type: string
+          nullable: true
+          enum:
+            - call
+            - self_go
+            - pickup
+          description: >-
+            Visit movement mode. MFA shows Aufrufen only for waiting + call;
+            directed/self_go and pickup stay visible without Call.
     TerminalAssistPendingItem:
       type: object
       additionalProperties: false
@@ -326,6 +343,19 @@ components:
         roomLabel:
           type: string
           nullable: true
+          description: >-
+            Assigned call room, or wayfinding target for directed/self_go and pickup
+            (TV "Bitte weiter zu" / pickup copy).
+        movementMode:
+          type: string
+          nullable: true
+          enum:
+            - call
+            - self_go
+            - pickup
+          description: >-
+            Visit movement mode. TV uses pickup (+ waiting) for "Sie werden abgeholt"
+            and directed + self_go for wayfinding.
     QueueListTvResponse:
       type: object
       additionalProperties: false
@@ -373,6 +403,10 @@ components:
           enum:
             - called
             - in_room
+            - directed
+          description: >-
+            called/in_room as today. directed = self_go underwegs zum Panel-Raum
+            (Patient kann „Ich bin da“ / Angekommen quittieren).
         calledAt:
           type: string
           format: date-time
@@ -528,8 +562,11 @@ components:
           enum:
             - call
             - check_in_room
+            - start_treatment
+            - continue_journey
             - reassign_room
             - check_out_room
+            - cancel
             - return_to_waiting
             - cycle_triage
             - set_absence

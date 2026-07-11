@@ -13,6 +13,8 @@ import {
   callVisit,
   checkInVisit,
   checkOutVisit,
+  cancelQueueVisit,
+  continueJourneyVisit,
   cycleTriageVisit,
   recallVisit,
   retryRecallNotifyVisit,
@@ -21,7 +23,9 @@ import {
   setAbsenceVisit,
   setCallbackPhoneVisit,
   clearCallbackPhoneVisit,
+  startTreatmentVisit,
 } from '$lib/queue/queue-actions';
+import { canMfaCallVisit } from '$lib/queue/mfa-call-gate';
 import { getQueueZone } from '$lib/queue/queue-zones';
 import {
   queueDragSourceFromItem,
@@ -220,7 +224,11 @@ export async function handleMfaRecall(visitId: string) {
 export function callMfaTicket(visitId: string) {
   // Call announcement reachability is server-authoritative (presence registry).
   // UI may warn via SSE status; do not pre-block the request here.
-  const room = resolveCallRoomTarget(queueItem(visitId));
+  const item = queueItem(visitId);
+  if (!item || !canMfaCallVisit(item)) {
+    return Promise.resolve();
+  }
+  const room = resolveCallRoomTarget(item);
   if (room && !ensureRoomCapacity(room.roomId)) {
     return Promise.resolve();
   }
@@ -237,6 +245,14 @@ export function checkInMfaTicket(visitId: string) {
   return runMfaQueueAction(visitId, () => checkInVisit(visitId, target));
 }
 
+export function startMfaTicket(visitId: string) {
+  return runMfaQueueAction(visitId, () => startTreatmentVisit(visitId));
+}
+
+export function continueMfaJourney(visitId: string) {
+  return runMfaQueueAction(visitId, () => continueJourneyVisit(visitId));
+}
+
 export function cycleMfaTriage(visitId: string) {
   return runMfaQueueAction(visitId, async () => {
     const result = await cycleTriageVisit(visitId);
@@ -248,12 +264,15 @@ export function cycleMfaTriage(visitId: string) {
 }
 
 export async function confirmMfaCheckOut() {
-  const visitId = mfaQueueActions.checkOutVisit?.visitId;
-  if (!visitId) {
+  const pending = mfaQueueActions.checkOutVisit;
+  if (!pending) {
     return;
   }
 
-  await runMfaQueueAction(visitId, () => checkOutVisit(visitId));
+  const visitId = pending.visitId;
+  await runMfaQueueAction(visitId, () =>
+    pending.purpose === 'cancel' ? cancelQueueVisit(visitId) : checkOutVisit(visitId),
+  );
   mfaQueueActions.checkOutVisit = null;
 }
 
@@ -279,6 +298,10 @@ export function handleMfaQueueDrop(visitId: string, target: QueueDropTarget) {
   }
 
   if (command.action === 'call') {
+    const dropItem = queueItem(command.visitId);
+    if (!dropItem || !canMfaCallVisit(dropItem)) {
+      return;
+    }
     if (!ensureRoomCapacity(command.room.roomId)) {
       return;
     }

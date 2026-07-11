@@ -35,6 +35,7 @@ export type CheckOutTicket = {
   visitId: string;
   laneCode: string;
   number: number;
+  purpose: 'checkout' | 'cancel';
 };
 
 export const mfaQueueActions = $state({
@@ -161,6 +162,21 @@ export function handleMfaCheckOut(visitId: string) {
     visitId: item.visitId,
     laneCode: item.laneCode,
     number: item.number,
+    purpose: 'checkout',
+  };
+}
+
+export function handleMfaCancelVisit(visitId: string) {
+  const item = queueItem(visitId);
+  if (!item) {
+    return;
+  }
+
+  mfaQueueActions.checkOutVisit = {
+    visitId: item.visitId,
+    laneCode: item.laneCode,
+    number: item.number,
+    purpose: 'cancel',
   };
 }
 

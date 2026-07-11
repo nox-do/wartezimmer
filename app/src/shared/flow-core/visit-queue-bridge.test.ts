@@ -10,8 +10,10 @@ import { createVisitCheckInInDb } from './flow-core-checkin.js';
 import {
   arriveVisit,
   callVisit,
+  cancelVisit,
   clearVisitCallbackPhone,
   completeVisit,
+  continueJourneyVisit,
   cycleVisitTriageLevel,
   listVisitQueueRows,
   recallVisit,
@@ -201,6 +203,7 @@ function setupComplexVisitFlow(): ReturnType<typeof setupVisitFlow> {
 test('visitStatusToQueueDisplayStatus maps arrived and in_progress to in_room', () => {
   assert.equal(visitStatusToQueueDisplayStatus('arrived'), 'in_room');
   assert.equal(visitStatusToQueueDisplayStatus('in_progress'), 'in_room');
+  assert.equal(visitStatusToQueueDisplayStatus('directed'), 'directed');
   assert.equal(visitStatusToQueueDisplayStatus('done'), 'done');
 });
 
@@ -244,6 +247,40 @@ test('MFA done from arrived auto-starts before completing', () => {
   assert.ok(visit?.startedAt);
 });
 
+test('startVisit marks treatment started while staying in_room', () => {
+  const { visitId, runtime, settings, listQueue, db } = setupVisitFlow();
+  callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisit(db, runtime, visitId);
+
+  const before = listQueue()[0];
+  assert.equal(before?.startedAt, null);
+
+  const started = startVisit(runtime, visitId, 'labor');
+  assert.deepEqual(started, { fromStatus: 'in_room', toStatus: 'in_room' });
+
+  const after = listQueue()[0];
+  assert.ok(after?.startedAt);
+  assert.equal(after?.status, 'in_room');
+});
+
+test('continueJourneyVisit applies next call hop from completed step', () => {
+  const { db, settings, visitId, runtime, listQueue } = setupComplexVisitFlow();
+
+  callVisit(db, runtime, settings, listQueue, visitId, 'mfa-tresen', 'Empfang');
+  arriveVisit(db, runtime, visitId, 'mfa-tresen');
+  let visit = runtime.visits().find((entry) => entry.id === visitId);
+  assert.ok(visit?.journeyStepCompletedAt);
+
+  const continued = continueJourneyVisit(runtime, visitId);
+  assert.deepEqual(continued, { fromStatus: 'in_room', toStatus: 'waiting' });
+
+  visit = runtime.visits().find((entry) => entry.id === visitId);
+  assert.equal(visit?.journeyStepIndex, 1);
+  assert.equal(visit?.journeyStepCompletedAt, undefined);
+  assert.equal(visit?.targetLocationId, 'labor');
+  assert.equal(visit?.status, 'waiting');
+});
+
 test('callVisit starts pending next call journey step before calling', () => {
   const { db, settings, visitId, runtime, listQueue } = setupComplexVisitFlow();
 
@@ -269,6 +306,70 @@ test('scoped arrive succeeds when acting room matches target', () => {
 
   const arrive = arriveVisit(db, runtime, visitId, 'labor');
   assert.deepEqual(arrive, { fromStatus: 'called', toStatus: 'in_room' });
+});
+
+test('arriveVisit from directed self_go succeeds with matching room scope', () => {
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  runtime.redirect(visitId, {
+    queueId: null,
+    targetLocationId: 'labor',
+    movementMode: 'self_go',
+    publicDisplayMode: 'visible',
+    actorSurfaceId: 'pf_mfa_dashboard',
+  });
+
+  const arrive = arriveVisit(db, runtime, visitId, 'labor');
+  assert.deepEqual(arrive, { fromStatus: 'directed', toStatus: 'in_room' });
+
+  const row = listQueue()[0];
+  assert.equal(row?.status, 'in_room');
+  assert.equal(row?.roomId, 'labor');
+});
+
+test('arriveVisit from directed rejects wrong room with QUEUE_ROOM_MISMATCH', () => {
+  const { db, visitId, runtime } = setupVisitFlow();
+  runtime.redirect(visitId, {
+    queueId: null,
+    targetLocationId: 'labor',
+    movementMode: 'self_go',
+    publicDisplayMode: 'visible',
+    actorSurfaceId: 'pf_mfa_dashboard',
+  });
+
+  assert.throws(
+    () => arriveVisit(db, runtime, visitId, 'mfa-tresen'),
+    (error: unknown) => error instanceof DomainError && error.domainCode === QUEUE_ROOM_MISMATCH,
+  );
+});
+
+test('cancelVisit marks waiting ticket cancelled and removes it from queue', () => {
+  const { db, visitId, runtime, listQueue } = setupVisitFlow();
+  assert.equal(listQueue().length, 1);
+
+  const cancelled = cancelVisit(db, runtime, visitId);
+  assert.deepEqual(cancelled, { fromStatus: 'waiting', toStatus: 'cancelled' });
+  assert.equal(listQueue().length, 0);
+
+  const visit = db
+    .prepare('SELECT status FROM visits WHERE id = ?')
+    .get(visitId) as { status?: string } | undefined;
+  assert.equal(visit?.status, 'cancelled');
+});
+
+test('cancelVisit clears directed self_go ticket', () => {
+  const { db, visitId, runtime, listQueue } = setupVisitFlow();
+  runtime.redirect(visitId, {
+    queueId: null,
+    targetLocationId: 'labor',
+    movementMode: 'self_go',
+    publicDisplayMode: 'visible',
+    actorSurfaceId: 'pf_mfa_dashboard',
+  });
+  assert.equal(listQueue()[0]?.status, 'directed');
+
+  const cancelled = cancelVisit(db, runtime, visitId);
+  assert.deepEqual(cancelled, { fromStatus: 'directed', toStatus: 'cancelled' });
+  assert.equal(listQueue().length, 0);
 });
 
 test('scoped arrive rejects wrong room with QUEUE_ROOM_MISMATCH', () => {

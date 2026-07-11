@@ -426,8 +426,16 @@ components:
           nullable: true
           minLength: 1
           maxLength: 64
+          description: >-
+            Optional legacy binding hint (which topic this template is "for").
+            Not the activation switch — topics opt in via journeyTemplateId.
+            UI currently hidden; may be removable if topic assignment alone is enough.
         active:
           type: boolean
+          description: >-
+            Soft enable for the template catalog. Inactive templates are omitted from
+            topic pickers and ignored at sync even if a topic still references them.
+            UI currently hidden; may be redundant with topic.journeyTemplateId selection.
         steps:
           type: array
           items:

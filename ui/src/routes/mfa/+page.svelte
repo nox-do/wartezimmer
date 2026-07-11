@@ -29,6 +29,8 @@
     checkInMfaTicket,
     cancelMfaCheckOut,
     confirmMfaCheckOut,
+    continueMfaJourney,
+    handleMfaCancelVisit,
     handleMfaCheckOut,
     confirmMfaPhoneCorrection,
     confirmMfaReassign,
@@ -42,6 +44,7 @@
     cancelMfaSupersede,
     mfaQueueActions,
     returnMfaTicketToWaiting,
+    startMfaTicket,
   } from '$lib/mfa/mfa-queue-actions.svelte';
   import {
     getMfaClockLabel,
@@ -119,8 +122,11 @@
       queueFilterActive={queueFilterActive}
       onCall={callMfaTicket}
       onCheckIn={checkInMfaTicket}
+      onStart={startMfaTicket}
+      onContinue={continueMfaJourney}
       onReassign={handleMfaReassign}
       onCheckOut={handleMfaCheckOut}
+      onCancelVisit={handleMfaCancelVisit}
       onReturnToWaiting={returnMfaTicketToWaiting}
       onRecall={(visitId) => void handleMfaRecall(visitId)}
       onFixRecallNotify={handleMfaFixRecallNotify}

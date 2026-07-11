@@ -2,6 +2,7 @@ import type { QueueItem, QueueZone } from './types';
 
 const ACTIVE_STATUSES = new Set(['called', 'in_room']);
 const AWAY_STATUSES = new Set(['absent_wait_here', 'absent_return_later']);
+const WAITING_STATUSES = new Set(['waiting', 'directed']);
 
 export function getQueueZone(status: string): QueueZone | null {
   if (ACTIVE_STATUSES.has(status)) {
@@ -10,7 +11,7 @@ export function getQueueZone(status: string): QueueZone | null {
   if (AWAY_STATUSES.has(status)) {
     return 'away';
   }
-  if (status === 'waiting') {
+  if (WAITING_STATUSES.has(status)) {
     return 'waiting';
   }
   return null;

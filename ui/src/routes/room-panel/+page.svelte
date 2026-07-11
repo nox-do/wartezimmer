@@ -62,7 +62,7 @@
   );
   const liveRoom = $derived(snapshot ? roomFromSnapshot(snapshot) : selectedRoom ? roomFromLoginRoom(selectedRoom) : null);
   const liveState = $derived(
-    panelItems.some((item) => item.status === 'called')
+    panelItems.some((item) => item.status === 'called' || item.status === 'directed')
       ? 'enter'
       : panelItems.some((item) => item.status === 'in_room')
         ? 'arrival'
@@ -71,9 +71,9 @@
   const liveStateLabel = $derived(resolveLiveStateLabel());
 
   function resolveLiveStateLabel(): string {
-    const hasCalled = panelItems.some((item) => item.status === 'called');
+    const hasIncoming = panelItems.some((item) => item.status === 'called' || item.status === 'directed');
     const hasInRoom = panelItems.some((item) => item.status === 'in_room');
-    if (hasCalled) {
+    if (hasIncoming) {
       return snapshot?.panel.calledText ?? t('roomPanel.noTickets');
     }
     if (hasInRoom) {

@@ -19,6 +19,14 @@ export function allowsByDisplayMode(displayMode: PublicDisplayMode, visit: Pick<
   return true;
 }
 
+/** TV wayfinding: self_go underwegs or pickup waiting for escort. */
+export function isPublicWayfindingVisit(
+  visit: Pick<Visit, 'status' | 'movementMode'>,
+): boolean {
+  if (visit.status === 'directed') return true;
+  return visit.status === 'waiting' && visit.movementMode === 'pickup';
+}
+
 export function ruleSpecificity(rule: SurfaceDisplayRule): number {
   let score = 0;
   if (rule.topicId) score += 4;
@@ -85,6 +93,19 @@ export function explainVisibility(
   const rule = resolveSurfaceDisplayRule(matching);
 
   if (!rule) {
+    // directed/self_go or pickup: visit.publicDisplayMode alone can put the ticket on TV
+    // ("Bitte weiter zu" / "Sie werden abgeholt") even without a queue-scoped SurfaceDisplayRule.
+    if (
+      surface.type === 'public_display' &&
+      isPublicWayfindingVisit(visit) &&
+      allowsByDisplayMode(visit.publicDisplayMode, visit)
+    ) {
+      return {
+        visible: true,
+        reason: 'Sichtbar wegen visit.publicDisplayMode (Wayfinding)',
+        matchingRuleIds,
+      };
+    }
     return {
       visible: false,
       reason: 'Keine passende SurfaceDisplayRule',
@@ -102,6 +123,22 @@ export function explainVisibility(
   }
 
   if (surface.type === 'public_display') {
+    if (isPublicWayfindingVisit(visit)) {
+      if (!allowsByDisplayMode(visit.publicDisplayMode, visit)) {
+        return {
+          visible: false,
+          rule,
+          reason: `visit.publicDisplayMode=${visit.publicDisplayMode}`,
+          matchingRuleIds,
+        };
+      }
+      return {
+        visible: true,
+        rule,
+        reason: `Sichtbar wegen Regel ${rule.id} (Wayfinding)`,
+        matchingRuleIds,
+      };
+    }
     if (!isPatientAtSurfaceLocation(visit, surface)) {
       return {
         visible: false,

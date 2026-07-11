@@ -138,6 +138,7 @@ export const QueueStatus = {
   type: 'string',
   enum: [
     'waiting',
+    'directed',
     'called',
     'in_room',
     'done',

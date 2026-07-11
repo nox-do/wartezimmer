@@ -374,6 +374,7 @@ export interface components {
     /** @enum {string} */
     QueueStatus:
       | 'waiting'
+      | 'directed'
       | 'called'
       | 'in_room'
       | 'done'

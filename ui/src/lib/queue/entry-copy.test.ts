@@ -2,8 +2,15 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('$lib/i18n/i18nStore.svelte', () => ({
   t: (key: string) => key,
-  tf: (key: string, params: Record<string, string>) =>
-    params.topic ? `${params.topic} · ${params.time ?? ''}` : key,
+  tf: (key: string, params: Record<string, string>) => {
+    if (params.room) {
+      return `${key}:${params.room}`;
+    }
+    if (params.topic) {
+      return `${params.topic} · ${params.time ?? ''}`;
+    }
+    return key;
+  },
 }));
 
 import { queueEntryPrimary, queueEntrySecondary } from './entry-copy';
@@ -71,6 +78,31 @@ describe('queueEntryPrimary', () => {
 describe('queueEntrySecondary', () => {
   it('shows check-in time in the waiting zone', () => {
     expect(queueEntrySecondary(baseItem(), 'waiting')).toBe('mfa.entryCheckedInAt');
+  });
+
+  it('shows pickup destination in the waiting zone', () => {
+    expect(
+      queueEntrySecondary(
+        baseItem({
+          movementMode: 'pickup',
+          destinationRoomLabel: 'Labor',
+        }),
+        'waiting',
+      ),
+    ).toBe('mfa.entryPickupTo:Labor');
+  });
+
+  it('shows directed destination in the waiting zone', () => {
+    expect(
+      queueEntrySecondary(
+        baseItem({
+          status: 'directed',
+          movementMode: 'self_go',
+          destinationRoomLabel: 'Labor',
+        }),
+        'waiting',
+      ),
+    ).toBe('mfa.entryDirectedTo:Labor');
   });
 
   it('shows called status without room in the active zone', () => {

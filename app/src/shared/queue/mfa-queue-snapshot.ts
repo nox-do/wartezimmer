@@ -16,6 +16,7 @@ export type MfaQueueSnapshot = {
     roomId: string | null;
     roomLabel: string | null;
     journeyStepCompletedAt: string | null;
+    startedAt: string | null;
     arrivedAt: string;
     waitMs: number;
     documentCount: number;
@@ -28,6 +29,7 @@ export type MfaQueueSnapshot = {
     returnUntil: string | null;
     triageLevel: string | null;
     needsAssistance: boolean;
+    movementMode: 'call' | 'self_go' | 'pickup' | null;
   }>;
   assistPending: TerminalAssistPendingItem[];
   checkinLocked: boolean;
@@ -61,6 +63,7 @@ export function buildMfaQueueSnapshot(
       roomId: item.roomId,
       roomLabel: item.roomLabel,
       journeyStepCompletedAt: item.journeyStepCompletedAt,
+      startedAt: item.startedAt,
       arrivedAt: item.createdAt,
       waitMs,
       documentCount: item.documentCount,
@@ -73,6 +76,7 @@ export function buildMfaQueueSnapshot(
       returnUntil,
       triageLevel: item.triageLevel?.trim() || null,
       needsAssistance: item.needsAssistance,
+      movementMode: item.movementMode ?? null,
     };
   });
 
