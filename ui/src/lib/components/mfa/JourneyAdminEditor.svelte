@@ -7,7 +7,6 @@
     JOURNEY_COMPLETED_WHEN,
     JOURNEY_DISPLAY_MODES,
     JOURNEY_MOVEMENT_MODES,
-    PF_GENERAL_QUEUE_ID,
   } from '$lib/mfa/journey-admin-helpers';
   import type {
     JourneySettings,
@@ -186,21 +185,7 @@
               </select>
             </label>
 
-            <label class="journey-admin__field">
-              <span>{t('mfa.settings.journeyStepQueue')}</span>
-              <select
-                class="form-input"
-                value={step.queueId ?? ''}
-                disabled={busy}
-                onchange={(event) =>
-                  updateStep(step.id, {
-                    queueId: (event.currentTarget as HTMLSelectElement).value || null,
-                  })}
-              >
-                <option value="">{t('mfa.settings.journeyStepQueueNone')}</option>
-                <option value={PF_GENERAL_QUEUE_ID}>{t('mfa.settings.journeyGeneralQueue')}</option>
-              </select>
-            </label>
+            <!-- Warteliste dropdown hidden: single waiting room; steps default to pf_general_queue (see createDefaultJourneyStep). -->
 
             <label class="journey-admin__field">
               <span>{t('mfa.settings.journeyStepMovement')}</span>

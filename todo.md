@@ -11,7 +11,7 @@ Stand: 2026-07-10
 - Fix: Journey-Step-IDs via `randomId()` (LAN-HTTP ohne `crypto.randomUUID`).
 - Fix: Check-in/Bon `destinationRoomLabel` nur aus Visit-Ziel (kein Topic-Default-Fallback).
 - ✅ MFA Active-Zone Primary-Button (2026-07-11): `startedAt` + `start_treatment`/`continue_journey`; Resolver Starten/Weiter/Entlassen; Simple+Complex angeglichen.
-- Journey-Admin: Standard-Thema + Aktiv ausgeblendet (2026-07-11); Aktivierung bleibt am Topic; Felder ggf. später entfernbar.
+- Journey-Admin: Standard-Thema + Aktiv + Warteliste-Dropdown ausgeblendet (2026-07-12); Steps default `pf_general_queue`; Aktivierung bleibt am Topic.
 - ✅ TV Wayfinding (2026-07-11): QueueStatus `directed`; Visibility `directed`/`pickup`+`visible`; TV-Spalte „Bitte weiter zu“ (+ Pickup-Copy „Sie werden abgeholt“).
 - ✅ Room-Panel self_go (2026-07-11): Snapshot zeigt `directed` wenn Ziel = Panel-Raum; Quittieren („Ich bin da“/Angekommen) = `arrive` aus directed; OpenAPI RoomPanelItem.status + Preview/Live-UI.
 - ✅ MFA Call-Gate + Löschen (2026-07-11): Aufrufen disabled+Tooltip (directed/pickup); Trash danger-Style; Modal → `cancelled`.

@@ -30,6 +30,14 @@ export function createJourneyTemplateId(name: string, taken: Set<string>): strin
   return candidate;
 }
 
+/**
+ * Default hop for new journey steps.
+ *
+ * `queueId` always defaults to the general waiting list (`PF_GENERAL_QUEUE_ID`).
+ * The Journey admin UI currently hides the Warteliste dropdown (single waiting room);
+ * keep the field on the model for API/sync and a possible multi-waiting-room setup later.
+ * Until then: use movementMode (e.g. self_go) for direct-to-room flows, not queueId=null.
+ */
 export function createDefaultJourneyStep(
   sortOrder: number,
   fallbackLocationId: string,
@@ -99,7 +107,7 @@ export function normalizeJourneySettingsForSave(settings: JourneySettings): Jour
         id: step.id.trim(),
         sortOrder: stepIndex,
         targetLocationId: step.targetLocationId?.trim() || null,
-        queueId: step.queueId?.trim() || null,
+        queueId: step.queueId?.trim() || PF_GENERAL_QUEUE_ID,
         instructionText: step.instructionText?.trim() || null,
       })),
     })),
