@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  advanceJourneyPatch,
+  completeJourneyStepPatch,
   formatStepFraction,
-  shouldAdvanceOn,
-  stepToVisitPatch
+  isStepCompletedByAction,
+  startNextJourneyStepPatch,
+  stepToVisitPatch,
 } from '@praxis-flow/flow-core';
 import { escortTerminalInstruction } from '@praxis-flow/flow-core';
 
@@ -51,14 +52,14 @@ test('stepToVisitPatch: escort required mappt self_go auf pickup', () => {
   assert.equal(patch.terminalInstruction, escortTerminalInstruction('Raum 1'));
 });
 
-test('shouldAdvanceOn respektiert completedWhen', () => {
+test('isStepCompletedByAction respektiert completedWhen', () => {
   const step = { completedWhen: 'arrive' };
-  assert.equal(shouldAdvanceOn(step, 'arrive'), true);
-  assert.equal(shouldAdvanceOn(step, 'start'), false);
-  assert.equal(shouldAdvanceOn(undefined, 'arrive'), false);
+  assert.equal(isStepCompletedByAction(step, 'arrive'), true);
+  assert.equal(isStepCompletedByAction(step, 'start'), false);
+  assert.equal(isStepCompletedByAction(undefined, 'arrive'), false);
 });
 
-test('advanceJourneyPatch: letzter Schritt setzt journeyStepIndex auf null', () => {
+test('startNextJourneyStepPatch: letzter Schritt setzt journeyStepIndex auf null', () => {
   const steps = [
     { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
     { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', completedWhen: 'start' }
@@ -70,11 +71,11 @@ test('advanceJourneyPatch: letzter Schritt setzt journeyStepIndex auf null', () 
     status: 'arrived'
   };
 
-  const patch = advanceJourneyPatch(visit, 'start', steps, { locations: [room1] });
-  assert.deepEqual(patch, { journeyStepIndex: null, journeyState: 'completed' });
+  const patch = startNextJourneyStepPatch(visit, steps, { locations: [room1] });
+  assert.deepEqual(patch, { journeyStepIndex: null, journeyStepCompletedAt: null, journeyState: 'completed' });
 });
 
-test('advanceJourneyPatch: call-Step setzt Aufruf-Text, nicht Geh-Text', () => {
+test('startNextJourneyStepPatch: call-Step setzt Aufruf-Text, nicht Geh-Text', () => {
   const reception = { id: 'reception', name: 'Empfang', publicName: 'Empfang' };
   const steps = [
     { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
@@ -87,13 +88,13 @@ test('advanceJourneyPatch: call-Step setzt Aufruf-Text, nicht Geh-Text', () => {
     status: 'called'
   };
 
-  const patch = advanceJourneyPatch(visit, 'arrive', steps, { locations: [reception, room1] });
+  const patch = startNextJourneyStepPatch(visit, steps, { locations: [reception, room1] });
   assert.equal(patch.movementMode, 'call');
   assert.equal(patch.terminalInstruction, 'Bitte warten Sie. Sie werden aufgerufen.');
   assert.doesNotMatch(patch.terminalInstruction, /gehen Sie zu/);
 });
 
-test('advanceJourneyPatch: completedWhen wird respektiert', () => {
+test('completeJourneyStepPatch: completedWhen wird respektiert', () => {
   const steps = [
     { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
     { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'self_go', publicDisplayMode: 'hidden', completedWhen: 'start' }
@@ -105,16 +106,34 @@ test('advanceJourneyPatch: completedWhen wird respektiert', () => {
     status: 'called'
   };
 
-  assert.equal(advanceJourneyPatch(visit, 'call', steps, { locations: [room1] }), null);
+  assert.equal(completeJourneyStepPatch(visit, 'call', steps, { completedAt: '2026-07-04T10:00:00.000Z', locations: [room1] }), null);
 
-  const patch = advanceJourneyPatch(visit, 'arrive', steps, { locations: [room1] });
+  const patch = completeJourneyStepPatch(visit, 'arrive', steps, { completedAt: '2026-07-04T10:00:00.000Z', locations: [room1] });
+  assert.deepEqual(patch, { journeyStepCompletedAt: '2026-07-04T10:00:00.000Z' });
+});
+
+test('startNextJourneyStepPatch: pending pickup-Step wird angewendet', () => {
+  const steps = [
+    { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
+    { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'self_go', publicDisplayMode: 'hidden', completedWhen: 'start' }
+  ];
+  const visit = {
+    journeyTemplateId: 'journey_general',
+    journeyStepIndex: 0,
+    journeyStepCompletedAt: '2026-07-04T10:00:00.000Z',
+    effectiveEscortPolicy: 'required',
+    status: 'called'
+  };
+
+  const patch = startNextJourneyStepPatch(visit, steps, { locations: [room1] });
   assert.equal(patch.journeyStepIndex, 1);
   assert.equal(patch.targetLocationId, 'room_1');
   assert.equal(patch.movementMode, 'pickup');
+  assert.equal(patch.journeyStepCompletedAt, null);
   assert.equal(patch.terminalInstruction, escortTerminalInstruction('Raum 1'));
 });
 
-test('advanceJourneyPatch: arrive-Advance behaelt arrivedAt', () => {
+test('startNextJourneyStepPatch: neuer Step setzt arrivedAt zurueck', () => {
   const reception = { id: 'reception', name: 'Empfang', publicName: 'Empfang' };
   const steps = [
     { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
@@ -128,13 +147,13 @@ test('advanceJourneyPatch: arrive-Advance behaelt arrivedAt', () => {
     arrivedAt: '2026-07-04T10:00:00.000Z'
   };
 
-  const patch = advanceJourneyPatch(visit, 'arrive', steps, { locations: [reception] });
-  assert.equal(patch.arrivedAt, undefined);
+  const patch = startNextJourneyStepPatch(visit, steps, { locations: [reception] });
+  assert.equal(patch.arrivedAt, null);
   assert.equal(patch.calledAt, null);
   assert.equal(patch.startedAt, null);
 });
 
-test('advanceJourneyPatch: instructionText des naechsten Steps', () => {
+test('startNextJourneyStepPatch: instructionText des naechsten Steps', () => {
   const steps = [
     { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
     {
@@ -154,11 +173,11 @@ test('advanceJourneyPatch: instructionText des naechsten Steps', () => {
     status: 'called'
   };
 
-  const patch = advanceJourneyPatch(visit, 'arrive', steps, { locations: [{ id: 'room_1', name: 'Raum 1' }] });
+  const patch = startNextJourneyStepPatch(visit, steps, { locations: [{ id: 'room_1', name: 'Raum 1' }] });
   assert.equal(patch.terminalInstruction, 'Bitte nehmen Sie im Behandlungsraum Platz.');
 });
 
-test('advanceJourneyPatch: Same-Target-Advance setzt Warte-Hinweis ohne instructionText', () => {
+test('startNextJourneyStepPatch: Same-Target-Step setzt Warte-Hinweis ohne instructionText', () => {
   const steps = [
     { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
     { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', completedWhen: 'start' }
@@ -171,14 +190,14 @@ test('advanceJourneyPatch: Same-Target-Advance setzt Warte-Hinweis ohne instruct
     lastKnownLocationId: 'room_1'
   };
 
-  const patch = advanceJourneyPatch(visit, 'arrive', steps, { locations: [room1] });
+  const patch = startNextJourneyStepPatch(visit, steps, { locations: [room1] });
   assert.equal(patch.status, 'arrived');
   assert.equal(patch.terminalInstruction, 'Bitte warten Sie im Raum.');
 });
 
-test('advanceJourneyPatch: ohne Journey-Cursor kein Patch', () => {
+test('startNextJourneyStepPatch: ohne Journey-Cursor kein Patch', () => {
   assert.equal(
-    advanceJourneyPatch({ journeyTemplateId: null, journeyStepIndex: null }, 'arrive', []),
+    startNextJourneyStepPatch({ journeyTemplateId: null, journeyStepIndex: null }, []),
     null
   );
 });

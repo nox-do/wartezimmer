@@ -50,7 +50,7 @@ async function handleApi(request: IncomingMessage, response: ServerResponse, url
   if (request.method === 'POST' && url.pathname === '/api/check-in') {
     return sendJson(response, 200, runtime.checkIn(parseCheckInBody(await readJson(request))));
   }
-  const actionMatch = url.pathname.match(/^\/api\/visits\/([^/]+)\/(call|arrive|start|done)$/);
+  const actionMatch = url.pathname.match(/^\/api\/visits\/([^/]+)\/(call|arrive|start|done|start_next_journey_step)$/);
   if (request.method === 'POST' && actionMatch) {
     const body = await readJson(request);
     return sendJson(

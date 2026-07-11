@@ -214,7 +214,7 @@ http.ts                   — PoC-HTTP (Host ersetzt durch Fastify)
 
 - `requiresReceptionConfirmation` (Schließanlage)
 - Template-Versioning bei laufenden Visits
-- `manual` Journey-Advance
+- manuelles Starten des naechsten Journey-Steps
 - `stay_at_terminal` als MovementMode (PoC-Plan verworfen)
 - Auth, Rollen, PVS, Docker, echte Migrationen
 

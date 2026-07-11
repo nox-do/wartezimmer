@@ -492,6 +492,8 @@ export interface components {
       roomId?: string | null;
       roomLabel?: string | null;
       /** Format: date-time */
+      journeyStepCompletedAt?: string | null;
+      /** Format: date-time */
       arrivedAt: string;
       waitMs: number;
       documentCount: number;

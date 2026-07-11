@@ -44,10 +44,10 @@ export const VISIT_INSERT_SQL = `INSERT INTO visits (
   configured_escort_policy, effective_escort_policy, allow_redirect,
   terminal_instruction, staff_note,
   checked_in_at, called_at, arrived_at, started_at, finished_at,
-  journey_template_id, journey_step_index, journey_state,
+  journey_template_id, journey_step_index, journey_step_completed_at, journey_state,
   supersedes_visit_id, superseded_by_visit_id,
   created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 function resolveTopicRouting(
   catalogRepository: CatalogRepository,
@@ -231,6 +231,7 @@ export function supersedeVisit(params: {
       null,
       routing.journeyTemplateId,
       routing.journeyStepIndex,
+      null,
       routing.journeyState,
       current.id,
       null,

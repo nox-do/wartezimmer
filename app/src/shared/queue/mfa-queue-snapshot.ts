@@ -15,6 +15,7 @@ export type MfaQueueSnapshot = {
     status: string;
     roomId: string | null;
     roomLabel: string | null;
+    journeyStepCompletedAt: string | null;
     arrivedAt: string;
     waitMs: number;
     documentCount: number;
@@ -59,6 +60,7 @@ export function buildMfaQueueSnapshot(
       status: item.status,
       roomId: item.roomId,
       roomLabel: item.roomLabel,
+      journeyStepCompletedAt: item.journeyStepCompletedAt,
       arrivedAt: item.createdAt,
       waitMs,
       documentCount: item.documentCount,

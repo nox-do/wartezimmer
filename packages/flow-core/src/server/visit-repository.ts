@@ -48,6 +48,7 @@ function visit(row: SqlRow): Visit {
     finishedAt: opt(row.finished_at as string | null),
     journeyTemplateId: opt(row.journey_template_id as string | null),
     journeyStepIndex: row.journey_step_index != null ? Number(row.journey_step_index) : undefined,
+    journeyStepCompletedAt: opt(row.journey_step_completed_at as string | null),
     journeyState: opt(row.journey_state as Visit['journeyState'] | null),
     supersedesVisitId: opt(row.supersedes_visit_id as string | null),
     supersededByVisitId: opt(row.superseded_by_visit_id as string | null),
@@ -96,6 +97,7 @@ export function updateVisit(db: DatabaseSync, current: Visit, patch: Partial<Vis
     'finished_at = ?',
     'journey_template_id = ?',
     'journey_step_index = ?',
+    'journey_step_completed_at = ?',
     'journey_state = ?',
   ];
   const values: Array<string | number | null> = [
@@ -114,6 +116,7 @@ export function updateVisit(db: DatabaseSync, current: Visit, patch: Partial<Vis
     patchField(patch, current, 'finishedAt') ?? null,
     patch.journeyTemplateId ?? current.journeyTemplateId ?? null,
     patchField(patch, current, 'journeyStepIndex') ?? null,
+    patchField(patch, current, 'journeyStepCompletedAt') ?? null,
     patchField(patch, current, 'journeyState') ?? null,
   ];
 

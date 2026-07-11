@@ -56,6 +56,7 @@ export type QueueVisitRow = {
   checkinPhone: string | null;
   roomId: string | null;
   roomLabel: string | null;
+  journeyStepCompletedAt: string | null;
   callbackPhone: string | null;
   recallNotifyErrorCode: string | null;
   recallNotifySent: boolean;

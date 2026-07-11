@@ -39,6 +39,7 @@ export function resolveRedirectVisitPatch(
     arrivedAt: undefined,
     startedAt: undefined,
     journeyStepIndex: undefined,
+    journeyStepCompletedAt: undefined,
   };
 
   if (semantics === 'instructed') {

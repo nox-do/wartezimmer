@@ -1,9 +1,9 @@
 /**
- * Journey-Autopilot: Schritte in Visit-Patches, Advance nach Transition.
+ * Journey-Autopilot: Schritte in Visit-Patches, Completion nach Transition.
  *
  * Geplanter Export als Komponente in ein anderes Projekt. Bewusst wenig Kopplung
  * an diesen PoC — das Host-Projekt (runtime, DB, API) integriert über
- * stepToVisitPatch, advanceJourneyPatch und journeyStepLabel.
+ * stepToVisitPatch, completeJourneyStepPatch, startNextJourneyStepPatch und journeyStepLabel.
  *
  * Beim Mitnehmen: types.ts (JourneyStep, Visit), escort, visit-flow.
  * Dopplungen an Host-Grenzen (z. B. stepsForTemplate in catalog-repository,
@@ -26,7 +26,12 @@ import { statusForMovementMode } from './visit-flow.js';
 
 export type JourneyCompletedPatch = {
   journeyStepIndex: null;
+  journeyStepCompletedAt?: null;
   journeyState: 'completed';
+};
+
+export type JourneyStepCompletedPatch = {
+  journeyStepCompletedAt: string;
 };
 
 export type JourneyVisitPatch = {
@@ -41,6 +46,7 @@ export type JourneyVisitPatch = {
   startedAt?: null;
   arrivedAt?: null;
   journeyStepIndex?: number | null;
+  journeyStepCompletedAt?: string | null;
   journeyState?: 'completed';
 };
 
@@ -82,25 +88,21 @@ export function stepToVisitPatch(
   return patch;
 }
 
-export function shouldAdvanceOn(step: JourneyStep | undefined, action: TransitionAction): boolean {
+export function isStepCompletedByAction(step: JourneyStep | undefined, action: TransitionAction): boolean {
   return Boolean(step && step.completedWhen === action);
 }
 
-export function advanceJourneyPatch(
+export function startNextJourneyStepPatch(
   visit: Visit,
-  action: TransitionAction,
   steps: JourneyStep[],
   options: { locations?: Location[] } = {},
 ): (JourneyVisitPatch & { journeyStepIndex: number }) | JourneyCompletedPatch | null {
   if (visit.journeyTemplateId == null || visit.journeyStepIndex == null) return null;
 
-  const currentStep = steps[visit.journeyStepIndex];
-  if (!shouldAdvanceOn(currentStep, action)) return null;
-
   const nextIndex = visit.journeyStepIndex + 1;
   const nextStep = steps[nextIndex];
   if (!nextStep) {
-    return { journeyStepIndex: null, journeyState: 'completed' };
+    return { journeyStepIndex: null, journeyStepCompletedAt: null, journeyState: 'completed' };
   }
 
   const targetLocation = options.locations?.find((location) => location.id === nextStep.targetLocationId);
@@ -111,16 +113,13 @@ export function advanceJourneyPatch(
         movementMode: patch.movementMode,
         targetLocation,
       });
-  /** Neuer Hop: Aufruf-/Start-Zeiten zuruecksetzen. arrivedAt nach arrive-Advance bleibt:
-   *  es markiert die Ankunft am abgeschlossenen Hop-Ziel, nicht am neuen targetLocationId.
-   *  Fuer Hop-Historie siehe visit_events; call() setzt arrivedAt fuer den naechsten Zyklus zurueck. */
+  /** Neuer Hop: Aufruf-/Start-Zeiten zuruecksetzen. */
   patch.calledAt = null;
   patch.startedAt = null;
-  if (action !== 'arrive') {
-    patch.arrivedAt = null;
-  }
+  patch.arrivedAt = null;
+  patch.journeyStepCompletedAt = null;
   // H7: Patient bereits am Ziel des naechsten Hops — kein erneuter waiting/call-Zyklus.
-  if (action === 'arrive' && visit.lastKnownLocationId === nextStep.targetLocationId) {
+  if (visit.lastKnownLocationId === nextStep.targetLocationId) {
     patch.status = 'arrived';
     if (!nextStep.instructionText?.trim()) {
       patch.terminalInstruction = 'Bitte warten Sie im Raum.';
@@ -131,6 +130,23 @@ export function advanceJourneyPatch(
     journeyStepIndex: nextIndex,
     ...hopPatch,
   };
+}
+
+export function completeJourneyStepPatch(
+  visit: Visit,
+  action: TransitionAction,
+  steps: JourneyStep[],
+  options: { completedAt: string; locations?: Location[] } = { completedAt: new Date().toISOString() },
+): (JourneyVisitPatch & { journeyStepIndex: number }) | JourneyCompletedPatch | JourneyStepCompletedPatch | null {
+  if (visit.journeyTemplateId == null || visit.journeyStepIndex == null) return null;
+
+  const currentStep = steps[visit.journeyStepIndex];
+  if (!isStepCompletedByAction(currentStep, action)) return null;
+
+  const nextPatch = startNextJourneyStepPatch(visit, steps, options);
+  if (!nextPatch || nextPatch.journeyState === 'completed') return nextPatch;
+  if (nextPatch.movementMode === 'self_go') return nextPatch;
+  return { journeyStepCompletedAt: options.completedAt };
 }
 
 export function journeyStepLabel(steps: JourneyStep[], index: number | null | undefined): string | null {

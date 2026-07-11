@@ -51,7 +51,7 @@ Dieses Repo ist der **extrahierte Kern** für die Übernahme in die Praxissoftwa
 db/schema.sql              — SQLite-Schema (Source of Truth)
 src/shared/                — portable Domain-Logik (TypeScript → dist/shared/)
   types.ts                 — Typen und Enums
-  journey.ts               — Journey-Autopilot (Patches, Advance)
+  journey.ts               — Journey-Autopilot (Completion, Next-Step-Patches)
   visit-flow.ts            — erlaubte Statusübergänge
   redirect-flow.ts         — Redirect-Semantik
   surface-visibility.ts    — Sichtbarkeit auf Surfaces

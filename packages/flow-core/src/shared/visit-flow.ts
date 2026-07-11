@@ -80,6 +80,11 @@ export function assertTransitionAllowed(
         throw new Error('RETURN_TO_WAITING_NOT_ALLOWED');
       }
       return;
+    case 'start_next_journey_step':
+      if (visit.journeyTemplateId == null || visit.journeyStepIndex == null || !visit.journeyStepCompletedAt) {
+        throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
+      }
+      return;
     default:
       throw new Error('UNKNOWN_ACTION');
   }

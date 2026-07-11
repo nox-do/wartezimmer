@@ -46,6 +46,7 @@ const INVALID_TRANSITION_CORE_CODES = new Set([
   'START_ONLY_WHEN_ARRIVED',
   'DONE_ONLY_WHEN_IN_PROGRESS',
   'RETURN_TO_WAITING_NOT_ALLOWED',
+  'START_NEXT_JOURNEY_STEP_NOT_ALLOWED',
   'UNKNOWN_ACTION',
   'SUPERSEDE_SOURCE_TERMINAL',
   'SUPERSEDE_ALREADY_SUPERSEDED',
@@ -168,6 +169,7 @@ export function visitToQueueVisitRow(
     checkinPhone: hostState?.checkinPhone ?? null,
     roomId: assignedRoomId,
     roomLabel: assignedRoomId ? resolveLocationLabel(settings, assignedRoomId) : null,
+    journeyStepCompletedAt: visit.journeyStepCompletedAt ?? null,
     callbackPhone: hostState?.callbackPhone ?? null,
     recallNotifyErrorCode: hostState?.recallNotifyErrorCode ?? null,
     recallNotifySent: hostState?.recallNotifySent ?? false,
@@ -421,14 +423,19 @@ export function callVisit(
   roomId?: string,
   roomLabel?: string,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
-  const visit = requireVisit(runtime, visitId);
+  let visit = requireVisit(runtime, visitId);
+  const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
+  const startedNextJourneyStep = Boolean(visit.journeyStepCompletedAt);
+  if (startedNextJourneyStep) {
+    visit = runVisitTransition(runtime, visitId, 'start_next_journey_step');
+  }
   if (visit.status !== 'waiting' && visit.status !== 'directed') {
     throw domainError('INVALID_TRANSITION');
   }
   assertNoAbsentHostOverlay(db, visitId);
 
   const queueRow = visitToQueueVisitRow(visit, settings);
-  const resolvedRoom = resolveCallRoomForVisit(settings, roomId, roomLabel, {
+  const resolvedRoom = resolveCallRoomForVisit(settings, startedNextJourneyStep ? undefined : roomId, startedNextJourneyStep ? undefined : roomLabel, {
     roomId: queueRow.destinationRoomId,
     roomLabel: queueRow.destinationRoomLabel,
   });
@@ -436,7 +443,6 @@ export function callVisit(
     assertRoomHasCapacity(settings, listQueue(), resolvedRoom.roomId);
   }
 
-  const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
   runVisitTransition(runtime, visitId, 'call', {
     targetLocationId: resolvedRoom?.roomId ?? visit.targetLocationId ?? undefined,
   });
@@ -490,8 +496,8 @@ export function completeVisit(
   if (!actingLocationId && visit.status === 'arrived') {
     runVisitTransition(runtime, visitId, 'start', {});
   }
-  runVisitTransition(runtime, visitId, 'done', { actingLocationId });
-  return { fromStatus, toStatus: 'done' };
+  const afterDone = runVisitTransition(runtime, visitId, 'done', { actingLocationId });
+  return { fromStatus, toStatus: visitStatusToQueueDisplayStatus(afterDone.status) };
 }
 
 /**

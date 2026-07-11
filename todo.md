@@ -10,7 +10,28 @@ Stand: 2026-07-10
 - Fehlercode bleibt `ROUTING_MODE_CHANGE_BLOCKED`, Details: `openVisitCount`.
 - Fix: Journey-Step-IDs via `randomId()` (LAN-HTTP ohne `crypto.randomUUID`).
 - Fix: Check-in/Bon `destinationRoomLabel` nur aus Visit-Ziel (kein Topic-Default-Fallback).
-- **Offen:** MFA Active-Zone Buttons Simple-first → Complex braucht Journey-Matrix (start / weiter / entlassen); Skizze 2026-07-10 im Chat.
+- **Offen:** MFA Active-Zone Primary-Button implementieren (Plan fixiert 2026-07-11).
+
+### MFA Primary-Button — fixierter Plan (2026-07-11)
+
+**Was wir machen:** MFA Active-Zone Primary-Button journey-bewusst machen. Simple und Complex teilen Aufrufen→Angekommen→**Starten**→Entlassen; Complex ergänzt **Weiter** zwischen Hops. Ohne Room-Panel bedient MFA den ganzen Flow. Backend-Fundament liegt (`completedWhen`, `journeyStepCompletedAt`, `start_next_journey_step`, Call-Bridge).
+
+**Regeln:**
+- Angekommen = Anwesenheit; Starten = Behandlung beginnt; Weiter = Routing anwenden; Entlassen = Visit-Ende.
+- Simple bekommt sichtbares **Starten** (nicht mehr still beim Entlassen) — an Core/`in_progress` und Complex angeglichen.
+- Dafür braucht die Queue `arrived` vs `in_progress` (heute beides nur `in_room`).
+- Weiter nur bei Folgeschritt `call`/`pickup` (self_go schon beim Complete).
+- Kein Folgeschritt (auch letzter Hop = Empfang) → Entlassen.
+- Kein bedienbares Panel → MFA zeigt alle nötigen Primary-Actions.
+
+| Situation | Simple | Complex |
+|---|---|---|
+| waiting | Aufrufen | Aufrufen |
+| called | Angekommen | Angekommen |
+| arrived (im Raum, noch nicht gestartet) | Starten | Starten |
+| in_progress + Flag, nächster call/pickup | — | Weiter |
+| in_progress + Flag, nächster self_go | — | (kein Weiter) |
+| in_progress, kein Folgeschritt / kein Template | Entlassen | Entlassen |
 
 ## Heute: UI↔BE Drift-Aufräumen (Runde 1)
 

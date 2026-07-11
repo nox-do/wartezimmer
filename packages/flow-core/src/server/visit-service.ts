@@ -5,12 +5,13 @@ import {
   effectiveEscortPolicy,
   movementTerminalInstruction,
   ruleForTopicAtSurface,
-  formatJourneyAdvanceNote,
+  formatJourneyNextStepNote,
   lastKnownFromJourneyStep,
   resolveRedirectVisitPatch,
   assertTransitionAllowed,
-  advanceJourneyPatch,
+  completeJourneyStepPatch,
   journeyStepLabel,
+  startNextJourneyStepPatch,
   stepToVisitPatch,
   validateRedirectRequest,
   laneCounterScope,
@@ -43,9 +44,9 @@ const CHECKIN_VISIT_INSERT_SQL = `INSERT INTO visits (
   configured_escort_policy, effective_escort_policy, allow_redirect,
   terminal_instruction, staff_note,
   checked_in_at, called_at, arrived_at, started_at, finished_at,
-  journey_template_id, journey_step_index, journey_state,
+  journey_template_id, journey_step_index, journey_step_completed_at, journey_state,
   created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 type CheckInBody = {
   topicId?: string;
@@ -74,62 +75,100 @@ export function createVisitService(params: {
   const { loadCatalog, stepsForTemplate } = catalogRepository;
   const { visitById, updateVisit, addEvent } = visitRepository;
 
-  const applyJourneyAdvance = (visitId: string, action: TransitionAction): VisitView | undefined => {
-    const updated = visitById(visitId);
-    if (!updated?.journeyTemplateId || updated.journeyStepIndex == null) return updated;
-
-    const data = loadCatalog();
-    const steps = stepsForTemplate(updated.journeyTemplateId, data.journeySteps);
-    const advancePatch = advanceJourneyPatch(updated, action, steps, { locations: data.locations });
-    if (!advancePatch) return updated;
-
-    maybeFail('journeyAdvance:update');
-    updateVisit(updated, advancePatch as Partial<Visit>);
+  const applyJourneyPatch = (
+    visitId: string,
+    current: VisitView,
+    patch: Partial<Visit>,
+    steps: ReturnType<typeof stepsForTemplate>,
+  ): VisitView => {
+    maybeFail('journeyProgression:update');
+    updateVisit(current, patch);
     const after = visitById(visitId)!;
-    const fromLocation = data.locations.find((item) => item.id === updated.targetLocationId);
+    const data = loadCatalog();
+    const fromLocation = data.locations.find((item) => item.id === current.targetLocationId);
     const toLocation = data.locations.find((item) => item.id === after.targetLocationId);
-    maybeFail('journeyAdvance:event');
-    if (advancePatch.journeyState === 'completed') {
+    maybeFail('journeyProgression:event');
+    if (patch.journeyState === 'completed') {
       addEvent(
         visitId,
         'journey_completed',
-        updated.status,
+        current.status,
         after.status,
-        updated.targetLocationId,
+        current.targetLocationId,
         after.targetLocationId,
-        updated.queueId,
+        current.queueId,
         after.queueId,
         'system',
-        formatJourneyAdvanceNote({
-          previousIndex: updated.journeyStepIndex,
+        formatJourneyNextStepNote({
+          previousIndex: current.journeyStepIndex!,
           nextIndex: null,
           stepCount: steps.length,
           fromLocationName: fromLocation?.name,
           toLocationName: toLocation?.name,
         }),
       );
-    } else {
-      const note = formatJourneyAdvanceNote({
-        previousIndex: updated.journeyStepIndex,
-        nextIndex: 'journeyStepIndex' in advancePatch ? advancePatch.journeyStepIndex : null,
-        stepCount: steps.length,
-        fromLocationName: fromLocation?.name,
-        toLocationName: toLocation?.name,
-      });
+    } else if ('journeyStepIndex' in patch) {
       addEvent(
         visitId,
         'routed',
-        updated.status,
+        current.status,
         after.status,
-        updated.targetLocationId,
+        current.targetLocationId,
         after.targetLocationId,
-        updated.queueId,
+        current.queueId,
         after.queueId,
         'system',
-        note,
+        formatJourneyNextStepNote({
+          previousIndex: current.journeyStepIndex!,
+          nextIndex: patch.journeyStepIndex ?? null,
+          stepCount: steps.length,
+          fromLocationName: fromLocation?.name,
+          toLocationName: toLocation?.name,
+        }),
+      );
+    } else if ('journeyStepCompletedAt' in patch) {
+      addEvent(
+        visitId,
+        'journey_step_completed',
+        current.status,
+        after.status,
+        current.targetLocationId,
+        after.targetLocationId,
+        current.queueId,
+        after.queueId,
+        'system',
+        `Journey Schritt ${journeyStepLabel(steps, current.journeyStepIndex) ?? ''} erledigt`.trim(),
       );
     }
     return after;
+  };
+
+  const applyJourneyProgression = (visitId: string, action: TransitionAction, completedAt: string): VisitView | undefined => {
+    const updated = visitById(visitId);
+    if (!updated?.journeyTemplateId || updated.journeyStepIndex == null) return updated;
+
+    const data = loadCatalog();
+    const steps = stepsForTemplate(updated.journeyTemplateId, data.journeySteps);
+    const journeyPatch = completeJourneyStepPatch(updated, action, steps, {
+      completedAt,
+      locations: data.locations,
+    });
+    if (!journeyPatch) return updated;
+    return applyJourneyPatch(visitId, updated, journeyPatch as Partial<Visit>, steps);
+  };
+
+  const startNextJourneyStep = (visitId: string): VisitView | undefined => {
+    const current = visitById(visitId);
+    if (!current?.journeyTemplateId || current.journeyStepIndex == null || !current.journeyStepCompletedAt) {
+      throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
+    }
+    const data = loadCatalog();
+    const steps = stepsForTemplate(current.journeyTemplateId, data.journeySteps);
+    const journeyPatch = startNextJourneyStepPatch(current, steps, { locations: data.locations });
+    if (!journeyPatch || journeyPatch.journeyState === 'completed') {
+      throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
+    }
+    return applyJourneyPatch(visitId, current, journeyPatch as Partial<Visit>, steps);
   };
 
   const checkIn = (body: CheckInBody): VisitView | undefined =>
@@ -262,6 +301,7 @@ export function createVisitService(params: {
         null,
         journeyTemplateId,
         journeyStepIndex,
+        null,
         journeyState,
         now,
         now,
@@ -363,18 +403,31 @@ export function createVisitService(params: {
           'mfa',
         );
       } else if (action === 'done') {
-        const donePatch: Partial<Visit> = { status: 'done', finishedAt: now };
+        const data = loadCatalog();
+        const steps =
+          current.journeyTemplateId != null ? stepsForTemplate(current.journeyTemplateId, data.journeySteps) : [];
+        const currentStep =
+          current.journeyStepIndex != null ? steps[current.journeyStepIndex] : undefined;
+        const hasNextJourneyStep =
+          current.journeyTemplateId != null &&
+          current.journeyStepIndex != null &&
+          currentStep?.completedWhen === 'done' &&
+          steps[current.journeyStepIndex + 1] != null;
+        const donePatch: Partial<Visit> = hasNextJourneyStep
+          ? { status: current.status === 'arrived' ? 'in_progress' : current.status }
+          : { status: 'done', finishedAt: now };
         if (current.status === 'arrived' && context.actingLocationId) {
           donePatch.startedAt = current.startedAt ?? current.arrivedAt ?? now;
         }
         maybeFail('transition:update');
         updateVisit(current, donePatch);
+        const afterDone = visitById(visitId)!;
         maybeFail('transition:event');
         addEvent(
           visitId,
           'done',
           current.status,
-          'done',
+          afterDone.status,
           current.lastKnownLocationId,
           current.targetLocationId,
           current.queueId,
@@ -382,7 +435,7 @@ export function createVisitService(params: {
           'mfa',
         );
       } else if (action === 'return_to_waiting') {
-        // Recall, kein Redirect: journeyState bleibt unveraendert (applyJourneyAdvance no-op ohne passendes completedWhen).
+        // Recall, kein Redirect: journeyState bleibt unveraendert (kein passendes completedWhen).
         const data = loadCatalog();
         const returnPatch = resolveReturnToWaitingVisitPatch(current, data);
         const nextStatus = returnPatch.status!;
@@ -401,10 +454,12 @@ export function createVisitService(params: {
           afterReturn.queueId,
           'mfa',
         );
+      } else if (action === 'start_next_journey_step') {
+        return startNextJourneyStep(visitId);
       } else {
         throw new Error('UNKNOWN_ACTION');
       }
-      return applyJourneyAdvance(visitId, action);
+      return applyJourneyProgression(visitId, action, now);
     });
 
   const redirect = (visitId: string, body: RedirectRequestBody): VisitView | undefined =>

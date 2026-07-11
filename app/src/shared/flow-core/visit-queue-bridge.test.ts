@@ -143,6 +143,61 @@ function setupVisitFlow(): {
   return { db, settings, visitId: created.visitId, runtime, listQueue };
 }
 
+function setupComplexVisitFlow(): ReturnType<typeof setupVisitFlow> {
+  const db = new DatabaseSync(':memory:');
+  db.exec('PRAGMA foreign_keys = ON');
+  ensureFlowCoreSchema(db);
+  const baseSettings = sampleSettings();
+  const settings: OpsSettings = {
+    ...baseSettings,
+    routingMode: 'complex',
+    topics: baseSettings.topics.map((topic) =>
+      topic.topicId === 'blut' ? { ...topic, journeyTemplateId: 'journey_blut' } : topic,
+    ),
+    journeySettings: {
+      templates: [
+        {
+          id: 'journey_blut',
+          name: 'Blut Complex',
+          topicId: 'blut',
+          active: true,
+          steps: [
+            {
+              id: 'step_blut_0',
+              sortOrder: 0,
+              targetLocationId: 'mfa-tresen',
+              queueId: 'pf_general_queue',
+              movementMode: 'call',
+              publicDisplayMode: 'visible',
+              completedWhen: 'arrive',
+              instructionText: null,
+            },
+            {
+              id: 'step_blut_1',
+              sortOrder: 1,
+              targetLocationId: 'labor',
+              queueId: 'pf_general_queue',
+              movementMode: 'call',
+              publicDisplayMode: 'hidden',
+              completedWhen: 'done',
+              instructionText: null,
+            },
+          ],
+        },
+      ],
+    },
+  };
+  syncFlowCoreCatalog(db, settings);
+  const created = createVisitCheckInInDb(buildDeps(db, settings), {
+    topicId: 'blut',
+    authPath: 'phone_dob',
+    identityRef: 'Complex Test',
+  });
+  const runtime = getFlowCoreRuntime(db);
+  const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay(), db);
+  return { db, settings, visitId: created.visitId, runtime, listQueue };
+}
+
 test('visitStatusToQueueDisplayStatus maps arrived and in_progress to in_room', () => {
   assert.equal(visitStatusToQueueDisplayStatus('arrived'), 'in_room');
   assert.equal(visitStatusToQueueDisplayStatus('in_progress'), 'in_room');
@@ -187,6 +242,25 @@ test('MFA done from arrived auto-starts before completing', () => {
     .get(visitId) as { status?: string; startedAt?: string | null } | undefined;
   assert.equal(visit?.status, 'done');
   assert.ok(visit?.startedAt);
+});
+
+test('callVisit starts pending next call journey step before calling', () => {
+  const { db, settings, visitId, runtime, listQueue } = setupComplexVisitFlow();
+
+  callVisit(db, runtime, settings, listQueue, visitId, 'mfa-tresen', 'Empfang');
+  arriveVisit(db, runtime, visitId, 'mfa-tresen');
+  let visit = runtime.visits().find((entry) => entry.id === visitId);
+  assert.equal(visit?.journeyStepIndex, 0);
+  assert.ok(visit?.journeyStepCompletedAt);
+  assert.equal(visit?.targetLocationId, 'mfa-tresen');
+
+  const call = callVisit(db, runtime, settings, listQueue, visitId, 'mfa-tresen', 'Empfang');
+  assert.deepEqual(call, { fromStatus: 'in_room', toStatus: 'called' });
+  visit = runtime.visits().find((entry) => entry.id === visitId);
+  assert.equal(visit?.journeyStepIndex, 1);
+  assert.equal(visit?.journeyStepCompletedAt, undefined);
+  assert.equal(visit?.targetLocationId, 'labor');
+  assert.equal(visit?.status, 'called');
 });
 
 test('scoped arrive succeeds when acting room matches target', () => {

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildJourneyRoutePreview,
-  formatJourneyAdvanceNote,
+  formatJourneyNextStepNote,
   lastKnownFromJourneyStep,
   ruleUsesJourneyRouting,
   visitOperationalLabel
@@ -19,12 +19,12 @@ test('lastKnownFromJourneyStep: Queue-Home als Wartebereich', () => {
   assert.equal(lastKnownFromJourneyStep(step, queues), 'waiting_general');
 });
 
-test('formatJourneyAdvanceNote', () => {
+test('formatJourneyNextStepNote', () => {
   assert.equal(
-    formatJourneyAdvanceNote({ previousIndex: 0, nextIndex: 1, stepCount: 2, fromLocationName: 'Empfang', toLocationName: 'Raum 1' }),
-    'Journey advance 1/2 → 2/2: Empfang → Raum 1'
+    formatJourneyNextStepNote({ previousIndex: 0, nextIndex: 1, stepCount: 2, fromLocationName: 'Empfang', toLocationName: 'Raum 1' }),
+    'Journey next step 1/2 → 2/2: Empfang → Raum 1'
   );
-  assert.equal(formatJourneyAdvanceNote({ previousIndex: 1, nextIndex: null, stepCount: 2 }), 'Journey complete');
+  assert.equal(formatJourneyNextStepNote({ previousIndex: 1, nextIndex: null, stepCount: 2 }), 'Journey complete');
 });
 
 test('visitOperationalLabel: waiting in Journey-Kontext', () => {

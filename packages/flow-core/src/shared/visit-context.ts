@@ -29,7 +29,7 @@ export function lastKnownFromJourneyStep(step: JourneyStep | null | undefined, q
   return queue?.homeLocationId ?? null;
 }
 
-export function formatJourneyAdvanceNote(params: {
+export function formatJourneyNextStepNote(params: {
   previousIndex: number;
   nextIndex?: number | null;
   stepCount: number;
@@ -41,9 +41,9 @@ export function formatJourneyAdvanceNote(params: {
 
   const hop = `${formatStepFraction(previousIndex, stepCount)} → ${formatStepFraction(nextIndex, stepCount)}`;
   if (fromLocationName && toLocationName && fromLocationName !== toLocationName) {
-    return `Journey advance ${hop}: ${fromLocationName} → ${toLocationName}`;
+    return `Journey next step ${hop}: ${fromLocationName} → ${toLocationName}`;
   }
-  return `Journey advance ${hop}`;
+  return `Journey next step ${hop}`;
 }
 
 /** Kontext-Label fuer Visit-Karten (waiting ≠ Wartezimmer). */

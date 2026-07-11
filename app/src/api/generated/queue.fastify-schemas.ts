@@ -58,6 +58,10 @@ export const QueueItem = {
     roomLabel: {
       type: ['string', 'null'],
     },
+    journeyStepCompletedAt: {
+      type: ['string', 'null'],
+      format: 'date-time',
+    },
     arrivedAt: {
       type: 'string',
       format: 'date-time',
@@ -388,6 +392,10 @@ export const QueueListMfaResponse = {
           },
           roomLabel: {
             type: ['string', 'null'],
+          },
+          journeyStepCompletedAt: {
+            type: ['string', 'null'],
+            format: 'date-time',
           },
           arrivedAt: {
             type: 'string',
@@ -743,6 +751,10 @@ export const QueueListResponse = {
               },
               roomLabel: {
                 type: ['string', 'null'],
+              },
+              journeyStepCompletedAt: {
+                type: ['string', 'null'],
+                format: 'date-time',
               },
               arrivedAt: {
                 type: 'string',
@@ -1553,6 +1565,10 @@ export const GET_api_v1_queueResponse200 = {
               },
               roomLabel: {
                 type: ['string', 'null'],
+              },
+              journeyStepCompletedAt: {
+                type: ['string', 'null'],
+                format: 'date-time',
               },
               arrivedAt: {
                 type: 'string',

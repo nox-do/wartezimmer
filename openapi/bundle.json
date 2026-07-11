@@ -3834,6 +3834,11 @@
                                 "type": "string",
                                 "nullable": true
                               },
+                              "journeyStepCompletedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
+                              },
                               "arrivedAt": {
                                 "type": "string",
                                 "format": "date-time"
@@ -16152,6 +16157,11 @@
             "type": "string",
             "nullable": true
           },
+          "journeyStepCompletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
           "arrivedAt": {
             "type": "string",
             "format": "date-time"
@@ -16475,6 +16485,11 @@
                 },
                 "roomLabel": {
                   "type": "string",
+                  "nullable": true
+                },
+                "journeyStepCompletedAt": {
+                  "type": "string",
+                  "format": "date-time",
                   "nullable": true
                 },
                 "arrivedAt": {
@@ -16857,6 +16872,11 @@
                     },
                     "roomLabel": {
                       "type": "string",
+                      "nullable": true
+                    },
+                    "journeyStepCompletedAt": {
+                      "type": "string",
+                      "format": "date-time",
                       "nullable": true
                     },
                     "arrivedAt": {

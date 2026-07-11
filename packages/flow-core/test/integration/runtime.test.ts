@@ -110,7 +110,7 @@ test('checkIn Journey: Schritt 0 und Cursor gesetzt', () => {
   assert.equal(visit.locationConfidence, 'assumed');
 });
 
-test('Journey advance: arrive am Empfang wechselt zu Schritt 2/3 (Raum)', () => {
+test('Journey completion: arrive am Empfang markiert Schritt 1/3 als erledigt', () => {
   const { runtime } = testRuntime();
   const created = runtime.checkIn({ topicId: 'general', displayName: 'Adv', surfaceId: 'terminal_1' });
   assert.equal(created.lastKnownLocationId, 'waiting_general');
@@ -118,26 +118,34 @@ test('Journey advance: arrive am Empfang wechselt zu Schritt 2/3 (Raum)', () => 
   runtime.transition(created.id, 'call');
   const after = runtime.transition(created.id, 'arrive');
 
-  assert.equal(after.journeyStepIndex, 1);
-  assert.equal(after.journeyStepLabel, '2/3');
+  assert.equal(after.journeyStepIndex, 0);
+  assert.equal(after.journeyStepLabel, '1/3');
   assert.equal(after.lastKnownLocationId, 'reception');
-  assert.equal(after.targetLocationId, 'room_1');
-  assert.equal(after.status, 'waiting');
+  assert.equal(after.targetLocationId, 'reception');
+  assert.equal(after.status, 'arrived');
+  assert.ok(after.journeyStepCompletedAt);
   assert.ok(after.arrivedAt);
-  assert.equal(after.terminalInstruction, 'Bitte warten Sie. Sie werden aufgerufen.');
   const visitEvents = runtime.events(created.id);
-  const advanceEvent = visitEvents.find((event) => event.note?.startsWith('Journey advance'));
-  assert.ok(advanceEvent);
-  assert.match(advanceEvent.note, /Empfang.*Raum 1/);
+  assert.ok(visitEvents.some((event) => event.type === 'journey_step_completed'));
+
+  const next = runtime.transition(created.id, 'start_next_journey_step');
+  assert.equal(next.journeyStepIndex, 1);
+  assert.equal(next.journeyStepLabel, '2/3');
+  assert.equal(next.targetLocationId, 'room_1');
+  assert.equal(next.status, 'waiting');
+  assert.equal(next.journeyStepCompletedAt, undefined);
+  assert.equal(next.terminalInstruction, 'Bitte warten Sie. Sie werden aufgerufen.');
 });
 
-test('Journey advance: letzter Schritt setzt journeyStepIndex auf null', () => {
+test('Journey next step: letzter Schritt setzt journeyStepIndex auf null', () => {
   const { runtime } = testRuntime();
   const created = runtime.checkIn({ topicId: 'general', displayName: 'Done', surfaceId: 'terminal_1' });
   runtime.transition(created.id, 'call');
-  runtime.transition(created.id, 'arrive'); // 1/3 → 2/3 Empfang
+  runtime.transition(created.id, 'arrive'); // 1/3 erledigt
+  runtime.transition(created.id, 'start_next_journey_step'); // 1/3 → 2/3 Empfang
   runtime.transition(created.id, 'call');
-  const atRoom = runtime.transition(created.id, 'arrive'); // 2/3 → 3/3 Raum, ohne erneuten call-Zyklus (H7)
+  runtime.transition(created.id, 'arrive'); // 2/3 erledigt
+  const atRoom = runtime.transition(created.id, 'start_next_journey_step'); // 2/3 → 3/3 Raum, ohne erneuten call-Zyklus (H7)
 
   assert.equal(atRoom.journeyStepIndex, 2);
   assert.equal(atRoom.status, 'arrived');
@@ -152,7 +160,7 @@ test('Journey advance: letzter Schritt setzt journeyStepIndex auf null', () => {
   assert.ok(visitEvents.some((event) => event.type === 'journey_completed'));
 });
 
-test('Journey advance mit Escort: self_go → pickup + Escort-Terminaltext', () => {
+test('Journey next step mit Escort: self_go → pickup + Escort-Terminaltext', () => {
   const { db, runtime } = testRuntime();
   const catalog = runtime.catalog();
   const steps = catalog.journeySteps.filter((step) => step.templateId === 'journey_general');
@@ -170,7 +178,8 @@ test('Journey advance mit Escort: self_go → pickup + Escort-Terminaltext', () 
 
   const created = runtime.checkIn({ topicId: 'general', displayName: 'Escort', surfaceId: 'terminal_1' });
   runtime.transition(created.id, 'call');
-  const after = runtime.transition(created.id, 'arrive');
+  runtime.transition(created.id, 'arrive');
+  const after = runtime.transition(created.id, 'start_next_journey_step');
 
   assert.equal(after.movementMode, 'pickup');
   assert.match(after.terminalInstruction, /begleitet/);

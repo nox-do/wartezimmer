@@ -199,6 +199,8 @@ export interface Visit {
   journeyTemplateId?: string;
   /** Index in journey_steps; null wenn Hop-Cursor beendet — Endzustand siehe journeyState. */
   journeyStepIndex?: number;
+  /** Aktueller Journey-Step ist erfuellt; naechster manueller Step wurde noch nicht gestartet. */
+  journeyStepCompletedAt?: string;
   /** active | completed | abandoned; fehlt wenn keine Journey. */
   journeyState?: JourneyState;
   /** Vorgänger-Visit bei Topic-Supersede (1:1-Kette). */
@@ -212,7 +214,7 @@ export interface Visit {
 export interface VisitEvent {
   id: string;
   visitId: string;
-  type: 'checked_in' | 'routed' | 'called' | 'arrived' | 'started' | 'returned_to_waiting' | 'redirected' | 'journey_completed' | 'journey_abandoned' | 'blocked' | 'done' | 'cancelled' | 'no_show' | 'superseded';
+  type: 'checked_in' | 'routed' | 'called' | 'arrived' | 'started' | 'returned_to_waiting' | 'redirected' | 'journey_step_completed' | 'journey_completed' | 'journey_abandoned' | 'blocked' | 'done' | 'cancelled' | 'no_show' | 'superseded';
   fromStatus?: string;
   toStatus?: string;
   fromLocationId?: string;

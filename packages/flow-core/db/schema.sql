@@ -153,6 +153,7 @@ CREATE TABLE IF NOT EXISTS visits (
   finished_at TEXT,
   journey_template_id TEXT,
   journey_step_index INTEGER,
+  journey_step_completed_at TEXT,
   journey_state TEXT,
   supersedes_visit_id TEXT,
   superseded_by_visit_id TEXT,

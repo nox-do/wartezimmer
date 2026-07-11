@@ -35,14 +35,14 @@ test('checkIn rollback: Event-Fehler hinterlässt keinen halben Check-in', () =>
   assert.equal(countRows(db, 'daily_queue_counters'), 0);
 });
 
-test('transition rollback: Journey-Advance-Fehler rollt Transition zurück', () => {
-  const { db, runtime } = testRuntime({ testHooks: { failAfter: 'journeyAdvance:update' } });
+test('transition rollback: Journey-Progression-Fehler rollt Transition zurück', () => {
+  const { db, runtime } = testRuntime({ testHooks: { failAfter: 'journeyProgression:update' } });
   const created = runtime.checkIn({ topicId: 'general', displayName: 'Trans', surfaceId: 'terminal_1' });
   runtime.transition(created.id, 'call');
 
   assert.throws(
     () => runtime.transition(created.id, 'arrive'),
-    /TEST_FAILURE:journeyAdvance:update/
+    /TEST_FAILURE:journeyProgression:update/
   );
 
   const visit = db.prepare('SELECT status, journey_step_index FROM visits WHERE id = ?').get(created.id);

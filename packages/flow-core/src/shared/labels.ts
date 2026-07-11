@@ -76,6 +76,7 @@ export const errorLabels: Record<string, string> = {
   ARRIVE_NOT_ALLOWED: 'Ankunft für diesen movementMode nicht vorgesehen.',
   START_ONLY_WHEN_ARRIVED: 'Start nur nach Ankunft (status = arrived).',
   DONE_ONLY_WHEN_IN_PROGRESS: 'Abschluss nur während Behandlung (status = in_progress).',
+  START_NEXT_JOURNEY_STEP_NOT_ALLOWED: 'Nächster Journey-Schritt kann in diesem Status nicht gestartet werden.',
   VISIT_NOT_FOUND: 'Visit nicht gefunden.',
   TOPIC_OR_ROUTING_RULE_MISSING: 'Topic oder RoutingRule fehlt.',
   CHECKIN_TOPIC_OR_MFA_ASSIST_REQUIRED: 'Check-in braucht ein Thema oder den Hilfe-Button.',
