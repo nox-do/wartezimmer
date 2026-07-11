@@ -7,7 +7,7 @@
  * Projekt wandern kann.
  */
 
-import { movementLabels, displayLabels, advanceLabels } from '/shared/labels.js';
+import { movementLabels, displayLabels, completedWhenLabels } from '/shared/labels.js';
 
 /**
  * Wiederverwendbare Journey-Admin-Komponente.
@@ -91,7 +91,7 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
       </section>
 
       <section class="journey-admin-block">
-        <h4>Schritte <small class="muted">Schritt 1 = erster Hop · advanceOn = wann der nächste Schritt startet</small></h4>
+        <h4>Schritte <small class="muted">Schritt 1 = erster Hop · completedWhen = wann dieser Schritt erfüllt ist</small></h4>
         <div class="journey-admin-steps" data-role="steps">
           ${steps.map((step, index) => renderStep(step, index)).join('')}
         </div>
@@ -131,8 +131,8 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
             <input data-field="instructionText" type="text" value="${escapeHtml(step.instructionText || '')}" placeholder="Leer = Default aus Weg + Ziel" />
           </label>
           <label class="journey-admin-field">
-            ${fieldLabel('advanceOn', 'Nächster Schritt')}
-            <select data-field="advanceOn">${advanceOptions(step.advanceOn)}</select>
+            ${fieldLabel('completedWhen', 'Erfüllt wenn')}
+            <select data-field="completedWhen">${completedWhenOptions(step.completedWhen)}</select>
           </label>
         </div>
       </article>
@@ -153,7 +153,7 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
     const hopLabels = steps.map((step, index) => {
       const target = catalog.locations.find((item) => item.id === step.targetLocationId)?.name || step.targetLocationId || '?';
       const mode = movementLabels[step.movementMode] || step.movementMode;
-      const trigger = advanceLabels[step.advanceOn] || step.advanceOn;
+      const trigger = completedWhenLabels[step.completedWhen] || step.completedWhen;
       return `${index + 1}: ${target} (${mode}, weiter ${trigger})`;
     });
     const topicLabel = topic?.name || template.topicId || 'ohne Topic';
@@ -172,7 +172,7 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
       queueId: node.querySelector('[data-field="queueId"]')?.value || null,
       movementMode: node.querySelector('[data-field="movementMode"]')?.value,
       publicDisplayMode: node.querySelector('[data-field="publicDisplayMode"]')?.value,
-      advanceOn: node.querySelector('[data-field="advanceOn"]')?.value,
+      completedWhen: node.querySelector('[data-field="completedWhen"]')?.value,
       instructionText: node.querySelector('[data-field="instructionText"]')?.value?.trim() || undefined
     }));
 
@@ -223,7 +223,7 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
         queueId: last?.queueId || null,
         movementMode: last?.movementMode || 'call',
         publicDisplayMode: last?.publicDisplayMode || 'visible',
-        advanceOn: 'arrive'
+        completedWhen: 'arrive'
       });
       catalog = {
         ...catalog,
@@ -291,8 +291,8 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
     `).join('');
   }
 
-  function advanceOptions(value) {
-    return Object.entries(advanceLabels).map(([key, label]) => `
+  function completedWhenOptions(value) {
+    return Object.entries(completedWhenLabels).map(([key, label]) => `
       <option value="${key}" ${key === value ? 'selected' : ''}>${key} · ${escapeHtml(label)}</option>
     `).join('');
   }

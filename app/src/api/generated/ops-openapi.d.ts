@@ -1476,7 +1476,7 @@ export interface components {
       /** @enum {string} */
       publicDisplayMode: 'visible' | 'hidden' | 'call_only';
       /** @enum {string} */
-      advanceOn: 'arrive' | 'start' | 'done';
+      completedWhen: 'arrive' | 'start' | 'done';
       instructionText?: string | null;
     };
     JourneyTemplateSetting: {

@@ -1,6 +1,6 @@
 import type {
   EscortPolicy,
-  JourneyAdvanceOn,
+  JourneyCompletedWhen,
   LocationConfidence,
   MovementMode,
   PublicDisplayMode,
@@ -8,7 +8,7 @@ import type {
 } from './types.js';
 
 export const MOVEMENT_MODES = ['call', 'self_go', 'pickup'] as const satisfies readonly MovementMode[];
-export const ADVANCE_ON_VALUES = ['arrive', 'start', 'done'] as const satisfies readonly JourneyAdvanceOn[];
+export const COMPLETED_WHEN_VALUES = ['arrive', 'start', 'done'] as const satisfies readonly JourneyCompletedWhen[];
 export const REDIRECT_LOCATION_SEMANTICS = ['instructed', 'confirmed', 'unknown'] as const satisfies readonly RedirectLocationSemantics[];
 export const ESCORT_POLICIES = ['none', 'recommended', 'required'] as const satisfies readonly EscortPolicy[];
 export const LOCATION_CONFIDENCES = ['instructed', 'assumed', 'confirmed'] as const satisfies readonly LocationConfidence[];

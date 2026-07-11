@@ -126,7 +126,7 @@ function journeyStep(row: SqlRow): JourneyStep {
     queueId: opt(row.queue_id as string | null),
     movementMode: row.movement_mode as JourneyStep['movementMode'],
     publicDisplayMode: row.public_display_mode as JourneyStep['publicDisplayMode'],
-    advanceOn: row.advance_on as JourneyStep['advanceOn'],
+    completedWhen: row.completed_when as JourneyStep['completedWhen'],
     instructionText: opt(row.instruction_text as string | null),
   };
 }

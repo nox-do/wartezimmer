@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS journey_steps (
   queue_id TEXT,
   movement_mode TEXT NOT NULL,
   public_display_mode TEXT NOT NULL,
-  advance_on TEXT NOT NULL,
+  completed_when TEXT NOT NULL,
   instruction_text TEXT,
   FOREIGN KEY(template_id) REFERENCES journey_templates(id),
   FOREIGN KEY(target_location_id) REFERENCES locations(id),

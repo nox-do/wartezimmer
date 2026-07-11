@@ -95,7 +95,7 @@ export interface SurfaceDisplayRule {
 }
 
 /** Journey-Templates — Domain-Typen der exportierbaren Journey-Komponente (`journey.ts`). */
-export type JourneyAdvanceOn = 'arrive' | 'start' | 'done';
+export type JourneyCompletedWhen = 'arrive' | 'start' | 'done';
 
 /** Laufzeitstatus der Journey auf dem Visit — unabhängig von journeyStepIndex. */
 export type JourneyState = 'active' | 'completed' | 'abandoned';
@@ -118,7 +118,7 @@ export interface JourneyStep {
   queueId?: string;
   movementMode: MovementMode;
   publicDisplayMode: PublicDisplayMode;
-  advanceOn: JourneyAdvanceOn;
+  completedWhen: JourneyCompletedWhen;
   /** Optionaler Hop-Hinweis; leer = Default aus movementMode + Ziel. */
   instructionText?: string;
 }

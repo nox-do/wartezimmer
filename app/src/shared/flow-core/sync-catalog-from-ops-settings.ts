@@ -299,14 +299,14 @@ function upsertJourneyStep(
     queueId: string | null;
     movementMode: string;
     publicDisplayMode: string;
-    advanceOn: string;
+    completedWhen: string;
     instructionText: string | null;
   },
 ): void {
   db.prepare(
     `INSERT INTO journey_steps (
       id, template_id, sort_order, target_location_id, queue_id,
-      movement_mode, public_display_mode, advance_on, instruction_text
+      movement_mode, public_display_mode, completed_when, instruction_text
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       template_id = excluded.template_id,
@@ -315,7 +315,7 @@ function upsertJourneyStep(
       queue_id = excluded.queue_id,
       movement_mode = excluded.movement_mode,
       public_display_mode = excluded.public_display_mode,
-      advance_on = excluded.advance_on,
+      completed_when = excluded.completed_when,
       instruction_text = excluded.instruction_text`,
   ).run(
     row.id,
@@ -325,7 +325,7 @@ function upsertJourneyStep(
     row.queueId,
     row.movementMode,
     row.publicDisplayMode,
-    row.advanceOn,
+    row.completedWhen,
     row.instructionText,
   );
 }
@@ -374,7 +374,7 @@ export function syncJourneyTemplatesFromOpsSettings(db: DatabaseSync, settings: 
         queueId: step.queueId,
         movementMode: step.movementMode,
         publicDisplayMode: step.publicDisplayMode,
-        advanceOn: step.advanceOn,
+        completedWhen: step.completedWhen,
         instructionText: step.instructionText,
       });
     }

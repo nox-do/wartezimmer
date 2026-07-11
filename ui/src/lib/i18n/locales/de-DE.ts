@@ -554,7 +554,7 @@ export const dict = {
       journeyGeneralQueue: 'Allgemeine Warteliste',
       journeyStepMovement: 'Weg',
       journeyStepDisplay: 'WZ-TV',
-      journeyStepAdvance: 'Nächster Schritt',
+      journeyStepCompletedWhen: 'Erfüllt wenn',
       journeyStepInstruction: 'Hinweis (optional)',
       journeyStepInstructionPlaceholder: 'Leer = Standard aus Weg und Ziel',
       journeyRemoveTemplate: 'Journey löschen',

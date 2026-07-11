@@ -99,7 +99,7 @@ const catalogFixture: Catalog = {
       queueId: 'general_queue',
       movementMode: 'call',
       publicDisplayMode: 'visible',
-      advanceOn: 'arrive',
+      completedWhen: 'arrive',
     },
     {
       id: 'step_1',
@@ -109,7 +109,7 @@ const catalogFixture: Catalog = {
       queueId: 'reception_queue',
       movementMode: 'call',
       publicDisplayMode: 'hidden',
-      advanceOn: 'arrive',
+      completedWhen: 'arrive',
     },
   ],
   routingRules: [simpleRule, journeyRule],

@@ -23,7 +23,7 @@ test('stepToVisitPatch: ohne Escort-Remap keine terminalInstruction', () => {
       queueId: 'general_queue',
       movementMode: 'call',
       publicDisplayMode: 'visible',
-      advanceOn: 'arrive'
+      completedWhen: 'arrive'
     },
     { effectiveEscortPolicy: 'none' },
     { baseInstruction: 'Bitte nehmen Sie im Wartezimmer Platz.' }
@@ -40,7 +40,7 @@ test('stepToVisitPatch: escort required mappt self_go auf pickup', () => {
       queueId: null,
       movementMode: 'self_go',
       publicDisplayMode: 'hidden',
-      advanceOn: 'start'
+      completedWhen: 'start'
     },
     { effectiveEscortPolicy: 'required' },
     { targetLocation: room1, baseInstruction: 'Bitte gehen Sie direkt zu Raum 1.' }
@@ -51,8 +51,8 @@ test('stepToVisitPatch: escort required mappt self_go auf pickup', () => {
   assert.equal(patch.terminalInstruction, escortTerminalInstruction('Raum 1'));
 });
 
-test('shouldAdvanceOn respektiert advanceOn', () => {
-  const step = { advanceOn: 'arrive' };
+test('shouldAdvanceOn respektiert completedWhen', () => {
+  const step = { completedWhen: 'arrive' };
   assert.equal(shouldAdvanceOn(step, 'arrive'), true);
   assert.equal(shouldAdvanceOn(step, 'start'), false);
   assert.equal(shouldAdvanceOn(undefined, 'arrive'), false);
@@ -60,8 +60,8 @@ test('shouldAdvanceOn respektiert advanceOn', () => {
 
 test('advanceJourneyPatch: letzter Schritt setzt journeyStepIndex auf null', () => {
   const steps = [
-    { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
-    { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', advanceOn: 'start' }
+    { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
+    { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', completedWhen: 'start' }
   ];
   const visit = {
     journeyTemplateId: 'journey_general',
@@ -77,8 +77,8 @@ test('advanceJourneyPatch: letzter Schritt setzt journeyStepIndex auf null', () 
 test('advanceJourneyPatch: call-Step setzt Aufruf-Text, nicht Geh-Text', () => {
   const reception = { id: 'reception', name: 'Empfang', publicName: 'Empfang' };
   const steps = [
-    { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
-    { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', advanceOn: 'start' }
+    { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
+    { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', completedWhen: 'start' }
   ];
   const visit = {
     journeyTemplateId: 'journey_general',
@@ -93,10 +93,10 @@ test('advanceJourneyPatch: call-Step setzt Aufruf-Text, nicht Geh-Text', () => {
   assert.doesNotMatch(patch.terminalInstruction, /gehen Sie zu/);
 });
 
-test('advanceJourneyPatch: advanceOn wird respektiert', () => {
+test('advanceJourneyPatch: completedWhen wird respektiert', () => {
   const steps = [
-    { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
-    { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'self_go', publicDisplayMode: 'hidden', advanceOn: 'start' }
+    { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
+    { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'self_go', publicDisplayMode: 'hidden', completedWhen: 'start' }
   ];
   const visit = {
     journeyTemplateId: 'journey_general',
@@ -117,8 +117,8 @@ test('advanceJourneyPatch: advanceOn wird respektiert', () => {
 test('advanceJourneyPatch: arrive-Advance behaelt arrivedAt', () => {
   const reception = { id: 'reception', name: 'Empfang', publicName: 'Empfang' };
   const steps = [
-    { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
-    { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', advanceOn: 'start' }
+    { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
+    { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', completedWhen: 'start' }
   ];
   const visit = {
     journeyTemplateId: 'journey_general',
@@ -136,14 +136,14 @@ test('advanceJourneyPatch: arrive-Advance behaelt arrivedAt', () => {
 
 test('advanceJourneyPatch: instructionText des naechsten Steps', () => {
   const steps = [
-    { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
+    { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
     {
       sortOrder: 1,
       targetLocationId: 'room_1',
       queueId: null,
       movementMode: 'call',
       publicDisplayMode: 'hidden',
-      advanceOn: 'start',
+      completedWhen: 'start',
       instructionText: 'Bitte nehmen Sie im Behandlungsraum Platz.'
     }
   ];
@@ -160,8 +160,8 @@ test('advanceJourneyPatch: instructionText des naechsten Steps', () => {
 
 test('advanceJourneyPatch: Same-Target-Advance setzt Warte-Hinweis ohne instructionText', () => {
   const steps = [
-    { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
-    { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', advanceOn: 'start' }
+    { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
+    { sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', completedWhen: 'start' }
   ];
   const visit = {
     journeyTemplateId: 'journey_general',

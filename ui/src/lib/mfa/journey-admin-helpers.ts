@@ -11,7 +11,7 @@ export const PF_GENERAL_QUEUE_ID = 'pf_general_queue';
 
 export const JOURNEY_MOVEMENT_MODES = ['call', 'self_go', 'pickup'] as const;
 export const JOURNEY_DISPLAY_MODES = ['visible', 'hidden', 'call_only'] as const;
-export const JOURNEY_ADVANCE_ON = ['arrive', 'start', 'done'] as const;
+export const JOURNEY_COMPLETED_WHEN = ['arrive', 'start', 'done'] as const;
 
 export function createJourneyTemplateId(name: string, taken: Set<string>): string {
   const base =
@@ -42,7 +42,7 @@ export function createDefaultJourneyStep(
     queueId: previous?.queueId ?? PF_GENERAL_QUEUE_ID,
     movementMode: previous?.movementMode ?? 'call',
     publicDisplayMode: previous?.publicDisplayMode ?? 'visible',
-    advanceOn: previous?.advanceOn ?? 'arrive',
+    completedWhen: previous?.completedWhen ?? 'arrive',
     instructionText: null,
   };
 }

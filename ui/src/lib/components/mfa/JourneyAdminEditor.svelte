@@ -4,7 +4,7 @@
     buildJourneyPreview,
     createDefaultJourneyStep,
     createJourneyTemplate,
-    JOURNEY_ADVANCE_ON,
+    JOURNEY_COMPLETED_WHEN,
     JOURNEY_DISPLAY_MODES,
     JOURNEY_MOVEMENT_MODES,
     PF_GENERAL_QUEUE_ID,
@@ -267,18 +267,18 @@
             </label>
 
             <label class="journey-admin__field">
-              <span>{t('mfa.settings.journeyStepAdvance')}</span>
+              <span>{t('mfa.settings.journeyStepCompletedWhen')}</span>
               <select
                 class="form-input"
-                value={step.advanceOn}
+                value={step.completedWhen}
                 disabled={busy}
                 onchange={(event) =>
                   updateStep(step.id, {
-                    advanceOn: (event.currentTarget as HTMLSelectElement)
-                      .value as JourneyTemplateSetting['steps'][number]['advanceOn'],
+                    completedWhen: (event.currentTarget as HTMLSelectElement)
+                      .value as JourneyTemplateSetting['steps'][number]['completedWhen'],
                   })}
               >
-                {#each JOURNEY_ADVANCE_ON as mode (mode)}
+                {#each JOURNEY_COMPLETED_WHEN as mode (mode)}
                   <option value={mode}>{mode}</option>
                 {/each}
               </select>

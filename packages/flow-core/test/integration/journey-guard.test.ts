@@ -29,7 +29,7 @@ test('saveJourneyTemplate: bei offenen Visits nicht speicherbar', () => {
         queueId: step.queueId,
         movementMode: step.movementMode,
         publicDisplayMode: step.publicDisplayMode,
-        advanceOn: step.advanceOn,
+        completedWhen: step.completedWhen,
         instructionText: step.instructionText
       }))
     }),
@@ -47,8 +47,8 @@ test('saveJourneyTemplate: ohne offene Visits erlaubt', () => {
     topicId: 'general',
     active: true,
     steps: [
-      { id: steps[0].id, sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
-      { id: steps[1].id, sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'pickup', publicDisplayMode: 'hidden', advanceOn: 'start' }
+      { id: steps[0].id, sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
+      { id: steps[1].id, sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'pickup', publicDisplayMode: 'hidden', completedWhen: 'start' }
     ]
   });
 

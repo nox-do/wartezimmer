@@ -51,7 +51,7 @@ test('parseSaveRuleBody und parseSaveJourneyTemplateBody', () => {
     name: 'Test',
     active: true,
     steps: [
-      { id: 'step_1', sortOrder: 0, movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' }
+      { id: 'step_1', sortOrder: 0, movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' }
     ]
   });
   assert.equal(template.steps.length, 1);

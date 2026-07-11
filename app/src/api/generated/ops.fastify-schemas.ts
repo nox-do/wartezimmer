@@ -424,7 +424,7 @@ export const PracticeProfile = {
 
 export const JourneyStepSetting = {
   type: 'object',
-  required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+  required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'completedWhen'],
   additionalProperties: false,
   properties: {
     id: {
@@ -455,7 +455,7 @@ export const JourneyStepSetting = {
       type: 'string',
       enum: ['visible', 'hidden', 'call_only'],
     },
-    advanceOn: {
+    completedWhen: {
       type: 'string',
       enum: ['arrive', 'start', 'done'],
     },
@@ -494,7 +494,7 @@ export const JourneyTemplateSetting = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+        required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'completedWhen'],
         additionalProperties: false,
         properties: {
           id: {
@@ -525,7 +525,7 @@ export const JourneyTemplateSetting = {
             type: 'string',
             enum: ['visible', 'hidden', 'call_only'],
           },
-          advanceOn: {
+          completedWhen: {
             type: 'string',
             enum: ['arrive', 'start', 'done'],
           },
@@ -574,7 +574,7 @@ export const JourneySettings = {
             type: 'array',
             items: {
               type: 'object',
-              required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+              required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'completedWhen'],
               additionalProperties: false,
               properties: {
                 id: {
@@ -605,7 +605,7 @@ export const JourneySettings = {
                   type: 'string',
                   enum: ['visible', 'hidden', 'call_only'],
                 },
-                advanceOn: {
+                completedWhen: {
                   type: 'string',
                   enum: ['arrive', 'start', 'done'],
                 },
@@ -769,7 +769,13 @@ export const OpsSettingsResponse = {
                 type: 'array',
                 items: {
                   type: 'object',
-                  required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+                  required: [
+                    'id',
+                    'sortOrder',
+                    'movementMode',
+                    'publicDisplayMode',
+                    'completedWhen',
+                  ],
                   additionalProperties: false,
                   properties: {
                     id: {
@@ -800,7 +806,7 @@ export const OpsSettingsResponse = {
                       type: 'string',
                       enum: ['visible', 'hidden', 'call_only'],
                     },
-                    advanceOn: {
+                    completedWhen: {
                       type: 'string',
                       enum: ['arrive', 'start', 'done'],
                     },
@@ -2075,7 +2081,13 @@ export const GET_api_v1_ops_settingsResponse200 = {
                 type: 'array',
                 items: {
                   type: 'object',
-                  required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+                  required: [
+                    'id',
+                    'sortOrder',
+                    'movementMode',
+                    'publicDisplayMode',
+                    'completedWhen',
+                  ],
                   additionalProperties: false,
                   properties: {
                     id: {
@@ -2106,7 +2118,7 @@ export const GET_api_v1_ops_settingsResponse200 = {
                       type: 'string',
                       enum: ['visible', 'hidden', 'call_only'],
                     },
-                    advanceOn: {
+                    completedWhen: {
                       type: 'string',
                       enum: ['arrive', 'start', 'done'],
                     },
@@ -2663,7 +2675,13 @@ export const PATCH_api_v1_ops_settingsRequestBody = {
                 type: 'array',
                 items: {
                   type: 'object',
-                  required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+                  required: [
+                    'id',
+                    'sortOrder',
+                    'movementMode',
+                    'publicDisplayMode',
+                    'completedWhen',
+                  ],
                   additionalProperties: false,
                   properties: {
                     id: {
@@ -2694,7 +2712,7 @@ export const PATCH_api_v1_ops_settingsRequestBody = {
                       type: 'string',
                       enum: ['visible', 'hidden', 'call_only'],
                     },
-                    advanceOn: {
+                    completedWhen: {
                       type: 'string',
                       enum: ['arrive', 'start', 'done'],
                     },
@@ -2912,7 +2930,13 @@ export const PATCH_api_v1_ops_settingsResponse200 = {
                 type: 'array',
                 items: {
                   type: 'object',
-                  required: ['id', 'sortOrder', 'movementMode', 'publicDisplayMode', 'advanceOn'],
+                  required: [
+                    'id',
+                    'sortOrder',
+                    'movementMode',
+                    'publicDisplayMode',
+                    'completedWhen',
+                  ],
                   additionalProperties: false,
                   properties: {
                     id: {
@@ -2943,7 +2967,7 @@ export const PATCH_api_v1_ops_settingsResponse200 = {
                       type: 'string',
                       enum: ['visible', 'hidden', 'call_only'],
                     },
-                    advanceOn: {
+                    completedWhen: {
                       type: 'string',
                       enum: ['arrive', 'start', 'done'],
                     },

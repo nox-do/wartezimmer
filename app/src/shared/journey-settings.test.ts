@@ -36,7 +36,7 @@ test('validateTopicJourneyAssignments accepts active template assignment', () =>
               queueId: 'q1',
               movementMode: 'call',
               publicDisplayMode: 'visible',
-              advanceOn: 'arrive',
+              completedWhen: 'arrive',
               instructionText: null,
             },
           ],

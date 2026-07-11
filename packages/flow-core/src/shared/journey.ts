@@ -11,7 +11,7 @@
  */
 
 import type {
-  JourneyAdvanceOn,
+  JourneyCompletedWhen,
   JourneyStep,
   Location,
   LocationConfidence,
@@ -83,7 +83,7 @@ export function stepToVisitPatch(
 }
 
 export function shouldAdvanceOn(step: JourneyStep | undefined, action: TransitionAction): boolean {
-  return Boolean(step && step.advanceOn === action);
+  return Boolean(step && step.completedWhen === action);
 }
 
 export function advanceJourneyPatch(

@@ -10992,7 +10992,7 @@
                                     "sortOrder",
                                     "movementMode",
                                     "publicDisplayMode",
-                                    "advanceOn"
+                                    "completedWhen"
                                   ],
                                   "additionalProperties": false,
                                   "properties": {
@@ -11026,7 +11026,7 @@
                                       "type": "string",
                                       "enum": ["visible", "hidden", "call_only"]
                                     },
-                                    "advanceOn": {
+                                    "completedWhen": {
                                       "type": "string",
                                       "enum": ["arrive", "start", "done"]
                                     },
@@ -11625,7 +11625,7 @@
                                   "sortOrder",
                                   "movementMode",
                                   "publicDisplayMode",
-                                  "advanceOn"
+                                  "completedWhen"
                                 ],
                                 "additionalProperties": false,
                                 "properties": {
@@ -11659,7 +11659,7 @@
                                     "type": "string",
                                     "enum": ["visible", "hidden", "call_only"]
                                   },
-                                  "advanceOn": {
+                                  "completedWhen": {
                                     "type": "string",
                                     "enum": ["arrive", "start", "done"]
                                   },
@@ -11905,7 +11905,7 @@
                                     "sortOrder",
                                     "movementMode",
                                     "publicDisplayMode",
-                                    "advanceOn"
+                                    "completedWhen"
                                   ],
                                   "additionalProperties": false,
                                   "properties": {
@@ -11939,7 +11939,7 @@
                                       "type": "string",
                                       "enum": ["visible", "hidden", "call_only"]
                                     },
-                                    "advanceOn": {
+                                    "completedWhen": {
                                       "type": "string",
                                       "enum": ["arrive", "start", "done"]
                                     },
@@ -18610,7 +18610,7 @@
       },
       "JourneyStepSetting": {
         "type": "object",
-        "required": ["id", "sortOrder", "movementMode", "publicDisplayMode", "advanceOn"],
+        "required": ["id", "sortOrder", "movementMode", "publicDisplayMode", "completedWhen"],
         "additionalProperties": false,
         "properties": {
           "id": {
@@ -18643,7 +18643,7 @@
             "type": "string",
             "enum": ["visible", "hidden", "call_only"]
           },
-          "advanceOn": {
+          "completedWhen": {
             "type": "string",
             "enum": ["arrive", "start", "done"]
           },
@@ -18683,7 +18683,7 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["id", "sortOrder", "movementMode", "publicDisplayMode", "advanceOn"],
+              "required": ["id", "sortOrder", "movementMode", "publicDisplayMode", "completedWhen"],
               "additionalProperties": false,
               "properties": {
                 "id": {
@@ -18716,7 +18716,7 @@
                   "type": "string",
                   "enum": ["visible", "hidden", "call_only"]
                 },
-                "advanceOn": {
+                "completedWhen": {
                   "type": "string",
                   "enum": ["arrive", "start", "done"]
                 },
@@ -18771,7 +18771,7 @@
                       "sortOrder",
                       "movementMode",
                       "publicDisplayMode",
-                      "advanceOn"
+                      "completedWhen"
                     ],
                     "additionalProperties": false,
                     "properties": {
@@ -18805,7 +18805,7 @@
                         "type": "string",
                         "enum": ["visible", "hidden", "call_only"]
                       },
-                      "advanceOn": {
+                      "completedWhen": {
                         "type": "string",
                         "enum": ["arrive", "start", "done"]
                       },
@@ -18987,7 +18987,7 @@
                           "sortOrder",
                           "movementMode",
                           "publicDisplayMode",
-                          "advanceOn"
+                          "completedWhen"
                         ],
                         "additionalProperties": false,
                         "properties": {
@@ -19021,7 +19021,7 @@
                             "type": "string",
                             "enum": ["visible", "hidden", "call_only"]
                           },
-                          "advanceOn": {
+                          "completedWhen": {
                             "type": "string",
                             "enum": ["arrive", "start", "done"]
                           },

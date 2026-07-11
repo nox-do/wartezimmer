@@ -10,6 +10,7 @@ Stand: 2026-07-10
 - Fehlercode bleibt `ROUTING_MODE_CHANGE_BLOCKED`, Details: `openVisitCount`.
 - Fix: Journey-Step-IDs via `randomId()` (LAN-HTTP ohne `crypto.randomUUID`).
 - Fix: Check-in/Bon `destinationRoomLabel` nur aus Visit-Ziel (kein Topic-Default-Fallback).
+- **Offen:** MFA Active-Zone Buttons Simple-first → Complex braucht Journey-Matrix (start / weiter / entlassen); Skizze 2026-07-10 im Chat.
 
 ## Heute: UI↔BE Drift-Aufräumen (Runde 1)
 

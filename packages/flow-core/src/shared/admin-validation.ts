@@ -1,6 +1,6 @@
 import type {
   Catalog,
-  JourneyAdvanceOn,
+  JourneyCompletedWhen,
   MovementMode,
   PublicDisplayMode,
   RoutingRule,
@@ -8,7 +8,7 @@ import type {
   Visit,
 } from './types.js';
 import {
-  ADVANCE_ON_VALUES,
+  COMPLETED_WHEN_VALUES,
   ESCORT_POLICIES,
   LOCATION_CONFIDENCES,
   MOVEMENT_MODES,
@@ -137,7 +137,7 @@ export type JourneyStepDraft = {
   queueId?: string | null;
   movementMode: MovementMode;
   publicDisplayMode: PublicDisplayMode;
-  advanceOn: JourneyAdvanceOn;
+  completedWhen: JourneyCompletedWhen;
   instructionText?: string;
 };
 
@@ -163,7 +163,7 @@ export function validateJourneyTemplateDraft(catalog: Catalog, templateDraft: Jo
   const stepIds = new Set<string>();
   for (const step of steps) {
     if (!MOVEMENT_MODES.includes(step.movementMode)) throw new Error('INVALID_MOVEMENT_MODE');
-    if (!ADVANCE_ON_VALUES.includes(step.advanceOn)) throw new Error('INVALID_ADVANCE_ON');
+    if (!COMPLETED_WHEN_VALUES.includes(step.completedWhen)) throw new Error('INVALID_COMPLETED_WHEN');
     if (!PUBLIC_DISPLAY_MODES.includes(step.publicDisplayMode)) throw new Error('INVALID_PUBLIC_DISPLAY_MODE');
     if (sortOrders.has(step.sortOrder)) throw new Error('DUPLICATE_JOURNEY_SORT_ORDER');
     sortOrders.add(step.sortOrder);

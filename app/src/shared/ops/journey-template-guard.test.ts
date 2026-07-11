@@ -31,7 +31,7 @@ function sampleTemplate(overrides: Partial<JourneySettings['templates'][number]>
         queueId: null,
         movementMode: 'call',
         publicDisplayMode: 'visible',
-        advanceOn: 'arrive',
+        completedWhen: 'arrive',
         instructionText: null,
       },
     ],

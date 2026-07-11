@@ -1,5 +1,5 @@
 import {
-  ADVANCE_ON_VALUES,
+  COMPLETED_WHEN_VALUES,
   MOVEMENT_MODES,
   PUBLIC_DISPLAY_MODES,
 } from '@praxis-flow/flow-core';
@@ -12,7 +12,7 @@ export type JourneyStepSetting = {
   queueId: string | null;
   movementMode: string;
   publicDisplayMode: string;
-  advanceOn: string;
+  completedWhen: string;
   instructionText: string | null;
 };
 
@@ -41,11 +41,11 @@ function normalizeJourneyStep(raw: unknown, index: number, templateIndex: number
   const sortOrder = typeof raw.sortOrder === 'number' ? raw.sortOrder : index;
   const movementMode = typeof raw.movementMode === 'string' ? raw.movementMode.trim() : '';
   const publicDisplayMode = typeof raw.publicDisplayMode === 'string' ? raw.publicDisplayMode.trim() : '';
-  const advanceOn = typeof raw.advanceOn === 'string' ? raw.advanceOn.trim() : '';
+  const completedWhen = typeof raw.completedWhen === 'string' ? raw.completedWhen.trim() : '';
   if (
     !isEnumMember(MOVEMENT_MODES, movementMode) ||
     !isEnumMember(PUBLIC_DISPLAY_MODES, publicDisplayMode) ||
-    !isEnumMember(ADVANCE_ON_VALUES, advanceOn)
+    !isEnumMember(COMPLETED_WHEN_VALUES, completedWhen)
   ) {
     throw new Error(`JOURNEY_SETTINGS_INVALID: template ${templateIndex} step ${index} has invalid enums.`);
   }
@@ -60,7 +60,7 @@ function normalizeJourneyStep(raw: unknown, index: number, templateIndex: number
       typeof raw.queueId === 'string' && raw.queueId.trim().length > 0 ? raw.queueId.trim() : null,
     movementMode,
     publicDisplayMode,
-    advanceOn,
+    completedWhen,
     instructionText:
       typeof raw.instructionText === 'string' && raw.instructionText.trim().length > 0
         ? raw.instructionText.trim()

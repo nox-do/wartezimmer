@@ -1,7 +1,7 @@
 import type {
   AuthPath,
   EscortPolicy,
-  JourneyAdvanceOn,
+  JourneyCompletedWhen,
   LocationConfidence,
   MovementMode,
   Priority,
@@ -9,7 +9,7 @@ import type {
   RedirectLocationSemantics,
 } from './types.js';
 import {
-  ADVANCE_ON_VALUES,
+  COMPLETED_WHEN_VALUES,
   ESCORT_POLICIES,
   LOCATION_CONFIDENCES,
   MOVEMENT_MODES,
@@ -195,7 +195,7 @@ function parseJourneyStepDraft(step: unknown, _index: number) {
       PUBLIC_DISPLAY_MODES,
       'INVALID_PUBLIC_DISPLAY_MODE',
     ) as PublicDisplayMode,
-    advanceOn: assertEnum(raw.advanceOn, ADVANCE_ON_VALUES, 'INVALID_ADVANCE_ON') as JourneyAdvanceOn,
+    completedWhen: assertEnum(raw.completedWhen, COMPLETED_WHEN_VALUES, 'INVALID_COMPLETED_WHEN') as JourneyCompletedWhen,
     instructionText:
       isString(raw.instructionText) && raw.instructionText.trim() ? raw.instructionText.trim() : undefined,
   };

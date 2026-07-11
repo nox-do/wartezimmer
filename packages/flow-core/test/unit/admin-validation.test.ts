@@ -68,8 +68,8 @@ test('validateJourneyTemplateDraft: doppelte sortOrder wird verhindert', () => {
       topicId: 'general',
       active: true,
       steps: [
-        { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
-        { sortOrder: 0, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', advanceOn: 'start' }
+        { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
+        { sortOrder: 0, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', completedWhen: 'start' }
       ]
     }),
     /DUPLICATE_JOURNEY_SORT_ORDER/
@@ -85,8 +85,8 @@ test('validateJourneyTemplateDraft: doppelte Step-IDs werden verhindert', () => 
       topicId: 'general',
       active: true,
       steps: [
-        { id: 'step_same', sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
-        { id: 'step_same', sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', advanceOn: 'start' }
+        { id: 'step_same', sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
+        { id: 'step_same', sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', completedWhen: 'start' }
       ]
     }),
     /DUPLICATE_JOURNEY_STEP_ID/
@@ -102,7 +102,7 @@ test('validateJourneyTemplateDraft: ungültige movementMode werden abgelehnt', (
       topicId: 'general',
       active: true,
       steps: [
-        { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'fly', publicDisplayMode: 'visible', advanceOn: 'arrive' }
+        { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'fly', publicDisplayMode: 'visible', completedWhen: 'arrive' }
       ]
     }),
     /INVALID_MOVEMENT_MODE/

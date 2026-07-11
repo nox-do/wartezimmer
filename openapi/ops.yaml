@@ -369,7 +369,7 @@ components:
         - sortOrder
         - movementMode
         - publicDisplayMode
-        - advanceOn
+        - completedWhen
       additionalProperties: false
       properties:
         id:
@@ -396,7 +396,7 @@ components:
         publicDisplayMode:
           type: string
           enum: [visible, hidden, call_only]
-        advanceOn:
+        completedWhen:
           type: string
           enum: [arrive, start, done]
         instructionText:

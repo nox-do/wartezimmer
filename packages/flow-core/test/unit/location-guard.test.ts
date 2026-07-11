@@ -12,7 +12,7 @@ const catalog = {
       queueId: 'lab_queue',
       movementMode: 'call' as const,
       publicDisplayMode: 'visible' as const,
-      advanceOn: 'arrive' as const,
+      completedWhen: 'arrive' as const,
     },
   ],
   routingRules: [

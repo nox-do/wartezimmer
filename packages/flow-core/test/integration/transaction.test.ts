@@ -86,9 +86,9 @@ test('saveJourneyTemplate rollback: Insert-Fehler behält alte Steps', () => {
       topicId: 'general',
       active: true,
       steps: [
-        { id: existing[0].id, sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', advanceOn: 'arrive' },
-        { id: existing[1].id, sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', advanceOn: 'start' },
-        { sortOrder: 3, targetLocationId: 'lab', queueId: null, movementMode: 'self_go', publicDisplayMode: 'hidden', advanceOn: 'done' }
+        { id: existing[0].id, sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
+        { id: existing[1].id, sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', completedWhen: 'start' },
+        { sortOrder: 3, targetLocationId: 'lab', queueId: null, movementMode: 'self_go', publicDisplayMode: 'hidden', completedWhen: 'done' }
       ]
     }),
     /TEST_FAILURE:journeyTemplate:insertStep/
@@ -122,7 +122,7 @@ test('saveJourneyTemplate: bestehende Steps werden fortgeschrieben statt komplet
         queueId: null,
         movementMode: 'call',
         publicDisplayMode: 'hidden',
-        advanceOn: 'arrive',
+        completedWhen: 'arrive',
       },
       {
         id: before[2].id,
@@ -131,7 +131,7 @@ test('saveJourneyTemplate: bestehende Steps werden fortgeschrieben statt komplet
         queueId: null,
         movementMode: 'pickup',
         publicDisplayMode: 'hidden',
-        advanceOn: 'start',
+        completedWhen: 'start',
       },
       {
         sortOrder: 3,
@@ -139,7 +139,7 @@ test('saveJourneyTemplate: bestehende Steps werden fortgeschrieben statt komplet
         queueId: null,
         movementMode: 'self_go',
         publicDisplayMode: 'hidden',
-        advanceOn: 'done',
+        completedWhen: 'done',
       },
     ],
   });
@@ -186,7 +186,7 @@ test('saveJourneyTemplate: fremde Step-ID wird abgelehnt', () => {
           queueId: 'general_queue',
           movementMode: 'call',
           publicDisplayMode: 'visible',
-          advanceOn: 'arrive',
+          completedWhen: 'arrive',
         },
       ],
     }),

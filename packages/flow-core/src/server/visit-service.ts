@@ -382,7 +382,7 @@ export function createVisitService(params: {
           'mfa',
         );
       } else if (action === 'return_to_waiting') {
-        // Recall, kein Redirect: journeyState bleibt unveraendert (applyJourneyAdvance no-op ohne passendes advanceOn).
+        // Recall, kein Redirect: journeyState bleibt unveraendert (applyJourneyAdvance no-op ohne passendes completedWhen).
         const data = loadCatalog();
         const returnPatch = resolveReturnToWaitingVisitPatch(current, data);
         const nextStatus = returnPatch.status!;

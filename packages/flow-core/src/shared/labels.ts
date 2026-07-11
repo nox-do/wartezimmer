@@ -3,7 +3,7 @@
 import type {
   ActiveVisitStatus,
   EscortPolicy,
-  JourneyAdvanceOn,
+  JourneyCompletedWhen,
   LocationConfidence,
   MovementMode,
   PublicDisplayMode,
@@ -45,7 +45,7 @@ export const confidenceLabels: Record<LocationConfidence, string> = {
   confirmed: 'bestätigt',
 };
 
-export const advanceLabels: Record<JourneyAdvanceOn, string> = {
+export const completedWhenLabels: Record<JourneyCompletedWhen, string> = {
   arrive: 'nach Ankunft',
   start: 'nach Start',
   done: 'nach Abschluss',
@@ -56,7 +56,7 @@ export const errorLabels: Record<string, string> = {
   ROUTING_RULE_NOT_FOUND: 'RoutingRule nicht gefunden.',
   ROUTING_RULE_TOPIC_IMMUTABLE: 'Topic einer RoutingRule kann nicht geändert werden.',
   SURFACE_NOT_FOUND: 'Surface nicht gefunden.',
-  INVALID_ADVANCE_ON: 'Ungültiger advanceOn-Wert.',
+  INVALID_COMPLETED_WHEN: 'Ungültiger completedWhen-Wert.',
   INVALID_ESCORT_POLICY: 'Ungültige Escort-Policy.',
   INVALID_LOCATION_CONFIDENCE: 'Ungültige locationConfidence.',
   TERMINAL_SURFACE_INVALID: 'Ungültiges Terminal (Surface).',

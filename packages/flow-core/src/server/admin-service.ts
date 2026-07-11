@@ -104,7 +104,7 @@ export function createAdminService(params: {
 
       const upsertStep = db.prepare(
         `INSERT INTO journey_steps (
-          id, template_id, sort_order, target_location_id, queue_id, movement_mode, public_display_mode, advance_on, instruction_text
+          id, template_id, sort_order, target_location_id, queue_id, movement_mode, public_display_mode, completed_when, instruction_text
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           template_id = excluded.template_id,
@@ -113,7 +113,7 @@ export function createAdminService(params: {
           queue_id = excluded.queue_id,
           movement_mode = excluded.movement_mode,
           public_display_mode = excluded.public_display_mode,
-          advance_on = excluded.advance_on,
+          completed_when = excluded.completed_when,
           instruction_text = excluded.instruction_text`,
       );
       const deleteStep = db.prepare('DELETE FROM journey_steps WHERE id = ?');
@@ -141,7 +141,7 @@ export function createAdminService(params: {
           step.queueId ?? null,
           step.movementMode,
           step.publicDisplayMode,
-          step.advanceOn,
+          step.completedWhen,
           step.instructionText ?? null,
         );
       }
