@@ -2,20 +2,11 @@
 
 Stand: 2026-07-12
 
-## Raum-Panel v2 (in Arbeit)
+## Raum-Panel v2 (abgeschlossen 2026-07-12)
 
-- ✅ Plan bereinigt: `docs/plan-room-panel.md` — Scope vs. Aktion, Phasen A–E
-- ✅ Phase A: Claims (`canCall`, `visitTargetsRoom`, `mayShowPatientNames`); `allowCalling`; Auth inside=PIN / outside=ohne
-- ✅ **P0 Domain** (2026-07-12): `RoomPanelsSettings` + `normalizeRoomPanelsSettings`; status-aware `visitTargetsRoom`; `resolveRoomPanelCapabilities` disabled→false
-- ✅ **P1 Dual-Placement** (2026-07-12): `room.panels` in DB/Ops/OpenAPI/UI; Domain-Helpers; Catalog `supportsCalling`; partial patch merge; compile-grün
-- ✅ **P1 Auth-Nachzug** (2026-07-12): Login `roomId + placement`, pin optional; UI Login-Key `roomId:placement`
-- ✅ **P4 MFA Settings UI** (2026-07-12): RoomsEditor Accordion; Tür/Raum getrennt; Placement-Badges; Save pro Expander; Add/Delete-Modal
-- ✅ **P5 Panel Live/Login UI** (2026-07-12): Snapshot-Renderer + Action-Dispatcher; callCandidates getrennt; Login Tür/Raum
-- ⏳ P6: siehe Plan (Doku)
-- ✅ **P2 Device Presence + Revoke** (2026-07-12): `room-panel:${roomId}:${placement}`; placement-granularer Revoke; MFA-Badge pro Placement; P2-Test-Checkliste im Plan abgehakt
-- ✅ **P3 Backend Call + Snapshot** (2026-07-12): Panel-Call Scope-Guard; `resolveRoomPanelSnapshotPolicy`; capabilities/actions/callCandidates; OpenAPI 403
-- ✅ UI typecheck (2026-07-12): `Button.ariaLabel` statt invalidem `aria-label`-Prop in `JourneyAdminEditor`
-- ✅ P1 App-Tests (2026-07-12): 11 Testdateien auf `panels: { outside, inside }` + Domain-Helpers umgestellt
+- ✅ Dual-Placement (`outside` / `inside`): Domain, API, Auth, Snapshot, MFA-Settings-Accordion, Live-UI
+- ✅ Doku: [`flows.md`](docs/flows.md) § Flow 5, [`apis.md`](docs/apis.md) § Raum-Panel
+- Plan-Datei entfernt — Inhalt in Kerndokumenten
 
 ## Hinweis: RoutingMode-Guard vs. offene Wartenummern (2026-07-10)
 

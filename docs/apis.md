@@ -18,6 +18,7 @@ Diese Datei ergänzt OpenAPI um **Rollen**, **fachliche Regeln** und **Nicht-Off
 | `terminal`            | Check-in       | `checkins`, `checkins/assist/*`, `ops/heartbeat`, `ops/device/presence`, optional `ops/emergency/raise` |
 | `mfa`                 | MFA-Dashboard  | `queue` (+ SSE), `identity`, `documents`, `ops` (+ Stream, Day-Lifecycle, Check-in-Lock)                  |
 | `tv`                  | Wartezimmer    | `GET /queue`, `GET /queue/stream`, `ops/device/presence`                                                  |
+| `room-panel`          | Raum-Tablet    | `GET /auth/room-panel/rooms`, `POST /auth/room-panel/login`, `GET /queue` (+ SSE), `POST /queue/:id/transition` (eingeschränkt) |
 | `captive`             | Gateway-Bridge | `sessions/verify-ticket-code`                                                                             |
 | `patient-web-session` | Portal         | `sessions/*`, `patient-documents/*` (Bearer-Token)                                                        |
 | `ops`                 | IT-Settings    | Settings (CSV/SMS-Subset), Messaging, Maintenance, Outbox-Status                                          |
@@ -30,6 +31,27 @@ Diese Datei ergänzt OpenAPI um **Rollen**, **fachliche Regeln** und **Nicht-Off
 - **`topics` und `rooms` ersetzen jeweils die gesamte Liste** (kein partielles Merge)
 - **`triageLevel`** am Queue-Eintrag: nur MFA (`POST …/transition` mit `type: cycle_triage`); TV sieht keinen Triage-Status
 - **`identityRef`**: MFA schreibt manuellen Anzeigenamen per `PATCH …/identity-ref` (technisches Feld fuer Namenshinweis aus CSV/eGK)
+- **`room-panel`**: eigene Session (`roomId` + `placement`); Queue-Snapshot mit reduzierter Payload; Transitions nur `check_in_room`, `check_out_room`, `call` — Guards über `capabilities` und Flow-Core
+
+## Raum-Panel (Auth & Queue)
+
+Vertrag: `openapi/auth.yaml` (Login), `openapi/queue.yaml` (`RoomPanelSnapshot`, Transitions).
+
+| Endpoint | Rolle | Zweck |
+| -------- | ----- | ----- |
+| `GET /auth/room-panel/rooms` | öffentlich | Aktive Placements zum Login (`requiresPin`: nur `inside`) |
+| `POST /auth/room-panel/login` | öffentlich | Session-Cookie; Body `roomId`, `placement`, optional `pin` |
+| `GET /queue` | `room-panel` | Snapshot: `capabilities`, `panel`, `items[]`, optional `callCandidates[]` |
+| `GET /queue/stream` | `room-panel` | SSE `snapshot` + `session-revoked` |
+| `POST /queue/:visitId/transition` | `room-panel` | `check_in_room`, `check_out_room`, `call` |
+
+**Snapshot-Actions** (pro Item/Kandidat): `canArrive`, `canCheckOut`, `canCall`, optional `disabledReason`. UI rendert Buttons daraus — Server bleibt autoritativ.
+
+**Capabilities:** `canCheckIn`, `canCheckOut`, `canCall`, `mayShowPatientNames`, `requiresPin`. `canCall` nur bei `inside` + `staff_full` + `allowCalling` + Panel aktiv.
+
+**Fehler:** Transition **403** = Capability/Scope (Snapshot refresh, kein Logout) · **409** = TV offline / Capacity / Race · Queue **401/403** = Session ungültig (Re-Login).
+
+Details: [`flows.md`](flows.md) § Flow 5
 
 ## Patient-Portal-Session (v1)
 
@@ -52,7 +74,7 @@ SSE für Beobachtung, REST für Mutationen. Leitdokument: [`realtime-streams.md`
 
 | Kanal                    | Rolle            | Inhalt                                       |
 | ------------------------ | ---------------- | -------------------------------------------- |
-| `GET /queue/stream`      | `mfa`, `tv`      | Warteschlange live                           |
+| `GET /queue/stream`      | `mfa`, `tv`, `room-panel` | Warteschlange live (View abhängig von Rolle) |
 | `GET /ops/stream`        | `mfa`            | Notfall, `device.presence`, `device.pairing` |
 | `GET /ops/device/stream` | `tv`, `terminal` | Device-Liveness                              |
 

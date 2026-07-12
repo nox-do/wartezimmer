@@ -10,7 +10,8 @@ Abgleich Svelte-Apps (`ui/`) gegen diese Flows — **ohne** eGK-Hardware, SMS/Me
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | Terminal Happy Path | Phone/DOB (+49 fest), **Nachname+DOB** (optional per Ops), Themen, Bestätigung, MFA-Assist, Notfall, Terminal gesperrt, Themen-Zeitfenster (Backend-Filter), optional Bon-Druck (Kiosk), Sprachen de/en/tr/ru/uk (Patienten-UI; MFA wählt sichtbare Sprachen, Default nur DE)                                                                                                   | Empfangs-Ausweg bei nicht verfügbarer Anmeldung / Themen                                          |
 | Portal              | Wartenummer → Menü → Upload **und** Erstanamnese; Session-Abschluss (Formular → revoke, Upload → TTL 30 Min); Captive-Authorize (UI + API)                                                                                                                                                                                                                                      | Internet-Modell offen (ein vs. zweites WLAN); Fragenkatalog-Review; Gateway-Betrieb nur Linux-Lab |
-| MFA                 | Warteliste (SSE), Zonen, **Raum-Board** (grüne Spalte), **DnD** (WZ↔Räume), **Triage-Merker**, persistierter Anzeigename (`identity-ref`), Dokument-Vorschau (inkl. Deep-Link), Notfall (Ops-Stream), Quicksettings (**Terminal sperren**, Aufrufziel, Geräte-Presence/Pairing), Betrieb-Settings (WLAN-Promo, `returnWindowMinutes`), Rückhol-SMS, Themen-Reihenfolge per Drag | Queue-Summary, Identity/Patient-Detail, PVS-Spalten, Raum-Panel                                   |
+| MFA                 | Warteliste (SSE), Zonen, **Raum-Board** (grüne Spalte), **DnD** (WZ↔Räume), **Triage-Merker**, persistierter Anzeigename (`identity-ref`), Dokument-Vorschau (inkl. Deep-Link), Notfall (Ops-Stream), Quicksettings (**Terminal sperren**, Aufrufziel, Geräte-Presence/Pairing), Betrieb-Settings (WLAN-Promo, `returnWindowMinutes`), Rückhol-SMS, Themen-Reihenfolge per Drag, **Raum-Panel-Settings** (Tür + im Raum pro Raum) | Queue-Summary, Identity/Patient-Detail, PVS-Spalten |
+| Raum-Panel          | Login pro Placement (`/room-panel`), Live-Snapshot (SSE), Ankunft/Entlassen/Aufruf aus `actions`, getrennte `callCandidates`-Liste                                                                                                                                                                                                                                              | —                                                                                                 |
 | TV                  | SSE, Aufruf, Chime, Pagination, Device-Pairing                                                                                                                                                                                                                                                                                                                                  | —                                                                                                 |
 
 **Echtzeit-Zielbild:** `docs/realtime-streams.md` — Presence (offline) und Pairing (PIN) sind getrennte SSE-Events; REST nur fuer Aktionen.
@@ -354,16 +355,21 @@ Jedes Terminal-Thema hat ein **Standard-Aufrufziel** (`defaultRoomId`). In der R
 
 **Laufzeit:** `type: call`, `type: reassign_room`, `type: check_in_room` (bei Raumzuweisung) werfen `ROOM_AT_CAPACITY` (409), wenn `maxOccupancy` erreicht ist. Quicksettings bleiben unverändert — voller Raum scheitert beim Aufruf.
 
-### Check-in / Check-out — MFA vs. Raum-Panel (geplant)
+### Check-in / Check-out — MFA vs. Raum-Panel
 
-| Schritt                        | MFA                                                                       | Raum-Panel (später)                                  |
-| ------------------------------ | ------------------------------------------------------------------------- | ---------------------------------------------------- |
-| **Check-in**                   | überall, kein `actingRoomId`                                              | nur wenn `room_id` = Panel-Raum; Body `actingRoomId` |
-| **Check-out**                  | überall (Modal „Patient entlassen?“)                                      | nur im zugewiesenen Raum; Body `actingRoomId`        |
-| **Umziehen (MFA)**             | `type: reassign_room` — bei Raumwechsel aus `in_room` zurück auf `called` | Panel zeigt danach kein Check-out mehr am alten Ort  |
-| **Zurückholen vor Entlassung** | MFA: zurück ins Wartezimmer / erneut aufrufen                             | —                                                    |
+| Schritt                        | MFA                                                                       | Raum-Panel                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Check-in**                   | überall, kein `actingRoomId`                                              | nur im Panel-Raum (`check_in_room`); Scope serverseitig                    |
+| **Check-out**                  | überall (Modal „Patient entlassen?“)                                      | nur `inside` + Modus `staff_full` (`check_out_room`)                       |
+| **Aufrufen**                   | Warteschlange / DnD                                                       | nur `inside` + `staff_full` + `allowCalling` (`call`); WZ-TV muss online    |
+| **Umziehen (MFA)**             | `type: reassign_room` — bei Raumwechsel aus `in_room` zurück auf `called` | Panel zeigt danach kein Check-out mehr am alten Ort                        |
+| **Zurückholen vor Entlassung** | MFA: zurück ins Wartezimmer / erneut aufrufen                             | —                                                                          |
 
-**Backend (Ist):** `POST …/transition` mit `type: check_in_room` oder `type: check_out_room` akzeptiert optional `actingRoomId`. Ist es gesetzt und passt nicht zu `room_id` → `QUEUE_ROOM_MISMATCH` (409). MFA lässt das Feld weg.
+**Backend:** `POST …/transition` mit `type: check_in_room`, `check_out_room` oder `call` (nur Raum-Panel-Session). MFA sendet weiterhin die MFA-Transitions ohne Raum-Einschränkung. Raum-Panel nutzt **Snapshot-Actions** (`canArrive`, `canCheckOut`, `canCall`) — UI leitet Buttons daraus ab, Server antwortet bei Race/Guard mit 403/409.
+
+**Scope vs. Aktion:** Gehört der Visit zu diesem Raum? (`visitTargetsRoom`, status-aware) — separat von: Darf dieses Placement etwas tun? (`capabilities` + Flow-Core).
+
+**Nicht im Panel:** `reassign_room`, `return_to_waiting`, Triage, Supersede, Pickup-Hops — bleiben MFA.
 
 ### MFA-Triage-Merker (Ist)
 
@@ -393,7 +399,7 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 
 | Bereich                    | Inhalt                                                                                                                                                                     |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Themen & Räume**         | Terminal-Themen (Label, Nummernkreis `laneCode`, Zeitfenster, aktiv, Reihenfolge per Drag) + Raumliste + Standard-Aufrufziel je Thema — **laufende Nummer nur vom System** |
+| **Themen & Räume**         | Terminal-Themen (Label, Nummernkreis `laneCode`, Zeitfenster, aktiv, Reihenfolge per Drag) + Raumliste + **Tür-Panel / Raum-Panel** pro Raum (Expander, je Placement Modus, Texte, optional Namen/Aufruf) + Standard-Aufrufziel je Thema — **laufende Nummer nur vom System** |
 | **Betrieb**                | WLAN-Promo, **Rückkehr-Fenster** (`returnWindowMinutes` — einziger MFA-Zeitwert für Rückholen, mit/ohne SMS); **nicht** Terminal sperren (nur Quicksettings)               |
 | **Terminal & Wartezimmer** | Notfall-Feature an/aus                                                                                                                                                     |
 
@@ -427,6 +433,46 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 **Ansteuerung:** MFA **Aufrufen** → Eintrag rechts; Check-out / weg → raus. Außer Haus links **grau** (bis Rückkehr).
 
 **Datenschutz:** wie Terminal — keine Namen.
+
+---
+
+## Flow 5 — Raum-Panel (Tablet)
+
+**Route:** `/room-panel` · optional Deep-Link `?room=<roomId>&placement=outside|inside`
+
+**Ziel:** Pro Raum zwei unabhängige Placements — **Tür** (`outside`) und **im Raum** (`inside`). Orientierung, optionale Ankunft, optional Entlassen/Aufruf — je nach Settings.
+
+### Placements
+
+| Placement | PIN | Modus | Namen | Aufruf |
+| --------- | --- | ----- | ----- | ------ |
+| **outside** (Tür) | nein | `display_only` \| `arrival` | nie | nie |
+| **inside** (im Raum) | ja (Praxis-PIN) | `display_only` \| `arrival` \| `staff_full` | optional | nur `staff_full` + `allowCalling` |
+
+**Settings:** MFA → Themen & Räume → Raum-Expander. Panel-PIN wird in den Ops-Einstellungen gesetzt.
+
+### Login
+
+- `GET /auth/room-panel/rooms` — ein Eintrag pro **aktivem Placement** (`roomId`, `roomLabel`, `placement`, `mode`, `requiresPin`)
+- `POST /auth/room-panel/login` — Body: `roomId` + `placement`; `pin` nur für `inside`
+- UI: „Labor – Tür“ / „Labor – im Raum“; URL-Placement wird beim Restore bevorzugt
+
+### Live-UI
+
+- `GET /queue` + `GET /queue/stream` mit Rolle `room-panel` → **RoomPanelSnapshot**
+- **Lead-Texte** aus Snapshot (`calledText`, `arrivedText`)
+- **Raum-Items** (`called`, `directed`, `in_room`) mit Actions
+- **Aufruf-Liste** (`callCandidates`, Backend-FIFO) nur wenn `capabilities.canCall`; getrennt von Raum-Items
+- Buttons nur bei `actions.canArrive` / `canCheckOut` / `canCall` — kein lokales Ableiten aus Modus
+- **409** (TV offline, Capacity, Race): Toast + Snapshot-Refresh · **403** Capability: Refresh ohne Logout · Session-Ende nur bei 401 / Queue-403 / Revoke
+
+### Device Presence
+
+Device-ID: `room-panel:<roomId>:<placement>` — MFA-Settings zeigen „Tür online“ / „Raum offline“ pro Placement.
+
+### Wenn kein bedienbares Panel
+
+MFA behält die volle Primary-Action-Fläche (Aufrufen, Ankommen, Starten, …).
 
 ---
 

@@ -31,6 +31,7 @@ Fachdetail: [`flows.md`](flows.md)
 | `/portal/*`   | Wartenummer, Upload, Anamnese, Captive-Hooks     |
 | `/mfa/*`      | SSE-Queue, Dokumente, Pairing, Notfall, Settings |
 | `/tv`         | SSE, Chime, Pagination                           |
+| `/room-panel` | Login pro Placement, Snapshot-Actions, Aufruf-Liste |
 
 Backend deckt mehr ab als die UI (Identity-Detail, Day-Close-UI, eGK).
 
@@ -40,14 +41,13 @@ Backend deckt mehr ab als die UI (Identity-Detail, Day-Close-UI, eGK).
 - Tagesreset: MFA „Tag neu starten“ (`day-lifecycle/reset`); Day-Close-API ohne UI
 - Rückhol-Fenster: `returnWindowMinutes` (Default 15 Min), danach auto `waiting`
 - Überlast: MFA steuert (Terminal sperren + Empfang), kein Terminal-3-Optionen-Flow
-- Raum-Panel: Orientierung zuerst; Ankunft/Fertig optional pro Raum — [`plan-room-panel.md`](plan-room-panel.md)
+- Raum-Panel: dual Placement (Tür / im Raum), Settings in MFA, Live-UI — [`flows.md`](flows.md) § Flow 5
 - eGK/PVS: Phase 3, nicht Beta-Blocker
 
 ## Nächste Schritte
 
 1. Terminal-Sonderfälle sauber zum Empfang führen
-2. Raum-Panel — [`plan-room-panel.md`](plan-room-panel.md)
-3. Gateway-Feldtest (Linux + Gast-NIC)
-4. eGK/PVS — [`integrations.md`](integrations.md)
-5. Proxy + TLS — [`plan-proxy-container.md`](plan-proxy-container.md)
-6. Manager Phase 4: Installer / Auto-Update
+2. Gateway-Feldtest (Linux + Gast-NIC)
+3. eGK/PVS — [`integrations.md`](integrations.md)
+4. Proxy + TLS — [`plan-proxy-container.md`](plan-proxy-container.md)
+5. Manager Phase 4: Installer / Auto-Update
