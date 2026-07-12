@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { createLucideIcon } from './lucide-icons.js';
   import type { DeviceUrlEntry } from './status-view-model.js';
   import TvKioskTip from './TvKioskTip.svelte';
 
@@ -12,20 +11,9 @@
   } = $props();
 
   let copied = $state(false);
-  let copyBtn = $state<HTMLButtonElement | null>(null);
   let copyResetTimer: ReturnType<typeof setTimeout> | null = null;
 
-  $effect(() => {
-    if (!copyBtn) {
-      return;
-    }
-    copyBtn.replaceChildren(createLucideIcon(copied ? 'check' : 'copy'));
-  });
-
   async function copyUrl(): Promise<void> {
-    if (!copyBtn) {
-      return;
-    }
     try {
       await navigator.clipboard.writeText(entry.url);
       copied = true;
@@ -37,7 +25,7 @@
         copyResetTimer = null;
       }, 1200);
     } catch {
-      copyBtn.setAttribute('aria-label', 'Kopieren fehlgeschlagen');
+      // Clipboard API unavailable — button label stays unchanged.
     }
   }
 </script>
@@ -48,7 +36,7 @@
     class="device-url-value"
     href={entry.url}
     target="_blank"
-    rel="noopener noreferrer"
+    rel="external noopener noreferrer"
     title={entry.url}
     onclick={(event) => {
       event.preventDefault();
@@ -62,13 +50,33 @@
       <TvKioskTip tvUrl={entry.url} />
     {/if}
     <button
-      bind:this={copyBtn}
       type="button"
       class="btn-icon btn-secondary btn-copy"
       aria-label={copied ? 'Kopiert' : 'URL kopieren'}
       onclick={() => {
         void copyUrl();
       }}
-    ></button>
+    >
+      <svg
+        class="icon"
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        {#if copied}
+          <path d="M20 6 9 17l-5-5"></path>
+        {:else}
+          <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+        {/if}
+      </svg>
+    </button>
   </div>
 </li>
