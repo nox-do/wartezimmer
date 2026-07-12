@@ -10,6 +10,8 @@ import {
   normalizeRoomPanelPlacementConfig,
   normalizeRoomPanelSettings,
   normalizeRoomPanelsSettings,
+  resolveRoomPanelDisplayTextConfig,
+  updateRoomPanelPlacementConfig,
   roomHasAnyEnabledPanel,
   roomPanelConfigForPlacement,
   ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
@@ -169,6 +171,32 @@ test('roomPanelsOrDefault and listEnabledRoomPanelPlacements', () => {
   assert.deepEqual(listEnabledRoomPanelPlacements(room), ['outside', 'inside']);
   assert.equal(roomHasAnyEnabledPanel(room), true);
   assert.equal(roomPanelConfigForPlacement(room, 'inside').allowCalling, true);
+});
+
+test('updateRoomPanelPlacementConfig patches one placement', () => {
+  const result = updateRoomPanelPlacementConfig(DEFAULT_ROOM_PANELS_SETTINGS, 'inside', {
+    enabled: true,
+    mode: 'staff_full',
+    allowCalling: true,
+  });
+  assert.equal(result.inside.enabled, true);
+  assert.equal(result.inside.allowCalling, true);
+  assert.equal(result.outside.allowCalling, false);
+});
+
+test('resolveRoomPanelDisplayTextConfig uses custom or falls back', () => {
+  assert.deepEqual(
+    resolveRoomPanelDisplayTextConfig('custom', '  Hallo  ', 'please_enter'),
+    { preset: 'custom', custom: 'Hallo' },
+  );
+  assert.deepEqual(
+    resolveRoomPanelDisplayTextConfig('custom', '   ', 'please_wait_here'),
+    { preset: 'please_wait_here', custom: null },
+  );
+  assert.deepEqual(
+    resolveRoomPanelDisplayTextConfig('please_enter', null, 'please_wait_here'),
+    { preset: 'please_enter', custom: null },
+  );
 });
 
 test('applyRoomPanelPlacement coerces outside staff_full to arrival', () => {

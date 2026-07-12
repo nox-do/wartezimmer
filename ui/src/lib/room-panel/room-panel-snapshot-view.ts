@@ -25,19 +25,20 @@ export function resolveRoomPanelLeadState(items: RoomPanelItem[]): RoomPanelLead
 }
 
 export function resolveRoomPanelLeadLabel(
-  snapshot: RoomPanelSnapshot,
   state: RoomPanelLeadState,
-  labels: {
+  texts: {
+    called: string;
+    arrived: string;
     waiting: string;
   },
 ): string {
   if (state === 'enter') {
-    return snapshot.panel.calledText;
+    return texts.called;
   }
   if (state === 'arrival') {
-    return snapshot.panel.arrivedText;
+    return texts.arrived;
   }
-  return labels.waiting;
+  return texts.waiting;
 }
 
 export function roomPanelCallCandidates(snapshot: RoomPanelSnapshot): RoomPanelCallCandidate[] {

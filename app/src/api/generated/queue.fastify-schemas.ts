@@ -798,7 +798,15 @@ export const RoomPanelSnapshot = {
     panel: {
       type: 'object',
       additionalProperties: false,
-      required: ['placement', 'mode', 'showPatientNames', 'calledText', 'arrivedText'],
+      required: [
+        'placement',
+        'mode',
+        'showPatientNames',
+        'calledTextPreset',
+        'calledTextCustom',
+        'arrivedTextPreset',
+        'arrivedTextCustom',
+      ],
       properties: {
         placement: {
           type: 'string',
@@ -811,11 +819,19 @@ export const RoomPanelSnapshot = {
         showPatientNames: {
           type: 'boolean',
         },
-        calledText: {
+        calledTextPreset: {
           type: 'string',
+          enum: ['you_are_right', 'please_wait_here', 'please_enter', 'go_to_reception', 'custom'],
         },
-        arrivedText: {
+        calledTextCustom: {
+          type: ['string', 'null'],
+        },
+        arrivedTextPreset: {
           type: 'string',
+          enum: ['you_are_right', 'please_wait_here', 'please_enter', 'go_to_reception', 'custom'],
+        },
+        arrivedTextCustom: {
+          type: ['string', 'null'],
         },
       },
     },
@@ -1209,7 +1225,15 @@ export const QueueListResponse = {
         panel: {
           type: 'object',
           additionalProperties: false,
-          required: ['placement', 'mode', 'showPatientNames', 'calledText', 'arrivedText'],
+          required: [
+            'placement',
+            'mode',
+            'showPatientNames',
+            'calledTextPreset',
+            'calledTextCustom',
+            'arrivedTextPreset',
+            'arrivedTextCustom',
+          ],
           properties: {
             placement: {
               type: 'string',
@@ -1222,11 +1246,31 @@ export const QueueListResponse = {
             showPatientNames: {
               type: 'boolean',
             },
-            calledText: {
+            calledTextPreset: {
               type: 'string',
+              enum: [
+                'you_are_right',
+                'please_wait_here',
+                'please_enter',
+                'go_to_reception',
+                'custom',
+              ],
             },
-            arrivedText: {
+            calledTextCustom: {
+              type: ['string', 'null'],
+            },
+            arrivedTextPreset: {
               type: 'string',
+              enum: [
+                'you_are_right',
+                'please_wait_here',
+                'please_enter',
+                'go_to_reception',
+                'custom',
+              ],
+            },
+            arrivedTextCustom: {
+              type: ['string', 'null'],
             },
           },
         },
@@ -2153,7 +2197,15 @@ export const GET_api_v1_queueResponse200 = {
         panel: {
           type: 'object',
           additionalProperties: false,
-          required: ['placement', 'mode', 'showPatientNames', 'calledText', 'arrivedText'],
+          required: [
+            'placement',
+            'mode',
+            'showPatientNames',
+            'calledTextPreset',
+            'calledTextCustom',
+            'arrivedTextPreset',
+            'arrivedTextCustom',
+          ],
           properties: {
             placement: {
               type: 'string',
@@ -2166,11 +2218,31 @@ export const GET_api_v1_queueResponse200 = {
             showPatientNames: {
               type: 'boolean',
             },
-            calledText: {
+            calledTextPreset: {
               type: 'string',
+              enum: [
+                'you_are_right',
+                'please_wait_here',
+                'please_enter',
+                'go_to_reception',
+                'custom',
+              ],
             },
-            arrivedText: {
+            calledTextCustom: {
+              type: ['string', 'null'],
+            },
+            arrivedTextPreset: {
               type: 'string',
+              enum: [
+                'you_are_right',
+                'please_wait_here',
+                'please_enter',
+                'go_to_reception',
+                'custom',
+              ],
+            },
+            arrivedTextCustom: {
+              type: ['string', 'null'],
             },
           },
         },

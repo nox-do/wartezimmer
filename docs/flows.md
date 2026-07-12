@@ -460,7 +460,7 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 ### Live-UI
 
 - `GET /queue` + `GET /queue/stream` mit Rolle `room-panel` → **RoomPanelSnapshot**
-- **Lead-Texte** aus Snapshot (`calledText`, `arrivedText`)
+- **Lead-Texte** aus Snapshot-Presets (`calledTextPreset`/`arrivedTextPreset` + optional Custom) — UI löst i18n (`roomPanel.text_*`)
 - **Raum-Items** (`called`, `directed`, `in_room`) mit Actions
 - **Aufruf-Liste** (`callCandidates`, Backend-FIFO) nur wenn `capabilities.canCall`; getrennt von Raum-Items
 - Buttons nur bei `actions.canArrive` / `canCheckOut` / `canCall` — kein lokales Ableiten aus Modus; Aufruf disabled wenn `capabilities.callAnnouncementReachable` false (WZ-TV offline, Server-Presence)

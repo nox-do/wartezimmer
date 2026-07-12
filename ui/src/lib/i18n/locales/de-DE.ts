@@ -861,6 +861,9 @@ export const dict = {
     actionArrived: 'Angekommen',
     actionDone: 'Entlassen',
     actionCall: 'Aufrufen',
+    actionCallOfflineHint: 'Aufrufen — Wartezimmer-TV scheint offline',
+    callAnnouncementOffline:
+      'Wartezimmer-TV scheint offline. Aufruf wird vom Server geprüft — bitte Gerät prüfen oder koppeln.',
     callSectionTitle: 'Aufrufen',
     callSectionAria: 'Aufrufbare Personen',
     itemsSectionTitle: 'Im Raum',

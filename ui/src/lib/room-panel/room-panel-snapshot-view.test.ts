@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatRoomPanelTicketCode,
+  resolveRoomPanelLeadLabel,
   resolveRoomPanelLeadState,
   roomPanelCallAnnouncementReachable,
   roomPanelCallCandidates,
   roomPanelCandidateDisplayName,
   shouldRenderRoomPanelCallSection,
 } from './room-panel-snapshot-view';
+import { formatRoomPanelDisplayText } from './room-panel-text';
 import type { RoomPanelSnapshot } from '$lib/queue/openapi-types';
+
+const t = (key: string) => key;
 
 function snapshot(partial: Partial<RoomPanelSnapshot> = {}): RoomPanelSnapshot {
   return {
@@ -28,8 +32,10 @@ function snapshot(partial: Partial<RoomPanelSnapshot> = {}): RoomPanelSnapshot {
       placement: 'inside',
       mode: 'staff_full',
       showPatientNames: false,
-      calledText: 'Bitte eintreten.',
-      arrivedText: 'Bitte warten.',
+      calledTextPreset: 'please_enter',
+      calledTextCustom: null,
+      arrivedTextPreset: 'please_wait_here',
+      arrivedTextCustom: null,
     },
     items: [],
     ...partial,
@@ -51,8 +57,10 @@ describe('roomPanelCallCandidates', () => {
         placement: 'outside',
         mode: 'arrival',
         showPatientNames: false,
-        calledText: 'Bitte eintreten.',
-        arrivedText: 'Bitte warten.',
+        calledTextPreset: 'please_enter',
+        calledTextCustom: null,
+        arrivedTextPreset: 'please_wait_here',
+        arrivedTextCustom: null,
       },
       callCandidates: [
         {
@@ -131,6 +139,53 @@ describe('roomPanelCallAnnouncementReachable', () => {
         }),
       ),
     ).toBe(false);
+  });
+});
+
+describe('resolveRoomPanelLeadLabel', () => {
+  it('resolves enter/arrival/waiting from preformatted texts', () => {
+    expect(
+      resolveRoomPanelLeadLabel('enter', {
+        called: 'called',
+        arrived: 'arrived',
+        waiting: 'waiting',
+      }),
+    ).toBe('called');
+    expect(
+      resolveRoomPanelLeadLabel('arrival', {
+        called: 'called',
+        arrived: 'arrived',
+        waiting: 'waiting',
+      }),
+    ).toBe('arrived');
+    expect(
+      resolveRoomPanelLeadLabel('waiting', {
+        called: 'called',
+        arrived: 'arrived',
+        waiting: 'waiting',
+      }),
+    ).toBe('waiting');
+  });
+
+  it('formats presets via roomPanel i18n keys', () => {
+    const panel = snapshot().panel;
+    expect(
+      resolveRoomPanelLeadLabel('enter', {
+        called: formatRoomPanelDisplayText(
+          panel.calledTextPreset,
+          panel.calledTextCustom,
+          'please_enter',
+          t,
+        ),
+        arrived: formatRoomPanelDisplayText(
+          panel.arrivedTextPreset,
+          panel.arrivedTextCustom,
+          'please_wait_here',
+          t,
+        ),
+        waiting: 'roomPanel.noTickets',
+      }),
+    ).toBe('roomPanel.text_please_enter');
   });
 });
 

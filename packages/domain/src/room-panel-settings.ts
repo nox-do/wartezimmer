@@ -162,6 +162,36 @@ export function normalizeRoomPanelPlacementConfig(
   };
 }
 
+export function updateRoomPanelPlacementConfig(
+  panels: RoomPanelsSettings,
+  placement: RoomPanelPlacement,
+  patch: Partial<RoomPanelPlacementConfig>,
+): RoomPanelsSettings {
+  return {
+    ...panels,
+    [placement]: normalizeRoomPanelPlacementConfig(placement, {
+      ...panels[placement],
+      ...patch,
+    }),
+  };
+}
+
+/** Which preset/custom applies for live display — locale strings are resolved in the UI. */
+export function resolveRoomPanelDisplayTextConfig(
+  preset: RoomPanelTextPreset,
+  custom: string | null,
+  fallbackPreset: RoomPanelTextPreset,
+): { preset: RoomPanelTextPreset; custom: string | null } {
+  if (preset === 'custom') {
+    const trimmed = normalizeRoomPanelCustomText(custom);
+    if (trimmed) {
+      return { preset: 'custom', custom: trimmed };
+    }
+    return { preset: fallbackPreset, custom: null };
+  }
+  return { preset, custom: null };
+}
+
 /** Canonical dual-placement normalize — no legacy single-panel wrapper. */
 export function normalizeRoomPanelsSettings(
   panels: PartialRoomPanelsSettings | null | undefined,

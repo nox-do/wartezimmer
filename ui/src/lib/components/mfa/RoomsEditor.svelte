@@ -17,7 +17,8 @@
     roomPanelConfigForPlacement,
     roomPanelsOrDefault,
   } from '$lib/queue/ops-settings-api';
-  import { updateRoomPanelPlacementConfig } from '$lib/queue/room-panel-settings';
+  import { updateRoomPanelPlacementConfig } from '@praxis-flow/domain';
+  import { roomPanelPresetOptionLabel } from '$lib/room-panel/room-panel-text';
   import { getDevicePresenceStatus } from '$lib/mfa/ops-stream-store.svelte';
   import { roomPanelDeviceId, type DevicePresenceStatus } from '$lib/ops/device-presence-api';
   import { normalizeMaxOccupancy } from '$lib/queue/room-capacity';
@@ -278,13 +279,7 @@
   }
 
   function roomPanelTextPresetLabel(preset: RoomPanelTextPreset): string {
-    return {
-      you_are_right: t('mfa.settings.roomPanelPreset_you_are_right'),
-      please_wait_here: t('mfa.settings.roomPanelPreset_please_wait_here'),
-      please_enter: t('mfa.settings.roomPanelPreset_please_enter'),
-      go_to_reception: t('mfa.settings.roomPanelPreset_go_to_reception'),
-      custom: t('mfa.settings.roomPanelPreset_custom'),
-    }[preset];
+    return roomPanelPresetOptionLabel(preset, t);
   }
 
   function panelModesForPlacement(placement: RoomPanelPlacement): readonly RoomPanelMode[] {

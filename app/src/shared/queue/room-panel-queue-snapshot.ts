@@ -24,14 +24,6 @@ import {
   type RoomPanelItemActions,
 } from '../room-panel/room-panel-snapshot-policy.js';
 
-const PRESET_TEXT: Record<RoomPanelTextPreset, string> = {
-  you_are_right: 'Sie sind hier richtig.',
-  please_wait_here: 'Bitte hier warten.',
-  please_enter: 'Bitte eintreten.',
-  go_to_reception: 'Bitte wenden Sie sich an den Empfang.',
-  custom: '',
-};
-
 export type RoomPanelQueueSnapshot = {
   revision: number;
   view: 'room-panel';
@@ -49,8 +41,10 @@ export type RoomPanelQueueSnapshot = {
     placement: RoomPanelPlacement;
     mode: RoomPanelMode;
     showPatientNames: boolean;
-    calledText: string;
-    arrivedText: string;
+    calledTextPreset: RoomPanelTextPreset;
+    calledTextCustom: string | null;
+    arrivedTextPreset: RoomPanelTextPreset;
+    arrivedTextCustom: string | null;
   };
   items: Array<{
     visitId: string;
@@ -86,14 +80,6 @@ export type BuildRoomPanelQueueSnapshotInput = {
   revision: number;
   session: Pick<RoomPanelSession, 'roomId' | 'placement'>;
 };
-
-function panelText(
-  preset: RoomPanelTextPreset,
-  custom: string | null,
-  fallbackPreset: RoomPanelTextPreset,
-): string {
-  return preset === 'custom' ? custom?.trim() || PRESET_TEXT[fallbackPreset] : PRESET_TEXT[preset];
-}
 
 function roomPanelCallSortMs(item: Pick<QueueVisitRow, 'calledAt' | 'createdAt'>): number {
   const calledMs = item.calledAt ? Date.parse(item.calledAt) : Number.NaN;
@@ -238,8 +224,10 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
       placement,
       mode: panel.mode,
       showPatientNames,
-      calledText: panelText(panel.calledTextPreset, panel.calledTextCustom, 'please_enter'),
-      arrivedText: panelText(panel.arrivedTextPreset, panel.arrivedTextCustom, 'please_wait_here'),
+      calledTextPreset: panel.calledTextPreset,
+      calledTextCustom: panel.calledTextCustom,
+      arrivedTextPreset: panel.arrivedTextPreset,
+      arrivedTextCustom: panel.arrivedTextCustom,
     },
     items: scored.map((entry) => entry.item),
     serverTime: new Date().toISOString(),

@@ -4170,8 +4170,10 @@
                             "placement",
                             "mode",
                             "showPatientNames",
-                            "calledText",
-                            "arrivedText"
+                            "calledTextPreset",
+                            "calledTextCustom",
+                            "arrivedTextPreset",
+                            "arrivedTextCustom"
                           ],
                           "properties": {
                             "placement": {
@@ -4185,11 +4187,33 @@
                             "showPatientNames": {
                               "type": "boolean"
                             },
-                            "calledText": {
-                              "type": "string"
+                            "calledTextPreset": {
+                              "type": "string",
+                              "enum": [
+                                "you_are_right",
+                                "please_wait_here",
+                                "please_enter",
+                                "go_to_reception",
+                                "custom"
+                              ]
                             },
-                            "arrivedText": {
-                              "type": "string"
+                            "calledTextCustom": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "arrivedTextPreset": {
+                              "type": "string",
+                              "enum": [
+                                "you_are_right",
+                                "please_wait_here",
+                                "please_enter",
+                                "go_to_reception",
+                                "custom"
+                              ]
+                            },
+                            "arrivedTextCustom": {
+                              "type": "string",
+                              "nullable": true
                             }
                           }
                         },
@@ -17430,7 +17454,15 @@
           "panel": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["placement", "mode", "showPatientNames", "calledText", "arrivedText"],
+            "required": [
+              "placement",
+              "mode",
+              "showPatientNames",
+              "calledTextPreset",
+              "calledTextCustom",
+              "arrivedTextPreset",
+              "arrivedTextCustom"
+            ],
             "properties": {
               "placement": {
                 "type": "string",
@@ -17443,11 +17475,33 @@
               "showPatientNames": {
                 "type": "boolean"
               },
-              "calledText": {
-                "type": "string"
+              "calledTextPreset": {
+                "type": "string",
+                "enum": [
+                  "you_are_right",
+                  "please_wait_here",
+                  "please_enter",
+                  "go_to_reception",
+                  "custom"
+                ]
               },
-              "arrivedText": {
-                "type": "string"
+              "calledTextCustom": {
+                "type": "string",
+                "nullable": true
+              },
+              "arrivedTextPreset": {
+                "type": "string",
+                "enum": [
+                  "you_are_right",
+                  "please_wait_here",
+                  "please_enter",
+                  "go_to_reception",
+                  "custom"
+                ]
+              },
+              "arrivedTextCustom": {
+                "type": "string",
+                "nullable": true
               }
             }
           },
@@ -17898,7 +17952,15 @@
               "panel": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["placement", "mode", "showPatientNames", "calledText", "arrivedText"],
+                "required": [
+                  "placement",
+                  "mode",
+                  "showPatientNames",
+                  "calledTextPreset",
+                  "calledTextCustom",
+                  "arrivedTextPreset",
+                  "arrivedTextCustom"
+                ],
                 "properties": {
                   "placement": {
                     "type": "string",
@@ -17911,11 +17973,33 @@
                   "showPatientNames": {
                     "type": "boolean"
                   },
-                  "calledText": {
-                    "type": "string"
+                  "calledTextPreset": {
+                    "type": "string",
+                    "enum": [
+                      "you_are_right",
+                      "please_wait_here",
+                      "please_enter",
+                      "go_to_reception",
+                      "custom"
+                    ]
                   },
-                  "arrivedText": {
-                    "type": "string"
+                  "calledTextCustom": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "arrivedTextPreset": {
+                    "type": "string",
+                    "enum": [
+                      "you_are_right",
+                      "please_wait_here",
+                      "please_enter",
+                      "go_to_reception",
+                      "custom"
+                    ]
+                  },
+                  "arrivedTextCustom": {
+                    "type": "string",
+                    "nullable": true
                   }
                 }
               },

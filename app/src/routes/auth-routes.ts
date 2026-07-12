@@ -1,4 +1,4 @@
-import { roomPanelRequiresPin } from '../auth/room-panel-login.js';
+import { roomPanelRequiresPin } from '@praxis-flow/domain';
 import {
   listEnabledRoomPanelPlacements,
   roomPanelConfigForPlacement,

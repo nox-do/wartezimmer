@@ -98,6 +98,8 @@ export {
   roomHasAnyEnabledPanel,
   roomPanelConfigForPlacement,
   roomPanelsOrDefault,
+  resolveRoomPanelDisplayTextConfig,
+  updateRoomPanelPlacementConfig,
   ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
   ROOM_PANEL_MODES,
   ROOM_PANEL_PLACEMENTS,

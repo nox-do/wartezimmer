@@ -4,17 +4,18 @@
   import Button from '$lib/components/forms/Button.svelte';
   import type { RoomPanelSnapshot } from '$lib/queue/openapi-types';
   import { tf, t } from '$lib/i18n/i18nStore.svelte';
-  import {
-    formatRoomPanelTicketCode,
-    resolveRoomPanelLeadLabel,
-    resolveRoomPanelLeadState,
-    roomPanelCallCandidates,
-    roomPanelCallAnnouncementReachable,
-    roomPanelCandidateDisplayName,
-    roomPanelItemDisplayName,
-    roomPanelItemTicketCodes,
-    shouldRenderRoomPanelCallSection,
-  } from '$lib/room-panel/room-panel-snapshot-view';
+import { formatRoomPanelDisplayText } from '$lib/room-panel/room-panel-text';
+import {
+  formatRoomPanelTicketCode,
+  resolveRoomPanelLeadLabel,
+  resolveRoomPanelLeadState,
+  roomPanelCallAnnouncementReachable,
+  roomPanelCallCandidates,
+  roomPanelCandidateDisplayName,
+  roomPanelItemDisplayName,
+  roomPanelItemTicketCodes,
+  shouldRenderRoomPanelCallSection,
+} from '$lib/room-panel/room-panel-snapshot-view';
   import {
     getRoomPanelPageCount,
     getRoomPanelPaginated,
@@ -48,11 +49,31 @@
   const panelItems = $derived(snapshot.items);
   const callCandidates = $derived(roomPanelCallCandidates(snapshot));
   const callAnnouncementReachable = $derived(roomPanelCallAnnouncementReachable(snapshot));
-  const callOfflineHint = $derived(t('mfa.callAnnouncementOffline'));
+  const callOfflineHint = $derived(t('roomPanel.callAnnouncementOffline'));
+  const calledLeadText = $derived(
+    formatRoomPanelDisplayText(
+      snapshot.panel.calledTextPreset,
+      snapshot.panel.calledTextCustom,
+      'please_enter',
+      t,
+    ),
+  );
+  const arrivedLeadText = $derived(
+    formatRoomPanelDisplayText(
+      snapshot.panel.arrivedTextPreset,
+      snapshot.panel.arrivedTextCustom,
+      'please_wait_here',
+      t,
+    ),
+  );
   const showCallSection = $derived(shouldRenderRoomPanelCallSection(snapshot));
   const leadState = $derived(resolveRoomPanelLeadState(panelItems));
   const stateLabel = $derived(
-    resolveRoomPanelLeadLabel(snapshot, leadState, { waiting: t('roomPanel.noTickets') }),
+    resolveRoomPanelLeadLabel(leadState, {
+      called: calledLeadText,
+      arrived: arrivedLeadText,
+      waiting: t('roomPanel.noTickets'),
+    }),
   );
   const StateIcon = $derived(leadState === 'enter' ? DoorOpen : leadState === 'arrival' ? LogIn : MapPin);
   const queueTicketCodes = $derived(roomPanelItemTicketCodes(panelItems));
@@ -133,9 +154,9 @@
                         !callAnnouncementReachable ||
                         (busyVisitId !== null && busyVisitId !== candidate.visitId)
                       }
-                      ariaLabel={callAnnouncementReachable
-                        ? t('roomPanel.actionCall')
-                        : t('mfa.actionCallOfflineHint')}
+                    ariaLabel={callAnnouncementReachable
+                      ? t('roomPanel.actionCall')
+                      : t('roomPanel.actionCallOfflineHint')}
                       onclick={() => onCall?.(candidate.visitId)}
                     >
                       <PhoneOutgoing size={18} aria-hidden="true" />

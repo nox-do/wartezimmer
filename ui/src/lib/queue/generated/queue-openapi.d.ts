@@ -691,8 +691,22 @@ export interface components {
         /** @enum {string} */
         mode: 'display_only' | 'arrival' | 'staff_full';
         showPatientNames: boolean;
-        calledText: string;
-        arrivedText: string;
+        /** @enum {string} */
+        calledTextPreset:
+          | 'you_are_right'
+          | 'please_wait_here'
+          | 'please_enter'
+          | 'go_to_reception'
+          | 'custom';
+        calledTextCustom: string | null;
+        /** @enum {string} */
+        arrivedTextPreset:
+          | 'you_are_right'
+          | 'please_wait_here'
+          | 'please_enter'
+          | 'go_to_reception'
+          | 'custom';
+        arrivedTextCustom: string | null;
       };
       items: components['schemas']['RoomPanelItem'][];
       /** @description Present only when capabilities.canCall is true. Waiting/directed visits with movementMode call targeting this room, oldest first. */
