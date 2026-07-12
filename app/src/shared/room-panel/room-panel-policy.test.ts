@@ -13,6 +13,7 @@ const outsidePanel = {
   placement: 'outside' as const,
   mode: 'arrival' as const,
   showPatientNames: true,
+  allowCalling: false,
   calledTextPreset: 'please_enter' as const,
   calledTextCustom: null,
   arrivedTextPreset: 'please_wait_here' as const,

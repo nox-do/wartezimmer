@@ -1,1 +1,1 @@
-export { roomPanelRequiresPin } from '../shared/room-panel/room-panel-policy.js';
+export { roomPanelRequiresPin } from '@praxis-flow/domain';

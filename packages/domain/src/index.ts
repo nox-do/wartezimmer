@@ -100,3 +100,17 @@ export {
   type RoomPanelSettings,
   type RoomPanelTextPreset,
 } from './room-panel-settings.js';
+export {
+  resolveRoomPanelCapabilities,
+  roomPanelCanCall,
+  roomPanelCanCheckIn,
+  roomPanelCanCheckOut,
+  roomPanelMayCallVisit,
+  roomPanelMayShowPatientNames,
+  roomPanelRequiresPin,
+  roomPanelVisitTargetsRoom,
+  resolveVisitTargetRoomId,
+  type RoomPanelCallVisitInput,
+  type RoomPanelCapabilities,
+  type RoomPanelPolicyInput,
+} from './room-panel-policy.js';

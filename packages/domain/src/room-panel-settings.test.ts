@@ -26,6 +26,7 @@ test('normalizeRoomPanelSettings applies defaults and outside constraints', () =
       placement: 'outside',
       mode: 'arrival',
       showPatientNames: false,
+      allowCalling: false,
       calledTextPreset: 'please_enter',
       calledTextCustom: 'hi',
       arrivedTextPreset: 'please_wait_here',
@@ -43,6 +44,27 @@ test('normalizeRoomPanelCustomText truncates to max length', () => {
   assert.equal(normalizeRoomPanelCustomText('   '), null);
 });
 
+test('normalizeRoomPanelSettings forces allowCalling off outside', () => {
+  assert.deepEqual(
+    normalizeRoomPanelSettings({
+      enabled: true,
+      placement: 'outside',
+      mode: 'arrival',
+      allowCalling: true,
+    }).allowCalling,
+    false,
+  );
+  assert.equal(
+    normalizeRoomPanelSettings({
+      enabled: true,
+      placement: 'inside',
+      mode: 'staff_full',
+      allowCalling: true,
+    }).allowCalling,
+    true,
+  );
+});
+
 test('applyRoomPanelPlacement coerces outside staff_full to arrival', () => {
   const inside = normalizeRoomPanelSettings({
     ...DEFAULT_ROOM_PANEL_SETTINGS,
@@ -54,4 +76,5 @@ test('applyRoomPanelPlacement coerces outside staff_full to arrival', () => {
   assert.equal(outside.placement, 'outside');
   assert.equal(outside.mode, 'arrival');
   assert.equal(outside.showPatientNames, false);
+  assert.equal(outside.allowCalling, false);
 });

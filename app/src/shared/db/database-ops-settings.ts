@@ -252,6 +252,7 @@ function normalizeRoomPanelSettingsFromDb(
     placement,
     mode,
     showPatientNames: raw.showPatientNames === true,
+    allowCalling: raw.allowCalling === true,
     calledTextPreset,
     calledTextCustom: normalizeRoomPanelCustomTextStrict(
       raw.calledTextCustom ?? raw.arrivalTextCustom,

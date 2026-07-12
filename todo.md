@@ -1,6 +1,12 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-10
+Stand: 2026-07-12
+
+## Raum-Panel v2 (in Arbeit)
+
+- ✅ Plan bereinigt: `docs/plan-room-panel.md` — Scope vs. Aktion, Phasen A–E
+- ✅ Phase A: Claims (`canCall`, `visitTargetsRoom`, `mayShowPatientNames`); `allowCalling`; Auth inside=PIN / outside=ohne
+- ⏳ Phase B–E: siehe Plan (Dual-Placement → Backend call → UI → Doku)
 
 ## Hinweis: RoutingMode-Guard vs. offene Wartenummern (2026-07-10)
 

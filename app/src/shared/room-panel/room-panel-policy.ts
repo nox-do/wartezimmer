@@ -1,28 +1,25 @@
 import type { CoreDatabase } from '../db/database.js';
 import type { OpsSettings, RoomPanelPlacement, RoomPanelSettings } from '../db/db-types.js';
 
+export {
+  resolveRoomPanelCapabilities,
+  roomPanelCanCall,
+  roomPanelCanCheckIn,
+  roomPanelCanCheckOut,
+  roomPanelMayCallVisit,
+  roomPanelMayShowPatientNames,
+  roomPanelRequiresPin,
+  roomPanelVisitTargetsRoom,
+  resolveVisitTargetRoomId,
+  type RoomPanelCallVisitInput,
+  type RoomPanelCapabilities,
+  type RoomPanelPolicyInput,
+} from '@praxis-flow/domain';
+
 export type ActiveRoomPanel = {
   room: OpsSettings['rooms'][number];
   panel: RoomPanelSettings;
 };
-
-export function roomPanelRequiresPin(placement: RoomPanelPlacement): boolean {
-  return placement === 'inside';
-}
-
-export function roomPanelCanCheckIn(panel: Pick<RoomPanelSettings, 'placement' | 'mode'>): boolean {
-  return panel.mode === 'arrival' || (panel.placement === 'inside' && panel.mode === 'staff_full');
-}
-
-export function roomPanelCanCheckOut(
-  panel: Pick<RoomPanelSettings, 'placement' | 'mode'>,
-): boolean {
-  return panel.placement === 'inside' && panel.mode === 'staff_full';
-}
-
-export function roomPanelMayShowPatientNames(panel: RoomPanelSettings): boolean {
-  return panel.placement === 'inside' && panel.showPatientNames === true;
-}
 
 export function findActiveRoomPanel(
   db: Pick<CoreDatabase, 'getOpsSettings'>,

@@ -19,6 +19,8 @@ export type RoomPanelSettings = {
   placement: RoomPanelPlacement;
   mode: RoomPanelMode;
   showPatientNames: boolean;
+  /** Inside panels only — enables queue call from the room tablet (WZ-TV announcement still required). */
+  allowCalling: boolean;
   calledTextPreset: RoomPanelTextPreset;
   calledTextCustom: string | null;
   arrivedTextPreset: RoomPanelTextPreset;
@@ -30,6 +32,7 @@ export const DEFAULT_ROOM_PANEL_SETTINGS: RoomPanelSettings = {
   placement: 'outside',
   mode: 'display_only',
   showPatientNames: false,
+  allowCalling: false,
   calledTextPreset: 'please_enter',
   calledTextCustom: null,
   arrivedTextPreset: 'please_wait_here',
@@ -81,6 +84,7 @@ export function normalizeRoomPanelSettings(
     placement,
     mode,
     showPatientNames: placement === 'inside' && source.showPatientNames === true,
+    allowCalling: placement === 'inside' && source.allowCalling === true,
     calledTextPreset: isRoomPanelTextPreset(source.calledTextPreset)
       ? source.calledTextPreset
       : DEFAULT_ROOM_PANEL_SETTINGS.calledTextPreset,
