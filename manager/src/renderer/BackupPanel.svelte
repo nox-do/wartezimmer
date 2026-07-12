@@ -5,44 +5,63 @@
   let {
     latestBackupPath,
     envExists,
+    backupStatusText = '',
     pinResetStatusText = '',
     busy = false,
     onBackup,
+    onValidateBackup,
+    onRestore,
     onPinReset,
   }: {
     latestBackupPath: string | null;
     envExists: boolean | undefined;
+    backupStatusText?: string;
     pinResetStatusText?: string;
     busy?: boolean;
     onBackup: () => void;
+    onValidateBackup: () => void;
+    onRestore: () => void;
     onPinReset: () => void;
   } = $props();
 </script>
 
 <div class="panel-section">
   <div class="panel-section-heading">
-    <h2>Sicherung (.env)</h2>
+    <h2>Praxis-Backup (.pfbackup)</h2>
     <IconButton
       icon="info"
       class="btn-icon-muted info-tip-trigger"
-      ariaLabel="Hilfe zur .env-Sicherung"
+      ariaLabel="Hilfe zum Praxis-Backup"
       describedBy="maintenance-backup-tip"
     />
     <div id="maintenance-backup-tip" class="info-tip-panel" role="tooltip">
       <p>
-        Sichert die Konfigurationsdatei im Install-Home und öffnet einen Speichern-Dialog zum Download
-        (LAN-IP, Secrets, Import-/Export-Pfade). Datenbank-Volumes und Staff-PINs werden nicht
-        mitgesichert.
+        Sichert Settings aus der App-Datenbank, die Stack-<code>.env</code> und den
+        Manager-Release-Stand (<code>manager-state.json</code>) in einer
+        <code>.pfbackup</code>-Datei mit Prüfsummen.
       </p>
       <p>
-        Wiederherstellen: gewünschte <code>.env.backup-*</code> manuell über die aktuelle
-        <code>.env</code> kopieren (vorher Stack stoppen), danach neu starten. Kein automatischer
-        Restore in dieser Version.
+        Patientendaten und laufende Warteschlange werden nicht mitgesichert. Mit
+        „Wiederherstellen“ importieren Sie Settings aus einer <code>.pfbackup</code>-Datei in eine
+        frische Datenbank (Stack kurz offline).
       </p>
     </div>
   </div>
   <p class="maintenance-backup-status">{backupInfoText(latestBackupPath, envExists)}</p>
-  <button type="button" class="btn-secondary" disabled={busy} onclick={onBackup}>.env sichern</button>
+  {#if backupStatusText}
+    <p class="maintenance-backup-status">{backupStatusText}</p>
+  {/if}
+  <div class="maintenance-backup-actions">
+    <button type="button" class="btn-secondary" disabled={busy} onclick={onBackup}>
+      Backup erstellen
+    </button>
+    <button type="button" class="btn-secondary" disabled={busy} onclick={onValidateBackup}>
+      Backup prüfen
+    </button>
+    <button type="button" class="btn-secondary" disabled={busy} onclick={onRestore}>
+      Wiederherstellen …
+    </button>
+  </div>
 </div>
 
 <div class="panel-section">
@@ -59,3 +78,11 @@
     MFA- &amp; Ops-PIN auf 0000 zurücksetzen
   </button>
 </div>
+
+<style>
+  .maintenance-backup-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+</style>

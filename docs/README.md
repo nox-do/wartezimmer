@@ -20,6 +20,7 @@ Kurzüberblick: **was wann lesen**. Technische Details stehen in den verlinkten 
 | [`apis.md`](apis.md)                           | Rollenmatrix, fachliche API-Regeln (Vertrag: OpenAPI) |
 | [`realtime-streams.md`](realtime-streams.md)   | SSE: Queue, Ops-Stream, Presence, Pairing             |
 | [`deployment-docker.md`](deployment-docker.md) | Compose, Volumes, Updates, Betrieb                    |
+| [`release-packaging.md`](release-packaging.md) | Images bauen, `.pfupdate`, Manager-Versionierung    |
 | [`domain-model.md`](domain-model.md)           | Nummernkreis, Themen, Räume                           |
 | [`events.md`](events.md)                       | Outbox, interne Events                                |
 | [`roadmap.md`](roadmap.md)                     | Phasen, nächste Schritte                              |

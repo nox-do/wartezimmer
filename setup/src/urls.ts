@@ -7,6 +7,11 @@ export const DEFAULT_APP_PORT = 8080;
 /** Local Docker-publish probe target — not a user/device URL. */
 export const LOCAL_SETUP_APP_BASE_URL = `http://127.0.0.1:${DEFAULT_APP_PORT}`;
 
+export const DEFAULT_MAINTENANCE_PORT = 8082;
+
+/** Manager maintenance API — host loopback via Docker publish; not LAN-reachable. */
+export const LOCAL_MAINTENANCE_APP_BASE_URL = `http://127.0.0.1:${DEFAULT_MAINTENANCE_PORT}`;
+
 /** Keys written by `buildGatewayEnv` — removed from `.env` when gateway is disabled. */
 export const GATEWAY_ENV_KEYS = [
   'GATEWAY_INTERFACE',

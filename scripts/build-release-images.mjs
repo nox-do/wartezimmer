@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * Build delivery images (app + sandbox) and pack a single release archive for
- * Praxis Flow Manager import (docker load).
+ * Build delivery images (app + sandbox) and pack a release archive for
+ * Praxis Flow Manager **Erstinstallation** (Setup-Wizard: Release-Paket wählen).
+ *
+ * Für Software-Updates in der Wartung: scripts/build-pfupdate.mjs → eine .pfupdate-Datei.
  *
  * Usage:
  *   npm run release:images

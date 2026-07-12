@@ -5,17 +5,20 @@ import {
   IPC_FETCH_SETUP_STATUS,
   IPC_GET_SETUP_API_BASE,
   IPC_OPEN_EXTERNAL_URL,
-  IPC_SAVE_ENV_BACKUP,
+  IPC_READ_PFBACKUP_FOR_VALIDATE,
+  IPC_SAVE_PFBACKUP,
   IPC_SELECT_FOLDER,
   IPC_SELECT_RELEASE_ARCHIVE,
+  IPC_SELECT_PFUPDATE_ARCHIVE,
   IPC_SETUP_API_CALL,
   type SetupApiCallRequest,
 } from '../shared/ipc-channels.js';
 import { selectFolderDialog } from './select-folder.js';
 import { selectReleaseArchiveDialog } from './select-release-archive.js';
+import { selectPfupdateArchiveDialog } from './select-pfupdate-archive.js';
 import { installMacApplicationMenu } from './mac-app-menu.js';
 import { fetchHostStatusFromApi, callSetupApi } from './setup-api.js';
-import { saveEnvBackupToDisk } from './save-env-backup.js';
+import { readPfbackupFromDialog, savePfbackupToDisk } from './pfbackup-dialog.js';
 import { startSetupServer, stopSetupServer, type SetupServerHandle } from './setup-server.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -56,9 +59,18 @@ function registerSetupIpc(handle: SetupServerHandle): void {
     await shell.openExternal(url);
   });
 
-  ipcMain.handle(IPC_SAVE_ENV_BACKUP, async (_event, backupPath: string) => {
+  ipcMain.handle(IPC_SAVE_PFBACKUP, async (_event, backupPath: string) => {
     try {
-      return await saveEnvBackupToDisk(mainWindow, backupPath);
+      return await savePfbackupToDisk(mainWindow, backupPath);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(detail, { cause: error });
+    }
+  });
+
+  ipcMain.handle(IPC_READ_PFBACKUP_FOR_VALIDATE, async () => {
+    try {
+      return await readPfbackupFromDialog(mainWindow);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new Error(detail, { cause: error });
@@ -77,6 +89,15 @@ function registerSetupIpc(handle: SetupServerHandle): void {
   ipcMain.handle(IPC_SELECT_RELEASE_ARCHIVE, async () => {
     try {
       return await selectReleaseArchiveDialog(mainWindow);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(detail, { cause: error });
+    }
+  });
+
+  ipcMain.handle(IPC_SELECT_PFUPDATE_ARCHIVE, async () => {
+    try {
+      return await selectPfupdateArchiveDialog(mainWindow);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new Error(detail, { cause: error });

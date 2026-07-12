@@ -14,12 +14,17 @@ import {
 } from './docker.js';
 import {
   backupEnvFile,
-  findLatestEnvBackupPath,
   readEnvMap,
   removeEnvKeys,
   updateEnvKeys,
   writeEnvFromExample,
 } from './env-file.js';
+import { createPfbackup, getPfbackupInfo, validatePfbackupFull } from './settings-backup.js';
+import { inspectPfbackup } from './settings-backup-inspect.js';
+import { restorePfbackup } from './settings-backup-restore.js';
+import { applyPfupdate } from './settings-backup-update.js';
+import { inspectPfupdate } from './pfupdate-inspect.js';
+import { resolveCurrentSettingsFormatVersion } from './settings-format-version.js';
 import {
   normalizeStorageFoldersInput,
   prepareStorageFoldersOnDisk,
@@ -203,9 +208,7 @@ export async function getComposeLogs(
   return result;
 }
 
-export function backupEnv(ctx: SetupContext): { envPath: string; backupPath: string } {
-  return backupEnvFile(ctx.home);
-}
+export { createPfbackup as backupPf, getPfbackupInfo, validatePfbackupFull, inspectPfbackup, restorePfbackup, applyPfupdate, inspectPfupdate };
 
 export async function resetStaffPinsAndRestart(ctx: SetupContext): Promise<ResetStaffPinsResult> {
   const envPath = path.join(ctx.home, '.env');
@@ -267,19 +270,6 @@ export async function resetStaffPinsAndRestart(ctx: SetupContext): Promise<Reset
   };
 }
 
-export function getEnvBackupInfo(ctx: SetupContext): {
-  envPath: string;
-  latestBackupPath: string | null;
-} {
-  const envPath = path.join(ctx.home, '.env');
-  if (!fs.existsSync(envPath)) {
-    return { envPath, latestBackupPath: null };
-  }
-  return {
-    envPath,
-    latestBackupPath: findLatestEnvBackupPath(ctx.home),
-  };
-}
 
 export function resolveComposeBuild(input: {
   preserveEnv?: boolean;
@@ -505,6 +495,7 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     envMap,
     docker,
   });
+  const settingsFormatVersion = await resolveCurrentSettingsFormatVersion();
 
   return {
     installHome: root,
@@ -527,6 +518,7 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     networkBindings,
     networkPrerequisites,
     deliveryImages,
+    settingsFormatVersion,
   };
 }
 

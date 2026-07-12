@@ -136,6 +136,48 @@ export function writeEnvFromExample(
   return { envPath, backupPath, keysWritten };
 }
 
+/**
+ * Merge backup ENV values into an existing `.env` file.
+ * Keys absent from `record` are kept unchanged (see mergeConfigRestoreEnv).
+ */
+export function writeEnvRecordAtomically(
+  envPath: string,
+  record: Record<string, string>,
+): { keysWritten: string[] } {
+  const recordMap = new Map(Object.entries(record));
+  const keysWritten: string[] = [];
+  const keysSeen = new Set<string>();
+  const output: string[] = [];
+
+  if (fs.existsSync(envPath)) {
+    const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+    for (const line of lines) {
+      const parsed = parseEnvLine(line);
+      if (!parsed || !recordMap.has(parsed.key)) {
+        output.push(line);
+        continue;
+      }
+      const value = recordMap.get(parsed.key)!;
+      output.push(formatEnvLine(parsed.key, value));
+      keysWritten.push(parsed.key);
+      keysSeen.add(parsed.key);
+      recordMap.delete(parsed.key);
+    }
+  }
+
+  for (const [key, value] of recordMap) {
+    output.push(formatEnvLine(key, value));
+    keysWritten.push(key);
+    keysSeen.add(key);
+  }
+
+  const tempPath = `${envPath}.tmp-${process.pid}-${Date.now()}`;
+  fs.mkdirSync(path.dirname(envPath), { recursive: true });
+  fs.writeFileSync(tempPath, `${output.join('\n')}\n`, 'utf8');
+  fs.renameSync(tempPath, envPath);
+  return { keysWritten };
+}
+
 export function updateEnvKeys(
   envPath: string,
   updates: Record<string, string>,

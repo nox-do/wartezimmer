@@ -16,6 +16,18 @@
   import StoragePathsPanel from './StoragePathsPanel.svelte';
   import BackupPanel from './BackupPanel.svelte';
   import LogsPanel from './LogsPanel.svelte';
+  import RestoreWizardDialog from './RestoreWizardDialog.svelte';
+  import PfupdateWizardDialog from './PfupdateWizardDialog.svelte';
+  import {
+    createRestoreWizardController,
+    type RestoreWizardController,
+  } from './restore-wizard-controller.js';
+  import {
+    createPfupdateWizardController,
+    type PfupdateWizardController,
+  } from './pfupdate-wizard-controller.js';
+  import type { RestoreWizardState } from './restore-wizard-flow.js';
+  import type { PfupdateWizardState } from './pfupdate-wizard-flow.js';
 
   type MaintenanceExpanderId = 'operations' | 'practice' | 'security' | 'diagnostics';
 
@@ -33,6 +45,10 @@
   let pinResetOpen = $state(false);
 
   let controller = $state<MaintenanceController | null>(null);
+  let restoreWizard = $state<RestoreWizardController | null>(null);
+  let pfupdateWizard = $state<PfupdateWizardController | null>(null);
+  let restoreSnapshot = $state<RestoreWizardState | null>(null);
+  let pfupdateSnapshot = $state<PfupdateWizardState | null>(null);
   let hostPlatform = $state('linux');
   let lastSessionGeneration = $state<number | null>(null);
 
@@ -50,6 +66,14 @@
 
   function syncSnapshot(): void {
     snapshot = controller ? { ...controller.getState() } : null;
+  }
+
+  function syncRestoreSnapshot(): void {
+    restoreSnapshot = restoreWizard ? { ...restoreWizard.getState() } : null;
+  }
+
+  function syncPfupdateSnapshot(): void {
+    pfupdateSnapshot = pfupdateWizard ? { ...pfupdateWizard.getState() } : null;
   }
 
   function requestConfirm(message: string, onConfirm: () => void): void {
@@ -94,7 +118,24 @@
       requestConfirm,
       onStateChange: syncSnapshot,
     });
+    restoreWizard = createRestoreWizardController({
+      api,
+      onAfterMutation,
+      onStateChange: syncRestoreSnapshot,
+    });
+    pfupdateWizard = createPfupdateWizardController({
+      api,
+      onAfterMutation,
+      getHostStatus: () => controller?.getState().status ?? null,
+      onApplySuccess: (result) => {
+        controller?.recordPfupdateSuccess(result);
+        syncSnapshot();
+      },
+      onStateChange: syncPfupdateSnapshot,
+    });
     syncSnapshot();
+    syncRestoreSnapshot();
+    syncPfupdateSnapshot();
   });
 
   $effect(() => {
@@ -166,7 +207,7 @@
         open={openSection === 'operations'}
         title="Betrieb & Updates"
         subtitle="Stack · Software-Update"
-        copy="Stack starten, neu starten und Release-Pakete importieren."
+        copy="Stack steuern und Software-Updates einspielen."
         onToggle={() => toggleSection('operations')}
       >
         <StackControls
@@ -180,8 +221,11 @@
         <SoftwareUpdatePanel
           status={snapshot.status}
           statusText={snapshot.softwareUpdateStatusText}
-          busy={snapshot.busy}
-          onImport={() => controller?.importSoftware()}
+          busy={snapshot.busy || (pfupdateSnapshot?.busy ?? false)}
+          onImport={() => {
+            pfupdateWizard?.open();
+            syncPfupdateSnapshot();
+          }}
         />
       </MaintenanceSection>
 
@@ -235,16 +279,22 @@
       <MaintenanceSection
         open={openSection === 'security'}
         title="Sicherung & Zugänge"
-        subtitle=".env-Backup · Staff-PINs"
-        copy="Konfiguration sichern und MFA-/Ops-PIN zurücksetzen."
+        subtitle=".pfbackup · Staff-PINs"
+        copy="Settings und Stack-Konfiguration sichern; MFA-/Ops-PIN zurücksetzen."
         onToggle={() => toggleSection('security')}
       >
         <BackupPanel
           latestBackupPath={snapshot.latestBackupPath}
           envExists={snapshot.status?.envExists}
           pinResetStatusText={snapshot.pinResetStatusText}
+          backupStatusText={snapshot.backupStatusText}
           busy={snapshot.busy}
-          onBackup={() => controller?.backupEnv()}
+          onBackup={() => controller?.backupPf()}
+          onValidateBackup={() => controller?.validatePfbackup()}
+          onRestore={() => {
+            restoreWizard?.openStandalone();
+            syncRestoreSnapshot();
+          }}
           onPinReset={() => {
             pinResetOpen = true;
           }}
@@ -297,4 +347,48 @@
       Datenbank aktualisiert und neu gestartet. Terminal und MFA sind kurz offline.
     </p>
   </ConfirmDialog>
+
+  {#if restoreSnapshot}
+    <RestoreWizardDialog
+      snapshot={restoreSnapshot}
+      onChooseRestore={(restore) => {
+        restoreWizard?.chooseRestore(restore);
+        syncRestoreSnapshot();
+      }}
+      onConfirmRestore={() => {
+        restoreWizard?.confirmRestore();
+        syncRestoreSnapshot();
+      }}
+      onRetry={() => {
+        restoreWizard?.retryRestore();
+        syncRestoreSnapshot();
+      }}
+      onSkip={() => {
+        restoreWizard?.skipAfterFailure();
+        syncRestoreSnapshot();
+      }}
+      onClose={() => {
+        restoreWizard?.close();
+        syncRestoreSnapshot();
+      }}
+      onToggleCredentialSkip={(value) => {
+        restoreWizard?.setSkipProviderCredentials(value);
+        syncRestoreSnapshot();
+      }}
+    />
+  {/if}
+
+  {#if pfupdateSnapshot}
+    <PfupdateWizardDialog
+      snapshot={pfupdateSnapshot}
+      onConfirmApply={() => {
+        pfupdateWizard?.confirmApply();
+        syncPfupdateSnapshot();
+      }}
+      onClose={() => {
+        pfupdateWizard?.close();
+        syncPfupdateSnapshot();
+      }}
+    />
+  {/if}
 </div>

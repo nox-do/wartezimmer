@@ -96,7 +96,25 @@ Setup-API (localhost `:9190`):
 | GET     | `/api/setup/host/routing-mode`     | Capabilities inkl. `routingMode`, `complexRoutingLicensed`                             |
 | POST    | `/api/setup/host/routing-mode`     | `{ routingMode: "simple"\|"complex" }` — proxied zur App-API mit Manager-Trust         |
 
+| POST    | `/api/setup/host/images/load`      | Erstinstallation: `.tar.gz` + Sidecar (`manifest.json` / `SHA256SUMS.txt`) |
+| POST    | `/api/setup/host/update/inspect`   | Wartung: `.pfupdate`-Datei prüfen (Release, Kompatibilität, Warnungen)       |
+| POST    | `/api/setup/host/update/apply`     | Wartung: `.pfupdate`-Datei (Pfad), Cutover + Rollback                        |
+
 Vollständiger Install-Reset bleibt CLI: `npm run setup:reset`.
+
+## Stack-Releases bauen
+
+Siehe **[`docs/release-packaging.md`](../docs/release-packaging.md)** — dort: Manager-Semver vs. Stack-Release-Tag, `release:pfupdate` vs. `release:images`, Kompatibilität.
+
+Kurz:
+
+```bash
+# Stack-Update für Kunden (eine Datei)
+npm run release:pfupdate -- --version 2026.08.0
+
+# Erstinstallation Wizard (Sidecar-Format, nur app+sandbox)
+npm run release:images -- --version 2026.08.0
+```
 
 ## Internen macOS-Build erstellen
 

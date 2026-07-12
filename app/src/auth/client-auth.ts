@@ -11,7 +11,6 @@ import {
   readCookieValue,
   type StaffSessionManager,
 } from './staff-session-auth.js';
-import { resolveManagerLocalOpsRole } from './manager-local-auth.js';
 import { trustProxyHeaders } from '../http/trusted-proxy.js';
 
 export type ClientRole = 'terminal' | 'mfa' | 'tv' | 'captive' | 'ops' | 'room-panel';
@@ -19,7 +18,6 @@ export type ClientRole = 'terminal' | 'mfa' | 'tv' | 'captive' | 'ops' | 'room-p
 declare module 'fastify' {
   interface FastifyRequest {
     clientRole?: ClientRole;
-    managerLocalTrusted?: boolean;
   }
 }
 
@@ -345,21 +343,12 @@ export function registerClientAuth(
 
     const token = extractBearerToken(request.headers.authorization);
     const bearerRole = token ? resolveRoleFromToken(token, config.captiveKey) : null;
-    const managerLocalRole = bearerRole
-      ? null
-      : resolveManagerLocalOpsRole(request, method, routePath);
-    const sessionRole =
-      bearerRole || managerLocalRole ? null : resolveRoleFromSessionCookie(request, staffSessions);
+    const sessionRole = bearerRole ? null : resolveRoleFromSessionCookie(request, staffSessions);
     const localTvRole =
-      bearerRole || sessionRole || managerLocalRole
-        ? null
-        : resolveLocalTvRole(request, method, rule, config.localTvOrigin);
-    const role = bearerRole ?? sessionRole ?? managerLocalRole ?? localTvRole;
+      bearerRole || sessionRole ? null : resolveLocalTvRole(request, method, rule, config.localTvOrigin);
+    const role = bearerRole ?? sessionRole ?? localTvRole;
     if (bearerRole) {
       request.clientRole = bearerRole;
-    } else if (managerLocalRole) {
-      request.clientRole = managerLocalRole;
-      request.managerLocalTrusted = true;
     } else if (localTvRole) {
       request.clientRole = localTvRole;
     }
@@ -384,12 +373,7 @@ export function registerClientAuth(
       return;
     }
 
-    if (
-      sessionRole &&
-      !managerLocalRole &&
-      isUnsafeMethod(method) &&
-      !originHostMatchesRequest(request)
-    ) {
+    if (sessionRole && isUnsafeMethod(method) && !originHostMatchesRequest(request)) {
       authError(reply, 403, {
         code: 'AUTH_FORBIDDEN',
         message: 'Forbidden.',

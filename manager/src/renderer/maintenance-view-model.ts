@@ -8,7 +8,7 @@ import type {
   RoutingMode,
   StorageFoldersResult,
 } from '../shared/host-status.js';
-import { formatEnvBackupLabel } from '@praxis-flow/server-shared';
+import { formatEnvBackupLabel, formatPfbackupLabel } from '@praxis-flow/server-shared';
 import { deliveryImagesSummary } from './delivery-images-flow.js';
 
 export const MAINTENANCE_LOG_SERVICES = [
@@ -22,9 +22,6 @@ export type MaintenanceInfoRow = { label: string; value: string };
 export const STACK_OFFLINE_CONFIRM_MESSAGE =
   'Praxis offline — Terminal und MFA sind während Stop/Neustart nicht erreichbar. Fortfahren?';
 
-export const SOFTWARE_UPDATE_CONFIRM_MESSAGE =
-  'Praxis offline — während des Updates sind Terminal und MFA kurz nicht erreichbar. Fortfahren?';
-
 export const STORAGE_PATHS_RESTART_CONFIRM_MESSAGE =
   'Die neuen Import-/Export-Ordner werden erst nach einem Stack-Neustart aktiv. Pfade speichern und Stack jetzt neu starten?';
 
@@ -32,7 +29,7 @@ export const STORAGE_PATHS_VALIDATION_ERROR = 'Bitte Import- und Exportordner an
 
 export const STORAGE_SAVE_PROGRESS_TEXT = 'Speichern …';
 export const ROUTING_MODE_SAVE_PROGRESS_TEXT = 'Speichern …';
-export const SOFTWARE_UPDATE_LOADING_TEXT = 'Prüfsumme und Import …';
+export const SOFTWARE_UPDATE_LOADING_TEXT = 'Update läuft …';
 export const PIN_RESET_PROGRESS_TEXT = 'PIN-Reset läuft …';
 
 export function backupInfoText(
@@ -40,12 +37,30 @@ export function backupInfoText(
   envExists: boolean | undefined,
 ): string {
   if (latestBackupPath) {
-    return `Letztes Backup: ${formatEnvBackupLabel(latestBackupPath)}`;
+    return `Letztes Backup: ${formatPfbackupLabel(latestBackupPath)}`;
   }
   if (envExists) {
     return 'Noch kein Backup vorhanden.';
   }
   return 'Keine .env vorhanden.';
+}
+
+export function pfbackupValidateSuccessText(summary: {
+  routingMode: string | null;
+  releaseVersion: string | null;
+}): string {
+  const parts = ['Backup ist wiederherstellbar.'];
+  if (summary.routingMode) {
+    parts.push(`Routing: ${summary.routingMode}.`);
+  }
+  if (summary.releaseVersion) {
+    parts.push(`Release: ${summary.releaseVersion}.`);
+  }
+  return parts.join(' ');
+}
+
+export function pfbackupArchiveOnlyValidText(): string {
+  return 'Backup-Datei ist formal in Ordnung, aber Settings sind für Restore nicht importierbar.';
 }
 
 export function stackStatusLabel(running: boolean): string {

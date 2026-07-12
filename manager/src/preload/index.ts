@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import managerPackage from '../../package.json' with { type: 'json' };
 import type {
   ApplySetupInput,
   ApplySetupResult,
@@ -7,10 +8,20 @@ import type {
   ComposeStatus,
   EnvBackupInfo,
   EnvBackupResult,
-  SaveEnvBackupResult,
+  PfbackupInfo,
+  PfbackupResult,
+  PfbackupValidateResult,
+  PfbackupInspectResult,
+  PfbackupRestoreResult,
+  SavePfbackupResult,
   LoadDeliveryImagesResult,
+  PfupdateApplyInput,
+  PfupdateApplyResult,
+  PfupdateInspectInput,
+  PfupdateInspectResult,
   SelectFolderResult,
   SelectReleaseArchiveResult,
+  SelectPfupdateArchiveResult,
   StorageFoldersInput,
   StorageFoldersResult,
   HostNetworkInput,
@@ -30,12 +41,16 @@ import {
   IPC_FETCH_SETUP_STATUS,
   IPC_GET_SETUP_API_BASE,
   IPC_OPEN_EXTERNAL_URL,
-  IPC_SAVE_ENV_BACKUP,
+  IPC_READ_PFBACKUP_FOR_VALIDATE,
+  IPC_SAVE_PFBACKUP,
   IPC_SELECT_FOLDER,
   IPC_SELECT_RELEASE_ARCHIVE,
+  IPC_SELECT_PFUPDATE_ARCHIVE,
   IPC_SETUP_API_CALL,
   type SetupApiCallRequest,
 } from '../shared/ipc-channels.js';
+
+const managerVersion = managerPackage.version;
 
 async function invokeMain<T>(channel: string, ...args: unknown[]): Promise<T> {
   return ipcRenderer.invoke(channel, ...args) as Promise<T>;
@@ -131,23 +146,58 @@ async function runComposeAction(
   });
 }
 
-async function backupEnv(): Promise<EnvBackupResult> {
-  return callSetupApi<EnvBackupResult>({
+async function createPfbackup(): Promise<PfbackupResult> {
+  return callSetupApi<PfbackupResult>({
     method: 'POST',
     path: '/api/setup/host/backup',
-    body: { target: 'env' },
   });
 }
 
-async function getEnvBackupInfo(): Promise<EnvBackupInfo> {
-  return callSetupApi<EnvBackupInfo>({
+async function getPfbackupInfo(): Promise<PfbackupInfo> {
+  return callSetupApi<PfbackupInfo>({
     method: 'GET',
     path: '/api/setup/host/backup',
   });
 }
 
-async function saveEnvBackup(backupPath: string): Promise<SaveEnvBackupResult> {
-  return invokeMain<SaveEnvBackupResult>(IPC_SAVE_ENV_BACKUP, backupPath);
+async function savePfbackup(backupPath: string): Promise<SavePfbackupResult> {
+  return invokeMain<SavePfbackupResult>(IPC_SAVE_PFBACKUP, backupPath);
+}
+
+async function readPfbackupForValidate(): Promise<
+  { canceled: true } | { canceled: false; content: string; filePath: string }
+> {
+  return invokeMain(IPC_READ_PFBACKUP_FOR_VALIDATE);
+}
+
+async function validatePfbackup(content: string): Promise<PfbackupValidateResult> {
+  return callSetupApi<PfbackupValidateResult>({
+    method: 'POST',
+    path: '/api/setup/host/backup/validate',
+    body: { content },
+  });
+}
+
+async function inspectPfbackup(content: string): Promise<PfbackupInspectResult> {
+  return callSetupApi<PfbackupInspectResult>({
+    method: 'POST',
+    path: '/api/setup/host/backup/inspect',
+    body: { content },
+  });
+}
+
+async function restorePfbackup(
+  content: string,
+  options: { skipProviderCredentials?: boolean } = {},
+): Promise<PfbackupRestoreResult> {
+  return callSetupApi<PfbackupRestoreResult>({
+    method: 'POST',
+    path: '/api/setup/host/backup/restore',
+    body: {
+      content,
+      skipProviderCredentials: options.skipProviderCredentials === true,
+    },
+  });
 }
 
 async function selectFolder(defaultPath?: string): Promise<SelectFolderResult> {
@@ -158,6 +208,10 @@ async function selectReleaseArchive(): Promise<SelectReleaseArchiveResult> {
   return invokeMain<SelectReleaseArchiveResult>(IPC_SELECT_RELEASE_ARCHIVE);
 }
 
+async function selectPfupdateArchive(): Promise<SelectPfupdateArchiveResult> {
+  return invokeMain<SelectPfupdateArchiveResult>(IPC_SELECT_PFUPDATE_ARCHIVE);
+}
+
 async function loadDeliveryImages(body: {
   archivePath: string;
   restartCompose?: boolean;
@@ -166,6 +220,28 @@ async function loadDeliveryImages(body: {
     method: 'POST',
     path: '/api/setup/host/images/load',
     body,
+  });
+}
+
+async function inspectPfupdate(body: PfupdateInspectInput): Promise<PfupdateInspectResult> {
+  return callSetupApi<PfupdateInspectResult>({
+    method: 'POST',
+    path: '/api/setup/host/update/inspect',
+    body: {
+      ...body,
+      managerVersion: body.managerVersion ?? managerVersion,
+    },
+  });
+}
+
+async function applyPfupdate(body: PfupdateApplyInput): Promise<PfupdateApplyResult> {
+  return callSetupApi<PfupdateApplyResult>({
+    method: 'POST',
+    path: '/api/setup/host/update/apply',
+    body: {
+      ...body,
+      managerVersion: body.managerVersion ?? managerVersion,
+    },
   });
 }
 
@@ -234,14 +310,21 @@ contextBridge.exposeInMainWorld('praxisManager', {
   getComposeStatus,
   getComposeLogs,
   runComposeAction,
-  backupEnv,
-  saveEnvBackup,
+  createPfbackup,
+  savePfbackup,
+  readPfbackupForValidate,
+  validatePfbackup,
+  inspectPfbackup,
+  restorePfbackup,
   selectFolder,
   selectReleaseArchive,
+  selectPfupdateArchive,
+  inspectPfupdate,
   loadDeliveryImages,
+  applyPfupdate,
   saveStorageFolders,
   saveHostNetwork,
-  getEnvBackupInfo,
+  getPfbackupInfo,
   resetStaffPins,
   getRoutingMode,
   setRoutingMode,

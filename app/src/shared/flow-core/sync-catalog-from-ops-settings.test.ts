@@ -432,3 +432,27 @@ test('syncCatalogFromOpsSettings maps defaultRoomId to routing target location',
     .get('blut') as { target: string } | undefined;
   assert.equal(rule?.target, 'labor');
 });
+
+test('syncCatalogFromOpsSettings reflects ops_settings topic label on resync', () => {
+  const db = openTestFlowCoreDb();
+  const settings = sampleOpsSettings();
+  syncCatalogFromOpsSettings(db, settings);
+
+  const before = db.prepare('SELECT name FROM topics WHERE id = ?').get('blut') as
+    | { name?: string }
+    | undefined;
+  assert.ok(before?.name);
+
+  syncCatalogFromOpsSettings(db, {
+    ...settings,
+    topics: settings.topics.map((topic) =>
+      topic.topicId === 'blut' ? { ...topic, label: 'Blutabnahme NEU' } : topic,
+    ),
+  });
+
+  const after = db.prepare('SELECT name FROM topics WHERE id = ?').get('blut') as
+    | { name?: string }
+    | undefined;
+  assert.equal(after?.name, 'Blutabnahme NEU');
+  validateCatalogIntegrity(loadCatalog(db));
+});

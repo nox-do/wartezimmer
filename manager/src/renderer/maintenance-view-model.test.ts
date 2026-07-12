@@ -101,7 +101,10 @@ function minimalSoftwareResult(
 }
 
 test('backupInfoText covers backup, missing backup, and missing env', () => {
-  assert.match(backupInfoText('/tmp/.env.backup-1', true), /^Letztes Backup:/);
+  assert.match(
+    backupInfoText('/tmp/backups/praxis-flow-backup-2026-06-25T10-00-00-000Z.pfbackup', true),
+    /^Letztes Backup:/,
+  );
   assert.equal(backupInfoText(null, true), 'Noch kein Backup vorhanden.');
   assert.equal(backupInfoText(null, false), 'Keine .env vorhanden.');
 });

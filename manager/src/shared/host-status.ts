@@ -14,6 +14,11 @@ export type {
   DockerStatus,
   EnvBackupInfo,
   EnvBackupResult,
+  PfbackupInfo,
+  PfbackupResult,
+  PfbackupValidateResult,
+  PfbackupInspectResult,
+  PfbackupRestoreResult,
   GatewayPlan,
   GatewayPlanInput,
   HostGatewayStatus,
@@ -24,6 +29,10 @@ export type {
   HostStatus,
   LanCandidate,
   LoadDeliveryImagesResult,
+  PfupdateApplyInput,
+  PfupdateApplyResult,
+  PfupdateInspectInput,
+  PfupdateInspectResult,
   NetworkBindingCheck,
   NetworkSnapshot,
   ProbeResult,
@@ -42,12 +51,15 @@ export type {
 
 export type { SandboxScannerStatus } from '@praxis-flow/server-shared';
 
-/** Electron IPC: save `.env` backup via native save dialog. */
-export type SaveEnvBackupResult = {
+/** Electron IPC: save `.pfbackup` via native save dialog. */
+export type SavePfbackupResult = {
   saved: boolean;
   canceled: boolean;
   filePath: string | null;
 };
+
+/** @deprecated Use SavePfbackupResult */
+export type SaveEnvBackupResult = SavePfbackupResult;
 
 /** Electron IPC: native folder picker. */
 export type SelectFolderResult = {
@@ -55,8 +67,14 @@ export type SelectFolderResult = {
   path: string | null;
 };
 
-/** Electron IPC: release archive file picker. */
+/** Electron IPC: release archive file picker (Erstinstallation / Wizard). */
 export type SelectReleaseArchiveResult = {
+  canceled: boolean;
+  path: string | null;
+};
+
+/** Electron IPC: update package file picker (Wartung). */
+export type SelectPfupdateArchiveResult = {
   canceled: boolean;
   path: string | null;
 };

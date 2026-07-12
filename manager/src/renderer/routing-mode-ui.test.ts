@@ -27,6 +27,15 @@ test('formatRoutingModeError maps license error', () => {
   );
 });
 
+test('formatRoutingModeError maps unreachable maintenance API', () => {
+  assert.equal(
+    formatRoutingModeError({
+      error: 'Praxis Flow Maintenance-API ist nicht erreichbar (Port 8082).',
+    }),
+    'Praxis Flow läuft nicht — Stack starten oder später erneut versuchen.',
+  );
+});
+
 test('formatRoutingModeError maps unreachable app', () => {
   assert.equal(
     formatRoutingModeError({

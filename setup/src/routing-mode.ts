@@ -6,9 +6,9 @@ import type {
 import { isComplexRoutingLicensed } from '@praxis-flow/server-shared';
 import { APP_DB_PATH, appDataVolumeName } from './staff-pin-reset.js';
 import { runDockerCommand } from './docker-cli.js';
+import { LOCAL_MAINTENANCE_APP_BASE_URL } from './urls.js';
 
-export const MANAGER_LOCAL_HEADER = 'x-praxis-manager-local';
-const DEFAULT_LOCAL_APP = 'http://127.0.0.1:8080';
+const DEFAULT_LOCAL_APP = LOCAL_MAINTENANCE_APP_BASE_URL;
 
 function buildCapabilities(routingMode: RoutingMode, openVisitCount = 0): RoutingModeCapabilities {
   const licensed = isComplexRoutingLicensed();
@@ -215,7 +215,6 @@ async function fetchCapabilitiesFromApp(
     const response = await fetch(
       `${localAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/settings/capabilities`,
       {
-        headers: { [MANAGER_LOCAL_HEADER]: '1' },
         signal: AbortSignal.timeout(5_000),
       },
     );
@@ -237,7 +236,6 @@ async function patchRoutingModeViaApp(
       method: 'PATCH',
       headers: {
         'content-type': 'application/json',
-        [MANAGER_LOCAL_HEADER]: '1',
       },
       body: JSON.stringify({ routingMode }),
       signal: AbortSignal.timeout(15_000),
@@ -274,7 +272,7 @@ async function patchRoutingModeViaApp(
   } catch {
     return {
       ok: false,
-      error: 'Praxis Flow App ist nicht erreichbar (Port 8080).',
+      error: 'Praxis Flow Maintenance-API ist nicht erreichbar (Port 8082).',
     };
   }
 }
@@ -321,7 +319,7 @@ export async function setRoutingMode(
   }
 
   const fallbackToDatabase =
-    viaApp.error === 'Praxis Flow App ist nicht erreichbar (Port 8080).' ||
+    viaApp.error === 'Praxis Flow Maintenance-API ist nicht erreichbar (Port 8082).' ||
     viaApp.code === 'AUTH_UNAUTHORIZED' ||
     viaApp.error === 'Unauthorized.';
 

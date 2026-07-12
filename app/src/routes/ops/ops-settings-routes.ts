@@ -168,18 +168,6 @@ export function registerOpsSettingsRoutes(
       },
     },
     async (request, reply) => {
-      if (request.managerLocalTrusted) {
-        const keys = Object.keys(request.body ?? {}).filter(
-          (key) => request.body[key as keyof typeof request.body] !== undefined,
-        );
-        if (keys.length !== 1 || keys[0] !== 'routingMode') {
-          return reply.code(403).send({
-            code: 'AUTH_FORBIDDEN',
-            message: 'Manager may only patch routingMode.',
-          });
-        }
-      }
-
       const roleCheck = assertPatchOpsSettingsAllowedForRole(request.clientRole, request.body);
       if (!roleCheck.ok) {
         return reply.code(403).send({

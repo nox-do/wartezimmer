@@ -1,12 +1,11 @@
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import type { ComposeStatus, HostStatus, RoutingMode } from '../shared/host-status.js';
+import type { PfupdateApplyResult } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
-import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
+import { formatPfupdateSuccess } from './pfupdate-flow.js';
 import {
   PIN_RESET_PROGRESS_TEXT,
   ROUTING_MODE_SAVE_PROGRESS_TEXT,
-  SOFTWARE_UPDATE_CONFIRM_MESSAGE,
-  SOFTWARE_UPDATE_LOADING_TEXT,
   STACK_OFFLINE_CONFIRM_MESSAGE,
   STORAGE_PATHS_RESTART_CONFIRM_MESSAGE,
   STORAGE_PATHS_VALIDATION_ERROR,
@@ -14,8 +13,8 @@ import {
   composeActionErrorMessage,
   pinResetSuccessText,
   routingModeSuccessText,
-  softwareUpdateErrorText,
-  softwareUpdateStatusText,
+  pfbackupValidateSuccessText,
+  pfbackupArchiveOnlyValidText,
   storagePathsChanged,
   storageSaveErrorText,
   storageSaveStatusText,
@@ -43,6 +42,7 @@ export type MaintenanceState = {
   openVisitCount: number;
   routingModeStatusText: string;
   pinResetStatusText: string;
+  backupStatusText: string;
   busy: boolean;
   error: string | null;
 };
@@ -66,9 +66,10 @@ export type MaintenanceController = {
   restart: () => void;
   refreshLogs: (service?: string) => Promise<void>;
   requestLogsRefresh: (service?: string) => void;
-  backupEnv: () => void;
+  backupPf: () => void;
+  validatePfbackup: () => void;
   applyStorage: () => void;
-  importSoftware: () => void;
+  recordPfupdateSuccess: (result: Extract<PfupdateApplyResult, { ok: true }>) => void;
   saveRoutingMode: () => void;
   executePinReset: () => void;
   applyRuntimeHealth: (health: HostRuntimeHealth) => void;
@@ -94,6 +95,7 @@ function createInitialState(): MaintenanceState {
     openVisitCount: 0,
     routingModeStatusText: '',
     pinResetStatusText: '',
+    backupStatusText: '',
     busy: false,
     error: null,
   };
@@ -203,65 +205,14 @@ export function createMaintenanceController(
       });
   }
 
-  function runSoftwareUpdate(restartCompose: boolean): void {
-    setBusy(true);
-    setError(null);
-    patch({ softwareUpdateStatusText: SOFTWARE_UPDATE_LOADING_TEXT });
-
-    void pickAndLoadReleaseArchive(deps.api, {
-      restartCompose,
-      loadingMessage: SOFTWARE_UPDATE_LOADING_TEXT,
-      onProgress: (progress) => {
-        if (progress.phase === 'loading') {
-          patch({ softwareUpdateStatusText: progress.statusText });
-        }
-      },
-    })
-      .then(async (pickResult) => {
-        if (pickResult.canceled) {
-          patch({ softwareUpdateStatusText: '' });
-          return;
-        }
-        if (!pickResult.ok || !pickResult.result) {
-          patch({ softwareUpdateStatusText: '' });
-          if (pickResult.error) {
-            setError(pickResult.error);
-          }
-          return;
-        }
-
-        const result = pickResult.result;
-        const nextStatus = state.status
-          ? {
-              ...state.status,
-              envExists: true,
-              deliveryImages: result.deliveryImages,
-              compose: result.compose ?? state.status.compose,
-            }
-          : state.status;
-        patch({
-          status: nextStatus,
-          compose: result.compose ?? state.compose,
-          softwareUpdateStatusText: softwareUpdateStatusText(result, restartCompose),
-        });
-        const updateError = softwareUpdateErrorText(result, restartCompose);
-        if (updateError) {
-          setError(updateError);
-        }
-        deps.onAfterMutation?.();
-        if (restartCompose && result.composeRestarted) {
-          await refreshLogs();
-        }
-      })
-      .catch((error) => {
-        patch({ softwareUpdateStatusText: '' });
-        setError(
-          error instanceof Error
-            ? error.message
-            : 'Software-Update konnte nicht importiert werden.',
-        );
-      })
-      .finally(() => setBusy(false));
+  function recordPfupdateSuccess(result: Extract<PfupdateApplyResult, { ok: true }>): void {
+    patch({
+      compose: result.report.compose ?? state.compose,
+      softwareUpdateStatusText: formatPfupdateSuccess(result),
+      latestBackupPath: result.report.backupPath,
+    });
+    deps.onAfterMutation?.();
+    void refreshLogs();
   }
 
   return {
@@ -321,20 +272,64 @@ export function createMaintenanceController(
         })
         .finally(() => setBusy(false));
     },
-    backupEnv() {
+    backupPf() {
       setBusy(true);
       setError(null);
+      patch({ backupStatusText: 'Backup wird erstellt …' });
       void deps.api
-        .backupEnv()
+        .createPfbackup()
         .then(async (result) => {
           patch({ latestBackupPath: result.backupPath });
-          const saveResult = await deps.api.saveEnvBackup(result.backupPath);
-          if (!saveResult.canceled && !saveResult.saved) {
-            setError('Download fehlgeschlagen.');
+          const saveResult = await deps.api.savePfbackup(result.backupPath);
+          if (saveResult.canceled) {
+            patch({ backupStatusText: 'Backup lokal gespeichert (Download abgebrochen).' });
+            return;
           }
+          if (!saveResult.saved) {
+            patch({ backupStatusText: '' });
+            setError('Download fehlgeschlagen.');
+            return;
+          }
+          patch({ backupStatusText: 'Backup erstellt und exportiert.' });
         })
         .catch((error) => {
-          setError(error instanceof Error ? error.message : '.env-Backup fehlgeschlagen.');
+          patch({ backupStatusText: '' });
+          setError(error instanceof Error ? error.message : 'Backup fehlgeschlagen.');
+        })
+        .finally(() => setBusy(false));
+    },
+    validatePfbackup() {
+      setBusy(true);
+      setError(null);
+      patch({ backupStatusText: 'Backup wird geprüft …' });
+      void deps.api
+        .readPfbackupForValidate()
+        .then(async (picked) => {
+          if (picked.canceled) {
+            patch({ backupStatusText: '' });
+            return;
+          }
+          const result = await deps.api.validatePfbackup(picked.content);
+          if (!result.archiveValid) {
+            patch({ backupStatusText: '' });
+            setError(result.archiveErrors.join(' ') || 'Backup-Datei ungültig.');
+            return;
+          }
+          if (!result.restoreValid) {
+            patch({ backupStatusText: pfbackupArchiveOnlyValidText() });
+            setError(result.restoreErrors.join(' ') || 'Settings nicht importierbar.');
+            return;
+          }
+          patch({
+            backupStatusText: pfbackupValidateSuccessText({
+              routingMode: result.summary?.routingMode ?? null,
+              releaseVersion: result.summary?.releaseVersion ?? null,
+            }),
+          });
+        })
+        .catch((error) => {
+          patch({ backupStatusText: '' });
+          setError(error instanceof Error ? error.message : 'Backup-Prüfung fehlgeschlagen.');
         })
         .finally(() => setBusy(false));
     },
@@ -351,16 +346,8 @@ export function createMaintenanceController(
 
       saveStorageFolders(false);
     },
-    importSoftware() {
-      const stackRunning = state.compose?.running ?? false;
-      const proceed = () => runSoftwareUpdate(stackRunning);
-
-      if (stackRunning) {
-        deps.requestConfirm(SOFTWARE_UPDATE_CONFIRM_MESSAGE, proceed);
-        return;
-      }
-
-      proceed();
+    recordPfupdateSuccess(result) {
+      recordPfupdateSuccess(result);
     },
     saveRoutingMode() {
       if (!state.routingMode) {
@@ -445,11 +432,12 @@ export function createMaintenanceController(
         softwareUpdateStatusText: '',
         routingModeStatusText: '',
         pinResetStatusText: '',
+        backupStatusText: '',
         error: null,
       });
 
       setBusy(true);
-      void Promise.all([refreshLogs('app'), deps.api.getEnvBackupInfo(), deps.api.getRoutingMode()])
+      void Promise.all([refreshLogs('app'), deps.api.getPfbackupInfo(), deps.api.getRoutingMode()])
         .then(([, backupInfoResult, routingCapabilities]) => {
           patch({
             latestBackupPath: backupInfoResult.latestBackupPath,

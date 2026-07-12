@@ -2,12 +2,31 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import { createLogger } from '../logging/logger.js';
-import { runMigrations } from './migrations-runner.js';
+import {
+  assertSupportedSchemaGeneration,
+  createCurrentSchema,
+  isUninitializedDatabase,
+  readSchemaGeneration,
+  runTransitionSchemaEnsures,
+} from './create-current-schema.js';
 import {
   applyDemoContactLookupSettings,
   ensureDemoContactLookupSeed,
 } from '../contacts/ensure-demo-contact-csv.js';
 import { ensurePracticeProfileSeedFromEnv } from '../practice/ensure-practice-profile-seed.js';
+import {
+  exportSettingsDbSnapshotFromDb,
+  exportSettingsSnapshotFromDb,
+} from '../settings/settings-snapshot-export.js';
+import {
+  importSettingsSnapshotIntoDb,
+  type SettingsSnapshotImportResult,
+} from '../settings/settings-snapshot-import.js';
+import type {
+  SettingsSnapshotImportOptions,
+  SettingsSnapshotDbV1,
+  SettingsSnapshotV1,
+} from '../settings/settings-snapshot-types.js';
 import { prepareCoreDatabaseStatements } from './database-statements.js';
 import {
   getDayLifecycleStateFromDb,
@@ -32,7 +51,7 @@ import {
   resetFlowCoreRuntimeForTests,
   syncFlowCoreCatalog,
 } from '../flow-core/flow-core-runtime.js';
-import { clearFlowCoreVisitRuntime, ensureFlowCoreSchema } from '../flow-core/flow-core-schema.js';
+import { clearFlowCoreVisitRuntime } from '../flow-core/flow-core-schema.js';
 import {
   arriveVisit,
   callVisit,
@@ -80,7 +99,6 @@ import { OpsSettingsValidationError } from './ops-settings-errors.js';
 import {
   createOpsSetupStatements,
   getOpsSetupFromDb,
-  ensureOpsSetupSchema,
   updateOpsSetupProgressInDb,
 } from './database-ops-setup.js';
 import { DomainError } from '../errors/domain-error.js';
@@ -104,7 +122,6 @@ import {
 import {
   clearAllTerminalAssistPending,
   clearTerminalAssistPending,
-  ensureTerminalAssistPendingSchema,
   expireTerminalAssistPending,
   getTerminalAssistPending as getTerminalAssistPendingRow,
   isTerminalAssistPendingActive,
@@ -173,7 +190,6 @@ import {
   type OutboxDeps,
 } from './database-outbox.js';
 import {
-  ensureAuthSettingsSchema,
   getAuthSettingsFromDb,
   updateAuthPinHashInDb,
   type AuthPinTarget,
@@ -304,14 +320,19 @@ export class CoreDatabase {
     this.db = new DatabaseSync(dbPath);
     this.db.exec('PRAGMA journal_mode = WAL;');
     this.db.exec('PRAGMA foreign_keys = ON;');
+    this.db.exec('PRAGMA busy_timeout = 5000;');
 
-    runMigrations(this.db);
-    ensureOpsSetupSchema(this.db);
-    ensureTerminalAssistPendingSchema(this.db);
-    ensureAuthSettingsSchema(this.db);
+    if (isUninitializedDatabase(this.db)) {
+      createCurrentSchema(this.db);
+    } else {
+      assertSupportedSchemaGeneration(this.db);
+      if (readSchemaGeneration(this.db) === 0) {
+        runTransitionSchemaEnsures(this.db);
+      }
+    }
+
     ensureDemoContactLookupSeed(this.db);
     ensurePracticeProfileSeedFromEnv(this.db);
-    ensureFlowCoreSchema(this.db);
     ({
       findTicketByCodeStmt: this.findTicketByCodeStmt,
       checkinLockStmt: this.checkinLockStmt,
@@ -1377,6 +1398,21 @@ export class CoreDatabase {
       syncFlowCoreCatalog(this.db, next);
       return next;
     });
+  }
+
+  exportSettingsSnapshot(env: Record<string, string>): SettingsSnapshotV1 {
+    return exportSettingsSnapshotFromDb(this.db, env);
+  }
+
+  exportSettingsDbSnapshot(): SettingsSnapshotDbV1 {
+    return exportSettingsDbSnapshotFromDb(this.db);
+  }
+
+  importSettingsSnapshot(
+    snapshot: unknown,
+    options?: SettingsSnapshotImportOptions,
+  ): SettingsSnapshotImportResult {
+    return importSettingsSnapshotIntoDb(this.db, snapshot, options);
   }
 
   async getSetupStatus(): Promise<SetupStatusSnapshot> {

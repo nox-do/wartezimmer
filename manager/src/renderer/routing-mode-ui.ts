@@ -34,7 +34,10 @@ export function formatRoutingModeError(input: {
   if (input.code === 'COMPLEX_ROUTING_NOT_LICENSED') {
     return 'Complex Routing ist in Ihrer Lizenz nicht enthalten.';
   }
-  if (input.error === 'Praxis Flow App ist nicht erreichbar (Port 8080).') {
+  if (
+    input.error === 'Praxis Flow Maintenance-API ist nicht erreichbar (Port 8082).' ||
+    input.error === 'Praxis Flow App ist nicht erreichbar (Port 8080).'
+  ) {
     return 'Praxis Flow läuft nicht — Stack starten oder später erneut versuchen.';
   }
   return input.error;

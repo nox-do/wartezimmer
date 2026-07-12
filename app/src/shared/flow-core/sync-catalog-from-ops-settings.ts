@@ -1,4 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite';
+/**
+ * Projects ops_settings (topics, rooms, journeys) into flow-core catalog tables.
+ * Sole production writer for catalog DML — see docs/catalog-source-of-truth.md.
+ */
 import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
 import { loadCatalog } from '@praxis-flow/flow-core/server';
 import { roomHasAnyEnabledPanel, roomPanelConfigForPlacement } from '@praxis-flow/domain';

@@ -1,0 +1,93 @@
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {
+  buildPfupdateManifest,
+  formatSha256Sums,
+  PFUPDATE_REQUIRED_FILE_PATHS,
+  serializePfupdateManifest,
+} from '@praxis-flow/server-shared';
+import { sha256File } from './pfupdate-package.js';
+
+const defaultReleaseVersion = '2026.08.0';
+
+function writeFileDigest(root: string, relativePath: string, content: string) {
+  const absolutePath = path.join(root, relativePath);
+  fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+  fs.writeFileSync(absolutePath, content, 'utf8');
+  return {
+    path: relativePath,
+    sha256: sha256File(absolutePath),
+    byteLength: Buffer.byteLength(content, 'utf8'),
+  };
+}
+
+export type BuildTestPfupdateArchiveOptions = {
+  version?: string;
+  manifestContent?: string;
+};
+
+export function buildTestPfupdateArchive(
+  targetPath: string,
+  versionOrOptions: string | BuildTestPfupdateArchiveOptions = defaultReleaseVersion,
+  legacyVersion?: string,
+): void {
+  const options: BuildTestPfupdateArchiveOptions =
+    typeof versionOrOptions === 'string'
+      ? { version: versionOrOptions ?? legacyVersion ?? defaultReleaseVersion }
+      : versionOrOptions;
+  const version = options.version ?? defaultReleaseVersion;
+  const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-build-'));
+  try {
+    const imagesTar = path.join(staging, 'images', 'praxis-flow-images.tar');
+    fs.mkdirSync(path.dirname(imagesTar), { recursive: true });
+    fs.writeFileSync(imagesTar, 'fake-docker-save-tar');
+
+    const fileEntries = [
+      writeFileDigest(staging, 'images/praxis-flow-images.tar', 'fake-docker-save-tar'),
+      writeFileDigest(staging, 'templates/docker-compose.delivery.yml', 'services: {}\n'),
+      writeFileDigest(staging, 'templates/docker-compose.gateway.delivery.yml', 'services: {}\n'),
+      writeFileDigest(
+        staging,
+        'templates/.env.example',
+        `PRAXIS_FLOW_APP_IMAGE=praxis-flow/app:${version}\n`,
+      ),
+    ];
+
+    const manifest = buildPfupdateManifest({
+      releaseVersion: version,
+      minimumManagerVersion: '0.2.0',
+      images: {
+        app: `praxis-flow/app:${version}`,
+        sandbox: `praxis-flow/sandbox:${version}`,
+        gateway: `praxis-flow/gateway:${version}`,
+      },
+      files: fileEntries.map((entry) => ({
+        path: entry.path as (typeof PFUPDATE_REQUIRED_FILE_PATHS)[number],
+        sha256: entry.sha256,
+        byteLength: entry.byteLength,
+      })),
+    });
+
+    fs.writeFileSync(
+      path.join(staging, 'manifest.json'),
+      options.manifestContent ?? serializePfupdateManifest(manifest),
+      'utf8',
+    );
+    fs.writeFileSync(
+      path.join(staging, 'SHA256SUMS.txt'),
+      formatSha256Sums(
+        fileEntries.map(({ path: filePath, sha256 }) => ({ path: filePath, sha256 })),
+      ),
+      'utf8',
+    );
+
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    const result = spawnSync('tar', ['czf', targetPath, '-C', staging, '.'], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr || 'tar pack failed');
+  } finally {
+    fs.rmSync(staging, { recursive: true, force: true });
+  }
+}

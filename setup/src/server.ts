@@ -3,21 +3,26 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   applySetupPlan,
-  backupEnv,
+  backupPf,
   buildSetupPlan,
   getComposeLogs,
   getComposeStatus,
-  getEnvBackupInfo,
   getHostRuntimeHealth,
   getHostStatus,
   getHostRoutingModeCapabilities,
   getNetworkSnapshot,
+  getPfbackupInfo,
+  inspectPfbackup,
   loadDeliveryImages,
   resetStaffPinsAndRestart,
+  restorePfbackup,
+  applyPfupdate,
+  inspectPfupdate,
   runComposeAction,
   saveHostNetwork,
   saveStorageFolders,
   setHostRoutingMode,
+  validatePfbackupFull,
 } from './host-state.js';
 import { readEnvMap } from './env-file.js';
 import { resolveSetupApiError } from './api-error.js';
@@ -28,6 +33,7 @@ import {
   SetupApiValidationError,
 } from './setup-api-normalize.js';
 import { resolveSetupContext } from './setup-context.js';
+import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
 
 const DEFAULT_PORT = 9190;
 
@@ -139,15 +145,42 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
       }
 
       if (method === 'GET' && url.pathname === '/api/setup/host/backup') {
-        return sendJson(res, 200, getEnvBackupInfo(ctx));
+        return sendJson(res, 200, getPfbackupInfo(ctx));
       }
 
       if (method === 'POST' && url.pathname === '/api/setup/host/backup') {
+        const backup = await backupPf(ctx);
+        return sendJson(res, 200, backup);
+      }
+
+      if (method === 'POST' && url.pathname === '/api/setup/host/backup/validate') {
         const body = readBodyRecord(await readJsonBody(req));
-        if (readOptionalString(body, 'target') !== 'env') {
-          return sendJson(res, 400, { error: 'target must be env' });
+        const content = readOptionalString(body, 'content');
+        if (!content?.trim()) {
+          return sendJson(res, 400, { error: 'content is required' });
         }
-        return sendJson(res, 200, backupEnv(ctx));
+        return sendJson(res, 200, await validatePfbackupFull(content, LOCAL_MAINTENANCE_APP_BASE_URL));
+      }
+
+      if (method === 'POST' && url.pathname === '/api/setup/host/backup/inspect') {
+        const body = readBodyRecord(await readJsonBody(req));
+        const content = readOptionalString(body, 'content');
+        if (!content?.trim()) {
+          return sendJson(res, 400, { error: 'content is required' });
+        }
+        return sendJson(res, 200, await inspectPfbackup(content, ctx));
+      }
+
+      if (method === 'POST' && url.pathname === '/api/setup/host/backup/restore') {
+        const body = readBodyRecord(await readJsonBody(req));
+        const content = readOptionalString(body, 'content');
+        if (!content?.trim()) {
+          return sendJson(res, 400, { error: 'content is required' });
+        }
+        const result = await restorePfbackup(content, ctx, {
+          skipProviderCredentials: body.skipProviderCredentials === true,
+        });
+        return sendJson(res, result.ok ? 200 : 500, result);
       }
 
       if (method === 'POST' && url.pathname === '/api/setup/host/reset-staff-pins') {
@@ -207,6 +240,52 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
         return sendJson(res, 200, result);
       }
 
+      if (method === 'POST' && url.pathname === '/api/setup/host/update/inspect') {
+        const body = readBodyRecord(await readJsonBody(req));
+        const archivePath = readOptionalString(body, 'archivePath')?.trim() ?? '';
+        if (!archivePath) {
+          return sendJson(res, 400, { error: 'archivePath required' });
+        }
+        const managerVersion = readOptionalString(body, 'managerVersion')?.trim() || undefined;
+        const settingsFormatVersionRaw = body.settingsFormatVersion;
+        const settingsFormatVersion =
+          typeof settingsFormatVersionRaw === 'number' && Number.isInteger(settingsFormatVersionRaw)
+            ? settingsFormatVersionRaw
+            : undefined;
+        const result = await inspectPfupdate(
+          {
+            archivePath,
+            managerVersion,
+            settingsFormatVersion,
+          },
+          ctx,
+        );
+        return sendJson(res, 200, result);
+      }
+
+      if (method === 'POST' && url.pathname === '/api/setup/host/update/apply') {
+        const body = readBodyRecord(await readJsonBody(req));
+        const archivePath = readOptionalString(body, 'archivePath')?.trim() ?? '';
+        if (!archivePath) {
+          return sendJson(res, 400, { error: 'archivePath required' });
+        }
+        const managerVersion = readOptionalString(body, 'managerVersion')?.trim() || undefined;
+        const settingsFormatVersionRaw = body.settingsFormatVersion;
+        const settingsFormatVersion =
+          typeof settingsFormatVersionRaw === 'number' && Number.isInteger(settingsFormatVersionRaw)
+            ? settingsFormatVersionRaw
+            : undefined;
+        const result = await applyPfupdate(
+          {
+            archivePath,
+            managerVersion,
+            settingsFormatVersion,
+          },
+          ctx,
+        );
+        return sendJson(res, result.ok ? 200 : 500, result);
+      }
+
       if (method === 'POST' && url.pathname === '/api/setup/host/images/load') {
         const body = readBodyRecord(await readJsonBody(req));
         const archivePath = readOptionalString(body, 'archivePath')?.trim() ?? '';
@@ -231,7 +310,7 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
         }
         const probes = await import('./probes.js').then((m) =>
           m.runConnectionProbes({
-            localAppBaseUrl: localAppBaseUrl || 'http://127.0.0.1:8080',
+            localAppBaseUrl: localAppBaseUrl || LOCAL_SETUP_APP_BASE_URL,
             lanAppBaseUrl,
           }),
         );

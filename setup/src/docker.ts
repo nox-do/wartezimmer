@@ -94,7 +94,9 @@ export function canRunGatewayCompose(): boolean {
   return process.platform === 'linux';
 }
 
-export async function composeUp(options: ComposeUpOptions): Promise<{
+export async function composeUp(
+  options: ComposeUpOptions & { services?: string[] },
+): Promise<{
   ok: boolean;
   log: string;
   gatewaySkipped: boolean;
@@ -102,7 +104,9 @@ export async function composeUp(options: ComposeUpOptions): Promise<{
   const files = resolveComposeFiles(options.projectRoot, options.delivery);
 
   const wantGateway =
-    wantsGatewayCompose(options.projectRoot, options.withGateway) && canRunGatewayCompose();
+    wantsGatewayCompose(options.projectRoot, options.withGateway) &&
+    canRunGatewayCompose() &&
+    (!options.services || options.services.length === 0);
   const gatewaySkipped =
     wantsGatewayCompose(options.projectRoot, options.withGateway) && !canRunGatewayCompose();
 
@@ -120,6 +124,9 @@ export async function composeUp(options: ComposeUpOptions): Promise<{
   args.push('--env-file', '.env', 'up', '-d');
   if (options.build) {
     args.push('--build');
+  }
+  if (options.services?.length) {
+    args.push(...options.services);
   }
 
   const envPath = path.join(options.projectRoot, '.env');

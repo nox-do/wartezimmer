@@ -2,11 +2,96 @@
 
 Stand: 2026-07-12
 
+## Erledigt: Fresh-DB-Settings-Cutover extrahiert (2026-07-12)
+
+- `setup/src/settings-snapshot-db-verify.ts`: `dbSnapshotsEquivalent`, `buildExpectedDbSnapshotAfterImport` (inkl. `skipProviderCredentials`)
+- `setup/src/fresh-db-settings-cutover.ts`: `runFreshDbSettingsCutover` — moveDbAside → App-Start → Maintenance → Import → Re-Export-Vergleich → Full Stack → Health
+- Restore/Update behalten eigene Vorphasen + Rollback; Cutover liefert nur `{ ok, failedPhase, errors }` bzw. Erfolgs-Metadaten
+- Update nutzt `prepareImport`-Hook (Pre-Update-Backup lesen, validieren, ENV mergen) nach Maintenance-Ready
+- Tests: 4 Unit-Tests verify + 5 Cutover-Tests; bestehende Restore/Update-Tests unverändert grün (143 setup tests)
+- Doku: `.env`-Restore-Vertrag präzisiert (`docs/settings-backup-classification.md`) — Merge statt Blind-Replace
+- Manager Restore-Wizard: Credential-Skip-Checkbox auch in Failed-Ansicht; `shouldOfferCredentialSkip` wired; Auto-Vorauswahl bei Credential/PIN-Fehler
+
+## Erledigt: Maintenance-Port für Manager-API (2026-07-12)
+
+- App: zweiter Listener auf `:8082` — Snapshot, Validate, Capabilities, Routing-PATCH nur dort (nicht auf `:8080`)
+- `:8080` unverändert für LAN (Terminal/MFA/TV/Ops); `x-praxis-manager-local` + Host-Header-Auth entfernt
+- Setup/Backup/Routing-Mode rufen `LOCAL_MAINTENANCE_APP_BASE_URL` (`http://127.0.0.1:8082`) auf
+- Compose: `127.0.0.1:8082:8082` (nicht LAN-erreichbar) + `MAINTENANCE_HOST=0.0.0.0` im Container; intra-Compose-Zugriff möglich
+- Packaged Manager: `prepare-packaged-resources.mjs` kopiert `docker-compose.delivery.yml` aus Repo-Root
+
 ## Type-Cast-Audit (2026-07-12)
 
 - ✅ Bereinigt: `room-panel-transition.ts` (Result.error direkt); `I18nManager.ts` (AppDict statt Doppel-Cast); `Button`/`MfaActionButton` → `resolvedHref()` (ein `as any` in `kit-paths.ts`); `setup/server.ts` + `setup-api-normalize.ts` (unknown an Grenze); `redirect-flow.ts`; `database.ts`/`queue-routes.ts` (`QueueDisplayStatus`/`TriageLevel` statt OpenAPI-Casts); `visit-service.ts` (`JourneyProgressionPatch`); `patient-documents-routes.ts` (Body-Validierung)
 - ✅ `flow-core/tsconfig.json`: extends lokales `tsconfig.base.json` mit `"types": ["node"]` — behebt IDE-TS2591 für `node:sqlite` (Root-TS 6.0)
 - ⏭️ Bewusst gelassen: SQLite-Row-Mapper; iconv `csv-encoding.ts`; SSE `data as RoomPanelSnapshot`; sessionStorage JSON.parse; Test-Mocks `as unknown as CoreDatabase`
+
+## SQLite Stack — Upgrade-/Backup-Vertrag (2026-07-12)
+
+**Entscheidung:** Keine In-place-Migration wegwerfbarer Runtime-Daten (`patient_sessions`, `documents`, Visits, Queue, Outbox). Langlebig sind nur Settings + Deployment-Kontext. Upgrade = Fresh DB + Settings-Export/Import via Manager-Cutover.
+
+**Nicht zuerst:** gesamte DB-Finding-Liste (Indizes, Enum-Checks, Legacy-Rebuilds, Migrations-Engine).
+
+- ↩️ S2-Rebuild-Patch (atomare Portal-Rebuilds, ~700 Zeilen) **reverted** — falsche Investition für diesen Vertrag
+- ⏭️ Bestehende einfache `ensure*`-Funktionen bleiben **Übergang** (Release A), werden **nicht weiter ausgebaut**
+
+### Marker-Rollen (keine Doppel-Systeme)
+
+| Marker | Bedeutung |
+|--------|-----------|
+| `PRAGMA user_version` | DB-Schema-**Generation** (z. B. `1` = vollständig aus aktuellem Fresh-Schema erzeugt) — **keine** Migrationshistorie |
+| `settingsFormatVersion` | nur im Settings-**Export-Snapshot** (z. B. `1`) |
+| `app_metadata` (optional) | zur Laufzeit: `schema_generation`, ggf. gespiegelte `settings_format_version` — **nicht** pro Feature |
+
+### Release-Schnitt
+
+| Release | Inhalt |
+|---------|--------|
+| **A (Übergang)** | Schritte 1–5; einfache `ensure*` bleiben; Settings-Export + Manager-Backup |
+| **B (Cutover)** | Schritte 6–8 stabil; Fresh DB + Import; historische `ensure*`-Rebuilds **entfernen** |
+
+### Empfohlene Reihenfolge
+
+**1. Langlebige Settings exakt festlegen** — ✅ [`docs/settings-backup-classification.md`](docs/settings-backup-classification.md) (schlank: Klartext-Stack-Backup; nur SMS-Credentials at-rest in DB; Restore optional ohne Provider)
+
+**2. `ops_settings` verbindlich zur Catalog-Wahrheit machen** — ✅ [`docs/catalog-source-of-truth.md`](docs/catalog-source-of-truth.md) · Guard-Test `catalog-write-guard.test.ts` · Resync-Test in `sync-catalog-from-ops-settings.test.ts`
+
+**3. Settings-Export und -Import in der App** — ✅ Kern + Maintenance-HTTP (`GET snapshot`, `POST validate`, `POST import`) · gemeinsame `prepareSettingsSnapshotImport` für Validate/Import · Credential-Skip deaktiviert externe Provider
+
+**4. Kanonisches Fresh-Schema + DB-Startup minimal absichern** — ✅ Kern: `app/src/shared/db/create-current-schema.ts` · `createCurrentSchema` / `runTransitionSchemaEnsures` · `SCHEMA_GENERATION = 1` · Startup in `database.ts` (fresh → canonical, legacy 0 → ensures, >1 → `SchemaGenerationUnsupportedError`) · `PRAGMA busy_timeout = 5000` · FK-Check nach Fresh-Build · Tests `create-current-schema.test.ts`
+
+`createCurrentSchema(db)` — eine kanonische Quelle für leere aktuelle DB (App-Core, flow-core, Portal-FKs, Host-State, Terminal-Assist, Indizes, Trigger, Singletons); Baseline sofort endgültig (z. B. `patient_sessions`/`documents` mit Visit-FK)
+
+Startup: DB fehlt → Schema erzeugen · bekannte Generation → starten · unbekannte/alte → **nicht reparieren**, klaren Upgrade-/Restore-Hinweis
+
+Quick-Wins (offen): `parseAllowedSurfaceIds()` strikt · `visit_events`-Insert mit expliziter Spaltenliste
+
+**5. Manager-Backup auf Settings-Export** — ✅ `.pfbackup` · voller Stack in `settings.env` (inkl. Image-Tags) · `gatewayImage` in manager-state · Inspect-Vorschau
+
+App-Export aufrufen · Setup-API sammelt Settings + `.env` + `manager-state.json` · `.pfbackup` mit Manifest/Checksummen · direkt wieder einlesen/validieren · Electron Speichern-Dialog · zuerst „Backup prüfen“, noch kein Auto-Restore
+
+**6. Restore gegen frische DB** — ✅ Orchestrierung + Manager-Wizard · Fix: Restore-Timeout 10 min · Rollback-Fehler blockiert Retry/Skip · Escape während Restore · Credential-Skip nur manuell · Dateidialog-Abbruch → zurück zur Auswahl
+
+**7. Release-Bundle `.pfupdate`** — ✅ Review-Fixes (2026-07-12)
+
+- ✅ `packages/server-shared/src/pfupdate.ts` — Format v1, Manifest-Parser, Checksummen, Kompatibilität
+- ✅ `scripts/build-pfupdate.mjs` — App/Sandbox/Gateway → `images/praxis-flow-images.tar` + Compose-Templates + `.env.example` → eine `.pfupdate`-Datei, Roundtrip-Validierung
+- ✅ Setup: `pfupdate-package.ts` (verbose Tar-Listing: Pfade + Entry-Typen, `lstatSync`) + `settings-backup-update.ts` + `pfupdate-inspect.ts` (try/finally)
+- ✅ Setup-API: `POST /api/setup/host/update/inspect` + `POST /api/setup/host/update/apply`
+- ✅ Manager: Update-Wizard (Datei → Inspect/Preview → Bestätigen → Apply), analog Restore
+- ✅ `settingsFormatVersion` aus `HostStatus` / Maintenance-App (nicht hardcoded im Manager)
+- ✅ Optional: `PFUPDATE_DOCKER_SMOKE=1 npm run test -w @praxis-flow/setup -- pfupdate-docker-smoke`
+- ✅ Doku: [`docs/release-packaging.md`](docs/release-packaging.md) · `deployment-docker.md` + `manager/README.md` verlinkt
+
+**8. Update-Orchestrator** — ✅ Setup `/update/apply` (2026-07-12)
+
+Release + Kompatibilität prüfen · offene Visits prüfen · Backup erstellen/verifizieren · Images laden · Stack stoppen · neue Version · frische DB · Settings restore · Healthchecks · bei Fehler Rollback (alte DB + alte Images)
+
+**9. Performance- und Schema-Findings nachziehen**
+
+Rest der DB-Liste: fehlende Indizes, Status-Enum-Checks, `visit_topics`-Unique, Supersede-FKs, Prepared-Statement-Konsolidierung, `SELECT *`, Outbox-Lease, Legacy-Namensbereinigung
+
+Ausnahme — jederzeit als Quick Win: `idx_visits_day_status_checkin`, `idx_visit_events_visit_created`
 
 ## Raum-Panel v2 (abgeschlossen 2026-07-12)
 

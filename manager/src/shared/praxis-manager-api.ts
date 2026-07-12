@@ -6,10 +6,20 @@ import type {
   ComposeStatus,
   EnvBackupInfo,
   EnvBackupResult,
-  SaveEnvBackupResult,
+  PfbackupInfo,
+  PfbackupResult,
+  PfbackupValidateResult,
+  PfbackupInspectResult,
+  PfbackupRestoreResult,
+  PfupdateApplyInput,
+  PfupdateApplyResult,
+  PfupdateInspectInput,
+  PfupdateInspectResult,
+  SavePfbackupResult,
   LoadDeliveryImagesResult,
   SelectFolderResult,
   SelectReleaseArchiveResult,
+  SelectPfupdateArchiveResult,
   StorageFoldersInput,
   StorageFoldersResult,
   HostNetworkInput,
@@ -40,10 +50,13 @@ export type PraxisManagerSetupApi = {
   openExternalUrl(url: string): Promise<void>;
   selectFolder(defaultPath?: string): Promise<SelectFolderResult>;
   selectReleaseArchive(): Promise<SelectReleaseArchiveResult>;
+  selectPfupdateArchive(): Promise<SelectPfupdateArchiveResult>;
   loadDeliveryImages(body: {
     archivePath: string;
     restartCompose?: boolean;
   }): Promise<LoadDeliveryImagesResult>;
+  applyPfupdate(body: PfupdateApplyInput): Promise<PfupdateApplyResult>;
+  inspectPfupdate(body: PfupdateInspectInput): Promise<PfupdateInspectResult>;
 };
 
 export type PraxisManagerMaintenanceApi = {
@@ -53,11 +66,20 @@ export type PraxisManagerMaintenanceApi = {
     action: 'start' | 'stop' | 'restart',
     build?: boolean,
   ): Promise<ComposeActionResult>;
-  backupEnv(): Promise<EnvBackupResult>;
-  saveEnvBackup(backupPath: string): Promise<SaveEnvBackupResult>;
+  createPfbackup(): Promise<PfbackupResult>;
+  savePfbackup(backupPath: string): Promise<SavePfbackupResult>;
+  validatePfbackup(content: string): Promise<PfbackupValidateResult>;
+  inspectPfbackup(content: string): Promise<PfbackupInspectResult>;
+  restorePfbackup(
+    content: string,
+    options?: { skipProviderCredentials?: boolean },
+  ): Promise<PfbackupRestoreResult>;
+  readPfbackupForValidate(): Promise<
+    { canceled: true } | { canceled: false; content: string; filePath: string }
+  >;
   saveStorageFolders(body: StorageFoldersInput): Promise<StorageFoldersResult>;
   saveHostNetwork(body: HostNetworkInput): Promise<HostNetworkResult>;
-  getEnvBackupInfo(): Promise<EnvBackupInfo>;
+  getPfbackupInfo(): Promise<PfbackupInfo>;
   resetStaffPins(): Promise<ResetStaffPinsResult>;
   getRoutingMode(): Promise<RoutingModeCapabilities>;
   setRoutingMode(body: SetRoutingModeInput): Promise<SetRoutingModeResult>;

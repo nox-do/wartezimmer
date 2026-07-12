@@ -6,6 +6,20 @@ const DEFAULT_SETUP_API_TIMEOUT_MS = 30_000;
 const FIRST_INSTALL_APPLY_TIMEOUT_MS = 10 * 60 * 1000;
 /** Release-Paket importieren (docker load) kann mehrere Minuten dauern. */
 const DOCKER_LOAD_TIMEOUT_MS = 15 * 60 * 1000;
+/** Restore: Stack stoppen, DB, Import, Re-Export und Healthchecks — deutlich länger als Status-Polls. */
+const RESTORE_TIMEOUT_MS = 10 * 60 * 1000;
+/** Software-Update: Backup, docker load, Cutover, Import, Healthchecks. */
+const UPDATE_APPLY_TIMEOUT_MS = 15 * 60 * 1000;
+
+function isStructuredOperationResult(body: unknown): body is { ok: boolean } {
+  return body !== null && typeof body === 'object' && typeof (body as { ok?: unknown }).ok === 'boolean';
+}
+
+function returnsStructuredOperationResult(path: string): boolean {
+  return (
+    path === '/api/setup/host/backup/restore' || path === '/api/setup/host/update/apply'
+  );
+}
 
 function isSetupApplyBody(
   body: unknown,
@@ -20,9 +34,17 @@ function errorDetailFromBody(body: unknown): string | null {
   return String(body.error);
 }
 
-function setupApiTimeoutMs(request: SetupApiCallRequest): number {
+export function setupApiTimeoutMs(request: SetupApiCallRequest): number {
   if (request.method === 'POST' && request.path === '/api/setup/host/images/load') {
     return DOCKER_LOAD_TIMEOUT_MS;
+  }
+
+  if (request.method === 'POST' && request.path === '/api/setup/host/backup/restore') {
+    return RESTORE_TIMEOUT_MS;
+  }
+
+  if (request.method === 'POST' && request.path === '/api/setup/host/update/apply') {
+    return UPDATE_APPLY_TIMEOUT_MS;
   }
 
   if (request.method !== 'POST' || request.path !== '/api/setup/host/apply') {
@@ -75,6 +97,9 @@ export async function callSetupApi<T = unknown>(
   }
 
   if (!response.ok) {
+    if (returnsStructuredOperationResult(request.path) && isStructuredOperationResult(body)) {
+      return body as T;
+    }
     const detail = errorDetailFromBody(body) ?? `HTTP ${response.status}`;
     throw new Error(`Setup-API ${request.path}: ${detail}`);
   }

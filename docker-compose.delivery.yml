@@ -13,6 +13,8 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 8080
+      MAINTENANCE_HOST: 0.0.0.0
+      MAINTENANCE_PORT: 8082
       EXPORT_BASE_PATH: ${EXPORT_BASE_PATH:-/exports}
       AUTH_ENABLED: ${AUTH_ENABLED:-true}
       AUTH_KEY_CAPTIVE: ${AUTH_KEY_CAPTIVE:?AUTH_KEY_CAPTIVE is required}
@@ -25,6 +27,8 @@ services:
       GATEWAY_AUTH_BRIDGE_URL: ${GATEWAY_AUTH_BRIDGE_URL:-}
     ports:
       - '8080:8080'
+      # LAN boundary: publish maintenance only on host loopback (container listens 0.0.0.0:8082).
+      - '127.0.0.1:8082:8082'
     volumes:
       - app_data:/var/lib/praxis-flow/app
       - ${EXPORTS_HOST_PATH:-~/praxis-flow-exports}:/exports

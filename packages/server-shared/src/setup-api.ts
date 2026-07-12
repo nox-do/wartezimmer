@@ -68,10 +68,99 @@ export type EnvBackupResult = {
   backupPath: string;
 };
 
+/** @deprecated Replaced by PfbackupResult — kept for transitional typing only. */
 export type EnvBackupInfo = {
   envPath: string;
   latestBackupPath: string | null;
 };
+
+export type PfbackupResult = {
+  envPath: string;
+  backupPath: string;
+};
+
+export type PfbackupInfo = {
+  envPath: string;
+  latestBackupPath: string | null;
+};
+
+export type PfbackupValidateInput = {
+  content: string;
+};
+
+export type PfbackupValidateResult = {
+  archiveValid: boolean;
+  restoreValid: boolean;
+  archiveErrors: string[];
+  restoreErrors: string[];
+  summary?: {
+    createdAt: string;
+    settingsFormatVersion: number;
+    exportedAt: string | null;
+    releaseVersion: string | null;
+    routingMode: string | null;
+  };
+};
+
+export type PfbackupInspectInput = {
+  content: string;
+};
+
+export type PfbackupInspectBackupSummary = {
+  createdAt: string;
+  settingsFormatVersion: number;
+  releaseVersion: string | null;
+  routingMode: string | null;
+  portalEnabled: boolean;
+  providerCredentialsIncluded: boolean;
+};
+
+export type PfbackupInspectEnvironment = {
+  hostPaths: Record<string, string>;
+  network: Record<string, string>;
+  imageReferences: Record<string, string>;
+};
+
+export type PfbackupInspectCompatibility = {
+  archiveValid: boolean;
+  settingsValid: boolean;
+  targetAppReachable: boolean;
+  restoreSupported: boolean;
+  warnings: string[];
+};
+
+export type PfbackupInspectResult = {
+  ok: boolean;
+  backup?: PfbackupInspectBackupSummary;
+  environment?: PfbackupInspectEnvironment;
+  compatibility: PfbackupInspectCompatibility;
+  errors?: string[];
+};
+
+export type PfbackupRestoreInput = {
+  content: string;
+  skipProviderCredentials?: boolean;
+};
+
+export type PfbackupRestoreReport = {
+  restoreId: string;
+  routingMode: string | null;
+  portalEnabled: boolean;
+  providerCredentialsSkipped: boolean;
+  disabledProviderIds: string[];
+  compose: ComposeStatus;
+};
+
+export type PfbackupRestoreResult =
+  | { ok: true; restoreId: string; report: PfbackupRestoreReport }
+  | {
+      ok: false;
+      restoreId: string;
+      failedPhase: string;
+      rollbackAttempted: boolean;
+      rollbackSucceeded: boolean;
+      errors: string[];
+    };
 
 export type StorageFolderPaths = {
   imports: string;
@@ -222,6 +311,64 @@ export type LoadDeliveryImagesResult = {
   restartLog: string | null;
 };
 
+export type PfupdateApplyInput = {
+  archivePath: string;
+  managerVersion?: string | null;
+  settingsFormatVersion?: number | null;
+};
+
+export type PfupdateInspectPackageSummary = {
+  releaseVersion: string;
+  minimumManagerVersion: string;
+  supportedSettingsFormatVersions: number[];
+  targetSchemaVersion: number;
+  images: {
+    app: string;
+    sandbox: string;
+    gateway: string;
+  };
+};
+
+export type PfupdateInspectCompatibility = {
+  packageValid: boolean;
+  managerCompatible: boolean;
+  settingsCompatible: boolean;
+  updateSupported: boolean;
+  warnings: string[];
+};
+
+export type PfupdateInspectInput = {
+  archivePath: string;
+  managerVersion?: string | null;
+  settingsFormatVersion?: number | null;
+};
+
+export type PfupdateInspectResult = {
+  ok: boolean;
+  package?: PfupdateInspectPackageSummary;
+  currentReleaseVersion: string | null;
+  compatibility: PfupdateInspectCompatibility;
+  errors?: string[];
+};
+
+export type PfupdateApplyReport = {
+  previousVersion: string | null;
+  targetVersion: string;
+  backupPath: string;
+  compose: ComposeStatus;
+};
+
+export type PfupdateApplyResult =
+  | { ok: true; updateId: string; report: PfupdateApplyReport }
+  | {
+      ok: false;
+      updateId: string;
+      failedPhase: string;
+      rollbackAttempted: boolean;
+      rollbackSucceeded: boolean;
+      errors: string[];
+    };
+
 export type NetworkAddress = {
   family: string;
   address: string;
@@ -273,6 +420,8 @@ export type HostStatus = {
    */
   networkPrerequisites: NetworkBindingCheck[];
   deliveryImages: DeliveryImagesStatus;
+  /** Live settings schema from maintenance app when reachable; otherwise current build default. */
+  settingsFormatVersion: number;
 };
 
 /** Pollable stack/runtime snapshot — separate from config fields on `HostStatus`. */
