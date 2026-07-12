@@ -7,6 +7,7 @@ Stand: 2026-07-12
 - ✅ Dual-Placement (`outside` / `inside`): Domain, API, Auth, Snapshot, MFA-Settings-Accordion, Live-UI
 - ✅ Doku: [`flows.md`](docs/flows.md) § Flow 5, [`apis.md`](docs/apis.md) § Raum-Panel
 - Plan-Datei entfernt — Inhalt in Kerndokumenten
+- ✅ Review-Cleanup (2026-07-12): Call-Scope dedup (`resolveRoomPanelCallCandidateScope`); URL-Helper (`findRequestedRoomEntry`, `buildRoomPanelPath`/`Url` via `VITE_API_BASE`); tot Preview-CSS; deprecated Domain-Exports (`roomPanelMayCallVisit`, `roomPanelVisitTargetsRoom`, `normalizeRoomPanelSettings` aus Public API); shared `emptyFlowCoreRuntimeForMocks`; callCandidates dedup gegen items (kein Doppel-Listing); Home-Links mit Placement
 
 ## Hinweis: RoutingMode-Guard vs. offene Wartenummern (2026-07-10)
 

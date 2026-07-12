@@ -70,5 +70,9 @@ export function roomPanelItemDisplayName(
   item: Pick<RoomPanelItem, 'identityRef'>,
   mayShowPatientNames: boolean,
 ): string | null {
-  return roomPanelCandidateDisplayName(item, mayShowPatientNames);
+  if (!mayShowPatientNames) {
+    return null;
+  }
+  const name = item.identityRef?.trim();
+  return name ? name : null;
 }

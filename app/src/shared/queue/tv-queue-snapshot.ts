@@ -3,6 +3,7 @@ import type { Runtime } from '@praxis-flow/flow-core/server';
 import type { CoreDatabase } from '../db/database.js';
 import type { OpsSettings } from '../db/db-types.js';
 import { getBusinessDay } from '../db/database-time.js';
+import { emptyFlowCoreRuntimeForMocks } from '../flow-core/test-runtime-mocks.js';
 import { getFlowCoreRuntime } from '../flow-core/flow-core-runtime.js';
 import { PF_FLOW_SURFACE_TV } from '../flow-core/sync-catalog-from-ops-settings.js';
 import { visitToQueueVisitRow } from '../flow-core/visit-queue-bridge.js';
@@ -74,13 +75,6 @@ export function buildTvQueueSnapshotFromFlowCore(input: BuildTvQueueSnapshotInpu
     checkinLocked,
     serverTime: new Date().toISOString(),
   };
-}
-
-function emptyFlowCoreRuntimeForMocks(): Runtime {
-  return {
-    catalog: () => ({ surfaces: [], surfaceDisplayRules: [] }),
-    visits: () => [],
-  } as unknown as Runtime;
 }
 
 function resolveFlowCoreRuntime(db: CoreDatabase): Runtime {

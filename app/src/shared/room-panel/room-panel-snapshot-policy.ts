@@ -67,6 +67,40 @@ export function roomPanelCallVisitScopeInput(
   };
 }
 
+export type RoomPanelCallCandidateScopeFailure =
+  | 'VISIT_NOT_FOUND'
+  | 'INVALID_TRANSITION'
+  | 'ROOM_MISMATCH';
+
+/** Shared scope check for snapshot callCandidates and transition guards. */
+export function resolveRoomPanelCallCandidateScope(
+  visit: Pick<VisitView, 'status' | 'movementMode' | 'targetLocationId'> | undefined,
+  row: Pick<QueueVisitRow, 'destinationRoomId' | 'roomId'> | null,
+  sessionRoomId: string,
+): RoomPanelCallCandidateScopeFailure | null {
+  if (!visit) {
+    return 'VISIT_NOT_FOUND';
+  }
+  if (visit.movementMode !== 'call') {
+    return 'INVALID_TRANSITION';
+  }
+  if (visit.status !== 'waiting' && visit.status !== 'directed') {
+    return 'INVALID_TRANSITION';
+  }
+  if (!row || !visitTargetsRoom(roomPanelCallVisitScopeInput(visit, row), sessionRoomId)) {
+    return 'ROOM_MISMATCH';
+  }
+  return null;
+}
+
+export function isRoomPanelCallCandidateVisit(
+  visit: Pick<VisitView, 'status' | 'movementMode' | 'targetLocationId'>,
+  row: Pick<QueueVisitRow, 'destinationRoomId' | 'roomId'>,
+  sessionRoomId: string,
+): boolean {
+  return resolveRoomPanelCallCandidateScope(visit, row, sessionRoomId) === null;
+}
+
 /** Panel call may only confirm routing for visits already targeting the session room. */
 export function assertRoomPanelCallVisitScope(
   db: Pick<CoreDatabase, 'getOpsSettings' | 'getFlowCoreRuntimeInstance'>,
@@ -75,17 +109,16 @@ export function assertRoomPanelCallVisitScope(
 ): void {
   const runtime = db.getFlowCoreRuntimeInstance();
   const visit = runtime.visits().find((entry) => entry.id === visitId);
-  if (!visit) {
-    throw domainError('VISIT_NOT_FOUND');
-  }
-  if (visit.movementMode !== 'call') {
-    throw domainError('INVALID_TRANSITION');
-  }
-  if (visit.status !== 'waiting' && visit.status !== 'directed') {
-    throw domainError('INVALID_TRANSITION');
-  }
-  const row = visitToQueueVisitRow(visit, db.getOpsSettings());
-  if (!visitTargetsRoom(roomPanelCallVisitScopeInput(visit, row), sessionRoomId)) {
-    throw domainError(QUEUE_ROOM_MISMATCH);
+  const row = visit ? visitToQueueVisitRow(visit, db.getOpsSettings()) : null;
+  const failure = resolveRoomPanelCallCandidateScope(visit, row, sessionRoomId);
+  switch (failure) {
+    case 'VISIT_NOT_FOUND':
+      throw domainError('VISIT_NOT_FOUND');
+    case 'INVALID_TRANSITION':
+      throw domainError('INVALID_TRANSITION');
+    case 'ROOM_MISMATCH':
+      throw domainError(QUEUE_ROOM_MISMATCH);
+    case null:
+      return;
   }
 }

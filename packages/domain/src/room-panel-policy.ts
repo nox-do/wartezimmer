@@ -98,19 +98,3 @@ export function visitTargetsRoom(visit: RoomPanelCallVisitInput, sessionRoomId: 
   const roomId = sessionRoomId.trim();
   return roomId.length > 0 && resolveVisitTargetRoomId(visit) === roomId;
 }
-
-/** @deprecated Use visitTargetsRoom. */
-export function roomPanelVisitTargetsRoom(
-  visit: RoomPanelCallVisitInput,
-  sessionRoomId: string,
-): boolean {
-  return visitTargetsRoom(visit, sessionRoomId);
-}
-
-/** @deprecated Use visitTargetsRoom; call validity is enforced by flow-core on transition. */
-export function roomPanelMayCallVisit(
-  visit: RoomPanelCallVisitInput,
-  sessionRoomId: string,
-): boolean {
-  return visitTargetsRoom(visit, sessionRoomId);
-}

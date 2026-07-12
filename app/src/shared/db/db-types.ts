@@ -204,7 +204,9 @@ export type RoomPanelPlacementConfig = import('@praxis-flow/domain').RoomPanelPl
 export type RoomPanelsSettings = import('@praxis-flow/domain').RoomPanelsSettings;
 
 /** @deprecated Removed in P1 — use RoomPanelPlacementConfig + placement key. */
-export type RoomPanelSettings = import('@praxis-flow/domain').RoomPanelSettings;
+export type RoomPanelSettings = RoomPanelPlacementConfig & {
+  placement?: RoomPanelPlacement;
+};
 
 export type OutboxEventRow = {
   id: string;

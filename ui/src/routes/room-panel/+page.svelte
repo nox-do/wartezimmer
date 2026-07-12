@@ -27,6 +27,8 @@
     type RoomPanelTransitionOutcome,
   } from '$lib/room-panel/room-panel-transition';
   import {
+    findRequestedRoomEntry,
+    readRequestedPlacementParam,
     shouldReconcileRequestedUrl,
     snapshotMatchesRequestedUrl,
   } from '$lib/room-panel/room-panel-requested-url';
@@ -76,18 +78,13 @@
     if (!requestedRoomId || loading || submitting || recoveringSession || reconcilingRoom) {
       return;
     }
-    const requestedPlacement = requestedPlacementFromUrl;
-    const requestedEntry =
-      rooms.find(
-        (room) =>
-          room.roomId === requestedRoomId &&
-          (!requestedPlacement || room.placement === requestedPlacement),
-      ) ?? null;
+    const requestedPlacement = readRequestedPlacementParam(requestedPlacementFromUrl);
+    const requestedEntry = findRequestedRoomEntry(rooms, requestedRoomId, requestedPlacement);
     if (requestedEntry) {
       selectedLoginKey = roomPanelLoginKey(requestedEntry);
     }
     if (
-      !shouldReconcileRequestedUrl(snapshot, requestedRoomId, readRequestedPlacement())
+      !shouldReconcileRequestedUrl(snapshot, requestedRoomId, requestedPlacement)
     ) {
       return;
     }
@@ -110,8 +107,7 @@
   }
 
   function readRequestedPlacement(): string {
-    const placement = requestedPlacementFromUrl;
-    return placement === 'outside' || placement === 'inside' ? placement : '';
+    return readRequestedPlacementParam(requestedPlacementFromUrl);
   }
 
   function resolveAutoOpenLoginKey(): string | null {
@@ -120,9 +116,8 @@
     if (requestedRoomId) {
       const matches = rooms.filter((entry) => entry.roomId === requestedRoomId);
       const room =
-        (requestedPlacement
-          ? matches.find((entry) => entry.placement === requestedPlacement)
-          : matches.find((entry) => entry.placement === 'outside')) ??
+        findRequestedRoomEntry(matches, requestedRoomId, requestedPlacement) ??
+        matches.find((entry) => entry.placement === 'outside') ??
         matches[0] ??
         null;
       return room && !room.requiresPin ? roomPanelLoginKey(room) : null;
@@ -149,12 +144,7 @@
       }
 
       const requestedPlacement = readRequestedPlacement();
-      const requestedEntry =
-        rooms.find(
-          (room) =>
-            room.roomId === requestedRoomId &&
-            (!requestedPlacement || room.placement === requestedPlacement),
-        ) ?? null;
+      const requestedEntry = findRequestedRoomEntry(rooms, requestedRoomId, requestedPlacement);
       if (requestedEntry) {
         selectedLoginKey = roomPanelLoginKey(requestedEntry);
       }
@@ -229,12 +219,7 @@
 
     const urlRoomId = readRequestedRoomId();
     const urlPlacement = readRequestedPlacement();
-    const urlEntry =
-      urlRoomId &&
-      result.data.rooms.find(
-        (room) =>
-          room.roomId === urlRoomId && (!urlPlacement || room.placement === urlPlacement),
-      );
+    const urlEntry = urlRoomId ? findRequestedRoomEntry(result.data.rooms, urlRoomId, urlPlacement) : null;
     if (urlEntry) {
       selectedLoginKey = roomPanelLoginKey(urlEntry);
     } else if (!findRoomPanelLoginEntry(result.data.rooms, selectedLoginKey)) {

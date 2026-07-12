@@ -1,7 +1,6 @@
 import { explainVisibility } from '@praxis-flow/flow-core';
 import type { Runtime } from '@praxis-flow/flow-core/server';
 import type { VisitView } from '@praxis-flow/flow-core';
-import { visitTargetsRoom } from '@praxis-flow/domain';
 import type {
   QueueVisitRow,
   RoomPanelMode,
@@ -11,15 +10,16 @@ import type {
 import type { CoreDatabase } from '../db/database.js';
 import type { RoomPanelSession } from '../../auth/staff-session-auth.js';
 import { getBusinessDay } from '../db/database-time.js';
+import { emptyFlowCoreRuntimeForMocks } from '../flow-core/test-runtime-mocks.js';
 import { getFlowCoreRuntime } from '../flow-core/flow-core-runtime.js';
 import { panelFlowSurfaceId } from '../flow-core/sync-catalog-from-ops-settings.js';
 import { visitToQueueVisitRow } from '../flow-core/visit-queue-bridge.js';
 import { resolveRoomPanelForSession } from '../room-panel/room-panel-policy.js';
 import {
+  isRoomPanelCallCandidateVisit,
   resolveRoomPanelCallCandidateActions,
   resolveRoomPanelItemActions,
   resolveRoomPanelSnapshotPolicy,
-  roomPanelCallVisitScopeInput,
   type RoomPanelItemActions,
 } from '../room-panel/room-panel-snapshot-policy.js';
 
@@ -121,24 +121,6 @@ function isRoomPanelStatus(status: string): status is 'called' | 'in_room' | 'di
   return status === 'called' || status === 'in_room' || status === 'directed';
 }
 
-function isRoomPanelCallCandidateStatus(status: string): status is 'waiting' | 'directed' {
-  return status === 'waiting' || status === 'directed';
-}
-
-function isRoomPanelCallCandidateVisit(
-  visit: VisitView,
-  row: QueueVisitRow,
-  sessionRoomId: string,
-): boolean {
-  if (visit.movementMode !== 'call') {
-    return false;
-  }
-  if (visit.status !== 'waiting' && visit.status !== 'directed') {
-    return false;
-  }
-  return visitTargetsRoom(roomPanelCallVisitScopeInput(visit, row), sessionRoomId);
-}
-
 function mapQueueRowToPanelItem(
   row: QueueVisitRow,
   sessionRoomId: string,
@@ -174,9 +156,6 @@ function mapQueueRowToCallCandidate(
   showPatientNames: boolean,
   actions: RoomPanelItemActions,
 ): RoomPanelCallCandidate | null {
-  if (!isRoomPanelCallCandidateStatus(row.status)) {
-    return null;
-  }
   return {
     visitId: row.id,
     laneCode: row.laneCode,
@@ -262,23 +241,18 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
   };
 
   if (capabilities.canCall) {
+    const itemVisitIds = new Set(scored.map((entry) => entry.item.visitId));
     callCandidateRows.sort(compareRoomPanelCallCandidateOrder);
     const candidateActions = resolveRoomPanelCallCandidateActions(capabilities);
     snapshot.callCandidates = callCandidateRows
       .map((row) =>
         mapQueueRowToCallCandidate(row, session.roomId, roomLabel, showPatientNames, candidateActions),
       )
-      .filter((entry): entry is RoomPanelCallCandidate => entry !== null);
+      .filter((entry): entry is RoomPanelCallCandidate => entry !== null)
+      .filter((entry) => !itemVisitIds.has(entry.visitId));
   }
 
   return snapshot;
-}
-
-function emptyFlowCoreRuntimeForMocks(): Runtime {
-  return {
-    catalog: () => ({ surfaces: [], surfaceDisplayRules: [] }),
-    visits: () => [],
-  } as unknown as Runtime;
 }
 
 function resolveFlowCoreRuntime(db: CoreDatabase): Runtime {

@@ -197,13 +197,6 @@
     box-shadow: none;
   }
 
-  :global(.room-panel-preview:not([data-live='true'])) {
-    min-height: min(86dvh, 48rem);
-    border: 1px solid #d5ded4;
-    border-radius: 8px;
-    box-shadow: 0 12px 36px rgb(20 23 19 / 10%);
-  }
-
   :global(.room-panel-preview__header) {
     flex-shrink: 0;
     display: flex;

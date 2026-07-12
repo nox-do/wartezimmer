@@ -3,6 +3,7 @@
   import Button from '$lib/components/forms/Button.svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { fetchRoomPanelRooms, type RoomPanelRoom } from '$lib/room-panel/room-panel-api';
+  import { buildRoomPanelUrl } from '$lib/room-panel/room-panel-requested-url';
 
   let panelRooms = $state<RoomPanelRoom[]>([]);
   let panelRoomsLoading = $state(false);
@@ -24,8 +25,8 @@
     panelRooms = result.data.rooms;
   }
 
-  function roomPanelHref(roomId: string): string {
-    return `/room-panel?room=${encodeURIComponent(roomId)}`;
+  function roomPanelHref(room: RoomPanelRoom): string {
+    return buildRoomPanelUrl(room.roomId, room.placement);
   }
 
   const newTabLink = {
@@ -69,8 +70,10 @@
       <p class="text-muted">Noch keine Raum-Panels aktiviert.</p>
     {:else}
       <div class="panel-links__list">
-        {#each panelRooms as room (room.roomId)}
-          <Button href={roomPanelHref(room.roomId)} variant="outline" {...newTabLink}>{room.roomLabel}</Button>
+        {#each panelRooms as room (`${room.roomId}:${room.placement}`)}
+          <Button href={roomPanelHref(room)} variant="outline" {...newTabLink}>
+            {room.roomLabel} — {t(`mfa.settings.roomPanelPlacementShort_${room.placement}`)}
+          </Button>
         {/each}
       </div>
     {/if}
