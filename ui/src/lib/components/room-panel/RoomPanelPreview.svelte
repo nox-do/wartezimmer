@@ -2,8 +2,12 @@
   import { onMount } from 'svelte';
   import { DoorOpen, LogIn, MapPin, User, UserCheck, UserX } from '@lucide/svelte';
   import Button from '$lib/components/forms/Button.svelte';
-  import type { PracticeRoomWithPanel } from '$lib/queue/ops-settings-api';
-  import { roomPanelSettingsOrDefault } from '$lib/queue/ops-settings-api';
+  import type { PracticeRoomWithPanels } from '$lib/queue/ops-settings-api';
+  import {
+    DEFAULT_ROOM_PANELS_SETTINGS,
+    roomPanelConfigForPlacement,
+  } from '$lib/queue/ops-settings-api';
+  import type { RoomPanelPlacement } from '@praxis-flow/domain';
   import { tf, t } from '$lib/i18n/i18nStore.svelte';
   import {
     getRoomPanelPageCount,
@@ -21,7 +25,8 @@
   };
 
   interface Props {
-    room: PracticeRoomWithPanel;
+    room: PracticeRoomWithPanels;
+    placement?: RoomPanelPlacement;
     queueEntries?: RoomPanelQueueEntry[];
     state?: 'waiting' | 'enter' | 'arrival';
     stateLabelOverride?: string;
@@ -33,6 +38,7 @@
 
   let {
     room,
+    placement = 'outside',
     queueEntries = [
       {
         visitId: 'preview',
@@ -52,9 +58,9 @@
   let panelEl = $state<HTMLElement | null>(null);
   let viewportEl = $state<HTMLDivElement | null>(null);
 
-  const panel = $derived(roomPanelSettingsOrDefault(room));
+  const panel = $derived(roomPanelConfigForPlacement(room, placement));
   const title = $derived(room.roomLabel.trim() || t('roomPanel.roomFallback'));
-  const showNames = $derived(panel.placement === 'inside' && panel.showPatientNames);
+  const showNames = $derived(placement === 'inside' && panel.showPatientNames);
   const arrivedText = $derived(panelText(panel.arrivedTextPreset, panel.arrivedTextCustom, 'please_wait_here'));
   const calledText = $derived(panelText(panel.calledTextPreset, panel.calledTextCustom, 'please_enter'));
   const stateLabel = $derived(
@@ -156,7 +162,7 @@
                   onclick={() => onCheckIn?.(entry.visitId)}
                 >
                   <UserCheck size={18} aria-hidden="true" />
-                  {panel.placement === 'outside'
+                  {placement === 'outside'
                     ? t('roomPanel.actionIAmHere')
                     : t('roomPanel.actionArrived')}
                 </Button>

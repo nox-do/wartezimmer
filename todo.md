@@ -7,7 +7,10 @@ Stand: 2026-07-12
 - ✅ Plan bereinigt: `docs/plan-room-panel.md` — Scope vs. Aktion, Phasen A–E
 - ✅ Phase A: Claims (`canCall`, `visitTargetsRoom`, `mayShowPatientNames`); `allowCalling`; Auth inside=PIN / outside=ohne
 - ✅ **P0 Domain** (2026-07-12): `RoomPanelsSettings` + `normalizeRoomPanelsSettings`; status-aware `visitTargetsRoom`; `resolveRoomPanelCapabilities` disabled→false
-- ⏳ P1–P6: siehe Plan (Dual-Placement → Backend call → UI → Doku)
+- ✅ **P1 Dual-Placement** (2026-07-12): `room.panels` in DB/Ops/OpenAPI/UI; Domain-Helpers; Catalog `supportsCalling`; partial patch merge; compile-grün
+- ✅ **P1 Auth-Nachzug** (2026-07-12): Login `roomId + placement`, pin optional; UI Login-Key `roomId:placement`
+- ⏳ P2–P6: siehe Plan (Device Presence → Backend call → UI Accordion → Doku)
+- ✅ P1 App-Tests (2026-07-12): 11 Testdateien auf `panels: { outside, inside }` + Domain-Helpers umgestellt
 
 ## Hinweis: RoutingMode-Guard vs. offene Wartenummern (2026-07-10)
 

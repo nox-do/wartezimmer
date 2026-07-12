@@ -3,7 +3,8 @@ import type { Runtime } from '@praxis-flow/flow-core/server';
 import type {
   QueueVisitRow,
   RoomPanelMode,
-  RoomPanelSettings,
+  RoomPanelPlacement,
+  RoomPanelPlacementConfig,
   RoomPanelTextPreset,
 } from '../db/db-types.js';
 import type { CoreDatabase } from '../db/database.js';
@@ -31,7 +32,7 @@ export type RoomPanelQueueSnapshot = {
   roomId: string;
   roomLabel: string;
   panel: {
-    placement: RoomPanelSettings['placement'];
+    placement: RoomPanelPlacement;
     mode: RoomPanelMode;
     showPatientNames: boolean;
     calledText: string;
@@ -127,10 +128,10 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
   if (!active) {
     throw new Error('ROOM_PANEL_SESSION_INVALID');
   }
-  const { room, panel } = active;
+  const { room, placement, panel } = active;
   const settings = db.getOpsSettings();
   const roomLabel = room.roomLabel;
-  const showPatientNames = roomPanelMayShowPatientNames(panel);
+  const showPatientNames = roomPanelMayShowPatientNames({ placement, ...panel });
 
   const catalog = runtime.catalog();
   const surfaceId = panelFlowSurfaceId(session.roomId);
@@ -164,7 +165,7 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
     roomId: session.roomId,
     roomLabel,
     panel: {
-      placement: panel.placement,
+      placement,
       mode: panel.mode,
       showPatientNames,
       calledText: panelText(panel.calledTextPreset, panel.calledTextCustom, 'please_enter'),

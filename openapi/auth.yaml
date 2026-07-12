@@ -91,16 +91,19 @@ components:
       additionalProperties: false
       required:
         - roomId
-        - pin
+        - placement
       properties:
         roomId:
           type: string
           minLength: 1
           maxLength: 64
+        placement:
+          $ref: '#/components/schemas/RoomPanelPlacement'
         pin:
           type: string
           minLength: 0
           maxLength: 128
+          description: Required for inside panels; omit or empty for outside panels without PIN.
     RoomPanelSessionResponse:
       type: object
       additionalProperties: false
@@ -340,6 +343,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RoomPanelSessionResponse'
+        '400':
+          description: Invalid placement or request body.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
         '401':
           description: PIN is invalid.
           content:

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import Fastify from 'fastify';
+import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
 import { registerQueueRoutes } from './queue-routes.js';
 import type { CoreDatabase } from '../shared/db/database.js';
 import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS } from '../shared/checkin-topic-settings.js';
@@ -39,16 +40,17 @@ function buildQueueRouteDb(overrides: QueueRouteDbOverrides = {}): CoreDatabase 
           enabled: true,
           defaultCallTarget: true,
           maxOccupancy: null,
-          panel: {
-            enabled: true,
-            placement: 'outside',
-            mode: 'arrival',
-            showPatientNames: false,
-            calledTextPreset: 'please_enter',
-            calledTextCustom: null,
-            arrivedTextPreset: 'please_wait_here',
-            arrivedTextCustom: null,
-          },
+          panels: normalizeRoomPanelsSettings({
+            outside: {
+              enabled: true,
+              mode: 'arrival',
+              showPatientNames: false,
+              calledTextPreset: 'please_enter',
+              calledTextCustom: null,
+              arrivedTextPreset: 'please_wait_here',
+              arrivedTextCustom: null,
+            },
+          }),
         },
       ],
     }),
@@ -522,7 +524,13 @@ test('room-panel transition uses the current mode without a new login', async ()
           ...settings,
           rooms: settings.rooms.map((room) => ({
             ...room,
-            panel: room.panel ? { ...room.panel, mode: currentMode } : undefined,
+            panels: {
+              ...room.panels,
+              outside: {
+                ...room.panels.outside,
+                mode: currentMode,
+              },
+            },
           })),
         };
       },
@@ -570,16 +578,17 @@ function tvQueueTestSettings(): OpsSettings {
         enabled: true,
         defaultCallTarget: false,
         maxOccupancy: null,
-        panel: {
-          enabled: true,
-          placement: 'outside',
-          mode: 'arrival',
-          showPatientNames: false,
-          calledTextPreset: 'please_enter',
-          calledTextCustom: null,
-          arrivedTextPreset: 'please_wait_here',
-          arrivedTextCustom: null,
-        },
+        panels: normalizeRoomPanelsSettings({
+          outside: {
+            enabled: true,
+            mode: 'arrival',
+            showPatientNames: false,
+            calledTextPreset: 'please_enter',
+            calledTextCustom: null,
+            arrivedTextPreset: 'please_wait_here',
+            arrivedTextCustom: null,
+          },
+        }),
       },
     ],
     contactLookupFolderPath: null,

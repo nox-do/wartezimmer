@@ -1,39 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import type { RoomPanelSettings } from './ops-settings-api';
-import { applyRoomPanelPlacement } from './room-panel-settings';
+import { DEFAULT_ROOM_PANELS_SETTINGS } from '@praxis-flow/domain';
+import { updateRoomPanelPlacementConfig } from './room-panel-settings';
 
-const defaultSettings: RoomPanelSettings = {
-  enabled: true,
-  placement: 'outside',
-  mode: 'display_only',
-  showPatientNames: false,
-  calledTextPreset: 'please_enter',
-  calledTextCustom: null,
-  arrivedTextPreset: 'please_wait_here',
-  arrivedTextCustom: null,
-};
+describe('updateRoomPanelPlacementConfig', () => {
+  it('updates only the targeted placement', () => {
+    const result = updateRoomPanelPlacementConfig(DEFAULT_ROOM_PANELS_SETTINGS, 'inside', {
+      enabled: true,
+      mode: 'staff_full',
+      showPatientNames: true,
+    });
 
-describe('applyRoomPanelPlacement', () => {
-  it('removes protected data and checkout actions outside', () => {
-    const result = applyRoomPanelPlacement(
-      {
-        ...defaultSettings,
-        placement: 'inside',
-        mode: 'staff_full',
-        showPatientNames: true,
-      },
-      'outside',
-    );
-
-    expect(result.placement).toBe('outside');
-    expect(result.mode).toBe('arrival');
-    expect(result.showPatientNames).toBe(false);
+    expect(result.outside).toEqual(DEFAULT_ROOM_PANELS_SETTINGS.outside);
+    expect(result.inside.enabled).toBe(true);
+    expect(result.inside.mode).toBe('staff_full');
+    expect(result.inside.showPatientNames).toBe(true);
   });
 
-  it('keeps an explicit inside configuration unchanged', () => {
-    const result = applyRoomPanelPlacement({ ...defaultSettings, mode: 'arrival' }, 'inside');
+  it('coerces protected outside settings', () => {
+    const result = updateRoomPanelPlacementConfig(DEFAULT_ROOM_PANELS_SETTINGS, 'outside', {
+      enabled: true,
+      mode: 'staff_full',
+      showPatientNames: true,
+      allowCalling: true,
+    });
 
-    expect(result.placement).toBe('inside');
-    expect(result.mode).toBe('arrival');
+    expect(result.outside.mode).toBe('arrival');
+    expect(result.outside.showPatientNames).toBe(false);
+    expect(result.outside.allowCalling).toBe(false);
   });
 });

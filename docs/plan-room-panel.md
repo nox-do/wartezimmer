@@ -133,18 +133,18 @@ Bleibt MFA:
 
 ### P1 — Dual-Placement Daten/API
 
-- [ ] Breaking Schema/Mapper: `panel` entfernen, `panels` verwenden
-- [ ] DB/Ops Mapper/OpenAPI anpassen
-- [ ] Catalog-Surface aktiv, wenn `outside` oder `inside` aktiv
-- [ ] Catalog `supportsCalling` dynamisch setzen, wenn ein inside-Panel `allowCalling` hat
-- [ ] Tests fuer Defaults, neues Schema und Outside-Normalisierung
+- [x] Breaking Schema/Mapper: `panel` entfernen, `panels` verwenden
+- [x] DB/Ops Mapper/OpenAPI anpassen
+- [x] Catalog-Surface aktiv, wenn `outside` oder `inside` aktiv
+- [x] Catalog `supportsCalling` dynamisch setzen, wenn ein inside-Panel `allowCalling` hat
+- [x] Tests fuer Defaults, neues Schema und Outside-Normalisierung
 
 ### P2 — Auth, Session, Device Identity
 
-- [ ] Login-Liste flach pro Placement
-- [ ] Login-Body/OpenAPI: `roomId + placement`, `pin?`
-- [ ] `resolveRoomPanelForSession(roomId, placement)` auf `panels[placement]`
-- [ ] Device Presence IDs pro Placement
+- [x] Login-Body/OpenAPI: `roomId + placement`, `pin?` (P1-Nachzug: Ambiguität bei Dual-Placement)
+- [ ] Login-Liste flach pro Placement (Liste erledigt; UI-Labels P5)
+- [ ] **P2 First-Step:** Device Presence IDs pro Placement (`room-panel:${roomId}:${placement}`) — aktuell noch raumweit, Ops-Badge zeigt nur „irgendein Panel online“
+- [ ] `resolveRoomPanelForSession(roomId, placement)` auf `panels[placement]` (erledigt in P1)
 - [ ] Placement-granularer Session-Revoke
 - [ ] Tests: parallel outside+inside, falsches Placement, PIN nur inside
 

@@ -12,11 +12,13 @@ import { ensureSingleDefaultCallTarget } from '../../shared/db/database-ops-sett
 import { normalizeMaxOccupancy } from '../../shared/ops/room-capacity.js';
 import {
   defaultAccentForLane,
-  DEFAULT_ROOM_PANEL_SETTINGS,
   normalizeRoomPanelCustomText,
-  normalizeRoomPanelSettings,
+  normalizeRoomPanelPlacementConfig,
   normalizeTopicAccentColor,
-  type RoomPanelSettings,
+  roomPanelsOrDefault,
+  type RoomPanelPlacement,
+  type RoomPanelPlacementConfig,
+  type RoomPanelsSettings,
 } from '@praxis-flow/domain';
 import {
   mergePracticeProfile,
@@ -65,32 +67,49 @@ type SettingsPatchError = {
 };
 
 type RoomPatch = NonNullable<PatchOpsSettingsBody['rooms']>[number];
+type RoomPanelsPatch = NonNullable<RoomPatch['panels']>;
+type RoomPanelPlacementPatch = NonNullable<RoomPanelsPatch['outside']>;
 
-function mergeRoomPanelPatch(
-  current: RoomPanelSettings | undefined,
-  patch: RoomPatch['panel'],
-): RoomPanelSettings {
-  const base = current ?? DEFAULT_ROOM_PANEL_SETTINGS;
+function mergeRoomPanelPlacementPatch(
+  placement: RoomPanelPlacement,
+  current: RoomPanelPlacementConfig,
+  patch: RoomPanelPlacementPatch | undefined,
+): RoomPanelPlacementConfig {
+  if (!patch) {
+    return current;
+  }
+
+  return normalizeRoomPanelPlacementConfig(placement, {
+    enabled: patch.enabled ?? current.enabled,
+    mode: patch.mode ?? current.mode,
+    showPatientNames: patch.showPatientNames ?? current.showPatientNames,
+    allowCalling: patch.allowCalling ?? current.allowCalling,
+    calledTextPreset: patch.calledTextPreset ?? current.calledTextPreset,
+    calledTextCustom:
+      patch.calledTextCustom !== undefined
+        ? normalizeRoomPanelCustomText(patch.calledTextCustom)
+        : current.calledTextCustom,
+    arrivedTextPreset: patch.arrivedTextPreset ?? current.arrivedTextPreset,
+    arrivedTextCustom:
+      patch.arrivedTextCustom !== undefined
+        ? normalizeRoomPanelCustomText(patch.arrivedTextCustom)
+        : current.arrivedTextCustom,
+  });
+}
+
+function mergeRoomPanelsPatch(
+  current: { panels?: RoomPanelsSettings } | undefined,
+  patch: RoomPanelsPatch | undefined,
+): RoomPanelsSettings {
+  const base = roomPanelsOrDefault(current ?? {});
   if (!patch) {
     return base;
   }
 
-  return normalizeRoomPanelSettings({
-    enabled: patch.enabled ?? base.enabled,
-    placement: patch.placement ?? base.placement,
-    mode: patch.mode ?? base.mode,
-    showPatientNames: patch.showPatientNames ?? base.showPatientNames,
-    calledTextPreset: patch.calledTextPreset ?? base.calledTextPreset,
-    calledTextCustom:
-      patch.calledTextCustom !== undefined
-        ? normalizeRoomPanelCustomText(patch.calledTextCustom)
-        : base.calledTextCustom,
-    arrivedTextPreset: patch.arrivedTextPreset ?? base.arrivedTextPreset,
-    arrivedTextCustom:
-      patch.arrivedTextCustom !== undefined
-        ? normalizeRoomPanelCustomText(patch.arrivedTextCustom)
-        : base.arrivedTextCustom,
-  });
+  return {
+    outside: mergeRoomPanelPlacementPatch('outside', base.outside, patch.outside),
+    inside: mergeRoomPanelPlacementPatch('inside', base.inside, patch.inside),
+  };
 }
 
 function mergeTopicPatch(
@@ -185,24 +204,12 @@ export async function buildOpsSettingsUpdate(
             enabled: room.enabled ?? true,
             defaultCallTarget: room.defaultCallTarget === true,
             maxOccupancy: normalizeMaxOccupancy(room.maxOccupancy ?? null),
-            panel: mergeRoomPanelPatch(currentRoom?.panel, room.panel),
+            panels: mergeRoomPanelsPatch(currentRoom, room.panels),
           };
         }),
         body.rooms.find((room) => room.defaultCallTarget === true)?.roomId?.trim(),
       )
     : undefined;
-
-  const invalidPanel = nextRooms?.find(
-    (room) =>
-      room.panel?.placement === 'outside' &&
-      (room.panel.mode === 'staff_full' || room.panel.showPatientNames),
-  );
-  if (invalidPanel) {
-    return {
-      code: 'INVALID_ARGUMENT',
-      message: `Room "${invalidPanel.roomId}" has invalid outside panel settings.`,
-    };
-  }
 
   let currentMapping: CsvContactLookupMapping;
   try {

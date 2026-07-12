@@ -420,7 +420,9 @@ async function applyRoomPanelQueueVisitTransition(
     return undefined;
   }
 
-  if (body.type === 'check_in_room' && !roomPanelCanCheckIn(activePanel.panel)) {
+  const panelPolicy = { placement: activePanel.placement, ...activePanel.panel };
+
+  if (body.type === 'check_in_room' && !roomPanelCanCheckIn(panelPolicy)) {
     sendApiError(reply, 403, {
       code: 'AUTH_FORBIDDEN',
       message: 'Ankunftsbestätigung ist für dieses Raum-Panel nicht aktiviert.',
@@ -428,7 +430,7 @@ async function applyRoomPanelQueueVisitTransition(
     return undefined;
   }
 
-  if (body.type === 'check_out_room' && !roomPanelCanCheckOut(activePanel.panel)) {
+  if (body.type === 'check_out_room' && !roomPanelCanCheckOut(panelPolicy)) {
     sendApiError(reply, 403, {
       code: 'AUTH_FORBIDDEN',
       message: 'Check-out ist nur im Raum-Panel-Modus staff_full erlaubt.',

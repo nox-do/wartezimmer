@@ -3,6 +3,150 @@
  * Run: npm run generate:api-schemas
  */
 
+export const RoomPanelPlacementConfig = {
+  type: 'object',
+  required: [
+    'enabled',
+    'mode',
+    'showPatientNames',
+    'allowCalling',
+    'calledTextPreset',
+    'calledTextCustom',
+    'arrivedTextPreset',
+    'arrivedTextCustom',
+  ],
+  additionalProperties: false,
+  properties: {
+    enabled: {
+      type: 'boolean',
+    },
+    mode: {
+      type: 'string',
+      enum: ['display_only', 'arrival', 'staff_full'],
+    },
+    showPatientNames: {
+      type: 'boolean',
+    },
+    allowCalling: {
+      type: 'boolean',
+    },
+    calledTextPreset: {
+      type: 'string',
+      enum: ['you_are_right', 'please_wait_here', 'please_enter', 'go_to_reception', 'custom'],
+    },
+    calledTextCustom: {
+      type: ['string', 'null'],
+      maxLength: 80,
+    },
+    arrivedTextPreset: {
+      type: 'string',
+      enum: ['you_are_right', 'please_wait_here', 'please_enter', 'go_to_reception', 'custom'],
+    },
+    arrivedTextCustom: {
+      type: ['string', 'null'],
+      maxLength: 80,
+    },
+  },
+} as const;
+
+export const RoomPanelsSettings = {
+  type: 'object',
+  required: ['outside', 'inside'],
+  additionalProperties: false,
+  properties: {
+    outside: {
+      type: 'object',
+      required: [
+        'enabled',
+        'mode',
+        'showPatientNames',
+        'allowCalling',
+        'calledTextPreset',
+        'calledTextCustom',
+        'arrivedTextPreset',
+        'arrivedTextCustom',
+      ],
+      additionalProperties: false,
+      properties: {
+        enabled: {
+          type: 'boolean',
+        },
+        mode: {
+          type: 'string',
+          enum: ['display_only', 'arrival', 'staff_full'],
+        },
+        showPatientNames: {
+          type: 'boolean',
+        },
+        allowCalling: {
+          type: 'boolean',
+        },
+        calledTextPreset: {
+          type: 'string',
+          enum: ['you_are_right', 'please_wait_here', 'please_enter', 'go_to_reception', 'custom'],
+        },
+        calledTextCustom: {
+          type: ['string', 'null'],
+          maxLength: 80,
+        },
+        arrivedTextPreset: {
+          type: 'string',
+          enum: ['you_are_right', 'please_wait_here', 'please_enter', 'go_to_reception', 'custom'],
+        },
+        arrivedTextCustom: {
+          type: ['string', 'null'],
+          maxLength: 80,
+        },
+      },
+    },
+    inside: {
+      type: 'object',
+      required: [
+        'enabled',
+        'mode',
+        'showPatientNames',
+        'allowCalling',
+        'calledTextPreset',
+        'calledTextCustom',
+        'arrivedTextPreset',
+        'arrivedTextCustom',
+      ],
+      additionalProperties: false,
+      properties: {
+        enabled: {
+          type: 'boolean',
+        },
+        mode: {
+          type: 'string',
+          enum: ['display_only', 'arrival', 'staff_full'],
+        },
+        showPatientNames: {
+          type: 'boolean',
+        },
+        allowCalling: {
+          type: 'boolean',
+        },
+        calledTextPreset: {
+          type: 'string',
+          enum: ['you_are_right', 'please_wait_here', 'please_enter', 'go_to_reception', 'custom'],
+        },
+        calledTextCustom: {
+          type: ['string', 'null'],
+          maxLength: 80,
+        },
+        arrivedTextPreset: {
+          type: 'string',
+          enum: ['you_are_right', 'please_wait_here', 'please_enter', 'go_to_reception', 'custom'],
+        },
+        arrivedTextCustom: {
+          type: ['string', 'null'],
+          maxLength: 80,
+        },
+      },
+    },
+  },
+} as const;
+
 export const OpsStateResponse = {
   type: 'object',
   required: ['checkinLocked', 'dayClosePhase', 'updatedAt'],
@@ -849,61 +993,124 @@ export const OpsSettingsResponse = {
             type: ['integer', 'null'],
             minimum: 1,
           },
-          panel: {
+          panels: {
             type: 'object',
-            required: [
-              'enabled',
-              'placement',
-              'mode',
-              'showPatientNames',
-              'calledTextPreset',
-              'calledTextCustom',
-              'arrivedTextPreset',
-              'arrivedTextCustom',
-            ],
+            required: ['outside', 'inside'],
             additionalProperties: false,
             properties: {
-              enabled: {
-                type: 'boolean',
-              },
-              placement: {
-                type: 'string',
-                enum: ['outside', 'inside'],
-              },
-              mode: {
-                type: 'string',
-                enum: ['display_only', 'arrival', 'staff_full'],
-              },
-              showPatientNames: {
-                type: 'boolean',
-              },
-              calledTextPreset: {
-                type: 'string',
-                enum: [
-                  'you_are_right',
-                  'please_wait_here',
-                  'please_enter',
-                  'go_to_reception',
-                  'custom',
+              outside: {
+                type: 'object',
+                required: [
+                  'enabled',
+                  'mode',
+                  'showPatientNames',
+                  'allowCalling',
+                  'calledTextPreset',
+                  'calledTextCustom',
+                  'arrivedTextPreset',
+                  'arrivedTextCustom',
                 ],
+                additionalProperties: false,
+                properties: {
+                  enabled: {
+                    type: 'boolean',
+                  },
+                  mode: {
+                    type: 'string',
+                    enum: ['display_only', 'arrival', 'staff_full'],
+                  },
+                  showPatientNames: {
+                    type: 'boolean',
+                  },
+                  allowCalling: {
+                    type: 'boolean',
+                  },
+                  calledTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  calledTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                  arrivedTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  arrivedTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                },
               },
-              calledTextCustom: {
-                type: ['string', 'null'],
-                maxLength: 80,
-              },
-              arrivedTextPreset: {
-                type: 'string',
-                enum: [
-                  'you_are_right',
-                  'please_wait_here',
-                  'please_enter',
-                  'go_to_reception',
-                  'custom',
+              inside: {
+                type: 'object',
+                required: [
+                  'enabled',
+                  'mode',
+                  'showPatientNames',
+                  'allowCalling',
+                  'calledTextPreset',
+                  'calledTextCustom',
+                  'arrivedTextPreset',
+                  'arrivedTextCustom',
                 ],
-              },
-              arrivedTextCustom: {
-                type: ['string', 'null'],
-                maxLength: 80,
+                additionalProperties: false,
+                properties: {
+                  enabled: {
+                    type: 'boolean',
+                  },
+                  mode: {
+                    type: 'string',
+                    enum: ['display_only', 'arrival', 'staff_full'],
+                  },
+                  showPatientNames: {
+                    type: 'boolean',
+                  },
+                  allowCalling: {
+                    type: 'boolean',
+                  },
+                  calledTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  calledTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                  arrivedTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  arrivedTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                },
               },
             },
           },
@@ -2161,61 +2368,124 @@ export const GET_api_v1_ops_settingsResponse200 = {
             type: ['integer', 'null'],
             minimum: 1,
           },
-          panel: {
+          panels: {
             type: 'object',
-            required: [
-              'enabled',
-              'placement',
-              'mode',
-              'showPatientNames',
-              'calledTextPreset',
-              'calledTextCustom',
-              'arrivedTextPreset',
-              'arrivedTextCustom',
-            ],
+            required: ['outside', 'inside'],
             additionalProperties: false,
             properties: {
-              enabled: {
-                type: 'boolean',
-              },
-              placement: {
-                type: 'string',
-                enum: ['outside', 'inside'],
-              },
-              mode: {
-                type: 'string',
-                enum: ['display_only', 'arrival', 'staff_full'],
-              },
-              showPatientNames: {
-                type: 'boolean',
-              },
-              calledTextPreset: {
-                type: 'string',
-                enum: [
-                  'you_are_right',
-                  'please_wait_here',
-                  'please_enter',
-                  'go_to_reception',
-                  'custom',
+              outside: {
+                type: 'object',
+                required: [
+                  'enabled',
+                  'mode',
+                  'showPatientNames',
+                  'allowCalling',
+                  'calledTextPreset',
+                  'calledTextCustom',
+                  'arrivedTextPreset',
+                  'arrivedTextCustom',
                 ],
+                additionalProperties: false,
+                properties: {
+                  enabled: {
+                    type: 'boolean',
+                  },
+                  mode: {
+                    type: 'string',
+                    enum: ['display_only', 'arrival', 'staff_full'],
+                  },
+                  showPatientNames: {
+                    type: 'boolean',
+                  },
+                  allowCalling: {
+                    type: 'boolean',
+                  },
+                  calledTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  calledTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                  arrivedTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  arrivedTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                },
               },
-              calledTextCustom: {
-                type: ['string', 'null'],
-                maxLength: 80,
-              },
-              arrivedTextPreset: {
-                type: 'string',
-                enum: [
-                  'you_are_right',
-                  'please_wait_here',
-                  'please_enter',
-                  'go_to_reception',
-                  'custom',
+              inside: {
+                type: 'object',
+                required: [
+                  'enabled',
+                  'mode',
+                  'showPatientNames',
+                  'allowCalling',
+                  'calledTextPreset',
+                  'calledTextCustom',
+                  'arrivedTextPreset',
+                  'arrivedTextCustom',
                 ],
-              },
-              arrivedTextCustom: {
-                type: ['string', 'null'],
-                maxLength: 80,
+                additionalProperties: false,
+                properties: {
+                  enabled: {
+                    type: 'boolean',
+                  },
+                  mode: {
+                    type: 'string',
+                    enum: ['display_only', 'arrival', 'staff_full'],
+                  },
+                  showPatientNames: {
+                    type: 'boolean',
+                  },
+                  allowCalling: {
+                    type: 'boolean',
+                  },
+                  calledTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  calledTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                  arrivedTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  arrivedTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                },
               },
             },
           },
@@ -2491,51 +2761,103 @@ export const PATCH_api_v1_ops_settingsRequestBody = {
             type: ['integer', 'null'],
             minimum: 1,
           },
-          panel: {
+          panels: {
             type: 'object',
             additionalProperties: false,
             properties: {
-              enabled: {
-                type: 'boolean',
+              outside: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  enabled: {
+                    type: 'boolean',
+                  },
+                  mode: {
+                    type: 'string',
+                    enum: ['display_only', 'arrival', 'staff_full'],
+                  },
+                  showPatientNames: {
+                    type: 'boolean',
+                  },
+                  allowCalling: {
+                    type: 'boolean',
+                  },
+                  calledTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  calledTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                  arrivedTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  arrivedTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                },
               },
-              placement: {
-                type: 'string',
-                enum: ['outside', 'inside'],
-              },
-              mode: {
-                type: 'string',
-                enum: ['display_only', 'arrival', 'staff_full'],
-              },
-              showPatientNames: {
-                type: 'boolean',
-              },
-              calledTextPreset: {
-                type: 'string',
-                enum: [
-                  'you_are_right',
-                  'please_wait_here',
-                  'please_enter',
-                  'go_to_reception',
-                  'custom',
-                ],
-              },
-              calledTextCustom: {
-                type: ['string', 'null'],
-                maxLength: 80,
-              },
-              arrivedTextPreset: {
-                type: 'string',
-                enum: [
-                  'you_are_right',
-                  'please_wait_here',
-                  'please_enter',
-                  'go_to_reception',
-                  'custom',
-                ],
-              },
-              arrivedTextCustom: {
-                type: ['string', 'null'],
-                maxLength: 80,
+              inside: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  enabled: {
+                    type: 'boolean',
+                  },
+                  mode: {
+                    type: 'string',
+                    enum: ['display_only', 'arrival', 'staff_full'],
+                  },
+                  showPatientNames: {
+                    type: 'boolean',
+                  },
+                  allowCalling: {
+                    type: 'boolean',
+                  },
+                  calledTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  calledTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                  arrivedTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  arrivedTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                },
               },
             },
           },
@@ -3010,61 +3332,124 @@ export const PATCH_api_v1_ops_settingsResponse200 = {
             type: ['integer', 'null'],
             minimum: 1,
           },
-          panel: {
+          panels: {
             type: 'object',
-            required: [
-              'enabled',
-              'placement',
-              'mode',
-              'showPatientNames',
-              'calledTextPreset',
-              'calledTextCustom',
-              'arrivedTextPreset',
-              'arrivedTextCustom',
-            ],
+            required: ['outside', 'inside'],
             additionalProperties: false,
             properties: {
-              enabled: {
-                type: 'boolean',
-              },
-              placement: {
-                type: 'string',
-                enum: ['outside', 'inside'],
-              },
-              mode: {
-                type: 'string',
-                enum: ['display_only', 'arrival', 'staff_full'],
-              },
-              showPatientNames: {
-                type: 'boolean',
-              },
-              calledTextPreset: {
-                type: 'string',
-                enum: [
-                  'you_are_right',
-                  'please_wait_here',
-                  'please_enter',
-                  'go_to_reception',
-                  'custom',
+              outside: {
+                type: 'object',
+                required: [
+                  'enabled',
+                  'mode',
+                  'showPatientNames',
+                  'allowCalling',
+                  'calledTextPreset',
+                  'calledTextCustom',
+                  'arrivedTextPreset',
+                  'arrivedTextCustom',
                 ],
+                additionalProperties: false,
+                properties: {
+                  enabled: {
+                    type: 'boolean',
+                  },
+                  mode: {
+                    type: 'string',
+                    enum: ['display_only', 'arrival', 'staff_full'],
+                  },
+                  showPatientNames: {
+                    type: 'boolean',
+                  },
+                  allowCalling: {
+                    type: 'boolean',
+                  },
+                  calledTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  calledTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                  arrivedTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  arrivedTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                },
               },
-              calledTextCustom: {
-                type: ['string', 'null'],
-                maxLength: 80,
-              },
-              arrivedTextPreset: {
-                type: 'string',
-                enum: [
-                  'you_are_right',
-                  'please_wait_here',
-                  'please_enter',
-                  'go_to_reception',
-                  'custom',
+              inside: {
+                type: 'object',
+                required: [
+                  'enabled',
+                  'mode',
+                  'showPatientNames',
+                  'allowCalling',
+                  'calledTextPreset',
+                  'calledTextCustom',
+                  'arrivedTextPreset',
+                  'arrivedTextCustom',
                 ],
-              },
-              arrivedTextCustom: {
-                type: ['string', 'null'],
-                maxLength: 80,
+                additionalProperties: false,
+                properties: {
+                  enabled: {
+                    type: 'boolean',
+                  },
+                  mode: {
+                    type: 'string',
+                    enum: ['display_only', 'arrival', 'staff_full'],
+                  },
+                  showPatientNames: {
+                    type: 'boolean',
+                  },
+                  allowCalling: {
+                    type: 'boolean',
+                  },
+                  calledTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  calledTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                  arrivedTextPreset: {
+                    type: 'string',
+                    enum: [
+                      'you_are_right',
+                      'please_wait_here',
+                      'please_enter',
+                      'go_to_reception',
+                      'custom',
+                    ],
+                  },
+                  arrivedTextCustom: {
+                    type: ['string', 'null'],
+                    maxLength: 80,
+                  },
+                },
               },
             },
           },
@@ -5981,6 +6366,8 @@ export const POST_api_v1_ops_day_close_startResponse409 = {
 } as const;
 
 export const opsSchemas = {
+  RoomPanelPlacementConfig,
+  RoomPanelsSettings,
   OpsStateResponse,
   BusinessDayResetResponse,
   BusinessDayResetRequest,

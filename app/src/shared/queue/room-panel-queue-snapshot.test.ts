@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
+import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
 import type { CoreDatabase } from '../db/database.js';
 import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS } from '../checkin-topic-settings.js';
 import type { CheckinSessionDeps } from '../db/database-checkin-sessions.js';
@@ -52,16 +53,17 @@ function panelTestSettings(showPatientNames = false): OpsSettings {
         enabled: true,
         defaultCallTarget: false,
         maxOccupancy: null,
-        panel: {
-          enabled: true,
-          placement: 'outside',
-          mode: 'arrival',
-          showPatientNames,
-          calledTextPreset: 'please_enter',
-          calledTextCustom: null,
-          arrivedTextPreset: 'please_wait_here',
-          arrivedTextCustom: null,
-        },
+        panels: normalizeRoomPanelsSettings({
+          outside: {
+            enabled: true,
+            mode: 'arrival',
+            showPatientNames,
+            calledTextPreset: 'please_enter',
+            calledTextCustom: null,
+            arrivedTextPreset: 'please_wait_here',
+            arrivedTextCustom: null,
+          },
+        }),
       },
     ],
     contactLookupFolderPath: null,
@@ -177,8 +179,14 @@ test('buildRoomPanelQueueSnapshot includes identityRef only when room setting al
   sqlite.exec('PRAGMA foreign_keys = ON');
   ensureFlowCoreSchema(sqlite);
   const settings = panelTestSettings(true);
-  settings.rooms.find((room) => room.roomId === 'labor')!.panel!.placement = 'inside';
-  settings.rooms.find((room) => room.roomId === 'labor')!.panel!.mode = 'staff_full';
+  const labor = settings.rooms.find((room) => room.roomId === 'labor')!;
+  labor.panels = normalizeRoomPanelsSettings({
+    inside: {
+      enabled: true,
+      mode: 'staff_full',
+      showPatientNames: true,
+    },
+  });
   syncFlowCoreCatalog(sqlite, settings);
 
   sqlite.exec(`

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test, { afterEach, beforeEach } from 'node:test';
 import Fastify from 'fastify';
+import { DEFAULT_ROOM_PANELS_SETTINGS, normalizeRoomPanelsSettings } from '@praxis-flow/domain';
 import { registerClientAuth } from '../auth/client-auth.js';
 import {
   createStaffSessionManager,
@@ -111,16 +112,27 @@ async function buildAuthApp(): Promise<ReturnType<typeof Fastify>> {
           enabled: true,
           defaultCallTarget: false,
           maxOccupancy: null,
-          panel: {
-            enabled: true,
-            placement: 'outside',
-            mode: 'arrival',
-            showPatientNames: false,
-            calledTextPreset: 'please_enter',
-            calledTextCustom: null,
-            arrivedTextPreset: 'please_wait_here',
-            arrivedTextCustom: null,
-          },
+          panels: normalizeRoomPanelsSettings({
+            outside: {
+              enabled: true,
+              mode: 'arrival',
+              showPatientNames: false,
+              calledTextPreset: 'please_enter',
+              calledTextCustom: null,
+              arrivedTextPreset: 'please_wait_here',
+              arrivedTextCustom: null,
+            },
+            inside: {
+              enabled: true,
+              mode: 'staff_full',
+              showPatientNames: false,
+              allowCalling: false,
+              calledTextPreset: 'please_enter',
+              calledTextCustom: null,
+              arrivedTextPreset: 'please_wait_here',
+              arrivedTextCustom: null,
+            },
+          }),
         },
         {
           roomId: 'korridor',
@@ -128,16 +140,17 @@ async function buildAuthApp(): Promise<ReturnType<typeof Fastify>> {
           enabled: true,
           defaultCallTarget: false,
           maxOccupancy: null,
-          panel: {
-            enabled: true,
-            placement: 'outside',
-            mode: 'display_only',
-            showPatientNames: false,
-            calledTextPreset: 'please_enter',
-            calledTextCustom: null,
-            arrivedTextPreset: 'please_wait_here',
-            arrivedTextCustom: null,
-          },
+          panels: normalizeRoomPanelsSettings({
+            outside: {
+              enabled: true,
+              mode: 'display_only',
+              showPatientNames: false,
+              calledTextPreset: 'please_enter',
+              calledTextCustom: null,
+              arrivedTextPreset: 'please_wait_here',
+              arrivedTextCustom: null,
+            },
+          }),
         },
         {
           roomId: 'rezeption',
@@ -145,16 +158,17 @@ async function buildAuthApp(): Promise<ReturnType<typeof Fastify>> {
           enabled: true,
           defaultCallTarget: false,
           maxOccupancy: null,
-          panel: {
-            enabled: true,
-            placement: 'inside',
-            mode: 'display_only',
-            showPatientNames: true,
-            calledTextPreset: 'please_enter',
-            calledTextCustom: null,
-            arrivedTextPreset: 'please_wait_here',
-            arrivedTextCustom: null,
-          },
+          panels: normalizeRoomPanelsSettings({
+            inside: {
+              enabled: true,
+              mode: 'display_only',
+              showPatientNames: true,
+              calledTextPreset: 'please_enter',
+              calledTextCustom: null,
+              arrivedTextPreset: 'please_wait_here',
+              arrivedTextCustom: null,
+            },
+          }),
         },
         {
           roomId: 'archiv',
@@ -162,16 +176,7 @@ async function buildAuthApp(): Promise<ReturnType<typeof Fastify>> {
           enabled: true,
           defaultCallTarget: false,
           maxOccupancy: null,
-          panel: {
-            enabled: false,
-            placement: 'outside',
-            mode: 'display_only',
-            showPatientNames: false,
-            calledTextPreset: 'please_enter',
-            calledTextCustom: null,
-            arrivedTextPreset: 'please_wait_here',
-            arrivedTextCustom: null,
-          },
+          panels: DEFAULT_ROOM_PANELS_SETTINGS,
         },
       ],
     }),
@@ -268,6 +273,13 @@ test('room-panel rooms endpoint lists only enabled panel rooms', async () => {
         requiresPin: false,
       },
       {
+        roomId: 'labor',
+        roomLabel: 'Labor',
+        placement: 'inside',
+        mode: 'staff_full',
+        requiresPin: true,
+      },
+      {
         roomId: 'korridor',
         roomLabel: 'Korridor',
         placement: 'outside',
@@ -294,7 +306,7 @@ test('room-panel login creates scoped room-panel session cookie', async () => {
   const login = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', pin: '2222' },
+    payload: { roomId: 'labor', placement: 'outside', pin: '2222' },
   });
 
   assert.equal(login.statusCode, 200);
@@ -320,6 +332,36 @@ test('room-panel login creates scoped room-panel session cookie', async () => {
   await app.close();
 });
 
+test('room-panel login resolves placement when outside and inside are both enabled', async () => {
+  enableTestAuth();
+  const app = await buildAuthApp();
+
+  const outsideLogin = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/room-panel/login',
+    payload: { roomId: 'labor', placement: 'outside', pin: '' },
+  });
+  assert.equal(outsideLogin.statusCode, 200);
+  assert.equal(outsideLogin.json().placement, 'outside');
+
+  const insideLogin = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/room-panel/login',
+    payload: { roomId: 'labor', placement: 'inside', pin: '2222' },
+  });
+  assert.equal(insideLogin.statusCode, 200);
+  assert.equal(insideLogin.json().placement, 'inside');
+
+  const missingPlacement = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/room-panel/login',
+    payload: { roomId: 'labor', pin: '' },
+  });
+  assert.equal(missingPlacement.statusCode, 400);
+
+  await app.close();
+});
+
 test('multiple room-panel sessions can use the same room profile', async () => {
   enableTestAuth();
   const app = await buildAuthApp();
@@ -327,14 +369,14 @@ test('multiple room-panel sessions can use the same room profile', async () => {
   const firstLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', pin: '' },
+    payload: { roomId: 'labor', placement: 'outside', pin: '' },
   });
   const firstCookie = readSetCookie(firstLogin);
 
   const secondLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', pin: '' },
+    payload: { roomId: 'labor', placement: 'outside', pin: '' },
   });
   assert.equal(secondLogin.statusCode, 200);
 
@@ -357,7 +399,7 @@ test('outside room-panel sessions are capped per client without blocking PIN log
     const login = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/room-panel/login',
-      payload: { roomId: 'labor', pin: '' },
+      payload: { roomId: 'labor', placement: 'outside', pin: '' },
     });
     assert.equal(login.statusCode, 200);
   }
@@ -365,14 +407,14 @@ test('outside room-panel sessions are capped per client without blocking PIN log
   const capped = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', pin: '' },
+    payload: { roomId: 'labor', placement: 'outside', pin: '' },
   });
   assert.equal(capped.statusCode, 429);
 
   const protectedLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'rezeption', pin: '2222' },
+    payload: { roomId: 'rezeption', placement: 'inside', pin: '2222' },
   });
   assert.equal(protectedLogin.statusCode, 200);
 
@@ -386,7 +428,7 @@ test('room-panel login allows empty pin for display_only without patient names',
   const login = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'korridor', pin: '' },
+    payload: { roomId: 'korridor', placement: 'outside', pin: '' },
   });
 
   assert.equal(login.statusCode, 200);
@@ -410,14 +452,14 @@ test('room-panel login allows outside interaction and requires pin inside', asyn
   const patientArrival = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', pin: '' },
+    payload: { roomId: 'labor', placement: 'outside', pin: '' },
   });
   assert.equal(patientArrival.statusCode, 200);
 
   const namedDisplay = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'rezeption', pin: '' },
+    payload: { roomId: 'rezeption', placement: 'inside', pin: '' },
   });
   assert.equal(namedDisplay.statusCode, 401);
 
@@ -431,14 +473,14 @@ test('room-panel login rejects wrong pin and disabled panel room', async () => {
   const wrongPin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'rezeption', pin: '0000' },
+    payload: { roomId: 'rezeption', placement: 'inside', pin: '0000' },
   });
   assert.equal(wrongPin.statusCode, 401);
 
   const disabledRoom = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'archiv', pin: '2222' },
+    payload: { roomId: 'archiv', placement: 'outside', pin: '2222' },
   });
   assert.equal(disabledRoom.statusCode, 404);
 
@@ -605,14 +647,14 @@ test('MFA can rotate shared room panel PIN after entering current MFA PIN', asyn
   const existingPanelLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'rezeption', pin: '2222' },
+    payload: { roomId: 'rezeption', placement: 'inside', pin: '2222' },
   });
   assert.equal(existingPanelLogin.statusCode, 200);
   const existingPanelCookie = readSetCookie(existingPanelLogin);
   const outsidePanelLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', pin: '' },
+    payload: { roomId: 'labor', placement: 'outside', pin: '' },
   });
   assert.equal(outsidePanelLogin.statusCode, 200);
   const outsidePanelCookie = readSetCookie(outsidePanelLogin);
@@ -629,14 +671,14 @@ test('MFA can rotate shared room panel PIN after entering current MFA PIN', asyn
   const oldLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'rezeption', pin: '2222' },
+    payload: { roomId: 'rezeption', placement: 'inside', pin: '2222' },
   });
   assert.equal(oldLogin.statusCode, 401);
 
   const newLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'rezeption', pin: '4444' },
+    payload: { roomId: 'rezeption', placement: 'inside', pin: '4444' },
   });
   assert.equal(newLogin.statusCode, 200);
 
@@ -673,7 +715,7 @@ test('PIN rotation rejects wrong current MFA PIN', async () => {
   const panelLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', pin: '2222' },
+    payload: { roomId: 'labor', placement: 'outside', pin: '2222' },
   });
   assert.equal(panelLogin.statusCode, 200);
 
@@ -841,21 +883,21 @@ test('room-panel login treats SQL metacharacter fields as data', async () => {
   const injectedRoom = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: "rezeption' OR '1'='1", pin: '2222' },
+    payload: { roomId: "rezeption' OR '1'='1", placement: 'inside', pin: '2222' },
   });
   assert.equal(injectedRoom.statusCode, 404);
 
   const injectedPin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'rezeption', pin: "2222' OR '1'='1" },
+    payload: { roomId: 'rezeption', placement: 'inside', pin: "2222' OR '1'='1" },
   });
   assert.equal(injectedPin.statusCode, 401);
 
   const validLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'rezeption', pin: '2222' },
+    payload: { roomId: 'rezeption', placement: 'inside', pin: '2222' },
   });
   assert.equal(validLogin.statusCode, 200);
 

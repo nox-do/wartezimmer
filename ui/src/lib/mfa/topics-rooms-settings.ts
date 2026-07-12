@@ -10,7 +10,7 @@ import {
   normalizeRoomsForSave,
   normalizeTopicsForSave,
   patchOpsSettings,
-  type PracticeRoomWithPanel,
+  type PracticeRoomWithPanels,
   type PracticeTopicSetting,
 } from '$lib/queue/ops-settings-api';
 import { roomGuardErrorMessage, type RoomQueueGuardContext } from '$lib/queue/room-removal-guard';
@@ -29,7 +29,7 @@ import { t, tf } from '$lib/i18n/i18nStore.svelte';
 import { toastStore } from '$lib/stores/toastStore';
 
 export type TopicsRoomsSettings = {
-  rooms: PracticeRoomWithPanel[];
+  rooms: PracticeRoomWithPanels[];
   topics: PracticeTopicSetting[];
   journeySettings: JourneySettings;
   routingCapabilities: RoutingCapabilities;
@@ -76,7 +76,7 @@ export async function loadTopicsRoomsSettings(): Promise<TopicsRoomsSettings | n
 }
 
 export async function persistTopicsRoomsSettings(
-  rooms: PracticeRoomWithPanel[],
+  rooms: PracticeRoomWithPanels[],
   topics: PracticeTopicSetting[],
   options?: PersistTopicsRoomsOptions,
 ): Promise<TopicsRoomsSettings | null> {

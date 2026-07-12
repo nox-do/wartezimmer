@@ -1,4 +1,9 @@
 import { roomPanelRequiresPin } from '../auth/room-panel-login.js';
+import {
+  listEnabledRoomPanelPlacements,
+  roomPanelConfigForPlacement,
+  type RoomPanelPlacement,
+} from '@praxis-flow/domain';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { authSchemas } from '../api/generated/auth.fastify-schemas.js';
 import { createRateLimiter } from '../http/simple-rate-limit.js';
@@ -45,8 +50,13 @@ type LoginBody = {
 
 type RoomPanelLoginBody = {
   roomId?: string;
+  placement?: RoomPanelPlacement;
   pin?: string;
 };
+
+function isRoomPanelPlacement(value: string | undefined): value is RoomPanelPlacement {
+  return value === 'outside' || value === 'inside';
+}
 
 type ChangePinBody = {
   currentPin?: string;
@@ -89,18 +99,19 @@ function recordPairingDevicePresence(role: DeviceSessionRole, displayId: string)
 function listEnabledRoomPanelRooms(db: AuthRoutesDb) {
   return db
     .getOpsSettings()
-    .rooms.filter((room) => room.enabled && room.panel?.enabled === true)
-    .map((room) => {
-      const mode = room.panel?.mode ?? 'display_only';
-      const placement = room.panel?.placement ?? 'outside';
-      return {
-        roomId: room.roomId,
-        roomLabel: room.roomLabel,
-        placement,
-        mode,
-        requiresPin: roomPanelRequiresPin(placement),
-      };
-    });
+    .rooms.filter((room) => room.enabled)
+    .flatMap((room) =>
+      listEnabledRoomPanelPlacements(room).map((placement) => {
+        const config = roomPanelConfigForPlacement(room, placement);
+        return {
+          roomId: room.roomId,
+          roomLabel: room.roomLabel,
+          placement,
+          mode: config.mode,
+          requiresPin: roomPanelRequiresPin(placement),
+        };
+      }),
+    );
 }
 
 function getCurrentAuthConfig(db: AuthRoutesDb) {
@@ -318,6 +329,7 @@ export function registerAuthRoutes(
         body: authSchemas.POST_api_v1_auth_room_panel_loginRequestBody,
         response: {
           200: authSchemas.POST_api_v1_auth_room_panel_loginResponse200,
+          400: authSchemas.POST_api_v1_auth_room_panel_loginResponse400,
           401: authSchemas.POST_api_v1_auth_room_panel_loginResponse401,
           404: authSchemas.POST_api_v1_auth_room_panel_loginResponse404,
           429: authSchemas.POST_api_v1_auth_room_panel_loginResponse429,
@@ -327,9 +339,19 @@ export function registerAuthRoutes(
     async (request, reply) => {
       const clientKey = request.ip?.trim() || 'unknown';
       const roomId = request.body.roomId?.trim() ?? '';
+      const placement = request.body.placement;
       const pin = request.body.pin?.trim() ?? '';
 
-      const room = listEnabledRoomPanelRooms(db).find((entry) => entry.roomId === roomId);
+      if (!isRoomPanelPlacement(placement)) {
+        return reply.code(400).send({
+          code: 'INVALID_ARGUMENT',
+          message: 'Room panel placement must be outside or inside.',
+        });
+      }
+
+      const room = listEnabledRoomPanelRooms(db).find(
+        (entry) => entry.roomId === roomId && entry.placement === placement,
+      );
       if (!room) {
         return reply.code(404).send({ code: 'NOT_FOUND', message: 'Room panel room not found.' });
       }
@@ -353,6 +375,7 @@ export function registerAuthRoutes(
       sessions.revokeSession(readCookieValue(request, getRoomPanelSessionCookieName()));
       if (
         !room.requiresPin &&
+        placement === 'outside' &&
         sessions.countRoomPanelSessions({ clientKey, placement: 'outside' }) >=
           maxOutsideSessionsPerClient
       ) {

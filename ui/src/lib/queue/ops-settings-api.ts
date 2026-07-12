@@ -9,9 +9,13 @@ import type {
 import { ensureSingleDefaultCallTarget } from './room-default-call-target';
 import { normalizeMaxOccupancy } from './room-capacity';
 import {
-  DEFAULT_ROOM_PANEL_SETTINGS,
+  DEFAULT_ROOM_PANELS_SETTINGS,
   isValidConfigurableTopicId as isValidTopicId,
-  normalizeRoomPanelSettings,
+  listEnabledRoomPanelPlacements,
+  normalizeRoomPanelsSettings,
+  roomHasAnyEnabledPanel,
+  roomPanelConfigForPlacement,
+  roomPanelsOrDefault,
   ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
   ROOM_PANEL_MODES,
   ROOM_PANEL_PLACEMENTS,
@@ -19,7 +23,8 @@ import {
   slugifyTopicId,
   type RoomPanelMode,
   type RoomPanelPlacement,
-  type RoomPanelSettings,
+  type RoomPanelPlacementConfig,
+  type RoomPanelsSettings,
   type RoomPanelTextPreset,
 } from '@praxis-flow/domain';
 
@@ -32,18 +37,23 @@ export type {
 export { isValidTopicId, slugifyTopicId };
 
 export {
-  DEFAULT_ROOM_PANEL_SETTINGS,
+  DEFAULT_ROOM_PANELS_SETTINGS,
   ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
   ROOM_PANEL_MODES,
   ROOM_PANEL_PLACEMENTS,
   ROOM_PANEL_TEXT_PRESETS,
+  listEnabledRoomPanelPlacements,
+  roomHasAnyEnabledPanel,
+  roomPanelConfigForPlacement,
+  roomPanelsOrDefault,
   type RoomPanelMode,
   type RoomPanelPlacement,
-  type RoomPanelSettings,
+  type RoomPanelPlacementConfig,
+  type RoomPanelsSettings,
   type RoomPanelTextPreset,
 };
 
-export type PracticeRoomWithPanel = PracticeRoom;
+export type PracticeRoomWithPanels = PracticeRoom;
 
 export async function fetchOpsSettings() {
   return cookieAuthFetch<OpsSettingsResponse>('/api/v1/ops/settings');
@@ -124,14 +134,18 @@ export function normalizeRoomIdInput(value: string): string {
   return value.trim().toLowerCase();
 }
 
-export function roomPanelSettingsOrDefault(room: PracticeRoomWithPanel): RoomPanelSettings {
+export function emptyRoomPanels(): PracticeRoomWithPanels {
   return {
-    ...DEFAULT_ROOM_PANEL_SETTINGS,
-    ...(room.panel ?? {}),
+    roomId: '',
+    roomLabel: '',
+    enabled: true,
+    defaultCallTarget: false,
+    maxOccupancy: null,
+    panels: { ...DEFAULT_ROOM_PANELS_SETTINGS },
   };
 }
 
-export function normalizeRoomsForSave(rooms: PracticeRoomWithPanel[]): PracticeRoomWithPanel[] {
+export function normalizeRoomsForSave(rooms: PracticeRoomWithPanels[]): PracticeRoomWithPanels[] {
   const normalized = rooms
     .map((room) => {
       return {
@@ -140,7 +154,7 @@ export function normalizeRoomsForSave(rooms: PracticeRoomWithPanel[]): PracticeR
         enabled: room.enabled,
         defaultCallTarget: room.defaultCallTarget === true,
         maxOccupancy: normalizeMaxOccupancy(room.maxOccupancy ?? null),
-        panel: normalizeRoomPanelSettings(room.panel),
+        panels: normalizeRoomPanelsSettings(room.panels),
       };
     })
     .filter((room) => room.roomId.length > 0 && room.roomLabel.length > 0);

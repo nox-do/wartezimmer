@@ -91,10 +91,14 @@ export {
   DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG,
   DEFAULT_ROOM_PANEL_SETTINGS,
   DEFAULT_ROOM_PANELS_SETTINGS,
+  listEnabledRoomPanelPlacements,
   normalizeRoomPanelCustomText,
   normalizeRoomPanelPlacementConfig,
   normalizeRoomPanelSettings,
   normalizeRoomPanelsSettings,
+  roomHasAnyEnabledPanel,
+  roomPanelConfigForPlacement,
+  roomPanelsOrDefault,
   ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
   ROOM_PANEL_MODES,
   ROOM_PANEL_PLACEMENTS,
@@ -105,6 +109,7 @@ export {
   type RoomPanelSettings,
   type PartialRoomPanelsSettings,
   type RoomPanelsSettings,
+  type RoomWithPanels,
   type RoomPanelTextPreset,
 } from './room-panel-settings.js';
 export {

@@ -227,29 +227,53 @@ export interface paths {
               enabled?: boolean;
               defaultCallTarget?: boolean;
               maxOccupancy?: number | null;
-              panel?: {
-                enabled?: boolean;
-                /** @enum {string} */
-                placement?: 'outside' | 'inside';
-                /** @enum {string} */
-                mode?: 'display_only' | 'arrival' | 'staff_full';
-                showPatientNames?: boolean;
-                /** @enum {string} */
-                calledTextPreset?:
-                  | 'you_are_right'
-                  | 'please_wait_here'
-                  | 'please_enter'
-                  | 'go_to_reception'
-                  | 'custom';
-                calledTextCustom?: string | null;
-                /** @enum {string} */
-                arrivedTextPreset?:
-                  | 'you_are_right'
-                  | 'please_wait_here'
-                  | 'please_enter'
-                  | 'go_to_reception'
-                  | 'custom';
-                arrivedTextCustom?: string | null;
+              panels?: {
+                outside?: {
+                  enabled?: boolean;
+                  /** @enum {string} */
+                  mode?: 'display_only' | 'arrival' | 'staff_full';
+                  showPatientNames?: boolean;
+                  allowCalling?: boolean;
+                  /** @enum {string} */
+                  calledTextPreset?:
+                    | 'you_are_right'
+                    | 'please_wait_here'
+                    | 'please_enter'
+                    | 'go_to_reception'
+                    | 'custom';
+                  calledTextCustom?: string | null;
+                  /** @enum {string} */
+                  arrivedTextPreset?:
+                    | 'you_are_right'
+                    | 'please_wait_here'
+                    | 'please_enter'
+                    | 'go_to_reception'
+                    | 'custom';
+                  arrivedTextCustom?: string | null;
+                };
+                inside?: {
+                  enabled?: boolean;
+                  /** @enum {string} */
+                  mode?: 'display_only' | 'arrival' | 'staff_full';
+                  showPatientNames?: boolean;
+                  allowCalling?: boolean;
+                  /** @enum {string} */
+                  calledTextPreset?:
+                    | 'you_are_right'
+                    | 'please_wait_here'
+                    | 'please_enter'
+                    | 'go_to_reception'
+                    | 'custom';
+                  calledTextCustom?: string | null;
+                  /** @enum {string} */
+                  arrivedTextPreset?:
+                    | 'you_are_right'
+                    | 'please_wait_here'
+                    | 'please_enter'
+                    | 'go_to_reception'
+                    | 'custom';
+                  arrivedTextCustom?: string | null;
+                };
               };
             }[];
             contactLookupFolderPath?: string | null;
@@ -1328,6 +1352,35 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    RoomPanelPlacementConfig: {
+      enabled: boolean;
+      /** @enum {string} */
+      mode: 'display_only' | 'arrival' | 'staff_full';
+      /** @description Patient names are only allowed for inside panels when explicitly enabled. */
+      showPatientNames: boolean;
+      /** @description Inside panels only — enables queue call from the room tablet. */
+      allowCalling: boolean;
+      /** @enum {string} */
+      calledTextPreset:
+        | 'you_are_right'
+        | 'please_wait_here'
+        | 'please_enter'
+        | 'go_to_reception'
+        | 'custom';
+      calledTextCustom: string | null;
+      /** @enum {string} */
+      arrivedTextPreset:
+        | 'you_are_right'
+        | 'please_wait_here'
+        | 'please_enter'
+        | 'go_to_reception'
+        | 'custom';
+      arrivedTextCustom: string | null;
+    };
+    RoomPanelsSettings: {
+      outside: components['schemas']['RoomPanelPlacementConfig'];
+      inside: components['schemas']['RoomPanelPlacementConfig'];
+    };
     OpsStateResponse: {
       checkinLocked: boolean;
       /** @enum {string} */
@@ -1529,31 +1582,7 @@ export interface components {
         defaultCallTarget?: boolean;
         /** @description Maximum concurrent called or in-room tickets assigned to this room. Null or omitted means unlimited. */
         maxOccupancy?: number | null;
-        panel?: {
-          enabled: boolean;
-          /** @enum {string} */
-          placement: 'outside' | 'inside';
-          /** @enum {string} */
-          mode: 'display_only' | 'arrival' | 'staff_full';
-          /** @description Patient names are only allowed for panels placed inside the room and when explicitly enabled. */
-          showPatientNames: boolean;
-          /** @enum {string} */
-          calledTextPreset:
-            | 'you_are_right'
-            | 'please_wait_here'
-            | 'please_enter'
-            | 'go_to_reception'
-            | 'custom';
-          calledTextCustom: string | null;
-          /** @enum {string} */
-          arrivedTextPreset:
-            | 'you_are_right'
-            | 'please_wait_here'
-            | 'please_enter'
-            | 'go_to_reception'
-            | 'custom';
-          arrivedTextCustom: string | null;
-        };
+        panels?: components['schemas']['RoomPanelsSettings'];
       }[];
       /** @description Absolute path to patient/contact import folder inside CONTACT_LOOKUP_BASE_PATH (e.g. /imports or /imports/pvs when IMPORTS_HOST_PATH is mounted). CSV files are scanned recursively. */
       contactLookupFolderPath: string | null;

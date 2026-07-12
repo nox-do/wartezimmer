@@ -2,21 +2,23 @@
   import Modal from '$lib/components/Modal.svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import type {
-    PracticeRoomWithPanel,
+    PracticeRoomWithPanels,
     RoomPanelMode,
     RoomPanelPlacement,
     RoomPanelTextPreset,
   } from '$lib/queue/ops-settings-api';
   import {
+    DEFAULT_ROOM_PANELS_SETTINGS,
     ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
     ROOM_PANEL_MODES,
     ROOM_PANEL_PLACEMENTS,
     ROOM_PANEL_TEXT_PRESETS,
     isValidRoomId,
-    roomPanelSettingsOrDefault,
+    roomPanelConfigForPlacement,
+    roomPanelsOrDefault,
   } from '$lib/queue/ops-settings-api';
+  import { updateRoomPanelPlacementConfig } from '$lib/queue/room-panel-settings';
   import { normalizeMaxOccupancy } from '$lib/queue/room-capacity';
-  import { applyRoomPanelPlacement } from '$lib/queue/room-panel-settings';
   import { normalizeRoomPanelCustomText } from '@praxis-flow/domain';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { toastStore } from '$lib/stores/toastStore';
@@ -24,11 +26,11 @@
   interface Props {
     open?: boolean;
     mode?: 'add' | 'edit';
-    draft?: PracticeRoomWithPanel;
+    draft?: PracticeRoomWithPanels;
     roomIdsTaken?: Set<string>;
     canDelete?: boolean;
     busy?: boolean;
-    onApply?: (draft: PracticeRoomWithPanel) => void;
+    onApply?: (draft: PracticeRoomWithPanels) => void;
     onDelete?: () => void;
     onCancel?: () => void;
   }
@@ -42,6 +44,7 @@
       enabled: true,
       defaultCallTarget: false,
       maxOccupancy: null,
+      panels: { ...DEFAULT_ROOM_PANELS_SETTINGS },
     }),
     roomIdsTaken = new Set<string>(),
     canDelete = false,
@@ -54,11 +57,12 @@
   let labelError = $state('');
   let maxOccupancyError = $state('');
   let maxOccupancyInput = $state('');
+  let selectedPlacement = $state<RoomPanelPlacement>('outside');
 
   const modalTitle = $derived(
     mode === 'add' ? t('mfa.settings.roomModalAddTitle') : t('mfa.settings.roomModalEditTitle'),
   );
-  const panelDraft = $derived(roomPanelSettingsOrDefault(draft));
+  const panelDraft = $derived(roomPanelConfigForPlacement(draft, selectedPlacement));
 
   $effect(() => {
     if (!open) {
@@ -66,6 +70,7 @@
     }
     maxOccupancyInput = draft.maxOccupancy == null ? '' : String(draft.maxOccupancy);
     maxOccupancyError = '';
+    selectedPlacement = 'outside';
   });
 
   function updateLabel(roomLabel: string) {
@@ -77,7 +82,7 @@
     return {
       display_only: t('mfa.settings.roomPanelMode_display_only'),
       arrival:
-        panelDraft.placement === 'outside'
+        selectedPlacement === 'outside'
           ? t('mfa.settings.roomPanelMode_arrival_outside')
           : t('mfa.settings.roomPanelMode_arrival_inside'),
       staff_full: t('mfa.settings.roomPanelMode_staff_full'),
@@ -85,7 +90,7 @@
   }
 
   function roomPanelModeGuide(): string {
-    const key = `${panelDraft.placement}_${panelDraft.mode}` as const;
+    const key = `${selectedPlacement}_${panelDraft.mode}` as const;
     const guides: Record<string, string> = {
       outside_display_only: t('mfa.settings.roomPanelModeGuide_outside_display_only'),
       outside_arrival: t('mfa.settings.roomPanelModeGuide_outside_arrival'),
@@ -97,7 +102,7 @@
   }
 
   function updatePanelPlacement(placement: RoomPanelPlacement) {
-    draft = { ...draft, panel: applyRoomPanelPlacement(panelDraft, placement) };
+    selectedPlacement = placement;
   }
 
   function roomPanelTextPresetLabel(preset: RoomPanelTextPreset): string {
@@ -110,13 +115,10 @@
     }[preset];
   }
 
-  function updatePanel(patch: Partial<PracticeRoomWithPanel['panel']>) {
+  function updatePanel(patch: Partial<typeof panelDraft>) {
     draft = {
       ...draft,
-      panel: {
-        ...panelDraft,
-        ...patch,
-      },
+      panels: updateRoomPanelPlacementConfig(roomPanelsOrDefault(draft), selectedPlacement, patch),
     };
   }
 
@@ -173,16 +175,24 @@
     const trimmedMax = maxOccupancyInput.trim();
     const maxOccupancy =
       trimmedMax.length > 0 ? normalizeMaxOccupancy(Number(trimmedMax)) : null;
+    const panels = roomPanelsOrDefault(draft);
     onApply?.({
       roomId: draft.roomId.trim(),
       roomLabel: draft.roomLabel.trim(),
       enabled: draft.enabled,
       defaultCallTarget: draft.defaultCallTarget === true,
       maxOccupancy,
-      panel: {
-        ...panelDraft,
-        calledTextCustom: normalizeRoomPanelCustomText(panelDraft.calledTextCustom),
-        arrivedTextCustom: normalizeRoomPanelCustomText(panelDraft.arrivedTextCustom),
+      panels: {
+        outside: {
+          ...panels.outside,
+          calledTextCustom: normalizeRoomPanelCustomText(panels.outside.calledTextCustom),
+          arrivedTextCustom: normalizeRoomPanelCustomText(panels.outside.arrivedTextCustom),
+        },
+        inside: {
+          ...panels.inside,
+          calledTextCustom: normalizeRoomPanelCustomText(panels.inside.calledTextCustom),
+          arrivedTextCustom: normalizeRoomPanelCustomText(panels.inside.arrivedTextCustom),
+        },
       },
     });
     open = false;
@@ -303,7 +313,7 @@
               type="radio"
               name="room-panel-placement"
               value={placement}
-              checked={panelDraft.placement === placement}
+              checked={selectedPlacement === placement}
               disabled={busy || !panelDraft.enabled}
               onchange={() => updatePanelPlacement(placement)}
             />
@@ -311,7 +321,7 @@
           </label>
         {/each}
         <p class="modal-form-hint">
-          {panelDraft.placement === 'outside'
+          {selectedPlacement === 'outside'
             ? t('mfa.settings.roomPanelPlacementOutsideHint')
             : t('mfa.settings.roomPanelPlacementInsideHint')}
         </p>
@@ -319,7 +329,7 @@
 
       <div class="modal-form-field" role="radiogroup" aria-labelledby="room-panel-mode-label">
         <span id="room-panel-mode-label">{t('mfa.settings.roomPanelMode')}</span>
-        {#each ROOM_PANEL_MODES.filter((mode) => panelDraft.placement === 'inside' || mode !== 'staff_full') as panelMode}
+        {#each ROOM_PANEL_MODES.filter((mode) => selectedPlacement === 'inside' || mode !== 'staff_full') as panelMode}
           <label class="modal-form-check">
             <input
               type="radio"
@@ -337,7 +347,7 @@
         {/if}
       </div>
 
-      {#if panelDraft.placement === 'inside'}
+      {#if selectedPlacement === 'inside'}
         <label class="modal-form-check">
           <input
             type="checkbox"

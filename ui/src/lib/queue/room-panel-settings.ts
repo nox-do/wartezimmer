@@ -1,12 +1,20 @@
 import {
-  applyRoomPanelPlacement as applyRoomPanelPlacementDomain,
+  normalizeRoomPanelPlacementConfig,
   type RoomPanelPlacement,
-  type RoomPanelSettings,
+  type RoomPanelPlacementConfig,
+  type RoomPanelsSettings,
 } from '@praxis-flow/domain';
 
-export function applyRoomPanelPlacement(
-  settings: RoomPanelSettings,
+export function updateRoomPanelPlacementConfig(
+  panels: RoomPanelsSettings,
   placement: RoomPanelPlacement,
-): RoomPanelSettings {
-  return applyRoomPanelPlacementDomain(settings, placement);
+  patch: Partial<RoomPanelPlacementConfig>,
+): RoomPanelsSettings {
+  return {
+    ...panels,
+    [placement]: normalizeRoomPanelPlacementConfig(placement, {
+      ...panels[placement],
+      ...patch,
+    }),
+  };
 }

@@ -54,6 +54,35 @@ export const DEFAULT_ROOM_PANELS_SETTINGS: RoomPanelsSettings = {
   inside: { ...DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG },
 };
 
+/** Minimal room shape for panel helpers (ops settings, API responses). */
+export type RoomWithPanels = {
+  panels?: PartialRoomPanelsSettings | RoomPanelsSettings | null;
+};
+
+export function roomPanelsOrDefault(room: RoomWithPanels): RoomPanelsSettings {
+  return normalizeRoomPanelsSettings(room.panels);
+}
+
+export function roomPanelConfigForPlacement(
+  room: RoomWithPanels,
+  placement: RoomPanelPlacement,
+): RoomPanelPlacementConfig {
+  return normalizeRoomPanelPlacementConfig(placement, roomPanelsOrDefault(room)[placement]);
+}
+
+export function roomHasAnyEnabledPanel(room: RoomWithPanels): boolean {
+  const panels = roomPanelsOrDefault(room);
+  return panels.outside.enabled || panels.inside.enabled;
+}
+
+export function listEnabledRoomPanelPlacements(room: RoomWithPanels): RoomPanelPlacement[] {
+  const panels = roomPanelsOrDefault(room);
+  const enabled: RoomPanelPlacement[] = [];
+  if (panels.outside.enabled) enabled.push('outside');
+  if (panels.inside.enabled) enabled.push('inside');
+  return enabled;
+}
+
 /** @deprecated Single-panel shape — replaced by RoomPanelsSettings in P1. */
 export type RoomPanelSettings = RoomPanelPlacementConfig & {
   placement: RoomPanelPlacement;

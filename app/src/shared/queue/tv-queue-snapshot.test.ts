@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
+import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
 import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS } from '../checkin-topic-settings.js';
 import { getBusinessDay } from '../db/database-time.js';
 import type { OpsSettings } from '../db/db-types.js';
@@ -39,16 +40,17 @@ function sampleSettings(): OpsSettings {
         enabled: true,
         defaultCallTarget: false,
         maxOccupancy: null,
-        panel: {
-          enabled: true,
-          placement: 'outside',
-          mode: 'arrival',
-          showPatientNames: false,
-          calledTextPreset: 'please_enter',
-          calledTextCustom: null,
-          arrivedTextPreset: 'please_wait_here',
-          arrivedTextCustom: null,
-        },
+        panels: normalizeRoomPanelsSettings({
+          outside: {
+            enabled: true,
+            mode: 'arrival',
+            showPatientNames: false,
+            calledTextPreset: 'please_enter',
+            calledTextCustom: null,
+            arrivedTextPreset: 'please_wait_here',
+            arrivedTextCustom: null,
+          },
+        }),
       },
     ],
     contactLookupFolderPath: null,

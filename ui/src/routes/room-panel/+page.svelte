@@ -7,9 +7,10 @@
   import RoomPanelPinLogin from '$lib/components/room-panel/RoomPanelPinLogin.svelte';
   import RoomPanelPreview from '$lib/components/room-panel/RoomPanelPreview.svelte';
   import {
-    DEFAULT_ROOM_PANEL_SETTINGS,
-    type PracticeRoomWithPanel,
+    DEFAULT_ROOM_PANELS_SETTINGS,
+    type PracticeRoomWithPanels,
   } from '$lib/queue/ops-settings-api';
+  import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
   import type { RoomPanelItem, RoomPanelSnapshot } from '$lib/queue/openapi-types';
   import {
     checkInRoomPanelVisit,
@@ -22,6 +23,10 @@
     type RoomPanelRoom,
   } from '$lib/room-panel/room-panel-api';
   import {
+    findRoomPanelLoginEntry,
+    roomPanelLoginKey,
+  } from '$lib/room-panel/room-panel-login-key';
+  import {
     getPracticeProfileFallback,
     mountPracticeProfileSync,
     practiceDisplayLabel,
@@ -30,7 +35,7 @@
 
   let loading = $state(true);
   let rooms = $state<RoomPanelRoom[]>([]);
-  let selectedRoomId = $state('');
+  let selectedLoginKey = $state('');
   let pin = $state('');
   let errorMessage = $state<string | null>(null);
   let snapshot = $state<RoomPanelSnapshot | null>(null);
@@ -45,9 +50,12 @@
   let reconcilingRoom = $state(false);
 
   const requestedRoomIdFromUrl = $derived($page.url.searchParams.get('room')?.trim() ?? '');
+  const requestedPlacementFromUrl = $derived($page.url.searchParams.get('placement')?.trim() ?? '');
 
   const practiceName = $derived(practiceDisplayLabel(practiceProfile, t('terminal.practiceFallback')));
-  const selectedRoom = $derived(rooms.find((room) => room.roomId === selectedRoomId) ?? rooms[0] ?? null);
+  const selectedRoom = $derived(
+    findRoomPanelLoginEntry(rooms, selectedLoginKey) ?? rooms[0] ?? null,
+  );
   const pinRequired = $derived(selectedRoom?.requiresPin ?? true);
   const hasRooms = $derived(rooms.length > 0);
   const isLive = $derived(snapshot !== null);
@@ -83,8 +91,8 @@
   }
 
   $effect(() => {
-    if (!selectedRoomId && rooms[0]) {
-      selectedRoomId = rooms[0].roomId;
+    if (!selectedLoginKey && rooms[0]) {
+      selectedLoginKey = roomPanelLoginKey(rooms[0]);
     }
   });
 
@@ -93,7 +101,16 @@
     if (!requestedRoomId || loading || submitting || recoveringSession || reconcilingRoom) {
       return;
     }
-    selectedRoomId = requestedRoomId;
+    const requestedPlacement = requestedPlacementFromUrl;
+    const requestedEntry =
+      rooms.find(
+        (room) =>
+          room.roomId === requestedRoomId &&
+          (!requestedPlacement || room.placement === requestedPlacement),
+      ) ?? null;
+    if (requestedEntry) {
+      selectedLoginKey = roomPanelLoginKey(requestedEntry);
+    }
     if (snapshot?.roomId === requestedRoomId) {
       return;
     }
@@ -105,8 +122,16 @@
       practiceProfile = profile;
     });
     const requestedRoomId = readRequestedRoomId();
+    const requestedPlacement = readRequestedPlacement();
     if (requestedRoomId) {
-      selectedRoomId = requestedRoomId;
+      const requestedEntry = rooms.find(
+        (room) =>
+          room.roomId === requestedRoomId &&
+          (!requestedPlacement || room.placement === requestedPlacement),
+      );
+      if (requestedEntry) {
+        selectedLoginKey = roomPanelLoginKey(requestedEntry);
+      }
     }
     void bootstrapPanel();
     return () => {
@@ -119,15 +144,27 @@
     return requestedRoomIdFromUrl;
   }
 
-  function resolveAutoOpenRoomId(): string | null {
+  function readRequestedPlacement(): string {
+    const placement = requestedPlacementFromUrl;
+    return placement === 'outside' || placement === 'inside' ? placement : '';
+  }
+
+  function resolveAutoOpenLoginKey(): string | null {
     const requestedRoomId = readRequestedRoomId();
+    const requestedPlacement = readRequestedPlacement();
     if (requestedRoomId) {
-      const room = rooms.find((entry) => entry.roomId === requestedRoomId);
-      return room && !room.requiresPin ? room.roomId : null;
+      const matches = rooms.filter((entry) => entry.roomId === requestedRoomId);
+      const room =
+        (requestedPlacement
+          ? matches.find((entry) => entry.placement === requestedPlacement)
+          : matches.find((entry) => entry.placement === 'outside')) ??
+        matches[0] ??
+        null;
+      return room && !room.requiresPin ? roomPanelLoginKey(room) : null;
     }
 
     const pinFreeRooms = rooms.filter((entry) => !entry.requiresPin);
-    return pinFreeRooms.length === 1 ? (pinFreeRooms[0]?.roomId ?? null) : null;
+    return pinFreeRooms.length === 1 ? roomPanelLoginKey(pinFreeRooms[0]!) : null;
   }
 
   async function reconcileRequestedRoom(): Promise<boolean> {
@@ -146,23 +183,34 @@
         return false;
       }
 
-      selectedRoomId = requestedRoomId;
-      const requestedRoom = rooms.find((entry) => entry.roomId === requestedRoomId);
-      if (!requestedRoom) {
+      const requestedRoomId = readRequestedRoomId();
+      const requestedPlacement = readRequestedPlacement();
+      const requestedEntry =
+        rooms.find(
+          (room) =>
+            room.roomId === requestedRoomId &&
+            (!requestedPlacement || room.placement === requestedPlacement),
+        ) ?? null;
+      if (requestedEntry) {
+        selectedLoginKey = roomPanelLoginKey(requestedEntry);
+      }
+      if (!requestedEntry) {
         errorMessage = t('roomPanel.noRoomError');
         return false;
       }
 
-      if (snapshot?.roomId === requestedRoomId) {
+      if (snapshot?.roomId === requestedRoomId && snapshot.panel.placement === requestedEntry.placement) {
         return true;
       }
 
       disconnectStream?.();
       disconnectStream = null;
 
-      if (!requestedRoom.requiresPin) {
-        await completeLogin(requestedRoomId);
-        return snapshot?.roomId === requestedRoomId;
+      if (!requestedEntry.requiresPin) {
+        await completeLogin(requestedEntry);
+        return (
+          snapshot?.roomId === requestedRoomId && snapshot.panel.placement === requestedEntry.placement
+        );
       }
 
       snapshot = null;
@@ -190,32 +238,39 @@
     return true;
   }
 
-  function roomFromLoginRoom(room: RoomPanelRoom): PracticeRoomWithPanel {
+  function roomFromLoginRoom(room: RoomPanelRoom): PracticeRoomWithPanels {
     return {
       roomId: room.roomId,
       roomLabel: room.roomLabel,
       enabled: true,
-      panel: {
-        ...DEFAULT_ROOM_PANEL_SETTINGS,
-        enabled: true,
-        placement: room.placement,
-        mode: room.mode,
-      },
+      defaultCallTarget: false,
+      maxOccupancy: null,
+      panels: normalizeRoomPanelsSettings({
+        outside:
+          room.placement === 'outside'
+            ? { enabled: true, mode: room.mode }
+            : undefined,
+        inside:
+          room.placement === 'inside' ? { enabled: true, mode: room.mode } : undefined,
+      }),
     };
   }
 
-  function roomFromSnapshot(data: RoomPanelSnapshot): PracticeRoomWithPanel {
+  function roomFromSnapshot(data: RoomPanelSnapshot): PracticeRoomWithPanels {
+    const placement = data.panel.placement;
     return {
       roomId: data.roomId,
       roomLabel: data.roomLabel,
       enabled: true,
-      panel: {
-        ...DEFAULT_ROOM_PANEL_SETTINGS,
-        enabled: true,
-        placement: data.panel.placement,
-        mode: data.panel.mode,
-        showPatientNames: data.panel.showPatientNames,
-      },
+      defaultCallTarget: false,
+      maxOccupancy: null,
+      panels: normalizeRoomPanelsSettings({
+        [placement]: {
+          enabled: true,
+          mode: data.panel.mode,
+          showPatientNames: data.panel.showPatientNames,
+        },
+      }),
     };
   }
 
@@ -229,15 +284,22 @@
 
     rooms = result.data.rooms;
     if (result.data.rooms.length === 0) {
-      selectedRoomId = '';
+      selectedLoginKey = '';
       return true;
     }
 
     const urlRoomId = readRequestedRoomId();
-    if (urlRoomId && result.data.rooms.some((room) => room.roomId === urlRoomId)) {
-      selectedRoomId = urlRoomId;
-    } else if (!result.data.rooms.some((room) => room.roomId === selectedRoomId)) {
-      selectedRoomId = result.data.rooms[0].roomId;
+    const urlPlacement = readRequestedPlacement();
+    const urlEntry =
+      urlRoomId &&
+      result.data.rooms.find(
+        (room) =>
+          room.roomId === urlRoomId && (!urlPlacement || room.placement === urlPlacement),
+      );
+    if (urlEntry) {
+      selectedLoginKey = roomPanelLoginKey(urlEntry);
+    } else if (!findRoomPanelLoginEntry(result.data.rooms, selectedLoginKey)) {
+      selectedLoginKey = roomPanelLoginKey(result.data.rooms[0]!);
     }
     return true;
   }
@@ -256,9 +318,12 @@
       return;
     }
 
-    const autoOpenRoomId = resolveAutoOpenRoomId();
-    if (autoOpenRoomId && !forceLoginScreen) {
-      await completeLogin(autoOpenRoomId);
+    const autoOpenLoginKey = resolveAutoOpenLoginKey();
+    if (autoOpenLoginKey && !forceLoginScreen) {
+      const autoOpenEntry = findRoomPanelLoginEntry(rooms, autoOpenLoginKey);
+      if (autoOpenEntry) {
+        await completeLogin(autoOpenEntry);
+      }
     }
     forceLoginScreen = false;
     loading = false;
@@ -315,12 +380,16 @@
     recoveringSession = false;
   }
 
-  async function completeLogin(roomId: string) {
+  async function completeLogin(room: RoomPanelRoom) {
     submitting = true;
     errorMessage = null;
     streamError = null;
 
-    const result = await loginRoomPanel({ roomId, pin: pin.trim() });
+    const result = await loginRoomPanel({
+      roomId: room.roomId,
+      placement: room.placement,
+      pin: pin.trim(),
+    });
     if (!result.ok) {
       submitting = false;
       errorMessage = result.error.status === 401 ? t('roomPanel.loginInvalid') : result.error.message;
@@ -350,7 +419,7 @@
       return;
     }
 
-    await completeLogin(selectedRoom.roomId);
+    await completeLogin(selectedRoom);
   }
 
   async function runTicketAction(item: RoomPanelItem | undefined, action: 'check_in' | 'check_out') {
@@ -432,6 +501,7 @@
   <div class="room-panel-live-shell">
     <RoomPanelPreview
       room={liveRoom}
+      placement={selectedRoom?.placement ?? snapshot?.panel.placement ?? 'outside'}
       {queueEntries}
       state={liveState}
       stateLabelOverride={liveStateLabel}
@@ -475,7 +545,7 @@
       <p class="room-panel-login__kicker">{practiceName}</p>
       <RoomPanelPinLogin
         {rooms}
-        bind:selectedRoomId
+        bind:selectedLoginKey
         bind:pin
         {pinRequired}
         loading={false}

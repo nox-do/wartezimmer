@@ -3,6 +3,7 @@
   import TerminalDobNumpad from '$lib/components/terminal/TerminalDobNumpad.svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import type { RoomPanelRoom } from '$lib/room-panel/room-panel-api';
+  import { roomPanelLoginKey } from '$lib/room-panel/room-panel-login-key';
   import { t } from '$lib/i18n/i18nStore.svelte';
 
   const PIN_MIN_LENGTH = 4;
@@ -10,7 +11,7 @@
 
   interface Props {
     rooms: RoomPanelRoom[];
-    selectedRoomId?: string;
+    selectedLoginKey?: string;
     pin?: string;
     pinRequired?: boolean;
     loading?: boolean;
@@ -21,7 +22,7 @@
 
   let {
     rooms,
-    selectedRoomId = $bindable(''),
+    selectedLoginKey = $bindable(''),
     pin = $bindable(''),
     pinRequired = true,
     loading = false,
@@ -31,7 +32,7 @@
   }: Props = $props();
 
   const canSubmit = $derived(
-    Boolean(selectedRoomId) && (pinRequired ? pin.length >= PIN_MIN_LENGTH : true) && !submitting,
+    Boolean(selectedLoginKey) && (pinRequired ? pin.length >= PIN_MIN_LENGTH : true) && !submitting,
   );
 
   function appendDigit(digit: string) {
@@ -108,9 +109,11 @@
   {:else}
     <label class="modal-form-field">
       <span>{t('roomPanel.roomLabel')}</span>
-      <select class="form-select" bind:value={selectedRoomId} disabled={submitting}>
-        {#each rooms as room (room.roomId)}
-          <option value={room.roomId}>{room.roomLabel}</option>
+      <select class="form-select" bind:value={selectedLoginKey} disabled={submitting}>
+        {#each rooms as room (roomPanelLoginKey(room))}
+          <option value={roomPanelLoginKey(room)}>
+            {room.roomLabel} – {t(`mfa.settings.roomPanelPlacement_${room.placement}`)}
+          </option>
         {/each}
       </select>
     </label>

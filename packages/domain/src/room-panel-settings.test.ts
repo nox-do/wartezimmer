@@ -5,10 +5,13 @@ import {
   DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG,
   DEFAULT_ROOM_PANEL_SETTINGS,
   DEFAULT_ROOM_PANELS_SETTINGS,
+  listEnabledRoomPanelPlacements,
   normalizeRoomPanelCustomText,
   normalizeRoomPanelPlacementConfig,
   normalizeRoomPanelSettings,
   normalizeRoomPanelsSettings,
+  roomHasAnyEnabledPanel,
+  roomPanelConfigForPlacement,
   ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
 } from './room-panel-settings.js';
 
@@ -146,6 +149,18 @@ test('normalizeRoomPanelSettings forces allowCalling off outside', () => {
     }).allowCalling,
     true,
   );
+});
+
+test('roomPanelsOrDefault and listEnabledRoomPanelPlacements', () => {
+  const room = {
+    panels: normalizeRoomPanelsSettings({
+      outside: { enabled: true, mode: 'arrival' },
+      inside: { enabled: true, mode: 'staff_full', allowCalling: true },
+    }),
+  };
+  assert.deepEqual(listEnabledRoomPanelPlacements(room), ['outside', 'inside']);
+  assert.equal(roomHasAnyEnabledPanel(room), true);
+  assert.equal(roomPanelConfigForPlacement(room, 'inside').allowCalling, true);
 });
 
 test('applyRoomPanelPlacement coerces outside staff_full to arrival', () => {

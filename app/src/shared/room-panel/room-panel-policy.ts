@@ -1,5 +1,5 @@
 import type { CoreDatabase } from '../db/database.js';
-import type { OpsSettings, RoomPanelPlacement, RoomPanelSettings } from '../db/db-types.js';
+import type { OpsSettings, RoomPanelPlacement, RoomPanelPlacementConfig } from '../db/db-types.js';
 
 export {
   resolveRoomPanelCapabilities,
@@ -17,33 +17,35 @@ export {
   type RoomPanelPolicyInput,
 } from '@praxis-flow/domain';
 
+import { roomPanelConfigForPlacement } from '@praxis-flow/domain';
+
 export type ActiveRoomPanel = {
   room: OpsSettings['rooms'][number];
-  panel: RoomPanelSettings;
+  placement: RoomPanelPlacement;
+  panel: RoomPanelPlacementConfig;
 };
 
 export function findActiveRoomPanel(
   db: Pick<CoreDatabase, 'getOpsSettings'>,
   roomId: string,
+  placement: RoomPanelPlacement,
 ): ActiveRoomPanel | null {
   const room = db
     .getOpsSettings()
-    .rooms.find(
-      (entry) => entry.roomId === roomId && entry.enabled && entry.panel?.enabled === true,
-    );
-  if (!room?.panel) {
+    .rooms.find((entry) => entry.roomId === roomId && entry.enabled);
+  if (!room) {
     return null;
   }
-  return { room, panel: room.panel };
+  const panel = roomPanelConfigForPlacement(room, placement);
+  if (!panel.enabled) {
+    return null;
+  }
+  return { room, placement, panel };
 }
 
 export function resolveRoomPanelForSession(
   db: Pick<CoreDatabase, 'getOpsSettings'>,
   session: { roomId: string; placement: RoomPanelPlacement },
 ): ActiveRoomPanel | null {
-  const active = findActiveRoomPanel(db, session.roomId);
-  if (!active || active.panel.placement !== session.placement) {
-    return null;
-  }
-  return active;
+  return findActiveRoomPanel(db, session.roomId, session.placement);
 }

@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {
+  DEFAULT_ROOM_PANELS_SETTINGS,
+  normalizeRoomPanelsSettings,
+} from '@praxis-flow/domain';
 import type { PatchOpsSettingsBody } from '../../api/ops-openapi-types.js';
 import type { CoreDatabase } from '../../shared/db/database.js';
 import { buildOpsSettingsUpdate } from './ops-settings-mapper.js';
@@ -25,7 +29,16 @@ function mockDb(): CoreDatabase {
           sortOrder: 1,
         },
       ],
-      rooms: [{ roomId: 'empfang', roomLabel: 'Empfang', enabled: true, defaultCallTarget: true }],
+      rooms: [
+        {
+          roomId: 'empfang',
+          roomLabel: 'Empfang',
+          enabled: true,
+          defaultCallTarget: true,
+          maxOccupancy: null,
+          panels: DEFAULT_ROOM_PANELS_SETTINGS,
+        },
+      ],
       contactLookupFolderPath: null,
       contactLookupDelimiterMode: 'auto',
       contactLookupHasHeader: true,
@@ -234,16 +247,17 @@ test('buildOpsSettingsUpdate preserves panel settings on rooms patch', async () 
           enabled: true,
           defaultCallTarget: true,
           maxOccupancy: null,
-          panel: {
-            enabled: true,
-            placement: 'inside',
-            mode: 'staff_full',
-            showPatientNames: true,
-            calledTextPreset: 'custom',
-            calledTextCustom: 'Bitte eintreten',
-            arrivedTextPreset: 'please_wait_here',
-            arrivedTextCustom: null,
-          },
+          panels: normalizeRoomPanelsSettings({
+            inside: {
+              enabled: true,
+              mode: 'staff_full',
+              showPatientNames: true,
+              calledTextPreset: 'custom',
+              calledTextCustom: 'Bitte eintreten',
+              arrivedTextPreset: 'please_wait_here',
+              arrivedTextCustom: null,
+            },
+          }),
         },
       ],
     }),
@@ -260,13 +274,13 @@ test('buildOpsSettingsUpdate preserves panel settings on rooms patch', async () 
     return;
   }
 
-  assert.equal(result.rooms?.[0]?.panel?.enabled, true);
-  assert.equal(result.rooms?.[0]?.panel?.mode, 'staff_full');
-  assert.equal(result.rooms?.[0]?.panel?.showPatientNames, true);
-  assert.equal(result.rooms?.[0]?.panel?.calledTextCustom, 'Bitte eintreten');
+  assert.equal(result.rooms?.[0]?.panels.inside.enabled, true);
+  assert.equal(result.rooms?.[0]?.panels.inside.mode, 'staff_full');
+  assert.equal(result.rooms?.[0]?.panels.inside.showPatientNames, true);
+  assert.equal(result.rooms?.[0]?.panels.inside.calledTextCustom, 'Bitte eintreten');
 });
 
-test('buildOpsSettingsUpdate normalizes outside placement on partial panel patch', async () => {
+test('buildOpsSettingsUpdate merges partial inside panel patch and preserves outside', async () => {
   const db = {
     getOpsSettings: () => ({
       ...mockDb().getOpsSettings(),
@@ -277,16 +291,20 @@ test('buildOpsSettingsUpdate normalizes outside placement on partial panel patch
           enabled: true,
           defaultCallTarget: true,
           maxOccupancy: null,
-          panel: {
-            enabled: true,
-            placement: 'inside',
-            mode: 'staff_full',
-            showPatientNames: true,
-            calledTextPreset: 'please_enter',
-            calledTextCustom: null,
-            arrivedTextPreset: 'please_wait_here',
-            arrivedTextCustom: null,
-          },
+          panels: normalizeRoomPanelsSettings({
+            outside: {
+              enabled: true,
+              mode: 'arrival',
+              calledTextPreset: 'please_enter',
+              calledTextCustom: 'Draußen warten',
+            },
+            inside: {
+              enabled: true,
+              mode: 'staff_full',
+              showPatientNames: true,
+              allowCalling: false,
+            },
+          }),
         },
       ],
     }),
@@ -299,7 +317,7 @@ test('buildOpsSettingsUpdate normalizes outside placement on partial panel patch
         roomLabel: 'Empfang',
         enabled: true,
         defaultCallTarget: true,
-        panel: { placement: 'outside' },
+        panels: { inside: { allowCalling: true } },
       },
     ],
   });
@@ -309,9 +327,64 @@ test('buildOpsSettingsUpdate normalizes outside placement on partial panel patch
     return;
   }
 
-  assert.equal(result.rooms?.[0]?.panel?.placement, 'outside');
-  assert.equal(result.rooms?.[0]?.panel?.mode, 'arrival');
-  assert.equal(result.rooms?.[0]?.panel?.showPatientNames, false);
+  assert.equal(result.rooms?.[0]?.panels.inside.allowCalling, true);
+  assert.equal(result.rooms?.[0]?.panels.inside.mode, 'staff_full');
+  assert.equal(result.rooms?.[0]?.panels.outside.enabled, true);
+  assert.equal(result.rooms?.[0]?.panels.outside.mode, 'arrival');
+  assert.equal(result.rooms?.[0]?.panels.outside.calledTextCustom, 'Draußen warten');
+});
+
+test('buildOpsSettingsUpdate normalizes outside constraints on partial outside patch', async () => {
+  const db = {
+    getOpsSettings: () => ({
+      ...mockDb().getOpsSettings(),
+      rooms: [
+        {
+          roomId: 'empfang',
+          roomLabel: 'Empfang',
+          enabled: true,
+          defaultCallTarget: true,
+          maxOccupancy: null,
+          panels: normalizeRoomPanelsSettings({
+            inside: {
+              enabled: true,
+              mode: 'staff_full',
+              showPatientNames: true,
+            },
+          }),
+        },
+      ],
+    }),
+  } as unknown as CoreDatabase;
+
+  const result = await buildOpsSettingsUpdate(db, {
+    rooms: [
+      {
+        roomId: 'empfang',
+        roomLabel: 'Empfang',
+        enabled: true,
+        defaultCallTarget: true,
+        panels: {
+          outside: {
+            enabled: true,
+            mode: 'staff_full',
+            showPatientNames: true,
+          },
+        },
+      },
+    ],
+  });
+
+  assert.ok(result && !('code' in result));
+  if ('code' in result) {
+    return;
+  }
+
+  assert.equal(result.rooms?.[0]?.panels.outside.enabled, true);
+  assert.equal(result.rooms?.[0]?.panels.outside.mode, 'arrival');
+  assert.equal(result.rooms?.[0]?.panels.outside.showPatientNames, false);
+  assert.equal(result.rooms?.[0]?.panels.inside.enabled, true);
+  assert.equal(result.rooms?.[0]?.panels.inside.mode, 'staff_full');
 });
 
 test('buildOpsSettingsUpdate normalizes protected outside panel settings', async () => {
@@ -322,15 +395,16 @@ test('buildOpsSettingsUpdate normalizes protected outside panel settings', async
         roomLabel: 'Empfang',
         enabled: true,
         defaultCallTarget: true,
-        panel: {
-          enabled: true,
-          placement: 'outside',
-          mode: 'staff_full',
-          showPatientNames: true,
-          calledTextPreset: 'please_enter',
-          calledTextCustom: null,
-          arrivedTextPreset: 'please_wait_here',
-          arrivedTextCustom: null,
+        panels: {
+          outside: {
+            enabled: true,
+            mode: 'staff_full',
+            showPatientNames: true,
+            calledTextPreset: 'please_enter',
+            calledTextCustom: null,
+            arrivedTextPreset: 'please_wait_here',
+            arrivedTextCustom: null,
+          },
         },
       },
     ],
@@ -340,9 +414,9 @@ test('buildOpsSettingsUpdate normalizes protected outside panel settings', async
     assert.fail(result.message);
   }
 
-  assert.equal(result.rooms?.[0]?.panel?.placement, 'outside');
-  assert.equal(result.rooms?.[0]?.panel?.mode, 'arrival');
-  assert.equal(result.rooms?.[0]?.panel?.showPatientNames, false);
+  assert.equal(result.rooms?.[0]?.panels.outside.enabled, true);
+  assert.equal(result.rooms?.[0]?.panels.outside.mode, 'arrival');
+  assert.equal(result.rooms?.[0]?.panels.outside.showPatientNames, false);
 });
 
 test('buildOpsSettingsUpdate merges practiceProfile partial patch', async () => {

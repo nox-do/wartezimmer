@@ -176,7 +176,7 @@ export type OpsSettings = {
     enabled: boolean;
     defaultCallTarget: boolean;
     maxOccupancy: number | null;
-    panel?: RoomPanelSettings;
+    panels: RoomPanelsSettings;
   }>;
   contactLookupFolderPath: string | null;
   contactLookupDelimiterMode: 'auto' | 'semicolon' | 'comma' | 'tab';
@@ -199,6 +199,11 @@ export type RoomPanelMode = import('@praxis-flow/domain').RoomPanelMode;
 
 export type RoomPanelTextPreset = import('@praxis-flow/domain').RoomPanelTextPreset;
 
+export type RoomPanelPlacementConfig = import('@praxis-flow/domain').RoomPanelPlacementConfig;
+
+export type RoomPanelsSettings = import('@praxis-flow/domain').RoomPanelsSettings;
+
+/** @deprecated Removed in P1 — use RoomPanelPlacementConfig + placement key. */
 export type RoomPanelSettings = import('@praxis-flow/domain').RoomPanelSettings;
 
 export type OutboxEventRow = {

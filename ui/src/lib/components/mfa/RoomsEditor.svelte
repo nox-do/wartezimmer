@@ -1,8 +1,15 @@
 <script lang="ts">
   import Button from '$lib/components/forms/Button.svelte';
   import RoomEditorModal from '$lib/components/mfa/RoomEditorModal.svelte';
-  import type { PracticeRoomWithPanel, RoomPanelMode } from '$lib/queue/ops-settings-api';
-  import { ensureSingleDefaultCallTarget, generateRoomId, roomPanelSettingsOrDefault } from '$lib/queue/ops-settings-api';
+  import type { PracticeRoomWithPanels, RoomPanelMode } from '$lib/queue/ops-settings-api';
+  import {
+    emptyRoomPanels,
+    ensureSingleDefaultCallTarget,
+    generateRoomId,
+    listEnabledRoomPanelPlacements,
+    roomHasAnyEnabledPanel,
+    roomPanelConfigForPlacement,
+  } from '$lib/queue/ops-settings-api';
   import { getDevicePresenceStatus } from '$lib/mfa/ops-stream-store.svelte';
   import { deviceStatusLabel } from '$lib/ops/device-presence-labels';
   import { roomPanelDeviceId } from '$lib/ops/device-presence-api';
@@ -11,9 +18,9 @@
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
 
   interface Props {
-    rooms: PracticeRoomWithPanel[];
+    rooms: PracticeRoomWithPanels[];
     busy?: boolean;
-    onChange?: (rooms: PracticeRoomWithPanel[]) => void;
+    onChange?: (rooms: PracticeRoomWithPanels[]) => void;
     /** Persist is authoritative for room remove/disable/capacity guards (server). */
     onPersist?: (options?: { roomQueueGuardContext?: RoomQueueGuardContext }) => void | Promise<boolean>;
   }
@@ -28,17 +35,11 @@
   let editorOpen = $state(false);
   let editorMode = $state<'add' | 'edit'>('add');
   let editorIndex = $state<number | null>(null);
-  let draft = $state<PracticeRoomWithPanel>(emptyRoom());
+  let draft = $state<PracticeRoomWithPanels>(emptyRoomPanels());
   let editorRoomIdsTaken = $state<Set<string>>(new Set());
 
-  function emptyRoom(): PracticeRoomWithPanel {
-    return {
-      roomId: '',
-      roomLabel: '',
-      enabled: true,
-      defaultCallTarget: false,
-      maxOccupancy: null,
-    };
+  function emptyRoom(): PracticeRoomWithPanels {
+    return emptyRoomPanels();
   }
 
   function openAdd() {
@@ -53,6 +54,7 @@
       enabled: true,
       defaultCallTarget: false,
       maxOccupancy: null,
+      panels: emptyRoomPanels().panels,
     };
     editorOpen = true;
   }
@@ -70,8 +72,8 @@
   }
 
   function roomQueueGuardContextForEdit(
-    previous: PracticeRoomWithPanel,
-    next: PracticeRoomWithPanel,
+    previous: PracticeRoomWithPanels,
+    next: PracticeRoomWithPanels,
   ): RoomQueueGuardContext | undefined {
     if (next.roomId !== previous.roomId) {
       return 'remove';
@@ -82,9 +84,9 @@
     return undefined;
   }
 
-  async function applyDraft(next: PracticeRoomWithPanel) {
+  async function applyDraft(next: PracticeRoomWithPanels) {
     const preferredDefaultId = next.defaultCallTarget ? next.roomId : null;
-    let updated: PracticeRoomWithPanel[];
+    let updated: PracticeRoomWithPanels[];
     let roomQueueGuardContext: RoomQueueGuardContext | undefined;
 
     if (editorMode === 'add') {
@@ -146,7 +148,11 @@
   {:else}
     <ul class="mfa-editor-list" role="list">
       {#each rooms as room, index (`room-row-${index}`)}
-        {@const panelSettings = roomPanelSettingsOrDefault(room)}
+        {@const enabledPlacements = listEnabledRoomPanelPlacements(room)}
+        {@const primaryPlacement = enabledPlacements[0]}
+        {@const primaryPanel = primaryPlacement
+          ? roomPanelConfigForPlacement(room, primaryPlacement)
+          : null}
         <li class="mfa-editor-list-item" class:mfa-editor-list-item--inactive={!room.enabled} role="listitem">
           <div class="mfa-editor-list-item__main">
             <span class="mfa-editor-list-item__icon" aria-hidden="true">⌂</span>
@@ -162,8 +168,8 @@
                     count: resolveRoomMaxOccupancy(rooms, room.roomId) ?? 0,
                   })}
                 {/if}
-                {#if panelSettings.enabled}
-                  · {roomPanelModeLabel(panelSettings.mode)}
+                {#if primaryPanel}
+                  · {roomPanelModeLabel(primaryPanel.mode)}
                 {/if}
               </span>
             </div>
@@ -172,7 +178,7 @@
             {#if room.defaultCallTarget && room.enabled}
               <span class="pill pill--info">{t('mfa.settings.roomDefaultCallTargetBadge')}</span>
             {/if}
-            {#if panelSettings.enabled}
+            {#if roomHasAnyEnabledPanel(room)}
               {@const panelStatus = getDevicePresenceStatus(roomPanelDeviceId(room.roomId))}
               <span
                 class="pill"

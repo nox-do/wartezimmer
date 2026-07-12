@@ -3,6 +3,7 @@ import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
 import { createRuntime, loadCatalog } from '@praxis-flow/flow-core/server';
+import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
 import { ensureFlowCoreSchema } from './flow-core-schema.js';
 import {
   PF_FLOW_LOC_WAITING,
@@ -42,16 +43,17 @@ function sampleOpsSettings(): OpsSettings {
         enabled: true,
         defaultCallTarget: false,
         maxOccupancy: null,
-        panel: {
-          enabled: true,
-          placement: 'outside',
-          mode: 'arrival',
-          showPatientNames: false,
-          calledTextPreset: 'please_enter',
-          calledTextCustom: null,
-          arrivedTextPreset: 'please_wait_here',
-          arrivedTextCustom: null,
-        },
+        panels: normalizeRoomPanelsSettings({
+          outside: {
+            enabled: true,
+            mode: 'arrival',
+            showPatientNames: false,
+            calledTextPreset: 'please_enter',
+            calledTextCustom: null,
+            arrivedTextPreset: 'please_wait_here',
+            arrivedTextCustom: null,
+          },
+        }),
       },
     ],
     contactLookupFolderPath: null,

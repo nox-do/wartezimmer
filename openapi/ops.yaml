@@ -21,6 +21,68 @@ components:
       in: cookie
       name: pf_terminal_device_session
   schemas:
+    RoomPanelPlacementConfig:
+      type: object
+      required:
+        - enabled
+        - mode
+        - showPatientNames
+        - allowCalling
+        - calledTextPreset
+        - calledTextCustom
+        - arrivedTextPreset
+        - arrivedTextCustom
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+        mode:
+          type: string
+          enum:
+            - display_only
+            - arrival
+            - staff_full
+        showPatientNames:
+          type: boolean
+          description: Patient names are only allowed for inside panels when explicitly enabled.
+        allowCalling:
+          type: boolean
+          description: Inside panels only — enables queue call from the room tablet.
+        calledTextPreset:
+          type: string
+          enum:
+            - you_are_right
+            - please_wait_here
+            - please_enter
+            - go_to_reception
+            - custom
+        calledTextCustom:
+          type: string
+          nullable: true
+          maxLength: 80
+        arrivedTextPreset:
+          type: string
+          enum:
+            - you_are_right
+            - please_wait_here
+            - please_enter
+            - go_to_reception
+            - custom
+        arrivedTextCustom:
+          type: string
+          nullable: true
+          maxLength: 80
+    RoomPanelsSettings:
+      type: object
+      required:
+        - outside
+        - inside
+      additionalProperties: false
+      properties:
+        outside:
+          $ref: '#/components/schemas/RoomPanelPlacementConfig'
+        inside:
+          $ref: '#/components/schemas/RoomPanelPlacementConfig'
     OpsStateResponse:
       type: object
       required:
@@ -584,59 +646,8 @@ components:
                 nullable: true
                 minimum: 1
                 description: Maximum concurrent called or in-room tickets assigned to this room. Null or omitted means unlimited.
-              panel:
-                type: object
-                required:
-                  - enabled
-                  - placement
-                  - mode
-                  - showPatientNames
-                  - calledTextPreset
-                  - calledTextCustom
-                  - arrivedTextPreset
-                  - arrivedTextCustom
-                additionalProperties: false
-                properties:
-                  enabled:
-                    type: boolean
-                  placement:
-                    type: string
-                    enum:
-                      - outside
-                      - inside
-                  mode:
-                    type: string
-                    enum:
-                      - display_only
-                      - arrival
-                      - staff_full
-                  showPatientNames:
-                    type: boolean
-                    description: Patient names are only allowed for panels placed inside the room and when explicitly enabled.
-                  calledTextPreset:
-                    type: string
-                    enum:
-                      - you_are_right
-                      - please_wait_here
-                      - please_enter
-                      - go_to_reception
-                      - custom
-                  calledTextCustom:
-                    type: string
-                    nullable: true
-                    maxLength: 80
-                  arrivedTextPreset:
-                    type: string
-                    enum:
-                      - you_are_right
-                      - please_wait_here
-                      - please_enter
-                      - go_to_reception
-                      - custom
-                  arrivedTextCustom:
-                    type: string
-                    nullable: true
-                    maxLength: 80
+              panels:
+                $ref: '#/components/schemas/RoomPanelsSettings'
         contactLookupFolderPath:
           type: string
           nullable: true
@@ -1371,49 +1382,90 @@ paths:
                         type: integer
                         nullable: true
                         minimum: 1
-                      panel:
+                      panels:
                         type: object
                         additionalProperties: false
                         properties:
-                          enabled:
-                            type: boolean
-                          placement:
-                            type: string
-                            enum:
-                              - outside
-                              - inside
-                          mode:
-                            type: string
-                            enum:
-                              - display_only
-                              - arrival
-                              - staff_full
-                          showPatientNames:
-                            type: boolean
-                          calledTextPreset:
-                            type: string
-                            enum:
-                              - you_are_right
-                              - please_wait_here
-                              - please_enter
-                              - go_to_reception
-                              - custom
-                          calledTextCustom:
-                            type: string
-                            nullable: true
-                            maxLength: 80
-                          arrivedTextPreset:
-                            type: string
-                            enum:
-                              - you_are_right
-                              - please_wait_here
-                              - please_enter
-                              - go_to_reception
-                              - custom
-                          arrivedTextCustom:
-                            type: string
-                            nullable: true
-                            maxLength: 80
+                          outside:
+                            type: object
+                            additionalProperties: false
+                            properties:
+                              enabled:
+                                type: boolean
+                              mode:
+                                type: string
+                                enum:
+                                  - display_only
+                                  - arrival
+                                  - staff_full
+                              showPatientNames:
+                                type: boolean
+                              allowCalling:
+                                type: boolean
+                              calledTextPreset:
+                                type: string
+                                enum:
+                                  - you_are_right
+                                  - please_wait_here
+                                  - please_enter
+                                  - go_to_reception
+                                  - custom
+                              calledTextCustom:
+                                type: string
+                                nullable: true
+                                maxLength: 80
+                              arrivedTextPreset:
+                                type: string
+                                enum:
+                                  - you_are_right
+                                  - please_wait_here
+                                  - please_enter
+                                  - go_to_reception
+                                  - custom
+                              arrivedTextCustom:
+                                type: string
+                                nullable: true
+                                maxLength: 80
+                          inside:
+                            type: object
+                            additionalProperties: false
+                            properties:
+                              enabled:
+                                type: boolean
+                              mode:
+                                type: string
+                                enum:
+                                  - display_only
+                                  - arrival
+                                  - staff_full
+                              showPatientNames:
+                                type: boolean
+                              allowCalling:
+                                type: boolean
+                              calledTextPreset:
+                                type: string
+                                enum:
+                                  - you_are_right
+                                  - please_wait_here
+                                  - please_enter
+                                  - go_to_reception
+                                  - custom
+                              calledTextCustom:
+                                type: string
+                                nullable: true
+                                maxLength: 80
+                              arrivedTextPreset:
+                                type: string
+                                enum:
+                                  - you_are_right
+                                  - please_wait_here
+                                  - please_enter
+                                  - go_to_reception
+                                  - custom
+                              arrivedTextCustom:
+                                type: string
+                                nullable: true
+                                maxLength: 80
                 contactLookupFolderPath:
                   type: string
                   nullable: true

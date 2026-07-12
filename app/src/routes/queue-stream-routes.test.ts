@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
 import test, { afterEach, beforeEach } from 'node:test';
 import Fastify from 'fastify';
+import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
 import { registerClientAuth } from '../auth/client-auth.js';
 import {
   getDeviceSessionCookieName,
@@ -53,16 +54,17 @@ function fakeQueueDb(): CoreDatabase {
           roomId: 'labor',
           roomLabel: 'Labor',
           enabled: true,
-          panel: {
-            enabled: true,
-            placement: 'inside',
-            mode: 'staff_full',
-            showPatientNames: true,
-            calledTextPreset: 'please_enter',
-            calledTextCustom: null,
-            arrivedTextPreset: 'please_wait_here',
-            arrivedTextCustom: null,
-          },
+          panels: normalizeRoomPanelsSettings({
+            inside: {
+              enabled: true,
+              mode: 'staff_full',
+              showPatientNames: true,
+              calledTextPreset: 'please_enter',
+              calledTextCustom: null,
+              arrivedTextPreset: 'please_wait_here',
+              arrivedTextCustom: null,
+            },
+          }),
         },
       ],
     }),

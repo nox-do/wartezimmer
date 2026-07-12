@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import type { StatementSync } from 'node:sqlite';
 import test from 'node:test';
+import { DEFAULT_ROOM_PANELS_SETTINGS } from '@praxis-flow/domain';
 import {
   ensureSingleDefaultCallTarget,
   getOpsSettingsFromDb,
@@ -117,7 +118,18 @@ test('getOpsSettingsFromDb treats only 1 as enabled for terminal auth flags', ()
   assert.equal(settings.terminalAuthEgkEnabled, true);
 });
 
-test('getOpsSettingsFromDb migrates legacy room panel settings without exposing names outside', () => {
+test('getOpsSettingsFromDb defaults missing panels to DEFAULT_ROOM_PANELS_SETTINGS', () => {
+  const settings = getOpsSettingsFromDb({
+    getOpsSettingsStmt: {
+      get: () => minimalOpsSettingsRow(),
+    } as StatementSync,
+    configuredExportBasePath: null,
+  });
+
+  assert.deepEqual(settings.rooms[0]?.panels, DEFAULT_ROOM_PANELS_SETTINGS);
+});
+
+test('getOpsSettingsFromDb applies outside constraints on panels', () => {
   const settings = getOpsSettingsFromDb({
     getOpsSettingsStmt: {
       get: () =>
@@ -128,41 +140,19 @@ test('getOpsSettingsFromDb migrates legacy room panel settings without exposing 
               roomLabel: 'Empfang',
               enabled: true,
               defaultCallTarget: true,
-              panel: {
-                enabled: true,
-                mode: 'patient_arrival',
-                showPatientNames: false,
-                arrivalTextPreset: 'custom',
-                arrivalTextCustom: 'Bitte eintreten',
-                waitingTextPreset: 'please_wait_here',
-                waitingTextCustom: null,
-              },
-            },
-            {
-              roomId: 'labor',
-              roomLabel: 'Labor',
-              enabled: true,
-              defaultCallTarget: false,
-              panel: {
-                enabled: true,
-                mode: 'display_only',
-                showPatientNames: true,
-                arrivalTextPreset: 'please_enter',
-                waitingTextPreset: 'please_wait_here',
-              },
-            },
-            {
-              roomId: 'behandlung',
-              roomLabel: 'Behandlung',
-              enabled: true,
-              defaultCallTarget: false,
-              panel: {
-                enabled: true,
-                placement: 'outside',
-                mode: 'staff_full',
-                showPatientNames: true,
-                calledTextPreset: 'please_enter',
-                arrivedTextPreset: 'please_wait_here',
+              panels: {
+                outside: {
+                  enabled: true,
+                  mode: 'staff_full',
+                  showPatientNames: true,
+                  allowCalling: true,
+                },
+                inside: {
+                  enabled: true,
+                  mode: 'staff_full',
+                  showPatientNames: true,
+                  allowCalling: true,
+                },
               },
             },
           ]),
@@ -171,19 +161,43 @@ test('getOpsSettingsFromDb migrates legacy room panel settings without exposing 
     configuredExportBasePath: null,
   });
 
-  const migratedArrival = settings.rooms.find((room) => room.roomId === 'empfang')?.panel;
-  assert.equal(migratedArrival?.placement, 'inside');
-  assert.equal(migratedArrival?.mode, 'arrival');
-  assert.equal(migratedArrival?.calledTextPreset, 'custom');
-  assert.equal(migratedArrival?.calledTextCustom, 'Bitte eintreten');
+  const room = settings.rooms.find((entry) => entry.roomId === 'empfang');
+  assert.equal(room?.panels.outside.mode, 'arrival');
+  assert.equal(room?.panels.outside.showPatientNames, false);
+  assert.equal(room?.panels.outside.allowCalling, false);
+  assert.equal(room?.panels.inside.mode, 'staff_full');
+  assert.equal(room?.panels.inside.showPatientNames, true);
+  assert.equal(room?.panels.inside.allowCalling, true);
+});
 
-  const inside = settings.rooms.find((room) => room.roomId === 'labor')?.panel;
-  assert.equal(inside?.placement, 'inside');
-  assert.equal(inside?.showPatientNames, true);
-
-  const malformedOutside = settings.rooms.find((room) => room.roomId === 'behandlung')?.panel;
-  assert.equal(malformedOutside?.mode, 'arrival');
-  assert.equal(malformedOutside?.showPatientNames, false);
+test('getOpsSettingsFromDb rejects deprecated panel field', () => {
+  assert.throws(
+    () =>
+      getOpsSettingsFromDb({
+        getOpsSettingsStmt: {
+          get: () =>
+            minimalOpsSettingsRow({
+              roomsJson: JSON.stringify([
+                {
+                  roomId: 'empfang',
+                  roomLabel: 'Empfang',
+                  enabled: true,
+                  defaultCallTarget: true,
+                  panel: {
+                    enabled: true,
+                    placement: 'outside',
+                    mode: 'arrival',
+                  },
+                },
+              ]),
+            }),
+        } as StatementSync,
+        configuredExportBasePath: null,
+      }),
+    (error: unknown) =>
+      error instanceof OpsSettingsValidationError &&
+      /deprecated panel field/i.test(error.detailMessage),
+  );
 });
 
 test('ensureSingleDefaultCallTarget re-export matches domain package', () => {

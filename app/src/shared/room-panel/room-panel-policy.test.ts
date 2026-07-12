@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
 import type { CoreDatabase } from '../db/database.js';
 import {
   resolveRoomPanelForSession,
@@ -10,7 +11,6 @@ import {
 
 const outsidePanel = {
   enabled: true,
-  placement: 'outside' as const,
   mode: 'arrival' as const,
   showPatientNames: true,
   allowCalling: false,
@@ -41,7 +41,7 @@ test('session placement must still match current settings', () => {
           enabled: true,
           defaultCallTarget: true,
           maxOccupancy: null,
-          panel: outsidePanel,
+          panels: normalizeRoomPanelsSettings({ outside: outsidePanel }),
         },
       ],
     }),

@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
 import { loadCatalog } from '@praxis-flow/flow-core/server';
+import { roomHasAnyEnabledPanel, roomPanelConfigForPlacement } from '@praxis-flow/domain';
 import type { OpsSettings } from '../db/db-types.js';
 import { EMPTY_JOURNEY_SETTINGS } from '../journey-settings.js';
 import {
@@ -640,7 +641,7 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
     ...settings.rooms.map((room) => room.roomId),
   ];
   const desiredPanelSurfaceIds = settings.rooms
-    .filter((room) => room.enabled && room.panel?.enabled)
+    .filter((room) => room.enabled && roomHasAnyEnabledPanel(room))
     .map((room) => panelFlowSurfaceId(room.roomId));
 
   deactivateTopicsOutside(db, desiredTopicIds);
@@ -787,7 +788,9 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
 
   let panelIndex = 0;
   for (const room of settings.rooms) {
-    if (!room.enabled || !room.panel?.enabled) continue;
+    if (!room.enabled || !roomHasAnyEnabledPanel(room)) continue;
+    const insidePanel = roomPanelConfigForPlacement(room, 'inside');
+    const supportsCalling = insidePanel.enabled && insidePanel.allowCalling ? 1 : 0;
     const surfaceId = panelFlowSurfaceId(room.roomId);
     upsertSurface(db, {
       id: surfaceId,
@@ -796,7 +799,7 @@ export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettin
       type: 'staff_panel',
       audience: 'staff',
       showsQueue: 1,
-      supportsCalling: 0,
+      supportsCalling,
       supportsConfirmation: 1,
       supportsRedirect: 0,
       enabled: 1,

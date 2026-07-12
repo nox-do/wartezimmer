@@ -418,17 +418,22 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["roomId", "pin"],
+                "required": ["roomId", "placement"],
                 "properties": {
                   "roomId": {
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 64
                   },
+                  "placement": {
+                    "type": "string",
+                    "enum": ["outside", "inside"]
+                  },
                   "pin": {
                     "type": "string",
                     "minLength": 0,
-                    "maxLength": 128
+                    "maxLength": 128,
+                    "description": "Required for inside panels; omit or empty for outside panels without PIN."
                   }
                 }
               }
@@ -11112,64 +11117,132 @@
                             "minimum": 1,
                             "description": "Maximum concurrent called or in-room tickets assigned to this room. Null or omitted means unlimited."
                           },
-                          "panel": {
+                          "panels": {
                             "type": "object",
-                            "required": [
-                              "enabled",
-                              "placement",
-                              "mode",
-                              "showPatientNames",
-                              "calledTextPreset",
-                              "calledTextCustom",
-                              "arrivedTextPreset",
-                              "arrivedTextCustom"
-                            ],
+                            "required": ["outside", "inside"],
                             "additionalProperties": false,
                             "properties": {
-                              "enabled": {
-                                "type": "boolean"
+                              "outside": {
+                                "type": "object",
+                                "required": [
+                                  "enabled",
+                                  "mode",
+                                  "showPatientNames",
+                                  "allowCalling",
+                                  "calledTextPreset",
+                                  "calledTextCustom",
+                                  "arrivedTextPreset",
+                                  "arrivedTextCustom"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "enabled": {
+                                    "type": "boolean"
+                                  },
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": ["display_only", "arrival", "staff_full"]
+                                  },
+                                  "showPatientNames": {
+                                    "type": "boolean",
+                                    "description": "Patient names are only allowed for inside panels when explicitly enabled."
+                                  },
+                                  "allowCalling": {
+                                    "type": "boolean",
+                                    "description": "Inside panels only — enables queue call from the room tablet."
+                                  },
+                                  "calledTextPreset": {
+                                    "type": "string",
+                                    "enum": [
+                                      "you_are_right",
+                                      "please_wait_here",
+                                      "please_enter",
+                                      "go_to_reception",
+                                      "custom"
+                                    ]
+                                  },
+                                  "calledTextCustom": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "maxLength": 80
+                                  },
+                                  "arrivedTextPreset": {
+                                    "type": "string",
+                                    "enum": [
+                                      "you_are_right",
+                                      "please_wait_here",
+                                      "please_enter",
+                                      "go_to_reception",
+                                      "custom"
+                                    ]
+                                  },
+                                  "arrivedTextCustom": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "maxLength": 80
+                                  }
+                                }
                               },
-                              "placement": {
-                                "type": "string",
-                                "enum": ["outside", "inside"]
-                              },
-                              "mode": {
-                                "type": "string",
-                                "enum": ["display_only", "arrival", "staff_full"]
-                              },
-                              "showPatientNames": {
-                                "type": "boolean",
-                                "description": "Patient names are only allowed for panels placed inside the room and when explicitly enabled."
-                              },
-                              "calledTextPreset": {
-                                "type": "string",
-                                "enum": [
-                                  "you_are_right",
-                                  "please_wait_here",
-                                  "please_enter",
-                                  "go_to_reception",
-                                  "custom"
-                                ]
-                              },
-                              "calledTextCustom": {
-                                "type": "string",
-                                "nullable": true,
-                                "maxLength": 80
-                              },
-                              "arrivedTextPreset": {
-                                "type": "string",
-                                "enum": [
-                                  "you_are_right",
-                                  "please_wait_here",
-                                  "please_enter",
-                                  "go_to_reception",
-                                  "custom"
-                                ]
-                              },
-                              "arrivedTextCustom": {
-                                "type": "string",
-                                "nullable": true,
-                                "maxLength": 80
+                              "inside": {
+                                "type": "object",
+                                "required": [
+                                  "enabled",
+                                  "mode",
+                                  "showPatientNames",
+                                  "allowCalling",
+                                  "calledTextPreset",
+                                  "calledTextCustom",
+                                  "arrivedTextPreset",
+                                  "arrivedTextCustom"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "enabled": {
+                                    "type": "boolean"
+                                  },
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": ["display_only", "arrival", "staff_full"]
+                                  },
+                                  "showPatientNames": {
+                                    "type": "boolean",
+                                    "description": "Patient names are only allowed for inside panels when explicitly enabled."
+                                  },
+                                  "allowCalling": {
+                                    "type": "boolean",
+                                    "description": "Inside panels only — enables queue call from the room tablet."
+                                  },
+                                  "calledTextPreset": {
+                                    "type": "string",
+                                    "enum": [
+                                      "you_are_right",
+                                      "please_wait_here",
+                                      "please_enter",
+                                      "go_to_reception",
+                                      "custom"
+                                    ]
+                                  },
+                                  "calledTextCustom": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "maxLength": 80
+                                  },
+                                  "arrivedTextPreset": {
+                                    "type": "string",
+                                    "enum": [
+                                      "you_are_right",
+                                      "please_wait_here",
+                                      "please_enter",
+                                      "go_to_reception",
+                                      "custom"
+                                    ]
+                                  },
+                                  "arrivedTextCustom": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "maxLength": 80
+                                  }
+                                }
                               }
                             }
                           }
@@ -11470,53 +11543,107 @@
                           "nullable": true,
                           "minimum": 1
                         },
-                        "panel": {
+                        "panels": {
                           "type": "object",
                           "additionalProperties": false,
                           "properties": {
-                            "enabled": {
-                              "type": "boolean"
+                            "outside": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "enabled": {
+                                  "type": "boolean"
+                                },
+                                "mode": {
+                                  "type": "string",
+                                  "enum": ["display_only", "arrival", "staff_full"]
+                                },
+                                "showPatientNames": {
+                                  "type": "boolean"
+                                },
+                                "allowCalling": {
+                                  "type": "boolean"
+                                },
+                                "calledTextPreset": {
+                                  "type": "string",
+                                  "enum": [
+                                    "you_are_right",
+                                    "please_wait_here",
+                                    "please_enter",
+                                    "go_to_reception",
+                                    "custom"
+                                  ]
+                                },
+                                "calledTextCustom": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "maxLength": 80
+                                },
+                                "arrivedTextPreset": {
+                                  "type": "string",
+                                  "enum": [
+                                    "you_are_right",
+                                    "please_wait_here",
+                                    "please_enter",
+                                    "go_to_reception",
+                                    "custom"
+                                  ]
+                                },
+                                "arrivedTextCustom": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "maxLength": 80
+                                }
+                              }
                             },
-                            "placement": {
-                              "type": "string",
-                              "enum": ["outside", "inside"]
-                            },
-                            "mode": {
-                              "type": "string",
-                              "enum": ["display_only", "arrival", "staff_full"]
-                            },
-                            "showPatientNames": {
-                              "type": "boolean"
-                            },
-                            "calledTextPreset": {
-                              "type": "string",
-                              "enum": [
-                                "you_are_right",
-                                "please_wait_here",
-                                "please_enter",
-                                "go_to_reception",
-                                "custom"
-                              ]
-                            },
-                            "calledTextCustom": {
-                              "type": "string",
-                              "nullable": true,
-                              "maxLength": 80
-                            },
-                            "arrivedTextPreset": {
-                              "type": "string",
-                              "enum": [
-                                "you_are_right",
-                                "please_wait_here",
-                                "please_enter",
-                                "go_to_reception",
-                                "custom"
-                              ]
-                            },
-                            "arrivedTextCustom": {
-                              "type": "string",
-                              "nullable": true,
-                              "maxLength": 80
+                            "inside": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "enabled": {
+                                  "type": "boolean"
+                                },
+                                "mode": {
+                                  "type": "string",
+                                  "enum": ["display_only", "arrival", "staff_full"]
+                                },
+                                "showPatientNames": {
+                                  "type": "boolean"
+                                },
+                                "allowCalling": {
+                                  "type": "boolean"
+                                },
+                                "calledTextPreset": {
+                                  "type": "string",
+                                  "enum": [
+                                    "you_are_right",
+                                    "please_wait_here",
+                                    "please_enter",
+                                    "go_to_reception",
+                                    "custom"
+                                  ]
+                                },
+                                "calledTextCustom": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "maxLength": 80
+                                },
+                                "arrivedTextPreset": {
+                                  "type": "string",
+                                  "enum": [
+                                    "you_are_right",
+                                    "please_wait_here",
+                                    "please_enter",
+                                    "go_to_reception",
+                                    "custom"
+                                  ]
+                                },
+                                "arrivedTextCustom": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "maxLength": 80
+                                }
+                              }
                             }
                           }
                         }
@@ -12029,64 +12156,132 @@
                             "minimum": 1,
                             "description": "Maximum concurrent called or in-room tickets assigned to this room. Null or omitted means unlimited."
                           },
-                          "panel": {
+                          "panels": {
                             "type": "object",
-                            "required": [
-                              "enabled",
-                              "placement",
-                              "mode",
-                              "showPatientNames",
-                              "calledTextPreset",
-                              "calledTextCustom",
-                              "arrivedTextPreset",
-                              "arrivedTextCustom"
-                            ],
+                            "required": ["outside", "inside"],
                             "additionalProperties": false,
                             "properties": {
-                              "enabled": {
-                                "type": "boolean"
+                              "outside": {
+                                "type": "object",
+                                "required": [
+                                  "enabled",
+                                  "mode",
+                                  "showPatientNames",
+                                  "allowCalling",
+                                  "calledTextPreset",
+                                  "calledTextCustom",
+                                  "arrivedTextPreset",
+                                  "arrivedTextCustom"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "enabled": {
+                                    "type": "boolean"
+                                  },
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": ["display_only", "arrival", "staff_full"]
+                                  },
+                                  "showPatientNames": {
+                                    "type": "boolean",
+                                    "description": "Patient names are only allowed for inside panels when explicitly enabled."
+                                  },
+                                  "allowCalling": {
+                                    "type": "boolean",
+                                    "description": "Inside panels only — enables queue call from the room tablet."
+                                  },
+                                  "calledTextPreset": {
+                                    "type": "string",
+                                    "enum": [
+                                      "you_are_right",
+                                      "please_wait_here",
+                                      "please_enter",
+                                      "go_to_reception",
+                                      "custom"
+                                    ]
+                                  },
+                                  "calledTextCustom": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "maxLength": 80
+                                  },
+                                  "arrivedTextPreset": {
+                                    "type": "string",
+                                    "enum": [
+                                      "you_are_right",
+                                      "please_wait_here",
+                                      "please_enter",
+                                      "go_to_reception",
+                                      "custom"
+                                    ]
+                                  },
+                                  "arrivedTextCustom": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "maxLength": 80
+                                  }
+                                }
                               },
-                              "placement": {
-                                "type": "string",
-                                "enum": ["outside", "inside"]
-                              },
-                              "mode": {
-                                "type": "string",
-                                "enum": ["display_only", "arrival", "staff_full"]
-                              },
-                              "showPatientNames": {
-                                "type": "boolean",
-                                "description": "Patient names are only allowed for panels placed inside the room and when explicitly enabled."
-                              },
-                              "calledTextPreset": {
-                                "type": "string",
-                                "enum": [
-                                  "you_are_right",
-                                  "please_wait_here",
-                                  "please_enter",
-                                  "go_to_reception",
-                                  "custom"
-                                ]
-                              },
-                              "calledTextCustom": {
-                                "type": "string",
-                                "nullable": true,
-                                "maxLength": 80
-                              },
-                              "arrivedTextPreset": {
-                                "type": "string",
-                                "enum": [
-                                  "you_are_right",
-                                  "please_wait_here",
-                                  "please_enter",
-                                  "go_to_reception",
-                                  "custom"
-                                ]
-                              },
-                              "arrivedTextCustom": {
-                                "type": "string",
-                                "nullable": true,
-                                "maxLength": 80
+                              "inside": {
+                                "type": "object",
+                                "required": [
+                                  "enabled",
+                                  "mode",
+                                  "showPatientNames",
+                                  "allowCalling",
+                                  "calledTextPreset",
+                                  "calledTextCustom",
+                                  "arrivedTextPreset",
+                                  "arrivedTextCustom"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "enabled": {
+                                    "type": "boolean"
+                                  },
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": ["display_only", "arrival", "staff_full"]
+                                  },
+                                  "showPatientNames": {
+                                    "type": "boolean",
+                                    "description": "Patient names are only allowed for inside panels when explicitly enabled."
+                                  },
+                                  "allowCalling": {
+                                    "type": "boolean",
+                                    "description": "Inside panels only — enables queue call from the room tablet."
+                                  },
+                                  "calledTextPreset": {
+                                    "type": "string",
+                                    "enum": [
+                                      "you_are_right",
+                                      "please_wait_here",
+                                      "please_enter",
+                                      "go_to_reception",
+                                      "custom"
+                                    ]
+                                  },
+                                  "calledTextCustom": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "maxLength": 80
+                                  },
+                                  "arrivedTextPreset": {
+                                    "type": "string",
+                                    "enum": [
+                                      "you_are_right",
+                                      "please_wait_here",
+                                      "please_enter",
+                                      "go_to_reception",
+                                      "custom"
+                                    ]
+                                  },
+                                  "arrivedTextCustom": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "maxLength": 80
+                                  }
+                                }
                               }
                             }
                           }
@@ -15796,17 +15991,22 @@
       "RoomPanelLoginRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["roomId", "pin"],
+        "required": ["roomId", "placement"],
         "properties": {
           "roomId": {
             "type": "string",
             "minLength": 1,
             "maxLength": 64
           },
+          "placement": {
+            "type": "string",
+            "enum": ["outside", "inside"]
+          },
           "pin": {
             "type": "string",
             "minLength": 0,
-            "maxLength": 128
+            "maxLength": 128,
+            "description": "Required for inside panels; omit or empty for outside panels without PIN."
           }
         }
       },
@@ -18323,6 +18523,196 @@
           }
         ]
       },
+      "RoomPanelPlacementConfig": {
+        "type": "object",
+        "required": [
+          "enabled",
+          "mode",
+          "showPatientNames",
+          "allowCalling",
+          "calledTextPreset",
+          "calledTextCustom",
+          "arrivedTextPreset",
+          "arrivedTextCustom"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["display_only", "arrival", "staff_full"]
+          },
+          "showPatientNames": {
+            "type": "boolean",
+            "description": "Patient names are only allowed for inside panels when explicitly enabled."
+          },
+          "allowCalling": {
+            "type": "boolean",
+            "description": "Inside panels only — enables queue call from the room tablet."
+          },
+          "calledTextPreset": {
+            "type": "string",
+            "enum": [
+              "you_are_right",
+              "please_wait_here",
+              "please_enter",
+              "go_to_reception",
+              "custom"
+            ]
+          },
+          "calledTextCustom": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 80
+          },
+          "arrivedTextPreset": {
+            "type": "string",
+            "enum": [
+              "you_are_right",
+              "please_wait_here",
+              "please_enter",
+              "go_to_reception",
+              "custom"
+            ]
+          },
+          "arrivedTextCustom": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 80
+          }
+        }
+      },
+      "RoomPanelsSettings": {
+        "type": "object",
+        "required": ["outside", "inside"],
+        "additionalProperties": false,
+        "properties": {
+          "outside": {
+            "type": "object",
+            "required": [
+              "enabled",
+              "mode",
+              "showPatientNames",
+              "allowCalling",
+              "calledTextPreset",
+              "calledTextCustom",
+              "arrivedTextPreset",
+              "arrivedTextCustom"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["display_only", "arrival", "staff_full"]
+              },
+              "showPatientNames": {
+                "type": "boolean",
+                "description": "Patient names are only allowed for inside panels when explicitly enabled."
+              },
+              "allowCalling": {
+                "type": "boolean",
+                "description": "Inside panels only — enables queue call from the room tablet."
+              },
+              "calledTextPreset": {
+                "type": "string",
+                "enum": [
+                  "you_are_right",
+                  "please_wait_here",
+                  "please_enter",
+                  "go_to_reception",
+                  "custom"
+                ]
+              },
+              "calledTextCustom": {
+                "type": "string",
+                "nullable": true,
+                "maxLength": 80
+              },
+              "arrivedTextPreset": {
+                "type": "string",
+                "enum": [
+                  "you_are_right",
+                  "please_wait_here",
+                  "please_enter",
+                  "go_to_reception",
+                  "custom"
+                ]
+              },
+              "arrivedTextCustom": {
+                "type": "string",
+                "nullable": true,
+                "maxLength": 80
+              }
+            }
+          },
+          "inside": {
+            "type": "object",
+            "required": [
+              "enabled",
+              "mode",
+              "showPatientNames",
+              "allowCalling",
+              "calledTextPreset",
+              "calledTextCustom",
+              "arrivedTextPreset",
+              "arrivedTextCustom"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["display_only", "arrival", "staff_full"]
+              },
+              "showPatientNames": {
+                "type": "boolean",
+                "description": "Patient names are only allowed for inside panels when explicitly enabled."
+              },
+              "allowCalling": {
+                "type": "boolean",
+                "description": "Inside panels only — enables queue call from the room tablet."
+              },
+              "calledTextPreset": {
+                "type": "string",
+                "enum": [
+                  "you_are_right",
+                  "please_wait_here",
+                  "please_enter",
+                  "go_to_reception",
+                  "custom"
+                ]
+              },
+              "calledTextCustom": {
+                "type": "string",
+                "nullable": true,
+                "maxLength": 80
+              },
+              "arrivedTextPreset": {
+                "type": "string",
+                "enum": [
+                  "you_are_right",
+                  "please_wait_here",
+                  "please_enter",
+                  "go_to_reception",
+                  "custom"
+                ]
+              },
+              "arrivedTextCustom": {
+                "type": "string",
+                "nullable": true,
+                "maxLength": 80
+              }
+            }
+          }
+        }
+      },
       "OpsStateResponse": {
         "type": "object",
         "required": ["checkinLocked", "dayClosePhase", "updatedAt"],
@@ -19213,64 +19603,132 @@
                   "minimum": 1,
                   "description": "Maximum concurrent called or in-room tickets assigned to this room. Null or omitted means unlimited."
                 },
-                "panel": {
+                "panels": {
                   "type": "object",
-                  "required": [
-                    "enabled",
-                    "placement",
-                    "mode",
-                    "showPatientNames",
-                    "calledTextPreset",
-                    "calledTextCustom",
-                    "arrivedTextPreset",
-                    "arrivedTextCustom"
-                  ],
+                  "required": ["outside", "inside"],
                   "additionalProperties": false,
                   "properties": {
-                    "enabled": {
-                      "type": "boolean"
+                    "outside": {
+                      "type": "object",
+                      "required": [
+                        "enabled",
+                        "mode",
+                        "showPatientNames",
+                        "allowCalling",
+                        "calledTextPreset",
+                        "calledTextCustom",
+                        "arrivedTextPreset",
+                        "arrivedTextCustom"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "mode": {
+                          "type": "string",
+                          "enum": ["display_only", "arrival", "staff_full"]
+                        },
+                        "showPatientNames": {
+                          "type": "boolean",
+                          "description": "Patient names are only allowed for inside panels when explicitly enabled."
+                        },
+                        "allowCalling": {
+                          "type": "boolean",
+                          "description": "Inside panels only — enables queue call from the room tablet."
+                        },
+                        "calledTextPreset": {
+                          "type": "string",
+                          "enum": [
+                            "you_are_right",
+                            "please_wait_here",
+                            "please_enter",
+                            "go_to_reception",
+                            "custom"
+                          ]
+                        },
+                        "calledTextCustom": {
+                          "type": "string",
+                          "nullable": true,
+                          "maxLength": 80
+                        },
+                        "arrivedTextPreset": {
+                          "type": "string",
+                          "enum": [
+                            "you_are_right",
+                            "please_wait_here",
+                            "please_enter",
+                            "go_to_reception",
+                            "custom"
+                          ]
+                        },
+                        "arrivedTextCustom": {
+                          "type": "string",
+                          "nullable": true,
+                          "maxLength": 80
+                        }
+                      }
                     },
-                    "placement": {
-                      "type": "string",
-                      "enum": ["outside", "inside"]
-                    },
-                    "mode": {
-                      "type": "string",
-                      "enum": ["display_only", "arrival", "staff_full"]
-                    },
-                    "showPatientNames": {
-                      "type": "boolean",
-                      "description": "Patient names are only allowed for panels placed inside the room and when explicitly enabled."
-                    },
-                    "calledTextPreset": {
-                      "type": "string",
-                      "enum": [
-                        "you_are_right",
-                        "please_wait_here",
-                        "please_enter",
-                        "go_to_reception",
-                        "custom"
-                      ]
-                    },
-                    "calledTextCustom": {
-                      "type": "string",
-                      "nullable": true,
-                      "maxLength": 80
-                    },
-                    "arrivedTextPreset": {
-                      "type": "string",
-                      "enum": [
-                        "you_are_right",
-                        "please_wait_here",
-                        "please_enter",
-                        "go_to_reception",
-                        "custom"
-                      ]
-                    },
-                    "arrivedTextCustom": {
-                      "type": "string",
-                      "nullable": true,
-                      "maxLength": 80
+                    "inside": {
+                      "type": "object",
+                      "required": [
+                        "enabled",
+                        "mode",
+                        "showPatientNames",
+                        "allowCalling",
+                        "calledTextPreset",
+                        "calledTextCustom",
+                        "arrivedTextPreset",
+                        "arrivedTextCustom"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "mode": {
+                          "type": "string",
+                          "enum": ["display_only", "arrival", "staff_full"]
+                        },
+                        "showPatientNames": {
+                          "type": "boolean",
+                          "description": "Patient names are only allowed for inside panels when explicitly enabled."
+                        },
+                        "allowCalling": {
+                          "type": "boolean",
+                          "description": "Inside panels only — enables queue call from the room tablet."
+                        },
+                        "calledTextPreset": {
+                          "type": "string",
+                          "enum": [
+                            "you_are_right",
+                            "please_wait_here",
+                            "please_enter",
+                            "go_to_reception",
+                            "custom"
+                          ]
+                        },
+                        "calledTextCustom": {
+                          "type": "string",
+                          "nullable": true,
+                          "maxLength": 80
+                        },
+                        "arrivedTextPreset": {
+                          "type": "string",
+                          "enum": [
+                            "you_are_right",
+                            "please_wait_here",
+                            "please_enter",
+                            "go_to_reception",
+                            "custom"
+                          ]
+                        },
+                        "arrivedTextCustom": {
+                          "type": "string",
+                          "nullable": true,
+                          "maxLength": 80
+                        }
+                      }
                     }
                   }
                 }

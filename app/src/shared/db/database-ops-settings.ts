@@ -1,14 +1,14 @@
 import type { StatementSync } from 'node:sqlite';
 import {
-  DEFAULT_ROOM_PANEL_SETTINGS,
   ensureSingleDefaultCallTarget,
-  normalizeRoomPanelSettings,
+  normalizeRoomPanelPlacementConfig,
+  normalizeRoomPanelsSettings,
   normalizeTerminalPatientLocales,
   ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
   ROOM_PANEL_MODES,
-  ROOM_PANEL_PLACEMENTS,
   ROOM_PANEL_TEXT_PRESETS,
   type RoomPanelPlacement,
+  type RoomPanelPlacementConfig,
   type RoomPanelTextPreset,
 } from '@praxis-flow/domain';
 import { isValidConfigurableTopicId } from '../checkin-topics.js';
@@ -214,57 +214,61 @@ function normalizeRoomPanelCustomTextStrict(
   return trimmed.length > 0 ? trimmed : null;
 }
 
-const ROOM_PANEL_PLACEMENT_SET = new Set<RoomPanelPlacement>(ROOM_PANEL_PLACEMENTS);
 const ROOM_PANEL_MODE_SET = new Set(ROOM_PANEL_MODES);
 const ROOM_PANEL_TEXT_PRESET_SET = new Set<RoomPanelTextPreset>(ROOM_PANEL_TEXT_PRESETS);
 
-function normalizeRoomPanelSettingsFromDb(
+function normalizeRoomPanelPlacementConfigFromDb(
   raw: unknown,
+  placement: RoomPanelPlacement,
   index: number,
-): OpsSettings['rooms'][number]['panel'] {
+): RoomPanelPlacementConfig {
   if (raw == null) {
-    return { ...DEFAULT_ROOM_PANEL_SETTINGS };
+    return normalizeRoomPanelPlacementConfig(placement, null);
   }
-
   if (!isRecord(raw)) {
-    throw new OpsSettingsValidationError(`rooms_json entry at index ${index} has invalid panel.`);
+    throw new OpsSettingsValidationError(
+      `rooms_json entry at index ${index} has invalid panels.${placement}.`,
+    );
   }
 
-  // Legacy DB shapes only — then canonical domain normalize.
-  const legacyMode = raw.mode === 'patient_arrival' ? 'arrival' : raw.mode;
-  const mode = isStringSetMember(ROOM_PANEL_MODE_SET, legacyMode) ? legacyMode : 'display_only';
-  const inferredPlacement: RoomPanelPlacement =
-    mode !== 'display_only' || raw.showPatientNames === true ? 'inside' : 'outside';
-  const placement = isStringSetMember(ROOM_PANEL_PLACEMENT_SET, raw.placement)
-    ? raw.placement
-    : inferredPlacement;
-  const calledTextPresetRaw = raw.calledTextPreset ?? raw.arrivalTextPreset;
-  const calledTextPreset = isStringSetMember(ROOM_PANEL_TEXT_PRESET_SET, calledTextPresetRaw)
-    ? calledTextPresetRaw
-    : 'please_enter';
-  const arrivedTextPresetRaw = raw.arrivedTextPreset ?? raw.waitingTextPreset;
-  const arrivedTextPreset = isStringSetMember(ROOM_PANEL_TEXT_PRESET_SET, arrivedTextPresetRaw)
-    ? arrivedTextPresetRaw
-    : 'please_wait_here';
-
-  return normalizeRoomPanelSettings({
+  return normalizeRoomPanelPlacementConfig(placement, {
     enabled: raw.enabled === true,
-    placement,
-    mode,
+    mode: isStringSetMember(ROOM_PANEL_MODE_SET, raw.mode) ? raw.mode : undefined,
     showPatientNames: raw.showPatientNames === true,
     allowCalling: raw.allowCalling === true,
-    calledTextPreset,
+    calledTextPreset: isStringSetMember(ROOM_PANEL_TEXT_PRESET_SET, raw.calledTextPreset)
+      ? raw.calledTextPreset
+      : undefined,
     calledTextCustom: normalizeRoomPanelCustomTextStrict(
-      raw.calledTextCustom ?? raw.arrivalTextCustom,
-      'panel.calledTextCustom',
+      raw.calledTextCustom,
+      `panels.${placement}.calledTextCustom`,
       index,
     ),
-    arrivedTextPreset,
+    arrivedTextPreset: isStringSetMember(ROOM_PANEL_TEXT_PRESET_SET, raw.arrivedTextPreset)
+      ? raw.arrivedTextPreset
+      : undefined,
     arrivedTextCustom: normalizeRoomPanelCustomTextStrict(
-      raw.arrivedTextCustom ?? raw.waitingTextCustom,
-      'panel.arrivedTextCustom',
+      raw.arrivedTextCustom,
+      `panels.${placement}.arrivedTextCustom`,
       index,
     ),
+  });
+}
+
+function normalizeRoomPanelsSettingsFromDb(
+  raw: unknown,
+  index: number,
+): OpsSettings['rooms'][number]['panels'] {
+  if (raw == null) {
+    return normalizeRoomPanelsSettings(null);
+  }
+  if (!isRecord(raw)) {
+    throw new OpsSettingsValidationError(`rooms_json entry at index ${index} has invalid panels.`);
+  }
+
+  return normalizeRoomPanelsSettings({
+    outside: normalizeRoomPanelPlacementConfigFromDb(raw.outside, 'outside', index),
+    inside: normalizeRoomPanelPlacementConfigFromDb(raw.inside, 'inside', index),
   });
 }
 
@@ -314,13 +318,19 @@ function parseRoomSettings(raw: string | undefined): OpsSettings['rooms'] {
         `rooms_json entry at index ${index} has invalid maxOccupancy.`,
       );
     }
+    if (entry.panel != null) {
+      throw new OpsSettingsValidationError(
+        `rooms_json entry at index ${index} uses deprecated panel field; use panels instead.`,
+      );
+    }
+
     normalized.push({
       roomId,
       roomLabel,
       enabled: typeof entry.enabled === 'boolean' ? entry.enabled : true,
       defaultCallTarget: entry.defaultCallTarget === true,
       maxOccupancy: parseMaxOccupancy(maxOccupancyRaw),
-      panel: normalizeRoomPanelSettingsFromDb(entry.panel, index),
+      panels: normalizeRoomPanelsSettingsFromDb(entry.panels, index),
     });
   }
 
