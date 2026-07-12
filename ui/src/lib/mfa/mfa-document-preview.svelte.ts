@@ -1,3 +1,4 @@
+/* eslint-disable svelte/prefer-svelte-reactivity -- internal visitId→count bookkeeping, not UI state */
 import { authSession } from '$lib/auth/session-state.svelte';
 import { fetchDocumentsForVisit } from '$lib/documents/document-api';
 import {

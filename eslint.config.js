@@ -50,6 +50,7 @@ module.exports = tseslint.config(
     },
     rules: {
       '@typescript-eslint/no-unused-vars': tsUnusedVars,
+      'svelte/prefer-svelte-reactivity': 'error',
     },
   },
   {
@@ -68,18 +69,11 @@ module.exports = tseslint.config(
     rules: {
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-unused-expressions': 'off',
-      'svelte/no-navigation-without-resolve': 'off',
-      'svelte/no-useless-children-snippet': 'off',
-      'svelte/require-each-key': 'off',
-      'svelte/no-dom-manipulating': 'off',
-      'svelte/no-unused-svelte-ignore': 'off',
-    },
-  },
-  {
-    rules: {
-      // Project does not use resolve() yet; runes modules use plain Map/Set by design.
-      'svelte/no-navigation-without-resolve': 'off',
-      'svelte/prefer-svelte-reactivity': 'off',
+      'svelte/no-navigation-without-resolve': 'error',
+      'svelte/no-useless-children-snippet': 'error',
+      'svelte/require-each-key': 'error',
+      'svelte/no-dom-manipulating': 'error',
+      'svelte/no-unused-svelte-ignore': 'error',
     },
   },
 );

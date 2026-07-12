@@ -1,3 +1,4 @@
+/* eslint-disable svelte/prefer-svelte-reactivity -- internal async waiters/cancels, opsStream $state drives UI */
 import { type DevicePresenceStatus } from '$lib/ops/device-presence-api';
 import {
   computeDeviceQuicksettingsPhase,
