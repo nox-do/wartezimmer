@@ -13,7 +13,7 @@
 
 <div class="numpad" aria-label={t('terminal.numpadAria')}>
   <div class="numpad-grid">
-    {#each ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as digit}
+    {#each ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as digit (digit)}
       <button type="button" class="numpad-key" {disabled} onclick={() => onDigit(digit)}>{digit}</button>
     {/each}
     <button type="button" class="numpad-key numpad-key--clear" {disabled} onclick={onClear}>

@@ -590,7 +590,7 @@
                               }
                             }}
                           >
-                            {#each ROOM_PANEL_TEXT_PRESETS as preset}
+                            {#each ROOM_PANEL_TEXT_PRESETS as preset (preset)}
                               <option value={preset}>{roomPanelTextPresetLabel(preset)}</option>
                             {/each}
                           </select>
@@ -626,7 +626,7 @@
                               }
                             }}
                           >
-                            {#each ROOM_PANEL_TEXT_PRESETS as preset}
+                            {#each ROOM_PANEL_TEXT_PRESETS as preset (preset)}
                               <option value={preset}>{roomPanelTextPresetLabel(preset)}</option>
                             {/each}
                           </select>

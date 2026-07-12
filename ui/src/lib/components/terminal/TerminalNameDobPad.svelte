@@ -201,7 +201,7 @@
           <button type="button" class="numpad-key numpad-key--clear name-key name-key--utility" disabled={disabled} onclick={clearActive}>
             {t('terminal.numpadDelete')}
           </button>
-          {#each nameKeyboardLayout.topRow as key}
+          {#each nameKeyboardLayout.topRow as key (key)}
             <button type="button" class="numpad-key name-key" disabled={disabled} onclick={() => appendNameChar(key)}>
               {key}
             </button>
@@ -226,9 +226,9 @@
             ←
           </button>
         </div>
-        {#each nameKeyboardLayout.rows as row}
+        {#each nameKeyboardLayout.rows as row, rowIndex (rowIndex)}
           <div class="name-keyboard-row">
-            {#each row as key}
+            {#each row as key (key)}
               <button type="button" class="numpad-key name-key" disabled={disabled} onclick={() => appendNameChar(key)}>
                 {key}
               </button>
@@ -236,7 +236,7 @@
           </div>
         {/each}
         <div class="name-keyboard-row name-keyboard-row--space">
-          {#each Array.from({ length: nameKeyboardMetrics.spacebarLeadingGhostCount }) as _leading}
+          {#each Array.from({ length: nameKeyboardMetrics.spacebarLeadingGhostCount }) as _leading, index (`leading-${index}`)}
             <span class="name-key name-key--ghost" aria-hidden="true"></span>
           {/each}
           <button
@@ -247,7 +247,7 @@
           >
             {t('terminal.nameSpaceKey')}
           </button>
-          {#each Array.from({ length: nameKeyboardMetrics.spacebarTrailingGhostCount }) as _trailing}
+          {#each Array.from({ length: nameKeyboardMetrics.spacebarTrailingGhostCount }) as _trailing, index (`trailing-${index}`)}
             <span class="name-key name-key--ghost" aria-hidden="true"></span>
           {/each}
         </div>
