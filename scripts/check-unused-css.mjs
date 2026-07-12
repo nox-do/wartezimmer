@@ -44,7 +44,7 @@ const targets = [
     ],
     safelist: {
       standard: [/^is-/, /^has-/],
-      greedy: [/is-/, /has-/],
+      greedy: [/is-/, /has-/, /queue-drop-zone--/, /journey-admin__delete-btn/],
     },
   },
 ];
