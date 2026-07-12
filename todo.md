@@ -12,6 +12,7 @@ Stand: 2026-07-12
 - ✅ TV-offline Aufruf-Gate (2026-07-12): `capabilities.callAnnouncementReachable` im Snapshot (Server-Presence); UI disabled+Tooltip; `disabledReason` aus OpenAPI entfernt
 - ✅ Kleinkram+i18n (2026-07-12): `updateRoomPanelPlacementConfig`→Domain; `room-panel-login.ts`+`room-panel-settings.ts` entfernt; Snapshot-Presets statt DE-Hardcode; `room-panel-text.ts` + `roomPanel.*` i18n
 - 🔍 Quality-Audit (2026-07-12): ESLint+Stylelint+Prettier grün; `format:check` in `verify`; tote CSS entfernt; `flow-core` lint; ESLint+`eslint-plugin-svelte` für `.svelte` (ui/manager); QueueEntry a11y (`<button>`); kein GitHub/CI — lokal `npm run verify`
+- 🔧 ESLint-Svelte-Reaktivierung (2026-07-12): deaktivierte Regeln weitgehend zurück — `require-each-key`, `no-navigation-without-resolve`, `no-useless-children-snippet`, `no-dom-manipulating` wieder `error`; `prefer-svelte-reactivity` nur file-disable für interne Map/Set; `kit-paths.ts`; Navigation `resolve()`; `npm run lint` + `ui check` + `npm run verify` grün
 
 ## Hinweis: RoutingMode-Guard vs. offene Wartenummern (2026-07-10)
 
