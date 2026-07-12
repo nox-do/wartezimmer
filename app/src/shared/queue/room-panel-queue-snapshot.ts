@@ -142,6 +142,9 @@ function mapQueueRowToCallCandidate(
   showPatientNames: boolean,
   actions: RoomPanelItemActions,
 ): RoomPanelCallCandidate | null {
+  if (row.status !== 'waiting' && row.status !== 'directed') {
+    return null;
+  }
   return {
     visitId: row.id,
     laneCode: row.laneCode,

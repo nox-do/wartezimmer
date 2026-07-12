@@ -1251,7 +1251,8 @@ test('terminal device role can be selected when staff and device cookies share o
 
   const terminal = listDevicePresence().find((entry) => entry.deviceId === 'checkin-terminal');
   assert.equal(terminal?.streamConnected, false);
-  assert.equal(terminal?.status, 'offline');
+  // Heartbeat without SSE: fresh presence is online until PRESENCE_OFFLINE_AFTER_MS (see device-presence-registry.test.ts).
+  assert.equal(terminal?.status, 'online');
   assert.ok(terminal?.lastSeenAt);
 
   await app.close();
