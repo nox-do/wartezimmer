@@ -88,16 +88,23 @@ export {
 } from './topic-icon-ids.js';
 export {
   applyRoomPanelPlacement,
+  DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG,
   DEFAULT_ROOM_PANEL_SETTINGS,
+  DEFAULT_ROOM_PANELS_SETTINGS,
   normalizeRoomPanelCustomText,
+  normalizeRoomPanelPlacementConfig,
   normalizeRoomPanelSettings,
+  normalizeRoomPanelsSettings,
   ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
   ROOM_PANEL_MODES,
   ROOM_PANEL_PLACEMENTS,
   ROOM_PANEL_TEXT_PRESETS,
   type RoomPanelMode,
   type RoomPanelPlacement,
+  type RoomPanelPlacementConfig,
   type RoomPanelSettings,
+  type PartialRoomPanelsSettings,
+  type RoomPanelsSettings,
   type RoomPanelTextPreset,
 } from './room-panel-settings.js';
 export {
@@ -110,6 +117,7 @@ export {
   roomPanelRequiresPin,
   roomPanelVisitTargetsRoom,
   resolveVisitTargetRoomId,
+  visitTargetsRoom,
   type RoomPanelCallVisitInput,
   type RoomPanelCapabilities,
   type RoomPanelPolicyInput,

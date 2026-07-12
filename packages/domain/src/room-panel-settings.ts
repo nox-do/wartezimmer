@@ -14,9 +14,9 @@ export type RoomPanelPlacement = (typeof ROOM_PANEL_PLACEMENTS)[number];
 export type RoomPanelMode = (typeof ROOM_PANEL_MODES)[number];
 export type RoomPanelTextPreset = (typeof ROOM_PANEL_TEXT_PRESETS)[number];
 
-export type RoomPanelSettings = {
+/** Per-placement config (outside | inside) without the placement key itself. */
+export type RoomPanelPlacementConfig = {
   enabled: boolean;
-  placement: RoomPanelPlacement;
   mode: RoomPanelMode;
   showPatientNames: boolean;
   /** Inside panels only — enables queue call from the room tablet (WZ-TV announcement still required). */
@@ -27,9 +27,19 @@ export type RoomPanelSettings = {
   arrivedTextCustom: string | null;
 };
 
-export const DEFAULT_ROOM_PANEL_SETTINGS: RoomPanelSettings = {
+export type RoomPanelsSettings = {
+  outside: RoomPanelPlacementConfig;
+  inside: RoomPanelPlacementConfig;
+};
+
+/** Input shape for normalizeRoomPanelsSettings — each placement may be partial or omitted. */
+export type PartialRoomPanelsSettings = {
+  outside?: Partial<RoomPanelPlacementConfig> | null;
+  inside?: Partial<RoomPanelPlacementConfig> | null;
+};
+
+export const DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG: RoomPanelPlacementConfig = {
   enabled: false,
-  placement: 'outside',
   mode: 'display_only',
   showPatientNames: false,
   allowCalling: false,
@@ -37,6 +47,22 @@ export const DEFAULT_ROOM_PANEL_SETTINGS: RoomPanelSettings = {
   calledTextCustom: null,
   arrivedTextPreset: 'please_wait_here',
   arrivedTextCustom: null,
+};
+
+export const DEFAULT_ROOM_PANELS_SETTINGS: RoomPanelsSettings = {
+  outside: { ...DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG },
+  inside: { ...DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG },
+};
+
+/** @deprecated Single-panel shape — replaced by RoomPanelsSettings in P1. */
+export type RoomPanelSettings = RoomPanelPlacementConfig & {
+  placement: RoomPanelPlacement;
+};
+
+/** @deprecated Single-panel default — replaced by DEFAULT_ROOM_PANELS_SETTINGS in P1. */
+export const DEFAULT_ROOM_PANEL_SETTINGS: RoomPanelSettings = {
+  ...DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG,
+  placement: 'outside',
 };
 
 function isRoomPanelPlacement(value: unknown): value is RoomPanelPlacement {
@@ -63,8 +89,62 @@ export function normalizeRoomPanelCustomText(value: string | null | undefined): 
   return trimmed.length > 0 ? trimmed.slice(0, ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH) : null;
 }
 
+function normalizeRoomPanelTextFields(
+  source: Partial<RoomPanelPlacementConfig>,
+): Pick<
+  RoomPanelPlacementConfig,
+  'calledTextPreset' | 'calledTextCustom' | 'arrivedTextPreset' | 'arrivedTextCustom'
+> {
+  return {
+    calledTextPreset: isRoomPanelTextPreset(source.calledTextPreset)
+      ? source.calledTextPreset
+      : DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG.calledTextPreset,
+    calledTextCustom: normalizeRoomPanelCustomText(source.calledTextCustom),
+    arrivedTextPreset: isRoomPanelTextPreset(source.arrivedTextPreset)
+      ? source.arrivedTextPreset
+      : DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG.arrivedTextPreset,
+    arrivedTextCustom: normalizeRoomPanelCustomText(source.arrivedTextCustom),
+  };
+}
+
 /**
- * Canonical room-panel settings normalize (enums, outside constraints, custom text).
+ * Canonical per-placement normalize (enums, outside constraints, custom text).
+ * Accepts partial/unknown fields and coerces to defaults.
+ */
+export function normalizeRoomPanelPlacementConfig(
+  placement: RoomPanelPlacement,
+  config: Partial<RoomPanelPlacementConfig> | null | undefined,
+): RoomPanelPlacementConfig {
+  const source = config ?? DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG;
+  let mode = isRoomPanelMode(source.mode)
+    ? source.mode
+    : DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG.mode;
+  if (placement === 'outside' && mode === 'staff_full') {
+    mode = 'arrival';
+  }
+
+  return {
+    enabled: source.enabled === true,
+    mode,
+    showPatientNames: placement === 'inside' && source.showPatientNames === true,
+    allowCalling: placement === 'inside' && source.allowCalling === true,
+    ...normalizeRoomPanelTextFields(source),
+  };
+}
+
+/** Canonical dual-placement normalize — no legacy single-panel wrapper. */
+export function normalizeRoomPanelsSettings(
+  panels: PartialRoomPanelsSettings | null | undefined,
+): RoomPanelsSettings {
+  const source = panels ?? {};
+  return {
+    outside: normalizeRoomPanelPlacementConfig('outside', source.outside),
+    inside: normalizeRoomPanelPlacementConfig('inside', source.inside),
+  };
+}
+
+/**
+ * @deprecated Single-panel normalize — replaced by normalizeRoomPanelsSettings in P1.
  * Accepts partial/unknown fields and coerces to defaults.
  */
 export function normalizeRoomPanelSettings(
@@ -74,25 +154,10 @@ export function normalizeRoomPanelSettings(
   const placement = isRoomPanelPlacement(source.placement)
     ? source.placement
     : DEFAULT_ROOM_PANEL_SETTINGS.placement;
-  let mode = isRoomPanelMode(source.mode) ? source.mode : DEFAULT_ROOM_PANEL_SETTINGS.mode;
-  if (placement === 'outside' && mode === 'staff_full') {
-    mode = 'arrival';
-  }
 
   return {
-    enabled: source.enabled === true,
     placement,
-    mode,
-    showPatientNames: placement === 'inside' && source.showPatientNames === true,
-    allowCalling: placement === 'inside' && source.allowCalling === true,
-    calledTextPreset: isRoomPanelTextPreset(source.calledTextPreset)
-      ? source.calledTextPreset
-      : DEFAULT_ROOM_PANEL_SETTINGS.calledTextPreset,
-    calledTextCustom: normalizeRoomPanelCustomText(source.calledTextCustom),
-    arrivedTextPreset: isRoomPanelTextPreset(source.arrivedTextPreset)
-      ? source.arrivedTextPreset
-      : DEFAULT_ROOM_PANEL_SETTINGS.arrivedTextPreset,
-    arrivedTextCustom: normalizeRoomPanelCustomText(source.arrivedTextCustom),
+    ...normalizeRoomPanelPlacementConfig(placement, source),
   };
 }
 

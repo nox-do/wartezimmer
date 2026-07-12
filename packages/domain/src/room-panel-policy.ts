@@ -47,8 +47,19 @@ export function roomPanelCanCall(panel: RoomPanelPolicyInput): boolean {
 }
 
 export function resolveRoomPanelCapabilities(panel: RoomPanelPolicyInput): RoomPanelCapabilities {
+  const requiresPin = roomPanelRequiresPin(panel.placement);
+  if (panel.enabled !== true) {
+    return {
+      requiresPin,
+      canCheckIn: false,
+      canCheckOut: false,
+      mayShowPatientNames: false,
+      canCall: false,
+    };
+  }
+
   return {
-    requiresPin: roomPanelRequiresPin(panel.placement),
+    requiresPin,
     canCheckIn: roomPanelCanCheckIn(panel),
     canCheckOut: roomPanelCanCheckOut(panel),
     mayShowPatientNames: roomPanelMayShowPatientNames(panel),
@@ -64,29 +75,41 @@ export type RoomPanelCallVisitInput = {
   roomId?: string | null;
 };
 
-/** Next or current target room for panel scope (waiting, called, directed, in_room). */
+/**
+ * Status-aware target room for panel scope.
+ * - waiting/directed: destinationRoomId || targetLocationId
+ * - called/in_room: roomId preferred (current assignment)
+ */
 export function resolveVisitTargetRoomId(visit: RoomPanelCallVisitInput): string | null {
+  const status = visit.status?.trim() || '';
   const destination = visit.destinationRoomId?.trim() || visit.targetLocationId?.trim() || '';
-  if (destination) {
-    return destination;
-  }
   const assigned = visit.roomId?.trim() || '';
-  return assigned || null;
+
+  if (status === 'called' || status === 'in_room') {
+    return assigned || destination || null;
+  }
+
+  return destination || null;
 }
 
 /** Generic room scope: visit belongs on this room's panel (list, snapshot, call candidates). */
-export function roomPanelVisitTargetsRoom(
-  visit: RoomPanelCallVisitInput,
-  sessionRoomId: string,
-): boolean {
+export function visitTargetsRoom(visit: RoomPanelCallVisitInput, sessionRoomId: string): boolean {
   const roomId = sessionRoomId.trim();
   return roomId.length > 0 && resolveVisitTargetRoomId(visit) === roomId;
 }
 
-/** @deprecated Use roomPanelVisitTargetsRoom; call validity is enforced by flow-core on transition. */
+/** @deprecated Use visitTargetsRoom. */
+export function roomPanelVisitTargetsRoom(
+  visit: RoomPanelCallVisitInput,
+  sessionRoomId: string,
+): boolean {
+  return visitTargetsRoom(visit, sessionRoomId);
+}
+
+/** @deprecated Use visitTargetsRoom; call validity is enforced by flow-core on transition. */
 export function roomPanelMayCallVisit(
   visit: RoomPanelCallVisitInput,
   sessionRoomId: string,
 ): boolean {
-  return roomPanelVisitTargetsRoom(visit, sessionRoomId);
+  return visitTargetsRoom(visit, sessionRoomId);
 }

@@ -9,7 +9,7 @@ Stand: 2026-07-12
 ## Leitentscheidungen
 
 - `placement` wird Teil der Panel-Identitaet: Auth, Session, Device Presence, Revoke, Login-Liste, UI-Badges.
-- Datenmodell: `room.panels.outside` + `room.panels.inside`; Legacy `room.panel` wird beim Load migriert.
+- Breaking Umbau: `room.panel` wird durch `room.panels.outside` + `room.panels.inside` ersetzt. Keine Legacy-Migration, bis das Feature fertig ist.
 - `outside`: kein PIN, nur `display_only | arrival`, nie Namen, nie Aufruf.
 - `inside`: PIN, `display_only | arrival | staff_full`, optional Namen, optional Aufruf.
 - UI: Raeume nicht mehr primaer im Modal bearbeiten, sondern als Expander/Accordion. Settings direkt im Raum-Expander.
@@ -62,8 +62,8 @@ type RoomPanelsSettings = {
 
 Normalisierung:
 
-- Legacy `panel.placement === outside` -> `panels.outside`
-- Legacy `panel.placement === inside` -> `panels.inside`
+- Neues Modell ist verbindlich; alte `panel`-Form wird nicht parallel unterstuetzt.
+- Beide Placements haben zentrale Defaults: disabled, `display_only`, keine Namen, kein Aufruf.
 - `outside.staff_full` -> `outside.arrival`
 - `outside.showPatientNames/allowCalling` -> `false`
 
@@ -125,16 +125,19 @@ Bleibt MFA:
 ### P0 — Plan & Domain-Schaerfung
 
 - [x] Capabilities: `canCall`, `mayShowPatientNames`, `requiresPin`
-- [ ] `visitTargetsRoom` status-aware schaerfen
-- [ ] Domain-Types fuer `RoomPanelsSettings`
+- [x] `visitTargetsRoom` status-aware schaerfen
+- [x] Domain-Types fuer `RoomPanelsSettings`
+- [x] Defaults fuer `RoomPanelPlacementConfig` + `RoomPanelsSettings`
+- [x] Normalizer nur fuer neues `panels`-Modell; kein Legacy-Wrapper
+- [x] Capabilities bei `enabled: false` auf false normalisieren (`requiresPin` bleibt Placement-Eigenschaft)
 
 ### P1 — Dual-Placement Daten/API
 
-- [ ] Settings normalisieren: `panel` -> `panels`
+- [ ] Breaking Schema/Mapper: `panel` entfernen, `panels` verwenden
 - [ ] DB/Ops Mapper/OpenAPI anpassen
 - [ ] Catalog-Surface aktiv, wenn `outside` oder `inside` aktiv
 - [ ] Catalog `supportsCalling` dynamisch setzen, wenn ein inside-Panel `allowCalling` hat
-- [ ] Tests fuer Legacy-Migration und Outside-Normalisierung
+- [ ] Tests fuer Defaults, neues Schema und Outside-Normalisierung
 
 ### P2 — Auth, Session, Device Identity
 

@@ -11,6 +11,7 @@ export {
   roomPanelRequiresPin,
   roomPanelVisitTargetsRoom,
   resolveVisitTargetRoomId,
+  visitTargetsRoom,
   type RoomPanelCallVisitInput,
   type RoomPanelCapabilities,
   type RoomPanelPolicyInput,

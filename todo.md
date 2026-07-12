@@ -6,7 +6,8 @@ Stand: 2026-07-12
 
 - ✅ Plan bereinigt: `docs/plan-room-panel.md` — Scope vs. Aktion, Phasen A–E
 - ✅ Phase A: Claims (`canCall`, `visitTargetsRoom`, `mayShowPatientNames`); `allowCalling`; Auth inside=PIN / outside=ohne
-- ⏳ Phase B–E: siehe Plan (Dual-Placement → Backend call → UI → Doku)
+- ✅ **P0 Domain** (2026-07-12): `RoomPanelsSettings` + `normalizeRoomPanelsSettings`; status-aware `visitTargetsRoom`; `resolveRoomPanelCapabilities` disabled→false
+- ⏳ P1–P6: siehe Plan (Dual-Placement → Backend call → UI → Doku)
 
 ## Hinweis: RoutingMode-Guard vs. offene Wartenummern (2026-07-10)
 
