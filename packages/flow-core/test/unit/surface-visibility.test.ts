@@ -257,14 +257,6 @@ test('Konfliktaufloesung: spezifisch schlaegt allgemein', () => {
     displayMode: 'visible',
     sortOrder: 99,
   };
-  const visit = {
-    primaryTopicId: 'general',
-    queueId: 'general_queue',
-    targetLocationId: 'reception',
-    lastKnownLocationId: 'waiting_general',
-    status: 'waiting',
-    publicDisplayMode: 'visible',
-  };
 
   assert.ok(ruleSpecificity(specific) > ruleSpecificity(general));
   assert.equal(resolveSurfaceDisplayRule([general, specific])?.id, 'narrow');

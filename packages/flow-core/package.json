@@ -25,6 +25,7 @@
     "dump": "node scripts/dump-context.mjs",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "npm run build && node --import tsx --test 'test/**/*.test.ts'"
   },
   "dependencies": {

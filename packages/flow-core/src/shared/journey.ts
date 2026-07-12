@@ -11,7 +11,6 @@
  */
 
 import type {
-  JourneyCompletedWhen,
   JourneyStep,
   Location,
   LocationConfidence,

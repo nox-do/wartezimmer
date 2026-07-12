@@ -78,7 +78,7 @@
 
 {#if state.gatewayEnabled}
   <p class="hint">
-    Netzwerkkarte am Gateway für das Gast-Netz (z. B. eth1). Ihre IT leitet den Gast-WLAN-Traffic
+    Netzwerkkarte am Gateway für das Gast-Netz (z. B. eth1). Ihre IT leitet den Gast-WLAN-Traffic
     dorthin.
   </p>
 

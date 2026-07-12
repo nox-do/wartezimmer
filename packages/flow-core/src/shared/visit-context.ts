@@ -6,7 +6,7 @@
  * das Journey-Bundle soll ohne Server-Import nutzbar bleiben.
  */
 
-import type { JourneyStep, Location, Queue, RoutingRule, Visit, VisitView } from './types.js';
+import type { JourneyStep, Location, Queue, RoutingRule, VisitView } from './types.js';
 import { movementLabels, statusLabels } from './labels.js';
 import { formatStepFraction } from './journey.js';
 

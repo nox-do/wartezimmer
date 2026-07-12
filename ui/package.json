@@ -10,7 +10,7 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "generate:openapi-types": "node ../scripts/generate-openapi-types.mjs",
     "typecheck": "npm run check",
-    "lint": "eslint \"src/**/*.ts\"",
+    "lint": "eslint \"src/**/*.{ts,svelte}\"",
     "test": "vitest run",
     "test:watch": "vitest"
   },

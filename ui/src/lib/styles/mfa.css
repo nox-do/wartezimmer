@@ -140,6 +140,16 @@
   flex-shrink: 0;
 }
 
+button.queue-ticket {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+}
+
 .queue-ticket--supersede {
   cursor: pointer;
   border-radius: var(--radius-xs);

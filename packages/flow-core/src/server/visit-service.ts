@@ -246,7 +246,7 @@ export function createVisitService(params: {
       let journeyTemplateId: string | null = null;
       let journeyStepIndex: number | null = null;
       let journeyState: Visit['journeyState'] | null = null;
-      let checkedInNote = selectedTopic.name;
+      const checkedInNote = selectedTopic.name;
       let routeNote = selectedRule.name;
 
       if (useJourney && journeyStep0) {

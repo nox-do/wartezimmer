@@ -10,7 +10,7 @@
     "build": "cross-env ELECTRON_RUN_AS_NODE= electron-vite build",
     "prepare:packaged": "npm run --prefix .. build:server-shared && npm run --prefix ../setup build && node scripts/prepare-packaged-resources.mjs",
     "dist:mac": "npm run prepare:packaged && npm run build && electron-builder --mac dmg",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint \"src/**/*.{ts,svelte}\"",
     "test": "node --import tsx --test src/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit && svelte-check --tsconfig tsconfig.json"
   },

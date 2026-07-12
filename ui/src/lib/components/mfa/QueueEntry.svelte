@@ -276,31 +276,39 @@
   }
 </script>
 
+{#snippet queueTicketMarks()}
+  <TopicLaneBadge laneCode={item.laneCode} accentColor={laneAccentColor} title={item.laneCode} />
+  <span class="queue-num">{String(item.number).padStart(3, '0')}</span>
+  {#if showStaffAttentionMark}
+    <span class="queue-assist-mark" title={staffAttentionTitle} aria-label={staffAttentionTitle}>
+      <Users size={16} aria-hidden="true" />
+    </span>
+  {/if}
+  {#if showDirectedMark}
+    <span class="queue-directed-mark" title={directedMarkTitle} aria-label={directedMarkTitle}>
+      <Navigation size={16} aria-hidden="true" />
+    </span>
+  {/if}
+{/snippet}
+
 {#snippet queueTicket()}
-  <div
-    class="queue-ticket"
-    class:queue-ticket--supersede={canSupersedeTopic}
-    role={canSupersedeTopic ? 'button' : undefined}
-    tabindex={canSupersedeTopic ? 0 : undefined}
-    title={canSupersedeTopic ? t('mfa.supersedeTicketAria') : undefined}
-    aria-label={canSupersedeTopic ? t('mfa.supersedeTicketAria') : undefined}
-    ondblclick={canSupersedeTopic ? handleSupersedeDoubleClick : undefined}
-    onpointerdown={canSupersedeTopic ? handleSupersedePointerDown : undefined}
-    onkeydown={canSupersedeTopic ? handleSupersedeKeydown : undefined}
-  >
-    <TopicLaneBadge laneCode={item.laneCode} accentColor={laneAccentColor} title={item.laneCode} />
-    <span class="queue-num">{String(item.number).padStart(3, '0')}</span>
-    {#if showStaffAttentionMark}
-      <span class="queue-assist-mark" title={staffAttentionTitle} aria-label={staffAttentionTitle}>
-        <Users size={16} aria-hidden="true" />
-      </span>
-    {/if}
-    {#if showDirectedMark}
-      <span class="queue-directed-mark" title={directedMarkTitle} aria-label={directedMarkTitle}>
-        <Navigation size={16} aria-hidden="true" />
-      </span>
-    {/if}
-  </div>
+  {#if canSupersedeTopic}
+    <button
+      type="button"
+      class="queue-ticket queue-ticket--supersede"
+      title={t('mfa.supersedeTicketAria')}
+      aria-label={t('mfa.supersedeTicketAria')}
+      ondblclick={handleSupersedeDoubleClick}
+      onpointerdown={handleSupersedePointerDown}
+      onkeydown={handleSupersedeKeydown}
+    >
+      {@render queueTicketMarks()}
+    </button>
+  {:else}
+    <div class="queue-ticket">
+      {@render queueTicketMarks()}
+    </div>
+  {/if}
 {/snippet}
 
 {#snippet queueInfo()}
