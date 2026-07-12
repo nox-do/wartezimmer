@@ -10,6 +10,9 @@ Stand: 2026-07-12
 - ✅ **P1 Dual-Placement** (2026-07-12): `room.panels` in DB/Ops/OpenAPI/UI; Domain-Helpers; Catalog `supportsCalling`; partial patch merge; compile-grün
 - ✅ **P1 Auth-Nachzug** (2026-07-12): Login `roomId + placement`, pin optional; UI Login-Key `roomId:placement`
 - ⏳ P2–P6: siehe Plan (Device Presence → Backend call → UI Accordion → Doku)
+- ✅ **P2 Device Presence + Revoke** (2026-07-12): `room-panel:${roomId}:${placement}`; placement-granularer Revoke; MFA-Badge pro Placement; P2-Test-Checkliste im Plan abgehakt
+- ✅ **P3 Backend Call + Snapshot** (2026-07-12): Panel-Call Scope-Guard; `resolveRoomPanelSnapshotPolicy`; capabilities/actions/callCandidates; OpenAPI 403
+- ✅ UI typecheck (2026-07-12): `Button.ariaLabel` statt invalidem `aria-label`-Prop in `JourneyAdminEditor`
 - ✅ P1 App-Tests (2026-07-12): 11 Testdateien auf `panels: { outside, inside }` + Domain-Helpers umgestellt
 
 ## Hinweis: RoutingMode-Guard vs. offene Wartenummern (2026-07-10)

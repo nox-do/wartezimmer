@@ -485,6 +485,86 @@
               }
             }
           },
+          "400": {
+            "description": "Invalid placement or request body.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
+          },
           "401": {
             "description": "PIN is invalid.",
             "content": {
@@ -4027,6 +4107,7 @@
                         "roomLabel",
                         "revision",
                         "serverTime",
+                        "capabilities",
                         "panel",
                         "items"
                       ],
@@ -4048,6 +4129,34 @@
                         "serverTime": {
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "capabilities": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "requiresPin",
+                            "canCheckIn",
+                            "canCheckOut",
+                            "mayShowPatientNames",
+                            "canCall"
+                          ],
+                          "properties": {
+                            "requiresPin": {
+                              "type": "boolean"
+                            },
+                            "canCheckIn": {
+                              "type": "boolean"
+                            },
+                            "canCheckOut": {
+                              "type": "boolean"
+                            },
+                            "mayShowPatientNames": {
+                              "type": "boolean"
+                            },
+                            "canCall": {
+                              "type": "boolean"
+                            }
+                          }
                         },
                         "panel": {
                           "type": "object",
@@ -4090,7 +4199,8 @@
                               "number",
                               "status",
                               "roomId",
-                              "roomLabel"
+                              "roomLabel",
+                              "actions"
                             ],
                             "properties": {
                               "visitId": {
@@ -4121,6 +4231,85 @@
                                 "type": "string",
                                 "nullable": true,
                                 "description": "Only present for inside panels when showPatientNames is enabled."
+                              },
+                              "actions": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "canCall": {
+                                    "type": "boolean"
+                                  },
+                                  "canArrive": {
+                                    "type": "boolean"
+                                  },
+                                  "canCheckOut": {
+                                    "type": "boolean"
+                                  },
+                                  "disabledReason": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "callCandidates": {
+                          "type": "array",
+                          "description": "Present only when capabilities.canCall is true. Waiting/directed visits with movementMode call targeting this room, oldest first.",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "visitId",
+                              "laneCode",
+                              "number",
+                              "status",
+                              "roomId",
+                              "roomLabel",
+                              "actions"
+                            ],
+                            "properties": {
+                              "visitId": {
+                                "type": "string"
+                              },
+                              "laneCode": {
+                                "type": "string"
+                              },
+                              "number": {
+                                "type": "integer"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": ["waiting", "directed"]
+                              },
+                              "roomId": {
+                                "type": "string"
+                              },
+                              "roomLabel": {
+                                "type": "string"
+                              },
+                              "identityRef": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Only present for inside panels when showPatientNames is enabled."
+                              },
+                              "actions": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "canCall": {
+                                    "type": "boolean"
+                                  },
+                                  "canArrive": {
+                                    "type": "boolean"
+                                  },
+                                  "canCheckOut": {
+                                    "type": "boolean"
+                                  },
+                                  "disabledReason": {
+                                    "type": "string"
+                                  }
+                                }
                               }
                             }
                           }
@@ -4834,6 +5023,86 @@
           },
           "400": {
             "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Panel policy forbids this action",
             "content": {
               "application/json": {
                 "schema": {
@@ -16949,10 +17218,50 @@
           }
         }
       },
+      "RoomPanelItemActions": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "canCall": {
+            "type": "boolean"
+          },
+          "canArrive": {
+            "type": "boolean"
+          },
+          "canCheckOut": {
+            "type": "boolean"
+          },
+          "disabledReason": {
+            "type": "string"
+          }
+        }
+      },
+      "RoomPanelCapabilities": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["requiresPin", "canCheckIn", "canCheckOut", "mayShowPatientNames", "canCall"],
+        "properties": {
+          "requiresPin": {
+            "type": "boolean"
+          },
+          "canCheckIn": {
+            "type": "boolean"
+          },
+          "canCheckOut": {
+            "type": "boolean"
+          },
+          "mayShowPatientNames": {
+            "type": "boolean"
+          },
+          "canCall": {
+            "type": "boolean"
+          }
+        }
+      },
       "RoomPanelItem": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["visitId", "laneCode", "number", "status", "roomId", "roomLabel"],
+        "required": ["visitId", "laneCode", "number", "status", "roomId", "roomLabel", "actions"],
         "properties": {
           "visitId": {
             "type": "string"
@@ -16982,13 +17291,89 @@
             "type": "string",
             "nullable": true,
             "description": "Only present for inside panels when showPatientNames is enabled."
+          },
+          "actions": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "canCall": {
+                "type": "boolean"
+              },
+              "canArrive": {
+                "type": "boolean"
+              },
+              "canCheckOut": {
+                "type": "boolean"
+              },
+              "disabledReason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "RoomPanelCallCandidate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["visitId", "laneCode", "number", "status", "roomId", "roomLabel", "actions"],
+        "properties": {
+          "visitId": {
+            "type": "string"
+          },
+          "laneCode": {
+            "type": "string"
+          },
+          "number": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["waiting", "directed"]
+          },
+          "roomId": {
+            "type": "string"
+          },
+          "roomLabel": {
+            "type": "string"
+          },
+          "identityRef": {
+            "type": "string",
+            "nullable": true,
+            "description": "Only present for inside panels when showPatientNames is enabled."
+          },
+          "actions": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "canCall": {
+                "type": "boolean"
+              },
+              "canArrive": {
+                "type": "boolean"
+              },
+              "canCheckOut": {
+                "type": "boolean"
+              },
+              "disabledReason": {
+                "type": "string"
+              }
+            }
           }
         }
       },
       "RoomPanelSnapshot": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["view", "roomId", "roomLabel", "revision", "serverTime", "panel", "items"],
+        "required": [
+          "view",
+          "roomId",
+          "roomLabel",
+          "revision",
+          "serverTime",
+          "capabilities",
+          "panel",
+          "items"
+        ],
         "properties": {
           "view": {
             "type": "string",
@@ -17007,6 +17392,34 @@
           "serverTime": {
             "type": "string",
             "format": "date-time"
+          },
+          "capabilities": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "requiresPin",
+              "canCheckIn",
+              "canCheckOut",
+              "mayShowPatientNames",
+              "canCall"
+            ],
+            "properties": {
+              "requiresPin": {
+                "type": "boolean"
+              },
+              "canCheckIn": {
+                "type": "boolean"
+              },
+              "canCheckOut": {
+                "type": "boolean"
+              },
+              "mayShowPatientNames": {
+                "type": "boolean"
+              },
+              "canCall": {
+                "type": "boolean"
+              }
+            }
           },
           "panel": {
             "type": "object",
@@ -17037,7 +17450,15 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["visitId", "laneCode", "number", "status", "roomId", "roomLabel"],
+              "required": [
+                "visitId",
+                "laneCode",
+                "number",
+                "status",
+                "roomId",
+                "roomLabel",
+                "actions"
+              ],
               "properties": {
                 "visitId": {
                   "type": "string"
@@ -17067,6 +17488,85 @@
                   "type": "string",
                   "nullable": true,
                   "description": "Only present for inside panels when showPatientNames is enabled."
+                },
+                "actions": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "canCall": {
+                      "type": "boolean"
+                    },
+                    "canArrive": {
+                      "type": "boolean"
+                    },
+                    "canCheckOut": {
+                      "type": "boolean"
+                    },
+                    "disabledReason": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "callCandidates": {
+            "type": "array",
+            "description": "Present only when capabilities.canCall is true. Waiting/directed visits with movementMode call targeting this room, oldest first.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "visitId",
+                "laneCode",
+                "number",
+                "status",
+                "roomId",
+                "roomLabel",
+                "actions"
+              ],
+              "properties": {
+                "visitId": {
+                  "type": "string"
+                },
+                "laneCode": {
+                  "type": "string"
+                },
+                "number": {
+                  "type": "integer"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["waiting", "directed"]
+                },
+                "roomId": {
+                  "type": "string"
+                },
+                "roomLabel": {
+                  "type": "string"
+                },
+                "identityRef": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Only present for inside panels when showPatientNames is enabled."
+                },
+                "actions": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "canCall": {
+                      "type": "boolean"
+                    },
+                    "canArrive": {
+                      "type": "boolean"
+                    },
+                    "canCheckOut": {
+                      "type": "boolean"
+                    },
+                    "disabledReason": {
+                      "type": "string"
+                    }
+                  }
                 }
               }
             }
@@ -17333,7 +17833,16 @@
           {
             "type": "object",
             "additionalProperties": false,
-            "required": ["view", "roomId", "roomLabel", "revision", "serverTime", "panel", "items"],
+            "required": [
+              "view",
+              "roomId",
+              "roomLabel",
+              "revision",
+              "serverTime",
+              "capabilities",
+              "panel",
+              "items"
+            ],
             "properties": {
               "view": {
                 "type": "string",
@@ -17352,6 +17861,34 @@
               "serverTime": {
                 "type": "string",
                 "format": "date-time"
+              },
+              "capabilities": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "requiresPin",
+                  "canCheckIn",
+                  "canCheckOut",
+                  "mayShowPatientNames",
+                  "canCall"
+                ],
+                "properties": {
+                  "requiresPin": {
+                    "type": "boolean"
+                  },
+                  "canCheckIn": {
+                    "type": "boolean"
+                  },
+                  "canCheckOut": {
+                    "type": "boolean"
+                  },
+                  "mayShowPatientNames": {
+                    "type": "boolean"
+                  },
+                  "canCall": {
+                    "type": "boolean"
+                  }
+                }
               },
               "panel": {
                 "type": "object",
@@ -17382,7 +17919,15 @@
                 "items": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["visitId", "laneCode", "number", "status", "roomId", "roomLabel"],
+                  "required": [
+                    "visitId",
+                    "laneCode",
+                    "number",
+                    "status",
+                    "roomId",
+                    "roomLabel",
+                    "actions"
+                  ],
                   "properties": {
                     "visitId": {
                       "type": "string"
@@ -17412,6 +17957,85 @@
                       "type": "string",
                       "nullable": true,
                       "description": "Only present for inside panels when showPatientNames is enabled."
+                    },
+                    "actions": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "canCall": {
+                          "type": "boolean"
+                        },
+                        "canArrive": {
+                          "type": "boolean"
+                        },
+                        "canCheckOut": {
+                          "type": "boolean"
+                        },
+                        "disabledReason": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "callCandidates": {
+                "type": "array",
+                "description": "Present only when capabilities.canCall is true. Waiting/directed visits with movementMode call targeting this room, oldest first.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "visitId",
+                    "laneCode",
+                    "number",
+                    "status",
+                    "roomId",
+                    "roomLabel",
+                    "actions"
+                  ],
+                  "properties": {
+                    "visitId": {
+                      "type": "string"
+                    },
+                    "laneCode": {
+                      "type": "string"
+                    },
+                    "number": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["waiting", "directed"]
+                    },
+                    "roomId": {
+                      "type": "string"
+                    },
+                    "roomLabel": {
+                      "type": "string"
+                    },
+                    "identityRef": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Only present for inside panels when showPatientNames is enabled."
+                    },
+                    "actions": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "canCall": {
+                          "type": "boolean"
+                        },
+                        "canArrive": {
+                          "type": "boolean"
+                        },
+                        "canCheckOut": {
+                          "type": "boolean"
+                        },
+                        "disabledReason": {
+                          "type": "string"
+                        }
+                      }
                     }
                   }
                 }

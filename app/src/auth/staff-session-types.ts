@@ -71,6 +71,11 @@ export type StaffSessionManager = {
   revokeSessionsByRole(role: StaffRole | RoomPanelSessionRole, exceptSessionId?: string): void;
   revokeRoomPanelSessions(roomId: string, exceptSessionId?: string): void;
   revokeRoomPanelSessionsByPlacement(placement: RoomPanelPlacement): void;
+  revokeRoomPanelSessionPlacement(
+    roomId: string,
+    placement: RoomPanelPlacement,
+    exceptSessionId?: string,
+  ): void;
   revokeDeviceSessions(role: DeviceSessionRole, deviceId: string): void;
   subscribeSessionRevocation(sessionId: string, listener: () => void): () => void;
 };

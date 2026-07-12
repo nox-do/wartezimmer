@@ -5,7 +5,7 @@ describe('parseDevicePresenceOpsSnapshot', () => {
   test('accepts room-panel presence events', () => {
     const snapshot = parseDevicePresenceOpsSnapshot({
       revision: 1,
-      deviceId: 'room-panel:labor',
+      deviceId: 'room-panel:labor:outside',
       kind: 'room-panel',
       status: 'online',
       streamConnected: true,
@@ -15,7 +15,7 @@ describe('parseDevicePresenceOpsSnapshot', () => {
 
     expect(snapshot).toEqual({
       revision: 1,
-      deviceId: 'room-panel:labor',
+      deviceId: 'room-panel:labor:outside',
       kind: 'room-panel',
       status: 'online',
       streamConnected: true,

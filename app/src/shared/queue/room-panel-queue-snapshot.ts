@@ -1,10 +1,11 @@
 import { explainVisibility } from '@praxis-flow/flow-core';
 import type { Runtime } from '@praxis-flow/flow-core/server';
+import type { VisitView } from '@praxis-flow/flow-core';
+import { visitTargetsRoom } from '@praxis-flow/domain';
 import type {
   QueueVisitRow,
   RoomPanelMode,
   RoomPanelPlacement,
-  RoomPanelPlacementConfig,
   RoomPanelTextPreset,
 } from '../db/db-types.js';
 import type { CoreDatabase } from '../db/database.js';
@@ -13,10 +14,14 @@ import { getBusinessDay } from '../db/database-time.js';
 import { getFlowCoreRuntime } from '../flow-core/flow-core-runtime.js';
 import { panelFlowSurfaceId } from '../flow-core/sync-catalog-from-ops-settings.js';
 import { visitToQueueVisitRow } from '../flow-core/visit-queue-bridge.js';
+import { resolveRoomPanelForSession } from '../room-panel/room-panel-policy.js';
 import {
-  resolveRoomPanelForSession,
-  roomPanelMayShowPatientNames,
-} from '../room-panel/room-panel-policy.js';
+  resolveRoomPanelCallCandidateActions,
+  resolveRoomPanelItemActions,
+  resolveRoomPanelSnapshotPolicy,
+  roomPanelCallVisitScopeInput,
+  type RoomPanelItemActions,
+} from '../room-panel/room-panel-snapshot-policy.js';
 
 const PRESET_TEXT: Record<RoomPanelTextPreset, string> = {
   you_are_right: 'Sie sind hier richtig.',
@@ -31,6 +36,13 @@ export type RoomPanelQueueSnapshot = {
   view: 'room-panel';
   roomId: string;
   roomLabel: string;
+  capabilities: {
+    requiresPin: boolean;
+    canCheckIn: boolean;
+    canCheckOut: boolean;
+    mayShowPatientNames: boolean;
+    canCall: boolean;
+  };
   panel: {
     placement: RoomPanelPlacement;
     mode: RoomPanelMode;
@@ -47,11 +59,23 @@ export type RoomPanelQueueSnapshot = {
     roomId: string;
     roomLabel: string;
     identityRef?: string | null;
+    actions: RoomPanelItemActions;
+  }>;
+  callCandidates?: Array<{
+    visitId: string;
+    laneCode: string;
+    number: number;
+    status: 'waiting' | 'directed';
+    roomId: string;
+    roomLabel: string;
+    identityRef?: string | null;
+    actions: RoomPanelItemActions;
   }>;
   serverTime: string;
 };
 
 type RoomPanelItem = RoomPanelQueueSnapshot['items'][number];
+type RoomPanelCallCandidate = NonNullable<RoomPanelQueueSnapshot['callCandidates']>[number];
 
 export type BuildRoomPanelQueueSnapshotInput = {
   db: CoreDatabase;
@@ -89,8 +113,30 @@ export function compareRoomPanelCallOrder(
   return Date.parse(left.createdAt) - Date.parse(right.createdAt);
 }
 
+function compareRoomPanelCallCandidateOrder(left: QueueVisitRow, right: QueueVisitRow): number {
+  return Date.parse(left.createdAt) - Date.parse(right.createdAt);
+}
+
 function isRoomPanelStatus(status: string): status is 'called' | 'in_room' | 'directed' {
   return status === 'called' || status === 'in_room' || status === 'directed';
+}
+
+function isRoomPanelCallCandidateStatus(status: string): status is 'waiting' | 'directed' {
+  return status === 'waiting' || status === 'directed';
+}
+
+function isRoomPanelCallCandidateVisit(
+  visit: VisitView,
+  row: QueueVisitRow,
+  sessionRoomId: string,
+): boolean {
+  if (visit.movementMode !== 'call') {
+    return false;
+  }
+  if (visit.status !== 'waiting' && visit.status !== 'directed') {
+    return false;
+  }
+  return visitTargetsRoom(roomPanelCallVisitScopeInput(visit, row), sessionRoomId);
 }
 
 function mapQueueRowToPanelItem(
@@ -98,6 +144,7 @@ function mapQueueRowToPanelItem(
   sessionRoomId: string,
   fallbackRoomLabel: string,
   showPatientNames: boolean,
+  actions: RoomPanelItemActions,
 ): RoomPanelItem | null {
   if (!isRoomPanelStatus(row.status)) {
     return null;
@@ -116,6 +163,29 @@ function mapQueueRowToPanelItem(
     roomId: sessionRoomId,
     roomLabel: row.roomLabel?.trim() || row.destinationRoomLabel?.trim() || fallbackRoomLabel,
     ...(showPatientNames ? { identityRef: row.identityRef?.trim() || null } : {}),
+    actions,
+  };
+}
+
+function mapQueueRowToCallCandidate(
+  row: QueueVisitRow,
+  sessionRoomId: string,
+  fallbackRoomLabel: string,
+  showPatientNames: boolean,
+  actions: RoomPanelItemActions,
+): RoomPanelCallCandidate | null {
+  if (!isRoomPanelCallCandidateStatus(row.status)) {
+    return null;
+  }
+  return {
+    visitId: row.id,
+    laneCode: row.laneCode,
+    number: row.number,
+    status: row.status,
+    roomId: sessionRoomId,
+    roomLabel: row.destinationRoomLabel?.trim() || fallbackRoomLabel,
+    ...(showPatientNames ? { identityRef: row.identityRef?.trim() || null } : {}),
+    actions,
   };
 }
 
@@ -129,9 +199,11 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
     throw new Error('ROOM_PANEL_SESSION_INVALID');
   }
   const { room, placement, panel } = active;
+  const snapshotPolicy = resolveRoomPanelSnapshotPolicy(active);
+  const { capabilities } = snapshotPolicy;
   const settings = db.getOpsSettings();
   const roomLabel = room.roomLabel;
-  const showPatientNames = roomPanelMayShowPatientNames({ placement, ...panel });
+  const showPatientNames = capabilities.mayShowPatientNames;
 
   const catalog = runtime.catalog();
   const surfaceId = panelFlowSurfaceId(session.roomId);
@@ -146,12 +218,25 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
     item: RoomPanelItem;
     sortRow: Pick<QueueVisitRow, 'calledAt' | 'createdAt'>;
   }> = [];
+  const callCandidateRows: QueueVisitRow[] = [];
 
   for (const visit of businessDayVisits) {
-    const explanation = explainVisibility(visit, surface, rules);
-    if (!explanation.visible) continue;
     const row = visitToQueueVisitRow(visit, settings);
-    const item = mapQueueRowToPanelItem(row, session.roomId, roomLabel, showPatientNames);
+
+    if (capabilities.canCall && isRoomPanelCallCandidateVisit(visit, row, session.roomId)) {
+      callCandidateRows.push(row);
+    }
+
+    const explanation = explainVisibility(visit, surface, rules);
+    if (!explanation.visible || !isRoomPanelStatus(row.status)) continue;
+
+    const item = mapQueueRowToPanelItem(
+      row,
+      session.roomId,
+      roomLabel,
+      showPatientNames,
+      resolveRoomPanelItemActions(row.status, capabilities),
+    );
     if (item) {
       scored.push({ item, sortRow: row });
     }
@@ -159,11 +244,12 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
 
   scored.sort((left, right) => compareRoomPanelCallOrder(left.sortRow, right.sortRow));
 
-  return {
+  const snapshot: RoomPanelQueueSnapshot = {
     revision,
     view: 'room-panel',
     roomId: session.roomId,
     roomLabel,
+    capabilities,
     panel: {
       placement,
       mode: panel.mode,
@@ -174,6 +260,18 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
     items: scored.map((entry) => entry.item),
     serverTime: new Date().toISOString(),
   };
+
+  if (capabilities.canCall) {
+    callCandidateRows.sort(compareRoomPanelCallCandidateOrder);
+    const candidateActions = resolveRoomPanelCallCandidateActions(capabilities);
+    snapshot.callCandidates = callCandidateRows
+      .map((row) =>
+        mapQueueRowToCallCandidate(row, session.roomId, roomLabel, showPatientNames, candidateActions),
+      )
+      .filter((entry): entry is RoomPanelCallCandidate => entry !== null);
+  }
+
+  return snapshot;
 }
 
 function emptyFlowCoreRuntimeForMocks(): Runtime {

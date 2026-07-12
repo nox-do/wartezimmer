@@ -588,10 +588,52 @@ export const QueueListTvResponse = {
   },
 } as const;
 
+export const RoomPanelItemActions = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    canCall: {
+      type: 'boolean',
+    },
+    canArrive: {
+      type: 'boolean',
+    },
+    canCheckOut: {
+      type: 'boolean',
+    },
+    disabledReason: {
+      type: 'string',
+    },
+  },
+} as const;
+
+export const RoomPanelCapabilities = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['requiresPin', 'canCheckIn', 'canCheckOut', 'mayShowPatientNames', 'canCall'],
+  properties: {
+    requiresPin: {
+      type: 'boolean',
+    },
+    canCheckIn: {
+      type: 'boolean',
+    },
+    canCheckOut: {
+      type: 'boolean',
+    },
+    mayShowPatientNames: {
+      type: 'boolean',
+    },
+    canCall: {
+      type: 'boolean',
+    },
+  },
+} as const;
+
 export const RoomPanelItem = {
   type: 'object',
   additionalProperties: false,
-  required: ['visitId', 'laneCode', 'number', 'status', 'roomId', 'roomLabel'],
+  required: ['visitId', 'laneCode', 'number', 'status', 'roomId', 'roomLabel', 'actions'],
   properties: {
     visitId: {
       type: 'string',
@@ -619,13 +661,88 @@ export const RoomPanelItem = {
     identityRef: {
       type: ['string', 'null'],
     },
+    actions: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        canCall: {
+          type: 'boolean',
+        },
+        canArrive: {
+          type: 'boolean',
+        },
+        canCheckOut: {
+          type: 'boolean',
+        },
+        disabledReason: {
+          type: 'string',
+        },
+      },
+    },
+  },
+} as const;
+
+export const RoomPanelCallCandidate = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['visitId', 'laneCode', 'number', 'status', 'roomId', 'roomLabel', 'actions'],
+  properties: {
+    visitId: {
+      type: 'string',
+    },
+    laneCode: {
+      type: 'string',
+    },
+    number: {
+      type: 'integer',
+    },
+    status: {
+      type: 'string',
+      enum: ['waiting', 'directed'],
+    },
+    roomId: {
+      type: 'string',
+    },
+    roomLabel: {
+      type: 'string',
+    },
+    identityRef: {
+      type: ['string', 'null'],
+    },
+    actions: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        canCall: {
+          type: 'boolean',
+        },
+        canArrive: {
+          type: 'boolean',
+        },
+        canCheckOut: {
+          type: 'boolean',
+        },
+        disabledReason: {
+          type: 'string',
+        },
+      },
+    },
   },
 } as const;
 
 export const RoomPanelSnapshot = {
   type: 'object',
   additionalProperties: false,
-  required: ['view', 'roomId', 'roomLabel', 'revision', 'serverTime', 'panel', 'items'],
+  required: [
+    'view',
+    'roomId',
+    'roomLabel',
+    'revision',
+    'serverTime',
+    'capabilities',
+    'panel',
+    'items',
+  ],
   properties: {
     view: {
       type: 'string',
@@ -644,6 +761,28 @@ export const RoomPanelSnapshot = {
     serverTime: {
       type: 'string',
       format: 'date-time',
+    },
+    capabilities: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['requiresPin', 'canCheckIn', 'canCheckOut', 'mayShowPatientNames', 'canCall'],
+      properties: {
+        requiresPin: {
+          type: 'boolean',
+        },
+        canCheckIn: {
+          type: 'boolean',
+        },
+        canCheckOut: {
+          type: 'boolean',
+        },
+        mayShowPatientNames: {
+          type: 'boolean',
+        },
+        canCall: {
+          type: 'boolean',
+        },
+      },
     },
     panel: {
       type: 'object',
@@ -674,7 +813,7 @@ export const RoomPanelSnapshot = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['visitId', 'laneCode', 'number', 'status', 'roomId', 'roomLabel'],
+        required: ['visitId', 'laneCode', 'number', 'status', 'roomId', 'roomLabel', 'actions'],
         properties: {
           visitId: {
             type: 'string',
@@ -701,6 +840,74 @@ export const RoomPanelSnapshot = {
           },
           identityRef: {
             type: ['string', 'null'],
+          },
+          actions: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              canCall: {
+                type: 'boolean',
+              },
+              canArrive: {
+                type: 'boolean',
+              },
+              canCheckOut: {
+                type: 'boolean',
+              },
+              disabledReason: {
+                type: 'string',
+              },
+            },
+          },
+        },
+      },
+    },
+    callCandidates: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['visitId', 'laneCode', 'number', 'status', 'roomId', 'roomLabel', 'actions'],
+        properties: {
+          visitId: {
+            type: 'string',
+          },
+          laneCode: {
+            type: 'string',
+          },
+          number: {
+            type: 'integer',
+          },
+          status: {
+            type: 'string',
+            enum: ['waiting', 'directed'],
+          },
+          roomId: {
+            type: 'string',
+          },
+          roomLabel: {
+            type: 'string',
+          },
+          identityRef: {
+            type: ['string', 'null'],
+          },
+          actions: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              canCall: {
+                type: 'boolean',
+              },
+              canArrive: {
+                type: 'boolean',
+              },
+              canCheckOut: {
+                type: 'boolean',
+              },
+              disabledReason: {
+                type: 'string',
+              },
+            },
           },
         },
       },
@@ -933,7 +1140,16 @@ export const QueueListResponse = {
     {
       type: 'object',
       additionalProperties: false,
-      required: ['view', 'roomId', 'roomLabel', 'revision', 'serverTime', 'panel', 'items'],
+      required: [
+        'view',
+        'roomId',
+        'roomLabel',
+        'revision',
+        'serverTime',
+        'capabilities',
+        'panel',
+        'items',
+      ],
       properties: {
         view: {
           type: 'string',
@@ -952,6 +1168,28 @@ export const QueueListResponse = {
         serverTime: {
           type: 'string',
           format: 'date-time',
+        },
+        capabilities: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['requiresPin', 'canCheckIn', 'canCheckOut', 'mayShowPatientNames', 'canCall'],
+          properties: {
+            requiresPin: {
+              type: 'boolean',
+            },
+            canCheckIn: {
+              type: 'boolean',
+            },
+            canCheckOut: {
+              type: 'boolean',
+            },
+            mayShowPatientNames: {
+              type: 'boolean',
+            },
+            canCall: {
+              type: 'boolean',
+            },
+          },
         },
         panel: {
           type: 'object',
@@ -982,7 +1220,7 @@ export const QueueListResponse = {
           items: {
             type: 'object',
             additionalProperties: false,
-            required: ['visitId', 'laneCode', 'number', 'status', 'roomId', 'roomLabel'],
+            required: ['visitId', 'laneCode', 'number', 'status', 'roomId', 'roomLabel', 'actions'],
             properties: {
               visitId: {
                 type: 'string',
@@ -1009,6 +1247,74 @@ export const QueueListResponse = {
               },
               identityRef: {
                 type: ['string', 'null'],
+              },
+              actions: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  canCall: {
+                    type: 'boolean',
+                  },
+                  canArrive: {
+                    type: 'boolean',
+                  },
+                  canCheckOut: {
+                    type: 'boolean',
+                  },
+                  disabledReason: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        callCandidates: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['visitId', 'laneCode', 'number', 'status', 'roomId', 'roomLabel', 'actions'],
+            properties: {
+              visitId: {
+                type: 'string',
+              },
+              laneCode: {
+                type: 'string',
+              },
+              number: {
+                type: 'integer',
+              },
+              status: {
+                type: 'string',
+                enum: ['waiting', 'directed'],
+              },
+              roomId: {
+                type: 'string',
+              },
+              roomLabel: {
+                type: 'string',
+              },
+              identityRef: {
+                type: ['string', 'null'],
+              },
+              actions: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  canCall: {
+                    type: 'boolean',
+                  },
+                  canArrive: {
+                    type: 'boolean',
+                  },
+                  canCheckOut: {
+                    type: 'boolean',
+                  },
+                  disabledReason: {
+                    type: 'string',
+                  },
+                },
               },
             },
           },
@@ -1774,7 +2080,16 @@ export const GET_api_v1_queueResponse200 = {
     {
       type: 'object',
       additionalProperties: false,
-      required: ['view', 'roomId', 'roomLabel', 'revision', 'serverTime', 'panel', 'items'],
+      required: [
+        'view',
+        'roomId',
+        'roomLabel',
+        'revision',
+        'serverTime',
+        'capabilities',
+        'panel',
+        'items',
+      ],
       properties: {
         view: {
           type: 'string',
@@ -1793,6 +2108,28 @@ export const GET_api_v1_queueResponse200 = {
         serverTime: {
           type: 'string',
           format: 'date-time',
+        },
+        capabilities: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['requiresPin', 'canCheckIn', 'canCheckOut', 'mayShowPatientNames', 'canCall'],
+          properties: {
+            requiresPin: {
+              type: 'boolean',
+            },
+            canCheckIn: {
+              type: 'boolean',
+            },
+            canCheckOut: {
+              type: 'boolean',
+            },
+            mayShowPatientNames: {
+              type: 'boolean',
+            },
+            canCall: {
+              type: 'boolean',
+            },
+          },
         },
         panel: {
           type: 'object',
@@ -1823,7 +2160,7 @@ export const GET_api_v1_queueResponse200 = {
           items: {
             type: 'object',
             additionalProperties: false,
-            required: ['visitId', 'laneCode', 'number', 'status', 'roomId', 'roomLabel'],
+            required: ['visitId', 'laneCode', 'number', 'status', 'roomId', 'roomLabel', 'actions'],
             properties: {
               visitId: {
                 type: 'string',
@@ -1850,6 +2187,74 @@ export const GET_api_v1_queueResponse200 = {
               },
               identityRef: {
                 type: ['string', 'null'],
+              },
+              actions: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  canCall: {
+                    type: 'boolean',
+                  },
+                  canArrive: {
+                    type: 'boolean',
+                  },
+                  canCheckOut: {
+                    type: 'boolean',
+                  },
+                  disabledReason: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        callCandidates: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['visitId', 'laneCode', 'number', 'status', 'roomId', 'roomLabel', 'actions'],
+            properties: {
+              visitId: {
+                type: 'string',
+              },
+              laneCode: {
+                type: 'string',
+              },
+              number: {
+                type: 'integer',
+              },
+              status: {
+                type: 'string',
+                enum: ['waiting', 'directed'],
+              },
+              roomId: {
+                type: 'string',
+              },
+              roomLabel: {
+                type: 'string',
+              },
+              identityRef: {
+                type: ['string', 'null'],
+              },
+              actions: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  canCall: {
+                    type: 'boolean',
+                  },
+                  canArrive: {
+                    type: 'boolean',
+                  },
+                  canCheckOut: {
+                    type: 'boolean',
+                  },
+                  disabledReason: {
+                    type: 'string',
+                  },
+                },
               },
             },
           },
@@ -2465,6 +2870,78 @@ export const POST_api_v1_queue_visitId_transitionResponse200 = {
 } as const;
 
 export const POST_api_v1_queue_visitId_transitionResponse400 = {
+  type: 'object',
+  required: ['code', 'message'],
+  properties: {
+    code: {
+      type: 'string',
+      enum: [
+        'INVALID_ARGUMENT',
+        'INTERNAL_ERROR',
+        'NOT_FOUND',
+        'AUTH_UNAUTHORIZED',
+        'AUTH_FORBIDDEN',
+        'RATE_LIMITED',
+        'VISIT_NOT_FOUND',
+        'DOCUMENT_NOT_FOUND',
+        'DOCUMENT_FORBIDDEN',
+        'INVALID_TRANSITION',
+        'ROOM_REQUIRED',
+        'MISSING_CALLBACK_PHONE',
+        'CHECKIN_LOCK_REQUIRED',
+        'DAY_CLOSE_IN_PROGRESS',
+        'INVALID_DAY_CLOSE_PHASE',
+        'DAY_CLOSE_NOT_STARTED',
+        'UNKNOWN_MESSAGING_PROVIDER',
+        'CHECKIN_LOCKED',
+        'CHECKIN_AUTH_PATH_DISABLED',
+        'CHECKIN_CLOSED',
+        'TOPIC_DISABLED',
+        'TOPIC_CLOSED',
+        'DOCUMENT_NOT_SCANNED',
+        'EXPORT_BLOCKED_MALWARE',
+        'OPS_SETTINGS_INVALID',
+        'EMERGENCY_DISABLED',
+        'EMERGENCY_NOT_FOUND',
+        'SETUP_INCOMPLETE',
+        'SETUP_ALREADY_COMPLETED',
+        'SESSION_INVALID_TICKET',
+        'SESSION_TICKET_NOT_ACTIVE',
+        'SESSION_ALREADY_ACTIVE',
+        'SESSION_UNAUTHORIZED',
+        'SESSION_EXPIRED',
+        'FORM_TEMPLATE_NOT_FOUND',
+        'DOCUMENT_INTAKE_BLOCKED',
+        'DOCUMENT_TEMPLATE_METADATA_INVALID',
+        'DOCUMENT_SCHEMA_OUTDATED',
+        'SANDBOX_UNAVAILABLE',
+        'CAPTIVE_CLIENT_MISSING',
+        'CAPTIVE_AUTH_FAILED',
+        'CALL_ANNOUNCEMENT_OFFLINE',
+        'ROOM_AT_CAPACITY',
+        'ROOM_BLOCKED_TOPICS',
+        'ROOM_BLOCKED_QUEUE',
+        'ROOM_BLOCKED_CAPACITY',
+        'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+        'RECALL_WINDOW_EXPIRED',
+        'UNKNOWN_TOPIC',
+        'TERMINAL_OFFLINE',
+        'TERMINAL_PHONE_INVALID',
+        'TERMINAL_BIRTH_DATE_INVALID',
+        'TERMINAL_LAST_NAME_INVALID',
+      ],
+    },
+    message: {
+      type: 'string',
+    },
+    details: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+} as const;
+
+export const POST_api_v1_queue_visitId_transitionResponse403 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -3747,7 +4224,10 @@ export const queueSchemas = {
   QueueListMfaResponse,
   QueueTvItem,
   QueueListTvResponse,
+  RoomPanelItemActions,
+  RoomPanelCapabilities,
   RoomPanelItem,
+  RoomPanelCallCandidate,
   RoomPanelSnapshot,
   QueueListResponse,
   QueueSummaryResponse,
@@ -3770,6 +4250,7 @@ export const queueSchemas = {
   POST_api_v1_queue_visitId_transitionRequestBody,
   POST_api_v1_queue_visitId_transitionResponse200,
   POST_api_v1_queue_visitId_transitionResponse400,
+  POST_api_v1_queue_visitId_transitionResponse403,
   POST_api_v1_queue_visitId_transitionResponse404,
   POST_api_v1_queue_visitId_transitionResponse409,
   PUT_api_v1_queue_visitId_callback_phoneParams,

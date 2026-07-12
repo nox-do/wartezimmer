@@ -27,11 +27,11 @@ import { buildTvQueueSnapshot } from '../shared/queue/tv-queue-snapshot.js';
 import { handleQueueRouteError } from './queue/queue-errors.js';
 import { resolveDomainError, sendApiError, sendDomainError } from '../http/domain-error-mapper.js';
 import type { AuthSession, RoomPanelSession } from '../auth/staff-session-auth.js';
+import { resolveRoomPanelForSession } from '../shared/room-panel/room-panel-policy.js';
 import {
-  resolveRoomPanelForSession,
-  roomPanelCanCheckIn,
-  roomPanelCanCheckOut,
-} from '../shared/room-panel/room-panel-policy.js';
+  assertRoomPanelCallVisitScope,
+  resolveRoomPanelSnapshotPolicy,
+} from '../shared/room-panel/room-panel-snapshot-policy.js';
 
 const queueErrorResponse = commonSchemas.Error;
 
@@ -40,9 +40,13 @@ const roomAtCapacityMessage = 'Raum ist voll — bitte anderes Aufrufziel wähle
 const queueVisitTransitionResponses = {
   200: queueSchemas.POST_api_v1_queue_visitId_transitionResponse200,
   400: queueErrorResponse,
+  403: queueErrorResponse,
   404: queueErrorResponse,
   409: queueErrorResponse,
 } as const;
+
+const callAnnouncementOfflineMessage =
+  'Aufruf nicht möglich — Wartezimmer-Anzeige ist offline. Bitte TV prüfen oder koppeln.';
 
 const queueCallbackPhoneResponses = {
   200: queueSchemas.PUT_api_v1_queue_visitId_callback_phoneResponse200,
@@ -412,6 +416,61 @@ async function applyRoomPanelQueueVisitTransition(
     return undefined;
   }
 
+  const { capabilities } = resolveRoomPanelSnapshotPolicy(activePanel);
+
+  if (body.type === 'call') {
+    if (!capabilities.canCall) {
+      sendApiError(reply, 403, {
+        code: 'AUTH_FORBIDDEN',
+        message:
+          activePanel.placement === 'outside'
+            ? 'Raum-Panel darf diese Ticket-Aktion nicht ausfuehren.'
+            : 'Patienten aufrufen ist für dieses Raum-Panel nicht aktiviert.',
+      });
+      return undefined;
+    }
+
+    try {
+      assertQueueCallAnnouncementReachable();
+    } catch (error) {
+      if (
+        handleQueueRouteError(reply, visitId, error, {
+          invalidTransitionMessage: `Ticket ${visitId} kann nicht aufgerufen werden.`,
+          roomAtCapacityMessage,
+          callAnnouncementOfflineMessage,
+        })
+      ) {
+        return undefined;
+      }
+      throw error;
+    }
+
+    const roomId = session.roomId;
+    const roomLabel = activePanel.room.roomLabel?.trim() || null;
+
+    return runVisitTransition({
+      reply,
+      visitId,
+      execute: () => {
+        assertRoomPanelCallVisitScope(db, visitId, session.roomId);
+        // Do not pass an explicit call target — panel calls confirm routing, never retarget.
+        return db.callVisit(visitId);
+      },
+      mapSuccess: (transition) => ({
+        ...transitionBody(transition, visitId),
+        roomId,
+        roomLabel,
+      }),
+      errorOptions: {
+        invalidTransitionMessage: `Ticket ${visitId} kann im aktuellen Routing nicht aufgerufen werden.`,
+        roomAtCapacityMessage,
+        callAnnouncementOfflineMessage,
+        roomScopeMismatchMessage:
+          'Aufruf nur für Tickets mit Ziel dieses Raums möglich — bitte Snapshot aktualisieren.',
+      },
+    });
+  }
+
   if (body.type !== 'check_in_room' && body.type !== 'check_out_room') {
     sendApiError(reply, 403, {
       code: 'AUTH_FORBIDDEN',
@@ -420,9 +479,7 @@ async function applyRoomPanelQueueVisitTransition(
     return undefined;
   }
 
-  const panelPolicy = { placement: activePanel.placement, ...activePanel.panel };
-
-  if (body.type === 'check_in_room' && !roomPanelCanCheckIn(panelPolicy)) {
+  if (body.type === 'check_in_room' && !capabilities.canCheckIn) {
     sendApiError(reply, 403, {
       code: 'AUTH_FORBIDDEN',
       message: 'Ankunftsbestätigung ist für dieses Raum-Panel nicht aktiviert.',
@@ -430,7 +487,7 @@ async function applyRoomPanelQueueVisitTransition(
     return undefined;
   }
 
-  if (body.type === 'check_out_room' && !roomPanelCanCheckOut(panelPolicy)) {
+  if (body.type === 'check_out_room' && !capabilities.canCheckOut) {
     sendApiError(reply, 403, {
       code: 'AUTH_FORBIDDEN',
       message: 'Check-out ist nur im Raum-Panel-Modus staff_full erlaubt.',

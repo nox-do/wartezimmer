@@ -89,7 +89,7 @@ test('streamConnected tracks active SSE connections directly', () => {
 });
 
 test('room panel stream presence uses room-panel kind without pairing semantics', () => {
-  const deviceId = 'room-panel:labor';
+  const deviceId = 'room-panel:labor:inside';
 
   markDeviceStreamConnected({ deviceId, kind: 'room-panel' });
   let roomPanel = listDevicePresence().find((entry) => entry.deviceId === deviceId);

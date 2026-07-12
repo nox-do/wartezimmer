@@ -206,6 +206,19 @@ export function createStaffSessionManager(options: {
       }
     },
 
+    revokeRoomPanelSessionPlacement(roomId, placement, exceptSessionId) {
+      for (const [tokenHash, session] of sessionsByTokenHash) {
+        if (
+          session.kind === 'room-panel' &&
+          session.roomId === roomId &&
+          session.placement === placement &&
+          session.sessionId !== exceptSessionId
+        ) {
+          deleteSession(tokenHash, session);
+        }
+      }
+    },
+
     revokeDeviceSessions(role: DeviceSessionRole, deviceId: string) {
       for (const [tokenHash, session] of sessionsByTokenHash) {
         if (session.kind === 'device' && session.role === role && session.deviceId === deviceId) {

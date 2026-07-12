@@ -365,6 +365,25 @@ test('room-panel session operations can target placement without affecting outsi
   assert.equal(manager.countRoomPanelSessions({ clientKey: 'test-client' }), 1);
 });
 
+test('room-panel session revoke can target one room placement without affecting siblings', () => {
+  const manager = createStaffSessionManager({ sessionTtlMs: 10_000 });
+  const inside = manager.createRoomPanelSession({
+    roomId: 'labor',
+    placement: 'inside',
+    clientKey: 'test-client',
+  });
+  const outside = manager.createRoomPanelSession({
+    roomId: 'labor',
+    placement: 'outside',
+    clientKey: 'test-client',
+  });
+
+  manager.revokeRoomPanelSessionPlacement('labor', 'inside');
+
+  assert.equal(manager.getSession(inside.token), null);
+  assert.equal(manager.getSession(outside.token)?.sessionId, outside.session.sessionId);
+});
+
 test('session revocation notifies listeners and can preserve the current MFA session', () => {
   const manager = createStaffSessionManager({ sessionTtlMs: 10_000 });
   const current = manager.createStaffSession('mfa');

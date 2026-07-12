@@ -210,7 +210,7 @@
                   variant="ghost"
                   size="sm"
                   disabled={busy || selectedTemplate.steps.length <= 1}
-                  aria-label={tf('mfa.settings.journeyRemoveStepAria', { index: index + 1 })}
+                  ariaLabel={tf('mfa.settings.journeyRemoveStepAria', { index: index + 1 })}
                   onclick={() => removeStep(step.id)}
                 >
                   <Trash2 size={16} aria-hidden="true" />

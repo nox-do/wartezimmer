@@ -78,8 +78,9 @@ Normalisierung:
 - Bestehende Rate-Limits bleiben: outside IP/session-limit, inside PIN-rate-limit.
 - Revoke:
   - Raum deaktiviert/entfernt -> beide Placements
-  - Placement deaktiviert/geaendert -> nur dieses Placement
-  - PIN-Wechsel -> inside-Sessions
+  - Placement **deaktiviert** -> nur dieses Placement (`revokeRoomPanelSessionPlacement`)
+  - Placement-Config (Modus, allowCalling, Texte, Namen) -> live ohne Re-Login; Session bleibt, Snapshot/403 erzwingen neu
+  - PIN-Wechsel -> alle inside-Sessions
 
 ---
 
@@ -142,18 +143,21 @@ Bleibt MFA:
 ### P2 — Auth, Session, Device Identity
 
 - [x] Login-Body/OpenAPI: `roomId + placement`, `pin?` (P1-Nachzug: Ambiguität bei Dual-Placement)
-- [ ] Login-Liste flach pro Placement (Liste erledigt; UI-Labels P5)
-- [ ] **P2 First-Step:** Device Presence IDs pro Placement (`room-panel:${roomId}:${placement}`) — aktuell noch raumweit, Ops-Badge zeigt nur „irgendein Panel online“
-- [ ] `resolveRoomPanelForSession(roomId, placement)` auf `panels[placement]` (erledigt in P1)
-- [ ] Placement-granularer Session-Revoke
-- [ ] Tests: parallel outside+inside, falsches Placement, PIN nur inside
+- [ ] Login-Liste flach pro Placement (API erledigt; UI-Labels → P5)
+- [x] Device Presence IDs pro Placement (`room-panel:${roomId}:${placement}`)
+- [x] `resolveRoomPanelForSession(roomId, placement)` auf `panels[placement]` (P1)
+- [x] Placement-granularer Session-Revoke bei Disable (`revokeRoomPanelSessionPlacement`)
+- [x] P2-Tests (Stand 2026-07-12):
+  - [x] parallel outside+inside: Login beider Placements (`auth-routes.test.ts`), parallele Sessions + Revoke nur ein Placement (`client-auth.test.ts`)
+  - [x] falsches/fehlendes Placement: `placement` fehlt → 400; nicht aktives Placement → 404; Session stale nach Disable → 403 Queue (`auth-routes`, `queue-routes`, `room-panel-policy`)
+  - [x] PIN nur inside: outside ohne PIN ok; inside ohne/falscher PIN → 401 (`auth-routes.test.ts`, `room-panel-login.test.ts`)
 
 ### P3 — Backend Aufruf & Snapshot
 
-- [ ] `applyRoomPanelQueueVisitTransition`: `call` nur mit `canCall`
-- [ ] WZ-TV/Capacity/Flow-Core Guards fuer Panel-Call wiederverwenden
-- [ ] Snapshot mit `capabilities`, Actions und optional `callCandidates`
-- [ ] Tests: 403 outside, 403 ohne `allowCalling`, 409 TV offline, 409 capacity, Race
+- [x] `applyRoomPanelQueueVisitTransition`: `call` nur mit `canCall`
+- [x] WZ-TV/Capacity/Flow-Core Guards fuer Panel-Call wiederverwenden
+- [x] Snapshot mit `capabilities`, Actions und optional `callCandidates`
+- [x] Tests: 403 outside, 403 ohne `allowCalling`, 409 TV offline (Capacity/Race via Flow-Core-Pfad)
 
 ### P4 — MFA Settings UI
 
@@ -182,7 +186,7 @@ Bleibt MFA:
 ## Offen
 
 1. Aufruf-UX final: Auswahl-Liste reicht erstmal; "Naechster fuer diesen Raum" spaeter.
-2. Soll `callCandidates` im normalen Snapshot liegen oder eigener Endpoint werden?
+2. ~~Soll `callCandidates` im normalen Snapshot liegen oder eigener Endpoint werden?~~ → im Snapshot wenn `canCall`
 
 ---
 

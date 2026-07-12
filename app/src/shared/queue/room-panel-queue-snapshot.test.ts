@@ -172,6 +172,10 @@ test('buildRoomPanelQueueSnapshot filters to session room and hides names by def
   assert.equal(snapshot.items.length, 1);
   assert.equal(snapshot.items[0]?.visitId, visitId);
   assert.equal('identityRef' in snapshot.items[0]!, false);
+  assert.equal(snapshot.capabilities.canCheckIn, true);
+  assert.equal(snapshot.capabilities.canCall, false);
+  assert.equal(snapshot.items[0]?.actions.canArrive, true);
+  assert.equal('callCandidates' in snapshot, false);
 });
 
 test('buildRoomPanelQueueSnapshot includes identityRef only when room setting allows names', () => {
@@ -246,6 +250,7 @@ test('buildRoomPanelQueueSnapshot includes identityRef only when room setting al
   });
 
   assert.equal(snapshot.items[0]?.identityRef, 'Panel Test');
+  assert.equal(snapshot.capabilities.mayShowPatientNames, true);
 });
 
 test('buildRoomPanelQueueSnapshot shows called visit for panel room via explainVisibility', () => {
@@ -380,4 +385,107 @@ test('arriveVisit from directed maps to in_room on room panel', () => {
   });
   assert.equal(snapshot.items.length, 1);
   assert.equal(snapshot.items[0]?.status, 'in_room');
+});
+
+test('buildRoomPanelQueueSnapshot exposes callCandidates for inside allowCalling panels', () => {
+  const sqlite = new DatabaseSync(':memory:');
+  sqlite.exec('PRAGMA foreign_keys = ON');
+  ensureFlowCoreSchema(sqlite);
+  const settings = panelTestSettings(false);
+  const labor = settings.rooms.find((room) => room.roomId === 'labor')!;
+  labor.panels = normalizeRoomPanelsSettings({
+    inside: {
+      enabled: true,
+      mode: 'staff_full',
+      showPatientNames: false,
+      allowCalling: true,
+    },
+  });
+  syncFlowCoreCatalog(sqlite, settings);
+
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS ops_state (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      checkin_locked INTEGER NOT NULL DEFAULT 0,
+      day_close_phase TEXT NOT NULL DEFAULT 'open',
+      last_reset_business_day TEXT,
+      updated_at TEXT NOT NULL
+    );
+    INSERT OR IGNORE INTO ops_state (id, checkin_locked, day_close_phase, last_reset_business_day, updated_at)
+    VALUES (1, 0, 'open', '${getBusinessDay()}', '2026-07-04T12:00:00.000Z');
+  `);
+
+  const deps: CheckinSessionDeps & { db: DatabaseSync } = {
+    db: sqlite,
+    findTicketByCodeStmt: sqlite.prepare('SELECT 1'),
+    checkinLockStmt: sqlite.prepare('SELECT checkin_locked AS locked FROM ops_state WHERE id = 1'),
+    dayCloseStateStmt: sqlite.prepare(
+      'SELECT checkin_locked AS locked, day_close_phase AS phase, last_reset_business_day AS lastResetBusinessDay FROM ops_state WHERE id = 1',
+    ),
+    updateCheckinLockStmt: sqlite.prepare('SELECT 1'),
+    getVisitIdentityViewStmt: sqlite.prepare('SELECT 1'),
+    getVisitPortalContextStmt: sqlite.prepare('SELECT 1'),
+    insertPatientSessionStmt: sqlite.prepare('SELECT 1'),
+    expireActiveSessionsByTicketStmt: sqlite.prepare('SELECT 1'),
+    getActiveSessionByTicketStmt: sqlite.prepare('SELECT 1'),
+    getPatientSessionByTokenStmt: sqlite.prepare('SELECT 1'),
+    touchPatientSessionStmt: sqlite.prepare('SELECT 1'),
+    expirePatientSessionStmt: sqlite.prepare('SELECT 1'),
+    revokePatientSessionStmt: sqlite.prepare('SELECT 1'),
+    nowIso: () => '2026-07-04T12:00:00.000Z',
+    getBusinessDay,
+    getBusinessTimeZone: () => 'Europe/Berlin',
+    getOpsSettings: () => settings,
+    normalizeDayClosePhase,
+    emitOutboxEvent: () => undefined,
+  };
+
+  const created = createVisitCheckInInDb(deps, {
+    topicId: 'blut',
+    authPath: 'phone_dob',
+    identityRef: 'Call Candidate',
+  });
+  const runtime = getFlowCoreRuntime(sqlite);
+  runtime.redirect(created.visitId, {
+    queueId: null,
+    targetLocationId: 'labor',
+    movementMode: 'call',
+    publicDisplayMode: 'visible',
+    actorSurfaceId: 'pf_mfa_dashboard',
+  });
+
+  const db = {
+    getOpsSettings: () => settings,
+    getFlowCoreRuntimeInstance: () => runtime,
+  } as unknown as CoreDatabase;
+
+  const snapshot = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 20, {
+    roomId: 'labor',
+    placement: 'inside',
+  });
+
+  assert.equal(snapshot.capabilities.canCall, true);
+  assert.equal(snapshot.callCandidates?.length, 1);
+  assert.equal(snapshot.callCandidates?.[0]?.visitId, created.visitId);
+  assert.equal(snapshot.callCandidates?.[0]?.actions.canCall, true);
+  assert.equal('identityRef' in snapshot.callCandidates![0]!, false);
+});
+
+test('buildRoomPanelQueueSnapshot omits callCandidates when allowCalling is disabled', () => {
+  const { db, sqlite, visitId, runtime } = setupPanelVisitFlow();
+  runtime.redirect(visitId, {
+    queueId: null,
+    targetLocationId: 'labor',
+    movementMode: 'call',
+    publicDisplayMode: 'visible',
+    actorSurfaceId: 'pf_mfa_dashboard',
+  });
+
+  const snapshot = buildRoomPanelQueueSnapshotForSqlite(db, sqlite, 21, {
+    roomId: 'labor',
+    placement: 'outside',
+  });
+
+  assert.equal(snapshot.capabilities.canCall, false);
+  assert.equal('callCandidates' in snapshot, false);
 });

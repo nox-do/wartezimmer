@@ -8,6 +8,7 @@ import {
   recordDevicePresence,
   WAITING_ROOM_DEVICE_ID,
 } from '../shared/ops/device-presence-registry.js';
+import { roomPanelDeviceId } from '../shared/ops/device-ids.js';
 import {
   currentMfaQueueSnapshot,
   currentRoomPanelQueueSnapshot,
@@ -65,9 +66,9 @@ export function registerQueueStreamRoutes(
 
       if (role === 'room-panel' && request.authSession?.kind === 'room-panel') {
         const session = request.authSession;
-        const roomPanelDeviceId = `room-panel:${session.roomId}`;
-        recordDevicePresence({ deviceId: roomPanelDeviceId, kind: 'room-panel' });
-        markDeviceStreamConnected({ deviceId: roomPanelDeviceId, kind: 'room-panel' });
+        const panelDeviceId = roomPanelDeviceId(session.roomId, session.placement);
+        recordDevicePresence({ deviceId: panelDeviceId, kind: 'room-panel' });
+        markDeviceStreamConnected({ deviceId: panelDeviceId, kind: 'room-panel' });
 
         publishExpiredRecallWindows(db);
         writeEvent('snapshot', currentRoomPanelQueueSnapshot(db, session));
@@ -87,7 +88,7 @@ export function registerQueueStreamRoutes(
           if (!sessions.refreshSession(session.sessionId)) {
             return;
           }
-          recordDevicePresence({ deviceId: roomPanelDeviceId, kind: 'room-panel' });
+          recordDevicePresence({ deviceId: panelDeviceId, kind: 'room-panel' });
           publishExpiredRecallWindows(db);
           reply.raw.write(': ping\n\n');
         }, sessionRefreshMs);
@@ -116,7 +117,7 @@ export function registerQueueStreamRoutes(
           cleanedUp = true;
           clearInterval(pingTimer);
           clearTimeout(absoluteExpiryTimer);
-          markDeviceStreamDisconnected(roomPanelDeviceId);
+          markDeviceStreamDisconnected(panelDeviceId);
           unsubscribe();
           unsubscribeRevocation();
         };

@@ -20,7 +20,7 @@ function settings(panels: Parameters<typeof normalizeRoomPanelsSettings>[0]) {
 }
 
 test('mode changes publish live without revoking placement session', () => {
-  const revoked: string[] = [];
+  const revoked: Array<{ roomId: string; placement: string }> = [];
   let published = 0;
 
   applyRoomPanelSettingsEffects({
@@ -30,7 +30,11 @@ test('mode changes publish live without revoking placement session', () => {
     updated: settings({
       inside: { enabled: true, mode: 'staff_full', showPatientNames: true },
     }),
-    sessions: { revokeRoomPanelSessions: (roomId) => void revoked.push(roomId) },
+    sessions: {
+      revokeRoomPanelSessions: () => undefined,
+      revokeRoomPanelSessionPlacement: (roomId, placement) =>
+        void revoked.push({ roomId, placement }),
+    },
     publishQueueUpdate: () => {
       published += 1;
     },
@@ -40,24 +44,28 @@ test('mode changes publish live without revoking placement session', () => {
   assert.equal(published, 1);
 });
 
-test('disabling inside panel revokes existing sessions before publishing', () => {
+test('disabling inside panel revokes only inside sessions before publishing', () => {
   const events: string[] = [];
   applyRoomPanelSettingsEffects({
     previous: settings({
+      outside: { enabled: true, mode: 'arrival' },
       inside: { enabled: true, mode: 'staff_full', showPatientNames: true },
     }),
     updated: settings({
+      outside: { enabled: true, mode: 'arrival' },
       inside: { enabled: false, mode: 'staff_full', showPatientNames: true },
     }),
     sessions: {
-      revokeRoomPanelSessions: (roomId) => void events.push(`revoke:${roomId}`),
+      revokeRoomPanelSessions: (roomId) => void events.push(`revoke-all:${roomId}`),
+      revokeRoomPanelSessionPlacement: (roomId, placement) =>
+        void events.push(`revoke:${roomId}:${placement}`),
     },
     publishQueueUpdate: () => void events.push('publish'),
   });
-  assert.deepEqual(events, ['revoke:labor', 'publish']);
+  assert.deepEqual(events, ['revoke:labor:inside', 'publish']);
 });
 
-test('disabling outside panel revokes existing sessions before publishing', () => {
+test('disabling outside panel revokes only outside sessions before publishing', () => {
   const events: string[] = [];
   applyRoomPanelSettingsEffects({
     previous: settings({
@@ -67,9 +75,11 @@ test('disabling outside panel revokes existing sessions before publishing', () =
       outside: { enabled: false, mode: 'arrival' },
     }),
     sessions: {
-      revokeRoomPanelSessions: (roomId) => void events.push(`revoke:${roomId}`),
+      revokeRoomPanelSessions: (roomId) => void events.push(`revoke-all:${roomId}`),
+      revokeRoomPanelSessionPlacement: (roomId, placement) =>
+        void events.push(`revoke:${roomId}:${placement}`),
     },
     publishQueueUpdate: () => void events.push('publish'),
   });
-  assert.deepEqual(events, ['revoke:labor', 'publish']);
+  assert.deepEqual(events, ['revoke:labor:outside', 'publish']);
 });

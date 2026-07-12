@@ -557,6 +557,289 @@ test('room-panel transition uses the current mode without a new login', async ()
   await app.close();
 });
 
+function roomPanelSessionHook(placement: 'outside' | 'inside') {
+  return async (request: { clientRole?: string; authSession?: unknown }) => {
+    request.clientRole = 'room-panel';
+    request.authSession = {
+      kind: 'room-panel',
+      role: 'room-panel',
+      sessionId: 'rp-1',
+      roomId: 'labor',
+      placement,
+      createdAt: '2026-06-18T08:00:00.000Z',
+      lastSeenAt: '2026-06-18T08:00:00.000Z',
+      idleExpiresAt: '2026-06-18T10:00:00.000Z',
+      expiresAt: '2026-06-18T20:00:00.000Z',
+    };
+  };
+}
+
+function insideCallingPanelSettings() {
+  return normalizeRoomPanelsSettings({
+    outside: {
+      enabled: true,
+      mode: 'arrival',
+      showPatientNames: false,
+      calledTextPreset: 'please_enter',
+      calledTextCustom: null,
+      arrivedTextPreset: 'please_wait_here',
+      arrivedTextCustom: null,
+    },
+    inside: {
+      enabled: true,
+      mode: 'staff_full',
+      showPatientNames: false,
+      allowCalling: true,
+      calledTextPreset: 'please_enter',
+      calledTextCustom: null,
+      arrivedTextPreset: 'please_wait_here',
+      arrivedTextCustom: null,
+    },
+  });
+}
+
+test('room-panel call transition is forbidden for outside panels', async () => {
+  resetDevicePresenceForTests();
+  markDeviceStreamConnected({ deviceId: WAITING_ROOM_DEVICE_ID, kind: 'tv' });
+  const app = Fastify({ logger: false });
+  app.addHook('preHandler', roomPanelSessionHook('outside'));
+  registerQueueRoutes(app, buildQueueRouteDb());
+  await app.ready();
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/queue/A-001/transition',
+    payload: { type: 'call', roomId: 'other-room', roomLabel: 'Other' },
+  });
+
+  assert.equal(response.statusCode, 403);
+  assert.match(response.json().message, /darf diese Ticket-Aktion nicht/);
+
+  await app.close();
+  resetDevicePresenceForTests();
+});
+
+test('room-panel call transition is forbidden when allowCalling is disabled', async () => {
+  resetDevicePresenceForTests();
+  markDeviceStreamConnected({ deviceId: WAITING_ROOM_DEVICE_ID, kind: 'tv' });
+  const app = Fastify({ logger: false });
+  app.addHook('preHandler', roomPanelSessionHook('inside'));
+  registerQueueRoutes(
+    app,
+    buildQueueRouteDb({
+      getOpsSettings: () => ({
+        rooms: [
+          {
+            roomId: 'labor',
+            roomLabel: 'Labor',
+            enabled: true,
+            defaultCallTarget: true,
+            maxOccupancy: null,
+            panels: normalizeRoomPanelsSettings({
+              inside: {
+                enabled: true,
+                mode: 'staff_full',
+                showPatientNames: false,
+                allowCalling: false,
+              },
+            }),
+          },
+        ],
+      }),
+    }),
+  );
+  await app.ready();
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/queue/A-001/transition',
+    payload: { type: 'call' },
+  });
+
+  assert.equal(response.statusCode, 403);
+  assert.match(response.json().message, /nicht aktiviert/);
+
+  await app.close();
+  resetDevicePresenceForTests();
+});
+
+test('room-panel call transition confirms scoped visit without overriding call target', async () => {
+  resetDevicePresenceForTests();
+  markDeviceStreamConnected({ deviceId: WAITING_ROOM_DEVICE_ID, kind: 'tv' });
+  const { db, visitId } = buildRoomPanelCallRouteDb('labor');
+  const calls: Array<{ visitId: string; roomId?: string; roomLabel?: string }> = [];
+  const wrappedDb = {
+    ...db,
+    callVisit: (targetVisitId: string, roomId?: string, roomLabel?: string) => {
+      calls.push({ visitId: targetVisitId, roomId, roomLabel });
+      return transition('waiting', 'called');
+    },
+  } as CoreDatabase;
+  const app = Fastify({ logger: false });
+  app.addHook('preHandler', roomPanelSessionHook('inside'));
+  registerQueueRoutes(app, wrappedDb);
+  await app.ready();
+
+  const response = await app.inject({
+    method: 'POST',
+    url: `/api/v1/queue/${visitId}/transition`,
+    payload: { type: 'call', roomId: 'other-room', roomLabel: 'Other' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(calls, [{ visitId, roomId: undefined, roomLabel: undefined }]);
+  assert.equal(response.json().roomId, 'labor');
+  assert.equal(response.json().roomLabel, 'Labor');
+
+  await app.close();
+  resetDevicePresenceForTests();
+});
+
+test('room-panel call transition rejects visits targeting another room', async () => {
+  resetDevicePresenceForTests();
+  markDeviceStreamConnected({ deviceId: WAITING_ROOM_DEVICE_ID, kind: 'tv' });
+  const { db, visitId } = buildRoomPanelCallRouteDb('mfa-tresen');
+  const app = Fastify({ logger: false });
+  app.addHook('preHandler', roomPanelSessionHook('inside'));
+  registerQueueRoutes(app, db);
+  await app.ready();
+
+  const response = await app.inject({
+    method: 'POST',
+    url: `/api/v1/queue/${visitId}/transition`,
+    payload: { type: 'call' },
+  });
+
+  assert.equal(response.statusCode, 409);
+  assert.match(response.json().message, /Ziel dieses Raums/);
+
+  await app.close();
+  resetDevicePresenceForTests();
+});
+
+test('room-panel call transition returns 409 when WZ-TV is offline', async () => {
+  resetDevicePresenceForTests();
+  const app = Fastify({ logger: false });
+  app.addHook('preHandler', roomPanelSessionHook('inside'));
+  registerQueueRoutes(
+    app,
+    buildQueueRouteDb({
+      getOpsSettings: () => ({
+        rooms: [
+          {
+            roomId: 'labor',
+            roomLabel: 'Labor',
+            enabled: true,
+            defaultCallTarget: true,
+            maxOccupancy: null,
+            panels: insideCallingPanelSettings(),
+          },
+        ],
+      }),
+    }),
+  );
+  await app.ready();
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/queue/A-001/transition',
+    payload: { type: 'call' },
+  });
+
+  assert.equal(response.statusCode, 409);
+  assert.match(response.json().message, /Wartezimmer-Anzeige ist offline/);
+
+  await app.close();
+  resetDevicePresenceForTests();
+});
+
+function buildRoomPanelCallRouteDb(targetRoomId: 'labor' | 'mfa-tresen'): {
+  db: CoreDatabase;
+  visitId: string;
+} {
+  const sqlite = new DatabaseSync(':memory:');
+  sqlite.exec('PRAGMA foreign_keys = ON');
+  ensureFlowCoreSchema(sqlite);
+  const settings = tvQueueTestSettings();
+  const labor = settings.rooms.find((room) => room.roomId === 'labor')!;
+  labor.panels = insideCallingPanelSettings();
+  syncFlowCoreCatalog(sqlite, settings);
+
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS ops_state (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      checkin_locked INTEGER NOT NULL DEFAULT 0,
+      day_close_phase TEXT NOT NULL DEFAULT 'open',
+      last_reset_business_day TEXT,
+      updated_at TEXT NOT NULL
+    );
+    INSERT OR IGNORE INTO ops_state (id, checkin_locked, day_close_phase, last_reset_business_day, updated_at)
+    VALUES (1, 0, 'open', '${getBusinessDay()}', '2026-07-04T12:00:00.000Z');
+  `);
+
+  const deps: CheckinSessionDeps & { db: DatabaseSync } = {
+    db: sqlite,
+    findTicketByCodeStmt: sqlite.prepare('SELECT 1'),
+    checkinLockStmt: sqlite.prepare('SELECT checkin_locked AS locked FROM ops_state WHERE id = 1'),
+    dayCloseStateStmt: sqlite.prepare(
+      'SELECT checkin_locked AS locked, day_close_phase AS phase, last_reset_business_day AS lastResetBusinessDay FROM ops_state WHERE id = 1',
+    ),
+    updateCheckinLockStmt: sqlite.prepare('SELECT 1'),
+    getVisitIdentityViewStmt: sqlite.prepare('SELECT 1'),
+    getVisitPortalContextStmt: sqlite.prepare('SELECT 1'),
+    insertPatientSessionStmt: sqlite.prepare('SELECT 1'),
+    expireActiveSessionsByTicketStmt: sqlite.prepare('SELECT 1'),
+    getActiveSessionByTicketStmt: sqlite.prepare('SELECT 1'),
+    getPatientSessionByTokenStmt: sqlite.prepare('SELECT 1'),
+    touchPatientSessionStmt: sqlite.prepare('SELECT 1'),
+    expirePatientSessionStmt: sqlite.prepare('SELECT 1'),
+    revokePatientSessionStmt: sqlite.prepare('SELECT 1'),
+    nowIso: () => '2026-07-04T12:00:00.000Z',
+    getBusinessDay,
+    getBusinessTimeZone: () => 'Europe/Berlin',
+    getOpsSettings: () => settings,
+    normalizeDayClosePhase,
+    emitOutboxEvent: () => undefined,
+  };
+
+  const created = createVisitCheckInInDb(deps, {
+    topicId: 'blut',
+    authPath: 'phone_dob',
+    identityRef: 'Scope Test',
+  });
+  const runtime = getFlowCoreRuntime(sqlite);
+  runtime.redirect(created.visitId, {
+    queueId: null,
+    targetLocationId: targetRoomId,
+    movementMode: 'call',
+    publicDisplayMode: 'visible',
+    actorSurfaceId: 'pf_mfa_dashboard',
+  });
+
+  const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay());
+  const db = {
+    listActiveTerminalAssistPending: () => [],
+    isCheckinLocked: () => false,
+    isEffectiveCheckinLocked: () => false,
+    processExpiredRecallWindows: () => [],
+    getQueueSummary: () => ({
+      waitingNow: 0,
+      calledNow: 0,
+      inRoomNow: 0,
+      absentNow: 0,
+      processedToday: 0,
+    }),
+    getOpsSettings: () => settings,
+    getFlowCoreRuntimeInstance: () => runtime,
+    getOpsState: () => ({ checkinLocked: false, dayClosePhase: 'open' as const }),
+    listQueue,
+    callVisit: (visitId: string, roomId?: string, roomLabel?: string) =>
+      callVisit(sqlite, runtime, settings, listQueue, visitId, roomId, roomLabel),
+  } as unknown as CoreDatabase;
+
+  return { db, visitId: created.visitId };
+}
+
 function tvQueueTestSettings(): OpsSettings {
   return {
     returnWindowMinutes: 15,

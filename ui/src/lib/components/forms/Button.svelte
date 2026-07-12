@@ -11,6 +11,7 @@
     href?: string;
     target?: '_blank' | '_self' | '_parent' | '_top';
     rel?: string;
+    ariaLabel?: string;
     class?: string;
     children?: Snippet;
     onclick?: (event: MouseEvent) => void;
@@ -26,6 +27,7 @@
     href = undefined,
     target = undefined,
     rel = undefined,
+    ariaLabel = undefined,
     class: className = '',
     children,
     onclick,
@@ -47,14 +49,14 @@
 </script>
 
 {#if href}
-  <a {href} {target} {rel} class={computedClass} aria-disabled={disabled || loading} {onclick}>
+  <a {href} {target} {rel} class={computedClass} aria-disabled={disabled || loading} aria-label={ariaLabel} {onclick}>
     {#if loading}
       <span class="spinner" aria-hidden="true"></span>
     {/if}
     {@render children?.()}
   </a>
 {:else}
-  <button {type} class={computedClass} disabled={disabled || loading} {onclick}>
+  <button {type} class={computedClass} disabled={disabled || loading} aria-label={ariaLabel} {onclick}>
     {#if loading}
       <span class="spinner" aria-hidden="true"></span>
     {/if}

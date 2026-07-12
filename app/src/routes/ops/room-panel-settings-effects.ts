@@ -5,7 +5,10 @@ import type { OpsSettings } from '../../shared/db/db-types.js';
 export function applyRoomPanelSettingsEffects(input: {
   previous: Pick<OpsSettings, 'rooms'>;
   updated: Pick<OpsSettings, 'rooms'>;
-  sessions: Pick<StaffSessionManager, 'revokeRoomPanelSessions'>;
+  sessions: Pick<
+    StaffSessionManager,
+    'revokeRoomPanelSessions' | 'revokeRoomPanelSessionPlacement'
+  >;
   publishQueueUpdate: () => void;
 }): void {
   const updatedById = new Map(input.updated.rooms.map((room) => [room.roomId, room]));
@@ -18,11 +21,10 @@ export function applyRoomPanelSettingsEffects(input: {
 
     const previousPanels = roomPanelsOrDefault(previousRoom);
     const nextPanels = roomPanelsOrDefault(nextRoom);
-    const placementDisabled = ROOM_PANEL_PLACEMENTS.some(
-      (placement) => previousPanels[placement].enabled && !nextPanels[placement].enabled,
-    );
-    if (placementDisabled) {
-      input.sessions.revokeRoomPanelSessions(previousRoom.roomId);
+    for (const placement of ROOM_PANEL_PLACEMENTS) {
+      if (previousPanels[placement].enabled && !nextPanels[placement].enabled) {
+        input.sessions.revokeRoomPanelSessionPlacement(previousRoom.roomId, placement);
+      }
     }
   }
   input.publishQueueUpdate();

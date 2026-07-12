@@ -466,6 +466,27 @@ test('room-panel login allows outside interaction and requires pin inside', asyn
   await app.close();
 });
 
+test('room-panel login rejects placement that is not enabled for the room', async () => {
+  enableTestAuth();
+  const app = await buildAuthApp();
+
+  const insideOnOutsideOnlyRoom = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/room-panel/login',
+    payload: { roomId: 'korridor', placement: 'inside', pin: '2222' },
+  });
+  assert.equal(insideOnOutsideOnlyRoom.statusCode, 404);
+
+  const outsideOnInsideOnlyRoom = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/room-panel/login',
+    payload: { roomId: 'rezeption', placement: 'outside', pin: '' },
+  });
+  assert.equal(outsideOnInsideOnlyRoom.statusCode, 404);
+
+  await app.close();
+});
+
 test('room-panel login rejects wrong pin and disabled panel room', async () => {
   enableTestAuth();
   const app = await buildAuthApp();

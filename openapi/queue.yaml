@@ -381,6 +381,38 @@ components:
         serverTime:
           type: string
           format: date-time
+    RoomPanelItemActions:
+      type: object
+      additionalProperties: false
+      properties:
+        canCall:
+          type: boolean
+        canArrive:
+          type: boolean
+        canCheckOut:
+          type: boolean
+        disabledReason:
+          type: string
+    RoomPanelCapabilities:
+      type: object
+      additionalProperties: false
+      required:
+        - requiresPin
+        - canCheckIn
+        - canCheckOut
+        - mayShowPatientNames
+        - canCall
+      properties:
+        requiresPin:
+          type: boolean
+        canCheckIn:
+          type: boolean
+        canCheckOut:
+          type: boolean
+        mayShowPatientNames:
+          type: boolean
+        canCall:
+          type: boolean
     RoomPanelItem:
       type: object
       additionalProperties: false
@@ -391,6 +423,7 @@ components:
         - status
         - roomId
         - roomLabel
+        - actions
       properties:
         visitId:
           type: string
@@ -418,6 +451,41 @@ components:
           type: string
           nullable: true
           description: Only present for inside panels when showPatientNames is enabled.
+        actions:
+          $ref: '#/components/schemas/RoomPanelItemActions'
+    RoomPanelCallCandidate:
+      type: object
+      additionalProperties: false
+      required:
+        - visitId
+        - laneCode
+        - number
+        - status
+        - roomId
+        - roomLabel
+        - actions
+      properties:
+        visitId:
+          type: string
+        laneCode:
+          type: string
+        number:
+          type: integer
+        status:
+          type: string
+          enum:
+            - waiting
+            - directed
+        roomId:
+          type: string
+        roomLabel:
+          type: string
+        identityRef:
+          type: string
+          nullable: true
+          description: Only present for inside panels when showPatientNames is enabled.
+        actions:
+          $ref: '#/components/schemas/RoomPanelItemActions'
     RoomPanelSnapshot:
       type: object
       additionalProperties: false
@@ -427,6 +495,7 @@ components:
         - roomLabel
         - revision
         - serverTime
+        - capabilities
         - panel
         - items
       properties:
@@ -443,6 +512,8 @@ components:
         serverTime:
           type: string
           format: date-time
+        capabilities:
+          $ref: '#/components/schemas/RoomPanelCapabilities'
         panel:
           type: object
           additionalProperties: false
@@ -474,6 +545,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RoomPanelItem'
+        callCandidates:
+          type: array
+          description: >-
+            Present only when capabilities.canCall is true. Waiting/directed visits
+            with movementMode call targeting this room, oldest first.
+          items:
+            $ref: '#/components/schemas/RoomPanelCallCandidate'
     QueueListResponse:
       oneOf:
         - $ref: '#/components/schemas/QueueListMfaResponse'
@@ -785,6 +863,12 @@ paths:
                 $ref: './common.yaml#/components/schemas/Error'
         '404':
           description: Visit not found
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '403':
+          description: Panel policy forbids this action
           content:
             application/json:
               schema:

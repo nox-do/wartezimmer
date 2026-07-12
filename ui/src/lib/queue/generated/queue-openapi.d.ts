@@ -186,6 +186,15 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
+        /** @description Panel policy forbids this action */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
         /** @description Visit not found */
         404: {
           headers: {
@@ -624,6 +633,19 @@ export interface components {
       /** Format: date-time */
       serverTime: string;
     };
+    RoomPanelItemActions: {
+      canCall?: boolean;
+      canArrive?: boolean;
+      canCheckOut?: boolean;
+      disabledReason?: string;
+    };
+    RoomPanelCapabilities: {
+      requiresPin: boolean;
+      canCheckIn: boolean;
+      canCheckOut: boolean;
+      mayShowPatientNames: boolean;
+      canCall: boolean;
+    };
     RoomPanelItem: {
       visitId: string;
       laneCode: string;
@@ -639,6 +661,19 @@ export interface components {
       roomLabel: string;
       /** @description Only present for inside panels when showPatientNames is enabled. */
       identityRef?: string | null;
+      actions: components['schemas']['RoomPanelItemActions'];
+    };
+    RoomPanelCallCandidate: {
+      visitId: string;
+      laneCode: string;
+      number: number;
+      /** @enum {string} */
+      status: 'waiting' | 'directed';
+      roomId: string;
+      roomLabel: string;
+      /** @description Only present for inside panels when showPatientNames is enabled. */
+      identityRef?: string | null;
+      actions: components['schemas']['RoomPanelItemActions'];
     };
     RoomPanelSnapshot: {
       /** @constant */
@@ -648,6 +683,7 @@ export interface components {
       revision: number;
       /** Format: date-time */
       serverTime: string;
+      capabilities: components['schemas']['RoomPanelCapabilities'];
       panel: {
         /** @enum {string} */
         placement: 'outside' | 'inside';
@@ -658,6 +694,8 @@ export interface components {
         arrivedText: string;
       };
       items: components['schemas']['RoomPanelItem'][];
+      /** @description Present only when capabilities.canCall is true. Waiting/directed visits with movementMode call targeting this room, oldest first. */
+      callCandidates?: components['schemas']['RoomPanelCallCandidate'][];
     };
     QueueListResponse:
       | components['schemas']['QueueListMfaResponse']

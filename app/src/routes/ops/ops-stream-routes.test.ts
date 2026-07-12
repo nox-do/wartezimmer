@@ -174,7 +174,7 @@ test('ops stream sends initial emergency, presence, and pairing snapshots', asyn
 
   registerClientAuth(app, { staffSessions: sessions });
   registerOpsStreamRoutes(app, fakeOpsDb(), sessions);
-  markDeviceStreamConnected({ deviceId: 'room-panel:labor', kind: 'room-panel' });
+  markDeviceStreamConnected({ deviceId: 'room-panel:labor:outside', kind: 'room-panel' });
 
   await app.listen({ host: '127.0.0.1', port: 0 });
   const address = app.server.address();
@@ -217,7 +217,7 @@ test('ops stream sends initial emergency, presence, and pairing snapshots', asyn
     events.some(
       (entry) =>
         entry.event === 'device.presence' &&
-        (entry.data as { deviceId?: string; kind?: string }).deviceId === 'room-panel:labor' &&
+        (entry.data as { deviceId?: string; kind?: string }).deviceId === 'room-panel:labor:outside' &&
         (entry.data as { deviceId?: string; kind?: string }).kind === 'room-panel',
     ),
   );

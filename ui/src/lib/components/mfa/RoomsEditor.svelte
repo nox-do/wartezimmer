@@ -179,15 +179,18 @@
               <span class="pill pill--info">{t('mfa.settings.roomDefaultCallTargetBadge')}</span>
             {/if}
             {#if roomHasAnyEnabledPanel(room)}
-              {@const panelStatus = getDevicePresenceStatus(roomPanelDeviceId(room.roomId))}
-              <span
-                class="pill"
-                class:pill--on={panelStatus === 'online'}
-                class:pill--warn={panelStatus === 'stale'}
-                class:pill--off={panelStatus === 'offline'}
-              >
-                {deviceStatusLabel(panelStatus)}
-              </span>
+              {#each enabledPlacements as placement (`${room.roomId}:${placement}`)}
+                {@const panelStatus = getDevicePresenceStatus(roomPanelDeviceId(room.roomId, placement))}
+                <span
+                  class="pill"
+                  class:pill--on={panelStatus === 'online'}
+                  class:pill--warn={panelStatus === 'stale'}
+                  class:pill--off={panelStatus === 'offline'}
+                  title={t(`mfa.settings.roomPanelPlacement_${placement}`)}
+                >
+                  {deviceStatusLabel(panelStatus)}
+                </span>
+              {/each}
               <span class="pill pill--ok">{t('mfa.settings.roomPanelBadge')}</span>
             {/if}
             {#if !room.enabled}
