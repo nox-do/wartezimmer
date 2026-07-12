@@ -170,10 +170,10 @@ Bleibt MFA:
 
 ### P5 — Panel Live/Login UI
 
-- [ ] Login zeigt Placement: `Labor - Tuer`, `Labor - im Raum`
-- [ ] Live-Panel zeigt Actions aus Snapshot
-- [ ] Inside-Aufruf-UX: erst Auswahl-Liste; spaeter optional "Naechster"
-- [ ] Race/409 als Toast + Snapshot refresh
+- [x] Login zeigt Placement: `Labor - Tuer`, `Labor - im Raum`
+- [x] Live-Panel zeigt Actions aus Snapshot
+- [x] Inside-Aufruf-UX: Auswahl-Liste aus `callCandidates` (Backend-FIFO)
+- [x] Race/409 als Toast + Snapshot refresh; 403 Capability refresh ohne Auto-Logout
 
 ### P6 — Doku
 

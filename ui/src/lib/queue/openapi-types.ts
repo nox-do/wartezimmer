@@ -12,6 +12,7 @@ export type QueueResponse = QueueSchemas['QueueListMfaResponse'];
 export type TvQueueItem = QueueSchemas['QueueTvItem'];
 export type TvQueueResponse = QueueSchemas['QueueListTvResponse'];
 export type RoomPanelItem = QueueSchemas['RoomPanelItem'];
+export type RoomPanelCallCandidate = QueueSchemas['RoomPanelCallCandidate'];
 export type RoomPanelSnapshot = QueueSchemas['RoomPanelSnapshot'];
 export type QueueTransitionResponse = QueueSchemas['QueueTransitionResponse'];
 export type QueueVisitTransitionBody = QueueSchemas['QueueVisitTransitionRequest'];

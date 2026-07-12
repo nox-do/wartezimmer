@@ -271,6 +271,82 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+    gap: clamp(0.75rem, 2vh, 1rem);
+  }
+
+  :global(.room-panel-call-section) {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: clamp(0.65rem, 1.8vh, 0.85rem);
+    border: 1px solid #d8e3d4;
+    border-radius: 10px;
+    background: #f7fbf5;
+  }
+
+  :global(.room-panel-call-section__title),
+  :global(.room-panel-items-section__title) {
+    margin: 0;
+    font-size: clamp(0.95rem, 2.2vh, 1.1rem);
+    font-weight: 800;
+    color: #166534;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  :global(.room-panel-call-section__empty),
+  :global(.room-panel-items-section__empty) {
+    margin: 0;
+    font-size: clamp(0.95rem, 2.4vh, 1.15rem);
+    font-weight: 600;
+    color: #6b7268;
+  }
+
+  :global(.room-panel-call-section__list) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  :global(.room-panel-call-section__item) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.25rem;
+  }
+
+  :global(.room-panel-call-section__code) {
+    font-size: clamp(1.35rem, 4vh, 2rem);
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  :global(.room-panel-call-section__name) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #3f453b;
+    font-size: clamp(0.95rem, 2.2vh, 1.15rem);
+    font-weight: 700;
+  }
+
+  :global(.room-panel-call-section__action) {
+    width: min(100%, 14rem);
+  }
+
+  :global(.room-panel-items-section) {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   :global(.room-panel-preview__queue-viewport) {
@@ -382,9 +458,12 @@
     }
 
     :global(.room-panel-preview__main) {
-      flex-direction: row;
-      align-items: stretch;
-      gap: 1rem;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    :global(.room-panel-items-section) {
+      min-height: 0;
     }
 
     :global(.room-panel-preview__lead) {

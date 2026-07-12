@@ -1,18 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
-  import { formatTicketCode } from '@praxis-flow/domain';
   import Button from '$lib/components/forms/Button.svelte';
   import CheckOutConfirmModal from '$lib/components/mfa/CheckOutConfirmModal.svelte';
   import RoomPanelPinLogin from '$lib/components/room-panel/RoomPanelPinLogin.svelte';
   import RoomPanelPreview from '$lib/components/room-panel/RoomPanelPreview.svelte';
-  import {
-    DEFAULT_ROOM_PANELS_SETTINGS,
-    type PracticeRoomWithPanels,
-  } from '$lib/queue/ops-settings-api';
-  import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
   import type { RoomPanelItem, RoomPanelSnapshot } from '$lib/queue/openapi-types';
   import {
+    callRoomPanelVisit,
     checkInRoomPanelVisit,
     checkOutRoomPanelVisit,
     connectRoomPanelQueueStream,
@@ -27,11 +22,21 @@
     roomPanelLoginKey,
   } from '$lib/room-panel/room-panel-login-key';
   import {
+    resolveRoomPanelQueueFetchOutcome,
+    resolveRoomPanelTransitionOutcome,
+    type RoomPanelTransitionOutcome,
+  } from '$lib/room-panel/room-panel-transition';
+  import {
+    shouldReconcileRequestedUrl,
+    snapshotMatchesRequestedUrl,
+  } from '$lib/room-panel/room-panel-requested-url';
+  import {
     getPracticeProfileFallback,
     mountPracticeProfileSync,
     practiceDisplayLabel,
   } from '$lib/practice/practice-profile-client';
   import { t } from '$lib/i18n/i18nStore.svelte';
+  import { toastStore } from '$lib/stores/toastStore';
 
   let loading = $state(true);
   let rooms = $state<RoomPanelRoom[]>([]);
@@ -59,36 +64,6 @@
   const pinRequired = $derived(selectedRoom?.requiresPin ?? true);
   const hasRooms = $derived(rooms.length > 0);
   const isLive = $derived(snapshot !== null);
-  const panelItems = $derived(snapshot?.items ?? []);
-  const queueEntries = $derived(
-    panelItems.map((item) => ({
-      visitId: item.visitId,
-      ticketCode: formatTicketCode(item.laneCode, item.number),
-      patientName: item.identityRef,
-      status: item.status,
-    })),
-  );
-  const liveRoom = $derived(snapshot ? roomFromSnapshot(snapshot) : selectedRoom ? roomFromLoginRoom(selectedRoom) : null);
-  const liveState = $derived(
-    panelItems.some((item) => item.status === 'called' || item.status === 'directed')
-      ? 'enter'
-      : panelItems.some((item) => item.status === 'in_room')
-        ? 'arrival'
-        : 'waiting',
-  );
-  const liveStateLabel = $derived(resolveLiveStateLabel());
-
-  function resolveLiveStateLabel(): string {
-    const hasIncoming = panelItems.some((item) => item.status === 'called' || item.status === 'directed');
-    const hasInRoom = panelItems.some((item) => item.status === 'in_room');
-    if (hasIncoming) {
-      return snapshot?.panel.calledText ?? t('roomPanel.noTickets');
-    }
-    if (hasInRoom) {
-      return snapshot?.panel.arrivedText ?? t('roomPanel.noTickets');
-    }
-    return t('roomPanel.noTickets');
-  }
 
   $effect(() => {
     if (!selectedLoginKey && rooms[0]) {
@@ -111,7 +86,9 @@
     if (requestedEntry) {
       selectedLoginKey = roomPanelLoginKey(requestedEntry);
     }
-    if (snapshot?.roomId === requestedRoomId) {
+    if (
+      !shouldReconcileRequestedUrl(snapshot, requestedRoomId, readRequestedPlacement())
+    ) {
       return;
     }
     void reconcileRequestedRoom();
@@ -121,18 +98,6 @@
     const stopProfile = mountPracticeProfileSync((profile) => {
       practiceProfile = profile;
     });
-    const requestedRoomId = readRequestedRoomId();
-    const requestedPlacement = readRequestedPlacement();
-    if (requestedRoomId) {
-      const requestedEntry = rooms.find(
-        (room) =>
-          room.roomId === requestedRoomId &&
-          (!requestedPlacement || room.placement === requestedPlacement),
-      );
-      if (requestedEntry) {
-        selectedLoginKey = roomPanelLoginKey(requestedEntry);
-      }
-    }
     void bootstrapPanel();
     return () => {
       stopProfile();
@@ -183,7 +148,6 @@
         return false;
       }
 
-      const requestedRoomId = readRequestedRoomId();
       const requestedPlacement = readRequestedPlacement();
       const requestedEntry =
         rooms.find(
@@ -199,7 +163,10 @@
         return false;
       }
 
-      if (snapshot?.roomId === requestedRoomId && snapshot.panel.placement === requestedEntry.placement) {
+      if (
+        snapshot &&
+        snapshotMatchesRequestedUrl(snapshot, requestedRoomId, requestedPlacement)
+      ) {
         return true;
       }
 
@@ -209,7 +176,8 @@
       if (!requestedEntry.requiresPin) {
         await completeLogin(requestedEntry);
         return (
-          snapshot?.roomId === requestedRoomId && snapshot.panel.placement === requestedEntry.placement
+          snapshot?.roomId === requestedRoomId &&
+          snapshot.panel.placement === requestedEntry.placement
         );
       }
 
@@ -224,54 +192,25 @@
 
   async function tryRestoreSession(): Promise<boolean> {
     const queueResult = await fetchRoomPanelQueue();
-    if (!queueResult.ok) {
+    const outcome = resolveRoomPanelQueueFetchOutcome(queueResult, t('roomPanel.queueLoadError'));
+    if (outcome.kind === 'sessionExpired') {
+      return false;
+    }
+    if (outcome.kind !== 'success' || !queueResult.ok) {
       return false;
     }
 
     const requestedRoomId = readRequestedRoomId();
-    if (requestedRoomId && queueResult.data.roomId !== requestedRoomId) {
+    if (
+      requestedRoomId &&
+      !snapshotMatchesRequestedUrl(queueResult.data, requestedRoomId, readRequestedPlacement())
+    ) {
       return reconcileRequestedRoom();
     }
 
     snapshot = queueResult.data;
     startStream();
     return true;
-  }
-
-  function roomFromLoginRoom(room: RoomPanelRoom): PracticeRoomWithPanels {
-    return {
-      roomId: room.roomId,
-      roomLabel: room.roomLabel,
-      enabled: true,
-      defaultCallTarget: false,
-      maxOccupancy: null,
-      panels: normalizeRoomPanelsSettings({
-        outside:
-          room.placement === 'outside'
-            ? { enabled: true, mode: room.mode }
-            : undefined,
-        inside:
-          room.placement === 'inside' ? { enabled: true, mode: room.mode } : undefined,
-      }),
-    };
-  }
-
-  function roomFromSnapshot(data: RoomPanelSnapshot): PracticeRoomWithPanels {
-    const placement = data.panel.placement;
-    return {
-      roomId: data.roomId,
-      roomLabel: data.roomLabel,
-      enabled: true,
-      defaultCallTarget: false,
-      maxOccupancy: null,
-      panels: normalizeRoomPanelsSettings({
-        [placement]: {
-          enabled: true,
-          mode: data.panel.mode,
-          showPatientNames: data.panel.showPatientNames,
-        },
-      }),
-    };
   }
 
   async function loadRoomList(): Promise<boolean> {
@@ -331,8 +270,13 @@
 
   async function refreshSnapshot() {
     const result = await fetchRoomPanelQueue();
-    if (!result.ok) {
-      streamError = result.error.message || t('roomPanel.queueLoadError');
+    const outcome = resolveRoomPanelQueueFetchOutcome(result, t('roomPanel.queueLoadError'));
+    if (outcome.kind === 'sessionExpired') {
+      await recoverExpiredSession(outcome.message);
+      return;
+    }
+    if (outcome.kind !== 'success' || !result.ok) {
+      streamError = outcome.kind === 'error' ? outcome.message : t('roomPanel.queueLoadError');
       return;
     }
     snapshot = result.data;
@@ -343,8 +287,7 @@
     disconnectStream?.();
     disconnectStream = connectRoomPanelQueueStream({
       onSnapshot: (data) => {
-        const requestedRoomId = readRequestedRoomId();
-        if (requestedRoomId && data.roomId !== requestedRoomId) {
+        if (shouldReconcileRequestedUrl(data, readRequestedRoomId(), readRequestedPlacement())) {
           void reconcileRequestedRoom();
           return;
         }
@@ -422,29 +365,51 @@
     await completeLogin(selectedRoom);
   }
 
-  async function runTicketAction(item: RoomPanelItem | undefined, action: 'check_in' | 'check_out') {
-    if (!item) {
-      streamError = t('roomPanel.actionError');
-      return;
-    }
-
-    busyVisitId = item.visitId;
-    const result =
-      action === 'check_in'
-        ? await checkInRoomPanelVisit(item.visitId)
-        : await checkOutRoomPanelVisit(item.visitId);
-    busyVisitId = null;
-
-    if (!result.ok) {
-      if (result.error.status === 401 || result.error.status === 403) {
-        await recoverExpiredSession(t('roomPanel.sessionExpired'));
+  async function applyTransitionOutcome(outcome: RoomPanelTransitionOutcome) {
+    switch (outcome.kind) {
+      case 'success':
+        await refreshSnapshot();
         return;
-      }
-      streamError = result.error.message || t('roomPanel.actionError');
+      case 'conflict':
+        toastStore.error(outcome.message);
+        await refreshSnapshot();
+        return;
+      case 'forbidden':
+        toastStore.error(outcome.message);
+        await refreshSnapshot();
+        return;
+      case 'sessionExpired':
+        await recoverExpiredSession(outcome.message);
+        return;
+      case 'error':
+        streamError = outcome.message;
+        return;
+    }
+  }
+
+  async function runVisitAction(
+    visitId: string,
+    action: 'arrive' | 'check_out' | 'call',
+  ) {
+    if (busyVisitId) {
       return;
     }
 
-    await refreshSnapshot();
+    busyVisitId = visitId;
+    try {
+      const result =
+        action === 'call'
+          ? await callRoomPanelVisit(visitId)
+          : action === 'arrive'
+            ? await checkInRoomPanelVisit(visitId)
+            : await checkOutRoomPanelVisit(visitId);
+
+      await applyTransitionOutcome(
+        resolveRoomPanelTransitionOutcome(result, t('roomPanel.actionError')),
+      );
+    } finally {
+      busyVisitId = null;
+    }
   }
 
   function requestCheckOut(visitId: string) {
@@ -456,7 +421,7 @@
     if (!item) {
       return;
     }
-    await runTicketAction(item, 'check_out');
+    await runVisitAction(item.visitId, 'check_out');
     checkOutVisit = null;
   }
 
@@ -493,22 +458,18 @@
   }
 
   function findPanelItem(visitId: string): RoomPanelItem | undefined {
-    return panelItems.find((item) => item.visitId === visitId);
+    return snapshot?.items.find((item) => item.visitId === visitId);
   }
 </script>
 
-{#if isLive && liveRoom}
+{#if isLive && snapshot}
   <div class="room-panel-live-shell">
     <RoomPanelPreview
-      room={liveRoom}
-      placement={selectedRoom?.placement ?? snapshot?.panel.placement ?? 'outside'}
-      {queueEntries}
-      state={liveState}
-      stateLabelOverride={liveStateLabel}
-      preview={false}
+      {snapshot}
       {busyVisitId}
-      onCheckIn={(visitId) => void runTicketAction(findPanelItem(visitId), 'check_in')}
+      onArrive={(visitId) => void runVisitAction(visitId, 'arrive')}
       onCheckOut={requestCheckOut}
+      onCall={(visitId) => void runVisitAction(visitId, 'call')}
     />
     <CheckOutConfirmModal
       ticket={checkOutVisit}

@@ -112,7 +112,7 @@
       <select class="form-select" bind:value={selectedLoginKey} disabled={submitting}>
         {#each rooms as room (roomPanelLoginKey(room))}
           <option value={roomPanelLoginKey(room)}>
-            {room.roomLabel} – {t(`mfa.settings.roomPanelPlacement_${room.placement}`)}
+            {room.roomLabel} – {t(`mfa.settings.roomPanelPlacementShort_${room.placement}`)}
           </option>
         {/each}
       </select>

@@ -1,14 +1,19 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { DoorOpen, LogIn, MapPin, User, UserCheck, UserX } from '@lucide/svelte';
+  import { DoorOpen, LogIn, MapPin, PhoneOutgoing, User, UserCheck, UserX } from '@lucide/svelte';
   import Button from '$lib/components/forms/Button.svelte';
-  import type { PracticeRoomWithPanels } from '$lib/queue/ops-settings-api';
-  import {
-    DEFAULT_ROOM_PANELS_SETTINGS,
-    roomPanelConfigForPlacement,
-  } from '$lib/queue/ops-settings-api';
-  import type { RoomPanelPlacement } from '@praxis-flow/domain';
+  import type { RoomPanelSnapshot } from '$lib/queue/openapi-types';
   import { tf, t } from '$lib/i18n/i18nStore.svelte';
+  import {
+    formatRoomPanelTicketCode,
+    resolveRoomPanelLeadLabel,
+    resolveRoomPanelLeadState,
+    roomPanelCallCandidates,
+    roomPanelCandidateDisplayName,
+    roomPanelItemDisplayName,
+    roomPanelItemTicketCodes,
+    shouldRenderRoomPanelCallSection,
+  } from '$lib/room-panel/room-panel-snapshot-view';
   import {
     getRoomPanelPageCount,
     getRoomPanelPaginated,
@@ -17,74 +22,49 @@
     roomPanelQueueLayout,
   } from '$lib/room-panel/room-panel-queue-layout.svelte';
 
-  export type RoomPanelQueueEntry = {
-    visitId: string;
-    ticketCode: string;
-    patientName?: string | null;
-    status: 'called' | 'in_room' | 'directed';
-  };
-
   interface Props {
-    room: PracticeRoomWithPanels;
-    placement?: RoomPanelPlacement;
-    queueEntries?: RoomPanelQueueEntry[];
-    state?: 'waiting' | 'enter' | 'arrival';
-    stateLabelOverride?: string;
-    preview?: boolean;
+    snapshot: RoomPanelSnapshot;
     busyVisitId?: string | null;
-    onCheckIn?: (visitId: string) => void;
+    onArrive?: (visitId: string) => void;
     onCheckOut?: (visitId: string) => void;
+    onCall?: (visitId: string) => void;
   }
 
   let {
-    room,
-    placement = 'outside',
-    queueEntries = [
-      {
-        visitId: 'preview',
-        ticketCode: 'A-042',
-        patientName: 'Muster',
-        status: 'called',
-      },
-    ],
-    state: panelState = 'waiting',
-    stateLabelOverride,
-    preview = true,
+    snapshot,
     busyVisitId = null,
-    onCheckIn,
+    onArrive,
     onCheckOut,
+    onCall,
   }: Props = $props();
 
   let panelEl = $state<HTMLElement | null>(null);
   let viewportEl = $state<HTMLDivElement | null>(null);
 
-  const panel = $derived(roomPanelConfigForPlacement(room, placement));
-  const title = $derived(room.roomLabel.trim() || t('roomPanel.roomFallback'));
-  const showNames = $derived(placement === 'inside' && panel.showPatientNames);
-  const arrivedText = $derived(panelText(panel.arrivedTextPreset, panel.arrivedTextCustom, 'please_wait_here'));
-  const calledText = $derived(panelText(panel.calledTextPreset, panel.calledTextCustom, 'please_enter'));
+  const title = $derived(snapshot.roomLabel.trim() || t('roomPanel.roomFallback'));
+  const placement = $derived(snapshot.panel.placement);
+  const mayShowPatientNames = $derived(snapshot.capabilities.mayShowPatientNames);
+  const panelItems = $derived(snapshot.items);
+  const callCandidates = $derived(roomPanelCallCandidates(snapshot));
+  const showCallSection = $derived(shouldRenderRoomPanelCallSection(snapshot));
+  const leadState = $derived(resolveRoomPanelLeadState(panelItems));
   const stateLabel = $derived(
-    stateLabelOverride?.trim() ||
-      (panelState === 'enter'
-        ? calledText
-        : panelState === 'arrival'
-          ? arrivedText
-          : t('roomPanel.noTickets')),
+    resolveRoomPanelLeadLabel(snapshot, leadState, { waiting: t('roomPanel.noTickets') }),
   );
-  const StateIcon = $derived(panelState === 'enter' ? DoorOpen : panelState === 'arrival' ? LogIn : MapPin);
-  const queueTicketCodes = $derived(
-    queueEntries.map((entry) => entry.ticketCode).filter((code) => code.trim() && code !== '—'),
+  const StateIcon = $derived(leadState === 'enter' ? DoorOpen : leadState === 'arrival' ? LogIn : MapPin);
+  const queueTicketCodes = $derived(roomPanelItemTicketCodes(panelItems));
+  const itemByCode = $derived(
+    new Map(
+      panelItems.map((item) => [formatRoomPanelTicketCode(item.laneCode, item.number), item]),
+    ),
   );
-  const entryByCode = $derived(new Map(queueEntries.map((entry) => [entry.ticketCode, entry])));
-  const visibleEntries = $derived(
+  const visibleItems = $derived(
     getVisibleRoomPanelTickets()
-      .map((code) => entryByCode.get(code))
-      .filter((entry): entry is RoomPanelQueueEntry => Boolean(entry)),
+      .map((code) => itemByCode.get(code))
+      .filter((item): item is (typeof panelItems)[number] => Boolean(item)),
   );
   const pageCount = $derived(getRoomPanelPageCount());
   const paginated = $derived(getRoomPanelPaginated());
-  const showCheckIn = $derived(!preview && panel.mode !== 'display_only' && Boolean(onCheckIn));
-  const showCheckOut = $derived(!preview && panel.mode === 'staff_full' && Boolean(onCheckOut));
 
   onMount(() =>
     mountRoomPanelQueueLayout({
@@ -93,36 +73,21 @@
       getTicketCodes: () => queueTicketCodes,
     }),
   );
-
-  function panelText(
-    preset: typeof panel.calledTextPreset,
-    customText: string | null,
-    fallbackPreset: typeof panel.calledTextPreset,
-  ): string {
-    const texts = {
-      you_are_right: t('roomPanel.text_you_are_right'),
-      please_wait_here: t('roomPanel.text_please_wait_here'),
-      please_enter: t('roomPanel.text_please_enter'),
-      go_to_reception: t('roomPanel.text_go_to_reception'),
-      custom: '',
-    };
-    return preset === 'custom' ? customText?.trim() || texts[fallbackPreset] : texts[preset];
-  }
 </script>
 
 <section
   bind:this={panelEl}
   class="room-panel-preview"
-  data-state={panelState}
-  data-live={preview ? undefined : 'true'}
+  data-state={leadState}
+  data-live="true"
   data-queue-count={queueTicketCodes.length}
-  aria-label={preview ? t('roomPanel.previewAria') : title}
+  aria-label={title}
 >
   <header class="room-panel-preview__header">
     <span class="room-panel-preview__room">{title}</span>
-    {#if preview}
-      <span class="room-panel-preview__mode">{t('roomPanel.previewBadge')}</span>
-    {/if}
+    <span class="room-panel-preview__mode">
+      {t(`mfa.settings.roomPanelPlacementShort_${placement}`)}
+    </span>
   </header>
 
   <div class="room-panel-preview__lead">
@@ -133,64 +98,113 @@
   </div>
 
   <div class="room-panel-preview__main">
-    {#if queueTicketCodes.length > 0}
-      <div class="room-panel-preview__queue-viewport" bind:this={viewportEl}>
-        <ul
-          class="room-panel-preview__queue"
-          class:room-panel-preview__queue--cols-2={roomPanelQueueLayout.layout.columns === 2}
-          class:room-panel-preview__queue--paginated={paginated}
-          aria-label={t('roomPanel.moreTicketsAria')}
-        >
-          {#each visibleEntries as entry (entry.visitId)}
-            <li
-              class="room-panel-preview__queue-item"
-              class:room-panel-preview__queue-item--next={entry.status === 'called' || entry.status === 'directed'}
-            >
-              <span class="room-panel-preview__queue-code">{entry.ticketCode}</span>
-              {#if showNames && entry.patientName?.trim()}
-                <span class="room-panel-preview__queue-name">
-                  <User size={20} aria-hidden="true" />
-                  <span>{entry.patientName}</span>
-                </span>
-              {/if}
-              {#if showCheckIn && (entry.status === 'called' || entry.status === 'directed')}
-                <Button
-                  class="room-panel-preview__queue-action"
-                  variant="primary"
-                  fullWidth
-                  loading={busyVisitId === entry.visitId}
-                  onclick={() => onCheckIn?.(entry.visitId)}
-                >
-                  <UserCheck size={18} aria-hidden="true" />
-                  {placement === 'outside'
-                    ? t('roomPanel.actionIAmHere')
-                    : t('roomPanel.actionArrived')}
-                </Button>
-              {/if}
-              {#if showCheckOut && entry.status === 'in_room'}
-                <Button
-                  class="room-panel-preview__queue-action"
-                  variant="secondary"
-                  fullWidth
-                  loading={busyVisitId === entry.visitId}
-                  onclick={() => onCheckOut?.(entry.visitId)}
-                >
-                  <UserX size={18} aria-hidden="true" />
-                  {t('roomPanel.actionDone')}
-                </Button>
-              {/if}
-            </li>
-          {/each}
-        </ul>
-      </div>
-      {#if paginated}
-        <p class="room-panel-preview__pages" aria-live="polite">
-          {tf('tv.pageIndicator', {
-            current: roomPanelQueueLayout.pageIndex + 1,
-            total: pageCount,
-          })}
-        </p>
-      {/if}
+    {#if showCallSection}
+      <section class="room-panel-call-section" aria-label={t('roomPanel.callSectionAria')}>
+        <h2 class="room-panel-call-section__title">{t('roomPanel.callSectionTitle')}</h2>
+        {#if callCandidates.length === 0}
+          <p class="room-panel-call-section__empty">{t('roomPanel.noCallCandidates')}</p>
+        {:else}
+          <ul class="room-panel-call-section__list" role="list">
+            {#each callCandidates as candidate (candidate.visitId)}
+              {@const ticketCode = formatRoomPanelTicketCode(candidate.laneCode, candidate.number)}
+              {@const displayName = roomPanelCandidateDisplayName(candidate, mayShowPatientNames)}
+              <li class="room-panel-call-section__item" role="listitem">
+                <span class="room-panel-call-section__code">{ticketCode}</span>
+                {#if displayName}
+                  <span class="room-panel-call-section__name">
+                    <User size={18} aria-hidden="true" />
+                    <span>{displayName}</span>
+                  </span>
+                {/if}
+                {#if candidate.actions.canCall}
+                  <Button
+                    class="room-panel-call-section__action"
+                    variant="primary"
+                    fullWidth
+                    loading={busyVisitId === candidate.visitId}
+                    disabled={busyVisitId !== null && busyVisitId !== candidate.visitId}
+                    onclick={() => onCall?.(candidate.visitId)}
+                  >
+                    <PhoneOutgoing size={18} aria-hidden="true" />
+                    {t('roomPanel.actionCall')}
+                  </Button>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </section>
     {/if}
+
+    <section class="room-panel-items-section" aria-label={t('roomPanel.itemsSectionAria')}>
+      {#if showCallSection}
+        <h2 class="room-panel-items-section__title">{t('roomPanel.itemsSectionTitle')}</h2>
+      {/if}
+
+      {#if panelItems.length === 0}
+        <p class="room-panel-items-section__empty">{t('roomPanel.noRoomItems')}</p>
+      {:else}
+        <div class="room-panel-preview__queue-viewport" bind:this={viewportEl}>
+          <ul
+            class="room-panel-preview__queue"
+            class:room-panel-preview__queue--cols-2={roomPanelQueueLayout.layout.columns === 2}
+            class:room-panel-preview__queue--paginated={paginated}
+          >
+            {#each visibleItems as item (item.visitId)}
+              {@const ticketCode = formatRoomPanelTicketCode(item.laneCode, item.number)}
+              {@const displayName = roomPanelItemDisplayName(item, mayShowPatientNames)}
+              <li
+                class="room-panel-preview__queue-item"
+                class:room-panel-preview__queue-item--next={item.status === 'called' || item.status === 'directed'}
+              >
+                <span class="room-panel-preview__queue-code">{ticketCode}</span>
+                {#if displayName}
+                  <span class="room-panel-preview__queue-name">
+                    <User size={20} aria-hidden="true" />
+                    <span>{displayName}</span>
+                  </span>
+                {/if}
+                {#if item.actions.canArrive}
+                  <Button
+                    class="room-panel-preview__queue-action"
+                    variant="primary"
+                    fullWidth
+                    loading={busyVisitId === item.visitId}
+                    disabled={busyVisitId !== null && busyVisitId !== item.visitId}
+                    onclick={() => onArrive?.(item.visitId)}
+                  >
+                    <UserCheck size={18} aria-hidden="true" />
+                    {placement === 'outside'
+                      ? t('roomPanel.actionIAmHere')
+                      : t('roomPanel.actionArrived')}
+                  </Button>
+                {/if}
+                {#if item.actions.canCheckOut}
+                  <Button
+                    class="room-panel-preview__queue-action"
+                    variant="secondary"
+                    fullWidth
+                    loading={busyVisitId === item.visitId}
+                    disabled={busyVisitId !== null && busyVisitId !== item.visitId}
+                    onclick={() => onCheckOut?.(item.visitId)}
+                  >
+                    <UserX size={18} aria-hidden="true" />
+                    {t('roomPanel.actionDone')}
+                  </Button>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+        </div>
+        {#if paginated}
+          <p class="room-panel-preview__pages" aria-live="polite">
+            {tf('tv.pageIndicator', {
+              current: roomPanelQueueLayout.pageIndex + 1,
+              total: pageCount,
+            })}
+          </p>
+        {/if}
+      {/if}
+    </section>
   </div>
 </section>
