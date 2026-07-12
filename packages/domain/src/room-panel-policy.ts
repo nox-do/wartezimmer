@@ -37,11 +37,12 @@ export function roomPanelMayShowPatientNames(
   return panel.placement === 'inside' && panel.showPatientNames === true;
 }
 
-/** Patient call from the room tablet — inside only, explicitly enabled, never at the door. */
+/** Patient call from the room tablet — inside staff_full only, explicitly enabled, never at the door. */
 export function roomPanelCanCall(panel: RoomPanelPolicyInput): boolean {
   return (
     panel.placement === 'inside' &&
     panel.enabled === true &&
+    panel.mode === 'staff_full' &&
     panel.allowCalling === true
   );
 }

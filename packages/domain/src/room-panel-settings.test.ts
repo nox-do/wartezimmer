@@ -60,6 +60,14 @@ test('normalizeRoomPanelPlacementConfig applies defaults and outside constraints
       arrivedTextCustom: null,
     },
   );
+  assert.equal(
+    normalizeRoomPanelPlacementConfig('inside', {
+      enabled: true,
+      mode: 'arrival',
+      allowCalling: true,
+    }).allowCalling,
+    false,
+  );
 });
 
 test('normalizeRoomPanelsSettings normalizes both placements independently', () => {

@@ -156,7 +156,8 @@ export function normalizeRoomPanelPlacementConfig(
     enabled: source.enabled === true,
     mode,
     showPatientNames: placement === 'inside' && source.showPatientNames === true,
-    allowCalling: placement === 'inside' && source.allowCalling === true,
+    allowCalling:
+      placement === 'inside' && mode === 'staff_full' && source.allowCalling === true,
     ...normalizeRoomPanelTextFields(source),
   };
 }

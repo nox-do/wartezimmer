@@ -1,27 +1,34 @@
 <script lang="ts">
+  import Modal from '$lib/components/Modal.svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import RoomEditorModal from '$lib/components/mfa/RoomEditorModal.svelte';
-  import type { PracticeRoomWithPanels, RoomPanelMode } from '$lib/queue/ops-settings-api';
-  import {
-    emptyRoomPanels,
-    ensureSingleDefaultCallTarget,
-    generateRoomId,
-    listEnabledRoomPanelPlacements,
-    roomHasAnyEnabledPanel,
-    roomPanelConfigForPlacement,
+  import type {
+    PracticeRoomWithPanels,
+    RoomPanelMode,
+    RoomPanelPlacement,
+    RoomPanelTextPreset,
   } from '$lib/queue/ops-settings-api';
+  import {
+    ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
+    ROOM_PANEL_MODES,
+    ROOM_PANEL_TEXT_PRESETS,
+    ensureSingleDefaultCallTarget,
+    listEnabledRoomPanelPlacements,
+    roomPanelConfigForPlacement,
+    roomPanelsOrDefault,
+  } from '$lib/queue/ops-settings-api';
+  import { updateRoomPanelPlacementConfig } from '$lib/queue/room-panel-settings';
   import { getDevicePresenceStatus } from '$lib/mfa/ops-stream-store.svelte';
-  import { deviceStatusLabel } from '$lib/ops/device-presence-labels';
-  import { roomPanelDeviceId } from '$lib/ops/device-presence-api';
-  import { resolveRoomMaxOccupancy } from '$lib/queue/room-capacity';
+  import { roomPanelDeviceId, type DevicePresenceStatus } from '$lib/ops/device-presence-api';
+  import { normalizeMaxOccupancy } from '$lib/queue/room-capacity';
   import type { RoomQueueGuardContext } from '$lib/queue/room-removal-guard';
+  import { normalizeRoomPanelCustomText } from '@praxis-flow/domain';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
 
   interface Props {
     rooms: PracticeRoomWithPanels[];
     busy?: boolean;
     onChange?: (rooms: PracticeRoomWithPanels[]) => void;
-    /** Persist is authoritative for room remove/disable/capacity guards (server). */
     onPersist?: (options?: { roomQueueGuardContext?: RoomQueueGuardContext }) => void | Promise<boolean>;
   }
 
@@ -32,46 +39,80 @@
     onPersist,
   }: Props = $props();
 
-  let editorOpen = $state(false);
-  let editorMode = $state<'add' | 'edit'>('add');
-  let editorIndex = $state<number | null>(null);
-  let draft = $state<PracticeRoomWithPanels>(emptyRoomPanels());
-  let editorRoomIdsTaken = $state<Set<string>>(new Set());
+  let openRoomId = $state<string | null>(null);
+  let draft = $state<PracticeRoomWithPanels | null>(null);
+  let lastSyncedRoomJson = $state('');
+  let maxOccupancyInput = $state('');
+  let labelError = $state('');
+  let maxOccupancyError = $state('');
 
-  function emptyRoom(): PracticeRoomWithPanels {
-    return emptyRoomPanels();
-  }
+  let addModalOpen = $state(false);
+  let deleteConfirmOpen = $state(false);
+  let deleteTargetIndex = $state<number | null>(null);
 
-  function openAdd() {
-    const roomLabel = t('mfa.settings.roomDefaultLabel');
-    editorMode = 'add';
-    editorIndex = null;
-    const roomIdsTaken = new Set(rooms.map((room) => room.roomId));
-    editorRoomIdsTaken = roomIdsTaken;
-    draft = {
-      roomId: generateRoomId(roomIdsTaken),
-      roomLabel,
-      enabled: true,
-      defaultCallTarget: false,
-      maxOccupancy: null,
-      panels: emptyRoomPanels().panels,
-    };
-    editorOpen = true;
-  }
+  const editingIndex = $derived(
+    openRoomId == null ? -1 : rooms.findIndex((room) => room.roomId === openRoomId),
+  );
 
-  function openEdit(index: number) {
-    const room = rooms[index];
-    if (!room) {
+  $effect(() => {
+    if (openRoomId == null) {
       return;
     }
-    editorMode = 'edit';
-    editorIndex = index;
-    editorRoomIdsTaken = new Set(rooms.map((r) => r.roomId).filter((id) => id !== room.roomId));
-    draft = { ...room };
-    editorOpen = true;
+    const saved = rooms.find((room) => room.roomId === openRoomId);
+    if (!saved) {
+      closeExpander();
+      return;
+    }
+    const savedJson = JSON.stringify(saved);
+    if (savedJson !== lastSyncedRoomJson) {
+      lastSyncedRoomJson = savedJson;
+      draft = structuredClone(saved);
+      maxOccupancyInput = saved.maxOccupancy == null ? '' : String(saved.maxOccupancy);
+    }
+  });
+
+  function closeExpander() {
+    openRoomId = null;
+    draft = null;
+    lastSyncedRoomJson = '';
+    maxOccupancyInput = '';
+    labelError = '';
+    maxOccupancyError = '';
   }
 
-  function roomQueueGuardContextForEdit(
+  function toggleExpander(roomId: string) {
+    if (openRoomId === roomId) {
+      closeExpander();
+      return;
+    }
+    const saved = rooms.find((room) => room.roomId === roomId);
+    if (!saved) {
+      return;
+    }
+    openRoomId = roomId;
+    draft = structuredClone(saved);
+    lastSyncedRoomJson = JSON.stringify(saved);
+    maxOccupancyInput = saved.maxOccupancy == null ? '' : String(saved.maxOccupancy);
+    labelError = '';
+    maxOccupancyError = '';
+  }
+
+  function openAddModal() {
+    addModalOpen = true;
+  }
+
+  function applyAddRoom(next: PracticeRoomWithPanels) {
+    const updated = ensureSingleDefaultCallTarget([...rooms, next], null);
+    onChange?.(updated);
+    openRoomId = next.roomId;
+    draft = structuredClone(next);
+    lastSyncedRoomJson = JSON.stringify(next);
+    maxOccupancyInput = '';
+    labelError = '';
+    maxOccupancyError = '';
+  }
+
+  function roomQueueGuardContextForSave(
     previous: PracticeRoomWithPanels,
     next: PracticeRoomWithPanels,
   ): RoomQueueGuardContext | undefined {
@@ -84,52 +125,204 @@
     return undefined;
   }
 
-  async function applyDraft(next: PracticeRoomWithPanels) {
-    const preferredDefaultId = next.defaultCallTarget ? next.roomId : null;
-    let updated: PracticeRoomWithPanels[];
-    let roomQueueGuardContext: RoomQueueGuardContext | undefined;
-
-    if (editorMode === 'add') {
-      updated = ensureSingleDefaultCallTarget([...rooms, next], preferredDefaultId);
-    } else if (editorIndex != null) {
-      const previous = rooms[editorIndex];
-      if (previous) {
-        roomQueueGuardContext = roomQueueGuardContextForEdit(previous, next);
-      }
-      updated = ensureSingleDefaultCallTarget(
-        rooms.map((room, i) => (i === editorIndex ? next : room)),
-        preferredDefaultId,
-      );
-    } else {
-      return;
-    }
-
-    onChange?.(updated);
-    await onPersist?.(roomQueueGuardContext ? { roomQueueGuardContext } : undefined);
+  function normalizeDraftForSave(source: PracticeRoomWithPanels): PracticeRoomWithPanels {
+    const panels = roomPanelsOrDefault(source);
+    return {
+      roomId: source.roomId.trim(),
+      roomLabel: source.roomLabel.trim(),
+      enabled: source.enabled,
+      defaultCallTarget: source.defaultCallTarget === true,
+      maxOccupancy: source.maxOccupancy,
+      panels: {
+        outside: {
+          ...panels.outside,
+          calledTextCustom: normalizeRoomPanelCustomText(panels.outside.calledTextCustom),
+          arrivedTextCustom: normalizeRoomPanelCustomText(panels.outside.arrivedTextCustom),
+        },
+        inside: {
+          ...panels.inside,
+          calledTextCustom: normalizeRoomPanelCustomText(panels.inside.calledTextCustom),
+          arrivedTextCustom: normalizeRoomPanelCustomText(panels.inside.arrivedTextCustom),
+        },
+      },
+    };
   }
 
-  async function deleteFromModal() {
-    if (editorIndex == null || rooms.length <= 1) {
+  function validateDraft(): boolean {
+    if (!draft) {
+      return false;
+    }
+    labelError = '';
+    maxOccupancyError = '';
+
+    if (!draft.roomLabel.trim()) {
+      labelError = t('mfa.settings.roomModalLabelRequired');
+      return false;
+    }
+
+    const trimmedMax = maxOccupancyInput.trim();
+    if (trimmedMax.length > 0) {
+      const parsed = Number(trimmedMax);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        maxOccupancyError = t('mfa.settings.roomMaxOccupancyInvalid');
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  async function saveDraft() {
+    if (!draft || editingIndex < 0) {
       return;
     }
-    const room = rooms[editorIndex];
-    if (!room) {
+    if (!validateDraft()) {
       return;
     }
 
-    onChange?.(ensureSingleDefaultCallTarget(rooms.filter((_, i) => i !== editorIndex)));
-    editorOpen = false;
-    editorIndex = null;
+    const trimmedMax = maxOccupancyInput.trim();
+    const maxOccupancy =
+      trimmedMax.length > 0 ? normalizeMaxOccupancy(Number(trimmedMax)) : null;
+
+    const next = normalizeDraftForSave({
+      ...draft,
+      maxOccupancy,
+    });
+
+    const previous = rooms[editingIndex];
+    const roomQueueGuardContext = previous ? roomQueueGuardContextForSave(previous, next) : undefined;
+    const preferredDefaultId = next.defaultCallTarget ? next.roomId : null;
+    const updated = ensureSingleDefaultCallTarget(
+      rooms.map((room, index) => (index === editingIndex ? next : room)),
+      preferredDefaultId,
+    );
+
+    onChange?.(updated);
+    const ok = await onPersist?.(roomQueueGuardContext ? { roomQueueGuardContext } : undefined);
+    if (ok === false) {
+      return;
+    }
+    lastSyncedRoomJson = JSON.stringify(next);
+  }
+
+  function requestDelete(index: number) {
+    if (rooms.length <= 1) {
+      return;
+    }
+    deleteTargetIndex = index;
+    deleteConfirmOpen = true;
+  }
+
+  async function confirmDelete() {
+    if (deleteTargetIndex == null || rooms.length <= 1) {
+      deleteConfirmOpen = false;
+      deleteTargetIndex = null;
+      return;
+    }
+    const removed = rooms[deleteTargetIndex];
+    if (!removed) {
+      deleteConfirmOpen = false;
+      deleteTargetIndex = null;
+      return;
+    }
+
+    if (openRoomId === removed.roomId) {
+      closeExpander();
+    }
+
+    onChange?.(ensureSingleDefaultCallTarget(rooms.filter((_, index) => index !== deleteTargetIndex)));
+    deleteConfirmOpen = false;
+    deleteTargetIndex = null;
     await onPersist?.({ roomQueueGuardContext: 'remove' });
   }
 
-  function roomPanelModeLabel(panelMode: RoomPanelMode): string {
+  function updateDraft(patch: Partial<PracticeRoomWithPanels>) {
+    if (!draft) {
+      return;
+    }
+    draft = { ...draft, ...patch };
+  }
+
+  function updateDraftPanel(placement: RoomPanelPlacement, patch: Parameters<typeof updateRoomPanelPlacementConfig>[2]) {
+    if (!draft) {
+      return;
+    }
+    draft = {
+      ...draft,
+      panels: updateRoomPanelPlacementConfig(roomPanelsOrDefault(draft), placement, patch),
+    };
+  }
+
+  function roomPanelModeLabel(placement: RoomPanelPlacement, panelMode: RoomPanelMode): string {
+    if (panelMode === 'arrival') {
+      return placement === 'outside'
+        ? t('mfa.settings.roomPanelMode_arrival_outside')
+        : t('mfa.settings.roomPanelMode_arrival_inside');
+    }
     return {
       display_only: t('mfa.settings.roomPanelMode_display_only'),
-      arrival: t('mfa.settings.roomPanelMode_arrival'),
       staff_full: t('mfa.settings.roomPanelMode_staff_full'),
     }[panelMode];
   }
+
+  function roomPanelModeGuide(placement: RoomPanelPlacement, panelMode: RoomPanelMode): string {
+    const key = `${placement}_${panelMode}` as const;
+    const guides: Record<string, string> = {
+      outside_display_only: t('mfa.settings.roomPanelModeGuide_outside_display_only'),
+      outside_arrival: t('mfa.settings.roomPanelModeGuide_outside_arrival'),
+      inside_display_only: t('mfa.settings.roomPanelModeGuide_inside_display_only'),
+      inside_arrival: t('mfa.settings.roomPanelModeGuide_inside_arrival'),
+      inside_staff_full: t('mfa.settings.roomPanelModeGuide_inside_staff_full'),
+    };
+    return guides[key] ?? '';
+  }
+
+  function roomPanelTextPresetLabel(preset: RoomPanelTextPreset): string {
+    return {
+      you_are_right: t('mfa.settings.roomPanelPreset_you_are_right'),
+      please_wait_here: t('mfa.settings.roomPanelPreset_please_wait_here'),
+      please_enter: t('mfa.settings.roomPanelPreset_please_enter'),
+      go_to_reception: t('mfa.settings.roomPanelPreset_go_to_reception'),
+      custom: t('mfa.settings.roomPanelPreset_custom'),
+    }[preset];
+  }
+
+  function panelModesForPlacement(placement: RoomPanelPlacement): readonly RoomPanelMode[] {
+    return placement === 'outside'
+      ? ROOM_PANEL_MODES.filter((mode) => mode !== 'staff_full')
+      : ROOM_PANEL_MODES;
+  }
+
+  function roomPanelPresenceLabel(placement: RoomPanelPlacement, status: DevicePresenceStatus): string {
+    const placementLabel = t(`mfa.settings.roomPanelPlacementShort_${placement}`);
+    const statusKey = status === 'online' ? 'online' : status === 'stale' ? 'stale' : 'offline';
+    return tf(`mfa.settings.roomPanelPresence_${statusKey}`, { placement: placementLabel });
+  }
+
+  function presencePillClass(status: DevicePresenceStatus): string {
+    if (status === 'online') {
+      return 'pill--on';
+    }
+    if (status === 'stale') {
+      return 'pill--warn';
+    }
+    return 'pill--off';
+  }
+
+  function roomCapacityLabel(room: PracticeRoomWithPanels): string {
+    if (room.maxOccupancy == null) {
+      return t('mfa.settings.roomCapacityUnlimited');
+    }
+    return tf('mfa.settings.roomCapacityLimited', { count: room.maxOccupancy });
+  }
+
+  function panelSummary(room: PracticeRoomWithPanels, placement: RoomPanelPlacement): string {
+    const panel = roomPanelConfigForPlacement(room, placement);
+    const short = t(`mfa.settings.roomPanelPlacementShort_${placement}`);
+    return `${short}: ${roomPanelModeLabel(placement, panel.mode)}`;
+  }
+
+  const PANEL_PLACEMENTS: RoomPanelPlacement[] = ['outside', 'inside'];
 </script>
 
 <div class="panel rooms-editor-panel">
@@ -138,7 +331,7 @@
       <h2 class="panel__title">{t('mfa.settings.roomsPanelTitle')}</h2>
       <p class="text-desc">{t('mfa.settings.roomsPanelDesc')}</p>
     </div>
-    <Button variant="outline" size="sm" disabled={busy} onclick={openAdd}>
+    <Button variant="outline" size="sm" disabled={busy} onclick={openAddModal}>
       {t('mfa.settings.roomAdd')}
     </Button>
   </div>
@@ -146,60 +339,343 @@
   {#if rooms.length === 0}
     <p class="mfa-editor-empty">{t('mfa.settings.roomsEmpty')}</p>
   {:else}
-    <ul class="mfa-editor-list" role="list">
-      {#each rooms as room, index (`room-row-${index}`)}
+    <ul class="room-expander-list" role="list">
+      {#each rooms as room, index (`room-expander-${room.roomId}`)}
+        {@const isOpen = openRoomId === room.roomId}
         {@const enabledPlacements = listEnabledRoomPanelPlacements(room)}
-        {@const primaryPlacement = enabledPlacements[0]}
-        {@const primaryPanel = primaryPlacement
-          ? roomPanelConfigForPlacement(room, primaryPlacement)
-          : null}
-        <li class="mfa-editor-list-item" class:mfa-editor-list-item--inactive={!room.enabled} role="listitem">
-          <div class="mfa-editor-list-item__main">
-            <span class="mfa-editor-list-item__icon" aria-hidden="true">⌂</span>
-            <div class="mfa-editor-list-item__text">
-              <span class="mfa-editor-list-item__label">
+        <li
+          class="room-expander"
+          class:is-open={isOpen}
+          class:room-expander--inactive={!room.enabled}
+          role="listitem"
+        >
+          <button
+            type="button"
+            class="room-expander__trigger"
+            aria-expanded={isOpen}
+            disabled={busy}
+            onclick={() => toggleExpander(room.roomId)}
+          >
+            <span class="room-expander__icon" aria-hidden="true">⌂</span>
+            <span class="room-expander__summary">
+              <span class="room-expander__label">
                 {room.roomLabel.trim() || t('mfa.settings.roomDefaultLabel')}
               </span>
-              <span class="mfa-editor-list-item__meta">
-                {#if resolveRoomMaxOccupancy(rooms, room.roomId) == null}
-                  {t('mfa.settings.roomCapacityUnlimited')}
-                {:else}
-                  {tf('mfa.settings.roomCapacityLimited', {
-                    count: resolveRoomMaxOccupancy(rooms, room.roomId) ?? 0,
-                  })}
-                {/if}
-                {#if primaryPanel}
-                  · {roomPanelModeLabel(primaryPanel.mode)}
+              <span class="room-expander__meta">
+                {roomCapacityLabel(room)}
+                {#if enabledPlacements.length > 0}
+                  · {enabledPlacements.map((placement) => panelSummary(room, placement)).join(' · ')}
                 {/if}
               </span>
-            </div>
-          </div>
-          <div class="mfa-editor-list-item__actions">
-            {#if room.defaultCallTarget && room.enabled}
-              <span class="pill pill--info">{t('mfa.settings.roomDefaultCallTargetBadge')}</span>
-            {/if}
-            {#if roomHasAnyEnabledPanel(room)}
-              {#each enabledPlacements as placement (`${room.roomId}:${placement}`)}
-                {@const panelStatus = getDevicePresenceStatus(roomPanelDeviceId(room.roomId, placement))}
-                <span
-                  class="pill"
-                  class:pill--on={panelStatus === 'online'}
-                  class:pill--warn={panelStatus === 'stale'}
-                  class:pill--off={panelStatus === 'offline'}
-                  title={t(`mfa.settings.roomPanelPlacement_${placement}`)}
-                >
-                  {deviceStatusLabel(panelStatus)}
-                </span>
+            </span>
+            <span class="room-expander__badges">
+              {#if room.defaultCallTarget && room.enabled}
+                <span class="pill pill--info">{t('mfa.settings.roomDefaultCallTargetBadge')}</span>
+              {/if}
+              {#each PANEL_PLACEMENTS as placement (`${room.roomId}:header:${placement}`)}
+                {@const panel = roomPanelConfigForPlacement(room, placement)}
+                {#if panel.enabled}
+                  {@const panelStatus = getDevicePresenceStatus(roomPanelDeviceId(room.roomId, placement))}
+                  <span class="pill {presencePillClass(panelStatus)}">
+                    {roomPanelPresenceLabel(placement, panelStatus)}
+                  </span>
+                {/if}
               {/each}
-              <span class="pill pill--ok">{t('mfa.settings.roomPanelBadge')}</span>
-            {/if}
-            {#if !room.enabled}
-              <span class="pill pill--caps">{t('mfa.settings.roomInactive')}</span>
-            {/if}
-            <Button variant="outline" size="sm" disabled={busy} onclick={() => openEdit(index)}>
-              {t('mfa.settings.roomEdit')}
-            </Button>
-          </div>
+              {#if !room.enabled}
+                <span class="pill pill--caps">{t('mfa.settings.roomInactive')}</span>
+              {/if}
+            </span>
+            <span class="room-expander__chevron" aria-hidden="true">⌄</span>
+          </button>
+
+          {#if isOpen && draft}
+            {@const roomDraft = draft}
+            <div class="room-expander__panel">
+              <form
+                class="room-expander-form"
+                onsubmit={(event) => {
+                  event.preventDefault();
+                  void saveDraft();
+                }}
+              >
+                <section class="room-expander-section room-expander-section--room">
+                  <div class="room-expander-section__head">
+                    <h3 class="room-expander-section__title">{t('mfa.settings.roomBasicsSectionTitle')}</h3>
+                  </div>
+
+                  <label class="modal-form-field">
+                    <span>{t('mfa.settings.roomLabel')}</span>
+                    <input
+                      class="form-input"
+                      type="text"
+                      value={roomDraft.roomLabel}
+                      disabled={busy}
+                      oninput={(event) => {
+                        updateDraft({ roomLabel: (event.currentTarget as HTMLInputElement).value });
+                        labelError = '';
+                      }}
+                    />
+                    {#if labelError}
+                      <span class="modal-form-error">{labelError}</span>
+                    {/if}
+                  </label>
+
+                  <label class="modal-form-check">
+                    <input
+                      type="checkbox"
+                      checked={roomDraft.enabled}
+                      disabled={busy}
+                      onchange={(event) => {
+                        const enabled = (event.currentTarget as HTMLInputElement).checked;
+                        updateDraft({
+                          enabled,
+                          defaultCallTarget: enabled ? roomDraft.defaultCallTarget : false,
+                        });
+                      }}
+                    />
+                    <span>{t('mfa.settings.roomEnabled')}</span>
+                  </label>
+                  <p class="room-expander-section__hint">{t('mfa.settings.roomBasicsEnabledHint')}</p>
+
+                  <label class="modal-form-check">
+                    <input
+                      type="checkbox"
+                      checked={roomDraft.defaultCallTarget === true}
+                      disabled={busy || !roomDraft.enabled}
+                      onchange={(event) => {
+                        const defaultCallTarget = (event.currentTarget as HTMLInputElement).checked;
+                        updateDraft({
+                          enabled: defaultCallTarget ? true : roomDraft.enabled,
+                          defaultCallTarget,
+                        });
+                      }}
+                    />
+                    <span>{t('mfa.settings.roomDefaultCallTarget')}</span>
+                  </label>
+                  <p class="room-expander-section__hint">{t('mfa.settings.roomDefaultCallTargetHint')}</p>
+
+                  <label class="modal-form-field">
+                    <span>{t('mfa.settings.roomMaxOccupancy')}</span>
+                    <input
+                      class="form-input"
+                      type="number"
+                      min="1"
+                      step="1"
+                      inputmode="numeric"
+                      value={maxOccupancyInput}
+                      disabled={busy}
+                      placeholder={t('mfa.settings.roomCapacityUnlimited')}
+                      oninput={(event) => {
+                        maxOccupancyInput = (event.currentTarget as HTMLInputElement).value;
+                        maxOccupancyError = '';
+                      }}
+                    />
+                    <p class="room-expander-section__hint">{t('mfa.settings.roomMaxOccupancyHint')}</p>
+                    {#if maxOccupancyError}
+                      <span class="modal-form-error">{maxOccupancyError}</span>
+                    {/if}
+                  </label>
+                </section>
+
+                {#each PANEL_PLACEMENTS as placement (`${roomDraft.roomId}:panel:${placement}`)}
+                  {@const panel = roomPanelConfigForPlacement(roomDraft, placement)}
+                  {@const savedPanel = roomPanelConfigForPlacement(room, placement)}
+                  {@const panelStatus = getDevicePresenceStatus(roomPanelDeviceId(roomDraft.roomId, placement))}
+                  <section class="room-expander-section room-panel-settings">
+                    <div class="room-expander-section__head">
+                      <h3 class="room-expander-section__title">
+                        {placement === 'outside'
+                          ? t('mfa.settings.roomPanelSectionOutside')
+                          : t('mfa.settings.roomPanelSectionInside')}
+                      </h3>
+                      {#if panel.enabled}
+                        <span class="pill {presencePillClass(panelStatus)}">
+                          {roomPanelPresenceLabel(placement, panelStatus)}
+                        </span>
+                      {/if}
+                    </div>
+
+                    <label class="modal-form-check">
+                      <input
+                        type="checkbox"
+                        checked={panel.enabled}
+                        disabled={busy || !roomDraft.enabled}
+                        onchange={(event) =>
+                          updateDraftPanel(placement, {
+                            enabled: (event.currentTarget as HTMLInputElement).checked,
+                          })}
+                      />
+                      <span>{t('mfa.settings.roomPanelEnabled')}</span>
+                    </label>
+                    {#if savedPanel.enabled && !panel.enabled}
+                      <p class="room-expander-section__hint">{t('mfa.settings.roomPanelDisableHint')}</p>
+                    {:else if panel.enabled}
+                      <p class="room-expander-section__hint">{t('mfa.settings.roomPanelLiveConfigHint')}</p>
+                    {/if}
+
+                    {#if placement === 'inside' && panel.enabled}
+                      <p class="room-expander-section__hint">{t('mfa.settings.roomPanelInsidePinHint')}</p>
+                    {/if}
+
+                    {#if panel.enabled}
+                      <div class="modal-form-field">
+                        <span id="room-panel-mode-{placement}">{t('mfa.settings.roomPanelMode')}</span>
+                        <div
+                          class="segmented-control segmented-control--journey"
+                          role="radiogroup"
+                          aria-labelledby="room-panel-mode-{placement}"
+                        >
+                          {#each panelModesForPlacement(placement) as panelMode (`${placement}:${panelMode}`)}
+                            <button
+                              type="button"
+                              class="segmented-control__option"
+                              role="radio"
+                              aria-checked={panel.mode === panelMode}
+                              disabled={busy}
+                              onclick={() =>
+                                updateDraftPanel(placement, {
+                                  mode: panelMode,
+                                  ...(placement === 'inside' && panelMode !== 'staff_full'
+                                    ? { allowCalling: false }
+                                    : {}),
+                                })}
+                            >
+                              {roomPanelModeLabel(placement, panelMode)}
+                            </button>
+                          {/each}
+                        </div>
+                        <p class="room-expander-section__hint">{roomPanelModeGuide(placement, panel.mode)}</p>
+                      </div>
+
+                      {#if placement === 'inside'}
+                        <label class="modal-form-check">
+                          <input
+                            type="checkbox"
+                            checked={panel.showPatientNames}
+                            disabled={busy}
+                            onchange={(event) =>
+                              updateDraftPanel(placement, {
+                                showPatientNames: (event.currentTarget as HTMLInputElement).checked,
+                              })}
+                          />
+                          <span>{t('mfa.settings.roomPanelShowNames')}</span>
+                        </label>
+                        <p class="room-expander-section__hint">{t('mfa.settings.roomPanelShowNamesHint')}</p>
+
+                        {#if panel.mode === 'staff_full'}
+                          <label class="modal-form-check">
+                            <input
+                              type="checkbox"
+                              checked={panel.allowCalling}
+                              disabled={busy}
+                              onchange={(event) =>
+                                updateDraftPanel(placement, {
+                                  allowCalling: (event.currentTarget as HTMLInputElement).checked,
+                                })}
+                            />
+                            <span>{t('mfa.settings.roomPanelAllowCalling')}</span>
+                          </label>
+                          <p class="room-expander-section__hint">{t('mfa.settings.roomPanelAllowCallingHint')}</p>
+                        {/if}
+                      {/if}
+
+                      <div class="room-panel-settings-grid">
+                        <label class="modal-form-field">
+                          <span>{t('mfa.settings.roomPanelCalledText')}</span>
+                          <select
+                            class="form-select"
+                            value={panel.calledTextPreset}
+                            disabled={busy}
+                            onchange={(event) => {
+                              const preset = ROOM_PANEL_TEXT_PRESETS.find(
+                                (candidate) => candidate === event.currentTarget.value,
+                              );
+                              if (preset) {
+                                updateDraftPanel(placement, { calledTextPreset: preset });
+                              }
+                            }}
+                          >
+                            {#each ROOM_PANEL_TEXT_PRESETS as preset}
+                              <option value={preset}>{roomPanelTextPresetLabel(preset)}</option>
+                            {/each}
+                          </select>
+                          <p class="room-expander-section__hint">{t('mfa.settings.roomPanelCalledTextHint')}</p>
+                          {#if panel.calledTextPreset === 'custom'}
+                            <input
+                              class="form-input"
+                              type="text"
+                              value={panel.calledTextCustom ?? ''}
+                              disabled={busy}
+                              maxlength={ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH}
+                              placeholder={t('mfa.settings.roomPanelCustomTextPlaceholder')}
+                              oninput={(event) =>
+                                updateDraftPanel(placement, {
+                                  calledTextCustom: (event.currentTarget as HTMLInputElement).value,
+                                })}
+                            />
+                          {/if}
+                        </label>
+
+                        <label class="modal-form-field">
+                          <span>{t('mfa.settings.roomPanelArrivedText')}</span>
+                          <select
+                            class="form-select"
+                            value={panel.arrivedTextPreset}
+                            disabled={busy}
+                            onchange={(event) => {
+                              const preset = ROOM_PANEL_TEXT_PRESETS.find(
+                                (candidate) => candidate === event.currentTarget.value,
+                              );
+                              if (preset) {
+                                updateDraftPanel(placement, { arrivedTextPreset: preset });
+                              }
+                            }}
+                          >
+                            {#each ROOM_PANEL_TEXT_PRESETS as preset}
+                              <option value={preset}>{roomPanelTextPresetLabel(preset)}</option>
+                            {/each}
+                          </select>
+                          <p class="room-expander-section__hint">{t('mfa.settings.roomPanelArrivedTextHint')}</p>
+                          {#if panel.arrivedTextPreset === 'custom'}
+                            <input
+                              class="form-input"
+                              type="text"
+                              value={panel.arrivedTextCustom ?? ''}
+                              disabled={busy}
+                              maxlength={ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH}
+                              placeholder={t('mfa.settings.roomPanelCustomTextPlaceholder')}
+                              oninput={(event) =>
+                                updateDraftPanel(placement, {
+                                  arrivedTextCustom: (event.currentTarget as HTMLInputElement).value,
+                                })}
+                            />
+                          {/if}
+                        </label>
+                      </div>
+                    {/if}
+                  </section>
+                {/each}
+
+                <div class="room-expander-actions">
+                  {#if rooms.length > 1}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={busy}
+                      onclick={() => requestDelete(index)}
+                    >
+                      {t('mfa.settings.roomRemove')}
+                    </Button>
+                  {/if}
+                  <div class="room-expander-actions__end">
+                    <Button type="submit" variant="primary" size="sm" disabled={busy}>
+                      {t('mfa.settings.roomExpanderSave')}
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          {/if}
         </li>
       {/each}
     </ul>
@@ -207,12 +683,40 @@
 </div>
 
 <RoomEditorModal
-  bind:open={editorOpen}
-  mode={editorMode}
-  bind:draft
-  roomIdsTaken={editorRoomIdsTaken}
-  canDelete={editorMode === 'edit' && rooms.length > 1}
+  bind:open={addModalOpen}
+  roomIdsTaken={new Set(rooms.map((room) => room.roomId))}
   {busy}
-  onApply={applyDraft}
-  onDelete={deleteFromModal}
+  onApply={applyAddRoom}
 />
+
+<Modal
+  bind:open={deleteConfirmOpen}
+  title={t('mfa.settings.roomDeleteConfirmTitle')}
+  maxWidth="480px"
+  dimBackdrop={true}
+  closeOnEscape={!busy}
+  onClose={() => {
+    deleteConfirmOpen = false;
+    deleteTargetIndex = null;
+  }}
+>
+  <p class="modal-form-hint">{t('mfa.settings.roomDeleteConfirmBody')}</p>
+  <div class="form-actions">
+    <div class="form-actions__end">
+      <Button
+        type="button"
+        variant="outline"
+        disabled={busy}
+        onclick={() => {
+          deleteConfirmOpen = false;
+          deleteTargetIndex = null;
+        }}
+      >
+        {t('ui.cancel')}
+      </Button>
+      <Button type="button" variant="danger" disabled={busy} onclick={() => void confirmDelete()}>
+        {t('mfa.settings.roomRemove')}
+      </Button>
+    </div>
+  </div>
+</Modal>

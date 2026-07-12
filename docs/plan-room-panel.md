@@ -161,12 +161,12 @@ Bleibt MFA:
 
 ### P4 — MFA Settings UI
 
-- [ ] `RoomsEditor` zu Expander/Accordion umbauen
-- [ ] Raum-Basisdaten im Expander statt schwerem Edit-Modal
-- [ ] Sektionen: `Tuer-Panel` und `Raum-Panel`
-- [ ] Pro Placement: aktiv, Modus, Texte, Status-Badge, Setup/Login-Hinweis
-- [ ] Inside zusaetzlich: Namen anzeigen, Patienten aufrufen
-- [ ] Modal nur noch fuer Hinzufuegen/Loeschen oder riskante Confirm-Flows
+- [x] `RoomsEditor` zu Expander/Accordion umbauen
+- [x] Raum-Basisdaten im Expander statt schwerem Edit-Modal
+- [x] Sektionen: `Tuer-Panel` und `Raum-Panel`
+- [x] Pro Placement: aktiv, Modus, Texte, Status-Badge, Setup/Login-Hinweis
+- [x] Inside zusaetzlich: Namen anzeigen, Patienten aufrufen (nur `staff_full`)
+- [x] Modal nur noch fuer Hinzufuegen/Loeschen oder riskante Confirm-Flows
 
 ### P5 — Panel Live/Login UI
 

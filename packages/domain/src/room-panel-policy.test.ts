@@ -13,7 +13,7 @@ test('roomPanelRequiresPin: inside yes, outside no', () => {
   assert.equal(roomPanelRequiresPin('outside'), false);
 });
 
-test('roomPanelCanCall: inside + allowCalling only', () => {
+test('roomPanelCanCall: inside staff_full + allowCalling only', () => {
   assert.equal(
     roomPanelCanCall({
       placement: 'inside',
@@ -22,6 +22,15 @@ test('roomPanelCanCall: inside + allowCalling only', () => {
       allowCalling: true,
     }),
     true,
+  );
+  assert.equal(
+    roomPanelCanCall({
+      placement: 'inside',
+      mode: 'arrival',
+      enabled: true,
+      allowCalling: true,
+    }),
+    false,
   );
   assert.equal(
     roomPanelCanCall({

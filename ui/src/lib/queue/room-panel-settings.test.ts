@@ -28,4 +28,20 @@ describe('updateRoomPanelPlacementConfig', () => {
     expect(result.outside.showPatientNames).toBe(false);
     expect(result.outside.allowCalling).toBe(false);
   });
+
+  it('clears allowCalling when inside mode is not staff_full', () => {
+    const withCalling = updateRoomPanelPlacementConfig(DEFAULT_ROOM_PANELS_SETTINGS, 'inside', {
+      enabled: true,
+      mode: 'staff_full',
+      allowCalling: true,
+    });
+    expect(withCalling.inside.allowCalling).toBe(true);
+
+    const arrival = updateRoomPanelPlacementConfig(withCalling, 'inside', {
+      mode: 'arrival',
+      allowCalling: true,
+    });
+    expect(arrival.inside.mode).toBe('arrival');
+    expect(arrival.inside.allowCalling).toBe(false);
+  });
 });
