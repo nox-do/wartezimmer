@@ -127,9 +127,7 @@
   </div>
 
   <div class="room-panel-preview__main">
-    {#if queueTicketCodes.length === 0}
-      <p class="room-panel-preview__empty" aria-hidden="true">—</p>
-    {:else}
+    {#if queueTicketCodes.length > 0}
       <div class="room-panel-preview__queue-viewport" bind:this={viewportEl}>
         <ul
           class="room-panel-preview__queue"

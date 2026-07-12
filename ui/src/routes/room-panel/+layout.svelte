@@ -273,16 +273,6 @@
     flex-direction: column;
   }
 
-  :global(.room-panel-preview__empty) {
-    flex: 1;
-    display: grid;
-    place-items: center;
-    margin: 0;
-    font-size: clamp(3rem, 12vh, 6rem);
-    font-weight: 900;
-    color: #c7cdc4;
-  }
-
   :global(.room-panel-preview__queue-viewport) {
     flex: 1;
     min-height: 0;

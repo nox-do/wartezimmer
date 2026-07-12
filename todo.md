@@ -14,6 +14,8 @@ Stand: 2026-07-10
 - Journey-Admin: Standard-Thema + Aktiv + Warteliste-Dropdown ausgeblendet (2026-07-12); Steps default `pf_general_queue`; Aktivierung bleibt am Topic.
 - ✅ TV Wayfinding (2026-07-11): QueueStatus `directed`; Visibility `directed`/`pickup`+`visible`; TV-Spalte „Bitte weiter zu“ (+ Pickup-Copy „Sie werden abgeholt“).
 - ✅ Room-Panel self_go (2026-07-11): Snapshot zeigt `directed` wenn Ziel = Panel-Raum; Quittieren („Ich bin da“/Angekommen) = `arrive` aus directed; OpenAPI RoomPanelItem.status + Preview/Live-UI.
+- ✅ Room-Panel leerer Zustand (2026-07-12): Grauer Platzhalter-Strich (`room-panel-preview__empty`) entfernt; Status nur noch im Lead-Bereich.
+- ✅ MFA Journey-Designer Polish (2026-07-12): Enum-i18n, Preview-i18n, Save-Vorvalidierung; ausgeblendete Felder dokumentiert in `journey-admin-helpers.ts`; tote CSS/i18n-Keys entfernt.
 - ✅ MFA Call-Gate + Löschen (2026-07-11): Aufrufen disabled+Tooltip (directed/pickup); Trash danger-Style; Modal → `cancelled`.
 - ✅ MFA Card-Marken (2026-07-11): pickup = blaues Users-Mark; directed = Navigation (teal). Away-Löschen in einer Zeile mit Rückkehr-Countdown.
 

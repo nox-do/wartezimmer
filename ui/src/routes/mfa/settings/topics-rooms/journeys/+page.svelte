@@ -2,10 +2,13 @@
   import { onMount } from 'svelte';
   import MfaSettingsPageHeader from '$lib/components/mfa/MfaSettingsPageHeader.svelte';
   import JourneyAdminEditor from '$lib/components/mfa/JourneyAdminEditor.svelte';
-  import { normalizeJourneySettingsForSave } from '$lib/mfa/journey-admin-helpers';
+  import {
+    normalizeJourneySettingsForSave,
+    validateJourneySettingsForSave,
+  } from '$lib/mfa/journey-admin-helpers';
   import { journeySettingsErrorMessage } from '$lib/mfa/journey-settings-errors';
   import { fetchRoutingCapabilities, type RoutingCapabilities } from '$lib/mfa/practice-ops-api';
-  import type { JourneySettings, PracticeTopicSetting } from '$lib/ops/openapi-types';
+  import type { JourneySettings } from '$lib/ops/openapi-types';
   import { fetchOpsSettings, listEnabledRooms, patchOpsSettings } from '$lib/queue/ops-settings-api';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { toastStore } from '$lib/stores/toastStore';
@@ -14,13 +17,13 @@
   let saving = $state(false);
   let routingCapabilities = $state<RoutingCapabilities | null>(null);
   let journeySettings = $state<JourneySettings>({ templates: [] });
-  let topics = $state<PracticeTopicSetting[]>([]);
   let enabledRooms = $state<ReturnType<typeof listEnabledRooms>>([]);
 
   const journeyDesignerVisible = $derived(
     routingCapabilities?.features.journeyDesigner === true &&
       routingCapabilities?.routingMode === 'complex',
   );
+  const enabledRoomIds = $derived(new Set(enabledRooms.map((room) => room.roomId)));
 
   async function loadPage() {
     loading = true;
@@ -37,11 +40,16 @@
 
     routingCapabilities = capabilitiesResult.data;
     journeySettings = structuredClone(settingsResult.data.journeySettings);
-    topics = settingsResult.data.topics;
     enabledRooms = listEnabledRooms(settingsResult.data.rooms);
   }
 
   async function saveJourneySettings(next: JourneySettings) {
+    const validation = validateJourneySettingsForSave(next, enabledRoomIds);
+    if (!validation.ok) {
+      toastStore.error(t(validation.messageKey));
+      return;
+    }
+
     saving = true;
     const result = await patchOpsSettings({
       journeySettings: normalizeJourneySettingsForSave(next),
@@ -72,7 +80,6 @@
 {:else}
   <JourneyAdminEditor
     {journeySettings}
-    {topics}
     {enabledRooms}
     busy={saving}
     onChange={(next) => {

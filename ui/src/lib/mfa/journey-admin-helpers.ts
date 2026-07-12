@@ -1,17 +1,74 @@
+import type { TranslationKey } from '$lib/i18n/core/translation-keys';
 import type {
   JourneySettings,
   JourneyStepSetting,
   JourneyTemplateSetting,
   PracticeRoom,
-  PracticeTopicSetting,
 } from '$lib/ops/openapi-types';
 import { randomId } from '$lib/utils/random-id';
+
+/**
+ * Journey admin helpers — defaults, normalize, and UX validation for Ops Settings.
+ *
+ * ## UI fields intentionally hidden (model + API unchanged)
+ *
+ * **JourneyTemplateSetting**
+ * - `topicId` — assignment via `PracticeTopicSetting.journeyTemplateId` on the Topics page
+ * - `active` — new templates default to `true`; the topic picker lists active templates only
+ *
+ * **JourneyStepSetting**
+ * - `queueId` — defaults to `PF_GENERAL_QUEUE_ID` (single general waiting list).
+ *   Use `movementMode: self_go` for direct-to-room flows until a multi-queue UI exists.
+ */
 
 export const PF_GENERAL_QUEUE_ID = 'pf_general_queue';
 
 export const JOURNEY_MOVEMENT_MODES = ['call', 'self_go', 'pickup'] as const;
 export const JOURNEY_DISPLAY_MODES = ['visible', 'hidden', 'call_only'] as const;
 export const JOURNEY_COMPLETED_WHEN = ['arrive', 'start', 'done'] as const;
+
+export type JourneyMovementMode = (typeof JOURNEY_MOVEMENT_MODES)[number];
+export type JourneyDisplayMode = (typeof JOURNEY_DISPLAY_MODES)[number];
+export type JourneyCompletedWhenMode = (typeof JOURNEY_COMPLETED_WHEN)[number];
+
+export type JourneySettingsValidationResult =
+  | { ok: true }
+  | {
+      ok: false;
+      messageKey:
+        | 'mfa.settings.journeyTemplateNameRequired'
+        | 'mfa.settings.journeyStepTargetInvalid';
+    };
+
+const journeyMovementLabelKeys = {
+  call: 'mfa.settings.journeyMovement.call',
+  self_go: 'mfa.settings.journeyMovement.self_go',
+  pickup: 'mfa.settings.journeyMovement.pickup',
+} as const satisfies Record<JourneyMovementMode, TranslationKey>;
+
+const journeyDisplayLabelKeys = {
+  visible: 'mfa.settings.journeyDisplay.visible',
+  hidden: 'mfa.settings.journeyDisplay.hidden',
+  call_only: 'mfa.settings.journeyDisplay.call_only',
+} as const satisfies Record<JourneyDisplayMode, TranslationKey>;
+
+const journeyCompletedWhenLabelKeys = {
+  arrive: 'mfa.settings.journeyCompletedWhen.arrive',
+  start: 'mfa.settings.journeyCompletedWhen.start',
+  done: 'mfa.settings.journeyCompletedWhen.done',
+} as const satisfies Record<JourneyCompletedWhenMode, TranslationKey>;
+
+export function journeyMovementLabelKey(mode: JourneyMovementMode): TranslationKey {
+  return journeyMovementLabelKeys[mode];
+}
+
+export function journeyDisplayLabelKey(mode: JourneyDisplayMode): TranslationKey {
+  return journeyDisplayLabelKeys[mode];
+}
+
+export function journeyCompletedWhenLabelKey(mode: JourneyCompletedWhenMode): TranslationKey {
+  return journeyCompletedWhenLabelKeys[mode];
+}
 
 export function createJourneyTemplateId(name: string, taken: Set<string>): string {
   const base =
@@ -30,14 +87,6 @@ export function createJourneyTemplateId(name: string, taken: Set<string>): strin
   return candidate;
 }
 
-/**
- * Default hop for new journey steps.
- *
- * `queueId` always defaults to the general waiting list (`PF_GENERAL_QUEUE_ID`).
- * The Journey admin UI currently hides the Warteliste dropdown (single waiting room);
- * keep the field on the model for API/sync and a possible multi-waiting-room setup later.
- * Until then: use movementMode (e.g. self_go) for direct-to-room flows, not queueId=null.
- */
 export function createDefaultJourneyStep(
   sortOrder: number,
   fallbackLocationId: string,
@@ -55,13 +104,6 @@ export function createDefaultJourneyStep(
   };
 }
 
-/**
- * Defaults for new journey templates.
- *
- * `topicId` / `active` stay in the model for API/sync compatibility, but the Journey
- * admin UI no longer edits them. Activation belongs on the topic (`journeyTemplateId`).
- * These fields may turn out unnecessary and could be removed later.
- */
 export function createJourneyTemplate(
   name: string,
   taken: Set<string>,
@@ -79,8 +121,8 @@ export function createJourneyTemplate(
 
 export function buildJourneyPreview(
   template: JourneyTemplateSetting,
-  _topics: PracticeTopicSetting[],
   rooms: PracticeRoom[],
+  noStepsLabel: string,
 ): string {
   const hopLabels = template.steps
     .slice()
@@ -92,12 +134,33 @@ export function buildJourneyPreview(
         '?';
       return `${index + 1}: ${target}`;
     });
-  return `${template.name} · ${hopLabels.join(' → ') || 'keine Schritte'}`;
+  return `${template.name} · ${hopLabels.join(' → ') || noStepsLabel}`;
+}
+
+export function validateJourneySettingsForSave(
+  settings: JourneySettings,
+  enabledRoomIds: ReadonlySet<string>,
+): JourneySettingsValidationResult {
+  // UX-only precheck — server `normalizeJourneySettings` / catalog validation remain authoritative.
+  for (const template of settings.templates) {
+    if (!template.name.trim()) {
+      return { ok: false, messageKey: 'mfa.settings.journeyTemplateNameRequired' };
+    }
+
+    for (const step of template.steps) {
+      const targetId = step.targetLocationId?.trim();
+      if (!targetId || !enabledRoomIds.has(targetId)) {
+        return { ok: false, messageKey: 'mfa.settings.journeyStepTargetInvalid' };
+      }
+    }
+  }
+
+  return { ok: true };
 }
 
 export function normalizeJourneySettingsForSave(settings: JourneySettings): JourneySettings {
   return {
-    templates: settings.templates.map((template, templateIndex) => ({
+    templates: settings.templates.map((template) => ({
       ...template,
       id: template.id.trim(),
       name: template.name.trim(),

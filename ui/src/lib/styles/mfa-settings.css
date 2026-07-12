@@ -218,12 +218,6 @@
   grid-column: 1 / -1;
 }
 
-.journey-admin__check {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 .journey-admin__preview {
   margin: 0;
   color: var(--mfa-muted);

@@ -7,18 +7,15 @@
     JOURNEY_COMPLETED_WHEN,
     JOURNEY_DISPLAY_MODES,
     JOURNEY_MOVEMENT_MODES,
+    journeyCompletedWhenLabelKey,
+    journeyDisplayLabelKey,
+    journeyMovementLabelKey,
   } from '$lib/mfa/journey-admin-helpers';
-  import type {
-    JourneySettings,
-    JourneyTemplateSetting,
-    PracticeRoom,
-    PracticeTopicSetting,
-  } from '$lib/ops/openapi-types';
+  import type { JourneySettings, JourneyTemplateSetting, PracticeRoom } from '$lib/ops/openapi-types';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
 
   interface Props {
     journeySettings: JourneySettings;
-    topics: PracticeTopicSetting[];
     enabledRooms: PracticeRoom[];
     busy?: boolean;
     onChange?: (settings: JourneySettings) => void;
@@ -27,7 +24,6 @@
 
   let {
     journeySettings,
-    topics,
     enabledRooms,
     busy = false,
     onChange,
@@ -39,6 +35,11 @@
   const fallbackLocationId = $derived(enabledRooms[0]?.roomId ?? '');
   const selectedTemplate = $derived(
     journeySettings.templates.find((template) => template.id === selectedTemplateId) ?? null,
+  );
+  const previewText = $derived(
+    selectedTemplate
+      ? buildJourneyPreview(selectedTemplate, enabledRooms, t('mfa.settings.journeyPreviewNoSteps'))
+      : '',
   );
 
   $effect(() => {
@@ -126,9 +127,7 @@
   </div>
 
   {#if selectedTemplate}
-    <p class="journey-admin__preview">
-      {buildJourneyPreview(selectedTemplate, topics, enabledRooms)}
-    </p>
+    <p class="journey-admin__preview">{previewText}</p>
 
     <div class="journey-admin__grid">
       <label class="journey-admin__field">
@@ -142,7 +141,6 @@
             updateSelectedTemplate({ name: (event.currentTarget as HTMLInputElement).value })}
         />
       </label>
-      <!-- topicId + active: bewusst ausgeblendet — Zuordnung/Aktivierung am Topic. Siehe JourneyTemplateSetting in OpenAPI / journey-admin-helpers. -->
     </div>
 
     <section class="journey-admin__steps">
@@ -173,7 +171,7 @@
               <select
                 class="form-input"
                 value={step.targetLocationId ?? ''}
-                disabled={busy}
+                disabled={busy || enabledRooms.length === 0}
                 onchange={(event) =>
                   updateStep(step.id, {
                     targetLocationId: (event.currentTarget as HTMLSelectElement).value || null,
@@ -184,8 +182,6 @@
                 {/each}
               </select>
             </label>
-
-            <!-- Warteliste dropdown hidden: single waiting room; steps default to pf_general_queue (see createDefaultJourneyStep). -->
 
             <label class="journey-admin__field">
               <span>{t('mfa.settings.journeyStepMovement')}</span>
@@ -200,7 +196,7 @@
                   })}
               >
                 {#each JOURNEY_MOVEMENT_MODES as mode (mode)}
-                  <option value={mode}>{mode}</option>
+                  <option value={mode}>{t(journeyMovementLabelKey(mode))}</option>
                 {/each}
               </select>
             </label>
@@ -218,7 +214,7 @@
                   })}
               >
                 {#each JOURNEY_DISPLAY_MODES as mode (mode)}
-                  <option value={mode}>{mode}</option>
+                  <option value={mode}>{t(journeyDisplayLabelKey(mode))}</option>
                 {/each}
               </select>
             </label>
@@ -236,7 +232,7 @@
                   })}
               >
                 {#each JOURNEY_COMPLETED_WHEN as mode (mode)}
-                  <option value={mode}>{mode}</option>
+                  <option value={mode}>{t(journeyCompletedWhenLabelKey(mode))}</option>
                 {/each}
               </select>
             </label>
