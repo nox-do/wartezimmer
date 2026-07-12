@@ -361,7 +361,7 @@
       ariaLabel={t('mfa.actionReassign')}
       onclick={onReassign}
     >
-      {#snippet children()}<ArrowRight aria-hidden="true" />{/snippet}
+      <ArrowRight aria-hidden="true" />
     </MfaActionButton>
   {/if}
   {#if onReturnToWaiting}
@@ -372,7 +372,7 @@
       ariaLabel={t('mfa.actionReturnWaiting')}
       onclick={onReturnToWaiting}
     >
-      {#snippet children()}<RotateCcw aria-hidden="true" />{/snippet}
+      <RotateCcw aria-hidden="true" />
     </MfaActionButton>
   {/if}
 {/snippet}
@@ -432,7 +432,7 @@
         count={item.documentCount}
         onclick={handleOpenDocuments}
       >
-        {#snippet children()}<FileText aria-hidden="true" />{/snippet}
+        <FileText aria-hidden="true" />
       </MfaActionButton>
     {/if}
 
@@ -451,7 +451,7 @@
               title={callButtonTitle}
               onclick={onCall}
             >
-              {#snippet children()}<Megaphone aria-hidden="true" />{/snippet}
+              <Megaphone aria-hidden="true" />
             </MfaActionButton>
           </span>
         {/if}
@@ -463,7 +463,7 @@
             ariaLabel={t('mfa.actionMarkAway')}
             onclick={onMarkAway}
           >
-            {#snippet children()}<TreePalm aria-hidden="true" />{/snippet}
+            <TreePalm aria-hidden="true" />
           </MfaActionButton>
         {/if}
         {#if showCancelVisit}
@@ -474,14 +474,14 @@
             ariaLabel={t('mfa.actionCancelVisit')}
             onclick={onCancelVisit}
           >
-            {#snippet children()}<Trash2 aria-hidden="true" />{/snippet}
+            <Trash2 aria-hidden="true" />
           </MfaActionButton>
         {/if}
       </div>
     {:else if zone === 'active' && item.status === 'called' && onCheckIn}
       <div class="queue-entry-actions-hover">
         <MfaActionButton icon disabled={busy} ariaLabel={t('mfa.actionCheckIn')} onclick={onCheckIn}>
-          {#snippet children()}<MapPin aria-hidden="true" />{/snippet}
+          <MapPin aria-hidden="true" />
         </MfaActionButton>
         {@render roomManagementActions()}
       </div>
@@ -489,11 +489,11 @@
       <div class="queue-entry-actions-hover">
         {#if inRoomPrimary === 'continue' && onContinue}
           <MfaActionButton icon disabled={busy} ariaLabel={t('mfa.actionContinue')} onclick={onContinue}>
-            {#snippet children()}<ArrowRight aria-hidden="true" />{/snippet}
+            <ArrowRight aria-hidden="true" />
           </MfaActionButton>
         {:else if inRoomPrimary === 'start' && onStart}
           <MfaActionButton icon disabled={busy} ariaLabel={t('mfa.actionStart')} onclick={onStart}>
-            {#snippet children()}<Play aria-hidden="true" />{/snippet}
+            <Play aria-hidden="true" />
           </MfaActionButton>
         {:else if inRoomPrimary === 'checkout' && onCheckOut}
           <MfaActionButton
@@ -503,7 +503,7 @@
             ariaLabel={t('mfa.actionCheckOut')}
             onclick={onCheckOut}
           >
-            {#snippet children()}<LogOut aria-hidden="true" />{/snippet}
+            <LogOut aria-hidden="true" />
           </MfaActionButton>
         {/if}
         {@render roomManagementActions()}
@@ -518,9 +518,7 @@
         </span>
         {#if recallNotifyFailed && returnRemainingMs > 0 && onFixRecallNotify}
           <MfaActionButton disabled={busy} onclick={onFixRecallNotify}>
-            {#snippet children()}
-              {t('mfa.actionFixRecallNotify')}
-            {/snippet}
+            {t('mfa.actionFixRecallNotify')}
           </MfaActionButton>
         {/if}
         {#if showCancelVisit}
@@ -531,7 +529,7 @@
             ariaLabel={t('mfa.actionCancelVisit')}
             onclick={onCancelVisit}
           >
-            {#snippet children()}<Trash2 aria-hidden="true" />{/snippet}
+            <Trash2 aria-hidden="true" />
           </MfaActionButton>
         {/if}
       </div>
@@ -539,10 +537,8 @@
       <div class="queue-entry-actions-hover">
         {#if recallPending && onRecall}
           <MfaActionButton disabled={busy} onclick={onRecall}>
-            {#snippet children()}
-              <Send aria-hidden="true" />
-              {t('mfa.actionRecall')}
-            {/snippet}
+            <Send aria-hidden="true" />
+            {t('mfa.actionRecall')}
           </MfaActionButton>
         {/if}
         {#if showCancelVisit}
@@ -553,7 +549,7 @@
             ariaLabel={t('mfa.actionCancelVisit')}
             onclick={onCancelVisit}
           >
-            {#snippet children()}<Trash2 aria-hidden="true" />{/snippet}
+            <Trash2 aria-hidden="true" />
           </MfaActionButton>
         {/if}
       </div>
