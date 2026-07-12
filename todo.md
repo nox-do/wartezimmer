@@ -11,6 +11,7 @@ Stand: 2026-07-12
 - Controller-Split bewusst zurückgestellt — JSDoc in `ui/src/routes/room-panel/+page.svelte` (Trigger + `tv-display`-Pattern)
 - ✅ TV-offline Aufruf-Gate (2026-07-12): `capabilities.callAnnouncementReachable` im Snapshot (Server-Presence); UI disabled+Tooltip; `disabledReason` aus OpenAPI entfernt
 - ✅ Kleinkram+i18n (2026-07-12): `updateRoomPanelPlacementConfig`→Domain; `room-panel-login.ts`+`room-panel-settings.ts` entfernt; Snapshot-Presets statt DE-Hardcode; `room-panel-text.ts` + `roomPanel.*` i18n
+- 🔍 Quality-Audit (2026-07-12): ESLint+Stylelint-Fixes; `.vscode/` + `.prettierignore`; `room-panel-text.ts` typecheck-Fix; Prettier-Drift (~202 Dateien) und `format:check` in `verify` noch offen
 
 ## Hinweis: RoutingMode-Guard vs. offene Wartenummern (2026-07-10)
 

@@ -18,14 +18,16 @@ export function roomPanelPresetI18nKey(preset: Exclude<RoomPanelTextPreset, 'cus
 export function formatRoomPanelDisplayText(
   preset: RoomPanelTextPreset,
   custom: string | null,
-  fallbackPreset: RoomPanelTextPreset,
+  fallbackPreset: Exclude<RoomPanelTextPreset, 'custom'>,
   translate: (key: string) => string,
 ): string {
   const resolved = resolveRoomPanelDisplayTextConfig(preset, custom, fallbackPreset);
   if (resolved.preset === 'custom' && resolved.custom) {
     return resolved.custom;
   }
-  return translate(PRESET_I18N_KEY[resolved.preset]);
+  const displayPreset: Exclude<RoomPanelTextPreset, 'custom'> =
+    resolved.preset === 'custom' ? fallbackPreset : resolved.preset;
+  return translate(PRESET_I18N_KEY[displayPreset]);
 }
 
 /** Dropdown option label — custom shows the settings meta-label, not user text. */

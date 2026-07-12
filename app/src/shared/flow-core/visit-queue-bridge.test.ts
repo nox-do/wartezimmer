@@ -12,7 +12,6 @@ import {
   arriveVisit,
   callVisit,
   cancelVisit,
-  clearVisitCallbackPhone,
   completeVisit,
   continueJourneyVisit,
   cycleVisitTriageLevel,
@@ -311,7 +310,7 @@ test('scoped arrive succeeds when acting room matches target', () => {
 });
 
 test('arriveVisit from directed self_go succeeds with matching room scope', () => {
-  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  const { db, visitId, runtime, listQueue } = setupVisitFlow();
   runtime.redirect(visitId, {
     queueId: null,
     targetLocationId: 'labor',

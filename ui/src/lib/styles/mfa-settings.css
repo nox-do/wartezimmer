@@ -433,10 +433,6 @@
   line-height: 1.3;
 }
 
-.journey-admin__field--wide {
-  grid-column: 1 / -1;
-}
-
 .journey-admin__segment-row {
   grid-column: 1 / -1;
   display: grid;

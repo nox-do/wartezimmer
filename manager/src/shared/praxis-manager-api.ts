@@ -18,7 +18,6 @@ import type {
   HostRuntimeHealth,
   NetworkSnapshot,
   ResetStaffPinsResult,
-  RoutingMode,
   RoutingModeCapabilities,
   SetRoutingModeInput,
   SetRoutingModeResult,

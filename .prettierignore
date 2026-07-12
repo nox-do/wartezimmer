@@ -1,1 +1,11 @@
+node_modules/
+**/dist/
+**/build/
+**/coverage/
+ui/.svelte-kit/
+ui/build/
+manager/out/
+manager/build-resources/setup/vendor/
+**/generated/
+openapi/bundle.json
 ui/src/lib/mfa/vendor/

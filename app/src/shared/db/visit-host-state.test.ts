@@ -152,7 +152,6 @@ test('clearAbsentMode clears overlay but keeps recall notify state', () => {
 test('countVisitQueueSummary counts absent overlay separately', () => {
   const db = setupDb();
   const runtime = getFlowCoreRuntime(db);
-  const settings = sampleSettings();
   const visit = runtime.checkIn({
     topicId: 'blut',
     authPath: 'phone_dob',

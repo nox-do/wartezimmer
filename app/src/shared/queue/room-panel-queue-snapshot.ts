@@ -1,6 +1,5 @@
 import { explainVisibility } from '@praxis-flow/flow-core';
 import type { Runtime } from '@praxis-flow/flow-core/server';
-import type { VisitView } from '@praxis-flow/flow-core';
 import type {
   QueueVisitRow,
   RoomPanelMode,

@@ -1,0 +1,20 @@
+{
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "[svelte]": {
+    "editor.defaultFormatter": "svelte.svelte-vscode"
+  },
+  "eslint.useFlatConfig": true,
+  "eslint.workingDirectories": [
+    { "mode": "auto" }
+  ],
+  "eslint.validate": ["javascript", "typescript", "svelte"],
+  "svelte.enable-ts-plugin": true,
+  "stylelint.validate": ["css"],
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true
+}
