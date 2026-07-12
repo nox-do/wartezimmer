@@ -4,6 +4,7 @@ import {
   createJourneyTemplate,
   normalizeJourneySettingsForSave,
   validateJourneySettingsForSave,
+  journeyStepRoomBadge,
 } from './journey-admin-helpers';
 
 describe('journey-admin-helpers', () => {
@@ -82,5 +83,9 @@ describe('journey-admin-helpers', () => {
     expect(normalized.templates[0]?.steps[0]?.sortOrder).toBe(0);
     expect(normalized.templates[0]?.steps[0]?.instructionText).toBe('Hinweis');
     expect(normalized.templates[0]?.steps[0]?.queueId).toBe('pf_general_queue');
+  });
+
+  it('journeyStepRoomBadge uppercases the room label', () => {
+    expect(journeyStepRoomBadge('room_a', rooms)).toBe('RAUM A');
   });
 });

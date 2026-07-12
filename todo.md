@@ -16,6 +16,9 @@ Stand: 2026-07-10
 - ✅ Room-Panel self_go (2026-07-11): Snapshot zeigt `directed` wenn Ziel = Panel-Raum; Quittieren („Ich bin da“/Angekommen) = `arrive` aus directed; OpenAPI RoomPanelItem.status + Preview/Live-UI.
 - ✅ Room-Panel leerer Zustand (2026-07-12): Grauer Platzhalter-Strich (`room-panel-preview__empty`) entfernt; Status nur noch im Lead-Bereich.
 - ✅ MFA Journey-Designer Polish (2026-07-12): Enum-i18n, Preview-i18n, Save-Vorvalidierung; ausgeblendete Felder dokumentiert in `journey-admin-helpers.ts`; tote CSS/i18n-Keys entfernt.
+- ✅ MFA Journey-Designer UI (2026-07-12): Mock-inspiriert — Timeline, Raum-Badge, Segmented Controls (Weg/WZ-TV), Feld-Hints, kompakteres 2-Spalten-Grid; ohne Drag/Reorder.
+- ✅ MFA Journey-Designer Feinschliff (2026-07-12): Kompakter Meta-Bereich, größere Timeline-Kreise, Segment-Groups fit-content + Kontrast, Label „Wartezimmer Verhalten“; Save/Löschen in Meta, „Neue Journey“ im Page-Header.
+- ✅ Journey `instructionText` (2026-07-12): Routing-Hinweis-Feld in Admin-UI ausgeblendet; Modell/API bleiben, Doku in `journey-admin-helpers.ts`.
 - ✅ MFA Call-Gate + Löschen (2026-07-11): Aufrufen disabled+Tooltip (directed/pickup); Trash danger-Style; Modal → `cancelled`.
 - ✅ MFA Card-Marken (2026-07-11): pickup = blaues Users-Mark; directed = Navigation (teal). Away-Löschen in einer Zeile mit Rückkehr-Countdown.
 

@@ -17,8 +17,10 @@ import { randomId } from '$lib/utils/random-id';
  * - `active` — new templates default to `true`; the topic picker lists active templates only
  *
  * **JourneyStepSetting**
- * - `queueId` — defaults to `PF_GENERAL_QUEUE_ID` (single general waiting list).
+ * - `queueId` — defaults to `PF_GENERAL_QUEUE_ID` (single waiting room).
  *   Use `movementMode: self_go` for direct-to-room flows until a multi-queue UI exists.
+ * - `instructionText` — optional routing hint for the patient (e.g. „2. Etage“, „rechts, weiße Tür“);
+ *   maps to `visit.terminalInstruction` on hop changes. UI hidden until a surface shows it.
  */
 
 export const PF_GENERAL_QUEUE_ID = 'pf_general_queue';
@@ -68,6 +70,47 @@ export function journeyDisplayLabelKey(mode: JourneyDisplayMode): TranslationKey
 
 export function journeyCompletedWhenLabelKey(mode: JourneyCompletedWhenMode): TranslationKey {
   return journeyCompletedWhenLabelKeys[mode];
+}
+
+const journeyMovementHintKeys = {
+  call: 'mfa.settings.journeyMovementHint.call',
+  self_go: 'mfa.settings.journeyMovementHint.self_go',
+  pickup: 'mfa.settings.journeyMovementHint.pickup',
+} as const satisfies Record<JourneyMovementMode, TranslationKey>;
+
+const journeyDisplayHintKeys = {
+  visible: 'mfa.settings.journeyDisplayHint.visible',
+  hidden: 'mfa.settings.journeyDisplayHint.hidden',
+  call_only: 'mfa.settings.journeyDisplayHint.call_only',
+} as const satisfies Record<JourneyDisplayMode, TranslationKey>;
+
+const journeyCompletedWhenHintKeys = {
+  arrive: 'mfa.settings.journeyCompletedWhenHint.arrive',
+  start: 'mfa.settings.journeyCompletedWhenHint.start',
+  done: 'mfa.settings.journeyCompletedWhenHint.done',
+} as const satisfies Record<JourneyCompletedWhenMode, TranslationKey>;
+
+export function journeyMovementHintKey(mode: JourneyMovementMode): TranslationKey {
+  return journeyMovementHintKeys[mode];
+}
+
+export function journeyDisplayHintKey(mode: JourneyDisplayMode): TranslationKey {
+  return journeyDisplayHintKeys[mode];
+}
+
+export function journeyCompletedWhenHintKey(mode: JourneyCompletedWhenMode): TranslationKey {
+  return journeyCompletedWhenHintKeys[mode];
+}
+
+export function journeyStepRoomBadge(
+  targetLocationId: string | null | undefined,
+  rooms: PracticeRoom[],
+): string {
+  const label =
+    rooms.find((room) => room.roomId === targetLocationId)?.roomLabel?.trim() ||
+    targetLocationId?.trim() ||
+    '?';
+  return label.toLocaleUpperCase('de-DE');
 }
 
 export function createJourneyTemplateId(name: string, taken: Set<string>): string {

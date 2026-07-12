@@ -1,21 +1,27 @@
 <script lang="ts">
+  import { Plus, Trash2 } from '@lucide/svelte';
   import Button from '$lib/components/forms/Button.svelte';
+  import SegmentedControl from '$lib/components/forms/SegmentedControl.svelte';
   import {
     buildJourneyPreview,
     createDefaultJourneyStep,
-    createJourneyTemplate,
     JOURNEY_COMPLETED_WHEN,
     JOURNEY_DISPLAY_MODES,
     JOURNEY_MOVEMENT_MODES,
+    journeyCompletedWhenHintKey,
     journeyCompletedWhenLabelKey,
+    journeyDisplayHintKey,
     journeyDisplayLabelKey,
+    journeyMovementHintKey,
     journeyMovementLabelKey,
+    journeyStepRoomBadge,
   } from '$lib/mfa/journey-admin-helpers';
   import type { JourneySettings, JourneyTemplateSetting, PracticeRoom } from '$lib/ops/openapi-types';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
 
   interface Props {
     journeySettings: JourneySettings;
+    selectedTemplateId?: string;
     enabledRooms: PracticeRoom[];
     busy?: boolean;
     onChange?: (settings: JourneySettings) => void;
@@ -24,22 +30,36 @@
 
   let {
     journeySettings,
+    selectedTemplateId = $bindable(''),
     enabledRooms,
     busy = false,
     onChange,
     onSave,
   }: Props = $props();
 
-  let selectedTemplateId = $state('');
-
   const fallbackLocationId = $derived(enabledRooms[0]?.roomId ?? '');
   const selectedTemplate = $derived(
     journeySettings.templates.find((template) => template.id === selectedTemplateId) ?? null,
+  );
+  const sortedSteps = $derived(
+    selectedTemplate?.steps.slice().sort((a, b) => a.sortOrder - b.sortOrder) ?? [],
   );
   const previewText = $derived(
     selectedTemplate
       ? buildJourneyPreview(selectedTemplate, enabledRooms, t('mfa.settings.journeyPreviewNoSteps'))
       : '',
+  );
+  const movementSegmentOptions = $derived(
+    JOURNEY_MOVEMENT_MODES.map((mode) => ({
+      value: mode,
+      label: t(journeyMovementLabelKey(mode)),
+    })),
+  );
+  const displaySegmentOptions = $derived(
+    JOURNEY_DISPLAY_MODES.map((mode) => ({
+      value: mode,
+      label: t(journeyDisplayLabelKey(mode)),
+    })),
   );
 
   $effect(() => {
@@ -65,13 +85,6 @@
     );
   }
 
-  function addTemplate() {
-    const taken = new Set(journeySettings.templates.map((template) => template.id));
-    const template = createJourneyTemplate(t('mfa.settings.journeyNewTemplateName'), taken, fallbackLocationId);
-    updateTemplates([...journeySettings.templates, template]);
-    selectedTemplateId = template.id;
-  }
-
   function removeSelectedTemplate() {
     if (!selectedTemplate) return;
     updateTemplates(journeySettings.templates.filter((template) => template.id !== selectedTemplate.id));
@@ -79,7 +92,7 @@
 
   function addStep() {
     if (!selectedTemplate) return;
-    const steps = [...selectedTemplate.steps].sort((a, b) => a.sortOrder - b.sortOrder);
+    const steps = [...sortedSteps];
     const last = steps[steps.length - 1];
     steps.push(createDefaultJourneyStep(steps.length, fallbackLocationId, last));
     updateSelectedTemplate({ steps });
@@ -101,175 +114,193 @@
 </script>
 
 <section class="journey-admin">
-  <div class="journey-admin__toolbar">
-    <label class="journey-admin__field">
-      <span>{t('mfa.settings.journeySelectTemplate')}</span>
-      <select
-        class="form-input"
-        value={selectedTemplateId}
-        disabled={busy || journeySettings.templates.length === 0}
-        onchange={(event) => {
-          selectedTemplateId = (event.currentTarget as HTMLSelectElement).value;
-        }}
-      >
-        {#if journeySettings.templates.length === 0}
-          <option value="">{t('mfa.settings.journeyNoTemplates')}</option>
-        {:else}
-          {#each journeySettings.templates as template (template.id)}
-            <option value={template.id}>{template.name}</option>
-          {/each}
-        {/if}
-      </select>
-    </label>
-    <Button type="button" variant="outline" disabled={busy} onclick={addTemplate}>
-      {t('mfa.settings.journeyAddTemplate')}
-    </Button>
-  </div>
-
-  {#if selectedTemplate}
-    <p class="journey-admin__preview">{previewText}</p>
-
-    <div class="journey-admin__grid">
-      <label class="journey-admin__field">
-        <span>{t('mfa.settings.journeyTemplateName')}</span>
-        <input
+  <section class="journey-admin__meta">
+    <div class="journey-admin__meta-row">
+      <label class="journey-admin__field journey-admin__field--template">
+        <span class="journey-admin__field-label">{t('mfa.settings.journeySelectTemplate')}</span>
+        <select
           class="form-input"
-          type="text"
-          value={selectedTemplate.name}
-          disabled={busy}
-          oninput={(event) =>
-            updateSelectedTemplate({ name: (event.currentTarget as HTMLInputElement).value })}
-        />
+          value={selectedTemplateId}
+          disabled={busy || journeySettings.templates.length === 0}
+          onchange={(event) => {
+            selectedTemplateId = (event.currentTarget as HTMLSelectElement).value;
+          }}
+        >
+          {#if journeySettings.templates.length === 0}
+            <option value="">{t('mfa.settings.journeyNoTemplates')}</option>
+          {:else}
+            {#each journeySettings.templates as template (template.id)}
+              <option value={template.id}>{template.name}</option>
+            {/each}
+          {/if}
+        </select>
       </label>
+
+      {#if selectedTemplate}
+        <label class="journey-admin__field journey-admin__field--name">
+          <span class="journey-admin__field-label">{t('mfa.settings.journeyTemplateName')}</span>
+          <input
+            class="form-input"
+            type="text"
+            value={selectedTemplate.name}
+            disabled={busy}
+            oninput={(event) =>
+              updateSelectedTemplate({ name: (event.currentTarget as HTMLInputElement).value })}
+          />
+        </label>
+      {/if}
+
+      {#if selectedTemplate}
+        <div class="journey-admin__meta-actions">
+          <Button
+            type="button"
+            variant="outline"
+            class="journey-admin__delete-btn"
+            size="sm"
+            disabled={busy}
+            onclick={removeSelectedTemplate}
+          >
+            {t('mfa.settings.journeyRemoveTemplate')}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            disabled={busy}
+            onclick={() => onSave?.(journeySettings)}
+          >
+            {t('mfa.settings.journeySave')}
+          </Button>
+        </div>
+      {/if}
     </div>
 
+    {#if selectedTemplate}
+      <p class="journey-admin__preview">{previewText}</p>
+    {/if}
+  </section>
+
+  {#if selectedTemplate}
     <section class="journey-admin__steps">
       <header class="journey-admin__steps-header">
-        <h3>{t('mfa.settings.journeyStepsTitle')}</h3>
-        <Button type="button" variant="outline" disabled={busy} onclick={addStep}>
+        <div class="journey-admin__steps-intro">
+          <h3>{t('mfa.settings.journeyStepsTitle')}</h3>
+          <p class="journey-admin__steps-lead">{t('mfa.settings.journeyStepsLead')}</p>
+        </div>
+        <Button type="button" variant="outline" size="sm" disabled={busy} onclick={addStep}>
+          <Plus size={16} aria-hidden="true" />
           {t('mfa.settings.journeyAddStep')}
         </Button>
       </header>
 
-      {#each selectedTemplate.steps.slice().sort((a, b) => a.sortOrder - b.sortOrder) as step, index (step.id)}
-        <article class="journey-admin__step">
-          <header class="journey-admin__step-header">
-            <strong>{tf('mfa.settings.journeyStepLabel', { index: index + 1 })}</strong>
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={busy || selectedTemplate.steps.length <= 1}
-              onclick={() => removeStep(step.id)}
-            >
-              {t('mfa.settings.journeyRemoveStep')}
-            </Button>
-          </header>
+      <ol class="journey-admin__step-list">
+        {#each sortedSteps as step, index (step.id)}
+          <li class="journey-admin__step-row">
+            <div class="journey-admin__timeline" aria-hidden="true">
+              <span class="journey-admin__timeline-num">{index + 1}</span>
+            </div>
 
-          <div class="journey-admin__grid">
-            <label class="journey-admin__field">
-              <span>{t('mfa.settings.journeyStepTarget')}</span>
-              <select
-                class="form-input"
-                value={step.targetLocationId ?? ''}
-                disabled={busy || enabledRooms.length === 0}
-                onchange={(event) =>
-                  updateStep(step.id, {
-                    targetLocationId: (event.currentTarget as HTMLSelectElement).value || null,
-                  })}
-              >
-                {#each enabledRooms as room (room.roomId)}
-                  <option value={room.roomId}>{room.roomLabel}</option>
-                {/each}
-              </select>
-            </label>
+            <article class="journey-admin__step">
+              <header class="journey-admin__step-header">
+                <span class="pill pill--caps journey-admin__step-badge">
+                  {journeyStepRoomBadge(step.targetLocationId, enabledRooms)}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy || selectedTemplate.steps.length <= 1}
+                  aria-label={tf('mfa.settings.journeyRemoveStepAria', { index: index + 1 })}
+                  onclick={() => removeStep(step.id)}
+                >
+                  <Trash2 size={16} aria-hidden="true" />
+                  {t('mfa.settings.journeyRemoveStep')}
+                </Button>
+              </header>
 
-            <label class="journey-admin__field">
-              <span>{t('mfa.settings.journeyStepMovement')}</span>
-              <select
-                class="form-input"
-                value={step.movementMode}
-                disabled={busy}
-                onchange={(event) =>
-                  updateStep(step.id, {
-                    movementMode: (event.currentTarget as HTMLSelectElement)
-                      .value as JourneyTemplateSetting['steps'][number]['movementMode'],
-                  })}
-              >
-                {#each JOURNEY_MOVEMENT_MODES as mode (mode)}
-                  <option value={mode}>{t(journeyMovementLabelKey(mode))}</option>
-                {/each}
-              </select>
-            </label>
+              <div class="journey-admin__step-grid">
+                <label class="journey-admin__field">
+                  <span class="journey-admin__field-label">{t('mfa.settings.journeyStepTarget')}</span>
+                  <select
+                    class="form-input"
+                    value={step.targetLocationId ?? ''}
+                    disabled={busy || enabledRooms.length === 0}
+                    onchange={(event) =>
+                      updateStep(step.id, {
+                        targetLocationId: (event.currentTarget as HTMLSelectElement).value || null,
+                      })}
+                  >
+                    {#each enabledRooms as room (room.roomId)}
+                      <option value={room.roomId}>{room.roomLabel}</option>
+                    {/each}
+                  </select>
+                </label>
 
-            <label class="journey-admin__field">
-              <span>{t('mfa.settings.journeyStepDisplay')}</span>
-              <select
-                class="form-input"
-                value={step.publicDisplayMode}
-                disabled={busy}
-                onchange={(event) =>
-                  updateStep(step.id, {
-                    publicDisplayMode: (event.currentTarget as HTMLSelectElement)
-                      .value as JourneyTemplateSetting['steps'][number]['publicDisplayMode'],
-                  })}
-              >
-                {#each JOURNEY_DISPLAY_MODES as mode (mode)}
-                  <option value={mode}>{t(journeyDisplayLabelKey(mode))}</option>
-                {/each}
-              </select>
-            </label>
+                <label class="journey-admin__field">
+                  <span class="journey-admin__field-label">{t('mfa.settings.journeyStepCompletedWhen')}</span>
+                  <select
+                    class="form-input"
+                    value={step.completedWhen}
+                    disabled={busy}
+                    onchange={(event) =>
+                      updateStep(step.id, {
+                        completedWhen: (event.currentTarget as HTMLSelectElement)
+                          .value as JourneyTemplateSetting['steps'][number]['completedWhen'],
+                      })}
+                  >
+                    {#each JOURNEY_COMPLETED_WHEN as mode (mode)}
+                      <option value={mode}>{t(journeyCompletedWhenLabelKey(mode))}</option>
+                    {/each}
+                  </select>
+                  <p class="journey-admin__field-hint">{t(journeyCompletedWhenHintKey(step.completedWhen))}</p>
+                </label>
 
-            <label class="journey-admin__field">
-              <span>{t('mfa.settings.journeyStepCompletedWhen')}</span>
-              <select
-                class="form-input"
-                value={step.completedWhen}
-                disabled={busy}
-                onchange={(event) =>
-                  updateStep(step.id, {
-                    completedWhen: (event.currentTarget as HTMLSelectElement)
-                      .value as JourneyTemplateSetting['steps'][number]['completedWhen'],
-                  })}
-              >
-                {#each JOURNEY_COMPLETED_WHEN as mode (mode)}
-                  <option value={mode}>{t(journeyCompletedWhenLabelKey(mode))}</option>
-                {/each}
-              </select>
-            </label>
+                <div class="journey-admin__segment-row">
+                  <div class="journey-admin__field">
+                    <span class="journey-admin__field-label">{t('mfa.settings.journeyStepMovement')}</span>
+                    <div class="journey-admin__segment-wrap">
+                      <SegmentedControl
+                        class="segmented-control--journey"
+                        options={movementSegmentOptions}
+                        value={step.movementMode}
+                        disabled={busy}
+                        ariaLabel={t('mfa.settings.journeyStepMovement')}
+                        onchange={(value) =>
+                          updateStep(step.id, {
+                            movementMode: value as JourneyTemplateSetting['steps'][number]['movementMode'],
+                          })}
+                      />
+                    </div>
+                    <p class="journey-admin__field-hint">{t(journeyMovementHintKey(step.movementMode))}</p>
+                  </div>
 
-            <label class="journey-admin__field journey-admin__field--wide">
-              <span>{t('mfa.settings.journeyStepInstruction')}</span>
-              <input
-                class="form-input"
-                type="text"
-                value={step.instructionText ?? ''}
-                disabled={busy}
-                placeholder={t('mfa.settings.journeyStepInstructionPlaceholder')}
-                oninput={(event) =>
-                  updateStep(step.id, {
-                    instructionText: (event.currentTarget as HTMLInputElement).value || null,
-                  })}
-              />
-            </label>
-          </div>
-        </article>
-      {/each}
+                  <div class="journey-admin__field">
+                    <span class="journey-admin__field-label">{t('mfa.settings.journeyStepDisplay')}</span>
+                    <div class="journey-admin__segment-wrap">
+                      <SegmentedControl
+                        class="segmented-control--journey"
+                        options={displaySegmentOptions}
+                        value={step.publicDisplayMode}
+                        disabled={busy}
+                        ariaLabel={t('mfa.settings.journeyStepDisplay')}
+                        onchange={(value) =>
+                          updateStep(step.id, {
+                            publicDisplayMode: value as JourneyTemplateSetting['steps'][number]['publicDisplayMode'],
+                          })}
+                      />
+                    </div>
+                    <p class="journey-admin__field-hint">{t(journeyDisplayHintKey(step.publicDisplayMode))}</p>
+                  </div>
+                </div>
+
+                <!-- instructionText: bewusst ausgeblendet — Routing-Hinweis fürs Terminal, UI folgt später. -->
+              </div>
+            </article>
+          </li>
+        {/each}
+      </ol>
     </section>
-
-    <div class="journey-admin__actions">
-      <Button type="button" variant="ghost" disabled={busy} onclick={removeSelectedTemplate}>
-        {t('mfa.settings.journeyRemoveTemplate')}
-      </Button>
-      <Button
-        type="button"
-        variant="primary"
-        disabled={busy}
-        onclick={() => onSave?.(journeySettings)}
-      >
-        {t('mfa.settings.journeySave')}
-      </Button>
-    </div>
-  {:else}
+  {:else if journeySettings.templates.length === 0}
     <p class="text-muted">{t('mfa.settings.journeyEmptyState')}</p>
   {/if}
 </section>

@@ -1,8 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { Plus } from '@lucide/svelte';
+  import Button from '$lib/components/forms/Button.svelte';
   import MfaSettingsPageHeader from '$lib/components/mfa/MfaSettingsPageHeader.svelte';
   import JourneyAdminEditor from '$lib/components/mfa/JourneyAdminEditor.svelte';
   import {
+    createJourneyTemplate,
     normalizeJourneySettingsForSave,
     validateJourneySettingsForSave,
   } from '$lib/mfa/journey-admin-helpers';
@@ -18,6 +21,7 @@
   let routingCapabilities = $state<RoutingCapabilities | null>(null);
   let journeySettings = $state<JourneySettings>({ templates: [] });
   let enabledRooms = $state<ReturnType<typeof listEnabledRooms>>([]);
+  let selectedTemplateId = $state('');
 
   const journeyDesignerVisible = $derived(
     routingCapabilities?.features.journeyDesigner === true &&
@@ -41,6 +45,18 @@
     routingCapabilities = capabilitiesResult.data;
     journeySettings = structuredClone(settingsResult.data.journeySettings);
     enabledRooms = listEnabledRooms(settingsResult.data.rooms);
+  }
+
+  function addJourneyTemplate() {
+    const fallbackLocationId = enabledRooms[0]?.roomId ?? '';
+    const taken = new Set(journeySettings.templates.map((template) => template.id));
+    const template = createJourneyTemplate(
+      t('mfa.settings.journeyNewTemplateName'),
+      taken,
+      fallbackLocationId,
+    );
+    journeySettings = { templates: [...journeySettings.templates, template] };
+    selectedTemplateId = template.id;
   }
 
   async function saveJourneySettings(next: JourneySettings) {
@@ -71,7 +87,16 @@
   });
 </script>
 
-<MfaSettingsPageHeader title={t('mfa.settings.journeysPanelTitle')} lead={t('mfa.settings.journeysPanelDesc')} />
+<MfaSettingsPageHeader title={t('mfa.settings.journeysPanelTitle')} lead={t('mfa.settings.journeysPanelDesc')}>
+  {#snippet actions()}
+    {#if !loading && journeyDesignerVisible}
+      <Button type="button" variant="primary" size="sm" disabled={saving} onclick={addJourneyTemplate}>
+        <Plus size={16} aria-hidden="true" />
+        {t('mfa.settings.journeyAddTemplate')}
+      </Button>
+    {/if}
+  {/snippet}
+</MfaSettingsPageHeader>
 
 {#if loading}
   <p class="text-muted">{t('ui.loading')}</p>
@@ -80,6 +105,7 @@
 {:else}
   <JourneyAdminEditor
     {journeySettings}
+    bind:selectedTemplateId
     {enabledRooms}
     busy={saving}
     onChange={(next) => {
