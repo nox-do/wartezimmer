@@ -21,6 +21,24 @@ export class SetupApiValidationError extends Error {
   }
 }
 
+function coerceSetupRecord(body: unknown): Record<string, unknown> {
+  return body !== null && typeof body === 'object' && !Array.isArray(body)
+    ? (body as Record<string, unknown>)
+    : {};
+}
+
+function coerceSetupPlanInput(body: unknown): SetupPlanInput {
+  return coerceSetupRecord(body) as SetupPlanInput;
+}
+
+function coerceApplySetupInput(body: unknown): ApplySetupInput {
+  return coerceSetupRecord(body) as ApplySetupInput;
+}
+
+function coerceHostNetworkInput(body: unknown): HostNetworkInput {
+  return coerceSetupRecord(body) as HostNetworkInput;
+}
+
 export function requireTrimmedLanAppIp(value: string | undefined): string {
   const lanAppIp = value?.trim();
   if (!lanAppIp) {
@@ -78,32 +96,34 @@ export function normalizeStorageFolderPaths(
   return { imports, exports };
 }
 
-export function normalizeSetupPlanInput(body: SetupPlanInput): NormalizedSetupPlanInput {
-  const lanAppIp = requireTrimmedLanAppIp(body.lanAppIp);
+export function normalizeSetupPlanInput(body: unknown): NormalizedSetupPlanInput {
+  const input = coerceSetupPlanInput(body);
+  const lanAppIp = requireTrimmedLanAppIp(input.lanAppIp);
   return {
     lanAppIp,
-    practiceDisplayName: body.practiceDisplayName?.trim() || SETUP_DEFAULT_PRACTICE_NAME,
-    portalAppIp: body.gateway?.portalAppIp?.trim() || undefined,
-    canonicalBaseUrl: normalizeOptionalCanonicalBaseUrl(body.canonicalBaseUrl),
-    gateway: normalizeGatewayPlan(body.gateway, lanAppIp),
+    practiceDisplayName: input.practiceDisplayName?.trim() || SETUP_DEFAULT_PRACTICE_NAME,
+    portalAppIp: input.gateway?.portalAppIp?.trim() || undefined,
+    canonicalBaseUrl: normalizeOptionalCanonicalBaseUrl(input.canonicalBaseUrl),
+    gateway: normalizeGatewayPlan(input.gateway, lanAppIp),
   };
 }
 
-export function normalizeApplySetupInput(body: ApplySetupInput): NormalizedSetupPlanInput & {
+export function normalizeApplySetupInput(body: unknown): NormalizedSetupPlanInput & {
   runCompose?: boolean;
   preserveEnv?: boolean;
   delivery?: boolean;
   composeBuild?: boolean;
   runProbes?: boolean;
 } {
+  const input = coerceApplySetupInput(body);
   return {
-    ...normalizeSetupPlanInput(body),
-    folders: normalizeStorageFolderPaths(body.folders),
-    delivery: body.delivery,
-    runCompose: body.runCompose,
-    preserveEnv: body.preserveEnv,
-    composeBuild: body.composeBuild,
-    runProbes: body.runProbes,
+    ...normalizeSetupPlanInput(input),
+    folders: normalizeStorageFolderPaths(input.folders),
+    delivery: input.delivery,
+    runCompose: input.runCompose,
+    preserveEnv: input.preserveEnv,
+    composeBuild: input.composeBuild,
+    runProbes: input.runProbes,
   };
 }
 
@@ -124,17 +144,18 @@ function normalizeOptionalCanonicalBaseUrl(value: string | undefined): string | 
   return parsed;
 }
 
-export function normalizeHostNetworkInput(body: HostNetworkInput): {
+export function normalizeHostNetworkInput(body: unknown): {
   lanAppIp: string;
   gateway: GatewayPlan;
   restartCompose: boolean;
   canonicalBaseUrl?: string;
 } {
-  const lanAppIp = requireTrimmedLanAppIp(body.lanAppIp);
+  const input = coerceHostNetworkInput(body);
+  const lanAppIp = requireTrimmedLanAppIp(input.lanAppIp);
   return {
     lanAppIp,
-    restartCompose: Boolean(body.restartCompose),
-    gateway: normalizeGatewayPlan(requireHostNetworkGateway(body.gateway), lanAppIp),
-    canonicalBaseUrl: normalizeOptionalCanonicalBaseUrl(body.canonicalBaseUrl),
+    restartCompose: Boolean(input.restartCompose),
+    gateway: normalizeGatewayPlan(requireHostNetworkGateway(input.gateway), lanAppIp),
+    canonicalBaseUrl: normalizeOptionalCanonicalBaseUrl(input.canonicalBaseUrl),
   };
 }

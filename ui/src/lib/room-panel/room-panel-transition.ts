@@ -7,11 +7,6 @@ export type RoomPanelTransitionOutcome =
   | { kind: 'sessionExpired'; message: string }
   | { kind: 'error'; message: string };
 
-type TransitionError = {
-  message: string;
-  status?: number;
-};
-
 export function resolveRoomPanelTransitionOutcome(
   result: Result<unknown>,
   fallbackMessage: string,
@@ -20,16 +15,15 @@ export function resolveRoomPanelTransitionOutcome(
     return { kind: 'success' };
   }
 
-  const error = result.error as TransitionError;
-  const message = error.message?.trim() || fallbackMessage;
+  const message = result.error.message?.trim() || fallbackMessage;
 
-  if (error.status === 401) {
+  if (result.error.status === 401) {
     return { kind: 'sessionExpired', message };
   }
-  if (error.status === 409) {
+  if (result.error.status === 409) {
     return { kind: 'conflict', message };
   }
-  if (error.status === 403) {
+  if (result.error.status === 403) {
     return { kind: 'forbidden', message };
   }
 
@@ -44,10 +38,9 @@ export function resolveRoomPanelQueueFetchOutcome(
     return { kind: 'success' };
   }
 
-  const error = result.error as TransitionError;
-  const message = error.message?.trim() || fallbackMessage;
+  const message = result.error.message?.trim() || fallbackMessage;
 
-  if (error.status === 401 || error.status === 403) {
+  if (result.error.status === 401 || result.error.status === 403) {
     return { kind: 'sessionExpired', message };
   }
 

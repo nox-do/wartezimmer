@@ -302,7 +302,20 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
             .code(400)
             .send({ code: 'INVALID_ARGUMENT', message: 'Each form item must be an object.' });
         }
-        const record = raw as PatientFormDocumentItem;
+        const record = raw as Record<string, unknown>;
+        const templateId = record.templateId;
+        const templateVersion = record.templateVersion;
+        if (typeof templateId !== 'string' || !templateId.trim()) {
+          return reply
+            .code(400)
+            .send({ code: 'INVALID_ARGUMENT', message: 'templateId must be a non-empty string.' });
+        }
+        if (typeof templateVersion !== 'string' && typeof templateVersion !== 'number') {
+          return reply.code(400).send({
+            code: 'INVALID_ARGUMENT',
+            message: 'templateVersion must be a string or number.',
+          });
+        }
         const answers = record.answers;
         if (answers != null && !isRecord(answers)) {
           return reply
@@ -310,8 +323,8 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
             .send({ code: 'INVALID_ARGUMENT', message: 'answers must be an object.' });
         }
         items.push({
-          templateId: record.templateId,
-          templateVersion: record.templateVersion,
+          templateId: templateId.trim(),
+          templateVersion: String(templateVersion),
           answers,
         });
       }

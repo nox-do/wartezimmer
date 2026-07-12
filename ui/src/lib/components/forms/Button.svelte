@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { resolve } from '$app/paths';
+  import { resolvedHref } from '$lib/navigation/kit-paths';
 
   interface Props {
     variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
@@ -50,9 +50,9 @@
 </script>
 
 {#if href}
-  <!-- href is a caller-provided app path; resolve() overloads need a wide cast at this boundary. -->
-  <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
-  <a href={resolve(href as any)} {target} {rel} class={computedClass} aria-disabled={disabled || loading} aria-label={ariaLabel} {onclick}>
+  <!-- resolvedHref() wraps $app/paths resolve(); ESLint only recognizes resolve() in .svelte templates. -->
+  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+  <a href={resolvedHref(href)} {target} {rel} class={computedClass} aria-disabled={disabled || loading} aria-label={ariaLabel} {onclick}>
     {#if loading}
       <span class="spinner" aria-hidden="true"></span>
     {/if}

@@ -18,7 +18,6 @@ import {
   saveHostNetwork,
   saveStorageFolders,
   setHostRoutingMode,
-  type ComposeAction,
 } from './host-state.js';
 import { readEnvMap } from './env-file.js';
 import { resolveSetupApiError } from './api-error.js';
@@ -29,14 +28,19 @@ import {
   SetupApiValidationError,
 } from './setup-api-normalize.js';
 import { resolveSetupContext } from './setup-context.js';
-import type {
-  ApplySetupInput,
-  HostNetworkInput,
-  SetupPlanInput,
-  StorageFoldersInput,
-} from '@praxis-flow/server-shared';
 
 const DEFAULT_PORT = 9190;
+
+function readBodyRecord(body: unknown): Record<string, unknown> {
+  return body !== null && typeof body === 'object' && !Array.isArray(body)
+    ? (body as Record<string, unknown>)
+    : {};
+}
+
+function readOptionalString(record: Record<string, unknown>, key: string): string | undefined {
+  const value = record[key];
+  return typeof value === 'string' ? value : undefined;
+}
 
 function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -100,7 +104,7 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
       }
 
       if (method === 'POST' && url.pathname === '/api/setup/host/network') {
-        const body = (await readJsonBody(req)) as HostNetworkInput;
+        const body = await readJsonBody(req);
         const input = normalizeHostNetworkInput(body);
         const result = await saveHostNetwork(ctx, input);
         return sendJson(res, 200, result);
@@ -122,8 +126,8 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
       }
 
       if (method === 'POST' && url.pathname === '/api/setup/host/compose') {
-        const body = (await readJsonBody(req)) as { action?: string; build?: boolean };
-        const action = body.action?.trim() as ComposeAction | undefined;
+        const body = readBodyRecord(await readJsonBody(req));
+        const action = readOptionalString(body, 'action')?.trim();
         if (action !== 'start' && action !== 'stop' && action !== 'restart') {
           return sendJson(res, 400, { error: 'action must be start, stop, or restart' });
         }
@@ -139,8 +143,8 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
       }
 
       if (method === 'POST' && url.pathname === '/api/setup/host/backup') {
-        const body = (await readJsonBody(req)) as { target?: string };
-        if (body.target !== 'env') {
+        const body = readBodyRecord(await readJsonBody(req));
+        if (readOptionalString(body, 'target') !== 'env') {
           return sendJson(res, 400, { error: 'target must be env' });
         }
         return sendJson(res, 200, backupEnv(ctx));
@@ -156,8 +160,8 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
       }
 
       if (method === 'POST' && url.pathname === '/api/setup/host/routing-mode') {
-        const body = (await readJsonBody(req)) as { routingMode?: string };
-        const routingMode = body.routingMode?.trim();
+        const body = readBodyRecord(await readJsonBody(req));
+        const routingMode = readOptionalString(body, 'routingMode')?.trim();
         if (routingMode !== 'simple' && routingMode !== 'complex') {
           return sendJson(res, 400, { error: 'routingMode must be simple or complex' });
         }
@@ -175,7 +179,7 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
       }
 
       if (method === 'POST' && url.pathname === '/api/setup/host/plan') {
-        const body = (await readJsonBody(req)) as SetupPlanInput;
+        const body = await readJsonBody(req);
         const envPath = path.join(ctx.home, '.env');
         const envMap = fs.existsSync(envPath) ? readEnvMap(envPath) : null;
         const plan = buildSetupPlan(normalizeSetupPlanInput(body), envMap);
@@ -183,52 +187,51 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
       }
 
       if (method === 'POST' && url.pathname === '/api/setup/host/apply') {
-        const body = (await readJsonBody(req)) as ApplySetupInput;
+        const body = await readJsonBody(req);
         const result = await applySetupPlan(ctx, normalizeApplySetupInput(body));
         return sendJson(res, 200, result);
       }
 
       if (method === 'POST' && url.pathname === '/api/setup/host/storage') {
-        const body = (await readJsonBody(req)) as StorageFoldersInput;
-        if (!body.importsHostPath?.trim() || !body.exportsHostPath?.trim()) {
+        const body = readBodyRecord(await readJsonBody(req));
+        const importsHostPath = readOptionalString(body, 'importsHostPath')?.trim() ?? '';
+        const exportsHostPath = readOptionalString(body, 'exportsHostPath')?.trim() ?? '';
+        if (!importsHostPath || !exportsHostPath) {
           return sendJson(res, 400, { error: 'importsHostPath and exportsHostPath required' });
         }
         const result = await saveStorageFolders(ctx, {
-          importsHostPath: body.importsHostPath.trim(),
-          exportsHostPath: body.exportsHostPath.trim(),
+          importsHostPath,
+          exportsHostPath,
           restartCompose: Boolean(body.restartCompose),
         });
         return sendJson(res, 200, result);
       }
 
       if (method === 'POST' && url.pathname === '/api/setup/host/images/load') {
-        const body = (await readJsonBody(req)) as {
-          archivePath?: string;
-          restartCompose?: boolean;
-        };
-        if (!body.archivePath?.trim()) {
+        const body = readBodyRecord(await readJsonBody(req));
+        const archivePath = readOptionalString(body, 'archivePath')?.trim() ?? '';
+        if (!archivePath) {
           return sendJson(res, 400, { error: 'archivePath required' });
         }
         const result = await loadDeliveryImages(ctx, {
-          archivePath: body.archivePath.trim(),
+          archivePath,
           restartCompose: Boolean(body.restartCompose),
         });
         return sendJson(res, 200, result);
       }
 
       if (method === 'POST' && url.pathname === '/api/setup/host/probes') {
-        const body = (await readJsonBody(req)) as {
-          localAppBaseUrl?: string;
-          lanAppBaseUrl?: string;
-          appBaseUrl?: string;
-        };
-        const lanAppBaseUrl = body.lanAppBaseUrl?.trim() || body.appBaseUrl?.trim();
-        if (!lanAppBaseUrl && !body.localAppBaseUrl?.trim()) {
+        const body = readBodyRecord(await readJsonBody(req));
+        const lanAppBaseUrl =
+          readOptionalString(body, 'lanAppBaseUrl')?.trim() ||
+          readOptionalString(body, 'appBaseUrl')?.trim();
+        const localAppBaseUrl = readOptionalString(body, 'localAppBaseUrl')?.trim();
+        if (!lanAppBaseUrl && !localAppBaseUrl) {
           return sendJson(res, 400, { error: 'lanAppBaseUrl or localAppBaseUrl required' });
         }
         const probes = await import('./probes.js').then((m) =>
           m.runConnectionProbes({
-            localAppBaseUrl: body.localAppBaseUrl?.trim() || 'http://127.0.0.1:8080',
+            localAppBaseUrl: localAppBaseUrl || 'http://127.0.0.1:8080',
             lanAppBaseUrl,
           }),
         );

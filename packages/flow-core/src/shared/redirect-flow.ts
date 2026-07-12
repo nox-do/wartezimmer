@@ -51,8 +51,7 @@ export function resolveRedirectVisitPatch(
   } else {
     patch.locationConfidence = 'assumed';
     if ('lastKnownLocationId' in body) {
-      (patch as { lastKnownLocationId?: string | null }).lastKnownLocationId =
-        body.lastKnownLocationId;
+      patch.lastKnownLocationId = body.lastKnownLocationId ?? undefined;
     }
   }
 

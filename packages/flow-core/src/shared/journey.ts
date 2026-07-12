@@ -37,6 +37,13 @@ export type JourneyStepCompletedPatch = {
   journeyStepCompletedAt: string;
 };
 
+/** Patch shapes returned by journey progression helpers — assignable to visit updates. */
+export type JourneyProgressionPatch =
+  | JourneyCompletedPatch
+  | JourneyStepCompletedPatch
+  | (JourneyVisitPatch & { journeyStepIndex: number })
+  | JourneyVisitPatch;
+
 export type JourneyVisitPatch = {
   targetLocationId: string | null;
   queueId: string | null;

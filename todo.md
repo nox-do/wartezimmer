@@ -2,6 +2,12 @@
 
 Stand: 2026-07-12
 
+## Type-Cast-Audit (2026-07-12)
+
+- ✅ Bereinigt: `room-panel-transition.ts` (Result.error direkt); `I18nManager.ts` (AppDict statt Doppel-Cast); `Button`/`MfaActionButton` → `resolvedHref()` (ein `as any` in `kit-paths.ts`); `setup/server.ts` + `setup-api-normalize.ts` (unknown an Grenze); `redirect-flow.ts`; `database.ts`/`queue-routes.ts` (`QueueDisplayStatus`/`TriageLevel` statt OpenAPI-Casts); `visit-service.ts` (`JourneyProgressionPatch`); `patient-documents-routes.ts` (Body-Validierung)
+- ✅ `flow-core/tsconfig.json`: extends lokales `tsconfig.base.json` mit `"types": ["node"]` — behebt IDE-TS2591 für `node:sqlite` (Root-TS 6.0)
+- ⏭️ Bewusst gelassen: SQLite-Row-Mapper; iconv `csv-encoding.ts`; SSE `data as RoomPanelSnapshot`; sessionStorage JSON.parse; Test-Mocks `as unknown as CoreDatabase`
+
 ## Raum-Panel v2 (abgeschlossen 2026-07-12)
 
 - ✅ Dual-Placement (`outside` / `inside`): Domain, API, Auth, Snapshot, MFA-Settings-Accordion, Live-UI

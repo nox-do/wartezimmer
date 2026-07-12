@@ -18,6 +18,7 @@ import {
   journeyStepLabel,
   startNextJourneyStepPatch,
   stepToVisitPatch,
+  type JourneyProgressionPatch,
   validateRedirectRequest,
   laneCounterScope,
   resolveLaneCodeForCheckIn,
@@ -83,17 +84,17 @@ export function createVisitService(params: {
   const applyJourneyPatch = (
     visitId: string,
     current: VisitView,
-    patch: Partial<Visit>,
+    patch: JourneyProgressionPatch,
     steps: ReturnType<typeof stepsForTemplate>,
   ): VisitView => {
     maybeFail('journeyProgression:update');
-    updateVisit(current, patch);
+    updateVisit(current, patch as Partial<Visit>);
     const after = visitById(visitId)!;
     const data = loadCatalog();
     const fromLocation = data.locations.find((item) => item.id === current.targetLocationId);
     const toLocation = data.locations.find((item) => item.id === after.targetLocationId);
     maybeFail('journeyProgression:event');
-    if (patch.journeyState === 'completed') {
+    if ('journeyState' in patch && patch.journeyState === 'completed') {
       addEvent(
         visitId,
         'journey_completed',
@@ -163,7 +164,7 @@ export function createVisitService(params: {
       locations: data.locations,
     });
     if (!journeyPatch) return updated;
-    return applyJourneyPatch(visitId, updated, journeyPatch as Partial<Visit>, steps);
+    return applyJourneyPatch(visitId, updated, journeyPatch, steps);
   };
 
   const startNextJourneyStep = (visitId: string): VisitView | undefined => {
@@ -181,7 +182,7 @@ export function createVisitService(params: {
     if (!journeyPatch || journeyPatch.journeyState === 'completed') {
       throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
     }
-    return applyJourneyPatch(visitId, current, journeyPatch as Partial<Visit>, steps);
+    return applyJourneyPatch(visitId, current, journeyPatch, steps);
   };
 
   const checkIn = (body: CheckInBody): VisitView | undefined =>

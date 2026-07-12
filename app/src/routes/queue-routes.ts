@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { CoreDatabase } from '../shared/db/database.js';
+import type { QueueDisplayStatus } from '../shared/db/db-types.js';
 import { queueSchemas } from '../api/generated/queue.fastify-schemas.js';
 import { commonSchemas } from '../api/generated/common.fastify-schemas.js';
 import type {
@@ -11,7 +12,6 @@ import type {
   QueueVisitTransitionBody,
   QueueVisitTransitionResponse,
   QueueTransitionResponse,
-  QueueTriageResponse,
 } from '../api/queue-openapi-types.js';
 import { dispatchRecallNotifyAndPersist } from '../shared/messaging/recall-notify-persist.js';
 import type { MessageDispatchResult } from '../shared/messaging/sms-sender.js';
@@ -81,7 +81,7 @@ function notifyTvQueueChanged(db: CoreDatabase): void {
 }
 
 function transitionBody(
-  transition: { fromStatus: string; toStatus: string },
+  transition: { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus },
   visitId: string,
 ): {
   resultType: 'transition';
@@ -95,8 +95,8 @@ function transitionBody(
   return {
     resultType: 'transition',
     visitId,
-    fromStatus: transition.fromStatus as QueueTransitionResponse['fromStatus'],
-    toStatus: transition.toStatus as QueueTransitionResponse['toStatus'],
+    fromStatus: transition.fromStatus,
+    toStatus: transition.toStatus,
     updatedAt: new Date().toISOString(),
     roomId: null,
     roomLabel: null,
@@ -284,7 +284,7 @@ async function applyQueueVisitTransition(
         return {
           resultType: 'triage',
           visitId: visitId,
-          triageLevel: result.triageLevel as QueueTriageResponse['triageLevel'],
+          triageLevel: result.triageLevel,
           updatedAt: result.updatedAt,
         };
       } catch (error) {
@@ -336,8 +336,8 @@ async function applyQueueVisitTransition(
         return {
           resultType: 'recall',
           visitId: visitId,
-          fromStatus: transition.fromStatus as QueueTransitionResponse['fromStatus'],
-          toStatus: transition.toStatus as QueueTransitionResponse['toStatus'],
+          fromStatus: transition.fromStatus,
+          toStatus: transition.toStatus,
           updatedAt: new Date().toISOString(),
           returnUntil: transition.returnUntil,
           smsDispatch,

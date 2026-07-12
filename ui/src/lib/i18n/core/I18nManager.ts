@@ -1,24 +1,24 @@
-import type { AppLocale } from './I18nTypes';
+import type { AppDict, AppLocale } from './I18nTypes';
 import type { TranslationKey } from './translation-keys';
 
 let currentLocale: AppLocale | null = null;
-let currentDict: Record<string, unknown> | null = null;
+let currentDict: AppDict | null = null;
 let inFlight: Promise<void> | null = null;
 
-async function importLocale(locale: AppLocale): Promise<Record<string, unknown>> {
+async function importLocale(locale: AppLocale): Promise<AppDict> {
   switch (locale) {
     case 'de-DE':
-      return (await import('$lib/i18n/locales/de-DE')).dict as unknown as Record<string, unknown>;
+      return (await import('$lib/i18n/locales/de-DE')).dict;
     case 'en-GB':
-      return (await import('$lib/i18n/locales/en-GB')).dict as unknown as Record<string, unknown>;
+      return (await import('$lib/i18n/locales/en-GB')).dict;
     case 'tr-TR':
-      return (await import('$lib/i18n/locales/tr-TR')).dict as unknown as Record<string, unknown>;
+      return (await import('$lib/i18n/locales/tr-TR')).dict;
     case 'ru-RU':
-      return (await import('$lib/i18n/locales/ru-RU')).dict as unknown as Record<string, unknown>;
+      return (await import('$lib/i18n/locales/ru-RU')).dict;
     case 'uk-UA':
-      return (await import('$lib/i18n/locales/uk-UA')).dict as unknown as Record<string, unknown>;
+      return (await import('$lib/i18n/locales/uk-UA')).dict;
     default:
-      return (await import('$lib/i18n/locales/de-DE')).dict as unknown as Record<string, unknown>;
+      return (await import('$lib/i18n/locales/de-DE')).dict;
   }
 }
 

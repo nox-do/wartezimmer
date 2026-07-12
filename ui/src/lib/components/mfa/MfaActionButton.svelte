@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { resolve } from '$app/paths';
+  import { resolvedHref } from '$lib/navigation/kit-paths';
 
   interface Props {
     variant?: 'primary' | 'ghost' | 'doc' | 'danger';
@@ -40,8 +40,9 @@
 </script>
 
 {#if href}
-  <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
-  <a href={resolve(href as any)} class={className} aria-label={ariaLabel} {title} aria-disabled={disabled} onclick={onclick}>
+  <!-- resolvedHref() wraps $app/paths resolve(); ESLint only recognizes resolve() in .svelte templates. -->
+  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+  <a href={resolvedHref(href)} class={className} aria-label={ariaLabel} {title} aria-disabled={disabled} onclick={onclick}>
     {@render children?.()}
     {#if count != null}
       <span class="btn-staff-sm__count">{count}</span>

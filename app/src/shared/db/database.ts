@@ -117,6 +117,7 @@ import {
   type MarkAbsenceLookupDeps,
   type MarkAbsenceLookupInput,
 } from '../queue/mark-absence-lookup.js';
+import type { TriageLevel } from '../queue/queue-triage.js';
 import {
   completeDocumentExportInDb,
   discardDocumentByMfaInDb,
@@ -205,6 +206,7 @@ import type {
   PatientDocumentRow,
   PatientSession,
   PatientSessionMe,
+  QueueDisplayStatus,
   QueueSummary,
   QueueVisitRow,
   SessionResolveResult,
@@ -808,7 +810,7 @@ export class CoreDatabase {
     visitId: string,
     roomId?: string,
     roomLabel?: string,
-  ): { fromStatus: string; toStatus: string } {
+  ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
     return this.withTransaction('callVisit', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -838,7 +840,7 @@ export class CoreDatabase {
     roomId?: string,
     roomLabel?: string,
     actingRoomId?: string,
-  ): { fromStatus: string; toStatus: string } {
+  ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
     return this.withTransaction('checkInRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -855,7 +857,10 @@ export class CoreDatabase {
     });
   }
 
-  startTreatment(visitId: string, actingRoomId?: string): { fromStatus: string; toStatus: string } {
+  startTreatment(
+    visitId: string,
+    actingRoomId?: string,
+  ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
     return this.withTransaction('startTreatment', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -872,7 +877,10 @@ export class CoreDatabase {
     });
   }
 
-  continueJourney(visitId: string): { fromStatus: string; toStatus: string } {
+  continueJourney(visitId: string): {
+    fromStatus: QueueDisplayStatus;
+    toStatus: QueueDisplayStatus;
+  } {
     return this.withTransaction('continueJourney', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -893,7 +901,7 @@ export class CoreDatabase {
     visitId: string,
     roomId?: string,
     roomLabel?: string,
-  ): { fromStatus: string; toStatus: string } {
+  ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
     return this.withTransaction('reassignRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -918,7 +926,10 @@ export class CoreDatabase {
     });
   }
 
-  checkOutRoom(visitId: string, actingRoomId?: string): { fromStatus: string; toStatus: string } {
+  checkOutRoom(
+    visitId: string,
+    actingRoomId?: string,
+  ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
     return this.withTransaction('checkOutRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -935,7 +946,10 @@ export class CoreDatabase {
     });
   }
 
-  cancelQueueVisit(visitId: string): { fromStatus: string; toStatus: string } {
+  cancelQueueVisit(visitId: string): {
+    fromStatus: QueueDisplayStatus;
+    toStatus: QueueDisplayStatus;
+  } {
     return this.withTransaction('cancelQueueVisit', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -952,7 +966,10 @@ export class CoreDatabase {
     });
   }
 
-  returnToWaiting(visitId: string): { fromStatus: string; toStatus: string } {
+  returnToWaiting(visitId: string): {
+    fromStatus: QueueDisplayStatus;
+    toStatus: QueueDisplayStatus;
+  } {
     cancelRecallWindowExpiry(visitId);
     return this.withTransaction('returnToWaiting', () => {
       requireVisitExistsInDb(this.db, visitId);
@@ -975,7 +992,10 @@ export class CoreDatabase {
     });
   }
 
-  setAbsence(visitId: string, mode: AbsenceMode): { fromStatus: string; toStatus: string } {
+  setAbsence(
+    visitId: string,
+    mode: AbsenceMode,
+  ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
     return this.withTransaction('setAbsence', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -1089,7 +1109,7 @@ export class CoreDatabase {
     });
   }
 
-  cycleTriage(visitId: string): { triageLevel: string | null; updatedAt: string } {
+  cycleTriage(visitId: string): { triageLevel: TriageLevel | null; updatedAt: string } {
     return this.withTransaction('cycleTriage', () => {
       requireVisitExistsInDb(this.db, visitId);
       return cycleVisitTriageLevel(
@@ -1104,7 +1124,7 @@ export class CoreDatabase {
 
   async markAbsenceByLookup(
     input: MarkAbsenceLookupInput,
-  ): Promise<{ visitId: string; fromStatus: string; toStatus: string }> {
+  ): Promise<{ visitId: string; fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus }> {
     const mode = input.mode ?? 'wait_here';
     const ticket = await resolveMarkAbsenceTicket(this.markAbsenceLookupDeps(), input);
     const transition = this.setAbsence(ticket.id, mode);
@@ -1118,8 +1138,8 @@ export class CoreDatabase {
     visitId: string,
     returnWindowMinutes?: number,
   ): {
-    fromStatus: string;
-    toStatus: string;
+    fromStatus: QueueDisplayStatus;
+    toStatus: QueueDisplayStatus;
     returnUntil: string;
     returnWindowMinutes: number;
     callbackPhone: string | null;

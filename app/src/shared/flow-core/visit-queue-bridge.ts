@@ -381,7 +381,7 @@ export function cycleVisitTriageLevel(
   settings: OpsSettings,
   visitId: string,
   updatedAt: string,
-): { triageLevel: string | null; updatedAt: string } {
+): { triageLevel: TriageLevel | null; updatedAt: string } {
   const visit = requireVisitForQueueOp(runtime, visitId);
   const hostState = getVisitHostState(db, visitId);
   assertEffectiveStatus(visit, hostState, TRIAGE_ELIGIBLE_STATUSES);
