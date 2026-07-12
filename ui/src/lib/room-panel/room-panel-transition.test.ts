@@ -8,7 +8,10 @@ describe('resolveRoomPanelTransitionOutcome', () => {
   it('maps 409 to conflict refresh flow', () => {
     expect(
       resolveRoomPanelTransitionOutcome(
-        { ok: false, error: { message: 'TV offline', status: 409, code: 'CALL_ANNOUNCEMENT_OFFLINE' } },
+        {
+          ok: false,
+          error: { message: 'TV offline', status: 409, code: 'CALL_ANNOUNCEMENT_OFFLINE' },
+        },
         'fallback',
       ),
     ).toEqual({ kind: 'conflict', message: 'TV offline' });

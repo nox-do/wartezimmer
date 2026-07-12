@@ -12,7 +12,10 @@ import type { Queue } from '@praxis-flow/flow-core';
  * - Public-Display (Wartezimmer-TV): nur Visits mit lastKnownLocationId = Surface-Standort.
  */
 
-export function queueForLocation(locationId: string | null | undefined, queues: Queue[]): Queue | undefined {
+export function queueForLocation(
+  locationId: string | null | undefined,
+  queues: Queue[],
+): Queue | undefined {
   if (!locationId) return undefined;
   return queues.find((queue) => queue.active && queue.homeLocationId === locationId);
 }

@@ -14,7 +14,9 @@ export type RoomPanelSnapshotPolicy = {
   capabilities: RoomPanelCapabilities;
 };
 
-export function resolveRoomPanelSnapshotPolicy(activePanel: ActiveRoomPanel): RoomPanelSnapshotPolicy {
+export function resolveRoomPanelSnapshotPolicy(
+  activePanel: ActiveRoomPanel,
+): RoomPanelSnapshotPolicy {
   const policyInput: RoomPanelPolicyInput = {
     placement: activePanel.placement,
     ...activePanel.panel,

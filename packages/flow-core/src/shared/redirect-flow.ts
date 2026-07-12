@@ -46,11 +46,13 @@ export function resolveRedirectVisitPatch(
     patch.locationConfidence = 'instructed';
   } else if (semantics === 'confirmed') {
     patch.locationConfidence = 'confirmed';
-    patch.lastKnownLocationId = body.lastKnownLocationId ?? body.targetLocationId ?? current.lastKnownLocationId;
+    patch.lastKnownLocationId =
+      body.lastKnownLocationId ?? body.targetLocationId ?? current.lastKnownLocationId;
   } else {
     patch.locationConfidence = 'assumed';
     if ('lastKnownLocationId' in body) {
-      (patch as { lastKnownLocationId?: string | null }).lastKnownLocationId = body.lastKnownLocationId;
+      (patch as { lastKnownLocationId?: string | null }).lastKnownLocationId =
+        body.lastKnownLocationId;
     }
   }
 

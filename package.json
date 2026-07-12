@@ -29,7 +29,7 @@
     "test:all": "npm run test && npm run test:network",
     "check:drift": "node ./scripts/check-topic-icon-ids.mjs && node ./scripts/check-openapi-types-sync.mjs && node ./scripts/check-app-openapi-types-sync.mjs && node ./scripts/check-bundle-sync.mjs && node ./scripts/check-fastify-schemas-sync.mjs && node ./scripts/check-openapi-route-sync.mjs && node ./scripts/check-auth-route-rules.mjs",
     "typecheck:only": "npm run build:domain && npm run build:server-shared && npm run -ws typecheck && npm run check:drift",
-    "verify": "npm run lint && npm run typecheck:only && npm run test && npm run build:ui && node scripts/copy-ui-static.mjs && npm run check:ui-bundle-secrets",
+    "verify": "npm run lint && npm run format:check && npm run typecheck:only && npm run test && npm run build:ui && node scripts/copy-ui-static.mjs && npm run check:ui-bundle-secrets",
     "ci:check": "npm run verify",
     "typecheck": "npm run typecheck:only",
     "bundle:openapi": "node ./scripts/bundle-openapi.mjs",

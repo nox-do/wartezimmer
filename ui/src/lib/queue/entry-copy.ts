@@ -38,8 +38,7 @@ export function queueEntryPrimary(item: QueueItem): string {
 
 export function queueEntrySecondary(item: QueueItem, zone: QueueEntryZone): string {
   const arrived = formatClockTime(item.arrivedAt);
-  const destination =
-    item.destinationRoomLabel?.trim() || item.roomLabel?.trim() || '';
+  const destination = item.destinationRoomLabel?.trim() || item.roomLabel?.trim() || '';
 
   switch (item.status) {
     case 'called':
@@ -65,9 +64,7 @@ export function queueEntrySecondary(item: QueueItem, zone: QueueEntryZone): stri
         return t('mfa.entryArrived');
       }
       if (zone === 'waiting' && item.movementMode === 'pickup') {
-        return destination
-          ? tf('mfa.entryPickupTo', { room: destination })
-          : t('mfa.entryPickup');
+        return destination ? tf('mfa.entryPickupTo', { room: destination }) : t('mfa.entryPickup');
       }
       return tf('mfa.entryCheckedInAt', { time: arrived });
   }

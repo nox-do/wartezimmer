@@ -4,12 +4,12 @@ Vom Pitch zur lauffähigen Installation — Detailstand in [`todo.md`](../todo.m
 
 ## Phasen
 
-| Phase             | Inhalt                       | Status                                         |
-| ----------------- | ---------------------------- | ---------------------------------------------- |
+| Phase             | Inhalt                       | Status                                                   |
+| ----------------- | ---------------------------- | -------------------------------------------------------- |
 | **1 Workflows**   | Screens, Regeln, Fehlerfälle | Runtime-UI deckt Happy Paths; frühe Mocks in Git-History |
-| **2 Architektur** | Komponenten, APIs, Events    | dokumentiert (`architecture.md`, `apis.md`)    |
-| **3 Integration** | eGK, PVS                     | offen · Gateway-Scaffold vorhanden             |
-| **4 Solution**    | Code, Docker, Betrieb        | laufend (`app`, `ui`, `sandbox`)               |
+| **2 Architektur** | Komponenten, APIs, Events    | dokumentiert (`architecture.md`, `apis.md`)              |
+| **3 Integration** | eGK, PVS                     | offen · Gateway-Scaffold vorhanden                       |
+| **4 Solution**    | Code, Docker, Betrieb        | laufend (`app`, `ui`, `sandbox`)                         |
 
 ## Vier Flows
 
@@ -25,12 +25,12 @@ Fachdetail: [`flows.md`](flows.md)
 
 ## Runtime-UI (Stand)
 
-| Route         | Stand                                            |
-| ------------- | ------------------------------------------------ |
-| `/terminal/*` | Phone/DOB, Themen, eGK-Stub, Notfall, Sperre     |
-| `/portal/*`   | Wartenummer, Upload, Anamnese, Captive-Hooks     |
-| `/mfa/*`      | SSE-Queue, Dokumente, Pairing, Notfall, Settings |
-| `/tv`         | SSE, Chime, Pagination                           |
+| Route         | Stand                                               |
+| ------------- | --------------------------------------------------- |
+| `/terminal/*` | Phone/DOB, Themen, eGK-Stub, Notfall, Sperre        |
+| `/portal/*`   | Wartenummer, Upload, Anamnese, Captive-Hooks        |
+| `/mfa/*`      | SSE-Queue, Dokumente, Pairing, Notfall, Settings    |
+| `/tv`         | SSE, Chime, Pagination                              |
 | `/room-panel` | Login pro Placement, Snapshot-Actions, Aufruf-Liste |
 
 Backend deckt mehr ab als die UI (Identity-Detail, Day-Close-UI, eGK).

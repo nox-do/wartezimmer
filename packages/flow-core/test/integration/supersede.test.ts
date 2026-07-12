@@ -27,8 +27,14 @@ test('supersede: mfaAssist → general, neue Nummer, Link, checkedInAt erhalten'
   assert.equal(result.visit.checkInPath, 'topic');
 
   const active = runtime.visits();
-  assert.equal(active.some((visit) => visit.id === source.id), false);
-  assert.equal(active.some((visit) => visit.id === result.visit.id), true);
+  assert.equal(
+    active.some((visit) => visit.id === source.id),
+    false,
+  );
+  assert.equal(
+    active.some((visit) => visit.id === result.visit.id),
+    true,
+  );
 
   const events = runtime.events(result.visit.id);
   const supersededEvent = events.find((event) => event.type === 'superseded');
@@ -71,14 +77,20 @@ test('supersede: terminales Ticket abgelehnt', () => {
   runtime.transition(source.id, 'arrive');
   runtime.transition(source.id, 'start');
   runtime.transition(source.id, 'done');
-  assert.throws(() => runtime.supersede(source.id, { topicId: 'general' }), /SUPERSEDE_SOURCE_TERMINAL/);
+  assert.throws(
+    () => runtime.supersede(source.id, { topicId: 'general' }),
+    /SUPERSEDE_SOURCE_TERMINAL/,
+  );
 });
 
 test('supersede: doppeltes Supersede abgelehnt', () => {
   const { runtime } = testRuntime();
   const source = runtime.checkIn({ mfaAssist: true, surfaceId: 'terminal_1' });
   runtime.supersede(source.id, { topicId: 'general' });
-  assert.throws(() => runtime.supersede(source.id, { topicId: 'infection' }), /SUPERSEDE_ALREADY_SUPERSEDED|SUPERSEDE_SOURCE_TERMINAL/);
+  assert.throws(
+    () => runtime.supersede(source.id, { topicId: 'infection' }),
+    /SUPERSEDE_ALREADY_SUPERSEDED|SUPERSEDE_SOURCE_TERMINAL/,
+  );
 });
 
 test('checkIn nach ensureVisitSupersedeColumns und nach Supersede weiterhin ok', () => {

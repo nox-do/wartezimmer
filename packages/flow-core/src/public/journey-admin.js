@@ -51,7 +51,9 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
     }
 
     const steps = stepsForTemplate(template.id);
-    const linkedRules = catalog.routingRules.filter((rule) => rule.journeyTemplateId === template.id && rule.active);
+    const linkedRules = catalog.routingRules.filter(
+      (rule) => rule.journeyTemplateId === template.id && rule.active,
+    );
     const topic = catalog.topics.find((item) => item.id === template.topicId);
 
     root.innerHTML = `
@@ -74,9 +76,14 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
             ${fieldLabel('topicId', 'Anliegen (optional)')}
             <select data-role="template-topic">
               <option value="">— keins —</option>
-              ${catalog.topics.filter((item) => item.active && item.id !== 'mfa').map((item) => `
+              ${catalog.topics
+                .filter((item) => item.active && item.id !== 'mfa')
+                .map(
+                  (item) => `
                 <option value="${escapeHtml(item.id)}" ${item.id === template.topicId ? 'selected' : ''}>${escapeHtml(item.name)}</option>
-              `).join('')}
+              `,
+                )
+                .join('')}
             </select>
           </label>
           <label class="journey-admin-check">
@@ -151,7 +158,10 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
 
   function buildPreview(template, steps, topic) {
     const hopLabels = steps.map((step, index) => {
-      const target = catalog.locations.find((item) => item.id === step.targetLocationId)?.name || step.targetLocationId || '?';
+      const target =
+        catalog.locations.find((item) => item.id === step.targetLocationId)?.name ||
+        step.targetLocationId ||
+        '?';
       const mode = movementLabels[step.movementMode] || step.movementMode;
       const trigger = completedWhenLabels[step.completedWhen] || step.completedWhen;
       return `${index + 1}: ${target} (${mode}, weiter ${trigger})`;
@@ -166,14 +176,18 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
 
     const stepNodes = [...root.querySelectorAll('[data-role="steps"] .journey-admin-step')];
     const steps = stepNodes.map((node, index) => ({
-      id: node.dataset.stepId && !node.dataset.stepId.startsWith('draft_') ? node.dataset.stepId : undefined,
+      id:
+        node.dataset.stepId && !node.dataset.stepId.startsWith('draft_')
+          ? node.dataset.stepId
+          : undefined,
       sortOrder: index,
       targetLocationId: node.querySelector('[data-field="targetLocationId"]')?.value || null,
       queueId: node.querySelector('[data-field="queueId"]')?.value || null,
       movementMode: node.querySelector('[data-field="movementMode"]')?.value,
       publicDisplayMode: node.querySelector('[data-field="publicDisplayMode"]')?.value,
       completedWhen: node.querySelector('[data-field="completedWhen"]')?.value,
-      instructionText: node.querySelector('[data-field="instructionText"]')?.value?.trim() || undefined
+      instructionText:
+        node.querySelector('[data-field="instructionText"]')?.value?.trim() || undefined,
     }));
 
     return {
@@ -181,7 +195,7 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
       name: root.querySelector('[data-role="template-name"]')?.value?.trim() || template.name,
       topicId: root.querySelector('[data-role="template-topic"]')?.value || null,
       active: root.querySelector('[data-role="template-active"]')?.checked ?? true,
-      steps
+      steps,
     };
   }
 
@@ -192,7 +206,11 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
     if (!template) return;
     const draft = collectPayload();
     const topic = catalog.topics.find((item) => item.id === draft.topicId);
-    preview.textContent = buildPreview({ ...template, name: draft.name, topicId: draft.topicId }, draft.steps, topic);
+    preview.textContent = buildPreview(
+      { ...template, name: draft.name, topicId: draft.topicId },
+      draft.steps,
+      topic,
+    );
   }
 
   function onRootChange(event) {
@@ -201,7 +219,10 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
       render();
       return;
     }
-    if (event.target.closest('[data-role="steps"]') || event.target.matches('[data-role="template-topic"]')) {
+    if (
+      event.target.closest('[data-role="steps"]') ||
+      event.target.matches('[data-role="template-topic"]')
+    ) {
       updatePreview();
     }
   }
@@ -223,7 +244,7 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
         queueId: last?.queueId || null,
         movementMode: last?.movementMode || 'call',
         publicDisplayMode: last?.publicDisplayMode || 'visible',
-        completedWhen: 'arrive'
+        completedWhen: 'arrive',
       });
       catalog = {
         ...catalog,
@@ -233,8 +254,8 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
             ...step,
             id: step.id && !step.id.startsWith('draft_') ? step.id : `draft_${index}`,
             templateId: selectedTemplateId,
-          }))
-        ]
+          })),
+        ],
       };
       render();
       updatePreview();
@@ -253,8 +274,8 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
             sortOrder: i,
             id: step.id && !step.id.startsWith('draft_') ? step.id : `draft_${i}`,
             templateId: selectedTemplateId,
-          }))
-        ]
+          })),
+        ],
       };
       render();
       updatePreview();
@@ -267,34 +288,55 @@ export function mountJourneyAdmin(root, { onSave } = {}) {
   }
 
   function locationOptions(value) {
-    return catalog.locations.map((item) => `
+    return catalog.locations
+      .map(
+        (item) => `
       <option value="${escapeHtml(item.id)}" ${item.id === value ? 'selected' : ''}>${escapeHtml(item.name)}</option>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 
   function queueOptions(value) {
-    const rows = ['<option value="">— keine —</option>', ...catalog.queues.map((item) => `
+    const rows = [
+      '<option value="">— keine —</option>',
+      ...catalog.queues.map(
+        (item) => `
       <option value="${escapeHtml(item.id)}" ${item.id === value ? 'selected' : ''}>${escapeHtml(item.name)}</option>
-    `)];
+    `,
+      ),
+    ];
     return rows.join('');
   }
 
   function movementOptions(value) {
-    return Object.entries(movementLabels).map(([key, label]) => `
+    return Object.entries(movementLabels)
+      .map(
+        ([key, label]) => `
       <option value="${key}" ${key === value ? 'selected' : ''}>${key} · ${escapeHtml(label)}</option>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 
   function displayOptions(value) {
-    return Object.entries(displayLabels).map(([key, label]) => `
+    return Object.entries(displayLabels)
+      .map(
+        ([key, label]) => `
       <option value="${key}" ${key === value ? 'selected' : ''}>${key} · ${escapeHtml(label)}</option>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 
   function completedWhenOptions(value) {
-    return Object.entries(completedWhenLabels).map(([key, label]) => `
+    return Object.entries(completedWhenLabels)
+      .map(
+        ([key, label]) => `
       <option value="${key}" ${key === value ? 'selected' : ''}>${key} · ${escapeHtml(label)}</option>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 
   return { updateCatalog, getSelectedTemplateId };
@@ -309,5 +351,8 @@ function metaRow(field, value) {
 }
 
 function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[char]);
+  return String(value ?? '').replace(
+    /[&<>"']/g,
+    (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[char],
+  );
 }

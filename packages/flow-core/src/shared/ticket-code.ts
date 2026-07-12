@@ -15,7 +15,9 @@ export function formatVisitId(businessDay: string, laneCode: string, sequence: n
   return `${compactBusinessDay(businessDay)}-${formatTicketCode(laneCode, sequence)}`;
 }
 
-export function parseVisitId(visitId: string): { businessDay: string; laneCode: string; number: number } | null {
+export function parseVisitId(
+  visitId: string,
+): { businessDay: string; laneCode: string; number: number } | null {
   const normalized = visitId.trim();
   const match = normalized.match(/^([0-9]{8})-([A-Z])-([0-9]{1,4})$/);
   if (!match) return null;

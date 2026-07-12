@@ -1,8 +1,5 @@
 import type { Component } from 'svelte';
-import {
-  isValidTopicIconId,
-  type TopicIconId,
-} from '@praxis-flow/domain';
+import { isValidTopicIconId, type TopicIconId } from '@praxis-flow/domain';
 import {
   Activity,
   Ambulance,

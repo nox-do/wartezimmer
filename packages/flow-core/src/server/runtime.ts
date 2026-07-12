@@ -1,5 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { resolveBusinessDay as defaultResolveBusinessDay, type ResolveBusinessDay } from '@praxis-flow/flow-core';
+import {
+  resolveBusinessDay as defaultResolveBusinessDay,
+  type ResolveBusinessDay,
+} from '@praxis-flow/flow-core';
 import { createCatalogRepository } from './catalog-repository.js';
 import { createVisitRepository } from './visit-repository.js';
 import { createVisitService } from './visit-service.js';

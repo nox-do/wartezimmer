@@ -336,9 +336,9 @@ function deactivateJourneyTemplatesOutside(db: DatabaseSync, templateIds: string
     db.prepare('UPDATE journey_templates SET active = 0').run();
     return;
   }
-  db.prepare(`UPDATE journey_templates SET active = 0 WHERE id NOT IN (${bindList(templateIds)})`).run(
-    ...templateIds,
-  );
+  db.prepare(
+    `UPDATE journey_templates SET active = 0 WHERE id NOT IN (${bindList(templateIds)})`,
+  ).run(...templateIds);
 }
 
 function deactivateJourneyStepsOutside(db: DatabaseSync, stepIds: string[]): void {
@@ -349,7 +349,9 @@ function deactivateJourneyStepsOutside(db: DatabaseSync, stepIds: string[]): voi
   db.prepare(`DELETE FROM journey_steps WHERE id NOT IN (${bindList(stepIds)})`).run(...stepIds);
 }
 
-function journeySettingsFrom(settings: Pick<OpsSettings, 'journeySettings'>): OpsSettings['journeySettings'] {
+function journeySettingsFrom(
+  settings: Pick<OpsSettings, 'journeySettings'>,
+): OpsSettings['journeySettings'] {
   return settings.journeySettings ?? EMPTY_JOURNEY_SETTINGS;
 }
 
@@ -413,7 +415,9 @@ function resolveTopicJourneyTemplateId(
 ): string | null {
   const journeyTemplateId = topic.journeyTemplateId ?? null;
   if (!journeyTemplateId) return null;
-  const template = journeySettingsFrom(settings).templates.find((entry) => entry.id === journeyTemplateId);
+  const template = journeySettingsFrom(settings).templates.find(
+    (entry) => entry.id === journeyTemplateId,
+  );
   return template?.active ? journeyTemplateId : null;
 }
 
@@ -555,7 +559,9 @@ function terminalInstructionForTopic(label: string): string {
 }
 
 function deactivateTopicsOutside(db: DatabaseSync, topicIds: string[]): void {
-  db.prepare(`UPDATE topics SET active = 0 WHERE id NOT IN (${bindList(topicIds)})`).run(...topicIds);
+  db.prepare(`UPDATE topics SET active = 0 WHERE id NOT IN (${bindList(topicIds)})`).run(
+    ...topicIds,
+  );
 }
 
 function deactivateLocationsOutside(db: DatabaseSync, locationIds: string[]): void {
@@ -565,9 +571,9 @@ function deactivateLocationsOutside(db: DatabaseSync, locationIds: string[]): vo
 }
 
 function deactivateRoutingRulesOutside(db: DatabaseSync, topicIds: string[]): void {
-  db.prepare(`UPDATE routing_rules SET active = 0 WHERE topic_id NOT IN (${bindList(topicIds)})`).run(
-    ...topicIds,
-  );
+  db.prepare(
+    `UPDATE routing_rules SET active = 0 WHERE topic_id NOT IN (${bindList(topicIds)})`,
+  ).run(...topicIds);
 }
 
 function deactivatePanelSurfacesOutside(db: DatabaseSync, surfaceIds: string[]): void {
@@ -582,7 +588,9 @@ function deactivatePanelSurfacesOutside(db: DatabaseSync, surfaceIds: string[]):
 }
 
 function replaceGeneratedDisplayRules(db: DatabaseSync): void {
-  db.prepare("DELETE FROM surface_display_rules WHERE id = 'tv_general_visible' OR id LIKE 'panel_%_target'").run();
+  db.prepare(
+    "DELETE FROM surface_display_rules WHERE id = 'tv_general_visible' OR id LIKE 'panel_%_target'",
+  ).run();
 }
 
 export function syncSimpleRoutingRulesFromOpsSettings(
@@ -633,7 +641,10 @@ export function syncRoutingRulesFromOpsSettings(
   syncComplexRoutingRulesFromOpsSettings(db, settings, receptionRoomId);
 }
 
-export function syncCatalogFromOpsSettings(db: DatabaseSync, settings: OpsSettings): CatalogSyncSummary {
+export function syncCatalogFromOpsSettings(
+  db: DatabaseSync,
+  settings: OpsSettings,
+): CatalogSyncSummary {
   const desiredTopicIds = [MFA_ASSIST_TOPIC_ID, ...settings.topics.map((topic) => topic.topicId)];
   const desiredLocationIds = [
     PF_FLOW_LOC_ENTRANCE,

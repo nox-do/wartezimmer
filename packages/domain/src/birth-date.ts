@@ -8,7 +8,11 @@ function formatYmd(year: number, month: number, day: number): string {
   return `${String(year).padStart(4, '0')}${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}`;
 }
 
-function classifyBirthDateParts(year: number, month: number, day: number): BirthDatePartsIssue | null {
+function classifyBirthDateParts(
+  year: number,
+  month: number,
+  day: number,
+): BirthDatePartsIssue | null {
   if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1900) {
     return 'invalid';
   }

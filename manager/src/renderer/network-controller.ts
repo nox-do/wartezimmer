@@ -146,9 +146,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
 
     const canonicalBaseUrl = resolveCanonicalForSave();
     if (!canonicalBaseUrl || !isHttpOrigin(canonicalBaseUrl)) {
-      setError(
-        'Erreichbarkeit: bitte LAN-IP, Rechnername oder eigenen Hostnamen wählen.',
-      );
+      setError('Erreichbarkeit: bitte LAN-IP, Rechnername oder eigenen Hostnamen wählen.');
       return;
     }
 
@@ -211,7 +209,10 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
         return;
       }
 
-      if ((state.compose?.running ?? false) && hostNetworkChanged(state, state.status, state.network)) {
+      if (
+        (state.compose?.running ?? false) &&
+        hostNetworkChanged(state, state.status, state.network)
+      ) {
         deps.requestConfirm(NETWORK_RESTART_CONFIRM_MESSAGE, () => saveHostNetwork(true));
         return;
       }

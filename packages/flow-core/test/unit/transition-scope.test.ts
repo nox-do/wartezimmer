@@ -4,7 +4,7 @@ import { assertActingLocationScope, assertCallTargetLocation } from '@praxis-flo
 import { assertTransitionAllowed } from '@praxis-flow/flow-core';
 
 const catalog = {
-  locations: [{ id: 'room_1', name: 'Raum 1', active: true }]
+  locations: [{ id: 'room_1', name: 'Raum 1', active: true }],
 };
 
 test('assertActingLocationScope: Zielort muss passen', () => {

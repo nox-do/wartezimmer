@@ -20,7 +20,7 @@ const DUMP_FILES = [
   'src/server/reset-db.ts',
   'src/shared/journey.ts',
   'src/shared/visit-context.ts',
-  'todo.md'
+  'todo.md',
 ];
 
 const missing = DUMP_FILES.filter((relativePath) => !existsSync(join(rootDir, relativePath)));

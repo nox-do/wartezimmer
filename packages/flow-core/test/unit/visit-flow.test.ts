@@ -7,7 +7,7 @@ import {
   statusForMovementMode,
   ACTIVE_VISIT_STATUSES,
   OPEN_VISIT_STATUSES,
-  TERMINAL_VISIT_STATUSES
+  TERMINAL_VISIT_STATUSES,
 } from '@praxis-flow/flow-core';
 import type { Catalog, RoutingRule, Visit } from '@praxis-flow/flow-core';
 
@@ -34,7 +34,7 @@ test('assertTransitionAllowed: call nur aus waiting bei call movement', () => {
   assert.doesNotThrow(() => assertTransitionAllowed(visit, 'call'));
   assert.throws(
     () => assertTransitionAllowed({ ...visit, movementMode: 'self_go' }, 'call'),
-    /CALL_ONLY_FOR_CALL_MOVEMENT/
+    /CALL_ONLY_FOR_CALL_MOVEMENT/,
   );
 });
 
@@ -48,9 +48,15 @@ test('assertTransitionAllowed: pickup start nur nach Ankunft', () => {
 
 test('assertTransitionAllowed: return_to_waiting nur aus called/arrived/in_progress', () => {
   const base = { movementMode: 'call' as const, needsAssistance: false };
-  assert.doesNotThrow(() => assertTransitionAllowed({ ...base, status: 'called' }, 'return_to_waiting'));
-  assert.doesNotThrow(() => assertTransitionAllowed({ ...base, status: 'arrived' }, 'return_to_waiting'));
-  assert.doesNotThrow(() => assertTransitionAllowed({ ...base, status: 'in_progress' }, 'return_to_waiting'));
+  assert.doesNotThrow(() =>
+    assertTransitionAllowed({ ...base, status: 'called' }, 'return_to_waiting'),
+  );
+  assert.doesNotThrow(() =>
+    assertTransitionAllowed({ ...base, status: 'arrived' }, 'return_to_waiting'),
+  );
+  assert.doesNotThrow(() =>
+    assertTransitionAllowed({ ...base, status: 'in_progress' }, 'return_to_waiting'),
+  );
   assert.throws(
     () => assertTransitionAllowed({ ...base, status: 'waiting' }, 'return_to_waiting'),
     /RETURN_TO_WAITING_NOT_ALLOWED/,
@@ -122,10 +128,7 @@ test('resolveReturnToWaitingTargetLocationId: Simple behaelt Aufrufziel', () => 
     appliedRoutingRuleId: 'rule_general',
   } as Visit;
 
-  assert.equal(
-    resolveReturnToWaitingTargetLocationId(visit, simpleRule, catalogFixture),
-    'room_1',
-  );
+  assert.equal(resolveReturnToWaitingTargetLocationId(visit, simpleRule, catalogFixture), 'room_1');
 });
 
 test('resolveReturnToWaitingTargetLocationId: Simple Fallback auf Rule-Default', () => {

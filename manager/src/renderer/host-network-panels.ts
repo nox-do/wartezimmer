@@ -22,10 +22,7 @@ export type GatewayFieldState = {
 export type { ReachabilityFieldState, ReachabilityMode } from './reachability.js';
 
 /** Manual LAN IP is only needed when auto-detection is ambiguous or insufficient. */
-export function shouldOfferManualLanIpEntry(
-  candidateCount: number,
-  lanIpStale: boolean,
-): boolean {
+export function shouldOfferManualLanIpEntry(candidateCount: number, lanIpStale: boolean): boolean {
   if (candidateCount === 0) {
     return true;
   }

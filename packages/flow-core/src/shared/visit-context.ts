@@ -11,19 +11,27 @@ import { movementLabels, statusLabels } from './labels.js';
 import { formatStepFraction } from './journey.js';
 
 /** Rule mit Journey: operative Route kommt ausschliesslich aus Journey-Steps, nicht aus initial_*. */
-export function ruleUsesJourneyRouting(rule: Pick<RoutingRule, 'journeyTemplateId'> | null | undefined): boolean {
+export function ruleUsesJourneyRouting(
+  rule: Pick<RoutingRule, 'journeyTemplateId'> | null | undefined,
+): boolean {
   return Boolean(rule?.journeyTemplateId);
 }
 
 /** Steps eines Templates — Journey-Bundle-Variante (parallel zu runtime.stepsForTemplate). */
-export function stepsForJourneyTemplate(templateId: string, journeySteps: JourneyStep[]): JourneyStep[] {
+export function stepsForJourneyTemplate(
+  templateId: string,
+  journeySteps: JourneyStep[],
+): JourneyStep[] {
   return journeySteps
     .filter((step) => step.templateId === templateId)
     .sort((left, right) => left.sortOrder - right.sortOrder);
 }
 
 /** Wartebereich beim Check-in: Home-Location der Step-Queue. */
-export function lastKnownFromJourneyStep(step: JourneyStep | null | undefined, queues: Queue[]): string | null {
+export function lastKnownFromJourneyStep(
+  step: JourneyStep | null | undefined,
+  queues: Queue[],
+): string | null {
   if (!step?.queueId) return null;
   const queue = queues.find((item) => item.id === step.queueId);
   return queue?.homeLocationId ?? null;
@@ -93,7 +101,11 @@ export function visitOperationalLabel(
   return statusLabel;
 }
 
-export function buildJourneyRoutePreview(steps: JourneyStep[], locations: Location[], queues: Queue[] = []): string {
+export function buildJourneyRoutePreview(
+  steps: JourneyStep[],
+  locations: Location[],
+  queues: Queue[] = [],
+): string {
   if (!steps.length) return 'Keine Journey-Schritte';
   return steps
     .map((step, index) => {

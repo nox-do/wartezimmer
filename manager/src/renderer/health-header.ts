@@ -199,4 +199,3 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
 
   return tiles;
 }
-

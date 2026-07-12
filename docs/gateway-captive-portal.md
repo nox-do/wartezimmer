@@ -148,20 +148,20 @@ npm run docker:up
 
 ## Env-Referenz
 
-| Variable                   | Service       | Bedeutung                                          |
-| -------------------------- | ------------- | -------------------------------------------------- |
-| `GATEWAY_INTERFACE`        | gateway       | NIC zum Gast-WLAN                                  |
-| `GATEWAY_IP`               | gateway       | Gateway-IP auf dieser NIC                          |
-| `GATEWAY_DHCP_RANGE_*`     | gateway       | DHCP-Pool für Gäste                                |
-| `APP_PORTAL_URL`           | gateway       | openNDS FAS → Splash (`/portal`)                   |
+| Variable                   | Service       | Bedeutung                                                  |
+| -------------------------- | ------------- | ---------------------------------------------------------- |
+| `GATEWAY_INTERFACE`        | gateway       | NIC zum Gast-WLAN                                          |
+| `GATEWAY_IP`               | gateway       | Gateway-IP auf dieser NIC                                  |
+| `GATEWAY_DHCP_RANGE_*`     | gateway       | DHCP-Pool für Gäste                                        |
+| `APP_PORTAL_URL`           | gateway       | openNDS FAS → Splash (`/portal`)                           |
 | `APP_API_URL`              | gateway       | Bridge → app `verify-ticket-code` (vom Gateway erreichbar) |
-| `APP_PORTAL_MENU_URL`      | gateway       | Default-Redirect nach Auth                         |
-| `PORTAL_FQDN`              | gateway       | Walled-Garden-Hostname                             |
-| `OPENNDS_FAS_KEY`          | gateway       | FAS-Shared-Secret (openNDS)                        |
-| `GATEWAY_AUTH_BRIDGE_PORT` | gateway       | Bridge-Port (Default `9100`)                       |
-| `GATEWAY_AUTH_BRIDGE_BIND` | gateway       | Bind-Adresse (Default `0.0.0.0`)                   |
-| `GATEWAY_AUTH_BRIDGE_URL`  | app           | App → Bridge (`http://172.17.0.1:9100` o. ä.)      |
-| `AUTH_KEY_CAPTIVE`         | app + gateway | Bridge-Auth; **nicht** im Browser                  |
+| `APP_PORTAL_MENU_URL`      | gateway       | Default-Redirect nach Auth                                 |
+| `PORTAL_FQDN`              | gateway       | Walled-Garden-Hostname                                     |
+| `OPENNDS_FAS_KEY`          | gateway       | FAS-Shared-Secret (openNDS)                                |
+| `GATEWAY_AUTH_BRIDGE_PORT` | gateway       | Bridge-Port (Default `9100`)                               |
+| `GATEWAY_AUTH_BRIDGE_BIND` | gateway       | Bind-Adresse (Default `0.0.0.0`)                           |
+| `GATEWAY_AUTH_BRIDGE_URL`  | app           | App → Bridge (`http://172.17.0.1:9100` o. ä.)              |
+| `AUTH_KEY_CAPTIVE`         | app + gateway | Bridge-Auth; **nicht** im Browser                          |
 
 Vollständige Vorlage: `.env.example`.
 

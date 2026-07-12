@@ -22,10 +22,7 @@ import { OpsSettingsValidationError } from './ops-settings-errors.js';
 import type { OpsSettings, RoutingMode } from './db-types.js';
 import { domainError } from '../errors/domain-error.js';
 import { parseMaxOccupancy } from '../ops/room-capacity.js';
-import {
-  parseJourneySettingsJson,
-  validateTopicJourneyAssignments,
-} from '../journey-settings.js';
+import { parseJourneySettingsJson, validateTopicJourneyAssignments } from '../journey-settings.js';
 
 export { ensureSingleDefaultCallTarget };
 

@@ -87,15 +87,17 @@ function buildPortalScenario(input: {
   `;
   section.append(flow);
 
-  section.append(buildChecklist([
-    'Router/AP: nur Gast-WLAN/VLAN; kein Access Point im Lieferumfang.',
-    'Dediziertes Gast-Netz + Firewall: Gäste nur zum Portal, nicht zu Ops/MFA/Host-Diensten.',
-    'GATEWAY_INTERFACE/GATEWAY_IP: Gastseite des Mini-PCs; DHCP setzt diese IP als Default-Route und DNS.',
-    'APP_PORTAL_URL/PORTAL_FQDN: Portal-Ziel der app für den Captive-Portal-Redirect.',
-    'Patienten geben immer zuerst ihre Wartenummer im Portal ein.',
-    'Danach: Portal weiter nutzen oder Internet über das Gateway freigeben.',
-    'GATEWAY_AUTH_BRIDGE_URL: von der app erreichbare Adresse der Auth-Bridge auf dem Gateway.',
-  ]));
+  section.append(
+    buildChecklist([
+      'Router/AP: nur Gast-WLAN/VLAN; kein Access Point im Lieferumfang.',
+      'Dediziertes Gast-Netz + Firewall: Gäste nur zum Portal, nicht zu Ops/MFA/Host-Diensten.',
+      'GATEWAY_INTERFACE/GATEWAY_IP: Gastseite des Mini-PCs; DHCP setzt diese IP als Default-Route und DNS.',
+      'APP_PORTAL_URL/PORTAL_FQDN: Portal-Ziel der app für den Captive-Portal-Redirect.',
+      'Patienten geben immer zuerst ihre Wartenummer im Portal ein.',
+      'Danach: Portal weiter nutzen oder Internet über das Gateway freigeben.',
+      'GATEWAY_AUTH_BRIDGE_URL: von der app erreichbare Adresse der Auth-Bridge auf dem Gateway.',
+    ]),
+  );
 
   return section;
 }
@@ -169,9 +171,7 @@ function flowStep(
 }
 
 function flowArrow(caption?: string): string {
-  const cap = caption
-    ? `<span class="net-flow-arrow-caption">${escapeHtml(caption)}</span>`
-    : '';
+  const cap = caption ? `<span class="net-flow-arrow-caption">${escapeHtml(caption)}</span>` : '';
   return `<div class="net-flow-arrow" aria-hidden="true"><span class="net-flow-arrow-icon">↓</span>${cap}</div>`;
 }
 

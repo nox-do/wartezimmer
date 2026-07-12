@@ -256,7 +256,9 @@ async function runComposeCommand(
   return { ok: result.code === 0, log, stdout: result.stdout };
 }
 
-export async function composeStop(options: ComposeRunOptions): Promise<{ ok: boolean; log: string }> {
+export async function composeStop(
+  options: ComposeRunOptions,
+): Promise<{ ok: boolean; log: string }> {
   const envPath = path.join(options.projectRoot, '.env');
   if (!fs.existsSync(envPath)) {
     return { ok: true, log: 'no .env — skipped compose stop' };
@@ -307,7 +309,9 @@ export async function composeLogs(
   return { ok: result.ok, log: result.log || result.stdout };
 }
 
-export async function composeDown(options: ComposeRunOptions): Promise<{ ok: boolean; log: string }> {
+export async function composeDown(
+  options: ComposeRunOptions,
+): Promise<{ ok: boolean; log: string }> {
   const envPath = path.join(options.projectRoot, '.env');
   if (!fs.existsSync(envPath)) {
     return { ok: true, log: 'no .env — skipped compose down' };

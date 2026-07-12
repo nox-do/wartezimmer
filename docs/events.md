@@ -29,20 +29,20 @@ Implementierung: `app/src/shared/outbox/outbox-worker.ts`, Emitter via `emitOutb
 
 Alle unten stehenden Typen sind **audit-only** (Worker setzt `published_at`, kein Side-Effect).
 
-| Event                      | Emitter (Auszug)                                            | Zweck                                                                                                       |
-| -------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `CheckinCreated`           | `flow-core-checkin.ts` (via `database.ts` / `runtime.checkIn()`) | Audit Check-in                                                                                         |
-| `VisitSuperseded`          | `database.ts` (`supersedeVisit`)                                | Audit Topic-Supersede (alte/neue visitId, topicId, lane)                                              |
-| `QueueStatusChanged`       | `database.ts` (Visit-Transitions)                           | Audit Queue-Transition                                                                                      |
-| `EmergencyRaised`          | `database-emergency.ts`                                     | Audit Terminal-Notfall                                                                                      |
-| `EmergencyAcknowledged`    | `database-emergency.ts`                                     | Audit MFA-Quittierung                                                                                       |
-| `PatientSessionClosed`     | `database-checkin-sessions.ts` (via `submitPatientSession`) | Audit Session-Ende; v1 ausgeloest nach Formular-Intake (`patient-documents/forms`), nicht nach Datei-Upload |
-| `DocumentIntakeReceived`   | `database-documents.ts`                                     | Audit Upload/Form-Intake                                                                                    |
-| `DocumentPreviewRequested` | `database-documents.ts`                                     | Audit MFA-Preview-Anfrage                                                                                   |
-| `DocumentLifecycleChanged` | `database-documents.ts`                                     | Audit discard/export/status                                                                                 |
-| `DayCloseStarted`          | `database-day-lifecycle.ts`                                 | Audit Tagesabschluss-Start (`day-close/start`)                                                              |
-| `BusinessDayReset`         | `database-day-lifecycle.ts`                                 | Audit Tagesreset (`day-lifecycle/reset`)                                                                    |
-| `OpsRuntimeReset`          | `database-runtime-reset.ts`                                 | Audit Wartungs-Reset                                                                                        |
+| Event                      | Emitter (Auszug)                                                 | Zweck                                                                                                       |
+| -------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `CheckinCreated`           | `flow-core-checkin.ts` (via `database.ts` / `runtime.checkIn()`) | Audit Check-in                                                                                              |
+| `VisitSuperseded`          | `database.ts` (`supersedeVisit`)                                 | Audit Topic-Supersede (alte/neue visitId, topicId, lane)                                                    |
+| `QueueStatusChanged`       | `database.ts` (Visit-Transitions)                                | Audit Queue-Transition                                                                                      |
+| `EmergencyRaised`          | `database-emergency.ts`                                          | Audit Terminal-Notfall                                                                                      |
+| `EmergencyAcknowledged`    | `database-emergency.ts`                                          | Audit MFA-Quittierung                                                                                       |
+| `PatientSessionClosed`     | `database-checkin-sessions.ts` (via `submitPatientSession`)      | Audit Session-Ende; v1 ausgeloest nach Formular-Intake (`patient-documents/forms`), nicht nach Datei-Upload |
+| `DocumentIntakeReceived`   | `database-documents.ts`                                          | Audit Upload/Form-Intake                                                                                    |
+| `DocumentPreviewRequested` | `database-documents.ts`                                          | Audit MFA-Preview-Anfrage                                                                                   |
+| `DocumentLifecycleChanged` | `database-documents.ts`                                          | Audit discard/export/status                                                                                 |
+| `DayCloseStarted`          | `database-day-lifecycle.ts`                                      | Audit Tagesabschluss-Start (`day-close/start`)                                                              |
+| `BusinessDayReset`         | `database-day-lifecycle.ts`                                      | Audit Tagesreset (`day-lifecycle/reset`)                                                                    |
+| `OpsRuntimeReset`          | `database-runtime-reset.ts`                                      | Audit Wartungs-Reset                                                                                        |
 
 **Nicht als Outbox-Event, aber implementiert:**
 

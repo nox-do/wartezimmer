@@ -155,29 +155,29 @@ aber inaktiv. Der Einstieg ist `syncRoutingRulesFromOpsSettings`; im Complex Mod
 
 **Aus OpsSettings abgeleitet (pro Topic):**
 
-| RoutingRule-Feld | Quelle |
-|----------------|--------|
-| `id` | `rule_{topicId}` |
-| `topicId` | `topic.topicId` |
-| `name` | `topic.label` |
-| `active` | `topic.enabled` |
-| `initialTargetLocationId` | `topic.defaultRoomId` → aufloesen auf enabled Room, sonst Empfang |
-| `terminalInstructionTemplate` | generiert aus `topic.label` |
-| `allowRedirect` | `0` fuer `mfa`, sonst `1` |
+| RoutingRule-Feld              | Quelle                                                            |
+| ----------------------------- | ----------------------------------------------------------------- |
+| `id`                          | `rule_{topicId}`                                                  |
+| `topicId`                     | `topic.topicId`                                                   |
+| `name`                        | `topic.label`                                                     |
+| `active`                      | `topic.enabled`                                                   |
+| `initialTargetLocationId`     | `topic.defaultRoomId` → aufloesen auf enabled Room, sonst Empfang |
+| `terminalInstructionTemplate` | generiert aus `topic.label`                                       |
+| `allowRedirect`               | `0` fuer `mfa`, sonst `1`                                         |
 
 **Fest generiert (Simple Routing Konstanten):**
 
-| RoutingRule-Feld | Wert |
-|------------------|------|
-| `initialLastKnownLocationId` | `pf_waiting` |
-| `initialQueueId` | `pf_general_queue` |
-| `initialMovementMode` | `call` |
-| `initialLocationConfidence` | `assumed` |
-| `publicDisplayMode` | `visible` |
-| `requiresReceptionConfirmation` | `false` |
-| `escortPolicy` | `none` |
-| `allowedSurfaceIds` | `[pf_terminal_1]` |
-| `journeyTemplateId` | `null` |
+| RoutingRule-Feld                | Wert               |
+| ------------------------------- | ------------------ |
+| `initialLastKnownLocationId`    | `pf_waiting`       |
+| `initialQueueId`                | `pf_general_queue` |
+| `initialMovementMode`           | `call`             |
+| `initialLocationConfidence`     | `assumed`          |
+| `publicDisplayMode`             | `visible`          |
+| `requiresReceptionConfirmation` | `false`            |
+| `escortPolicy`                  | `none`             |
+| `allowedSurfaceIds`             | `[pf_terminal_1]`  |
+| `journeyTemplateId`             | `null`             |
 
 Zusaetzlich wird immer eine MFA-Assist-Rule (`rule_mfa`) mit Empfangsziel und
 `allowRedirect: 0` synchronisiert.

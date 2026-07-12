@@ -89,9 +89,7 @@ export function normalizeSetupPlanInput(body: SetupPlanInput): NormalizedSetupPl
   };
 }
 
-export function normalizeApplySetupInput(
-  body: ApplySetupInput,
-): NormalizedSetupPlanInput & {
+export function normalizeApplySetupInput(body: ApplySetupInput): NormalizedSetupPlanInput & {
   runCompose?: boolean;
   preserveEnv?: boolean;
   delivery?: boolean;

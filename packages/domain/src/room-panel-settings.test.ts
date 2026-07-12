@@ -133,10 +133,7 @@ test('normalizeRoomPanelSettings applies defaults and outside constraints', () =
 
 test('normalizeRoomPanelCustomText truncates to max length', () => {
   const long = 'a'.repeat(ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH + 10);
-  assert.equal(
-    normalizeRoomPanelCustomText(long)?.length,
-    ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH,
-  );
+  assert.equal(normalizeRoomPanelCustomText(long)?.length, ROOM_PANEL_CUSTOM_TEXT_MAX_LENGTH);
   assert.equal(normalizeRoomPanelCustomText('   '), null);
 });
 
@@ -185,18 +182,18 @@ test('updateRoomPanelPlacementConfig patches one placement', () => {
 });
 
 test('resolveRoomPanelDisplayTextConfig uses custom or falls back', () => {
-  assert.deepEqual(
-    resolveRoomPanelDisplayTextConfig('custom', '  Hallo  ', 'please_enter'),
-    { preset: 'custom', custom: 'Hallo' },
-  );
-  assert.deepEqual(
-    resolveRoomPanelDisplayTextConfig('custom', '   ', 'please_wait_here'),
-    { preset: 'please_wait_here', custom: null },
-  );
-  assert.deepEqual(
-    resolveRoomPanelDisplayTextConfig('please_enter', null, 'please_wait_here'),
-    { preset: 'please_enter', custom: null },
-  );
+  assert.deepEqual(resolveRoomPanelDisplayTextConfig('custom', '  Hallo  ', 'please_enter'), {
+    preset: 'custom',
+    custom: 'Hallo',
+  });
+  assert.deepEqual(resolveRoomPanelDisplayTextConfig('custom', '   ', 'please_wait_here'), {
+    preset: 'please_wait_here',
+    custom: null,
+  });
+  assert.deepEqual(resolveRoomPanelDisplayTextConfig('please_enter', null, 'please_wait_here'), {
+    preset: 'please_enter',
+    custom: null,
+  });
 });
 
 test('applyRoomPanelPlacement coerces outside staff_full to arrival', () => {

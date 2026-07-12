@@ -7,10 +7,7 @@ import {
   startDayCloseInDb,
   type DayLifecycleDeps,
 } from './database-day-lifecycle.js';
-import {
-  setCheckinLockInDb,
-  type CheckinSessionDeps,
-} from './database-checkin-sessions.js';
+import { setCheckinLockInDb, type CheckinSessionDeps } from './database-checkin-sessions.js';
 import { normalizeDayClosePhase } from './database-time.js';
 
 type MutableDayCloseRow = {

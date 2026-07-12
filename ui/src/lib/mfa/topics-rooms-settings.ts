@@ -21,10 +21,7 @@ import {
 } from '$lib/queue/topic-settings-form';
 import { isValidLaneCode } from '@praxis-flow/domain';
 import { validateTopicTimeWindow } from '$lib/queue/time-of-day';
-import {
-  fetchRoutingCapabilities,
-  type RoutingCapabilities,
-} from '$lib/mfa/practice-ops-api';
+import { fetchRoutingCapabilities, type RoutingCapabilities } from '$lib/mfa/practice-ops-api';
 import { t, tf } from '$lib/i18n/i18nStore.svelte';
 import { toastStore } from '$lib/stores/toastStore';
 
@@ -142,7 +139,9 @@ export async function persistTopicsRoomsSettings(
       if (timeWindow.code === 'incomplete') {
         toastStore.error(tf('mfa.settings.topicTimeWindowIncompleteForTopic', { label }));
       } else {
-        toastStore.error(tf('mfa.settings.topicTimeInvalidForTopic', { label, value: timeWindow.value }));
+        toastStore.error(
+          tf('mfa.settings.topicTimeInvalidForTopic', { label, value: timeWindow.value }),
+        );
       }
       return null;
     }
@@ -150,7 +149,9 @@ export async function persistTopicsRoomsSettings(
 
   const result = await patchOpsSettings({ rooms: normalizedRooms, topics: normalizedTopics });
   if (!result.ok) {
-    toastStore.error(roomGuardErrorMessage(result.error, options?.roomQueueGuardContext ?? 'remove'));
+    toastStore.error(
+      roomGuardErrorMessage(result.error, options?.roomQueueGuardContext ?? 'remove'),
+    );
     return loadTopicsRoomsSettings();
   }
 
@@ -166,7 +167,9 @@ export async function persistTopicsRoomsSettings(
     rooms: [...result.data.rooms],
     topics: nextTopics,
     journeySettings: structuredClone(result.data.journeySettings),
-    routingCapabilities: await loadRoutingCapabilitiesAfterSave(options?.routingCapabilities ?? null),
+    routingCapabilities: await loadRoutingCapabilitiesAfterSave(
+      options?.routingCapabilities ?? null,
+    ),
     savedTopicsSnapshot: JSON.stringify(normalizeTopicsForSave(nextTopics)),
   };
 }

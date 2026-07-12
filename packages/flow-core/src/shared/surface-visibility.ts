@@ -13,16 +13,17 @@
 
 import type { PublicDisplayMode, Surface, SurfaceDisplayRule, Visit } from './types.js';
 
-export function allowsByDisplayMode(displayMode: PublicDisplayMode, visit: Pick<Visit, 'status'>): boolean {
+export function allowsByDisplayMode(
+  displayMode: PublicDisplayMode,
+  visit: Pick<Visit, 'status'>,
+): boolean {
   if (displayMode === 'hidden') return false;
   if (displayMode === 'call_only') return visit.status === 'called';
   return true;
 }
 
 /** TV wayfinding: self_go underwegs or pickup waiting for escort. */
-export function isPublicWayfindingVisit(
-  visit: Pick<Visit, 'status' | 'movementMode'>,
-): boolean {
+export function isPublicWayfindingVisit(visit: Pick<Visit, 'status' | 'movementMode'>): boolean {
   if (visit.status === 'directed') return true;
   return visit.status === 'waiting' && visit.movementMode === 'pickup';
 }
@@ -53,7 +54,9 @@ export function compareSurfaceDisplayRules(a: SurfaceDisplayRule, b: SurfaceDisp
   return String(a.id).localeCompare(String(b.id));
 }
 
-export function resolveSurfaceDisplayRule(matchingRules: SurfaceDisplayRule[]): SurfaceDisplayRule | undefined {
+export function resolveSurfaceDisplayRule(
+  matchingRules: SurfaceDisplayRule[],
+): SurfaceDisplayRule | undefined {
   if (!matchingRules.length) return undefined;
 
   const sorted = [...matchingRules].sort(compareSurfaceDisplayRules);
@@ -64,11 +67,17 @@ export function resolveSurfaceDisplayRule(matchingRules: SurfaceDisplayRule[]): 
   return topTier[0];
 }
 
-export function matchingSurfaceDisplayRules(visit: Visit, rulesForSurface: SurfaceDisplayRule[]): SurfaceDisplayRule[] {
+export function matchingSurfaceDisplayRules(
+  visit: Visit,
+  rulesForSurface: SurfaceDisplayRule[],
+): SurfaceDisplayRule[] {
   return rulesForSurface.filter((rule) => ruleMatchesVisit(rule, visit));
 }
 
-export function isPatientAtSurfaceLocation(visit: Pick<Visit, 'lastKnownLocationId'>, surface: Surface): boolean {
+export function isPatientAtSurfaceLocation(
+  visit: Pick<Visit, 'lastKnownLocationId'>,
+  surface: Surface,
+): boolean {
   return visit.lastKnownLocationId === surface.locationId;
 }
 

@@ -9,7 +9,10 @@ import {
 
 test('resolveMaxSignatureAgeHours falls back to 24h', () => {
   assert.equal(resolveMaxSignatureAgeHours(new Map()), 24);
-  assert.equal(resolveMaxSignatureAgeHours(new Map([['CLAMAV_MAX_SIGNATURE_AGE_HOURS', '24']])), 24);
+  assert.equal(
+    resolveMaxSignatureAgeHours(new Map([['CLAMAV_MAX_SIGNATURE_AGE_HOURS', '24']])),
+    24,
+  );
 });
 
 test('formatFreshclamAttemptLog formats last-attempt record with stderr message', () => {
@@ -19,8 +22,7 @@ test('formatFreshclamAttemptLog formats last-attempt record with stderr message'
       ok: false,
       exitCode: 9,
       source: 'startup',
-      message:
-        'ERROR: No DatabaseMirror or PrivateMirror servers set in freshclam config file.',
+      message: 'ERROR: No DatabaseMirror or PrivateMirror servers set in freshclam config file.',
     }),
   );
 

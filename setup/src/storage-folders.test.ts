@@ -3,13 +3,20 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { normalizeHostFolderPath, resolveStorageFoldersFromSources, writeStorageFolders } from './storage-folders.js';
+import {
+  normalizeHostFolderPath,
+  resolveStorageFoldersFromSources,
+  writeStorageFolders,
+} from './storage-folders.js';
 import { readEnvMap } from './env-file.js';
 import type { SetupContext } from './setup-context.js';
 
 test('normalizeHostFolderPath expands ~ and normalizes absolute paths', () => {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '';
-  assert.equal(normalizeHostFolderPath('~/praxis-flow-imports'), path.join(home, 'praxis-flow-imports'));
+  assert.equal(
+    normalizeHostFolderPath('~/praxis-flow-imports'),
+    path.join(home, 'praxis-flow-imports'),
+  );
   assert.equal(
     normalizeHostFolderPath('/tmp/praxis-flow-exports'),
     path.normalize('/tmp/praxis-flow-exports'),
@@ -64,7 +71,11 @@ test('resolveStorageFoldersFromSources expands ~ from env map', () => {
 test('writeStorageFolders updates env keys and creates directories', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-storage-'));
   const envPath = path.join(root, '.env');
-  fs.writeFileSync(envPath, 'IMPORTS_HOST_PATH=/old/imports\nEXPORTS_HOST_PATH=/old/exports\n', 'utf8');
+  fs.writeFileSync(
+    envPath,
+    'IMPORTS_HOST_PATH=/old/imports\nEXPORTS_HOST_PATH=/old/exports\n',
+    'utf8',
+  );
 
   const ctx: SetupContext = {
     home: root,
@@ -92,7 +103,11 @@ test('writeStorageFolders updates env keys and creates directories', () => {
 test('writeStorageFolders rejects existing files as folder paths', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-storage-file-'));
   const envPath = path.join(root, '.env');
-  fs.writeFileSync(envPath, 'IMPORTS_HOST_PATH=/old/imports\nEXPORTS_HOST_PATH=/old/exports\n', 'utf8');
+  fs.writeFileSync(
+    envPath,
+    'IMPORTS_HOST_PATH=/old/imports\nEXPORTS_HOST_PATH=/old/exports\n',
+    'utf8',
+  );
 
   const ctx: SetupContext = {
     home: root,

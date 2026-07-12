@@ -80,7 +80,7 @@ export function ensureOpsSetupSchema(db: DatabaseSync): void {
   }
   if (!columns.has('journey_settings_json')) {
     db.exec(
-      "ALTER TABLE ops_settings ADD COLUMN journey_settings_json TEXT NOT NULL DEFAULT '{\"templates\":[]}'",
+      'ALTER TABLE ops_settings ADD COLUMN journey_settings_json TEXT NOT NULL DEFAULT \'{"templates":[]}\'',
     );
   }
 }

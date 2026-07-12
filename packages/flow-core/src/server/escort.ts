@@ -1,5 +1,16 @@
-import type { EscortPolicy, Location, LocationConfidence, MovementMode, RoutingRule, VisitStatus } from '@praxis-flow/flow-core';
-import { applyEscortPolicyToMovementMode, resolveTerminalInstruction, statusForMovementMode } from '@praxis-flow/flow-core';
+import type {
+  EscortPolicy,
+  Location,
+  LocationConfidence,
+  MovementMode,
+  RoutingRule,
+  VisitStatus,
+} from '@praxis-flow/flow-core';
+import {
+  applyEscortPolicyToMovementMode,
+  resolveTerminalInstruction,
+  statusForMovementMode,
+} from '@praxis-flow/flow-core';
 
 export function resolveCheckInRouting(params: {
   selectedRule: RoutingRule;
@@ -20,7 +31,9 @@ export function resolveCheckInRouting(params: {
   let terminalInstruction = selectedRule.terminalInstructionTemplate;
 
   if (movementMode !== originalMovementMode) {
-    const target = locations.find((location) => location.id === selectedRule.initialTargetLocationId);
+    const target = locations.find(
+      (location) => location.id === selectedRule.initialTargetLocationId,
+    );
     terminalInstruction = resolveTerminalInstruction({
       baseInstruction: selectedRule.terminalInstructionTemplate,
       movementMode,

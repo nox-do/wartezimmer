@@ -40,7 +40,9 @@ export function createAdminService(params: {
       }
 
       const data = loadCatalog();
-      validateRoutingRuleDraft(data, { ...body, topicId: existing.topic_id } as RoutingRuleDraft, { ruleId: id });
+      validateRoutingRuleDraft(data, { ...body, topicId: existing.topic_id } as RoutingRuleDraft, {
+        ruleId: id,
+      });
 
       db.prepare(
         `UPDATE routing_rules SET
@@ -90,17 +92,16 @@ export function createAdminService(params: {
       assertJourneyTemplateEditable({ openVisitCount });
 
       maybeFail('journeyTemplate:update');
-      db.prepare('UPDATE journey_templates SET name = ?, topic_id = ?, active = ? WHERE id = ?').run(
-        body.name,
-        body.topicId ?? null,
-        body.active ? 1 : 0,
-        id,
-      );
+      db.prepare(
+        'UPDATE journey_templates SET name = ?, topic_id = ?, active = ? WHERE id = ?',
+      ).run(body.name, body.topicId ?? null, body.active ? 1 : 0, id);
       const existingSteps = db
         .prepare('SELECT id, sort_order FROM journey_steps WHERE template_id = ?')
         .all(id) as Array<{ id: string; sort_order: number }>;
       const existingById = new Set(existingSteps.map((step) => step.id));
-      const retainedStepIds = new Set((body.steps ?? []).flatMap((step) => (step.id ? [step.id] : [])));
+      const retainedStepIds = new Set(
+        (body.steps ?? []).flatMap((step) => (step.id ? [step.id] : [])),
+      );
 
       const upsertStep = db.prepare(
         `INSERT INTO journey_steps (
@@ -127,9 +128,9 @@ export function createAdminService(params: {
 
       for (const step of body.steps ?? []) {
         if (step.id && !existingById.has(step.id)) {
-            const foreign = lookupAnyStep.get(step.id) as { template_id: string } | undefined;
-            if (foreign?.template_id) throw new Error('JOURNEY_STEP_TEMPLATE_MISMATCH');
-            throw new Error('JOURNEY_STEP_NOT_FOUND');
+          const foreign = lookupAnyStep.get(step.id) as { template_id: string } | undefined;
+          if (foreign?.template_id) throw new Error('JOURNEY_STEP_TEMPLATE_MISMATCH');
+          throw new Error('JOURNEY_STEP_NOT_FOUND');
         }
 
         maybeFail(step.id ? 'journeyTemplate:updateStep' : 'journeyTemplate:insertStep');

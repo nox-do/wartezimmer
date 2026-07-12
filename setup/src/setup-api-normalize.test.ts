@@ -10,16 +10,13 @@ import {
 } from './setup-api-normalize.js';
 
 test('normalizeGatewayPlan applies defaults when gateway enabled', () => {
-  assert.deepEqual(
-    normalizeGatewayPlan({ enabled: true }, '192.168.1.10'),
-    {
-      enabled: true,
-      gatewayInterface: 'eth1',
-      gatewayIp: '192.168.88.1',
-      portalAppIp: '192.168.1.10',
-      authBridgeUrl: '',
-    },
-  );
+  assert.deepEqual(normalizeGatewayPlan({ enabled: true }, '192.168.1.10'), {
+    enabled: true,
+    gatewayInterface: 'eth1',
+    gatewayIp: '192.168.88.1',
+    portalAppIp: '192.168.1.10',
+    authBridgeUrl: '',
+  });
 });
 
 test('normalizeHostNetworkInput rejects missing gateway payload', () => {
@@ -30,16 +27,13 @@ test('normalizeHostNetworkInput rejects missing gateway payload', () => {
 });
 
 test('normalizeGatewayPlan keeps disabled gateway without inventing NIC values', () => {
-  assert.deepEqual(
-    normalizeGatewayPlan({ enabled: false }, '192.168.1.10'),
-    {
-      enabled: false,
-      gatewayInterface: 'eth1',
-      gatewayIp: '192.168.88.1',
-      portalAppIp: '192.168.1.10',
-      authBridgeUrl: '',
-    },
-  );
+  assert.deepEqual(normalizeGatewayPlan({ enabled: false }, '192.168.1.10'), {
+    enabled: false,
+    gatewayInterface: 'eth1',
+    gatewayIp: '192.168.88.1',
+    portalAppIp: '192.168.1.10',
+    authBridgeUrl: '',
+  });
 });
 
 test('normalizeSetupPlanInput fills practice default and trims LAN', () => {

@@ -13,7 +13,9 @@ import {
   waitingItemMatchesSearch,
 } from './waiting-list-filter';
 
-function item(partial: Partial<QueueItem> & Pick<QueueItem, 'visitId' | 'laneCode' | 'number'>): QueueItem {
+function item(
+  partial: Partial<QueueItem> & Pick<QueueItem, 'visitId' | 'laneCode' | 'number'>,
+): QueueItem {
   return {
     status: 'waiting',
     topicId: 'general',

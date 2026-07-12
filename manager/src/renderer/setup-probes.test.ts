@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ProbeResult } from '../shared/host-status.js';
-import {
-  buildSetupProbeInput,
-  connectionProbesReady,
-  pollSetupProbes,
-} from './setup-probes.js';
+import { buildSetupProbeInput, connectionProbesReady, pollSetupProbes } from './setup-probes.js';
 
 test('connectionProbesReady requires local probe and optional lan probe', () => {
   const okLocal: ProbeResult[] = [
@@ -89,10 +85,14 @@ test('pollSetupProbes retries until probes are ready', async () => {
     },
   };
 
-  const probes = await pollSetupProbes(api, { localAppBaseUrl: 'http://127.0.0.1:8080' }, {
-    intervalMs: 5,
-    maxWaitMs: 100,
-  });
+  const probes = await pollSetupProbes(
+    api,
+    { localAppBaseUrl: 'http://127.0.0.1:8080' },
+    {
+      intervalMs: 5,
+      maxWaitMs: 100,
+    },
+  );
 
   assert.equal(calls, 3);
   assert.equal(connectionProbesReady(probes), true);
@@ -105,10 +105,14 @@ test('pollSetupProbes returns last snapshot when deadline passes', async () => {
     }),
   };
 
-  const probes = await pollSetupProbes(api, { localAppBaseUrl: 'http://127.0.0.1:8080' }, {
-    intervalMs: 5,
-    maxWaitMs: 12,
-  });
+  const probes = await pollSetupProbes(
+    api,
+    { localAppBaseUrl: 'http://127.0.0.1:8080' },
+    {
+      intervalMs: 5,
+      maxWaitMs: 12,
+    },
+  );
 
   assert.equal(probes[0]?.ok, false);
 });

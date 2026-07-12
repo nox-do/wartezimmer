@@ -7,7 +7,9 @@ function tableHasColumn(db: DatabaseSync, table: string, column: string): boolea
 
 function visitsTableExists(db: DatabaseSync): boolean {
   const row = db
-    .prepare("SELECT 1 AS exists_flag FROM sqlite_master WHERE type = 'table' AND name = 'visits' LIMIT 1")
+    .prepare(
+      "SELECT 1 AS exists_flag FROM sqlite_master WHERE type = 'table' AND name = 'visits' LIMIT 1",
+    )
     .get() as { exists_flag?: number } | undefined;
   return row?.exists_flag === 1;
 }

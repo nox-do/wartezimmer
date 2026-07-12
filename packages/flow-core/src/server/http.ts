@@ -38,46 +38,76 @@ const server = createServer(async (request, response) => {
     }
     serveStatic(url.pathname, response);
   } catch (error) {
-    sendJson(response, httpStatusForError(error), { error: error instanceof Error ? error.message : String(error) });
+    sendJson(response, httpStatusForError(error), {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
-async function handleApi(request: IncomingMessage, response: ServerResponse, url: URL): Promise<void> {
-  if (request.method === 'GET' && url.pathname === '/api/catalog') return sendJson(response, 200, runtime.catalog());
-  if (request.method === 'GET' && url.pathname === '/api/visits') return sendJson(response, 200, runtime.visits());
+async function handleApi(
+  request: IncomingMessage,
+  response: ServerResponse,
+  url: URL,
+): Promise<void> {
+  if (request.method === 'GET' && url.pathname === '/api/catalog')
+    return sendJson(response, 200, runtime.catalog());
+  if (request.method === 'GET' && url.pathname === '/api/visits')
+    return sendJson(response, 200, runtime.visits());
   const eventMatch = url.pathname.match(/^\/api\/visits\/([^/]+)\/events$/);
-  if (request.method === 'GET' && eventMatch) return sendJson(response, 200, runtime.events(eventMatch[1]));
+  if (request.method === 'GET' && eventMatch)
+    return sendJson(response, 200, runtime.events(eventMatch[1]));
   if (request.method === 'POST' && url.pathname === '/api/check-in') {
     return sendJson(response, 200, runtime.checkIn(parseCheckInBody(await readJson(request))));
   }
-  const actionMatch = url.pathname.match(/^\/api\/visits\/([^/]+)\/(call|arrive|start|done|start_next_journey_step)$/);
+  const actionMatch = url.pathname.match(
+    /^\/api\/visits\/([^/]+)\/(call|arrive|start|done|start_next_journey_step)$/,
+  );
   if (request.method === 'POST' && actionMatch) {
     const body = await readJson(request);
     return sendJson(
       response,
       200,
-      runtime.transition(actionMatch[1], parseTransitionAction(actionMatch[2]), parseTransitionBody(body)),
+      runtime.transition(
+        actionMatch[1],
+        parseTransitionAction(actionMatch[2]),
+        parseTransitionBody(body),
+      ),
     );
   }
   const redirectMatch = url.pathname.match(/^\/api\/visits\/([^/]+)\/redirect$/);
   if (request.method === 'POST' && redirectMatch) {
-    return sendJson(response, 200, runtime.redirect(redirectMatch[1], parseRedirectBody(await readJson(request))));
+    return sendJson(
+      response,
+      200,
+      runtime.redirect(redirectMatch[1], parseRedirectBody(await readJson(request))),
+    );
   }
   const ruleMatch = url.pathname.match(/^\/api\/routing-rules\/([^/]+)$/);
   if (request.method === 'PUT' && ruleMatch) {
-    return sendJson(response, 200, runtime.saveRule(ruleMatch[1], parseSaveRuleBody(await readJson(request))));
+    return sendJson(
+      response,
+      200,
+      runtime.saveRule(ruleMatch[1], parseSaveRuleBody(await readJson(request))),
+    );
   }
   const journeyMatch = url.pathname.match(/^\/api\/journey-templates\/([^/]+)$/);
   if (request.method === 'PUT' && journeyMatch) {
     return sendJson(
       response,
       200,
-      runtime.saveJourneyTemplate(journeyMatch[1], parseSaveJourneyTemplateBody(await readJson(request))),
+      runtime.saveJourneyTemplate(
+        journeyMatch[1],
+        parseSaveJourneyTemplateBody(await readJson(request)),
+      ),
     );
   }
   const topicMatch = url.pathname.match(/^\/api\/topics\/([^/]+)$/);
   if (request.method === 'PUT' && topicMatch) {
-    return sendJson(response, 200, runtime.saveTopic(topicMatch[1], parseSaveTopicBody(await readJson(request))));
+    return sendJson(
+      response,
+      200,
+      runtime.saveTopic(topicMatch[1], parseSaveTopicBody(await readJson(request))),
+    );
   }
   sendJson(response, 404, { error: 'NOT_FOUND' });
 }

@@ -68,9 +68,7 @@ export function storagePathsChanged(
   if (!current) {
     return false;
   }
-  return (
-    draftImports.trim() !== current.imports || draftExports.trim() !== current.exports
-  );
+  return draftImports.trim() !== current.imports || draftExports.trim() !== current.exports;
 }
 
 export function storageWarningText(running: boolean, pathsChanged: boolean): string | null {

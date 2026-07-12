@@ -48,8 +48,10 @@ export function parseCheckInBody(body: unknown) {
     topicId,
     mfaAssist,
     authPath,
-    surfaceId: isString(raw.surfaceId) && raw.surfaceId.trim() ? raw.surfaceId.trim() : 'terminal_1',
-    displayName: isString(raw.displayName) && raw.displayName.trim() ? raw.displayName.trim() : undefined,
+    surfaceId:
+      isString(raw.surfaceId) && raw.surfaceId.trim() ? raw.surfaceId.trim() : 'terminal_1',
+    displayName:
+      isString(raw.displayName) && raw.displayName.trim() ? raw.displayName.trim() : undefined,
     needsAssistance,
     staffNote: isString(raw.staffNote) ? raw.staffNote : undefined,
   };
@@ -61,9 +63,13 @@ export function parseTransitionBody(body: unknown) {
   return {
     targetLocationId: 'targetLocationId' in raw ? nullableId(raw.targetLocationId) : undefined,
     actingLocationId:
-      isString(raw.actingLocationId) && raw.actingLocationId.trim() ? raw.actingLocationId.trim() : undefined,
+      isString(raw.actingLocationId) && raw.actingLocationId.trim()
+        ? raw.actingLocationId.trim()
+        : undefined,
     actorSurfaceId:
-      isString(raw.actorSurfaceId) && raw.actorSurfaceId.trim() ? raw.actorSurfaceId.trim() : undefined,
+      isString(raw.actorSurfaceId) && raw.actorSurfaceId.trim()
+        ? raw.actorSurfaceId.trim()
+        : undefined,
   };
 }
 
@@ -81,7 +87,8 @@ export function parseSaveTopicBody(body: unknown) {
       ['low', 'normal', 'high', 'urgent'] as const,
       'INVALID_REQUEST_BODY',
     ) as Priority,
-    estimatedDurationMin: typeof raw.estimatedDurationMin === 'number' ? raw.estimatedDurationMin : undefined,
+    estimatedDurationMin:
+      typeof raw.estimatedDurationMin === 'number' ? raw.estimatedDurationMin : undefined,
     active: Boolean(raw.active),
     sortOrder: typeof raw.sortOrder === 'number' ? raw.sortOrder : 0,
     laneCode: raw.laneCode.trim().toUpperCase(),
@@ -102,7 +109,11 @@ export function parseRedirectBody(body: unknown) {
   return {
     queueId,
     targetLocationId,
-    movementMode: assertEnum(raw.movementMode, MOVEMENT_MODES, 'INVALID_MOVEMENT_MODE') as MovementMode,
+    movementMode: assertEnum(
+      raw.movementMode,
+      MOVEMENT_MODES,
+      'INVALID_MOVEMENT_MODE',
+    ) as MovementMode,
     publicDisplayMode: assertEnum(
       raw.publicDisplayMode,
       PUBLIC_DISPLAY_MODES,
@@ -110,7 +121,9 @@ export function parseRedirectBody(body: unknown) {
     ) as PublicDisplayMode,
     staffNote: isString(raw.staffNote) ? raw.staffNote : undefined,
     actorSurfaceId:
-      isString(raw.actorSurfaceId) && raw.actorSurfaceId.trim() ? raw.actorSurfaceId.trim() : 'mfa_dashboard',
+      isString(raw.actorSurfaceId) && raw.actorSurfaceId.trim()
+        ? raw.actorSurfaceId.trim()
+        : 'mfa_dashboard',
     locationSemantics: (raw.locationSemantics == null
       ? 'instructed'
       : assertEnum(
@@ -118,7 +131,8 @@ export function parseRedirectBody(body: unknown) {
           REDIRECT_LOCATION_SEMANTICS,
           'INVALID_REDIRECT_LOCATION_SEMANTICS',
         )) as RedirectLocationSemantics,
-    lastKnownLocationId: 'lastKnownLocationId' in raw ? nullableId(raw.lastKnownLocationId) : undefined,
+    lastKnownLocationId:
+      'lastKnownLocationId' in raw ? nullableId(raw.lastKnownLocationId) : undefined,
     terminalInstruction: isString(raw.terminalInstruction) ? raw.terminalInstruction : undefined,
     preserveTerminalInstruction: Boolean(raw.preserveTerminalInstruction),
   };
@@ -142,7 +156,11 @@ export function parseSaveRuleBody(body: unknown) {
     initialLastKnownLocationId: nullableId(raw.initialLastKnownLocationId),
     initialTargetLocationId: nullableId(raw.initialTargetLocationId),
     initialQueueId: nullableId(raw.initialQueueId),
-    initialMovementMode: assertEnum(raw.initialMovementMode, MOVEMENT_MODES, 'INVALID_MOVEMENT_MODE') as MovementMode,
+    initialMovementMode: assertEnum(
+      raw.initialMovementMode,
+      MOVEMENT_MODES,
+      'INVALID_MOVEMENT_MODE',
+    ) as MovementMode,
     initialLocationConfidence: assertEnum(
       raw.initialLocationConfidence ?? 'instructed',
       LOCATION_CONFIDENCES,
@@ -153,9 +171,15 @@ export function parseSaveRuleBody(body: unknown) {
       PUBLIC_DISPLAY_MODES,
       'INVALID_PUBLIC_DISPLAY_MODE',
     ) as PublicDisplayMode,
-    terminalInstructionTemplate: isString(raw.terminalInstructionTemplate) ? raw.terminalInstructionTemplate : '',
+    terminalInstructionTemplate: isString(raw.terminalInstructionTemplate)
+      ? raw.terminalInstructionTemplate
+      : '',
     requiresReceptionConfirmation: Boolean(raw.requiresReceptionConfirmation),
-    escortPolicy: assertEnum(raw.escortPolicy, ESCORT_POLICIES, 'INVALID_ESCORT_POLICY') as EscortPolicy,
+    escortPolicy: assertEnum(
+      raw.escortPolicy,
+      ESCORT_POLICIES,
+      'INVALID_ESCORT_POLICY',
+    ) as EscortPolicy,
     allowRedirect: raw.allowRedirect == null ? true : Boolean(raw.allowRedirect),
     allowedSurfaceIds: allowedSurfaceIds?.length ? allowedSurfaceIds : undefined,
     journeyTemplateId: nullableId(raw.journeyTemplateId),
@@ -167,7 +191,9 @@ export function parseSaveJourneyTemplateBody(body: unknown) {
   const raw = body as Record<string, unknown>;
   if (!isString(raw.name) || !raw.name.trim()) throw new Error('INVALID_REQUEST_BODY');
 
-  const steps = Array.isArray(raw.steps) ? raw.steps.map((step, index) => parseJourneyStepDraft(step, index)) : [];
+  const steps = Array.isArray(raw.steps)
+    ? raw.steps.map((step, index) => parseJourneyStepDraft(step, index))
+    : [];
 
   return {
     name: raw.name.trim(),
@@ -189,15 +215,25 @@ function parseJourneyStepDraft(step: unknown, _index: number) {
     sortOrder: raw.sortOrder,
     targetLocationId: nullableId(raw.targetLocationId),
     queueId: nullableId(raw.queueId),
-    movementMode: assertEnum(raw.movementMode, MOVEMENT_MODES, 'INVALID_MOVEMENT_MODE') as MovementMode,
+    movementMode: assertEnum(
+      raw.movementMode,
+      MOVEMENT_MODES,
+      'INVALID_MOVEMENT_MODE',
+    ) as MovementMode,
     publicDisplayMode: assertEnum(
       raw.publicDisplayMode,
       PUBLIC_DISPLAY_MODES,
       'INVALID_PUBLIC_DISPLAY_MODE',
     ) as PublicDisplayMode,
-    completedWhen: assertEnum(raw.completedWhen, COMPLETED_WHEN_VALUES, 'INVALID_COMPLETED_WHEN') as JourneyCompletedWhen,
+    completedWhen: assertEnum(
+      raw.completedWhen,
+      COMPLETED_WHEN_VALUES,
+      'INVALID_COMPLETED_WHEN',
+    ) as JourneyCompletedWhen,
     instructionText:
-      isString(raw.instructionText) && raw.instructionText.trim() ? raw.instructionText.trim() : undefined,
+      isString(raw.instructionText) && raw.instructionText.trim()
+        ? raw.instructionText.trim()
+        : undefined,
   };
 }
 

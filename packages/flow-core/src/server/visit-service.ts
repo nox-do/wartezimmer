@@ -1,5 +1,10 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { ResolveBusinessDay, TransitionAction, Visit, VisitView } from '@praxis-flow/flow-core';
+import type {
+  ResolveBusinessDay,
+  TransitionAction,
+  Visit,
+  VisitView,
+} from '@praxis-flow/flow-core';
 import {
   MFA_ASSIST_TOPIC_ID,
   effectiveEscortPolicy,
@@ -143,7 +148,11 @@ export function createVisitService(params: {
     return after;
   };
 
-  const applyJourneyProgression = (visitId: string, action: TransitionAction, completedAt: string): VisitView | undefined => {
+  const applyJourneyProgression = (
+    visitId: string,
+    action: TransitionAction,
+    completedAt: string,
+  ): VisitView | undefined => {
     const updated = visitById(visitId);
     if (!updated?.journeyTemplateId || updated.journeyStepIndex == null) return updated;
 
@@ -159,7 +168,11 @@ export function createVisitService(params: {
 
   const startNextJourneyStep = (visitId: string): VisitView | undefined => {
     const current = visitById(visitId);
-    if (!current?.journeyTemplateId || current.journeyStepIndex == null || !current.journeyStepCompletedAt) {
+    if (
+      !current?.journeyTemplateId ||
+      current.journeyStepIndex == null ||
+      !current.journeyStepCompletedAt
+    ) {
       throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
     }
     const data = loadCatalog();
@@ -181,14 +194,19 @@ export function createVisitService(params: {
       const surfaceId = body.surfaceId ?? 'terminal_1';
 
       const checkInSurface = data.surfaces.find((item) => item.id === surfaceId && item.enabled);
-      if (!checkInSurface || checkInSurface.type !== 'terminal') throw new Error('CHECKIN_SURFACE_INVALID');
+      if (!checkInSurface || checkInSurface.type !== 'terminal')
+        throw new Error('CHECKIN_SURFACE_INVALID');
 
       const selectedTopic = data.topics.find((item) => item.id === resolvedTopicId && item.active);
       const selectedRule = ruleForTopicAtSurface(data, resolvedTopicId, surfaceId);
       if (!selectedTopic) throw new Error('TOPIC_OR_ROUTING_RULE_MISSING');
       if (!selectedRule) {
-        const hasActiveRule = data.routingRules.some((item) => item.topicId === resolvedTopicId && item.active);
-        throw new Error(hasActiveRule ? 'TOPIC_NOT_ALLOWED_AT_SURFACE' : 'TOPIC_OR_ROUTING_RULE_MISSING');
+        const hasActiveRule = data.routingRules.some(
+          (item) => item.topicId === resolvedTopicId && item.active,
+        );
+        throw new Error(
+          hasActiveRule ? 'TOPIC_NOT_ALLOWED_AT_SURFACE' : 'TOPIC_OR_ROUTING_RULE_MISSING',
+        );
       }
 
       const now = new Date().toISOString();
@@ -211,7 +229,9 @@ export function createVisitService(params: {
       const visitNeedsAssistance = checkInPath === 'topic' && needsAssistance;
 
       const useJourney = Boolean(selectedRule.journeyTemplateId);
-      const templateSteps = useJourney ? stepsForTemplate(selectedRule.journeyTemplateId!, data.journeySteps) : [];
+      const templateSteps = useJourney
+        ? stepsForTemplate(selectedRule.journeyTemplateId!, data.journeySteps)
+        : [];
       const journeyStep0 = templateSteps[0];
       if (useJourney && !journeyStep0) throw new Error('JOURNEY_STEP_MISSING');
 
@@ -230,8 +250,14 @@ export function createVisitService(params: {
       let routeNote = selectedRule.name;
 
       if (useJourney && journeyStep0) {
-        const target = data.locations.find((location) => location.id === journeyStep0.targetLocationId);
-        const stepPatch = stepToVisitPatch(journeyStep0, { effectiveEscortPolicy: effectivePolicy }, { targetLocation: target });
+        const target = data.locations.find(
+          (location) => location.id === journeyStep0.targetLocationId,
+        );
+        const stepPatch = stepToVisitPatch(
+          journeyStep0,
+          { effectiveEscortPolicy: effectivePolicy },
+          { targetLocation: target },
+        );
         visitLastKnown = lastKnownFromJourneyStep(journeyStep0, data.queues);
         visitTarget = stepPatch.targetLocationId;
         visitQueue = stepPatch.queueId;
@@ -266,7 +292,12 @@ export function createVisitService(params: {
       }
 
       maybeFail('checkIn:patient');
-      db.prepare('INSERT INTO patients VALUES (?, ?, ?, ?)').run(patientId, body.displayName || null, body.displayName ? 0 : 1, now);
+      db.prepare('INSERT INTO patients VALUES (?, ?, ?, ?)').run(
+        patientId,
+        body.displayName || null,
+        body.displayName ? 0 : 1,
+        now,
+      );
       maybeFail('checkIn:visit');
       db.prepare(CHECKIN_VISIT_INSERT_SQL).run(
         visitId,
@@ -307,11 +338,39 @@ export function createVisitService(params: {
         now,
       );
       maybeFail('checkIn:visitTopic');
-      db.prepare('INSERT INTO visit_topics VALUES (?, ?, ?, ?, ?)').run(crypto.randomUUID(), visitId, selectedTopic.id, 1, 'open');
+      db.prepare('INSERT INTO visit_topics VALUES (?, ?, ?, ?, ?)').run(
+        crypto.randomUUID(),
+        visitId,
+        selectedTopic.id,
+        1,
+        'open',
+      );
       maybeFail('checkIn:event:checked_in');
-      addEvent(visitId, 'checked_in', null, visitStatus, null, visitLastKnown, null, visitQueue, 'terminal', checkedInNote);
+      addEvent(
+        visitId,
+        'checked_in',
+        null,
+        visitStatus,
+        null,
+        visitLastKnown,
+        null,
+        visitQueue,
+        'terminal',
+        checkedInNote,
+      );
       maybeFail('checkIn:event:routed');
-      addEvent(visitId, 'routed', null, visitStatus, null, visitTarget, null, visitQueue, 'system', routeNote);
+      addEvent(
+        visitId,
+        'routed',
+        null,
+        visitStatus,
+        null,
+        visitTarget,
+        null,
+        visitQueue,
+        'system',
+        routeNote,
+      );
       return visitById(visitId);
     });
 
@@ -328,7 +387,11 @@ export function createVisitService(params: {
     });
   };
 
-  const transition = (visitId: string, action: TransitionAction, context: TransitionContext = {}): VisitView | undefined =>
+  const transition = (
+    visitId: string,
+    action: TransitionAction,
+    context: TransitionContext = {},
+  ): VisitView | undefined =>
     runInTransaction(db, () => {
       const current = visitById(visitId);
       if (!current) throw new Error('VISIT_NOT_FOUND');
@@ -366,7 +429,11 @@ export function createVisitService(params: {
         );
       } else if (action === 'arrive') {
         const data = loadCatalog();
-        const nextQueueId = resolveQueueOnArrival(current.queueId, current.targetLocationId, data.queues);
+        const nextQueueId = resolveQueueOnArrival(
+          current.queueId,
+          current.targetLocationId,
+          data.queues,
+        );
         maybeFail('transition:update');
         updateVisit(current, {
           status: 'arrived',
@@ -405,7 +472,9 @@ export function createVisitService(params: {
       } else if (action === 'done') {
         const data = loadCatalog();
         const steps =
-          current.journeyTemplateId != null ? stepsForTemplate(current.journeyTemplateId, data.journeySteps) : [];
+          current.journeyTemplateId != null
+            ? stepsForTemplate(current.journeyTemplateId, data.journeySteps)
+            : [];
         const currentStep =
           current.journeyStepIndex != null ? steps[current.journeyStepIndex] : undefined;
         const hasNextJourneyStep =

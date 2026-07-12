@@ -10,11 +10,7 @@ import type {
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { deliveryImagesReady } from './delivery-images-flow.js';
 import { buildSetupProbeInput, pollSetupProbes } from './setup-probes.js';
-import {
-  draftCanonicalBaseUrl,
-  isHttpOrigin,
-  matchesHostnameModeBase,
-} from './reachability.js';
+import { draftCanonicalBaseUrl, isHttpOrigin, matchesHostnameModeBase } from './reachability.js';
 import {
   buildGatewayPlanInput,
   createInitialWizardFields,
@@ -102,18 +98,13 @@ export function networkPrerequisitesReady(status: HostStatus | null): boolean {
   return checks.length > 0 && checks.every((check) => check.ok);
 }
 
-export function networkPrerequisitesFailed(
-  status: HostStatus | null,
-): NetworkBindingCheck[] {
+export function networkPrerequisitesFailed(status: HostStatus | null): NetworkBindingCheck[] {
   return (status?.networkPrerequisites ?? []).filter((check) => !check.ok);
 }
 
 export function canLeaveWizardStep1(status: HostStatus | null, busy: boolean): boolean {
   return (
-    dockerReady(status) &&
-    deliveryImagesReady(status) &&
-    networkPrerequisitesReady(status) &&
-    !busy
+    dockerReady(status) && deliveryImagesReady(status) && networkPrerequisitesReady(status) && !busy
   );
 }
 
@@ -130,7 +121,8 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
     if (!canonical || !isHttpOrigin(canonical)) {
       return {
         type: 'validate-error',
-        message: 'Bitte eine gültige Erreichbarkeit wählen (LAN-IP, Rechnername oder eigener Hostname).',
+        message:
+          'Bitte eine gültige Erreichbarkeit wählen (LAN-IP, Rechnername oder eigener Hostname).',
       };
     }
     return { type: 'goto', step: 3 };
@@ -244,7 +236,10 @@ export async function loadWizardNetwork(api: PraxisManagerApi): Promise<NetworkS
   return api.fetchSetupNetwork();
 }
 
-export async function loadWizardPlan(api: PraxisManagerApi, state: WizardFlowState): Promise<SetupPlan> {
+export async function loadWizardPlan(
+  api: PraxisManagerApi,
+  state: WizardFlowState,
+): Promise<SetupPlan> {
   return api.fetchSetupPlan(buildWizardPlanInput(state));
 }
 

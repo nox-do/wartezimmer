@@ -49,10 +49,7 @@ test('readEnvMap unescapes docker compose env values', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-env-read-'));
   try {
     const envPath = path.join(dir, '.env');
-    fs.writeFileSync(
-      envPath,
-      'AUTH_KEY_CAPTIVE=test-key\nSANDBOX_INTERNAL_TOKEN=test-token\n',
-    );
+    fs.writeFileSync(envPath, 'AUTH_KEY_CAPTIVE=test-key\nSANDBOX_INTERNAL_TOKEN=test-token\n');
     const map = readEnvMap(envPath);
     assert.equal(map.get('AUTH_KEY_CAPTIVE'), 'test-key');
   } finally {

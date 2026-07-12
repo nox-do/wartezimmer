@@ -313,9 +313,7 @@ export function handleMfaQueueDrop(visitId: string, target: QueueDropTarget) {
     if (!ensureRoomCapacity(command.room.roomId, command.visitId)) {
       return;
     }
-    void runMfaQueueAction(command.visitId, () =>
-      reassignRoomVisit(command.visitId, command.room),
-    );
+    void runMfaQueueAction(command.visitId, () => reassignRoomVisit(command.visitId, command.room));
     return;
   }
 

@@ -150,7 +150,12 @@ export function assertCheckInAllowed(
 export function assertTerminalAssistPressAllowed(
   deps: Pick<
     CheckinSessionDeps,
-    'dayCloseStateStmt' | 'normalizeDayClosePhase' | 'getBusinessDay' | 'getBusinessTimeZone' | 'getOpsSettings' | 'checkinLockStmt'
+    | 'dayCloseStateStmt'
+    | 'normalizeDayClosePhase'
+    | 'getBusinessDay'
+    | 'getBusinessTimeZone'
+    | 'getOpsSettings'
+    | 'checkinLockStmt'
   >,
 ): void {
   const state = deps.dayCloseStateStmt.get() as

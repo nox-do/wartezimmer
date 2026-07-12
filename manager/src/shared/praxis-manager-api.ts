@@ -40,13 +40,19 @@ export type PraxisManagerSetupApi = {
   openExternalUrl(url: string): Promise<void>;
   selectFolder(defaultPath?: string): Promise<SelectFolderResult>;
   selectReleaseArchive(): Promise<SelectReleaseArchiveResult>;
-  loadDeliveryImages(body: { archivePath: string; restartCompose?: boolean }): Promise<LoadDeliveryImagesResult>;
+  loadDeliveryImages(body: {
+    archivePath: string;
+    restartCompose?: boolean;
+  }): Promise<LoadDeliveryImagesResult>;
 };
 
 export type PraxisManagerMaintenanceApi = {
   getComposeStatus(): Promise<ComposeStatus>;
   getComposeLogs(service?: string, tail?: number): Promise<ComposeLogsResult>;
-  runComposeAction(action: 'start' | 'stop' | 'restart', build?: boolean): Promise<ComposeActionResult>;
+  runComposeAction(
+    action: 'start' | 'stop' | 'restart',
+    build?: boolean,
+  ): Promise<ComposeActionResult>;
   backupEnv(): Promise<EnvBackupResult>;
   saveEnvBackup(backupPath: string): Promise<SaveEnvBackupResult>;
   saveStorageFolders(body: StorageFoldersInput): Promise<StorageFoldersResult>;

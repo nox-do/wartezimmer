@@ -137,14 +137,19 @@ function setupVisitPortalFlow(): {
   syncFlowCoreCatalog(db, settings);
   const { deps: checkinDeps, stmts } = buildCheckinDeps(db, settings);
   const documentDeps = buildDocumentDeps(db, stmts, checkinDeps);
-  const created = createVisitCheckInInDb({ ...checkinDeps, db }, {
-    topicId: 'blut',
-    authPath: 'phone_dob',
-    checkinPhone: '+49172111111',
-    checkinLocale: 'de',
-    identityRef: 'Portal Patient',
-  });
-  const visit = getFlowCoreRuntime(db).visits().find((entry) => entry.id === created.visitId);
+  const created = createVisitCheckInInDb(
+    { ...checkinDeps, db },
+    {
+      topicId: 'blut',
+      authPath: 'phone_dob',
+      checkinPhone: '+49172111111',
+      checkinLocale: 'de',
+      identityRef: 'Portal Patient',
+    },
+  );
+  const visit = getFlowCoreRuntime(db)
+    .visits()
+    .find((entry) => entry.id === created.visitId);
   assert.ok(visit);
   const ticketCode = formatTicketCode(visit.queueLaneCode, created.number);
   return {
@@ -208,14 +213,7 @@ test('visit portal: document intake uses visit_id FK', () => {
 test('identity view reflects absent host overlay', () => {
   const { db, checkinDeps, settings, visitId } = setupVisitPortalFlow();
   const runtime = getFlowCoreRuntime(db);
-  setVisitAbsent(
-    db,
-    runtime,
-    settings,
-    visitId,
-    'wait_here',
-    '2026-07-05T12:10:00.000Z',
-  );
+  setVisitAbsent(db, runtime, settings, visitId, 'wait_here', '2026-07-05T12:10:00.000Z');
 
   const identity = getVisitIdentityViewFromDb(checkinDeps, visitId);
   assert.equal(identity.status, 'absent_wait_here');

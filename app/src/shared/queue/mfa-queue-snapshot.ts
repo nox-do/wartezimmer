@@ -1,5 +1,8 @@
 import type { CoreDatabase } from '../db/database.js';
-import { toAssistPendingItem, type TerminalAssistPendingItem } from '../checkin/terminal-assist-pending.js';
+import {
+  toAssistPendingItem,
+  type TerminalAssistPendingItem,
+} from '../checkin/terminal-assist-pending.js';
 
 export type MfaQueueSnapshot = {
   revision: number;
@@ -80,7 +83,9 @@ export function buildMfaQueueSnapshot(
     };
   });
 
-  const assistPending = db.listActiveTerminalAssistPending(nowMs).map((row) => toAssistPendingItem(row, nowMs));
+  const assistPending = db
+    .listActiveTerminalAssistPending(nowMs)
+    .map((row) => toAssistPendingItem(row, nowMs));
 
   return {
     revision,

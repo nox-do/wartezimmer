@@ -26,10 +26,7 @@ export async function lookupMfaIdentityCandidates(input: {
   });
 }
 
-export async function createMfaCheckin(input: {
-  topicId: string;
-  identityRef?: string;
-}) {
+export async function createMfaCheckin(input: { topicId: string; identityRef?: string }) {
   return cookieAuthFetch<VisitCreated>('/api/v1/checkins', {
     method: 'POST',
     body: JSON.stringify({

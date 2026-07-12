@@ -158,7 +158,11 @@ function sha256File(filePath) {
 }
 
 function writeManifest(outputDir, manifest) {
-  fs.writeFileSync(path.join(outputDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(
+    path.join(outputDir, 'manifest.json'),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+    'utf8',
+  );
 }
 
 function writeSha256Sums(outputDir, entries) {

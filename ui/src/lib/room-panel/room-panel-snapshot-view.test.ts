@@ -191,15 +191,11 @@ describe('resolveRoomPanelLeadLabel', () => {
 
 describe('roomPanelCandidateDisplayName', () => {
   it('renders ticket-only when names are disabled', () => {
-    expect(
-      roomPanelCandidateDisplayName({ identityRef: 'Muster' }, false),
-    ).toBeNull();
+    expect(roomPanelCandidateDisplayName({ identityRef: 'Muster' }, false)).toBeNull();
   });
 
   it('renders name only when policy allows and identityRef exists', () => {
-    expect(
-      roomPanelCandidateDisplayName({ identityRef: '  Muster  ' }, true),
-    ).toBe('Muster');
+    expect(roomPanelCandidateDisplayName({ identityRef: '  Muster  ' }, true)).toBe('Muster');
     expect(roomPanelCandidateDisplayName({ identityRef: null }, true)).toBeNull();
   });
 });

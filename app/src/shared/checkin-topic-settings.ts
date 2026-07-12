@@ -20,7 +20,13 @@ import {
 export type TopicSetting = OpsSettings['topics'][number];
 /** `defaultRoomId` wird im Simple-Routing-Sync zu `RoutingRule.initialTargetLocationId`. */
 
-export { MFA_ASSIST_TOPIC_ID, MFA_ASSIST_LANE_CODE, isReservedLaneCode, isValidLaneCode, normalizeLaneCode };
+export {
+  MFA_ASSIST_TOPIC_ID,
+  MFA_ASSIST_LANE_CODE,
+  isReservedLaneCode,
+  isValidLaneCode,
+  normalizeLaneCode,
+};
 
 const DEFAULT_CENTRAL_ROOM_ID = 'mfa-tresen';
 

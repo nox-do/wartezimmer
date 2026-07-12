@@ -18,13 +18,25 @@ describe('resolveQueueDrop', () => {
   it('does not call directed or pickup tickets dropped onto a room', () => {
     expect(
       resolveQueueDrop(
-        { visitId: 't1d', zone: 'waiting', status: 'directed', roomId: null, movementMode: 'self_go' },
+        {
+          visitId: 't1d',
+          zone: 'waiting',
+          status: 'directed',
+          roomId: null,
+          movementMode: 'self_go',
+        },
         { kind: 'room', roomId: 'labor', roomLabel: 'Labor' },
       ),
     ).toBeNull();
     expect(
       resolveQueueDrop(
-        { visitId: 't1p', zone: 'waiting', status: 'waiting', roomId: null, movementMode: 'pickup' },
+        {
+          visitId: 't1p',
+          zone: 'waiting',
+          status: 'waiting',
+          roomId: null,
+          movementMode: 'pickup',
+        },
         { kind: 'room', roomId: 'labor', roomLabel: 'Labor' },
       ),
     ).toBeNull();

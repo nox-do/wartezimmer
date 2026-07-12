@@ -113,7 +113,8 @@ export function upsertVisitHostState(
     absentMode: patch.absentMode !== undefined ? patch.absentMode : (existing?.absentMode ?? null),
     callbackPhone:
       patch.callbackPhone !== undefined ? patch.callbackPhone : (existing?.callbackPhone ?? null),
-    returnUntil: patch.returnUntil !== undefined ? patch.returnUntil : (existing?.returnUntil ?? null),
+    returnUntil:
+      patch.returnUntil !== undefined ? patch.returnUntil : (existing?.returnUntil ?? null),
     recallNotifyErrorCode:
       patch.recallNotifyErrorCode !== undefined
         ? patch.recallNotifyErrorCode
@@ -122,7 +123,8 @@ export function upsertVisitHostState(
       patch.recallNotifySent !== undefined
         ? patch.recallNotifySent
         : (existing?.recallNotifySent ?? false),
-    triageLevel: patch.triageLevel !== undefined ? patch.triageLevel : (existing?.triageLevel ?? null),
+    triageLevel:
+      patch.triageLevel !== undefined ? patch.triageLevel : (existing?.triageLevel ?? null),
     checkinPhone:
       patch.checkinPhone !== undefined ? patch.checkinPhone : (existing?.checkinPhone ?? null),
     checkinLocale:
@@ -197,7 +199,11 @@ export function setVisitCallbackPhone(
   return canonical;
 }
 
-export function clearVisitCallbackPhone(db: DatabaseSync, visitId: string, updatedAt: string): void {
+export function clearVisitCallbackPhone(
+  db: DatabaseSync,
+  visitId: string,
+  updatedAt: string,
+): void {
   upsertVisitHostState(db, visitId, { callbackPhone: null }, updatedAt);
 }
 
@@ -234,7 +240,11 @@ export function setVisitAbsentMode(
   upsertVisitHostState(db, visitId, { absentMode: mode }, updatedAt);
 }
 
-export function clearVisitRecallNotifyState(db: DatabaseSync, visitId: string, updatedAt: string): void {
+export function clearVisitRecallNotifyState(
+  db: DatabaseSync,
+  visitId: string,
+  updatedAt: string,
+): void {
   upsertVisitHostState(
     db,
     visitId,
@@ -325,7 +335,9 @@ export function countPendingDocumentsByVisitIds(
   }
 
   const documentsTable = db
-    .prepare("SELECT 1 AS exists_flag FROM sqlite_master WHERE type = 'table' AND name = 'documents' LIMIT 1")
+    .prepare(
+      "SELECT 1 AS exists_flag FROM sqlite_master WHERE type = 'table' AND name = 'documents' LIMIT 1",
+    )
     .get() as { exists_flag?: number } | undefined;
   if (documentsTable?.exists_flag !== 1) {
     return counts;

@@ -5,7 +5,10 @@ import type { CheckinSessionDeps } from '../db/database-checkin-sessions.js';
 import { assertCheckInAllowed } from '../db/database-checkin-sessions.js';
 import { upsertVisitHostState } from '../db/visit-host-state.js';
 import { canonicalizePhone } from '../phone/canonicalize-phone.js';
-import { resolveTopicLabelFromSettings, resolveCheckInDestinationRoomLabel } from '../checkin-topic-settings.js';
+import {
+  resolveTopicLabelFromSettings,
+  resolveCheckInDestinationRoomLabel,
+} from '../checkin-topic-settings.js';
 import { getFlowCoreRuntime } from './flow-core-runtime.js';
 import { PF_FLOW_SURFACE_TERMINAL } from './sync-catalog-from-ops-settings.js';
 

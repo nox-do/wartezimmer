@@ -95,10 +95,7 @@ export const DEFAULT_ROOM_PANEL_SETTINGS: RoomPanelSettings = {
 };
 
 function isRoomPanelPlacement(value: unknown): value is RoomPanelPlacement {
-  return (
-    typeof value === 'string' &&
-    (ROOM_PANEL_PLACEMENTS as readonly string[]).includes(value)
-  );
+  return typeof value === 'string' && (ROOM_PANEL_PLACEMENTS as readonly string[]).includes(value);
 }
 
 function isRoomPanelMode(value: unknown): value is RoomPanelMode {
@@ -107,8 +104,7 @@ function isRoomPanelMode(value: unknown): value is RoomPanelMode {
 
 function isRoomPanelTextPreset(value: unknown): value is RoomPanelTextPreset {
   return (
-    typeof value === 'string' &&
-    (ROOM_PANEL_TEXT_PRESETS as readonly string[]).includes(value)
+    typeof value === 'string' && (ROOM_PANEL_TEXT_PRESETS as readonly string[]).includes(value)
   );
 }
 
@@ -145,9 +141,7 @@ export function normalizeRoomPanelPlacementConfig(
   config: Partial<RoomPanelPlacementConfig> | null | undefined,
 ): RoomPanelPlacementConfig {
   const source = config ?? DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG;
-  let mode = isRoomPanelMode(source.mode)
-    ? source.mode
-    : DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG.mode;
+  let mode = isRoomPanelMode(source.mode) ? source.mode : DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG.mode;
   if (placement === 'outside' && mode === 'staff_full') {
     mode = 'arrival';
   }
@@ -156,8 +150,7 @@ export function normalizeRoomPanelPlacementConfig(
     enabled: source.enabled === true,
     mode,
     showPatientNames: placement === 'inside' && source.showPatientNames === true,
-    allowCalling:
-      placement === 'inside' && mode === 'staff_full' && source.allowCalling === true,
+    allowCalling: placement === 'inside' && mode === 'staff_full' && source.allowCalling === true,
     ...normalizeRoomPanelTextFields(source),
   };
 }

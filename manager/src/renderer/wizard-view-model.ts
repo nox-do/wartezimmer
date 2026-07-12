@@ -59,7 +59,10 @@ export function wizardCompletionItSettingsUrl(state: WizardControllerState): str
 
 export function wizardApplyResultItems(result: ApplySetupResult): string[] {
   const composeOk = result.compose?.ok === true;
-  const items = [`✓ .env geschrieben (${result.envPath})`, `${wizardCheckMark(composeOk)} Docker Compose`];
+  const items = [
+    `✓ .env geschrieben (${result.envPath})`,
+    `${wizardCheckMark(composeOk)} Docker Compose`,
+  ];
   if (result.gatewayComposeSkipped) {
     items.push(
       'Gateway auf diesem Rechner übersprungen; Werte für separates Linux-Gateway gespeichert',

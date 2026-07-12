@@ -5,9 +5,7 @@ import type { ProbeResult } from '@praxis-flow/server-shared';
 
 export type { ProbeResult } from '@praxis-flow/server-shared';
 
-function fetchStatus(
-  url: string,
-): Promise<{ ok: boolean; status: number; body: string }> {
+function fetchStatus(url: string): Promise<{ ok: boolean; status: number; body: string }> {
   return new Promise((resolve) => {
     let parsed: URL;
     try {

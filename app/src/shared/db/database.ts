@@ -372,7 +372,10 @@ export class CoreDatabase {
   }
 
   private initializeFlowCore(): void {
-    syncFlowCoreCatalog(this.db, getOpsSettingsFromDb(buildOpsSettingsReadParams(this.getOpsSettingsStmt)));
+    syncFlowCoreCatalog(
+      this.db,
+      getOpsSettingsFromDb(buildOpsSettingsReadParams(this.getOpsSettingsStmt)),
+    );
   }
 
   private commonHelperDeps() {
@@ -839,12 +842,7 @@ export class CoreDatabase {
     return this.withTransaction('checkInRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const transition = arriveVisit(
-        this.db,
-        getFlowCoreRuntime(this.db),
-        visitId,
-        actingRoomId,
-      );
+      const transition = arriveVisit(this.db, getFlowCoreRuntime(this.db), visitId, actingRoomId);
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
         fromStatus: transition.fromStatus,
@@ -1032,10 +1030,7 @@ export class CoreDatabase {
     });
   }
 
-  setIdentityRef(
-    visitId: string,
-    identityRef: string,
-  ): { identityRef: string; updatedAt: string } {
+  setIdentityRef(visitId: string, identityRef: string): { identityRef: string; updatedAt: string } {
     return this.withTransaction('setIdentityRef', () => {
       requireVisitExistsInDb(this.db, visitId);
       return setVisitIdentityRef(

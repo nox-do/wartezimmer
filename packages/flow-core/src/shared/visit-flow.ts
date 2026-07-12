@@ -28,10 +28,7 @@ export const TERMINAL_VISIT_STATUSES = new Set<TerminalVisitStatus>([
 ]);
 
 /** Nicht terminal — blockiert ggf. Tageskonfiguration; ACTIVE + blocked. */
-export const OPEN_VISIT_STATUSES = new Set<OpenVisitStatus>([
-  ...ACTIVE_VISIT_STATUSES,
-  'blocked',
-]);
+export const OPEN_VISIT_STATUSES = new Set<OpenVisitStatus>([...ACTIVE_VISIT_STATUSES, 'blocked']);
 
 export function isOpenVisitStatus(status: VisitStatus): status is OpenVisitStatus {
   return OPEN_VISIT_STATUSES.has(status as OpenVisitStatus);
@@ -51,7 +48,8 @@ export function assertTransitionAllowed(
 ): void {
   switch (action) {
     case 'call':
-      if (!['waiting', 'directed'].includes(visit.status)) throw new Error('CALL_ONLY_FROM_WAITING');
+      if (!['waiting', 'directed'].includes(visit.status))
+        throw new Error('CALL_ONLY_FROM_WAITING');
       if (visit.movementMode !== 'call') throw new Error('CALL_ONLY_FOR_CALL_MOVEMENT');
       return;
     case 'arrive':
@@ -81,7 +79,11 @@ export function assertTransitionAllowed(
       }
       return;
     case 'start_next_journey_step':
-      if (visit.journeyTemplateId == null || visit.journeyStepIndex == null || !visit.journeyStepCompletedAt) {
+      if (
+        visit.journeyTemplateId == null ||
+        visit.journeyStepIndex == null ||
+        !visit.journeyStepCompletedAt
+      ) {
         throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
       }
       return;
@@ -90,7 +92,11 @@ export function assertTransitionAllowed(
   }
 }
 
-export function canTransition(visit: Visit, action: TransitionAction, context: TransitionContext = {}): boolean {
+export function canTransition(
+  visit: Visit,
+  action: TransitionAction,
+  context: TransitionContext = {},
+): boolean {
   try {
     assertTransitionAllowed(visit, action, context);
     return true;
@@ -128,7 +134,8 @@ export function resolveReturnToWaitingVisitPatch(visit: Visit, catalog: Catalog)
   const waitingLocationId =
     rule?.initialLastKnownLocationId ??
     (waitingQueue?.homeLocationId &&
-    catalog.locations.find((item) => item.id === waitingQueue.homeLocationId)?.type === 'waiting_area'
+    catalog.locations.find((item) => item.id === waitingQueue.homeLocationId)?.type ===
+      'waiting_area'
       ? waitingQueue.homeLocationId
       : undefined);
 

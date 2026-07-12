@@ -6,7 +6,7 @@ import {
   parseRedirectBody,
   parseSaveJourneyTemplateBody,
   parseSaveRuleBody,
-  parseTransitionAction
+  parseTransitionAction,
 } from '@praxis-flow/flow-core';
 
 test('parseCheckInBody: topicId oder mfaAssist erforderlich', () => {
@@ -25,14 +25,14 @@ test('parseTransitionAction: unbekannte Action', () => {
 test('parseRedirectBody: Enum-Validierung', () => {
   assert.throws(
     () => parseRedirectBody({ movementMode: 'fly', publicDisplayMode: 'visible' }),
-    /INVALID_MOVEMENT_MODE/
+    /INVALID_MOVEMENT_MODE/,
   );
 });
 
 test('parseRedirectBody: ungültige queueId-Typen werden abgelehnt', () => {
   assert.throws(
     () => parseRedirectBody({ queueId: {}, movementMode: 'call', publicDisplayMode: 'visible' }),
-    /INVALID_REQUEST_BODY/
+    /INVALID_REQUEST_BODY/,
   );
 });
 
@@ -43,7 +43,7 @@ test('parseSaveRuleBody und parseSaveJourneyTemplateBody', () => {
     initialLocationConfidence: 'assumed',
     publicDisplayMode: 'visible',
     escortPolicy: 'none',
-    active: true
+    active: true,
   });
   assert.equal(rule.topicId, 'general');
 
@@ -51,8 +51,14 @@ test('parseSaveRuleBody und parseSaveJourneyTemplateBody', () => {
     name: 'Test',
     active: true,
     steps: [
-      { id: 'step_1', sortOrder: 0, movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' }
-    ]
+      {
+        id: 'step_1',
+        sortOrder: 0,
+        movementMode: 'call',
+        publicDisplayMode: 'visible',
+        completedWhen: 'arrive',
+      },
+    ],
   });
   assert.equal(template.steps.length, 1);
   assert.equal(template.steps[0].id, 'step_1');
@@ -64,16 +70,17 @@ test('saveRule: unbekannte Rule liefert ROUTING_RULE_NOT_FOUND', () => {
   const general = catalog.routingRules.find((item) => item.id === 'rule_general');
 
   assert.throws(
-    () => runtime.saveRule('missing_rule', {
-      topicId: general.topicId,
-      initialMovementMode: general.initialMovementMode,
-      initialLocationConfidence: general.initialLocationConfidence,
-      publicDisplayMode: general.publicDisplayMode,
-      terminalInstructionTemplate: general.terminalInstructionTemplate,
-      escortPolicy: general.escortPolicy,
-      active: true
-    }),
-    /ROUTING_RULE_NOT_FOUND/
+    () =>
+      runtime.saveRule('missing_rule', {
+        topicId: general.topicId,
+        initialMovementMode: general.initialMovementMode,
+        initialLocationConfidence: general.initialLocationConfidence,
+        publicDisplayMode: general.publicDisplayMode,
+        terminalInstructionTemplate: general.terminalInstructionTemplate,
+        escortPolicy: general.escortPolicy,
+        active: true,
+      }),
+    /ROUTING_RULE_NOT_FOUND/,
   );
 });
 
@@ -83,41 +90,53 @@ test('saveRule: falsches topicId wird abgelehnt (Journey-Spoofing)', () => {
   const infection = catalog.routingRules.find((item) => item.id === 'rule_infection');
 
   assert.throws(
-    () => runtime.saveRule('rule_infection', {
-      topicId: 'general',
-      initialMovementMode: infection.initialMovementMode,
-      initialLocationConfidence: infection.initialLocationConfidence,
-      publicDisplayMode: infection.publicDisplayMode,
-      terminalInstructionTemplate: infection.terminalInstructionTemplate,
-      escortPolicy: infection.escortPolicy,
-      journeyTemplateId: 'journey_general',
-      active: true
-    }),
-    /ROUTING_RULE_TOPIC_IMMUTABLE/
+    () =>
+      runtime.saveRule('rule_infection', {
+        topicId: 'general',
+        initialMovementMode: infection.initialMovementMode,
+        initialLocationConfidence: infection.initialLocationConfidence,
+        publicDisplayMode: infection.publicDisplayMode,
+        terminalInstructionTemplate: infection.terminalInstructionTemplate,
+        escortPolicy: infection.escortPolicy,
+        journeyTemplateId: 'journey_general',
+        active: true,
+      }),
+    /ROUTING_RULE_TOPIC_IMMUTABLE/,
   );
 });
 test('saveJourneyTemplate: leere aktive Journey wird verhindert', () => {
   const runtime = createRuntime(openDb({ path: ':memory:' }));
 
   assert.throws(
-    () => runtime.saveJourneyTemplate('journey_general', { name: 'Leer', topicId: 'general', active: true, steps: [] }),
-    /JOURNEY_STEPS_EMPTY/
+    () =>
+      runtime.saveJourneyTemplate('journey_general', {
+        name: 'Leer',
+        topicId: 'general',
+        active: true,
+        steps: [],
+      }),
+    /JOURNEY_STEPS_EMPTY/,
   );
 });
 
 test('redirect: Surface ohne supportsRedirect wird abgelehnt', () => {
   const runtime = createRuntime(openDb({ path: ':memory:' }));
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Redirect', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Redirect',
+    surfaceId: 'terminal_1',
+  });
 
   assert.throws(
-    () => runtime.redirect(created.id, {
-      queueId: 'lab_queue',
-      targetLocationId: 'lab',
-      movementMode: 'call',
-      publicDisplayMode: 'visible',
-      actorSurfaceId: 'waiting_tv'
-    }),
-    /REDIRECT_SURFACE_NOT_ALLOWED/
+    () =>
+      runtime.redirect(created.id, {
+        queueId: 'lab_queue',
+        targetLocationId: 'lab',
+        movementMode: 'call',
+        publicDisplayMode: 'visible',
+        actorSurfaceId: 'waiting_tv',
+      }),
+    /REDIRECT_SURFACE_NOT_ALLOWED/,
   );
 });
 
@@ -127,15 +146,20 @@ test('redirect: inaktive Location wird abgelehnt', () => {
     return { db, runtime: createRuntime(db) };
   })();
   db.prepare('UPDATE locations SET active = 0 WHERE id = ?').run('lab');
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Loc', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Loc',
+    surfaceId: 'terminal_1',
+  });
 
   assert.throws(
-    () => runtime.redirect(created.id, {
-      queueId: 'lab_queue',
-      targetLocationId: 'lab',
-      movementMode: 'call',
-      publicDisplayMode: 'visible'
-    }),
-    /LOCATION_INACTIVE_OR_MISSING/
+    () =>
+      runtime.redirect(created.id, {
+        queueId: 'lab_queue',
+        targetLocationId: 'lab',
+        movementMode: 'call',
+        publicDisplayMode: 'visible',
+      }),
+    /LOCATION_INACTIVE_OR_MISSING/,
   );
 });

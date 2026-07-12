@@ -3,7 +3,10 @@ import type { CoreDatabase } from '../../shared/db/database.js';
 import type { PatchOpsOnboardingBody, PatchOpsSettingsBody } from '../../api/ops-openapi-types.js';
 import { opsSchemas } from '../../api/generated/ops.fastify-schemas.js';
 import { sendDomainError, resolveDomainError } from '../../http/domain-error-mapper.js';
-import { opsSettingsInvalidHttpStatus, opsSettingsInvalidResponse } from '../../shared/db/ops-settings-errors.js';
+import {
+  opsSettingsInvalidHttpStatus,
+  opsSettingsInvalidResponse,
+} from '../../shared/db/ops-settings-errors.js';
 import { invalidateContactLookupCache } from '../../shared/contacts/contact-lookup-cache.js';
 import { assertPatchOpsSettingsAllowedForRole } from './ops-settings-patch-by-role.js';
 import { buildOpsSettingsUpdate, toOpsSettingsResponse } from './ops-settings-mapper.js';

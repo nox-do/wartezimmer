@@ -34,20 +34,27 @@ function isEnumMember<T extends string>(values: readonly T[], value: string): va
   return values.includes(value as T);
 }
 
-function normalizeJourneyStep(raw: unknown, index: number, templateIndex: number): JourneyStepSetting | null {
+function normalizeJourneyStep(
+  raw: unknown,
+  index: number,
+  templateIndex: number,
+): JourneyStepSetting | null {
   if (!isRecord(raw)) return null;
   const id = typeof raw.id === 'string' ? raw.id.trim() : '';
   if (id.length === 0) return null;
   const sortOrder = typeof raw.sortOrder === 'number' ? raw.sortOrder : index;
   const movementMode = typeof raw.movementMode === 'string' ? raw.movementMode.trim() : '';
-  const publicDisplayMode = typeof raw.publicDisplayMode === 'string' ? raw.publicDisplayMode.trim() : '';
+  const publicDisplayMode =
+    typeof raw.publicDisplayMode === 'string' ? raw.publicDisplayMode.trim() : '';
   const completedWhen = typeof raw.completedWhen === 'string' ? raw.completedWhen.trim() : '';
   if (
     !isEnumMember(MOVEMENT_MODES, movementMode) ||
     !isEnumMember(PUBLIC_DISPLAY_MODES, publicDisplayMode) ||
     !isEnumMember(COMPLETED_WHEN_VALUES, completedWhen)
   ) {
-    throw new Error(`JOURNEY_SETTINGS_INVALID: template ${templateIndex} step ${index} has invalid enums.`);
+    throw new Error(
+      `JOURNEY_SETTINGS_INVALID: template ${templateIndex} step ${index} has invalid enums.`,
+    );
   }
   return {
     id,
@@ -121,7 +128,9 @@ export function validateTopicJourneyAssignments(
   topics: Array<{ topicId: string; journeyTemplateId?: string | null }>,
   journeySettings: JourneySettings,
 ): { ok: true } | { ok: false; message: string } {
-  const templatesById = new Map(journeySettings.templates.map((template) => [template.id, template]));
+  const templatesById = new Map(
+    journeySettings.templates.map((template) => [template.id, template]),
+  );
   for (const topic of topics) {
     const journeyTemplateId = topic.journeyTemplateId ?? null;
     if (!journeyTemplateId) continue;

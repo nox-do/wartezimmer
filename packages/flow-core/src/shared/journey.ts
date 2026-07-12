@@ -21,7 +21,11 @@ import type {
   VisitStatus,
 } from './types.js';
 import type { TransitionAction } from './domain-enums.js';
-import { applyEscortPolicyToMovementMode, movementTerminalInstruction, resolveTerminalInstruction } from './escort.js';
+import {
+  applyEscortPolicyToMovementMode,
+  movementTerminalInstruction,
+  resolveTerminalInstruction,
+} from './escort.js';
 import { statusForMovementMode } from './visit-flow.js';
 
 export type JourneyCompletedPatch = {
@@ -50,7 +54,10 @@ export type JourneyVisitPatch = {
   journeyState?: 'completed';
 };
 
-export function formatStepFraction(index: number | null | undefined, stepCount: number): string | null {
+export function formatStepFraction(
+  index: number | null | undefined,
+  stepCount: number,
+): string | null {
   if (index == null || index < 0 || stepCount <= 0 || index >= stepCount) return null;
   return `${index + 1}/${stepCount}`;
 }
@@ -58,10 +65,16 @@ export function formatStepFraction(index: number | null | undefined, stepCount: 
 export function stepToVisitPatch(
   step: JourneyStep,
   visit?: Pick<Visit, 'effectiveEscortPolicy'>,
-  options: { targetLocation?: Pick<Location, 'name' | 'publicName'>; baseInstruction?: string } = {},
+  options: {
+    targetLocation?: Pick<Location, 'name' | 'publicName'>;
+    baseInstruction?: string;
+  } = {},
 ): JourneyVisitPatch {
   const originalMovementMode = step.movementMode;
-  const movementMode = applyEscortPolicyToMovementMode(visit?.effectiveEscortPolicy, step.movementMode);
+  const movementMode = applyEscortPolicyToMovementMode(
+    visit?.effectiveEscortPolicy,
+    step.movementMode,
+  );
   const patch: JourneyVisitPatch = {
     targetLocationId: step.targetLocationId ?? null,
     queueId: step.queueId ?? null,
@@ -88,7 +101,10 @@ export function stepToVisitPatch(
   return patch;
 }
 
-export function isStepCompletedByAction(step: JourneyStep | undefined, action: TransitionAction): boolean {
+export function isStepCompletedByAction(
+  step: JourneyStep | undefined,
+  action: TransitionAction,
+): boolean {
   return Boolean(step && step.completedWhen === action);
 }
 
@@ -105,7 +121,9 @@ export function startNextJourneyStepPatch(
     return { journeyStepIndex: null, journeyStepCompletedAt: null, journeyState: 'completed' };
   }
 
-  const targetLocation = options.locations?.find((location) => location.id === nextStep.targetLocationId);
+  const targetLocation = options.locations?.find(
+    (location) => location.id === nextStep.targetLocationId,
+  );
   const patch = stepToVisitPatch(nextStep, visit, { targetLocation });
   patch.terminalInstruction = nextStep.instructionText?.trim()
     ? nextStep.instructionText.trim()
@@ -136,8 +154,14 @@ export function completeJourneyStepPatch(
   visit: Visit,
   action: TransitionAction,
   steps: JourneyStep[],
-  options: { completedAt: string; locations?: Location[] } = { completedAt: new Date().toISOString() },
-): (JourneyVisitPatch & { journeyStepIndex: number }) | JourneyCompletedPatch | JourneyStepCompletedPatch | null {
+  options: { completedAt: string; locations?: Location[] } = {
+    completedAt: new Date().toISOString(),
+  },
+):
+  | (JourneyVisitPatch & { journeyStepIndex: number })
+  | JourneyCompletedPatch
+  | JourneyStepCompletedPatch
+  | null {
   if (visit.journeyTemplateId == null || visit.journeyStepIndex == null) return null;
 
   const currentStep = steps[visit.journeyStepIndex];
@@ -149,7 +173,10 @@ export function completeJourneyStepPatch(
   return { journeyStepCompletedAt: options.completedAt };
 }
 
-export function journeyStepLabel(steps: JourneyStep[], index: number | null | undefined): string | null {
+export function journeyStepLabel(
+  steps: JourneyStep[],
+  index: number | null | undefined,
+): string | null {
   if (!steps?.length || index == null || index < 0 || index >= steps.length) return null;
   return formatStepFraction(index, steps.length);
 }

@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  dockerInstallLink,
-  dockerPrerequisitesHints,
-} from './docker-prerequisites-ui.js';
+import { dockerInstallLink, dockerPrerequisitesHints } from './docker-prerequisites-ui.js';
 
 test('dockerInstallLink returns platform-specific docs URL', () => {
   assert.equal(

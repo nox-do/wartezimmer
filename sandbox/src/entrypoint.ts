@@ -1,8 +1,5 @@
 import { spawn } from 'node:child_process';
-import {
-  buildFreshclamAttemptMessage,
-  writeFreshclamAttempt,
-} from './freshclam-state.js';
+import { buildFreshclamAttemptMessage, writeFreshclamAttempt } from './freshclam-state.js';
 import { logSandboxInfo, logSandboxWarn, truncateLogTail } from './sandbox-log.js';
 
 function isEnabled(name: string, fallback: boolean): boolean {

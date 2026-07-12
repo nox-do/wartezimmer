@@ -8,12 +8,17 @@ test('resolveRedirectVisitPatch: instructed behaelt lastKnown, setzt Terminal-De
     terminalInstruction: 'Alter Hinweis',
     status: 'called',
     movementMode: 'call',
-    needsAssistance: false
+    needsAssistance: false,
   };
   const patch = resolveRedirectVisitPatch(
     current,
-    { queueId: 'lab_queue', targetLocationId: 'lab', movementMode: 'call', publicDisplayMode: 'visible' },
-    { targetLocation: { name: 'Labor' } }
+    {
+      queueId: 'lab_queue',
+      targetLocationId: 'lab',
+      movementMode: 'call',
+      publicDisplayMode: 'visible',
+    },
+    { targetLocation: { name: 'Labor' } },
   );
 
   assert.equal(patch.lastKnownLocationId, undefined);
@@ -23,15 +28,20 @@ test('resolveRedirectVisitPatch: instructed behaelt lastKnown, setzt Terminal-De
 
 test('resolveRedirectVisitPatch: confirmed setzt lastKnown auf Ziel', () => {
   const patch = resolveRedirectVisitPatch(
-    { lastKnownLocationId: 'waiting_general', terminalInstruction: 'x', status: 'waiting', movementMode: 'call' },
+    {
+      lastKnownLocationId: 'waiting_general',
+      terminalInstruction: 'x',
+      status: 'waiting',
+      movementMode: 'call',
+    },
     {
       queueId: null,
       targetLocationId: 'room_1',
       movementMode: 'pickup',
       publicDisplayMode: 'hidden',
-      locationSemantics: 'confirmed'
+      locationSemantics: 'confirmed',
     },
-    { targetLocation: { name: 'Raum 1' } }
+    { targetLocation: { name: 'Raum 1' } },
   );
 
   assert.equal(patch.lastKnownLocationId, 'room_1');
@@ -41,16 +51,21 @@ test('resolveRedirectVisitPatch: confirmed setzt lastKnown auf Ziel', () => {
 
 test('resolveRedirectVisitPatch: unknown kann lastKnown explizit nullen', () => {
   const patch = resolveRedirectVisitPatch(
-    { lastKnownLocationId: 'waiting_general', terminalInstruction: 'x', status: 'waiting', movementMode: 'call' },
+    {
+      lastKnownLocationId: 'waiting_general',
+      terminalInstruction: 'x',
+      status: 'waiting',
+      movementMode: 'call',
+    },
     {
       queueId: null,
       targetLocationId: 'lab',
       movementMode: 'call',
       publicDisplayMode: 'visible',
       locationSemantics: 'unknown',
-      lastKnownLocationId: null
+      lastKnownLocationId: null,
     },
-    { targetLocation: { name: 'Labor' } }
+    { targetLocation: { name: 'Labor' } },
   );
 
   assert.equal(patch.lastKnownLocationId, null);
@@ -64,10 +79,15 @@ test('resolveRedirectVisitPatch: Default ersetzt stale instruction', () => {
       terminalInstruction: 'Alter Check-in-Text',
       status: 'waiting',
       movementMode: 'call',
-      needsAssistance: false
+      needsAssistance: false,
     },
-    { queueId: 'lab_queue', targetLocationId: 'lab', movementMode: 'call', publicDisplayMode: 'visible' },
-    { targetLocation: { name: 'Labor' } }
+    {
+      queueId: 'lab_queue',
+      targetLocationId: 'lab',
+      movementMode: 'call',
+      publicDisplayMode: 'visible',
+    },
+    { targetLocation: { name: 'Labor' } },
   );
 
   assert.equal(patch.terminalInstruction, 'Bitte warten Sie. Sie werden aufgerufen.');

@@ -1,10 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  isValidTopicIconId,
-  normalizeTopicIconId,
-  TOPIC_ICON_IDS,
-} from './topic-icon-ids.js';
+import { isValidTopicIconId, normalizeTopicIconId, TOPIC_ICON_IDS } from './topic-icon-ids.js';
 
 test('TOPIC_ICON_IDS has unique kebab-case ids', () => {
   assert.equal(new Set(TOPIC_ICON_IDS).size, TOPIC_ICON_IDS.length);

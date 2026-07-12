@@ -7,10 +7,7 @@ import type {
 
 export type RoomPanelLeadState = 'waiting' | 'enter' | 'arrival';
 
-export function formatRoomPanelTicketCode(
-  laneCode: string,
-  number: number,
-): string {
+export function formatRoomPanelTicketCode(laneCode: string, number: number): string {
   return formatTicketCode(laneCode, number);
 }
 

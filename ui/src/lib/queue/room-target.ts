@@ -37,8 +37,6 @@ export function roomTargetFromTicketDestination(
   return { roomId, roomLabel };
 }
 
-export function resolveRoomTargetForCheckIn(
-  item: QueueItem | undefined,
-): RoomTarget | undefined {
+export function resolveRoomTargetForCheckIn(item: QueueItem | undefined): RoomTarget | undefined {
   return roomTargetFromQueueItem(item) ?? roomTargetFromTicketDestination(item);
 }

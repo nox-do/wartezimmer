@@ -43,9 +43,7 @@ export const MFA_SETTINGS_NAV: MfaSettingsNavGroup[] = [
 ];
 
 export function isJourneyDesignerNavVisible(capabilities: RoutingCapabilities | null): boolean {
-  return (
-    capabilities?.features.journeyDesigner === true && capabilities?.routingMode === 'complex'
-  );
+  return capabilities?.features.journeyDesigner === true && capabilities?.routingMode === 'complex';
 }
 
 export function buildMfaSettingsNav(

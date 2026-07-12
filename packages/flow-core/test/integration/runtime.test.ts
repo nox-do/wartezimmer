@@ -12,13 +12,13 @@ test('checkIn needsAssistance: Topic und Route unveraendert, nur Flag gesetzt', 
   const baseline = runtime.checkIn({
     topicId: 'general',
     displayName: 'Baseline',
-    surfaceId: 'terminal_1'
+    surfaceId: 'terminal_1',
   });
   const visit = runtime.checkIn({
     topicId: 'general',
     displayName: 'Test Patient',
     needsAssistance: true,
-    surfaceId: 'terminal_1'
+    surfaceId: 'terminal_1',
   });
 
   assert.equal(visit.primaryTopicId, 'general');
@@ -34,7 +34,7 @@ test('checkIn mfaAssist: checkInPath mfa_assist, normale Warteschlange, kein nee
   const { runtime } = testRuntime();
   const visit = runtime.checkIn({
     mfaAssist: true,
-    surfaceId: 'terminal_1'
+    surfaceId: 'terminal_1',
   });
 
   assert.equal(visit.primaryTopicId, 'mfa');
@@ -52,13 +52,14 @@ test('mfaAssist: redirect blockiert bei allowRedirect false', () => {
   const visit = runtime.checkIn({ mfaAssist: true, surfaceId: 'terminal_1' });
 
   assert.throws(
-    () => runtime.redirect(visit.id, {
-      queueId: 'lab_queue',
-      targetLocationId: 'lab',
-      movementMode: 'call',
-      publicDisplayMode: 'visible'
-    }),
-    /REDIRECT_NOT_ALLOWED/
+    () =>
+      runtime.redirect(visit.id, {
+        queueId: 'lab_queue',
+        targetLocationId: 'lab',
+        movementMode: 'call',
+        publicDisplayMode: 'visible',
+      }),
+    /REDIRECT_NOT_ALLOWED/,
   );
 });
 
@@ -68,7 +69,7 @@ test('checkIn infection + needsAssistance: Route und Lane unveraendert', () => {
   const visit = runtime.checkIn({
     topicId: 'infection',
     needsAssistance: true,
-    surfaceId: 'terminal_1'
+    surfaceId: 'terminal_1',
   });
 
   assert.equal(baseline.queueNumber, 'I-001');
@@ -85,7 +86,7 @@ test('checkIn Journey + needsAssistance: Autopilot bleibt aktiv', () => {
   const visit = runtime.checkIn({
     topicId: 'general',
     needsAssistance: true,
-    surfaceId: 'terminal_1'
+    surfaceId: 'terminal_1',
   });
 
   assert.equal(visit.needsAssistance, true);
@@ -98,7 +99,7 @@ test('checkIn Journey: Schritt 0 und Cursor gesetzt', () => {
   const visit = runtime.checkIn({
     topicId: 'general',
     displayName: 'Journey Patient',
-    surfaceId: 'terminal_1'
+    surfaceId: 'terminal_1',
   });
 
   assert.equal(visit.journeyTemplateId, 'journey_general');
@@ -112,7 +113,11 @@ test('checkIn Journey: Schritt 0 und Cursor gesetzt', () => {
 
 test('Journey completion: arrive am Empfang markiert Schritt 1/3 als erledigt', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Adv', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Adv',
+    surfaceId: 'terminal_1',
+  });
   assert.equal(created.lastKnownLocationId, 'waiting_general');
   assert.equal(created.journeyStepLabel, '1/3');
   runtime.transition(created.id, 'call');
@@ -139,7 +144,11 @@ test('Journey completion: arrive am Empfang markiert Schritt 1/3 als erledigt', 
 
 test('Journey next step: letzter Schritt setzt journeyStepIndex auf null', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Done', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Done',
+    surfaceId: 'terminal_1',
+  });
   runtime.transition(created.id, 'call');
   runtime.transition(created.id, 'arrive'); // 1/3 erledigt
   runtime.transition(created.id, 'start_next_journey_step'); // 1/3 → 2/3 Empfang
@@ -165,18 +174,41 @@ test('Journey next step mit Escort: self_go → pickup + Escort-Terminaltext', (
   const catalog = runtime.catalog();
   const steps = catalog.journeySteps.filter((step) => step.templateId === 'journey_general');
 
-  db.prepare('UPDATE routing_rules SET escort_policy = ? WHERE id = ?').run('required', 'rule_general');
+  db.prepare('UPDATE routing_rules SET escort_policy = ? WHERE id = ?').run(
+    'required',
+    'rule_general',
+  );
   runtime.saveJourneyTemplate('journey_general', {
     name: 'Sprechstunde Standard',
     topicId: 'general',
     active: true,
     steps: [
-      { id: steps[0].id, sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
-      { id: steps[1].id, sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'self_go', publicDisplayMode: 'hidden', completedWhen: 'start' }
-    ]
+      {
+        id: steps[0].id,
+        sortOrder: 0,
+        targetLocationId: 'reception',
+        queueId: 'general_queue',
+        movementMode: 'call',
+        publicDisplayMode: 'visible',
+        completedWhen: 'arrive',
+      },
+      {
+        id: steps[1].id,
+        sortOrder: 1,
+        targetLocationId: 'room_1',
+        queueId: null,
+        movementMode: 'self_go',
+        publicDisplayMode: 'hidden',
+        completedWhen: 'start',
+      },
+    ],
   });
 
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Escort', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Escort',
+    surfaceId: 'terminal_1',
+  });
   runtime.transition(created.id, 'call');
   runtime.transition(created.id, 'arrive');
   const after = runtime.transition(created.id, 'start_next_journey_step');
@@ -188,13 +220,17 @@ test('Journey next step mit Escort: self_go → pickup + Escort-Terminaltext', (
 
 test('redirect: journeyStepIndex null, journeyTemplateId bleibt, Journey-Exit-Event', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Redir', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Redir',
+    surfaceId: 'terminal_1',
+  });
   runtime.transition(created.id, 'call');
   const after = runtime.redirect(created.id, {
     queueId: 'lab_queue',
     targetLocationId: 'lab',
     movementMode: 'call',
-    publicDisplayMode: 'visible'
+    publicDisplayMode: 'visible',
   });
 
   assert.equal(after.journeyTemplateId, 'journey_general');
@@ -214,13 +250,17 @@ test('redirect: journeyStepIndex null, journeyTemplateId bleibt, Journey-Exit-Ev
 
 test('redirect: locationSemantics confirmed setzt lastKnownLocationId', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Conf', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Conf',
+    surfaceId: 'terminal_1',
+  });
   const after = runtime.redirect(created.id, {
     queueId: 'lab_queue',
     targetLocationId: 'lab',
     movementMode: 'call',
     publicDisplayMode: 'visible',
-    locationSemantics: 'confirmed'
+    locationSemantics: 'confirmed',
   });
 
   assert.equal(after.lastKnownLocationId, 'lab');
@@ -229,14 +269,18 @@ test('redirect: locationSemantics confirmed setzt lastKnownLocationId', () => {
 
 test('redirect: preserveTerminalInstruction behaelt alten Hinweis', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Keep', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Keep',
+    surfaceId: 'terminal_1',
+  });
   const beforeInstruction = created.terminalInstruction;
   const after = runtime.redirect(created.id, {
     queueId: 'lab_queue',
     targetLocationId: 'lab',
     movementMode: 'call',
     publicDisplayMode: 'visible',
-    preserveTerminalInstruction: true
+    preserveTerminalInstruction: true,
   });
 
   assert.equal(after.terminalInstruction, beforeInstruction);
@@ -244,7 +288,11 @@ test('redirect: preserveTerminalInstruction behaelt alten Hinweis', () => {
 
 test('Infekt-pickup: start aus waiting wird blockiert', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'infection', displayName: 'Infekt', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'infection',
+    displayName: 'Infekt',
+    surfaceId: 'terminal_1',
+  });
 
   assert.throws(() => runtime.transition(created.id, 'start'), /START_ONLY_WHEN_ARRIVED/);
 });
@@ -255,7 +303,7 @@ test('needsAssistance: start aus waiting wird blockiert wie normaler Patient', (
     topicId: 'general',
     displayName: 'Assist',
     needsAssistance: true,
-    surfaceId: 'terminal_1'
+    surfaceId: 'terminal_1',
   });
 
   assert.throws(() => runtime.transition(created.id, 'start'), /START_ONLY_WHEN_ARRIVED/);
@@ -263,28 +311,37 @@ test('needsAssistance: start aus waiting wird blockiert wie normaler Patient', (
 
 test('redirect: self_go blockiert bei effectiveEscortPolicy required', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'infection', displayName: 'Infekt', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'infection',
+    displayName: 'Infekt',
+    surfaceId: 'terminal_1',
+  });
 
   assert.throws(
-    () => runtime.redirect(created.id, {
-      queueId: 'infection_queue',
-      targetLocationId: 'waiting_infection',
-      movementMode: 'self_go',
-      publicDisplayMode: 'hidden'
-    }),
-    /SELF_GO_BLOCKED_BY_ESCORT_POLICY/
+    () =>
+      runtime.redirect(created.id, {
+        queueId: 'infection_queue',
+        targetLocationId: 'waiting_infection',
+        movementMode: 'self_go',
+        publicDisplayMode: 'hidden',
+      }),
+    /SELF_GO_BLOCKED_BY_ESCORT_POLICY/,
   );
 });
 
 test('updateVisit patchField: nullable Felder können auf null gesetzt werden', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Null', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Null',
+    surfaceId: 'terminal_1',
+  });
   runtime.transition(created.id, 'call');
   const after = runtime.redirect(created.id, {
     queueId: null,
     targetLocationId: 'room_1',
     movementMode: 'pickup',
-    publicDisplayMode: 'hidden'
+    publicDisplayMode: 'hidden',
   });
 
   assert.equal(after.queueId, undefined);
@@ -296,17 +353,34 @@ test('checkIn: disjunkte Terminal-Scopes waehlen passende Rule', () => {
   const db = openDb({ path: ':memory:' });
   const runtime = createRuntime(db);
   db.prepare(
-    `INSERT INTO routing_rules VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO routing_rules VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
-    'rule_blood_t1', 'blood', 'A Blut Eingang', 'entrance', 'lab', 'lab_queue',
-    'call', 'instructed', 'visible', 'Bitte warten am Eingang.', 0, 'none', 1,
-    '["terminal_1"]', null, 1
+    'rule_blood_t1',
+    'blood',
+    'A Blut Eingang',
+    'entrance',
+    'lab',
+    'lab_queue',
+    'call',
+    'instructed',
+    'visible',
+    'Bitte warten am Eingang.',
+    0,
+    'none',
+    1,
+    '["terminal_1"]',
+    null,
+    1,
   );
 
   const atT2 = runtime.checkIn({ topicId: 'blood', displayName: 'Labor', surfaceId: 'terminal_2' });
   assert.equal(atT2.appliedRoutingRuleId, 'rule_blood');
 
-  const atT1 = runtime.checkIn({ topicId: 'blood', displayName: 'Eingang', surfaceId: 'terminal_1' });
+  const atT1 = runtime.checkIn({
+    topicId: 'blood',
+    displayName: 'Eingang',
+    surfaceId: 'terminal_1',
+  });
   assert.equal(atT1.appliedRoutingRuleId, 'rule_blood_t1');
 });
 
@@ -316,19 +390,21 @@ test('createRuntime uses injected resolveBusinessDay for ticket snapshot', () =>
   const visit = runtime.checkIn({
     topicId: 'general',
     displayName: 'Fixed Day',
-    surfaceId: 'terminal_1'
+    surfaceId: 'terminal_1',
   });
 
   assert.equal(visit.queueNumberDate, '2026-06-02');
 });
 
 test('checkIn: Visit-ID entspricht Ticket-Format', () => {
-  const runtime = createRuntime(openDb({ path: ':memory:' }), { resolveBusinessDay: () => '2026-06-02' });
+  const runtime = createRuntime(openDb({ path: ':memory:' }), {
+    resolveBusinessDay: () => '2026-06-02',
+  });
   const visit = runtime.checkIn({
     topicId: 'general',
     displayName: 'Ticket-ID',
     surfaceId: 'terminal_1',
-    authPath: 'name_dob'
+    authPath: 'name_dob',
   });
 
   assert.equal(visit.id, '20260602-A-001');
@@ -339,7 +415,11 @@ test('checkIn: Visit-ID entspricht Ticket-Format', () => {
 
 test('transition call: targetLocationId setzt Aufrufziel', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Call Room', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Call Room',
+    surfaceId: 'terminal_1',
+  });
   const called = runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
 
   assert.equal(called.status, 'called');
@@ -348,12 +428,16 @@ test('transition call: targetLocationId setzt Aufrufziel', () => {
 
 test('transition: actingLocationId blockiert falschen Raum', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Scope', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Scope',
+    surfaceId: 'terminal_1',
+  });
   runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
 
   assert.throws(
     () => runtime.transition(created.id, 'arrive', { actingLocationId: 'room_2' }),
-    /VISIT_LOCATION_MISMATCH/
+    /VISIT_LOCATION_MISMATCH/,
   );
 
   const arrived = runtime.transition(created.id, 'arrive', { actingLocationId: 'room_1' });
@@ -363,7 +447,11 @@ test('transition: actingLocationId blockiert falschen Raum', () => {
 
 test('transition done: Raum-Panel darf direkt nach arrive abschliessen', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Panel', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Panel',
+    surfaceId: 'terminal_1',
+  });
   runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
   runtime.transition(created.id, 'arrive', { actingLocationId: 'room_1' });
 
@@ -374,7 +462,11 @@ test('transition done: Raum-Panel darf direkt nach arrive abschliessen', () => {
 
 test('transition return_to_waiting: called → waiting, Aufrufziel bleibt, Timestamps gelöscht', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'blood', displayName: 'Recall', surfaceId: 'terminal_2' });
+  const created = runtime.checkIn({
+    topicId: 'blood',
+    displayName: 'Recall',
+    surfaceId: 'terminal_2',
+  });
   runtime.transition(created.id, 'call', { targetLocationId: 'lab' });
 
   const after = runtime.transition(created.id, 'return_to_waiting');
@@ -391,7 +483,11 @@ test('transition return_to_waiting: called → waiting, Aufrufziel bleibt, Times
 
 test('transition return_to_waiting: arrive → waiting', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'blood', displayName: 'Recall2', surfaceId: 'terminal_2' });
+  const created = runtime.checkIn({
+    topicId: 'blood',
+    displayName: 'Recall2',
+    surfaceId: 'terminal_2',
+  });
   runtime.transition(created.id, 'call', { targetLocationId: 'lab' });
   runtime.transition(created.id, 'arrive', { actingLocationId: 'lab' });
 
@@ -405,7 +501,11 @@ test('transition return_to_waiting: arrive → waiting', () => {
 
 test('transition return_to_waiting: in_progress → waiting', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'blood', displayName: 'Recall3', surfaceId: 'terminal_2' });
+  const created = runtime.checkIn({
+    topicId: 'blood',
+    displayName: 'Recall3',
+    surfaceId: 'terminal_2',
+  });
   runtime.transition(created.id, 'call', { targetLocationId: 'lab' });
   runtime.transition(created.id, 'arrive', { actingLocationId: 'lab' });
   runtime.transition(created.id, 'start', { actingLocationId: 'lab' });
@@ -420,7 +520,11 @@ test('transition return_to_waiting: in_progress → waiting', () => {
 
 test('transition return_to_waiting: Journey rehydriert Aufrufziel aus aktivem Step', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Journey', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Journey',
+    surfaceId: 'terminal_1',
+  });
   runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
 
   const after = runtime.transition(created.id, 'return_to_waiting');
@@ -434,7 +538,11 @@ test('transition return_to_waiting: Journey rehydriert Aufrufziel aus aktivem St
 
 test('transition return_to_waiting: done blockiert', () => {
   const { runtime } = testRuntime();
-  const created = runtime.checkIn({ topicId: 'general', displayName: 'Done', surfaceId: 'terminal_1' });
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Done',
+    surfaceId: 'terminal_1',
+  });
   runtime.transition(created.id, 'call', { targetLocationId: 'room_1' });
   runtime.transition(created.id, 'arrive', { actingLocationId: 'room_1' });
   runtime.transition(created.id, 'done', { actingLocationId: 'room_1' });

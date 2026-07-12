@@ -26,10 +26,7 @@ import {
   resolvePracticeProfile,
   serializePracticeProfile,
 } from '../../shared/practice/practice-profile.js';
-import {
-  normalizeJourneySettings,
-  type JourneySettings,
-} from '../../shared/journey-settings.js';
+import { normalizeJourneySettings, type JourneySettings } from '../../shared/journey-settings.js';
 
 export function toPracticeProfileResponse(practiceProfileJson: string) {
   return resolvePracticeProfile(parsePracticeProfileJson(practiceProfileJson));

@@ -132,12 +132,7 @@ export function selectLocalDeliveryImagePair(refs: string[]): LocalDeliveryImage
 }
 
 export async function findLocalDeliveryImagePair(): Promise<LocalDeliveryImagePair | null> {
-  const result = await runDockerCommand([
-    'image',
-    'ls',
-    '--format',
-    '{{.Repository}}:{{.Tag}}',
-  ]);
+  const result = await runDockerCommand(['image', 'ls', '--format', '{{.Repository}}:{{.Tag}}']);
   if (result.code !== 0) {
     return null;
   }

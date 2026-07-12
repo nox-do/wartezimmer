@@ -1,4 +1,8 @@
-import type { RoutingMode, RoutingModeCapabilities, SetRoutingModeResult } from '@praxis-flow/server-shared';
+import type {
+  RoutingMode,
+  RoutingModeCapabilities,
+  SetRoutingModeResult,
+} from '@praxis-flow/server-shared';
 import { isComplexRoutingLicensed } from '@praxis-flow/server-shared';
 import { APP_DB_PATH, appDataVolumeName } from './staff-pin-reset.js';
 import { runDockerCommand } from './docker-cli.js';
@@ -208,10 +212,13 @@ async function fetchCapabilitiesFromApp(
   localAppBaseUrl = DEFAULT_LOCAL_APP,
 ): Promise<RoutingModeCapabilities | null> {
   try {
-    const response = await fetch(`${localAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/settings/capabilities`, {
-      headers: { [MANAGER_LOCAL_HEADER]: '1' },
-      signal: AbortSignal.timeout(5_000),
-    });
+    const response = await fetch(
+      `${localAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/settings/capabilities`,
+      {
+        headers: { [MANAGER_LOCAL_HEADER]: '1' },
+        signal: AbortSignal.timeout(5_000),
+      },
+    );
     if (!response.ok) {
       return null;
     }
@@ -242,9 +249,7 @@ async function patchRoutingModeViaApp(
         ok: false,
         code: typeof body.code === 'string' ? body.code : undefined,
         error:
-          typeof body.message === 'string'
-            ? body.message
-            : `App-API-Fehler (${response.status}).`,
+          typeof body.message === 'string' ? body.message : `App-API-Fehler (${response.status}).`,
         details:
           body.details && typeof body.details === 'object'
             ? (body.details as Record<string, unknown>)

@@ -52,7 +52,11 @@ import {
   resolveMaxSignatureAgeHours,
   type SandboxScannerStatus,
 } from './sandbox-health.js';
-import { DEFAULT_STAFF_PIN, SETUP_DEFAULT_GATEWAY_INTERFACE, SETUP_DEFAULT_GATEWAY_IP } from '@praxis-flow/server-shared';
+import {
+  DEFAULT_STAFF_PIN,
+  SETUP_DEFAULT_GATEWAY_INTERFACE,
+  SETUP_DEFAULT_GATEWAY_IP,
+} from '@praxis-flow/server-shared';
 import type {
   ApplySetupOptions,
   ComposeAction,
@@ -757,10 +761,7 @@ export async function saveHostNetwork(
   };
 
   if (gateway.enabled) {
-    Object.assign(
-      updates,
-      buildGatewayEnv(gateway, deviceUrls, defaultGatewayBridgeUrl()),
-    );
+    Object.assign(updates, buildGatewayEnv(gateway, deviceUrls, defaultGatewayBridgeUrl()));
     const { secrets } = resolveSecretsForEnv(existing, { preserve: true });
     if (!existing.get('OPENNDS_FAS_KEY')?.trim()) {
       updates.OPENNDS_FAS_KEY = secrets.OPENNDS_FAS_KEY;

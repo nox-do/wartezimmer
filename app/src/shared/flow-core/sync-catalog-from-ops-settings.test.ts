@@ -17,7 +17,10 @@ import {
 } from './sync-catalog-from-ops-settings.js';
 import type { OpsSettings } from '../db/db-types.js';
 import { EMPTY_JOURNEY_SETTINGS } from '../journey-settings.js';
-import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS, MFA_ASSIST_TOPIC_ID } from '../checkin-topic-settings.js';
+import {
+  DEFAULT_TERMINAL_TOPIC_DEFINITIONS,
+  MFA_ASSIST_TOPIC_ID,
+} from '../checkin-topic-settings.js';
 import { getFlowCoreRuntime } from './flow-core-runtime.js';
 
 function sampleOpsSettings(): OpsSettings {
@@ -106,9 +109,7 @@ test('syncCatalogFromOpsSettings maps PF topics and rooms into a valid flow-core
     .prepare(
       'SELECT initial_target_location_id AS target, initial_movement_mode AS movementMode, public_display_mode AS displayMode FROM routing_rules WHERE topic_id = ?',
     )
-    .get('rezept') as
-    | { target: string; movementMode: string; displayMode: string }
-    | undefined;
+    .get('rezept') as { target: string; movementMode: string; displayMode: string } | undefined;
   assert.ok(rezeptRule);
   assert.equal(rezeptRule.target, 'mfa-tresen');
   assert.equal(rezeptRule.movementMode, 'call');
@@ -152,9 +153,9 @@ test('syncCatalogFromOpsSettings creates room panel surfaces for enabled panels'
   const db = openTestFlowCoreDb();
   const summary = syncCatalogFromOpsSettings(db, sampleOpsSettings());
 
-  const panelSurface = db
-    .prepare('SELECT id FROM surfaces WHERE id = ?')
-    .get('pf_panel_labor') as { id: string } | undefined;
+  const panelSurface = db.prepare('SELECT id FROM surfaces WHERE id = ?').get('pf_panel_labor') as
+    | { id: string }
+    | undefined;
   assert.ok(panelSurface);
   assert.equal(summary.surfaces, 4);
 });
@@ -196,12 +197,14 @@ test('syncCatalogFromOpsSettings deactivates removed room locations and panel su
     | undefined;
   assert.equal(location?.active, 0);
 
-  const panelSurface = db.prepare('SELECT enabled FROM surfaces WHERE id = ?').get('pf_panel_labor') as
-    | { enabled: number }
-    | undefined;
+  const panelSurface = db
+    .prepare('SELECT enabled FROM surfaces WHERE id = ?')
+    .get('pf_panel_labor') as { enabled: number } | undefined;
   assert.equal(panelSurface?.enabled, 0);
 
-  const panelRule = db.prepare('SELECT id FROM surface_display_rules WHERE id = ?').get('panel_labor_target');
+  const panelRule = db
+    .prepare('SELECT id FROM surface_display_rules WHERE id = ?')
+    .get('panel_labor_target');
   assert.equal(panelRule, undefined);
 });
 
@@ -259,7 +262,9 @@ test('syncCatalogFromOpsSettings in simple mode: alle RoutingRules ohne Journey'
   syncCatalogFromOpsSettings(db, settings);
 
   const rules = db
-    .prepare('SELECT topic_id AS topicId, journey_template_id AS journeyTemplateId FROM routing_rules')
+    .prepare(
+      'SELECT topic_id AS topicId, journey_template_id AS journeyTemplateId FROM routing_rules',
+    )
     .all() as Array<{ topicId: string; journeyTemplateId: string | null }>;
   assert.ok(rules.length > 0);
   assert.ok(rules.every((rule) => rule.journeyTemplateId === null));
@@ -299,7 +304,9 @@ test('syncCatalogFromOpsSettings in simple mode ignores stored topic journeyTemp
   });
 
   const blutRule = db
-    .prepare('SELECT journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?')
+    .prepare(
+      'SELECT journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?',
+    )
     .get('blut') as { journeyTemplateId: string | null } | undefined;
   assert.equal(blutRule?.journeyTemplateId, null);
 });
@@ -321,9 +328,7 @@ test('syncCatalogFromOpsSettings in complex mode: mixed topics with and without 
     ...sampleOpsSettings(),
     routingMode: 'complex',
     topics: sampleOpsSettings().topics.map((topic) =>
-      topic.topicId === 'blut'
-        ? { ...topic, journeyTemplateId: 'journey_blut' }
-        : topic,
+      topic.topicId === 'blut' ? { ...topic, journeyTemplateId: 'journey_blut' } : topic,
     ),
     journeySettings: {
       templates: [
@@ -351,12 +356,16 @@ test('syncCatalogFromOpsSettings in complex mode: mixed topics with and without 
   syncCatalogFromOpsSettings(db, settings);
 
   const blutRule = db
-    .prepare('SELECT journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?')
+    .prepare(
+      'SELECT journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?',
+    )
     .get('blut') as { journeyTemplateId: string | null } | undefined;
   assert.equal(blutRule?.journeyTemplateId, 'journey_blut');
 
   const rezeptRule = db
-    .prepare('SELECT journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?')
+    .prepare(
+      'SELECT journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?',
+    )
     .get('rezept') as { journeyTemplateId: string | null } | undefined;
   assert.equal(rezeptRule?.journeyTemplateId, null);
 
@@ -369,9 +378,7 @@ test('complex mixed mode check-in uses journey step 0 for journey topic', () => 
     ...sampleOpsSettings(),
     routingMode: 'complex',
     topics: sampleOpsSettings().topics.map((topic) =>
-      topic.topicId === 'blut'
-        ? { ...topic, journeyTemplateId: 'journey_blut' }
-        : topic,
+      topic.topicId === 'blut' ? { ...topic, journeyTemplateId: 'journey_blut' } : topic,
     ),
     journeySettings: {
       templates: [

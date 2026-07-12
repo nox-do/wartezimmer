@@ -51,7 +51,9 @@ function notifyTvQueueChanged(db: CoreDatabase): void {
   publishTvQueueUpdate(db);
 }
 
-function resolveCheckinLocaleFromHeader(value: string | string[] | undefined): TerminalPatientLocale | null {
+function resolveCheckinLocaleFromHeader(
+  value: string | string[] | undefined,
+): TerminalPatientLocale | null {
   const raw = Array.isArray(value) ? value[0] : value;
   const normalized = raw?.trim() ?? '';
   return normalized && isTerminalPatientLocale(normalized) ? normalized : null;
@@ -158,7 +160,9 @@ export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): v
     async () => {
       const nowMs = Date.now();
       return {
-        items: db.listActiveTerminalAssistPending(nowMs).map((row) => toAssistPendingItem(row, nowMs)),
+        items: db
+          .listActiveTerminalAssistPending(nowMs)
+          .map((row) => toAssistPendingItem(row, nowMs)),
         serverTime: new Date(nowMs).toISOString(),
       };
     },

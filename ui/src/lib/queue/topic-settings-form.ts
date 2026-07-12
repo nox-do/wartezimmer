@@ -1,7 +1,4 @@
-import {
-  isReservedLaneCode,
-  MFA_ASSIST_LANE_CODE,
-} from '@praxis-flow/domain';
+import { isReservedLaneCode, MFA_ASSIST_LANE_CODE } from '@praxis-flow/domain';
 import type { PracticeRoom, PracticeTopicSetting } from './ops-settings-api';
 
 /** Re-export canonical reserved-lane helpers from `@praxis-flow/domain`. */

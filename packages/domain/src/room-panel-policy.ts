@@ -21,7 +21,9 @@ export function roomPanelRequiresPin(placement: RoomPanelPlacement): boolean {
   return placement === 'inside';
 }
 
-export function roomPanelCanCheckIn(panel: Pick<RoomPanelPolicyInput, 'placement' | 'mode'>): boolean {
+export function roomPanelCanCheckIn(
+  panel: Pick<RoomPanelPolicyInput, 'placement' | 'mode'>,
+): boolean {
   return panel.mode === 'arrival' || (panel.placement === 'inside' && panel.mode === 'staff_full');
 }
 

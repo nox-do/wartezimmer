@@ -38,9 +38,7 @@ async function waitForSetupApi(apiBase: string, timeoutMs = STARTUP_TIMEOUT_MS):
     }
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
-  throw new Error(
-    `Setup-API nicht erreichbar unter ${apiBase} — bitte Manager neu starten.`,
-  );
+  throw new Error(`Setup-API nicht erreichbar unter ${apiBase} — bitte Manager neu starten.`);
 }
 
 export type SetupServerHandle = {

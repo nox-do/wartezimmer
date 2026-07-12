@@ -81,7 +81,9 @@ function stripFlatDist(distDir) {
 
 const args = process.argv.slice(2);
 if (args.length === 0) {
-  console.error('Usage: node scripts/strip-production-artifacts.mjs <packageDir>|dist:<distDir> ...');
+  console.error(
+    'Usage: node scripts/strip-production-artifacts.mjs <packageDir>|dist:<distDir> ...',
+  );
   process.exit(1);
 }
 

@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  executeRuntimeResetInDb,
-  type RuntimeResetDeps,
-} from './database-runtime-reset.js';
+import { executeRuntimeResetInDb, type RuntimeResetDeps } from './database-runtime-reset.js';
 
 function createRuntimeResetDeps(): RuntimeResetDeps & {
   row: { locked?: number; phase?: string; lastResetBusinessDay?: string };
   outboxDeleted: boolean;
-  restoredProviderCalls: Array<{ providerId: string; enabled: boolean; credentials: Record<string, string> }>;
+  restoredProviderCalls: Array<{
+    providerId: string;
+    enabled: boolean;
+    credentials: Record<string, string>;
+  }>;
   emittedEvents: Array<{ type: string; payload: Record<string, unknown> }>;
   savedOpsSettings: Array<unknown>;
   emergencyClearedAt: string | null;
@@ -109,12 +110,7 @@ function createRuntimeResetDeps(): RuntimeResetDeps & {
       }),
     },
     upsertMessagingProviderConfigStmt: {
-      run: (
-        providerId: string,
-        _channel: string,
-        enabled: number,
-        credentialsJson: string,
-      ) => {
+      run: (providerId: string, _channel: string, enabled: number, credentialsJson: string) => {
         restoredProviderCalls.push({
           providerId,
           enabled: enabled === 1,

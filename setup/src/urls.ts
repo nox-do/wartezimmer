@@ -70,10 +70,7 @@ export function parseHttpBaseUrl(value: string | null | undefined): string | nul
   }
 }
 
-export function fallbackCanonicalBaseUrl(
-  lanAppIp: string,
-  port = DEFAULT_APP_PORT,
-): string {
+export function fallbackCanonicalBaseUrl(lanAppIp: string, port = DEFAULT_APP_PORT): string {
   return `http://${lanAppIp.trim()}:${port}`;
 }
 

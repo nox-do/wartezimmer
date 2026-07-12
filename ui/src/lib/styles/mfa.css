@@ -277,7 +277,8 @@
   }
 }
 
-.mfa-page .btn-staff-sm:not(.btn-staff-sm--doc):not(.btn-staff-sm--triage):not(.btn-staff-sm--danger) {
+.mfa-page
+  .btn-staff-sm:not(.btn-staff-sm--doc):not(.btn-staff-sm--triage):not(.btn-staff-sm--danger) {
   border-color: var(--mfa-ink);
   background: var(--mfa-ink);
   color: var(--card);

@@ -18,7 +18,9 @@ export function validateJourneySettingsEditable(
   db: DatabaseSync,
   current: JourneySettings,
   next: JourneySettings,
-): { ok: true } | { ok: false; code: string; message: string; templateId: string; openVisitCount: number } {
+):
+  | { ok: true }
+  | { ok: false; code: string; message: string; templateId: string; openVisitCount: number } {
   const currentById = new Map(current.templates.map((template) => [template.id, template]));
   const nextById = new Map(next.templates.map((template) => [template.id, template]));
 

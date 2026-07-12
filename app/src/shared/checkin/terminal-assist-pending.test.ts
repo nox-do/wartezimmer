@@ -60,7 +60,10 @@ function sampleSettings(): OpsSettings {
   };
 }
 
-function buildDeps(db: DatabaseSync, settings: OpsSettings): CheckinSessionDeps & { db: DatabaseSync } {
+function buildDeps(
+  db: DatabaseSync,
+  settings: OpsSettings,
+): CheckinSessionDeps & { db: DatabaseSync } {
   db.exec(`
     CREATE TABLE IF NOT EXISTS ops_state (
       id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -106,7 +109,8 @@ function stubDb(db: DatabaseSync, settings: OpsSettings) {
     getOpsSettings: () => settings,
     isEffectiveCheckinLocked: () => false,
     listQueue: () => listVisitQueueRows(runtime, settings, getBusinessDay()),
-    listActiveTerminalAssistPending: (nowMs = Date.now()) => listActiveTerminalAssistPending(db, nowMs),
+    listActiveTerminalAssistPending: (nowMs = Date.now()) =>
+      listActiveTerminalAssistPending(db, nowMs),
     expireTerminalAssistPending: (deviceId: string, nowMs = Date.now()) => {
       const rows = listActiveTerminalAssistPending(db, nowMs);
       const row = rows.find((entry) => entry.deviceId === deviceId);
@@ -155,7 +159,9 @@ test('terminal assist pending: check-in with active press sets needsAssistance',
   });
   clearTerminalAssistPending(db, TERMINAL_DEVICE_ID);
 
-  const visit = getFlowCoreRuntime(db).visits().find((entry) => entry.id === created.visitId);
+  const visit = getFlowCoreRuntime(db)
+    .visits()
+    .find((entry) => entry.id === created.visitId);
   assert.equal(visit?.needsAssistance, true);
   assert.equal(visit?.primaryTopicId, 'blut');
   assert.equal(isTerminalAssistPendingActive(db, TERMINAL_DEVICE_ID), false);

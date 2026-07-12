@@ -192,9 +192,6 @@ test('does not show wizard after leaving wizard before fetch resolves', async ()
 
 test('defaultWizardPresentation uses fullscreen before env exists', () => {
   assert.equal(defaultWizardPresentation(null), 'fullscreen');
-  assert.equal(
-    defaultWizardPresentation(minimalStatus({ envExists: false })),
-    'fullscreen',
-  );
+  assert.equal(defaultWizardPresentation(minimalStatus({ envExists: false })), 'fullscreen');
   assert.equal(defaultWizardPresentation(minimalStatus({ envExists: true })), 'embedded');
 });

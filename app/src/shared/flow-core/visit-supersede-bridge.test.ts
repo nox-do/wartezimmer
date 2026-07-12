@@ -2,18 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { DomainError } from '../errors/domain-error.js';
-import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS, MFA_ASSIST_TOPIC_ID } from '../checkin-topic-settings.js';
+import {
+  DEFAULT_TERMINAL_TOPIC_DEFINITIONS,
+  MFA_ASSIST_TOPIC_ID,
+} from '../checkin-topic-settings.js';
 import type { OpsSettings } from '../db/db-types.js';
 import { getBusinessDay } from '../db/database-time.js';
-import { ensureVisitHostStateSchema, getVisitHostState, upsertVisitHostState } from '../db/visit-host-state.js';
+import {
+  ensureVisitHostStateSchema,
+  getVisitHostState,
+  upsertVisitHostState,
+} from '../db/visit-host-state.js';
 import { ensureFlowCoreSchema } from './flow-core-schema.js';
 import { getFlowCoreRuntime, syncFlowCoreCatalog } from './flow-core-runtime.js';
 import { PF_FLOW_SURFACE_TERMINAL } from './sync-catalog-from-ops-settings.js';
 import { listVisitQueueRows } from './visit-queue-bridge.js';
-import {
-  rebindDocumentsForSupersede,
-  supersedeVisitTopic,
-} from './visit-supersede-bridge.js';
+import { rebindDocumentsForSupersede, supersedeVisitTopic } from './visit-supersede-bridge.js';
 
 function sampleSettings(): OpsSettings {
   return {
@@ -98,16 +102,12 @@ test('rebindDocumentsForSupersede: nur bei gültigem Successor-Paar', () => {
       updated_at TEXT
     );
   `);
-  db.prepare('INSERT INTO visits (id, supersedes_visit_id, superseded_by_visit_id) VALUES (?, ?, ?)').run(
-    'old',
-    null,
-    'new',
-  );
-  db.prepare('INSERT INTO visits (id, supersedes_visit_id, superseded_by_visit_id) VALUES (?, ?, ?)').run(
-    'new',
-    'old',
-    null,
-  );
+  db.prepare(
+    'INSERT INTO visits (id, supersedes_visit_id, superseded_by_visit_id) VALUES (?, ?, ?)',
+  ).run('old', null, 'new');
+  db.prepare(
+    'INSERT INTO visits (id, supersedes_visit_id, superseded_by_visit_id) VALUES (?, ?, ?)',
+  ).run('new', 'old', null);
   db.prepare('INSERT INTO documents (id, visit_id, updated_at) VALUES (?, ?, ?)').run(
     'doc1',
     'old',
@@ -136,16 +136,12 @@ test('rebindDocumentsForSupersede: falsches Paar abgelehnt', () => {
       updated_at TEXT
     );
   `);
-  db.prepare('INSERT INTO visits (id, supersedes_visit_id, superseded_by_visit_id) VALUES (?, ?, ?)').run(
-    'old',
-    null,
-    'new',
-  );
-  db.prepare('INSERT INTO visits (id, supersedes_visit_id, superseded_by_visit_id) VALUES (?, ?, ?)').run(
-    'new',
-    'old',
-    null,
-  );
+  db.prepare(
+    'INSERT INTO visits (id, supersedes_visit_id, superseded_by_visit_id) VALUES (?, ?, ?)',
+  ).run('old', null, 'new');
+  db.prepare(
+    'INSERT INTO visits (id, supersedes_visit_id, superseded_by_visit_id) VALUES (?, ?, ?)',
+  ).run('new', 'old', null);
   db.prepare('INSERT INTO visits (id) VALUES (?)').run('other');
 
   assert.throws(

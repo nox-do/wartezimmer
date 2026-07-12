@@ -70,10 +70,13 @@ describe('MFA settings nav', () => {
 
   it('marks the active child by exact route', () => {
     expect(
-      isMfaSettingsItemActive('/mfa/settings/topics-rooms/topics', '/mfa/settings/topics-rooms/topics'),
+      isMfaSettingsItemActive(
+        '/mfa/settings/topics-rooms/topics',
+        '/mfa/settings/topics-rooms/topics',
+      ),
     ).toBe(true);
-    expect(isMfaSettingsItemActive('/mfa/settings/topics-rooms', '/mfa/settings/topics-rooms/topics')).toBe(
-      false,
-    );
+    expect(
+      isMfaSettingsItemActive('/mfa/settings/topics-rooms', '/mfa/settings/topics-rooms/topics'),
+    ).toBe(false);
   });
 });

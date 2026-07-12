@@ -31,7 +31,10 @@ test('buildDeviceUrlsFromBaseUrl strips trailing slashes', () => {
 });
 
 test('buildDeviceUrls keeps legacy IP:port behavior', () => {
-  assert.deepEqual(buildDeviceUrls('192.168.1.13'), buildDeviceUrlsFromBaseUrl('http://192.168.1.13:8080'));
+  assert.deepEqual(
+    buildDeviceUrls('192.168.1.13'),
+    buildDeviceUrlsFromBaseUrl('http://192.168.1.13:8080'),
+  );
 });
 
 test('parseHttpBaseUrl accepts only http(s) origins', () => {
@@ -47,10 +50,7 @@ test('parseHttpBaseUrl accepts only http(s) origins', () => {
 });
 
 test('resolveCanonicalBaseUrl falls back to LAN IP when env is empty', () => {
-  assert.equal(
-    resolveCanonicalBaseUrl(new Map(), '192.168.1.50'),
-    'http://192.168.1.50:8080',
-  );
+  assert.equal(resolveCanonicalBaseUrl(new Map(), '192.168.1.50'), 'http://192.168.1.50:8080');
   assert.equal(resolveCanonicalBaseUrl(null, null), null);
 });
 

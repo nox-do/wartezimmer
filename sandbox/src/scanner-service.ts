@@ -58,14 +58,16 @@ function emptyFreshclamFields(): Pick<
 
 async function freshclamTelemetry(
   scannerDbPath: string,
-): Promise<Pick<
-  ScannerStatus,
-  | 'freshclamLastAttemptAt'
-  | 'freshclamLastAttemptOk'
-  | 'freshclamLastAttemptMessage'
-  | 'freshclamLastAttemptSource'
-  | 'freshclamLogTail'
->> {
+): Promise<
+  Pick<
+    ScannerStatus,
+    | 'freshclamLastAttemptAt'
+    | 'freshclamLastAttemptOk'
+    | 'freshclamLastAttemptMessage'
+    | 'freshclamLastAttemptSource'
+    | 'freshclamLogTail'
+  >
+> {
   const attempt = await readFreshclamAttempt(scannerDbPath);
   const freshclamLogTail = await readFreshclamLogTail();
   if (!attempt) {

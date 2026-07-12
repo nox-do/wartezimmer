@@ -11,7 +11,7 @@ Stand: 2026-07-12
 - Controller-Split bewusst zurückgestellt — JSDoc in `ui/src/routes/room-panel/+page.svelte` (Trigger + `tv-display`-Pattern)
 - ✅ TV-offline Aufruf-Gate (2026-07-12): `capabilities.callAnnouncementReachable` im Snapshot (Server-Presence); UI disabled+Tooltip; `disabledReason` aus OpenAPI entfernt
 - ✅ Kleinkram+i18n (2026-07-12): `updateRoomPanelPlacementConfig`→Domain; `room-panel-login.ts`+`room-panel-settings.ts` entfernt; Snapshot-Presets statt DE-Hardcode; `room-panel-text.ts` + `roomPanel.*` i18n
-- 🔍 Quality-Audit (2026-07-12): ESLint+Stylelint-Fixes; `.vscode/` + `.prettierignore`; `room-panel-text.ts` typecheck-Fix; tote Journey/Topic-CSS entfernt; PurgeCSS-Safelist für dynamische `queue-drop-zone--*`; Prettier-Drift + `format:check` in `verify` noch offen
+- 🔍 Quality-Audit (2026-07-12): ESLint+Stylelint+Prettier grün; `format:check` in `verify`; tote CSS entfernt; CI-Workflow für `verify` noch offen
 
 ## Hinweis: RoutingMode-Guard vs. offene Wartenummern (2026-07-10)
 
@@ -38,6 +38,7 @@ Stand: 2026-07-12
 **Umgesetzt:** Queue `startedAt` + Transitions `start_treatment` / `continue_journey`; Resolver `resolveMfaInRoomPrimaryAction`; MFA Buttons Starten/Weiter/Entlassen. Room-Panel unverändert (Arrive/Done, Auto-Start bei Checkout).
 
 **Regeln:**
+
 - Angekommen = Anwesenheit; Starten = Behandlung beginnt; Weiter = Routing anwenden; Entlassen = Visit-Ende.
 - Simple bekommt sichtbares **Starten** (nicht mehr still beim Entlassen) — an Core/`in_progress` und Complex angeglichen.
 - Signal: `in_room` + `startedAt` / `journeyStepCompletedAt` (Status bleibt `in_room` für Zone/Capacity).
@@ -45,14 +46,14 @@ Stand: 2026-07-12
 - Kein Folgeschritt (auch letzter Hop = Empfang) → Entlassen.
 - Kein bedienbares Panel → MFA zeigt alle nötigen Primary-Actions.
 
-| Situation | Simple | Complex |
-|---|---|---|
-| waiting | Aufrufen | Aufrufen |
-| called | Angekommen | Angekommen |
-| arrived (im Raum, noch nicht gestartet) | Starten | Starten |
-| in_progress + Flag, nächster call/pickup | — | Weiter |
-| in_progress + Flag, nächster self_go | — | (kein Weiter) |
-| in_progress, kein Folgeschritt / kein Template | Entlassen | Entlassen |
+| Situation                                      | Simple     | Complex       |
+| ---------------------------------------------- | ---------- | ------------- |
+| waiting                                        | Aufrufen   | Aufrufen      |
+| called                                         | Angekommen | Angekommen    |
+| arrived (im Raum, noch nicht gestartet)        | Starten    | Starten       |
+| in_progress + Flag, nächster call/pickup       | —          | Weiter        |
+| in_progress + Flag, nächster self_go           | —          | (kein Weiter) |
+| in_progress, kein Folgeschritt / kein Template | Entlassen  | Entlassen     |
 
 ## Heute: UI↔BE Drift-Aufräumen (Runde 1)
 
@@ -68,6 +69,7 @@ Stand: 2026-07-12
 3. **P0.2 Queue-Actions** — Split in `mfa-queue-modals` + `mfa-queue-commands`; Phone-Flows über `phoneCorrectionVisit.purpose` + `confirmMfaPhoneCorrection`; Barrel `mfa-queue-actions` bleibt Public API
 
 ### Review (manuell, 2026-07-10)
+
 - **OK:** Lane-Kanon, Actions-Split/Barrel, Phone-Unify, Catalog-Schreibstelle, Domain-Tests grün
 - **Medium:** Check-in-Verfügbarkeit bleibt Server (`terminalTopicsForUi` via `/api/v1/checkins/topics`); UI-Spiegel (`filterTopicsForCheckinUi` / Practice-Open im Context) wieder entfernt — Catalog nur Display
 - **Low:** `busyVisitId` lebt in Modal-State; `setPracticeTopicCatalog` noch öffentlich; `void practiceTopics`-Subscribe-Hack; `entry-copy` ohne Reactive-Track
@@ -78,25 +80,30 @@ Stand: 2026-07-12
 **Verdict:** kein Big-Bang nötig, aber 3 Hotspots vor Topic-Wechsel / neuen Queue-Actions angehen.
 
 ### P0 — vor Topic-Wechsel / neuen Queue-Actions
+
 1. **Topic-Validierung FE/BE driftet** — ✅ erledigt (siehe oben)
 2. **`mfa-queue-actions.svelte.ts` (~400)** — ✅ erledigt (Split + Phone-Unify)
 3. **Topic-Catalog 3× geladen** — ✅ erledigt (ein Bootstrap + Settings-Update)
 
 ### P1 — wenn man die Dateien sowieso anfasst
+
 - `+page.svelte` Orchestrator (20+ Imports / Callbacks) → Controller bündeln
 - `QueueEntry.svelte` (~386) — UI + Inline-Edit + DnD + Actions mischen
 - Settings-Boilerplate Topics/Rooms (load/persist copy-paste)
 - `queue-routes.ts` (~662) Backend nur bei Queue-API-Änderungen splitten
 
 ### Schon ok
+
 - `mfa-dashboard.svelte.ts` dünn; `MfaOpsStreamHost`; `queue-actions.ts` getrennt von MFA-Orchestrierung; Domain-Paket teilweise genutzt
 
 ### Nächster Schritt
+
 - Produktregeln Topic-Wechsel klären, dann Feature bauen
 
 ## Heute: MFA — Topic-Supersede (umgesetzt)
 
 ### Fachlich
+
 - Generischer Topic-Wechsel per Supersede-Kette; Policy v1 weit (`waiting`|`directed`, Ziel ≠ Quelle, aktiv); `arrivedAt`/`checkedInAt` behalten.
 - UI: Doppelklick Lane-Badge+Nummer → Modal → neue Nummer + Bon. DnD bleibt.
 - **Fix Drag vs Supersede:** DnD-Handle nur noch am Grip (nicht Ticket); Ticket bleibt klickbar für Topic-Wechsel (wie Name-Edit außerhalb der Drag-Zone).
@@ -108,6 +115,7 @@ Stand: 2026-07-12
 - Docs umhängen alt→neu nur im Supersede-Paar; MFA-Checkin unverändert.
 
 ### Implementiert
+
 - flow-core: `runtime.supersede()`, Link-Spalten via `ensureVisitSupersedeColumns`, Tests
 - Host: Policy, Bridge, Doc-Rebind, Outbox `VisitSuperseded`, `POST /api/v1/queue/:visitId/supersede`
 - UI: `MfaSupersedeModal`, QueueEntry Doppelklick
@@ -212,6 +220,7 @@ Stand zuvor: 2026-07-07 (Release **0.2.0** — Journey/Routing, non-breaking API
 - Markup in Wizard/Wartung/Netzwerk/Setup auf neue Klassen umgestellt
 
 **Review-Fokus (visuell prüfen):**
+
 1. Hint-Abstände (Wizard-Schritte, Netzwerk-Hinweise, Wartung-Texte) — früher `.wizard-hint` ohne Margin vs `.maintenance-hint` mit Margin, jetzt einheitlich `.hint`
 2. Checklisten Setup-Entry + Wizard Schritt 1/Abschluss — Mark-Größe/Gewicht leicht vereinheitlicht
 3. Wizard-Footer (Zurück/Weiter/Abbrechen) + Completion-Buttons
@@ -224,6 +233,7 @@ Stand zuvor: 2026-07-07 (Release **0.2.0** — Journey/Routing, non-breaking API
 Review-Canvas: `~/.cursor/projects/.../canvases/manager-svelte5-review.canvas.tsx`
 
 **Top-Funde (noch offen):**
+
 - Snapshot-Shallow-Copy statt reaktiver Controller-State — Svelte-5-Migrationsmuster
 - Topology-Diagramm remountet bei jedem Keystroke
 - Tote Flächen: `getComposeStatus`, `maintenance.subscribe`, `setButtonIcon`

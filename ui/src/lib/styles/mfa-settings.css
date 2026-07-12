@@ -460,7 +460,8 @@
   cursor: pointer;
 }
 
-.segmented-control--journey .segmented-control__option:hover:not(:disabled):not([aria-checked='true']) {
+.segmented-control--journey
+  .segmented-control__option:hover:not(:disabled):not([aria-checked='true']) {
   border-color: var(--zinc-400);
   background: color-mix(in srgb, var(--mfa-border) 14%, transparent);
 }

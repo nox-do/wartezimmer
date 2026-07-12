@@ -8,9 +8,7 @@
     "editor.defaultFormatter": "svelte.svelte-vscode"
   },
   "eslint.useFlatConfig": true,
-  "eslint.workingDirectories": [
-    { "mode": "auto" }
-  ],
+  "eslint.workingDirectories": [{ "mode": "auto" }],
   "eslint.validate": ["javascript", "typescript", "svelte"],
   "svelte.enable-ts-plugin": true,
   "stylelint.validate": ["css"],

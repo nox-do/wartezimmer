@@ -786,7 +786,8 @@ export const dict = {
       roomPanelShowNamesHint:
         'Namen werden nur an Panels im Raum ausgeliefert. Nur einschalten, wenn Patienteninformationen dort sichtbar sein dürfen.',
       roomPanelCalledText: 'Aufruf-Hinweis',
-      roomPanelCalledTextHint: 'Erscheint, wenn der Patient aufgerufen wird (Bitte eintreten/kommen).',
+      roomPanelCalledTextHint:
+        'Erscheint, wenn der Patient aufgerufen wird (Bitte eintreten/kommen).',
       roomPanelArrivedText: 'Ankunfts-Hinweis',
       roomPanelArrivedTextHint: 'Erscheint, wenn der Patient angekommen ist (wartet im Raum).',
       roomPanelCustomTextPlaceholder: 'Eigener Text optional',
@@ -800,8 +801,7 @@ export const dict = {
       roomPanelDisableHint: 'Deaktivieren meldet angemeldete Panels dieses Platzes ab.',
       roomPanelLiveConfigHint:
         'Modus, Texte und Namen wirken sofort — kein erneutes Anmelden nötig.',
-      roomPanelInsidePinHint:
-        'Panel-PIN wird in den Ops-Einstellungen gesetzt und zurückgesetzt.',
+      roomPanelInsidePinHint: 'Panel-PIN wird in den Ops-Einstellungen gesetzt und zurückgesetzt.',
       roomPanelAllowCalling: 'Patienten aufrufen',
       roomPanelAllowCallingHint: 'Personal kann Patienten für diesen Raum vom Panel aus aufrufen.',
       roomExpanderSave: 'Speichern',

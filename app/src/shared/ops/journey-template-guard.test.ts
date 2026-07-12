@@ -41,7 +41,12 @@ function sampleTemplate(overrides: Partial<JourneySettings['templates'][number]>
 
 function insertOpenVisitForTemplate(db: DatabaseSync, templateId: string): void {
   db.exec('PRAGMA foreign_keys = OFF');
-  db.prepare('INSERT INTO patients VALUES (?, ?, ?, ?)').run('p1', null, 1, '2026-07-07T10:00:00.000Z');
+  db.prepare('INSERT INTO patients VALUES (?, ?, ?, ?)').run(
+    'p1',
+    null,
+    1,
+    '2026-07-07T10:00:00.000Z',
+  );
   db.prepare(
     `INSERT INTO visits (
       id, patient_id, status, primary_topic_id, applied_routing_rule_id,

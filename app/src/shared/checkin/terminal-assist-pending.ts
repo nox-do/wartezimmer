@@ -32,7 +32,10 @@ export function resolveTerminalDeviceLabel(deviceId: string): string {
   return deviceId;
 }
 
-export function toAssistPendingItem(row: TerminalAssistPendingRow, nowMs = Date.now()): TerminalAssistPendingItem {
+export function toAssistPendingItem(
+  row: TerminalAssistPendingRow,
+  nowMs = Date.now(),
+): TerminalAssistPendingItem {
   const expiresMs = Date.parse(row.expiresAt);
   const remainingMs = Number.isNaN(expiresMs) ? 0 : Math.max(0, expiresMs - nowMs);
   return {
@@ -61,7 +64,9 @@ export function upsertTerminalAssistPending(
 }
 
 export function clearTerminalAssistPending(db: DatabaseSync, deviceId: string): boolean {
-  const result = db.prepare('DELETE FROM terminal_assist_pending WHERE device_id = ?').run(deviceId);
+  const result = db
+    .prepare('DELETE FROM terminal_assist_pending WHERE device_id = ?')
+    .run(deviceId);
   return result.changes > 0;
 }
 
@@ -119,7 +124,11 @@ export function listActiveTerminalAssistPending(
   return active;
 }
 
-export function expireTerminalAssistPending(db: DatabaseSync, deviceId: string, nowMs = Date.now()): boolean {
+export function expireTerminalAssistPending(
+  db: DatabaseSync,
+  deviceId: string,
+  nowMs = Date.now(),
+): boolean {
   const row = db
     .prepare('SELECT expires_at AS expiresAt FROM terminal_assist_pending WHERE device_id = ?')
     .get(deviceId) as { expiresAt?: string } | undefined;

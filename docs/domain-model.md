@@ -234,15 +234,15 @@ Vollständiger Review-Bericht: Agent-Transcript / Chat 2026-06-02.
 
 ## Abgleich mit bestehendem Code
 
-| Ziel                       | Ist (Stand 2026-06-02)                       |
-| -------------------------- | -------------------------------------------- |
-| Raum erst bei Aufruf       | ✅ `createVisitCheckInInDb` setzt Room-Snapshot      |
-| Themen-Default-Raum        | ✅ `defaultRoomId` + `resolveCallRoomTarget` |
-| MFA überschreibt Raum      | ✅ Quicksettings `selectedRoom` vor Default  |
-| `topicLabel` am Ticket     | ❌ nur `topicId`                             |
-| `laneCode` Benennung       | ✅ API/OpenAPI; DB intern `lane_code`        |
-| Legacy offene Sprechstunde | ❌ noch Spiegel-Spalten                      |
-| Ein Label-Resolver UI      | ❌ fragmentiert                              |
+| Ziel                       | Ist (Stand 2026-06-02)                          |
+| -------------------------- | ----------------------------------------------- |
+| Raum erst bei Aufruf       | ✅ `createVisitCheckInInDb` setzt Room-Snapshot |
+| Themen-Default-Raum        | ✅ `defaultRoomId` + `resolveCallRoomTarget`    |
+| MFA überschreibt Raum      | ✅ Quicksettings `selectedRoom` vor Default     |
+| `topicLabel` am Ticket     | ❌ nur `topicId`                                |
+| `laneCode` Benennung       | ✅ API/OpenAPI; DB intern `lane_code`           |
+| Legacy offene Sprechstunde | ❌ noch Spiegel-Spalten                         |
+| Ein Label-Resolver UI      | ❌ fragmentiert                                 |
 
 ---
 

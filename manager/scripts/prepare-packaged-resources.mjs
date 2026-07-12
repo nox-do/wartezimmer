@@ -46,14 +46,21 @@ fs.mkdirSync(templatesOutput, { recursive: true });
 fs.mkdirSync(serverSharedOutput, { recursive: true });
 
 assertExists(path.join(repoRoot, 'setup', 'dist', 'server.js'), 'Compiled setup server');
-assertExists(path.join(repoRoot, 'packages', 'server-shared', 'dist', 'index.js'), 'Compiled server-shared package');
+assertExists(
+  path.join(repoRoot, 'packages', 'server-shared', 'dist', 'index.js'),
+  'Compiled server-shared package',
+);
 
 fs.cpSync(path.join(repoRoot, 'setup', 'dist'), path.join(setupOutput, 'dist'), {
   recursive: true,
 });
-fs.cpSync(path.join(repoRoot, 'packages', 'server-shared', 'dist'), path.join(serverSharedOutput, 'dist'), {
-  recursive: true,
-});
+fs.cpSync(
+  path.join(repoRoot, 'packages', 'server-shared', 'dist'),
+  path.join(serverSharedOutput, 'dist'),
+  {
+    recursive: true,
+  },
+);
 
 function stripPackagedDist(relativeDistPath) {
   const result = spawnSync(process.execPath, [stripScript, `dist:${relativeDistPath}`], {
@@ -66,7 +73,9 @@ function stripPackagedDist(relativeDistPath) {
 }
 
 stripPackagedDist(path.join('manager', 'build-resources', 'setup', 'dist'));
-stripPackagedDist(path.join('manager', 'build-resources', 'setup', 'vendor', 'server-shared', 'dist'));
+stripPackagedDist(
+  path.join('manager', 'build-resources', 'setup', 'vendor', 'server-shared', 'dist'),
+);
 
 for (const fileName of fs.readdirSync(path.join(serverSharedOutput, 'dist'))) {
   fs.renameSync(

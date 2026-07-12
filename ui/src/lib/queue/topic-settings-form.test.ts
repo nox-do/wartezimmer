@@ -4,9 +4,7 @@ import { formatTopicLabels, topicsReferencingMissingRooms } from './topic-settin
 
 describe('topicsReferencingMissingRooms', () => {
   it('returns topics whose defaultRoomId was removed or renamed away', () => {
-    const rooms = [
-      { roomId: 'labor', roomLabel: 'Labor', enabled: true, defaultCallTarget: true },
-    ];
+    const rooms = [{ roomId: 'labor', roomLabel: 'Labor', enabled: true, defaultCallTarget: true }];
     const topics = [
       {
         topicId: 'offen',

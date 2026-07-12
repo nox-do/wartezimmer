@@ -32,10 +32,7 @@ function patchPlist(plistPath) {
   }
 
   const patched = xml
-    .replace(
-      /(<key>CFBundleDisplayName<\/key>\s*<string>)[^<]*(<\/string>)/,
-      `$1${APP_NAME}$2`,
-    )
+    .replace(/(<key>CFBundleDisplayName<\/key>\s*<string>)[^<]*(<\/string>)/, `$1${APP_NAME}$2`)
     .replace(/(<key>CFBundleName<\/key>\s*<string>)[^<]*(<\/string>)/, `$1${APP_NAME}$2`);
 
   fs.writeFileSync(plistPath, patched);

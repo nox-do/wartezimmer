@@ -6,7 +6,7 @@ import {
   escortTerminalInstruction,
   maxEscortPolicy,
   movementTerminalInstruction,
-  resolveTerminalInstruction
+  resolveTerminalInstruction,
 } from '@praxis-flow/flow-core';
 import { resolveCheckInRouting } from '@praxis-flow/flow-core/server';
 
@@ -29,7 +29,7 @@ test('resolveTerminalInstruction: self_go → pickup nutzt Escort-Text', () => {
     baseInstruction: 'Bitte gehen Sie direkt zu Raum 1.',
     movementMode: 'pickup',
     originalMovementMode: 'self_go',
-    targetLocation: { name: 'Raum 1', publicName: 'Raum 1' }
+    targetLocation: { name: 'Raum 1', publicName: 'Raum 1' },
   });
   assert.equal(result, escortTerminalInstruction('Raum 1'));
   assert.doesNotMatch(result, /gehen Sie direkt/);
@@ -41,9 +41,9 @@ test('resolveTerminalInstruction: ohne Remap bleibt baseInstruction', () => {
     resolveTerminalInstruction({
       baseInstruction: base,
       movementMode: 'call',
-      originalMovementMode: 'call'
+      originalMovementMode: 'call',
     }),
-    base
+    base,
   );
 });
 
@@ -52,15 +52,15 @@ test('movementTerminalInstruction: Text passt zu movementMode', () => {
 
   assert.equal(
     movementTerminalInstruction({ movementMode: 'call', targetLocation: room1 }),
-    'Bitte warten Sie. Sie werden aufgerufen.'
+    'Bitte warten Sie. Sie werden aufgerufen.',
   );
   assert.equal(
     movementTerminalInstruction({ movementMode: 'self_go', targetLocation: room1 }),
-    'Bitte gehen Sie zu Raum 1.'
+    'Bitte gehen Sie zu Raum 1.',
   );
   assert.equal(
     movementTerminalInstruction({ movementMode: 'pickup', targetLocation: room1 }),
-    escortTerminalInstruction('Raum 1')
+    escortTerminalInstruction('Raum 1'),
   );
 });
 
@@ -72,10 +72,10 @@ test('resolveCheckInRouting: normale Rule ohne Overlay', () => {
       initialQueueId: 'general_queue',
       initialTargetLocationId: 'reception',
       initialLastKnownLocationId: 'waiting_general',
-      initialLocationConfidence: 'assumed'
+      initialLocationConfidence: 'assumed',
     },
     effectiveEscortPolicy: 'none',
-    locations: [{ id: 'reception', name: 'Empfang', publicName: 'Empfang' }]
+    locations: [{ id: 'reception', name: 'Empfang', publicName: 'Empfang' }],
   });
 
   assert.equal(routing.movementMode, 'call');
@@ -92,10 +92,10 @@ test('resolveCheckInRouting: escort required + self_go → pickup + Escort-Text'
       initialQueueId: 'vaccine_queue',
       initialTargetLocationId: 'vaccine_room',
       initialLastKnownLocationId: 'entrance',
-      initialLocationConfidence: 'instructed'
+      initialLocationConfidence: 'instructed',
     },
     effectiveEscortPolicy: 'required',
-    locations: [{ id: 'vaccine_room', name: 'Impfraum', publicName: 'Impfraum' }]
+    locations: [{ id: 'vaccine_room', name: 'Impfraum', publicName: 'Impfraum' }],
   });
 
   assert.equal(routing.movementMode, 'pickup');

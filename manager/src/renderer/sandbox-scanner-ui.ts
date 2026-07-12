@@ -57,9 +57,7 @@ export function aggregatedServiceStateLabel(
   const parts = [service.state];
   const serviceName = service.service || service.name;
   const health =
-    serviceName === 'sandbox'
-      ? sandboxComposeHealthLabel(service.health, scanner)
-      : service.health;
+    serviceName === 'sandbox' ? sandboxComposeHealthLabel(service.health, scanner) : service.health;
   if (health) {
     parts.push(health);
   }

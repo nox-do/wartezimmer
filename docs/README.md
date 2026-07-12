@@ -27,13 +27,13 @@ Kurzüberblick: **was wann lesen**. Technische Details stehen in den verlinkten 
 
 ## Setup & Netzwerk
 
-| Datei                                                    | Inhalt                                           |
-| -------------------------------------------------------- | ------------------------------------------------ |
-| [`plan-setup-wizard.md`](plan-setup-wizard.md)           | Host-CLI (`npm run setup`) + In-App `/ops/setup` |
-| [`plan-praxis-flow-manager.md`](plan-praxis-flow-manager.md) | Manager (Electron): Install-Home, Setup-API, Wartung |
-| [`gateway-captive-portal.md`](gateway-captive-portal.md) | Optionales Gast-WLAN (Linux)                     |
-| [`plan-proxy-container.md`](plan-proxy-container.md)       | **Plan** — Reverse Proxy, TLS-Modi (LAN + Portal extern), Manager-Status |
-| [`integrations.md`](integrations.md)                     | eGK, PVS (Phase 3, offen)                        |
+| Datei                                                        | Inhalt                                                                   |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| [`plan-setup-wizard.md`](plan-setup-wizard.md)               | Host-CLI (`npm run setup`) + In-App `/ops/setup`                         |
+| [`plan-praxis-flow-manager.md`](plan-praxis-flow-manager.md) | Manager (Electron): Install-Home, Setup-API, Wartung                     |
+| [`gateway-captive-portal.md`](gateway-captive-portal.md)     | Optionales Gast-WLAN (Linux)                                             |
+| [`plan-proxy-container.md`](plan-proxy-container.md)         | **Plan** — Reverse Proxy, TLS-Modi (LAN + Portal extern), Manager-Status |
+| [`integrations.md`](integrations.md)                         | eGK, PVS (Phase 3, offen)                                                |
 
 ## Sandbox & Formulare
 
@@ -45,10 +45,10 @@ Kurzüberblick: **was wann lesen**. Technische Details stehen in den verlinkten 
 
 ## Selten gebraucht
 
-| Datei                                                    | Inhalt                                         |
-| -------------------------------------------------------- | ---------------------------------------------- |
-| [`i18n.md`](i18n.md)                                     | Sprachen Terminal/Portal vs. Staff             |
-| [`business-revenue-model.md`](business-revenue-model.md) | Preis-/Lizenz-Skizze (intern)                  |
+| Datei                                                    | Inhalt                             |
+| -------------------------------------------------------- | ---------------------------------- |
+| [`i18n.md`](i18n.md)                                     | Sprachen Terminal/Portal vs. Staff |
+| [`business-revenue-model.md`](business-revenue-model.md) | Preis-/Lizenz-Skizze (intern)      |
 
 ## API-Vertrag
 

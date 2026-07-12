@@ -205,10 +205,7 @@ test('wizardNextButtonLabel adapts to step', () => {
 
   assert.equal(wizardNextButtonLabel({ ...base, step: 5 }), 'Vorschau laden');
   assert.equal(wizardNextButtonLabel({ ...base, step: 6 }), 'Anwenden');
-  assert.equal(
-    wizardNextButtonLabel({ ...base, step: 7, applyResult: null }),
-    'Bitte warten …',
-  );
+  assert.equal(wizardNextButtonLabel({ ...base, step: 7, applyResult: null }), 'Bitte warten …');
 });
 
 test('wizardBackHidden hides on step 1 and after completion', () => {

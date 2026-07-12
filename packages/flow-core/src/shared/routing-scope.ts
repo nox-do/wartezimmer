@@ -6,7 +6,10 @@
 import type { Catalog, RoutingRule, Surface } from './types.js';
 import { MFA_ASSIST_TOPIC_ID } from './check-in-path.js';
 
-export function isRuleAllowedAtSurface(rule: Pick<RoutingRule, 'allowedSurfaceIds'>, surfaceId: string): boolean {
+export function isRuleAllowedAtSurface(
+  rule: Pick<RoutingRule, 'allowedSurfaceIds'>,
+  surfaceId: string,
+): boolean {
   const ids = rule.allowedSurfaceIds;
   if (!ids?.length) return true;
   return ids.includes(surfaceId);
@@ -33,7 +36,9 @@ export function topicsForTerminal(catalog: Catalog, surfaceId: string) {
 }
 
 export function terminalsForTopic(catalog: Catalog, topicId: string): Surface[] {
-  const terminals = catalog.surfaces.filter((surface) => surface.type === 'terminal' && surface.enabled);
+  const terminals = catalog.surfaces.filter(
+    (surface) => surface.type === 'terminal' && surface.enabled,
+  );
   if (!topicId) return [];
   const rules = catalog.routingRules.filter((item) => item.topicId === topicId && item.active);
   if (!rules.length) return [];
@@ -42,7 +47,10 @@ export function terminalsForTopic(catalog: Catalog, topicId: string): Surface[] 
   return terminals.filter((terminal) => allowedSurfaceIds.has(terminal.id));
 }
 
-export function formatAllowedSurfaceIds(allowedSurfaceIds: string[] | null | undefined, terminals: Surface[]): string {
+export function formatAllowedSurfaceIds(
+  allowedSurfaceIds: string[] | null | undefined,
+  terminals: Surface[],
+): string {
   if (!allowedSurfaceIds?.length) return 'alle Terminals';
   return allowedSurfaceIds
     .map((id) => {

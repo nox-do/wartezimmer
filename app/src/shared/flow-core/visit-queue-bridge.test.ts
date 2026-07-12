@@ -82,7 +82,10 @@ function sampleSettings(): OpsSettings {
   };
 }
 
-function buildDeps(db: DatabaseSync, settings: OpsSettings): CheckinSessionDeps & { db: DatabaseSync } {
+function buildDeps(
+  db: DatabaseSync,
+  settings: OpsSettings,
+): CheckinSessionDeps & { db: DatabaseSync } {
   db.exec(`
     CREATE TABLE IF NOT EXISTS ops_state (
       id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -351,9 +354,9 @@ test('cancelVisit marks waiting ticket cancelled and removes it from queue', () 
   assert.deepEqual(cancelled, { fromStatus: 'waiting', toStatus: 'cancelled' });
   assert.equal(listQueue().length, 0);
 
-  const visit = db
-    .prepare('SELECT status FROM visits WHERE id = ?')
-    .get(visitId) as { status?: string } | undefined;
+  const visit = db.prepare('SELECT status FROM visits WHERE id = ?').get(visitId) as
+    | { status?: string }
+    | undefined;
   assert.equal(visit?.status, 'cancelled');
 });
 
@@ -481,14 +484,7 @@ test('setVisitAbsent overlays absent_wait_here on waiting visit', () => {
 
 test('callVisit rejects waiting visit with absent host overlay', () => {
   const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
-  setVisitAbsent(
-    db,
-    runtime,
-    settings,
-    visitId,
-    'wait_here',
-    '2026-07-04T12:05:00.000Z',
-  );
+  setVisitAbsent(db, runtime, settings, visitId, 'wait_here', '2026-07-04T12:05:00.000Z');
 
   assert.throws(
     () => callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor'),
@@ -499,14 +495,7 @@ test('callVisit rejects waiting visit with absent host overlay', () => {
 test('arriveVisit rejects called visit with absent host overlay', () => {
   const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
   callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  setVisitAbsent(
-    db,
-    runtime,
-    settings,
-    visitId,
-    'wait_here',
-    '2026-07-04T12:05:00.000Z',
-  );
+  setVisitAbsent(db, runtime, settings, visitId, 'wait_here', '2026-07-04T12:05:00.000Z');
 
   assert.throws(
     () => arriveVisit(db, runtime, visitId, 'labor'),
@@ -516,22 +505,10 @@ test('arriveVisit rejects called visit with absent host overlay', () => {
 
 test('recallVisit sets return_later with notify phone from checkinPhone', () => {
   const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
-  upsertVisitHostState(
-    db,
-    visitId,
-    { checkinPhone: '+49172111111' },
-    '2026-07-04T12:00:00.000Z',
-  );
+  upsertVisitHostState(db, visitId, { checkinPhone: '+49172111111' }, '2026-07-04T12:00:00.000Z');
   setVisitAbsentMode(db, visitId, 'wait_here', '2026-07-04T12:01:00.000Z');
 
-  const recall = recallVisit(
-    db,
-    runtime,
-    settings,
-    visitId,
-    15,
-    '2026-07-04T12:02:00.000Z',
-  );
+  const recall = recallVisit(db, runtime, settings, visitId, 15, '2026-07-04T12:02:00.000Z');
 
   assert.equal(recall.toStatus, 'absent_return_later');
   assert.equal(recall.callbackPhone, '+49172111111');
@@ -559,34 +536,16 @@ test('setVisitCallbackPhone stores canonical phone in host state', () => {
 test('cycleVisitTriageLevel cycles triage in host state', () => {
   const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
 
-  const first = cycleVisitTriageLevel(
-    db,
-    runtime,
-    settings,
-    visitId,
-    '2026-07-04T12:04:00.000Z',
-  );
+  const first = cycleVisitTriageLevel(db, runtime, settings, visitId, '2026-07-04T12:04:00.000Z');
   assert.equal(first.triageLevel, 'green');
   assert.equal(listQueue()[0]?.triageLevel, 'green');
 });
 
 test('returnAbsentVisitToQueue clears absent overlay without core transition', () => {
   const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
-  setVisitAbsent(
-    db,
-    runtime,
-    settings,
-    visitId,
-    'return_later',
-    '2026-07-04T12:05:00.000Z',
-  );
+  setVisitAbsent(db, runtime, settings, visitId, 'return_later', '2026-07-04T12:05:00.000Z');
 
-  const result = returnAbsentVisitToQueue(
-    db,
-    runtime,
-    visitId,
-    '2026-07-04T12:06:00.000Z',
-  );
+  const result = returnAbsentVisitToQueue(db, runtime, visitId, '2026-07-04T12:06:00.000Z');
   assert.deepEqual(result, { fromStatus: 'absent_return_later', toStatus: 'waiting' });
   assert.equal(listQueue()[0]?.status, 'waiting');
 });

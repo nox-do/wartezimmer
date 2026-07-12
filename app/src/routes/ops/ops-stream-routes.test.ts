@@ -217,7 +217,8 @@ test('ops stream sends initial emergency, presence, and pairing snapshots', asyn
     events.some(
       (entry) =>
         entry.event === 'device.presence' &&
-        (entry.data as { deviceId?: string; kind?: string }).deviceId === 'room-panel:labor:outside' &&
+        (entry.data as { deviceId?: string; kind?: string }).deviceId ===
+          'room-panel:labor:outside' &&
         (entry.data as { deviceId?: string; kind?: string }).kind === 'room-panel',
     ),
   );

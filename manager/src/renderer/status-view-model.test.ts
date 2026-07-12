@@ -142,13 +142,18 @@ test('statusGridRows includes wlan and lan when configured', () => {
     rows.map((row) => row.label),
     ['Install-Home', 'Compose', 'Docker', '.env', 'WLAN aktuell', 'LAN in .env', 'Software-Paket'],
   );
-  assert.equal(currentWlanLabel(minimalStatus({
-    network: {
-      configuredLanIp: null,
-      currentLanCandidates: [{ address: '192.168.1.20', interfaceName: 'en0' }],
-      lanIpStale: false,
-    },
-  })), '192.168.1.20 (en0)');
+  assert.equal(
+    currentWlanLabel(
+      minimalStatus({
+        network: {
+          configuredLanIp: null,
+          currentLanCandidates: [{ address: '192.168.1.20', interfaceName: 'en0' }],
+          lanIpStale: false,
+        },
+      }),
+    ),
+    '192.168.1.20 (en0)',
+  );
 });
 
 test('showDeliveryImagesWarning only outside setup entry', () => {

@@ -175,10 +175,7 @@ test('resolveVisitTargetRoomId: called/in_room prefer roomId', () => {
 test('visitTargetsRoom matches session room against resolved target', () => {
   const room = 'labor';
   assert.equal(
-    visitTargetsRoom(
-      { status: 'waiting', movementMode: 'call', destinationRoomId: room },
-      room,
-    ),
+    visitTargetsRoom({ status: 'waiting', movementMode: 'call', destinationRoomId: room }, room),
     true,
   );
   assert.equal(
@@ -193,10 +190,7 @@ test('visitTargetsRoom matches session room against resolved target', () => {
     true,
   );
   assert.equal(
-    visitTargetsRoom(
-      { status: 'waiting', movementMode: 'call', targetLocationId: room },
-      room,
-    ),
+    visitTargetsRoom({ status: 'waiting', movementMode: 'call', targetLocationId: room }, room),
     true,
   );
   assert.equal(

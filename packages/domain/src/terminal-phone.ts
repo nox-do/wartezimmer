@@ -5,11 +5,7 @@ export const TERMINAL_PHONE_PREFIX = '+49';
 export const TERMINAL_PHONE_SUFFIX_MIN = 9;
 export const TERMINAL_PHONE_SUFFIX_MAX = 11;
 
-export type TerminalPhoneSuffixIssue =
-  | 'invalid_chars'
-  | 'leading_zero'
-  | 'too_short'
-  | 'too_long';
+export type TerminalPhoneSuffixIssue = 'invalid_chars' | 'leading_zero' | 'too_short' | 'too_long';
 
 export function terminalPhoneSuffixDigits(suffix: string): string {
   return suffix.replace(/\D/g, '');

@@ -46,7 +46,10 @@ function sampleSettings(): OpsSettings {
   };
 }
 
-function buildDeps(db: DatabaseSync, settings: OpsSettings): CheckinSessionDeps & { db: DatabaseSync } {
+function buildDeps(
+  db: DatabaseSync,
+  settings: OpsSettings,
+): CheckinSessionDeps & { db: DatabaseSync } {
   db.exec(`
     CREATE TABLE IF NOT EXISTS ops_state (
       id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -123,8 +126,14 @@ test('syncFlowCoreCatalog seeds reserved mfa topic and direct mfa check-in works
   syncFlowCoreCatalog(db, settings);
 
   const catalog = getFlowCoreRuntime(db).catalog();
-  assert.equal(catalog.topics.some((topic) => topic.id === MFA_ASSIST_TOPIC_ID), true);
-  assert.equal(catalog.routingRules.some((rule) => rule.topicId === MFA_ASSIST_TOPIC_ID), true);
+  assert.equal(
+    catalog.topics.some((topic) => topic.id === MFA_ASSIST_TOPIC_ID),
+    true,
+  );
+  assert.equal(
+    catalog.routingRules.some((rule) => rule.topicId === MFA_ASSIST_TOPIC_ID),
+    true,
+  );
 
   const created = createVisitCheckInInDb(buildDeps(db, settings), {
     topicId: MFA_ASSIST_TOPIC_ID,

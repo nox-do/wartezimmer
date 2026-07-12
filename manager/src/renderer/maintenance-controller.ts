@@ -99,7 +99,9 @@ function createInitialState(): MaintenanceState {
   };
 }
 
-export function createMaintenanceController(deps: MaintenanceControllerDeps): MaintenanceController {
+export function createMaintenanceController(
+  deps: MaintenanceControllerDeps,
+): MaintenanceController {
   const state = createInitialState();
   const listeners = new Set<() => void>();
 
@@ -126,11 +128,7 @@ export function createMaintenanceController(deps: MaintenanceControllerDeps): Ma
   }
 
   function pathsChanged(): boolean {
-    return storagePathsChanged(
-      state.importsHostPath,
-      state.exportsHostPath,
-      state.status?.folders,
-    );
+    return storagePathsChanged(state.importsHostPath, state.exportsHostPath, state.status?.folders);
   }
 
   async function refreshLogs(service?: string): Promise<void> {
@@ -393,7 +391,9 @@ export function createMaintenanceController(deps: MaintenanceControllerDeps): Ma
         .catch((error) => {
           patch({ routingModeStatusText: '' });
           setError(
-            error instanceof Error ? error.message : 'Routing-Modus konnte nicht gespeichert werden.',
+            error instanceof Error
+              ? error.message
+              : 'Routing-Modus konnte nicht gespeichert werden.',
           );
         })
         .finally(() => setBusy(false));
@@ -449,11 +449,7 @@ export function createMaintenanceController(deps: MaintenanceControllerDeps): Ma
       });
 
       setBusy(true);
-      void Promise.all([
-        refreshLogs('app'),
-        deps.api.getEnvBackupInfo(),
-        deps.api.getRoutingMode(),
-      ])
+      void Promise.all([refreshLogs('app'), deps.api.getEnvBackupInfo(), deps.api.getRoutingMode()])
         .then(([, backupInfoResult, routingCapabilities]) => {
           patch({
             latestBackupPath: backupInfoResult.latestBackupPath,

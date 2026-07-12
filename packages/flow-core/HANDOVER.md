@@ -10,12 +10,12 @@ Dieses Dokument fasst **getroffene Entscheidungen** und **offene Merge-Schritte*
 
 ## Was dieses Repo ist
 
-| Mitnehmen | Nicht mitnehmen |
-|-----------|-----------------|
-| `@praxis-flow/flow-core` — Shared Domain (TypeScript) | `src/public/` — Referenz-UI, Cherry-Pick only |
-| `@praxis-flow/flow-core/server` — Runtime-Muster (Repositories, Services) | `src/server/http.ts` — PoC-HTTP-Server |
-| `db/schema.sql` — Source of Truth | Auth, Portal, Dokumente, SSE/Outbox |
-| `test/` — 111 Tests als Vertrag | Demo-Seed als Produkt-Katalog |
+| Mitnehmen                                                                 | Nicht mitnehmen                               |
+| ------------------------------------------------------------------------- | --------------------------------------------- |
+| `@praxis-flow/flow-core` — Shared Domain (TypeScript)                     | `src/public/` — Referenz-UI, Cherry-Pick only |
+| `@praxis-flow/flow-core/server` — Runtime-Muster (Repositories, Services) | `src/server/http.ts` — PoC-HTTP-Server        |
+| `db/schema.sql` — Source of Truth                                         | Auth, Portal, Dokumente, SSE/Outbox           |
+| `test/` — 111 Tests als Vertrag                                           | Demo-Seed als Produkt-Katalog                 |
 
 **Package:** `@praxis-flow/flow-core` · Branch `feat/typescript-package` · Build: `npm run build` → `dist/`  
 Lokale PoC-DB: `db/flow-core.sqlite`.
@@ -33,10 +33,10 @@ Lokale PoC-DB: `db/flow-core.sqlite`.
 
 ### 2. `authPath` ≠ `checkInPath`
 
-| Feld | Bedeutung | Werte |
-|------|-----------|-------|
-| `authPath` | Wie hat sich der Patient am Terminal identifiziert? | `phone_dob`, `name_dob`, `egk`, `none` |
-| `checkInPath` | Routing-Kontext beim Check-in | `topic`, `mfa_assist` |
+| Feld          | Bedeutung                                           | Werte                                  |
+| ------------- | --------------------------------------------------- | -------------------------------------- |
+| `authPath`    | Wie hat sich der Patient am Terminal identifiziert? | `phone_dob`, `name_dob`, `egk`, `none` |
+| `checkInPath` | Routing-Kontext beim Check-in                       | `topic`, `mfa_assist`                  |
 
 Nicht vermischen. PF `authPath` mappt 1:1 auf `visits.auth_path`.
 
@@ -50,14 +50,14 @@ Nicht vermischen. PF `authPath` mappt 1:1 auf `visits.auth_path`.
 
 Flow Core behält **`arrived` + `in_progress`** statt PF `in_room`:
 
-| PF (alt) | Flow Core (neu) | Anmerkung |
-|----------|-----------------|-----------|
-| `waiting` | `waiting` / `directed` | abhängig von `movementMode` |
-| `called` | `called` | |
-| `in_room` | `arrived` oder `in_progress` | Raum-Panel unterscheidet beides |
-| `done` | `done` | |
-| `absent_*` | — | **PF-Erweiterung** im Host, nicht im Core |
-| — | `blocked`, `no_show`, `cancelled` | Core-Status |
+| PF (alt)   | Flow Core (neu)                   | Anmerkung                                 |
+| ---------- | --------------------------------- | ----------------------------------------- |
+| `waiting`  | `waiting` / `directed`            | abhängig von `movementMode`               |
+| `called`   | `called`                          |                                           |
+| `in_room`  | `arrived` oder `in_progress`      | Raum-Panel unterscheidet beides           |
+| `done`     | `done`                            |                                           |
+| `absent_*` | —                                 | **PF-Erweiterung** im Host, nicht im Core |
+| —          | `blocked`, `no_show`, `cancelled` | Core-Status                               |
 
 **Raum-Panel-Mapping:**
 
@@ -74,21 +74,21 @@ Transition-Body (optional):
 { "actingLocationId": "room_1" }
 ```
 
-| Action | Verhalten |
-|--------|-----------|
-| `call` + `targetLocationId` | Setzt Aufrufziel (wie PF `room_id` beim Call) |
-| `arrive` / `start` / `done` + `actingLocationId` | Nur wenn `visit.targetLocationId` passt → `VISIT_LOCATION_MISMATCH` |
-| `done` + `actingLocationId` ab `arrived` | Raum-Panel „Fertig“ ohne explizites `start` (setzt `startedAt` retroaktiv) |
+| Action                                           | Verhalten                                                                  |
+| ------------------------------------------------ | -------------------------------------------------------------------------- |
+| `call` + `targetLocationId`                      | Setzt Aufrufziel (wie PF `room_id` beim Call)                              |
+| `arrive` / `start` / `done` + `actingLocationId` | Nur wenn `visit.targetLocationId` passt → `VISIT_LOCATION_MISMATCH`        |
+| `done` + `actingLocationId` ab `arrived`         | Raum-Panel „Fertig“ ohne explizites `start` (setzt `startedAt` retroaktiv) |
 
 MFA-Dashboard sendet **kein** `actingLocationId` — uneingeschränkt wie bisher.
 
 ### 6. Konfiguration: Locks
 
-| Entität | Guard | Fehlercode |
-|---------|-------|------------|
-| JourneyTemplate | Offene Visits auf Template | `JOURNEY_TEMPLATE_LOCKED` |
-| Topic | Offene Visits mit `primaryTopicId` | `TOPIC_LOCKED` |
-| RoutingRule | `topicId` immutable | `ROUTING_RULE_TOPIC_IMMUTABLE` |
+| Entität         | Guard                              | Fehlercode                     |
+| --------------- | ---------------------------------- | ------------------------------ |
+| JourneyTemplate | Offene Visits auf Template         | `JOURNEY_TEMPLATE_LOCKED`      |
+| Topic           | Offene Visits mit `primaryTopicId` | `TOPIC_LOCKED`                 |
+| RoutingRule     | `topicId` immutable                | `ROUTING_RULE_TOPIC_IMMUTABLE` |
 
 ---
 
@@ -108,9 +108,9 @@ const runtime = createRuntime(db, { resolveBusinessDay: getBusinessDay });
 
 ### Package-Exports (Stand TS-Migration)
 
-| Entry | Verwendung |
-|-------|------------|
-| `@praxis-flow/flow-core` | Domain-Logik, Validierung, Parser, Labels — ohne SQLite |
+| Entry                           | Verwendung                                                                    |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| `@praxis-flow/flow-core`        | Domain-Logik, Validierung, Parser, Labels — ohne SQLite                       |
 | `@praxis-flow/flow-core/server` | `createRuntime`, `openDb`, Repositories, `updateVisit`, `runInTransaction`, … |
 
 PoC-HTTP (`dist/server/http.js`) ist nur Referenz — im Host durch Fastify-Routes ersetzen.
@@ -173,12 +173,12 @@ http.ts                   — PoC-HTTP (Host ersetzt durch Fastify)
 
 ## TypeScript-Migration (erledigt)
 
-| Phase | Inhalt |
-|-------|--------|
-| 0 | `tsconfig`, Package `@praxis-flow/flow-core`, `dist/` |
-| 1 | `src/shared/` in TypeScript, Browser importiert `dist/shared/*.js` |
-| 2 | `src/server/` in TypeScript, Unit-Tests → `.test.ts`, PoC-HTTP → `dist/server/http.js` |
-| 3 | Integration-Tests → `.test.ts`, Barrel-Exports, `main`/`types`/`files` in `package.json` |
+| Phase | Inhalt                                                                                   |
+| ----- | ---------------------------------------------------------------------------------------- |
+| 0     | `tsconfig`, Package `@praxis-flow/flow-core`, `dist/`                                    |
+| 1     | `src/shared/` in TypeScript, Browser importiert `dist/shared/*.js`                       |
+| 2     | `src/server/` in TypeScript, Unit-Tests → `.test.ts`, PoC-HTTP → `dist/server/http.js`   |
+| 3     | Integration-Tests → `.test.ts`, Barrel-Exports, `main`/`types`/`files` in `package.json` |
 
 **Verifikation:** `npm test` → build + 111 Tests grün.
 
@@ -186,11 +186,11 @@ http.ts                   — PoC-HTTP (Host ersetzt durch Fastify)
 
 ## Offen im Core (klein)
 
-| Thema | Priorität |
-|-------|-----------|
+| Thema                                                         | Priorität                                                           |
+| ------------------------------------------------------------- | ------------------------------------------------------------------- |
 | Raumkapazität (`called`+`arrived`+`in_progress` pro Location) | Mittel — Logik aus PF `@praxis-flow/domain/room-capacity` portieren |
-| `ticket-code` mit `@praxis-flow/domain` deduplizieren | Niedrig — beim PF-Merge |
-| Referenz-UI: `authPath`, Transition-Body | Optional, nur PoC |
+| `ticket-code` mit `@praxis-flow/domain` deduplizieren         | Niedrig — beim PF-Merge                                             |
+| Referenz-UI: `authPath`, Transition-Body                      | Optional, nur PoC                                                   |
 
 ---
 

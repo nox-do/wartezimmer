@@ -196,9 +196,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
         'customLanIp' in partial;
       patch({
         ...partial,
-        ...(clearsProbe
-          ? { reachabilityProbeMessage: null, reachabilityProbeOk: null }
-          : {}),
+        ...(clearsProbe ? { reachabilityProbeMessage: null, reachabilityProbeOk: null } : {}),
       });
     },
 

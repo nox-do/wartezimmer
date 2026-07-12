@@ -13,8 +13,20 @@ describe('roomPanelLoginKey', () => {
 
   it('finds the matching login entry in a flat room list', () => {
     const rooms = [
-      { roomId: 'labor', roomLabel: 'Labor', placement: 'outside' as const, mode: 'arrival' as const, requiresPin: false },
-      { roomId: 'labor', roomLabel: 'Labor', placement: 'inside' as const, mode: 'staff_full' as const, requiresPin: true },
+      {
+        roomId: 'labor',
+        roomLabel: 'Labor',
+        placement: 'outside' as const,
+        mode: 'arrival' as const,
+        requiresPin: false,
+      },
+      {
+        roomId: 'labor',
+        roomLabel: 'Labor',
+        placement: 'inside' as const,
+        mode: 'staff_full' as const,
+        requiresPin: true,
+      },
     ];
     expect(findRoomPanelLoginEntry(rooms, 'labor:inside')?.placement).toBe('inside');
   });

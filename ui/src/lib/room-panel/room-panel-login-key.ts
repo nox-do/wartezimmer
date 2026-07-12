@@ -20,17 +20,13 @@ export function parseRoomPanelLoginKey(
   return { roomId, placement };
 }
 
-export function findRoomPanelLoginEntry(
-  rooms: RoomPanelRoom[],
-  key: string,
-): RoomPanelRoom | null {
+export function findRoomPanelLoginEntry(rooms: RoomPanelRoom[], key: string): RoomPanelRoom | null {
   const parsed = parseRoomPanelLoginKey(key);
   if (!parsed) {
     return null;
   }
   return (
-    rooms.find(
-      (room) => room.roomId === parsed.roomId && room.placement === parsed.placement,
-    ) ?? null
+    rooms.find((room) => room.roomId === parsed.roomId && room.placement === parsed.placement) ??
+    null
   );
 }

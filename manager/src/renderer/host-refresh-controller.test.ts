@@ -60,10 +60,12 @@ function minimalRuntime(overrides: Partial<HostRuntimeHealth> = {}): HostRuntime
   };
 }
 
-function mockApi(overrides: {
-  fetchSetupStatus?: () => Promise<HostStatus>;
-  fetchRuntimeHealth?: () => Promise<HostRuntimeHealth>;
-} = {}) {
+function mockApi(
+  overrides: {
+    fetchSetupStatus?: () => Promise<HostStatus>;
+    fetchRuntimeHealth?: () => Promise<HostRuntimeHealth>;
+  } = {},
+) {
   return {
     fetchSetupStatus: overrides.fetchSetupStatus ?? (async () => minimalStatus()),
     fetchRuntimeHealth: overrides.fetchRuntimeHealth ?? (async () => minimalRuntime()),

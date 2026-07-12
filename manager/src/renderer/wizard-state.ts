@@ -1,10 +1,19 @@
-import type { GatewayPlanInput, HostStatus, NetworkSnapshot, RoutingMode } from '../shared/host-status.js';
+import type {
+  GatewayPlanInput,
+  HostStatus,
+  NetworkSnapshot,
+  RoutingMode,
+} from '../shared/host-status.js';
 import {
   SETUP_DEFAULT_GATEWAY_INTERFACE,
   SETUP_DEFAULT_GATEWAY_IP,
   SETUP_DEFAULT_PRACTICE_NAME,
 } from '@praxis-flow/server-shared';
-import { inferReachabilityFields, type ReachabilityFieldState, type ReachabilityMode } from './reachability.js';
+import {
+  inferReachabilityFields,
+  type ReachabilityFieldState,
+  type ReachabilityMode,
+} from './reachability.js';
 
 export type WizardInitialFields = {
   lanAppIp: string;
@@ -145,7 +154,9 @@ export function createInitialWizardFields(status: HostStatus | null): WizardInit
 }
 
 /** LAN + Gateway + reachability fields for maintenance (no practice/storage). */
-export function createHostNetworkFields(status: HostStatus | null): Pick<
+export function createHostNetworkFields(
+  status: HostStatus | null,
+): Pick<
   WizardInitialFields,
   | 'lanAppIp'
   | 'customLanIp'
@@ -164,7 +175,9 @@ export function createHostNetworkFields(status: HostStatus | null): Pick<
   };
 }
 
-export function resolvedLanIp(fields: Pick<WizardInitialFields, 'lanAppIp' | 'customLanIp'>): string {
+export function resolvedLanIp(
+  fields: Pick<WizardInitialFields, 'lanAppIp' | 'customLanIp'>,
+): string {
   if (fields.lanAppIp === '__custom__') {
     return fields.customLanIp.trim();
   }

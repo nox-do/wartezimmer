@@ -52,17 +52,17 @@ Mehrere Anmeldgründe dürfen denselben Nummernkreis teilen (z. B. Termin-Varian
 
 Fachliche Schichten — keine 1:1-Ordnerstruktur, kein Microservice-Schnitt. Details in `docs/flows.md`.
 
-| # | Komponente | Schutz | Kurz |
-| - | ---------- | ------ | ---- |
-| 1 | **Frontend Gateway** | unkritisch | Terminal, MFA, TV, Portal (`ui/` → `app/dist/ui-static`); SSE Queue + Ops — `docs/realtime-streams.md` |
-| 2 | **Check-in & Ticket** | unkritisch | Terminal-Check-in, Wartenummer (`laneCode`), Portal-Session-Bindung; keine Klarnamen in Queue |
-| 3 | **Queue & Aufruf** | unkritisch | Status, TV-Liste, Rückhol-Fenster, optionales Aufrufziel (`roomId`) |
-| 4 | **Identity** | kritisch | PII-Zuordnung für MFA (Mobil, DOB, später eGK) |
-| 5 | **Dokumente** | kritisch | Upload, Anamnese-Output, Export auf Host; Vorschau nur via Sandbox |
-| 6 | **Sandbox Adapter** | kritisch, isoliert | Preview-Custody; keine Rohdatei an MFA-Client — `docs/sandbox-interface.md` |
-| 7 | **Tagesbetrieb & Reset** | querschnittlich | Check-in-Sperre, Day-Close/Reset, Ops-Settings, Notfall |
-| 8 | **SMS Adapter** | extern | Rückhol-SMS; v1 Vonage, austauschbar |
-| 9 | **Guest-WLAN Gateway** | optional | openNDS + Bridge; Portal-UI bleibt in (1) — `docs/gateway-captive-portal.md` |
+| #   | Komponente               | Schutz             | Kurz                                                                                                   |
+| --- | ------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------ |
+| 1   | **Frontend Gateway**     | unkritisch         | Terminal, MFA, TV, Portal (`ui/` → `app/dist/ui-static`); SSE Queue + Ops — `docs/realtime-streams.md` |
+| 2   | **Check-in & Ticket**    | unkritisch         | Terminal-Check-in, Wartenummer (`laneCode`), Portal-Session-Bindung; keine Klarnamen in Queue          |
+| 3   | **Queue & Aufruf**       | unkritisch         | Status, TV-Liste, Rückhol-Fenster, optionales Aufrufziel (`roomId`)                                    |
+| 4   | **Identity**             | kritisch           | PII-Zuordnung für MFA (Mobil, DOB, später eGK)                                                         |
+| 5   | **Dokumente**            | kritisch           | Upload, Anamnese-Output, Export auf Host; Vorschau nur via Sandbox                                     |
+| 6   | **Sandbox Adapter**      | kritisch, isoliert | Preview-Custody; keine Rohdatei an MFA-Client — `docs/sandbox-interface.md`                            |
+| 7   | **Tagesbetrieb & Reset** | querschnittlich    | Check-in-Sperre, Day-Close/Reset, Ops-Settings, Notfall                                                |
+| 8   | **SMS Adapter**          | extern             | Rückhol-SMS; v1 Vonage, austauschbar                                                                   |
+| 9   | **Guest-WLAN Gateway**   | optional           | openNDS + Bridge; Portal-UI bleibt in (1) — `docs/gateway-captive-portal.md`                           |
 
 ```mermaid
 flowchart LR
@@ -133,14 +133,14 @@ Monorepo (npm workspaces): `app`, `ui`, `sandbox`, `setup`.
 
 **Domäne → Routes (Auszug):**
 
-| Komponente           | Routes                                                             | Shared / DB                                                            |
-| -------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| Check-in & Visit     | `routes/checkin-routes.ts`, `routes/sessions-routes.ts`            | `shared/flow-core/flow-core-checkin.ts`, `shared/db/database-checkin-sessions.ts` |
+| Komponente           | Routes                                                             | Shared / DB                                                                         |
+| -------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| Check-in & Visit     | `routes/checkin-routes.ts`, `routes/sessions-routes.ts`            | `shared/flow-core/flow-core-checkin.ts`, `shared/db/database-checkin-sessions.ts`   |
 | Queue & Aufruf       | `routes/queue-routes.ts`                                           | `shared/queue/`, `shared/db/database.ts` (Visit-Bridge via `visit-queue-bridge.ts`) |
-| Identity             | `routes/identity-routes.ts`                                        | Check-in/Sessions-DB, Contacts                                         |
-| Dokumente            | `routes/documents-routes.ts`, `routes/patient-documents-routes.ts` | `shared/documents/`, `shared/forms/`, `database-documents.ts`          |
-| Tagesbetrieb & Reset | `routes/ops/*`                                                     | `shared/ops/`, `database-day-lifecycle.ts`, `database-ops-settings.ts` |
-| Session (Portal)     | `routes/session-auth.ts` (preHandler)                              | Patient-Session in Check-in-DB                                         |
+| Identity             | `routes/identity-routes.ts`                                        | Check-in/Sessions-DB, Contacts                                                      |
+| Dokumente            | `routes/documents-routes.ts`, `routes/patient-documents-routes.ts` | `shared/documents/`, `shared/forms/`, `database-documents.ts`                       |
+| Tagesbetrieb & Reset | `routes/ops/*`                                                     | `shared/ops/`, `database-day-lifecycle.ts`, `database-ops-settings.ts`              |
+| Session (Portal)     | `routes/session-auth.ts` (preHandler)                              | Patient-Session in Check-in-DB                                                      |
 
 Kein separates `src/modules/*/controller|service|repository`-Layout — bewusst ein Fastify-Monolith für Single-Praxis-Betrieb.
 

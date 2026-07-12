@@ -7,7 +7,7 @@ import {
   validateCatalogIntegrity,
   validateJourneyTemplateDraft,
   validateRoutingRuleDraft,
-  validateSurfaceDisplayRules
+  validateSurfaceDisplayRules,
 } from '@praxis-flow/flow-core';
 
 function baseCatalog() {
@@ -21,7 +21,7 @@ test('validateRoutingRuleDraft: doppelte aktive Rules pro Topic werden verhinder
 
   assert.throws(
     () => validateRoutingRuleDraft(catalog, { ...general, active: true }, { ruleId: 'rule_new' }),
-    /DUPLICATE_ACTIVE_ROUTING_RULE/
+    /DUPLICATE_ACTIVE_ROUTING_RULE/,
   );
 });
 
@@ -29,11 +29,17 @@ test('validateRoutingRuleDraft: unterschiedliche Terminal-Scopes erlauben zwei a
   const catalog = baseCatalog();
   const general = catalog.routingRules.find((item) => item.id === 'rule_general');
 
-  assert.doesNotThrow(() => validateRoutingRuleDraft(catalog, {
-    ...general,
-    allowedSurfaceIds: ['terminal_2'],
-    active: true
-  }, { ruleId: 'rule_new' }));
+  assert.doesNotThrow(() =>
+    validateRoutingRuleDraft(
+      catalog,
+      {
+        ...general,
+        allowedSurfaceIds: ['terminal_2'],
+        active: true,
+      },
+      { ruleId: 'rule_new' },
+    ),
+  );
 });
 
 test('validateRoutingRuleDraft: Journey-Topic-Mismatch wird verhindert', () => {
@@ -41,12 +47,17 @@ test('validateRoutingRuleDraft: Journey-Topic-Mismatch wird verhindert', () => {
   const infection = catalog.routingRules.find((item) => item.id === 'rule_infection');
 
   assert.throws(
-    () => validateRoutingRuleDraft(catalog, {
-      ...infection,
-      journeyTemplateId: 'journey_general',
-      active: true
-    }, { ruleId: 'rule_infection' }),
-    /JOURNEY_TOPIC_MISMATCH/
+    () =>
+      validateRoutingRuleDraft(
+        catalog,
+        {
+          ...infection,
+          journeyTemplateId: 'journey_general',
+          active: true,
+        },
+        { ruleId: 'rule_infection' },
+      ),
+    /JOURNEY_TOPIC_MISMATCH/,
   );
 });
 
@@ -54,8 +65,14 @@ test('validateJourneyTemplateDraft: leere aktive Journey wird verhindert', () =>
   const catalog = baseCatalog();
 
   assert.throws(
-    () => validateJourneyTemplateDraft(catalog, { name: 'Leer', topicId: 'general', active: true, steps: [] }),
-    /JOURNEY_STEPS_EMPTY/
+    () =>
+      validateJourneyTemplateDraft(catalog, {
+        name: 'Leer',
+        topicId: 'general',
+        active: true,
+        steps: [],
+      }),
+    /JOURNEY_STEPS_EMPTY/,
   );
 });
 
@@ -63,16 +80,31 @@ test('validateJourneyTemplateDraft: doppelte sortOrder wird verhindert', () => {
   const catalog = baseCatalog();
 
   assert.throws(
-    () => validateJourneyTemplateDraft(catalog, {
-      name: 'Dup',
-      topicId: 'general',
-      active: true,
-      steps: [
-        { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
-        { sortOrder: 0, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', completedWhen: 'start' }
-      ]
-    }),
-    /DUPLICATE_JOURNEY_SORT_ORDER/
+    () =>
+      validateJourneyTemplateDraft(catalog, {
+        name: 'Dup',
+        topicId: 'general',
+        active: true,
+        steps: [
+          {
+            sortOrder: 0,
+            targetLocationId: 'reception',
+            queueId: 'general_queue',
+            movementMode: 'call',
+            publicDisplayMode: 'visible',
+            completedWhen: 'arrive',
+          },
+          {
+            sortOrder: 0,
+            targetLocationId: 'room_1',
+            queueId: null,
+            movementMode: 'call',
+            publicDisplayMode: 'hidden',
+            completedWhen: 'start',
+          },
+        ],
+      }),
+    /DUPLICATE_JOURNEY_SORT_ORDER/,
   );
 });
 
@@ -80,16 +112,33 @@ test('validateJourneyTemplateDraft: doppelte Step-IDs werden verhindert', () => 
   const catalog = baseCatalog();
 
   assert.throws(
-    () => validateJourneyTemplateDraft(catalog, {
-      name: 'DupIds',
-      topicId: 'general',
-      active: true,
-      steps: [
-        { id: 'step_same', sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
-        { id: 'step_same', sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'call', publicDisplayMode: 'hidden', completedWhen: 'start' }
-      ]
-    }),
-    /DUPLICATE_JOURNEY_STEP_ID/
+    () =>
+      validateJourneyTemplateDraft(catalog, {
+        name: 'DupIds',
+        topicId: 'general',
+        active: true,
+        steps: [
+          {
+            id: 'step_same',
+            sortOrder: 0,
+            targetLocationId: 'reception',
+            queueId: 'general_queue',
+            movementMode: 'call',
+            publicDisplayMode: 'visible',
+            completedWhen: 'arrive',
+          },
+          {
+            id: 'step_same',
+            sortOrder: 1,
+            targetLocationId: 'room_1',
+            queueId: null,
+            movementMode: 'call',
+            publicDisplayMode: 'hidden',
+            completedWhen: 'start',
+          },
+        ],
+      }),
+    /DUPLICATE_JOURNEY_STEP_ID/,
   );
 });
 
@@ -97,15 +146,23 @@ test('validateJourneyTemplateDraft: ungültige movementMode werden abgelehnt', (
   const catalog = baseCatalog();
 
   assert.throws(
-    () => validateJourneyTemplateDraft(catalog, {
-      name: 'Bad',
-      topicId: 'general',
-      active: true,
-      steps: [
-        { sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'fly', publicDisplayMode: 'visible', completedWhen: 'arrive' }
-      ]
-    }),
-    /INVALID_MOVEMENT_MODE/
+    () =>
+      validateJourneyTemplateDraft(catalog, {
+        name: 'Bad',
+        topicId: 'general',
+        active: true,
+        steps: [
+          {
+            sortOrder: 0,
+            targetLocationId: 'reception',
+            queueId: 'general_queue',
+            movementMode: 'fly',
+            publicDisplayMode: 'visible',
+            completedWhen: 'arrive',
+          },
+        ],
+      }),
+    /INVALID_MOVEMENT_MODE/,
   );
 });
 
@@ -113,11 +170,28 @@ test('validateSurfaceDisplayRules: mehrdeutige Regeln gleicher Prioritaet werden
   const catalog = baseCatalog();
 
   assert.throws(
-    () => validateSurfaceDisplayRules(catalog, [
-      { id: 'a', surfaceId: 'waiting_tv', queueId: 'general_queue', locationId: null, topicId: null, displayMode: 'visible', sortOrder: 10 },
-      { id: 'b', surfaceId: 'waiting_tv', queueId: 'general_queue', locationId: null, topicId: null, displayMode: 'hidden', sortOrder: 10 }
-    ]),
-    /SURFACE_DISPLAY_RULE_AMBIGUOUS/
+    () =>
+      validateSurfaceDisplayRules(catalog, [
+        {
+          id: 'a',
+          surfaceId: 'waiting_tv',
+          queueId: 'general_queue',
+          locationId: null,
+          topicId: null,
+          displayMode: 'visible',
+          sortOrder: 10,
+        },
+        {
+          id: 'b',
+          surfaceId: 'waiting_tv',
+          queueId: 'general_queue',
+          locationId: null,
+          topicId: null,
+          displayMode: 'hidden',
+          sortOrder: 10,
+        },
+      ]),
+    /SURFACE_DISPLAY_RULE_AMBIGUOUS/,
   );
 });
 
@@ -129,18 +203,71 @@ test('validateSurfaceDisplayRules: Seed-Katalog ist konfliktfrei', () => {
 test('terminalScopesOverlap und surfaceDisplayRulesOverlap', () => {
   assert.equal(terminalScopesOverlap(null, ['terminal_1']), true);
   assert.equal(terminalScopesOverlap(['terminal_1'], ['terminal_2']), false);
-  assert.equal(surfaceDisplayRulesOverlap(
-    { id: '1', surfaceId: 's', queueId: 'q1', locationId: null, topicId: null, displayMode: 'visible' },
-    { id: '2', surfaceId: 's', queueId: 'q1', locationId: 'lab', topicId: null, displayMode: 'hidden' }
-  ), true);
-  assert.equal(surfaceDisplayRulesOverlap(
-    { id: '1', surfaceId: 's', queueId: null, locationId: 'lab', topicId: null, displayMode: 'visible', sortOrder: 0 },
-    { id: '2', surfaceId: 's', queueId: null, locationId: 'reception', topicId: null, displayMode: 'hidden', sortOrder: 0 }
-  ), false);
-  assert.equal(surfaceDisplayRulesOverlap(
-    { id: '1', surfaceId: 's', queueId: 'general_queue', locationId: null, topicId: null, displayMode: 'visible' },
-    { id: '2', surfaceId: 's', queueId: 'infection_queue', locationId: null, topicId: null, displayMode: 'hidden' }
-  ), false);
+  assert.equal(
+    surfaceDisplayRulesOverlap(
+      {
+        id: '1',
+        surfaceId: 's',
+        queueId: 'q1',
+        locationId: null,
+        topicId: null,
+        displayMode: 'visible',
+      },
+      {
+        id: '2',
+        surfaceId: 's',
+        queueId: 'q1',
+        locationId: 'lab',
+        topicId: null,
+        displayMode: 'hidden',
+      },
+    ),
+    true,
+  );
+  assert.equal(
+    surfaceDisplayRulesOverlap(
+      {
+        id: '1',
+        surfaceId: 's',
+        queueId: null,
+        locationId: 'lab',
+        topicId: null,
+        displayMode: 'visible',
+        sortOrder: 0,
+      },
+      {
+        id: '2',
+        surfaceId: 's',
+        queueId: null,
+        locationId: 'reception',
+        topicId: null,
+        displayMode: 'hidden',
+        sortOrder: 0,
+      },
+    ),
+    false,
+  );
+  assert.equal(
+    surfaceDisplayRulesOverlap(
+      {
+        id: '1',
+        surfaceId: 's',
+        queueId: 'general_queue',
+        locationId: null,
+        topicId: null,
+        displayMode: 'visible',
+      },
+      {
+        id: '2',
+        surfaceId: 's',
+        queueId: 'infection_queue',
+        locationId: null,
+        topicId: null,
+        displayMode: 'hidden',
+      },
+    ),
+    false,
+  );
 });
 
 test('validateCatalogIntegrity: Seed-Katalog ist konsistent', () => {

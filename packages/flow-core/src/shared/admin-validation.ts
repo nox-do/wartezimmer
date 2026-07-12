@@ -43,15 +43,22 @@ function assertActiveQueue(catalog: Catalog, queueId: string | null | undefined)
 }
 
 /** Zwei Regeln koennen dieselbe Visit treffen, wenn Queue/Topic/Location-Filter kompatibel sind. */
-export function surfaceDisplayRulesOverlap(left: SurfaceDisplayRule, right: SurfaceDisplayRule): boolean {
+export function surfaceDisplayRulesOverlap(
+  left: SurfaceDisplayRule,
+  right: SurfaceDisplayRule,
+): boolean {
   if (left.surfaceId !== right.surfaceId) return false;
   const queueOverlap = !left.queueId || !right.queueId || left.queueId === right.queueId;
   const topicOverlap = !left.topicId || !right.topicId || left.topicId === right.topicId;
-  const locationOverlap = !left.locationId || !right.locationId || left.locationId === right.locationId;
+  const locationOverlap =
+    !left.locationId || !right.locationId || left.locationId === right.locationId;
   return queueOverlap && topicOverlap && locationOverlap;
 }
 
-export function surfaceDisplayRulesAmbiguous(left: SurfaceDisplayRule, right: SurfaceDisplayRule): boolean {
+export function surfaceDisplayRulesAmbiguous(
+  left: SurfaceDisplayRule,
+  right: SurfaceDisplayRule,
+): boolean {
   if (!surfaceDisplayRulesOverlap(left, right)) return false;
   if (ruleSpecificity(left) !== ruleSpecificity(right)) return false;
   if ((left.sortOrder ?? 0) !== (right.sortOrder ?? 0)) return false;
@@ -110,9 +117,12 @@ export function validateRoutingRuleDraft(
   }
 
   if (ruleDraft.journeyTemplateId) {
-    const template = catalog.journeyTemplates.find((item) => item.id === ruleDraft.journeyTemplateId);
+    const template = catalog.journeyTemplates.find(
+      (item) => item.id === ruleDraft.journeyTemplateId,
+    );
     if (!template?.active) throw new Error('JOURNEY_TEMPLATE_INACTIVE_OR_MISSING');
-    if (template.topicId && template.topicId !== ruleDraft.topicId) throw new Error('JOURNEY_TOPIC_MISMATCH');
+    if (template.topicId && template.topicId !== ruleDraft.topicId)
+      throw new Error('JOURNEY_TOPIC_MISMATCH');
   } else {
     assertActiveLocation(catalog, ruleDraft.initialLastKnownLocationId);
     assertActiveLocation(catalog, ruleDraft.initialTargetLocationId);
@@ -148,7 +158,10 @@ export type JourneyTemplateDraft = {
   steps?: JourneyStepDraft[];
 };
 
-export function validateJourneyTemplateDraft(catalog: Catalog, templateDraft: JourneyTemplateDraft): void {
+export function validateJourneyTemplateDraft(
+  catalog: Catalog,
+  templateDraft: JourneyTemplateDraft,
+): void {
   if (!templateDraft.name?.trim()) throw new Error('INVALID_REQUEST_BODY');
 
   if (templateDraft.topicId) {
@@ -163,8 +176,10 @@ export function validateJourneyTemplateDraft(catalog: Catalog, templateDraft: Jo
   const stepIds = new Set<string>();
   for (const step of steps) {
     if (!MOVEMENT_MODES.includes(step.movementMode)) throw new Error('INVALID_MOVEMENT_MODE');
-    if (!COMPLETED_WHEN_VALUES.includes(step.completedWhen)) throw new Error('INVALID_COMPLETED_WHEN');
-    if (!PUBLIC_DISPLAY_MODES.includes(step.publicDisplayMode)) throw new Error('INVALID_PUBLIC_DISPLAY_MODE');
+    if (!COMPLETED_WHEN_VALUES.includes(step.completedWhen))
+      throw new Error('INVALID_COMPLETED_WHEN');
+    if (!PUBLIC_DISPLAY_MODES.includes(step.publicDisplayMode))
+      throw new Error('INVALID_PUBLIC_DISPLAY_MODE');
     if (sortOrders.has(step.sortOrder)) throw new Error('DUPLICATE_JOURNEY_SORT_ORDER');
     sortOrders.add(step.sortOrder);
     if (step.id) {
@@ -181,7 +196,8 @@ export function validateSurfaceDisplayRules(catalog: Catalog, rules: SurfaceDisp
   for (const rule of rules) {
     const surface = catalog.surfaces.find((item) => item.id === rule.surfaceId);
     if (!surface) throw new Error('SURFACE_NOT_FOUND');
-    if (!PUBLIC_DISPLAY_MODES.includes(rule.displayMode)) throw new Error('INVALID_PUBLIC_DISPLAY_MODE');
+    if (!PUBLIC_DISPLAY_MODES.includes(rule.displayMode))
+      throw new Error('INVALID_PUBLIC_DISPLAY_MODE');
     if (rule.queueId) assertActiveQueue(catalog, rule.queueId);
     if (rule.locationId) assertActiveLocation(catalog, rule.locationId);
     if (rule.topicId) {
@@ -200,12 +216,17 @@ export function validateSurfaceDisplayRules(catalog: Catalog, rules: SurfaceDisp
   }
 }
 
-export function validateRedirectRequest(catalog: Catalog, visit: Visit, body: RedirectRequestBody): void {
+export function validateRedirectRequest(
+  catalog: Catalog,
+  visit: Visit,
+  body: RedirectRequestBody,
+): void {
   assertActiveLocation(catalog, body.targetLocationId);
   assertActiveQueue(catalog, body.queueId);
 
   if (!MOVEMENT_MODES.includes(body.movementMode)) throw new Error('INVALID_MOVEMENT_MODE');
-  if (!PUBLIC_DISPLAY_MODES.includes(body.publicDisplayMode)) throw new Error('INVALID_PUBLIC_DISPLAY_MODE');
+  if (!PUBLIC_DISPLAY_MODES.includes(body.publicDisplayMode))
+    throw new Error('INVALID_PUBLIC_DISPLAY_MODE');
   if (body.locationSemantics && !REDIRECT_LOCATION_SEMANTICS.includes(body.locationSemantics)) {
     throw new Error('INVALID_REDIRECT_LOCATION_SEMANTICS');
   }
@@ -219,7 +240,8 @@ export function validateRedirectRequest(catalog: Catalog, visit: Visit, body: Re
 
   const actorSurfaceId = body.actorSurfaceId ?? 'mfa_dashboard';
   const surface = catalog.surfaces.find((item) => item.id === actorSurfaceId);
-  if (!surface?.enabled || !surface.supportsRedirect) throw new Error('REDIRECT_SURFACE_NOT_ALLOWED');
+  if (!surface?.enabled || !surface.supportsRedirect)
+    throw new Error('REDIRECT_SURFACE_NOT_ALLOWED');
 
   if (visit.effectiveEscortPolicy === 'required' && body.movementMode === 'self_go') {
     throw new Error('SELF_GO_BLOCKED_BY_ESCORT_POLICY');

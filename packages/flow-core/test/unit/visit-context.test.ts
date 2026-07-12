@@ -5,7 +5,7 @@ import {
   formatJourneyNextStepNote,
   lastKnownFromJourneyStep,
   ruleUsesJourneyRouting,
-  visitOperationalLabel
+  visitOperationalLabel,
 } from '@praxis-flow/flow-core';
 
 test('ruleUsesJourneyRouting', () => {
@@ -21,10 +21,19 @@ test('lastKnownFromJourneyStep: Queue-Home als Wartebereich', () => {
 
 test('formatJourneyNextStepNote', () => {
   assert.equal(
-    formatJourneyNextStepNote({ previousIndex: 0, nextIndex: 1, stepCount: 2, fromLocationName: 'Empfang', toLocationName: 'Raum 1' }),
-    'Journey next step 1/2 → 2/2: Empfang → Raum 1'
+    formatJourneyNextStepNote({
+      previousIndex: 0,
+      nextIndex: 1,
+      stepCount: 2,
+      fromLocationName: 'Empfang',
+      toLocationName: 'Raum 1',
+    }),
+    'Journey next step 1/2 → 2/2: Empfang → Raum 1',
   );
-  assert.equal(formatJourneyNextStepNote({ previousIndex: 1, nextIndex: null, stepCount: 2 }), 'Journey complete');
+  assert.equal(
+    formatJourneyNextStepNote({ previousIndex: 1, nextIndex: null, stepCount: 2 }),
+    'Journey complete',
+  );
 });
 
 test('visitOperationalLabel: waiting in Journey-Kontext', () => {
@@ -35,7 +44,7 @@ test('visitOperationalLabel: waiting in Journey-Kontext', () => {
     journeyStepIndex: 1,
     journeyStepLabel: '2/2',
     lastKnownLocation: { name: 'Empfang' },
-    targetLocation: { name: 'Raum 1' }
+    targetLocation: { name: 'Raum 1' },
   });
   assert.match(label, /Schritt 2\/2/);
   assert.match(label, /Empfang/);
@@ -47,7 +56,7 @@ test('buildJourneyRoutePreview', () => {
   const preview = buildJourneyRoutePreview(
     [{ targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call' }],
     [{ id: 'reception', name: 'Empfang' }],
-    [{ id: 'general_queue', name: 'Allgemeine Warteliste' }]
+    [{ id: 'general_queue', name: 'Allgemeine Warteliste' }],
   );
   assert.match(preview, /Schritt 1: Empfang/);
 });

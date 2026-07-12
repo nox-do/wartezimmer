@@ -22,7 +22,10 @@ type RecallMessageInput = {
   practiceName?: string;
 };
 
-const RECALL_SMS_BY_LOCALE: Record<TerminalPatientLocale, (practiceName: string, time: string, ticketId: string) => string> = {
+const RECALL_SMS_BY_LOCALE: Record<
+  TerminalPatientLocale,
+  (practiceName: string, time: string, ticketId: string) => string
+> = {
   'de-DE': (practiceName, time, ticketId) =>
     `${practiceName}: Bitte kommen Sie bis ${time} Uhr zurück. Ihre Wartenummer ${ticketId} bleibt bis dahin reserviert.`,
   'en-GB': (practiceName, time, ticketId) =>
@@ -36,7 +39,9 @@ const RECALL_SMS_BY_LOCALE: Record<TerminalPatientLocale, (practiceName: string,
 };
 
 function resolvePracticeName(db: CoreDatabase): string {
-  const displayName = parsePracticeProfileJson(db.getOpsSettings().practiceProfileJson).displayName.trim();
+  const displayName = parsePracticeProfileJson(
+    db.getOpsSettings().practiceProfileJson,
+  ).displayName.trim();
   return displayName || 'Ihre Praxis';
 }
 

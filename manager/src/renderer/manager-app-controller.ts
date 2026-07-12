@@ -1,8 +1,5 @@
 import { createHostRefreshController } from './host-refresh-controller.js';
-import {
-  createManagerNavigation,
-  defaultWizardPresentation,
-} from './manager-navigation.js';
+import { createManagerNavigation, defaultWizardPresentation } from './manager-navigation.js';
 import type { NavigateOptions } from './manager-navigation.js';
 import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
 import type { ManagerView } from './host-refresh-controller.js';

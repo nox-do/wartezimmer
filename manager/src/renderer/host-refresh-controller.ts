@@ -37,11 +37,12 @@ export type HostRefreshController = {
 
 const DEFAULT_POLL_MS = 12_000;
 
-export function createHostRefreshController(deps: HostRefreshControllerDeps): HostRefreshController {
+export function createHostRefreshController(
+  deps: HostRefreshControllerDeps,
+): HostRefreshController {
   const pollIntervalMs = deps.pollIntervalMs ?? DEFAULT_POLL_MS;
   const schedule: ScheduleFn =
-    deps.schedule ??
-    ((callback, delayMs) => globalThis.setTimeout(callback, delayMs));
+    deps.schedule ?? ((callback, delayMs) => globalThis.setTimeout(callback, delayMs));
   const clearSchedule: ClearScheduleFn =
     deps.clearSchedule ??
     ((id) => {

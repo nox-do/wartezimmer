@@ -1,7 +1,12 @@
 import type { HostStatus } from '../shared/host-status.js';
 import { deliveryImagesSummary, needsDeliveryImages } from './delivery-images-flow.js';
 
-export type SetupEntryTone = 'fresh' | 'needs-docker' | 'needs-release' | 'needs-lan' | 'maintenance';
+export type SetupEntryTone =
+  | 'fresh'
+  | 'needs-docker'
+  | 'needs-release'
+  | 'needs-lan'
+  | 'maintenance';
 
 export type SetupChecklistItem = { label: string; done: boolean; muted?: boolean };
 

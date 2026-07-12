@@ -11,17 +11,18 @@ test('saveTopic: bei offenen Visits nicht speicherbar', () => {
   runtime.checkIn({ topicId: 'general', displayName: 'Offen', surfaceId: 'terminal_1' });
 
   assert.throws(
-    () => runtime.saveTopic('general', {
-      name: 'Neuer Name',
-      category: topic.category,
-      color: topic.color,
-      defaultPriority: topic.defaultPriority,
-      estimatedDurationMin: topic.estimatedDurationMin,
-      active: topic.active,
-      sortOrder: topic.sortOrder,
-      laneCode: topic.laneCode
-    }),
-    /TOPIC_LOCKED/
+    () =>
+      runtime.saveTopic('general', {
+        name: 'Neuer Name',
+        category: topic.category,
+        color: topic.color,
+        defaultPriority: topic.defaultPriority,
+        estimatedDurationMin: topic.estimatedDurationMin,
+        active: topic.active,
+        sortOrder: topic.sortOrder,
+        laneCode: topic.laneCode,
+      }),
+    /TOPIC_LOCKED/,
   );
 });
 
@@ -39,7 +40,7 @@ test('saveTopic: ohne offene Visits erlaubt', () => {
     estimatedDurationMin: topic.estimatedDurationMin,
     active: topic.active,
     sortOrder: topic.sortOrder,
-    laneCode: topic.laneCode
+    laneCode: topic.laneCode,
   });
 
   assert.equal(saved.name, 'Blut geändert');

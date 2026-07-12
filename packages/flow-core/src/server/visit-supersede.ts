@@ -62,8 +62,12 @@ function resolveTopicRouting(
   const selectedRule = ruleForTopicAtSurface(data, params.topicId, params.surfaceId);
   if (!selectedTopic) throw new Error('TOPIC_OR_ROUTING_RULE_MISSING');
   if (!selectedRule) {
-    const hasActiveRule = data.routingRules.some((item) => item.topicId === params.topicId && item.active);
-    throw new Error(hasActiveRule ? 'TOPIC_NOT_ALLOWED_AT_SURFACE' : 'TOPIC_OR_ROUTING_RULE_MISSING');
+    const hasActiveRule = data.routingRules.some(
+      (item) => item.topicId === params.topicId && item.active,
+    );
+    throw new Error(
+      hasActiveRule ? 'TOPIC_NOT_ALLOWED_AT_SURFACE' : 'TOPIC_OR_ROUTING_RULE_MISSING',
+    );
   }
 
   const useJourney = Boolean(selectedRule.journeyTemplateId);
@@ -154,7 +158,8 @@ export function supersedeVisit(params: {
   visitId: string;
   body: SupersedeRequest;
 }): SupersedeResult {
-  const { db, catalogRepository, visitRepository, maybeFail, resolveBusinessDay, visitId, body } = params;
+  const { db, catalogRepository, visitRepository, maybeFail, resolveBusinessDay, visitId, body } =
+    params;
   const { visitById, updateVisit, addEvent } = visitRepository;
 
   return runInTransaction(db, () => {
@@ -173,8 +178,12 @@ export function supersedeVisit(params: {
     const data = catalogRepository.loadCatalog();
     const selectedRulePreview = ruleForTopicAtSurface(data, topicId, surfaceId);
     if (!selectedRulePreview) {
-      const hasActiveRule = data.routingRules.some((item) => item.topicId === topicId && item.active);
-      throw new Error(hasActiveRule ? 'TOPIC_NOT_ALLOWED_AT_SURFACE' : 'TOPIC_OR_ROUTING_RULE_MISSING');
+      const hasActiveRule = data.routingRules.some(
+        (item) => item.topicId === topicId && item.active,
+      );
+      throw new Error(
+        hasActiveRule ? 'TOPIC_NOT_ALLOWED_AT_SURFACE' : 'TOPIC_OR_ROUTING_RULE_MISSING',
+      );
     }
     const configuredEscortPolicy = selectedRulePreview.escortPolicy;
     const effectivePolicy = effectiveEscortPolicy(configuredEscortPolicy);

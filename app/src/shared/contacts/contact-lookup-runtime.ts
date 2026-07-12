@@ -82,7 +82,10 @@ function candidateNameMatches(query: string, candidate: ContactLookupCandidate):
   return fullName.includes(queryNorm);
 }
 
-function candidateBirthDateMatches(needleBirthDate: string, candidateBirthDate: string | null): boolean {
+function candidateBirthDateMatches(
+  needleBirthDate: string,
+  candidateBirthDate: string | null,
+): boolean {
   if (!candidateBirthDate) {
     return false;
   }

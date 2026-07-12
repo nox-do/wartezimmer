@@ -7,7 +7,9 @@ vi.mock('$lib/i18n/i18nStore.svelte', () => ({
 import { partitionTvQueue } from './tv-queue';
 import type { TvQueueItem } from './tv-queue';
 
-function item(partial: Partial<TvQueueItem> & Pick<TvQueueItem, 'laneCode' | 'number' | 'status'>): TvQueueItem {
+function item(
+  partial: Partial<TvQueueItem> & Pick<TvQueueItem, 'laneCode' | 'number' | 'status'>,
+): TvQueueItem {
   return {
     roomLabel: null,
     movementMode: null,
@@ -19,7 +21,13 @@ describe('partitionTvQueue', () => {
   it('keeps call waiting on the left and called on the right', () => {
     const { waiting, calls } = partitionTvQueue([
       item({ laneCode: 'L', number: 1, status: 'waiting', movementMode: 'call' }),
-      item({ laneCode: 'L', number: 2, status: 'called', roomLabel: 'Labor', movementMode: 'call' }),
+      item({
+        laneCode: 'L',
+        number: 2,
+        status: 'called',
+        roomLabel: 'Labor',
+        movementMode: 'call',
+      }),
     ]);
     expect(waiting).toEqual([{ ticketCode: 'L-001', away: false, hint: undefined }]);
     expect(calls).toEqual([{ ticketCode: 'L-002', where: 'Labor' }]);

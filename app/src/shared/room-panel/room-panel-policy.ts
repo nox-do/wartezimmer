@@ -28,9 +28,7 @@ export function findActiveRoomPanel(
   roomId: string,
   placement: RoomPanelPlacement,
 ): ActiveRoomPanel | null {
-  const room = db
-    .getOpsSettings()
-    .rooms.find((entry) => entry.roomId === roomId && entry.enabled);
+  const room = db.getOpsSettings().rooms.find((entry) => entry.roomId === roomId && entry.enabled);
   if (!room) {
     return null;
   }

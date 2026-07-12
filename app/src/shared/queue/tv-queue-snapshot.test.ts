@@ -69,7 +69,10 @@ function sampleSettings(): OpsSettings {
   };
 }
 
-function buildDeps(db: DatabaseSync, settings: OpsSettings): CheckinSessionDeps & { db: DatabaseSync } {
+function buildDeps(
+  db: DatabaseSync,
+  settings: OpsSettings,
+): CheckinSessionDeps & { db: DatabaseSync } {
   db.exec(`
     CREATE TABLE IF NOT EXISTS ops_state (
       id INTEGER PRIMARY KEY CHECK (id = 1),

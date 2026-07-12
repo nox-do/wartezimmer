@@ -10,7 +10,7 @@ test('parseCheckInBody: topicId oder mfaAssist', () => {
     surfaceId: 'terminal_1',
     displayName: undefined,
     needsAssistance: false,
-    staffNote: undefined
+    staffNote: undefined,
   });
 
   assert.deepEqual(parseCheckInBody({ mfaAssist: true }), {
@@ -20,7 +20,7 @@ test('parseCheckInBody: topicId oder mfaAssist', () => {
     surfaceId: 'terminal_1',
     displayName: undefined,
     needsAssistance: false,
-    staffNote: undefined
+    staffNote: undefined,
   });
 
   assert.deepEqual(parseCheckInBody({ topicId: 'blood', needsAssistance: true, authPath: 'egk' }), {
@@ -30,19 +30,22 @@ test('parseCheckInBody: topicId oder mfaAssist', () => {
     surfaceId: 'terminal_1',
     displayName: undefined,
     needsAssistance: true,
-    staffNote: undefined
+    staffNote: undefined,
   });
 });
 
 test('parseCheckInBody: ungueltige Kombinationen', () => {
   assert.throws(() => parseCheckInBody({}), /CHECKIN_TOPIC_OR_MFA_ASSIST_REQUIRED/);
-  assert.throws(() => parseCheckInBody({ needsAssistance: true }), /CHECKIN_ASSISTANCE_REQUIRES_TOPIC/);
+  assert.throws(
+    () => parseCheckInBody({ needsAssistance: true }),
+    /CHECKIN_ASSISTANCE_REQUIRES_TOPIC/,
+  );
   assert.throws(
     () => parseCheckInBody({ mfaAssist: true, topicId: 'general' }),
-    /CHECKIN_MFA_ASSIST_EXCLUSIVE/
+    /CHECKIN_MFA_ASSIST_EXCLUSIVE/,
   );
   assert.throws(
     () => parseCheckInBody({ mfaAssist: true, needsAssistance: true }),
-    /CHECKIN_MFA_ASSIST_EXCLUSIVE/
+    /CHECKIN_MFA_ASSIST_EXCLUSIVE/,
   );
 });

@@ -2,7 +2,10 @@ import type { DatabaseSync } from 'node:sqlite';
 import { createRuntime, type Runtime } from '@praxis-flow/flow-core/server';
 import { getBusinessDay } from '../db/database-time.js';
 import type { OpsSettings } from '../db/db-types.js';
-import { syncCatalogFromOpsSettings, type CatalogSyncSummary } from './sync-catalog-from-ops-settings.js';
+import {
+  syncCatalogFromOpsSettings,
+  type CatalogSyncSummary,
+} from './sync-catalog-from-ops-settings.js';
 
 let flowCoreRuntime: Runtime | null = null;
 let flowCoreRuntimeDb: DatabaseSync | null = null;

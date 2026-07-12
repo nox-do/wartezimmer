@@ -76,7 +76,11 @@ function event(row: SqlRow): VisitEvent {
   };
 }
 
-function patchField<K extends keyof Visit>(patch: Partial<Visit>, current: Visit, field: K): Visit[K] | null | undefined {
+function patchField<K extends keyof Visit>(
+  patch: Partial<Visit>,
+  current: Visit,
+  field: K,
+): Visit[K] | null | undefined {
   return field in patch ? patch[field] : current[field];
 }
 
@@ -165,8 +169,14 @@ export function addEvent(
   );
 }
 
-function enrich(visitRow: Visit, data: Catalog, stepsForTemplateFn: CatalogRepository['stepsForTemplate']): VisitView {
-  const steps = visitRow.journeyTemplateId ? stepsForTemplateFn(visitRow.journeyTemplateId, data.journeySteps) : [];
+function enrich(
+  visitRow: Visit,
+  data: Catalog,
+  stepsForTemplateFn: CatalogRepository['stepsForTemplate'],
+): VisitView {
+  const steps = visitRow.journeyTemplateId
+    ? stepsForTemplateFn(visitRow.journeyTemplateId, data.journeySteps)
+    : [];
   return {
     ...visitRow,
     topic: data.topics.find((item) => item.id === visitRow.primaryTopicId),
@@ -175,7 +185,9 @@ function enrich(visitRow: Visit, data: Catalog, stepsForTemplateFn: CatalogRepos
     targetLocation: data.locations.find((item) => item.id === visitRow.targetLocationId),
     journeyTemplate: data.journeyTemplates.find((item) => item.id === visitRow.journeyTemplateId),
     journeyStepLabel:
-      visitRow.journeyStepIndex != null ? journeyStepLabel(steps, visitRow.journeyStepIndex) ?? undefined : undefined,
+      visitRow.journeyStepIndex != null
+        ? (journeyStepLabel(steps, visitRow.journeyStepIndex) ?? undefined)
+        : undefined,
   };
 }
 
@@ -189,7 +201,9 @@ export function createVisitRepository(db: DatabaseSync, catalogRepository: Catal
        WHERE visits.id = ?`,
       )
       .get(id) as SqlRow | undefined;
-    return row ? enrich(visit(row), catalogRepository.loadCatalog(), catalogRepository.stepsForTemplate) : undefined;
+    return row
+      ? enrich(visit(row), catalogRepository.loadCatalog(), catalogRepository.stepsForTemplate)
+      : undefined;
   };
 
   const visits = (): VisitView[] => {
@@ -208,9 +222,11 @@ export function createVisitRepository(db: DatabaseSync, catalogRepository: Catal
   };
 
   const events = (visitId: string): VisitEvent[] =>
-    (db.prepare('SELECT * FROM visit_events WHERE visit_id = ? ORDER BY created_at').all(visitId) as SqlRow[]).map(
-      event,
-    );
+    (
+      db
+        .prepare('SELECT * FROM visit_events WHERE visit_id = ? ORDER BY created_at')
+        .all(visitId) as SqlRow[]
+    ).map(event);
 
   return {
     visits,
@@ -229,7 +245,21 @@ export function createVisitRepository(db: DatabaseSync, catalogRepository: Catal
       actorType: VisitEvent['actorType'],
       note?: string | null,
       eventOptions?: { correlationId?: string },
-    ) => addEvent(db, visitId, type, fromStatus, toStatus, fromLocationId, toLocationId, fromQueueId, toQueueId, actorType, note ?? null, eventOptions),
+    ) =>
+      addEvent(
+        db,
+        visitId,
+        type,
+        fromStatus,
+        toStatus,
+        fromLocationId,
+        toLocationId,
+        fromQueueId,
+        toQueueId,
+        actorType,
+        note ?? null,
+        eventOptions,
+      ),
   };
 }
 

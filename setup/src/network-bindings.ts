@@ -2,10 +2,7 @@ import net from 'node:net';
 import type { ComposeStatus, NetworkBindingCheck } from '@praxis-flow/server-shared';
 import { runProcessCommand } from './command-runner.js';
 import { canRunGatewayCompose } from './docker.js';
-import {
-  listNetworkInterfaces,
-  type NetworkInterfaceInfo,
-} from './network.js';
+import { listNetworkInterfaces, type NetworkInterfaceInfo } from './network.js';
 import { DEFAULT_APP_PORT } from './urls.js';
 
 export type { NetworkBindingCheck } from '@praxis-flow/server-shared';
@@ -36,11 +33,7 @@ export function hostHasLanIp(interfaces: NetworkInterfaceInfo[], lanIp: string):
   );
 }
 
-export function probeTcpPort(
-  host: string,
-  port: number,
-  timeoutMs = 2_000,
-): Promise<boolean> {
+export function probeTcpPort(host: string, port: number, timeoutMs = 2_000): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = net.connect({ host, port, timeout: timeoutMs });
     const finish = (ok: boolean) => {
@@ -287,9 +280,7 @@ export async function auditNetworkBindings(input: {
     checks.push({
       id: 'gateway.ip-on-interface',
       ok: ipOk,
-      message: ipOk
-        ? `${gatewayIp} liegt auf ${ifaceName}`
-        : `${gatewayIp} fehlt auf ${ifaceName}`,
+      message: ipOk ? `${gatewayIp} liegt auf ${ifaceName}` : `${gatewayIp} fehlt auf ${ifaceName}`,
       detail: ipOk
         ? undefined
         : 'Gateway-IP muss auf der Gast-Netzwerkkarte gesetzt sein (Praxis-IT oder Host).',
@@ -297,8 +288,7 @@ export async function auditNetworkBindings(input: {
   }
 
   if (gatewayRunning && Number.isFinite(bridgePort)) {
-    const probeHost =
-      bridgeBind === '0.0.0.0' || bridgeBind === '::' ? '127.0.0.1' : bridgeBind;
+    const probeHost = bridgeBind === '0.0.0.0' || bridgeBind === '::' ? '127.0.0.1' : bridgeBind;
     const bridgeOk = await probeTcpPort(probeHost, bridgePort);
     checks.push({
       id: 'gateway.bridge-port',

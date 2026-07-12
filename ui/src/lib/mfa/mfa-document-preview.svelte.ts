@@ -121,10 +121,7 @@ export async function bootstrapMfaDocumentPreviewFromUrl(
   }
   if (mfaDocumentPreview.open) {
     const current = mfaDocumentPreview.context;
-    if (
-      current?.visitId === visitId &&
-      (!documentId || documentId === current.activeDocumentId)
-    ) {
+    if (current?.visitId === visitId && (!documentId || documentId === current.activeDocumentId)) {
       clearQueryParams();
       return;
     }

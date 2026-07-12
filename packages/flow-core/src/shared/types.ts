@@ -1,9 +1,4 @@
-export type ActiveVisitStatus =
-  | 'waiting'
-  | 'directed'
-  | 'called'
-  | 'arrived'
-  | 'in_progress';
+export type ActiveVisitStatus = 'waiting' | 'directed' | 'called' | 'arrived' | 'in_progress';
 
 /** Fachlich abgeschlossen — siehe visit-flow.TERMINAL_VISIT_STATUSES. */
 export type TerminalVisitStatus = 'done' | 'cancelled' | 'no_show';
@@ -12,11 +7,13 @@ export type TerminalVisitStatus = 'done' | 'cancelled' | 'no_show';
 export type OpenVisitStatus = ActiveVisitStatus | 'blocked';
 
 /** Reserviert / Event-only — nicht in Runtime-Transitions genutzt. */
-export type ReservedVisitStatus =
-  | 'created'
-  | 'checked_in';
+export type ReservedVisitStatus = 'created' | 'checked_in';
 
-export type VisitStatus = ActiveVisitStatus | TerminalVisitStatus | OpenVisitStatus | ReservedVisitStatus;
+export type VisitStatus =
+  | ActiveVisitStatus
+  | TerminalVisitStatus
+  | OpenVisitStatus
+  | ReservedVisitStatus;
 
 export type MovementMode = 'self_go' | 'call' | 'pickup';
 export type EscortPolicy = 'none' | 'recommended' | 'required';
@@ -43,7 +40,14 @@ export interface Topic {
 export interface Location {
   id: string;
   name: string;
-  type: 'entrance' | 'waiting_area' | 'reception' | 'treatment_room' | 'lab' | 'service_station' | 'virtual';
+  type:
+    | 'entrance'
+    | 'waiting_area'
+    | 'reception'
+    | 'treatment_room'
+    | 'lab'
+    | 'service_station'
+    | 'virtual';
   canWait: boolean;
   canTreat: boolean;
   canCheckIn: boolean;
@@ -214,7 +218,22 @@ export interface Visit {
 export interface VisitEvent {
   id: string;
   visitId: string;
-  type: 'checked_in' | 'routed' | 'called' | 'arrived' | 'started' | 'returned_to_waiting' | 'redirected' | 'journey_step_completed' | 'journey_completed' | 'journey_abandoned' | 'blocked' | 'done' | 'cancelled' | 'no_show' | 'superseded';
+  type:
+    | 'checked_in'
+    | 'routed'
+    | 'called'
+    | 'arrived'
+    | 'started'
+    | 'returned_to_waiting'
+    | 'redirected'
+    | 'journey_step_completed'
+    | 'journey_completed'
+    | 'journey_abandoned'
+    | 'blocked'
+    | 'done'
+    | 'cancelled'
+    | 'no_show'
+    | 'superseded';
   fromStatus?: string;
   toStatus?: string;
   fromLocationId?: string;

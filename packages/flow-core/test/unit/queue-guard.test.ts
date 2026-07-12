@@ -43,26 +43,35 @@ const catalog = {
 };
 
 test('queueReferences: findet Journey-, Routing-, Display- und Visit-Referenzen', () => {
-  assert.deepEqual(queueReferences(catalog, 'lab_queue'), [{ kind: 'journey_step', id: 'step_lab' }]);
+  assert.deepEqual(queueReferences(catalog, 'lab_queue'), [
+    { kind: 'journey_step', id: 'step_lab' },
+  ]);
   assert.deepEqual(queueReferences(catalog, 'general_queue'), [
     { kind: 'routing_rule', id: 'rule_general' },
     { kind: 'display_rule', id: 'tv_rule' },
   ]);
-  assert.deepEqual(queueReferences(catalog, 'assist_queue', [{ id: 'v1', status: 'waiting', queueId: 'assist_queue' }]), [
-    { kind: 'visit', id: 'v1' },
-  ]);
+  assert.deepEqual(
+    queueReferences(catalog, 'assist_queue', [
+      { id: 'v1', status: 'waiting', queueId: 'assist_queue' },
+    ]),
+    [{ kind: 'visit', id: 'v1' }],
+  );
 });
 
 test('queueReferences: ignoriert abgeschlossene Visits', () => {
   assert.deepEqual(
-    queueReferences(catalog, 'assist_queue', [{ id: 'v_done', status: 'done', queueId: 'assist_queue' }]),
+    queueReferences(catalog, 'assist_queue', [
+      { id: 'v_done', status: 'done', queueId: 'assist_queue' },
+    ]),
     [],
   );
 });
 
 test('queueReferences: zaehlt blocked Visits als offen', () => {
   assert.deepEqual(
-    queueReferences(catalog, 'assist_queue', [{ id: 'v_blocked', status: 'blocked', queueId: 'assist_queue' }]),
+    queueReferences(catalog, 'assist_queue', [
+      { id: 'v_blocked', status: 'blocked', queueId: 'assist_queue' },
+    ]),
     [{ kind: 'visit', id: 'v_blocked' }],
   );
 });

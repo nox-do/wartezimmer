@@ -6,8 +6,7 @@ export const NETWORK_NO_CHANGES_ERROR = 'Keine Änderungen an LAN oder Gateway.'
 export const NETWORK_RESTART_CONFIRM_MESSAGE =
   'Einstellungen werden gespeichert. Stack jetzt neu starten, damit die Änderungen greifen?';
 export const NETWORK_LAN_REQUIRED_ERROR = 'Bitte eine LAN-Adresse wählen oder eingeben.';
-export const NETWORK_GATEWAY_INTERFACE_ERROR =
-  'Bitte eine Netzwerkkarte für das Gast-Netz wählen.';
+export const NETWORK_GATEWAY_INTERFACE_ERROR = 'Bitte eine Netzwerkkarte für das Gast-Netz wählen.';
 
 export function networkWarningText(running: boolean, changed: boolean): string | null {
   if (running && changed) {
@@ -16,10 +15,7 @@ export function networkWarningText(running: boolean, changed: boolean): string |
   return null;
 }
 
-export function networkSaveStatusText(
-  result: HostNetworkResult,
-  restartCompose: boolean,
-): string {
+export function networkSaveStatusText(result: HostNetworkResult, restartCompose: boolean): string {
   const parts = ['Netzwerk-Konfiguration gespeichert.'];
   if (result.backupPath) {
     parts.push(`Backup: ${formatEnvBackupLabel(result.backupPath)}`);

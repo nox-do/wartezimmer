@@ -6,7 +6,7 @@ import { assertJourneyTemplateEditable } from '@praxis-flow/flow-core';
 test('assertJourneyTemplateEditable: blockiert bei offenen Visits', () => {
   assert.throws(
     () => assertJourneyTemplateEditable({ openVisitCount: 1 }),
-    /JOURNEY_TEMPLATE_LOCKED/
+    /JOURNEY_TEMPLATE_LOCKED/,
   );
   assert.doesNotThrow(() => assertJourneyTemplateEditable({ openVisitCount: 0 }));
 });
@@ -18,22 +18,23 @@ test('saveJourneyTemplate: bei offenen Visits nicht speicherbar', () => {
   const steps = catalog.journeySteps.filter((step) => step.templateId === 'journey_general');
 
   assert.throws(
-    () => runtime.saveJourneyTemplate('journey_general', {
-      name: 'Neuer Name',
-      topicId: 'general',
-      active: true,
-      steps: steps.map((step) => ({
-        id: step.id,
-        sortOrder: step.sortOrder,
-        targetLocationId: step.targetLocationId,
-        queueId: step.queueId,
-        movementMode: step.movementMode,
-        publicDisplayMode: step.publicDisplayMode,
-        completedWhen: step.completedWhen,
-        instructionText: step.instructionText
-      }))
-    }),
-    /JOURNEY_TEMPLATE_LOCKED/
+    () =>
+      runtime.saveJourneyTemplate('journey_general', {
+        name: 'Neuer Name',
+        topicId: 'general',
+        active: true,
+        steps: steps.map((step) => ({
+          id: step.id,
+          sortOrder: step.sortOrder,
+          targetLocationId: step.targetLocationId,
+          queueId: step.queueId,
+          movementMode: step.movementMode,
+          publicDisplayMode: step.publicDisplayMode,
+          completedWhen: step.completedWhen,
+          instructionText: step.instructionText,
+        })),
+      }),
+    /JOURNEY_TEMPLATE_LOCKED/,
   );
 });
 
@@ -47,9 +48,25 @@ test('saveJourneyTemplate: ohne offene Visits erlaubt', () => {
     topicId: 'general',
     active: true,
     steps: [
-      { id: steps[0].id, sortOrder: 0, targetLocationId: 'reception', queueId: 'general_queue', movementMode: 'call', publicDisplayMode: 'visible', completedWhen: 'arrive' },
-      { id: steps[1].id, sortOrder: 1, targetLocationId: 'room_1', queueId: null, movementMode: 'pickup', publicDisplayMode: 'hidden', completedWhen: 'start' }
-    ]
+      {
+        id: steps[0].id,
+        sortOrder: 0,
+        targetLocationId: 'reception',
+        queueId: 'general_queue',
+        movementMode: 'call',
+        publicDisplayMode: 'visible',
+        completedWhen: 'arrive',
+      },
+      {
+        id: steps[1].id,
+        sortOrder: 1,
+        targetLocationId: 'room_1',
+        queueId: null,
+        movementMode: 'pickup',
+        publicDisplayMode: 'hidden',
+        completedWhen: 'start',
+      },
+    ],
   });
 
   assert.equal(result.template.name, 'Geaendert');

@@ -81,20 +81,20 @@ Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unte
 
 Setup-API (localhost `:9190`):
 
-| Methode | Pfad | Zweck |
-| ------- | ---- | ----- |
-| GET | `/api/setup/host/status` | Config-Snapshot (`HostStatus`) |
-| GET | `/api/setup/host/runtime-health` | Pollbarer Runtime-Snapshot |
-| GET | `/api/setup/host/compose` | Container-Status |
-| GET | `/api/setup/host/compose/logs` | Log-Auszug |
-| POST | `/api/setup/host/compose` | `{ action: start\|stop\|restart, build?: boolean }`; `build` nur bei `start`/`restart` |
-| GET | `/api/setup/host/backup` | Letztes `.env`-Backup (nur lesen) |
-| POST | `/api/setup/host/backup` | `{ target: "env" }` |
-| POST | `/api/setup/host/storage` | `{ importsHostPath, exportsHostPath, restartCompose? }` |
-| POST | `/api/setup/host/network` | `{ lanAppIp, gateway, restartCompose? }` — Wartung/Netzwerk LAN/Gateway |
-| POST | `/api/setup/host/reset-staff-pins` | MFA- & Ops-PIN auf Default `0000` (DB), Stack stop → reset → start |
-| GET | `/api/setup/host/routing-mode` | Capabilities inkl. `routingMode`, `complexRoutingLicensed` |
-| POST | `/api/setup/host/routing-mode` | `{ routingMode: "simple"\|"complex" }` — proxied zur App-API mit Manager-Trust |
+| Methode | Pfad                               | Zweck                                                                                  |
+| ------- | ---------------------------------- | -------------------------------------------------------------------------------------- |
+| GET     | `/api/setup/host/status`           | Config-Snapshot (`HostStatus`)                                                         |
+| GET     | `/api/setup/host/runtime-health`   | Pollbarer Runtime-Snapshot                                                             |
+| GET     | `/api/setup/host/compose`          | Container-Status                                                                       |
+| GET     | `/api/setup/host/compose/logs`     | Log-Auszug                                                                             |
+| POST    | `/api/setup/host/compose`          | `{ action: start\|stop\|restart, build?: boolean }`; `build` nur bei `start`/`restart` |
+| GET     | `/api/setup/host/backup`           | Letztes `.env`-Backup (nur lesen)                                                      |
+| POST    | `/api/setup/host/backup`           | `{ target: "env" }`                                                                    |
+| POST    | `/api/setup/host/storage`          | `{ importsHostPath, exportsHostPath, restartCompose? }`                                |
+| POST    | `/api/setup/host/network`          | `{ lanAppIp, gateway, restartCompose? }` — Wartung/Netzwerk LAN/Gateway                |
+| POST    | `/api/setup/host/reset-staff-pins` | MFA- & Ops-PIN auf Default `0000` (DB), Stack stop → reset → start                     |
+| GET     | `/api/setup/host/routing-mode`     | Capabilities inkl. `routingMode`, `complexRoutingLicensed`                             |
+| POST    | `/api/setup/host/routing-mode`     | `{ routingMode: "simple"\|"complex" }` — proxied zur App-API mit Manager-Trust         |
 
 Vollständiger Install-Reset bleibt CLI: `npm run setup:reset`.
 

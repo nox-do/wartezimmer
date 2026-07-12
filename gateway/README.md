@@ -39,16 +39,16 @@ docker compose \
 
 See `.env.example` (`GATEWAY_*`, `APP_PORTAL_URL`, `OPENNDS_FAS_KEY`).
 
-| Variable                  | Example                            | Meaning                                           |
-| ------------------------- | ---------------------------------- | ------------------------------------------------- |
-| `GATEWAY_INTERFACE`       | `eth1`                             | NIC facing guest WLAN / VLAN                      |
-| `GATEWAY_IP`              | `192.168.88.1`                     | Gateway address on that NIC                       |
-| `APP_PORTAL_URL`          | `http://192.168.88.10:8080/portal` | openNDS FAS splash (app UI)                       |
+| Variable                  | Example                            | Meaning                                               |
+| ------------------------- | ---------------------------------- | ----------------------------------------------------- |
+| `GATEWAY_INTERFACE`       | `eth1`                             | NIC facing guest WLAN / VLAN                          |
+| `GATEWAY_IP`              | `192.168.88.1`                     | Gateway address on that NIC                           |
+| `APP_PORTAL_URL`          | `http://192.168.88.10:8080/portal` | openNDS FAS splash (app UI)                           |
 | `APP_API_URL`             | `http://192.168.88.10:8080`        | Auth bridge → app `verify-ticket-code` (role captive) |
-| `PORTAL_FQDN`             | `portal.praxis.local`              | Walled-garden hostname                            |
-| `OPENNDS_FAS_KEY`         | long random string                 | Shared with openNDS FAS (no quotes)               |
-| `AUTH_KEY_CAPTIVE`        | same as app                        | Protects auth bridge endpoint                     |
-| `GATEWAY_AUTH_BRIDGE_URL` | `http://172.17.0.1:9100`           | App container → bridge (set on `app` service)     |
+| `PORTAL_FQDN`             | `portal.praxis.local`              | Walled-garden hostname                                |
+| `OPENNDS_FAS_KEY`         | long random string                 | Shared with openNDS FAS (no quotes)                   |
+| `AUTH_KEY_CAPTIVE`        | same as app                        | Protects auth bridge endpoint                         |
+| `GATEWAY_AUTH_BRIDGE_URL` | `http://172.17.0.1:9100`           | App container → bridge (set on `app` service)         |
 
 `APP_PORTAL_URL` must be reachable from patient phones **before** full internet auth (walled garden on app port). `APP_API_URL` must be reachable from the gateway Mini-PC so the auth bridge can verify tickets against the app.
 

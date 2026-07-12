@@ -8,15 +8,15 @@ Dieses Repo ist der **extrahierte Kern** für die Übernahme in die Praxissoftwa
 
 ## Domain-Modell
 
-| Begriff | Rolle |
-|---|---|
-| **Visit** | Operative Wahrheit eines heutigen Praxisdurchlaufs |
-| **Location** | Physischer Ort oder Station (Wartezimmer ist eine normale Location) |
-| **Queue** | Geordnete Bearbeitungsliste (Warteliste, Laborliste, …) |
-| **Surface** | Anzeige oder Bedienoberfläche (Terminal, WZ-TV, Labor-Panel, …) |
-| **Topic** | Anliegen aus dem Check-in |
-| **RoutingRule** | Policy + Auswahl (Topic, Terminals, Escort, Redirect); Route entweder `single_step` oder vollständig aus **JourneyTemplate** |
-| **JourneyTemplate** | Vordefinierte Mehrschritt-Route; ersetzt ab Check-in die operative Route |
+| Begriff             | Rolle                                                                                                                        |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Visit**           | Operative Wahrheit eines heutigen Praxisdurchlaufs                                                                           |
+| **Location**        | Physischer Ort oder Station (Wartezimmer ist eine normale Location)                                                          |
+| **Queue**           | Geordnete Bearbeitungsliste (Warteliste, Laborliste, …)                                                                      |
+| **Surface**         | Anzeige oder Bedienoberfläche (Terminal, WZ-TV, Labor-Panel, …)                                                              |
+| **Topic**           | Anliegen aus dem Check-in                                                                                                    |
+| **RoutingRule**     | Policy + Auswahl (Topic, Terminals, Escort, Redirect); Route entweder `single_step` oder vollständig aus **JourneyTemplate** |
+| **JourneyTemplate** | Vordefinierte Mehrschritt-Route; ersetzt ab Check-in die operative Route                                                     |
 
 ### Wichtige Invarianten
 
@@ -31,17 +31,17 @@ Dieses Repo ist der **extrahierte Kern** für die Übernahme in die Praxissoftwa
 
 ### Visit-Ticket-Felder (API)
 
-| Feld | Bedeutung |
-|---|---|
-| `queueNumber` | Formatiert, z. B. `A-017` — **nicht** numerisch parsen |
-| `queueLaneCode` | Snapshot Nummernkreis (A–Z) |
-| `queueSequence` | Laufnummer im Lane-Tag |
-| `queueNumberDate` | Geschäftstag (PoC: Kalendertag) |
-| `queueNumberScope` | immer `lane_day` |
-| `needsAssistance` | MFA-Markierung — **kein** Routing/Escort/Lane-Effekt |
-| `checkInPath` | `topic` (Standard) oder `mfa_assist` (Hilfe-Button) |
-| `authPath` | `phone_dob`, `name_dob`, `egk`, `none` — Terminal-Anmeldeweg |
-| `id` (Visit) | `formatVisitId(businessDay, laneCode, sequence)` → `20260602-A-017` |
+| Feld               | Bedeutung                                                           |
+| ------------------ | ------------------------------------------------------------------- |
+| `queueNumber`      | Formatiert, z. B. `A-017` — **nicht** numerisch parsen              |
+| `queueLaneCode`    | Snapshot Nummernkreis (A–Z)                                         |
+| `queueSequence`    | Laufnummer im Lane-Tag                                              |
+| `queueNumberDate`  | Geschäftstag (PoC: Kalendertag)                                     |
+| `queueNumberScope` | immer `lane_day`                                                    |
+| `needsAssistance`  | MFA-Markierung — **kein** Routing/Escort/Lane-Effekt                |
+| `checkInPath`      | `topic` (Standard) oder `mfa_assist` (Hilfe-Button)                 |
+| `authPath`         | `phone_dob`, `name_dob`, `egk`, `none` — Terminal-Anmeldeweg        |
+| `id` (Visit)       | `formatVisitId(businessDay, laneCode, sequence)` → `20260602-A-017` |
 
 **Wichtig für Adapter:** Ticket-Anzeige und Sortierung über `queueLaneCode` + `queueSequence` (oder `parseTicketCode(queueNumber)`). `visit.topic.laneCode` ist Live-Katalog und kann vom Snapshot abweichen.
 
@@ -77,20 +77,20 @@ dist/                      — Build-Ausgabe (gitignored)
 
 ### Package-Exports
 
-| Import | Inhalt |
-|---|---|
-| `@praxis-flow/flow-core` | Shared Domain (Types, Validierung, Journey, Visit-Flow, …) |
+| Import                          | Inhalt                                                      |
+| ------------------------------- | ----------------------------------------------------------- |
+| `@praxis-flow/flow-core`        | Shared Domain (Types, Validierung, Journey, Visit-Flow, …)  |
 | `@praxis-flow/flow-core/server` | Runtime (`createRuntime`, `openDb`, Repositories, Services) |
 
 ## Referenz-UI (`src/public/`) — nicht übernehmen
 
 Bleibt in diesem Repo zum **lokalen Durchspielen** und als **Cherry-Pick-Quelle** für das Host-Projekt. Die Produkt-UI lebt woanders; hier nachschauen, was sinnvoll ist, einzeln übernehmen.
 
-| Datei | Cherry-Pick-Kandidaten |
-|---|---|
-| `app.js` | API-Aufrufe, Redirect-Formularfelder, Surface-Visibility mit `explainVisibility`, Visit-Chips/Labels |
-| `journey-admin.js` | Mount-Pattern für Journey-Templates (`mountJourneyAdmin`, `updateCatalog`) |
-| `index.html` / `styles.css` | Layout-Ideen — nur als Referenz, nicht 1:1 kopieren |
+| Datei                       | Cherry-Pick-Kandidaten                                                                               |
+| --------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `app.js`                    | API-Aufrufe, Redirect-Formularfelder, Surface-Visibility mit `explainVisibility`, Visit-Chips/Labels |
+| `journey-admin.js`          | Mount-Pattern für Journey-Templates (`mountJourneyAdmin`, `updateCatalog`)                           |
+| `index.html` / `styles.css` | Layout-Ideen — nur als Referenz, nicht 1:1 kopieren                                                  |
 
 Lokal starten: `npm run dev` → `http://127.0.0.1:3001`. Shared-Module werden unter `/shared/*.js` aus `dist/shared/` ausgeliefert.
 
@@ -107,17 +107,17 @@ npm run typecheck  # tsc ohne Emit
 
 ## API (Referenz-Runtime)
 
-| Methode | Pfad | Beschreibung |
-|---|---|---|
-| GET | `/api/catalog` | Locations, Queues, Surfaces, Topics, Rules, Templates |
-| GET | `/api/visits` | Alle Visits (angereichert) |
-| GET | `/api/visits/:id/events` | Event-Historie |
-| POST | `/api/check-in` | Patient + Visit anlegen, Routing anwenden |
-| POST | `/api/visits/:id/call\|arrive\|start\|done` | Statusübergang (Body optional: `targetLocationId`, `actingLocationId`) |
-| POST | `/api/visits/:id/redirect` | Operative Umleitung |
-| PUT | `/api/routing-rules/:id` | RoutingRule speichern (validiert) |
-| PUT | `/api/journey-templates/:id` | JourneyTemplate speichern (Lock-Guard) |
-| PUT | `/api/topics/:id` | Topic speichern (Lock-Guard) |
+| Methode | Pfad                                        | Beschreibung                                                           |
+| ------- | ------------------------------------------- | ---------------------------------------------------------------------- |
+| GET     | `/api/catalog`                              | Locations, Queues, Surfaces, Topics, Rules, Templates                  |
+| GET     | `/api/visits`                               | Alle Visits (angereichert)                                             |
+| GET     | `/api/visits/:id/events`                    | Event-Historie                                                         |
+| POST    | `/api/check-in`                             | Patient + Visit anlegen, Routing anwenden                              |
+| POST    | `/api/visits/:id/call\|arrive\|start\|done` | Statusübergang (Body optional: `targetLocationId`, `actingLocationId`) |
+| POST    | `/api/visits/:id/redirect`                  | Operative Umleitung                                                    |
+| PUT     | `/api/routing-rules/:id`                    | RoutingRule speichern (validiert)                                      |
+| PUT     | `/api/journey-templates/:id`                | JourneyTemplate speichern (Lock-Guard)                                 |
+| PUT     | `/api/topics/:id`                           | Topic speichern (Lock-Guard)                                           |
 
 ## Seed-Szenarien (nach `reset-db`)
 
@@ -154,15 +154,15 @@ Shared-Module (Domain, ohne DB) — vollständige Liste siehe `src/index.ts`.
 
 **Praxis-Flow-Mapping (Check-in / Ticket):**
 
-| Flow Core | Praxis Flow | Anmerkung |
-|---|---|---|
-| `checkInPath: 'topic'` | Routing-Kontext Standard-Themen-Check-in | |
-| `checkInPath: 'mfa_assist'` | Routing-Kontext Hilfe-Button | |
-| `authPath` | `phone_dob`, `name_dob`, `egk`, `none` | Terminal-Identifikation |
-| `id` / Visit-ID | `formatVisitId(...)` | wie PF Ticket-ID |
-| `queueLaneCode` + `queueSequence` | `laneCode` + `number` | strukturiert bevorzugen |
-| `queueNumber` | `formatTicketCode(...)` | `A-017`; Legacy-Consumer nicht als Zahl parsen |
-| `needsAssistance` | *(neu in PF)* | reine MFA-Markierung, additiv zum Topic |
+| Flow Core                         | Praxis Flow                              | Anmerkung                                      |
+| --------------------------------- | ---------------------------------------- | ---------------------------------------------- |
+| `checkInPath: 'topic'`            | Routing-Kontext Standard-Themen-Check-in |                                                |
+| `checkInPath: 'mfa_assist'`       | Routing-Kontext Hilfe-Button             |                                                |
+| `authPath`                        | `phone_dob`, `name_dob`, `egk`, `none`   | Terminal-Identifikation                        |
+| `id` / Visit-ID                   | `formatVisitId(...)`                     | wie PF Ticket-ID                               |
+| `queueLaneCode` + `queueSequence` | `laneCode` + `number`                    | strukturiert bevorzugen                        |
+| `queueNumber`                     | `formatTicketCode(...)`                  | `A-017`; Legacy-Consumer nicht als Zahl parsen |
+| `needsAssistance`                 | _(neu in PF)_                            | reine MFA-Markierung, additiv zum Topic        |
 
 **Ticket-Format:** wie PF — `formatTicketCode` mit `padStart(3)` bis 999, danach variable Breite; `parseTicketCode` akzeptiert 1–4 Ziffern und optionalen Bindestrich.
 

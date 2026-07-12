@@ -172,16 +172,11 @@ async function main() {
     jsonBody: { type: 'set_absence', mode: 'wait_here' },
     expectedStatus: 200,
   });
-  await requestJson(
-    baseUrl,
-    'PUT',
-    `/api/v1/queue/${encodeURIComponent(visitId)}/callback-phone`,
-    {
-      auth: mfaAuth,
-      jsonBody: { callbackPhone: '4917612345678' },
-      expectedStatus: 200,
-    },
-  );
+  await requestJson(baseUrl, 'PUT', `/api/v1/queue/${encodeURIComponent(visitId)}/callback-phone`, {
+    auth: mfaAuth,
+    jsonBody: { callbackPhone: '4917612345678' },
+    expectedStatus: 200,
+  });
   const recallSms = await requestJson(
     baseUrl,
     'POST',
@@ -208,16 +203,11 @@ async function main() {
     jsonBody: { type: 'set_absence', mode: 'wait_here' },
     expectedStatus: 200,
   });
-  await requestJson(
-    baseUrl,
-    'PUT',
-    `/api/v1/queue/${encodeURIComponent(visitId)}/callback-phone`,
-    {
-      auth: mfaAuth,
-      jsonBody: { callbackPhone: '4917612345678' },
-      expectedStatus: 200,
-    },
-  );
+  await requestJson(baseUrl, 'PUT', `/api/v1/queue/${encodeURIComponent(visitId)}/callback-phone`, {
+    auth: mfaAuth,
+    jsonBody: { callbackPhone: '4917612345678' },
+    expectedStatus: 200,
+  });
 
   console.log('8) recall notifyChannel=whatsapp -> SMS fallback when WhatsApp disabled');
   const recallWhatsApp = await requestJson(

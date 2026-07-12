@@ -32,22 +32,26 @@ export type BuildTvQueueSnapshotInput = {
   revision: number;
 };
 
-function mapVisitToTvItem(visit: ReturnType<Runtime['visits']>[number], settings: OpsSettings): TvQueueItem {
+function mapVisitToTvItem(
+  visit: ReturnType<Runtime['visits']>[number],
+  settings: OpsSettings,
+): TvQueueItem {
   const row = visitToQueueVisitRow(visit, settings);
-  const wayfinding = row.status === 'directed' || (row.status === 'waiting' && row.movementMode === 'pickup');
+  const wayfinding =
+    row.status === 'directed' || (row.status === 'waiting' && row.movementMode === 'pickup');
   return {
     laneCode: row.laneCode,
     number: row.number,
     status: row.status,
-    roomLabel: wayfinding
-      ? row.destinationRoomLabel?.trim() || row.roomLabel
-      : row.roomLabel,
+    roomLabel: wayfinding ? row.destinationRoomLabel?.trim() || row.roomLabel : row.roomLabel,
     movementMode: row.movementMode,
   };
 }
 
 /** TV items from Visits via explainVisibility (Phase A — no legacy ticket fallback). */
-export function buildTvQueueSnapshotFromFlowCore(input: BuildTvQueueSnapshotInput): TvQueueSnapshot {
+export function buildTvQueueSnapshotFromFlowCore(
+  input: BuildTvQueueSnapshotInput,
+): TvQueueSnapshot {
   const { runtime, settings, businessDay, checkinLocked, revision } = input;
   const catalog = runtime.catalog();
   const surface = catalog.surfaces.find((entry) => entry.id === PF_FLOW_SURFACE_TV);

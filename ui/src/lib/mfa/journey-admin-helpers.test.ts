@@ -46,7 +46,9 @@ describe('journey-admin-helpers', () => {
       },
     ];
 
-    expect(buildJourneyPreview(template, rooms, 'Keine Schritte')).toBe('Labor · 1: Raum A → 2: Raum B');
+    expect(buildJourneyPreview(template, rooms, 'Keine Schritte')).toBe(
+      'Labor · 1: Raum A → 2: Raum B',
+    );
   });
 
   it('validateJourneySettingsForSave rejects empty template names', () => {

@@ -23,10 +23,10 @@ Zusaetzlich wird der Proxy zum **kanonischen Zugriffspunkt** fuer alle Nutzer-UR
 
 ## Zwei Ebenen: Praxis-LAN und Internet
 
-| Ebene | Erreichbarkeit | TLS | Proxy-Regel |
-| ----- | -------------- | --- | ----------- |
-| **Praxis-LAN** | Terminal, MFA, TV, Ops, Portal | optional (`http` oder `https`) | Voller Reverse-Proxy auf `app:8080`; `CANONICAL_BASE_URL` fuer alle Rollen |
-| **Internet** | nur Portal (+ Captive-/Upload-APIs) | **HTTPS Pflicht** | **Whitelist** — kein `/mfa`, `/terminal`, `/tv`, `/ops` |
+| Ebene          | Erreichbarkeit                      | TLS                            | Proxy-Regel                                                                |
+| -------------- | ----------------------------------- | ------------------------------ | -------------------------------------------------------------------------- |
+| **Praxis-LAN** | Terminal, MFA, TV, Ops, Portal      | optional (`http` oder `https`) | Voller Reverse-Proxy auf `app:8080`; `CANONICAL_BASE_URL` fuer alle Rollen |
+| **Internet**   | nur Portal (+ Captive-/Upload-APIs) | **HTTPS Pflicht**              | **Whitelist** — kein `/mfa`, `/terminal`, `/tv`, `/ops`                    |
 
 Im LAN ersetzt der Proxy den direkten App-Port `8080` als sichtbaren Einstieg (`80`/`443`). In Dev ohne Proxy bleibt `http://<host>:8080` erlaubt.
 
@@ -162,8 +162,8 @@ services:
     container_name: praxis-flow-proxy
     restart: unless-stopped
     ports:
-      - "${PROXY_HTTP_PORT:-80}:80"
-      - "${PROXY_HTTPS_PORT:-443}:443"
+      - '${PROXY_HTTP_PORT:-80}:80'
+      - '${PROXY_HTTPS_PORT:-443}:443'
     volumes:
       - ${PROXY_MANAGED_CERTS_HOST_PATH:-~/praxis-flow/certs/managed}:/data
       - ${PROXY_CONFIG_DIR_HOST_PATH:-~/praxis-flow/proxy}:/config
@@ -547,7 +547,7 @@ GET  /api/setup/host/proxy/logs?tail=200
 ```ts
 type ProxyStatus = {
   enabled: boolean;
-  mode: "off" | "http" | "tls-custom" | "tls-managed";
+  mode: 'off' | 'http' | 'tls-custom' | 'tls-managed';
   hostname?: string;
   publicBaseUrl?: string;
   container?: {
@@ -562,7 +562,7 @@ type ProxyStatus = {
   };
   tls?: {
     enabled: boolean;
-    source: "none" | "file" | "acme-dns" | "external";
+    source: 'none' | 'file' | 'acme-dns' | 'external';
     valid?: boolean;
     issuer?: string;
     notBefore?: string;
@@ -584,12 +584,12 @@ type ProxyStatus = {
 
 ```ts
 type ProxyAction =
-  | { action: "configure"; config: ProxyConfigInput }
-  | { action: "start" }
-  | { action: "stop" }
-  | { action: "restart" }
-  | { action: "regenerate-config" }
-  | { action: "import-certificate"; certPath: string; keyPath: string };
+  | { action: 'configure'; config: ProxyConfigInput }
+  | { action: 'start' }
+  | { action: 'stop' }
+  | { action: 'restart' }
+  | { action: 'regenerate-config' }
+  | { action: 'import-certificate'; certPath: string; keyPath: string };
 ```
 
 ## Sicherheitsregeln

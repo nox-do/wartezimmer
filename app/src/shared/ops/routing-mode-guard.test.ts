@@ -11,9 +11,20 @@ function openDb(): DatabaseSync {
   return db;
 }
 
-function insertVisit(db: DatabaseSync, id: string, status: string, journeyState: string | null = null, sequence = 1): void {
+function insertVisit(
+  db: DatabaseSync,
+  id: string,
+  status: string,
+  journeyState: string | null = null,
+  sequence = 1,
+): void {
   db.exec('PRAGMA foreign_keys = OFF');
-  db.prepare('INSERT INTO patients VALUES (?, ?, ?, ?)').run(`p-${id}`, null, 1, '2026-07-07T10:00:00.000Z');
+  db.prepare('INSERT INTO patients VALUES (?, ?, ?, ?)').run(
+    `p-${id}`,
+    null,
+    1,
+    '2026-07-07T10:00:00.000Z',
+  );
   db.prepare(
     `INSERT INTO visits (
       id, patient_id, status, primary_topic_id, applied_routing_rule_id,
@@ -79,21 +90,18 @@ test('validateRoutingModeChange blocks complex to simple when waiting numbers ar
 test('validateRoutingModeChange allows mode switch when no open waiting numbers', () => {
   const db = openDb();
   insertVisit(db, 'visit-1', 'done', 'active');
-  assert.deepEqual(
-    validateRoutingModeChange({ currentMode: 'simple', nextMode: 'complex', db }),
-    { ok: true },
-  );
-  assert.deepEqual(
-    validateRoutingModeChange({ currentMode: 'complex', nextMode: 'simple', db }),
-    { ok: true },
-  );
+  assert.deepEqual(validateRoutingModeChange({ currentMode: 'simple', nextMode: 'complex', db }), {
+    ok: true,
+  });
+  assert.deepEqual(validateRoutingModeChange({ currentMode: 'complex', nextMode: 'simple', db }), {
+    ok: true,
+  });
 });
 
 test('validateRoutingModeChange is no-op when mode unchanged', () => {
   const db = openDb();
   insertVisit(db, 'visit-1', 'waiting', null);
-  assert.deepEqual(
-    validateRoutingModeChange({ currentMode: 'complex', nextMode: 'complex', db }),
-    { ok: true },
-  );
+  assert.deepEqual(validateRoutingModeChange({ currentMode: 'complex', nextMode: 'complex', db }), {
+    ok: true,
+  });
 });

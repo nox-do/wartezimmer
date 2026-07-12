@@ -118,8 +118,7 @@ function mapQueueRowToPanelItem(
   if (!isRoomPanelStatus(row.status)) {
     return null;
   }
-  const panelRoomId =
-    row.status === 'directed' ? row.destinationRoomId || null : row.roomId;
+  const panelRoomId = row.status === 'directed' ? row.destinationRoomId || null : row.roomId;
   if (panelRoomId !== sessionRoomId) {
     return null;
   }
@@ -238,7 +237,13 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
     const candidateActions = resolveRoomPanelCallCandidateActions(capabilities);
     snapshot.callCandidates = callCandidateRows
       .map((row) =>
-        mapQueueRowToCallCandidate(row, session.roomId, roomLabel, showPatientNames, candidateActions),
+        mapQueueRowToCallCandidate(
+          row,
+          session.roomId,
+          roomLabel,
+          showPatientNames,
+          candidateActions,
+        ),
       )
       .filter((entry): entry is RoomPanelCallCandidate => entry !== null)
       .filter((entry) => !itemVisitIds.has(entry.visitId));

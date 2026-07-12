@@ -7,7 +7,10 @@ import type { QueueItem } from './types';
  */
 export type MfaInRoomPrimaryAction = 'start' | 'continue' | 'checkout';
 
-export type MfaPrimaryActionInput = Pick<QueueItem, 'status' | 'startedAt' | 'journeyStepCompletedAt'>;
+export type MfaPrimaryActionInput = Pick<
+  QueueItem,
+  'status' | 'startedAt' | 'journeyStepCompletedAt'
+>;
 
 export function resolveMfaInRoomPrimaryAction(
   item: MfaPrimaryActionInput,

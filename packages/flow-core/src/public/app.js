@@ -1,5 +1,10 @@
 import { explainVisibility, isVisitVisibleOnSurface } from '/shared/surface-visibility.js';
-import { formatAllowedSurfaceIds, ruleForTopicAtSurface, terminalsForTopic, topicsForTerminal } from '/shared/routing-scope.js';
+import {
+  formatAllowedSurfaceIds,
+  ruleForTopicAtSurface,
+  terminalsForTopic,
+  topicsForTerminal,
+} from '/shared/routing-scope.js';
 import { canTransition } from '/shared/visit-flow.js';
 import {
   confidenceLabels,
@@ -7,13 +12,13 @@ import {
   errorLabels,
   escortLabels,
   movementLabels,
-  statusLabels
+  statusLabels,
 } from '/shared/labels.js';
 import {
   buildJourneyRoutePreview,
   ruleUsesJourneyRouting,
   stepsForJourneyTemplate,
-  visitOperationalLabel
+  visitOperationalLabel,
 } from '/shared/visit-context.js';
 
 import { mountJourneyAdmin } from './journey-admin.js';
@@ -25,7 +30,12 @@ const api = async (url, options) => {
   if (!response.ok) throw new Error(payload.error || 'API_ERROR');
   return payload;
 };
-const post = (url, body) => api(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+const post = (url, body) =>
+  api(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 
 let catalog;
 let visits = [];
@@ -39,12 +49,12 @@ const journeyAdmin = mountJourneyAdmin($('journeyAdminRoot'), {
     await api(`/api/journey-templates/${payload.id}`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
     catalog = await api('/api/catalog');
     journeyAdmin.updateCatalog(catalog);
     renderRuleForm();
-  }
+  },
 });
 
 function sourceChip(field, value, label) {
@@ -55,11 +65,31 @@ function visitSourceChips(visit) {
   const chips = [
     sourceChip('status', visit.status, statusLabels[visit.status] || visit.status),
     sourceChip('movementMode', visit.movementMode, movementLabels[visit.movementMode]),
-    sourceChip('locationConfidence', visit.locationConfidence, confidenceLabels[visit.locationConfidence]),
-    sourceChip('publicDisplayMode', visit.publicDisplayMode, displayLabels[visit.publicDisplayMode]),
-    sourceChip('configuredEscortPolicy', visit.configuredEscortPolicy, escortLabels[visit.configuredEscortPolicy]),
-    sourceChip('effectiveEscortPolicy', visit.effectiveEscortPolicy, escortLabels[visit.effectiveEscortPolicy]),
-    sourceChip('allowRedirect', visit.allowRedirect ? 'true' : 'false', visit.allowRedirect ? 'MFA darf umleiten' : 'kein Redirect')
+    sourceChip(
+      'locationConfidence',
+      visit.locationConfidence,
+      confidenceLabels[visit.locationConfidence],
+    ),
+    sourceChip(
+      'publicDisplayMode',
+      visit.publicDisplayMode,
+      displayLabels[visit.publicDisplayMode],
+    ),
+    sourceChip(
+      'configuredEscortPolicy',
+      visit.configuredEscortPolicy,
+      escortLabels[visit.configuredEscortPolicy],
+    ),
+    sourceChip(
+      'effectiveEscortPolicy',
+      visit.effectiveEscortPolicy,
+      escortLabels[visit.effectiveEscortPolicy],
+    ),
+    sourceChip(
+      'allowRedirect',
+      visit.allowRedirect ? 'true' : 'false',
+      visit.allowRedirect ? 'MFA darf umleiten' : 'kein Redirect',
+    ),
   ];
   if (visit.checkInPath === 'mfa_assist') {
     chips.push(sourceChip('checkInPath', 'mfa_assist', 'Hilfe-Button · Zur MFA'));
@@ -71,7 +101,9 @@ function visitSourceChips(visit) {
     const label = visit.journeyStepLabel || '—';
     const name = visit.journeyTemplate?.name || visit.journeyTemplateId;
     chips.push(sourceChip('journeyStepIndex', label, `${name} · Schritt ${label}`));
-    chips.push(`<span><code>operationalLabel</code> · ${escapeHtml(visitOperationalLabel(visit))}</span>`);
+    chips.push(
+      `<span><code>operationalLabel</code> · ${escapeHtml(visitOperationalLabel(visit))}</span>`,
+    );
   }
   return chips.join('');
 }
@@ -115,7 +147,9 @@ function syncCheckinSelects() {
   }
 
   const topicId = $('topic')?.value;
-  const rule = topicId ? ruleForTopicAtSurface(catalog, topicId, $('checkinSurface')?.value) : undefined;
+  const rule = topicId
+    ? ruleForTopicAtSurface(catalog, topicId, $('checkinSurface')?.value)
+    : undefined;
   const terminals = topicId ? terminalsForTopic(catalog, topicId) : terminalSurfaces();
   const previousSurfaceId = $('checkinSurface')?.value;
   fill($('checkinSurface'), terminals, 'id', 'name');
@@ -133,7 +167,11 @@ function terminalSurfaces() {
 }
 
 function fill(select, rows, valueKey, labelKey) {
-  select.innerHTML = rows.map((row) => `<option value="${escapeHtml(row[valueKey])}">${escapeHtml(row[labelKey])}</option>`).join('');
+  select.innerHTML = rows
+    .map(
+      (row) => `<option value="${escapeHtml(row[valueKey])}">${escapeHtml(row[labelKey])}</option>`,
+    )
+    .join('');
 }
 
 async function refresh() {
@@ -166,7 +204,7 @@ function renderRedirectPanel() {
     'redirectLocationSemantics',
     'redirectLastKnown',
     'redirectPreserveInstruction',
-    'redirectTerminalInstruction'
+    'redirectTerminalInstruction',
   ]) {
     const control = $(id);
     if (control) control.disabled = !allowed;
@@ -181,7 +219,8 @@ function renderRedirectPanel() {
     return;
   }
   if (!allowed) {
-    notice.textContent = 'Redirect nicht erlaubt (allowRedirect = false, z. B. Hilfe-Button / rule_mfa).';
+    notice.textContent =
+      'Redirect nicht erlaubt (allowRedirect = false, z. B. Hilfe-Button / rule_mfa).';
     notice.classList.remove('hidden');
     return;
   }
@@ -202,9 +241,10 @@ function syncRedirectPanel() {
 
   if (lastKnownSelect && semantics !== 'instructed') {
     const targetId = $('redirectLocation')?.value;
-    const options = semantics === 'unknown'
-      ? [{ id: '', name: '— unbekannt (null) —' }, ...catalog.locations]
-      : catalog.locations;
+    const options =
+      semantics === 'unknown'
+        ? [{ id: '', name: '— unbekannt (null) —' }, ...catalog.locations]
+        : catalog.locations;
     // Select wird bei jedem sync neu gebaut — PoC ok; manuelle Auswahl geht bei Re-Render verloren.
     fill(lastKnownSelect, options, 'id', 'name');
     if (semantics === 'confirmed' && targetId) {
@@ -227,7 +267,7 @@ function redirectBodyFromForm() {
     movementMode: $('redirectMovement').value,
     publicDisplayMode: $('redirectDisplay').value,
     locationSemantics: $('redirectLocationSemantics').value,
-    staffNote: 'Redirect aus PoC-Dashboard'
+    staffNote: 'Redirect aus PoC-Dashboard',
   };
 
   if ($('redirectPreserveInstruction').checked) {
@@ -263,7 +303,9 @@ function renderCheckinPanel() {
   const needsAssistance = $('needsAssistance')?.checked;
   const rule = topicId ? ruleForTopicAtSurface(catalog, topicId, surfaceId) : undefined;
   const journeyMode = ruleUsesJourneyRouting(rule);
-  const journeySteps = journeyMode ? stepsForJourneyTemplate(rule.journeyTemplateId, catalog.journeySteps) : [];
+  const journeySteps = journeyMode
+    ? stepsForJourneyTemplate(rule.journeyTemplateId, catalog.journeySteps)
+    : [];
   $('checkinContext').innerHTML = `
     <section class="journey-step">
       <h4>Schritt 1 · Terminal (Surface)</h4>
@@ -276,18 +318,29 @@ function renderCheckinPanel() {
       <h4>Schritt 2 · Anmeldgrund + Routing</h4>
       ${needsAssistance && topicId ? `<p class="muted">Thema + <code>needsAssistance</code> — nur MFA-Markierung, Routing unverändert.</p>` : ''}
       ${!topicId ? `<p class="muted">Hilfe-Button sendet <code>mfaAssist: true</code> — <code>checkInPath: mfa_assist</code>, Routing über PoC-RoutingRule (kein Terminal-Thema).</p>` : ''}
-      ${rule ? `<dl>
+      ${
+        rule
+          ? `<dl>
         ${fieldRow('topicId', catalog.topics.find((item) => item.id === topicId)?.name || topicId || '—')}
         ${fieldRow('allowedSurfaceIds', formatAllowedSurfaceIds(rule.allowedSurfaceIds, terminalSurfaces()))}
         ${fieldRow('appliedRoutingRuleId', `${rule.id} · ${rule.name}`)}
         ${fieldRow('routingMode', journeyMode ? 'journey · Route aus Journey-Template' : 'single_step · Route aus Rule initial_*')}
-        ${journeyMode
-          ? fieldRow('journeyRoute', buildJourneyRoutePreview(journeySteps, catalog.locations, catalog.queues))
-          : `${fieldRow('initialLastKnownLocationId', labelLoc(rule.initialLastKnownLocationId))}
+        ${
+          journeyMode
+            ? fieldRow(
+                'journeyRoute',
+                buildJourneyRoutePreview(journeySteps, catalog.locations, catalog.queues),
+              )
+            : `${fieldRow('initialLastKnownLocationId', labelLoc(rule.initialLastKnownLocationId))}
              ${fieldRow('initialTargetLocationId', labelLoc(rule.initialTargetLocationId))}
              ${fieldRow('initialQueueId', labelQueue(rule.initialQueueId))}
-             ${fieldRow('initialMovementMode', rule.initialMovementMode)}`}
-      </dl>` : (!topicId ? '' : '<p class="muted">Thema wählen oder Hilfe-Button nutzen.</p>')}
+             ${fieldRow('initialMovementMode', rule.initialMovementMode)}`
+        }
+      </dl>`
+          : !topicId
+            ? ''
+            : '<p class="muted">Thema wählen oder Hilfe-Button nutzen.</p>'
+      }
     </section>
     <p class="muted journey-note">Mit Journey ersetzt das Template den operativen Route-Teil der Rule (initial_*). Policy: Escort, Redirect, Terminals.</p>
   `;
@@ -305,15 +358,25 @@ function journeyLine(visit) {
 function renderGroups() {
   const groups = new Map();
   for (const visit of visits) {
-    const key = activeView === 'queues' ? visit.queueId || 'none' : activeView === 'locations' ? visit.lastKnownLocationId || 'unknown' : visit.primaryTopicId || 'none';
+    const key =
+      activeView === 'queues'
+        ? visit.queueId || 'none'
+        : activeView === 'locations'
+          ? visit.lastKnownLocationId || 'unknown'
+          : visit.primaryTopicId || 'none';
     groups.set(key, [...(groups.get(key) || []), visit]);
   }
-  $('groups').innerHTML = [...groups.entries()].map(([id, items]) => `
+  $('groups').innerHTML =
+    [...groups.entries()]
+      .map(
+        ([id, items]) => `
     <section class="group">
       <h2>${labelFor(activeView, id)} <span>${items.length}</span></h2>
       ${items.map(renderVisit).join('')}
     </section>
-  `).join('') || '<p class="muted">Noch keine aktiven Visits.</p>';
+  `,
+      )
+      .join('') || '<p class="muted">Noch keine aktiven Visits.</p>';
 }
 
 function renderVisit(visit) {
@@ -350,20 +413,28 @@ function surfaceRouteLabel(visit) {
 
 function renderSurfaces() {
   const ids = ['waiting_tv', 'panel_vaccine', 'panel_lab', 'panel_room_1'];
-  $('surfaces').innerHTML = ids.map((surfaceId) => {
-    const surface = catalog.surfaces.find((item) => item.id === surfaceId);
-    const rules = catalog.surfaceDisplayRules.filter((rule) => rule.surfaceId === surfaceId);
-    const rows = visits
-      .map((visit) => ({ visit, explanation: explainVisibility(visit, surface, rules) }))
-      .filter(({ explanation }) => explanation.visible);
-    return `<article><h3>${surface.name}</h3>${rows.map(({ visit, explanation }) => `
+  $('surfaces').innerHTML = ids
+    .map((surfaceId) => {
+      const surface = catalog.surfaces.find((item) => item.id === surfaceId);
+      const rules = catalog.surfaceDisplayRules.filter((rule) => rule.surfaceId === surfaceId);
+      const rows = visits
+        .map((visit) => ({ visit, explanation: explainVisibility(visit, surface, rules) }))
+        .filter(({ explanation }) => explanation.visible);
+      return `<article><h3>${surface.name}</h3>${
+        rows
+          .map(
+            ({ visit, explanation }) => `
       <div class="surface-row" title="${escapeHtml(explanation.reason)}">
         <strong>${visit.queueNumber}</strong>
         <span>${escapeHtml(surfaceRouteLabel(visit))}</span>
         <small class="muted">${escapeHtml(explanation.reason)}</small>
       </div>
-    `).join('') || '<p class="muted">Keine passenden Visits</p>'}</article>`;
-  }).join('');
+    `,
+          )
+          .join('') || '<p class="muted">Keine passenden Visits</p>'
+      }</article>`;
+    })
+    .join('');
 }
 
 function renderEventLine(event) {
@@ -400,12 +471,14 @@ function renderEvents() {
     return;
   }
 
-  $('events').innerHTML = eventsForDisplay(events).map((item) => {
-    if (item.kind === 'group') {
-      return `<li class="event-group"><span class="event-group-label">Redirect · Journey verlassen</span><ul class="event-group-items">${item.events.map(renderEventLine).join('')}</ul></li>`;
-    }
-    return renderEventLine(item.event);
-  }).join('');
+  $('events').innerHTML = eventsForDisplay(events)
+    .map((item) => {
+      if (item.kind === 'group') {
+        return `<li class="event-group"><span class="event-group-label">Redirect · Journey verlassen</span><ul class="event-group-items">${item.events.map(renderEventLine).join('')}</ul></li>`;
+      }
+      return renderEventLine(item.event);
+    })
+    .join('');
 }
 
 function renderRuleForm({ journeyTemplateIdOverride } = {}) {
@@ -413,12 +486,15 @@ function renderRuleForm({ journeyTemplateIdOverride } = {}) {
   if (!rule) return;
   const topic = catalog.topics.find((item) => item.id === rule.topicId);
   const terminals = terminalSurfaces();
-  const effectiveJourneyId = journeyTemplateIdOverride !== undefined
-    ? (journeyTemplateIdOverride || undefined)
-    : rule.journeyTemplateId;
+  const effectiveJourneyId =
+    journeyTemplateIdOverride !== undefined
+      ? journeyTemplateIdOverride || undefined
+      : rule.journeyTemplateId;
   const effectiveRule = { ...rule, journeyTemplateId: effectiveJourneyId };
   const journeyMode = ruleUsesJourneyRouting(effectiveRule);
-  const journeySteps = journeyMode ? stepsForJourneyTemplate(effectiveJourneyId, catalog.journeySteps) : [];
+  const journeySteps = journeyMode
+    ? stepsForJourneyTemplate(effectiveJourneyId, catalog.journeySteps)
+    : [];
 
   $('ruleForm').innerHTML = `
     <p class="rule-preview" id="rulePreview">${escapeHtml(buildRuleJourneyPreview(effectiveRule))}</p>
@@ -437,27 +513,40 @@ function renderRuleForm({ journeyTemplateIdOverride } = {}) {
         ${ruleFieldLabel('journeyTemplateId', 'Journey-Vorlage', 'Gesetzt = Journey ersetzt operative Route (initial_* wird ignoriert)')}
         <select id="ruleJourney">
           <option value="" ${!effectiveJourneyId ? 'selected' : ''}>— Einfacher Schritt (single_step) —</option>
-          ${catalog.journeyTemplates.filter((item) => item.active).map((item) => `
+          ${catalog.journeyTemplates
+            .filter((item) => item.active)
+            .map(
+              (item) => `
             <option value="${escapeHtml(item.id)}" ${item.id === effectiveJourneyId ? 'selected' : ''}>${escapeHtml(item.name)}</option>
-          `).join('')}
+          `,
+            )
+            .join('')}
         </select>
       </label>
-      ${journeyMode ? `
+      ${
+        journeyMode
+          ? `
         <p class="rule-journey-line">${escapeHtml(buildJourneyRoutePreview(journeySteps, catalog.locations, catalog.queues))}</p>
         <p class="rule-help wide">Policy bleibt in der Rule: Terminals, Escort, Redirect. Route bearbeiten → Journey-Admin unten.</p>
-      ` : ''}
+      `
+          : ''
+      }
     </section>
 
     <section class="rule-block">
       <h4>1 · Check-in — Terminals &amp; Policy</h4>
       <div class="wide terminal-picks">
         ${ruleFieldLabel('allowedSurfaceIds', 'An welchen Terminals?', 'Keine Auswahl = alle Terminals')}
-        ${terminals.map((terminal) => `
+        ${terminals
+          .map(
+            (terminal) => `
           <label class="check">
             <input class="ruleTerminal" type="checkbox" value="${escapeHtml(terminal.id)}" ${ruleTerminalChecked(rule, terminal.id) ? 'checked' : ''} />
             ${escapeHtml(terminal.name)} <code>${escapeHtml(terminal.id)}</code>
           </label>
-        `).join('')}
+        `,
+          )
+          .join('')}
       </div>
       <label class="rule-field wide ${journeyMode ? 'hidden' : ''}" id="ruleTerminalBlock">
         ${ruleFieldLabel('terminalInstructionTemplate', 'Text am Terminal', 'Nur single_step — bei Journey aus movementMode abgeleitet')}
@@ -522,7 +611,10 @@ function locName(id) {
 function buildRuleOrtLine(rule) {
   const last = locName(rule.initialLastKnownLocationId);
   const target = locName(rule.initialTargetLocationId);
-  const queue = catalog.queues.find((item) => item.id === rule.initialQueueId)?.name || rule.initialQueueId || '?';
+  const queue =
+    catalog.queues.find((item) => item.id === rule.initialQueueId)?.name ||
+    rule.initialQueueId ||
+    '?';
   return `Wartet in: ${last}  →  Ziel: ${target}  ·  Liste: ${queue}`;
 }
 
@@ -535,7 +627,12 @@ function buildRuleJourneyPreview(rule) {
     return `Journey · ${template?.name || rule.journeyTemplateId} · Terminal (${terminals}) · ${topic?.name || rule.topicId} · ${buildJourneyRoutePreview(steps, catalog.locations, catalog.queues)}`;
   }
   const movement = movementLabels[rule.initialMovementMode] || rule.initialMovementMode;
-  const tv = rule.publicDisplayMode === 'hidden' ? 'nicht am WZ-TV' : rule.publicDisplayMode === 'call_only' ? 'WZ-TV nur nach Aufruf' : 'am WZ-TV sichtbar';
+  const tv =
+    rule.publicDisplayMode === 'hidden'
+      ? 'nicht am WZ-TV'
+      : rule.publicDisplayMode === 'call_only'
+        ? 'WZ-TV nur nach Aufruf'
+        : 'am WZ-TV sichtbar';
   return `Single-Step · Terminal (${terminals}) · ${topic?.name || rule.topicId} · ${buildRuleOrtLine(rule)} · ${movement} · ${tv}`;
 }
 
@@ -548,15 +645,17 @@ function draftRuleFromForm(rule) {
     allowedSurfaceIds: selectedAllowedSurfaceIds(),
     escortPolicy: $('ruleEscort')?.value ?? rule.escortPolicy,
     allowRedirect: $('ruleRedirect')?.checked ?? rule.allowRedirect,
-    ...(journeyMode ? {} : {
-      initialLastKnownLocationId: $('ruleLast')?.value ?? rule.initialLastKnownLocationId,
-      initialTargetLocationId: $('ruleTarget')?.value ?? rule.initialTargetLocationId,
-      initialQueueId: $('ruleQueue')?.value ?? rule.initialQueueId,
-      initialMovementMode: $('ruleMovement')?.value ?? rule.initialMovementMode,
-      initialLocationConfidence: $('ruleConfidence')?.value ?? rule.initialLocationConfidence,
-      publicDisplayMode: $('ruleDisplay')?.value ?? rule.publicDisplayMode,
-      terminalInstructionTemplate: $('ruleText')?.value ?? rule.terminalInstructionTemplate
-    })
+    ...(journeyMode
+      ? {}
+      : {
+          initialLastKnownLocationId: $('ruleLast')?.value ?? rule.initialLastKnownLocationId,
+          initialTargetLocationId: $('ruleTarget')?.value ?? rule.initialTargetLocationId,
+          initialQueueId: $('ruleQueue')?.value ?? rule.initialQueueId,
+          initialMovementMode: $('ruleMovement')?.value ?? rule.initialMovementMode,
+          initialLocationConfidence: $('ruleConfidence')?.value ?? rule.initialLocationConfidence,
+          publicDisplayMode: $('ruleDisplay')?.value ?? rule.publicDisplayMode,
+          terminalInstructionTemplate: $('ruleText')?.value ?? rule.terminalInstructionTemplate,
+        }),
   };
 }
 
@@ -569,9 +668,15 @@ function updateRulePreview() {
   if (ortLine) ortLine.textContent = buildRuleOrtLine(draft);
 }
 
-function movementOption(value, rule) { return `<option value="${value}" ${rule.initialMovementMode === value ? 'selected' : ''}>${value} · ${movementLabels[value]}</option>`; }
-function displayOption(value, rule) { return `<option value="${value}" ${rule.publicDisplayMode === value ? 'selected' : ''}>${value} · ${displayLabels[value]}</option>`; }
-function escortOption(value, rule) { return `<option value="${value}" ${rule.escortPolicy === value ? 'selected' : ''}>${value} · ${escortLabels[value]}</option>`; }
+function movementOption(value, rule) {
+  return `<option value="${value}" ${rule.initialMovementMode === value ? 'selected' : ''}>${value} · ${movementLabels[value]}</option>`;
+}
+function displayOption(value, rule) {
+  return `<option value="${value}" ${rule.publicDisplayMode === value ? 'selected' : ''}>${value} · ${displayLabels[value]}</option>`;
+}
+function escortOption(value, rule) {
+  return `<option value="${value}" ${rule.escortPolicy === value ? 'selected' : ''}>${value} · ${escortLabels[value]}</option>`;
+}
 function confidenceOption(value, rule) {
   return `<option value="${value}" ${rule.initialLocationConfidence === value ? 'selected' : ''}>${value} · ${confidenceLabels[value]}</option>`;
 }
@@ -581,7 +686,9 @@ function ruleTerminalChecked(rule, terminalId) {
 }
 
 function selectedAllowedSurfaceIds() {
-  const checked = [...document.querySelectorAll('.ruleTerminal:checked')].map((input) => input.value);
+  const checked = [...document.querySelectorAll('.ruleTerminal:checked')].map(
+    (input) => input.value,
+  );
   return checked.length ? checked : null;
 }
 
@@ -593,12 +700,18 @@ function surfaceVisits(surfaceId) {
 
 function labelFor(view, id) {
   if (view === 'queues') return catalog.queues.find((item) => item.id === id)?.name || 'Ohne Queue';
-  if (view === 'locations') return catalog.locations.find((item) => item.id === id)?.name || 'Unbekannter Ort';
+  if (view === 'locations')
+    return catalog.locations.find((item) => item.id === id)?.name || 'Unbekannter Ort';
   return catalog.topics.find((item) => item.id === id)?.name || 'Ohne Thema';
 }
 
 function locationText(visit) {
-  const confidence = visit.locationConfidence === 'confirmed' ? 'bestätigt in' : visit.locationConfidence === 'instructed' ? 'angewiesen zu' : 'angenommen in';
+  const confidence =
+    visit.locationConfidence === 'confirmed'
+      ? 'bestätigt in'
+      : visit.locationConfidence === 'instructed'
+        ? 'angewiesen zu'
+        : 'angenommen in';
   return `${confidence} ${visit.lastKnownLocation?.name || 'unbekannt'}`;
 }
 
@@ -607,9 +720,14 @@ function showError(error) {
   $('error').textContent = errorLabels[message] || message;
   $('error').classList.remove('hidden');
 }
-function clearError() { $('error').classList.add('hidden'); }
+function clearError() {
+  $('error').classList.add('hidden');
+}
 function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[char]);
+  return String(value ?? '').replace(
+    /[&<>"']/g,
+    (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[char],
+  );
 }
 
 function buildCheckInBody({ mfaAssist = false } = {}) {
@@ -617,7 +735,7 @@ function buildCheckInBody({ mfaAssist = false } = {}) {
     return {
       surfaceId: $('checkinSurface').value,
       mfaAssist: true,
-      displayName: $('displayName').value || undefined
+      displayName: $('displayName').value || undefined,
     };
   }
 
@@ -628,7 +746,7 @@ function buildCheckInBody({ mfaAssist = false } = {}) {
     surfaceId: $('checkinSurface').value,
     topicId,
     displayName: $('displayName').value || undefined,
-    needsAssistance: $('needsAssistance').checked
+    needsAssistance: $('needsAssistance').checked,
   };
 }
 
@@ -639,7 +757,10 @@ document.addEventListener('click', async (event) => {
     clearError();
     if (button?.id === 'refresh') await refresh();
     if (button?.id === 'checkin' || button?.id === 'checkinAssistOnly') {
-      const visit = await post('/api/check-in', buildCheckInBody({ mfaAssist: button.id === 'checkinAssistOnly' }));
+      const visit = await post(
+        '/api/check-in',
+        buildCheckInBody({ mfaAssist: button.id === 'checkinAssistOnly' }),
+      );
       selectedVisitId = visit.id;
       $('displayName').value = '';
       $('needsAssistance').checked = false;
@@ -691,15 +812,17 @@ document.addEventListener('click', async (event) => {
           initialTargetLocationId: draft.initialTargetLocationId,
           initialQueueId: draft.initialQueueId,
           initialMovementMode: draft.initialMovementMode ?? rule.initialMovementMode,
-          initialLocationConfidence: draft.initialLocationConfidence ?? rule.initialLocationConfidence,
+          initialLocationConfidence:
+            draft.initialLocationConfidence ?? rule.initialLocationConfidence,
           publicDisplayMode: draft.publicDisplayMode ?? rule.publicDisplayMode,
-          terminalInstructionTemplate: draft.terminalInstructionTemplate ?? rule.terminalInstructionTemplate,
+          terminalInstructionTemplate:
+            draft.terminalInstructionTemplate ?? rule.terminalInstructionTemplate,
           escortPolicy: draft.escortPolicy,
           requiresReceptionConfirmation: rule.requiresReceptionConfirmation,
           allowRedirect: draft.allowRedirect,
           allowedSurfaceIds: draft.allowedSurfaceIds,
-          journeyTemplateId: draft.journeyTemplateId
-        })
+          journeyTemplateId: draft.journeyTemplateId,
+        }),
       });
       catalog = await api('/api/catalog');
       syncCheckinSelects();
@@ -718,7 +841,9 @@ document.addEventListener('click', async (event) => {
 document.querySelectorAll('.tabs button').forEach((button) => {
   button.addEventListener('click', () => {
     activeView = button.dataset.view;
-    document.querySelectorAll('.tabs button').forEach((item) => item.classList.toggle('active', item === button));
+    document
+      .querySelectorAll('.tabs button')
+      .forEach((item) => item.classList.toggle('active', item === button));
     renderGroups();
   });
 });
@@ -748,11 +873,9 @@ for (const id of ['checkinSurface', 'topic', 'needsAssistance']) {
 
 document.querySelector('.redirect')?.addEventListener('change', (event) => {
   const { id } = event.target;
-  if ([
-    'redirectLocationSemantics',
-    'redirectLocation',
-    'redirectPreserveInstruction'
-  ].includes(id)) {
+  if (
+    ['redirectLocationSemantics', 'redirectLocation', 'redirectPreserveInstruction'].includes(id)
+  ) {
     syncRedirectPanel();
   }
 });

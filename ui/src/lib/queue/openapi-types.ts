@@ -27,4 +27,3 @@ export type QueueTriageResponse = QueueSchemas['QueueTriageResponse'];
 export type TriageLevel = NonNullable<QueueItem['triageLevel']>;
 export type QueueSummaryResponse = QueueSchemas['QueueSummaryResponse'];
 export type AbsenceMode = QueueSchemas['AbsenceMode'];
-

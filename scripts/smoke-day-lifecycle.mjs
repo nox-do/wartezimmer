@@ -191,10 +191,7 @@ async function main() {
       expectedStatus: 404,
     },
   );
-  assert(
-    oldTicketCall.body?.code === 'VISIT_NOT_FOUND',
-    'Expected VISIT_NOT_FOUND for old ticket',
-  );
+  assert(oldTicketCall.body?.code === 'VISIT_NOT_FOUND', 'Expected VISIT_NOT_FOUND for old ticket');
 
   console.log('5) Outbox ist nach Reset geleert (nur frisches BusinessDayReset)');
   const outbox = await requestJson(baseUrl, 'GET', '/api/v1/ops/outbox-status', {

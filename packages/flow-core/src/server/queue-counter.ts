@@ -8,7 +8,10 @@ const ALLOCATE_SQL = `
 `;
 
 /** Atomare Laufnummer pro Counter-Scope und Tag. */
-export function allocateQueueSequence(db: DatabaseSync, params: { scope: string; date: string }): number {
+export function allocateQueueSequence(
+  db: DatabaseSync,
+  params: { scope: string; date: string },
+): number {
   const row = db.prepare(ALLOCATE_SQL).get(params.scope, params.date) as { next_value: number };
   return Number(row.next_value);
 }

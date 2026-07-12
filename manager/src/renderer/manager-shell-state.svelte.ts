@@ -117,10 +117,7 @@ export function clearStatusError(): void {
   managerShell.statusError = null;
 }
 
-export function setDeferredViewLoading(
-  view: 'maintenance' | 'network',
-  loading: boolean,
-): void {
+export function setDeferredViewLoading(view: 'maintenance' | 'network', loading: boolean): void {
   managerShell.viewLoading[view] = loading;
 }
 

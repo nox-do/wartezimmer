@@ -16,11 +16,15 @@ export function formatRoutingModeMaintenanceFootnote(openVisitCount: number): st
   return `Modus gilt praxisweit. Wechsel gesperrt: ${openVisitCount} ${label} noch aktiv.`;
 }
 
-export function formatRoutingModeError(
-  input: { code?: string; error: string; details?: Record<string, unknown> },
-): string {
+export function formatRoutingModeError(input: {
+  code?: string;
+  error: string;
+  details?: Record<string, unknown>;
+}): string {
   if (input.code === 'ROUTING_MODE_CHANGE_BLOCKED') {
-    const count = Number(input.details?.openVisitCount ?? input.details?.activeJourneyVisitCount ?? 0);
+    const count = Number(
+      input.details?.openVisitCount ?? input.details?.activeJourneyVisitCount ?? 0,
+    );
     if (count > 0) {
       const label = count === 1 ? 'Wartenummer' : 'Wartenummern';
       return `Wechsel nicht möglich: ${count} ${label} noch aktiv.`;
@@ -54,7 +58,9 @@ export function buildRoutingModeOptions(
   const changeBlocked = openVisitCount > 0;
 
   const optionDisabled = (value: RoutingMode, extra = false): boolean =>
-    extra || (changeBlocked && currentMode != null && value !== currentMode) || (changeBlocked && currentMode == null);
+    extra ||
+    (changeBlocked && currentMode != null && value !== currentMode) ||
+    (changeBlocked && currentMode == null);
 
   if (context === 'wizard') {
     return [

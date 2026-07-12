@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostStatus, LoadDeliveryImagesResult, StorageFoldersResult } from '../shared/host-status.js';
+import type {
+  HostStatus,
+  LoadDeliveryImagesResult,
+  StorageFoldersResult,
+} from '../shared/host-status.js';
 import {
   backupInfoText,
   fileSharingHintText,

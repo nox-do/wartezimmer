@@ -20,13 +20,8 @@ const allowlistPath = path.join(repoRoot, 'scripts/unused-css-allowlist.json');
 const targets = [
   {
     name: 'manager',
-    css: [
-      'manager/src/renderer/styles.css',
-      'manager/src/renderer/network-topology.css',
-    ],
-    content: [
-      'manager/src/renderer/**/*.{svelte,html,ts}',
-    ],
+    css: ['manager/src/renderer/styles.css', 'manager/src/renderer/network-topology.css'],
+    content: ['manager/src/renderer/**/*.{svelte,html,ts}'],
     safelist: {
       // Dynamic state / BEM modifiers built in TS (`net-flow-step--${variant}`, `is-${level}`, …).
       standard: [/^is-/, /^has-/, /^net-flow-step--/, /^net-scenario--/, /^net-scenario-badge--/],
@@ -35,13 +30,8 @@ const targets = [
   },
   {
     name: 'ui',
-    css: [
-      'ui/src/app.css',
-      'ui/src/lib/styles/**/*.css',
-    ],
-    content: [
-      'ui/src/**/*.{svelte,html,ts}',
-    ],
+    css: ['ui/src/app.css', 'ui/src/lib/styles/**/*.css'],
+    content: ['ui/src/**/*.{svelte,html,ts}'],
     safelist: {
       standard: [/^is-/, /^has-/],
       greedy: [/is-/, /has-/, /queue-drop-zone--/, /journey-admin__delete-btn/],
@@ -147,12 +137,13 @@ async function main() {
   const args = process.argv.slice(2);
   const printAllowlist = args.includes('--print-allowlist');
   const only = args.filter((arg) => !arg.startsWith('-'));
-  const selected = only.length > 0
-    ? targets.filter((target) => only.includes(target.name))
-    : targets;
+  const selected =
+    only.length > 0 ? targets.filter((target) => only.includes(target.name)) : targets;
 
   if (selected.length === 0) {
-    console.error(`Unknown target(s): ${only.join(', ')}. Known: ${targets.map((t) => t.name).join(', ')}`);
+    console.error(
+      `Unknown target(s): ${only.join(', ')}. Known: ${targets.map((t) => t.name).join(', ')}`,
+    );
     process.exit(2);
   }
 

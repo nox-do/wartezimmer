@@ -28,17 +28,13 @@ export function findRequestedRoomEntry<T extends RoomPanelLoginEntry>(
   }
   const placement = readRequestedPlacementParam(requestedPlacement);
   return (
-    rooms.find(
-      (room) => room.roomId === roomId && (!placement || room.placement === placement),
-    ) ?? null
+    rooms.find((room) => room.roomId === roomId && (!placement || room.placement === placement)) ??
+    null
   );
 }
 
 /** Relative deep-link path for same-origin navigation. */
-export function buildRoomPanelPath(
-  roomId: string,
-  placement?: RoomPanelPlacement | '',
-): string {
+export function buildRoomPanelPath(roomId: string, placement?: RoomPanelPlacement | ''): string {
   const params = new URLSearchParams({ room: roomId.trim() });
   const normalizedPlacement = placement ? readRequestedPlacementParam(placement) : '';
   if (normalizedPlacement) {

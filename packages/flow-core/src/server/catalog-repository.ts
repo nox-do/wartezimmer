@@ -96,7 +96,8 @@ function rule(row: SqlRow): RoutingRule {
     initialTargetLocationId: opt(row.initial_target_location_id as string | null),
     initialQueueId: opt(row.initial_queue_id as string | null),
     initialMovementMode: row.initial_movement_mode as RoutingRule['initialMovementMode'],
-    initialLocationConfidence: row.initial_location_confidence as RoutingRule['initialLocationConfidence'],
+    initialLocationConfidence:
+      row.initial_location_confidence as RoutingRule['initialLocationConfidence'],
     publicDisplayMode: row.public_display_mode as RoutingRule['publicDisplayMode'],
     terminalInstructionTemplate: str(row.terminal_instruction_template),
     requiresReceptionConfirmation: bool(row.requires_reception_confirmation),
@@ -149,25 +150,31 @@ export function serializeAllowedSurfaceIds(ids: string[] | null | undefined): st
 export function loadCatalog(db: DatabaseSync): Catalog {
   return {
     topics: (db.prepare('SELECT * FROM topics ORDER BY sort_order').all() as SqlRow[]).map(topic),
-    locations: (db.prepare('SELECT * FROM locations ORDER BY sort_order').all() as SqlRow[]).map(location),
+    locations: (db.prepare('SELECT * FROM locations ORDER BY sort_order').all() as SqlRow[]).map(
+      location,
+    ),
     queues: (db.prepare('SELECT * FROM queues ORDER BY sort_order').all() as SqlRow[]).map(queue),
     surfaces: (db.prepare('SELECT * FROM surfaces ORDER BY name').all() as SqlRow[]).map(surface),
-    surfaceDisplayRules: (db.prepare('SELECT * FROM surface_display_rules ORDER BY id').all() as SqlRow[]).map(
-      surfaceRule,
+    surfaceDisplayRules: (
+      db.prepare('SELECT * FROM surface_display_rules ORDER BY id').all() as SqlRow[]
+    ).map(surfaceRule),
+    routingRules: (db.prepare('SELECT * FROM routing_rules ORDER BY name').all() as SqlRow[]).map(
+      rule,
     ),
-    routingRules: (db.prepare('SELECT * FROM routing_rules ORDER BY name').all() as SqlRow[]).map(rule),
-    journeyTemplates: (db.prepare('SELECT * FROM journey_templates ORDER BY name').all() as SqlRow[]).map(
-      journeyTemplate,
-    ),
-    journeySteps: (db.prepare('SELECT * FROM journey_steps ORDER BY template_id, sort_order').all() as SqlRow[]).map(
-      journeyStep,
-    ),
+    journeyTemplates: (
+      db.prepare('SELECT * FROM journey_templates ORDER BY name').all() as SqlRow[]
+    ).map(journeyTemplate),
+    journeySteps: (
+      db.prepare('SELECT * FROM journey_steps ORDER BY template_id, sort_order').all() as SqlRow[]
+    ).map(journeyStep),
   };
 }
 
 /** Host-Integration: Steps für ein Template laden. */
 export function stepsForTemplate(templateId: string, allSteps: JourneyStep[]): JourneyStep[] {
-  return allSteps.filter((step) => step.templateId === templateId).sort((left, right) => left.sortOrder - right.sortOrder);
+  return allSteps
+    .filter((step) => step.templateId === templateId)
+    .sort((left, right) => left.sortOrder - right.sortOrder);
 }
 
 export function createCatalogRepository(db: DatabaseSync) {

@@ -2,7 +2,12 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { Runtime } from '@praxis-flow/flow-core/server';
 import { addEvent, updateVisit } from '@praxis-flow/flow-core/server';
 import type { TransitionAction, Visit, VisitView, VisitStatus } from '@praxis-flow/flow-core';
-import type { AbsenceMode, OpsSettings, QueueVisitRow, QueueDisplayStatus } from '../db/db-types.js';
+import type {
+  AbsenceMode,
+  OpsSettings,
+  QueueVisitRow,
+  QueueDisplayStatus,
+} from '../db/db-types.js';
 import {
   absentModeToQueueDisplayStatus,
   applyVisitRecall,
@@ -23,7 +28,10 @@ import { QUEUE_ROOM_MISMATCH } from '../queue/queue-room-scope.js';
 import { resolveCallRoomForVisit } from '../queue/resolve-call-room.js';
 import { resolveRecallNotifyPhone } from '../queue/recall-notify-phone.js';
 import { assertRoomHasCapacity } from '../ops/room-capacity.js';
-import { resolveCheckInDestinationRoomLabel, resolveTopicLabelFromSettings } from '../checkin-topic-settings.js';
+import {
+  resolveCheckInDestinationRoomLabel,
+  resolveTopicLabelFromSettings,
+} from '../checkin-topic-settings.js';
 
 const VISIT_QUEUE_STATUSES = new Set<VisitStatus>([
   'waiting',
@@ -58,9 +66,9 @@ const INVALID_TRANSITION_CORE_CODES = new Set([
 ]);
 
 export function visitExistsInDb(db: DatabaseSync, visitId: string): boolean {
-  const row = db.prepare('SELECT 1 AS exists_flag FROM visits WHERE id = ? LIMIT 1').get(visitId) as
-    | { exists_flag?: number }
-    | undefined;
+  const row = db
+    .prepare('SELECT 1 AS exists_flag FROM visits WHERE id = ? LIMIT 1')
+    .get(visitId) as { exists_flag?: number } | undefined;
   return row?.exists_flag === 1;
 }
 
@@ -97,7 +105,10 @@ export function mapFlowCoreTransitionError(error: unknown): never {
   throw error instanceof Error ? error : domainError('INVALID_TRANSITION');
 }
 
-function resolveLocationLabel(settings: OpsSettings, locationId: string | null | undefined): string | null {
+function resolveLocationLabel(
+  settings: OpsSettings,
+  locationId: string | null | undefined,
+): string | null {
   if (!locationId) return null;
   const room = settings.rooms.find((entry) => entry.roomId === locationId);
   if (room) return room.roomLabel;
@@ -153,7 +164,7 @@ export function visitToQueueVisitRow(
   const hasAbsentOverlay = Boolean(hostState?.absentMode);
   const assignedRoomId =
     !hasAbsentOverlay && ROOM_ASSIGNED_VISIT_STATUSES.has(visit.status)
-      ? visit.targetLocationId ?? null
+      ? (visit.targetLocationId ?? null)
       : null;
 
   return {
@@ -301,7 +312,9 @@ export function recallVisit(
   const fromStatus = assertEffectiveStatus(visit, hostState, RECALL_ELIGIBLE_STATUSES);
   const notifyPhone = resolveRecallNotifyPhone(hostState?.callbackPhone, hostState?.checkinPhone);
 
-  const returnUntil = new Date(Date.parse(updatedAt) + returnWindowMinutes * 60 * 1000).toISOString();
+  const returnUntil = new Date(
+    Date.parse(updatedAt) + returnWindowMinutes * 60 * 1000,
+  ).toISOString();
   applyVisitRecall(db, visitId, returnUntil, updatedAt);
 
   return {
@@ -441,10 +454,15 @@ export function callVisit(
   assertNoAbsentHostOverlay(db, visitId);
 
   const queueRow = visitToQueueVisitRow(visit, settings);
-  const resolvedRoom = resolveCallRoomForVisit(settings, startedNextJourneyStep ? undefined : roomId, startedNextJourneyStep ? undefined : roomLabel, {
-    roomId: queueRow.destinationRoomId,
-    roomLabel: queueRow.destinationRoomLabel,
-  });
+  const resolvedRoom = resolveCallRoomForVisit(
+    settings,
+    startedNextJourneyStep ? undefined : roomId,
+    startedNextJourneyStep ? undefined : roomLabel,
+    {
+      roomId: queueRow.destinationRoomId,
+      roomLabel: queueRow.destinationRoomLabel,
+    },
+  );
   if (resolvedRoom?.roomId) {
     assertRoomHasCapacity(settings, listQueue(), resolvedRoom.roomId);
   }

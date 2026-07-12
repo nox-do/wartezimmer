@@ -58,7 +58,9 @@ test('locationReferences: findet Topic-, Journey-, Routing-, Queue- und Visit-Re
       { kind: 'queue_home', id: 'reception_queue' },
     ],
   );
-  assert.deepEqual(locationReferences(catalog, 'labor'), [{ kind: 'journey_step', id: 'step_lab' }]);
+  assert.deepEqual(locationReferences(catalog, 'labor'), [
+    { kind: 'journey_step', id: 'step_lab' },
+  ]);
   assert.deepEqual(
     locationReferences(catalog, 'raum_3', {
       visits: [

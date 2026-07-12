@@ -87,5 +87,9 @@ export async function resetStaffPinsInAppDatabase(
     };
   }
 
-  return { ok: true, log: 'MFA- und Ops-PIN in der Datenbank auf Default gesetzt.', databaseUpdated: true };
+  return {
+    ok: true,
+    log: 'MFA- und Ops-PIN in der Datenbank auf Default gesetzt.',
+    databaseUpdated: true,
+  };
 }

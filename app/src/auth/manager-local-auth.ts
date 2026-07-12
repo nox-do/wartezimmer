@@ -39,7 +39,9 @@ function isLocalHostBoundRequest(request: FastifyRequest): boolean {
     const url = hostHeader.includes('://') ? new URL(hostHeader) : new URL(`http://${hostHeader}`);
     return isLoopbackHostname(url.hostname);
   } catch {
-    const hostname = hostHeader.includes(':') ? hostHeader.slice(0, hostHeader.lastIndexOf(':')) : hostHeader;
+    const hostname = hostHeader.includes(':')
+      ? hostHeader.slice(0, hostHeader.lastIndexOf(':'))
+      : hostHeader;
     return isLoopbackHostname(hostname);
   }
 }

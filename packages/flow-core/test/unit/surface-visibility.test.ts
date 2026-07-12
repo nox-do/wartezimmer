@@ -5,31 +5,73 @@ import {
   isVisitVisibleOnSurface,
   matchingSurfaceDisplayRules,
   resolveSurfaceDisplayRule,
-  ruleSpecificity
+  ruleSpecificity,
 } from '@praxis-flow/flow-core';
 
 const surfaces = {
   waiting_tv: { id: 'waiting_tv', locationId: 'waiting_general', type: 'public_display' },
   panel_vaccine: { id: 'panel_vaccine', locationId: 'vaccine_room', type: 'staff_panel' },
   panel_lab: { id: 'panel_lab', locationId: 'lab', type: 'staff_panel' },
-  panel_room_1: { id: 'panel_room_1', locationId: 'room_1', type: 'staff_panel' }
+  panel_room_1: { id: 'panel_room_1', locationId: 'room_1', type: 'staff_panel' },
 };
 
 const rules = {
   waiting_tv: [
-    { id: 'tv_general', queueId: 'general_queue', locationId: null, topicId: null, displayMode: 'visible', sortOrder: 10 },
-    { id: 'tv_infection', queueId: 'infection_queue', locationId: null, topicId: null, displayMode: 'hidden', sortOrder: 20 },
-    { id: 'tv_reception', queueId: 'reception_queue', locationId: null, topicId: null, displayMode: 'hidden', sortOrder: 30 }
+    {
+      id: 'tv_general',
+      queueId: 'general_queue',
+      locationId: null,
+      topicId: null,
+      displayMode: 'visible',
+      sortOrder: 10,
+    },
+    {
+      id: 'tv_infection',
+      queueId: 'infection_queue',
+      locationId: null,
+      topicId: null,
+      displayMode: 'hidden',
+      sortOrder: 20,
+    },
+    {
+      id: 'tv_reception',
+      queueId: 'reception_queue',
+      locationId: null,
+      topicId: null,
+      displayMode: 'hidden',
+      sortOrder: 30,
+    },
   ],
   panel_vaccine: [
-    { id: 'panel_vaccine', queueId: 'vaccine_queue', locationId: 'vaccine_room', topicId: null, displayMode: 'visible', sortOrder: 10 }
+    {
+      id: 'panel_vaccine',
+      queueId: 'vaccine_queue',
+      locationId: 'vaccine_room',
+      topicId: null,
+      displayMode: 'visible',
+      sortOrder: 10,
+    },
   ],
   panel_lab: [
-    { id: 'panel_lab', queueId: 'lab_queue', locationId: 'lab', topicId: null, displayMode: 'visible', sortOrder: 10 }
+    {
+      id: 'panel_lab',
+      queueId: 'lab_queue',
+      locationId: 'lab',
+      topicId: null,
+      displayMode: 'visible',
+      sortOrder: 10,
+    },
   ],
   panel_room_1: [
-    { id: 'panel_room_1', queueId: null, locationId: 'room_1', topicId: null, displayMode: 'visible', sortOrder: 10 }
-  ]
+    {
+      id: 'panel_room_1',
+      queueId: null,
+      locationId: 'room_1',
+      topicId: null,
+      displayMode: 'visible',
+      sortOrder: 10,
+    },
+  ],
 };
 
 test('Impfung: sichtbar auf panel_vaccine, nicht auf waiting_tv', () => {
@@ -39,7 +81,7 @@ test('Impfung: sichtbar auf panel_vaccine, nicht auf waiting_tv', () => {
     targetLocationId: 'vaccine_room',
     lastKnownLocationId: 'entrance',
     status: 'directed',
-    publicDisplayMode: 'hidden'
+    publicDisplayMode: 'hidden',
   };
 
   assert.equal(isVisitVisibleOnSurface(visit, surfaces.panel_vaccine, rules.panel_vaccine), true);
@@ -53,7 +95,7 @@ test('Infekt: nie auf Wartezimmer-TV, auch bei publicDisplayMode visible', () =>
     targetLocationId: 'waiting_infection',
     lastKnownLocationId: 'waiting_infection',
     status: 'waiting',
-    publicDisplayMode: 'visible'
+    publicDisplayMode: 'visible',
   };
 
   const explanation = explainVisibility(visit, surfaces.waiting_tv, rules.waiting_tv);
@@ -69,7 +111,7 @@ test('Blutabnahme: sichtbar auf panel_lab, nicht auf waiting_tv (lastKnown=lab)'
     targetLocationId: 'lab',
     lastKnownLocationId: 'lab',
     status: 'waiting',
-    publicDisplayMode: 'visible'
+    publicDisplayMode: 'visible',
   };
 
   assert.equal(isVisitVisibleOnSurface(visit, surfaces.panel_lab, rules.panel_lab), true);
@@ -83,9 +125,14 @@ test('Allgemein: sichtbar auf waiting_tv nur wenn Patient im Wartezimmer', () =>
     targetLocationId: 'reception',
     lastKnownLocationId: 'waiting_general',
     status: 'waiting',
-    publicDisplayMode: 'visible'
+    publicDisplayMode: 'visible',
   };
-  const atLab = { ...inWaiting, lastKnownLocationId: 'lab', targetLocationId: 'lab', queueId: 'lab_queue' };
+  const atLab = {
+    ...inWaiting,
+    lastKnownLocationId: 'lab',
+    targetLocationId: 'lab',
+    queueId: 'lab_queue',
+  };
 
   assert.equal(isVisitVisibleOnSurface(inWaiting, surfaces.waiting_tv, rules.waiting_tv), true);
   assert.equal(isVisitVisibleOnSurface(atLab, surfaces.waiting_tv, rules.waiting_tv), false);
@@ -98,14 +145,23 @@ test('call_only auf TV: erst bei status called', () => {
     targetLocationId: 'reception',
     lastKnownLocationId: 'waiting_general',
     status: 'waiting',
-    publicDisplayMode: 'call_only'
+    publicDisplayMode: 'call_only',
   };
-  const tvRules = [{ id: 'tv_general', queueId: 'general_queue', locationId: null, topicId: null, displayMode: 'visible', sortOrder: 10 }];
+  const tvRules = [
+    {
+      id: 'tv_general',
+      queueId: 'general_queue',
+      locationId: null,
+      topicId: null,
+      displayMode: 'visible',
+      sortOrder: 10,
+    },
+  ];
 
   assert.equal(isVisitVisibleOnSurface(visit, surfaces.waiting_tv, tvRules), false);
   assert.equal(
     isVisitVisibleOnSurface({ ...visit, status: 'called' }, surfaces.waiting_tv, tvRules),
-    true
+    true,
   );
 });
 
@@ -116,7 +172,7 @@ test('Staff Panel: publicDisplayMode hidden blockiert nicht', () => {
     targetLocationId: 'room_1',
     lastKnownLocationId: 'room_1',
     status: 'in_progress',
-    publicDisplayMode: 'hidden'
+    publicDisplayMode: 'hidden',
   };
 
   const explanation = explainVisibility(visit, surfaces.panel_room_1, rules.panel_room_1);
@@ -131,7 +187,7 @@ test('Redirect auf Raum ohne Panel: nicht auf bestehenden Panels', () => {
     targetLocationId: 'room_2',
     lastKnownLocationId: 'room_2',
     status: 'waiting',
-    publicDisplayMode: 'visible'
+    publicDisplayMode: 'visible',
   };
 
   assert.equal(isVisitVisibleOnSurface(visit, surfaces.panel_room_1, rules.panel_room_1), false);
@@ -145,7 +201,7 @@ test('Raum 1 Journey: sichtbar auf panel_room_1 nach Ankunft', () => {
     targetLocationId: 'room_1',
     lastKnownLocationId: 'room_1',
     status: 'in_progress',
-    publicDisplayMode: 'hidden'
+    publicDisplayMode: 'hidden',
   };
 
   assert.equal(isVisitVisibleOnSurface(visit, surfaces.panel_room_1, rules.panel_room_1), true);
@@ -158,11 +214,25 @@ test('Konfliktaufloesung: hidden schlaegt visible bei gleicher Spezifitaet', () 
     targetLocationId: 'reception',
     lastKnownLocationId: 'waiting_general',
     status: 'waiting',
-    publicDisplayMode: 'visible'
+    publicDisplayMode: 'visible',
   };
   const conflicting = [
-    { id: 'visible_rule', queueId: 'general_queue', locationId: null, topicId: null, displayMode: 'visible', sortOrder: 10 },
-    { id: 'hidden_rule', queueId: 'general_queue', locationId: null, topicId: null, displayMode: 'hidden', sortOrder: 20 }
+    {
+      id: 'visible_rule',
+      queueId: 'general_queue',
+      locationId: null,
+      topicId: null,
+      displayMode: 'visible',
+      sortOrder: 10,
+    },
+    {
+      id: 'hidden_rule',
+      queueId: 'general_queue',
+      locationId: null,
+      topicId: null,
+      displayMode: 'hidden',
+      sortOrder: 20,
+    },
   ];
 
   const resolved = resolveSurfaceDisplayRule(matchingSurfaceDisplayRules(visit, conflicting));
@@ -171,15 +241,29 @@ test('Konfliktaufloesung: hidden schlaegt visible bei gleicher Spezifitaet', () 
 });
 
 test('Konfliktaufloesung: spezifisch schlaegt allgemein', () => {
-  const general = { id: 'broad', queueId: 'general_queue', locationId: null, topicId: null, displayMode: 'hidden', sortOrder: 5 };
-  const specific = { id: 'narrow', queueId: 'general_queue', locationId: 'waiting_general', topicId: 'general', displayMode: 'visible', sortOrder: 99 };
+  const general = {
+    id: 'broad',
+    queueId: 'general_queue',
+    locationId: null,
+    topicId: null,
+    displayMode: 'hidden',
+    sortOrder: 5,
+  };
+  const specific = {
+    id: 'narrow',
+    queueId: 'general_queue',
+    locationId: 'waiting_general',
+    topicId: 'general',
+    displayMode: 'visible',
+    sortOrder: 99,
+  };
   const visit = {
     primaryTopicId: 'general',
     queueId: 'general_queue',
     targetLocationId: 'reception',
     lastKnownLocationId: 'waiting_general',
     status: 'waiting',
-    publicDisplayMode: 'visible'
+    publicDisplayMode: 'visible',
   };
 
   assert.ok(ruleSpecificity(specific) > ruleSpecificity(general));

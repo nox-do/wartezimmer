@@ -220,7 +220,8 @@ function requestHost(request: FastifyRequest): string | null {
   return (
     (trustProxyHeaders() && typeof forwardedHost === 'string'
       ? forwardedHost
-      : request.headers.host)
+      : request.headers.host
+    )
       ?.split(',')[0]
       ?.trim() ?? null
   );
@@ -348,9 +349,7 @@ export function registerClientAuth(
       ? null
       : resolveManagerLocalOpsRole(request, method, routePath);
     const sessionRole =
-      bearerRole || managerLocalRole
-        ? null
-        : resolveRoleFromSessionCookie(request, staffSessions);
+      bearerRole || managerLocalRole ? null : resolveRoleFromSessionCookie(request, staffSessions);
     const localTvRole =
       bearerRole || sessionRole || managerLocalRole
         ? null
@@ -385,7 +384,12 @@ export function registerClientAuth(
       return;
     }
 
-    if (sessionRole && !managerLocalRole && isUnsafeMethod(method) && !originHostMatchesRequest(request)) {
+    if (
+      sessionRole &&
+      !managerLocalRole &&
+      isUnsafeMethod(method) &&
+      !originHostMatchesRequest(request)
+    ) {
       authError(reply, 403, {
         code: 'AUTH_FORBIDDEN',
         message: 'Forbidden.',

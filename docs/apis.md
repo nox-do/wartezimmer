@@ -13,15 +13,15 @@ Diese Datei ergänzt OpenAPI um **Rollen**, **fachliche Regeln** und **Nicht-Off
 
 ## Rollenmatrix (v1)
 
-| Rolle                 | Client         | API-Bereiche                                                                                              |
-| --------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
-| `terminal`            | Check-in       | `checkins`, `checkins/assist/*`, `ops/heartbeat`, `ops/device/presence`, optional `ops/emergency/raise` |
-| `mfa`                 | MFA-Dashboard  | `queue` (+ SSE), `identity`, `documents`, `ops` (+ Stream, Day-Lifecycle, Check-in-Lock)                  |
-| `tv`                  | Wartezimmer    | `GET /queue`, `GET /queue/stream`, `ops/device/presence`                                                  |
+| Rolle                 | Client         | API-Bereiche                                                                                                                    |
+| --------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `terminal`            | Check-in       | `checkins`, `checkins/assist/*`, `ops/heartbeat`, `ops/device/presence`, optional `ops/emergency/raise`                         |
+| `mfa`                 | MFA-Dashboard  | `queue` (+ SSE), `identity`, `documents`, `ops` (+ Stream, Day-Lifecycle, Check-in-Lock)                                        |
+| `tv`                  | Wartezimmer    | `GET /queue`, `GET /queue/stream`, `ops/device/presence`                                                                        |
 | `room-panel`          | Raum-Tablet    | `GET /auth/room-panel/rooms`, `POST /auth/room-panel/login`, `GET /queue` (+ SSE), `POST /queue/:id/transition` (eingeschränkt) |
-| `captive`             | Gateway-Bridge | `sessions/verify-ticket-code`                                                                             |
-| `patient-web-session` | Portal         | `sessions/*`, `patient-documents/*` (Bearer-Token)                                                        |
-| `ops`                 | IT-Settings    | Settings (CSV/SMS-Subset), Messaging, Maintenance, Outbox-Status                                          |
+| `captive`             | Gateway-Bridge | `sessions/verify-ticket-code`                                                                                                   |
+| `patient-web-session` | Portal         | `sessions/*`, `patient-documents/*` (Bearer-Token)                                                                              |
+| `ops`                 | IT-Settings    | Settings (CSV/SMS-Subset), Messaging, Maintenance, Outbox-Status                                                                |
 
 **Regeln:**
 
@@ -37,13 +37,13 @@ Diese Datei ergänzt OpenAPI um **Rollen**, **fachliche Regeln** und **Nicht-Off
 
 Vertrag: `openapi/auth.yaml` (Login), `openapi/queue.yaml` (`RoomPanelSnapshot`, Transitions).
 
-| Endpoint | Rolle | Zweck |
-| -------- | ----- | ----- |
-| `GET /auth/room-panel/rooms` | öffentlich | Aktive Placements zum Login (`requiresPin`: nur `inside`) |
-| `POST /auth/room-panel/login` | öffentlich | Session-Cookie; Body `roomId`, `placement`, optional `pin` |
-| `GET /queue` | `room-panel` | Snapshot: `capabilities`, `panel`, `items[]`, optional `callCandidates[]` |
-| `GET /queue/stream` | `room-panel` | SSE `snapshot` + `session-revoked` |
-| `POST /queue/:visitId/transition` | `room-panel` | `check_in_room`, `check_out_room`, `call` |
+| Endpoint                          | Rolle        | Zweck                                                                     |
+| --------------------------------- | ------------ | ------------------------------------------------------------------------- |
+| `GET /auth/room-panel/rooms`      | öffentlich   | Aktive Placements zum Login (`requiresPin`: nur `inside`)                 |
+| `POST /auth/room-panel/login`     | öffentlich   | Session-Cookie; Body `roomId`, `placement`, optional `pin`                |
+| `GET /queue`                      | `room-panel` | Snapshot: `capabilities`, `panel`, `items[]`, optional `callCandidates[]` |
+| `GET /queue/stream`               | `room-panel` | SSE `snapshot` + `session-revoked`                                        |
+| `POST /queue/:visitId/transition` | `room-panel` | `check_in_room`, `check_out_room`, `call`                                 |
 
 **Snapshot-Actions** (pro Item/Kandidat): `canArrive`, `canCheckOut`, `canCall`. UI rendert Buttons daraus — Server bleibt autoritativ. `capabilities.callAnnouncementReachable` steuert Aufruf-Buttons bei offline WZ-TV (Server-Presence).
 
@@ -72,11 +72,11 @@ Details: [`flows.md`](flows.md) § Portal-Session-Lebensdauer
 
 SSE für Beobachtung, REST für Mutationen. Leitdokument: [`realtime-streams.md`](realtime-streams.md)
 
-| Kanal                    | Rolle            | Inhalt                                       |
-| ------------------------ | ---------------- | -------------------------------------------- |
+| Kanal                    | Rolle                     | Inhalt                                       |
+| ------------------------ | ------------------------- | -------------------------------------------- |
 | `GET /queue/stream`      | `mfa`, `tv`, `room-panel` | Warteschlange live (View abhängig von Rolle) |
-| `GET /ops/stream`        | `mfa`            | Notfall, `device.presence`, `device.pairing` |
-| `GET /ops/device/stream` | `tv`, `terminal` | Device-Liveness                              |
+| `GET /ops/stream`        | `mfa`                     | Notfall, `device.presence`, `device.pairing` |
+| `GET /ops/device/stream` | `tv`, `terminal`          | Device-Liveness                              |
 
 **Presence ≠ Pairing** — getrennte States, nicht vermischen.
 

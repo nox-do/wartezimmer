@@ -60,14 +60,14 @@ npm run smoke:all               # Integration — braucht laufenden Stack auf :8
 
 Basis: `http://localhost:8080`
 
-| Rolle          | URL                                      |
-| -------------- | ---------------------------------------- |
-| Terminal       | http://localhost:8080/terminal           |
-| MFA            | http://localhost:8080/mfa                |
-| TV             | http://localhost:8080/tv                 |
-| Portal         | http://localhost:8080/portal             |
-| Ops-Setup      | http://localhost:8080/ops/setup          |
-| API-Docs (Dev) | http://localhost:8080/api/docs             |
+| Rolle          | URL                             |
+| -------------- | ------------------------------- |
+| Terminal       | http://localhost:8080/terminal  |
+| MFA            | http://localhost:8080/mfa       |
+| TV             | http://localhost:8080/tv        |
+| Portal         | http://localhost:8080/portal    |
+| Ops-Setup      | http://localhost:8080/ops/setup |
+| API-Docs (Dev) | http://localhost:8080/api/docs  |
 
 ## Dokumentation
 
