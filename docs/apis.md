@@ -45,7 +45,7 @@ Vertrag: `openapi/auth.yaml` (Login), `openapi/queue.yaml` (`RoomPanelSnapshot`,
 | `GET /queue/stream` | `room-panel` | SSE `snapshot` + `session-revoked` |
 | `POST /queue/:visitId/transition` | `room-panel` | `check_in_room`, `check_out_room`, `call` |
 
-**Snapshot-Actions** (pro Item/Kandidat): `canArrive`, `canCheckOut`, `canCall`, optional `disabledReason`. UI rendert Buttons daraus — Server bleibt autoritativ.
+**Snapshot-Actions** (pro Item/Kandidat): `canArrive`, `canCheckOut`, `canCall`. UI rendert Buttons daraus — Server bleibt autoritativ. `capabilities.callAnnouncementReachable` steuert Aufruf-Buttons bei offline WZ-TV (Server-Presence).
 
 **Capabilities:** `canCheckIn`, `canCheckOut`, `canCall`, `mayShowPatientNames`, `requiresPin`. `canCall` nur bei `inside` + `staff_full` + `allowCalling` + Panel aktiv.
 

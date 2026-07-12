@@ -4138,7 +4138,8 @@
                             "canCheckIn",
                             "canCheckOut",
                             "mayShowPatientNames",
-                            "canCall"
+                            "canCall",
+                            "callAnnouncementReachable"
                           ],
                           "properties": {
                             "requiresPin": {
@@ -4155,6 +4156,10 @@
                             },
                             "canCall": {
                               "type": "boolean"
+                            },
+                            "callAnnouncementReachable": {
+                              "type": "boolean",
+                              "description": "WZ-TV presence for call announcements; when false and canCall is true, UI should disable call actions."
                             }
                           }
                         },
@@ -4244,9 +4249,6 @@
                                   },
                                   "canCheckOut": {
                                     "type": "boolean"
-                                  },
-                                  "disabledReason": {
-                                    "type": "string"
                                   }
                                 }
                               }
@@ -4305,9 +4307,6 @@
                                   },
                                   "canCheckOut": {
                                     "type": "boolean"
-                                  },
-                                  "disabledReason": {
-                                    "type": "string"
                                   }
                                 }
                               }
@@ -17230,16 +17229,20 @@
           },
           "canCheckOut": {
             "type": "boolean"
-          },
-          "disabledReason": {
-            "type": "string"
           }
         }
       },
       "RoomPanelCapabilities": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["requiresPin", "canCheckIn", "canCheckOut", "mayShowPatientNames", "canCall"],
+        "required": [
+          "requiresPin",
+          "canCheckIn",
+          "canCheckOut",
+          "mayShowPatientNames",
+          "canCall",
+          "callAnnouncementReachable"
+        ],
         "properties": {
           "requiresPin": {
             "type": "boolean"
@@ -17255,6 +17258,10 @@
           },
           "canCall": {
             "type": "boolean"
+          },
+          "callAnnouncementReachable": {
+            "type": "boolean",
+            "description": "WZ-TV presence for call announcements; when false and canCall is true, UI should disable call actions."
           }
         }
       },
@@ -17304,9 +17311,6 @@
               },
               "canCheckOut": {
                 "type": "boolean"
-              },
-              "disabledReason": {
-                "type": "string"
               }
             }
           }
@@ -17353,9 +17357,6 @@
               },
               "canCheckOut": {
                 "type": "boolean"
-              },
-              "disabledReason": {
-                "type": "string"
               }
             }
           }
@@ -17401,7 +17402,8 @@
               "canCheckIn",
               "canCheckOut",
               "mayShowPatientNames",
-              "canCall"
+              "canCall",
+              "callAnnouncementReachable"
             ],
             "properties": {
               "requiresPin": {
@@ -17418,6 +17420,10 @@
               },
               "canCall": {
                 "type": "boolean"
+              },
+              "callAnnouncementReachable": {
+                "type": "boolean",
+                "description": "WZ-TV presence for call announcements; when false and canCall is true, UI should disable call actions."
               }
             }
           },
@@ -17501,9 +17507,6 @@
                     },
                     "canCheckOut": {
                       "type": "boolean"
-                    },
-                    "disabledReason": {
-                      "type": "string"
                     }
                   }
                 }
@@ -17562,9 +17565,6 @@
                     },
                     "canCheckOut": {
                       "type": "boolean"
-                    },
-                    "disabledReason": {
-                      "type": "string"
                     }
                   }
                 }
@@ -17870,7 +17870,8 @@
                   "canCheckIn",
                   "canCheckOut",
                   "mayShowPatientNames",
-                  "canCall"
+                  "canCall",
+                  "callAnnouncementReachable"
                 ],
                 "properties": {
                   "requiresPin": {
@@ -17887,6 +17888,10 @@
                   },
                   "canCall": {
                     "type": "boolean"
+                  },
+                  "callAnnouncementReachable": {
+                    "type": "boolean",
+                    "description": "WZ-TV presence for call announcements; when false and canCall is true, UI should disable call actions."
                   }
                 }
               },
@@ -17970,9 +17975,6 @@
                         },
                         "canCheckOut": {
                           "type": "boolean"
-                        },
-                        "disabledReason": {
-                          "type": "string"
                         }
                       }
                     }
@@ -18031,9 +18033,6 @@
                         },
                         "canCheckOut": {
                           "type": "boolean"
-                        },
-                        "disabledReason": {
-                          "type": "string"
                         }
                       }
                     }

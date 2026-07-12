@@ -15,11 +15,13 @@ export function isAnnouncementDeviceReachable(deviceId: string, nowMs = Date.now
 }
 
 export function assertQueueCallAnnouncementReachable(nowMs = Date.now()): void {
-  const offlineDeviceIds = announcementDeviceIdsForQueueCall().filter(
-    (deviceId) => !isAnnouncementDeviceReachable(deviceId, nowMs),
-  );
-
-  if (offlineDeviceIds.length > 0) {
+  if (!isQueueCallAnnouncementReachable(nowMs)) {
     throw domainError('CALL_ANNOUNCEMENT_OFFLINE');
   }
+}
+
+export function isQueueCallAnnouncementReachable(nowMs = Date.now()): boolean {
+  return announcementDeviceIdsForQueueCall().every((deviceId) =>
+    isAnnouncementDeviceReachable(deviceId, nowMs),
+  );
 }

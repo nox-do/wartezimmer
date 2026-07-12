@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatRoomPanelTicketCode,
   resolveRoomPanelLeadState,
+  roomPanelCallAnnouncementReachable,
   roomPanelCallCandidates,
   roomPanelCandidateDisplayName,
   shouldRenderRoomPanelCallSection,
@@ -21,6 +22,7 @@ function snapshot(partial: Partial<RoomPanelSnapshot> = {}): RoomPanelSnapshot {
       canCheckOut: true,
       mayShowPatientNames: false,
       canCall: false,
+      callAnnouncementReachable: true,
     },
     panel: {
       placement: 'inside',
@@ -43,6 +45,7 @@ describe('roomPanelCallCandidates', () => {
         canCheckOut: false,
         mayShowPatientNames: false,
         canCall: false,
+        callAnnouncementReachable: true,
       },
       panel: {
         placement: 'outside',
@@ -96,12 +99,38 @@ describe('roomPanelCallCandidates', () => {
         canCheckOut: true,
         mayShowPatientNames: false,
         canCall: true,
+        callAnnouncementReachable: true,
       },
       callCandidates: candidates,
     });
 
     expect(roomPanelCallCandidates(data)).toEqual(candidates);
     expect(shouldRenderRoomPanelCallSection(data)).toBe(true);
+  });
+});
+
+describe('roomPanelCallAnnouncementReachable', () => {
+  it('defaults to reachable when field is absent (legacy snapshots)', () => {
+    const data = snapshot();
+    delete (data.capabilities as { callAnnouncementReachable?: boolean }).callAnnouncementReachable;
+    expect(roomPanelCallAnnouncementReachable(data)).toBe(true);
+  });
+
+  it('reflects server false when WZ-TV is offline', () => {
+    expect(
+      roomPanelCallAnnouncementReachable(
+        snapshot({
+          capabilities: {
+            requiresPin: true,
+            canCheckIn: true,
+            canCheckOut: true,
+            mayShowPatientNames: false,
+            canCall: true,
+            callAnnouncementReachable: false,
+          },
+        }),
+      ),
+    ).toBe(false);
   });
 });
 

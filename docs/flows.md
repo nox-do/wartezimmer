@@ -463,8 +463,8 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 - **Lead-Texte** aus Snapshot (`calledText`, `arrivedText`)
 - **Raum-Items** (`called`, `directed`, `in_room`) mit Actions
 - **Aufruf-Liste** (`callCandidates`, Backend-FIFO) nur wenn `capabilities.canCall`; getrennt von Raum-Items
-- Buttons nur bei `actions.canArrive` / `canCheckOut` / `canCall` — kein lokales Ableiten aus Modus
-- **409** (TV offline, Capacity, Race): Toast + Snapshot-Refresh · **403** Capability: Refresh ohne Logout · Session-Ende nur bei 401 / Queue-403 / Revoke
+- Buttons nur bei `actions.canArrive` / `canCheckOut` / `canCall` — kein lokales Ableiten aus Modus; Aufruf disabled wenn `capabilities.callAnnouncementReachable` false (WZ-TV offline, Server-Presence)
+- **409** (TV offline trotzdem versucht, Capacity, Race): Toast + Snapshot-Refresh · **403** Capability: Refresh ohne Logout · Session-Ende nur bei 401 / Queue-403 / Revoke
 
 ### Device Presence
 

@@ -637,7 +637,6 @@ export interface components {
       canCall?: boolean;
       canArrive?: boolean;
       canCheckOut?: boolean;
-      disabledReason?: string;
     };
     RoomPanelCapabilities: {
       requiresPin: boolean;
@@ -645,6 +644,8 @@ export interface components {
       canCheckOut: boolean;
       mayShowPatientNames: boolean;
       canCall: boolean;
+      /** @description WZ-TV presence for call announcements; when false and canCall is true, UI should disable call actions. */
+      callAnnouncementReachable: boolean;
     };
     RoomPanelItem: {
       visitId: string;

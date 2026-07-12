@@ -51,6 +51,11 @@ export function shouldRenderRoomPanelCallSection(snapshot: RoomPanelSnapshot): b
   return snapshot.capabilities.canCall === true;
 }
 
+/** Server-side WZ-TV presence — room-panel has no ops SSE; snapshot is authoritative. */
+export function roomPanelCallAnnouncementReachable(snapshot: RoomPanelSnapshot): boolean {
+  return snapshot.capabilities.callAnnouncementReachable !== false;
+}
+
 export function roomPanelItemTicketCodes(items: RoomPanelItem[]): string[] {
   return items.map((item) => formatRoomPanelTicketCode(item.laneCode, item.number));
 }

@@ -465,6 +465,7 @@ test('buildRoomPanelQueueSnapshot exposes callCandidates for inside allowCalling
   });
 
   assert.equal(snapshot.capabilities.canCall, true);
+  assert.equal(snapshot.capabilities.callAnnouncementReachable, false);
   assert.equal(snapshot.callCandidates?.length, 1);
   assert.equal(snapshot.callCandidates?.[0]?.visitId, created.visitId);
   assert.equal(snapshot.callCandidates?.[0]?.actions.canCall, true);

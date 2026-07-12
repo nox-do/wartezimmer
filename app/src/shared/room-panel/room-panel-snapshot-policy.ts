@@ -31,7 +31,6 @@ export type RoomPanelItemActions = {
   canCall?: boolean;
   canArrive?: boolean;
   canCheckOut?: boolean;
-  disabledReason?: string;
 };
 
 export function resolveRoomPanelItemActions(

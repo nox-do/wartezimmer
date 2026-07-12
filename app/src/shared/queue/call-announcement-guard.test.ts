@@ -10,12 +10,14 @@ import { WAITING_ROOM_DEVICE_ID } from '../ops/device-ids.js';
 import {
   assertQueueCallAnnouncementReachable,
   isAnnouncementDeviceReachable,
+  isQueueCallAnnouncementReachable,
 } from './call-announcement-guard.js';
 
 test('queue call requires waiting-room display online with open stream', () => {
   resetDevicePresenceForTests();
 
   assert.equal(isAnnouncementDeviceReachable(WAITING_ROOM_DEVICE_ID), false);
+  assert.equal(isQueueCallAnnouncementReachable(), false);
 
   assert.throws(
     () => assertQueueCallAnnouncementReachable(),
@@ -28,8 +30,10 @@ test('queue call requires waiting-room display online with open stream', () => {
 
   markDeviceStreamConnected({ deviceId: WAITING_ROOM_DEVICE_ID, kind: 'tv' });
   assert.equal(isAnnouncementDeviceReachable(WAITING_ROOM_DEVICE_ID), true);
+  assert.equal(isQueueCallAnnouncementReachable(), true);
   assert.doesNotThrow(() => assertQueueCallAnnouncementReachable());
 
   markDeviceStreamDisconnected(WAITING_ROOM_DEVICE_ID);
   assert.equal(isAnnouncementDeviceReachable(WAITING_ROOM_DEVICE_ID), false);
+  assert.equal(isQueueCallAnnouncementReachable(), false);
 });

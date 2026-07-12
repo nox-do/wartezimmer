@@ -330,6 +330,11 @@
     font-weight: 700;
   }
 
+  :global(.room-panel-call-section__action-wrap) {
+    display: block;
+    width: 100%;
+  }
+
   :global(.room-panel-call-section__action) {
     width: min(100%, 14rem);
   }

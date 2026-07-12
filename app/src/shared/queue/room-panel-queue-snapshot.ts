@@ -14,6 +14,7 @@ import { emptyFlowCoreRuntimeForMocks } from '../flow-core/test-runtime-mocks.js
 import { getFlowCoreRuntime } from '../flow-core/flow-core-runtime.js';
 import { panelFlowSurfaceId } from '../flow-core/sync-catalog-from-ops-settings.js';
 import { visitToQueueVisitRow } from '../flow-core/visit-queue-bridge.js';
+import { isQueueCallAnnouncementReachable } from './call-announcement-guard.js';
 import { resolveRoomPanelForSession } from '../room-panel/room-panel-policy.js';
 import {
   isRoomPanelCallCandidateVisit,
@@ -42,6 +43,7 @@ export type RoomPanelQueueSnapshot = {
     canCheckOut: boolean;
     mayShowPatientNames: boolean;
     canCall: boolean;
+    callAnnouncementReachable: boolean;
   };
   panel: {
     placement: RoomPanelPlacement;
@@ -228,7 +230,10 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
     view: 'room-panel',
     roomId: session.roomId,
     roomLabel,
-    capabilities,
+    capabilities: {
+      ...capabilities,
+      callAnnouncementReachable: isQueueCallAnnouncementReachable(),
+    },
     panel: {
       placement,
       mode: panel.mode,

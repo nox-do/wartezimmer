@@ -601,16 +601,20 @@ export const RoomPanelItemActions = {
     canCheckOut: {
       type: 'boolean',
     },
-    disabledReason: {
-      type: 'string',
-    },
   },
 } as const;
 
 export const RoomPanelCapabilities = {
   type: 'object',
   additionalProperties: false,
-  required: ['requiresPin', 'canCheckIn', 'canCheckOut', 'mayShowPatientNames', 'canCall'],
+  required: [
+    'requiresPin',
+    'canCheckIn',
+    'canCheckOut',
+    'mayShowPatientNames',
+    'canCall',
+    'callAnnouncementReachable',
+  ],
   properties: {
     requiresPin: {
       type: 'boolean',
@@ -625,6 +629,9 @@ export const RoomPanelCapabilities = {
       type: 'boolean',
     },
     canCall: {
+      type: 'boolean',
+    },
+    callAnnouncementReachable: {
       type: 'boolean',
     },
   },
@@ -674,9 +681,6 @@ export const RoomPanelItem = {
         canCheckOut: {
           type: 'boolean',
         },
-        disabledReason: {
-          type: 'string',
-        },
       },
     },
   },
@@ -722,9 +726,6 @@ export const RoomPanelCallCandidate = {
         canCheckOut: {
           type: 'boolean',
         },
-        disabledReason: {
-          type: 'string',
-        },
       },
     },
   },
@@ -765,7 +766,14 @@ export const RoomPanelSnapshot = {
     capabilities: {
       type: 'object',
       additionalProperties: false,
-      required: ['requiresPin', 'canCheckIn', 'canCheckOut', 'mayShowPatientNames', 'canCall'],
+      required: [
+        'requiresPin',
+        'canCheckIn',
+        'canCheckOut',
+        'mayShowPatientNames',
+        'canCall',
+        'callAnnouncementReachable',
+      ],
       properties: {
         requiresPin: {
           type: 'boolean',
@@ -780,6 +788,9 @@ export const RoomPanelSnapshot = {
           type: 'boolean',
         },
         canCall: {
+          type: 'boolean',
+        },
+        callAnnouncementReachable: {
           type: 'boolean',
         },
       },
@@ -854,9 +865,6 @@ export const RoomPanelSnapshot = {
               canCheckOut: {
                 type: 'boolean',
               },
-              disabledReason: {
-                type: 'string',
-              },
             },
           },
         },
@@ -903,9 +911,6 @@ export const RoomPanelSnapshot = {
               },
               canCheckOut: {
                 type: 'boolean',
-              },
-              disabledReason: {
-                type: 'string',
               },
             },
           },
@@ -1172,7 +1177,14 @@ export const QueueListResponse = {
         capabilities: {
           type: 'object',
           additionalProperties: false,
-          required: ['requiresPin', 'canCheckIn', 'canCheckOut', 'mayShowPatientNames', 'canCall'],
+          required: [
+            'requiresPin',
+            'canCheckIn',
+            'canCheckOut',
+            'mayShowPatientNames',
+            'canCall',
+            'callAnnouncementReachable',
+          ],
           properties: {
             requiresPin: {
               type: 'boolean',
@@ -1187,6 +1199,9 @@ export const QueueListResponse = {
               type: 'boolean',
             },
             canCall: {
+              type: 'boolean',
+            },
+            callAnnouncementReachable: {
               type: 'boolean',
             },
           },
@@ -1261,9 +1276,6 @@ export const QueueListResponse = {
                   canCheckOut: {
                     type: 'boolean',
                   },
-                  disabledReason: {
-                    type: 'string',
-                  },
                 },
               },
             },
@@ -1310,9 +1322,6 @@ export const QueueListResponse = {
                   },
                   canCheckOut: {
                     type: 'boolean',
-                  },
-                  disabledReason: {
-                    type: 'string',
                   },
                 },
               },
@@ -2112,7 +2121,14 @@ export const GET_api_v1_queueResponse200 = {
         capabilities: {
           type: 'object',
           additionalProperties: false,
-          required: ['requiresPin', 'canCheckIn', 'canCheckOut', 'mayShowPatientNames', 'canCall'],
+          required: [
+            'requiresPin',
+            'canCheckIn',
+            'canCheckOut',
+            'mayShowPatientNames',
+            'canCall',
+            'callAnnouncementReachable',
+          ],
           properties: {
             requiresPin: {
               type: 'boolean',
@@ -2127,6 +2143,9 @@ export const GET_api_v1_queueResponse200 = {
               type: 'boolean',
             },
             canCall: {
+              type: 'boolean',
+            },
+            callAnnouncementReachable: {
               type: 'boolean',
             },
           },
@@ -2201,9 +2220,6 @@ export const GET_api_v1_queueResponse200 = {
                   canCheckOut: {
                     type: 'boolean',
                   },
-                  disabledReason: {
-                    type: 'string',
-                  },
                 },
               },
             },
@@ -2250,9 +2266,6 @@ export const GET_api_v1_queueResponse200 = {
                   },
                   canCheckOut: {
                     type: 'boolean',
-                  },
-                  disabledReason: {
-                    type: 'string',
                   },
                 },
               },

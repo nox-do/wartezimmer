@@ -9,6 +9,7 @@
     resolveRoomPanelLeadLabel,
     resolveRoomPanelLeadState,
     roomPanelCallCandidates,
+    roomPanelCallAnnouncementReachable,
     roomPanelCandidateDisplayName,
     roomPanelItemDisplayName,
     roomPanelItemTicketCodes,
@@ -46,6 +47,8 @@
   const mayShowPatientNames = $derived(snapshot.capabilities.mayShowPatientNames);
   const panelItems = $derived(snapshot.items);
   const callCandidates = $derived(roomPanelCallCandidates(snapshot));
+  const callAnnouncementReachable = $derived(roomPanelCallAnnouncementReachable(snapshot));
+  const callOfflineHint = $derived(t('mfa.callAnnouncementOffline'));
   const showCallSection = $derived(shouldRenderRoomPanelCallSection(snapshot));
   const leadState = $derived(resolveRoomPanelLeadState(panelItems));
   const stateLabel = $derived(
@@ -117,17 +120,28 @@
                   </span>
                 {/if}
                 {#if candidate.actions.canCall}
-                  <Button
-                    class="room-panel-call-section__action"
-                    variant="primary"
-                    fullWidth
-                    loading={busyVisitId === candidate.visitId}
-                    disabled={busyVisitId !== null && busyVisitId !== candidate.visitId}
-                    onclick={() => onCall?.(candidate.visitId)}
+                  <span
+                    class="room-panel-call-section__action-wrap"
+                    title={callAnnouncementReachable ? undefined : callOfflineHint}
                   >
-                    <PhoneOutgoing size={18} aria-hidden="true" />
-                    {t('roomPanel.actionCall')}
-                  </Button>
+                    <Button
+                      class="room-panel-call-section__action"
+                      variant="primary"
+                      fullWidth
+                      loading={busyVisitId === candidate.visitId}
+                      disabled={
+                        !callAnnouncementReachable ||
+                        (busyVisitId !== null && busyVisitId !== candidate.visitId)
+                      }
+                      ariaLabel={callAnnouncementReachable
+                        ? t('roomPanel.actionCall')
+                        : t('mfa.actionCallOfflineHint')}
+                      onclick={() => onCall?.(candidate.visitId)}
+                    >
+                      <PhoneOutgoing size={18} aria-hidden="true" />
+                      {t('roomPanel.actionCall')}
+                    </Button>
+                  </span>
                 {/if}
               </li>
             {/each}

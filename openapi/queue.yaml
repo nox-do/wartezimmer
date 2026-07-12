@@ -391,8 +391,6 @@ components:
           type: boolean
         canCheckOut:
           type: boolean
-        disabledReason:
-          type: string
     RoomPanelCapabilities:
       type: object
       additionalProperties: false
@@ -402,6 +400,7 @@ components:
         - canCheckOut
         - mayShowPatientNames
         - canCall
+        - callAnnouncementReachable
       properties:
         requiresPin:
           type: boolean
@@ -413,6 +412,9 @@ components:
           type: boolean
         canCall:
           type: boolean
+        callAnnouncementReachable:
+          type: boolean
+          description: WZ-TV presence for call announcements; when false and canCall is true, UI should disable call actions.
     RoomPanelItem:
       type: object
       additionalProperties: false

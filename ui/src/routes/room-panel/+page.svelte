@@ -1,4 +1,18 @@
 <script lang="ts">
+  /**
+   * Room-panel route orchestrator: login, URL deep-link reconcile, SSE snapshot, visit actions.
+   *
+   * API and pure helpers live in `$lib/room-panel/*` (api, transition, requested-url, snapshot-view).
+   * This file still owns reactive state and lifecycle — intentionally not split yet (2026-07-12).
+   *
+   * **Deferred refactor:** extract to `room-panel-session.svelte.ts` (same pattern as `tv-display.svelte.ts`).
+   * Worth doing when the next feature or bugfix touches this route; not a standalone cleanup — no user-facing gain.
+   *
+   * **Split triggers:** recurring login/stream bugs, or the file growing again. Prefer incremental extraction on that touch, not a big-bang move.
+   *
+   * **Page wiring after split:** `mountRoomPanelSession({ getRequestedRoomId, getRequestedPlacement })` from `$page`;
+   * markup stays here, session module exports `$state` + actions.
+   */
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import Button from '$lib/components/forms/Button.svelte';

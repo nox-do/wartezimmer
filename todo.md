@@ -8,6 +8,8 @@ Stand: 2026-07-12
 - ✅ Doku: [`flows.md`](docs/flows.md) § Flow 5, [`apis.md`](docs/apis.md) § Raum-Panel
 - Plan-Datei entfernt — Inhalt in Kerndokumenten
 - ✅ Review-Cleanup (2026-07-12): Call-Scope dedup (`resolveRoomPanelCallCandidateScope`); URL-Helper (`findRequestedRoomEntry`, `buildRoomPanelPath`/`Url` via `VITE_API_BASE`); tot Preview-CSS; deprecated Domain-Exports (`roomPanelMayCallVisit`, `roomPanelVisitTargetsRoom`, `normalizeRoomPanelSettings` aus Public API); shared `emptyFlowCoreRuntimeForMocks`; callCandidates dedup gegen items (kein Doppel-Listing); Home-Links mit Placement
+- Controller-Split bewusst zurückgestellt — JSDoc in `ui/src/routes/room-panel/+page.svelte` (Trigger + `tv-display`-Pattern)
+- ✅ TV-offline Aufruf-Gate (2026-07-12): `capabilities.callAnnouncementReachable` im Snapshot (Server-Presence); UI disabled+Tooltip; `disabledReason` aus OpenAPI entfernt
 
 ## Hinweis: RoutingMode-Guard vs. offene Wartenummern (2026-07-10)
 
