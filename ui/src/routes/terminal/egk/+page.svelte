@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { gotoResolved } from '$lib/navigation/kit-paths';
+  import { resolve } from '$app/paths';
   import { getContext } from 'svelte';
   import { ChevronRight, CreditCard } from '@lucide/svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
@@ -13,7 +14,7 @@
 
   function continueToTopics() {
     writeTerminalSession({ authPath: 'egk' });
-    void goto('/terminal/topic');
+    void gotoResolved('/terminal/topic');
   }
 </script>
 
@@ -33,6 +34,6 @@
   </button>
 
   <nav class="terminal-nav">
-    <a href="/terminal">{t('terminal.egkBack')}</a>
+    <a href={resolve('/terminal')}>{t('terminal.egkBack')}</a>
   </nav>
 </div>

@@ -1,4 +1,4 @@
-import { goto } from '$app/navigation';
+import { gotoResolved } from '$lib/navigation/kit-paths';
 import { t } from '$lib/i18n/i18nStore.svelte';
 import { toastStore } from '$lib/stores/toastStore';
 import {
@@ -42,6 +42,6 @@ export function mountTerminalAuthRouteGuard(
     redirected = true;
     clearTerminalSession();
     toastStore.error(t('terminal.authPathDisabled'));
-    void goto('/terminal');
+    void gotoResolved('/terminal');
   });
 }

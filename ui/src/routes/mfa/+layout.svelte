@@ -1,7 +1,7 @@
 <script lang="ts">
   import '$lib/styles/mfa.css';
   import '$lib/styles/terminal.css';
-  import { goto } from '$app/navigation';
+  import { gotoResolved } from '$lib/navigation/kit-paths';
   import { page } from '$app/stores';
   import AuthGate from '$lib/components/auth/AuthGate.svelte';
   import DocumentPreviewOverlay from '$lib/components/mfa/DocumentPreviewOverlay.svelte';
@@ -39,7 +39,7 @@
       next.searchParams.delete('visitId');
       next.searchParams.delete('documentId');
       const nextSearch = next.searchParams.toString();
-      void goto(`${next.pathname}${nextSearch ? `?${nextSearch}` : ''}`, { replaceState: true });
+      void gotoResolved(`${next.pathname}${nextSearch ? `?${nextSearch}` : ''}`, { replaceState: true });
     });
   });
 </script>

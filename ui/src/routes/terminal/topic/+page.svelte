@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { gotoResolved } from '$lib/navigation/kit-paths';
+  import { resolve } from '$app/paths';
   import { getContext, onMount } from 'svelte';
   import { ChevronRight } from '@lucide/svelte';
   import TopicIconDisplay from '$lib/components/topics/TopicIconDisplay.svelte';
@@ -16,7 +17,7 @@
   } from '$lib/terminal/terminal-api';
   import { mountTerminalAuthRouteGuard } from '$lib/terminal/terminal-auth-route-guard.svelte';
   import { TERMINAL_OPS_CONTEXT_KEY, type TerminalOpsSnapshot } from '$lib/terminal/terminal-ops-context';
-  import { readAssistMode, readTerminalSession, terminalAuthEntryPath, writeCheckinResult } from '$lib/terminal/terminal-session';
+  import { readAssistMode, readTerminalSession, writeCheckinResult } from '$lib/terminal/terminal-session';
   import { toastStore } from '$lib/stores/toastStore';
 
   const terminalOps = getContext<TerminalOpsSnapshot>(TERMINAL_OPS_CONTEXT_KEY);
@@ -75,7 +76,7 @@
     });
 
     busyTopicId = null;
-    void goto('/terminal/confirmed');
+    void gotoResolved('/terminal/confirmed');
   }
 
   $effect(() => {
@@ -103,7 +104,7 @@
   onMount(() => {
     session = readTerminalSession();
     if (!session) {
-      void goto('/terminal');
+      void gotoResolved('/terminal');
       return;
     }
 
@@ -169,9 +170,15 @@
     {/if}
 
     <nav class="terminal-nav">
-      <a href={showAssistHint ? '/terminal' : terminalAuthEntryPath(session.authPath)}>
-        {showAssistHint ? t('terminal.topicAssistBack') : t('terminal.topicBack')}
-      </a>
+      {#if showAssistHint}
+        <a href={resolve('/terminal')}>{t('terminal.topicAssistBack')}</a>
+      {:else if session.authPath === 'egk'}
+        <a href={resolve('/terminal/egk')}>{t('terminal.topicBack')}</a>
+      {:else if session.authPath === 'name_dob'}
+        <a href={resolve('/terminal/name')}>{t('terminal.topicBack')}</a>
+      {:else}
+        <a href={resolve('/terminal/phone')}>{t('terminal.topicBack')}</a>
+      {/if}
     </nav>
   </div>
 {/if}

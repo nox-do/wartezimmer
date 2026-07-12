@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { afterNavigate } from '$app/navigation';
   import { page } from '$app/state';
+  import { resolve } from '$app/paths';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { fetchRoutingCapabilities, type RoutingCapabilities } from '$lib/mfa/practice-ops-api';
   import {
@@ -40,7 +41,7 @@
 <div class="mfa-settings-layout">
   <aside class="mfa-settings-sidebar" aria-label={t('mfa.settings.hubTitle')}>
     <header class="mfa-settings-sidebar__top">
-      <a class="mfa-settings-sidebar__back" href="/mfa">
+      <a class="mfa-settings-sidebar__back" href={resolve('/mfa')}>
         <span aria-hidden="true">←</span>
         {t('mfa.settings.navBack')}
       </a>
@@ -60,7 +61,7 @@
           <a
             class="mfa-settings-nav__group-link"
             class:mfa-settings-nav__group-link--active={pathname === group.href}
-            href={group.href}
+            href={resolve(group.href)}
             aria-current={pathname === group.href ? 'page' : undefined}
           >
             {t(group.labelKey)}
@@ -74,7 +75,7 @@
                   <a
                     class="mfa-settings-nav__child-link"
                     class:mfa-settings-nav__child-link--active={itemActive}
-                    href={item.href}
+                    href={resolve(item.href)}
                     aria-current={itemActive ? 'page' : undefined}
                   >
                     {t(item.labelKey)}
@@ -90,7 +91,7 @@
     <footer class="mfa-settings-sidebar__footer">
       <a
         class="mfa-settings-sidebar__footer-link"
-        href="/ops"
+        href={resolve('/ops')}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={t('mfa.settings.hubOpsLinkAria')}

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { goto, replaceState } from '$app/navigation';
+  import { gotoResolved, replaceStateResolved } from '$lib/navigation/kit-paths';
   import Button from '$lib/components/forms/Button.svelte';
   import PrivacyNoticeModal from '$lib/components/shared/PrivacyNoticeModal.svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
@@ -51,7 +51,7 @@
 
     storeCaptivePortalContext(captiveContext);
     const cleaned = stripCaptivePortalQuery(currentUrl);
-    replaceState(`${cleaned.pathname}${cleaned.search}`, {});
+    replaceStateResolved(`${cleaned.pathname}${cleaned.search}`, {});
 
     return stopProfile;
   });
@@ -109,7 +109,7 @@
         }
       }
 
-      await goto(menuPath);
+      await gotoResolved(menuPath);
     } finally {
       submitting = false;
     }

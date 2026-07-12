@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
+  import { gotoResolved } from '$lib/navigation/kit-paths';
+  import { resolve } from '$app/paths';
   import Button from '$lib/components/forms/Button.svelte';
   import PrivacyNoticeModal from '$lib/components/shared/PrivacyNoticeModal.svelte';
   import { formatFileSize } from '$lib/documents/format-file-size';
@@ -38,7 +39,7 @@
   const privacyNotice = $derived(getUploadPrivacyNotice(practiceProfile));
 
   function backToPortal() {
-    void goto('/portal');
+    void gotoResolved('/portal');
   }
 
   async function loadDocuments(activeSession: PortalSessionContext) {
@@ -241,7 +242,7 @@
       </div>
 
       <p class="portal-back-link">
-        <a href="/portal/menu">{t('portal.backToMenu')}</a>
+        <a href={resolve('/portal/menu')}>{t('portal.backToMenu')}</a>
       </p>
     </section>
   {/if}

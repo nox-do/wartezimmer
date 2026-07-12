@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { gotoResolved } from '$lib/navigation/kit-paths';
+  import { resolve } from '$app/paths';
   import { getContext } from 'svelte';
   import TerminalNumpad from '$lib/components/terminal/TerminalNumpad.svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
@@ -17,14 +18,14 @@
       phoneNumber: payload.phoneNumber,
       dobDisplay: payload.dobDisplay,
     });
-    void goto('/terminal/topic');
+    void gotoResolved('/terminal/topic');
   }
 </script>
 
 <div class="terminal-body terminal-body--flow terminal-body--numpad">
   <div class="terminal-numpad-head">
     <h1>{t('terminal.phoneTitle')}</h1>
-    <a class="terminal-numpad-back" href="/terminal">{t('terminal.phoneBack')}</a>
+    <a class="terminal-numpad-back" href={resolve('/terminal')}>{t('terminal.phoneBack')}</a>
   </div>
   <p class="terminal-lead">{t('terminal.phoneLead')}</p>
 

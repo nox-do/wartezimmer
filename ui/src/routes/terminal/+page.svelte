@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { gotoResolved } from '$lib/navigation/kit-paths';
+  import { resolve } from '$app/paths';
   import { onMount } from 'svelte';
   import { ChevronRight, CreditCard, IdCard, Smartphone, Users } from '@lucide/svelte';
   import { getContext } from 'svelte';
@@ -76,7 +77,7 @@
       authPath: 'none',
       createdAt: result.data.createdAt,
     });
-    void goto('/terminal/confirmed');
+    void gotoResolved('/terminal/confirmed');
   }
 </script>
 
@@ -101,7 +102,7 @@
 
     <div class="terminal-card-grid terminal-card-grid--start">
       {#if authPhoneEnabled}
-        <a class="terminal-card" href="/terminal/phone">
+        <a class="terminal-card" href={resolve('/terminal/phone')}>
           <span class="terminal-card__icon" aria-hidden="true">
             <Smartphone size={26} />
           </span>
@@ -114,7 +115,7 @@
       {/if}
 
       {#if authNameDobEnabled}
-        <a class="terminal-card" href="/terminal/name">
+        <a class="terminal-card" href={resolve('/terminal/name')}>
           <span class="terminal-card__icon" aria-hidden="true">
             <IdCard size={26} />
           </span>
@@ -127,7 +128,7 @@
       {/if}
 
       {#if authEgkEnabled}
-        <a class="terminal-card" href="/terminal/egk">
+        <a class="terminal-card" href={resolve('/terminal/egk')}>
           <span class="terminal-card__icon" aria-hidden="true">
             <CreditCard size={26} />
           </span>

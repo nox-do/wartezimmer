@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { resolve } from '$app/paths';
 
   interface Props {
     variant?: 'primary' | 'ghost' | 'doc' | 'danger';
@@ -39,14 +40,8 @@
 </script>
 
 {#if href}
-  <a
-    {href}
-    class={className}
-    aria-label={ariaLabel}
-    {title}
-    aria-disabled={disabled}
-    onclick={onclick}
-  >
+  <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
+  <a href={resolve(href as any)} class={className} aria-label={ariaLabel} {title} aria-disabled={disabled} onclick={onclick}>
     {@render children?.()}
     {#if count != null}
       <span class="btn-staff-sm__count">{count}</span>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { resolve } from '$app/paths';
 
   interface Props {
     variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
@@ -49,7 +50,9 @@
 </script>
 
 {#if href}
-  <a {href} {target} {rel} class={computedClass} aria-disabled={disabled || loading} aria-label={ariaLabel} {onclick}>
+  <!-- href is a caller-provided app path; resolve() overloads need a wide cast at this boundary. -->
+  <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
+  <a href={resolve(href as any)} {target} {rel} class={computedClass} aria-disabled={disabled || loading} aria-label={ariaLabel} {onclick}>
     {#if loading}
       <span class="spinner" aria-hidden="true"></span>
     {/if}

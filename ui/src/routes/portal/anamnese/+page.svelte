@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Button from '$lib/components/forms/Button.svelte';
+  import { resolve } from '$app/paths';
   import { locale, t } from '$lib/i18n/i18nStore.svelte';
   import {
     translateDynamicLabelsWithRetry,
@@ -409,7 +410,7 @@
       </form>
 
       <p class="portal-back-link">
-        <a href="/portal/menu">{t('portal.backToMenu')}</a>
+        <a href={resolve('/portal/menu')}>{t('portal.backToMenu')}</a>
       </p>
 
       <AnamnesePrivacyModal

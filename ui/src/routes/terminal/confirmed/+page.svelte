@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { gotoResolved, resolvedHref } from '$lib/navigation/kit-paths';
   import { onMount } from 'svelte';
   import { getContext } from 'svelte';
   import TerminalWlanPromoBanner from '$lib/components/terminal/TerminalWlanPromoBanner.svelte';
@@ -53,13 +53,13 @@
 
   function closeScreen() {
     resetTerminalFlow();
-    void goto('/terminal');
+    void gotoResolved('/terminal');
   }
 
   onMount(() => {
     result = readCheckinResult();
     if (!result) {
-      void goto('/terminal');
+      void gotoResolved('/terminal');
       return;
     }
 

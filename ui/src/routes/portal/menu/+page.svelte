@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { ChevronRight, ClipboardList, FileUp } from '@lucide/svelte';
+  import { resolve } from '$app/paths';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { ensurePortalSession } from '$lib/portal/ensure-portal-session';
   import type { PortalSessionContext } from '$lib/portal/portal-session';
@@ -45,7 +46,7 @@
       </header>
 
       <div class="portal-action-grid">
-        <a class="panel panel--clickable" href="/portal/upload">
+        <a class="panel panel--clickable" href={resolve('/portal/upload')}>
           <span class="portal-action-icon" aria-hidden="true">
             <FileUp size={26} strokeWidth={2} />
           </span>
@@ -56,7 +57,7 @@
           <ChevronRight class="portal-action-chevron" aria-hidden="true" size={22} />
         </a>
 
-        <a class="panel panel--clickable" href="/portal/anamnese">
+        <a class="panel panel--clickable" href={resolve('/portal/anamnese')}>
           <span class="portal-action-icon" aria-hidden="true">
             <ClipboardList size={26} strokeWidth={2} />
           </span>

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
-  import { goto } from '$app/navigation';
+  import { gotoResolved } from '$lib/navigation/kit-paths';
   import Button from '$lib/components/forms/Button.svelte';
   import OpsContactLookupForm from '$lib/components/ops/OpsContactLookupForm.svelte';
   import OpsPortalSettings from '$lib/components/ops/OpsPortalSettings.svelte';
@@ -209,7 +209,7 @@
     }
     applyOnboardingSnapshot(result.data);
     if (result.data.setupCompletedAt) {
-      await goto('/ops');
+      await gotoResolved('/ops');
     }
     return true;
   }
@@ -225,7 +225,7 @@
       syncVerifyMessage();
     }
     if (result.data.setupCompletedAt) {
-      await goto('/ops');
+      await gotoResolved('/ops');
     }
     return true;
   }
@@ -434,7 +434,7 @@
       return;
     }
     toastStore.success(t('ops.setup.completeOk'));
-    await goto('/ops');
+    await gotoResolved('/ops');
   }
 </script>
 

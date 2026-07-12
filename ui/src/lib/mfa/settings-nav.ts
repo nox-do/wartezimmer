@@ -1,17 +1,23 @@
 import type { TranslationKey } from '$lib/i18n/core/translation-keys';
 import type { RoutingCapabilities } from '$lib/mfa/practice-ops-api';
 
+export type MfaSettingsHref =
+  | '/mfa/settings/operations'
+  | '/mfa/settings/topics-rooms'
+  | '/mfa/settings/topics-rooms/topics'
+  | '/mfa/settings/topics-rooms/journeys';
+
 export type MfaSettingsNavItem = {
   id: string;
   labelKey: TranslationKey;
-  href: string;
+  href: MfaSettingsHref;
   requiresJourneyDesigner?: boolean;
 };
 
 export type MfaSettingsNavGroup = {
   id: string;
   labelKey: TranslationKey;
-  href: string;
+  href: MfaSettingsHref;
   children: MfaSettingsNavItem[];
 };
 

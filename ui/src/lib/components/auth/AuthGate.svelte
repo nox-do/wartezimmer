@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { gotoResolved } from '$lib/navigation/kit-paths';
   import { page } from '$app/stores';
   import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
@@ -42,7 +42,7 @@
     const redirectTarget = `${$page.url.pathname}${$page.url.search}`;
     const target = loginTargetWithRedirect(loginHref, redirectTarget);
     if (`${$page.url.pathname}${$page.url.search}` !== target) {
-      void goto(target, { replaceState: true });
+      void gotoResolved(target, { replaceState: true });
     }
   });
 </script>

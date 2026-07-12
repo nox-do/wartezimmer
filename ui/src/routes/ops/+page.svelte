@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { gotoResolved } from '$lib/navigation/kit-paths';
+  import { resolve } from '$app/paths';
   import Button from '$lib/components/forms/Button.svelte';
   import StaffSettingsShell from '$lib/components/shared/StaffSettingsShell.svelte';
   import { patchOpsOnboarding } from '$lib/ops/ops-system-api';
@@ -20,7 +21,7 @@
       toastStore.error(result.error.message || t('ops.loadError'));
       return;
     }
-    await goto('/ops/setup');
+    await gotoResolved('/ops/setup');
   }
 </script>
 
@@ -35,43 +36,43 @@
   <p class="text-desc">{t('ops.hubMfaHint')}</p>
 
   <div class="settings-grid">
-    <a class="panel panel--clickable" href="/ops/practice">
+    <a class="panel panel--clickable" href={resolve('/ops/practice')}>
       <span>
         <strong>{t('ops.cardPracticeTitle')}</strong>
         <span>{t('ops.cardPracticeDesc')}</span>
       </span>
     </a>
-    <a class="panel panel--clickable" href="/ops/storage">
+    <a class="panel panel--clickable" href={resolve('/ops/storage')}>
       <span>
         <strong>{t('ops.cardStorageTitle')}</strong>
         <span>{t('ops.cardStorageDesc')}</span>
       </span>
     </a>
-    <a class="panel panel--clickable" href="/ops/contacts">
+    <a class="panel panel--clickable" href={resolve('/ops/contacts')}>
       <span>
         <strong>{t('ops.cardContactsTitle')}</strong>
         <span>{t('ops.cardContactsDesc')}</span>
       </span>
     </a>
-    <a class="panel panel--clickable" href="/ops/messaging">
+    <a class="panel panel--clickable" href={resolve('/ops/messaging')}>
       <span>
         <strong>{t('ops.cardMessagingTitle')}</strong>
         <span>{t('ops.cardMessagingDesc')}</span>
       </span>
     </a>
-    <a class="panel panel--clickable" href="/ops/portal">
+    <a class="panel panel--clickable" href={resolve('/ops/portal')}>
       <span>
         <strong>{t('ops.cardPortalTitle')}</strong>
         <span>{t('ops.cardPortalDesc')}</span>
       </span>
     </a>
-    <a class="panel panel--clickable" href="/ops/security">
+    <a class="panel panel--clickable" href={resolve('/ops/security')}>
       <span>
         <strong>{t('ops.cardSecurityTitle')}</strong>
         <span>{t('ops.cardSecurityDesc')}</span>
       </span>
     </a>
-    <a class="panel panel--clickable" href="/ops/maintenance">
+    <a class="panel panel--clickable" href={resolve('/ops/maintenance')}>
       <span>
         <strong>{t('ops.cardMaintenanceTitle')}</strong>
         <span>{t('ops.cardMaintenanceDesc')}</span>

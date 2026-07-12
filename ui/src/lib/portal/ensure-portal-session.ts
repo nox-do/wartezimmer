@@ -1,4 +1,4 @@
-import { replaceState } from '$app/navigation';
+import { replaceStateResolved } from '$lib/navigation/kit-paths';
 import { t } from '$lib/i18n/i18nStore.svelte';
 import { normalizeTicketCode } from '$lib/portal/normalize-ticket-code';
 import {
@@ -37,7 +37,7 @@ export async function ensurePortalSession(
       visitId: resolved.data.visitId,
     });
     if (options.replacePath) {
-      replaceState(options.replacePath, {});
+      replaceStateResolved(options.replacePath, {});
     }
     return { ok: true, session };
   }

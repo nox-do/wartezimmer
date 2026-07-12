@@ -47,7 +47,9 @@ export function clearAssistMode(): void {
   sessionStorage.removeItem(ASSIST_EXPIRES_KEY);
 }
 
-export function terminalAuthEntryPath(authPath: TerminalAuthPath): string {
+export type TerminalAuthEntryPath = '/terminal/egk' | '/terminal/name' | '/terminal/phone';
+
+export function terminalAuthEntryPath(authPath: TerminalAuthPath): TerminalAuthEntryPath {
   if (authPath === 'egk') {
     return '/terminal/egk';
   }

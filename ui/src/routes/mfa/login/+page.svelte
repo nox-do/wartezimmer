@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
-  import { goto } from '$app/navigation';
+  import { gotoResolved } from '$lib/navigation/kit-paths';
   import Button from '$lib/components/forms/Button.svelte';
   import {
     getPracticeProfileFallback,
@@ -34,7 +34,7 @@
       authSession.status === 'authenticated' &&
       authSession.user?.roles.includes(loginRole)
     ) {
-      void goto(redirectTarget);
+      void gotoResolved(redirectTarget);
     }
   });
 
@@ -58,7 +58,7 @@
         return;
       }
 
-      await goto(redirectTarget);
+      await gotoResolved(redirectTarget);
     } finally {
       submitting = false;
     }

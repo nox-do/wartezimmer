@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Settings, UserPlus } from '@lucide/svelte';
   import { confirmDevicePairing } from '$lib/auth/device-pairing-client';
+  import { resolve } from '$app/paths';
   import PairingConfirmForm from '$lib/components/auth/PairingConfirmForm.svelte';
   import WaitingListFilters from '$lib/components/mfa/WaitingListFilters.svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
@@ -79,7 +80,7 @@
     {/if}
     <a
       class="qs-settings-icon-btn"
-      href="/mfa/settings"
+      href={resolve('/mfa/settings')}
       aria-label={t('mfa.settings.hubTitle')}
       title={t('mfa.settings.hubTitle')}
     >
