@@ -101,7 +101,7 @@ Entkoppelt von Check-in und Thema:
 
 Ergänzt oder überschreibt den Raum-Snapshot, wenn die MFA „Check-in“ im Behandlungsraum auslöst (`resolveRoomTargetForCheckIn`: zuerst bestehender Queue-Snapshot, sonst Quicksettings-Raum).
 
-**Raum-Scope (Raum-Panel):** Raum-Panel-Transitions prüfen Scope serverseitig (`visitTargetsRoom`, Session-`roomId` + `placement`). MFA sendet kein `actingRoomId` und bleibt ohne Einschränkung. Fehler: `QUEUE_ROOM_MISMATCH` (409) bei Scope-Konflikt.
+**Raum-Scope (Raum-Panel):** Raum-Panel-Transitions prüfen Scope serverseitig (`visitTargetsRoom` gegen `VisitView.targetLocationId`, Session-`roomId` + `placement`). MFA sendet kein `actingRoomId` und bleibt ohne Einschränkung. Fehler: `QUEUE_ROOM_MISMATCH` (409) bei Scope-Konflikt.
 
 **Reassign + Check-in:** War der Patient `in_room` und MFA weist einen **anderen** Raum zu → Status zurück auf `called` (Ankunft muss im neuen Raum erneut bestätigt werden). Gleicher Raum → `in_room` bleibt.
 

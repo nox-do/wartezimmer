@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   resolveRoomPanelCapabilities,
-  resolveVisitTargetRoomId,
   roomPanelCanCall,
   roomPanelRequiresPin,
   visitTargetsRoom,
@@ -120,91 +119,11 @@ test('resolveRoomPanelCapabilities disables actions when panel is off', () => {
   );
 });
 
-test('resolveVisitTargetRoomId: waiting/directed use destination fields', () => {
-  assert.equal(
-    resolveVisitTargetRoomId({
-      status: 'waiting',
-      destinationRoomId: 'labor',
-      roomId: 'empfang',
-    }),
-    'labor',
-  );
-  assert.equal(
-    resolveVisitTargetRoomId({
-      status: 'directed',
-      targetLocationId: 'labor',
-      roomId: 'empfang',
-    }),
-    'labor',
-  );
-  assert.equal(
-    resolveVisitTargetRoomId({
-      status: 'waiting',
-      roomId: 'empfang',
-    }),
-    null,
-  );
-});
-
-test('resolveVisitTargetRoomId: called/in_room prefer roomId', () => {
-  assert.equal(
-    resolveVisitTargetRoomId({
-      status: 'called',
-      roomId: 'labor',
-      destinationRoomId: 'empfang',
-    }),
-    'labor',
-  );
-  assert.equal(
-    resolveVisitTargetRoomId({
-      status: 'in_room',
-      roomId: 'labor',
-      targetLocationId: 'empfang',
-    }),
-    'labor',
-  );
-  assert.equal(
-    resolveVisitTargetRoomId({
-      status: 'called',
-      destinationRoomId: 'empfang',
-    }),
-    'empfang',
-  );
-});
-
-test('visitTargetsRoom matches session room against resolved target', () => {
+test('visitTargetsRoom matches Flow-Core targetLocationId only', () => {
   const room = 'labor';
-  assert.equal(
-    visitTargetsRoom({ status: 'waiting', movementMode: 'call', destinationRoomId: room }, room),
-    true,
-  );
-  assert.equal(
-    visitTargetsRoom({ status: 'called', movementMode: 'call', roomId: room }, room),
-    true,
-  );
-  assert.equal(
-    visitTargetsRoom(
-      { status: 'directed', movementMode: 'self_go', destinationRoomId: room },
-      room,
-    ),
-    true,
-  );
-  assert.equal(
-    visitTargetsRoom({ status: 'waiting', movementMode: 'call', targetLocationId: room }, room),
-    true,
-  );
-  assert.equal(
-    visitTargetsRoom(
-      { status: 'called', movementMode: 'call', roomId: 'empfang', destinationRoomId: room },
-      room,
-    ),
-    false,
-  );
-  assert.equal(
-    visitTargetsRoom(
-      { status: 'waiting', movementMode: 'call', destinationRoomId: 'empfang' },
-      room,
-    ),
-    false,
-  );
+  assert.equal(visitTargetsRoom({ targetLocationId: room }, room), true);
+  assert.equal(visitTargetsRoom({ targetLocationId: 'empfang' }, room), false);
+  assert.equal(visitTargetsRoom({ targetLocationId: null }, room), false);
+  assert.equal(visitTargetsRoom({ targetLocationId: room }, ''), false);
+  assert.equal(visitTargetsRoom({ targetLocationId: ` ${room} ` }, room), true);
 });

@@ -70,33 +70,14 @@ export function resolveRoomPanelCapabilities(panel: RoomPanelPolicyInput): RoomP
   };
 }
 
-export type RoomPanelCallVisitInput = {
-  status: string;
-  movementMode?: string | null;
-  destinationRoomId?: string | null;
+/** Flow-Core canonical room scope for room-panel snapshots and transition guards. */
+export type RoomTargetInput = {
   targetLocationId?: string | null;
-  roomId?: string | null;
 };
 
-/**
- * Status-aware target room for panel scope.
- * - waiting/directed: destinationRoomId || targetLocationId
- * - called/in_room: roomId preferred (current assignment)
- */
-export function resolveVisitTargetRoomId(visit: RoomPanelCallVisitInput): string | null {
-  const status = visit.status?.trim() || '';
-  const destination = visit.destinationRoomId?.trim() || visit.targetLocationId?.trim() || '';
-  const assigned = visit.roomId?.trim() || '';
-
-  if (status === 'called' || status === 'in_room') {
-    return assigned || destination || null;
-  }
-
-  return destination || null;
-}
-
-/** Generic room scope: visit belongs on this room's panel (list, snapshot, call candidates). */
-export function visitTargetsRoom(visit: RoomPanelCallVisitInput, sessionRoomId: string): boolean {
+/** Visit belongs on this room's panel when its Flow-Core target location matches the session room. */
+export function visitTargetsRoom(visit: RoomTargetInput, sessionRoomId: string): boolean {
+  const targetLocationId = visit.targetLocationId?.trim();
   const roomId = sessionRoomId.trim();
-  return roomId.length > 0 && resolveVisitTargetRoomId(visit) === roomId;
+  return roomId.length > 0 && targetLocationId === roomId;
 }

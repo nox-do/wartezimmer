@@ -1,4 +1,5 @@
 import { explainVisibility } from '@praxis-flow/flow-core';
+import { visitTargetsRoom } from '@praxis-flow/domain';
 import type { Runtime } from '@praxis-flow/flow-core/server';
 import type {
   QueueVisitRow,
@@ -118,10 +119,6 @@ function mapQueueRowToPanelItem(
   if (!isRoomPanelStatus(row.status)) {
     return null;
   }
-  const panelRoomId = row.status === 'directed' ? row.destinationRoomId || null : row.roomId;
-  if (panelRoomId !== sessionRoomId) {
-    return null;
-  }
   return {
     visitId: row.id,
     laneCode: row.laneCode,
@@ -191,8 +188,12 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
   for (const visit of businessDayVisits) {
     const row = visitToQueueVisitRow(visit, settings);
 
-    if (capabilities.canCall && isRoomPanelCallCandidateVisit(visit, row, session.roomId)) {
+    if (capabilities.canCall && isRoomPanelCallCandidateVisit(visit, session.roomId)) {
       callCandidateRows.push(row);
+    }
+
+    if (!visitTargetsRoom(visit, session.roomId)) {
+      continue;
     }
 
     const explanation = explainVisibility(visit, surface, rules);

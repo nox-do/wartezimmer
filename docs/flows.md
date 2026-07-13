@@ -367,7 +367,7 @@ Jedes Terminal-Thema hat ein **Standard-Aufrufziel** (`defaultRoomId`). In der R
 
 **Backend:** `POST …/transition` mit `type: check_in_room`, `check_out_room` oder `call` (nur Raum-Panel-Session). MFA sendet weiterhin die MFA-Transitions ohne Raum-Einschränkung. Raum-Panel nutzt **Snapshot-Actions** (`canArrive`, `canCheckOut`, `canCall`) — UI leitet Buttons daraus ab, Server antwortet bei Race/Guard mit 403/409.
 
-**Scope vs. Aktion:** Gehört der Visit zu diesem Raum? (`visitTargetsRoom`, status-aware) — separat von: Darf dieses Placement etwas tun? (`capabilities` + Flow-Core).
+**Scope vs. Aktion:** Gehört der Visit zu diesem Raum? (`visitTargetsRoom` über `targetLocationId`) — separat von: Darf dieses Placement etwas tun? (`capabilities` + Flow-Core). Status und `movementMode` steuern nur Darstellung und erlaubte Aktionen.
 
 **Nicht im Panel:** `reassign_room`, `return_to_waiting`, Triage, Supersede, Pickup-Hops — bleiben MFA.
 

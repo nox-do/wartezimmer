@@ -1,6 +1,13 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-12
+Stand: 2026-07-13
+
+## Erledigt: Room-Panel Raum-Scope vereinheitlicht (2026-07-13)
+
+- `visitTargetsRoom` prüft nur noch `VisitView.targetLocationId` (Flow-Core-Wahrheit)
+- `resolveVisitTargetRoomId`, `RoomPanelCallVisitInput`, `roomPanelCallVisitScopeInput` entfernt
+- Snapshot-Items, callCandidates und Transition-Guard nutzen denselben Scope-Helper
+- Item-Eligibility weiter über `row.status` (Absent-Overlay); Raum-Scope über `visit`
 
 ## Erledigt: Fresh-DB-Settings-Cutover extrahiert (2026-07-12)
 

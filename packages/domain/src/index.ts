@@ -119,9 +119,8 @@ export {
   roomPanelCanCheckOut,
   roomPanelMayShowPatientNames,
   roomPanelRequiresPin,
-  resolveVisitTargetRoomId,
   visitTargetsRoom,
-  type RoomPanelCallVisitInput,
+  type RoomTargetInput,
   type RoomPanelCapabilities,
   type RoomPanelPolicyInput,
 } from './room-panel-policy.js';
