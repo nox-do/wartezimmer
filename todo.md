@@ -6,7 +6,7 @@ Stand: 2026-07-13
 
 | Kandidat | Status | Evidenz |
 |----------|--------|---------|
-| Domain Single-Panel (`RoomPanelSettings`, `DEFAULT_ROOM_PANEL_SETTINGS`, `normalizeRoomPanelSettings`, `applyRoomPanelPlacement`) | **offen** (nächste Welle) | Nicht in Public API; Prod nutzt `RoomPanelsSettings`; nur Eigen + Tests. Parallel: `db-types.ts` `RoomPanelSettings` unreferenziert. |
+| Domain Single-Panel (`RoomPanelSettings`, `DEFAULT_ROOM_PANEL_SETTINGS`, `normalizeRoomPanelSettings`, `applyRoomPanelPlacement`) | **entfernt** | Domain-Cluster + Tests bereinigt; `db-types.ts` Alias entfernt. |
 | `EnvBackupInfo` / `EnvBackupResult` | **entfernt** | Re-Exports aus `setup-api`/`index`/`host-status` entfernt. `SaveEnvBackupResult` bleibt (Rename später). |
 | `app/src/http/domain-error.ts` Shim | **entfernt** | Imports → `shared/errors/domain-error.js`; Datei gelöscht. |
 | `setup/src/urls.ts` `buildDeviceUrls` | **entfernt** | Tests auf `buildDeviceUrlsFromBaseUrl` umgestellt. |

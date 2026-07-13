@@ -83,21 +83,6 @@ export function listEnabledRoomPanelPlacements(room: RoomWithPanels): RoomPanelP
   return enabled;
 }
 
-/** @deprecated Single-panel shape — replaced by RoomPanelsSettings in P1. */
-export type RoomPanelSettings = RoomPanelPlacementConfig & {
-  placement: RoomPanelPlacement;
-};
-
-/** @deprecated Single-panel default — replaced by DEFAULT_ROOM_PANELS_SETTINGS in P1. */
-export const DEFAULT_ROOM_PANEL_SETTINGS: RoomPanelSettings = {
-  ...DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG,
-  placement: 'outside',
-};
-
-function isRoomPanelPlacement(value: unknown): value is RoomPanelPlacement {
-  return typeof value === 'string' && (ROOM_PANEL_PLACEMENTS as readonly string[]).includes(value);
-}
-
 function isRoomPanelMode(value: unknown): value is RoomPanelMode {
   return typeof value === 'string' && (ROOM_PANEL_MODES as readonly string[]).includes(value);
 }
@@ -185,7 +170,7 @@ export function resolveRoomPanelDisplayTextConfig(
   return { preset, custom: null };
 }
 
-/** Canonical dual-placement normalize — no legacy single-panel wrapper. */
+/** Canonical dual-placement normalize. */
 export function normalizeRoomPanelsSettings(
   panels: PartialRoomPanelsSettings | null | undefined,
 ): RoomPanelsSettings {
@@ -194,29 +179,4 @@ export function normalizeRoomPanelsSettings(
     outside: normalizeRoomPanelPlacementConfig('outside', source.outside),
     inside: normalizeRoomPanelPlacementConfig('inside', source.inside),
   };
-}
-
-/**
- * @deprecated Single-panel normalize — replaced by normalizeRoomPanelsSettings in P1.
- * Accepts partial/unknown fields and coerces to defaults.
- */
-export function normalizeRoomPanelSettings(
-  panel: Partial<RoomPanelSettings> | null | undefined,
-): RoomPanelSettings {
-  const source = panel ?? DEFAULT_ROOM_PANEL_SETTINGS;
-  const placement = isRoomPanelPlacement(source.placement)
-    ? source.placement
-    : DEFAULT_ROOM_PANEL_SETTINGS.placement;
-
-  return {
-    placement,
-    ...normalizeRoomPanelPlacementConfig(placement, source),
-  };
-}
-
-export function applyRoomPanelPlacement(
-  settings: RoomPanelSettings,
-  placement: RoomPanelPlacement,
-): RoomPanelSettings {
-  return normalizeRoomPanelSettings({ ...settings, placement });
 }
