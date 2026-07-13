@@ -845,13 +845,6 @@ button.queue-ticket {
   flex-shrink: 0;
 }
 
-.room-panel-settings {
-  padding: 12px;
-  border: 1px solid var(--mfa-border);
-  border-radius: var(--radius-sm);
-  background: var(--mfa-surface);
-}
-
 .room-panel-settings-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
@@ -973,6 +966,20 @@ button.queue-ticket {
   background: var(--card);
 }
 
+.room-expander-basics-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7.5rem, 11rem);
+  gap: 10px;
+  align-items: start;
+}
+
+.room-expander-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  align-items: center;
+}
+
 .room-expander-section__head {
   display: flex;
   flex-wrap: wrap;
@@ -986,29 +993,6 @@ button.queue-ticket {
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--mfa-ink);
-}
-
-.room-expander-section__hint {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--mfa-muted);
-  line-height: 1.35;
-}
-
-.room-expander-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-top: 4px;
-}
-
-.room-expander-actions__end {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: auto;
 }
 
 .topic-icon-search {

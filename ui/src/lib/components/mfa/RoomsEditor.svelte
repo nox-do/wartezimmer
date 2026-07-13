@@ -67,7 +67,7 @@
     const savedJson = JSON.stringify(saved);
     if (savedJson !== lastSyncedRoomJson) {
       lastSyncedRoomJson = savedJson;
-      draft = structuredClone(saved);
+      draft = $state.snapshot(saved);
       maxOccupancyInput = saved.maxOccupancy == null ? '' : String(saved.maxOccupancy);
     }
   });
@@ -91,7 +91,7 @@
       return;
     }
     openRoomId = roomId;
-    draft = structuredClone(saved);
+    draft = $state.snapshot(saved);
     lastSyncedRoomJson = JSON.stringify(saved);
     maxOccupancyInput = saved.maxOccupancy == null ? '' : String(saved.maxOccupancy);
     labelError = '';
@@ -106,7 +106,7 @@
     const updated = ensureSingleDefaultCallTarget([...rooms, next], null);
     onChange?.(updated);
     openRoomId = next.roomId;
-    draft = structuredClone(next);
+    draft = $state.snapshot(next);
     lastSyncedRoomJson = JSON.stringify(next);
     maxOccupancyInput = '';
     labelError = '';
@@ -394,89 +394,88 @@
                 }}
               >
                 <section class="room-expander-section room-expander-section--room">
-                  <div class="room-expander-section__head">
-                    <h3 class="room-expander-section__title">{t('mfa.settings.roomBasicsSectionTitle')}</h3>
+                  <div class="room-expander-basics-grid">
+                    <label class="modal-form-field">
+                      <span>{t('mfa.settings.roomLabel')}</span>
+                      <input
+                        class="form-input"
+                        type="text"
+                        value={roomDraft.roomLabel}
+                        disabled={busy}
+                        oninput={(event) => {
+                          updateDraft({ roomLabel: (event.currentTarget as HTMLInputElement).value });
+                          labelError = '';
+                        }}
+                      />
+                      {#if labelError}
+                        <span class="modal-form-error">{labelError}</span>
+                      {/if}
+                    </label>
+
+                    <label class="modal-form-field">
+                      <span>{t('mfa.settings.roomMaxOccupancy')}</span>
+                      <input
+                        class="form-input"
+                        type="number"
+                        min="1"
+                        step="1"
+                        inputmode="numeric"
+                        value={maxOccupancyInput}
+                        disabled={busy}
+                        placeholder={t('mfa.settings.roomCapacityUnlimited')}
+                        oninput={(event) => {
+                          maxOccupancyInput = (event.currentTarget as HTMLInputElement).value;
+                          maxOccupancyError = '';
+                        }}
+                      />
+                      {#if maxOccupancyError}
+                        <span class="modal-form-error">{maxOccupancyError}</span>
+                      {/if}
+                    </label>
                   </div>
 
-                  <label class="modal-form-field">
-                    <span>{t('mfa.settings.roomLabel')}</span>
-                    <input
-                      class="form-input"
-                      type="text"
-                      value={roomDraft.roomLabel}
-                      disabled={busy}
-                      oninput={(event) => {
-                        updateDraft({ roomLabel: (event.currentTarget as HTMLInputElement).value });
-                        labelError = '';
-                      }}
-                    />
-                    {#if labelError}
-                      <span class="modal-form-error">{labelError}</span>
-                    {/if}
-                  </label>
+                  <div class="room-expander-checks">
+                    <label class="modal-form-check">
+                      <input
+                        type="checkbox"
+                        checked={roomDraft.enabled}
+                        disabled={busy}
+                        onchange={(event) => {
+                          const enabled = (event.currentTarget as HTMLInputElement).checked;
+                          updateDraft({
+                            enabled,
+                            defaultCallTarget: enabled ? roomDraft.defaultCallTarget : false,
+                          });
+                        }}
+                      />
+                      <span>{t('mfa.settings.roomEnabled')}</span>
+                    </label>
 
-                  <label class="modal-form-check">
-                    <input
-                      type="checkbox"
-                      checked={roomDraft.enabled}
-                      disabled={busy}
-                      onchange={(event) => {
-                        const enabled = (event.currentTarget as HTMLInputElement).checked;
-                        updateDraft({
-                          enabled,
-                          defaultCallTarget: enabled ? roomDraft.defaultCallTarget : false,
-                        });
-                      }}
-                    />
-                    <span>{t('mfa.settings.roomEnabled')}</span>
-                  </label>
-                  <p class="room-expander-section__hint">{t('mfa.settings.roomBasicsEnabledHint')}</p>
-
-                  <label class="modal-form-check">
-                    <input
-                      type="checkbox"
-                      checked={roomDraft.defaultCallTarget === true}
-                      disabled={busy || !roomDraft.enabled}
-                      onchange={(event) => {
-                        const defaultCallTarget = (event.currentTarget as HTMLInputElement).checked;
-                        updateDraft({
-                          enabled: defaultCallTarget ? true : roomDraft.enabled,
-                          defaultCallTarget,
-                        });
-                      }}
-                    />
-                    <span>{t('mfa.settings.roomDefaultCallTarget')}</span>
-                  </label>
-                  <p class="room-expander-section__hint">{t('mfa.settings.roomDefaultCallTargetHint')}</p>
-
-                  <label class="modal-form-field">
-                    <span>{t('mfa.settings.roomMaxOccupancy')}</span>
-                    <input
-                      class="form-input"
-                      type="number"
-                      min="1"
-                      step="1"
-                      inputmode="numeric"
-                      value={maxOccupancyInput}
-                      disabled={busy}
-                      placeholder={t('mfa.settings.roomCapacityUnlimited')}
-                      oninput={(event) => {
-                        maxOccupancyInput = (event.currentTarget as HTMLInputElement).value;
-                        maxOccupancyError = '';
-                      }}
-                    />
-                    <p class="room-expander-section__hint">{t('mfa.settings.roomMaxOccupancyHint')}</p>
-                    {#if maxOccupancyError}
-                      <span class="modal-form-error">{maxOccupancyError}</span>
-                    {/if}
-                  </label>
+                    <label class="modal-form-check">
+                      <input
+                        type="checkbox"
+                        checked={roomDraft.defaultCallTarget === true}
+                        disabled={busy || !roomDraft.enabled}
+                        onchange={(event) => {
+                          const defaultCallTarget = (event.currentTarget as HTMLInputElement).checked;
+                          updateDraft({
+                            enabled: defaultCallTarget ? true : roomDraft.enabled,
+                            defaultCallTarget,
+                          });
+                        }}
+                      />
+                      <span>{t('mfa.settings.roomDefaultCallTarget')}</span>
+                    </label>
+                  </div>
+                  <p class="field-hint">{t('mfa.settings.roomBasicsEnabledHint')}</p>
+                  <p class="field-hint">{t('mfa.settings.roomDefaultCallTargetHint')}</p>
                 </section>
 
                 {#each PANEL_PLACEMENTS as placement (`${roomDraft.roomId}:panel:${placement}`)}
                   {@const panel = roomPanelConfigForPlacement(roomDraft, placement)}
                   {@const savedPanel = roomPanelConfigForPlacement(room, placement)}
                   {@const panelStatus = getDevicePresenceStatus(roomPanelDeviceId(roomDraft.roomId, placement))}
-                  <section class="room-expander-section room-panel-settings">
+                  <section class="room-expander-section">
                     <div class="room-expander-section__head">
                       <h3 class="room-expander-section__title">
                         {placement === 'outside'
@@ -503,13 +502,13 @@
                       <span>{t('mfa.settings.roomPanelEnabled')}</span>
                     </label>
                     {#if savedPanel.enabled && !panel.enabled}
-                      <p class="room-expander-section__hint">{t('mfa.settings.roomPanelDisableHint')}</p>
+                      <p class="field-hint">{t('mfa.settings.roomPanelDisableHint')}</p>
                     {:else if panel.enabled}
-                      <p class="room-expander-section__hint">{t('mfa.settings.roomPanelLiveConfigHint')}</p>
+                      <p class="field-hint">{t('mfa.settings.roomPanelLiveConfigHint')}</p>
                     {/if}
 
                     {#if placement === 'inside' && panel.enabled}
-                      <p class="room-expander-section__hint">{t('mfa.settings.roomPanelInsidePinHint')}</p>
+                      <p class="field-hint">{t('mfa.settings.roomPanelInsidePinHint')}</p>
                     {/if}
 
                     {#if panel.enabled}
@@ -539,7 +538,7 @@
                             </button>
                           {/each}
                         </div>
-                        <p class="room-expander-section__hint">{roomPanelModeGuide(placement, panel.mode)}</p>
+                        <p class="field-hint">{roomPanelModeGuide(placement, panel.mode)}</p>
                       </div>
 
                       {#if placement === 'inside'}
@@ -555,7 +554,7 @@
                           />
                           <span>{t('mfa.settings.roomPanelShowNames')}</span>
                         </label>
-                        <p class="room-expander-section__hint">{t('mfa.settings.roomPanelShowNamesHint')}</p>
+                        <p class="field-hint">{t('mfa.settings.roomPanelShowNamesHint')}</p>
 
                         {#if panel.mode === 'staff_full'}
                           <label class="modal-form-check">
@@ -570,7 +569,7 @@
                             />
                             <span>{t('mfa.settings.roomPanelAllowCalling')}</span>
                           </label>
-                          <p class="room-expander-section__hint">{t('mfa.settings.roomPanelAllowCallingHint')}</p>
+                          <p class="field-hint">{t('mfa.settings.roomPanelAllowCallingHint')}</p>
                         {/if}
                       {/if}
 
@@ -594,7 +593,7 @@
                               <option value={preset}>{roomPanelTextPresetLabel(preset)}</option>
                             {/each}
                           </select>
-                          <p class="room-expander-section__hint">{t('mfa.settings.roomPanelCalledTextHint')}</p>
+                          <p class="field-hint">{t('mfa.settings.roomPanelCalledTextHint')}</p>
                           {#if panel.calledTextPreset === 'custom'}
                             <input
                               class="form-input"
@@ -630,7 +629,7 @@
                               <option value={preset}>{roomPanelTextPresetLabel(preset)}</option>
                             {/each}
                           </select>
-                          <p class="room-expander-section__hint">{t('mfa.settings.roomPanelArrivedTextHint')}</p>
+                          <p class="field-hint">{t('mfa.settings.roomPanelArrivedTextHint')}</p>
                           {#if panel.arrivedTextPreset === 'custom'}
                             <input
                               class="form-input"
@@ -651,7 +650,7 @@
                   </section>
                 {/each}
 
-                <div class="room-expander-actions">
+                <div class="form-actions form-actions--split">
                   {#if rooms.length > 1}
                     <Button
                       type="button"
@@ -662,7 +661,7 @@
                       {t('mfa.settings.roomRemove')}
                     </Button>
                   {/if}
-                  <div class="room-expander-actions__end">
+                  <div class="form-actions__end">
                     <Button type="submit" variant="primary" size="sm" disabled={busy}>
                       {t('mfa.settings.roomExpanderSave')}
                     </Button>

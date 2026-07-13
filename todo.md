@@ -2,6 +2,7 @@
 
 Stand: 2026-07-13
 
+- **Fix:** Raum-Expander — `$state.snapshot()`; Basics-Layout kompakter; CSS konsolidiert (`field-hint`, `form-actions`, `room-panel-settings` entfernt)
 - Lint/Verify: **grün** (`npm run verify`) — ESLint-Fixes, Test-Fixtures (`minimalHostStatus`, `freshInstallHostStatus`, `testSetupContext`), Auth-Regeln für Snapshot-Routen; 10 Manager-Tests nach Fixture-Konsolidierung korrigiert
 - Wizard Abschluss: eine Footer-Zeile mit kleinen Buttons „Zum Status“ + „IT-Einstellungen“ (ohne Abbrechen)
 - Wizard Abschluss: Health-Header — Polling läuft auch im Wizard; nach Apply zusätzlich sofortiger Refresh (`onHostMutated`)
