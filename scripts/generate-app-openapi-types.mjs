@@ -30,6 +30,10 @@ const specs = [
     input: path.join(root, 'openapi/documents.yaml'),
     output: path.join(root, 'app/src/api/generated/documents-openapi.d.ts'),
   },
+  {
+    input: path.join(root, 'openapi/auth.yaml'),
+    output: path.join(root, 'app/src/api/generated/auth-openapi.d.ts'),
+  },
 ];
 
 if (!fs.existsSync(bin)) {

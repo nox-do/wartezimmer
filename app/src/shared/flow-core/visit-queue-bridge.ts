@@ -27,6 +27,7 @@ import { DomainError, domainError } from '../errors/domain-error.js';
 import { QUEUE_ROOM_MISMATCH } from '../queue/queue-room-scope.js';
 import { resolveCallRoomForVisit } from '../queue/resolve-call-room.js';
 import { resolveRecallNotifyPhone } from '../queue/recall-notify-phone.js';
+import type { TriageLevel } from '../queue/queue-triage.js';
 import { assertRoomHasCapacity } from '../ops/room-capacity.js';
 import {
   resolveCheckInDestinationRoomLabel,

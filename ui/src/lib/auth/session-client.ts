@@ -1,5 +1,11 @@
 import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
 import type { Result } from '$lib/types/result';
+import type {
+  AuthPinTarget,
+  ChangePinResponse,
+  StaffLoginRequest,
+  StaffSessionResponse,
+} from './openapi-types';
 
 export type AuthUserRole = 'mfa' | 'ops' | 'terminal' | 'tv';
 
@@ -9,25 +15,11 @@ export type AuthSessionUser = {
   roles: AuthUserRole[];
 };
 
-export type AuthSessionStatus = {
-  ok: true;
-  sessionId: string;
-  role: Extract<AuthUserRole, 'mfa' | 'ops'>;
-  expiresAt: string;
-};
+export type AuthSessionStatus = StaffSessionResponse;
+export type AuthLoginRequest = StaffLoginRequest;
+export type ChangeAuthPinResponse = ChangePinResponse;
 
-export type AuthLoginRequest = {
-  pin: string;
-  role?: Extract<AuthUserRole, 'mfa' | 'ops'>;
-};
-
-export type AuthPinTarget = 'mfa' | 'ops' | 'room-panel';
-
-export type ChangeAuthPinResponse = {
-  ok: true;
-  target: AuthPinTarget;
-  updatedAt: string;
-};
+export type { AuthPinTarget };
 
 export async function fetchAuthStatus(): Promise<Result<AuthSessionStatus>> {
   return cookieAuthFetch<AuthSessionStatus>('/api/v1/auth/me');

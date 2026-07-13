@@ -2,9 +2,18 @@ import { roomPanelRequiresPin } from '@praxis-flow/domain';
 import {
   listEnabledRoomPanelPlacements,
   roomPanelConfigForPlacement,
-  type RoomPanelPlacement,
 } from '@praxis-flow/domain';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type {
+  ChangePinBody,
+  DevicePairingConfirmBody,
+  DevicePairingParams,
+  DevicePairingStartBody,
+  AuthPinTarget,
+  RoomPanelLoginBody,
+  RoomPanelPlacement,
+  StaffLoginBody,
+} from '../api/auth-openapi-types.js';
 import { authSchemas } from '../api/generated/auth.fastify-schemas.js';
 import { createRateLimiter } from '../http/simple-rate-limit.js';
 import {
@@ -39,47 +48,17 @@ import {
 import type { OpsSettings } from '../shared/db/db-types.js';
 import {
   toStaffPinHashConfig,
-  type AuthPinTarget,
   type AuthSettings,
 } from '../shared/db/database-auth-settings.js';
-
-type LoginBody = {
-  pin?: string;
-  role?: StaffRole;
-};
-
-type RoomPanelLoginBody = {
-  roomId?: string;
-  placement?: RoomPanelPlacement;
-  pin?: string;
-};
 
 function isRoomPanelPlacement(value: string | undefined): value is RoomPanelPlacement {
   return value === 'outside' || value === 'inside';
 }
 
-type ChangePinBody = {
-  currentPin?: string;
-  newPin?: string;
-  target?: AuthPinTarget;
-};
-
 type AuthRoutesDb = {
   getOpsSettings(): Pick<OpsSettings, 'rooms'>;
   getAuthSettings(): AuthSettings;
   updateAuthPinHash(target: AuthPinTarget, pinHash: string): AuthSettings;
-};
-
-type DevicePairingStartBody = {
-  displayId?: string;
-};
-
-type DevicePairingParams = {
-  pairingId: string;
-};
-
-type DevicePairingConfirmBody = {
-  code?: string;
 };
 
 const DEFAULT_TV_DISPLAY_ID = defaultDeviceIdForPairedRole('tv');
@@ -272,7 +251,7 @@ export function registerAuthRoutes(
     };
   }
 
-  app.post<{ Body: LoginBody }>(
+  app.post<{ Body: StaffLoginBody }>(
     '/api/v1/auth/login',
     {
       schema: {

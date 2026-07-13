@@ -185,6 +185,16 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
   }> = [];
   const callCandidateRows: QueueVisitRow[] = [];
 
+  /**
+   * Per-visit filters (see also docs/flows.md § Flow 5):
+   *
+   * - callCandidates: visitTargetsRoom + movementMode/status only — no explainVisibility.
+   * - items: visitTargetsRoom (Flow-Core targetLocationId) → explainVisibility (shared pf_panel_
+   *   surface; location match via targetLocationId or lastKnownLocationId) → row.status eligibility
+   *   (directed/called/in_room; absent overlay via QueueVisitRow).
+   *
+   * Placement capabilities (canCall, canCheckIn, …) come from the session, not the Flow surface.
+   */
   for (const visit of businessDayVisits) {
     const row = visitToQueueVisitRow(visit, settings);
 

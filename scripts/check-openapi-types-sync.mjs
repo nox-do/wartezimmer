@@ -12,6 +12,7 @@ const generatedFiles = [
   'ui/src/lib/queue/generated/queue-openapi.d.ts',
   'ui/src/lib/documents/generated/documents-openapi.d.ts',
   'ui/src/lib/terminal/generated/checkin-openapi.d.ts',
+  'ui/src/lib/auth/generated/auth-openapi.d.ts',
 ];
 
 const generate = spawnSync(

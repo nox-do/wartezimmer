@@ -87,9 +87,12 @@ export {
   type TopicIconId,
 } from './topic-icon-ids.js';
 export {
-  applyRoomPanelPlacement,
+  roomPanelDeviceId,
+  TERMINAL_DEVICE_ID,
+  WAITING_ROOM_DEVICE_ID,
+} from './device-ids.js';
+export {
   DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG,
-  DEFAULT_ROOM_PANEL_SETTINGS,
   DEFAULT_ROOM_PANELS_SETTINGS,
   listEnabledRoomPanelPlacements,
   normalizeRoomPanelCustomText,

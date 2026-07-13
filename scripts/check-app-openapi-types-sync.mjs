@@ -13,6 +13,7 @@ const generatedFiles = [
   'app/src/api/generated/identity-openapi.d.ts',
   'app/src/api/generated/ops-openapi.d.ts',
   'app/src/api/generated/documents-openapi.d.ts',
+  'app/src/api/generated/auth-openapi.d.ts',
 ];
 
 const generate = spawnSync(

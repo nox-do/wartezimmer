@@ -1,29 +1,15 @@
 import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
 import { publicFetch } from '$lib/api/public-fetch';
 import type { Result } from '$lib/types/result';
+import type {
+  DevicePairingConfirmResponse,
+  DevicePairingStartResponse,
+  DevicePairingStatusResponse,
+} from './openapi-types';
 
 export type DevicePairingKind = 'tv' | 'terminal';
 
-export type DevicePairingStartResponse = {
-  pairingId: string;
-  code: string;
-  expiresAt: string;
-  status: 'pending';
-};
-
-export type DevicePairingStatusResponse = {
-  pairingId: string;
-  status: 'pending' | 'paired' | 'expired';
-  paired: boolean;
-  expiresAt?: string;
-  sessionId?: string;
-};
-
-export type DevicePairingConfirmResponse = {
-  ok: true;
-  pairingId: string;
-  status: 'paired' | 'already_paired';
-};
+export type { DevicePairingConfirmResponse, DevicePairingStartResponse, DevicePairingStatusResponse };
 
 function pairingPath(kind: DevicePairingKind, suffix: string): string {
   return `/api/v1/auth/${kind}/pairing/${suffix}`;

@@ -3,31 +3,17 @@ import { buildApiStreamUrl } from '$lib/api/build-api-url';
 import { httpFetch } from '$lib/api/http-fetch';
 import { SSE_CLIENT_ERROR, connectMultiEventSseStream } from '$lib/api/sse-client';
 import { t } from '$lib/i18n/i18nStore.svelte';
-import type { RoomPanelMode, RoomPanelPlacement } from '$lib/queue/ops-settings-api';
+import type {
+  RoomPanelPlacement,
+  RoomPanelRoom,
+  RoomPanelRoomsResponse,
+  RoomPanelSessionResponse,
+} from '$lib/auth/openapi-types';
 import type { QueueVisitTransitionResponse, RoomPanelSnapshot } from '$lib/queue/openapi-types';
 import type { Result, SimpleResult } from '$lib/types/result';
 import { isRoomPanelSessionExpiredError } from './room-panel-stream-error';
 
-export type RoomPanelRoom = {
-  roomId: string;
-  roomLabel: string;
-  placement: RoomPanelPlacement;
-  mode: RoomPanelMode;
-  requiresPin: boolean;
-};
-
-export type RoomPanelRoomsResponse = {
-  rooms: RoomPanelRoom[];
-};
-
-export type RoomPanelSessionResponse = {
-  ok: true;
-  sessionId: string;
-  role: 'room-panel';
-  roomId: string;
-  placement: RoomPanelPlacement;
-  expiresAt: string;
-};
+export type { RoomPanelRoom, RoomPanelRoomsResponse, RoomPanelSessionResponse };
 
 export type RoomPanelStreamError = {
   message: string;

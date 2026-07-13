@@ -4,6 +4,9 @@ import {
   getAuthSettingsSeedConfig,
   type StaffPinHashConfig,
 } from '../../auth/staff-session-auth.js';
+import type { AuthPinTarget } from '../../api/auth-openapi-types.js';
+
+export type { AuthPinTarget };
 
 export type AuthSettings = {
   staffPinHashMfa: string;
@@ -17,8 +20,6 @@ export type AuthSettingsDeps = {
   updateAuthPinHashStmt: StatementSync;
   nowIso: () => string;
 };
-
-export type AuthPinTarget = 'mfa' | 'ops' | 'room-panel';
 
 export function ensureAuthSettingsSchema(db: DatabaseSync): void {
   db.exec(`

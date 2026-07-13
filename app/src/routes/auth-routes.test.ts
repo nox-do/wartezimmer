@@ -16,7 +16,8 @@ import {
 } from '../shared/ops/device-presence-registry.js';
 import { registerAuthRoutes } from './auth-routes.js';
 import { registerOpsDeviceRoutes } from './ops/ops-device-routes.js';
-import type { AuthPinTarget, AuthSettings } from '../shared/db/database-auth-settings.js';
+import type { AuthPinTarget } from '../api/auth-openapi-types.js';
+import type { AuthSettings } from '../shared/db/database-auth-settings.js';
 
 const ENV_KEYS = [
   'AUTH_ENABLED',

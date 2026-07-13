@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
 import { loadCatalog } from '@praxis-flow/flow-core/server';
 import {
+  normalizeRoomPanelsSettings,
   normalizeTerminalPatientLocales,
   type RoomPanelPlacementConfig,
 } from '@praxis-flow/domain';
@@ -116,6 +117,41 @@ function parseEnvSnapshot(raw: unknown): Record<string, string> {
   return env;
 }
 
+function parseRoomPanelsFromSnapshot(
+  raw: unknown,
+  index: number,
+): OpsSettings['rooms'][number]['panels'] {
+  if (raw == null) {
+    return normalizeRoomPanelsSettings(null);
+  }
+  if (!isRecord(raw)) {
+    throw new SettingsSnapshotError(
+      'INVALID_SNAPSHOT',
+      `opsSettings.rooms[${index}].panels must be an object`,
+    );
+  }
+
+  const outside = raw.outside;
+  const inside = raw.inside;
+  if (outside != null && !isRecord(outside)) {
+    throw new SettingsSnapshotError(
+      'INVALID_SNAPSHOT',
+      `opsSettings.rooms[${index}].panels.outside must be an object`,
+    );
+  }
+  if (inside != null && !isRecord(inside)) {
+    throw new SettingsSnapshotError(
+      'INVALID_SNAPSHOT',
+      `opsSettings.rooms[${index}].panels.inside must be an object`,
+    );
+  }
+
+  return normalizeRoomPanelsSettings({
+    outside: outside as Partial<RoomPanelPlacementConfig> | undefined,
+    inside: inside as Partial<RoomPanelPlacementConfig> | undefined,
+  });
+}
+
 function parseRoomSettingsFromSnapshot(raw: unknown): OpsSettings['rooms'] {
   if (!Array.isArray(raw)) {
     throw new SettingsSnapshotError('INVALID_SNAPSHOT', 'opsSettings.rooms must be an array');
@@ -136,7 +172,7 @@ function parseRoomSettingsFromSnapshot(raw: unknown): OpsSettings['rooms'] {
         typeof entry.maxOccupancy === 'number' && Number.isFinite(entry.maxOccupancy)
           ? entry.maxOccupancy
           : null,
-      panels: entry.panels as Record<string, RoomPanelPlacementConfig> | undefined,
+      panels: parseRoomPanelsFromSnapshot(entry.panels, index),
     };
   });
 

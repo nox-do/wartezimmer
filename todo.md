@@ -2,6 +2,37 @@
 
 Stand: 2026-07-13
 
+## Erledigt: App-Typecheck-Fixes (2026-07-13)
+
+- `visit-queue-bridge.ts`: fehlender `TriageLevel`-Import
+- `settings-snapshot-import.ts`: `panels` via `normalizeRoomPanelsSettings` statt loose cast
+- `patient-documents-routes.ts`: `templateVersion` als positive Integer geparst
+- `AuthPinTarget`: Single Source in `auth-openapi-types.ts`; App re-exportiert nur noch
+
+## Erledigt: Room-Panel/Domain Cleanup (2026-07-13)
+
+- Device-IDs (`WAITING_ROOM_DEVICE_ID`, `TERMINAL_DEVICE_ID`, `roomPanelDeviceId`) → `packages/domain/src/device-ids.ts`; App/UI re-exporten nur noch
+- Domain: `applyRoomPanelPlacement` + `DEFAULT_ROOM_PANEL_SETTINGS` aus Public API (`index.ts`) entfernt — nur noch intern/Test-Import aus `room-panel-settings.ts`
+- Room-Panel-Styles: `+layout.svelte` (493→10 Zeilen) → `ui/src/lib/styles/room-panel.css` (wie `tv.css`/`terminal.css`)
+- **Offen:** `+page.svelte` Session-Controller-Split (`room-panel-session.svelte.ts`) — bewusst zurückgestellt (kein User-Gain, JSDoc-Trigger)
+
+## Erledigt: Auth OpenAPI vollständig (2026-07-13)
+
+- UI: `session-client.ts`, `device-pairing-client.ts` → `$lib/auth/openapi-types`
+- App: `auth-openapi.d.ts` + `auth-openapi-types.ts`; `auth-routes.ts` ohne Hand-Body-Typen
+
+## Erledigt: Auth OpenAPI → UI-Typen (2026-07-13)
+
+- `openapi/auth.yaml` in `generate-openapi-types` + `check-openapi-types-sync` aufgenommen
+- `ui/src/lib/auth/openapi-types.ts` + generiertes `auth-openapi.d.ts`
+- `room-panel-api.ts`: `RoomPanelRoom` / `RoomPanelRoomsResponse` / `RoomPanelSessionResponse` aus OpenAPI statt Hand-Duplikat
+- ~~Offen: `session-client.ts`, `device-pairing-client.ts` (weitere Auth-Duplikate); App-Seite `auth-openapi.d.ts` für Handler-Typen~~
+
+## Erledigt: Room-Panel Snapshot-Doku (2026-07-13)
+
+- Filter-Pipeline in `room-panel-queue-snapshot.ts` kommentiert (Scope → Visibility → row.status)
+- `flows.md`: Raum-Panel-PIN vs. MFA/Ops-PIN korrigiert
+
 ## Erledigt: Room-Panel Raum-Scope vereinheitlicht (2026-07-13)
 
 - `visitTargetsRoom` prüft nur noch `VisitView.targetLocationId` (Flow-Core-Wahrheit)

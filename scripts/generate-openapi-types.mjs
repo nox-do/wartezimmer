@@ -26,6 +26,10 @@ const specs = [
     input: path.join(root, 'openapi/checkin.yaml'),
     output: path.join(root, 'ui/src/lib/terminal/generated/checkin-openapi.d.ts'),
   },
+  {
+    input: path.join(root, 'openapi/auth.yaml'),
+    output: path.join(root, 'ui/src/lib/auth/generated/auth-openapi.d.ts'),
+  },
 ];
 
 if (!fs.existsSync(bin)) {

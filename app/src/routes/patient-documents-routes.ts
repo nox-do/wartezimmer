@@ -316,6 +316,16 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
             message: 'templateVersion must be a string or number.',
           });
         }
+        const parsedTemplateVersion =
+          typeof templateVersion === 'number'
+            ? templateVersion
+            : Number.parseInt(String(templateVersion).trim(), 10);
+        if (!Number.isInteger(parsedTemplateVersion) || parsedTemplateVersion < 1) {
+          return reply.code(400).send({
+            code: 'INVALID_ARGUMENT',
+            message: 'templateVersion must be a positive integer.',
+          });
+        }
         const answers = record.answers;
         if (answers != null && !isRecord(answers)) {
           return reply
@@ -324,8 +334,8 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
         }
         items.push({
           templateId: templateId.trim(),
-          templateVersion: String(templateVersion),
-          answers,
+          templateVersion: parsedTemplateVersion,
+          answers: answers ?? undefined,
         });
       }
 

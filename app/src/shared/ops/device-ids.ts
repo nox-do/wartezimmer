@@ -1,8 +1,5 @@
-import type { RoomPanelPlacement } from '../db/db-types.js';
-
-export const WAITING_ROOM_DEVICE_ID = 'waiting-room';
-export const TERMINAL_DEVICE_ID = 'checkin-terminal';
-
-export function roomPanelDeviceId(roomId: string, placement: RoomPanelPlacement): string {
-  return `room-panel:${roomId}:${placement}`;
-}
+export {
+  roomPanelDeviceId,
+  TERMINAL_DEVICE_ID,
+  WAITING_ROOM_DEVICE_ID,
+} from '@praxis-flow/domain';

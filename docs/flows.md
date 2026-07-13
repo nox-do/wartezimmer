@@ -447,9 +447,9 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 | Placement            | PIN             | Modus                                       | Namen    | Aufruf                            |
 | -------------------- | --------------- | ------------------------------------------- | -------- | --------------------------------- |
 | **outside** (Tür)    | nein            | `display_only` \| `arrival`                 | nie      | nie                               |
-| **inside** (im Raum) | ja (Praxis-PIN) | `display_only` \| `arrival` \| `staff_full` | optional | nur `staff_full` + `allowCalling` |
+| **inside** (im Raum) | ja (Raum-Panel-PIN, gemeinsam für alle Inside-Placements) | `display_only` \| `arrival` \| `staff_full` | optional | nur `staff_full` + `allowCalling` |
 
-**Settings:** MFA → Themen & Räume → Raum-Expander. Panel-PIN wird in den Ops-Einstellungen gesetzt.
+**Settings:** Panel-Modi und Texte: MFA → Themen & Räume → Raum-Expander. **Raum-Panel-PIN** (getrennt von MFA-/Ops-PIN): MFA → Betrieb.
 
 ### Login
 
