@@ -2,7 +2,7 @@
 
 Stand: 2026-07-13
 
-- **Fix:** Raum-Expander — `$state.snapshot()`; Basics-Layout kompakter; CSS konsolidiert (`field-hint`, `form-actions`, `room-panel-settings` entfernt)
+- **Fix:** Raum-Expander — `$state.snapshot()`; Basics-Layout kompakter; CSS konsolidiert; Raum-Panel-Leerlauf nutzt konfigurierten Ankunfts-Hinweis statt hardcoded `noTickets`
 - Lint/Verify: **grün** (`npm run verify`) — ESLint-Fixes, Test-Fixtures (`minimalHostStatus`, `freshInstallHostStatus`, `testSetupContext`), Auth-Regeln für Snapshot-Routen; 10 Manager-Tests nach Fixture-Konsolidierung korrigiert
 - Wizard Abschluss: eine Footer-Zeile mit kleinen Buttons „Zum Status“ + „IT-Einstellungen“ (ohne Abbrechen)
 - Wizard Abschluss: Health-Header — Polling läuft auch im Wizard; nach Apply zusätzlich sofortiger Refresh (`onHostMutated`)
@@ -452,6 +452,23 @@ Review-Canvas: `~/.cursor/projects/.../canvases/manager-svelte5-review.canvas.ts
 ## Erledigt: Wizard Docker-Compose Label (2026-07-09)
 
 - Checkliste: „Docker Compose verfügbar“ (Produktname, nicht CLI-Schreibweise)
+
+## Hinweis: Simple vs Complex State-Mapping (2026-07-13)
+
+- Gleiche Core-Statuskette; Complex verdoppelt Hop per Journey-Step (`→ Weiter`).
+- Queue-UI: `arrived`+`in_progress` → `in_room`; MFA: Starten / Weiter / Entlassen.
+
+## Fix: Room-Panel Sektions-Alignment (2026-07-13)
+
+- „Aufrufen“ vs „Im Raum“: gleicher linker Text-Einzug (`section-pad` + Border).
+
+## Offen: MFA „Starten“ hängt bei vielen SSE-Tabs (2026-07-13)
+
+- Container-Check `praxis-flow-app`: L-001 war `arrived` / `in_room`, `startedAt: null` — **kein** `start_treatment` im Browser-Log
+- Nur 2 Transitions vom Client: Aufruf + Ankommen (200); Starten-POST kam nie an
+- API `start_treatment` funktioniert (manuell im Container getestet → L-001 jetzt `in_progress`)
+- Verdacht: Browser-Connection-Pool voll durch viele parallele `/api/v1/queue/stream` + `/api/v1/ops/stream` (MFA + Raum-Panel-Tabs) → POST blockiert, `busyVisitId` wirkt „hängend“
+- Nächster Schritt (optional): Connection-Budget/Polling-Fallback oder HTTP/2; Start-Button `loading={busy}`
 
 ## Referenzen
 

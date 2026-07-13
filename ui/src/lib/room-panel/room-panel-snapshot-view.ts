@@ -26,16 +26,9 @@ export function resolveRoomPanelLeadLabel(
   texts: {
     called: string;
     arrived: string;
-    waiting: string;
   },
 ): string {
-  if (state === 'enter') {
-    return texts.called;
-  }
-  if (state === 'arrival') {
-    return texts.arrived;
-  }
-  return texts.waiting;
+  return state === 'enter' ? texts.called : texts.arrived;
 }
 
 export function roomPanelCallCandidates(snapshot: RoomPanelSnapshot): RoomPanelCallCandidate[] {

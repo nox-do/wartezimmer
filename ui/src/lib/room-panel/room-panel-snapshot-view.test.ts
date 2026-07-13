@@ -143,49 +143,47 @@ describe('roomPanelCallAnnouncementReachable', () => {
 });
 
 describe('resolveRoomPanelLeadLabel', () => {
-  it('resolves enter/arrival/waiting from preformatted texts', () => {
+  it('uses called text only for enter; arrival and waiting share arrived text', () => {
     expect(
       resolveRoomPanelLeadLabel('enter', {
         called: 'called',
         arrived: 'arrived',
-        waiting: 'waiting',
       }),
     ).toBe('called');
     expect(
       resolveRoomPanelLeadLabel('arrival', {
         called: 'called',
         arrived: 'arrived',
-        waiting: 'waiting',
       }),
     ).toBe('arrived');
     expect(
       resolveRoomPanelLeadLabel('waiting', {
         called: 'called',
         arrived: 'arrived',
-        waiting: 'waiting',
       }),
-    ).toBe('waiting');
+    ).toBe('arrived');
   });
 
   it('formats presets via roomPanel i18n keys', () => {
     const panel = snapshot().panel;
-    expect(
-      resolveRoomPanelLeadLabel('enter', {
-        called: formatRoomPanelDisplayText(
-          panel.calledTextPreset,
-          panel.calledTextCustom,
-          'please_enter',
-          t,
-        ),
-        arrived: formatRoomPanelDisplayText(
-          panel.arrivedTextPreset,
-          panel.arrivedTextCustom,
-          'please_wait_here',
-          t,
-        ),
-        waiting: 'roomPanel.noTickets',
-      }),
-    ).toBe('roomPanel.text_please_enter');
+    const called = formatRoomPanelDisplayText(
+      panel.calledTextPreset,
+      panel.calledTextCustom,
+      'please_enter',
+      t,
+    );
+    const arrived = formatRoomPanelDisplayText(
+      panel.arrivedTextPreset,
+      panel.arrivedTextCustom,
+      'please_wait_here',
+      t,
+    );
+    expect(resolveRoomPanelLeadLabel('enter', { called, arrived })).toBe(
+      'roomPanel.text_please_enter',
+    );
+    expect(resolveRoomPanelLeadLabel('waiting', { called, arrived })).toBe(
+      'roomPanel.text_please_wait_here',
+    );
   });
 });
 

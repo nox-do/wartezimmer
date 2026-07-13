@@ -789,7 +789,8 @@ export const dict = {
       roomPanelCalledTextHint:
         'Erscheint, wenn der Patient aufgerufen wird (Bitte eintreten/kommen).',
       roomPanelArrivedText: 'Ankunfts-Hinweis',
-      roomPanelArrivedTextHint: 'Erscheint, wenn der Patient angekommen ist (wartet im Raum).',
+      roomPanelArrivedTextHint:
+        'Erscheint, wenn der Patient angekommen ist (wartet im Raum) und solange das Panel leer ist.',
       roomPanelCustomTextPlaceholder: 'Eigener Text optional',
       roomPanelSectionOutside: 'Tür-Panel',
       roomPanelSectionInside: 'Raum-Panel',

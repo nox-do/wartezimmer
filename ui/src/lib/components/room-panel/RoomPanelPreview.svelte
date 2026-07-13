@@ -7,7 +7,6 @@
 import { formatRoomPanelDisplayText } from '$lib/room-panel/room-panel-text';
 import {
   formatRoomPanelTicketCode,
-  resolveRoomPanelLeadLabel,
   resolveRoomPanelLeadState,
   roomPanelCallAnnouncementReachable,
   roomPanelCallCandidates,
@@ -69,11 +68,7 @@ import {
   const showCallSection = $derived(shouldRenderRoomPanelCallSection(snapshot));
   const leadState = $derived(resolveRoomPanelLeadState(panelItems));
   const stateLabel = $derived(
-    resolveRoomPanelLeadLabel(leadState, {
-      called: calledLeadText,
-      arrived: arrivedLeadText,
-      waiting: t('roomPanel.noTickets'),
-    }),
+    leadState === 'enter' ? calledLeadText : arrivedLeadText,
   );
   const StateIcon = $derived(leadState === 'enter' ? DoorOpen : leadState === 'arrival' ? LogIn : MapPin);
   const queueTicketCodes = $derived(roomPanelItemTicketCodes(panelItems));
