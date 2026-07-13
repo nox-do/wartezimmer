@@ -5,6 +5,8 @@ export type RouteAccessRule = {
   path: string;
   roles?: RouteAccessRole[];
   public?: boolean;
+  /** Registered only on the loopback maintenance listener (port 8082), not the LAN-facing app. */
+  maintenanceListenerOnly?: boolean;
 };
 
 export const ROUTE_ACCESS_RULES: RouteAccessRule[] = [
@@ -57,6 +59,21 @@ export const ROUTE_ACCESS_RULES: RouteAccessRule[] = [
   { method: 'POST', path: '/api/v1/ops/device/presence', roles: ['tv', 'terminal'] },
   { method: 'GET', path: '/api/v1/ops/device/stream', roles: ['tv', 'terminal'] },
   { method: 'GET', path: '/api/v1/ops/settings/capabilities', roles: ['mfa', 'ops'] },
+  {
+    method: 'GET',
+    path: '/api/v1/ops/settings/snapshot',
+    maintenanceListenerOnly: true,
+  },
+  {
+    method: 'POST',
+    path: '/api/v1/ops/settings/snapshot/validate',
+    maintenanceListenerOnly: true,
+  },
+  {
+    method: 'POST',
+    path: '/api/v1/ops/settings/snapshot/import',
+    maintenanceListenerOnly: true,
+  },
   { method: 'GET', path: '/api/v1/ops/settings', roles: ['mfa', 'ops'] },
   { method: 'GET', path: '/api/v1/ops/settings/onboarding', roles: ['ops'] },
   { method: 'POST', path: '/api/v1/ops/settings/onboarding/verify', roles: ['ops'] },

@@ -50,11 +50,11 @@ flowchart TB
 
 ## Drei verschiedene „Versionen“
 
-| Begriff | Beispiel | Wo definiert | Wofür |
-|--------|----------|--------------|--------|
-| **Manager-Version** | `0.2.0` | `manager/package.json` | Electron-App, DMG-Name, `minimumManagerVersion` beim Update |
+| Begriff                   | Beispiel    | Wo definiert           | Wofür                                                         |
+| ------------------------- | ----------- | ---------------------- | ------------------------------------------------------------- |
+| **Manager-Version**       | `0.2.0`     | `manager/package.json` | Electron-App, DMG-Name, `minimumManagerVersion` beim Update   |
 | **Stack-Release-Version** | `2026.07.0` | `--version` beim Build | Docker-Image-Tags, `manager-state.json`, `.pfupdate`-Manifest |
-| **Monorepo-Version** | `0.2.0` | Root-`package.json` | npm-Workspaces — **nur Default**, wenn `--version` fehlt |
+| **Monorepo-Version**      | `0.2.0`     | Root-`package.json`    | npm-Workspaces — **nur Default**, wenn `--version` fehlt      |
 
 Stack-Release und Monorepo-Version sind **nicht gekoppelt**. Für Kunden-Releases immer explizit setzen:
 
@@ -69,10 +69,10 @@ npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 
 ## Zwei Auslieferungsartefakte
 
-| Artefakt | Build | Manager-Flow | Inhalt |
-|----------|-------|--------------|--------|
-| **`.tar.gz` + Sidecar** | `npm run release:images` | Setup-Wizard → „Release-Paket wählen" | app + sandbox, `manifest.json` + `SHA256SUMS.txt` |
-| **`.pfupdate`** | `npm run release:pfupdate` | Wartung → Software-Update | Eine Datei: Manifest, Checksummen, Images (app+sandbox+gateway), Compose-Templates |
+| Artefakt                | Build                      | Manager-Flow                          | Inhalt                                                                             |
+| ----------------------- | -------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
+| **`.tar.gz` + Sidecar** | `npm run release:images`   | Setup-Wizard → „Release-Paket wählen" | app + sandbox, `manifest.json` + `SHA256SUMS.txt`                                  |
+| **`.pfupdate`**         | `npm run release:pfupdate` | Wartung → Software-Update             | Eine Datei: Manifest, Checksummen, Images (app+sandbox+gateway), Compose-Templates |
 
 Updates laufen **nur** über `.pfupdate`. Der Wizard nutzt das ältere Sidecar-Format (Erstinstallation, kein Cutover/Rollback).
 
@@ -105,15 +105,15 @@ npm run release:pfupdate:current   # packt :local in .pfupdate ohne Rebuild
 
 ### npm-Scripts (Root)
 
-| Script | Zweck |
-|--------|-------|
-| `release:images` | Images bauen + Erstinstallations-Archiv packen |
-| `release:images:pack` | Nur packen (Images existieren lokal) |
-| `release:images:current` | `:local`-Tags als Erstinstallations-Archiv |
-| `release:pfupdate` | Images bauen + `.pfupdate` packen + Roundtrip-Validierung |
-| `release:pfupdate:pack` | Nur packen |
-| `release:pfupdate:current` | `:local`-Tags als `.pfupdate` |
-| `dist:manager:mac` | Manager-DMG bauen |
+| Script                     | Zweck                                                     |
+| -------------------------- | --------------------------------------------------------- |
+| `release:images`           | Images bauen + Erstinstallations-Archiv packen            |
+| `release:images:pack`      | Nur packen (Images existieren lokal)                      |
+| `release:images:current`   | `:local`-Tags als Erstinstallations-Archiv                |
+| `release:pfupdate`         | Images bauen + `.pfupdate` packen + Roundtrip-Validierung |
+| `release:pfupdate:pack`    | Nur packen                                                |
+| `release:pfupdate:current` | `:local`-Tags als `.pfupdate`                             |
+| `dist:manager:mac`         | Manager-DMG bauen                                         |
 
 ### Erstinstallation (`scripts/build-release-images.mjs`)
 
@@ -163,8 +163,8 @@ Gepackter Manager startet Setup-API aus `resources/setup/` und nutzt standardmä
 
 ### Install-Home
 
-| Override | Default (macOS) |
-|----------|-----------------|
+| Override           | Default (macOS)                            |
+| ------------------ | ------------------------------------------ |
 | `PRAXIS_FLOW_HOME` | `~/Library/Application Support/PraxisFlow` |
 
 Beim ersten Start kopiert die Setup-API `.env.example` und Delivery-Compose-Templates ins Install-Home, falls noch nicht vorhanden.
@@ -216,28 +216,28 @@ Stack muss für das Settings-Backup laufen (Maintenance-App auf `127.0.0.1:8082`
 
 ### Kompatibilitätsprüfungen
 
-| Prüfung | Quelle |
-|---------|--------|
-| Paket strukturell + Checksummen | `packages/server-shared/src/pfupdate.ts` |
-| Manager ≥ `minimumManagerVersion` | Manager sendet Version automatisch |
-| Settings-Format | Maintenance-App oder Build-Default |
-| DB-Schema nach Cutover | `targetSchemaVersion: 1` → Fresh DB + Settings-Import |
+| Prüfung                           | Quelle                                                |
+| --------------------------------- | ----------------------------------------------------- |
+| Paket strukturell + Checksummen   | `packages/server-shared/src/pfupdate.ts`              |
+| Manager ≥ `minimumManagerVersion` | Manager sendet Version automatisch                    |
+| Settings-Format                   | Maintenance-App oder Build-Default                    |
+| DB-Schema nach Cutover            | `targetSchemaVersion: 1` → Fresh DB + Settings-Import |
 
 **Regel:** `build-pfupdate.mjs` setzt `minimumManagerVersion` auf die aktuelle Manager-Version. Ein Stack-Paket darf keine höhere Mindest-Manager-Version verlangen als die Manager-DMG, mit der es getestet wurde.
 
 ### Update-Phasen (`settings-backup-update.ts`)
 
-| Phase | Aktion |
-|-------|--------|
-| `validate_package` | Struktur + Kompatibilität |
-| `create_settings_backup` | `.pfbackup` via Maintenance-App |
-| `load_images` | `docker load` |
-| `stop_stack` | `compose stop` |
-| `backup_rollback_state` | Snapshot `.env`, `manager-state.json`, Templates, DB |
-| `install_templates` | Compose-Templates aus Paket |
-| `write_release_state` | Image-Tags + `releaseVersion` atomar |
-| Fresh-DB-Cutover | Settings aus Pre-Update-Backup importieren |
-| `health_check` / `complete` | Stack hoch, Cleanup |
+| Phase                       | Aktion                                               |
+| --------------------------- | ---------------------------------------------------- |
+| `validate_package`          | Struktur + Kompatibilität                            |
+| `create_settings_backup`    | `.pfbackup` via Maintenance-App                      |
+| `load_images`               | `docker load`                                        |
+| `stop_stack`                | `compose stop`                                       |
+| `backup_rollback_state`     | Snapshot `.env`, `manager-state.json`, Templates, DB |
+| `install_templates`         | Compose-Templates aus Paket                          |
+| `write_release_state`       | Image-Tags + `releaseVersion` atomar                 |
+| Fresh-DB-Cutover            | Settings aus Pre-Update-Backup importieren           |
+| `health_check` / `complete` | Stack hoch, Cleanup                                  |
 
 Bei Fehler nach Rollback-Artefakten: `executeUpdateRollback()` stellt vorherigen Zustand wieder her. Pre-Update-`.pfbackup` liegt unter `<install-home>/backups/`.
 
@@ -264,12 +264,12 @@ Details zu erhaltenen Settings: [`settings-backup-classification.md`](settings-b
 
 ## Versionen zur Laufzeit
 
-| Ort | Feld | Bedeutung |
-|-----|------|-----------|
+| Ort                  | Feld                      | Bedeutung                   |
+| -------------------- | ------------------------- | --------------------------- |
 | Manager UI → Wartung | Software-Update „Aktuell" | `HostStatus.deliveryImages` |
-| `manager-state.json` | `release.releaseVersion` | Aktives Stack-Release |
-| `.env` | `PRAXIS_FLOW_*_IMAGE` | Aktive Compose-Image-Refs |
-| `.pfbackup` | Settings + manager-state | Stand vor Restore/Update |
+| `manager-state.json` | `release.releaseVersion`  | Aktives Stack-Release       |
+| `.env`               | `PRAXIS_FLOW_*_IMAGE`     | Aktive Compose-Image-Refs   |
+| `.pfbackup`          | Settings + manager-state  | Stand vor Restore/Update    |
 
 ---
 
@@ -287,21 +287,21 @@ Details zu erhaltenen Settings: [`settings-backup-classification.md`](settings-b
 
 ## Häufige Fehler
 
-| Symptom | Ursache |
-|---------|---------|
-| „Manager-Version … zu alt" | `.pfupdate` verlangt höhere `minimumManagerVersion` |
-| „images.gateway muss … sein" | `--version` weicht von Image-Tags ab |
-| Update bricht bei Backup ab | Stack nicht erreichbar (Maintenance `:8082`) |
-| Wizard findet kein Gateway | `release:images` liefert nur app+sandbox |
-| SHA256-Fehler beim Laden | Sidecar passt nicht zur `.tar.gz` |
+| Symptom                      | Ursache                                             |
+| ---------------------------- | --------------------------------------------------- |
+| „Manager-Version … zu alt"   | `.pfupdate` verlangt höhere `minimumManagerVersion` |
+| „images.gateway muss … sein" | `--version` weicht von Image-Tags ab                |
+| Update bricht bei Backup ab  | Stack nicht erreichbar (Maintenance `:8082`)        |
+| Wizard findet kein Gateway   | `release:images` liefert nur app+sandbox            |
+| SHA256-Fehler beim Laden     | Sidecar passt nicht zur `.tar.gz`                   |
 
 ---
 
 ## Verwandte Dokumente
 
-| Datei | Inhalt |
-|-------|--------|
-| [`deployment-docker.md`](deployment-docker.md) | Compose, Volumes, Logs, Tagesbetrieb |
-| [`../manager/README.md`](../manager/README.md) | Manager-Architektur, Setup-API, Dev |
-| [`settings-backup-classification.md`](settings-backup-classification.md) | Was beim Update erhalten bleibt |
+| Datei                                                                                    | Inhalt                               |
+| ---------------------------------------------------------------------------------------- | ------------------------------------ |
+| [`deployment-docker.md`](deployment-docker.md)                                           | Compose, Volumes, Logs, Tagesbetrieb |
+| [`../manager/README.md`](../manager/README.md)                                           | Manager-Architektur, Setup-API, Dev  |
+| [`settings-backup-classification.md`](settings-backup-classification.md)                 | Was beim Update erhalten bleibt      |
 | [`../packages/server-shared/src/pfupdate.ts`](../packages/server-shared/src/pfupdate.ts) | Format-Validierung (Source of Truth) |

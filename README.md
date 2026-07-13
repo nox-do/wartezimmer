@@ -79,7 +79,7 @@ Einstieg nach Rolle: **[`docs/README.md`](docs/README.md)**
 | Architektur       | [`docs/architecture.md`](docs/architecture.md)                   |
 | API-Vertrag       | `openapi/*.yaml` (+ [`docs/apis.md`](docs/apis.md) Rollenmatrix) |
 | Echtzeit (SSE)    | [`docs/realtime-streams.md`](docs/realtime-streams.md)           |
-| Build & Release   | [`docs/delivery.md`](docs/delivery.md)                         |
+| Build & Release   | [`docs/delivery.md`](docs/delivery.md)                           |
 | Docker-Betrieb    | [`docs/deployment-docker.md`](docs/deployment-docker.md)         |
 | Manager           | [`manager/README.md`](manager/README.md)                         |
 | Gast-WLAN         | [`gateway/README.md`](gateway/README.md)                         |

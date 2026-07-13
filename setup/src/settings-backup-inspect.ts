@@ -16,10 +16,7 @@ import { readEnvMap } from './env-file.js';
 import { readManagerState } from './manager-state.js';
 import type { SetupContext } from './setup-context.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL } from './urls.js';
-import {
-  validatePfbackupContent,
-  validateSettingsSnapshotWithApp,
-} from './settings-backup.js';
+import { validatePfbackupContent, validateSettingsSnapshotWithApp } from './settings-backup.js';
 
 const HOST_PATH_ENV_KEYS = [
   'IMPORTS_HOST_PATH',
@@ -72,9 +69,7 @@ function readOpsSettingsRecord(settings: Record<string, unknown>): Record<string
     : null;
 }
 
-export function providerCredentialsIncludedInSnapshot(
-  messagingProviderConfigs: unknown,
-): boolean {
+export function providerCredentialsIncludedInSnapshot(messagingProviderConfigs: unknown): boolean {
   if (!Array.isArray(messagingProviderConfigs)) {
     return false;
   }
@@ -112,7 +107,10 @@ export function extractPfbackupInspectEnvironment(
     ),
   );
 
-  if (typeof opsSettings?.contactLookupFolderPath === 'string' && opsSettings.contactLookupFolderPath.trim()) {
+  if (
+    typeof opsSettings?.contactLookupFolderPath === 'string' &&
+    opsSettings.contactLookupFolderPath.trim()
+  ) {
     hostPaths.contactLookupFolderPath = opsSettings.contactLookupFolderPath.trim();
   }
   if (typeof opsSettings?.exportBasePath === 'string' && opsSettings.exportBasePath.trim()) {
@@ -316,7 +314,9 @@ export async function inspectPfbackup(
     return {
       ok: false,
       compatibility: emptyCompatibility(),
-      errors: [error instanceof Error ? error.message : 'Backup-Archiv konnte nicht gelesen werden.'],
+      errors: [
+        error instanceof Error ? error.message : 'Backup-Archiv konnte nicht gelesen werden.',
+      ],
     };
   }
 

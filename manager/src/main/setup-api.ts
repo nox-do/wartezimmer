@@ -12,13 +12,13 @@ const RESTORE_TIMEOUT_MS = 10 * 60 * 1000;
 const UPDATE_APPLY_TIMEOUT_MS = 15 * 60 * 1000;
 
 function isStructuredOperationResult(body: unknown): body is { ok: boolean } {
-  return body !== null && typeof body === 'object' && typeof (body as { ok?: unknown }).ok === 'boolean';
+  return (
+    body !== null && typeof body === 'object' && typeof (body as { ok?: unknown }).ok === 'boolean'
+  );
 }
 
 function returnsStructuredOperationResult(path: string): boolean {
-  return (
-    path === '/api/setup/host/backup/restore' || path === '/api/setup/host/update/apply'
-  );
+  return path === '/api/setup/host/backup/restore' || path === '/api/setup/host/update/apply';
 }
 
 function isSetupApplyBody(

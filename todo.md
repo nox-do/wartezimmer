@@ -2,7 +2,7 @@
 
 Stand: 2026-07-13
 
-- OpenAPI: Settings-Snapshot-Endpunkte in `ops.yaml` + `npm run generate:api` (Maintenance-Listener)
+- Lint/Verify: **grün** (`npm run verify`) — ESLint-Fixes, Test-Fixtures (`minimalHostStatus`, `freshInstallHostStatus`, `testSetupContext`), Auth-Regeln für Snapshot-Routen; 10 Manager-Tests nach Fixture-Konsolidierung korrigiert
 - Wizard Abschluss: eine Footer-Zeile mit kleinen Buttons „Zum Status“ + „IT-Einstellungen“ (ohne Abbrechen)
 - Wizard Abschluss: Health-Header — Polling läuft auch im Wizard; nach Apply zusätzlich sofortiger Refresh (`onHostMutated`)
 - Schritt 3: .env-Hinweis entfernt, Routing-Überschrift kompakt, Intro gekürzt
@@ -113,18 +113,18 @@ Stand: 2026-07-13
 
 ### Marker-Rollen (keine Doppel-Systeme)
 
-| Marker | Bedeutung |
-|--------|-----------|
-| `PRAGMA user_version` | DB-Schema-**Generation** (z. B. `1` = vollständig aus aktuellem Fresh-Schema erzeugt) — **keine** Migrationshistorie |
-| `settingsFormatVersion` | nur im Settings-**Export-Snapshot** (z. B. `1`) |
-| `app_metadata` (optional) | zur Laufzeit: `schema_generation`, ggf. gespiegelte `settings_format_version` — **nicht** pro Feature |
+| Marker                    | Bedeutung                                                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `PRAGMA user_version`     | DB-Schema-**Generation** (z. B. `1` = vollständig aus aktuellem Fresh-Schema erzeugt) — **keine** Migrationshistorie |
+| `settingsFormatVersion`   | nur im Settings-**Export-Snapshot** (z. B. `1`)                                                                      |
+| `app_metadata` (optional) | zur Laufzeit: `schema_generation`, ggf. gespiegelte `settings_format_version` — **nicht** pro Feature                |
 
 ### Release-Schnitt
 
-| Release | Inhalt |
-|---------|--------|
-| **A (Übergang)** | Schritte 1–5; einfache `ensure*` bleiben; Settings-Export + Manager-Backup |
-| **B (Cutover)** | Schritte 6–8 stabil; Fresh DB + Import; historische `ensure*`-Rebuilds **entfernen** |
+| Release          | Inhalt                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------ |
+| **A (Übergang)** | Schritte 1–5; einfache `ensure*` bleiben; Settings-Export + Manager-Backup           |
+| **B (Cutover)**  | Schritte 6–8 stabil; Fresh DB + Import; historische `ensure*`-Rebuilds **entfernen** |
 
 ### Empfohlene Reihenfolge
 

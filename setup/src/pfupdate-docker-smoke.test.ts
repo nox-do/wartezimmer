@@ -25,15 +25,17 @@ test(
 
     try {
       fs.mkdirSync(path.dirname(imagesTar), { recursive: true });
-      const saveResult = spawnSync(
-        'docker',
-        ['save', '-o', imagesTar, 'hello-world:latest'],
-        { encoding: 'utf8' },
-      );
+      const saveResult = spawnSync('docker', ['save', '-o', imagesTar, 'hello-world:latest'], {
+        encoding: 'utf8',
+      });
       assert.equal(saveResult.status, 0, saveResult.stderr || 'docker save hello-world failed');
 
       const loadResult = spawnSync('docker', ['load', '-i', imagesTar], { encoding: 'utf8' });
-      assert.equal(loadResult.status, 0, loadResult.stderr || loadResult.stdout || 'docker load failed');
+      assert.equal(
+        loadResult.status,
+        0,
+        loadResult.stderr || loadResult.stdout || 'docker load failed',
+      );
       assert.match(`${loadResult.stdout}\n${loadResult.stderr}`, /Loaded image|hello-world/i);
     } finally {
       fs.rmSync(workDir, { recursive: true, force: true });

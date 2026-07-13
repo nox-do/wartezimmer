@@ -3,18 +3,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import {
-  buildPfbackupArchive,
-  serializePfbackupArchive,
-} from '@praxis-flow/server-shared';
+import { buildPfbackupArchive, serializePfbackupArchive } from '@praxis-flow/server-shared';
 import { APP_DB_RELATED_FILES, createLocalAppDataAccess } from './app-data-volume.js';
 import { readEnvMap } from './env-file.js';
 import { readManagerState } from './manager-state.js';
 import { buildTestPfupdateArchive } from './pfupdate-test-fixtures.js';
-import {
-  applyPfupdate,
-  UPDATE_PHASES,
-} from './settings-backup-update.js';
+import { applyPfupdate, UPDATE_PHASES } from './settings-backup-update.js';
 import type { SetupContext } from './setup-context.js';
 
 const sampleSettings = {
@@ -73,7 +67,10 @@ function seedInstallHome(dir: string): { envPath: string; appDataDir: string; ba
     )}\n`,
   );
   fs.writeFileSync(path.join(dir, 'docker-compose.delivery.yml'), 'services: { app: {} }\n');
-  fs.writeFileSync(path.join(dir, 'docker-compose.gateway.delivery.yml'), 'services: { gateway: {} }\n');
+  fs.writeFileSync(
+    path.join(dir, 'docker-compose.gateway.delivery.yml'),
+    'services: { gateway: {} }\n',
+  );
 
   const appDataDir = path.join(dir, 'app-data');
   fs.mkdirSync(appDataDir, { recursive: true });

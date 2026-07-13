@@ -9,7 +9,11 @@ import type {
 
 export type DevicePairingKind = 'tv' | 'terminal';
 
-export type { DevicePairingConfirmResponse, DevicePairingStartResponse, DevicePairingStatusResponse };
+export type {
+  DevicePairingConfirmResponse,
+  DevicePairingStartResponse,
+  DevicePairingStatusResponse,
+};
 
 function pairingPath(kind: DevicePairingKind, suffix: string): string {
   return `/api/v1/auth/${kind}/pairing/${suffix}`;

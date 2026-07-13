@@ -1,7 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { getOpsSettingsFromDb } from '../db/database-ops-settings.js';
 import { getAuthSettingsFromDb } from '../db/database-auth-settings.js';
-import { buildOpsSettingsReadParams } from '../db/database-deps.js';
 import { prepareCoreDatabaseStatements } from '../db/database-statements.js';
 import { SETUP_CONTACT_MODES, type SetupContactMode } from '../ops/setup-types.js';
 import {
@@ -103,11 +102,11 @@ function readMessagingProviderSnapshots(db: DatabaseSync): MessagingProviderConf
     `,
     )
     .all() as Array<{
-      providerId?: string;
-      channel?: string;
-      enabled?: number;
-      credentialsJson?: string;
-    }>;
+    providerId?: string;
+    channel?: string;
+    enabled?: number;
+    credentialsJson?: string;
+  }>;
 
   return rows
     .filter((row) => row.providerId && (row.channel === 'sms' || row.channel === 'messenger'))

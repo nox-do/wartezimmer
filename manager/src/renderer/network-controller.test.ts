@@ -1,59 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostStatus } from '../shared/host-status.js';
+import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import { createNetworkController } from './network-controller.js';
 import { NETWORK_NO_CHANGES_ERROR, NETWORK_RESTART_CONFIRM_MESSAGE } from './network-view-model.js';
-
-function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
-  return {
-    installHome: '/tmp/praxis',
-    mode: 'dev',
-    composeProjectName: 'pf-praxis',
-    projectRoot: '/tmp/praxis',
-    envExists: true,
-    envPath: '/tmp/praxis/.env',
-    practiceDisplayName: 'Praxis',
-    docker: {
-      installed: true,
-      daemonRunning: true,
-      composeAvailable: true,
-      detail: null,
-    },
-    folders: { imports: '/imports', exports: '/exports' },
-    appBaseUrl: 'http://192.168.1.10:8080',
-    configuredCanonicalBaseUrl: null,
-    network: {
-      configuredLanIp: '192.168.1.10',
-      currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
-      lanIpStale: false,
-    },
-    gateway: {
-      enabled: false,
-      gatewayInterface: 'eth1',
-      gatewayIp: '192.168.88.1',
-      portalAppIp: '192.168.1.10',
-      authBridgeUrl: '',
-    },
-    deviceUrls: null,
-    probes: [],
-    compose: { running: false, services: [] },
-    sandboxScanner: null,
-    networkBindings: [],
-    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
-    deliveryImages: {
-      required: false,
-      configured: false,
-      appImage: null,
-      sandboxImage: null,
-      releaseVersion: null,
-      archiveSha256: null,
-      appPresent: false,
-      sandboxPresent: false,
-      ready: true,
-    },
-    ...overrides,
-  };
-}
 
 test('createNetworkController sets busy during show bootstrap', async () => {
   let resolveNetwork: (value: unknown) => void = () => {};
@@ -68,7 +17,7 @@ test('createNetworkController sets busy during show bootstrap', async () => {
     requestConfirm: () => {},
   });
 
-  controller.show(minimalStatus());
+  controller.show(minimalHostStatus());
   assert.equal(controller.getState().busy, true);
 
   resolveNetwork({
@@ -98,7 +47,7 @@ test('network bootstrap fills gateway portal IP from selected LAN IP', async () 
   });
 
   controller.show(
-    minimalStatus({
+    minimalHostStatus({
       network: {
         configuredLanIp: null,
         currentLanCandidates: [],
@@ -150,7 +99,7 @@ test('apply rejects unchanged network fields', async () => {
     requestConfirm: () => {},
   });
 
-  controller.show(minimalStatus());
+  controller.show(minimalHostStatus());
   await Promise.resolve();
   controller.apply();
 
@@ -166,7 +115,7 @@ test('apply requests restart confirm when stack runs and fields changed', async 
     },
   });
 
-  const status = minimalStatus({
+  const status = minimalHostStatus({
     compose: { running: true, services: [] },
   });
   controller.show(status);

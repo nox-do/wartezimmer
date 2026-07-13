@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostStatus } from '../shared/host-status.js';
+import { freshInstallHostStatus, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import {
   canLeaveWizardStep1,
   createWizardFlowState,
@@ -10,51 +10,6 @@ import {
   wizardProbeFailureHint,
 } from './wizard-flow.js';
 
-function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
-  return {
-    installHome: '/tmp/praxis',
-    mode: 'dev',
-    composeProjectName: 'pf-praxis',
-    projectRoot: '/tmp/praxis',
-    envExists: false,
-    envPath: '/tmp/praxis/.env',
-    practiceDisplayName: null,
-    docker: {
-      installed: true,
-      daemonRunning: true,
-      composeAvailable: true,
-      detail: null,
-    },
-    folders: { imports: '/tmp/imports', exports: '/tmp/exports' },
-    appBaseUrl: 'http://127.0.0.1:8080',
-    configuredCanonicalBaseUrl: null,
-    network: {
-      configuredLanIp: null,
-      currentLanCandidates: [],
-      lanIpStale: false,
-    },
-    gateway: null,
-    deviceUrls: null,
-    probes: [],
-    compose: null,
-    sandboxScanner: null,
-    networkBindings: [],
-    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
-    deliveryImages: {
-      required: false,
-      configured: false,
-      appImage: null,
-      sandboxImage: null,
-      releaseVersion: null,
-      archiveSha256: null,
-      appPresent: false,
-      sandboxPresent: false,
-      ready: true,
-    },
-    ...overrides,
-  };
-}
-
 test('previousWizardStep walks back through wizard steps', () => {
   assert.equal(previousWizardStep(1), 1);
   assert.equal(previousWizardStep(3), 2);
@@ -62,11 +17,11 @@ test('previousWizardStep walks back through wizard steps', () => {
 });
 
 test('canLeaveWizardStep1 requires docker, network prerequisites and delivery images', () => {
-  const status = minimalStatus();
+  const status = minimalHostStatus();
   assert.equal(canLeaveWizardStep1(status, false), true);
   assert.equal(
     canLeaveWizardStep1(
-      minimalStatus({
+      minimalHostStatus({
         deliveryImages: {
           required: true,
           configured: false,
@@ -88,7 +43,7 @@ test('canLeaveWizardStep1 requires docker, network prerequisites and delivery im
 test('canLeaveWizardStep1 blocks when network prerequisites fail', () => {
   assert.equal(
     canLeaveWizardStep1(
-      minimalStatus({
+      minimalHostStatus({
         networkPrerequisites: [
           {
             id: 'preflight.app-port',
@@ -104,7 +59,7 @@ test('canLeaveWizardStep1 blocks when network prerequisites fail', () => {
   );
   assert.equal(
     canLeaveWizardStep1(
-      minimalStatus({
+      minimalHostStatus({
         networkPrerequisites: [],
       }),
       false,
@@ -114,26 +69,26 @@ test('canLeaveWizardStep1 blocks when network prerequisites fail', () => {
 });
 
 test('planWizardAdvance validates LAN IP on step 2', () => {
-  const state = createWizardFlowState(minimalStatus(), 2);
+  const state = createWizardFlowState(freshInstallHostStatus(), 2);
   assert.equal(planWizardAdvance(2, state).type, 'validate-error');
 });
 
 test('planWizardAdvance advances from step 2 when LAN and reachability are set', () => {
-  const state = createWizardFlowState(minimalStatus(), 2);
+  const state = createWizardFlowState(minimalHostStatus(), 2);
   state.lanAppIp = '192.168.1.10';
   state.reachabilityMode = 'lan-ip';
   assert.deepEqual(planWizardAdvance(2, state), { type: 'goto', step: 3 });
 });
 
 test('planWizardAdvance rejects hostname reachability without network snapshot', () => {
-  const state = createWizardFlowState(minimalStatus(), 2);
+  const state = createWizardFlowState(minimalHostStatus(), 2);
   state.lanAppIp = '192.168.1.10';
   state.reachabilityMode = 'hostname';
   assert.equal(planWizardAdvance(2, state).type, 'validate-error');
 });
 
 test('planWizardAdvance loads plan when leaving step 5', () => {
-  const state = createWizardFlowState(minimalStatus(), 5);
+  const state = createWizardFlowState(minimalHostStatus(), 5);
   state.lanAppIp = '192.168.1.10';
   state.practiceDisplayName = 'Praxis';
   state.importsHostPath = '/imports';
@@ -147,7 +102,7 @@ test('planWizardAdvance loads plan when leaving step 5', () => {
 });
 
 test('planWizardAdvance validates gateway bridge URL on step 4', () => {
-  const state = createWizardFlowState(minimalStatus(), 4);
+  const state = createWizardFlowState(minimalHostStatus(), 4);
   state.gatewayEnabled = true;
   state.gatewayInterface = 'eth1';
   state.authBridgeUrl = '10.0.0.2:9100';
@@ -157,7 +112,7 @@ test('planWizardAdvance validates gateway bridge URL on step 4', () => {
 });
 
 test('planWizardAdvance prefills gateway bridge URL when entering step 4', () => {
-  const state = createWizardFlowState(minimalStatus(), 3);
+  const state = createWizardFlowState(minimalHostStatus(), 3);
   state.lanAppIp = '192.168.1.10';
   state.practiceDisplayName = 'Praxis';
   state.gatewayEnabled = true;
@@ -173,14 +128,13 @@ test('planWizardAdvance prefills gateway bridge URL when entering step 4', () =>
     type: 'goto',
     step: 4,
     patch: {
-      portalAppIp: '192.168.1.10',
       authBridgeUrl: 'http://host.docker.internal:9100',
     },
   });
 });
 
 test('planWizardAdvance keeps explicit gateway bridge URL when entering step 4', () => {
-  const state = createWizardFlowState(minimalStatus(), 3);
+  const state = createWizardFlowState(minimalHostStatus(), 3);
   state.lanAppIp = '192.168.1.10';
   state.practiceDisplayName = 'Praxis';
   state.gatewayEnabled = true;
@@ -196,9 +150,7 @@ test('planWizardAdvance keeps explicit gateway bridge URL when entering step 4',
   assert.deepEqual(planWizardAdvance(3, state), {
     type: 'goto',
     step: 4,
-    patch: {
-      portalAppIp: '192.168.1.10',
-    },
+    patch: {},
   });
 });
 

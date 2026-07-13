@@ -7,10 +7,7 @@ import type {
   PfupdateManifestV1,
 } from '@praxis-flow/server-shared';
 import { readManagerState } from './manager-state.js';
-import {
-  extractPfupdateArchive,
-  validateExtractedPfupdate,
-} from './pfupdate-package.js';
+import { extractPfupdateArchive, validateExtractedPfupdate } from './pfupdate-package.js';
 import { resolveCurrentSettingsFormatVersion } from './settings-format-version.js';
 import type { SetupContext } from './setup-context.js';
 
@@ -76,8 +73,7 @@ export async function inspectPfupdate(
     extractArchive(archivePath, stagingDir);
 
     const settingsFormatVersion =
-      input.settingsFormatVersion ??
-      (await resolveSettingsFormatVersion());
+      input.settingsFormatVersion ?? (await resolveSettingsFormatVersion());
 
     const validation = validatePackage(stagingDir, {
       managerVersion: input.managerVersion ?? undefined,
@@ -111,10 +107,7 @@ export async function inspectPfupdate(
         ...compatibility,
         updateSupported,
       },
-      errors:
-        updateSupported || validation.errors.length === 0
-          ? undefined
-          : validation.errors,
+      errors: updateSupported || validation.errors.length === 0 ? undefined : validation.errors,
     };
   } catch (error) {
     return {

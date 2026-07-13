@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostStatus } from '../shared/host-status.js';
+import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { createMaintenanceController } from './maintenance-controller.js';
 import {
@@ -9,53 +9,11 @@ import {
   STORAGE_PATHS_VALIDATION_ERROR,
 } from './maintenance-view-model.js';
 
-function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
-  return {
-    installHome: '/tmp/pf',
-    mode: 'install',
-    composeProjectName: 'pf-test',
-    projectRoot: '/tmp/pf',
-    envExists: true,
-    envPath: '/tmp/pf/.env',
-    practiceDisplayName: 'Test',
-    docker: {
-      installed: true,
-      daemonRunning: true,
-      composeAvailable: true,
-      detail: null,
-    },
-    folders: { imports: '/data/imports', exports: '/data/exports' },
-    appBaseUrl: 'http://192.168.1.10:8080',
-    configuredCanonicalBaseUrl: null,
-    network: { configuredLanIp: '192.168.1.10', currentLanCandidates: [], lanIpStale: false },
-    gateway: null,
-    deviceUrls: null,
-    probes: [],
-    compose: { running: true, services: [] },
-    sandboxScanner: null,
-    networkBindings: [],
-    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
-    deliveryImages: {
-      required: false,
-      configured: true,
-      appImage: null,
-      sandboxImage: null,
-      releaseVersion: null,
-      archiveSha256: null,
-      appPresent: true,
-      sandboxPresent: true,
-      ready: true,
-    },
-    settingsFormatVersion: 1,
-    ...overrides,
-  };
-}
-
 function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManagerApi {
   return {
     hostPlatform: 'linux',
-    fetchSetupStatus: async () => minimalStatus(),
-    getComposeLogs: async () => ({ log: 'ok' }),
+    fetchSetupStatus: async () => minimalHostStatus(),
+    getComposeLogs: async () => ({ ok: true, log: 'ok' }),
     runComposeAction: async () => ({
       ok: true,
       log: '',
@@ -200,7 +158,7 @@ test('createMaintenanceController sets busy during show bootstrap', async () => 
     ),
   );
 
-  controller.show(minimalStatus());
+  controller.show(minimalHostStatus());
   assert.equal(controller.getState().busy, true);
 
   resolveBackup();
@@ -217,7 +175,7 @@ test('applyStorage validates missing folder paths', () => {
     }),
   );
 
-  controller.show(minimalStatus());
+  controller.show(minimalHostStatus());
   controller.setImportsPath('');
   controller.applyStorage();
 
@@ -236,7 +194,7 @@ test('applyStorage requests restart confirm when stack runs and paths changed', 
     }),
   );
 
-  controller.show(minimalStatus({ compose: { running: true, services: [] } }));
+  controller.show(minimalHostStatus({ compose: { running: true, services: [] } }));
   controller.setImportsPath('/other/imports');
   controller.applyStorage();
 
@@ -252,7 +210,7 @@ test('restart and stack stop request offline confirm', () => {
     }),
   );
 
-  controller.show(minimalStatus());
+  controller.show(minimalHostStatus());
   controller.restart();
   controller.handleStackToggle(false);
 
@@ -263,12 +221,12 @@ test('recordPfupdateSuccess updates software update status text', async () => {
   const controller = createMaintenanceController(
     createControllerDeps(
       createMockApi({
-        getComposeLogs: async () => ({ log: 'updated' }),
+        getComposeLogs: async () => ({ ok: true, log: 'updated' }),
       }),
     ),
   );
 
-  controller.show(minimalStatus({ compose: { running: true, services: [] } }));
+  controller.show(minimalHostStatus({ compose: { running: true, services: [] } }));
   await new Promise((resolve) => setTimeout(resolve, 0));
   controller.recordPfupdateSuccess({
     ok: true,
@@ -296,7 +254,7 @@ test('requestLogsRefresh sets error when log fetch fails', async () => {
     ),
   );
 
-  controller.show(minimalStatus());
+  controller.show(minimalHostStatus());
   controller.requestLogsRefresh('app');
   await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -322,14 +280,14 @@ test('applyConfigSnapshot updates draft paths only when not busy', async () => {
   );
 
   controller.show(
-    minimalStatus({
+    minimalHostStatus({
       folders: { imports: '/data/imports', exports: '/data/exports' },
     }),
   );
   controller.setImportsPath('/draft/imports');
 
   controller.applyConfigSnapshot(
-    minimalStatus({
+    minimalHostStatus({
       folders: { imports: '/server/imports', exports: '/server/exports' },
     }),
   );
@@ -340,7 +298,7 @@ test('applyConfigSnapshot updates draft paths only when not busy', async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   controller.applyConfigSnapshot(
-    minimalStatus({
+    minimalHostStatus({
       folders: { imports: '/server/imports', exports: '/server/exports' },
     }),
   );

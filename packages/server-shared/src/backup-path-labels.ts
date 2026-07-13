@@ -12,9 +12,7 @@ export function parsePfbackupTimestampFromPath(backupPath: string): Date | null 
     PFBACKUP_BASENAME_PREFIX.length,
     base.length - `.${PFBACKUP_FILE_EXTENSION}`.length,
   );
-  const match = encoded.match(
-    /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/,
-  );
+  const match = encoded.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/);
   if (!match) {
     return null;
   }

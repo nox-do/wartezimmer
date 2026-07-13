@@ -4,7 +4,6 @@ import path from 'node:path';
 import {
   parsePfbackupArchive,
   validateManagerStateForBackup,
-  type ComposeStatus,
   type ManagerReleaseState,
   type ManagerState,
   type PfupdateApplyResult,
@@ -16,10 +15,7 @@ import {
   type AppDataVolumeAccess,
 } from './app-data-volume.js';
 import { composePs, composeStop, composeUp, type ComposeRunOptions } from './docker.js';
-import {
-  dockerImageExists,
-  dockerLoadArchive,
-} from './delivery-images.js';
+import { dockerImageExists, dockerLoadArchive } from './delivery-images.js';
 import { readEnvMap, writeEnvRecordAtomically } from './env-file.js';
 import {
   MANAGER_STATE_FILE,
@@ -48,14 +44,15 @@ import {
   runFreshDbSettingsCutover,
   type FreshDbCutoverPhase,
 } from './fresh-db-settings-cutover.js';
-import {
-  mergeConfigRestoreEnv,
-  type PfbackupRestoreDeps,
-} from './settings-backup-restore.js';
+import { mergeConfigRestoreEnv, type PfbackupRestoreDeps } from './settings-backup-restore.js';
 import { resolveCurrentSettingsFormatVersion } from './settings-format-version.js';
 import type { SetupContext } from './setup-context.js';
 import { resolveDeliveryImageConfig } from './delivery-images.js';
-import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL, resolveCanonicalBaseUrl } from './urls.js';
+import {
+  LOCAL_MAINTENANCE_APP_BASE_URL,
+  LOCAL_SETUP_APP_BASE_URL,
+  resolveCanonicalBaseUrl,
+} from './urls.js';
 
 export const UPDATE_PHASES = {
   validatePackage: 'validate_package',
@@ -148,7 +145,10 @@ function hostEnvRecord(envPath: string): Record<string, string> {
   return Object.fromEntries(readEnvMap(envPath).entries());
 }
 
-function resolveComposeRunOptions(ctx: SetupContext, envMap: Map<string, string>): ComposeRunOptions {
+function resolveComposeRunOptions(
+  ctx: SetupContext,
+  envMap: Map<string, string>,
+): ComposeRunOptions {
   const deliveryConfig = resolveDeliveryImageConfig({
     projectRoot: ctx.home,
     envMap,
@@ -410,14 +410,18 @@ async function executeUpdateRollback(input: {
     await input.appDataAccess.moveDbAside(failedUpdateDir);
   } catch (error) {
     errors.push(
-      error instanceof Error ? error.message : 'Neue Runtime-DB konnte nicht beiseitegelegt werden.',
+      error instanceof Error
+        ? error.message
+        : 'Neue Runtime-DB konnte nicht beiseitegelegt werden.',
     );
   }
   try {
     await input.appDataAccess.restoreDbFiles(input.rollback.appDataDir);
   } catch (error) {
     errors.push(
-      error instanceof Error ? error.message : 'Rollback-Runtime-DB konnte nicht zurückgespielt werden.',
+      error instanceof Error
+        ? error.message
+        : 'Rollback-Runtime-DB konnte nicht zurückgespielt werden.',
     );
   }
 
@@ -477,24 +481,22 @@ export async function applyPfupdate(
   const stopStack = deps.stopStack ?? composeStop;
   const startAppStack =
     deps.startAppStack ??
-    (async (runOptions) => composeUp({ ...runOptions, build: false, services: ['sandbox', 'app'] }));
+    (async (runOptions) =>
+      composeUp({ ...runOptions, build: false, services: ['sandbox', 'app'] }));
   const startFullStack =
     deps.startFullStack ?? (async (runOptions) => composeUp({ ...runOptions, build: false }));
   const waitForMaintenanceApp =
-    deps.waitForMaintenanceApp ??
-    ((baseUrl: string) => defaultWaitForMaintenanceApp(baseUrl));
+    deps.waitForMaintenanceApp ?? ((baseUrl: string) => defaultWaitForMaintenanceApp(baseUrl));
   const validateSettings = deps.validateSettings ?? validateSettingsSnapshotWithApp;
   const importSnapshot = deps.importSnapshot ?? importSettingsSnapshotViaApp;
   const exportDbSnapshot =
-    deps.exportDbSnapshot ??
-    ((baseUrl: string) => fetchSettingsDbSnapshotFromApp(baseUrl));
+    deps.exportDbSnapshot ?? ((baseUrl: string) => fetchSettingsDbSnapshotFromApp(baseUrl));
   const composeStatus = deps.composeStatus ?? composePs;
   const runHealthChecks = deps.runHealthChecks ?? defaultRunHealthChecks;
 
-  let rollback: UpdateRollbackArtifacts | null = null;
-  let manifest: PfupdateManifestV1 | null = null;
+  let rollback: UpdateRollbackArtifacts;
   let preUpdateBackupPath: string | null = null;
-  let previousVersion: string | null = readManagerState(ctx.home).release?.releaseVersion ?? null;
+  const previousVersion: string | null = readManagerState(ctx.home).release?.releaseVersion ?? null;
 
   const envPath = path.join(ctx.home, '.env');
   if (!fs.existsSync(envPath)) {
@@ -524,7 +526,8 @@ export async function applyPfupdate(
   let packageValidation;
   try {
     const settingsFormatVersion =
-      input.settingsFormatVersion ?? (await resolveSettingsFormatVersion(localMaintenanceAppBaseUrl));
+      input.settingsFormatVersion ??
+      (await resolveSettingsFormatVersion(localMaintenanceAppBaseUrl));
 
     packageValidation = validatePackage(stagingDir, {
       managerVersion: input.managerVersion ?? undefined,
@@ -551,7 +554,7 @@ export async function applyPfupdate(
       false,
     );
   }
-  manifest = packageValidation.manifest;
+  const manifest = packageValidation.manifest;
 
   if (packageValidation.compatibility && !packageValidation.compatibility.managerCompatible) {
     cleanupStaging(stagingDir);
@@ -640,11 +643,12 @@ export async function applyPfupdate(
   } catch (error) {
     cleanupStaging(stagingDir);
     const restart = await startFullStack(runOptions);
-    const errors = [
-      error instanceof Error ? error.message : 'Rollback-Sicherung fehlgeschlagen.',
-    ];
+    const errors = [error instanceof Error ? error.message : 'Rollback-Sicherung fehlgeschlagen.'];
     if (!restart.ok) {
-      errors.push(restart.log || 'Stack konnte nach fehlgeschlagener Rollback-Sicherung nicht neu gestartet werden.');
+      errors.push(
+        restart.log ||
+          'Stack konnte nach fehlgeschlagener Rollback-Sicherung nicht neu gestartet werden.',
+      );
     }
     return failureResult(updateId, UPDATE_PHASES.backupRollbackState, errors, false, false);
   }
@@ -663,9 +667,16 @@ export async function applyPfupdate(
       failRollback: testHooks.failRollback,
     });
     cleanupStaging(stagingDir);
-    return failureWithRollback(updateId, UPDATE_PHASES.installTemplates, [
-      error instanceof Error ? error.message : 'Compose-Templates konnten nicht installiert werden.',
-    ], rollbackResult);
+    return failureWithRollback(
+      updateId,
+      UPDATE_PHASES.installTemplates,
+      [
+        error instanceof Error
+          ? error.message
+          : 'Compose-Templates konnten nicht installiert werden.',
+      ],
+      rollbackResult,
+    );
   }
 
   const releaseState = buildReleaseStateFromManifest(manifest, outerArchiveSha256);
@@ -691,9 +702,12 @@ export async function applyPfupdate(
       failRollback: testHooks.failRollback,
     });
     cleanupStaging(stagingDir);
-    return failureWithRollback(updateId, UPDATE_PHASES.writeReleaseState, [
-      error instanceof Error ? error.message : 'Release-State konnte nicht geschrieben werden.',
-    ], rollbackResult);
+    return failureWithRollback(
+      updateId,
+      UPDATE_PHASES.writeReleaseState,
+      [error instanceof Error ? error.message : 'Release-State konnte nicht geschrieben werden.'],
+      rollbackResult,
+    );
   }
 
   const envAfterWrite = readEnvMap(envPath);
@@ -705,8 +719,7 @@ export async function applyPfupdate(
       dbAsideSubdir: 'pre-update-db',
       runOptions: runOptionsAfterWrite,
       envAfterWrite,
-      verifyMismatchMessage:
-        'Re-exportierter Settings-Snapshot weicht vom Pre-Update-Backup ab.',
+      verifyMismatchMessage: 'Re-exportierter Settings-Snapshot weicht vom Pre-Update-Backup ab.',
       localAppBaseUrl,
       localMaintenanceAppBaseUrl,
       prepareImport: async () => {

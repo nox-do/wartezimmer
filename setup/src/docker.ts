@@ -94,9 +94,7 @@ export function canRunGatewayCompose(): boolean {
   return process.platform === 'linux';
 }
 
-export async function composeUp(
-  options: ComposeUpOptions & { services?: string[] },
-): Promise<{
+export async function composeUp(options: ComposeUpOptions & { services?: string[] }): Promise<{
   ok: boolean;
   log: string;
   gatewaySkipped: boolean;

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostStatus } from '../shared/host-status.js';
+import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import {
   draftCanonicalBaseUrl,
   inferReachabilityFields,
@@ -8,59 +8,6 @@ import {
   lanProbeBaseUrl,
   matchesHostnameModeBase,
 } from './reachability.js';
-
-function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
-  return {
-    installHome: '/tmp/praxis',
-    mode: 'dev',
-    composeProjectName: 'pf-praxis',
-    projectRoot: '/tmp/praxis',
-    envExists: true,
-    envPath: '/tmp/praxis/.env',
-    practiceDisplayName: 'Praxis',
-    docker: {
-      installed: true,
-      daemonRunning: true,
-      composeAvailable: true,
-      detail: null,
-    },
-    folders: { imports: '/imports', exports: '/exports' },
-    appBaseUrl: 'http://192.168.1.10:8080',
-    configuredCanonicalBaseUrl: null,
-    network: {
-      configuredLanIp: '192.168.1.10',
-      currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
-      lanIpStale: false,
-    },
-    gateway: null,
-    deviceUrls: {
-      appBaseUrl: 'http://192.168.1.10:8080',
-      terminal: 'http://192.168.1.10:8080/terminal',
-      mfa: 'http://192.168.1.10:8080/mfa',
-      tv: 'http://192.168.1.10:8080/tv',
-      ops: 'http://192.168.1.10:8080/ops',
-      opsSetup: 'http://192.168.1.10:8080/ops/setup',
-      portal: 'http://192.168.1.10:8080/portal',
-    },
-    probes: [],
-    compose: null,
-    sandboxScanner: null,
-    networkBindings: [],
-    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
-    deliveryImages: {
-      required: false,
-      configured: false,
-      appImage: null,
-      sandboxImage: null,
-      releaseVersion: null,
-      archiveSha256: null,
-      appPresent: false,
-      sandboxPresent: false,
-      ready: true,
-    },
-    ...overrides,
-  };
-}
 
 test('isHttpOrigin rejects path query hash and credentials', () => {
   assert.equal(isHttpOrigin('http://praxis.local:8080'), true);
@@ -70,14 +17,14 @@ test('isHttpOrigin rejects path query hash and credentials', () => {
 
 test('inferReachabilityFields uses lan-ip for exact IP fallback', () => {
   const fields = inferReachabilityFields(
-    minimalStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' }),
+    minimalHostStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' }),
   );
   assert.equal(fields.reachabilityMode, 'lan-ip');
 });
 
 test('inferReachabilityFields uses custom for hostname bases', () => {
   const fields = inferReachabilityFields(
-    minimalStatus({ configuredCanonicalBaseUrl: 'http://praxis-flow.local:8080' }),
+    minimalHostStatus({ configuredCanonicalBaseUrl: 'http://praxis-flow.local:8080' }),
   );
   assert.equal(fields.reachabilityMode, 'custom');
   assert.equal(fields.customHostname, 'praxis-flow.local');

@@ -1,7 +1,4 @@
-import {
-  SettingsSnapshotError,
-  type SettingsSnapshotV1,
-} from './settings-snapshot-types.js';
+import { SettingsSnapshotError, type SettingsSnapshotV1 } from './settings-snapshot-types.js';
 import { prepareSettingsSnapshotImport } from './settings-snapshot-import.js';
 
 export type SettingsSnapshotValidationResult = {

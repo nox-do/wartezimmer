@@ -89,10 +89,7 @@ export type FreshDbCutoverFailure = {
 
 export type FreshDbCutoverResult = FreshDbCutoverSuccess | FreshDbCutoverFailure;
 
-function failure(
-  failedPhase: FreshDbCutoverPhase,
-  errors: string[],
-): FreshDbCutoverFailure {
+function failure(failedPhase: FreshDbCutoverPhase, errors: string[]): FreshDbCutoverFailure {
   return { ok: false, failedPhase, errors };
 }
 
@@ -116,7 +113,9 @@ export async function runFreshDbSettingsCutover(
 
   await testHooks.beforeStartApp?.();
   if (testHooks.failStartApp) {
-    return failure(FRESH_DB_CUTOVER_PHASES.startApp, ['App-Start absichtlich fehlgeschlagen (Test).']);
+    return failure(FRESH_DB_CUTOVER_PHASES.startApp, [
+      'App-Start absichtlich fehlgeschlagen (Test).',
+    ]);
   }
 
   const appStart = await deps.startAppStack(input.runOptions);

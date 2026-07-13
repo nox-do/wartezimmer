@@ -1,61 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostStatus } from '../shared/host-status.js';
+import { CONFIGURED_GATEWAY, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import { hostNetworkChanged, shouldOfferManualLanIpEntry } from './host-network-panels.js';
 
-function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
-  return {
-    installHome: '/tmp/praxis',
-    mode: 'dev',
-    composeProjectName: 'pf-praxis',
-    projectRoot: '/tmp/praxis',
-    envExists: true,
-    envPath: '/tmp/praxis/.env',
-    practiceDisplayName: 'Praxis',
-    docker: {
-      installed: true,
-      daemonRunning: true,
-      composeAvailable: true,
-      detail: null,
-    },
-    folders: { imports: '/imports', exports: '/exports' },
-    appBaseUrl: 'http://192.168.1.10:8080',
-    configuredCanonicalBaseUrl: null,
-    network: {
-      configuredLanIp: '192.168.1.10',
-      currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
-      lanIpStale: false,
-    },
-    gateway: {
-      enabled: true,
-      gatewayInterface: 'eth1',
-      gatewayIp: '192.168.88.1',
-      portalAppIp: '192.168.1.10',
-      authBridgeUrl: 'http://172.17.0.1:9100',
-    },
-    deviceUrls: null,
-    probes: [],
-    compose: null,
-    sandboxScanner: null,
-    networkBindings: [],
-    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
-    deliveryImages: {
-      required: false,
-      configured: false,
-      appImage: null,
-      sandboxImage: null,
-      releaseVersion: null,
-      archiveSha256: null,
-      appPresent: false,
-      sandboxPresent: false,
-      ready: true,
-    },
-    ...overrides,
-  };
-}
-
 test('hostNetworkChanged detects LAN IP change', () => {
-  const status = minimalStatus();
+  const status = minimalHostStatus();
   assert.equal(
     hostNetworkChanged(
       {
@@ -76,7 +25,10 @@ test('hostNetworkChanged detects LAN IP change', () => {
 });
 
 test('hostNetworkChanged is false when fields match status', () => {
-  const status = minimalStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' });
+  const status = minimalHostStatus({
+    configuredCanonicalBaseUrl: 'http://192.168.1.10:8080',
+    gateway: CONFIGURED_GATEWAY,
+  });
   assert.equal(
     hostNetworkChanged(
       {
@@ -97,7 +49,7 @@ test('hostNetworkChanged is false when fields match status', () => {
 });
 
 test('hostNetworkChanged detects canonical reachability change', () => {
-  const status = minimalStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' });
+  const status = minimalHostStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' });
   assert.equal(
     hostNetworkChanged(
       {
@@ -118,7 +70,7 @@ test('hostNetworkChanged detects canonical reachability change', () => {
 });
 
 test('hostNetworkChanged detects gateway bridge URL change', () => {
-  const status = minimalStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' });
+  const status = minimalHostStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' });
   assert.equal(
     hostNetworkChanged(
       {

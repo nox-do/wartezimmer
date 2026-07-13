@@ -8,13 +8,13 @@ Siehe auch: [`settings-backup-classification.md`](settings-backup-classification
 
 ## Regel
 
-| Was | Wahrheit | Wer schreibt |
-|-----|----------|--------------|
-| Themen | `ops_settings.topic_settings_json` | Ops-API → `updateOpsSettings` |
-| Räume | `ops_settings.rooms_json` | Ops-API → `updateOpsSettings` |
-| Journeys | `ops_settings.journey_settings_json` | Ops-API → `updateOpsSettings` |
-| Routing-Modus | `ops_settings.routing_mode` | Ops-API → `updateOpsSettings` |
-| flow-core-Catalog | **Projektion** | **Nur** `syncCatalogFromOpsSettings()` |
+| Was               | Wahrheit                             | Wer schreibt                           |
+| ----------------- | ------------------------------------ | -------------------------------------- |
+| Themen            | `ops_settings.topic_settings_json`   | Ops-API → `updateOpsSettings`          |
+| Räume             | `ops_settings.rooms_json`            | Ops-API → `updateOpsSettings`          |
+| Journeys          | `ops_settings.journey_settings_json` | Ops-API → `updateOpsSettings`          |
+| Routing-Modus     | `ops_settings.routing_mode`          | Ops-API → `updateOpsSettings`          |
+| flow-core-Catalog | **Projektion**                       | **Nur** `syncCatalogFromOpsSettings()` |
 
 **Produktions-App:** Keine direkten `INSERT`/`UPDATE`/`DELETE` auf Catalog-Tabellen außerhalb des Sync-Moduls.
 
@@ -41,8 +41,8 @@ Beim **App-Start** (`CoreDatabase` constructor): einmalig `initializeFlowCore()`
 
 ## Einziger Catalog-Writer in der App
 
-| Modul | Rolle |
-|-------|--------|
+| Modul                                                                                                                         | Rolle                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | [`app/src/shared/flow-core/sync-catalog-from-ops-settings.ts`](../app/src/shared/flow-core/sync-catalog-from-ops-settings.ts) | Spiegelt Settings in den Catalog; deaktiviert verwaiste Zeilen; legt System-Locations/Queues/Surfaces an |
 
 Alles andere unter `app/src/` das Catalog-DML enthält, ist ein **Architekturfehler** (wird durch `catalog-write-guard.test.ts` abgesichert).
@@ -51,11 +51,11 @@ Alles andere unter `app/src/` das Catalog-DML enthält, ist ein **Architekturfeh
 
 ## Bewusst außerhalb der App
 
-| Modul | Kontext |
-|-------|---------|
+| Modul                                            | Kontext                                                        |
+| ------------------------------------------------ | -------------------------------------------------------------- |
 | `packages/flow-core/src/server/admin-service.ts` | PoC/Integration — **nicht** aus der Produktions-App importiert |
-| `packages/flow-core/src/server/seed.ts` | Tests / Demos |
-| `packages/flow-core/test/**` | Integrationstests |
+| `packages/flow-core/src/server/seed.ts`          | Tests / Demos                                                  |
+| `packages/flow-core/test/**`                     | Integrationstests                                              |
 
 Diese Pfade dürfen Catalog direkt schreiben; sie sind kein Produktions-Upgrade-Pfad.
 
@@ -84,11 +84,11 @@ Bereits abgedeckt in `sync-catalog-from-ops-settings.test.ts` (simple/complex, J
 
 ## Tests
 
-| Test | Zweck |
-|------|--------|
-| `catalog-write-guard.test.ts` | Kein Catalog-DML in `app/src` außer Sync-Modul |
-| `sync-catalog-from-ops-settings.test.ts` | Fachliche Projektion + Integrität |
-| `database-ops-settings.test.ts` | Settings-Validierung vor Persistenz |
+| Test                                     | Zweck                                          |
+| ---------------------------------------- | ---------------------------------------------- |
+| `catalog-write-guard.test.ts`            | Kein Catalog-DML in `app/src` außer Sync-Modul |
+| `sync-catalog-from-ops-settings.test.ts` | Fachliche Projektion + Integrität              |
+| `database-ops-settings.test.ts`          | Settings-Validierung vor Persistenz            |
 
 ---
 

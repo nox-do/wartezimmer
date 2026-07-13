@@ -6,15 +6,15 @@ import {
   normalizeTerminalPatientLocales,
   type RoomPanelPlacementConfig,
 } from '@praxis-flow/domain';
-import { validateTopicSettings, normalizeTopicSettingsList, type TopicSetting } from '../checkin-topic-settings.js';
+import {
+  validateTopicSettings,
+  normalizeTopicSettingsList,
+  type TopicSetting,
+} from '../checkin-topic-settings.js';
 import { ensureSingleDefaultCallTarget } from '../db/database-ops-settings.js';
 import { OpsSettingsValidationError } from '../db/ops-settings-errors.js';
-import { prepareCoreDatabaseStatements } from '../db/database-statements.js';
 import { syncFlowCoreCatalog } from '../flow-core/flow-core-runtime.js';
-import {
-  parseJourneySettingsJson,
-  validateTopicJourneyAssignments,
-} from '../journey-settings.js';
+import { parseJourneySettingsJson, validateTopicJourneyAssignments } from '../journey-settings.js';
 import { SETUP_CONTACT_MODES, type SetupContactMode } from '../ops/setup-types.js';
 import { isRecord } from '../type-guards.js';
 import type { OpsSettings, RoutingMode } from '../db/db-types.js';
@@ -74,7 +74,10 @@ function parseAuthSettingsSnapshot(raw: unknown): AuthSettingsSnapshotV1 {
 
 function parseMessagingProviderSnapshots(raw: unknown): MessagingProviderConfigSnapshotV1[] {
   if (!Array.isArray(raw)) {
-    throw new SettingsSnapshotError('INVALID_SNAPSHOT', 'messagingProviderConfigs must be an array');
+    throw new SettingsSnapshotError(
+      'INVALID_SNAPSHOT',
+      'messagingProviderConfigs must be an array',
+    );
   }
 
   return raw.map((entry, index) => {
@@ -159,7 +162,10 @@ function parseRoomSettingsFromSnapshot(raw: unknown): OpsSettings['rooms'] {
 
   const rooms = raw.map((entry, index) => {
     if (!isRecord(entry)) {
-      throw new SettingsSnapshotError('INVALID_SNAPSHOT', `opsSettings.rooms[${index}] must be an object`);
+      throw new SettingsSnapshotError(
+        'INVALID_SNAPSHOT',
+        `opsSettings.rooms[${index}] must be an object`,
+      );
     }
     const roomId = assertString(entry.roomId, `opsSettings.rooms[${index}].roomId`);
     const roomLabel = assertString(entry.roomLabel, `opsSettings.rooms[${index}].roomLabel`);
@@ -193,7 +199,11 @@ function parseOpsSettingsSnapshot(raw: unknown): OpsSettingsSnapshotV1 {
     raw.contactLookupDelimiterMode,
     'opsSettings.contactLookupDelimiterMode',
   );
-  if (!DELIMITER_MODES.has(contactLookupDelimiterMode as OpsSettingsSnapshotV1['contactLookupDelimiterMode'])) {
+  if (
+    !DELIMITER_MODES.has(
+      contactLookupDelimiterMode as OpsSettingsSnapshotV1['contactLookupDelimiterMode'],
+    )
+  ) {
     throw new SettingsSnapshotError(
       'INVALID_SNAPSHOT',
       'opsSettings.contactLookupDelimiterMode is invalid',
@@ -206,7 +216,9 @@ function parseOpsSettingsSnapshot(raw: unknown): OpsSettingsSnapshotV1 {
   }
 
   const setupCompletedAt =
-    raw.setupCompletedAt == null ? null : assertString(raw.setupCompletedAt, 'opsSettings.setupCompletedAt');
+    raw.setupCompletedAt == null
+      ? null
+      : assertString(raw.setupCompletedAt, 'opsSettings.setupCompletedAt');
 
   return {
     routingMode: routingMode as RoutingMode,
@@ -281,7 +293,8 @@ function validateOpsSettingsSnapshot(snapshot: OpsSettingsSnapshotV1): OpsSettin
   try {
     journeySettings = parseJourneySettingsJson(JSON.stringify(snapshot.journeySettings));
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'opsSettings.journeySettings is invalid';
+    const message =
+      error instanceof Error ? error.message : 'opsSettings.journeySettings is invalid';
     throw new SettingsSnapshotError('OPS_SETTINGS_INVALID', message);
   }
 
@@ -296,7 +309,10 @@ function validateOpsSettingsSnapshot(snapshot: OpsSettingsSnapshotV1): OpsSettin
   try {
     terminalPatientLocales = normalizeTerminalPatientLocales(snapshot.terminalPatientLocales);
   } catch {
-    throw new SettingsSnapshotError('OPS_SETTINGS_INVALID', 'opsSettings.terminalPatientLocales is invalid');
+    throw new SettingsSnapshotError(
+      'OPS_SETTINGS_INVALID',
+      'opsSettings.terminalPatientLocales is invalid',
+    );
   }
 
   return {
@@ -411,7 +427,11 @@ function writeOpsSettingsSnapshot(
   );
 }
 
-function writeAuthSettingsSnapshot(db: DatabaseSync, auth: AuthSettingsSnapshotV1, updatedAt: string): void {
+function writeAuthSettingsSnapshot(
+  db: DatabaseSync,
+  auth: AuthSettingsSnapshotV1,
+  updatedAt: string,
+): void {
   db.prepare(
     `
     UPDATE auth_settings
@@ -514,7 +534,7 @@ export function importSettingsSnapshotIntoDb(
   const skipProviderCredentials = options.skipProviderCredentials === true;
   const { snapshot, opsSettings } = prepareSettingsSnapshotImport(rawSnapshot);
   const updatedAt = new Date().toISOString();
-  let disabledProviderIds: string[] = [];
+  let disabledProviderIds: string[];
 
   db.exec('BEGIN IMMEDIATE');
   try {
@@ -556,11 +576,15 @@ export function importSettingsSnapshotIntoDb(
   };
 }
 
-export function snapshotsEquivalentForRestore(left: SettingsSnapshotV1, right: SettingsSnapshotV1): boolean {
+export function snapshotsEquivalentForRestore(
+  left: SettingsSnapshotV1,
+  right: SettingsSnapshotV1,
+): boolean {
   return (
     JSON.stringify(left.opsSettings) === JSON.stringify(right.opsSettings) &&
     JSON.stringify(left.authSettings) === JSON.stringify(right.authSettings) &&
-    JSON.stringify(left.messagingProviderConfigs) === JSON.stringify(right.messagingProviderConfigs) &&
+    JSON.stringify(left.messagingProviderConfigs) ===
+      JSON.stringify(right.messagingProviderConfigs) &&
     JSON.stringify(left.env) === JSON.stringify(right.env)
   );
 }

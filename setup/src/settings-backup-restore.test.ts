@@ -3,10 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import {
-  buildPfbackupArchive,
-  serializePfbackupArchive,
-} from '@praxis-flow/server-shared';
+import { buildPfbackupArchive, serializePfbackupArchive } from '@praxis-flow/server-shared';
 import { APP_DB_RELATED_FILES, createLocalAppDataAccess } from './app-data-volume.js';
 import { readEnvMap, writeEnvRecordAtomically } from './env-file.js';
 import { readManagerState } from './manager-state.js';
@@ -16,16 +13,7 @@ import {
   mergeConfigRestoreManagerState,
   restorePfbackup,
 } from './settings-backup-restore.js';
-import type { SetupContext } from './setup-context.js';
-
-function testCtx(home: string): SetupContext {
-  return {
-    home,
-    composeProjectName: 'pf-test',
-    mode: 'install',
-    templateRoot: home,
-  };
-}
+import { testSetupContext } from './test-setup-context.js';
 
 const sampleSettings = {
   settingsFormatVersion: 1,
@@ -167,7 +155,7 @@ test('restorePfbackup rejects invalid archive without side effects', async () =>
   try {
     const result = await restorePfbackup(
       '{not-json',
-      testCtx(dir),
+      testSetupContext(dir),
       {},
       { appDataAccess: createLocalAppDataAccess(appDataDir) },
     );
@@ -212,12 +200,7 @@ test('restorePfbackup succeeds and preserves current image tags in .env', async 
   };
 
   try {
-    const result = await restorePfbackup(
-      buildArchiveContent(),
-      testCtx(dir),
-      {},
-      deps,
-    );
+    const result = await restorePfbackup(buildArchiveContent(), testSetupContext(dir), {}, deps);
     assert.equal(result.ok, true);
     const env = readEnvMap(envPath);
     assert.equal(env.get('IMPORTS_HOST_PATH'), '/data/imports');
@@ -272,7 +255,7 @@ test('restorePfbackup passes skipProviderCredentials to import', async () => {
   try {
     const result = await restorePfbackup(
       buildArchiveContent(),
-      testCtx(dir),
+      testSetupContext(dir),
       { skipProviderCredentials: true },
       deps,
     );
@@ -310,12 +293,7 @@ test('restorePfbackup rolls back after import failure', async () => {
   };
 
   try {
-    const result = await restorePfbackup(
-      buildArchiveContent(),
-      testCtx(dir),
-      {},
-      deps,
-    );
+    const result = await restorePfbackup(buildArchiveContent(), testSetupContext(dir), {}, deps);
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.equal(result.failedPhase, RESTORE_PHASES.importSnapshot);
@@ -352,13 +330,9 @@ test('restorePfbackup fails write_env and rolls back', async () => {
   };
 
   try {
-    const result = await restorePfbackup(
-      buildArchiveContent(),
-      testCtx(dir),
-      {},
-      deps,
-      { failWriteEnv: true },
-    );
+    const result = await restorePfbackup(buildArchiveContent(), testSetupContext(dir), {}, deps, {
+      failWriteEnv: true,
+    });
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.equal(result.failedPhase, RESTORE_PHASES.writeEnv);
@@ -393,13 +367,9 @@ test('restorePfbackup fails start_app and rolls back', async () => {
   };
 
   try {
-    const result = await restorePfbackup(
-      buildArchiveContent(),
-      testCtx(dir),
-      {},
-      deps,
-      { failStartApp: true },
-    );
+    const result = await restorePfbackup(buildArchiveContent(), testSetupContext(dir), {}, deps, {
+      failStartApp: true,
+    });
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.equal(result.failedPhase, RESTORE_PHASES.startApp);
@@ -441,12 +411,7 @@ test('restorePfbackup fails verify_export and rolls back', async () => {
   };
 
   try {
-    const result = await restorePfbackup(
-      buildArchiveContent(),
-      testCtx(dir),
-      {},
-      deps,
-    );
+    const result = await restorePfbackup(buildArchiveContent(), testSetupContext(dir), {}, deps);
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.equal(result.failedPhase, RESTORE_PHASES.verifyExport);
@@ -489,19 +454,13 @@ test('restorePfbackup backs up db wal and shm into rollback directory', async ()
   };
 
   try {
-    const result = await restorePfbackup(
-      buildArchiveContent(),
-      testCtx(dir),
-      {},
-      deps,
-      {
-        afterBackupRollbackState: async () => {
-          const rollbackRoot = path.join(dir, 'rollback');
-          const [restoreId] = fs.readdirSync(rollbackRoot);
-          capturedRollbackDir = path.join(rollbackRoot, restoreId, 'app-data');
-        },
+    const result = await restorePfbackup(buildArchiveContent(), testSetupContext(dir), {}, deps, {
+      afterBackupRollbackState: async () => {
+        const rollbackRoot = path.join(dir, 'rollback');
+        const [restoreId] = fs.readdirSync(rollbackRoot);
+        capturedRollbackDir = path.join(rollbackRoot, restoreId, 'app-data');
       },
-    );
+    });
     assert.equal(result.ok, true);
     for (const name of APP_DB_RELATED_FILES) {
       assert.equal(fs.existsSync(path.join(capturedRollbackDir, name)), true);
@@ -580,7 +539,7 @@ test('restorePfbackup stops stack before backing up runtime db files', async () 
   };
 
   try {
-    const result = await restorePfbackup(buildArchiveContent(), testCtx(dir), {}, deps);
+    const result = await restorePfbackup(buildArchiveContent(), testSetupContext(dir), {}, deps);
     assert.equal(result.ok, true);
     assert.ok(callOrder.indexOf('stopStack') < callOrder.indexOf('backupDbFiles'));
   } finally {
@@ -611,13 +570,9 @@ test('restorePfbackup surfaces rollback errors in failure response', async () =>
   };
 
   try {
-    const result = await restorePfbackup(
-      buildArchiveContent(),
-      testCtx(dir),
-      {},
-      deps,
-      { failRollback: true },
-    );
+    const result = await restorePfbackup(buildArchiveContent(), testSetupContext(dir), {}, deps, {
+      failRollback: true,
+    });
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.equal(result.rollbackAttempted, true);
@@ -631,5 +586,8 @@ test('restorePfbackup surfaces rollback errors in failure response', async () =>
 });
 
 test('mergeConfigRestoreManagerState unit', () => {
-  assert.deepEqual(mergeConfigRestoreManagerState({ release: null }, currentManagerState), currentManagerState);
+  assert.deepEqual(
+    mergeConfigRestoreManagerState({ release: null }, currentManagerState),
+    currentManagerState,
+  );
 });

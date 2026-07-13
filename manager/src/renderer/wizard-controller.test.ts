@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostStatus, RoutingModeCapabilities } from '../shared/host-status.js';
+import type { RoutingModeCapabilities } from '../shared/host-status.js';
+import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import { createWizardController } from './wizard-controller.js';
 import {
   wizardBackHidden,
@@ -9,57 +10,6 @@ import {
   wizardNextButtonLabel,
 } from './wizard-view-model.js';
 
-function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
-  return {
-    installHome: '/tmp/praxis',
-    mode: 'dev',
-    composeProjectName: 'pf-praxis',
-    projectRoot: '/tmp/praxis',
-    envExists: false,
-    envPath: '/tmp/praxis/.env',
-    practiceDisplayName: 'Praxis',
-    docker: {
-      installed: true,
-      daemonRunning: true,
-      composeAvailable: true,
-      detail: null,
-    },
-    folders: { imports: '/imports', exports: '/exports' },
-    appBaseUrl: 'http://127.0.0.1:8080',
-    configuredCanonicalBaseUrl: null,
-    network: {
-      configuredLanIp: null,
-      currentLanCandidates: [],
-      lanIpStale: false,
-    },
-    gateway: {
-      enabled: false,
-      gatewayInterface: 'eth1',
-      gatewayIp: '192.168.88.1',
-      portalAppIp: '',
-      authBridgeUrl: '',
-    },
-    deviceUrls: null,
-    probes: [],
-    compose: null,
-    sandboxScanner: null,
-    networkBindings: [],
-    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
-    deliveryImages: {
-      required: false,
-      configured: false,
-      appImage: null,
-      sandboxImage: null,
-      releaseVersion: null,
-      archiveSha256: null,
-      appPresent: false,
-      sandboxPresent: false,
-      ready: true,
-    },
-    ...overrides,
-  };
-}
-
 test('createWizardController initializes on show', () => {
   const controller = createWizardController({
     api: {} as never,
@@ -67,7 +17,7 @@ test('createWizardController initializes on show', () => {
     onCancel: () => {},
   });
 
-  controller.show(minimalStatus(), 'fullscreen');
+  controller.show(minimalHostStatus(), 'fullscreen');
   const state = controller.getState();
   assert.equal(state.presentation, 'fullscreen');
   assert.equal(state.step, 1);
@@ -117,7 +67,7 @@ test('goBack does not leave completed wizard', () => {
     onCancel: () => {},
   });
 
-  controller.show(minimalStatus(), 'embedded');
+  controller.show(minimalHostStatus(), 'embedded');
   controller.patchFields({
     step: 7,
     applyResult: minimalApplyResult(),
@@ -142,7 +92,7 @@ test('network load fills gateway portal IP from selected LAN IP', async () => {
     onCancel: () => {},
   });
 
-  controller.show(minimalStatus(), 'embedded');
+  controller.show(minimalHostStatus(), 'embedded');
   controller.patchFields({
     gatewayEnabled: true,
     lanAppIp: '192.168.1.10',
@@ -167,7 +117,7 @@ test('entering routing step waits for server routing mode', async () => {
     onCancel: () => {},
   });
 
-  controller.show(minimalStatus(), 'embedded');
+  controller.show(minimalHostStatus(), 'embedded');
   controller.patchFields({ step: 2, lanAppIp: '10.0.0.2' });
 
   const advance = controller.goNext();
@@ -245,7 +195,7 @@ test('wizardNextButtonDisabled blocks step 1 until prerequisites ready', () => {
     wizardNextButtonDisabled({
       ...base,
       step: 1,
-      status: minimalStatus({
+      status: minimalHostStatus({
         docker: {
           installed: false,
           daemonRunning: false,

@@ -332,6 +332,13 @@ export function registerClientAuth(
 
     const method = request.method === 'HEAD' ? 'GET' : request.method;
     const rule = getRouteRule(method, routePath);
+    if (rule?.maintenanceListenerOnly) {
+      authError(reply, 404, {
+        code: 'NOT_FOUND',
+        message: 'Not found.',
+      });
+      return;
+    }
     if (!rule && config.enabled) {
       app.log.warn({ method, routePath }, 'Auth rule missing for API route');
       authError(reply, 403, {
@@ -345,7 +352,9 @@ export function registerClientAuth(
     const bearerRole = token ? resolveRoleFromToken(token, config.captiveKey) : null;
     const sessionRole = bearerRole ? null : resolveRoleFromSessionCookie(request, staffSessions);
     const localTvRole =
-      bearerRole || sessionRole ? null : resolveLocalTvRole(request, method, rule, config.localTvOrigin);
+      bearerRole || sessionRole
+        ? null
+        : resolveLocalTvRole(request, method, rule, config.localTvOrigin);
     const role = bearerRole ?? sessionRole ?? localTvRole;
     if (bearerRole) {
       request.clientRole = bearerRole;

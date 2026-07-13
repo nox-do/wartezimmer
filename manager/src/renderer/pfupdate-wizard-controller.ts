@@ -80,7 +80,9 @@ export function createPfupdateWizardController(
         busy: false,
         statusText: '',
         error:
-          inspect.ok && inspect.compatibility.updateSupported ? null : inspectErrorMessage({ ...state, inspect }),
+          inspect.ok && inspect.compatibility.updateSupported
+            ? null
+            : inspectErrorMessage({ ...state, inspect }),
       });
       return true;
     } catch (error) {

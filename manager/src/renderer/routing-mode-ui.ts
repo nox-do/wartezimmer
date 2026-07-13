@@ -2,8 +2,7 @@ import type { RoutingMode } from '../shared/host-status.js';
 
 export type RoutingModePanelContext = 'wizard' | 'maintenance';
 
-export const ROUTING_MODE_WIZARD_HEADING =
-  'Routing — Wohin soll der Patient nach dem Check-in?';
+export const ROUTING_MODE_WIZARD_HEADING = 'Routing — Wohin soll der Patient nach dem Check-in?';
 export const ROUTING_MODE_WIZARD_INTRO_DETAIL =
   'Vom Terminal über Wartezimmer und Aufruf bis zum Zielraum — wie detailliert soll der Weg konfigurierbar sein?';
 export const ROUTING_MODE_WIZARD_FOOTNOTE =

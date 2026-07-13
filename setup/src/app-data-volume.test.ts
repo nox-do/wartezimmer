@@ -10,10 +10,7 @@ import {
 } from './app-data-volume.js';
 
 test('createDockerAppDataAccess requires configured app utility image', () => {
-  assert.throws(
-    () => createDockerAppDataAccess('pf-test', ''),
-    /PRAXIS_FLOW_APP_IMAGE fehlt/,
-  );
+  assert.throws(() => createDockerAppDataAccess('pf-test', ''), /PRAXIS_FLOW_APP_IMAGE fehlt/);
 });
 
 test('createLocalAppDataAccess moveDbAside succeeds when db files are absent', async () => {

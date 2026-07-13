@@ -367,7 +367,11 @@ try {
     files: fileEntries,
   });
 
-  fs.writeFileSync(path.join(stagingRoot, 'manifest.json'), pfupdate.serializePfupdateManifest(manifest), 'utf8');
+  fs.writeFileSync(
+    path.join(stagingRoot, 'manifest.json'),
+    pfupdate.serializePfupdateManifest(manifest),
+    'utf8',
+  );
   fs.writeFileSync(
     path.join(stagingRoot, 'SHA256SUMS.txt'),
     pfupdate.formatSha256Sums(fileEntries),
@@ -386,7 +390,9 @@ try {
   console.log(`Release: ${version} · minimum Manager: ${minimumManagerVersion}`);
   console.log('Import: Manager → Wartung → Betrieb & Updates → Update-Paket wählen …');
   console.log('');
-  console.log('Hinweis: Erstinstallation (Wizard) nutzt weiter npm run release:images (.tar.gz + Sidecar).');
+  console.log(
+    'Hinweis: Erstinstallation (Wizard) nutzt weiter npm run release:images (.tar.gz + Sidecar).',
+  );
 } finally {
   fs.rmSync(stagingRoot, { recursive: true, force: true });
 }

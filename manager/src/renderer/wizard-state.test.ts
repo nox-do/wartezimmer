@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostStatus } from '../shared/host-status.js';
+import { freshInstallHostStatus, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import {
   buildGatewayPlanInput,
   createInitialWizardFields,
@@ -11,57 +11,12 @@ import {
   validateGatewayAuthBridgeUrl,
 } from './wizard-state.js';
 
-function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
-  return {
-    installHome: '/tmp/praxis',
-    mode: 'dev',
-    composeProjectName: 'pf-praxis',
-    projectRoot: '/tmp/praxis',
-    envExists: false,
-    envPath: '/tmp/praxis/.env',
-    practiceDisplayName: null,
-    docker: {
-      installed: true,
-      daemonRunning: true,
-      composeAvailable: true,
-      detail: null,
-    },
-    folders: { imports: '/tmp/imports', exports: '/tmp/exports' },
-    appBaseUrl: 'http://127.0.0.1:8080',
-    configuredCanonicalBaseUrl: null,
-    network: {
-      configuredLanIp: null,
-      currentLanCandidates: [],
-      lanIpStale: false,
-    },
-    gateway: null,
-    deviceUrls: null,
-    probes: [],
-    compose: null,
-    sandboxScanner: null,
-    networkBindings: [],
-    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
-    deliveryImages: {
-      required: false,
-      configured: false,
-      appImage: null,
-      sandboxImage: null,
-      releaseVersion: null,
-      archiveSha256: null,
-      appPresent: false,
-      sandboxPresent: false,
-      ready: true,
-    },
-    ...overrides,
-  };
-}
-
 test('initialPracticeDisplayName uses seed default for fresh install', () => {
-  assert.equal(initialPracticeDisplayName(minimalStatus()), 'Hausarztpraxis');
+  assert.equal(initialPracticeDisplayName(freshInstallHostStatus()), 'Hausarztpraxis');
 });
 
 test('initialPracticeDisplayName uses .env value when re-running setup', () => {
-  const status = minimalStatus({
+  const status = minimalHostStatus({
     envExists: true,
     practiceDisplayName: 'Dr. Muster',
   });
@@ -69,12 +24,12 @@ test('initialPracticeDisplayName uses .env value when re-running setup', () => {
 });
 
 test('initialPracticeDisplayName stays empty when .env exists without name', () => {
-  const status = minimalStatus({ envExists: true, practiceDisplayName: null });
+  const status = minimalHostStatus({ envExists: true, practiceDisplayName: null });
   assert.equal(initialPracticeDisplayName(status), '');
 });
 
 test('initialLanIpSelection picks configured IP when it matches a candidate', () => {
-  const status = minimalStatus({
+  const status = minimalHostStatus({
     network: {
       configuredLanIp: '192.168.1.13',
       currentLanCandidates: [{ address: '192.168.1.13', interfaceName: 'en0' }],
@@ -88,7 +43,7 @@ test('initialLanIpSelection picks configured IP when it matches a candidate', ()
 });
 
 test('initialLanIpSelection uses custom field for stale configured IP', () => {
-  const status = minimalStatus({
+  const status = minimalHostStatus({
     network: {
       configuredLanIp: '192.168.1.50',
       currentLanCandidates: [{ address: '192.168.1.13', interfaceName: 'en0' }],
@@ -102,7 +57,7 @@ test('initialLanIpSelection uses custom field for stale configured IP', () => {
 });
 
 test('initialLanIpSelection prefers live candidate when configured LAN is stale', () => {
-  const status = minimalStatus({
+  const status = minimalHostStatus({
     network: {
       configuredLanIp: '192.168.1.13',
       currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
@@ -116,7 +71,7 @@ test('initialLanIpSelection prefers live candidate when configured LAN is stale'
 });
 
 test('createInitialWizardFields combines LAN, practice and storage defaults', () => {
-  const status = minimalStatus({
+  const status = minimalHostStatus({
     envExists: true,
     practiceDisplayName: 'Praxis Sonnenschein',
     folders: { imports: '/data/imports', exports: '/data/exports' },
@@ -144,7 +99,7 @@ test('createInitialWizardFields combines LAN, practice and storage defaults', ()
 });
 
 test('createInitialWizardFields prefills gateway from status', () => {
-  const status = minimalStatus({
+  const status = minimalHostStatus({
     envExists: true,
     gateway: {
       enabled: true,

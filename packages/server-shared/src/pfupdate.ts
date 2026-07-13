@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { sha256HexUtf8, stableJsonStringify } from './pfbackup.js';
+import { stableJsonStringify } from './pfbackup.js';
 
 export const PFUPDATE_FORMAT_VERSION = 1 as const;
 export const PFUPDATE_FILE_EXTENSION = 'pfupdate';
@@ -226,7 +226,10 @@ function validateManifestObject(raw: unknown): { manifest?: PfupdateManifestV1; 
     );
   }
 
-  if (!isNonEmptyString(record.releaseVersion) || !RELEASE_VERSION_PATTERN.test(record.releaseVersion.trim())) {
+  if (
+    !isNonEmptyString(record.releaseVersion) ||
+    !RELEASE_VERSION_PATTERN.test(record.releaseVersion.trim())
+  ) {
     errors.push('manifest.json: releaseVersion fehlt oder ist ungültig.');
   }
 
@@ -242,7 +245,10 @@ function validateManifestObject(raw: unknown): { manifest?: PfupdateManifestV1; 
     errors.push('manifest.json: minimumManagerVersion ist keine gültige Semver-Angabe.');
   }
 
-  if (!Array.isArray(record.supportedSettingsFormatVersions) || record.supportedSettingsFormatVersions.length === 0) {
+  if (
+    !Array.isArray(record.supportedSettingsFormatVersions) ||
+    record.supportedSettingsFormatVersions.length === 0
+  ) {
     errors.push('manifest.json: supportedSettingsFormatVersions muss ein nicht-leeres Array sein.');
   } else if (
     !record.supportedSettingsFormatVersions.every(
@@ -350,7 +356,10 @@ export function validatePfupdateFileEntries(
     }
     seen.add(pathValue);
 
-    if (!isNonEmptyString(entryRaw.sha256) || !SHA256_PATTERN.test(entryRaw.sha256.trim().toLowerCase())) {
+    if (
+      !isNonEmptyString(entryRaw.sha256) ||
+      !SHA256_PATTERN.test(entryRaw.sha256.trim().toLowerCase())
+    ) {
       errors.push(`manifest.json: files[${index}].sha256 ist ungültig.`);
     }
 
@@ -380,9 +389,7 @@ export function validatePfupdateImageRefs(manifest: PfupdateManifestV1): string[
     const expected = expectedPfupdateImageRef(IMAGE_REPO_BY_KEY[key], releaseVersion);
     const actual = manifest.images[key];
     if (actual !== expected) {
-      errors.push(
-        `manifest.json: images.${key} muss "${expected}" sein (ist "${actual}").`,
-      );
+      errors.push(`manifest.json: images.${key} muss "${expected}" sein (ist "${actual}").`);
     }
   }
 
@@ -509,10 +516,7 @@ export function validatePfupdatePackage(input: {
     };
   }
 
-  const errors = [
-    ...parsed.errors,
-    ...validatePfupdateFileDigests(parsed.manifest, input.files),
-  ];
+  const errors = [...parsed.errors, ...validatePfupdateFileDigests(parsed.manifest, input.files)];
 
   if (input.sha256Sums) {
     errors.push(...validatePfupdateSha256Sums(parsed.manifest, input.sha256Sums));

@@ -16,6 +16,7 @@ import {
   validatePfbackupContent,
   validatePfbackupFile,
 } from './settings-backup.js';
+import { testSetupContext } from './test-setup-context.js';
 
 const sampleDbSnapshot = {
   settingsFormatVersion: 1,
@@ -74,7 +75,7 @@ test('getPfbackupInfo reports latest valid backup path', () => {
       managerState: { release: null },
     });
     fs.writeFileSync(backupPath, serializePfbackupArchive(archive));
-    const info = getPfbackupInfo({ home: dir, composeProjectName: 'pf-test' });
+    const info = getPfbackupInfo(testSetupContext(dir));
     assert.equal(info.latestBackupPath, backupPath);
     assert.equal(info.envPath, path.join(dir, '.env'));
   } finally {
@@ -138,7 +139,10 @@ test('validatePfbackupFile reads archive from disk', () => {
     fs.writeFileSync(filePath, serializePfbackupArchive(archive));
     const result = validatePfbackupFile(filePath);
     assert.equal(result.archiveValid, true);
-    assert.equal(validatePfbackupArchive(JSON.parse(fs.readFileSync(filePath, 'utf8'))).archiveValid, true);
+    assert.equal(
+      validatePfbackupArchive(JSON.parse(fs.readFileSync(filePath, 'utf8'))).archiveValid,
+      true,
+    );
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

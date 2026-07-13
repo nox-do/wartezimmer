@@ -21,10 +21,7 @@ import { createSerializedExecutor } from './ops-settings-routes.js';
  * Not LAN-reachable; intra-compose access to 0.0.0.0:8082 is possible and accepted for this stack.
  * No session auth — Setup reaches it from the host only.
  */
-export function registerOpsManagerMaintenanceRoutes(
-  app: FastifyInstance,
-  db: CoreDatabase,
-): void {
+export function registerOpsManagerMaintenanceRoutes(app: FastifyInstance, db: CoreDatabase): void {
   const serializeSettingsUpdate = createSerializedExecutor();
 
   app.get(

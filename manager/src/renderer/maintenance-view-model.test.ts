@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type {
-  HostStatus,
-  LoadDeliveryImagesResult,
-  StorageFoldersResult,
-} from '../shared/host-status.js';
+import type { LoadDeliveryImagesResult, StorageFoldersResult } from '../shared/host-status.js';
+import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import {
   backupInfoText,
   fileSharingHintText,
@@ -22,47 +19,6 @@ import {
   storageSaveStatusText,
   storageWarningText,
 } from './maintenance-view-model.js';
-
-function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
-  return {
-    installHome: '/tmp/pf',
-    mode: 'install',
-    composeProjectName: 'pf-test',
-    projectRoot: '/tmp/pf',
-    envExists: false,
-    envPath: '/tmp/pf/.env',
-    practiceDisplayName: 'Test',
-    docker: {
-      installed: false,
-      daemonRunning: false,
-      composeAvailable: false,
-      detail: null,
-    },
-    folders: { imports: '/tmp/imports', exports: '/tmp/exports' },
-    appBaseUrl: 'http://192.168.1.10:8080',
-    configuredCanonicalBaseUrl: null,
-    network: { configuredLanIp: null, currentLanCandidates: [], lanIpStale: false },
-    gateway: null,
-    deviceUrls: null,
-    probes: [],
-    compose: { running: false, services: [] },
-    sandboxScanner: null,
-    networkBindings: [],
-    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
-    deliveryImages: {
-      required: true,
-      configured: false,
-      appImage: null,
-      sandboxImage: null,
-      releaseVersion: null,
-      archiveSha256: null,
-      appPresent: false,
-      sandboxPresent: false,
-      ready: false,
-    },
-    ...overrides,
-  };
-}
 
 function minimalStorageResult(overrides: Partial<StorageFoldersResult> = {}): StorageFoldersResult {
   return {
@@ -87,7 +43,7 @@ function minimalSoftwareResult(
     loadedImages: [],
     appImage: 'praxis-flow/app:1.0',
     sandboxImage: 'praxis-flow/sandbox:1.0',
-    deliveryImages: minimalStatus().deliveryImages,
+    deliveryImages: minimalHostStatus().deliveryImages,
     sha256Verified: true,
     sha256: 'abc',
     releaseVersion: null,
@@ -133,14 +89,14 @@ test('storageWarningText only when stack runs and paths changed', () => {
 });
 
 test('softwareUpdateSectionVisible when host is set up', () => {
-  assert.equal(softwareUpdateSectionVisible(minimalStatus()), false);
-  assert.equal(softwareUpdateSectionVisible(minimalStatus({ envExists: true })), true);
+  assert.equal(softwareUpdateSectionVisible(minimalHostStatus({ envExists: false })), false);
+  assert.equal(softwareUpdateSectionVisible(minimalHostStatus({ envExists: true })), true);
   assert.equal(
     softwareUpdateSectionVisible(
-      minimalStatus({
+      minimalHostStatus({
         envExists: true,
         deliveryImages: {
-          ...minimalStatus().deliveryImages,
+          ...minimalHostStatus().deliveryImages,
           required: false,
         },
       }),
@@ -151,7 +107,7 @@ test('softwareUpdateSectionVisible when host is set up', () => {
 });
 
 test('softwareUpdateInfoRows shows compact current release', () => {
-  const status = minimalStatus({
+  const status = minimalHostStatus({
     envExists: true,
     deliveryImages: {
       required: true,
@@ -171,7 +127,7 @@ test('softwareUpdateInfoRows shows compact current release', () => {
 
 test('softwareUpdateInfoRows falls back to shared image tag without releaseVersion', () => {
   const rows = softwareUpdateInfoRows(
-    minimalStatus({
+    minimalHostStatus({
       envExists: true,
       deliveryImages: {
         required: true,

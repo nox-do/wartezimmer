@@ -159,7 +159,11 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
         if (!content?.trim()) {
           return sendJson(res, 400, { error: 'content is required' });
         }
-        return sendJson(res, 200, await validatePfbackupFull(content, LOCAL_MAINTENANCE_APP_BASE_URL));
+        return sendJson(
+          res,
+          200,
+          await validatePfbackupFull(content, LOCAL_MAINTENANCE_APP_BASE_URL),
+        );
       }
 
       if (method === 'POST' && url.pathname === '/api/setup/host/backup/inspect') {

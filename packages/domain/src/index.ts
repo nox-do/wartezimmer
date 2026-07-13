@@ -86,11 +86,7 @@ export {
   TOPIC_ICON_IDS,
   type TopicIconId,
 } from './topic-icon-ids.js';
-export {
-  roomPanelDeviceId,
-  TERMINAL_DEVICE_ID,
-  WAITING_ROOM_DEVICE_ID,
-} from './device-ids.js';
+export { roomPanelDeviceId, TERMINAL_DEVICE_ID, WAITING_ROOM_DEVICE_ID } from './device-ids.js';
 export {
   DEFAULT_ROOM_PANEL_PLACEMENT_CONFIG,
   DEFAULT_ROOM_PANELS_SETTINGS,

@@ -1,7 +1,4 @@
-import type {
-  PfbackupInspectResult,
-  PfbackupRestoreResult,
-} from '../shared/host-status.js';
+import type { PfbackupInspectResult, PfbackupRestoreResult } from '../shared/host-status.js';
 
 export type RestoreWizardMode = 'standalone' | 'pre-update';
 
@@ -43,9 +40,7 @@ export function createInitialRestoreWizardState(): RestoreWizardState {
 }
 
 export function restoreWizardChooseTitle(mode: RestoreWizardMode): string {
-  return mode === 'pre-update'
-    ? 'Vor dem Software-Update'
-    : 'Settings wiederherstellen';
+  return mode === 'pre-update' ? 'Vor dem Software-Update' : 'Settings wiederherstellen';
 }
 
 export function restoreWizardChooseLead(mode: RestoreWizardMode): string {
@@ -93,7 +88,9 @@ export function restoreInspectBlockedMessage(inspect: PfbackupInspectResult): st
   return 'Restore wird nicht unterstützt.';
 }
 
-export function restoreFailureSummary(result: Extract<PfbackupRestoreResult, { ok: false }>): string {
+export function restoreFailureSummary(
+  result: Extract<PfbackupRestoreResult, { ok: false }>,
+): string {
   const parts = [`Fehler in Phase „${result.failedPhase}“.`, ...result.errors];
   if (result.rollbackAttempted) {
     parts.push(

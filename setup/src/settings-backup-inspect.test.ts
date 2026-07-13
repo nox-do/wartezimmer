@@ -3,10 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import {
-  buildPfbackupArchive,
-  serializePfbackupArchive,
-} from '@praxis-flow/server-shared';
+import { buildPfbackupArchive, serializePfbackupArchive } from '@praxis-flow/server-shared';
 import {
   buildPfbackupInspectBackupSummary,
   buildPfbackupInspectWarnings,
@@ -14,6 +11,7 @@ import {
   inspectPfbackup,
   providerCredentialsIncludedInSnapshot,
 } from './settings-backup-inspect.js';
+import { testSetupContext } from './test-setup-context.js';
 
 const sampleSettings = {
   settingsFormatVersion: 1,
@@ -181,7 +179,7 @@ test('buildPfbackupInspectWarnings reports path release and stack image mismatch
 test('inspectPfbackup rejects invalid archive without side effects', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-inspect-invalid-'));
   try {
-    const result = await inspectPfbackup('{not-json', { home: dir, composeProjectName: 'pf-test' });
+    const result = await inspectPfbackup('{not-json', testSetupContext(dir));
     assert.equal(result.ok, false);
     assert.equal(result.compatibility.archiveValid, false);
     assert.equal(result.backup, undefined);
@@ -217,14 +215,10 @@ test('inspectPfbackup returns restore preview when archive and settings validate
         createdAt: '2026-07-12T10:00:00.000Z',
       }),
     );
-    const result = await inspectPfbackup(
-      content,
-      { home: dir, composeProjectName: 'pf-test' },
-      {
-        checkTargetAppReachable: async () => true,
-        validateSettingsSnapshot: async () => ({ ok: true, errors: [] }),
-      },
-    );
+    const result = await inspectPfbackup(content, testSetupContext(dir), {
+      checkTargetAppReachable: async () => true,
+      validateSettingsSnapshot: async () => ({ ok: true, errors: [] }),
+    });
 
     assert.equal(result.ok, true);
     assert.equal(result.backup?.routingMode, 'simple');
@@ -242,17 +236,13 @@ test('inspectPfbackup marks restore unsupported when maintenance API is unreacha
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-inspect-unreachable-'));
   try {
     const content = serializePfbackupArchive(buildSampleArchive());
-    const result = await inspectPfbackup(
-      content,
-      { home: dir, composeProjectName: 'pf-test' },
-      {
-        checkTargetAppReachable: async () => false,
-        validateSettingsSnapshot: async () => ({
-          ok: false,
-          errors: ['should not be called'],
-        }),
-      },
-    );
+    const result = await inspectPfbackup(content, testSetupContext(dir), {
+      checkTargetAppReachable: async () => false,
+      validateSettingsSnapshot: async () => ({
+        ok: false,
+        errors: ['should not be called'],
+      }),
+    });
 
     assert.equal(result.ok, false);
     assert.equal(result.compatibility.targetAppReachable, false);

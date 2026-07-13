@@ -47,10 +47,7 @@ test('parseTarVerboseListOutput rejects unparseable lines', () => {
 });
 
 test('validateTarArchiveEntryPaths rejects traversal before extract', () => {
-  assert.throws(
-    () => validateTarArchiveEntryPaths(['../etc/passwd']),
-    /PFUPDATE_TAR_PATH_UNSAFE/,
-  );
+  assert.throws(() => validateTarArchiveEntryPaths(['../etc/passwd']), /PFUPDATE_TAR_PATH_UNSAFE/);
   assert.throws(
     () => validateTarArchiveEntryPaths(['manifest.json', 'images/../../etc/passwd']),
     /PFUPDATE_TAR_PATH_UNSAFE/,
@@ -107,7 +104,10 @@ with open(${JSON.stringify(archivePath)}, 'wb') as output:
   }
 
   try {
-    assert.throws(() => extractPfupdateArchive(archivePath, stagingDir), /PFUPDATE_TAR_PATH_UNSAFE/);
+    assert.throws(
+      () => extractPfupdateArchive(archivePath, stagingDir),
+      /PFUPDATE_TAR_PATH_UNSAFE/,
+    );
     assert.equal(fs.readFileSync(outsideMarker, 'utf8'), 'before');
     assert.equal(listTarArchiveEntries(archivePath).length > 0, true);
   } finally {

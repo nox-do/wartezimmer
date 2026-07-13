@@ -68,22 +68,19 @@ test('maintenance listener exports settings snapshot without auth headers', asyn
   process.env.BUSINESS_TZ = 'Europe/Berlin';
 
   const app = Fastify({ logger: false });
-  registerOpsManagerMaintenanceRoutes(
-    app,
-    {
-      exportSettingsDbSnapshot: () => ({
-        settingsFormatVersion: 1,
-        exportedAt: '2026-07-12T12:00:00.000Z',
-        opsSettings: { routingMode: 'simple' },
-        authSettings: {
-          staffPinHashMfa: 'a',
-          staffPinHashOps: 'b',
-          roomPanelPinHash: 'c',
-        },
-        messagingProviderConfigs: [],
-      }),
-    } as unknown as CoreDatabase,
-  );
+  registerOpsManagerMaintenanceRoutes(app, {
+    exportSettingsDbSnapshot: () => ({
+      settingsFormatVersion: 1,
+      exportedAt: '2026-07-12T12:00:00.000Z',
+      opsSettings: { routingMode: 'simple' },
+      authSettings: {
+        staffPinHashMfa: 'a',
+        staffPinHashOps: 'b',
+        roomPanelPinHash: 'c',
+      },
+      messagingProviderConfigs: [],
+    }),
+  } as unknown as CoreDatabase);
 
   await app.ready();
   const response = await app.inject({
@@ -98,7 +95,7 @@ test('maintenance listener exports settings snapshot without auth headers', asyn
   await app.close();
 });
 
-test('maintenance validate endpoint rejects invalid settings snapshot', async (t) => {
+test('maintenance validate endpoint rejects invalid settings snapshot', async () => {
   const app = Fastify({ logger: false });
   registerOpsManagerMaintenanceRoutes(app, {} as unknown as CoreDatabase);
 
@@ -130,15 +127,12 @@ test('maintenance validate endpoint rejects invalid settings snapshot', async (t
   await app.close();
 });
 
-test('maintenance patch rejects non-routingMode fields', async (t) => {
+test('maintenance patch rejects non-routingMode fields', async () => {
   const app = Fastify({ logger: false });
-  registerOpsManagerMaintenanceRoutes(
-    app,
-    {
-      getOpsSettings: () => ({ routingMode: 'simple' }),
-      updateOpsSettings: () => ({ routingMode: 'complex' }),
-    } as unknown as CoreDatabase,
-  );
+  registerOpsManagerMaintenanceRoutes(app, {
+    getOpsSettings: () => ({ routingMode: 'simple' }),
+    updateOpsSettings: () => ({ routingMode: 'complex' }),
+  } as unknown as CoreDatabase);
 
   await app.ready();
   const response = await app.inject({
@@ -156,23 +150,20 @@ test('maintenance patch rejects non-routingMode fields', async (t) => {
   await app.close();
 });
 
-test('maintenance capabilities are readable without session', async (t) => {
+test('maintenance capabilities are readable without session', async () => {
   const app = Fastify({ logger: false });
-  registerOpsManagerMaintenanceRoutes(
-    app,
-    {
-      getRoutingCapabilities: () => ({
-        routingMode: 'complex',
-        openVisitCount: 0,
-        features: {
-          complexRouting: true,
-          journeyDesigner: true,
-          routingSimulator: true,
-          complexRoutingLicensed: true,
-        },
-      }),
-    } as unknown as CoreDatabase,
-  );
+  registerOpsManagerMaintenanceRoutes(app, {
+    getRoutingCapabilities: () => ({
+      routingMode: 'complex',
+      openVisitCount: 0,
+      features: {
+        complexRouting: true,
+        journeyDesigner: true,
+        routingSimulator: true,
+        complexRoutingLicensed: true,
+      },
+    }),
+  } as unknown as CoreDatabase);
 
   await app.ready();
   const response = await app.inject({
@@ -199,9 +190,7 @@ function mutateTopicLabel(db: DatabaseSync, label: string): void {
     .prepare('SELECT topic_settings_json AS json FROM ops_settings WHERE id = ?')
     .get('singleton') as { json?: string };
   const topics = JSON.parse(row?.json ?? '[]') as Array<Record<string, unknown>>;
-  const next = topics.map((topic) =>
-    topic.topicId === 'blut' ? { ...topic, label } : topic,
-  );
+  const next = topics.map((topic) => (topic.topicId === 'blut' ? { ...topic, label } : topic));
   db.prepare('UPDATE ops_settings SET topic_settings_json = ? WHERE id = ?').run(
     JSON.stringify(next),
     'singleton',

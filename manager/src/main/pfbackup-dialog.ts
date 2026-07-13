@@ -53,7 +53,9 @@ export async function savePfbackupToDisk(
 
 export async function readPfbackupFromDialog(
   parentWindow: BrowserWindow | null,
-): Promise<{ canceled: true; content: null } | { canceled: false; content: string; filePath: string }> {
+): Promise<
+  { canceled: true; content: null } | { canceled: false; content: string; filePath: string }
+> {
   const dialogOptions: OpenDialogOptions = {
     title: 'Praxis-Backup prüfen',
     properties: ['openFile'],

@@ -6,8 +6,6 @@ import type {
   ComposeActionResult,
   ComposeLogsResult,
   ComposeStatus,
-  EnvBackupInfo,
-  EnvBackupResult,
   PfbackupInfo,
   PfbackupResult,
   PfbackupValidateResult,

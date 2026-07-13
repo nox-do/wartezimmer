@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostStatus } from '../shared/host-status.js';
+import { freshInstallHostStatus, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import {
   currentWlanLabel,
   deviceUrlEntries,
@@ -13,53 +13,12 @@ import {
   statusGridRows,
 } from './status-view-model.js';
 
-function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
-  return {
-    installHome: '/tmp/pf',
-    mode: 'install',
-    composeProjectName: 'pf-test',
-    projectRoot: '/tmp/pf',
-    envExists: false,
-    envPath: '/tmp/pf/.env',
-    practiceDisplayName: 'Test',
-    docker: {
-      installed: false,
-      daemonRunning: false,
-      composeAvailable: false,
-      detail: null,
-    },
-    folders: { imports: '/tmp/imports', exports: '/tmp/exports' },
-    appBaseUrl: 'http://192.168.1.10:8080',
-    configuredCanonicalBaseUrl: null,
-    network: { configuredLanIp: null, currentLanCandidates: [], lanIpStale: false },
-    gateway: null,
-    deviceUrls: null,
-    probes: [],
-    compose: { running: false, services: [] },
-    sandboxScanner: null,
-    networkBindings: [],
-    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
-    deliveryImages: {
-      required: true,
-      configured: false,
-      appImage: null,
-      sandboxImage: null,
-      releaseVersion: null,
-      archiveSha256: null,
-      appPresent: false,
-      sandboxPresent: false,
-      ready: false,
-    },
-    ...overrides,
-  };
-}
-
 test('setupEntryTone classifies fresh install', () => {
-  assert.equal(setupEntryTone(minimalStatus()), 'fresh');
+  assert.equal(setupEntryTone(freshInstallHostStatus()), 'fresh');
 });
 
 test('setupEntryTone classifies docker gap', () => {
-  const status = minimalStatus({
+  const status = minimalHostStatus({
     envExists: true,
     docker: { installed: true, daemonRunning: false, composeAvailable: true, detail: null },
   });
@@ -67,7 +26,7 @@ test('setupEntryTone classifies docker gap', () => {
 });
 
 test('setupEntryTone classifies missing release package', () => {
-  const status = minimalStatus({
+  const status = minimalHostStatus({
     envExists: true,
     docker: { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
     deliveryImages: {
@@ -86,7 +45,7 @@ test('setupEntryTone classifies missing release package', () => {
 });
 
 test('setupEntryTone classifies maintenance when setup is complete', () => {
-  const status = minimalStatus({
+  const status = minimalHostStatus({
     envExists: true,
     docker: { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
     network: { configuredLanIp: '192.168.1.10', currentLanCandidates: [], lanIpStale: false },
@@ -107,7 +66,7 @@ test('setupEntryTone classifies maintenance when setup is complete', () => {
 });
 
 test('setupEntryContent adapts copy for release gap', () => {
-  const status = minimalStatus({
+  const status = minimalHostStatus({
     envExists: true,
     docker: { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
   });
@@ -118,7 +77,7 @@ test('setupEntryContent adapts copy for release gap', () => {
 
 test('setupChecklistItems marks docker step open when daemon is down', () => {
   const items = setupChecklistItems(
-    minimalStatus({
+    minimalHostStatus({
       envExists: true,
       docker: { installed: true, daemonRunning: false, composeAvailable: true, detail: null },
     }),
@@ -129,12 +88,23 @@ test('setupChecklistItems marks docker step open when daemon is down', () => {
 
 test('statusGridRows includes wlan and lan when configured', () => {
   const rows = statusGridRows(
-    minimalStatus({
+    minimalHostStatus({
       envExists: true,
       network: {
         configuredLanIp: '192.168.1.10',
         currentLanCandidates: [{ address: '192.168.1.20', interfaceName: 'en0' }],
         lanIpStale: false,
+      },
+      deliveryImages: {
+        required: true,
+        configured: true,
+        appImage: null,
+        sandboxImage: null,
+        releaseVersion: null,
+        archiveSha256: null,
+        appPresent: true,
+        sandboxPresent: true,
+        ready: true,
       },
     }),
   );
@@ -144,7 +114,7 @@ test('statusGridRows includes wlan and lan when configured', () => {
   );
   assert.equal(
     currentWlanLabel(
-      minimalStatus({
+      minimalHostStatus({
         network: {
           configuredLanIp: null,
           currentLanCandidates: [{ address: '192.168.1.20', interfaceName: 'en0' }],
@@ -157,16 +127,27 @@ test('statusGridRows includes wlan and lan when configured', () => {
 });
 
 test('showDeliveryImagesWarning only outside setup entry', () => {
-  const status = minimalStatus({
+  const status = minimalHostStatus({
     envExists: true,
     docker: { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
+    deliveryImages: {
+      required: true,
+      configured: false,
+      appImage: null,
+      sandboxImage: null,
+      releaseVersion: null,
+      archiveSha256: null,
+      appPresent: false,
+      sandboxPresent: false,
+      ready: false,
+    },
   });
   assert.equal(showDeliveryImagesWarning(status, true), false);
   assert.equal(showDeliveryImagesWarning(status, false), true);
 });
 
 test('lanWarningText covers stale lan and missing lan', () => {
-  const stale = minimalStatus({
+  const stale = minimalHostStatus({
     envExists: true,
     network: {
       configuredLanIp: '192.168.1.10',
@@ -176,13 +157,16 @@ test('lanWarningText covers stale lan and missing lan', () => {
   });
   assert.match(lanWarningText(stale, false) ?? '', /passt nicht zur aktuellen WLAN-IP/);
 
-  const missing = minimalStatus({ envExists: true });
+  const missing = minimalHostStatus({
+    envExists: true,
+    network: { configuredLanIp: null, currentLanCandidates: [], lanIpStale: false },
+  });
   assert.match(lanWarningText(missing, false) ?? '', /LAN noch nicht konfiguriert/);
 });
 
 test('deviceUrlEntries maps device urls with tv kiosk tip', () => {
   const entries = deviceUrlEntries(
-    minimalStatus({
+    minimalHostStatus({
       deviceUrls: {
         appBaseUrl: 'http://app',
         terminal: 'http://t',

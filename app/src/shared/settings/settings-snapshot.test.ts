@@ -35,9 +35,7 @@ function mutateTopicLabel(db: DatabaseSync, label: string): void {
     .prepare('SELECT topic_settings_json AS json FROM ops_settings WHERE id = ?')
     .get('singleton') as { json?: string };
   const topics = JSON.parse(row?.json ?? '[]') as Array<Record<string, unknown>>;
-  const next = topics.map((topic) =>
-    topic.topicId === 'blut' ? { ...topic, label } : topic,
-  );
+  const next = topics.map((topic) => (topic.topicId === 'blut' ? { ...topic, label } : topic));
   db.prepare('UPDATE ops_settings SET topic_settings_json = ? WHERE id = ?').run(
     JSON.stringify(next),
     'singleton',
@@ -153,7 +151,9 @@ test('import without provider credentials clears credential blobs and disables e
 
   const snapshot = exportSettingsSnapshotFromDb(sourceDb, sampleEnv());
   const targetDb = openFreshDb();
-  const result = importSettingsSnapshotIntoDb(targetDb, snapshot, { skipProviderCredentials: true });
+  const result = importSettingsSnapshotIntoDb(targetDb, snapshot, {
+    skipProviderCredentials: true,
+  });
   assert.deepEqual(
     [...result.disabledProviderIds].sort(),
     snapshot.messagingProviderConfigs
@@ -177,16 +177,12 @@ test('import rolls back ops auth and providers when catalog sync hook fails', ()
   mutateTopicLabel(db, beforeLabel);
   const snapshot = exportSettingsSnapshotFromDb(db, sampleEnv());
   mutateTopicLabel(db, 'Nach Import-Versuch');
-  db
-    .prepare(
-      "UPDATE auth_settings SET staff_pin_hash_mfa = ? WHERE id = 'singleton'",
-    )
-    .run('changed-auth-hash');
-  db
-    .prepare(
-      "UPDATE messaging_provider_configs SET credentials_json = ? WHERE provider_id = 'seven'",
-    )
-    .run('{"apiKey":"before-import"}');
+  db.prepare("UPDATE auth_settings SET staff_pin_hash_mfa = ? WHERE id = 'singleton'").run(
+    'changed-auth-hash',
+  );
+  db.prepare(
+    "UPDATE messaging_provider_configs SET credentials_json = ? WHERE provider_id = 'seven'",
+  ).run('{"apiKey":"before-import"}');
 
   assert.throws(
     () =>
@@ -215,7 +211,9 @@ test('import rolls back ops auth and providers when catalog sync hook fails', ()
   assert.equal(auth.hash, 'changed-auth-hash');
 
   const seven = db
-    .prepare('SELECT credentials_json AS credentialsJson FROM messaging_provider_configs WHERE provider_id = ?')
+    .prepare(
+      'SELECT credentials_json AS credentialsJson FROM messaging_provider_configs WHERE provider_id = ?',
+    )
     .get('seven') as { credentialsJson?: string } | undefined;
   assert.equal(seven?.credentialsJson, '{"apiKey":"before-import"}');
 });

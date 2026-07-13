@@ -6,10 +6,7 @@ export const PFBACKUP_FORMAT_VERSION = 1 as const;
 /** Settings snapshot schema version used by app export/import and `.pfbackup` / `.pfupdate` compatibility. */
 export const CURRENT_SETTINGS_FORMAT_VERSION = 1 as const;
 export { PFBACKUP_BASENAME_PREFIX, PFBACKUP_FILE_EXTENSION } from './backup-path-labels.js';
-export {
-  formatPfbackupLabel,
-  parsePfbackupTimestampFromPath,
-} from './backup-path-labels.js';
+export { formatPfbackupLabel, parsePfbackupTimestampFromPath } from './backup-path-labels.js';
 
 /** @deprecated No keys are excluded — full stack `.env` is exported into settings snapshots. */
 export const SETTINGS_EXPORT_ENV_EXCLUDED_KEYS = new Set<string>();
@@ -246,7 +243,9 @@ export function validateManagerStateForBackup(raw: unknown): ManagerStateValidat
   };
 }
 
-export function validateManagerStateJsonForBackup(managerStateJson: string): ManagerStateValidationResult {
+export function validateManagerStateJsonForBackup(
+  managerStateJson: string,
+): ManagerStateValidationResult {
   try {
     return validateManagerStateForBackup(JSON.parse(managerStateJson));
   } catch {
@@ -304,7 +303,10 @@ export function parsePfbackupArchive(raw: unknown): PfbackupArchiveV1 {
   if (!candidate.manifest || typeof candidate.manifest !== 'object') {
     throw new Error('PFBACKUP_MANIFEST_MISSING');
   }
-  if (typeof candidate.settingsJson !== 'string' || typeof candidate.managerStateJson !== 'string') {
+  if (
+    typeof candidate.settingsJson !== 'string' ||
+    typeof candidate.managerStateJson !== 'string'
+  ) {
     throw new Error('PFBACKUP_PAYLOAD_MISSING');
   }
 

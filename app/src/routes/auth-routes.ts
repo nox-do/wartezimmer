@@ -1,8 +1,5 @@
 import { roomPanelRequiresPin } from '@praxis-flow/domain';
-import {
-  listEnabledRoomPanelPlacements,
-  roomPanelConfigForPlacement,
-} from '@praxis-flow/domain';
+import { listEnabledRoomPanelPlacements, roomPanelConfigForPlacement } from '@praxis-flow/domain';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type {
   ChangePinBody,
@@ -46,10 +43,7 @@ import {
   verifyStaffPin,
 } from '../auth/staff-session-auth.js';
 import type { OpsSettings } from '../shared/db/db-types.js';
-import {
-  toStaffPinHashConfig,
-  type AuthSettings,
-} from '../shared/db/database-auth-settings.js';
+import { toStaffPinHashConfig, type AuthSettings } from '../shared/db/database-auth-settings.js';
 
 function isRoomPanelPlacement(value: string | undefined): value is RoomPanelPlacement {
   return value === 'outside' || value === 'inside';

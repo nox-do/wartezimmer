@@ -13,9 +13,7 @@ import {
   suggestCredentialSkipAfterRestoreFailure,
 } from './restore-wizard-flow.js';
 
-function inspectFixture(
-  overrides: Partial<PfbackupInspectResult> = {},
-): PfbackupInspectResult {
+function inspectFixture(overrides: Partial<PfbackupInspectResult> = {}): PfbackupInspectResult {
   return {
     ok: true,
     backup: {
@@ -221,10 +219,7 @@ test('suggestCredentialSkipAfterRestoreFailure does not preselect on unrelated i
     rollbackSucceeded: true,
     errors: ['Catalog integrity check failed after import.'],
   };
-  assert.equal(
-    shouldOfferCredentialSkip({ inspect, restoreResult: failed }),
-    true,
-  );
+  assert.equal(shouldOfferCredentialSkip({ inspect, restoreResult: failed }), true);
   assert.equal(
     suggestCredentialSkipAfterRestoreFailure({
       inspect,

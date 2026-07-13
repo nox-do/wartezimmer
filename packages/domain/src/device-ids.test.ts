@@ -1,10 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  roomPanelDeviceId,
-  TERMINAL_DEVICE_ID,
-  WAITING_ROOM_DEVICE_ID,
-} from './device-ids.js';
+import { roomPanelDeviceId, TERMINAL_DEVICE_ID, WAITING_ROOM_DEVICE_ID } from './device-ids.js';
 
 test('device id constants', () => {
   assert.equal(WAITING_ROOM_DEVICE_ID, 'waiting-room');

@@ -43,9 +43,7 @@ export async function pickAndApplyPfupdate(
   }
 }
 
-export function formatPfupdateFailure(
-  result: Extract<PfupdateApplyResult, { ok: false }>,
-): string {
+export function formatPfupdateFailure(result: Extract<PfupdateApplyResult, { ok: false }>): string {
   const parts: string[] = [];
   if (result.rollbackAttempted && result.rollbackSucceeded) {
     parts.push('Update fehlgeschlagen. Die vorherige Version wurde wiederhergestellt.');
@@ -63,9 +61,7 @@ export function formatPfupdateFailure(
   return parts.join(' ');
 }
 
-export function formatPfupdateSuccess(
-  result: Extract<PfupdateApplyResult, { ok: true }>,
-): string {
+export function formatPfupdateSuccess(result: Extract<PfupdateApplyResult, { ok: true }>): string {
   const parts = [`Update abgeschlossen — Version ${result.report.targetVersion}.`];
   if (result.report.previousVersion) {
     parts.push(`Vorher: ${result.report.previousVersion}.`);

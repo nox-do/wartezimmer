@@ -208,7 +208,15 @@ export async function getComposeLogs(
   return result;
 }
 
-export { createPfbackup as backupPf, getPfbackupInfo, validatePfbackupFull, inspectPfbackup, restorePfbackup, applyPfupdate, inspectPfupdate };
+export {
+  createPfbackup as backupPf,
+  getPfbackupInfo,
+  validatePfbackupFull,
+  inspectPfbackup,
+  restorePfbackup,
+  applyPfupdate,
+  inspectPfupdate,
+};
 
 export async function resetStaffPinsAndRestart(ctx: SetupContext): Promise<ResetStaffPinsResult> {
   const envPath = path.join(ctx.home, '.env');
@@ -269,7 +277,6 @@ export async function resetStaffPinsAndRestart(ctx: SetupContext): Promise<Reset
     compose,
   };
 }
-
 
 export function resolveComposeBuild(input: {
   preserveEnv?: boolean;

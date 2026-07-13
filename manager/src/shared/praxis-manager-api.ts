@@ -4,8 +4,6 @@ import type {
   ComposeActionResult,
   ComposeLogsResult,
   ComposeStatus,
-  EnvBackupInfo,
-  EnvBackupResult,
   PfbackupInfo,
   PfbackupResult,
   PfbackupValidateResult,
@@ -62,9 +60,7 @@ export type PraxisManagerSetupApi = {
 export type PraxisManagerMaintenanceApi = {
   getComposeStatus(): Promise<ComposeStatus>;
   getComposeLogs(service?: string, tail?: number): Promise<ComposeLogsResult>;
-  runComposeAction(
-    action: 'start' | 'stop' | 'restart',
-  ): Promise<ComposeActionResult>;
+  runComposeAction(action: 'start' | 'stop' | 'restart'): Promise<ComposeActionResult>;
   createPfbackup(): Promise<PfbackupResult>;
   savePfbackup(backupPath: string): Promise<SavePfbackupResult>;
   validatePfbackup(content: string): Promise<PfbackupValidateResult>;

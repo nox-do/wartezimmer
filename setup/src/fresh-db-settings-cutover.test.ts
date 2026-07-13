@@ -30,7 +30,10 @@ function seedAppData(dir: string): string {
   return dir;
 }
 
-function baseDeps(appDataDir: string, overrides: Partial<FreshDbCutoverDeps> = {}): FreshDbCutoverDeps {
+function baseDeps(
+  appDataDir: string,
+  overrides: Partial<FreshDbCutoverDeps> = {},
+): FreshDbCutoverDeps {
   return {
     appDataAccess: createLocalAppDataAccess(appDataDir),
     startAppStack: async () => ({ ok: true, log: 'app started', gatewaySkipped: false }),
@@ -57,7 +60,7 @@ function baseDeps(appDataDir: string, overrides: Partial<FreshDbCutoverDeps> = {
   };
 }
 
-function cutoverInput(home: string, appDataDir: string) {
+function cutoverInput(home: string, _appDataDir: string) {
   const rollbackDir = path.join(home, 'rollback', 'test-id');
   fs.mkdirSync(rollbackDir, { recursive: true });
   return {

@@ -36,7 +36,11 @@ import {
   type SettingsSnapshotDbFromApp,
 } from './settings-backup.js';
 import type { SetupContext } from './setup-context.js';
-import { resolveCanonicalBaseUrl, LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
+import {
+  resolveCanonicalBaseUrl,
+  LOCAL_MAINTENANCE_APP_BASE_URL,
+  LOCAL_SETUP_APP_BASE_URL,
+} from './urls.js';
 import { runConnectionProbes } from './probes.js';
 import { resolveDeliveryImageConfig } from './delivery-images.js';
 
@@ -166,7 +170,10 @@ export function mergeConfigRestoreManagerState(
   };
 }
 
-function resolveComposeRunOptions(ctx: SetupContext, envMap: Map<string, string>): ComposeRunOptions {
+function resolveComposeRunOptions(
+  ctx: SetupContext,
+  envMap: Map<string, string>,
+): ComposeRunOptions {
   const deliveryConfig = resolveDeliveryImageConfig({
     projectRoot: ctx.home,
     envMap,
@@ -308,14 +315,18 @@ async function executeRollback(input: {
     await input.appDataAccess.moveDbAside(failedRestoreDir);
   } catch (error) {
     errors.push(
-      error instanceof Error ? error.message : 'Neue Runtime-DB konnte nicht beiseitegelegt werden.',
+      error instanceof Error
+        ? error.message
+        : 'Neue Runtime-DB konnte nicht beiseitegelegt werden.',
     );
   }
   try {
     await input.appDataAccess.restoreDbFiles(input.rollback.appDataDir);
   } catch (error) {
     errors.push(
-      error instanceof Error ? error.message : 'Rollback-Runtime-DB konnte nicht zurückgespielt werden.',
+      error instanceof Error
+        ? error.message
+        : 'Rollback-Runtime-DB konnte nicht zurückgespielt werden.',
     );
   }
 
@@ -328,7 +339,10 @@ async function executeRollback(input: {
 
   const health = await defaultRunHealthChecks({
     localAppBaseUrl: input.localAppBaseUrl,
-    lanAppBaseUrl: resolveCanonicalBaseUrl(envAfterRollback, envAfterRollback.get('SETUP_LAN_APP_IP')),
+    lanAppBaseUrl: resolveCanonicalBaseUrl(
+      envAfterRollback,
+      envAfterRollback.get('SETUP_LAN_APP_IP'),
+    ),
   });
   if (!health.ok) {
     errors.push(...health.errors);
@@ -368,10 +382,7 @@ function failureWithRollback(
   return failureResult(
     restoreId,
     failedPhase,
-    [
-      ...originalErrors,
-      ...rollbackResult.errors.map((error) => `Rollback: ${error}`),
-    ],
+    [...originalErrors, ...rollbackResult.errors.map((error) => `Rollback: ${error}`)],
     true,
     rollbackResult.ok,
   );
@@ -395,24 +406,29 @@ export async function restorePfbackup(
   const stopStack = deps.stopStack ?? composeStop;
   const startAppStack =
     deps.startAppStack ??
-    (async (runOptions) => composeUp({ ...runOptions, build: false, services: ['sandbox', 'app'] }));
+    (async (runOptions) =>
+      composeUp({ ...runOptions, build: false, services: ['sandbox', 'app'] }));
   const startFullStack =
     deps.startFullStack ?? (async (runOptions) => composeUp({ ...runOptions, build: false }));
   const waitForMaintenanceApp =
-    deps.waitForMaintenanceApp ??
-    ((baseUrl: string) => defaultWaitForMaintenanceApp(baseUrl));
+    deps.waitForMaintenanceApp ?? ((baseUrl: string) => defaultWaitForMaintenanceApp(baseUrl));
   const importSnapshot = deps.importSnapshot ?? importSettingsSnapshotViaApp;
   const exportDbSnapshot =
-    deps.exportDbSnapshot ??
-    ((baseUrl: string) => fetchSettingsDbSnapshotFromApp(baseUrl));
+    deps.exportDbSnapshot ?? ((baseUrl: string) => fetchSettingsDbSnapshotFromApp(baseUrl));
   const composeStatus = deps.composeStatus ?? composePs;
   const runHealthChecks = deps.runHealthChecks ?? defaultRunHealthChecks;
 
-  let rollback: RollbackArtifacts | null = null;
+  let rollback: RollbackArtifacts;
 
   const archiveResult = validateArchive(content);
   if (!archiveResult.archiveValid) {
-    return failureResult(restoreId, RESTORE_PHASES.validateArchive, archiveResult.errors, false, false);
+    return failureResult(
+      restoreId,
+      RESTORE_PHASES.validateArchive,
+      archiveResult.errors,
+      false,
+      false,
+    );
   }
 
   let settings: Record<string, unknown>;
@@ -466,7 +482,10 @@ export async function restorePfbackup(
       ? (settings.env as Record<string, string>)
       : {};
   const restoreEnv = mergeConfigRestoreEnv(backupEnv, currentEnv);
-  const restoreManagerState = mergeConfigRestoreManagerState(backupManagerState, currentManagerState);
+  const restoreManagerState = mergeConfigRestoreManagerState(
+    backupManagerState,
+    currentManagerState,
+  );
 
   const stop = await stopStack(runOptions);
   if (!stop.ok) {
@@ -484,12 +503,11 @@ export async function restorePfbackup(
     await testHooks.afterBackupRollbackState?.();
   } catch (error) {
     const restart = await startFullStack(runOptions);
-    const errors = [
-      error instanceof Error ? error.message : 'Rollback-Sicherung fehlgeschlagen.',
-    ];
+    const errors = [error instanceof Error ? error.message : 'Rollback-Sicherung fehlgeschlagen.'];
     if (!restart.ok) {
       errors.push(
-        restart.log || 'Stack konnte nach fehlgeschlagener Rollback-Sicherung nicht neu gestartet werden.',
+        restart.log ||
+          'Stack konnte nach fehlgeschlagener Rollback-Sicherung nicht neu gestartet werden.',
       );
     }
     return failureResult(restoreId, RESTORE_PHASES.backupRollbackState, errors, false, false);
@@ -512,9 +530,12 @@ export async function restorePfbackup(
       localAppBaseUrl,
       failRollback: testHooks.failRollback,
     });
-    return failureWithRollback(restoreId, RESTORE_PHASES.writeEnv, [
-      error instanceof Error ? error.message : 'Backup-.env konnte nicht geschrieben werden.',
-    ], rollbackResult);
+    return failureWithRollback(
+      restoreId,
+      RESTORE_PHASES.writeEnv,
+      [error instanceof Error ? error.message : 'Backup-.env konnte nicht geschrieben werden.'],
+      rollbackResult,
+    );
   }
 
   try {
@@ -608,10 +629,10 @@ export async function restorePfbackup(
     restoreId,
     report: {
       restoreId,
-      routingMode: importResult.routingMode ?? (typeof opsSettings?.routingMode === 'string' ? opsSettings.routingMode : null),
-      portalEnabled:
-        importResult.portalEnabled ??
-        (opsSettings?.portalEnabled === true),
+      routingMode:
+        importResult.routingMode ??
+        (typeof opsSettings?.routingMode === 'string' ? opsSettings.routingMode : null),
+      portalEnabled: importResult.portalEnabled ?? opsSettings?.portalEnabled === true,
       providerCredentialsSkipped:
         importResult.providerCredentialsSkipped ?? skipProviderCredentials,
       disabledProviderIds: importResult.disabledProviderIds ?? [],

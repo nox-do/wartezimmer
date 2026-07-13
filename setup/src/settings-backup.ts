@@ -179,7 +179,9 @@ export async function validateSettingsSnapshotWithApp(
   } catch {
     return {
       ok: false,
-      errors: ['Praxis Flow Maintenance-API ist nicht erreichbar (Port 8082) — Restore-Validierung nicht möglich.'],
+      errors: [
+        'Praxis Flow Maintenance-API ist nicht erreichbar (Port 8082) — Restore-Validierung nicht möglich.',
+      ],
     };
   }
 }
@@ -246,7 +248,9 @@ export async function importSettingsSnapshotViaApp(
   } catch {
     return {
       ok: false,
-      errors: ['Praxis Flow Maintenance-API ist nicht erreichbar (Port 8082) — Import nicht möglich.'],
+      errors: [
+        'Praxis Flow Maintenance-API ist nicht erreichbar (Port 8082) — Import nicht möglich.',
+      ],
     };
   }
 }

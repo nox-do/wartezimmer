@@ -1,51 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { HostRefreshController } from './host-refresh-controller.js';
-import { createManagerNavigation, defaultWizardPresentation, shouldAutoStartFullscreenWizard } from './manager-navigation.js';
+import {
+  createManagerNavigation,
+  defaultWizardPresentation,
+  shouldAutoStartFullscreenWizard,
+} from './manager-navigation.js';
 import type { ManagerNavigationSessions } from './manager-navigation.js';
 import type { HostStatus } from '../shared/host-status.js';
+import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import type { WizardPresentation } from './manager-navigation.js';
-
-function minimalStatus(overrides: Partial<HostStatus> = {}): HostStatus {
-  return {
-    installHome: '/tmp/pf',
-    mode: 'install',
-    composeProjectName: 'pf-test',
-    projectRoot: '/tmp/pf',
-    envExists: true,
-    envPath: '/tmp/pf/.env',
-    practiceDisplayName: 'Test',
-    docker: {
-      installed: true,
-      daemonRunning: true,
-      composeAvailable: true,
-      detail: null,
-    },
-    folders: { imports: '/tmp/imports', exports: '/tmp/exports' },
-    appBaseUrl: 'http://192.168.1.10:8080',
-    configuredCanonicalBaseUrl: null,
-    network: { configuredLanIp: '192.168.1.10', currentLanCandidates: [], lanIpStale: false },
-    gateway: null,
-    deviceUrls: null,
-    probes: [],
-    compose: { running: true, services: [] },
-    sandboxScanner: null,
-    networkBindings: [],
-    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
-    deliveryImages: {
-      required: false,
-      configured: true,
-      appImage: null,
-      sandboxImage: null,
-      releaseVersion: null,
-      archiveSha256: null,
-      appPresent: true,
-      sandboxPresent: true,
-      ready: true,
-    },
-    ...overrides,
-  };
-}
 
 function createMockHostRefresh(options: {
   getView: () => 'status' | 'maintenance' | 'network' | 'wizard';
@@ -55,7 +19,7 @@ function createMockHostRefresh(options: {
     getView: options.getView,
     setView: () => {},
     refresh: options.refresh ?? (async () => {}),
-    getLastConfig: () => minimalStatus(),
+    getLastConfig: () => minimalHostStatus(),
     getLastRuntime: () => null,
   };
 }
@@ -114,7 +78,7 @@ test('deferred view shows loading until refresh completes', async () => {
     }),
     syncShell: () => {},
     sessions,
-    fetchSetupStatus: async () => minimalStatus(),
+    fetchSetupStatus: async () => minimalHostStatus(),
   });
 
   navigation.navigateTo('maintenance');
@@ -144,12 +108,12 @@ test('does not show maintenance after navigating to network before refresh resol
       refresh: async () => {
         await refreshGate;
       },
-      getLastConfig: () => minimalStatus({ practiceDisplayName: 'Fresh' }),
+      getLastConfig: () => minimalHostStatus({ practiceDisplayName: 'Fresh' }),
       getLastRuntime: () => null,
     },
     syncShell: () => {},
     sessions,
-    fetchSetupStatus: async () => minimalStatus(),
+    fetchSetupStatus: async () => minimalHostStatus(),
   });
 
   navigation.navigateTo('maintenance');
@@ -183,7 +147,7 @@ test('does not show wizard after leaving wizard before fetch resolves', async ()
 
   navigation.navigateTo('wizard');
   currentView = 'status';
-  resolveFetch(minimalStatus());
+  resolveFetch(minimalHostStatus());
   await fetchGate;
   await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -192,12 +156,12 @@ test('does not show wizard after leaving wizard before fetch resolves', async ()
 
 test('defaultWizardPresentation uses fullscreen before env exists', () => {
   assert.equal(defaultWizardPresentation(null), 'fullscreen');
-  assert.equal(defaultWizardPresentation(minimalStatus({ envExists: false })), 'fullscreen');
-  assert.equal(defaultWizardPresentation(minimalStatus({ envExists: true })), 'embedded');
+  assert.equal(defaultWizardPresentation(minimalHostStatus({ envExists: false })), 'fullscreen');
+  assert.equal(defaultWizardPresentation(minimalHostStatus({ envExists: true })), 'embedded');
 });
 
 test('shouldAutoStartFullscreenWizard only before .env exists', () => {
   assert.equal(shouldAutoStartFullscreenWizard(null), true);
-  assert.equal(shouldAutoStartFullscreenWizard(minimalStatus({ envExists: false })), true);
-  assert.equal(shouldAutoStartFullscreenWizard(minimalStatus({ envExists: true })), false);
+  assert.equal(shouldAutoStartFullscreenWizard(minimalHostStatus({ envExists: false })), true);
+  assert.equal(shouldAutoStartFullscreenWizard(minimalHostStatus({ envExists: true })), false);
 });

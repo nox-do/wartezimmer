@@ -12,15 +12,15 @@ Dieses Dokument legt fest, **welche Werte** beim Backup/Restore/Update erhalten 
 
 ## Legende
 
-| Klasse | Bedeutung | Backup | Restore |
-|--------|-----------|--------|---------|
-| **Fachlich** | Praxis-/Produkt-Konfiguration | Ja, Klartext | Ersetzen → ggf. Catalog-Sync |
-| **Zugriffsschutz** | PIN-**Hashes** | Ja, Klartext | Ersetzen; lokal zurücksetzbar |
-| **At-rest Secret** | SMS/API-Credentials in DB | Ja, **wie in DB gespeichert** (verschlüsselter Blob) | Import; Entschlüsselung nur zur Laufzeit im RAM |
-| **Host / Stack** | Pfade, URLs, `.env`, Gateway | Ja, Klartext | Merge (siehe unten); Pfade ggf. bestätigen |
-| **Deployment** | Release-Images (`manager-state`) | Ja, im **Backup-Manifest** | Rollback-Referenz |
-| **Projektion** | flow-core-Catalog | Nein | Neu generieren |
-| **Runtime** | Visits, Sessions, Queue, … | Nein | Verwerfen |
+| Klasse             | Bedeutung                        | Backup                                               | Restore                                         |
+| ------------------ | -------------------------------- | ---------------------------------------------------- | ----------------------------------------------- |
+| **Fachlich**       | Praxis-/Produkt-Konfiguration    | Ja, Klartext                                         | Ersetzen → ggf. Catalog-Sync                    |
+| **Zugriffsschutz** | PIN-**Hashes**                   | Ja, Klartext                                         | Ersetzen; lokal zurücksetzbar                   |
+| **At-rest Secret** | SMS/API-Credentials in DB        | Ja, **wie in DB gespeichert** (verschlüsselter Blob) | Import; Entschlüsselung nur zur Laufzeit im RAM |
+| **Host / Stack**   | Pfade, URLs, `.env`, Gateway     | Ja, Klartext                                         | Merge (siehe unten); Pfade ggf. bestätigen      |
+| **Deployment**     | Release-Images (`manager-state`) | Ja, im **Backup-Manifest**                           | Rollback-Referenz                               |
+| **Projektion**     | flow-core-Catalog                | Nein                                                 | Neu generieren                                  |
+| **Runtime**        | Visits, Sessions, Queue, …       | Nein                                                 | Verwerfen                                       |
 
 **Wahrheit fachlich:** `ops_settings` (+ JSON-Felder), nicht der Catalog.
 
@@ -48,35 +48,35 @@ Dieses Dokument legt fest, **welche Werte** beim Backup/Restore/Update erhalten 
 
 ## `ops_settings` (Singleton)
 
-| Feld | Backup | Restore |
-|------|--------|---------|
-| `topic_settings_json`, `rooms_json`, `journey_settings_json` | Ja | Ersetzen → Catalog-Sync |
-| `routing_mode`, `return_window_minutes`, Öffnungszeiten | Ja | Ersetzen |
-| `practice_profile_json` | Ja (Wahrheit) | Ersetzen + `.env`-Praxis-Felder spiegeln |
-| Terminal-Auth, `emergency_enabled`, `portal_enabled`, … | Ja | Ersetzen |
-| `sms_provider` | Ja | Ersetzen |
-| `contact_lookup_*`, `export_base_path` | Ja, Klartext | Ersetzen; Pfad ggf. bestätigen |
-| `setup_completed_at`, `setup_contact_mode` | Ja | Ersetzen |
-| `setup_last_step` | **Nein** | Aus `setup_completed_at` ableiten (`verify` vs. `welcome`) |
-| `waiting_room_full` | Nein | Default `0` |
-| `updated_at`, `id` | Nein | Neu / `singleton` |
+| Feld                                                         | Backup        | Restore                                                    |
+| ------------------------------------------------------------ | ------------- | ---------------------------------------------------------- |
+| `topic_settings_json`, `rooms_json`, `journey_settings_json` | Ja            | Ersetzen → Catalog-Sync                                    |
+| `routing_mode`, `return_window_minutes`, Öffnungszeiten      | Ja            | Ersetzen                                                   |
+| `practice_profile_json`                                      | Ja (Wahrheit) | Ersetzen + `.env`-Praxis-Felder spiegeln                   |
+| Terminal-Auth, `emergency_enabled`, `portal_enabled`, …      | Ja            | Ersetzen                                                   |
+| `sms_provider`                                               | Ja            | Ersetzen                                                   |
+| `contact_lookup_*`, `export_base_path`                       | Ja, Klartext  | Ersetzen; Pfad ggf. bestätigen                             |
+| `setup_completed_at`, `setup_contact_mode`                   | Ja            | Ersetzen                                                   |
+| `setup_last_step`                                            | **Nein**      | Aus `setup_completed_at` ableiten (`verify` vs. `welcome`) |
+| `waiting_room_full`                                          | Nein          | Default `0`                                                |
+| `updated_at`, `id`                                           | Nein          | Neu / `singleton`                                          |
 
 ---
 
 ## `auth_settings`
 
-| Feld | Backup | Restore |
-|------|--------|---------|
+| Feld                                      | Backup      | Restore  |
+| ----------------------------------------- | ----------- | -------- |
 | `staff_pin_hash_*`, `room_panel_pin_hash` | Ja (Hashes) | Ersetzen |
 
 ---
 
 ## `messaging_provider_configs`
 
-| Feld | Backup | Restore |
-|------|--------|---------|
-| `provider_id`, `channel`, `enabled` | Ja, Klartext | Ersetzen |
-| `credentials_json` | Ja, **DB-Blob** (at-rest verschlüsselt) | Ersetzen; bei PIN-Mismatch optional weglassen |
+| Feld                                | Backup                                  | Restore                                       |
+| ----------------------------------- | --------------------------------------- | --------------------------------------------- |
+| `provider_id`, `channel`, `enabled` | Ja, Klartext                            | Ersetzen                                      |
+| `credentials_json`                  | Ja, **DB-Blob** (at-rest verschlüsselt) | Ersetzen; bei PIN-Mismatch optional weglassen |
 
 Provider-IDs (Baseline): `mock`, `seven`, `seven_whatsapp`.
 
@@ -86,15 +86,15 @@ Provider-IDs (Baseline): `mock`, `seven`, `seven_whatsapp`.
 
 **Regel v1:** Alle gesetzten Variablen der Installation **Klartext** ins Backup — inkl. Gateway-Block, wenn konfiguriert. Eine Installation = ein Stack für genau diese Praxis.
 
-| Bereich | Beispiele | Backup |
-|---------|-----------|--------|
-| Praxis / TZ | `PRACTICE_*`, `BUSINESS_TZ` | Ja (Spiegel zu DB; Restore sync) |
-| Host / Pfade | `EXPORT_*`, `IMPORTS_HOST_PATH`, `CONTACT_LOOKUP_BASE_PATH` | Ja, Klartext |
-| Netz / URLs | `SETUP_LAN_APP_IP`, `CANONICAL_BASE_URL` | Ja, Klartext |
-| Gateway | `GATEWAY_*`, `OPENNDS_*`, `PORTAL_FQDN`, … | Ja, wenn gesetzt |
-| Interne Tokens | `SANDBOX_INTERNAL_TOKEN`, `AUTH_KEY_CAPTIVE`, … | Ja, Klartext (lokal, kein PII) |
-| Tuning | `OUTBOX_*`, Session-TTLs, … | Ja, wenn gesetzt |
-| Images | `PRAXIS_FLOW_*_IMAGE` | Im Snapshot oft mit exportiert; **Restore behält aktuelle Tags** (siehe unten) |
+| Bereich        | Beispiele                                                   | Backup                                                                         |
+| -------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Praxis / TZ    | `PRACTICE_*`, `BUSINESS_TZ`                                 | Ja (Spiegel zu DB; Restore sync)                                               |
+| Host / Pfade   | `EXPORT_*`, `IMPORTS_HOST_PATH`, `CONTACT_LOOKUP_BASE_PATH` | Ja, Klartext                                                                   |
+| Netz / URLs    | `SETUP_LAN_APP_IP`, `CANONICAL_BASE_URL`                    | Ja, Klartext                                                                   |
+| Gateway        | `GATEWAY_*`, `OPENNDS_*`, `PORTAL_FQDN`, …                  | Ja, wenn gesetzt                                                               |
+| Interne Tokens | `SANDBOX_INTERNAL_TOKEN`, `AUTH_KEY_CAPTIVE`, …             | Ja, Klartext (lokal, kein PII)                                                 |
+| Tuning         | `OUTBOX_*`, Session-TTLs, …                                 | Ja, wenn gesetzt                                                               |
+| Images         | `PRAXIS_FLOW_*_IMAGE`                                       | Im Snapshot oft mit exportiert; **Restore behält aktuelle Tags** (siehe unten) |
 
 **Restore-Vertrag v1 (`.env` — kein vollständiges Ersetzen):**
 
@@ -105,7 +105,7 @@ Implementierung: `mergeConfigRestoreEnv` + `writeEnvRecordAtomically` in Setup.
 3. **Current-only Keys bleiben:** Variablen, die nur in der aktuellen `.env` existieren (neu seit dem Backup, lokal ergänzt), werden nicht entfernt.
 4. **Kein implizites Aufräumen:** Keys, die im Backup standen, aber lokal entfernt wurden, kommen beim Restore wieder — bewusstes Entfernen veralteter Keys braucht eine explizite Remove-Liste (nicht v1).
 
-Kurz: *Backup-Werte überschreiben bekannte Keys, aktuelle unbekannte Keys bleiben, Image-Tags bleiben aktuell.*
+Kurz: _Backup-Werte überschreiben bekannte Keys, aktuelle unbekannte Keys bleiben, Image-Tags bleiben aktuell._
 
 Bei Host-Pfaden **bestätigen**, wenn sie vom Zielsystem abweichen.
 
@@ -151,24 +151,24 @@ Nach Import: `syncFlowCoreCatalog` → `validateCatalogIntegrity`.
 
 ## Alle Entscheidungen (Stand 2026-07-12)
 
-| # | Thema | Entscheidung |
-|---|--------|--------------|
-| 1 | PINs | Hashes unverschlüsselt im Backup |
-| 2 | SMS/API-Credentials | At-rest in DB (MFA-PIN); Backup = DB-Blob; Laufzeit nur RAM |
-| 3 | `setup_last_step` | Nicht exportieren |
-| 4 | `.env`-Tuning | Mit exportieren, wenn gesetzt (Teil des Stack-Snapshots); Restore = Merge, kein Blind-Replace |
-| 5 | Praxis-Profil | Wahrheit DB; Restore spiegelt `.env` |
-| 6 | Host-Pfade / URLs | Klartext |
-| 7 | Backup-Verschlüsselung | Keine extra Schicht |
-| 8 | PIN passt nicht mehr | Restore ohne Provider-Settings anbieten |
-| 9 | Kontakt-Lookup-Pfad | Klartext (Dateisystempfad) |
-| 10 | `manager-state` | Backup-Manifest, nicht Settings-JSON |
-| 11 | Gateway / ganzer Stack | Ja — alles, was für diese Praxis konfiguriert ist |
+| #   | Thema                  | Entscheidung                                                                                  |
+| --- | ---------------------- | --------------------------------------------------------------------------------------------- |
+| 1   | PINs                   | Hashes unverschlüsselt im Backup                                                              |
+| 2   | SMS/API-Credentials    | At-rest in DB (MFA-PIN); Backup = DB-Blob; Laufzeit nur RAM                                   |
+| 3   | `setup_last_step`      | Nicht exportieren                                                                             |
+| 4   | `.env`-Tuning          | Mit exportieren, wenn gesetzt (Teil des Stack-Snapshots); Restore = Merge, kein Blind-Replace |
+| 5   | Praxis-Profil          | Wahrheit DB; Restore spiegelt `.env`                                                          |
+| 6   | Host-Pfade / URLs      | Klartext                                                                                      |
+| 7   | Backup-Verschlüsselung | Keine extra Schicht                                                                           |
+| 8   | PIN passt nicht mehr   | Restore ohne Provider-Settings anbieten                                                       |
+| 9   | Kontakt-Lookup-Pfad    | Klartext (Dateisystempfad)                                                                    |
+| 10  | `manager-state`        | Backup-Manifest, nicht Settings-JSON                                                          |
+| 11  | Gateway / ganzer Stack | Ja — alles, was für diese Praxis konfiguriert ist                                             |
 
 ---
 
 ## Nächste Schritte
 
-2. ~~Catalog-Wahrheit~~ — [`catalog-source-of-truth.md`](catalog-source-of-truth.md)  
-3. ~~Settings-Export/Import V1 (Kern)~~ — `app/src/shared/settings/`  
+2. ~~Catalog-Wahrheit~~ — [`catalog-source-of-truth.md`](catalog-source-of-truth.md)
+3. ~~Settings-Export/Import V1 (Kern)~~ — `app/src/shared/settings/`
 4. `createCurrentSchema(db)` + `user_version`
