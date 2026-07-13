@@ -63,17 +63,6 @@ export type ComposeLogsResult = {
   log: string;
 };
 
-export type EnvBackupResult = {
-  envPath: string;
-  backupPath: string;
-};
-
-/** @deprecated Replaced by PfbackupResult — kept for transitional typing only. */
-export type EnvBackupInfo = {
-  envPath: string;
-  latestBackupPath: string | null;
-};
-
 export type PfbackupResult = {
   envPath: string;
   backupPath: string;

@@ -12,8 +12,6 @@ export type {
   DeliveryImagesStatus,
   DeviceUrls,
   DockerStatus,
-  EnvBackupInfo,
-  EnvBackupResult,
   PfbackupInfo,
   PfbackupResult,
   PfbackupValidateResult,

@@ -1,6 +1,6 @@
 import type { FastifyReply } from 'fastify';
 import { API_ERROR_CODES, type ApiErrorCode, type ApiErrorPayload } from './api-errors.js';
-import { readDomainCode } from './domain-error.js';
+import { readDomainCode } from '../shared/errors/domain-error.js';
 
 type DomainErrorHttpSpec = {
   status: number;

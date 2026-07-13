@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  buildDeviceUrls,
   buildDeviceUrlsFromBaseUrl,
   buildGatewayEnv,
   fallbackCanonicalBaseUrl,
@@ -27,13 +26,6 @@ test('buildDeviceUrlsFromBaseUrl strips trailing slashes', () => {
   assert.equal(
     buildDeviceUrlsFromBaseUrl('http://praxis-flow.local/').appBaseUrl,
     'http://praxis-flow.local',
-  );
-});
-
-test('buildDeviceUrls keeps legacy IP:port behavior', () => {
-  assert.deepEqual(
-    buildDeviceUrls('192.168.1.13'),
-    buildDeviceUrlsFromBaseUrl('http://192.168.1.13:8080'),
   );
 });
 
@@ -161,7 +153,7 @@ test('buildGatewayEnv points portal and API URLs to the app address reachable fr
       portalAppIp: '192.168.1.13',
       authBridgeUrl: '',
     },
-    buildDeviceUrls('192.168.1.13'),
+    buildDeviceUrlsFromBaseUrl('http://192.168.1.13:8080'),
     'http://192.168.88.1:9100',
   );
 
@@ -180,7 +172,7 @@ test('buildGatewayEnv uses explicit gateway bridge URL when provided', () => {
       portalAppIp: '192.168.1.13',
       authBridgeUrl: 'http://10.0.0.2:9100',
     },
-    buildDeviceUrls('192.168.1.13'),
+    buildDeviceUrlsFromBaseUrl('http://192.168.1.13:8080'),
     'http://192.168.88.1:9100',
   );
 

@@ -110,8 +110,6 @@ export {
   type DeliveryImagesStatus,
   type DeviceUrls,
   type DockerStatus,
-  type EnvBackupInfo,
-  type EnvBackupResult,
   type PfbackupInfo,
   type PfbackupResult,
   type PfbackupValidateInput,

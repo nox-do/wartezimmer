@@ -11,7 +11,7 @@ import {
   lookupIdentityRefByPhoneFromContactLookup,
 } from '../shared/contacts/contact-lookup-runtime.js';
 import { sendResolvedDomainError } from '../http/domain-error-mapper.js';
-import { domainError } from '../http/domain-error.js';
+import { domainError } from '../shared/errors/domain-error.js';
 import { resolveCheckinPhoneForTicket } from '../shared/checkin/checkin-phone.js';
 import {
   assertKnownCheckinAuthPath,

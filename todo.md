@@ -2,8 +2,18 @@
 
 Stand: 2026-07-13
 
+## Code-Diät: Deprecated-Kandidaten (Audit 2026-07-13)
+
+| Kandidat | Status | Evidenz |
+|----------|--------|---------|
+| Domain Single-Panel (`RoomPanelSettings`, `DEFAULT_ROOM_PANEL_SETTINGS`, `normalizeRoomPanelSettings`, `applyRoomPanelPlacement`) | **offen** (nächste Welle) | Nicht in Public API; Prod nutzt `RoomPanelsSettings`; nur Eigen + Tests. Parallel: `db-types.ts` `RoomPanelSettings` unreferenziert. |
+| `EnvBackupInfo` / `EnvBackupResult` | **entfernt** | Re-Exports aus `setup-api`/`index`/`host-status` entfernt. `SaveEnvBackupResult` bleibt (Rename später). |
+| `app/src/http/domain-error.ts` Shim | **entfernt** | Imports → `shared/errors/domain-error.js`; Datei gelöscht. |
+| `setup/src/urls.ts` `buildDeviceUrls` | **entfernt** | Tests auf `buildDeviceUrlsFromBaseUrl` umgestellt. |
+| UI `createMfaAssistCheckin` | **entfernt** | Server `POST /mfa-assist` bleibt. |
+
 - **Auth-Routen Überblick:** Staff/Device unter `/api/v1/auth/*` in `app/src/routes/auth-routes.ts` (OpenAPI `openapi/auth.yaml`); Guard via `registerClientAuth` + `route-access-rules.ts`; Cookie-Sessions (kein JWT/OAuth)
-- **Auth-Plan:** [`docs/plan-auth-session-slots.md`](docs/plan-auth-session-slots.md) — gestrafft: P1 nur scoped Logout; P2 Cookie-Split + Header immer Pflicht + `selectedRole`; Legacy nur clearen; Login-Union gestrichen; P3 = MFA-Realtime; Entscheidungen §6 fest
+- **Auth-Plan:** [`docs/plan-auth-session-slots.md`](docs/plan-auth-session-slots.md) — P1 idempotenter scoped Logout (400 Header / 200 ohne Session); P2 Cookie-Split + `mfaAuthFetch`/`opsAuthFetch` + Smoke/OpenAPI; Bearer ohne Role-Header; Breaking Change
 - **Fix:** Raum-Expander — `$state.snapshot()`; Basics-Layout kompakter; CSS konsolidiert; Raum-Panel-Leerlauf nutzt konfigurierten Ankunfts-Hinweis statt hardcoded `noTickets`
 - Lint/Verify: **grün** (`npm run verify`) — ESLint-Fixes, Test-Fixtures (`minimalHostStatus`, `freshInstallHostStatus`, `testSetupContext`), Auth-Regeln für Snapshot-Routen; 10 Manager-Tests nach Fixture-Konsolidierung korrigiert
 - Wizard Abschluss: eine Footer-Zeile mit kleinen Buttons „Zum Status“ + „IT-Einstellungen“ (ohne Abbrechen)

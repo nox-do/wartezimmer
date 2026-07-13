@@ -114,11 +114,6 @@ export function buildDeviceUrlsFromBaseUrl(baseUrl: string): DeviceUrls {
   };
 }
 
-/** @deprecated Prefer buildDeviceUrlsFromBaseUrl / resolveCanonicalBaseUrl. */
-export function buildDeviceUrls(lanAppIp: string, port = DEFAULT_APP_PORT): DeviceUrls {
-  return buildDeviceUrlsFromBaseUrl(fallbackCanonicalBaseUrl(lanAppIp, port));
-}
-
 /**
  * When LAN IP changes, rewrite CANONICAL_BASE_URL only if it was missing
  * or exactly equal to the previous IP fallback (`http://<previous-ip>:8080`).

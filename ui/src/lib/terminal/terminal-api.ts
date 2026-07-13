@@ -77,15 +77,6 @@ export async function pressTerminalAssist() {
   });
 }
 
-/** @deprecated Legacy cutover — same as pressTerminalAssist. */
-export async function createMfaAssistCheckin() {
-  return cookieAuthFetch<TerminalAssistPressed>('/api/v1/checkins/mfa-assist', {
-    method: 'POST',
-    headers: terminalDeviceHeaders,
-    body: JSON.stringify({}),
-  });
-}
-
 export async function releaseTerminalAssist() {
   return cookieAuthFetch<null>('/api/v1/checkins/assist/release', {
     method: 'POST',

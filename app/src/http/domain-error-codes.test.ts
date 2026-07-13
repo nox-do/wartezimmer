@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { domainError } from './domain-error.js';
+import { domainError } from '../shared/errors/domain-error.js';
 import { isExpectedDomainError, resolveDomainError } from './domain-error-codes.js';
 
 test('resolveDomainError maps DomainError and plain Error session codes to 4xx', () => {

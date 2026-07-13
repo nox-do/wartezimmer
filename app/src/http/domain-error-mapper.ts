@@ -13,7 +13,7 @@ export type {
   DomainErrorMessageOverrides,
   ResolvedDomainError,
 } from './domain-error-codes.js';
-export { DomainError, domainError, readDomainCode } from './domain-error.js';
+export { DomainError, domainError, readDomainCode } from '../shared/errors/domain-error.js';
 
 export function sendApiError(
   reply: FastifyReply,
