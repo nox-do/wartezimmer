@@ -200,6 +200,113 @@ test('applyPfupdate rolls back when import fails', async () => {
   }
 });
 
+test('applyPfupdate validates its backup before stopping the stack', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-prepare-backup-'));
+  const archivePath = path.join(dir, 'update.pfupdate');
+  const { appDataDir, backupPath } = seedInstallHome(dir);
+  buildTestPfupdateArchive(archivePath, '2026.08.0');
+  let stopCalls = 0;
+
+  try {
+    const result = await applyPfupdate(
+      { archivePath, managerVersion: '0.2.0', settingsFormatVersion: 1 },
+      testCtx(dir),
+      {
+        ...mockDeps(appDataDir, backupPath),
+        validateSettings: async () => ({ ok: false, errors: ['backup invalid'] }),
+        stopStack: async () => {
+          stopCalls += 1;
+          return { ok: true, log: 'stopped' };
+        },
+      },
+    );
+
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.failedPhase, UPDATE_PHASES.createSettingsBackup);
+      assert.equal(result.rollbackAttempted, false);
+    }
+    assert.equal(stopCalls, 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('applyPfupdate rolls back when a cutover dependency throws', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-cutover-throw-'));
+  const archivePath = path.join(dir, 'update.pfupdate');
+  const { envPath, appDataDir, backupPath } = seedInstallHome(dir);
+  buildTestPfupdateArchive(archivePath, '2026.08.0');
+
+  try {
+    const result = await applyPfupdate(
+      { archivePath, managerVersion: '0.2.0', settingsFormatVersion: 1 },
+      testCtx(dir),
+      {
+        ...mockDeps(appDataDir, backupPath),
+        startAppStack: async () => {
+          throw new Error('start exploded');
+        },
+      },
+    );
+
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.failedPhase, UPDATE_PHASES.cutover);
+      assert.equal(result.rollbackAttempted, true);
+      assert.equal(result.rollbackSucceeded, true);
+      assert.match(result.errors.join(' '), /start exploded/);
+    }
+    assert.equal(readEnvMap(envPath).get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:2026.07.1');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('applyPfupdate does not restore database files while rollback stop fails', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-rollback-stop-'));
+  const archivePath = path.join(dir, 'update.pfupdate');
+  const { appDataDir, backupPath } = seedInstallHome(dir);
+  buildTestPfupdateArchive(archivePath, '2026.08.0');
+  const base = mockDeps(appDataDir, backupPath);
+  let stopCalls = 0;
+  let restoreCalls = 0;
+
+  try {
+    const result = await applyPfupdate(
+      { archivePath, managerVersion: '0.2.0', settingsFormatVersion: 1 },
+      testCtx(dir),
+      {
+        ...base,
+        importSnapshot: async () => ({ ok: false, errors: ['import failed'] }),
+        stopStack: async () => {
+          stopCalls += 1;
+          return stopCalls === 1
+            ? { ok: true, log: 'stopped' }
+            : { ok: false, log: 'rollback stop failed' };
+        },
+        appDataAccess: {
+          ...base.appDataAccess,
+          restoreDbFiles: async (sourceDir) => {
+            restoreCalls += 1;
+            await base.appDataAccess.restoreDbFiles(sourceDir);
+          },
+        },
+      },
+    );
+
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.rollbackAttempted, true);
+      assert.equal(result.rollbackSucceeded, false);
+      assert.match(result.errors.join(' '), /rollback stop failed/);
+    }
+    assert.equal(restoreCalls, 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('applyPfupdate rejects invalid package before cutover', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-apply-invalid-'));
   const archivePath = path.join(dir, 'broken.pfupdate');

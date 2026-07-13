@@ -5,7 +5,6 @@ import {
   parsePfbackupArchive,
   STACK_IMAGE_ENV_KEYS,
   validateManagerStateForBackup,
-  type ComposeStatus,
   type ManagerState,
   type PfbackupRestoreResult,
 } from '@praxis-flow/server-shared';
@@ -16,12 +15,7 @@ import {
 } from './app-data-volume.js';
 import { composePs, composeStop, composeUp, type ComposeRunOptions } from './docker.js';
 import { readEnvMap, writeEnvRecordAtomically } from './env-file.js';
-import {
-  MANAGER_STATE_FILE,
-  managerStatePath,
-  readManagerState,
-  writeManagerStateAtomically,
-} from './manager-state.js';
+import { readManagerState, writeManagerStateAtomically } from './manager-state.js';
 import {
   FRESH_DB_CUTOVER_PHASES,
   runFreshDbSettingsCutover,
@@ -36,13 +30,16 @@ import {
   type SettingsSnapshotDbFromApp,
 } from './settings-backup.js';
 import type { SetupContext } from './setup-context.js';
+import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
 import {
-  resolveCanonicalBaseUrl,
-  LOCAL_MAINTENANCE_APP_BASE_URL,
-  LOCAL_SETUP_APP_BASE_URL,
-} from './urls.js';
-import { runConnectionProbes } from './probes.js';
-import { resolveDeliveryImageConfig } from './delivery-images.js';
+  captureMaintenanceRollback,
+  executeMaintenanceRollback,
+  readHostEnvRecord,
+  resolveMaintenanceComposeRunOptions,
+  runDefaultMaintenanceHealthChecks,
+  type MaintenanceRollbackArtifacts,
+  type MaintenanceStackRuntime,
+} from './maintenance-rollback.js';
 
 export const RESTORE_PHASES = {
   validateArchive: 'validate_archive',
@@ -58,17 +55,10 @@ export const RESTORE_PHASES = {
   verifyExport: 'verify_export',
   startFullStack: 'start_full_stack',
   healthCheck: 'health_check',
+  cutover: 'cutover',
 } as const;
 
 export type RestorePhase = (typeof RESTORE_PHASES)[keyof typeof RESTORE_PHASES];
-
-type RollbackArtifacts = {
-  rollbackDir: string;
-  envPath: string;
-  managerStatePath: string;
-  appDataDir: string;
-  dbFilesBackedUp: string[];
-};
 
 export type PfbackupRestoreOptions = {
   skipProviderCredentials?: boolean;
@@ -90,26 +80,49 @@ export type PfbackupRestoreTestHooks = {
 export type PfbackupRestoreDeps = {
   validateArchive?: typeof validatePfbackupContent;
   validateSettings?: typeof validateSettingsSnapshotWithApp;
-  stopStack?: (runOptions: ComposeRunOptions) => Promise<{ ok: boolean; log: string }>;
+  stopStack?: MaintenanceStackRuntime['stopStack'];
   startAppStack?: (
     runOptions: ComposeRunOptions,
   ) => Promise<{ ok: boolean; log: string; gatewaySkipped: boolean }>;
-  startFullStack?: (
-    runOptions: ComposeRunOptions,
-  ) => Promise<{ ok: boolean; log: string; gatewaySkipped: boolean }>;
+  startFullStack?: MaintenanceStackRuntime['startFullStack'];
   waitForMaintenanceApp?: (localAppBaseUrl: string) => Promise<boolean>;
   importSnapshot?: typeof importSettingsSnapshotViaApp;
   exportDbSnapshot?: (localAppBaseUrl: string) => Promise<SettingsSnapshotDbFromApp>;
-  composeStatus?: (runOptions: ComposeRunOptions) => Promise<ComposeStatus>;
-  runHealthChecks?: (input: {
-    localAppBaseUrl: string;
-    lanAppBaseUrl: string | null;
-  }) => Promise<{ ok: boolean; errors: string[] }>;
+  composeStatus?: MaintenanceStackRuntime['composeStatus'];
+  runHealthChecks?: MaintenanceStackRuntime['runHealthChecks'];
   appDataAccess?: AppDataVolumeAccess;
   localAppBaseUrl?: string;
   localMaintenanceAppBaseUrl?: string;
   now?: () => Date;
 };
+
+type RestoreRuntime = MaintenanceStackRuntime & {
+  validateArchive: typeof validatePfbackupContent;
+  validateSettings: typeof validateSettingsSnapshotWithApp;
+  startAppStack: NonNullable<PfbackupRestoreDeps['startAppStack']>;
+  waitForMaintenanceApp: NonNullable<PfbackupRestoreDeps['waitForMaintenanceApp']>;
+  importSnapshot: typeof importSettingsSnapshotViaApp;
+  exportDbSnapshot: NonNullable<PfbackupRestoreDeps['exportDbSnapshot']>;
+  appDataAccess?: AppDataVolumeAccess;
+};
+
+type PreparedRestore = {
+  settings: Record<string, unknown>;
+  restoreEnv: Record<string, string>;
+  restoreManagerState: ManagerState;
+  envPath: string;
+  runOptions: ComposeRunOptions;
+  appDataAccess: AppDataVolumeAccess;
+};
+
+class RestorePhaseError extends Error {
+  constructor(
+    readonly phase: RestorePhase,
+    readonly errors: string[],
+  ) {
+    super(errors.join(' '));
+  }
+}
 
 function createRestoreId(now = new Date()): string {
   const stamp = now.toISOString().replace(/[:.]/g, '-');
@@ -118,13 +131,6 @@ function createRestoreId(now = new Date()): string {
 
 function rollbackDirectory(installHome: string, restoreId: string): string {
   return path.join(installHome, 'rollback', restoreId);
-}
-
-function hostEnvRecord(envPath: string): Record<string, string> {
-  if (!fs.existsSync(envPath)) {
-    return {};
-  }
-  return Object.fromEntries(readEnvMap(envPath).entries());
 }
 
 /**
@@ -170,21 +176,6 @@ export function mergeConfigRestoreManagerState(
   };
 }
 
-function resolveComposeRunOptions(
-  ctx: SetupContext,
-  envMap: Map<string, string>,
-): ComposeRunOptions {
-  const deliveryConfig = resolveDeliveryImageConfig({
-    projectRoot: ctx.home,
-    envMap,
-  });
-  return {
-    projectRoot: ctx.home,
-    delivery: Boolean(deliveryConfig?.appImage),
-    composeProjectName: ctx.composeProjectName,
-  };
-}
-
 async function defaultWaitForMaintenanceApp(
   localAppBaseUrl: string,
   timeoutMs = 120_000,
@@ -198,18 +189,6 @@ async function defaultWaitForMaintenanceApp(
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
   return false;
-}
-
-async function defaultRunHealthChecks(input: {
-  localAppBaseUrl: string;
-  lanAppBaseUrl: string | null;
-}): Promise<{ ok: boolean; errors: string[] }> {
-  const probes = await runConnectionProbes({
-    localAppBaseUrl: input.localAppBaseUrl,
-    lanAppBaseUrl: input.lanAppBaseUrl ?? undefined,
-  });
-  const errors = probes.filter((probe) => !probe.ok).map((probe) => probe.message);
-  return { ok: errors.length === 0, errors };
 }
 
 function restorePhaseFromCutover(phase: FreshDbCutoverPhase): RestorePhase {
@@ -249,111 +228,29 @@ async function backupRollbackArtifactsAfterStop(
   ctx: SetupContext,
   restoreId: string,
   appDataAccess: AppDataVolumeAccess,
-): Promise<RollbackArtifacts> {
-  const rollbackDir = rollbackDirectory(ctx.home, restoreId);
-  const envPath = path.join(ctx.home, '.env');
-  const managerPath = managerStatePath(ctx.home);
-  const appDataDir = path.join(rollbackDir, 'app-data');
-  fs.mkdirSync(rollbackDir, { recursive: true });
-
-  if (fs.existsSync(envPath)) {
-    fs.copyFileSync(envPath, path.join(rollbackDir, '.env'));
-  }
-  if (fs.existsSync(managerPath)) {
-    fs.copyFileSync(managerPath, path.join(rollbackDir, MANAGER_STATE_FILE));
-  }
-
-  const dbFilesBackedUp = await appDataAccess.backupDbFiles(appDataDir);
-  return {
-    rollbackDir,
-    envPath,
-    managerStatePath: managerPath,
-    appDataDir,
-    dbFilesBackedUp,
-  };
+): Promise<MaintenanceRollbackArtifacts> {
+  return captureMaintenanceRollback(ctx, rollbackDirectory(ctx.home, restoreId), appDataAccess);
 }
 
 async function executeRollback(input: {
   ctx: SetupContext;
-  rollback: RollbackArtifacts;
+  rollback: MaintenanceRollbackArtifacts;
   appDataAccess: AppDataVolumeAccess;
-  stopStack: PfbackupRestoreDeps['stopStack'];
-  startFullStack: PfbackupRestoreDeps['startFullStack'];
-  composeStatus: PfbackupRestoreDeps['composeStatus'];
+  runtime: RestoreRuntime;
   localAppBaseUrl: string;
   failRollback?: boolean;
 }): Promise<{ ok: boolean; errors: string[] }> {
-  const errors: string[] = [];
   if (input.failRollback) {
     return { ok: false, errors: ['Rollback absichtlich fehlgeschlagen (Test).'] };
   }
-
-  const envMap = readEnvMap(path.join(input.ctx.home, '.env'));
-  const runOptions = resolveComposeRunOptions(input.ctx, envMap);
-
-  const stop = await input.stopStack!(runOptions);
-  if (!stop.ok) {
-    errors.push(stop.log || 'Stack konnte für Rollback nicht gestoppt werden.');
-  }
-
-  const rollbackEnv = path.join(input.rollback.rollbackDir, '.env');
-  if (fs.existsSync(rollbackEnv)) {
-    fs.copyFileSync(rollbackEnv, path.join(input.ctx.home, '.env'));
-  } else {
-    errors.push('Rollback-.env fehlt.');
-  }
-
-  const rollbackManager = path.join(input.rollback.rollbackDir, MANAGER_STATE_FILE);
-  if (fs.existsSync(rollbackManager)) {
-    fs.copyFileSync(rollbackManager, input.rollback.managerStatePath);
-  } else if (fs.existsSync(input.rollback.managerStatePath)) {
-    fs.unlinkSync(input.rollback.managerStatePath);
-  }
-
-  const failedRestoreDir = path.join(input.rollback.rollbackDir, 'failed-restore-db');
-  try {
-    await input.appDataAccess.moveDbAside(failedRestoreDir);
-  } catch (error) {
-    errors.push(
-      error instanceof Error
-        ? error.message
-        : 'Neue Runtime-DB konnte nicht beiseitegelegt werden.',
-    );
-  }
-  try {
-    await input.appDataAccess.restoreDbFiles(input.rollback.appDataDir);
-  } catch (error) {
-    errors.push(
-      error instanceof Error
-        ? error.message
-        : 'Rollback-Runtime-DB konnte nicht zurückgespielt werden.',
-    );
-  }
-
-  const envAfterRollback = readEnvMap(path.join(input.ctx.home, '.env'));
-  const runOptionsAfter = resolveComposeRunOptions(input.ctx, envAfterRollback);
-  const up = await input.startFullStack!(runOptionsAfter);
-  if (!up.ok) {
-    errors.push(up.log || 'Stack konnte nach Rollback nicht gestartet werden.');
-  }
-
-  const health = await defaultRunHealthChecks({
+  return executeMaintenanceRollback({
+    ctx: input.ctx,
+    rollback: input.rollback,
+    appDataAccess: input.appDataAccess,
+    runtime: input.runtime,
     localAppBaseUrl: input.localAppBaseUrl,
-    lanAppBaseUrl: resolveCanonicalBaseUrl(
-      envAfterRollback,
-      envAfterRollback.get('SETUP_LAN_APP_IP'),
-    ),
+    failedDbDirName: 'failed-restore-db',
   });
-  if (!health.ok) {
-    errors.push(...health.errors);
-  }
-
-  const compose = await input.composeStatus!(runOptionsAfter);
-  if (!compose.running) {
-    errors.push('Compose meldet nach Rollback keinen laufenden Stack.');
-  }
-
-  return { ok: errors.length === 0, errors };
 }
 
 function failureResult(
@@ -388,6 +285,275 @@ function failureWithRollback(
   );
 }
 
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function resolveRestoreRuntime(deps: PfbackupRestoreDeps): RestoreRuntime {
+  return {
+    validateArchive: deps.validateArchive ?? validatePfbackupContent,
+    validateSettings: deps.validateSettings ?? validateSettingsSnapshotWithApp,
+    stopStack: deps.stopStack ?? composeStop,
+    startAppStack:
+      deps.startAppStack ??
+      (async (runOptions) =>
+        composeUp({ ...runOptions, build: false, services: ['sandbox', 'app'] })),
+    startFullStack:
+      deps.startFullStack ?? (async (runOptions) => composeUp({ ...runOptions, build: false })),
+    waitForMaintenanceApp:
+      deps.waitForMaintenanceApp ?? ((baseUrl) => defaultWaitForMaintenanceApp(baseUrl)),
+    importSnapshot: deps.importSnapshot ?? importSettingsSnapshotViaApp,
+    exportDbSnapshot:
+      deps.exportDbSnapshot ?? ((baseUrl) => fetchSettingsDbSnapshotFromApp(baseUrl)),
+    composeStatus: deps.composeStatus ?? composePs,
+    runHealthChecks: deps.runHealthChecks ?? runDefaultMaintenanceHealthChecks,
+    appDataAccess: deps.appDataAccess,
+  };
+}
+
+async function prepareRestore(input: {
+  content: string;
+  ctx: SetupContext;
+  runtime: RestoreRuntime;
+  localMaintenanceAppBaseUrl: string;
+}): Promise<PreparedRestore> {
+  const archiveResult = input.runtime.validateArchive(input.content);
+  if (!archiveResult.archiveValid) {
+    throw new RestorePhaseError(RESTORE_PHASES.validateArchive, archiveResult.errors);
+  }
+
+  let parsed: ReturnType<typeof parseArchiveContent>;
+  try {
+    parsed = parseArchiveContent(input.content);
+  } catch (error) {
+    throw new RestorePhaseError(RESTORE_PHASES.validateArchive, [
+      errorMessage(error, 'Backup-Archiv konnte nicht gelesen werden.'),
+    ]);
+  }
+
+  const validation = await input.runtime.validateSettings(
+    parsed.settings,
+    input.localMaintenanceAppBaseUrl,
+  );
+  if (!validation.ok) {
+    throw new RestorePhaseError(RESTORE_PHASES.validateSettings, validation.errors);
+  }
+
+  const envPath = path.join(input.ctx.home, '.env');
+  if (!fs.existsSync(envPath)) {
+    throw new RestorePhaseError(RESTORE_PHASES.backupRollbackState, [
+      'Keine .env — Setup zuerst ausführen.',
+    ]);
+  }
+  const envMap = readEnvMap(envPath);
+  const backupEnv =
+    parsed.settings.env &&
+    typeof parsed.settings.env === 'object' &&
+    !Array.isArray(parsed.settings.env)
+      ? (parsed.settings.env as Record<string, string>)
+      : {};
+  return {
+    settings: parsed.settings,
+    restoreEnv: mergeConfigRestoreEnv(backupEnv, readHostEnvRecord(envPath)),
+    restoreManagerState: mergeConfigRestoreManagerState(
+      parsed.managerState,
+      readManagerState(input.ctx.home),
+    ),
+    envPath,
+    runOptions: resolveMaintenanceComposeRunOptions(input.ctx, envMap),
+    appDataAccess:
+      input.runtime.appDataAccess ??
+      createDockerAppDataAccess(
+        input.ctx.composeProjectName,
+        envMap.get('PRAXIS_FLOW_APP_IMAGE')?.trim() ?? '',
+      ),
+  };
+}
+
+async function commitRestore(input: {
+  prepared: PreparedRestore;
+  ctx: SetupContext;
+  runtime: RestoreRuntime;
+  rollback: MaintenanceRollbackArtifacts;
+  skipProviderCredentials: boolean;
+  localAppBaseUrl: string;
+  localMaintenanceAppBaseUrl: string;
+  testHooks: PfbackupRestoreTestHooks;
+}) {
+  try {
+    await input.testHooks.beforeWriteEnv?.();
+    if (input.testHooks.failWriteEnv) {
+      throw new Error('ENV-Schreiben absichtlich fehlgeschlagen (Test).');
+    }
+    writeEnvRecordAtomically(input.prepared.envPath, input.prepared.restoreEnv);
+  } catch (error) {
+    throw new RestorePhaseError(RESTORE_PHASES.writeEnv, [
+      errorMessage(error, 'Backup-.env konnte nicht geschrieben werden.'),
+    ]);
+  }
+  try {
+    writeManagerStateAtomically(input.ctx.home, input.prepared.restoreManagerState);
+  } catch (error) {
+    throw new RestorePhaseError(RESTORE_PHASES.writeManagerState, [
+      errorMessage(error, 'Backup-manager-state.json konnte nicht geschrieben werden.'),
+    ]);
+  }
+
+  let cutover;
+  try {
+    const envAfterWrite = readEnvMap(input.prepared.envPath);
+    cutover = await runFreshDbSettingsCutover(
+      {
+        rollbackDir: input.rollback.rollbackDir,
+        dbAsideSubdir: 'pre-restore-db',
+        runOptions: resolveMaintenanceComposeRunOptions(input.ctx, envAfterWrite),
+        envAfterWrite,
+        importPayload: input.prepared.settings,
+        skipProviderCredentials: input.skipProviderCredentials,
+        verifyMismatchMessage:
+          'Re-exportierter Settings-Snapshot weicht vom importierten Backup ab.',
+        localAppBaseUrl: input.localAppBaseUrl,
+        localMaintenanceAppBaseUrl: input.localMaintenanceAppBaseUrl,
+      },
+      {
+        appDataAccess: input.prepared.appDataAccess,
+        startAppStack: input.runtime.startAppStack,
+        startFullStack: input.runtime.startFullStack,
+        waitForMaintenanceApp: input.runtime.waitForMaintenanceApp,
+        importSnapshot: input.runtime.importSnapshot,
+        exportDbSnapshot: input.runtime.exportDbSnapshot,
+        composeStatus: input.runtime.composeStatus,
+        runHealthChecks: input.runtime.runHealthChecks,
+      },
+      {
+        beforeStartApp: input.testHooks.beforeStartApp,
+        beforeImportSnapshot: input.testHooks.beforeImportSnapshot,
+        beforeVerifyExport: input.testHooks.beforeVerifyExport,
+        failStartApp: input.testHooks.failStartApp,
+        failImportSnapshot: input.testHooks.failImportSnapshot,
+        failVerifyExport: input.testHooks.failVerifyExport,
+      },
+    );
+  } catch (error) {
+    throw new RestorePhaseError(RESTORE_PHASES.cutover, [
+      errorMessage(error, 'Restore-Cutover ist unerwartet fehlgeschlagen.'),
+    ]);
+  }
+  if (!cutover.ok) {
+    throw new RestorePhaseError(restorePhaseFromCutover(cutover.failedPhase), cutover.errors);
+  }
+  return cutover;
+}
+
+function restoreFailure(error: unknown, phase: RestorePhase, fallback: string): RestorePhaseError {
+  return error instanceof RestorePhaseError
+    ? error
+    : new RestorePhaseError(phase, [errorMessage(error, fallback)]);
+}
+
+async function restartAfterBackupFailure(
+  runtime: RestoreRuntime,
+  runOptions: ComposeRunOptions,
+  error: unknown,
+): Promise<string[]> {
+  const errors = [errorMessage(error, 'Rollback-Sicherung fehlgeschlagen.')];
+  try {
+    const restart = await runtime.startFullStack(runOptions);
+    if (!restart.ok) {
+      errors.push(
+        restart.log ||
+          'Stack konnte nach fehlgeschlagener Rollback-Sicherung nicht neu gestartet werden.',
+      );
+    }
+  } catch (restartError) {
+    errors.push(errorMessage(restartError, 'Stack konnte nicht neu gestartet werden.'));
+  }
+  return errors;
+}
+
+function successfulRestoreResult(
+  restoreId: string,
+  settings: Record<string, unknown>,
+  skipProviderCredentials: boolean,
+  cutover: Awaited<ReturnType<typeof commitRestore>>,
+): PfbackupRestoreResult {
+  const opsSettings =
+    settings.opsSettings && typeof settings.opsSettings === 'object'
+      ? (settings.opsSettings as Record<string, unknown>)
+      : null;
+  return {
+    ok: true,
+    restoreId,
+    report: {
+      restoreId,
+      routingMode:
+        cutover.importResult.routingMode ??
+        (typeof opsSettings?.routingMode === 'string' ? opsSettings.routingMode : null),
+      portalEnabled: cutover.importResult.portalEnabled ?? opsSettings?.portalEnabled === true,
+      providerCredentialsSkipped:
+        cutover.importResult.providerCredentialsSkipped ?? skipProviderCredentials,
+      disabledProviderIds: cutover.importResult.disabledProviderIds ?? [],
+      compose: cutover.compose,
+    },
+  };
+}
+
+async function applyPreparedRestore(input: {
+  restoreId: string;
+  prepared: PreparedRestore;
+  ctx: SetupContext;
+  runtime: RestoreRuntime;
+  skipProviderCredentials: boolean;
+  localAppBaseUrl: string;
+  localMaintenanceAppBaseUrl: string;
+  testHooks: PfbackupRestoreTestHooks;
+}): Promise<PfbackupRestoreResult> {
+  const stop = await input.runtime.stopStack(input.prepared.runOptions);
+  if (!stop.ok) {
+    return failureResult(
+      input.restoreId,
+      RESTORE_PHASES.stopStack,
+      [stop.log || 'Stack konnte nicht gestoppt werden.'],
+      false,
+      false,
+    );
+  }
+
+  let rollback: MaintenanceRollbackArtifacts;
+  try {
+    rollback = await backupRollbackArtifactsAfterStop(
+      input.ctx,
+      input.restoreId,
+      input.prepared.appDataAccess,
+    );
+    await input.testHooks.afterBackupRollbackState?.();
+  } catch (error) {
+    const errors = await restartAfterBackupFailure(input.runtime, input.prepared.runOptions, error);
+    return failureResult(input.restoreId, RESTORE_PHASES.backupRollbackState, errors, false, false);
+  }
+
+  try {
+    const cutover = await commitRestore({ ...input, rollback });
+    return successfulRestoreResult(
+      input.restoreId,
+      input.prepared.settings,
+      input.skipProviderCredentials,
+      cutover,
+    );
+  } catch (error) {
+    const failure = restoreFailure(error, RESTORE_PHASES.cutover, 'Restore ist fehlgeschlagen.');
+    const rollbackResult = await executeRollback({
+      ctx: input.ctx,
+      rollback,
+      appDataAccess: input.prepared.appDataAccess,
+      runtime: input.runtime,
+      localAppBaseUrl: input.localAppBaseUrl,
+      failRollback: input.testHooks.failRollback,
+    });
+    return failureWithRollback(input.restoreId, failure.phase, failure.errors, rollbackResult);
+  }
+}
+
 export async function restorePfbackup(
   content: string,
   ctx: SetupContext,
@@ -400,245 +566,27 @@ export async function restorePfbackup(
     deps.localMaintenanceAppBaseUrl ?? LOCAL_MAINTENANCE_APP_BASE_URL;
   const localAppBaseUrl = deps.localAppBaseUrl ?? LOCAL_SETUP_APP_BASE_URL;
   const skipProviderCredentials = options.skipProviderCredentials === true;
-
-  const validateArchive = deps.validateArchive ?? validatePfbackupContent;
-  const validateSettings = deps.validateSettings ?? validateSettingsSnapshotWithApp;
-  const stopStack = deps.stopStack ?? composeStop;
-  const startAppStack =
-    deps.startAppStack ??
-    (async (runOptions) =>
-      composeUp({ ...runOptions, build: false, services: ['sandbox', 'app'] }));
-  const startFullStack =
-    deps.startFullStack ?? (async (runOptions) => composeUp({ ...runOptions, build: false }));
-  const waitForMaintenanceApp =
-    deps.waitForMaintenanceApp ?? ((baseUrl: string) => defaultWaitForMaintenanceApp(baseUrl));
-  const importSnapshot = deps.importSnapshot ?? importSettingsSnapshotViaApp;
-  const exportDbSnapshot =
-    deps.exportDbSnapshot ?? ((baseUrl: string) => fetchSettingsDbSnapshotFromApp(baseUrl));
-  const composeStatus = deps.composeStatus ?? composePs;
-  const runHealthChecks = deps.runHealthChecks ?? defaultRunHealthChecks;
-
-  let rollback: RollbackArtifacts;
-
-  const archiveResult = validateArchive(content);
-  if (!archiveResult.archiveValid) {
-    return failureResult(
-      restoreId,
-      RESTORE_PHASES.validateArchive,
-      archiveResult.errors,
-      false,
-      false,
-    );
-  }
-
-  let settings: Record<string, unknown>;
-  let backupManagerState: ManagerState;
+  const runtime = resolveRestoreRuntime(deps);
   try {
-    const parsed = parseArchiveContent(content);
-    settings = parsed.settings;
-    backupManagerState = parsed.managerState;
-  } catch (error) {
-    return failureResult(
+    const prepared = await prepareRestore({ content, ctx, runtime, localMaintenanceAppBaseUrl });
+    return applyPreparedRestore({
       restoreId,
-      RESTORE_PHASES.validateArchive,
-      [error instanceof Error ? error.message : 'Backup-Archiv konnte nicht gelesen werden.'],
-      false,
-      false,
-    );
-  }
-
-  const settingsValidation = await validateSettings(settings, localMaintenanceAppBaseUrl);
-  if (!settingsValidation.ok) {
-    return failureResult(
-      restoreId,
-      RESTORE_PHASES.validateSettings,
-      settingsValidation.errors,
-      false,
-      false,
-    );
-  }
-
-  const envPath = path.join(ctx.home, '.env');
-  if (!fs.existsSync(envPath)) {
-    return failureResult(
-      restoreId,
-      RESTORE_PHASES.backupRollbackState,
-      ['Keine .env — Setup zuerst ausführen.'],
-      false,
-      false,
-    );
-  }
-
-  const envMap = readEnvMap(envPath);
-  const runOptions = resolveComposeRunOptions(ctx, envMap);
-  const utilityImage = envMap.get('PRAXIS_FLOW_APP_IMAGE')?.trim() ?? '';
-  const appDataAccess =
-    deps.appDataAccess ?? createDockerAppDataAccess(ctx.composeProjectName, utilityImage);
-
-  const currentEnv = hostEnvRecord(envPath);
-  const currentManagerState = readManagerState(ctx.home);
-  const backupEnv =
-    settings.env && typeof settings.env === 'object' && !Array.isArray(settings.env)
-      ? (settings.env as Record<string, string>)
-      : {};
-  const restoreEnv = mergeConfigRestoreEnv(backupEnv, currentEnv);
-  const restoreManagerState = mergeConfigRestoreManagerState(
-    backupManagerState,
-    currentManagerState,
-  );
-
-  const stop = await stopStack(runOptions);
-  if (!stop.ok) {
-    return failureResult(
-      restoreId,
-      RESTORE_PHASES.stopStack,
-      [stop.log || 'Stack konnte nicht gestoppt werden.'],
-      false,
-      false,
-    );
-  }
-
-  try {
-    rollback = await backupRollbackArtifactsAfterStop(ctx, restoreId, appDataAccess);
-    await testHooks.afterBackupRollbackState?.();
-  } catch (error) {
-    const restart = await startFullStack(runOptions);
-    const errors = [error instanceof Error ? error.message : 'Rollback-Sicherung fehlgeschlagen.'];
-    if (!restart.ok) {
-      errors.push(
-        restart.log ||
-          'Stack konnte nach fehlgeschlagener Rollback-Sicherung nicht neu gestartet werden.',
-      );
-    }
-    return failureResult(restoreId, RESTORE_PHASES.backupRollbackState, errors, false, false);
-  }
-
-  try {
-    await testHooks.beforeWriteEnv?.();
-    if (testHooks.failWriteEnv) {
-      throw new Error('ENV-Schreiben absichtlich fehlgeschlagen (Test).');
-    }
-    writeEnvRecordAtomically(envPath, restoreEnv);
-  } catch (error) {
-    const rollbackResult = await executeRollback({
+      prepared,
       ctx,
-      rollback: rollback!,
-      appDataAccess,
-      stopStack,
-      startFullStack,
-      composeStatus,
-      localAppBaseUrl,
-      failRollback: testHooks.failRollback,
-    });
-    return failureWithRollback(
-      restoreId,
-      RESTORE_PHASES.writeEnv,
-      [error instanceof Error ? error.message : 'Backup-.env konnte nicht geschrieben werden.'],
-      rollbackResult,
-    );
-  }
-
-  try {
-    writeManagerStateAtomically(ctx.home, restoreManagerState);
-  } catch (error) {
-    const rollbackResult = await executeRollback({
-      ctx,
-      rollback: rollback!,
-      appDataAccess,
-      stopStack,
-      startFullStack,
-      composeStatus,
-      localAppBaseUrl,
-      failRollback: testHooks.failRollback,
-    });
-    return failureWithRollback(
-      restoreId,
-      RESTORE_PHASES.writeManagerState,
-      [
-        error instanceof Error
-          ? error.message
-          : 'Backup-manager-state.json konnte nicht geschrieben werden.',
-      ],
-      rollbackResult,
-    );
-  }
-
-  const envAfterWrite = readEnvMap(envPath);
-  const runOptionsAfterWrite = resolveComposeRunOptions(ctx, envAfterWrite);
-
-  const cutoverResult = await runFreshDbSettingsCutover(
-    {
-      rollbackDir: rollback!.rollbackDir,
-      dbAsideSubdir: 'pre-restore-db',
-      runOptions: runOptionsAfterWrite,
-      envAfterWrite,
-      importPayload: settings,
+      runtime,
       skipProviderCredentials,
-      verifyMismatchMessage: 'Re-exportierter Settings-Snapshot weicht vom importierten Backup ab.',
       localAppBaseUrl,
       localMaintenanceAppBaseUrl,
-    },
-    {
-      appDataAccess,
-      startAppStack,
-      startFullStack,
-      waitForMaintenanceApp,
-      importSnapshot,
-      exportDbSnapshot,
-      composeStatus,
-      runHealthChecks,
-    },
-    {
-      beforeStartApp: testHooks.beforeStartApp,
-      beforeImportSnapshot: testHooks.beforeImportSnapshot,
-      beforeVerifyExport: testHooks.beforeVerifyExport,
-      failStartApp: testHooks.failStartApp,
-      failImportSnapshot: testHooks.failImportSnapshot,
-      failVerifyExport: testHooks.failVerifyExport,
-    },
-  );
-
-  if (!cutoverResult.ok) {
-    const rollbackResult = await executeRollback({
-      ctx,
-      rollback: rollback!,
-      appDataAccess,
-      stopStack,
-      startFullStack,
-      composeStatus,
-      localAppBaseUrl,
-      failRollback: testHooks.failRollback,
+      testHooks,
     });
-    return failureWithRollback(
-      restoreId,
-      restorePhaseFromCutover(cutoverResult.failedPhase),
-      cutoverResult.errors,
-      rollbackResult,
+  } catch (error) {
+    const failure = restoreFailure(
+      error,
+      RESTORE_PHASES.validateArchive,
+      'Restore-Vorbereitung ist fehlgeschlagen.',
     );
+    return failureResult(restoreId, failure.phase, failure.errors, false, false);
   }
-
-  const { importResult, compose } = cutoverResult;
-
-  const opsSettings =
-    settings.opsSettings && typeof settings.opsSettings === 'object'
-      ? (settings.opsSettings as Record<string, unknown>)
-      : null;
-
-  return {
-    ok: true,
-    restoreId,
-    report: {
-      restoreId,
-      routingMode:
-        importResult.routingMode ??
-        (typeof opsSettings?.routingMode === 'string' ? opsSettings.routingMode : null),
-      portalEnabled: importResult.portalEnabled ?? opsSettings?.portalEnabled === true,
-      providerCredentialsSkipped:
-        importResult.providerCredentialsSkipped ?? skipProviderCredentials,
-      disabledProviderIds: importResult.disabledProviderIds ?? [],
-      compose,
-    },
-  };
 }
 
 export { createLocalAppDataAccess, type AppDataVolumeAccess };

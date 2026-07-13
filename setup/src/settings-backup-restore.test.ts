@@ -12,6 +12,7 @@ import {
   mergeConfigRestoreEnv,
   mergeConfigRestoreManagerState,
   restorePfbackup,
+  type PfbackupRestoreDeps,
 } from './settings-backup-restore.js';
 import { testSetupContext } from './test-setup-context.js';
 
@@ -131,6 +132,31 @@ function seedInstallHome(dir: string): { envPath: string; appDataDir: string } {
     fs.writeFileSync(path.join(appDataDir, name), `seed-${name}`);
   }
   return { envPath, appDataDir };
+}
+
+function workingRestoreDeps(
+  appDataDir: string,
+  overrides: Partial<PfbackupRestoreDeps> = {},
+): PfbackupRestoreDeps {
+  return {
+    stopStack: async () => ({ ok: true, log: 'stopped' }),
+    startAppStack: async () => ({ ok: true, log: 'app started', gatewaySkipped: false }),
+    startFullStack: async () => ({ ok: true, log: 'full stack started', gatewaySkipped: false }),
+    waitForMaintenanceApp: async () => true,
+    validateSettings: async () => ({ ok: true, errors: [] }),
+    importSnapshot: async () => ({ ok: false, errors: ['Import fehlgeschlagen.'] }),
+    exportDbSnapshot: async () => ({
+      settingsFormatVersion: 1,
+      exportedAt: sampleSettings.exportedAt,
+      opsSettings: sampleSettings.opsSettings,
+      authSettings: sampleSettings.authSettings,
+      messagingProviderConfigs: sampleSettings.messagingProviderConfigs,
+    }),
+    composeStatus: async () => ({ running: true, services: [] }),
+    runHealthChecks: async () => ({ ok: true, errors: [] }),
+    appDataAccess: createLocalAppDataAccess(appDataDir),
+    ...overrides,
+  };
 }
 
 test('mergeConfigRestoreEnv keeps current stack image tags', () => {
@@ -542,6 +568,66 @@ test('restorePfbackup stops stack before backing up runtime db files', async () 
     const result = await restorePfbackup(buildArchiveContent(), testSetupContext(dir), {}, deps);
     assert.equal(result.ok, true);
     assert.ok(callOrder.indexOf('stopStack') < callOrder.indexOf('backupDbFiles'));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('restorePfbackup rolls back when a cutover dependency throws', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-cutover-throw-'));
+  const { envPath, appDataDir } = seedInstallHome(dir);
+  const deps = workingRestoreDeps(appDataDir, {
+    startAppStack: async () => {
+      throw new Error('Docker-Aufruf abgebrochen.');
+    },
+  });
+
+  try {
+    const result = await restorePfbackup(buildArchiveContent(), testSetupContext(dir), {}, deps);
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.failedPhase, RESTORE_PHASES.cutover);
+      assert.equal(result.rollbackAttempted, true);
+      assert.equal(result.rollbackSucceeded, true);
+      assert.ok(result.errors.some((error) => error.includes('Docker-Aufruf abgebrochen.')));
+    }
+    assert.equal(readEnvMap(envPath).get('IMPORTS_HOST_PATH'), '/old/imports');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('restorePfbackup does not restore database files while rollback stop fails', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-rollback-stop-'));
+  const { appDataDir } = seedInstallHome(dir);
+  const localAccess = createLocalAppDataAccess(appDataDir);
+  let stopCalls = 0;
+  let restoreCalls = 0;
+  const deps = workingRestoreDeps(appDataDir, {
+    stopStack: async () => {
+      stopCalls += 1;
+      return stopCalls === 1
+        ? { ok: true, log: 'stopped' }
+        : { ok: false, log: 'Rollback-Stop fehlgeschlagen.' };
+    },
+    appDataAccess: {
+      ...localAccess,
+      restoreDbFiles: async (sourceDir) => {
+        restoreCalls += 1;
+        return localAccess.restoreDbFiles(sourceDir);
+      },
+    },
+  });
+
+  try {
+    const result = await restorePfbackup(buildArchiveContent(), testSetupContext(dir), {}, deps);
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.rollbackAttempted, true);
+      assert.equal(result.rollbackSucceeded, false);
+      assert.ok(result.errors.some((error) => error.includes('Rollback-Stop fehlgeschlagen.')));
+    }
+    assert.equal(restoreCalls, 0);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
