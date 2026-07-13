@@ -186,3 +186,27 @@ test('poll uses setTimeout after refresh completes', async () => {
   await controller.refresh({ scope: 'runtime', silent: true });
   assert.equal(pollRuns, 2);
 });
+
+test('poll continues while wizard view is active', async () => {
+  const timers: Array<{ delay: number; cb: () => void }> = [];
+
+  const controller = createHostRefreshController({
+    api: () => mockApi(),
+    pollIntervalMs: 5_000,
+    onRuntime: () => {},
+    onConfig: () => {},
+    onError: () => {},
+    schedule: (cb, delay) => {
+      timers.push({ delay, cb });
+      return timers.length;
+    },
+    clearSchedule: () => {
+      timers.length = 0;
+    },
+  });
+
+  controller.setView('wizard');
+  await controller.refresh({ scope: 'full', immediate: true });
+  assert.equal(timers.length, 1);
+  assert.equal(timers[0]?.delay, 5_000);
+});

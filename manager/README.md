@@ -62,9 +62,8 @@ Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unte
 
 ### Wartung
 
-- Stack: Start / Stop / Neustart / Neu bauen & starten (Stop ohne Volume-Löschung; Bestätigung bei Stop/Neustart)
-- **Neustart bei gestopptem Stack** = Start ohne Build (`compose up -d`)
-- **Neu bauen & starten:** `POST /compose { action: "restart", build: true }`
+- Stack: Start / Stop / Neustart (Stop ohne Volume-Löschung; Bestätigung bei Stop/Neustart)
+- **Neustart bei gestopptem Stack** = Start (`compose up -d`)
 - Logs pro Service (`GET /compose/logs`)
 - `.env`-Backup (`POST /backup { target: "env" }`) — keine DB/Staff-PINs
 - Import-/Export-Hostordner (`POST /storage`)
@@ -87,7 +86,7 @@ Setup-API (localhost `:9190`):
 | GET     | `/api/setup/host/runtime-health`   | Pollbarer Runtime-Snapshot                                                             |
 | GET     | `/api/setup/host/compose`          | Container-Status                                                                       |
 | GET     | `/api/setup/host/compose/logs`     | Log-Auszug                                                                             |
-| POST    | `/api/setup/host/compose`          | `{ action: start\|stop\|restart, build?: boolean }`; `build` nur bei `start`/`restart` |
+| POST    | `/api/setup/host/compose`          | `{ action: start\|stop\|restart }`                                                     |
 | GET     | `/api/setup/host/backup`           | Letztes `.env`-Backup (nur lesen)                                                      |
 | POST    | `/api/setup/host/backup`           | `{ target: "env" }`                                                                    |
 | POST    | `/api/setup/host/storage`          | `{ importsHostPath, exportsHostPath, restartCompose? }`                                |
@@ -102,19 +101,7 @@ Setup-API (localhost `:9190`):
 
 Vollständiger Install-Reset bleibt CLI: `npm run setup:reset`.
 
-## Stack-Releases bauen
-
-Siehe **[`docs/release-packaging.md`](../docs/release-packaging.md)** — dort: Manager-Semver vs. Stack-Release-Tag, `release:pfupdate` vs. `release:images`, Kompatibilität.
-
-Kurz:
-
-```bash
-# Stack-Update für Kunden (eine Datei)
-npm run release:pfupdate -- --version 2026.08.0
-
-# Erstinstallation Wizard (Sidecar-Format, nur app+sandbox)
-npm run release:images -- --version 2026.08.0
-```
+Build, Release-Pakete und Versionierung: **[`docs/delivery.md`](../docs/delivery.md)**.
 
 ## Internen macOS-Build erstellen
 

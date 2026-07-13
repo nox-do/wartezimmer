@@ -42,6 +42,8 @@ export type WizardControllerState = WizardFlowState & {
 export type WizardControllerDeps = WizardCallbacks & {
   api: PraxisManagerApi;
   onStateChange?: () => void;
+  /** Nach Apply / Stack-Start — Health-Header und Shell-Status aktualisieren. */
+  onHostMutated?: () => void;
 };
 
 export type WizardController = {
@@ -132,6 +134,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       status: await refreshWizardStatusAfterApply(deps.api),
       probeStatusText: null,
     });
+    deps.onHostMutated?.();
     try {
       await persistWizardRoutingMode(deps.api, state);
     } catch (error) {

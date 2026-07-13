@@ -12,7 +12,6 @@ import {
   pinResetSuccessText,
   routingModeSaveDisabled,
   routingModeSuccessText,
-  showRestartBuildButton,
   softwareUpdateErrorText,
   softwareUpdateInfoRows,
   softwareUpdateSectionVisible,
@@ -114,12 +113,6 @@ test('stackStatusLabel reflects compose running state', () => {
   assert.equal(stackStatusLabel(false), 'Gestoppt');
 });
 
-test('showRestartBuildButton only for repo mode', () => {
-  assert.equal(showRestartBuildButton('repo'), true);
-  assert.equal(showRestartBuildButton('install'), false);
-  assert.equal(showRestartBuildButton(undefined), false);
-});
-
 test('logsDisplayText falls back to empty placeholder', () => {
   assert.equal(logsDisplayText(''), '(keine Logs)');
   assert.equal(logsDisplayText('line 1'), 'line 1');
@@ -139,24 +132,27 @@ test('storageWarningText only when stack runs and paths changed', () => {
   assert.equal(storageWarningText(false, true), null);
 });
 
-test('softwareUpdateSectionVisible follows deliveryImages.required', () => {
-  assert.equal(softwareUpdateSectionVisible(minimalStatus()), true);
+test('softwareUpdateSectionVisible when host is set up', () => {
+  assert.equal(softwareUpdateSectionVisible(minimalStatus()), false);
+  assert.equal(softwareUpdateSectionVisible(minimalStatus({ envExists: true })), true);
   assert.equal(
     softwareUpdateSectionVisible(
       minimalStatus({
+        envExists: true,
         deliveryImages: {
           ...minimalStatus().deliveryImages,
           required: false,
         },
       }),
     ),
-    false,
+    true,
   );
   assert.equal(softwareUpdateSectionVisible(null), false);
 });
 
-test('softwareUpdateInfoRows includes summary and configured images', () => {
+test('softwareUpdateInfoRows shows compact current release', () => {
   const status = minimalStatus({
+    envExists: true,
     deliveryImages: {
       required: true,
       configured: true,
@@ -170,12 +166,27 @@ test('softwareUpdateInfoRows includes summary and configured images', () => {
     },
   });
   const rows = softwareUpdateInfoRows(status);
-  assert.equal(rows[0]?.label, 'Aktuell');
-  assert.match(rows[0]?.value ?? '', /praxis-flow\/app:2.0/);
-  assert.deepEqual(
-    rows.slice(1).map((row) => row.label),
-    ['app', 'sandbox'],
+  assert.deepEqual(rows, [{ label: 'Aktuell', value: '2.0.0' }]);
+});
+
+test('softwareUpdateInfoRows falls back to shared image tag without releaseVersion', () => {
+  const rows = softwareUpdateInfoRows(
+    minimalStatus({
+      envExists: true,
+      deliveryImages: {
+        required: true,
+        configured: true,
+        appImage: 'praxis-flow/app:2026.07.0',
+        sandboxImage: 'praxis-flow/sandbox:2026.07.0',
+        releaseVersion: null,
+        archiveSha256: null,
+        appPresent: true,
+        sandboxPresent: true,
+        ready: true,
+      },
+    }),
   );
+  assert.deepEqual(rows, [{ label: 'Aktuell', value: '2026.07.0' }]);
 });
 
 test('routingModeSaveDisabled blocks while busy, unknown, unchanged, or open waiting numbers', () => {

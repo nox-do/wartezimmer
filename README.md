@@ -6,7 +6,7 @@ Lokales Praxis-System: Check-in am Terminal, Warteschlange (MFA), Wartezimmer-TV
 
 ## Status
 
-Basisentwicklung — lokaler Dev-Stack und Docker-Compose sind der Hauptweg. Kunden-Delivery (versionierte Images, Electron-Installer) folgen; Details in [`docs/roadmap.md`](docs/roadmap.md).
+Basisentwicklung — lokaler Dev-Stack und Docker-Compose sind der Hauptweg. Kunden-Delivery (versionierte Images, Manager, `.pfupdate`): [`docs/delivery.md`](docs/delivery.md).
 
 ## Voraussetzungen
 
@@ -45,8 +45,8 @@ npm run dev:ui                  # SvelteKit-Devserver mit Proxy auf :8080
 
 Dokument-Preview, Form2PDF und Malware-Scan: Stack mit `npm run docker:up` (mindestens `app` + `sandbox`). Selten nativ: `npm run dev:sandbox` (nur Sandbox; App/API weiter separat).
 
-Host-Erstinstallation (LAN, Ordner, `.env`): `npm run setup` — [`docs/plan-setup-wizard.md`](docs/plan-setup-wizard.md).  
-Test-Install in Temp: `PRAXIS_FLOW_HOME=/tmp/pf-dev-001 npm run setup` · Reset: `npm run setup:reset` — [`docs/plan-praxis-flow-manager.md`](docs/plan-praxis-flow-manager.md).
+Erstinstallation & Manager: [`docs/delivery.md`](docs/delivery.md) · [`manager/README.md`](manager/README.md).  
+CLI: `npm run setup` · Test-Install: `PRAXIS_FLOW_HOME=/tmp/pf-dev-001 npm run setup` · Reset: `npm run setup:reset`
 
 ## Alltagsbefehle
 
@@ -79,13 +79,14 @@ Einstieg nach Rolle: **[`docs/README.md`](docs/README.md)**
 | Architektur       | [`docs/architecture.md`](docs/architecture.md)                   |
 | API-Vertrag       | `openapi/*.yaml` (+ [`docs/apis.md`](docs/apis.md) Rollenmatrix) |
 | Echtzeit (SSE)    | [`docs/realtime-streams.md`](docs/realtime-streams.md)           |
+| Build & Release   | [`docs/delivery.md`](docs/delivery.md)                         |
 | Docker-Betrieb    | [`docs/deployment-docker.md`](docs/deployment-docker.md)         |
-| Setup-Wizard      | [`docs/plan-setup-wizard.md`](docs/plan-setup-wizard.md)         |
+| Manager           | [`manager/README.md`](manager/README.md)                         |
 | Gast-WLAN         | [`gateway/README.md`](gateway/README.md)                         |
 
 Env-Variablen: [`.env.example`](.env.example) — nicht hier duplizieren.
 
-Kundenbetrieb (Images, kein lokaler Build): `docker-compose.delivery.yml` — siehe [`docs/deployment-docker.md`](docs/deployment-docker.md).
+Kundenbetrieb: `docker-compose.delivery.yml` — Runtime [`docs/deployment-docker.md`](docs/deployment-docker.md), Build/Release [`docs/delivery.md`](docs/delivery.md).
 
 ## Repo-Struktur
 
@@ -96,6 +97,7 @@ sandbox/                Dokument-Preview, ClamAV, Form2PDF
 packages/domain/        Geteilte Fachlogik / Typen
 packages/server-shared/ Geteilte Server-Helfer (Logger, …)
 setup/                  Host-CLI + Setup-API (:9190)
+manager/                Electron-App: Wizard, Wartung, Updates
 gateway/                Optionales Captive-Portal (Profil gateway, Linux)
 openapi/                API-Spezifikation (Source of Truth)
 docs/                   Fach- und Architektur-Doku

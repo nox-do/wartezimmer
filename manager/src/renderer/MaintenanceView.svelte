@@ -211,13 +211,12 @@
         onToggle={() => toggleSection('operations')}
       >
         <StackControls
-          status={snapshot.status}
           compose={snapshot.compose}
           busy={snapshot.busy}
           onToggle={(wantRunning) => controller?.handleStackToggle(wantRunning)}
-          onRestartBuild={() => controller?.restartBuild()}
           onRestart={() => controller?.restart()}
         />
+        <hr class="panel-section-divider" />
         <SoftwareUpdatePanel
           status={snapshot.status}
           statusText={snapshot.softwareUpdateStatusText}

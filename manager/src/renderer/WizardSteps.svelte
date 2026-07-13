@@ -12,8 +12,8 @@
   } from './wizard-flow.js';
   import { deliveryImagesReady, needsDeliveryImages } from './delivery-images-flow.js';
   import {
+    ROUTING_MODE_WIZARD_HEADING,
     ROUTING_MODE_WIZARD_INTRO_DETAIL,
-    ROUTING_MODE_WIZARD_INTRO_LEAD,
   } from './routing-mode-ui.js';
   import { resolvedLanIp } from './wizard-state.js';
   import type { WizardController } from './wizard-controller.js';
@@ -157,48 +157,48 @@
         {/if}
       {/if}
     {:else if snapshot.step === 2}
-      <p>
-        Unter welcher Adresse erreichen Terminal, TV und MFA Praxis Flow im Praxisnetz? Zuerst die
-        Host-Adresse (LAN-IP), danach die Basis-URL für Geräte.
+      <p class="wizard-step-lead">
+        LAN-Adresse dieses Rechners und die Basis-URL, unter der Terminal, TV und MFA Praxis Flow im
+        Praxisnetz erreichen.
       </p>
-      <h3 class="network-config-subheading">LAN-Adresse (Host / Binding)</h3>
-      <p class="hint">Adresse dieses Rechners im Praxisnetz — Fallback, wenn ein Hostname nicht auflöst.</p>
-      <LanIpPanel
-        state={snapshot}
-        network={snapshot.network}
-        status={snapshot.status}
-        disabled={snapshot.busy || snapshot.reachabilityProbeBusy}
-        variant="wizard"
-        radioName="wizard-lan-ip"
-        idPrefix="wizard"
-        onChange={patchFields}
-      />
 
-      <h3 class="network-config-subheading">Erreichbarkeit im Praxisnetz</h3>
-      <ReachabilityPanel
-        state={snapshot}
-        network={snapshot.network}
-        disabled={snapshot.busy}
-        probeBusy={snapshot.reachabilityProbeBusy}
-        probeMessage={snapshot.reachabilityProbeMessage}
-        probeOk={snapshot.reachabilityProbeOk}
-        onChange={patchFields}
-        onTest={() => {
-          void controller.testReachability().then(onPatch);
-        }}
-      />
-      <p class="hint">
-        Später optional: Zugang über Port 80/443 (Reverse Proxy). Aktuell läuft Praxis Flow auf Port
-        8080.
-      </p>
+      <section class="network-config-block">
+        <h3 class="network-config-subheading">1. Host im Praxisnetz</h3>
+        <p class="hint">
+          Adresse dieses Rechners — Fallback, wenn ein Hostname im LAN nicht auflöst.
+        </p>
+        <LanIpPanel
+          state={snapshot}
+          network={snapshot.network}
+          status={snapshot.status}
+          disabled={snapshot.busy || snapshot.reachabilityProbeBusy}
+          variant="wizard"
+          radioName="wizard-lan-ip"
+          idPrefix="wizard"
+          onChange={patchFields}
+        />
+      </section>
+
+      <section class="network-config-block">
+        <h3 class="network-config-subheading">2. Geräte-URL (Basis)</h3>
+        <ReachabilityPanel
+          state={snapshot}
+          network={snapshot.network}
+          disabled={snapshot.busy}
+          probeBusy={snapshot.reachabilityProbeBusy}
+          probeMessage={snapshot.reachabilityProbeMessage}
+          probeOk={snapshot.reachabilityProbeOk}
+          onChange={patchFields}
+          onTest={() => {
+            void controller.testReachability().then(onPatch);
+          }}
+        />
+      </section>
     {:else if snapshot.step === 3}
       <p>
         Dieser Name wird an verschiedenen Stellen in Praxis Flow verwendet, um den Namen Ihrer
         Praxis anzuzeigen.
       </p>
-      {#if snapshot.status?.envExists && snapshot.practiceDisplayName.trim()}
-        <p class="hint">Aktueller Wert aus .env: {snapshot.practiceDisplayName.trim()}</p>
-      {/if}
       <input
         type="text"
         class="wizard-input"
@@ -207,11 +207,8 @@
         oninput={(event) => patchFields({ practiceDisplayName: event.currentTarget.value })}
       />
 
-      <h3 class="routing-mode-subheading">Routing-Modus</h3>
-      <div class="routing-mode-intro">
-        <p><strong>{ROUTING_MODE_WIZARD_INTRO_LEAD}</strong></p>
-        <p>{ROUTING_MODE_WIZARD_INTRO_DETAIL}</p>
-      </div>
+      <h3 class="routing-mode-subheading">{ROUTING_MODE_WIZARD_HEADING}</h3>
+      <p class="hint routing-mode-intro-compact">{ROUTING_MODE_WIZARD_INTRO_DETAIL}</p>
       <WizardRoutingModePanel
         routingMode={snapshot.routingMode}
         complexRoutingLicensed={snapshot.complexRoutingLicensed}
@@ -221,7 +218,7 @@
       {#if snapshot.routingCapabilitiesStatus === 'loading'}
         <p class="wizard-progress is-active" role="status">
           <span class="spinner" aria-hidden="true"></span>
-          Routing-Modus wird geladen …
+          Routing wird geladen …
         </p>
       {/if}
     {:else if snapshot.step === 4}
@@ -285,6 +282,10 @@
           <dt>Portal</dt><dd>{snapshot.plan.deviceUrls.portal}</dd>
           <dt>Ops Setup</dt><dd>{snapshot.plan.deviceUrls.opsSetup}</dd>
         </dl>
+        <p class="hint">
+          Geräte nutzen Port 8080. Zugang künftig optional über Port 80/443 (Reverse Proxy) — noch
+          nicht Teil dieser Einrichtung.
+        </p>
 
         {#if snapshot.gatewayEnabled && Object.keys(snapshot.plan.gatewayEnv).length > 0}
           <h3 class="wizard-subheading">Gast-WLAN</h3>

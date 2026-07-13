@@ -788,10 +788,9 @@ Auth von aussen: Session-Token, Wartenummer vom Terminal — ohne Besuch im Port
 
 ## Referenzen
 
+- `docs/delivery.md`
 - `docs/deployment-docker.md`
-- `docs/plan-setup-wizard.md`
-- `docs/plan-praxis-flow-manager.md`
-- `docs/plan-praxis-flow-manager.md`
+- `manager/README.md`
 - `docs/gateway-captive-portal.md`
 - `docker-compose.delivery.yml`
 - `setup/src/server.ts`

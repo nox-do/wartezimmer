@@ -13051,6 +13051,508 @@
         }
       }
     },
+    "/api/v1/ops/settings/snapshot": {
+      "get": {
+        "summary": "Export DB settings snapshot (maintenance listener)",
+        "description": "Exports ops, auth, and messaging provider settings from SQLite without host `.env`.\nServed on the maintenance HTTP listener (host loopback, e.g. port 8082). No session auth.\n",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "DB-only settings snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "settingsFormatVersion",
+                    "exportedAt",
+                    "opsSettings",
+                    "authSettings",
+                    "messagingProviderConfigs"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "settingsFormatVersion": {
+                      "type": "integer",
+                      "const": 1
+                    },
+                    "exportedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "opsSettings": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.)."
+                    },
+                    "authSettings": {
+                      "type": "object",
+                      "required": ["staffPinHashMfa", "staffPinHashOps", "roomPanelPinHash"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "staffPinHashMfa": {
+                          "type": "string"
+                        },
+                        "staffPinHashOps": {
+                          "type": "string"
+                        },
+                        "roomPanelPinHash": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "messagingProviderConfigs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["providerId", "channel", "enabled", "credentialsJson"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "providerId": {
+                            "type": "string"
+                          },
+                          "channel": {
+                            "type": "string",
+                            "enum": ["sms", "messenger"]
+                          },
+                          "enabled": {
+                            "type": "boolean"
+                          },
+                          "credentialsJson": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ops/settings/snapshot/validate": {
+      "post": {
+        "summary": "Validate settings snapshot for restore (maintenance listener)",
+        "description": "Parses and validates a full settings snapshot (including `env` when present).\nMaintenance listener only; used by Setup for `.pfbackup` / `.pfupdate` compatibility checks.\n",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "settingsFormatVersion",
+                      "exportedAt",
+                      "opsSettings",
+                      "authSettings",
+                      "messagingProviderConfigs"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "settingsFormatVersion": {
+                        "type": "integer",
+                        "const": 1
+                      },
+                      "exportedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "opsSettings": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "description": "Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.)."
+                      },
+                      "authSettings": {
+                        "type": "object",
+                        "required": ["staffPinHashMfa", "staffPinHashOps", "roomPanelPinHash"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "staffPinHashMfa": {
+                            "type": "string"
+                          },
+                          "staffPinHashOps": {
+                            "type": "string"
+                          },
+                          "roomPanelPinHash": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "messagingProviderConfigs": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": ["providerId", "channel", "enabled", "credentialsJson"],
+                          "additionalProperties": false,
+                          "properties": {
+                            "providerId": {
+                              "type": "string"
+                            },
+                            "channel": {
+                              "type": "string",
+                              "enum": ["sms", "messenger"]
+                            },
+                            "enabled": {
+                              "type": "boolean"
+                            },
+                            "credentialsJson": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": ["env"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "env": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation result (`ok` false still returns HTTP 200)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["ok", "errors"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "UNKNOWN_FORMAT_VERSION",
+                        "INVALID_SNAPSHOT",
+                        "OPS_SETTINGS_INVALID",
+                        "CATALOG_INTEGRITY_FAILED",
+                        "IMPORT_FAILED"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ops/settings/snapshot/import": {
+      "post": {
+        "summary": "Import settings snapshot into SQLite (maintenance listener)",
+        "description": "Replaces ops/auth/messaging settings in the app database. Maintenance listener only.\nHost `.env` is not modified — Setup merges env when building `.pfbackup`.\n",
+        "security": [],
+        "parameters": [
+          {
+            "name": "skipProviderCredentials",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
+            },
+            "description": "When `true`, messaging provider credentials are not restored from the snapshot."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "settingsFormatVersion",
+                      "exportedAt",
+                      "opsSettings",
+                      "authSettings",
+                      "messagingProviderConfigs"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "settingsFormatVersion": {
+                        "type": "integer",
+                        "const": 1
+                      },
+                      "exportedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "opsSettings": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "description": "Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.)."
+                      },
+                      "authSettings": {
+                        "type": "object",
+                        "required": ["staffPinHashMfa", "staffPinHashOps", "roomPanelPinHash"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "staffPinHashMfa": {
+                            "type": "string"
+                          },
+                          "staffPinHashOps": {
+                            "type": "string"
+                          },
+                          "roomPanelPinHash": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "messagingProviderConfigs": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": ["providerId", "channel", "enabled", "credentialsJson"],
+                          "additionalProperties": false,
+                          "properties": {
+                            "providerId": {
+                              "type": "string"
+                            },
+                            "channel": {
+                              "type": "string",
+                              "enum": ["sms", "messenger"]
+                            },
+                            "enabled": {
+                              "type": "boolean"
+                            },
+                            "credentialsJson": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": ["env"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "env": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Import succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "settingsFormatVersion",
+                    "exportedAt",
+                    "routingMode",
+                    "portalEnabled",
+                    "setupContactMode",
+                    "messagingProviderCount",
+                    "catalogIntegrityOk",
+                    "skipProviderCredentials",
+                    "providerCredentialsSkipped",
+                    "disabledProviderIds"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "settingsFormatVersion": {
+                      "type": "integer",
+                      "const": 1
+                    },
+                    "exportedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "routingMode": {
+                      "type": "string",
+                      "enum": ["simple", "complex"]
+                    },
+                    "portalEnabled": {
+                      "type": "boolean"
+                    },
+                    "setupContactMode": {
+                      "type": "string",
+                      "enum": ["unset", "sample", "own"]
+                    },
+                    "messagingProviderCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "catalogIntegrityOk": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "skipProviderCredentials": {
+                      "type": "boolean"
+                    },
+                    "providerCredentialsSkipped": {
+                      "type": "boolean"
+                    },
+                    "disabledProviderIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid snapshot, import failure, or invalid query parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "required": ["ok", "errors"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "ok": {
+                          "type": "boolean",
+                          "const": false
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "UNKNOWN_FORMAT_VERSION",
+                            "INVALID_SNAPSHOT",
+                            "OPS_SETTINGS_INVALID",
+                            "CATALOG_INTEGRITY_FAILED",
+                            "IMPORT_FAILED"
+                          ]
+                        },
+                        "errors": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "required": ["code", "message"],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Machine-readable API error code returned in Error responses.",
+                          "enum": [
+                            "INVALID_ARGUMENT",
+                            "INTERNAL_ERROR",
+                            "NOT_FOUND",
+                            "AUTH_UNAUTHORIZED",
+                            "AUTH_FORBIDDEN",
+                            "RATE_LIMITED",
+                            "VISIT_NOT_FOUND",
+                            "DOCUMENT_NOT_FOUND",
+                            "DOCUMENT_FORBIDDEN",
+                            "INVALID_TRANSITION",
+                            "ROOM_REQUIRED",
+                            "MISSING_CALLBACK_PHONE",
+                            "CHECKIN_LOCK_REQUIRED",
+                            "DAY_CLOSE_IN_PROGRESS",
+                            "INVALID_DAY_CLOSE_PHASE",
+                            "DAY_CLOSE_NOT_STARTED",
+                            "UNKNOWN_MESSAGING_PROVIDER",
+                            "CHECKIN_LOCKED",
+                            "CHECKIN_AUTH_PATH_DISABLED",
+                            "CHECKIN_CLOSED",
+                            "TOPIC_DISABLED",
+                            "TOPIC_CLOSED",
+                            "DOCUMENT_NOT_SCANNED",
+                            "EXPORT_BLOCKED_MALWARE",
+                            "OPS_SETTINGS_INVALID",
+                            "EMERGENCY_DISABLED",
+                            "EMERGENCY_NOT_FOUND",
+                            "SETUP_INCOMPLETE",
+                            "SETUP_ALREADY_COMPLETED",
+                            "SESSION_INVALID_TICKET",
+                            "SESSION_TICKET_NOT_ACTIVE",
+                            "SESSION_ALREADY_ACTIVE",
+                            "SESSION_UNAUTHORIZED",
+                            "SESSION_EXPIRED",
+                            "FORM_TEMPLATE_NOT_FOUND",
+                            "DOCUMENT_INTAKE_BLOCKED",
+                            "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                            "DOCUMENT_SCHEMA_OUTDATED",
+                            "SANDBOX_UNAVAILABLE",
+                            "CAPTIVE_CLIENT_MISSING",
+                            "CAPTIVE_AUTH_FAILED",
+                            "CALL_ANNOUNCEMENT_OFFLINE",
+                            "ROOM_AT_CAPACITY",
+                            "ROOM_BLOCKED_TOPICS",
+                            "ROOM_BLOCKED_QUEUE",
+                            "ROOM_BLOCKED_CAPACITY",
+                            "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                            "RECALL_WINDOW_EXPIRED",
+                            "UNKNOWN_TOPIC",
+                            "TERMINAL_OFFLINE",
+                            "TERMINAL_PHONE_INVALID",
+                            "TERMINAL_BIRTH_DATE_INVALID",
+                            "TERMINAL_LAST_NAME_INVALID"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Optional extra context for debugging."
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ops/settings/onboarding/verify": {
       "post": {
         "summary": "Verify setup checks (expensive probes)",
@@ -20649,6 +21151,309 @@
               "complexRoutingLicensed": {
                 "type": "boolean"
               }
+            }
+          }
+        }
+      },
+      "SettingsSnapshotAuthSettingsV1": {
+        "type": "object",
+        "required": ["staffPinHashMfa", "staffPinHashOps", "roomPanelPinHash"],
+        "additionalProperties": false,
+        "properties": {
+          "staffPinHashMfa": {
+            "type": "string"
+          },
+          "staffPinHashOps": {
+            "type": "string"
+          },
+          "roomPanelPinHash": {
+            "type": "string"
+          }
+        }
+      },
+      "SettingsSnapshotMessagingProviderConfigV1": {
+        "type": "object",
+        "required": ["providerId", "channel", "enabled", "credentialsJson"],
+        "additionalProperties": false,
+        "properties": {
+          "providerId": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string",
+            "enum": ["sms", "messenger"]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "credentialsJson": {
+            "type": "string"
+          }
+        }
+      },
+      "SettingsSnapshotOpsSettingsV1": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.)."
+      },
+      "SettingsSnapshotDbV1": {
+        "type": "object",
+        "required": [
+          "settingsFormatVersion",
+          "exportedAt",
+          "opsSettings",
+          "authSettings",
+          "messagingProviderConfigs"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "settingsFormatVersion": {
+            "type": "integer",
+            "const": 1
+          },
+          "exportedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "opsSettings": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.)."
+          },
+          "authSettings": {
+            "type": "object",
+            "required": ["staffPinHashMfa", "staffPinHashOps", "roomPanelPinHash"],
+            "additionalProperties": false,
+            "properties": {
+              "staffPinHashMfa": {
+                "type": "string"
+              },
+              "staffPinHashOps": {
+                "type": "string"
+              },
+              "roomPanelPinHash": {
+                "type": "string"
+              }
+            }
+          },
+          "messagingProviderConfigs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["providerId", "channel", "enabled", "credentialsJson"],
+              "additionalProperties": false,
+              "properties": {
+                "providerId": {
+                  "type": "string"
+                },
+                "channel": {
+                  "type": "string",
+                  "enum": ["sms", "messenger"]
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "credentialsJson": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SettingsSnapshotV1": {
+        "allOf": [
+          {
+            "type": "object",
+            "required": [
+              "settingsFormatVersion",
+              "exportedAt",
+              "opsSettings",
+              "authSettings",
+              "messagingProviderConfigs"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "settingsFormatVersion": {
+                "type": "integer",
+                "const": 1
+              },
+              "exportedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "opsSettings": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.)."
+              },
+              "authSettings": {
+                "type": "object",
+                "required": ["staffPinHashMfa", "staffPinHashOps", "roomPanelPinHash"],
+                "additionalProperties": false,
+                "properties": {
+                  "staffPinHashMfa": {
+                    "type": "string"
+                  },
+                  "staffPinHashOps": {
+                    "type": "string"
+                  },
+                  "roomPanelPinHash": {
+                    "type": "string"
+                  }
+                }
+              },
+              "messagingProviderConfigs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["providerId", "channel", "enabled", "credentialsJson"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "providerId": {
+                      "type": "string"
+                    },
+                    "channel": {
+                      "type": "string",
+                      "enum": ["sms", "messenger"]
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "credentialsJson": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["env"],
+            "additionalProperties": false,
+            "properties": {
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "SettingsSnapshotValidationResult": {
+        "type": "object",
+        "required": ["ok", "errors"],
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "UNKNOWN_FORMAT_VERSION",
+              "INVALID_SNAPSHOT",
+              "OPS_SETTINGS_INVALID",
+              "CATALOG_INTEGRITY_FAILED",
+              "IMPORT_FAILED"
+            ]
+          }
+        }
+      },
+      "SettingsSnapshotImportReport": {
+        "type": "object",
+        "required": [
+          "ok",
+          "settingsFormatVersion",
+          "exportedAt",
+          "routingMode",
+          "portalEnabled",
+          "setupContactMode",
+          "messagingProviderCount",
+          "catalogIntegrityOk",
+          "skipProviderCredentials",
+          "providerCredentialsSkipped",
+          "disabledProviderIds"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "settingsFormatVersion": {
+            "type": "integer",
+            "const": 1
+          },
+          "exportedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "routingMode": {
+            "type": "string",
+            "enum": ["simple", "complex"]
+          },
+          "portalEnabled": {
+            "type": "boolean"
+          },
+          "setupContactMode": {
+            "type": "string",
+            "enum": ["unset", "sample", "own"]
+          },
+          "messagingProviderCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "catalogIntegrityOk": {
+            "type": "boolean",
+            "const": true
+          },
+          "skipProviderCredentials": {
+            "type": "boolean"
+          },
+          "providerCredentialsSkipped": {
+            "type": "boolean"
+          },
+          "disabledProviderIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SettingsSnapshotImportError": {
+        "type": "object",
+        "required": ["ok", "errors"],
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": false
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "UNKNOWN_FORMAT_VERSION",
+              "INVALID_SNAPSHOT",
+              "OPS_SETTINGS_INVALID",
+              "CATALOG_INTEGRITY_FAILED",
+              "IMPORT_FAILED"
+            ]
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         }

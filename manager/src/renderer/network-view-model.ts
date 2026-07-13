@@ -1,4 +1,4 @@
-import { formatEnvBackupLabel } from '@praxis-flow/server-shared';
+import { formatEnvBackupLabel } from '@praxis-flow/server-shared/env-backup';
 import type { HostNetworkResult } from '../shared/host-status.js';
 
 export const NETWORK_SAVE_PROGRESS_TEXT = 'Speichern …';

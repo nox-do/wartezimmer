@@ -62,7 +62,6 @@ export type MaintenanceController = {
   browseImportsFolder: () => Promise<string | null>;
   browseExportsFolder: () => Promise<string | null>;
   handleStackToggle: (wantRunning: boolean) => void;
-  restartBuild: () => void;
   restart: () => void;
   refreshLogs: (service?: string) => Promise<void>;
   requestLogsRefresh: (service?: string) => void;
@@ -140,11 +139,11 @@ export function createMaintenanceController(
     patch({ logsText: result.log });
   }
 
-  async function runAction(action: 'start' | 'stop' | 'restart', build = false): Promise<void> {
+  async function runAction(action: 'start' | 'stop' | 'restart'): Promise<void> {
     setBusy(true);
     setError(null);
     try {
-      const result = await deps.api.runComposeAction(action, build);
+      const result = await deps.api.runComposeAction(action);
       patch({ compose: result.compose });
       if (!result.ok) {
         setError(composeActionErrorMessage(action, result.log));
@@ -254,9 +253,6 @@ export function createMaintenanceController(
       deps.requestConfirm(STACK_OFFLINE_CONFIRM_MESSAGE, () => {
         void runAction('stop');
       });
-    },
-    restartBuild() {
-      void runAction('restart', true);
     },
     restart() {
       deps.requestConfirm(STACK_OFFLINE_CONFIRM_MESSAGE, () => {

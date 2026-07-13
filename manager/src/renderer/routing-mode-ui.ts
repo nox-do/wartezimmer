@@ -2,9 +2,10 @@ import type { RoutingMode } from '../shared/host-status.js';
 
 export type RoutingModePanelContext = 'wizard' | 'maintenance';
 
-export const ROUTING_MODE_WIZARD_INTRO_LEAD = 'Wohin soll der Patient nach dem Check-in?';
+export const ROUTING_MODE_WIZARD_HEADING =
+  'Routing — Wohin soll der Patient nach dem Check-in?';
 export const ROUTING_MODE_WIZARD_INTRO_DETAIL =
-  'Praxis Flow steuert den Weg vom Terminal über Wartezimmer und Aufruf bis zum Zielraum. Wählen Sie, wie detailliert Sie diese Wege konfigurieren möchten.';
+  'Vom Terminal über Wartezimmer und Aufruf bis zum Zielraum — wie detailliert soll der Weg konfigurierbar sein?';
 export const ROUTING_MODE_WIZARD_FOOTNOTE =
   'Der Modus gilt praxisweit. Simple ist der Standard und lässt sich jederzeit in den IT-Einstellungen anpassen.';
 

@@ -2,6 +2,44 @@
 
 Stand: 2026-07-13
 
+- OpenAPI: Settings-Snapshot-Endpunkte in `ops.yaml` + `npm run generate:api` (Maintenance-Listener)
+- Wizard Abschluss: eine Footer-Zeile mit kleinen Buttons „Zum Status“ + „IT-Einstellungen“ (ohne Abbrechen)
+- Wizard Abschluss: Health-Header — Polling läuft auch im Wizard; nach Apply zusätzlich sofortiger Refresh (`onHostMutated`)
+- Schritt 3: .env-Hinweis entfernt, Routing-Überschrift kompakt, Intro gekürzt
+
+## Erledigt: Wizard Schritt 2 UX (2026-07-13)
+
+- Schritt 2: zwei Blöcke (Host / Geräte-URL), Gast-WLAN-Hinweis → Schritt 4, Reverse-Proxy → Vorschau Schritt 6
+
+## Erledigt: Manager Wizard-Autostart (2026-07-13)
+
+- Ohne `.env` (`envExists: false`): nach erstem Status-Load → Wizard fullscreen (ohne Tabs), wie vor Svelte-Shell
+- Abbruch vom Wizard → Status mit Setup-Entry (kein erneuter Autostart in derselben Session)
+- Dev-Hinweis: Repo-Modus mit vorhandener `.env` startet bewusst auf Status
+
+## Release-Test 2026.07.0 (2026-07-13)
+
+- `npm run release:images -- --version 2026.07.0` — OK (~67s)
+- Artefakte: `dist/releases/praxis-flow-2026.07.0/` (95 MB `.tar.gz` + manifest + SHA256)
+- Images lokal: `praxis-flow/app:2026.07.0`, `praxis-flow/sandbox:2026.07.0`
+- Nächster Schritt: Manager → Release-Paket laden → Erstinstallation testen
+
+## Erledigt: Manager weißer Screen (2026-07-13)
+
+- Ursache: Renderer importierte `@praxis-flow/server-shared` Barrel → `node:crypto` in Browser-Kontext → Modul-Ladefehler, Svelte mountet nicht
+- Fix: Browser-sichere Subpath-Exports (`env-backup`, `backup-path-labels`, `setup-api`); Label-Helper nach `backup-path-labels.ts` extrahiert
+
+## Erledigt: Docker-Build flow-core (2026-07-13)
+
+- `app/Dockerfile`: `packages/flow-core/tsconfig.base.json` fehlte im COPY — `tsc` fiel auf Default-CompilerOptions zurück (Kaskadenfehler)
+
+## Erledigt: Delivery-Doku konsolidiert (2026-07-13)
+
+- Neu: [`docs/delivery.md`](docs/delivery.md) — Build, Erstinstallation, Update, Versionierung (eine Stelle)
+- Entfernt: `docs/release-packaging.md` (Inhalt migriert)
+- Bereinigt: `deployment-docker.md` (nur Runtime), `manager/README.md` (kein Build-Duplikat)
+- Kaputte Links gefixt: `plan-setup-wizard.md`, `plan-praxis-flow-manager.md` → `delivery.md` / `manager/README.md`
+
 ## Erledigt: App-Typecheck-Fixes (2026-07-13)
 
 - `visit-queue-bridge.ts`: fehlender `TriageLevel`-Import
@@ -119,7 +157,7 @@ App-Export aufrufen · Setup-API sammelt Settings + `.env` + `manager-state.json
 - ✅ Manager: Update-Wizard (Datei → Inspect/Preview → Bestätigen → Apply), analog Restore
 - ✅ `settingsFormatVersion` aus `HostStatus` / Maintenance-App (nicht hardcoded im Manager)
 - ✅ Optional: `PFUPDATE_DOCKER_SMOKE=1 npm run test -w @praxis-flow/setup -- pfupdate-docker-smoke`
-- ✅ Doku: [`docs/release-packaging.md`](docs/release-packaging.md) · `deployment-docker.md` + `manager/README.md` verlinkt
+- ✅ Doku: [`docs/delivery.md`](docs/delivery.md) (Build, Release, Installation, Update) · Runtime in `deployment-docker.md` · Manager in `manager/README.md`
 
 **8. Update-Orchestrator** — ✅ Setup `/update/apply` (2026-07-12)
 

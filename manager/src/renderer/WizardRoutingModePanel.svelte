@@ -1,8 +1,6 @@
 <script lang="ts">
   import {
     ROUTING_MODE_WIZARD_FOOTNOTE,
-    ROUTING_MODE_WIZARD_INTRO_DETAIL,
-    ROUTING_MODE_WIZARD_INTRO_LEAD,
     buildRoutingModeOptions,
   } from './routing-mode-ui.js';
   import type { RoutingMode } from '../shared/host-status.js';

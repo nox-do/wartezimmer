@@ -118,23 +118,8 @@ Ziel: so wenig Schritte wie moeglich, klarer Support-Pfad.
 - Tagesbetrieb:
   - keine Build-Kommandos
   - nur Start/Stop/Status
-- Update (über **Praxis Flow Manager → Wartung → Software-Update**):
-  - eine `.pfupdate`-Datei wählen (siehe [`release-packaging.md`](release-packaging.md))
-  - Manager führt Cutover inkl. Settings-Backup automatisch aus
-- Manuell (Support / ohne Manager):
-  - neue Image-Tags in `.env` setzen
-  - `docker compose -f docker-compose.delivery.yml --env-file .env pull && … up -d`
-
-Details, Versionierung und Build: **[`release-packaging.md`](release-packaging.md)**.
-
-## Update-Runbook (minimal, manuell)
-
-1. Backup der Volumes (`app_data`, `sandbox_intake_data`) und ggf. Export-/Import-Ordner auf dem Host
-2. In `.env` neue Image-Tags setzen (`PRAXIS_FLOW_APP_IMAGE`, `PRAXIS_FLOW_SANDBOX_IMAGE`)
-3. `docker compose -f docker-compose.delivery.yml --env-file .env pull`
-4. `docker compose -f docker-compose.delivery.yml --env-file .env up -d`
-5. Health pruefen (`/api/v1/ops/health`)
-6. Kurztest in UI (Terminal + MFA + TV)
+- Update: **Praxis Flow Manager → Wartung → Software-Update** (`.pfupdate`) — siehe [`delivery.md`](delivery.md)
+- Manuell ohne Manager (nur Support-Fallback): Image-Tags in `.env` setzen, `compose pull && up -d` — kein Settings-Cutover/Rollback
 
 ## Start/Stop/Status (Kundenbetrieb)
 

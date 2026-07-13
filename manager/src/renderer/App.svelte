@@ -42,7 +42,11 @@
       />
       <MaintenanceView {onAfterMutation} />
       <NetworkView {onAfterMutation} />
-      <WizardView onComplete={onWizardComplete} onCancel={onWizardCancel} />
+      <WizardView
+        onComplete={onWizardComplete}
+        onCancel={onWizardCancel}
+        onHostMutated={onAfterMutation}
+      />
     </div>
   </div>
 </div>

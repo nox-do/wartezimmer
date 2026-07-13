@@ -64,7 +64,6 @@ export type PraxisManagerMaintenanceApi = {
   getComposeLogs(service?: string, tail?: number): Promise<ComposeLogsResult>;
   runComposeAction(
     action: 'start' | 'stop' | 'restart',
-    build?: boolean,
   ): Promise<ComposeActionResult>;
   createPfbackup(): Promise<PfbackupResult>;
   savePfbackup(backupPath: string): Promise<SavePfbackupResult>;

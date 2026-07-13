@@ -20,9 +20,11 @@
   let {
     onComplete,
     onCancel,
+    onHostMutated,
   }: {
     onComplete: () => void;
     onCancel: () => void;
+    onHostMutated?: () => void;
   } = $props();
 
   let snapshot = $state<WizardControllerState | null>(null);
@@ -56,6 +58,7 @@
       api,
       onComplete,
       onCancel,
+      onHostMutated,
       onStateChange: syncSnapshot,
     });
     syncSnapshot();
@@ -107,60 +110,59 @@
       <WizardSteps {snapshot} {controller} {hostPlatform} onPatch={syncSnapshot} />
     {/if}
 
-    <footer class="actions-row actions-row--footer" id="wizard-actions" hidden={completed}>
-      <button
-        type="button"
-        id="wizard-back"
-        class="btn-secondary"
-        hidden={wizardBackHidden(snapshot)}
-        disabled={snapshot.busy}
-        onclick={() => {
-          controller?.goBack();
-          syncSnapshot();
-        }}
-      >
-        Zurück
-      </button>
-      <button
-        type="button"
-        id="wizard-next"
-        disabled={wizardNextButtonDisabled(snapshot)}
-        onclick={() => {
-          void controller?.goNext().then(syncSnapshot);
-        }}
-      >
-        {wizardNextButtonLabel(snapshot)}
-      </button>
-      <button
-        type="button"
-        id="wizard-cancel"
-        class="btn-link"
-        disabled={snapshot.busy}
-        onclick={() => controller?.cancel()}
-      >
-        Abbrechen
-      </button>
-    </footer>
-
-    <footer class="wizard-completion-actions" id="wizard-completion-actions" hidden={!completed}>
-      <button
-        type="button"
-        id="wizard-complete-status"
-        class="btn-secondary"
-        disabled={snapshot.busy}
-        onclick={() => controller?.complete()}
-      >
-        Zum Status
-      </button>
-      <button
-        type="button"
-        id="wizard-complete-it-settings"
-        class="btn-secondary"
-        disabled={snapshot.busy || !itSettingsUrl}
-        onclick={() => controller?.openItSettings()}
-      >
-        IT-Einstellungen in Praxis Flow öffnen
-      </button>
+    <footer class="actions-row actions-row--footer" id="wizard-actions">
+      {#if completed}
+        <button
+          type="button"
+          id="wizard-complete-status"
+          disabled={snapshot.busy}
+          onclick={() => controller?.complete()}
+        >
+          Zum Status
+        </button>
+        <button
+          type="button"
+          id="wizard-complete-it-settings"
+          class="btn-secondary"
+          disabled={snapshot.busy || !itSettingsUrl}
+          onclick={() => controller?.openItSettings()}
+        >
+          IT-Einstellungen
+        </button>
+      {:else}
+        <button
+          type="button"
+          id="wizard-back"
+          class="btn-secondary"
+          hidden={wizardBackHidden(snapshot)}
+          disabled={snapshot.busy}
+          onclick={() => {
+            controller?.goBack();
+            syncSnapshot();
+          }}
+        >
+          Zurück
+        </button>
+        <button
+          type="button"
+          id="wizard-next"
+          disabled={wizardNextButtonDisabled(snapshot)}
+          onclick={() => {
+            void controller?.goNext().then(syncSnapshot);
+          }}
+        >
+          {wizardNextButtonLabel(snapshot)}
+        </button>
+        <button
+          type="button"
+          id="wizard-cancel"
+          class="btn-link"
+          disabled={snapshot.busy}
+          onclick={() => controller?.cancel()}
+        >
+          Abbrechen
+        </button>
+      {/if}
     </footer>
   {/if}
 </div>

@@ -848,14 +848,8 @@ button:disabled {
   font-weight: 600;
 }
 
-.routing-mode-intro {
-  margin: 0 0 0.75rem;
-  display: grid;
-  gap: 0.35rem;
-}
-
-.routing-mode-intro p {
-  margin: 0;
+.routing-mode-intro-compact {
+  margin: 0 0 0.65rem;
 }
 
 .routing-mode-footnote {
@@ -1064,22 +1058,6 @@ button:disabled {
   line-height: 1.45;
 }
 
-.wizard-completion-actions {
-  margin-top: 1.5rem;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.65rem;
-}
-
-.wizard-completion-actions[hidden] {
-  display: none;
-}
-
-.wizard-completion-actions .btn-secondary {
-  width: 100%;
-  justify-content: center;
-}
-
 .routing-mode-recommended-badge {
   display: inline-block;
   margin-left: 0.15rem;
@@ -1117,6 +1095,14 @@ button:disabled {
   margin-top: 1.25rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--border);
+}
+
+.wizard-step-lead {
+  margin: 0 0 1rem;
+}
+
+.network-config-block .network-config-subheading {
+  margin-top: 0;
 }
 
 .network-config-subheading {

@@ -7,6 +7,11 @@ export function defaultWizardPresentation(status: HostStatus | null): WizardPres
   return status?.envExists ? 'embedded' : 'fullscreen';
 }
 
+/** Erstinstallation ohne `.env` → Wizard fullscreen ohne Tabs (siehe manager/README). */
+export function shouldAutoStartFullscreenWizard(status: HostStatus | null): boolean {
+  return !status?.envExists;
+}
+
 export type NavigateOptions = {
   wizardPresentation?: WizardPresentation;
 };

@@ -1,24 +1,16 @@
 <script lang="ts">
-  import {
-    stackStatusLabel,
-    showRestartBuildButton,
-  } from './maintenance-view-model.js';
-  import type { HostStatus } from '../shared/host-status.js';
+  import { stackStatusLabel } from './maintenance-view-model.js';
   import type { ComposeStatus } from '../shared/host-status.js';
 
   let {
-    status,
     compose,
     busy = false,
     onToggle,
-    onRestartBuild,
     onRestart,
   }: {
-    status: HostStatus | null;
     compose: ComposeStatus | null;
     busy?: boolean;
     onToggle: (wantRunning: boolean) => void;
-    onRestartBuild: () => void;
     onRestart: () => void;
   } = $props();
 
@@ -49,11 +41,6 @@
       </span>
       <span id="maintenance-stack-status" class="stack-toggle-status">{stackStatusLabel(running)}</span>
     </label>
-    {#if showRestartBuildButton(status?.mode)}
-      <button type="button" class="btn-secondary" disabled={busy} onclick={onRestartBuild}>
-        Neu bauen &amp; starten
-      </button>
-    {/if}
     <button type="button" class="btn-secondary" disabled={busy} onclick={onRestart}>Neustart</button>
   </div>
   <p class="hint">Ist der Stack gestoppt, entspricht Neustart einem Start.</p>

@@ -7,6 +7,18 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./env-backup": {
+      "types": "./dist/env-backup.d.ts",
+      "import": "./dist/env-backup.js"
+    },
+    "./setup-api": {
+      "types": "./dist/setup-api.d.ts",
+      "import": "./dist/setup-api.js"
+    },
+    "./backup-path-labels": {
+      "types": "./dist/backup-path-labels.d.ts",
+      "import": "./dist/backup-path-labels.js"
     }
   },
   "scripts": {

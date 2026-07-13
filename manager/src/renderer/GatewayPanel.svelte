@@ -43,7 +43,8 @@
     <p><strong>Wofür ist dieser Schritt?</strong></p>
     <p>
       Sie entscheiden, ob Praxis Flow Einstellungen für ein Gast-WLAN mit Captive Portal vorbereiten
-      soll.
+      soll. Das ist <strong>optional</strong> und ein <strong>separates Netz</strong> — die
+      Portal-Adresse kann von der Geräte-Basis aus Schritt 2 (Terminal, TV, MFA) abweichen.
     </p>
     <ul class="wizard-gateway-intro-list">
       <li><strong>Aus:</strong> Kein Gast-WLAN — Normalfall für den Start.</li>

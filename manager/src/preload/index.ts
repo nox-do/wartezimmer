@@ -137,12 +137,11 @@ async function getComposeLogs(service?: string, tail?: number): Promise<ComposeL
 
 async function runComposeAction(
   action: 'start' | 'stop' | 'restart',
-  build?: boolean,
 ): Promise<ComposeActionResult> {
   return callSetupApi<ComposeActionResult>({
     method: 'POST',
     path: '/api/setup/host/compose',
-    body: { action, build: Boolean(build) },
+    body: { action },
   });
 }
 

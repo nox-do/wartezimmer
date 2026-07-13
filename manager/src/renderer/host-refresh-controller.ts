@@ -63,13 +63,9 @@ export function createHostRefreshController(
     }
   }
 
-  function shouldPoll(view: ManagerView): boolean {
-    return view !== 'wizard';
-  }
-
   function schedulePollTimer(myGeneration: number): void {
     stopPollTimer();
-    if (!shouldPoll(currentView) || myGeneration !== generation) {
+    if (myGeneration !== generation) {
       return;
     }
     pollTimerId = schedule(() => {
@@ -111,7 +107,7 @@ export function createHostRefreshController(
           : 'Setup-API nicht erreichbar — bitte Manager neu starten.';
       deps.onError(message, currentView);
     } finally {
-      if (myGeneration === generation && shouldPoll(currentView)) {
+      if (myGeneration === generation) {
         schedulePollTimer(myGeneration);
       }
     }
@@ -138,11 +134,6 @@ export function createHostRefreshController(
     },
     setView(view: ManagerView): void {
       currentView = view;
-      if (view === 'wizard') {
-        stopPollTimer();
-        ++generation;
-        return;
-      }
     },
     refresh,
     getLastConfig(): HostStatus | null {

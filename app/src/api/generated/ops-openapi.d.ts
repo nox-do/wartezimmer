@@ -376,6 +376,148 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/ops/settings/snapshot': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Export DB settings snapshot (maintenance listener)
+     * @description Exports ops, auth, and messaging provider settings from SQLite without host `.env`.
+     *     Served on the maintenance HTTP listener (host loopback, e.g. port 8082). No session auth.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description DB-only settings snapshot */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['SettingsSnapshotDbV1'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/ops/settings/snapshot/validate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Validate settings snapshot for restore (maintenance listener)
+     * @description Parses and validates a full settings snapshot (including `env` when present).
+     *     Maintenance listener only; used by Setup for `.pfbackup` / `.pfupdate` compatibility checks.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['SettingsSnapshotV1'];
+        };
+      };
+      responses: {
+        /** @description Validation result (`ok` false still returns HTTP 200) */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['SettingsSnapshotValidationResult'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/ops/settings/snapshot/import': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Import settings snapshot into SQLite (maintenance listener)
+     * @description Replaces ops/auth/messaging settings in the app database. Maintenance listener only.
+     *     Host `.env` is not modified — Setup merges env when building `.pfbackup`.
+     */
+    post: {
+      parameters: {
+        query?: {
+          /** @description When `true`, messaging provider credentials are not restored from the snapshot. */
+          skipProviderCredentials?: 'true' | 'false';
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['SettingsSnapshotV1'];
+        };
+      };
+      responses: {
+        /** @description Import succeeded */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['SettingsSnapshotImportReport'];
+          };
+        };
+        /** @description Invalid snapshot, import failure, or invalid query parameter */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json':
+              | components['schemas']['SettingsSnapshotImportError']
+              | components['schemas']['Error'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/ops/settings/onboarding/verify': {
     parameters: {
       query?: never;
@@ -1624,6 +1766,78 @@ export interface components {
         routingSimulator: boolean;
         complexRoutingLicensed: boolean;
       };
+    };
+    SettingsSnapshotAuthSettingsV1: {
+      staffPinHashMfa: string;
+      staffPinHashOps: string;
+      roomPanelPinHash: string;
+    };
+    SettingsSnapshotMessagingProviderConfigV1: {
+      providerId: string;
+      /** @enum {string} */
+      channel: 'sms' | 'messenger';
+      enabled: boolean;
+      credentialsJson: string;
+    };
+    /** @description Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.). */
+    SettingsSnapshotOpsSettingsV1: {
+      [key: string]: unknown;
+    };
+    SettingsSnapshotDbV1: {
+      /** @constant */
+      settingsFormatVersion: 1;
+      /** Format: date-time */
+      exportedAt: string;
+      opsSettings: components['schemas']['SettingsSnapshotOpsSettingsV1'];
+      authSettings: components['schemas']['SettingsSnapshotAuthSettingsV1'];
+      messagingProviderConfigs: components['schemas']['SettingsSnapshotMessagingProviderConfigV1'][];
+    };
+    SettingsSnapshotV1: components['schemas']['SettingsSnapshotDbV1'] & {
+      env: {
+        [key: string]: string;
+      };
+    };
+    SettingsSnapshotValidationResult: {
+      ok: boolean;
+      errors: string[];
+      /** @enum {string} */
+      code?:
+        | 'UNKNOWN_FORMAT_VERSION'
+        | 'INVALID_SNAPSHOT'
+        | 'OPS_SETTINGS_INVALID'
+        | 'CATALOG_INTEGRITY_FAILED'
+        | 'IMPORT_FAILED';
+    };
+    SettingsSnapshotImportReport: {
+      /** @constant */
+      ok: true;
+      /** @constant */
+      settingsFormatVersion: 1;
+      /** Format: date-time */
+      exportedAt: string;
+      /** @enum {string} */
+      routingMode: 'simple' | 'complex';
+      portalEnabled: boolean;
+      /** @enum {string} */
+      setupContactMode: 'unset' | 'sample' | 'own';
+      messagingProviderCount: number;
+      /** @constant */
+      catalogIntegrityOk: true;
+      skipProviderCredentials: boolean;
+      providerCredentialsSkipped: boolean;
+      disabledProviderIds: string[];
+    };
+    SettingsSnapshotImportError: {
+      /** @constant */
+      ok: false;
+      /** @enum {string} */
+      code?:
+        | 'UNKNOWN_FORMAT_VERSION'
+        | 'INVALID_SNAPSHOT'
+        | 'OPS_SETTINGS_INVALID'
+        | 'CATALOG_INTEGRITY_FAILED'
+        | 'IMPORT_FAILED';
+      errors: string[];
     };
     DeploymentVolumeStatus: {
       containerPath: string;

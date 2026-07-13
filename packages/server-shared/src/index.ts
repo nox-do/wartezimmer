@@ -15,6 +15,10 @@ export {
 export {
   PFBACKUP_BASENAME_PREFIX,
   PFBACKUP_FILE_EXTENSION,
+  formatPfbackupLabel,
+  parsePfbackupTimestampFromPath,
+} from './backup-path-labels.js';
+export {
   PFBACKUP_FORMAT_VERSION,
   CURRENT_SETTINGS_FORMAT_VERSION,
   STACK_IMAGE_ENV_KEYS,
@@ -22,12 +26,10 @@ export {
   buildPfbackupArchive,
   buildPfbackupFilename,
   envRecordForSettingsExport,
-  formatPfbackupLabel,
   normalizeManagerState,
   validateManagerStateForBackup,
   validateManagerStateJsonForBackup,
   parsePfbackupArchive,
-  parsePfbackupTimestampFromPath,
   serializePfbackupArchive,
   sha256HexUtf8,
   stableJsonStringify,

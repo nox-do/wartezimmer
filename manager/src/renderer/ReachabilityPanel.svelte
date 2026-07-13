@@ -40,8 +40,8 @@
 
 <div class="reachability-panel">
   <p class="hint">
-    Basis-URL für Terminal, TV, MFA, Ops und Portal. Hostname ist Komfort — wenn der Name im LAN
-    nicht auflöst, LAN-IP verwenden. Port ist aktuell immer 8080.
+    Basis-URL für Terminal, TV, MFA und Ops im Praxisnetz (Port 8080). Hostname ist Komfort — wenn
+    der Name im LAN nicht auflöst, LAN-IP verwenden.
   </p>
 
   <fieldset class="wizard-fieldset" disabled={disabled || probeBusy}>
@@ -124,9 +124,4 @@
   {#if probeMessage}
     <p class={probeOk === false ? 'error' : 'hint'}>{probeMessage}</p>
   {/if}
-
-  <p class="hint">
-    Gast-WLAN / Captive Portal bleibt getrennt (unten) — dort kann die Portal-Adresse von dieser
-    Basis abweichen.
-  </p>
 </div>

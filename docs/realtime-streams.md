@@ -238,5 +238,5 @@ Akzeptanz: MFA sieht Pairing-Prompt und Presence-Wechsel ohne spürbare Verzöge
 - API-Details: `docs/apis.md` → Abschnitt „Echtzeit / Ops-Stream“
 - Interne Events (Outbox vs. SSE): `docs/events.md`
 - Architektur: `docs/architecture.md` (logische Komponenten)
-- Pairing/Auth: `docs/plan-setup-wizard.md`
+- Pairing/Auth: [`delivery.md`](delivery.md), [`../manager/README.md`](../manager/README.md)
 - Ist-Code: `ops-event-hub.ts`, `ops-stream-routes.ts`, `connectOpsStream()`, `MfaQuicksettings.svelte` (Stores)

@@ -157,41 +157,43 @@
 
   {#if snapshot}
     <section class="panel-section panel-section--network">
-      <MaintenanceSection
-        open={topologyOpen}
-        title="Erläuterung zu den Betriebsarten"
-        subtitle="Betrieb mit oder ohne Patientenportal"
-        onToggle={() => {
-          topologyOpen = !topologyOpen;
-        }}
-      >
-        <NetworkTopologyDiagram
-          lanIp={diagramLanIp}
-          gatewayIp={snapshot.gatewayEnabled ? snapshot.gatewayIp : null}
-          gatewayEnabled={snapshot.gatewayEnabled}
-        />
-      </MaintenanceSection>
-      <MaintenanceSection
-        open={reachabilityOpen}
-        title="Erreichbarkeit im Praxisnetz"
-        subtitle={snapshot.status?.configuredCanonicalBaseUrl ||
-          snapshot.status?.appBaseUrl ||
-          'Basis-URL für Geräte wählen'}
-        onToggle={() => {
-          reachabilityOpen = !reachabilityOpen;
-        }}
-      >
-        <ReachabilityPanel
-          state={snapshot}
-          network={snapshot.network}
-          disabled={snapshot.busy}
-          probeBusy={snapshot.reachabilityProbeBusy}
-          probeMessage={snapshot.reachabilityProbeMessage}
-          probeOk={snapshot.reachabilityProbeOk}
-          onChange={patchFields}
-          onTest={() => controller?.testReachability()}
-        />
-      </MaintenanceSection>
+      <div class="maintenance-accordion">
+        <MaintenanceSection
+          open={topologyOpen}
+          title="Erläuterung zu den Betriebsarten"
+          subtitle="Betrieb mit oder ohne Patientenportal"
+          onToggle={() => {
+            topologyOpen = !topologyOpen;
+          }}
+        >
+          <NetworkTopologyDiagram
+            lanIp={diagramLanIp}
+            gatewayIp={snapshot.gatewayEnabled ? snapshot.gatewayIp : null}
+            gatewayEnabled={snapshot.gatewayEnabled}
+          />
+        </MaintenanceSection>
+        <MaintenanceSection
+          open={reachabilityOpen}
+          title="Erreichbarkeit im Praxisnetz"
+          subtitle={snapshot.status?.configuredCanonicalBaseUrl ||
+            snapshot.status?.appBaseUrl ||
+            'Basis-URL für Geräte wählen'}
+          onToggle={() => {
+            reachabilityOpen = !reachabilityOpen;
+          }}
+        >
+          <ReachabilityPanel
+            state={snapshot}
+            network={snapshot.network}
+            disabled={snapshot.busy}
+            probeBusy={snapshot.reachabilityProbeBusy}
+            probeMessage={snapshot.reachabilityProbeMessage}
+            probeOk={snapshot.reachabilityProbeOk}
+            onChange={patchFields}
+            onTest={() => controller?.testReachability()}
+          />
+        </MaintenanceSection>
+      </div>
       <NetworkBindingChecks checks={snapshot.status?.networkBindings} />
     </section>
 

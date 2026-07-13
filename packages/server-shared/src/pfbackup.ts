@@ -1,11 +1,15 @@
 import { createHash } from 'node:crypto';
+import { PFBACKUP_BASENAME_PREFIX, PFBACKUP_FILE_EXTENSION } from './backup-path-labels.js';
 import { encodeEnvBackupTimestamp } from './env-backup.js';
 
 export const PFBACKUP_FORMAT_VERSION = 1 as const;
 /** Settings snapshot schema version used by app export/import and `.pfbackup` / `.pfupdate` compatibility. */
 export const CURRENT_SETTINGS_FORMAT_VERSION = 1 as const;
-export const PFBACKUP_FILE_EXTENSION = 'pfbackup';
-export const PFBACKUP_BASENAME_PREFIX = 'praxis-flow-backup-';
+export { PFBACKUP_BASENAME_PREFIX, PFBACKUP_FILE_EXTENSION } from './backup-path-labels.js';
+export {
+  formatPfbackupLabel,
+  parsePfbackupTimestampFromPath,
+} from './backup-path-labels.js';
 
 /** @deprecated No keys are excluded — full stack `.env` is exported into settings snapshots. */
 export const SETTINGS_EXPORT_ENV_EXCLUDED_KEYS = new Set<string>();
@@ -252,47 +256,6 @@ export function validateManagerStateJsonForBackup(managerStateJson: string): Man
 
 export function buildPfbackupFilename(date = new Date()): string {
   return `${PFBACKUP_BASENAME_PREFIX}${encodeEnvBackupTimestamp(date)}.${PFBACKUP_FILE_EXTENSION}`;
-}
-
-export function parsePfbackupTimestampFromPath(backupPath: string): Date | null {
-  const base = backupPath.replace(/\\/g, '/').split('/').pop() ?? backupPath;
-  if (!base.startsWith(PFBACKUP_BASENAME_PREFIX) || !base.endsWith(`.${PFBACKUP_FILE_EXTENSION}`)) {
-    return null;
-  }
-  const encoded = base.slice(
-    PFBACKUP_BASENAME_PREFIX.length,
-    base.length - `.${PFBACKUP_FILE_EXTENSION}`.length,
-  );
-  const match = encoded.match(
-    /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/,
-  );
-  if (!match) {
-    return null;
-  }
-  const [, year, month, day, hour, minute, second, millis] = match;
-  return new Date(
-    Date.UTC(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hour),
-      Number(minute),
-      Number(second),
-      Number(millis),
-    ),
-  );
-}
-
-export function formatPfbackupLabel(backupPath: string, locale = 'de-DE'): string {
-  const date = parsePfbackupTimestampFromPath(backupPath);
-  if (!date) {
-    const base = backupPath.replace(/\\/g, '/').split('/').pop();
-    return base ?? backupPath;
-  }
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
 }
 
 export function buildPfbackupArchive(input: {

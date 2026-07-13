@@ -35,6 +35,7 @@ COPY packages/domain/src ./packages/domain/src
 COPY packages/server-shared/tsconfig.json ./packages/server-shared/tsconfig.json
 COPY packages/server-shared/src ./packages/server-shared/src
 COPY packages/flow-core/tsconfig.json ./packages/flow-core/tsconfig.json
+COPY packages/flow-core/tsconfig.base.json ./packages/flow-core/tsconfig.base.json
 COPY packages/flow-core/src ./packages/flow-core/src
 COPY packages/flow-core/db ./packages/flow-core/db
 COPY ui/svelte.config.js ./ui/svelte.config.js

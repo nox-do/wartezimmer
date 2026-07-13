@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { HostRefreshController } from './host-refresh-controller.js';
-import { createManagerNavigation, defaultWizardPresentation } from './manager-navigation.js';
+import { createManagerNavigation, defaultWizardPresentation, shouldAutoStartFullscreenWizard } from './manager-navigation.js';
 import type { ManagerNavigationSessions } from './manager-navigation.js';
 import type { HostStatus } from '../shared/host-status.js';
 import type { WizardPresentation } from './manager-navigation.js';
@@ -194,4 +194,10 @@ test('defaultWizardPresentation uses fullscreen before env exists', () => {
   assert.equal(defaultWizardPresentation(null), 'fullscreen');
   assert.equal(defaultWizardPresentation(minimalStatus({ envExists: false })), 'fullscreen');
   assert.equal(defaultWizardPresentation(minimalStatus({ envExists: true })), 'embedded');
+});
+
+test('shouldAutoStartFullscreenWizard only before .env exists', () => {
+  assert.equal(shouldAutoStartFullscreenWizard(null), true);
+  assert.equal(shouldAutoStartFullscreenWizard(minimalStatus({ envExists: false })), true);
+  assert.equal(shouldAutoStartFullscreenWizard(minimalStatus({ envExists: true })), false);
 });

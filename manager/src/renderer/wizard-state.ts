@@ -8,7 +8,7 @@ import {
   SETUP_DEFAULT_GATEWAY_INTERFACE,
   SETUP_DEFAULT_GATEWAY_IP,
   SETUP_DEFAULT_PRACTICE_NAME,
-} from '@praxis-flow/server-shared';
+} from '@praxis-flow/server-shared/setup-api';
 import {
   inferReachabilityFields,
   type ReachabilityFieldState,

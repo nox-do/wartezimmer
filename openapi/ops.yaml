@@ -763,6 +763,168 @@ components:
               type: boolean
             complexRoutingLicensed:
               type: boolean
+    SettingsSnapshotAuthSettingsV1:
+      type: object
+      required:
+        - staffPinHashMfa
+        - staffPinHashOps
+        - roomPanelPinHash
+      additionalProperties: false
+      properties:
+        staffPinHashMfa:
+          type: string
+        staffPinHashOps:
+          type: string
+        roomPanelPinHash:
+          type: string
+    SettingsSnapshotMessagingProviderConfigV1:
+      type: object
+      required:
+        - providerId
+        - channel
+        - enabled
+        - credentialsJson
+      additionalProperties: false
+      properties:
+        providerId:
+          type: string
+        channel:
+          type: string
+          enum: [sms, messenger]
+        enabled:
+          type: boolean
+        credentialsJson:
+          type: string
+    SettingsSnapshotOpsSettingsV1:
+      type: object
+      additionalProperties: true
+      description: Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.).
+    SettingsSnapshotDbV1:
+      type: object
+      required:
+        - settingsFormatVersion
+        - exportedAt
+        - opsSettings
+        - authSettings
+        - messagingProviderConfigs
+      additionalProperties: false
+      properties:
+        settingsFormatVersion:
+          type: integer
+          const: 1
+        exportedAt:
+          type: string
+          format: date-time
+        opsSettings:
+          $ref: '#/components/schemas/SettingsSnapshotOpsSettingsV1'
+        authSettings:
+          $ref: '#/components/schemas/SettingsSnapshotAuthSettingsV1'
+        messagingProviderConfigs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettingsSnapshotMessagingProviderConfigV1'
+    SettingsSnapshotV1:
+      allOf:
+        - $ref: '#/components/schemas/SettingsSnapshotDbV1'
+        - type: object
+          required:
+            - env
+          additionalProperties: false
+          properties:
+            env:
+              type: object
+              additionalProperties:
+                type: string
+    SettingsSnapshotValidationResult:
+      type: object
+      required:
+        - ok
+        - errors
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: string
+        code:
+          type: string
+          enum:
+            - UNKNOWN_FORMAT_VERSION
+            - INVALID_SNAPSHOT
+            - OPS_SETTINGS_INVALID
+            - CATALOG_INTEGRITY_FAILED
+            - IMPORT_FAILED
+    SettingsSnapshotImportReport:
+      type: object
+      required:
+        - ok
+        - settingsFormatVersion
+        - exportedAt
+        - routingMode
+        - portalEnabled
+        - setupContactMode
+        - messagingProviderCount
+        - catalogIntegrityOk
+        - skipProviderCredentials
+        - providerCredentialsSkipped
+        - disabledProviderIds
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          const: true
+        settingsFormatVersion:
+          type: integer
+          const: 1
+        exportedAt:
+          type: string
+          format: date-time
+        routingMode:
+          type: string
+          enum: [simple, complex]
+        portalEnabled:
+          type: boolean
+        setupContactMode:
+          type: string
+          enum: [unset, sample, own]
+        messagingProviderCount:
+          type: integer
+          minimum: 0
+        catalogIntegrityOk:
+          type: boolean
+          const: true
+        skipProviderCredentials:
+          type: boolean
+        providerCredentialsSkipped:
+          type: boolean
+        disabledProviderIds:
+          type: array
+          items:
+            type: string
+    SettingsSnapshotImportError:
+      type: object
+      required:
+        - ok
+        - errors
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          const: false
+        code:
+          type: string
+          enum:
+            - UNKNOWN_FORMAT_VERSION
+            - INVALID_SNAPSHOT
+            - OPS_SETTINGS_INVALID
+            - CATALOG_INTEGRITY_FAILED
+            - IMPORT_FAILED
+        errors:
+          type: array
+          items:
+            type: string
     DeploymentVolumeStatus:
       type: object
       required:
@@ -1578,6 +1740,76 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RoutingCapabilitiesResponse'
+  /api/v1/ops/settings/snapshot:
+    get:
+      summary: Export DB settings snapshot (maintenance listener)
+      description: |
+        Exports ops, auth, and messaging provider settings from SQLite without host `.env`.
+        Served on the maintenance HTTP listener (host loopback, e.g. port 8082). No session auth.
+      security: []
+      responses:
+        '200':
+          description: DB-only settings snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsSnapshotDbV1'
+  /api/v1/ops/settings/snapshot/validate:
+    post:
+      summary: Validate settings snapshot for restore (maintenance listener)
+      description: |
+        Parses and validates a full settings snapshot (including `env` when present).
+        Maintenance listener only; used by Setup for `.pfbackup` / `.pfupdate` compatibility checks.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsSnapshotV1'
+      responses:
+        '200':
+          description: Validation result (`ok` false still returns HTTP 200)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsSnapshotValidationResult'
+  /api/v1/ops/settings/snapshot/import:
+    post:
+      summary: Import settings snapshot into SQLite (maintenance listener)
+      description: |
+        Replaces ops/auth/messaging settings in the app database. Maintenance listener only.
+        Host `.env` is not modified — Setup merges env when building `.pfbackup`.
+      security: []
+      parameters:
+        - name: skipProviderCredentials
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ['true', 'false']
+          description: When `true`, messaging provider credentials are not restored from the snapshot.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsSnapshotV1'
+      responses:
+        '200':
+          description: Import succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsSnapshotImportReport'
+        '400':
+          description: Invalid snapshot, import failure, or invalid query parameter
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SettingsSnapshotImportError'
+                  - $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/settings/onboarding/verify:
     post:
       summary: Verify setup checks (expensive probes)

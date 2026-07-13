@@ -1,5 +1,5 @@
 import { createHostRefreshController } from './host-refresh-controller.js';
-import { createManagerNavigation, defaultWizardPresentation } from './manager-navigation.js';
+import { createManagerNavigation, defaultWizardPresentation, shouldAutoStartFullscreenWizard } from './manager-navigation.js';
 import type { NavigateOptions } from './manager-navigation.js';
 import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
 import type { ManagerView } from './host-refresh-controller.js';
@@ -65,6 +65,8 @@ export function createManagerAppController(): ManagerAppController {
     navigation.navigateTo('wizard', { wizardPresentation: 'fullscreen' });
   }
 
+  let bootRouteResolved = false;
+
   const hostRefresh = createHostRefreshController({
     api: requirePraxisManager,
     onRuntime(runtime) {
@@ -72,6 +74,13 @@ export function createManagerAppController(): ManagerAppController {
     },
     onConfig(status, view) {
       applyHostStatus(status);
+      if (!bootRouteResolved && view === 'status') {
+        bootRouteResolved = true;
+        if (shouldAutoStartFullscreenWizard(status)) {
+          navigation.navigateTo('wizard', { wizardPresentation: 'fullscreen' });
+          return;
+        }
+      }
       syncShell(view);
     },
     onError(message) {

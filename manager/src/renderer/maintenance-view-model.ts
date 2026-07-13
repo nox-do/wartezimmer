@@ -8,7 +8,8 @@ import type {
   RoutingMode,
   StorageFoldersResult,
 } from '../shared/host-status.js';
-import { formatEnvBackupLabel, formatPfbackupLabel } from '@praxis-flow/server-shared';
+import { formatEnvBackupLabel } from '@praxis-flow/server-shared/env-backup';
+import { formatPfbackupLabel } from '@praxis-flow/server-shared/backup-path-labels';
 import { deliveryImagesSummary } from './delivery-images-flow.js';
 
 export const MAINTENANCE_LOG_SERVICES = [
@@ -67,10 +68,6 @@ export function stackStatusLabel(running: boolean): string {
   return running ? 'Läuft' : 'Gestoppt';
 }
 
-export function showRestartBuildButton(mode: HostStatus['mode'] | undefined): boolean {
-  return mode === 'repo';
-}
-
 export function logsDisplayText(logsText: string): string {
   return logsText || '(keine Logs)';
 }
@@ -94,18 +91,28 @@ export function storageWarningText(running: boolean, pathsChanged: boolean): str
 }
 
 export function softwareUpdateSectionVisible(status: HostStatus | null): boolean {
-  return status?.deliveryImages.required ?? false;
+  return Boolean(status?.envExists);
+}
+
+export function softwareUpdateCurrentLabel(status: HostStatus): string {
+  const images = status.deliveryImages;
+  const release = images.releaseVersion?.trim();
+  if (release) {
+    return release;
+  }
+  if (images.ready && images.appImage && images.sandboxImage) {
+    const appTag = images.appImage.split(':').pop() ?? images.appImage;
+    const sandboxTag = images.sandboxImage.split(':').pop() ?? images.sandboxImage;
+    if (appTag === sandboxTag) {
+      return appTag;
+    }
+    return `${appTag} (app) · ${sandboxTag} (sandbox)`;
+  }
+  return deliveryImagesSummary(status);
 }
 
 export function softwareUpdateInfoRows(status: HostStatus): MaintenanceInfoRow[] {
-  const rows: MaintenanceInfoRow[] = [{ label: 'Aktuell', value: deliveryImagesSummary(status) }];
-  if (status.deliveryImages.appImage) {
-    rows.push({ label: 'app', value: status.deliveryImages.appImage });
-  }
-  if (status.deliveryImages.sandboxImage) {
-    rows.push({ label: 'sandbox', value: status.deliveryImages.sandboxImage });
-  }
-  return rows;
+  return [{ label: 'Aktuell', value: softwareUpdateCurrentLabel(status) }];
 }
 
 export function routingModeSaveDisabled(
