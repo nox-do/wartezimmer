@@ -1,6 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import {
   applySetupPlan,
   backupPf,
@@ -32,10 +33,14 @@ import {
   normalizeSetupPlanInput,
   SetupApiValidationError,
 } from './setup-api-normalize.js';
-import { resolveSetupContext } from './setup-context.js';
+import { resolveSetupContext, type SetupContext } from './setup-context.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
 
 const DEFAULT_PORT = 9190;
+
+type RouteResult = [status: number, body: unknown];
+type RouteHandler = (req: http.IncomingMessage, url: URL) => RouteResult | Promise<RouteResult>;
+type Routes = Record<string, RouteHandler>;
 
 function readBodyRecord(body: unknown): Record<string, unknown> {
   return body !== null && typeof body === 'object' && !Array.isArray(body)
@@ -60,8 +65,8 @@ function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
       }
       try {
         resolve(JSON.parse(raw));
-      } catch (error) {
-        reject(error);
+      } catch {
+        reject(new SetupApiValidationError('invalid JSON'));
       }
     });
   });
@@ -75,253 +80,220 @@ function sendJson(res: http.ServerResponse, status: number, body: unknown) {
   res.end(JSON.stringify(body));
 }
 
-export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DEFAULT_PORT)) {
-  const ctx = resolveSetupContext();
+function routeResult(body: unknown, status = 200): RouteResult {
+  return [status, body];
+}
 
-  const server = http.createServer(async (req, res) => {
+function requireString(
+  record: Record<string, unknown>,
+  key: string,
+  errorMessage = `${key} required`,
+): string {
+  const value = readOptionalString(record, key)?.trim();
+  if (!value) {
+    throw new SetupApiValidationError(errorMessage);
+  }
+  return value;
+}
+
+async function readPfupdateInput(req: http.IncomingMessage) {
+  const body = readBodyRecord(await readJsonBody(req));
+  const settingsFormatVersion = body.settingsFormatVersion;
+  return {
+    archivePath: requireString(body, 'archivePath'),
+    managerVersion: readOptionalString(body, 'managerVersion')?.trim() || undefined,
+    settingsFormatVersion:
+      typeof settingsFormatVersion === 'number' && Number.isInteger(settingsFormatVersion)
+        ? settingsFormatVersion
+        : undefined,
+  };
+}
+
+function createRuntimeRoutes(ctx: SetupContext): Routes {
+  return {
+    'GET /api/setup/host/status': async (_req, url) => {
+      const includeParam = url.searchParams.get('include') ?? '';
+      const include = new Set(
+        includeParam
+          .split(',')
+          .map((part) => part.trim())
+          .filter(Boolean),
+      );
+      return routeResult(
+        await getHostStatus(ctx, {
+          includeProbes: include.has('probes'),
+          includeSandboxScanner: include.has('sandboxScanner'),
+        }),
+      );
+    },
+    'GET /api/setup/host/runtime-health': async () => routeResult(await getHostRuntimeHealth(ctx)),
+    'GET /api/setup/host/network': () => routeResult(getNetworkSnapshot()),
+    'POST /api/setup/host/network': async (req) => {
+      const body = await readJsonBody(req);
+      const input = normalizeHostNetworkInput(body);
+      return routeResult(await saveHostNetwork(ctx, input));
+    },
+    'GET /api/setup/host/compose': async () => routeResult(await getComposeStatus(ctx)),
+    'GET /api/setup/host/compose/logs': async (_req, url) => {
+      const service = url.searchParams.get('service')?.trim() || undefined;
+      const tailRaw = url.searchParams.get('tail');
+      const tail = tailRaw ? Number(tailRaw) : undefined;
+      const result = await getComposeLogs(ctx, {
+        service,
+        tail: Number.isFinite(tail) ? tail : undefined,
+      });
+      return routeResult(result, result.ok ? 200 : 500);
+    },
+    'POST /api/setup/host/compose': async (req) => {
+      const body = readBodyRecord(await readJsonBody(req));
+      const action = readOptionalString(body, 'action')?.trim();
+      if (action !== 'start' && action !== 'stop' && action !== 'restart') {
+        throw new SetupApiValidationError('action must be start, stop, or restart');
+      }
+      if (action === 'stop' && body.build) {
+        throw new SetupApiValidationError('build is only allowed for start or restart');
+      }
+      const result = await runComposeAction(ctx, action, { build: Boolean(body.build) });
+      return routeResult(result, result.ok ? 200 : 500);
+    },
+  };
+}
+
+function createManagementRoutes(ctx: SetupContext): Routes {
+  return {
+    'GET /api/setup/host/backup': () => routeResult(getPfbackupInfo(ctx)),
+    'POST /api/setup/host/backup': async () => routeResult(await backupPf(ctx)),
+    'POST /api/setup/host/backup/validate': async (req) => {
+      const body = readBodyRecord(await readJsonBody(req));
+      return routeResult(
+        await validatePfbackupFull(
+          requireString(body, 'content', 'content is required'),
+          LOCAL_MAINTENANCE_APP_BASE_URL,
+        ),
+      );
+    },
+    'POST /api/setup/host/backup/inspect': async (req) => {
+      const body = readBodyRecord(await readJsonBody(req));
+      const content = requireString(body, 'content', 'content is required');
+      return routeResult(await inspectPfbackup(content, ctx));
+    },
+    'POST /api/setup/host/backup/restore': async (req) => {
+      const body = readBodyRecord(await readJsonBody(req));
+      const content = requireString(body, 'content', 'content is required');
+      const result = await restorePfbackup(content, ctx, {
+        skipProviderCredentials: body.skipProviderCredentials === true,
+      });
+      return routeResult(result, result.ok ? 200 : 500);
+    },
+    'POST /api/setup/host/reset-staff-pins': async () => {
+      const result = await resetStaffPinsAndRestart(ctx);
+      return routeResult(result, result.ok ? 200 : 500);
+    },
+    'GET /api/setup/host/routing-mode': async () =>
+      routeResult(await getHostRoutingModeCapabilities(ctx)),
+    'POST /api/setup/host/routing-mode': async (req) => {
+      const body = readBodyRecord(await readJsonBody(req));
+      const routingMode = readOptionalString(body, 'routingMode')?.trim();
+      if (routingMode !== 'simple' && routingMode !== 'complex') {
+        throw new SetupApiValidationError('routingMode must be simple or complex');
+      }
+      const result = await setHostRoutingMode(ctx, { routingMode });
+      const errorStatuses: Record<string, number> = {
+        ROUTING_MODE_CHANGE_BLOCKED: 409,
+        COMPLEX_ROUTING_NOT_LICENSED: 403,
+      };
+      return routeResult(result, result.ok ? 200 : (errorStatuses[result.code ?? ''] ?? 400));
+    },
+    'POST /api/setup/host/plan': async (req) => {
+      const body = await readJsonBody(req);
+      const envPath = path.join(ctx.home, '.env');
+      const envMap = fs.existsSync(envPath) ? readEnvMap(envPath) : null;
+      return routeResult(buildSetupPlan(normalizeSetupPlanInput(body), envMap));
+    },
+    'POST /api/setup/host/apply': async (req) => {
+      const body = await readJsonBody(req);
+      return routeResult(await applySetupPlan(ctx, normalizeApplySetupInput(body)));
+    },
+    'POST /api/setup/host/storage': async (req) => {
+      const body = readBodyRecord(await readJsonBody(req));
+      const importsHostPath = requireString(
+        body,
+        'importsHostPath',
+        'importsHostPath and exportsHostPath required',
+      );
+      const exportsHostPath = requireString(
+        body,
+        'exportsHostPath',
+        'importsHostPath and exportsHostPath required',
+      );
+      const result = await saveStorageFolders(ctx, {
+        importsHostPath,
+        exportsHostPath,
+        restartCompose: Boolean(body.restartCompose),
+      });
+      return routeResult(result);
+    },
+  };
+}
+
+function createDeliveryRoutes(ctx: SetupContext): Routes {
+  return {
+    'POST /api/setup/host/update/inspect': async (req) =>
+      routeResult(await inspectPfupdate(await readPfupdateInput(req), ctx)),
+    'POST /api/setup/host/update/apply': async (req) => {
+      const result = await applyPfupdate(await readPfupdateInput(req), ctx);
+      return routeResult(result, result.ok ? 200 : 500);
+    },
+    'POST /api/setup/host/images/load': async (req) => {
+      const body = readBodyRecord(await readJsonBody(req));
+      const result = await loadDeliveryImages(ctx, {
+        archivePath: requireString(body, 'archivePath'),
+        restartCompose: Boolean(body.restartCompose),
+      });
+      return routeResult(result);
+    },
+    'POST /api/setup/host/probes': async (req) => {
+      const body = readBodyRecord(await readJsonBody(req));
+      const lanAppBaseUrl =
+        readOptionalString(body, 'lanAppBaseUrl')?.trim() ||
+        readOptionalString(body, 'appBaseUrl')?.trim();
+      const localAppBaseUrl = readOptionalString(body, 'localAppBaseUrl')?.trim();
+      if (!lanAppBaseUrl && !localAppBaseUrl) {
+        throw new SetupApiValidationError('lanAppBaseUrl or localAppBaseUrl required');
+      }
+      const probes = await import('./probes.js').then((m) =>
+        m.runConnectionProbes({
+          localAppBaseUrl: localAppBaseUrl || LOCAL_SETUP_APP_BASE_URL,
+          lanAppBaseUrl,
+        }),
+      );
+      return routeResult({ probes });
+    },
+  };
+}
+
+function createSetupRoutes(ctx: SetupContext): ReadonlyMap<string, RouteHandler> {
+  return new Map(
+    Object.entries({
+      ...createRuntimeRoutes(ctx),
+      ...createManagementRoutes(ctx),
+      ...createDeliveryRoutes(ctx),
+    }),
+  );
+}
+
+export function createSetupRequestHandler(ctx: SetupContext, port = DEFAULT_PORT) {
+  const routes = createSetupRoutes(ctx);
+  return async (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = new URL(req.url ?? '/', `http://127.0.0.1:${port}`);
-    const method = req.method ?? 'GET';
+    const handler = routes.get(`${req.method ?? 'GET'} ${url.pathname}`);
 
     try {
-      if (method === 'GET' && url.pathname === '/api/setup/host/status') {
-        const includeParam = url.searchParams.get('include') ?? '';
-        const include = new Set(
-          includeParam
-            .split(',')
-            .map((part) => part.trim())
-            .filter(Boolean),
-        );
-        return sendJson(
-          res,
-          200,
-          await getHostStatus(ctx, {
-            includeProbes: include.has('probes'),
-            includeSandboxScanner: include.has('sandboxScanner'),
-          }),
-        );
+      if (!handler) {
+        return sendJson(res, 404, { error: 'not found' });
       }
-
-      if (method === 'GET' && url.pathname === '/api/setup/host/runtime-health') {
-        return sendJson(res, 200, await getHostRuntimeHealth(ctx));
-      }
-
-      if (method === 'GET' && url.pathname === '/api/setup/host/network') {
-        return sendJson(res, 200, getNetworkSnapshot());
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/network') {
-        const body = await readJsonBody(req);
-        const input = normalizeHostNetworkInput(body);
-        const result = await saveHostNetwork(ctx, input);
-        return sendJson(res, 200, result);
-      }
-
-      if (method === 'GET' && url.pathname === '/api/setup/host/compose') {
-        return sendJson(res, 200, await getComposeStatus(ctx));
-      }
-
-      if (method === 'GET' && url.pathname === '/api/setup/host/compose/logs') {
-        const service = url.searchParams.get('service')?.trim() || undefined;
-        const tailRaw = url.searchParams.get('tail');
-        const tail = tailRaw ? Number(tailRaw) : undefined;
-        const result = await getComposeLogs(ctx, {
-          service,
-          tail: Number.isFinite(tail) ? tail : undefined,
-        });
-        return sendJson(res, result.ok ? 200 : 500, result);
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/compose') {
-        const body = readBodyRecord(await readJsonBody(req));
-        const action = readOptionalString(body, 'action')?.trim();
-        if (action !== 'start' && action !== 'stop' && action !== 'restart') {
-          return sendJson(res, 400, { error: 'action must be start, stop, or restart' });
-        }
-        if (action === 'stop' && body.build) {
-          return sendJson(res, 400, { error: 'build is only allowed for start or restart' });
-        }
-        const result = await runComposeAction(ctx, action, { build: Boolean(body.build) });
-        return sendJson(res, result.ok ? 200 : 500, result);
-      }
-
-      if (method === 'GET' && url.pathname === '/api/setup/host/backup') {
-        return sendJson(res, 200, getPfbackupInfo(ctx));
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/backup') {
-        const backup = await backupPf(ctx);
-        return sendJson(res, 200, backup);
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/backup/validate') {
-        const body = readBodyRecord(await readJsonBody(req));
-        const content = readOptionalString(body, 'content');
-        if (!content?.trim()) {
-          return sendJson(res, 400, { error: 'content is required' });
-        }
-        return sendJson(
-          res,
-          200,
-          await validatePfbackupFull(content, LOCAL_MAINTENANCE_APP_BASE_URL),
-        );
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/backup/inspect') {
-        const body = readBodyRecord(await readJsonBody(req));
-        const content = readOptionalString(body, 'content');
-        if (!content?.trim()) {
-          return sendJson(res, 400, { error: 'content is required' });
-        }
-        return sendJson(res, 200, await inspectPfbackup(content, ctx));
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/backup/restore') {
-        const body = readBodyRecord(await readJsonBody(req));
-        const content = readOptionalString(body, 'content');
-        if (!content?.trim()) {
-          return sendJson(res, 400, { error: 'content is required' });
-        }
-        const result = await restorePfbackup(content, ctx, {
-          skipProviderCredentials: body.skipProviderCredentials === true,
-        });
-        return sendJson(res, result.ok ? 200 : 500, result);
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/reset-staff-pins') {
-        const result = await resetStaffPinsAndRestart(ctx);
-        return sendJson(res, result.ok ? 200 : 500, result);
-      }
-
-      if (method === 'GET' && url.pathname === '/api/setup/host/routing-mode') {
-        return sendJson(res, 200, await getHostRoutingModeCapabilities(ctx));
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/routing-mode') {
-        const body = readBodyRecord(await readJsonBody(req));
-        const routingMode = readOptionalString(body, 'routingMode')?.trim();
-        if (routingMode !== 'simple' && routingMode !== 'complex') {
-          return sendJson(res, 400, { error: 'routingMode must be simple or complex' });
-        }
-        const result = await setHostRoutingMode(ctx, { routingMode });
-        if (!result.ok) {
-          const status =
-            result.code === 'ROUTING_MODE_CHANGE_BLOCKED'
-              ? 409
-              : result.code === 'COMPLEX_ROUTING_NOT_LICENSED'
-                ? 403
-                : 400;
-          return sendJson(res, status, result);
-        }
-        return sendJson(res, 200, result);
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/plan') {
-        const body = await readJsonBody(req);
-        const envPath = path.join(ctx.home, '.env');
-        const envMap = fs.existsSync(envPath) ? readEnvMap(envPath) : null;
-        const plan = buildSetupPlan(normalizeSetupPlanInput(body), envMap);
-        return sendJson(res, 200, plan);
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/apply') {
-        const body = await readJsonBody(req);
-        const result = await applySetupPlan(ctx, normalizeApplySetupInput(body));
-        return sendJson(res, 200, result);
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/storage') {
-        const body = readBodyRecord(await readJsonBody(req));
-        const importsHostPath = readOptionalString(body, 'importsHostPath')?.trim() ?? '';
-        const exportsHostPath = readOptionalString(body, 'exportsHostPath')?.trim() ?? '';
-        if (!importsHostPath || !exportsHostPath) {
-          return sendJson(res, 400, { error: 'importsHostPath and exportsHostPath required' });
-        }
-        const result = await saveStorageFolders(ctx, {
-          importsHostPath,
-          exportsHostPath,
-          restartCompose: Boolean(body.restartCompose),
-        });
-        return sendJson(res, 200, result);
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/update/inspect') {
-        const body = readBodyRecord(await readJsonBody(req));
-        const archivePath = readOptionalString(body, 'archivePath')?.trim() ?? '';
-        if (!archivePath) {
-          return sendJson(res, 400, { error: 'archivePath required' });
-        }
-        const managerVersion = readOptionalString(body, 'managerVersion')?.trim() || undefined;
-        const settingsFormatVersionRaw = body.settingsFormatVersion;
-        const settingsFormatVersion =
-          typeof settingsFormatVersionRaw === 'number' && Number.isInteger(settingsFormatVersionRaw)
-            ? settingsFormatVersionRaw
-            : undefined;
-        const result = await inspectPfupdate(
-          {
-            archivePath,
-            managerVersion,
-            settingsFormatVersion,
-          },
-          ctx,
-        );
-        return sendJson(res, 200, result);
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/update/apply') {
-        const body = readBodyRecord(await readJsonBody(req));
-        const archivePath = readOptionalString(body, 'archivePath')?.trim() ?? '';
-        if (!archivePath) {
-          return sendJson(res, 400, { error: 'archivePath required' });
-        }
-        const managerVersion = readOptionalString(body, 'managerVersion')?.trim() || undefined;
-        const settingsFormatVersionRaw = body.settingsFormatVersion;
-        const settingsFormatVersion =
-          typeof settingsFormatVersionRaw === 'number' && Number.isInteger(settingsFormatVersionRaw)
-            ? settingsFormatVersionRaw
-            : undefined;
-        const result = await applyPfupdate(
-          {
-            archivePath,
-            managerVersion,
-            settingsFormatVersion,
-          },
-          ctx,
-        );
-        return sendJson(res, result.ok ? 200 : 500, result);
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/images/load') {
-        const body = readBodyRecord(await readJsonBody(req));
-        const archivePath = readOptionalString(body, 'archivePath')?.trim() ?? '';
-        if (!archivePath) {
-          return sendJson(res, 400, { error: 'archivePath required' });
-        }
-        const result = await loadDeliveryImages(ctx, {
-          archivePath,
-          restartCompose: Boolean(body.restartCompose),
-        });
-        return sendJson(res, 200, result);
-      }
-
-      if (method === 'POST' && url.pathname === '/api/setup/host/probes') {
-        const body = readBodyRecord(await readJsonBody(req));
-        const lanAppBaseUrl =
-          readOptionalString(body, 'lanAppBaseUrl')?.trim() ||
-          readOptionalString(body, 'appBaseUrl')?.trim();
-        const localAppBaseUrl = readOptionalString(body, 'localAppBaseUrl')?.trim();
-        if (!lanAppBaseUrl && !localAppBaseUrl) {
-          return sendJson(res, 400, { error: 'lanAppBaseUrl or localAppBaseUrl required' });
-        }
-        const probes = await import('./probes.js').then((m) =>
-          m.runConnectionProbes({
-            localAppBaseUrl: localAppBaseUrl || LOCAL_SETUP_APP_BASE_URL,
-            lanAppBaseUrl,
-          }),
-        );
-        return sendJson(res, 200, { probes });
-      }
-
-      return sendJson(res, 404, { error: 'not found' });
+      const [status, body] = await handler(req, url);
+      return sendJson(res, status, body);
     } catch (error) {
       if (error instanceof SetupApiValidationError) {
         return sendJson(res, 400, { error: error.message });
@@ -329,7 +301,12 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
       const { status, error: message } = resolveSetupApiError(error);
       return sendJson(res, status, { error: message });
     }
-  });
+  };
+}
+
+export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DEFAULT_PORT)) {
+  const ctx = resolveSetupContext();
+  const server = http.createServer(createSetupRequestHandler(ctx, port));
 
   server.listen(port, '127.0.0.1', () => {
     console.log(`Setup host API: http://127.0.0.1:${port}`);
@@ -339,4 +316,6 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
   return server;
 }
 
-startSetupServer();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  startSetupServer();
+}
