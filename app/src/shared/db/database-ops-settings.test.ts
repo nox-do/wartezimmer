@@ -2,11 +2,7 @@ import assert from 'node:assert/strict';
 import type { StatementSync } from 'node:sqlite';
 import test from 'node:test';
 import { DEFAULT_ROOM_PANELS_SETTINGS } from '@praxis-flow/domain';
-import {
-  ensureSingleDefaultCallTarget,
-  getOpsSettingsFromDb,
-  updateOpsSettingsInDb,
-} from './database-ops-settings.js';
+import { getOpsSettingsFromDb, updateOpsSettingsInDb } from './database-ops-settings.js';
 import { OpsSettingsValidationError, opsSettingsInvalidHttpStatus } from './ops-settings-errors.js';
 
 function minimalOpsSettingsRow(overrides?: Record<string, unknown>) {
@@ -198,31 +194,6 @@ test('getOpsSettingsFromDb rejects deprecated panel field', () => {
       error instanceof OpsSettingsValidationError &&
       /deprecated panel field/i.test(error.detailMessage),
   );
-});
-
-test('ensureSingleDefaultCallTarget re-export matches domain package', () => {
-  const rooms = ensureSingleDefaultCallTarget(
-    [
-      {
-        roomId: 'empfang',
-        roomLabel: 'Empfang',
-        enabled: true,
-        defaultCallTarget: true,
-        maxOccupancy: null,
-      },
-      {
-        roomId: 'labor',
-        roomLabel: 'Labor',
-        enabled: true,
-        defaultCallTarget: false,
-        maxOccupancy: null,
-      },
-    ],
-    'labor',
-  );
-
-  assert.equal(rooms.find((room) => room.roomId === 'labor')?.defaultCallTarget, true);
-  assert.equal(rooms.find((room) => room.roomId === 'empfang')?.defaultCallTarget, false);
 });
 
 test('getOpsSettingsFromDb rejects reserved mfa topic id in configurable topic settings', () => {

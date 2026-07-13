@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildInlineContentDisposition } from '../../../../sandbox/src/content-disposition-inline.js';
+import { buildInlineContentDisposition } from './content-disposition-inline.js';
 
 test('buildInlineContentDisposition accepts umlauts and spaces', () => {
   const header = buildInlineContentDisposition('büchse der pandorra.png');

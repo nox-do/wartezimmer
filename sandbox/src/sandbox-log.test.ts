@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { truncateLogTail } from '../../../../sandbox/src/sandbox-log.js';
+import { truncateLogTail } from './sandbox-log.js';
 
 test('truncateLogTail shortens long freshclam output', () => {
   const long = 'x'.repeat(600);

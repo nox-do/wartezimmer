@@ -2,6 +2,14 @@
 
 Stand: 2026-07-13
 
+## Erledigt: Umbau-Hilfstests bereinigt (2026-07-13)
+
+- Gelöscht: `app/.../room-panel-login.test.ts`, `canonicalize-birth-date.test.ts` (Domain-Duplikate)
+- Getrimmt: `database-ops-settings` Re-Export-Case; `normalize-last-name` Domain-Charset-Case
+- UI: `room-default-call-target.test.ts` nur noch `defaultCallRoom`
+- Verschoben: Sandbox-Tests `content-disposition-inline` / `sandbox-log` von `app/` → `sandbox/src/`
+- Runde 2: `room-panel-policy.test.ts` nur Session-Resolve; `terminal-input-validation` nur Phone; i18n ohne APP_LOCALES-Tautologie; topic-guard unit+integration behalten
+
 ## Code-Diät: Deprecated-Kandidaten (Audit 2026-07-13)
 
 | Kandidat | Status | Evidenz |

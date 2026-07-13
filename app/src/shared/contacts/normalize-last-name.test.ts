@@ -1,10 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  hasValidTerminalLastNameChars,
-  lastNamesMatch,
-  normalizeLastNameForLookup,
-} from './normalize-last-name.js';
+import { lastNamesMatch, normalizeLastNameForLookup } from './normalize-last-name.js';
 
 test('normalizeLastNameForLookup trims and lowercases with German locale', () => {
   assert.equal(normalizeLastNameForLookup('  Müller '), 'müller');
@@ -23,11 +19,4 @@ test('lastNamesMatch is case-insensitive and exact otherwise', () => {
   assert.equal(lastNamesMatch('Mueller', 'Müller'), false);
   assert.equal(lastNamesMatch('Schmidt', 'Schmid'), false);
   assert.equal(lastNamesMatch('yılmaz', 'Yılmaz'), true);
-});
-
-test('hasValidTerminalLastNameChars accepts terminal keyboard charsets', () => {
-  assert.equal(hasValidTerminalLastNameChars('Müller-Schmidt'), true);
-  assert.equal(hasValidTerminalLastNameChars('Yılmaz'), true);
-  assert.equal(hasValidTerminalLastNameChars('Иванов'), true);
-  assert.equal(hasValidTerminalLastNameChars('Smith@'), false);
 });

@@ -2,12 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
 import type { CoreDatabase } from '../db/database.js';
-import {
-  resolveRoomPanelForSession,
-  roomPanelCanCheckIn,
-  roomPanelCanCheckOut,
-  roomPanelMayShowPatientNames,
-} from './room-panel-policy.js';
+import { resolveRoomPanelForSession } from './room-panel-policy.js';
 
 const outsidePanel = {
   enabled: true,
@@ -19,17 +14,6 @@ const outsidePanel = {
   arrivedTextPreset: 'please_wait_here' as const,
   arrivedTextCustom: null,
 };
-
-test('outside placement is a hard privacy boundary', () => {
-  assert.equal(roomPanelMayShowPatientNames(outsidePanel), false);
-});
-
-test('arrival and staff modes have distinct capabilities', () => {
-  assert.equal(roomPanelCanCheckIn({ placement: 'outside', mode: 'display_only' }), false);
-  assert.equal(roomPanelCanCheckIn({ placement: 'outside', mode: 'arrival' }), true);
-  assert.equal(roomPanelCanCheckOut({ placement: 'outside', mode: 'staff_full' }), false);
-  assert.equal(roomPanelCanCheckOut({ placement: 'inside', mode: 'staff_full' }), true);
-});
 
 test('session placement must still match current settings', () => {
   const db = {
