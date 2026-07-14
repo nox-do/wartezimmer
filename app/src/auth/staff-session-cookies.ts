@@ -48,10 +48,6 @@ export function getStaffSessionCookieName(role: StaffRole): string {
   return STAFF_SESSION_COOKIE_BY_ROLE[role];
 }
 
-export function getLegacyStaffSessionCookieName(): string {
-  return LEGACY_STAFF_SESSION_COOKIE;
-}
-
 export function getDeviceSessionCookieName(role: DeviceSessionRole): string {
   return DEVICE_SESSION_COOKIE_BY_ROLE[role];
 }

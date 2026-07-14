@@ -103,7 +103,6 @@ components:
       required:
         - pressedAt
         - expiresAt
-        - legacyCutover
       properties:
         pressedAt:
           type: string
@@ -111,9 +110,6 @@ components:
         expiresAt:
           type: string
           format: date-time
-        legacyCutover:
-          type: boolean
-          description: True when returned from deprecated /mfa-assist cutover endpoint.
 paths:
   /api/v1/checkins/topics:
     parameters:
@@ -290,51 +286,3 @@ paths:
                   serverTime:
                     type: string
                     format: date-time
-  /api/v1/checkins/mfa-assist:
-    parameters:
-      - $ref: './common.yaml#/components/parameters/XClientRole'
-    post:
-      summary: Deprecated — cutover to assist press (no ticket)
-      deprecated: true
-      responses:
-        '201':
-          description: Assist pending registered (legacy cutover)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TerminalAssistPressed'
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: './common.yaml#/components/schemas/Error'
-        '409':
-          description: Check-in rejected by configured opening-hour guardrails
-          content:
-            application/json:
-              schema:
-                $ref: './common.yaml#/components/schemas/Error'
-              examples:
-                checkinClosed:
-                  summary: Practice currently closed
-                  value:
-                    code: CHECKIN_CLOSED
-                    message: Check-in ist ausserhalb der Praxiszeiten nicht verfuegbar.
-                checkinLocked:
-                  summary: Check-in locked by MFA/ops
-                  value:
-                    code: CHECKIN_LOCKED
-                    message: Check-in ist derzeit gesperrt.
-        '500':
-          description: Invalid opening-hour configuration
-          content:
-            application/json:
-              schema:
-                $ref: './common.yaml#/components/schemas/Error'
-              examples:
-                opsSettingsInvalid:
-                  summary: Invalid practice-hour settings
-                  value:
-                    code: OPS_SETTINGS_INVALID
-                    message: Praxiszeiten sind ungueltig konfiguriert.

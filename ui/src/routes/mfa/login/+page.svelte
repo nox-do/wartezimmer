@@ -9,7 +9,7 @@
     practiceDisplayLabel,
   } from '$lib/practice/practice-profile-client';
   import { t } from '$lib/i18n/i18nStore.svelte';
-  import { authSession, submitAuthLogin } from '$lib/auth/session-state.svelte';
+  import { staffAuthSlots, submitAuthLogin } from '$lib/auth/session-state.svelte';
 
   let practiceProfile = $state(getPracticeProfileFallback());
   const practiceName = $derived(practiceDisplayLabel(practiceProfile, t('terminal.practiceFallback')));
@@ -29,10 +29,12 @@
     return role === 'ops' ? '/ops' : '/mfa';
   }
 
+  const authSlot = $derived(staffAuthSlots[loginRole]);
+
   $effect(() => {
     if (
-      authSession.status === 'authenticated' &&
-      authSession.user?.roles.includes(loginRole)
+      authSlot.status === 'authenticated' &&
+      authSlot.user?.role === loginRole
     ) {
       void gotoResolved(redirectTarget);
     }
@@ -54,7 +56,7 @@
       });
 
       if (!ok) {
-        formError = authSession.errorMessage ?? t('auth.loginFailed');
+        formError = authSlot.errorMessage ?? t('auth.loginFailed');
         return;
       }
 

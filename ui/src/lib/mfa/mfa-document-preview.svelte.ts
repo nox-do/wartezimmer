@@ -1,5 +1,5 @@
 /* eslint-disable svelte/prefer-svelte-reactivity -- internal visitId→count bookkeeping, not UI state */
-import { authSession } from '$lib/auth/session-state.svelte';
+import { staffAuthSlots } from '$lib/auth/session-state.svelte';
 import { fetchDocumentsForVisit } from '$lib/documents/document-api';
 import {
   rememberMfaDocumentContext,
@@ -26,7 +26,7 @@ function isBootstrapCurrent(generation: number): boolean {
 }
 
 function isMfaAuthenticated(): boolean {
-  return authSession.status === 'authenticated' && Boolean(authSession.user?.roles.includes('mfa'));
+  return staffAuthSlots.mfa.status === 'authenticated' && staffAuthSlots.mfa.user?.role === 'mfa';
 }
 
 export function invalidateDocumentRename(): void {

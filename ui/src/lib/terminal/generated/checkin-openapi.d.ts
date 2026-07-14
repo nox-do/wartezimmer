@@ -288,78 +288,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/checkins/mfa-assist': {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
-        'X-Client-Role': components['parameters']['XClientRole'];
-      };
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Deprecated — cutover to assist press (no ticket)
-     * @deprecated
-     */
-    post: {
-      parameters: {
-        query?: never;
-        header: {
-          /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
-          'X-Client-Role': components['parameters']['XClientRole'];
-        };
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Assist pending registered (legacy cutover) */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['TerminalAssistPressed'];
-          };
-        };
-        /** @description Invalid request */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['Error'];
-          };
-        };
-        /** @description Check-in rejected by configured opening-hour guardrails */
-        409: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['Error'];
-          };
-        };
-        /** @description Invalid opening-hour configuration */
-        500: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['Error'];
-          };
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -404,8 +332,6 @@ export interface components {
       pressedAt: string;
       /** Format: date-time */
       expiresAt: string;
-      /** @description True when returned from deprecated /mfa-assist cutover endpoint. */
-      legacyCutover: boolean;
     };
     /** @enum {string} */
     QueueStatus:

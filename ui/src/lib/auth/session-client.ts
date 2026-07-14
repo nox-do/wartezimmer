@@ -1,4 +1,5 @@
-import { cookieAuthFetch, mfaAuthFetch, opsAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch, opsAuthFetch } from '$lib/api/staff-auth-fetch';
 import type { Result } from '$lib/types/result';
 import type {
   AuthPinTarget,
@@ -7,12 +8,12 @@ import type {
   StaffSessionResponse,
 } from './openapi-types';
 
-export type AuthUserRole = 'mfa' | 'ops' | 'terminal' | 'tv';
+export type StaffAuthRole = 'mfa' | 'ops';
 
 export type AuthSessionUser = {
   id: string;
   displayName?: string;
-  roles: AuthUserRole[];
+  role: StaffAuthRole;
 };
 
 export type AuthSessionStatus = StaffSessionResponse;
@@ -21,9 +22,7 @@ export type ChangeAuthPinResponse = ChangePinResponse;
 
 export type { AuthPinTarget };
 
-export async function fetchAuthStatus(
-  role: Extract<AuthUserRole, 'mfa' | 'ops'>,
-): Promise<Result<AuthSessionStatus>> {
+export async function fetchAuthStatus(role: StaffAuthRole): Promise<Result<AuthSessionStatus>> {
   const fetch = role === 'ops' ? opsAuthFetch : mfaAuthFetch;
   return fetch<AuthSessionStatus>('/api/v1/auth/me');
 }
@@ -48,7 +47,7 @@ export async function changeAuthPin(payload: {
   currentPin: string;
   newPin: string;
   target: AuthPinTarget;
-  role: Extract<AuthUserRole, 'mfa' | 'ops'>;
+  role: StaffAuthRole;
 }): Promise<Result<ChangeAuthPinResponse>> {
   const fetch = payload.role === 'ops' ? opsAuthFetch : mfaAuthFetch;
   return fetch<ChangePinResponse>(

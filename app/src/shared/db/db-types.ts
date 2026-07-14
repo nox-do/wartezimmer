@@ -263,11 +263,6 @@ export type BusinessDayVisitStats = {
   openVisits: BusinessDayOpenVisit[];
 };
 
-/** @deprecated Use BusinessDayVisitStats */
-export type BusinessDayTicketStats = BusinessDayVisitStats;
-/** @deprecated Use BusinessDayOpenVisit */
-export type BusinessDayOpenTicket = BusinessDayOpenVisit;
-
 export type EmergencyState = {
   active: boolean;
   emergencyId: string | null;

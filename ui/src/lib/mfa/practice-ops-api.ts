@@ -1,4 +1,4 @@
-import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/staff-auth-fetch';
 
 export type BusinessDayTopicCount = {
   topicId: string;
@@ -22,11 +22,6 @@ export type BusinessDayVisitStats = {
   byTopic: BusinessDayTopicCount[];
   openVisits: BusinessDayOpenVisit[];
 };
-
-/** @deprecated Use BusinessDayOpenVisit */
-export type BusinessDayOpenTicket = BusinessDayOpenVisit;
-/** @deprecated Use BusinessDayVisitStats */
-export type BusinessDayTicketStats = BusinessDayVisitStats;
 
 export type RoutingCapabilities = {
   routingMode: 'simple' | 'complex';

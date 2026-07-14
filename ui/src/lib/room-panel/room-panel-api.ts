@@ -1,6 +1,7 @@
 import { isBackendUnreachable } from '$lib/api/backend-unreachable';
 import { buildApiStreamUrl } from '$lib/api/build-api-url';
 import { httpFetch } from '$lib/api/http-fetch';
+import { roomPanelAuthFetch } from '$lib/api/cookie-auth-fetch';
 import { SSE_CLIENT_ERROR, connectMultiEventSseStream } from '$lib/api/sse-client';
 import { t } from '$lib/i18n/i18nStore.svelte';
 import type {
@@ -25,12 +26,6 @@ export type RoomPanelStreamHandlers = {
   onSnapshot: (data: RoomPanelSnapshot) => void;
   onError?: (error: RoomPanelStreamError) => void;
 };
-
-function withRoomPanelRole(init: RequestInit = {}): RequestInit {
-  const headers = new Headers(init.headers);
-  headers.set('X-Client-Role', 'room-panel');
-  return { ...init, headers };
-}
 
 export async function fetchRoomPanelRooms(): Promise<Result<RoomPanelRoomsResponse>> {
   return httpFetch<RoomPanelRoomsResponse>(
@@ -61,37 +56,26 @@ export async function loginRoomPanel(input: {
 }
 
 export async function logoutRoomPanel(): Promise<SimpleResult> {
-  return httpFetch<void>(
-    '/api/v1/auth/logout',
-    withRoomPanelRole({
-      method: 'POST',
-      credentials: 'include',
-      body: JSON.stringify({}),
-    }),
-    { includeClientOriginHeader: true },
-  );
+  return roomPanelAuthFetch<void>('/api/v1/auth/logout', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 }
 
 export async function fetchRoomPanelQueue(): Promise<Result<RoomPanelSnapshot>> {
-  return httpFetch<RoomPanelSnapshot>(
-    '/api/v1/queue',
-    withRoomPanelRole({ method: 'GET', credentials: 'include' }),
-    { includeClientOriginHeader: true },
-  );
+  return roomPanelAuthFetch<RoomPanelSnapshot>('/api/v1/queue', { method: 'GET' });
 }
 
 function transitionRoomPanelVisit(
   visitId: string,
   type: 'check_in_room' | 'check_out_room' | 'call',
 ) {
-  return httpFetch<QueueVisitTransitionResponse>(
+  return roomPanelAuthFetch<QueueVisitTransitionResponse>(
     `/api/v1/queue/${encodeURIComponent(visitId)}/transition`,
-    withRoomPanelRole({
+    {
       method: 'POST',
-      credentials: 'include',
       body: JSON.stringify({ type }),
-    }),
-    { includeClientOriginHeader: true },
+    },
   );
 }
 

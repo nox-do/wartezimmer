@@ -1,4 +1,4 @@
-import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/staff-auth-fetch';
 import { publicFetch } from '$lib/api/public-fetch';
 import type { Result } from '$lib/types/result';
 import type {

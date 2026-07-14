@@ -12,12 +12,12 @@
     closeMfaDocumentPreview,
     mfaDocumentPreview,
   } from '$lib/mfa/mfa-document-preview.svelte';
-  import { authSession } from '$lib/auth/session-state.svelte';
+  import { staffAuthSlots } from '$lib/auth/session-state.svelte';
 
   let { children } = $props();
 
   const mfaAuthenticated = $derived(
-    authSession.status === 'authenticated' && authSession.user?.roles.includes('mfa'),
+    staffAuthSlots.mfa.status === 'authenticated' && staffAuthSlots.mfa.user?.role === 'mfa',
   );
 
   $effect(() => {

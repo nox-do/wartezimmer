@@ -1,14 +1,10 @@
-import { markAuthUnauthorized } from '$lib/auth/session-state.svelte';
 import { httpFetch, type HttpFetchOptions } from './http-fetch';
 
-type CookieAuthFetchOptions = Omit<
-  HttpFetchOptions,
-  'authToken' | 'credentials' | 'onUnauthorized'
->;
+export type CookieAuthFetchOptions = Omit<HttpFetchOptions, 'authToken' | 'credentials'>;
 
-export type StaffClientRole = 'mfa' | 'ops';
+type CookieClientRole = 'mfa' | 'ops' | 'terminal' | 'room-panel';
 
-function withClientRole(init: RequestInit, role: StaffClientRole): RequestInit {
+export function withCookieClientRole(init: RequestInit, role: CookieClientRole): RequestInit {
   const headers = new Headers(init.headers);
   headers.set('X-Client-Role', role);
   return { ...init, headers };
@@ -23,22 +19,22 @@ export async function cookieAuthFetch<T>(
     ...options,
     credentials: init.credentials ?? 'include',
     includeClientOriginHeader: options.includeClientOriginHeader ?? true,
-    onUnauthorized: () => markAuthUnauthorized(),
+    onUnauthorized: options.onUnauthorized,
   });
 }
 
-export async function mfaAuthFetch<T>(
+export async function terminalAuthFetch<T>(
   path: string,
   init: RequestInit = {},
   options: CookieAuthFetchOptions = {},
 ) {
-  return cookieAuthFetch<T>(path, withClientRole(init, 'mfa'), options);
+  return cookieAuthFetch<T>(path, withCookieClientRole(init, 'terminal'), options);
 }
 
-export async function opsAuthFetch<T>(
+export async function roomPanelAuthFetch<T>(
   path: string,
   init: RequestInit = {},
   options: CookieAuthFetchOptions = {},
 ) {
-  return cookieAuthFetch<T>(path, withClientRole(init, 'ops'), options);
+  return cookieAuthFetch<T>(path, withCookieClientRole(init, 'room-panel'), options);
 }

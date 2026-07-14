@@ -45,7 +45,7 @@ export function connectOpsStream(handlers: OpsStreamHandlers = {}): () => void {
     },
     onError: (message) => {
       if (message === SSE_CLIENT_ERROR.unauthorized || message === SSE_CLIENT_ERROR.forbidden) {
-        markAuthUnauthorized();
+        markAuthUnauthorized('mfa');
         handlers.onError?.(t('auth.loginRequiredTitle'));
         return;
       }

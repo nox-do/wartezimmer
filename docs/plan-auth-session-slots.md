@@ -66,11 +66,12 @@ passenden Slot.
 
 ### 1.4 UI und OpenAPI
 
-- MFA-Module verwenden `mfaAuthFetch`, Ops-Module `opsAuthFetch`.
+- `staffAuthSlots.mfa` und `staffAuthSlots.ops` halten den UI-Auth-State unabhängig.
+- MFA-Module verwenden `mfaAuthFetch`, Ops-Module `opsAuthFetch`; ein `401` setzt nur
+  den zugehörigen Slot auf anonym.
 - Geräte und Room-Panel senden ihre feste Rolle weiterhin explizit.
 - `/queue/stream` und `/ops/stream` im MFA-Dashboard senden `X-Client-Role: mfa`.
 - `loadAuthSession(role)` prüft den angeforderten Slot auch beim Wechsel zwischen MFA und Ops.
-- Ein Cross-Slot-`401` verwirft nicht die gültige Session der anderen Oberfläche.
 - OpenAPI beschreibt Cookie-Scheme, Rollenheader und tatsächliche ACL pro Operation;
   Documents verwendet für MFA keinen alten API-Key-Bearer mehr.
 

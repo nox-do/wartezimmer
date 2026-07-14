@@ -1,4 +1,4 @@
-import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/staff-auth-fetch';
 import type { QueueItem, QueueResponse } from '$lib/queue/types';
 
 export type MfaDocumentContext = Pick<

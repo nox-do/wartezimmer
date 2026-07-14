@@ -1,4 +1,4 @@
-import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/staff-auth-fetch';
 import { normalizeTopicAccentColor } from '$lib/topics/topic-accent';
 import type {
   MfaPatchOpsSettingsBody,

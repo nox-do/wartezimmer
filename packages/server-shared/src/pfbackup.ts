@@ -8,9 +8,6 @@ export const CURRENT_SETTINGS_FORMAT_VERSION = 1 as const;
 export { PFBACKUP_BASENAME_PREFIX, PFBACKUP_FILE_EXTENSION } from './backup-path-labels.js';
 export { formatPfbackupLabel, parsePfbackupTimestampFromPath } from './backup-path-labels.js';
 
-/** @deprecated No keys are excluded — full stack `.env` is exported into settings snapshots. */
-export const SETTINGS_EXPORT_ENV_EXCLUDED_KEYS = new Set<string>();
-
 export const STACK_IMAGE_ENV_KEYS = [
   'PRAXIS_FLOW_APP_IMAGE',
   'PRAXIS_FLOW_SANDBOX_IMAGE',
@@ -64,9 +61,6 @@ export type PfbackupArchiveValidationResult = {
   errors: string[];
   summary?: PfbackupValidationSummary;
 };
-
-/** @deprecated Use PfbackupArchiveValidationResult.archiveValid */
-export type PfbackupValidationResult = PfbackupArchiveValidationResult;
 
 export function sha256HexUtf8(content: string): string {
   return createHash('sha256').update(content, 'utf8').digest('hex');

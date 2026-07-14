@@ -22,7 +22,6 @@ export {
   PFBACKUP_FORMAT_VERSION,
   CURRENT_SETTINGS_FORMAT_VERSION,
   STACK_IMAGE_ENV_KEYS,
-  SETTINGS_EXPORT_ENV_EXCLUDED_KEYS,
   buildPfbackupArchive,
   buildPfbackupFilename,
   envRecordForSettingsExport,
@@ -41,7 +40,6 @@ export {
   type PfbackupManifestEntryV1,
   type PfbackupManifestV1,
   type PfbackupArchiveValidationResult,
-  type PfbackupValidationResult,
   type PfbackupValidationSummary,
   type StackImageEnvKey,
 } from './pfbackup.js';

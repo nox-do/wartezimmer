@@ -3,123 +3,100 @@ import {
   loginAuthSession,
   type AuthLoginRequest,
   type AuthSessionUser,
+  type StaffAuthRole,
 } from './session-client';
+import {
+  applyStaffAuthAnonymous,
+  markStaffAuthUnauthorized,
+  staffAuthSlot,
+  staffAuthSlots,
+} from './staff-auth-slot-state.svelte';
 
-export type AuthSessionState = {
-  status: 'idle' | 'loading' | 'authenticated' | 'anonymous' | 'error';
-  user: AuthSessionUser | null;
-  errorMessage: string | null;
-};
+export type { StaffAuthRole } from './session-client';
+export type { AuthSessionState } from './staff-auth-slot-state.svelte';
+export { staffAuthSlots };
 
-export type StaffAuthRole = Extract<AuthSessionUser['roles'][number], 'mfa' | 'ops'>;
+const inflightLoads: Partial<Record<StaffAuthRole, Promise<void>>> = {};
 
-export const authSession = $state<AuthSessionState>({
-  status: 'idle',
-  user: null,
-  errorMessage: null,
-});
-
-let inflightLoad: Promise<void> | null = null;
-let inflightLoadRole: StaffAuthRole | null = null;
-
-function applyAnonymous(message: string | null = null) {
-  authSession.status = 'anonymous';
-  authSession.user = null;
-  authSession.errorMessage = message;
-}
-
-function userFromSession(session: {
-  sessionId: string;
-  role: AuthSessionUser['roles'][number];
-}): AuthSessionUser {
+function userFromSession(session: { sessionId: string; role: StaffAuthRole }): AuthSessionUser {
   return {
     id: session.sessionId,
-    roles: [session.role],
+    role: session.role,
   };
 }
 
-export function markAuthUnauthorized(message: string | null = null) {
-  applyAnonymous(message);
+export function markAuthUnauthorized(role: StaffAuthRole, message: string | null = null) {
+  markStaffAuthUnauthorized(role, message);
 }
 
 export function shouldLoadAuthSession(role: StaffAuthRole): boolean {
-  if (authSession.status === 'loading') {
+  const slot = staffAuthSlot(role);
+  if (slot.status === 'loading') {
     return false;
   }
-  if (authSession.status === 'idle') {
+  if (slot.status === 'idle') {
     return true;
-  }
-  if (authSession.status === 'authenticated') {
-    return !authSession.user?.roles.includes(role);
   }
   return false;
 }
 
 export async function loadAuthSession(role: StaffAuthRole): Promise<void> {
-  if (!shouldLoadAuthSession(role)) {
-    return;
-  }
-  if (inflightLoad && inflightLoadRole === role) {
-    await inflightLoad;
+  const inflight = inflightLoads[role];
+  if (inflight) {
+    await inflight;
     return;
   }
 
-  inflightLoadRole = role;
-  inflightLoad = loadAuthSessionInternal(role);
+  if (!shouldLoadAuthSession(role)) {
+    return;
+  }
+
+  const loadPromise = loadAuthSessionInternal(role);
+  inflightLoads[role] = loadPromise;
   try {
-    await inflightLoad;
+    await loadPromise;
   } finally {
-    inflightLoad = null;
-    inflightLoadRole = null;
+    delete inflightLoads[role];
   }
 }
 
 async function loadAuthSessionInternal(role: StaffAuthRole): Promise<void> {
-  const priorUser = authSession.user;
-  const probingAlternateSlot =
-    authSession.status === 'authenticated' &&
-    priorUser != null &&
-    !priorUser.roles.includes(role);
-
-  authSession.status = 'loading';
-  authSession.errorMessage = null;
+  const slot = staffAuthSlot(role);
+  slot.status = 'loading';
+  slot.errorMessage = null;
 
   const result = await fetchAuthStatus(role);
   if (!result.ok) {
     if (result.error.status === 401 || result.error.code === 'AUTH_UNAUTHORIZED') {
-      if (probingAlternateSlot && priorUser) {
-        authSession.status = 'authenticated';
-        authSession.user = priorUser;
-        authSession.errorMessage = null;
-        return;
-      }
-      applyAnonymous();
+      applyStaffAuthAnonymous(role);
       return;
     }
 
-    authSession.status = 'error';
-    authSession.user = null;
-    authSession.errorMessage = result.error.message;
+    slot.status = 'error';
+    slot.user = null;
+    slot.errorMessage = result.error.message;
     return;
   }
 
-  authSession.status = 'authenticated';
-  authSession.user = userFromSession(result.data);
-  authSession.errorMessage = null;
+  slot.status = 'authenticated';
+  slot.user = userFromSession(result.data);
+  slot.errorMessage = null;
 }
 
 export async function submitAuthLogin(payload: AuthLoginRequest): Promise<boolean> {
-  authSession.status = 'loading';
-  authSession.errorMessage = null;
+  const role = payload.role;
+  const slot = staffAuthSlot(role);
+  slot.status = 'loading';
+  slot.errorMessage = null;
 
   const result = await loginAuthSession(payload);
   if (!result.ok) {
-    applyAnonymous(result.error.message);
+    applyStaffAuthAnonymous(role, result.error.message);
     return false;
   }
 
-  authSession.status = 'authenticated';
-  authSession.user = userFromSession(result.data);
-  authSession.errorMessage = null;
+  slot.status = 'authenticated';
+  slot.user = userFromSession(result.data);
+  slot.errorMessage = null;
   return true;
 }

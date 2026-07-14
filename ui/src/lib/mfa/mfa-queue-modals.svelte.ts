@@ -13,9 +13,6 @@ export type PhoneCorrectionTicket = {
   absenceConfirmed: boolean;
 };
 
-/** @deprecated Prefer PhoneCorrectionTicket — kept for call-site typing clarity. */
-export type MarkAwayTicket = PhoneCorrectionTicket;
-
 export type ReassignTicket = {
   visitId: string;
   laneCode: string;

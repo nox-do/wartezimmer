@@ -31,7 +31,6 @@ export {
   clearSessionCookieForSlot,
   clearStaffSessionCookie,
   getDeviceSessionCookieName,
-  getLegacyStaffSessionCookieName,
   getRoomPanelSessionCookieName,
   getSessionCookieNameForSlot,
   getStaffSessionCookieName,

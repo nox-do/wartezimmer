@@ -1,4 +1,4 @@
-import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/staff-auth-fetch';
 import type { MfaDocument, MfaDocumentListResponse, MfaDocumentPreview } from './types';
 
 function documentPath(documentId: string, action?: string): string {

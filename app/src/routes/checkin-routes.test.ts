@@ -293,18 +293,3 @@ test('POST /api/v1/checkins accepts none auth path for direct MFA topic check-in
   assert.equal(capturedNeedsAssistance, false);
   await app.close();
 });
-
-test('POST /api/v1/checkins/mfa-assist keeps legacy assist-pending behavior', async () => {
-  const app = Fastify({ logger: false });
-  registerCheckinRoutes(app, fakeCheckinDb());
-
-  await app.ready();
-  const response = await app.inject({
-    method: 'POST',
-    url: '/api/v1/checkins/mfa-assist',
-  });
-
-  assert.equal(response.statusCode, 201);
-  assert.equal(response.json().legacyCutover, true);
-  await app.close();
-});

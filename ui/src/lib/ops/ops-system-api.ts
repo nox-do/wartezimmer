@@ -1,4 +1,4 @@
-import { opsAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { opsAuthFetch } from '$lib/api/staff-auth-fetch';
 import { updatePracticeProfileCache } from '$lib/practice/practice-profile-client';
 import type {
   CsvContactDelimiterMode,

@@ -2835,7 +2835,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["pressedAt", "expiresAt", "legacyCutover"],
+                  "required": ["pressedAt", "expiresAt"],
                   "properties": {
                     "pressedAt": {
                       "type": "string",
@@ -2844,10 +2844,6 @@
                     "expiresAt": {
                       "type": "string",
                       "format": "date-time"
-                    },
-                    "legacyCutover": {
-                      "type": "boolean",
-                      "description": "True when returned from deprecated /mfa-assist cutover endpoint."
                     }
                   }
                 }
@@ -3180,317 +3176,6 @@
                     "serverTime": {
                       "type": "string",
                       "format": "date-time"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/checkins/mfa-assist": {
-      "parameters": [
-        {
-          "name": "X-Client-Role",
-          "in": "header",
-          "required": true,
-          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
-          "schema": {
-            "type": "string",
-            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
-          }
-        }
-      ],
-      "post": {
-        "summary": "Deprecated — cutover to assist press (no ticket)",
-        "deprecated": true,
-        "responses": {
-          "201": {
-            "description": "Assist pending registered (legacy cutover)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": ["pressedAt", "expiresAt", "legacyCutover"],
-                  "properties": {
-                    "pressedAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "expiresAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "legacyCutover": {
-                      "type": "boolean",
-                      "description": "True when returned from deprecated /mfa-assist cutover endpoint."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": ["code", "message"],
-                  "properties": {
-                    "code": {
-                      "type": "string",
-                      "description": "Machine-readable API error code returned in Error responses.",
-                      "enum": [
-                        "INVALID_ARGUMENT",
-                        "INTERNAL_ERROR",
-                        "NOT_FOUND",
-                        "AUTH_UNAUTHORIZED",
-                        "AUTH_FORBIDDEN",
-                        "RATE_LIMITED",
-                        "VISIT_NOT_FOUND",
-                        "DOCUMENT_NOT_FOUND",
-                        "DOCUMENT_FORBIDDEN",
-                        "INVALID_TRANSITION",
-                        "ROOM_REQUIRED",
-                        "MISSING_CALLBACK_PHONE",
-                        "CHECKIN_LOCK_REQUIRED",
-                        "DAY_CLOSE_IN_PROGRESS",
-                        "INVALID_DAY_CLOSE_PHASE",
-                        "DAY_CLOSE_NOT_STARTED",
-                        "UNKNOWN_MESSAGING_PROVIDER",
-                        "CHECKIN_LOCKED",
-                        "CHECKIN_AUTH_PATH_DISABLED",
-                        "CHECKIN_CLOSED",
-                        "TOPIC_DISABLED",
-                        "TOPIC_CLOSED",
-                        "DOCUMENT_NOT_SCANNED",
-                        "EXPORT_BLOCKED_MALWARE",
-                        "OPS_SETTINGS_INVALID",
-                        "EMERGENCY_DISABLED",
-                        "EMERGENCY_NOT_FOUND",
-                        "SETUP_INCOMPLETE",
-                        "SETUP_ALREADY_COMPLETED",
-                        "SESSION_INVALID_TICKET",
-                        "SESSION_TICKET_NOT_ACTIVE",
-                        "SESSION_ALREADY_ACTIVE",
-                        "SESSION_UNAUTHORIZED",
-                        "SESSION_EXPIRED",
-                        "FORM_TEMPLATE_NOT_FOUND",
-                        "DOCUMENT_INTAKE_BLOCKED",
-                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
-                        "DOCUMENT_SCHEMA_OUTDATED",
-                        "SANDBOX_UNAVAILABLE",
-                        "CAPTIVE_CLIENT_MISSING",
-                        "CAPTIVE_AUTH_FAILED",
-                        "CALL_ANNOUNCEMENT_OFFLINE",
-                        "ROOM_AT_CAPACITY",
-                        "ROOM_BLOCKED_TOPICS",
-                        "ROOM_BLOCKED_QUEUE",
-                        "ROOM_BLOCKED_CAPACITY",
-                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
-                        "RECALL_WINDOW_EXPIRED",
-                        "UNKNOWN_TOPIC",
-                        "TERMINAL_OFFLINE",
-                        "TERMINAL_PHONE_INVALID",
-                        "TERMINAL_BIRTH_DATE_INVALID",
-                        "TERMINAL_LAST_NAME_INVALID"
-                      ]
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "details": {
-                      "type": "object",
-                      "additionalProperties": true,
-                      "description": "Optional extra context for debugging."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Check-in rejected by configured opening-hour guardrails",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": ["code", "message"],
-                  "properties": {
-                    "code": {
-                      "type": "string",
-                      "description": "Machine-readable API error code returned in Error responses.",
-                      "enum": [
-                        "INVALID_ARGUMENT",
-                        "INTERNAL_ERROR",
-                        "NOT_FOUND",
-                        "AUTH_UNAUTHORIZED",
-                        "AUTH_FORBIDDEN",
-                        "RATE_LIMITED",
-                        "VISIT_NOT_FOUND",
-                        "DOCUMENT_NOT_FOUND",
-                        "DOCUMENT_FORBIDDEN",
-                        "INVALID_TRANSITION",
-                        "ROOM_REQUIRED",
-                        "MISSING_CALLBACK_PHONE",
-                        "CHECKIN_LOCK_REQUIRED",
-                        "DAY_CLOSE_IN_PROGRESS",
-                        "INVALID_DAY_CLOSE_PHASE",
-                        "DAY_CLOSE_NOT_STARTED",
-                        "UNKNOWN_MESSAGING_PROVIDER",
-                        "CHECKIN_LOCKED",
-                        "CHECKIN_AUTH_PATH_DISABLED",
-                        "CHECKIN_CLOSED",
-                        "TOPIC_DISABLED",
-                        "TOPIC_CLOSED",
-                        "DOCUMENT_NOT_SCANNED",
-                        "EXPORT_BLOCKED_MALWARE",
-                        "OPS_SETTINGS_INVALID",
-                        "EMERGENCY_DISABLED",
-                        "EMERGENCY_NOT_FOUND",
-                        "SETUP_INCOMPLETE",
-                        "SETUP_ALREADY_COMPLETED",
-                        "SESSION_INVALID_TICKET",
-                        "SESSION_TICKET_NOT_ACTIVE",
-                        "SESSION_ALREADY_ACTIVE",
-                        "SESSION_UNAUTHORIZED",
-                        "SESSION_EXPIRED",
-                        "FORM_TEMPLATE_NOT_FOUND",
-                        "DOCUMENT_INTAKE_BLOCKED",
-                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
-                        "DOCUMENT_SCHEMA_OUTDATED",
-                        "SANDBOX_UNAVAILABLE",
-                        "CAPTIVE_CLIENT_MISSING",
-                        "CAPTIVE_AUTH_FAILED",
-                        "CALL_ANNOUNCEMENT_OFFLINE",
-                        "ROOM_AT_CAPACITY",
-                        "ROOM_BLOCKED_TOPICS",
-                        "ROOM_BLOCKED_QUEUE",
-                        "ROOM_BLOCKED_CAPACITY",
-                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
-                        "RECALL_WINDOW_EXPIRED",
-                        "UNKNOWN_TOPIC",
-                        "TERMINAL_OFFLINE",
-                        "TERMINAL_PHONE_INVALID",
-                        "TERMINAL_BIRTH_DATE_INVALID",
-                        "TERMINAL_LAST_NAME_INVALID"
-                      ]
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "details": {
-                      "type": "object",
-                      "additionalProperties": true,
-                      "description": "Optional extra context for debugging."
-                    }
-                  }
-                },
-                "examples": {
-                  "checkinClosed": {
-                    "summary": "Practice currently closed",
-                    "value": {
-                      "code": "CHECKIN_CLOSED",
-                      "message": "Check-in ist ausserhalb der Praxiszeiten nicht verfuegbar."
-                    }
-                  },
-                  "checkinLocked": {
-                    "summary": "Check-in locked by MFA/ops",
-                    "value": {
-                      "code": "CHECKIN_LOCKED",
-                      "message": "Check-in ist derzeit gesperrt."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Invalid opening-hour configuration",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": ["code", "message"],
-                  "properties": {
-                    "code": {
-                      "type": "string",
-                      "description": "Machine-readable API error code returned in Error responses.",
-                      "enum": [
-                        "INVALID_ARGUMENT",
-                        "INTERNAL_ERROR",
-                        "NOT_FOUND",
-                        "AUTH_UNAUTHORIZED",
-                        "AUTH_FORBIDDEN",
-                        "RATE_LIMITED",
-                        "VISIT_NOT_FOUND",
-                        "DOCUMENT_NOT_FOUND",
-                        "DOCUMENT_FORBIDDEN",
-                        "INVALID_TRANSITION",
-                        "ROOM_REQUIRED",
-                        "MISSING_CALLBACK_PHONE",
-                        "CHECKIN_LOCK_REQUIRED",
-                        "DAY_CLOSE_IN_PROGRESS",
-                        "INVALID_DAY_CLOSE_PHASE",
-                        "DAY_CLOSE_NOT_STARTED",
-                        "UNKNOWN_MESSAGING_PROVIDER",
-                        "CHECKIN_LOCKED",
-                        "CHECKIN_AUTH_PATH_DISABLED",
-                        "CHECKIN_CLOSED",
-                        "TOPIC_DISABLED",
-                        "TOPIC_CLOSED",
-                        "DOCUMENT_NOT_SCANNED",
-                        "EXPORT_BLOCKED_MALWARE",
-                        "OPS_SETTINGS_INVALID",
-                        "EMERGENCY_DISABLED",
-                        "EMERGENCY_NOT_FOUND",
-                        "SETUP_INCOMPLETE",
-                        "SETUP_ALREADY_COMPLETED",
-                        "SESSION_INVALID_TICKET",
-                        "SESSION_TICKET_NOT_ACTIVE",
-                        "SESSION_ALREADY_ACTIVE",
-                        "SESSION_UNAUTHORIZED",
-                        "SESSION_EXPIRED",
-                        "FORM_TEMPLATE_NOT_FOUND",
-                        "DOCUMENT_INTAKE_BLOCKED",
-                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
-                        "DOCUMENT_SCHEMA_OUTDATED",
-                        "SANDBOX_UNAVAILABLE",
-                        "CAPTIVE_CLIENT_MISSING",
-                        "CAPTIVE_AUTH_FAILED",
-                        "CALL_ANNOUNCEMENT_OFFLINE",
-                        "ROOM_AT_CAPACITY",
-                        "ROOM_BLOCKED_TOPICS",
-                        "ROOM_BLOCKED_QUEUE",
-                        "ROOM_BLOCKED_CAPACITY",
-                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
-                        "RECALL_WINDOW_EXPIRED",
-                        "UNKNOWN_TOPIC",
-                        "TERMINAL_OFFLINE",
-                        "TERMINAL_PHONE_INVALID",
-                        "TERMINAL_BIRTH_DATE_INVALID",
-                        "TERMINAL_LAST_NAME_INVALID"
-                      ]
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "details": {
-                      "type": "object",
-                      "additionalProperties": true,
-                      "description": "Optional extra context for debugging."
-                    }
-                  }
-                },
-                "examples": {
-                  "opsSettingsInvalid": {
-                    "summary": "Invalid practice-hour settings",
-                    "value": {
-                      "code": "OPS_SETTINGS_INVALID",
-                      "message": "Praxiszeiten sind ungueltig konfiguriert."
                     }
                   }
                 }
@@ -17773,7 +17458,7 @@
       "TerminalAssistPressed": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["pressedAt", "expiresAt", "legacyCutover"],
+        "required": ["pressedAt", "expiresAt"],
         "properties": {
           "pressedAt": {
             "type": "string",
@@ -17782,10 +17467,6 @@
           "expiresAt": {
             "type": "string",
             "format": "date-time"
-          },
-          "legacyCutover": {
-            "type": "boolean",
-            "description": "True when returned from deprecated /mfa-assist cutover endpoint."
           }
         }
       },

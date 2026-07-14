@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/api/cookie-auth-fetch', () => ({
-  cookieAuthFetch: vi.fn(),
+vi.mock('$lib/api/staff-auth-fetch', () => ({
+  mfaAuthFetch: vi.fn(),
 }));
 
 import { generateRoomId } from './ops-settings-api';

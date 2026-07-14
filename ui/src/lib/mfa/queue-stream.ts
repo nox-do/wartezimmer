@@ -1,6 +1,6 @@
 import { isBackendUnreachable } from '$lib/api/backend-unreachable';
 import { buildApiStreamUrl } from '$lib/api/build-api-url';
-import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/staff-auth-fetch';
 import { SSE_CLIENT_ERROR, connectSseStream } from '$lib/api/sse-client';
 import { markAuthUnauthorized } from '$lib/auth/session-state.svelte';
 import { t } from '$lib/i18n/i18nStore.svelte';
@@ -31,7 +31,7 @@ export async function fetchMfaQueue(): Promise<Result<MfaQueueStreamSnapshot>> {
 
 function resolveStreamError(message: string): MfaQueueStreamError {
   if (message === SSE_CLIENT_ERROR.unauthorized || message === SSE_CLIENT_ERROR.forbidden) {
-    markAuthUnauthorized();
+    markAuthUnauthorized('mfa');
     return { message: t('auth.loginRequiredTitle'), backendUnreachable: false };
   }
   if (message === SSE_CLIENT_ERROR.connectFailed) {
@@ -87,7 +87,7 @@ export function connectMfaQueueStream(handlers: MfaQueueStreamHandlers): () => v
       }
       if (!result.ok) {
         if (result.error.status === 401 || result.error.status === 403) {
-          markAuthUnauthorized();
+          markAuthUnauthorized('mfa');
           handlers.onError?.(resolveStreamError(SSE_CLIENT_ERROR.unauthorized));
         }
         return;

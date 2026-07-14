@@ -66,13 +66,12 @@ function resolveTerminalDeviceId(request: FastifyRequest): string {
   return TERMINAL_DEVICE_ID;
 }
 
-function runAssistPress(db: CoreDatabase, deviceId: string, legacyCutover: boolean) {
+function runAssistPress(db: CoreDatabase, deviceId: string) {
   const row = db.pressTerminalAssist(deviceId);
   notifyTvQueueChanged(db);
   return {
     pressedAt: row.pressedAt,
     expiresAt: row.expiresAt,
-    legacyCutover,
   };
 }
 
@@ -118,7 +117,7 @@ export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): v
     },
     async (request, reply) => {
       try {
-        const payload = runAssistPress(db, resolveTerminalDeviceId(request), false);
+        const payload = runAssistPress(db, resolveTerminalDeviceId(request));
         return reply.code(201).send(payload);
       } catch (error) {
         if (sendResolvedDomainError(reply, error, CHECKIN_ERROR_MESSAGES)) {
@@ -288,31 +287,6 @@ export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): v
           createdAt: created.createdAt,
           destinationRoomLabel,
         });
-      } catch (error) {
-        if (sendResolvedDomainError(reply, error, CHECKIN_ERROR_MESSAGES)) {
-          return;
-        }
-        throw error;
-      }
-    },
-  );
-
-  app.post(
-    '/api/v1/checkins/mfa-assist',
-    {
-      schema: {
-        response: {
-          201: checkinSchemas.POST_api_v1_checkins_assist_pressResponse201,
-          400: checkinErrorResponse,
-          409: checkinErrorResponse,
-          500: checkinErrorResponse,
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const payload = runAssistPress(db, resolveTerminalDeviceId(request), true);
-        return reply.code(201).send(payload);
       } catch (error) {
         if (sendResolvedDomainError(reply, error, CHECKIN_ERROR_MESSAGES)) {
           return;

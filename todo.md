@@ -2,6 +2,14 @@
 
 Stand: 2026-07-14
 
+## Erledigt: Legacy-Cleanup mfa-assist + ungenutzte Aliases (2026-07-14)
+
+- Entfernt: `POST /api/v1/checkins/mfa-assist`, `legacyCutover` aus `TerminalAssistPressed`, ACL-Regel, Legacy-Test
+- Entfernt: `BusinessDayTicketStats`, `BusinessDayOpenTicket` (Backend + UI), `MarkAwayTicket` (UI)
+- Entfernt: `SETTINGS_EXPORT_ENV_EXCLUDED_KEYS`, `PfbackupValidationResult` aus server-shared
+- OpenAPI/Schemas neu generiert (`npm run generate:api`)
+- **Nach Deploy:** `LEGACY_STAFF_SESSION_COOKIE` / `clearLegacyStaffSessionCookie()` / Login-Clear-Test entfernen (Negativ-Tests für `pf_staff_session` behalten)
+
 ## Erledigt: Code-Diät queue-routes Transition-Engine (2026-07-14)
 
 - Extrakt: `app/src/routes/queue/queue-visit-transitions.ts` — Staff Handler-Map + shared `runVisitTransition`
@@ -27,9 +35,17 @@ Stand: 2026-07-14
 | `EnvBackupInfo` / `EnvBackupResult`                                                                                               | **entfernt** | Re-Exports aus `setup-api`/`index`/`host-status` entfernt. `SaveEnvBackupResult` bleibt (Rename später). |
 | `app/src/http/domain-error.ts` Shim                                                                                               | **entfernt** | Imports → `shared/errors/domain-error.js`; Datei gelöscht.                                               |
 | `setup/src/urls.ts` `buildDeviceUrls`                                                                                             | **entfernt** | Tests auf `buildDeviceUrlsFromBaseUrl` umgestellt.                                                       |
-| UI `createMfaAssistCheckin`                                                                                                       | **entfernt** | Server `POST /mfa-assist` bleibt.                                                                        |
+| UI `createMfaAssistCheckin`                                                                                                       | **entfernt** | Server `POST /mfa-assist` ebenfalls entfernt (2026-07-14).                                               |
 
 - **Auth-Routen Überblick:** Staff/Device unter `/api/v1/auth/*` in `app/src/routes/auth-routes.ts` (OpenAPI `openapi/auth.yaml`); Guard via `registerClientAuth` + `route-access-rules.ts`; Cookie-Sessions (kein JWT/OAuth)
+
+## Erledigt: Auth-UI-State Cleanup (2026-07-14)
+
+- UI: `staffAuthSlots` (mfa/ops getrennt) statt globalem `authSession`; `probingAlternateSlot`-Hack entfernt
+- `markAuthUnauthorized(role)` slot-scoped; `mfaAuthFetch`/`opsAuthFetch` rufen nur eigenen Slot
+- Fetch: `terminalAuthFetch` / `roomPanelAuthFetch`; MFA-/Ops-Wrapper in `staff-auth-fetch.ts`; Slot-State ohne zyklische Runtime-Abhängigkeit
+- Typen: `StaffAuthRole` zentral in `session-client.ts`; `AuthSessionUser.role` statt `roles[]`
+- Backend: toter Export `getLegacyStaffSessionCookieName()` entfernt (`pf_staff_session`-Clear beim Login bleibt)
 
 ## Erledigt: Auth Session-Slots + MFA-Recovery (Phase 1–3, 2026-07-14)
 

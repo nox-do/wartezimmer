@@ -1,4 +1,4 @@
-import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/staff-auth-fetch';
 import type { TerminalTopic, VisitCreated } from '$lib/terminal/openapi-types';
 
 export type MfaLookupCandidate = {

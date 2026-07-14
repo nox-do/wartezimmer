@@ -3,20 +3,26 @@
   import { page } from '$app/stores';
   import type { Snippet } from 'svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
-  import { authSession, loadAuthSession, shouldLoadAuthSession } from '$lib/auth/session-state.svelte';
-  import type { AuthSessionUser } from '$lib/auth/session-client';
+  import {
+    loadAuthSession,
+    shouldLoadAuthSession,
+    staffAuthSlots,
+  } from '$lib/auth/session-state.svelte';
+  import type { StaffAuthRole } from '$lib/auth/session-client';
 
   interface Props {
     loginHref?: string;
-    requiredRole?: AuthSessionUser['roles'][number];
+    requiredRole?: StaffAuthRole;
     children?: Snippet;
   }
 
   let { loginHref = '/mfa/login', requiredRole, children }: Props = $props();
 
+  const authSlot = $derived(requiredRole ? staffAuthSlots[requiredRole] : staffAuthSlots.mfa);
+
   const authenticated = $derived(
-    authSession.status === 'authenticated' &&
-      (!requiredRole || authSession.user?.roles.includes(requiredRole)),
+    authSlot.status === 'authenticated' &&
+      (!requiredRole || authSlot.user?.role === requiredRole),
   );
 
   function loginTargetWithRedirect(href: string, redirectTarget: string): string {
@@ -28,7 +34,7 @@
   }
 
   $effect(() => {
-    if (!requiredRole || (requiredRole !== 'mfa' && requiredRole !== 'ops')) {
+    if (!requiredRole) {
       return;
     }
     if (shouldLoadAuthSession(requiredRole)) {
@@ -37,7 +43,7 @@
   });
 
   $effect(() => {
-    if (authenticated || authSession.status === 'idle' || authSession.status === 'loading') {
+    if (authenticated || authSlot.status === 'idle' || authSlot.status === 'loading') {
       return;
     }
 

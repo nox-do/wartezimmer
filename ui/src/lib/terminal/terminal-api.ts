@@ -1,4 +1,4 @@
-import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { terminalAuthFetch } from '$lib/api/cookie-auth-fetch';
 import { t } from '$lib/i18n/i18nStore.svelte';
 import type { TerminalTopic, TicketCreated } from '$lib/terminal/openapi-types';
 
@@ -10,7 +10,6 @@ export type TerminalTopicOption = TerminalTopic;
 export type TerminalAssistPressed = {
   pressedAt: string;
   expiresAt: string;
-  legacyCutover?: boolean;
 };
 
 import type { TerminalPatientLocale } from '@praxis-flow/domain';
@@ -27,18 +26,12 @@ export type TerminalHeartbeat = {
   emergencyActive: boolean;
 };
 
-const terminalDeviceHeaders = { 'X-Client-Role': 'terminal' };
-
 export async function fetchTerminalHeartbeat() {
-  return cookieAuthFetch<TerminalHeartbeat>('/api/v1/ops/heartbeat', {
-    headers: terminalDeviceHeaders,
-  });
+  return terminalAuthFetch<TerminalHeartbeat>('/api/v1/ops/heartbeat');
 }
 
 export async function fetchTerminalTopics() {
-  return cookieAuthFetch<{ topics: TerminalTopicOption[] }>('/api/v1/checkins/topics', {
-    headers: terminalDeviceHeaders,
-  });
+  return terminalAuthFetch<{ topics: TerminalTopicOption[] }>('/api/v1/checkins/topics');
 }
 
 export async function createCheckin(input: {
@@ -50,7 +43,7 @@ export async function createCheckin(input: {
   identityRef?: string;
   patientLocale?: string;
 }) {
-  const headers: Record<string, string> = { ...terminalDeviceHeaders };
+  const headers: Record<string, string> = {};
   if (input.patientLocale?.trim()) {
     headers['X-Patient-Locale'] = input.patientLocale.trim();
   }
@@ -62,7 +55,7 @@ export async function createCheckin(input: {
     birthDate: input.birthDate,
     identityRef: input.identityRef,
   };
-  return cookieAuthFetch<CheckinCreated>('/api/v1/checkins', {
+  return terminalAuthFetch<CheckinCreated>('/api/v1/checkins', {
     method: 'POST',
     headers,
     body: JSON.stringify(payload),
@@ -70,27 +63,27 @@ export async function createCheckin(input: {
 }
 
 export async function pressTerminalAssist() {
-  return cookieAuthFetch<TerminalAssistPressed>('/api/v1/checkins/assist/press', {
+  return terminalAuthFetch<TerminalAssistPressed>('/api/v1/checkins/assist/press', {
     method: 'POST',
-    headers: terminalDeviceHeaders,
     body: JSON.stringify({}),
   });
 }
 
 export async function releaseTerminalAssist() {
-  return cookieAuthFetch<null>('/api/v1/checkins/assist/release', {
+  return terminalAuthFetch<null>('/api/v1/checkins/assist/release', {
     method: 'POST',
-    headers: terminalDeviceHeaders,
     body: JSON.stringify({}),
   });
 }
 
 export async function raiseTerminalEmergency() {
-  return cookieAuthFetch<{ emergencyId: string; raisedAt: string }>('/api/v1/ops/emergency/raise', {
-    method: 'POST',
-    headers: terminalDeviceHeaders,
-    body: JSON.stringify({}),
-  });
+  return terminalAuthFetch<{ emergencyId: string; raisedAt: string }>(
+    '/api/v1/ops/emergency/raise',
+    {
+      method: 'POST',
+      body: JSON.stringify({}),
+    },
+  );
 }
 
 export function mapCheckinErrorMessage(code: string | undefined, fallback: string): string {

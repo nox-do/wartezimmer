@@ -19,7 +19,6 @@ export {
   mfaQueueActions,
   resetMfaQueueActions,
   type CheckOutTicket,
-  type MarkAwayTicket,
   type PhoneCorrectionPurpose,
   type PhoneCorrectionTicket,
   type ReassignTicket,

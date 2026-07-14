@@ -25,7 +25,6 @@ export const ROUTE_ACCESS_RULES: RouteAccessRule[] = [
   { method: 'GET', path: '/api/v1/checkins/topics', roles: ['terminal', 'mfa'] },
   { method: 'POST', path: '/api/v1/checkins', roles: ['terminal', 'mfa'] },
   { method: 'POST', path: '/api/v1/checkins/assist/press', roles: ['terminal'] },
-  { method: 'POST', path: '/api/v1/checkins/mfa-assist', roles: ['terminal'] },
   { method: 'POST', path: '/api/v1/checkins/assist/release', roles: ['terminal'] },
   { method: 'GET', path: '/api/v1/checkins/assist/pending', roles: ['mfa'] },
   { method: 'POST', path: '/api/v1/identity/phone-dob-lookup', roles: ['mfa'] },

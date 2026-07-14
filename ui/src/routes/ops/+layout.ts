@@ -1,5 +1,9 @@
 import { redirect } from '@sveltejs/kit';
-import { authSession, loadAuthSession, shouldLoadAuthSession } from '$lib/auth/session-state.svelte';
+import {
+  staffAuthSlots,
+  loadAuthSession,
+  shouldLoadAuthSession,
+} from '$lib/auth/session-state.svelte';
 import { fetchOpsOnboarding } from '$lib/ops/ops-system-api';
 
 export const ssr = false;
@@ -13,7 +17,7 @@ export async function load({ url }) {
     await loadAuthSession('ops');
   }
 
-  if (authSession.status !== 'authenticated' || !authSession.user?.roles.includes('ops')) {
+  if (staffAuthSlots.ops.status !== 'authenticated' || staffAuthSlots.ops.user?.role !== 'ops') {
     return {};
   }
 
