@@ -166,36 +166,6 @@ test('getOpsSettingsFromDb applies outside constraints on panels', () => {
   assert.equal(room?.panels.inside.allowCalling, true);
 });
 
-test('getOpsSettingsFromDb rejects deprecated panel field', () => {
-  assert.throws(
-    () =>
-      getOpsSettingsFromDb({
-        getOpsSettingsStmt: {
-          get: () =>
-            minimalOpsSettingsRow({
-              roomsJson: JSON.stringify([
-                {
-                  roomId: 'empfang',
-                  roomLabel: 'Empfang',
-                  enabled: true,
-                  defaultCallTarget: true,
-                  panel: {
-                    enabled: true,
-                    placement: 'outside',
-                    mode: 'arrival',
-                  },
-                },
-              ]),
-            }),
-        } as StatementSync,
-        configuredExportBasePath: null,
-      }),
-    (error: unknown) =>
-      error instanceof OpsSettingsValidationError &&
-      /deprecated panel field/i.test(error.detailMessage),
-  );
-});
-
 test('getOpsSettingsFromDb rejects reserved mfa topic id in configurable topic settings', () => {
   assert.throws(
     () =>

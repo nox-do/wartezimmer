@@ -315,8 +315,7 @@ export function readGatewayStatusFromEnv(env: Map<string, string>): HostGatewayS
 }
 
 export function pickPracticeDisplayNameFromEnv(env: Map<string, string>): string | null {
-  const name =
-    env.get('PRACTICE_DISPLAY_NAME')?.trim() || env.get('VITE_PRACTICE_DISPLAY_NAME')?.trim();
+  const name = env.get('PRACTICE_DISPLAY_NAME')?.trim();
   return name || null;
 }
 

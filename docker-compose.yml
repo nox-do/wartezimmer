@@ -45,12 +45,6 @@ services:
       PRACTICE_EMAIL: ${PRACTICE_EMAIL:-}
       PRACTICE_DPO: ${PRACTICE_DPO:-}
       PRACTICE_WEBSITE: ${PRACTICE_WEBSITE:-}
-      # Deprecated — one-time DB seed via migration 007 if PRACTICE_* unset (remove after upgrade)
-      VITE_PRACTICE_DISPLAY_NAME: ${VITE_PRACTICE_DISPLAY_NAME:-}
-      VITE_PRACTICE_ADDRESS: ${VITE_PRACTICE_ADDRESS:-}
-      VITE_PRACTICE_PHONE: ${VITE_PRACTICE_PHONE:-}
-      VITE_PRACTICE_EMAIL: ${VITE_PRACTICE_EMAIL:-}
-      VITE_PRACTICE_DPO: ${VITE_PRACTICE_DPO:-}
     ports:
       - '8080:8080'
       # LAN boundary: publish maintenance only on host loopback (container listens 0.0.0.0:8082).

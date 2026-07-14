@@ -394,7 +394,7 @@ paths:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/sessions/resolve-ticket:
     post:
-      summary: Resolve waiting-number ticket to anonymous patient session
+      summary: Resolve waiting number (ticketCode) to anonymous patient session
       security: []
       requestBody:
         required: true
@@ -517,7 +517,7 @@ paths:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/sessions/verify-ticket-code:
     post:
-      summary: Verify waiting-number ticket without creating a patient session
+      summary: Verify waiting number (ticketCode) without creating a patient session
       description: Used by the gateway auth bridge (role captive). Does not rotate session tokens.
       security:
         - clientApiKeyBearer: []
@@ -537,7 +537,7 @@ paths:
                   maxLength: 8
       responses:
         '200':
-          description: Ticket verified
+          description: Waiting number verified
           content:
             application/json:
               schema:
@@ -743,7 +743,7 @@ paths:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
-      summary: List documents for MFA processing by ticket
+      summary: List documents for MFA processing by visit
       security:
         - mfaSessionCookie: []
       parameters:
@@ -755,7 +755,7 @@ paths:
             minLength: 1
       responses:
         '200':
-          description: Ticket documents for MFA
+          description: Visit documents for MFA
           content:
             application/json:
               schema:

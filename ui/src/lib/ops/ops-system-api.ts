@@ -160,7 +160,7 @@ export async function fetchMessagingCatalog() {
 }
 
 export type RuntimeResetPreview = {
-  ticketCount: number;
+  visitCount: number;
   outboxEventCount: number;
   emergencyActive: boolean;
   preservedTopicCount: number;
@@ -170,7 +170,7 @@ export type RuntimeResetPreview = {
 };
 
 export type RuntimeResetResult = {
-  resetTicketCount: number;
+  resetVisitCount: number;
   clearedOutboxCount: number;
   emergencyCleared: boolean;
   preservedTopicCount: number;

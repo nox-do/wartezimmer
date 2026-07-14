@@ -216,7 +216,7 @@ export const BusinessDayResetRequest = {
 export const RuntimeResetPreviewResponse = {
   type: 'object',
   required: [
-    'ticketCount',
+    'visitCount',
     'outboxEventCount',
     'emergencyActive',
     'preservedTopicCount',
@@ -6021,7 +6021,7 @@ export const PATCH_api_v1_ops_messaging_providers_providerId_Response400 = {
 export const GET_api_v1_ops_maintenance_runtime_reset_previewResponse200 = {
   type: 'object',
   required: [
-    'ticketCount',
+    'visitCount',
     'outboxEventCount',
     'emergencyActive',
     'preservedTopicCount',

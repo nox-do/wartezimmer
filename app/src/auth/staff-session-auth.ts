@@ -26,7 +26,6 @@ export type { CookieSlotRole } from './cookie-slot-role.js';
 export { readRequestedCookieSlotRole } from './cookie-slot-role.js';
 export {
   clearDeviceSessionCookie,
-  clearLegacyStaffSessionCookie,
   clearRoomPanelSessionCookie,
   clearSessionCookieForSlot,
   clearStaffSessionCookie,

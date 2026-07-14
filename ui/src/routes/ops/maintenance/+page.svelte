@@ -43,7 +43,7 @@
 
     toastStore.success(
       tf('ops.maintenanceResetOk', {
-        tickets: String(result.data.resetTicketCount),
+        tickets: String(result.data.resetVisitCount),
         outbox: String(result.data.clearedOutboxCount),
       }),
     );
@@ -75,7 +75,7 @@
       <h2 class="panel__title">{t('ops.maintenanceWillDeleteTitle')}</h2>
       <ul class="ops-maintenance-list">
         <li>
-          {tf('ops.maintenanceTickets', { count: String(preview.ticketCount) })}
+          {tf('ops.maintenanceTickets', { count: String(preview.visitCount) })}
         </li>
         <li>
           {tf('ops.maintenanceOutbox', { count: String(preview.outboxEventCount) })}

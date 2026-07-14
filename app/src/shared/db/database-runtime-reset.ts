@@ -48,7 +48,7 @@ export type RuntimeResetDeps = RuntimeResetStatements &
   RuntimeResetHelpers;
 
 export type RuntimeResetPreview = {
-  ticketCount: number;
+  visitCount: number;
   outboxEventCount: number;
   emergencyActive: boolean;
   preservedTopicCount: number;
@@ -162,7 +162,7 @@ export function getRuntimeResetPreviewFromDb(
   const emergency = getEmergencyStateFromDb(deps);
 
   return {
-    ticketCount: countFromStmt(deps.countAllVisitsStmt),
+    visitCount: countFromStmt(deps.countAllVisitsStmt),
     outboxEventCount: countFromStmt(deps.countAllOutboxEventsStmt),
     emergencyActive: emergency.active,
     preservedTopicCount: settings.topics.length,

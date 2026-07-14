@@ -270,7 +270,7 @@ function hasSessionCookies(request: FastifyRequest): boolean {
     return false;
   }
 
-  return /\bpf_(?:mfa|ops|staff|room_panel|tv_device|terminal_device)_session=/.test(raw);
+  return /\bpf_(?:mfa|ops|room_panel|tv_device|terminal_device)_session=/.test(raw);
 }
 
 export function registerClientAuth(

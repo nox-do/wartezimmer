@@ -301,12 +301,6 @@ function parseRoomSettings(raw: string | undefined): OpsSettings['rooms'] {
         `rooms_json entry at index ${index} has invalid maxOccupancy.`,
       );
     }
-    if (entry.panel != null) {
-      throw new OpsSettingsValidationError(
-        `rooms_json entry at index ${index} uses deprecated panel field; use panels instead.`,
-      );
-    }
-
     normalized.push({
       roomId,
       roomLabel,

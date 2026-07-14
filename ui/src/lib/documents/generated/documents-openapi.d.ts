@@ -259,7 +259,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Resolve waiting-number ticket to anonymous patient session */
+    /** Resolve waiting number (ticketCode) to anonymous patient session */
     post: {
       parameters: {
         query?: never;
@@ -414,7 +414,7 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Verify waiting-number ticket without creating a patient session
+     * Verify waiting number (ticketCode) without creating a patient session
      * @description Used by the gateway auth bridge (role captive). Does not rotate session tokens.
      */
     post: {
@@ -432,7 +432,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Ticket verified */
+        /** @description Waiting number verified */
         200: {
           headers: {
             [name: string]: unknown;
@@ -771,7 +771,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** List documents for MFA processing by ticket */
+    /** List documents for MFA processing by visit */
     get: {
       parameters: {
         query?: never;
@@ -786,7 +786,7 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Ticket documents for MFA */
+        /** @description Visit documents for MFA */
         200: {
           headers: {
             [name: string]: unknown;

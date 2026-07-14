@@ -121,7 +121,7 @@ components:
           description: Always open after a successful business-day reset.
         resetVisitCount:
           type: integer
-          description: Tickets cleared during the reset (runtime queue data only).
+          description: Visits cleared during the reset (runtime queue data only).
         updatedAt:
           type: string
           format: date-time
@@ -147,7 +147,7 @@ components:
     RuntimeResetPreviewResponse:
       type: object
       required:
-        - ticketCount
+        - visitCount
         - outboxEventCount
         - emergencyActive
         - preservedTopicCount
@@ -648,7 +648,7 @@ components:
                 type: integer
                 nullable: true
                 minimum: 1
-                description: Maximum concurrent called or in-room tickets assigned to this room. Null or omitted means unlimited.
+                description: Maximum concurrent called or in-room visits assigned to this room. Null or omitted means unlimited.
               panels:
                 $ref: '#/components/schemas/RoomPanelsSettings'
         contactLookupFolderPath:
@@ -707,7 +707,7 @@ components:
           type: boolean
         terminalWlanPromoEnabled:
           type: boolean
-          description: Show WLAN promo banner on check-in terminal (start + after ticket).
+          description: Show WLAN promo banner on check-in terminal (start + after check-in).
         terminalAuthPhoneEnabled:
           type: boolean
           description: Allow terminal check-in via mobile number and date of birth.
@@ -1217,7 +1217,7 @@ components:
                   type: integer
                 maxWaitMs:
                   type: integer
-                  description: Longest wait from arrival until call (ms), among tickets that were called.
+                  description: Longest wait from arrival until call (ms), among visits that were called.
                 byTopic:
                   type: array
                   items:
@@ -1235,7 +1235,7 @@ components:
                         type: integer
                 openVisits:
                   type: array
-                  description: Non-closed tickets from that business day (shown read-only before day start reset).
+                  description: Non-closed visits from that business day (shown read-only before day start reset).
                   items:
                     type: object
                     required:
@@ -2097,7 +2097,7 @@ paths:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Execute ops runtime reset (ops role)
-      description: Clears tickets, outbox, active emergency; preserves practice settings and messaging credentials.
+      description: Clears visits, outbox, active emergency; preserves practice settings and messaging credentials.
       requestBody:
         required: true
         content:
@@ -2149,7 +2149,7 @@ paths:
     post:
       summary: Reset runtime for a new business day
       description: >-
-        Clears tickets and outbox runtime data, locks check-in, stamps lastResetBusinessDay,
+        Clears visits and outbox runtime data, locks check-in, stamps lastResetBusinessDay,
         and queues sandbox purge/restart. Settings are preserved. This is the MFA „Neuen Tag starten“
         action — not the same as starting day-close (Tagesabschluss).
       requestBody:

@@ -2,13 +2,20 @@
 
 Stand: 2026-07-14
 
+## Erledigt: Legacy-Cleanup Deploy-Nachzügler (2026-07-14)
+
+- Entfernt: `pf_staff_session` Cookie-Clear beim Login (`clearLegacyStaffSessionCookie`, `LEGACY_STAFF_SESSION_COOKIE`); Negativ-Tests bleiben
+- Entfernt: `rooms_json.panel` DB-Lese-Guard (nur noch `panels`; alte DB-Zeilen ignorieren `panel`)
+- Entfernt: `VITE_PRACTICE_*` aus Compose + Env-Fallbacks (`practice-profile`, `host-state`)
+- OpenAPI: Beschreibungen ticket → visit; `RuntimeResetPreviewResponse.visitCount` konsistent (Backend + UI)
+- OpenAPI/Schemas neu generiert (`npm run generate:api`)
+
 ## Erledigt: Legacy-Cleanup mfa-assist + ungenutzte Aliases (2026-07-14)
 
 - Entfernt: `POST /api/v1/checkins/mfa-assist`, `legacyCutover` aus `TerminalAssistPressed`, ACL-Regel, Legacy-Test
 - Entfernt: `BusinessDayTicketStats`, `BusinessDayOpenTicket` (Backend + UI), `MarkAwayTicket` (UI)
 - Entfernt: `SETTINGS_EXPORT_ENV_EXCLUDED_KEYS`, `PfbackupValidationResult` aus server-shared
 - OpenAPI/Schemas neu generiert (`npm run generate:api`)
-- **Nach Deploy:** `LEGACY_STAFF_SESSION_COOKIE` / `clearLegacyStaffSessionCookie()` / Login-Clear-Test entfernen (Negativ-Tests für `pf_staff_session` behalten)
 
 ## Erledigt: Code-Diät queue-routes Transition-Engine (2026-07-14)
 

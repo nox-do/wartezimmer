@@ -2437,7 +2437,7 @@
         }
       ],
       "post": {
-        "summary": "Create check-in ticket",
+        "summary": "Create check-in visit",
         "requestBody": {
           "required": true,
           "content": {
@@ -2462,7 +2462,7 @@
                   },
                   "phoneNumber": {
                     "type": "string",
-                    "description": "Optional phone number for CSV identity lookup; stored on the ticket when authPath is phone_dob (portal anamnese prefill)."
+                    "description": "Optional phone number for CSV identity lookup; stored on the visit when authPath is phone_dob (portal anamnese prefill)."
                   },
                   "lastName": {
                     "type": "string",
@@ -2492,7 +2492,7 @@
                   "properties": {
                     "visitId": {
                       "type": "string",
-                      "description": "Internal unique ticket id.",
+                      "description": "Internal unique visit id.",
                       "example": "20260530-A-001"
                     },
                     "laneCode": {
@@ -3612,7 +3612,7 @@
         }
       ],
       "get": {
-        "summary": "Read identity-related ticket details for MFA context",
+        "summary": "Read identity-related visit details for MFA context",
         "parameters": [
           {
             "in": "path",
@@ -3626,7 +3626,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Ticket identity details",
+            "description": "Visit identity details",
             "content": {
               "application/json": {
                 "schema": {
@@ -4378,7 +4378,7 @@
         }
       ],
       "post": {
-        "summary": "Mark patient absent by phone number or ticket code lookup",
+        "summary": "Mark patient absent by phone number or waiting number (ticketCode) lookup",
         "requestBody": {
           "required": true,
           "content": {
@@ -4408,7 +4408,7 @@
         },
         "responses": {
           "200": {
-            "description": "Ticket marked absent",
+            "description": "Visit marked absent",
             "content": {
               "application/json": {
                 "schema": {
@@ -4474,7 +4474,7 @@
             }
           },
           "400": {
-            "description": "Invalid request or ticket code required",
+            "description": "Invalid request or waiting number (ticketCode) required",
             "content": {
               "application/json": {
                 "schema": {
@@ -4730,7 +4730,7 @@
         }
       ],
       "post": {
-        "summary": "Apply a typed workflow transition to a queue ticket",
+        "summary": "Apply a typed workflow transition to a queue visit",
         "parameters": [
           {
             "in": "path",
@@ -4803,7 +4803,7 @@
         },
         "responses": {
           "200": {
-            "description": "Ticket transition applied",
+            "description": "Visit transition applied",
             "content": {
               "application/json": {
                 "schema": {
@@ -5584,7 +5584,7 @@
             }
           },
           "409": {
-            "description": "Ticket not in a state that allows updating callback phone",
+            "description": "Visit not in a state that allows updating callback phone",
             "content": {
               "application/json": {
                 "schema": {
@@ -5781,7 +5781,7 @@
             }
           },
           "409": {
-            "description": "Ticket not in a state that allows updating callback phone",
+            "description": "Visit not in a state that allows updating callback phone",
             "content": {
               "application/json": {
                 "schema": {
@@ -5877,7 +5877,7 @@
         }
       ],
       "patch": {
-        "summary": "Set MFA display name for a ticket without identity (manual entry in waiting list)",
+        "summary": "Set MFA display name for a visit without identity (manual entry in waiting list)",
         "parameters": [
           {
             "in": "path",
@@ -5910,7 +5910,7 @@
         },
         "responses": {
           "200": {
-            "description": "Display name stored on ticket",
+            "description": "Display name stored on visit",
             "content": {
               "application/json": {
                 "schema": {
@@ -6094,7 +6094,7 @@
             }
           },
           "409": {
-            "description": "Ticket not in waiting list or already has a display name",
+            "description": "Visit not in waiting list or already has a display name",
             "content": {
               "application/json": {
                 "schema": {
@@ -6190,7 +6190,7 @@
         }
       ],
       "post": {
-        "summary": "Supersede a waiting/directed visit with a new topic (new ticket number, chain link, preserve wait clock)",
+        "summary": "Supersede a waiting/directed visit with a new topic (new waiting number, chain link, preserve wait clock)",
         "parameters": [
           {
             "in": "path",
@@ -6223,7 +6223,7 @@
         },
         "responses": {
           "200": {
-            "description": "Visit superseded; new ticket created",
+            "description": "Visit superseded; new visit created",
             "content": {
               "application/json": {
                 "schema": {
@@ -7713,7 +7713,7 @@
     },
     "/api/v1/sessions/resolve-ticket": {
       "post": {
-        "summary": "Resolve waiting-number ticket to anonymous patient session",
+        "summary": "Resolve waiting number (ticketCode) to anonymous patient session",
         "security": [],
         "requestBody": {
           "required": true,
@@ -8310,7 +8310,7 @@
     },
     "/api/v1/sessions/verify-ticket-code": {
       "post": {
-        "summary": "Verify waiting-number ticket without creating a patient session",
+        "summary": "Verify waiting number (ticketCode) without creating a patient session",
         "description": "Used by the gateway auth bridge (role captive). Does not rotate session tokens.",
         "security": [
           {
@@ -8338,7 +8338,7 @@
         },
         "responses": {
           "200": {
-            "description": "Ticket verified",
+            "description": "Waiting number verified",
             "content": {
               "application/json": {
                 "schema": {
@@ -9570,7 +9570,7 @@
         }
       ],
       "get": {
-        "summary": "List documents for MFA processing by ticket",
+        "summary": "List documents for MFA processing by visit",
         "security": [
           {
             "mfaSessionCookie": []
@@ -9589,7 +9589,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Ticket documents for MFA",
+            "description": "Visit documents for MFA",
             "content": {
               "application/json": {
                 "schema": {
@@ -11513,7 +11513,7 @@
                             "type": "integer",
                             "nullable": true,
                             "minimum": 1,
-                            "description": "Maximum concurrent called or in-room tickets assigned to this room. Null or omitted means unlimited."
+                            "description": "Maximum concurrent called or in-room visits assigned to this room. Null or omitted means unlimited."
                           },
                           "panels": {
                             "type": "object",
@@ -11728,7 +11728,7 @@
                     },
                     "terminalWlanPromoEnabled": {
                       "type": "boolean",
-                      "description": "Show WLAN promo banner on check-in terminal (start + after ticket)."
+                      "description": "Show WLAN promo banner on check-in terminal (start + after check-in)."
                     },
                     "terminalAuthPhoneEnabled": {
                       "type": "boolean",
@@ -12552,7 +12552,7 @@
                             "type": "integer",
                             "nullable": true,
                             "minimum": 1,
-                            "description": "Maximum concurrent called or in-room tickets assigned to this room. Null or omitted means unlimited."
+                            "description": "Maximum concurrent called or in-room visits assigned to this room. Null or omitted means unlimited."
                           },
                           "panels": {
                             "type": "object",
@@ -12767,7 +12767,7 @@
                     },
                     "terminalWlanPromoEnabled": {
                       "type": "boolean",
-                      "description": "Show WLAN promo banner on check-in terminal (start + after ticket)."
+                      "description": "Show WLAN promo banner on check-in terminal (start + after check-in)."
                     },
                     "terminalAuthPhoneEnabled": {
                       "type": "boolean",
@@ -15464,7 +15464,7 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "ticketCount",
+                    "visitCount",
                     "outboxEventCount",
                     "emergencyActive",
                     "preservedTopicCount",
@@ -15522,7 +15522,7 @@
       ],
       "post": {
         "summary": "Execute ops runtime reset (ops role)",
-        "description": "Clears tickets, outbox, active emergency; preserves practice settings and messaging credentials.",
+        "description": "Clears visits, outbox, active emergency; preserves practice settings and messaging credentials.",
         "requestBody": {
           "required": true,
           "content": {
@@ -15823,7 +15823,7 @@
                             },
                             "maxWaitMs": {
                               "type": "integer",
-                              "description": "Longest wait from arrival until call (ms), among tickets that were called."
+                              "description": "Longest wait from arrival until call (ms), among visits that were called."
                             },
                             "byTopic": {
                               "type": "array",
@@ -15845,7 +15845,7 @@
                             },
                             "openVisits": {
                               "type": "array",
-                              "description": "Non-closed tickets from that business day (shown read-only before day start reset).",
+                              "description": "Non-closed visits from that business day (shown read-only before day start reset).",
                               "items": {
                                 "type": "object",
                                 "required": [
@@ -15913,7 +15913,7 @@
       ],
       "post": {
         "summary": "Reset runtime for a new business day",
-        "description": "Clears tickets and outbox runtime data, locks check-in, stamps lastResetBusinessDay, and queues sandbox purge/restart. Settings are preserved. This is the MFA „Neuen Tag starten“ action — not the same as starting day-close (Tagesabschluss).",
+        "description": "Clears visits and outbox runtime data, locks check-in, stamps lastResetBusinessDay, and queues sandbox purge/restart. Settings are preserved. This is the MFA „Neuen Tag starten“ action — not the same as starting day-close (Tagesabschluss).",
         "requestBody": {
           "required": true,
           "content": {
@@ -15955,7 +15955,7 @@
                     },
                     "resetVisitCount": {
                       "type": "integer",
-                      "description": "Tickets cleared during the reset (runtime queue data only)."
+                      "description": "Visits cleared during the reset (runtime queue data only)."
                     },
                     "updatedAt": {
                       "type": "string",
@@ -17355,7 +17355,7 @@
         "properties": {
           "visitId": {
             "type": "string",
-            "description": "Internal unique ticket id.",
+            "description": "Internal unique visit id.",
             "example": "20260530-A-001"
           },
           "laneCode": {
@@ -19106,7 +19106,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 64,
-            "description": "When set, check-in/out only succeeds if the ticket's assigned room_id matches (room panel). Omit for MFA staff actions without room scope."
+            "description": "When set, check-in/out only succeeds if the visit's assigned room_id matches (room panel). Omit for MFA staff actions without room scope."
           }
         }
       },
@@ -20332,7 +20332,7 @@
           },
           "resetVisitCount": {
             "type": "integer",
-            "description": "Tickets cleared during the reset (runtime queue data only)."
+            "description": "Visits cleared during the reset (runtime queue data only)."
           },
           "updatedAt": {
             "type": "string",
@@ -20367,7 +20367,7 @@
       "RuntimeResetPreviewResponse": {
         "type": "object",
         "required": [
-          "ticketCount",
+          "visitCount",
           "outboxEventCount",
           "emergencyActive",
           "preservedTopicCount",
@@ -21185,7 +21185,7 @@
                   "type": "integer",
                   "nullable": true,
                   "minimum": 1,
-                  "description": "Maximum concurrent called or in-room tickets assigned to this room. Null or omitted means unlimited."
+                  "description": "Maximum concurrent called or in-room visits assigned to this room. Null or omitted means unlimited."
                 },
                 "panels": {
                   "type": "object",
@@ -21400,7 +21400,7 @@
           },
           "terminalWlanPromoEnabled": {
             "type": "boolean",
-            "description": "Show WLAN promo banner on check-in terminal (start + after ticket)."
+            "description": "Show WLAN promo banner on check-in terminal (start + after check-in)."
           },
           "terminalAuthPhoneEnabled": {
             "type": "boolean",
@@ -22335,7 +22335,7 @@
                   },
                   "maxWaitMs": {
                     "type": "integer",
-                    "description": "Longest wait from arrival until call (ms), among tickets that were called."
+                    "description": "Longest wait from arrival until call (ms), among visits that were called."
                   },
                   "byTopic": {
                     "type": "array",
@@ -22357,7 +22357,7 @@
                   },
                   "openVisits": {
                     "type": "array",
-                    "description": "Non-closed tickets from that business day (shown read-only before day start reset).",
+                    "description": "Non-closed visits from that business day (shown read-only before day start reset).",
                     "items": {
                       "type": "object",
                       "required": [

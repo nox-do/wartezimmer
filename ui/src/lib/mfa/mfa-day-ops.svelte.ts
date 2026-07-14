@@ -68,7 +68,7 @@ export async function confirmMfaDayStart() {
     }
 
     toastStore.success(
-      tf('mfa.settings.dayStartSuccess', { count: String(result.data.resetTicketCount) }),
+      tf('mfa.settings.dayStartSuccess', { count: String(result.data.resetVisitCount) }),
     );
 
     if (result.data.sandboxRestartInitiated) {

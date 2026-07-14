@@ -115,7 +115,7 @@ test('setStaffSessionCookie marks Secure behind trusted HTTPS proxy', () => {
   }
 });
 
-test('setStaffSessionCookie clears legacy pf_staff_session on login', () => {
+test('setStaffSessionCookie sets role-scoped cookie', () => {
   const reply = createReply();
   setStaffSessionCookie(
     reply as never,
@@ -124,5 +124,12 @@ test('setStaffSessionCookie clears legacy pf_staff_session on login', () => {
     'token',
     60_000,
   );
-  assert.equal(reply.values.some((value) => value.startsWith('pf_staff_session=')), true);
+  assert.equal(
+    reply.values.some((value) => value.startsWith('pf_mfa_session=token')),
+    true,
+  );
+  assert.equal(
+    reply.values.some((value) => value.startsWith('pf_staff_session=')),
+    false,
+  );
 });

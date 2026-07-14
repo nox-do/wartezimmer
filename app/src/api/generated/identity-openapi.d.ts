@@ -146,7 +146,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Read identity-related ticket details for MFA context */
+    /** Read identity-related visit details for MFA context */
     get: {
       parameters: {
         query?: never;
@@ -161,7 +161,7 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Ticket identity details */
+        /** @description Visit identity details */
         200: {
           headers: {
             [name: string]: unknown;

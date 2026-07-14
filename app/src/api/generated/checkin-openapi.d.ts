@@ -60,7 +60,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Create check-in ticket */
+    /** Create check-in visit */
     post: {
       parameters: {
         query?: never;
@@ -79,7 +79,7 @@ export interface paths {
             /** @enum {string} */
             authPath: 'phone_dob' | 'name_dob' | 'egk' | 'none';
             identityRef?: string;
-            /** @description Optional phone number for CSV identity lookup; stored on the ticket when authPath is phone_dob (portal anamnese prefill). */
+            /** @description Optional phone number for CSV identity lookup; stored on the visit when authPath is phone_dob (portal anamnese prefill). */
             phoneNumber?: string;
             /** @description Last name for CSV identity lookup when authPath is name_dob (case-insensitive exact match on the CSV lastName column). */
             lastName?: string;
@@ -294,7 +294,7 @@ export interface components {
   schemas: {
     VisitCreated: {
       /**
-       * @description Internal unique ticket id.
+       * @description Internal unique visit id.
        * @example 20260530-A-001
        */
       visitId: string;

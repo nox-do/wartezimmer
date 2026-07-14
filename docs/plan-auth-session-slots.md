@@ -25,8 +25,8 @@ verleiht aber keine Rolle; maßgeblich bleibt die serverseitige Session.
 | `tv`         | `pf_tv_device_session`       | Device-Pairing   |
 | `terminal`   | `pf_terminal_device_session` | Device-Pairing   |
 
-`pf_staff_session` ist ein nicht mehr akzeptierter Legacy-Name. Login darf ihn löschen,
-der Resolver liest ihn nicht. Nach dem Rollout ist deshalb einmaliges Neuanmelden nötig.
+`pf_staff_session` ist ein nicht mehr akzeptierter Legacy-Name; der Resolver liest ihn nicht
+(`401 AUTH_UNAUTHORIZED`). Nach dem Rollout war deshalb einmaliges Neuanmelden nötig.
 
 Room-Panel, MFA, Ops, TV und Terminal können mit ihren getrennten Slots im selben Browser
 koexistieren. Mehrere Room-Panel-Sessions im selben Browser bleiben bewusst ausgeschlossen,

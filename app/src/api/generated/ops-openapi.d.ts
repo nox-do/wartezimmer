@@ -1097,7 +1097,7 @@ export interface paths {
     put?: never;
     /**
      * Execute ops runtime reset (ops role)
-     * @description Clears tickets, outbox, active emergency; preserves practice settings and messaging credentials.
+     * @description Clears visits, outbox, active emergency; preserves practice settings and messaging credentials.
      */
     post: {
       parameters: {
@@ -1245,7 +1245,7 @@ export interface paths {
     put?: never;
     /**
      * Reset runtime for a new business day
-     * @description Clears tickets and outbox runtime data, locks check-in, stamps lastResetBusinessDay, and queues sandbox purge/restart. Settings are preserved. This is the MFA „Neuen Tag starten“ action — not the same as starting day-close (Tagesabschluss).
+     * @description Clears visits and outbox runtime data, locks check-in, stamps lastResetBusinessDay, and queues sandbox purge/restart. Settings are preserved. This is the MFA „Neuen Tag starten“ action — not the same as starting day-close (Tagesabschluss).
      */
     post: {
       parameters: {
@@ -1674,7 +1674,7 @@ export interface components {
        * @enum {string}
        */
       dayClosePhase: 'open' | 'started';
-      /** @description Tickets cleared during the reset (runtime queue data only). */
+      /** @description Visits cleared during the reset (runtime queue data only). */
       resetVisitCount: number;
       /** Format: date-time */
       updatedAt: string;
@@ -1693,7 +1693,7 @@ export interface components {
       confirmBusinessDayReset: true;
     };
     RuntimeResetPreviewResponse: {
-      visitCount?: number;
+      visitCount: number;
       outboxEventCount: number;
       emergencyActive: boolean;
       preservedTopicCount: number;
@@ -1860,7 +1860,7 @@ export interface components {
         enabled: boolean;
         /** @description Default MFA call destination when Quicksettings have no session override. Exactly one enabled room should be marked. */
         defaultCallTarget?: boolean;
-        /** @description Maximum concurrent called or in-room tickets assigned to this room. Null or omitted means unlimited. */
+        /** @description Maximum concurrent called or in-room visits assigned to this room. Null or omitted means unlimited. */
         maxOccupancy?: number | null;
         panels?: components['schemas']['RoomPanelsSettings'];
       }[];
@@ -1876,7 +1876,7 @@ export interface components {
         birthDate?: string | number;
       };
       emergencyEnabled: boolean;
-      /** @description Show WLAN promo banner on check-in terminal (start + after ticket). */
+      /** @description Show WLAN promo banner on check-in terminal (start + after check-in). */
       terminalWlanPromoEnabled: boolean;
       /** @description Allow terminal check-in via mobile number and date of birth. */
       terminalAuthPhoneEnabled: boolean;
@@ -2063,14 +2063,14 @@ export interface components {
       lastDayStats: null | {
         businessDay: string;
         totalVisits: number;
-        /** @description Longest wait from arrival until call (ms), among tickets that were called. */
+        /** @description Longest wait from arrival until call (ms), among visits that were called. */
         maxWaitMs: number;
         byTopic: {
           topicId: string;
           topicLabel: string;
           count: number;
         }[];
-        /** @description Non-closed tickets from that business day (shown read-only before day start reset). */
+        /** @description Non-closed visits from that business day (shown read-only before day start reset). */
         openVisits: {
           visitId: string;
           laneCode: string;

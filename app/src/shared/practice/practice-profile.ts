@@ -76,13 +76,13 @@ export function serializePracticeProfile(profile: PracticeProfile): string {
 
 export function practiceProfileFromEnv(): PracticeProfile {
   return normalizePracticeProfile({
-    displayName: readEnv('PRACTICE_DISPLAY_NAME') || readEnv('VITE_PRACTICE_DISPLAY_NAME'),
-    street: readEnv('PRACTICE_ADDRESS') || readEnv('VITE_PRACTICE_ADDRESS'),
+    displayName: readEnv('PRACTICE_DISPLAY_NAME'),
+    street: readEnv('PRACTICE_ADDRESS'),
     postalCode: readEnv('PRACTICE_POSTAL_CODE'),
     city: readEnv('PRACTICE_CITY'),
-    phone: readEnv('PRACTICE_PHONE') || readEnv('VITE_PRACTICE_PHONE'),
-    email: readEnv('PRACTICE_EMAIL') || readEnv('VITE_PRACTICE_EMAIL'),
-    dataProtectionOfficer: readEnv('PRACTICE_DPO') || readEnv('VITE_PRACTICE_DPO'),
+    phone: readEnv('PRACTICE_PHONE'),
+    email: readEnv('PRACTICE_EMAIL'),
+    dataProtectionOfficer: readEnv('PRACTICE_DPO'),
     website: readEnv('PRACTICE_WEBSITE'),
   });
 }

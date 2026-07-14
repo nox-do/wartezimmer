@@ -100,7 +100,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Mark patient absent by phone number or ticket code lookup */
+    /** Mark patient absent by phone number or waiting number (ticketCode) lookup */
     post: {
       parameters: {
         query?: never;
@@ -117,7 +117,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Ticket marked absent */
+        /** @description Visit marked absent */
         200: {
           headers: {
             [name: string]: unknown;
@@ -126,7 +126,7 @@ export interface paths {
             'application/json': components['schemas']['QueueTransitionResponse'];
           };
         };
-        /** @description Invalid request or ticket code required */
+        /** @description Invalid request or waiting number (ticketCode) required */
         400: {
           headers: {
             [name: string]: unknown;
@@ -173,7 +173,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Apply a typed workflow transition to a queue ticket */
+    /** Apply a typed workflow transition to a queue visit */
     post: {
       parameters: {
         query?: never;
@@ -192,7 +192,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Ticket transition applied */
+        /** @description Visit transition applied */
         200: {
           headers: {
             [name: string]: unknown;
@@ -304,7 +304,7 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
-        /** @description Ticket not in a state that allows updating callback phone */
+        /** @description Visit not in a state that allows updating callback phone */
         409: {
           headers: {
             [name: string]: unknown;
@@ -349,7 +349,7 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
-        /** @description Ticket not in a state that allows updating callback phone */
+        /** @description Visit not in a state that allows updating callback phone */
         409: {
           headers: {
             [name: string]: unknown;
@@ -381,7 +381,7 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    /** Set MFA display name for a ticket without identity (manual entry in waiting list) */
+    /** Set MFA display name for a visit without identity (manual entry in waiting list) */
     patch: {
       parameters: {
         query?: never;
@@ -402,7 +402,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Display name stored on ticket */
+        /** @description Display name stored on visit */
         200: {
           headers: {
             [name: string]: unknown;
@@ -429,7 +429,7 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
-        /** @description Ticket not in waiting list or already has a display name */
+        /** @description Visit not in waiting list or already has a display name */
         409: {
           headers: {
             [name: string]: unknown;
@@ -454,7 +454,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Supersede a waiting/directed visit with a new topic (new ticket number, chain link, preserve wait clock) */
+    /** Supersede a waiting/directed visit with a new topic (new waiting number, chain link, preserve wait clock) */
     post: {
       parameters: {
         query?: never;
@@ -475,7 +475,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Visit superseded; new ticket created */
+        /** @description Visit superseded; new visit created */
         200: {
           headers: {
             [name: string]: unknown;
@@ -785,7 +785,7 @@ export interface components {
     QueueRoomActionBody: {
       roomId?: string;
       roomLabel?: string;
-      /** @description When set, check-in/out only succeeds if the ticket's assigned room_id matches (room panel). Omit for MFA staff actions without room scope. */
+      /** @description When set, check-in/out only succeeds if the visit's assigned room_id matches (room panel). Omit for MFA staff actions without room scope. */
       actingRoomId?: string;
     };
     QueueVisitTransitionRequest: {

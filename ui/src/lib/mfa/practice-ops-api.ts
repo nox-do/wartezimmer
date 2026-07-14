@@ -51,7 +51,7 @@ export type CheckinLockState = {
 
 export type BusinessDayResetResult = {
   dayClosePhase: 'open' | 'started';
-  resetTicketCount: number;
+  resetVisitCount: number;
   updatedAt: string;
   lastResetBusinessDay: string;
   sandboxRestartRequired: boolean;

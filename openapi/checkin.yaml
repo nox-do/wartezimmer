@@ -27,7 +27,7 @@ components:
       properties:
         visitId:
           type: string
-          description: Internal unique ticket id.
+          description: Internal unique visit id.
           example: '20260530-A-001'
         laneCode:
           type: string
@@ -134,7 +134,7 @@ paths:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
-      summary: Create check-in ticket
+      summary: Create check-in visit
       requestBody:
         required: true
         content:
@@ -162,7 +162,7 @@ paths:
                   type: string
                 phoneNumber:
                   type: string
-                  description: Optional phone number for CSV identity lookup; stored on the ticket when authPath is phone_dob (portal anamnese prefill).
+                  description: Optional phone number for CSV identity lookup; stored on the visit when authPath is phone_dob (portal anamnese prefill).
                 lastName:
                   type: string
                   minLength: 1

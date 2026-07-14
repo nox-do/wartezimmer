@@ -649,7 +649,7 @@ components:
           minLength: 1
           maxLength: 64
           description: >-
-            When set, check-in/out only succeeds if the ticket's assigned room_id matches
+            When set, check-in/out only succeeds if the visit's assigned room_id matches
             (room panel). Omit for MFA staff actions without room scope.
     QueueVisitTransitionRequest:
       type: object
@@ -828,7 +828,7 @@ paths:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
-      summary: Mark patient absent by phone number or ticket code lookup
+      summary: Mark patient absent by phone number or waiting number (ticketCode) lookup
       requestBody:
         required: true
         content:
@@ -837,13 +837,13 @@ paths:
               $ref: '#/components/schemas/MarkAbsenceLookupRequest'
       responses:
         '200':
-          description: Ticket marked absent
+          description: Visit marked absent
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/QueueTransitionResponse'
         '400':
-          description: Invalid request or ticket code required
+          description: Invalid request or waiting number (ticketCode) required
           content:
             application/json:
               schema:
@@ -864,7 +864,7 @@ paths:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
-      summary: Apply a typed workflow transition to a queue ticket
+      summary: Apply a typed workflow transition to a queue visit
       parameters:
         - in: path
           name: visitId
@@ -880,7 +880,7 @@ paths:
               $ref: '#/components/schemas/QueueVisitTransitionRequest'
       responses:
         '200':
-          description: Ticket transition applied
+          description: Visit transition applied
           content:
             application/json:
               schema:
@@ -955,7 +955,7 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
         '409':
-          description: Ticket not in a state that allows updating callback phone
+          description: Visit not in a state that allows updating callback phone
           content:
             application/json:
               schema:
@@ -983,7 +983,7 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
         '409':
-          description: Ticket not in a state that allows updating callback phone
+          description: Visit not in a state that allows updating callback phone
           content:
             application/json:
               schema:
@@ -992,7 +992,7 @@ paths:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     patch:
-      summary: Set MFA display name for a ticket without identity (manual entry in waiting list)
+      summary: Set MFA display name for a visit without identity (manual entry in waiting list)
       parameters:
         - in: path
           name: visitId
@@ -1016,7 +1016,7 @@ paths:
                   maxLength: 160
       responses:
         '200':
-          description: Display name stored on ticket
+          description: Display name stored on visit
           content:
             application/json:
               schema:
@@ -1034,7 +1034,7 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
         '409':
-          description: Ticket not in waiting list or already has a display name
+          description: Visit not in waiting list or already has a display name
           content:
             application/json:
               schema:
@@ -1043,7 +1043,7 @@ paths:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
-      summary: Supersede a waiting/directed visit with a new topic (new ticket number, chain link, preserve wait clock)
+      summary: Supersede a waiting/directed visit with a new topic (new waiting number, chain link, preserve wait clock)
       parameters:
         - in: path
           name: visitId
@@ -1067,7 +1067,7 @@ paths:
                   maxLength: 64
       responses:
         '200':
-          description: Visit superseded; new ticket created
+          description: Visit superseded; new visit created
           content:
             application/json:
               schema:

@@ -3,7 +3,6 @@ import type { CookieSlotRole } from './cookie-slot-role.js';
 import type { DeviceSessionRole, StaffRole } from './staff-session-types.js';
 import { trustProxyHeaders } from '../http/trusted-proxy.js';
 
-const LEGACY_STAFF_SESSION_COOKIE = 'pf_staff_session';
 const STAFF_SESSION_COOKIE_BY_ROLE: Record<StaffRole, string> = {
   mfa: 'pf_mfa_session',
   ops: 'pf_ops_session',
@@ -103,7 +102,6 @@ export function setStaffSessionCookie(
     reply,
     `${cookieName}=${encodeURIComponent(token)}; ${tokenCookieOptions(request, maxAgeSeconds)}`,
   );
-  clearLegacyStaffSessionCookie(reply, request);
 }
 
 export function setDeviceSessionCookie(
@@ -131,10 +129,6 @@ export function setRoomPanelSessionCookie(
     reply,
     `${ROOM_PANEL_SESSION_COOKIE}=${encodeURIComponent(token)}; ${tokenCookieOptions(request, maxAgeSeconds)}`,
   );
-}
-
-export function clearLegacyStaffSessionCookie(reply: FastifyReply, request: FastifyRequest): void {
-  appendSetCookie(reply, `${LEGACY_STAFF_SESSION_COOKIE}=; ${expiredCookieOptions(request)}`);
 }
 
 export function clearStaffSessionCookie(

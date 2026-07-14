@@ -150,7 +150,7 @@ paths:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
-      summary: Read identity-related ticket details for MFA context
+      summary: Read identity-related visit details for MFA context
       parameters:
         - in: path
           name: visitId
@@ -160,7 +160,7 @@ paths:
             minLength: 1
       responses:
         '200':
-          description: Ticket identity details
+          description: Visit identity details
           content:
             application/json:
               schema:

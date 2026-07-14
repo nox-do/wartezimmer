@@ -123,7 +123,7 @@ async function main() {
       expectedStatus: 200,
     },
   );
-  assert(typeof resetPreview.body?.ticketCount === 'number', 'preview ticketCount missing');
+  assert(typeof resetPreview.body?.visitCount === 'number', 'preview visitCount missing');
   assert(typeof resetPreview.body?.confirmPhrase === 'string', 'preview confirmPhrase missing');
 
   console.log('7) Ops session: GET messaging/providers');

@@ -44,17 +44,13 @@ test('isLanIpStale is false for localhost or missing configuration', () => {
   assert.equal(isLanIpStale(null, candidates), false);
 });
 
-test('pickPracticeDisplayNameFromEnv prefers PRACTICE_DISPLAY_NAME', () => {
-  const env = new Map([
-    ['PRACTICE_DISPLAY_NAME', 'Praxis Nord'],
-    ['VITE_PRACTICE_DISPLAY_NAME', 'Alt'],
-  ]);
+test('pickPracticeDisplayNameFromEnv reads PRACTICE_DISPLAY_NAME', () => {
+  const env = new Map([['PRACTICE_DISPLAY_NAME', 'Praxis Nord']]);
   assert.equal(pickPracticeDisplayNameFromEnv(env), 'Praxis Nord');
 });
 
-test('pickPracticeDisplayNameFromEnv falls back to VITE_PRACTICE_DISPLAY_NAME', () => {
-  const env = new Map([['VITE_PRACTICE_DISPLAY_NAME', 'Legacy Name']]);
-  assert.equal(pickPracticeDisplayNameFromEnv(env), 'Legacy Name');
+test('pickPracticeDisplayNameFromEnv returns null when unset', () => {
+  assert.equal(pickPracticeDisplayNameFromEnv(new Map()), null);
 });
 
 test('resolveComposeBuild skips build when re-applying existing env', () => {
