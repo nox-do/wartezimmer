@@ -1,6 +1,15 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-13
+Stand: 2026-07-14
+
+## Erledigt: Code-Diät queue-routes Transition-Engine (2026-07-14)
+
+- Extrakt: `app/src/routes/queue/queue-visit-transitions.ts` — Staff Handler-Map + shared `runVisitTransition`
+- HTTP-Adapter: `queue-routes.ts` 802→343 Zeilen (nur Registration + Nebenrouten)
+- P0: Room-Panel → Policy-Gates + shared `runCallTransition` / `runCheckInRoomTransition` / `runCheckOutRoomTransition` (kein Clone mehr)
+- P1: `runQueueMutation` für callback-phone / identity-ref / supersede (`queue/queue-mutations.ts`)
+- Tests unverändert, 21/21 grün (`queue-routes.test.ts`)
+- Offen/optional: `mark-absence` Error-Pfad vereinheitlichen; Message-Defaults zentralisieren
 
 ## Erledigt: Umbau-Hilfstests bereinigt (2026-07-13)
 
@@ -279,7 +288,7 @@ Ausnahme — jederzeit als Quick Win: `idx_visits_day_status_checkin`, `idx_visi
 - `+page.svelte` Orchestrator (20+ Imports / Callbacks) → Controller bündeln
 - `QueueEntry.svelte` (~386) — UI + Inline-Edit + DnD + Actions mischen
 - Settings-Boilerplate Topics/Rooms (load/persist copy-paste)
-- `queue-routes.ts` (~662) Backend nur bei Queue-API-Änderungen splitten
+- `queue-routes.ts` — Transition-Engine extrahiert (2026-07-14); optional Nebenrouten weiter splitten
 
 ### Schon ok
 

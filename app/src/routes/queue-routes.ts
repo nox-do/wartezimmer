@@ -1,6 +1,5 @@
 import type { FastifyInstance } from 'fastify';
 import type { CoreDatabase } from '../shared/db/database.js';
-import type { QueueDisplayStatus } from '../shared/db/db-types.js';
 import { queueSchemas } from '../api/generated/queue.fastify-schemas.js';
 import { commonSchemas } from '../api/generated/common.fastify-schemas.js';
 import type {
@@ -10,12 +9,7 @@ import type {
   QueueSupersedeBody,
   VisitParams,
   QueueVisitTransitionBody,
-  QueueVisitTransitionResponse,
-  QueueTransitionResponse,
 } from '../api/queue-openapi-types.js';
-import { dispatchRecallNotifyAndPersist } from '../shared/messaging/recall-notify-persist.js';
-import type { MessageDispatchResult } from '../shared/messaging/sms-sender.js';
-import { assertQueueCallAnnouncementReachable } from '../shared/queue/call-announcement-guard.js';
 import {
   getQueueRevision,
   publishExpiredRecallWindows,
@@ -25,17 +19,15 @@ import { buildMfaQueueSnapshot } from '../shared/queue/mfa-queue-snapshot.js';
 import { buildRoomPanelQueueSnapshot } from '../shared/queue/room-panel-queue-snapshot.js';
 import { buildTvQueueSnapshot } from '../shared/queue/tv-queue-snapshot.js';
 import { handleQueueRouteError } from './queue/queue-errors.js';
+import { runQueueMutation } from './queue/queue-mutations.js';
 import { resolveDomainError, sendApiError, sendDomainError } from '../http/domain-error-mapper.js';
-import type { AuthSession, RoomPanelSession } from '../auth/staff-session-auth.js';
 import { resolveRoomPanelForSession } from '../shared/room-panel/room-panel-policy.js';
 import {
-  assertRoomPanelCallVisitScope,
-  resolveRoomPanelSnapshotPolicy,
-} from '../shared/room-panel/room-panel-snapshot-policy.js';
+  applyQueueVisitTransition,
+  buildQueueTransitionResponse,
+} from './queue/queue-visit-transitions.js';
 
 const queueErrorResponse = commonSchemas.Error;
-
-const roomAtCapacityMessage = 'Raum ist voll — bitte anderes Aufrufziel wählen.';
 
 const queueVisitTransitionResponses = {
   200: queueSchemas.POST_api_v1_queue_visitId_transitionResponse200,
@@ -44,9 +36,6 @@ const queueVisitTransitionResponses = {
   404: queueErrorResponse,
   409: queueErrorResponse,
 } as const;
-
-const callAnnouncementOfflineMessage =
-  'Aufruf nicht möglich — Wartezimmer-Anzeige ist offline. Bitte TV prüfen oder koppeln.';
 
 const queueCallbackPhoneResponses = {
   200: queueSchemas.PUT_api_v1_queue_visitId_callback_phoneResponse200,
@@ -78,453 +67,6 @@ const queueSupersedeResponses = {
 
 function notifyTvQueueChanged(db: CoreDatabase): void {
   publishTvQueueUpdate(db);
-}
-
-function transitionBody(
-  transition: { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus },
-  visitId: string,
-): {
-  resultType: 'transition';
-  visitId: string;
-  fromStatus: QueueTransitionResponse['fromStatus'];
-  toStatus: QueueTransitionResponse['toStatus'];
-  updatedAt: string;
-  roomId: null;
-  roomLabel: null;
-} {
-  return {
-    resultType: 'transition',
-    visitId,
-    fromStatus: transition.fromStatus,
-    toStatus: transition.toStatus,
-    updatedAt: new Date().toISOString(),
-    roomId: null,
-    roomLabel: null,
-  };
-}
-
-function runVisitTransition<TTransition, TResponse>(input: {
-  reply: Parameters<typeof handleQueueRouteError>[0];
-  visitId: string;
-  execute: () => TTransition;
-  mapSuccess: (transition: TTransition) => TResponse;
-  errorOptions: Parameters<typeof handleQueueRouteError>[3];
-}): TResponse | undefined {
-  try {
-    const transition = input.execute();
-    return input.mapSuccess(transition);
-  } catch (error) {
-    const handled = handleQueueRouteError(input.reply, input.visitId, error, input.errorOptions);
-    if (handled) {
-      return undefined;
-    }
-    throw error;
-  }
-}
-
-async function applyQueueVisitTransition(
-  db: CoreDatabase,
-  reply: Parameters<typeof handleQueueRouteError>[0],
-  visitId: string,
-  body: QueueVisitTransitionBody,
-  authSession?: AuthSession,
-): Promise<QueueVisitTransitionResponse | undefined> {
-  if (authSession?.kind === 'room-panel') {
-    return applyRoomPanelQueueVisitTransition(db, reply, visitId, body, authSession);
-  }
-
-  switch (body.type) {
-    case 'call': {
-      const roomId = body.roomId?.trim();
-      const roomLabel = body.roomLabel?.trim();
-
-      try {
-        assertQueueCallAnnouncementReachable();
-      } catch (error) {
-        if (
-          handleQueueRouteError(reply, visitId, error, {
-            invalidTransitionMessage: `Ticket ${visitId} kann nicht aufgerufen werden.`,
-            roomAtCapacityMessage,
-            callAnnouncementOfflineMessage:
-              'Aufruf nicht möglich — Wartezimmer-Anzeige ist offline. Bitte TV prüfen oder koppeln.',
-          })
-        ) {
-          return undefined;
-        }
-        throw error;
-      }
-
-      return runVisitTransition({
-        reply,
-        visitId,
-        execute: () => db.callVisit(visitId, roomId, roomLabel),
-        mapSuccess: (transition) => ({
-          ...transitionBody(transition, visitId),
-          roomId: roomId ?? null,
-          roomLabel: roomLabel ?? null,
-        }),
-        errorOptions: {
-          invalidTransitionMessage: `Ticket ${visitId} kann im aktuellen Routing nicht aufgerufen werden.`,
-          roomAtCapacityMessage,
-          callAnnouncementOfflineMessage:
-            'Aufruf nicht möglich — Wartezimmer-Anzeige ist offline. Bitte TV prüfen oder koppeln.',
-        },
-      });
-    }
-    case 'check_in_room': {
-      const roomId = body.roomId?.trim();
-      const roomLabel = body.roomLabel?.trim();
-      const actingRoomId = body.actingRoomId?.trim();
-
-      return runVisitTransition({
-        reply,
-        visitId,
-        execute: () => db.checkInRoom(visitId, roomId, roomLabel, actingRoomId),
-        mapSuccess: (transition) => ({
-          ...transitionBody(transition, visitId),
-          roomId: roomId ?? null,
-          roomLabel: roomLabel ?? null,
-        }),
-        errorOptions: {
-          invalidTransitionMessage: `Ticket ${visitId} kann nicht in Behandlung gesetzt werden.`,
-          roomAtCapacityMessage,
-          roomScopeMismatchMessage:
-            'Check-in nur im aktuell zugewiesenen Raum möglich — bitte am richtigen Raum-Panel oder MFA nutzen.',
-        },
-      });
-    }
-    case 'start_treatment': {
-      const actingRoomId = body.actingRoomId?.trim();
-      return runVisitTransition({
-        reply,
-        visitId,
-        execute: () => db.startTreatment(visitId, actingRoomId),
-        mapSuccess: (transition) => transitionBody(transition, visitId),
-        errorOptions: {
-          invalidTransitionMessage: `Ticket ${visitId} kann nicht gestartet werden.`,
-          roomScopeMismatchMessage:
-            'Start nur im aktuell zugewiesenen Raum möglich — bitte am richtigen Raum-Panel oder MFA nutzen.',
-        },
-      });
-    }
-    case 'continue_journey':
-      return runVisitTransition({
-        reply,
-        visitId,
-        execute: () => db.continueJourney(visitId),
-        mapSuccess: (transition) => transitionBody(transition, visitId),
-        errorOptions: {
-          invalidTransitionMessage: `Ticket ${visitId} kann nicht zum nächsten Journey-Schritt weitergeleitet werden.`,
-        },
-      });
-    case 'reassign_room': {
-      const roomId = body.roomId?.trim();
-      const roomLabel = body.roomLabel?.trim();
-      if (!roomId) {
-        sendApiError(reply, 400, {
-          code: 'INVALID_ARGUMENT',
-          message: 'Bitte ein gültiges Aufrufziel angeben.',
-        });
-        return undefined;
-      }
-
-      return runVisitTransition({
-        reply,
-        visitId,
-        execute: () => db.reassignRoom(visitId, roomId, roomLabel),
-        mapSuccess: (transition) => ({
-          ...transitionBody(transition, visitId),
-          roomId: roomId ?? null,
-          roomLabel: roomLabel ?? null,
-        }),
-        errorOptions: {
-          invalidTransitionMessage: `Ticket ${visitId} kann im aktuellen Routing nicht umgeleitet werden.`,
-          roomRequiredMessage: 'Bitte ein gültiges Aufrufziel angeben.',
-          roomAtCapacityMessage,
-        },
-      });
-    }
-    case 'check_out_room': {
-      const actingRoomId = body.actingRoomId?.trim();
-      return runVisitTransition({
-        reply,
-        visitId,
-        execute: () => db.checkOutRoom(visitId, actingRoomId),
-        mapSuccess: (transition) => transitionBody(transition, visitId),
-        errorOptions: {
-          invalidTransitionMessage: `Ticket ${visitId} kann nicht aus Behandlung ausgecheckt werden.`,
-          roomScopeMismatchMessage:
-            'Check-out nur im aktuell zugewiesenen Raum möglich — bitte am richtigen Raum-Panel oder MFA nutzen.',
-        },
-      });
-    }
-    case 'cancel':
-      return runVisitTransition({
-        reply,
-        visitId,
-        execute: () => db.cancelQueueVisit(visitId),
-        mapSuccess: (transition) => transitionBody(transition, visitId),
-        errorOptions: {
-          invalidTransitionMessage: `Ticket ${visitId} kann nicht gelöscht werden.`,
-        },
-      });
-    case 'return_to_waiting':
-      return runVisitTransition({
-        reply,
-        visitId,
-        execute: () => db.returnToWaiting(visitId),
-        mapSuccess: (transition) => transitionBody(transition, visitId),
-        errorOptions: {
-          invalidTransitionMessage: `Ticket ${visitId} kann nicht ins Wartezimmer zurueck.`,
-        },
-      });
-    case 'cycle_triage':
-      try {
-        const result = db.cycleTriage(visitId);
-        return {
-          resultType: 'triage',
-          visitId: visitId,
-          triageLevel: result.triageLevel,
-          updatedAt: result.updatedAt,
-        };
-      } catch (error) {
-        const handled = handleQueueRouteError(reply, visitId, error, {
-          invalidTransitionMessage: `Fuer Ticket ${visitId} kann keine Markierung gesetzt werden.`,
-        });
-        if (handled) {
-          return undefined;
-        }
-        throw error;
-      }
-    case 'set_absence': {
-      if (!body.mode) {
-        sendApiError(reply, 400, {
-          code: 'INVALID_ARGUMENT',
-          message: 'Abwesenheitsmodus ist erforderlich.',
-        });
-        return undefined;
-      }
-      const absenceMode = body.mode;
-      return runVisitTransition({
-        reply,
-        visitId,
-        execute: () => db.setAbsence(visitId, absenceMode),
-        mapSuccess: (transition) => transitionBody(transition, visitId),
-        errorOptions: {
-          invalidTransitionMessage: `Ticket ${visitId} kann nicht als abwesend markiert werden.`,
-        },
-      });
-    }
-    case 'recall': {
-      const notifyChannel = body.notifyChannel ?? 'sms';
-      try {
-        const transition = db.recallVisit(visitId, body.returnWindowMinutes);
-        let smsDispatch: MessageDispatchResult | null = null;
-        if (transition.callbackPhone) {
-          smsDispatch = await dispatchRecallNotifyAndPersist(
-            db,
-            visitId,
-            {
-              callbackPhone: transition.callbackPhone,
-              returnWindowMinutes: transition.returnWindowMinutes,
-              returnUntil: transition.returnUntil,
-              checkinLocale: transition.checkinLocale,
-            },
-            notifyChannel,
-          );
-        }
-        return {
-          resultType: 'recall',
-          visitId: visitId,
-          fromStatus: transition.fromStatus,
-          toStatus: transition.toStatus,
-          updatedAt: new Date().toISOString(),
-          returnUntil: transition.returnUntil,
-          smsDispatch,
-        };
-      } catch (error) {
-        const handled = handleQueueRouteError(reply, visitId, error, {
-          invalidTransitionMessage: `Ticket ${visitId} kann nicht zurueckgeholt werden.`,
-          missingCallbackPhoneMessage: 'Rueckholen per SMS nicht moeglich: callbackPhone fehlt.',
-        });
-        if (handled) {
-          return undefined;
-        }
-        throw error;
-      }
-    }
-    case 'retry_recall_notify': {
-      const notifyChannel = body.notifyChannel ?? 'sms';
-      try {
-        const retry = db.retryRecallNotify(visitId);
-        const smsDispatch = await dispatchRecallNotifyAndPersist(
-          db,
-          visitId,
-          {
-            callbackPhone: retry.callbackPhone,
-            returnWindowMinutes: retry.returnWindowMinutes,
-            returnUntil: retry.returnUntil,
-            checkinLocale: retry.checkinLocale,
-          },
-          notifyChannel,
-        );
-        return {
-          resultType: 'recall_notify_retry',
-          visitId: visitId,
-          returnUntil: retry.returnUntil,
-          recallNotifyErrorCode: smsDispatch.sent ? null : (smsDispatch.errorCode ?? 'UNKNOWN'),
-          smsDispatch,
-        };
-      } catch (error) {
-        const handled = handleQueueRouteError(reply, visitId, error, {
-          invalidTransitionMessage: `Ticket ${visitId} kann keine Rückhol-SMS erneut senden.`,
-          missingCallbackPhoneMessage:
-            'Fuer erneuten SMS-Versand ist eine Handynummer erforderlich.',
-          recallNotifyRetryNotAllowedMessage:
-            'Erneuter SMS-Versand ist fuer dieses Ticket nicht moeglich.',
-          recallWindowExpiredMessage:
-            'Das Rueckkehrfenster ist abgelaufen — erneuter SMS-Versand nicht moeglich.',
-        });
-        if (handled) {
-          return undefined;
-        }
-        throw error;
-      }
-    }
-    default:
-      sendApiError(reply, 400, {
-        code: 'INVALID_ARGUMENT',
-        message: 'Unbekannte Ticket-Aktion.',
-      });
-      return undefined;
-  }
-}
-
-async function applyRoomPanelQueueVisitTransition(
-  db: CoreDatabase,
-  reply: Parameters<typeof handleQueueRouteError>[0],
-  visitId: string,
-  body: QueueVisitTransitionBody,
-  session: RoomPanelSession,
-): Promise<QueueVisitTransitionResponse | undefined> {
-  const activePanel = resolveRoomPanelForSession(db, session);
-  if (!activePanel) {
-    sendApiError(reply, 403, {
-      code: 'AUTH_FORBIDDEN',
-      message: 'Raum-Panel ist deaktiviert oder die Platzierung wurde geändert.',
-    });
-    return undefined;
-  }
-
-  const { capabilities } = resolveRoomPanelSnapshotPolicy(activePanel);
-
-  if (body.type === 'call') {
-    if (!capabilities.canCall) {
-      sendApiError(reply, 403, {
-        code: 'AUTH_FORBIDDEN',
-        message:
-          activePanel.placement === 'outside'
-            ? 'Raum-Panel darf diese Ticket-Aktion nicht ausfuehren.'
-            : 'Patienten aufrufen ist für dieses Raum-Panel nicht aktiviert.',
-      });
-      return undefined;
-    }
-
-    try {
-      assertQueueCallAnnouncementReachable();
-    } catch (error) {
-      if (
-        handleQueueRouteError(reply, visitId, error, {
-          invalidTransitionMessage: `Ticket ${visitId} kann nicht aufgerufen werden.`,
-          roomAtCapacityMessage,
-          callAnnouncementOfflineMessage,
-        })
-      ) {
-        return undefined;
-      }
-      throw error;
-    }
-
-    const roomId = session.roomId;
-    const roomLabel = activePanel.room.roomLabel?.trim() || null;
-
-    return runVisitTransition({
-      reply,
-      visitId,
-      execute: () => {
-        assertRoomPanelCallVisitScope(db, visitId, session.roomId);
-        // Do not pass an explicit call target — panel calls confirm routing, never retarget.
-        return db.callVisit(visitId);
-      },
-      mapSuccess: (transition) => ({
-        ...transitionBody(transition, visitId),
-        roomId,
-        roomLabel,
-      }),
-      errorOptions: {
-        invalidTransitionMessage: `Ticket ${visitId} kann im aktuellen Routing nicht aufgerufen werden.`,
-        roomAtCapacityMessage,
-        callAnnouncementOfflineMessage,
-        roomScopeMismatchMessage:
-          'Aufruf nur für Tickets mit Ziel dieses Raums möglich — bitte Snapshot aktualisieren.',
-      },
-    });
-  }
-
-  if (body.type !== 'check_in_room' && body.type !== 'check_out_room') {
-    sendApiError(reply, 403, {
-      code: 'AUTH_FORBIDDEN',
-      message: 'Raum-Panel darf diese Ticket-Aktion nicht ausfuehren.',
-    });
-    return undefined;
-  }
-
-  if (body.type === 'check_in_room' && !capabilities.canCheckIn) {
-    sendApiError(reply, 403, {
-      code: 'AUTH_FORBIDDEN',
-      message: 'Ankunftsbestätigung ist für dieses Raum-Panel nicht aktiviert.',
-    });
-    return undefined;
-  }
-
-  if (body.type === 'check_out_room' && !capabilities.canCheckOut) {
-    sendApiError(reply, 403, {
-      code: 'AUTH_FORBIDDEN',
-      message: 'Check-out ist nur im Raum-Panel-Modus staff_full erlaubt.',
-    });
-    return undefined;
-  }
-
-  if (body.type === 'check_in_room') {
-    return runVisitTransition({
-      reply,
-      visitId,
-      execute: () => db.checkInRoom(visitId, undefined, undefined, session.roomId),
-      mapSuccess: (transition) => ({
-        ...transitionBody(transition, visitId),
-        roomId: session.roomId,
-        roomLabel: null,
-      }),
-      errorOptions: {
-        invalidTransitionMessage: `Ticket ${visitId} kann nicht in Behandlung gesetzt werden.`,
-        roomAtCapacityMessage,
-        roomScopeMismatchMessage:
-          'Check-in nur im aktuell zugewiesenen Raum möglich — bitte am richtigen Raum-Panel oder MFA nutzen.',
-      },
-    });
-  }
-
-  return runVisitTransition({
-    reply,
-    visitId,
-    execute: () => db.checkOutRoom(visitId, session.roomId),
-    mapSuccess: (transition) => transitionBody(transition, visitId),
-    errorOptions: {
-      invalidTransitionMessage: `Ticket ${visitId} kann nicht aus Behandlung ausgecheckt werden.`,
-      roomScopeMismatchMessage:
-        'Check-out nur im aktuell zugewiesenen Raum möglich — bitte am richtigen Raum-Panel oder MFA nutzen.',
-    },
-  });
 }
 
 export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): void {
@@ -638,7 +180,7 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
           mode: request.body.mode,
         });
         notifyTvQueueChanged(db);
-        return transitionBody(result, result.visitId);
+        return buildQueueTransitionResponse(result, result.visitId);
       } catch (error) {
         if (
           sendDomainError(reply, error, {
@@ -682,23 +224,18 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
     },
     async (request, reply) => {
       const visitId = request.params.visitId.trim();
-      try {
-        const result = db.setCallbackPhone(visitId, request.body.callbackPhone);
-        notifyTvQueueChanged(db);
-        return {
-          visitId: visitId,
+      return runQueueMutation({
+        db,
+        reply,
+        ticketId: visitId,
+        execute: () => db.setCallbackPhone(visitId, request.body.callbackPhone),
+        mapSuccess: (result) => ({
+          visitId,
           callbackPhone: result.callbackPhone,
           updatedAt: result.updatedAt,
-        };
-      } catch (error) {
-        const handled = handleQueueRouteError(reply, visitId, error, {
-          invalidTransitionMessage: `Fuer Ticket ${visitId} kann keine Rückrufnummer gespeichert werden.`,
-        });
-        if (handled) {
-          return;
-        }
-        throw error;
-      }
+        }),
+        invalidTransitionMessage: `Fuer Ticket ${visitId} kann keine Rückrufnummer gespeichert werden.`,
+      });
     },
   );
 
@@ -712,22 +249,17 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
     },
     async (request, reply) => {
       const visitId = request.params.visitId.trim();
-      try {
-        const result = db.clearCallbackPhone(visitId);
-        notifyTvQueueChanged(db);
-        return {
-          visitId: visitId,
+      return runQueueMutation({
+        db,
+        reply,
+        ticketId: visitId,
+        execute: () => db.clearCallbackPhone(visitId),
+        mapSuccess: (result) => ({
+          visitId,
           updatedAt: result.updatedAt,
-        };
-      } catch (error) {
-        const handled = handleQueueRouteError(reply, visitId, error, {
-          invalidTransitionMessage: `Fuer Ticket ${visitId} kann keine Rückrufnummer geloescht werden.`,
-        });
-        if (handled) {
-          return;
-        }
-        throw error;
-      }
+        }),
+        invalidTransitionMessage: `Fuer Ticket ${visitId} kann keine Rückrufnummer geloescht werden.`,
+      });
     },
   );
 
@@ -742,23 +274,18 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
     },
     async (request, reply) => {
       const visitId = request.params.visitId.trim();
-      try {
-        const result = db.setIdentityRef(visitId, request.body.identityRef);
-        notifyTvQueueChanged(db);
-        return {
-          visitId: visitId,
+      return runQueueMutation({
+        db,
+        reply,
+        ticketId: visitId,
+        execute: () => db.setIdentityRef(visitId, request.body.identityRef),
+        mapSuccess: (result) => ({
+          visitId,
           identityRef: result.identityRef,
           updatedAt: result.updatedAt,
-        };
-      } catch (error) {
-        const handled = handleQueueRouteError(reply, visitId, error, {
-          invalidTransitionMessage: `Fuer Ticket ${visitId} kann kein Anzeigename gesetzt werden.`,
-        });
-        if (handled) {
-          return;
-        }
-        throw error;
-      }
+        }),
+        invalidTransitionMessage: `Fuer Ticket ${visitId} kann kein Anzeigename gesetzt werden.`,
+      });
     },
   );
 
@@ -773,10 +300,12 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
     },
     async (request, reply) => {
       const visitId = request.params.visitId.trim();
-      try {
-        const result = db.supersedeVisit(visitId, request.body.topicId);
-        notifyTvQueueChanged(db);
-        return {
+      return runQueueMutation({
+        db,
+        reply,
+        ticketId: visitId,
+        execute: () => db.supersedeVisit(visitId, request.body.topicId),
+        mapSuccess: (result) => ({
           resultType: 'supersede' as const,
           supersededVisitId: result.supersededVisitId,
           visitId: result.visitId,
@@ -787,16 +316,9 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
           destinationRoomLabel: result.destinationRoomLabel,
           checkedInAt: result.checkedInAt,
           documentsRebound: result.documentsRebound,
-        };
-      } catch (error) {
-        const handled = handleQueueRouteError(reply, visitId, error, {
-          invalidTransitionMessage: `Ticket ${visitId} kann nicht auf ein anderes Thema umgebucht werden.`,
-        });
-        if (handled) {
-          return;
-        }
-        throw error;
-      }
+        }),
+        invalidTransitionMessage: `Ticket ${visitId} kann nicht auf ein anderes Thema umgebucht werden.`,
+      });
     },
   );
 }
