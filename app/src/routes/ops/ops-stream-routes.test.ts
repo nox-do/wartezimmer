@@ -184,7 +184,8 @@ test('ops stream sends initial emergency, presence, and pairing snapshots', asyn
 
   const response = await fetch(`http://127.0.0.1:${port}/api/v1/ops/stream`, {
     headers: {
-      cookie: `${getStaffSessionCookieName()}=${staffToken}`,
+      cookie: `${getStaffSessionCookieName('mfa')}=${staffToken}`,
+      'x-client-role': 'mfa',
     },
   });
   assert.equal(response.status, 200);
@@ -255,7 +256,8 @@ test('ops stream pushes device.presence updates to open MFA connections', async 
 
   const response = await fetch(`http://127.0.0.1:${port}/api/v1/ops/stream`, {
     headers: {
-      cookie: `${getStaffSessionCookieName()}=${staffToken}`,
+      cookie: `${getStaffSessionCookieName('mfa')}=${staffToken}`,
+      'x-client-role': 'mfa',
     },
   });
   assert.equal(response.status, 200);
@@ -322,7 +324,8 @@ test('ops stream pushes device.pairing when terminal pairing starts', async () =
 
   const response = await fetch(`http://127.0.0.1:${port}/api/v1/ops/stream`, {
     headers: {
-      cookie: `${getStaffSessionCookieName()}=${staffToken}`,
+      cookie: `${getStaffSessionCookieName('mfa')}=${staffToken}`,
+      'x-client-role': 'mfa',
     },
   });
   assert.equal(response.status, 200);
@@ -378,7 +381,8 @@ test('ops stream pushes emergency updates when emergency is raised', async () =>
 
   const response = await fetch(`http://127.0.0.1:${port}/api/v1/ops/stream`, {
     headers: {
-      cookie: `${getStaffSessionCookieName()}=${staffToken}`,
+      cookie: `${getStaffSessionCookieName('mfa')}=${staffToken}`,
+      'x-client-role': 'mfa',
     },
   });
   assert.equal(response.status, 200);
@@ -398,7 +402,8 @@ test('ops stream pushes emergency updates when emergency is raised', async () =>
   const raise = await fetch(`http://127.0.0.1:${port}/api/v1/ops/emergency/raise`, {
     method: 'POST',
     headers: {
-      cookie: `${getStaffSessionCookieName()}=${staffToken}`,
+      cookie: `${getStaffSessionCookieName('mfa')}=${staffToken}`,
+      'x-client-role': 'mfa',
       origin: `http://127.0.0.1:${port}`,
     },
   });

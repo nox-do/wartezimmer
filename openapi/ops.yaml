@@ -3,15 +3,18 @@ info:
   title: Praxis Flow Ops API
   version: 0.2.0
 security:
-  - staffSessionCookie: []
-  - tvDeviceSessionCookie: []
-  - terminalDeviceSessionCookie: []
+  - mfaSessionCookie: []
+  - opsSessionCookie: []
 components:
   securitySchemes:
-    staffSessionCookie:
+    mfaSessionCookie:
       type: apiKey
       in: cookie
-      name: pf_staff_session
+      name: pf_mfa_session
+    opsSessionCookie:
+      type: apiKey
+      in: cookie
+      name: pf_ops_session
     tvDeviceSessionCookie:
       type: apiKey
       in: cookie
@@ -1427,6 +1430,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/OpsPatientLocalesResponse'
   /api/v1/ops/heartbeat:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: Heartbeat for polling clients (e.g. waiting-room TV browser)
       responses:
@@ -1437,6 +1442,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/OpsHeartbeatResponse'
   /api/v1/ops/settings:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: Read operations settings
       responses:
@@ -1731,6 +1738,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/settings/capabilities:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: Read routing capabilities for UI and guards
       responses:
@@ -1811,7 +1820,11 @@ paths:
                   - $ref: '#/components/schemas/SettingsSnapshotImportError'
                   - $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/settings/onboarding/verify:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
+      security:
+        - opsSessionCookie: []
       summary: Verify setup checks (expensive probes)
       description: Requires authenticated ops client key. Runs storage and CSV health checks.
       responses:
@@ -1828,6 +1841,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/settings/onboarding:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: Read setup onboarding progress (lightweight)
       description: Returns wizard progress and cheap checks only. Run POST …/onboarding/verify for storage and CSV probes.
@@ -1901,6 +1916,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/deployment/storage:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: Read deployment import/export volume readiness
       description: Requires authenticated ops client key.
@@ -1912,6 +1929,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/DeploymentStorageResponse'
   /api/v1/ops/contact-lookup/preview:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Preview CSV contact lookup folder scan and suggest column mapping
       description: Requires authenticated ops client key.
@@ -1935,6 +1954,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/contact-lookup/validate:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Validate CSV contact lookup settings
       description: Requires authenticated ops client key.
@@ -1958,6 +1979,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/contact-lookup/apply-demo:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Apply demo contact CSV for setup wizard
       description: Requires authenticated ops client key.
@@ -1969,6 +1992,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/OpsOnboardingStatus'
   /api/v1/ops/messaging/providers:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: List messaging providers and channel availability for UI settings
       description: Requires authenticated MFA client key in v1.
@@ -1980,6 +2005,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/MessagingProviderCatalogResponse'
   /api/v1/ops/messaging/providers/{providerId}:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     patch:
       summary: Update messaging provider settings and credentials
       description: Requires authenticated MFA client key in v1.
@@ -2053,6 +2080,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/maintenance/runtime-reset/preview:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: Preview ops runtime reset impact (ops role)
       description: Requires authenticated ops client key. Returns counts and confirm phrase for POST.
@@ -2064,6 +2093,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/RuntimeResetPreviewResponse'
   /api/v1/ops/maintenance/runtime-reset:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Execute ops runtime reset (ops role)
       description: Clears tickets, outbox, active emergency; preserves practice settings and messaging credentials.
@@ -2087,6 +2118,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/outbox-status:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: Read outbox delivery status (ready, retry, dead-letter)
       description: Requires authenticated MFA client key in v1.
@@ -2098,6 +2131,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/OutboxStatusResponse'
   /api/v1/ops/day-lifecycle:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: Read day lifecycle state and day-change warning hint
       description: Requires authenticated MFA client key in v1.
@@ -2109,6 +2144,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/DayLifecycleResponse'
   /api/v1/ops/day-lifecycle/reset:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Reset runtime for a new business day
       description: >-
@@ -2135,8 +2172,13 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/device/presence:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Device heartbeat (presence)
+      security:
+        - tvDeviceSessionCookie: []
+        - terminalDeviceSessionCookie: []
       requestBody:
         required: false
         content:
@@ -2147,8 +2189,13 @@ paths:
         '204':
           description: Presence recorded
   /api/v1/ops/device/stream:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: Device presence stream (SSE keepalive)
+      security:
+        - tvDeviceSessionCookie: []
+        - terminalDeviceSessionCookie: []
       description: >-
         Lightweight SSE for paired TV/terminal liveness. TV may use queue/stream instead;
         terminal uses this channel for immediate offline detection at MFA.
@@ -2166,8 +2213,13 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/emergency/raise:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Raise emergency from terminal or MFA client
+      security:
+        - mfaSessionCookie: []
+        - terminalDeviceSessionCookie: []
       description: Requires authenticated terminal or MFA client key in v1.
       responses:
         '200':
@@ -2183,8 +2235,12 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/emergency/ack:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Acknowledge emergency after UI displayed emergency state
+      security:
+        - mfaSessionCookie: []
       description: Requires authenticated MFA client key in v1.
       requestBody:
         required: true
@@ -2206,6 +2262,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/checkin-lock:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Lock or unlock check-in creation
       requestBody:
@@ -2239,6 +2297,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/day-close/start:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Start day-close phase (Tagesabschluss)
       description: >-

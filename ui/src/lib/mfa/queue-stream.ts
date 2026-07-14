@@ -1,6 +1,6 @@
 import { isBackendUnreachable } from '$lib/api/backend-unreachable';
 import { buildApiStreamUrl } from '$lib/api/build-api-url';
-import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
 import { SSE_CLIENT_ERROR, connectSseStream } from '$lib/api/sse-client';
 import { markAuthUnauthorized } from '$lib/auth/session-state.svelte';
 import { t } from '$lib/i18n/i18nStore.svelte';
@@ -26,7 +26,7 @@ const HIDDEN_STALE_MS = 5_000;
 const POLL_MS = 3_000;
 
 export async function fetchMfaQueue(): Promise<Result<MfaQueueStreamSnapshot>> {
-  return cookieAuthFetch<MfaQueueStreamSnapshot>('/api/v1/queue');
+  return mfaAuthFetch<MfaQueueStreamSnapshot>('/api/v1/queue');
 }
 
 function resolveStreamError(message: string): MfaQueueStreamError {
@@ -65,6 +65,7 @@ export function connectMfaQueueStream(handlers: MfaQueueStreamHandlers): () => v
   const disconnectStream = connectSseStream<MfaQueueStreamSnapshot>({
     url: buildApiStreamUrl('/api/v1/queue/stream'),
     credentials: 'include',
+    clientRole: 'mfa',
     eventName: 'snapshot',
     onEvent: onSnapshot,
     onError,

@@ -1,4 +1,4 @@
-import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
 import { publicFetch } from '$lib/api/public-fetch';
 import type { Result } from '$lib/types/result';
 import type {
@@ -44,7 +44,7 @@ export async function confirmDevicePairing(
   kind: DevicePairingKind,
   code: string,
 ): Promise<Result<DevicePairingConfirmResponse>> {
-  return cookieAuthFetch<DevicePairingConfirmResponse>(pairingPath(kind, 'confirm'), {
+  return mfaAuthFetch<DevicePairingConfirmResponse>(pairingPath(kind, 'confirm'), {
     method: 'POST',
     body: JSON.stringify({ code }),
   });

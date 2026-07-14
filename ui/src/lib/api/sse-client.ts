@@ -89,7 +89,7 @@ export type MultiEventSseStreamOptions = {
   csrfToken?: string;
   csrfHeaderName?: string;
   includeClientOriginHeader?: boolean;
-  clientRole?: 'terminal' | 'tv' | 'room-panel';
+  clientRole?: 'mfa' | 'ops' | 'terminal' | 'tv' | 'room-panel';
   handlers: MultiEventSseHandlers;
   onError?: (message: string) => void;
 };
@@ -229,7 +229,7 @@ export type SseStreamOptions<T> = {
   csrfToken?: string;
   csrfHeaderName?: string;
   includeClientOriginHeader?: boolean;
-  clientRole?: 'terminal' | 'tv' | 'room-panel';
+  clientRole?: 'mfa' | 'ops' | 'terminal' | 'tv' | 'room-panel';
   eventName: string;
   onEvent: (data: T) => void;
   onError?: (message: string) => void;

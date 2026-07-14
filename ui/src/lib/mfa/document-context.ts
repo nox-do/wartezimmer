@@ -1,4 +1,4 @@
-import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
 import type { QueueItem, QueueResponse } from '$lib/queue/types';
 
 export type MfaDocumentContext = Pick<
@@ -79,7 +79,7 @@ export async function resolveMfaDocumentContext(
     new URL(window.location.href).searchParams.get('visitId')?.trim() ||
     null;
   if (visitId) {
-    const result = await cookieAuthFetch<QueueResponse>('/api/v1/queue');
+    const result = await mfaAuthFetch<QueueResponse>('/api/v1/queue');
     if (result.ok) {
       const item = result.data.items.find((entry) => entry.visitId === visitId);
       if (item) {

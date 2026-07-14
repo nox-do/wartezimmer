@@ -124,7 +124,7 @@ test('TV queue stream marks streamConnected only while the SSE connection is ope
 
   const response = await fetch(`http://127.0.0.1:${port}/api/v1/queue/stream`, {
     headers: {
-      cookie: `${getStaffSessionCookieName()}=${staffToken}; ${getDeviceSessionCookieName('tv')}=${token}`,
+      cookie: `${getStaffSessionCookieName('mfa')}=${staffToken}; ${getDeviceSessionCookieName('tv')}=${token}`,
       'x-client-role': 'tv',
     },
   });

@@ -209,6 +209,7 @@
         target,
         currentPin,
         newPin,
+        role: 'mfa',
       });
       if (!result.ok) {
         toastStore.error(

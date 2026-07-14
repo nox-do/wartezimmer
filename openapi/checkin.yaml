@@ -3,14 +3,14 @@ info:
   title: Praxis Flow Check-in API
   version: 0.2.0
 security:
-  - staffSessionCookie: []
+  - mfaSessionCookie: []
   - terminalDeviceSessionCookie: []
 components:
   securitySchemes:
-    staffSessionCookie:
+    mfaSessionCookie:
       type: apiKey
       in: cookie
-      name: pf_staff_session
+      name: pf_mfa_session
     terminalDeviceSessionCookie:
       type: apiKey
       in: cookie
@@ -116,6 +116,8 @@ components:
           description: True when returned from deprecated /mfa-assist cutover endpoint.
 paths:
   /api/v1/checkins/topics:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: List enabled terminal topics for check-in UI
       responses:
@@ -133,6 +135,8 @@ paths:
                     items:
                       $ref: '#/components/schemas/TerminalTopic'
   /api/v1/checkins:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Create check-in ticket
       requestBody:
@@ -226,6 +230,8 @@ paths:
                     code: OPS_SETTINGS_INVALID
                     message: Praxiszeiten sind ungueltig konfiguriert.
   /api/v1/checkins/assist/press:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Terminal help button pressed — ephemeral assist pending (no visit)
       responses:
@@ -254,12 +260,16 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/checkins/assist/release:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Clear terminal assist pending (manual or timeout)
       responses:
         '204':
           description: Released or already inactive
   /api/v1/checkins/assist/pending:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: List active terminal assist pending signals (MFA)
       responses:
@@ -281,6 +291,8 @@ paths:
                     type: string
                     format: date-time
   /api/v1/checkins/mfa-assist:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Deprecated — cutover to assist press (no ticket)
       deprecated: true

@@ -1,13 +1,12 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { readRequestedCookieSlotRole, type CookieSlotRole } from './cookie-slot-role.js';
 import { ROUTE_ACCESS_RULES, type RouteAccessRule } from './route-access-rules.js';
 import {
   createStaffSessionManager,
-  getDeviceSessionCookieName,
-  getRoomPanelSessionCookieName,
+  getSessionCookieNameForSlot,
   getAuthSettingsSeedConfig,
   getStaffSessionAuthConfig,
-  getStaffSessionCookieName,
   readCookieValue,
   type StaffSessionManager,
 } from './staff-session-auth.js';
@@ -113,50 +112,27 @@ function getDefaultStaffSessionManager(): StaffSessionManager {
   });
 }
 
+function sessionMatchesSlotRole(
+  session: NonNullable<ReturnType<StaffSessionManager['getSession']>>,
+  role: CookieSlotRole,
+): boolean {
+  if (role === 'mfa' || role === 'ops') {
+    return session.kind === 'staff' && session.role === role;
+  }
+  if (role === 'room-panel') {
+    return session.kind === 'room-panel' && session.role === role;
+  }
+  return session.kind === 'device' && session.role === role;
+}
+
 function resolveRoleFromSessionCookie(
   request: FastifyRequest,
   staffSessions: StaffSessionManager,
+  requestedRole: CookieSlotRole,
 ): ClientRole | null {
-  const staffToken = readCookieValue(request, getStaffSessionCookieName());
-  const requestedDeviceRole = readRequestedDeviceRole(request);
-  const deviceToken =
-    requestedDeviceRole === 'terminal' || requestedDeviceRole === 'tv'
-      ? readCookieValue(request, getDeviceSessionCookieName(requestedDeviceRole))
-      : requestedDeviceRole
-        ? null
-        : readAnyDeviceSessionCookie(request);
-  const roomPanelToken =
-    requestedDeviceRole === 'room-panel'
-      ? readCookieValue(request, getRoomPanelSessionCookieName())
-      : requestedDeviceRole
-        ? null
-        : readCookieValue(request, getRoomPanelSessionCookieName());
-  const deviceSession = staffSessions.getSession(deviceToken);
-  const roomPanelSession = staffSessions.getSession(roomPanelToken);
-  if (
-    requestedDeviceRole &&
-    deviceSession?.kind === 'device' &&
-    deviceSession.role === requestedDeviceRole
-  ) {
-    request.authSession = deviceSession;
-    request.clientRole = deviceSession.role;
-    return deviceSession.role;
-  }
-  if (requestedDeviceRole) {
-    if (
-      requestedDeviceRole === 'room-panel' &&
-      roomPanelSession?.kind === 'room-panel' &&
-      roomPanelSession.role === requestedDeviceRole
-    ) {
-      request.authSession = roomPanelSession;
-      request.clientRole = roomPanelSession.role;
-      return roomPanelSession.role;
-    }
-    return null;
-  }
-
-  const session = staffSessions.getSession(staffToken) ?? deviceSession ?? roomPanelSession;
-  if (!session) {
+  const token = readCookieValue(request, getSessionCookieNameForSlot(requestedRole));
+  const session = staffSessions.getSession(token);
+  if (!session || !sessionMatchesSlotRole(session, requestedRole)) {
     return null;
   }
 
@@ -167,21 +143,6 @@ function resolveRoleFromSessionCookie(
   }
 
   return session.role;
-}
-
-function readAnyDeviceSessionCookie(request: FastifyRequest): string | null {
-  return (
-    readCookieValue(request, getDeviceSessionCookieName('terminal')) ??
-    readCookieValue(request, getDeviceSessionCookieName('tv'))
-  );
-}
-
-function readRequestedDeviceRole(
-  request: FastifyRequest,
-): Extract<ClientRole, 'terminal' | 'tv' | 'room-panel'> | null {
-  const header = request.headers['x-client-role'];
-  const value = typeof header === 'string' ? header.trim().toLowerCase() : '';
-  return value === 'terminal' || value === 'tv' || value === 'room-panel' ? value : null;
 }
 
 function getRouteRule(method: string, routePath: string): RouteAccessRule | undefined {
@@ -303,6 +264,15 @@ function resolveLocalTvRole(
   return new URL(localTvOrigin).host === host ? 'tv' : null;
 }
 
+function hasSessionCookies(request: FastifyRequest): boolean {
+  const raw = request.headers.cookie;
+  if (!raw?.trim()) {
+    return false;
+  }
+
+  return /\bpf_(?:mfa|ops|staff|room_panel|tv_device|terminal_device)_session=/.test(raw);
+}
+
 export function registerClientAuth(
   app: FastifyInstance,
   options: RegisterClientAuthOptions = {},
@@ -348,22 +318,34 @@ export function registerClientAuth(
       return;
     }
 
+    if (!config.enabled) {
+      return;
+    }
+
     const token = extractBearerToken(request.headers.authorization);
     const bearerRole = token ? resolveRoleFromToken(token, config.captiveKey) : null;
-    const sessionRole = bearerRole ? null : resolveRoleFromSessionCookie(request, staffSessions);
-    const localTvRole =
-      bearerRole || sessionRole
-        ? null
-        : resolveLocalTvRole(request, method, rule, config.localTvOrigin);
-    const role = bearerRole ?? sessionRole ?? localTvRole;
+    const localTvRole = bearerRole
+      ? null
+      : resolveLocalTvRole(request, method, rule, config.localTvOrigin);
+
+    let sessionRole: ClientRole | null = null;
+    if (!bearerRole && !localTvRole && rule && !rule.public && hasSessionCookies(request)) {
+      const requestedRole = readRequestedCookieSlotRole(request);
+      if (!requestedRole) {
+        authError(reply, 400, {
+          code: 'INVALID_ARGUMENT',
+          message: 'X-Client-Role header is required for cookie authentication.',
+        });
+        return;
+      }
+      sessionRole = resolveRoleFromSessionCookie(request, staffSessions, requestedRole);
+    }
+
+    const role = bearerRole ?? localTvRole ?? sessionRole;
     if (bearerRole) {
       request.clientRole = bearerRole;
     } else if (localTvRole) {
       request.clientRole = localTvRole;
-    }
-
-    if (!config.enabled) {
-      return;
     }
 
     if (!rule) {

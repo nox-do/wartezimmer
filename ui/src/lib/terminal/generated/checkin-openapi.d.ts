@@ -7,7 +7,10 @@ export interface paths {
   '/api/v1/checkins/topics': {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+        'X-Client-Role': components['parameters']['XClientRole'];
+      };
       path?: never;
       cookie?: never;
     };
@@ -15,7 +18,10 @@ export interface paths {
     get: {
       parameters: {
         query?: never;
-        header?: never;
+        header: {
+          /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+          'X-Client-Role': components['parameters']['XClientRole'];
+        };
         path?: never;
         cookie?: never;
       };
@@ -45,7 +51,10 @@ export interface paths {
   '/api/v1/checkins': {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+        'X-Client-Role': components['parameters']['XClientRole'];
+      };
       path?: never;
       cookie?: never;
     };
@@ -55,7 +64,10 @@ export interface paths {
     post: {
       parameters: {
         query?: never;
-        header?: never;
+        header: {
+          /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+          'X-Client-Role': components['parameters']['XClientRole'];
+        };
         path?: never;
         cookie?: never;
       };
@@ -124,7 +136,10 @@ export interface paths {
   '/api/v1/checkins/assist/press': {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+        'X-Client-Role': components['parameters']['XClientRole'];
+      };
       path?: never;
       cookie?: never;
     };
@@ -134,7 +149,10 @@ export interface paths {
     post: {
       parameters: {
         query?: never;
-        header?: never;
+        header: {
+          /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+          'X-Client-Role': components['parameters']['XClientRole'];
+        };
         path?: never;
         cookie?: never;
       };
@@ -187,7 +205,10 @@ export interface paths {
   '/api/v1/checkins/assist/release': {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+        'X-Client-Role': components['parameters']['XClientRole'];
+      };
       path?: never;
       cookie?: never;
     };
@@ -197,7 +218,10 @@ export interface paths {
     post: {
       parameters: {
         query?: never;
-        header?: never;
+        header: {
+          /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+          'X-Client-Role': components['parameters']['XClientRole'];
+        };
         path?: never;
         cookie?: never;
       };
@@ -221,7 +245,10 @@ export interface paths {
   '/api/v1/checkins/assist/pending': {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+        'X-Client-Role': components['parameters']['XClientRole'];
+      };
       path?: never;
       cookie?: never;
     };
@@ -229,7 +256,10 @@ export interface paths {
     get: {
       parameters: {
         query?: never;
-        header?: never;
+        header: {
+          /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+          'X-Client-Role': components['parameters']['XClientRole'];
+        };
         path?: never;
         cookie?: never;
       };
@@ -261,7 +291,10 @@ export interface paths {
   '/api/v1/checkins/mfa-assist': {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+        'X-Client-Role': components['parameters']['XClientRole'];
+      };
       path?: never;
       cookie?: never;
     };
@@ -274,7 +307,10 @@ export interface paths {
     post: {
       parameters: {
         query?: never;
-        header?: never;
+        header: {
+          /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+          'X-Client-Role': components['parameters']['XClientRole'];
+        };
         path?: never;
         cookie?: never;
       };
@@ -449,7 +485,10 @@ export interface components {
     };
   };
   responses: never;
-  parameters: never;
+  parameters: {
+    /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+    XClientRole: 'mfa' | 'ops' | 'terminal' | 'tv' | 'room-panel';
+  };
   requestBodies: never;
   headers: never;
   pathItems: never;

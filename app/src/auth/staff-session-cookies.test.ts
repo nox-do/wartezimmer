@@ -3,19 +3,38 @@ import test from 'node:test';
 import { setStaffSessionCookie } from './staff-session-cookies.js';
 
 type HeaderSink = {
-  value: string | null;
-  header(name: string, value: string): void;
+  values: string[];
+  getHeader(name: string): string | string[] | undefined;
+  header(name: string, value: string | string[]): void;
 };
 
 function createReply(): HeaderSink {
   return {
-    value: null,
-    header(name: string, value: string) {
-      if (name.toLowerCase() === 'set-cookie') {
-        this.value = value;
+    values: [],
+    getHeader(name: string) {
+      if (name.toLowerCase() !== 'set-cookie') {
+        return undefined;
       }
+      if (this.values.length === 0) {
+        return undefined;
+      }
+      return this.values.length === 1 ? this.values[0] : this.values;
+    },
+    header(name: string, value: string | string[]) {
+      if (name.toLowerCase() !== 'set-cookie') {
+        return;
+      }
+      if (Array.isArray(value)) {
+        this.values.push(...value);
+        return;
+      }
+      this.values.push(value);
     },
   };
+}
+
+function sessionCookieHeader(reply: HeaderSink): string {
+  return reply.values.find((value) => value.startsWith('pf_mfa_session=')) ?? '';
 }
 
 test('setStaffSessionCookie does not force Secure only because NODE_ENV is production', () => {
@@ -26,10 +45,11 @@ test('setStaffSessionCookie does not force Secure only because NODE_ENV is produ
     setStaffSessionCookie(
       reply as never,
       { protocol: 'http', headers: {} } as never,
+      'mfa',
       'token',
       60_000,
     );
-    assert.equal(reply.value?.includes('; Secure'), false);
+    assert.equal(sessionCookieHeader(reply).includes('; Secure'), false);
   } finally {
     if (previousNodeEnv === undefined) {
       delete process.env.NODE_ENV;
@@ -44,10 +64,11 @@ test('setStaffSessionCookie marks Secure when request is HTTPS', () => {
   setStaffSessionCookie(
     reply as never,
     { protocol: 'https', headers: {} } as never,
+    'mfa',
     'token',
     60_000,
   );
-  assert.equal(reply.value?.includes('; Secure'), true);
+  assert.equal(sessionCookieHeader(reply).includes('; Secure'), true);
 });
 
 test('setStaffSessionCookie ignores forwarded proto unless proxy headers are trusted', () => {
@@ -58,10 +79,11 @@ test('setStaffSessionCookie ignores forwarded proto unless proxy headers are tru
     setStaffSessionCookie(
       reply as never,
       { protocol: 'http', headers: { 'x-forwarded-proto': 'https' } } as never,
+      'mfa',
       'token',
       60_000,
     );
-    assert.equal(reply.value?.includes('; Secure'), false);
+    assert.equal(sessionCookieHeader(reply).includes('; Secure'), false);
   } finally {
     if (previousTrustProxyHeaders === undefined) {
       delete process.env.TRUST_PROXY_HEADERS;
@@ -79,10 +101,11 @@ test('setStaffSessionCookie marks Secure behind trusted HTTPS proxy', () => {
     setStaffSessionCookie(
       reply as never,
       { protocol: 'http', headers: { 'x-forwarded-proto': 'https' } } as never,
+      'mfa',
       'token',
       60_000,
     );
-    assert.equal(reply.value?.includes('; Secure'), true);
+    assert.equal(sessionCookieHeader(reply).includes('; Secure'), true);
   } finally {
     if (previousTrustProxyHeaders === undefined) {
       delete process.env.TRUST_PROXY_HEADERS;
@@ -90,4 +113,16 @@ test('setStaffSessionCookie marks Secure behind trusted HTTPS proxy', () => {
       process.env.TRUST_PROXY_HEADERS = previousTrustProxyHeaders;
     }
   }
+});
+
+test('setStaffSessionCookie clears legacy pf_staff_session on login', () => {
+  const reply = createReply();
+  setStaffSessionCookie(
+    reply as never,
+    { protocol: 'http', headers: {} } as never,
+    'mfa',
+    'token',
+    60_000,
+  );
+  assert.equal(reply.values.some((value) => value.startsWith('pf_staff_session=')), true);
 });

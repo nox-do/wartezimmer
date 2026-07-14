@@ -17,7 +17,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["pin"],
+                "required": ["pin", "role"],
                 "additionalProperties": false,
                 "properties": {
                   "pin": {
@@ -26,7 +26,6 @@
                     "maxLength": 128
                   },
                   "role": {
-                    "default": "mfa",
                     "type": "string",
                     "enum": ["mfa", "ops"]
                   }
@@ -241,7 +240,22 @@
         "summary": "Return the active staff session.",
         "security": [
           {
-            "staffSessionCookie": []
+            "mfaSessionCookie": []
+          },
+          {
+            "opsSessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Client-Role",
+            "in": "header",
+            "required": true,
+            "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+            "schema": {
+              "type": "string",
+              "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+            }
           }
         ],
         "responses": {
@@ -814,7 +828,22 @@
         "summary": "Change staff PIN (MFA, Ops, or room panel) after verifying the current PIN for that target.",
         "security": [
           {
-            "staffSessionCookie": []
+            "mfaSessionCookie": []
+          },
+          {
+            "opsSessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Client-Role",
+            "in": "header",
+            "required": true,
+            "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+            "schema": {
+              "type": "string",
+              "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+            }
           }
         ],
         "requestBody": {
@@ -1198,17 +1227,29 @@
     "/api/v1/auth/logout": {
       "post": {
         "operationId": "logoutStaffSession",
-        "summary": "Revoke the current staff session if present.",
+        "summary": "Revoke the cookie session for the requested client role slot.",
         "security": [],
+        "parameters": [
+          {
+            "name": "X-Client-Role",
+            "in": "header",
+            "required": true,
+            "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+            "schema": {
+              "type": "string",
+              "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Session cookie cleared.",
+            "description": "Session slot cleared (idempotent when no active session).",
             "headers": {
               "Set-Cookie": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Expired staff session cookie."
+                "description": "Expired session cookie for the requested slot."
               }
             },
             "content": {
@@ -1220,6 +1261,86 @@
                     "ok": {
                       "type": "boolean",
                       "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or unknown X-Client-Role header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
                     }
                   }
                 }
@@ -1507,7 +1628,19 @@
         "summary": "Confirm a TV pairing code from an authenticated MFA session.",
         "security": [
           {
-            "staffSessionCookie": []
+            "mfaSessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Client-Role",
+            "in": "header",
+            "required": true,
+            "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+            "schema": {
+              "type": "string",
+              "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+            }
           }
         ],
         "requestBody": {
@@ -1994,7 +2127,19 @@
         "summary": "Confirm a terminal pairing code from an authenticated MFA session.",
         "security": [
           {
-            "staffSessionCookie": []
+            "mfaSessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Client-Role",
+            "in": "header",
+            "required": true,
+            "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+            "schema": {
+              "type": "string",
+              "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+            }
           }
         ],
         "requestBody": {
@@ -2204,6 +2349,18 @@
       }
     },
     "/api/v1/checkins/topics": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "List enabled terminal topics for check-in UI",
         "responses": {
@@ -2267,6 +2424,18 @@
       }
     },
     "/api/v1/checkins": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Create check-in ticket",
         "requestBody": {
@@ -2644,6 +2813,18 @@
       }
     },
     "/api/v1/checkins/assist/press": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Terminal help button pressed — ephemeral assist pending (no visit)",
         "responses": {
@@ -2917,6 +3098,18 @@
       }
     },
     "/api/v1/checkins/assist/release": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Clear terminal assist pending (manual or timeout)",
         "responses": {
@@ -2927,6 +3120,18 @@
       }
     },
     "/api/v1/checkins/assist/pending": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "List active terminal assist pending signals (MFA)",
         "responses": {
@@ -2985,6 +3190,18 @@
       }
     },
     "/api/v1/checkins/mfa-assist": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Deprecated — cutover to assist press (no ticket)",
         "deprecated": true,
@@ -3284,6 +3501,18 @@
       }
     },
     "/api/v1/identity/phone-dob-lookup": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Resolve minimal identity reference by phone number and date of birth",
         "requestBody": {
@@ -3415,6 +3644,18 @@
       }
     },
     "/api/v1/identity/mfa-lookup": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Lookup identity candidates for MFA-assisted check-in",
         "requestBody": {
@@ -3673,6 +3914,18 @@
       }
     },
     "/api/v1/identity/{visitId}": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "Read identity-related ticket details for MFA context",
         "parameters": [
@@ -3828,6 +4081,18 @@
       }
     },
     "/api/v1/queue": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "Get current queue list (role-filtered payload)",
         "responses": {
@@ -4348,6 +4613,18 @@
       }
     },
     "/api/v1/queue/summary": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "Get queue and daily progress summary for dashboard",
         "responses": {
@@ -4403,6 +4680,18 @@
       }
     },
     "/api/v1/queue/mark-absence": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Mark patient absent by phone number or ticket code lookup",
         "requestBody": {
@@ -4743,6 +5032,18 @@
       }
     },
     "/api/v1/queue/{visitId}/transition": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Apply a typed workflow transition to a queue ticket",
         "parameters": [
@@ -5368,6 +5669,18 @@
       }
     },
     "/api/v1/queue/{visitId}/callback-phone": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "put": {
         "summary": "Set MFA callback phone for recall SMS (separate from terminal check-in phone)",
         "parameters": [
@@ -5866,6 +6179,18 @@
       }
     },
     "/api/v1/queue/{visitId}/identity-ref": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "patch": {
         "summary": "Set MFA display name for a ticket without identity (manual entry in waiting list)",
         "parameters": [
@@ -6167,6 +6492,18 @@
       }
     },
     "/api/v1/queue/{visitId}/supersede": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Supersede a waiting/directed visit with a new topic (new ticket number, chain link, preserve wait clock)",
         "parameters": [
@@ -9535,11 +9872,23 @@
       }
     },
     "/api/v1/documents/{visitId}": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "List documents for MFA processing by ticket",
         "security": [
           {
-            "clientApiKeyBearer": []
+            "mfaSessionCookie": []
           }
         ],
         "parameters": [
@@ -9712,11 +10061,23 @@
       }
     },
     "/api/v1/documents/{documentId}/preview": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Request MFA preview lifecycle step",
         "security": [
           {
-            "clientApiKeyBearer": []
+            "mfaSessionCookie": []
           }
         ],
         "parameters": [
@@ -10076,11 +10437,23 @@
       }
     },
     "/api/v1/documents/{documentId}/rename": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Rename document base file name before export (extension stays fixed)",
         "security": [
           {
-            "clientApiKeyBearer": []
+            "mfaSessionCookie": []
           }
         ],
         "parameters": [
@@ -10423,11 +10796,23 @@
       }
     },
     "/api/v1/documents/{documentId}/discard": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Discard document from MFA",
         "security": [
           {
-            "clientApiKeyBearer": []
+            "mfaSessionCookie": []
           }
         ],
         "parameters": [
@@ -10671,11 +11056,23 @@
       }
     },
     "/api/v1/documents/{documentId}/export-filesystem": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Synchronously export document to practice filesystem (streams from sandbox custody after preview scan)",
         "security": [
           {
-            "clientApiKeyBearer": []
+            "mfaSessionCookie": []
           }
         ],
         "parameters": [
@@ -11067,6 +11464,18 @@
       }
     },
     "/api/v1/ops/heartbeat": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "Heartbeat for polling clients (e.g. waiting-room TV browser)",
         "responses": {
@@ -11154,6 +11563,18 @@
       }
     },
     "/api/v1/ops/settings": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "Read operations settings",
         "responses": {
@@ -12998,6 +13419,18 @@
       }
     },
     "/api/v1/ops/settings/capabilities": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "Read routing capabilities for UI and guards",
         "responses": {
@@ -13554,7 +13987,24 @@
       }
     },
     "/api/v1/ops/settings/onboarding/verify": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
+        "security": [
+          {
+            "opsSessionCookie": []
+          }
+        ],
         "summary": "Verify setup checks (expensive probes)",
         "description": "Requires authenticated ops client key. Runs storage and CSV health checks.",
         "responses": {
@@ -13736,6 +14186,18 @@
       }
     },
     "/api/v1/ops/settings/onboarding": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "Read setup onboarding progress (lightweight)",
         "description": "Returns wizard progress and cheap checks only. Run POST …/onboarding/verify for storage and CSV probes.",
@@ -14220,6 +14682,18 @@
       }
     },
     "/api/v1/ops/deployment/storage": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "Read deployment import/export volume readiness",
         "description": "Requires authenticated ops client key.",
@@ -14373,6 +14847,18 @@
       }
     },
     "/api/v1/ops/contact-lookup/preview": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Preview CSV contact lookup folder scan and suggest column mapping",
         "description": "Requires authenticated ops client key.",
@@ -14662,6 +15148,18 @@
       }
     },
     "/api/v1/ops/contact-lookup/validate": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Validate CSV contact lookup settings",
         "description": "Requires authenticated ops client key.",
@@ -14888,6 +15386,18 @@
       }
     },
     "/api/v1/ops/contact-lookup/apply-demo": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Apply demo contact CSV for setup wizard",
         "description": "Requires authenticated ops client key.",
@@ -14990,6 +15500,18 @@
       }
     },
     "/api/v1/ops/messaging/providers": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "List messaging providers and channel availability for UI settings",
         "description": "Requires authenticated MFA client key in v1.",
@@ -15062,6 +15584,18 @@
       }
     },
     "/api/v1/ops/messaging/providers/{providerId}": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "patch": {
         "summary": "Update messaging provider settings and credentials",
         "description": "Requires authenticated MFA client key in v1.",
@@ -15222,6 +15756,18 @@
       }
     },
     "/api/v1/ops/maintenance/runtime-reset/preview": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "Preview ops runtime reset impact (ops role)",
         "description": "Requires authenticated ops client key. Returns counts and confirm phrase for POST.",
@@ -15277,6 +15823,18 @@
       }
     },
     "/api/v1/ops/maintenance/runtime-reset": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Execute ops runtime reset (ops role)",
         "description": "Clears tickets, outbox, active emergency; preserves practice settings and messaging credentials.",
@@ -15451,6 +16009,18 @@
       }
     },
     "/api/v1/ops/outbox-status": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "Read outbox delivery status (ready, retry, dead-letter)",
         "description": "Requires authenticated MFA client key in v1.",
@@ -15496,6 +16066,18 @@
       }
     },
     "/api/v1/ops/day-lifecycle": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "Read day lifecycle state and day-change warning hint",
         "description": "Requires authenticated MFA client key in v1.",
@@ -15632,6 +16214,18 @@
       }
     },
     "/api/v1/ops/day-lifecycle/reset": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Reset runtime for a new business day",
         "description": "Clears tickets and outbox runtime data, locks check-in, stamps lastResetBusinessDay, and queues sandbox purge/restart. Settings are preserved. This is the MFA „Neuen Tag starten“ action — not the same as starting day-close (Tagesabschluss).",
@@ -15784,8 +16378,28 @@
       }
     },
     "/api/v1/ops/device/presence": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Device heartbeat (presence)",
+        "security": [
+          {
+            "tvDeviceSessionCookie": []
+          },
+          {
+            "terminalDeviceSessionCookie": []
+          }
+        ],
         "requestBody": {
           "required": false,
           "content": {
@@ -15820,8 +16434,28 @@
       }
     },
     "/api/v1/ops/device/stream": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "get": {
         "summary": "Device presence stream (SSE keepalive)",
+        "security": [
+          {
+            "tvDeviceSessionCookie": []
+          },
+          {
+            "terminalDeviceSessionCookie": []
+          }
+        ],
         "description": "Lightweight SSE for paired TV/terminal liveness. TV may use queue/stream instead; terminal uses this channel for immediate offline detection at MFA.",
         "responses": {
           "200": {
@@ -15918,8 +16552,28 @@
       }
     },
     "/api/v1/ops/emergency/raise": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Raise emergency from terminal or MFA client",
+        "security": [
+          {
+            "mfaSessionCookie": []
+          },
+          {
+            "terminalDeviceSessionCookie": []
+          }
+        ],
         "description": "Requires authenticated terminal or MFA client key in v1.",
         "responses": {
           "200": {
@@ -16034,8 +16688,25 @@
       }
     },
     "/api/v1/ops/emergency/ack": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Acknowledge emergency after UI displayed emergency state",
+        "security": [
+          {
+            "mfaSessionCookie": []
+          }
+        ],
         "description": "Requires authenticated MFA client key in v1.",
         "requestBody": {
           "required": true,
@@ -16184,6 +16855,18 @@
       }
     },
     "/api/v1/ops/checkin-lock": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Lock or unlock check-in creation",
         "requestBody": {
@@ -16391,6 +17074,18 @@
       }
     },
     "/api/v1/ops/day-close/start": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
       "post": {
         "summary": "Start day-close phase (Tagesabschluss)",
         "description": "Future use: explicit end-of-day phase before export/archiving. Locks check-in creation while phase is started. Does not reset runtime data — use POST /ops/day-lifecycle/reset for that.",
@@ -16680,7 +17375,7 @@
       },
       "StaffLoginRequest": {
         "type": "object",
-        "required": ["pin"],
+        "required": ["pin", "role"],
         "additionalProperties": false,
         "properties": {
           "pin": {
@@ -16689,7 +17384,6 @@
             "maxLength": 128
           },
           "role": {
-            "default": "mfa",
             "type": "string",
             "enum": ["mfa", "ops"]
           }
@@ -22163,10 +22857,15 @@
       }
     },
     "securitySchemes": {
-      "staffSessionCookie": {
+      "mfaSessionCookie": {
         "type": "apiKey",
         "in": "cookie",
-        "name": "pf_staff_session"
+        "name": "pf_mfa_session"
+      },
+      "opsSessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "pf_ops_session"
       },
       "terminalDeviceSessionCookie": {
         "type": "apiKey",

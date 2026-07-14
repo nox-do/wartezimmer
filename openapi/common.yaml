@@ -3,6 +3,22 @@ info:
   title: Praxis Flow Common Schemas
   version: 0.2.0
 components:
+  parameters:
+    XClientRole:
+      name: X-Client-Role
+      in: header
+      required: true
+      description: >-
+        Selects the cookie session slot for staff/device/panel authentication.
+        Not used with Bearer (captive/patient) auth.
+      schema:
+        type: string
+        enum:
+          - mfa
+          - ops
+          - terminal
+          - tv
+          - room-panel
   schemas:
     ApiErrorCode:
       type: string

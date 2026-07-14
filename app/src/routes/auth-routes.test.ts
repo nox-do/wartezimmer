@@ -65,12 +65,35 @@ function readSetCookie(response: {
   return raw ?? '';
 }
 
-function sameOriginCookieHeaders(cookie: string): Record<string, string> {
-  return {
+function sameOriginCookieHeaders(
+  cookie: string,
+  clientRole?: 'mfa' | 'ops' | 'terminal' | 'tv' | 'room-panel',
+): Record<string, string> {
+  const headers: Record<string, string> = {
     cookie,
     host: 'praxis.test',
     origin: 'http://praxis.test',
   };
+  if (clientRole) {
+    headers['x-client-role'] = clientRole;
+  }
+  return headers;
+}
+
+function mfaSessionHeaders(cookie: string): Record<string, string> {
+  return sameOriginCookieHeaders(cookie, 'mfa');
+}
+
+function opsSessionHeaders(cookie: string): Record<string, string> {
+  return sameOriginCookieHeaders(cookie, 'ops');
+}
+
+function terminalSessionHeaders(cookie: string): Record<string, string> {
+  return sameOriginCookieHeaders(cookie, 'terminal');
+}
+
+function tvSessionHeaders(cookie: string): Record<string, string> {
+  return sameOriginCookieHeaders(cookie, 'tv');
 }
 
 function buildAuthSettingsStub(): {
@@ -237,7 +260,7 @@ async function pairDeviceSession(
   const confirm = await app.inject({
     method: 'POST',
     url: `/api/v1/auth/${input.kind}/pairing/confirm`,
-    headers: sameOriginCookieHeaders(input.mfaCookie),
+    headers: mfaSessionHeaders(input.mfaCookie),
     payload: { code: started.code },
   });
   assert.equal(confirm.statusCode, 200);
@@ -517,7 +540,7 @@ test('MFA can rotate own PIN after entering current MFA PIN', async () => {
   const change = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/pin/change',
-    headers: sameOriginCookieHeaders(cookie),
+    headers: mfaSessionHeaders(cookie),
     payload: { currentPin: '0000', target: 'mfa', newPin: '3333' },
   });
   assert.equal(change.statusCode, 200);
@@ -551,7 +574,7 @@ test('MFA PIN rotation revokes other MFA sessions but preserves the current sess
   const change = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/pin/change',
-    headers: sameOriginCookieHeaders(currentCookie),
+    headers: mfaSessionHeaders(currentCookie),
     payload: { currentPin: '0000', target: 'mfa', newPin: '3333' },
   });
   assert.equal(change.statusCode, 200);
@@ -559,14 +582,14 @@ test('MFA PIN rotation revokes other MFA sessions but preserves the current sess
   const currentSession = await app.inject({
     method: 'GET',
     url: '/api/v1/auth/me',
-    headers: { cookie: currentCookie },
+    headers: mfaSessionHeaders(currentCookie),
   });
   assert.equal(currentSession.statusCode, 200);
 
   const otherSession = await app.inject({
     method: 'GET',
     url: '/api/v1/auth/me',
-    headers: { cookie: otherCookie },
+    headers: mfaSessionHeaders(otherCookie),
   });
   assert.equal(otherSession.statusCode, 401);
 
@@ -581,7 +604,7 @@ test('MFA PIN rotation rejects the current Ops PIN', async () => {
   const change = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/pin/change',
-    headers: sameOriginCookieHeaders(cookie),
+    headers: mfaSessionHeaders(cookie),
     payload: { currentPin: '0000', target: 'mfa', newPin: '1111' },
   });
   assert.equal(change.statusCode, 400);
@@ -605,7 +628,7 @@ test('MFA cannot rotate Ops PIN', async () => {
   const change = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/pin/change',
-    headers: sameOriginCookieHeaders(cookie),
+    headers: mfaSessionHeaders(cookie),
     payload: { currentPin: '0000', target: 'ops', newPin: '5555' },
   });
   assert.equal(change.statusCode, 403);
@@ -622,7 +645,7 @@ test('Ops can rotate Ops PIN after entering current Ops PIN', async () => {
   const change = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/pin/change',
-    headers: sameOriginCookieHeaders(cookie),
+    headers: opsSessionHeaders(cookie),
     payload: { currentPin: '1111', target: 'ops', newPin: '5555' },
   });
   assert.equal(change.statusCode, 200);
@@ -653,7 +676,7 @@ test('Ops PIN rotation rejects the current MFA PIN as new Ops PIN', async () => 
   const change = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/pin/change',
-    headers: sameOriginCookieHeaders(cookie),
+    headers: opsSessionHeaders(cookie),
     payload: { currentPin: '1111', target: 'ops', newPin: '0000' },
   });
   assert.equal(change.statusCode, 400);
@@ -684,7 +707,7 @@ test('MFA can rotate shared room panel PIN after entering current MFA PIN', asyn
   const change = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/pin/change',
-    headers: sameOriginCookieHeaders(cookie),
+    headers: mfaSessionHeaders(cookie),
     payload: { currentPin: '0000', target: 'room-panel', newPin: '4444' },
   });
   assert.equal(change.statusCode, 200);
@@ -729,7 +752,7 @@ test('PIN rotation rejects wrong current MFA PIN', async () => {
   const change = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/pin/change',
-    headers: sameOriginCookieHeaders(cookie),
+    headers: mfaSessionHeaders(cookie),
     payload: { currentPin: '9999', target: 'room-panel', newPin: '4444' },
   });
   assert.equal(change.statusCode, 401);
@@ -752,7 +775,7 @@ test('PIN rotation treats SQL metacharacter current PIN as wrong credentials', a
   const injectedCurrentPin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/pin/change',
-    headers: sameOriginCookieHeaders(cookie),
+    headers: mfaSessionHeaders(cookie),
     payload: { currentPin: "0000' OR '1'='1", target: 'mfa', newPin: '3333' },
   });
   assert.equal(injectedCurrentPin.statusCode, 401);
@@ -776,7 +799,7 @@ test('PIN rotation is rate limited per MFA session and client', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/pin/change',
-      headers: sameOriginCookieHeaders(cookie),
+      headers: mfaSessionHeaders(cookie),
       payload: { currentPin: '9999', target: 'room-panel', newPin: '4444' },
     });
     assert.equal(response.statusCode, 401);
@@ -785,7 +808,7 @@ test('PIN rotation is rate limited per MFA session and client', async () => {
   const limited = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/pin/change',
-    headers: sameOriginCookieHeaders(cookie),
+    headers: mfaSessionHeaders(cookie),
     payload: { currentPin: '9999', target: 'room-panel', newPin: '4444' },
   });
   assert.equal(limited.statusCode, 429);
@@ -798,6 +821,119 @@ afterEach(() => {
   restoreEnv();
   resetDevicePairingForTests();
   resetDevicePresenceForTests();
+});
+
+test('mfa and ops sessions can coexist in one browser', async () => {
+  enableTestAuth();
+  const app = await buildAuthApp();
+  const mfaCookie = await loginMfa(app);
+  const opsCookie = await loginOps(app);
+
+  const mfaMe = await app.inject({
+    method: 'GET',
+    url: '/api/v1/auth/me',
+    headers: mfaSessionHeaders(mfaCookie),
+  });
+  assert.equal(mfaMe.statusCode, 200);
+  assert.equal(mfaMe.json().role, 'mfa');
+
+  const opsMe = await app.inject({
+    method: 'GET',
+    url: '/api/v1/auth/me',
+    headers: opsSessionHeaders(opsCookie),
+  });
+  assert.equal(opsMe.statusCode, 200);
+  assert.equal(opsMe.json().role, 'ops');
+
+  await app.close();
+});
+
+test('room-panel logout leaves mfa session intact', async () => {
+  enableTestAuth();
+  const app = await buildAuthApp();
+  const mfaCookie = await loginMfa(app);
+
+  const panelLogin = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/room-panel/login',
+    payload: { roomId: 'labor', placement: 'outside', pin: '' },
+  });
+  assert.equal(panelLogin.statusCode, 200);
+  const panelCookie = readSetCookie(panelLogin);
+  const combinedCookie = `${mfaCookie}; ${panelCookie}`;
+
+  const logout = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/logout',
+    headers: sameOriginCookieHeaders(combinedCookie, 'room-panel'),
+  });
+  assert.equal(logout.statusCode, 200);
+
+  const mfaMe = await app.inject({
+    method: 'GET',
+    url: '/api/v1/auth/me',
+    headers: mfaSessionHeaders(mfaCookie),
+  });
+  assert.equal(mfaMe.statusCode, 200);
+  assert.equal(mfaMe.json().role, 'mfa');
+
+  await app.close();
+});
+
+test('legacy pf_staff_session cookie is rejected', async () => {
+  enableTestAuth();
+  const app = await buildAuthApp();
+
+  const response = await app.inject({
+    method: 'GET',
+    url: '/api/v1/auth/me',
+    headers: {
+      cookie: 'pf_staff_session=legacy-token',
+      'x-client-role': 'mfa',
+    },
+  });
+
+  assert.equal(response.statusCode, 401);
+  assert.deepEqual(response.json(), { code: 'AUTH_UNAUTHORIZED', message: 'Unauthorized.' });
+
+  await app.close();
+});
+
+test('cookie auth without X-Client-Role returns 400', async () => {
+  enableTestAuth();
+  const app = await buildAuthApp();
+  const cookie = await loginMfa(app);
+
+  const response = await app.inject({
+    method: 'GET',
+    url: '/api/v1/auth/me',
+    headers: { cookie },
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().code, 'INVALID_ARGUMENT');
+
+  await app.close();
+});
+
+test('cookie auth with unknown X-Client-Role returns 400', async () => {
+  enableTestAuth();
+  const app = await buildAuthApp();
+  const cookie = await loginMfa(app);
+
+  const response = await app.inject({
+    method: 'GET',
+    url: '/api/v1/auth/me',
+    headers: {
+      cookie,
+      'x-client-role': 'bogus',
+    },
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().code, 'INVALID_ARGUMENT');
+
+  await app.close();
 });
 
 test('staff login creates a cookie session that authenticates /auth/me', async () => {
@@ -814,14 +950,14 @@ test('staff login creates a cookie session that authenticates /auth/me', async (
   assert.equal(login.json().ok, true);
   assert.equal(login.json().role, 'ops');
   const cookie = readSetCookie(login);
-  assert.match(cookie, /pf_staff_session=/);
+  assert.match(cookie, /pf_ops_session=/);
   assert.match(cookie, /HttpOnly/);
   assert.match(cookie, /SameSite=Strict/);
 
   const me = await app.inject({
     method: 'GET',
     url: '/api/v1/auth/me',
-    headers: { cookie },
+    headers: opsSessionHeaders(cookie),
   });
 
   assert.equal(me.statusCode, 200);
@@ -831,7 +967,7 @@ test('staff login creates a cookie session that authenticates /auth/me', async (
   const protectedRoute = await app.inject({
     method: 'GET',
     url: '/api/v1/ops/deployment/storage',
-    headers: { cookie },
+    headers: opsSessionHeaders(cookie),
   });
 
   assert.equal(protectedRoute.statusCode, 200);
@@ -940,7 +1076,7 @@ test('logout revokes staff session cookie', async () => {
   const logout = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/logout',
-    headers: sameOriginCookieHeaders(cookie),
+    headers: mfaSessionHeaders(cookie),
   });
 
   assert.equal(logout.statusCode, 200);
@@ -950,7 +1086,7 @@ test('logout revokes staff session cookie', async () => {
   const me = await app.inject({
     method: 'GET',
     url: '/api/v1/auth/me',
-    headers: { cookie },
+    headers: mfaSessionHeaders(cookie),
   });
 
   assert.equal(me.statusCode, 401);
@@ -973,7 +1109,7 @@ test('staff cookie mutations require same-origin request headers', async () => {
   const missingOrigin = await app.inject({
     method: 'POST',
     url: '/api/v1/queue/A-001/transition',
-    headers: { cookie },
+    headers: { cookie, 'x-client-role': 'mfa' },
     payload: {},
   });
   assert.equal(missingOrigin.statusCode, 403);
@@ -985,6 +1121,7 @@ test('staff cookie mutations require same-origin request headers', async () => {
       cookie,
       host: 'praxis.test',
       origin: 'http://evil.test',
+      'x-client-role': 'mfa',
     },
     payload: {},
   });
@@ -997,6 +1134,7 @@ test('staff cookie mutations require same-origin request headers', async () => {
       cookie,
       host: 'localhost:8080',
       origin: 'http://localhost:5180',
+      'x-client-role': 'mfa',
     },
     payload: { type: 'call' },
   });
@@ -1058,7 +1196,7 @@ test('TV pairing code creates read-only TV device session on polling TV browser'
   const confirm = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/tv/pairing/confirm',
-    headers: sameOriginCookieHeaders(mfaCookie),
+    headers: mfaSessionHeaders(mfaCookie),
     payload: { code: started.code },
   });
   assert.equal(confirm.statusCode, 200);
@@ -1079,7 +1217,7 @@ test('TV pairing code creates read-only TV device session on polling TV browser'
   const queue = await app.inject({
     method: 'GET',
     url: '/api/v1/queue',
-    headers: { cookie: tvCookie },
+    headers: tvSessionHeaders(tvCookie),
   });
   assert.equal(queue.statusCode, 200);
   assert.deepEqual(queue.json(), { role: 'tv' });
@@ -1087,7 +1225,7 @@ test('TV pairing code creates read-only TV device session on polling TV browser'
   const mutation = await app.inject({
     method: 'POST',
     url: '/api/v1/queue/A-001/transition',
-    headers: { cookie: tvCookie },
+    headers: tvSessionHeaders(tvCookie),
     payload: { type: 'call' },
   });
   assert.equal(mutation.statusCode, 403);
@@ -1115,7 +1253,7 @@ test('terminal pairing code creates terminal device session for check-in routes'
   const confirm = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/terminal/pairing/confirm',
-    headers: sameOriginCookieHeaders(mfaCookie),
+    headers: mfaSessionHeaders(mfaCookie),
     payload: { code: started.code },
   });
   assert.equal(confirm.statusCode, 200);
@@ -1132,7 +1270,7 @@ test('terminal pairing code creates terminal device session for check-in routes'
   const topics = await app.inject({
     method: 'GET',
     url: '/api/v1/checkins/topics',
-    headers: { cookie: terminalCookie },
+    headers: terminalSessionHeaders(terminalCookie),
   });
   assert.equal(topics.statusCode, 200);
   assert.equal(topics.json().role, 'terminal');
@@ -1140,7 +1278,7 @@ test('terminal pairing code creates terminal device session for check-in routes'
   const checkin = await app.inject({
     method: 'POST',
     url: '/api/v1/checkins',
-    headers: sameOriginCookieHeaders(terminalCookie),
+    headers: terminalSessionHeaders(terminalCookie),
     payload: { topicId: 'general', authPath: 'phone_dob' },
   });
   assert.equal(checkin.statusCode, 201);
@@ -1149,7 +1287,7 @@ test('terminal pairing code creates terminal device session for check-in routes'
   const mfaOnly = await app.inject({
     method: 'POST',
     url: '/api/v1/queue/A-001/transition',
-    headers: { cookie: terminalCookie },
+    headers: terminalSessionHeaders(terminalCookie),
     payload: { type: 'call' },
   });
   assert.equal(mfaOnly.statusCode, 403);
@@ -1170,7 +1308,7 @@ test('re-pairing a device revokes older sessions for the same device', async () 
   const oldTopics = await app.inject({
     method: 'GET',
     url: '/api/v1/checkins/topics',
-    headers: { cookie: oldTerminalCookie },
+    headers: terminalSessionHeaders(oldTerminalCookie),
   });
   assert.equal(oldTopics.statusCode, 200);
 
@@ -1183,14 +1321,14 @@ test('re-pairing a device revokes older sessions for the same device', async () 
   const revokedTopics = await app.inject({
     method: 'GET',
     url: '/api/v1/checkins/topics',
-    headers: { cookie: oldTerminalCookie },
+    headers: terminalSessionHeaders(oldTerminalCookie),
   });
   assert.equal(revokedTopics.statusCode, 401);
 
   const newTopics = await app.inject({
     method: 'GET',
     url: '/api/v1/checkins/topics',
-    headers: { cookie: newTerminalCookie },
+    headers: terminalSessionHeaders(newTerminalCookie),
   });
   assert.equal(newTopics.statusCode, 200);
 
@@ -1206,7 +1344,7 @@ test('terminal device role can be selected when staff and device cookies share o
     method: 'POST',
     url: '/api/v1/checkins',
     headers: {
-      ...sameOriginCookieHeaders(mfaCookie),
+      ...mfaSessionHeaders(mfaCookie),
       'x-client-role': 'terminal',
     },
     payload: { topicId: 'general', authPath: 'phone_dob' },
@@ -1223,7 +1361,7 @@ test('terminal device role can be selected when staff and device cookies share o
   const staffSelected = await app.inject({
     method: 'POST',
     url: '/api/v1/checkins',
-    headers: sameOriginCookieHeaders(mixedCookie),
+    headers: mfaSessionHeaders(mixedCookie),
     payload: { topicId: 'general', authPath: 'phone_dob' },
   });
   assert.equal(staffSelected.statusCode, 201);
@@ -1232,7 +1370,7 @@ test('terminal device role can be selected when staff and device cookies share o
     method: 'POST',
     url: '/api/v1/checkins',
     headers: {
-      ...sameOriginCookieHeaders(mixedCookie),
+      ...mfaSessionHeaders(mixedCookie),
       'x-client-role': 'terminal',
     },
     payload: { topicId: 'general', authPath: 'phone_dob' },
@@ -1243,7 +1381,7 @@ test('terminal device role can be selected when staff and device cookies share o
     method: 'POST',
     url: '/api/v1/ops/device/presence',
     headers: {
-      ...sameOriginCookieHeaders(mixedCookie),
+      ...mfaSessionHeaders(mixedCookie),
       'x-client-role': 'terminal',
     },
     payload: { clientTime: '2026-06-09T18:20:00.000Z' },
@@ -1318,7 +1456,7 @@ test('device presence is bound to the authenticated device session', async () =>
   const tvPresence = await app.inject({
     method: 'POST',
     url: '/api/v1/ops/device/presence',
-    headers: sameOriginCookieHeaders(tvCookie),
+    headers: tvSessionHeaders(tvCookie),
     payload: { deviceId: 'checkin-terminal', clientTime: '2026-06-09T17:00:00.000Z' },
   });
   assert.equal(tvPresence.statusCode, 204);
@@ -1326,7 +1464,7 @@ test('device presence is bound to the authenticated device session', async () =>
   const terminalPresence = await app.inject({
     method: 'POST',
     url: '/api/v1/ops/device/presence',
-    headers: sameOriginCookieHeaders(terminalCookie),
+    headers: terminalSessionHeaders(terminalCookie),
     payload: { deviceId: 'waiting-room', clientTime: '2026-06-09T17:00:01.000Z' },
   });
   assert.equal(terminalPresence.statusCode, 204);
@@ -1362,7 +1500,7 @@ test('terminal routes reject requests without any authenticated session', async 
   const mfaCheckin = await app.inject({
     method: 'POST',
     url: '/api/v1/checkins',
-    headers: sameOriginCookieHeaders(mfaCookie),
+    headers: mfaSessionHeaders(mfaCookie),
     payload: { topicId: 'general', authPath: 'phone_dob' },
   });
   assert.equal(mfaCheckin.statusCode, 201);
@@ -1383,7 +1521,7 @@ test('duplicate pairing confirm before device poll is idempotent', async () => {
   const started = start.json() as { pairingId: string; code: string };
 
   const mfaCookie = await loginMfa(app);
-  const confirmHeaders = sameOriginCookieHeaders(mfaCookie);
+  const confirmHeaders = mfaSessionHeaders(mfaCookie);
 
   const firstConfirm = await app.inject({
     method: 'POST',
@@ -1442,7 +1580,7 @@ test('pairing confirm is rate limited per mfa session', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/terminal/pairing/confirm',
-      headers: sameOriginCookieHeaders(mfaCookie),
+      headers: mfaSessionHeaders(mfaCookie),
       payload: { code: '0000' },
     });
     lastStatus = response.statusCode;

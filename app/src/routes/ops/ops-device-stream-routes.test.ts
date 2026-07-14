@@ -83,7 +83,7 @@ test('terminal device stream clears streamConnected but keeps fresh heartbeat on
 
   const response = await fetch(`http://127.0.0.1:${port}/api/v1/ops/device/stream`, {
     headers: {
-      cookie: `${getStaffSessionCookieName()}=${staffToken}; ${getDeviceSessionCookieName('terminal')}=${token}`,
+      cookie: `${getStaffSessionCookieName('mfa')}=${staffToken}; ${getDeviceSessionCookieName('terminal')}=${token}`,
       'x-client-role': 'terminal',
     },
   });

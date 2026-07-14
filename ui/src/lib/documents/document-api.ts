@@ -1,4 +1,4 @@
-import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
 import type { MfaDocument, MfaDocumentListResponse, MfaDocumentPreview } from './types';
 
 function documentPath(documentId: string, action?: string): string {
@@ -7,16 +7,14 @@ function documentPath(documentId: string, action?: string): string {
 }
 
 function postDocumentAction<T>(documentId: string, action: string, body: object = {}) {
-  return cookieAuthFetch<T>(documentPath(documentId, action), {
+  return mfaAuthFetch<T>(documentPath(documentId, action), {
     method: 'POST',
     body: JSON.stringify(body),
   });
 }
 
 export async function fetchDocumentsForVisit(visitId: string) {
-  return cookieAuthFetch<MfaDocumentListResponse>(
-    `/api/v1/documents/${encodeURIComponent(visitId)}`,
-  );
+  return mfaAuthFetch<MfaDocumentListResponse>(`/api/v1/documents/${encodeURIComponent(visitId)}`);
 }
 
 export async function previewDocument(documentId: string) {

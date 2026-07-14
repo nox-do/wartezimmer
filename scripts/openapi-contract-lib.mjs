@@ -45,6 +45,9 @@ export async function requestJson(baseUrl, endpoint, authOrBearer, options = {})
   if (authOrBearer?.origin) {
     headers.origin = authOrBearer.origin;
   }
+  if (authOrBearer?.kind === 'session' || authOrBearer?.kind === 'device') {
+    headers['x-client-role'] = authOrBearer.role;
+  }
   if (options.jsonBody != null) {
     headers['content-type'] = 'application/json';
   }

@@ -22,13 +22,21 @@ export {
   hashStaffPinForConfig,
   verifyStaffPin,
 } from './staff-pin-auth.js';
+export type { CookieSlotRole } from './cookie-slot-role.js';
+export { readRequestedCookieSlotRole } from './cookie-slot-role.js';
 export {
+  clearDeviceSessionCookie,
+  clearLegacyStaffSessionCookie,
   clearRoomPanelSessionCookie,
+  clearSessionCookieForSlot,
   clearStaffSessionCookie,
   getDeviceSessionCookieName,
+  getLegacyStaffSessionCookieName,
   getRoomPanelSessionCookieName,
+  getSessionCookieNameForSlot,
   getStaffSessionCookieName,
   readCookieValue,
+  readSessionTokenForSlot,
   setDeviceSessionCookie,
   setRoomPanelSessionCookie,
   setStaffSessionCookie,

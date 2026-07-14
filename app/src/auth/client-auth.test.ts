@@ -71,7 +71,19 @@ async function buildProbeApp(): Promise<{
 
 function staffCookie(sessions: StaffSessionManager, role: 'mfa' | 'ops'): string {
   const { token } = sessions.createStaffSession(role);
-  return `${getStaffSessionCookieName()}=${token}`;
+  return `${getStaffSessionCookieName(role)}=${token}`;
+}
+
+function staffAuthHeaders(
+  sessions: StaffSessionManager,
+  role: 'mfa' | 'ops',
+  extra: Record<string, string> = {},
+): Record<string, string> {
+  return {
+    cookie: staffCookie(sessions, role),
+    'x-client-role': role,
+    ...extra,
+  };
 }
 
 function deviceCookie(sessions: StaffSessionManager, role: 'terminal' | 'tv'): string {
@@ -102,7 +114,7 @@ test('wrong role is rejected and route handler does not run', async () => {
   const response = await app.inject({
     method: 'GET',
     url: '/api/v1/ops/deployment/storage',
-    headers: { cookie: deviceCookie(sessions, 'tv') },
+    headers: { cookie: deviceCookie(sessions, 'tv'), 'x-client-role': 'tv' },
   });
 
   assert.equal(response.statusCode, 403);
@@ -119,7 +131,7 @@ test('allowed role reaches route handler', async () => {
   const response = await app.inject({
     method: 'GET',
     url: '/api/v1/ops/deployment/storage',
-    headers: { cookie: staffCookie(sessions, 'ops') },
+    headers: staffAuthHeaders(sessions, 'ops'),
   });
 
   assert.equal(response.statusCode, 200);
@@ -164,6 +176,28 @@ test('missing bearer token is rejected without running handler', async () => {
   assert.equal(response.statusCode, 401);
   assert.deepEqual(response.json(), { code: 'AUTH_UNAUTHORIZED', message: 'Unauthorized.' });
   assert.equal(getHandlerCalled(), false);
+
+  await app.close();
+});
+
+test('disabled auth ignores stale session cookies', async () => {
+  process.env.AUTH_ENABLED = 'false';
+  process.env.NODE_ENV = 'development';
+  process.env.AUTH_KEY_CAPTIVE = 'test-captive-key';
+  const { app } = await buildProbeApp();
+
+  const withoutCookie = await app.inject({
+    method: 'GET',
+    url: '/api/v1/queue',
+  });
+  const withStaleCookie = await app.inject({
+    method: 'GET',
+    url: '/api/v1/queue',
+    headers: { cookie: 'pf_staff_session=stale-token' },
+  });
+
+  assert.equal(withoutCookie.statusCode, 200);
+  assert.equal(withStaleCookie.statusCode, 200);
 
   await app.close();
 });
@@ -294,6 +328,7 @@ test('unsafe cookie requests do not trust spoofed forwarded host by default', as
     url: '/api/v1/ops/device/presence',
     headers: {
       cookie: deviceCookie(sessions, 'terminal'),
+      'x-client-role': 'terminal',
       host: 'praxis.test',
       origin: 'http://evil.test',
       'x-forwarded-host': 'evil.test',

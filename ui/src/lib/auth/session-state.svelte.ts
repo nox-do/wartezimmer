@@ -11,11 +11,16 @@ export type AuthSessionState = {
   errorMessage: string | null;
 };
 
+export type StaffAuthRole = Extract<AuthSessionUser['roles'][number], 'mfa' | 'ops'>;
+
 export const authSession = $state<AuthSessionState>({
   status: 'idle',
   user: null,
   errorMessage: null,
 });
+
+let inflightLoad: Promise<void> | null = null;
+let inflightLoadRole: StaffAuthRole | null = null;
 
 function applyAnonymous(message: string | null = null) {
   authSession.status = 'anonymous';
@@ -37,13 +42,57 @@ export function markAuthUnauthorized(message: string | null = null) {
   applyAnonymous(message);
 }
 
-export async function loadAuthSession(): Promise<void> {
+export function shouldLoadAuthSession(role: StaffAuthRole): boolean {
+  if (authSession.status === 'loading') {
+    return false;
+  }
+  if (authSession.status === 'idle') {
+    return true;
+  }
+  if (authSession.status === 'authenticated') {
+    return !authSession.user?.roles.includes(role);
+  }
+  return false;
+}
+
+export async function loadAuthSession(role: StaffAuthRole): Promise<void> {
+  if (!shouldLoadAuthSession(role)) {
+    return;
+  }
+  if (inflightLoad && inflightLoadRole === role) {
+    await inflightLoad;
+    return;
+  }
+
+  inflightLoadRole = role;
+  inflightLoad = loadAuthSessionInternal(role);
+  try {
+    await inflightLoad;
+  } finally {
+    inflightLoad = null;
+    inflightLoadRole = null;
+  }
+}
+
+async function loadAuthSessionInternal(role: StaffAuthRole): Promise<void> {
+  const priorUser = authSession.user;
+  const probingAlternateSlot =
+    authSession.status === 'authenticated' &&
+    priorUser != null &&
+    !priorUser.roles.includes(role);
+
   authSession.status = 'loading';
   authSession.errorMessage = null;
 
-  const result = await fetchAuthStatus();
+  const result = await fetchAuthStatus(role);
   if (!result.ok) {
     if (result.error.status === 401 || result.error.code === 'AUTH_UNAUTHORIZED') {
+      if (probingAlternateSlot && priorUser) {
+        authSession.status = 'authenticated';
+        authSession.user = priorUser;
+        authSession.errorMessage = null;
+        return;
+      }
       applyAnonymous();
       return;
     }

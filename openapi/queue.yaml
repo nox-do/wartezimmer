@@ -3,15 +3,15 @@ info:
   title: Praxis Flow Queue API
   version: 0.3.0
 security:
-  - staffSessionCookie: []
+  - mfaSessionCookie: []
   - tvDeviceSessionCookie: []
   - roomPanelSessionCookie: []
 components:
   securitySchemes:
-    staffSessionCookie:
+    mfaSessionCookie:
       type: apiKey
       in: cookie
-      name: pf_staff_session
+      name: pf_mfa_session
     tvDeviceSessionCookie:
       type: apiKey
       in: cookie
@@ -801,6 +801,8 @@ components:
             - return_later
 paths:
   /api/v1/queue:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: Get current queue list (role-filtered payload)
       responses:
@@ -811,6 +813,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/QueueListResponse'
   /api/v1/queue/summary:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: Get queue and daily progress summary for dashboard
       responses:
@@ -821,6 +825,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/QueueSummaryResponse'
   /api/v1/queue/mark-absence:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Mark patient absent by phone number or ticket code lookup
       requestBody:
@@ -855,6 +861,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/queue/{visitId}/transition:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Apply a typed workflow transition to a queue ticket
       parameters:
@@ -902,6 +910,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/queue/{visitId}/callback-phone:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     put:
       summary: Set MFA callback phone for recall SMS (separate from terminal check-in phone)
       parameters:
@@ -979,6 +989,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/queue/{visitId}/identity-ref:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     patch:
       summary: Set MFA display name for a ticket without identity (manual entry in waiting list)
       parameters:
@@ -1028,6 +1040,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/queue/{visitId}/supersede:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Supersede a waiting/directed visit with a new topic (new ticket number, chain link, preserve wait clock)
       parameters:

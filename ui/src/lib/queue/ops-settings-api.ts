@@ -1,4 +1,4 @@
-import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
 import { normalizeTopicAccentColor } from '$lib/topics/topic-accent';
 import type {
   MfaPatchOpsSettingsBody,
@@ -56,7 +56,7 @@ export {
 export type PracticeRoomWithPanels = PracticeRoom;
 
 export async function fetchOpsSettings() {
-  return cookieAuthFetch<OpsSettingsResponse>('/api/v1/ops/settings');
+  return mfaAuthFetch<OpsSettingsResponse>('/api/v1/ops/settings');
 }
 
 let inflightOpsSettings: Promise<Awaited<ReturnType<typeof fetchOpsSettings>>> | null = null;
@@ -70,7 +70,7 @@ export async function fetchOpsSettingsDeduped() {
 }
 
 export async function patchOpsSettings(body: MfaPatchOpsSettingsBody) {
-  return cookieAuthFetch<OpsSettingsResponse>('/api/v1/ops/settings', {
+  return mfaAuthFetch<OpsSettingsResponse>('/api/v1/ops/settings', {
     method: 'PATCH',
     body: JSON.stringify(body),
   });

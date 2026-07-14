@@ -1,4 +1,4 @@
-import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
 import type {
   AbsenceMode,
   QueueCallbackPhoneResponse,
@@ -18,7 +18,7 @@ function visitPath(visitId: string, action: string): string {
 }
 
 function transitionVisit<T>(visitId: string, body: QueueVisitTransitionBody) {
-  return cookieAuthFetch<T>(visitPath(visitId, 'transition'), {
+  return mfaAuthFetch<T>(visitPath(visitId, 'transition'), {
     method: 'POST',
     body: JSON.stringify(body),
   });
@@ -90,27 +90,27 @@ export async function retryRecallNotifyVisit(visitId: string) {
 }
 
 export async function clearCallbackPhoneVisit(visitId: string) {
-  return cookieAuthFetch<QueueCallbackPhoneClearResponse>(visitPath(visitId, 'callback-phone'), {
+  return mfaAuthFetch<QueueCallbackPhoneClearResponse>(visitPath(visitId, 'callback-phone'), {
     method: 'DELETE',
   });
 }
 
 export async function setCallbackPhoneVisit(visitId: string, callbackPhone: string) {
-  return cookieAuthFetch<QueueCallbackPhoneResponse>(visitPath(visitId, 'callback-phone'), {
+  return mfaAuthFetch<QueueCallbackPhoneResponse>(visitPath(visitId, 'callback-phone'), {
     method: 'PUT',
     body: JSON.stringify({ callbackPhone: callbackPhone.trim() }),
   });
 }
 
 export async function setIdentityRefVisit(visitId: string, identityRef: string) {
-  return cookieAuthFetch<QueueIdentityRefResponse>(visitPath(visitId, 'identity-ref'), {
+  return mfaAuthFetch<QueueIdentityRefResponse>(visitPath(visitId, 'identity-ref'), {
     method: 'PATCH',
     body: JSON.stringify({ identityRef: identityRef.trim() }),
   });
 }
 
 export async function supersedeVisitTopic(visitId: string, topicId: string) {
-  return cookieAuthFetch<QueueSupersedeResponse>(visitPath(visitId, 'supersede'), {
+  return mfaAuthFetch<QueueSupersedeResponse>(visitPath(visitId, 'supersede'), {
     method: 'POST',
     body: JSON.stringify({ topicId }),
   });

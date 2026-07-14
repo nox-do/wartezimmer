@@ -4,10 +4,14 @@ info:
   version: 0.1.0
 components:
   securitySchemes:
-    staffSessionCookie:
+    mfaSessionCookie:
       type: apiKey
       in: cookie
-      name: pf_staff_session
+      name: pf_mfa_session
+    opsSessionCookie:
+      type: apiKey
+      in: cookie
+      name: pf_ops_session
   schemas:
     StaffRole:
       type: string
@@ -18,6 +22,7 @@ components:
       type: object
       required:
         - pin
+        - role
       additionalProperties: false
       properties:
         pin:
@@ -26,7 +31,6 @@ components:
           maxLength: 128
         role:
           $ref: '#/components/schemas/StaffRole'
-          default: mfa
     StaffSessionResponse:
       type: object
       required:
@@ -294,7 +298,10 @@ paths:
       operationId: getStaffSessionMe
       summary: Return the active staff session.
       security:
-        - staffSessionCookie: []
+        - mfaSessionCookie: []
+        - opsSessionCookie: []
+      parameters:
+        - $ref: './common.yaml#/components/parameters/XClientRole'
       responses:
         '200':
           description: Current staff session.
@@ -372,7 +379,10 @@ paths:
       operationId: changeAuthPin
       summary: Change staff PIN (MFA, Ops, or room panel) after verifying the current PIN for that target.
       security:
-        - staffSessionCookie: []
+        - mfaSessionCookie: []
+        - opsSessionCookie: []
+      parameters:
+        - $ref: './common.yaml#/components/parameters/XClientRole'
       requestBody:
         required: true
         content:
@@ -413,20 +423,28 @@ paths:
   /api/v1/auth/logout:
     post:
       operationId: logoutStaffSession
-      summary: Revoke the current staff session if present.
+      summary: Revoke the cookie session for the requested client role slot.
       security: []
+      parameters:
+        - $ref: './common.yaml#/components/parameters/XClientRole'
       responses:
         '200':
-          description: Session cookie cleared.
+          description: Session slot cleared (idempotent when no active session).
           headers:
             Set-Cookie:
               schema:
                 type: string
-              description: Expired staff session cookie.
+              description: Expired session cookie for the requested slot.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LogoutResponse'
+        '400':
+          description: Missing or unknown X-Client-Role header.
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
   /api/v1/auth/tv/pairing/start:
     post:
       operationId: startTvPairing
@@ -485,7 +503,9 @@ paths:
       operationId: confirmTvPairing
       summary: Confirm a TV pairing code from an authenticated MFA session.
       security:
-        - staffSessionCookie: []
+        - mfaSessionCookie: []
+      parameters:
+        - $ref: './common.yaml#/components/parameters/XClientRole'
       requestBody:
         required: true
         content:
@@ -569,7 +589,9 @@ paths:
       operationId: confirmTerminalPairing
       summary: Confirm a terminal pairing code from an authenticated MFA session.
       security:
-        - staffSessionCookie: []
+        - mfaSessionCookie: []
+      parameters:
+        - $ref: './common.yaml#/components/parameters/XClientRole'
       requestBody:
         required: true
         content:

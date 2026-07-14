@@ -1,7 +1,7 @@
-import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
 
 export async function acknowledgeEmergency(emergencyId: string) {
-  return cookieAuthFetch<{
+  return mfaAuthFetch<{
     emergencyId: string;
     status: 'acknowledged';
     raisedAt: string;

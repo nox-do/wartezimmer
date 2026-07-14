@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { authSession, loadAuthSession } from '$lib/auth/session-state.svelte';
+import { authSession, loadAuthSession, shouldLoadAuthSession } from '$lib/auth/session-state.svelte';
 import { fetchOpsOnboarding } from '$lib/ops/ops-system-api';
 
 export const ssr = false;
@@ -9,8 +9,8 @@ export async function load({ url }) {
     return {};
   }
 
-  if (authSession.status === 'idle') {
-    await loadAuthSession();
+  if (shouldLoadAuthSession('ops')) {
+    await loadAuthSession('ops');
   }
 
   if (authSession.status !== 'authenticated' || !authSession.user?.roles.includes('ops')) {

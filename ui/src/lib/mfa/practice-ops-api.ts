@@ -1,4 +1,4 @@
-import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
 
 export type BusinessDayTopicCount = {
   topicId: string;
@@ -64,22 +64,22 @@ export type BusinessDayResetResult = {
 };
 
 export async function fetchDayLifecycle() {
-  return cookieAuthFetch<DayLifecycleState>('/api/v1/ops/day-lifecycle');
+  return mfaAuthFetch<DayLifecycleState>('/api/v1/ops/day-lifecycle');
 }
 
 export async function fetchRoutingCapabilities() {
-  return cookieAuthFetch<RoutingCapabilities>('/api/v1/ops/settings/capabilities');
+  return mfaAuthFetch<RoutingCapabilities>('/api/v1/ops/settings/capabilities');
 }
 
 export async function setCheckinLock(locked: boolean) {
-  return cookieAuthFetch<CheckinLockState>('/api/v1/ops/checkin-lock', {
+  return mfaAuthFetch<CheckinLockState>('/api/v1/ops/checkin-lock', {
     method: 'POST',
     body: JSON.stringify({ locked }),
   });
 }
 
 export async function resetBusinessDay() {
-  return cookieAuthFetch<BusinessDayResetResult>('/api/v1/ops/day-lifecycle/reset', {
+  return mfaAuthFetch<BusinessDayResetResult>('/api/v1/ops/day-lifecycle/reset', {
     method: 'POST',
     body: JSON.stringify({ confirmBusinessDayReset: true }),
   });

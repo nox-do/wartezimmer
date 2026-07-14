@@ -182,6 +182,9 @@ function applyAuthHeaders(headers, auth) {
   if (auth.origin) {
     headers.origin = auth.origin;
   }
+  if (auth.kind === 'session' || auth.kind === 'device') {
+    headers['x-client-role'] = auth.role;
+  }
 }
 
 export async function requestJson(

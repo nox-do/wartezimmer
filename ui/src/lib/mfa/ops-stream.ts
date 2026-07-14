@@ -22,6 +22,7 @@ export function connectOpsStream(handlers: OpsStreamHandlers = {}): () => void {
   const disconnect = connectMultiEventSseStream({
     url: buildApiStreamUrl('/api/v1/ops/stream'),
     credentials: 'include',
+    clientRole: 'mfa',
     handlers: {
       emergency: (data) => {
         const snapshot = parseEmergencyOpsSnapshot(data);

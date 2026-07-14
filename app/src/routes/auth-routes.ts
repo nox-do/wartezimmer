@@ -27,13 +27,13 @@ import {
   deviceKindForPairedRole,
 } from '../shared/ops/device-role.js';
 import {
-  clearRoomPanelSessionCookie,
-  clearStaffSessionCookie,
+  clearSessionCookieForSlot,
   type DeviceSessionRole,
   getRoomPanelSessionCookieName,
   getStaffSessionAuthConfig,
-  getStaffSessionCookieName,
   readCookieValue,
+  readRequestedCookieSlotRole,
+  readSessionTokenForSlot,
   setDeviceSessionCookie,
   setRoomPanelSessionCookie,
   setStaffSessionCookie,
@@ -264,14 +264,19 @@ export function registerAuthRoutes(
       }
 
       const pin = request.body.pin?.trim() ?? '';
-      const role = isStaffRole(request.body.role) ? request.body.role : 'mfa';
+      const role = request.body.role;
+      if (!isStaffRole(role)) {
+        return reply
+          .code(400)
+          .send({ code: 'INVALID_ARGUMENT', message: 'Staff role is required.' });
+      }
       const config = getCurrentAuthConfig(db);
       if (!verifyStaffPin(pin, config.pinHashesByRole[role])) {
         return reply.code(401).send({ code: 'AUTH_UNAUTHORIZED', message: 'Unauthorized.' });
       }
 
       const { token, session } = sessions.createStaffSession(role);
-      setStaffSessionCookie(reply, request, token, sessionConfig.sessionTtlMs);
+      setStaffSessionCookie(reply, request, role, token, sessionConfig.sessionTtlMs);
       return reply.send({
         ok: true,
         sessionId: session.sessionId,
@@ -484,18 +489,24 @@ export function registerAuthRoutes(
       schema: {
         response: {
           200: authSchemas.POST_api_v1_auth_logoutResponse200,
+          400: authSchemas.POST_api_v1_auth_logoutResponse400,
         },
       },
     },
     async (request, reply) => {
-      const token = readCookieValue(request, getStaffSessionCookieName());
-      sessions.revokeSession(token);
+      const role = readRequestedCookieSlotRole(request);
+      if (!role) {
+        return reply.code(400).send({
+          code: 'INVALID_ARGUMENT',
+          message: 'X-Client-Role header is required.',
+        });
+      }
 
-      const roomPanelToken = readCookieValue(request, getRoomPanelSessionCookieName());
-      sessions.revokeSession(roomPanelToken);
-
-      clearStaffSessionCookie(reply, request);
-      clearRoomPanelSessionCookie(reply, request);
+      const token = readSessionTokenForSlot(request, role);
+      if (token) {
+        sessions.revokeSession(token);
+      }
+      clearSessionCookieForSlot(reply, request, role);
       return reply.send({ ok: true });
     },
   );

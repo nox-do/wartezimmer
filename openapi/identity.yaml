@@ -3,13 +3,13 @@ info:
   title: Praxis Flow Identity API
   version: 0.1.0
 security:
-  - staffSessionCookie: []
+  - mfaSessionCookie: []
 components:
   securitySchemes:
-    staffSessionCookie:
+    mfaSessionCookie:
       type: apiKey
       in: cookie
-      name: pf_staff_session
+      name: pf_mfa_session
   schemas:
     MfaLookupCandidate:
       type: object
@@ -45,6 +45,8 @@ components:
           maxLength: 32
 paths:
   /api/v1/identity/phone-dob-lookup:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Resolve minimal identity reference by phone number and date of birth
       requestBody:
@@ -89,6 +91,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/identity/mfa-lookup:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Lookup identity candidates for MFA-assisted check-in
       requestBody:
@@ -143,6 +147,8 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/identity/{visitId}:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: Read identity-related ticket details for MFA context
       parameters:

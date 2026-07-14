@@ -2,9 +2,8 @@
   import { gotoResolved } from '$lib/navigation/kit-paths';
   import { page } from '$app/stores';
   import type { Snippet } from 'svelte';
-  import { onMount } from 'svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
-  import { authSession, loadAuthSession } from '$lib/auth/session-state.svelte';
+  import { authSession, loadAuthSession, shouldLoadAuthSession } from '$lib/auth/session-state.svelte';
   import type { AuthSessionUser } from '$lib/auth/session-client';
 
   interface Props {
@@ -28,9 +27,12 @@
     return `${url.pathname}${url.search}${url.hash}`;
   }
 
-  onMount(() => {
-    if (authSession.status === 'idle') {
-      void loadAuthSession();
+  $effect(() => {
+    if (!requiredRole || (requiredRole !== 'mfa' && requiredRole !== 'ops')) {
+      return;
+    }
+    if (shouldLoadAuthSession(requiredRole)) {
+      void loadAuthSession(requiredRole);
     }
   });
 

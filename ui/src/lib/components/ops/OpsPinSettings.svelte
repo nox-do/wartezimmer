@@ -41,7 +41,7 @@
 
     busy = true;
     try {
-      const result = await changeAuthPin({ target: 'ops', currentPin, newPin });
+      const result = await changeAuthPin({ target: 'ops', currentPin, newPin, role: 'ops' });
       if (!result.ok) {
         toastStore.error(
           result.error.status === 401

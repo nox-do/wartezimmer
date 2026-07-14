@@ -30,7 +30,18 @@ Stand: 2026-07-14
 | UI `createMfaAssistCheckin` | **entfernt** | Server `POST /mfa-assist` bleibt. |
 
 - **Auth-Routen Überblick:** Staff/Device unter `/api/v1/auth/*` in `app/src/routes/auth-routes.ts` (OpenAPI `openapi/auth.yaml`); Guard via `registerClientAuth` + `route-access-rules.ts`; Cookie-Sessions (kein JWT/OAuth)
-- **Auth-Plan:** [`docs/plan-auth-session-slots.md`](docs/plan-auth-session-slots.md) — P1 idempotenter scoped Logout (400 Header / 200 ohne Session); P2 Cookie-Split + `mfaAuthFetch`/`opsAuthFetch` + Smoke/OpenAPI; Bearer ohne Role-Header; Breaking Change
+## Erledigt: Auth Session-Slots (Phase 1+2, 2026-07-14)
+
+- Cookie-Split: `pf_mfa_session` / `pf_ops_session` (Breaking — `pf_staff_session` wird nicht gelesen, nur gecleart)
+- Scoped idempotenter Logout via `X-Client-Role` (Panel produktiv; Pattern generisch für alle Slots)
+- Guard: Cookie-Auth braucht `X-Client-Role` wenn Session-Cookies mitgesendet; Bearer + Local-TV-Bypass unverändert
+- UI: `mfaAuthFetch` / `opsAuthFetch`; SSE Streams mit `clientRole: mfa`; `loadAuthSession(role)`
+- OpenAPI: mfa/ops Session-Schemes; Logout Header + 400; `StaffLoginRequest.role` required
+- Smoke: `applyAuthHeaders` setzt `x-client-role` für session/device
+- Manuell: MFA-Tab + Room-Panel Logout → MFA bleibt; nach Deploy einmal neu anmelden
+- Review-Nachzug (2026-07-14): documents.yaml → mfaSessionCookie; identity/checkin/queue/ops OpenAPI (ACL-korrekte Security + X-Client-Role in common.yaml); Guard AUTH_ENABLED=false vor Header-Check; shouldLoadAuthSession für MFA↔Ops-Tabwechsel; openapi-contract-lib x-client-role; Regressionstests (Koexistenz, Panel-Logout, Legacy-Cookie, 400 Header)
+- Fix: /auth/me Endlosschleife — shouldLoadAuthSession nicht bei anonymous; Cross-Slot-401 behält andere Session
+
 - **Fix:** Raum-Expander — `$state.snapshot()`; Basics-Layout kompakter; CSS konsolidiert; Raum-Panel-Leerlauf nutzt konfigurierten Ankunfts-Hinweis statt hardcoded `noTickets`
 - Lint/Verify: **grün** (`npm run verify`) — ESLint-Fixes, Test-Fixtures (`minimalHostStatus`, `freshInstallHostStatus`, `testSetupContext`), Auth-Regeln für Snapshot-Routen; 10 Manager-Tests nach Fixture-Konsolidierung korrigiert
 - Wizard Abschluss: eine Footer-Zeile mit kleinen Buttons „Zum Status“ + „IT-Einstellungen“ (ohne Abbrechen)

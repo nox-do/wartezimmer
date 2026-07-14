@@ -1,4 +1,4 @@
-import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { mfaAuthFetch } from '$lib/api/cookie-auth-fetch';
 import type { TerminalTopic, VisitCreated } from '$lib/terminal/openapi-types';
 
 export type MfaLookupCandidate = {
@@ -11,7 +11,7 @@ export type MfaLookupCandidate = {
 };
 
 export async function fetchMfaCheckinTopics() {
-  return cookieAuthFetch<{ topics: TerminalTopic[] }>('/api/v1/checkins/topics');
+  return mfaAuthFetch<{ topics: TerminalTopic[] }>('/api/v1/checkins/topics');
 }
 
 export async function lookupMfaIdentityCandidates(input: {
@@ -20,14 +20,14 @@ export async function lookupMfaIdentityCandidates(input: {
   phoneNumber?: string;
   limit?: number;
 }) {
-  return cookieAuthFetch<{ candidates: MfaLookupCandidate[] }>('/api/v1/identity/mfa-lookup', {
+  return mfaAuthFetch<{ candidates: MfaLookupCandidate[] }>('/api/v1/identity/mfa-lookup', {
     method: 'POST',
     body: JSON.stringify(input),
   });
 }
 
 export async function createMfaCheckin(input: { topicId: string; identityRef?: string }) {
-  return cookieAuthFetch<VisitCreated>('/api/v1/checkins', {
+  return mfaAuthFetch<VisitCreated>('/api/v1/checkins', {
     method: 'POST',
     body: JSON.stringify({
       topicId: input.topicId,

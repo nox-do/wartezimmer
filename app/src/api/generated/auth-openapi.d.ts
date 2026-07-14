@@ -98,7 +98,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Revoke the current staff session if present. */
+    /** Revoke the cookie session for the requested client role slot. */
     post: operations['logoutStaffSession'];
     delete?: never;
     options?: never;
@@ -216,7 +216,6 @@ export interface components {
     StaffRole: 'mfa' | 'ops';
     StaffLoginRequest: {
       pin: string;
-      /** @default mfa */
       role: components['schemas']['StaffRole'];
     };
     StaffSessionResponse: {
@@ -374,7 +373,10 @@ export interface components {
     };
   };
   responses: never;
-  parameters: never;
+  parameters: {
+    /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+    XClientRole: 'mfa' | 'ops' | 'terminal' | 'tv' | 'room-panel';
+  };
   requestBodies: never;
   headers: never;
   pathItems: never;
@@ -428,7 +430,10 @@ export interface operations {
   getStaffSessionMe: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+        'X-Client-Role': components['parameters']['XClientRole'];
+      };
       path?: never;
       cookie?: never;
     };
@@ -539,7 +544,10 @@ export interface operations {
   changeAuthPin: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+        'X-Client-Role': components['parameters']['XClientRole'];
+      };
       path?: never;
       cookie?: never;
     };
@@ -599,21 +607,33 @@ export interface operations {
   logoutStaffSession: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+        'X-Client-Role': components['parameters']['XClientRole'];
+      };
       path?: never;
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      /** @description Session cookie cleared. */
+      /** @description Session slot cleared (idempotent when no active session). */
       200: {
         headers: {
-          /** @description Expired staff session cookie. */
+          /** @description Expired session cookie for the requested slot. */
           'Set-Cookie'?: string;
           [name: string]: unknown;
         };
         content: {
           'application/json': components['schemas']['LogoutResponse'];
+        };
+      };
+      /** @description Missing or unknown X-Client-Role header. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -687,7 +707,10 @@ export interface operations {
   confirmTvPairing: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+        'X-Client-Role': components['parameters']['XClientRole'];
+      };
       path?: never;
       cookie?: never;
     };
@@ -795,7 +818,10 @@ export interface operations {
   confirmTerminalPairing: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+        'X-Client-Role': components['parameters']['XClientRole'];
+      };
       path?: never;
       cookie?: never;
     };

@@ -1,7 +1,7 @@
 # Plan: Auth-Session-Slots (Rolle ↔ Cookie)
 
 Stand: 2026-07-13  
-Status: **Planung** — Arbeitsdokument, noch keine Implementierung.
+Status: **Implementiert** (Phase 1+2, 2026-07-14) — Phase 3 (MFA-Realtime) offen.
 
 Dieses Dokument klärt Ausgangslage, Zielmodell, Blast Radius und einen **gestrafften**
 Phasenplan, bevor Cookie- und Session-Handling umgebaut werden.
@@ -446,15 +446,15 @@ Verify: `npm run verify`.
 
 ## 10. Implementierungs-Checkliste
 
-- [ ] Phase 1: scoped, **idempotenter** Logout; Header → 400; ohne Session → 200; Tests + OpenAPI
-- [ ] Phase 2: Cookie-Split; `pf_staff_session` nicht lesen (Breaking); `role` required
-- [ ] Phase 2: Guard — Cookie → Header Pflicht; Bearer zuerst ohne Header
-- [ ] Phase 2: UI `selectedRole` + `mfaAuthFetch` / `opsAuthFetch` in allen Cookie-Modulen
-- [ ] Phase 2: MFA-Streams inkl. `/ops/stream` → `mfa`; Pairing-Confirm MFA
-- [ ] Phase 2: OpenAPI auth/checkin/identity/queue/ops/documents + Header + codegen
-- [ ] Phase 2: Smoke-Helpers / Stream-Smokes / Contract / inject-Tests
+- [x] Phase 1: scoped, **idempotenter** Logout; Header → 400; ohne Session → 200; Tests + OpenAPI
+- [x] Phase 2: Cookie-Split; `pf_staff_session` nicht lesen (Breaking); `role` required
+- [x] Phase 2: Guard — Cookie → Header Pflicht; Bearer zuerst ohne Header
+- [x] Phase 2: UI `selectedRole` + `mfaAuthFetch` / `opsAuthFetch` in allen Cookie-Modulen
+- [x] Phase 2: MFA-Streams inkl. `/ops/stream` → `mfa`; Pairing-Confirm MFA
+- [x] Phase 2: OpenAPI auth/checkin/identity/queue/ops/documents + Header + codegen
+- [x] Phase 2: Smoke-Helpers / Stream-Smokes / Contract / inject-Tests
 - [ ] Phase 3 (später): MFA-Realtime-Konsolidierung
-- [ ] Status dieses Dokuments aktualisieren
+- [x] Status dieses Dokuments aktualisieren
 
 ---
 

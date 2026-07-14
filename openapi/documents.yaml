@@ -12,6 +12,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: Session token
+    mfaSessionCookie:
+      type: apiKey
+      in: cookie
+      name: pf_mfa_session
   schemas:
     PatientDocument:
       type: object
@@ -736,10 +740,12 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/documents/{visitId}:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
       summary: List documents for MFA processing by ticket
       security:
-        - clientApiKeyBearer: []
+        - mfaSessionCookie: []
       parameters:
         - in: path
           name: visitId
@@ -761,10 +767,12 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/documents/{documentId}/preview:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Request MFA preview lifecycle step
       security:
-        - clientApiKeyBearer: []
+        - mfaSessionCookie: []
       parameters:
         - in: path
           name: documentId
@@ -798,10 +806,12 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/documents/{documentId}/rename:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Rename document base file name before export (extension stays fixed)
       security:
-        - clientApiKeyBearer: []
+        - mfaSessionCookie: []
       parameters:
         - in: path
           name: documentId
@@ -849,10 +859,12 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/documents/{documentId}/discard:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Discard document from MFA
       security:
-        - clientApiKeyBearer: []
+        - mfaSessionCookie: []
       parameters:
         - in: path
           name: documentId
@@ -880,10 +892,12 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
   /api/v1/documents/{documentId}/export-filesystem:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Synchronously export document to practice filesystem (streams from sandbox custody after preview scan)
       security:
-        - clientApiKeyBearer: []
+        - mfaSessionCookie: []
       parameters:
         - in: path
           name: documentId
