@@ -478,6 +478,11 @@ Review-Canvas: `~/.cursor/projects/.../canvases/manager-svelte5-review.canvas.ts
 
 - Routing-Modus als `h2` wie Import/Export; Trennlinie dazwischen
 
+## Erledigt: checkin-topic-settings Normalizer-Diät (2026-07-14)
+
+- Feld-Primitive (`readNonEmptyString`, `readNullableTimeField`, …) statt Inline-Ternaries in `normalizeSingleTopic`
+- `database-ops-settings` nutzt `readPartialNullable*` für gleiche Tri-State-Logik
+
 ## Erledigt: Wizard Docker-Compose Label (2026-07-09)
 
 - Checkliste: „Docker Compose verfügbar“ (Produktname, nicht CLI-Schreibweise)

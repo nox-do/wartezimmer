@@ -14,6 +14,8 @@ import {
 import { isValidConfigurableTopicId } from '../checkin-topics.js';
 import {
   normalizeTopicSettingsList,
+  readPartialNullableId,
+  readPartialNullableTimeField,
   validateTopicSettings,
   type TopicSetting,
 } from '../checkin-topic-settings.js';
@@ -148,29 +150,13 @@ function parseTopicSettingsRaw(raw: string | undefined): OpsSettings['topics'] {
             ? entry.prefix
             : undefined,
       defaultRoomId: typeof entry.defaultRoomId === 'string' ? entry.defaultRoomId : undefined,
-      iconId:
-        typeof entry.iconId === 'string' ? entry.iconId : entry.iconId === null ? null : undefined,
+      iconId: readPartialNullableId(entry.iconId),
       accentColor: typeof entry.accentColor === 'string' ? entry.accentColor : undefined,
       enabled: typeof entry.enabled === 'boolean' ? entry.enabled : undefined,
-      availableFrom:
-        typeof entry.availableFrom === 'string'
-          ? entry.availableFrom
-          : entry.availableFrom === null
-            ? null
-            : undefined,
-      availableTo:
-        typeof entry.availableTo === 'string'
-          ? entry.availableTo
-          : entry.availableTo === null
-            ? null
-            : undefined,
+      availableFrom: readPartialNullableTimeField(entry.availableFrom),
+      availableTo: readPartialNullableTimeField(entry.availableTo),
       sortOrder: typeof entry.sortOrder === 'number' ? entry.sortOrder : undefined,
-      journeyTemplateId:
-        typeof entry.journeyTemplateId === 'string'
-          ? entry.journeyTemplateId
-          : entry.journeyTemplateId === null
-            ? null
-            : undefined,
+      journeyTemplateId: readPartialNullableId(entry.journeyTemplateId),
     });
   }
 

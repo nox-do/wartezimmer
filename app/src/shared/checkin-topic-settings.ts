@@ -97,6 +97,64 @@ const DEFAULT_BY_TOPIC_ID = new Map(
   DEFAULT_TERMINAL_TOPIC_DEFINITIONS.map((topic) => [topic.topicId, topic]),
 );
 
+function readNonEmptyString(value: unknown, fallback: string): string {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
+  }
+  return fallback;
+}
+
+function readNullableTimeField(value: unknown, defaultValue: string | null): string | null {
+  if (typeof value === 'string') {
+    return value.trim() || null;
+  }
+  if (value === null) {
+    return null;
+  }
+  return defaultValue;
+}
+
+function readNullableId(value: unknown, fallback: string | null): string | null {
+  if (value === null) {
+    return null;
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
+  }
+  return fallback;
+}
+
+function readBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function readNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' ? value : fallback;
+}
+
+function readTopicIconId(value: unknown, fallback: string | null): string | null {
+  if (value === null) {
+    return null;
+  }
+  return normalizeTopicIconId(value) ?? fallback;
+}
+
+/** Loose JSON parse: preserve string/null, omit undefined fields for normalize defaults. */
+export function readPartialNullableTimeField(value: unknown): string | null | undefined {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value === null) {
+    return null;
+  }
+  return undefined;
+}
+
+/** Loose JSON parse: preserve string/null, omit undefined fields for normalize defaults. */
+export function readPartialNullableId(value: unknown): string | null | undefined {
+  return readPartialNullableTimeField(value);
+}
+
 function readLaneCodeFromPartial(
   entry: Partial<TopicSetting> & { prefix?: string },
 ): string | undefined {
@@ -118,50 +176,26 @@ function normalizeSingleTopic(
   }
 
   const defaults = DEFAULT_BY_TOPIC_ID.get(topicId);
-  const availableFrom =
-    typeof entry.availableFrom === 'string'
-      ? entry.availableFrom.trim() || null
-      : entry.availableFrom === null
-        ? null
-        : (defaults?.availableFrom ?? null);
-  const availableTo =
-    typeof entry.availableTo === 'string'
-      ? entry.availableTo.trim() || null
-      : entry.availableTo === null
-        ? null
-        : (defaults?.availableTo ?? null);
-
   const laneCode = readLaneCodeFromPartial(entry) ?? defaults?.laneCode ?? 'A';
 
   return {
     topicId,
-    label:
-      typeof entry.label === 'string' && entry.label.trim().length > 0
-        ? entry.label.trim()
-        : (defaults?.label ?? topicId),
+    label: readNonEmptyString(entry.label, defaults?.label ?? topicId),
     laneCode,
-    defaultRoomId:
-      typeof entry.defaultRoomId === 'string' && entry.defaultRoomId.trim().length > 0
-        ? entry.defaultRoomId.trim()
-        : (defaults?.defaultRoomId ?? DEFAULT_CENTRAL_ROOM_ID),
-    iconId:
-      entry.iconId === null
-        ? null
-        : (normalizeTopicIconId(entry.iconId) ?? defaults?.iconId ?? null),
+    defaultRoomId: readNonEmptyString(
+      entry.defaultRoomId,
+      defaults?.defaultRoomId ?? DEFAULT_CENTRAL_ROOM_ID,
+    ),
+    iconId: readTopicIconId(entry.iconId, defaults?.iconId ?? null),
     accentColor: normalizeTopicAccentColor(
       entry.accentColor,
       defaults?.accentColor ?? defaultAccentForLane(laneCode),
     ),
-    enabled: typeof entry.enabled === 'boolean' ? entry.enabled : (defaults?.enabled ?? true),
-    availableFrom,
-    availableTo,
-    sortOrder: typeof entry.sortOrder === 'number' ? entry.sortOrder : (defaults?.sortOrder ?? 99),
-    journeyTemplateId:
-      entry.journeyTemplateId === null
-        ? null
-        : typeof entry.journeyTemplateId === 'string' && entry.journeyTemplateId.trim().length > 0
-          ? entry.journeyTemplateId.trim()
-          : (defaults?.journeyTemplateId ?? null),
+    enabled: readBoolean(entry.enabled, defaults?.enabled ?? true),
+    availableFrom: readNullableTimeField(entry.availableFrom, defaults?.availableFrom ?? null),
+    availableTo: readNullableTimeField(entry.availableTo, defaults?.availableTo ?? null),
+    sortOrder: readNumber(entry.sortOrder, defaults?.sortOrder ?? 99),
+    journeyTemplateId: readNullableId(entry.journeyTemplateId, defaults?.journeyTemplateId ?? null),
   };
 }
 
