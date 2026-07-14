@@ -2,6 +2,10 @@
 
 Stand: 2026-07-14
 
+## Erledigt: JourneyTemplateSetting OpenAPI-Kommentare (2026-07-14)
+
+- `topicId` / `active`: Beschreibungen in `openapi/ops.yaml` + `journey-admin-helpers.ts` — kein Legacy/removable mehr; Rolle vs. `journeyTemplateId` dokumentiert
+
 ## Erledigt: Legacy-Cleanup Deploy-Nachzügler (2026-07-14)
 
 - Entfernt: `pf_staff_session` Cookie-Clear beim Login (`clearLegacyStaffSessionCookie`, `LEGACY_STAFF_SESSION_COOKIE`); Negativ-Tests bleiben

@@ -13,8 +13,12 @@ import { randomId } from '$lib/utils/random-id';
  * ## UI fields intentionally hidden (model + API unchanged)
  *
  * **JourneyTemplateSetting**
- * - `topicId` — assignment via `PracticeTopicSetting.journeyTemplateId` on the Topics page
- * - `active` — new templates default to `true`; the topic picker lists active templates only
+ * - `topicId` — optional bindung an ein Anliegen; Zuweisung läuft primär über
+ *   `PracticeTopicSetting.journeyTemplateId` am Anliegen. Wenn gesetzt, darf nur dieses
+ *   Topic die Vorlage nutzen (Save-Validierung). UI-Feld folgt; Default `null`.
+ * - `active` — Vorlage im Katalog verfügbar. Inaktive fehlen im Topic-Journey-Picker
+ *   und werden beim Catalog-Sync nicht geroutet. Vor Deaktivieren Zuordnung am Anliegen
+ *   lösen (Save-Validierung). UI-Toggle folgt; Default `true`.
  *
  * **JourneyStepSetting**
  * - `queueId` — defaults to `PF_GENERAL_QUEUE_ID` (single waiting room).

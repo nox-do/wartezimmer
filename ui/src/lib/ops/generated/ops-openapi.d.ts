@@ -1815,9 +1815,9 @@ export interface components {
     JourneyTemplateSetting: {
       id: string;
       name: string;
-      /** @description Optional legacy binding hint (which topic this template is "for"). Not the activation switch — topics opt in via journeyTemplateId. UI currently hidden; may be removable if topic assignment alone is enough. */
+      /** @description Optional intended topic for this template. Topics assign a template via journeyTemplateId; when topicId is set here, only that topic may reference this template (validated on save). Not the on/off switch. Hidden in the MFA journey editor for now; new templates default to null. */
       topicId?: string | null;
-      /** @description Soft enable for the template catalog. Inactive templates are omitted from topic pickers and ignored at sync even if a topic still references them. UI currently hidden; may be redundant with topic.journeyTemplateId selection. */
+      /** @description Catalog availability for this template. Inactive templates are omitted from topic journey pickers and not applied on catalog sync (topic uses simple routing). Distinct from topic.journeyTemplateId. Save is rejected while a topic still references an inactive template. Hidden in the MFA journey editor for now; new templates default to true. */
       active: boolean;
       steps: components['schemas']['JourneyStepSetting'][];
     };
