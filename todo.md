@@ -21,16 +21,17 @@ Stand: 2026-07-14
 
 ## Code-Diät: Deprecated-Kandidaten (Audit 2026-07-13)
 
-| Kandidat | Status | Evidenz |
-|----------|--------|---------|
-| Domain Single-Panel (`RoomPanelSettings`, `DEFAULT_ROOM_PANEL_SETTINGS`, `normalizeRoomPanelSettings`, `applyRoomPanelPlacement`) | **entfernt** | Domain-Cluster + Tests bereinigt; `db-types.ts` Alias entfernt. |
-| `EnvBackupInfo` / `EnvBackupResult` | **entfernt** | Re-Exports aus `setup-api`/`index`/`host-status` entfernt. `SaveEnvBackupResult` bleibt (Rename später). |
-| `app/src/http/domain-error.ts` Shim | **entfernt** | Imports → `shared/errors/domain-error.js`; Datei gelöscht. |
-| `setup/src/urls.ts` `buildDeviceUrls` | **entfernt** | Tests auf `buildDeviceUrlsFromBaseUrl` umgestellt. |
-| UI `createMfaAssistCheckin` | **entfernt** | Server `POST /mfa-assist` bleibt. |
+| Kandidat                                                                                                                          | Status       | Evidenz                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------- |
+| Domain Single-Panel (`RoomPanelSettings`, `DEFAULT_ROOM_PANEL_SETTINGS`, `normalizeRoomPanelSettings`, `applyRoomPanelPlacement`) | **entfernt** | Domain-Cluster + Tests bereinigt; `db-types.ts` Alias entfernt.                                          |
+| `EnvBackupInfo` / `EnvBackupResult`                                                                                               | **entfernt** | Re-Exports aus `setup-api`/`index`/`host-status` entfernt. `SaveEnvBackupResult` bleibt (Rename später). |
+| `app/src/http/domain-error.ts` Shim                                                                                               | **entfernt** | Imports → `shared/errors/domain-error.js`; Datei gelöscht.                                               |
+| `setup/src/urls.ts` `buildDeviceUrls`                                                                                             | **entfernt** | Tests auf `buildDeviceUrlsFromBaseUrl` umgestellt.                                                       |
+| UI `createMfaAssistCheckin`                                                                                                       | **entfernt** | Server `POST /mfa-assist` bleibt.                                                                        |
 
 - **Auth-Routen Überblick:** Staff/Device unter `/api/v1/auth/*` in `app/src/routes/auth-routes.ts` (OpenAPI `openapi/auth.yaml`); Guard via `registerClientAuth` + `route-access-rules.ts`; Cookie-Sessions (kein JWT/OAuth)
-## Erledigt: Auth Session-Slots (Phase 1+2, 2026-07-14)
+
+## Erledigt: Auth Session-Slots + MFA-Recovery (Phase 1–3, 2026-07-14)
 
 - Cookie-Split: `pf_mfa_session` / `pf_ops_session` (Breaking — `pf_staff_session` wird nicht gelesen, nur gecleart)
 - Scoped idempotenter Logout via `X-Client-Role` (Panel produktiv; Pattern generisch für alle Slots)
@@ -39,8 +40,12 @@ Stand: 2026-07-14
 - OpenAPI: mfa/ops Session-Schemes; Logout Header + 400; `StaffLoginRequest.role` required
 - Smoke: `applyAuthHeaders` setzt `x-client-role` für session/device
 - Manuell: MFA-Tab + Room-Panel Logout → MFA bleibt; nach Deploy einmal neu anmelden
+- Manuell (2026-07-14): MFA + Ops parallel im gleichen Browser — verifiziert
 - Review-Nachzug (2026-07-14): documents.yaml → mfaSessionCookie; identity/checkin/queue/ops OpenAPI (ACL-korrekte Security + X-Client-Role in common.yaml); Guard AUTH_ENABLED=false vor Header-Check; shouldLoadAuthSession für MFA↔Ops-Tabwechsel; openapi-contract-lib x-client-role; Regressionstests (Koexistenz, Panel-Logout, Legacy-Cookie, 400 Header)
 - Fix: /auth/me Endlosschleife — shouldLoadAuthSession nicht bei anonymous; Cross-Slot-401 behält andere Session
+- Phase 3 (2026-07-14): Hard-Reload entfernt — `handleMfaBackendRecovered` schließt transiente Zustände und remountet nur die aktive MFA-Route; Queue-Revision wird beim Host-Mount zurückgesetzt; Unit-Test `mfa-backend-recovery.test.ts`
+- Optional offen: messungsgetriebenes Multi-Tab-SSE-Connection-Budget; Entscheidungsreihenfolge
+  und Sicherheitsregeln siehe [`docs/plan-auth-session-slots.md`](docs/plan-auth-session-slots.md#5-optionale-nächste-phase--multi-tab-connection-budget)
 
 - **Fix:** Raum-Expander — `$state.snapshot()`; Basics-Layout kompakter; CSS konsolidiert; Raum-Panel-Leerlauf nutzt konfigurierten Ankunfts-Hinweis statt hardcoded `noTickets`
 - Lint/Verify: **grün** (`npm run verify`) — ESLint-Fixes, Test-Fixtures (`minimalHostStatus`, `freshInstallHostStatus`, `testSetupContext`), Auth-Regeln für Snapshot-Routen; 10 Manager-Tests nach Fixture-Konsolidierung korrigiert

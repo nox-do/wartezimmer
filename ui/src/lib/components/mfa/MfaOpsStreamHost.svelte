@@ -3,9 +3,17 @@
   import { onMount } from 'svelte';
   import EmergencyAlert from '$lib/components/mfa/EmergencyAlert.svelte';
   import TerminalAssistAlert from '$lib/components/mfa/TerminalAssistAlert.svelte';
+  import {
+    handleMfaBackendRecovered,
+    mfaBackendRecoveryEpoch,
+  } from '$lib/mfa/mfa-backend-recovery.svelte';
   import { connectOpsStream } from '$lib/mfa/ops-stream';
   import { clearMfaEmergency, mfaEmergency, mountMfaEmergency } from '$lib/mfa/mfa-emergency.svelte';
-  import { mfaQueueDisplay, mountMfaQueueDisplay } from '$lib/mfa/mfa-queue-display.svelte';
+  import {
+    mfaQueueDisplay,
+    mountMfaQueueDisplay,
+    resetMfaQueueDisplay,
+  } from '$lib/mfa/mfa-queue-display.svelte';
 
   interface Props {
     children?: Snippet;
@@ -14,10 +22,11 @@
   let { children }: Props = $props();
 
   onMount(() => {
+    resetMfaQueueDisplay();
     const disconnectOpsStream = connectOpsStream();
     const stopEmergency = mountMfaEmergency();
     const stopQueueDisplay = mountMfaQueueDisplay({
-      onBackendRecovered: () => window.location.reload(),
+      onBackendRecovered: handleMfaBackendRecovered,
     });
 
     return () => {
@@ -44,4 +53,6 @@
   </div>
 {/if}
 
-{@render children?.()}
+{#key $mfaBackendRecoveryEpoch}
+  {@render children?.()}
+{/key}
