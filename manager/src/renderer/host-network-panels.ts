@@ -1,4 +1,5 @@
 import type { HostStatus, NetworkSnapshot } from '../shared/host-status.js';
+import { parseGatewayManagementIpFromBridgeUrl } from '@praxis-flow/server-shared';
 import {
   draftCanonicalBaseUrl,
   effectiveCanonicalBaseUrl,
@@ -16,7 +17,7 @@ export type GatewayFieldState = {
   gatewayInterface: string;
   gatewayIp: string;
   portalAppIp: string;
-  authBridgeUrl: string;
+  gatewayManagementIp: string;
 };
 
 export type { ReachabilityFieldState, ReachabilityMode } from './reachability.js';
@@ -65,10 +66,10 @@ export function hostNetworkChanged(
   if (fields.gatewayIp.trim() !== (gateway?.gatewayIp ?? '192.168.88.1')) {
     return true;
   }
-  if (fields.authBridgeUrl.trim() !== (gateway?.authBridgeUrl ?? '').trim()) {
-    return true;
-  }
+  const managementIp = fields.gatewayManagementIp.trim();
+  const configuredManagementIp =
+    parseGatewayManagementIpFromBridgeUrl(gateway?.authBridgeUrl ?? '') ?? '';
   const portalIp = fields.portalAppIp.trim() || lanIp;
   const configuredPortal = gateway?.portalAppIp?.trim() ?? configuredLan;
-  return portalIp !== configuredPortal;
+  return portalIp !== configuredPortal || managementIp !== configuredManagementIp;
 }

@@ -40,7 +40,8 @@ test('auditNetworkBindings skips gateway NIC checks when compose unsupported', a
   const env = new Map([
     ['GATEWAY_INTERFACE', 'en0'],
     ['GATEWAY_IP', '192.168.88.1'],
-    ['GATEWAY_AUTH_BRIDGE_URL', 'http://host.docker.internal:9100'],
+    ['GATEWAY_AUTH_BRIDGE_URL', 'http://192.168.10.25:9100'],
+    ['GATEWAY_AUTH_BRIDGE_BIND', '192.168.10.25'],
   ]);
   const checks = await auditNetworkBindings({
     env,

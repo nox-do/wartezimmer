@@ -379,7 +379,6 @@ export type NetworkSnapshot = {
   }>;
   /** Host machine hostname (comfort path for LAN reachability). */
   machineHostname: string;
-  defaultGatewayBridgeUrl: string;
   gatewayComposeSupported: boolean;
 };
 

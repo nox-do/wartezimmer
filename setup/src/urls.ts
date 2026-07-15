@@ -1,4 +1,5 @@
 import type { DeviceUrls, GatewayPlan } from '@praxis-flow/server-shared';
+import { deriveGatewayBridgeBindFromUrl } from '@praxis-flow/server-shared';
 
 export type { DeviceUrls, GatewayPlan } from '@praxis-flow/server-shared';
 
@@ -162,10 +163,14 @@ export function resolveCanonicalBaseUrlForLanPlan(input: {
 export function buildGatewayEnv(
   gateway: GatewayPlan,
   deviceUrls: DeviceUrls,
-  bridgeUrl: string,
 ): Record<string, string> {
   if (!gateway.enabled) {
     return {};
+  }
+
+  const bridgeUrl = gateway.authBridgeUrl.trim();
+  if (!bridgeUrl) {
+    throw new Error('GATEWAY_AUTH_BRIDGE_URL required when gateway is enabled');
   }
 
   const portalBase =
@@ -182,8 +187,8 @@ export function buildGatewayEnv(
     APP_API_URL: portalBase,
     APP_PORTAL_MENU_URL: `${portalBase}/portal/menu`,
     PORTAL_FQDN: 'portal.praxis.local',
-    GATEWAY_AUTH_BRIDGE_URL: gateway.authBridgeUrl.trim() || bridgeUrl,
+    GATEWAY_AUTH_BRIDGE_URL: bridgeUrl,
     GATEWAY_AUTH_BRIDGE_PORT: '9100',
-    GATEWAY_AUTH_BRIDGE_BIND: '0.0.0.0',
+    GATEWAY_AUTH_BRIDGE_BIND: deriveGatewayBridgeBindFromUrl(bridgeUrl),
   };
 }

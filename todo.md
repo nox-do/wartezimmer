@@ -2,6 +2,14 @@
 
 Stand: 2026-07-15
 
+## Erledigt: Gateway Auth-Bridge an Management-IP (2026-07-15)
+
+- App + Gateway getrennte Hosts: keine `172.17.0.1` / `host.docker.internal`-Defaults mehr
+- Manager Schritt 4: Feld **Praxis-/Management-IP des Gateway-PCs** → `GATEWAY_AUTH_BRIDGE_URL` + `GATEWAY_AUTH_BRIDGE_BIND`
+- Validierung: Pflicht bei Gateway an; Block wenn Gast-IP / Gast-NIC; Warnung bei `0.0.0.0`
+- Shared: `packages/server-shared/src/gateway-bridge.ts`
+- Keine Erreichbarkeitsprüfung zum Gateway-PC (kommt meist später) — Hinweis im Wizard/Status, Anpassung unter Netzwerk
+
 ## Erledigt: VisitPatch-Semantik vereinheitlicht (2026-07-15)
 
 - `VisitPatch` in flow-core: fehlender Key → preserve, `null` → DB clear, kein `undefined`-Löschsignal

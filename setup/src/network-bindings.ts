@@ -1,5 +1,8 @@
 import net from 'node:net';
 import type { ComposeStatus, NetworkBindingCheck } from '@praxis-flow/server-shared';
+import {
+  assessGatewayBridgeBind,
+} from '@praxis-flow/server-shared';
 import { runProcessCommand } from './command-runner.js';
 import { canRunGatewayCompose } from './docker.js';
 import { listNetworkInterfaces, type NetworkInterfaceInfo } from './network.js';
@@ -260,6 +263,13 @@ export async function auditNetworkBindings(input: {
       message: 'Gateway-Dienst startet nur auf Linux',
       detail: `Werte gespeichert (${ifaceName}, ${gatewayIp}). Am Linux-Gateway mit zweiter Netzwerkkarte einrichten — nicht die WLAN-Adresse dieses Rechners.`,
     });
+    checks.push(...buildGatewayBridgeConfigChecks({
+      bridgeBind,
+      bridgeUrl: input.env.get('GATEWAY_AUTH_BRIDGE_URL')?.trim() ?? '',
+      gatewayInterface: ifaceName,
+      gatewayIp,
+      interfaces,
+    }));
     return checks;
   }
 
@@ -308,6 +318,51 @@ export async function auditNetworkBindings(input: {
       detail: 'Auf dem Linux-Gateway mit zweiter Netzwerkkarte starten.',
     });
   }
+
+  const bridgeUrl = input.env.get('GATEWAY_AUTH_BRIDGE_URL')?.trim() ?? '';
+  checks.push(
+    ...buildGatewayBridgeConfigChecks({
+      bridgeBind,
+      bridgeUrl,
+      gatewayInterface: ifaceName,
+      gatewayIp,
+      interfaces,
+    }),
+  );
+
+  return checks;
+}
+
+function buildGatewayBridgeConfigChecks(input: {
+  bridgeBind: string;
+  bridgeUrl: string;
+  gatewayInterface: string;
+  gatewayIp: string;
+  interfaces: NetworkInterfaceInfo[];
+}): NetworkBindingCheck[] {
+  const checks: NetworkBindingCheck[] = [];
+  if (!input.bridgeUrl) {
+    return checks;
+  }
+
+  const bindAssessment = assessGatewayBridgeBind(input.bridgeBind, {
+    gatewayInterface: input.gatewayInterface,
+    gatewayIp: input.gatewayIp,
+    interfaces: input.interfaces,
+  });
+  checks.push({
+    id: 'gateway.bridge-bind',
+    ok: bindAssessment.level !== 'block',
+    message: bindAssessment.message,
+    detail: bindAssessment.level === 'warn' || bindAssessment.level === 'block' ? bindAssessment.detail : undefined,
+  });
+
+  checks.push({
+    id: 'gateway.bridge-reachability',
+    ok: true,
+    message: 'Erreichbarkeit des Gateway-PCs wird nicht geprüft',
+    detail: 'Gateway kommt meist später — IP später unter Netzwerk anpassen.',
+  });
 
   return checks;
 }

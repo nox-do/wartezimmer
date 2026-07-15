@@ -25,7 +25,7 @@
 
   const gatewayIpId = $derived(`${idPrefix}-gateway-ip`);
   const portalIpId = $derived(`${idPrefix}-portal-ip`);
-  const authBridgeUrlId = $derived(`${idPrefix}-auth-bridge-url`);
+  const gatewayManagementIpId = $derived(`${idPrefix}-gateway-management-ip`);
 
   const composeSupported = $derived(network?.gatewayComposeSupported ?? true);
   const interfaceNames = $derived(new Set((network?.interfaces ?? []).map((iface) => iface.name)));
@@ -151,20 +151,27 @@
     oninput={(event) => onChange({ portalAppIp: event.currentTarget.value })}
   />
 
-  <label class="wizard-field-label" for={authBridgeUrlId}>Adresse für Internetfreigabe</label>
+  <label class="wizard-field-label" for={gatewayManagementIpId}
+    >Praxis-/Management-IP des Gateway-PCs</label
+  >
   <input
-    id={authBridgeUrlId}
+    id={gatewayManagementIpId}
     type="text"
     class="wizard-input"
-    placeholder={network?.defaultGatewayBridgeUrl ?? 'http://<gateway-host>:9100'}
-    value={state.authBridgeUrl}
+    placeholder="192.168.10.25"
+    value={state.gatewayManagementIp}
     {disabled}
-    oninput={(event) => onChange({ authBridgeUrl: event.currentTarget.value })}
+    oninput={(event) => onChange({ gatewayManagementIp: event.currentTarget.value })}
   />
 
   <p class="hint">
-    Nach gültiger Wartenummer löst Praxis Flow darüber die Internetfreigabe aus. Bei separatem
-    Linux-Gateway: dessen von hier erreichbare Adresse eintragen.
+    Die Internetfreigabe (Port 9100) lauscht nur auf dieser Adresse — nicht auf der Gast-Netzwerkkarte.
+    Der App-Container erreicht den Gateway-PC später über das Praxis-LAN.
+  </p>
+
+  <p class="hint">
+    Die Erreichbarkeit des Gateway-PCs wird hier <strong>nicht</strong> geprüft — das Gerät kommt meist
+    erst später. Die IP können Sie jederzeit unter <strong>Netzwerk</strong> anpassen.
   </p>
 
   <p class="hint">

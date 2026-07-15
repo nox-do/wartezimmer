@@ -13,7 +13,7 @@ x-docker-logging: &docker-logging
 services:
   app:
     environment:
-      GATEWAY_AUTH_BRIDGE_URL: ${GATEWAY_AUTH_BRIDGE_URL:-http://172.17.0.1:9100}
+      GATEWAY_AUTH_BRIDGE_URL: ${GATEWAY_AUTH_BRIDGE_URL:?GATEWAY_AUTH_BRIDGE_URL is required}
 
   gateway:
     logging: *docker-logging
@@ -44,7 +44,7 @@ services:
       OPENNDS_FAS_KEY: ${OPENNDS_FAS_KEY:-change-me-opennds-fas-key}
       AUTH_KEY_CAPTIVE: ${AUTH_KEY_CAPTIVE:?AUTH_KEY_CAPTIVE is required}
       GATEWAY_AUTH_BRIDGE_PORT: ${GATEWAY_AUTH_BRIDGE_PORT:-9100}
-      GATEWAY_AUTH_BRIDGE_BIND: ${GATEWAY_AUTH_BRIDGE_BIND:-0.0.0.0}
+      GATEWAY_AUTH_BRIDGE_BIND: ${GATEWAY_AUTH_BRIDGE_BIND:?GATEWAY_AUTH_BRIDGE_BIND is required}
     depends_on:
       app:
         condition: service_healthy

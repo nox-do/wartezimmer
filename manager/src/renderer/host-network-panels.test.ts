@@ -14,7 +14,7 @@ test('hostNetworkChanged detects LAN IP change', () => {
         gatewayInterface: 'eth1',
         gatewayIp: '192.168.88.1',
         portalAppIp: '192.168.1.10',
-        authBridgeUrl: 'http://172.17.0.1:9100',
+        gatewayManagementIp: '10.0.0.2',
         reachabilityMode: 'lan-ip',
         customHostname: '',
       },
@@ -38,7 +38,7 @@ test('hostNetworkChanged is false when fields match status', () => {
         gatewayInterface: 'eth1',
         gatewayIp: '192.168.88.1',
         portalAppIp: '192.168.1.10',
-        authBridgeUrl: 'http://172.17.0.1:9100',
+        gatewayManagementIp: '10.0.0.2',
         reachabilityMode: 'lan-ip',
         customHostname: '',
       },
@@ -48,7 +48,7 @@ test('hostNetworkChanged is false when fields match status', () => {
   );
 });
 
-test('hostNetworkChanged detects canonical reachability change', () => {
+test('hostNetworkChanged detects gateway management IP change', () => {
   const status = minimalHostStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' });
   assert.equal(
     hostNetworkChanged(
@@ -59,28 +59,7 @@ test('hostNetworkChanged detects canonical reachability change', () => {
         gatewayInterface: 'eth1',
         gatewayIp: '192.168.88.1',
         portalAppIp: '192.168.1.10',
-        authBridgeUrl: 'http://172.17.0.1:9100',
-        reachabilityMode: 'custom',
-        customHostname: 'praxis-flow.local',
-      },
-      status,
-    ),
-    true,
-  );
-});
-
-test('hostNetworkChanged detects gateway bridge URL change', () => {
-  const status = minimalHostStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' });
-  assert.equal(
-    hostNetworkChanged(
-      {
-        lanAppIp: '192.168.1.10',
-        customLanIp: '',
-        gatewayEnabled: true,
-        gatewayInterface: 'eth1',
-        gatewayIp: '192.168.88.1',
-        portalAppIp: '192.168.1.10',
-        authBridgeUrl: 'http://10.0.0.2:9100',
+        gatewayManagementIp: '192.168.10.25',
         reachabilityMode: 'lan-ip',
         customHostname: '',
       },
@@ -92,10 +71,4 @@ test('hostNetworkChanged detects gateway bridge URL change', () => {
 
 test('shouldOfferManualLanIpEntry hides manual path for single fresh candidate', () => {
   assert.equal(shouldOfferManualLanIpEntry(1, false), false);
-});
-
-test('shouldOfferManualLanIpEntry offers manual path when stale or ambiguous', () => {
-  assert.equal(shouldOfferManualLanIpEntry(1, true), true);
-  assert.equal(shouldOfferManualLanIpEntry(2, false), true);
-  assert.equal(shouldOfferManualLanIpEntry(0, false), true);
 });

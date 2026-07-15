@@ -33,7 +33,6 @@ import {
 import {
   listLanIpv4Candidates,
   listNetworkInterfaces,
-  defaultGatewayBridgeUrl,
   machineHostname,
 } from './network.js';
 import { runConnectionProbes } from './probes.js';
@@ -546,7 +545,7 @@ export function buildSetupPlan(
     ...input.gateway,
     portalAppIp: input.portalAppIp?.trim() || input.lanAppIp,
   };
-  const gatewayEnv = buildGatewayEnv(gateway, deviceUrls, defaultGatewayBridgeUrl());
+  const gatewayEnv = buildGatewayEnv(gateway, deviceUrls);
 
   return {
     deviceUrls,
@@ -599,7 +598,7 @@ export async function applySetupPlan(
     ...input.gateway,
     portalAppIp: input.portalAppIp?.trim() || input.lanAppIp,
   };
-  const gatewayEnv = buildGatewayEnv(gateway, deviceUrls, defaultGatewayBridgeUrl());
+  const gatewayEnv = buildGatewayEnv(gateway, deviceUrls);
   const { envPath, backupPath, keysWritten } = writeEnvFromExample(
     projectRoot,
     {
@@ -633,18 +632,23 @@ export async function applySetupPlan(
   const envAfterWrite = readEnvMap(envPath);
 
   let compose: Awaited<ReturnType<typeof composeUp>> | null = null;
+  let composeStatus: ComposeStatus | null = null;
   if (input.runCompose) {
     const delivery = Boolean(
       resolveDeliveryImageConfig({ projectRoot, envMap: envAfterWrite })?.appImage ||
       input.delivery,
     );
-    compose = await composeUp({
+    const runOptions = {
       projectRoot,
       delivery,
+      composeProjectName: ctx.composeProjectName,
+    };
+    compose = await composeUp({
+      ...runOptions,
       withGateway: input.gateway.enabled,
       build: resolveComposeBuild({ ...input, delivery }),
-      composeProjectName: ctx.composeProjectName,
     });
+    composeStatus = await composePs(runOptions);
   }
 
   const probes =
@@ -674,7 +678,6 @@ export function getNetworkSnapshot() {
     interfaces: listNetworkInterfaces(),
     lanCandidates: listLanIpv4Candidates(),
     machineHostname: machineHostname(),
-    defaultGatewayBridgeUrl: defaultGatewayBridgeUrl(),
     gatewayComposeSupported: canRunGatewayCompose(),
   };
 }
@@ -759,7 +762,7 @@ export async function saveHostNetwork(
   };
 
   if (gateway.enabled) {
-    Object.assign(updates, buildGatewayEnv(gateway, deviceUrls, defaultGatewayBridgeUrl()));
+    Object.assign(updates, buildGatewayEnv(gateway, deviceUrls));
     const { secrets } = resolveSecretsForEnv(existing, { preserve: true });
     if (!existing.get('OPENNDS_FAS_KEY')?.trim()) {
       updates.OPENNDS_FAS_KEY = secrets.OPENNDS_FAS_KEY;

@@ -70,13 +70,6 @@ export function listLanIpv4Candidates(): {
   });
 }
 
-export function defaultGatewayBridgeUrl(): string {
-  if (process.platform === 'darwin' || process.platform === 'win32') {
-    return 'http://host.docker.internal:9100';
-  }
-  return 'http://172.17.0.1:9100';
-}
-
 /** Host machine hostname for LAN reachability comfort path. */
 export function machineHostname(): string {
   return os.hostname().trim();

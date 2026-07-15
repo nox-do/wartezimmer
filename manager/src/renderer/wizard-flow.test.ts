@@ -101,25 +101,25 @@ test('planWizardAdvance loads plan when leaving step 5', () => {
   });
 });
 
-test('planWizardAdvance validates gateway bridge URL on step 4', () => {
+test('planWizardAdvance validates gateway management IP on step 4', () => {
   const state = createWizardFlowState(minimalHostStatus(), 4);
   state.gatewayEnabled = true;
   state.gatewayInterface = 'eth1';
-  state.authBridgeUrl = '10.0.0.2:9100';
+  state.gatewayManagementIp = '';
   const action = planWizardAdvance(4, state);
   assert.equal(action.type, 'validate-error');
-  assert.match(action.type === 'validate-error' ? action.message : '', /Gateway-Bridge-URL/);
+  assert.match(action.type === 'validate-error' ? action.message : '', /Gateway-PC/);
 });
 
-test('planWizardAdvance prefills gateway bridge URL when entering step 4', () => {
+test('planWizardAdvance prefills portal app IP when entering step 4', () => {
   const state = createWizardFlowState(minimalHostStatus(), 3);
   state.lanAppIp = '192.168.1.10';
   state.practiceDisplayName = 'Praxis';
   state.gatewayEnabled = true;
+  state.portalAppIp = '';
   state.network = {
     interfaces: [],
     lanCandidates: [],
-    defaultGatewayBridgeUrl: 'http://host.docker.internal:9100',
     machineHostname: 'praxis-mac',
     gatewayComposeSupported: false,
   };
@@ -128,29 +128,8 @@ test('planWizardAdvance prefills gateway bridge URL when entering step 4', () =>
     type: 'goto',
     step: 4,
     patch: {
-      authBridgeUrl: 'http://host.docker.internal:9100',
+      portalAppIp: '192.168.1.10',
     },
-  });
-});
-
-test('planWizardAdvance keeps explicit gateway bridge URL when entering step 4', () => {
-  const state = createWizardFlowState(minimalHostStatus(), 3);
-  state.lanAppIp = '192.168.1.10';
-  state.practiceDisplayName = 'Praxis';
-  state.gatewayEnabled = true;
-  state.authBridgeUrl = 'http://10.0.0.2:9100';
-  state.network = {
-    interfaces: [],
-    lanCandidates: [],
-    defaultGatewayBridgeUrl: 'http://host.docker.internal:9100',
-    machineHostname: 'praxis-mac',
-    gatewayComposeSupported: false,
-  };
-
-  assert.deepEqual(planWizardAdvance(3, state), {
-    type: 'goto',
-    step: 4,
-    patch: {},
   });
 });
 

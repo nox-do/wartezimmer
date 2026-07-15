@@ -10,13 +10,26 @@ import {
 } from './setup-api-normalize.js';
 
 test('normalizeGatewayPlan applies defaults when gateway enabled', () => {
-  assert.deepEqual(normalizeGatewayPlan({ enabled: true }, '192.168.1.10'), {
-    enabled: true,
-    gatewayInterface: 'eth1',
-    gatewayIp: '192.168.88.1',
-    portalAppIp: '192.168.1.10',
-    authBridgeUrl: '',
-  });
+  assert.throws(
+    () => normalizeGatewayPlan({ enabled: true }, '192.168.1.10'),
+    SetupApiValidationError,
+  );
+});
+
+test('normalizeGatewayPlan accepts explicit bridge URL when gateway enabled', () => {
+  assert.deepEqual(
+    normalizeGatewayPlan(
+      { enabled: true, authBridgeUrl: 'http://192.168.10.25:9100' },
+      '192.168.1.10',
+    ),
+    {
+      enabled: true,
+      gatewayInterface: 'eth1',
+      gatewayIp: '192.168.88.1',
+      portalAppIp: '192.168.1.10',
+      authBridgeUrl: 'http://192.168.10.25:9100',
+    },
+  );
 });
 
 test('normalizeHostNetworkInput rejects missing gateway payload', () => {
@@ -41,7 +54,11 @@ test('normalizeSetupPlanInput fills practice default and trims LAN', () => {
     normalizeSetupPlanInput({
       lanAppIp: ' 192.168.1.20 ',
       practiceDisplayName: '  Praxis Süd ',
-      gateway: { enabled: true, gatewayInterface: 'eth2' },
+      gateway: {
+        enabled: true,
+        gatewayInterface: 'eth2',
+        authBridgeUrl: 'http://192.168.10.25:9100',
+      },
     }),
     {
       lanAppIp: '192.168.1.20',
@@ -53,7 +70,7 @@ test('normalizeSetupPlanInput fills practice default and trims LAN', () => {
         gatewayInterface: 'eth2',
         gatewayIp: '192.168.88.1',
         portalAppIp: '192.168.1.20',
-        authBridgeUrl: '',
+        authBridgeUrl: 'http://192.168.10.25:9100',
       },
     },
   );
@@ -83,7 +100,7 @@ test('normalizeHostNetworkInput normalizes gateway for maintenance route', () =>
     normalizeHostNetworkInput({
       lanAppIp: '10.0.0.5',
       restartCompose: true,
-      gateway: { enabled: true, portalAppIp: '10.0.0.9' },
+      gateway: { enabled: true, portalAppIp: '10.0.0.9', authBridgeUrl: 'http://192.168.10.25:9100' },
     }),
     {
       lanAppIp: '10.0.0.5',
@@ -94,7 +111,7 @@ test('normalizeHostNetworkInput normalizes gateway for maintenance route', () =>
         gatewayInterface: 'eth1',
         gatewayIp: '192.168.88.1',
         portalAppIp: '10.0.0.9',
-        authBridgeUrl: '',
+        authBridgeUrl: 'http://192.168.10.25:9100',
       },
     },
   );

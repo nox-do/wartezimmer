@@ -95,7 +95,8 @@ PORTAL_FQDN=portal.praxis.local
 OPENNDS_FAS_KEY=…   # langer Zufallsstring, keine Anführungszeichen
 
 # App → Gateway-Bridge (Linux Docker-Bridge-IP)
-GATEWAY_AUTH_BRIDGE_URL=http://172.17.0.1:9100
+GATEWAY_AUTH_BRIDGE_URL=http://192.168.10.25:9100
+GATEWAY_AUTH_BRIDGE_BIND=192.168.10.25
 ```
 
 `APP_PORTAL_URL` muss vom Handy **vor** voller Internet-Freischaltung erreichbar sein (openNDS Walled Garden).
@@ -160,7 +161,8 @@ npm run docker:up
 | `OPENNDS_FAS_KEY`          | gateway       | FAS-Shared-Secret (openNDS)                                |
 | `GATEWAY_AUTH_BRIDGE_PORT` | gateway       | Bridge-Port (Default `9100`)                               |
 | `GATEWAY_AUTH_BRIDGE_BIND` | gateway       | Bind-Adresse (Default `0.0.0.0`)                           |
-| `GATEWAY_AUTH_BRIDGE_URL`  | app           | App → Bridge (`http://172.17.0.1:9100` o. ä.)              |
+| `GATEWAY_AUTH_BRIDGE_URL`  | app           | App → Bridge (`http://<gateway-mgmt-ip>:9100`)             |
+| `GATEWAY_AUTH_BRIDGE_BIND` | gateway       | Praxis-/Management-IP des Gateway-PCs (nicht Gast-NIC)   |
 | `AUTH_KEY_CAPTIVE`         | app + gateway | Bridge-Auth; **nicht** im Browser                          |
 
 Vollständige Vorlage: `.env.example`.

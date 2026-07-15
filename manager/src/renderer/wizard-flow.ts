@@ -16,7 +16,7 @@ import {
   createInitialWizardFields,
   gatewayDraftDefaults,
   resolvedLanIp,
-  validateGatewayAuthBridgeUrl,
+  validateGatewayManagementIpForUi,
 } from './wizard-state.js';
 
 export const WIZARD_STEPS = [1, 2, 3, 4, 5, 6, 7] as const;
@@ -149,9 +149,13 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
         message: 'Bitte ein Netzwerk-Interface für das Gast-LAN wählen.',
       };
     }
-    const bridgeUrlError = validateGatewayAuthBridgeUrl(state.authBridgeUrl);
-    if (state.gatewayEnabled && bridgeUrlError) {
-      return { type: 'validate-error', message: bridgeUrlError };
+    const managementIpError = validateGatewayManagementIpForUi(
+      state.gatewayManagementIp,
+      state,
+      state.network,
+    );
+    if (state.gatewayEnabled && managementIpError) {
+      return { type: 'validate-error', message: managementIpError };
     }
     return { type: 'goto', step: 5 };
   }

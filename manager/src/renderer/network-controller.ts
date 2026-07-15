@@ -32,7 +32,7 @@ import {
   createHostNetworkFields,
   gatewayDraftDefaults,
   resolvedLanIp,
-  validateGatewayAuthBridgeUrl,
+  validateGatewayManagementIpForUi,
 } from './wizard-state.js';
 
 export type NetworkCallbacks = {
@@ -85,7 +85,7 @@ function createInitialState(): NetworkState {
     gatewayInterface: 'eth1',
     gatewayIp: '192.168.88.1',
     portalAppIp: '',
-    authBridgeUrl: '',
+    gatewayManagementIp: '',
     reachabilityMode: 'lan-ip',
     customHostname: '',
     busy: false,
@@ -138,9 +138,13 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       setError(NETWORK_GATEWAY_INTERFACE_ERROR);
       return;
     }
-    const bridgeUrlError = validateGatewayAuthBridgeUrl(state.authBridgeUrl);
-    if (state.gatewayEnabled && bridgeUrlError) {
-      setError(bridgeUrlError);
+    const managementIpError = validateGatewayManagementIpForUi(
+      state.gatewayManagementIp,
+      state,
+      state.network,
+    );
+    if (state.gatewayEnabled && managementIpError) {
+      setError(managementIpError);
       return;
     }
 

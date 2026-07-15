@@ -11,6 +11,8 @@ import {
   SETUP_DEFAULT_GATEWAY_INTERFACE,
   SETUP_DEFAULT_GATEWAY_IP,
   SETUP_DEFAULT_PRACTICE_NAME,
+  parseGatewayManagementIpFromBridgeUrl,
+  validateGatewayManagementIp,
 } from '@praxis-flow/server-shared';
 import { parseHttpBaseUrl } from './urls.js';
 
@@ -69,12 +71,40 @@ export function normalizeGatewayPlan(
   input: GatewayPlanInput | undefined,
   lanAppIp: string,
 ): GatewayPlan {
+  const enabled = Boolean(input?.enabled);
+  const gatewayInterface = input?.gatewayInterface?.trim() || SETUP_DEFAULT_GATEWAY_INTERFACE;
+  const gatewayIp = input?.gatewayIp?.trim() || SETUP_DEFAULT_GATEWAY_IP;
+  const portalAppIp = input?.portalAppIp?.trim() || lanAppIp;
+  const authBridgeUrl = enabled ? normalizeGatewayAuthBridgeUrl(input?.authBridgeUrl) : '';
+
+  if (enabled && !authBridgeUrl) {
+    throw new SetupApiValidationError(
+      'authBridgeUrl ist erforderlich, wenn das Gast-WLAN vorbereitet wird',
+    );
+  }
+
+  if (enabled) {
+    const managementIp = parseGatewayManagementIpFromBridgeUrl(authBridgeUrl);
+    if (!managementIp) {
+      throw new SetupApiValidationError(
+        'authBridgeUrl muss eine gültige URL mit Host/IP sein (z. B. http://192.168.10.25:9100)',
+      );
+    }
+    const validationError = validateGatewayManagementIp(managementIp, {
+      gatewayInterface,
+      gatewayIp,
+    });
+    if (validationError) {
+      throw new SetupApiValidationError(validationError);
+    }
+  }
+
   return {
-    enabled: Boolean(input?.enabled),
-    gatewayInterface: input?.gatewayInterface?.trim() || SETUP_DEFAULT_GATEWAY_INTERFACE,
-    gatewayIp: input?.gatewayIp?.trim() || SETUP_DEFAULT_GATEWAY_IP,
-    portalAppIp: input?.portalAppIp?.trim() || lanAppIp,
-    authBridgeUrl: input?.enabled ? normalizeGatewayAuthBridgeUrl(input.authBridgeUrl) : '',
+    enabled,
+    gatewayInterface,
+    gatewayIp,
+    portalAppIp,
+    authBridgeUrl,
   };
 }
 

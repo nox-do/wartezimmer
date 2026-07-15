@@ -48,7 +48,8 @@ See `.env.example` (`GATEWAY_*`, `APP_PORTAL_URL`, `OPENNDS_FAS_KEY`).
 | `PORTAL_FQDN`             | `portal.praxis.local`              | Walled-garden hostname                                |
 | `OPENNDS_FAS_KEY`         | long random string                 | Shared with openNDS FAS (no quotes)                   |
 | `AUTH_KEY_CAPTIVE`        | same as app                        | Protects auth bridge endpoint                         |
-| `GATEWAY_AUTH_BRIDGE_URL` | `http://172.17.0.1:9100`           | App container → bridge (set on `app` service)         |
+| `GATEWAY_AUTH_BRIDGE_URL` | `http://192.168.10.25:9100`        | App container → bridge on gateway PC management IP     |
+| `GATEWAY_AUTH_BRIDGE_BIND`| `192.168.10.25`                    | Bridge listens on Praxis-LAN IP only (not guest NIC)  |
 
 `APP_PORTAL_URL` must be reachable from patient phones **before** full internet auth (walled garden on app port). `APP_API_URL` must be reachable from the gateway Mini-PC so the auth bridge can verify tickets against the app.
 

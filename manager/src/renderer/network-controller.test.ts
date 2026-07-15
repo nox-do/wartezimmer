@@ -25,7 +25,6 @@ test('createNetworkController sets busy during show bootstrap', async () => {
     interfaces: [],
     machineHostname: 'praxis-mac',
     gatewayComposeSupported: true,
-    defaultGatewayBridgeUrl: 'http://172.17.0.1:9100',
   });
 
   await networkPromise;
@@ -62,21 +61,20 @@ test('network bootstrap fills gateway portal IP from selected LAN IP', async () 
       },
     }),
   );
-  controller.patchFields({ lanAppIp: '192.168.1.10', portalAppIp: '', authBridgeUrl: '' });
+  controller.patchFields({ lanAppIp: '192.168.1.10', portalAppIp: '', gatewayManagementIp: '' });
 
   resolveNetwork({
     lanCandidates: [{ address: '192.168.1.10', label: 'en0 — 192.168.1.10' }],
     interfaces: [],
     machineHostname: 'praxis-mac',
     gatewayComposeSupported: true,
-    defaultGatewayBridgeUrl: 'http://172.17.0.1:9100',
   });
 
   await networkPromise;
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   assert.equal(controller.getState().portalAppIp, '192.168.1.10');
-  assert.equal(controller.getState().authBridgeUrl, 'http://172.17.0.1:9100');
+  assert.equal(controller.getState().gatewayManagementIp, '');
 });
 
 function mockApi(overrides: Partial<{ fetchSetupNetwork: () => Promise<unknown> }> = {}) {
@@ -87,7 +85,6 @@ function mockApi(overrides: Partial<{ fetchSetupNetwork: () => Promise<unknown> 
         interfaces: [],
         machineHostname: 'praxis-mac',
         gatewayComposeSupported: true,
-        defaultGatewayBridgeUrl: 'http://172.17.0.1:9100',
       }),
     ...overrides,
   } as never;

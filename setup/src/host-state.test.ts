@@ -209,6 +209,7 @@ test('saveHostNetwork updates LAN and gateway keys without touching practice nam
     assert.equal(env.get('GATEWAY_IP'), '192.168.99.1');
     assert.equal(env.get('APP_PORTAL_URL'), 'http://192.168.1.20:8080/portal');
     assert.equal(env.get('GATEWAY_AUTH_BRIDGE_URL'), 'http://10.0.0.2:9100');
+    assert.equal(env.get('GATEWAY_AUTH_BRIDGE_BIND'), '10.0.0.2');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

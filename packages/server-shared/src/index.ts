@@ -94,6 +94,17 @@ export {
   type SandboxScannerStatus,
 } from './sandbox-scanner.js';
 export {
+  DEFAULT_GATEWAY_BRIDGE_PORT,
+  assessGatewayBridgeBind,
+  buildGatewayBridgeUrl,
+  deriveGatewayBridgeBindFromUrl,
+  parseGatewayManagementIpFromBridgeUrl,
+  validateGatewayManagementIp,
+  type GatewayBridgeBindAssessment,
+  type GatewayBridgeInterface,
+  type GatewayBridgeValidationContext,
+} from './gateway-bridge.js';
+export {
   SETUP_DEFAULT_GATEWAY_INTERFACE,
   SETUP_DEFAULT_GATEWAY_IP,
   SETUP_DEFAULT_PRACTICE_NAME,

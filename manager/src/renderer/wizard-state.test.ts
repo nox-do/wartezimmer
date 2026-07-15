@@ -8,7 +8,7 @@ import {
   gatewayEnabledPatch,
   initialLanIpSelection,
   initialPracticeDisplayName,
-  validateGatewayAuthBridgeUrl,
+  validateGatewayManagementIpForUi,
 } from './wizard-state.js';
 
 test('initialPracticeDisplayName uses seed default for fresh install', () => {
@@ -42,34 +42,6 @@ test('initialLanIpSelection picks configured IP when it matches a candidate', ()
   });
 });
 
-test('initialLanIpSelection uses custom field for stale configured IP', () => {
-  const status = minimalHostStatus({
-    network: {
-      configuredLanIp: '192.168.1.50',
-      currentLanCandidates: [{ address: '192.168.1.13', interfaceName: 'en0' }],
-      lanIpStale: true,
-    },
-  });
-  assert.deepEqual(initialLanIpSelection(status), {
-    lanAppIp: '192.168.1.13',
-    customLanIp: '',
-  });
-});
-
-test('initialLanIpSelection prefers live candidate when configured LAN is stale', () => {
-  const status = minimalHostStatus({
-    network: {
-      configuredLanIp: '192.168.1.13',
-      currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
-      lanIpStale: true,
-    },
-  });
-  assert.deepEqual(initialLanIpSelection(status), {
-    lanAppIp: '192.168.1.10',
-    customLanIp: '',
-  });
-});
-
 test('createInitialWizardFields combines LAN, practice and storage defaults', () => {
   const status = minimalHostStatus({
     envExists: true,
@@ -91,7 +63,7 @@ test('createInitialWizardFields combines LAN, practice and storage defaults', ()
     gatewayInterface: 'eth1',
     gatewayIp: '192.168.88.1',
     portalAppIp: '192.168.1.13',
-    authBridgeUrl: '',
+    gatewayManagementIp: '',
     reachabilityMode: 'lan-ip',
     customHostname: '',
     routingMode: null,
@@ -116,27 +88,11 @@ test('createInitialWizardFields prefills gateway from status', () => {
   });
   const fields = createInitialWizardFields(status);
   assert.equal(fields.gatewayEnabled, true);
-  assert.equal(fields.gatewayInterface, 'eth1');
   assert.equal(fields.portalAppIp, '10.0.0.5');
-  assert.equal(fields.authBridgeUrl, 'http://10.0.0.2:9100');
+  assert.equal(fields.gatewayManagementIp, '10.0.0.2');
 });
 
-test('buildGatewayPlanInput returns disabled payload when gateway off', () => {
-  assert.deepEqual(
-    buildGatewayPlanInput({
-      lanAppIp: '192.168.1.10',
-      customLanIp: '',
-      gatewayEnabled: false,
-      gatewayInterface: 'eth1',
-      gatewayIp: '192.168.88.1',
-      portalAppIp: '',
-      authBridgeUrl: '',
-    }),
-    { enabled: false },
-  );
-});
-
-test('buildGatewayPlanInput sends UI values without server-side defaults', () => {
+test('buildGatewayPlanInput builds bridge URL from management IP', () => {
   assert.deepEqual(
     buildGatewayPlanInput({
       lanAppIp: '192.168.1.10',
@@ -145,7 +101,7 @@ test('buildGatewayPlanInput sends UI values without server-side defaults', () =>
       gatewayInterface: 'eth1',
       gatewayIp: '192.168.88.1',
       portalAppIp: '',
-      authBridgeUrl: ' http://10.0.0.2:9100 ',
+      gatewayManagementIp: '10.0.0.2',
     }),
     {
       enabled: true,
@@ -157,63 +113,46 @@ test('buildGatewayPlanInput sends UI values without server-side defaults', () =>
   );
 });
 
-test('validateGatewayAuthBridgeUrl accepts empty and http URLs', () => {
-  assert.equal(validateGatewayAuthBridgeUrl(''), null);
-  assert.equal(validateGatewayAuthBridgeUrl(' http://10.0.0.2:9100 '), null);
-  assert.equal(validateGatewayAuthBridgeUrl('https://gateway.example.test/bridge'), null);
+test('validateGatewayManagementIpForUi rejects guest gateway IP', () => {
+  assert.match(
+    validateGatewayManagementIpForUi(
+      '192.168.88.1',
+      { gatewayInterface: 'eth1', gatewayIp: '192.168.88.1' },
+      null,
+    ) ?? '',
+    /Gast-Netz/,
+  );
 });
 
-test('validateGatewayAuthBridgeUrl rejects non-http URLs', () => {
-  assert.match(validateGatewayAuthBridgeUrl('10.0.0.2:9100') ?? '', /http/);
-  assert.match(validateGatewayAuthBridgeUrl('ftp://10.0.0.2:9100') ?? '', /http/);
-});
-
-test('gatewayDraftDefaults fills portal and bridge without overwriting user values', () => {
+test('gatewayDraftDefaults fills portal IP without auto bridge default', () => {
   const network = {
     interfaces: [],
     lanCandidates: [],
-    defaultGatewayBridgeUrl: 'http://host.docker.internal:9100',
     machineHostname: 'praxis-mac',
     gatewayComposeSupported: false,
   };
 
   assert.deepEqual(
     gatewayDraftDefaults(
-      { gatewayEnabled: true, portalAppIp: '', authBridgeUrl: '' },
+      { gatewayEnabled: true, portalAppIp: '', gatewayManagementIp: '' },
       network,
       '192.168.1.10',
     ),
-    {
-      portalAppIp: '192.168.1.10',
-      authBridgeUrl: 'http://host.docker.internal:9100',
-    },
-  );
-  assert.deepEqual(
-    gatewayDraftDefaults(
-      {
-        gatewayEnabled: true,
-        portalAppIp: '10.0.0.5',
-        authBridgeUrl: 'http://10.0.0.2:9100',
-      },
-      network,
-      '192.168.1.10',
-    ),
-    {},
+    { portalAppIp: '192.168.1.10' },
   );
 });
 
-test('gatewayEnabledPatch applies defaults only when enabling gateway', () => {
+test('gatewayEnabledPatch applies portal default only when enabling gateway', () => {
   const network = {
     interfaces: [],
     lanCandidates: [],
-    defaultGatewayBridgeUrl: 'http://host.docker.internal:9100',
     machineHostname: 'praxis-mac',
     gatewayComposeSupported: false,
   };
 
   assert.deepEqual(
     gatewayEnabledPatch(
-      { gatewayEnabled: false, portalAppIp: '', authBridgeUrl: '' },
+      { gatewayEnabled: false, portalAppIp: '', gatewayManagementIp: '' },
       true,
       network,
       '192.168.1.10',
@@ -221,16 +160,6 @@ test('gatewayEnabledPatch applies defaults only when enabling gateway', () => {
     {
       gatewayEnabled: true,
       portalAppIp: '192.168.1.10',
-      authBridgeUrl: 'http://host.docker.internal:9100',
     },
-  );
-  assert.deepEqual(
-    gatewayEnabledPatch(
-      { gatewayEnabled: true, portalAppIp: '', authBridgeUrl: '' },
-      false,
-      network,
-      '192.168.1.10',
-    ),
-    { gatewayEnabled: false },
   );
 });

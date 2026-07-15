@@ -5,7 +5,7 @@ const CONFIGURED_GATEWAY = {
   gatewayInterface: 'eth1',
   gatewayIp: '192.168.88.1',
   portalAppIp: '192.168.1.10',
-  authBridgeUrl: 'http://172.17.0.1:9100',
+  authBridgeUrl: 'http://10.0.0.2:9100',
 } as const;
 
 /** Shared HostStatus defaults for renderer unit tests (configured / maintenance host). */

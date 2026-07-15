@@ -5,6 +5,11 @@ import type {
   RoutingMode,
 } from '../shared/host-status.js';
 import {
+  buildGatewayBridgeUrl,
+  parseGatewayManagementIpFromBridgeUrl,
+  validateGatewayManagementIp,
+} from '@praxis-flow/server-shared';
+import {
   SETUP_DEFAULT_GATEWAY_INTERFACE,
   SETUP_DEFAULT_GATEWAY_IP,
   SETUP_DEFAULT_PRACTICE_NAME,
@@ -25,7 +30,7 @@ export type WizardInitialFields = {
   gatewayInterface: string;
   gatewayIp: string;
   portalAppIp: string;
-  authBridgeUrl: string;
+  gatewayManagementIp: string;
   reachabilityMode: ReachabilityMode;
   customHostname: string;
   /** null until getRoutingMode() hydrates — never show a fake default. */
@@ -86,7 +91,7 @@ export function initialGatewayFields(
   customLanIp: string,
 ): Pick<
   WizardInitialFields,
-  'gatewayEnabled' | 'gatewayInterface' | 'gatewayIp' | 'portalAppIp' | 'authBridgeUrl'
+  'gatewayEnabled' | 'gatewayInterface' | 'gatewayIp' | 'portalAppIp' | 'gatewayManagementIp'
 > {
   const gateway = status?.gateway;
   const resolvedLan = lanAppIp === '__custom__' ? customLanIp.trim() : lanAppIp;
@@ -95,33 +100,30 @@ export function initialGatewayFields(
     gatewayInterface: gateway?.gatewayInterface ?? SETUP_DEFAULT_GATEWAY_INTERFACE,
     gatewayIp: gateway?.gatewayIp ?? SETUP_DEFAULT_GATEWAY_IP,
     portalAppIp: gateway?.portalAppIp?.trim() || resolvedLan || '',
-    authBridgeUrl: gateway?.authBridgeUrl?.trim() || '',
+    gatewayManagementIp:
+      parseGatewayManagementIpFromBridgeUrl(gateway?.authBridgeUrl) ?? '',
   };
 }
 
 type GatewayDefaultFields = Pick<
   WizardInitialFields,
-  'gatewayEnabled' | 'portalAppIp' | 'authBridgeUrl'
+  'gatewayEnabled' | 'portalAppIp' | 'gatewayManagementIp'
 >;
 
 export function gatewayDraftDefaults(
   fields: GatewayDefaultFields,
-  network: NetworkSnapshot | null,
+  _network: NetworkSnapshot | null,
   lanIpFallback = '',
-): Partial<Pick<WizardInitialFields, 'portalAppIp' | 'authBridgeUrl'>> {
+): Partial<Pick<WizardInitialFields, 'portalAppIp'>> {
   if (!fields.gatewayEnabled) {
     return {};
   }
 
-  const patch: Partial<Pick<WizardInitialFields, 'portalAppIp' | 'authBridgeUrl'>> = {};
+  const patch: Partial<Pick<WizardInitialFields, 'portalAppIp'>> = {};
   const fallbackPortalIp = lanIpFallback.trim();
-  const fallbackBridgeUrl = network?.defaultGatewayBridgeUrl?.trim();
 
   if (!fields.portalAppIp.trim() && fallbackPortalIp) {
     patch.portalAppIp = fallbackPortalIp;
-  }
-  if (!fields.authBridgeUrl.trim() && fallbackBridgeUrl) {
-    patch.authBridgeUrl = fallbackBridgeUrl;
   }
 
   return patch;
@@ -133,7 +135,7 @@ export function gatewayEnabledPatch(
   network: NetworkSnapshot | null,
   lanIpFallback = '',
 ): Pick<WizardInitialFields, 'gatewayEnabled'> &
-  Partial<Pick<WizardInitialFields, 'portalAppIp' | 'authBridgeUrl'>> {
+  Partial<Pick<WizardInitialFields, 'portalAppIp'>> {
   const base = { ...fields, gatewayEnabled: enabled };
   return {
     gatewayEnabled: enabled,
@@ -164,7 +166,7 @@ export function createHostNetworkFields(
   | 'gatewayInterface'
   | 'gatewayIp'
   | 'portalAppIp'
-  | 'authBridgeUrl'
+  | 'gatewayManagementIp'
 > &
   ReachabilityFieldState {
   const lan = initialLanIpSelection(status);
@@ -193,34 +195,31 @@ export function buildGatewayPlanInput(
     | 'gatewayInterface'
     | 'gatewayIp'
     | 'portalAppIp'
-    | 'authBridgeUrl'
+    | 'gatewayManagementIp'
   >,
 ): GatewayPlanInput {
   if (!fields.gatewayEnabled) {
     return { enabled: false };
   }
   const lanAppIp = resolvedLanIp(fields);
+  const managementIp = fields.gatewayManagementIp.trim();
   return {
     enabled: true,
     gatewayInterface: fields.gatewayInterface.trim() || undefined,
     gatewayIp: fields.gatewayIp.trim() || undefined,
     portalAppIp: fields.portalAppIp.trim() || lanAppIp || undefined,
-    authBridgeUrl: fields.authBridgeUrl.trim() || undefined,
+    authBridgeUrl: buildGatewayBridgeUrl(managementIp),
   };
 }
 
-export function validateGatewayAuthBridgeUrl(value: string): string | null {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  try {
-    const url = new URL(trimmed);
-    if ((url.protocol === 'http:' || url.protocol === 'https:') && Boolean(url.hostname)) {
-      return null;
-    }
-  } catch {
-    // handled by common message below
-  }
-  return 'Bitte eine gültige Gateway-Bridge-URL mit http:// oder https:// eingeben.';
+export function validateGatewayManagementIpForUi(
+  managementIp: string,
+  fields: Pick<WizardInitialFields, 'gatewayInterface' | 'gatewayIp'>,
+  network: NetworkSnapshot | null,
+): string | null {
+  return validateGatewayManagementIp(managementIp, {
+    gatewayInterface: fields.gatewayInterface,
+    gatewayIp: fields.gatewayIp,
+    interfaces: network?.interfaces,
+  });
 }

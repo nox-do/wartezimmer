@@ -85,7 +85,6 @@ test('network load fills gateway portal IP from selected LAN IP', async () => {
         interfaces: [],
         machineHostname: 'praxis-mac',
         gatewayComposeSupported: true,
-        defaultGatewayBridgeUrl: 'http://172.17.0.1:9100',
       }),
     } as never,
     onComplete: () => {},
@@ -97,14 +96,14 @@ test('network load fills gateway portal IP from selected LAN IP', async () => {
     gatewayEnabled: true,
     lanAppIp: '192.168.1.10',
     portalAppIp: '',
-    authBridgeUrl: '',
+    gatewayManagementIp: '',
   });
 
   await controller.goNext();
 
   assert.equal(controller.getState().step, 2);
   assert.equal(controller.getState().portalAppIp, '192.168.1.10');
-  assert.equal(controller.getState().authBridgeUrl, 'http://172.17.0.1:9100');
+  assert.equal(controller.getState().gatewayManagementIp, '');
 });
 
 test('entering routing step waits for server routing mode', async () => {
