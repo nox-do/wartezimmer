@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Include build-stage packages in SBOM (multi-stage; Docker Scout / Desktop analysis).
 ARG BUILDKIT_SBOM_SCAN_STAGE=true
 

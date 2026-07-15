@@ -845,7 +845,6 @@ export const dict = {
   roomPanel: {
     loginTitle: 'Raum-Panel',
     loginLead: 'Raum auswählen. Panels im Raum starten mit PIN, Panels außerhalb ohne PIN.',
-    pinDefaultHint: 'Standard-PIN nach Einrichtung: 0000 (bis in MFA → Betrieb geändert).',
     roomLabel: 'Raum',
     loginSubmit: 'Panel starten',
     noRooms: 'Noch kein Raum-Panel aktiviert. Bitte in den MFA-Raum-Einstellungen aktivieren.',

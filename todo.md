@@ -2,6 +2,19 @@
 
 Stand: 2026-07-14
 
+## Erledigt: Dockerfile syntax-Zeile entfernt (2026-07-14)
+
+- `app/sandbox/gateway/Dockerfile`: `# syntax=docker/dockerfile:1` entfernt — BuildKit nutzt eingebauten Parser, kein Pull von Docker Hub nötig
+
+## Erledigt: MFA PIN-Modal schließt nach Speichern (2026-07-14)
+
+- `mfa/settings/operations`: Nach erfolgreichem MFA-/Panel-PIN-Wechsel Modal schließen (`resetPinDialog` statt `closePinDialog` während `pinBusyTarget` gesetzt)
+
+## Erledigt: Room-Panel PIN-Hinweis entfernt (2026-07-14)
+
+- `RoomPanelPinLogin.svelte`: Hinweis „Standard-PIN nach Einrichtung: 0000 …“ aus PIN-Dialog entfernt
+- `de-DE.ts`: ungenutzter `pinDefaultHint`-Key entfernt
+
 ## Erledigt: JourneyTemplateSetting OpenAPI-Kommentare (2026-07-14)
 
 - `topicId` / `active`: Beschreibungen in `openapi/ops.yaml` + `journey-admin-helpers.ts` — kein Legacy/removable mehr; Rolle vs. `journeyTemplateId` dokumentiert

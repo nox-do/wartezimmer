@@ -189,12 +189,16 @@
     pinDialogForm = { currentPin: '', newPin: '', confirmNewPin: '' };
   }
 
+  function resetPinDialog() {
+    pinDialogTarget = null;
+    pinDialogForm = { currentPin: '', newPin: '', confirmNewPin: '' };
+  }
+
   function closePinDialog() {
     if (pinBusyTarget != null) {
       return;
     }
-    pinDialogTarget = null;
-    pinDialogForm = { currentPin: '', newPin: '', confirmNewPin: '' };
+    resetPinDialog();
   }
 
   async function handlePinChange(target: MfaPinTarget, currentPin: string, newPin: string) {
@@ -220,7 +224,7 @@
         return;
       }
 
-      closePinDialog();
+      resetPinDialog();
       const savedKey =
         target === 'mfa' ? 'mfa.settings.pinChangeMfaSaved' : 'mfa.settings.pinChangePanelSaved';
       toastStore.success(t(savedKey));

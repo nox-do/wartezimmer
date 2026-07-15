@@ -136,7 +136,6 @@
           {/if}
         </div>
       </div>
-      <p class="field-hint">{t('roomPanel.pinDefaultHint')}</p>
     {/if}
 
     {#if errorMessage}
