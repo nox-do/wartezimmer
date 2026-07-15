@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openDb, createRuntime, ensureVisitSupersedeColumns } from '@praxis-flow/flow-core/server';
+import { openDb, createRuntime } from '@praxis-flow/flow-core/server';
 
 function testRuntime() {
   const db = openDb({ path: ':memory:' });
@@ -95,9 +95,8 @@ test('supersede: doppeltes Supersede abgelehnt', () => {
   );
 });
 
-test('checkIn nach ensureVisitSupersedeColumns und nach Supersede weiterhin ok', () => {
-  const { db, runtime } = testRuntime();
-  ensureVisitSupersedeColumns(db);
+test('checkIn nach Supersede weiterhin ok', () => {
+  const { runtime } = testRuntime();
 
   const before = runtime.checkIn({ topicId: 'general', surfaceId: 'terminal_1' });
   assert.equal(before.queueNumber, 'A-001');

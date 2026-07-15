@@ -41,11 +41,10 @@ import type { CatalogRepository } from './catalog-repository.js';
 import type { VisitRepository } from './visit-repository.js';
 import { runInTransaction } from './unit-of-work.js';
 import { supersedeVisit, type SupersedeRequest, type SupersedeResult } from './visit-supersede.js';
-import { ensureVisitSupersedeColumns } from './visit-supersede-schema.js';
 
 export type { SupersedeRequest, SupersedeResult } from './visit-supersede.js';
 
-/** Check-in ohne Supersede-Spalten — funktioniert vor und nach ensureVisitSupersedeColumns. */
+/** Check-in INSERT ohne Supersede-Link-Spalten — SQLite setzt NULL. */
 const CHECKIN_VISIT_INSERT_SQL = `INSERT INTO visits (
   id, patient_id, status, primary_topic_id, applied_routing_rule_id,
   last_known_location_id, target_location_id, queue_id, last_surface_id,
@@ -393,9 +392,8 @@ export function createVisitService(params: {
       return visitById(visitId);
     });
 
-  const supersede = (id: string, body: SupersedeRequest): SupersedeResult => {
-    ensureVisitSupersedeColumns(db);
-    return supersedeVisit({
+  const supersede = (id: string, body: SupersedeRequest): SupersedeResult =>
+    supersedeVisit({
       db,
       catalogRepository,
       visitRepository,
@@ -404,7 +402,6 @@ export function createVisitService(params: {
       visitId: id,
       body,
     });
-  };
 
   const transition = (
     visitId: string,

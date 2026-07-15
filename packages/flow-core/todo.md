@@ -6,7 +6,8 @@
 - [x] Repository: preserve/clear via Key-Präsenz; `journeyTemplateId` nicht patchbar
 - [x] Redirect: Parser + `resolveRedirectVisitPatch` + effektive Event-Werte
 - [x] Actor-Vertrag Transitionen: `TransitionRequestBody` ohne Actor-Felder; `actorId` nur Host-Kontext
-- [x] 168 Tests grün
+- [x] Supersede-Migration beim DB-Open (`openDb`), nicht mehr lazy in `supersede()`
+- [x] 171 Tests grün
 
 ## Erledigt (Baseline)
 

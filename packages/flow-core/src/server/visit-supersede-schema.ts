@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-/** Additive Spalten für bestehende DBs (CREATE TABLE IF NOT EXISTS ändert nichts). */
+/** Additive Spalten für bestehende DBs — wird von openDb aufgerufen (CREATE TABLE IF NOT EXISTS ändert nichts). */
 export function ensureVisitSupersedeColumns(db: DatabaseSync): void {
   const columns = (db.prepare('PRAGMA table_info(visits)').all() as Array<{ name?: string }>).map(
     (row) => row.name,
