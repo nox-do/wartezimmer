@@ -11,7 +11,16 @@ export {
   stepsForTemplate,
   type CatalogRepository,
 } from './catalog-repository.js';
-export { createVisitRepository, type VisitRepository } from './visit-repository.js';
+export {
+  createVisitRepository,
+  insertCheckInAggregate,
+  toVisitView,
+  visitRecordById,
+  type CheckInPatientInsert,
+  type CheckInTopicInsert,
+  type CheckInVisitInsert,
+  type VisitRepository,
+} from './visit-repository.js';
 export {
   createVisitService,
   type VisitService,

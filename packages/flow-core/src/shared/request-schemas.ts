@@ -63,6 +63,11 @@ export type TransitionRequestBody = {
   actingLocationId?: string;
 };
 
+/** Host-injizierte Audit-Identitaet fuer Redirect — nicht aus HTTP-Body. */
+export type RedirectContext = {
+  actorId?: string;
+};
+
 export function parseTransitionBody(body: unknown): TransitionRequestBody {
   const raw = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
 

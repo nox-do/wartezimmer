@@ -141,3 +141,41 @@ test('updateVisit: supersededByVisitId null, undefined oder leer wird abgelehnt'
     /INVALID_VISIT_PATCH/,
   );
 });
+
+test('visitRecordById und toVisitView: roher Visit vs angereicherte View', () => {
+  const db = openDb({ path: ':memory:' });
+  const catalogRepository = createCatalogRepository(db);
+  const visitRepository = visitRepositoryFor(db);
+  const created = createRuntime(db).checkIn({
+    topicId: 'general',
+    displayName: 'Enrich',
+    surfaceId: 'terminal_1',
+  });
+
+  const record = visitRepository.visitRecordById(created!.id);
+  assert.ok(record);
+  assert.equal(record?.primaryTopicId, 'general');
+  assert.equal('topic' in record!, false);
+
+  const view = visitRepository.toVisitView(record!, catalogRepository.loadCatalog());
+  assert.equal(view.topic?.id, 'general');
+  assert.ok(view.journeyStepLabel);
+});
+
+test('visitById und visitRecordById: gleicher Kern, View mit Enrichment', () => {
+  const db = openDb({ path: ':memory:' });
+  const visitRepository = visitRepositoryFor(db);
+  const created = createRuntime(db).checkIn({
+    topicId: 'general',
+    displayName: 'Parity',
+    surfaceId: 'terminal_1',
+  });
+
+  const record = visitRepository.visitRecordById(created!.id)!;
+  const view = visitRepository.visitById(created!.id)!;
+
+  assert.equal(view.id, record.id);
+  assert.equal(view.status, record.status);
+  assert.equal(view.queueNumber, record.queueNumber);
+  assert.ok(view.topic);
+});

@@ -9,7 +9,7 @@ export type {
   RoutingRuleDraft,
 } from './shared/admin-validation.js';
 export type { RedirectRequestBody, RedirectVisitPatch } from './shared/redirect-flow.js';
-export type { TransitionRequestBody } from './shared/request-schemas.js';
+export type { RedirectContext, TransitionRequestBody } from './shared/request-schemas.js';
 export type { TransitionContext } from './shared/visit-flow.js';
 export type { JourneyCompletedPatch, JourneyVisitPatch } from './shared/journey.js';
 export type { VisibilityExplanation } from './shared/surface-visibility.js';

@@ -16,8 +16,8 @@ export type RedirectRequestBody = {
   movementMode: MovementMode;
   publicDisplayMode: PublicDisplayMode;
   staffNote?: string | null;
+  /** Oberflaeche fuer Redirect-Berechtigung (validateRedirectRequest). */
   actorSurfaceId?: string;
-  actorId?: string;
   locationSemantics?: RedirectLocationSemantics;
   lastKnownLocationId?: string | null;
   terminalInstruction?: string;

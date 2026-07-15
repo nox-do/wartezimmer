@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type {
+  Catalog,
   ResolveBusinessDay,
   TransitionAction,
   Visit,
@@ -33,7 +34,7 @@ import {
   resolveReturnToWaitingVisitPatch,
   statusForMovementMode,
 } from '@praxis-flow/flow-core';
-import type { RedirectRequestBody, TransitionRequestBody } from '@praxis-flow/flow-core';
+import type { RedirectRequestBody, RedirectContext, TransitionRequestBody } from '@praxis-flow/flow-core';
 import { resolveCheckInRouting } from './escort.js';
 import { resolveQueueOnArrival } from './location-routing.js';
 import { allocateQueueSequence } from './queue-counter.js';
@@ -43,20 +44,6 @@ import { runInTransaction } from './unit-of-work.js';
 import { supersedeVisit, type SupersedeRequest, type SupersedeResult } from './visit-supersede.js';
 
 export type { SupersedeRequest, SupersedeResult } from './visit-supersede.js';
-
-/** Check-in INSERT ohne Supersede-Link-Spalten — SQLite setzt NULL. */
-const CHECKIN_VISIT_INSERT_SQL = `INSERT INTO visits (
-  id, patient_id, status, primary_topic_id, applied_routing_rule_id,
-  last_known_location_id, target_location_id, queue_id, last_surface_id,
-  movement_mode, location_confidence, public_display_mode,
-  queue_number, queue_number_date, queue_number_scope, queue_lane_code, queue_sequence,
-  needs_assistance, check_in_path, auth_path,
-  configured_escort_policy, effective_escort_policy, allow_redirect,
-  terminal_instruction, staff_note,
-  checked_in_at, called_at, arrived_at, started_at, finished_at,
-  journey_template_id, journey_step_index, journey_step_completed_at, journey_state,
-  created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 type CheckInBody = {
   topicId?: string;
@@ -95,31 +82,43 @@ export function createVisitService(params: {
 }) {
   const { db, catalogRepository, visitRepository, maybeFail, resolveBusinessDay } = params;
   const { loadCatalog, stepsForTemplate } = catalogRepository;
-  const { visitById, updateVisit, addEvent } = visitRepository;
+  const {
+    visitRecordById,
+    toVisitView,
+    updateVisit,
+    addEvent,
+    insertCheckInAggregate,
+  } = visitRepository;
+
+  const visitView = (id: string, catalog: Catalog): VisitView | undefined => {
+    const record = visitRecordById(id);
+    return record ? toVisitView(record, catalog) : undefined;
+  };
 
   const applyJourneyPatch = (
     visitId: string,
-    current: VisitView,
+    current: Visit,
     patch: JourneyProgressionPatch,
     steps: ReturnType<typeof stepsForTemplate>,
+    catalog: Catalog,
   ): VisitView => {
     maybeFail('journeyProgression:update');
     updateVisit(current, patch);
-    const after = visitById(visitId)!;
-    const data = loadCatalog();
-    const fromLocation = data.locations.find((item) => item.id === current.targetLocationId);
-    const toLocation = data.locations.find((item) => item.id === after.targetLocationId);
+    const afterRecord = visitRecordById(visitId)!;
+    const after = toVisitView(afterRecord, catalog);
+    const fromLocation = catalog.locations.find((item) => item.id === current.targetLocationId);
+    const toLocation = catalog.locations.find((item) => item.id === afterRecord.targetLocationId);
     maybeFail('journeyProgression:event');
     if ('journeyState' in patch && patch.journeyState === 'completed') {
       addEvent(
         visitId,
         'journey_completed',
         current.status,
-        after.status,
+        afterRecord.status,
         current.targetLocationId,
-        after.targetLocationId,
+        afterRecord.targetLocationId,
         current.queueId,
-        after.queueId,
+        afterRecord.queueId,
         'system',
         formatJourneyNextStepNote({
           previousIndex: current.journeyStepIndex!,
@@ -134,11 +133,11 @@ export function createVisitService(params: {
         visitId,
         'routed',
         current.status,
-        after.status,
+        afterRecord.status,
         current.targetLocationId,
-        after.targetLocationId,
+        afterRecord.targetLocationId,
         current.queueId,
-        after.queueId,
+        afterRecord.queueId,
         'system',
         formatJourneyNextStepNote({
           previousIndex: current.journeyStepIndex!,
@@ -153,11 +152,11 @@ export function createVisitService(params: {
         visitId,
         'journey_step_completed',
         current.status,
-        after.status,
+        afterRecord.status,
         current.targetLocationId,
-        after.targetLocationId,
+        afterRecord.targetLocationId,
         current.queueId,
-        after.queueId,
+        afterRecord.queueId,
         'system',
         `Journey Schritt ${journeyStepLabel(steps, current.journeyStepIndex) ?? ''} erledigt`.trim(),
       );
@@ -169,36 +168,37 @@ export function createVisitService(params: {
     visitId: string,
     action: TransitionAction,
     completedAt: string,
+    catalog: Catalog,
   ): VisitView | undefined => {
-    const updated = visitById(visitId);
-    if (!updated?.journeyTemplateId || updated.journeyStepIndex == null) return updated;
+    const record = visitRecordById(visitId);
+    if (!record?.journeyTemplateId || record.journeyStepIndex == null) {
+      return visitView(visitId, catalog);
+    }
 
-    const data = loadCatalog();
-    const steps = stepsForTemplate(updated.journeyTemplateId, data.journeySteps);
-    const journeyPatch = completeJourneyStepPatch(updated, action, steps, {
+    const steps = stepsForTemplate(record.journeyTemplateId, catalog.journeySteps);
+    const journeyPatch = completeJourneyStepPatch(record, action, steps, {
       completedAt,
-      locations: data.locations,
+      locations: catalog.locations,
     });
-    if (!journeyPatch) return updated;
-    return applyJourneyPatch(visitId, updated, journeyPatch, steps);
+    if (!journeyPatch) return toVisitView(record, catalog);
+    return applyJourneyPatch(visitId, record, journeyPatch, steps, catalog);
   };
 
-  const startNextJourneyStep = (visitId: string): VisitView | undefined => {
-    const current = visitById(visitId);
+  const startNextJourneyStep = (visitId: string, catalog: Catalog): VisitView | undefined => {
+    const record = visitRecordById(visitId);
     if (
-      !current?.journeyTemplateId ||
-      current.journeyStepIndex == null ||
-      !current.journeyStepCompletedAt
+      !record?.journeyTemplateId ||
+      record.journeyStepIndex == null ||
+      !record.journeyStepCompletedAt
     ) {
       throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
     }
-    const data = loadCatalog();
-    const steps = stepsForTemplate(current.journeyTemplateId, data.journeySteps);
-    const journeyPatch = startNextJourneyStepPatch(current, steps, { locations: data.locations });
+    const steps = stepsForTemplate(record.journeyTemplateId, catalog.journeySteps);
+    const journeyPatch = startNextJourneyStepPatch(record, steps, { locations: catalog.locations });
     if (!journeyPatch || journeyPatch.journeyState === 'completed') {
       throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
     }
-    return applyJourneyPatch(visitId, current, journeyPatch, steps);
+    return applyJourneyPatch(visitId, record, journeyPatch, steps, catalog);
   };
 
   const checkIn = (body: CheckInBody): VisitView | undefined =>
@@ -309,59 +309,54 @@ export function createVisitService(params: {
       }
 
       maybeFail('checkIn:patient');
-      db.prepare('INSERT INTO patients VALUES (?, ?, ?, ?)').run(
-        patientId,
-        body.displayName || null,
-        body.displayName ? 0 : 1,
-        now,
-      );
       maybeFail('checkIn:visit');
-      db.prepare(CHECKIN_VISIT_INSERT_SQL).run(
-        visitId,
-        patientId,
-        visitStatus,
-        selectedTopic.id,
-        selectedRule.id,
-        visitLastKnown,
-        visitTarget,
-        visitQueue,
-        surfaceId,
-        visitMovement,
-        visitConfidence,
-        visitDisplay,
-        queueNumber,
-        businessDay,
-        queueScope,
-        queueLaneCode,
-        queueSequence,
-        visitNeedsAssistance ? 1 : 0,
-        checkInPath,
-        authPath,
-        configuredEscortPolicy,
-        effectivePolicy,
-        allowRedirect ? 1 : 0,
-        visitTerminalInstruction,
-        body.staffNote ?? null,
-        now,
-        null,
-        null,
-        null,
-        null,
-        journeyTemplateId,
-        journeyStepIndex,
-        null,
-        journeyState,
-        now,
-        now,
-      );
+      insertCheckInAggregate({
+        patient: {
+          id: patientId,
+          displayName: body.displayName || null,
+          isAnonymous: !body.displayName,
+          createdAt: now,
+        },
+        visit: {
+          id: visitId,
+          patientId,
+          status: visitStatus,
+          primaryTopicId: selectedTopic.id,
+          appliedRoutingRuleId: selectedRule.id,
+          lastKnownLocationId: visitLastKnown,
+          targetLocationId: visitTarget,
+          queueId: visitQueue,
+          lastSurfaceId: surfaceId,
+          movementMode: visitMovement,
+          locationConfidence: visitConfidence,
+          publicDisplayMode: visitDisplay,
+          queueNumber,
+          queueNumberDate: businessDay,
+          queueNumberScope: queueScope,
+          queueLaneCode,
+          queueSequence,
+          needsAssistance: visitNeedsAssistance,
+          checkInPath,
+          authPath,
+          configuredEscortPolicy,
+          effectiveEscortPolicy: effectivePolicy,
+          allowRedirect,
+          terminalInstruction: visitTerminalInstruction,
+          staffNote: body.staffNote ?? null,
+          checkedInAt: now,
+          journeyTemplateId,
+          journeyStepIndex,
+          journeyState,
+          createdAt: now,
+          updatedAt: now,
+        },
+        topic: {
+          id: crypto.randomUUID(),
+          visitId,
+          topicId: selectedTopic.id,
+        },
+      });
       maybeFail('checkIn:visitTopic');
-      db.prepare('INSERT INTO visit_topics VALUES (?, ?, ?, ?, ?)').run(
-        crypto.randomUUID(),
-        visitId,
-        selectedTopic.id,
-        1,
-        'open',
-      );
       maybeFail('checkIn:event:checked_in');
       addEvent(
         visitId,
@@ -389,7 +384,8 @@ export function createVisitService(params: {
         'system',
         routeNote,
       );
-      return visitById(visitId);
+      const record = visitRecordById(visitId);
+      return record ? toVisitView(record, data) : undefined;
     });
 
   const supersede = (id: string, body: SupersedeRequest): SupersedeResult =>
@@ -409,15 +405,18 @@ export function createVisitService(params: {
     context: VisitTransitionContext = {},
   ): VisitView | undefined =>
     runInTransaction(db, () => {
-      const current = visitById(visitId);
-      if (!current) throw new Error('VISIT_NOT_FOUND');
-      assertTransitionAllowed(current, action, context);
-      assertActingLocationScope(current, context.actingLocationId);
+      const catalog = loadCatalog();
+      const record = visitRecordById(visitId);
+      if (!record) throw new Error('VISIT_NOT_FOUND');
+      assertTransitionAllowed(record, action, context);
+      assertActingLocationScope(record, context.actingLocationId);
       const now = new Date().toISOString();
+      if (action === 'start_next_journey_step') {
+        return startNextJourneyStep(visitId, catalog);
+      }
       if (action === 'call') {
-        const data = loadCatalog();
         if (context.targetLocationId) {
-          assertCallTargetLocation(data, context.targetLocationId);
+          assertCallTargetLocation(catalog, context.targetLocationId);
         }
         const callPatch: VisitPatch = {
           status: 'called',
@@ -428,34 +427,33 @@ export function createVisitService(params: {
         if (context.targetLocationId) {
           callPatch.targetLocationId = context.targetLocationId;
         }
+        const nextTargetLocationId = callPatch.targetLocationId ?? record.targetLocationId;
         maybeFail('transition:update');
-        updateVisit(current, callPatch);
-        const afterCall = visitById(visitId)!;
+        updateVisit(record, callPatch);
         maybeFail('transition:event');
         addEvent(
           visitId,
           'called',
-          current.status,
+          record.status,
           'called',
-          current.lastKnownLocationId,
-          afterCall.targetLocationId,
-          current.queueId,
-          afterCall.queueId,
+          record.lastKnownLocationId,
+          nextTargetLocationId,
+          record.queueId,
+          record.queueId,
           'mfa',
           null,
           { actorId: context.actorId },
         );
       } else if (action === 'arrive') {
-        const data = loadCatalog();
         const nextQueueId = resolveQueueOnArrival(
-          current.queueId,
-          current.targetLocationId,
-          data.queues,
+          record.queueId,
+          record.targetLocationId,
+          catalog.queues,
         );
         maybeFail('transition:update');
-        updateVisit(current, {
+        updateVisit(record, {
           status: 'arrived',
-          lastKnownLocationId: current.targetLocationId,
+          lastKnownLocationId: record.targetLocationId,
           queueId: nextQueueId,
           locationConfidence: 'confirmed',
           arrivedAt: now,
@@ -464,11 +462,11 @@ export function createVisitService(params: {
         addEvent(
           visitId,
           'arrived',
-          current.status,
+          record.status,
           'arrived',
-          current.lastKnownLocationId,
-          current.targetLocationId,
-          current.queueId,
+          record.lastKnownLocationId,
+          record.targetLocationId,
+          record.queueId,
           nextQueueId,
           'mfa',
           null,
@@ -476,117 +474,117 @@ export function createVisitService(params: {
         );
       } else if (action === 'start') {
         maybeFail('transition:update');
-        updateVisit(current, { status: 'in_progress', startedAt: now });
+        updateVisit(record, { status: 'in_progress', startedAt: now });
         maybeFail('transition:event');
         addEvent(
           visitId,
           'started',
-          current.status,
+          record.status,
           'in_progress',
-          current.lastKnownLocationId,
-          current.targetLocationId,
-          current.queueId,
-          current.queueId,
+          record.lastKnownLocationId,
+          record.targetLocationId,
+          record.queueId,
+          record.queueId,
           'mfa',
           null,
           { actorId: context.actorId },
         );
       } else if (action === 'done') {
-        const data = loadCatalog();
         const steps =
-          current.journeyTemplateId != null
-            ? stepsForTemplate(current.journeyTemplateId, data.journeySteps)
+          record.journeyTemplateId != null
+            ? stepsForTemplate(record.journeyTemplateId, catalog.journeySteps)
             : [];
         const currentStep =
-          current.journeyStepIndex != null ? steps[current.journeyStepIndex] : undefined;
+          record.journeyStepIndex != null ? steps[record.journeyStepIndex] : undefined;
         const hasNextJourneyStep =
-          current.journeyTemplateId != null &&
-          current.journeyStepIndex != null &&
+          record.journeyTemplateId != null &&
+          record.journeyStepIndex != null &&
           currentStep?.completedWhen === 'done' &&
-          steps[current.journeyStepIndex + 1] != null;
+          steps[record.journeyStepIndex + 1] != null;
         const donePatch: VisitPatch = hasNextJourneyStep
-          ? { status: current.status === 'arrived' ? 'in_progress' : current.status }
+          ? { status: record.status === 'arrived' ? 'in_progress' : record.status }
           : { status: 'done', finishedAt: now };
-        if (current.status === 'arrived' && context.actingLocationId) {
-          donePatch.startedAt = current.startedAt ?? current.arrivedAt ?? now;
+        if (record.status === 'arrived' && context.actingLocationId) {
+          donePatch.startedAt = record.startedAt ?? record.arrivedAt ?? now;
         }
+        const nextStatus = donePatch.status ?? record.status;
         maybeFail('transition:update');
-        updateVisit(current, donePatch);
-        const afterDone = visitById(visitId)!;
+        updateVisit(record, donePatch);
         maybeFail('transition:event');
         addEvent(
           visitId,
           'done',
-          current.status,
-          afterDone.status,
-          current.lastKnownLocationId,
-          current.targetLocationId,
-          current.queueId,
-          current.queueId,
+          record.status,
+          nextStatus,
+          record.lastKnownLocationId,
+          record.targetLocationId,
+          record.queueId,
+          record.queueId,
           'mfa',
           null,
           { actorId: context.actorId },
         );
       } else if (action === 'return_to_waiting') {
-        // Recall, kein Redirect: journeyState bleibt unveraendert (kein passendes completedWhen).
-        const data = loadCatalog();
-        const returnPatch = resolveReturnToWaitingVisitPatch(current, data);
-        const nextStatus = returnPatch.status ?? current.status;
+        const returnPatch = resolveReturnToWaitingVisitPatch(record, catalog);
+        const nextStatus = returnPatch.status ?? record.status;
+        const nextLastKnown = returnPatch.lastKnownLocationId ?? record.lastKnownLocationId;
+        const nextQueueId = returnPatch.queueId ?? record.queueId;
         maybeFail('transition:update');
-        updateVisit(current, returnPatch);
-        const afterReturn = visitById(visitId)!;
+        updateVisit(record, returnPatch);
         maybeFail('transition:event');
         addEvent(
           visitId,
           'returned_to_waiting',
-          current.status,
+          record.status,
           nextStatus,
-          current.targetLocationId,
-          afterReturn.lastKnownLocationId,
-          current.queueId,
-          afterReturn.queueId,
+          record.targetLocationId,
+          nextLastKnown,
+          record.queueId,
+          nextQueueId,
           'mfa',
           null,
           { actorId: context.actorId },
         );
-      } else if (action === 'start_next_journey_step') {
-        return startNextJourneyStep(visitId);
       } else {
         throw new Error('UNKNOWN_ACTION');
       }
-      return applyJourneyProgression(visitId, action, now);
+      return applyJourneyProgression(visitId, action, now, catalog);
     });
 
-  const redirect = (visitId: string, body: RedirectRequestBody): VisitView | undefined =>
+  const redirect = (
+    visitId: string,
+    body: RedirectRequestBody,
+    context: RedirectContext = {},
+  ): VisitView | undefined =>
     runInTransaction(db, () => {
-      const current = visitById(visitId);
-      if (!current) throw new Error('VISIT_NOT_FOUND');
-      validateRedirectRequest(loadCatalog(), current, body);
-      const data = loadCatalog();
-      const effectiveTargetLocationId = effectiveRedirectTargetLocationId(body, current);
-      const effectiveQueueId = effectiveRedirectQueueId(body, current);
+      const catalog = loadCatalog();
+      const record = visitRecordById(visitId);
+      if (!record) throw new Error('VISIT_NOT_FOUND');
+      validateRedirectRequest(catalog, record, body);
+      const effectiveTargetLocationId = effectiveRedirectTargetLocationId(body, record);
+      const effectiveQueueId = effectiveRedirectQueueId(body, record);
       const targetLocation = effectiveTargetLocationId
-        ? data.locations.find((item) => item.id === effectiveTargetLocationId)
+        ? catalog.locations.find((item) => item.id === effectiveTargetLocationId)
         : undefined;
-      const wasOnJourney = current.journeyStepIndex != null || current.journeyState === 'active';
-      const patch = resolveRedirectVisitPatch(current, body, { targetLocation });
+      const wasOnJourney = record.journeyStepIndex != null || record.journeyState === 'active';
+      const patch = resolveRedirectVisitPatch(record, body, { targetLocation });
       if (wasOnJourney) {
         patch.journeyState = 'abandoned';
       }
       const nextStatus = patch.status;
       maybeFail('redirect:update');
-      updateVisit(current, patch);
+      updateVisit(record, patch);
       if (wasOnJourney) {
         maybeFail('redirect:journeyExit');
         const correlationId = crypto.randomUUID();
         addEvent(
           visitId,
           'journey_abandoned',
-          current.status,
+          record.status,
           nextStatus,
-          current.targetLocationId,
+          record.targetLocationId,
           effectiveTargetLocationId ?? null,
-          current.queueId,
+          record.queueId,
           effectiveQueueId ?? null,
           'system',
           'wegen Redirect',
@@ -596,52 +594,53 @@ export function createVisitService(params: {
         addEvent(
           visitId,
           'redirected',
-          current.status,
+          record.status,
           nextStatus,
-          current.targetLocationId,
+          record.targetLocationId,
           effectiveTargetLocationId ?? null,
-          current.queueId,
+          record.queueId,
           effectiveQueueId ?? null,
           'mfa',
           body.staffNote ?? null,
-          { correlationId, actorId: body.actorId },
+          { correlationId, actorId: context.actorId },
         );
       } else {
         maybeFail('redirect:event');
         addEvent(
           visitId,
           'redirected',
-          current.status,
+          record.status,
           nextStatus,
-          current.targetLocationId,
+          record.targetLocationId,
           effectiveTargetLocationId ?? null,
-          current.queueId,
+          record.queueId,
           effectiveQueueId ?? null,
           'mfa',
           body.staffNote ?? null,
-          { actorId: body.actorId },
+          { actorId: context.actorId },
         );
       }
-      return visitById(visitId);
+      return visitView(visitId, catalog);
     });
 
   const cancel = (visitId: string, context: CancelContext = {}): VisitView | undefined =>
     runInTransaction(db, () => {
-      const current = visitById(visitId);
-      if (!current) throw new Error('VISIT_NOT_FOUND');
+      const catalog = loadCatalog();
+      const record = visitRecordById(visitId);
+      if (!record) throw new Error('VISIT_NOT_FOUND');
       if (
         !['waiting', 'directed', 'called', 'arrived', 'in_progress', 'blocked'].includes(
-          current.status,
+          record.status,
         )
       ) {
         throw new Error('CANCEL_NOT_ALLOWED');
       }
 
       const now = new Date().toISOString();
-      const wasOnJourney = current.journeyState === 'active' || current.journeyStepIndex != null;
+      const wasOnJourney = record.journeyState === 'active' || record.journeyStepIndex != null;
       const correlationId = wasOnJourney ? crypto.randomUUID() : undefined;
       maybeFail('cancel:update');
-      updateVisit(current, {
+      updateVisit(record, {
         status: 'cancelled',
         finishedAt: now,
         ...(wasOnJourney ? { journeyState: 'abandoned' } : {}),
@@ -652,12 +651,12 @@ export function createVisitService(params: {
         addEvent(
           visitId,
           'journey_abandoned',
-          current.status,
+          record.status,
           'cancelled',
-          current.targetLocationId,
-          current.targetLocationId,
-          current.queueId,
-          current.queueId,
+          record.targetLocationId,
+          record.targetLocationId,
+          record.queueId,
+          record.queueId,
           'system',
           'wegen Abbruch',
           { correlationId },
@@ -668,45 +667,47 @@ export function createVisitService(params: {
       addEvent(
         visitId,
         'cancelled',
-        current.status,
+        record.status,
         'cancelled',
-        current.targetLocationId,
-        current.targetLocationId,
-        current.queueId,
-        current.queueId,
+        record.targetLocationId,
+        record.targetLocationId,
+        record.queueId,
+        record.queueId,
         context.actorType ?? 'mfa',
         context.note,
         { correlationId, actorId: context.actorId },
       );
-      return visitById(visitId);
+      return visitView(visitId, catalog);
     });
 
   const reassignTarget = (visitId: string, context: ReassignTargetContext): VisitView | undefined =>
     runInTransaction(db, () => {
-      const current = visitById(visitId);
-      if (!current) throw new Error('VISIT_NOT_FOUND');
-      if (!['called', 'arrived', 'in_progress'].includes(current.status)) {
+      const catalog = loadCatalog();
+      const record = visitRecordById(visitId);
+      if (!record) throw new Error('VISIT_NOT_FOUND');
+      if (!['called', 'arrived', 'in_progress'].includes(record.status)) {
         throw new Error('REASSIGN_TARGET_NOT_ALLOWED');
       }
 
-      const data = loadCatalog();
-      assertCallTargetLocation(data, context.targetLocationId);
-      if (current.targetLocationId === context.targetLocationId) return current;
+      assertCallTargetLocation(catalog, context.targetLocationId);
+      if (record.targetLocationId === context.targetLocationId) {
+        return toVisitView(record, catalog);
+      }
 
-      const targetLocation = data.locations.find((item) => item.id === context.targetLocationId);
+      const targetLocation = catalog.locations.find((item) => item.id === context.targetLocationId);
       const now = new Date().toISOString();
       const nextStatus =
-        current.movementMode === 'call' ? 'called' : statusForMovementMode(current.movementMode);
+        record.movementMode === 'call' ? 'called' : statusForMovementMode(record.movementMode);
       maybeFail('reassignTarget:update');
-      updateVisit(current, {
+      updateVisit(record, {
         status: nextStatus,
         targetLocationId: context.targetLocationId,
         locationConfidence: 'instructed',
         terminalInstruction: movementTerminalInstruction({
-          movementMode: current.movementMode,
+          movementMode: record.movementMode,
           targetLocation,
         }),
-        calledAt: current.movementMode === 'call' ? now : null,
+        calledAt: record.movementMode === 'call' ? now : null,
         arrivedAt: null,
         startedAt: null,
       });
@@ -715,17 +716,17 @@ export function createVisitService(params: {
       addEvent(
         visitId,
         'target_reassigned',
-        current.status,
+        record.status,
         nextStatus,
-        current.targetLocationId,
+        record.targetLocationId,
         context.targetLocationId,
-        current.queueId,
-        current.queueId,
+        record.queueId,
+        record.queueId,
         context.actorType ?? 'mfa',
         context.note,
         { actorId: context.actorId },
       );
-      return visitById(visitId);
+      return visitView(visitId, catalog);
     });
 
   return { checkIn, supersede, transition, redirect, cancel, reassignTarget };

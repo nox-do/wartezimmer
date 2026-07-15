@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { ResolveBusinessDay, Visit, VisitEvent, VisitView } from '@praxis-flow/flow-core';
+import type { Catalog, ResolveBusinessDay, Visit, VisitEvent, VisitView } from '@praxis-flow/flow-core';
 import {
   TERMINAL_VISIT_STATUSES,
   effectiveEscortPolicy,
@@ -51,14 +51,15 @@ export const VISIT_INSERT_SQL = `INSERT INTO visits (
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 function resolveTopicRouting(
-  catalogRepository: CatalogRepository,
+  catalog: Catalog,
+  stepsForTemplate: CatalogRepository['stepsForTemplate'],
   params: {
     topicId: string;
     surfaceId: string;
     effectivePolicy: Visit['effectiveEscortPolicy'];
   },
 ) {
-  const data = catalogRepository.loadCatalog();
+  const data = catalog;
   const selectedTopic = data.topics.find((item) => item.id === params.topicId && item.active);
   const selectedRule = ruleForTopicAtSurface(data, params.topicId, params.surfaceId);
   if (!selectedTopic) throw new Error('TOPIC_OR_ROUTING_RULE_MISSING');
@@ -73,7 +74,7 @@ function resolveTopicRouting(
 
   const useJourney = Boolean(selectedRule.journeyTemplateId);
   const templateSteps = useJourney
-    ? catalogRepository.stepsForTemplate(selectedRule.journeyTemplateId!, data.journeySteps)
+    ? stepsForTemplate(selectedRule.journeyTemplateId!, data.journeySteps)
     : [];
   const journeyStep0 = templateSteps[0];
   if (useJourney && !journeyStep0) throw new Error('JOURNEY_STEP_MISSING');
@@ -161,13 +162,14 @@ export function supersedeVisit(params: {
 }): SupersedeResult {
   const { db, catalogRepository, visitRepository, maybeFail, resolveBusinessDay, visitId, body } =
     params;
-  const { visitById, updateVisit, addEvent } = visitRepository;
+  const { visitRecordById, toVisitView, updateVisit, addEvent } = visitRepository;
+  const { loadCatalog, stepsForTemplate } = catalogRepository;
 
   return runInTransaction(db, () => {
     const topicId = body.topicId?.trim();
     if (!topicId) throw new Error('SUPERSEDE_TOPIC_REQUIRED');
 
-    const current = visitById(visitId);
+    const current = visitRecordById(visitId);
     if (!current) throw new Error('VISIT_NOT_FOUND');
     if (TERMINAL_VISIT_STATUSES.has(current.status as 'done' | 'cancelled' | 'no_show')) {
       throw new Error('SUPERSEDE_SOURCE_TERMINAL');
@@ -176,10 +178,10 @@ export function supersedeVisit(params: {
     if (current.primaryTopicId === topicId) throw new Error('SUPERSEDE_SAME_TOPIC');
 
     const surfaceId = body.surfaceId?.trim() || current.lastSurfaceId || 'terminal_1';
-    const data = catalogRepository.loadCatalog();
-    const selectedRulePreview = ruleForTopicAtSurface(data, topicId, surfaceId);
+    const catalog = loadCatalog();
+    const selectedRulePreview = ruleForTopicAtSurface(catalog, topicId, surfaceId);
     if (!selectedRulePreview) {
-      const hasActiveRule = data.routingRules.some(
+      const hasActiveRule = catalog.routingRules.some(
         (item) => item.topicId === topicId && item.active,
       );
       throw new Error(
@@ -188,7 +190,11 @@ export function supersedeVisit(params: {
     }
     const configuredEscortPolicy = selectedRulePreview.escortPolicy;
     const effectivePolicy = effectiveEscortPolicy(configuredEscortPolicy);
-    const routing = resolveTopicRouting(catalogRepository, { topicId, surfaceId, effectivePolicy });
+    const routing = resolveTopicRouting(catalog, stepsForTemplate, {
+      topicId,
+      surfaceId,
+      effectivePolicy,
+    });
 
     const now = new Date().toISOString();
     const businessDay = current.queueNumberDate || resolveBusinessDay(new Date(now));
@@ -331,9 +337,13 @@ export function supersedeVisit(params: {
       { correlationId, actorId },
     );
 
-    const superseded = visitById(current.id);
-    const visit = visitById(newVisitId);
-    if (!superseded || !visit) throw new Error('VISIT_NOT_FOUND');
-    return { superseded, visit, correlationId };
+    const supersededRecord = visitRecordById(current.id);
+    const visitRecord = visitRecordById(newVisitId);
+    if (!supersededRecord || !visitRecord) throw new Error('VISIT_NOT_FOUND');
+    return {
+      superseded: toVisitView(supersededRecord, catalog),
+      visit: toVisitView(visitRecord, catalog),
+      correlationId,
+    };
   });
 }

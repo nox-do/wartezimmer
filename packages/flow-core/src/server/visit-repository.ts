@@ -13,7 +13,73 @@ const bool = (value: unknown) => Boolean(value);
 const opt = <T>(value: T | null | undefined) => value ?? undefined;
 const str = (value: unknown) => String(value);
 
-function visit(row: SqlRow): Visit {
+const VISIT_SELECT_SQL = `SELECT visits.*, patients.display_name AS patient_display_name
+FROM visits
+JOIN patients ON patients.id = visits.patient_id
+WHERE visits.id = ?`;
+
+/** Check-in INSERT ohne Supersede-Link-Spalten — SQLite setzt NULL. */
+const CHECKIN_VISIT_INSERT_SQL = `INSERT INTO visits (
+  id, patient_id, status, primary_topic_id, applied_routing_rule_id,
+  last_known_location_id, target_location_id, queue_id, last_surface_id,
+  movement_mode, location_confidence, public_display_mode,
+  queue_number, queue_number_date, queue_number_scope, queue_lane_code, queue_sequence,
+  needs_assistance, check_in_path, auth_path,
+  configured_escort_policy, effective_escort_policy, allow_redirect,
+  terminal_instruction, staff_note,
+  checked_in_at, called_at, arrived_at, started_at, finished_at,
+  journey_template_id, journey_step_index, journey_step_completed_at, journey_state,
+  created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+export type CheckInPatientInsert = {
+  id: string;
+  displayName: string | null;
+  isAnonymous: boolean;
+  createdAt: string;
+};
+
+export type CheckInVisitInsert = {
+  id: string;
+  patientId: string;
+  status: Visit['status'];
+  primaryTopicId: string;
+  appliedRoutingRuleId: string;
+  lastKnownLocationId: string | null;
+  targetLocationId: string | null;
+  queueId: string | null;
+  lastSurfaceId: string;
+  movementMode: Visit['movementMode'];
+  locationConfidence: Visit['locationConfidence'];
+  publicDisplayMode: Visit['publicDisplayMode'];
+  queueNumber: string;
+  queueNumberDate: string;
+  queueNumberScope: Visit['queueNumberScope'];
+  queueLaneCode: string;
+  queueSequence: number;
+  needsAssistance: boolean;
+  checkInPath: Visit['checkInPath'];
+  authPath: Visit['authPath'];
+  configuredEscortPolicy: Visit['configuredEscortPolicy'];
+  effectiveEscortPolicy: Visit['effectiveEscortPolicy'];
+  allowRedirect: boolean;
+  terminalInstruction: string;
+  staffNote: string | null;
+  checkedInAt: string;
+  journeyTemplateId: string | null;
+  journeyStepIndex: number | null;
+  journeyState: Visit['journeyState'] | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CheckInTopicInsert = {
+  id: string;
+  visitId: string;
+  topicId: string;
+};
+
+function mapVisit(row: SqlRow): Visit {
   return {
     id: str(row.id),
     patientId: str(row.patient_id),
@@ -57,7 +123,7 @@ function visit(row: SqlRow): Visit {
   };
 }
 
-function event(row: SqlRow): VisitEvent {
+function mapEvent(row: SqlRow): VisitEvent {
   return {
     id: str(row.id),
     visitId: str(row.visit_id),
@@ -77,6 +143,95 @@ function event(row: SqlRow): VisitEvent {
     correlationId: opt(row.correlation_id as string | null),
     createdAt: str(row.created_at),
   };
+}
+
+export function visitRecordById(db: DatabaseSync, id: string): Visit | undefined {
+  const row = db.prepare(VISIT_SELECT_SQL).get(id) as SqlRow | undefined;
+  return row ? mapVisit(row) : undefined;
+}
+
+export function toVisitView(
+  visitRow: Visit,
+  catalog: Catalog,
+  stepsForTemplateFn: CatalogRepository['stepsForTemplate'],
+): VisitView {
+  const steps = visitRow.journeyTemplateId
+    ? stepsForTemplateFn(visitRow.journeyTemplateId, catalog.journeySteps)
+    : [];
+  return {
+    ...visitRow,
+    topic: catalog.topics.find((item) => item.id === visitRow.primaryTopicId),
+    queue: catalog.queues.find((item) => item.id === visitRow.queueId),
+    lastKnownLocation: catalog.locations.find((item) => item.id === visitRow.lastKnownLocationId),
+    targetLocation: catalog.locations.find((item) => item.id === visitRow.targetLocationId),
+    journeyTemplate: catalog.journeyTemplates.find((item) => item.id === visitRow.journeyTemplateId),
+    journeyStepLabel:
+      visitRow.journeyStepIndex != null
+        ? (journeyStepLabel(steps, visitRow.journeyStepIndex) ?? undefined)
+        : undefined,
+  };
+}
+
+export function insertCheckInAggregate(
+  db: DatabaseSync,
+  params: {
+    patient: CheckInPatientInsert;
+    visit: CheckInVisitInsert;
+    topic: CheckInTopicInsert;
+  },
+): void {
+  const { patient, visit: visitRow, topic } = params;
+  db.prepare('INSERT INTO patients VALUES (?, ?, ?, ?)').run(
+    patient.id,
+    patient.displayName,
+    patient.isAnonymous ? 0 : 1,
+    patient.createdAt,
+  );
+  db.prepare(CHECKIN_VISIT_INSERT_SQL).run(
+    visitRow.id,
+    visitRow.patientId,
+    visitRow.status,
+    visitRow.primaryTopicId,
+    visitRow.appliedRoutingRuleId,
+    visitRow.lastKnownLocationId,
+    visitRow.targetLocationId,
+    visitRow.queueId,
+    visitRow.lastSurfaceId,
+    visitRow.movementMode,
+    visitRow.locationConfidence,
+    visitRow.publicDisplayMode,
+    visitRow.queueNumber,
+    visitRow.queueNumberDate,
+    visitRow.queueNumberScope,
+    visitRow.queueLaneCode,
+    visitRow.queueSequence,
+    visitRow.needsAssistance ? 1 : 0,
+    visitRow.checkInPath,
+    visitRow.authPath,
+    visitRow.configuredEscortPolicy,
+    visitRow.effectiveEscortPolicy,
+    visitRow.allowRedirect ? 1 : 0,
+    visitRow.terminalInstruction,
+    visitRow.staffNote,
+    visitRow.checkedInAt,
+    null,
+    null,
+    null,
+    null,
+    visitRow.journeyTemplateId,
+    visitRow.journeyStepIndex,
+    null,
+    visitRow.journeyState ?? null,
+    visitRow.createdAt,
+    visitRow.updatedAt,
+  );
+  db.prepare('INSERT INTO visit_topics VALUES (?, ?, ?, ?, ?)').run(
+    topic.id,
+    topic.visitId,
+    topic.topicId,
+    1,
+    'open',
+  );
 }
 
 function validateVisitPatch(patch: VisitPatch): void {
@@ -219,40 +374,11 @@ export function addEvent(
   );
 }
 
-function enrich(
-  visitRow: Visit,
-  data: Catalog,
-  stepsForTemplateFn: CatalogRepository['stepsForTemplate'],
-): VisitView {
-  const steps = visitRow.journeyTemplateId
-    ? stepsForTemplateFn(visitRow.journeyTemplateId, data.journeySteps)
-    : [];
-  return {
-    ...visitRow,
-    topic: data.topics.find((item) => item.id === visitRow.primaryTopicId),
-    queue: data.queues.find((item) => item.id === visitRow.queueId),
-    lastKnownLocation: data.locations.find((item) => item.id === visitRow.lastKnownLocationId),
-    targetLocation: data.locations.find((item) => item.id === visitRow.targetLocationId),
-    journeyTemplate: data.journeyTemplates.find((item) => item.id === visitRow.journeyTemplateId),
-    journeyStepLabel:
-      visitRow.journeyStepIndex != null
-        ? (journeyStepLabel(steps, visitRow.journeyStepIndex) ?? undefined)
-        : undefined,
-  };
-}
-
 export function createVisitRepository(db: DatabaseSync, catalogRepository: CatalogRepository) {
   const visitById = (id: string): VisitView | undefined => {
-    const row = db
-      .prepare(
-        `SELECT visits.*, patients.display_name AS patient_display_name
-       FROM visits
-       JOIN patients ON patients.id = visits.patient_id
-       WHERE visits.id = ?`,
-      )
-      .get(id) as SqlRow | undefined;
-    return row
-      ? enrich(visit(row), catalogRepository.loadCatalog(), catalogRepository.stepsForTemplate)
+    const record = visitRecordById(db, id);
+    return record
+      ? toVisitView(record, catalogRepository.loadCatalog(), catalogRepository.stepsForTemplate)
       : undefined;
   };
 
@@ -267,8 +393,10 @@ export function createVisitRepository(db: DatabaseSync, catalogRepository: Catal
        ORDER BY visits.created_at`,
       )
       .all(...activeStatuses) as SqlRow[];
-    const data = catalogRepository.loadCatalog();
-    return rows.map((row) => enrich(visit(row), data, catalogRepository.stepsForTemplate));
+    const catalog = catalogRepository.loadCatalog();
+    return rows.map((row) =>
+      toVisitView(mapVisit(row), catalog, catalogRepository.stepsForTemplate),
+    );
   };
 
   const events = (visitId: string): VisitEvent[] =>
@@ -276,11 +404,19 @@ export function createVisitRepository(db: DatabaseSync, catalogRepository: Catal
       db
         .prepare('SELECT * FROM visit_events WHERE visit_id = ? ORDER BY sequence')
         .all(visitId) as SqlRow[]
-    ).map(event);
+    ).map(mapEvent);
 
   return {
     visits,
     visitById,
+    visitRecordById: (id: string) => visitRecordById(db, id),
+    toVisitView: (visitRow: Visit, catalog: Catalog) =>
+      toVisitView(visitRow, catalog, catalogRepository.stepsForTemplate),
+    insertCheckInAggregate: (params: {
+      patient: CheckInPatientInsert;
+      visit: CheckInVisitInsert;
+      topic: CheckInTopicInsert;
+    }) => insertCheckInAggregate(db, params),
     events,
     updateVisit: (current: Visit, patch: VisitPatch) => updateVisit(db, current, patch),
     addEvent: (
