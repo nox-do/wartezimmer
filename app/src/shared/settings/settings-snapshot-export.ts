@@ -1,7 +1,7 @@
-import type { DatabaseSync } from 'node:sqlite';
+import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import { getOpsSettingsFromDb } from '../db/database-ops-settings.js';
 import { getAuthSettingsFromDb } from '../db/database-auth-settings.js';
-import { prepareCoreDatabaseStatements } from '../db/database-statements.js';
+import { prepareOpsDatabaseStatements } from '../db/database-ops-statements.js';
 import { SETUP_CONTACT_MODES, type SetupContactMode } from '../ops/setup-types.js';
 import {
   SETTINGS_FORMAT_VERSION,
@@ -16,7 +16,7 @@ export function exportSettingsDbSnapshotFromDb(
   db: DatabaseSync,
   exportedAt: string = new Date().toISOString(),
 ): SettingsSnapshotDbV1 {
-  const stmts = prepareCoreDatabaseStatements(db);
+  const stmts = prepareOpsDatabaseStatements(db);
   const auth = getAuthSettingsFromDb({ getAuthSettingsStmt: stmts.getAuthSettingsStmt });
 
   const authSettings: AuthSettingsSnapshotV1 = {
@@ -30,7 +30,9 @@ export function exportSettingsDbSnapshotFromDb(
     exportedAt,
     opsSettings: buildOpsSettingsSnapshotV1(db, stmts.getOpsSettingsStmt),
     authSettings,
-    messagingProviderConfigs: readMessagingProviderSnapshots(db),
+    messagingProviderConfigs: readMessagingProviderSnapshots(
+      stmts.listMessagingProviderConfigsStmt,
+    ),
   };
 }
 
@@ -88,20 +90,10 @@ function readOpsSettingsExtras(db: DatabaseSync): {
   };
 }
 
-function readMessagingProviderSnapshots(db: DatabaseSync): MessagingProviderConfigSnapshotV1[] {
-  const rows = db
-    .prepare(
-      `
-      SELECT
-        provider_id AS providerId,
-        channel,
-        enabled,
-        credentials_json AS credentialsJson
-      FROM messaging_provider_configs
-      ORDER BY provider_id
-    `,
-    )
-    .all() as Array<{
+function readMessagingProviderSnapshots(
+  listMessagingProviderConfigsStmt: StatementSync,
+): MessagingProviderConfigSnapshotV1[] {
+  const rows = listMessagingProviderConfigsStmt.all() as Array<{
     providerId?: string;
     channel?: string;
     enabled?: number;
@@ -120,7 +112,7 @@ function readMessagingProviderSnapshots(db: DatabaseSync): MessagingProviderConf
 
 export function buildOpsSettingsSnapshotV1(
   db: DatabaseSync,
-  getOpsSettingsStmt: ReturnType<typeof prepareCoreDatabaseStatements>['getOpsSettingsStmt'],
+  getOpsSettingsStmt: StatementSync,
 ): OpsSettingsSnapshotV1 {
   const settings = getOpsSettingsFromDb({
     getOpsSettingsStmt,
