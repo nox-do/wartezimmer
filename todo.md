@@ -1,6 +1,15 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-14
+Stand: 2026-07-15
+
+## Erledigt: VisitPatch-Semantik vereinheitlicht (2026-07-15)
+
+- `VisitPatch` in flow-core: fehlender Key → preserve, `null` → DB clear, kein `undefined`-Löschsignal
+- `updateVisit`: `journeyTemplateId` aus generischem UPDATE entfernt; `staffNote` per Presence-Semantik
+- Redirect: Parser/Patch/Events mit Dreiwert-Semantik (`queueId`, `targetLocationId`, `staffNote`)
+- Journey-Patches an `VisitPatch` angebunden; Cast in `visit-service` entfernt
+- Tests: `visit-repository.test.ts`, `parseRedirectBody`-Presence, Redirect-Fix
+- Review-Nachzug: `INVALID_VISIT_PATCH` bei explizitem `undefined`; Journey-Typen wieder fachlich eng; Redirect-E2E preserve/clear; `updateVisit` nicht öffentlich exportiert
 
 ## Erledigt: Dockerfile syntax-Zeile entfernt (2026-07-14)
 

@@ -103,12 +103,9 @@ export function parseRedirectBody(body: unknown) {
   if (!body || typeof body !== 'object') throw new Error('INVALID_REQUEST_BODY');
   const raw = body as Record<string, unknown>;
 
-  const queueId = nullableId(raw.queueId);
-  const targetLocationId = nullableId(raw.targetLocationId);
-
   return {
-    queueId,
-    targetLocationId,
+    ...('queueId' in raw ? { queueId: nullableId(raw.queueId) } : {}),
+    ...('targetLocationId' in raw ? { targetLocationId: nullableId(raw.targetLocationId) } : {}),
     movementMode: assertEnum(
       raw.movementMode,
       MOVEMENT_MODES,
@@ -119,7 +116,7 @@ export function parseRedirectBody(body: unknown) {
       PUBLIC_DISPLAY_MODES,
       'INVALID_PUBLIC_DISPLAY_MODE',
     ) as PublicDisplayMode,
-    staffNote: isString(raw.staffNote) ? raw.staffNote : undefined,
+    ...('staffNote' in raw ? { staffNote: nullableString(raw.staffNote) } : {}),
     actorSurfaceId:
       isString(raw.actorSurfaceId) && raw.actorSurfaceId.trim()
         ? raw.actorSurfaceId.trim()
@@ -131,8 +128,9 @@ export function parseRedirectBody(body: unknown) {
           REDIRECT_LOCATION_SEMANTICS,
           'INVALID_REDIRECT_LOCATION_SEMANTICS',
         )) as RedirectLocationSemantics,
-    lastKnownLocationId:
-      'lastKnownLocationId' in raw ? nullableId(raw.lastKnownLocationId) : undefined,
+    ...('lastKnownLocationId' in raw
+      ? { lastKnownLocationId: nullableId(raw.lastKnownLocationId) }
+      : {}),
     terminalInstruction: isString(raw.terminalInstruction) ? raw.terminalInstruction : undefined,
     preserveTerminalInstruction: Boolean(raw.preserveTerminalInstruction),
   };
@@ -237,10 +235,17 @@ function parseJourneyStepDraft(step: unknown, _index: number) {
   };
 }
 
-function nullableId(value: unknown): string | null | undefined {
-  if (value == null || value === '') return null;
+function nullableId(value: unknown): string | null {
+  if (value == null) return null;
   if (!isString(value)) throw new Error('INVALID_REQUEST_BODY');
-  return value.trim();
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function nullableString(value: unknown): string | null {
+  if (value === null) return null;
+  if (!isString(value)) throw new Error('INVALID_REQUEST_BODY');
+  return value;
 }
 
 function optionalId(value: unknown): string | undefined {

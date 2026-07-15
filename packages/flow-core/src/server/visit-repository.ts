@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { Catalog, Visit, VisitEvent, VisitView } from '@praxis-flow/flow-core';
+import type { Catalog, Visit, VisitEvent, VisitPatch, VisitView } from '@praxis-flow/flow-core';
 import { journeyStepLabel, ACTIVE_VISIT_STATUSES } from '@praxis-flow/flow-core';
 import type { CatalogRepository } from './catalog-repository.js';
 
@@ -79,15 +79,37 @@ function event(row: SqlRow): VisitEvent {
   };
 }
 
-function patchField<K extends keyof Visit>(
-  patch: Partial<Visit>,
-  current: Visit,
-  field: K,
-): Visit[K] | null | undefined {
-  return field in patch ? patch[field] : current[field];
+function validateVisitPatch(patch: VisitPatch): void {
+  for (const key of Object.keys(patch) as (keyof VisitPatch)[]) {
+    if (patch[key] === undefined) {
+      throw new Error('INVALID_VISIT_PATCH');
+    }
+  }
+  if ('supersededByVisitId' in patch) {
+    const supersededByVisitId = patch.supersededByVisitId;
+    if (typeof supersededByVisitId !== 'string' || !supersededByVisitId.trim()) {
+      throw new Error('INVALID_VISIT_PATCH');
+    }
+  }
 }
 
-export function updateVisit(db: DatabaseSync, current: Visit, patch: Partial<Visit>): void {
+function patchField(
+  patch: VisitPatch,
+  current: Visit,
+  field: keyof VisitPatch,
+): string | number | null | undefined {
+  if (field in patch) {
+    return patch[field] as string | number | null | undefined;
+  }
+  return current[field as keyof Visit] as string | number | null | undefined;
+}
+
+function sqlNullable(value: unknown): string | number | null {
+  return value == null ? null : (value as string | number);
+}
+
+export function updateVisit(db: DatabaseSync, current: Visit, patch: VisitPatch): void {
+  validateVisitPatch(patch);
   const sets = [
     'status = ?',
     'last_known_location_id = ?',
@@ -102,34 +124,34 @@ export function updateVisit(db: DatabaseSync, current: Visit, patch: Partial<Vis
     'arrived_at = ?',
     'started_at = ?',
     'finished_at = ?',
-    'journey_template_id = ?',
     'journey_step_index = ?',
     'journey_step_completed_at = ?',
     'journey_state = ?',
   ];
   const values: Array<string | number | null> = [
-    patch.status ?? current.status,
-    patchField(patch, current, 'lastKnownLocationId') ?? null,
-    patchField(patch, current, 'targetLocationId') ?? null,
-    patchField(patch, current, 'queueId') ?? null,
-    patch.movementMode ?? current.movementMode,
-    patch.locationConfidence ?? current.locationConfidence,
-    patch.publicDisplayMode ?? current.publicDisplayMode,
-    patch.staffNote ?? current.staffNote ?? null,
-    patch.terminalInstruction ?? current.terminalInstruction,
-    patchField(patch, current, 'calledAt') ?? null,
-    patchField(patch, current, 'arrivedAt') ?? null,
-    patchField(patch, current, 'startedAt') ?? null,
-    patchField(patch, current, 'finishedAt') ?? null,
-    patch.journeyTemplateId ?? current.journeyTemplateId ?? null,
-    patchField(patch, current, 'journeyStepIndex') ?? null,
-    patchField(patch, current, 'journeyStepCompletedAt') ?? null,
-    patchField(patch, current, 'journeyState') ?? null,
+    patchField(patch, current, 'status') as Visit['status'],
+    sqlNullable(patchField(patch, current, 'lastKnownLocationId')),
+    sqlNullable(patchField(patch, current, 'targetLocationId')),
+    sqlNullable(patchField(patch, current, 'queueId')),
+    patchField(patch, current, 'movementMode') as Visit['movementMode'],
+    patchField(patch, current, 'locationConfidence') as Visit['locationConfidence'],
+    patchField(patch, current, 'publicDisplayMode') as Visit['publicDisplayMode'],
+    sqlNullable(patchField(patch, current, 'staffNote')),
+    patchField(patch, current, 'terminalInstruction') as string,
+    sqlNullable(patchField(patch, current, 'calledAt')),
+    sqlNullable(patchField(patch, current, 'arrivedAt')),
+    sqlNullable(patchField(patch, current, 'startedAt')),
+    sqlNullable(patchField(patch, current, 'finishedAt')),
+    sqlNullable(patchField(patch, current, 'journeyStepIndex')),
+    sqlNullable(patchField(patch, current, 'journeyStepCompletedAt')),
+    sqlNullable(patchField(patch, current, 'journeyState')),
   ];
 
   if ('supersededByVisitId' in patch) {
+    const supersededByVisitId = patch.supersededByVisitId;
+    if (supersededByVisitId === undefined) throw new Error('INVALID_VISIT_PATCH');
     sets.push('superseded_by_visit_id = ?');
-    values.push(patch.supersededByVisitId ?? null);
+    values.push(supersededByVisitId);
   }
 
   sets.push('updated_at = ?');
@@ -260,7 +282,7 @@ export function createVisitRepository(db: DatabaseSync, catalogRepository: Catal
     visits,
     visitById,
     events,
-    updateVisit: (current: Visit, patch: Partial<Visit>) => updateVisit(db, current, patch),
+    updateVisit: (current: Visit, patch: VisitPatch) => updateVisit(db, current, patch),
     addEvent: (
       visitId: string,
       type: VisitEvent['type'],

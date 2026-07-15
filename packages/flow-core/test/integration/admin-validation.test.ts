@@ -36,6 +36,38 @@ test('parseRedirectBody: ungültige queueId-Typen werden abgelehnt', () => {
   );
 });
 
+test('parseRedirectBody: fehlende queueId vs explizites null unterscheidbar', () => {
+  const without = parseRedirectBody({ movementMode: 'call', publicDisplayMode: 'visible' });
+  assert.equal('queueId' in without, false);
+
+  const cleared = parseRedirectBody({
+    queueId: null,
+    movementMode: 'call',
+    publicDisplayMode: 'visible',
+  });
+  assert.equal('queueId' in cleared, true);
+  assert.equal(cleared.queueId, null);
+
+  const trimmed = parseRedirectBody({
+    queueId: '   ',
+    movementMode: 'call',
+    publicDisplayMode: 'visible',
+  });
+  assert.equal(trimmed.queueId, null);
+});
+
+test('parseRedirectBody: staffNote null vs fehlend', () => {
+  const without = parseRedirectBody({ movementMode: 'call', publicDisplayMode: 'visible' });
+  assert.equal('staffNote' in without, false);
+
+  const cleared = parseRedirectBody({
+    staffNote: null,
+    movementMode: 'call',
+    publicDisplayMode: 'visible',
+  });
+  assert.equal(cleared.staffNote, null);
+});
+
 test('parseSaveRuleBody und parseSaveJourneyTemplateBody', () => {
   const rule = parseSaveRuleBody({
     topicId: 'general',

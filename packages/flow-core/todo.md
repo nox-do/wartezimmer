@@ -1,5 +1,12 @@
 # Flow Core — Handover
 
+## Erledigt: VisitPatch-Semantik (2026-07-15)
+
+- [x] Expliziter `VisitPatch`-Typ (kein `Partial<Visit>`)
+- [x] Repository: preserve/clear via Key-Präsenz; `journeyTemplateId` nicht patchbar
+- [x] Redirect: Parser + `resolveRedirectVisitPatch` + effektive Event-Werte
+- [x] 161 Tests grün
+
 ## Erledigt (Baseline)
 
 - [x] Transaktionen, atomare Queue-Nummern, WAL

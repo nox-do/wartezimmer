@@ -14,12 +14,15 @@ import {
   formatJourneyNextStepNote,
   lastKnownFromJourneyStep,
   resolveRedirectVisitPatch,
+  effectiveRedirectQueueId,
+  effectiveRedirectTargetLocationId,
   assertTransitionAllowed,
   completeJourneyStepPatch,
   journeyStepLabel,
   startNextJourneyStepPatch,
   stepToVisitPatch,
   type JourneyProgressionPatch,
+  type VisitPatch,
   validateRedirectRequest,
   laneCounterScope,
   resolveLaneCodeForCheckIn,
@@ -104,7 +107,7 @@ export function createVisitService(params: {
     steps: ReturnType<typeof stepsForTemplate>,
   ): VisitView => {
     maybeFail('journeyProgression:update');
-    updateVisit(current, patch as Partial<Visit>);
+    updateVisit(current, patch);
     const after = visitById(visitId)!;
     const data = loadCatalog();
     const fromLocation = data.locations.find((item) => item.id === current.targetLocationId);
@@ -421,11 +424,11 @@ export function createVisitService(params: {
         if (context.targetLocationId) {
           assertCallTargetLocation(data, context.targetLocationId);
         }
-        const callPatch: Partial<Visit> = {
+        const callPatch: VisitPatch = {
           status: 'called',
           locationConfidence: 'instructed',
           calledAt: now,
-          arrivedAt: undefined,
+          arrivedAt: null,
         };
         if (context.targetLocationId) {
           callPatch.targetLocationId = context.targetLocationId;
@@ -506,7 +509,7 @@ export function createVisitService(params: {
           current.journeyStepIndex != null &&
           currentStep?.completedWhen === 'done' &&
           steps[current.journeyStepIndex + 1] != null;
-        const donePatch: Partial<Visit> = hasNextJourneyStep
+        const donePatch: VisitPatch = hasNextJourneyStep
           ? { status: current.status === 'arrived' ? 'in_progress' : current.status }
           : { status: 'done', finishedAt: now };
         if (current.status === 'arrived' && context.actingLocationId) {
@@ -533,7 +536,7 @@ export function createVisitService(params: {
         // Recall, kein Redirect: journeyState bleibt unveraendert (kein passendes completedWhen).
         const data = loadCatalog();
         const returnPatch = resolveReturnToWaitingVisitPatch(current, data);
-        const nextStatus = returnPatch.status!;
+        const nextStatus = returnPatch.status ?? current.status;
         maybeFail('transition:update');
         updateVisit(current, returnPatch);
         const afterReturn = visitById(visitId)!;
@@ -565,13 +568,17 @@ export function createVisitService(params: {
       if (!current) throw new Error('VISIT_NOT_FOUND');
       validateRedirectRequest(loadCatalog(), current, body);
       const data = loadCatalog();
-      const targetLocation = data.locations.find((item) => item.id === body.targetLocationId);
+      const effectiveTargetLocationId = effectiveRedirectTargetLocationId(body, current);
+      const effectiveQueueId = effectiveRedirectQueueId(body, current);
+      const targetLocation = effectiveTargetLocationId
+        ? data.locations.find((item) => item.id === effectiveTargetLocationId)
+        : undefined;
       const wasOnJourney = current.journeyStepIndex != null || current.journeyState === 'active';
       const patch = resolveRedirectVisitPatch(current, body, { targetLocation });
       if (wasOnJourney) {
         patch.journeyState = 'abandoned';
       }
-      const nextStatus = patch.status!;
+      const nextStatus = patch.status;
       maybeFail('redirect:update');
       updateVisit(current, patch);
       if (wasOnJourney) {
@@ -583,9 +590,9 @@ export function createVisitService(params: {
           current.status,
           nextStatus,
           current.targetLocationId,
-          body.targetLocationId,
+          effectiveTargetLocationId ?? null,
           current.queueId,
-          body.queueId,
+          effectiveQueueId ?? null,
           'system',
           'wegen Redirect',
           { correlationId },
@@ -597,11 +604,11 @@ export function createVisitService(params: {
           current.status,
           nextStatus,
           current.targetLocationId,
-          body.targetLocationId,
+          effectiveTargetLocationId ?? null,
           current.queueId,
-          body.queueId,
+          effectiveQueueId ?? null,
           'mfa',
-          body.staffNote,
+          body.staffNote ?? null,
           { correlationId, actorId: body.actorId },
         );
       } else {
@@ -612,11 +619,11 @@ export function createVisitService(params: {
           current.status,
           nextStatus,
           current.targetLocationId,
-          body.targetLocationId,
+          effectiveTargetLocationId ?? null,
           current.queueId,
-          body.queueId,
+          effectiveQueueId ?? null,
           'mfa',
-          body.staffNote,
+          body.staffNote ?? null,
           { actorId: body.actorId },
         );
       }
@@ -704,9 +711,9 @@ export function createVisitService(params: {
           movementMode: current.movementMode,
           targetLocation,
         }),
-        calledAt: current.movementMode === 'call' ? now : undefined,
-        arrivedAt: undefined,
-        startedAt: undefined,
+        calledAt: current.movementMode === 'call' ? now : null,
+        arrivedAt: null,
+        startedAt: null,
       });
 
       maybeFail('reassignTarget:event');

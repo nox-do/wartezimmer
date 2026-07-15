@@ -215,6 +215,34 @@ export interface Visit {
   updatedAt: string;
 }
 
+/** Patch fuer updateVisit — fehlender Key behaelt Current, null loescht nullable DB-Felder. */
+export type VisitPatch = {
+  status?: Visit['status'];
+
+  lastKnownLocationId?: string | null;
+  targetLocationId?: string | null;
+  queueId?: string | null;
+
+  movementMode?: Visit['movementMode'];
+  locationConfidence?: Visit['locationConfidence'];
+  publicDisplayMode?: Visit['publicDisplayMode'];
+
+  staffNote?: string | null;
+  terminalInstruction?: string;
+
+  calledAt?: string | null;
+  arrivedAt?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+
+  journeyStepIndex?: number | null;
+  journeyStepCompletedAt?: string | null;
+  journeyState?: Visit['journeyState'];
+
+  /** Nur setzbar (Supersede); nicht per null loeschbar. */
+  supersededByVisitId?: string;
+};
+
 export interface VisitEvent {
   id: string;
   visitId: string;

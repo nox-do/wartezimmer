@@ -6,6 +6,7 @@ import type {
   RoutingRule,
   TerminalVisitStatus,
   Visit,
+  VisitPatch,
   VisitStatus,
 } from './types.js';
 import type { TransitionAction } from './domain-enums.js';
@@ -127,7 +128,7 @@ export function resolveReturnToWaitingTargetLocationId(
  * Patch fuer return_to_waiting: Warteliste + Wartebereich aus RoutingRule, Aufruf-Timestamps geloescht.
  * Bewusst kein Redirect — Journey bleibt active (Patient verlaesst nur den Aufruf-Zyklus, nicht die Route).
  */
-export function resolveReturnToWaitingVisitPatch(visit: Visit, catalog: Catalog): Partial<Visit> {
+export function resolveReturnToWaitingVisitPatch(visit: Visit, catalog: Catalog): VisitPatch {
   const rule = catalog.routingRules.find((item) => item.id === visit.appliedRoutingRuleId);
   const waitingQueueId = rule?.initialQueueId ?? visit.queueId;
   const waitingQueue = catalog.queues.find((item) => item.id === waitingQueueId);
@@ -139,14 +140,22 @@ export function resolveReturnToWaitingVisitPatch(visit: Visit, catalog: Catalog)
       ? waitingQueue.homeLocationId
       : undefined);
 
-  return {
+  const patch: VisitPatch = {
     status: statusForMovementMode(visit.movementMode),
-    targetLocationId: resolveReturnToWaitingTargetLocationId(visit, rule, catalog),
-    queueId: waitingQueueId ?? undefined,
-    lastKnownLocationId: waitingLocationId ?? undefined,
     locationConfidence: 'assumed',
-    calledAt: undefined,
-    arrivedAt: undefined,
-    startedAt: undefined,
+    calledAt: null,
+    arrivedAt: null,
+    startedAt: null,
   };
+
+  const targetLocationId = resolveReturnToWaitingTargetLocationId(visit, rule, catalog);
+  if (targetLocationId !== undefined) {
+    patch.targetLocationId = targetLocationId;
+  }
+  if (waitingQueueId !== undefined) {
+    patch.queueId = waitingQueueId;
+  }
+  patch.lastKnownLocationId = waitingLocationId ?? null;
+
+  return patch;
 }

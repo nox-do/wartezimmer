@@ -37,7 +37,7 @@ export type JourneyStepCompletedPatch = {
   journeyStepCompletedAt: string;
 };
 
-/** Patch shapes returned by journey progression helpers — assignable to visit updates. */
+/** Patch shapes returned by journey progression helpers — assignable to VisitPatch. */
 export type JourneyProgressionPatch =
   | JourneyCompletedPatch
   | JourneyStepCompletedPatch

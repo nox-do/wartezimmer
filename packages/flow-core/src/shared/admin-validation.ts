@@ -221,8 +221,12 @@ export function validateRedirectRequest(
   visit: Visit,
   body: RedirectRequestBody,
 ): void {
-  assertActiveLocation(catalog, body.targetLocationId);
-  assertActiveQueue(catalog, body.queueId);
+  if ('targetLocationId' in body) {
+    assertActiveLocation(catalog, body.targetLocationId);
+  }
+  if ('queueId' in body) {
+    assertActiveQueue(catalog, body.queueId);
+  }
 
   if (!MOVEMENT_MODES.includes(body.movementMode)) throw new Error('INVALID_MOVEMENT_MODE');
   if (!PUBLIC_DISPLAY_MODES.includes(body.publicDisplayMode))

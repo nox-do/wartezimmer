@@ -181,5 +181,5 @@ test('resolveReturnToWaitingVisitPatch setzt targetLocationId nicht auf undefine
 
   assert.equal(patch.targetLocationId, 'room_1');
   assert.equal(patch.status, 'waiting');
-  assert.equal(patch.calledAt, undefined);
+  assert.equal(patch.calledAt, null);
 });

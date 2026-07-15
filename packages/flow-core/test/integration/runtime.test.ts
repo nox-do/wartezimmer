@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { openDb, createRuntime } from '@praxis-flow/flow-core/server';
+import { parseRedirectBody } from '@praxis-flow/flow-core';
 
 function testRuntime() {
   const db = openDb({ path: ':memory:' });
@@ -271,6 +272,60 @@ test('redirect: journeyStepIndex null, journeyTemplateId bleibt, Journey-Exit-Ev
   assert.equal(abandoned?.note, 'wegen Redirect');
   assert.ok(abandoned?.correlationId);
   assert.equal(abandoned?.correlationId, redirected?.correlationId);
+});
+
+test('redirect: fehlende queueId/targetLocationId behalten DB-Werte, Event und Terminaltext', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'KeepTarget',
+    surfaceId: 'terminal_1',
+  });
+
+  assert.equal(created.targetLocationId, 'reception');
+  assert.equal(created.queueId, 'general_queue');
+  const preservedTarget = created.targetLocationId!;
+  const preservedQueue = created.queueId!;
+
+  const body = parseRedirectBody({
+    movementMode: 'pickup',
+    publicDisplayMode: 'hidden',
+  });
+  const after = runtime.redirect(created.id, body);
+
+  assert.equal(after?.targetLocationId, preservedTarget);
+  assert.equal(after?.queueId, preservedQueue);
+  assert.match(after!.terminalInstruction, /begleitet/);
+  assert.match(after!.terminalInstruction, /Empfang/);
+  assert.doesNotMatch(after!.terminalInstruction, /gehen Sie direkt/i);
+
+  const redirected = runtime.events(created.id).find((event) => event.type === 'redirected');
+  assert.equal(redirected?.toLocationId, preservedTarget);
+  assert.equal(redirected?.toQueueId, preservedQueue);
+});
+
+test('redirect: explizites null loescht queue/target in DB und Event', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'ClearTarget',
+    surfaceId: 'terminal_1',
+  });
+
+  const body = parseRedirectBody({
+    queueId: null,
+    targetLocationId: null,
+    movementMode: 'call',
+    publicDisplayMode: 'visible',
+  });
+  const after = runtime.redirect(created.id, body);
+
+  assert.equal(after?.queueId, undefined);
+  assert.equal(after?.targetLocationId, undefined);
+
+  const redirected = runtime.events(created.id).find((event) => event.type === 'redirected');
+  assert.equal(redirected?.toLocationId, undefined);
+  assert.equal(redirected?.toQueueId, undefined);
 });
 
 test('redirect: locationSemantics confirmed setzt lastKnownLocationId', () => {

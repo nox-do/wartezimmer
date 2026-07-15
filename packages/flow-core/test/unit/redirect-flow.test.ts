@@ -21,7 +21,7 @@ test('resolveRedirectVisitPatch: instructed behaelt lastKnown, setzt Terminal-De
     { targetLocation: { name: 'Labor' } },
   );
 
-  assert.equal(patch.lastKnownLocationId, undefined);
+  assert.equal('lastKnownLocationId' in patch, false);
   assert.equal(patch.locationConfidence, 'instructed');
   assert.equal(patch.terminalInstruction, 'Bitte warten Sie. Sie werden aufgerufen.');
 });
