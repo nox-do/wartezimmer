@@ -33,7 +33,7 @@ import {
   resolveReturnToWaitingVisitPatch,
   statusForMovementMode,
 } from '@praxis-flow/flow-core';
-import type { RedirectRequestBody } from '@praxis-flow/flow-core';
+import type { RedirectRequestBody, TransitionRequestBody } from '@praxis-flow/flow-core';
 import { resolveCheckInRouting } from './escort.js';
 import { resolveQueueOnArrival } from './location-routing.js';
 import { allocateQueueSequence } from './queue-counter.js';
@@ -69,10 +69,8 @@ type CheckInBody = {
   staffNote?: string;
 };
 
-type TransitionContext = {
-  targetLocationId?: string | null;
-  actingLocationId?: string;
-  actorSurfaceId?: string;
+type VisitTransitionContext = TransitionRequestBody & {
+  /** Host-injizierte Audit-Identitaet — nicht aus HTTP-Body. */
   actorId?: string;
 };
 
@@ -411,7 +409,7 @@ export function createVisitService(params: {
   const transition = (
     visitId: string,
     action: TransitionAction,
-    context: TransitionContext = {},
+    context: VisitTransitionContext = {},
   ): VisitView | undefined =>
     runInTransaction(db, () => {
       const current = visitById(visitId);

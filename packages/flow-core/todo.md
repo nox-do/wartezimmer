@@ -5,7 +5,8 @@
 - [x] Expliziter `VisitPatch`-Typ (kein `Partial<Visit>`)
 - [x] Repository: preserve/clear via Key-Präsenz; `journeyTemplateId` nicht patchbar
 - [x] Redirect: Parser + `resolveRedirectVisitPatch` + effektive Event-Werte
-- [x] 161 Tests grün
+- [x] Actor-Vertrag Transitionen: `TransitionRequestBody` ohne Actor-Felder; `actorId` nur Host-Kontext
+- [x] 168 Tests grün
 
 ## Erledigt (Baseline)
 

@@ -10,6 +10,7 @@ Stand: 2026-07-15
 - Journey-Patches an `VisitPatch` angebunden; Cast in `visit-service` entfernt
 - Tests: `visit-repository.test.ts`, `parseRedirectBody`-Presence, Redirect-Fix
 - Review-Nachzug: `INVALID_VISIT_PATCH` bei explizitem `undefined`; Journey-Typen wieder fachlich eng; Redirect-E2E preserve/clear; `updateVisit` nicht öffentlich exportiert
+- Actor-Vertrag Transitionen: `actorSurfaceId` aus Parser/Service entfernt; `actorId` nur Host-Kontext; Contract-Tests HTTP vs Runtime
 
 ## Erledigt: Dockerfile syntax-Zeile entfernt (2026-07-14)
 

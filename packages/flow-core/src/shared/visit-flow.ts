@@ -40,7 +40,11 @@ export function statusForMovementMode(movementMode: MovementMode): VisitStatus {
   return 'waiting';
 }
 
-export type TransitionContext = { actingLocationId?: string; actorId?: string };
+export type TransitionContext = {
+  actingLocationId?: string;
+  /** Host-injizierte Audit-Identitaet — nicht aus HTTP-Body. */
+  actorId?: string;
+};
 
 export function assertTransitionAllowed(
   visit: Visit,

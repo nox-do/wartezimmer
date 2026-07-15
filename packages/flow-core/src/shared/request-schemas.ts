@@ -57,7 +57,13 @@ export function parseCheckInBody(body: unknown) {
   };
 }
 
-export function parseTransitionBody(body: unknown) {
+/** HTTP-Body fuer Visit-Transitionen — ohne Actor-Identitaet (Host injiziert actorId). */
+export type TransitionRequestBody = {
+  targetLocationId?: string | null;
+  actingLocationId?: string;
+};
+
+export function parseTransitionBody(body: unknown): TransitionRequestBody {
   const raw = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
 
   return {
@@ -65,10 +71,6 @@ export function parseTransitionBody(body: unknown) {
     actingLocationId:
       isString(raw.actingLocationId) && raw.actingLocationId.trim()
         ? raw.actingLocationId.trim()
-        : undefined,
-    actorSurfaceId:
-      isString(raw.actorSurfaceId) && raw.actorSurfaceId.trim()
-        ? raw.actorSurfaceId.trim()
         : undefined,
   };
 }
