@@ -61,11 +61,14 @@ function event(row: SqlRow): VisitEvent {
   return {
     id: str(row.id),
     visitId: str(row.visit_id),
+    sequence: Number(row.sequence),
     type: row.type as VisitEvent['type'],
     fromStatus: opt(row.from_status as string | null),
     toStatus: opt(row.to_status as string | null),
     fromLocationId: opt(row.from_location_id as string | null),
     toLocationId: opt(row.to_location_id as string | null),
+    fromLocationName: opt(row.from_location_name as string | null),
+    toLocationName: opt(row.to_location_name as string | null),
     fromQueueId: opt(row.from_queue_id as string | null),
     toQueueId: opt(row.to_queue_id as string | null),
     actorType: row.actor_type as VisitEvent['actorType'],
@@ -148,21 +151,46 @@ export function addEvent(
   toQueueId: string | null | undefined,
   actorType: VisitEvent['actorType'],
   note: string | null = null,
-  eventOptions: { correlationId?: string } = {},
+  eventOptions: { correlationId?: string; actorId?: string } = {},
 ): void {
-  const { correlationId } = eventOptions;
-  db.prepare('INSERT INTO visit_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+  const { correlationId, actorId } = eventOptions;
+  const sequence = Number(
+    (
+      db
+        .prepare(
+          'SELECT COALESCE(MAX(sequence), 0) + 1 AS next FROM visit_events WHERE visit_id = ?',
+        )
+        .get(visitId) as { next: number }
+    ).next,
+  );
+  const locationName = (locationId: string | null | undefined): string | null => {
+    if (!locationId) return null;
+    const row = db.prepare('SELECT name FROM locations WHERE id = ?').get(locationId) as
+      | { name: string }
+      | undefined;
+    return row?.name ?? null;
+  };
+  db.prepare(
+    `INSERT INTO visit_events (
+      id, visit_id, sequence, type, from_status, to_status,
+      from_location_id, to_location_id, from_location_name, to_location_name,
+      from_queue_id, to_queue_id, actor_type, actor_id, note, correlation_id, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
     crypto.randomUUID(),
     visitId,
+    sequence,
     type,
     fromStatus ?? null,
     toStatus ?? null,
     fromLocationId ?? null,
     toLocationId ?? null,
+    locationName(fromLocationId),
+    locationName(toLocationId),
     fromQueueId ?? null,
     toQueueId ?? null,
     actorType,
-    null,
+    actorId ?? null,
     note,
     correlationId ?? null,
     new Date().toISOString(),
@@ -224,7 +252,7 @@ export function createVisitRepository(db: DatabaseSync, catalogRepository: Catal
   const events = (visitId: string): VisitEvent[] =>
     (
       db
-        .prepare('SELECT * FROM visit_events WHERE visit_id = ? ORDER BY created_at')
+        .prepare('SELECT * FROM visit_events WHERE visit_id = ? ORDER BY sequence')
         .all(visitId) as SqlRow[]
     ).map(event);
 
@@ -244,7 +272,7 @@ export function createVisitRepository(db: DatabaseSync, catalogRepository: Catal
       toQueueId: string | null | undefined,
       actorType: VisitEvent['actorType'],
       note?: string | null,
-      eventOptions?: { correlationId?: string },
+      eventOptions?: { correlationId?: string; actorId?: string },
     ) =>
       addEvent(
         db,

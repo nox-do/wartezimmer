@@ -218,6 +218,7 @@ export interface Visit {
 export interface VisitEvent {
   id: string;
   visitId: string;
+  sequence: number;
   type:
     | 'checked_in'
     | 'routed'
@@ -225,6 +226,7 @@ export interface VisitEvent {
     | 'arrived'
     | 'started'
     | 'returned_to_waiting'
+    | 'target_reassigned'
     | 'redirected'
     | 'journey_step_completed'
     | 'journey_completed'
@@ -238,9 +240,13 @@ export interface VisitEvent {
   toStatus?: string;
   fromLocationId?: string;
   toLocationId?: string;
+  fromLocationName?: string;
+  toLocationName?: string;
   fromQueueId?: string;
   toQueueId?: string;
+  /** Fachliche Akteurskategorie; Raum-Panels handeln derzeit als `mfa`. */
   actorType: 'terminal' | 'mfa' | 'doctor' | 'system';
+  /** Konkrete Session oder Oberfläche innerhalb der Akteurskategorie. */
   actorId?: string;
   note?: string;
   correlationId?: string;

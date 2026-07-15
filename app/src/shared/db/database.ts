@@ -831,6 +831,7 @@ export class CoreDatabase {
     visitId: string,
     roomId?: string,
     roomLabel?: string,
+    actorId?: string,
   ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
     return this.withTransaction('callVisit', () => {
       requireVisitExistsInDb(this.db, visitId);
@@ -843,6 +844,7 @@ export class CoreDatabase {
         visitId,
         roomId,
         roomLabel,
+        actorId,
       );
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
@@ -861,11 +863,18 @@ export class CoreDatabase {
     roomId?: string,
     roomLabel?: string,
     actingRoomId?: string,
+    actorId?: string,
   ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
     return this.withTransaction('checkInRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const transition = arriveVisit(this.db, getFlowCoreRuntime(this.db), visitId, actingRoomId);
+      const transition = arriveVisit(
+        this.db,
+        getFlowCoreRuntime(this.db),
+        visitId,
+        actingRoomId,
+        actorId,
+      );
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
         fromStatus: transition.fromStatus,
@@ -881,11 +890,12 @@ export class CoreDatabase {
   startTreatment(
     visitId: string,
     actingRoomId?: string,
+    actorId?: string,
   ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
     return this.withTransaction('startTreatment', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const transition = startVisit(getFlowCoreRuntime(this.db), visitId, actingRoomId);
+      const transition = startVisit(getFlowCoreRuntime(this.db), visitId, actingRoomId, actorId);
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
         fromStatus: transition.fromStatus,
@@ -922,6 +932,7 @@ export class CoreDatabase {
     visitId: string,
     roomId?: string,
     roomLabel?: string,
+    actorId?: string,
   ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
     return this.withTransaction('reassignRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
@@ -934,6 +945,7 @@ export class CoreDatabase {
         visitId,
         roomId,
         roomLabel,
+        actorId,
       );
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
@@ -950,11 +962,12 @@ export class CoreDatabase {
   checkOutRoom(
     visitId: string,
     actingRoomId?: string,
+    actorId?: string,
   ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
     return this.withTransaction('checkOutRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const transition = completeVisit(getFlowCoreRuntime(this.db), visitId, actingRoomId);
+      const transition = completeVisit(getFlowCoreRuntime(this.db), visitId, actingRoomId, actorId);
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
         fromStatus: transition.fromStatus,
@@ -967,14 +980,17 @@ export class CoreDatabase {
     });
   }
 
-  cancelQueueVisit(visitId: string): {
+  cancelQueueVisit(
+    visitId: string,
+    actorId?: string,
+  ): {
     fromStatus: QueueDisplayStatus;
     toStatus: QueueDisplayStatus;
   } {
     return this.withTransaction('cancelQueueVisit', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const transition = cancelVisit(this.db, getFlowCoreRuntime(this.db), visitId);
+      const transition = cancelVisit(this.db, getFlowCoreRuntime(this.db), visitId, actorId);
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
         fromStatus: transition.fromStatus,
@@ -987,7 +1003,10 @@ export class CoreDatabase {
     });
   }
 
-  returnToWaiting(visitId: string): {
+  returnToWaiting(
+    visitId: string,
+    actorId?: string,
+  ): {
     fromStatus: QueueDisplayStatus;
     toStatus: QueueDisplayStatus;
   } {
@@ -997,7 +1016,7 @@ export class CoreDatabase {
       const updatedAt = this.commonHelperDeps().nowIso();
       const runtime = getFlowCoreRuntime(this.db);
       const absentTransition = returnAbsentVisitToQueue(this.db, runtime, visitId, updatedAt);
-      const transition = absentTransition ?? returnVisitToWaiting(runtime, visitId);
+      const transition = absentTransition ?? returnVisitToWaiting(runtime, visitId, actorId);
       if (!absentTransition) {
         clearAbsentMode(this.db, visitId, updatedAt);
       }
@@ -1087,6 +1106,7 @@ export class CoreDatabase {
   supersedeVisit(
     visitId: string,
     topicId: string,
+    actorId?: string,
   ): {
     supersededVisitId: string;
     visitId: string;
@@ -1106,6 +1126,7 @@ export class CoreDatabase {
         settings: this.getOpsSettings(),
         visitId,
         topicId,
+        actorId,
       });
       this.emitOutboxEvent('VisitSuperseded', result.visitId, {
         supersededVisitId: result.supersededVisitId,

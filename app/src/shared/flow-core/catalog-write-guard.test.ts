@@ -67,3 +67,17 @@ test('app/src has no catalog DML outside sync-catalog-from-ops-settings', () => 
     `Catalog tables must only be mutated via ${ALLOWED_CATALOG_WRITER}. Violations: ${violations.join(', ')}`,
   );
 });
+
+test('app/src does not import low-level flow-core visit writers', () => {
+  const violations = collectTypeScriptFiles(APP_SRC_ROOT)
+    .filter((absolutePath) => !absolutePath.endsWith('.test.ts'))
+    .filter((absolutePath) => {
+      const source = readFileSync(absolutePath, 'utf8');
+      return /import\s*\{[^}]*\b(?:updateVisit|addEvent)\b[^}]*\}\s*from\s*['"]@praxis-flow\/flow-core\/server['"]/s.test(
+        source,
+      );
+    })
+    .map((absolutePath) => relative(APP_SRC_ROOT, absolutePath).replaceAll('\\', '/'));
+
+  assert.deepEqual(violations, []);
+});

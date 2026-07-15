@@ -667,11 +667,16 @@ test('room-panel call transition confirms scoped visit without overriding call t
   resetDevicePresenceForTests();
   markDeviceStreamConnected({ deviceId: WAITING_ROOM_DEVICE_ID, kind: 'tv' });
   const { db, visitId } = buildRoomPanelCallRouteDb('labor');
-  const calls: Array<{ visitId: string; roomId?: string; roomLabel?: string }> = [];
+  const calls: Array<{
+    visitId: string;
+    roomId?: string;
+    roomLabel?: string;
+    actorId?: string;
+  }> = [];
   const wrappedDb = {
     ...db,
-    callVisit: (targetVisitId: string, roomId?: string, roomLabel?: string) => {
-      calls.push({ visitId: targetVisitId, roomId, roomLabel });
+    callVisit: (targetVisitId: string, roomId?: string, roomLabel?: string, actorId?: string) => {
+      calls.push({ visitId: targetVisitId, roomId, roomLabel, actorId });
       return transition('waiting', 'called');
     },
   } as CoreDatabase;
@@ -687,7 +692,7 @@ test('room-panel call transition confirms scoped visit without overriding call t
   });
 
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(calls, [{ visitId, roomId: undefined, roomLabel: undefined }]);
+  assert.deepEqual(calls, [{ visitId, roomId: undefined, roomLabel: undefined, actorId: 'rp-1' }]);
   assert.equal(response.json().roomId, 'labor');
   assert.equal(response.json().roomLabel, 'Labor');
 

@@ -142,7 +142,7 @@ test('resolveReturnToWaitingTargetLocationId: Simple Fallback auf Rule-Default',
   );
 });
 
-test('resolveReturnToWaitingTargetLocationId: Complex rehydriert aus Journey-Step', () => {
+test('resolveReturnToWaitingTargetLocationId: Complex behält operatives Ziel', () => {
   const visit = {
     targetLocationId: 'room_1',
     appliedRoutingRuleId: 'rule_journey',
@@ -152,11 +152,11 @@ test('resolveReturnToWaitingTargetLocationId: Complex rehydriert aus Journey-Ste
 
   assert.equal(
     resolveReturnToWaitingTargetLocationId(visit, journeyRule, catalogFixture),
-    'reception',
+    'room_1',
   );
 });
 
-test('resolveReturnToWaitingTargetLocationId: Complex rehydriert auch wenn Rule nicht mehr Journey ist', () => {
+test('resolveReturnToWaitingTargetLocationId: Complex behält operatives Ziel bei geänderter Rule', () => {
   const visit = {
     targetLocationId: 'room_1',
     appliedRoutingRuleId: 'rule_general',
@@ -164,10 +164,7 @@ test('resolveReturnToWaitingTargetLocationId: Complex rehydriert auch wenn Rule 
     journeyStepIndex: 0,
   } as Visit;
 
-  assert.equal(
-    resolveReturnToWaitingTargetLocationId(visit, simpleRule, catalogFixture),
-    'reception',
-  );
+  assert.equal(resolveReturnToWaitingTargetLocationId(visit, simpleRule, catalogFixture), 'room_1');
 });
 
 test('resolveReturnToWaitingVisitPatch setzt targetLocationId nicht auf undefined', () => {

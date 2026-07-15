@@ -87,6 +87,33 @@ test('redirect rollback: Event-Fehler rollt Visit-Update zurück', () => {
   assert.equal(countRows(db, 'visit_events'), 2);
 });
 
+test('cancel rollback: Event-Fehler rollt Visit und Journey zurück', () => {
+  const { runtime } = testRuntime({ testHooks: { failAfter: 'cancel:event' } });
+  const created = runtime.checkIn({ topicId: 'general', surfaceId: 'terminal_1' });
+
+  assert.throws(() => runtime.cancel(created.id), /TEST_FAILURE:cancel:event/);
+
+  const after = runtime.visits().find((visit) => visit.id === created.id);
+  assert.equal(after?.status, created.status);
+  assert.equal(after?.journeyState, 'active');
+  assert.ok(!runtime.events(created.id).some((event) => event.type === 'journey_abandoned'));
+});
+
+test('reassignTarget rollback: Event-Fehler behält altes Ziel', () => {
+  const { runtime } = testRuntime({ testHooks: { failAfter: 'reassignTarget:event' } });
+  const created = runtime.checkIn({ topicId: 'general', surfaceId: 'terminal_1' });
+  runtime.transition(created.id, 'call');
+
+  assert.throws(
+    () => runtime.reassignTarget(created.id, { targetLocationId: 'room_2' }),
+    /TEST_FAILURE:reassignTarget:event/,
+  );
+
+  const after = runtime.visits().find((visit) => visit.id === created.id);
+  assert.equal(after?.targetLocationId, created.targetLocationId);
+  assert.ok(!runtime.events(created.id).some((event) => event.type === 'target_reassigned'));
+});
+
 test('saveJourneyTemplate rollback: Insert-Fehler behält alte Steps', () => {
   const { db, runtime } = testRuntime({ testHooks: { failAfter: 'journeyTemplate:insertStep' } });
   const existing = db

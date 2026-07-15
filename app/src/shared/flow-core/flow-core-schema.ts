@@ -2,7 +2,10 @@ import type { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ensureVisitSupersedeColumns } from '@praxis-flow/flow-core/server';
+import {
+  ensureVisitEventAuditColumns,
+  ensureVisitSupersedeColumns,
+} from '@praxis-flow/flow-core/server';
 import { ensureVisitHostStateSchema } from '../db/visit-host-state.js';
 import { ensureVisitPortalSchema } from '../db/visit-portal-schema.js';
 import { ensureVisitLegacyDropSchema } from '../db/visit-legacy-drop-schema.js';
@@ -16,6 +19,7 @@ export function flowCoreSchemaSql(): string {
 
 export function ensureFlowCoreSchema(db: DatabaseSync): void {
   db.exec(flowCoreSchemaSql());
+  ensureVisitEventAuditColumns(db);
   ensureVisitSupersedeColumns(db);
   ensureVisitHostStateSchema(db);
   ensureVisitPortalSchema(db);

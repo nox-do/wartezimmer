@@ -304,7 +304,8 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
         db,
         reply,
         ticketId: visitId,
-        execute: () => db.supersedeVisit(visitId, request.body.topicId),
+        execute: () =>
+          db.supersedeVisit(visitId, request.body.topicId, request.authSession?.sessionId),
         mapSuccess: (result) => ({
           resultType: 'supersede' as const,
           supersededVisitId: result.supersededVisitId,

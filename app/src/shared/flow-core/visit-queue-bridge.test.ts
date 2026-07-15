@@ -19,6 +19,7 @@ import {
   recallVisit,
   returnAbsentVisitToQueue,
   returnVisitToWaiting,
+  reassignVisitRoom,
   setVisitAbsent,
   setVisitCallbackPhone,
   startVisit,
@@ -344,6 +345,42 @@ test('arriveVisit from directed rejects wrong room with QUEUE_ROOM_MISMATCH', ()
     () => arriveVisit(db, runtime, visitId, 'mfa-tresen'),
     (error: unknown) => error instanceof DomainError && error.domainCode === QUEUE_ROOM_MISMATCH,
   );
+});
+
+test('arriveVisit accepts waiting pickup via core transition rules', () => {
+  const { db, visitId, runtime } = setupVisitFlow();
+  runtime.redirect(visitId, {
+    queueId: null,
+    targetLocationId: 'labor',
+    movementMode: 'pickup',
+    publicDisplayMode: 'visible',
+    actorSurfaceId: 'pf_mfa_dashboard',
+  });
+
+  const arrive = arriveVisit(db, runtime, visitId, 'labor');
+  assert.deepEqual(arrive, { fromStatus: 'waiting', toStatus: 'in_room' });
+});
+
+test('reassignVisitRoom delegates tactical target change to flow-core', () => {
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  arriveVisit(db, runtime, visitId, 'labor');
+
+  const result = reassignVisitRoom(
+    db,
+    runtime,
+    settings,
+    listQueue,
+    visitId,
+    'mfa-tresen',
+    'Empfang',
+  );
+
+  assert.deepEqual(result, { fromStatus: 'in_room', toStatus: 'called' });
+  const after = runtime.visits().find((visit) => visit.id === visitId);
+  assert.equal(after?.targetLocationId, 'mfa-tresen');
+  assert.ok(runtime.events(visitId).some((event) => event.type === 'target_reassigned'));
+  assert.ok(!runtime.events(visitId).some((event) => event.type === 'redirected'));
 });
 
 test('cancelVisit marks waiting ticket cancelled and removes it from queue', () => {

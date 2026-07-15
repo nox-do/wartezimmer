@@ -3,6 +3,7 @@ import type {
   ResolveBusinessDay,
   TransitionAction,
   Visit,
+  VisitEvent,
   VisitView,
 } from '@praxis-flow/flow-core';
 import {
@@ -27,6 +28,7 @@ import {
   assertActingLocationScope,
   assertCallTargetLocation,
   resolveReturnToWaitingVisitPatch,
+  statusForMovementMode,
 } from '@praxis-flow/flow-core';
 import type { RedirectRequestBody } from '@praxis-flow/flow-core';
 import { resolveCheckInRouting } from './escort.js';
@@ -68,6 +70,20 @@ type TransitionContext = {
   targetLocationId?: string | null;
   actingLocationId?: string;
   actorSurfaceId?: string;
+  actorId?: string;
+};
+
+type CancelContext = {
+  actorType?: VisitEvent['actorType'];
+  actorId?: string;
+  note?: string;
+};
+
+type ReassignTargetContext = {
+  targetLocationId: string;
+  actorType?: VisitEvent['actorType'];
+  actorId?: string;
+  note?: string;
 };
 
 export function createVisitService(params: {
@@ -358,6 +374,7 @@ export function createVisitService(params: {
         visitQueue,
         'terminal',
         checkedInNote,
+        { actorId: surfaceId },
       );
       maybeFail('checkIn:event:routed');
       addEvent(
@@ -427,6 +444,8 @@ export function createVisitService(params: {
           current.queueId,
           afterCall.queueId,
           'mfa',
+          null,
+          { actorId: context.actorId },
         );
       } else if (action === 'arrive') {
         const data = loadCatalog();
@@ -454,6 +473,8 @@ export function createVisitService(params: {
           current.queueId,
           nextQueueId,
           'mfa',
+          null,
+          { actorId: context.actorId },
         );
       } else if (action === 'start') {
         maybeFail('transition:update');
@@ -469,6 +490,8 @@ export function createVisitService(params: {
           current.queueId,
           current.queueId,
           'mfa',
+          null,
+          { actorId: context.actorId },
         );
       } else if (action === 'done') {
         const data = loadCatalog();
@@ -503,6 +526,8 @@ export function createVisitService(params: {
           current.queueId,
           current.queueId,
           'mfa',
+          null,
+          { actorId: context.actorId },
         );
       } else if (action === 'return_to_waiting') {
         // Recall, kein Redirect: journeyState bleibt unveraendert (kein passendes completedWhen).
@@ -523,6 +548,8 @@ export function createVisitService(params: {
           current.queueId,
           afterReturn.queueId,
           'mfa',
+          null,
+          { actorId: context.actorId },
         );
       } else if (action === 'start_next_journey_step') {
         return startNextJourneyStep(visitId);
@@ -575,7 +602,7 @@ export function createVisitService(params: {
           body.queueId,
           'mfa',
           body.staffNote,
-          { correlationId },
+          { correlationId, actorId: body.actorId },
         );
       } else {
         maybeFail('redirect:event');
@@ -590,12 +617,116 @@ export function createVisitService(params: {
           body.queueId,
           'mfa',
           body.staffNote,
+          { actorId: body.actorId },
         );
       }
       return visitById(visitId);
     });
 
-  return { checkIn, supersede, transition, redirect };
+  const cancel = (visitId: string, context: CancelContext = {}): VisitView | undefined =>
+    runInTransaction(db, () => {
+      const current = visitById(visitId);
+      if (!current) throw new Error('VISIT_NOT_FOUND');
+      if (
+        !['waiting', 'directed', 'called', 'arrived', 'in_progress', 'blocked'].includes(
+          current.status,
+        )
+      ) {
+        throw new Error('CANCEL_NOT_ALLOWED');
+      }
+
+      const now = new Date().toISOString();
+      const wasOnJourney = current.journeyState === 'active' || current.journeyStepIndex != null;
+      const correlationId = wasOnJourney ? crypto.randomUUID() : undefined;
+      maybeFail('cancel:update');
+      updateVisit(current, {
+        status: 'cancelled',
+        finishedAt: now,
+        ...(wasOnJourney ? { journeyState: 'abandoned' } : {}),
+      });
+
+      if (wasOnJourney) {
+        maybeFail('cancel:journeyExit');
+        addEvent(
+          visitId,
+          'journey_abandoned',
+          current.status,
+          'cancelled',
+          current.targetLocationId,
+          current.targetLocationId,
+          current.queueId,
+          current.queueId,
+          'system',
+          'wegen Abbruch',
+          { correlationId },
+        );
+      }
+
+      maybeFail('cancel:event');
+      addEvent(
+        visitId,
+        'cancelled',
+        current.status,
+        'cancelled',
+        current.targetLocationId,
+        current.targetLocationId,
+        current.queueId,
+        current.queueId,
+        context.actorType ?? 'mfa',
+        context.note,
+        { correlationId, actorId: context.actorId },
+      );
+      return visitById(visitId);
+    });
+
+  const reassignTarget = (visitId: string, context: ReassignTargetContext): VisitView | undefined =>
+    runInTransaction(db, () => {
+      const current = visitById(visitId);
+      if (!current) throw new Error('VISIT_NOT_FOUND');
+      if (!['called', 'arrived', 'in_progress'].includes(current.status)) {
+        throw new Error('REASSIGN_TARGET_NOT_ALLOWED');
+      }
+
+      const data = loadCatalog();
+      assertCallTargetLocation(data, context.targetLocationId);
+      if (current.targetLocationId === context.targetLocationId) return current;
+
+      const targetLocation = data.locations.find((item) => item.id === context.targetLocationId);
+      const now = new Date().toISOString();
+      const nextStatus =
+        current.movementMode === 'call' ? 'called' : statusForMovementMode(current.movementMode);
+      maybeFail('reassignTarget:update');
+      updateVisit(current, {
+        status: nextStatus,
+        targetLocationId: context.targetLocationId,
+        locationConfidence: 'instructed',
+        terminalInstruction: movementTerminalInstruction({
+          movementMode: current.movementMode,
+          targetLocation,
+        }),
+        calledAt: current.movementMode === 'call' ? now : undefined,
+        arrivedAt: undefined,
+        startedAt: undefined,
+      });
+
+      maybeFail('reassignTarget:event');
+      addEvent(
+        visitId,
+        'target_reassigned',
+        current.status,
+        nextStatus,
+        current.targetLocationId,
+        context.targetLocationId,
+        current.queueId,
+        current.queueId,
+        context.actorType ?? 'mfa',
+        context.note,
+        { actorId: context.actorId },
+      );
+      return visitById(visitId);
+    });
+
+  return { checkIn, supersede, transition, redirect, cancel, reassignTarget };
 }
 
 export type VisitService = ReturnType<typeof createVisitService>;

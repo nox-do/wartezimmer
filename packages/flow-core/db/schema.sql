@@ -190,11 +190,14 @@ CREATE TABLE IF NOT EXISTS daily_queue_counters (
 CREATE TABLE IF NOT EXISTS visit_events (
   id TEXT PRIMARY KEY,
   visit_id TEXT NOT NULL,
+  sequence INTEGER NOT NULL,
   type TEXT NOT NULL,
   from_status TEXT,
   to_status TEXT,
   from_location_id TEXT,
   to_location_id TEXT,
+  from_location_name TEXT,
+  to_location_name TEXT,
   from_queue_id TEXT,
   to_queue_id TEXT,
   actor_type TEXT NOT NULL,
@@ -204,3 +207,6 @@ CREATE TABLE IF NOT EXISTS visit_events (
   created_at TEXT NOT NULL,
   FOREIGN KEY(visit_id) REFERENCES visits(id)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS visit_events_visit_sequence_uq
+  ON visit_events (visit_id, sequence);

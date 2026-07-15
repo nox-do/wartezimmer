@@ -27,6 +27,7 @@ export type SupersedeRequest = {
   staffNote?: string;
   /** Actor für cancelled/superseded/checked_in Events. Default `system` (Host setzt z. B. `mfa`). */
   actorType?: VisitEvent['actorType'];
+  actorId?: string;
 };
 
 export type SupersedeResult = {
@@ -205,6 +206,7 @@ export function supersedeVisit(params: {
     const arrivedAt = preserveArrivedAt ? (current.arrivedAt ?? null) : null;
     const staffNote = body.staffNote !== undefined ? body.staffNote : (current.staffNote ?? null);
     const actorType = body.actorType ?? 'system';
+    const actorId = body.actorId;
 
     maybeFail('supersede:insert');
     db.prepare(VISIT_INSERT_SQL).run(
@@ -274,7 +276,7 @@ export function supersedeVisit(params: {
       current.queueId,
       actorType,
       `superseded by ${newVisitId}`,
-      { correlationId },
+      { correlationId, actorId },
     );
     addEvent(
       current.id,
@@ -287,7 +289,7 @@ export function supersedeVisit(params: {
       current.queueId,
       actorType,
       newVisitId,
-      { correlationId },
+      { correlationId, actorId },
     );
     addEvent(
       newVisitId,
@@ -300,7 +302,7 @@ export function supersedeVisit(params: {
       routing.visitQueue,
       actorType,
       routing.checkedInNote,
-      { correlationId },
+      { correlationId, actorId },
     );
     addEvent(
       newVisitId,
@@ -326,7 +328,7 @@ export function supersedeVisit(params: {
       routing.visitQueue,
       actorType,
       `supersedes ${current.id}`,
-      { correlationId },
+      { correlationId, actorId },
     );
 
     const superseded = visitById(current.id);

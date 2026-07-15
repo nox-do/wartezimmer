@@ -39,7 +39,7 @@ export function statusForMovementMode(movementMode: MovementMode): VisitStatus {
   return 'waiting';
 }
 
-export type TransitionContext = { actingLocationId?: string };
+export type TransitionContext = { actingLocationId?: string; actorId?: string };
 
 export function assertTransitionAllowed(
   visit: Visit,
@@ -106,8 +106,8 @@ export function canTransition(
 }
 
 /**
- * Aufrufziel nach return_to_waiting: Simple behaelt visit.targetLocationId; Complex rehydriert aus dem
- * aktiven Journey-Step (Wahrheit der Route). Fallback: Rule initial_* wenn Snapshot fehlt.
+ * Aufrufziel nach return_to_waiting: Das operative Visit-Ziel bleibt erhalten.
+ * Journey-Step und Rule dienen nur als Fallback, wenn der Snapshot kein Ziel enthält.
  */
 export function resolveReturnToWaitingTargetLocationId(
   visit: Visit,
@@ -117,7 +117,7 @@ export function resolveReturnToWaitingTargetLocationId(
   if (visit.journeyTemplateId != null && visit.journeyStepIndex != null) {
     const steps = stepsForJourneyTemplate(visit.journeyTemplateId, catalog.journeySteps);
     const step = steps[visit.journeyStepIndex];
-    return step?.targetLocationId ?? visit.targetLocationId ?? rule?.initialTargetLocationId;
+    return visit.targetLocationId ?? step?.targetLocationId ?? rule?.initialTargetLocationId;
   }
 
   return visit.targetLocationId ?? rule?.initialTargetLocationId;

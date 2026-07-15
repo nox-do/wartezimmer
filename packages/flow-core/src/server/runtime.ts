@@ -40,6 +40,8 @@ export function createRuntime(
     supersede: visitService.supersede,
     transition: visitService.transition,
     redirect: visitService.redirect,
+    cancel: visitService.cancel,
+    reassignTarget: visitService.reassignTarget,
     saveRule: adminService.saveRule,
     saveJourneyTemplate: adminService.saveJourneyTemplate,
     saveTopic: adminService.saveTopic,

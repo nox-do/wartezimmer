@@ -47,9 +47,11 @@ test('supersede: Host-Actor mfa wird durchgereicht', () => {
   const result = runtime.supersede(source.id, {
     topicId: 'general',
     actorType: 'mfa',
+    actorId: 'staff-session-1',
   });
   const events = runtime.events(result.visit.id);
   assert.equal(events.find((event) => event.type === 'checked_in')?.actorType, 'mfa');
+  assert.equal(events.find((event) => event.type === 'checked_in')?.actorId, 'staff-session-1');
   assert.equal(events.find((event) => event.type === 'routed')?.actorType, 'system');
 });
 

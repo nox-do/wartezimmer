@@ -111,6 +111,31 @@ test('checkIn Journey: Schritt 0 und Cursor gesetzt', () => {
   assert.equal(visit.locationConfidence, 'assumed');
 });
 
+test('Events haben stabile Reihenfolge, Actor-ID und historische Ortsnamen', () => {
+  const { db, runtime } = testRuntime();
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Audit',
+    surfaceId: 'terminal_1',
+  });
+  const receptionName = (
+    db.prepare('SELECT name FROM locations WHERE id = ?').get('reception') as { name: string }
+  ).name;
+
+  runtime.transition(created.id, 'call', { actorId: 'staff-session-1' });
+  db.prepare('UPDATE locations SET name = ? WHERE id = ?').run('Neuer Empfang', 'reception');
+
+  const events = runtime.events(created.id);
+  assert.deepEqual(
+    events.map((event) => event.sequence),
+    events.map((_, index) => index + 1),
+  );
+  assert.equal(events.find((event) => event.type === 'checked_in')?.actorId, 'terminal_1');
+  const called = events.find((event) => event.type === 'called');
+  assert.equal(called?.actorId, 'staff-session-1');
+  assert.equal(called?.toLocationName, receptionName);
+});
+
 test('Journey completion: arrive am Empfang markiert Schritt 1/3 als erledigt', () => {
   const { runtime } = testRuntime();
   const created = runtime.checkIn({
@@ -518,7 +543,7 @@ test('transition return_to_waiting: in_progress → waiting', () => {
   assert.equal(after.lastKnownLocationId, 'lab');
 });
 
-test('transition return_to_waiting: Journey rehydriert Aufrufziel aus aktivem Step', () => {
+test('transition return_to_waiting: Journey behält operatives Aufrufziel', () => {
   const { runtime } = testRuntime();
   const created = runtime.checkIn({
     topicId: 'general',
@@ -532,7 +557,7 @@ test('transition return_to_waiting: Journey rehydriert Aufrufziel aus aktivem St
   assert.equal(after.journeyTemplateId, 'journey_general');
   assert.equal(after.journeyStepIndex, 0);
   assert.equal(after.journeyState, 'active');
-  assert.equal(after.targetLocationId, 'reception');
+  assert.equal(after.targetLocationId, 'room_1');
   assert.ok(!runtime.events(created.id).some((event) => event.type === 'journey_abandoned'));
 });
 
@@ -551,4 +576,65 @@ test('transition return_to_waiting: done blockiert', () => {
     () => runtime.transition(created.id, 'return_to_waiting'),
     /RETURN_TO_WAITING_NOT_ALLOWED/,
   );
+});
+
+test('cancel: beendet Visit und aktive Journey mit korrelierter Historie', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Cancel',
+    surfaceId: 'terminal_1',
+  });
+
+  const cancelled = runtime.cancel(created.id, { note: 'durch MFA beendet' });
+
+  assert.equal(cancelled.status, 'cancelled');
+  assert.equal(cancelled.journeyState, 'abandoned');
+  assert.ok(cancelled.finishedAt);
+  const events = runtime.events(created.id);
+  const abandoned = events.find((event) => event.type === 'journey_abandoned');
+  const cancelEvent = events.find((event) => event.type === 'cancelled');
+  assert.ok(abandoned?.correlationId);
+  assert.equal(abandoned?.correlationId, cancelEvent?.correlationId);
+});
+
+test('reassignTarget: ändert nur den operativen Hop und hält Journey aktiv', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Reassign',
+    surfaceId: 'terminal_1',
+  });
+  runtime.transition(created.id, 'call');
+  runtime.transition(created.id, 'arrive');
+  const completedAt = runtime
+    .visits()
+    .find((visit) => visit.id === created.id)?.journeyStepCompletedAt;
+
+  const reassigned = runtime.reassignTarget(created.id, { targetLocationId: 'room_2' });
+
+  assert.equal(reassigned.status, 'called');
+  assert.equal(reassigned.targetLocationId, 'room_2');
+  assert.equal(reassigned.movementMode, 'call');
+  assert.equal(reassigned.journeyState, 'active');
+  assert.equal(reassigned.journeyStepIndex, 0);
+  assert.ok(completedAt);
+  assert.equal(reassigned.journeyStepCompletedAt, completedAt);
+  assert.ok(runtime.events(created.id).some((event) => event.type === 'target_reassigned'));
+  assert.ok(!runtime.events(created.id).some((event) => event.type === 'journey_abandoned'));
+
+  const waiting = runtime.transition(created.id, 'return_to_waiting');
+  assert.equal(waiting.targetLocationId, 'room_2');
+});
+
+test('reassignTarget: behält konfigurierte pickup-Bewegung bei', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({ topicId: 'infection', surfaceId: 'terminal_1' });
+  runtime.transition(created.id, 'arrive');
+
+  const reassigned = runtime.reassignTarget(created.id, { targetLocationId: 'room_2' });
+
+  assert.equal(reassigned.movementMode, 'pickup');
+  assert.equal(reassigned.status, 'waiting');
+  assert.match(reassigned.terminalInstruction, /begleitet/);
 });

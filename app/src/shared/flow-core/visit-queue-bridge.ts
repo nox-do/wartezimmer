@@ -1,7 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { Runtime } from '@praxis-flow/flow-core/server';
-import { addEvent, updateVisit } from '@praxis-flow/flow-core/server';
-import type { TransitionAction, Visit, VisitView, VisitStatus } from '@praxis-flow/flow-core';
+import type { TransitionAction, VisitView, VisitStatus } from '@praxis-flow/flow-core';
 import type {
   AbsenceMode,
   OpsSettings,
@@ -56,6 +55,8 @@ const INVALID_TRANSITION_CORE_CODES = new Set([
   'DONE_ONLY_WHEN_IN_PROGRESS',
   'RETURN_TO_WAITING_NOT_ALLOWED',
   'START_NEXT_JOURNEY_STEP_NOT_ALLOWED',
+  'CANCEL_NOT_ALLOWED',
+  'REASSIGN_TARGET_NOT_ALLOWED',
   'UNKNOWN_ACTION',
   'SUPERSEDE_SOURCE_TERMINAL',
   'SUPERSEDE_ALREADY_SUPERSEDED',
@@ -130,7 +131,7 @@ function runVisitTransition(
   runtime: Runtime,
   visitId: string,
   action: TransitionAction,
-  context: { actingLocationId?: string; targetLocationId?: string } = {},
+  context: { actingLocationId?: string; targetLocationId?: string; actorId?: string } = {},
 ): VisitView {
   try {
     const updated = runtime.transition(visitId, action, context);
@@ -442,15 +443,13 @@ export function callVisit(
   visitId: string,
   roomId?: string,
   roomLabel?: string,
+  actorId?: string,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   let visit = requireVisit(runtime, visitId);
   const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
   const startedNextJourneyStep = Boolean(visit.journeyStepCompletedAt);
   if (startedNextJourneyStep) {
     visit = runVisitTransition(runtime, visitId, 'start_next_journey_step');
-  }
-  if (visit.status !== 'waiting' && visit.status !== 'directed') {
-    throw domainError('INVALID_TRANSITION');
   }
   assertNoAbsentHostOverlay(db, visitId);
 
@@ -470,6 +469,7 @@ export function callVisit(
 
   runVisitTransition(runtime, visitId, 'call', {
     targetLocationId: resolvedRoom?.roomId ?? visit.targetLocationId ?? undefined,
+    actorId,
   });
 
   return { fromStatus, toStatus: 'called' };
@@ -480,15 +480,13 @@ export function arriveVisit(
   runtime: Runtime,
   visitId: string,
   actingLocationId?: string,
+  actorId?: string,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
-  if (visit.status !== 'called' && visit.status !== 'directed') {
-    throw domainError('INVALID_TRANSITION');
-  }
   assertNoAbsentHostOverlay(db, visitId);
 
   const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
-  runVisitTransition(runtime, visitId, 'arrive', { actingLocationId });
+  runVisitTransition(runtime, visitId, 'arrive', { actingLocationId, actorId });
   return { fromStatus, toStatus: 'in_room' };
 }
 
@@ -496,14 +494,11 @@ export function startVisit(
   runtime: Runtime,
   visitId: string,
   actingLocationId?: string,
+  actorId?: string,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
-  if (visit.status !== 'arrived') {
-    throw domainError('INVALID_TRANSITION');
-  }
-
   const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
-  runVisitTransition(runtime, visitId, 'start', { actingLocationId });
+  runVisitTransition(runtime, visitId, 'start', { actingLocationId, actorId });
   return { fromStatus, toStatus: 'in_room' };
 }
 
@@ -512,10 +507,6 @@ export function continueJourneyVisit(
   visitId: string,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
-  if (!visit.journeyStepCompletedAt) {
-    throw domainError('INVALID_TRANSITION');
-  }
-
   const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
   const after = runVisitTransition(runtime, visitId, 'start_next_journey_step');
   return { fromStatus, toStatus: visitStatusToQueueDisplayStatus(after.status) };
@@ -525,66 +516,33 @@ export function completeVisit(
   runtime: Runtime,
   visitId: string,
   actingLocationId?: string,
+  actorId?: string,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
-  if (visit.status !== 'arrived' && visit.status !== 'in_progress') {
-    throw domainError('INVALID_TRANSITION');
-  }
-
   const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
   if (!actingLocationId && visit.status === 'arrived') {
-    runVisitTransition(runtime, visitId, 'start', {});
+    runVisitTransition(runtime, visitId, 'start', { actorId });
   }
-  const afterDone = runVisitTransition(runtime, visitId, 'done', { actingLocationId });
+  const afterDone = runVisitTransition(runtime, visitId, 'done', { actingLocationId, actorId });
   return { fromStatus, toStatus: visitStatusToQueueDisplayStatus(afterDone.status) };
 }
-
-const CANCELABLE_VISIT_STATUSES = new Set<VisitStatus>([
-  'waiting',
-  'directed',
-  'called',
-  'arrived',
-  'in_progress',
-  'blocked',
-]);
 
 /** MFA „Wartenummer löschen“ — Visit terminal `cancelled` (kein Hard-Delete). */
 export function cancelVisit(
   db: DatabaseSync,
   runtime: Runtime,
   visitId: string,
+  actorId?: string,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visitView = requireVisit(runtime, visitId);
-  if (!CANCELABLE_VISIT_STATUSES.has(visitView.status)) {
-    throw domainError('INVALID_TRANSITION');
-  }
-
   const hostState = getVisitHostState(db, visitId);
   const fromStatus = resolveEffectiveQueueDisplayStatus(visitView, hostState);
   const now = new Date().toISOString();
-  const visit = visitView as Visit;
-  const patch: Partial<Visit> = {
-    status: 'cancelled',
-    finishedAt: now,
-  };
-  if (visit.journeyState === 'active' || visit.journeyStepIndex != null) {
-    patch.journeyState = 'abandoned';
+  try {
+    runtime.cancel(visitId, { actorType: 'mfa', actorId, note: 'Wartenummer gelöscht' });
+  } catch (error) {
+    mapFlowCoreTransitionError(error);
   }
-
-  updateVisit(db, visit, patch);
-  addEvent(
-    db,
-    visitId,
-    'cancelled',
-    visit.status,
-    'cancelled',
-    visit.lastKnownLocationId,
-    visit.targetLocationId,
-    visit.queueId,
-    visit.queueId,
-    'mfa',
-    'Wartenummer gelöscht',
-  );
   if (hostState?.absentMode) {
     clearAbsentMode(db, visitId, now);
   }
@@ -599,14 +557,11 @@ export function cancelVisit(
 export function returnVisitToWaiting(
   runtime: Runtime,
   visitId: string,
+  actorId?: string,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
-  if (!['called', 'arrived', 'in_progress'].includes(visit.status)) {
-    throw domainError('INVALID_TRANSITION');
-  }
-
   const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
-  runVisitTransition(runtime, visitId, 'return_to_waiting');
+  runVisitTransition(runtime, visitId, 'return_to_waiting', { actorId });
   return { fromStatus, toStatus: 'waiting' };
 }
 
@@ -618,11 +573,9 @@ export function reassignVisitRoom(
   visitId: string,
   roomId?: string,
   roomLabel?: string,
+  actorId?: string,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visitView = requireVisit(runtime, visitId);
-  if (!['called', 'arrived', 'in_progress'].includes(visitView.status)) {
-    throw domainError('INVALID_TRANSITION');
-  }
   assertNoAbsentHostOverlay(db, visitId);
 
   const fromStatus = visitStatusToQueueDisplayStatus(visitView.status);
@@ -641,31 +594,15 @@ export function reassignVisitRoom(
     assertRoomHasCapacity(settings, listQueue(), resolvedRoom.roomId, visitId);
   }
 
-  let toStatus: QueueDisplayStatus = fromStatus;
-  const patch: Partial<Visit> = {
-    targetLocationId: resolvedRoom.roomId,
-  };
-  if (fromStatus === 'in_room' && roomChanged) {
-    patch.status = 'called';
-    patch.arrivedAt = undefined;
-    patch.startedAt = undefined;
-    toStatus = 'called';
+  try {
+    const after = runtime.reassignTarget(visitId, {
+      targetLocationId: resolvedRoom.roomId,
+      actorType: 'mfa',
+      actorId,
+    });
+    if (!after) throw domainError('VISIT_NOT_FOUND');
+    return { fromStatus, toStatus: visitStatusToQueueDisplayStatus(after.status) };
+  } catch (error) {
+    mapFlowCoreTransitionError(error);
   }
-
-  const visit = visitView as Visit;
-  updateVisit(db, visit, patch);
-  addEvent(
-    db,
-    visitId,
-    'redirected',
-    visit.status,
-    patch.status ?? visit.status,
-    visit.targetLocationId,
-    resolvedRoom.roomId,
-    visit.queueId,
-    visit.queueId,
-    'mfa',
-  );
-
-  return { fromStatus, toStatus };
 }

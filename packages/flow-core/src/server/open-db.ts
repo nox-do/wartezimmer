@@ -5,6 +5,7 @@ import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
 import { loadCatalog } from './catalog-repository.js';
 import { seedIfEmpty } from './seed.js';
 import { projectRoot } from './paths.js';
+import { ensureVisitEventAuditColumns } from './visit-event-audit-schema.js';
 
 export const dbPath = join(projectRoot(), 'db/flow-core.sqlite');
 const schemaPath = join(projectRoot(), 'db/schema.sql');
@@ -41,6 +42,7 @@ export function openDb(options: { reset?: boolean; path?: string } = {}): Databa
     db.exec('PRAGMA foreign_keys = ON');
   }
   db.exec(readFileSync(schemaPath, 'utf8'));
+  ensureVisitEventAuditColumns(db);
   seedIfEmpty(db);
   assertCatalogIntegrity(db);
   return db;

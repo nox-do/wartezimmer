@@ -11,12 +11,7 @@ export {
   stepsForTemplate,
   type CatalogRepository,
 } from './catalog-repository.js';
-export {
-  createVisitRepository,
-  updateVisit,
-  addEvent,
-  type VisitRepository,
-} from './visit-repository.js';
+export { createVisitRepository, type VisitRepository } from './visit-repository.js';
 export {
   createVisitService,
   type VisitService,
@@ -26,3 +21,4 @@ export {
 export { createAdminService, type AdminService } from './admin-service.js';
 export { createFailureInjector } from './test-hooks.js';
 export { ensureVisitSupersedeColumns } from './visit-supersede-schema.js';
+export { ensureVisitEventAuditColumns } from './visit-event-audit-schema.js';

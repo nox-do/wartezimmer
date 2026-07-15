@@ -15,6 +15,7 @@ export type RedirectRequestBody = {
   publicDisplayMode: PublicDisplayMode;
   staffNote?: string;
   actorSurfaceId?: string;
+  actorId?: string;
   locationSemantics?: RedirectLocationSemantics;
   lastKnownLocationId?: string | null;
   terminalInstruction?: string;

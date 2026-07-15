@@ -33,6 +33,7 @@ type TransitionContext = {
   reply: QueueReply;
   visitId: string;
   body: QueueVisitTransitionBody;
+  actorId?: string;
 };
 
 function transitionBody(
@@ -100,7 +101,7 @@ function roomFields(roomId: string | undefined, roomLabel: string | undefined) {
   };
 }
 
-type TransitionRunnerContext = Pick<TransitionContext, 'db' | 'reply' | 'visitId'>;
+type TransitionRunnerContext = Pick<TransitionContext, 'db' | 'reply' | 'visitId' | 'actorId'>;
 
 const checkInRoomScopeMismatchMessage =
   'Check-in nur im aktuell zugewiesenen Raum möglich — bitte am richtigen Raum-Panel oder MFA nutzen.';
@@ -139,10 +140,10 @@ function runCallTransition(
     execute: () => {
       input.beforeExecute?.();
       if (input.callTarget) {
-        return ctx.db.callVisit(ctx.visitId, roomId, roomLabel);
+        return ctx.db.callVisit(ctx.visitId, roomId, roomLabel, ctx.actorId);
       }
       // Panel calls confirm routing, never retarget.
-      return ctx.db.callVisit(ctx.visitId);
+      return ctx.db.callVisit(ctx.visitId, undefined, undefined, ctx.actorId);
     },
     mapSuccess: (transition) => ({
       ...transitionBody(transition, ctx.visitId),
@@ -173,7 +174,7 @@ function runCheckInRoomTransition(
   return runVisitTransition({
     reply: ctx.reply,
     visitId: ctx.visitId,
-    execute: () => ctx.db.checkInRoom(ctx.visitId, roomId, roomLabel, actingRoomId),
+    execute: () => ctx.db.checkInRoom(ctx.visitId, roomId, roomLabel, actingRoomId, ctx.actorId),
     mapSuccess: (transition) => ({
       ...transitionBody(transition, ctx.visitId),
       roomId: input.responseRoomId ?? roomId ?? null,
@@ -194,7 +195,7 @@ function runCheckOutRoomTransition(
   return runVisitTransition({
     reply: ctx.reply,
     visitId: ctx.visitId,
-    execute: () => ctx.db.checkOutRoom(ctx.visitId, input.actingRoomId),
+    execute: () => ctx.db.checkOutRoom(ctx.visitId, input.actingRoomId, ctx.actorId),
     mapSuccess: (transition) => transitionBody(transition, ctx.visitId),
     errorOptions: {
       invalidTransitionMessage: `Ticket ${ctx.visitId} kann nicht aus Behandlung ausgecheckt werden.`,
@@ -225,7 +226,7 @@ function handleStartTreatment(ctx: TransitionContext): QueueVisitTransitionRespo
   return runVisitTransition({
     reply: ctx.reply,
     visitId: ctx.visitId,
-    execute: () => ctx.db.startTreatment(ctx.visitId, actingRoomId),
+    execute: () => ctx.db.startTreatment(ctx.visitId, actingRoomId, ctx.actorId),
     mapSuccess: (transition) => transitionBody(transition, ctx.visitId),
     errorOptions: {
       invalidTransitionMessage: `Ticket ${ctx.visitId} kann nicht gestartet werden.`,
@@ -260,7 +261,7 @@ function handleReassignRoom(ctx: TransitionContext): QueueVisitTransitionRespons
   return runVisitTransition({
     reply: ctx.reply,
     visitId: ctx.visitId,
-    execute: () => ctx.db.reassignRoom(ctx.visitId, roomId, roomLabel),
+    execute: () => ctx.db.reassignRoom(ctx.visitId, roomId, roomLabel, ctx.actorId),
     mapSuccess: (transition) => ({
       ...transitionBody(transition, ctx.visitId),
       roomId: roomId ?? null,
@@ -283,7 +284,7 @@ function handleCancel(ctx: TransitionContext): QueueVisitTransitionResponse | un
   return runVisitTransition({
     reply: ctx.reply,
     visitId: ctx.visitId,
-    execute: () => ctx.db.cancelQueueVisit(ctx.visitId),
+    execute: () => ctx.db.cancelQueueVisit(ctx.visitId, ctx.actorId),
     mapSuccess: (transition) => transitionBody(transition, ctx.visitId),
     errorOptions: {
       invalidTransitionMessage: `Ticket ${ctx.visitId} kann nicht gelöscht werden.`,
@@ -295,7 +296,7 @@ function handleReturnToWaiting(ctx: TransitionContext): QueueVisitTransitionResp
   return runVisitTransition({
     reply: ctx.reply,
     visitId: ctx.visitId,
-    execute: () => ctx.db.returnToWaiting(ctx.visitId),
+    execute: () => ctx.db.returnToWaiting(ctx.visitId, ctx.actorId),
     mapSuccess: (transition) => transitionBody(transition, ctx.visitId),
     errorOptions: {
       invalidTransitionMessage: `Ticket ${ctx.visitId} kann nicht ins Wartezimmer zurueck.`,
@@ -448,6 +449,7 @@ async function applyStaffQueueVisitTransition(
   reply: QueueReply,
   visitId: string,
   body: QueueVisitTransitionBody,
+  actorId?: string,
 ): Promise<QueueVisitTransitionResponse | undefined> {
   const handler = staffTransitionHandlers[body.type];
   if (!handler) {
@@ -457,7 +459,7 @@ async function applyStaffQueueVisitTransition(
     });
     return undefined;
   }
-  return handler({ db, reply, visitId, body });
+  return handler({ db, reply, visitId, body, actorId });
 }
 
 async function applyRoomPanelQueueVisitTransition(
@@ -477,7 +479,7 @@ async function applyRoomPanelQueueVisitTransition(
   }
 
   const { capabilities } = resolveRoomPanelSnapshotPolicy(activePanel);
-  const ctx: TransitionRunnerContext = { db, reply, visitId };
+  const ctx: TransitionRunnerContext = { db, reply, visitId, actorId: session.sessionId };
 
   switch (body.type) {
     case 'call': {
@@ -552,5 +554,5 @@ export async function applyQueueVisitTransition(
     return applyRoomPanelQueueVisitTransition(db, reply, visitId, body, authSession);
   }
 
-  return applyStaffQueueVisitTransition(db, reply, visitId, body);
+  return applyStaffQueueVisitTransition(db, reply, visitId, body, authSession?.sessionId);
 }

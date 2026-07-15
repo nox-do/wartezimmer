@@ -68,8 +68,9 @@ export function supersedeVisitTopic(params: {
   settings: OpsSettings;
   visitId: string;
   topicId: string;
+  actorId?: string;
 }): SupersedeVisitResult {
-  const { db, runtime, settings, visitId, topicId } = params;
+  const { db, runtime, settings, visitId, topicId, actorId } = params;
   const activeVisit = runtime.visits().find((visit) => visit.id === visitId);
   if (!activeVisit) {
     throw domainError('VISIT_NOT_FOUND');
@@ -93,6 +94,7 @@ export function supersedeVisitTopic(params: {
       preserveArrivedAt: true,
       surfaceId: activeVisit.lastSurfaceId,
       actorType: 'mfa',
+      actorId,
     });
   } catch (error) {
     mapFlowCoreTransitionError(error);
