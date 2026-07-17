@@ -23,12 +23,12 @@ import { createWriteStream } from 'node:fs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createGzip } from 'node:zlib';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-function printHelp() {
+function printHelp(proxyImage) {
   console.log(`build-release-images — Praxis Flow delivery release package
 
 Options:
@@ -40,6 +40,7 @@ Options:
 Images tagged as:
   praxis-flow/app:<version>
   praxis-flow/sandbox:<version>
+  ${proxyImage}   ← optional offline reverse proxy (not auto-started)
 `);
 }
 
@@ -47,12 +48,13 @@ function parseArgs(argv) {
   let version = process.env.PRAXIS_FLOW_RELEASE_VERSION?.trim() || null;
   let noBuild = false;
   let outputRoot = path.join(root, 'dist', 'releases');
+  let showHelp = false;
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--help' || arg === '-h') {
-      printHelp();
-      process.exit(0);
+      showHelp = true;
+      continue;
     }
     if (arg === '--version') {
       version = argv[index + 1]?.trim() ?? '';
@@ -69,17 +71,19 @@ function parseArgs(argv) {
     }
   }
 
-  if (!version) {
-    const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-    version = String(pkg.version ?? '').trim();
+  if (!showHelp) {
+    if (!version) {
+      const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+      version = String(pkg.version ?? '').trim();
+    }
+
+    if (!version || !/^[0-9A-Za-z][0-9A-Za-z._-]*$/.test(version)) {
+      console.error('Invalid or missing --version (use semver, e.g. 1.4.2).');
+      process.exit(1);
+    }
   }
 
-  if (!version || !/^[0-9A-Za-z][0-9A-Za-z._-]*$/.test(version)) {
-    console.error('Invalid or missing --version (use semver, e.g. 1.4.2).');
-    process.exit(1);
-  }
-
-  return { version, noBuild, outputRoot };
+  return { version, noBuild, outputRoot, showHelp };
 }
 
 function run(command, args, options = {}) {
@@ -118,6 +122,17 @@ function assertDockerReady() {
 
 function assertImageExists(imageRef) {
   runCapture('docker', ['image', 'inspect', imageRef, '--format', '{{.Id}}']);
+}
+
+function ensureProxyImage(proxyImage) {
+  try {
+    assertImageExists(proxyImage);
+    console.log(`Using local ${proxyImage}`);
+  } catch {
+    console.log(`Pulling ${proxyImage} …`);
+    run('docker', ['pull', proxyImage]);
+    assertImageExists(proxyImage);
+  }
 }
 
 function buildReleaseImages(version) {
@@ -197,7 +212,21 @@ async function packImages(archivePath, imageRefs) {
   }
 }
 
-const { version, noBuild, outputRoot } = parseArgs(process.argv.slice(2));
+async function loadProxyImageRef() {
+  run('npm', ['run', 'build:server-shared'], { stdio: 'inherit' });
+  const modulePath = path.join(root, 'packages/server-shared/dist/pfupdate.js');
+  const pfupdate = await import(pathToFileURL(modulePath).href);
+  return pfupdate.PRAXIS_FLOW_PROXY_IMAGE_REF;
+}
+
+const { version, noBuild, outputRoot, showHelp } = parseArgs(process.argv.slice(2));
+const proxyImage = await loadProxyImageRef();
+
+if (showHelp) {
+  printHelp(proxyImage);
+  process.exit(0);
+}
+
 const appImage = `praxis-flow/app:${version}`;
 const sandboxImage = `praxis-flow/sandbox:${version}`;
 const releaseDir = path.join(outputRoot, `praxis-flow-${version}`);
@@ -210,28 +239,38 @@ if (noBuild) {
   console.log('Skipping build (--no-build). Checking local tags …');
   assertImageExists(appImage);
   assertImageExists(sandboxImage);
+  ensureProxyImage(proxyImage);
 } else {
   buildReleaseImages(version);
+  ensureProxyImage(proxyImage);
 }
 
 fs.mkdirSync(releaseDir, { recursive: true });
 
 console.log(`Packing ${archivePath} …`);
-await packImages(archivePath, [appImage, sandboxImage]);
+await packImages(archivePath, [appImage, sandboxImage, proxyImage]);
 
 const archiveSha256 = sha256File(archivePath);
+const archiveBytes = fs.statSync(archivePath).size;
 const manifest = {
   version,
   createdAt: new Date().toISOString(),
   images: {
     app: appImage,
     sandbox: sandboxImage,
+    proxy: proxyImage,
   },
   archive: archiveName,
   sha256: archiveSha256,
   envExample: {
     PRAXIS_FLOW_APP_IMAGE: appImage,
     PRAXIS_FLOW_SANDBOX_IMAGE: sandboxImage,
+    PRAXIS_FLOW_PROXY_IMAGE: proxyImage,
+  },
+  notes: {
+    proxyImageSizeHintMb: 85,
+    proxyImageGzipHintMb: 22,
+    proxyRuntimeDefault: 'disabled',
   },
 };
 
@@ -241,9 +280,12 @@ writeSha256Sums(releaseDir, [[archiveName, archiveSha256]]);
 console.log('');
 console.log('Release package ready:');
 console.log(`  ${releaseDir}/`);
-console.log(`    ${archiveName}`);
+console.log(`    ${archiveName} (${(archiveBytes / (1024 * 1024)).toFixed(1)} MB)`);
 console.log('    manifest.json');
 console.log('    SHA256SUMS.txt');
+console.log('');
+console.log(`Includes optional offline proxy image ${proxyImage} (~85 MB / ~22 MB gzip).`);
+console.log('Proxy stays disabled until explicitly enabled in Manager/Setup.');
 console.log('');
 console.log('Upload to customer share (e.g. Google Drive):');
 console.log(`  ${archiveName} + manifest.json + SHA256SUMS.txt`);

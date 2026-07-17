@@ -12,6 +12,7 @@ export const STACK_IMAGE_ENV_KEYS = [
   'PRAXIS_FLOW_APP_IMAGE',
   'PRAXIS_FLOW_SANDBOX_IMAGE',
   'PRAXIS_FLOW_GATEWAY_IMAGE',
+  'PRAXIS_FLOW_PROXY_IMAGE',
 ] as const;
 
 export type StackImageEnvKey = (typeof STACK_IMAGE_ENV_KEYS)[number];

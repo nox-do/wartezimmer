@@ -164,8 +164,10 @@ test('mergeConfigRestoreEnv keeps current stack image tags', () => {
     PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:current',
     PRAXIS_FLOW_SANDBOX_IMAGE: 'praxis-flow/sandbox:current',
     PRAXIS_FLOW_GATEWAY_IMAGE: 'praxis-flow/gateway:current',
+    PRAXIS_FLOW_PROXY_IMAGE: 'caddy:2.11.4',
   });
   assert.equal(merged.PRAXIS_FLOW_APP_IMAGE, 'praxis-flow/app:current');
+  assert.equal(merged.PRAXIS_FLOW_PROXY_IMAGE, 'caddy:2.11.4');
   assert.equal(merged.IMPORTS_HOST_PATH, '/data/imports');
 });
 

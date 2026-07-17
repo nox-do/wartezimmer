@@ -17,6 +17,12 @@ export const PFUPDATE_COMPOSE_TEMPLATE_FILES = [
   'docker-compose.gateway.delivery.yml',
 ] as const;
 
+/** Installed from .pfupdate when present; rolled back with other compose templates. */
+export const PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE = 'docker-compose.proxy.delivery.yml' as const;
+
+/** Seeded only when missing — never overwritten on update. */
+export const PFUPDATE_PROXY_CADDYFILE_RELATIVE = 'proxy/Caddyfile' as const;
+
 export type TarArchiveEntryType =
   | 'file'
   | 'directory'

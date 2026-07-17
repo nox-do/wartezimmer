@@ -1,7 +1,11 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { DeliveryImagesStatus } from '@praxis-flow/server-shared';
+import {
+  PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY,
+  PRAXIS_FLOW_PROXY_IMAGE_REF,
+  type DeliveryImagesStatus,
+} from '@praxis-flow/server-shared';
 import type { DockerStatus } from './docker.js';
 import { runDockerCommand } from './docker-cli.js';
 import { backupEnvFile, readEnvMap, updateEnvKeys } from './env-file.js';
@@ -348,10 +352,17 @@ export async function auditDeliveryImages(input: {
   };
 }
 
+export type LoadDeliveryImagesDeps = {
+  verifyReleaseArchiveSha256?: typeof verifyReleaseArchiveSha256;
+  dockerLoadArchive?: typeof dockerLoadArchive;
+  auditDeliveryImages?: typeof auditDeliveryImages;
+};
+
 export async function loadDeliveryImagesFromArchive(
   projectRoot: string,
   archivePath: string,
   docker: DockerStatus,
+  deps: LoadDeliveryImagesDeps = {},
 ): Promise<LoadDeliveryImagesCoreResult> {
   if (!docker.installed || !docker.daemonRunning) {
     throw new Error('DOCKER_NOT_READY');
@@ -362,9 +373,13 @@ export async function loadDeliveryImagesFromArchive(
     throw new Error('RELEASE_ARCHIVE_NOT_FOUND');
   }
 
-  const shaCheck = verifyReleaseArchiveSha256(resolvedArchive);
+  const verifySha = deps.verifyReleaseArchiveSha256 ?? verifyReleaseArchiveSha256;
+  const dockerLoad = deps.dockerLoadArchive ?? dockerLoadArchive;
+  const auditImages = deps.auditDeliveryImages ?? auditDeliveryImages;
 
-  const loadResult = await dockerLoadArchive(resolvedArchive);
+  const shaCheck = verifySha(resolvedArchive);
+
+  const loadResult = await dockerLoad(resolvedArchive);
   if (!loadResult.ok) {
     throw new Error(`DOCKER_LOAD_FAILED: ${loadResult.log || 'unknown error'}`);
   }
@@ -392,8 +407,14 @@ export async function loadDeliveryImagesFromArchive(
   });
   writeDeliveryImageEnvFromState(projectRoot);
 
+  if (loadResult.loaded.includes(PRAXIS_FLOW_PROXY_IMAGE_REF)) {
+    updateEnvKeys(envPath, {
+      [PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY]: PRAXIS_FLOW_PROXY_IMAGE_REF,
+    });
+  }
+
   const envMap = readEnvMap(envPath);
-  const deliveryImages = await auditDeliveryImages({ projectRoot, envMap, docker });
+  const deliveryImages = await auditImages({ projectRoot, envMap, docker });
 
   return {
     envPath,

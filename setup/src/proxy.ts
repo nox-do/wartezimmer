@@ -4,6 +4,7 @@ import type {
   ProxyMode,
   ProxyStatus,
 } from '@praxis-flow/server-shared';
+import { PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY } from '@praxis-flow/server-shared';
 import { DEFAULT_PROXY_HTTP_PORT } from './network-bindings.js';
 import {
   DEFAULT_APP_PORT,
@@ -16,7 +17,7 @@ export const DEFAULT_APP_BIND_ADDRESS = '0.0.0.0';
 export const PROXY_APP_BIND_ADDRESS = '127.0.0.1';
 
 /** Always survive applySetupPlan (not part of the proxy wire payload). */
-export const PROXY_IMAGE_ENV_KEY = 'PRAXIS_FLOW_PROXY_IMAGE' as const;
+export const PROXY_IMAGE_ENV_KEY = PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY;
 
 /**
  * Survive applySetupPlan only when the wire omits `proxy` (older clients).
@@ -72,10 +73,7 @@ const PROXY_ENABLED_TRUE = new Set(['1', 'true', 'yes', 'on']);
 const PROXY_ENABLED_FALSE = new Set(['0', 'false', 'no', 'off']);
 
 /** Strict boolean for PROXY_ENABLED — unknown tokens (e.g. "treu") are rejected. */
-export function parseProxyEnabledFlag(
-  raw: string | undefined,
-  fallback: boolean,
-): boolean {
+export function parseProxyEnabledFlag(raw: string | undefined, fallback: boolean): boolean {
   const trimmed = raw?.trim().toLowerCase() ?? '';
   if (!trimmed) {
     return fallback;
@@ -347,9 +345,7 @@ export function findProxyContainer(compose: ComposeStatus | null): ComposeServic
   if (!compose) {
     return null;
   }
-  return (
-    compose.services.find((service) => (service.service || service.name) === 'proxy') ?? null
-  );
+  return compose.services.find((service) => (service.service || service.name) === 'proxy') ?? null;
 }
 
 export function buildProxyStatus(input: {

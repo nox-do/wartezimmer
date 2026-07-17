@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS,
   PFUPDATE_REQUIRED_FILE_PATHS,
+  PRAXIS_FLOW_PROXY_IMAGE_REF,
   buildPfupdateFilename,
   buildPfupdateManifest,
   compareSemver,
@@ -92,6 +94,56 @@ test('validatePfupdateImageRefs requires releaseVersion-aligned tags', () => {
   manifest.images.gateway = 'praxis-flow/gateway:2026.07.1';
   const errors = validatePfupdateImageRefs(manifest);
   assert.match(errors.join(' '), /gateway/);
+});
+
+test('validatePfupdatePackage accepts optional proxy image and templates', () => {
+  const required = sampleFiles();
+  const proxyFiles = PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS.map((path, index) => ({
+    path,
+    sha256: `${String(index + 10).padStart(64, '0')}`,
+    byteLength: 200 + index,
+  }));
+  const files = [...required, ...proxyFiles];
+  const manifest = buildPfupdateManifest({
+    releaseVersion,
+    createdAt: '2026-08-01T10:00:00.000Z',
+    minimumManagerVersion: '0.3.0',
+    images: {
+      app: `praxis-flow/app:${releaseVersion}`,
+      sandbox: `praxis-flow/sandbox:${releaseVersion}`,
+      gateway: `praxis-flow/gateway:${releaseVersion}`,
+      proxy: PRAXIS_FLOW_PROXY_IMAGE_REF,
+    },
+    files,
+  });
+
+  const result = validatePfupdatePackage({
+    manifest,
+    files: digestMapFromManifest(manifest),
+    sha256Sums: formatSha256Sums(manifest.files),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.manifest?.images.proxy, PRAXIS_FLOW_PROXY_IMAGE_REF);
+});
+
+test('validatePfupdatePackage still accepts legacy packages without proxy', () => {
+  const manifest = sampleManifest();
+  const result = validatePfupdatePackage({
+    manifest,
+    files: digestMapFromManifest(manifest),
+    sha256Sums: formatSha256Sums(manifest.files),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.manifest?.images.proxy, undefined);
+});
+
+test('validatePfupdateImageRefs rejects wrong proxy pin or missing proxy templates', () => {
+  const manifest = sampleManifest();
+  manifest.images.proxy = 'caddy:latest';
+  assert.match(validatePfupdateImageRefs(manifest).join(' '), /images\.proxy/);
+
+  manifest.images.proxy = PRAXIS_FLOW_PROXY_IMAGE_REF;
+  assert.match(validatePfupdateImageRefs(manifest).join(' '), /proxy\/Caddyfile/);
 });
 
 test('isPfupdateRelativePath rejects traversal and absolute paths', () => {

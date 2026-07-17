@@ -48,15 +48,18 @@ Options:
 Package layout (extracted):
   manifest.json
   SHA256SUMS.txt
-  images/praxis-flow-images.tar     ← docker save (app + sandbox + gateway)
+  images/praxis-flow-images.tar     ← docker save (app + sandbox + gateway + caddy)
   templates/docker-compose.delivery.yml
   templates/docker-compose.gateway.delivery.yml
+  templates/docker-compose.proxy.delivery.yml
+  templates/proxy/Caddyfile
   templates/.env.example
 
 Images tagged as:
   praxis-flow/app:<version>
   praxis-flow/sandbox:<version>
   praxis-flow/gateway:<version>
+  caddy:2.11.4                      ← optional offline reverse proxy (not auto-started)
 `);
 }
 
@@ -143,6 +146,17 @@ function assertImageExists(imageRef) {
   runCapture('docker', ['image', 'inspect', imageRef, '--format', '{{.Id}}']);
 }
 
+function ensureProxyImage(proxyImage) {
+  try {
+    assertImageExists(proxyImage);
+    console.log(`Using local ${proxyImage}`);
+  } catch {
+    console.log(`Pulling ${proxyImage} …`);
+    run('docker', ['pull', proxyImage]);
+    assertImageExists(proxyImage);
+  }
+}
+
 function buildReleaseImages(version) {
   const appImage = `praxis-flow/app:${version}`;
   const sandboxImage = `praxis-flow/sandbox:${version}`;
@@ -223,13 +237,14 @@ function copyFileEnsuringDir(sourcePath, targetPath) {
   fs.copyFileSync(sourcePath, targetPath);
 }
 
-function buildDeliveryEnvExample(version, appImage, sandboxImage, gatewayImage) {
+function buildDeliveryEnvExample(version, appImage, sandboxImage, gatewayImage, proxyImage) {
   const sourcePath = path.join(root, '.env.example');
   const lines = fs.readFileSync(sourcePath, 'utf8').split(/\r?\n/);
   const imageLines = new Set([
     'PRAXIS_FLOW_APP_IMAGE',
     'PRAXIS_FLOW_SANDBOX_IMAGE',
     'PRAXIS_FLOW_GATEWAY_IMAGE',
+    'PRAXIS_FLOW_PROXY_IMAGE',
   ]);
 
   const out = [];
@@ -248,6 +263,7 @@ function buildDeliveryEnvExample(version, appImage, sandboxImage, gatewayImage) 
   out.push(`PRAXIS_FLOW_APP_IMAGE=${appImage}`);
   out.push(`PRAXIS_FLOW_SANDBOX_IMAGE=${sandboxImage}`);
   out.push(`PRAXIS_FLOW_GATEWAY_IMAGE=${gatewayImage}`);
+  out.push(`PRAXIS_FLOW_PROXY_IMAGE=${proxyImage}`);
 
   return `${out.join('\n').replace(/\n+$/, '')}\n`;
 }
@@ -315,13 +331,18 @@ const archivePath = path.join(outputRoot, archiveFileName);
 
 assertDockerReady();
 
+const pfupdate = await loadPfupdateValidation();
+const proxyImage = pfupdate.PRAXIS_FLOW_PROXY_IMAGE_REF;
+
 if (noBuild) {
   console.log('Skipping build (--no-build). Checking local tags …');
   assertImageExists(appImage);
   assertImageExists(sandboxImage);
   assertImageExists(gatewayImage);
+  ensureProxyImage(proxyImage);
 } else {
   buildReleaseImages(version);
+  ensureProxyImage(proxyImage);
 }
 
 try {
@@ -329,7 +350,7 @@ try {
 
   const imagesTarPath = path.join(stagingRoot, 'images', 'praxis-flow-images.tar');
   console.log(`Saving images to ${imagesTarPath} …`);
-  await dockerSaveTar(imagesTarPath, [appImage, sandboxImage, gatewayImage]);
+  await dockerSaveTar(imagesTarPath, [appImage, sandboxImage, gatewayImage, proxyImage]);
 
   copyFileEnsuringDir(
     path.join(root, 'docker-compose.delivery.yml'),
@@ -339,14 +360,21 @@ try {
     path.join(root, 'docker-compose.gateway.delivery.yml'),
     path.join(stagingRoot, 'templates', 'docker-compose.gateway.delivery.yml'),
   );
+  copyFileEnsuringDir(
+    path.join(root, 'docker-compose.proxy.delivery.yml'),
+    path.join(stagingRoot, 'templates', 'docker-compose.proxy.delivery.yml'),
+  );
+  copyFileEnsuringDir(
+    path.join(root, 'proxy', 'Caddyfile'),
+    path.join(stagingRoot, 'templates', 'proxy', 'Caddyfile'),
+  );
   fs.writeFileSync(
     path.join(stagingRoot, 'templates', '.env.example'),
-    buildDeliveryEnvExample(version, appImage, sandboxImage, gatewayImage),
+    buildDeliveryEnvExample(version, appImage, sandboxImage, gatewayImage, proxyImage),
     'utf8',
   );
 
-  const pfupdate = await loadPfupdateValidation();
-  const fileEntries = pfupdate.PFUPDATE_REQUIRED_FILE_PATHS.map((relativePath) => {
+  const fileEntries = pfupdate.PFUPDATE_ALLOWED_FILE_PATHS.map((relativePath) => {
     const absolutePath = path.join(stagingRoot, relativePath);
     const stat = fs.statSync(absolutePath);
     return {
@@ -363,6 +391,7 @@ try {
       app: appImage,
       sandbox: sandboxImage,
       gateway: gatewayImage,
+      proxy: proxyImage,
     },
     files: fileEntries,
   });
@@ -388,6 +417,7 @@ try {
   console.log(`  ${archivePath}`);
   console.log('');
   console.log(`Release: ${version} · minimum Manager: ${minimumManagerVersion}`);
+  console.log(`Proxy image (optional runtime): ${proxyImage}`);
   console.log('Import: Manager → Wartung → Betrieb & Updates → Update-Paket wählen …');
   console.log('');
   console.log(

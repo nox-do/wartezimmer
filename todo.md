@@ -2,6 +2,15 @@
 
 Stand: 2026-07-17
 
+## Erledigt: P2c – optionale Release-Verpackung Proxy (2026-07-17)
+
+- `caddy:2.11.4` in `release:images` und `.pfupdate` (docker save); Runtime weiter default off
+- pfupdate v1: optional `images.proxy` + Proxy-Templates; alte Pakete ohne Proxy bleiben gültig
+- Install/Update setzt `PRAXIS_FLOW_PROXY_IMAGE`; Caddyfile nur wenn fehlend (nie überschreiben)
+- Backup/Restore: `PRAXIS_FLOW_PROXY_IMAGE` in `STACK_IMAGE_ENV_KEYS` (aktuelles Image bleibt)
+- Größe: ~85 MB Image / ~22 MB `docker save|gzip` (lokal gemessen); dokumentiert in `docs/delivery.md`
+- Nachzug: Caddyfile-Rollback bei fehlgeschlagenem Update; `release:images` nutzt Shared-Konstante; Erstinstall-Test für PROXY_IMAGE
+
 ## Erledigt: P2b P1-Cutover-Fixes (2026-07-17)
 
 - Apply ohne `proxy`: PROXY_* / APP_BIND bleiben erhalten (`writeProxyEnv === false`)

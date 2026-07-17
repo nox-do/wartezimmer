@@ -69,14 +69,16 @@ npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 
 ## Zwei Auslieferungsartefakte
 
-| Artefakt                | Build                      | Manager-Flow                          | Inhalt                                                                             |
-| ----------------------- | -------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
-| **`.tar.gz` + Sidecar** | `npm run release:images`   | Setup-Wizard → „Release-Paket wählen" | app + sandbox, `manifest.json` + `SHA256SUMS.txt`                                  |
-| **`.pfupdate`**         | `npm run release:pfupdate` | Wartung → Software-Update             | Eine Datei: Manifest, Checksummen, Images (app+sandbox+gateway), Compose-Templates |
+| Artefakt                | Build                      | Manager-Flow                          | Inhalt                                                                                           |
+| ----------------------- | -------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **`.tar.gz` + Sidecar** | `npm run release:images`   | Setup-Wizard → „Release-Paket wählen" | app + sandbox + optional `caddy:2.11.4`, `manifest.json` + `SHA256SUMS.txt`                      |
+| **`.pfupdate`**         | `npm run release:pfupdate` | Wartung → Software-Update             | Manifest, Checksummen, Images (app+sandbox+gateway+caddy), Compose-Templates inkl. Proxy-Overlay |
 
 Updates laufen **nur** über `.pfupdate`. Der Wizard nutzt das ältere Sidecar-Format (Erstinstallation, kein Cutover/Rollback).
 
 **Drittes Artefakt (separater Zyklus):** Manager-DMG via `npm run dist:manager:mac` — Setup-Server und Templates eingebettet, selten neu ausgeliefert.
+
+**Proxy:** `caddy:2.11.4` wird mitgeliefert (~85 MB Image / ~22 MB als `docker save | gzip`), startet aber **nicht** automatisch. Aktivierung bleibt optional über Setup/Manager (`PROXY_ENABLED`).
 
 ---
 
@@ -88,9 +90,10 @@ Updates laufen **nur** über `.pfupdate`. Der Wizard nutzt das ältere Sidecar-F
 praxis-flow/app:<releaseVersion>
 praxis-flow/sandbox:<releaseVersion>
 praxis-flow/gateway:<releaseVersion>
+caddy:2.11.4   # optional offline reverse proxy (PRAXIS_FLOW_PROXY_IMAGE)
 ```
 
-`<releaseVersion>` muss **identisch** sein mit `manifest.releaseVersion`, allen `manifest.images.*` (strikt in `pfupdate.ts`) und `manager-state.json` → `release.releaseVersion`.
+`<releaseVersion>` muss **identisch** sein mit `manifest.releaseVersion`, allen versionierten `manifest.images.*` (`app`/`sandbox`/`gateway`, strikt in `pfupdate.ts`) und `manager-state.json` → `release.releaseVersion`. `images.proxy` ist optional und, wenn gesetzt, fest auf `caddy:2.11.4`.
 
 ### Lokale Dev-Tags
 
@@ -118,19 +121,20 @@ npm run release:pfupdate:current   # packt :local in .pfupdate ohne Rebuild
 ### Erstinstallation (`scripts/build-release-images.mjs`)
 
 1. `docker build` → `praxis-flow/app:<version>` + `praxis-flow/sandbox:<version>` (SBOM + Provenance)
-2. `docker save | gzip` → `praxis-flow-<version>-images.tar.gz`
-3. `manifest.json` + `SHA256SUMS.txt`
+2. `docker pull`/`assert` → `caddy:2.11.4` (offline Proxy, ~85 MB Image / ~22 MB gzip)
+3. `docker save | gzip` → `praxis-flow-<version>-images.tar.gz`
+4. `manifest.json` + `SHA256SUMS.txt` (inkl. optional `images.proxy`)
 
 **Ausgabe:** `dist/releases/praxis-flow-<version>/`
 
-Gateway ist **nicht** enthalten — nur app + sandbox.
+Gateway ist **nicht** enthalten — nur app + sandbox (+ optional Caddy).
 
 ### Stack-Update (`scripts/build-pfupdate.mjs`)
 
-1. `docker build` → app + sandbox + **gateway**
+1. `docker build` → app + sandbox + **gateway**; `docker pull` → **caddy:2.11.4**
 2. `docker save` → unkomprimiertes `images/praxis-flow-images.tar`
-3. Compose-Templates + `.env.example` (Image-Tags gesetzt)
-4. Manifest mit `minimumManagerVersion` (= aktuelle `manager/package.json`-Version)
+3. Compose-Templates inkl. Proxy-Overlay + `proxy/Caddyfile` + `.env.example` (Image-Tags gesetzt)
+4. Manifest mit `minimumManagerVersion` (= aktuelle `manager/package.json`-Version) und optional `images.proxy`
 5. `tar czf` → `dist/releases/praxis-flow-update-<version>.pfupdate`
 6. Roundtrip-Validierung via `validatePfupdatePackage()`
 
@@ -142,8 +146,12 @@ SHA256SUMS.txt
 images/praxis-flow-images.tar
 templates/docker-compose.delivery.yml
 templates/docker-compose.gateway.delivery.yml
+templates/docker-compose.proxy.delivery.yml
+templates/proxy/Caddyfile
 templates/.env.example
 ```
+
+Ältere `.pfupdate`-Pakete ohne Proxy-Felder bleiben gültig (v1-kompatibel).
 
 ### Manager-DMG (`manager/package.json` → `dist:mac`)
 

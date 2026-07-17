@@ -6,8 +6,11 @@ import path from 'node:path';
 import {
   buildPfupdateManifest,
   formatSha256Sums,
-  PFUPDATE_REQUIRED_FILE_PATHS,
+  PFUPDATE_ALLOWED_FILE_PATHS,
+  PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS,
+  PRAXIS_FLOW_PROXY_IMAGE_REF,
   serializePfupdateManifest,
+  type PfupdateAllowedFilePath,
 } from '@praxis-flow/server-shared';
 import { sha256File } from './pfupdate-package.js';
 
@@ -27,6 +30,8 @@ function writeFileDigest(root: string, relativePath: string, content: string) {
 export type BuildTestPfupdateArchiveOptions = {
   version?: string;
   manifestContent?: string;
+  /** Include optional offline proxy image + templates (P2c packages). */
+  withProxy?: boolean;
 };
 
 export function buildTestPfupdateArchive(
@@ -39,6 +44,7 @@ export function buildTestPfupdateArchive(
       ? { version: versionOrOptions ?? legacyVersion ?? defaultReleaseVersion }
       : versionOrOptions;
   const version = options.version ?? defaultReleaseVersion;
+  const withProxy = options.withProxy === true;
   const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-build-'));
   try {
     const imagesTar = path.join(staging, 'images', 'praxis-flow-images.tar');
@@ -52,9 +58,27 @@ export function buildTestPfupdateArchive(
       writeFileDigest(
         staging,
         'templates/.env.example',
-        `PRAXIS_FLOW_APP_IMAGE=praxis-flow/app:${version}\n`,
+        [
+          `PRAXIS_FLOW_APP_IMAGE=praxis-flow/app:${version}`,
+          ...(withProxy ? [`PRAXIS_FLOW_PROXY_IMAGE=${PRAXIS_FLOW_PROXY_IMAGE_REF}`] : []),
+          '',
+        ].join('\n'),
       ),
     ];
+
+    if (withProxy) {
+      for (const relativePath of PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS) {
+        const content = relativePath.endsWith('Caddyfile')
+          ? ':80 {\n  reverse_proxy app:8080\n}\n'
+          : 'services: {}\n';
+        fileEntries.push(writeFileDigest(staging, relativePath, content));
+      }
+    }
+
+    const allowed = new Set<string>(PFUPDATE_ALLOWED_FILE_PATHS);
+    for (const entry of fileEntries) {
+      assert.ok(allowed.has(entry.path), `unexpected test fixture path ${entry.path}`);
+    }
 
     const manifest = buildPfupdateManifest({
       releaseVersion: version,
@@ -63,9 +87,10 @@ export function buildTestPfupdateArchive(
         app: `praxis-flow/app:${version}`,
         sandbox: `praxis-flow/sandbox:${version}`,
         gateway: `praxis-flow/gateway:${version}`,
+        ...(withProxy ? { proxy: PRAXIS_FLOW_PROXY_IMAGE_REF } : {}),
       },
       files: fileEntries.map((entry) => ({
-        path: entry.path as (typeof PFUPDATE_REQUIRED_FILE_PATHS)[number],
+        path: entry.path as PfupdateAllowedFilePath,
         sha256: entry.sha256,
         byteLength: entry.byteLength,
       })),

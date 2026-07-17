@@ -37,14 +37,16 @@ const NETWORK_ENV_KEYS = [
 
 const MOCK_MESSAGING_PROVIDER_ID = 'mock';
 
-const STACK_IMAGE_MANAGER_FIELDS: Record<
-  StackImageEnvKey,
-  keyof Pick<ManagerReleaseState, 'appImage' | 'sandboxImage' | 'gatewayImage'>
-> = {
+const STACK_IMAGE_MANAGER_FIELDS = {
   PRAXIS_FLOW_APP_IMAGE: 'appImage',
   PRAXIS_FLOW_SANDBOX_IMAGE: 'sandboxImage',
   PRAXIS_FLOW_GATEWAY_IMAGE: 'gatewayImage',
-};
+} as const satisfies Record<
+  Exclude<StackImageEnvKey, 'PRAXIS_FLOW_PROXY_IMAGE'>,
+  keyof Pick<ManagerReleaseState, 'appImage' | 'sandboxImage' | 'gatewayImage'>
+>;
+
+type StackImageManagerEnvKey = keyof typeof STACK_IMAGE_MANAGER_FIELDS;
 
 export type PfbackupInspectDeps = {
   validateSettingsSnapshot?: typeof validateSettingsSnapshotWithApp;
@@ -131,6 +133,7 @@ export function extractPfbackupInspectEnvironment(
     appImage: env.PRAXIS_FLOW_APP_IMAGE ?? release?.appImage,
     sandboxImage: env.PRAXIS_FLOW_SANDBOX_IMAGE ?? release?.sandboxImage,
     gatewayImage: env.PRAXIS_FLOW_GATEWAY_IMAGE ?? release?.gatewayImage ?? undefined,
+    proxyImage: env.PRAXIS_FLOW_PROXY_IMAGE,
     archiveSha256: release?.archiveSha256 ?? undefined,
   });
 
@@ -165,7 +168,7 @@ function buildStackImageConsistencyWarnings(
   }
 
   const warnings: string[] = [];
-  for (const envKey of STACK_IMAGE_ENV_KEYS) {
+  for (const envKey of Object.keys(STACK_IMAGE_MANAGER_FIELDS) as StackImageManagerEnvKey[]) {
     const envValue = backupEnv[envKey]?.trim();
     const managerField = STACK_IMAGE_MANAGER_FIELDS[envKey];
     const managerValue = backupRelease[managerField]?.trim();

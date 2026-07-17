@@ -7,10 +7,20 @@ export const PFUPDATE_BASENAME_PREFIX = 'praxis-flow-update-';
 
 export const PFUPDATE_IMAGES_TAR_PATH = 'images/praxis-flow-images.tar';
 
+/** Pinned offline reverse-proxy image shipped in release/.pfupdate packages (optional at runtime). */
+export const PRAXIS_FLOW_PROXY_IMAGE_REF = 'caddy:2.11.4' as const;
+export const PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY = 'PRAXIS_FLOW_PROXY_IMAGE' as const;
+
 export const PFUPDATE_TEMPLATE_PATHS = [
   'templates/docker-compose.delivery.yml',
   'templates/docker-compose.gateway.delivery.yml',
   'templates/.env.example',
+] as const;
+
+/** Optional in v1 for backward compatibility with packages built before P2c. */
+export const PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS = [
+  'templates/docker-compose.proxy.delivery.yml',
+  'templates/proxy/Caddyfile',
 ] as const;
 
 export const PFUPDATE_REQUIRED_FILE_PATHS = [
@@ -18,11 +28,19 @@ export const PFUPDATE_REQUIRED_FILE_PATHS = [
   ...PFUPDATE_TEMPLATE_PATHS,
 ] as const;
 
+export const PFUPDATE_ALLOWED_FILE_PATHS = [
+  ...PFUPDATE_REQUIRED_FILE_PATHS,
+  ...PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS,
+] as const;
+
 export type PfupdateTemplatePath = (typeof PFUPDATE_TEMPLATE_PATHS)[number];
+export type PfupdateOptionalProxyTemplatePath =
+  (typeof PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS)[number];
 export type PfupdateRequiredFilePath = (typeof PFUPDATE_REQUIRED_FILE_PATHS)[number];
+export type PfupdateAllowedFilePath = (typeof PFUPDATE_ALLOWED_FILE_PATHS)[number];
 
 export type PfupdateFileEntryV1 = {
-  path: PfupdateRequiredFilePath;
+  path: PfupdateAllowedFilePath;
   sha256: string;
   byteLength: number;
 };
@@ -31,6 +49,8 @@ export type PfupdateImagesV1 = {
   app: string;
   sandbox: string;
   gateway: string;
+  /** Present in packages that ship the offline Caddy image; omitted in older v1 packages. */
+  proxy?: string;
 };
 
 export type PfupdateManifestV1 = {
@@ -71,11 +91,13 @@ export type PfupdateValidationResult = {
 const SEMVER_PATTERN = /^(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const RELEASE_VERSION_PATTERN = /^[0-9A-Za-z][0-9A-Za-z._-]*$/;
-const IMAGE_REPO_BY_KEY = {
+const VERSIONED_IMAGE_REPO_BY_KEY = {
   app: 'praxis-flow/app',
   sandbox: 'praxis-flow/sandbox',
   gateway: 'praxis-flow/gateway',
-} as const satisfies Record<keyof PfupdateImagesV1, string>;
+} as const;
+
+type PfupdateVersionedImageKey = keyof typeof VERSIONED_IMAGE_REPO_BY_KEY;
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
@@ -135,7 +157,7 @@ export function buildPfupdateFilename(releaseVersion: string): string {
 }
 
 export function expectedPfupdateImageRef(
-  repository: (typeof IMAGE_REPO_BY_KEY)[keyof PfupdateImagesV1],
+  repository: (typeof VERSIONED_IMAGE_REPO_BY_KEY)[PfupdateVersionedImageKey],
   releaseVersion: string,
 ): string {
   return `${repository}:${releaseVersion}`;
@@ -150,6 +172,14 @@ export function buildPfupdateManifest(input: {
   supportedSettingsFormatVersions?: number[];
   targetSchemaVersion?: number;
 }): PfupdateManifestV1 {
+  const images: PfupdateImagesV1 = {
+    app: input.images.app.trim(),
+    sandbox: input.images.sandbox.trim(),
+    gateway: input.images.gateway.trim(),
+  };
+  if (input.images.proxy !== undefined) {
+    images.proxy = input.images.proxy.trim();
+  }
   return {
     updateFormatVersion: PFUPDATE_FORMAT_VERSION,
     releaseVersion: input.releaseVersion.trim(),
@@ -157,11 +187,7 @@ export function buildPfupdateManifest(input: {
     minimumManagerVersion: input.minimumManagerVersion ?? '0.2.0',
     supportedSettingsFormatVersions: input.supportedSettingsFormatVersions ?? [1],
     targetSchemaVersion: input.targetSchemaVersion ?? 1,
-    images: {
-      app: input.images.app.trim(),
-      sandbox: input.images.sandbox.trim(),
-      gateway: input.images.gateway.trim(),
-    },
+    images,
     files: input.files.map((entry) => ({
       path: entry.path,
       sha256: entry.sha256.trim().toLowerCase(),
@@ -270,15 +296,18 @@ function validateManifestObject(raw: unknown): { manifest?: PfupdateManifestV1; 
     errors.push('manifest.json: images fehlt oder ist kein Objekt.');
   } else {
     for (const key of Object.keys(record.images)) {
-      if (!(key in IMAGE_REPO_BY_KEY)) {
+      if (key !== 'proxy' && !(key in VERSIONED_IMAGE_REPO_BY_KEY)) {
         errors.push(`manifest.json: Unbekanntes images-Feld "${key}".`);
       }
     }
-    for (const key of Object.keys(IMAGE_REPO_BY_KEY) as Array<keyof PfupdateImagesV1>) {
+    for (const key of Object.keys(VERSIONED_IMAGE_REPO_BY_KEY) as PfupdateVersionedImageKey[]) {
       const value = record.images[key];
       if (!isNonEmptyString(value)) {
         errors.push(`manifest.json: images.${key} fehlt oder ist leer.`);
       }
+    }
+    if (record.images.proxy !== undefined && !isNonEmptyString(record.images.proxy)) {
+      errors.push('manifest.json: images.proxy muss ein nicht-leerer String sein, wenn gesetzt.');
     }
   }
 
@@ -290,6 +319,16 @@ function validateManifestObject(raw: unknown): { manifest?: PfupdateManifestV1; 
     return { errors };
   }
 
+  const imagesRaw = record.images as PfupdateImagesV1;
+  const images: PfupdateImagesV1 = {
+    app: imagesRaw.app.trim(),
+    sandbox: imagesRaw.sandbox.trim(),
+    gateway: imagesRaw.gateway.trim(),
+  };
+  if (isNonEmptyString(imagesRaw.proxy)) {
+    images.proxy = imagesRaw.proxy.trim();
+  }
+
   const manifest: PfupdateManifestV1 = {
     updateFormatVersion: PFUPDATE_FORMAT_VERSION,
     releaseVersion: (record.releaseVersion as string).trim(),
@@ -297,11 +336,7 @@ function validateManifestObject(raw: unknown): { manifest?: PfupdateManifestV1; 
     minimumManagerVersion: (record.minimumManagerVersion as string).trim(),
     supportedSettingsFormatVersions: [...(record.supportedSettingsFormatVersions as number[])],
     targetSchemaVersion: record.targetSchemaVersion as number,
-    images: {
-      app: (record.images as PfupdateImagesV1).app.trim(),
-      sandbox: (record.images as PfupdateImagesV1).sandbox.trim(),
-      gateway: (record.images as PfupdateImagesV1).gateway.trim(),
-    },
+    images,
     files: [],
   };
 
@@ -347,7 +382,7 @@ export function validatePfupdateFileEntries(
       continue;
     }
 
-    if (!PFUPDATE_REQUIRED_FILE_PATHS.includes(pathValue as PfupdateRequiredFilePath)) {
+    if (!PFUPDATE_ALLOWED_FILE_PATHS.includes(pathValue as PfupdateAllowedFilePath)) {
       errors.push(`manifest.json: files[${index}].path "${pathValue}" ist nicht erlaubt.`);
     }
 
@@ -385,11 +420,26 @@ export function validatePfupdateImageRefs(manifest: PfupdateManifestV1): string[
   const errors: string[] = [];
   const releaseVersion = manifest.releaseVersion;
 
-  for (const key of Object.keys(IMAGE_REPO_BY_KEY) as Array<keyof PfupdateImagesV1>) {
-    const expected = expectedPfupdateImageRef(IMAGE_REPO_BY_KEY[key], releaseVersion);
+  for (const key of Object.keys(VERSIONED_IMAGE_REPO_BY_KEY) as PfupdateVersionedImageKey[]) {
+    const expected = expectedPfupdateImageRef(VERSIONED_IMAGE_REPO_BY_KEY[key], releaseVersion);
     const actual = manifest.images[key];
     if (actual !== expected) {
       errors.push(`manifest.json: images.${key} muss "${expected}" sein (ist "${actual}").`);
+    }
+  }
+
+  if (manifest.images.proxy !== undefined) {
+    if (manifest.images.proxy !== PRAXIS_FLOW_PROXY_IMAGE_REF) {
+      errors.push(
+        `manifest.json: images.proxy muss "${PRAXIS_FLOW_PROXY_IMAGE_REF}" sein (ist "${manifest.images.proxy}").`,
+      );
+    }
+    for (const templatePath of PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS) {
+      if (!manifest.files.some((entry) => entry.path === templatePath)) {
+        errors.push(
+          `manifest.json: Pflichtdatei "${templatePath}" fehlt in files, wenn images.proxy gesetzt ist.`,
+        );
+      }
     }
   }
 

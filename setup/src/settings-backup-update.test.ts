@@ -166,6 +166,61 @@ test('applyPfupdate succeeds and writes new image tags', async () => {
   }
 });
 
+test('applyPfupdate with proxy sets PROXY_IMAGE and seeds Caddyfile without overwrite', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-apply-proxy-'));
+  const archivePath = path.join(dir, 'update.pfupdate');
+  const { envPath, appDataDir, backupPath } = seedInstallHome(dir);
+  const customCaddy = path.join(dir, 'proxy', 'Caddyfile');
+  fs.mkdirSync(path.dirname(customCaddy), { recursive: true });
+  fs.writeFileSync(customCaddy, '# custom caddyfile\n', 'utf8');
+  buildTestPfupdateArchive(archivePath, { version: '2026.08.0', withProxy: true });
+
+  try {
+    const result = await applyPfupdate(
+      { archivePath, managerVersion: '0.2.0', settingsFormatVersion: 1 },
+      testCtx(dir),
+      mockDeps(appDataDir, backupPath),
+    );
+    assert.equal(result.ok, true);
+
+    const env = readEnvMap(envPath);
+    assert.equal(env.get('PRAXIS_FLOW_PROXY_IMAGE'), 'caddy:2.11.4');
+    assert.equal(fs.readFileSync(customCaddy, 'utf8'), '# custom caddyfile\n');
+    assert.equal(fs.existsSync(path.join(dir, 'docker-compose.proxy.delivery.yml')), true);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('applyPfupdate rolls back seeded Caddyfile when import fails', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-apply-proxy-rollback-'));
+  const archivePath = path.join(dir, 'update.pfupdate');
+  const { appDataDir, backupPath } = seedInstallHome(dir);
+  assert.equal(fs.existsSync(path.join(dir, 'proxy', 'Caddyfile')), false);
+  buildTestPfupdateArchive(archivePath, { version: '2026.08.0', withProxy: true });
+
+  const deps = {
+    ...mockDeps(appDataDir, backupPath),
+    importSnapshot: async () => ({ ok: false, errors: ['import failed'] }),
+  };
+
+  try {
+    const result = await applyPfupdate(
+      { archivePath, managerVersion: '0.2.0', settingsFormatVersion: 1 },
+      testCtx(dir),
+      deps,
+    );
+
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.rollbackSucceeded, true);
+    }
+    assert.equal(fs.existsSync(path.join(dir, 'proxy', 'Caddyfile')), false);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('applyPfupdate rolls back when import fails', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-apply-fail-'));
   const archivePath = path.join(dir, 'update.pfupdate');

@@ -16,6 +16,8 @@ import { readManagerState, writeManagerStateAtomically } from './manager-state.j
 import {
   extractPfupdateArchive,
   PFUPDATE_COMPOSE_TEMPLATE_FILES,
+  PFUPDATE_PROXY_CADDYFILE_RELATIVE,
+  PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE,
   pfupdateImagesTarPath,
   pfupdateOuterArchiveSha256,
   pfupdateTemplatePath,
@@ -262,6 +264,7 @@ function buildUpdateEnv(
     PRAXIS_FLOW_APP_IMAGE: manifest.images.app,
     PRAXIS_FLOW_SANDBOX_IMAGE: manifest.images.sandbox,
     PRAXIS_FLOW_GATEWAY_IMAGE: manifest.images.gateway,
+    ...(manifest.images.proxy ? { PRAXIS_FLOW_PROXY_IMAGE: manifest.images.proxy } : {}),
   };
 }
 
@@ -290,7 +293,11 @@ async function verifyManifestImagesLoaded(
   imageExists: (ref: string) => Promise<boolean>,
 ): Promise<string[]> {
   const errors: string[] = [];
-  for (const ref of [manifest.images.app, manifest.images.sandbox, manifest.images.gateway]) {
+  const refs = [manifest.images.app, manifest.images.sandbox, manifest.images.gateway];
+  if (manifest.images.proxy) {
+    refs.push(manifest.images.proxy);
+  }
+  for (const ref of refs) {
     if (!(await imageExists(ref))) {
       errors.push(`Docker-Image nicht lokal vorhanden: ${ref}`);
     }
@@ -298,13 +305,28 @@ async function verifyManifestImagesLoaded(
   return errors;
 }
 
+function composeTemplateFilesForRollback(): readonly string[] {
+  return [...PFUPDATE_COMPOSE_TEMPLATE_FILES, PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE];
+}
+
+const CADDYFILE_WAS_ABSENT_MARKER = 'caddyfile-was-absent';
+
 function backupComposeTemplates(home: string, targetDir: string): void {
   fs.mkdirSync(targetDir, { recursive: true });
-  for (const fileName of PFUPDATE_COMPOSE_TEMPLATE_FILES) {
+  for (const fileName of composeTemplateFilesForRollback()) {
     const source = path.join(home, fileName);
     if (fs.existsSync(source)) {
       fs.copyFileSync(source, path.join(targetDir, fileName));
     }
+  }
+
+  const caddySource = path.join(home, PFUPDATE_PROXY_CADDYFILE_RELATIVE);
+  if (fs.existsSync(caddySource)) {
+    const caddyBackup = path.join(targetDir, PFUPDATE_PROXY_CADDYFILE_RELATIVE);
+    fs.mkdirSync(path.dirname(caddyBackup), { recursive: true });
+    fs.copyFileSync(caddySource, caddyBackup);
+  } else {
+    fs.writeFileSync(path.join(targetDir, CADDYFILE_WAS_ABSENT_MARKER), '');
   }
 }
 
@@ -315,13 +337,25 @@ function installComposeTemplates(stagingDir: string, home: string): void {
     fs.mkdirSync(home, { recursive: true });
     fs.copyFileSync(source, target);
   }
+
+  const proxyComposeSource = pfupdateTemplatePath(stagingDir, PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE);
+  if (fs.existsSync(proxyComposeSource)) {
+    fs.copyFileSync(proxyComposeSource, path.join(home, PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE));
+  }
+
+  const caddySource = path.join(stagingDir, 'templates', PFUPDATE_PROXY_CADDYFILE_RELATIVE);
+  const caddyTarget = path.join(home, PFUPDATE_PROXY_CADDYFILE_RELATIVE);
+  if (fs.existsSync(caddySource) && !fs.existsSync(caddyTarget)) {
+    fs.mkdirSync(path.dirname(caddyTarget), { recursive: true });
+    fs.copyFileSync(caddySource, caddyTarget);
+  }
 }
 
 function restoreComposeTemplates(composeTemplatesDir: string, home: string): void {
   if (!fs.existsSync(composeTemplatesDir)) {
     return;
   }
-  for (const fileName of PFUPDATE_COMPOSE_TEMPLATE_FILES) {
+  for (const fileName of composeTemplateFilesForRollback()) {
     const source = path.join(composeTemplatesDir, fileName);
     const target = path.join(home, fileName);
     if (fs.existsSync(source)) {
@@ -329,6 +363,22 @@ function restoreComposeTemplates(composeTemplatesDir: string, home: string): voi
     } else if (fs.existsSync(target)) {
       fs.unlinkSync(target);
     }
+  }
+
+  const caddyTarget = path.join(home, PFUPDATE_PROXY_CADDYFILE_RELATIVE);
+  const caddyBackup = path.join(composeTemplatesDir, PFUPDATE_PROXY_CADDYFILE_RELATIVE);
+  const wasAbsent = fs.existsSync(path.join(composeTemplatesDir, CADDYFILE_WAS_ABSENT_MARKER));
+  if (wasAbsent) {
+    if (fs.existsSync(caddyTarget)) {
+      fs.unlinkSync(caddyTarget);
+    }
+    const proxyDir = path.dirname(caddyTarget);
+    if (fs.existsSync(proxyDir) && fs.readdirSync(proxyDir).length === 0) {
+      fs.rmdirSync(proxyDir);
+    }
+  } else if (fs.existsSync(caddyBackup)) {
+    fs.mkdirSync(path.dirname(caddyTarget), { recursive: true });
+    fs.copyFileSync(caddyBackup, caddyTarget);
   }
 }
 
