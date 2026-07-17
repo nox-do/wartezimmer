@@ -34,6 +34,8 @@ export type {
   NetworkBindingCheck,
   NetworkSnapshot,
   ProbeResult,
+  ProxyMode,
+  ProxyStatus,
   ResetStaffPinsResult,
   RoutingMode,
   RoutingModeCapabilities,

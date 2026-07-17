@@ -22,12 +22,16 @@ const DELIVERY_BOOTSTRAP_FILES = [
   '.env.example',
   'docker-compose.delivery.yml',
   'docker-compose.gateway.delivery.yml',
+  'docker-compose.proxy.delivery.yml',
+  'proxy/Caddyfile',
 ] as const;
 
 const DEV_BOOTSTRAP_FILES = [
   '.env.example',
   'docker-compose.yml',
   'docker-compose.gateway.yml',
+  'docker-compose.proxy.yml',
+  'proxy/Caddyfile',
 ] as const;
 
 function resolveTemplateRoot(startDir?: string): string {
@@ -69,6 +73,7 @@ export function ensureInstallHomeLayout(installHome: string, templateRoot: strin
       throw new Error(`SETUP_BOOTSTRAP_FILE_MISSING: ${relativePath}`);
     }
     if (!fs.existsSync(target)) {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.copyFileSync(source, target);
       copied.push(relativePath);
     }

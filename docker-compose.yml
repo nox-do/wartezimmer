@@ -46,7 +46,7 @@ services:
       PRACTICE_DPO: ${PRACTICE_DPO:-}
       PRACTICE_WEBSITE: ${PRACTICE_WEBSITE:-}
     ports:
-      - '8080:8080'
+      - '${APP_BIND_ADDRESS:-0.0.0.0}:8080:8080'
       # LAN boundary: publish maintenance only on host loopback (container listens 0.0.0.0:8082).
       - '127.0.0.1:8082:8082'
     volumes:

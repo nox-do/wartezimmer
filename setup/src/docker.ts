@@ -45,6 +45,7 @@ export type ComposeRunOptions = {
   projectRoot: string;
   delivery?: boolean;
   withGateway?: boolean;
+  withProxy?: boolean;
   composeProjectName: string;
 };
 
@@ -54,16 +55,6 @@ function usesDeliveryCompose(projectRoot: string, delivery?: boolean): boolean {
   }
   const hasDev = fs.existsSync(path.join(projectRoot, 'docker-compose.yml'));
   return !hasDev;
-}
-
-function resolveComposeFiles(projectRoot: string, delivery?: boolean): string[] {
-  const useDelivery = usesDeliveryCompose(projectRoot, delivery);
-  return useDelivery ? ['docker-compose.delivery.yml'] : ['docker-compose.yml'];
-}
-
-function resolveGatewayComposeFile(projectRoot: string, delivery?: boolean): string {
-  const useDelivery = usesDeliveryCompose(projectRoot, delivery);
-  return useDelivery ? 'docker-compose.gateway.delivery.yml' : 'docker-compose.gateway.yml';
 }
 
 function wantsGatewayCompose(projectRoot: string, withGateway?: boolean): boolean {
@@ -76,6 +67,68 @@ function wantsGatewayCompose(projectRoot: string, withGateway?: boolean): boolea
   }
   const envMap = readEnvMap(envPath);
   return Boolean(envMap.get('GATEWAY_AUTH_BRIDGE_URL')?.trim());
+}
+
+function wantsProxyCompose(projectRoot: string, withProxy?: boolean): boolean {
+  if (withProxy !== undefined) {
+    return withProxy;
+  }
+  const envPath = path.join(projectRoot, '.env');
+  if (!fs.existsSync(envPath)) {
+    return false;
+  }
+  const envMap = readEnvMap(envPath);
+  const enabled = ['1', 'true', 'yes', 'on'].includes(
+    (envMap.get('PROXY_ENABLED')?.trim() || '').toLowerCase(),
+  );
+  if (!enabled) {
+    return false;
+  }
+  const mode = (envMap.get('PROXY_MODE')?.trim() || 'http').toLowerCase();
+  return mode === 'http';
+}
+
+/**
+ * Single compose-file resolver for up/ps/stop/restart/logs/down.
+ * Gateway overlay is included when enabled and the host can run it; callers still
+ * pass `--profile gateway` via buildComposeArgv.
+ */
+export function resolveComposeFiles(input: {
+  projectRoot: string;
+  delivery?: boolean;
+  proxyEnabled?: boolean;
+  gatewayEnabled?: boolean;
+}): string[] {
+  const useDelivery = usesDeliveryCompose(input.projectRoot, input.delivery);
+  const files = useDelivery ? ['docker-compose.delivery.yml'] : ['docker-compose.yml'];
+
+  if (input.proxyEnabled) {
+    files.push(useDelivery ? 'docker-compose.proxy.delivery.yml' : 'docker-compose.proxy.yml');
+  }
+
+  if (input.gatewayEnabled && canRunGatewayCompose()) {
+    files.push(useDelivery ? 'docker-compose.gateway.delivery.yml' : 'docker-compose.gateway.yml');
+  }
+
+  return files;
+}
+
+function resolveComposeFileList(options: ComposeRunOptions): {
+  files: string[];
+  wantGateway: boolean;
+  gatewaySkipped: boolean;
+} {
+  const proxyEnabled = wantsProxyCompose(options.projectRoot, options.withProxy);
+  const gatewayWanted = wantsGatewayCompose(options.projectRoot, options.withGateway);
+  const wantGateway = gatewayWanted && canRunGatewayCompose();
+  const gatewaySkipped = gatewayWanted && !canRunGatewayCompose();
+  const files = resolveComposeFiles({
+    projectRoot: options.projectRoot,
+    delivery: options.delivery,
+    proxyEnabled,
+    gatewayEnabled: gatewayWanted,
+  });
+  return { files, wantGateway, gatewaySkipped };
 }
 
 function buildComposeEnv(composeProjectName: string): NodeJS.ProcessEnv {
@@ -99,24 +152,19 @@ export async function composeUp(options: ComposeUpOptions & { services?: string[
   log: string;
   gatewaySkipped: boolean;
 }> {
-  const files = resolveComposeFiles(options.projectRoot, options.delivery);
-
-  const wantGateway =
-    wantsGatewayCompose(options.projectRoot, options.withGateway) &&
-    canRunGatewayCompose() &&
-    (!options.services || options.services.length === 0);
-  const gatewaySkipped =
-    wantsGatewayCompose(options.projectRoot, options.withGateway) && !canRunGatewayCompose();
-
-  if (wantGateway) {
-    files.push(resolveGatewayComposeFile(options.projectRoot, options.delivery));
-  }
+  const { files, wantGateway, gatewaySkipped } = resolveComposeFileList(options);
+  // Gateway profile only when not targeting a subset of services.
+  const useGatewayProfile = wantGateway && (!options.services || options.services.length === 0);
 
   const args = ['compose'];
   for (const file of files) {
+    // When services filter is set, drop gateway overlay so we don't require the profile.
+    if (!useGatewayProfile && /docker-compose\.gateway/.test(file)) {
+      continue;
+    }
     args.push('-f', file);
   }
-  if (wantGateway) {
+  if (useGatewayProfile) {
     args.push('--profile', 'gateway');
   }
   args.push('--env-file', '.env', 'up', '-d');
@@ -224,12 +272,7 @@ function buildComposeArgv(
   options: ComposeRunOptions,
   subcommand: string[],
 ): { args: string[]; cwd: string; env: NodeJS.ProcessEnv } {
-  const files = resolveComposeFiles(options.projectRoot, options.delivery);
-  const wantGateway =
-    wantsGatewayCompose(options.projectRoot, options.withGateway) && canRunGatewayCompose();
-  if (wantGateway) {
-    files.push(resolveGatewayComposeFile(options.projectRoot, options.delivery));
-  }
+  const { files, wantGateway } = resolveComposeFileList(options);
 
   const args = ['compose'];
   for (const file of files) {
@@ -289,11 +332,29 @@ export async function composePs(options: ComposeRunOptions): Promise<ComposeStat
     return { running: false, services: [] };
   }
 
-  const result = await runComposeCommand(options, ['ps', '--format', 'json']);
+  // --all: include stopped/exited services (needed for "proxy enabled but stopped").
+  const result = await runComposeCommand(options, ['ps', '--all', '--format', 'json']);
   if (!result.ok && !result.stdout) {
     return { running: false, services: [] };
   }
   return buildComposeStatus(parseComposePsOutput(result.stdout));
+}
+
+/** Stop and remove named services. Use `withProxy: true` when tearing down proxy after disable. */
+export async function composeRemoveServices(
+  options: ComposeRunOptions,
+  services: string[],
+): Promise<{ ok: boolean; log: string }> {
+  const envPath = path.join(options.projectRoot, '.env');
+  if (!fs.existsSync(envPath)) {
+    return { ok: true, log: 'no .env — skipped compose rm' };
+  }
+  const names = services.map((service) => service.trim()).filter(Boolean);
+  if (names.length === 0) {
+    return { ok: true, log: 'no services to remove' };
+  }
+  const result = await runComposeCommand(options, ['rm', '-sf', ...names]);
+  return { ok: result.ok, log: result.log };
 }
 
 export async function composeLogs(
@@ -322,12 +383,7 @@ export async function composeDown(
     return { ok: true, log: 'no .env — skipped compose down' };
   }
 
-  const files = resolveComposeFiles(options.projectRoot, options.delivery);
-  const wantGateway =
-    wantsGatewayCompose(options.projectRoot, options.withGateway) && canRunGatewayCompose();
-  if (wantGateway) {
-    files.push(resolveGatewayComposeFile(options.projectRoot, options.delivery));
-  }
+  const { files, wantGateway } = resolveComposeFileList(options);
 
   const args = ['compose'];
   for (const file of files) {

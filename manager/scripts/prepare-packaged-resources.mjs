@@ -90,5 +90,8 @@ copyFile('.env.example');
 // Source of truth for packaged installs — maintenance port: 127.0.0.1:8082 host publish, 0.0.0.0 in container.
 copyFile('docker-compose.delivery.yml');
 copyFile('docker-compose.gateway.delivery.yml');
+copyFile('docker-compose.proxy.delivery.yml');
+fs.mkdirSync(path.join(templatesOutput, 'proxy'), { recursive: true });
+copyFile('proxy/Caddyfile');
 
 console.log(`Packaged resources prepared in ${outputRoot}`);

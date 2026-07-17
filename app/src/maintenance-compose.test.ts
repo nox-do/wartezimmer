@@ -17,6 +17,7 @@ for (const composeFile of COMPOSE_FILES) {
     const source = readCompose(composeFile);
     assert.match(source, /MAINTENANCE_HOST:\s*0\.0\.0\.0/);
     assert.match(source, /MAINTENANCE_PORT:\s*8082/);
+    assert.match(source, /\$\{APP_BIND_ADDRESS:-0\.0\.0\.0\}:8080:8080/);
     assert.match(source, /127\.0\.0\.1:8082:8082/);
     assert.doesNotMatch(source, /^\s+-\s+'8082:8082'/m);
   });

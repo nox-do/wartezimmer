@@ -1,6 +1,48 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildComposeStatus, parseComposePsOutput } from './docker.js';
+import { buildComposeStatus, parseComposePsOutput, resolveComposeFiles } from './docker.js';
+
+test('resolveComposeFiles selects base file by delivery flag', () => {
+  assert.deepEqual(
+    resolveComposeFiles({
+      projectRoot: '/tmp/pf',
+      delivery: false,
+      proxyEnabled: false,
+      gatewayEnabled: false,
+    }),
+    ['docker-compose.yml'],
+  );
+  assert.deepEqual(
+    resolveComposeFiles({
+      projectRoot: '/tmp/pf',
+      delivery: true,
+      proxyEnabled: false,
+      gatewayEnabled: false,
+    }),
+    ['docker-compose.delivery.yml'],
+  );
+});
+
+test('resolveComposeFiles stacks proxy overlays', () => {
+  assert.deepEqual(
+    resolveComposeFiles({
+      projectRoot: '/tmp/pf',
+      delivery: false,
+      proxyEnabled: true,
+      gatewayEnabled: false,
+    }),
+    ['docker-compose.yml', 'docker-compose.proxy.yml'],
+  );
+  assert.deepEqual(
+    resolveComposeFiles({
+      projectRoot: '/tmp/pf',
+      delivery: true,
+      proxyEnabled: true,
+      gatewayEnabled: false,
+    }),
+    ['docker-compose.delivery.yml', 'docker-compose.proxy.delivery.yml'],
+  );
+});
 
 test('parseComposePsOutput handles empty stdout', () => {
   assert.deepEqual(parseComposePsOutput(''), []);

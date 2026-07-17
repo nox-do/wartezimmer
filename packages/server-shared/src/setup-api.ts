@@ -256,6 +256,19 @@ export type HostGatewayStatus = {
   authBridgeUrl: string | null;
 };
 
+/** P2a: HTTP proxy only. TLS modes are additive later. */
+export type ProxyMode = 'off' | 'http';
+
+export type ProxyStatus = {
+  enabled: boolean;
+  mode: ProxyMode;
+  canonicalBaseUrl: string | null;
+  httpPort: number;
+  appBindAddress: string;
+  /** Present when compose knows a `proxy` service (running or stopped); null if missing. */
+  container: ComposeServiceStatus | null;
+};
+
 export type HostNetworkStatus = {
   configuredLanIp: string | null;
   currentLanCandidates: LanCandidate[];
@@ -397,6 +410,8 @@ export type HostStatus = {
   configuredCanonicalBaseUrl: string | null;
   network: HostNetworkStatus;
   gateway: HostGatewayStatus | null;
+  /** Always set: proxy is part of the host model; `enabled: false` / `mode: 'off'` is normal. */
+  proxy: ProxyStatus;
   deviceUrls: DeviceUrls | null;
   probes: ProbeResult[];
   compose: ComposeStatus | null;

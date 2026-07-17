@@ -1,6 +1,30 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-15
+Stand: 2026-07-17
+
+## In Arbeit: P2a – HTTP-Proxy Runtime (2026-07-17)
+
+Entscheidungen:
+- Bootstrap: Proxy-Compose + `proxy/Caddyfile` in DEV/DELIVERY; nested `mkdir`; nicht überschreiben
+- Packaged resources: Delivery-Proxy-Dateien mitnehmen (kein Caddy-Image/.pfupdate)
+- Apply setzt Canonical atomar aus Host + Proxy-Port (Port 80 weglassen)
+- `HostStatus.proxy` immer gesetzt (`off` ist regulärer Zustand)
+
+Umgesetzt:
+- Shared: `ProxyMode` / `ProxyStatus`, `HostStatus.proxy`
+- `setup/src/proxy.ts` + Tests
+- `resolveComposeFiles` zentral (Proxy-/Gateway-Overlays)
+- Compose: `APP_BIND_ADDRESS`, Overlays, Caddyfile `:80 → app:8080` (caddy:2.11.4)
+- Apply/saveHostNetwork schreibt Proxy-Companion-Keys + Canonical
+- Bootstrap + `prepare-packaged-resources.mjs`
+
+Review-Nachzug:
+- Ungültige Proxy-Env (unbekannter Modus, enabled+off) → `ProxyConfigError` / 400
+- Disable: `compose rm -sf proxy` mit erzwungenem Overlay **vor** Env-Write, dann Up ohne Overlay
+- `compose ps --all` für gestoppte Proxy-Container
+- Tests: enabled→disabled, unbekannter Modus, gestoppter Proxy, planProxyComposeActions
+
+Noch nicht (bewusst): Manager-UI, TLS, eigenes Proxy-Image, `.pfupdate`, Backup, Portal-Whitelist
 
 ## Erledigt: Gateway Auth-Bridge an Management-IP (2026-07-15)
 

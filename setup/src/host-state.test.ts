@@ -341,3 +341,164 @@ test('saveHostNetwork writes explicit canonicalBaseUrl override', async () => {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('saveHostNetwork derives proxy http canonical and bind when PROXY_ENABLED', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-save-network-proxy-'));
+  try {
+    fs.writeFileSync(
+      path.join(root, '.env'),
+      [
+        'PRACTICE_DISPLAY_NAME=Praxis Nord',
+        'SETUP_LAN_APP_IP=192.168.1.10',
+        'CANONICAL_BASE_URL=http://192.168.1.10:8080',
+        'PROXY_ENABLED=true',
+        'PROXY_MODE=http',
+        'PROXY_HTTP_PORT=80',
+        '',
+      ].join('\n'),
+    );
+
+    const result = await saveHostNetwork(
+      {
+        home: root,
+        mode: 'install',
+        composeProjectName: 'pf-test',
+        templateRoot: root,
+      },
+      {
+        lanAppIp: '192.168.1.50',
+        gateway: {
+          enabled: false,
+          gatewayInterface: 'eth1',
+          gatewayIp: '192.168.88.1',
+          portalAppIp: '192.168.1.50',
+          authBridgeUrl: '',
+        },
+      },
+    );
+
+    const env = readEnvMap(path.join(root, '.env'));
+    assert.equal(env.get('PROXY_ENABLED'), 'true');
+    assert.equal(env.get('PROXY_MODE'), 'http');
+    assert.equal(env.get('PROXY_HTTP_PORT'), '80');
+    assert.equal(env.get('APP_BIND_ADDRESS'), '127.0.0.1');
+    assert.equal(env.get('CANONICAL_BASE_URL'), 'http://192.168.1.50');
+    assert.equal(result.deviceUrls.appBaseUrl, 'http://192.168.1.50');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('saveHostNetwork rejects unknown PROXY_MODE', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-save-network-proxy-bad-'));
+  try {
+    fs.writeFileSync(
+      path.join(root, '.env'),
+      [
+        'PRACTICE_DISPLAY_NAME=Praxis Nord',
+        'SETUP_LAN_APP_IP=192.168.1.10',
+        'CANONICAL_BASE_URL=http://192.168.1.10:8080',
+        'PROXY_ENABLED=true',
+        'PROXY_MODE=tls-managed',
+        '',
+      ].join('\n'),
+    );
+
+    await assert.rejects(
+      () =>
+        saveHostNetwork(
+          {
+            home: root,
+            mode: 'install',
+            composeProjectName: 'pf-test',
+            templateRoot: root,
+          },
+          {
+            lanAppIp: '192.168.1.10',
+            gateway: {
+              enabled: false,
+              gatewayInterface: 'eth1',
+              gatewayIp: '192.168.88.1',
+              portalAppIp: '192.168.1.10',
+              authBridgeUrl: '',
+            },
+          },
+        ),
+      (error: unknown) =>
+        error instanceof Error && /PROXY_MODE=tls-managed/.test(error.message),
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('saveHostNetwork writes disabled companion keys after proxy was enabled', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-save-network-proxy-off-'));
+  try {
+    fs.writeFileSync(
+      path.join(root, '.env'),
+      [
+        'PRACTICE_DISPLAY_NAME=Praxis Nord',
+        'SETUP_LAN_APP_IP=192.168.1.50',
+        'CANONICAL_BASE_URL=http://192.168.1.50',
+        'PROXY_ENABLED=false',
+        'PROXY_MODE=off',
+        'PROXY_HTTP_PORT=80',
+        'APP_BIND_ADDRESS=127.0.0.1',
+        '',
+      ].join('\n'),
+    );
+
+    await saveHostNetwork(
+      {
+        home: root,
+        mode: 'install',
+        composeProjectName: 'pf-test',
+        templateRoot: root,
+      },
+      {
+        lanAppIp: '192.168.1.50',
+        gateway: {
+          enabled: false,
+          gatewayInterface: 'eth1',
+          gatewayIp: '192.168.88.1',
+          portalAppIp: '192.168.1.50',
+          authBridgeUrl: '',
+        },
+      },
+    );
+
+    const env = readEnvMap(path.join(root, '.env'));
+    assert.equal(env.get('PROXY_ENABLED'), 'false');
+    assert.equal(env.get('PROXY_MODE'), 'off');
+    assert.equal(env.get('APP_BIND_ADDRESS'), '0.0.0.0');
+    assert.equal(env.get('CANONICAL_BASE_URL'), 'http://192.168.1.50:8080');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('buildSetupPlan derives proxy http preview without :8080', () => {
+  const env = new Map([
+    ['SETUP_LAN_APP_IP', '192.168.1.10'],
+    ['CANONICAL_BASE_URL', 'http://192.168.1.10:8080'],
+    ['PROXY_ENABLED', 'true'],
+    ['PROXY_MODE', 'http'],
+    ['PROXY_HTTP_PORT', '80'],
+  ]);
+  const plan = buildSetupPlan(
+    {
+      lanAppIp: '192.168.1.50',
+      practiceDisplayName: 'Praxis Nord',
+      gateway: {
+        enabled: false,
+        gatewayInterface: 'eth1',
+        gatewayIp: '192.168.88.1',
+        portalAppIp: '192.168.1.50',
+        authBridgeUrl: '',
+      },
+    },
+    env,
+  );
+  assert.equal(plan.deviceUrls.appBaseUrl, 'http://192.168.1.50');
+});

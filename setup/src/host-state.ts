@@ -4,6 +4,7 @@ import {
   canRunGatewayCompose,
   composeLogs,
   composePs,
+  composeRemoveServices,
   composeRestart,
   composeStop,
   composeUp,
@@ -38,7 +39,6 @@ import {
 import { runConnectionProbes } from './probes.js';
 import {
   DEFAULT_GATEWAY_BRIDGE_PORT,
-  DEFAULT_PROXY_HTTP_PORT,
   DEFAULT_PROXY_HTTPS_PORT,
   auditNetworkBindings,
   auditNetworkPrerequisites,
@@ -91,8 +91,16 @@ import {
   LOCAL_SETUP_APP_BASE_URL,
   parseHttpBaseUrl,
   resolveCanonicalBaseUrl,
-  resolveCanonicalBaseUrlForLanPlan,
 } from './urls.js';
+import {
+  buildProxyEnvUpdates,
+  buildProxyStatus,
+  planProxyComposeActions,
+  ProxyConfigError,
+  readProxyConfig,
+  resolveCanonicalBaseUrlForProxyPlan,
+} from './proxy.js';
+import { SetupApiValidationError } from './setup-api-normalize.js';
 import type { SetupContext } from './setup-context.js';
 import {
   getRoutingModeCapabilities as readRoutingModeCapabilities,
@@ -121,6 +129,17 @@ export type {
 export type { SandboxScannerStatus } from './sandbox-health.js';
 
 export type { ComposeStatus } from './docker.js';
+
+function requireProxyConfig(env: Map<string, string> | null | undefined) {
+  try {
+    return readProxyConfig(env);
+  } catch (error) {
+    if (error instanceof ProxyConfigError) {
+      throw new SetupApiValidationError(error.message);
+    }
+    throw error;
+  }
+}
 
 function resolveComposeRunOptions(ctx: SetupContext, envMap: Map<string, string>) {
   const deliveryConfig = resolveDeliveryImageConfig({
@@ -482,17 +501,16 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
       })
     : [];
   const bridgePort = readPortEnv(envMap, 'GATEWAY_AUTH_BRIDGE_PORT', DEFAULT_GATEWAY_BRIDGE_PORT);
-  const proxyEnabled = readBooleanEnv(envMap, 'PROXY_ENABLED', false);
-  const proxyMode = envMap.get('PROXY_MODE')?.trim() || 'off';
+  const proxy = requireProxyConfig(envMap);
   const networkPrerequisites = await auditNetworkPrerequisites({
     compose,
     appPublishEnabled: readBooleanEnv(envMap, 'APP_PUBLISH_PORT', true),
     gatewayEnabled: Boolean(gateway?.enabled),
     gatewayBridgePort: bridgePort,
-    proxyEnabled,
-    proxyHttpPort: readPortEnv(envMap, 'PROXY_HTTP_PORT', DEFAULT_PROXY_HTTP_PORT),
+    proxyEnabled: proxy.enabled,
+    proxyHttpPort: proxy.httpPort,
     proxyHttpsPort: readPortEnv(envMap, 'PROXY_HTTPS_PORT', DEFAULT_PROXY_HTTPS_PORT),
-    proxyHttpsEnabled: proxyModeUsesHttps(proxyMode),
+    proxyHttpsEnabled: proxyModeUsesHttps(envMap.get('PROXY_MODE')?.trim() || 'off'),
   });
 
   const deliveryImages = await auditDeliveryImages({
@@ -516,6 +534,11 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     configuredCanonicalBaseUrl,
     network,
     gateway,
+    proxy: buildProxyStatus({
+      proxy,
+      canonicalBaseUrl: canonicalBaseUrl ?? appBaseUrl,
+      compose,
+    }),
     deviceUrls,
     probes,
     compose,
@@ -532,14 +555,14 @@ export function buildSetupPlan(
   env: Map<string, string> | null = null,
 ): SetupPlan {
   const previousLanIp = env ? pickLanIpFromEnv(env) : null;
-  const overrideCanonical = parseHttpBaseUrl(input.canonicalBaseUrl);
-  const canonicalBaseUrl =
-    overrideCanonical ??
-    resolveCanonicalBaseUrlForLanPlan({
-      existingCanonical: env?.get('CANONICAL_BASE_URL'),
-      previousLanIp,
-      nextLanIp: input.lanAppIp.trim(),
-    });
+  const proxy = requireProxyConfig(env);
+  const canonicalBaseUrl = resolveCanonicalBaseUrlForProxyPlan({
+    proxy,
+    existingCanonical: env?.get('CANONICAL_BASE_URL'),
+    previousLanIp,
+    nextLanIp: input.lanAppIp.trim(),
+    overrideCanonical: input.canonicalBaseUrl,
+  });
   const deviceUrls = buildDeviceUrlsFromBaseUrl(canonicalBaseUrl);
   const gateway: GatewayPlan = {
     ...input.gateway,
@@ -585,20 +608,44 @@ export async function applySetupPlan(
   });
   const releaseEnv = releaseEnvFromManagerState(readManagerState(projectRoot));
   const previousLanIp = pickLanIpFromEnv(existingBefore);
-  const overrideCanonical = parseHttpBaseUrl(input.canonicalBaseUrl);
-  const canonicalToWrite =
-    overrideCanonical ??
-    resolveCanonicalBaseUrlForLanPlan({
-      existingCanonical: existingBefore.get('CANONICAL_BASE_URL'),
-      previousLanIp,
-      nextLanIp: input.lanAppIp.trim(),
-    });
+  const proxy = requireProxyConfig(existingBefore);
+  const canonicalToWrite = resolveCanonicalBaseUrlForProxyPlan({
+    proxy,
+    existingCanonical: existingBefore.get('CANONICAL_BASE_URL'),
+    previousLanIp,
+    nextLanIp: input.lanAppIp.trim(),
+    overrideCanonical: input.canonicalBaseUrl,
+  });
   const deviceUrls = buildDeviceUrlsFromBaseUrl(canonicalToWrite);
   const gateway: GatewayPlan = {
     ...input.gateway,
     portalAppIp: input.portalAppIp?.trim() || input.lanAppIp,
   };
   const gatewayEnv = buildGatewayEnv(gateway, deviceUrls);
+
+  if (input.runCompose) {
+    const deliveryEarly = Boolean(
+      resolveDeliveryImageConfig({ projectRoot, envMap: existingBefore })?.appImage ||
+      input.delivery,
+    );
+    if (
+      !proxy.enabled &&
+      (existingBefore.has('PROXY_ENABLED') ||
+        existingBefore.has('PROXY_MODE') ||
+        existingBefore.get('APP_BIND_ADDRESS') === '127.0.0.1')
+    ) {
+      await composeRemoveServices(
+        {
+          projectRoot,
+          delivery: deliveryEarly,
+          composeProjectName: ctx.composeProjectName,
+          withProxy: true,
+        },
+        ['proxy'],
+      );
+    }
+  }
+
   const { envPath, backupPath, keysWritten } = writeEnvFromExample(
     projectRoot,
     {
@@ -607,6 +654,7 @@ export async function applySetupPlan(
       extra: {
         ...releaseEnv,
         ...gatewayEnv,
+        ...buildProxyEnvUpdates(proxy, existingBefore),
         SETUP_LAN_APP_IP: input.lanAppIp.trim(),
         CANONICAL_BASE_URL: canonicalToWrite,
         ...(preparedStorage
@@ -646,6 +694,7 @@ export async function applySetupPlan(
     compose = await composeUp({
       ...runOptions,
       withGateway: input.gateway.enabled,
+      withProxy: proxy.enabled,
       build: resolveComposeBuild({ ...input, delivery }),
     });
     composeStatus = await composePs(runOptions);
@@ -747,18 +796,19 @@ export async function saveHostNetwork(
 
   const backup = backupEnvFile(ctx.home);
   const previousLanIp = pickLanIpFromEnv(existing);
-  const overrideCanonical = parseHttpBaseUrl(input.canonicalBaseUrl);
-  const canonicalBaseUrl =
-    overrideCanonical ??
-    resolveCanonicalBaseUrlForLanPlan({
-      existingCanonical: existing.get('CANONICAL_BASE_URL'),
-      previousLanIp,
-      nextLanIp: lanAppIp,
-    });
+  const proxy = requireProxyConfig(existing);
+  const canonicalBaseUrl = resolveCanonicalBaseUrlForProxyPlan({
+    proxy,
+    existingCanonical: existing.get('CANONICAL_BASE_URL'),
+    previousLanIp,
+    nextLanIp: lanAppIp,
+    overrideCanonical: input.canonicalBaseUrl,
+  });
   const deviceUrls = buildDeviceUrlsFromBaseUrl(canonicalBaseUrl);
   const updates: Record<string, string> = {
     SETUP_LAN_APP_IP: lanAppIp,
     CANONICAL_BASE_URL: canonicalBaseUrl,
+    ...buildProxyEnvUpdates(proxy, existing),
   };
 
   if (gateway.enabled) {
@@ -769,27 +819,41 @@ export async function saveHostNetwork(
     }
   }
 
+  let composeRestarted = false;
+  let compose: ComposeStatus | null = composeBefore;
+  let restartLog: string | null = null;
+  let gatewayComposeSkipped = false;
+
+  const proxyActions = planProxyComposeActions({
+    proxyEnabled: proxy.enabled,
+    restartCompose: Boolean(input.restartCompose),
+    stackWasRunning,
+  });
+
+  if (proxyActions.removeProxyFirst) {
+    // Remove while forcing the overlay — must happen before env drops PROXY_ENABLED
+    // for compose file resolution (withProxy: true keeps the overlay either way).
+    const removed = await composeRemoveServices({ ...runOptions, withProxy: true }, ['proxy']);
+    restartLog = removed.log || null;
+  }
+
   const { keysWritten } = updateEnvKeys(envPath, updates);
   if (!gateway.enabled) {
     const { keysRemoved } = removeEnvKeys(envPath, [...GATEWAY_ENV_KEYS]);
     keysWritten.push(...keysRemoved);
   }
 
-  let composeRestarted = false;
-  let compose: ComposeStatus | null = composeBefore;
-  let restartLog: string | null = null;
-  let gatewayComposeSkipped = false;
-
-  if (input.restartCompose && stackWasRunning) {
+  if (proxyActions.composeUp) {
     const envAfter = readEnvMap(envPath);
     const up = await composeUp({
       ...resolveComposeRunOptions(ctx, envAfter),
       build: false,
       withGateway: gateway.enabled,
+      withProxy: proxy.enabled,
     });
     composeRestarted = up.ok;
     gatewayComposeSkipped = up.gatewaySkipped;
-    restartLog = up.log || null;
+    restartLog = [restartLog, up.log].filter(Boolean).join('\n') || null;
     compose = await composePs(resolveComposeRunOptions(ctx, envAfter));
   }
 

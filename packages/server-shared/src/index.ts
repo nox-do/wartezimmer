@@ -140,6 +140,8 @@ export {
   type HostRuntimeHealth,
   type HostStatus,
   type HostStatusOptions,
+  type ProxyMode,
+  type ProxyStatus,
   type LanCandidate,
   type LoadDeliveryImagesResult,
   type PfupdateApplyInput,

@@ -1,0 +1,25 @@
+# Optional overlay: HTTP reverse proxy on port 80 (stock Caddy, delivery images).
+# Usage:
+#   docker compose -f docker-compose.delivery.yml -f docker-compose.proxy.delivery.yml up -d
+#
+# P2a: HTTP only — no 443 / certs. TLS overlays come later.
+
+x-docker-logging: &docker-logging
+  driver: json-file
+  options:
+    max-size: ${DOCKER_LOG_MAX_SIZE:-10m}
+    max-file: ${DOCKER_LOG_MAX_FILE:-5}
+
+services:
+  proxy:
+    logging: *docker-logging
+    image: ${PRAXIS_FLOW_PROXY_IMAGE:-caddy:2.11.4}
+    container_name: praxis-flow-proxy
+    restart: unless-stopped
+    ports:
+      - '${PROXY_HTTP_PORT:-80}:80'
+    volumes:
+      - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      app:
+        condition: service_healthy
