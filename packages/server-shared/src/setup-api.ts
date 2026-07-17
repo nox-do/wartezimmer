@@ -22,6 +22,13 @@ export type GatewayPlan = {
   authBridgeUrl: string;
 };
 
+/** Optional wire input for plan/apply/network — absent means leave PROXY_* env unchanged. */
+export type ProxyConfigInput = {
+  enabled: boolean;
+  /** Defaults to 80 when enabled. */
+  httpPort?: number;
+};
+
 export type DockerStatus = {
   installed: boolean;
   daemonRunning: boolean;
@@ -179,6 +186,8 @@ export type HostNetworkInput = {
   /** Optional product base override (http(s) origin). When omitted, setup derives from LAN plan. */
   canonicalBaseUrl?: string;
   gateway: GatewayPlanInput;
+  /** When omitted, existing PROXY_* / APP_BIND_ADDRESS keys stay unchanged. */
+  proxy?: ProxyConfigInput;
 };
 
 export type HostNetworkResult = {
@@ -458,6 +467,8 @@ export type SetupPlanInput = {
   /** Optional product base override (http(s) origin). When omitted, setup derives from LAN plan. */
   canonicalBaseUrl?: string;
   gateway?: GatewayPlanInput;
+  /** When omitted, existing PROXY_* / APP_BIND_ADDRESS keys stay unchanged. */
+  proxy?: ProxyConfigInput;
 };
 
 export type ApplySetupOptions = {
@@ -495,4 +506,6 @@ export type NormalizedSetupPlanInput = {
   canonicalBaseUrl?: string;
   delivery?: boolean;
   folders?: StorageFolderPaths;
+  /** Present only when the wire body included `proxy`. */
+  proxy?: ProxyConfigInput;
 };

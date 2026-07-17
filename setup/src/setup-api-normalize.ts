@@ -4,6 +4,7 @@ import type {
   GatewayPlanInput,
   HostNetworkInput,
   NormalizedSetupPlanInput,
+  ProxyConfigInput,
   SetupPlanInput,
   StorageFolderPaths,
 } from '@praxis-flow/server-shared';
@@ -14,6 +15,7 @@ import {
   parseGatewayManagementIpFromBridgeUrl,
   validateGatewayManagementIp,
 } from '@praxis-flow/server-shared';
+import { DEFAULT_PROXY_HTTP_PORT } from './network-bindings.js';
 import { parseHttpBaseUrl } from './urls.js';
 
 export class SetupApiValidationError extends Error {
@@ -115,6 +117,42 @@ function requireHostNetworkGateway(input: GatewayPlanInput | undefined): Gateway
   return input;
 }
 
+/** Absent wire field → undefined (leave env alone). Present → validated ProxyConfigInput. */
+export function normalizeOptionalProxyConfig(
+  input: ProxyConfigInput | undefined,
+): ProxyConfigInput | undefined {
+  if (input === undefined) {
+    return undefined;
+  }
+  if (input === null || typeof input !== 'object' || Array.isArray(input)) {
+    throw new SetupApiValidationError('proxy muss ein Objekt mit enabled sein');
+  }
+  if (typeof input.enabled !== 'boolean') {
+    throw new SetupApiValidationError('proxy.enabled muss boolean sein');
+  }
+
+  let httpPort = DEFAULT_PROXY_HTTP_PORT;
+  if (input.httpPort !== undefined) {
+    if (
+      typeof input.httpPort !== 'number' ||
+      !Number.isFinite(input.httpPort) ||
+      input.httpPort <= 0 ||
+      input.httpPort > 65535 ||
+      !Number.isInteger(input.httpPort)
+    ) {
+      throw new SetupApiValidationError(
+        'proxy.httpPort muss eine ganze Zahl zwischen 1 und 65535 sein',
+      );
+    }
+    httpPort = input.httpPort;
+  }
+
+  return {
+    enabled: input.enabled,
+    httpPort,
+  };
+}
+
 export function normalizeStorageFolderPaths(
   folders: { imports?: string; exports?: string } | undefined,
 ): StorageFolderPaths | undefined {
@@ -129,12 +167,15 @@ export function normalizeStorageFolderPaths(
 export function normalizeSetupPlanInput(body: unknown): NormalizedSetupPlanInput {
   const input = coerceSetupPlanInput(body);
   const lanAppIp = requireTrimmedLanAppIp(input.lanAppIp);
+  const proxy = normalizeOptionalProxyConfig(input.proxy);
+  const canonicalBaseUrl = normalizeOptionalCanonicalBaseUrl(input.canonicalBaseUrl);
   return {
     lanAppIp,
     practiceDisplayName: input.practiceDisplayName?.trim() || SETUP_DEFAULT_PRACTICE_NAME,
     portalAppIp: input.gateway?.portalAppIp?.trim() || undefined,
-    canonicalBaseUrl: normalizeOptionalCanonicalBaseUrl(input.canonicalBaseUrl),
     gateway: normalizeGatewayPlan(input.gateway, lanAppIp),
+    ...(canonicalBaseUrl ? { canonicalBaseUrl } : {}),
+    ...(proxy ? { proxy } : {}),
   };
 }
 
@@ -179,13 +220,17 @@ export function normalizeHostNetworkInput(body: unknown): {
   gateway: GatewayPlan;
   restartCompose: boolean;
   canonicalBaseUrl?: string;
+  proxy?: ProxyConfigInput;
 } {
   const input = coerceHostNetworkInput(body);
   const lanAppIp = requireTrimmedLanAppIp(input.lanAppIp);
+  const proxy = normalizeOptionalProxyConfig(input.proxy);
+  const canonicalBaseUrl = normalizeOptionalCanonicalBaseUrl(input.canonicalBaseUrl);
   return {
     lanAppIp,
     restartCompose: Boolean(input.restartCompose),
     gateway: normalizeGatewayPlan(requireHostNetworkGateway(input.gateway), lanAppIp),
-    canonicalBaseUrl: normalizeOptionalCanonicalBaseUrl(input.canonicalBaseUrl),
+    ...(canonicalBaseUrl ? { canonicalBaseUrl } : {}),
+    ...(proxy ? { proxy } : {}),
   };
 }

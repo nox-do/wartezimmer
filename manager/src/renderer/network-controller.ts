@@ -25,6 +25,7 @@ import {
   draftCanonicalBaseUrl,
   isHttpOrigin,
   matchesHostnameModeBase,
+  productPublishPort,
   type ReachabilityMode,
 } from './reachability.js';
 import {
@@ -88,6 +89,7 @@ function createInitialState(): NetworkState {
     gatewayManagementIp: '',
     reachabilityMode: 'lan-ip',
     customHostname: '',
+    proxyEnabled: false,
     busy: false,
     error: null,
     reachabilityProbeBusy: false,
@@ -168,6 +170,10 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
         restartCompose,
         canonicalBaseUrl,
         gateway: buildGatewayPlanInput(state),
+        proxy: {
+          enabled: state.proxyEnabled,
+          httpPort: 80,
+        },
       })
       .then((result) => {
         patch({
@@ -197,6 +203,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       if (
         'reachabilityMode' in patchFields ||
         'customHostname' in patchFields ||
+        'proxyEnabled' in patchFields ||
         'lanAppIp' in patchFields ||
         'customLanIp' in patchFields
       ) {
@@ -299,7 +306,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
           let customHostname = fields.customHostname;
           const host = network.machineHostname?.trim();
           const configured = status.configuredCanonicalBaseUrl?.trim();
-          if (matchesHostnameModeBase(configured, host)) {
+          if (matchesHostnameModeBase(configured, host, productPublishPort(fields.proxyEnabled))) {
             reachabilityMode = 'hostname';
             customHostname = '';
           }

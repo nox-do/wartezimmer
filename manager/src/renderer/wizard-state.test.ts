@@ -66,6 +66,7 @@ test('createInitialWizardFields combines LAN, practice and storage defaults', ()
     gatewayManagementIp: '',
     reachabilityMode: 'lan-ip',
     customHostname: '',
+    proxyEnabled: false,
     routingMode: null,
   });
 });

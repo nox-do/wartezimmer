@@ -10,7 +10,7 @@ import type {
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { deliveryImagesReady } from './delivery-images-flow.js';
 import { buildSetupProbeInput, pollSetupProbes } from './setup-probes.js';
-import { draftCanonicalBaseUrl, isHttpOrigin, matchesHostnameModeBase } from './reachability.js';
+import { draftCanonicalBaseUrl, isHttpOrigin, matchesHostnameModeBase, productPublishPort } from './reachability.js';
 import {
   buildGatewayPlanInput,
   createInitialWizardFields,
@@ -191,6 +191,7 @@ export function buildWizardPlanInput(state: WizardFlowState): {
   practiceDisplayName: string;
   canonicalBaseUrl?: string;
   gateway: ReturnType<typeof buildGatewayPlanInput>;
+  proxy: { enabled: boolean; httpPort: number };
 } {
   const canonicalBaseUrl = draftCanonicalBaseUrl(state, state.network) ?? undefined;
   return {
@@ -198,16 +199,21 @@ export function buildWizardPlanInput(state: WizardFlowState): {
     practiceDisplayName: state.practiceDisplayName.trim(),
     ...(canonicalBaseUrl ? { canonicalBaseUrl } : {}),
     gateway: buildGatewayPlanInput(state),
+    proxy: {
+      enabled: state.proxyEnabled,
+      httpPort: 80,
+    },
   };
 }
 
-/** After network snapshot loads: prefer hostname mode only for exact http://host:8080. */
+/** After network snapshot loads: prefer hostname mode only for exact hostname serialization. */
 export function wizardReachabilityAfterNetworkLoad(
   state: WizardFlowState,
   network: NetworkSnapshot,
 ): Partial<WizardFlowState> {
   const configured = state.status?.configuredCanonicalBaseUrl?.trim();
-  if (matchesHostnameModeBase(configured, network.machineHostname)) {
+  const port = productPublishPort(state.proxyEnabled);
+  if (matchesHostnameModeBase(configured, network.machineHostname, port)) {
     return {
       network,
       reachabilityMode: 'hostname',

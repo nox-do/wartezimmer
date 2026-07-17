@@ -283,8 +283,12 @@
           <dt>Ops Setup</dt><dd>{snapshot.plan.deviceUrls.opsSetup}</dd>
         </dl>
         <p class="hint">
-          Geräte nutzen Port 8080. Zugang künftig optional über Port 80/443 (Reverse Proxy) — noch
-          nicht Teil dieser Einrichtung.
+          {#if snapshot.proxyEnabled}
+            Geräte-URLs nutzen den Reverse Proxy (Port 80). Der App-Port bleibt lokal unter
+            <code>127.0.0.1:8080</code> erreichbar.
+          {:else}
+            Geräte nutzen Port 8080. Optional: Reverse Proxy auf Port 80 unter Erreichbarkeit aktivieren.
+          {/if}
         </p>
 
         {#if snapshot.gatewayEnabled && Object.keys(snapshot.plan.gatewayEnv).length > 0}

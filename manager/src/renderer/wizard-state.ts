@@ -33,6 +33,7 @@ export type WizardInitialFields = {
   gatewayManagementIp: string;
   reachabilityMode: ReachabilityMode;
   customHostname: string;
+  proxyEnabled: boolean;
   /** null until getRoutingMode() hydrates — never show a fake default. */
   routingMode: RoutingMode | null;
 };

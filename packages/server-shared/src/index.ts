@@ -140,6 +140,7 @@ export {
   type HostRuntimeHealth,
   type HostStatus,
   type HostStatusOptions,
+  type ProxyConfigInput,
   type ProxyMode,
   type ProxyStatus,
   type LanCandidate,

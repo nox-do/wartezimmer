@@ -5,6 +5,7 @@
     draftCanonicalBaseUrl,
     fallbackLanBaseUrl,
     hostnameBaseUrl,
+    productPublishPort,
   } from './reachability.js';
   import type { LanIpFieldState } from './host-network-panels.js';
   import { resolvedLanIp } from './wizard-state.js';
@@ -31,6 +32,7 @@
 
   const lanIp = $derived(resolvedLanIp(state));
   const machineHostname = $derived(network?.machineHostname?.trim() || '');
+  const publishPort = $derived(productPublishPort(state.proxyEnabled));
   const preview = $derived(draftCanonicalBaseUrl(state, network));
 
   function selectMode(mode: ReachabilityMode): void {
@@ -40,8 +42,13 @@
 
 <div class="reachability-panel">
   <p class="hint">
-    Basis-URL für Terminal, TV, MFA und Ops im Praxisnetz (Port 8080). Hostname ist Komfort — wenn
-    der Name im LAN nicht auflöst, LAN-IP verwenden.
+    {#if state.proxyEnabled}
+      Basis-URL für Terminal, TV, MFA und Ops im Praxisnetz über den Reverse Proxy (Port 80). Der
+      direkte App-Port bleibt lokal unter <code>127.0.0.1:8080</code> erreichbar.
+    {:else}
+      Basis-URL für Terminal, TV, MFA und Ops im Praxisnetz (Port 8080). Hostname ist Komfort — wenn
+      der Name im LAN nicht auflöst, LAN-IP verwenden.
+    {/if}
   </p>
 
   <fieldset class="wizard-fieldset" disabled={disabled || probeBusy}>
@@ -57,7 +64,7 @@
       <span>
         LAN-IP verwenden
         {#if lanIp}
-          <span class="hint">({fallbackLanBaseUrl(lanIp)})</span>
+          <span class="hint">({fallbackLanBaseUrl(lanIp, publishPort)})</span>
         {/if}
       </span>
     </label>
@@ -73,7 +80,7 @@
       <span>
         Rechnernamen versuchen
         {#if machineHostname}
-          <span class="hint">({hostnameBaseUrl(machineHostname)})</span>
+          <span class="hint">({hostnameBaseUrl(machineHostname, publishPort)})</span>
         {:else}
           <span class="hint">(kein Hostname erkannt)</span>
         {/if}
@@ -103,7 +110,27 @@
       oninput={(event) =>
         onChange({ customHostname: (event.currentTarget as HTMLInputElement).value })}
     />
-    <p class="hint">Wird als <code>http://&lt;name&gt;:8080</code> gespeichert.</p>
+    <p class="hint">
+      {#if state.proxyEnabled}
+        Wird als <code>http://&lt;name&gt;</code> (Port 80) gespeichert.
+      {:else}
+        Wird als <code>http://&lt;name&gt;:8080</code> gespeichert.
+      {/if}
+    </p>
+  {/if}
+
+  <label class="wizard-checkbox">
+    <input
+      type="checkbox"
+      checked={state.proxyEnabled}
+      disabled={disabled || probeBusy}
+      onchange={(event) =>
+        onChange({ proxyEnabled: (event.currentTarget as HTMLInputElement).checked })}
+    />
+    <span>Zugriff über Reverse Proxy auf Port 80</span>
+  </label>
+  {#if state.proxyEnabled}
+    <p class="hint">Direkter App-Port bleibt lokal unter <code>127.0.0.1:8080</code> erreichbar.</p>
   {/if}
 
   {#if preview}

@@ -17,6 +17,7 @@ test('hostNetworkChanged detects LAN IP change', () => {
         gatewayManagementIp: '10.0.0.2',
         reachabilityMode: 'lan-ip',
         customHostname: '',
+        proxyEnabled: false,
       },
       status,
     ),
@@ -41,6 +42,7 @@ test('hostNetworkChanged is false when fields match status', () => {
         gatewayManagementIp: '10.0.0.2',
         reachabilityMode: 'lan-ip',
         customHostname: '',
+        proxyEnabled: false,
       },
       status,
     ),
@@ -62,6 +64,29 @@ test('hostNetworkChanged detects gateway management IP change', () => {
         gatewayManagementIp: '192.168.10.25',
         reachabilityMode: 'lan-ip',
         customHostname: '',
+        proxyEnabled: false,
+      },
+      status,
+    ),
+    true,
+  );
+});
+
+test('hostNetworkChanged detects proxy toggle', () => {
+  const status = minimalHostStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' });
+  assert.equal(
+    hostNetworkChanged(
+      {
+        lanAppIp: '192.168.1.10',
+        customLanIp: '',
+        gatewayEnabled: false,
+        gatewayInterface: 'eth1',
+        gatewayIp: '192.168.88.1',
+        portalAppIp: '192.168.1.10',
+        gatewayManagementIp: '',
+        reachabilityMode: 'lan-ip',
+        customHostname: '',
+        proxyEnabled: true,
       },
       status,
     ),

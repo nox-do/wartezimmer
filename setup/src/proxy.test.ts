@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  assertComposeRemoveSucceeded,
   buildProxyEnvUpdates,
   buildProxyHttpCanonicalBaseUrl,
   buildProxyStatus,
@@ -8,6 +9,7 @@ import {
   ProxyConfigError,
   readProxyConfig,
   resolveCanonicalBaseUrlForProxyPlan,
+  resolveProxyConfigForWrite,
 } from './proxy.js';
 
 test('readProxyConfig defaults to off with public app bind', () => {
@@ -54,6 +56,28 @@ test('readProxyConfig rejects unknown PROXY_MODE', () => {
         ]),
       ),
     ProxyConfigError,
+  );
+});
+
+test('readProxyConfig rejects invalid PROXY_ENABLED tokens', () => {
+  assert.throws(
+    () => readProxyConfig(new Map([['PROXY_ENABLED', 'treu']])),
+    (error: unknown) =>
+      error instanceof ProxyConfigError && /PROXY_ENABLED=treu/.test(error.message),
+  );
+});
+
+test('readProxyConfig rejects PROXY_ENABLED=false with PROXY_MODE=http', () => {
+  assert.throws(
+    () =>
+      readProxyConfig(
+        new Map([
+          ['PROXY_ENABLED', 'false'],
+          ['PROXY_MODE', 'http'],
+        ]),
+      ),
+    (error: unknown) =>
+      error instanceof ProxyConfigError && /PROXY_MODE=http erfordert PROXY_ENABLED=true/.test(error.message),
   );
 });
 
@@ -250,6 +274,45 @@ test('resolveCanonicalBaseUrlForProxyPlan restores :8080 when leaving proxy', ()
   );
 });
 
+test('resolveCanonicalBaseUrlForProxyPlan restores :8080 for custom hostname when leaving proxy', () => {
+  assert.equal(
+    resolveCanonicalBaseUrlForProxyPlan({
+      proxy: {
+        enabled: false,
+        mode: 'off',
+        httpPort: 80,
+        appBindAddress: '0.0.0.0',
+      },
+      existingCanonical: 'http://praxis-flow.local',
+      previousLanIp: '192.168.1.50',
+      nextLanIp: '192.168.1.50',
+    }),
+    'http://praxis-flow.local:8080',
+  );
+});
+
+test('resolveProxyConfigForWrite leaves env when override absent', () => {
+  const env = new Map([
+    ['PROXY_ENABLED', 'true'],
+    ['PROXY_MODE', 'http'],
+    ['PROXY_HTTP_PORT', '80'],
+  ]);
+  const resolved = resolveProxyConfigForWrite(env);
+  assert.equal(resolved.writeEnv, false);
+  assert.equal(resolved.proxy.enabled, true);
+});
+
+test('resolveProxyConfigForWrite applies enable override', () => {
+  const resolved = resolveProxyConfigForWrite(new Map(), { enabled: true });
+  assert.equal(resolved.writeEnv, true);
+  assert.deepEqual(resolved.proxy, {
+    enabled: true,
+    mode: 'http',
+    httpPort: 80,
+    appBindAddress: '127.0.0.1',
+  });
+});
+
 test('planProxyComposeActions removes proxy before up when disabling on a running stack', () => {
   assert.deepEqual(
     planProxyComposeActions({
@@ -274,6 +337,17 @@ test('planProxyComposeActions removes proxy before up when disabling on a runnin
       stackWasRunning: true,
     }),
     { removeProxyFirst: false, composeUp: false },
+  );
+});
+
+test('assertComposeRemoveSucceeded throws when compose rm failed', () => {
+  assert.doesNotThrow(() => assertComposeRemoveSucceeded({ ok: true, log: '' }));
+  assert.throws(
+    () => assertComposeRemoveSucceeded({ ok: false, log: 'permission denied' }),
+    (error: unknown) =>
+      error instanceof ProxyConfigError &&
+      /Proxy-Container konnte nicht entfernt werden/.test(error.message) &&
+      /permission denied/.test(error.message),
   );
 });
 

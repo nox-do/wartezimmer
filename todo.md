@@ -2,7 +2,28 @@
 
 Stand: 2026-07-17
 
-## In Arbeit: P2a – HTTP-Proxy Runtime (2026-07-17)
+## Erledigt: P2b P1-Cutover-Fixes (2026-07-17)
+
+- Apply ohne `proxy`: PROXY_* / APP_BIND bleiben erhalten (`writeProxyEnv === false`)
+- `PRAXIS_FLOW_PROXY_IMAGE` immer bewahren (nicht im Wire-Payload)
+- Apply mit `proxy`: Runtime-Keys überschreibbar; Image bleibt
+- Enable: Port-Preflight mit `composePs(..., withProxy: true)` vor Env-Write
+- Disable: `composeRemoveServices` ok=false → Abort vor Env-Änderung (apply + saveHostNetwork)
+
+## Erledigt: P2b-Randfälle – Proxy-Env-Validierung + Canonical-Restore (2026-07-17)
+
+- `PROXY_ENABLED=treu` (und andere unbekannte Tokens) → `ProxyConfigError`, kein stilles Disable
+- `PROXY_MODE=http` ohne `PROXY_ENABLED=true` → Reject (nicht still als off)
+- API-Disable ohne Wire-`canonicalBaseUrl`: Custom-Hostname bekommt wieder `:8080` (nicht nur LAN-IP)
+
+## Erledigt: P2b – Proxy über Network-/Plan-/Apply (2026-07-17)
+
+- Shared: optional `proxy?: ProxyConfigInput` auf Plan/Apply/Network
+- Absent → PROXY_* unverändert; present → enable/disable inkl. Canonical/Bind
+- Manager: Checkbox in Erreichbarkeit + Statuszeilen Zugriff/Proxy
+- Kein neuer Endpoint; bestehende Probes; kein TLS / .pfupdate (→ P2c)
+
+## Erledigt: P2a – HTTP-Proxy Runtime (2026-07-17)
 
 Entscheidungen:
 - Bootstrap: Proxy-Compose + `proxy/Caddyfile` in DEV/DELIVERY; nested `mkdir`; nicht überschreiben
@@ -23,8 +44,6 @@ Review-Nachzug:
 - Disable: `compose rm -sf proxy` mit erzwungenem Overlay **vor** Env-Write, dann Up ohne Overlay
 - `compose ps --all` für gestoppte Proxy-Container
 - Tests: enabled→disabled, unbekannter Modus, gestoppter Proxy, planProxyComposeActions
-
-Noch nicht (bewusst): Manager-UI, TLS, eigenes Proxy-Image, `.pfupdate`, Backup, Portal-Whitelist
 
 ## Erledigt: Gateway Auth-Bridge an Management-IP (2026-07-15)
 

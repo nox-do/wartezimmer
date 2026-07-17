@@ -110,7 +110,17 @@ test('statusGridRows includes wlan and lan when configured', () => {
   );
   assert.deepEqual(
     rows.map((row) => row.label),
-    ['Install-Home', 'Compose', 'Docker', '.env', 'WLAN aktuell', 'LAN in .env', 'Software-Paket'],
+    [
+      'Install-Home',
+      'Compose',
+      'Docker',
+      '.env',
+      'WLAN aktuell',
+      'LAN in .env',
+      'Zugriff',
+      'Proxy',
+      'Software-Paket',
+    ],
   );
   assert.equal(
     currentWlanLabel(

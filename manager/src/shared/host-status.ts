@@ -34,6 +34,7 @@ export type {
   NetworkBindingCheck,
   NetworkSnapshot,
   ProbeResult,
+  ProxyConfigInput,
   ProxyMode,
   ProxyStatus,
   ResetStaffPinsResult,

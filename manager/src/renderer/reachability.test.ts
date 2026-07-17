@@ -20,6 +20,25 @@ test('inferReachabilityFields uses lan-ip for exact IP fallback', () => {
     minimalHostStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' }),
   );
   assert.equal(fields.reachabilityMode, 'lan-ip');
+  assert.equal(fields.proxyEnabled, false);
+});
+
+test('inferReachabilityFields uses lan-ip for proxy IP origin without port', () => {
+  const fields = inferReachabilityFields(
+    minimalHostStatus({
+      configuredCanonicalBaseUrl: 'http://192.168.1.10',
+      proxy: {
+        enabled: true,
+        mode: 'http',
+        canonicalBaseUrl: 'http://192.168.1.10',
+        httpPort: 80,
+        appBindAddress: '127.0.0.1',
+        container: null,
+      },
+    }),
+  );
+  assert.equal(fields.reachabilityMode, 'lan-ip');
+  assert.equal(fields.proxyEnabled, true);
 });
 
 test('inferReachabilityFields uses custom for hostname bases', () => {
@@ -38,10 +57,27 @@ test('draftCanonicalBaseUrl builds hostname mode from network snapshot', () => {
         customLanIp: '',
         reachabilityMode: 'hostname',
         customHostname: '',
+        proxyEnabled: false,
       },
       { machineHostname: 'praxis-mac' },
     ),
     'http://praxis-mac:8080',
+  );
+});
+
+test('draftCanonicalBaseUrl omits port 80 when proxy is enabled', () => {
+  assert.equal(
+    draftCanonicalBaseUrl(
+      {
+        lanAppIp: '192.168.1.10',
+        customLanIp: '',
+        reachabilityMode: 'lan-ip',
+        customHostname: '',
+        proxyEnabled: true,
+      },
+      null,
+    ),
+    'http://192.168.1.10',
   );
 });
 
@@ -53,6 +89,7 @@ test('draftCanonicalBaseUrl builds custom mode from hostname only', () => {
         customLanIp: '',
         reachabilityMode: 'custom',
         customHostname: 'praxis-flow.local',
+        proxyEnabled: false,
       },
       null,
     ),
@@ -65,6 +102,7 @@ test('draftCanonicalBaseUrl builds custom mode from hostname only', () => {
         customLanIp: '',
         reachabilityMode: 'custom',
         customHostname: 'http://praxis-flow.local:9000',
+        proxyEnabled: false,
       },
       null,
     ),
@@ -85,6 +123,7 @@ test('matchesHostnameModeBase requires exact http://host:8080 form', () => {
   assert.equal(matchesHostnameModeBase('https://praxis-mac', 'praxis-mac'), false);
   assert.equal(matchesHostnameModeBase('http://praxis-mac:9000', 'praxis-mac'), false);
   assert.equal(matchesHostnameModeBase('http://praxis-mac', 'praxis-mac'), false);
+  assert.equal(matchesHostnameModeBase('http://praxis-mac', 'praxis-mac', 80), true);
 });
 
 test('lanProbeBaseUrl ignores local-only appBaseUrl fallback', () => {
@@ -93,6 +132,14 @@ test('lanProbeBaseUrl ignores local-only appBaseUrl fallback', () => {
       network: { configuredLanIp: null, currentLanCandidates: [], lanIpStale: false },
       configuredCanonicalBaseUrl: null,
       deviceUrls: null,
+      proxy: {
+        enabled: false,
+        mode: 'off',
+        canonicalBaseUrl: null,
+        httpPort: 80,
+        appBindAddress: '0.0.0.0',
+        container: null,
+      },
     }),
     undefined,
   );
@@ -101,6 +148,14 @@ test('lanProbeBaseUrl ignores local-only appBaseUrl fallback', () => {
       network: { configuredLanIp: '192.168.1.10', currentLanCandidates: [], lanIpStale: false },
       configuredCanonicalBaseUrl: null,
       deviceUrls: null,
+      proxy: {
+        enabled: false,
+        mode: 'off',
+        canonicalBaseUrl: null,
+        httpPort: 80,
+        appBindAddress: '0.0.0.0',
+        container: null,
+      },
     }),
     'http://192.168.1.10:8080',
   );

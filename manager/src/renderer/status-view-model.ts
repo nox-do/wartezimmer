@@ -161,11 +161,37 @@ export function statusGridRows(status: HostStatus): StatusGridRow[] {
     rows.push({ label: 'LAN in .env', value: status.network.configuredLanIp });
   }
 
+  const accessUrl =
+    status.configuredCanonicalBaseUrl?.trim() ||
+    status.deviceUrls?.appBaseUrl?.trim() ||
+    status.appBaseUrl?.trim() ||
+    null;
+  if (accessUrl) {
+    rows.push({ label: 'Zugriff', value: accessUrl });
+  }
+
+  rows.push({ label: 'Proxy', value: proxyStatusLabel(status) });
+
   if (status.deliveryImages.required) {
     rows.push({ label: 'Software-Paket', value: deliveryImagesSummary(status) });
   }
 
   return rows;
+}
+
+function proxyStatusLabel(status: HostStatus): string {
+  if (!status.proxy?.enabled) {
+    return 'Aus';
+  }
+  const port = status.proxy.httpPort || 80;
+  const state = status.proxy.container?.state?.toLowerCase() ?? '';
+  if (state.includes('running')) {
+    return `Läuft · Port ${port}`;
+  }
+  if (status.proxy.container) {
+    return `Gestoppt · Port ${port}`;
+  }
+  return `Aktiv · Port ${port} (Container fehlt)`;
 }
 
 export const DELIVERY_IMAGES_WARNING_TEXT =

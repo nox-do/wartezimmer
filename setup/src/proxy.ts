@@ -15,6 +15,20 @@ import {
 export const DEFAULT_APP_BIND_ADDRESS = '0.0.0.0';
 export const PROXY_APP_BIND_ADDRESS = '127.0.0.1';
 
+/** Always survive applySetupPlan (not part of the proxy wire payload). */
+export const PROXY_IMAGE_ENV_KEY = 'PRAXIS_FLOW_PROXY_IMAGE' as const;
+
+/**
+ * Survive applySetupPlan only when the wire omits `proxy` (older clients).
+ * Image is always preserved separately via PROXY_IMAGE_ENV_KEY.
+ */
+export const PROXY_RUNTIME_ENV_KEYS = [
+  'PROXY_ENABLED',
+  'PROXY_MODE',
+  'PROXY_HTTP_PORT',
+  'APP_BIND_ADDRESS',
+] as const;
+
 export type ProxyConfig = {
   enabled: boolean;
   mode: ProxyMode;
@@ -29,6 +43,19 @@ export class ProxyConfigError extends Error {
   }
 }
 
+/** Abort disable cutover when `compose rm` failed — caller must not rewrite env afterward. */
+export function assertComposeRemoveSucceeded(result: { ok: boolean; log: string }): void {
+  if (result.ok) {
+    return;
+  }
+  const detail = result.log.trim();
+  throw new ProxyConfigError(
+    detail
+      ? `Proxy-Container konnte nicht entfernt werden. Die Konfiguration bleibt unverändert. ${detail}`
+      : 'Proxy-Container konnte nicht entfernt werden. Die Konfiguration bleibt unverändert.',
+  );
+}
+
 type EnvLike = Map<string, string> | Record<string, string | undefined> | null | undefined;
 
 function readEnvValue(env: EnvLike, key: string): string | undefined {
@@ -41,12 +68,27 @@ function readEnvValue(env: EnvLike, key: string): string | undefined {
   return env[key];
 }
 
-function readBooleanEnv(env: EnvLike, key: string, fallback: boolean): boolean {
-  const raw = readEnvValue(env, key)?.trim().toLowerCase();
-  if (!raw) {
+const PROXY_ENABLED_TRUE = new Set(['1', 'true', 'yes', 'on']);
+const PROXY_ENABLED_FALSE = new Set(['0', 'false', 'no', 'off']);
+
+/** Strict boolean for PROXY_ENABLED — unknown tokens (e.g. "treu") are rejected. */
+export function parseProxyEnabledFlag(
+  raw: string | undefined,
+  fallback: boolean,
+): boolean {
+  const trimmed = raw?.trim().toLowerCase() ?? '';
+  if (!trimmed) {
     return fallback;
   }
-  return ['1', 'true', 'yes', 'on'].includes(raw);
+  if (PROXY_ENABLED_TRUE.has(trimmed)) {
+    return true;
+  }
+  if (PROXY_ENABLED_FALSE.has(trimmed)) {
+    return false;
+  }
+  throw new ProxyConfigError(
+    `PROXY_ENABLED=${raw?.trim()} ist ungültig (erlaubt: true/false, 1/0, yes/no, on/off)`,
+  );
 }
 
 function readPortEnv(env: EnvLike, key: string, fallback: number): number {
@@ -63,11 +105,12 @@ function normalizeProxyModeRaw(value: string | undefined, enabledFlag: boolean):
 }
 
 /**
- * P2a allows only off|http. Unknown modes (incl. future TLS) and inconsistent
- * PROXY_ENABLED=true + PROXY_MODE=off are rejected — never silently rewritten.
+ * P2a allows only off|http. Unknown modes, invalid PROXY_ENABLED tokens, and
+ * inconsistent enabled/mode pairs are rejected — never silently rewritten.
  */
 export function assertProxyEnvValid(env: EnvLike): void {
-  const enabledFlag = readBooleanEnv(env, 'PROXY_ENABLED', false);
+  const enabledRaw = readEnvValue(env, 'PROXY_ENABLED');
+  const enabledFlag = parseProxyEnabledFlag(enabledRaw, false);
   const modeRaw = normalizeProxyModeRaw(readEnvValue(env, 'PROXY_MODE'), enabledFlag);
 
   if (modeRaw !== 'off' && modeRaw !== 'http') {
@@ -79,6 +122,12 @@ export function assertProxyEnvValid(env: EnvLike): void {
   if (enabledFlag && modeRaw === 'off') {
     throw new ProxyConfigError(
       'PROXY_ENABLED=true erfordert PROXY_MODE=http (PROXY_MODE=off ist ungültig)',
+    );
+  }
+
+  if (!enabledFlag && modeRaw === 'http') {
+    throw new ProxyConfigError(
+      'PROXY_MODE=http erfordert PROXY_ENABLED=true (bei deaktiviertem Proxy: PROXY_MODE=off)',
     );
   }
 
@@ -98,7 +147,7 @@ export function assertProxyEnvValid(env: EnvLike): void {
 export function readProxyConfig(env: EnvLike): ProxyConfig {
   assertProxyEnvValid(env);
 
-  const enabledFlag = readBooleanEnv(env, 'PROXY_ENABLED', false);
+  const enabledFlag = parseProxyEnabledFlag(readEnvValue(env, 'PROXY_ENABLED'), false);
   const httpPort = readPortEnv(env, 'PROXY_HTTP_PORT', DEFAULT_PROXY_HTTP_PORT);
   const modeRaw = normalizeProxyModeRaw(readEnvValue(env, 'PROXY_MODE'), enabledFlag);
   const httpActive = enabledFlag && modeRaw === 'http';
@@ -160,15 +209,15 @@ export function resolveCanonicalBaseUrlForProxyPlan(input: {
     const nextLan = input.nextLanIp.trim();
     if (existing) {
       const url = new URL(existing);
-      const host = url.hostname;
       const port = url.port ? Number(url.port) : url.protocol === 'https:' ? 443 : 80;
-      // Leaving proxy: restore P0 :8080 for IP-derived proxy URLs (port 80 or custom proxy port).
-      if (
-        url.protocol === 'http:' &&
-        (host === previousLan || host === nextLan) &&
-        port !== DEFAULT_APP_PORT
-      ) {
-        return fallbackCanonicalBaseUrl(nextLan, DEFAULT_APP_PORT);
+      // Leaving proxy: restore P0 :8080 for any http origin that was not already on :8080
+      // (LAN IP or custom hostname; Manager may also send an explicit override).
+      if (url.protocol === 'http:' && port !== DEFAULT_APP_PORT) {
+        const host =
+          (previousLan && url.hostname === previousLan) || url.hostname === nextLan
+            ? nextLan
+            : url.hostname;
+        return fallbackCanonicalBaseUrl(host, DEFAULT_APP_PORT);
       }
     }
 
@@ -229,6 +278,49 @@ export function buildProxyEnvUpdates(proxy: ProxyConfig, env?: EnvLike): Record<
     PROXY_MODE: 'off',
     PROXY_HTTP_PORT: String(proxy.httpPort || DEFAULT_PROXY_HTTP_PORT),
     APP_BIND_ADDRESS: DEFAULT_APP_BIND_ADDRESS,
+  };
+}
+
+/**
+ * Resolve effective proxy config for plan/apply/network writes.
+ * - override absent → read env, do not rewrite PROXY_* keys
+ * - override present → apply enabled/httpPort (mode http when enabled)
+ */
+export function resolveProxyConfigForWrite(
+  env: EnvLike,
+  override?: { enabled: boolean; httpPort?: number } | null,
+): { proxy: ProxyConfig; writeEnv: boolean } {
+  if (override === undefined || override === null) {
+    return { proxy: readProxyConfig(env), writeEnv: false };
+  }
+
+  const httpPort =
+    typeof override.httpPort === 'number' &&
+    Number.isFinite(override.httpPort) &&
+    override.httpPort > 0
+      ? override.httpPort
+      : DEFAULT_PROXY_HTTP_PORT;
+
+  if (override.enabled) {
+    return {
+      proxy: {
+        enabled: true,
+        mode: 'http',
+        httpPort,
+        appBindAddress: PROXY_APP_BIND_ADDRESS,
+      },
+      writeEnv: true,
+    };
+  }
+
+  return {
+    proxy: {
+      enabled: false,
+      mode: 'off',
+      httpPort,
+      appBindAddress: DEFAULT_APP_BIND_ADDRESS,
+    },
+    writeEnv: true,
   };
 }
 

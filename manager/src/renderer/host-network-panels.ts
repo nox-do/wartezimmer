@@ -53,6 +53,10 @@ export function hostNetworkChanged(
     return true;
   }
 
+  if (fields.proxyEnabled !== Boolean(status.proxy?.enabled)) {
+    return true;
+  }
+
   const gateway = status.gateway;
   if (fields.gatewayEnabled !== (gateway?.enabled ?? false)) {
     return true;

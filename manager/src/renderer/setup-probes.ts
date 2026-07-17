@@ -24,7 +24,9 @@ export function connectionProbesReady(probes: ProbeResult[]): boolean {
 }
 
 export function buildSetupProbeInput(
-  status: Pick<HostStatus, 'network' | 'deviceUrls' | 'configuredCanonicalBaseUrl'>,
+  status: Pick<HostStatus, 'network' | 'deviceUrls' | 'configuredCanonicalBaseUrl'> & {
+    proxy?: HostStatus['proxy'] | null;
+  },
 ): {
   localAppBaseUrl: string;
   lanAppBaseUrl: string | undefined;
