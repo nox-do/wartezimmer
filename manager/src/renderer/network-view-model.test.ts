@@ -4,6 +4,10 @@ import type { HostNetworkResult } from '../shared/host-status.js';
 import {
   NETWORK_NO_CHANGES_ERROR,
   NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE,
+  networkExpanderDefaults,
+  networkHostChecksForDisplay,
+  networkHostChecksHaveFailures,
+  networkHostChecksSubtitle,
   networkSaveErrorText,
   networkSaveStatusText,
   networkWarningText,
@@ -144,6 +148,50 @@ test('proxyNeedsRestore is true when enabled without running container', () => {
     false,
   );
   assert.equal(proxyNeedsRestore(minimalHostStatus()), false);
+});
+
+test('networkHostChecksForDisplay drops gateway leftover checks', () => {
+  const checks = networkHostChecksForDisplay([
+    { id: 'lan.ip-on-host', ok: true, message: 'LAN ok' },
+    { id: 'gateway.interface', ok: false, message: 'NIC fehlt' },
+    { id: 'app.port', ok: false, message: '8080 down' },
+  ]);
+  assert.deepEqual(
+    checks.map((check) => check.id),
+    ['lan.ip-on-host', 'app.port'],
+  );
+  assert.equal(networkHostChecksHaveFailures(checks), true);
+  assert.equal(networkHostChecksSubtitle(checks), '1 ok · 1 Fehler');
+});
+
+test('networkExpanderDefaults opens checks and proxy when degraded', () => {
+  const defaults = networkExpanderDefaults({
+    status: minimalHostStatus({
+      network: {
+        configuredLanIp: '192.168.1.10',
+        currentLanCandidates: [],
+        lanIpStale: false,
+      },
+      networkBindings: [
+        { id: 'app.port', ok: false, message: 'down' },
+        { id: 'gateway.compose', ok: false, message: 'gw' },
+      ],
+      proxy: {
+        enabled: true,
+        mode: 'http',
+        canonicalBaseUrl: 'http://192.168.1.10',
+        httpPort: 80,
+        appBindAddress: '127.0.0.1',
+        container: null,
+      },
+    }),
+    proxyEnabled: true,
+  });
+  assert.equal(defaults.reachabilityOpen, true);
+  assert.equal(defaults.topologyOpen, false);
+  assert.equal(defaults.checksOpen, true);
+  assert.equal(defaults.proxyOpen, true);
+  assert.equal(defaults.lanOpen, false);
 });
 
 test('networkSaveStatusText summarizes proxy restore', () => {

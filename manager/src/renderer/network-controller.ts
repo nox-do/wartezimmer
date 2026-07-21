@@ -94,6 +94,13 @@ function lanProbeSummary(probes: ProbeResult[]): { ok: boolean | null; message: 
   return { ok: lan.ok, message: lan.message };
 }
 
+/**
+ * Network tab controller — field draft + save/restore/probe.
+ *
+ * CAUTION: applyConfigSnapshot preserves dirty drafts; applyRuntimeHealth only
+ * patches compose. Session show() resets fields from HostStatus. NetworkView
+ * wires three separate shell $effects — keep those semantics if refactoring.
+ */
 export function createNetworkController(deps: NetworkControllerDeps): NetworkController {
   const state = createInitialState();
 

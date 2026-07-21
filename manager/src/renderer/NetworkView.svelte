@@ -1,4 +1,15 @@
 <script lang="ts">
+  /**
+   * Network tab layout (IT action order):
+   * 1 Host/LAN → 2 Proxy → 3 Erreichbarkeit → Apply → 4 Prüfungen → 5 Erläuterung
+   *
+   * CAUTION — shell sync: three $effects below (session / config / runtime). Do not
+   * merge casually; show() vs applyConfigSnapshot vs applyRuntimeHealth have different
+   * dirty-field semantics (see network-controller).
+   *
+   * TODO: Wizard Zugang still embeds proxy/reachability separately — keep labels in sync
+   * with NetworkProxyPanel / ReachabilityPanel, or extract shared step snippets later.
+   */
   import { onMount } from 'svelte';
   import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
   import { hostNetworkChanged } from './host-network-panels.js';
@@ -7,7 +18,16 @@
     type NetworkController,
     type NetworkState,
   } from './network-controller.js';
-  import { networkWarningText, proxyNeedsRestore, NETWORK_PROXY_RESTORE_HINT } from './network-view-model.js';
+  import {
+    networkExpanderDefaults,
+    networkHostChecksForDisplay,
+    networkHostChecksSubtitle,
+    networkLanSubtitle,
+    networkProxySubtitle,
+    networkReachabilitySubtitle,
+    networkWarningText,
+    proxyNeedsRestore,
+  } from './network-view-model.js';
   import { resolvedLanIp } from './wizard-state.js';
   import { managerShell } from './manager-shell-state.svelte.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
@@ -15,6 +35,7 @@
   import MaintenanceSection from './MaintenanceSection.svelte';
   import NetworkTopologyDiagram from './NetworkTopologyDiagram.svelte';
   import NetworkBindingChecks from './NetworkBindingChecks.svelte';
+  import NetworkProxyPanel from './NetworkProxyPanel.svelte';
   import LanIpPanel from './LanIpPanel.svelte';
   import ReachabilityPanel from './ReachabilityPanel.svelte';
 
@@ -28,8 +49,12 @@
   let confirmOpen = $state(false);
   let confirmMessage = $state('');
   let confirmAction: (() => void) | null = null;
-  let topologyOpen = $state(false);
+
+  let lanOpen = $state(false);
+  let proxyOpen = $state(false);
   let reachabilityOpen = $state(true);
+  let checksOpen = $state(false);
+  let topologyOpen = $state(false);
 
   let controller = $state<NetworkController | null>(null);
   let lastSessionGeneration = $state<number | null>(null);
@@ -48,6 +73,18 @@
 
   function syncSnapshot(): void {
     snapshot = controller ? { ...controller.getState() } : null;
+  }
+
+  function applyExpanderDefaults(state: NetworkState): void {
+    const defaults = networkExpanderDefaults({
+      status: state.status!,
+      proxyEnabled: state.proxyEnabled,
+    });
+    lanOpen = defaults.lanOpen;
+    proxyOpen = defaults.proxyOpen;
+    reachabilityOpen = defaults.reachabilityOpen;
+    checksOpen = defaults.checksOpen;
+    topologyOpen = defaults.topologyOpen;
   }
 
   function requestConfirm(message: string, onConfirm: () => void): void {
@@ -77,13 +114,17 @@
     snapshot
       ? networkWarningText(
           snapshot.compose?.running ?? false,
-          hostNetworkChanged(snapshot, snapshot.status),
+          hostNetworkChanged(snapshot, snapshot.status, snapshot.network),
         )
       : null,
   );
 
   const showProxyRestore = $derived(
     Boolean(snapshot && snapshot.proxyEnabled && proxyNeedsRestore(snapshot.status)),
+  );
+
+  const hostChecks = $derived(
+    snapshot ? networkHostChecksForDisplay(snapshot.status?.networkBindings) : [],
   );
 
   const diagramLanIp = $derived(
@@ -120,6 +161,10 @@
       lastSessionGeneration = session.generation;
       c.show(session.status);
       syncSnapshot();
+      const state = c.getState();
+      if (state.status) {
+        applyExpanderDefaults(state);
+      }
     }
   });
 
@@ -158,25 +203,48 @@
 >
   <LoadingOverlay loading={viewLoading} />
 
-  {#if snapshot}
+  {#if snapshot?.status}
     <section class="panel-section panel-section--network">
       <div class="maintenance-accordion">
         <MaintenanceSection
-          open={topologyOpen}
-          title="Erläuterung zum Netz"
-          subtitle="Portal mit Praxis-IT-Captive oder nur Praxis-intern"
+          open={lanOpen}
+          title="Host / LAN-Adresse"
+          subtitle={networkLanSubtitle(snapshot.status, snapshot)}
           onToggle={() => {
-            topologyOpen = !topologyOpen;
+            lanOpen = !lanOpen;
           }}
         >
-          <NetworkTopologyDiagram lanIp={diagramLanIp} />
+          <p class="hint">Adresse dieses Rechners im Praxisnetz (Binding, Stale-Check, Fallback).</p>
+          <LanIpPanel
+            state={snapshot}
+            network={snapshot.network}
+            status={snapshot.status}
+            disabled={snapshot.busy}
+            onChange={patchFields}
+          />
         </MaintenanceSection>
+
+        <MaintenanceSection
+          open={proxyOpen}
+          title="Proxy-Server"
+          subtitle={networkProxySubtitle(snapshot.status, snapshot.proxyEnabled)}
+          onToggle={() => {
+            proxyOpen = !proxyOpen;
+          }}
+        >
+          <NetworkProxyPanel
+            proxyEnabled={snapshot.proxyEnabled}
+            busy={snapshot.busy}
+            showRestore={showProxyRestore}
+            onChange={(proxyEnabled) => patchFields({ proxyEnabled })}
+            onRestore={() => controller?.restoreProxy()}
+          />
+        </MaintenanceSection>
+
         <MaintenanceSection
           open={reachabilityOpen}
           title="Erreichbarkeit im Praxisnetz"
-          subtitle={snapshot.status?.configuredCanonicalBaseUrl ||
-            snapshot.status?.appBaseUrl ||
-            'Basis-URL für Geräte wählen'}
+          subtitle={networkReachabilitySubtitle(snapshot.status)}
           onToggle={() => {
             reachabilityOpen = !reachabilityOpen;
           }}
@@ -193,64 +261,6 @@
             onTest={() => controller?.testReachability()}
           />
         </MaintenanceSection>
-      </div>
-      <NetworkBindingChecks checks={snapshot.status?.networkBindings} />
-    </section>
-
-    <section class="panel-section panel-section--network network-config-section">
-      <h2 class="wizard-subheading">Netzwerk-Einstellungen</h2>
-      <p class="hint">
-        Host-Adresse für Binding und optionaler Proxy-Server. Geräte-URLs folgen der Basis unter
-        „Erreichbarkeit“.
-      </p>
-
-      <div class="network-config-block" id="network-lan-panel">
-        <h3 class="network-config-subheading">LAN-Adresse (Host / Binding)</h3>
-        <p class="hint">Adresse dieses Rechners im Praxisnetz (für Stale-Check und Fallback).</p>
-        <LanIpPanel
-          state={snapshot}
-          network={snapshot.network}
-          status={snapshot.status}
-          disabled={snapshot.busy}
-          onChange={patchFields}
-        />
-      </div>
-
-      <div class="network-config-block" id="network-proxy-panel">
-        <h3 class="network-config-subheading">Proxy-Server (optional)</h3>
-        <p class="hint">
-          Einstieg im Praxisnetz über Port 80 statt :8080. Das Caddy-Image ist im Release enthalten und
-          startet nur, wenn Sie den Proxy aktivieren.
-        </p>
-        <label class="wizard-checkbox">
-          <input
-            type="checkbox"
-            checked={snapshot.proxyEnabled}
-            disabled={snapshot.busy}
-            onchange={(event) =>
-              patchFields({ proxyEnabled: (event.currentTarget as HTMLInputElement).checked })}
-          />
-          <span>Zugriff über Reverse Proxy auf Port 80</span>
-        </label>
-        {#if snapshot.proxyEnabled}
-          <p class="hint">
-            Direkter App-Port bleibt lokal unter <code>127.0.0.1:8080</code> erreichbar. Geräte-URLs
-            unter „Erreichbarkeit“ nutzen dann Port 80.
-          </p>
-        {/if}
-        {#if showProxyRestore}
-          <p class="hint network-proxy-restore-hint">{NETWORK_PROXY_RESTORE_HINT}</p>
-          <div class="actions-row">
-            <button
-              type="button"
-              class="btn-secondary"
-              disabled={snapshot.busy}
-              onclick={() => controller?.restoreProxy()}
-            >
-              Proxy wiederherstellen
-            </button>
-          </div>
-        {/if}
       </div>
 
       {#if warningText}
@@ -269,6 +279,30 @@
       {#if snapshot.networkStatusText}
         <p class="maintenance-backup-status">{snapshot.networkStatusText}</p>
       {/if}
+
+      <div class="maintenance-accordion network-diagnose-accordion">
+        <MaintenanceSection
+          open={checksOpen}
+          title="Prüfungen am Rechner"
+          subtitle={networkHostChecksSubtitle(hostChecks)}
+          onToggle={() => {
+            checksOpen = !checksOpen;
+          }}
+        >
+          <NetworkBindingChecks checks={hostChecks} />
+        </MaintenanceSection>
+
+        <MaintenanceSection
+          open={topologyOpen}
+          title="Erläuterung zum Netz"
+          subtitle="Portal mit Praxis-IT-Captive oder nur Praxis-intern"
+          onToggle={() => {
+            topologyOpen = !topologyOpen;
+          }}
+        >
+          <NetworkTopologyDiagram lanIp={diagramLanIp} />
+        </MaintenanceSection>
+      </div>
     </section>
 
     {#if snapshot.error}

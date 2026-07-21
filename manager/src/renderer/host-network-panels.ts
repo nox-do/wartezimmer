@@ -49,6 +49,7 @@ export function hostNetworkChanged(
   }
 
   // Leftover openNDS GATEWAY_* from older installs — cleared on next network save.
+  // CAUTION: until then hostNetworkChanged stays true even if LAN/proxy/canonical match.
   if (status.gateway?.enabled) {
     return true;
   }

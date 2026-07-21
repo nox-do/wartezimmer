@@ -229,6 +229,8 @@ export async function auditNetworkBindings(input: {
       message: appListenOk
         ? 'Praxis Flow erreichbar auf Port 8080'
         : 'Port 8080 am Rechner nicht erreichbar',
+      // CAUTION: with proxy enabled, product entry is :80 — this check is still the
+      // local app publish / loopback path, not the Praxis-Gerät URL.
       detail: 'Terminal, TV und MFA nutzen die LAN-Adresse dieses Rechners.',
     });
   }
@@ -251,6 +253,9 @@ export async function auditNetworkBindings(input: {
     return checks;
   }
 
+  // TODO(wlan-boundary): gateway.* checks are filtered out in the Manager Network tab
+  // (networkHostChecksForDisplay). Prefer clearing GATEWAY_* via network save; then
+  // drop this entire branch and the openNDS-specific helpers below.
   const ifaceName = gateway.gatewayInterface.trim();
   const gatewayIp = gateway.gatewayIp.trim();
 

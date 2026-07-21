@@ -1,5 +1,11 @@
 import { formatEnvBackupLabel } from '@praxis-flow/server-shared/env-backup';
-import type { HostNetworkResult, HostStatus } from '../shared/host-status.js';
+import type {
+  HostNetworkResult,
+  HostStatus,
+  NetworkBindingCheck,
+} from '../shared/host-status.js';
+import type { LanIpFieldState } from './host-network-panels.js';
+import { resolvedLanIp } from './wizard-state.js';
 
 export const NETWORK_SAVE_PROGRESS_TEXT = 'Speichern …';
 export const NETWORK_SAVE_PROGRESS_RESTART_TEXT = 'Speichern und Stack neu starten …';
@@ -25,6 +31,89 @@ export function proxyNeedsRestore(status: HostStatus | null | undefined): boolea
   }
   const state = status.proxy.container?.state?.toLowerCase() ?? '';
   return !state.includes('running');
+}
+
+/**
+ * Network-tab display: omit leftover openNDS gateway.* binding checks.
+ * TODO(setup): stop emitting gateway checks from auditNetworkBindings once GATEWAY_*
+ * is fully cleared from installs (save already disables gateway on network apply).
+ */
+export function networkHostChecksForDisplay(
+  checks: NetworkBindingCheck[] | null | undefined,
+): NetworkBindingCheck[] {
+  return (checks ?? []).filter((check) => !check.id.startsWith('gateway.'));
+}
+
+export function networkHostChecksHaveFailures(checks: NetworkBindingCheck[]): boolean {
+  return checks.some((check) => !check.ok);
+}
+
+export function networkHostChecksSubtitle(checks: NetworkBindingCheck[]): string {
+  if (checks.length === 0) {
+    return 'Keine Host-Prüfungen';
+  }
+  const failed = checks.filter((check) => !check.ok).length;
+  if (failed === 0) {
+    return `${checks.length} ok`;
+  }
+  return `${checks.length - failed} ok · ${failed} Fehler`;
+}
+
+export function networkLanSubtitle(
+  status: HostStatus | null | undefined,
+  fields: LanIpFieldState,
+): string {
+  const ip = resolvedLanIp(fields) || status?.network.configuredLanIp?.trim() || '';
+  if (!ip) {
+    return 'LAN-Adresse wählen';
+  }
+  if (status?.network.lanIpStale) {
+    return `${ip} — passt nicht zur aktuellen Adresse`;
+  }
+  return ip;
+}
+
+export function networkProxySubtitle(
+  status: HostStatus | null | undefined,
+  proxyEnabled: boolean,
+): string {
+  if (!proxyEnabled) {
+    return 'Aus — Einstieg über :8080';
+  }
+  if (proxyNeedsRestore(status)) {
+    return 'Aktiv — Container fehlt';
+  }
+  const port = status?.proxy?.httpPort || 80;
+  return `Aktiv — Port ${port}`;
+}
+
+export function networkReachabilitySubtitle(status: HostStatus | null | undefined): string {
+  return (
+    status?.configuredCanonicalBaseUrl ||
+    status?.appBaseUrl ||
+    'Basis-URL für Geräte wählen'
+  );
+}
+
+/** Default expander open flags for a Network-tab session (IT action order). */
+export function networkExpanderDefaults(input: {
+  status: HostStatus;
+  proxyEnabled: boolean;
+}): {
+  lanOpen: boolean;
+  proxyOpen: boolean;
+  reachabilityOpen: boolean;
+  checksOpen: boolean;
+  topologyOpen: boolean;
+} {
+  const checks = networkHostChecksForDisplay(input.status.networkBindings);
+  return {
+    lanOpen: Boolean(input.status.network.lanIpStale) || !input.status.network.configuredLanIp,
+    proxyOpen: input.proxyEnabled && proxyNeedsRestore(input.status),
+    reachabilityOpen: true,
+    checksOpen: networkHostChecksHaveFailures(checks),
+    topologyOpen: false,
+  };
 }
 
 export function networkRestartConfirmMessage(proxyChanging: boolean): string {

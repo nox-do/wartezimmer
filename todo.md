@@ -8,6 +8,13 @@ Stand: 2026-07-18
 - **Wir liefern:** Portal-UI + Wartenummer-Prüfung + dünne Vendor-Adapter (Outbound-URL / Inbound ja|nein)
 - Verwandt (zurückstellen): Plan Gateway Management Hostname/IP
 
+## Netzwerk-Tab Layout (2026-07-21)
+
+- Expander-Reihenfolge: Host/LAN → Proxy → Erreichbarkeit → Übernehmen → Prüfungen → Erläuterung
+- Prüfungen: gateway.* ausgeblendet; offen bei Fehlern
+- Proxy-UI → `NetworkProxyPanel`; View-Model-Subtitles/Defaults
+- Offen/Refactor: Wizard-Zugang mit NetworkProxyPanel sync; `auditNetworkBindings` gateway-Branch entfernen nach GATEWAY_*-Cleanup; `app.port`-Detailtext bei Proxy
+
 ## Proxy wiederherstellen (2026-07-21)
 
 - Netzwerk: wenn Proxy enabled aber Container nicht running → Hinweis + Button „Proxy wiederherstellen“

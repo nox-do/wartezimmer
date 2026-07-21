@@ -1123,6 +1123,10 @@ button:disabled {
   border-top: 1px solid var(--border);
 }
 
+.network-diagnose-accordion {
+  margin-top: 1.25rem;
+}
+
 .network-bindings-title {
   margin-top: 1rem;
 }
