@@ -8,9 +8,9 @@ import type { NavigateOptions } from './manager-navigation.js';
 import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
 import type { ManagerView } from './host-refresh-controller.js';
 import {
-  applyHostStatus,
+  applyConfigSnapshot,
   applyRuntimeError,
-  applyRuntimeHealth,
+  applyRuntimeSnapshot,
   applyShellNavigation,
   applyStatusError,
   beginMaintenanceSession,
@@ -74,10 +74,10 @@ export function createManagerAppController(): ManagerAppController {
   const hostRefresh = createHostRefreshController({
     api: requirePraxisManager,
     onRuntime(runtime) {
-      applyRuntimeHealth(runtime);
+      applyRuntimeSnapshot(runtime);
     },
     onConfig(status, view) {
-      applyHostStatus(status);
+      applyConfigSnapshot(status);
       if (!bootRouteResolved && view === 'status') {
         bootRouteResolved = true;
         if (shouldAutoStartFullscreenWizard(status)) {
@@ -87,8 +87,12 @@ export function createManagerAppController(): ManagerAppController {
       }
       syncShell(view);
     },
-    onError(message) {
-      applyRuntimeError(message);
+    onError(message, _view, source) {
+      if (source === 'config') {
+        applyStatusError(message);
+      } else {
+        applyRuntimeError(message);
+      }
     },
   });
 

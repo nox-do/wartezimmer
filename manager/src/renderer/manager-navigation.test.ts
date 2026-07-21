@@ -14,33 +14,38 @@ import type { WizardPresentation } from './manager-navigation.js';
 function createMockHostRefresh(options: {
   getView: () => 'status' | 'maintenance' | 'network' | 'wizard';
   refresh?: () => Promise<void>;
+  getLastConfig?: () => HostStatus | null;
 }): HostRefreshController {
   return {
     getView: options.getView,
     setView: () => {},
     refresh: options.refresh ?? (async () => {}),
-    getLastConfig: () => minimalHostStatus(),
+    getLastConfig: options.getLastConfig ?? (() => minimalHostStatus()),
     getLastRuntime: () => null,
   };
 }
 
 function createSessionRecorder(): ManagerNavigationSessions & {
   loading: boolean[];
-  maintenanceShown: HostStatus[];
-  networkShown: HostStatus[];
+  maintenanceBegun: number;
+  networkBegun: number;
   wizardShown: Array<{ status: HostStatus | null; presentation: WizardPresentation }>;
   cleared: Array<'status' | 'maintenance' | 'network' | 'wizard'>;
 } {
   const loading: boolean[] = [];
-  const maintenanceShown: HostStatus[] = [];
-  const networkShown: HostStatus[] = [];
+  let maintenanceBegun = 0;
+  let networkBegun = 0;
   const wizardShown: Array<{ status: HostStatus | null; presentation: WizardPresentation }> = [];
   const cleared: Array<'status' | 'maintenance' | 'network' | 'wizard'> = [];
 
   return {
     loading,
-    maintenanceShown,
-    networkShown,
+    get maintenanceBegun() {
+      return maintenanceBegun;
+    },
+    get networkBegun() {
+      return networkBegun;
+    },
     wizardShown,
     cleared,
     clearInactive: (active) => {
@@ -49,11 +54,11 @@ function createSessionRecorder(): ManagerNavigationSessions & {
     setDeferredLoading: (_view, value) => {
       loading.push(value);
     },
-    beginMaintenance: (status) => {
-      maintenanceShown.push(status);
+    beginMaintenance: () => {
+      maintenanceBegun += 1;
     },
-    beginNetwork: (status) => {
-      networkShown.push(status);
+    beginNetwork: () => {
+      networkBegun += 1;
     },
     beginWizard: (status, presentation) => {
       wizardShown.push({ status, presentation });
@@ -87,10 +92,10 @@ test('deferred view shows loading until refresh completes', async () => {
   await refreshGate;
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.deepEqual(sessions.loading, [true, false]);
-  assert.equal(sessions.maintenanceShown.length, 1);
+  assert.equal(sessions.maintenanceBegun, 1);
 });
 
-test('does not show maintenance after navigating to network before refresh resolves', async () => {
+test('does not begin maintenance after navigating to network before refresh resolves', async () => {
   let currentView: 'status' | 'maintenance' | 'network' | 'wizard' = 'status';
   let resolveRefresh!: () => void;
   const refreshGate = new Promise<void>((resolve) => {
@@ -122,8 +127,8 @@ test('does not show maintenance after navigating to network before refresh resol
   await refreshGate;
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  assert.equal(sessions.maintenanceShown.length, 0);
-  assert.equal(sessions.networkShown.length, 1);
+  assert.equal(sessions.maintenanceBegun, 0);
+  assert.equal(sessions.networkBegun, 1);
   assert.deepEqual(sessions.cleared, ['maintenance', 'network']);
 });
 

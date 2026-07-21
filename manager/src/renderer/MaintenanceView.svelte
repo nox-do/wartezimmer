@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+  import type { HostStatus } from '../shared/host-status.js';
   import { managerShell } from './manager-shell-state.svelte.js';
   import {
     createMaintenanceController,
@@ -51,6 +52,8 @@
   let pfupdateSnapshot = $state<PfupdateWizardState | null>(null);
   let hostPlatform = $state('linux');
   let lastSessionGeneration = $state<number | null>(null);
+  /** Skip config effect once after session show() used this same snapshot ref. */
+  let sessionOpenConfig = $state<HostStatus | null>(null);
 
   const viewLoading = $derived(managerShell.viewLoading.maintenance);
 
@@ -150,26 +153,37 @@
         c.clearError();
         syncSnapshot();
         lastSessionGeneration = null;
+        sessionOpenConfig = null;
       }
       return;
     }
 
     if (session.generation !== lastSessionGeneration) {
+      const status = managerShell.configSnapshot;
+      if (!status) {
+        return;
+      }
       lastSessionGeneration = session.generation;
-      c.show(session.status);
+      sessionOpenConfig = status;
+      c.show(status);
+      // Live compose from runtime — do not rely on config.compose after Shell merge removal.
+      const runtime = managerShell.runtimeSnapshot;
+      if (runtime) {
+        c.applyRuntimeHealth(runtime);
+      }
       syncSnapshot();
     }
   });
 
   $effect(() => {
     const c = controller;
-    const status = managerShell.hostStatus;
+    const status = managerShell.configSnapshot;
     const session = managerShell.maintenanceSession;
     if (!c || !status || !session) {
       return;
     }
     // Session-Start wendet denselben Snapshot bereits in show() an.
-    if (status === session.status) {
+    if (status === sessionOpenConfig) {
       return;
     }
     c.applyConfigSnapshot(status);
@@ -178,7 +192,7 @@
 
   $effect(() => {
     const c = controller;
-    const health = managerShell.runtimeHealth;
+    const health = managerShell.runtimeSnapshot;
     const session = managerShell.maintenanceSession;
     if (!c || !health || !session || managerShell.activeView !== 'maintenance') {
       return;

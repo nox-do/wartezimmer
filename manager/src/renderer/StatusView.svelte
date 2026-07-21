@@ -16,36 +16,40 @@
     onOpenUrl: (url: string) => void;
   } = $props();
 
-  const hostStatus = $derived(managerShell.hostStatus);
-  const displayError = $derived(managerShell.statusError ?? managerShell.runtimeError);
-  const setupEntry = $derived(hostStatus ? isSetupEntryStatus(hostStatus) : false);
+  /** Status page shows saved config; live stack/probes live in HealthHeader (runtimeSnapshot). */
+  const configSnapshot = $derived(managerShell.configSnapshot);
+  const statusError = $derived(managerShell.statusError);
+  const setupEntry = $derived(configSnapshot ? isSetupEntryStatus(configSnapshot) : false);
   const lanWarning = $derived(
-    hostStatus && !displayError ? lanWarningText(hostStatus, setupEntry) : null,
+    configSnapshot ? lanWarningText(configSnapshot, setupEntry) : null,
   );
 </script>
 
 <div id="status-view" class="app" hidden={managerShell.activeView !== 'status'}>
-  {#if displayError}
+  {#if statusError && !configSnapshot}
     <p id="error-message" class="error">
-      {displayError || 'Setup-API nicht erreichbar — bitte Manager neu starten.'}
+      {statusError || 'Setup-API nicht erreichbar — bitte Manager neu starten.'}
     </p>
-  {:else if hostStatus}
+  {:else if configSnapshot}
+    {#if statusError}
+      <p id="error-message" class="error">{statusError}</p>
+    {/if}
     {#if setupEntry}
       <SetupEntry
-        status={hostStatus}
+        status={configSnapshot}
         {onSetupClick}
         {onLoadReleaseArchive}
       />
     {/if}
     <DeliveryImagesWarning
-      status={hostStatus}
+      status={configSnapshot}
       {setupEntry}
       {onLoadReleaseArchive}
     />
     {#if lanWarning}
       <p id="lan-warning" class="lan-warning">{lanWarning}</p>
     {/if}
-    <StatusGrid status={hostStatus} {setupEntry} />
-    <DeviceUrls status={hostStatus} {setupEntry} {onOpenUrl} />
+    <StatusGrid status={configSnapshot} {setupEntry} />
+    <DeviceUrls status={configSnapshot} {setupEntry} {onOpenUrl} />
   {/if}
 </div>

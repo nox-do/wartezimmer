@@ -31,9 +31,11 @@ npm run dev:manager
 
 ### Refresh / Poll
 
-- **Full refresh** (Tab-Wechsel, Mutation): `fetchSetupStatus` + `fetchRuntimeHealth`
-- **Runtime-Poll** alle **12s** (nicht im Wizard): nur `fetchRuntimeHealth` — aktualisiert Header und überlappt live Felder in `hostStatus` (Compose, Probes, Docker, …)
-- Config-Felder (LAN-Kandidaten, Geräte-URLs, Ordner, …) kommen aus dem Full-Refresh
+- **Full refresh** (Tab-Wechsel, Mutation): `fetchSetupStatus` + `fetchRuntimeHealth` — unabhängig; ein Fail verwirft den anderen nicht
+- **Runtime-Poll** alle **12s** (nicht im Wizard): nur `fetchRuntimeHealth` → `runtimeSnapshot` (Header, Compose, Probes, Docker, …)
+- **Config** (`configSnapshot`): nur erfolgreicher Config-Fetch; Runtime-Poll schreibt nicht hinein
+- Fehler getrennt: `statusError` (Config) vs. `runtimeError` (Health-Header); Statusseite bleibt bei Health-Fehlern sichtbar
+- Überlappende Felder: reine Selektoren (`effectiveCompose`, …) — keine Mischkopie
 
 ### Install-Wizard (Assistent)
 

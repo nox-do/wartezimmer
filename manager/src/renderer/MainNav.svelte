@@ -8,7 +8,11 @@
 
 <nav id="main-nav" class="main-nav" aria-label="Hauptnavigation">
   {#each TAB_ORDER as tab (tab)}
-    {@const disabledReason = tabDisabled(tab, managerShell.hostStatus)}
+    {@const disabledReason = tabDisabled(
+      tab,
+      managerShell.configSnapshot,
+      managerShell.runtimeSnapshot,
+    )}
     <button
       type="button"
       class="main-nav-tab"

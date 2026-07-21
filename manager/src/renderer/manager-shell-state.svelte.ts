@@ -5,12 +5,10 @@ import type { WizardPresentation } from './manager-navigation.js';
 
 export type MaintenanceSession = {
   generation: number;
-  status: HostStatus;
 };
 
 export type NetworkSession = {
   generation: number;
-  status: HostStatus;
 };
 
 export type WizardSession = {
@@ -22,8 +20,10 @@ export type WizardSession = {
 export type ManagerShellState = {
   activeView: ManagerView;
   wizardPresentation: WizardPresentation;
-  hostStatus: HostStatus | null;
-  runtimeHealth: HostRuntimeHealth | null;
+  /** Last full-refresh config — never patched by runtime poll. */
+  configSnapshot: HostStatus | null;
+  /** Last runtime poll — live compose/probes/docker/…. */
+  runtimeSnapshot: HostRuntimeHealth | null;
   runtimeError: string | null;
   statusError: string | null;
   viewLoading: {
@@ -45,8 +45,8 @@ function nextGeneration(): number {
 export const managerShell = $state<ManagerShellState>({
   activeView: 'status',
   wizardPresentation: 'embedded',
-  hostStatus: null,
-  runtimeHealth: null,
+  configSnapshot: null,
+  runtimeSnapshot: null,
   runtimeError: null,
   statusError: null,
   viewLoading: {
@@ -76,32 +76,14 @@ export function applyShellNavigation(
   }
 }
 
-export function applyRuntimeHealth(runtime: HostRuntimeHealth): void {
-  managerShell.runtimeHealth = runtime;
+/** Runtime poll only — must not mutate configSnapshot. */
+export function applyRuntimeSnapshot(runtime: HostRuntimeHealth): void {
+  managerShell.runtimeSnapshot = runtime;
   managerShell.runtimeError = null;
-
-  // Keep Status/Maintenance/Network config snapshots aligned with the 12s runtime poll
-  // for overlapping live fields (compose, probes, docker, …).
-  const status = managerShell.hostStatus;
-  if (status) {
-    managerShell.hostStatus = {
-      ...status,
-      envExists: runtime.envExists,
-      docker: runtime.docker,
-      compose: runtime.compose,
-      probes: runtime.probes,
-      sandboxScanner: runtime.sandboxScanner,
-      network: {
-        ...status.network,
-        configuredLanIp: runtime.configuredLanIp,
-      },
-      appBaseUrl: runtime.appBaseUrl ?? status.appBaseUrl,
-    };
-  }
 }
 
-export function applyHostStatus(status: HostStatus): void {
-  managerShell.hostStatus = status;
+export function applyConfigSnapshot(status: HostStatus): void {
+  managerShell.configSnapshot = status;
   clearStatusError();
 }
 
@@ -133,17 +115,15 @@ export function clearWizardSession(): void {
   managerShell.wizardSession = null;
 }
 
-export function beginMaintenanceSession(status: HostStatus): void {
+export function beginMaintenanceSession(): void {
   managerShell.maintenanceSession = {
     generation: nextGeneration(),
-    status,
   };
 }
 
-export function beginNetworkSession(status: HostStatus): void {
+export function beginNetworkSession(): void {
   managerShell.networkSession = {
     generation: nextGeneration(),
-    status,
   };
 }
 

@@ -6,6 +6,8 @@ export type ManagerView = 'status' | 'maintenance' | 'network' | 'wizard';
 
 export type RefreshScope = 'full' | 'runtime';
 
+export type RefreshErrorSource = 'config' | 'runtime';
+
 export type RefreshOptions = {
   scope: RefreshScope;
   /** Poll / background — errors are ignored. */
@@ -22,7 +24,7 @@ export type HostRefreshControllerDeps = {
   pollIntervalMs?: number;
   onRuntime: (runtime: HostRuntimeHealth) => void;
   onConfig: (status: HostStatus, view: ManagerView) => void;
-  onError: (message: string, view: ManagerView) => void;
+  onError: (message: string, view: ManagerView, source: RefreshErrorSource) => void;
   schedule?: ScheduleFn;
   clearSchedule?: ClearScheduleFn;
 };
@@ -36,6 +38,12 @@ export type HostRefreshController = {
 };
 
 const DEFAULT_POLL_MS = 12_000;
+
+const SETUP_UNREACHABLE = 'Setup-API nicht erreichbar — bitte Manager neu starten.';
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : SETUP_UNREACHABLE;
+}
 
 export function createHostRefreshController(
   deps: HostRefreshControllerDeps,
@@ -74,20 +82,38 @@ export function createHostRefreshController(
     }, pollIntervalMs);
   }
 
+  function reportError(options: RefreshOptions, source: RefreshErrorSource, error: unknown): void {
+    if (options.silent) {
+      return;
+    }
+    deps.onError(errorMessage(error), currentView, source);
+  }
+
   async function performRefresh(myGeneration: number, options: RefreshOptions): Promise<void> {
     try {
       if (options.scope === 'full') {
-        const [status, runtime] = await Promise.all([
+        // Config and runtime succeed/fail independently — one failure must not discard the other.
+        const [statusResult, runtimeResult] = await Promise.allSettled([
           deps.api().fetchSetupStatus(),
           deps.api().fetchRuntimeHealth(),
         ]);
         if (myGeneration !== generation) {
           return;
         }
-        lastConfig = status;
-        lastRuntime = runtime;
-        deps.onRuntime(runtime);
-        deps.onConfig(status, currentView);
+
+        if (runtimeResult.status === 'fulfilled') {
+          lastRuntime = runtimeResult.value;
+          deps.onRuntime(runtimeResult.value);
+        } else {
+          reportError(options, 'runtime', runtimeResult.reason);
+        }
+
+        if (statusResult.status === 'fulfilled') {
+          lastConfig = statusResult.value;
+          deps.onConfig(statusResult.value, currentView);
+        } else {
+          reportError(options, 'config', statusResult.reason);
+        }
         return;
       }
 
@@ -98,14 +124,7 @@ export function createHostRefreshController(
       lastRuntime = runtime;
       deps.onRuntime(runtime);
     } catch (error) {
-      if (options.silent) {
-        return;
-      }
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Setup-API nicht erreichbar — bitte Manager neu starten.';
-      deps.onError(message, currentView);
+      reportError(options, 'runtime', error);
     } finally {
       if (myGeneration === generation) {
         schedulePollTimer(myGeneration);

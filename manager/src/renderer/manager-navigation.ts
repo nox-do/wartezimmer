@@ -21,8 +21,8 @@ export type DeferredView = 'maintenance' | 'network';
 export type ManagerNavigationSessions = {
   clearInactive: (active: ManagerView) => void;
   setDeferredLoading: (view: DeferredView, loading: boolean) => void;
-  beginMaintenance: (status: HostStatus) => void;
-  beginNetwork: (status: HostStatus) => void;
+  beginMaintenance: () => void;
+  beginNetwork: () => void;
   beginWizard: (status: HostStatus | null, presentation: WizardPresentation) => void;
 };
 
@@ -76,12 +76,12 @@ export function createManagerNavigation(deps: ManagerNavigationDeps) {
       if (!isDeferredView(view)) {
         return;
       }
-      const refreshed = deps.hostRefresh.getLastConfig();
-      if (refreshed) {
+      // Full refresh has written configSnapshot; session is only a generation trigger.
+      if (deps.hostRefresh.getLastConfig()) {
         if (view === 'maintenance') {
-          deps.sessions.beginMaintenance(refreshed);
+          deps.sessions.beginMaintenance();
         } else {
-          deps.sessions.beginNetwork(refreshed);
+          deps.sessions.beginNetwork();
         }
       }
       deps.sessions.setDeferredLoading(view, false);

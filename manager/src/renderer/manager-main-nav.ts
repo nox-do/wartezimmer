@@ -1,5 +1,7 @@
 import type { ManagerView } from './host-refresh-controller.js';
 import type { HostStatus } from '../shared/host-status.js';
+import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
+import { effectiveDocker, effectiveEnvExists } from './host-snapshot-selectors.js';
 
 export type MainNavTab = ManagerView;
 
@@ -12,15 +14,24 @@ export const TAB_LABELS: Record<MainNavTab, string> = {
 
 export const TAB_ORDER: MainNavTab[] = ['status', 'network', 'maintenance', 'wizard'];
 
-export function setupReadyForTools(status: HostStatus): boolean {
-  return status.envExists && status.docker.installed && status.docker.daemonRunning;
+export function setupReadyForTools(
+  config: HostStatus | null,
+  runtime: HostRuntimeHealth | null = null,
+): boolean {
+  const envExists = effectiveEnvExists(config, runtime);
+  const docker = effectiveDocker(config, runtime);
+  return Boolean(envExists && docker?.installed && docker?.daemonRunning);
 }
 
-export function tabDisabled(tab: MainNavTab, status: HostStatus | null): string | null {
-  if (!status) {
+export function tabDisabled(
+  tab: MainNavTab,
+  config: HostStatus | null,
+  runtime: HostRuntimeHealth | null = null,
+): string | null {
+  if (!config && !runtime) {
     return tab === 'status' || tab === 'wizard' ? null : 'Noch nicht verfügbar';
   }
-  if ((tab === 'network' || tab === 'maintenance') && !setupReadyForTools(status)) {
+  if ((tab === 'network' || tab === 'maintenance') && !setupReadyForTools(config, runtime)) {
     return 'Nach der Einrichtung verfügbar';
   }
   return null;

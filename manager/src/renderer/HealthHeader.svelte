@@ -10,15 +10,15 @@
   const overall = $derived(
     managerShell.runtimeError
       ? ({ text: 'Unbekannt', level: 'bad' } as const)
-      : managerShell.runtimeHealth
-        ? deriveOverallStatus(managerShell.runtimeHealth)
+      : managerShell.runtimeSnapshot
+        ? deriveOverallStatus(managerShell.runtimeSnapshot)
         : ({ text: '…', level: 'ok' } as const),
   );
 
   const tiles = $derived(
-    managerShell.runtimeError || !managerShell.runtimeHealth
+    managerShell.runtimeError || !managerShell.runtimeSnapshot
       ? []
-      : collectHealthTiles(managerShell.runtimeHealth),
+      : collectHealthTiles(managerShell.runtimeSnapshot),
   );
 
   const errorMessage = $derived(

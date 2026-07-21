@@ -171,3 +171,69 @@ test('poll continues while wizard view is active', async () => {
   assert.equal(timers.length, 1);
   assert.equal(timers[0]?.delay, 5_000);
 });
+
+test('full refresh keeps config when only runtime health fails', async () => {
+  const status = minimalHostStatus({ practiceDisplayName: 'Kept' });
+  const configs: HostStatus[] = [];
+  const runtimes: HostRuntimeHealth[] = [];
+  const errors: Array<{ message: string; source: string }> = [];
+
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchSetupStatus: async () => status,
+        fetchRuntimeHealth: async () => {
+          throw new Error('health down');
+        },
+      }),
+    pollIntervalMs: 60_000,
+    onRuntime: (value) => runtimes.push(value),
+    onConfig: (snapshot) => configs.push(snapshot),
+    onError: (message, _view, source) => {
+      errors.push({ message, source });
+    },
+    schedule: () => 0,
+    clearSchedule: () => {},
+  });
+
+  await controller.refresh({ scope: 'full', immediate: true });
+
+  assert.equal(configs.length, 1);
+  assert.equal(configs[0]?.practiceDisplayName, 'Kept');
+  assert.equal(controller.getLastConfig()?.practiceDisplayName, 'Kept');
+  assert.equal(runtimes.length, 0);
+  assert.deepEqual(errors, [{ message: 'health down', source: 'runtime' }]);
+});
+
+test('full refresh keeps runtime when only config fetch fails', async () => {
+  const runtime = minimalRuntime({ checkedAt: 'runtime-ok' });
+  const configs: HostStatus[] = [];
+  const runtimes: HostRuntimeHealth[] = [];
+  const errors: Array<{ message: string; source: string }> = [];
+
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchSetupStatus: async () => {
+          throw new Error('config down');
+        },
+        fetchRuntimeHealth: async () => runtime,
+      }),
+    pollIntervalMs: 60_000,
+    onRuntime: (value) => runtimes.push(value),
+    onConfig: (snapshot) => configs.push(snapshot),
+    onError: (message, _view, source) => {
+      errors.push({ message, source });
+    },
+    schedule: () => 0,
+    clearSchedule: () => {},
+  });
+
+  await controller.refresh({ scope: 'full', immediate: true });
+
+  assert.equal(runtimes.length, 1);
+  assert.equal(controller.getLastRuntime()?.checkedAt, 'runtime-ok');
+  assert.equal(configs.length, 0);
+  assert.equal(controller.getLastConfig(), null);
+  assert.deepEqual(errors, [{ message: 'config down', source: 'config' }]);
+});

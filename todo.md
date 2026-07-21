@@ -27,8 +27,25 @@ Stand: 2026-07-18
 - P2: Wizard-Totcode `testReachability` / `reachabilityProbe*` entfernt
 - Copy: Wiederherstellen-Hinweis ohne „Diagnose“
 
-### Etappe 3 — State vereinfachen (offen)
-- configSnapshot / runtimeSnapshot / networkDraft; weniger Shell-Kopien
+### Etappe 3 — State vereinfachen (offen, Scope 2026-07-21)
+Ziel: drei Wahrheiten — `configSnapshot` / `runtimeSnapshot` / `networkDraft` (+ lokales UI: phase/notice/networkSnapshot). Keine Runtime→Config-Kopien.
+
+**Review-Punkt 1 — Shell-Vertrag (erledigt 2026-07-21)**
+- Shell: `configSnapshot` / `runtimeSnapshot`; `applyConfigSnapshot` / `applyRuntimeSnapshot`
+- Runtime→Config-Merge entfernt; Selektoren in `host-snapshot-selectors.ts`
+- Sessions: `NetworkSession` / `MaintenanceSession` nur `{ generation }`
+- Maintenance minimal: Init aus config, Live-Compose aus runtime
+- Status-Seite liest Config; HealthHeader/MainNav nutzen Runtime bzw. Selektoren
+- Nachzug: Full-Refresh Config/Runtime entkoppelt (`allSettled`); Fehler `statusError` vs `runtimeError`; StatusView blankt nicht bei Health-Fehler; `effectiveProxyContainer` — Runtime-`proxyServer: null` schlägt Config
+- Tests: Selektoren, Navigation, MainNav-Runtime-Unlock, Partial-Refresh; typecheck grün
+
+**Review-Punkt 2 — Network-State (offen)**
+- Draft / Phase / Notice; Controller ohne Config-/Runtime-Kopien
+- NetworkView: Session-Lifecycle + `$derived`; Effects reduzieren
+- `NETWORK_NO_CHANGES_HINT` löschen; Übernehmen-Button immer sichtbar, dirty-disabled
+- Tests: Poll/Draft/Session/Races
+
+**Nicht enthalten:** voller Maintenance-Umbau, Wizard-Architektur, Backend-DTOs, Gateway-Migration, `host-state.ts`-Split. Wizard nur Rename/Typen/gemeinsame Draft-Helfer.
 
 ### Etappe 4 — Backend + Legacy (offen)
 - Gateway-Migration explizit; API bereinigen; `host-state.ts` aufteilen

@@ -6,9 +6,11 @@
    * CAUTION — shell sync: three $effects below (session / config / runtime). Do not
    * merge casually; show() vs applyConfigSnapshot vs applyRuntimeHealth have different
    * dirty-field semantics (see network-controller).
+   * Session is generation-only; status comes from managerShell.configSnapshot.
    */
   import { onMount } from 'svelte';
   import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+  import type { HostStatus } from '../shared/host-status.js';
   import { hostNetworkChanged } from './host-network-panels.js';
   import {
     createNetworkController,
@@ -59,6 +61,8 @@
 
   let controller = $state<NetworkController | null>(null);
   let lastSessionGeneration = $state<number | null>(null);
+  /** Skip config effect once after session show() used this same snapshot ref. */
+  let sessionOpenConfig = $state<HostStatus | null>(null);
 
   const viewLoading = $derived(managerShell.viewLoading.network);
 
@@ -157,13 +161,23 @@
         c.hide();
         syncSnapshot();
         lastSessionGeneration = null;
+        sessionOpenConfig = null;
       }
       return;
     }
 
     if (session.generation !== lastSessionGeneration) {
+      const status = managerShell.configSnapshot;
+      if (!status) {
+        return;
+      }
       lastSessionGeneration = session.generation;
-      c.show(session.status);
+      sessionOpenConfig = status;
+      c.show(status);
+      const runtime = managerShell.runtimeSnapshot;
+      if (runtime) {
+        c.applyRuntimeHealth(runtime);
+      }
       syncSnapshot();
       const state = c.getState();
       if (state.status) {
@@ -174,12 +188,12 @@
 
   $effect(() => {
     const c = controller;
-    const status = managerShell.hostStatus;
+    const status = managerShell.configSnapshot;
     const session = managerShell.networkSession;
     if (!c || !status || !session) {
       return;
     }
-    if (status === session.status) {
+    if (status === sessionOpenConfig) {
       return;
     }
     c.applyConfigSnapshot(status);
@@ -188,7 +202,7 @@
 
   $effect(() => {
     const c = controller;
-    const health = managerShell.runtimeHealth;
+    const health = managerShell.runtimeSnapshot;
     const session = managerShell.networkSession;
     if (!c || !health || !session || managerShell.activeView !== 'network') {
       return;
