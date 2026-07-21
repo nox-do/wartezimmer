@@ -8,6 +8,25 @@ Stand: 2026-07-18
 - **Wir liefern:** Portal-UI + Wartenummer-Prüfung + dünne Vendor-Adapter (Outbound-URL / Inbound ja|nein)
 - Verwandt (zurückstellen): Plan Gateway Management Hostname/IP
 
+## Aufräumen Etappen (Review 2026-07-21)
+
+### Etappe 1 — Korrektheit + kleine Diät (erledigt 2026-07-21)
+- Typecheck Manager grün
+- Proxy-Ownership nur bei `proxyServer.enabled`
+- Network `show()` Generation gegen stale `fetchSetupNetwork`
+- Scanner-Totcode, ungenutztes CSS, `NetworkController.clearError` entfernt
+
+### Etappe 2 — Netzwerk-Ablauf (offen)
+- „Übernehmen und prüfen“; Test nur gegen gespeicherte URL / nach Restart
+- Gemeinsames ProxySettings (Wizard + Netzwerk)
+- Verständlichere Texte
+
+### Etappe 3 — State vereinfachen (offen)
+- configSnapshot / runtimeSnapshot / networkDraft; weniger Shell-Kopien
+
+### Etappe 4 — Backend + Legacy (offen)
+- Gateway-Migration explizit; API bereinigen; `host-state.ts` aufteilen
+
 ## Netzwerk-Tab Layout (2026-07-21)
 
 - Expander-Reihenfolge: Host/LAN → Proxy → Erreichbarkeit → Übernehmen → Prüfungen → Erläuterung

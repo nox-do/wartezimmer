@@ -1,13 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { SandboxScannerStatus } from '../shared/host-status.js';
-import {
-  aggregatedServiceStateLabel,
-  formatSandboxScannerDetail,
-  sandboxClamAvChip,
-  sandboxScannerLevel,
-  sandboxScannerReachability,
-} from './sandbox-scanner-ui.js';
+import { sandboxClamAvChip, sandboxScannerLevel } from './sandbox-scanner-ui.js';
 
 function scanner(overrides: Partial<SandboxScannerStatus> = {}): SandboxScannerStatus {
   return {
@@ -41,40 +35,6 @@ test('sandboxScannerLevel marks stale signatures as warn', () => {
   );
 });
 
-test('formatSandboxScannerDetail omits freshclam log message on failure', () => {
-  const detail = formatSandboxScannerDetail(
-    scanner({
-      definitionsAgeHours: null,
-      signaturesFreshEnough: false,
-      ready: false,
-      freshclamLastAttemptAt: '2026-06-25T10:00:00.000Z',
-      freshclamLastAttemptOk: false,
-      freshclamLastAttemptMessage: 'WARNING: rate limited',
-      freshclamLastAttemptSource: 'startup',
-    }),
-  );
-  assert.match(detail ?? '', /Virendefinitionen fehlen/);
-  assert.match(detail ?? '', /fehlgeschlagen/);
-  assert.match(detail ?? '', /beim Start/);
-  assert.doesNotMatch(detail ?? '', /rate limited/);
-});
-
-test('aggregatedServiceStateLabel replaces healthy when scanner is degraded', () => {
-  const label = aggregatedServiceStateLabel(
-    { name: 'sandbox', service: 'sandbox', state: 'running', health: 'healthy' },
-    scanner({ definitionsAgeHours: null, signaturesFreshEnough: false, ready: false }),
-  );
-  assert.equal(label, 'running — unhealthy');
-});
-
-test('aggregatedServiceStateLabel keeps healthy when scanner is ok', () => {
-  const label = aggregatedServiceStateLabel(
-    { name: 'sandbox', service: 'sandbox', state: 'running', health: 'healthy' },
-    scanner(),
-  );
-  assert.equal(label, 'running — healthy');
-});
-
 test('sandboxClamAvChip is red when definitions are missing', () => {
   assert.deepEqual(sandboxClamAvChip(scanner({ definitionsAgeHours: null })), {
     label: 'ClamAV',
@@ -92,14 +52,5 @@ test('sandboxClamAvChip is yellow when signatures are outdated', () => {
       ok: false,
       warn: true,
     },
-  );
-});
-
-test('sandboxScannerReachability returns warn for stale signatures', () => {
-  assert.equal(
-    sandboxScannerReachability(
-      scanner({ signaturesFreshEnough: false, definitionsAgeHours: 30, ready: false }),
-    ),
-    'warn',
   );
 });

@@ -1090,13 +1090,6 @@ button:disabled {
   vertical-align: middle;
 }
 
-.network-config-section {
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-raised, rgba(255, 255, 255, 0.02));
-}
-
 .network-config-block + .network-config-block {
   margin-top: 1.25rem;
   padding-top: 1.25rem;
@@ -1125,10 +1118,6 @@ button:disabled {
 
 .network-diagnose-accordion {
   margin-top: 1.25rem;
-}
-
-.network-bindings-title {
-  margin-top: 1rem;
 }
 
 .network-bindings-list {

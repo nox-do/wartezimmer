@@ -3,7 +3,6 @@ import test from 'node:test';
 import type { HostNetworkResult } from '../shared/host-status.js';
 import {
   NETWORK_NO_CHANGES_ERROR,
-  NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE,
   networkExpanderDefaults,
   networkHostChecksForDisplay,
   networkHostChecksHaveFailures,

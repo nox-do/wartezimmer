@@ -62,7 +62,6 @@ export type NetworkController = {
   testReachability: () => void;
   show: (status: HostStatus) => void;
   hide: () => void;
-  clearError: () => void;
   applyConfigSnapshot: (status: HostStatus) => void;
   applyRuntimeHealth: (health: HostRuntimeHealth) => void;
 };
@@ -103,6 +102,8 @@ function lanProbeSummary(probes: ProbeResult[]): { ok: boolean | null; message: 
  */
 export function createNetworkController(deps: NetworkControllerDeps): NetworkController {
   const state = createInitialState();
+  /** Bumped on each show()/hide() so stale fetchSetupNetwork responses are ignored. */
+  let showGeneration = 0;
 
   function notify(): void {
     deps.onStateChange?.();
@@ -302,6 +303,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     },
 
     show(status) {
+      const generation = ++showGeneration;
       patch({
         status,
         compose: status.compose,
@@ -315,6 +317,9 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       void deps.api
         .fetchSetupNetwork()
         .then((network) => {
+          if (generation !== showGeneration) {
+            return;
+          }
           const fields = { ...state, ...createHostNetworkFields(status) };
           // Prefer hostname mode only for the exact hostname-mode URL (http://host:8080).
           let reachabilityMode: ReachabilityMode = fields.reachabilityMode;
@@ -332,19 +337,25 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
           });
         })
         .catch((error) => {
+          if (generation !== showGeneration) {
+            return;
+          }
           setError(
             error instanceof Error ? error.message : 'Netzwerkdaten konnten nicht geladen werden.',
           );
         })
-        .finally(() => setBusy(false));
+        .finally(() => {
+          if (generation !== showGeneration) {
+            return;
+          }
+          setBusy(false);
+        });
     },
 
     hide() {
+      showGeneration += 1;
       setError(null);
-    },
-
-    clearError() {
-      setError(null);
+      setBusy(false);
     },
 
     applyConfigSnapshot(status) {

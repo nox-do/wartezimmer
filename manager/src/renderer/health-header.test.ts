@@ -178,7 +178,7 @@ test('collectHealthTiles sandbox ampel uses Compose health, not ClamAV', () => {
         definitionsAgeHours: null,
         maxSignatureAgeHours: 24,
         engineVersion: null,
-        healthStatus: 'unavailable',
+        healthStatus: 'degraded',
         freshclamLastAttemptAt: null,
         freshclamLastAttemptOk: null,
         freshclamLastAttemptMessage: null,
@@ -192,6 +192,29 @@ test('collectHealthTiles sandbox ampel uses Compose health, not ClamAV', () => {
   assert.equal(sandbox.status, 'ok');
   assert.equal(sandbox.detail, 'running — healthy');
   assert.ok(sandbox.chips?.some((chip) => chip.label === 'ClamAV' && chip.ok === false && !chip.warn));
+});
+
+test('collectHealthTiles with disabled leftover proxy keeps entry on App', () => {
+  const tiles = collectHealthTiles(
+    runtime({
+      probes: [
+        { id: 'app.health.local', ok: true, message: 'ok' },
+        { id: 'app.health.lan', ok: false, message: 'down' },
+      ],
+      proxyServer: {
+        enabled: false,
+        container: proxyContainer,
+      },
+    }),
+  );
+  assert.equal(
+    tiles.some((tile) => tile.name === 'Proxy-Server'),
+    false,
+  );
+  const app = tiles.find((tile) => tile.name === 'app');
+  assert.ok(app);
+  assert.equal(app.status, 'warn');
+  assert.match(app.detail, /Einstieg nicht erreichbar/);
 });
 
 test('deriveOverallStatus is Betrieb when local and LAN probes are green', () => {

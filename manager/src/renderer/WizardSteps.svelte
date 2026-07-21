@@ -294,7 +294,7 @@
       <section class="network-config-block">
         <h3 class="network-config-subheading">Patientenportal / WLAN-Freigabe</h3>
         <p class="hint">
-          Hier kommt später die Auswahl des WLAN-Adapters (z. B. Omada, UniFi): Praxis Flow prüft die
+          Hier kommt später die Auswahl des WLAN-Adapters (z. B. Omada, UniFi): Praxis Flow prüft die
           Wartenummer und meldet dem Captive der Praxis-IT die Freigabe. Router und Captive Portal
           stellen wir nicht her.
         </p>

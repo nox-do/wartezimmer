@@ -139,8 +139,9 @@ function entryDetail(
   return stackDetail;
 }
 
-function proxyConfigured(runtime: HostRuntimeHealth): boolean {
-  return runtime.proxyServer != null;
+/** Entry path is owned by the proxy only while PROXY is enabled (not leftover containers). */
+function proxyOwnsEntry(runtime: HostRuntimeHealth): boolean {
+  return Boolean(runtime.proxyServer?.enabled);
 }
 
 export type HealthTileChip = {
@@ -165,10 +166,10 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
   const probesPending = probes.length === 0 && runtime.docker.daemonRunning;
   const lanProbe = probesById.get('app.health.lan');
   const scanner = runtime.sandboxScanner;
-  const useProxyEntry = proxyConfigured(runtime);
+  const useProxyEntry = proxyOwnsEntry(runtime);
   const tiles: HealthTileSpec[] = [];
 
-  if (services.length === 0 && !runtime.proxyServer) {
+  if (services.length === 0 && !useProxyEntry) {
     tiles.push({
       name: 'Stack',
       detail: probesPending ? 'Wird geprüft …' : 'Keine Container',
@@ -222,7 +223,7 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
     });
   }
 
-  if (runtime.proxyServer) {
+  if (runtime.proxyServer?.enabled) {
     const container = runtime.proxyServer.container;
     if (container) {
       const stackStatus = composeServiceStatus(container);
@@ -236,14 +237,14 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
     } else {
       tiles.push({
         name: 'Proxy-Server',
-        detail: runtime.proxyServer.enabled ? 'Container fehlt' : 'Gestoppt',
+        detail: 'Container fehlt',
         status: 'bad',
       });
     }
   }
 
   const hasApp = services.some((service) => (service.service || service.name) === 'app');
-  const entryOwnedByTile = hasApp || Boolean(runtime.proxyServer);
+  const entryOwnedByTile = hasApp || useProxyEntry;
   for (const probe of probes) {
     if (entryOwnedByTile && ['app.health.local', 'app.health.lan'].includes(probe.id)) {
       continue;
