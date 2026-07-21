@@ -11,6 +11,8 @@ export type LanIpFieldState = {
   customLanIp: string;
 };
 
+export type HostNetworkDraftFields = LanIpFieldState & ReachabilityFieldState;
+
 export type { ReachabilityFieldState, ReachabilityMode } from './reachability.js';
 
 /** Manual LAN IP is only needed when auto-detection is ambiguous or insufficient. */
@@ -24,8 +26,32 @@ export function shouldOfferManualLanIpEntry(candidateCount: number, lanIpStale: 
   return lanIpStale;
 }
 
-export function hostNetworkChanged(
-  fields: LanIpFieldState & ReachabilityFieldState,
+export function snapshotNetworkDraft(draft: HostNetworkDraftFields): HostNetworkDraftFields {
+  return {
+    lanAppIp: draft.lanAppIp,
+    customLanIp: draft.customLanIp,
+    reachabilityMode: draft.reachabilityMode,
+    customHostname: draft.customHostname,
+    proxyEnabled: draft.proxyEnabled,
+  };
+}
+
+export function networkDraftEquals(a: HostNetworkDraftFields, b: HostNetworkDraftFields): boolean {
+  return (
+    a.lanAppIp === b.lanAppIp &&
+    a.customLanIp === b.customLanIp &&
+    a.reachabilityMode === b.reachabilityMode &&
+    a.customHostname === b.customHostname &&
+    a.proxyEnabled === b.proxyEnabled
+  );
+}
+
+/**
+ * Pure draft-field drift vs saved config (LAN / canonical / proxy).
+ * Does not include leftover gateway — that is apply-needed, not draft edit.
+ */
+export function networkDraftChanged(
+  fields: HostNetworkDraftFields,
   status: HostStatus | null,
   network: Pick<NetworkSnapshot, 'machineHostname'> | null = null,
 ): boolean {
@@ -48,11 +74,23 @@ export function hostNetworkChanged(
     return true;
   }
 
-  // Leftover openNDS GATEWAY_* from older installs — cleared on next network save.
-  // CAUTION: until then hostNetworkChanged stays true even if LAN/proxy/canonical match.
-  if (status.gateway?.enabled) {
+  return false;
+}
+
+/**
+ * Apply button: draft fields differ OR leftover GATEWAY_* still needs a save to clear.
+ */
+export function hostNetworkChanged(
+  fields: HostNetworkDraftFields,
+  status: HostStatus | null,
+  network: Pick<NetworkSnapshot, 'machineHostname'> | null = null,
+): boolean {
+  if (networkDraftChanged(fields, status, network)) {
     return true;
   }
-
+  // Leftover openNDS GATEWAY_* from older installs — cleared on next network save.
+  if (status?.gateway?.enabled) {
+    return true;
+  }
   return false;
 }

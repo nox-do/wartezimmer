@@ -1,13 +1,13 @@
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-import type {
-  ComposeStatus,
-  HostNetworkResult,
-  HostStatus,
-  NetworkSnapshot,
-} from '../shared/host-status.js';
+import type { HostNetworkResult, HostStatus, NetworkSnapshot } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import type { LanIpFieldState, ReachabilityFieldState } from './host-network-panels.js';
-import { hostNetworkChanged } from './host-network-panels.js';
+import {
+  hostNetworkChanged,
+  networkDraftEquals,
+  snapshotNetworkDraft,
+} from './host-network-panels.js';
+import { effectiveCompose } from './host-snapshot-selectors.js';
 import {
   formatActiveReachabilityResult,
   NETWORK_LAN_REQUIRED_ERROR,
@@ -15,22 +15,22 @@ import {
   NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE,
   NETWORK_STACK_STOPPED_VERIFY_HINT,
   networkIsBusy,
-  networkOperationProgressText,
   networkProxyMissingAfterRestart,
   networkProxyStartFailureMessage,
   networkRestartConfirmMessage,
   networkRestartFailureMessage,
   networkSavedWhileStoppedMessage,
-  type NetworkOperation,
   proxyNeedsRestore,
   savedDeviceBaseUrl,
+  type NetworkDraft,
+  type NetworkNotice,
+  type NetworkPhase,
 } from './network-view-model.js';
 import {
   draftCanonicalBaseUrl,
   isHttpOrigin,
   matchesHostnameModeBase,
   productPublishPort,
-  type ReachabilityMode,
 } from './reachability.js';
 import { pollSetupProbes } from './setup-probes.js';
 import { createHostNetworkFields, resolvedLanIp } from './wizard-state.js';
@@ -40,20 +40,17 @@ export type NetworkCallbacks = {
   onAfterMutation?: () => void;
 };
 
-export type NetworkState = LanIpFieldState &
-  ReachabilityFieldState & {
-    status: HostStatus | null;
-    network: NetworkSnapshot | null;
-    compose: ComposeStatus | null;
-    operation: NetworkOperation;
-    /** Progress / outcome for the primary network action. */
-    resultMessage: string | null;
-    resultOk: boolean | null;
-    error: string | null;
-  };
+/** Local network-tab state: draft + phase/notice + network snapshot. No config/runtime copies. */
+export type NetworkState = NetworkDraft & {
+  network: NetworkSnapshot | null;
+  phase: NetworkPhase;
+  notice: NetworkNotice | null;
+};
 
 export type NetworkControllerDeps = NetworkCallbacks & {
   api: PraxisManagerApi;
+  getConfig: () => HostStatus | null;
+  getRuntime: () => HostRuntimeHealth | null;
   onStateChange?: () => void;
   requestConfirm: (message: string, onConfirm: () => void) => void;
   /** Override probe polling (tests / shorter LAN grace). */
@@ -71,35 +68,64 @@ export type NetworkController = {
   restoreProxy: () => void;
   /** Probe an already-saved device base URL (never the draft). */
   verifyActiveConfiguration: (baseUrl?: string | null) => void;
-  show: (status: HostStatus) => void;
+  /** Open tab: hydrate draft from config and load network snapshot. */
+  show: () => void;
   hide: () => void;
-  applyConfigSnapshot: (status: HostStatus) => void;
-  applyRuntimeHealth: (health: HostRuntimeHealth) => void;
+  /**
+   * Config snapshot changed. Hydrates when the draft is untouched since last baseline
+   * or unchanged since save start; otherwise the user draft wins.
+   * Safe while busy — queues until phase returns to idle.
+   */
+  syncFromConfig: () => void;
+  /** Explicit discard: rehydrate from current config (idle only). */
+  discardDraft: () => void;
 };
 
 function createInitialState(): NetworkState {
   return {
-    status: null,
     network: null,
-    compose: null,
     lanAppIp: '__custom__',
     customLanIp: '',
     reachabilityMode: 'lan-ip',
     customHostname: '',
     proxyEnabled: false,
-    operation: 'idle',
-    resultMessage: null,
-    resultOk: null,
-    error: null,
+    phase: 'idle',
+    notice: null,
+  };
+}
+
+function noticeFromVerified(verified: { ok: boolean; message: string }): NetworkNotice {
+  return { tone: verified.ok ? 'success' : 'error', message: verified.message };
+}
+
+function draftFromConfig(
+  config: HostStatus,
+  network: NetworkSnapshot | null,
+): NetworkDraft {
+  const fields = createHostNetworkFields(config);
+  let reachabilityMode = fields.reachabilityMode;
+  let customHostname = fields.customHostname;
+  if (network) {
+    const host = network.machineHostname?.trim();
+    const configured = config.configuredCanonicalBaseUrl?.trim();
+    if (matchesHostnameModeBase(configured, host, productPublishPort(fields.proxyEnabled))) {
+      reachabilityMode = 'hostname';
+      customHostname = '';
+    }
+  }
+  return {
+    lanAppIp: fields.lanAppIp,
+    customLanIp: fields.customLanIp,
+    reachabilityMode,
+    customHostname,
+    proxyEnabled: fields.proxyEnabled,
   };
 }
 
 /**
- * Network tab controller — draft fields + applyAndVerify / verifyActiveConfiguration.
- *
- * CAUTION: applyConfigSnapshot preserves dirty drafts; applyRuntimeHealth only
- * patches compose. Session show() resets fields from HostStatus. NetworkView
- * wires three separate shell $effects — keep those semantics if refactoring.
+ * Network tab controller — draft + apply/verify/repair only.
+ * Config and runtime are read via getters; never stored on the controller.
+ * Hydration baseline is a normalized NetworkDraft, not a HostStatus copy.
  */
 export function createNetworkController(deps: NetworkControllerDeps): NetworkController {
   const state = createInitialState();
@@ -107,6 +133,12 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
   let showGeneration = 0;
   /** Bumped to drop in-flight save/verify work after hide. */
   let actionGeneration = 0;
+  /** Last successfully applied draft baseline (normalized fields only). */
+  let draftBaseline: NetworkDraft | null = null;
+  /** Draft as submitted at save start — hydrate after config refresh if still equal. */
+  let saveSubmittedDraft: NetworkDraft | null = null;
+  /** Config arrived while busy; flush when phase returns to idle. */
+  let pendingConfigHydrate = false;
 
   function notify(): void {
     deps.onStateChange?.();
@@ -117,31 +149,85 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     notify();
   }
 
-  function setOperation(operation: NetworkOperation, resultMessage?: string | null): void {
-    const progress = networkOperationProgressText(operation);
-    patch({
-      operation,
-      ...(resultMessage !== undefined
-        ? { resultMessage }
-        : progress
-          ? { resultMessage: progress, resultOk: null }
-          : {}),
-    });
+  function currentDraftSnapshot(): NetworkDraft {
+    return snapshotNetworkDraft(state);
+  }
+
+  function applyDraft(draft: NetworkDraft, options: { clearSaveMarker?: boolean } = {}): void {
+    patch({ ...draft });
+    draftBaseline = snapshotNetworkDraft(draft);
+    if (options.clearSaveMarker !== false) {
+      saveSubmittedDraft = null;
+    }
+  }
+
+  function tryHydrateFromConfig(config: HostStatus): void {
+    const next = draftFromConfig(config, state.network);
+    if (saveSubmittedDraft) {
+      if (!networkDraftEquals(currentDraftSnapshot(), saveSubmittedDraft)) {
+        // User edited after save started — keep their draft.
+        return;
+      }
+      applyDraft(next);
+      return;
+    }
+    if (draftBaseline && !networkDraftEquals(currentDraftSnapshot(), draftBaseline)) {
+      return;
+    }
+    applyDraft(next);
+  }
+
+  function flushPendingConfigHydrate(): void {
+    if (!pendingConfigHydrate) {
+      return;
+    }
+    pendingConfigHydrate = false;
+    const config = deps.getConfig();
+    if (config) {
+      tryHydrateFromConfig(config);
+    }
+  }
+
+  function setPhase(phase: NetworkPhase): void {
+    patch({ phase, ...(phase !== 'idle' ? { notice: null } : {}) });
+    if (phase === 'idle') {
+      flushPendingConfigHydrate();
+    }
+  }
+
+  function setErrorNotice(message: string): void {
+    patch({ phase: 'idle', notice: { tone: 'error', message } });
+    flushPendingConfigHydrate();
+  }
+
+  function setSuccessNotice(message: string): void {
+    patch({ phase: 'idle', notice: { tone: 'success', message } });
+    flushPendingConfigHydrate();
+  }
+
+  function setWarningNotice(message: string): void {
+    patch({ phase: 'idle', notice: { tone: 'warning', message } });
+    flushPendingConfigHydrate();
   }
 
   function resolveDraftCanonical(): string | null {
     return draftCanonicalBaseUrl(state, state.network);
   }
 
-  function isDirty(): boolean {
-    return hostNetworkChanged(state, state.status, state.network);
+  /** Apply button: field drift or leftover gateway cleanup. */
+  function needsApply(): boolean {
+    return hostNetworkChanged(state, deps.getConfig(), state.network);
+  }
+
+  function stackRunning(): boolean {
+    return effectiveCompose(deps.getConfig(), deps.getRuntime())?.running ?? false;
   }
 
   async function verifySavedBaseUrl(
     baseUrl: string,
     generation: number,
   ): Promise<{ ok: boolean; message: string }> {
-    setOperation('checking');
+    setPhase('checking');
     try {
       const probes = await pollSetupProbes(
         deps.api,
@@ -149,7 +235,6 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
           localAppBaseUrl: 'http://127.0.0.1:8080',
           lanAppBaseUrl: baseUrl,
         },
-        // Wait while app comes up; local ok then short LAN grace before accepting LAN red.
         {
           maxWaitMs: 30_000,
           intervalMs: 2_500,
@@ -176,33 +261,30 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     const generation = ++actionGeneration;
     const lanAppIp = resolvedLanIp(state);
     if (!lanAppIp) {
-      patch({ operation: 'failed', error: NETWORK_LAN_REQUIRED_ERROR, resultMessage: null, resultOk: false });
+      setErrorNotice(NETWORK_LAN_REQUIRED_ERROR);
       return;
     }
 
     const canonicalBaseUrl = resolveDraftCanonical();
     if (!canonicalBaseUrl || !isHttpOrigin(canonicalBaseUrl)) {
-      patch({
-        operation: 'failed',
-        error: 'Bitte LAN-IP, Rechnername oder eigenen Hostnamen für die Geräte-Adresse wählen.',
-        resultMessage: null,
-        resultOk: false,
-      });
+      setErrorNotice(
+        'Bitte LAN-IP, Rechnername oder eigenen Hostnamen für die Geräte-Adresse wählen.',
+      );
       return;
     }
 
-    if (!state.status) {
+    if (!deps.getConfig()) {
       return;
     }
 
     const proxyEnabled = state.proxyEnabled;
-    setOperation(input.repairProxy || input.restartCompose ? 'restarting' : 'saving');
-    patch({ error: null, resultOk: null });
+    saveSubmittedDraft = currentDraftSnapshot();
+    setPhase(input.repairProxy || input.restartCompose ? 'restarting' : 'saving');
 
     let result: HostNetworkResult;
     try {
       if (!input.restartCompose) {
-        setOperation('saving');
+        setPhase('saving');
       }
       result = await deps.api.saveHostNetwork({
         lanAppIp,
@@ -219,12 +301,10 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       if (generation !== actionGeneration) {
         return;
       }
-      patch({
-        operation: 'failed',
-        error: error instanceof Error ? error.message : 'Netzwerk konnte nicht gespeichert werden.',
-        resultMessage: null,
-        resultOk: false,
-      });
+      saveSubmittedDraft = null;
+      setErrorNotice(
+        error instanceof Error ? error.message : 'Netzwerk konnte nicht gespeichert werden.',
+      );
       return;
     }
 
@@ -232,42 +312,28 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       return;
     }
 
-    patch({ compose: result.compose ?? state.compose });
     deps.onAfterMutation?.();
 
-    // Restart was requested (save-with-restart or proxy repair) but compose did not come up.
+    // Env already written — keep saveSubmittedDraft so a following config refresh
+    // can still hydrate server-normalized values even if restart/proxy start failed.
     if (input.restartCompose && !result.composeRestarted) {
-      patch({
-        operation: 'failed',
-        error: input.repairProxy
+      setErrorNotice(
+        input.repairProxy
           ? networkProxyStartFailureMessage()
           : networkRestartFailureMessage(result),
-        resultMessage: null,
-        resultOk: false,
-      });
+      );
       return;
     }
 
     if (input.repairProxy || (proxyEnabled && input.restartCompose)) {
       if (networkProxyMissingAfterRestart(result, proxyEnabled)) {
-        patch({
-          operation: 'failed',
-          error: networkProxyStartFailureMessage(),
-          resultMessage: null,
-          resultOk: false,
-        });
+        setErrorNotice(networkProxyStartFailureMessage());
         return;
       }
     }
 
-    // Normal save while stack stopped — no restart requested.
     if (!result.stackWasRunning && !result.composeRestarted) {
-      patch({
-        operation: 'success',
-        resultMessage: networkSavedWhileStoppedMessage(),
-        resultOk: true,
-        error: null,
-      });
+      setWarningNotice(networkSavedWhileStoppedMessage());
       return;
     }
 
@@ -276,12 +342,8 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     if (generation !== actionGeneration || !verified.message) {
       return;
     }
-    patch({
-      operation: verified.ok ? 'success' : 'failed',
-      resultMessage: verified.message,
-      resultOk: verified.ok,
-      error: verified.ok ? null : verified.message,
-    });
+    patch({ phase: 'idle', notice: noticeFromVerified(verified) });
+    flushPendingConfigHydrate();
   }
 
   return {
@@ -296,24 +358,24 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
         'lanAppIp' in patchFields ||
         'customLanIp' in patchFields
       ) {
-        if (state.operation === 'success' || state.operation === 'failed') {
-          patch({ operation: 'idle', resultMessage: null, resultOk: null, error: null });
+        if (state.notice) {
+          patch({ phase: 'idle', notice: null });
         }
       }
     },
 
     applyAndVerify() {
-      if (networkIsBusy(state.operation)) {
+      if (networkIsBusy(state.phase)) {
         return;
       }
-      if (!isDirty()) {
+      if (!needsApply()) {
         return;
       }
 
-      const proxyChanging = Boolean(state.proxyEnabled) !== Boolean(state.status?.proxy?.enabled);
-      const stackRunning = state.compose?.running ?? false;
+      const config = deps.getConfig();
+      const proxyChanging = Boolean(state.proxyEnabled) !== Boolean(config?.proxy?.enabled);
 
-      if (stackRunning) {
+      if (stackRunning()) {
         deps.requestConfirm(networkRestartConfirmMessage(proxyChanging), () => {
           void saveAndMaybeVerify({ restartCompose: true });
         });
@@ -324,25 +386,15 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     },
 
     restoreProxy() {
-      if (networkIsBusy(state.operation)) {
+      if (networkIsBusy(state.phase)) {
         return;
       }
-      if (!proxyNeedsRestore(state.status)) {
-        patch({
-          operation: 'failed',
-          error: 'Proxy-Dienst läuft bereits oder ist nicht aktiviert.',
-          resultMessage: null,
-          resultOk: false,
-        });
+      if (!proxyNeedsRestore(deps.getConfig(), deps.getRuntime())) {
+        setErrorNotice('Proxy-Dienst läuft bereits oder ist nicht aktiviert.');
         return;
       }
       if (!state.proxyEnabled) {
-        patch({
-          operation: 'failed',
-          error: 'Bitte den Zugriff über Port 80 aktiviert lassen und wiederherstellen.',
-          resultMessage: null,
-          resultOk: false,
-        });
+        setErrorNotice('Bitte den Zugriff über Port 80 aktiviert lassen und wiederherstellen.');
         return;
       }
       deps.requestConfirm(NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE, () => {
@@ -351,114 +403,110 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     },
 
     verifyActiveConfiguration(baseUrl) {
-      if (networkIsBusy(state.operation)) {
+      if (networkIsBusy(state.phase)) {
         return;
       }
-      if (!(state.compose?.running ?? false)) {
-        patch({
-          operation: 'failed',
-          error: NETWORK_STACK_STOPPED_VERIFY_HINT,
-          resultMessage: NETWORK_STACK_STOPPED_VERIFY_HINT,
-          resultOk: false,
-        });
+      if (!stackRunning()) {
+        setErrorNotice(NETWORK_STACK_STOPPED_VERIFY_HINT);
         return;
       }
-      const url = (baseUrl ?? savedDeviceBaseUrl(state.status))?.trim() || '';
+      const url = (baseUrl ?? savedDeviceBaseUrl(deps.getConfig()))?.trim() || '';
       if (!url) {
-        patch({
-          operation: 'failed',
-          error: 'Keine gespeicherte Geräte-Adresse — bitte zuerst übernehmen.',
-          resultMessage: null,
-          resultOk: false,
-        });
+        setErrorNotice('Keine gespeicherte Geräte-Adresse — bitte zuerst übernehmen.');
         return;
       }
 
       const generation = ++actionGeneration;
-      patch({ error: null });
       void verifySavedBaseUrl(url, generation).then((verified) => {
         if (generation !== actionGeneration || !verified.message) {
           return;
         }
-        patch({
-          operation: verified.ok ? 'success' : 'failed',
-          resultMessage: verified.message,
-          resultOk: verified.ok,
-          error: verified.ok ? null : verified.message,
-        });
+        patch({ phase: 'idle', notice: noticeFromVerified(verified) });
+        flushPendingConfigHydrate();
       });
     },
 
-    show(status) {
+    show() {
+      if (!deps.getConfig()) {
+        return;
+      }
       const generation = ++showGeneration;
       actionGeneration += 1;
+      saveSubmittedDraft = null;
+      pendingConfigHydrate = false;
+
+      const openingConfig = deps.getConfig()!;
+      const openingDraft = draftFromConfig(openingConfig, null);
       patch({
-        status,
-        compose: status.compose,
-        operation: 'loading',
-        resultMessage: networkOperationProgressText('loading'),
-        resultOk: null,
-        error: null,
-        ...createHostNetworkFields(status),
+        phase: 'loading',
+        notice: null,
+        network: null,
+        ...openingDraft,
       });
+      draftBaseline = snapshotNetworkDraft(openingDraft);
+
       void deps.api
         .fetchSetupNetwork()
         .then((network) => {
           if (generation !== showGeneration) {
             return;
           }
-          const fields = { ...state, ...createHostNetworkFields(status) };
-          let reachabilityMode: ReachabilityMode = fields.reachabilityMode;
-          let customHostname = fields.customHostname;
-          const host = network.machineHostname?.trim();
-          const configured = status.configuredCanonicalBaseUrl?.trim();
-          if (matchesHostnameModeBase(configured, host, productPublishPort(fields.proxyEnabled))) {
-            reachabilityMode = 'hostname';
-            customHostname = '';
-          }
+          // Always re-read config — a newer snapshot may have arrived during fetch.
+          const config = deps.getConfig() ?? openingConfig;
+          const draft = draftFromConfig(config, network);
           patch({
             network,
-            reachabilityMode,
-            customHostname,
-            operation: 'idle',
-            resultMessage: null,
+            ...draft,
+            phase: 'idle',
+            notice: null,
           });
+          draftBaseline = snapshotNetworkDraft(draft);
+          pendingConfigHydrate = false;
         })
         .catch((error) => {
           if (generation !== showGeneration) {
             return;
           }
-          patch({
-            operation: 'failed',
-            error:
-              error instanceof Error ? error.message : 'Netzwerkdaten konnten nicht geladen werden.',
-            resultMessage: null,
-            resultOk: false,
-          });
+          setErrorNotice(
+            error instanceof Error ? error.message : 'Netzwerkdaten konnten nicht geladen werden.',
+          );
         });
     },
 
     hide() {
       showGeneration += 1;
       actionGeneration += 1;
+      draftBaseline = null;
+      saveSubmittedDraft = null;
+      pendingConfigHydrate = false;
       patch({
-        operation: 'idle',
-        error: null,
-        resultMessage: null,
-        resultOk: null,
+        phase: 'idle',
+        notice: null,
       });
     },
 
-    applyConfigSnapshot(status) {
-      const dirty = isDirty();
-      patch({ status });
-      if (!dirty && !networkIsBusy(state.operation)) {
-        patch(createHostNetworkFields(status));
+    syncFromConfig() {
+      const config = deps.getConfig();
+      if (!config) {
+        return;
       }
+      if (networkIsBusy(state.phase)) {
+        pendingConfigHydrate = true;
+        return;
+      }
+      tryHydrateFromConfig(config);
     },
 
-    applyRuntimeHealth(health) {
-      patch({ compose: health.compose });
+    discardDraft() {
+      const config = deps.getConfig();
+      if (!config || networkIsBusy(state.phase)) {
+        return;
+      }
+      saveSubmittedDraft = null;
+      pendingConfigHydrate = false;
+      const draft = draftFromConfig(config, state.network);
+      applyDraft(draft);
+      patch({ notice: null });
     },
   };
 }

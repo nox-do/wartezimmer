@@ -27,7 +27,23 @@ test('tabDisabled enables network and maintenance when env and docker are ready'
   assert.equal(tabDisabled('maintenance', ready), null);
 });
 
-test('setupReadyForTools prefers runtime docker/env over stale config', () => {
+test('runtime alone does not unlock tools without configSnapshot', () => {
+  const runtime: HostRuntimeHealth = {
+    checkedAt: '2026-07-21T12:00:00.000Z',
+    envExists: true,
+    configuredLanIp: '192.168.1.10',
+    appBaseUrl: 'http://192.168.1.10:8080',
+    docker: { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
+    compose: null,
+    probes: [],
+    sandboxScanner: null,
+    proxyServer: null,
+  };
+  assert.equal(setupReadyForTools(null, runtime), false);
+  assert.equal(tabDisabled('network', null, runtime), 'Noch nicht verfügbar');
+});
+
+test('setupReadyForTools prefers runtime docker/env over stale config when config exists', () => {
   const config = minimalHostStatus({
     envExists: false,
     docker: { installed: true, daemonRunning: false, composeAvailable: true, detail: null },

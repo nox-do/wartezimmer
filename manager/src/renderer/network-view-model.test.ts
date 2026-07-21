@@ -16,9 +16,10 @@ import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 
 test('networkIsBusy covers in-flight phases only', () => {
   assert.equal(networkIsBusy('idle'), false);
-  assert.equal(networkIsBusy('success'), false);
   assert.equal(networkIsBusy('checking'), true);
   assert.equal(networkIsBusy('saving'), true);
+  assert.equal(networkIsBusy('restarting'), true);
+  assert.equal(networkIsBusy('loading'), true);
 });
 
 test('formatActiveReachabilityResult prefers actionable messages', () => {
@@ -67,21 +68,58 @@ test('networkProxyMissingAfterRestart detects enabled-but-missing container', ()
   );
 });
 
-test('proxyNeedsRestore and savedDeviceBaseUrl', () => {
+test('proxyNeedsRestore uses runtime container when runtime snapshot exists', () => {
+  const config = minimalHostStatus({
+    proxy: {
+      enabled: true,
+      mode: 'http',
+      canonicalBaseUrl: 'http://192.168.1.10',
+      httpPort: 80,
+      appBindAddress: '127.0.0.1',
+      container: {
+        name: 'stale',
+        service: 'proxy',
+        state: 'exited',
+        health: null,
+      },
+    },
+  });
+  assert.equal(proxyNeedsRestore(config, null), true);
   assert.equal(
-    proxyNeedsRestore(
-      minimalHostStatus({
-        proxy: {
-          enabled: true,
-          mode: 'http',
-          canonicalBaseUrl: 'http://192.168.1.10',
-          httpPort: 80,
-          appBindAddress: '127.0.0.1',
-          container: null,
-        },
-      }),
-    ),
+    proxyNeedsRestore(config, {
+      checkedAt: 't',
+      envExists: true,
+      configuredLanIp: '192.168.1.10',
+      appBaseUrl: null,
+      docker: config.docker,
+      compose: null,
+      probes: [],
+      sandboxScanner: null,
+      proxyServer: null,
+    }),
     true,
+  );
+  assert.equal(
+    proxyNeedsRestore(config, {
+      checkedAt: 't',
+      envExists: true,
+      configuredLanIp: '192.168.1.10',
+      appBaseUrl: null,
+      docker: config.docker,
+      compose: null,
+      probes: [],
+      sandboxScanner: null,
+      proxyServer: {
+        enabled: true,
+        container: {
+          name: 'up',
+          service: 'proxy',
+          state: 'running',
+          health: 'healthy',
+        },
+      },
+    }),
+    false,
   );
   assert.equal(
     savedDeviceBaseUrl(

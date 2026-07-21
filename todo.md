@@ -39,11 +39,12 @@ Ziel: drei Wahrheiten — `configSnapshot` / `runtimeSnapshot` / `networkDraft` 
 - Nachzug: Full-Refresh Config/Runtime entkoppelt (`allSettled`); Fehler `statusError` vs `runtimeError`; StatusView blankt nicht bei Health-Fehler; `effectiveProxyContainer` — Runtime-`proxyServer: null` schlägt Config
 - Tests: Selektoren, Navigation, MainNav-Runtime-Unlock, Partial-Refresh; typecheck grün
 
-**Review-Punkt 2 — Network-State (offen)**
+**Review-Punkt 2 — Network-State (bereit zum Commit)**
 - Draft / Phase / Notice; Controller ohne Config-/Runtime-Kopien
-- NetworkView: Session-Lifecycle + `$derived`; Effects reduzieren
-- `NETWORK_NO_CHANGES_HINT` löschen; Übernehmen-Button immer sichtbar, dirty-disabled
-- Tests: Poll/Draft/Session/Races
+- Hydration: Draft-Baseline, `saveSubmittedDraft` (bleibt nach Env-Write auch bei Restartfehler), Pending-Flush
+- Dirty-Split, `discardDraft` + Button „Änderungen verwerfen“, gestoppter Stack → Notice `warning`
+- Ein Lifecycle-Effekt; MainNav braucht `configSnapshot`
+- Tests inkl. Restartfehler+Hydration; typecheck grün
 
 **Nicht enthalten:** voller Maintenance-Umbau, Wizard-Architektur, Backend-DTOs, Gateway-Migration, `host-state.ts`-Split. Wizard nur Rename/Typen/gemeinsame Draft-Helfer.
 

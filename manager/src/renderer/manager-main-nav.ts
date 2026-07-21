@@ -14,10 +14,14 @@ export const TAB_LABELS: Record<MainNavTab, string> = {
 
 export const TAB_ORDER: MainNavTab[] = ['status', 'network', 'maintenance', 'wizard'];
 
+/** Tools tabs need a config snapshot; runtime alone must not unlock them. */
 export function setupReadyForTools(
   config: HostStatus | null,
   runtime: HostRuntimeHealth | null = null,
 ): boolean {
+  if (!config) {
+    return false;
+  }
   const envExists = effectiveEnvExists(config, runtime);
   const docker = effectiveDocker(config, runtime);
   return Boolean(envExists && docker?.installed && docker?.daemonRunning);
@@ -28,7 +32,7 @@ export function tabDisabled(
   config: HostStatus | null,
   runtime: HostRuntimeHealth | null = null,
 ): string | null {
-  if (!config && !runtime) {
+  if (!config) {
     return tab === 'status' || tab === 'wizard' ? null : 'Noch nicht verfügbar';
   }
   if ((tab === 'network' || tab === 'maintenance') && !setupReadyForTools(config, runtime)) {

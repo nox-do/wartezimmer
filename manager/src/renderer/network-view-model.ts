@@ -4,19 +4,21 @@ import type {
   NetworkBindingCheck,
   ProbeResult,
 } from '../shared/host-status.js';
-import type { LanIpFieldState } from './host-network-panels.js';
+import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
+import type { LanIpFieldState, ReachabilityFieldState } from './host-network-panels.js';
+import { effectiveProxyContainer } from './host-snapshot-selectors.js';
 import { resolvedLanIp } from './wizard-state.js';
 
-export type NetworkOperation =
-  | 'idle'
-  | 'loading'
-  | 'saving'
-  | 'restarting'
-  | 'checking'
-  | 'success'
-  | 'failed';
+/** In-flight phases only — outcomes live in NetworkNotice. */
+export type NetworkPhase = 'idle' | 'loading' | 'saving' | 'restarting' | 'checking';
 
-export const NETWORK_NO_CHANGES_HINT = 'Keine Änderungen an LAN, Proxy oder Geräte-Adresse.';
+export type NetworkNotice =
+  | { tone: 'success'; message: string }
+  | { tone: 'warning'; message: string }
+  | { tone: 'error'; message: string };
+
+export type NetworkDraft = LanIpFieldState & ReachabilityFieldState;
+
 export const NETWORK_LAN_REQUIRED_ERROR = 'Bitte eine Adresse dieses Rechners wählen oder eingeben.';
 export const NETWORK_RESTART_CONFIRM_MESSAGE =
   'Einstellungen speichern und Praxis Flow neu starten, damit die Änderung wirksam wird?';
@@ -31,17 +33,14 @@ export const NETWORK_STACK_STOPPED_VERIFY_HINT =
 export const NETWORK_PROBE_FAILED_MESSAGE =
   'Die Erreichbarkeit konnte nicht geprüft werden. Bitte kurz warten und erneut versuchen.';
 
-export function networkIsBusy(operation: NetworkOperation): boolean {
+export function networkIsBusy(phase: NetworkPhase): boolean {
   return (
-    operation === 'loading' ||
-    operation === 'saving' ||
-    operation === 'restarting' ||
-    operation === 'checking'
+    phase === 'loading' || phase === 'saving' || phase === 'restarting' || phase === 'checking'
   );
 }
 
-export function networkOperationProgressText(operation: NetworkOperation): string {
-  switch (operation) {
+export function networkPhaseProgressText(phase: NetworkPhase): string {
+  switch (phase) {
     case 'loading':
       return 'Netzwerkdaten werden geladen …';
     case 'saving':
@@ -55,12 +54,16 @@ export function networkOperationProgressText(operation: NetworkOperation): strin
   }
 }
 
-/** Configured proxy without a running container — recoverable via restore action. */
-export function proxyNeedsRestore(status: HostStatus | null | undefined): boolean {
-  if (!status?.proxy?.enabled) {
+/** Configured proxy without a running container — container from runtime when available. */
+export function proxyNeedsRestore(
+  config: HostStatus | null | undefined,
+  runtime: HostRuntimeHealth | null = null,
+): boolean {
+  if (!config?.proxy?.enabled) {
     return false;
   }
-  const state = status.proxy.container?.state?.toLowerCase() ?? '';
+  const container = effectiveProxyContainer(config, runtime);
+  const state = container?.state?.toLowerCase() ?? '';
   return !state.includes('running');
 }
 
@@ -105,13 +108,14 @@ export function networkLanSubtitle(
 }
 
 export function networkProxySubtitle(
-  status: HostStatus | null | undefined,
+  config: HostStatus | null | undefined,
   proxyEnabled: boolean,
+  runtime: HostRuntimeHealth | null = null,
 ): string {
   if (!proxyEnabled) {
     return 'Aus — Geräte-Adresse mit :8080';
   }
-  if (proxyNeedsRestore(status)) {
+  if (proxyNeedsRestore(config, runtime)) {
     return 'An — Proxy-Dienst fehlt';
   }
   return 'An — Geräte-Adresse ohne :8080 (Port 80)';
@@ -130,6 +134,7 @@ export function networkReachabilitySubtitle(status: HostStatus | null | undefine
 export function networkExpanderDefaults(input: {
   status: HostStatus;
   proxyEnabled: boolean;
+  runtime?: HostRuntimeHealth | null;
 }): {
   lanOpen: boolean;
   proxyOpen: boolean;
@@ -140,7 +145,7 @@ export function networkExpanderDefaults(input: {
   const checks = networkHostChecksForDisplay(input.status.networkBindings);
   return {
     lanOpen: Boolean(input.status.network.lanIpStale) || !input.status.network.configuredLanIp,
-    proxyOpen: input.proxyEnabled && proxyNeedsRestore(input.status),
+    proxyOpen: input.proxyEnabled && proxyNeedsRestore(input.status, input.runtime ?? null),
     reachabilityOpen: true,
     checksOpen: networkHostChecksHaveFailures(checks),
     topologyOpen: false,
@@ -192,7 +197,10 @@ function proxyContainerRunning(result: HostNetworkResult): boolean {
 }
 
 /** After save+restart: proxy enabled but container still missing. */
-export function networkProxyMissingAfterRestart(result: HostNetworkResult, proxyEnabled: boolean): boolean {
+export function networkProxyMissingAfterRestart(
+  result: HostNetworkResult,
+  proxyEnabled: boolean,
+): boolean {
   return proxyEnabled && result.composeRestarted && !proxyContainerRunning(result);
 }
 

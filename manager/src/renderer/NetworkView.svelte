@@ -3,14 +3,12 @@
    * Network tab layout (IT action order):
    * 1 Host/LAN → 2 Proxy → 3 Erreichbarkeit → Apply+Verify → 4 Prüfungen → 5 Erläuterung
    *
-   * CAUTION — shell sync: three $effects below (session / config / runtime). Do not
-   * merge casually; show() vs applyConfigSnapshot vs applyRuntimeHealth have different
-   * dirty-field semantics (see network-controller).
-   * Session is generation-only; status comes from managerShell.configSnapshot.
+   * Shell: configSnapshot + runtimeSnapshot via $derived / selectors.
+   * Controller: draft + phase/notice + network snapshot; hydration via syncFromConfig.
+   * One lifecycle $effect for session open/close and config refresh.
    */
   import { onMount } from 'svelte';
   import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
-  import type { HostStatus } from '../shared/host-status.js';
   import { hostNetworkChanged } from './host-network-panels.js';
   import {
     createNetworkController,
@@ -23,6 +21,7 @@
     networkHostChecksSubtitle,
     networkIsBusy,
     networkLanSubtitle,
+    networkPhaseProgressText,
     networkProxySubtitle,
     networkReachabilitySubtitle,
     networkWarningText,
@@ -30,6 +29,7 @@
     proxyNeedsRestore,
     savedDeviceBaseUrl,
   } from './network-view-model.js';
+  import { effectiveCompose, effectiveConfiguredLanIp } from './host-snapshot-selectors.js';
   import { resolvedLanIp } from './wizard-state.js';
   import { managerShell } from './manager-shell-state.svelte.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
@@ -61,10 +61,11 @@
 
   let controller = $state<NetworkController | null>(null);
   let lastSessionGeneration = $state<number | null>(null);
-  /** Skip config effect once after session show() used this same snapshot ref. */
-  let sessionOpenConfig = $state<HostStatus | null>(null);
 
   const viewLoading = $derived(managerShell.viewLoading.network);
+  const configSnapshot = $derived(managerShell.configSnapshot);
+  const runtimeSnapshot = $derived(managerShell.runtimeSnapshot);
+  const compose = $derived(effectiveCompose(configSnapshot, runtimeSnapshot));
 
   function requireApi(): PraxisManagerApi {
     const api = window.praxisManager;
@@ -80,10 +81,14 @@
     snapshot = controller ? { ...controller.getState() } : null;
   }
 
-  function applyExpanderDefaults(state: NetworkState): void {
+  function applyExpanderDefaults(draft: NetworkState): void {
+    if (!configSnapshot) {
+      return;
+    }
     const defaults = networkExpanderDefaults({
-      status: state.status!,
-      proxyEnabled: state.proxyEnabled,
+      status: configSnapshot,
+      proxyEnabled: draft.proxyEnabled,
+      runtime: runtimeSnapshot,
     });
     lanOpen = defaults.lanOpen;
     proxyOpen = defaults.proxyOpen;
@@ -116,32 +121,44 @@
   }
 
   const dirty = $derived(
-    snapshot ? hostNetworkChanged(snapshot, snapshot.status, snapshot.network) : false,
+    snapshot ? hostNetworkChanged(snapshot, configSnapshot, snapshot.network) : false,
   );
 
-  const busy = $derived(snapshot ? networkIsBusy(snapshot.operation) : false);
+  const busy = $derived(snapshot ? networkIsBusy(snapshot.phase) : false);
+
+  const progressText = $derived(
+    snapshot && busy ? networkPhaseProgressText(snapshot.phase) : '',
+  );
 
   const warningText = $derived(
-    snapshot ? networkWarningText(snapshot.compose?.running ?? false, dirty) : null,
+    snapshot ? networkWarningText(compose?.running ?? false, dirty) : null,
   );
 
   const showProxyRestore = $derived(
-    Boolean(snapshot && snapshot.proxyEnabled && proxyNeedsRestore(snapshot.status)),
+    Boolean(
+      snapshot &&
+        snapshot.proxyEnabled &&
+        proxyNeedsRestore(configSnapshot, runtimeSnapshot),
+    ),
   );
 
   const hostChecks = $derived(
-    snapshot ? networkHostChecksForDisplay(snapshot.status?.networkBindings) : [],
+    configSnapshot ? networkHostChecksForDisplay(configSnapshot.networkBindings) : [],
   );
 
   const diagramLanIp = $derived(
-    snapshot ? resolvedLanIp(snapshot) || snapshot.status?.network.configuredLanIp : null,
+    snapshot
+      ? resolvedLanIp(snapshot) || effectiveConfiguredLanIp(configSnapshot, runtimeSnapshot)
+      : null,
   );
 
-  const savedUrl = $derived(snapshot ? savedDeviceBaseUrl(snapshot.status) : null);
+  const savedUrl = $derived(savedDeviceBaseUrl(configSnapshot));
 
   onMount(() => {
     controller = createNetworkController({
       api: requireApi(),
+      getConfig: () => managerShell.configSnapshot,
+      getRuntime: () => managerShell.runtimeSnapshot,
       onAfterMutation,
       requestConfirm,
       onStateChange: syncSnapshot,
@@ -152,6 +169,7 @@
   $effect(() => {
     const c = controller;
     const session = managerShell.networkSession;
+    const config = managerShell.configSnapshot;
     if (!c) {
       return;
     }
@@ -161,54 +179,26 @@
         c.hide();
         syncSnapshot();
         lastSessionGeneration = null;
-        sessionOpenConfig = null;
       }
       return;
     }
 
     if (session.generation !== lastSessionGeneration) {
-      const status = managerShell.configSnapshot;
-      if (!status) {
+      if (!config) {
         return;
       }
       lastSessionGeneration = session.generation;
-      sessionOpenConfig = status;
-      c.show(status);
-      const runtime = managerShell.runtimeSnapshot;
-      if (runtime) {
-        c.applyRuntimeHealth(runtime);
-      }
+      c.show();
       syncSnapshot();
-      const state = c.getState();
-      if (state.status) {
-        applyExpanderDefaults(state);
-      }
+      applyExpanderDefaults(c.getState());
+      return;
     }
-  });
 
-  $effect(() => {
-    const c = controller;
-    const status = managerShell.configSnapshot;
-    const session = managerShell.networkSession;
-    if (!c || !status || !session) {
-      return;
+    // Same session: config refresh → controller decides hydrate vs keep dirty draft.
+    if (config) {
+      c.syncFromConfig();
+      syncSnapshot();
     }
-    if (status === sessionOpenConfig) {
-      return;
-    }
-    c.applyConfigSnapshot(status);
-    syncSnapshot();
-  });
-
-  $effect(() => {
-    const c = controller;
-    const health = managerShell.runtimeSnapshot;
-    const session = managerShell.networkSession;
-    if (!c || !health || !session || managerShell.activeView !== 'network') {
-      return;
-    }
-    c.applyRuntimeHealth(health);
-    syncSnapshot();
   });
 </script>
 
@@ -220,13 +210,13 @@
 >
   <LoadingOverlay loading={viewLoading} />
 
-  {#if snapshot?.status}
+  {#if configSnapshot && snapshot}
     <section class="panel-section panel-section--network">
       <div class="maintenance-accordion">
         <MaintenanceSection
           open={lanOpen}
           title="Adresse dieses Rechners"
-          subtitle={networkLanSubtitle(snapshot.status, snapshot)}
+          subtitle={networkLanSubtitle(configSnapshot, snapshot)}
           onToggle={() => {
             lanOpen = !lanOpen;
           }}
@@ -237,7 +227,7 @@
           <LanIpPanel
             state={snapshot}
             network={snapshot.network}
-            status={snapshot.status}
+            status={configSnapshot}
             disabled={busy}
             onChange={patchFields}
           />
@@ -246,7 +236,7 @@
         <MaintenanceSection
           open={proxyOpen}
           title="Gerätezugriff (Port 80)"
-          subtitle={networkProxySubtitle(snapshot.status, snapshot.proxyEnabled)}
+          subtitle={networkProxySubtitle(configSnapshot, snapshot.proxyEnabled, runtimeSnapshot)}
           onToggle={() => {
             proxyOpen = !proxyOpen;
           }}
@@ -264,7 +254,7 @@
         <MaintenanceSection
           open={reachabilityOpen}
           title="Adresse für Terminal, TV und MFA"
-          subtitle={networkReachabilitySubtitle(snapshot.status)}
+          subtitle={networkReachabilitySubtitle(configSnapshot)}
           onToggle={() => {
             reachabilityOpen = !reachabilityOpen;
           }}
@@ -274,8 +264,8 @@
             network={snapshot.network}
             disabled={busy}
             savedBaseUrl={savedUrl}
-            verifyBusy={snapshot.operation === 'checking'}
-            verifyEnabled={Boolean(snapshot.compose?.running)}
+            verifyBusy={snapshot.phase === 'checking'}
+            verifyEnabled={Boolean(compose?.running)}
             verifyDisabledHint={NETWORK_STACK_STOPPED_VERIFY_HINT}
             onChange={patchFields}
             onVerifySaved={() => controller?.verifyActiveConfiguration(savedUrl)}
@@ -295,18 +285,32 @@
         >
           Einstellungen übernehmen und prüfen
         </button>
+        {#if dirty}
+          <button
+            type="button"
+            class="btn-secondary"
+            disabled={busy}
+            onclick={() => {
+              controller?.discardDraft();
+              syncSnapshot();
+            }}
+          >
+            Änderungen verwerfen
+          </button>
+        {/if}
       </div>
-      {#if snapshot.resultMessage}
+      {#if progressText}
+        <p class="maintenance-backup-status">{progressText}</p>
+      {:else if snapshot.notice}
         <p
-          class={snapshot.resultOk === false || snapshot.operation === 'failed'
+          class={snapshot.notice.tone === 'error'
             ? 'error'
-            : 'maintenance-backup-status'}
+            : snapshot.notice.tone === 'warning'
+              ? 'lan-warning'
+              : 'maintenance-backup-status'}
         >
-          {snapshot.resultMessage}
+          {snapshot.notice.message}
         </p>
-      {/if}
-      {#if snapshot.error && snapshot.error !== snapshot.resultMessage}
-        <p class="error">{snapshot.error}</p>
       {/if}
 
       <div class="maintenance-accordion network-diagnose-accordion">
