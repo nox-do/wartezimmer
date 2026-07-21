@@ -156,11 +156,13 @@ test('applyPfupdate succeeds and writes new image tags', async () => {
     const env = readEnvMap(envPath);
     assert.equal(env.get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:2026.08.0');
     assert.equal(env.get('PRAXIS_FLOW_SANDBOX_IMAGE'), 'praxis-flow/sandbox:2026.08.0');
-    assert.equal(env.get('PRAXIS_FLOW_GATEWAY_IMAGE'), 'praxis-flow/gateway:2026.08.0');
+    // Product packages omit gateway; existing lab image ref is preserved.
+    assert.equal(env.get('PRAXIS_FLOW_GATEWAY_IMAGE'), 'praxis-flow/gateway:2026.07.1');
 
     const manager = readManagerState(dir);
     assert.equal(manager.release?.releaseVersion, '2026.08.0');
     assert.equal(manager.release?.appImage, 'praxis-flow/app:2026.08.0');
+    assert.equal(manager.release?.gatewayImage, 'praxis-flow/gateway:2026.07.1');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

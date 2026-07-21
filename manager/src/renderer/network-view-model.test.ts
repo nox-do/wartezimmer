@@ -47,9 +47,10 @@ test('networkSaveStatusText summarizes save and restart outcome', () => {
   assert.match(text, /neu gestartet/);
 });
 
-test('networkSaveStatusText notes skipped gateway compose on macOS', () => {
+test('networkSaveStatusText ignores gatewayComposeSkipped', () => {
   const text = networkSaveStatusText(minimalSaveResult({ gatewayComposeSkipped: true }), false);
-  assert.match(text, /Gateway auf diesem Rechner übersprungen/);
+  assert.doesNotMatch(text, /Gateway/);
+  assert.match(text, /gespeichert/);
 });
 
 test('networkSaveErrorText surfaces restart failure log', () => {
@@ -63,6 +64,41 @@ test('networkSaveErrorText surfaces restart failure log', () => {
   assert.equal(networkSaveErrorText(minimalSaveResult(), true), null);
 });
 
-test('NETWORK_NO_CHANGES_ERROR is stable copy', () => {
-  assert.equal(NETWORK_NO_CHANGES_ERROR, 'Keine Änderungen an LAN oder Gateway.');
+test('NETWORK_NO_CHANGES_ERROR mentions LAN and proxy only', () => {
+  assert.equal(NETWORK_NO_CHANGES_ERROR, 'Keine Änderungen an LAN oder Proxy-Server.');
+});
+
+test('networkSaveStatusText notes proxy when stack was stopped', () => {
+  const text = networkSaveStatusText(
+    minimalSaveResult({
+      composeRestarted: false,
+      stackWasRunning: false,
+    }),
+    false,
+    { proxyEnabled: true },
+  );
+  assert.match(text, /Proxy aktiviert/);
+  assert.match(text, /Stack unter Status starten/);
+});
+
+test('networkSaveStatusText notes running proxy after restart', () => {
+  const text = networkSaveStatusText(
+    minimalSaveResult({
+      compose: {
+        running: true,
+        services: [
+          {
+            name: 'proxy',
+            service: 'proxy',
+            state: 'running',
+            health: null,
+            publishedPorts: [80],
+          },
+        ],
+      },
+    }),
+    true,
+    { proxyEnabled: true },
+  );
+  assert.match(text, /Proxy-Server läuft/);
 });

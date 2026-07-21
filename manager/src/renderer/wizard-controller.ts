@@ -1,7 +1,6 @@
 import type { HostStatus } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import type { WizardPresentation } from './manager-navigation.js';
-import { gatewayDraftDefaults, resolvedLanIp } from './wizard-state.js';
 import {
   pickAndLoadReleaseArchive,
   WIZARD_RELEASE_IMPORT_LOADING_MESSAGE,
@@ -118,7 +117,6 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       const network = await loadWizardNetwork(deps.api);
       patch({
         ...wizardReachabilityAfterNetworkLoad(state, network),
-        ...gatewayDraftDefaults(state, network, resolvedLanIp(state)),
       });
       return;
     }
@@ -161,7 +159,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     routingCapabilitiesPromise = deps.api
       .getRoutingMode()
       .then((capabilities) => {
-        if (requestId !== routingCapabilitiesRequestId || state.step !== 3) {
+        if (requestId !== routingCapabilitiesRequestId || state.step !== 2) {
           return;
         }
         patch({
@@ -171,7 +169,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
         });
       })
       .catch(() => {
-        if (requestId === routingCapabilitiesRequestId && state.step === 3) {
+        if (requestId === routingCapabilitiesRequestId && state.step === 2) {
           patch({ complexRoutingLicensed: true, routingCapabilitiesStatus: 'error' });
         }
       });
@@ -180,7 +178,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
   }
 
   async function enterStep(step: WizardStep): Promise<void> {
-    if (step === 3) {
+    if (step === 2) {
       await ensureRoutingCapabilities();
     }
   }
@@ -195,6 +193,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       const clearsProbe =
         'reachabilityMode' in partial ||
         'customHostname' in partial ||
+        'proxyEnabled' in partial ||
         'lanAppIp' in partial ||
         'customLanIp' in partial;
       patch({
@@ -223,7 +222,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       setError(null);
       setBusy(true);
       try {
-        if (state.step === 3) {
+        if (state.step === 2) {
           await ensureRoutingCapabilities();
           if (state.routingCapabilitiesStatus !== 'ready' || state.routingMode === null) {
             setError('Routing-Modus konnte nicht geladen werden. Bitte erneut versuchen.');

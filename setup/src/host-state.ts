@@ -31,11 +31,7 @@ import {
   prepareStorageFoldersOnDisk,
   writeStorageFolders,
 } from './storage-folders.js';
-import {
-  listLanIpv4Candidates,
-  listNetworkInterfaces,
-  machineHostname,
-} from './network.js';
+import { listLanIpv4Candidates, listNetworkInterfaces, machineHostname } from './network.js';
 import { runConnectionProbes } from './probes.js';
 import {
   DEFAULT_GATEWAY_BRIDGE_PORT,
@@ -96,6 +92,8 @@ import {
   assertComposeRemoveSucceeded,
   buildProxyEnvUpdates,
   buildProxyStatus,
+  ensureProxyImageAvailable,
+  findProxyContainer,
   planProxyComposeActions,
   PROXY_IMAGE_ENV_KEY,
   PROXY_RUNTIME_ENV_KEYS,
@@ -103,7 +101,9 @@ import {
   readProxyConfig,
   resolveCanonicalBaseUrlForProxyPlan,
   resolveProxyConfigForWrite,
+  resolveProxyImageRef,
 } from './proxy.js';
+import { dockerImageExists } from './delivery-images.js';
 import { SetupApiValidationError } from './setup-api-normalize.js';
 import type { SetupContext } from './setup-context.js';
 import type { ProxyConfigInput } from '@praxis-flow/server-shared';
@@ -141,6 +141,7 @@ export type HostWriteRuntimeHooks = {
   composeRemoveServices?: typeof composeRemoveServices;
   composeUp?: typeof composeUp;
   auditNetworkPrerequisites?: typeof auditNetworkPrerequisites;
+  ensureProxyImageAvailable?: typeof ensureProxyImageAvailable;
 };
 
 function requireProxyConfig(env: Map<string, string> | null | undefined) {
@@ -173,6 +174,18 @@ function mapProxyError(error: unknown): never {
     throw new SetupApiValidationError(error.message);
   }
   throw error;
+}
+
+async function ensureProxyImageForCompose(
+  env: Map<string, string>,
+  hooks?: HostWriteRuntimeHooks,
+): Promise<void> {
+  const ensure = hooks?.ensureProxyImageAvailable ?? ensureProxyImageAvailable;
+  try {
+    await ensure(env);
+  } catch (error) {
+    mapProxyError(error);
+  }
 }
 
 function isProxyCurrentlyEnabled(env: Map<string, string>): boolean {
@@ -514,6 +527,22 @@ export async function getHostRuntimeHealth(ctx: SetupContext): Promise<HostRunti
     sandboxScanner = await fetchSandboxScannerStatus(resolveMaxSignatureAgeHours(envMap));
   }
 
+  let proxyServer: HostRuntimeHealth['proxyServer'] = null;
+  if (docker.daemonRunning) {
+    try {
+      const proxy = readProxyConfig(envMap);
+      const container = findProxyContainer(compose);
+      const used = proxy.enabled || Boolean(container);
+      // Enabled proxy always gets a header tile (even if the image is missing), so a
+      // configured-but-broken state is visible. Optional image gate only for leftover containers.
+      if (used && (proxy.enabled || (await dockerImageExists(resolveProxyImageRef(envMap))))) {
+        proxyServer = { enabled: proxy.enabled, container };
+      }
+    } catch {
+      // Invalid proxy env — omit header tile; full HostStatus surfaces the error path.
+    }
+  }
+
   return {
     checkedAt,
     envExists,
@@ -523,6 +552,7 @@ export async function getHostRuntimeHealth(ctx: SetupContext): Promise<HostRunti
     compose,
     probes,
     sandboxScanner,
+    proxyServer,
   };
 }
 
@@ -669,10 +699,7 @@ export async function applySetupPlan(
   });
   const releaseEnv = releaseEnvFromManagerState(readManagerState(projectRoot));
   const previousLanIp = pickLanIpFromEnv(existingBefore);
-  const { proxy, writeEnv: writeProxyEnv } = resolveProxyForHostWrite(
-    existingBefore,
-    input.proxy,
-  );
+  const { proxy, writeEnv: writeProxyEnv } = resolveProxyForHostWrite(existingBefore, input.proxy);
   // Image always; runtime PROXY_* only when wire omits proxy (else overrides cannot flip enable).
   const preserveExistingKeys = [
     ...(input.preserveEnv
@@ -706,8 +733,7 @@ export async function applySetupPlan(
   const runComposeUp = hooks?.composeUp ?? composeUp;
 
   const deliveryEarly = Boolean(
-    resolveDeliveryImageConfig({ projectRoot, envMap: existingBefore })?.appImage ||
-      input.delivery,
+    resolveDeliveryImageConfig({ projectRoot, envMap: existingBefore })?.appImage || input.delivery,
   );
   const runOptionsEarly = {
     projectRoot,
@@ -781,7 +807,6 @@ export async function applySetupPlan(
   const envAfterWrite = readEnvMap(envPath);
 
   let compose: Awaited<ReturnType<typeof composeUp>> | null = null;
-  let composeStatus: ComposeStatus | null = null;
   if (input.runCompose) {
     const delivery = Boolean(
       resolveDeliveryImageConfig({ projectRoot, envMap: envAfterWrite })?.appImage ||
@@ -792,13 +817,15 @@ export async function applySetupPlan(
       delivery,
       composeProjectName: ctx.composeProjectName,
     };
+    if (proxy.enabled) {
+      await ensureProxyImageForCompose(envAfterWrite, hooks);
+    }
     compose = await runComposeUp({
       ...runOptions,
       withGateway: input.gateway.enabled,
       withProxy: proxy.enabled,
       build: resolveComposeBuild({ ...input, delivery }),
     });
-    composeStatus = await runComposePs(runOptions);
   }
 
   const probes =
@@ -967,6 +994,9 @@ export async function saveHostNetwork(
 
   if (proxyActions.composeUp) {
     const envAfter = readEnvMap(envPath);
+    if (proxy.enabled) {
+      await ensureProxyImageForCompose(envAfter, hooks);
+    }
     const up = await runComposeUp({
       ...resolveComposeRunOptions(ctx, envAfter),
       build: false,
@@ -976,7 +1006,10 @@ export async function saveHostNetwork(
     composeRestarted = up.ok;
     gatewayComposeSkipped = up.gatewaySkipped;
     restartLog = [restartLog, up.log].filter(Boolean).join('\n') || null;
-    compose = await runComposePs(resolveComposeRunOptions(ctx, envAfter));
+    compose = await runComposePs({
+      ...resolveComposeRunOptions(ctx, envAfter),
+      withProxy: proxy.enabled,
+    });
   }
 
   return {

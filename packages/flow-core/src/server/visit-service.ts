@@ -34,7 +34,11 @@ import {
   resolveReturnToWaitingVisitPatch,
   statusForMovementMode,
 } from '@praxis-flow/flow-core';
-import type { RedirectRequestBody, RedirectContext, TransitionRequestBody } from '@praxis-flow/flow-core';
+import type {
+  RedirectRequestBody,
+  RedirectContext,
+  TransitionRequestBody,
+} from '@praxis-flow/flow-core';
 import { resolveCheckInRouting } from './escort.js';
 import { resolveQueueOnArrival } from './location-routing.js';
 import { allocateQueueSequence } from './queue-counter.js';
@@ -82,13 +86,8 @@ export function createVisitService(params: {
 }) {
   const { db, catalogRepository, visitRepository, maybeFail, resolveBusinessDay } = params;
   const { loadCatalog, stepsForTemplate } = catalogRepository;
-  const {
-    visitRecordById,
-    toVisitView,
-    updateVisit,
-    addEvent,
-    insertCheckInAggregate,
-  } = visitRepository;
+  const { visitRecordById, toVisitView, updateVisit, addEvent, insertCheckInAggregate } =
+    visitRepository;
 
   const visitView = (id: string, catalog: Catalog): VisitView | undefined => {
     const record = visitRecordById(id);

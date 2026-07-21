@@ -8,7 +8,7 @@ Vom Pitch zur lauffähigen Installation — Detailstand in [`todo.md`](../todo.m
 | ----------------- | ---------------------------- | -------------------------------------------------------- |
 | **1 Workflows**   | Screens, Regeln, Fehlerfälle | Runtime-UI deckt Happy Paths; frühe Mocks in Git-History |
 | **2 Architektur** | Komponenten, APIs, Events    | dokumentiert (`architecture.md`, `apis.md`)              |
-| **3 Integration** | eGK, PVS                     | offen · Gateway-Scaffold vorhanden                       |
+| **3 Integration** | eGK, PVS, WLAN-Adapter       | offen · Captive-Hardware nicht im Produkt                |
 | **4 Solution**    | Code, Docker, Betrieb        | laufend (`app`, `ui`, `sandbox`)                         |
 
 ## Vier Flows

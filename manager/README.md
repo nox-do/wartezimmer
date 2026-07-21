@@ -38,10 +38,10 @@ npm run dev:manager
 ### Install-Wizard (Assistent)
 
 1. Voraussetzungen (Docker, ggf. Release-Paket)
-2. Netzwerk — LAN-IP wählen (`GET /network`)
-3. Praxis — Anzeigename + Routing-Modus (`GET|POST /routing-mode`)
-4. Gast-WLAN / Gateway (optional)
-5. Import- & Export-Hostordner
+2. Praxis — Anzeigename + Routing-Modus
+3. Import & Export — Host-Ordner (Kontakte / MFA-Exporte)
+4. Netzwerk — LAN-IP & Erreichbarkeit (Basis)
+5. Zugang — Proxy + Hinweis WLAN-/Portal-Adapter (Auswahl folgt)
 6. Vorschau (`POST /plan`) — Geräte-URLs
 7. Anwenden (`POST /apply`) + Abschluss (Probes, Link zu IT-Einstellungen / Status)
 
@@ -57,7 +57,7 @@ Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unte
 
 ### Netzwerk-Tab
 
-- LAN-IP und Gateway (gleiche Panels wie Wizard), `POST /network` mit optionalem Stack-Neustart
+- LAN-IP und optional Proxy (`POST /network` mit optionalem Stack-Neustart)
 - Topology-Übersicht + Binding-Checks
 
 ### Wartung
@@ -90,7 +90,7 @@ Setup-API (localhost `:9190`):
 | GET     | `/api/setup/host/backup`           | Letztes `.env`-Backup (nur lesen)                                              |
 | POST    | `/api/setup/host/backup`           | `{ target: "env" }`                                                            |
 | POST    | `/api/setup/host/storage`          | `{ importsHostPath, exportsHostPath, restartCompose? }`                        |
-| POST    | `/api/setup/host/network`          | `{ lanAppIp, gateway, restartCompose? }` — Wartung/Netzwerk LAN/Gateway        |
+| POST    | `/api/setup/host/network`          | `{ lanAppIp, gateway, restartCompose? }` — Wartung/Netzwerk (gateway stets `{ enabled: false }` aus Manager) |
 | POST    | `/api/setup/host/reset-staff-pins` | MFA- & Ops-PIN auf Default `0000` (DB), Stack stop → reset → start             |
 | GET     | `/api/setup/host/routing-mode`     | Capabilities inkl. `routingMode`, `complexRoutingLicensed`                     |
 | POST    | `/api/setup/host/routing-mode`     | `{ routingMode: "simple"\|"complex" }` — proxied zur App-API mit Manager-Trust |

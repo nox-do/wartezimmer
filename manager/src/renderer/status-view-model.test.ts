@@ -118,7 +118,7 @@ test('statusGridRows includes wlan and lan when configured', () => {
       'WLAN aktuell',
       'LAN in .env',
       'Zugriff',
-      'Proxy',
+      'Proxy-Server',
       'Software-Paket',
     ],
   );

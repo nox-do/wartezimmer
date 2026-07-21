@@ -27,17 +27,8 @@
   background: var(--surface-raised, rgba(255, 255, 255, 0.02));
 }
 
-.net-scenario.is-current {
-  border-color: color-mix(in srgb, var(--accent, #3b82f6) 45%, var(--border));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, #3b82f6) 12%, transparent);
-}
-
 .net-scenario--portal {
-  border-color: color-mix(in srgb, #a855f7 28%, var(--border));
-}
-
-.net-scenario--portal.is-current {
-  border-color: color-mix(in srgb, #a855f7 50%, var(--accent, #3b82f6) 20%);
+  border-color: color-mix(in srgb, var(--accent, #3b82f6) 35%, var(--border));
 }
 
 .net-scenario-header {
@@ -59,7 +50,7 @@
 .net-scenario-badge {
   display: inline-block;
   padding: 0.12rem 0.45rem;
-  border-radius: 999px;
+  border-radius: 4px;
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -68,13 +59,8 @@
 }
 
 .net-scenario-badge--recommended {
-  background: color-mix(in srgb, #a855f7 18%, var(--surface, rgba(0, 0, 0, 0.12)));
-  color: color-mix(in srgb, #a855f7 75%, var(--text, #fff));
-}
-
-.net-scenario-badge--active {
-  background: color-mix(in srgb, var(--accent, #3b82f6) 20%, var(--surface, rgba(0, 0, 0, 0.12)));
-  color: color-mix(in srgb, var(--accent, #3b82f6) 85%, var(--text, #fff));
+  background: color-mix(in srgb, var(--accent, #3b82f6) 16%, var(--surface, rgba(0, 0, 0, 0.12)));
+  color: color-mix(in srgb, var(--accent, #3b82f6) 80%, var(--text, #fff));
 }
 
 .net-scenario-lead {
@@ -121,26 +107,13 @@
 }
 
 .net-flow-step--extern {
-  border-color: color-mix(in srgb, #f59e0b 40%, var(--border));
-  background: color-mix(in srgb, #f59e0b 8%, var(--surface, rgba(0, 0, 0, 0.08)));
+  border-color: color-mix(in srgb, #b45309 40%, var(--border));
+  background: color-mix(in srgb, #b45309 8%, var(--surface, rgba(0, 0, 0, 0.08)));
 }
 
 .net-flow-step--ours {
   border-color: color-mix(in srgb, var(--accent, #3b82f6) 40%, var(--border));
   background: color-mix(in srgb, var(--accent, #3b82f6) 8%, var(--surface, rgba(0, 0, 0, 0.08)));
-}
-
-.net-flow-step--struck {
-  border-color: #dc2626;
-  color: var(--text, #111);
-  background:
-    linear-gradient(to top left, transparent 46%, #dc2626 46%, #dc2626 54%, transparent 54%),
-    linear-gradient(to top right, transparent 46%, #dc2626 46%, #dc2626 54%, transparent 54%),
-    var(--surface, rgba(0, 0, 0, 0.08));
-}
-
-.net-flow-step--struck .net-flow-step-note {
-  color: var(--text, #111);
 }
 
 .net-flow-step-label {
@@ -177,119 +150,6 @@
   color: var(--muted);
 }
 
-.net-flow-host {
-  width: 100%;
-  padding: 0.6rem 0.65rem;
-  border: 2px dashed var(--border);
-  border-radius: 6px;
-  text-align: center;
-}
-
-.net-flow-host-title {
-  margin: 0 0 0.45rem;
-  font-size: 0.86rem;
-  font-weight: 600;
-}
-
-.net-flow-host-stack {
-  margin: 0 0 0.45rem;
-  font-size: 0.82rem;
-  color: var(--muted);
-}
-
-.net-flow-host-nics {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.net-flow-host-nic {
-  padding: 0.35rem 0.45rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  line-height: 1.35;
-  text-align: left;
-}
-
-.net-flow-host-nic--lan {
-  border: 1px solid color-mix(in srgb, var(--accent, #3b82f6) 35%, var(--border));
-  background: color-mix(in srgb, var(--accent, #3b82f6) 6%, transparent);
-}
-
-.net-flow-host-nic--portal {
-  border: 1px solid color-mix(in srgb, #a855f7 35%, var(--border));
-  background: color-mix(in srgb, #a855f7 6%, transparent);
-}
-
-.net-flow-host-nic-label {
-  display: block;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 0.1rem;
-}
-
-.net-flow-host-caption {
-  margin: 0.4rem 0 0;
-  font-size: 0.78rem;
-  color: var(--muted);
-}
-
-.net-flow-decision {
-  width: 100%;
-  margin-top: 0.15rem;
-}
-
-.net-flow-decision-title {
-  margin: 0 0 0.4rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-align: center;
-  color: var(--muted);
-}
-
-.net-flow-decision-branches {
-  display: grid;
-  gap: 0.4rem;
-}
-
-.net-flow-decision-branch {
-  min-width: 0;
-}
-
-.net-flow-internet {
-  padding: 0.45rem 0.55rem;
-  border-radius: 6px;
-  border: 1px solid color-mix(in srgb, #22c55e 35%, var(--border));
-  background: color-mix(in srgb, #22c55e 6%, transparent);
-  text-align: center;
-  font-size: 0.82rem;
-  line-height: 1.35;
-}
-
-.net-flow-branch-when {
-  display: block;
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: var(--muted);
-}
-
-.net-flow-branch-target {
-  display: block;
-  font-weight: 600;
-  margin-top: 0.1rem;
-}
-
-.net-flow-branch-note {
-  display: block;
-  font-size: 0.78rem;
-  color: var(--muted);
-  margin-top: 0.1rem;
-}
-
 .net-flow-footnote {
   width: 100%;
   margin: 0.5rem 0 0;
@@ -312,10 +172,5 @@
 @media (min-width: 560px) {
   .net-flow {
     max-width: 34rem;
-  }
-
-  .net-flow-decision-branches {
-    align-items: stretch;
-    grid-template-columns: minmax(0, 1.45fr) minmax(10rem, 0.85fr);
   }
 }

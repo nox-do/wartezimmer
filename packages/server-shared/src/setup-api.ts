@@ -336,7 +336,8 @@ export type PfupdateInspectPackageSummary = {
   images: {
     app: string;
     sandbox: string;
-    gateway: string;
+    gateway?: string;
+    proxy?: string;
   };
 };
 
@@ -447,6 +448,14 @@ export type HostRuntimeHealth = {
   compose: ComposeStatus | null;
   probes: ProbeResult[];
   sandboxScanner: SandboxScannerStatus | null;
+  /**
+   * Header tile for Proxy-Server — only when the offline image is present and
+   * the proxy has been used (enabled and/or container exists).
+   */
+  proxyServer: {
+    enabled: boolean;
+    container: ComposeServiceStatus | null;
+  } | null;
 };
 
 export type HostStatusOptions = {

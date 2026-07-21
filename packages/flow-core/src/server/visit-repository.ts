@@ -164,7 +164,9 @@ export function toVisitView(
     queue: catalog.queues.find((item) => item.id === visitRow.queueId),
     lastKnownLocation: catalog.locations.find((item) => item.id === visitRow.lastKnownLocationId),
     targetLocation: catalog.locations.find((item) => item.id === visitRow.targetLocationId),
-    journeyTemplate: catalog.journeyTemplates.find((item) => item.id === visitRow.journeyTemplateId),
+    journeyTemplate: catalog.journeyTemplates.find(
+      (item) => item.id === visitRow.journeyTemplateId,
+    ),
     journeyStepLabel:
       visitRow.journeyStepIndex != null
         ? (journeyStepLabel(steps, visitRow.journeyStepIndex) ?? undefined)

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS,
   PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS,
   PFUPDATE_REQUIRED_FILE_PATHS,
   PRAXIS_FLOW_PROXY_IMAGE_REF,
@@ -27,7 +28,28 @@ function sampleFiles() {
   }));
 }
 
-function sampleManifest() {
+function sampleGatewayFiles() {
+  return PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS.map((path, index) => ({
+    path,
+    sha256: `${String(index + 20).padStart(64, '0')}`,
+    byteLength: 150 + index,
+  }));
+}
+
+function sampleManifest(options: { withGateway?: boolean; withProxy?: boolean } = {}) {
+  const withGateway = options.withGateway === true;
+  const withProxy = options.withProxy === true;
+  const files = [
+    ...sampleFiles(),
+    ...(withGateway ? sampleGatewayFiles() : []),
+    ...(withProxy
+      ? PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS.map((path, index) => ({
+          path,
+          sha256: `${String(index + 10).padStart(64, '0')}`,
+          byteLength: 200 + index,
+        }))
+      : []),
+  ];
   return buildPfupdateManifest({
     releaseVersion,
     createdAt: '2026-08-01T10:00:00.000Z',
@@ -35,9 +57,10 @@ function sampleManifest() {
     images: {
       app: `praxis-flow/app:${releaseVersion}`,
       sandbox: `praxis-flow/sandbox:${releaseVersion}`,
-      gateway: `praxis-flow/gateway:${releaseVersion}`,
+      ...(withGateway ? { gateway: `praxis-flow/gateway:${releaseVersion}` } : {}),
+      ...(withProxy ? { proxy: PRAXIS_FLOW_PROXY_IMAGE_REF } : {}),
     },
-    files: sampleFiles(),
+    files,
   });
 }
 
@@ -67,6 +90,7 @@ test('buildPfupdateManifest validates on roundtrip', () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.manifest?.releaseVersion, releaseVersion);
+  assert.equal(result.manifest?.images.gateway, undefined);
   assert.equal(result.compatibility?.managerCompatible, true);
   assert.equal(result.compatibility?.settingsCompatible, true);
 });
@@ -89,33 +113,50 @@ test('validatePfupdatePackage rejects tampered checksum', () => {
   assert.match(result.errors.join(' '), /templates\/\.env\.example/);
 });
 
-test('validatePfupdateImageRefs requires releaseVersion-aligned tags', () => {
+test('validatePfupdateImageRefs requires releaseVersion-aligned tags for required images', () => {
   const manifest = sampleManifest();
-  manifest.images.gateway = 'praxis-flow/gateway:2026.07.1';
+  manifest.images.app = 'praxis-flow/app:2026.07.1';
   const errors = validatePfupdateImageRefs(manifest);
-  assert.match(errors.join(' '), /gateway/);
+  assert.match(errors.join(' '), /images\.app/);
+});
+
+test('validatePfupdatePackage accepts optional gateway image and template', () => {
+  const manifest = sampleManifest({ withGateway: true });
+  const result = validatePfupdatePackage({
+    manifest,
+    files: digestMapFromManifest(manifest),
+    sha256Sums: formatSha256Sums(manifest.files),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.manifest?.images.gateway, `praxis-flow/gateway:${releaseVersion}`);
+});
+
+test('validatePfupdatePackage still accepts legacy packages with gateway', () => {
+  const manifest = sampleManifest({ withGateway: true });
+  const result = validatePfupdatePackage({
+    manifest,
+    files: digestMapFromManifest(manifest),
+    sha256Sums: formatSha256Sums(manifest.files),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.manifest?.images.gateway, `praxis-flow/gateway:${releaseVersion}`);
+});
+
+test('validatePfupdateImageRefs rejects wrong gateway tag or missing gateway template', () => {
+  const manifest = sampleManifest({ withGateway: true });
+  manifest.images.gateway = 'praxis-flow/gateway:2026.07.1';
+  assert.match(validatePfupdateImageRefs(manifest).join(' '), /gateway/);
+
+  const withoutTemplate = sampleManifest();
+  withoutTemplate.images.gateway = `praxis-flow/gateway:${releaseVersion}`;
+  assert.match(
+    validatePfupdateImageRefs(withoutTemplate).join(' '),
+    /docker-compose\.gateway\.delivery\.yml/,
+  );
 });
 
 test('validatePfupdatePackage accepts optional proxy image and templates', () => {
-  const required = sampleFiles();
-  const proxyFiles = PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS.map((path, index) => ({
-    path,
-    sha256: `${String(index + 10).padStart(64, '0')}`,
-    byteLength: 200 + index,
-  }));
-  const files = [...required, ...proxyFiles];
-  const manifest = buildPfupdateManifest({
-    releaseVersion,
-    createdAt: '2026-08-01T10:00:00.000Z',
-    minimumManagerVersion: '0.3.0',
-    images: {
-      app: `praxis-flow/app:${releaseVersion}`,
-      sandbox: `praxis-flow/sandbox:${releaseVersion}`,
-      gateway: `praxis-flow/gateway:${releaseVersion}`,
-      proxy: PRAXIS_FLOW_PROXY_IMAGE_REF,
-    },
-    files,
-  });
+  const manifest = sampleManifest({ withProxy: true });
 
   const result = validatePfupdatePackage({
     manifest,

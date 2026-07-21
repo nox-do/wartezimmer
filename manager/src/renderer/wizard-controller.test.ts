@@ -77,35 +77,6 @@ test('goBack does not leave completed wizard', () => {
   assert.equal(controller.getState().step, 7);
 });
 
-test('network load fills gateway portal IP from selected LAN IP', async () => {
-  const controller = createWizardController({
-    api: {
-      fetchSetupNetwork: async () => ({
-        lanCandidates: [],
-        interfaces: [],
-        machineHostname: 'praxis-mac',
-        gatewayComposeSupported: true,
-      }),
-    } as never,
-    onComplete: () => {},
-    onCancel: () => {},
-  });
-
-  controller.show(minimalHostStatus(), 'embedded');
-  controller.patchFields({
-    gatewayEnabled: true,
-    lanAppIp: '192.168.1.10',
-    portalAppIp: '',
-    gatewayManagementIp: '',
-  });
-
-  await controller.goNext();
-
-  assert.equal(controller.getState().step, 2);
-  assert.equal(controller.getState().portalAppIp, '192.168.1.10');
-  assert.equal(controller.getState().gatewayManagementIp, '');
-});
-
 test('entering routing step waits for server routing mode', async () => {
   const routingMode = deferred<RoutingModeCapabilities>();
   const controller = createWizardController({
@@ -117,12 +88,11 @@ test('entering routing step waits for server routing mode', async () => {
   });
 
   controller.show(minimalHostStatus(), 'embedded');
-  controller.patchFields({ step: 2, lanAppIp: '10.0.0.2' });
 
   const advance = controller.goNext();
   await Promise.resolve();
 
-  assert.equal(controller.getState().step, 3);
+  assert.equal(controller.getState().step, 2);
   assert.equal(controller.getState().busy, true);
   assert.equal(controller.getState().routingCapabilitiesStatus, 'loading');
   assert.equal(controller.getState().routingMode, null);
@@ -139,7 +109,7 @@ test('entering routing step waits for server routing mode', async () => {
   });
   await advance;
 
-  assert.equal(controller.getState().step, 3);
+  assert.equal(controller.getState().step, 2);
   assert.equal(controller.getState().busy, false);
   assert.equal(controller.getState().routingCapabilitiesStatus, 'ready');
   assert.equal(controller.getState().routingMode, 'complex');
@@ -217,7 +187,7 @@ test('wizardNextButtonDisabled blocks routing step until mode is hydrated', () =
   assert.equal(
     wizardNextButtonDisabled({
       ...base,
-      step: 3,
+      step: 2,
       routingCapabilitiesStatus: 'loading',
       routingMode: null,
     }),
@@ -226,7 +196,7 @@ test('wizardNextButtonDisabled blocks routing step until mode is hydrated', () =
   assert.equal(
     wizardNextButtonDisabled({
       ...base,
-      step: 3,
+      step: 2,
       routingCapabilitiesStatus: 'ready',
       routingMode: null,
     }),
@@ -235,7 +205,7 @@ test('wizardNextButtonDisabled blocks routing step until mode is hydrated', () =
   assert.equal(
     wizardNextButtonDisabled({
       ...base,
-      step: 3,
+      step: 2,
       routingCapabilitiesStatus: 'ready',
       routingMode: 'simple',
     }),

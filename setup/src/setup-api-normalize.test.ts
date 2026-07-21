@@ -99,7 +99,11 @@ test('normalizeHostNetworkInput normalizes gateway for maintenance route', () =>
     normalizeHostNetworkInput({
       lanAppIp: '10.0.0.5',
       restartCompose: true,
-      gateway: { enabled: true, portalAppIp: '10.0.0.9', authBridgeUrl: 'http://192.168.10.25:9100' },
+      gateway: {
+        enabled: true,
+        portalAppIp: '10.0.0.9',
+        authBridgeUrl: 'http://192.168.10.25:9100',
+      },
     }),
     {
       lanAppIp: '10.0.0.5',

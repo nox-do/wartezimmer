@@ -1,17 +1,21 @@
-# Guest-WLAN & Captive Portal — Setup und Betrieb
+# Guest-WLAN & Captive Portal — Lab-Referenz (archiviert)
 
-End-to-End-Dokumentation für Flow 2 (Praxis-WLAN). Fachliche Regeln: `docs/flows.md`.
+> **Produktgrenze (2026-07):** Praxis Flow stellt **keine** Router, APs oder Captive-Hardware her.
+> Produktkern: Portal + Wartenummer-Prüfung + dünne Vendor-Adapter — siehe `docs/integrations.md`.
+> Dieses Dokument beschreibt den früheren **openNDS-`gateway`-Lab-Pfad** (Referenz, nicht Produktkern).
 
-## Zielbild
+Fachliche Regeln: `docs/flows.md`.
+
+## Zielbild (Lab)
 
 | Baustein                  | Wo                              | Rolle                                           |
 | ------------------------- | ------------------------------- | ----------------------------------------------- |
 | **Access Point / Router** | Praxis-IT (nicht unser Produkt) | Gast-WLAN / VLAN; leitet Traffic zum Gateway    |
-| **`gateway`-Container**   | optional, Profil `gateway`      | DHCP, openNDS, Firewall, Auth-Bridge            |
+| **`gateway`-Container**   | Lab, Profil `gateway`           | DHCP, openNDS, Firewall, Auth-Bridge            |
 | **`app`-Container**       | Pflicht                         | Portal-UI (`/portal/*`), Session-API, Fachlogik |
 | **`sandbox`-Container**   | Pflicht                         | Dokument-Scan, Form2PDF (intern)                |
 
-Wir stellen **keinen Router**. Wir stellen **Gateway + Captive-Mechanik**; die Portal-Oberfläche läuft im `app`-Container.
+Wir stellen **keinen Router**. Der openNDS-Container war ein Lab-Scaffold für Captive-Mechanik; die Portal-Oberfläche läuft im `app`-Container.
 
 ```mermaid
 flowchart LR
@@ -162,7 +166,7 @@ npm run docker:up
 | `GATEWAY_AUTH_BRIDGE_PORT` | gateway       | Bridge-Port (Default `9100`)                               |
 | `GATEWAY_AUTH_BRIDGE_BIND` | gateway       | Bind-Adresse (Default `0.0.0.0`)                           |
 | `GATEWAY_AUTH_BRIDGE_URL`  | app           | App → Bridge (`http://<gateway-mgmt-ip>:9100`)             |
-| `GATEWAY_AUTH_BRIDGE_BIND` | gateway       | Praxis-/Management-IP des Gateway-PCs (nicht Gast-NIC)   |
+| `GATEWAY_AUTH_BRIDGE_BIND` | gateway       | Praxis-/Management-IP des Gateway-PCs (nicht Gast-NIC)     |
 | `AUTH_KEY_CAPTIVE`         | app + gateway | Bridge-Auth; **nicht** im Browser                          |
 
 Vollständige Vorlage: `.env.example`.

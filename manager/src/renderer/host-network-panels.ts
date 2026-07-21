@@ -1,5 +1,4 @@
 import type { HostStatus, NetworkSnapshot } from '../shared/host-status.js';
-import { parseGatewayManagementIpFromBridgeUrl } from '@praxis-flow/server-shared';
 import {
   draftCanonicalBaseUrl,
   effectiveCanonicalBaseUrl,
@@ -10,14 +9,6 @@ import { resolvedLanIp } from './wizard-state.js';
 export type LanIpFieldState = {
   lanAppIp: string;
   customLanIp: string;
-};
-
-export type GatewayFieldState = {
-  gatewayEnabled: boolean;
-  gatewayInterface: string;
-  gatewayIp: string;
-  portalAppIp: string;
-  gatewayManagementIp: string;
 };
 
 export type { ReachabilityFieldState, ReachabilityMode } from './reachability.js';
@@ -34,7 +25,7 @@ export function shouldOfferManualLanIpEntry(candidateCount: number, lanIpStale: 
 }
 
 export function hostNetworkChanged(
-  fields: LanIpFieldState & GatewayFieldState & ReachabilityFieldState,
+  fields: LanIpFieldState & ReachabilityFieldState,
   status: HostStatus | null,
   network: Pick<NetworkSnapshot, 'machineHostname'> | null = null,
 ): boolean {
@@ -57,23 +48,10 @@ export function hostNetworkChanged(
     return true;
   }
 
-  const gateway = status.gateway;
-  if (fields.gatewayEnabled !== (gateway?.enabled ?? false)) {
+  // Leftover openNDS GATEWAY_* from older installs — cleared on next network save.
+  if (status.gateway?.enabled) {
     return true;
   }
-  if (!fields.gatewayEnabled) {
-    return false;
-  }
-  if (fields.gatewayInterface.trim() !== (gateway?.gatewayInterface ?? 'eth1')) {
-    return true;
-  }
-  if (fields.gatewayIp.trim() !== (gateway?.gatewayIp ?? '192.168.88.1')) {
-    return true;
-  }
-  const managementIp = fields.gatewayManagementIp.trim();
-  const configuredManagementIp =
-    parseGatewayManagementIpFromBridgeUrl(gateway?.authBridgeUrl ?? '') ?? '';
-  const portalIp = fields.portalAppIp.trim() || lanIp;
-  const configuredPortal = gateway?.portalAppIp?.trim() ?? configuredLan;
-  return portalIp !== configuredPortal || managementIp !== configuredManagementIp;
+
+  return false;
 }

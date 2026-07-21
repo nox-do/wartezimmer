@@ -5,6 +5,8 @@ import {
   buildGatewayBridgeUrl,
   deriveGatewayBridgeBindFromUrl,
   parseGatewayManagementIpFromBridgeUrl,
+  parseValidGatewayManagementIpFromBridgeUrl,
+  sanitizeGatewayManagementIp,
   validateGatewayManagementIp,
 } from './gateway-bridge.js';
 
@@ -13,11 +15,15 @@ test('buildGatewayBridgeUrl formats management IP with default port', () => {
 });
 
 test('parseGatewayManagementIpFromBridgeUrl extracts hostname', () => {
-  assert.equal(
-    parseGatewayManagementIpFromBridgeUrl('http://192.168.10.25:9100'),
-    '192.168.10.25',
-  );
+  assert.equal(parseGatewayManagementIpFromBridgeUrl('http://192.168.10.25:9100'), '192.168.10.25');
   assert.equal(parseGatewayManagementIpFromBridgeUrl(''), null);
+});
+
+test('sanitizeGatewayManagementIp drops legacy hostnames', () => {
+  assert.equal(sanitizeGatewayManagementIp('192.168.10.25'), '192.168.10.25');
+  assert.equal(sanitizeGatewayManagementIp('0.0.0.0'), '0.0.0.0');
+  assert.equal(sanitizeGatewayManagementIp('host.docker.internal'), '');
+  assert.equal(parseValidGatewayManagementIpFromBridgeUrl('http://host.docker.internal:9100'), '');
 });
 
 test('deriveGatewayBridgeBindFromUrl returns hostname', () => {
@@ -65,7 +71,11 @@ test('assessGatewayBridgeBind warns on 0.0.0.0 and blocks guest NIC bind', () =>
     { name: 'eth1', addresses: [{ address: '192.168.88.1' }] },
   ];
 
-  assert.equal(assessGatewayBridgeBind('0.0.0.0', { gatewayInterface: 'eth1', gatewayIp: '192.168.88.1' }).level, 'warn');
+  assert.equal(
+    assessGatewayBridgeBind('0.0.0.0', { gatewayInterface: 'eth1', gatewayIp: '192.168.88.1' })
+      .level,
+    'warn',
+  );
   assert.equal(
     assessGatewayBridgeBind('192.168.88.1', {
       gatewayInterface: 'eth1',

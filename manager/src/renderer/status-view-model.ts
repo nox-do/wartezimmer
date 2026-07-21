@@ -170,7 +170,7 @@ export function statusGridRows(status: HostStatus): StatusGridRow[] {
     rows.push({ label: 'Zugriff', value: accessUrl });
   }
 
-  rows.push({ label: 'Proxy', value: proxyStatusLabel(status) });
+  rows.push({ label: 'Proxy-Server', value: proxyStatusLabel(status) });
 
   if (status.deliveryImages.required) {
     rows.push({ label: 'Software-Paket', value: deliveryImagesSummary(status) });

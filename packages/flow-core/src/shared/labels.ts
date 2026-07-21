@@ -63,7 +63,8 @@ export const errorLabels: Record<string, string> = {
   LOCATION_INACTIVE_OR_MISSING: 'Location fehlt oder ist inaktiv.',
   QUEUE_INACTIVE_OR_MISSING: 'Queue fehlt oder ist inaktiv.',
   INVALID_REQUEST_BODY: 'Ungültiger Request-Body.',
-  INVALID_VISIT_PATCH: 'Ungültiger Visit-Patch (undefined-Werte oder ungültiges supersededByVisitId).',
+  INVALID_VISIT_PATCH:
+    'Ungültiger Visit-Patch (undefined-Werte oder ungültiges supersededByVisitId).',
   INVALID_JSON: 'Ungültiges JSON.',
   REQUEST_BODY_TOO_LARGE: 'Request-Body zu groß.',
   SELF_GO_BLOCKED_BY_ESCORT_POLICY:

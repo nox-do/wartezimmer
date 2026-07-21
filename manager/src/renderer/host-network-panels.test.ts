@@ -10,11 +10,6 @@ test('hostNetworkChanged detects LAN IP change', () => {
       {
         lanAppIp: '192.168.1.20',
         customLanIp: '',
-        gatewayEnabled: true,
-        gatewayInterface: 'eth1',
-        gatewayIp: '192.168.88.1',
-        portalAppIp: '192.168.1.10',
-        gatewayManagementIp: '10.0.0.2',
         reachabilityMode: 'lan-ip',
         customHostname: '',
         proxyEnabled: false,
@@ -28,18 +23,13 @@ test('hostNetworkChanged detects LAN IP change', () => {
 test('hostNetworkChanged is false when fields match status', () => {
   const status = minimalHostStatus({
     configuredCanonicalBaseUrl: 'http://192.168.1.10:8080',
-    gateway: CONFIGURED_GATEWAY,
+    gateway: null,
   });
   assert.equal(
     hostNetworkChanged(
       {
         lanAppIp: '192.168.1.10',
         customLanIp: '',
-        gatewayEnabled: true,
-        gatewayInterface: 'eth1',
-        gatewayIp: '192.168.88.1',
-        portalAppIp: '192.168.1.10',
-        gatewayManagementIp: '10.0.0.2',
         reachabilityMode: 'lan-ip',
         customHostname: '',
         proxyEnabled: false,
@@ -50,18 +40,16 @@ test('hostNetworkChanged is false when fields match status', () => {
   );
 });
 
-test('hostNetworkChanged detects gateway management IP change', () => {
-  const status = minimalHostStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10:8080' });
+test('hostNetworkChanged is true when leftover gateway is enabled', () => {
+  const status = minimalHostStatus({
+    configuredCanonicalBaseUrl: 'http://192.168.1.10:8080',
+    gateway: CONFIGURED_GATEWAY,
+  });
   assert.equal(
     hostNetworkChanged(
       {
         lanAppIp: '192.168.1.10',
         customLanIp: '',
-        gatewayEnabled: true,
-        gatewayInterface: 'eth1',
-        gatewayIp: '192.168.88.1',
-        portalAppIp: '192.168.1.10',
-        gatewayManagementIp: '192.168.10.25',
         reachabilityMode: 'lan-ip',
         customHostname: '',
         proxyEnabled: false,
@@ -79,11 +67,6 @@ test('hostNetworkChanged detects proxy toggle', () => {
       {
         lanAppIp: '192.168.1.10',
         customLanIp: '',
-        gatewayEnabled: false,
-        gatewayInterface: 'eth1',
-        gatewayIp: '192.168.88.1',
-        portalAppIp: '192.168.1.10',
-        gatewayManagementIp: '',
         reachabilityMode: 'lan-ip',
         customHostname: '',
         proxyEnabled: true,

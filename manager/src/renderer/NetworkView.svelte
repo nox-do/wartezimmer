@@ -16,7 +16,6 @@
   import NetworkTopologyDiagram from './NetworkTopologyDiagram.svelte';
   import NetworkBindingChecks from './NetworkBindingChecks.svelte';
   import LanIpPanel from './LanIpPanel.svelte';
-  import GatewayPanel from './GatewayPanel.svelte';
   import ReachabilityPanel from './ReachabilityPanel.svelte';
 
   let {
@@ -160,17 +159,13 @@
       <div class="maintenance-accordion">
         <MaintenanceSection
           open={topologyOpen}
-          title="Erläuterung zu den Betriebsarten"
-          subtitle="Betrieb mit oder ohne Patientenportal"
+          title="Erläuterung zum Netz"
+          subtitle="Portal mit Praxis-IT-Captive oder nur Praxis-intern"
           onToggle={() => {
             topologyOpen = !topologyOpen;
           }}
         >
-          <NetworkTopologyDiagram
-            lanIp={diagramLanIp}
-            gatewayIp={snapshot.gatewayEnabled ? snapshot.gatewayIp : null}
-            gatewayEnabled={snapshot.gatewayEnabled}
-          />
+          <NetworkTopologyDiagram lanIp={diagramLanIp} />
         </MaintenanceSection>
         <MaintenanceSection
           open={reachabilityOpen}
@@ -189,6 +184,7 @@
             probeBusy={snapshot.reachabilityProbeBusy}
             probeMessage={snapshot.reachabilityProbeMessage}
             probeOk={snapshot.reachabilityProbeOk}
+            showProxyToggle={false}
             onChange={patchFields}
             onTest={() => controller?.testReachability()}
           />
@@ -200,7 +196,7 @@
     <section class="panel-section panel-section--network network-config-section">
       <h2 class="wizard-subheading">Netzwerk-Einstellungen</h2>
       <p class="hint">
-        Host-Adresse für Binding und optionale Gast-WLAN-Werte. Geräte-URLs folgen der Basis unter
+        Host-Adresse für Binding und optionaler Proxy-Server. Geräte-URLs folgen der Basis unter
         „Erreichbarkeit“.
       </p>
 
@@ -216,19 +212,28 @@
         />
       </div>
 
-      <div class="network-config-block" id="network-gateway-panel">
-        <h3 class="network-config-subheading">Gast-WLAN (optional)</h3>
+      <div class="network-config-block" id="network-proxy-panel">
+        <h3 class="network-config-subheading">Proxy-Server (optional)</h3>
         <p class="hint">
-          Technische Werte für Captive Portal speichern. Das Portal selbst aktivieren Sie später in
-          Praxis Flow (Betrieb).
+          Einstieg im Praxisnetz über Port 80 statt :8080. Das Caddy-Image ist im Release enthalten und
+          startet nur, wenn Sie den Proxy aktivieren.
         </p>
-        <GatewayPanel
-          state={snapshot}
-          network={snapshot.network}
-          lanIpFallback={resolvedLanIp(snapshot)}
-          disabled={snapshot.busy}
-          onChange={patchFields}
-        />
+        <label class="wizard-checkbox">
+          <input
+            type="checkbox"
+            checked={snapshot.proxyEnabled}
+            disabled={snapshot.busy}
+            onchange={(event) =>
+              patchFields({ proxyEnabled: (event.currentTarget as HTMLInputElement).checked })}
+          />
+          <span>Zugriff über Reverse Proxy auf Port 80</span>
+        </label>
+        {#if snapshot.proxyEnabled}
+          <p class="hint">
+            Direkter App-Port bleibt lokal unter <code>127.0.0.1:8080</code> erreichbar. Geräte-URLs
+            unter „Erreichbarkeit“ nutzen dann Port 80.
+          </p>
+        {/if}
       </div>
 
       {#if warningText}

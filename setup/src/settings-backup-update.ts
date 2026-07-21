@@ -16,6 +16,7 @@ import { readManagerState, writeManagerStateAtomically } from './manager-state.j
 import {
   extractPfupdateArchive,
   PFUPDATE_COMPOSE_TEMPLATE_FILES,
+  PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE,
   PFUPDATE_PROXY_CADDYFILE_RELATIVE,
   PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE,
   pfupdateImagesTarPath,
@@ -245,12 +246,16 @@ function parsePfbackupSettings(content: string): Record<string, unknown> {
 function buildReleaseStateFromManifest(
   manifest: PfupdateManifestV1,
   archiveSha256: string,
+  previousGatewayImage?: string | null,
 ): ManagerReleaseState {
   return {
     releaseVersion: manifest.releaseVersion,
     appImage: manifest.images.app,
     sandboxImage: manifest.images.sandbox,
-    gatewayImage: manifest.images.gateway,
+    gatewayImage:
+      manifest.images.gateway !== undefined
+        ? manifest.images.gateway
+        : (previousGatewayImage ?? null),
     archiveSha256,
   };
 }
@@ -263,7 +268,9 @@ function buildUpdateEnv(
     ...currentEnv,
     PRAXIS_FLOW_APP_IMAGE: manifest.images.app,
     PRAXIS_FLOW_SANDBOX_IMAGE: manifest.images.sandbox,
-    PRAXIS_FLOW_GATEWAY_IMAGE: manifest.images.gateway,
+    ...(manifest.images.gateway
+      ? { PRAXIS_FLOW_GATEWAY_IMAGE: manifest.images.gateway }
+      : {}),
     ...(manifest.images.proxy ? { PRAXIS_FLOW_PROXY_IMAGE: manifest.images.proxy } : {}),
   };
 }
@@ -293,7 +300,10 @@ async function verifyManifestImagesLoaded(
   imageExists: (ref: string) => Promise<boolean>,
 ): Promise<string[]> {
   const errors: string[] = [];
-  const refs = [manifest.images.app, manifest.images.sandbox, manifest.images.gateway];
+  const refs = [manifest.images.app, manifest.images.sandbox];
+  if (manifest.images.gateway) {
+    refs.push(manifest.images.gateway);
+  }
   if (manifest.images.proxy) {
     refs.push(manifest.images.proxy);
   }
@@ -306,7 +316,11 @@ async function verifyManifestImagesLoaded(
 }
 
 function composeTemplateFilesForRollback(): readonly string[] {
-  return [...PFUPDATE_COMPOSE_TEMPLATE_FILES, PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE];
+  return [
+    ...PFUPDATE_COMPOSE_TEMPLATE_FILES,
+    PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE,
+    PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE,
+  ];
 }
 
 const CADDYFILE_WAS_ABSENT_MARKER = 'caddyfile-was-absent';
@@ -336,6 +350,17 @@ function installComposeTemplates(stagingDir: string, home: string): void {
     const target = path.join(home, fileName);
     fs.mkdirSync(home, { recursive: true });
     fs.copyFileSync(source, target);
+  }
+
+  const gatewayComposeSource = pfupdateTemplatePath(
+    stagingDir,
+    PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE,
+  );
+  if (fs.existsSync(gatewayComposeSource)) {
+    fs.copyFileSync(
+      gatewayComposeSource,
+      path.join(home, PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE),
+    );
   }
 
   const proxyComposeSource = pfupdateTemplatePath(stagingDir, PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE);
@@ -557,9 +582,11 @@ async function commitPreparedUpdate(input: {
 
   let envAfterWrite: Map<string, string>;
   try {
+    const previousRelease = readManagerState(input.ctx.home).release;
     const release = buildReleaseStateFromManifest(
       input.prepared.manifest,
       input.prepared.outerArchiveSha256,
+      previousRelease?.gatewayImage,
     );
     writeEnvRecordAtomically(
       input.prepared.envPath,

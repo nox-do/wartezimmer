@@ -64,6 +64,27 @@ export function parseGatewayManagementIpFromBridgeUrl(
   }
 }
 
+/**
+ * UI/setup accept only IPv4 (or 0.0.0.0). Legacy hostnames such as
+ * `host.docker.internal` / Docker bridge IPs must not appear as field defaults.
+ */
+export function sanitizeGatewayManagementIp(value: string | null | undefined): string {
+  const trimmed = value?.trim() ?? '';
+  if (!trimmed) {
+    return '';
+  }
+  if (trimmed === '0.0.0.0' || isIpv4Like(trimmed)) {
+    return trimmed;
+  }
+  return '';
+}
+
+export function parseValidGatewayManagementIpFromBridgeUrl(
+  bridgeUrl: string | null | undefined,
+): string {
+  return sanitizeGatewayManagementIp(parseGatewayManagementIpFromBridgeUrl(bridgeUrl));
+}
+
 /** Bind address for auth-bridge.py — hostname from bridge URL (e.g. Praxis-LAN-IP of gateway PC). */
 export function deriveGatewayBridgeBindFromUrl(bridgeUrl: string): string {
   const hostname = parseGatewayManagementIpFromBridgeUrl(bridgeUrl);
@@ -124,8 +145,7 @@ export function assessGatewayBridgeBind(
     return {
       level: 'warn',
       message: 'Internetfreigabe lauscht auf allen Schnittstellen (0.0.0.0)',
-      detail:
-        'Empfohlen: Praxis-/Management-IP des Gateway-PCs — nicht die Gast-Netzwerkkarte.',
+      detail: 'Empfohlen: Praxis-/Management-IP des Gateway-PCs — nicht die Gast-Netzwerkkarte.',
     };
   }
 

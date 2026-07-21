@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { freshInstallHostStatus, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import {
+  buildWizardPlanInput,
   canLeaveWizardStep1,
   createWizardFlowState,
+  DISABLED_GATEWAY_PLAN,
   planWizardAdvance,
   previousWizardStep,
   wizardCompletionLead,
@@ -68,31 +70,64 @@ test('canLeaveWizardStep1 blocks when network prerequisites fail', () => {
   );
 });
 
-test('planWizardAdvance validates LAN IP on step 2', () => {
+test('planWizardAdvance leaves prerequisites for praxis', () => {
+  const state = createWizardFlowState(freshInstallHostStatus(), 1);
+  assert.deepEqual(planWizardAdvance(1, state), { type: 'goto', step: 2 });
+});
+
+test('planWizardAdvance validates praxis name on step 2', () => {
   const state = createWizardFlowState(freshInstallHostStatus(), 2);
+  state.practiceDisplayName = '';
   assert.equal(planWizardAdvance(2, state).type, 'validate-error');
 });
 
-test('planWizardAdvance advances from step 2 when LAN and reachability are set', () => {
+test('planWizardAdvance advances from praxis to folders', () => {
   const state = createWizardFlowState(minimalHostStatus(), 2);
-  state.lanAppIp = '192.168.1.10';
-  state.reachabilityMode = 'lan-ip';
+  state.practiceDisplayName = 'Praxis';
   assert.deepEqual(planWizardAdvance(2, state), { type: 'goto', step: 3 });
 });
 
-test('planWizardAdvance rejects hostname reachability without network snapshot', () => {
-  const state = createWizardFlowState(minimalHostStatus(), 2);
-  state.lanAppIp = '192.168.1.10';
-  state.reachabilityMode = 'hostname';
-  assert.equal(planWizardAdvance(2, state).type, 'validate-error');
+test('planWizardAdvance validates folders on step 3', () => {
+  const state = createWizardFlowState(minimalHostStatus(), 3);
+  state.practiceDisplayName = 'Praxis';
+  state.importsHostPath = '';
+  state.exportsHostPath = '';
+  assert.equal(planWizardAdvance(3, state).type, 'validate-error');
 });
 
-test('planWizardAdvance loads plan when leaving step 5', () => {
-  const state = createWizardFlowState(minimalHostStatus(), 5);
-  state.lanAppIp = '192.168.1.10';
+test('planWizardAdvance loads network when leaving folders', () => {
+  const state = createWizardFlowState(minimalHostStatus(), 3);
   state.practiceDisplayName = 'Praxis';
   state.importsHostPath = '/imports';
   state.exportsHostPath = '/exports';
+  assert.deepEqual(planWizardAdvance(3, state), {
+    type: 'goto',
+    step: 4,
+    after: 'loadNetwork',
+  });
+});
+
+test('planWizardAdvance validates LAN IP on network step 4', () => {
+  const state = createWizardFlowState(freshInstallHostStatus(), 4);
+  assert.equal(planWizardAdvance(4, state).type, 'validate-error');
+});
+
+test('planWizardAdvance advances from network to access when LAN and reachability are set', () => {
+  const state = createWizardFlowState(minimalHostStatus(), 4);
+  state.lanAppIp = '192.168.1.10';
+  state.reachabilityMode = 'lan-ip';
+  assert.deepEqual(planWizardAdvance(4, state), { type: 'goto', step: 5 });
+});
+
+test('planWizardAdvance rejects hostname reachability without network snapshot', () => {
+  const state = createWizardFlowState(minimalHostStatus(), 4);
+  state.lanAppIp = '192.168.1.10';
+  state.reachabilityMode = 'hostname';
+  assert.equal(planWizardAdvance(4, state).type, 'validate-error');
+});
+
+test('planWizardAdvance loads plan when leaving access step 5', () => {
+  const state = createWizardFlowState(minimalHostStatus(), 5);
   assert.deepEqual(planWizardAdvance(5, state), {
     type: 'goto',
     step: 6,
@@ -101,36 +136,23 @@ test('planWizardAdvance loads plan when leaving step 5', () => {
   });
 });
 
-test('planWizardAdvance validates gateway management IP on step 4', () => {
-  const state = createWizardFlowState(minimalHostStatus(), 4);
-  state.gatewayEnabled = true;
-  state.gatewayInterface = 'eth1';
-  state.gatewayManagementIp = '';
-  const action = planWizardAdvance(4, state);
-  assert.equal(action.type, 'validate-error');
-  assert.match(action.type === 'validate-error' ? action.message : '', /Gateway-PC/);
+test('planWizardAdvance applies when leaving preview step 6', () => {
+  const state = createWizardFlowState(minimalHostStatus(), 6);
+  assert.deepEqual(planWizardAdvance(6, state), {
+    type: 'goto',
+    step: 7,
+    patch: { applyResult: null },
+    after: 'apply-and-refresh',
+  });
 });
 
-test('planWizardAdvance prefills portal app IP when entering step 4', () => {
+test('buildWizardPlanInput always disables gateway', () => {
   const state = createWizardFlowState(minimalHostStatus(), 3);
   state.lanAppIp = '192.168.1.10';
   state.practiceDisplayName = 'Praxis';
-  state.gatewayEnabled = true;
-  state.portalAppIp = '';
-  state.network = {
-    interfaces: [],
-    lanCandidates: [],
-    machineHostname: 'praxis-mac',
-    gatewayComposeSupported: false,
-  };
-
-  assert.deepEqual(planWizardAdvance(3, state), {
-    type: 'goto',
-    step: 4,
-    patch: {
-      portalAppIp: '192.168.1.10',
-    },
-  });
+  const input = buildWizardPlanInput(state);
+  assert.deepEqual(input.gateway, DISABLED_GATEWAY_PLAN);
+  assert.equal(input.gateway.enabled, false);
 });
 
 test('wizardCompletionLead celebrates when probes are green', () => {

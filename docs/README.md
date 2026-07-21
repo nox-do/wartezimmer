@@ -28,13 +28,13 @@ Kurzüberblick: **was wann lesen**. Technische Details stehen in den verlinkten 
 
 ## Setup & Netzwerk
 
-| Datei                                                    | Inhalt                                                                   |
-| -------------------------------------------------------- | ------------------------------------------------------------------------ |
-| [`../manager/README.md`](../manager/README.md)           | Manager (Electron): Wizard, Setup-API, Wartung                           |
-| [`gateway-captive-portal.md`](gateway-captive-portal.md) | Optionales Gast-WLAN (Linux)                                             |
+| Datei                                                                | Inhalt                                                                   |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [`../manager/README.md`](../manager/README.md)                       | Manager (Electron): Wizard, Setup-API, Wartung                           |
+| [`integrations.md`](integrations.md)                     | Externe Systeme: WLAN-Adapter-Grenze, eGK, PVS, SMS                      |
+| [`gateway-captive-portal.md`](gateway-captive-portal.md) | **Lab-Referenz** — früherer openNDS-Pfad (nicht Produktkern)             |
 | [`plan-proxy-container.md`](plan-proxy-container.md)     | **Plan** — Reverse Proxy, TLS-Modi (LAN + Portal extern), Manager-Status |
 | [`plan-auth-session-slots.md`](plan-auth-session-slots.md) | **Plan** — Auth: Rolle ↔ Cookie, scoped Login/Me/Logout, UI-Auswirkungen |
-| [`integrations.md`](integrations.md)                     | eGK, PVS (Phase 3, offen)                                                |
 
 ## Sandbox & Formulare
 

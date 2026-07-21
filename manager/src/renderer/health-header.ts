@@ -1,11 +1,7 @@
-import type { ComposeStatus, ProbeResult } from '../shared/host-status.js';
+import type { ComposeServiceStatus, ComposeStatus, ProbeResult } from '../shared/host-status.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import { probeLabel } from './probe-label.js';
-import {
-  aggregatedServiceStateLabel,
-  sandboxClamAvChip,
-  sandboxScannerReachability,
-} from './sandbox-scanner-ui.js';
+import { sandboxClamAvChip } from './sandbox-scanner-ui.js';
 
 type OverallLevel = 'ok' | 'warn' | 'bad';
 
@@ -54,6 +50,15 @@ export function deriveOverallStatus(
     return { text: 'Gestoppt', level: 'warn' };
   }
 
+  // Configured proxy without a running container — LAN probe usually fails on :80.
+  if (setupComplete && runtime.proxyServer?.enabled && !runtime.proxyServer.container) {
+    return { text: 'Proxy-Server fehlt', level: 'warn' };
+  }
+
+  if (setupComplete && localOk && lanProbe && !lanOk) {
+    return { text: 'LAN nicht erreichbar', level: 'warn' };
+  }
+
   return { text: 'Einrichtung unvollständig', level: 'warn' };
 }
 
@@ -64,24 +69,14 @@ function sandboxChips(
   return chip ? [chip] : undefined;
 }
 
-function isServiceRunning(service: ComposeStatus['services'][number]): boolean {
+function isServiceRunning(service: ComposeServiceStatus): boolean {
   return service.state.toLowerCase().includes('running');
 }
 
-function serviceRowStatus(
-  service: ComposeStatus['services'][number],
-  scanner: HostRuntimeHealth['sandboxScanner'],
-): ReachabilityStatus {
+/** Ampel for app / sandbox / proxy: Compose running + Docker health only. */
+function composeServiceStatus(service: ComposeServiceStatus): ReachabilityStatus {
   if (!isServiceRunning(service)) {
     return 'bad';
-  }
-
-  const serviceName = service.service || service.name;
-  if (serviceName === 'sandbox') {
-    const scannerStatus = sandboxScannerReachability(scanner);
-    if (scannerStatus) {
-      return scannerStatus;
-    }
   }
 
   const health = service.health?.toLowerCase() ?? '';
@@ -95,6 +90,14 @@ function serviceRowStatus(
     return 'bad';
   }
   return 'warn';
+}
+
+function composeServiceDetail(service: ComposeServiceStatus): string {
+  const parts = [service.state];
+  if (service.health) {
+    parts.push(service.health);
+  }
+  return parts.join(' — ');
 }
 
 function appProbeChips(
@@ -136,13 +139,6 @@ function serviceChips(
   return undefined;
 }
 
-function serviceDetail(
-  service: ComposeStatus['services'][number],
-  scanner: HostRuntimeHealth['sandboxScanner'],
-): string {
-  return aggregatedServiceStateLabel(service, scanner);
-}
-
 export type HealthTileChip = { label: string; ok: boolean | null; neutral?: boolean };
 
 export type HealthTileSpec = {
@@ -160,7 +156,7 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
   const scanner = runtime.sandboxScanner;
   const tiles: HealthTileSpec[] = [];
 
-  if (services.length === 0) {
+  if (services.length === 0 && !runtime.proxyServer) {
     tiles.push({
       name: 'Stack',
       detail: probesPending ? 'Wird geprüft …' : 'Keine Container',
@@ -172,12 +168,33 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
 
   for (const service of services) {
     const serviceName = service.service || service.name;
+    if (serviceName === 'proxy') {
+      // Dedicated Proxy-Server tile below (only when image present + used).
+      continue;
+    }
     tiles.push({
       name: serviceName,
-      detail: serviceDetail(service, scanner),
-      status: serviceRowStatus(service, scanner),
+      detail: composeServiceDetail(service),
+      status: composeServiceStatus(service),
       chips: serviceChips(serviceName, probesById, probesPending, scanner),
     });
+  }
+
+  if (runtime.proxyServer) {
+    const container = runtime.proxyServer.container;
+    if (container) {
+      tiles.push({
+        name: 'Proxy-Server',
+        detail: composeServiceDetail(container),
+        status: composeServiceStatus(container),
+      });
+    } else {
+      tiles.push({
+        name: 'Proxy-Server',
+        detail: runtime.proxyServer.enabled ? 'Container fehlt' : 'Gestoppt',
+        status: 'bad',
+      });
+    }
   }
 
   const hasApp = services.some((service) => (service.service || service.name) === 'app');

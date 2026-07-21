@@ -4,18 +4,17 @@
 
 Status-Legende: **implementiert** · **geplant** · **Discovery**
 
-## Guest-WLAN / Captive Portal — **implementiert (v1 Scaffold)**
+## Guest-WLAN / Captive Portal — **Produktgrenze (Adapter, geplant)**
 
-| Aspekt                | Details                                                                                 |
-| --------------------- | --------------------------------------------------------------------------------------- |
-| **Wir liefern**       | Optionaler `gateway`-Container (openNDS + dnsmasq + Auth-Bridge)                        |
-| **Wir liefern nicht** | Access Point, Praxis-Router, Internet-Anschluss                                         |
-| **Portal-UI**         | `app`-Container, Route `/portal/*`                                                      |
-| **Session**           | Wartenummer = WLAN-Session; API `sessions/resolve-ticket`, `sessions/captive-authorize` |
-| **Setup**             | **`docs/gateway-captive-portal.md`** (End-to-End)                                       |
-| **Technik**           | `gateway/README.md`, Compose-Overlays `docker-compose.gateway*.yml`                     |
+| Aspekt                | Details                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------ |
+| **Wir liefern**       | Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API; später dünne Vendor-Adapter         |
+| **Wir liefern nicht** | Router, Access Point, Captive-Portal-Hardware, eigenen Captive-Datenpfad (DHCP/Firewall/`ndsctl`) |
+| **Adapter-Formen**    | Outbound: nach gültiger Wartenummer URL/API beim Controller; Inbound: Request mit ja/nein       |
+| **Session**           | Wartenummer = Portal-Session; `sessions/resolve-ticket`, `sessions/captive-authorize` (Hook)   |
+| **Lab-Referenz**      | Früherer openNDS-`gateway`-Container: `docs/gateway-captive-portal.md` (nicht Produktkern)      |
 
-Offen für Produktionsreife: HTTPS im LAN, Gast-VLAN-Referenzdesign pro Praxis, Feldtest mit echter AP-Kombination.
+WLAN-Infrastruktur (Omada, UniFi, …) bleibt Sache der Praxis-IT. Praxis Flow prüft Wartenummern und spricht Freigabe nur über Adapter an.
 
 ## eGK — **Discovery (Phase 3)**
 

@@ -25,11 +25,8 @@ Verwendete Compose-Datei fuer Kundenbetrieb:
 - `sandbox`
   - isolierte Dokumentenvorschau + Form2PDF
   - nur intern erreichbar (kein oeffentlicher Port)
-- `gateway` _(optional, Profil `gateway`)_
-  - Guest-WLAN: openNDS + dnsmasq + Auth-Bridge
-  - `network_mode: host`, Linux-Host mit Gast-LAN-NIC
-  - Splash zeigt auf `app` (`APP_PORTAL_URL`, typisch `/portal`)
-  - Details: **`docs/gateway-captive-portal.md`**, `gateway/README.md`, Overlays `docker-compose.gateway.yml` / `docker-compose.gateway.delivery.yml`
+- `gateway` _(Lab-Referenz, Profil `gateway` — nicht Produktkern)_
+  - Früherer openNDS-Pfad; siehe `docs/integrations.md` und `docs/gateway-captive-portal.md`
 
 ## Nicht in v1
 
@@ -67,7 +64,7 @@ Es gibt **kein** separates Log-Volume mehr (`logs_data` entfernt). Nach einem Up
 
 - Extern nur **ein Port** (vom `app`-Service)
 - `sandbox` bleibt im internen Docker-Netz
-- Captive-Portal-Netzwerk laeuft im optionalen `gateway`-Container; Portal-UI bleibt im `app`-Container (`/portal`)
+- Portal-UI bleibt im `app`-Container (`/portal`); WLAN/Captive = Praxis-IT + geplante Adapter (`docs/integrations.md`)
 
 ## UI-Rollen im App-Image
 
@@ -92,7 +89,7 @@ Auth-Keys und Session-Secrets bleiben serverseitige Runtime-Konfiguration in `.e
 
 ## Docker Scout / Image-Analyse (Desktop)
 
-Lokale Dev-Images (`docker-compose.yml`) heissen `praxis-flow/app:local`, `praxis-flow/sandbox:local`, `praxis-flow/gateway:local` und werden mit **SBOM- + Provenance-Attestations** gebaut (`sbom: true`, `provenance: mode=max`).
+Lokale Dev-Images (`docker-compose.yml`) heissen `praxis-flow/app:local`, `praxis-flow/sandbox:local` und werden mit **SBOM- + Provenance-Attestations** gebaut (`sbom: true`, `provenance: mode=max`).
 
 Damit die Analyse in **Docker Desktop → Images** zuverlaessig funktioniert:
 

@@ -10,24 +10,30 @@ import type {
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { deliveryImagesReady } from './delivery-images-flow.js';
 import { buildSetupProbeInput, pollSetupProbes } from './setup-probes.js';
-import { draftCanonicalBaseUrl, isHttpOrigin, matchesHostnameModeBase, productPublishPort } from './reachability.js';
 import {
-  buildGatewayPlanInput,
-  createInitialWizardFields,
-  gatewayDraftDefaults,
-  resolvedLanIp,
-  validateGatewayManagementIpForUi,
-} from './wizard-state.js';
+  draftCanonicalBaseUrl,
+  isHttpOrigin,
+  matchesHostnameModeBase,
+  productPublishPort,
+} from './reachability.js';
+import { createInitialWizardFields, resolvedLanIp } from './wizard-state.js';
 
+/** Product boundary: no captive/gateway hardware in Manager — always disable. */
+export const DISABLED_GATEWAY_PLAN = { enabled: false as const };
+
+/**
+ * Order: warm-up (Praxis + folders) → network basic → network complex → preview → apply.
+ * WLAN vendor selection is a placeholder on the complex network step until adapters exist.
+ */
 export const WIZARD_STEPS = [1, 2, 3, 4, 5, 6, 7] as const;
 export type WizardStep = (typeof WIZARD_STEPS)[number];
 
 export const WIZARD_STEP_LABELS = [
   'Voraussetzungen',
-  'Netzwerk',
   'Praxis',
-  'Gast-WLAN',
   'Import & Export',
+  'Netzwerk',
+  'Zugang',
   'Vorschau',
   'Abschluss',
 ] as const satisfies ReadonlyArray<string>;
@@ -110,10 +116,24 @@ export function canLeaveWizardStep1(status: HostStatus | null, busy: boolean): b
 
 export function planWizardAdvance(step: WizardStep, state: WizardFlowState): WizardAdvanceAction {
   if (step === 1) {
-    return { type: 'goto', step: 2, after: 'loadNetwork' };
+    return { type: 'goto', step: 2 };
   }
 
   if (step === 2) {
+    if (!state.practiceDisplayName.trim()) {
+      return { type: 'validate-error', message: 'Bitte einen Praxisnamen eingeben.' };
+    }
+    return { type: 'goto', step: 3 };
+  }
+
+  if (step === 3) {
+    if (!state.importsHostPath.trim() || !state.exportsHostPath.trim()) {
+      return { type: 'validate-error', message: 'Bitte Import- und Exportordner angeben.' };
+    }
+    return { type: 'goto', step: 4, after: 'loadNetwork' };
+  }
+
+  if (step === 4) {
     if (!resolvedLanIp(state)) {
       return { type: 'validate-error', message: 'Bitte eine LAN-IP wählen oder eingeben.' };
     }
@@ -125,45 +145,10 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
           'Bitte eine gültige Erreichbarkeit wählen (LAN-IP, Rechnername oder eigener Hostname).',
       };
     }
-    return { type: 'goto', step: 3 };
-  }
-
-  if (step === 3) {
-    if (!state.practiceDisplayName.trim()) {
-      return { type: 'validate-error', message: 'Bitte einen Praxisnamen eingeben.' };
-    }
-    const lanIp = resolvedLanIp(state);
-    return {
-      type: 'goto',
-      step: 4,
-      patch: {
-        ...gatewayDraftDefaults(state, state.network, lanIp),
-      },
-    };
-  }
-
-  if (step === 4) {
-    if (state.gatewayEnabled && !state.gatewayInterface.trim()) {
-      return {
-        type: 'validate-error',
-        message: 'Bitte ein Netzwerk-Interface für das Gast-LAN wählen.',
-      };
-    }
-    const managementIpError = validateGatewayManagementIpForUi(
-      state.gatewayManagementIp,
-      state,
-      state.network,
-    );
-    if (state.gatewayEnabled && managementIpError) {
-      return { type: 'validate-error', message: managementIpError };
-    }
     return { type: 'goto', step: 5 };
   }
 
   if (step === 5) {
-    if (!state.importsHostPath.trim() || !state.exportsHostPath.trim()) {
-      return { type: 'validate-error', message: 'Bitte Import- und Exportordner angeben.' };
-    }
     return { type: 'goto', step: 6, patch: { plan: null }, after: 'loadPlan' };
   }
 
@@ -190,7 +175,7 @@ export function buildWizardPlanInput(state: WizardFlowState): {
   lanAppIp: string;
   practiceDisplayName: string;
   canonicalBaseUrl?: string;
-  gateway: ReturnType<typeof buildGatewayPlanInput>;
+  gateway: typeof DISABLED_GATEWAY_PLAN;
   proxy: { enabled: boolean; httpPort: number };
 } {
   const canonicalBaseUrl = draftCanonicalBaseUrl(state, state.network) ?? undefined;
@@ -198,7 +183,7 @@ export function buildWizardPlanInput(state: WizardFlowState): {
     lanAppIp: resolvedLanIp(state),
     practiceDisplayName: state.practiceDisplayName.trim(),
     ...(canonicalBaseUrl ? { canonicalBaseUrl } : {}),
-    gateway: buildGatewayPlanInput(state),
+    gateway: DISABLED_GATEWAY_PLAN,
     proxy: {
       enabled: state.proxyEnabled,
       httpPort: 80,

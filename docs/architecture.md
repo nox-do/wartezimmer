@@ -7,10 +7,10 @@ Das System wird bewusst einfach und wartungsarm betrieben:
 - Frontend: `Svelte + TypeScript + Vite`
 - Backend: `TypeScript` (modularer Monolith, Node.js LTS)
 - Runtime/Delivery: `Docker` (ohne Kubernetes)
-- Captive Portal / Guest-WLAN:
+- Patient-Portal / WLAN-Anbindung:
   - Portal-UI und Session-API im `app`-Container (`/portal/*`)
-  - Optionales Netzwerk-Gateway im `gateway`-Container (openNDS + dnsmasq)
-  - Setup: `docs/gateway-captive-portal.md`
+  - Kein eigener Captive-/Router-Stack im Produkt; WLAN-Infrastruktur = Praxis-IT
+  - Freigabe später über dünne Vendor-Adapter — `docs/integrations.md`
 - SMS-Rueckruf: adapterfaehig, v1 mit `Vonage`
 
 Fokus: kritische Daten logisch trennen von unkritischen Betriebsdaten.
@@ -62,7 +62,7 @@ Fachliche Schichten — keine 1:1-Ordnerstruktur, kein Microservice-Schnitt. Det
 | 6   | **Sandbox Adapter**      | kritisch, isoliert | Preview-Custody; keine Rohdatei an MFA-Client — `docs/sandbox-interface.md`                            |
 | 7   | **Tagesbetrieb & Reset** | querschnittlich    | Check-in-Sperre, Day-Close/Reset, Ops-Settings, Notfall                                                |
 | 8   | **SMS Adapter**          | extern             | Rückhol-SMS; v1 Vonage, austauschbar                                                                   |
-| 9   | **Guest-WLAN Gateway**   | optional           | openNDS + Bridge; Portal-UI bleibt in (1) — `docs/gateway-captive-portal.md`                           |
+| 9   | **WLAN-Adapter**         | extern (geplant)   | Dünne Anbindung an Praxis-WLAN/Captive (Outbound/Inbound); kein eigener Gateway-Container im Produkt  |
 
 ```mermaid
 flowchart LR
@@ -70,16 +70,14 @@ flowchart LR
     frontend[app_UI_static]
     backend[typescript_backend_monolith]
     sandbox[sandbox_runtime]
-    gateway[gateway_optional]
   end
 
   terminalUi[Terminal] --> frontend
   mfaUi[MFA] --> frontend
   tvUi[TV] --> frontend
   portalUi[Portal] --> frontend
-  patientPhone[Patient_Handy] --> gateway
-  gateway --> frontend
-  gateway --> backend
+  patientPhone[Patient_Handy] --> frontend
+  wlanIt[WLAN_Praxis_IT] -.->|Adapter_geplant| backend
   frontend --> backend
   backend --> sandbox
   backend --> pvsOptional[PVS_optional]
@@ -92,7 +90,7 @@ Kein separater TV-Read-Service; TV nutzt `GET /queue` mit Rolle `tv`. Domänen t
 ```mermaid
 flowchart LR
   patient[Patient_und_MFA]
-  gateway[gateway_optional_openNDS]
+  wlanIt[WLAN_Praxis_IT]
   pvs[PVS_optional]
 
   subgraph praxisVmHost [Praxis_VM_Host_Docker]
@@ -101,8 +99,7 @@ flowchart LR
   end
 
   patient --> app
-  patient --> gateway
-  gateway --> app
+  wlanIt -.->|Adapter_geplant| app
   app --> sandbox
   app --> pvs
 ```
@@ -113,9 +110,8 @@ flowchart LR
 
 1. `app` - TypeScript API + Businesslogik + statische Frontend-UIs (Terminal, MFA, TV, Portal) + SQLite
 2. `sandbox` - isolierte Dokumentenvorschau
-3. `gateway` _(optional)_ - Guest-WLAN: openNDS, DHCP, Auth-Bridge; `network_mode: host` auf Linux
 
-Kein separater DB-Container in v1. SQLite liegt auf persistentem Volume im `app`-Container.
+Kein separater DB-Container in v1. SQLite liegt auf persistentem Volume im `app`-Container. Lab-Referenz openNDS: `docs/gateway-captive-portal.md` (nicht Produktkern).
 
 ## Ist-Stand Code (2026-06)
 

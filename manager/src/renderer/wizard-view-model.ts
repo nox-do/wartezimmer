@@ -39,7 +39,7 @@ export function wizardNextButtonDisabled(state: WizardControllerState): boolean 
     return true;
   }
   if (
-    state.step === 3 &&
+    state.step === 2 &&
     (state.routingCapabilitiesStatus !== 'ready' || state.routingMode === null)
   ) {
     return true;
@@ -59,16 +59,10 @@ export function wizardCompletionItSettingsUrl(state: WizardControllerState): str
 
 export function wizardApplyResultItems(result: ApplySetupResult): string[] {
   const composeOk = result.compose?.ok === true;
-  const items = [
+  return [
     `✓ .env geschrieben (${result.envPath})`,
     `${wizardCheckMark(composeOk)} Docker Compose`,
   ];
-  if (result.gatewayComposeSkipped) {
-    items.push(
-      'Gateway auf diesem Rechner übersprungen; Werte für separates Linux-Gateway gespeichert',
-    );
-  }
-  return items;
 }
 
 export function wizardCompletionLeadText(state: WizardControllerState): string {
@@ -83,13 +77,13 @@ export function wizardStepTitle(step: WizardStep): string {
     case 1:
       return 'Voraussetzungen';
     case 2:
-      return 'Netzwerk — Erreichbarkeit';
-    case 3:
       return 'Praxis — Anzeigename';
-    case 4:
-      return 'Gast-WLAN (optional)';
-    case 5:
+    case 3:
       return 'Import & Export — Host-Ordner';
+    case 4:
+      return 'Netzwerk — Host & Erreichbarkeit';
+    case 5:
+      return 'Zugang — Proxy & Patientenportal';
     case 6:
       return 'Vorschau — Geräte-URLs';
     case 7:

@@ -1,5 +1,11 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { Catalog, ResolveBusinessDay, Visit, VisitEvent, VisitView } from '@praxis-flow/flow-core';
+import type {
+  Catalog,
+  ResolveBusinessDay,
+  Visit,
+  VisitEvent,
+  VisitView,
+} from '@praxis-flow/flow-core';
 import {
   TERMINAL_VISIT_STATUSES,
   effectiveEscortPolicy,

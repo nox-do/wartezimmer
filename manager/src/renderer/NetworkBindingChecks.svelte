@@ -8,8 +8,7 @@
   <div id="network-bindings-panel">
     <h3 class="wizard-subheading network-bindings-title">Prüfungen am Rechner</h3>
     <p class="hint">
-      Ob Port und Adresse an diesem Rechner passen — nicht, ob das Gast-WLAN in der Praxis richtig
-      geroutet ist.
+      Ob Port und Adresse an diesem Rechner passen — nicht die Erreichbarkeit aus dem Praxisnetz.
     </p>
     <ul class="checklist network-bindings-list">
       {#each checks as check (check.message)}

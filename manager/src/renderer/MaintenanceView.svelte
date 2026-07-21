@@ -303,7 +303,7 @@
       <MaintenanceSection
         open={openSection === 'diagnostics'}
         title="Logs & Diagnose"
-        subtitle="app · sandbox · gateway"
+        subtitle="app · sandbox"
         copy="Container-Logs der laufenden Dienste einsehen."
         onToggle={() => toggleSection('diagnostics')}
       >

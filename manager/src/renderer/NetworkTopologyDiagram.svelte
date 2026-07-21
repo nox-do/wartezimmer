@@ -3,12 +3,8 @@
 
   let {
     lanIp,
-    gatewayIp,
-    gatewayEnabled,
   }: {
     lanIp?: string | null;
-    gatewayIp?: string | null;
-    gatewayEnabled?: boolean;
   } = $props();
 
   let host = $state<HTMLElement | null>(null);
@@ -17,7 +13,7 @@
     if (!host) {
       return;
     }
-    mountNetworkTopologyDiagram(host, { lanIp, gatewayIp, gatewayEnabled });
+    mountNetworkTopologyDiagram(host, { lanIp });
   });
 </script>
 

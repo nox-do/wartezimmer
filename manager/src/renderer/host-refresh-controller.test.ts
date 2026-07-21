@@ -16,6 +16,7 @@ function minimalRuntime(overrides: Partial<HostRuntimeHealth> = {}): HostRuntime
     compose: status.compose,
     probes: [{ id: 'app.health.local', ok: true, message: 'ok' }],
     sandboxScanner: null,
+    proxyServer: null,
     ...overrides,
   };
 }

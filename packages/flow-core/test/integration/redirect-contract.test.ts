@@ -50,12 +50,8 @@ test('redirect contract: HTTP-Pfad liefert kein actorId, Host-Kontext schon', ()
     { actorId: 'staff-session-1' },
   );
 
-  const httpRedirected = runtime
-    .events(httpVisit!.id)
-    .find((event) => event.type === 'redirected');
-  const hostRedirected = runtime
-    .events(hostVisit!.id)
-    .find((event) => event.type === 'redirected');
+  const httpRedirected = runtime.events(httpVisit!.id).find((event) => event.type === 'redirected');
+  const hostRedirected = runtime.events(hostVisit!.id).find((event) => event.type === 'redirected');
 
   assert.equal(httpRedirected?.actorId, undefined);
   assert.equal(hostRedirected?.actorId, 'staff-session-1');

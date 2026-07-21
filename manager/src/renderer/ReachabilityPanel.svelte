@@ -17,6 +17,7 @@
     probeBusy = false,
     probeMessage = null,
     probeOk = null,
+    showProxyToggle = true,
     onChange,
     onTest,
   }: {
@@ -26,6 +27,8 @@
     probeBusy?: boolean;
     probeMessage?: string | null;
     probeOk?: boolean | null;
+    /** Network tab keeps the toggle under Netzwerk-Einstellungen; wizard shows it on Zugang. */
+    showProxyToggle?: boolean;
     onChange: (patch: Partial<ReachabilityFieldState>) => void;
     onTest: () => void;
   } = $props();
@@ -119,18 +122,22 @@
     </p>
   {/if}
 
-  <label class="wizard-checkbox">
-    <input
-      type="checkbox"
-      checked={state.proxyEnabled}
-      disabled={disabled || probeBusy}
-      onchange={(event) =>
-        onChange({ proxyEnabled: (event.currentTarget as HTMLInputElement).checked })}
-    />
-    <span>Zugriff über Reverse Proxy auf Port 80</span>
-  </label>
-  {#if state.proxyEnabled}
-    <p class="hint">Direkter App-Port bleibt lokal unter <code>127.0.0.1:8080</code> erreichbar.</p>
+  {#if showProxyToggle}
+    <label class="wizard-checkbox">
+      <input
+        type="checkbox"
+        checked={state.proxyEnabled}
+        disabled={disabled || probeBusy}
+        onchange={(event) =>
+          onChange({ proxyEnabled: (event.currentTarget as HTMLInputElement).checked })}
+      />
+      <span>Zugriff über Reverse Proxy auf Port 80</span>
+    </label>
+    {#if state.proxyEnabled}
+      <p class="hint">
+        Direkter App-Port bleibt lokal unter <code>127.0.0.1:8080</code> erreichbar.
+      </p>
+    {/if}
   {/if}
 
   {#if preview}

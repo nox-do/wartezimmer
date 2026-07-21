@@ -20,7 +20,7 @@ flowchart TB
     RV --> RI
     RV --> RP
     RI --> TAR[".tar.gz + manifest + SHA256<br/>(app + sandbox)"]
-    RP --> PFU[".pfupdate<br/>(app + sandbox + gateway + templates)"]
+    RP --> PFU[".pfupdate<br/>(app + sandbox + templates; gateway optional/lab)"]
     DM --> DMG["Manager DMG<br/>(Manager-Semver)"]
   end
 
@@ -72,13 +72,15 @@ npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 | Artefakt                | Build                      | Manager-Flow                          | Inhalt                                                                                           |
 | ----------------------- | -------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | **`.tar.gz` + Sidecar** | `npm run release:images`   | Setup-Wizard → „Release-Paket wählen" | app + sandbox + optional `caddy:2.11.4`, `manifest.json` + `SHA256SUMS.txt`                      |
-| **`.pfupdate`**         | `npm run release:pfupdate` | Wartung → Software-Update             | Manifest, Checksummen, Images (app+sandbox+gateway+caddy), Compose-Templates inkl. Proxy-Overlay |
+| **`.pfupdate`**         | `npm run release:pfupdate` | Wartung → Software-Update             | Manifest, Checksummen, Images (app+sandbox+caddy; gateway optional/lab), Compose-Templates inkl. Proxy-Overlay |
 
 Updates laufen **nur** über `.pfupdate`. Der Wizard nutzt das ältere Sidecar-Format (Erstinstallation, kein Cutover/Rollback).
 
 **Drittes Artefakt (separater Zyklus):** Manager-DMG via `npm run dist:manager:mac` — Setup-Server und Templates eingebettet, selten neu ausgeliefert.
 
 **Proxy:** `caddy:2.11.4` wird mitgeliefert (~85 MB Image / ~22 MB als `docker save | gzip`), startet aber **nicht** automatisch. Aktivierung bleibt optional über Setup/Manager (`PROXY_ENABLED`).
+
+Standalone prüfen (ohne App-Stack): `npm run smoke:proxy` — nutzt `proxy/Caddyfile` gegen einen Throwaway-Upstream (`app:8080`). Zum Ausprobieren: `npm run smoke:proxy -- --keep` (danach `curl http://127.0.0.1:18080/`, Aufräumen mit `--cleanup`).
 
 ---
 
@@ -89,16 +91,16 @@ Updates laufen **nur** über `.pfupdate`. Der Wizard nutzt das ältere Sidecar-F
 ```
 praxis-flow/app:<releaseVersion>
 praxis-flow/sandbox:<releaseVersion>
-praxis-flow/gateway:<releaseVersion>
+praxis-flow/gateway:<releaseVersion>   ← optional (`--with-gateway`, Lab/openNDS; nicht Produkt-Default)
 caddy:2.11.4   # optional offline reverse proxy (PRAXIS_FLOW_PROXY_IMAGE)
 ```
 
-`<releaseVersion>` muss **identisch** sein mit `manifest.releaseVersion`, allen versionierten `manifest.images.*` (`app`/`sandbox`/`gateway`, strikt in `pfupdate.ts`) und `manager-state.json` → `release.releaseVersion`. `images.proxy` ist optional und, wenn gesetzt, fest auf `caddy:2.11.4`.
+`<releaseVersion>` muss **identisch** sein mit `manifest.releaseVersion`, allen **gesetzten** versionierten `manifest.images.*` (`app`/`sandbox` Pflicht; `gateway` optional/lab, strikt in `pfupdate.ts` wenn vorhanden) und `manager-state.json` → `release.releaseVersion`. `images.proxy` ist optional und, wenn gesetzt, fest auf `caddy:2.11.4`.
 
 ### Lokale Dev-Tags
 
 ```bash
-docker compose build   # praxis-flow/app:local, sandbox:local, gateway:local
+docker compose build   # praxis-flow/app:local, sandbox:local (+ gateway:local nur Lab)
 npm run release:pfupdate:current   # packt :local in .pfupdate ohne Rebuild
 ```
 
@@ -131,10 +133,10 @@ Gateway ist **nicht** enthalten — nur app + sandbox (+ optional Caddy).
 
 ### Stack-Update (`scripts/build-pfupdate.mjs`)
 
-1. `docker build` → app + sandbox + **gateway**; `docker pull` → **caddy:2.11.4**
+1. `docker build` → app + sandbox; optional `--with-gateway` → **gateway** (Lab); `docker pull` → **caddy:2.11.4**
 2. `docker save` → unkomprimiertes `images/praxis-flow-images.tar`
 3. Compose-Templates inkl. Proxy-Overlay + `proxy/Caddyfile` + `.env.example` (Image-Tags gesetzt)
-4. Manifest mit `minimumManagerVersion` (= aktuelle `manager/package.json`-Version) und optional `images.proxy`
+4. Manifest mit `minimumManagerVersion` (= aktuelle `manager/package.json`-Version), optional `images.proxy`, optional `images.gateway` (nur `--with-gateway`)
 5. `tar czf` → `dist/releases/praxis-flow-update-<version>.pfupdate`
 6. Roundtrip-Validierung via `validatePfupdatePackage()`
 
@@ -145,13 +147,13 @@ manifest.json
 SHA256SUMS.txt
 images/praxis-flow-images.tar
 templates/docker-compose.delivery.yml
-templates/docker-compose.gateway.delivery.yml
+templates/docker-compose.gateway.delivery.yml   ← nur mit `--with-gateway` / Legacy-Pakete
 templates/docker-compose.proxy.delivery.yml
 templates/proxy/Caddyfile
 templates/.env.example
 ```
 
-Ältere `.pfupdate`-Pakete ohne Proxy-Felder bleiben gültig (v1-kompatibel).
+Ältere `.pfupdate`-Pakete ohne Proxy- und/oder Gateway-Felder bleiben gültig (v1-kompatibel); Gateway ist Lab-only (`--with-gateway`).
 
 ### Manager-DMG (`manager/package.json` → `dist:mac`)
 
@@ -263,7 +265,7 @@ Details zu erhaltenen Settings: [`settings-backup-classification.md`](settings-b
   "images": {
     "app": "praxis-flow/app:2026.07.0",
     "sandbox": "praxis-flow/sandbox:2026.07.0",
-    "gateway": "praxis-flow/gateway:2026.07.0"
+    "proxy": "caddy:2.11.4"
   }
 }
 ```
@@ -298,9 +300,9 @@ Details zu erhaltenen Settings: [`settings-backup-classification.md`](settings-b
 | Symptom                      | Ursache                                             |
 | ---------------------------- | --------------------------------------------------- |
 | „Manager-Version … zu alt"   | `.pfupdate` verlangt höhere `minimumManagerVersion` |
-| „images.gateway muss … sein" | `--version` weicht von Image-Tags ab                |
+| „images.gateway muss … sein" | Legacy/`--with-gateway`: `--version` weicht vom Tag ab |
 | Update bricht bei Backup ab  | Stack nicht erreichbar (Maintenance `:8082`)        |
-| Wizard findet kein Gateway   | `release:images` liefert nur app+sandbox            |
+| Wizard findet kein Gateway   | Gateway ist Lab-only; Produkt-`.pfupdate` ohne gateway |
 | SHA256-Fehler beim Laden     | Sidecar passt nicht zur `.tar.gz`                   |
 
 ---

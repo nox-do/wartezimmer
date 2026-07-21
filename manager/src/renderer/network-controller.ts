@@ -7,18 +7,16 @@ import type {
 } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import type {
-  GatewayFieldState,
   LanIpFieldState,
   ReachabilityFieldState,
 } from './host-network-panels.js';
 import { hostNetworkChanged } from './host-network-panels.js';
 import {
-  NETWORK_GATEWAY_INTERFACE_ERROR,
   NETWORK_LAN_REQUIRED_ERROR,
   NETWORK_NO_CHANGES_ERROR,
-  NETWORK_RESTART_CONFIRM_MESSAGE,
-  NETWORK_SAVE_PROGRESS_TEXT,
+  networkRestartConfirmMessage,
   networkSaveErrorText,
+  networkSaveProgressText,
   networkSaveStatusText,
 } from './network-view-model.js';
 import {
@@ -28,20 +26,14 @@ import {
   productPublishPort,
   type ReachabilityMode,
 } from './reachability.js';
-import {
-  buildGatewayPlanInput,
-  createHostNetworkFields,
-  gatewayDraftDefaults,
-  resolvedLanIp,
-  validateGatewayManagementIpForUi,
-} from './wizard-state.js';
+import { createHostNetworkFields, resolvedLanIp } from './wizard-state.js';
+import { DISABLED_GATEWAY_PLAN } from './wizard-flow.js';
 
 export type NetworkCallbacks = {
   onAfterMutation?: () => void;
 };
 
 export type NetworkState = LanIpFieldState &
-  GatewayFieldState &
   ReachabilityFieldState & {
     status: HostStatus | null;
     network: NetworkSnapshot | null;
@@ -62,9 +54,7 @@ export type NetworkControllerDeps = NetworkCallbacks & {
 
 export type NetworkController = {
   getState: () => Readonly<NetworkState>;
-  patchFields: (
-    patch: Partial<LanIpFieldState & GatewayFieldState & ReachabilityFieldState>,
-  ) => void;
+  patchFields: (patch: Partial<LanIpFieldState & ReachabilityFieldState>) => void;
   apply: () => void;
   testReachability: () => void;
   show: (status: HostStatus) => void;
@@ -82,11 +72,6 @@ function createInitialState(): NetworkState {
     networkStatusText: '',
     lanAppIp: '__custom__',
     customLanIp: '',
-    gatewayEnabled: false,
-    gatewayInterface: 'eth1',
-    gatewayIp: '192.168.88.1',
-    portalAppIp: '',
-    gatewayManagementIp: '',
     reachabilityMode: 'lan-ip',
     customHostname: '',
     proxyEnabled: false,
@@ -136,19 +121,6 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       setError(NETWORK_LAN_REQUIRED_ERROR);
       return;
     }
-    if (state.gatewayEnabled && !state.gatewayInterface.trim()) {
-      setError(NETWORK_GATEWAY_INTERFACE_ERROR);
-      return;
-    }
-    const managementIpError = validateGatewayManagementIpForUi(
-      state.gatewayManagementIp,
-      state,
-      state.network,
-    );
-    if (state.gatewayEnabled && managementIpError) {
-      setError(managementIpError);
-      return;
-    }
 
     const canonicalBaseUrl = resolveCanonicalForSave();
     if (!canonicalBaseUrl || !isHttpOrigin(canonicalBaseUrl)) {
@@ -162,14 +134,20 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
 
     setBusy(true);
     setError(null);
-    patch({ networkStatusText: NETWORK_SAVE_PROGRESS_TEXT });
+    const enablingProxy = state.proxyEnabled && !state.status.proxy?.enabled;
+    patch({
+      networkStatusText: networkSaveProgressText({
+        restartCompose,
+        enablingProxy,
+      }),
+    });
 
     void deps.api
       .saveHostNetwork({
         lanAppIp,
         restartCompose,
         canonicalBaseUrl,
-        gateway: buildGatewayPlanInput(state),
+        gateway: DISABLED_GATEWAY_PLAN,
         proxy: {
           enabled: state.proxyEnabled,
           httpPort: 80,
@@ -177,7 +155,9 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       })
       .then((result) => {
         patch({
-          networkStatusText: networkSaveStatusText(result, restartCompose),
+          networkStatusText: networkSaveStatusText(result, restartCompose, {
+            proxyEnabled: state.proxyEnabled,
+          }),
           compose: result.compose ?? state.compose,
         });
         const saveError = networkSaveErrorText(result, restartCompose);
@@ -220,11 +200,15 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
         return;
       }
 
+      const proxyChanging = Boolean(state.proxyEnabled) !== Boolean(state.status?.proxy?.enabled);
+
       if (
         (state.compose?.running ?? false) &&
         hostNetworkChanged(state, state.status, state.network)
       ) {
-        deps.requestConfirm(NETWORK_RESTART_CONFIRM_MESSAGE, () => saveHostNetwork(true));
+        deps.requestConfirm(networkRestartConfirmMessage(proxyChanging), () =>
+          saveHostNetwork(true),
+        );
         return;
       }
 
@@ -314,7 +298,6 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
             network,
             reachabilityMode,
             customHostname,
-            ...gatewayDraftDefaults(state, network, resolvedLanIp(state)),
           });
         })
         .catch((error) => {

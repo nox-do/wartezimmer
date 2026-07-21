@@ -5,6 +5,7 @@ import {
   buildProxyEnvUpdates,
   buildProxyHttpCanonicalBaseUrl,
   buildProxyStatus,
+  ensureProxyImageAvailable,
   planProxyComposeActions,
   ProxyConfigError,
   readProxyConfig,
@@ -77,7 +78,8 @@ test('readProxyConfig rejects PROXY_ENABLED=false with PROXY_MODE=http', () => {
         ]),
       ),
     (error: unknown) =>
-      error instanceof ProxyConfigError && /PROXY_MODE=http erfordert PROXY_ENABLED=true/.test(error.message),
+      error instanceof ProxyConfigError &&
+      /PROXY_MODE=http erfordert PROXY_ENABLED=true/.test(error.message),
   );
 });
 
@@ -90,17 +92,13 @@ test('readProxyConfig rejects PROXY_ENABLED=true with PROXY_MODE=off', () => {
           ['PROXY_MODE', 'off'],
         ]),
       ),
-    (error: unknown) =>
-      error instanceof ProxyConfigError && /PROXY_MODE=http/.test(error.message),
+    (error: unknown) => error instanceof ProxyConfigError && /PROXY_MODE=http/.test(error.message),
   );
 });
 
 test('buildProxyHttpCanonicalBaseUrl omits standard port 80', () => {
   assert.equal(buildProxyHttpCanonicalBaseUrl('192.168.1.50', 80), 'http://192.168.1.50');
-  assert.equal(
-    buildProxyHttpCanonicalBaseUrl('192.168.1.50', 8088),
-    'http://192.168.1.50:8088',
-  );
+  assert.equal(buildProxyHttpCanonicalBaseUrl('192.168.1.50', 8088), 'http://192.168.1.50:8088');
 });
 
 test('resolveCanonicalBaseUrlForProxyPlan derives http URL from LAN host when proxy on', () => {
@@ -386,4 +384,45 @@ test('buildProxyStatus distinguishes missing container from stopped service', ()
   assert.equal(stopped.enabled, true);
   assert.equal(stopped.container?.service, 'proxy');
   assert.equal(stopped.container?.state, 'exited');
+});
+
+test('ensureProxyImageAvailable uses existing image without pull', async () => {
+  let pulled = false;
+  const result = await ensureProxyImageAvailable(
+    new Map([['PRAXIS_FLOW_PROXY_IMAGE', 'caddy:test']]),
+    {
+      imageExists: async () => true,
+      pullImage: async () => {
+        pulled = true;
+        return { ok: true, log: '' };
+      },
+    },
+  );
+  assert.equal(result.imageRef, 'caddy:test');
+  assert.equal(result.pulled, false);
+  assert.equal(pulled, false);
+});
+
+test('ensureProxyImageAvailable pulls when missing', async () => {
+  let inspectCalls = 0;
+  const result = await ensureProxyImageAvailable(undefined, {
+    imageExists: async () => {
+      inspectCalls += 1;
+      return inspectCalls > 1;
+    },
+    pullImage: async () => ({ ok: true, log: 'pulled' }),
+  });
+  assert.equal(result.pulled, true);
+  assert.equal(inspectCalls, 2);
+});
+
+test('ensureProxyImageAvailable fails when pull fails', async () => {
+  await assert.rejects(
+    () =>
+      ensureProxyImageAvailable(undefined, {
+        imageExists: async () => false,
+        pullImage: async () => ({ ok: false, log: 'denied' }),
+      }),
+    /nicht geladen/,
+  );
 });

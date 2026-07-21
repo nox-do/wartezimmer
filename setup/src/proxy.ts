@@ -4,7 +4,11 @@ import type {
   ProxyMode,
   ProxyStatus,
 } from '@praxis-flow/server-shared';
-import { PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY } from '@praxis-flow/server-shared';
+import {
+  PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY,
+  PRAXIS_FLOW_PROXY_IMAGE_REF,
+} from '@praxis-flow/server-shared';
+import { runDockerCommand } from './docker-cli.js';
 import { DEFAULT_PROXY_HTTP_PORT } from './network-bindings.js';
 import {
   DEFAULT_APP_PORT,
@@ -339,6 +343,58 @@ export function planProxyComposeActions(input: {
     return { removeProxyFirst: true, composeUp: true };
   }
   return { removeProxyFirst: false, composeUp: true };
+}
+
+export function resolveProxyImageRef(env?: EnvLike): string {
+  return readEnvValue(env, PROXY_IMAGE_ENV_KEY)?.trim() || PRAXIS_FLOW_PROXY_IMAGE_REF;
+}
+
+export type EnsureProxyImageResult = {
+  imageRef: string;
+  pulled: boolean;
+};
+
+/**
+ * Ensure the offline proxy image is present before compose up.
+ * Does not start the container — callers run compose after save/apply.
+ */
+export async function ensureProxyImageAvailable(
+  env?: EnvLike,
+  deps?: {
+    imageExists?: (ref: string) => Promise<boolean>;
+    pullImage?: (ref: string) => Promise<{ ok: boolean; log: string }>;
+  },
+): Promise<EnsureProxyImageResult> {
+  const imageRef = resolveProxyImageRef(env);
+  const imageExists =
+    deps?.imageExists ??
+    (async (ref: string) => {
+      const result = await runDockerCommand(['image', 'inspect', ref, '--format', '{{.Id}}']);
+      return result.code === 0;
+    });
+  if (await imageExists(imageRef)) {
+    return { imageRef, pulled: false };
+  }
+
+  const pullImage =
+    deps?.pullImage ??
+    (async (ref: string) => {
+      const result = await runDockerCommand(['pull', ref]);
+      return { ok: result.code === 0, log: result.stderr || result.stdout || '' };
+    });
+
+  const pulled = await pullImage(imageRef);
+  if (!pulled.ok) {
+    throw new ProxyConfigError(
+      `Proxy-Image fehlt lokal und konnte nicht geladen werden (${imageRef}). ` +
+        `Release-Paket/.pfupdate mit Caddy importieren oder Docker-Registry prüfen.` +
+        (pulled.log ? ` ${pulled.log.trim()}` : ''),
+    );
+  }
+  if (!(await imageExists(imageRef))) {
+    throw new ProxyConfigError(`Proxy-Image nach dem Laden nicht gefunden: ${imageRef}`);
+  }
+  return { imageRef, pulled: true };
 }
 
 export function findProxyContainer(compose: ComposeStatus | null): ComposeServiceStatus | null {

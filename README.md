@@ -2,7 +2,7 @@
 
 Lokales Praxis-System: Check-in am Terminal, Warteschlange (MFA), Wartezimmer-TV, Patient-Portal (Upload/Anamnese), Dokument-Export — als Docker-Stack ohne Cloud.
 
-**Stack:** `app` (Fastify + SQLite + UI), `ui` (Svelte 5), `sandbox` (Preview/Form2PDF, ClamAV), optional `gateway` (Gast-WLAN, Linux).
+**Stack:** `app` (Fastify + SQLite + UI), `ui` (Svelte 5), `sandbox` (Preview/Form2PDF, ClamAV). WLAN/Captive: Praxis-IT + geplante dünne Adapter — kein eigener Gateway-Container im Produkt.
 
 ## Status
 
@@ -82,7 +82,7 @@ Einstieg nach Rolle: **[`docs/README.md`](docs/README.md)**
 | Build & Release   | [`docs/delivery.md`](docs/delivery.md)                           |
 | Docker-Betrieb    | [`docs/deployment-docker.md`](docs/deployment-docker.md)         |
 | Manager           | [`manager/README.md`](manager/README.md)                         |
-| Gast-WLAN         | [`gateway/README.md`](gateway/README.md)                         |
+| WLAN / Portal     | [`docs/integrations.md`](docs/integrations.md)                   |
 
 Env-Variablen: [`.env.example`](.env.example) — nicht hier duplizieren.
 
@@ -98,11 +98,10 @@ packages/domain/        Geteilte Fachlogik / Typen
 packages/server-shared/ Geteilte Server-Helfer (Logger, …)
 setup/                  Host-CLI + Setup-API (:9190)
 manager/                Electron-App: Wizard, Wartung, Updates
-gateway/                Optionales Captive-Portal (Profil gateway, Linux)
+gateway/                Lab-Referenz openNDS (nicht Produktkern)
 openapi/                API-Spezifikation (Source of Truth)
 docs/                   Fach- und Architektur-Doku
 
 docker-compose.yml              Dev: Build + Start (app, sandbox)
 docker-compose.delivery.yml     Kunden: nur Image-Tags aus Registry
-docker-compose.gateway*.yml     Optionales Gast-WLAN-Overlay
 ```

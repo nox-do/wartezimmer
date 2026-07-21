@@ -15,7 +15,6 @@
     ROUTING_MODE_WIZARD_HEADING,
     ROUTING_MODE_WIZARD_INTRO_DETAIL,
   } from './routing-mode-ui.js';
-  import { resolvedLanIp } from './wizard-state.js';
   import type { WizardController } from './wizard-controller.js';
   import type { WizardControllerState } from './wizard-controller.js';
   import {
@@ -26,7 +25,6 @@
   } from './wizard-view-model.js';
   import FolderPathField from './FolderPathField.svelte';
   import LanIpPanel from './LanIpPanel.svelte';
-  import GatewayPanel from './GatewayPanel.svelte';
   import ReachabilityPanel from './ReachabilityPanel.svelte';
   import WizardRoutingModePanel from './WizardRoutingModePanel.svelte';
 
@@ -158,43 +156,9 @@
       {/if}
     {:else if snapshot.step === 2}
       <p class="wizard-step-lead">
-        LAN-Adresse dieses Rechners und die Basis-URL, unter der Terminal, TV und MFA Praxis Flow im
-        Praxisnetz erreichen.
+        Zuerst das Einfache: Wie heißt die Praxis, und wie sollen Patienten durch die Praxis geführt
+        werden?
       </p>
-
-      <section class="network-config-block">
-        <h3 class="network-config-subheading">1. Host im Praxisnetz</h3>
-        <p class="hint">
-          Adresse dieses Rechners — Fallback, wenn ein Hostname im LAN nicht auflöst.
-        </p>
-        <LanIpPanel
-          state={snapshot}
-          network={snapshot.network}
-          status={snapshot.status}
-          disabled={snapshot.busy || snapshot.reachabilityProbeBusy}
-          variant="wizard"
-          radioName="wizard-lan-ip"
-          idPrefix="wizard"
-          onChange={patchFields}
-        />
-      </section>
-
-      <section class="network-config-block">
-        <h3 class="network-config-subheading">2. Geräte-URL (Basis)</h3>
-        <ReachabilityPanel
-          state={snapshot}
-          network={snapshot.network}
-          disabled={snapshot.busy}
-          probeBusy={snapshot.reachabilityProbeBusy}
-          probeMessage={snapshot.reachabilityProbeMessage}
-          probeOk={snapshot.reachabilityProbeOk}
-          onChange={patchFields}
-          onTest={() => {
-            void controller.testReachability().then(onPatch);
-          }}
-        />
-      </section>
-    {:else if snapshot.step === 3}
       <p>
         Dieser Name wird an verschiedenen Stellen in Praxis Flow verwendet, um den Namen Ihrer
         Praxis anzuzeigen.
@@ -221,21 +185,10 @@
           Routing wird geladen …
         </p>
       {/if}
-    {:else if snapshot.step === 4}
-      <GatewayPanel
-        state={snapshot}
-        network={snapshot.network}
-        lanIpFallback={resolvedLanIp(snapshot)}
-        disabled={snapshot.busy}
-        showIntro
-        radioName="wizard-gateway-interface"
-        idPrefix="wizard"
-        onChange={patchFields}
-      />
-      {#if snapshot.status?.gateway?.enabled && snapshot.status.envExists}
-        <p class="hint">Bestehende Gast-WLAN-Einstellungen aus der Konfiguration übernommen.</p>
-      {/if}
-    {:else if snapshot.step === 5}
+    {:else if snapshot.step === 3}
+      <p class="wizard-step-lead">
+        Ordner für Kontakt-Import und Dokument-Export auf diesem Rechner.
+      </p>
       <p>
         Diese Ordner werden per Docker-Bind-Mount mit /imports und /exports im app-Container
         verbunden — für Kontakt-CSV und MFA-Exporte.
@@ -271,6 +224,89 @@
           return path;
         }}
       />
+    {:else if snapshot.step === 4}
+      <p class="wizard-step-lead">
+        Unter welcher Adresse — optional mit internem DNS-Namen — soll Praxis Flow erreichbar sein?
+      </p>
+
+      <section class="network-config-block">
+        <h3 class="network-config-subheading">1. Host im Praxisnetz</h3>
+        <p class="hint">
+          Adresse dieses Rechners — Fallback, wenn ein Hostname im LAN nicht auflöst.
+        </p>
+        <LanIpPanel
+          state={snapshot}
+          network={snapshot.network}
+          status={snapshot.status}
+          disabled={snapshot.busy || snapshot.reachabilityProbeBusy}
+          variant="wizard"
+          radioName="wizard-lan-ip"
+          idPrefix="wizard"
+          onChange={patchFields}
+        />
+      </section>
+
+      <section class="network-config-block">
+        <h3 class="network-config-subheading">2. Geräte-URL (Basis)</h3>
+        <ReachabilityPanel
+          state={snapshot}
+          network={snapshot.network}
+          disabled={snapshot.busy}
+          probeBusy={snapshot.reachabilityProbeBusy}
+          probeMessage={snapshot.reachabilityProbeMessage}
+          probeOk={snapshot.reachabilityProbeOk}
+          showProxyToggle={false}
+          onChange={patchFields}
+          onTest={() => {
+            void controller.testReachability().then(onPatch);
+          }}
+        />
+      </section>
+    {:else if snapshot.step === 5}
+      <p class="wizard-step-lead">
+        Optionaler Zugang: Reverse Proxy und später die WLAN-/Captive-Anbindung fürs Patientenportal.
+      </p>
+
+      <section class="network-config-block">
+        <h3 class="network-config-subheading">Proxy-Server (optional)</h3>
+        <p class="hint">
+          Einstieg im Praxisnetz über Port 80 statt :8080. Das Caddy-Image ist im Release enthalten und
+          startet nur, wenn Sie den Proxy aktivieren.
+        </p>
+        <label class="wizard-checkbox">
+          <input
+            type="checkbox"
+            checked={snapshot.proxyEnabled}
+            disabled={snapshot.busy}
+            onchange={(event) =>
+              patchFields({ proxyEnabled: (event.currentTarget as HTMLInputElement).checked })}
+          />
+          <span>Zugriff über Reverse Proxy auf Port 80</span>
+        </label>
+        {#if snapshot.proxyEnabled}
+          <p class="hint">
+            Direkter App-Port bleibt lokal unter <code>127.0.0.1:8080</code> erreichbar. Die
+            Geräte-URLs in der Vorschau nutzen dann Port 80.
+          </p>
+        {/if}
+      </section>
+
+      <section class="network-config-block">
+        <h3 class="network-config-subheading">Patientenportal / WLAN-Freigabe</h3>
+        <p class="hint">
+          Hier kommt später die Auswahl des WLAN-Adapters (z. B. Omada, UniFi): Praxis Flow prüft die
+          Wartenummer und meldet dem Captive der Praxis-IT die Freigabe. Router und Captive Portal
+          stellen wir nicht her.
+        </p>
+        <p class="hint">
+          Bis dahin: Captive bleibt bei der Praxis-IT. Produktiv mit Patientenportal empfohlen;
+          <code>/portal</code> ohne Captive nur zum Test. Details unter Netzwerk → Erläuterung zum
+          Netz.
+        </p>
+        <p class="hint wizard-placeholder-note">
+          <strong>Auswahl folgt:</strong> Vendor-Dropdown und Anschlussdaten — noch nicht verfügbar.
+        </p>
+      </section>
     {:else if snapshot.step === 6}
       {#if !snapshot.plan}
         <p>Plan wird geladen …</p>
@@ -287,20 +323,10 @@
             Geräte-URLs nutzen den Reverse Proxy (Port 80). Der App-Port bleibt lokal unter
             <code>127.0.0.1:8080</code> erreichbar.
           {:else}
-            Geräte nutzen Port 8080. Optional: Reverse Proxy auf Port 80 unter Erreichbarkeit aktivieren.
+            Geräte nutzen Port 8080. Optionalen Proxy können Sie unter Zugang oder später unter
+            Netzwerk aktivieren.
           {/if}
         </p>
-
-        {#if snapshot.gatewayEnabled && Object.keys(snapshot.plan.gatewayEnv).length > 0}
-          <h3 class="wizard-subheading">Gast-WLAN</h3>
-          <dl class="status-grid wizard-summary-grid">
-            <dt>Netzwerkkarte</dt><dd>{snapshot.plan.gatewayEnv.GATEWAY_INTERFACE ?? snapshot.gatewayInterface}</dd>
-            <dt>Gateway-IP</dt><dd>{snapshot.plan.gatewayEnv.GATEWAY_IP ?? snapshot.gatewayIp}</dd>
-            <dt>Portal-URL</dt><dd>{snapshot.plan.gatewayEnv.APP_PORTAL_URL ?? ''}</dd>
-            <dt>App für Gateway</dt><dd>{snapshot.plan.gatewayEnv.APP_API_URL ?? ''}</dd>
-            <dt>Internetfreigabe</dt><dd>{snapshot.plan.gatewayEnv.GATEWAY_AUTH_BRIDGE_URL ?? ''}</dd>
-          </dl>
-        {/if}
 
         <h3 class="wizard-subheading">Host-Ordner (Docker-Mounts)</h3>
         <dl class="status-grid wizard-summary-grid">

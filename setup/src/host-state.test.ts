@@ -135,11 +135,17 @@ test('pickLanIpFromEnv falls back to APP_PORTAL_URL hostname', () => {
 });
 
 test('isLanIpStale is false when configured IP matches a current candidate', () => {
-  assert.equal(isLanIpStale('192.168.1.13', [{ address: '192.168.1.13', interfaceName: 'en0' }]), false);
+  assert.equal(
+    isLanIpStale('192.168.1.13', [{ address: '192.168.1.13', interfaceName: 'en0' }]),
+    false,
+  );
 });
 
 test('isLanIpStale is true when configured IP is absent from current candidates', () => {
-  assert.equal(isLanIpStale('192.168.1.23', [{ address: '192.168.1.13', interfaceName: 'en0' }]), true);
+  assert.equal(
+    isLanIpStale('192.168.1.23', [{ address: '192.168.1.13', interfaceName: 'en0' }]),
+    true,
+  );
 });
 
 test('isLanIpStale is false for localhost or missing configuration', () => {
@@ -149,7 +155,10 @@ test('isLanIpStale is false for localhost or missing configuration', () => {
 });
 
 test('pickPracticeDisplayNameFromEnv reads PRACTICE_DISPLAY_NAME', () => {
-  assert.equal(pickPracticeDisplayNameFromEnv(new Map([['PRACTICE_DISPLAY_NAME', 'Praxis Nord']])), 'Praxis Nord');
+  assert.equal(
+    pickPracticeDisplayNameFromEnv(new Map([['PRACTICE_DISPLAY_NAME', 'Praxis Nord']])),
+    'Praxis Nord',
+  );
 });
 
 test('pickPracticeDisplayNameFromEnv returns null when unset', () => {
@@ -349,7 +358,8 @@ test('saveHostNetwork rejects unknown PROXY_MODE', async () => {
     });
 
     await assert.rejects(
-      () => saveHostNetwork(ctx(root), { lanAppIp: '192.168.1.10', gateway: gwOff('192.168.1.10') }),
+      () =>
+        saveHostNetwork(ctx(root), { lanAppIp: '192.168.1.10', gateway: gwOff('192.168.1.10') }),
       (error: unknown) => error instanceof Error && /PROXY_MODE=tls-managed/.test(error.message),
     );
   });
@@ -388,7 +398,11 @@ test('saveHostNetwork enables and disables proxy from wire', async () => {
 
     await saveHostNetwork(
       ctx(root),
-      { lanAppIp: '192.168.1.10', proxy: { enabled: true, httpPort: 80 }, gateway: gwOff('192.168.1.10') },
+      {
+        lanAppIp: '192.168.1.10',
+        proxy: { enabled: true, httpPort: 80 },
+        gateway: gwOff('192.168.1.10'),
+      },
       allowProxyPort,
     );
     let map = env(root);
@@ -530,7 +544,11 @@ test('proxy enable preflight calls composePs with withProxy true', async () => {
     const withProxyFlags: Array<boolean | undefined> = [];
     await saveHostNetwork(
       ctx(root),
-      { lanAppIp: '192.168.1.10', proxy: { enabled: true, httpPort: 80 }, gateway: gwOff('192.168.1.10') },
+      {
+        lanAppIp: '192.168.1.10',
+        proxy: { enabled: true, httpPort: 80 },
+        gateway: gwOff('192.168.1.10'),
+      },
       {
         ...allowProxyPort,
         composePs: async (options) => {

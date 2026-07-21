@@ -13,8 +13,12 @@ export const PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY = 'PRAXIS_FLOW_PROXY_IMAGE' as cons
 
 export const PFUPDATE_TEMPLATE_PATHS = [
   'templates/docker-compose.delivery.yml',
-  'templates/docker-compose.gateway.delivery.yml',
   'templates/.env.example',
+] as const;
+
+/** Optional openNDS gateway compose (lab / legacy packages). Not part of product releases. */
+export const PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS = [
+  'templates/docker-compose.gateway.delivery.yml',
 ] as const;
 
 /** Optional in v1 for backward compatibility with packages built before P2c. */
@@ -30,10 +34,13 @@ export const PFUPDATE_REQUIRED_FILE_PATHS = [
 
 export const PFUPDATE_ALLOWED_FILE_PATHS = [
   ...PFUPDATE_REQUIRED_FILE_PATHS,
+  ...PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS,
   ...PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS,
 ] as const;
 
 export type PfupdateTemplatePath = (typeof PFUPDATE_TEMPLATE_PATHS)[number];
+export type PfupdateOptionalGatewayTemplatePath =
+  (typeof PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS)[number];
 export type PfupdateOptionalProxyTemplatePath =
   (typeof PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS)[number];
 export type PfupdateRequiredFilePath = (typeof PFUPDATE_REQUIRED_FILE_PATHS)[number];
@@ -48,7 +55,8 @@ export type PfupdateFileEntryV1 = {
 export type PfupdateImagesV1 = {
   app: string;
   sandbox: string;
-  gateway: string;
+  /** Present in lab/legacy packages that ship openNDS; omitted from product releases. */
+  gateway?: string;
   /** Present in packages that ship the offline Caddy image; omitted in older v1 packages. */
   proxy?: string;
 };
@@ -98,6 +106,9 @@ const VERSIONED_IMAGE_REPO_BY_KEY = {
 } as const;
 
 type PfupdateVersionedImageKey = keyof typeof VERSIONED_IMAGE_REPO_BY_KEY;
+
+/** Always required in v1 manifests. */
+const REQUIRED_VERSIONED_IMAGE_KEYS = ['app', 'sandbox'] as const satisfies readonly PfupdateVersionedImageKey[];
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
@@ -175,8 +186,10 @@ export function buildPfupdateManifest(input: {
   const images: PfupdateImagesV1 = {
     app: input.images.app.trim(),
     sandbox: input.images.sandbox.trim(),
-    gateway: input.images.gateway.trim(),
   };
+  if (input.images.gateway !== undefined) {
+    images.gateway = input.images.gateway.trim();
+  }
   if (input.images.proxy !== undefined) {
     images.proxy = input.images.proxy.trim();
   }
@@ -300,11 +313,14 @@ function validateManifestObject(raw: unknown): { manifest?: PfupdateManifestV1; 
         errors.push(`manifest.json: Unbekanntes images-Feld "${key}".`);
       }
     }
-    for (const key of Object.keys(VERSIONED_IMAGE_REPO_BY_KEY) as PfupdateVersionedImageKey[]) {
+    for (const key of REQUIRED_VERSIONED_IMAGE_KEYS) {
       const value = record.images[key];
       if (!isNonEmptyString(value)) {
         errors.push(`manifest.json: images.${key} fehlt oder ist leer.`);
       }
+    }
+    if (record.images.gateway !== undefined && !isNonEmptyString(record.images.gateway)) {
+      errors.push('manifest.json: images.gateway muss ein nicht-leerer String sein, wenn gesetzt.');
     }
     if (record.images.proxy !== undefined && !isNonEmptyString(record.images.proxy)) {
       errors.push('manifest.json: images.proxy muss ein nicht-leerer String sein, wenn gesetzt.');
@@ -323,8 +339,10 @@ function validateManifestObject(raw: unknown): { manifest?: PfupdateManifestV1; 
   const images: PfupdateImagesV1 = {
     app: imagesRaw.app.trim(),
     sandbox: imagesRaw.sandbox.trim(),
-    gateway: imagesRaw.gateway.trim(),
   };
+  if (isNonEmptyString(imagesRaw.gateway)) {
+    images.gateway = imagesRaw.gateway.trim();
+  }
   if (isNonEmptyString(imagesRaw.proxy)) {
     images.proxy = imagesRaw.proxy.trim();
   }
@@ -420,11 +438,30 @@ export function validatePfupdateImageRefs(manifest: PfupdateManifestV1): string[
   const errors: string[] = [];
   const releaseVersion = manifest.releaseVersion;
 
-  for (const key of Object.keys(VERSIONED_IMAGE_REPO_BY_KEY) as PfupdateVersionedImageKey[]) {
+  for (const key of REQUIRED_VERSIONED_IMAGE_KEYS) {
     const expected = expectedPfupdateImageRef(VERSIONED_IMAGE_REPO_BY_KEY[key], releaseVersion);
     const actual = manifest.images[key];
     if (actual !== expected) {
       errors.push(`manifest.json: images.${key} muss "${expected}" sein (ist "${actual}").`);
+    }
+  }
+
+  if (manifest.images.gateway !== undefined) {
+    const expectedGateway = expectedPfupdateImageRef(
+      VERSIONED_IMAGE_REPO_BY_KEY.gateway,
+      releaseVersion,
+    );
+    if (manifest.images.gateway !== expectedGateway) {
+      errors.push(
+        `manifest.json: images.gateway muss "${expectedGateway}" sein (ist "${manifest.images.gateway}").`,
+      );
+    }
+    for (const templatePath of PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS) {
+      if (!manifest.files.some((entry) => entry.path === templatePath)) {
+        errors.push(
+          `manifest.json: Pflichtdatei "${templatePath}" fehlt in files, wenn images.gateway gesetzt ist.`,
+        );
+      }
     }
   }
 

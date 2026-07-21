@@ -1,8 +1,6 @@
 import net from 'node:net';
 import type { ComposeStatus, NetworkBindingCheck } from '@praxis-flow/server-shared';
-import {
-  assessGatewayBridgeBind,
-} from '@praxis-flow/server-shared';
+import { assessGatewayBridgeBind } from '@praxis-flow/server-shared';
 import { runProcessCommand } from './command-runner.js';
 import { canRunGatewayCompose } from './docker.js';
 import { listNetworkInterfaces, type NetworkInterfaceInfo } from './network.js';
@@ -263,13 +261,15 @@ export async function auditNetworkBindings(input: {
       message: 'Gateway-Dienst startet nur auf Linux',
       detail: `Werte gespeichert (${ifaceName}, ${gatewayIp}). Am Linux-Gateway mit zweiter Netzwerkkarte einrichten — nicht die WLAN-Adresse dieses Rechners.`,
     });
-    checks.push(...buildGatewayBridgeConfigChecks({
-      bridgeBind,
-      bridgeUrl: input.env.get('GATEWAY_AUTH_BRIDGE_URL')?.trim() ?? '',
-      gatewayInterface: ifaceName,
-      gatewayIp,
-      interfaces,
-    }));
+    checks.push(
+      ...buildGatewayBridgeConfigChecks({
+        bridgeBind,
+        bridgeUrl: input.env.get('GATEWAY_AUTH_BRIDGE_URL')?.trim() ?? '',
+        gatewayInterface: ifaceName,
+        gatewayIp,
+        interfaces,
+      }),
+    );
     return checks;
   }
 
@@ -354,7 +354,10 @@ function buildGatewayBridgeConfigChecks(input: {
     id: 'gateway.bridge-bind',
     ok: bindAssessment.level !== 'block',
     message: bindAssessment.message,
-    detail: bindAssessment.level === 'warn' || bindAssessment.level === 'block' ? bindAssessment.detail : undefined,
+    detail:
+      bindAssessment.level === 'warn' || bindAssessment.level === 'block'
+        ? bindAssessment.detail
+        : undefined,
   });
 
   checks.push({

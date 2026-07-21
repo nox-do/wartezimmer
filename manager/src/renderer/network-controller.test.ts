@@ -21,7 +21,7 @@ test('createNetworkController sets busy during show bootstrap', async () => {
   assert.equal(controller.getState().busy, true);
 
   resolveNetwork({
-    lanCandidates: [{ address: '192.168.1.10', label: 'en0 — 192.168.1.10' }],
+    lanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
     interfaces: [],
     machineHostname: 'praxis-mac',
     gatewayComposeSupported: true,
@@ -32,7 +32,7 @@ test('createNetworkController sets busy during show bootstrap', async () => {
   assert.equal(controller.getState().busy, false);
 });
 
-test('network bootstrap fills gateway portal IP from selected LAN IP', async () => {
+test('network bootstrap marks leftover enabled gateway as dirty', async () => {
   let resolveNetwork: (value: unknown) => void = () => {};
   const networkPromise = new Promise((resolve) => {
     resolveNetwork = resolve;
@@ -47,24 +47,24 @@ test('network bootstrap fills gateway portal IP from selected LAN IP', async () 
 
   controller.show(
     minimalHostStatus({
+      configuredCanonicalBaseUrl: 'http://192.168.1.10:8080',
       network: {
-        configuredLanIp: null,
-        currentLanCandidates: [],
+        configuredLanIp: '192.168.1.10',
+        currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
         lanIpStale: false,
       },
       gateway: {
         enabled: true,
         gatewayInterface: 'eth1',
         gatewayIp: '192.168.88.1',
-        portalAppIp: '',
+        portalAppIp: '192.168.1.10',
         authBridgeUrl: '',
       },
     }),
   );
-  controller.patchFields({ lanAppIp: '192.168.1.10', portalAppIp: '', gatewayManagementIp: '' });
 
   resolveNetwork({
-    lanCandidates: [{ address: '192.168.1.10', label: 'en0 — 192.168.1.10' }],
+    lanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
     interfaces: [],
     machineHostname: 'praxis-mac',
     gatewayComposeSupported: true,
@@ -73,8 +73,10 @@ test('network bootstrap fills gateway portal IP from selected LAN IP', async () 
   await networkPromise;
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  assert.equal(controller.getState().portalAppIp, '192.168.1.10');
-  assert.equal(controller.getState().gatewayManagementIp, '');
+  assert.equal(controller.getState().lanAppIp, '192.168.1.10');
+  // Leftover GATEWAY_* must be treated as dirty so save can clear it.
+  controller.apply();
+  assert.notEqual(controller.getState().error, NETWORK_NO_CHANGES_ERROR);
 });
 
 function mockApi(overrides: Partial<{ fetchSetupNetwork: () => Promise<unknown> }> = {}) {

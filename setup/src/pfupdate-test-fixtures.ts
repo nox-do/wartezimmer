@@ -7,6 +7,7 @@ import {
   buildPfupdateManifest,
   formatSha256Sums,
   PFUPDATE_ALLOWED_FILE_PATHS,
+  PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS,
   PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS,
   PRAXIS_FLOW_PROXY_IMAGE_REF,
   serializePfupdateManifest,
@@ -30,6 +31,8 @@ function writeFileDigest(root: string, relativePath: string, content: string) {
 export type BuildTestPfupdateArchiveOptions = {
   version?: string;
   manifestContent?: string;
+  /** Include optional openNDS gateway image + compose template (lab/legacy packages). */
+  withGateway?: boolean;
   /** Include optional offline proxy image + templates (P2c packages). */
   withProxy?: boolean;
 };
@@ -44,6 +47,7 @@ export function buildTestPfupdateArchive(
       ? { version: versionOrOptions ?? legacyVersion ?? defaultReleaseVersion }
       : versionOrOptions;
   const version = options.version ?? defaultReleaseVersion;
+  const withGateway = options.withGateway === true;
   const withProxy = options.withProxy === true;
   const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-build-'));
   try {
@@ -54,17 +58,23 @@ export function buildTestPfupdateArchive(
     const fileEntries = [
       writeFileDigest(staging, 'images/praxis-flow-images.tar', 'fake-docker-save-tar'),
       writeFileDigest(staging, 'templates/docker-compose.delivery.yml', 'services: {}\n'),
-      writeFileDigest(staging, 'templates/docker-compose.gateway.delivery.yml', 'services: {}\n'),
       writeFileDigest(
         staging,
         'templates/.env.example',
         [
           `PRAXIS_FLOW_APP_IMAGE=praxis-flow/app:${version}`,
+          ...(withGateway ? [`PRAXIS_FLOW_GATEWAY_IMAGE=praxis-flow/gateway:${version}`] : []),
           ...(withProxy ? [`PRAXIS_FLOW_PROXY_IMAGE=${PRAXIS_FLOW_PROXY_IMAGE_REF}`] : []),
           '',
         ].join('\n'),
       ),
     ];
+
+    if (withGateway) {
+      for (const relativePath of PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS) {
+        fileEntries.push(writeFileDigest(staging, relativePath, 'services: {}\n'));
+      }
+    }
 
     if (withProxy) {
       for (const relativePath of PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS) {
@@ -86,7 +96,7 @@ export function buildTestPfupdateArchive(
       images: {
         app: `praxis-flow/app:${version}`,
         sandbox: `praxis-flow/sandbox:${version}`,
-        gateway: `praxis-flow/gateway:${version}`,
+        ...(withGateway ? { gateway: `praxis-flow/gateway:${version}` } : {}),
         ...(withProxy ? { proxy: PRAXIS_FLOW_PROXY_IMAGE_REF } : {}),
       },
       files: fileEntries.map((entry) => ({

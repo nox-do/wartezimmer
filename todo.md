@@ -1,6 +1,77 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-17
+Stand: 2026-07-18
+
+## Entscheidung: Produktgrenze WLAN / Captive (2026-07-18)
+
+- **Wir stellen nicht her:** Router, APs, Captive-Portal-Hardware, eigenen Captive-Datenpfad
+- **Wir liefern:** Portal-UI + Wartenummer-Prüfung + dünne Vendor-Adapter (Outbound-URL / Inbound ja|nein)
+- Verwandt (zurückstellen): Plan Gateway Management Hostname/IP
+
+## Health-Pills / Ampeln (2026-07-21)
+
+- Ampel App/Sandbox/Proxy einheitlich: Compose running + Docker-Health
+- Sandbox-ClamAV nur noch als Pill, färbt die Ampel nicht mehr
+- Offen als Nächstes: App-Pills (lokal/LAN) entwirren
+
+## Fix: Manager-Headline bei Proxy/LAN (2026-07-21)
+
+- „Einrichtung unvollständig“ war irreführend bei LAN-Probe-Fail / fehlendem Proxy-Container
+- Neu: „Proxy-Server fehlt“ bzw. „LAN nicht erreichbar“
+- Header-Kachel Proxy auch wenn Proxy enabled aber Image fehlt (vorher nur mit Image)
+
+## Wizard-Reihenfolge + Zugang-Platzhalter (2026-07-18)
+
+- Neu: 1 Voraussetzungen → 2 Praxis → 3 Import/Export → 4 Netzwerk → 5 Zugang → 6 Vorschau → 7 Abschluss
+- Praxis-Basis (Name, Routing, Ordner) vor Netz; Netz basic → komplex
+- Schritt 5: Info „Vendor-Auswahl folgt“ — noch kein Dropdown
+
+## Aufräumen WLAN-Grenze — erledigt (2026-07-18)
+
+- Doku: `integrations.md`, `architecture.md`, README; openNDS = Lab (`gateway-captive-portal.md`)
+- Manager: Wizard 6 Schritte; Gateway-Draft-Felder weg; Plan/Save `gateway: { enabled: false }`
+- Topology **neu**: Portal mit Praxis-IT-Captive (empfohlen) vs. nur Praxis-intern — kein openNDS-Mini-PC
+- Release: `images.gateway` optional (Default ohne; Lab `--with-gateway`)
+- Offen: Wizard-Schritt „WLAN-Freigabe“ + Vendor-Dropdown — später, neuer State (nicht GatewayPanel)
+
+## Plan: Gateway Management Hostname/IP (2026-07-17)
+
+- Review-Plan: `docs/plan-gateway-management-host.md` — **Zurückgestellt** (Produktgrenze WLAN)
+- Noch nicht umgesetzt
+
+## Fix: Gast-WLAN Management-IP host.docker.internal (2026-07-17)
+
+- Legacy `GATEWAY_AUTH_BRIDGE_URL=http://host.docker.internal:9100` wurde als Feldwert geladen → IPv4-Fehler
+- Sanitize: nur IPv4 (bzw. 0.0.0.0) in UI; beim Aktivieren ungültige Hostnamen leeren
+
+## Smoke: standalone Proxy (2026-07-17)
+
+- `npm run smoke:proxy` — Caddy-Image + echte `proxy/Caddyfile`, Mock-Upstream Alias `app`
+- `--keep` / `--cleanup` zum manuellen Ausprobieren; nicht in `smoke:all` (braucht Docker)
+
+## Chore: Prettier repo-clean (2026-07-17)
+
+- Restliche Format-Warnungen (docs, flow-core, gateway-bridge) mitgezogen; `format:check` + lint grün
+
+## UI: Header-Kachel Proxy-Server (2026-07-17)
+
+- Nur wenn Offline-Image vorhanden und Proxy schon genutzt (enabled und/oder Container)
+- Label „Proxy-Server“; keine Roh-Service-Kachel `proxy`
+
+## UI: Proxy Enable erst beim Speichern (2026-07-17)
+
+- Checkbox ändert nur Draft; Start bei „Netzwerk-Einstellungen übernehmen“ + Stack-Neustart
+- Vor Compose-Up: Proxy-Image prüfen/pullen; Spinner-Texte für Proxy-Start; Status-Hinweise
+
+## UI: Proxy-Server Label + Netzwerk-Settings (2026-07-17)
+
+- Status: Label „Proxy-Server“ (nicht „Proxy“)
+- Netzwerk-Tab: eigener Block „Proxy-Server (optional)“ unter Netzwerk-Einstellungen; Toggle nicht nur im Wizard
+
+## Fix: Manager weißer Screen — gateway-bridge Barrel-Import (2026-07-17)
+
+- Ursache: Renderer (`wizard-state`, `host-network-panels`) importierte `@praxis-flow/server-shared` Barrel → `node:crypto` via pfupdate/pfbackup
+- Fix: Subpath `@praxis-flow/server-shared/gateway-bridge` + Export in package.json
 
 ## Erledigt: P2c – optionale Release-Verpackung Proxy (2026-07-17)
 
@@ -13,7 +84,7 @@ Stand: 2026-07-17
 
 ## Erledigt: P2b P1-Cutover-Fixes (2026-07-17)
 
-- Apply ohne `proxy`: PROXY_* / APP_BIND bleiben erhalten (`writeProxyEnv === false`)
+- Apply ohne `proxy`: PROXY\_\* / APP_BIND bleiben erhalten (`writeProxyEnv === false`)
 - `PRAXIS_FLOW_PROXY_IMAGE` immer bewahren (nicht im Wire-Payload)
 - Apply mit `proxy`: Runtime-Keys überschreibbar; Image bleibt
 - Enable: Port-Preflight mit `composePs(..., withProxy: true)` vor Env-Write
@@ -28,19 +99,21 @@ Stand: 2026-07-17
 ## Erledigt: P2b – Proxy über Network-/Plan-/Apply (2026-07-17)
 
 - Shared: optional `proxy?: ProxyConfigInput` auf Plan/Apply/Network
-- Absent → PROXY_* unverändert; present → enable/disable inkl. Canonical/Bind
+- Absent → PROXY\_\* unverändert; present → enable/disable inkl. Canonical/Bind
 - Manager: Checkbox in Erreichbarkeit + Statuszeilen Zugriff/Proxy
 - Kein neuer Endpoint; bestehende Probes; kein TLS / .pfupdate (→ P2c)
 
 ## Erledigt: P2a – HTTP-Proxy Runtime (2026-07-17)
 
 Entscheidungen:
+
 - Bootstrap: Proxy-Compose + `proxy/Caddyfile` in DEV/DELIVERY; nested `mkdir`; nicht überschreiben
 - Packaged resources: Delivery-Proxy-Dateien mitnehmen (kein Caddy-Image/.pfupdate)
 - Apply setzt Canonical atomar aus Host + Proxy-Port (Port 80 weglassen)
 - `HostStatus.proxy` immer gesetzt (`off` ist regulärer Zustand)
 
 Umgesetzt:
+
 - Shared: `ProxyMode` / `ProxyStatus`, `HostStatus.proxy`
 - `setup/src/proxy.ts` + Tests
 - `resolveComposeFiles` zentral (Proxy-/Gateway-Overlays)
@@ -49,6 +122,7 @@ Umgesetzt:
 - Bootstrap + `prepare-packaged-resources.mjs`
 
 Review-Nachzug:
+
 - Ungültige Proxy-Env (unbekannter Modus, enabled+off) → `ProxyConfigError` / 400
 - Disable: `compose rm -sf proxy` mit erzwungenem Overlay **vor** Env-Write, dann Up ohne Overlay
 - `compose ps --all` für gestoppte Proxy-Container
