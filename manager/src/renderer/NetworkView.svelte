@@ -1,14 +1,11 @@
 <script lang="ts">
   /**
    * Network tab layout (IT action order):
-   * 1 Host/LAN → 2 Proxy → 3 Erreichbarkeit → Apply → 4 Prüfungen → 5 Erläuterung
+   * 1 Host/LAN → 2 Proxy → 3 Erreichbarkeit → Apply+Verify → 4 Prüfungen → 5 Erläuterung
    *
    * CAUTION — shell sync: three $effects below (session / config / runtime). Do not
    * merge casually; show() vs applyConfigSnapshot vs applyRuntimeHealth have different
    * dirty-field semantics (see network-controller).
-   *
-   * TODO: Wizard Zugang still embeds proxy/reachability separately — keep labels in sync
-   * with NetworkProxyPanel / ReachabilityPanel, or extract shared step snippets later.
    */
   import { onMount } from 'svelte';
   import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
@@ -22,11 +19,14 @@
     networkExpanderDefaults,
     networkHostChecksForDisplay,
     networkHostChecksSubtitle,
+    networkIsBusy,
     networkLanSubtitle,
     networkProxySubtitle,
     networkReachabilitySubtitle,
     networkWarningText,
+    NETWORK_STACK_STOPPED_VERIFY_HINT,
     proxyNeedsRestore,
+    savedDeviceBaseUrl,
   } from './network-view-model.js';
   import { resolvedLanIp } from './wizard-state.js';
   import { managerShell } from './manager-shell-state.svelte.js';
@@ -35,7 +35,8 @@
   import MaintenanceSection from './MaintenanceSection.svelte';
   import NetworkTopologyDiagram from './NetworkTopologyDiagram.svelte';
   import NetworkBindingChecks from './NetworkBindingChecks.svelte';
-  import NetworkProxyPanel from './NetworkProxyPanel.svelte';
+  import ProxySettings from './ProxySettings.svelte';
+  import ProxyRecoveryAction from './ProxyRecoveryAction.svelte';
   import LanIpPanel from './LanIpPanel.svelte';
   import ReachabilityPanel from './ReachabilityPanel.svelte';
 
@@ -110,13 +111,14 @@
     syncSnapshot();
   }
 
+  const dirty = $derived(
+    snapshot ? hostNetworkChanged(snapshot, snapshot.status, snapshot.network) : false,
+  );
+
+  const busy = $derived(snapshot ? networkIsBusy(snapshot.operation) : false);
+
   const warningText = $derived(
-    snapshot
-      ? networkWarningText(
-          snapshot.compose?.running ?? false,
-          hostNetworkChanged(snapshot, snapshot.status, snapshot.network),
-        )
-      : null,
+    snapshot ? networkWarningText(snapshot.compose?.running ?? false, dirty) : null,
   );
 
   const showProxyRestore = $derived(
@@ -130,6 +132,8 @@
   const diagramLanIp = $derived(
     snapshot ? resolvedLanIp(snapshot) || snapshot.status?.network.configuredLanIp : null,
   );
+
+  const savedUrl = $derived(snapshot ? savedDeviceBaseUrl(snapshot.status) : null);
 
   onMount(() => {
     controller = createNetworkController({
@@ -175,7 +179,6 @@
     if (!c || !status || !session) {
       return;
     }
-    // Session-Start wendet denselben Snapshot bereits in show() an.
     if (status === session.status) {
       return;
     }
@@ -208,42 +211,45 @@
       <div class="maintenance-accordion">
         <MaintenanceSection
           open={lanOpen}
-          title="Host / LAN-Adresse"
+          title="Adresse dieses Rechners"
           subtitle={networkLanSubtitle(snapshot.status, snapshot)}
           onToggle={() => {
             lanOpen = !lanOpen;
           }}
         >
-          <p class="hint">Adresse dieses Rechners im Praxisnetz (Binding, Stale-Check, Fallback).</p>
+          <p class="hint">
+            IP dieses Rechners im Praxisnetz. Wenn sie nicht mehr stimmt, hier anpassen und übernehmen.
+          </p>
           <LanIpPanel
             state={snapshot}
             network={snapshot.network}
             status={snapshot.status}
-            disabled={snapshot.busy}
+            disabled={busy}
             onChange={patchFields}
           />
         </MaintenanceSection>
 
         <MaintenanceSection
           open={proxyOpen}
-          title="Proxy-Server"
+          title="Gerätezugriff (Port 80)"
           subtitle={networkProxySubtitle(snapshot.status, snapshot.proxyEnabled)}
           onToggle={() => {
             proxyOpen = !proxyOpen;
           }}
         >
-          <NetworkProxyPanel
-            proxyEnabled={snapshot.proxyEnabled}
-            busy={snapshot.busy}
-            showRestore={showProxyRestore}
+          <ProxySettings
+            enabled={snapshot.proxyEnabled}
+            disabled={busy}
             onChange={(proxyEnabled) => patchFields({ proxyEnabled })}
-            onRestore={() => controller?.restoreProxy()}
           />
+          {#if showProxyRestore}
+            <ProxyRecoveryAction disabled={busy} onRestore={() => controller?.restoreProxy()} />
+          {/if}
         </MaintenanceSection>
 
         <MaintenanceSection
           open={reachabilityOpen}
-          title="Erreichbarkeit im Praxisnetz"
+          title="Adresse für Terminal, TV und MFA"
           subtitle={networkReachabilitySubtitle(snapshot.status)}
           onToggle={() => {
             reachabilityOpen = !reachabilityOpen;
@@ -252,13 +258,13 @@
           <ReachabilityPanel
             state={snapshot}
             network={snapshot.network}
-            disabled={snapshot.busy}
-            probeBusy={snapshot.reachabilityProbeBusy}
-            probeMessage={snapshot.reachabilityProbeMessage}
-            probeOk={snapshot.reachabilityProbeOk}
-            showProxyToggle={false}
+            disabled={busy}
+            savedBaseUrl={savedUrl}
+            verifyBusy={snapshot.operation === 'checking'}
+            verifyEnabled={Boolean(snapshot.compose?.running)}
+            verifyDisabledHint={NETWORK_STACK_STOPPED_VERIFY_HINT}
             onChange={patchFields}
-            onTest={() => controller?.testReachability()}
+            onVerifySaved={() => controller?.verifyActiveConfiguration(savedUrl)}
           />
         </MaintenanceSection>
       </div>
@@ -270,14 +276,23 @@
         <button
           type="button"
           class="btn-secondary"
-          disabled={snapshot.busy}
-          onclick={() => controller?.apply()}
+          disabled={busy || !dirty}
+          onclick={() => controller?.applyAndVerify()}
         >
-          Netzwerk-Einstellungen übernehmen
+          Einstellungen übernehmen und prüfen
         </button>
       </div>
-      {#if snapshot.networkStatusText}
-        <p class="maintenance-backup-status">{snapshot.networkStatusText}</p>
+      {#if snapshot.resultMessage}
+        <p
+          class={snapshot.resultOk === false || snapshot.operation === 'failed'
+            ? 'error'
+            : 'maintenance-backup-status'}
+        >
+          {snapshot.resultMessage}
+        </p>
+      {/if}
+      {#if snapshot.error && snapshot.error !== snapshot.resultMessage}
+        <p class="error">{snapshot.error}</p>
       {/if}
 
       <div class="maintenance-accordion network-diagnose-accordion">
@@ -304,10 +319,6 @@
         </MaintenanceSection>
       </div>
     </section>
-
-    {#if snapshot.error}
-      <p class="error">{snapshot.error}</p>
-    {/if}
   {/if}
 
   <ConfirmDialog open={confirmOpen} onConfirm={confirmAndRun} onCancel={closeConfirm}>

@@ -25,6 +25,7 @@
   } from './wizard-view-model.js';
   import FolderPathField from './FolderPathField.svelte';
   import LanIpPanel from './LanIpPanel.svelte';
+  import ProxySettings from './ProxySettings.svelte';
   import ReachabilityPanel from './ReachabilityPanel.svelte';
   import WizardRoutingModePanel from './WizardRoutingModePanel.svelte';
 
@@ -238,7 +239,7 @@
           state={snapshot}
           network={snapshot.network}
           status={snapshot.status}
-          disabled={snapshot.busy || snapshot.reachabilityProbeBusy}
+          disabled={snapshot.busy}
           variant="wizard"
           radioName="wizard-lan-ip"
           idPrefix="wizard"
@@ -252,14 +253,7 @@
           state={snapshot}
           network={snapshot.network}
           disabled={snapshot.busy}
-          probeBusy={snapshot.reachabilityProbeBusy}
-          probeMessage={snapshot.reachabilityProbeMessage}
-          probeOk={snapshot.reachabilityProbeOk}
-          showProxyToggle={false}
           onChange={patchFields}
-          onTest={() => {
-            void controller.testReachability().then(onPatch);
-          }}
         />
       </section>
     {:else if snapshot.step === 5}
@@ -268,27 +262,12 @@
       </p>
 
       <section class="network-config-block">
-        <h3 class="network-config-subheading">Proxy-Server (optional)</h3>
-        <p class="hint">
-          Einstieg im Praxisnetz über Port 80 statt :8080. Das Caddy-Image ist im Release enthalten und
-          startet nur, wenn Sie den Proxy aktivieren.
-        </p>
-        <label class="wizard-checkbox">
-          <input
-            type="checkbox"
-            checked={snapshot.proxyEnabled}
-            disabled={snapshot.busy}
-            onchange={(event) =>
-              patchFields({ proxyEnabled: (event.currentTarget as HTMLInputElement).checked })}
-          />
-          <span>Zugriff über Reverse Proxy auf Port 80</span>
-        </label>
-        {#if snapshot.proxyEnabled}
-          <p class="hint">
-            Direkter App-Port bleibt lokal unter <code>127.0.0.1:8080</code> erreichbar. Die
-            Geräte-URLs in der Vorschau nutzen dann Port 80.
-          </p>
-        {/if}
+        <h3 class="network-config-subheading">Gerätezugriff (Port 80)</h3>
+        <ProxySettings
+          enabled={snapshot.proxyEnabled}
+          disabled={snapshot.busy}
+          onChange={(proxyEnabled) => patchFields({ proxyEnabled })}
+        />
       </section>
 
       <section class="network-config-block">

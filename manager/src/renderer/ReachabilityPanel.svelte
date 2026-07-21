@@ -14,23 +14,24 @@
     state,
     network,
     disabled = false,
-    probeBusy = false,
-    probeMessage = null,
-    probeOk = null,
-    showProxyToggle = true,
+    /** When set, shows verify against the saved URL (not the draft preview). */
+    savedBaseUrl = null,
+    verifyBusy = false,
+    /** When false, verify button is disabled (e.g. stack stopped). */
+    verifyEnabled = true,
+    verifyDisabledHint = null,
     onChange,
-    onTest,
+    onVerifySaved,
   }: {
     state: LanIpFieldState & ReachabilityFieldState;
     network: NetworkSnapshot | null;
     disabled?: boolean;
-    probeBusy?: boolean;
-    probeMessage?: string | null;
-    probeOk?: boolean | null;
-    /** Network tab keeps the toggle under Netzwerk-Einstellungen; wizard shows it on Zugang. */
-    showProxyToggle?: boolean;
+    savedBaseUrl?: string | null;
+    verifyBusy?: boolean;
+    verifyEnabled?: boolean;
+    verifyDisabledHint?: string | null;
     onChange: (patch: Partial<ReachabilityFieldState>) => void;
-    onTest: () => void;
+    onVerifySaved?: () => void;
   } = $props();
 
   const lanIp = $derived(resolvedLanIp(state));
@@ -45,16 +46,15 @@
 
 <div class="reachability-panel">
   <p class="hint">
+    Adresse für Terminal, TV und MFA
     {#if state.proxyEnabled}
-      Basis-URL für Terminal, TV, MFA und Ops im Praxisnetz über den Reverse Proxy (Port 80). Der
-      direkte App-Port bleibt lokal unter <code>127.0.0.1:8080</code> erreichbar.
+      (Port 80).
     {:else}
-      Basis-URL für Terminal, TV, MFA und Ops im Praxisnetz (Port 8080). Hostname ist Komfort — wenn
-      der Name im LAN nicht auflöst, LAN-IP verwenden.
+      (Port 8080). Hostname ist Komfort — wenn der Name im Praxisnetz nicht auflöst, LAN-IP verwenden.
     {/if}
   </p>
 
-  <fieldset class="wizard-fieldset" disabled={disabled || probeBusy}>
+  <fieldset class="wizard-fieldset" disabled={disabled || verifyBusy}>
     <legend class="lan-ip-prompt">Wie soll Praxis Flow im Praxisnetz erreichbar sein?</legend>
 
     <label class="wizard-radio">
@@ -109,7 +109,7 @@
       type="text"
       placeholder="praxis-flow.local"
       value={state.customHostname}
-      disabled={disabled || probeBusy}
+      disabled={disabled || verifyBusy}
       oninput={(event) =>
         onChange({ customHostname: (event.currentTarget as HTMLInputElement).value })}
     />
@@ -122,40 +122,25 @@
     </p>
   {/if}
 
-  {#if showProxyToggle}
-    <label class="wizard-checkbox">
-      <input
-        type="checkbox"
-        checked={state.proxyEnabled}
-        disabled={disabled || probeBusy}
-        onchange={(event) =>
-          onChange({ proxyEnabled: (event.currentTarget as HTMLInputElement).checked })}
-      />
-      <span>Zugriff über Reverse Proxy auf Port 80</span>
-    </label>
-    {#if state.proxyEnabled}
-      <p class="hint">
-        Direkter App-Port bleibt lokal unter <code>127.0.0.1:8080</code> erreichbar.
-      </p>
-    {/if}
-  {/if}
-
   {#if preview}
-    <p class="hint">Vorschau Geräte-Basis: <code>{preview}</code></p>
+    <p class="hint">Vorschau (Entwurf): <code>{preview}</code></p>
   {/if}
 
-  <div class="actions-row">
-    <button
-      type="button"
-      class="btn-secondary"
-      disabled={disabled || probeBusy || !preview}
-      onclick={onTest}
-    >
-      {probeBusy ? 'Prüfe …' : 'Erreichbarkeit testen'}
-    </button>
-  </div>
-
-  {#if probeMessage}
-    <p class={probeOk === false ? 'error' : 'hint'}>{probeMessage}</p>
+  {#if savedBaseUrl && onVerifySaved}
+    <p class="hint">Gespeichert: <code>{savedBaseUrl}</code></p>
+    {#if !verifyEnabled && verifyDisabledHint}
+      <p class="hint">{verifyDisabledHint}</p>
+    {:else}
+      <div class="actions-row">
+        <button
+          type="button"
+          class="btn-secondary"
+          disabled={disabled || verifyBusy || !verifyEnabled}
+          onclick={onVerifySaved}
+        >
+          {verifyBusy ? 'Prüfe …' : 'Gespeicherte Adresse erneut prüfen'}
+        </button>
+      </div>
+    {/if}
   {/if}
 </div>

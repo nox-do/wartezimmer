@@ -1,25 +1,29 @@
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import type {
   ComposeStatus,
+  HostNetworkResult,
   HostStatus,
   NetworkSnapshot,
-  ProbeResult,
 } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
-import type {
-  LanIpFieldState,
-  ReachabilityFieldState,
-} from './host-network-panels.js';
+import type { LanIpFieldState, ReachabilityFieldState } from './host-network-panels.js';
 import { hostNetworkChanged } from './host-network-panels.js';
 import {
+  formatActiveReachabilityResult,
   NETWORK_LAN_REQUIRED_ERROR,
-  NETWORK_NO_CHANGES_ERROR,
+  NETWORK_PROBE_FAILED_MESSAGE,
   NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE,
+  NETWORK_STACK_STOPPED_VERIFY_HINT,
+  networkIsBusy,
+  networkOperationProgressText,
+  networkProxyMissingAfterRestart,
+  networkProxyStartFailureMessage,
   networkRestartConfirmMessage,
-  networkSaveErrorText,
-  networkSaveProgressText,
-  networkSaveStatusText,
+  networkRestartFailureMessage,
+  networkSavedWhileStoppedMessage,
+  type NetworkOperation,
   proxyNeedsRestore,
+  savedDeviceBaseUrl,
 } from './network-view-model.js';
 import {
   draftCanonicalBaseUrl,
@@ -28,6 +32,7 @@ import {
   productPublishPort,
   type ReachabilityMode,
 } from './reachability.js';
+import { pollSetupProbes } from './setup-probes.js';
 import { createHostNetworkFields, resolvedLanIp } from './wizard-state.js';
 import { DISABLED_GATEWAY_PLAN } from './wizard-flow.js';
 
@@ -40,26 +45,32 @@ export type NetworkState = LanIpFieldState &
     status: HostStatus | null;
     network: NetworkSnapshot | null;
     compose: ComposeStatus | null;
-    networkStatusText: string;
-    busy: boolean;
+    operation: NetworkOperation;
+    /** Progress / outcome for the primary network action. */
+    resultMessage: string | null;
+    resultOk: boolean | null;
     error: string | null;
-    reachabilityProbeBusy: boolean;
-    reachabilityProbeMessage: string | null;
-    reachabilityProbeOk: boolean | null;
   };
 
 export type NetworkControllerDeps = NetworkCallbacks & {
   api: PraxisManagerApi;
   onStateChange?: () => void;
   requestConfirm: (message: string, onConfirm: () => void) => void;
+  /** Override probe polling (tests / shorter LAN grace). */
+  verifyProbeOptions?: {
+    maxWaitMs?: number;
+    intervalMs?: number;
+    lanGraceMs?: number;
+  };
 };
 
 export type NetworkController = {
   getState: () => Readonly<NetworkState>;
   patchFields: (patch: Partial<LanIpFieldState & ReachabilityFieldState>) => void;
-  apply: () => void;
+  applyAndVerify: () => void;
   restoreProxy: () => void;
-  testReachability: () => void;
+  /** Probe an already-saved device base URL (never the draft). */
+  verifyActiveConfiguration: (baseUrl?: string | null) => void;
   show: (status: HostStatus) => void;
   hide: () => void;
   applyConfigSnapshot: (status: HostStatus) => void;
@@ -71,30 +82,20 @@ function createInitialState(): NetworkState {
     status: null,
     network: null,
     compose: null,
-    networkStatusText: '',
     lanAppIp: '__custom__',
     customLanIp: '',
     reachabilityMode: 'lan-ip',
     customHostname: '',
     proxyEnabled: false,
-    busy: false,
+    operation: 'idle',
+    resultMessage: null,
+    resultOk: null,
     error: null,
-    reachabilityProbeBusy: false,
-    reachabilityProbeMessage: null,
-    reachabilityProbeOk: null,
   };
 }
 
-function lanProbeSummary(probes: ProbeResult[]): { ok: boolean | null; message: string | null } {
-  const lan = probes.find((probe) => probe.id === 'app.health.lan');
-  if (!lan) {
-    return { ok: null, message: 'Keine Praxisnetz-Prüfung möglich (keine Basis-URL).' };
-  }
-  return { ok: lan.ok, message: lan.message };
-}
-
 /**
- * Network tab controller — field draft + save/restore/probe.
+ * Network tab controller — draft fields + applyAndVerify / verifyActiveConfiguration.
  *
  * CAUTION: applyConfigSnapshot preserves dirty drafts; applyRuntimeHealth only
  * patches compose. Session show() resets fields from HostStatus. NetworkView
@@ -104,6 +105,8 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
   const state = createInitialState();
   /** Bumped on each show()/hide() so stale fetchSetupNetwork responses are ignored. */
   let showGeneration = 0;
+  /** Bumped to drop in-flight save/verify work after hide. */
+  let actionGeneration = 0;
 
   function notify(): void {
     deps.onStateChange?.();
@@ -114,31 +117,77 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     notify();
   }
 
-  function setBusy(busy: boolean): void {
-    patch({ busy });
+  function setOperation(operation: NetworkOperation, resultMessage?: string | null): void {
+    const progress = networkOperationProgressText(operation);
+    patch({
+      operation,
+      ...(resultMessage !== undefined
+        ? { resultMessage }
+        : progress
+          ? { resultMessage: progress, resultOk: null }
+          : {}),
+    });
   }
 
-  function setError(message: string | null): void {
-    patch({ error: message });
-  }
-
-  function resolveCanonicalForSave(): string | null {
+  function resolveDraftCanonical(): string | null {
     return draftCanonicalBaseUrl(state, state.network);
   }
 
-  function saveHostNetwork(
-    restartCompose: boolean,
-    options?: { repairProxy?: boolean },
-  ): void {
+  function isDirty(): boolean {
+    return hostNetworkChanged(state, state.status, state.network);
+  }
+
+  async function verifySavedBaseUrl(
+    baseUrl: string,
+    generation: number,
+  ): Promise<{ ok: boolean; message: string }> {
+    setOperation('checking');
+    try {
+      const probes = await pollSetupProbes(
+        deps.api,
+        {
+          localAppBaseUrl: 'http://127.0.0.1:8080',
+          lanAppBaseUrl: baseUrl,
+        },
+        // Wait while app comes up; local ok then short LAN grace before accepting LAN red.
+        {
+          maxWaitMs: 30_000,
+          intervalMs: 2_500,
+          requireLan: false,
+          ...deps.verifyProbeOptions,
+        },
+      );
+      if (generation !== actionGeneration) {
+        return { ok: false, message: '' };
+      }
+      return formatActiveReachabilityResult(probes, baseUrl);
+    } catch {
+      if (generation !== actionGeneration) {
+        return { ok: false, message: '' };
+      }
+      return { ok: false, message: NETWORK_PROBE_FAILED_MESSAGE };
+    }
+  }
+
+  async function saveAndMaybeVerify(input: {
+    restartCompose: boolean;
+    repairProxy?: boolean;
+  }): Promise<void> {
+    const generation = ++actionGeneration;
     const lanAppIp = resolvedLanIp(state);
     if (!lanAppIp) {
-      setError(NETWORK_LAN_REQUIRED_ERROR);
+      patch({ operation: 'failed', error: NETWORK_LAN_REQUIRED_ERROR, resultMessage: null, resultOk: false });
       return;
     }
 
-    const canonicalBaseUrl = resolveCanonicalForSave();
+    const canonicalBaseUrl = resolveDraftCanonical();
     if (!canonicalBaseUrl || !isHttpOrigin(canonicalBaseUrl)) {
-      setError('Erreichbarkeit: bitte LAN-IP, Rechnername oder eigenen Hostnamen wählen.');
+      patch({
+        operation: 'failed',
+        error: 'Bitte LAN-IP, Rechnername oder eigenen Hostnamen für die Geräte-Adresse wählen.',
+        resultMessage: null,
+        resultOk: false,
+      });
       return;
     }
 
@@ -146,51 +195,93 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       return;
     }
 
-    const repairingProxy = Boolean(options?.repairProxy);
-    setBusy(true);
-    setError(null);
-    const enablingProxy = state.proxyEnabled && !state.status.proxy?.enabled;
-    patch({
-      networkStatusText: networkSaveProgressText({
-        restartCompose,
-        enablingProxy,
-        repairingProxy,
-      }),
-    });
+    const proxyEnabled = state.proxyEnabled;
+    setOperation(input.repairProxy || input.restartCompose ? 'restarting' : 'saving');
+    patch({ error: null, resultOk: null });
 
-    void deps.api
-      .saveHostNetwork({
+    let result: HostNetworkResult;
+    try {
+      if (!input.restartCompose) {
+        setOperation('saving');
+      }
+      result = await deps.api.saveHostNetwork({
         lanAppIp,
-        restartCompose,
-        repairProxy: repairingProxy || undefined,
+        restartCompose: input.restartCompose,
+        repairProxy: input.repairProxy || undefined,
         canonicalBaseUrl,
         gateway: DISABLED_GATEWAY_PLAN,
         proxy: {
-          enabled: state.proxyEnabled,
+          enabled: proxyEnabled,
           httpPort: 80,
         },
-      })
-      .then((result) => {
+      });
+    } catch (error) {
+      if (generation !== actionGeneration) {
+        return;
+      }
+      patch({
+        operation: 'failed',
+        error: error instanceof Error ? error.message : 'Netzwerk konnte nicht gespeichert werden.',
+        resultMessage: null,
+        resultOk: false,
+      });
+      return;
+    }
+
+    if (generation !== actionGeneration) {
+      return;
+    }
+
+    patch({ compose: result.compose ?? state.compose });
+    deps.onAfterMutation?.();
+
+    // Restart was requested (save-with-restart or proxy repair) but compose did not come up.
+    if (input.restartCompose && !result.composeRestarted) {
+      patch({
+        operation: 'failed',
+        error: input.repairProxy
+          ? networkProxyStartFailureMessage()
+          : networkRestartFailureMessage(result),
+        resultMessage: null,
+        resultOk: false,
+      });
+      return;
+    }
+
+    if (input.repairProxy || (proxyEnabled && input.restartCompose)) {
+      if (networkProxyMissingAfterRestart(result, proxyEnabled)) {
         patch({
-          networkStatusText: networkSaveStatusText(result, restartCompose, {
-            proxyEnabled: state.proxyEnabled,
-            repairingProxy,
-          }),
-          compose: result.compose ?? state.compose,
+          operation: 'failed',
+          error: networkProxyStartFailureMessage(),
+          resultMessage: null,
+          resultOk: false,
         });
-        const saveError = networkSaveErrorText(result, restartCompose);
-        if (saveError) {
-          setError(saveError);
-        }
-        deps.onAfterMutation?.();
-      })
-      .catch((error) => {
-        patch({ networkStatusText: '' });
-        setError(
-          error instanceof Error ? error.message : 'Netzwerk konnte nicht gespeichert werden.',
-        );
-      })
-      .finally(() => setBusy(false));
+        return;
+      }
+    }
+
+    // Normal save while stack stopped — no restart requested.
+    if (!result.stackWasRunning && !result.composeRestarted) {
+      patch({
+        operation: 'success',
+        resultMessage: networkSavedWhileStoppedMessage(),
+        resultOk: true,
+        error: null,
+      });
+      return;
+    }
+
+    const savedUrl = result.deviceUrls.appBaseUrl?.trim() || canonicalBaseUrl;
+    const verified = await verifySavedBaseUrl(savedUrl, generation);
+    if (generation !== actionGeneration || !verified.message) {
+      return;
+    }
+    patch({
+      operation: verified.ok ? 'success' : 'failed',
+      resultMessage: verified.message,
+      resultOk: verified.ok,
+      error: verified.ok ? null : verified.message,
+    });
   }
 
   return {
@@ -205,115 +296,111 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
         'lanAppIp' in patchFields ||
         'customLanIp' in patchFields
       ) {
-        patch({
-          reachabilityProbeMessage: null,
-          reachabilityProbeOk: null,
-        });
+        if (state.operation === 'success' || state.operation === 'failed') {
+          patch({ operation: 'idle', resultMessage: null, resultOk: null, error: null });
+        }
       }
     },
 
-    apply() {
-      if (!hostNetworkChanged(state, state.status, state.network)) {
-        setError(NETWORK_NO_CHANGES_ERROR);
+    applyAndVerify() {
+      if (networkIsBusy(state.operation)) {
+        return;
+      }
+      if (!isDirty()) {
         return;
       }
 
       const proxyChanging = Boolean(state.proxyEnabled) !== Boolean(state.status?.proxy?.enabled);
+      const stackRunning = state.compose?.running ?? false;
 
-      if (
-        (state.compose?.running ?? false) &&
-        hostNetworkChanged(state, state.status, state.network)
-      ) {
-        deps.requestConfirm(networkRestartConfirmMessage(proxyChanging), () =>
-          saveHostNetwork(true),
-        );
-        return;
-      }
-
-      saveHostNetwork(false);
-    },
-
-    restoreProxy() {
-      if (!proxyNeedsRestore(state.status)) {
-        setError('Proxy-Server läuft bereits oder ist nicht aktiviert.');
-        return;
-      }
-      if (!state.proxyEnabled) {
-        setError('Bitte Proxy aktiviert lassen und „Proxy wiederherstellen“ nutzen.');
-        return;
-      }
-      deps.requestConfirm(NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE, () =>
-        saveHostNetwork(true, { repairProxy: true }),
-      );
-    },
-
-    testReachability() {
-      const lanAppBaseUrl = resolveCanonicalForSave();
-      if (!lanAppBaseUrl) {
-        patch({
-          reachabilityProbeOk: false,
-          reachabilityProbeMessage:
-            'Keine Basis-URL — LAN-IP wählen oder Hostname/Domain eintragen.',
+      if (stackRunning) {
+        deps.requestConfirm(networkRestartConfirmMessage(proxyChanging), () => {
+          void saveAndMaybeVerify({ restartCompose: true });
         });
         return;
       }
 
-      patch({
-        reachabilityProbeBusy: true,
-        reachabilityProbeMessage: `Prüfe ${lanAppBaseUrl} …`,
-        reachabilityProbeOk: null,
-        error: null,
-      });
+      void saveAndMaybeVerify({ restartCompose: false });
+    },
 
-      void deps.api
-        .runSetupProbes({
-          localAppBaseUrl: 'http://127.0.0.1:8080',
-          lanAppBaseUrl,
-        })
-        .then((result) => {
-          const summary = lanProbeSummary(result.probes);
-          const local = result.probes.find((probe) => probe.id === 'app.health.local');
-          if (local && !local.ok) {
-            patch({
-              reachabilityProbeOk: false,
-              reachabilityProbeMessage: `Lokal nicht erreichbar — ${local.message}`,
-            });
-            return;
-          }
-          if (summary.ok === false) {
-            patch({
-              reachabilityProbeOk: false,
-              reachabilityProbeMessage: `${summary.message ?? 'Nicht erreichbar'} — bei Hostname-Problemen LAN-IP verwenden.`,
-            });
-            return;
-          }
-          patch({
-            reachabilityProbeOk: true,
-            reachabilityProbeMessage: summary.message ?? `Erreichbar: ${lanAppBaseUrl}`,
-          });
-        })
-        .catch((error) => {
-          patch({
-            reachabilityProbeOk: false,
-            reachabilityProbeMessage:
-              error instanceof Error ? error.message : 'Erreichbarkeitstest fehlgeschlagen.',
-          });
-        })
-        .finally(() => patch({ reachabilityProbeBusy: false }));
+    restoreProxy() {
+      if (networkIsBusy(state.operation)) {
+        return;
+      }
+      if (!proxyNeedsRestore(state.status)) {
+        patch({
+          operation: 'failed',
+          error: 'Proxy-Dienst läuft bereits oder ist nicht aktiviert.',
+          resultMessage: null,
+          resultOk: false,
+        });
+        return;
+      }
+      if (!state.proxyEnabled) {
+        patch({
+          operation: 'failed',
+          error: 'Bitte den Zugriff über Port 80 aktiviert lassen und wiederherstellen.',
+          resultMessage: null,
+          resultOk: false,
+        });
+        return;
+      }
+      deps.requestConfirm(NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE, () => {
+        void saveAndMaybeVerify({ restartCompose: true, repairProxy: true });
+      });
+    },
+
+    verifyActiveConfiguration(baseUrl) {
+      if (networkIsBusy(state.operation)) {
+        return;
+      }
+      if (!(state.compose?.running ?? false)) {
+        patch({
+          operation: 'failed',
+          error: NETWORK_STACK_STOPPED_VERIFY_HINT,
+          resultMessage: NETWORK_STACK_STOPPED_VERIFY_HINT,
+          resultOk: false,
+        });
+        return;
+      }
+      const url = (baseUrl ?? savedDeviceBaseUrl(state.status))?.trim() || '';
+      if (!url) {
+        patch({
+          operation: 'failed',
+          error: 'Keine gespeicherte Geräte-Adresse — bitte zuerst übernehmen.',
+          resultMessage: null,
+          resultOk: false,
+        });
+        return;
+      }
+
+      const generation = ++actionGeneration;
+      patch({ error: null });
+      void verifySavedBaseUrl(url, generation).then((verified) => {
+        if (generation !== actionGeneration || !verified.message) {
+          return;
+        }
+        patch({
+          operation: verified.ok ? 'success' : 'failed',
+          resultMessage: verified.message,
+          resultOk: verified.ok,
+          error: verified.ok ? null : verified.message,
+        });
+      });
     },
 
     show(status) {
       const generation = ++showGeneration;
+      actionGeneration += 1;
       patch({
         status,
         compose: status.compose,
-        networkStatusText: '',
+        operation: 'loading',
+        resultMessage: networkOperationProgressText('loading'),
+        resultOk: null,
         error: null,
-        reachabilityProbeMessage: null,
-        reachabilityProbeOk: null,
         ...createHostNetworkFields(status),
       });
-      setBusy(true);
       void deps.api
         .fetchSetupNetwork()
         .then((network) => {
@@ -321,7 +408,6 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
             return;
           }
           const fields = { ...state, ...createHostNetworkFields(status) };
-          // Prefer hostname mode only for the exact hostname-mode URL (http://host:8080).
           let reachabilityMode: ReachabilityMode = fields.reachabilityMode;
           let customHostname = fields.customHostname;
           const host = network.machineHostname?.trim();
@@ -334,34 +420,39 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
             network,
             reachabilityMode,
             customHostname,
+            operation: 'idle',
+            resultMessage: null,
           });
         })
         .catch((error) => {
           if (generation !== showGeneration) {
             return;
           }
-          setError(
-            error instanceof Error ? error.message : 'Netzwerkdaten konnten nicht geladen werden.',
-          );
-        })
-        .finally(() => {
-          if (generation !== showGeneration) {
-            return;
-          }
-          setBusy(false);
+          patch({
+            operation: 'failed',
+            error:
+              error instanceof Error ? error.message : 'Netzwerkdaten konnten nicht geladen werden.',
+            resultMessage: null,
+            resultOk: false,
+          });
         });
     },
 
     hide() {
       showGeneration += 1;
-      setError(null);
-      setBusy(false);
+      actionGeneration += 1;
+      patch({
+        operation: 'idle',
+        error: null,
+        resultMessage: null,
+        resultOk: null,
+      });
     },
 
     applyConfigSnapshot(status) {
-      const dirty = hostNetworkChanged(state, state.status, state.network);
+      const dirty = isDirty();
       patch({ status });
-      if (!dirty && !state.busy) {
+      if (!dirty && !networkIsBusy(state.operation)) {
         patch(createHostNetworkFields(status));
       }
     },

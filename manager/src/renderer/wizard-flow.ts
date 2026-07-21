@@ -45,9 +45,6 @@ export type WizardFlowState = ReturnType<typeof createInitialWizardFields> & {
   plan: SetupPlan | null;
   applyResult: ApplySetupResult | null;
   releaseImportStatus: string | null;
-  reachabilityProbeBusy: boolean;
-  reachabilityProbeMessage: string | null;
-  reachabilityProbeOk: boolean | null;
 };
 
 export type WizardAdvanceAfter = 'loadNetwork' | 'loadPlan' | 'apply-and-refresh';
@@ -74,9 +71,6 @@ export function createWizardFlowState(
     plan: null,
     applyResult: null,
     releaseImportStatus: null,
-    reachabilityProbeBusy: false,
-    reachabilityProbeMessage: null,
-    reachabilityProbeOk: null,
   };
 }
 
@@ -203,14 +197,10 @@ export function wizardReachabilityAfterNetworkLoad(
       network,
       reachabilityMode: 'hostname',
       customHostname: '',
-      reachabilityProbeMessage: null,
-      reachabilityProbeOk: null,
     };
   }
   return {
     network,
-    reachabilityProbeMessage: null,
-    reachabilityProbeOk: null,
   };
 }
 

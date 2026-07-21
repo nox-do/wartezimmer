@@ -21,8 +21,6 @@ import {
   type WizardFlowState,
   type WizardStep,
 } from './wizard-flow.js';
-import { draftCanonicalBaseUrl, isHttpOrigin } from './reachability.js';
-import type { ProbeResult } from '../shared/host-status.js';
 
 export type WizardCallbacks = {
   onComplete: () => void;
@@ -59,7 +57,6 @@ export type WizardController = {
   loadReleaseArchive: () => Promise<void>;
   browseImportsFolder: () => Promise<string | null>;
   browseExportsFolder: () => Promise<string | null>;
-  testReachability: () => Promise<void>;
 };
 
 function createInitialState(
@@ -190,16 +187,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       if (Object.prototype.hasOwnProperty.call(partial, 'routingMode')) {
         routingModeTouched = true;
       }
-      const clearsProbe =
-        'reachabilityMode' in partial ||
-        'customHostname' in partial ||
-        'proxyEnabled' in partial ||
-        'lanAppIp' in partial ||
-        'customLanIp' in partial;
-      patch({
-        ...partial,
-        ...(clearsProbe ? { reachabilityProbeMessage: null, reachabilityProbeOk: null } : {}),
-      });
+      patch(partial);
     },
 
     show(status, presentation = 'embedded') {
@@ -325,60 +313,5 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
 
     browseImportsFolder: () => browseFolder('importsHostPath'),
     browseExportsFolder: () => browseFolder('exportsHostPath'),
-
-    async testReachability() {
-      const lanAppBaseUrl = draftCanonicalBaseUrl(state, state.network);
-      if (!lanAppBaseUrl || !isHttpOrigin(lanAppBaseUrl)) {
-        patch({
-          reachabilityProbeOk: false,
-          reachabilityProbeMessage:
-            'Keine Basis-URL — LAN-IP wählen oder Hostname/Domain eintragen.',
-        });
-        return;
-      }
-
-      patch({
-        reachabilityProbeBusy: true,
-        reachabilityProbeMessage: `Prüfe ${lanAppBaseUrl} …`,
-        reachabilityProbeOk: null,
-        error: null,
-      });
-
-      try {
-        const result = await deps.api.runSetupProbes({
-          localAppBaseUrl: 'http://127.0.0.1:8080',
-          lanAppBaseUrl,
-        });
-        const probes: ProbeResult[] = result.probes;
-        const local = probes.find((probe) => probe.id === 'app.health.local');
-        const lan = probes.find((probe) => probe.id === 'app.health.lan');
-        if (local && !local.ok) {
-          patch({
-            reachabilityProbeOk: false,
-            reachabilityProbeMessage: `Lokal nicht erreichbar — ${local.message}`,
-          });
-          return;
-        }
-        if (lan && !lan.ok) {
-          patch({
-            reachabilityProbeOk: false,
-            reachabilityProbeMessage: `${lan.message} — bei Hostname-Problemen LAN-IP verwenden.`,
-          });
-          return;
-        }
-        patch({
-          reachabilityProbeOk: true,
-          reachabilityProbeMessage: lan?.message ?? `Erreichbar: ${lanAppBaseUrl}`,
-        });
-      } catch (error) {
-        patch({
-          reachabilityProbeOk: false,
-          reachabilityProbeMessage:
-            error instanceof Error ? error.message : 'Erreichbarkeitstest fehlgeschlagen.',
-        });
-      } finally {
-        patch({ reachabilityProbeBusy: false });
-      }
-    },
   };
 }

@@ -43,12 +43,25 @@ export async function pollSetupProbes(
     localAppBaseUrl?: string;
     lanAppBaseUrl?: string;
   },
-  options?: { maxWaitMs?: number; intervalMs?: number },
+  options?: {
+    maxWaitMs?: number;
+    intervalMs?: number;
+    /**
+     * When false, once local is ok wait briefly for LAN (grace), then return even if LAN is still red.
+     * Default true waits for LAN too (wizard first boot).
+     */
+    requireLan?: boolean;
+    /** Extra wait after first local-ok when requireLan is false (default 5s). */
+    lanGraceMs?: number;
+  },
 ): Promise<ProbeResult[]> {
   const maxWaitMs = options?.maxWaitMs ?? DEFAULT_PROBE_WAIT_MS;
   const intervalMs = options?.intervalMs ?? DEFAULT_PROBE_INTERVAL_MS;
+  const requireLan = options?.requireLan !== false;
+  const lanGraceMs = options?.lanGraceMs ?? 5_000;
   const deadline = Date.now() + maxWaitMs;
   let last: ProbeResult[] = [];
+  let lanGraceDeadline: number | null = null;
 
   while (Date.now() <= deadline) {
     const probeResult = await api.runSetupProbes(input);
@@ -56,11 +69,29 @@ export async function pollSetupProbes(
     if (connectionProbesReady(last)) {
       return last;
     }
+    if (!requireLan) {
+      const local = last.find((probe) => probe.id === 'app.health.local');
+      if (local?.ok) {
+        if (lanGraceDeadline == null) {
+          lanGraceDeadline = Date.now() + lanGraceMs;
+        }
+        if (Date.now() >= lanGraceDeadline) {
+          return last;
+        }
+      }
+    }
     const remaining = deadline - Date.now();
     if (remaining <= 0) {
       break;
     }
-    await sleep(Math.min(intervalMs, remaining));
+    const graceRemaining =
+      lanGraceDeadline == null ? remaining : Math.max(0, lanGraceDeadline - Date.now());
+    const waitCap = requireLan || lanGraceDeadline == null ? remaining : graceRemaining;
+    const sleepFor = Math.min(intervalMs, remaining, waitCap);
+    if (sleepFor <= 0) {
+      break;
+    }
+    await sleep(sleepFor);
   }
 
   return last;

@@ -16,10 +16,16 @@ Stand: 2026-07-18
 - Network `show()` Generation gegen stale `fetchSetupNetwork`
 - Scanner-Totcode, ungenutztes CSS, `NetworkController.clearError` entfernt
 
-### Etappe 2 — Netzwerk-Ablauf (offen)
-- „Übernehmen und prüfen“; Test nur gegen gespeicherte URL / nach Restart
-- Gemeinsames ProxySettings (Wizard + Netzwerk)
-- Verständlichere Texte
+### Etappe 2 — Netzwerk-Ablauf (Review-Fixes 2026-07-21)
+- „Einstellungen übernehmen und prüfen“; Probe nur gegen `deviceUrls.appBaseUrl`
+- `NetworkOperation` statt busy/probeBusy; `verifyActiveConfiguration(savedUrl)`
+- `ProxySettings` + `ProxyRecoveryAction`; IT-freundlichere Texte
+- P1: Probe-Reject → `failed` (nicht hängen auf „Prüfe …“)
+- P1: Restart/Repair mit `composeRestarted: false` immer Fehler (auch Stack vorher gestoppt)
+- P2: Verify-Button bei gestopptem Stack deaktiviert + Hinweis Status starten
+- P2: LAN-Kulanz (~5s) nach erstem lokalen Erfolg bei `requireLan: false`
+- P2: Wizard-Totcode `testReachability` / `reachabilityProbe*` entfernt
+- Copy: Wiederherstellen-Hinweis ohne „Diagnose“
 
 ### Etappe 3 — State vereinfachen (offen)
 - configSnapshot / runtimeSnapshot / networkDraft; weniger Shell-Kopien

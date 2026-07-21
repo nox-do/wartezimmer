@@ -1,28 +1,59 @@
-import { formatEnvBackupLabel } from '@praxis-flow/server-shared/env-backup';
 import type {
   HostNetworkResult,
   HostStatus,
   NetworkBindingCheck,
+  ProbeResult,
 } from '../shared/host-status.js';
 import type { LanIpFieldState } from './host-network-panels.js';
 import { resolvedLanIp } from './wizard-state.js';
 
-export const NETWORK_SAVE_PROGRESS_TEXT = 'Speichern …';
-export const NETWORK_SAVE_PROGRESS_RESTART_TEXT = 'Speichern und Stack neu starten …';
-export const NETWORK_SAVE_PROGRESS_PROXY_TEXT =
-  'Speichern und Proxy-Server starten … (Image prüfen, Compose)';
-export const NETWORK_SAVE_PROGRESS_PROXY_RESTORE_TEXT =
-  'Proxy wiederherstellen … (Image prüfen, Compose)';
-export const NETWORK_NO_CHANGES_ERROR = 'Keine Änderungen an LAN oder Proxy-Server.';
+export type NetworkOperation =
+  | 'idle'
+  | 'loading'
+  | 'saving'
+  | 'restarting'
+  | 'checking'
+  | 'success'
+  | 'failed';
+
+export const NETWORK_NO_CHANGES_HINT = 'Keine Änderungen an LAN, Proxy oder Geräte-Adresse.';
+export const NETWORK_LAN_REQUIRED_ERROR = 'Bitte eine Adresse dieses Rechners wählen oder eingeben.';
 export const NETWORK_RESTART_CONFIRM_MESSAGE =
-  'Einstellungen werden gespeichert. Stack jetzt neu starten, damit die Änderungen greifen?';
+  'Einstellungen speichern und Praxis Flow neu starten, damit die Änderung wirksam wird?';
 export const NETWORK_RESTART_CONFIRM_PROXY_MESSAGE =
-  'Einstellungen werden gespeichert und der Stack neu gestartet — der Proxy-Server startet dabei mit. Fortfahren?';
+  'Einstellungen speichern und Praxis Flow neu starten? Der Zugriff über Port 80 wird dabei mitgestartet.';
 export const NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE =
-  'Proxy-Image prüfen und Stack mit Proxy-Server starten? Bestehende Container werden neu gestartet.';
+  'Proxy-Dienst prüfen und starten? Praxis Flow wird dafür neu gestartet.';
 export const NETWORK_PROXY_RESTORE_HINT =
-  'Proxy ist aktiviert, aber der Container läuft nicht (Image oder Container fehlt). Mit „Proxy wiederherstellen“ Image prüfen und starten — oder Proxy abschalten und übernehmen.';
-export const NETWORK_LAN_REQUIRED_ERROR = 'Bitte eine LAN-Adresse wählen oder eingeben.';
+  'Zugriff über Port 80 ist eingeschaltet, aber der Proxy-Dienst läuft nicht. Hier wiederherstellen oder den Zugriff wieder ausschalten und übernehmen.';
+export const NETWORK_STACK_STOPPED_VERIFY_HINT =
+  'Praxis Flow ist gestoppt. Unter Status starten und danach erneut prüfen.';
+export const NETWORK_PROBE_FAILED_MESSAGE =
+  'Die Erreichbarkeit konnte nicht geprüft werden. Bitte kurz warten und erneut versuchen.';
+
+export function networkIsBusy(operation: NetworkOperation): boolean {
+  return (
+    operation === 'loading' ||
+    operation === 'saving' ||
+    operation === 'restarting' ||
+    operation === 'checking'
+  );
+}
+
+export function networkOperationProgressText(operation: NetworkOperation): string {
+  switch (operation) {
+    case 'loading':
+      return 'Netzwerkdaten werden geladen …';
+    case 'saving':
+      return 'Einstellungen werden gespeichert …';
+    case 'restarting':
+      return 'Praxis Flow wird neu gestartet …';
+    case 'checking':
+      return 'Gespeicherte Geräte-Adresse wird geprüft …';
+    default:
+      return '';
+  }
+}
 
 /** Configured proxy without a running container — recoverable via restore action. */
 export function proxyNeedsRestore(status: HostStatus | null | undefined): boolean {
@@ -65,10 +96,10 @@ export function networkLanSubtitle(
 ): string {
   const ip = resolvedLanIp(fields) || status?.network.configuredLanIp?.trim() || '';
   if (!ip) {
-    return 'LAN-Adresse wählen';
+    return 'Adresse dieses Rechners wählen';
   }
   if (status?.network.lanIpStale) {
-    return `${ip} — passt nicht zur aktuellen Adresse`;
+    return `${ip} — stimmt nicht mehr mit diesem Rechner überein`;
   }
   return ip;
 }
@@ -78,20 +109,20 @@ export function networkProxySubtitle(
   proxyEnabled: boolean,
 ): string {
   if (!proxyEnabled) {
-    return 'Aus — Einstieg über :8080';
+    return 'Aus — Geräte-Adresse mit :8080';
   }
   if (proxyNeedsRestore(status)) {
-    return 'Aktiv — Container fehlt';
+    return 'An — Proxy-Dienst fehlt';
   }
-  const port = status?.proxy?.httpPort || 80;
-  return `Aktiv — Port ${port}`;
+  return 'An — Geräte-Adresse ohne :8080 (Port 80)';
 }
 
 export function networkReachabilitySubtitle(status: HostStatus | null | undefined): string {
   return (
     status?.configuredCanonicalBaseUrl ||
+    status?.deviceUrls?.appBaseUrl ||
     status?.appBaseUrl ||
-    'Basis-URL für Geräte wählen'
+    'Adresse für Terminal, TV und MFA wählen'
   );
 }
 
@@ -120,28 +151,36 @@ export function networkRestartConfirmMessage(proxyChanging: boolean): string {
   return proxyChanging ? NETWORK_RESTART_CONFIRM_PROXY_MESSAGE : NETWORK_RESTART_CONFIRM_MESSAGE;
 }
 
-export function networkSaveProgressText(input: {
-  restartCompose: boolean;
-  enablingProxy: boolean;
-  repairingProxy?: boolean;
-}): string {
-  if (input.repairingProxy) {
-    return NETWORK_SAVE_PROGRESS_PROXY_RESTORE_TEXT;
-  }
-  if (input.restartCompose && input.enablingProxy) {
-    return NETWORK_SAVE_PROGRESS_PROXY_TEXT;
-  }
-  if (input.restartCompose) {
-    return NETWORK_SAVE_PROGRESS_RESTART_TEXT;
-  }
-  return NETWORK_SAVE_PROGRESS_TEXT;
+export function savedDeviceBaseUrl(status: HostStatus | null | undefined): string | null {
+  const url =
+    status?.configuredCanonicalBaseUrl?.trim() ||
+    status?.deviceUrls?.appBaseUrl?.trim() ||
+    status?.appBaseUrl?.trim() ||
+    '';
+  return url || null;
 }
 
 export function networkWarningText(running: boolean, changed: boolean): string | null {
   if (running && changed) {
-    return 'Änderungen werden erst nach einem Stack-Neustart wirksam. Beim Übernehmen wird danach gefragt.';
+    return 'Änderungen werden erst wirksam, wenn Praxis Flow neu gestartet wird. Beim Übernehmen wird danach gefragt.';
   }
   return null;
+}
+
+export function networkRestartFailureMessage(result: HostNetworkResult): string {
+  const detail = result.restartLog?.trim();
+  if (detail) {
+    return `Praxis Flow konnte nicht neu gestartet werden. ${summarizeTechnicalDetail(detail)}`;
+  }
+  return 'Praxis Flow konnte nicht neu gestartet werden. Bitte unter Status die Container prüfen.';
+}
+
+export function networkSavedWhileStoppedMessage(): string {
+  return 'Gespeichert. Die Erreichbarkeit kann geprüft werden, sobald Praxis Flow gestartet ist.';
+}
+
+export function networkProxyStartFailureMessage(): string {
+  return 'Der Proxy-Dienst konnte nicht gestartet werden. Proxy deaktivieren oder oben wiederherstellen.';
 }
 
 function proxyContainerRunning(result: HostNetworkResult): boolean {
@@ -152,46 +191,47 @@ function proxyContainerRunning(result: HostNetworkResult): boolean {
   return state.includes('running');
 }
 
-export function networkSaveStatusText(
-  result: HostNetworkResult,
-  restartCompose: boolean,
-  options?: { proxyEnabled?: boolean; repairingProxy?: boolean },
-): string {
-  const parts = [
-    options?.repairingProxy
-      ? 'Proxy-Wiederherstellung abgeschlossen.'
-      : 'Netzwerk-Konfiguration gespeichert.',
-  ];
-  if (result.backupPath) {
-    parts.push(`Backup: ${formatEnvBackupLabel(result.backupPath)}`);
-  }
-  if (result.composeRestarted) {
-    parts.push(options?.repairingProxy ? 'Stack gestartet.' : 'Stack neu gestartet.');
-    if (options?.proxyEnabled) {
-      parts.push(
-        proxyContainerRunning(result)
-          ? 'Proxy-Server läuft.'
-          : 'Proxy-Server ist aktiviert, Container aber nicht sichtbar — Logs prüfen.',
-      );
-    }
-  } else if (result.stackWasRunning && restartCompose) {
-    parts.push('Stack-Neustart fehlgeschlagen.');
-  } else if (options?.repairingProxy) {
-    parts.push('Proxy konnte nicht gestartet werden — Image/Logs prüfen.');
-  } else if (options?.proxyEnabled && !result.stackWasRunning) {
-    parts.push('Proxy aktiviert — Stack unter Status starten, damit der Proxy-Server läuft.');
-  }
-  return parts.join(' ');
+/** After save+restart: proxy enabled but container still missing. */
+export function networkProxyMissingAfterRestart(result: HostNetworkResult, proxyEnabled: boolean): boolean {
+  return proxyEnabled && result.composeRestarted && !proxyContainerRunning(result);
 }
 
-export function networkSaveErrorText(
-  result: HostNetworkResult,
-  restartCompose: boolean,
-): string | null {
-  if (restartCompose && !result.composeRestarted) {
-    if (result.stackWasRunning || result.restartLog) {
-      return result.restartLog || 'Docker Compose fehlgeschlagen.';
-    }
+export function formatActiveReachabilityResult(
+  probes: ProbeResult[],
+  baseUrl: string,
+): { ok: boolean; message: string } {
+  const local = probes.find((probe) => probe.id === 'app.health.local');
+  const lan = probes.find((probe) => probe.id === 'app.health.lan');
+
+  if (local && !local.ok) {
+    return {
+      ok: false,
+      message:
+        'Praxis Flow antwortet lokal noch nicht. Bitte kurz warten und die gespeicherte Adresse erneut prüfen.',
+    };
   }
-  return null;
+
+  if (lan && !lan.ok) {
+    return {
+      ok: false,
+      message: `Lokal erreichbar, aber nicht über das Praxisnetz (${baseUrl}). IP-Adresse und Firewall prüfen.`,
+    };
+  }
+
+  if (lan?.ok || (!lan && local?.ok)) {
+    return { ok: true, message: `Gespeichert und erreichbar: ${baseUrl}` };
+  }
+
+  return {
+    ok: false,
+    message: `Gespeichert. Praxis Flow wurde neu gestartet, ist aber noch nicht erreichbar (${baseUrl}). Bitte kurz warten und erneut prüfen.`,
+  };
+}
+
+function summarizeTechnicalDetail(detail: string): string {
+  const oneLine = detail.replace(/\s+/g, ' ').trim();
+  if (oneLine.length <= 160) {
+    return oneLine;
+  }
+  return `${oneLine.slice(0, 157)}…`;
 }

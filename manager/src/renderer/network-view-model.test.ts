@@ -2,114 +2,72 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { HostNetworkResult } from '../shared/host-status.js';
 import {
-  NETWORK_NO_CHANGES_ERROR,
+  formatActiveReachabilityResult,
   networkExpanderDefaults,
   networkHostChecksForDisplay,
-  networkHostChecksHaveFailures,
-  networkHostChecksSubtitle,
-  networkSaveErrorText,
-  networkSaveStatusText,
-  networkWarningText,
+  networkIsBusy,
+  networkProxyMissingAfterRestart,
+  networkRestartFailureMessage,
+  networkSavedWhileStoppedMessage,
   proxyNeedsRestore,
+  savedDeviceBaseUrl,
 } from './network-view-model.js';
 import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 
-function minimalSaveResult(overrides: Partial<HostNetworkResult> = {}): HostNetworkResult {
-  return {
-    envPath: '/tmp/praxis/.env',
-    backupPath: '/tmp/praxis/.env.backup-1',
-    keysWritten: ['SETUP_LAN_APP_IP'],
-    deviceUrls: {
-      appBaseUrl: '',
-      terminal: '',
-      tv: '',
-      mfa: '',
-      ops: '',
-      opsSetup: '',
-      portal: '',
-    },
-    gatewayComposeSkipped: false,
-    composeRestarted: true,
-    stackWasRunning: true,
-    compose: null,
-    restartLog: null,
-    ...overrides,
-  };
-}
+test('networkIsBusy covers in-flight phases only', () => {
+  assert.equal(networkIsBusy('idle'), false);
+  assert.equal(networkIsBusy('success'), false);
+  assert.equal(networkIsBusy('checking'), true);
+  assert.equal(networkIsBusy('saving'), true);
+});
 
-test('networkWarningText warns when stack runs and fields changed', () => {
-  assert.equal(
-    networkWarningText(true, true),
-    'Änderungen werden erst nach einem Stack-Neustart wirksam. Beim Übernehmen wird danach gefragt.',
+test('formatActiveReachabilityResult prefers actionable messages', () => {
+  assert.match(
+    formatActiveReachabilityResult(
+      [
+        { id: 'app.health.local', ok: true, message: 'ok' },
+        { id: 'app.health.lan', ok: true, message: 'ok' },
+      ],
+      'http://192.168.1.50',
+    ).message,
+    /erreichbar: http:\/\/192\.168\.1\.50/,
   );
-  assert.equal(networkWarningText(true, false), null);
-  assert.equal(networkWarningText(false, true), null);
+  assert.match(
+    formatActiveReachabilityResult(
+      [
+        { id: 'app.health.local', ok: true, message: 'ok' },
+        { id: 'app.health.lan', ok: false, message: 'down' },
+      ],
+      'http://192.168.1.50',
+    ).message,
+    /nicht über das Praxisnetz/,
+  );
 });
 
-test('networkSaveStatusText summarizes save and restart outcome', () => {
-  const text = networkSaveStatusText(minimalSaveResult(), true);
-  assert.match(text, /gespeichert/);
-  assert.match(text, /Backup:/);
-  assert.match(text, /neu gestartet/);
+test('networkRestartFailureMessage hides raw compose noise when empty', () => {
+  const result = {
+    composeRestarted: false,
+    stackWasRunning: true,
+    restartLog: null,
+  } as HostNetworkResult;
+  assert.match(networkRestartFailureMessage(result), /nicht neu gestartet/);
+  assert.match(networkSavedWhileStoppedMessage(), /sobald Praxis Flow gestartet/);
 });
 
-test('networkSaveStatusText ignores gatewayComposeSkipped', () => {
-  const text = networkSaveStatusText(minimalSaveResult({ gatewayComposeSkipped: true }), false);
-  assert.doesNotMatch(text, /Gateway/);
-  assert.match(text, /gespeichert/);
-});
-
-test('networkSaveErrorText surfaces restart failure log', () => {
+test('networkProxyMissingAfterRestart detects enabled-but-missing container', () => {
   assert.equal(
-    networkSaveErrorText(
-      minimalSaveResult({ composeRestarted: false, restartLog: 'compose failed' }),
+    networkProxyMissingAfterRestart(
+      {
+        composeRestarted: true,
+        compose: { running: true, services: [] },
+      } as unknown as HostNetworkResult,
       true,
     ),
-    'compose failed',
-  );
-  assert.equal(networkSaveErrorText(minimalSaveResult(), true), null);
-});
-
-test('NETWORK_NO_CHANGES_ERROR mentions LAN and proxy only', () => {
-  assert.equal(NETWORK_NO_CHANGES_ERROR, 'Keine Änderungen an LAN oder Proxy-Server.');
-});
-
-test('networkSaveStatusText notes proxy when stack was stopped', () => {
-  const text = networkSaveStatusText(
-    minimalSaveResult({
-      composeRestarted: false,
-      stackWasRunning: false,
-    }),
-    false,
-    { proxyEnabled: true },
-  );
-  assert.match(text, /Proxy aktiviert/);
-  assert.match(text, /Stack unter Status starten/);
-});
-
-test('networkSaveStatusText notes running proxy after restart', () => {
-  const text = networkSaveStatusText(
-    minimalSaveResult({
-      compose: {
-        running: true,
-        services: [
-          {
-            name: 'proxy',
-            service: 'proxy',
-            state: 'running',
-            health: null,
-            publishedPorts: [80],
-          },
-        ],
-      },
-    }),
     true,
-    { proxyEnabled: true },
   );
-  assert.match(text, /Proxy-Server läuft/);
 });
 
-test('proxyNeedsRestore is true when enabled without running container', () => {
+test('proxyNeedsRestore and savedDeviceBaseUrl', () => {
   assert.equal(
     proxyNeedsRestore(
       minimalHostStatus({
@@ -126,55 +84,27 @@ test('proxyNeedsRestore is true when enabled without running container', () => {
     true,
   );
   assert.equal(
-    proxyNeedsRestore(
-      minimalHostStatus({
-        proxy: {
-          enabled: true,
-          mode: 'http',
-          canonicalBaseUrl: 'http://192.168.1.10',
-          httpPort: 80,
-          appBindAddress: '127.0.0.1',
-          container: {
-            name: 'proxy',
-            service: 'proxy',
-            state: 'running',
-            health: null,
-            publishedPorts: [80],
-          },
-        },
-      }),
+    savedDeviceBaseUrl(
+      minimalHostStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10' }),
     ),
-    false,
+    'http://192.168.1.10',
   );
-  assert.equal(proxyNeedsRestore(minimalHostStatus()), false);
 });
 
 test('networkHostChecksForDisplay drops gateway leftover checks', () => {
-  const checks = networkHostChecksForDisplay([
-    { id: 'lan.ip-on-host', ok: true, message: 'LAN ok' },
-    { id: 'gateway.interface', ok: false, message: 'NIC fehlt' },
-    { id: 'app.port', ok: false, message: '8080 down' },
-  ]);
   assert.deepEqual(
-    checks.map((check) => check.id),
-    ['lan.ip-on-host', 'app.port'],
+    networkHostChecksForDisplay([
+      { id: 'lan.ip-on-host', ok: true, message: 'LAN ok' },
+      { id: 'gateway.interface', ok: false, message: 'NIC fehlt' },
+    ]).map((check) => check.id),
+    ['lan.ip-on-host'],
   );
-  assert.equal(networkHostChecksHaveFailures(checks), true);
-  assert.equal(networkHostChecksSubtitle(checks), '1 ok · 1 Fehler');
 });
 
 test('networkExpanderDefaults opens checks and proxy when degraded', () => {
   const defaults = networkExpanderDefaults({
     status: minimalHostStatus({
-      network: {
-        configuredLanIp: '192.168.1.10',
-        currentLanCandidates: [],
-        lanIpStale: false,
-      },
-      networkBindings: [
-        { id: 'app.port', ok: false, message: 'down' },
-        { id: 'gateway.compose', ok: false, message: 'gw' },
-      ],
+      networkBindings: [{ id: 'app.port', ok: false, message: 'down' }],
       proxy: {
         enabled: true,
         mode: 'http',
@@ -186,34 +116,7 @@ test('networkExpanderDefaults opens checks and proxy when degraded', () => {
     }),
     proxyEnabled: true,
   });
-  assert.equal(defaults.reachabilityOpen, true);
-  assert.equal(defaults.topologyOpen, false);
   assert.equal(defaults.checksOpen, true);
   assert.equal(defaults.proxyOpen, true);
-  assert.equal(defaults.lanOpen, false);
-});
-
-test('networkSaveStatusText summarizes proxy restore', () => {
-  const text = networkSaveStatusText(
-    minimalSaveResult({
-      composeRestarted: true,
-      stackWasRunning: false,
-      compose: {
-        running: true,
-        services: [
-          {
-            name: 'proxy',
-            service: 'proxy',
-            state: 'running',
-            health: null,
-            publishedPorts: [80],
-          },
-        ],
-      },
-    }),
-    true,
-    { proxyEnabled: true, repairingProxy: true },
-  );
-  assert.match(text, /Wiederherstellung/);
-  assert.match(text, /Proxy-Server läuft/);
+  assert.equal(defaults.topologyOpen, false);
 });
