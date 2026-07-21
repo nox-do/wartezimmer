@@ -191,7 +191,11 @@ test('collectHealthTiles sandbox ampel uses Compose health, not ClamAV', () => {
   assert.ok(sandbox);
   assert.equal(sandbox.status, 'ok');
   assert.equal(sandbox.detail, 'running — healthy');
-  assert.ok(sandbox.chips?.some((chip) => chip.label === 'ClamAV' && chip.ok === false && !chip.warn));
+  assert.ok(
+    sandbox.chips?.some(
+      (chip) => chip.label === 'not started' && chip.ok === false && !chip.warn,
+    ),
+  );
 });
 
 test('collectHealthTiles with disabled leftover proxy keeps entry on App', () => {

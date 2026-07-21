@@ -22,11 +22,19 @@ function scanner(overrides: Partial<SandboxScannerStatus> = {}): SandboxScannerS
   };
 }
 
-test('sandboxScannerLevel marks missing definitions as bad', () => {
-  assert.equal(sandboxScannerLevel(scanner({ definitionsAgeHours: null })), 'bad');
-});
-
-test('sandboxScannerLevel marks stale signatures as warn', () => {
+test('sandboxScannerLevel: engine missing is bad; signature issues are warn', () => {
+  assert.equal(sandboxScannerLevel(scanner({ engineVersion: null })), 'bad');
+  assert.equal(
+    sandboxScannerLevel(
+      scanner({
+        definitionsAgeHours: null,
+        freshclamLastAttemptOk: false,
+        signaturesFreshEnough: false,
+        ready: false,
+      }),
+    ),
+    'warn',
+  );
   assert.equal(
     sandboxScannerLevel(
       scanner({ signaturesFreshEnough: false, definitionsAgeHours: 30, ready: false }),
@@ -35,22 +43,51 @@ test('sandboxScannerLevel marks stale signatures as warn', () => {
   );
 });
 
-test('sandboxClamAvChip is red when definitions are missing', () => {
-  assert.deepEqual(sandboxClamAvChip(scanner({ definitionsAgeHours: null })), {
-    label: 'ClamAV',
-    ok: false,
-  });
+test('sandboxClamAvChip prefers update failed over Signatures missing', () => {
+  assert.deepEqual(
+    sandboxClamAvChip(
+      scanner({
+        definitionsAgeHours: null,
+        signaturesFreshEnough: false,
+        ready: false,
+        freshclamLastAttemptOk: false,
+        freshclamLastAttemptMessage: 'Blocked by CDN',
+      }),
+    ),
+    { label: 'update failed', ok: false, warn: true },
+  );
 });
 
-test('sandboxClamAvChip is yellow when signatures are outdated', () => {
+test('sandboxClamAvChip: Signatures missing only without failed update attempt', () => {
+  assert.deepEqual(
+    sandboxClamAvChip(
+      scanner({
+        definitionsAgeHours: null,
+        signaturesFreshEnough: false,
+        ready: false,
+        freshclamLastAttemptOk: null,
+      }),
+    ),
+    { label: 'Signatures missing', ok: false, warn: true },
+  );
+});
+
+test('sandboxClamAvChip: outdated is yellow', () => {
   assert.deepEqual(
     sandboxClamAvChip(
       scanner({ signaturesFreshEnough: false, definitionsAgeHours: 30, ready: false }),
     ),
-    {
-      label: 'ClamAV',
-      ok: false,
-      warn: true,
-    },
+    { label: 'outdated', ok: false, warn: true },
   );
+});
+
+test('sandboxClamAvChip: not started is red', () => {
+  assert.deepEqual(sandboxClamAvChip(scanner({ engineVersion: null })), {
+    label: 'not started',
+    ok: false,
+  });
+});
+
+test('sandboxClamAvChip: healthy', () => {
+  assert.deepEqual(sandboxClamAvChip(scanner()), { label: 'ClamAV', ok: true });
 });

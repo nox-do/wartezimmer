@@ -262,7 +262,7 @@
       </p>
 
       <section class="network-config-block">
-        <h3 class="network-config-subheading">Gerätezugriff (Port 80)</h3>
+        <h3 class="network-config-subheading">Browserzugriff (Port 80)</h3>
         <ProxySettings
           enabled={snapshot.proxyEnabled}
           disabled={snapshot.busy}

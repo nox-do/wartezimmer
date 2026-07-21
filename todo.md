@@ -56,6 +56,7 @@ Ziel: drei Wahrheiten — `configSnapshot` / `runtimeSnapshot` / `networkDraft` 
 - Expander-Reihenfolge: Host/LAN → Proxy → Erreichbarkeit → Übernehmen → Prüfungen → Erläuterung
 - Prüfungen: gateway.* ausgeblendet; offen bei Fehlern
 - Proxy-UI → `NetworkProxyPanel`; View-Model-Subtitles/Defaults
+- Accordion-Titel: „Browserzugriff (Port 80)“ (statt Gerätezugriff) — Network + Wizard
 - Offen/Refactor: Wizard-Zugang mit NetworkProxyPanel sync; `auditNetworkBindings` gateway-Branch entfernen nach GATEWAY_*-Cleanup; `app.port`-Detailtext bei Proxy
 
 ## Proxy wiederherstellen (2026-07-21)
@@ -71,7 +72,7 @@ Ziel: drei Wahrheiten — `configSnapshot` / `runtimeSnapshot` / `networkDraft` 
   - Proxy rot = Container fehlt; gelb = Proxy up, App dahinter nicht; grün = Einstieg ok
 - Ohne Proxy: Einstieg an App-Ampel (gleiche Semantik)
 - Lokal/LAN-Pills entfernt
-- ClamAV-Pill: veraltet = gelb; fehlt/kaputt = rot; färbt Sandbox-Ampel nicht
+- ClamAV-Pill: rot nur `not started` (Engine); gelb `update failed` / `Signatures missing` / `outdated`; färbt Sandbox-Ampel nicht
 
 ## Fix: Manager-Headline bei Proxy/LAN (2026-07-21)
 
