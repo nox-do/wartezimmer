@@ -562,6 +562,69 @@ test('proxy enable preflight calls composePs with withProxy true', async () => {
   });
 });
 
+test('saveHostNetwork repairProxy ensures image and compose-up even when stack was stopped', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, {
+      PRACTICE_DISPLAY_NAME: 'Praxis Nord',
+      SETUP_LAN_APP_IP: '192.168.1.10',
+      CANONICAL_BASE_URL: 'http://192.168.1.10',
+      ...proxyOn,
+    });
+
+    let ensureCalled = false;
+    let composeUpCalled = false;
+    const result = await saveHostNetwork(
+      ctx(root),
+      {
+        lanAppIp: '192.168.1.10',
+        proxy: { enabled: true, httpPort: 80 },
+        gateway: gwOff('192.168.1.10'),
+        repairProxy: true,
+      },
+      {
+        ...allowProxyPort,
+        composePs: async () => ({ running: false, services: [] }),
+        ensureProxyImageAvailable: async () => {
+          ensureCalled = true;
+          return { imageRef: 'caddy:2.11.4', pulled: true };
+        },
+        composeUp: async () => {
+          composeUpCalled = true;
+          return { ok: true, log: 'up', gatewaySkipped: false };
+        },
+      },
+    );
+
+    assert.equal(ensureCalled, true);
+    assert.equal(composeUpCalled, true);
+    assert.equal(result.composeRestarted, true);
+    assert.equal(result.stackWasRunning, false);
+  });
+});
+
+test('saveHostNetwork repairProxy rejects when proxy is disabled', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, {
+      PRACTICE_DISPLAY_NAME: 'Praxis Nord',
+      SETUP_LAN_APP_IP: '192.168.1.10',
+      CANONICAL_BASE_URL: 'http://192.168.1.10:8080',
+    });
+
+    await assert.rejects(
+      () =>
+        saveHostNetwork(ctx(root), {
+          lanAppIp: '192.168.1.10',
+          proxy: { enabled: false, httpPort: 80 },
+          gateway: gwOff('192.168.1.10'),
+          repairProxy: true,
+        }),
+      (error: unknown) =>
+        error instanceof SetupApiValidationError &&
+        /Wiederherstellung nur möglich/.test(error.message),
+    );
+  });
+});
+
 test('saveHostNetwork blocks proxy enable when desired HTTP port is occupied', async () => {
   const listener = await listenEphemeral();
   try {

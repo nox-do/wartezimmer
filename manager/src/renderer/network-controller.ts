@@ -14,10 +14,12 @@ import { hostNetworkChanged } from './host-network-panels.js';
 import {
   NETWORK_LAN_REQUIRED_ERROR,
   NETWORK_NO_CHANGES_ERROR,
+  NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE,
   networkRestartConfirmMessage,
   networkSaveErrorText,
   networkSaveProgressText,
   networkSaveStatusText,
+  proxyNeedsRestore,
 } from './network-view-model.js';
 import {
   draftCanonicalBaseUrl,
@@ -56,6 +58,7 @@ export type NetworkController = {
   getState: () => Readonly<NetworkState>;
   patchFields: (patch: Partial<LanIpFieldState & ReachabilityFieldState>) => void;
   apply: () => void;
+  restoreProxy: () => void;
   testReachability: () => void;
   show: (status: HostStatus) => void;
   hide: () => void;
@@ -115,7 +118,10 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     return draftCanonicalBaseUrl(state, state.network);
   }
 
-  function saveHostNetwork(restartCompose: boolean): void {
+  function saveHostNetwork(
+    restartCompose: boolean,
+    options?: { repairProxy?: boolean },
+  ): void {
     const lanAppIp = resolvedLanIp(state);
     if (!lanAppIp) {
       setError(NETWORK_LAN_REQUIRED_ERROR);
@@ -132,6 +138,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       return;
     }
 
+    const repairingProxy = Boolean(options?.repairProxy);
     setBusy(true);
     setError(null);
     const enablingProxy = state.proxyEnabled && !state.status.proxy?.enabled;
@@ -139,6 +146,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       networkStatusText: networkSaveProgressText({
         restartCompose,
         enablingProxy,
+        repairingProxy,
       }),
     });
 
@@ -146,6 +154,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       .saveHostNetwork({
         lanAppIp,
         restartCompose,
+        repairProxy: repairingProxy || undefined,
         canonicalBaseUrl,
         gateway: DISABLED_GATEWAY_PLAN,
         proxy: {
@@ -157,6 +166,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
         patch({
           networkStatusText: networkSaveStatusText(result, restartCompose, {
             proxyEnabled: state.proxyEnabled,
+            repairingProxy,
           }),
           compose: result.compose ?? state.compose,
         });
@@ -213,6 +223,20 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       }
 
       saveHostNetwork(false);
+    },
+
+    restoreProxy() {
+      if (!proxyNeedsRestore(state.status)) {
+        setError('Proxy-Server läuft bereits oder ist nicht aktiviert.');
+        return;
+      }
+      if (!state.proxyEnabled) {
+        setError('Bitte Proxy aktiviert lassen und „Proxy wiederherstellen“ nutzen.');
+        return;
+      }
+      deps.requestConfirm(NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE, () =>
+        saveHostNetwork(true, { repairProxy: true }),
+      );
     },
 
     testReachability() {

@@ -3,10 +3,13 @@ import test from 'node:test';
 import type { HostNetworkResult } from '../shared/host-status.js';
 import {
   NETWORK_NO_CHANGES_ERROR,
+  NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE,
   networkSaveErrorText,
   networkSaveStatusText,
   networkWarningText,
+  proxyNeedsRestore,
 } from './network-view-model.js';
+import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 
 function minimalSaveResult(overrides: Partial<HostNetworkResult> = {}): HostNetworkResult {
   return {
@@ -100,5 +103,70 @@ test('networkSaveStatusText notes running proxy after restart', () => {
     true,
     { proxyEnabled: true },
   );
+  assert.match(text, /Proxy-Server läuft/);
+});
+
+test('proxyNeedsRestore is true when enabled without running container', () => {
+  assert.equal(
+    proxyNeedsRestore(
+      minimalHostStatus({
+        proxy: {
+          enabled: true,
+          mode: 'http',
+          canonicalBaseUrl: 'http://192.168.1.10',
+          httpPort: 80,
+          appBindAddress: '127.0.0.1',
+          container: null,
+        },
+      }),
+    ),
+    true,
+  );
+  assert.equal(
+    proxyNeedsRestore(
+      minimalHostStatus({
+        proxy: {
+          enabled: true,
+          mode: 'http',
+          canonicalBaseUrl: 'http://192.168.1.10',
+          httpPort: 80,
+          appBindAddress: '127.0.0.1',
+          container: {
+            name: 'proxy',
+            service: 'proxy',
+            state: 'running',
+            health: null,
+            publishedPorts: [80],
+          },
+        },
+      }),
+    ),
+    false,
+  );
+  assert.equal(proxyNeedsRestore(minimalHostStatus()), false);
+});
+
+test('networkSaveStatusText summarizes proxy restore', () => {
+  const text = networkSaveStatusText(
+    minimalSaveResult({
+      composeRestarted: true,
+      stackWasRunning: false,
+      compose: {
+        running: true,
+        services: [
+          {
+            name: 'proxy',
+            service: 'proxy',
+            state: 'running',
+            health: null,
+            publishedPorts: [80],
+          },
+        ],
+      },
+    }),
+    true,
+    { proxyEnabled: true, repairingProxy: true },
+  );
+  assert.match(text, /Wiederherstellung/);
   assert.match(text, /Proxy-Server läuft/);
 });

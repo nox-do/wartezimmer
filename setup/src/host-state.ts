@@ -900,6 +900,8 @@ export type SaveHostNetworkInput = {
   lanAppIp: string;
   gateway: GatewayPlan;
   restartCompose?: boolean;
+  /** Force proxy image ensure + compose up while proxy stays enabled. */
+  repairProxy?: boolean;
   canonicalBaseUrl?: string;
   proxy?: ProxyConfigInput;
 };
@@ -926,12 +928,19 @@ export async function saveHostNetwork(
   const runComposeUp = hooks?.composeUp ?? composeUp;
   const composeBefore = await runComposePs(runOptions);
   const stackWasRunning = composeBefore.running;
+  const repairProxy = Boolean(input.repairProxy);
 
   const previousLanIp = pickLanIpFromEnv(existing);
   const { proxy, writeEnv: writeProxyEnv } = resolveProxyForHostWrite(existing, input.proxy);
   const proxyWasEnabled = isProxyCurrentlyEnabled(existing);
 
-  if (writeProxyEnv && proxy.enabled && !proxyWasEnabled) {
+  if (repairProxy && !proxy.enabled) {
+    throw new SetupApiValidationError(
+      'Proxy-Wiederherstellung nur möglich, wenn der Proxy aktiviert ist.',
+    );
+  }
+
+  if ((writeProxyEnv && proxy.enabled && !proxyWasEnabled) || (repairProxy && proxy.enabled)) {
     // Force proxy overlay so a still-running own proxy is visible (not treated as foreign).
     const composeForPortCheck = await runComposePs({ ...runOptions, withProxy: true });
     await assertDesiredProxyHttpPortAvailable(
@@ -967,11 +976,14 @@ export async function saveHostNetwork(
   let restartLog: string | null = null;
   let gatewayComposeSkipped = false;
 
+  const restartCompose = Boolean(input.restartCompose) || repairProxy;
   const proxyActions = planProxyComposeActions({
     proxyEnabled: proxy.enabled,
-    restartCompose: Boolean(input.restartCompose),
+    restartCompose,
     stackWasRunning,
   });
+  // Repair must compose-up even when the stack was stopped (missing image/container).
+  const shouldComposeUp = proxyActions.composeUp || (repairProxy && proxy.enabled);
 
   if (proxyActions.removeProxyFirst) {
     // Remove while forcing the overlay — must happen before env drops PROXY_ENABLED
@@ -992,7 +1004,7 @@ export async function saveHostNetwork(
     keysWritten.push(...keysRemoved);
   }
 
-  if (proxyActions.composeUp) {
+  if (shouldComposeUp) {
     const envAfter = readEnvMap(envPath);
     if (proxy.enabled) {
       await ensureProxyImageForCompose(envAfter, hooks);

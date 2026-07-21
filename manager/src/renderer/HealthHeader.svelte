@@ -32,6 +32,9 @@
     if (chip.ok === null) {
       return 'reachability-chip is-pending';
     }
+    if (chip.warn) {
+      return 'reachability-chip is-warn';
+    }
     return `reachability-chip ${chip.ok ? 'is-ok' : 'is-bad'}`;
   }
 

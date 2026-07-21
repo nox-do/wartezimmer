@@ -8,11 +8,20 @@ Stand: 2026-07-18
 - **Wir liefern:** Portal-UI + Wartenummer-Prüfung + dünne Vendor-Adapter (Outbound-URL / Inbound ja|nein)
 - Verwandt (zurückstellen): Plan Gateway Management Hostname/IP
 
+## Proxy wiederherstellen (2026-07-21)
+
+- Netzwerk: wenn Proxy enabled aber Container nicht running → Hinweis + Button „Proxy wiederherstellen“
+- Backend `repairProxy`: Image sicherstellen + Compose up (auch wenn Stack vorher gestoppt)
+- Alternative: Proxy abschalten und übernehmen
+
 ## Health-Pills / Ampeln (2026-07-21)
 
-- Ampel App/Sandbox/Proxy einheitlich: Compose running + Docker-Health
-- Sandbox-ClamAV nur noch als Pill, färbt die Ampel nicht mehr
-- Offen als Nächstes: App-Pills (lokal/LAN) entwirren
+- Ampel App/Sandbox: Compose running + Docker-Health
+- Mit Proxy: App = nur Stack; Einstieg (Canonical-Probe) an Proxy-Ampel
+  - Proxy rot = Container fehlt; gelb = Proxy up, App dahinter nicht; grün = Einstieg ok
+- Ohne Proxy: Einstieg an App-Ampel (gleiche Semantik)
+- Lokal/LAN-Pills entfernt
+- ClamAV-Pill: veraltet = gelb; fehlt/kaputt = rot; färbt Sandbox-Ampel nicht
 
 ## Fix: Manager-Headline bei Proxy/LAN (2026-07-21)
 

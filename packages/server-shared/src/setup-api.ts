@@ -183,6 +183,11 @@ export type StorageFoldersResult = {
 export type HostNetworkInput = {
   lanAppIp: string;
   restartCompose?: boolean;
+  /**
+   * Re-ensure proxy image + compose up while PROXY stays enabled (recovery when
+   * container/image is missing). Implies restartCompose semantics for compose.
+   */
+  repairProxy?: boolean;
   /** Optional product base override (http(s) origin). When omitted, setup derives from LAN plan. */
   canonicalBaseUrl?: string;
   gateway: GatewayPlanInput;

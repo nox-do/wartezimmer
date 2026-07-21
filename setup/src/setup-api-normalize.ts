@@ -219,6 +219,7 @@ export function normalizeHostNetworkInput(body: unknown): {
   lanAppIp: string;
   gateway: GatewayPlan;
   restartCompose: boolean;
+  repairProxy: boolean;
   canonicalBaseUrl?: string;
   proxy?: ProxyConfigInput;
 } {
@@ -226,9 +227,11 @@ export function normalizeHostNetworkInput(body: unknown): {
   const lanAppIp = requireTrimmedLanAppIp(input.lanAppIp);
   const proxy = normalizeOptionalProxyConfig(input.proxy);
   const canonicalBaseUrl = normalizeOptionalCanonicalBaseUrl(input.canonicalBaseUrl);
+  const repairProxy = Boolean(input.repairProxy);
   return {
     lanAppIp,
-    restartCompose: Boolean(input.restartCompose),
+    restartCompose: Boolean(input.restartCompose) || repairProxy,
+    repairProxy,
     gateway: normalizeGatewayPlan(requireHostNetworkGateway(input.gateway), lanAppIp),
     ...(canonicalBaseUrl ? { canonicalBaseUrl } : {}),
     ...(proxy ? { proxy } : {}),

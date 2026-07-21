@@ -7,7 +7,7 @@
     type NetworkController,
     type NetworkState,
   } from './network-controller.js';
-  import { networkWarningText } from './network-view-model.js';
+  import { networkWarningText, proxyNeedsRestore, NETWORK_PROXY_RESTORE_HINT } from './network-view-model.js';
   import { resolvedLanIp } from './wizard-state.js';
   import { managerShell } from './manager-shell-state.svelte.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
@@ -80,6 +80,10 @@
           hostNetworkChanged(snapshot, snapshot.status),
         )
       : null,
+  );
+
+  const showProxyRestore = $derived(
+    Boolean(snapshot && snapshot.proxyEnabled && proxyNeedsRestore(snapshot.status)),
   );
 
   const diagramLanIp = $derived(
@@ -233,6 +237,19 @@
             Direkter App-Port bleibt lokal unter <code>127.0.0.1:8080</code> erreichbar. Geräte-URLs
             unter „Erreichbarkeit“ nutzen dann Port 80.
           </p>
+        {/if}
+        {#if showProxyRestore}
+          <p class="hint network-proxy-restore-hint">{NETWORK_PROXY_RESTORE_HINT}</p>
+          <div class="actions-row">
+            <button
+              type="button"
+              class="btn-secondary"
+              disabled={snapshot.busy}
+              onclick={() => controller?.restoreProxy()}
+            >
+              Proxy wiederherstellen
+            </button>
+          </div>
         {/if}
       </div>
 

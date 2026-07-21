@@ -108,6 +108,7 @@ test('normalizeHostNetworkInput normalizes gateway for maintenance route', () =>
     {
       lanAppIp: '10.0.0.5',
       restartCompose: true,
+      repairProxy: false,
       gateway: {
         enabled: true,
         gatewayInterface: 'eth1',
@@ -131,6 +132,7 @@ test('normalizeHostNetworkInput keeps explicit gateway bridge URL', () => {
     {
       lanAppIp: '10.0.0.5',
       restartCompose: false,
+      repairProxy: false,
       gateway: {
         enabled: true,
         gatewayInterface: 'eth1',
@@ -152,6 +154,7 @@ test('normalizeHostNetworkInput accepts optional canonicalBaseUrl origin', () =>
     {
       lanAppIp: '10.0.0.5',
       restartCompose: false,
+      repairProxy: false,
       canonicalBaseUrl: 'http://praxis-flow.local:8080',
       gateway: {
         enabled: false,
@@ -174,6 +177,7 @@ test('normalizeHostNetworkInput accepts optional proxy config', () => {
     {
       lanAppIp: '10.0.0.5',
       restartCompose: false,
+      repairProxy: false,
       gateway: {
         enabled: false,
         gatewayInterface: 'eth1',
@@ -184,6 +188,17 @@ test('normalizeHostNetworkInput accepts optional proxy config', () => {
       proxy: { enabled: true, httpPort: 80 },
     },
   );
+});
+
+test('normalizeHostNetworkInput repairProxy implies restartCompose', () => {
+  const result = normalizeHostNetworkInput({
+    lanAppIp: '10.0.0.5',
+    repairProxy: true,
+    gateway: { enabled: false },
+    proxy: { enabled: true, httpPort: 80 },
+  });
+  assert.equal(result.repairProxy, true);
+  assert.equal(result.restartCompose, true);
 });
 
 test('normalizeHostNetworkInput rejects invalid proxy.httpPort', () => {
@@ -244,6 +259,7 @@ test('normalizeHostNetworkInput ignores gateway bridge URL when gateway is disab
     {
       lanAppIp: '10.0.0.5',
       restartCompose: false,
+      repairProxy: false,
       gateway: {
         enabled: false,
         gatewayInterface: 'eth1',

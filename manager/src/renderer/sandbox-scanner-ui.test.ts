@@ -82,6 +82,19 @@ test('sandboxClamAvChip is red when definitions are missing', () => {
   });
 });
 
+test('sandboxClamAvChip is yellow when signatures are outdated', () => {
+  assert.deepEqual(
+    sandboxClamAvChip(
+      scanner({ signaturesFreshEnough: false, definitionsAgeHours: 30, ready: false }),
+    ),
+    {
+      label: 'ClamAV',
+      ok: false,
+      warn: true,
+    },
+  );
+});
+
 test('sandboxScannerReachability returns warn for stale signatures', () => {
   assert.equal(
     sandboxScannerReachability(

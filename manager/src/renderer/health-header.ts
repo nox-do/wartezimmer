@@ -64,7 +64,7 @@ export function deriveOverallStatus(
 
 function sandboxChips(
   scanner: HostRuntimeHealth['sandboxScanner'],
-): Array<{ label: string; ok: boolean | null; neutral?: boolean }> | undefined {
+): HealthTileChip[] | undefined {
   const chip = sandboxClamAvChip(scanner);
   return chip ? [chip] : undefined;
 }
@@ -73,7 +73,7 @@ function isServiceRunning(service: ComposeServiceStatus): boolean {
   return service.state.toLowerCase().includes('running');
 }
 
-/** Ampel for app / sandbox / proxy: Compose running + Docker health only. */
+/** Ampel from Compose: container running + Docker health. */
 function composeServiceStatus(service: ComposeServiceStatus): ReachabilityStatus {
   if (!isServiceRunning(service)) {
     return 'bad';
@@ -100,46 +100,56 @@ function composeServiceDetail(service: ComposeServiceStatus): string {
   return parts.join(' — ');
 }
 
-function appProbeChips(
-  probesById: Map<string, ProbeResult>,
+/**
+ * Entry-aware ampel: Compose must be up; green only when canonical health probe succeeds.
+ * Port/container up but entry fail → yellow.
+ */
+function withEntryProbe(
+  stackStatus: ReachabilityStatus,
+  lanProbe: ProbeResult | undefined,
   probesPending: boolean,
-): Array<{ label: string; ok: boolean | null; neutral?: boolean }> {
-  if (probesPending) {
-    return [
-      { label: 'lokal', ok: null },
-      { label: 'LAN', ok: null },
-    ];
+): ReachabilityStatus {
+  if (stackStatus === 'bad' || stackStatus === null) {
+    return stackStatus;
   }
-
-  const chips: Array<{ label: string; ok: boolean | null; neutral?: boolean }> = [];
-  const local = probesById.get('app.health.local');
-  const lan = probesById.get('app.health.lan');
-
-  if (local) {
-    chips.push({ label: 'lokal', ok: local.ok });
+  if (stackStatus === 'warn') {
+    return 'warn';
   }
-  if (lan) {
-    chips.push({ label: 'LAN', ok: lan.ok });
+  if (probesPending || !lanProbe) {
+    return 'warn';
   }
-  return chips;
+  return lanProbe.ok ? 'ok' : 'warn';
 }
 
-function serviceChips(
-  serviceName: string,
-  probesById: Map<string, ProbeResult>,
+function entryDetail(
+  stackDetail: string,
+  lanProbe: ProbeResult | undefined,
   probesPending: boolean,
-  scanner: HostRuntimeHealth['sandboxScanner'],
-): Array<{ label: string; ok: boolean | null; neutral?: boolean }> | undefined {
-  if (serviceName === 'app') {
-    return appProbeChips(probesById, probesPending);
+  status: ReachabilityStatus,
+): string {
+  if (status !== 'warn') {
+    return stackDetail;
   }
-  if (serviceName === 'sandbox') {
-    return sandboxChips(scanner);
+  if (probesPending || !lanProbe) {
+    return `${stackDetail} — Einstieg wird geprüft …`;
   }
-  return undefined;
+  if (!lanProbe.ok) {
+    return `${stackDetail} — Einstieg nicht erreichbar`;
+  }
+  return stackDetail;
 }
 
-export type HealthTileChip = { label: string; ok: boolean | null; neutral?: boolean };
+function proxyConfigured(runtime: HostRuntimeHealth): boolean {
+  return runtime.proxyServer != null;
+}
+
+export type HealthTileChip = {
+  label: string;
+  ok: boolean | null;
+  neutral?: boolean;
+  /** Yellow chip (e.g. ClamAV definitions outdated) — overrides red when ok is false. */
+  warn?: boolean;
+};
 
 export type HealthTileSpec = {
   name: string;
@@ -153,7 +163,9 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
   const probes = runtime.probes;
   const probesById = new Map(probes.map((probe) => [probe.id, probe]));
   const probesPending = probes.length === 0 && runtime.docker.daemonRunning;
+  const lanProbe = probesById.get('app.health.lan');
   const scanner = runtime.sandboxScanner;
+  const useProxyEntry = proxyConfigured(runtime);
   const tiles: HealthTileSpec[] = [];
 
   if (services.length === 0 && !runtime.proxyServer) {
@@ -161,7 +173,6 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
       name: 'Stack',
       detail: probesPending ? 'Wird geprüft …' : 'Keine Container',
       status: null,
-      chips: probesPending ? appProbeChips(probesById, true) : undefined,
     });
     return tiles;
   }
@@ -169,24 +180,58 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
   for (const service of services) {
     const serviceName = service.service || service.name;
     if (serviceName === 'proxy') {
-      // Dedicated Proxy-Server tile below (only when image present + used).
+      // Dedicated Proxy-Server tile below.
       continue;
     }
+
+    const stackStatus = composeServiceStatus(service);
+    const stackDetail = composeServiceDetail(service);
+
+    if (serviceName === 'app') {
+      if (useProxyEntry) {
+        tiles.push({
+          name: serviceName,
+          detail: stackDetail,
+          status: stackStatus,
+        });
+      } else {
+        const status = withEntryProbe(stackStatus, lanProbe, probesPending);
+        tiles.push({
+          name: serviceName,
+          detail: entryDetail(stackDetail, lanProbe, probesPending, status),
+          status,
+        });
+      }
+      continue;
+    }
+
+    if (serviceName === 'sandbox') {
+      tiles.push({
+        name: serviceName,
+        detail: stackDetail,
+        status: stackStatus,
+        chips: sandboxChips(scanner),
+      });
+      continue;
+    }
+
     tiles.push({
       name: serviceName,
-      detail: composeServiceDetail(service),
-      status: composeServiceStatus(service),
-      chips: serviceChips(serviceName, probesById, probesPending, scanner),
+      detail: stackDetail,
+      status: stackStatus,
     });
   }
 
   if (runtime.proxyServer) {
     const container = runtime.proxyServer.container;
     if (container) {
+      const stackStatus = composeServiceStatus(container);
+      const stackDetail = composeServiceDetail(container);
+      const status = withEntryProbe(stackStatus, lanProbe, probesPending);
       tiles.push({
         name: 'Proxy-Server',
-        detail: composeServiceDetail(container),
-        status: composeServiceStatus(container),
+        detail: entryDetail(stackDetail, lanProbe, probesPending, status),
+        status,
       });
     } else {
       tiles.push({
@@ -198,8 +243,9 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
   }
 
   const hasApp = services.some((service) => (service.service || service.name) === 'app');
+  const entryOwnedByTile = hasApp || Boolean(runtime.proxyServer);
   for (const probe of probes) {
-    if (hasApp && ['app.health.local', 'app.health.lan'].includes(probe.id)) {
+    if (entryOwnedByTile && ['app.health.local', 'app.health.lan'].includes(probe.id)) {
       continue;
     }
     let detail = probe.message;

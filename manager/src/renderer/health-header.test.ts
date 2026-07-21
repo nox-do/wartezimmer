@@ -39,6 +39,14 @@ function runtime(overrides: Partial<HostRuntimeHealth> = {}): HostRuntimeHealth 
   };
 }
 
+const proxyContainer = {
+  name: 'praxis-flow-proxy',
+  service: 'proxy',
+  state: 'running',
+  health: null as string | null,
+  publishedPorts: [80],
+};
+
 test('collectHealthTiles omits proxy when proxyServer is null', () => {
   const tiles = collectHealthTiles(
     runtime({
@@ -74,24 +82,32 @@ test('collectHealthTiles omits proxy when proxyServer is null', () => {
   );
 });
 
-test('collectHealthTiles shows Proxy-Server when image present and used', () => {
+test('collectHealthTiles Proxy-Server is green when Compose up and entry probe ok', () => {
   const tiles = collectHealthTiles(
     runtime({
-      proxyServer: {
-        enabled: true,
-        container: {
-          name: 'praxis-flow-proxy',
-          service: 'proxy',
-          state: 'running',
-          health: null,
-          publishedPorts: [80],
-        },
-      },
+      proxyServer: { enabled: true, container: proxyContainer },
     }),
   );
   const proxy = tiles.find((tile) => tile.name === 'Proxy-Server');
   assert.ok(proxy);
   assert.equal(proxy.status, 'ok');
+  assert.equal(proxy.detail, 'running');
+});
+
+test('collectHealthTiles Proxy-Server is yellow when container up but entry fails', () => {
+  const tiles = collectHealthTiles(
+    runtime({
+      probes: [
+        { id: 'app.health.local', ok: true, message: 'ok' },
+        { id: 'app.health.lan', ok: false, message: 'down' },
+      ],
+      proxyServer: { enabled: true, container: proxyContainer },
+    }),
+  );
+  const proxy = tiles.find((tile) => tile.name === 'Proxy-Server');
+  assert.ok(proxy);
+  assert.equal(proxy.status, 'warn');
+  assert.match(proxy.detail, /Einstieg nicht erreichbar/);
 });
 
 test('collectHealthTiles shows Proxy-Server missing container as bad', () => {
@@ -104,6 +120,39 @@ test('collectHealthTiles shows Proxy-Server missing container as bad', () => {
   assert.ok(proxy);
   assert.equal(proxy.detail, 'Container fehlt');
   assert.equal(proxy.status, 'bad');
+});
+
+test('collectHealthTiles with proxy keeps App as stack-only Compose ampel', () => {
+  const tiles = collectHealthTiles(
+    runtime({
+      probes: [
+        { id: 'app.health.local', ok: true, message: 'ok' },
+        { id: 'app.health.lan', ok: false, message: 'down' },
+      ],
+      proxyServer: { enabled: true, container: proxyContainer },
+    }),
+  );
+  const app = tiles.find((tile) => tile.name === 'app');
+  assert.ok(app);
+  assert.equal(app.status, 'ok');
+  assert.equal(app.detail, 'running — healthy');
+  assert.equal(app.chips, undefined);
+});
+
+test('collectHealthTiles without proxy puts entry on App ampel', () => {
+  const tiles = collectHealthTiles(
+    runtime({
+      probes: [
+        { id: 'app.health.local', ok: true, message: 'ok' },
+        { id: 'app.health.lan', ok: false, message: 'down' },
+      ],
+    }),
+  );
+  const app = tiles.find((tile) => tile.name === 'app');
+  assert.ok(app);
+  assert.equal(app.status, 'warn');
+  assert.match(app.detail, /Einstieg nicht erreichbar/);
+  assert.equal(app.chips, undefined);
 });
 
 test('collectHealthTiles sandbox ampel uses Compose health, not ClamAV', () => {
@@ -142,7 +191,7 @@ test('collectHealthTiles sandbox ampel uses Compose health, not ClamAV', () => {
   assert.ok(sandbox);
   assert.equal(sandbox.status, 'ok');
   assert.equal(sandbox.detail, 'running — healthy');
-  assert.ok(sandbox.chips?.some((chip) => chip.label === 'ClamAV' && chip.ok === false));
+  assert.ok(sandbox.chips?.some((chip) => chip.label === 'ClamAV' && chip.ok === false && !chip.warn));
 });
 
 test('deriveOverallStatus is Betrieb when local and LAN probes are green', () => {

@@ -127,13 +127,17 @@ export function formatSandboxScannerDetail(
 
 export function sandboxClamAvChip(
   scanner: SandboxScannerStatus | null | undefined,
-): { label: string; ok: boolean | null; neutral?: boolean } | null {
+): { label: string; ok: boolean | null; neutral?: boolean; warn?: boolean } | null {
   const level = sandboxScannerLevel(scanner);
   if (level === 'unknown') {
     return { label: 'ClamAV', ok: null };
   }
   if (level === 'neutral') {
     return { label: 'Scanner aus', ok: null, neutral: true };
+  }
+  if (level === 'warn') {
+    // Outdated definitions: still operational, but not fully healthy.
+    return { label: 'ClamAV', ok: false, warn: true };
   }
   return { label: 'ClamAV', ok: level === 'ok' };
 }

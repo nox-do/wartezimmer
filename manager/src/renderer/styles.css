@@ -228,6 +228,12 @@ body {
   background: var(--banner-ok);
 }
 
+.reachability-chip.is-warn {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 35%, var(--border));
+  background: var(--banner-warn);
+}
+
 .reachability-chip.is-bad {
   color: var(--bad);
   border-color: color-mix(in srgb, var(--bad) 35%, var(--border));
