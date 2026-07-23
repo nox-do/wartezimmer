@@ -59,9 +59,6 @@ export type SavePfbackupResult = {
   filePath: string | null;
 };
 
-/** @deprecated Use SavePfbackupResult */
-export type SaveEnvBackupResult = SavePfbackupResult;
-
 /** Electron IPC: native folder picker. */
 export type SelectFolderResult = {
   canceled: boolean;

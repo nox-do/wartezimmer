@@ -1,6 +1,19 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-18
+Stand: 2026-07-23
+
+## Audit Quick Wins (2026-07-23)
+
+- Docs: [`docs/audit-dopplungen-altlasten.md`](docs/audit-dopplungen-altlasten.md) nachgeschärft (Reihenfolge, Effort, Smoke-Helper, Sync-Guards); Link in `docs/README.md`
+- LEG-001: `validateTarArchiveEntryPaths` entfernt; Test auf `validateTarArchiveEntries`
+- LEG-002: `SaveEnvBackupResult`-Alias entfernt; `save-env-backup.ts` → `SavePfbackupResult`
+- DUP-001: `parseTicketCode` + `formatTicketCode` kanonisch in `@praxis-flow/domain`; Flow-Core/App/Smoke re-exportieren
+- Offen als Nächstes: DUP-002 (OpenAPI-Orchestrierung), dann LEG-003 (PoC-HTTP/UI Entscheidung)
+
+## Docs / Produktbeschreibung (2026-07-23)
+
+- [`docs/product.md`](docs/product.md): Produktinfo + Highlights + Markt-Kurzvergleich; Patient-App nur als Abgrenzung
+- [`docs/flows.md`](docs/flows.md): Flow 2 auf **Patientenportal** umgestellt (Captive = Praxis-IT/Adapter, nicht unser Screen); Kurzabschnitt **Betrieb — Manager / Proxy / Gateway** ergänzt; Querschnitt-Diagramm und Bezüge angepasst
 
 ## Entscheidung: Produktgrenze WLAN / Captive (2026-07-18)
 
@@ -264,7 +277,7 @@ Review-Nachzug:
 | Kandidat                                                                                                                          | Status       | Evidenz                                                                                                  |
 | --------------------------------------------------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------- |
 | Domain Single-Panel (`RoomPanelSettings`, `DEFAULT_ROOM_PANEL_SETTINGS`, `normalizeRoomPanelSettings`, `applyRoomPanelPlacement`) | **entfernt** | Domain-Cluster + Tests bereinigt; `db-types.ts` Alias entfernt.                                          |
-| `EnvBackupInfo` / `EnvBackupResult`                                                                                               | **entfernt** | Re-Exports aus `setup-api`/`index`/`host-status` entfernt. `SaveEnvBackupResult` bleibt (Rename später). |
+| `EnvBackupInfo` / `EnvBackupResult`                                                                                               | **entfernt** | Re-Exports aus `setup-api`/`index`/`host-status` entfernt. `SaveEnvBackupResult` ebenfalls entfernt (2026-07-23). |
 | `app/src/http/domain-error.ts` Shim                                                                                               | **entfernt** | Imports → `shared/errors/domain-error.js`; Datei gelöscht.                                               |
 | `setup/src/urls.ts` `buildDeviceUrls`                                                                                             | **entfernt** | Tests auf `buildDeviceUrlsFromBaseUrl` umgestellt.                                                       |
 | UI `createMfaAssistCheckin`                                                                                                       | **entfernt** | Server `POST /mfa-assist` ebenfalls entfernt (2026-07-14).                                               |

@@ -189,7 +189,7 @@ http.ts                   — PoC-HTTP (Host ersetzt durch Fastify)
 | Thema                                                         | Priorität                                                           |
 | ------------------------------------------------------------- | ------------------------------------------------------------------- |
 | Raumkapazität (`called`+`arrived`+`in_progress` pro Location) | Mittel — Logik aus PF `@praxis-flow/domain/room-capacity` portieren |
-| `ticket-code` mit `@praxis-flow/domain` deduplizieren         | Niedrig — beim PF-Merge                                             |
+| `ticket-code` mit `@praxis-flow/domain` deduplizieren         | ✅ 2026-07-23 — Domain kanonisch; Core re-exportiert                |
 | Referenz-UI: `authPath`, Transition-Body                      | Optional, nur PoC                                                   |
 
 ---

@@ -194,17 +194,6 @@ export function validateTarArchiveEntries(entries: TarArchiveEntry[]): void {
   }
 }
 
-/** @deprecated Use validateTarArchiveEntries with verbose listing. */
-export function validateTarArchiveEntryPaths(entries: string[]): void {
-  validateTarArchiveEntries(
-    entries.map((rawName) => ({
-      rawName,
-      name: normalizeTarEntryName(rawName),
-      type: 'file' as const,
-    })),
-  );
-}
-
 export function parseTarVerboseListOutput(stdout: string): TarArchiveEntry[] {
   const entries: TarArchiveEntry[] = [];
   for (const line of stdout.split('\n')) {

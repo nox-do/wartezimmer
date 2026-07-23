@@ -3,7 +3,7 @@ import { dialog } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ENV_BACKUP_BASENAME_PREFIX } from '@praxis-flow/server-shared';
-import type { SaveEnvBackupResult } from '../shared/host-status.js';
+import type { SavePfbackupResult } from '../shared/host-status.js';
 
 function assertAllowedBackupPath(backupPath: string): string {
   if (typeof backupPath !== 'string' || !backupPath.trim()) {
@@ -26,7 +26,7 @@ function assertAllowedBackupPath(backupPath: string): string {
 export async function saveEnvBackupToDisk(
   parentWindow: BrowserWindow | null,
   backupPath: string,
-): Promise<SaveEnvBackupResult> {
+): Promise<SavePfbackupResult> {
   const sourcePath = assertAllowedBackupPath(backupPath);
   const base = path.basename(sourcePath);
   const defaultName = base.startsWith('.') ? `praxis-flow${base}` : base;

@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
-export function formatTicketCode(prefix, number) {
-  return `${String(prefix).toUpperCase()}-${String(number).padStart(3, '0')}`;
-}
+export { formatTicketCode } from '@praxis-flow/domain';
 
 export function assert(condition, message) {
   if (!condition) {

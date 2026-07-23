@@ -14,7 +14,6 @@ import {
   parseTarVerboseListOutput,
   validateExtractedPfupdate,
   validateTarArchiveEntries,
-  validateTarArchiveEntryPaths,
 } from './pfupdate-package.js';
 import { buildTestPfupdateArchive } from './pfupdate-test-fixtures.js';
 
@@ -46,10 +45,24 @@ test('parseTarVerboseListOutput rejects unparseable lines', () => {
   );
 });
 
-test('validateTarArchiveEntryPaths rejects traversal before extract', () => {
-  assert.throws(() => validateTarArchiveEntryPaths(['../etc/passwd']), /PFUPDATE_TAR_PATH_UNSAFE/);
+test('validateTarArchiveEntries rejects traversal before extract', () => {
   assert.throws(
-    () => validateTarArchiveEntryPaths(['manifest.json', 'images/../../etc/passwd']),
+    () =>
+      validateTarArchiveEntries([
+        { rawName: '../etc/passwd', name: normalizeTarEntryName('../etc/passwd'), type: 'file' },
+      ]),
+    /PFUPDATE_TAR_PATH_UNSAFE/,
+  );
+  assert.throws(
+    () =>
+      validateTarArchiveEntries([
+        { rawName: 'manifest.json', name: 'manifest.json', type: 'file' },
+        {
+          rawName: 'images/../../etc/passwd',
+          name: normalizeTarEntryName('images/../../etc/passwd'),
+          type: 'file',
+        },
+      ]),
     /PFUPDATE_TAR_PATH_UNSAFE/,
   );
 });

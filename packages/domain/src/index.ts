@@ -1,4 +1,4 @@
-export { formatTicketCode } from './ticket-code.js';
+export { formatTicketCode, parseTicketCode } from './ticket-code.js';
 export type { PracticeProfile } from './practice-profile-types.js';
 export {
   DEFAULT_TOPIC_ACCENT,

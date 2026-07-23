@@ -50,6 +50,7 @@ Kurzüberblick: **was wann lesen**. Technische Details stehen in den verlinkten 
 | -------------------------------------------------------- | ---------------------------------- |
 | [`i18n.md`](i18n.md)                                     | Sprachen Terminal/Portal vs. Staff |
 | [`business-revenue-model.md`](business-revenue-model.md) | Preis-/Lizenz-Skizze (intern)      |
+| [`audit-dopplungen-altlasten.md`](audit-dopplungen-altlasten.md) | Inventur: Dopplungen / Altlasten (intern) |
 
 ## API-Vertrag
 
