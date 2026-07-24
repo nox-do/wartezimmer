@@ -9,7 +9,7 @@ Abgleich Svelte-Apps (`ui/`) gegen diese Flows — **ohne** eGK-Hardware, SMS/Me
 | Bereich             | In Runtime-UI                                                                                                                                                                                                                                                                                                                                                                                                                     | Nur Backend/Mocks                                                                                 |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | Terminal Happy Path | Phone/DOB (+49 fest), **Nachname+DOB** (optional per Ops), Themen, Bestätigung, MFA-Assist, Notfall, Terminal gesperrt, Themen-Zeitfenster (Backend-Filter), optional Bon-Druck (Kiosk), Sprachen de/en/tr/ru/uk (Patienten-UI; MFA wählt sichtbare Sprachen, Default nur DE)                                                                                                                                                     | Empfangs-Ausweg bei nicht verfügbarer Anmeldung / Themen                                          |
-| Portal              | Wartenummer → Menü → Upload **und** Erstanamnese; Session-Abschluss (Formular → revoke, Upload → TTL 30 Min); Captive-Authorize-Hook (WLAN-Adapter geplant) | Internet-Modell / Vendor-Adapter offen; Fragenkatalog-Review |
+| Portal              | Wartenummer → Menü → Upload **und** Erstanamnese; Session-Abschluss (Formular → revoke, Upload → TTL 30 Min); Captive-Authorize-Hook (dünner WLAN-Adapter geplant) | Vendor-Adapter; Fragenkatalog-Review |
 | MFA                 | Warteliste (SSE), Zonen, **Raum-Board** (grüne Spalte), **DnD** (WZ↔Räume), **Triage-Merker**, persistierter Anzeigename (`identity-ref`), Dokument-Vorschau (inkl. Deep-Link), Notfall (Ops-Stream), Quicksettings (**Terminal sperren**, Aufrufziel, Geräte-Presence/Pairing), Betrieb-Settings (WLAN-Promo, `returnWindowMinutes`), Rückhol-SMS, Themen-Reihenfolge per Drag, **Raum-Panel-Settings** (Tür + im Raum pro Raum) | Queue-Summary, Identity/Patient-Detail, PVS-Spalten                                               |
 | Raum-Panel          | Login pro Placement (`/room-panel`), Live-Snapshot (SSE), Ankunft/Entlassen/Aufruf aus `actions`, getrennte `callCandidates`-Liste                                                                                                                                                                                                                                                                                                | —                                                                                                 |
 | TV                  | SSE, Aufruf, Chime, Pagination, Device-Pairing                                                                                                                                                                                                                                                                                                                                                                                    | —                                                                                                 |
@@ -24,13 +24,14 @@ Details und offene fachliche Punkte siehe Abschnitte pro Flow unten.
 - **Portal:** Wartenummer vom Terminal → Upload (TTL 30 Min) oder Anamnese (Session sofort zu)
 - **MFA:** Metadaten + Vorschau/Export/Verwerfen — kein Patient-Download im Portal
 - **SMS:** nur beim MFA-Rückholen (optional), nicht am Standard-Check-in
+- **Betrieb ≠ Patienten-Flow:** Manager und optionaler Proxy sind Host-/Netz-Hülle — siehe [Betrieb](#betrieb--manager-proxy-gateway); Captive-Hardware und Gateway-Container sind **nicht** Produktkern ([`integrations.md`](integrations.md))
 
 ### SMS — wo ja, wo nein
 
 | Bereich                                     | SMS?              | Vorgehen                                                                                       |
 | ------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------- |
 | **Check-in / Warteschlange** (Standard)     | **Nein**          | Rufnummer + Geburtsdatum reicht; falscher Treffer stört die Queue kaum                         |
-| **WLAN / Captive Portal**                   | **Nein**          | Nummer **nur vom Terminal** → Patient gibt sie **im Captive Portal** ein (kein weiteres Feld)  |
+| **Portal / optional Captive**               | **Nein**          | Nummer **nur vom Terminal** → Patient gibt sie **im Portal** ein (kein weiteres Feld)          |
 | **Offene Sprechstunde — Patient kurz raus** | **Ja** (optional) | MFA **Rückholen** in der Warteliste — SMS/WhatsApp wenn Nummer vorhanden; kein SMS am Terminal |
 
 **Hinweis falsche Nummer (Standard-Check-in):** Die Eingabe ist eine Zuordnungshilfe, kein Nachweis — für Reihenfolge oft OK; PVS-Zuordnung nur mit Vorsicht.
@@ -138,8 +139,8 @@ Patient wählt **ein** Hauptanliegen (große Kacheln):
 | **Nachname + Geburtsdatum**  | getippter Nachname oder CSV-Treffer | **Wartenummer**                 |
 | **Zur MFA**                  | nein (optional später)              | **Wartenummer** (`M-…`)         |
 
-- Wartenummer: eindeutig pro Check-in, WLAN-Session, Wartezimmer-Anzeige; **optional Bon** (s. Kiosk + Drucker)
-- Optional: Hinweis **WLAN = Wartenummer im Captive Portal** (Nummer nur vom Terminal, Flow 2)
+- Wartenummer: eindeutig pro Check-in, Portal-Session, Wartezimmer-Anzeige; **optional Bon** (s. Kiosk + Drucker)
+- Optional: Hinweis **Portal = Wartenummer eingeben** (Nummer nur vom Terminal, Flow 2; Captive nur wenn Praxis-IT das vorschaltet)
 
 ### Offene Sprechstunde — Betrieb (Entscheidung v1)
 
@@ -207,34 +208,43 @@ Patient weiß: **jetzt oder bald** ist offene Sprechstunde. Thema `offen` verhä
 
 ---
 
-## Flow 2 — Wartezimmer WLAN (Captive Portal)
+## Flow 2 — Patientenportal (Upload / Erstanamnese)
 
-**Ziel:** WLAN nutzbar machen, optional Dokumente sicher übergeben — ohne dass Praxis-Personal Patientendaten am Portal _einsehen_ kann.
+**Ziel:** Optional Dokumente und Erstanamnese sicher übergeben — ohne dass Praxis-Personal Patientendaten am Portal _einsehen_ kann. Einstieg oft über Gast-WLAN der Praxis; **Captive-Hardware und Freischaltung sind nicht unser Produkt** ([`integrations.md`](integrations.md)).
+
+### Produktgrenze (WLAN / Captive)
+
+| Wir liefern | Wir liefern nicht |
+| ----------- | ----------------- |
+| Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API | Router, APs, Captive-Portal-Hardware, eigenen Captive-Datenpfad |
+| später: dünne Vendor-Adapter (Outbound-URL / Inbound ja\|nein) nach gültiger Wartenummer | openNDS-`gateway`-Container als Produktkern (nur Lab-Referenz: [`gateway-captive-portal.md`](gateway-captive-portal.md)) |
+
+**Praxis-IT** stellt Gast-WLAN / Captive. Nach Freischaltung (oder ohne Captive: direkter Browser-Aufruf der Portal-URL) läuft unser Portal. Dev/Test ohne WLAN: `/portal` direkt im Browser.
 
 ### Schritte (Screen-Ablauf)
 
-**Prinzip:** **Wartenummer = WLAN-/Portal-Session.** Die Nummer wird **nur am Anmeldeterminal** ausgegeben (Display/Bon) — der Patient muss sie **im Captive Portal am Handy eingeben**. Kein Geburtsdatum o. Ä.; die Wartenummer reicht in v1 bewusst fuer Upload/Erstanamnese.
+**Prinzip:** **Wartenummer = Portal-Session.** Die Nummer wird **nur am Anmeldeterminal** ausgegeben (Display/Bon) — der Patient gibt sie **im Portal am Handy** ein. Kein Geburtsdatum o. Ä.; die Wartenummer reicht in v1 bewusst fuer Upload/Erstanamnese.
 
 **Vorsorge:** Pro Ticket gibt es nur **eine aktive Patient-Session**. Nach **Formular-Absenden** wird die Session serverseitig geschlossen (`sessions/submit`); beim **Upload** endet sie per TTL (Standard 30 Min). Alter Token ungueltig, keine Wiederaufnahme der alten Upload-Liste. Ein erneuter Einstieg mit gleicher Wartenummer erzeugt technisch eine neue, leere Session. Innerhalb einer aktiven Session duerfen mehrere Dateien/Formular-Dokumente abgelegt werden; "einmalig" meint den Abschluss der Session, nicht genau eine Datei.
 
-| Pfad                         | Ablauf                                                                                                                                                 |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Session**                  | Captive → **Wartenummer** → Menü                                                                                                                       |
-| **Internet**                 | `?` — Produktentscheidung offen: ein WLAN mit Freischaltung nach Wartenummer **oder** separates Gast-WLAN; ggf. kein Patienten-Internet im Portal-Flow |
-| **Dokumente / Erstanamnese** | Browser, Session = Nummer                                                                                                                              |
+| Pfad                         | Ablauf                                                                                          |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Einstieg (optional)**      | Praxis-Gast-WLAN → fremdes Captive (IT/Vendor) → Redirect auf unser Portal                      |
+| **Session**                  | Portal → **Wartenummer** (+ Nutzungsbedingungen) → Menü                                         |
+| **Dokumente / Erstanamnese** | Browser, Session = Nummer                                                                       |
 
-**Warum Browser für Upload?** Captive-Portale sind oft eingeschränt (Mini-WebView, Datei-Picker, Kamera). Nach Freischaltung: **HTTP-Redirect** in Safari/Chrome — volle Upload-APIs, gleiches Praxisnetz, HTTPS POST lokal (Pitch Phase 3).
+**Warum voller Browser für Upload?** Captive-Mini-WebViews sind oft eingeschränkt (Datei-Picker, Kamera). Nach Freischaltung: Redirect in Safari/Chrome — volle Upload-APIs. Ohne Captive reicht der direkte Portal-Aufruf (LAN oder später extern über Proxy-Whitelist).
 
-| Screen         | Inhalt                                                                             |
-| -------------- | ---------------------------------------------------------------------------------- |
-| Captive Portal | Nutzungsbedingungen + **Wartenummer**                                              |
-| Menü           | Upload \| Erstanamnese (Surf-Hinweis nur bei Ein-WLAN-Modell; aktuell nicht in UI) |
-| Browser        | Upload oder Erstanamnese (ohne erneutes Ident)                                     |
+| Screen | Inhalt |
+| ------ | ------ |
+| Portal | Nutzungsbedingungen + **Wartenummer** |
+| Menü   | Upload \| Erstanamnese |
+| Form/Upload | ohne erneutes Ident |
 
 **Begriffe:** **Erstanamnesebogen** / **Neupatientenfragebogen** = medizinisch-administrative Aufnahme beim **ersten** Praxisbesuch. **Anamnese** bei jedem Termin ist etwas anderes (kurz, heute). **Stammdatenblatt** eher Adresse/Versicherung (oft PVS/eGK).
 
-1. Praxis-WLAN → Captive → **Wartenummer**
-2. Menü: Upload / Erstanamnese (Internet/Surf: siehe Pfad **Internet** oben — noch nicht entschieden)
+1. (Optional) Gast-WLAN / Captive der Praxis → Redirect auf Portal-URL
+2. Portal: **Wartenummer** → Menü: Upload / Erstanamnese
 3. Session endet mit Formular-Absenden (serverseitig `sessions/submit`), Upload-Ablauf (TTL, Standard 30 Min), oder Tagesreset — kein Wiederaufnehmen der alten Upload-Liste
 
 ### Portal-Session-Lebensdauer — bewusste Entscheidung (v1)
@@ -276,9 +286,23 @@ Patient kann den **generierten** Bogen im Portal **nicht** erneut öffnen oder s
 
 ### Offene Punkte
 
-- **Internet-Modell:** ein Praxis-WLAN mit Captive-Freischaltung vs. separates Gast-WLAN (ggf. ohne Portal-Surf-Hinweis) — noch nicht entschieden
+- Vendor-Adapter Captive (Outbound/Inbound) — Spezifikation und erste Integration
 - Rate-Limits Upload / Fehlversuche Wartenummer
 - Fragenkatalog Erstanamnese mit Praxis finalisieren
+
+---
+
+## Betrieb — Manager, Proxy, Gateway
+
+Kein Patienten-Flow — Rahmen für Installation und Erreichbarkeit. Fachliche Screens bleiben Flow 1–5.
+
+| Baustein | Rolle |
+| -------- | ----- |
+| **Manager** (Electron) | Host-Setup, Status, Netzwerk, Wartung, Updates — [`../manager/README.md`](../manager/README.md), [`delivery.md`](delivery.md) |
+| **Proxy** (optional Caddy) | LAN-Einstieg Port 80 (HTTP umgesetzt); TLS und externes Portal (Whitelist) geplant — [`plan-proxy-container.md`](plan-proxy-container.md) |
+| **Gateway** (openNDS) | **Nicht** Produktkern — Lab-Referenz; Delivery-Default ohne Gateway — [`gateway-captive-portal.md`](gateway-captive-portal.md) |
+
+Mit aktivem Proxy sind Geräte-/Portal-URLs über `CANONICAL_BASE_URL` (ohne `:8080` im LAN) kanonisch; App-Port 8080 bleibt lokal für Setup-Probes. Details und Manager-UI (Proxy an/aus, Wiederherstellen) gehören in Manager-/Proxy-Doku, nicht in die Patienten-Abläufe.
 
 ---
 
@@ -300,7 +324,7 @@ Patient kann den **generierten** Bogen im Portal **nicht** erneut öffnen oder s
 
 **Anzeigename:** Doppelklick auf Name in der Warteliste → `PATCH …/identity-ref`; persistiert technisch in `identityRef` (gleicher Anzeigename wie CSV/eGK), überlebt Refresh, Tagesreset.
 
-**Upload-Symbol:** deutliches blaues Dokument-Icon mit Anzahl — Dateien über WLAN **oder** Erstanamnese nach Absenden (Flow 2). Klick → **Dokumente bearbeiten** (Vorschau Sandbox, ins PVS speichern, löschen). Deep-Link `/mfa?visitId=…&documentId=…` öffnet Vorschau-Overlay direkt. Symbol verschwindet nach Verarbeitung.
+**Upload-Symbol:** deutliches blaues Dokument-Icon mit Anzahl — Dateien über Portal **oder** Erstanamnese nach Absenden (Flow 2). Klick → **Dokumente bearbeiten** (Vorschau Sandbox, ins PVS speichern, löschen). Deep-Link `/mfa?visitId=…&documentId=…` öffnet Vorschau-Overlay direkt. Symbol verschwindet nach Verarbeitung.
 
 **Notfall-Alarm:** rotes Banner oben (Terminal-Meldung) — MFA **quittiert** nach Reaktion; Banner verschwindet (neuer Alarm am Terminal würde erneut erscheinen). Notfall am Terminal ist nur aktiv, wenn das Feature in den Einstellungen aktiviert ist und das Terminal nicht deaktiviert wurde.
 
@@ -339,7 +363,7 @@ Die fünf Demo-Themen sind **Start-Defaults** — in MFA unter **Themen & Räume
 
 Nummernkreis je Thema in MFA unter **Themen & Räume** editierbar (ein Buchstabe A–Z, Feld `laneCode`). **Icon** optional (Lucide-Katalog im Modal); ohne Icon zeigt das Terminal den **ersten Buchstaben** des Namens. **Kein reservierter O-Nummernkreis** — „außer Haus“ auf dem TV kommt aus dem Queue-Status (`absent_*`), nicht aus dem Buchstaben.
 
-Anzeige z. B. **L-042** — Patient tippt dieselbe Nummer im Captive Portal. Beim nächsten Labor-Check-in vergibt das System **L-043** atomar (keine manuelle „nächste Nr.“ in den Einstellungen).
+Anzeige z. B. **L-042** — Patient tippt dieselbe Nummer im Portal. Beim nächsten Labor-Check-in vergibt das System **L-043** atomar (keine manuelle „nächste Nr.“ in den Einstellungen).
 
 ### Aufrufziel (Raum)
 
@@ -410,7 +434,7 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 | Quelle   | MFA sieht                                             |
 | -------- | ----------------------------------------------------- |
 | Check-in | Anliegen, Wartenummer (`laneCode` + Laufnummer), Zeit |
-| WLAN     | Session, Upload, Erstanamnese                         |
+| Portal   | Session, Upload, Erstanamnese                         |
 | Terminal | Notfall-Alarm                                         |
 | PVS `?`  | Termin, Raum                                          |
 
@@ -489,7 +513,7 @@ flowchart LR
     WQ[Warteschlange]
   end
   subgraph wr [Wartezimmer]
-    WLAN[Flow 2 Captive Portal]
+    Portal[Flow 2 Patientenportal]
   end
   subgraph f3 [Flow 3]
     MFA[MFA Arbeitsplatz]
@@ -499,10 +523,10 @@ flowchart LR
   end
   P --> CI --> T --> WQ
   CI -->|Zur MFA| MFA
-  WQ --> WLAN
+  WQ --> Portal
   WQ --> MON
   CI --> MFA
-  WLAN --> MFA
+  Portal --> MFA
   WQ --> MFA
   MFA -->|Aufrufe| MON
 ```

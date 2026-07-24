@@ -1,7 +1,33 @@
 # Plan: Reverse Proxy Container, TLS-Modi und Manager-Status
 
-Stand: 2026-06-30  
-Status: **Planung** — erst Arbeitsdokument, noch keine Implementierung.
+Stand: 2026-07-21
+
+Status: **In Umsetzung** — P0 und der optionale HTTP-Proxy (P2a/P2c) sind implementiert; TLS und externer Portalzugriff sind noch Planung.
+
+## Implementierungsstand (2026-07-21)
+
+Bereits umgesetzt:
+
+- `CANONICAL_BASE_URL` ist die gemeinsame Basis fuer Nutzer- und Geraete-URLs.
+- Ein optionaler Stock-Caddy-Container (`caddy:2.11.4`) nimmt HTTP auf Port 80 entgegen und leitet auf `app:8080` weiter.
+- Dev- und Delivery-Overlays existieren als `docker-compose.proxy.yml` und `docker-compose.proxy.delivery.yml`.
+- Setup und Manager koennen den HTTP-Proxy aktivieren, deaktivieren, starten und nach einem Fehler wiederherstellen.
+- Bei aktivem Proxy wird `APP_BIND_ADDRESS=127.0.0.1` gesetzt. Dadurch bleibt App-Port 8080 fuer lokale Setup-Probes erreichbar, ist aber nicht mehr im Praxis-LAN veroeffentlicht.
+- Proxy-Port-Preflight, Compose-Status, kanonische URL-Umschaltung und Manager-Anzeige sind implementiert.
+- Das Proxy-Image sowie Compose- und Caddy-Templates koennen in Offline-Delivery- und `.pfupdate`-Paketen mitgeliefert werden.
+- Ein eigenstaendiger Smoke-Test prueft das echte Repo-Caddyfile gegen einen temporaeren Upstream (`npm run smoke:proxy`).
+- `sandbox:8081` bleibt ueber `expose` im Compose-Netz; der Proxy routet ausschliesslich zur App.
+
+Noch nicht umgesetzt:
+
+- HTTPS/Port 443, Custom TLS und Managed TLS/ACME
+- Zertifikatsimport, persistenter Zertifikats-/ACME-State und TLS-Probes
+- getrennter oeffentlicher Portal-VHost mit Route-Whitelist
+- TLS-/Zertifikatsstatus und Ablaufwarnungen im Manager
+- dedizierte Proxy-Healthcheck-Definition im Compose-Overlay
+- Begrenzung des Vertrauens in `X-Forwarded-*` auf bekannte Proxy-Quellen fuer den spaeteren TLS-Betrieb
+
+Die folgenden Abschnitte beschreiben teils den vorhandenen HTTP-Stand und teils das Zielbild. Kennzeichnungen wie **Ist** und **Ziel** machen diese Grenze explizit.
 
 ## Ziel
 
@@ -42,26 +68,37 @@ Von aussen gilt weiterhin: **kein oeffentliches Exposing der gesamten App**. Det
 - Kein Zwang, in Dev sofort ueber 443 zu gehen.
 - Kein oeffentliches Exposing der gesamten App als Default.
 
-## Ausgangslage im Repo
+## Ausgangslage und heutiger Stand im Repo
 
 - `docker-compose.delivery.yml`
-  - `app` auf `8080:8080`
+  - `app` wird ueber `${APP_BIND_ADDRESS:-0.0.0.0}:8080:8080` veroeffentlicht
   - `sandbox` nur intern via `expose: 8081`
+- `docker-compose.proxy.yml` und `docker-compose.proxy.delivery.yml`
+  - optionaler Stock-Caddy auf `${PROXY_HTTP_PORT:-80}:80`
+  - `proxy/Caddyfile` leitet vollstaendig auf `app:8080` weiter
+  - noch kein Port 443, Zertifikats-Mount oder Proxy-Healthcheck
 - `docker-compose.gateway*.yml`
   - optional, nicht stabil fuer alle Umgebungen, wegen Netzwerk-Bridging ohnehin Sonderfall
-- `setup/`
-  - Host-Setup, `.env`, Compose, Probes, Setup-API `127.0.0.1:9190`
-- `manager/`
-  - Electron-UI fuer Installation, Status und Wartung
+- `setup/` und `manager/`
+  - Host-Setup, `.env`, Compose, Probes und Setup-API auf `127.0.0.1:9190`
+  - Proxy ist Teil des Host-/Netzwerkmodells (`off | http`)
+  - Manager-Checkbox „Einfacher Geraetezugriff ueber Port 80“
+  - Aktivierung setzt `APP_BIND_ADDRESS=127.0.0.1`; Deaktivierung stellt `0.0.0.0` und Nutzer-URLs mit `:8080` wieder her
+- Delivery/Update
+  - Proxy-Image ist auf `caddy:2.11.4` gepinnt
+  - Proxy-Overlay und Caddyfile sind optionale, rueckwaertskompatible Bestandteile des `.pfupdate`-Formats
 
-Heute ist der App-Port der sichtbare Einstieg. Ziel ist, fuer Delivery/Prod den Proxy als Einstieg zu ergaenzen:
+Ohne Proxy ist der App-Port der sichtbare Einstieg. Mit dem bereits implementierten HTTP-Proxy gilt:
 
 ```text
 Dev ohne Proxy:
   http://<host>:8080 -> app
 
-Delivery mit Proxy:
+Dev/Delivery mit HTTP-Proxy:
   http://<host>:80   -> proxy -> app
+  http://127.0.0.1:8080 -> app (nur lokale Setup-/Wartungs-Probes)
+
+Ziel fuer TLS:
   https://<host>:443 -> proxy -> app
 ```
 
@@ -144,16 +181,35 @@ Vorteile:
 
 Der Gateway bleibt dagegen separat, weil er Netzwerk-Infrastruktur ist.
 
-## Ziel-Compose
+## Compose: Ist und Ziel
 
-Neues Overlay:
+Vorhandene Overlays:
 
 ```text
 docker-compose.proxy.yml
 docker-compose.proxy.delivery.yml
 ```
 
-Minimaler Zielzustand:
+### Ist: HTTP-Proxy (P2a/P2c)
+
+```yaml
+services:
+  proxy:
+    image: ${PRAXIS_FLOW_PROXY_IMAGE:-caddy:2.11.4}
+    container_name: praxis-flow-proxy
+    restart: unless-stopped
+    ports:
+      - '${PROXY_HTTP_PORT:-80}:80'
+    volumes:
+      - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      app:
+        condition: service_healthy
+```
+
+Beide Proxy-Overlays sind absichtlich klein und verwenden dasselbe Caddyfile. Sie besitzen noch keinen eigenen Healthcheck; der Manager bewertet aktuell den Compose-Containerstatus und prueft die App ueber die kanonische URL.
+
+### Ziel: TLS-Erweiterung
 
 ```yaml
 services:
@@ -174,12 +230,14 @@ services:
         condition: service_healthy
 ```
 
-Im Delivery-Betrieb sollte `app` perspektivisch nicht mehr zwingend `8080:8080` publishen. Uebergangsweise kann das konfigurierbar bleiben:
+Die urspruenglich geplante Variable `APP_PUBLISH_PORT` wurde nicht eingefuehrt. Stattdessen steuert Setup die Bind-Adresse des weiterhin vorhandenen Port-Mappings:
 
 ```text
-APP_PUBLISH_PORT=true   -> 8080:8080 fuer lokale Dev-Profile ohne Proxy
-APP_PUBLISH_PORT=false  -> nur proxy oeffnet Ports
+Proxy aus: APP_BIND_ADDRESS=0.0.0.0   -> Port 8080 im Praxis-LAN erreichbar
+Proxy an:  APP_BIND_ADDRESS=127.0.0.1 -> Port 8080 nur auf dem Host erreichbar
 ```
+
+Das erhaelt die lokale Setup-/Wartungsprobe auf `127.0.0.1:8080`, ohne den direkten App-Port im LAN anzubieten. Ein vollstaendiges Entfernen des Port-Mappings ist derzeit nicht geplant, solange diese lokale Probe gebraucht wird.
 
 ## Proxy-Konfiguration
 
@@ -232,11 +290,24 @@ Offen bleibt nur die technische Verpackung:
 - Caddy fuer Proxy, separater Certbot/lego/acme.sh-Container fuer Zertifikate
 - spaeter ggf. Traefik, falls es im Stack klarer wird
 
-Entscheidung fuer die erste betreute Version: eigenes Praxis-Flow-Caddy-Image mit acme-dns Plugin, sofern der Build schlank und reproduzierbar bleibt. Fallback ist Caddy plus separater ACME-Client.
+Die fruehere Vorentscheidung fuer ein eigenes Praxis-Flow-Caddy-Image mit acme-dns-Plugin ist wieder offen. Vor P4/P5 wird der Proxy-Baustein neu bewertet: Stock Caddy erweitern, eigenes Caddy-Image bauen, Caddy mit separatem ACME-Client kombinieren oder einen anderen Proxy einsetzen. Der vorhandene HTTP-Stand legt die TLS-Loesung nicht fest.
 
 ## Konfigurationsmodell
 
-Neue Host-Konfiguration in `.env`:
+### Ist: Host-Konfiguration fuer HTTP
+
+```dotenv
+PROXY_ENABLED=false
+PROXY_MODE=off
+PROXY_HTTP_PORT=80
+PRAXIS_FLOW_PROXY_IMAGE=caddy:2.11.4
+APP_BIND_ADDRESS=0.0.0.0
+CANONICAL_BASE_URL=http://192.168.1.50:8080
+```
+
+Bei Aktivierung schreibt Setup `PROXY_MODE=http`, setzt `APP_BIND_ADDRESS=127.0.0.1` und normalisiert `CANONICAL_BASE_URL` auf den Proxy-Port (bei Port 80 ohne Portangabe). Erlaubte Modi sind derzeit strikt nur `off | http`; unbekannte oder widerspruechliche Werte werden abgelehnt.
+
+### Ziel: erweiterte Host-Konfiguration fuer TLS
 
 ```dotenv
 PROXY_ENABLED=false
@@ -250,7 +321,6 @@ TLS_CERT_SOURCE=none
 
 PROXY_HTTP_PORT=80
 PROXY_HTTPS_PORT=443
-APP_PUBLISH_PORT=false
 PROXY_CONFIG_DIR_HOST_PATH=
 PROXY_CADDYFILE_HOST_PATH=
 PROXY_CERTS_HOST_PATH=
@@ -263,7 +333,7 @@ ACME_DNS_ACCOUNT_ID=
 ACME_DNS_CNAME_TARGET=
 ```
 
-Empfohlene Enum-Werte:
+Zielwerte nach der TLS-Erweiterung:
 
 ```text
 PROXY_MODE=off|http|tls-custom|tls-managed
@@ -298,7 +368,7 @@ Der direkte App-Port bleibt in lokalen Dev-Profilen technisch moeglich:
 http://<lan-ip>:8080
 ```
 
-Im Proxy-Betrieb wird er nicht veroeffentlicht und erscheint nicht in QR-Codes, Buttons, Manager-Status oder Raum-/Geraetelinks.
+Im Proxy-Betrieb bleibt er nur auf Host-Loopback fuer Setup-/Wartungsprobes gebunden und erscheint nicht in QR-Codes, Buttons, Manager-Status oder Raum-/Geraetelinks.
 
 ## Kanonische URLs und Link-Erzeugung
 
@@ -533,64 +603,36 @@ Fuer den aktuellen Ein-Host-Compose-Betrieb ist die bessere erste Leitplanke: Sa
 
 ## Setup-API
 
-Neue oder erweiterte Endpunkte unter `127.0.0.1:9190`.
+### Ist: Proxy im bestehenden Host-Modell
 
 ```text
-GET  /api/setup/host/proxy
-POST /api/setup/host/proxy
-POST /api/setup/host/proxy/probes
-GET  /api/setup/host/proxy/logs?tail=200
+GET  /api/setup/host/status
+GET  /api/setup/host/runtime-health
+POST /api/setup/host/network
+GET  /api/setup/host/compose
+POST /api/setup/host/compose
+GET  /api/setup/host/compose/logs?tail=200
+POST /api/setup/host/probes
 ```
 
-`GET /proxy` liefert:
+Der HTTP-Proxy wurde bewusst in die vorhandenen Host-, Netzwerk-, Compose- und Probe-Endpunkte integriert. `POST /host/network` nimmt optional `{ proxy: { enabled, httpPort } }` entgegen. Host- und Runtime-Status enthalten Proxy-Konfiguration beziehungsweise Containerstatus. Das vermeidet fuer P2a eine zweite Aktions-API neben dem bestehenden Compose-Lebenszyklus.
+
+Aktueller gemeinsamer Typ:
 
 ```ts
 type ProxyStatus = {
   enabled: boolean;
-  mode: 'off' | 'http' | 'tls-custom' | 'tls-managed';
-  hostname?: string;
-  publicBaseUrl?: string;
-  container?: {
-    name: string;
-    state: string;
-    health?: string;
-  };
-  ports: {
-    http?: number;
-    https?: number;
-    appPublished?: boolean;
-  };
-  tls?: {
-    enabled: boolean;
-    source: 'none' | 'file' | 'acme-dns' | 'external';
-    valid?: boolean;
-    issuer?: string;
-    notBefore?: string;
-    notAfter?: string;
-    daysRemaining?: number;
-    subjectNames?: string[];
-    error?: string;
-  };
-  probes: {
-    localHttp?: ProbeResult;
-    localHttps?: ProbeResult;
-    hostnameHttps?: ProbeResult;
-    appBehindProxy?: ProbeResult;
-  };
+  mode: 'off' | 'http';
+  canonicalBaseUrl: string | null;
+  httpPort: number;
+  appBindAddress: string;
+  container: ComposeServiceStatus | null;
 };
 ```
 
-`POST /proxy` nutzt ein `action`-Modell:
+### Ziel fuer TLS
 
-```ts
-type ProxyAction =
-  | { action: 'configure'; config: ProxyConfigInput }
-  | { action: 'start' }
-  | { action: 'stop' }
-  | { action: 'restart' }
-  | { action: 'regenerate-config' }
-  | { action: 'import-certificate'; certPath: string; keyPath: string };
-```
+TLS erweitert `ProxyStatus` um HTTPS-Port, Zertifikatsquelle, Gueltigkeit, Subject Names und Ablauf. Ob Zertifikatsimport und Regeneration als eigene `/proxy`-Endpunkte oder als Erweiterung des bestehenden Host-Modells umgesetzt werden, wird mit der Proxy-/ACME-Entscheidung festgelegt. Ein separates `action`-Modell ist daher noch kein beschlossener API-Vertrag.
 
 ## Sicherheitsregeln
 
@@ -601,9 +643,9 @@ type ProxyAction =
 - Proxy routet nur zur App, nie direkt zur Sandbox.
 - Sandbox bleibt nur im privaten Compose-Netz erreichbar (`expose`, keine `ports`).
 - `SANDBOX_BASE_URL` ist in Delivery ein internes Compose-Ziel, kein LAN-/Public-Hostname.
-- App vertraut nicht blind jedem `X-Forwarded-*`; nur wenn Request aus Docker-Netz/Proxy kommt.
-- Cookies werden bei HTTPS mit `Secure` gesetzt.
-- Origin-/Host-Pruefung muss Proxy-Hostname beruecksichtigen.
+- **Ziel vor TLS:** App vertraut `X-Forwarded-*` nur von bekannten Proxy-Quellen. Der vorhandene Schalter `TRUST_PROXY_HEADERS=true` allein bildet diese Quellpruefung noch nicht ab und ist im Compose-Stand nicht aktiviert.
+- Cookies werden bei erkanntem HTTPS mit `Secure` gesetzt; die TLS-Integration muss die vertrauenswuerdige Proto-Weitergabe aktivieren und testen.
+- Origin-/Host-Pruefung beruecksichtigt den weitergeleiteten Host nur bei aktiviertem Proxy-Header-Vertrauen; auch das ist Teil der TLS-Sicherheitsarbeit.
 
 ## Migration / Kompatibilitaet
 
@@ -614,12 +656,12 @@ Empfohlener Uebergang:
 1. Proxy optional einfuehren, `PROXY_ENABLED=false` Default.
 2. Manager kann Proxy konfigurieren und testen.
 3. Installationen ohne Proxy koennen weiterhin `http://<lan-ip>:8080` nutzen.
-4. Sobald Proxy aktiviert ist, wird der App-Port nicht mehr veroeffentlicht.
+4. Sobald Proxy aktiviert ist, wird der App-Port nur noch an Host-Loopback (`127.0.0.1`) gebunden und ist nicht mehr im Praxis-LAN erreichbar.
 5. Neue Produktivinstallationen sollen ueber den Proxy laufen, auch im Modus ohne TLS.
 
 ## Implementierungsphasen
 
-### P0 — URL-Modell / URL-Autoritaet (vor Proxy)
+### P0 — URL-Modell / URL-Autoritaet — umgesetzt
 
 Ziel: `CANONICAL_BASE_URL` als Produktmodell etablieren, **bevor** Proxy-Compose kommt.
 
@@ -637,16 +679,14 @@ LAN-Erreichbarkeit:
 - Setup fragt/testet spaeter (Manager/Wizard Schritt 2); bei Fail klar warnen und IP setzen
 - keine magische mDNS/NetBIOS-Reparatur
 
-Code-Schnitt (Setup-Kern, ohne Manager-UI):
+Umgesetzter Code-Schnitt:
 
 - `buildDeviceUrlsFromBaseUrl(baseUrl)` + `resolveCanonicalBaseUrl(env, lanIp)`
 - Fallback ohne Env: `http://<lan-ip>:8080` (Verhalten unveraendert)
 - `getHostStatus` / `buildSetupPlan` / Apply / `saveHostNetwork` / LAN-Probes nutzen den Resolver
 - `.env` schreibt `CANONICAL_BASE_URL`; Custom-Hostname bleibt bei LAN-IP-Wechsel erhalten
 
-Danach erst P2 Proxy-Compose. Manager/Wizard-UI fuer Hostname-Probe = Schritt 2 nach P0.
-
-Schritt-2-UI (Manager, vor Proxy):
+Umgesetzte Manager-/Wizard-UI:
 
 - Netzwerk-Tab: neues Akkordeon **Erreichbarkeit im Praxisnetz** (getrennt vom Topology-Akkordeon „Betriebsarten“ Portal/Gastnetz)
 - Modi v0: LAN-IP (Default) | Hostname versuchen | eigener Name/Domain
@@ -654,32 +694,39 @@ Schritt-2-UI (Manager, vor Proxy):
 - Wizard teilt dasselbe Panel; Probe-/Copy-Reste (`setup-probes`, Wizard-Texte, Health-Header) mitziehen
 - Gateway/Captive bleibt eigener Block (`portalAppIp`)
 
-### P1 — Arbeitsdokument und Modell
+### P1 — Arbeitsdokument und Modell — teilweise umgesetzt
 
-- Dieses Dokument.
-- Konfigurationsnamen finalisieren.
-- ACME-Verpackung finalisieren: Caddy-Plugin vs. separater ACME-Client.
+- [x] Dieses Dokument und HTTP-Konfigurationsmodell.
+- [x] Konfigurationsnamen fuer `off | http` finalisiert.
+- [ ] TLS-Konfigurationsnamen mit der Proxy-/ACME-Entscheidung finalisieren.
+- [ ] Proxy und ACME-Verpackung neu bewerten.
 
-### P2 — Compose-Overlay ohne ACME
+### P2 — Compose-Overlay ohne ACME — HTTP umgesetzt
 
-- `docker-compose.proxy.yml`
-- einfacher HTTP-Proxy auf `80`
-- optional TLS mit vorhandenen Zertifikatdateien
-- Setup-API liest Proxy-Status
-- Manager zeigt Proxy-Status
-- Setup/Manager pruefen, dass `sandbox` nicht ueber Host-Port oder Proxy erreichbar ist
-- erste `CANONICAL_BASE_URL`-Ableitung fuer Proxy-HTTP
+- [x] `docker-compose.proxy.yml` und Delivery-Overlay
+- [x] einfacher HTTP-Proxy auf `80`
+- [x] Setup-API liest Proxy-Konfiguration und Containerstatus
+- [x] Manager zeigt und steuert den HTTP-Proxy
+- [x] `CANONICAL_BASE_URL`-Ableitung fuer Proxy-HTTP
+- [x] Port-Preflight, Aktivieren/Deaktivieren und Recovery-Aktion
+- [x] Offline-Image und Templates in Delivery/`.pfupdate` (rueckwaertskompatibel optional)
+- [x] eigenstaendiger Smoke-Test des Caddyfiles
+- [ ] dedizierter Proxy-Healthcheck
+- [ ] Setup/Manager-Audit fuer alle unsicheren Sandbox-/Proxy-Fehlkonfigurationen
+- [ ] optionales TLS mit vorhandenen Zertifikatdateien (jetzt P4)
 
-### P3 — Setup-Wizard Integration
+### P3 — Setup-Wizard Integration — HTTP weitgehend umgesetzt
 
-- Wizard-Schritt Zugriff & HTTPS
-- `.env` + Proxy-Konfig generieren
-- Ports pruefen
-- Health ueber Proxy pruefen
-- `SANDBOX_BASE_URL` gegen erlaubte interne Ziele validieren
-- alle Wizard-/Manager-Links aus `CANONICAL_BASE_URL` erzeugen
-- direkte `:8080`-Links im Proxy-Modus nicht mehr erzeugen
-- `APP_PUBLISH_PORT=false` setzen, sobald Proxy aktiv ist
+- [x] HTTP-Proxy im gemeinsamen Wizard-/Netzwerkbereich aktivieren
+- [x] `.env` fuer HTTP-Modus schreiben; statisches Repo-Caddyfile verwenden
+- [x] HTTP-Port pruefen
+- [x] App ueber die gespeicherte kanonische Proxy-URL pruefen
+- [x] Wizard-/Manager-Links aus `CANONICAL_BASE_URL` erzeugen
+- [x] direkte `:8080`-Nutzerlinks im Proxy-Modus nicht mehr erzeugen
+- [x] `APP_BIND_ADDRESS=127.0.0.1` setzen; lokale `:8080`-Probe bleibt erhalten
+- [ ] eigener Wizard-Schritt „Zugriff & HTTPS“ mit TLS-Moduswahl
+- [ ] dynamische TLS-Proxy-Konfiguration generieren
+- [ ] `SANDBOX_BASE_URL` und weitere interne Schutzgrenzen als Setup-Blocker validieren
 
 ### P4 — Custom TLS
 
@@ -740,21 +787,31 @@ Lieferumfang P6:
 
 Auth von aussen: Session-Token, Wartenummer vom Terminal — ohne Besuch im Portal nutzlos.
 
-## Definition of Done fuer erste Implementierung
+## Definition of Done
 
-- [ ] Proxy laeuft als eigener Container im Compose-Overlay.
-- [ ] App bleibt auf `8080`; Sandbox bleibt intern.
-- [ ] Setup kann Proxy an-/abschalten und Konfig schreiben.
-- [ ] Manager zeigt Proxy-Status, Ziel-URL und TLS-Status.
-- [ ] Manager/Setup warnen, wenn Sandbox oder interne Dokumentwege ins LAN/Public-Netz zeigen.
-- [ ] Manager/Wizard/App erzeugen Nutzerlinks aus einer `CANONICAL_BASE_URL`.
-- [ ] Im Proxy-Modus werden keine Nutzerlinks mehr mit direktem `:8080` ausgegeben.
-- [ ] Im Proxy-Modus wird der App-Port im Delivery-Profil nicht veroeffentlicht.
-- [ ] HTTP-Modus funktioniert ohne Zertifikat.
+### HTTP-Meilenstein (P2a/P2c)
+
+- [x] Proxy laeuft als eigener Container im Compose-Overlay.
+- [x] App bleibt auf `8080`; Sandbox bleibt intern.
+- [x] Setup kann den Proxy an-/abschalten und die HTTP-Konfiguration schreiben.
+- [x] Manager zeigt Proxy-Konfiguration, Containerstatus und Ziel-URL.
+- [x] Manager/Wizard erzeugen Nutzerlinks aus `CANONICAL_BASE_URL`.
+- [x] Im Proxy-Modus werden keine Nutzerlinks mit direktem `:8080` ausgegeben.
+- [x] Im Proxy-Modus ist App-Port 8080 nur an Host-Loopback gebunden.
+- [x] HTTP-Modus funktioniert ohne Zertifikat und besitzt einen eigenstaendigen Smoke-Test.
+- [x] Bestehende Delivery-Installationen und alte `.pfupdate`-Pakete ohne Proxy bleiben kompatibel.
+- [ ] Dedizierten Proxy-Healthcheck ergaenzen.
+- [ ] Deployment-Dokumentation mit dem implementierten HTTP-Einstieg und Loopback-Portmodell angleichen.
+
+### TLS-/Public-Meilenstein (P4-P6)
+
+- [ ] Manager/Setup warnen oder blockieren, wenn Sandbox oder interne Dokumentwege ins LAN/Public-Netz zeigen.
+- [ ] Manager zeigt TLS- und Zertifikatsstatus.
 - [ ] Custom-Zertifikat-Modus funktioniert mit importierten Dateien.
-- [ ] Proxy-Konfig, Zertifikate und ACME-State sind Teil des Backup-/Recovery-Plans.
-- [ ] Bestehende Delivery-Installationen ohne Proxy laufen unveraendert.
-- [ ] Doku `deployment-docker.md` erklaert neuen Proxy-Einstiegspunkt und Dev-App-Port ohne Proxy.
+- [ ] Managed TLS stellt Zertifikate automatisch aus und erneuert sie.
+- [ ] Proxy-Konfiguration, Zertifikate und ACME-State sind Teil von Backup/Recovery.
+- [ ] Vertrauen in Forwarded-Header ist auf bekannte Proxy-Quellen begrenzt.
+- [ ] Oeffentlicher Zugriff erlaubt ausschliesslich Portal und exakt benoetigte APIs.
 
 ## Festgelegte Entscheidungen
 
@@ -763,28 +820,30 @@ Auth von aussen: Session-Token, Wartenummer vom Terminal — ohne Besuch im Port
 3. Sobald `PROXY_ENABLED=true`, ist der Proxy der kanonische Einstieg fuer Nutzer.
 4. Auch ohne TLS kann der Proxy auf Port `80` laufen und auf `app:8080` weiterleiten.
 5. Im Proxy-Modus erzeugen Manager, Wizard und App Nutzerlinks aus `CANONICAL_BASE_URL`.
-6. Direkte `:8080`-Links werden im Proxy-Modus nicht erzeugt; der App-Port wird in Delivery dann nicht veroeffentlicht.
+6. Direkte `:8080`-Nutzerlinks werden im Proxy-Modus nicht erzeugt; der App-Port wird dann nur an Host-Loopback gebunden.
 7. TLS-Modi erzwingen `CANONICAL_BASE_URL=https://...`.
 8. Der Dokumentenpfad `app -> sandbox` bleibt Docker-intern; Sandbox wird nicht ueber Proxy oder LAN erreichbar gemacht.
 9. Unsichere Sandbox-Konfiguration ist bei TLS-Modi ein Setup-Blocker, nicht nur eine Warnung.
 10. Bestehende Installationen ohne Proxy bleiben kompatibel; der Proxy wird zuerst optional eingefuehrt.
 11. Die `.env` ist Quelle der Wahrheit fuer `CANONICAL_BASE_URL` und Proxy-/TLS-Modus.
-12. Zertifikate und Caddy-/ACME-State liegen unter `<PRAXIS_FLOW_HOME>/certs/...` und gehoeren in Backup/Recovery.
+12. Zertifikate und Proxy-/ACME-State liegen unter `<PRAXIS_FLOW_HOME>/certs/...` und gehoeren in Backup/Recovery; die genauen Unterpfade folgen aus der Proxy-Entscheidung.
 13. UI-Bezeichnungen der drei Wege sind festgelegt:
     - „Ohne TLS / SSL fortfahren (kann spaeter nachgeholt werden)“
     - „Eigene, vorhandene Domain nutzen (selbstverwaltet; Anleitung folgt in den nachfolgenden Schritten)“
     - „Praxisname als Subdomain von `praxis-flow.de` nutzen“, z. B. `mueller.praxis-flow.de`
 14. Erste Managed-TLS-Version ist betreut: Wizard/Manager zeigen den CNAME, Support traegt ihn bei United Domains ein.
 15. Renewal soll danach automatisch laufen; kein wiederkehrender manueller TXT-Prozess.
-16. Fuer Produktivbetrieb liegt Caddy-/ACME-State auf Host-Pfad unter `<PRAXIS_FLOW_HOME>/certs/managed`.
+16. Fuer Produktivbetrieb liegt persistenter Proxy-/ACME-State auf einem Host-Pfad unter `<PRAXIS_FLOW_HOME>`, nicht in einem anonymen Docker-Volume.
 17. **Praxis-LAN:** Proxy auf `80`/`443` ist kanonischer Einstieg fuer alle Rollen; TLS optional waehlbar.
 18. **Internet:** Nur Portal (+ Whitelist-APIs) oeffentlich; kein Exposing von MFA/Terminal/TV/Ops.
 19. `plan-portal-dns-tls.md` ist obsolet — Inhalt in diesem Plan (v. a. P6).
 
 ## Noch offene Entscheidungen
 
-1. **acme-dns Betrieb:** acme-dns selbst betreiben oder `auth.praxis-flow.de` / `kunden.praxis-flow.de` zu einem API-freundlichen DNS/Hosted-Service delegieren?
-2. **Caddy-Build-Fallback:** Falls Caddy mit acme-dns Plugin zu viel Pflege braucht, welcher separate ACME-Client wird Standard (`lego`, `certbot`, `acme.sh`)?
+1. **Proxy-Produktentscheidung:** Ist Stock Caddy auch fuer Custom TLS, Managed DNS-01 und die externe Portal-Whitelist der passende dauerhafte Baustein, oder ist Traefik, nginx oder eine andere Loesung fuer Betrieb und Updates klarer?
+2. **TLS-Verpackung bei Caddy:** Stock Image mit extern bereitgestellten Zertifikaten, eigenes `xcaddy`-Image mit DNS-Plugin oder separater ACME-Client (`lego`, `certbot`, `acme.sh`)?
+3. **acme-dns Betrieb:** acme-dns selbst betreiben oder `auth.praxis-flow.de` / `kunden.praxis-flow.de` zu einem API-freundlichen DNS/Hosted-Service delegieren?
+4. **Forwarded-Header-Vertrauen:** Wie wird die App-Quellpruefung robust an das konkrete Compose-Netz beziehungsweise den gewaehlten Proxy gebunden?
 
 ## Referenzen
 

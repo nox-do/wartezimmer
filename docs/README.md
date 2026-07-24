@@ -8,14 +8,15 @@ Kurzüberblick: **was wann lesen**. Technische Details stehen in den verlinkten 
 | --------------------------- | ------------------------------------------------------------------------------------------------ |
 | **Entwickler:in**           | [`architecture.md`](architecture.md) → `openapi/` → [`realtime-streams.md`](realtime-streams.md) |
 | **Beta / IT in der Praxis** | [`delivery.md`](delivery.md) → [`deployment-docker.md`](deployment-docker.md)                    |
-| **Produkt / Fachlichkeit**  | [`flows.md`](flows.md) → [`domain-model.md`](domain-model.md)                                    |
+| **Produkt / Fachlichkeit**  | [`product.md`](product.md) → [`flows.md`](flows.md) → [`domain-model.md`](domain-model.md) |
 | **API-Integration**         | `openapi/*.yaml` (Vertrag) · [`apis.md`](apis.md) (Rollen & Regeln)                              |
 
 ## Kerndokumente
 
-| Datei                                          | Inhalt                                                |
-| ---------------------------------------------- | ----------------------------------------------------- |
-| [`flows.md`](flows.md)                         | Patienten- und MFA-Abläufe, Entscheidungen, UI-Stand  |
+| Datei                                          | Inhalt                                                     |
+| ---------------------------------------------- | ---------------------------------------------------------- |
+| [`product.md`](product.md)                     | Produktinfo: was wir sind / nicht sind, Abgrenzungen       |
+| [`flows.md`](flows.md)                         | Patienten- und MFA-Abläufe; Betrieb-Rahmen (Manager/Proxy) |
 | [`architecture.md`](architecture.md)           | Container, Module, Persistenz, Tagesreset             |
 | [`apis.md`](apis.md)                           | Rollenmatrix, fachliche API-Regeln (Vertrag: OpenAPI) |
 | [`realtime-streams.md`](realtime-streams.md)   | SSE: Queue, Ops-Stream, Presence, Pairing             |

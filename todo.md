@@ -1,6 +1,13 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-23
+Stand: 2026-07-24
+
+## Flow-Core vs `../new_flow_core` (2026-07-24)
+
+- Quelle: `../new_flow_core` (Stand ~2026-07-04, Import); hier: `packages/flow-core` (**29 Commits voraus**)
+- Entscheidung: **Option B** — Voll-Sync Monorepo → `../new_flow_core` (2026-07-24)
+- Standalone: Domain-Helfer (`ticket-code` / `lane-code`) **inline** + `TODO(cleanup)`; keine `@praxis-flow/domain`-Dep
+- Parallel offen: LEG-003 PoC-HTTP/`src/public` behalten vs. aus aktivem Pfad entfernen
 
 ## Audit Quick Wins (2026-07-23)
 

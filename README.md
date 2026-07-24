@@ -75,6 +75,7 @@ Einstieg nach Rolle: **[`docs/README.md`](docs/README.md)**
 
 | Thema             | Datei                                                            |
 | ----------------- | ---------------------------------------------------------------- |
+| Produktinfo       | [`docs/product.md`](docs/product.md)                             |
 | Fachliche Abläufe | [`docs/flows.md`](docs/flows.md)                                 |
 | Architektur       | [`docs/architecture.md`](docs/architecture.md)                   |
 | API-Vertrag       | `openapi/*.yaml` (+ [`docs/apis.md`](docs/apis.md) Rollenmatrix) |
