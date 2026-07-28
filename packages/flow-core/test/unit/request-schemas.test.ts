@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseCheckInBody } from '@praxis-flow/flow-core';
 
-test('parseCheckInBody: topicId oder mfaAssist', () => {
+test('parseCheckInBody: normalisiert gueltige Check-in-Bodies', () => {
   assert.deepEqual(parseCheckInBody({ topicId: 'general' }), {
     topicId: 'general',
     mfaAssist: false,
@@ -32,20 +32,4 @@ test('parseCheckInBody: topicId oder mfaAssist', () => {
     needsAssistance: true,
     staffNote: undefined,
   });
-});
-
-test('parseCheckInBody: ungueltige Kombinationen', () => {
-  assert.throws(() => parseCheckInBody({}), /CHECKIN_TOPIC_OR_MFA_ASSIST_REQUIRED/);
-  assert.throws(
-    () => parseCheckInBody({ needsAssistance: true }),
-    /CHECKIN_ASSISTANCE_REQUIRES_TOPIC/,
-  );
-  assert.throws(
-    () => parseCheckInBody({ mfaAssist: true, topicId: 'general' }),
-    /CHECKIN_MFA_ASSIST_EXCLUSIVE/,
-  );
-  assert.throws(
-    () => parseCheckInBody({ mfaAssist: true, needsAssistance: true }),
-    /CHECKIN_MFA_ASSIST_EXCLUSIVE/,
-  );
 });

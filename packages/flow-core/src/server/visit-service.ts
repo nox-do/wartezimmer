@@ -9,6 +9,8 @@ import type {
 } from '@praxis-flow/flow-core';
 import {
   MFA_ASSIST_TOPIC_ID,
+  assertCheckInCombination,
+  normalizeCheckInTopicId,
   effectiveEscortPolicy,
   movementTerminalInstruction,
   ruleForTopicAtSurface,
@@ -205,7 +207,9 @@ export function createVisitService(params: {
       const data = loadCatalog();
       const mfaAssist = Boolean(body.mfaAssist);
       const needsAssistance = Boolean(body.needsAssistance);
-      const resolvedTopicId = mfaAssist ? MFA_ASSIST_TOPIC_ID : body.topicId!;
+      const topicId = normalizeCheckInTopicId(body.topicId);
+      assertCheckInCombination({ topicId, mfaAssist, needsAssistance });
+      const resolvedTopicId = mfaAssist ? MFA_ASSIST_TOPIC_ID : topicId!;
       const checkInPath = mfaAssist ? 'mfa_assist' : 'topic';
       const surfaceId = body.surfaceId ?? 'terminal_1';
 

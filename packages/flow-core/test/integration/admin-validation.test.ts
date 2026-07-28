@@ -2,20 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { openDb, createRuntime } from '@praxis-flow/flow-core/server';
 import {
-  parseCheckInBody,
   parseRedirectBody,
   parseSaveJourneyTemplateBody,
   parseSaveRuleBody,
   parseTransitionAction,
 } from '@praxis-flow/flow-core';
-
-test('parseCheckInBody: topicId oder mfaAssist erforderlich', () => {
-  assert.throws(() => parseCheckInBody({}), /CHECKIN_TOPIC_OR_MFA_ASSIST_REQUIRED/);
-  const body = parseCheckInBody({ topicId: 'general', surfaceId: 'terminal_1' });
-  assert.equal(body.topicId, 'general');
-  assert.equal(body.surfaceId, 'terminal_1');
-  assert.equal(parseCheckInBody({ mfaAssist: true }).mfaAssist, true);
-});
 
 test('parseTransitionAction: unbekannte Action', () => {
   assert.throws(() => parseTransitionAction('pause'), /UNKNOWN_ACTION/);

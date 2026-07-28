@@ -19,6 +19,7 @@ import {
   type TransitionAction,
 } from './domain-enums.js';
 import { AUTH_PATHS } from './auth-path.js';
+import { assertCheckInCombination, normalizeCheckInTopicId } from './check-in-path.js';
 
 function isString(value: unknown): value is string {
   return typeof value === 'string';
@@ -34,11 +35,9 @@ export function parseCheckInBody(body: unknown) {
   const raw = body as Record<string, unknown>;
   const mfaAssist = Boolean(raw.mfaAssist);
   const needsAssistance = Boolean(raw.needsAssistance);
-  const topicId = isString(raw.topicId) && raw.topicId.trim() ? raw.topicId.trim() : undefined;
+  const topicId = normalizeCheckInTopicId(isString(raw.topicId) ? raw.topicId : undefined);
 
-  if (mfaAssist && (topicId || needsAssistance)) throw new Error('CHECKIN_MFA_ASSIST_EXCLUSIVE');
-  if (needsAssistance && !topicId) throw new Error('CHECKIN_ASSISTANCE_REQUIRES_TOPIC');
-  if (!mfaAssist && !topicId) throw new Error('CHECKIN_TOPIC_OR_MFA_ASSIST_REQUIRED');
+  assertCheckInCombination({ topicId, mfaAssist, needsAssistance });
 
   const authPath: AuthPath = mfaAssist
     ? 'none'

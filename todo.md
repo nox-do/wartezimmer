@@ -9,7 +9,8 @@ Stand: 2026-07-28
 - README auf Library-only; Standalone/Referenz → `../new_flow_core`
 - eslint/stylelint-Ignores für `public`/`canvases` entfernt
 - PoC-Wording in Kommentaren bereinigt; `saveRule`/`saveJourneyTemplate`/`saveTopic` als Legacy markiert
-- Offen (fachlich): `parse*` behalten bis Check-in-Exklusivitätsregeln in `visit-service` liegen oder Host-Validierung explizit Source of Truth ist; `labels` bleibt wegen `visit-context`
+- Check-in-Exklusivität: `assertCheckInCombination` in Shared; SoT an `visit-service.checkIn` (+ Parser delegiert). `labels` bleibt wegen `visit-context`
+- Entscheidung: `needsAssistance` bleibt Visit-Flag im Core (Persistenz/Anzeige), **ohne** Escort/Lane/Route-Effekt; Begleitung = `escortPolicy` / Journey. Nicht aus Core herausziehen.
 
 ## Flow-Core vs `../new_flow_core` (2026-07-24)
 

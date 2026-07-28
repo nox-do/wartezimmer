@@ -8,6 +8,27 @@ function testRuntime() {
   return { db, runtime: createRuntime(db) };
 }
 
+test('checkIn: ungueltige Kombinationen werden an der Runtime abgelehnt', () => {
+  const { runtime } = testRuntime();
+
+  assert.throws(
+    () => runtime.checkIn({ surfaceId: 'terminal_1' }),
+    /CHECKIN_TOPIC_OR_MFA_ASSIST_REQUIRED/,
+  );
+  assert.throws(
+    () => runtime.checkIn({ needsAssistance: true, surfaceId: 'terminal_1' }),
+    /CHECKIN_ASSISTANCE_REQUIRES_TOPIC/,
+  );
+  assert.throws(
+    () => runtime.checkIn({ mfaAssist: true, topicId: 'general', surfaceId: 'terminal_1' }),
+    /CHECKIN_MFA_ASSIST_EXCLUSIVE/,
+  );
+  assert.throws(
+    () => runtime.checkIn({ mfaAssist: true, needsAssistance: true, surfaceId: 'terminal_1' }),
+    /CHECKIN_MFA_ASSIST_EXCLUSIVE/,
+  );
+});
+
 test('checkIn needsAssistance: Topic und Route unveraendert, nur Flag gesetzt', () => {
   const { runtime } = testRuntime();
   const baseline = runtime.checkIn({
