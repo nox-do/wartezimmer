@@ -36,5 +36,4 @@ export * from './shared/routing-scope.js';
 export * from './shared/surface-visibility.js';
 export * from './shared/admin-validation.js';
 export * from './shared/request-schemas.js';
-export * from './shared/api-errors.js';
 export * from './shared/labels.js';

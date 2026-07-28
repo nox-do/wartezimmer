@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS routing_rules (
   initial_location_confidence TEXT NOT NULL,
   public_display_mode TEXT NOT NULL,
   terminal_instruction_template TEXT NOT NULL,
-  requires_reception_confirmation INTEGER NOT NULL, -- FUTURE: Schließanlage/Gate, ungenutzt im PoC
+  requires_reception_confirmation INTEGER NOT NULL, -- FUTURE: Schließanlage/Gate, derzeit ungenutzt
   escort_policy TEXT NOT NULL,
   allow_redirect INTEGER NOT NULL,
   allowed_surface_ids TEXT,

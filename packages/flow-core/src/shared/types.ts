@@ -141,7 +141,7 @@ export interface RoutingRule {
   publicDisplayMode: PublicDisplayMode;
   /** Nur single_step — bei Journey terminalInstruction aus movementMode */
   terminalInstructionTemplate: string;
-  /** PoC: FUTURE — Schließanlage/Gate; ungenutzt, nicht in Admin-UI. */
+  /** FUTURE — Schließanlage/Gate; derzeit ungenutzt. */
   requiresReceptionConfirmation: boolean;
   escortPolicy: EscortPolicy;
   allowRedirect: boolean;

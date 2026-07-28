@@ -1,10 +1,10 @@
 # Flow Core
 
-Kernmodell für Praxisdurchläufe — Visit-Routing, Queues, Surfaces und Journey-Templates.
-
-Dieses Repo ist der **extrahierte Kern** für die Übernahme in die Praxissoftware. Siehe **`HANDOVER.md`** für Integrations-Entscheidungen und Merge-Checkliste.
+Library für Praxisdurchläufe — Visit-Routing, Queues, Surfaces und Journey-Templates.
 
 **Package:** `@praxis-flow/flow-core` (TypeScript, Build nach `dist/`)
+
+Standalone-Referenz (HTTP + UI): `../new_flow_core` (Sibling-Repo neben diesem Monorepo).
 
 ## Domain-Modell
 
@@ -36,7 +36,7 @@ Dieses Repo ist der **extrahierte Kern** für die Übernahme in die Praxissoftwa
 | `queueNumber`      | Formatiert, z. B. `A-017` — **nicht** numerisch parsen              |
 | `queueLaneCode`    | Snapshot Nummernkreis (A–Z)                                         |
 | `queueSequence`    | Laufnummer im Lane-Tag                                              |
-| `queueNumberDate`  | Geschäftstag (PoC: Kalendertag)                                     |
+| `queueNumberDate`  | Geschäftstag (Default: Kalendertag)                                 |
 | `queueNumberScope` | immer `lane_day`                                                    |
 | `needsAssistance`  | MFA-Markierung — **kein** Routing/Escort/Lane-Effekt                |
 | `checkInPath`      | `topic` (Standard) oder `mfa_assist` (Hilfe-Button)                 |
@@ -50,28 +50,15 @@ Dieses Repo ist der **extrahierte Kern** für die Übernahme in die Praxissoftwa
 ```text
 db/schema.sql              — SQLite-Schema (Source of Truth)
 src/shared/                — portable Domain-Logik (TypeScript → dist/shared/)
-  types.ts                 — Typen und Enums
-  journey.ts               — Journey-Autopilot (Completion, Next-Step-Patches)
-  visit-flow.ts            — erlaubte Statusübergänge
-  redirect-flow.ts         — Redirect-Semantik
-  surface-visibility.ts    — Sichtbarkeit auf Surfaces
-  routing-scope.ts         — Rule-Auswahl pro Terminal/Topic
-  admin-validation.ts      — Config-Invarianten
-  labels.ts                — deutsche UI-Labels
-src/server/                — Referenz-Runtime (TypeScript → dist/server/)
+src/server/                — Runtime (TypeScript → dist/server/)
   runtime.ts               — Composition Root (createRuntime)
   visit-service.ts         — Check-in, Transition, Redirect
   catalog-repository.ts    — Katalog aus SQLite
   visit-repository.ts      — Visits + Events
-  admin-service.ts         — Rules, Templates, Topics
-  seed-data.ts             — Demo-Szenarien
-  http.ts                  — PoC-HTTP-API + Static Server
+  admin-service.ts         — Rules/Templates/Topics (Package-Tests / Legacy)
+  open-db.ts / seed*.ts    — Test-Infrastruktur (nicht Host-Produktpfad)
 src/index.ts               — @praxis-flow/flow-core (shared barrel)
-src/public/                — Referenz-UI (nur hier, nicht übernehmen)
-  app.js                   — API-Nutzung, Redirect-Felder, Surface-Preview
-  journey-admin.js         — mountbare Journey-Admin-Komponente (Cherry-Pick)
-test/                      — Unit + Integration (111 Tests, .test.ts)
-canvases/                  — Architektur-Visualisierung (optional)
+test/                      — Unit + Integration
 dist/                      — Build-Ausgabe (gitignored)
 ```
 
@@ -82,55 +69,18 @@ dist/                      — Build-Ausgabe (gitignored)
 | `@praxis-flow/flow-core`        | Shared Domain (Types, Validierung, Journey, Visit-Flow, …)  |
 | `@praxis-flow/flow-core/server` | Runtime (`createRuntime`, `openDb`, Repositories, Services) |
 
-## Referenz-UI (`src/public/`) — nicht übernehmen
+`openDb` / `seed*` sind **Package-Testadapter**, nicht Teil des Host-Betriebs. Der Host nutzt Fastify + eigene DB/Migration und importiert Runtime/Shared.
 
-Bleibt in diesem Repo zum **lokalen Durchspielen** und als **Cherry-Pick-Quelle** für das Host-Projekt. Die Produkt-UI lebt woanders; hier nachschauen, was sinnvoll ist, einzeln übernehmen.
-
-| Datei                       | Cherry-Pick-Kandidaten                                                                               |
-| --------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `app.js`                    | API-Aufrufe, Redirect-Formularfelder, Surface-Visibility mit `explainVisibility`, Visit-Chips/Labels |
-| `journey-admin.js`          | Mount-Pattern für Journey-Templates (`mountJourneyAdmin`, `updateCatalog`)                           |
-| `index.html` / `styles.css` | Layout-Ideen — nur als Referenz, nicht 1:1 kopieren                                                  |
-
-Lokal starten: `npm run dev` → `http://127.0.0.1:3001`. Shared-Module werden unter `/shared/*.js` aus `dist/shared/` ausgeliefert.
-
-## Start
+## Entwicklung
 
 ```bash
-npm install
-npm run build      # TypeScript → dist/
-npm run reset-db   # Schema + Seed neu aufbauen
-npm run dev        # http://127.0.0.1:3001
-npm test           # build + 111 Tests
-npm run typecheck  # tsc ohne Emit
+npm run -w @praxis-flow/flow-core build
+npm run -w @praxis-flow/flow-core typecheck
+npm run -w @praxis-flow/flow-core lint
+npm run -w @praxis-flow/flow-core test
 ```
 
-## API (Referenz-Runtime)
-
-| Methode | Pfad                                        | Beschreibung                                                           |
-| ------- | ------------------------------------------- | ---------------------------------------------------------------------- |
-| GET     | `/api/catalog`                              | Locations, Queues, Surfaces, Topics, Rules, Templates                  |
-| GET     | `/api/visits`                               | Alle Visits (angereichert)                                             |
-| GET     | `/api/visits/:id/events`                    | Event-Historie                                                         |
-| POST    | `/api/check-in`                             | Patient + Visit anlegen, Routing anwenden                              |
-| POST    | `/api/visits/:id/call\|arrive\|start\|done` | Statusübergang (Body optional: `targetLocationId`, `actingLocationId`) |
-| POST    | `/api/visits/:id/redirect`                  | Operative Umleitung                                                    |
-| PUT     | `/api/routing-rules/:id`                    | RoutingRule speichern (validiert)                                      |
-| PUT     | `/api/journey-templates/:id`                | JourneyTemplate speichern (Lock-Guard)                                 |
-| PUT     | `/api/topics/:id`                           | Topic speichern (Lock-Guard)                                           |
-
-## Seed-Szenarien (nach `reset-db`)
-
-- **Allgemein** — Terminal → WZ → Empfang → Raum (`journey_general`)
-- **Blutabnahme** — direkt Labor, Aufruf nur über Labor-Panel
-- **Impfung** — direkt Impfraum, nicht im WZ-TV
-- **Redirect** — MFA kann operative Wahrheit ändern
-- **Begleitung** — `escortPolicy` aus Rule; `needsAssistance` ist reine MFA-Markierung ohne Routing-Effekt
-- **Terminal-Hilfe** — Hilfe-Button (`mfaAssist: true`) → `checkInPath: mfa_assist`, `authPath: none`; Routing über PoC-RoutingRule (kein Praxis-Katalog-Thema). `needsAssistance` am Visit: reine MFA-Markierung additiv zum gewählten Thema
-
-## Integration ins Host-Projekt
-
-**Als Package einbinden** (nach `npm run build` bzw. als Workspace-Package im Monorepo):
+## Integration
 
 ```typescript
 import {
@@ -141,15 +91,15 @@ import {
   type RoutingRuleDraft,
 } from '@praxis-flow/flow-core';
 
-import { createRuntime, openDb } from '@praxis-flow/flow-core/server';
+import { createRuntime, loadCatalog } from '@praxis-flow/flow-core/server';
 ```
 
 Shared-Module (Domain, ohne DB) — vollständige Liste siehe `src/index.ts`.
 
-**An Host-Grenze anbinden** (Adapter nötig):
+**An Host-Grenze:**
 
-- `createRuntime` / Services → eigener DB-Layer (Postgres), Auth, Event-Bus
-- `schema.sql` → Migration in Host-DB (**PoC: nur `npm run reset-db`, kein ALTER-Skript**)
+- `createRuntime` / Services → eigener DB-Layer, Auth, Event-Bus
+- `schema.sql` → Migration in Host-DB
 - `resolveBusinessDay()` → Host injiziert Praxis-Tagesgrenze via `createRuntime(db, { resolveBusinessDay })` (Default: UTC-Kalendertag)
 
 **Praxis-Flow-Mapping (Check-in / Ticket):**
@@ -164,11 +114,7 @@ Shared-Module (Domain, ohne DB) — vollständige Liste siehe `src/index.ts`.
 | `queueNumber`                     | `formatTicketCode(...)`                  | `A-017`; Legacy-Consumer nicht als Zahl parsen |
 | `needsAssistance`                 | _(neu in PF)_                            | reine MFA-Markierung, additiv zum Topic        |
 
-**Ticket-Format:** wie PF — `formatTicketCode` mit `padStart(3)` bis 999, danach variable Breite; `parseTicketCode` akzeptiert 1–4 Ziffern und optionalen Bindestrich.
-
-**Nicht übernehmen** — nur Cherry-Pick aus `src/public/`:
-
-- Admin-UI, Dashboard, Journey-Editor → Muster in `journey-admin.js` / `app.js` nachbauen
+**Ticket-Format:** `formatTicketCode` mit `padStart(3)` bis 999, danach variable Breite; `parseTicketCode` akzeptiert 1–4 Ziffern und optionalen Bindestrich.
 
 **Bewusste Dopplungen** an Host-Grenzen (siehe Kommentar in `journey.ts`):
 
@@ -176,12 +122,6 @@ Shared-Module (Domain, ohne DB) — vollständige Liste siehe `src/index.ts`.
 
 ## Bewusste Grenzen
 
-Keine Authentifizierung, keine Rollen, keine PVS-Anbindung, kein Docker, kein produktiver Migrationsverlauf, keine echten Patientendaten.
+Keine Authentifizierung, keine Rollen, keine PVS-Anbindung, kein produktiver Migrationsverlauf, keine echten Patientendaten.
 
 Reserviert für später: `requiresReceptionConfirmation` (Schließanlage/Gate), kein Template-Versioning.
-
-SQLite liegt lokal unter `db/flow-core.sqlite`.
-
-## Architektur-Visualisierung
-
-Optional: `canvases/routing-core-model.canvas.tsx` — Datenmodell mit Runtime-Guards als interaktives Diagramm (Cursor Canvas).

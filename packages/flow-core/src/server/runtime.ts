@@ -42,8 +42,11 @@ export function createRuntime(
     redirect: visitService.redirect,
     cancel: visitService.cancel,
     reassignTarget: visitService.reassignTarget,
+    /** @deprecated Host: Katalog via Ops-Settings-Sync. Nur Package-Tests / Legacy. */
     saveRule: adminService.saveRule,
+    /** @deprecated Host: Katalog via Ops-Settings-Sync. Nur Package-Tests / Legacy. */
     saveJourneyTemplate: adminService.saveJourneyTemplate,
+    /** @deprecated Host: Katalog via Ops-Settings-Sync. Nur Package-Tests / Legacy. */
     saveTopic: adminService.saveTopic,
   };
 }

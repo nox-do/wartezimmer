@@ -1,4 +1,4 @@
-/** Server/runtime exports for host integration and PoC tests. */
+/** Server/runtime exports for host integration and package tests. */
 export { createRuntime, type Runtime } from './runtime.js';
 export { openDb, dbPath } from './open-db.js';
 export { resolveCheckInRouting } from './escort.js';

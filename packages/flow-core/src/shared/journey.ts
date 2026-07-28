@@ -1,11 +1,9 @@
 /**
  * Journey-Autopilot: Schritte in Visit-Patches, Completion nach Transition.
  *
- * Geplanter Export als Komponente in ein anderes Projekt. Bewusst wenig Kopplung
- * an diesen PoC — das Host-Projekt (runtime, DB, API) integriert über
+ * Bewusst wenig Kopplung an Host-Runtime — Integration über
  * stepToVisitPatch, completeJourneyStepPatch, startNextJourneyStepPatch und journeyStepLabel.
  *
- * Beim Mitnehmen: types.ts (JourneyStep, Visit), escort, visit-flow.
  * Dopplungen an Host-Grenzen (z. B. stepsForTemplate in catalog-repository,
  * stepsForJourneyTemplate in visit-context) sind Absicht — kein Shared-Monolith.
  */

@@ -30,30 +30,30 @@ das ändert. Sie sind Absicherung gegen Drive-by-Refactors.
 
 Effort: **S** ≈ Minuten, **M** ≈ Stunden, **L** ≈ Entscheidung + ggf. größerer Schnitt.
 
-| Schritt | ID      | Aktion                                                                 | Effort |
-| ------- | ------- | ---------------------------------------------------------------------- | ------ |
-| ✅ 1    | LEG-001 | Tar-Pfad-Alias entfernen                                               | S      |
-| ✅ 2    | LEG-002 | `SaveEnvBackupResult`-Alias entfernen                                  | S      |
-| ✅ 3    | DUP-001 | Ticket-Code in Domain kanonisieren (inkl. Smoke-Helper)                | S–M    |
-| 4       | DUP-002 | OpenAPI-Generator/Sync-Checks vereinheitlichen (gleiche Guards)        | M      |
-| 5       | LEG-003 | PoC-HTTP/UI: behalten mit Owner **oder** aus aktivem Build entfernen   | L      |
-| 6       | DUP-003 | Monorepo-Root-Suche (bei Gelegenheit)                                  | S      |
-| 7       | DUP-004 | Proxy-Compose: Drift-Check oder Packaging-Kopie (bei Gelegenheit)      | S      |
+| Schritt | ID      | Aktion                                                               | Effort |
+| ------- | ------- | -------------------------------------------------------------------- | ------ |
+| ✅ 1    | LEG-001 | Tar-Pfad-Alias entfernen                                             | S      |
+| ✅ 2    | LEG-002 | `SaveEnvBackupResult`-Alias entfernen                                | S      |
+| ✅ 3    | DUP-001 | Ticket-Code in Domain kanonisieren (inkl. Smoke-Helper)              | S–M    |
+| 4       | DUP-002 | OpenAPI-Generator/Sync-Checks vereinheitlichen (gleiche Guards)      | M      |
+| 5       | LEG-003 | PoC-HTTP/UI: behalten mit Owner **oder** aus aktivem Build entfernen | L      |
+| 6       | DUP-003 | Monorepo-Root-Suche (bei Gelegenheit)                                | S      |
+| 7       | DUP-004 | Proxy-Compose: Drift-Check oder Packaging-Kopie (bei Gelegenheit)    | S      |
 
 ## Kurzpriorisierung
 
-| ID      | Kandidat                                                 | Status               | Priorität | Effort | Konfidenz |
-| ------- | -------------------------------------------------------- | -------------------- | --------- | ------ | --------- |
+| ID      | Kandidat                                                 | Status                | Priorität | Effort | Konfidenz |
+| ------- | -------------------------------------------------------- | --------------------- | --------- | ------ | --------- |
 | LEG-001 | `validateTarArchiveEntryPaths`                           | erledigt (2026-07-23) | niedrig   | S      | hoch      |
 | LEG-002 | `SaveEnvBackupResult`                                    | erledigt (2026-07-23) | niedrig   | S      | hoch      |
 | DUP-001 | Ticket-Code in Domain, Flow-Core, App und Smoke          | erledigt (2026-07-23) | mittel    | S–M    | hoch      |
-| DUP-002 | doppelte OpenAPI-Type-Generatoren und Drift-Checks       | bereinigen           | mittel    | M      | hoch      |
-| LEG-003 | Flow-Core-PoC-Server und Referenz-UI im Produkt-Monorepo | entscheiden          | mittel    | L      | hoch      |
-| DUP-003 | doppelte Monorepo-Root-Suche                             | entscheiden          | niedrig   | S      | hoch      |
-| DUP-004 | Proxy-Compose-Overlays mit identischem Inhalt            | behalten/entscheiden | niedrig   | S      | hoch      |
-| OK-001  | generierte OpenAPI-Typen für App und UI                  | behalten             | –         | –      | hoch      |
-| OK-002  | Raumkapazitäts-Adapter für App und UI                    | behalten             | –         | –      | hoch      |
-| OK-003  | lokale Re-Export-Grenzen für Domain-Konstanten           | behalten             | –         | –      | mittel    |
+| DUP-002 | doppelte OpenAPI-Type-Generatoren und Drift-Checks       | bereinigen            | mittel    | M      | hoch      |
+| LEG-003 | Flow-Core-PoC-Server und Referenz-UI im Produkt-Monorepo | entscheiden           | mittel    | L      | hoch      |
+| DUP-003 | doppelte Monorepo-Root-Suche                             | entscheiden           | niedrig   | S      | hoch      |
+| DUP-004 | Proxy-Compose-Overlays mit identischem Inhalt            | behalten/entscheiden  | niedrig   | S      | hoch      |
+| OK-001  | generierte OpenAPI-Typen für App und UI                  | behalten              | –         | –      | hoch      |
+| OK-002  | Raumkapazitäts-Adapter für App und UI                    | behalten              | –         | –      | hoch      |
+| OK-003  | lokale Re-Export-Grenzen für Domain-Konstanten           | behalten              | –         | –      | mittel    |
 
 ## Befunde
 
@@ -68,8 +68,9 @@ Zusätzlich: `scripts/smoke-helpers.mjs` enthält eine eigene `formatTicketCode`
 Domain exportiert `parseTicketCode` noch nicht — das ist die Lücke, nicht nur
 „zweimal dasselbe“.
 
-Der Fund ist nicht nur heuristisch: `packages/flow-core/HANDOVER.md` nennt
-„ticket-code mit @praxis-flow/domain deduplizieren“ selbst als offene Merge-Arbeit.
+Der Fund ist nicht nur historisch: die frühere Flow-Core-Übergabe nannte
+„ticket-code mit @praxis-flow/domain deduplizieren“ selbst als offene Merge-Arbeit
+(seit DUP-001 erledigt).
 
 Risiko:
 
@@ -143,36 +144,11 @@ Empfehlung:
 - Alias entfernen, sofern es keinen externen Consumer des privaten
   Manager-Pakets gibt.
 
-### LEG-003: Flow-Core enthält weiterhin eine vollständige PoC-Oberfläche
+### LEG-003: Flow-Core PoC-Oberfläche — erledigt (2026-07-28)
 
-`packages/flow-core` enthält neben der produktiv importierten Runtime:
-
-- einen eigenen HTTP-/Static-Server (`src/server/http.ts`),
-- eine eigene lokale DB-/Seed-Strecke,
-- Reset- und Start-Skripte (`dev`/`start` → `dist/server/http.js`),
-- eine Referenz-UI unter `src/public`,
-- eigene Handovers, Todos und eine Canvas-Datei.
-
-Die Dokumentation bezeichnet HTTP und UI ausdrücklich als PoC beziehungsweise
-Cherry-Pick-Quelle. Gleichzeitig ist die Host-Integration laut Handover weitgehend
-abgeschlossen. Das ist also eine beabsichtigte Altlast, keine versehentlich tote
-Datei.
-
-Kosten:
-
-- zweite ausführbare Oberfläche und API neben Fastify,
-- zweite lokale Betriebsart mit eigener DB und Seeds,
-- zusätzliche Tests und Dokumentation, die Produktstand und PoC-Stand
-  auseinanderhalten müssen,
-- bereits dokumentierter Konflikt bei Transaktions-Ownership
-  (`things-to-do-before-release.md`).
-
-**Entscheidungsfrage (Ja/Nein):**
-
-1. Brauchen wir Standalone-HTTP + `src/public` noch **aktiv** zum Entwickeln?
-2. Wenn **nein**: relevante ADRs/Beispiele archivieren; PoC-HTTP, Referenz-UI und
-   Standalone-Skripte aus dem aktiven Build/Testpfad entfernen.
-3. Wenn **ja**: Owner, Startbefehl und Verifikationspflicht explizit festlegen.
+PoC-HTTP, Referenz-UI (`src/public`), Standalone-Skripte und Package-Meta aus
+`packages/flow-core` entfernt. Library-Runtime + Package-Tests bleiben.
+Standalone-/Referenz-Snapshot: `../new_flow_core`.
 
 Nicht pauschal `packages/flow-core` entfernen: Die Produkt-App importiert dessen
 Shared- und Server-Runtime aktiv.

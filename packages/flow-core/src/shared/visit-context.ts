@@ -1,9 +1,8 @@
 /**
- * Journey-spezifische Labels, Route-Previews und Routing-Hilfen (Admin, Visit-Karten).
+ * Journey-spezifische Labels, Route-Previews und Routing-Hilfen.
  *
- * Teil des geplanten Journey-Exports neben journey und journey-admin.js.
  * stepsForJourneyTemplate ist absichtlich parallel zu catalog-repository.stepsForTemplate —
- * das Journey-Bundle soll ohne Server-Import nutzbar bleiben.
+ * Shared-Journey-Helfer sollen ohne Server-Import nutzbar bleiben.
  */
 
 import type { JourneyStep, Location, Queue, RoutingRule, VisitView } from './types.js';

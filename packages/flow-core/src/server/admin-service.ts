@@ -21,6 +21,10 @@ function sqlIn(values: readonly string[]): string {
 type SaveRuleBody = ReturnType<typeof parseSaveRuleBody>;
 type SaveTopicBody = ReturnType<typeof parseSaveTopicBody>;
 
+/**
+ * Catalog-Writes für Package-Tests und Legacy-Standalone.
+ * Host-Produktpfad: Katalog kommt über Ops-Settings-Sync (`syncCatalogFromOpsSettings`), nicht hier.
+ */
 export function createAdminService(params: {
   db: DatabaseSync;
   catalogRepository: CatalogRepository;

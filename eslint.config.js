@@ -23,8 +23,6 @@ module.exports = tseslint.config(
       'ui/.svelte-kit/**',
       'ui/src/lib/ops/generated/**',
       'manager/out/**',
-      'packages/flow-core/src/public/**',
-      'packages/flow-core/canvases/**',
       'docs/**',
     ],
   },

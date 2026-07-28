@@ -329,14 +329,12 @@ uebertragen.
 
 ### Kontext Fuer KI
 
-Die Referenz-UI aus `packages/flow-core/src/public` und `../new_flow_core` ist
-Cherry-Pick-Quelle, nicht Produkt-UI. Es soll in bestehende Svelte-Komponenten und
-Settings-Flows passen.
+Die Referenz-UI in `../new_flow_core` ist Cherry-Pick-Quelle, nicht Produkt-UI.
+Es soll in bestehende Svelte-Komponenten und Settings-Flows passen.
 
 ### Relevante Dateien
 
 - `../new_flow_core/src/public/journey-admin.js`
-- `packages/flow-core/src/public/journey-admin.js`
 - `ui/src/routes/mfa/settings/**`
 - `ui/src/lib/components/mfa/**`
 - `ui/src/lib/mfa/practice-ops-api.ts`

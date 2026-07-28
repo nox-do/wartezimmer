@@ -1,4 +1,4 @@
-/** Deutsche UI-Labels — geteilt zwischen Browser und PoC-Debug-Pills. */
+/** Deutsche UI-Labels für Display-Helfer (visit-context) und Library-Exports. */
 
 import type {
   ActiveVisitStatus,
@@ -113,7 +113,7 @@ export const errorLabels: Record<string, string> = {
   TOPIC_NOT_ACTIVE: 'Topic ist nicht aktiv.',
   INVALID_LANE_CODE: 'Ungültiger Nummernkreis (laneCode).',
   RESERVED_LANE_CODE:
-    'Nummernkreis M ist in PoC-Seed fuer Hilfe-Check-in reserviert — kein konfigurierbares Thema.',
+    'Nummernkreis M ist fuer Hilfe-Check-in reserviert — kein konfigurierbares Thema.',
   UNKNOWN_ACTION: 'Unbekannte Aktion.',
   SUPERSEDE_SOURCE_TERMINAL: 'Abgeschlossene Tickets können nicht umgebucht werden.',
   SUPERSEDE_ALREADY_SUPERSEDED: 'Dieses Ticket wurde bereits umgebucht.',

@@ -8,7 +8,6 @@ module.exports = {
     '**/coverage/**',
     'ui/.svelte-kit/**',
     'ui/build/**',
-    'packages/flow-core/src/public/styles.css',
   ],
   rules: {
     // Global sheets intentionally share broad element/attribute selectors.

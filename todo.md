@@ -1,13 +1,22 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-24
+Stand: 2026-07-28
+
+## LEG-003 Flow-Core PoC cleanup (2026-07-28)
+
+- Entfernt aus `packages/flow-core`: PoC-HTTP (`http.ts`), Referenz-UI (`src/public`), `reset-db`, `scripts`/`dump`, `HANDOVER`, Package-`todo`, `canvases`, Package-`package-lock`, `jsconfig`, `api-errors` (Host hat eigene Map)
+- Scripts: nur noch `build` / `typecheck` / `lint` / `test`
+- README auf Library-only; Standalone/Referenz → `../new_flow_core`
+- eslint/stylelint-Ignores für `public`/`canvases` entfernt
+- PoC-Wording in Kommentaren bereinigt; `saveRule`/`saveJourneyTemplate`/`saveTopic` als Legacy markiert
+- Offen (fachlich): `parse*` behalten bis Check-in-Exklusivitätsregeln in `visit-service` liegen oder Host-Validierung explizit Source of Truth ist; `labels` bleibt wegen `visit-context`
 
 ## Flow-Core vs `../new_flow_core` (2026-07-24)
 
 - Quelle: `../new_flow_core` (Stand ~2026-07-04, Import); hier: `packages/flow-core` (**29 Commits voraus**)
 - Entscheidung: **Option B** — Voll-Sync Monorepo → `../new_flow_core` (2026-07-24)
 - Standalone: Domain-Helfer (`ticket-code` / `lane-code`) **inline** + `TODO(cleanup)`; keine `@praxis-flow/domain`-Dep
-- Parallel offen: LEG-003 PoC-HTTP/`src/public` behalten vs. aus aktivem Pfad entfernen
+- LEG-003: PoC-HTTP/`src/public` aus Monorepo entfernt (2026-07-28)
 
 ## Audit Quick Wins (2026-07-23)
 
@@ -15,7 +24,7 @@ Stand: 2026-07-24
 - LEG-001: `validateTarArchiveEntryPaths` entfernt; Test auf `validateTarArchiveEntries`
 - LEG-002: `SaveEnvBackupResult`-Alias entfernt; `save-env-backup.ts` → `SavePfbackupResult`
 - DUP-001: `parseTicketCode` + `formatTicketCode` kanonisch in `@praxis-flow/domain`; Flow-Core/App/Smoke re-exportieren
-- Offen als Nächstes: DUP-002 (OpenAPI-Orchestrierung), dann LEG-003 (PoC-HTTP/UI Entscheidung)
+- Offen als Nächstes: DUP-002 (OpenAPI-Orchestrierung); LEG-003 erledigt
 
 ## Docs / Produktbeschreibung (2026-07-23)
 
@@ -31,12 +40,14 @@ Stand: 2026-07-24
 ## Aufräumen Etappen (Review 2026-07-21)
 
 ### Etappe 1 — Korrektheit + kleine Diät (erledigt 2026-07-21)
+
 - Typecheck Manager grün
 - Proxy-Ownership nur bei `proxyServer.enabled`
 - Network `show()` Generation gegen stale `fetchSetupNetwork`
 - Scanner-Totcode, ungenutztes CSS, `NetworkController.clearError` entfernt
 
 ### Etappe 2 — Netzwerk-Ablauf (Review-Fixes 2026-07-21)
+
 - „Einstellungen übernehmen und prüfen“; Probe nur gegen `deviceUrls.appBaseUrl`
 - `NetworkOperation` statt busy/probeBusy; `verifyActiveConfiguration(savedUrl)`
 - `ProxySettings` + `ProxyRecoveryAction`; IT-freundlichere Texte
@@ -48,9 +59,11 @@ Stand: 2026-07-24
 - Copy: Wiederherstellen-Hinweis ohne „Diagnose“
 
 ### Etappe 3 — State vereinfachen (offen, Scope 2026-07-21)
+
 Ziel: drei Wahrheiten — `configSnapshot` / `runtimeSnapshot` / `networkDraft` (+ lokales UI: phase/notice/networkSnapshot). Keine Runtime→Config-Kopien.
 
 **Review-Punkt 1 — Shell-Vertrag (erledigt 2026-07-21)**
+
 - Shell: `configSnapshot` / `runtimeSnapshot`; `applyConfigSnapshot` / `applyRuntimeSnapshot`
 - Runtime→Config-Merge entfernt; Selektoren in `host-snapshot-selectors.ts`
 - Sessions: `NetworkSession` / `MaintenanceSession` nur `{ generation }`
@@ -60,6 +73,7 @@ Ziel: drei Wahrheiten — `configSnapshot` / `runtimeSnapshot` / `networkDraft` 
 - Tests: Selektoren, Navigation, MainNav-Runtime-Unlock, Partial-Refresh; typecheck grün
 
 **Review-Punkt 2 — Network-State (bereit zum Commit)**
+
 - Draft / Phase / Notice; Controller ohne Config-/Runtime-Kopien
 - Hydration: Draft-Baseline, `saveSubmittedDraft` (bleibt nach Env-Write auch bei Restartfehler), Pending-Flush
 - Dirty-Split, `discardDraft` + Button „Änderungen verwerfen“, gestoppter Stack → Notice `warning`
@@ -69,15 +83,16 @@ Ziel: drei Wahrheiten — `configSnapshot` / `runtimeSnapshot` / `networkDraft` 
 **Nicht enthalten:** voller Maintenance-Umbau, Wizard-Architektur, Backend-DTOs, Gateway-Migration, `host-state.ts`-Split. Wizard nur Rename/Typen/gemeinsame Draft-Helfer.
 
 ### Etappe 4 — Backend + Legacy (offen)
+
 - Gateway-Migration explizit; API bereinigen; `host-state.ts` aufteilen
 
 ## Netzwerk-Tab Layout (2026-07-21)
 
 - Expander-Reihenfolge: Host/LAN → Proxy → Erreichbarkeit → Übernehmen → Prüfungen → Erläuterung
-- Prüfungen: gateway.* ausgeblendet; offen bei Fehlern
+- Prüfungen: gateway.\* ausgeblendet; offen bei Fehlern
 - Proxy-UI → `NetworkProxyPanel`; View-Model-Subtitles/Defaults
 - Accordion-Titel: „Browserzugriff (Port 80)“ (statt Gerätezugriff) — Network + Wizard
-- Offen/Refactor: Wizard-Zugang mit NetworkProxyPanel sync; `auditNetworkBindings` gateway-Branch entfernen nach GATEWAY_*-Cleanup; `app.port`-Detailtext bei Proxy
+- Offen/Refactor: Wizard-Zugang mit NetworkProxyPanel sync; `auditNetworkBindings` gateway-Branch entfernen nach GATEWAY\_\*-Cleanup; `app.port`-Detailtext bei Proxy
 
 ## Proxy wiederherstellen (2026-07-21)
 
@@ -281,13 +296,13 @@ Review-Nachzug:
 
 ## Code-Diät: Deprecated-Kandidaten (Audit 2026-07-13)
 
-| Kandidat                                                                                                                          | Status       | Evidenz                                                                                                  |
-| --------------------------------------------------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------- |
-| Domain Single-Panel (`RoomPanelSettings`, `DEFAULT_ROOM_PANEL_SETTINGS`, `normalizeRoomPanelSettings`, `applyRoomPanelPlacement`) | **entfernt** | Domain-Cluster + Tests bereinigt; `db-types.ts` Alias entfernt.                                          |
+| Kandidat                                                                                                                          | Status       | Evidenz                                                                                                           |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------- |
+| Domain Single-Panel (`RoomPanelSettings`, `DEFAULT_ROOM_PANEL_SETTINGS`, `normalizeRoomPanelSettings`, `applyRoomPanelPlacement`) | **entfernt** | Domain-Cluster + Tests bereinigt; `db-types.ts` Alias entfernt.                                                   |
 | `EnvBackupInfo` / `EnvBackupResult`                                                                                               | **entfernt** | Re-Exports aus `setup-api`/`index`/`host-status` entfernt. `SaveEnvBackupResult` ebenfalls entfernt (2026-07-23). |
-| `app/src/http/domain-error.ts` Shim                                                                                               | **entfernt** | Imports → `shared/errors/domain-error.js`; Datei gelöscht.                                               |
-| `setup/src/urls.ts` `buildDeviceUrls`                                                                                             | **entfernt** | Tests auf `buildDeviceUrlsFromBaseUrl` umgestellt.                                                       |
-| UI `createMfaAssistCheckin`                                                                                                       | **entfernt** | Server `POST /mfa-assist` ebenfalls entfernt (2026-07-14).                                               |
+| `app/src/http/domain-error.ts` Shim                                                                                               | **entfernt** | Imports → `shared/errors/domain-error.js`; Datei gelöscht.                                                        |
+| `setup/src/urls.ts` `buildDeviceUrls`                                                                                             | **entfernt** | Tests auf `buildDeviceUrlsFromBaseUrl` umgestellt.                                                                |
+| UI `createMfaAssistCheckin`                                                                                                       | **entfernt** | Server `POST /mfa-assist` ebenfalls entfernt (2026-07-14).                                                        |
 
 - **Auth-Routen Überblick:** Staff/Device unter `/api/v1/auth/*` in `app/src/routes/auth-routes.ts` (OpenAPI `openapi/auth.yaml`); Guard via `registerClientAuth` + `route-access-rules.ts`; Cookie-Sessions (kein JWT/OAuth)
 

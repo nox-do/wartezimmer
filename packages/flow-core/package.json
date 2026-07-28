@@ -19,10 +19,6 @@
     }
   },
   "scripts": {
-    "dev": "npm run build && node dist/server/http.js",
-    "start": "npm run build && node dist/server/http.js",
-    "reset-db": "npm run build && node dist/server/reset-db.js",
-    "dump": "node scripts/dump-context.mjs",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
