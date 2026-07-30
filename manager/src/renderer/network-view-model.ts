@@ -19,7 +19,8 @@ export type NetworkNotice =
 
 export type NetworkDraft = LanIpFieldState & ReachabilityFieldState;
 
-export const NETWORK_LAN_REQUIRED_ERROR = 'Bitte eine Adresse dieses Rechners wählen oder eingeben.';
+export const NETWORK_LAN_REQUIRED_ERROR =
+  'Bitte eine Adresse dieses Rechners wählen oder eingeben.';
 export const NETWORK_RESTART_CONFIRM_MESSAGE =
   'Einstellungen speichern und Praxis Flow neu starten, damit die Änderung wirksam wird?';
 export const NETWORK_RESTART_CONFIRM_PROXY_MESSAGE =

@@ -98,10 +98,7 @@ function noticeFromVerified(verified: { ok: boolean; message: string }): Network
   return { tone: verified.ok ? 'success' : 'error', message: verified.message };
 }
 
-function draftFromConfig(
-  config: HostStatus,
-  network: NetworkSnapshot | null,
-): NetworkDraft {
+function draftFromConfig(config: HostStatus, network: NetworkSnapshot | null): NetworkDraft {
   const fields = createHostNetworkFields(config);
   let reachabilityMode = fields.reachabilityMode;
   let customHostname = fields.customHostname;
@@ -197,11 +194,6 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
 
   function setErrorNotice(message: string): void {
     patch({ phase: 'idle', notice: { tone: 'error', message } });
-    flushPendingConfigHydrate();
-  }
-
-  function setSuccessNotice(message: string): void {
-    patch({ phase: 'idle', notice: { tone: 'success', message } });
     flushPendingConfigHydrate();
   }
 

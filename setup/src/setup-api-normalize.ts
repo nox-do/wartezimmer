@@ -11,7 +11,6 @@ import type {
 import {
   SETUP_DEFAULT_GATEWAY_INTERFACE,
   SETUP_DEFAULT_GATEWAY_IP,
-  SETUP_DEFAULT_PRACTICE_NAME,
   parseGatewayManagementIpFromBridgeUrl,
   validateGatewayManagementIp,
 } from '@praxis-flow/server-shared';
@@ -171,7 +170,7 @@ export function normalizeSetupPlanInput(body: unknown): NormalizedSetupPlanInput
   const canonicalBaseUrl = normalizeOptionalCanonicalBaseUrl(input.canonicalBaseUrl);
   return {
     lanAppIp,
-    practiceDisplayName: input.practiceDisplayName?.trim() || SETUP_DEFAULT_PRACTICE_NAME,
+    practiceDisplayName: input.practiceDisplayName?.trim() || '',
     portalAppIp: input.gateway?.portalAppIp?.trim() || undefined,
     gateway: normalizeGatewayPlan(input.gateway, lanAppIp),
     ...(canonicalBaseUrl ? { canonicalBaseUrl } : {}),

@@ -268,9 +268,7 @@ function buildUpdateEnv(
     ...currentEnv,
     PRAXIS_FLOW_APP_IMAGE: manifest.images.app,
     PRAXIS_FLOW_SANDBOX_IMAGE: manifest.images.sandbox,
-    ...(manifest.images.gateway
-      ? { PRAXIS_FLOW_GATEWAY_IMAGE: manifest.images.gateway }
-      : {}),
+    ...(manifest.images.gateway ? { PRAXIS_FLOW_GATEWAY_IMAGE: manifest.images.gateway } : {}),
     ...(manifest.images.proxy ? { PRAXIS_FLOW_PROXY_IMAGE: manifest.images.proxy } : {}),
   };
 }
@@ -357,10 +355,7 @@ function installComposeTemplates(stagingDir: string, home: string): void {
     PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE,
   );
   if (fs.existsSync(gatewayComposeSource)) {
-    fs.copyFileSync(
-      gatewayComposeSource,
-      path.join(home, PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE),
-    );
+    fs.copyFileSync(gatewayComposeSource, path.join(home, PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE));
   }
 
   const proxyComposeSource = pfupdateTemplatePath(stagingDir, PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE);

@@ -237,3 +237,47 @@ test('full refresh keeps runtime when only config fetch fails', async () => {
   assert.equal(controller.getLastConfig(), null);
   assert.deepEqual(errors, [{ message: 'config down', source: 'config' }]);
 });
+
+test('full refresh applies runtime before slow config settles', async () => {
+  let resolveConfig!: () => void;
+  const configGate = new Promise<void>((resolve) => {
+    resolveConfig = resolve;
+  });
+  const order: string[] = [];
+
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchSetupStatus: async () => {
+          await configGate;
+          order.push('config');
+          return minimalHostStatus();
+        },
+        fetchRuntimeHealth: async () => {
+          order.push('runtime');
+          return minimalRuntime({ checkedAt: 'fast-runtime' });
+        },
+      }),
+    pollIntervalMs: 60_000,
+    onRuntime: () => {
+      order.push('onRuntime');
+    },
+    onConfig: () => {
+      order.push('onConfig');
+    },
+    onError: () => {},
+    schedule: () => 0,
+    clearSchedule: () => {},
+  });
+
+  const refreshDone = controller.refresh({ scope: 'full', immediate: true });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(order, ['runtime', 'onRuntime']);
+  assert.equal(controller.getLastRuntime()?.checkedAt, 'fast-runtime');
+  assert.equal(controller.getLastConfig(), null);
+
+  resolveConfig();
+  await refreshDone;
+  assert.deepEqual(order, ['runtime', 'onRuntime', 'config', 'onConfig']);
+  assert.ok(controller.getLastConfig());
+});

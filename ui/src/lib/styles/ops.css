@@ -142,17 +142,6 @@
   font-size: var(--text-base);
 }
 
-.ops-setup-snippet {
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: var(--radius-xs);
-  background: var(--muted);
-  font-size: var(--text-xs);
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
 .ops-setup-nav {
   margin-top: 20px;
   padding-top: 16px;

@@ -114,7 +114,6 @@ export {
 export {
   SETUP_DEFAULT_GATEWAY_INTERFACE,
   SETUP_DEFAULT_GATEWAY_IP,
-  SETUP_DEFAULT_PRACTICE_NAME,
   type ApplySetupInput,
   type ApplySetupOptions,
   type ApplySetupResult,

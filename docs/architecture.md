@@ -62,7 +62,7 @@ Fachliche Schichten — keine 1:1-Ordnerstruktur, kein Microservice-Schnitt. Det
 | 6   | **Sandbox Adapter**      | kritisch, isoliert | Preview-Custody; keine Rohdatei an MFA-Client — `docs/sandbox-interface.md`                            |
 | 7   | **Tagesbetrieb & Reset** | querschnittlich    | Check-in-Sperre, Day-Close/Reset, Ops-Settings, Notfall                                                |
 | 8   | **SMS Adapter**          | extern             | Rückhol-SMS; v1 Vonage, austauschbar                                                                   |
-| 9   | **WLAN-Adapter**         | extern (geplant)   | Dünne Anbindung an Praxis-WLAN/Captive (Outbound/Inbound); kein eigener Gateway-Container im Produkt  |
+| 9   | **WLAN-Adapter**         | extern (geplant)   | Dünne Anbindung an Praxis-WLAN/Captive (Outbound/Inbound); kein eigener Gateway-Container im Produkt   |
 
 ```mermaid
 flowchart LR

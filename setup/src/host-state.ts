@@ -53,6 +53,7 @@ import {
   type SandboxScannerStatus,
 } from './sandbox-health.js';
 import {
+  CURRENT_SETTINGS_FORMAT_VERSION,
   DEFAULT_STAFF_PIN,
   SETUP_DEFAULT_GATEWAY_INTERFACE,
   SETUP_DEFAULT_GATEWAY_IP,
@@ -502,6 +503,11 @@ function isSandboxServiceRunning(compose: ComposeStatus | null): boolean {
   );
 }
 
+/** HTTP reachability probes only make sense when the stack claims to be up. */
+function shouldRunConnectionProbes(compose: ComposeStatus | null): boolean {
+  return Boolean(compose?.running);
+}
+
 export async function getHostRuntimeHealth(ctx: SetupContext): Promise<HostRuntimeHealth> {
   const checkedAt = new Date().toISOString();
   const root = ctx.home;
@@ -515,7 +521,7 @@ export async function getHostRuntimeHealth(ctx: SetupContext): Promise<HostRunti
   const compose = await readComposeForHost(ctx, envExists, docker, envMap);
 
   let probes: ProbeResult[] = [];
-  if (docker.daemonRunning) {
+  if (docker.daemonRunning && shouldRunConnectionProbes(compose)) {
     probes = await runConnectionProbes({
       localAppBaseUrl: LOCAL_SETUP_APP_BASE_URL,
       lanAppBaseUrl,
@@ -577,7 +583,7 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
   const compose = await readComposeForHost(ctx, envExists, docker, envMap);
 
   let probes: ProbeResult[] = [];
-  if (includeProbes && docker.daemonRunning) {
+  if (includeProbes && docker.daemonRunning && shouldRunConnectionProbes(compose)) {
     probes = await runConnectionProbes({
       localAppBaseUrl: LOCAL_SETUP_APP_BASE_URL,
       lanAppBaseUrl: canonicalBaseUrl ?? undefined,
@@ -616,7 +622,9 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     envMap,
     docker,
   });
-  const settingsFormatVersion = await resolveCurrentSettingsFormatVersion();
+  const settingsFormatVersion = shouldRunConnectionProbes(compose)
+    ? await resolveCurrentSettingsFormatVersion()
+    : CURRENT_SETTINGS_FORMAT_VERSION;
 
   return {
     installHome: root,

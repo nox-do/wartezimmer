@@ -122,9 +122,7 @@ test('proxyNeedsRestore uses runtime container when runtime snapshot exists', ()
     false,
   );
   assert.equal(
-    savedDeviceBaseUrl(
-      minimalHostStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10' }),
-    ),
+    savedDeviceBaseUrl(minimalHostStatus({ configuredCanonicalBaseUrl: 'http://192.168.1.10' })),
     'http://192.168.1.10',
   );
 });

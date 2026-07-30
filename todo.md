@@ -1,6 +1,39 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-28
+Stand: 2026-07-30
+
+## Fix: arrive VisitPatch undefined (2026-07-30)
+
+- Nach VisitPatch-Semantik (kein explizites `undefined`): Arrive setzte `queueId: nextQueueId`, auch wenn `resolveQueueOnArrival` `undefined` liefert (Redirect `queueId: null` + Raum ohne eigene Queue)
+- Fix: `queueId` / `lastKnownLocationId` nur setzen wenn definiert — wie bei `call` / `return_to_waiting`
+
+## Praxisname nur in Ops (2026-07-30)
+
+- Manager-Wizard: Praxisname-Feld entfernt; Schritt 2 = nur noch Routing
+- SetupPlanInput: `practiceDisplayName` optional (leer statt Default „Hausarztpraxis“)
+- Wahrheit: Ops DB / `/ops/setup`; `.env` PRACTICE\_\* nur noch optionaler CLI-Seed
+
+## Ops-Wizard Welcome/Speicher Copy (2026-07-30)
+
+- Welcome: nur Host/.env-Hinweis (ohne Ordner-Liste, ohne „danach hier weiter“, ohne `npm run setup`)
+- Ordner-Erklärung (`~/praxis-flow-imports` / exports) nach Schritt 3 Speicher verlagert
+- `.env` bleibt nötig für Compose/Manager/Backup — Löschen blockiert Betrieb
+
+## Manager Status-Latenz (2026-07-28)
+
+- Ursache: Runtime-Health probeierte LAN auch ohne laufenden Stack (bis 8 s Timeout)
+- Fix: Probes nur bei `compose.running`; Probe-Timeout 2 s; Runtime-UI unabhängig vom Config-Fetch; `GET /api/setup/health` für Setup-Start; Docker-CLI-Timeout 3 s
+
+## Stack-Release 2.1.0 (2026-07-28)
+
+- Stack-Versionierung: **Semver** (statt Kalender `YYYY.MM.P`); erstes Semver-Release nach Major-Änderungen: `2.1.0`
+- Build: `docker build --no-cache` app+sandbox, dann `release:images:pack` + `release:pfupdate --no-build`
+- Artefakte:
+  - `dist/releases/praxis-flow-2.1.0/` — `.tar.gz` + manifest + SHA256 (Erstinstallation)
+  - `dist/releases/praxis-flow-update-2.1.0.pfupdate` — Update-Paket (min. Manager `0.2.0`)
+- Docs: [`docs/delivery.md`](docs/delivery.md) Beispiel/Empfehlung auf Semver umgestellt
+- Manager DMG: `electronLanguages: ["de", "en"]` (Chromium-Locales schrumpfen)
+- Offen: Docs/Manager-Config committen?
 
 ## LEG-003 Flow-Core PoC cleanup (2026-07-28)
 

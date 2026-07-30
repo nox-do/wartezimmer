@@ -192,9 +192,7 @@ test('collectHealthTiles sandbox ampel uses Compose health, not ClamAV', () => {
   assert.equal(sandbox.status, 'ok');
   assert.equal(sandbox.detail, 'running — healthy');
   assert.ok(
-    sandbox.chips?.some(
-      (chip) => chip.label === 'not started' && chip.ok === false && !chip.warn,
-    ),
+    sandbox.chips?.some((chip) => chip.label === 'not started' && chip.ok === false && !chip.warn),
   );
 });
 
@@ -252,4 +250,14 @@ test('deriveOverallStatus reports LAN nicht erreichbar when probe fails', () => 
     ),
     { text: 'LAN nicht erreichbar', level: 'warn' },
   );
+});
+
+test('collectHealthTiles shows Keine Container without waiting when stack is down', () => {
+  const tiles = collectHealthTiles(
+    runtime({
+      compose: { running: false, services: [] },
+      probes: [],
+    }),
+  );
+  assert.deepEqual(tiles, [{ name: 'Stack', detail: 'Keine Container', status: null }]);
 });

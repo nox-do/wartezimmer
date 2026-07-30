@@ -9,7 +9,7 @@ import type { DockerStatus, ComposeServiceStatus, ComposeStatus } from '@praxis-
 export type { DockerStatus, ComposeServiceStatus, ComposeStatus } from '@praxis-flow/server-shared';
 
 export async function detectDocker(): Promise<DockerStatus> {
-  const version = await runDockerCommand(['--version']);
+  const version = await runDockerCommand(['--version'], { timeoutMs: 3_000 });
   if (version.code !== 0) {
     return {
       installed: false,
@@ -19,8 +19,10 @@ export async function detectDocker(): Promise<DockerStatus> {
     };
   }
 
-  const info = await runDockerCommand(['info', '--format', '{{.ServerVersion}}']);
-  const compose = await runDockerCommand(['compose', 'version', '--short']);
+  const info = await runDockerCommand(['info', '--format', '{{.ServerVersion}}'], {
+    timeoutMs: 3_000,
+  });
+  const compose = await runDockerCommand(['compose', 'version', '--short'], { timeoutMs: 3_000 });
 
   return {
     installed: true,

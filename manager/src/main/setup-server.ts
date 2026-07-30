@@ -21,7 +21,7 @@ export function getSetupApiBase(port = getSetupPort()): string {
 
 async function fetchStatusOk(apiBase: string): Promise<boolean> {
   try {
-    const response = await fetch(`${apiBase}/api/setup/host/status`, {
+    const response = await fetch(`${apiBase}/api/setup/health`, {
       signal: AbortSignal.timeout(2_000),
     });
     return response.ok;

@@ -73,7 +73,7 @@ Privilegierte Rollen-Keys werden **nicht** in das öffentliche UI-Bundle eingebe
 
 - `VITE_API_BASE` (optional, normalerweise leer/relative API)
 
-**Praxisname und Kontaktdaten** liegen in der Datenbank (Ops → Praxis & Datenschutz). `PRACTICE_DISPLAY_NAME` in `.env` seedet nur die Erstinstallation via Migration — kein UI-Rebuild nötig, wenn sich der Anzeigename ändert.
+**Praxisname und Kontaktdaten** liegen in der Datenbank (Ops → Praxis & Datenschutz bzw. `/ops/setup`). `PRACTICE_DISPLAY_NAME` in `.env` ist nur noch ein optionaler Seed (z. B. CLI `npm run setup`) — der Praxis Flow Manager fragt den Namen nicht mehr ab.
 
 MFA/Ops nutzen Staff-Session-Cookies, TV und Terminal nutzen Device-Pairing mit serverseitiger Device-Session. Lokale UI-Entwicklung nutzt `npm run dev:ui` (Proxy auf `:8080`).
 

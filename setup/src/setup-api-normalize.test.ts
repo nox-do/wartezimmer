@@ -49,7 +49,7 @@ test('normalizeGatewayPlan keeps disabled gateway without inventing NIC values',
   });
 });
 
-test('normalizeSetupPlanInput fills practice default and trims LAN', () => {
+test('normalizeSetupPlanInput trims LAN and optional practice name', () => {
   assert.deepEqual(
     normalizeSetupPlanInput({
       lanAppIp: ' 192.168.1.20 ',
@@ -73,6 +73,10 @@ test('normalizeSetupPlanInput fills practice default and trims LAN', () => {
       },
     },
   );
+});
+
+test('normalizeSetupPlanInput allows omitted practice name', () => {
+  assert.deepEqual(normalizeSetupPlanInput({ lanAppIp: '192.168.1.20' }).practiceDisplayName, '');
 });
 
 test('normalizeSetupPlanInput rejects missing lanAppIp', () => {

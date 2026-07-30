@@ -40,7 +40,7 @@ npm run dev:manager
 ### Install-Wizard (Assistent)
 
 1. Voraussetzungen (Docker, ggf. Release-Paket)
-2. Praxis — Anzeigename + Routing-Modus
+2. Routing — Routing-Modus (Praxisname erst in Ops)
 3. Import & Export — Host-Ordner (Kontakte / MFA-Exporte)
 4. Netzwerk — LAN-IP & Erreichbarkeit (Basis)
 5. Zugang — Proxy + Hinweis WLAN-/Portal-Adapter (Auswahl folgt)
@@ -82,20 +82,20 @@ Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unte
 
 Setup-API (localhost `:9190`):
 
-| Methode | Pfad                               | Zweck                                                                          |
-| ------- | ---------------------------------- | ------------------------------------------------------------------------------ |
-| GET     | `/api/setup/host/status`           | Config-Snapshot (`HostStatus`)                                                 |
-| GET     | `/api/setup/host/runtime-health`   | Pollbarer Runtime-Snapshot                                                     |
-| GET     | `/api/setup/host/compose`          | Container-Status                                                               |
-| GET     | `/api/setup/host/compose/logs`     | Log-Auszug                                                                     |
-| POST    | `/api/setup/host/compose`          | `{ action: start\|stop\|restart }`                                             |
-| GET     | `/api/setup/host/backup`           | Letztes `.env`-Backup (nur lesen)                                              |
-| POST    | `/api/setup/host/backup`           | `{ target: "env" }`                                                            |
-| POST    | `/api/setup/host/storage`          | `{ importsHostPath, exportsHostPath, restartCompose? }`                        |
+| Methode | Pfad                               | Zweck                                                                                                        |
+| ------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| GET     | `/api/setup/host/status`           | Config-Snapshot (`HostStatus`)                                                                               |
+| GET     | `/api/setup/host/runtime-health`   | Pollbarer Runtime-Snapshot                                                                                   |
+| GET     | `/api/setup/host/compose`          | Container-Status                                                                                             |
+| GET     | `/api/setup/host/compose/logs`     | Log-Auszug                                                                                                   |
+| POST    | `/api/setup/host/compose`          | `{ action: start\|stop\|restart }`                                                                           |
+| GET     | `/api/setup/host/backup`           | Letztes `.env`-Backup (nur lesen)                                                                            |
+| POST    | `/api/setup/host/backup`           | `{ target: "env" }`                                                                                          |
+| POST    | `/api/setup/host/storage`          | `{ importsHostPath, exportsHostPath, restartCompose? }`                                                      |
 | POST    | `/api/setup/host/network`          | `{ lanAppIp, gateway, restartCompose? }` — Wartung/Netzwerk (gateway stets `{ enabled: false }` aus Manager) |
-| POST    | `/api/setup/host/reset-staff-pins` | MFA- & Ops-PIN auf Default `0000` (DB), Stack stop → reset → start             |
-| GET     | `/api/setup/host/routing-mode`     | Capabilities inkl. `routingMode`, `complexRoutingLicensed`                     |
-| POST    | `/api/setup/host/routing-mode`     | `{ routingMode: "simple"\|"complex" }` — proxied zur App-API mit Manager-Trust |
+| POST    | `/api/setup/host/reset-staff-pins` | MFA- & Ops-PIN auf Default `0000` (DB), Stack stop → reset → start                                           |
+| GET     | `/api/setup/host/routing-mode`     | Capabilities inkl. `routingMode`, `complexRoutingLicensed`                                                   |
+| POST    | `/api/setup/host/routing-mode`     | `{ routingMode: "simple"\|"complex" }` — proxied zur App-API mit Manager-Trust                               |
 
 | POST | `/api/setup/host/images/load` | Erstinstallation: `.tar.gz` + Sidecar (`manifest.json` / `SHA256SUMS.txt`) |
 | POST | `/api/setup/host/update/inspect` | Wartung: `.pfupdate`-Datei prüfen (Release, Kompatibilität, Warnungen) |

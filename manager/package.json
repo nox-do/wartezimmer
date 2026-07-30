@@ -61,6 +61,10 @@
     "mac": {
       "category": "public.app-category.business",
       "identity": null,
+      "electronLanguages": [
+        "de",
+        "en"
+      ],
       "target": [
         "dmg"
       ]

@@ -92,28 +92,41 @@ export function createHostRefreshController(
   async function performRefresh(myGeneration: number, options: RefreshOptions): Promise<void> {
     try {
       if (options.scope === 'full') {
-        // Config and runtime succeed/fail independently — one failure must not discard the other.
-        const [statusResult, runtimeResult] = await Promise.allSettled([
-          deps.api().fetchSetupStatus(),
-          deps.api().fetchRuntimeHealth(),
+        // Apply each side as soon as it settles — runtime UI must not wait on full status.
+        await Promise.all([
+          deps
+            .api()
+            .fetchRuntimeHealth()
+            .then((runtime) => {
+              if (myGeneration !== generation) {
+                return;
+              }
+              lastRuntime = runtime;
+              deps.onRuntime(runtime);
+            })
+            .catch((error: unknown) => {
+              if (myGeneration !== generation) {
+                return;
+              }
+              reportError(options, 'runtime', error);
+            }),
+          deps
+            .api()
+            .fetchSetupStatus()
+            .then((status) => {
+              if (myGeneration !== generation) {
+                return;
+              }
+              lastConfig = status;
+              deps.onConfig(status, currentView);
+            })
+            .catch((error: unknown) => {
+              if (myGeneration !== generation) {
+                return;
+              }
+              reportError(options, 'config', error);
+            }),
         ]);
-        if (myGeneration !== generation) {
-          return;
-        }
-
-        if (runtimeResult.status === 'fulfilled') {
-          lastRuntime = runtimeResult.value;
-          deps.onRuntime(runtimeResult.value);
-        } else {
-          reportError(options, 'runtime', runtimeResult.reason);
-        }
-
-        if (statusResult.status === 'fulfilled') {
-          lastConfig = statusResult.value;
-          deps.onConfig(statusResult.value, currentView);
-        } else {
-          reportError(options, 'config', statusResult.reason);
-        }
         return;
       }
 

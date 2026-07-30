@@ -2,7 +2,6 @@
 
 import type { SandboxScannerStatus } from './sandbox-scanner.js';
 
-export const SETUP_DEFAULT_PRACTICE_NAME = 'Hausarztpraxis';
 export const SETUP_DEFAULT_GATEWAY_INTERFACE = 'eth1';
 export const SETUP_DEFAULT_GATEWAY_IP = '192.168.88.1';
 
@@ -477,7 +476,8 @@ export type SetupPlan = {
 /** Wire body for POST /api/setup/host/plan and /apply (server normalizes gateway defaults). */
 export type SetupPlanInput = {
   lanAppIp: string;
-  practiceDisplayName: string;
+  /** Optional seed for PRACTICE_DISPLAY_NAME; practice truth lives in Ops DB. */
+  practiceDisplayName?: string;
   /** Optional product base override (http(s) origin). When omitted, setup derives from LAN plan. */
   canonicalBaseUrl?: string;
   gateway?: GatewayPlanInput;

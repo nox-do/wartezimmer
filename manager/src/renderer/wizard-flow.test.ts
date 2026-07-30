@@ -70,26 +70,18 @@ test('canLeaveWizardStep1 blocks when network prerequisites fail', () => {
   );
 });
 
-test('planWizardAdvance leaves prerequisites for praxis', () => {
+test('planWizardAdvance leaves prerequisites for routing', () => {
   const state = createWizardFlowState(freshInstallHostStatus(), 1);
   assert.deepEqual(planWizardAdvance(1, state), { type: 'goto', step: 2 });
 });
 
-test('planWizardAdvance validates praxis name on step 2', () => {
-  const state = createWizardFlowState(freshInstallHostStatus(), 2);
-  state.practiceDisplayName = '';
-  assert.equal(planWizardAdvance(2, state).type, 'validate-error');
-});
-
-test('planWizardAdvance advances from praxis to folders', () => {
+test('planWizardAdvance advances from routing to folders', () => {
   const state = createWizardFlowState(minimalHostStatus(), 2);
-  state.practiceDisplayName = 'Praxis';
   assert.deepEqual(planWizardAdvance(2, state), { type: 'goto', step: 3 });
 });
 
 test('planWizardAdvance validates folders on step 3', () => {
   const state = createWizardFlowState(minimalHostStatus(), 3);
-  state.practiceDisplayName = 'Praxis';
   state.importsHostPath = '';
   state.exportsHostPath = '';
   assert.equal(planWizardAdvance(3, state).type, 'validate-error');
@@ -97,7 +89,6 @@ test('planWizardAdvance validates folders on step 3', () => {
 
 test('planWizardAdvance loads network when leaving folders', () => {
   const state = createWizardFlowState(minimalHostStatus(), 3);
-  state.practiceDisplayName = 'Praxis';
   state.importsHostPath = '/imports';
   state.exportsHostPath = '/exports';
   assert.deepEqual(planWizardAdvance(3, state), {
@@ -149,10 +140,10 @@ test('planWizardAdvance applies when leaving preview step 6', () => {
 test('buildWizardPlanInput always disables gateway', () => {
   const state = createWizardFlowState(minimalHostStatus(), 3);
   state.lanAppIp = '192.168.1.10';
-  state.practiceDisplayName = 'Praxis';
   const input = buildWizardPlanInput(state);
   assert.deepEqual(input.gateway, DISABLED_GATEWAY_PLAN);
   assert.equal(input.gateway.enabled, false);
+  assert.equal('practiceDisplayName' in input, false);
 });
 
 test('wizardCompletionLead celebrates when probes are green', () => {

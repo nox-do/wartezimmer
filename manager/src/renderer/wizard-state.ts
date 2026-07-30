@@ -1,5 +1,4 @@
 import type { HostStatus, RoutingMode } from '../shared/host-status.js';
-import { SETUP_DEFAULT_PRACTICE_NAME } from '@praxis-flow/server-shared/setup-api';
 import {
   inferReachabilityFields,
   type ReachabilityFieldState,
@@ -9,7 +8,6 @@ import {
 export type WizardInitialFields = {
   lanAppIp: string;
   customLanIp: string;
-  practiceDisplayName: string;
   importsHostPath: string;
   exportsHostPath: string;
   reachabilityMode: ReachabilityMode;
@@ -30,17 +28,6 @@ export function initialStorageFolderPaths(status: HostStatus | null): {
     };
   }
   return { importsHostPath: '', exportsHostPath: '' };
-}
-
-export function initialPracticeDisplayName(status: HostStatus | null): string {
-  const configured = status?.practiceDisplayName?.trim();
-  if (configured) {
-    return configured;
-  }
-  if (status?.envExists) {
-    return '';
-  }
-  return SETUP_DEFAULT_PRACTICE_NAME;
 }
 
 export function initialLanIpSelection(
@@ -71,7 +58,6 @@ export function createInitialWizardFields(status: HostStatus | null): WizardInit
   const lan = initialLanIpSelection(status);
   return {
     ...lan,
-    practiceDisplayName: initialPracticeDisplayName(status),
     ...initialStorageFolderPaths(status),
     ...inferReachabilityFields(status),
     routingMode: null,

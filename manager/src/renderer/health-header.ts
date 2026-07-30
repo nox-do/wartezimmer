@@ -62,9 +62,7 @@ export function deriveOverallStatus(
   return { text: 'Einrichtung unvollständig', level: 'warn' };
 }
 
-function sandboxChips(
-  scanner: HostRuntimeHealth['sandboxScanner'],
-): HealthTileChip[] | undefined {
+function sandboxChips(scanner: HostRuntimeHealth['sandboxScanner']): HealthTileChip[] | undefined {
   const chip = sandboxClamAvChip(scanner);
   return chip ? [chip] : undefined;
 }
@@ -163,7 +161,8 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
   const services = runtime.compose?.services ?? [];
   const probes = runtime.probes;
   const probesById = new Map(probes.map((probe) => [probe.id, probe]));
-  const probesPending = probes.length === 0 && runtime.docker.daemonRunning;
+  const probesPending =
+    probes.length === 0 && runtime.docker.daemonRunning && Boolean(runtime.compose?.running);
   const lanProbe = probesById.get('app.health.lan');
   const scanner = runtime.sandboxScanner;
   const useProxyEntry = proxyOwnsEntry(runtime);

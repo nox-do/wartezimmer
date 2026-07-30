@@ -50,28 +50,28 @@ flowchart TB
 
 ## Drei verschiedene „Versionen“
 
-| Begriff                   | Beispiel    | Wo definiert           | Wofür                                                         |
-| ------------------------- | ----------- | ---------------------- | ------------------------------------------------------------- |
-| **Manager-Version**       | `0.2.0`     | `manager/package.json` | Electron-App, DMG-Name, `minimumManagerVersion` beim Update   |
-| **Stack-Release-Version** | `2026.07.0` | `--version` beim Build | Docker-Image-Tags, `manager-state.json`, `.pfupdate`-Manifest |
-| **Monorepo-Version**      | `0.2.0`     | Root-`package.json`    | npm-Workspaces — **nur Default**, wenn `--version` fehlt      |
+| Begriff                   | Beispiel | Wo definiert           | Wofür                                                         |
+| ------------------------- | -------- | ---------------------- | ------------------------------------------------------------- |
+| **Manager-Version**       | `0.2.0`  | `manager/package.json` | Electron-App, DMG-Name, `minimumManagerVersion` beim Update   |
+| **Stack-Release-Version** | `2.1.0`  | `--version` beim Build | Docker-Image-Tags, `manager-state.json`, `.pfupdate`-Manifest |
+| **Monorepo-Version**      | `0.2.0`  | Root-`package.json`    | npm-Workspaces — **nur Default**, wenn `--version` fehlt      |
 
 Stack-Release und Monorepo-Version sind **nicht gekoppelt**. Für Kunden-Releases immer explizit setzen:
 
 ```bash
-export PRAXIS_FLOW_RELEASE_VERSION=2026.07.0
+export PRAXIS_FLOW_RELEASE_VERSION=2.1.0
 npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 ```
 
-**Empfehlung:** kalenderbasiertes Stack-Tag (`YYYY.MM.P`) — unabhängig von der Manager-Semver. Der Manager kann öfter patchen (`0.2.1`) ohne neues Stack-Paket.
+**Empfehlung:** Stack-Tag als **Semver** (`MAJOR.MINOR.PATCH`) — unabhängig von der Manager-Semver. Der Manager kann öfter patchen (`0.2.1`) ohne neues Stack-Paket. Major bei Breaking Changes am Stack/API/Images.
 
 ---
 
 ## Zwei Auslieferungsartefakte
 
-| Artefakt                | Build                      | Manager-Flow                          | Inhalt                                                                                           |
-| ----------------------- | -------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| **`.tar.gz` + Sidecar** | `npm run release:images`   | Setup-Wizard → „Release-Paket wählen" | app + sandbox + optional `caddy:2.11.4`, `manifest.json` + `SHA256SUMS.txt`                      |
+| Artefakt                | Build                      | Manager-Flow                          | Inhalt                                                                                                         |
+| ----------------------- | -------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **`.tar.gz` + Sidecar** | `npm run release:images`   | Setup-Wizard → „Release-Paket wählen" | app + sandbox + optional `caddy:2.11.4`, `manifest.json` + `SHA256SUMS.txt`                                    |
 | **`.pfupdate`**         | `npm run release:pfupdate` | Wartung → Software-Update             | Manifest, Checksummen, Images (app+sandbox+caddy; gateway optional/lab), Compose-Templates inkl. Proxy-Overlay |
 
 Updates laufen **nur** über `.pfupdate`. Der Wizard nutzt das ältere Sidecar-Format (Erstinstallation, kein Cutover/Rollback).
@@ -258,13 +258,13 @@ Details zu erhaltenen Settings: [`settings-backup-classification.md`](settings-b
 ```json
 {
   "updateFormatVersion": 1,
-  "releaseVersion": "2026.07.0",
+  "releaseVersion": "2.1.0",
   "minimumManagerVersion": "0.2.0",
   "supportedSettingsFormatVersions": [1],
   "targetSchemaVersion": 1,
   "images": {
-    "app": "praxis-flow/app:2026.07.0",
-    "sandbox": "praxis-flow/sandbox:2026.07.0",
+    "app": "praxis-flow/app:2.1.0",
+    "sandbox": "praxis-flow/sandbox:2.1.0",
     "proxy": "caddy:2.11.4"
   }
 }
@@ -297,13 +297,13 @@ Details zu erhaltenen Settings: [`settings-backup-classification.md`](settings-b
 
 ## Häufige Fehler
 
-| Symptom                      | Ursache                                             |
-| ---------------------------- | --------------------------------------------------- |
-| „Manager-Version … zu alt"   | `.pfupdate` verlangt höhere `minimumManagerVersion` |
+| Symptom                      | Ursache                                                |
+| ---------------------------- | ------------------------------------------------------ |
+| „Manager-Version … zu alt"   | `.pfupdate` verlangt höhere `minimumManagerVersion`    |
 | „images.gateway muss … sein" | Legacy/`--with-gateway`: `--version` weicht vom Tag ab |
-| Update bricht bei Backup ab  | Stack nicht erreichbar (Maintenance `:8082`)        |
+| Update bricht bei Backup ab  | Stack nicht erreichbar (Maintenance `:8082`)           |
 | Wizard findet kein Gateway   | Gateway ist Lab-only; Produkt-`.pfupdate` ohne gateway |
-| SHA256-Fehler beim Laden     | Sidecar passt nicht zur `.tar.gz`                   |
+| SHA256-Fehler beim Laden     | Sidecar passt nicht zur `.tar.gz`                      |
 
 ---
 

@@ -123,7 +123,10 @@ test('effectiveProxyContainer: runtime snapshot wins including proxyServer null'
   assert.equal(effectiveProxyContainer(config, runtime)?.name, 'runtime-proxy');
   assert.equal(effectiveProxyContainer(config, minimalRuntime({ proxyServer: null })), null);
   assert.equal(
-    effectiveProxyContainer(config, minimalRuntime({ proxyServer: { enabled: true, container: null } })),
+    effectiveProxyContainer(
+      config,
+      minimalRuntime({ proxyServer: { enabled: true, container: null } }),
+    ),
     null,
   );
   assert.equal(effectiveProxyContainer(config, null)?.name, 'config-proxy');

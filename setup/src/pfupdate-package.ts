@@ -12,9 +12,7 @@ import {
   type PfupdateValidationResult,
 } from '@praxis-flow/server-shared';
 
-export const PFUPDATE_COMPOSE_TEMPLATE_FILES = [
-  'docker-compose.delivery.yml',
-] as const;
+export const PFUPDATE_COMPOSE_TEMPLATE_FILES = ['docker-compose.delivery.yml'] as const;
 
 /** Installed from .pfupdate when present (lab/legacy); rolled back with other compose templates. */
 export const PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE =

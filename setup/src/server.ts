@@ -275,6 +275,7 @@ function createDeliveryRoutes(ctx: SetupContext): Routes {
 function createSetupRoutes(ctx: SetupContext): ReadonlyMap<string, RouteHandler> {
   return new Map(
     Object.entries({
+      'GET /api/setup/health': () => routeResult({ ok: true }),
       ...createRuntimeRoutes(ctx),
       ...createManagementRoutes(ctx),
       ...createDeliveryRoutes(ctx),

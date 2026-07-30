@@ -30,9 +30,7 @@ function minimalRuntime(config: HostStatus): HostRuntimeHealth {
     compose: config.compose,
     probes: config.probes,
     sandboxScanner: config.sandboxScanner,
-    proxyServer: config.proxy.enabled
-      ? { enabled: true, container: config.proxy.container }
-      : null,
+    proxyServer: config.proxy.enabled ? { enabled: true, container: config.proxy.container } : null,
   };
 }
 

@@ -157,21 +157,9 @@
       {/if}
     {:else if snapshot.step === 2}
       <p class="wizard-step-lead">
-        Zuerst das Einfache: Wie heißt die Praxis, und wie sollen Patienten durch die Praxis geführt
-        werden?
+        Wie sollen Patienten durch die Praxis geführt werden? Praxisname und Kontaktdaten legt die
+        Praxis später im Ops-Assistenten fest.
       </p>
-      <p>
-        Dieser Name wird an verschiedenen Stellen in Praxis Flow verwendet, um den Namen Ihrer
-        Praxis anzuzeigen.
-      </p>
-      <input
-        type="text"
-        class="wizard-input"
-        value={snapshot.practiceDisplayName}
-        disabled={snapshot.busy}
-        oninput={(event) => patchFields({ practiceDisplayName: event.currentTarget.value })}
-      />
-
       <h3 class="routing-mode-subheading">{ROUTING_MODE_WIZARD_HEADING}</h3>
       <p class="hint routing-mode-intro-compact">{ROUTING_MODE_WIZARD_INTRO_DETAIL}</p>
       <WizardRoutingModePanel

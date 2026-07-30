@@ -6,13 +6,13 @@
 
 Abgleich Svelte-Apps (`ui/`) gegen diese Flows — **ohne** eGK-Hardware, SMS/Messenger-Konfiguration und Settings-Editor.
 
-| Bereich             | In Runtime-UI                                                                                                                                                                                                                                                                                                                                                                                                                     | Nur Backend/Mocks                                                                                 |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Terminal Happy Path | Phone/DOB (+49 fest), **Nachname+DOB** (optional per Ops), Themen, Bestätigung, MFA-Assist, Notfall, Terminal gesperrt, Themen-Zeitfenster (Backend-Filter), optional Bon-Druck (Kiosk), Sprachen de/en/tr/ru/uk (Patienten-UI; MFA wählt sichtbare Sprachen, Default nur DE)                                                                                                                                                     | Empfangs-Ausweg bei nicht verfügbarer Anmeldung / Themen                                          |
-| Portal              | Wartenummer → Menü → Upload **und** Erstanamnese; Session-Abschluss (Formular → revoke, Upload → TTL 30 Min); Captive-Authorize-Hook (dünner WLAN-Adapter geplant) | Vendor-Adapter; Fragenkatalog-Review |
-| MFA                 | Warteliste (SSE), Zonen, **Raum-Board** (grüne Spalte), **DnD** (WZ↔Räume), **Triage-Merker**, persistierter Anzeigename (`identity-ref`), Dokument-Vorschau (inkl. Deep-Link), Notfall (Ops-Stream), Quicksettings (**Terminal sperren**, Aufrufziel, Geräte-Presence/Pairing), Betrieb-Settings (WLAN-Promo, `returnWindowMinutes`), Rückhol-SMS, Themen-Reihenfolge per Drag, **Raum-Panel-Settings** (Tür + im Raum pro Raum) | Queue-Summary, Identity/Patient-Detail, PVS-Spalten                                               |
-| Raum-Panel          | Login pro Placement (`/room-panel`), Live-Snapshot (SSE), Ankunft/Entlassen/Aufruf aus `actions`, getrennte `callCandidates`-Liste                                                                                                                                                                                                                                                                                                | —                                                                                                 |
-| TV                  | SSE, Aufruf, Chime, Pagination, Device-Pairing                                                                                                                                                                                                                                                                                                                                                                                    | —                                                                                                 |
+| Bereich             | In Runtime-UI                                                                                                                                                                                                                                                                                                                                                                                                                     | Nur Backend/Mocks                                        |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Terminal Happy Path | Phone/DOB (+49 fest), **Nachname+DOB** (optional per Ops), Themen, Bestätigung, MFA-Assist, Notfall, Terminal gesperrt, Themen-Zeitfenster (Backend-Filter), optional Bon-Druck (Kiosk), Sprachen de/en/tr/ru/uk (Patienten-UI; MFA wählt sichtbare Sprachen, Default nur DE)                                                                                                                                                     | Empfangs-Ausweg bei nicht verfügbarer Anmeldung / Themen |
+| Portal              | Wartenummer → Menü → Upload **und** Erstanamnese; Session-Abschluss (Formular → revoke, Upload → TTL 30 Min); Captive-Authorize-Hook (dünner WLAN-Adapter geplant)                                                                                                                                                                                                                                                                | Vendor-Adapter; Fragenkatalog-Review                     |
+| MFA                 | Warteliste (SSE), Zonen, **Raum-Board** (grüne Spalte), **DnD** (WZ↔Räume), **Triage-Merker**, persistierter Anzeigename (`identity-ref`), Dokument-Vorschau (inkl. Deep-Link), Notfall (Ops-Stream), Quicksettings (**Terminal sperren**, Aufrufziel, Geräte-Presence/Pairing), Betrieb-Settings (WLAN-Promo, `returnWindowMinutes`), Rückhol-SMS, Themen-Reihenfolge per Drag, **Raum-Panel-Settings** (Tür + im Raum pro Raum) | Queue-Summary, Identity/Patient-Detail, PVS-Spalten      |
+| Raum-Panel          | Login pro Placement (`/room-panel`), Live-Snapshot (SSE), Ankunft/Entlassen/Aufruf aus `actions`, getrennte `callCandidates`-Liste                                                                                                                                                                                                                                                                                                | —                                                        |
+| TV                  | SSE, Aufruf, Chime, Pagination, Device-Pairing                                                                                                                                                                                                                                                                                                                                                                                    | —                                                        |
 
 **Echtzeit-Zielbild:** `docs/realtime-streams.md` — Presence (offline) und Pairing (PIN) sind getrennte SSE-Events; REST nur fuer Aktionen.
 
@@ -214,9 +214,9 @@ Patient weiß: **jetzt oder bald** ist offene Sprechstunde. Thema `offen` verhä
 
 ### Produktgrenze (WLAN / Captive)
 
-| Wir liefern | Wir liefern nicht |
-| ----------- | ----------------- |
-| Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API | Router, APs, Captive-Portal-Hardware, eigenen Captive-Datenpfad |
+| Wir liefern                                                                              | Wir liefern nicht                                                                                                        |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API                                | Router, APs, Captive-Portal-Hardware, eigenen Captive-Datenpfad                                                          |
 | später: dünne Vendor-Adapter (Outbound-URL / Inbound ja\|nein) nach gültiger Wartenummer | openNDS-`gateway`-Container als Produktkern (nur Lab-Referenz: [`gateway-captive-portal.md`](gateway-captive-portal.md)) |
 
 **Praxis-IT** stellt Gast-WLAN / Captive. Nach Freischaltung (oder ohne Captive: direkter Browser-Aufruf der Portal-URL) läuft unser Portal. Dev/Test ohne WLAN: `/portal` direkt im Browser.
@@ -227,19 +227,19 @@ Patient weiß: **jetzt oder bald** ist offene Sprechstunde. Thema `offen` verhä
 
 **Vorsorge:** Pro Ticket gibt es nur **eine aktive Patient-Session**. Nach **Formular-Absenden** wird die Session serverseitig geschlossen (`sessions/submit`); beim **Upload** endet sie per TTL (Standard 30 Min). Alter Token ungueltig, keine Wiederaufnahme der alten Upload-Liste. Ein erneuter Einstieg mit gleicher Wartenummer erzeugt technisch eine neue, leere Session. Innerhalb einer aktiven Session duerfen mehrere Dateien/Formular-Dokumente abgelegt werden; "einmalig" meint den Abschluss der Session, nicht genau eine Datei.
 
-| Pfad                         | Ablauf                                                                                          |
-| ---------------------------- | ----------------------------------------------------------------------------------------------- |
-| **Einstieg (optional)**      | Praxis-Gast-WLAN → fremdes Captive (IT/Vendor) → Redirect auf unser Portal                      |
-| **Session**                  | Portal → **Wartenummer** (+ Nutzungsbedingungen) → Menü                                         |
-| **Dokumente / Erstanamnese** | Browser, Session = Nummer                                                                       |
+| Pfad                         | Ablauf                                                                     |
+| ---------------------------- | -------------------------------------------------------------------------- |
+| **Einstieg (optional)**      | Praxis-Gast-WLAN → fremdes Captive (IT/Vendor) → Redirect auf unser Portal |
+| **Session**                  | Portal → **Wartenummer** (+ Nutzungsbedingungen) → Menü                    |
+| **Dokumente / Erstanamnese** | Browser, Session = Nummer                                                  |
 
 **Warum voller Browser für Upload?** Captive-Mini-WebViews sind oft eingeschränkt (Datei-Picker, Kamera). Nach Freischaltung: Redirect in Safari/Chrome — volle Upload-APIs. Ohne Captive reicht der direkte Portal-Aufruf (LAN oder später extern über Proxy-Whitelist).
 
-| Screen | Inhalt |
-| ------ | ------ |
-| Portal | Nutzungsbedingungen + **Wartenummer** |
-| Menü   | Upload \| Erstanamnese |
-| Form/Upload | ohne erneutes Ident |
+| Screen      | Inhalt                                |
+| ----------- | ------------------------------------- |
+| Portal      | Nutzungsbedingungen + **Wartenummer** |
+| Menü        | Upload \| Erstanamnese                |
+| Form/Upload | ohne erneutes Ident                   |
 
 **Begriffe:** **Erstanamnesebogen** / **Neupatientenfragebogen** = medizinisch-administrative Aufnahme beim **ersten** Praxisbesuch. **Anamnese** bei jedem Termin ist etwas anderes (kurz, heute). **Stammdatenblatt** eher Adresse/Versicherung (oft PVS/eGK).
 
@@ -296,11 +296,11 @@ Patient kann den **generierten** Bogen im Portal **nicht** erneut öffnen oder s
 
 Kein Patienten-Flow — Rahmen für Installation und Erreichbarkeit. Fachliche Screens bleiben Flow 1–5.
 
-| Baustein | Rolle |
-| -------- | ----- |
-| **Manager** (Electron) | Host-Setup, Status, Netzwerk, Wartung, Updates — [`../manager/README.md`](../manager/README.md), [`delivery.md`](delivery.md) |
+| Baustein                   | Rolle                                                                                                                                     |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Manager** (Electron)     | Host-Setup, Status, Netzwerk, Wartung, Updates — [`../manager/README.md`](../manager/README.md), [`delivery.md`](delivery.md)             |
 | **Proxy** (optional Caddy) | LAN-Einstieg Port 80 (HTTP umgesetzt); TLS und externes Portal (Whitelist) geplant — [`plan-proxy-container.md`](plan-proxy-container.md) |
-| **Gateway** (openNDS) | **Nicht** Produktkern — Lab-Referenz; Delivery-Default ohne Gateway — [`gateway-captive-portal.md`](gateway-captive-portal.md) |
+| **Gateway** (openNDS)      | **Nicht** Produktkern — Lab-Referenz; Delivery-Default ohne Gateway — [`gateway-captive-portal.md`](gateway-captive-portal.md)            |
 
 Mit aktivem Proxy sind Geräte-/Portal-URLs über `CANONICAL_BASE_URL` (ohne `:8080` im LAN) kanonisch; App-Port 8080 bleibt lokal für Setup-Probes. Details und Manager-UI (Proxy an/aus, Wiederherstellen) gehören in Manager-/Proxy-Doku, nicht in die Patienten-Abläufe.
 

@@ -467,21 +467,8 @@
   {#if step === 'welcome'}
     <section class="panel">
       <h2 class="panel__title">{t('ops.setup.welcomeTitle')}</h2>
-      <p class="text-desc">{t('ops.setup.welcomeBody')}</p>
-      <p class="text-desc">{t('ops.setup.welcomeHomeHint')}</p>
-      <ul class="ops-setup-list">
-        <li>
-          <code>{status.userFolders.imports}</code> — {t('ops.setup.welcomeImports')}
-        </li>
-        <li>
-          <code>{status.userFolders.exports}</code> — {t('ops.setup.welcomeExports')}
-        </li>
-      </ul>
-      <div class="ops-setup-host-hint">
-        <h3 class="panel__title">{t('ops.setup.hostAgentTitle')}</h3>
-        <p class="text-desc">{t('ops.setup.hostAgentBody')}</p>
-        <pre class="ops-setup-snippet">{t('ops.setup.hostAgentCli')}</pre>
-      </div>
+      <h3 class="panel__title">{t('ops.setup.hostAgentTitle')}</h3>
+      <p class="text-desc">{t('ops.setup.hostAgentBody')}</p>
     </section>
   {:else if step === 'practice'}
     <section class="panel">
@@ -499,6 +486,15 @@
   {:else if step === 'storage'}
     <section class="panel">
       <h2 class="panel__title">{t('ops.storageTitle')}</h2>
+      <p class="text-desc">{t('ops.setup.storageIntro')}</p>
+      <ul class="ops-setup-list">
+        <li>
+          <code>{status.userFolders.imports}</code> — {t('ops.setup.storageImports')}
+        </li>
+        <li>
+          <code>{status.userFolders.exports}</code> — {t('ops.setup.storageExports')}
+        </li>
+      </ul>
       <p class="text-desc">{t('ops.setup.storageHint')}</p>
       <p>
         {t('ops.storageImportsLabel')}:

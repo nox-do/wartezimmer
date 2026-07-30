@@ -5,6 +5,8 @@ export type CommandResult = { code: number; stdout: string; stderr: string };
 export type RunCommandOptions = {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
+  /** Kill the process after this many ms and treat as failure. */
+  timeoutMs?: number;
 };
 
 export function runProcessCommand(
@@ -20,6 +22,31 @@ export function runProcessCommand(
     });
     let stdout = '';
     let stderr = '';
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const finish = (result: CommandResult) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timer) {
+        clearTimeout(timer);
+      }
+      resolve(result);
+    };
+
+    if (options?.timeoutMs && options.timeoutMs > 0) {
+      timer = setTimeout(() => {
+        child.kill('SIGKILL');
+        finish({
+          code: 124,
+          stdout: stdout.trim(),
+          stderr: stderr.trim() || `timeout after ${options.timeoutMs}ms`,
+        });
+      }, options.timeoutMs);
+    }
+
     child.stdout?.on('data', (chunk) => {
       stdout += String(chunk);
     });
@@ -27,10 +54,10 @@ export function runProcessCommand(
       stderr += String(chunk);
     });
     child.on('close', (code) => {
-      resolve({ code: code ?? 1, stdout: stdout.trim(), stderr: stderr.trim() });
+      finish({ code: code ?? 1, stdout: stdout.trim(), stderr: stderr.trim() });
     });
     child.on('error', () => {
-      resolve({ code: 127, stdout: '', stderr: 'spawn failed' });
+      finish({ code: 127, stdout: '', stderr: 'spawn failed' });
     });
   });
 }

@@ -108,7 +108,10 @@ const VERSIONED_IMAGE_REPO_BY_KEY = {
 type PfupdateVersionedImageKey = keyof typeof VERSIONED_IMAGE_REPO_BY_KEY;
 
 /** Always required in v1 manifests. */
-const REQUIRED_VERSIONED_IMAGE_KEYS = ['app', 'sandbox'] as const satisfies readonly PfupdateVersionedImageKey[];
+const REQUIRED_VERSIONED_IMAGE_KEYS = [
+  'app',
+  'sandbox',
+] as const satisfies readonly PfupdateVersionedImageKey[];
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;

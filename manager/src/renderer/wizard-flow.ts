@@ -22,7 +22,8 @@ import { createInitialWizardFields, resolvedLanIp } from './wizard-state.js';
 export const DISABLED_GATEWAY_PLAN = { enabled: false as const };
 
 /**
- * Order: warm-up (Praxis + folders) → network basic → network complex → preview → apply.
+ * Order: warm-up (Routing + folders) → network basic → network complex → preview → apply.
+ * Practice display name belongs in Ops (/ops/setup), not host setup.
  * WLAN vendor selection is a placeholder on the complex network step until adapters exist.
  */
 export const WIZARD_STEPS = [1, 2, 3, 4, 5, 6, 7] as const;
@@ -30,7 +31,7 @@ export type WizardStep = (typeof WIZARD_STEPS)[number];
 
 export const WIZARD_STEP_LABELS = [
   'Voraussetzungen',
-  'Praxis',
+  'Routing',
   'Import & Export',
   'Netzwerk',
   'Zugang',
@@ -114,9 +115,6 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
   }
 
   if (step === 2) {
-    if (!state.practiceDisplayName.trim()) {
-      return { type: 'validate-error', message: 'Bitte einen Praxisnamen eingeben.' };
-    }
     return { type: 'goto', step: 3 };
   }
 
@@ -167,7 +165,6 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
 
 export function buildWizardPlanInput(state: WizardFlowState): {
   lanAppIp: string;
-  practiceDisplayName: string;
   canonicalBaseUrl?: string;
   gateway: typeof DISABLED_GATEWAY_PLAN;
   proxy: { enabled: boolean; httpPort: number };
@@ -175,7 +172,6 @@ export function buildWizardPlanInput(state: WizardFlowState): {
   const canonicalBaseUrl = draftCanonicalBaseUrl(state, state.network) ?? undefined;
   return {
     lanAppIp: resolvedLanIp(state),
-    practiceDisplayName: state.practiceDisplayName.trim(),
     ...(canonicalBaseUrl ? { canonicalBaseUrl } : {}),
     gateway: DISABLED_GATEWAY_PLAN,
     proxy: {

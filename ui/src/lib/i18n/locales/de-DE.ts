@@ -197,19 +197,15 @@ export const dict = {
       back: 'Zurück',
       next: 'Weiter',
       welcomeTitle: 'Willkommen',
-      welcomeBody:
-        'Praxis Flow nutzt zwei Ordner auf dem Rechner — ohne Docker-Container-Pfade in der Oberfläche.',
-      welcomeHomeHint:
-        'Die Pfade mit ~ beziehen sich auf das Home-Verzeichnis des Benutzers oder Service-Accounts, unter dem Sie docker compose starten (nicht ein Pfad „im Container“).',
-      welcomeImports: 'Kontakt-CSV und Importe',
-      welcomeExports: 'Dokument-Exporte für MFA',
       hostAgentTitle: 'Zuerst auf diesem Rechner (Docker & Netz)',
       hostAgentBody:
-        'Host-Konfiguration (.env), LAN-Adresse und Docker-Start erfolgen einmalig mit dem Praxis Flow Manager auf dem Server — nicht im Browser. Staff-PINs liegen in der Datenbank (Standard 0000). Danach hier weiter.',
-      hostAgentCli: 'npm run setup',
+        'Netz, Pfade und Secrets legt der Praxis Flow Manager in der .env im Installationsordner ab. Diese Datei wird für Start, Update und Backup weiter gebraucht — bitte nicht löschen. Staff-PINs liegen in der Datenbank (Standard 0000).',
+      storageIntro: 'Praxis Flow nutzt zwei Ordner auf dem Server-Rechner (nicht im Container).',
+      storageImports: 'Kontakt-CSV und Importe',
+      storageExports: 'Dokument-Exporte für MFA',
       storageHint: 'Beide Ordner müssen für die App lesbar bzw. schreibbar sein.',
       practiceHint:
-        'Name und Kontaktdaten erscheinen am Terminal, im Patientenportal und in Datenschutzhinweisen. Bereits hinterlegte Werte (z. B. aus der Erstinstallation) werden vorausgefüllt.',
+        'Name und Kontaktdaten erscheinen am Terminal, im Patientenportal und in Datenschutzhinweisen. Bereits hinterlegte Werte werden vorausgefüllt.',
       storagePending: 'Noch nicht geprüft',
       checksNotVerifiedBanner:
         'Speicher, CSV und Gateway werden erst nach „Prüfen“ oder auf den Schritten Speicher, WLAN, Abschluss und Prüfen live verifiziert.',

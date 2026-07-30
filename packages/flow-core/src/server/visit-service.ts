@@ -453,14 +453,20 @@ export function createVisitService(params: {
           record.targetLocationId,
           catalog.queues,
         );
-        maybeFail('transition:update');
-        updateVisit(record, {
+        const arrivePatch: VisitPatch = {
           status: 'arrived',
-          lastKnownLocationId: record.targetLocationId,
-          queueId: nextQueueId,
           locationConfidence: 'confirmed',
           arrivedAt: now,
-        });
+        };
+        // VisitPatch: fehlender Key = preserve; kein explizites undefined (z. B. Raum ohne eigene Queue).
+        if (record.targetLocationId !== undefined) {
+          arrivePatch.lastKnownLocationId = record.targetLocationId;
+        }
+        if (nextQueueId !== undefined) {
+          arrivePatch.queueId = nextQueueId;
+        }
+        maybeFail('transition:update');
+        updateVisit(record, arrivePatch);
         maybeFail('transition:event');
         addEvent(
           visitId,

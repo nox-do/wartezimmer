@@ -58,5 +58,6 @@ export function runDockerCommand(
   return runProcessCommand(resolveDockerCli(), args, {
     cwd: options?.cwd,
     env: buildDockerEnv(options?.env),
+    timeoutMs: options?.timeoutMs,
   });
 }

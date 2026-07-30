@@ -396,10 +396,7 @@ try {
   );
 
   const packagedPaths = pfupdate.PFUPDATE_ALLOWED_FILE_PATHS.filter((relativePath) => {
-    if (
-      !withGateway &&
-      pfupdate.PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS.includes(relativePath)
-    ) {
+    if (!withGateway && pfupdate.PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS.includes(relativePath)) {
       return false;
     }
     return true;

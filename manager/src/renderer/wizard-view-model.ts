@@ -59,10 +59,7 @@ export function wizardCompletionItSettingsUrl(state: WizardControllerState): str
 
 export function wizardApplyResultItems(result: ApplySetupResult): string[] {
   const composeOk = result.compose?.ok === true;
-  return [
-    `✓ .env geschrieben (${result.envPath})`,
-    `${wizardCheckMark(composeOk)} Docker Compose`,
-  ];
+  return [`✓ .env geschrieben (${result.envPath})`, `${wizardCheckMark(composeOk)} Docker Compose`];
 }
 
 export function wizardCompletionLeadText(state: WizardControllerState): string {
@@ -77,7 +74,7 @@ export function wizardStepTitle(step: WizardStep): string {
     case 1:
       return 'Voraussetzungen';
     case 2:
-      return 'Praxis — Anzeigename';
+      return 'Routing';
     case 3:
       return 'Import & Export — Host-Ordner';
     case 4:
