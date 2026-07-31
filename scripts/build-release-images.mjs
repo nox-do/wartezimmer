@@ -148,6 +148,8 @@ function buildReleaseImages(version) {
     appImage,
     '--build-arg',
     'VITE_API_BASE=',
+    '--build-arg',
+    `PRAXIS_FLOW_STACK_VERSION=${version}`,
     '--sbom=true',
     '--provenance=mode=max',
     '.',

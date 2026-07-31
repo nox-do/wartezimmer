@@ -88,13 +88,11 @@
   color: var(--mfa-ink);
 }
 
-.panel--clickable :global(strong),
 .panel__text strong {
   display: block;
   font-size: var(--text-md);
 }
 
-.panel--clickable :global(strong + span),
 .panel__text span {
   font-size: var(--text-base);
   color: var(--muted-foreground);
@@ -229,11 +227,6 @@
   margin: 0;
   color: var(--destructive);
   font-weight: 600;
-}
-
-.settings-grid {
-  display: grid;
-  gap: 10px;
 }
 
 .modal-form > .qs-room-list {

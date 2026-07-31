@@ -442,7 +442,7 @@
   <OpsSetupChecklist checks={status!.checks} {checkLabel} {checkHintText} />
 {/snippet}
 
-<StaffSettingsShell surface="ops" title={t('ops.setup.wizardTitle')} variant="section">
+<StaffSettingsShell title={t('ops.setup.wizardTitle')} backHref="/" backLabelKey="nav.home">
   {#if loading}
     <p class="text-muted">{t('ui.loading')}</p>
   {:else if status}

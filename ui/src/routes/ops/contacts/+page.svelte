@@ -4,7 +4,7 @@
   import { t } from '$lib/i18n/i18nStore.svelte';
 </script>
 
-<StaffSettingsShell surface="ops" title={t('ops.contactsTitle')} lead={t('ops.contactsLead')}>
+<StaffSettingsShell title={t('ops.contactsTitle')} lead={t('ops.contactsLead')}>
   <section class="panel">
     <OpsContactLookupForm variant="settings" />
   </section>

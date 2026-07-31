@@ -4,7 +4,7 @@
   import { t } from '$lib/i18n/i18nStore.svelte';
 </script>
 
-<StaffSettingsShell surface="ops" title={t('ops.portalTitle')} lead={t('ops.portalLead')}>
+<StaffSettingsShell title={t('ops.portalTitle')} lead={t('ops.portalLead')}>
   <section class="panel">
     <OpsPortalSettings />
   </section>

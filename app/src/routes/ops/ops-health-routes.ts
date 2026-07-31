@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { CoreDatabase } from '../../shared/db/database.js';
 import { opsSchemas } from '../../api/generated/ops.fastify-schemas.js';
 import { SILENT_ROUTE_LOG } from '@praxis-flow/server-shared';
+import { resolveStackVersion } from '../../shared/stack-version.js';
 
 export function registerOpsHealthRoutes(app: FastifyInstance, db: CoreDatabase): void {
   app.get(
@@ -19,6 +20,7 @@ export function registerOpsHealthRoutes(app: FastifyInstance, db: CoreDatabase):
         status: 'ok',
         service: 'app',
         timestamp: new Date().toISOString(),
+        stackVersion: resolveStackVersion(),
       };
     },
   );

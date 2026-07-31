@@ -3,7 +3,7 @@
   import Modal from '$lib/components/Modal.svelte';
   import MfaBooleanSettingToggle from '$lib/components/mfa/MfaBooleanSettingToggle.svelte';
   import Button from '$lib/components/forms/Button.svelte';
-  import MfaSettingsPageHeader from '$lib/components/mfa/MfaSettingsPageHeader.svelte';
+  import StaffSettingsShell from '$lib/components/shared/StaffSettingsShell.svelte';
   import { changeAuthPin, type AuthPinTarget } from '$lib/auth/session-client';
   import { fetchOpsSettings, patchOpsSettings } from '$lib/queue/ops-settings-api';
   import { t } from '$lib/i18n/i18nStore.svelte';
@@ -257,8 +257,7 @@
   });
 </script>
 
-<MfaSettingsPageHeader title={t('mfa.settings.betriebTitle')} lead={t('mfa.settings.betriebLead')} />
-
+<StaffSettingsShell title={t('mfa.settings.betriebTitle')} lead={t('mfa.settings.betriebLead')}>
 {#if loading}
   <p class="text-muted">{t('ui.loading')}</p>
 {:else}
@@ -373,6 +372,7 @@
       />
   </div>
 {/if}
+</StaffSettingsShell>
 
 <Modal
   open={pinDialogTarget != null}

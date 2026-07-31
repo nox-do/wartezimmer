@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import MfaSettingsPageHeader from '$lib/components/mfa/MfaSettingsPageHeader.svelte';
+  import StaffSettingsShell from '$lib/components/shared/StaffSettingsShell.svelte';
   import RoomsEditor from '$lib/components/mfa/RoomsEditor.svelte';
   import { loadTopicsRoomsSettings, persistTopicsRoomsSettings } from '$lib/mfa/topics-rooms-settings';
   import type { PracticeRoomWithPanels, PracticeTopicSetting } from '$lib/queue/ops-settings-api';
@@ -54,13 +54,10 @@
   });
 </script>
 
-<MfaSettingsPageHeader
-  title={t('mfa.settings.themesRoomsTitle')}
-  lead={t('mfa.settings.themesRoomsLead')}
-/>
-
-{#if loading}
-  <p class="text-muted">{t('ui.loading')}</p>
-{:else}
-  <RoomsEditor {rooms} busy={saving} onChange={handleRoomsChange} onPersist={persistSettings} />
-{/if}
+<StaffSettingsShell title={t('mfa.settings.themesRoomsTitle')} lead={t('mfa.settings.themesRoomsLead')}>
+  {#if loading}
+    <p class="text-muted">{t('ui.loading')}</p>
+  {:else}
+    <RoomsEditor {rooms} busy={saving} onChange={handleRoomsChange} onPersist={persistSettings} />
+  {/if}
+</StaffSettingsShell>

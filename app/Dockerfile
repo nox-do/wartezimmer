@@ -64,6 +64,9 @@ FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
+ARG PRAXIS_FLOW_STACK_VERSION=
+ENV PRAXIS_FLOW_STACK_VERSION=${PRAXIS_FLOW_STACK_VERSION}
+
 RUN rm -rf /usr/local/lib/node_modules/npm \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx
 

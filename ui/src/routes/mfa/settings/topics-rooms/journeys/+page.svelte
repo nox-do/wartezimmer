@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { Plus } from '@lucide/svelte';
   import Button from '$lib/components/forms/Button.svelte';
-  import MfaSettingsPageHeader from '$lib/components/mfa/MfaSettingsPageHeader.svelte';
+  import StaffSettingsShell from '$lib/components/shared/StaffSettingsShell.svelte';
   import JourneyAdminEditor from '$lib/components/mfa/JourneyAdminEditor.svelte';
   import {
     createJourneyTemplate,
@@ -87,7 +87,11 @@
   });
 </script>
 
-<MfaSettingsPageHeader title={t('mfa.settings.journeysPanelTitle')} lead={t('mfa.settings.journeysPanelDesc')}>
+<StaffSettingsShell
+  title={t('mfa.settings.journeysPanelTitle')}
+  lead={t('mfa.settings.journeysPanelDesc')}
+  density="compact"
+>
   {#snippet actions()}
     {#if !loading && journeyDesignerVisible}
       <Button type="button" variant="primary" size="sm" disabled={saving} onclick={addJourneyTemplate}>
@@ -96,21 +100,21 @@
       </Button>
     {/if}
   {/snippet}
-</MfaSettingsPageHeader>
 
-{#if loading}
-  <p class="text-muted">{t('ui.loading')}</p>
-{:else if !journeyDesignerVisible}
-  <p class="text-muted">{t('mfa.settings.journeyComplexModeRequired')}</p>
-{:else}
-  <JourneyAdminEditor
-    {journeySettings}
-    bind:selectedTemplateId
-    {enabledRooms}
-    busy={saving}
-    onChange={(next) => {
-      journeySettings = next;
-    }}
-    onSave={saveJourneySettings}
-  />
-{/if}
+  {#if loading}
+    <p class="text-muted">{t('ui.loading')}</p>
+  {:else if !journeyDesignerVisible}
+    <p class="text-muted">{t('mfa.settings.journeyComplexModeRequired')}</p>
+  {:else}
+    <JourneyAdminEditor
+      {journeySettings}
+      bind:selectedTemplateId
+      {enabledRooms}
+      busy={saving}
+      onChange={(next) => {
+        journeySettings = next;
+      }}
+      onSave={saveJourneySettings}
+    />
+  {/if}
+</StaffSettingsShell>

@@ -70,6 +70,35 @@ textarea {
   padding: 0;
 }
 
+/* Home / Ops / MFA settings — fullscreen sidebar shell (no :has punch-through) */
+.app-main[data-surface='settings'] {
+  max-width: none;
+  width: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-main[data-surface='settings'] > .mfa-page,
+.app-main[data-surface='settings'] > .staff-page {
+  flex: 1;
+  min-height: 0;
+  max-width: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 48rem) {
+  .app-main[data-surface='settings'] {
+    height: auto;
+    overflow: visible;
+  }
+}
+
 .page-title {
   margin: 0 0 var(--spacing-2);
   font-size: 1.5rem;

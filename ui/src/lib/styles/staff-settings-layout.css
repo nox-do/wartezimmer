@@ -1,0 +1,211 @@
+/* Shared MFA/Ops/Home settings sidebar shell — height comes from data-surface=settings */
+
+.staff-settings-layout {
+  --staff-settings-sidebar-bg: oklch(24% 0.02 220);
+  --staff-settings-nav-ink: oklch(90% 0.01 200);
+  --staff-settings-nav-ink-muted: color-mix(in oklch, oklch(90% 0.01 200) 68%, transparent);
+  --staff-settings-nav-accent: var(--green-success-border);
+
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(13.5rem, 15rem) minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--background);
+}
+
+.staff-settings-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--staff-settings-sidebar-bg);
+  color: var(--staff-settings-nav-ink);
+}
+
+.staff-settings-sidebar__top {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  flex-shrink: 0;
+  padding: 1rem 0.875rem 0.75rem;
+}
+
+.staff-settings-sidebar__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: fit-content;
+  color: var(--staff-settings-nav-ink-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.staff-settings-sidebar__back:hover {
+  color: var(--staff-settings-nav-ink);
+}
+
+.staff-settings-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.staff-settings-sidebar__mark {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.375rem;
+  background: var(--green-success);
+}
+
+.staff-settings-sidebar__title {
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  color: var(--staff-settings-nav-ink);
+}
+
+.staff-settings-sidebar__subtitle {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--staff-settings-nav-ink-muted);
+}
+
+.staff-settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.staff-settings-nav__group-link {
+  display: block;
+  padding: 0.5rem 0.875rem;
+  border-left: 3px solid transparent;
+  color: var(--staff-settings-nav-ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.staff-settings-nav__group-link:hover {
+  background: color-mix(in srgb, var(--zinc-100) 8%, transparent);
+}
+
+.staff-settings-nav__group-link--active {
+  border-left-color: var(--staff-settings-nav-accent);
+  background: color-mix(in srgb, var(--zinc-100) 10%, transparent);
+}
+
+.staff-settings-nav__heading {
+  padding: 0.75rem 0.875rem 0.25rem;
+  color: var(--staff-settings-nav-ink-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.staff-settings-nav__group:first-child .staff-settings-nav__heading {
+  padding-top: 0.25rem;
+}
+
+.staff-settings-nav__children {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.staff-settings-nav__child-link {
+  display: block;
+  padding: 0.375rem 0.875rem 0.375rem 1.25rem;
+  border-left: 3px solid transparent;
+  color: var(--staff-settings-nav-ink-muted);
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+
+.staff-settings-nav__child-link:hover {
+  color: var(--staff-settings-nav-ink);
+  background: color-mix(in srgb, var(--zinc-100) 6%, transparent);
+}
+
+.staff-settings-nav__child-link--active {
+  border-left-color: var(--staff-settings-nav-accent);
+  color: var(--staff-settings-nav-ink);
+  background: color-mix(in srgb, var(--zinc-100) 8%, transparent);
+}
+
+.staff-settings-sidebar__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex-shrink: 0;
+  padding: 0.75rem 0.875rem 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--zinc-100) 14%, transparent);
+}
+
+.staff-settings-sidebar__footer-link {
+  color: var(--staff-settings-nav-ink-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.staff-settings-sidebar__footer-link:hover {
+  color: var(--staff-settings-nav-ink);
+}
+
+.staff-settings-sidebar__footer-meta {
+  color: var(--staff-settings-nav-ink-muted);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.staff-settings-main {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.5rem 2rem 2.5rem 1.5rem;
+}
+
+@media (max-width: 48rem) {
+  .staff-settings-layout {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .staff-settings-sidebar {
+    overflow: visible;
+  }
+
+  .staff-settings-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow: visible;
+    gap: 0.5rem;
+    padding-inline: 0.875rem;
+  }
+
+  .staff-settings-nav__group {
+    min-width: min(100%, 14rem);
+  }
+
+  .staff-settings-nav__children {
+    display: none;
+  }
+
+  .staff-settings-main {
+    overflow: visible;
+    padding-inline: 1rem;
+  }
+}

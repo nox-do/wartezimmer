@@ -1410,6 +1410,10 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
+                  stackVersion:
+                    type: string
+                    nullable: true
+                    description: Stack release version baked into the app image (null in local/dev builds)
   /api/v1/practice/profile:
     get:
       summary: Public practice profile for patient-facing UIs

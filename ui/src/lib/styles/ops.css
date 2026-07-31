@@ -305,3 +305,22 @@
   font-weight: 600;
   line-height: 1.25;
 }
+
+.ops-maintenance-subtitle {
+  margin: 1rem 0 0.35rem;
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.ops-maintenance-subtitle:first-of-type {
+  margin-top: 0.5rem;
+}
+
+.ops-maintenance-list {
+  margin: 0 0 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.ops-maintenance-list li + li {
+  margin-top: 0.25rem;
+}

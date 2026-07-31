@@ -1,5 +1,6 @@
-import type { TranslationKey } from '$lib/i18n/core/translation-keys';
 import type { RoutingCapabilities } from '$lib/mfa/practice-ops-api';
+import type { StaffSettingsNavGroup, StaffSettingsNavItem } from '$lib/staff/settings-nav';
+import { isStaffSettingsItemActive } from '$lib/staff/settings-nav';
 
 export type MfaSettingsHref =
   | '/mfa/settings/operations'
@@ -7,16 +8,12 @@ export type MfaSettingsHref =
   | '/mfa/settings/topics-rooms/topics'
   | '/mfa/settings/topics-rooms/journeys';
 
-export type MfaSettingsNavItem = {
-  id: string;
-  labelKey: TranslationKey;
+export type MfaSettingsNavItem = StaffSettingsNavItem & {
   href: MfaSettingsHref;
   requiresJourneyDesigner?: boolean;
 };
 
-export type MfaSettingsNavGroup = {
-  id: string;
-  labelKey: TranslationKey;
+export type MfaSettingsNavGroup = Omit<StaffSettingsNavGroup, 'href' | 'children'> & {
   href: MfaSettingsHref;
   children: MfaSettingsNavItem[];
 };
@@ -54,7 +51,7 @@ export function isJourneyDesignerNavVisible(capabilities: RoutingCapabilities | 
 
 export function buildMfaSettingsNav(
   capabilities: RoutingCapabilities | null,
-): MfaSettingsNavGroup[] {
+): StaffSettingsNavGroup[] {
   return MFA_SETTINGS_NAV.map((group) => ({
     ...group,
     children: group.children.filter(
@@ -63,6 +60,4 @@ export function buildMfaSettingsNav(
   }));
 }
 
-export function isMfaSettingsItemActive(pathname: string, href: string): boolean {
-  return pathname === href;
-}
+export const isMfaSettingsItemActive = isStaffSettingsItemActive;

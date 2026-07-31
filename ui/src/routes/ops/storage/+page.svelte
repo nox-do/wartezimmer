@@ -32,7 +32,7 @@
   });
 </script>
 
-<StaffSettingsShell surface="ops" title={t('ops.storageTitle')} lead={t('ops.storageLead')}>
+<StaffSettingsShell title={t('ops.storageTitle')} lead={t('ops.storageLead')}>
   {#if loading}
     <p class="text-muted">{t('ui.loading')}</p>
   {:else if storage}

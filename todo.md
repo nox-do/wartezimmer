@@ -1,6 +1,34 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-30
+Stand: 2026-07-31
+
+## CSS Nesting-Diät Settings/Home (2026-07-31)
+
+- `data-surface="settings"` für `/`, `/panels`, `/ops/*` (ohne Setup), `/mfa/settings` — Fullscreen am `.app-main`, kein `:has()`-Punch-through mehr
+- Höhen: einmal `100dvh` am Surface; Sidebar/Main über Flex/Grid (`min-height: 0`), kein 3× `100dvh`
+- Header: `MfaSettingsPageHeader` → `StaffSettingsShell` (+ `actions`, `density="compact"`); MFA-Header-CSS in `staff.css`
+- Relikt: `.panel--clickable :global(strong)` entfernt (Markup nutzt `.panel__text`)
+
+## Home Sidebar (2026-07-30)
+
+- `/` + `/panels`: Sidebar nur 2 Punkte (Schnellzugriffe, Raum-Panels); Cards im Content (neuer Tab)
+- Raum-Panels: Chrome-Fullscreen/Startbildschirm-Hinweis für Android-Tablets
+- Kacheln: `panel panel--clickable` + Grid; tote `.staff-settings-main .panel + .panel`-Regel entfernt (kaputt im Grid, redundant zu `.panel` margin-bottom)
+- Kurze Untertitel (MFA → Dashboard)
+- Shared Layout: optional Back, `external` Nav-Links, dynamische `label`, Footer-Meta
+- Stack-Version unten links aus `GET /api/v1/ops/health` → `stackVersion` (Docker `PRAXIS_FLOW_STACK_VERSION` via `release:images`)
+- Active-Match: `href: '/'` nur exact (kein Prefix auf alle Routen)
+
+## Ops/MFA Settings Sidebar angleichen (2026-07-30)
+
+- Shared `StaffSettingsLayout` + `staff-settings-layout.css`
+- Ops: linke Navi mit kurzen Labels (Allgemein, Speicher, Kontakte, SMS, Portal, Sicherheit, Wartung); Langtexte bleiben im Content
+- `/ops` → Redirect `/ops/practice`; Hub-Kacheln entfernt; Setup-Reopen unter Wartung
+- Footer Ops → MFA Settings; MFA Footer → `/ops/practice`
+- Review-Fixes: Setup-Escape (`StaffSettingsShell` Back → Home); tote Hub-i18n/`surface`/`variant`/`staff-page--settings` weg
+- Wartung: Setup in eigener Card; Hinweise gebündelt; Reset als Danger-Card; Copy IT-kurz
+- Setup Schritt Speicher + Ops „Dateien“: Pfad-Hinweis Manager → Wartung → Import & Export
+- Release `2.1.0` Images neu gebaut (`--no-cache`) + `.tar.gz` neu gepackt
 
 ## Fix: arrive VisitPatch undefined (2026-07-30)
 

@@ -2307,6 +2307,9 @@ export const GET_api_v1_ops_healthResponse200 = {
       type: 'string',
       format: 'date-time',
     },
+    stackVersion: {
+      type: ['string', 'null'],
+    },
   },
 } as const;
 

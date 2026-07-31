@@ -32,6 +32,8 @@ export interface paths {
               service: string;
               /** Format: date-time */
               timestamp: string;
+              /** @description Stack release version baked into the app image (null in local/dev builds) */
+              stackVersion?: string | null;
             };
           };
         };
