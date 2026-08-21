@@ -35,16 +35,3 @@ test('validateSettingsSnapshotForRestore rejects invalid routing mode', () => {
   assert.equal(result.ok, false);
   assert.match(result.errors.join(' '), /routingMode/i);
 });
-
-test('validateSettingsSnapshotForRestore rejects empty topics like import', () => {
-  const snapshot = validSnapshot();
-  const result = validateSettingsSnapshotForRestore({
-    ...snapshot,
-    opsSettings: {
-      ...snapshot.opsSettings,
-      topics: [],
-    },
-  });
-  assert.equal(result.ok, false);
-  assert.equal(result.code, 'OPS_SETTINGS_INVALID');
-});

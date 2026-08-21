@@ -1,6 +1,26 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-07-31
+Stand: 2026-08-21
+
+## Test-Dopplungen Inventur (2026-08-21)
+
+Zweitmeinung bestätigt; Batch bereinigt (001–006 + 008). **007 behalten**.
+
+- **001** flow-core `ticket-code`: nur noch Visit-ID
+- **002** UI `terminal-form`: i18n-Mapping-Smoke (+ `tooLong`/`invalidChars`); Domain `too_long` ergänzt
+- **003** UI `room-panel-text`: Fallback-Case weg; Preset-Key + Custom-Wiring + Option-Label
+- **004** UI `room-default-call-target.test.ts` gelöscht
+- **005** UI `room-capacity`: Occupancy auf Adapter-Smoke; App unverändert (war schon Adapter/Errors)
+- **006** Validate Empty-Topics entfernt (bleibt in Snapshot-Roundtrip)
+- **008** flow-core Unit `topic-guard` gelöscht (Integration bleibt)
+
+Bewusst behalten: supersede, room-panel snapshot, call-room, room-removal, Manager VM/Controller, room-panel-policy, **007** last-name locale.
+
+## Release-Images 2.1.0 neu (2026-07-31)
+
+- Working tree clean — kein Commit nötig
+- Version **nicht** erhöht (`2.1.0` ungenutzt); Images + `.tar.gz` + `.pfupdate` neu
+- Build: `docker build --no-cache` app+sandbox → `release:images:pack` → `release:pfupdate --no-build`
 
 ## CSS Nesting-Diät Settings/Home (2026-07-31)
 

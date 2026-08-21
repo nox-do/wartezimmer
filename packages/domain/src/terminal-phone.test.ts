@@ -21,10 +21,11 @@ test('getTerminalPhoneSuffixIssue accepts 9–11 digit mobile suffix without lea
   assert.equal(getTerminalPhoneSuffixIssue('15123456789'), null);
 });
 
-test('getTerminalPhoneSuffixIssue rejects leading zero, short, and invalid chars', () => {
+test('getTerminalPhoneSuffixIssue rejects leading zero, short, long, and invalid chars', () => {
   assert.equal(getTerminalPhoneSuffixIssue(''), null);
   assert.equal(getTerminalPhoneSuffixIssue('01512345678'), 'leading_zero');
   assert.equal(getTerminalPhoneSuffixIssue('1512'), 'too_short');
+  assert.equal(getTerminalPhoneSuffixIssue('151234567890'), 'too_long');
   assert.equal(getTerminalPhoneSuffixIssue('1512a45678'), 'invalid_chars');
 });
 

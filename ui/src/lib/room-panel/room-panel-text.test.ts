@@ -10,14 +10,8 @@ describe('formatRoomPanelDisplayText', () => {
     );
   });
 
-  it('uses custom text when preset is custom', () => {
+  it('returns trimmed custom text when preset is custom', () => {
     expect(formatRoomPanelDisplayText('custom', '  Hallo  ', 'please_enter', t)).toBe('Hallo');
-  });
-
-  it('falls back when custom is empty', () => {
-    expect(formatRoomPanelDisplayText('custom', '   ', 'please_wait_here', t)).toBe(
-      'roomPanel.text_please_wait_here',
-    );
   });
 });
 
