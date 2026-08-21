@@ -1,15 +1,11 @@
 <script lang="ts">
-  import { gotoResolved, resolvedHref } from '$lib/navigation/kit-paths';
+  import { gotoResolved } from '$lib/navigation/kit-paths';
   import { onMount } from 'svelte';
-  import { getContext } from 'svelte';
   import TerminalWlanPromoBanner from '$lib/components/terminal/TerminalWlanPromoBanner.svelte';
   import BrowserTranslatedText from '$lib/components/shared/BrowserTranslatedText.svelte';
   import { formatTicketCode } from '@praxis-flow/domain';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
-  import {
-    TERMINAL_OPS_CONTEXT_KEY,
-    type TerminalOpsSnapshot,
-  } from '$lib/terminal/terminal-ops-context';
+  import { terminalOps } from '$lib/terminal/terminal-ops-runtime.svelte';
   import {
     getPracticeProfileFallback,
     practiceDisplayLabel,
@@ -20,7 +16,6 @@
   import { resolveReceiptTopicLabel } from '$lib/terminal/terminal-receipt-topic-label';
 
   const AUTO_CLOSE_SEC = 25;
-  const terminalOps = getContext<TerminalOpsSnapshot>(TERMINAL_OPS_CONTEXT_KEY);
 
   let result = $state(readCheckinResult());
   let remainingSec = $state(AUTO_CLOSE_SEC);
@@ -57,30 +52,27 @@
   }
 
   onMount(() => {
-    result = readCheckinResult();
-    if (!result) {
+    const checkin = readCheckinResult();
+    if (!checkin) {
       void gotoResolved('/terminal');
       return;
     }
+    result = checkin;
 
     requestAnimationFrame(() => {
-      maybePrintReceipt(result!);
+      maybePrintReceipt(checkin);
     });
 
     const countdownTimer = setInterval(() => {
       remainingSec -= 1;
       if (remainingSec <= 0) {
         clearInterval(countdownTimer);
+        closeScreen();
       }
     }, 1000);
 
-    const closeTimer = setTimeout(() => {
-      closeScreen();
-    }, AUTO_CLOSE_SEC * 1000);
-
     return () => {
       clearInterval(countdownTimer);
-      clearTimeout(closeTimer);
     };
   });
 
@@ -94,7 +86,7 @@
         : tf('terminal.confirmedTicketAria', { code: ticketCode })
       : '',
   );
-  const wlanPromoEnabled = $derived(terminalOps?.terminalWlanPromoEnabled ?? false);
+  const wlanPromoEnabled = $derived(terminalOps.terminalWlanPromoEnabled);
 </script>
 
 {#if result}

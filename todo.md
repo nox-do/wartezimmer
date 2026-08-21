@@ -2,6 +2,19 @@
 
 Stand: 2026-08-21
 
+## UI-Tour (2026-08-21)
+
+- Überblick Stack/Architektur/Concern-Trennung (SvelteKit SPA → `app/dist/ui-static`)
+- **Terminal Cleanup** (Batch 1):
+  - Assist/`needsAssistance`: Stub `terminal-assist.stub.ts` (API/Session/Hints bleiben, Press unverdrahtet)
+  - Confirmed: unused Import weg; ein Countdown-Timer schließt
+  - EmergencyBar: `emergencyActive` aus Heartbeat/Runtime, kein eigener Poll
+  - Ops-Runtime: `terminal-ops-runtime.svelte.ts`; Layout dünn; Pages importieren `terminalOps` (kein Context)
+  - Numpad: bewusst nicht angefasst
+  - Bugbot-Fixes: EmergencyBar post-raise Heartbeat-Refresh + Release-Sync; Runtime State-Reset on mount/unmount
+  - Bugbot Re-Review: keine Findings
+- Offen: Assist-Press UX verdrahten · Numpad/Keyboard nur nach gezielter Duplikat-Prüfung
+
 ## Test-Dopplungen Inventur (2026-08-21)
 
 Zweitmeinung bestätigt; Batch bereinigt (001–006 + 008). **007 behalten**.

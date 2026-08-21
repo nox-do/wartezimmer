@@ -21,12 +21,15 @@ export type TerminalCheckinResult = {
 
 const SESSION_KEY = 'terminal:session';
 const RESULT_KEY = 'terminal:checkin-result';
+/** STUB assist client state — see `terminal-assist.stub.ts`. */
 const ASSIST_EXPIRES_KEY = 'terminal:assist-expires-at';
 
+/** STUB — wire via terminal-assist.stub later */
 export function writeAssistMode(expiresAt: string): void {
   sessionStorage.setItem(ASSIST_EXPIRES_KEY, expiresAt);
 }
 
+/** STUB — wire via terminal-assist.stub later */
 export function readAssistMode(): boolean {
   const expiresAt = sessionStorage.getItem(ASSIST_EXPIRES_KEY);
   if (!expiresAt) {
@@ -39,6 +42,7 @@ export function readAssistMode(): boolean {
   return true;
 }
 
+/** STUB — wire via terminal-assist.stub later */
 export function readAssistExpiresAt(): string | null {
   return sessionStorage.getItem(ASSIST_EXPIRES_KEY);
 }

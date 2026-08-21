@@ -62,6 +62,7 @@ export async function createCheckin(input: {
   });
 }
 
+/** STUB entry — not called from UI yet; see `terminal-assist.stub.ts`. */
 export async function pressTerminalAssist() {
   return terminalAuthFetch<TerminalAssistPressed>('/api/v1/checkins/assist/press', {
     method: 'POST',
@@ -69,6 +70,7 @@ export async function pressTerminalAssist() {
   });
 }
 
+/** STUB entry — not called from UI yet; see `terminal-assist.stub.ts`. */
 export async function releaseTerminalAssist() {
   return terminalAuthFetch<null>('/api/v1/checkins/assist/release', {
     method: 'POST',

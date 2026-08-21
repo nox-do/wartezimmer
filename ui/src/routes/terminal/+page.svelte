@@ -3,7 +3,6 @@
   import { resolve } from '$app/paths';
   import { onMount } from 'svelte';
   import { ChevronRight, CreditCard, IdCard, Smartphone, Users } from '@lucide/svelte';
-  import { getContext } from 'svelte';
   import TerminalEmergencyBar from '$lib/components/terminal/TerminalEmergencyBar.svelte';
   import TerminalPrivacyModal from '$lib/components/terminal/TerminalPrivacyModal.svelte';
   import TerminalWlanPromoBanner from '$lib/components/terminal/TerminalWlanPromoBanner.svelte';
@@ -14,10 +13,7 @@
     practiceDisplayLabel,
   } from '$lib/practice/practice-profile-client';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
-  import {
-    TERMINAL_OPS_CONTEXT_KEY,
-    type TerminalOpsSnapshot,
-  } from '$lib/terminal/terminal-ops-context';
+  import { terminalOps } from '$lib/terminal/terminal-ops-runtime.svelte';
   import {
     createCheckin,
     mapCheckinErrorMessage,
@@ -26,21 +22,20 @@
   import { clearAssistMode, writeCheckinResult } from '$lib/terminal/terminal-session';
   import { toastStore } from '$lib/stores/toastStore';
 
-  const terminalOps = getContext<TerminalOpsSnapshot>(TERMINAL_OPS_CONTEXT_KEY);
-
   let busy = $state(false);
   let privacyModalOpen = $state(false);
   let practiceProfile = $state(getPracticeProfileFallback());
 
   const privacyNotice = $derived(getTerminalPrivacyNotice(practiceProfile));
   const practiceName = $derived(practiceDisplayLabel(practiceProfile, t('terminal.practiceFallback')));
-  const loading = $derived(terminalOps?.loading ?? true);
-  const checkinLocked = $derived(terminalOps?.checkinLocked ?? false);
-  const emergencyEnabled = $derived(terminalOps?.emergencyEnabled ?? false);
-  const wlanPromoEnabled = $derived(terminalOps?.terminalWlanPromoEnabled ?? false);
-  const authPhoneEnabled = $derived(terminalOps?.terminalAuthPhoneEnabled ?? false);
-  const authNameDobEnabled = $derived(terminalOps?.terminalAuthNameDobEnabled ?? false);
-  const authEgkEnabled = $derived(terminalOps?.terminalAuthEgkEnabled ?? false);
+  const loading = $derived(terminalOps.loading);
+  const checkinLocked = $derived(terminalOps.checkinLocked);
+  const emergencyEnabled = $derived(terminalOps.emergencyEnabled);
+  const emergencyActive = $derived(terminalOps.emergencyActive);
+  const wlanPromoEnabled = $derived(terminalOps.terminalWlanPromoEnabled);
+  const authPhoneEnabled = $derived(terminalOps.terminalAuthPhoneEnabled);
+  const authNameDobEnabled = $derived(terminalOps.terminalAuthNameDobEnabled);
+  const authEgkEnabled = $derived(terminalOps.terminalAuthEgkEnabled);
 
   onMount(() => {
     const stopProfile = mountPracticeProfileSync((profile) => {
@@ -66,6 +61,7 @@
       return;
     }
 
+    // Persönliche Anmeldung (Visit M-…) — nicht Assist-Press / needsAssistance (siehe terminal-assist.stub.ts).
     clearAssistMode();
     writeCheckinResult({
       visitId: result.data.visitId,
@@ -162,7 +158,7 @@
     {/if}
 
     {#if emergencyEnabled}
-      <TerminalEmergencyBar />
+      <TerminalEmergencyBar emergencyActive={emergencyActive} />
     {/if}
 
     <TerminalPrivacyModal bind:open={privacyModalOpen} notice={privacyNotice} />

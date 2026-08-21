@@ -2,23 +2,29 @@
   import { onMount } from 'svelte';
   import { BellRing, ChevronRight, TriangleAlert } from '@lucide/svelte';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
-  import { fetchTerminalHeartbeat, raiseTerminalEmergency } from '$lib/terminal/terminal-api';
+  import { raiseTerminalEmergency } from '$lib/terminal/terminal-api';
+  import {
+    refreshTerminalOpsHeartbeat,
+    terminalOps,
+  } from '$lib/terminal/terminal-ops-runtime.svelte';
   import { toastStore } from '$lib/stores/toastStore';
 
   interface Props {
     disabled?: boolean;
+    /** From terminal heartbeat (`terminalOps.emergencyActive`). */
+    emergencyActive?: boolean;
   }
 
-  let { disabled = false }: Props = $props();
+  let { disabled = false, emergencyActive = false }: Props = $props();
 
   const COUNTDOWN_SEC = 3;
-  const RELEASE_POLL_MS = 3_000;
 
   let counting = $state(false);
   let remaining = $state(COUNTDOWN_SEC);
   let done = $state(false);
+  /** Blocks release-sync until post-raise heartbeat refresh finishes (avoids sync-turn reset). */
+  let suppressReleaseSync = $state(false);
   let timer: ReturnType<typeof setInterval> | null = null;
-  let releaseTimer: ReturnType<typeof setInterval> | null = null;
 
   function clearTimer() {
     if (timer) {
@@ -27,45 +33,29 @@
     }
   }
 
-  function stopReleasePoll() {
-    if (releaseTimer) {
-      clearInterval(releaseTimer);
-      releaseTimer = null;
-    }
-  }
-
   function reset() {
     clearTimer();
-    stopReleasePoll();
     counting = false;
     remaining = COUNTDOWN_SEC;
     done = false;
-  }
-
-  async function checkEmergencyReleased() {
-    const result = await fetchTerminalHeartbeat();
-    if (result.ok && !result.data.emergencyActive) {
-      reset();
-    }
-  }
-
-  function startReleasePoll() {
-    stopReleasePoll();
-    void checkEmergencyReleased();
-    releaseTimer = setInterval(() => {
-      void checkEmergencyReleased();
-    }, RELEASE_POLL_MS);
+    suppressReleaseSync = false;
   }
 
   $effect(() => {
-    if (done) {
-      startReleasePoll();
-      return () => {
-        stopReleasePoll();
-      };
+    if (suppressReleaseSync) {
+      return;
     }
 
-    stopReleasePoll();
+    if (emergencyActive) {
+      done = true;
+      clearTimer();
+      counting = false;
+      return;
+    }
+
+    if (done) {
+      reset();
+    }
   });
 
   function startCountdown() {
@@ -94,6 +84,14 @@
     }
 
     done = true;
+    suppressReleaseSync = true;
+    await refreshTerminalOpsHeartbeat();
+    suppressReleaseSync = false;
+
+    // Fast MFA release (or never-active): read runtime, not prop (prop may lag one flush).
+    if (!terminalOps.emergencyActive) {
+      reset();
+    }
   }
 
   function mapEmergencyError(code: string | undefined, fallback: string): string {
@@ -110,7 +108,6 @@
   onMount(() => {
     return () => {
       clearTimer();
-      stopReleasePoll();
     };
   });
 </script>

@@ -1,14 +1,11 @@
 <script lang="ts">
   import { gotoResolved } from '$lib/navigation/kit-paths';
   import { resolve } from '$app/paths';
-  import { getContext } from 'svelte';
   import { ChevronRight, CreditCard } from '@lucide/svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { mountTerminalAuthRouteGuard } from '$lib/terminal/terminal-auth-route-guard.svelte';
-  import { TERMINAL_OPS_CONTEXT_KEY, type TerminalOpsSnapshot } from '$lib/terminal/terminal-ops-context';
+  import { terminalOps } from '$lib/terminal/terminal-ops-runtime.svelte';
   import { writeTerminalSession } from '$lib/terminal/terminal-session';
-
-  const terminalOps = getContext<TerminalOpsSnapshot>(TERMINAL_OPS_CONTEXT_KEY);
 
   mountTerminalAuthRouteGuard(() => terminalOps, 'egk');
 

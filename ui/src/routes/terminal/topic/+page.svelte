@@ -1,7 +1,7 @@
 <script lang="ts">
   import { gotoResolved } from '$lib/navigation/kit-paths';
   import { resolve } from '$app/paths';
-  import { getContext, onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import { ChevronRight } from '@lucide/svelte';
   import TopicIconDisplay from '$lib/components/topics/TopicIconDisplay.svelte';
   import {
@@ -16,11 +16,9 @@
     type TerminalTopicOption,
   } from '$lib/terminal/terminal-api';
   import { mountTerminalAuthRouteGuard } from '$lib/terminal/terminal-auth-route-guard.svelte';
-  import { TERMINAL_OPS_CONTEXT_KEY, type TerminalOpsSnapshot } from '$lib/terminal/terminal-ops-context';
+  import { terminalOps } from '$lib/terminal/terminal-ops-runtime.svelte';
   import { readAssistMode, readTerminalSession, writeCheckinResult } from '$lib/terminal/terminal-session';
   import { toastStore } from '$lib/stores/toastStore';
-
-  const terminalOps = getContext<TerminalOpsSnapshot>(TERMINAL_OPS_CONTEXT_KEY);
 
   let session = $state(readTerminalSession());
   let topics = $state<TerminalTopicOption[]>([]);
@@ -31,6 +29,7 @@
 
   mountTerminalAuthRouteGuard(() => terminalOps, () => session?.authPath ?? null);
 
+  // STUB: Assist-Press-UX — siehe terminal-assist.stub.ts (readAssistMode nicht reaktiv).
   const showAssistHint = $derived(Boolean(session?.assistMode && readAssistMode()));
 
   function displayLabel(label: string): string {
