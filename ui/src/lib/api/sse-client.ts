@@ -33,14 +33,6 @@ export const SSE_CLIENT_ERROR = {
   interrupted: 'SSE_INTERRUPTED',
 } as const;
 
-function consumeSseBuffer(
-  buffer: string,
-  eventName: string,
-  onEvent: (data: unknown) => void,
-): string {
-  return consumeMultiEventSseBuffer(buffer, { [eventName]: onEvent });
-}
-
 export type MultiEventSseHandlers = Record<string, (data: unknown) => void>;
 
 function consumeMultiEventSseBuffer(buffer: string, handlers: MultiEventSseHandlers): string {
@@ -155,6 +147,10 @@ export function connectMultiEventSseStream(options: MultiEventSseStreamOptions):
         signal: abortController.signal,
       });
 
+      if (closed) {
+        return;
+      }
+
       if (response.status === 401) {
         options.onError?.(SSE_CLIENT_ERROR.unauthorized);
         return;
@@ -178,6 +174,9 @@ export function connectMultiEventSseStream(options: MultiEventSseStreamOptions):
 
       while (!closed) {
         const { done, value } = await reader.read();
+        if (closed) {
+          return;
+        }
         if (done) {
           break;
         }
@@ -236,130 +235,12 @@ export type SseStreamOptions<T> = {
 };
 
 export function connectSseStream<T>(options: SseStreamOptions<T>): () => void {
-  let closed = false;
-  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  let abortController: AbortController | null = null;
-  let reconnectDelayMs = 1000;
-  const slotKey = streamSlotKey(options.url, options.clientRole);
+  const { eventName, onEvent, ...transportOptions } = options;
 
-  const scheduleReconnect = () => {
-    if (closed) {
-      return;
-    }
-
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-    }
-
-    reconnectTimer = setTimeout(() => {
-      reconnectDelayMs = Math.min(reconnectDelayMs * 2, MAX_RECONNECT_MS);
-      void connect();
-    }, reconnectDelayMs);
-  };
-
-  const connect = async () => {
-    if (closed) {
-      return;
-    }
-
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
-
-    abortController?.abort();
-    abortController = new AbortController();
-
-    try {
-      const headers = new Headers({
-        Accept: 'text/event-stream',
-      });
-
-      if (options.authToken) {
-        headers.set('Authorization', `Bearer ${options.authToken}`);
-      }
-
-      if (options.csrfToken) {
-        headers.set(options.csrfHeaderName ?? 'X-CSRF-Token', options.csrfToken);
-      }
-
-      if (options.includeClientOriginHeader && typeof window !== 'undefined') {
-        headers.set('X-Client-Origin', window.location.origin);
-      }
-      if (options.clientRole) {
-        headers.set('X-Client-Role', options.clientRole);
-      }
-
-      const response = await fetch(options.url, {
-        headers,
-        credentials: options.credentials,
-        signal: abortController.signal,
-      });
-
-      if (response.status === 401) {
-        options.onError?.(SSE_CLIENT_ERROR.unauthorized);
-        return;
-      }
-
-      if (response.status === 403) {
-        options.onError?.(SSE_CLIENT_ERROR.forbidden);
-        return;
-      }
-
-      if (!response.ok || !response.body) {
-        options.onError?.(SSE_CLIENT_ERROR.connectFailed);
-        scheduleReconnect();
-        return;
-      }
-
-      reconnectDelayMs = 1000;
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (!closed) {
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-        try {
-          buffer = consumeSseBuffer(buffer, options.eventName, (data) => {
-            options.onEvent(data as T);
-          });
-        } catch {
-          options.onError?.(SSE_CLIENT_ERROR.invalidData);
-        }
-      }
-
-      if (!closed) {
-        scheduleReconnect();
-      }
-    } catch (error) {
-      if (closed || (error instanceof DOMException && error.name === 'AbortError')) {
-        return;
-      }
-
-      options.onError?.(
-        toNetworkUnreachableSignal(error) ??
-          (error instanceof Error ? error.message : SSE_CLIENT_ERROR.interrupted),
-      );
-      scheduleReconnect();
-    }
-  };
-
-  const disconnect = () => {
-    closed = true;
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-    }
-    abortController?.abort();
-    releaseStreamSlot(slotKey, disconnect);
-  };
-
-  claimStreamSlot(slotKey, disconnect);
-  void connect();
-
-  return disconnect;
+  return connectMultiEventSseStream({
+    ...transportOptions,
+    handlers: {
+      [eventName]: (data) => onEvent(data as T),
+    },
+  });
 }

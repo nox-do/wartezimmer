@@ -3,15 +3,7 @@
    * Room-panel route orchestrator: login, URL deep-link reconcile, SSE snapshot, visit actions.
    *
    * API and pure helpers live in `$lib/room-panel/*` (api, transition, requested-url, snapshot-view).
-   * This file still owns reactive state and lifecycle — intentionally not split yet (2026-07-12).
-   *
-   * **Deferred refactor:** extract to `room-panel-session.svelte.ts` (same pattern as `tv-display.svelte.ts`).
-   * Worth doing when the next feature or bugfix touches this route; not a standalone cleanup — no user-facing gain.
-   *
-   * **Split triggers:** recurring login/stream bugs, or the file growing again. Prefer incremental extraction on that touch, not a big-bang move.
-   *
-   * **Page wiring after split:** `mountRoomPanelSession({ getRequestedRoomId, getRequestedPlacement })` from `$page`;
-   * markup stays here, session module exports `$state` + actions.
+   * Lifecycle validity (mount, session, stream, reconcile) is centralized in `room-panel-lifecycle.ts`.
    */
   import { onMount } from 'svelte';
   import { page } from '$app/state';
@@ -36,6 +28,15 @@
     roomPanelLoginKey,
   } from '$lib/room-panel/room-panel-login-key';
   import {
+    RoomPanelLifecycleCoordinator,
+    readRoomPanelRequestedTarget,
+    requestedTargetsEqual,
+    shouldInvalidateSessionOnUrlChange,
+    shouldRequestReconcileRetryOnUrlChange,
+    urlAllowsLoginTarget,
+    type RoomPanelRequestedTarget,
+  } from '$lib/room-panel/room-panel-lifecycle';
+  import {
     resolveRoomPanelQueueFetchOutcome,
     resolveRoomPanelTransitionOutcome,
     type RoomPanelTransitionOutcome,
@@ -54,6 +55,8 @@
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { toastStore } from '$lib/stores/toastStore';
 
+  const lifecycle = new RoomPanelLifecycleCoordinator();
+
   let loading = $state(true);
   let rooms = $state<RoomPanelRoom[]>([]);
   let selectedLoginKey = $state('');
@@ -69,6 +72,8 @@
   let disconnectStream: (() => void) | null = null;
   let practiceProfile = $state(getPracticeProfileFallback());
   let reconcilingRoom = $state(false);
+  let reconcileTarget: RoomPanelRequestedTarget | null = null;
+  let lastObservedTarget: RoomPanelRequestedTarget | null = null;
 
   const requestedRoomIdFromUrl = $derived(page.url.searchParams.get('room')?.trim() ?? '');
   const requestedPlacementFromUrl = $derived(page.url.searchParams.get('placement')?.trim() ?? '');
@@ -88,20 +93,82 @@
   });
 
   $effect(() => {
-    const requestedRoomId = requestedRoomIdFromUrl;
-    if (!requestedRoomId || loading || submitting || recoveringSession || reconcilingRoom) {
+    const requestedTarget = readRequestedTarget();
+    const requestedRoomId = requestedTarget.roomId;
+
+    const urlChanged =
+      Boolean(requestedRoomId) &&
+      Boolean(lastObservedTarget?.roomId) &&
+      !requestedTargetsEqual(lastObservedTarget!, requestedTarget);
+
+    const snapshotMatchesTarget =
+      snapshot !== null &&
+      snapshotMatchesRequestedUrl(snapshot, requestedRoomId, requestedTarget.placement);
+
+    if (urlChanged) {
+      const invalidateSession = shouldInvalidateSessionOnUrlChange(
+        snapshotMatchesTarget,
+        submitting || recoveringSession,
+      );
+
+      if (invalidateSession) {
+        lifecycle.invalidateSession();
+        resetSessionScopedState();
+        disconnectStreamInternal();
+
+        // A matching snapshot is no longer trustworthy when an in-flight login may
+        // already have replaced the session cookie. Force the latest target through reconcile.
+        if (snapshotMatchesTarget) {
+          snapshot = null;
+        }
+      }
+
+      if (shouldRequestReconcileRetryOnUrlChange(reconcilingRoom)) {
+        if (invalidateSession) {
+          lifecycle.requestReconcileRetry();
+        } else {
+          // The URL moved back to the still-live session while reconcile was only
+          // loading metadata. Cancel that run without dropping the current stream.
+          lifecycle.cancelReconcile();
+        }
+      }
+    }
+    lastObservedTarget = requestedRoomId ? requestedTarget : null;
+
+    if (!requestedRoomId) {
       return;
     }
-    const requestedPlacement = readRequestedPlacementParam(requestedPlacementFromUrl);
-    const requestedEntry = findRequestedRoomEntry(rooms, requestedRoomId, requestedPlacement);
+
+    const requestedEntry = findRequestedRoomEntry(
+      rooms,
+      requestedTarget.roomId,
+      requestedTarget.placement,
+    );
     if (requestedEntry) {
       selectedLoginKey = roomPanelLoginKey(requestedEntry);
     }
-    if (
-      !shouldReconcileRequestedUrl(snapshot, requestedRoomId, requestedPlacement)
-    ) {
+
+    if (loading || submitting || recoveringSession) {
       return;
     }
+
+    if (!shouldReconcileRequestedUrl(snapshot, requestedRoomId, requestedTarget.placement)) {
+      return;
+    }
+
+    if (reconcilingRoom) {
+      // URL change while reconciling already requested retry above when urlChanged.
+      // Keep a safety check for target drift that did not go through lastObserved.
+      if (
+        !urlChanged &&
+        reconcileTarget &&
+        !requestedTargetsEqual(reconcileTarget, requestedTarget)
+      ) {
+        lifecycle.requestReconcileRetry();
+      }
+      return;
+    }
+
     void reconcileRequestedRoom();
   });
 
@@ -111,26 +178,69 @@
     });
     void bootstrapPanel();
     return () => {
+      lifecycle.invalidateLifecycle();
+      clearReloginTimer();
+      disconnectStreamInternal();
       stopProfile();
-      disconnectStream?.();
     };
   });
 
-  function readRequestedRoomId(): string {
-    return requestedRoomIdFromUrl;
+  function readRequestedTarget(): RoomPanelRequestedTarget {
+    return readRoomPanelRequestedTarget(requestedRoomIdFromUrl, requestedPlacementFromUrl);
   }
 
-  function readRequestedPlacement(): string {
-    return readRequestedPlacementParam(requestedPlacementFromUrl);
+  function resetSessionScopedState() {
+    busyVisitId = null;
+    checkOutVisit = null;
+  }
+
+  function isSessionOperationCurrent(
+    lifecycleGeneration: number,
+    sessionGeneration: number,
+  ): boolean {
+    return lifecycle.isSessionOperationCurrent(lifecycleGeneration, sessionGeneration);
+  }
+
+  function isLoginOperationCurrent(
+    lifecycleGeneration: number,
+    sessionGeneration: number,
+    loginTarget: RoomPanelRequestedTarget,
+  ): boolean {
+    return (
+      isSessionOperationCurrent(lifecycleGeneration, sessionGeneration) &&
+      urlAllowsLoginTarget(readRequestedTarget(), loginTarget)
+    );
+  }
+
+  function isReconcileOperationCurrent(
+    lifecycleGeneration: number,
+    reconcileGeneration: number,
+    requestedTarget: RoomPanelRequestedTarget,
+  ): boolean {
+    return (
+      lifecycle.isCurrentReconcile(reconcileGeneration, lifecycleGeneration) &&
+      requestedTargetsEqual(requestedTarget, readRequestedTarget())
+    );
+  }
+
+  function disconnectStreamInternal() {
+    if (disconnectStream) {
+      lifecycle.invalidateStream();
+      disconnectStream();
+      disconnectStream = null;
+    }
   }
 
   function resolveAutoOpenLoginKey(): string | null {
-    const requestedRoomId = readRequestedRoomId();
-    const requestedPlacement = readRequestedPlacement();
-    if (requestedRoomId) {
-      const matches = rooms.filter((entry) => entry.roomId === requestedRoomId);
+    const requestedTarget = readRequestedTarget();
+    if (requestedTarget.roomId) {
+      const matches = rooms.filter((entry) => entry.roomId === requestedTarget.roomId);
       const room =
-        findRequestedRoomEntry(matches, requestedRoomId, requestedPlacement) ??
+        findRequestedRoomEntry(
+          matches,
+          requestedTarget.roomId,
+          requestedTarget.placement,
+        ) ??
         matches.find((entry) => entry.placement === 'outside') ??
         matches[0] ??
         null;
@@ -145,20 +255,31 @@
     if (reconcilingRoom) {
       return false;
     }
-    reconcilingRoom = true;
-    const requestedRoomId = readRequestedRoomId();
-    if (!requestedRoomId) {
-      reconcilingRoom = false;
+
+    const lifecycleGeneration = lifecycle.captureLifecycle();
+    const reconcileGeneration = lifecycle.captureReconcile();
+    const requestedTarget = readRequestedTarget();
+    if (!requestedTarget.roomId) {
       return true;
     }
 
+    reconcilingRoom = true;
+    reconcileTarget = requestedTarget;
     try {
-      if (!(await loadRoomList())) {
+      if (!(await loadRoomList(lifecycleGeneration, lifecycle.captureSession()))) {
+        return false;
+      }
+      if (
+        !isReconcileOperationCurrent(lifecycleGeneration, reconcileGeneration, requestedTarget)
+      ) {
         return false;
       }
 
-      const requestedPlacement = readRequestedPlacement();
-      const requestedEntry = findRequestedRoomEntry(rooms, requestedRoomId, requestedPlacement);
+      const requestedEntry = findRequestedRoomEntry(
+        rooms,
+        requestedTarget.roomId,
+        requestedTarget.placement,
+      );
       if (requestedEntry) {
         selectedLoginKey = roomPanelLoginKey(requestedEntry);
       }
@@ -169,18 +290,24 @@
 
       if (
         snapshot &&
-        snapshotMatchesRequestedUrl(snapshot, requestedRoomId, requestedPlacement)
+        snapshotMatchesRequestedUrl(snapshot, requestedTarget.roomId, requestedTarget.placement)
       ) {
         return true;
       }
 
-      disconnectStream?.();
-      disconnectStream = null;
+      lifecycle.invalidateSession();
+      resetSessionScopedState();
+      disconnectStreamInternal();
 
       if (!requestedEntry.requiresPin) {
-        await completeLogin(requestedEntry);
+        await completeLogin(requestedEntry, lifecycleGeneration);
+        if (
+          !isReconcileOperationCurrent(lifecycleGeneration, reconcileGeneration, requestedTarget)
+        ) {
+          return false;
+        }
         return (
-          snapshot?.roomId === requestedRoomId &&
+          snapshot?.roomId === requestedTarget.roomId &&
           snapshot.panel.placement === requestedEntry.placement
         );
       }
@@ -191,11 +318,24 @@
       return false;
     } finally {
       reconcilingRoom = false;
+      reconcileTarget = null;
+      if (
+        lifecycle.consumeReconcilePending() &&
+        lifecycle.isMounted() &&
+        lifecycle.isActiveLifecycle(lifecycleGeneration)
+      ) {
+        void reconcileRequestedRoom();
+      }
     }
   }
 
-  async function tryRestoreSession(): Promise<boolean> {
+  async function tryRestoreSession(lifecycleGeneration: number): Promise<boolean> {
+    const sessionGeneration = lifecycle.captureSession();
     const queueResult = await fetchRoomPanelQueue();
+    if (!isSessionOperationCurrent(lifecycleGeneration, sessionGeneration)) {
+      return false;
+    }
+
     const outcome = resolveRoomPanelQueueFetchOutcome(queueResult, t('roomPanel.queueLoadError'));
     if (outcome.kind === 'sessionExpired') {
       return false;
@@ -204,22 +344,28 @@
       return false;
     }
 
-    const requestedRoomId = readRequestedRoomId();
+    const requestedTarget = readRequestedTarget();
     if (
-      requestedRoomId &&
-      !snapshotMatchesRequestedUrl(queueResult.data, requestedRoomId, readRequestedPlacement())
+      requestedTarget.roomId &&
+      !snapshotMatchesRequestedUrl(queueResult.data, requestedTarget.roomId, requestedTarget.placement)
     ) {
       return reconcileRequestedRoom();
     }
 
     snapshot = queueResult.data;
-    startStream();
+    startStream(lifecycleGeneration);
     return true;
   }
 
-  async function loadRoomList(): Promise<boolean> {
+  async function loadRoomList(
+    lifecycleGeneration: number,
+    sessionGeneration: number,
+  ): Promise<boolean> {
     errorMessage = null;
     const result = await fetchRoomPanelRooms();
+    if (!isSessionOperationCurrent(lifecycleGeneration, sessionGeneration)) {
+      return false;
+    }
     if (!result.ok) {
       errorMessage = result.error.message || t('roomPanel.settingsLoadError');
       return false;
@@ -231,9 +377,10 @@
       return true;
     }
 
-    const urlRoomId = readRequestedRoomId();
-    const urlPlacement = readRequestedPlacement();
-    const urlEntry = urlRoomId ? findRequestedRoomEntry(result.data.rooms, urlRoomId, urlPlacement) : null;
+    const requestedTarget = readRequestedTarget();
+    const urlEntry = requestedTarget.roomId
+      ? findRequestedRoomEntry(result.data.rooms, requestedTarget.roomId, requestedTarget.placement)
+      : null;
     if (urlEntry) {
       selectedLoginKey = roomPanelLoginKey(urlEntry);
     } else if (!findRoomPanelLoginEntry(result.data.rooms, selectedLoginKey)) {
@@ -243,16 +390,27 @@
   }
 
   async function bootstrapPanel() {
+    const lifecycleGeneration = lifecycle.captureLifecycle();
     loading = true;
     errorMessage = null;
 
-    if (await tryRestoreSession()) {
-      loading = false;
+    if (await tryRestoreSession(lifecycleGeneration)) {
+      if (lifecycle.isActiveLifecycle(lifecycleGeneration)) {
+        loading = false;
+      }
+      return;
+    }
+    if (!lifecycle.isActiveLifecycle(lifecycleGeneration)) {
       return;
     }
 
-    if (rooms.length === 0 && !(await loadRoomList())) {
-      loading = false;
+    if (rooms.length === 0 && !(await loadRoomList(lifecycleGeneration, lifecycle.captureSession()))) {
+      if (lifecycle.isActiveLifecycle(lifecycleGeneration)) {
+        loading = false;
+      }
+      return;
+    }
+    if (!lifecycle.isActiveLifecycle(lifecycleGeneration)) {
       return;
     }
 
@@ -260,15 +418,22 @@
     if (autoOpenLoginKey && !forceLoginScreen) {
       const autoOpenEntry = findRoomPanelLoginEntry(rooms, autoOpenLoginKey);
       if (autoOpenEntry) {
-        await completeLogin(autoOpenEntry);
+        await completeLogin(autoOpenEntry, lifecycleGeneration);
       }
+    }
+    if (!lifecycle.isActiveLifecycle(lifecycleGeneration)) {
+      return;
     }
     forceLoginScreen = false;
     loading = false;
   }
 
-  async function refreshSnapshot() {
+  async function refreshSnapshot(lifecycleGeneration: number, sessionGeneration: number) {
     const result = await fetchRoomPanelQueue();
+    if (!isSessionOperationCurrent(lifecycleGeneration, sessionGeneration)) {
+      return;
+    }
+
     const outcome = resolveRoomPanelQueueFetchOutcome(result, t('roomPanel.queueLoadError'));
     if (outcome.kind === 'sessionExpired') {
       await recoverExpiredSession(outcome.message);
@@ -282,11 +447,28 @@
     streamError = null;
   }
 
-  function startStream() {
-    disconnectStream?.();
+  function startStream(lifecycleGeneration: number) {
+    if (!lifecycle.isMounted() || !lifecycle.isActiveLifecycle(lifecycleGeneration)) {
+      return;
+    }
+
+    disconnectStreamInternal();
+    if (!lifecycle.isMounted() || !lifecycle.isActiveLifecycle(lifecycleGeneration)) {
+      return;
+    }
+
+    const streamGeneration = lifecycle.beginStream();
+    if (streamGeneration < 0) {
+      return;
+    }
+
     disconnectStream = connectRoomPanelQueueStream({
       onSnapshot: (data) => {
-        if (shouldReconcileRequestedUrl(data, readRequestedRoomId(), readRequestedPlacement())) {
+        if (!lifecycle.isCurrentStream(streamGeneration, lifecycleGeneration)) {
+          return;
+        }
+        const requestedTarget = readRequestedTarget();
+        if (shouldReconcileRequestedUrl(data, requestedTarget.roomId, requestedTarget.placement)) {
           void reconcileRequestedRoom();
           return;
         }
@@ -294,6 +476,9 @@
         streamError = null;
       },
       onError: (error) => {
+        if (!lifecycle.isCurrentStream(streamGeneration, lifecycleGeneration)) {
+          return;
+        }
         if (error.sessionExpired) {
           void recoverExpiredSession(error.message);
           return;
@@ -308,15 +493,22 @@
       return;
     }
     recoveringSession = true;
+    const lifecycleGeneration = lifecycle.captureLifecycle();
+    lifecycle.invalidateSession();
     try {
-      disconnectStream?.();
-      disconnectStream = null;
+      disconnectStreamInternal();
       snapshot = null;
       streamError = null;
-      busyVisitId = null;
+      resetSessionScopedState();
       rooms = [];
       await logoutRoomPanel();
+      if (!lifecycle.isActiveLifecycle(lifecycleGeneration)) {
+        return;
+      }
       await bootstrapPanel();
+      if (!lifecycle.isActiveLifecycle(lifecycleGeneration)) {
+        return;
+      }
       if (!snapshot) {
         errorMessage = message;
       }
@@ -325,7 +517,12 @@
     }
   }
 
-  async function completeLogin(room: RoomPanelRoom) {
+  async function completeLogin(room: RoomPanelRoom, lifecycleGeneration: number) {
+    const sessionGeneration = lifecycle.captureSession();
+    const loginTarget: RoomPanelRequestedTarget = {
+      roomId: room.roomId,
+      placement: room.placement,
+    };
     submitting = true;
     errorMessage = null;
     streamError = null;
@@ -335,6 +532,10 @@
       placement: room.placement,
       pin: pin.trim(),
     });
+    if (!isLoginOperationCurrent(lifecycleGeneration, sessionGeneration, loginTarget)) {
+      submitting = false;
+      return;
+    }
     if (!result.ok) {
       submitting = false;
       errorMessage = result.error.status === 401 ? t('roomPanel.loginInvalid') : result.error.message;
@@ -342,14 +543,22 @@
     }
 
     pin = '';
-    await refreshSnapshot();
+    await refreshSnapshot(lifecycleGeneration, sessionGeneration);
+    if (!isLoginOperationCurrent(lifecycleGeneration, sessionGeneration, loginTarget)) {
+      submitting = false;
+      return;
+    }
     if (!snapshot) {
       submitting = false;
       errorMessage = streamError ?? t('roomPanel.queueLoadError');
       return;
     }
 
-    startStream();
+    startStream(lifecycleGeneration);
+    if (!isLoginOperationCurrent(lifecycleGeneration, sessionGeneration, loginTarget)) {
+      submitting = false;
+      return;
+    }
     submitting = false;
   }
 
@@ -364,21 +573,29 @@
       return;
     }
 
-    await completeLogin(selectedRoom);
+    await completeLogin(selectedRoom, lifecycle.captureLifecycle());
   }
 
-  async function applyTransitionOutcome(outcome: RoomPanelTransitionOutcome) {
+  async function applyTransitionOutcome(
+    outcome: RoomPanelTransitionOutcome,
+    lifecycleGeneration: number,
+    sessionGeneration: number,
+  ) {
+    if (!isSessionOperationCurrent(lifecycleGeneration, sessionGeneration)) {
+      return;
+    }
+
     switch (outcome.kind) {
       case 'success':
-        await refreshSnapshot();
+        await refreshSnapshot(lifecycleGeneration, sessionGeneration);
         return;
       case 'conflict':
         toastStore.error(outcome.message);
-        await refreshSnapshot();
+        await refreshSnapshot(lifecycleGeneration, sessionGeneration);
         return;
       case 'forbidden':
         toastStore.error(outcome.message);
-        await refreshSnapshot();
+        await refreshSnapshot(lifecycleGeneration, sessionGeneration);
         return;
       case 'sessionExpired':
         await recoverExpiredSession(outcome.message);
@@ -397,6 +614,8 @@
       return;
     }
 
+    const lifecycleGeneration = lifecycle.captureLifecycle();
+    const sessionGeneration = lifecycle.captureSession();
     busyVisitId = visitId;
     try {
       const result =
@@ -408,9 +627,13 @@
 
       await applyTransitionOutcome(
         resolveRoomPanelTransitionOutcome(result, t('roomPanel.actionError')),
+        lifecycleGeneration,
+        sessionGeneration,
       );
     } finally {
-      busyVisitId = null;
+      if (isSessionOperationCurrent(lifecycleGeneration, sessionGeneration)) {
+        busyVisitId = null;
+      }
     }
   }
 
@@ -423,8 +646,12 @@
     if (!item) {
       return;
     }
+    const lifecycleGeneration = lifecycle.captureLifecycle();
+    const sessionGeneration = lifecycle.captureSession();
     await runVisitAction(item.visitId, 'check_out');
-    checkOutVisit = null;
+    if (isSessionOperationCurrent(lifecycleGeneration, sessionGeneration)) {
+      checkOutVisit = null;
+    }
   }
 
   function cancelCheckOut() {
@@ -447,15 +674,18 @@
 
   async function forceRelogin() {
     clearReloginTimer();
+    const lifecycleGeneration = lifecycle.captureLifecycle();
+    lifecycle.invalidateSession();
     forceLoginScreen = true;
-    checkOutVisit = null;
-    busyVisitId = null;
-    disconnectStream?.();
-    disconnectStream = null;
+    resetSessionScopedState();
+    disconnectStreamInternal();
     snapshot = null;
     streamError = null;
     errorMessage = null;
     await logoutRoomPanel();
+    if (!lifecycle.isActiveLifecycle(lifecycleGeneration)) {
+      return;
+    }
     await bootstrapPanel();
   }
 
@@ -492,7 +722,18 @@
     {#if streamError}
       <div class="room-panel-live-actions">
         <span class="room-panel-live-error">{streamError}</span>
-        <Button type="button" variant="outline" onclick={() => void refreshSnapshot()}>{t('ui.retry')}</Button>
+        <Button
+          type="button"
+          variant="outline"
+          onclick={() => {
+            if (!lifecycle.isMounted()) {
+              return;
+            }
+            void refreshSnapshot(lifecycle.captureLifecycle(), lifecycle.captureSession());
+          }}
+        >
+          {t('ui.retry')}
+        </Button>
       </div>
     {/if}
   </div>

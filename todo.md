@@ -16,6 +16,10 @@ Stand: 2026-08-22
 - Batch C ✅: Room Panel `$app/state` statt `$app/stores` für URL-Params
 - Portal `normalizeTicketCode` → Domain `parseTicketCode`/`formatTicketCode` (A-000-Drift behoben); restliche UI `$app/stores` → `$app/state` (5 Stellen)
 - UI-Lint: `resolvedHref` zentral in `kit-paths.ts` (HTTP-Passthrough, Query via resolve); Duplikate in HomeLinkCards/StaffSettingsLayout entfernt; 5× eslint-disable-next-line
+- **Batch D ✅ (2026-08-22):** Room-Panel-Lifecycle — vier Generationen; Session/Reconcile getrennt; `disposed`; URL-Observer vor Busy-Gate; `urlAllowsLoginTarget` (kein striktes Equal); Pending-Retry nur bei in-flight Reconcile; kompatibler URL-Wechsel behält Live-Stream; Outcome-Guard; Session-scoped Reset; Pure-Helper + Szenario-Tests
+- **Batch E ✅ (2026-08-22):** SSE-Deduplizierung — Charakterisierungstests (`sse-client.test.ts`); `connectSseStream` als Adapter über `connectMultiEventSseStream` (eventName/onEvent nicht weitergereicht); bestehende Fehler-Semantik festgehalten (invalid JSON/Handler still, kein SSE_INVALID_DATA); Visibility/Tab/Jitter/neue Invalid-Data-Semantik bewusst out of scope
+- **Batch F ✅ (2026-08-22):** SSE Disconnect-Race — `closed`-Check direkt nach `await fetch` und nach `await reader.read()`; zwei Deferred-Promise-Tests (kein onError nach Fetch-Race, kein Dispatch nach Read-Race)
+- **Nächster Schritt:** optional `SSE_INVALID_DATA`-Semantik separat; oder MFA Connection-Budget messen
 
 ## UI-Tour — MFA Dashboard Analyse (2026-08-21)
 
