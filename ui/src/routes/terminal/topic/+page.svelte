@@ -107,8 +107,14 @@
       return;
     }
 
+    let cancelled = false;
+
     void (async () => {
       const result = await fetchTerminalTopics();
+      if (cancelled) {
+        return;
+      }
+
       loading = false;
       if (!result.ok) {
         loadFailed = true;
@@ -117,6 +123,10 @@
       }
       topics = result.data.topics;
     })();
+
+    return () => {
+      cancelled = true;
+    };
   });
 </script>
 

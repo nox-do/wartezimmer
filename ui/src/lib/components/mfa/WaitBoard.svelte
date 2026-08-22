@@ -211,6 +211,30 @@
   {/if}
 {/snippet}
 
+{#snippet awayZoneBody()}
+  <h2 class="wait-zone-title">{t('mfa.zoneAwayTitle')}</h2>
+  <p class="wait-zone-desc">{t('mfa.zoneAwayDesc')}</p>
+  {#if away.length === 0}
+    <p class="wait-zone-empty">{zoneEmptyMessage('mfa.zoneAwayEmpty')}</p>
+  {:else}
+    <ul class="queue-list">
+      {#each away as item (item.visitId)}
+        <QueueEntry
+          {item}
+          zone="away"
+          {nowMs}
+          busy={isBusy(item.visitId)}
+          onRecall={() => onRecall(item.visitId)}
+          onFixRecallNotify={() => onFixRecallNotify(item.visitId)}
+          onCancelVisit={() => onCancelVisit(item.visitId)}
+          onOpenDocuments={onOpenDocuments}
+          onCycleTriage={() => onCycleTriage(item.visitId)}
+        />
+      {/each}
+    </ul>
+  {/if}
+{/snippet}
+
 <DragDropProvider
   sensors={queueDragSensors}
   onDragStart={handleDragStart}
@@ -245,51 +269,11 @@
           variant="away"
           class="wait-zone wait-zone--away"
         >
-          <h2 class="wait-zone-title">{t('mfa.zoneAwayTitle')}</h2>
-          <p class="wait-zone-desc">{t('mfa.zoneAwayDesc')}</p>
-          {#if away.length === 0}
-            <p class="wait-zone-empty">{zoneEmptyMessage('mfa.zoneAwayEmpty')}</p>
-          {:else}
-            <ul class="queue-list">
-              {#each away as item (item.visitId)}
-                <QueueEntry
-                  {item}
-                  zone="away"
-                  {nowMs}
-                  busy={isBusy(item.visitId)}
-                  onRecall={() => onRecall(item.visitId)}
-                  onFixRecallNotify={() => onFixRecallNotify(item.visitId)}
-                  onCancelVisit={() => onCancelVisit(item.visitId)}
-                  onOpenDocuments={onOpenDocuments}
-                  onCycleTriage={() => onCycleTriage(item.visitId)}
-                />
-              {/each}
-            </ul>
-          {/if}
+          {@render awayZoneBody()}
         </QueueDropZone>
       {:else}
         <section class="wait-zone wait-zone--away">
-          <h2 class="wait-zone-title">{t('mfa.zoneAwayTitle')}</h2>
-          <p class="wait-zone-desc">{t('mfa.zoneAwayDesc')}</p>
-          {#if away.length === 0}
-            <p class="wait-zone-empty">{zoneEmptyMessage('mfa.zoneAwayEmpty')}</p>
-          {:else}
-            <ul class="queue-list">
-              {#each away as item (item.visitId)}
-                <QueueEntry
-                  {item}
-                  zone="away"
-                  {nowMs}
-                  busy={isBusy(item.visitId)}
-                  onRecall={() => onRecall(item.visitId)}
-                  onFixRecallNotify={() => onFixRecallNotify(item.visitId)}
-                  onCancelVisit={() => onCancelVisit(item.visitId)}
-                  onOpenDocuments={onOpenDocuments}
-                  onCycleTriage={() => onCycleTriage(item.visitId)}
-                />
-              {/each}
-            </ul>
-          {/if}
+          {@render awayZoneBody()}
         </section>
       {/if}
     </div>
