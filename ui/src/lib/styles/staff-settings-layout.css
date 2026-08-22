@@ -10,6 +10,8 @@
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(13.5rem, 15rem) minmax(0, 1fr);
+  /* Bound the row so main can scroll; auto rows grow with content and clip under overflow:hidden */
+  grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
   background: var(--background);
 }
@@ -175,7 +177,7 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 1.5rem 2rem 2.5rem 1.5rem;
+  padding: 1.5rem 2rem 3rem 1.5rem;
 }
 
 @media (max-width: 48rem) {

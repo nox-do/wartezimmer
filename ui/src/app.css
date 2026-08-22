@@ -90,6 +90,14 @@ textarea {
   width: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+/* Auth/stream hosts render banners + page without a wrapper — keep the settings shell fillable */
+.app-main[data-surface='settings'] > .mfa-page > .staff-settings-layout,
+.app-main[data-surface='settings'] > .staff-page > .staff-settings-layout {
+  flex: 1;
+  min-height: 0;
 }
 
 @media (max-width: 48rem) {

@@ -353,13 +353,13 @@
       {/if}
     </fieldset>
 
-    <div class="form-actions" class:form-actions--split={mode === 'edit' && canDelete}>
-      {#if mode === 'edit' && canDelete}
-        <Button type="button" variant="ghost" disabled={busy} onclick={() => onDelete?.()}>
-          {t('mfa.settings.topicRemove')}
-        </Button>
-      {/if}
+    <div class="form-actions">
       <div class="form-actions__end">
+        {#if mode === 'edit' && canDelete}
+          <Button type="button" variant="ghost" disabled={busy} onclick={() => onDelete?.()}>
+            {t('mfa.settings.topicRemove')}
+          </Button>
+        {/if}
         <Button type="button" variant="outline" disabled={busy} onclick={handleClose}>{t('ui.cancel')}</Button>
         <Button type="submit" variant="primary" disabled={busy}>{t('mfa.settings.topicModalApply')}</Button>
       </div>

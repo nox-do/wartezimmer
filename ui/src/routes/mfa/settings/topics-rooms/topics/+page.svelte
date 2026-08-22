@@ -61,7 +61,7 @@
   });
 </script>
 
-<StaffSettingsShell title={t('mfa.settings.topicsPanelTitle')} lead={t('mfa.settings.topicsPanelDesc')}>
+<StaffSettingsShell title={t('mfa.settings.topicsPanelTitle')}>
   {#if loading}
     <p class="text-muted">{t('ui.loading')}</p>
   {:else}

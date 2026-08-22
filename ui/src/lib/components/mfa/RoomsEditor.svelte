@@ -102,9 +102,13 @@
     addModalOpen = true;
   }
 
-  function applyAddRoom(next: PracticeRoomWithPanels) {
+  async function applyAddRoom(next: PracticeRoomWithPanels) {
     const updated = ensureSingleDefaultCallTarget([...rooms, next], null);
     onChange?.(updated);
+    const ok = await onPersist?.();
+    if (ok === false) {
+      return;
+    }
     openRoomId = next.roomId;
     draft = $state.snapshot(next);
     lastSyncedRoomJson = JSON.stringify(next);
@@ -650,18 +654,18 @@
                   </section>
                 {/each}
 
-                <div class="form-actions form-actions--split">
-                  {#if rooms.length > 1}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      disabled={busy}
-                      onclick={() => requestDelete(index)}
-                    >
-                      {t('mfa.settings.roomRemove')}
-                    </Button>
-                  {/if}
+                <div class="form-actions">
                   <div class="form-actions__end">
+                    {#if rooms.length > 1}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={busy}
+                        onclick={() => requestDelete(index)}
+                      >
+                        {t('mfa.settings.roomRemove')}
+                      </Button>
+                    {/if}
                     <Button type="submit" variant="primary" size="sm" disabled={busy}>
                       {t('mfa.settings.roomExpanderSave')}
                     </Button>
@@ -680,7 +684,7 @@
   bind:open={addModalOpen}
   roomIdsTaken={new Set(rooms.map((room) => room.roomId))}
   {busy}
-  onApply={applyAddRoom}
+  onApply={(room) => void applyAddRoom(room)}
 />
 
 <Modal

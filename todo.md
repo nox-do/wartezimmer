@@ -2,6 +2,14 @@
 
 Stand: 2026-08-22
 
+## MFA Settings — Räume UX (2026-08-22)
+
+- Scroll: Settings-Shell Grid-Zeile `minmax(0,1fr)` + `mfa-page` overflow, damit Expander-Inhalt scrollbar bleibt
+- Raum hinzufügen: sofort persistieren (wie Themen), nicht erst lokal + Speichern
+- Expander-Actions: Entfernen + Speichern beide rechts
+- Themen-Modal: Entfernen ebenfalls rechts (mit Abbrechen/Übernehmen)
+- Themen-Seite: doppelter `topicsPanelDesc`-Lead entfernt (bleibt nur im Panel)
+
 ## MFA Settings — Raum/Thema hinzufügen Placeholder (2026-08-22)
 
 - Modal „Raum hinzufügen“: „Neuer Raum“ war echter Input-Wert → bleibt beim Fokussieren
