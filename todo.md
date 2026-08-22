@@ -10,7 +10,9 @@ Quelle: [`docs/audit-dopplungen-altlasten.md`](docs/audit-dopplungen-altlasten.m
 - **DUP-009** ✅ Default-Aufrufraum über Domain (`listEnabledRooms` / `resolveDefaultCallRoomId`); toter Export in `database-ops-settings` entfernt
 - **DUP-011** ✅ Setup-DTOs re-exportieren `server-shared` (`NetworkAddress`, `NetworkInterfaceInfo`, `PfupdateApplyInput`, `PfupdateInspectInput`)
 - **DUP-012** ✅ `sha256File` in `setup/src/sha256-file.ts`; `pfupdate-package` re-exportiert
-- **Nicht angefasst:** DUP-005/006/008/010/002/014/015/003/013/004, alle OK-*
+- **DUP-002** ✅ gemeinsame Type-Orchestrierung (`openapi-types-lib.mjs`); Wrapper-Namen stabil; gleiche Sync-Guards; Identity nur App
+- **DUP-005** ✅ UI-Handtypen → lokale OpenAPI-Aliase (Ops/Terminal, dann Portal aus documents-paths). Importnamen bleiben. OK-001 unverändert
+- **Nicht angefasst:** DUP-006/008/010/014/015/003/013/004, alle OK-\*
 
 ## MFA Settings — Räume UX (2026-08-22)
 

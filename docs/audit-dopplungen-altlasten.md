@@ -22,53 +22,29 @@ Artefakte. Die relevanten Dopplungen sind überwiegend strukturell oder semantis
 
 ### Aktuelle Priorisierung
 
-| Reihenfolge | ID      | Kandidat                                                    | Status      | Priorität | Effort |
-| ----------- | ------- | ----------------------------------------------------------- | ----------- | --------- | ------ |
-| 1           | DUP-005 | UI-Transporttypen aus vorhandenem OpenAPI ableiten          | bereinigen  | hoch      | M      |
-| 2           | DUP-006 | lokale Smoke-`requestJson` durch Shared-Helper ersetzen     | bereinigen  | mittel    | S      |
+| Reihenfolge | ID      | Kandidat                                                    | Status                | Priorität | Effort |
+| ----------- | ------- | ----------------------------------------------------------- | --------------------- | --------- | ------ |
+| 1           | DUP-005 | UI-Transporttypen aus vorhandenem OpenAPI ableiten          | erledigt (2026-08-22) | hoch      | M      |
+| 2           | DUP-006 | lokale Smoke-`requestJson` durch Shared-Helper ersetzen     | bereinigen            | mittel    | S      |
 | 3           | DUP-009 | Default-Aufrufraum vollständig an Domain koppeln            | erledigt (2026-08-22) | mittel    | S      |
-| 4           | DUP-008 | gemeinsames Route-Parsing für beide Drift-Checks            | bereinigen  | mittel    | S      |
+| 4           | DUP-008 | gemeinsames Route-Parsing für beide Drift-Checks            | bereinigen            | mittel    | S      |
 | 5           | DUP-007 | gemeinsamen Fastify-Error-Handler verwenden                 | erledigt (2026-08-22) | mittel    | S      |
-| 6           | DUP-010 | App/Sandbox-`FormPdfDisplay`-Vertrag zentralisieren         | bereinigen  | mittel    | S–M    |
+| 6           | DUP-010 | App/Sandbox-`FormPdfDisplay`-Vertrag zentralisieren         | bereinigen            | mittel    | S–M    |
 | 7           | DUP-011 | Setup-DTOs aus `server-shared` verwenden                    | erledigt (2026-08-22) | mittel    | S      |
-| 8           | DUP-002 | OpenAPI-Generatoren und Sync-Checks vereinheitlichen        | bereinigen  | mittel    | M      |
+| 8           | DUP-002 | OpenAPI-Generatoren und Sync-Checks vereinheitlichen        | erledigt (2026-08-22) | mittel    | M      |
 | 9           | DUP-012 | `sha256File` innerhalb von Setup zentralisieren             | erledigt (2026-08-22) | niedrig   | S      |
-| 10          | DUP-014 | DB-Snapshot-Vergleich als gemeinsamen Vertragshelfer führen | entscheiden | niedrig   | S      |
-| 11          | DUP-003 | Monorepo-Root-Suche zentralisieren                          | entscheiden | niedrig   | S      |
+| 10          | DUP-014 | DB-Snapshot-Vergleich als gemeinsamen Vertragshelfer führen | entscheiden           | niedrig   | S      |
+| 11          | DUP-003 | Monorepo-Root-Suche zentralisieren                          | entscheiden           | niedrig   | S      |
 
 ### Neue Befunde
 
-#### DUP-005: UI modelliert vorhandene OpenAPI-Responses nochmals von Hand
+#### DUP-005: UI modelliert vorhandene OpenAPI-Responses nochmals von Hand — erledigt (2026-08-22)
 
-Mehrere UI-Clients deklarieren Response-DTOs manuell, obwohl dieselben Schemas in
-OpenAPI stehen und bereits generierte UI-Typen existieren:
-
-- `ui/src/lib/mfa/practice-ops-api.ts`: Day-Lifecycle, Business-Day-Statistik und
-  Routing-Capabilities,
-- `ui/src/lib/ops/ops-system-api.ts`: Deployment-Storage, Contact-Lookup,
-  Messaging-Provider und Runtime-Reset,
-- `ui/src/lib/terminal/terminal-api.ts`: Terminal-Assist und Ops-Heartbeat,
-- `ui/src/lib/portal/types.ts`: Session-Resolve, Session-Me und Captive-Authorize.
-
-Beispielsweise sind `DayLifecycleResponse`, `RuntimeResetResponse`,
-`DeploymentStorageResponse`, `MessagingProviderCatalogResponse` und
-`OpsHeartbeatResponse` bereits in den generierten Deklarationen vorhanden.
-
-Risiko:
-
-- `check-openapi-types-sync` schützt nur die generierten Dateien, nicht die
-  handgeschriebenen Spiegeltypen;
-- Änderungen am Schema können trotz grünem Drift-Check unbemerkt am UI-Client
-  vorbeilaufen;
-- die bestehende OpenAPI-first-Regel wird an mehreren Stellen umgangen.
-
-Empfehlung:
-
-1. In den jeweiligen `openapi-types.ts` sprechende Aliase für Response- und
-   Request-Schemas exportieren.
-2. API-Clients ausschließlich mit diesen Aliasen typisieren.
-3. UI-eigene View-Models nur dort behalten, wo sie Daten tatsächlich transformieren.
-4. Nicht die generierten App- und UI-Dateien zusammenlegen; OK-001 bleibt gültig.
+Handgeschriebene Spiegeltypen sind durch Aliase auf die lokal generierten UI-Typen
+ersetzt. Bestehende Importnamen bleiben (z. B. `DayLifecycleState`,
+`RoutingCapabilities`, `TerminalAssistPressed`). Portal-Session-Typen kommen aus
+den inline-`paths` von `documents.yaml`; `identity.yaml` bleibt App-only.
+OK-001 unverändert: generierte App-/UI-Dateien nicht zusammengelegt.
 
 #### DUP-006: Smoke-Skripte kopieren einen bereits vorhandenen HTTP-Helper
 
@@ -216,7 +192,7 @@ Effort: **S** ≈ Minuten, **M** ≈ Stunden, **L** ≈ Entscheidung + ggf. grö
 | ✅ 1    | LEG-001 | Tar-Pfad-Alias entfernen                                          | S      |
 | ✅ 2    | LEG-002 | `SaveEnvBackupResult`-Alias entfernen                             | S      |
 | ✅ 3    | DUP-001 | Ticket-Code in Domain kanonisieren (inkl. Smoke-Helper)           | S–M    |
-| 4       | DUP-002 | OpenAPI-Generator/Sync-Checks vereinheitlichen (gleiche Guards)   | M      |
+| ✅ 4    | DUP-002 | OpenAPI-Generator/Sync-Checks vereinheitlichen (gleiche Guards)   | M      |
 | ✅ 5    | LEG-003 | PoC-HTTP/UI aus aktivem Build entfernen                           | L      |
 | 6       | DUP-003 | Monorepo-Root-Suche (bei Gelegenheit)                             | S      |
 | 7       | DUP-004 | Proxy-Compose: Drift-Check oder Packaging-Kopie (bei Gelegenheit) | S      |
@@ -228,7 +204,7 @@ Effort: **S** ≈ Minuten, **M** ≈ Stunden, **L** ≈ Entscheidung + ggf. grö
 | LEG-001 | `validateTarArchiveEntryPaths`                           | erledigt (2026-07-23) | niedrig   | S      | hoch      |
 | LEG-002 | `SaveEnvBackupResult`                                    | erledigt (2026-07-23) | niedrig   | S      | hoch      |
 | DUP-001 | Ticket-Code in Domain, Flow-Core, App und Smoke          | erledigt (2026-07-23) | mittel    | S–M    | hoch      |
-| DUP-002 | doppelte OpenAPI-Type-Generatoren und Drift-Checks       | bereinigen            | mittel    | M      | hoch      |
+| DUP-002 | doppelte OpenAPI-Type-Generatoren und Drift-Checks       | erledigt (2026-08-22) | mittel    | M      | hoch      |
 | LEG-003 | Flow-Core-PoC-Server und Referenz-UI im Produkt-Monorepo | erledigt (2026-07-28) | mittel    | L      | hoch      |
 | DUP-003 | doppelte Monorepo-Root-Suche                             | entscheiden           | niedrig   | S      | hoch      |
 | DUP-004 | Proxy-Compose-Overlays mit identischem Inhalt            | behalten/entscheiden  | niedrig   | S      | hoch      |
@@ -246,33 +222,12 @@ Funktionen; Flow-Core und App bilden nur noch dünne Re-Export-Grenzen und der
 Smoke-Helper re-exportiert `formatTicketCode` aus der Domain. Visit-ID-spezifische
 Logik bleibt bewusst im Flow-Core.
 
-### DUP-002: OpenAPI-Generierung ist doppelt und bereits unterschiedlich
+### DUP-002: OpenAPI-Generierung ist doppelt und bereits unterschiedlich — erledigt (2026-08-22)
 
-`scripts/generate-openapi-types.mjs` und
-`scripts/generate-app-openapi-types.mjs` enthalten denselben Ablauf mit
-unterschiedlichen Zieltabellen. Auch
-`scripts/check-openapi-types-sync.mjs` und
-`scripts/check-app-openapi-types-sync.mjs` wiederholen den Prüfablauf.
-
-Die Dopplung hat bereits zu Drift geführt:
-
-- der App-Check verwendet `repoRootFromImportMeta`, der UI-Check berechnet den Root
-  separat;
-- der App-Check ruft `assertGeneratedFilesTracked` auf, der UI-Check nicht;
-- Fehlermeldungen und Missing-File-Behandlung unterscheiden sich.
-
-Empfehlung:
-
-- eine gemeinsame Spezifikation `{ input, outputs[] }` und einen gemeinsamen
-  Generator verwenden;
-- einen gemeinsamen Sync-Check mit Zielgruppe oder Dateiliste verwenden;
-- **dieselben Guards** in beiden Checks (mindestens: Missing-Files +
-  `assertGeneratedFilesTracked`) — das ist der konkrete Bug, nicht nur Ästhetik;
-- die getrennten npm-Skriptnamen dürfen als stabile Bedienoberfläche erhalten
-  bleiben.
-
-Die erzeugten Dateien selbst sind nicht der primäre Fehler; die doppelte
-Orchestrierungslogik ist es. Siehe OK-001: Outputs nicht zusammenlegen.
+Eine Spec-Tabelle und ein Ablauf in `scripts/openapi-types-lib.mjs`. Die alten
+Skriptnamen bleiben Wrapper. UI- und App-Checks teilen Missing-File-Sammlung und
+`assertGeneratedFilesTracked`. Outputs bleiben getrennt (OK-001); `identity.yaml`
+nur App. Tracked-Guard liegt in `openapi-lib.mjs` und bekommt denselben Root.
 
 ### LEG-001: Deprecated Tar-Pfad-Validator — erledigt (2026-07-23)
 
@@ -331,7 +286,7 @@ abgesichert.
 
 Bewertung: behalten. Eine zentrale Generated-Package-Struktur wäre möglich, ist
 aber ein Architekturumbau und durch die bloße Dateidopplung nicht gerechtfertigt.
-Die Orchestrierung sollte trotzdem wie unter DUP-002 zusammengeführt werden.
+Die Orchestrierung ist unter DUP-002 zusammengeführt.
 
 ### OK-002: Raumkapazitäts-Adapter
 

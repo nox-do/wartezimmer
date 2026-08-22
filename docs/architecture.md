@@ -151,7 +151,7 @@ Kein separates `src/modules/*/controller|service|repository`-Layout — bewusst 
 - `npm run typecheck` — tsc, `check-openapi-types-sync`, `check-app-openapi-types-sync`, `check-bundle-sync`, `check-fastify-schemas-sync`, `check-openapi-route-sync`, `check-auth-route-rules`
 - `npm run test` — app `node:test` + ui vitest
 - `npm run smoke:*` — integrative Fach-Flows
-- **OpenAPI-first (Option A):** `openapi/*.yaml` ist die Schema-Quelle; `npm run generate:api` erzeugt `openapi/bundle.json`, Fastify-Schemas (`app/src/api/generated/*.fastify-schemas.ts`), Backend-Typen (`app/src/api/*-openapi-types.ts`) und UI-Typen. Swagger UI: `/api/docs` (standardmäßig außerhalb `production`, `OPENAPI_DOCS_ENABLED` override). Migriert: Check-in, Queue, Identity, Sessions, Ops; Contract-Smoke: `npm run smoke:openapi-contract` gegen `bundle.json`.
+- **OpenAPI-first (Option A):** `openapi/*.yaml` ist die Schema-Quelle; `npm run generate:api` erzeugt `openapi/bundle.json`, Fastify-Schemas (`app/src/api/generated/*.fastify-schemas.ts`), Backend-Typen (`app/src/api/*-openapi-types.ts`) und UI-Typen. Type-Generate/Sync ist eine Orchestrierung mit zwei Zielgruppen (App/UI), keine gemeinsame Generated-Package. Swagger UI: `/api/docs` (standardmäßig außerhalb `production`, `OPENAPI_DOCS_ENABLED` override). Migriert: Check-in, Queue, Identity, Sessions, Ops; Contract-Smoke: `npm run smoke:openapi-contract` gegen `bundle.json`.
 
 ### Echtzeit (Pub/Sub)
 

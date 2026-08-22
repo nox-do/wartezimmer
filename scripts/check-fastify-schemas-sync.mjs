@@ -3,8 +3,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { repoRootFromImportMeta } from './openapi-lib.mjs';
-import { assertGeneratedFilesTracked } from './check-generated-tracked.mjs';
+import { assertGeneratedFilesTracked, repoRootFromImportMeta } from './openapi-lib.mjs';
 
 const root = repoRootFromImportMeta(import.meta.url);
 const generatedFiles = [
@@ -53,6 +52,6 @@ if (failed) {
   process.exit(1);
 }
 
-assertGeneratedFilesTracked(generatedFiles, 'check-fastify-schemas-sync');
+assertGeneratedFilesTracked(generatedFiles, 'check-fastify-schemas-sync', root);
 
 console.log('check-fastify-schemas-sync: OK');

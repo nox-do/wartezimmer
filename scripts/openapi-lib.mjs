@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,6 +24,31 @@ export const OPENAPI_INTERNAL_ROUTES = new Set([
 
 export function repoRootFromImportMeta(importMetaUrl) {
   return path.resolve(path.dirname(fileURLToPath(importMetaUrl)), '..');
+}
+
+export function listUntrackedGeneratedFiles(relativePaths, root) {
+  if (!root) {
+    throw new Error('listUntrackedGeneratedFiles: root is required');
+  }
+  return relativePaths.filter((relativePath) => {
+    const tracked = spawnSync('git', ['ls-files', '--error-unmatch', relativePath], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+    return tracked.status !== 0;
+  });
+}
+
+export function assertGeneratedFilesTracked(relativePaths, label, root) {
+  const untracked = listUntrackedGeneratedFiles(relativePaths, root);
+  for (const relativePath of untracked) {
+    console.error(
+      `${label}: ${relativePath} is not tracked in git — git add and commit generated artifacts`,
+    );
+  }
+  if (untracked.length > 0) {
+    process.exit(1);
+  }
 }
 
 export async function loadAndMergeOpenApi(root) {

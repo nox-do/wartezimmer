@@ -24,6 +24,7 @@ COPY scripts/bundle-openapi.mjs ./scripts/bundle-openapi.mjs
 COPY scripts/generate-fastify-schemas.mjs ./scripts/generate-fastify-schemas.mjs
 COPY scripts/generate-openapi-types.mjs ./scripts/generate-openapi-types.mjs
 COPY scripts/generate-app-openapi-types.mjs ./scripts/generate-app-openapi-types.mjs
+COPY scripts/openapi-types-lib.mjs ./scripts/openapi-types-lib.mjs
 COPY scripts/openapi-lib.mjs ./scripts/openapi-lib.mjs
 COPY scripts/prettier-write.mjs ./scripts/prettier-write.mjs
 COPY openapi ./openapi

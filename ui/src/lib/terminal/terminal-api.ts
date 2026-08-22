@@ -1,37 +1,26 @@
 import { terminalAuthFetch } from '$lib/api/cookie-auth-fetch';
 import { t } from '$lib/i18n/i18nStore.svelte';
-import type { TerminalTopic, TicketCreated } from '$lib/terminal/openapi-types';
+import type { EmergencyRaiseResponse, OpsHeartbeatResponse } from '$lib/ops/openapi-types';
+import type {
+  TerminalAssistPressed,
+  TerminalAuthPath,
+  TerminalTopic,
+  TerminalTopicsResponse,
+  TicketCreated,
+} from '$lib/terminal/openapi-types';
 
-export type TerminalAuthPath = 'phone_dob' | 'name_dob' | 'egk' | 'none';
+export type { TerminalAssistPressed, TerminalAuthPath } from '$lib/terminal/openapi-types';
 
 export type CheckinCreated = TicketCreated;
 export type TerminalTopicOption = TerminalTopic;
-
-export type TerminalAssistPressed = {
-  pressedAt: string;
-  expiresAt: string;
-};
-
-import type { TerminalPatientLocale } from '@praxis-flow/domain';
-
-export type TerminalHeartbeat = {
-  checkinLocked: boolean;
-  serverTime: string;
-  emergencyEnabled: boolean;
-  terminalWlanPromoEnabled: boolean;
-  terminalAuthPhoneEnabled: boolean;
-  terminalAuthNameDobEnabled: boolean;
-  terminalAuthEgkEnabled: boolean;
-  terminalPatientLocales: TerminalPatientLocale[];
-  emergencyActive: boolean;
-};
+export type TerminalHeartbeat = OpsHeartbeatResponse;
 
 export async function fetchTerminalHeartbeat() {
-  return terminalAuthFetch<TerminalHeartbeat>('/api/v1/ops/heartbeat');
+  return terminalAuthFetch<OpsHeartbeatResponse>('/api/v1/ops/heartbeat');
 }
 
 export async function fetchTerminalTopics() {
-  return terminalAuthFetch<{ topics: TerminalTopicOption[] }>('/api/v1/checkins/topics');
+  return terminalAuthFetch<TerminalTopicsResponse>('/api/v1/checkins/topics');
 }
 
 export async function createCheckin(input: {
@@ -79,13 +68,10 @@ export async function releaseTerminalAssist() {
 }
 
 export async function raiseTerminalEmergency() {
-  return terminalAuthFetch<{ emergencyId: string; raisedAt: string }>(
-    '/api/v1/ops/emergency/raise',
-    {
-      method: 'POST',
-      body: JSON.stringify({}),
-    },
-  );
+  return terminalAuthFetch<EmergencyRaiseResponse>('/api/v1/ops/emergency/raise', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 }
 
 export function mapCheckinErrorMessage(code: string | undefined, fallback: string): string {

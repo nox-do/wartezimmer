@@ -59,3 +59,17 @@ export type CsvContactDelimiterMode = OpsSettingsResponse['contactLookupDelimite
 export type CsvContactLookupMapping = OpsSettingsResponse['contactLookupMapping'];
 
 export type PracticeProfile = OpsSchemas['PracticeProfile'];
+
+export type DayLifecycleResponse = OpsSchemas['DayLifecycleResponse'];
+export type RoutingCapabilitiesResponse = OpsSchemas['RoutingCapabilitiesResponse'];
+export type OpsStateResponse = OpsSchemas['OpsStateResponse'];
+export type BusinessDayResetResponse = OpsSchemas['BusinessDayResetResponse'];
+export type DeploymentStorageResponse = OpsSchemas['DeploymentStorageResponse'];
+export type DeploymentVolumeStatus = OpsSchemas['DeploymentVolumeStatus'];
+export type MessagingProviderCatalogResponse = OpsSchemas['MessagingProviderCatalogResponse'];
+export type RuntimeResetPreviewResponse = OpsSchemas['RuntimeResetPreviewResponse'];
+export type RuntimeResetResponse = OpsSchemas['RuntimeResetResponse'];
+export type OpsHeartbeatResponse = OpsSchemas['OpsHeartbeatResponse'];
+export type ContactLookupPreviewResponse = OpsSchemas['ContactLookupPreviewResponse'];
+export type ContactLookupValidateResponse = OpsSchemas['ContactLookupValidateResponse'];
+export type EmergencyRaiseResponse = OpsSchemas['EmergencyRaiseResponse'];
