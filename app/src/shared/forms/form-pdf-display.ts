@@ -1,3 +1,9 @@
+import type {
+  FormPdfDisplay,
+  FormPdfDisplayField,
+  FormPdfDisplayMeta,
+  FormPdfDisplaySection,
+} from '@praxis-flow/server-shared';
 import type { FormTemplateDefinition, FormTemplateField } from './template-types.js';
 import { buildFormPrivacyNoticeV2 } from './consent/privacy-notice-v1.js';
 import { getCoreDatabase } from '../db/database.js';
@@ -5,27 +11,7 @@ import { getPracticeProfileForDb } from '../practice/practice-profile-service.js
 import { buildConsentPatientSnapshot } from './consent/patient-consent-snapshot.js';
 import { formatTicketCode } from '../queue/ticket-code.js';
 
-export type FormPdfDisplayMeta = {
-  label: string;
-  value: string;
-};
-
-export type FormPdfDisplayField = {
-  label: string;
-  value: string;
-};
-
-export type FormPdfDisplaySection = {
-  title: string;
-  fields: FormPdfDisplayField[];
-};
-
-export type FormPdfDisplay = {
-  title: string;
-  subtitle?: string;
-  meta?: FormPdfDisplayMeta[];
-  sections: FormPdfDisplaySection[];
-};
+export type { FormPdfDisplay, FormPdfDisplayField, FormPdfDisplayMeta, FormPdfDisplaySection };
 
 export type FormPdfBatchContext = {
   ticketCode: string;

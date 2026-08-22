@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { collectRegisteredAppRoutes } from './fastify-route-scan.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const rulesPath = path.join(root, 'app/src/auth/route-access-rules.ts');
@@ -17,42 +18,9 @@ function parseAuthRules(source) {
   return rules;
 }
 
-function collectRouteFiles(dir) {
-  const files = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...collectRouteFiles(fullPath));
-      continue;
-    }
-    if (entry.isFile() && entry.name.endsWith('.ts')) {
-      files.push(fullPath);
-    }
-  }
-  return files;
-}
-
-function parseRegisteredRoutes(source) {
-  const routes = new Map();
-  const routeRe =
-    /app\.(get|post|patch|put|delete)(?:<[^>]*>)?\(\s*(?:\/\*[\s\S]*?\*\/\s*)?['"](\/api\/v1[^'"]+)['"]/gi;
-  for (const match of source.matchAll(routeRe)) {
-    const method = match[1].toUpperCase();
-    routes.set(`${method} ${match[2]}`, { method, path: match[2] });
-  }
-  return routes;
-}
-
 const rulesSource = fs.readFileSync(rulesPath, 'utf8');
 const rules = parseAuthRules(rulesSource);
-const registered = new Map();
-
-for (const file of collectRouteFiles(routesDir)) {
-  const source = fs.readFileSync(file, 'utf8');
-  for (const [key, route] of parseRegisteredRoutes(source)) {
-    registered.set(key, route);
-  }
-}
+const registered = collectRegisteredAppRoutes(routesDir);
 
 const missingRules = [...registered.values()].filter(
   (route) => !rules.has(`${route.method} ${route.path}`),

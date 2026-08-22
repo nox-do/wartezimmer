@@ -27,13 +27,14 @@ Erledigte Befunde stehen nicht mehr in der Priorisierung, sondern gesammelt unte
 
 | Reihenfolge | ID      | Kandidat                                                     | Status           | Priorität | Effort |
 | ----------- | ------- | ------------------------------------------------------------ | ---------------- | --------- | ------ |
-| 1           | DUP-008 | gemeinsames Route-Parsing für beide Drift-Checks             | bereinigen       | mittel    | S      |
-| 2           | DUP-010 | App/Sandbox-`FormPdfDisplay`-Vertrag zentralisieren          | bereinigen       | mittel    | S–M    |
-| 3           | DUP-015 | Portal-Control-Inferenz als Vertrag klären                   | entscheiden      | mittel    | S–M    |
-| 4           | DUP-014 | DB-Snapshot-Vergleich als gemeinsamen Vertragshelfer führen  | entscheiden      | niedrig   | S      |
-| 5           | DUP-003 | Monorepo-Root-Suche zentralisieren                           | entscheiden      | niedrig   | S      |
-| 6           | DUP-013 | gemeinsamen Prozess-Runner bei nächster Änderung extrahieren | bei Gelegenheit  | niedrig   | S      |
-| 7           | DUP-004 | Proxy-Compose-Overlays                                       | vorerst behalten | niedrig   | S      |
+| 1           | DUP-015 | Portal-Control-Inferenz als Vertrag klären                   | entscheiden      | mittel    | S–M    |
+| 2           | DUP-014 | DB-Snapshot-Vergleich als gemeinsamen Vertragshelfer führen  | entscheiden      | niedrig   | S      |
+| 3           | DUP-003 | Monorepo-Root-Suche zentralisieren                           | entscheiden      | niedrig   | S      |
+| 4           | DUP-013 | gemeinsamen Prozess-Runner bei nächster Änderung extrahieren | bei Gelegenheit  | niedrig   | S      |
+| 5           | DUP-004 | Proxy-Compose-Overlays                                       | vorerst behalten | niedrig   | S      |
+
+**Nächster Kandidat: DUP-015.** Backend und UI leiten dieselbe Portal-Eingabe
+ab; zu klären ist, ob `portalControl` ein verpflichtender Transportvertrag ist.
 
 ### Offene Befunde
 
@@ -56,28 +57,6 @@ Packaging-Modell, da Release-Pakete die `*.delivery.yml`-Templates mitnehmen.
 
 Bewertung: vorerst behalten. Falls eine der Dateien geändert wird, eine kanonische
 Vorlage mit Packaging-Kopie oder zumindest einen Gleichheits-/Drift-Check ergänzen.
-
-#### DUP-008: Route-Parser für zwei Architektur-Checks ist doppelt
-
-`scripts/check-auth-route-rules.mjs` und `scripts/check-openapi-route-sync.mjs`
-enthalten dieselbe Regex-basierte Funktion `parseRegisteredRoutes` und fast
-dieselbe rekursive Dateisuche. Wenn Fastify-Routen künftig anders geschrieben
-werden, können die beiden Schutzmechanismen unterschiedlich reagieren.
-
-Empfehlung: Collection und Parsing in einen gemeinsamen Script-Helper verschieben.
-Der Aufrufer entscheidet lediglich, ob Testdateien berücksichtigt werden und wie
-Pfade normalisiert werden.
-
-#### DUP-010: `FormPdfDisplay` ist ein doppelter App/Sandbox-Wire-Contract
-
-Die vier Typen `FormPdfDisplay`, `FormPdfDisplayMeta`, `FormPdfDisplayField` und
-`FormPdfDisplaySection` sind in `app/src/shared/forms/form-pdf-display.ts` und
-`sandbox/src/form2pdf-types.ts` strukturell gleich. Der App-Prozess erzeugt diese
-Daten; die Sandbox validiert und rendert sie.
-
-Empfehlung: Typen und Runtime-Guard in `@praxis-flow/server-shared` führen. App und
-Sandbox hängen bereits von diesem Package ab. Der App-spezifische Aufbau und das
-Sandbox-spezifische Layout bleiben lokal.
 
 #### DUP-013: Release-Skripte kopieren Prozess-Runner
 
@@ -174,19 +153,21 @@ das ändert. Sie sind Absicherung gegen Drive-by-Refactors.
 
 ## Abgeschlossen
 
-| ID      | Ergebnis                                                                                     | Datum      |
-| ------- | -------------------------------------------------------------------------------------------- | ---------- |
-| LEG-001 | veralteten Tar-Pfad-Alias entfernt; `validateTarArchiveEntries` bleibt kanonisch             | 2026-07-23 |
-| LEG-002 | `SaveEnvBackupResult` entfernt; interner Consumer nutzt `SavePfbackupResult`                 | 2026-07-23 |
-| LEG-003 | Flow-Core-PoC-HTTP, Referenz-UI und Standalone-Oberfläche entfernt                           | 2026-07-28 |
-| DUP-001 | Ticket-Code-Formatierung und -Parser in `@praxis-flow/domain` kanonisiert                    | 2026-07-23 |
-| DUP-002 | OpenAPI-Type-Orchestrierung und Sync-Guards zusammengeführt; Outputs bleiben getrennt        | 2026-08-22 |
-| DUP-005 | UI-Spiegeltypen durch Aliase auf lokal generierte OpenAPI-Typen ersetzt                      | 2026-08-22 |
-| DUP-007 | gemeinsamen `registerDefaultErrorHandler` für App und Maintenance-App eingeführt             | 2026-08-22 |
-| DUP-009 | Default-Aufrufraum an `listEnabledRooms` und `resolveDefaultCallRoomId` gekoppelt            | 2026-08-22 |
-| DUP-011 | Setup-DTOs aus `@praxis-flow/server-shared` übernommen und lokal re-exportiert               | 2026-08-22 |
-| DUP-012 | `sha256File` in Setup zentralisiert; bestehender Pfupdate-Import bleibt als Re-Export gültig | 2026-08-22 |
-| DUP-006 | lokale Smoke-`requestJson`/`assert` durch `smoke-helpers` ersetzt; `durationMs` ergänzt      | 2026-08-22 |
+| ID      | Ergebnis                                                                                      | Datum      |
+| ------- | --------------------------------------------------------------------------------------------- | ---------- |
+| DUP-001 | Ticket-Code-Formatierung und -Parser in `@praxis-flow/domain` kanonisiert                     | 2026-07-23 |
+| DUP-002 | OpenAPI-Type-Orchestrierung und Sync-Guards zusammengeführt; Outputs bleiben getrennt         | 2026-08-22 |
+| DUP-005 | UI-Spiegeltypen durch Aliase auf lokal generierte OpenAPI-Typen ersetzt                       | 2026-08-22 |
+| DUP-006 | lokale Smoke-`requestJson`/`assert` durch `smoke-helpers` ersetzt; `durationMs` ergänzt       | 2026-08-22 |
+| DUP-007 | gemeinsamen `registerDefaultErrorHandler` für App und Maintenance-App eingeführt              | 2026-08-22 |
+| DUP-009 | Default-Aufrufraum an `listEnabledRooms` und `resolveDefaultCallRoomId` gekoppelt             | 2026-08-22 |
+| DUP-010 | `FormPdfDisplay`-Typen und Guard in `@praxis-flow/server-shared`; App/Sandbox re-exportieren  | 2026-08-22 |
+| DUP-011 | Setup-DTOs aus `@praxis-flow/server-shared` übernommen und lokal re-exportiert                | 2026-08-22 |
+| DUP-012 | `sha256File` in Setup zentralisiert; bestehender Pfupdate-Import bleibt als Re-Export gültig  | 2026-08-22 |
+| DUP-008 | Fastify-Route-Scan in `fastify-route-scan.mjs`; Auth- und OpenAPI-Check nutzen dieselbe Menge | 2026-08-22 |
+| LEG-001 | veralteten Tar-Pfad-Alias entfernt; `validateTarArchiveEntries` bleibt kanonisch              | 2026-07-23 |
+| LEG-002 | `SaveEnvBackupResult` entfernt; interner Consumer nutzt `SavePfbackupResult`                  | 2026-07-23 |
+| LEG-003 | Flow-Core-PoC-HTTP, Referenz-UI und Standalone-Oberfläche entfernt                            | 2026-07-28 |
 
 Zu DUP-002: `scripts/openapi-types-lib.mjs` hält die gemeinsame Spec-Tabelle und
 Orchestrierung. UI und App behalten eigene generierte Zielbäume; `identity.yaml`
@@ -200,6 +181,16 @@ lokal.
 Zu DUP-006: Fünf identische `requestJson`-Kopien und sechs lokale `assert`-Kopien
 nutzen den Shared-Helper. `requestJson` liefert zusätzlich `durationMs`;
 `smoke-doc-flow.mjs` behält `fetchTimed` und `requestMultipart` lokal.
+
+Zu DUP-010: Typen und vollständiger Runtime-Guard liegen in
+`@praxis-flow/server-shared`. App (`form-pdf-display.ts`) und Sandbox
+(`form2pdf-types.ts`) bleiben Re-Export-Grenzen. Builder und PDF-Layout bleiben
+lokal. Der Guard prüft jetzt auch `subtitle` und `meta`.
+
+Zu DUP-008: `collectRegisteredAppRoutes` ist die einzige Scan-API. Testdateien
+(`*.test.ts`, `*.spec.ts`) sind fest ausgeschlossen — auch die Auth-Fixtures in
+`auth-routes.test.ts`. Normalisierung, Regel- und OpenAPI-Vergleich bleiben in
+den jeweiligen Checks.
 
 ## Nächste Audit-Wellen
 

@@ -96,6 +96,13 @@ export {
   normalizePatientUploadFileName,
 } from './intake-file-name-header.js';
 export {
+  isFormPdfDisplay,
+  type FormPdfDisplay,
+  type FormPdfDisplayField,
+  type FormPdfDisplayMeta,
+  type FormPdfDisplaySection,
+} from './form-pdf-display.js';
+export {
   FRESHCLAM_LOG_PATH,
   resolveMaxSignatureAgeHours,
   type SandboxScannerStatus,
