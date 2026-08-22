@@ -2,17 +2,15 @@
 
 Stand: 2026-08-22
 
-## Audit-Liste — sichere Vier (2026-08-22)
+## Audit Dopplungen und Altlasten (2026-08-22)
 
 Quelle: [`docs/audit-dopplungen-altlasten.md`](docs/audit-dopplungen-altlasten.md)
 
-- **DUP-007** ✅ `registerDefaultErrorHandler` in `app/src/http/` — App + Maintenance
-- **DUP-009** ✅ Default-Aufrufraum über Domain (`listEnabledRooms` / `resolveDefaultCallRoomId`); toter Export in `database-ops-settings` entfernt
-- **DUP-011** ✅ Setup-DTOs re-exportieren `server-shared` (`NetworkAddress`, `NetworkInterfaceInfo`, `PfupdateApplyInput`, `PfupdateInspectInput`)
-- **DUP-012** ✅ `sha256File` in `setup/src/sha256-file.ts`; `pfupdate-package` re-exportiert
-- **DUP-002** ✅ gemeinsame Type-Orchestrierung (`openapi-types-lib.mjs`); Wrapper-Namen stabil; gleiche Sync-Guards; Identity nur App
-- **DUP-005** ✅ UI-Handtypen → lokale OpenAPI-Aliase (Ops/Terminal, dann Portal aus documents-paths). Importnamen bleiben. OK-001 unverändert
-- **Nicht angefasst:** DUP-006/008/010/014/015/003/013/004, alle OK-\*
+- **Erledigt:** DUP-002, DUP-005, DUP-007, DUP-009, DUP-011, DUP-012
+- **Als Nächstes:** DUP-006, DUP-008, DUP-010
+- **Entscheiden:** DUP-003, DUP-014, DUP-015
+- **Bei Gelegenheit/vorerst behalten:** DUP-004, DUP-013
+- **Bewusst nicht konsolidieren:** OK-001 bis OK-006
 
 ## MFA Settings — Räume UX (2026-08-22)
 

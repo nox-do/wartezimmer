@@ -1,6 +1,6 @@
 # Audit: Dopplungen und Altlasten
 
-Stand: 2026-08-22 (zweite Audit-Welle)
+Stand: 2026-08-22
 
 ## Ergebnis der zweiten Audit-Welle
 
@@ -20,31 +20,43 @@ Die Suche kombinierte:
 Es gibt keine vollständig identischen produktiven Quelldateien außerhalb generierter
 Artefakte. Die relevanten Dopplungen sind überwiegend strukturell oder semantisch.
 
-### Aktuelle Priorisierung
+### Aktive Arbeitsliste
 
-| Reihenfolge | ID      | Kandidat                                                    | Status                | Priorität | Effort |
-| ----------- | ------- | ----------------------------------------------------------- | --------------------- | --------- | ------ |
-| 1           | DUP-005 | UI-Transporttypen aus vorhandenem OpenAPI ableiten          | erledigt (2026-08-22) | hoch      | M      |
-| 2           | DUP-006 | lokale Smoke-`requestJson` durch Shared-Helper ersetzen     | bereinigen            | mittel    | S      |
-| 3           | DUP-009 | Default-Aufrufraum vollständig an Domain koppeln            | erledigt (2026-08-22) | mittel    | S      |
-| 4           | DUP-008 | gemeinsames Route-Parsing für beide Drift-Checks            | bereinigen            | mittel    | S      |
-| 5           | DUP-007 | gemeinsamen Fastify-Error-Handler verwenden                 | erledigt (2026-08-22) | mittel    | S      |
-| 6           | DUP-010 | App/Sandbox-`FormPdfDisplay`-Vertrag zentralisieren         | bereinigen            | mittel    | S–M    |
-| 7           | DUP-011 | Setup-DTOs aus `server-shared` verwenden                    | erledigt (2026-08-22) | mittel    | S      |
-| 8           | DUP-002 | OpenAPI-Generatoren und Sync-Checks vereinheitlichen        | erledigt (2026-08-22) | mittel    | M      |
-| 9           | DUP-012 | `sha256File` innerhalb von Setup zentralisieren             | erledigt (2026-08-22) | niedrig   | S      |
-| 10          | DUP-014 | DB-Snapshot-Vergleich als gemeinsamen Vertragshelfer führen | entscheiden           | niedrig   | S      |
-| 11          | DUP-003 | Monorepo-Root-Suche zentralisieren                          | entscheiden           | niedrig   | S      |
+Erledigte Befunde stehen nicht mehr in der Priorisierung, sondern gesammelt unter
+[Abgeschlossen](#abgeschlossen).
 
-### Neue Befunde
+| Reihenfolge | ID      | Kandidat                                                     | Status           | Priorität | Effort |
+| ----------- | ------- | ------------------------------------------------------------ | ---------------- | --------- | ------ |
+| 1           | DUP-006 | lokale Smoke-`requestJson` durch Shared-Helper ersetzen      | bereinigen       | mittel    | S      |
+| 2           | DUP-008 | gemeinsames Route-Parsing für beide Drift-Checks             | bereinigen       | mittel    | S      |
+| 3           | DUP-010 | App/Sandbox-`FormPdfDisplay`-Vertrag zentralisieren          | bereinigen       | mittel    | S–M    |
+| 4           | DUP-015 | Portal-Control-Inferenz als Vertrag klären                   | entscheiden      | mittel    | S–M    |
+| 5           | DUP-014 | DB-Snapshot-Vergleich als gemeinsamen Vertragshelfer führen  | entscheiden      | niedrig   | S      |
+| 6           | DUP-003 | Monorepo-Root-Suche zentralisieren                           | entscheiden      | niedrig   | S      |
+| 7           | DUP-013 | gemeinsamen Prozess-Runner bei nächster Änderung extrahieren | bei Gelegenheit  | niedrig   | S      |
+| 8           | DUP-004 | Proxy-Compose-Overlays                                       | vorerst behalten | niedrig   | S      |
 
-#### DUP-005: UI modelliert vorhandene OpenAPI-Responses nochmals von Hand — erledigt (2026-08-22)
+### Offene Befunde
 
-Handgeschriebene Spiegeltypen sind durch Aliase auf die lokal generierten UI-Typen
-ersetzt. Bestehende Importnamen bleiben (z. B. `DayLifecycleState`,
-`RoutingCapabilities`, `TerminalAssistPressed`). Portal-Session-Typen kommen aus
-den inline-`paths` von `documents.yaml`; `identity.yaml` bleibt App-only.
-OK-001 unverändert: generierte App-/UI-Dateien nicht zusammengelegt.
+#### DUP-003: Monorepo-Root-Suche existiert zweimal
+
+`setup/src/project-root.ts` und `manager/src/main/project-root.ts` laufen beide
+maximal zwölf Verzeichnisse nach oben und suchen das Paket `praxis_flow`.
+Unterschiedlich sind hauptsächlich Defaults, Fehlermeldung und die optionale
+Variante.
+
+Empfehlung: den gemeinsamen Suchkern in ein Node-taugliches Shared-Modul
+verschieben. Lokale Wrapper dürfen paketbezogene Fehlermeldungen und Defaults
+behalten. Priorität niedrig, weil die Logik klein ist und sich selten ändert.
+
+#### DUP-004: Proxy-Compose-Overlays sind semantisch identisch
+
+`docker-compose.proxy.yml` und `docker-compose.proxy.delivery.yml` unterscheiden
+sich nur in Kommentar und Anwendungsbeispiel. Die getrennten Dateinamen passen zum
+Packaging-Modell, da Release-Pakete die `*.delivery.yml`-Templates mitnehmen.
+
+Bewertung: vorerst behalten. Falls eine der Dateien geändert wird, eine kanonische
+Vorlage mit Packaging-Kopie oder zumindest einen Gleichheits-/Drift-Check ergänzen.
 
 #### DUP-006: Smoke-Skripte kopieren einen bereits vorhandenen HTTP-Helper
 
@@ -67,11 +79,6 @@ Empfehlung: die fünf einfachen Kopien direkt ersetzen und den Doc-Flow nur um d
 tatsächlich benötigte Zusatzfähigkeit ergänzen. Lokale `assert`-Kopien im selben
 Zug ebenfalls gegen den exportierten Helper prüfen.
 
-#### DUP-007: Standard-Fehlerbehandlung ist in beiden Fastify-Apps identisch — erledigt (2026-08-22)
-
-`registerDefaultErrorHandler` liegt unter `app/src/http/default-error-handler.ts`.
-`app.ts` und `maintenance-app.ts` verwenden denselben Handler.
-
 #### DUP-008: Route-Parser für zwei Architektur-Checks ist doppelt
 
 `scripts/check-auth-route-rules.mjs` und `scripts/check-openapi-route-sync.mjs`
@@ -83,12 +90,6 @@ Empfehlung: Collection und Parsing in einen gemeinsamen Script-Helper verschiebe
 Der Aufrufer entscheidet lediglich, ob Testdateien berücksichtigt werden und wie
 Pfade normalisiert werden.
 
-#### DUP-009: Default-Aufrufraum ist trotz Domain-Quelle zweimal im Backend implementiert — erledigt (2026-08-22)
-
-`checkin-topic-settings.ts` liefert weiter das Room-Objekt, filtert und fällt
-aber über `listEnabledRooms` / `resolveDefaultCallRoomId` aus der Domain.
-Der ungenutzte Export in `database-ops-settings.ts` ist entfernt.
-
 #### DUP-010: `FormPdfDisplay` ist ein doppelter App/Sandbox-Wire-Contract
 
 Die vier Typen `FormPdfDisplay`, `FormPdfDisplayMeta`, `FormPdfDisplayField` und
@@ -99,16 +100,6 @@ Daten; die Sandbox validiert und rendert sie.
 Empfehlung: Typen und Runtime-Guard in `@praxis-flow/server-shared` führen. App und
 Sandbox hängen bereits von diesem Package ab. Der App-spezifische Aufbau und das
 Sandbox-spezifische Layout bleiben lokal.
-
-#### DUP-011: Setup implementiert Teile seines Shared-API-Vertrags erneut — erledigt (2026-08-22)
-
-`network.ts`, `settings-backup-update.ts` und `pfupdate-inspect.ts` importieren
-die DTOs aus `@praxis-flow/server-shared` und re-exportieren sie lokal.
-
-#### DUP-012: `sha256File` existiert zweimal im Setup-Workspace — erledigt (2026-08-22)
-
-Eine Implementierung in `setup/src/sha256-file.ts`. `pfupdate-package.ts`
-re-exportiert für bestehende Importe.
 
 #### DUP-013: Release-Skripte kopieren Prozess-Runner
 
@@ -140,6 +131,25 @@ Fallback für Abwärtskompatibilität nötig ist, die Regel browser-sicher teile
 mit einem expliziten Kompatibilitätstest absichern.
 
 ### Bewusst nicht konsolidieren
+
+#### OK-001: Generierte OpenAPI-Typen für App und UI
+
+App und UI bleiben getrennte Consumer-Grenzen und erhalten jeweils eigene
+`*-openapi.d.ts`. Die gemeinsame Spec-Tabelle, Generierung und die Drift-Guards
+liegen unter DUP-002; ein zusätzliches Shared-Package ist nicht gerechtfertigt.
+
+#### OK-002: Raumkapazitäts-Adapter für App und UI
+
+Die Fachlogik liegt in `@praxis-flow/domain`. App und UI besitzen dünne Adapter für
+ihre unterschiedlichen Datenformen und ergänzen jeweils schichtspezifische
+Validierung beziehungsweise Darstellung.
+
+#### OK-003: Lokale Domain-Re-Exports
+
+Lokale Re-Exports wie `app/src/shared/ops/device-ids.ts`,
+`app/src/shared/topic-icon-ids.ts` und `app/src/shared/checkin-topics.ts`
+stabilisieren App-interne Importgrenzen. Direkte Workspace-Imports sind derzeit
+keine allgemeine Projektregel.
 
 #### OK-004: Expiry-Scheduler
 
@@ -175,6 +185,7 @@ Status:
 
 - **bereinigen**: klare Doppelquelle oder klar auslaufender Kompatibilitätsrest,
 - **entscheiden**: Absicht ist dokumentiert, Nutzen und Kosten sollten aber neu bewertet werden,
+- **bei Gelegenheit**: kleine, stabile Dopplung ohne aktuellen Änderungsdruck,
 - **behalten**: Dopplung ist generiert, eine sinnvolle Grenzschicht oder verhältnismäßig.
 
 Build-Ausgaben, `node_modules`, `.svelte-kit`, `dist`, `out` und `ui/build` wurden
@@ -183,134 +194,29 @@ bei beiden repositoryweiten Inventur-Durchgängen ausgeschlossen.
 **OK-\*-Einträge nicht anfassen**, solange keine bewusste Architekturentscheidung
 das ändert. Sie sind Absicherung gegen Drive-by-Refactors.
 
-## Empfohlene Reihenfolge der ersten Audit-Welle (historisch)
+## Abgeschlossen
 
-Effort: **S** ≈ Minuten, **M** ≈ Stunden, **L** ≈ Entscheidung + ggf. größerer Schnitt.
+| ID      | Ergebnis                                                                                     | Datum      |
+| ------- | -------------------------------------------------------------------------------------------- | ---------- |
+| LEG-001 | veralteten Tar-Pfad-Alias entfernt; `validateTarArchiveEntries` bleibt kanonisch             | 2026-07-23 |
+| LEG-002 | `SaveEnvBackupResult` entfernt; interner Consumer nutzt `SavePfbackupResult`                 | 2026-07-23 |
+| LEG-003 | Flow-Core-PoC-HTTP, Referenz-UI und Standalone-Oberfläche entfernt                           | 2026-07-28 |
+| DUP-001 | Ticket-Code-Formatierung und -Parser in `@praxis-flow/domain` kanonisiert                    | 2026-07-23 |
+| DUP-002 | OpenAPI-Type-Orchestrierung und Sync-Guards zusammengeführt; Outputs bleiben getrennt        | 2026-08-22 |
+| DUP-005 | UI-Spiegeltypen durch Aliase auf lokal generierte OpenAPI-Typen ersetzt                      | 2026-08-22 |
+| DUP-007 | gemeinsamen `registerDefaultErrorHandler` für App und Maintenance-App eingeführt             | 2026-08-22 |
+| DUP-009 | Default-Aufrufraum an `listEnabledRooms` und `resolveDefaultCallRoomId` gekoppelt            | 2026-08-22 |
+| DUP-011 | Setup-DTOs aus `@praxis-flow/server-shared` übernommen und lokal re-exportiert               | 2026-08-22 |
+| DUP-012 | `sha256File` in Setup zentralisiert; bestehender Pfupdate-Import bleibt als Re-Export gültig | 2026-08-22 |
 
-| Schritt | ID      | Aktion                                                            | Effort |
-| ------- | ------- | ----------------------------------------------------------------- | ------ |
-| ✅ 1    | LEG-001 | Tar-Pfad-Alias entfernen                                          | S      |
-| ✅ 2    | LEG-002 | `SaveEnvBackupResult`-Alias entfernen                             | S      |
-| ✅ 3    | DUP-001 | Ticket-Code in Domain kanonisieren (inkl. Smoke-Helper)           | S–M    |
-| ✅ 4    | DUP-002 | OpenAPI-Generator/Sync-Checks vereinheitlichen (gleiche Guards)   | M      |
-| ✅ 5    | LEG-003 | PoC-HTTP/UI aus aktivem Build entfernen                           | L      |
-| 6       | DUP-003 | Monorepo-Root-Suche (bei Gelegenheit)                             | S      |
-| 7       | DUP-004 | Proxy-Compose: Drift-Check oder Packaging-Kopie (bei Gelegenheit) | S      |
+Zu DUP-002: `scripts/openapi-types-lib.mjs` hält die gemeinsame Spec-Tabelle und
+Orchestrierung. UI und App behalten eigene generierte Zielbäume; `identity.yaml`
+bleibt App-only.
 
-## Kurzpriorisierung
-
-| ID      | Kandidat                                                 | Status                | Priorität | Effort | Konfidenz |
-| ------- | -------------------------------------------------------- | --------------------- | --------- | ------ | --------- |
-| LEG-001 | `validateTarArchiveEntryPaths`                           | erledigt (2026-07-23) | niedrig   | S      | hoch      |
-| LEG-002 | `SaveEnvBackupResult`                                    | erledigt (2026-07-23) | niedrig   | S      | hoch      |
-| DUP-001 | Ticket-Code in Domain, Flow-Core, App und Smoke          | erledigt (2026-07-23) | mittel    | S–M    | hoch      |
-| DUP-002 | doppelte OpenAPI-Type-Generatoren und Drift-Checks       | erledigt (2026-08-22) | mittel    | M      | hoch      |
-| LEG-003 | Flow-Core-PoC-Server und Referenz-UI im Produkt-Monorepo | erledigt (2026-07-28) | mittel    | L      | hoch      |
-| DUP-003 | doppelte Monorepo-Root-Suche                             | entscheiden           | niedrig   | S      | hoch      |
-| DUP-004 | Proxy-Compose-Overlays mit identischem Inhalt            | behalten/entscheiden  | niedrig   | S      | hoch      |
-| OK-001  | generierte OpenAPI-Typen für App und UI                  | behalten              | –         | –      | hoch      |
-| OK-002  | Raumkapazitäts-Adapter für App und UI                    | behalten              | –         | –      | hoch      |
-| OK-003  | lokale Re-Export-Grenzen für Domain-Konstanten           | behalten              | –         | –      | mittel    |
-
-## Befunde
-
-### DUP-001: Ticket-Code — erledigt (2026-07-23)
-
-Historischer Befund: Formatierung und Parser waren in Domain, Flow-Core, App und
-Smoke mehrfach implementiert. Heute exportiert `@praxis-flow/domain` beide
-Funktionen; Flow-Core und App bilden nur noch dünne Re-Export-Grenzen und der
-Smoke-Helper re-exportiert `formatTicketCode` aus der Domain. Visit-ID-spezifische
-Logik bleibt bewusst im Flow-Core.
-
-### DUP-002: OpenAPI-Generierung ist doppelt und bereits unterschiedlich — erledigt (2026-08-22)
-
-Eine Spec-Tabelle und ein Ablauf in `scripts/openapi-types-lib.mjs`. Die alten
-Skriptnamen bleiben Wrapper. UI- und App-Checks teilen Missing-File-Sammlung und
-`assertGeneratedFilesTracked`. Outputs bleiben getrennt (OK-001); `identity.yaml`
-nur App. Tracked-Guard liegt in `openapi-lib.mjs` und bekommt denselben Root.
-
-### LEG-001: Deprecated Tar-Pfad-Validator — erledigt (2026-07-23)
-
-Der nur noch von Tests verwendete Alias `validateTarArchiveEntryPaths` wurde
-entfernt. Die produktive und getestete Validierung läuft über
-`validateTarArchiveEntries`, die zusätzlich Entry-Typen prüft.
-
-### LEG-002: Alter Env-Backup-Typname — erledigt (2026-07-23)
-
-Der interne Manager-Consumer wurde auf `SavePfbackupResult` umgestellt und der
-deprecated Alias `SaveEnvBackupResult` entfernt.
-
-### LEG-003: Flow-Core PoC-Oberfläche — erledigt (2026-07-28)
-
-PoC-HTTP, Referenz-UI (`src/public`), Standalone-Skripte und Package-Meta aus
-`packages/flow-core` entfernt. Library-Runtime + Package-Tests bleiben.
-Standalone-/Referenz-Snapshot: `../new_flow_core`.
-
-Nicht pauschal `packages/flow-core` entfernen: Die Produkt-App importiert dessen
-Shared- und Server-Runtime aktiv.
-
-### DUP-003: Monorepo-Root-Suche existiert zweimal
-
-`setup/src/project-root.ts` und `manager/src/main/project-root.ts` laufen beide
-maximal zwölf Verzeichnisse nach oben und suchen das Paket `praxis_flow`.
-Unterschiedlich sind hauptsächlich Defaults, Fehlermeldung und die optionale
-Variante.
-
-Empfehlung:
-
-- den gemeinsamen Suchkern in ein Node-taugliches Shared-Modul verschieben;
-- lokale Wrapper können paketbezogene Fehlermeldungen und Defaults behalten.
-
-Priorität niedrig: Die Logik ist klein und ändert sich selten.
-
-### DUP-004: Proxy-Compose-Overlays sind semantisch identisch
-
-`docker-compose.proxy.yml` und `docker-compose.proxy.delivery.yml` unterscheiden
-sich nur in Kommentar und Anwendungsbeispiel. Der Compose-Inhalt ist identisch.
-
-Die getrennten Dateinamen passen allerdings zum Packaging-Modell: Release-Pakete
-nehmen die `*.delivery.yml`-Templates mit. Deshalb ist die Dopplung derzeit
-verhältnismäßig.
-
-Mögliche Verbesserung:
-
-- eine kanonische Vorlage führen und die zweite Datei beim Packaging erzeugen
-  beziehungsweise kopieren;
-- alternativ einen kleinen Gleichheits-/Drift-Check ergänzen.
-
-### OK-001: Generierte OpenAPI-Typen für App und UI
-
-Mehrere `*-openapi.d.ts` sind bytegleich in App und UI. Beide Zielorte werden
-explizit generiert, sind getrennte Consumer-Grenzen und werden über Drift-Checks
-abgesichert.
-
-Bewertung: behalten. Eine zentrale Generated-Package-Struktur wäre möglich, ist
-aber ein Architekturumbau und durch die bloße Dateidopplung nicht gerechtfertigt.
-Die Orchestrierung ist unter DUP-002 zusammengeführt.
-
-### OK-002: Raumkapazitäts-Adapter
-
-Die Fachlogik liegt bereits in `@praxis-flow/domain`. App und UI besitzen dünne
-Adapter für unterschiedliche Datenformen:
-
-- Backend: `QueueVisitRow.id`,
-- UI: `QueueItem.visitId` und optionales `roomId`,
-- Backend ergänzt serverseitige Validierung und Domain-Fehler,
-- UI ergänzt Labels und UI-Abfragen.
-
-Bewertung: behalten. Die ähnlichen Mapping-Funktionen sind eine angemessene
-Schichtgrenze.
-
-### OK-003: Lokale Domain-Re-Exports
-
-Dateien wie `app/src/shared/ops/device-ids.ts`,
-`app/src/shared/topic-icon-ids.ts` und
-`app/src/shared/checkin-topics.ts` re-exportieren Domain-Symbole. Sie werden aktiv
-über lokale App-Pfade importiert.
-
-Bewertung: vorerst behalten. Sie stabilisieren App-interne Importgrenzen. Eine
-Bereinigung lohnt erst, wenn das Projekt bewusst direkte Workspace-Imports als
-Regel festlegt.
+Zu DUP-005: Die bisherigen öffentlichen UI-Typnamen bleiben als Re-Exports
+erhalten. Ops-, Terminal- und Portal-Transporttypen stammen aus `components` oder
+`paths` der jeweils lokalen generierten Deklarationen. Echte View-Models bleiben
+lokal.
 
 ## Nächste Audit-Wellen
 
