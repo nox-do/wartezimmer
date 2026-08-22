@@ -32,10 +32,9 @@
   });
 
   function buildDraft(): PracticeRoomWithPanels {
-    const roomLabel = t('mfa.settings.roomDefaultLabel');
     return {
       roomId: generateRoomId(roomIdsTaken),
-      roomLabel,
+      roomLabel: '',
       enabled: true,
       defaultCallTarget: false,
       maxOccupancy: null,
@@ -110,6 +109,7 @@
         class="form-input"
         type="text"
         value={draft.roomLabel}
+        placeholder={t('mfa.settings.roomDefaultLabel')}
         disabled={busy}
         oninput={(event) => {
           draft = { ...draft, roomLabel: (event.currentTarget as HTMLInputElement).value };

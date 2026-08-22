@@ -190,6 +190,7 @@
         class="form-input"
         type="text"
         value={draft.label}
+        placeholder={t('mfa.settings.topicDefaultLabel')}
         disabled={busy}
         oninput={(event) => updateLabel((event.currentTarget as HTMLInputElement).value)}
       />

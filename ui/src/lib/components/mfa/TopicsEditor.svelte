@@ -16,7 +16,7 @@
     readTopicIdFromSortTargetId,
     topicSortInsertBeforeIndex,
   } from '$lib/queue/topic-sort-drop';
-  import { slugifyTopicId, topicTimeWindowLabel } from '$lib/queue/ops-settings-api';
+  import { topicTimeWindowLabel } from '$lib/queue/ops-settings-api';
   import { roomLabelById } from '$lib/queue/topic-settings-form';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
 
@@ -104,27 +104,15 @@
     };
   }
 
-  function topicIdsTaken(): Set<string> {
-    return new Set(topics.map((topic) => topic.topicId));
-  }
-
   function openAdd() {
-    const label = t('mfa.settings.topicDefaultLabel');
     editorMode = 'add';
     editorIndex = null;
     autoSyncTopicId = true;
     editorTopicIdsTaken = new Set(topics.map((topic) => topic.topicId));
     draft = {
-      topicId: slugifyTopicId(label, topicIdsTaken()),
-      label,
-      laneCode: 'A',
-      defaultRoomId: enabledRooms[0]?.roomId ?? '',
-      iconId: null,
-      accentColor: DEFAULT_TOPIC_ACCENT,
-      enabled: true,
-      availableFrom: null,
-      availableTo: null,
-      sortOrder: topics.length + 1,
+      ...emptyTopic(),
+      topicId: '',
+      label: '',
     };
     editorOpen = true;
   }

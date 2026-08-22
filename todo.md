@@ -2,6 +2,12 @@
 
 Stand: 2026-08-22
 
+## MFA Settings — Raum/Thema hinzufügen Placeholder (2026-08-22)
+
+- Modal „Raum hinzufügen“: „Neuer Raum“ war echter Input-Wert → bleibt beim Fokussieren
+- Modal „Thema hinzufügen“: gleiches Muster mit „Neues Thema“
+- Fix: leerer `label`/`roomLabel` + `placeholder` (`roomDefaultLabel` / `topicDefaultLabel`)
+
 ## UI-Tour — Room Panel Analyse (2026-08-22)
 
 - Inventar + Architektur/Concern-Trennung dokumentiert (Chat); **kein Code geändert**
