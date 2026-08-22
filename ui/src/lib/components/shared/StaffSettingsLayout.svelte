@@ -1,9 +1,8 @@
 <script lang="ts">
-  /* eslint-disable @typescript-eslint/no-explicit-any -- resolve() overloads; nav hrefs are dynamic */
   import type { Snippet } from 'svelte';
   import { afterNavigate } from '$app/navigation';
   import { page } from '$app/state';
-  import { resolve } from '$app/paths';
+  import { resolvedHref } from '$lib/navigation/kit-paths';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import type { TranslationKey } from '$lib/i18n/core/translation-keys';
   import {
@@ -48,17 +47,6 @@
     return '';
   }
 
-  function resolvedHref(href: string): string {
-    if (/^https?:\/\//i.test(href)) {
-      return href;
-    }
-    const queryIndex = href.indexOf('?');
-    if (queryIndex === -1) {
-      return resolve(href as any);
-    }
-    return `${resolve(href.slice(0, queryIndex) as any)}${href.slice(queryIndex)}`;
-  }
-
   function linkAttrs(external?: boolean) {
     if (!external) {
       return {};
@@ -88,6 +76,8 @@
   <aside class="staff-settings-sidebar" aria-label={t(subtitleKey)}>
     <header class="staff-settings-sidebar__top">
       {#if backHref && backLabelKey}
+        <!-- resolvedHref() wraps $app/paths resolve(); ESLint only recognizes resolve() in .svelte templates. -->
+        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
         <a class="staff-settings-sidebar__back" href={resolvedHref(backHref)}>
           <span aria-hidden="true">←</span>
           {t(backLabelKey)}
@@ -108,13 +98,9 @@
         {@const groupActive = isGroupActive(group)}
         <div class="staff-settings-nav__group">
           {#if group.href}
-            <a
-              class="staff-settings-nav__group-link"
-              class:staff-settings-nav__group-link--active={groupActive}
-              href={resolvedHref(group.href)}
-              aria-current={pathname === group.href ? 'page' : undefined}
-              {...linkAttrs(group.external)}
-            >
+            <!-- resolvedHref() wraps $app/paths resolve(); ESLint only recognizes resolve() in .svelte templates. -->
+            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+            <a class="staff-settings-nav__group-link" class:staff-settings-nav__group-link--active={groupActive} href={resolvedHref(group.href)} aria-current={pathname === group.href ? 'page' : undefined} {...linkAttrs(group.external)}>
               {displayLabel(group)}
             </a>
           {:else}
@@ -126,13 +112,9 @@
               {#each group.children as item (item.id)}
                 {@const itemActive = isStaffSettingsItemActive(pathname, item.href)}
                 <li>
-                  <a
-                    class="staff-settings-nav__child-link"
-                    class:staff-settings-nav__child-link--active={itemActive}
-                    href={resolvedHref(item.href)}
-                    aria-current={itemActive ? 'page' : undefined}
-                    {...linkAttrs(item.external)}
-                  >
+                  <!-- resolvedHref() wraps $app/paths resolve(); ESLint only recognizes resolve() in .svelte templates. -->
+                  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+                  <a class="staff-settings-nav__child-link" class:staff-settings-nav__child-link--active={itemActive} href={resolvedHref(item.href)} aria-current={itemActive ? 'page' : undefined} {...linkAttrs(item.external)}>
                     {displayLabel(item)}
                   </a>
                 </li>
@@ -146,12 +128,9 @@
     {#if showFooter}
       <footer class="staff-settings-sidebar__footer">
         {#if footer}
-          <a
-            class="staff-settings-sidebar__footer-link"
-            href={resolvedHref(footer.href)}
-            {...linkAttrs(footer.external)}
-            aria-label={footer.ariaLabelKey ? t(footer.ariaLabelKey) : undefined}
-          >
+          <!-- resolvedHref() wraps $app/paths resolve(); ESLint only recognizes resolve() in .svelte templates. -->
+          <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+          <a class="staff-settings-sidebar__footer-link" href={resolvedHref(footer.href)} {...linkAttrs(footer.external)} aria-label={footer.ariaLabelKey ? t(footer.ariaLabelKey) : undefined}>
             {t(footer.labelKey)}
           </a>
         {/if}

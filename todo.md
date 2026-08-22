@@ -15,6 +15,7 @@ Stand: 2026-08-22
 - Batch A+B ✅: `recoverExpiredSession` try/finally; `roomPanelDisplayName` dedupe; `RoomPanelPlacement` aus Domain in login-key
 - Batch C ✅: Room Panel `$app/state` statt `$app/stores` für URL-Params
 - Portal `normalizeTicketCode` → Domain `parseTicketCode`/`formatTicketCode` (A-000-Drift behoben); restliche UI `$app/stores` → `$app/state` (5 Stellen)
+- UI-Lint: `resolvedHref` zentral in `kit-paths.ts` (HTTP-Passthrough, Query via resolve); Duplikate in HomeLinkCards/StaffSettingsLayout entfernt; 5× eslint-disable-next-line
 
 ## UI-Tour — MFA Dashboard Analyse (2026-08-21)
 

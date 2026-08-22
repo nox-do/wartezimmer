@@ -5,9 +5,12 @@ import { resolve } from '$app/paths';
 type GotoOptions = Parameters<typeof goto>[1];
 
 /** Prefix app base path for internal route hrefs (SvelteKit 2). Prefer `resolve()` from `$app/paths` in `.svelte` templates — ESLint only recognizes that import. */
-export function resolvedHref(path: string): string {
+export function resolvedHref(href: string): string {
+  if (/^https?:\/\//i.test(href)) {
+    return href;
+  }
   // resolve() is overload-narrowed per route; dynamic paths need a wide cast at this boundary.
-  return resolve(path as any);
+  return resolve(href as any);
 }
 
 export function gotoResolved(path: string, opts?: GotoOptions): ReturnType<typeof goto> {

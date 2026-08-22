@@ -1,6 +1,5 @@
 <script lang="ts">
-  /* eslint-disable @typescript-eslint/no-explicit-any -- resolve() overloads; hrefs are dynamic */
-  import { resolve } from '$app/paths';
+  import { resolvedHref } from '$lib/navigation/kit-paths';
   import { ChevronRight } from '@lucide/svelte';
 
   export type HomeLinkCardItem = {
@@ -16,27 +15,13 @@
   }
 
   let { items, ariaLabel }: Props = $props();
-
-  function resolvedHref(href: string): string {
-    if (/^https?:\/\//i.test(href)) {
-      return href;
-    }
-    const queryIndex = href.indexOf('?');
-    if (queryIndex === -1) {
-      return resolve(href as any);
-    }
-    return `${resolve(href.slice(0, queryIndex) as any)}${href.slice(queryIndex)}`;
-  }
 </script>
 
 <nav class="home-link-grid" aria-label={ariaLabel}>
   {#each items as item (item.id)}
-    <a
-      class="panel panel--clickable"
-      href={resolvedHref(item.href)}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
+    <!-- resolvedHref() wraps $app/paths resolve(); ESLint only recognizes resolve() in .svelte templates. -->
+    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+    <a class="panel panel--clickable" href={resolvedHref(item.href)} target="_blank" rel="noopener noreferrer">
       <span class="panel__text">
         <strong>{item.title}</strong>
         {#if item.subtitle}
