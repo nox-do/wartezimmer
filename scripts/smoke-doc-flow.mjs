@@ -6,19 +6,15 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { loadRepoDotEnv } from './dotenv.mjs';
 import {
+  assert,
   ensureCheckinAvailable,
   formatTicketCode,
   pairDeviceForSmoke,
+  requestJson,
   smokeStaffAuth,
 } from './smoke-helpers.mjs';
 
 const execFileAsync = promisify(execFile);
-
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message);
-  }
-}
 
 async function dockerExec(container, command) {
   const { stdout } = await execFileAsync('docker', ['exec', container, 'sh', '-lc', command], {
@@ -35,53 +31,6 @@ function applyAuthHeaders(headers, auth) {
   if (auth?.origin) {
     headers.origin = auth.origin;
   }
-}
-
-async function requestJson(
-  baseUrl,
-  method,
-  endpoint,
-  { bearerToken, auth, jsonBody, expectedStatus },
-) {
-  const startedAt = performance.now();
-  const headers = {};
-  if (jsonBody != null) {
-    headers['content-type'] = 'application/json';
-  }
-  if (bearerToken) {
-    headers.authorization = `Bearer ${bearerToken}`;
-  }
-  applyAuthHeaders(headers, auth);
-
-  const response = await fetch(`${baseUrl}${endpoint}`, {
-    method,
-    headers,
-    body: jsonBody != null ? JSON.stringify(jsonBody) : undefined,
-  });
-
-  const text = await response.text();
-  let body = null;
-  if (text.length > 0) {
-    try {
-      body = JSON.parse(text);
-    } catch {
-      body = text;
-    }
-  }
-
-  const durationMs = Math.round(performance.now() - startedAt);
-
-  if (expectedStatus != null && response.status !== expectedStatus) {
-    throw new Error(
-      `${method} ${endpoint} expected ${expectedStatus} but got ${response.status} (${durationMs} ms)\nResponse: ${JSON.stringify(body)}`,
-    );
-  }
-
-  return {
-    status: response.status,
-    body,
-    durationMs,
-  };
 }
 
 async function fetchTimed(url) {

@@ -200,6 +200,7 @@ export async function requestJson(
     expectedStatus,
   } = {},
 ) {
+  const startedAt = performance.now();
   const headers = { ...(extraHeaders ?? {}) };
   if (jsonBody != null) {
     headers['content-type'] = 'application/json';
@@ -237,13 +238,15 @@ export async function requestJson(
     }
   }
 
+  const durationMs = Math.round(performance.now() - startedAt);
+
   if (expectedStatus != null && response.status !== expectedStatus) {
     throw new Error(
       `${method} ${endpoint} expected ${expectedStatus} but got ${response.status}\nResponse: ${JSON.stringify(body)}`,
     );
   }
 
-  return { status: response.status, body };
+  return { status: response.status, body, durationMs };
 }
 
 /** Opens terminal check-in when a new business day was not started yet or check-in is locked. */

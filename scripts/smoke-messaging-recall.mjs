@@ -1,59 +1,13 @@
 #!/usr/bin/env node
 
 import { loadRepoDotEnv } from './dotenv.mjs';
-import { ensureCheckinAvailable, pairDeviceForSmoke, smokeStaffAuth } from './smoke-helpers.mjs';
-
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message);
-  }
-}
-
-async function requestJson(
-  baseUrl,
-  method,
-  endpoint,
-  { bearerToken, auth, jsonBody, expectedStatus },
-) {
-  const headers = {};
-  if (jsonBody != null) {
-    headers['content-type'] = 'application/json';
-  }
-  if (bearerToken) {
-    headers.authorization = `Bearer ${bearerToken}`;
-  }
-  const cookieHeader = auth?.cookieJar?.header();
-  if (cookieHeader) {
-    headers.cookie = cookieHeader;
-  }
-  if (auth?.origin) {
-    headers.origin = auth.origin;
-  }
-
-  const response = await fetch(`${baseUrl}${endpoint}`, {
-    method,
-    headers,
-    body: jsonBody != null ? JSON.stringify(jsonBody) : undefined,
-  });
-
-  const text = await response.text();
-  let body = null;
-  if (text.length > 0) {
-    try {
-      body = JSON.parse(text);
-    } catch {
-      body = text;
-    }
-  }
-
-  if (expectedStatus != null && response.status !== expectedStatus) {
-    throw new Error(
-      `${method} ${endpoint} expected ${expectedStatus} but got ${response.status}\nResponse: ${JSON.stringify(body)}`,
-    );
-  }
-
-  return { status: response.status, body };
-}
+import {
+  assert,
+  ensureCheckinAvailable,
+  pairDeviceForSmoke,
+  requestJson,
+  smokeStaffAuth,
+} from './smoke-helpers.mjs';
 
 async function main() {
   loadRepoDotEnv();

@@ -27,14 +27,13 @@ Erledigte Befunde stehen nicht mehr in der Priorisierung, sondern gesammelt unte
 
 | Reihenfolge | ID      | Kandidat                                                     | Status           | Priorität | Effort |
 | ----------- | ------- | ------------------------------------------------------------ | ---------------- | --------- | ------ |
-| 1           | DUP-006 | lokale Smoke-`requestJson` durch Shared-Helper ersetzen      | bereinigen       | mittel    | S      |
-| 2           | DUP-008 | gemeinsames Route-Parsing für beide Drift-Checks             | bereinigen       | mittel    | S      |
-| 3           | DUP-010 | App/Sandbox-`FormPdfDisplay`-Vertrag zentralisieren          | bereinigen       | mittel    | S–M    |
-| 4           | DUP-015 | Portal-Control-Inferenz als Vertrag klären                   | entscheiden      | mittel    | S–M    |
-| 5           | DUP-014 | DB-Snapshot-Vergleich als gemeinsamen Vertragshelfer führen  | entscheiden      | niedrig   | S      |
-| 6           | DUP-003 | Monorepo-Root-Suche zentralisieren                           | entscheiden      | niedrig   | S      |
-| 7           | DUP-013 | gemeinsamen Prozess-Runner bei nächster Änderung extrahieren | bei Gelegenheit  | niedrig   | S      |
-| 8           | DUP-004 | Proxy-Compose-Overlays                                       | vorerst behalten | niedrig   | S      |
+| 1           | DUP-008 | gemeinsames Route-Parsing für beide Drift-Checks             | bereinigen       | mittel    | S      |
+| 2           | DUP-010 | App/Sandbox-`FormPdfDisplay`-Vertrag zentralisieren          | bereinigen       | mittel    | S–M    |
+| 3           | DUP-015 | Portal-Control-Inferenz als Vertrag klären                   | entscheiden      | mittel    | S–M    |
+| 4           | DUP-014 | DB-Snapshot-Vergleich als gemeinsamen Vertragshelfer führen  | entscheiden      | niedrig   | S      |
+| 5           | DUP-003 | Monorepo-Root-Suche zentralisieren                           | entscheiden      | niedrig   | S      |
+| 6           | DUP-013 | gemeinsamen Prozess-Runner bei nächster Änderung extrahieren | bei Gelegenheit  | niedrig   | S      |
+| 7           | DUP-004 | Proxy-Compose-Overlays                                       | vorerst behalten | niedrig   | S      |
 
 ### Offene Befunde
 
@@ -57,27 +56,6 @@ Packaging-Modell, da Release-Pakete die `*.delivery.yml`-Templates mitnehmen.
 
 Bewertung: vorerst behalten. Falls eine der Dateien geändert wird, eine kanonische
 Vorlage mit Packaging-Kopie oder zumindest einen Gleichheits-/Drift-Check ergänzen.
-
-#### DUP-006: Smoke-Skripte kopieren einen bereits vorhandenen HTTP-Helper
-
-`scripts/smoke-helpers.mjs` exportiert einen vollständigen `requestJson`-Helper.
-Trotzdem implementieren sechs Smoke-Skripte einen lokalen Helper:
-
-- `smoke-day-lifecycle.mjs`,
-- `smoke-emergency.mjs`,
-- `smoke-messaging-recall.mjs`,
-- `smoke-ops-settings.mjs`,
-- `smoke-practice-hours.mjs`,
-- `smoke-doc-flow.mjs`.
-
-Fünf dieser Funktionen sind strukturell identisch. Der Shared-Helper unterstützt
-zusätzlich CSRF, Client-Rollen, Cookie-Updates und Extra-Header. Gerade dadurch ist
-die lokale Kopie riskant: neue Auth-Anforderungen erreichen nur einen Teil der
-Smokes.
-
-Empfehlung: die fünf einfachen Kopien direkt ersetzen und den Doc-Flow nur um die
-tatsächlich benötigte Zusatzfähigkeit ergänzen. Lokale `assert`-Kopien im selben
-Zug ebenfalls gegen den exportierten Helper prüfen.
 
 #### DUP-008: Route-Parser für zwei Architektur-Checks ist doppelt
 
@@ -208,6 +186,7 @@ das ändert. Sie sind Absicherung gegen Drive-by-Refactors.
 | DUP-009 | Default-Aufrufraum an `listEnabledRooms` und `resolveDefaultCallRoomId` gekoppelt            | 2026-08-22 |
 | DUP-011 | Setup-DTOs aus `@praxis-flow/server-shared` übernommen und lokal re-exportiert               | 2026-08-22 |
 | DUP-012 | `sha256File` in Setup zentralisiert; bestehender Pfupdate-Import bleibt als Re-Export gültig | 2026-08-22 |
+| DUP-006 | lokale Smoke-`requestJson`/`assert` durch `smoke-helpers` ersetzt; `durationMs` ergänzt      | 2026-08-22 |
 
 Zu DUP-002: `scripts/openapi-types-lib.mjs` hält die gemeinsame Spec-Tabelle und
 Orchestrierung. UI und App behalten eigene generierte Zielbäume; `identity.yaml`
@@ -217,6 +196,10 @@ Zu DUP-005: Die bisherigen öffentlichen UI-Typnamen bleiben als Re-Exports
 erhalten. Ops-, Terminal- und Portal-Transporttypen stammen aus `components` oder
 `paths` der jeweils lokalen generierten Deklarationen. Echte View-Models bleiben
 lokal.
+
+Zu DUP-006: Fünf identische `requestJson`-Kopien und sechs lokale `assert`-Kopien
+nutzen den Shared-Helper. `requestJson` liefert zusätzlich `durationMs`;
+`smoke-doc-flow.mjs` behält `fetchTimed` und `requestMultipart` lokal.
 
 ## Nächste Audit-Wellen
 

@@ -6,8 +6,8 @@ Stand: 2026-08-22
 
 Quelle: [`docs/audit-dopplungen-altlasten.md`](docs/audit-dopplungen-altlasten.md)
 
-- **Erledigt:** DUP-002, DUP-005, DUP-007, DUP-009, DUP-011, DUP-012
-- **Als Nächstes:** DUP-006, DUP-008, DUP-010
+- **Erledigt:** DUP-002, DUP-005, DUP-006, DUP-007, DUP-009, DUP-011, DUP-012
+- **Als Nächstes:** DUP-008, DUP-010
 - **Entscheiden:** DUP-003, DUP-014, DUP-015
 - **Bei Gelegenheit/vorerst behalten:** DUP-004, DUP-013
 - **Bewusst nicht konsolidieren:** OK-001 bis OK-006
