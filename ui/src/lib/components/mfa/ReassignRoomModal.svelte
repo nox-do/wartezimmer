@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { formatTicketCode } from '@praxis-flow/domain';
   import { ArrowRight } from '@lucide/svelte';
   import Modal from '$lib/components/Modal.svelte';
   import Button from '$lib/components/forms/Button.svelte';
@@ -27,6 +28,9 @@
   let { ticket = null, rooms = [], activeItems = [], busy = false, onConfirm, onCancel }: Props = $props();
 
   const open = $derived(ticket != null);
+  const ticketLabel = $derived(
+    ticket != null ? formatTicketCode(ticket.laneCode, ticket.number) : '',
+  );
   const enabledRooms = $derived(listEnabledRooms(rooms));
   let selectedRoomId = $state<string | null>(null);
   const selectedRoom = $derived(enabledRooms.find((room) => room.roomId === selectedRoomId) ?? null);
@@ -82,9 +86,7 @@
         <h2 id="modal-title" class="modal-title">{t('mfa.reassignModalTitle')}</h2>
         {#if ticket}
           <p class="modal-subtitle modal-subtitle--pre-line">
-            {tf('mfa.reassignModalDesc', {
-              ticket: `${ticket.laneCode}-${String(ticket.number).padStart(3, '0')}`,
-            })}
+            {tf('mfa.reassignModalDesc', { ticket: ticketLabel })}
           </p>
         {/if}
       </div>

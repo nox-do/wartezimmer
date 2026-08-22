@@ -3,18 +3,18 @@
   import { DoorOpen, LogIn, MapPin, PhoneOutgoing, User, UserCheck, UserX } from '@lucide/svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import type { RoomPanelSnapshot } from '$lib/queue/openapi-types';
+  import { formatTicketCode } from '@praxis-flow/domain';
   import { tf, t } from '$lib/i18n/i18nStore.svelte';
-import { formatRoomPanelDisplayText } from '$lib/room-panel/room-panel-text';
-import {
-  formatRoomPanelTicketCode,
-  resolveRoomPanelLeadState,
-  roomPanelCallAnnouncementReachable,
-  roomPanelCallCandidates,
-  roomPanelCandidateDisplayName,
-  roomPanelItemDisplayName,
-  roomPanelItemTicketCodes,
-  shouldRenderRoomPanelCallSection,
-} from '$lib/room-panel/room-panel-snapshot-view';
+  import { formatRoomPanelDisplayText } from '$lib/room-panel/room-panel-text';
+  import {
+    resolveRoomPanelLeadState,
+    roomPanelCallAnnouncementReachable,
+    roomPanelCallCandidates,
+    roomPanelCandidateDisplayName,
+    roomPanelItemDisplayName,
+    roomPanelItemTicketCodes,
+    shouldRenderRoomPanelCallSection,
+  } from '$lib/room-panel/room-panel-snapshot-view';
   import {
     getRoomPanelPageCount,
     getRoomPanelPaginated,
@@ -74,7 +74,7 @@ import {
   const queueTicketCodes = $derived(roomPanelItemTicketCodes(panelItems));
   const itemByCode = $derived(
     new Map(
-      panelItems.map((item) => [formatRoomPanelTicketCode(item.laneCode, item.number), item]),
+      panelItems.map((item) => [formatTicketCode(item.laneCode, item.number), item]),
     ),
   );
   const visibleItems = $derived(
@@ -125,7 +125,7 @@ import {
         {:else}
           <ul class="room-panel-call-section__list" role="list">
             {#each callCandidates as candidate (candidate.visitId)}
-              {@const ticketCode = formatRoomPanelTicketCode(candidate.laneCode, candidate.number)}
+              {@const ticketCode = formatTicketCode(candidate.laneCode, candidate.number)}
               {@const displayName = roomPanelCandidateDisplayName(candidate, mayShowPatientNames)}
               <li class="room-panel-call-section__item" role="listitem">
                 <span class="room-panel-call-section__code">{ticketCode}</span>
@@ -181,7 +181,7 @@ import {
             class:room-panel-preview__queue--paginated={paginated}
           >
             {#each visibleItems as item (item.visitId)}
-              {@const ticketCode = formatRoomPanelTicketCode(item.laneCode, item.number)}
+              {@const ticketCode = formatTicketCode(item.laneCode, item.number)}
               {@const displayName = roomPanelItemDisplayName(item, mayShowPatientNames)}
               <li
                 class="room-panel-preview__queue-item"

@@ -7,10 +7,6 @@ import type {
 
 export type RoomPanelLeadState = 'waiting' | 'enter' | 'arrival';
 
-export function formatRoomPanelTicketCode(laneCode: string, number: number): string {
-  return formatTicketCode(laneCode, number);
-}
-
 export function resolveRoomPanelLeadState(items: RoomPanelItem[]): RoomPanelLeadState {
   if (items.some((item) => item.status === 'called' || item.status === 'directed')) {
     return 'enter';
@@ -48,7 +44,7 @@ export function roomPanelCallAnnouncementReachable(snapshot: RoomPanelSnapshot):
 }
 
 export function roomPanelItemTicketCodes(items: RoomPanelItem[]): string[] {
-  return items.map((item) => formatRoomPanelTicketCode(item.laneCode, item.number));
+  return items.map((item) => formatTicketCode(item.laneCode, item.number));
 }
 
 export function roomPanelCandidateDisplayName(

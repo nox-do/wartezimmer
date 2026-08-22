@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { formatTicketCode } from '@praxis-flow/domain';
   import { LogOut, Trash2 } from '@lucide/svelte';
   import Modal from '$lib/components/Modal.svelte';
   import Button from '$lib/components/forms/Button.svelte';
@@ -22,6 +23,9 @@
 
   const open = $derived(ticket != null);
   const purpose = $derived(ticket?.purpose === 'cancel' ? 'cancel' : 'checkout');
+  const ticketLabel = $derived(
+    ticket != null ? formatTicketCode(ticket.laneCode, ticket.number) : '',
+  );
 
   function handleClose() {
     onCancel?.();
@@ -52,12 +56,8 @@
         {#if ticket}
           <p class="modal-subtitle">
             {purpose === 'cancel'
-              ? tf('mfa.cancelVisitModalDesc', {
-                  ticket: `${ticket.laneCode}-${String(ticket.number).padStart(3, '0')}`,
-                })
-              : tf('mfa.checkOutModalDesc', {
-                  ticket: `${ticket.laneCode}-${String(ticket.number).padStart(3, '0')}`,
-                })}
+              ? tf('mfa.cancelVisitModalDesc', { ticket: ticketLabel })
+              : tf('mfa.checkOutModalDesc', { ticket: ticketLabel })}
           </p>
         {/if}
       </div>

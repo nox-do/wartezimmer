@@ -1,6 +1,25 @@
 # Routing Modes – Arbeitsstand
 
-Stand: 2026-08-21
+Stand: 2026-08-22
+
+## UI-Tour — Room Panel Analyse (2026-08-22)
+
+- Inventar + Architektur/Concern-Trennung dokumentiert (Chat); **kein Code geändert**
+- Stack: `+page.svelte` Orchestrator (~521 Z.) · Layout dünn · `room-panel.css` (~489 Z.) · `$lib/room-panel/*` (API, Transition, URL, Snapshot-View, Text, Queue-Layout) · Components PinLogin + Preview
+- Filigran / Hände weg: URL-Reconcile `$effect` + SSE-Trigger, Dual-Placement Login-Key, Auto-Login pin-frei, Call-Gate (`callAnnouncementReachable`), Snapshot-Actions, Queue-Layout/Pagination (DOM-Messung), Session-Recovery, Relogin-Hotspot
+- Bewusst zurückgestellt: `room-panel-session.svelte.ts` (JSDoc wie TV — kein User-Gain ohne Feature/Bugfix)
+- Tests: pure Helpers + Stream session-revoked gut; kein Page-Integrationstest für Reconcile
+- **Nächster Schritt:** Cleanup-Batches nach Abstimmung (siehe Chat)
+- Ticket-Anzeige vereinheitlicht: 3 MFA-Modals + Room Panel → `formatTicketCode` (Domain); Wrapper `formatRoomPanelTicketCode` entfernt
+
+## UI-Tour — MFA Dashboard Analyse (2026-08-21)
+
+- Layout dünn; State in `mfa-*.svelte.ts` + Barrel `mfa-queue-actions` (bereits gesplittet)
+- Filigran / Hände weg ohne Anlass: WaitBoard DnD-Sensoren (Actions/Name/Grip), QueueEntry Grip vs Ticket-Supersede vs Name-Edit, hover-gated Actions (`queue-entry-actions-hover` + touch), Capacity-Drop-Disable, Call-Gate
+- Hotspots Größe: QueueEntry ~559, WaitBoard ~345 (Away-Zweig doppelt drag/no-drag), RoomsEditor/DocumentPreview/Settings separat
+- Aufräumen nur vorsichtig: Away-Snippet dedupe in WaitBoard ✅; Prop-Drill WaitBoard→Entry; QueueEntry Splits nur mit manueller DnD/Hover/Touch-Checkliste
+- Offen Terminal: Topic-Fetch-Guard · Assist stub
+- **Nächster Chat:** Room-Panel UI-Analyse (Prompt vorbereitet)
 
 ## UI-Tour (2026-08-21)
 
@@ -13,6 +32,8 @@ Stand: 2026-08-21
   - Numpad: bewusst nicht angefasst
   - Bugbot-Fixes: EmergencyBar post-raise Heartbeat-Refresh + Release-Sync; Runtime State-Reset on mount/unmount
   - Bugbot Re-Review: keine Findings
+  - Topic-Fetch: Unmount-Guard (kein Geister-Toast/Race)
+  - CSS/Numpad: Audit — Datei vertretbar (~1k, kaum Totcode); Numpad≠NameDobPad (zwei UX); kein Split/Merge ohne konkreten Anlass
 - Offen: Assist-Press UX verdrahten · Numpad/Keyboard nur nach gezielter Duplikat-Prüfung
 
 ## Test-Dopplungen Inventur (2026-08-21)

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  formatRoomPanelTicketCode,
   resolveRoomPanelLeadLabel,
   resolveRoomPanelLeadState,
   roomPanelCallAnnouncementReachable,
@@ -222,11 +221,5 @@ describe('resolveRoomPanelLeadState', () => {
         },
       ]),
     ).toBe('enter');
-  });
-});
-
-describe('formatRoomPanelTicketCode', () => {
-  it('formats lane and number for compact display', () => {
-    expect(formatRoomPanelTicketCode('a', 42)).toBe('A-042');
   });
 });

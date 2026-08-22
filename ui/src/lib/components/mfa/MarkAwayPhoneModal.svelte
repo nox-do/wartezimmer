@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { formatTicketCode } from '@praxis-flow/domain';
   import { TreePalm } from '@lucide/svelte';
   import Modal from '$lib/components/Modal.svelte';
   import Button from '$lib/components/forms/Button.svelte';
@@ -24,7 +25,7 @@
   let { ticket = null, purpose = 'markAway', busy = false, onConfirm, onCancel }: Props = $props();
 
   const ticketLabel = $derived(
-    ticket != null ? `${ticket.laneCode}-${String(ticket.number).padStart(3, '0')}` : '',
+    ticket != null ? formatTicketCode(ticket.laneCode, ticket.number) : '',
   );
 
   let open = $derived(ticket != null);
