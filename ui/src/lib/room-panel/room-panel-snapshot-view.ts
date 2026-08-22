@@ -47,24 +47,13 @@ export function roomPanelItemTicketCodes(items: RoomPanelItem[]): string[] {
   return items.map((item) => formatTicketCode(item.laneCode, item.number));
 }
 
-export function roomPanelCandidateDisplayName(
-  candidate: Pick<RoomPanelCallCandidate, 'identityRef'>,
+export function roomPanelDisplayName(
+  entry: Pick<RoomPanelCallCandidate | RoomPanelItem, 'identityRef'>,
   mayShowPatientNames: boolean,
 ): string | null {
   if (!mayShowPatientNames) {
     return null;
   }
-  const name = candidate.identityRef?.trim();
-  return name ? name : null;
-}
-
-export function roomPanelItemDisplayName(
-  item: Pick<RoomPanelItem, 'identityRef'>,
-  mayShowPatientNames: boolean,
-): string | null {
-  if (!mayShowPatientNames) {
-    return null;
-  }
-  const name = item.identityRef?.trim();
+  const name = entry.identityRef?.trim();
   return name ? name : null;
 }

@@ -14,7 +14,7 @@
    * markup stays here, session module exports `$state` + actions.
    */
   import { onMount } from 'svelte';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import Button from '$lib/components/forms/Button.svelte';
   import CheckOutConfirmModal from '$lib/components/mfa/CheckOutConfirmModal.svelte';
   import RoomPanelPinLogin from '$lib/components/room-panel/RoomPanelPinLogin.svelte';
@@ -70,8 +70,8 @@
   let practiceProfile = $state(getPracticeProfileFallback());
   let reconcilingRoom = $state(false);
 
-  const requestedRoomIdFromUrl = $derived($page.url.searchParams.get('room')?.trim() ?? '');
-  const requestedPlacementFromUrl = $derived($page.url.searchParams.get('placement')?.trim() ?? '');
+  const requestedRoomIdFromUrl = $derived(page.url.searchParams.get('room')?.trim() ?? '');
+  const requestedPlacementFromUrl = $derived(page.url.searchParams.get('placement')?.trim() ?? '');
 
   const practiceName = $derived(practiceDisplayLabel(practiceProfile, t('terminal.practiceFallback')));
   const selectedRoom = $derived(
@@ -308,18 +308,21 @@
       return;
     }
     recoveringSession = true;
-    disconnectStream?.();
-    disconnectStream = null;
-    snapshot = null;
-    streamError = null;
-    busyVisitId = null;
-    rooms = [];
-    await logoutRoomPanel();
-    await bootstrapPanel();
-    if (!snapshot) {
-      errorMessage = message;
+    try {
+      disconnectStream?.();
+      disconnectStream = null;
+      snapshot = null;
+      streamError = null;
+      busyVisitId = null;
+      rooms = [];
+      await logoutRoomPanel();
+      await bootstrapPanel();
+      if (!snapshot) {
+        errorMessage = message;
+      }
+    } finally {
+      recoveringSession = false;
     }
-    recoveringSession = false;
   }
 
   async function completeLogin(room: RoomPanelRoom) {

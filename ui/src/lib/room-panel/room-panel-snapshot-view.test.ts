@@ -4,7 +4,7 @@ import {
   resolveRoomPanelLeadState,
   roomPanelCallAnnouncementReachable,
   roomPanelCallCandidates,
-  roomPanelCandidateDisplayName,
+  roomPanelDisplayName,
   shouldRenderRoomPanelCallSection,
 } from './room-panel-snapshot-view';
 import { formatRoomPanelDisplayText } from './room-panel-text';
@@ -186,14 +186,14 @@ describe('resolveRoomPanelLeadLabel', () => {
   });
 });
 
-describe('roomPanelCandidateDisplayName', () => {
+describe('roomPanelDisplayName', () => {
   it('renders ticket-only when names are disabled', () => {
-    expect(roomPanelCandidateDisplayName({ identityRef: 'Muster' }, false)).toBeNull();
+    expect(roomPanelDisplayName({ identityRef: 'Muster' }, false)).toBeNull();
   });
 
   it('renders name only when policy allows and identityRef exists', () => {
-    expect(roomPanelCandidateDisplayName({ identityRef: '  Muster  ' }, true)).toBe('Muster');
-    expect(roomPanelCandidateDisplayName({ identityRef: null }, true)).toBeNull();
+    expect(roomPanelDisplayName({ identityRef: '  Muster  ' }, true)).toBe('Muster');
+    expect(roomPanelDisplayName({ identityRef: null }, true)).toBeNull();
   });
 });
 

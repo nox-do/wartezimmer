@@ -10,7 +10,10 @@ Stand: 2026-08-22
 - Bewusst zurückgestellt: `room-panel-session.svelte.ts` (JSDoc wie TV — kein User-Gain ohne Feature/Bugfix)
 - Tests: pure Helpers + Stream session-revoked gut; kein Page-Integrationstest für Reconcile
 - **Nächster Schritt:** Cleanup-Batches nach Abstimmung (siehe Chat)
-- Ticket-Anzeige vereinheitlicht: 3 MFA-Modals + Room Panel → `formatTicketCode` (Domain); Wrapper `formatRoomPanelTicketCode` entfernt
+- Ticket-Anzeige vereinheitlicht: 3 MFA-Modals + Room Panel → `formatTicketCode` (Domain); Wrapper `formatRoomPanelTicketCode` entfernt ✅ `3da7d69`
+- Review-Runde 2 (Chat): Inkonsistenzen/Architektur/Business-Logik-UI inventarisiert — siehe Chat
+- Batch A+B ✅: `recoverExpiredSession` try/finally; `roomPanelDisplayName` dedupe; `RoomPanelPlacement` aus Domain in login-key
+- Batch C ✅: Room Panel `$app/state` statt `$app/stores` für URL-Params
 
 ## UI-Tour — MFA Dashboard Analyse (2026-08-21)
 

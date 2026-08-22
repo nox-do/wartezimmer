@@ -10,8 +10,7 @@
     resolveRoomPanelLeadState,
     roomPanelCallAnnouncementReachable,
     roomPanelCallCandidates,
-    roomPanelCandidateDisplayName,
-    roomPanelItemDisplayName,
+    roomPanelDisplayName,
     roomPanelItemTicketCodes,
     shouldRenderRoomPanelCallSection,
   } from '$lib/room-panel/room-panel-snapshot-view';
@@ -126,7 +125,7 @@
           <ul class="room-panel-call-section__list" role="list">
             {#each callCandidates as candidate (candidate.visitId)}
               {@const ticketCode = formatTicketCode(candidate.laneCode, candidate.number)}
-              {@const displayName = roomPanelCandidateDisplayName(candidate, mayShowPatientNames)}
+              {@const displayName = roomPanelDisplayName(candidate, mayShowPatientNames)}
               <li class="room-panel-call-section__item" role="listitem">
                 <span class="room-panel-call-section__code">{ticketCode}</span>
                 {#if displayName}
@@ -182,7 +181,7 @@
           >
             {#each visibleItems as item (item.visitId)}
               {@const ticketCode = formatTicketCode(item.laneCode, item.number)}
-              {@const displayName = roomPanelItemDisplayName(item, mayShowPatientNames)}
+              {@const displayName = roomPanelDisplayName(item, mayShowPatientNames)}
               <li
                 class="room-panel-preview__queue-item"
                 class:room-panel-preview__queue-item--next={item.status === 'called' || item.status === 'directed'}
