@@ -1,3 +1,5 @@
+import { formatTicketCode, parseTicketCode } from '@praxis-flow/domain';
+
 export type FormatTicketCodeInputOptions = {
   /** When true, inserts `-` right after the lane letter (e.g. `A` → `A-`). */
   appendDashAfterLetter?: boolean;
@@ -27,22 +29,8 @@ export function formatTicketCodeInput(
   return letter;
 }
 
-/** Normalizes patient ticket codes to `PREFIX-NNN` (backend expects e.g. `O-001`). */
+/** Normalizes patient ticket codes via domain parse/format (backend uses the same rules). */
 export function normalizeTicketCode(raw: string): string | null {
-  const trimmed = raw.trim().toUpperCase();
-  if (!trimmed) {
-    return null;
-  }
-
-  const dashed = trimmed.match(/^([A-Z])-([0-9]{1,4})$/);
-  if (dashed) {
-    return `${dashed[1]}-${dashed[2].padStart(3, '0')}`;
-  }
-
-  const compact = trimmed.match(/^([A-Z])([0-9]{1,4})$/);
-  if (compact) {
-    return `${compact[1]}-${compact[2].padStart(3, '0')}`;
-  }
-
-  return null;
+  const parsed = parseTicketCode(raw.trim());
+  return parsed ? formatTicketCode(parsed.laneCode, parsed.number) : null;
 }

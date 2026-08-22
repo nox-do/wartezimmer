@@ -24,4 +24,18 @@ describe('normalizeTicketCode', () => {
     expect(normalizeTicketCode('A-42')).toBe('A-042');
     expect(normalizeTicketCode('a42')).toBe('A-042');
   });
+
+  it('preserves four-digit sequences', () => {
+    expect(normalizeTicketCode('A-1000')).toBe('A-1000');
+  });
+
+  it('rejects invalid numbers per domain rules', () => {
+    expect(normalizeTicketCode('A-000')).toBeNull();
+    expect(normalizeTicketCode('A-0')).toBeNull();
+    expect(normalizeTicketCode('A000')).toBeNull();
+  });
+
+  it('normalizes leading-zero semantics via parseInt', () => {
+    expect(normalizeTicketCode('A-0001')).toBe('A-001');
+  });
 });

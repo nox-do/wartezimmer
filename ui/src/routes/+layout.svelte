@@ -5,15 +5,15 @@
   import { initI18n, t } from '$lib/i18n/i18nStore.svelte';
   import { getAppInitialLocale } from '$lib/i18n/patient-locale';
   import { getAppSurface } from '$lib/layout/app-surface';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
 
   let { children } = $props();
   let bootstrapped = $state(false);
 
-  const surface = $derived(getAppSurface($page.url.pathname));
+  const surface = $derived(getAppSurface(page.url.pathname));
 
   $effect(() => {
-    const pathname = $page.url.pathname;
+    const pathname = page.url.pathname;
     void initI18n(getAppInitialLocale(pathname)).then(() => {
       bootstrapped = true;
     });

@@ -2,7 +2,7 @@
   import '$lib/styles/mfa.css';
   import '$lib/styles/terminal.css';
   import { gotoResolved } from '$lib/navigation/kit-paths';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import AuthGate from '$lib/components/auth/AuthGate.svelte';
   import DocumentPreviewOverlay from '$lib/components/mfa/DocumentPreviewOverlay.svelte';
   import MfaOpsStreamHost from '$lib/components/mfa/MfaOpsStreamHost.svelte';
@@ -21,17 +21,17 @@
   );
 
   $effect(() => {
-    if ($page.url.pathname !== '/mfa' && mfaDocumentPreview.open) {
+    if (page.url.pathname !== '/mfa' && mfaDocumentPreview.open) {
       closeMfaDocumentPreview();
     }
   });
 
   $effect(() => {
-    if ($page.url.pathname !== '/mfa' || !mfaAuthenticated) {
+    if (page.url.pathname !== '/mfa' || !mfaAuthenticated) {
       return;
     }
-    const search = $page.url.search;
-    void bootstrapMfaDocumentPreviewFromUrl($page.url.pathname, search, () => {
+    const search = page.url.search;
+    void bootstrapMfaDocumentPreviewFromUrl(page.url.pathname, search, () => {
       if (window.location.pathname !== '/mfa') {
         return;
       }
@@ -45,7 +45,7 @@
 </script>
 
 <div class="mfa-page">
-  {#if $page.url.pathname === '/mfa/login'}
+  {#if page.url.pathname === '/mfa/login'}
     {@render children()}
   {:else}
     <AuthGate requiredRole="mfa">
@@ -53,7 +53,7 @@
         {@render children()}
       </MfaOpsStreamHost>
       <TerminalReceiptPrintHost />
-      {#if $page.url.pathname === '/mfa' && mfaDocumentPreview.open && mfaDocumentPreview.context}
+      {#if page.url.pathname === '/mfa' && mfaDocumentPreview.open && mfaDocumentPreview.context}
         <DocumentPreviewOverlay
           bind:open={mfaDocumentPreview.open}
           context={mfaDocumentPreview.context}

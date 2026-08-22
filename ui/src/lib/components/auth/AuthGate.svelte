@@ -1,6 +1,6 @@
 <script lang="ts">
   import { gotoResolved } from '$lib/navigation/kit-paths';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import type { Snippet } from 'svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import {
@@ -47,9 +47,9 @@
       return;
     }
 
-    const redirectTarget = `${$page.url.pathname}${$page.url.search}`;
+    const redirectTarget = `${page.url.pathname}${page.url.search}`;
     const target = loginTargetWithRedirect(loginHref, redirectTarget);
-    if (`${$page.url.pathname}${$page.url.search}` !== target) {
+    if (`${page.url.pathname}${page.url.search}` !== target) {
       void gotoResolved(target, { replaceState: true });
     }
   });

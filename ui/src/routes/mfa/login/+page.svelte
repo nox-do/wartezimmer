@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { gotoResolved } from '$lib/navigation/kit-paths';
   import Button from '$lib/components/forms/Button.svelte';
   import {
@@ -18,8 +18,8 @@
   let submitting = $state(false);
   let formError = $state<string | null>(null);
 
-  const loginRole = $derived($page.url.searchParams.get('role') === 'ops' ? 'ops' : 'mfa');
-  const redirectTarget = $derived(resolveRedirectTarget($page.url.searchParams.get('redirect'), loginRole));
+  const loginRole = $derived(page.url.searchParams.get('role') === 'ops' ? 'ops' : 'mfa');
+  const redirectTarget = $derived(resolveRedirectTarget(page.url.searchParams.get('redirect'), loginRole));
   const loginLead = $derived(loginRole === 'ops' ? t('auth.loginLeadOps') : t('auth.loginLeadMfa'));
 
   function resolveRedirectTarget(candidate: string | null, role: 'mfa' | 'ops'): string {

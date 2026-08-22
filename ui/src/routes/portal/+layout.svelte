@@ -6,14 +6,14 @@
   import { clearPortalSession } from '$lib/portal/portal-session';
   import { DEFAULT_TERMINAL_PATIENT_LOCALES, type TerminalPatientLocale } from '@praxis-flow/domain';
   import { t } from '$lib/i18n/i18nStore.svelte';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
 
   let { children } = $props();
 
   let enabledLocales = $state<TerminalPatientLocale[]>([...DEFAULT_TERMINAL_PATIENT_LOCALES]);
   let portalEnabled = $state<boolean | null>(null);
 
-  const isPortalEntry = $derived($page.url.pathname === '/portal');
+  const isPortalEntry = $derived(page.url.pathname === '/portal');
 
   onMount(() => {
     let stopped = false;
