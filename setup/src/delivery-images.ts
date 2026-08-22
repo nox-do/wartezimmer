@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -15,6 +14,7 @@ import {
   writeManagerReleaseState,
   type ManagerReleaseState,
 } from './manager-state.js';
+import { sha256File } from './sha256-file.js';
 
 export type { DeliveryImagesStatus } from '@praxis-flow/server-shared';
 
@@ -167,12 +167,6 @@ export async function dockerLoadArchive(archivePath: string): Promise<{
   const log = [result.stdout, result.stderr].filter(Boolean).join('\n');
   const loaded = parseDockerLoadOutput(log);
   return { ok: result.code === 0 && loaded.length > 0, loaded, log };
-}
-
-export function sha256File(filePath: string): string {
-  const hash = createHash('sha256');
-  hash.update(fs.readFileSync(filePath));
-  return hash.digest('hex').toLowerCase();
 }
 
 export function readExpectedSha256ForArchive(archivePath: string): {

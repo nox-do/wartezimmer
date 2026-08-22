@@ -1,16 +1,7 @@
 import os from 'node:os';
+import type { NetworkAddress, NetworkInterfaceInfo } from '@praxis-flow/server-shared';
 
-export type NetworkAddress = {
-  family: string;
-  address: string;
-  internal: boolean;
-  cidr?: string;
-};
-
-export type NetworkInterfaceInfo = {
-  name: string;
-  addresses: NetworkAddress[];
-};
+export type { NetworkAddress, NetworkInterfaceInfo };
 
 export function listNetworkInterfaces(): NetworkInterfaceInfo[] {
   const raw = os.networkInterfaces();

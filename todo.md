@@ -2,6 +2,16 @@
 
 Stand: 2026-08-22
 
+## Audit-Liste — sichere Vier (2026-08-22)
+
+Quelle: [`docs/audit-dopplungen-altlasten.md`](docs/audit-dopplungen-altlasten.md)
+
+- **DUP-007** ✅ `registerDefaultErrorHandler` in `app/src/http/` — App + Maintenance
+- **DUP-009** ✅ Default-Aufrufraum über Domain (`listEnabledRooms` / `resolveDefaultCallRoomId`); toter Export in `database-ops-settings` entfernt
+- **DUP-011** ✅ Setup-DTOs re-exportieren `server-shared` (`NetworkAddress`, `NetworkInterfaceInfo`, `PfupdateApplyInput`, `PfupdateInspectInput`)
+- **DUP-012** ✅ `sha256File` in `setup/src/sha256-file.ts`; `pfupdate-package` re-exportiert
+- **Nicht angefasst:** DUP-005/006/008/010/002/014/015/003/013/004, alle OK-*
+
 ## MFA Settings — Räume UX (2026-08-22)
 
 - Scroll: Settings-Shell Grid-Zeile `minmax(0,1fr)` + `mfa-page` overflow, damit Expander-Inhalt scrollbar bleibt

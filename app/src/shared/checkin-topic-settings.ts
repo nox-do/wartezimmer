@@ -12,9 +12,11 @@ import {
   isReservedLaneCode,
   isValidLaneCode,
   isValidTopicAccentColor,
+  listEnabledRooms,
   MFA_ASSIST_LANE_CODE,
   normalizeLaneCode,
   normalizeTopicAccentColor,
+  resolveDefaultCallRoomId,
 } from '@praxis-flow/domain';
 
 export type TopicSetting = OpsSettings['topics'][number];
@@ -271,13 +273,11 @@ export function resolveDefaultRoomForTopic(
 function resolveDefaultCallRoom(
   settings: Pick<OpsSettings, 'rooms'>,
 ): OpsSettings['rooms'][number] | undefined {
-  const enabled = settings.rooms.filter(
-    (room) => room.enabled && room.roomId.trim().length > 0 && room.roomLabel.trim().length > 0,
-  );
-  if (enabled.length === 0) {
+  const roomId = resolveDefaultCallRoomId(settings.rooms);
+  if (!roomId) {
     return undefined;
   }
-  return enabled.find((entry) => entry.defaultCallTarget) ?? enabled[0];
+  return listEnabledRooms(settings.rooms).find((room) => room.roomId === roomId);
 }
 
 function resolveDefaultCallRoomLabel(settings: Pick<OpsSettings, 'rooms'>): string | null {

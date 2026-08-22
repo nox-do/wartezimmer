@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,6 +10,9 @@ import {
   validatePfupdatePackage,
   type PfupdateValidationResult,
 } from '@praxis-flow/server-shared';
+import { sha256File } from './sha256-file.js';
+
+export { sha256File };
 
 export const PFUPDATE_COMPOSE_TEMPLATE_FILES = ['docker-compose.delivery.yml'] as const;
 
@@ -38,12 +40,6 @@ export type TarArchiveEntry = {
   name: string;
   type: TarArchiveEntryType;
 };
-
-export function sha256File(filePath: string): string {
-  const hash = createHash('sha256');
-  hash.update(fs.readFileSync(filePath));
-  return hash.digest('hex').toLowerCase();
-}
 
 export function assertPathInsideRoot(root: string, target: string): void {
   const resolvedRoot = path.resolve(root);

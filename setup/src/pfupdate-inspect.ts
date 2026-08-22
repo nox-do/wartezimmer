@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type {
   PfupdateInspectCompatibility,
+  PfupdateInspectInput,
   PfupdateInspectResult,
   PfupdateManifestV1,
 } from '@praxis-flow/server-shared';
@@ -11,11 +12,7 @@ import { extractPfupdateArchive, validateExtractedPfupdate } from './pfupdate-pa
 import { resolveCurrentSettingsFormatVersion } from './settings-format-version.js';
 import type { SetupContext } from './setup-context.js';
 
-export type PfupdateInspectInput = {
-  archivePath: string;
-  managerVersion?: string | null;
-  settingsFormatVersion?: number | null;
-};
+export type { PfupdateInspectInput };
 
 export type PfupdateInspectDeps = {
   extractArchive?: typeof extractPfupdateArchive;

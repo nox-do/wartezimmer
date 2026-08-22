@@ -5,6 +5,7 @@ import {
   parsePfbackupArchive,
   validateManagerStateForBackup,
   type ManagerReleaseState,
+  type PfupdateApplyInput,
   type PfupdateApplyResult,
   type PfupdateManifestV1,
 } from '@praxis-flow/server-shared';
@@ -75,11 +76,7 @@ type UpdateRollbackArtifacts = MaintenanceRollbackArtifacts & {
   composeTemplatesDir: string;
 };
 
-export type PfupdateApplyInput = {
-  archivePath: string;
-  managerVersion?: string | null;
-  settingsFormatVersion?: number | null;
-};
+export type { PfupdateApplyInput };
 
 export type PfupdateApplyDeps = {
   extractArchive?: typeof extractPfupdateArchive;

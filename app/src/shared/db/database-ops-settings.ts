@@ -163,18 +163,6 @@ function parseTopicSettingsRaw(raw: string | undefined): OpsSettings['topics'] {
   return normalizeTopicSettingsList(parsedPartial);
 }
 
-export function resolveDefaultCallRoom(
-  settings: Pick<OpsSettings, 'rooms'>,
-): OpsSettings['rooms'][number] | undefined {
-  const enabled = settings.rooms.filter(
-    (room) => room.enabled && room.roomId.trim().length > 0 && room.roomLabel.trim().length > 0,
-  );
-  if (enabled.length === 0) {
-    return undefined;
-  }
-  return enabled.find((room) => room.defaultCallTarget) ?? enabled[0];
-}
-
 function normalizeRoomPanelCustomTextStrict(
   value: unknown,
   fieldName: string,

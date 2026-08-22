@@ -1,4 +1,4 @@
-import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
 import { getCoreDatabase } from './shared/db/database.js';
 import { registerCheckinRoutes } from './routes/checkin-routes.js';
@@ -15,7 +15,7 @@ import { OutboxWorker, readOutboxWorkerOptionsFromEnv } from './shared/outbox/ou
 import { registerIdentityRoutes } from './routes/identity-routes.js';
 import { registerSandboxEmbedProxyRoutes } from './routes/sandbox-embed-proxy-routes.js';
 import { registerPracticeRoutes } from './routes/practice-routes.js';
-import { resolveDomainError } from './http/domain-error-mapper.js';
+import { registerDefaultErrorHandler } from './http/default-error-handler.js';
 import { registerOpenApiDocs } from './openapi/register-openapi-docs.js';
 import { PATIENT_UPLOAD_MAX_BYTES } from './shared/documents/patient-upload-limits.js';
 import { resyncRecallWindowExpiryScheduler } from './shared/queue/recall-window-expiry-scheduler.js';
@@ -42,32 +42,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     sessionIdleTtlMs: staffAuthConfig.sessionIdleTtlMs,
   });
 
-  app.setErrorHandler((error, _request, reply) => {
-    if (error instanceof Error && 'validation' in error) {
-      const validationError = error as FastifyError;
-      if (validationError.validation) {
-        return reply.code(400).send({
-          code: 'INVALID_ARGUMENT',
-          message: 'Request validation failed.',
-          details: validationError.validation,
-        });
-      }
-    }
-
-    app.log.error(error);
-    const resolved = resolveDomainError(error);
-    if (resolved?.http) {
-      return reply.code(resolved.http.status).send({
-        code: resolved.http.code,
-        message: resolved.http.message,
-      });
-    }
-
-    return reply.code(500).send({
-      code: 'INTERNAL_ERROR',
-      message: 'Internal server error.',
-    });
-  });
+  registerDefaultErrorHandler(app);
 
   await registerOpenApiDocs(app);
   registerClientAuth(app, { staffSessions });

@@ -26,13 +26,13 @@ Artefakte. Die relevanten Dopplungen sind überwiegend strukturell oder semantis
 | ----------- | ------- | ----------------------------------------------------------- | ----------- | --------- | ------ |
 | 1           | DUP-005 | UI-Transporttypen aus vorhandenem OpenAPI ableiten          | bereinigen  | hoch      | M      |
 | 2           | DUP-006 | lokale Smoke-`requestJson` durch Shared-Helper ersetzen     | bereinigen  | mittel    | S      |
-| 3           | DUP-009 | Default-Aufrufraum vollständig an Domain koppeln            | bereinigen  | mittel    | S      |
+| 3           | DUP-009 | Default-Aufrufraum vollständig an Domain koppeln            | erledigt (2026-08-22) | mittel    | S      |
 | 4           | DUP-008 | gemeinsames Route-Parsing für beide Drift-Checks            | bereinigen  | mittel    | S      |
-| 5           | DUP-007 | gemeinsamen Fastify-Error-Handler verwenden                 | bereinigen  | mittel    | S      |
+| 5           | DUP-007 | gemeinsamen Fastify-Error-Handler verwenden                 | erledigt (2026-08-22) | mittel    | S      |
 | 6           | DUP-010 | App/Sandbox-`FormPdfDisplay`-Vertrag zentralisieren         | bereinigen  | mittel    | S–M    |
-| 7           | DUP-011 | Setup-DTOs aus `server-shared` verwenden                    | bereinigen  | mittel    | S      |
+| 7           | DUP-011 | Setup-DTOs aus `server-shared` verwenden                    | erledigt (2026-08-22) | mittel    | S      |
 | 8           | DUP-002 | OpenAPI-Generatoren und Sync-Checks vereinheitlichen        | bereinigen  | mittel    | M      |
-| 9           | DUP-012 | `sha256File` innerhalb von Setup zentralisieren             | bereinigen  | niedrig   | S      |
+| 9           | DUP-012 | `sha256File` innerhalb von Setup zentralisieren             | erledigt (2026-08-22) | niedrig   | S      |
 | 10          | DUP-014 | DB-Snapshot-Vergleich als gemeinsamen Vertragshelfer führen | entscheiden | niedrig   | S      |
 | 11          | DUP-003 | Monorepo-Root-Suche zentralisieren                          | entscheiden | niedrig   | S      |
 
@@ -91,14 +91,10 @@ Empfehlung: die fünf einfachen Kopien direkt ersetzen und den Doc-Flow nur um d
 tatsächlich benötigte Zusatzfähigkeit ergänzen. Lokale `assert`-Kopien im selben
 Zug ebenfalls gegen den exportierten Helper prüfen.
 
-#### DUP-007: Standard-Fehlerbehandlung ist in beiden Fastify-Apps identisch
+#### DUP-007: Standard-Fehlerbehandlung ist in beiden Fastify-Apps identisch — erledigt (2026-08-22)
 
-`app/src/app.ts` und `app/src/maintenance-app.ts` registrieren denselben Handler
-für Fastify-Validierungsfehler, Domain-Fehler und unbekannte Fehler.
-
-Empfehlung: `registerDefaultErrorHandler(app)` unter `app/src/http/` einführen und
-in beiden App-Buildern verwenden. Die getrennten App-Builder bleiben sinnvoll;
-nur die globale Fehlersemantik wird zentralisiert.
+`registerDefaultErrorHandler` liegt unter `app/src/http/default-error-handler.ts`.
+`app.ts` und `maintenance-app.ts` verwenden denselben Handler.
 
 #### DUP-008: Route-Parser für zwei Architektur-Checks ist doppelt
 
@@ -111,20 +107,11 @@ Empfehlung: Collection und Parsing in einen gemeinsamen Script-Helper verschiebe
 Der Aufrufer entscheidet lediglich, ob Testdateien berücksichtigt werden und wie
 Pfade normalisiert werden.
 
-#### DUP-009: Default-Aufrufraum ist trotz Domain-Quelle zweimal im Backend implementiert
+#### DUP-009: Default-Aufrufraum ist trotz Domain-Quelle zweimal im Backend implementiert — erledigt (2026-08-22)
 
-`@praxis-flow/domain` stellt mit `listEnabledRooms` und
-`resolveDefaultCallRoomId` bereits die kanonische Regel bereit. Die gleiche Filter-
-und Fallback-Regel steht zusätzlich in:
-
-- `app/src/shared/checkin-topic-settings.ts`,
-- `app/src/shared/db/database-ops-settings.ts`.
-
-Die UI verwendet die Domain-Quelle bereits über einen dünnen Adapter.
-
-Empfehlung: beide Backend-Stellen auf die Domain-Funktionen umstellen. Lokale
-Wrapper dürfen erhalten bleiben, wenn sie statt einer ID das vollständige
-`OpsSettings`-Room-Objekt liefern.
+`checkin-topic-settings.ts` liefert weiter das Room-Objekt, filtert und fällt
+aber über `listEnabledRooms` / `resolveDefaultCallRoomId` aus der Domain.
+Der ungenutzte Export in `database-ops-settings.ts` ist entfernt.
 
 #### DUP-010: `FormPdfDisplay` ist ein doppelter App/Sandbox-Wire-Contract
 
@@ -137,23 +124,15 @@ Empfehlung: Typen und Runtime-Guard in `@praxis-flow/server-shared` führen. App
 Sandbox hängen bereits von diesem Package ab. Der App-spezifische Aufbau und das
 Sandbox-spezifische Layout bleiben lokal.
 
-#### DUP-011: Setup implementiert Teile seines Shared-API-Vertrags erneut
+#### DUP-011: Setup implementiert Teile seines Shared-API-Vertrags erneut — erledigt (2026-08-22)
 
-Folgende lokalen Setup-Typen spiegeln bereits exportierte DTOs aus
-`packages/server-shared/src/setup-api.ts`:
+`network.ts`, `settings-backup-update.ts` und `pfupdate-inspect.ts` importieren
+die DTOs aus `@praxis-flow/server-shared` und re-exportieren sie lokal.
 
-- `NetworkAddress` und `NetworkInterfaceInfo` in `setup/src/network.ts`,
-- `PfupdateApplyInput` in `setup/src/settings-backup-update.ts`,
-- `PfupdateInspectInput` in `setup/src/pfupdate-inspect.ts`.
+#### DUP-012: `sha256File` existiert zweimal im Setup-Workspace — erledigt (2026-08-22)
 
-Empfehlung: Shared-Typen importieren beziehungsweise gezielt re-exportieren. Die
-Implementierungsdateien sollen nicht zu einer zweiten Vertragsquelle werden.
-
-#### DUP-012: `sha256File` existiert zweimal im Setup-Workspace
-
-`setup/src/delivery-images.ts` und `setup/src/pfupdate-package.ts` enthalten die
-gleiche synchrone SHA-256-Dateifunktion. Eine der Implementierungen sollte in
-einen kleinen lokalen Datei-/Digest-Helper verschoben werden.
+Eine Implementierung in `setup/src/sha256-file.ts`. `pfupdate-package.ts`
+re-exportiert für bestehende Importe.
 
 #### DUP-013: Release-Skripte kopieren Prozess-Runner
 
