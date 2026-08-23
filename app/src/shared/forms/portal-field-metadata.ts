@@ -1,9 +1,17 @@
 import type { FormTemplateField } from './template-types.js';
 
-export type FormPortalControl = 'checkbox' | 'compact' | 'input' | 'textarea-short' | 'textarea';
+export const FORM_PORTAL_CONTROLS = [
+  'checkbox',
+  'compact',
+  'input',
+  'textarea-short',
+  'textarea',
+] as const;
+
+export type FormPortalControl = (typeof FORM_PORTAL_CONTROLS)[number];
 
 export type PortalFormField = FormTemplateField & {
-  portalControl?: FormPortalControl;
+  portalControl: FormPortalControl;
   min?: number;
   max?: number;
   step?: number;

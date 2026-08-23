@@ -10,11 +10,7 @@
   import AnamnesePrivacyModal from '$lib/components/portal/AnamnesePrivacyModal.svelte';
   import { isAnamneseFieldVisible, orderFieldsBySections } from '$lib/portal/anamnese-form-sections';
   import { fetchPortalSessionMe } from '$lib/portal/session-api';
-  import {
-    anamneseInputType,
-    anamneseNumberAttrs,
-    resolveAnamneseFieldControl,
-  } from '$lib/portal/anamnese-field-control';
+  import { anamneseInputType, anamneseNumberAttrs } from '$lib/portal/anamnese-field-control';
   import {
     DEFAULT_ANAMNESE_TEMPLATE_ID,
     fetchAnamnesePrivacyNotice,
@@ -307,7 +303,7 @@
               {#each sectionFields as field (field.id)}
               {@const meta = fieldById.get(field.id)}
               {#if meta}
-                {@const control = resolveAnamneseFieldControl(meta)}
+                {@const control = meta.portalControl}
                 {#if control === 'checkbox'}
                   <label class="modal-form-check">
                     <input type="checkbox" bind:checked={answers[field.id] as boolean} />

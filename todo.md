@@ -6,11 +6,12 @@ Stand: 2026-08-22
 
 Quelle: [`docs/audit-dopplungen-altlasten.md`](docs/audit-dopplungen-altlasten.md)
 
-- **Erledigt:** DUP-002, DUP-005, DUP-006, DUP-007, DUP-008, DUP-009, DUP-010, DUP-011, DUP-012
+- **Erledigt:** DUP-002, DUP-005, DUP-006, DUP-007, DUP-008, DUP-009, DUP-010, DUP-011, DUP-012, DUP-015
 - **DUP-010:** `FormPdfDisplay`-Typen + vollständiger Guard in `@praxis-flow/server-shared`; App/Sandbox bleiben Re-Exports; Builder/Layout lokal
 - **DUP-008:** gemeinsamer Fastify-Route-Scan ohne Dateiauswahl-Option; `*.test.ts`/`*.spec.ts` fest ausgeschlossen; Auth- und OpenAPI-Check vergleichen dieselbe produktive Route-Menge
-- **Als Nächstes:** DUP-015 (entscheiden)
-- **Entscheiden:** DUP-003, DUP-014, DUP-015
+- **DUP-015:** `portalControl` ist verpflichtender Backend-Vertrag; UI-Inferenz entfernt; neue Formulare bekommen den Wert weiter über `toPortalFormFields` (Map oder Inferenz)
+- **Als Nächstes:** DUP-014 (entscheiden)
+- **Entscheiden:** DUP-003, DUP-014
 - **Bei Gelegenheit/vorerst behalten:** DUP-004, DUP-013
 - **Bewusst nicht konsolidieren:** OK-001 bis OK-006
 

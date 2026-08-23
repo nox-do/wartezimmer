@@ -1,40 +1,7 @@
 import type { FormTemplateField } from './patient-document-api.js';
 
-/** Wie das Feld im Portal gerendert wird (mobile-first). Metadaten kommen vom Backend-Template. */
-export type AnamneseFieldControl = 'checkbox' | 'compact' | 'input' | 'textarea-short' | 'textarea';
-
-export type PortalFormField = FormTemplateField & {
-  portalControl?: AnamneseFieldControl;
-  min?: number;
-  max?: number;
-  step?: number;
-  hideInPortalForm?: boolean;
-  hideWhenCheckinPhone?: boolean;
-};
-
-function inferAnamneseFieldControl(field: PortalFormField): AnamneseFieldControl {
-  if (field.type === 'boolean') {
-    return 'checkbox';
-  }
-  if (field.type === 'date' || field.type === 'number') {
-    return 'compact';
-  }
-  if (field.type === 'text') {
-    const max = field.maxLength ?? 0;
-    if (max <= 200) {
-      return 'input';
-    }
-    if (max <= 600) {
-      return 'textarea-short';
-    }
-    return 'textarea';
-  }
-  return 'input';
-}
-
-export function resolveAnamneseFieldControl(field: PortalFormField): AnamneseFieldControl {
-  return field.portalControl ?? inferAnamneseFieldControl(field);
-}
+/** Portal-Feld wie vom Backend geliefert; `portalControl` ist Teil des Vertrags. */
+export type PortalFormField = FormTemplateField;
 
 export function anamneseNumberAttrs(field: PortalFormField): {
   min?: number;

@@ -45,7 +45,7 @@ Neues Template: neue Datei `definitions/<id>.v1.ts` + Eintrag in `definitions/in
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | **Backend `templates/sections`** | Abschnitte (titleKey + pdfTitle + fieldIds) — Portal via API, PDF via `form-pdf-display`                                  |
 | **Portal**                       | Rendert `sections` aus Template-API; Sichtbarkeit (z. B. Telefon nur ohne Terminal-Nummer) in `anamnese-form-sections.ts` |
-| **`anamnese-field-control`**     | Input-Typ (kompakt, Textarea, …) — Default + Overrides pro `fieldId`                                                      |
+| **`anamnese-field-control`**     | Rendert `portalControl` aus der Template-API; lokal bleiben Zahlen-Attribute und Input-Typ                                |
 
 Menü `/portal/menu` wählt aktuell **fest** ein Default-Template; später: MFA-Setting oder Query `?form=…`.
 

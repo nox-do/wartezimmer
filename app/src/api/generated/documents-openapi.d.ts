@@ -1115,10 +1115,10 @@ export interface components {
       required: boolean;
       maxLength?: number;
       /**
-       * @description Portal UI control hint (server-side layout metadata)
+       * @description Required portal layout control chosen by the server
        * @enum {string}
        */
-      portalControl?: 'checkbox' | 'compact' | 'input' | 'textarea-short' | 'textarea';
+      portalControl: 'checkbox' | 'compact' | 'input' | 'textarea-short' | 'textarea';
       min?: number;
       max?: number;
       step?: number;

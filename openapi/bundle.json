@@ -6796,7 +6796,7 @@
                       "type": "array",
                       "items": {
                         "type": "object",
-                        "required": ["id", "label", "type", "required"],
+                        "required": ["id", "label", "type", "required", "portalControl"],
                         "properties": {
                           "id": {
                             "type": "string"
@@ -6817,7 +6817,7 @@
                           "portalControl": {
                             "type": "string",
                             "enum": ["checkbox", "compact", "input", "textarea-short", "textarea"],
-                            "description": "Portal UI control hint (server-side layout metadata)"
+                            "description": "Required portal layout control chosen by the server"
                           },
                           "min": {
                             "type": "number"
@@ -19657,7 +19657,7 @@
       },
       "FormTemplateField": {
         "type": "object",
-        "required": ["id", "label", "type", "required"],
+        "required": ["id", "label", "type", "required", "portalControl"],
         "properties": {
           "id": {
             "type": "string"
@@ -19678,7 +19678,7 @@
           "portalControl": {
             "type": "string",
             "enum": ["checkbox", "compact", "input", "textarea-short", "textarea"],
-            "description": "Portal UI control hint (server-side layout metadata)"
+            "description": "Required portal layout control chosen by the server"
           },
           "min": {
             "type": "number"
@@ -19749,7 +19749,7 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["id", "label", "type", "required"],
+              "required": ["id", "label", "type", "required", "portalControl"],
               "properties": {
                 "id": {
                   "type": "string"
@@ -19770,7 +19770,7 @@
                 "portalControl": {
                   "type": "string",
                   "enum": ["checkbox", "compact", "input", "textarea-short", "textarea"],
-                  "description": "Portal UI control hint (server-side layout metadata)"
+                  "description": "Required portal layout control chosen by the server"
                 },
                 "min": {
                   "type": "number"

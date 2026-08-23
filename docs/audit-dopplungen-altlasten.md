@@ -27,14 +27,14 @@ Erledigte Befunde stehen nicht mehr in der Priorisierung, sondern gesammelt unte
 
 | Reihenfolge | ID      | Kandidat                                                     | Status           | Priorität | Effort |
 | ----------- | ------- | ------------------------------------------------------------ | ---------------- | --------- | ------ |
-| 1           | DUP-015 | Portal-Control-Inferenz als Vertrag klären                   | entscheiden      | mittel    | S–M    |
-| 2           | DUP-014 | DB-Snapshot-Vergleich als gemeinsamen Vertragshelfer führen  | entscheiden      | niedrig   | S      |
-| 3           | DUP-003 | Monorepo-Root-Suche zentralisieren                           | entscheiden      | niedrig   | S      |
-| 4           | DUP-013 | gemeinsamen Prozess-Runner bei nächster Änderung extrahieren | bei Gelegenheit  | niedrig   | S      |
-| 5           | DUP-004 | Proxy-Compose-Overlays                                       | vorerst behalten | niedrig   | S      |
+| 1           | DUP-014 | DB-Snapshot-Vergleich als gemeinsamen Vertragshelfer führen  | entscheiden      | niedrig   | S      |
+| 2           | DUP-003 | Monorepo-Root-Suche zentralisieren                           | entscheiden      | niedrig   | S      |
+| 3           | DUP-013 | gemeinsamen Prozess-Runner bei nächster Änderung extrahieren | bei Gelegenheit  | niedrig   | S      |
+| 4           | DUP-004 | Proxy-Compose-Overlays                                       | vorerst behalten | niedrig   | S      |
 
-**Nächster Kandidat: DUP-015.** Backend und UI leiten dieselbe Portal-Eingabe
-ab; zu klären ist, ob `portalControl` ein verpflichtender Transportvertrag ist.
+**Nächster Kandidat: DUP-014.** App und Setup vergleichen dieselben
+DB-Snapshot-Bereiche an der Restore-Grenze; zu klären ist, ob der Vergleich
+gemeinsam liegen soll.
 
 ### Offene Befunde
 
@@ -74,18 +74,6 @@ dieselben drei Bereiche per `JSON.stringify`. Da dies eine Restore-Verifikation
 über eine Prozessgrenze ist, sollte entweder der Vergleich im Shared-Vertrag
 liegen oder explizit dokumentiert werden, warum Produzent und Orchestrator jeweils
 eine eigene Prüfung besitzen.
-
-#### DUP-015: Portal-Control-Inferenz läuft in Backend und UI
-
-`app/src/shared/forms/portal-field-metadata.ts` und
-`ui/src/lib/portal/anamnese-field-control.ts` leiten aus Feldtyp und `maxLength`
-dieselbe Eingabekomponente ab. Das Backend liefert `portalControl` bereits mit;
-die UI verwendet die Kopie als Fallback.
-
-Empfehlung: entscheiden, ob `portalControl` ein verpflichtender Transportvertrag
-ist. Falls ja, UI-Fallback entfernen und das OpenAPI-Schema verschärfen. Falls der
-Fallback für Abwärtskompatibilität nötig ist, die Regel browser-sicher teilen und
-mit einem expliziten Kompatibilitätstest absichern.
 
 ### Bewusst nicht konsolidieren
 
@@ -165,6 +153,7 @@ das ändert. Sie sind Absicherung gegen Drive-by-Refactors.
 | DUP-011 | Setup-DTOs aus `@praxis-flow/server-shared` übernommen und lokal re-exportiert                | 2026-08-22 |
 | DUP-012 | `sha256File` in Setup zentralisiert; bestehender Pfupdate-Import bleibt als Re-Export gültig  | 2026-08-22 |
 | DUP-008 | Fastify-Route-Scan in `fastify-route-scan.mjs`; Auth- und OpenAPI-Check nutzen dieselbe Menge | 2026-08-22 |
+| DUP-015 | `portalControl` verpflichtender Backend-Vertrag; UI-Inferenz entfernt                         | 2026-08-23 |
 | LEG-001 | veralteten Tar-Pfad-Alias entfernt; `validateTarArchiveEntries` bleibt kanonisch              | 2026-07-23 |
 | LEG-002 | `SaveEnvBackupResult` entfernt; interner Consumer nutzt `SavePfbackupResult`                  | 2026-07-23 |
 | LEG-003 | Flow-Core-PoC-HTTP, Referenz-UI und Standalone-Oberfläche entfernt                            | 2026-07-28 |
@@ -191,6 +180,11 @@ Zu DUP-008: `collectRegisteredAppRoutes` ist die einzige Scan-API. Testdateien
 (`*.test.ts`, `*.spec.ts`) sind fest ausgeschlossen — auch die Auth-Fixtures in
 `auth-routes.test.ts`. Normalisierung, Regel- und OpenAPI-Vergleich bleiben in
 den jeweiligen Checks.
+
+Zu DUP-015: `portalControl` ist verpflichtend im OpenAPI-/Fastify-Vertrag.
+`toPortalFormFields` bleibt der Lieferpfad: bekannte Templates dürfen eine Map
+haben, alle anderen bekommen den Wert per Inferenz. Die UI rendert nur noch den
+gelieferten Wert.
 
 ## Nächste Audit-Wellen
 

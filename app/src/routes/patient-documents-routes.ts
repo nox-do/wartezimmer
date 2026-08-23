@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, RouteShorthandOptions } from 'fastify';
 import { buildFormPrivacyNoticeV2 } from '../shared/forms/consent/privacy-notice-v1.js';
 import { getPracticeProfileForDb } from '../shared/practice/practice-profile-service.js';
+import { FORM_PORTAL_CONTROLS } from '../shared/forms/portal-field-metadata.js';
 import {
   getFormTemplate,
   listPortalFormTemplateDescriptors,
@@ -157,14 +158,14 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
                 type: 'array',
                 items: {
                   type: 'object',
-                  required: ['id', 'label', 'type', 'required'],
+                  required: ['id', 'label', 'type', 'required', 'portalControl'],
                   properties: {
                     id: { type: 'string' },
                     label: { type: 'string' },
                     type: { type: 'string' },
                     required: { type: 'boolean' },
                     maxLength: { type: 'integer' },
-                    portalControl: { type: 'string' },
+                    portalControl: { type: 'string', enum: [...FORM_PORTAL_CONTROLS] },
                     min: { type: 'number' },
                     max: { type: 'number' },
                     step: { type: 'number' },

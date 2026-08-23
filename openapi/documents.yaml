@@ -69,6 +69,7 @@ components:
         - label
         - type
         - required
+        - portalControl
       properties:
         id:
           type: string
@@ -93,7 +94,7 @@ components:
             - input
             - textarea-short
             - textarea
-          description: Portal UI control hint (server-side layout metadata)
+          description: Required portal layout control chosen by the server
         min:
           type: number
         max:
