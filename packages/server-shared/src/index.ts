@@ -103,6 +103,10 @@ export {
   type FormPdfDisplaySection,
 } from './form-pdf-display.js';
 export {
+  settingsDbSnapshotsEquivalentForRestore,
+  type SettingsDbSnapshotRestoreContent,
+} from './settings-db-snapshot.js';
+export {
   FRESHCLAM_LOG_PATH,
   resolveMaxSignatureAgeHours,
   type SandboxScannerStatus,

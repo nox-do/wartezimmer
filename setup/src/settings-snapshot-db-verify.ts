@@ -1,16 +1,5 @@
 import type { SettingsSnapshotDbFromApp } from './settings-backup.js';
 
-export function dbSnapshotsEquivalent(
-  left: SettingsSnapshotDbFromApp,
-  right: SettingsSnapshotDbFromApp,
-): boolean {
-  return (
-    JSON.stringify(left.opsSettings) === JSON.stringify(right.opsSettings) &&
-    JSON.stringify(left.authSettings) === JSON.stringify(right.authSettings) &&
-    JSON.stringify(left.messagingProviderConfigs) === JSON.stringify(right.messagingProviderConfigs)
-  );
-}
-
 export function buildExpectedDbSnapshotAfterImport(
   settings: Record<string, unknown>,
   options: { skipProviderCredentials?: boolean } = {},

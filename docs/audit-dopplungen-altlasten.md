@@ -27,14 +27,12 @@ Erledigte Befunde stehen nicht mehr in der Priorisierung, sondern gesammelt unte
 
 | Reihenfolge | ID      | Kandidat                                                     | Status           | Priorität | Effort |
 | ----------- | ------- | ------------------------------------------------------------ | ---------------- | --------- | ------ |
-| 1           | DUP-014 | DB-Snapshot-Vergleich als gemeinsamen Vertragshelfer führen  | entscheiden      | niedrig   | S      |
-| 2           | DUP-003 | Monorepo-Root-Suche zentralisieren                           | entscheiden      | niedrig   | S      |
-| 3           | DUP-013 | gemeinsamen Prozess-Runner bei nächster Änderung extrahieren | bei Gelegenheit  | niedrig   | S      |
-| 4           | DUP-004 | Proxy-Compose-Overlays                                       | vorerst behalten | niedrig   | S      |
+| 1           | DUP-003 | Monorepo-Root-Suche zentralisieren                           | entscheiden      | niedrig   | S      |
+| 2           | DUP-013 | gemeinsamen Prozess-Runner bei nächster Änderung extrahieren | bei Gelegenheit  | niedrig   | S      |
+| 3           | DUP-004 | Proxy-Compose-Overlays                                       | vorerst behalten | niedrig   | S      |
 
-**Nächster Kandidat: DUP-014.** App und Setup vergleichen dieselben
-DB-Snapshot-Bereiche an der Restore-Grenze; zu klären ist, ob der Vergleich
-gemeinsam liegen soll.
+**Nächster Kandidat: DUP-003.** Setup und Manager suchen beide das
+Monorepo-Root; zu klären ist, ob der Suchkern geteilt werden soll.
 
 ### Offene Befunde
 
@@ -64,16 +62,6 @@ Vorlage mit Packaging-Kopie oder zumindest einen Gleichheits-/Drift-Check ergän
 identische `run`- und `runCapture`-Funktionen. Ein gemeinsamer Script-Helper ist
 sinnvoll, sobald einer der beiden Build-Flows wieder angefasst wird. Priorität
 niedrig, weil die Logik klein und aktuell gleich ist.
-
-#### DUP-014: DB-Snapshot-Gleichheit wird an App- und Setup-Grenze separat definiert
-
-`dbSnapshotsEquivalentForRestore` in
-`app/src/shared/settings/settings-snapshot-import.ts` und
-`dbSnapshotsEquivalent` in `setup/src/settings-snapshot-db-verify.ts` vergleichen
-dieselben drei Bereiche per `JSON.stringify`. Da dies eine Restore-Verifikation
-über eine Prozessgrenze ist, sollte entweder der Vergleich im Shared-Vertrag
-liegen oder explizit dokumentiert werden, warum Produzent und Orchestrator jeweils
-eine eigene Prüfung besitzen.
 
 ### Bewusst nicht konsolidieren
 
@@ -154,6 +142,7 @@ das ändert. Sie sind Absicherung gegen Drive-by-Refactors.
 | DUP-012 | `sha256File` in Setup zentralisiert; bestehender Pfupdate-Import bleibt als Re-Export gültig  | 2026-08-22 |
 | DUP-008 | Fastify-Route-Scan in `fastify-route-scan.mjs`; Auth- und OpenAPI-Check nutzen dieselbe Menge | 2026-08-22 |
 | DUP-015 | `portalControl` verpflichtender Backend-Vertrag; UI-Inferenz entfernt                         | 2026-08-23 |
+| DUP-014 | DB-Restore-Vergleich in `@praxis-flow/server-shared`; App-Vollvergleich behält `env` lokal    | 2026-08-23 |
 | LEG-001 | veralteten Tar-Pfad-Alias entfernt; `validateTarArchiveEntries` bleibt kanonisch              | 2026-07-23 |
 | LEG-002 | `SaveEnvBackupResult` entfernt; interner Consumer nutzt `SavePfbackupResult`                  | 2026-07-23 |
 | LEG-003 | Flow-Core-PoC-HTTP, Referenz-UI und Standalone-Oberfläche entfernt                            | 2026-07-28 |
@@ -185,6 +174,12 @@ Zu DUP-015: `portalControl` ist verpflichtend im OpenAPI-/Fastify-Vertrag.
 `toPortalFormFields` bleibt der Lieferpfad: bekannte Templates dürfen eine Map
 haben, alle anderen bekommen den Wert per Inferenz. Die UI rendert nur noch den
 gelieferten Wert.
+
+Zu DUP-014: `settingsDbSnapshotsEquivalentForRestore` vergleicht nur
+`opsSettings`, `authSettings` und `messagingProviderConfigs`. `exportedAt` und
+`settingsFormatVersion` gehören nicht zum Restore-Inhalt. App und Setup
+importieren die Funktion direkt. `snapshotsEquivalentForRestore` bleibt App-lokal
+und ergänzt `env`. `buildExpectedDbSnapshotAfterImport` bleibt in Setup.
 
 ## Nächste Audit-Wellen
 

@@ -1,14 +1,14 @@
 import path from 'node:path';
-import type { ComposeStatus } from '@praxis-flow/server-shared';
+import {
+  settingsDbSnapshotsEquivalentForRestore,
+  type ComposeStatus,
+} from '@praxis-flow/server-shared';
 import type { AppDataVolumeAccess } from './app-data-volume.js';
 import type { ComposeRunOptions } from './docker.js';
 import type { SettingsSnapshotImportViaAppReport } from './settings-backup.js';
 import type { SettingsSnapshotDbFromApp } from './settings-backup.js';
 import { resolveCanonicalBaseUrl } from './urls.js';
-import {
-  buildExpectedDbSnapshotAfterImport,
-  dbSnapshotsEquivalent,
-} from './settings-snapshot-db-verify.js';
+import { buildExpectedDbSnapshotAfterImport } from './settings-snapshot-db-verify.js';
 
 export const FRESH_DB_CUTOVER_PHASES = {
   moveDatabase: 'move_database',
@@ -183,7 +183,7 @@ export async function runFreshDbSettingsCutover(
   const expectedDb = buildExpectedDbSnapshotAfterImport(importPayload, {
     skipProviderCredentials,
   });
-  if (!dbSnapshotsEquivalent(exportedDb, expectedDb)) {
+  if (!settingsDbSnapshotsEquivalentForRestore(exportedDb, expectedDb)) {
     return failure(FRESH_DB_CUTOVER_PHASES.verifyExport, [verifyMismatchMessage]);
   }
 

@@ -10,11 +10,9 @@ import { registerOpsSettingsRoutes } from './routes/ops/ops-settings-routes.js';
 import { registerOpsManagerMaintenanceRoutes } from './routes/ops/ops-manager-maintenance-routes.js';
 import { CoreDatabase } from './shared/db/database.js';
 import { createCurrentSchema } from './shared/db/create-current-schema.js';
+import { settingsDbSnapshotsEquivalentForRestore } from '@praxis-flow/server-shared';
 import { exportSettingsSnapshotFromDb } from './shared/settings/settings-snapshot-export.js';
-import {
-  dbSnapshotsEquivalentForRestore,
-  withDefaultEnvForSnapshotParse,
-} from './shared/settings/settings-snapshot-import.js';
+import { withDefaultEnvForSnapshotParse } from './shared/settings/settings-snapshot-import.js';
 
 const ENV_KEYS = ['AUTH_ENABLED', 'AUTH_KEY_CAPTIVE', 'NODE_ENV'] as const;
 const savedEnv = new Map<string, string | undefined>();
@@ -268,7 +266,7 @@ test('maintenance import endpoint round-trips db settings on fresh schema', asyn
 
   assert.equal(exportResponse.statusCode, 200);
   assert.ok(
-    dbSnapshotsEquivalentForRestore(sourceSnapshot, exportResponse.json()),
+    settingsDbSnapshotsEquivalentForRestore(sourceSnapshot, exportResponse.json()),
     're-exported db snapshot should match source',
   );
 

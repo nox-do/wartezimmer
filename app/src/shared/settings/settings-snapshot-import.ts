@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { settingsDbSnapshotsEquivalentForRestore } from '@praxis-flow/server-shared';
 import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
 import { loadCatalog } from '@praxis-flow/flow-core/server';
 import {
@@ -24,7 +25,6 @@ import {
   type AuthSettingsSnapshotV1,
   type MessagingProviderConfigSnapshotV1,
   type OpsSettingsSnapshotV1,
-  type SettingsSnapshotDbV1,
   type SettingsSnapshotImportOptions,
   type SettingsSnapshotImportReport,
   type SettingsSnapshotV1,
@@ -581,22 +581,8 @@ export function snapshotsEquivalentForRestore(
   right: SettingsSnapshotV1,
 ): boolean {
   return (
-    JSON.stringify(left.opsSettings) === JSON.stringify(right.opsSettings) &&
-    JSON.stringify(left.authSettings) === JSON.stringify(right.authSettings) &&
-    JSON.stringify(left.messagingProviderConfigs) ===
-      JSON.stringify(right.messagingProviderConfigs) &&
+    settingsDbSnapshotsEquivalentForRestore(left, right) &&
     JSON.stringify(left.env) === JSON.stringify(right.env)
-  );
-}
-
-export function dbSnapshotsEquivalentForRestore(
-  left: SettingsSnapshotDbV1,
-  right: SettingsSnapshotDbV1,
-): boolean {
-  return (
-    JSON.stringify(left.opsSettings) === JSON.stringify(right.opsSettings) &&
-    JSON.stringify(left.authSettings) === JSON.stringify(right.authSettings) &&
-    JSON.stringify(left.messagingProviderConfigs) === JSON.stringify(right.messagingProviderConfigs)
   );
 }
 

@@ -58,6 +58,10 @@ test('export and import produce equivalent restore snapshot', () => {
   const reExported = exportSettingsSnapshotFromDb(targetDb, sampleEnv());
 
   assert.ok(snapshotsEquivalentForRestore(exported, reExported));
+  assert.equal(
+    snapshotsEquivalentForRestore(exported, { ...reExported, env: { FOO: 'other' } }),
+    false,
+  );
 
   const blut = (reExported.opsSettings.topics as Array<{ topicId: string; label: string }>).find(
     (topic) => topic.topicId === 'blut',
