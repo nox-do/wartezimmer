@@ -52,14 +52,14 @@ flowchart TB
 
 | Begriff                   | Beispiel | Wo definiert           | Wofür                                                         |
 | ------------------------- | -------- | ---------------------- | ------------------------------------------------------------- |
-| **Manager-Version**       | `0.2.0`  | `manager/package.json` | Electron-App, DMG-Name, `minimumManagerVersion` beim Update   |
-| **Stack-Release-Version** | `2.1.0`  | `--version` beim Build | Docker-Image-Tags, `manager-state.json`, `.pfupdate`-Manifest |
-| **Monorepo-Version**      | `0.2.0`  | Root-`package.json`    | npm-Workspaces — **nur Default**, wenn `--version` fehlt      |
+| **Manager-Version**       | `0.3.0`  | `manager/package.json` | Electron-App, DMG-Name, `minimumManagerVersion` beim Update   |
+| **Stack-Release-Version** | `0.3.0`  | `--version` beim Build | Docker-Image-Tags, `manager-state.json`, `.pfupdate`-Manifest |
+| **Monorepo-Version**      | `0.3.0`  | Root-`package.json`    | npm-Workspaces — **nur Default**, wenn `--version` fehlt      |
 
 Stack-Release und Monorepo-Version sind **nicht gekoppelt**. Für Kunden-Releases immer explizit setzen:
 
 ```bash
-export PRAXIS_FLOW_RELEASE_VERSION=2.1.0
+export PRAXIS_FLOW_RELEASE_VERSION=0.3.0
 npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 ```
 
