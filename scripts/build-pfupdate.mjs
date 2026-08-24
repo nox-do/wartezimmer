@@ -21,6 +21,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { appDockerBuildArgs } from './release-app-image.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -170,18 +171,7 @@ function buildReleaseImages(version, { withGateway = false } = {}) {
   const gatewayImage = `praxis-flow/gateway:${version}`;
 
   console.log(`Building ${appImage} …`);
-  run('docker', [
-    'build',
-    '-f',
-    'app/Dockerfile',
-    '-t',
-    appImage,
-    '--build-arg',
-    'VITE_API_BASE=',
-    '--sbom=true',
-    '--provenance=mode=max',
-    '.',
-  ]);
+  run('docker', appDockerBuildArgs(version));
 
   console.log(`Building ${sandboxImage} …`);
   run('docker', [

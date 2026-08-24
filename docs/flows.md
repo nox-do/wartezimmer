@@ -1,6 +1,6 @@
 # Flows — Fachliche Abläufe
 
-> Runtime-UI deckt Happy Paths ab. Offenes: [`roadmap.md`](roadmap.md), [`todo.md`](../todo.md).
+> Runtime-UI deckt Happy Paths ab. Scope des Kunden-Tests: [`roadmap.md`](roadmap.md).
 
 ## Implementierungsstand Runtime-UI (2026-06)
 
@@ -214,10 +214,10 @@ Patient weiß: **jetzt oder bald** ist offene Sprechstunde. Thema `offen` verhä
 
 ### Produktgrenze (WLAN / Captive)
 
-| Wir liefern                                                                              | Wir liefern nicht                                                                                                        |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API                                | Router, APs, Captive-Portal-Hardware, eigenen Captive-Datenpfad                                                          |
-| später: dünne Vendor-Adapter (Outbound-URL / Inbound ja\|nein) nach gültiger Wartenummer | openNDS-`gateway`-Container als Produktkern (nur Lab-Referenz: [`gateway-captive-portal.md`](gateway-captive-portal.md)) |
+| Wir liefern                                                                              | Wir liefern nicht                                                                                                               |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API                                | Router, APs, Captive-Portal-Hardware, eigenen Captive-Datenpfad                                                                 |
+| später: dünne Vendor-Adapter (Outbound-URL / Inbound ja\|nein) nach gültiger Wartenummer | openNDS-`gateway`-Container als Produktkern (nur Lab: [`archive/gateway-captive-portal.md`](archive/gateway-captive-portal.md)) |
 
 **Praxis-IT** stellt Gast-WLAN / Captive. Nach Freischaltung (oder ohne Captive: direkter Browser-Aufruf der Portal-URL) läuft unser Portal. Dev/Test ohne WLAN: `/portal` direkt im Browser.
 
@@ -296,11 +296,11 @@ Patient kann den **generierten** Bogen im Portal **nicht** erneut öffnen oder s
 
 Kein Patienten-Flow — Rahmen für Installation und Erreichbarkeit. Fachliche Screens bleiben Flow 1–5.
 
-| Baustein                   | Rolle                                                                                                                                     |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Manager** (Electron)     | Host-Setup, Status, Netzwerk, Wartung, Updates — [`../manager/README.md`](../manager/README.md), [`delivery.md`](delivery.md)             |
-| **Proxy** (optional Caddy) | LAN-Einstieg Port 80 (HTTP umgesetzt); TLS und externes Portal (Whitelist) geplant — [`plan-proxy-container.md`](plan-proxy-container.md) |
-| **Gateway** (openNDS)      | **Nicht** Produktkern — Lab-Referenz; Delivery-Default ohne Gateway — [`gateway-captive-portal.md`](gateway-captive-portal.md)            |
+| Baustein                   | Rolle                                                                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Manager** (Electron)     | Host-Setup, Status, Netzwerk, Wartung, Updates — [`../manager/README.md`](../manager/README.md), [`delivery.md`](delivery.md)                  |
+| **Proxy** (optional Caddy) | LAN-Einstieg Port 80 (HTTP); TLS und Internet-Portal **nicht** im Kunden-Test — [`roadmap.md`](roadmap.md)                                     |
+| **Gateway** (openNDS)      | **Nicht** Produktkern — Lab-Referenz; Delivery-Default ohne Gateway — [`archive/gateway-captive-portal.md`](archive/gateway-captive-portal.md) |
 
 Mit aktivem Proxy sind Geräte-/Portal-URLs über `CANONICAL_BASE_URL` (ohne `:8080` im LAN) kanonisch; App-Port 8080 bleibt lokal für Setup-Probes. Details und Manager-UI (Proxy an/aus, Wiederherstellen) gehören in Manager-/Proxy-Doku, nicht in die Patienten-Abläufe.
 

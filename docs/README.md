@@ -2,14 +2,19 @@
 
 Kurzüberblick: **was wann lesen**. Technische Details stehen in den verlinkten Dateien — nicht alles auf einmal.
 
-## Für wen?
+## Kunden-Test (jetzt)
 
-| Rolle                       | Start hier                                                                                       |
-| --------------------------- | ------------------------------------------------------------------------------------------------ |
-| **Entwickler:in**           | [`architecture.md`](architecture.md) → `openapi/` → [`realtime-streams.md`](realtime-streams.md) |
-| **Beta / IT in der Praxis** | [`delivery.md`](delivery.md) → [`deployment-docker.md`](deployment-docker.md)                    |
-| **Produkt / Fachlichkeit**  | [`product.md`](product.md) → [`flows.md`](flows.md) → [`domain-model.md`](domain-model.md)       |
-| **API-Integration**         | `openapi/*.yaml` (Vertrag) · [`apis.md`](apis.md) (Rollen & Regeln)                              |
+Kein öffentliches Release. Ziel: eine Praxis-IT kann den Stack **installieren, im LAN betreiben und ein Update einspielen**.
+
+| Rolle                       | Start hier                                                                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Beta / IT in der Praxis** | [`delivery.md`](delivery.md) → [`deployment-docker.md`](deployment-docker.md) → [`../manager/README.md`](../manager/README.md) |
+| **Fachlichkeit vor Ort**    | [`product.md`](product.md) → [`flows.md`](flows.md)                                                                            |
+| **Scope / Nicht-Ziele**     | [`roadmap.md`](roadmap.md)                                                                                                     |
+
+**In diesem Test:** Terminal, MFA, TV, Raum-Panel, Portal (LAN), Manager, optional HTTP-Proxy Port 80, Backup/Restore, `.pfupdate`.
+
+**Nicht in diesem Test:** eGK, PVS-Adapter, Captive-/Gateway-Produkt, TLS/443, Internet-Portal, Manager-Auto-Update.
 
 ## Kerndokumente
 
@@ -24,18 +29,15 @@ Kurzüberblick: **was wann lesen**. Technische Details stehen in den verlinkten 
 | [`deployment-docker.md`](deployment-docker.md) | Compose, Volumes, Betrieb (Runtime)                        |
 | [`domain-model.md`](domain-model.md)           | Nummernkreis, Themen, Räume                                |
 | [`events.md`](events.md)                       | Outbox, interne Events                                     |
-| [`roadmap.md`](roadmap.md)                     | Phasen, nächste Schritte                                   |
-| [`todo.md`](../todo.md)                        | Arbeitsstand (intern)                                      |
+| [`roadmap.md`](roadmap.md)                     | Kunden-Test-Scope, danach                                  |
 
 ## Setup & Netzwerk
 
-| Datei                                                      | Inhalt                                                                   |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------ |
-| [`../manager/README.md`](../manager/README.md)             | Manager (Electron): Wizard, Setup-API, Wartung                           |
-| [`integrations.md`](integrations.md)                       | Externe Systeme: WLAN-Adapter-Grenze, eGK, PVS, SMS                      |
-| [`gateway-captive-portal.md`](gateway-captive-portal.md)   | **Lab-Referenz** — früherer openNDS-Pfad (nicht Produktkern)             |
-| [`plan-proxy-container.md`](plan-proxy-container.md)       | **Plan** — Reverse Proxy, TLS-Modi (LAN + Portal extern), Manager-Status |
-| [`plan-auth-session-slots.md`](plan-auth-session-slots.md) | **Plan** — Auth: Rolle ↔ Cookie, scoped Login/Me/Logout, UI-Auswirkungen |
+| Datei                                                                    | Inhalt                                         |
+| ------------------------------------------------------------------------ | ---------------------------------------------- |
+| [`../manager/README.md`](../manager/README.md)                           | Manager (Electron): Wizard, Setup-API, Wartung |
+| [`integrations.md`](integrations.md)                                     | Externe Systeme: WLAN-Grenze, eGK, PVS, SMS    |
+| [`settings-backup-classification.md`](settings-backup-classification.md) | Was Backup/Restore/Update erhält               |
 
 ## Sandbox & Formulare
 
@@ -45,13 +47,19 @@ Kurzüberblick: **was wann lesen**. Technische Details stehen in den verlinkten 
 | [`sandbox-container.md`](sandbox-container.md)   | Container, Pipeline, Volumes |
 | [`anamnese-templates.md`](anamnese-templates.md) | Erstanamnese-Vorlagen        |
 
-## Selten gebraucht
+## Intern — nicht für den Kunden-Test
 
-| Datei                                                            | Inhalt                                    |
-| ---------------------------------------------------------------- | ----------------------------------------- |
-| [`i18n.md`](i18n.md)                                             | Sprachen Terminal/Portal vs. Staff        |
-| [`business-revenue-model.md`](business-revenue-model.md)         | Preis-/Lizenz-Skizze (intern)             |
-| [`audit-dopplungen-altlasten.md`](audit-dopplungen-altlasten.md) | Inventur: Dopplungen / Altlasten (intern) |
+Pläne und Arbeitsstände. Historische Dateien: [`archive/README.md`](archive/README.md).
+
+| Datei                                                            | Inhalt                                                 |
+| ---------------------------------------------------------------- | ------------------------------------------------------ |
+| [`../todo.md`](../todo.md)                                       | Aktuelle Arbeitsliste (intern)                         |
+| [`audit-dopplungen-altlasten.md`](audit-dopplungen-altlasten.md) | Inventur Dopplungen / Altlasten                        |
+| [`i18n.md`](i18n.md)                                             | Sprachen Terminal/Portal vs. Staff                     |
+| [`business-revenue-model.md`](business-revenue-model.md)         | Preis-/Lizenz-Skizze                                   |
+| [`catalog-source-of-truth.md`](catalog-source-of-truth.md)       | `ops_settings` vs. flow-core-Catalog                   |
+| [`plan-proxy-tls.md`](plan-proxy-tls.md)                         | TLS / Internet-Portal — Zielbild, nicht Kunden-Test    |
+| [`archive/README.md`](archive/README.md)                         | Routing-Pläne, Auth-Slots, HTTP-Proxy-Ist, Gateway-Lab |
 
 ## API-Vertrag
 

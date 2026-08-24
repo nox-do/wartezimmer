@@ -1,10 +1,10 @@
 # Domänenmodell — Wartenummer, Anmeldgrund, Aufrufziel
 
-**Status:** Arbeitsdokument (Basisentwicklung)  
-**Stand:** 2026-06-17  
+**Status:** fachliche Referenz (umgesetzt)  
+**Stand:** 2026-08-24  
 **Bezug:** `docs/architecture.md`, `docs/apis.md`, `docs/flows.md`
 
-Dieses Dokument ist die **fachliche Referenz** für die Entkopplung von Themen/Räumen und die Umsetzung im Code. Bei Widersprüchen zu älteren Abschnitten in anderen Docs gilt hier das Zielbild.
+Dieses Dokument ist die **fachliche Referenz** für Nummernkreis, Themen und Räume.
 
 ---
 

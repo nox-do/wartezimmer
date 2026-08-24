@@ -1,6 +1,6 @@
 # Catalog-Wahrheit — `ops_settings` als Quelle
 
-Stand: 2026-07-12 · Schritt 2 des Upgrade-/Backup-Vertrags
+Stand: 2026-07-12 · geltender Vertrag (intern)
 
 Siehe auch: [`settings-backup-classification.md`](settings-backup-classification.md)
 

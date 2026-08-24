@@ -1,5 +1,9 @@
 # Flow Routing Modes - Arbeitspakete
 
+> **Historisch (Stand 2026-07-07).** Pakete 1–8 sind umgesetzt. Nicht als offene
+> Nicht als offene Auftragsliste lesen. Geltend: [`../product.md`](../product.md),
+> [`../flows.md`](../flows.md).
+
 Stand: 2026-07-07
 
 Dieses Dokument zerlegt den Ausbau von Simple/Complex Routing in getrennte

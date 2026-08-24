@@ -187,7 +187,7 @@ async function main() {
     }
     if (result.gatewayComposeSkipped) {
       p.log.info(
-        'Gateway-Profil übersprungen (macOS/Windows — siehe docs/gateway-captive-portal.md)',
+        'Gateway-Profil übersprungen (macOS/Windows — siehe docs/archive/gateway-captive-portal.md)',
       );
     }
     if (result.compose && !result.compose.ok) {

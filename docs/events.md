@@ -7,8 +7,6 @@
 
 Die Outbox in SQLite dient v1 als **Audit-Trail** und Crash-Recovery-Markierung — nicht als Event-Bus mit Side-Effect-Workern.
 
-Details Remediation (E2E-Review 2026-06-08, PR-Pakete P0–P4): siehe **`todo.md`** → Abschnitt „Remediation-Plan“.
-
 ## Grundsaetze
 
 - So wenig Events wie moeglich

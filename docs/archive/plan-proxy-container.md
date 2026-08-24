@@ -1,8 +1,12 @@
 # Plan: Reverse Proxy Container, TLS-Modi und Manager-Status
 
+> **Archiviert (2026-08-24).** HTTP-Ist und TLS-Soll waren hier vermischt.
+> TLS-Zielbild: [`../plan-proxy-tls.md`](../plan-proxy-tls.md).
+> HTTP-Betrieb: [`../delivery.md`](../delivery.md), [`../deployment-docker.md`](../deployment-docker.md).
+
 Stand: 2026-07-21
 
-Status: **In Umsetzung** — P0 und der optionale HTTP-Proxy (P2a/P2c) sind implementiert; TLS und externer Portalzugriff sind noch Planung.
+Status: **archiviert.** TLS-Zielbild und HTTP-Betrieb siehe Kasten oben.
 
 ## Implementierungsstand (2026-07-21)
 

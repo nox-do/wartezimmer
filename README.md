@@ -6,7 +6,7 @@ Lokales Praxis-System: Check-in am Terminal, Warteschlange (MFA), Wartezimmer-TV
 
 ## Status
 
-Basisentwicklung — lokaler Dev-Stack und Docker-Compose sind der Hauptweg. Kunden-Delivery (versionierte Images, Manager, `.pfupdate`): [`docs/delivery.md`](docs/delivery.md).
+Interner **Kunden-Test**: versionierte Images, Manager, `.pfupdate`. Kein öffentliches Release. Scope und Nicht-Ziele: [`docs/roadmap.md`](docs/roadmap.md). Einstieg für IT: [`docs/delivery.md`](docs/delivery.md).
 
 ## Voraussetzungen
 

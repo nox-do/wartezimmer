@@ -26,7 +26,7 @@ Verwendete Compose-Datei fuer Kundenbetrieb:
   - isolierte Dokumentenvorschau + Form2PDF
   - nur intern erreichbar (kein oeffentlicher Port)
 - `gateway` _(Lab-Referenz, Profil `gateway` — nicht Produktkern)_
-  - Früherer openNDS-Pfad; siehe `docs/integrations.md` und `docs/gateway-captive-portal.md`
+  - Früherer openNDS-Pfad; siehe `docs/integrations.md` und `docs/archive/gateway-captive-portal.md`
 
 ## Nicht in v1
 

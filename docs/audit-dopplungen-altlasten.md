@@ -25,43 +25,11 @@ Artefakte. Die relevanten Dopplungen sind überwiegend strukturell oder semantis
 Erledigte Befunde stehen nicht mehr in der Priorisierung, sondern gesammelt unter
 [Abgeschlossen](#abgeschlossen).
 
-| Reihenfolge | ID      | Kandidat                                                     | Status           | Priorität | Effort |
-| ----------- | ------- | ------------------------------------------------------------ | ---------------- | --------- | ------ |
-| 1           | DUP-003 | Monorepo-Root-Suche zentralisieren                           | entscheiden      | niedrig   | S      |
-| 2           | DUP-013 | gemeinsamen Prozess-Runner bei nächster Änderung extrahieren | bei Gelegenheit  | niedrig   | S      |
-| 3           | DUP-004 | Proxy-Compose-Overlays                                       | vorerst behalten | niedrig   | S      |
-
-**Nächster Kandidat: DUP-003.** Setup und Manager suchen beide das
-Monorepo-Root; zu klären ist, ob der Suchkern geteilt werden soll.
+Die aktive Arbeitsliste der zweiten Audit-Welle ist leer.
 
 ### Offene Befunde
 
-#### DUP-003: Monorepo-Root-Suche existiert zweimal
-
-`setup/src/project-root.ts` und `manager/src/main/project-root.ts` laufen beide
-maximal zwölf Verzeichnisse nach oben und suchen das Paket `praxis_flow`.
-Unterschiedlich sind hauptsächlich Defaults, Fehlermeldung und die optionale
-Variante.
-
-Empfehlung: den gemeinsamen Suchkern in ein Node-taugliches Shared-Modul
-verschieben. Lokale Wrapper dürfen paketbezogene Fehlermeldungen und Defaults
-behalten. Priorität niedrig, weil die Logik klein ist und sich selten ändert.
-
-#### DUP-004: Proxy-Compose-Overlays sind semantisch identisch
-
-`docker-compose.proxy.yml` und `docker-compose.proxy.delivery.yml` unterscheiden
-sich nur in Kommentar und Anwendungsbeispiel. Die getrennten Dateinamen passen zum
-Packaging-Modell, da Release-Pakete die `*.delivery.yml`-Templates mitnehmen.
-
-Bewertung: vorerst behalten. Falls eine der Dateien geändert wird, eine kanonische
-Vorlage mit Packaging-Kopie oder zumindest einen Gleichheits-/Drift-Check ergänzen.
-
-#### DUP-013: Release-Skripte kopieren Prozess-Runner
-
-`scripts/build-release-images.mjs` und `scripts/build-pfupdate.mjs` enthalten
-identische `run`- und `runCapture`-Funktionen. Ein gemeinsamer Script-Helper ist
-sinnvoll, sobald einer der beiden Build-Flows wieder angefasst wird. Priorität
-niedrig, weil die Logik klein und aktuell gleich ist.
+_(keine)_
 
 ### Bewusst nicht konsolidieren
 
@@ -102,6 +70,63 @@ aus ihrem SSE-Zustand. Diese Doppelung markiert eine sinnvolle Trust-Grenze.
 `restorePhaseFromCutover` und `updatePhaseFromCutover` haben denselben Switch-Aufbau,
 übersetzen aber bewusst in zwei verschiedene externe Fortschrittsvokabulare. Die
 kleine explizite Projektion ist lesbarer als ein generischer Mapper.
+
+#### OK-007: Proxy-Compose-Overlays
+
+`docker-compose.proxy.yml` und `docker-compose.proxy.delivery.yml` unterscheiden
+sich nur in drei Kommentarzeilen (Usage-Beispiel). Der YAML-Body ist identisch;
+beide Dateien stammen aus demselben Commit und sind seither nicht gedriftet.
+
+Anders als Basis-Compose und Gateway-Overlay braucht der Proxy kein `build:` vs.
+`image:`-Split: Caddy ist in Dev und Delivery dasselbe Upstream-Image. Die zwei
+Dateinamen sind die Packaging-Grenze (`*.delivery.yml` geht in Manager-Bundle und
+`.pfupdate`; `resolveComposeFiles` wählt nach Dev/Delivery). Zusammenlegen würde
+nur den Dateinamen-Vertrag ändern, ohne Verhalten zu verbessern.
+
+Kein Drift-Check, solange TLS/443 nicht angefasst wird. Dann beide Dateien
+gemeinsam ändern — oder erst dann eine kanonische Vorlage bzw. einen
+Gleichheitscheck nachziehen.
+
+#### OK-008: Monorepo-Root-Suche in Setup und Manager
+
+`setup/src/project-root.ts` und `manager/src/main/project-root.ts` laufen beide
+maximal zwölf Verzeichnisse nach oben und suchen `package.json` mit
+`name === "praxis_flow"`. Das ist kein gemeinsamer Vertrag, sondern zwei
+dünne Host-Helfer mit unterschiedlicher API:
+
+- Setup braucht `findProjectRootOptional`: Install-Mode liegt oft außerhalb
+  des Repos; `null` ist ein gültiger Zustand.
+- Manager braucht die strikte Variante nur im unpackaged Dev-Pfad
+  (`startDevSetupServer`). Packaged nutzt `process.resourcesPath` und sucht
+  das Repo nicht.
+- Fehlermeldungen sind produktbezogen (Setup-Code vs. Manager-UI).
+
+Ein Shared-Kern in `@praxis-flow/server-shared` würde ein neues Subpath-Export
+brauchen: der Barrel-Import ist im Manager-Renderer schon zweimal an
+`node:crypto` gescheitert. Das ist mehr Packaging als die ~25 Zeilen Walk.
+Setup darf den Manager nicht importieren; Manager soll Setup nicht als
+Library ziehen (Setup läuft als Child).
+
+Setup exportiert zusätzlich eine ungenutzte strikte `findProjectRoot` — kein
+Grund für eine Extraktion. Entfernen nur bei gezieltem Cleanup.
+
+#### OK-009: Prozess-Runner in den Release-Skripten
+
+`run` und `runCapture` in `scripts/build-release-images.mjs` und
+`scripts/build-pfupdate.mjs` sind identisch (`spawnSync`, `cwd` = Repo-Root,
+Fehler → `process.exit`). Dazu kommen dieselben Mini-Helfer `assertDockerReady`,
+`assertImageExists`, `ensureProxyImage` und `sha256File`. `smoke-proxy.mjs` hat
+einen dritten, anders geformten `run` (wirft, statt zu beenden) und gehört nicht
+dazu.
+
+Ein gemeinsamer Script-Helper lohnt die Packaging-Kante nicht: zwei CLI-Dateien,
+kein Testvertrag, `process.exit` als API. Die eigentlichen Flows bleiben
+verschieden (gzip-Archiv vs. unkomprimiertes `docker save` plus Templates).
+
+Beim Blick auf die Kopie war `buildReleaseImages` gedriftet: nur
+`release:images` setzte `PRAXIS_FLOW_STACK_VERSION`. Seit 2026-08-24 liegt der
+App-`docker build` in `scripts/release-app-image.mjs`; beide Skripte und ein
+Script-Test halten Tag und Build-Arg gleich. Die Runner bleiben lokal.
 
 ## Ziel und Bewertungsmaßstab
 
@@ -186,6 +211,7 @@ und ergänzt `env`. `buildExpectedDbSnapshotAfterImport` bleibt in Setup.
 1. App-Backend: parallele Route-/Service-/DB-Helfer und alte Visit-/Queue-Pfade.
 2. UI: ähnliche Fetch-Wrapper, Controller und View-Model-Mappings.
 3. Setup/Manager: doppelte Backup-, Update-, Netzwerk- und Compose-Modelle.
-4. Dokumentation: aktive Spezifikation gegen abgeschlossene Pläne, Handovers und
-   historische Todos abgrenzen.
+4. Dokumentation: Kunden-Test-Pfad vs. Archiv (2026-08-24); TLS-Zielbild
+   `plan-proxy-tls.md`, gemischter Proxy-Plan und Routing-/Auth-/Gateway-Docs unter
+   `docs/archive/`.
 5. Tests: doppelte Contract-Tests von sinnvollen Schichttests unterscheiden.

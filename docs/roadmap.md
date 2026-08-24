@@ -1,15 +1,29 @@
 # Roadmap
 
-Vom Pitch zur lauffähigen Installation — Detailstand in [`todo.md`](../todo.md).
+Vom Pitch zum **Kunden-Test** — danach erst öffentliches Release. Einstieg nach Rolle: [`README.md`](README.md).
+
+## Kunden-Test (jetzt)
+
+Was eine Praxis vor Ort prüfen soll:
+
+| Dabei                                                                 | Nicht dabei                                    |
+| --------------------------------------------------------------------- | ---------------------------------------------- |
+| Terminal, MFA, TV, Raum-Panel, Portal im **LAN**                      | eGK, PVS-Adapter, Captive-/Gateway-Produkt     |
+| Manager: Install, Status, Netzwerk, Backup, Update (`.pfupdate`)      | Manager-Auto-Update / Signatur / Notarisierung |
+| Optional HTTP-Proxy Port 80                                           | TLS/443, Internet-Portal (Whitelist)           |
+| Simple Routing (Default); Complex/Journeys soweit in der UI vorhanden | Lizenzpflicht Complex                          |
+| SMS-Rückholen (`seven.io` / mock)                                     | WhatsApp-Pflicht, Messenger-Produkt            |
+
+Install und Update: [`delivery.md`](delivery.md) · Betrieb: [`deployment-docker.md`](deployment-docker.md) · Abläufe: [`flows.md`](flows.md)
 
 ## Phasen
 
-| Phase             | Inhalt                       | Status                                                   |
-| ----------------- | ---------------------------- | -------------------------------------------------------- |
-| **1 Workflows**   | Screens, Regeln, Fehlerfälle | Runtime-UI deckt Happy Paths; frühe Mocks in Git-History |
-| **2 Architektur** | Komponenten, APIs, Events    | dokumentiert (`architecture.md`, `apis.md`)              |
-| **3 Integration** | eGK, PVS, WLAN-Adapter       | offen · Captive-Hardware nicht im Produkt                |
-| **4 Solution**    | Code, Docker, Betrieb        | laufend (`app`, `ui`, `sandbox`)                         |
+| Phase             | Inhalt                       | Status                                                    |
+| ----------------- | ---------------------------- | --------------------------------------------------------- |
+| **1 Workflows**   | Screens, Regeln, Fehlerfälle | Runtime-UI deckt Happy Paths                              |
+| **2 Architektur** | Komponenten, APIs, Events    | dokumentiert (`architecture.md`, `apis.md`)               |
+| **3 Integration** | eGK, PVS, WLAN-Adapter       | **nicht** Kunden-Test · Captive-Hardware nicht im Produkt |
+| **4 Solution**    | Code, Docker, Betrieb        | Kunden-Test über Manager + Delivery-Images                |
 
 ## Vier Flows
 
@@ -42,12 +56,13 @@ Backend deckt mehr ab als die UI (Identity-Detail, Day-Close-UI, eGK).
 - Rückhol-Fenster: `returnWindowMinutes` (Default 15 Min), danach auto `waiting`
 - Überlast: MFA steuert (Terminal sperren + Empfang), kein Terminal-3-Optionen-Flow
 - Raum-Panel: dual Placement (Tür / im Raum), Settings in MFA, Live-UI — [`flows.md`](flows.md) § Flow 5
-- eGK/PVS: Phase 3, nicht Beta-Blocker
+- eGK/PVS: Phase 3, nicht Kunden-Test-Blocker
+- HTTP-Proxy Port 80: optional, umgesetzt; TLS und externes Portal: **nach** dem Kunden-Test
 
-## Nächste Schritte
+## Danach (nicht Test-Blocker)
 
 1. Terminal-Sonderfälle sauber zum Empfang führen
-2. Gateway-Feldtest (Linux + Gast-NIC)
+2. TLS + optionales Internet-Portal — [`plan-proxy-tls.md`](plan-proxy-tls.md)
 3. eGK/PVS — [`integrations.md`](integrations.md)
-4. Proxy + TLS — [`plan-proxy-container.md`](plan-proxy-container.md)
-5. Manager Phase 4: Installer / Auto-Update
+4. Manager: Signatur / Auto-Update
+5. Vendor-Adapter Captive (Praxis-IT bleibt Eigentümer des WLANs)

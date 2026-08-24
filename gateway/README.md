@@ -7,7 +7,7 @@
 Optional third container for **Captive Portal + DHCP** on the guest LAN (lab only).  
 Portal UI and session logic stay in the `app` container (`/portal/*`).
 
-**End-to-End (archiviert):** [`docs/gateway-captive-portal.md`](../docs/gateway-captive-portal.md)
+**End-to-End (archiviert):** [`docs/archive/gateway-captive-portal.md`](../docs/archive/gateway-captive-portal.md)
 
 ## Stack
 

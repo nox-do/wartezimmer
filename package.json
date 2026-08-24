@@ -39,6 +39,7 @@
     "generate:openapi-types": "node ./scripts/generate-openapi-types.mjs",
     "generate:api": "npm run bundle:openapi && npm run generate:api-schemas && npm run generate:app-openapi-types && npm run generate:openapi-types",
     "generate:app-openapi-types": "node ./scripts/generate-app-openapi-types.mjs",
+    "smoke:auth-session": "node ./scripts/smoke-auth-session.mjs",
     "smoke:tv-pairing": "node ./scripts/smoke-tv-pairing.mjs",
     "smoke:terminal-pairing": "node ./scripts/smoke-terminal-pairing.mjs",
     "smoke:openapi-contract": "node ./scripts/smoke-openapi-contract.mjs",

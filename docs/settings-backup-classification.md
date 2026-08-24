@@ -1,6 +1,6 @@
 # Settings-Backup — Klassifikation langlebiger Daten
 
-Stand: 2026-07-12 · Schritt 1 des Upgrade-/Backup-Vertrags
+Stand: 2026-07-12 · geltender Vertrag für `.pfbackup` / Update
 
 Dieses Dokument legt fest, **welche Werte** beim Backup/Restore/Update erhalten bleiben. Grundlage für `settingsFormatVersion: 1` und `.pfbackup`.
 

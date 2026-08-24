@@ -1,6 +1,6 @@
 # Anamnese-Formularvorlagen — Ablage im Projekt
 
-Ziel: viele Templates (Erstanamnese, Kurzform, später ggf. Unfall/D-Arzt) ohne Chaos. **Eine Vorlage = ein Ordner**, klare Trennung von Code, UI-Layout und Referenz-HTML.
+Ziel: viele Templates (Erstanamnese, Kurzform, später ggf. Unfall/D-Arzt) ohne Chaos. **Eine Vorlage = Definition + Abschnitte**, klare Trennung von Runtime-Code und Portal-Widgets.
 
 ## Verzeichnisbaum (Konvention)
 
@@ -16,9 +16,6 @@ app/src/shared/forms/
       datenschutz-einwilligung.v1.ts
     sections/
       <template-id>.sections.ts # Eine Quelle: titleKey (Portal) + pdfTitle (MFA-PDF) + fieldIds
-    reference/
-      html/                     # Nur Wireframe/Druckvorlage, nicht Runtime
-        allgemeinmedizin-erstanamnese-v1.html
 
 ui/src/lib/portal/
   anamnese-api.ts               # lädt Template inkl. sections von GET form-templates/{id}
@@ -37,7 +34,7 @@ Jede Datei exportiert eine `FormTemplateDefinition`:
 | `category` | `erstanamnese` \| `kurz` \| `stammdaten` \| `spezial` (für spätere Menüfilter) |
 | `fields`   | Feldliste (API-Contract)                                                       |
 
-Neues Template: neue Datei `definitions/<id>.v1.ts` + Eintrag in `definitions/index.ts` + optional `reference/html/<id>-v1.html`.
+Neues Template: neue Datei `definitions/<id>.v1.ts` + Eintrag in `definitions/index.ts` + `sections/<id>.sections.ts`.
 
 ## Portal-UI vs. Backend
 

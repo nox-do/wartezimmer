@@ -2,10 +2,11 @@
 
 Stand: 2026-07-14
 
-Status: **Phase 1–3 abgeschlossen.** Offen ist nur eine optionale, messungsgetriebene
-Folgephase für das Multi-Tab-SSE-Connection-Budget.
+Status: **Phase 1–3 abgeschlossen** — geltender Vertrag. Offen ist nur eine
+optionale, messungsgetriebene Folgephase für das Multi-Tab-SSE-Connection-Budget.
+Nicht fortplanen; ACL und Cookies: [`../apis.md`](../apis.md), `openapi/auth.yaml`.
 
-Verwandt: [`apis.md`](apis.md), [`realtime-streams.md`](realtime-streams.md),
+Verwandt: [`../apis.md`](../apis.md), [`../realtime-streams.md`](../realtime-streams.md),
 `openapi/auth.yaml`, `app/src/auth/*`, `app/src/routes/auth-routes.ts`.
 
 ---

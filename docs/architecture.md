@@ -11,7 +11,7 @@ Das System wird bewusst einfach und wartungsarm betrieben:
   - Portal-UI und Session-API im `app`-Container (`/portal/*`)
   - Kein eigener Captive-/Router-Stack im Produkt; WLAN-Infrastruktur = Praxis-IT
   - Freigabe später über dünne Vendor-Adapter — `docs/integrations.md`
-- SMS-Rueckruf: adapterfaehig, v1 mit `Vonage`
+- SMS-Rueckruf: adapterfaehig, v1 mit `seven.io` (Dev: `mock`)
 
 Fokus: kritische Daten logisch trennen von unkritischen Betriebsdaten.
 
@@ -61,7 +61,7 @@ Fachliche Schichten — keine 1:1-Ordnerstruktur, kein Microservice-Schnitt. Det
 | 5   | **Dokumente**            | kritisch           | Upload, Anamnese-Output, Export auf Host; Vorschau nur via Sandbox                                     |
 | 6   | **Sandbox Adapter**      | kritisch, isoliert | Preview-Custody; keine Rohdatei an MFA-Client — `docs/sandbox-interface.md`                            |
 | 7   | **Tagesbetrieb & Reset** | querschnittlich    | Check-in-Sperre, Day-Close/Reset, Ops-Settings, Notfall                                                |
-| 8   | **SMS Adapter**          | extern             | Rückhol-SMS; v1 Vonage, austauschbar                                                                   |
+| 8   | **SMS Adapter**          | extern             | Rückhol-SMS; v1 `seven.io`, austauschbar                                                               |
 | 9   | **WLAN-Adapter**         | extern (geplant)   | Dünne Anbindung an Praxis-WLAN/Captive (Outbound/Inbound); kein eigener Gateway-Container im Produkt   |
 
 ```mermaid
@@ -111,7 +111,7 @@ flowchart LR
 1. `app` - TypeScript API + Businesslogik + statische Frontend-UIs (Terminal, MFA, TV, Portal) + SQLite
 2. `sandbox` - isolierte Dokumentenvorschau
 
-Kein separater DB-Container in v1. SQLite liegt auf persistentem Volume im `app`-Container. Lab-Referenz openNDS: `docs/gateway-captive-portal.md` (nicht Produktkern).
+Kein separater DB-Container in v1. SQLite liegt auf persistentem Volume im `app`-Container. Lab-Referenz openNDS: `docs/archive/gateway-captive-portal.md` (nicht Produktkern).
 
 ## Ist-Stand Code (2026-06)
 
@@ -216,18 +216,18 @@ Zwei getrennte Konzepte:
 - Ziel: kein Verlust des aktuellen Wartezimmer-Status
 - Bewusster Tagesreset nur ueber MFA `POST /ops/day-lifecycle/reset` (loescht Tickets/Outbox); Crash-Recovery loescht nichts
 
-## Technische Schulden & Remediation
+## Technische Schulden
 
-E2E-Review (2026-06-08): priorisierte Pakete und Sprint-Reihenfolge sind in **`todo.md`** (Abschnitt Remediation-Plan) konsolidiert. Outbox/Event-Ist-Stand v1: **`docs/events.md`**.
+Outbox/Event-Ist-Stand: **`docs/events.md`**. Historische Sprint-Listen nicht fortschreiben.
 
 ## Entschieden (v1)
 
 - **Portal-Session-Lebensdauer:** Formular → sofort revoke; Upload → TTL 30 Min (kein Submit nach Upload-Erfolg). Details: `docs/flows.md` § Portal-Session-Lebensdauer — **bewusstes Modell, kein Bug.**
 
-## Offene Entscheidung
+## Offene Entscheidung (nicht Kunden-Test)
 
-- Guest-WLAN HTTPS (lokales Zertifikat vs. HTTP-only LAN v1)
-- Referenz-Netzwerkdesign pro Praxis (Gast-VLAN, AP-Anbindung)
+- TLS im Praxis-LAN und optionales Internet-Portal — nach dem Test, [`plan-proxy-tls.md`](plan-proxy-tls.md)
+- WLAN/Captive bleibt Praxis-IT — [`integrations.md`](integrations.md)
 
 ## TypeScript (Ist-Stand)
 

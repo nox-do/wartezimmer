@@ -1,6 +1,6 @@
 # Build, Installation & Release
 
-Stand: 2026-07-13
+Stand: 2026-08-24
 
 Zentrale Doku für **wie Praxis Flow gebaut, installiert und aktualisiert wird**.  
 Runtime-Betrieb (Volumes, Logs, Compose): [`deployment-docker.md`](deployment-docker.md).  
@@ -62,6 +62,8 @@ Stack-Release und Monorepo-Version sind **nicht gekoppelt**. Für Kunden-Release
 export PRAXIS_FLOW_RELEASE_VERSION=2.1.0
 npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 ```
+
+**Anzeige (keine vierte Version):** `PRAXIS_FLOW_STACK_VERSION` wird beim App-`docker build` auf denselben Wert wie `--version` gesetzt. Beide Release-Skripte nutzen `scripts/release-app-image.mjs`. Die UI liest den Wert über `GET /api/v1/ops/health` (`stackVersion`). Lokal/Dev bleibt das Feld leer.
 
 **Empfehlung:** Stack-Tag als **Semver** (`MAJOR.MINOR.PATCH`) — unabhängig von der Manager-Semver. Der Manager kann öfter patchen (`0.2.1`) ohne neues Stack-Paket. Major bei Breaking Changes am Stack/API/Images.
 

@@ -1,5 +1,9 @@
 # Flow Routing Modes - Arbeitsdokument
 
+> **Historisch (Stand 2026-07-07).** Simple/Complex Routing und Journey-Admin sind umgesetzt.
+> Nicht fortschreiben. Geltend: [`../product.md`](../product.md), [`../flows.md`](../flows.md),
+> [`../catalog-source-of-truth.md`](../catalog-source-of-truth.md).
+
 Stand: 2026-07-07
 
 Dieses Dokument ist ein Arbeitsstand. Ziel ist, Ausgangslage, Zielbild, API-Grenzen,

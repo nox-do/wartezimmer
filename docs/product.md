@@ -30,16 +30,16 @@ Lokales Praxis-System für Check-in, Warteschlange und Wartezimmer — **ohne Cl
 
 ## Was wir haben (Kern)
 
-| Bereich        | Inhalt                                                                                                                               |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **Terminal**   | Digitaler Check-in (Phone/DOB, optional Nachname+DOB, Themen, Wartenummer, optional Bon)                                             |
-| **MFA**        | Warteliste live (SSE), Zonen, Aufruf, Dokumente (Vorschau/Export), Settings, Geräte-Pairing                                          |
-| **TV**         | Wartezimmer-Monitor: Nummern + „Bitte weiter zu …“ (keine Namen)                                                                     |
-| **Portal**     | Wartenummer → Upload und/oder Erstanamnese (Session = Nummer)                                                                        |
-| **Raum-Panel** | Tablet an Tür / im Raum: Ankunft, Aufruf, Orientierung                                                                               |
-| **Betrieb**    | Docker-Stack (`app` + `sandbox`), **Manager** (Install, Status, Netzwerk, Updates), optional **Proxy** (Caddy, Port 80; TLS geplant) |
+| Bereich        | Inhalt                                                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Terminal**   | Digitaler Check-in (Phone/DOB, optional Nachname+DOB, Themen, Wartenummer, optional Bon)                                                          |
+| **MFA**        | Warteliste live (SSE), Zonen, Aufruf, Dokumente (Vorschau/Export), Settings, Geräte-Pairing                                                       |
+| **TV**         | Wartezimmer-Monitor: Nummern + „Bitte weiter zu …“ (keine Namen)                                                                                  |
+| **Portal**     | Wartenummer → Upload und/oder Erstanamnese (Session = Nummer)                                                                                     |
+| **Raum-Panel** | Tablet an Tür / im Raum: Ankunft, Aufruf, Orientierung                                                                                            |
+| **Betrieb**    | Docker-Stack (`app` + `sandbox`), **Manager** (Install, Status, Netzwerk, Updates), optional **Proxy** (Caddy, Port 80; TLS nicht im Kunden-Test) |
 
-**Routing:** praxisweit **Simple** (Default: Thema → Zielraum) oder **Complex** (Journeys; Advanced, Lizenz geplant). Eine Runtime, zwei Config-Modi — [`flow-routing-modes-working-doc.md`](flow-routing-modes-working-doc.md).
+**Routing:** praxisweit **Simple** (Default: Thema → Zielraum) oder **Complex** (Journeys; Advanced, Lizenz geplant). Eine Runtime, zwei Config-Modi — [`flows.md`](flows.md).
 
 ## Was wir nicht sind / nicht liefern
 
@@ -72,6 +72,5 @@ Nach Start (Dev oft `:8080`, mit Proxy kanonisch Port 80): `/terminal` · `/mfa`
 | Abläufe & UX                   | [`flows.md`](flows.md)                                                       |
 | Nummernkreise / Themen / Räume | [`domain-model.md`](domain-model.md)                                         |
 | Install & Updates              | [`delivery.md`](delivery.md), [`../manager/README.md`](../manager/README.md) |
-| Proxy / TLS                    | [`plan-proxy-container.md`](plan-proxy-container.md)                         |
-| Roadmap                        | [`roadmap.md`](roadmap.md)                                                   |
+| Kunden-Test-Scope              | [`roadmap.md`](roadmap.md)                                                   |
 | Preis-/Lizenz-Skizze (intern)  | [`business-revenue-model.md`](business-revenue-model.md)                     |

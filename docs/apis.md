@@ -84,7 +84,7 @@ SSE für Beobachtung, REST für Mutationen. Leitdokument: [`realtime-streams.md`
 
 Outbox für Audit/async Nacharbeit: [`events.md`](events.md)
 
-## Geplant (nicht in v1)
+## Geplant (nicht Kunden-Test)
 
 - `POST /identity/egk-lookup`
-- Portal HTTPS / Reverse-Proxy — [`plan-proxy-container.md`](plan-proxy-container.md) (P6: nur Portal extern)
+- TLS / Internet-Portal — nach dem Test, [`plan-proxy-tls.md`](plan-proxy-tls.md)
