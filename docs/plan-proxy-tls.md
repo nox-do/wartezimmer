@@ -49,10 +49,10 @@ Caddy flusht `text/event-stream` ohne Extra-SSE-Konfiguration.
 
 Zwei Ebenen, ein Proxy-Container, zwei getrennte Umsetzungsphasen:
 
-| Ebene          | Erreichbarkeit                                      | TLS               | Regel                                          |
-| -------------- | --------------------------------------------------- | ----------------- | ---------------------------------------------- |
-| **Praxis-LAN** | Terminal, MFA, TV, Ops, Raum-Panel, Portal          | HTTPS             | voller Reverse-Proxy; `CANONICAL_BASE_URL`     |
-| **Internet**   | nur Portal (+ explizite Portal-APIs und -Assets)    | **HTTPS Pflicht** | eigener VHost, Allow-Liste, kein MFA/Ops/…     |
+| Ebene          | Erreichbarkeit                                   | TLS               | Regel                                      |
+| -------------- | ------------------------------------------------ | ----------------- | ------------------------------------------ |
+| **Praxis-LAN** | Terminal, MFA, TV, Ops, Raum-Panel, Portal       | HTTPS             | voller Reverse-Proxy; `CANONICAL_BASE_URL` |
+| **Internet**   | nur Portal (+ explizite Portal-APIs und -Assets) | **HTTPS Pflicht** | eigener VHost, Allow-Liste, kein MFA/Ops/… |
 
 Die App bleibt ohne TLS-Code. Der Proxy übernimmt Zertifikate, Redirects und HTTP/2.
 Bei aktivem TLS ist `CANONICAL_BASE_URL` immer `https://<hostname>` ohne Port 443.

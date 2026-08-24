@@ -13,4 +13,3 @@ License text: licenses/caddy/LICENSE.txt
 
 Caddy is included as an optional offline reverse proxy. It remains disabled
 until proxy/TLS operation is explicitly enabled through Praxis Flow Manager.
-
