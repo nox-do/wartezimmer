@@ -586,7 +586,7 @@ test('saveHostNetwork repairProxy ensures image and compose-up even when stack w
         composePs: async () => ({ running: false, services: [] }),
         ensureProxyImageAvailable: async () => {
           ensureCalled = true;
-          return { imageRef: 'caddy:2.11.4', pulled: true };
+          return { imageRef: 'caddy:2.11.4' };
         },
         composeUp: async () => {
           composeUpCalled = true;

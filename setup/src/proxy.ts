@@ -351,18 +351,17 @@ export function resolveProxyImageRef(env?: EnvLike): string {
 
 export type EnsureProxyImageResult = {
   imageRef: string;
-  pulled: boolean;
 };
 
 /**
- * Ensure the offline proxy image is present before compose up.
- * Does not start the container — callers run compose after save/apply.
+ * Ensure the release-supplied proxy image is present before compose up.
+ * Runtime code deliberately never pulls Caddy from a registry: upgrades must arrive
+ * through a digest-verified Praxis Flow release package.
  */
 export async function ensureProxyImageAvailable(
   env?: EnvLike,
   deps?: {
     imageExists?: (ref: string) => Promise<boolean>;
-    pullImage?: (ref: string) => Promise<{ ok: boolean; log: string }>;
   },
 ): Promise<EnsureProxyImageResult> {
   const imageRef = resolveProxyImageRef(env);
@@ -373,28 +372,14 @@ export async function ensureProxyImageAvailable(
       return result.code === 0;
     });
   if (await imageExists(imageRef)) {
-    return { imageRef, pulled: false };
+    return { imageRef };
   }
 
-  const pullImage =
-    deps?.pullImage ??
-    (async (ref: string) => {
-      const result = await runDockerCommand(['pull', ref]);
-      return { ok: result.code === 0, log: result.stderr || result.stdout || '' };
-    });
-
-  const pulled = await pullImage(imageRef);
-  if (!pulled.ok) {
-    throw new ProxyConfigError(
-      `Proxy-Image fehlt lokal und konnte nicht geladen werden (${imageRef}). ` +
-        `Release-Paket/.pfupdate mit Caddy importieren oder Docker-Registry prüfen.` +
-        (pulled.log ? ` ${pulled.log.trim()}` : ''),
-    );
-  }
-  if (!(await imageExists(imageRef))) {
-    throw new ProxyConfigError(`Proxy-Image nach dem Laden nicht gefunden: ${imageRef}`);
-  }
-  return { imageRef, pulled: true };
+  throw new ProxyConfigError(
+    `Proxy-Image fehlt lokal (${imageRef}). ` +
+      'Ein geprüftes Praxis-Flow-Release-Paket mit Caddy importieren; ' +
+      'automatische Registry-Downloads sind deaktiviert.',
+  );
 }
 
 export function findProxyContainer(compose: ComposeStatus | null): ComposeServiceStatus | null {

@@ -386,43 +386,22 @@ test('buildProxyStatus distinguishes missing container from stopped service', ()
   assert.equal(stopped.container?.state, 'exited');
 });
 
-test('ensureProxyImageAvailable uses existing image without pull', async () => {
-  let pulled = false;
+test('ensureProxyImageAvailable accepts the release-supplied local image', async () => {
   const result = await ensureProxyImageAvailable(
     new Map([['PRAXIS_FLOW_PROXY_IMAGE', 'caddy:test']]),
     {
       imageExists: async () => true,
-      pullImage: async () => {
-        pulled = true;
-        return { ok: true, log: '' };
-      },
     },
   );
   assert.equal(result.imageRef, 'caddy:test');
-  assert.equal(result.pulled, false);
-  assert.equal(pulled, false);
 });
 
-test('ensureProxyImageAvailable pulls when missing', async () => {
-  let inspectCalls = 0;
-  const result = await ensureProxyImageAvailable(undefined, {
-    imageExists: async () => {
-      inspectCalls += 1;
-      return inspectCalls > 1;
-    },
-    pullImage: async () => ({ ok: true, log: 'pulled' }),
-  });
-  assert.equal(result.pulled, true);
-  assert.equal(inspectCalls, 2);
-});
-
-test('ensureProxyImageAvailable fails when pull fails', async () => {
+test('ensureProxyImageAvailable requires a verified release package when missing', async () => {
   await assert.rejects(
     () =>
       ensureProxyImageAvailable(undefined, {
         imageExists: async () => false,
-        pullImage: async () => ({ ok: false, log: 'denied' }),
       }),
-    /nicht geladen/,
+    /automatische Registry-Downloads sind deaktiviert/,
   );
 });
