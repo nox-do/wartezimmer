@@ -15,6 +15,8 @@
  *   praxis-flow-<version>-images.tar.gz
  *   manifest.json
  *   SHA256SUMS.txt
+ *   THIRD_PARTY_NOTICES.txt
+ *   licenses/caddy/LICENSE.txt
  */
 
 import { createHash } from 'node:crypto';
@@ -26,6 +28,7 @@ import { pipeline } from 'node:stream/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createGzip } from 'node:zlib';
 import { appDockerBuildArgs } from './release-app-image.mjs';
+import { preparePinnedProxyImage } from './release-proxy-image.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -125,17 +128,6 @@ function assertImageExists(imageRef) {
   runCapture('docker', ['image', 'inspect', imageRef, '--format', '{{.Id}}']);
 }
 
-function ensureProxyImage(proxyImage) {
-  try {
-    assertImageExists(proxyImage);
-    console.log(`Using local ${proxyImage}`);
-  } catch {
-    console.log(`Pulling ${proxyImage} …`);
-    run('docker', ['pull', proxyImage]);
-    assertImageExists(proxyImage);
-  }
-}
-
 function buildReleaseImages(version) {
   const appImage = `praxis-flow/app:${version}`;
   const sandboxImage = `praxis-flow/sandbox:${version}`;
@@ -177,6 +169,16 @@ function writeSha256Sums(outputDir, entries) {
   fs.writeFileSync(path.join(outputDir, 'SHA256SUMS.txt'), `${lines.join('\n')}\n`, 'utf8');
 }
 
+function copyThirdPartyNotices(outputDir) {
+  const relativePaths = ['THIRD_PARTY_NOTICES.txt', 'licenses/caddy/LICENSE.txt'];
+  for (const relativePath of relativePaths) {
+    const targetPath = path.join(outputDir, relativePath);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.copyFileSync(path.join(root, relativePath), targetPath);
+  }
+  return relativePaths;
+}
+
 async function packImages(archivePath, imageRefs) {
   await fs.promises.mkdir(path.dirname(archivePath), { recursive: true });
 
@@ -202,15 +204,19 @@ async function packImages(archivePath, imageRefs) {
   }
 }
 
-async function loadProxyImageRef() {
+async function loadProxyReleaseConfig() {
   run('npm', ['run', 'build:server-shared'], { stdio: 'inherit' });
   const modulePath = path.join(root, 'packages/server-shared/dist/pfupdate.js');
   const pfupdate = await import(pathToFileURL(modulePath).href);
-  return pfupdate.PRAXIS_FLOW_PROXY_IMAGE_REF;
+  return {
+    imageRef: pfupdate.PRAXIS_FLOW_PROXY_IMAGE_REF,
+    registryDigest: pfupdate.PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+  };
 }
 
 const { version, noBuild, outputRoot, showHelp } = parseArgs(process.argv.slice(2));
-const proxyImage = await loadProxyImageRef();
+const proxyRelease = await loadProxyReleaseConfig();
+const proxyImage = proxyRelease.imageRef;
 
 if (showHelp) {
   printHelp(proxyImage);
@@ -229,11 +235,16 @@ if (noBuild) {
   console.log('Skipping build (--no-build). Checking local tags …');
   assertImageExists(appImage);
   assertImageExists(sandboxImage);
-  ensureProxyImage(proxyImage);
 } else {
   buildReleaseImages(version);
-  ensureProxyImage(proxyImage);
 }
+
+const proxyImageDigest = preparePinnedProxyImage({
+  imageRef: proxyImage,
+  registryDigest: proxyRelease.registryDigest,
+  run,
+  runCapture,
+});
 
 fs.mkdirSync(releaseDir, { recursive: true });
 
@@ -242,6 +253,7 @@ await packImages(archivePath, [appImage, sandboxImage, proxyImage]);
 
 const archiveSha256 = sha256File(archivePath);
 const archiveBytes = fs.statSync(archivePath).size;
+const thirdPartyNoticePaths = copyThirdPartyNotices(releaseDir);
 const manifest = {
   version,
   createdAt: new Date().toISOString(),
@@ -250,6 +262,10 @@ const manifest = {
     sandbox: sandboxImage,
     proxy: proxyImage,
   },
+  imageDigests: {
+    proxy: proxyImageDigest,
+  },
+  thirdPartyNotices: thirdPartyNoticePaths,
   archive: archiveName,
   sha256: archiveSha256,
   envExample: {
@@ -265,7 +281,13 @@ const manifest = {
 };
 
 writeManifest(releaseDir, manifest);
-writeSha256Sums(releaseDir, [[archiveName, archiveSha256]]);
+writeSha256Sums(releaseDir, [
+  [archiveName, archiveSha256],
+  ...thirdPartyNoticePaths.map((relativePath) => [
+    relativePath,
+    sha256File(path.join(releaseDir, relativePath)),
+  ]),
+]);
 
 console.log('');
 console.log('Release package ready:');
@@ -273,11 +295,12 @@ console.log(`  ${releaseDir}/`);
 console.log(`    ${archiveName} (${(archiveBytes / (1024 * 1024)).toFixed(1)} MB)`);
 console.log('    manifest.json');
 console.log('    SHA256SUMS.txt');
+console.log('    THIRD_PARTY_NOTICES.txt + licenses/caddy/LICENSE.txt');
 console.log('');
 console.log(`Includes optional offline proxy image ${proxyImage} (~85 MB / ~22 MB gzip).`);
 console.log('Proxy stays disabled until explicitly enabled in Manager/Setup.');
 console.log('');
 console.log('Upload to customer share (e.g. Google Drive):');
-console.log(`  ${archiveName} + manifest.json + SHA256SUMS.txt`);
+console.log(`  kompletter Ordner praxis-flow-${version} (inkl. Lizenznachweise)`);
 console.log('');
-console.log('Manager import expects a single .tar.gz with both images.');
+console.log('Manager import expects one .tar.gz containing app, sandbox, and Caddy.');

@@ -9,7 +9,7 @@
 {:else}
   <p class="hint">
     Ob Port und Adresse an diesem Rechner passen — nicht die Erreichbarkeit aus dem Praxisnetz (dazu
-    „Erreichbarkeit“ testen).
+    „Adresse für Terminal, TV und MFA“ prüfen).
   </p>
   <ul class="checklist network-bindings-list" id="network-bindings-panel">
     {#each checks as check (check.id)}

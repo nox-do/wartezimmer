@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS,
+  PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS,
   PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS,
   PFUPDATE_REQUIRED_FILE_PATHS,
+  PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
   PRAXIS_FLOW_PROXY_IMAGE_REF,
   buildPfupdateFilename,
   buildPfupdateManifest,
@@ -36,9 +38,12 @@ function sampleGatewayFiles() {
   }));
 }
 
-function sampleManifest(options: { withGateway?: boolean; withProxy?: boolean } = {}) {
+function sampleManifest(
+  options: { withGateway?: boolean; withProxy?: boolean; withProxyDigest?: boolean } = {},
+) {
   const withGateway = options.withGateway === true;
   const withProxy = options.withProxy === true;
+  const withProxyDigest = options.withProxyDigest === true;
   const files = [
     ...sampleFiles(),
     ...(withGateway ? sampleGatewayFiles() : []),
@@ -47,6 +52,13 @@ function sampleManifest(options: { withGateway?: boolean; withProxy?: boolean } 
           path,
           sha256: `${String(index + 10).padStart(64, '0')}`,
           byteLength: 200 + index,
+        }))
+      : []),
+    ...(withProxyDigest
+      ? PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS.map((path, index) => ({
+          path,
+          sha256: `${String(index + 30).padStart(64, '0')}`,
+          byteLength: 300 + index,
         }))
       : []),
   ];
@@ -60,6 +72,17 @@ function sampleManifest(options: { withGateway?: boolean; withProxy?: boolean } 
       ...(withGateway ? { gateway: `praxis-flow/gateway:${releaseVersion}` } : {}),
       ...(withProxy ? { proxy: PRAXIS_FLOW_PROXY_IMAGE_REF } : {}),
     },
+    ...(withProxyDigest
+      ? {
+          imageDigests: {
+            proxy: {
+              registryDigest: PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+              archiveImageId: `sha256:${'a'.repeat(64)}`,
+              platform: 'linux/arm64',
+            },
+          },
+        }
+      : {}),
     files,
   });
 }
@@ -165,6 +188,39 @@ test('validatePfupdatePackage accepts optional proxy image and templates', () =>
   });
   assert.equal(result.ok, true);
   assert.equal(result.manifest?.images.proxy, PRAXIS_FLOW_PROXY_IMAGE_REF);
+});
+
+test('validatePfupdatePackage accepts the approved Caddy digest and license files', () => {
+  const manifest = sampleManifest({ withProxy: true, withProxyDigest: true });
+  const result = validatePfupdatePackage({
+    manifest,
+    files: digestMapFromManifest(manifest),
+    sha256Sums: formatSha256Sums(manifest.files),
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(
+    result.manifest?.imageDigests?.proxy?.registryDigest,
+    PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+  );
+  assert.equal(result.manifest?.imageDigests?.proxy?.platform, 'linux/arm64');
+});
+
+test('validatePfupdatePackage rejects an unapproved Caddy digest or missing notices', () => {
+  const wrongDigest = sampleManifest({ withProxy: true, withProxyDigest: true });
+  wrongDigest.imageDigests!.proxy!.registryDigest = `sha256:${'f'.repeat(64)}`;
+  assert.match(
+    validatePfupdatePackage({
+      manifest: wrongDigest,
+      files: digestMapFromManifest(wrongDigest),
+    }).errors.join(' '),
+    /registryDigest/,
+  );
+
+  const missingNotices = sampleManifest({ withProxy: true, withProxyDigest: true });
+  const noticePaths = new Set<string>(PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS);
+  missingNotices.files = missingNotices.files.filter((entry) => !noticePaths.has(entry.path));
+  assert.match(validatePfupdateImageRefs(missingNotices).join(' '), /LICENSE\.txt/);
 });
 
 test('validatePfupdatePackage still accepts legacy packages without proxy', () => {

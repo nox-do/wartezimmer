@@ -1,0 +1,16 @@
+Praxis Flow third-party notices
+================================
+
+Caddy
+-----
+
+Version: 2.11.4
+Container image: caddy:2.11.4
+Upstream source: https://github.com/caddyserver/caddy
+Official image: https://hub.docker.com/_/caddy
+License: Apache License 2.0
+License text: licenses/caddy/LICENSE.txt
+
+Caddy is included as an optional offline reverse proxy. It remains disabled
+until proxy/TLS operation is explicitly enabled through Praxis Flow Manager.
+

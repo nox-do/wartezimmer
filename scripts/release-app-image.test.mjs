@@ -52,3 +52,12 @@ test('both release scripts build the app image via the shared helper', () => {
     );
   }
 });
+
+test('both release scripts prepare Caddy through the immutable proxy helper', () => {
+  for (const fileName of RELEASE_SCRIPTS) {
+    const source = fs.readFileSync(path.join(scriptsDir, fileName), 'utf8');
+    assert.match(source, /from ['"]\.\/release-proxy-image\.mjs['"]/);
+    assert.match(source, /preparePinnedProxyImage\(/);
+    assert.equal(source.includes("['pull', proxyImage]"), false);
+  }
+});

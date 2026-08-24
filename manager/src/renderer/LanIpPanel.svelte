@@ -82,8 +82,8 @@
     {/if}
     {#if stale && configuredLanIp}
       <p class="lan-ip-status-hint">
-        Die gespeicherte Adresse passt zu keiner aktuellen Rechner-Adresse — unten die richtige
-        wählen und übernehmen.
+        Die gespeicherte Adresse passt zu keiner aktuellen Rechner-Adresse — in der Liste die
+        richtige wählen und übernehmen.
       </p>
     {/if}
   </div>

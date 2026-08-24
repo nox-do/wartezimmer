@@ -245,7 +245,7 @@ export async function auditNetworkBindings(input: {
         : `LAN-Adresse ${input.configuredLanIp} ist an diesem Rechner nicht vergeben`,
       detail: lanOnHost
         ? undefined
-        : 'IP hat sich geändert oder ist falsch — unten anpassen und übernehmen.',
+        : 'IP hat sich geändert oder ist falsch — unter „Adresse dieses Rechners“ anpassen und übernehmen.',
     });
   }
 

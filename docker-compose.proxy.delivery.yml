@@ -14,6 +14,8 @@ services:
   proxy:
     logging: *docker-logging
     image: ${PRAXIS_FLOW_PROXY_IMAGE:-caddy:2.11.4}
+    # Caddy is supplied by a verified Praxis Flow release; customer systems never pull it implicitly.
+    pull_policy: never
     container_name: praxis-flow-proxy
     restart: unless-stopped
     ports:

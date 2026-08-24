@@ -9,6 +9,11 @@ export const PFUPDATE_IMAGES_TAR_PATH = 'images/praxis-flow-images.tar';
 
 /** Pinned offline reverse-proxy image shipped in release/.pfupdate packages (optional at runtime). */
 export const PRAXIS_FLOW_PROXY_IMAGE_REF = 'caddy:2.11.4' as const;
+/** Immutable upstream multi-platform digest approved for the pinned Caddy release. */
+export const PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST =
+  'sha256:df7f1c2fb114453b951de51a98efc010db1655a92c2e86be6706714e2417a78d' as const;
+export const PRAXIS_FLOW_PROXY_IMAGE_PINNED_REF =
+  `${PRAXIS_FLOW_PROXY_IMAGE_REF}@${PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST}` as const;
 export const PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY = 'PRAXIS_FLOW_PROXY_IMAGE' as const;
 
 export const PFUPDATE_TEMPLATE_PATHS = [
@@ -27,6 +32,12 @@ export const PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS = [
   'templates/proxy/Caddyfile',
 ] as const;
 
+/** Included by new releases; optional here so already-issued v1 packages remain valid. */
+export const PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS = [
+  'THIRD_PARTY_NOTICES.txt',
+  'licenses/caddy/LICENSE.txt',
+] as const;
+
 export const PFUPDATE_REQUIRED_FILE_PATHS = [
   PFUPDATE_IMAGES_TAR_PATH,
   ...PFUPDATE_TEMPLATE_PATHS,
@@ -36,6 +47,7 @@ export const PFUPDATE_ALLOWED_FILE_PATHS = [
   ...PFUPDATE_REQUIRED_FILE_PATHS,
   ...PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS,
   ...PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS,
+  ...PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS,
 ] as const;
 
 export type PfupdateTemplatePath = (typeof PFUPDATE_TEMPLATE_PATHS)[number];
@@ -43,6 +55,7 @@ export type PfupdateOptionalGatewayTemplatePath =
   (typeof PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS)[number];
 export type PfupdateOptionalProxyTemplatePath =
   (typeof PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS)[number];
+export type PfupdateOptionalProxyNoticePath = (typeof PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS)[number];
 export type PfupdateRequiredFilePath = (typeof PFUPDATE_REQUIRED_FILE_PATHS)[number];
 export type PfupdateAllowedFilePath = (typeof PFUPDATE_ALLOWED_FILE_PATHS)[number];
 
@@ -61,6 +74,19 @@ export type PfupdateImagesV1 = {
   proxy?: string;
 };
 
+export type PfupdateProxyImageDigestV1 = {
+  /** Immutable digest used for the registry pull during the release build. */
+  registryDigest: string;
+  /** Content/config digest reported by Docker for the platform image saved in the package. */
+  archiveImageId: string;
+  /** Docker platform of the saved image, for example linux/arm64. */
+  platform: string;
+};
+
+export type PfupdateImageDigestsV1 = {
+  proxy?: PfupdateProxyImageDigestV1;
+};
+
 export type PfupdateManifestV1 = {
   updateFormatVersion: typeof PFUPDATE_FORMAT_VERSION;
   releaseVersion: string;
@@ -69,6 +95,8 @@ export type PfupdateManifestV1 = {
   supportedSettingsFormatVersions: number[];
   targetSchemaVersion: number;
   images: PfupdateImagesV1;
+  /** Optional for backward compatibility; present in newly built releases with Caddy. */
+  imageDigests?: PfupdateImageDigestsV1;
   files: PfupdateFileEntryV1[];
 };
 
@@ -98,6 +126,7 @@ export type PfupdateValidationResult = {
 
 const SEMVER_PATTERN = /^(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const DOCKER_SHA256_PATTERN = /^sha256:[a-f0-9]{64}$/;
 const RELEASE_VERSION_PATTERN = /^[0-9A-Za-z][0-9A-Za-z._-]*$/;
 const VERSIONED_IMAGE_REPO_BY_KEY = {
   app: 'praxis-flow/app',
@@ -180,6 +209,7 @@ export function expectedPfupdateImageRef(
 export function buildPfupdateManifest(input: {
   releaseVersion: string;
   images: PfupdateImagesV1;
+  imageDigests?: PfupdateImageDigestsV1;
   files: PfupdateFileEntryV1[];
   createdAt?: string;
   minimumManagerVersion?: string;
@@ -196,7 +226,7 @@ export function buildPfupdateManifest(input: {
   if (input.images.proxy !== undefined) {
     images.proxy = input.images.proxy.trim();
   }
-  return {
+  const manifest: PfupdateManifestV1 = {
     updateFormatVersion: PFUPDATE_FORMAT_VERSION,
     releaseVersion: input.releaseVersion.trim(),
     createdAt: input.createdAt ?? new Date().toISOString(),
@@ -210,6 +240,16 @@ export function buildPfupdateManifest(input: {
       byteLength: entry.byteLength,
     })),
   };
+  if (input.imageDigests?.proxy) {
+    manifest.imageDigests = {
+      proxy: {
+        registryDigest: input.imageDigests.proxy.registryDigest.trim().toLowerCase(),
+        archiveImageId: input.imageDigests.proxy.archiveImageId.trim().toLowerCase(),
+        platform: input.imageDigests.proxy.platform.trim().toLowerCase(),
+      },
+    };
+  }
+  return manifest;
 }
 
 export function serializePfupdateManifest(manifest: PfupdateManifestV1): string {
@@ -253,6 +293,7 @@ function validateManifestObject(raw: unknown): { manifest?: PfupdateManifestV1; 
     'supportedSettingsFormatVersions',
     'targetSchemaVersion',
     'images',
+    'imageDigests',
     'files',
   ]);
 
@@ -330,6 +371,48 @@ function validateManifestObject(raw: unknown): { manifest?: PfupdateManifestV1; 
     }
   }
 
+  if (record.imageDigests !== undefined) {
+    if (!isPlainObject(record.imageDigests)) {
+      errors.push('manifest.json: imageDigests muss ein Objekt sein, wenn gesetzt.');
+    } else {
+      for (const key of Object.keys(record.imageDigests)) {
+        if (key !== 'proxy') {
+          errors.push(`manifest.json: Unbekanntes imageDigests-Feld "${key}".`);
+        }
+      }
+      const proxyDigest = record.imageDigests.proxy;
+      if (proxyDigest !== undefined) {
+        if (!isPlainObject(proxyDigest)) {
+          errors.push('manifest.json: imageDigests.proxy muss ein Objekt sein.');
+        } else {
+          for (const key of Object.keys(proxyDigest)) {
+            if (key !== 'registryDigest' && key !== 'archiveImageId' && key !== 'platform') {
+              errors.push(`manifest.json: Unbekanntes imageDigests.proxy-Feld "${key}".`);
+            }
+          }
+          if (
+            !isNonEmptyString(proxyDigest.registryDigest) ||
+            !DOCKER_SHA256_PATTERN.test(proxyDigest.registryDigest.trim().toLowerCase())
+          ) {
+            errors.push('manifest.json: imageDigests.proxy.registryDigest ist ungültig.');
+          }
+          if (
+            !isNonEmptyString(proxyDigest.archiveImageId) ||
+            !DOCKER_SHA256_PATTERN.test(proxyDigest.archiveImageId.trim().toLowerCase())
+          ) {
+            errors.push('manifest.json: imageDigests.proxy.archiveImageId ist ungültig.');
+          }
+          if (
+            !isNonEmptyString(proxyDigest.platform) ||
+            !/^linux\/[a-z0-9_-]+$/.test(proxyDigest.platform.trim().toLowerCase())
+          ) {
+            errors.push('manifest.json: imageDigests.proxy.platform ist ungültig.');
+          }
+        }
+      }
+    }
+  }
+
   if (!Array.isArray(record.files)) {
     errors.push('manifest.json: files muss ein Array sein.');
   }
@@ -360,6 +443,17 @@ function validateManifestObject(raw: unknown): { manifest?: PfupdateManifestV1; 
     images,
     files: [],
   };
+
+  const imageDigestsRaw = record.imageDigests as PfupdateImageDigestsV1 | undefined;
+  if (imageDigestsRaw?.proxy) {
+    manifest.imageDigests = {
+      proxy: {
+        registryDigest: imageDigestsRaw.proxy.registryDigest.trim().toLowerCase(),
+        archiveImageId: imageDigestsRaw.proxy.archiveImageId.trim().toLowerCase(),
+        platform: imageDigestsRaw.proxy.platform.trim().toLowerCase(),
+      },
+    };
+  }
 
   const fileErrors = validatePfupdateFileEntries(manifest, record.files);
   if (fileErrors.length > 0) {
@@ -481,6 +575,24 @@ export function validatePfupdateImageRefs(manifest: PfupdateManifestV1): string[
         );
       }
     }
+    if (manifest.imageDigests?.proxy) {
+      if (manifest.imageDigests.proxy.registryDigest !== PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST) {
+        errors.push(
+          `manifest.json: imageDigests.proxy.registryDigest muss "${PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST}" sein.`,
+        );
+      }
+      for (const noticePath of PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS) {
+        if (!manifest.files.some((entry) => entry.path === noticePath)) {
+          errors.push(
+            `manifest.json: Pflichtdatei "${noticePath}" fehlt bei gesetztem Caddy-Digest.`,
+          );
+        }
+      }
+    }
+  } else if (manifest.imageDigests?.proxy) {
+    errors.push(
+      'manifest.json: imageDigests.proxy darf nur zusammen mit images.proxy gesetzt sein.',
+    );
   }
 
   return errors;

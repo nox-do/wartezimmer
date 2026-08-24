@@ -20,6 +20,8 @@ Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-histo
 
 ## Heute (2026-08-24)
 
+- Netzwerk-Tab: Stale-IP-Hinweis ohne „unten“ (Prüfungen → „Adresse dieses Rechners“)
+- `docs/plan-proxy-tls.md`: TLS-Hostname aus Praxisnamen; freie Wahl nur Kollisions-Fehlerweg
 - Audit DUP-003/004/013: behalten bzw. Stack-Version-Arg gemeinsam
 - Doku: Kunden-Test-Pfad; Historie in `docs/archive/`; TLS-Zielbild getrennt
 - `todo.md`: Chronik archiviert, hier nur aktuelle Liste

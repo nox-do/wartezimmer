@@ -22,6 +22,7 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { appDockerBuildArgs } from './release-app-image.mjs';
+import { preparePinnedProxyImage } from './release-proxy-image.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -56,6 +57,8 @@ Package layout (extracted):
   templates/docker-compose.proxy.delivery.yml
   templates/proxy/Caddyfile
   templates/.env.example
+  THIRD_PARTY_NOTICES.txt
+  licenses/caddy/LICENSE.txt
   templates/docker-compose.gateway.delivery.yml   ← only with --with-gateway
 
 Images tagged as:
@@ -152,17 +155,6 @@ function assertDockerReady() {
 
 function assertImageExists(imageRef) {
   runCapture('docker', ['image', 'inspect', imageRef, '--format', '{{.Id}}']);
-}
-
-function ensureProxyImage(proxyImage) {
-  try {
-    assertImageExists(proxyImage);
-    console.log(`Using local ${proxyImage}`);
-  } catch {
-    console.log(`Pulling ${proxyImage} …`);
-    run('docker', ['pull', proxyImage]);
-    assertImageExists(proxyImage);
-  }
 }
 
 function buildReleaseImages(version, { withGateway = false } = {}) {
@@ -344,11 +336,16 @@ if (noBuild) {
   if (withGateway) {
     assertImageExists(gatewayImage);
   }
-  ensureProxyImage(proxyImage);
 } else {
   buildReleaseImages(version, { withGateway });
-  ensureProxyImage(proxyImage);
 }
+
+const proxyImageDigest = preparePinnedProxyImage({
+  imageRef: proxyImage,
+  registryDigest: pfupdate.PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+  run,
+  runCapture,
+});
 
 try {
   fs.mkdirSync(outputRoot, { recursive: true });
@@ -378,6 +375,14 @@ try {
   copyFileEnsuringDir(
     path.join(root, 'proxy', 'Caddyfile'),
     path.join(stagingRoot, 'templates', 'proxy', 'Caddyfile'),
+  );
+  copyFileEnsuringDir(
+    path.join(root, 'THIRD_PARTY_NOTICES.txt'),
+    path.join(stagingRoot, 'THIRD_PARTY_NOTICES.txt'),
+  );
+  copyFileEnsuringDir(
+    path.join(root, 'licenses', 'caddy', 'LICENSE.txt'),
+    path.join(stagingRoot, 'licenses', 'caddy', 'LICENSE.txt'),
   );
   fs.writeFileSync(
     path.join(stagingRoot, 'templates', '.env.example'),
@@ -410,6 +415,9 @@ try {
       sandbox: sandboxImage,
       ...(withGateway ? { gateway: gatewayImage } : {}),
       proxy: proxyImage,
+    },
+    imageDigests: {
+      proxy: proxyImageDigest,
     },
     files: fileEntries,
   });
