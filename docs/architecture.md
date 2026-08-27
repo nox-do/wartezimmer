@@ -226,7 +226,7 @@ Outbox/Event-Ist-Stand: **`docs/events.md`**. Historische Sprint-Listen nicht fo
 
 ## Offene Entscheidung (nicht Kunden-Test)
 
-- TLS im Praxis-LAN und optionales Internet-Portal — nach dem Test, [`plan-proxy-tls.md`](plan-proxy-tls.md)
+- TLS im Praxis-LAN und optionales Internet-Portal — nach dem Test, [`plan-proxy-tls.md`](plan-proxy-tls.md); Manager: [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md)
 - WLAN/Captive bleibt Praxis-IT — [`integrations.md`](integrations.md)
 
 ## TypeScript (Ist-Stand)

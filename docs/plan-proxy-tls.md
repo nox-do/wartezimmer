@@ -1,263 +1,295 @@
-# Plan: TLS, HTTP/2 und Internet-Portal
+# Plan: Vertrauenswürdiges TLS im Praxis-LAN
 
-Stand: 2026-08-24
+Stand: 2026-08-25
 
-Status: **Zielbild mit beschlossenem LAN-TLS-Pilot, nicht Teil des laufenden Kunden-Tests.**
-HTTP-Proxy auf Port 80 ist Ist — Betrieb in [`delivery.md`](delivery.md) und
+Status: **Überarbeitetes Zielbild für den LAN-TLS-Pilot. Nicht Teil des laufenden Kunden-Tests.**
+
+HTTP-Proxy auf Port 80 ist Ist — [`delivery.md`](delivery.md),
 [`deployment-docker.md`](deployment-docker.md). Historie:
 [`archive/plan-proxy-container.md`](archive/plan-proxy-container.md).
+Manager-Oberfläche und Aktivierungs-UX:
+[`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md).
 
-TLS erweitert denselben `proxy`-Service, dieselbe Setup-/Manager-Strecke und denselben
+TLS erweitert denselben `proxy`-Service, dieselbe Setup-API und denselben
 Delivery-Vertrag. Es ist kein paralleles System.
+
+## Entscheidung
+
+Praxis Flow verwendet pro Installation einen **stabilen öffentlichen Hostnamen**. Dessen
+öffentlicher A-Record zeigt auf die **feste private IPv4** des Praxisservers. Caddy
+erhält per ACME DNS-01 ein öffentlich vertrauenswürdiges Zertifikat.
+
+Es gibt **kein Zentral-Produkt** (kein Installationsregister, keine API „Zentrale“).
+Betreiber der DNS-Zone und der ACME-Challenge-Infrastruktur ist der
+Produktbetreiber. Installations-ID und Einmal-Token erzeugt der **Manager während
+des Setups**.
+
+```text
+Hostname:     7fk3m2.lan.notaus.de
+A-Record:     192.168.178.112
+Praxisserver: feste IPv4, keine Portfreigabe
+Client:       normaler Browser, keine Installation
+```
+
+Kein Präfix `praxis-` — die URL bleibt kurz. DNS legt der Betreiber **manuell und
+zeitversetzt** an: der Manager erzeugt einen **Mailtext**, den die Praxis an den
+Betreiber schickt. Es gibt keine automatische DNS-API. Die Praxis richtet eine feste IPv4
+beziehungsweise DHCP-Reservierung ein. Blockiert der Router öffentliche DNS-Namen mit
+privaten Zieladressen, richtet die Praxis eine **gezielte** DNS-Rebind-Ausnahme ein.
+Praxis Flow betreibt keinen eigenen DNS-Resolver.
 
 ## Ausgangslage
 
 Der optionale Caddy-Proxy nimmt HTTP auf Port 80 entgegen und leitet auf `app:8080`.
 `CANONICAL_BASE_URL` ist die Basis für Geräte- und Portal-URLs. Mit aktivem Proxy ist
-App-Port 8080 nur noch auf Host-Loopback. Sandbox bleibt intern. TLS, Port 443 und ein
-öffentliches Portal fehlen.
+App-Port 8080 nur noch auf Host-Loopback. Sandbox bleibt intern. TLS und Port 443 fehlen.
 
-Heutige harte Grenzen im Code (P2a), die TLS bewusst aufbrechen muss:
+Harte Grenzen im heutigen Code (P2a):
 
 - `PROXY_MODE` nur `off | http`; `tls-*` wird abgelehnt
 - Overlay publiziert `0.0.0.0:80`, ohne `/data`, ohne 443
 - `proxy/Caddyfile` ist `:80 { reverse_proxy app:8080 }` und wird bei Update nicht
   überschrieben
 - Delivery pinnt `images.proxy` auf `caddy:2.11.4`
-- Manager: Checkbox „Port 80“; Reachability schreibt immer `http://`
 - `TRUST_PROXY_HEADERS` existiert, steht nicht in Compose
 - `.pfbackup` enthält Settings und `.env`, keinen Caddy-/ACME-State
+- Compose hängt das Overlay nur bei `PROXY_ENABLED=true` und `PROXY_MODE=http`
+- `POST /host/network` darf einen aktiven TLS-Modus nicht wieder auf HTTP setzen
 
 ```text
 Ist:   Browser ── HTTP/1.1 ──> proxy:80  ── HTTP/1.1 ──> app:8080
 Ziel:  Browser ── HTTPS/h2 ───> proxy:443 ─ HTTP/1.1 ──> app:8080
+       Browser ── HTTP/1.1 ──> proxy:80  ── 301 → HTTPS
 ```
 
-TLS ist Vertraulichkeit und löst ein Echtzeitproblem: Browser begrenzen lang laufende
-HTTP/1.1-Verbindungen pro Origin typischerweise auf wenige. SSE belegt jede Verbindung
-dauerhaft; MFA hält Queue- und Ops-Stream parallel (fetch-SSE). Mehrere Tabs blockieren
-dann REST. Browser nutzen HTTP/2 praktisch nur über HTTPS; `h2c` ist kein Produktweg.
+TLS schafft Vertraulichkeit. HTTP/2 über HTTPS beseitigt das Browserlimit für parallele
+lang laufende HTTP/1.1-Verbindungen (Queue- und Ops-SSE). `h2c` ist kein Produktweg;
+ein app-seitiges Connection-Budget bleibt separat — [`todo.md`](../todo.md).
+Caddy terminiert TLS und handelt `h2` aus; der Hop `proxy → app` bleibt HTTP/1.1.
 
-HTTP/2 behebt das **Transportlimit**. Ein app-seitiges Connection-Budget (Tab-Koordination,
-Reconnect-Jitter) bleibt ein separates Thema — [`todo.md`](../todo.md),
-[`archive/plan-auth-session-slots.md`](archive/plan-auth-session-slots.md).
+## Zielarchitektur
 
-Caddy terminiert TLS und handelt `h2` aus. Der Hop `proxy → app` bleibt HTTP/1.1.
-Caddy flusht `text/event-stream` ohne Extra-SSE-Konfiguration.
-
-## Ziel
-
-Zwei Ebenen, ein Proxy-Container, zwei getrennte Umsetzungsphasen:
-
-| Ebene          | Erreichbarkeit                                   | TLS               | Regel                                      |
-| -------------- | ------------------------------------------------ | ----------------- | ------------------------------------------ |
-| **Praxis-LAN** | Terminal, MFA, TV, Ops, Raum-Panel, Portal       | HTTPS             | voller Reverse-Proxy; `CANONICAL_BASE_URL` |
-| **Internet**   | nur Portal (+ explizite Portal-APIs und -Assets) | **HTTPS Pflicht** | eigener VHost, Allow-Liste, kein MFA/Ops/… |
-
-Die App bleibt ohne TLS-Code. Der Proxy übernimmt Zertifikate, Redirects und HTTP/2.
-Bei aktivem TLS ist `CANONICAL_BASE_URL` immer `https://<hostname>` ohne Port 443.
-
-LAN-TLS veröffentlicht nicht die gesamte App ins Internet. Das ist eine **technische**
-Vorgabe (Bindung, kein öffentlicher A-Record, Manager-Warnung), nicht nur eine Bitte.
-
-## TLS-Wege
-
-1. **Ohne TLS** — vorhandener HTTP-Proxy (`PROXY_MODE=http`) für Entwicklung oder
-   begrenzten Test.
-2. **Eigenes Zertifikat** (`tls-custom`) — Praxis-IT liefert Hostname, PEM-Fullchain und
-   Private Key. Erneuerung liegt bei der Praxis-IT. Vertrag ist PEM; PFX ist nicht v1.
-3. **Managed TLS** (`tls-managed`) — Anbieter-Subdomain, Let's Encrypt über DNS-01,
-   automatische Erneuerung.
-
-Managed TLS ist der empfohlene Produktweg. Custom-TLS bleibt IT-Option.
-
-Alle drei Wege nutzen **dasselbe gepinnte Caddy-Image mit `dns.providers.acmedns`**.
-Kein zweites Stock-Image im Delivery-Vertrag. Das Plugin bleibt bei HTTP und Custom-TLS
-ungenutzt.
-
-## Nicht-Ziele
-
-- Kein Gateway-/Captive-Ersatz
-- Kein Kubernetes oder Service-Mesh
-- Keine TLS-Logik im App-Container
-- Kein Zwang, lokale Entwicklung über Port 443 zu fahren
-- Kein öffentliches Exposing der gesamten App
-- Kein TLS zwischen `app` und `sandbox`; der Hop bleibt Docker-intern
-- Kein paralleles Hostname-Feld in der Netzwerk-Reachability; TLS-Hostname kommt aus dem Praxisnamen
-- Keine freie Hostname-Wahl als Happy Path
-- Kein Hineinstecken der TLS-State-Machine in `POST /host/network`
-- Kein eigener ACME-DNS-Dienst im LAN-TLS-Pilot — Self-Hosting ist Produkthärtung danach
-
-## Beschlossene Managed-TLS-Architektur
-
-### Einmalige DNS-Delegation
-
-Die kostenpflichtige DNS-API des Domainproviders ist nicht erforderlich. Pro Praxis ein
-fester CNAME:
+| Rolle | Aufgabe |
+| --- | --- |
+| **Betreiber** | öffentliche DNS-Zone, A-Record je Installation, isolierte DNS-01-Berechtigung; kein Produkt-Register |
+| **Praxisserver** | feste private IPv4, Praxis Flow und Caddy, lokaler Schlüssel und Zertifikats-State |
+| **Manager / Setup** | Installations-ID und Einmal-Token erzeugen, IPv4 bestätigen, Cutover, Diagnose |
+| **Client** | normaler Browser, vorhandene DNS-Infrastruktur, HTTPS direkt zum Praxisserver im LAN |
 
 ```text
-_acme-challenge.<praxis>.<anbieter-domain>
-  CNAME <installations-id>.<acme-dns-zone>
+7fk3m2.lan.notaus.de.  A  192.168.178.112
 ```
 
-Der CNAME bleibt über Ausstellungen und Renewals gleich. Caddy ändert mit einem eng
-begrenzten ACME-DNS-Credential nur den TXT-Wert unter dem delegierten Ziel.
+Der A-Record ist öffentlich sichtbar. Die private Zieladresse ist aus dem Internet
+nicht routbar. Ohne Portweiterleitung wird die Anwendung dadurch nicht öffentlich.
 
-Let's Encrypt bleibt die CA. ACME-DNS stellt keine Zertifikate aus. Der Betreiber des
-ACME-DNS-Dienstes ist eine Vertrauensstelle. Der LAN-TLS-Pilot nutzt `auth.acme-dns.io`.
-Self-Hosting (eigene oder professionell betriebene Instanz) kommt später in der
-Produkthärtung; Server-URL und Zone bleiben ausgelieferte Produktkonfiguration, damit
-der Wechsel kein neues Protokoll braucht.
+Betrieb und HTTP-Proxy laufen **unabhängig** von TLS (Proxy ohne Zertifikat bleibt
+gültig). TLS setzt den Proxy voraus: ohne Port 80 keine HTTPS-Strecke. DNS und
+Zertifikat können dauern; ab dem Mailtext geht der Assistent mit HTTP weiter.
+`verify-dns` und Cutover folgen unter Netzwerk.
 
-Caddy pinnt Let's Encrypt (kein ZeroSSL-Fallback). DNS-01 deaktiviert HTTP-01 und
-TLS-ALPN — Port 80/443 müssen dafür nicht öffentlich erreichbar sein. Caddy braucht
-**Outbound** zu Let's Encrypt und zum ACME-DNS-Server.
+Die App terminiert kein TLS. Bei aktivem TLS ist `CANONICAL_BASE_URL` immer
+`https://<hostname>` ohne Port 443. Port 8080 bleibt Loopback für Setup-Probes.
 
-### Trennung von Zertifikat und LAN-IP
+## Installationsidentität und Hostname
+
+Während des Manager-Setups (TLS-Strecke) entstehen:
 
 ```text
-Zertifikatsrecht:
-  _acme-challenge.seidel.notaus.de → fester ACME-DNS-CNAME
-
-Lokale Erreichbarkeit:
-  seidel.notaus.de → aktuelle LAN-IP (Pilot: 127.0.0.1 per Hosts)
+Installations-ID: 7fk3m2q9
+Vorschlag:        7fk3m2.lan.notaus.de
+Optional:         seidel.lan.notaus.de
+Anzeigename:      Praxis Dr. Meyer
 ```
 
-Das Zertifikat gilt für den Hostnamen, unabhängig von der LAN-IP. Bei IP-Wechsel bleiben
-CNAME, Credential und Zertifikat. Nur die lokale Namensauflösung ändert sich. Empfohlen:
-DHCP-Reservierung.
+- Die Installations-ID ist **zufällig, stabil**, aber kein Geheimnis.
+- Default-Label: **6 Zeichen** aus der ID, lesbares Alphabet, kein Präfix `praxis-`.
+- Die Praxis kann im **selben Namensschritt** den Vorschlag nutzen, ein eigenes Label
+  setzen oder eine **eigene Domain** angeben. Nach `apply` ist der Hostname fest.
+- ACME-Delegation bleibt an der Installations-ID (`7fk3m2q9.acme.notaus.de`), nicht am
+  sichtbaren Namen.
+- Die Aktivierung verwendet ein **separates starkes Einmal-Token** im Mailtext.
+- Der neutrale Default bleibt bei Praxisumbenennung stabil. Ein Wunsch-Label kann in
+  CT-Logs erkennbar sein — deshalb ist der 6-Steller der Default.
+- Der Anzeigename kommt aus der Anwendung, nicht aus DNS.
+- Ein Kunde kann mehrere Installationen besitzen.
 
-Kein öffentlicher A-Record auf eine private LAN-IP. Pilot: Hosts-Datei. Produktiv: lokaler
-DNS (Fritzbox, AD, …). Der Manager zeigt die Anweisung für die erkannte LAN-IP, ändert
-aber keine fremde DNS-Infrastruktur.
+## Betriebsvarianten
 
-### Hostname aus dem Praxisnamen
-
-Der TLS-Hostname wird aus dem vergebenen Praxisnamen abgeleitet, nicht frei gewählt und
-nicht aus der LAN-Reachability (Maschinenname / Custom-Host). Beispiel: Anzeigename
-„Seidel“ → `seidel.notaus.de`. `CANONICAL_BASE_URL` bleibt die Wahrheit nach dem Cutover.
-
-Die genaue Slug-Normalisierung (Umlaute, Leerzeichen, führendes „Praxis“) wird bei der
-Implementierung festgelegt. Der abgeleitete Name wird bei der TLS-Aktivierung
-festgeschrieben; ein späterer Wechsel des Anzeigenamens ändert den Hostnamen nicht.
-
-**Happy Path:** Manager zeigt den abgeleiteten Hostnamen nur lesend. Kein Hostname-Feld.
-
-**Kollision (Fehlerweg):** **DNS prüfen** stellt fest, dass der Name schon vergeben ist
-(bestehende Delegation, fremder CNAME, Anbieter lehnt ab). Dann muss die Praxis einen
-**anderen Hostnamen** setzen. Das ist Fehlerbehandlung, kein zweiter Happy Path.
-
-Nach erfolgreicher Aktivierung bleibt der (ggf. abweichende) Hostname die Identität dieser
-Installation.
-
-## Setup-API: eigene TLS-Strecke
-
-`POST /api/setup/host/network` bleibt LAN-IP, Gateway und HTTP-Proxy. TLS bekommt eigene
-Endpunkte, weil der Ablauf eine State-Machine ist, kein einzelner Save:
+### Standard: Zone des Betreibers (Pilot-Happy-Path)
 
 ```text
-prepare → (Credential + CNAME-Anweisung)
-verify-dns → (exakter CNAME)
-apply → (Caddyfile rendern, Proxy starten, Zertifikat + h2 prüfen)
-status
-repair → (idempotent: State behalten, Container ggf. neu)
-reset-tls → (getrennte, warnende Wartung — löscht State)
+7fk3m2.lan.notaus.de
 ```
 
-Wire-Werte (Richtung, Schema folgt bei Implementierung): abgeleiteter Hostname,
-optionaler Override nur im Kollisionsfall, ACME-Kontakt-E-Mail, Modus
-`tls-custom | tls-managed`, optional Custom-Zertifikatpfade.
+Der Manager erzeugt einen **kopierbaren Mailtext** (Betreff, Records, ID, Token,
+bestätigte LAN-IP). Die Praxis schickt ihn an den Betreiber. Der Betreiber legt
+A-Record und ACME-Challenge **manuell** an — das darf Tage dauern. Die Praxis muss
+keinen DNS-Anbieter kontaktieren. `verify-dns` / TLS-`apply` warten unter Netzwerk;
+der Rest der Installation (Vorschau, Host-Apply) läuft auf HTTP weiter.
 
-Gerenderte Host-Env, ein Enum:
+### Optional: Domain der Praxis
+
+Dieselbe TLS-Strecke, Entscheidung im Namensschritt. Die Praxis kontrolliert den
+A-Record und richtet einmalig die ACME-CNAME-Delegation ein. Der Betreiber verwaltet
+nur die wechselnden TXT-Werte am delegierten Ziel und bekommt eine kürzere Mail
+(Freischaltung, kein A-Record in `lan.notaus.de`):
 
 ```text
+flow.praxis-meyer.de.                         A      192.168.178.112
+_acme-challenge.flow.praxis-meyer.de.         CNAME  7fk3m2q9.acme.notaus.de.
+```
+
+### Eigenes Zertifikat
+
+`tls-custom` akzeptiert PEM-Fullchain und privaten Schlüssel. PFX ist nicht v1.
+Notausgang für professionell verwaltete Netze, nicht der Standardweg.
+
+## DNS und ACME DNS-01
+
+A-Record (Browser-Ziel):
+
+```text
+7fk3m2.lan.notaus.de.  A  192.168.178.112
+```
+
+Temporärer TXT beweist der öffentlichen CA die Domainkontrolle:
+
+```text
+_acme-challenge.7fk3m2.lan.notaus.de.  TXT  "<Challenge-Wert>"
+```
+
+Der TXT-Wert wechselt bei Ausstellung und Erneuerung und wird danach entfernt.
+HTTP-01 und TLS-ALPN-01 sind ungeeignet: die CA erreicht den privaten Server nicht.
+
+Kein allgemeiner DNS-Provider-Schlüssel liegt auf dem Praxisserver. Jede Installation
+darf ausschließlich ihre eigene Challenge bedienen. Der private TLS-Schlüssel wird auf
+dem Praxisserver erzeugt und verlässt ihn nicht.
+
+Let's Encrypt bleibt die CA (kein ZeroSSL-Fallback). Outbound zu Let's Encrypt und zur
+ACME-DNS-Instanz ist nötig. Pilot-ACME-DNS: später betriebene Instanz unter
+`*.acme.notaus.de`; bis dahin eine vom Betreiber gewählte Instanz (kein Produktzwang
+auf `auth.acme-dns.io` in der UI).
+
+## Aufgabenverteilung
+
+**Betreiber**
+
+- Mail aus dem Manager entgegennehmen (kein Automatismus, kein Register)
+- zeitversetzt A-Record auf die bestätigte IPv4 setzen
+- DNS-01-Challenge isoliert je Installation ermöglichen
+- Registrierung, Sperrung und Zertifikatsstatus (DNS/ACME) verwalten
+- keine Praxis- oder Patientendaten transportieren
+
+**Praxisserver und Setup**
+
+- aktuelle IPv4 und MAC-Adresse erkennen und anzeigen
+- Bestätigung einer festen IP / DHCP-Reservierung verlangen
+- Installations-ID und Einmal-Token erzeugen; **Mailtext** erzeugen (Copy / Senden an
+  den Betreiber)
+- lokales Schlüsselpaar erzeugen
+- Zertifikat anfordern und automatisch erneuern
+- Caddy konfigurieren
+- DNS, Zertifikat, HTTPS, HTTP/2 und SSE testen
+- bei späterer IP-Abweichung deutlich warnen
+
+**Praxis**
+
+- Feste IPv4 oder DHCP-Reservierung für den Praxisserver einrichten
+- Keine Portfreigabe für 80 oder 443
+- Nur falls der Verbindungstest scheitert: exakte Rebind-Ausnahme
+- Clients nach Netzänderungen gegebenenfalls neu verbinden
+
+**Client**
+
+- keine Installation, keine Root-CA, keine Browser-Extension, kein lokaler DNS-Eintrag
+- Aufruf der ausgegebenen HTTPS-Adresse
+
+## DNS-Rebinding, DoH und Gast-WLAN
+
+Einige Router oder Resolver blockieren öffentliche DNS-Namen mit privaten Zieladressen.
+Das Setup prüft die Auflösung; der Assistent verlangt einen Check von einem **zweiten
+LAN-Gerät**.
+
+Wenn erforderlich, wird ausschließlich der konkrete Host freigegeben:
+
+```text
+7fk3m2.lan.notaus.de
+```
+
+Nur wenn der Router keine exakte Ausnahme zulässt: kleinste Subdomain `lan.notaus.de`.
+Der Rebinding-Schutz wird **niemals global** abgeschaltet.
+
+Explizit konfigurierte DoH-/Private-DNS-Dienste können den Router umgehen. Da der
+A-Record öffentlich ist, kann die Auflösung trotzdem funktionieren. Einige externe
+Resolver filtern private Antworten ebenfalls. Das Setup unterscheidet DNS-Fehler,
+Rebind-Block, fehlende Route und TLS-Fehler.
+
+Gäste-WLANs isolieren Endgeräte häufig vom Praxisserver. Für Patientenendgeräte ist
+gegebenenfalls eine gezielte Firewallfreigabe auf TCP 443 zum Praxisserver nötig.
+
+LAN-IP-Wechsel: neuer Mailtext mit neuer A-Record-IP an den Betreiber.
+Challenge-Delegation und Zertifikat bleiben. DHCP-Reservierung anpassen.
+
+## Portal-Abgrenzung
+
+Das öffentliche Internet-Portal ist **nicht** Teil des LAN-TLS-Piloten. Im Pilot werden
+**nicht** vorsorglich angelegt:
+
+- `portal.<installation>…`
+- zweiter A-Record oder zweites SAN
+- öffentliche Portweiterleitung
+- Portal-Allow-List-VHost
+
+LAN-Portal bleibt `https://<hostname>/portal` auf dem einen Host. Das Internet-Portal
+erhält später ein eigenes Bedrohungsmodell, einen eigenen Hostnamen, ein eigenes
+Zertifikat und einen explizit eingeschränkten Veröffentlichungsweg. LAN-TLS-Erneuerung
+und Internet-Portal sind nicht gekoppelt.
+
+## Setup-API und Cutover
+
+```text
+prepare → verify-dns → obtain-certificate → apply → status
+repair  → State behalten
+reset-tls → warnend, State löschen
+```
+
+`verify-dns` ist Gate für TLS, nicht für den Rest der Installation.
+
+Cutover:
+
+1. Hostname festlegen (6-Steller oder Wunsch-Label); **Mailtext** erzeugen; warten,
+   bis der Betreiber den A-Record auf die **bestätigte** LAN-IP gesetzt hat.
+2. Öffentlichen A-Record prüfen (`verify-dns`, vom Praxisserver aus).
+   Auflösung auf einem zweiten LAN-Gerät kann Setup nicht messen.
+3. Zertifikat per DNS-01 holen, **während HTTP weiter verfügbar bleibt**.
+4. Lokal HTTPS prüfen: Zertifikat, h2, App und ein SSE-Tick.
+5. Erst danach `CANONICAL_BASE_URL` und Geräte-URLs auf HTTPS umstellen.
+6. Port 80 auf ausschließlich 301 → HTTPS umstellen.
+
+Bei Fehler vor Schritt 5 bleiben Canonical und HTTP-Proxy unverändert. TLS-State bleibt
+für `repair`. `POST /host/network` darf einen aktiven TLS-Modus nicht auf HTTP
+zurücksetzen und Canonical nicht auf `http://` umschreiben.
+
+```text
+PROXY_ENABLED=true
 PROXY_MODE=off | http | tls-custom | tls-managed
 PROXY_HTTP_PORT=80
 PROXY_HTTPS_PORT=443
-PROXY_BIND_ADDRESS=<127.0.0.1 | LAN-IP>
 TLS_ACME_DIRECTORY=production | staging | pebble
 ```
 
-Kein zweites `TLS_MODE` / `TLS_CERT_SOURCE`. ACME-Secrets nicht in App-DB, nicht in der
-gerenderten Caddyfile, nicht im normalen `.env`.
-
-## Aktivierungsablauf (Managed TLS)
-
-1. Praxis wählt Managed TLS. Der Hostname wird aus dem Praxisnamen abgeleitet und
-   angezeigt, nicht eingegeben.
-2. Setup registriert genau einen ACME-DNS-Account für diese Installation.
-3. Manager zeigt eine kopierbare **TLS-Aktivierungsanfrage** (Hostname, CNAME-Name,
-   CNAME-Ziel, Installations-ID).
-4. Praxis übermittelt das an den Anbieter; der trägt den CNAME einmalig ein.
-5. **DNS prüfen** — Setup prüft, dass der Name frei bzw. die Delegation genau zu diesem
-   Credential gehört. Kollision → Fehler, anderer Hostname, zurück zu Schritt 3.
-6. Manager zeigt die lokale DNS-/Hosts-Anweisung für die erkannte Ziel-IP.
-7. Erst nach erfolgreicher Verifikation rendert Setup die Caddy-Konfiguration, startet
-   den TLS-Proxy und prüft Zertifikat sowie HTTP/2.
-8. Manager führt den **Origin-Cutover** explizit aus: `CANONICAL_BASE_URL` auf
-   `https://<hostname>`, Geräteliste inkl. Raum-Panel, Hinweis auf Neu-Anmeldung und
-   erneutes Pairing.
-9. Caddy erneuert danach automatisch.
-
-Zustände:
-
-```text
-off → preparing → awaiting-provider-dns → dns-verified
-    → provisioning → active
-                    ↘ degraded / error → retry
-```
-
-UI zeigt Geheimnisse nicht dauerhaft. Nach Registrierung: Hostname, CNAME-Anweisung,
-Status, Aussteller, Ablaufdatum.
-
-## Origin-Cutover
-
-Cookies sind host-only und `SameSite=Strict`. Wechsel von `http://<ip>` oder Port 80 auf
-`https://<hostname>` invalidiert Staff-, Geräte- und Raum-Panel-Sessions.
-
-Das ist ein geplanter Schritt, kein Nebeneffekt: neue kanonische URLs, QR-Codes, Hinweis
-zum erneuten Koppeln. `DeviceUrls` nimmt Raum-Panel auf.
-
-Gateway-Lab-URLs (`APP_PORTAL_URL` u. a.) folgen demselben kanonischen HTTPS-Origin,
-falls Gateway aktiv ist. Captive bleibt LAN-Thema, nicht Internet-Whitelist.
+Kein `PROXY_BIND_ADDRESS` auf LAN-IP oder Loopback als Isolationsmittel. Compose
+veröffentlicht 80 und 443 auf dem Praxis-Host (`0.0.0.0`). Schutz: private Zieladresse,
+keine Router-Portfreigabe, Host-Firewall. ACME-Secrets nicht in App-DB, Caddyfile oder
+normalem `.env`.
 
 ## Proxy-Runtime
 
-### Bindung
-
-Heute: `'${PROXY_HTTP_PORT:-80}:80'` → alle Interfaces.
-
-Ziel: Proxy-Ports an `PROXY_BIND_ADDRESS` (Loopback im Laptop-Pilot, sonst konfigurierte
-LAN-IP), nicht an eine öffentliche Host-NIC.
-
-Das verhindert Exposing über eine zweite, öffentliche Schnittstelle. Es verhindert
-**nicht** eine Router-Portweiterleitung auf die LAN-IP. Deshalb zusätzlich:
-
-- kein öffentlicher A-Record auf die LAN-IP
-- Manager-Warnung: gültiges LE-Zertifikat + Weiterleitung 443 = ganze App im Internet
-- Internet-VHost mit Allow-Liste **bevor** irgendwer 443 weiterleitet
-
-`remote_ip` im Container ist unter Docker Desktop unzuverlässig (NAT) und keine
-alleinige Kontrolle.
-
-### Caddyfile
-
-Setup rendert die Caddyfile. Markierung im Dateikopf, dass sie generiert ist. Apply,
-Repair und Update dürfen generierte Dateien ersetzen. Eine handeditierte Caddyfile ist
-eine warnende IT-Abweichung, nicht der Normalweg.
-
-Bei TLS: Named Site (Hostname, nicht `:80`), HTTP→HTTPS auf Port 80, DNS-01 für Managed,
-Datei-Zertifikat für Custom. HTTP/3 aus (LAN-Pilot). Pilot ohne HSTS oder mit kurzem
-`max-age`; Produktion darf HSTS.
-
-Credential-Datei als Bind-Mount, nicht inline in der Caddyfile. Plugin-JSON gegen die gepinnte Plugin-Version von `caddy-dns/acmedns` prüfen.
-
-### Compose (Ziel, derselbe `proxy`-Service)
-
 ```yaml
 ports:
-  - '${PROXY_BIND_ADDRESS}:${PROXY_HTTP_PORT:-80}:80'
-  - '${PROXY_BIND_ADDRESS}:${PROXY_HTTPS_PORT:-443}:443'
+  - '${PROXY_HTTP_PORT:-80}:80'
+  - '${PROXY_HTTPS_PORT:-443}:443'
 volumes:
   - ${PROXY_CADDY_DATA_HOST_PATH}:/data
   - ${PROXY_CADDY_CONFIG_HOST_PATH}:/config
@@ -266,155 +298,126 @@ volumes:
   - ${PROXY_CERTS_HOST_PATH}:/certs:ro
 ```
 
-`/data` und `/config` überleben Container-Neubau, Update und Repair. Ohne diese Volumes
-ist Managed TLS nicht idempotent.
+App-Port 8080 bleibt Loopback beziehungsweise Docker-intern. Pilot-Erfolg: ein **zweites
+Gerät im LAN** öffnet `https://7fk3m2.lan.notaus.de`, nicht nur der Host.
 
-Delivery: ein Image-Pin (nicht mehr zwingend Docker-Hub `caddy:2.11.4`). `.pfupdate`
-validiert gegen diese Referenz. xcaddy-Build, SBOM und Offline-`docker save` gehören in
-den bestehenden Release-Pfad.
+Caddy-Pflicht:
 
-### Forwarded-Header und Cookies
+- nur `h1 h2`; HTTP/3 zunächst aus
+- Issuer nur Let's Encrypt; ECH aus (ACME-DNS kann keine `HTTPS`-Records)
+- DNS-01, kein HTTP-01 oder TLS-ALPN-01
+- `reverse_proxy` ohne Idle-Kill für SSE
+- Port 80 liefert nur Redirect, keinen App-Inhalt
+- generierte Caddyfile mit Marker; Apply, Repair und Update dürfen sie ersetzen
+- ACME-Credentials nicht in App-DB, Caddyfile oder normalem `.env`
+- `X-Forwarded-*` nur von der Proxy-Quelle
+- Secure-Cookies nach dem HTTPS-Cutover
 
-`TRUST_PROXY_HEADERS=true` als globaler Schalter reicht nicht und wird nicht so
-verdrahtet. Die App vertraut `X-Forwarded-*` nur von der Proxy-Quelle (Netz/Peer oder
-Proxy-Secret-Header). Sandbox erreicht `app:8080` intern und darf Proto/Host nicht
-spoofen.
+Delivery: ein Image-Pin, xcaddy/SBOM/`docker save` im bestehenden Release-Pfad.
+Apply blockiert, wenn Sandbox ins LAN/Public oder über den Proxy zeigen würde.
 
-Compose setzt die App-Konfiguration dafür, sobald ein Proxy aktiv ist. Bei erkanntem
-HTTPS setzen Session-Cookies `Secure`.
+## Diagnose
 
-TLS-Apply blockiert, wenn Sandbox ins LAN/Public zeigt oder über den Proxy erreichbar
-wäre.
+`verify-dns` läuft auf dem Praxisserver. Er kann öffentlichen DNS und den Host
+selbst sehen, nicht TV, Tablet oder Handy.
+
+Vom Server prüfbar (Button, ohne zweites Gerät):
+
+- Server besitzt eine IPv4-Adresse
+- öffentliche A-Record-Abfrage (Resolver außerhalb des LAN, z. B. 1.1.1.1) zeigt
+  auf die bestätigte LAN-IP
+- ACME-CNAME zeigt auf das vereinbarte TXT-Ziel
+- optional: Auflösung über den Windows-Resolver dieses PCs (kann von Fritzbox-Clients
+  abweichen — kein Ersatz für das zweite Gerät)
+- nach `obtain-certificate`: Zertifikatskette und Name, lokal TCP 443, h2, ein SSE-Tick
+
+Nicht vom Server prüfbar — Bestätigung der Praxis, erst sinnvoll nach Zertifikat
+und Cutover:
+
+- Hostname löst auf einem zweiten LAN-Gerät auf
+- `https://<hostname>` lädt dort ohne Zertifikatswarnung
+
+Rebind-Filter der Fritzbox zeigt sich typisch nur auf anderen DHCP-Clients, nicht
+zuverlässig auf dem Host. Deshalb: Hinweis und manuelle Checkbox, kein grüner Haken
+von `verify-dns`.
+
+Fehlermeldungen unterscheiden A-Record-Fehler, Rebind (von der Praxis gemeldet),
+externen DNS-Filter, Client-Isolation, Firewall, belegten Port 443, falsche Uhrzeit,
+ACME-Fehler und Zertifikatsnamensfehler.
 
 ## Backup und Restore
 
-Backup umfasst Konfiguration, ACME-Credential, Custom-Zertifikate und Caddy-/ACME-State
-(`/data`, `/config`). Restore darf keine Neuregistrierung auslösen.
+Zu sichern: TLS-/Hostnamen-Konfiguration, installationsbezogene ACME-Berechtigung,
+Caddy `/data` und `/config`, Custom-Zertifikate. Restore für **dieselbe
+Installations-ID und denselben Hostnamen**. Repair ist idempotent; `reset-tls` ist die
+warnende Löschaktion.
 
-Install-Home auf Windows (Produktziel): restriktive ACLs statt Unix-`chmod 0600`. Logs
-und Manager-Fehlertexte geben kein ACME-Passwort, keinen Private Key und keine
-Credential-Datei aus.
+`.pfbackup` v1 kennt nur Settings und `.env` — keinen Dateibaum. Im Pilot Caddy-State
+**separat** sichern. Env mit `tls-managed` / `https://` ohne State nicht restaurieren
+(sonst HTTPS tot). Vollständiges Paket in `.pfbackup`: Produkthärtung nach dem Pilot.
+Windows: ACLs statt `chmod 0600`.
 
-Repair:
+## Nicht-Ziele
 
-```text
-gültiges Zertifikat + gültiges Credential + gültiger CNAME
-  → Konfiguration wiederverwenden
-  → Container bei Bedarf neu starten
-  → kein Löschen, keine Neuregistrierung
-```
+- kein eigenes Zentral-/Register-Produkt
+- kein eigener rekursiver DNS-Resolver im Praxisnetz
+- keine Hosts-Datei als Happy Path
+- keine Root-CA, Browser-Extension oder native Clientsoftware
+- kein Gateway-, DHCP- oder Captive-Portal-Ersatz
+- kein TLS zwischen `app` und `sandbox`
+- keine TLS-Logik in der Anwendung
+- kein öffentliches Exposing der gesamten App
+- kein Internet-Portal im LAN-TLS-Pilot (kein vorsorglicher Portal-Host/SAN)
+- kein Zwang, Entwicklung über Port 443 zu betreiben
+- keine TLS-State-Machine in `POST /host/network`
 
-Bewusstes Löschen von Zertifikat, ACME-Account oder Caddy-State ist `reset-tls`, nicht
-der normale Manager-Reset.
+## Pilot
 
-## Pilot auf dem Entwickler-Laptop
+Hostname-Beispiel `7fk3m2.lan.notaus.de`. Keine Portweiterleitung. Caddy-State behalten.
+CAA, Uhrzeit, Outbound sind Pilot-Risiken.
 
-Hostname: `seidel.notaus.de`.
+Erfolg: A-Record zeigt auf die LAN-IP, gültiges Zertifikat (ein Name, kein Portal-SAN),
+`h2`, SSE nicht am HTTP/1.1-Limit, Repair ohne Neuausstellung, Cutover mit
+HTTP→HTTPS-Redirect, zweites LAN-Gerät erreicht den Host.
+Manager-Abnahme: [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md).
 
-- `notaus.de` bleibt beim vorhandenen DNS-Provider; keine kostenpflichtige DNS-API.
-- `auth.acme-dns.io` nur für diesen Pilot.
-- Zuerst Credential und CNAME-Ziel, danach erst Record beim Provider.
-- Namensauflösung: zuerst `127.0.0.1`, später LAN-IP. DoH/Hosts und Local-Network-Access
-  des Browsers sind Pilot-Risiken, keine Produktfeatures.
-- CAA von `notaus.de` vor der ersten Ausstellung prüfen.
-- Keine Portweiterleitung 80/443 aus dem Internet.
-- Caddy-State nach erfolgreicher Ausstellung behalten.
-- Uhrzeit am Host stimmt (ACME/Zertifikat).
-- Outbound aus Docker zu Let's Encrypt und ACME-DNS.
+## Tests
 
-Erfolg:
+Keine fortlaufenden produktiven Let's-Encrypt-Zertifikate.
 
-- Browser öffnet `https://seidel.notaus.de` ohne Zertifikatswarnung
-- tatsächlich `h2`
-- mehrere SSE-Streams und MFA-Tabs nicht am HTTP/1.1-Limit
-- Neustart, Re-Apply, Repair behalten Zertifikat und Credential
-- simulierter Renewal-/DNS-Fehler ist im Manager sichtbar und heilbar
-- Origin-Cutover ist nachvollziehbar (alte Sessions tot, neue URLs stimmen)
-
-## Wiederholbare Tests
-
-Keine fortlaufenden produktiven Let's-Encrypt-Zertifikate in der Manager-Entwicklung.
-
-1. **Unit- und UI-Tests ohne Netzwerk** (zuerst): Registrierung, CNAME-Fälle,
-   Hostname-Ableitung, Kollision/Override, Provisioning/Active/Degraded, HTTPS-/h2-Probe,
-   Repair ohne State-Verlust, Cutover-URLs, Forwarded-Header nicht spoofbar.
-2. **Pebble + Test-DNS**, sobald Caddy wirklich startet: Ablauf
-   `Manager → Setup → Caddy → DNS-01 → ACME` ohne öffentliche CA. Nicht Schritt 1 der
-   Umsetzung.
-3. **Let's-Encrypt-Staging** — wenige manuelle Systemtests vor Releases, nicht CI.
-4. **Produktive Abnahme** — ein dauerhaftes Zertifikat für `seidel.notaus.de`.
-
-## Internet-Portal (eigene Phase, nach LAN-TLS)
-
-Nicht im LAN-Pilot. Öffentlicher VHost erst, wenn die Allow-Liste steht.
-
-Kein Prefix `/api` und kein pauschales Verbot `/api/v1/ops/*` als Ersatz für eine Liste. Die
-App-ACL macht u. a. `/api/v1/auth/login` und Pairing öffentlich — das darf nicht ins
-Internet. Captive-Authorize ist LAN-WLAN, kein Internet-Pfad.
-
-Orientierung am heutigen Portal-Ist (vor Implementierung gegen OpenAPI und UI prüfen):
-
-- UI: `/portal`, `/portal/*`
-- SPA-Assets der Portal-Oberfläche (typisch `/_app/*`); nicht der Fallback für `/mfa`,
-  `/terminal`, `/tv`, `/ops`, `/room-panel`
-- APIs mindestens: Sessions (`resolve-ticket`, `me`, `submit`), Patient-Documents
-  (intake, list, delete, form-templates, forms, privacy-notice),
-  `GET /api/v1/practice/profile`, `GET /api/v1/ops/patient-locales`
-
-Nicht öffentlich: `/mfa`, `/terminal`, `/tv`, `/ops` (UI), `/room-panel`, Auth-Login,
-Pairing, Queue, restliches `/api/v1/ops/*`.
-
-Hostname-Modell (gleicher Name mit Split-Horizon vs. eigener öffentlicher Name) ist
-offen; LAN-TLS legt `seidel.notaus.de` nicht stillschweigend als Internet-Name fest.
-
-## Sicherheit (kurz)
-
-- Proxy routet nur zur App, nie zur Sandbox
-- Forwarded-Header nur von der Proxy-Quelle
-- Secure-Cookies bei HTTPS
-- ACME-DNS-Credential ändert nur den delegierten TXT-Record
-- keine Provider-DNS-Zugangsdaten auf dem Praxisserver
-- `auth.acme-dns.io` nur Pilot
-- gültiges öffentliches Zertifikat ohne Internet-VHost ist bewusst LAN-only; Port-Forward
-  wäre ein Produktunfall
+1. Unit/Fakes (Setup-Vertrag, Canonical, Forwarded-Header, `verify-dns`)
+2. Pebble, sobald Caddy startet (erster Cutover darf headless sein)
+3. Staging manuell vor Releases
+4. Eine produktive Abnahme für einen Host `*.lan.notaus.de`
 
 ## Umsetzungsreihenfolge
 
-1. **Vertrag und Fakes:** Zustandsmodell, Setup-Wire, Canonical-HTTPS, Cutover-URLs,
-   Forwarded-Header-Tests — ohne Pebble.
-2. **Setup-API:** eigene TLS-Endpunkte, Prepare/Verify/Apply/Status/Repair.
-3. **Manager:** eigene TLS-Strecke; Hostname aus Praxisnamen, Override nur bei Kollision;
-   nicht die Port-80-Checkbox und nicht die LAN-Reachability als Namensquelle.
-4. **Proxy-Runtime:** ein Plugin-Image, 443, Bind-Adresse, persistenter State, generiertes
-   Caddyfile, Secure Cookies.
-5. **Pebble-Integration,** sobald Schritt 4 startet.
-6. **Pilot:** `seidel.notaus.de`, echtes Zertifikat, h2/SSE, Cutover.
-7. **Produkthärtung:** Self-Hosting ACME-DNS, Backup/Restore inkl. Caddy-State,
-   Ablaufmonitoring, Delivery/Update, HSTS.
-8. **Internet-Portal:** öffentlicher VHost mit expliziter Allow-Liste.
+1. Vertrag und Fakes (ID/Token, Hostname, Canonical-HTTPS, `verify-dns`)
+2. Setup-API (`prepare` … `obtain-certificate` … `apply`)
+3. Proxy-Runtime (Image, 443, Redirect auf 80, State, Cookies) + Pebble
+4. Manager — Mailtext an den Betreiber, Diagnose, zweites Gerät
+   [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md)
+5. Pilot
+6. Produkthärtung (ACME-DNS-Betrieb, Backup inkl. Caddy-State, HSTS)
+7. Internet-Portal (eigener Host, eigenes Cert, Allow-VHost)
 
 ## Offene Entscheidungen
 
-1. Nach dem Pilot: Wer betreibt den produktiven ACME-DNS-Dienst (Self-Hosting), unter
-   welcher Zone, mit welchem Backup-/Monitoring-SLA?
-2. Wie wird lokale DNS-Auflösung in typischen Praxisnetzen bereitgestellt und vom
-   Manager geprüft (Fritzbox, AD, Hosts nur als Fallback)?
-3. Slug-Regeln im Detail (Umlaute, „Praxis“-Präfix), sobald der erste Ableiter gebaut wird.
-4. Internet-Phase: gleicher Hostname (Split-Horizon) oder eigener öffentlicher Name?
+1. Welche ACME-DNS-Instanz der Betreiber im Pilot für die TXT-Delegation nutzt
+   (`server_url` / Zone, z. B. `acme.notaus.de` vs. öffentliche Instanz). Nicht in der
+   Praxis-UI.
+
+Custom-TLS-Datei-UX: [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md).
 
 ## Referenzen
 
 - [Caddy Automatic HTTPS](https://caddyserver.com/docs/automatic-https)
-- [Caddy HTTP-Protokolle](https://caddyserver.com/docs/modules/http)
 - [Caddy `reverse_proxy`](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)
 - [Caddy ACME-DNS-Plugin](https://github.com/caddy-dns/acmedns)
 - [Let's Encrypt: Challenge Types](https://letsencrypt.org/docs/challenge-types/)
-- [Let's Encrypt: Staging Environment](https://letsencrypt.org/docs/staging-environment/)
 - [Let's Encrypt Pebble](https://github.com/letsencrypt/pebble)
-- [MDN: Server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events)
 - [`realtime-streams.md`](realtime-streams.md)
 
 ## Umsetzung erst nach dem Kunden-Test
 
-Scope: [`roadmap.md`](roadmap.md). HTTP-Ist:
-[`delivery.md`](delivery.md), [`deployment-docker.md`](deployment-docker.md).
+Scope: [`roadmap.md`](roadmap.md).

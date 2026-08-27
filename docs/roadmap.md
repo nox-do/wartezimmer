@@ -62,7 +62,7 @@ Backend deckt mehr ab als die UI (Identity-Detail, Day-Close-UI, eGK).
 ## Danach (nicht Test-Blocker)
 
 1. Terminal-Sonderfälle sauber zum Empfang führen
-2. TLS + optionales Internet-Portal — [`plan-proxy-tls.md`](plan-proxy-tls.md)
+2. TLS + optionales Internet-Portal — [`plan-proxy-tls.md`](plan-proxy-tls.md), Manager: [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md)
 3. eGK/PVS — [`integrations.md`](integrations.md)
 4. Manager: Signatur / Auto-Update
 5. Vendor-Adapter Captive (Praxis-IT bleibt Eigentümer des WLANs)

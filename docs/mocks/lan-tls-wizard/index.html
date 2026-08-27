@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Einrichtung — LAN-TLS Mock</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <p class="mock-banner">
+      <strong>Mock</strong> — Vorlage für den Manager-Umbau, nicht die App. Keine DNS-/ACME-Aufrufe.
+      Port-Hinweise: <code>README.md</code> in diesem Ordner.
+    </p>
+
+    <div class="app-shell">
+      <div id="wizard-shell">
+        <header class="app-header">
+          <h1>Einrichtung</h1>
+        </header>
+
+        <ol id="wizard-steps" class="wizard-steps"></ol>
+
+        <div class="wizard-panel">
+          <h2 id="step-title"></h2>
+          <div id="step-body"></div>
+        </div>
+
+        <footer class="actions-row actions-row--footer" id="wizard-actions"></footer>
+      </div>
+
+      <div id="status-shell" hidden></div>
+      <div id="network-shell" hidden></div>
+
+      <details class="mock-jumps">
+        <summary>Mock: Sprungmarken</summary>
+        <p>Nur zum Durchklicken der TLS-Strecke, ohne den ganzen Assistenten.</p>
+        <div class="mock-jumps-row" id="mock-jumps"></div>
+      </details>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

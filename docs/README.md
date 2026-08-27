@@ -54,11 +54,11 @@ Pläne und Arbeitsstände. Historische Dateien: [`archive/README.md`](archive/RE
 | Datei                                                            | Inhalt                                                 |
 | ---------------------------------------------------------------- | ------------------------------------------------------ |
 | [`../todo.md`](../todo.md)                                       | Aktuelle Arbeitsliste (intern)                         |
-| [`audit-dopplungen-altlasten.md`](audit-dopplungen-altlasten.md) | Inventur Dopplungen / Altlasten                        |
 | [`i18n.md`](i18n.md)                                             | Sprachen Terminal/Portal vs. Staff                     |
 | [`business-revenue-model.md`](business-revenue-model.md)         | Preis-/Lizenz-Skizze                                   |
 | [`catalog-source-of-truth.md`](catalog-source-of-truth.md)       | `ops_settings` vs. flow-core-Catalog                   |
-| [`plan-proxy-tls.md`](plan-proxy-tls.md)                         | TLS / Internet-Portal — Zielbild, nicht Kunden-Test    |
+| [`plan-proxy-tls.md`](plan-proxy-tls.md)                         | LAN-TLS — Architektur, nicht Kunden-Test               |
+| [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md)         | Manager-UX für LAN-TLS — nicht Kunden-Test             |
 | [`archive/README.md`](archive/README.md)                         | Routing-Pläne, Auth-Slots, HTTP-Proxy-Ist, Gateway-Lab |
 
 ## API-Vertrag

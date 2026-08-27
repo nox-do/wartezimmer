@@ -16,7 +16,7 @@ Kein Kunden-Dokument. Einstieg für Beta/IT: [`docs/README.md`](docs/README.md) 
 
 ## Audit Dopplungen und Altlasten (2026-08-22)
 
-Quelle: [`docs/audit-dopplungen-altlasten.md`](docs/audit-dopplungen-altlasten.md)
+Quelle: [`audit-dopplungen-altlasten.md`](audit-dopplungen-altlasten.md)
 
 - **Erledigt:** DUP-002, DUP-005, DUP-006, DUP-007, DUP-008, DUP-009, DUP-010, DUP-011, DUP-012, DUP-014, DUP-015
 - **DUP-010:** `FormPdfDisplay`-Typen + vollständiger Guard in `@praxis-flow/server-shared`; App/Sandbox bleiben Re-Exports; Builder/Layout lokal
@@ -186,7 +186,7 @@ Bewusst behalten: supersede, room-panel snapshot, call-room, room-removal, Manag
 
 ## Audit Quick Wins (2026-07-23)
 
-- Docs: [`docs/audit-dopplungen-altlasten.md`](docs/audit-dopplungen-altlasten.md) nachgeschärft (Reihenfolge, Effort, Smoke-Helper, Sync-Guards); Link in `docs/README.md`
+- Docs: [`audit-dopplungen-altlasten.md`](audit-dopplungen-altlasten.md) nachgeschärft (Reihenfolge, Effort, Smoke-Helper, Sync-Guards); Link in `docs/README.md`
 - LEG-001: `validateTarArchiveEntryPaths` entfernt; Test auf `validateTarArchiveEntries`
 - LEG-002: `SaveEnvBackupResult`-Alias entfernt; `save-env-backup.ts` → `SavePfbackupResult`
 - DUP-001: `parseTicketCode` + `formatTicketCode` kanonisch in `@praxis-flow/domain`; Flow-Core/App/Smoke re-exportieren

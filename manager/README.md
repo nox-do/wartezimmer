@@ -135,3 +135,5 @@ Im gepackten Modus startet der Manager die Setup-API aus diesen Ressourcen und n
 npm run -w @praxis-flow/manager typecheck
 npm run -w @praxis-flow/setup test
 ```
+
+TLS nach dem Kunden-Test: Architektur [`docs/plan-proxy-tls.md`](../docs/plan-proxy-tls.md), Oberfläche [`docs/plan-proxy-tls-manager.md`](../docs/plan-proxy-tls-manager.md).

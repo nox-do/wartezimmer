@@ -87,4 +87,4 @@ Outbox für Audit/async Nacharbeit: [`events.md`](events.md)
 ## Geplant (nicht Kunden-Test)
 
 - `POST /identity/egk-lookup`
-- TLS / Internet-Portal — nach dem Test, [`plan-proxy-tls.md`](plan-proxy-tls.md)
+- TLS / Internet-Portal — nach dem Test, [`plan-proxy-tls.md`](plan-proxy-tls.md); Manager: [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md)

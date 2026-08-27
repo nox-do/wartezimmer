@@ -1,5 +1,8 @@
 # Audit: Dopplungen und Altlasten
 
+> **Archiviert (2026-08-24).** Zweite Audit-Welle abgeschlossen, keine offenen Befunde.
+> Nicht fortschreiben. Docs-Einstieg: [`../README.md`](../README.md).
+
 Stand: 2026-08-22
 
 ## Ergebnis der zweiten Audit-Welle

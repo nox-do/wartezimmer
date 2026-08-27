@@ -10,3 +10,4 @@ Historische Pläne und Arbeitsstände. **Nicht fortschreiben.** Geltende Specs l
 | [`flow-routing-work-packages.md`](flow-routing-work-packages.md)         | Pakete 1–8 erledigt                                                                                |
 | [`gateway-captive-portal.md`](gateway-captive-portal.md)                 | openNDS-Lab, nicht Produktkern. Grenze: [`../integrations.md`](../integrations.md)                 |
 | [`todo-history.md`](todo-history.md)                                     | Chronik `todo.md` bis 2026-08-24                                                                   |
+| [`audit-dopplungen-altlasten.md`](audit-dopplungen-altlasten.md)         | Zweite Audit-Welle abgeschlossen; OK-Liste gegen Drive-by-Refactors                                |
