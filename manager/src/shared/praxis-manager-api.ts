@@ -32,6 +32,11 @@ import type {
   SetupPlan,
   SetupPlanInput,
   SetupProbesResult,
+  TlsActionResult,
+  TlsPemSetupResult,
+  TlsPrepareInput,
+  TlsPrepareResult,
+  TlsVerifyDnsResult,
 } from './host-status.js';
 
 export type PraxisManagerSetupApi = {
@@ -74,6 +79,16 @@ export type PraxisManagerMaintenanceApi = {
   >;
   saveStorageFolders(body: StorageFoldersInput): Promise<StorageFoldersResult>;
   saveHostNetwork(body: HostNetworkInput): Promise<HostNetworkResult>;
+  prepareHostTls(body: TlsPrepareInput): Promise<TlsPrepareResult>;
+  verifyHostTlsDns(): Promise<TlsVerifyDnsResult>;
+  obtainHostTlsCertificate(): Promise<TlsActionResult>;
+  stageHostTlsCertificate(): Promise<TlsPemSetupResult>;
+  checkHostTlsCertificate(): Promise<TlsActionResult>;
+  applyHostTls(): Promise<TlsActionResult>;
+  repairHostTls(): Promise<TlsActionResult>;
+  resetHostTls(): Promise<TlsActionResult>;
+  renewHostTls(): Promise<TlsActionResult>;
+  renewHostTlsFromPem(): Promise<TlsPemSetupResult>;
   getPfbackupInfo(): Promise<PfbackupInfo>;
   resetStaffPins(): Promise<ResetStaffPinsResult>;
   getRoutingMode(): Promise<RoutingModeCapabilities>;

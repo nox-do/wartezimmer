@@ -21,7 +21,8 @@ import type {
   TlsStatus,
   TlsVerifyDnsResult,
 } from '@praxis-flow/server-shared';
-import { composeUp } from './docker.js';
+import { TLS_OPERATOR_ZONE_DEFAULT } from '@praxis-flow/server-shared';
+import { composeExec, composePs, composeUp } from './docker.js';
 import { readEnvMap, removeEnvKeys, updateEnvKeys } from './env-file.js';
 import {
   buildProxyTlsEnvUpdates,
@@ -35,9 +36,12 @@ import { readProxyConfig } from './proxy.js';
 import { SetupApiValidationError } from './setup-api-normalize.js';
 import type { SetupContext } from './setup-context.js';
 
-export const TLS_OPERATOR_ZONE_DEFAULT = 'lan.notaus.de';
+export { TLS_OPERATOR_ZONE_DEFAULT } from '@praxis-flow/server-shared';
 export const TLS_ACME_DNS_API_DEFAULT = 'https://auth.acme-dns.io';
+export const TLS_DNS_RESOLVERS_DEFAULT = ['1.1.1.1', '8.8.8.8'] as const;
 export const TLS_INSTALLATION_ID_ALPHABET = 'abcdefghijkmnpqrstuvwxyz23456789';
+export const TLS_LOCAL_CHECK_RETRY_INTERVAL_MS = 2_000;
+export const TLS_LOCAL_CHECK_RETRY_TIMEOUT_MS = 90_000;
 
 export const TLS_ENV_KEYS = [
   'TLS_STATE',
@@ -95,6 +99,14 @@ export class TlsRuntimeUnavailableError extends Error {
   }
 }
 
+/** Config/PEM errors — do not retry as ACME readiness. */
+export class TlsPermanentCheckError extends TlsRuntimeUnavailableError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TlsPermanentCheckError';
+  }
+}
+
 export class TlsCertificateError extends SetupApiValidationError {
   readonly errorClass: TlsErrorClass;
 
@@ -128,6 +140,7 @@ export function emptyTlsStatus(): TlsStatus {
     cutoverApplied: false,
     certificate: null,
     lastError: null,
+    acmeCnameTarget: null,
   };
 }
 
@@ -239,6 +252,7 @@ export function readTlsStatus(env: Map<string, string>): TlsStatus {
     cutoverApplied: readBoolean(env, 'TLS_CUTOVER_APPLIED'),
     certificate: issuer && notBefore && notAfter ? { issuer, notBefore, notAfter, names } : null,
     lastError: errorClass && errorMessage ? { class: errorClass, message: errorMessage } : null,
+    acmeCnameTarget: env.get('TLS_ACME_CNAME_TARGET')?.trim() || null,
   };
 }
 
@@ -309,6 +323,89 @@ export function requirePrivateLanIpv4(value: string): string {
   return address;
 }
 
+export function parseTlsDnsResolvers(raw: string | undefined): string[] {
+  const trimmed = raw?.trim() ?? '';
+  if (!trimmed) {
+    return [...TLS_DNS_RESOLVERS_DEFAULT];
+  }
+  const parts = trimmed.split(/[\s,]+/).filter(Boolean);
+  const seen = new Set<string>();
+  const servers: string[] = [];
+  for (const part of parts) {
+    const colon = part.lastIndexOf(':');
+    const host = colon === -1 ? part : part.slice(0, colon);
+    const portPart = colon === -1 ? undefined : part.slice(colon + 1);
+    if (!net.isIPv4(host)) {
+      throw new SetupApiValidationError(
+        `TLS_DNS_RESOLVERS enthält einen ungültigen Eintrag „${part}“. Erwartet wird IPv4 oder IPv4:Port, z. B. 1.1.1.1 oder 127.0.0.1:9053.`,
+      );
+    }
+    if (portPart !== undefined) {
+      const port = Number(portPart);
+      if (!Number.isInteger(port) || port < 1 || port > 65535 || !/^\d+$/.test(portPart)) {
+        throw new SetupApiValidationError(
+          `TLS_DNS_RESOLVERS enthält einen ungültigen Port in „${part}“.`,
+        );
+      }
+    }
+    if (!seen.has(part)) {
+      seen.add(part);
+      servers.push(part);
+    }
+  }
+  if (servers.length === 0) {
+    return [...TLS_DNS_RESOLVERS_DEFAULT];
+  }
+  return servers;
+}
+
+export function requireTlsHttpUrl(value: string, key: string): string {
+  const trimmed = value.trim();
+  try {
+    const url = new URL(trimmed);
+    if ((url.protocol === 'http:' || url.protocol === 'https:') && !/[\s{}]/.test(trimmed)) {
+      return trimmed.replace(/\/$/, '');
+    }
+  } catch {
+    // common error below
+  }
+  throw new SetupApiValidationError(`${key} muss eine gültige http(s)-URL sein.`);
+}
+
+export function resolveAcmeDnsCredentialsServerUrl(
+  env: Map<string, string>,
+  registrationApiUrl: string,
+): string {
+  const explicit = env.get('TLS_ACME_DNS_CREDENTIALS_SERVER_URL')?.trim();
+  if (!explicit) {
+    return registrationApiUrl;
+  }
+  return requireTlsHttpUrl(explicit, 'TLS_ACME_DNS_CREDENTIALS_SERVER_URL');
+}
+
+export function pebbleLocalCheckCa(env: Map<string, string>): Buffer | undefined {
+  const directory = env.get('TLS_ACME_DIRECTORY')?.trim().toLowerCase() || 'production';
+  const caPath = env.get('TLS_PEBBLE_ROOT_CA_PATH')?.trim();
+  if (!caPath) {
+    return undefined;
+  }
+  if (directory !== 'pebble') {
+    return undefined;
+  }
+  if (!fs.existsSync(caPath) || !fs.statSync(caPath).isFile()) {
+    throw new TlsPermanentCheckError(
+      `TLS_PEBBLE_ROOT_CA_PATH zeigt nicht auf eine lesbare Datei: ${caPath}`,
+    );
+  }
+  const pem = fs.readFileSync(caPath);
+  if (!pem.toString('utf8').includes('-----BEGIN CERTIFICATE-----')) {
+    throw new TlsPermanentCheckError(
+      `TLS_PEBBLE_ROOT_CA_PATH enthält kein PEM-Zertifikat: ${caPath}`,
+    );
+  }
+  return pem;
+}
+
 export type AcmeDnsRegistration = {
   username: string;
   password: string;
@@ -325,14 +422,29 @@ export type TlsDnsObservation = {
   message?: string;
 };
 
+export type DnsResolverLike = {
+  setServers: (servers: string[]) => void;
+  resolve4: (hostname: string) => Promise<string[]>;
+  resolveCname: (hostname: string) => Promise<string[]>;
+};
+
+export type TlsLocalCheckRetryOptions = {
+  intervalMs?: number;
+  timeoutMs?: number;
+  sleep?: (ms: number) => Promise<void>;
+  now?: () => number;
+};
+
 export type TlsRuntimeDependencies = {
   registerAcmeDns?: (serverUrl: string) => Promise<AcmeDnsRegistration>;
   verifyDns?: (hostname: string, mode: TlsMode) => Promise<TlsDnsObservation>;
+  createDnsResolver?: () => DnsResolverLike;
   reloadProxy?: (ctx: SetupContext) => Promise<void>;
   runLocalChecks?: (
     hostname: string,
     httpsPort: number,
   ) => Promise<{ certificate: TlsCertificateStatus; checks: TlsLocalCheck[] }>;
+  localCheckRetry?: TlsLocalCheckRetryOptions;
   randomBytes?: typeof crypto.randomBytes;
 };
 
@@ -367,9 +479,34 @@ async function registerAcmeDnsDefault(serverUrl: string): Promise<AcmeDnsRegistr
   return { username, password, subdomain, fulldomain, serverUrl };
 }
 
-async function verifyDnsDefault(hostname: string, mode: TlsMode): Promise<TlsDnsObservation> {
-  const resolver = new Resolver();
-  resolver.setServers(['1.1.1.1', '8.8.8.8']);
+function writeAcmeDnsCredentials(
+  filePath: string,
+  registration: AcmeDnsRegistration,
+  credentialsServerUrl: string,
+): void {
+  writeSecretFileAtomically(
+    filePath,
+    `${JSON.stringify(
+      {
+        username: registration.username,
+        password: registration.password,
+        subdomain: registration.subdomain,
+        server_url: credentialsServerUrl,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
+async function verifyDnsDefault(
+  hostname: string,
+  mode: TlsMode,
+  servers: string[],
+  createResolver?: () => DnsResolverLike,
+): Promise<TlsDnsObservation> {
+  const resolver = createResolver?.() ?? new Resolver();
+  resolver.setServers(servers);
   const aRecords = await resolver.resolve4(hostname).catch(() => []);
   const cnameRecords =
     mode === 'managed'
@@ -378,16 +515,57 @@ async function verifyDnsDefault(hostname: string, mode: TlsMode): Promise<TlsDns
   return { aRecords, cnameRecords };
 }
 
+export function planProxyReloadAfterUp(input: {
+  proxyWasRunning: boolean;
+  upLog: string;
+}): 'none' | 'reload' {
+  if (!input.proxyWasRunning) return 'none';
+  if (/\bRecreated\b/i.test(input.upLog)) return 'none';
+  return 'reload';
+}
+
+export function isRetryableLocalCheckError(error: unknown): boolean {
+  if (error instanceof TlsPermanentCheckError) return false;
+  if (error instanceof TlsCertificateError) return false;
+  if (error instanceof SetupApiValidationError) return false;
+  const message = error instanceof Error ? error.message : String(error);
+  if (/TLS_PEBBLE_ROOT_CA_PATH/.test(message)) return false;
+  if (/kein PEM-Zertifikat/.test(message)) return false;
+  return true;
+}
+
 async function reloadProxyDefault(ctx: SetupContext): Promise<void> {
-  const result = await composeUp({
+  const options = {
     projectRoot: ctx.home,
     composeProjectName: ctx.composeProjectName,
     withProxy: true,
-    build: false,
+    build: false as const,
     services: ['proxy'],
-  });
+  };
+  const before = await composePs(options);
+  const proxyWasRunning = before.services.some(
+    (service) => service.service === 'proxy' && service.state.toLowerCase().includes('running'),
+  );
+  const result = await composeUp(options);
   if (!result.ok)
     throw new TlsRuntimeUnavailableError(result.log || 'Caddy konnte nicht gestartet werden.');
+  if (planProxyReloadAfterUp({ proxyWasRunning, upLog: result.log }) === 'none') return;
+  const reloaded = await composeExec({
+    ...options,
+    service: 'proxy',
+    args: ['caddy', 'reload', '--config', '/etc/caddy/Caddyfile'],
+  });
+  if (reloaded.ok) return;
+  const signalled = await composeExec({
+    ...options,
+    service: 'proxy',
+    args: ['kill', '-USR1', '1'],
+  });
+  if (!signalled.ok) {
+    throw new TlsRuntimeUnavailableError(
+      reloaded.log || signalled.log || 'Caddy konnte nicht neu geladen werden.',
+    );
+  }
 }
 
 function parseCertificateNames(certificate: X509Certificate): string[] {
@@ -455,15 +633,19 @@ function readPeerCertificate(socket: tls.TLSSocket): TlsCertificateStatus {
 async function localChecksDefault(
   hostname: string,
   httpsPort: number,
+  env: Map<string, string>,
 ): Promise<{ certificate: TlsCertificateStatus; checks: TlsLocalCheck[] }> {
   const timeoutMs = 8_000;
-  const socket = tls.connect({
+  const ca = pebbleLocalCheckCa(env);
+  const tlsOptions = {
     host: '127.0.0.1',
     port: httpsPort,
     servername: hostname,
     ALPNProtocols: ['h2'],
     rejectUnauthorized: true,
-  });
+    ...(ca ? { ca } : {}),
+  };
+  const socket = tls.connect(tlsOptions);
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
     socket.once('secureConnect', () => {
@@ -485,14 +667,7 @@ async function localChecksDefault(
   socket.destroy();
 
   const client = http2.connect(`https://${hostname}:${httpsPort}`, {
-    createConnection: () =>
-      tls.connect({
-        host: '127.0.0.1',
-        port: httpsPort,
-        servername: hostname,
-        ALPNProtocols: ['h2'],
-        rejectUnauthorized: true,
-      }),
+    createConnection: () => tls.connect(tlsOptions),
   });
   const sseOk = await new Promise<boolean>((resolve) => {
     const timer = setTimeout(() => resolve(false), timeoutMs);
@@ -549,6 +724,10 @@ function fakeCertificate(hostname: string): TlsCertificateStatus {
   };
 }
 
+function allChecksPass(checks: TlsLocalCheck[]): boolean {
+  return checks.length >= 4 && checks.every((check) => check.ok);
+}
+
 async function runChecks(
   env: Map<string, string>,
   hostname: string,
@@ -565,9 +744,58 @@ async function runChecks(
       ],
     };
   }
-  return (deps.runLocalChecks ?? localChecksDefault)(
-    hostname,
-    Number(env.get('PROXY_HTTPS_PORT') || 443),
+  const checked = await (
+    deps.runLocalChecks ?? ((name, port) => localChecksDefault(name, port, env))
+  )(hostname, Number(env.get('PROXY_HTTPS_PORT') || 443));
+  if (!allChecksPass(checked.checks)) {
+    const failed = checked.checks.find((check) => !check.ok);
+    throw new TlsRuntimeUnavailableError(
+      failed?.message || 'Lokale TLS-Prüfungen sind nicht vollständig grün.',
+    );
+  }
+  return checked;
+}
+
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runChecksUntilReady(
+  env: Map<string, string>,
+  hostname: string,
+  deps: TlsRuntimeDependencies,
+): Promise<{ certificate: TlsCertificateStatus; checks: TlsLocalCheck[] }> {
+  if (fakeRuntimeEnabled(env)) {
+    return runChecks(env, hostname, deps);
+  }
+  const retry = deps.localCheckRetry ?? {};
+  const intervalMs = retry.intervalMs ?? TLS_LOCAL_CHECK_RETRY_INTERVAL_MS;
+  const timeoutMs = retry.timeoutMs ?? TLS_LOCAL_CHECK_RETRY_TIMEOUT_MS;
+  const now = retry.now ?? (() => Date.now());
+  const sleep = retry.sleep ?? sleepMs;
+  const deadline = now() + timeoutMs;
+  const maxAttempts = Math.max(2, Math.floor(timeoutMs / Math.max(intervalMs, 1)) + 2);
+  let lastError: unknown;
+  let attempts = 0;
+  while (true) {
+    try {
+      return await runChecks(env, hostname, deps);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableLocalCheckError(error)) {
+        throw error;
+      }
+      attempts += 1;
+      if (now() >= deadline || attempts >= maxAttempts) {
+        break;
+      }
+      await sleep(intervalMs);
+    }
+  }
+  const lastMessage =
+    lastError instanceof Error ? lastError.message : lastError ? String(lastError) : 'unbekannt';
+  throw new TlsRuntimeUnavailableError(
+    `Lokale TLS-Prüfungen sind nach ${timeoutMs}ms nicht grün: ${lastMessage}`,
   );
 }
 
@@ -658,16 +886,26 @@ export async function prepareHostTls(
     if (input.mode === 'managed') {
       const token = createOneTimeToken(deps.randomBytes);
       writeSecretFileAtomically(paths.operatorToken, `${token}\n`);
-      const serverUrl = env.get('TLS_ACME_DNS_API')?.trim() || TLS_ACME_DNS_API_DEFAULT;
+      const serverUrl = requireTlsHttpUrl(
+        env.get('TLS_ACME_DNS_API')?.trim() || TLS_ACME_DNS_API_DEFAULT,
+        'TLS_ACME_DNS_API',
+      );
+      resolveAcmeDnsCredentialsServerUrl(env, serverUrl);
       const registration = await (deps.registerAcmeDns ?? registerAcmeDnsDefault)(serverUrl);
-      writeSecretFileAtomically(
+      writeAcmeDnsCredentials(
         paths.acmeDnsCredentials,
-        `${JSON.stringify({ username: registration.username, password: registration.password, subdomain: registration.subdomain, server_url: registration.serverUrl }, null, 2)}\n`,
+        registration,
+        resolveAcmeDnsCredentialsServerUrl(env, registration.serverUrl),
       );
       operatorRequest = buildOperatorRequest(status, lanIp, token, registration.fulldomain);
       persistStatus(ctx, status, { TLS_ACME_CNAME_TARGET: registration.fulldomain });
+      status = {
+        ...transitionTlsStatus(status, { type: 'prepared' }),
+        acmeCnameTarget: registration.fulldomain,
+      };
+    } else {
+      status = transitionTlsStatus(status, { type: 'prepared' });
     }
-    status = transitionTlsStatus(status, { type: 'prepared' });
     const currentEnv = readEnvMap(envPath);
     writeGeneratedTlsCaddyfile(ctx.home, status, currentEnv);
     persistStatus(ctx, status);
@@ -700,9 +938,13 @@ export async function verifyHostTlsDns(
     throw new SetupApiValidationError(`DNS-Prüfung ist im Zustand ${status.state} nicht erlaubt.`);
   }
   const lanIp = env.get('TLS_LAN_IP')?.trim() || '';
+  const resolverServers = parseTlsDnsResolvers(env.get('TLS_DNS_RESOLVERS'));
   let observation: TlsDnsObservation;
   try {
-    observation = await (deps.verifyDns ?? verifyDnsDefault)(status.hostname, status.mode);
+    observation = await (
+      deps.verifyDns ??
+      ((name, mode) => verifyDnsDefault(name, mode, resolverServers, deps.createDnsResolver))
+    )(status.hostname, status.mode);
   } catch (error) {
     observation = {
       aRecords: [],
@@ -785,19 +1027,20 @@ export function stageCustomCertificate(
   return { tls: next };
 }
 
-function allChecksPass(checks: TlsLocalCheck[]): boolean {
-  return checks.length >= 4 && checks.every((check) => check.ok);
-}
-
 async function prepareRuntimeAndCheck(
   ctx: SetupContext,
   status: TlsStatus,
   deps: TlsRuntimeDependencies,
+  options?: { waitUntilReady?: boolean },
 ): Promise<{ status: TlsStatus; checks: TlsLocalCheck[] }> {
   const env = readEnvMap(envPathOf(ctx));
   writeGeneratedTlsCaddyfile(ctx.home, status, env);
   if (!fakeRuntimeEnabled(env)) await (deps.reloadProxy ?? reloadProxyDefault)(ctx);
-  const checked = await runChecks(readEnvMap(envPathOf(ctx)), status.hostname!, deps);
+  const envAfter = readEnvMap(envPathOf(ctx));
+  const checked =
+    options?.waitUntilReady === false
+      ? await runChecks(envAfter, status.hostname!, deps)
+      : await runChecksUntilReady(envAfter, status.hostname!, deps);
   if (!allChecksPass(checked.checks)) {
     throw new TlsRuntimeUnavailableError('Lokale TLS-Prüfungen sind nicht vollständig grün.');
   }
@@ -862,7 +1105,9 @@ export async function checkCustomCertificate(
     status.hostname,
   );
   try {
-    const checked = await prepareRuntimeAndCheck(ctx, { ...status, certificate: metadata }, deps);
+    const checked = await prepareRuntimeAndCheck(ctx, { ...status, certificate: metadata }, deps, {
+      waitUntilReady: false,
+    });
     status = checked.status;
     persistStatus(ctx, status);
     return { tls: status, checks: checked.checks };
@@ -888,24 +1133,47 @@ export async function applyHostTls(
     throw new SetupApiValidationError('HTTPS ist nicht vorbereitet.');
   const status = transitionTlsStatus(current, { type: 'apply' });
   writeGeneratedTlsCaddyfile(ctx.home, status, env);
-  persistStatus(ctx, status, {
+  const cutoverEnv = {
     PROXY_ENABLED: 'true',
     PROXY_MODE: `tls-${status.mode}`,
     APP_BIND_ADDRESS: '127.0.0.1',
     CANONICAL_BASE_URL: `https://${status.hostname}`,
     TRUST_PROXY_HEADERS: 'true',
-  });
+  };
   try {
-    if (!fakeRuntimeEnabled(env)) await (deps.reloadProxy ?? reloadProxyDefault)(ctx);
-    return { tls: status };
+    let checks: TlsLocalCheck[] | undefined;
+    if (!fakeRuntimeEnabled(env)) {
+      await (deps.reloadProxy ?? reloadProxyDefault)(ctx);
+      const checked = await runChecks(readEnvMap(envPath), status.hostname, deps);
+      if (!allChecksPass(checked.checks)) {
+        throw new TlsRuntimeUnavailableError(
+          'Lokale TLS-Prüfungen sind nach dem Cutover nicht vollständig grün.',
+        );
+      }
+      checks = checked.checks;
+    }
+    persistStatus(ctx, status, cutoverEnv);
+    return { tls: status, checks };
   } catch (error) {
-    const failed = transitionTlsStatus(status, {
-      type: 'fail',
-      errorClass: 'firewall',
-      message: error instanceof Error ? error.message : String(error),
-    });
-    persistStatus(ctx, failed, { TLS_RETRY_STATE: 'active' });
-    throw error;
+    writeGeneratedTlsCaddyfile(ctx.home, current, env);
+    if (!fakeRuntimeEnabled(env)) {
+      await (deps.reloadProxy ?? reloadProxyDefault)(ctx).catch(() => undefined);
+    }
+    persistStatus(
+      ctx,
+      {
+        ...current,
+        lastError: {
+          class: 'firewall',
+          message: error instanceof Error ? error.message : String(error),
+        },
+      },
+      { TLS_RETRY_STATE: 'dns-verified' },
+    );
+    if (error instanceof TlsRuntimeUnavailableError || error instanceof SetupApiValidationError) {
+      throw error;
+    }
+    throw new TlsRuntimeUnavailableError(error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -927,21 +1195,17 @@ export async function repairHostTls(
     if (!fs.existsSync(paths.operatorToken)) {
       writeSecretFileAtomically(paths.operatorToken, `${token}\n`);
     }
-    const serverUrl = env.get('TLS_ACME_DNS_API')?.trim() || TLS_ACME_DNS_API_DEFAULT;
+    const serverUrl = requireTlsHttpUrl(
+      env.get('TLS_ACME_DNS_API')?.trim() || TLS_ACME_DNS_API_DEFAULT,
+      'TLS_ACME_DNS_API',
+    );
+    resolveAcmeDnsCredentialsServerUrl(env, serverUrl);
     try {
       const registration = await (deps.registerAcmeDns ?? registerAcmeDnsDefault)(serverUrl);
-      writeSecretFileAtomically(
+      writeAcmeDnsCredentials(
         paths.acmeDnsCredentials,
-        `${JSON.stringify(
-          {
-            username: registration.username,
-            password: registration.password,
-            subdomain: registration.subdomain,
-            server_url: registration.serverUrl,
-          },
-          null,
-          2,
-        )}\n`,
+        registration,
+        resolveAcmeDnsCredentialsServerUrl(env, registration.serverUrl),
       );
       status = transitionTlsStatus(status, { type: 'prepared' });
       persistStatus(ctx, status, {

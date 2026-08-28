@@ -14,6 +14,10 @@ export const SETUP_TLS_ROUTES = {
   renew: '/api/setup/host/tls/renew',
 } as const;
 
+/** PoC operator zone (product later: lan.praxis-flow.de). */
+export const TLS_OPERATOR_ZONE_DEFAULT = 'lan.notaus.de';
+export const TLS_OPERATOR_MAIL = 'cert@notaus.de';
+
 export const SETUP_DEFAULT_GATEWAY_INTERFACE = 'eth1';
 export const SETUP_DEFAULT_GATEWAY_IP = '192.168.88.1';
 
@@ -284,6 +288,7 @@ export type SetupProbesResult = {
 export type LanCandidate = {
   address: string;
   interfaceName: string;
+  mac?: string;
 };
 
 export type NetworkBindingCheck = {
@@ -357,6 +362,8 @@ export type TlsStatus = {
   cutoverApplied: boolean;
   certificate: TlsCertificateStatus | null;
   lastError: { class: TlsErrorClass; message: string } | null;
+  /** Public ACME-DNS fulldomain for mail replay. Not a secret. */
+  acmeCnameTarget: string | null;
 };
 
 export type TlsPrepareInput = {
@@ -523,6 +530,7 @@ export type NetworkAddress = {
   address: string;
   internal: boolean;
   cidr?: string;
+  mac?: string;
 };
 
 export type NetworkInterfaceInfo = {
@@ -536,6 +544,7 @@ export type NetworkSnapshot = {
     label: string;
     address: string;
     interfaceName: string;
+    mac?: string;
   }>;
   /** Host machine hostname (comfort path for LAN reachability). */
   machineHostname: string;

@@ -3,7 +3,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { PRAXIS_FLOW_PROXY_IMAGE_REF } from '@praxis-flow/server-shared';
+import {
+  PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF,
+  PRAXIS_FLOW_PROXY_IMAGE_REF,
+} from '@praxis-flow/server-shared';
 import {
   auditDeliveryImages,
   classifyPraxisFlowImages,
@@ -283,6 +286,63 @@ test('loadDeliveryImagesFromArchive sets PRAXIS_FLOW_PROXY_IMAGE when Caddy was 
     assert.equal(env.get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:1.4.2');
     assert.equal(env.get('PRAXIS_FLOW_SANDBOX_IMAGE'), 'praxis-flow/sandbox:1.4.2');
     assert.equal(env.get('PRAXIS_FLOW_PROXY_IMAGE'), PRAXIS_FLOW_PROXY_IMAGE_REF);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('loadDeliveryImagesFromArchive sets PRAXIS_FLOW_PROXY_IMAGE from a legacy stock load', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-proxy-legacy-load-'));
+  try {
+    fs.writeFileSync(path.join(root, 'docker-compose.delivery.yml'), 'services: {}\n');
+    fs.writeFileSync(
+      path.join(root, '.env.example'),
+      [
+        'PRACTICE_DISPLAY_NAME=Praxis Flow',
+        '# PRAXIS_FLOW_APP_IMAGE=ghcr.io/example/app:v1',
+        '# PRAXIS_FLOW_SANDBOX_IMAGE=ghcr.io/example/sandbox:v1',
+        '',
+      ].join('\n'),
+    );
+    const archivePath = path.join(root, 'praxis-flow-1.4.2-images.tar.gz');
+    fs.writeFileSync(archivePath, 'fake-archive');
+
+    const result = await loadDeliveryImagesFromArchive(
+      root,
+      archivePath,
+      { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
+      {
+        verifyReleaseArchiveSha256: () => ({
+          sha256: 'c'.repeat(64),
+          expectedSha256: 'c'.repeat(64),
+          sha256Source: 'manifest.json',
+          releaseVersion: '1.4.2',
+        }),
+        dockerLoadArchive: async () => ({
+          ok: true,
+          loaded: [
+            'praxis-flow/app:1.4.2',
+            'praxis-flow/sandbox:1.4.2',
+            PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF,
+          ],
+          log: 'loaded',
+        }),
+        auditDeliveryImages: async () => ({
+          required: true,
+          configured: true,
+          appImage: 'praxis-flow/app:1.4.2',
+          sandboxImage: 'praxis-flow/sandbox:1.4.2',
+          releaseVersion: '1.4.2',
+          archiveSha256: 'c'.repeat(64),
+          appPresent: true,
+          sandboxPresent: true,
+          ready: true,
+        }),
+      },
+    );
+
+    const env = readEnvMap(result.envPath);
+    assert.equal(env.get('PRAXIS_FLOW_PROXY_IMAGE'), PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

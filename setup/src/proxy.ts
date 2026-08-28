@@ -5,8 +5,8 @@ import type {
   ProxyStatus,
 } from '@praxis-flow/server-shared';
 import {
+  PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF,
   PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY,
-  PRAXIS_FLOW_PROXY_IMAGE_REF,
 } from '@praxis-flow/server-shared';
 import { runDockerCommand } from './docker-cli.js';
 import { DEFAULT_PROXY_HTTP_PORT } from './network-bindings.js';
@@ -391,7 +391,9 @@ export function planProxyComposeActions(input: {
 }
 
 export function resolveProxyImageRef(env?: EnvLike): string {
-  return readEnvValue(env, PROXY_IMAGE_ENV_KEY)?.trim() || PRAXIS_FLOW_PROXY_IMAGE_REF;
+  return (
+    readEnvValue(env, PROXY_IMAGE_ENV_KEY)?.trim() || PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF
+  );
 }
 
 export type EnsureProxyImageResult = {

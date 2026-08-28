@@ -2,7 +2,7 @@
 
 Stand: 2026-08-28
 
-Kein Kunden-Dokument. Einstieg für Beta/IT: [`docs/README.md`](docs/README.md) · Scope: [`docs/roadmap.md`](docs/roadmap.md).  
+Kein Kunden-Dokument. Einstieg für Beta/IT: [`docs/README.md`](docs/README.md) · Scope: [`docs/roadmap.md`](docs/roadmap.md).
 Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-history.md).
 
 ## Jetzt — Kunden-Test
@@ -18,8 +18,16 @@ Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-histo
 - TLS / Internet-Portal: [`docs/plan-proxy-tls.md`](docs/plan-proxy-tls.md), Manager: [`docs/plan-proxy-tls-manager.md`](docs/plan-proxy-tls-manager.md) — Mailtext an Praxis Flow, DNS manuell/zeitversetzt, 6-Steller oder Wunsch-Label
 - Captive-Vendor-Adapter (WLAN bleibt Praxis-IT)
 
+## Als Nächstes — Wizard-Schritt 6 HTTPS (Manager)
+
+Setup-API, Cutover und Netzwerk-Tab stehen. Assistent ist noch 1–7 (nach Zugang direkt Vorschau/Apply, HTTP). Mock: `docs/mocks/lan-tls-wizard/` (nicht 1:1). Reihenfolge: (1) Nummern 1–8, Preview=7/Apply=8, ohne Proxy 5→7; (2) `planWizardAdvance` + https-Phasen im Flow; (3) UI in `WizardSteps.svelte` + Dots. DNS/Cert/Cutover bleiben unter Netzwerk. Kein Sidecar/Restore-Gate/Fehlerklassen in diesem Paket.
+
 ## Heute (2026-08-28)
 
+- Manager Netzwerk-HTTPS-Block: Start unter Netzwerk; Token-Reload via prepare; Cutover/Reset mit Confirm; PEM nur in Main; Obtain-Timeout 6min. Wizard-Schritt 6 und Backup-Sidecar extra.
+- Arbeitspaket 4/4: HTTPS-Cutover-E2E — isolierter `npm run smoke:tls-cutover` (Pebble), `apply` nach `applyReady`; Canonical/Geräte HTTPS, Port-80-Redirect; Reload-Fehler rollt Canonical zurück.
+- Pebble-Pfad Review: Compose-Restart nur Produkt-Services; Proxy-Reload ohne hartes Restart nach Recreate; lokale Checks fail-fast bei Konfig/PEM; Smoke-Obtain 180s
+- Arbeitspaket 3/4: Setup-TLS an Pebble-Lab — `TLS_DNS_RESOLVERS`, getrennte acme-dns-URLs, Pebble-Root nur für lokale Checks, Caddy-Bereitschaft pollend, `npm run smoke:tls-managed` bis `applyReady=true`; Smoke erkennt auch gestoppte Namenskollisionen und räumt partielle Starts auf (kein `apply`, kein `TLS_RUNTIME_FAKE`)
 - Arbeitspaket 2/4: TLS-Lab-Infra opt-in — `docker-compose.tls-lab.yml` (Pebble 2.10.1, acme-dns v1.0, CoreDNS 1.14.7), Proxy-Minica-Overlay, `docs/tls-lab.md`, `npm run smoke:tls-lab`; kein Setup-obtain
 - TLS-Lab Review: Challenge-CNAME nach `/register` schreiben + Kette prüfen; Start/Smoke als Alternativen; curl-Hilfsimage per Digest
 - Arbeitspaket 1/4: lokales Custom-Caddy-Image `praxis-flow-proxy:2.11.4-acmedns` (`proxy/Dockerfile`, xcaddy + `acmedns@v0.7.0`); Compose weiter über `PRAXIS_FLOW_PROXY_IMAGE`, Default bleibt Stock `caddy:2.11.4`

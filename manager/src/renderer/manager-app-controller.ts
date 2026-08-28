@@ -26,6 +26,7 @@ export type ManagerAppController = {
   onStatusSetupClick: () => void;
   onStatusLoadReleaseArchive: () => void;
   onStatusOpenUrl: (url: string) => void;
+  onOpenNetwork: () => void;
   onAfterMutation: () => Promise<void>;
   onWizardComplete: () => void;
   onWizardCancel: () => void;
@@ -139,6 +140,9 @@ export function createManagerAppController(): ManagerAppController {
     },
     onStatusOpenUrl: (url: string) => {
       void requirePraxisManager().openExternalUrl(url);
+    },
+    onOpenNetwork: () => {
+      navigateTab('network');
     },
     onAfterMutation,
     onWizardComplete: onWizardLeave,

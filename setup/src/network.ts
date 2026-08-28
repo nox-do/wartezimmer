@@ -21,6 +21,7 @@ export function listNetworkInterfaces(): NetworkInterfaceInfo[] {
         address: entry.address,
         internal: entry.internal,
         cidr: entry.cidr ?? undefined,
+        mac: entry.mac || undefined,
       });
     }
     if (addresses.length > 0) {
@@ -35,8 +36,9 @@ export function listLanIpv4Candidates(): {
   label: string;
   address: string;
   interfaceName: string;
+  mac?: string;
 }[] {
-  const candidates: { label: string; address: string; interfaceName: string }[] = [];
+  const candidates: { label: string; address: string; interfaceName: string; mac?: string }[] = [];
 
   for (const iface of listNetworkInterfaces()) {
     for (const addr of iface.addresses) {
@@ -47,6 +49,7 @@ export function listLanIpv4Candidates(): {
         label: `${addr.address} (${iface.name})`,
         address: addr.address,
         interfaceName: iface.name,
+        mac: addr.mac,
       });
     }
   }

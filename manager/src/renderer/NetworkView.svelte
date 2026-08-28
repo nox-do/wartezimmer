@@ -41,6 +41,9 @@
   import ProxyRecoveryAction from './ProxyRecoveryAction.svelte';
   import LanIpPanel from './LanIpPanel.svelte';
   import ReachabilityPanel from './ReachabilityPanel.svelte';
+  import TlsNetworkPanel from './TlsNetworkPanel.svelte';
+  import { createTlsNetworkController, type TlsNetworkController, type TlsNetworkState } from './tls-network-controller.js';
+  import { tlsNetworkSubtitle } from './tls-network-view-model.js';
 
   let {
     onAfterMutation,
@@ -61,6 +64,9 @@
 
   let controller = $state<NetworkController | null>(null);
   let lastSessionGeneration = $state<number | null>(null);
+  let tlsController = $state<TlsNetworkController | null>(null);
+  let tlsSnapshot = $state<TlsNetworkState | null>(null);
+  let tlsOpen = $state(true);
 
   const viewLoading = $derived(managerShell.viewLoading.network);
   const configSnapshot = $derived(managerShell.configSnapshot);
@@ -103,6 +109,7 @@
     reachabilityOpen = defaults.reachabilityOpen;
     checksOpen = defaults.checksOpen;
     topologyOpen = defaults.topologyOpen;
+    tlsOpen = defaults.tlsOpen;
   }
 
   function requestConfirm(message: string, onConfirm: () => void): void {
@@ -162,6 +169,10 @@
 
   const savedUrl = $derived(savedDeviceBaseUrl(configSnapshot));
 
+  function syncTlsSnapshot(): void {
+    tlsSnapshot = tlsController ? { ...tlsController.getState() } : null;
+  }
+
   onMount(() => {
     controller = createNetworkController({
       api: requireApi(),
@@ -171,11 +182,25 @@
       requestConfirm,
       onStateChange: syncSnapshot,
     });
+    tlsController = createTlsNetworkController({
+      api: requireApi(),
+      getConfig: () => managerShell.configSnapshot,
+      lanIp: () =>
+        resolvedLanIp(
+          controller?.getState() ?? { lanAppIp: '', customLanIp: '' },
+        ) ||
+        effectiveConfiguredLanIp(managerShell.configSnapshot, managerShell.runtimeSnapshot),
+      onAfterMutation,
+      onStateChange: syncTlsSnapshot,
+      requestConfirm,
+    });
     syncSnapshot();
+    syncTlsSnapshot();
   });
 
   $effect(() => {
     const c = controller;
+    const tls = tlsController;
     const session = managerShell.networkSession;
     const config = managerShell.configSnapshot;
     if (!c) {
@@ -199,6 +224,7 @@
       c.show();
       syncSnapshot();
       applyExpanderDefaults(c.getState());
+      void tls?.hydrateOperatorRequest();
       return;
     }
 
@@ -221,8 +247,28 @@
   {#if configSnapshot && snapshot}
     <section class="panel-section panel-section--network">
       <div class="maintenance-accordion">
-        <!-- LAN-TLS port: the dedicated TLS section is inserted before LAN/HTTP controls.
-             Its actions use a separate controller/API branch, never applyAndVerify(). -->
+        <!-- LAN-TLS port: TLS actions never go through applyAndVerify() / POST /host/network. -->
+        {#if tlsController && tlsSnapshot}
+          <MaintenanceSection
+            open={tlsOpen}
+            title="HTTPS"
+            subtitle={tlsNetworkSubtitle(configSnapshot.tls)}
+            onToggle={() => {
+              tlsOpen = !tlsOpen;
+            }}
+          >
+            <TlsNetworkPanel
+              status={configSnapshot}
+              network={snapshot.network}
+              lanIp={diagramLanIp}
+              state={tlsSnapshot}
+              controller={tlsController}
+              busy={busy || tlsSnapshot.busy}
+              onOpenMail={(href) => void requireApi().openExternalUrl(href)}
+            />
+          </MaintenanceSection>
+        {/if}
+
         <MaintenanceSection
           open={lanOpen}
           title="Adresse dieses Rechners"

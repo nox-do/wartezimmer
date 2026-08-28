@@ -172,6 +172,13 @@ export function statusGridRows(status: HostStatus): StatusGridRow[] {
 
   rows.push({ label: 'Proxy-Server', value: proxyStatusLabel(status) });
 
+  if (status.tls && status.tls.state !== 'off' && status.tls.hostname) {
+    rows.push({
+      label: 'HTTPS',
+      value: status.tls.cutoverApplied ? `aktiv · ${status.tls.hostname}` : `vorbereitet · ${status.tls.hostname}`,
+    });
+  }
+
   if (status.deliveryImages.required) {
     rows.push({ label: 'Software-Paket', value: deliveryImagesSummary(status) });
   }
@@ -182,6 +189,9 @@ export function statusGridRows(status: HostStatus): StatusGridRow[] {
 function proxyStatusLabel(status: HostStatus): string {
   if (!status.proxy?.enabled) {
     return 'Aus';
+  }
+  if (status.tls?.cutoverApplied) {
+    return 'Läuft · HTTPS (Proxy nur Weiterleitung)';
   }
   const port = status.proxy.httpPort || 80;
   const state = status.proxy.container?.state?.toLowerCase() ?? '';

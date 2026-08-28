@@ -20,6 +20,7 @@ import type {
   SelectFolderResult,
   SelectReleaseArchiveResult,
   SelectPfupdateArchiveResult,
+  TlsPemSetupResult,
   StorageFoldersInput,
   StorageFoldersResult,
   HostNetworkInput,
@@ -34,6 +35,10 @@ import type {
   SetupPlan,
   SetupPlanInput,
   SetupProbesResult,
+  TlsActionResult,
+  TlsPrepareInput,
+  TlsPrepareResult,
+  TlsVerifyDnsResult,
 } from '../shared/host-status.js';
 import {
   IPC_FETCH_SETUP_STATUS,
@@ -44,9 +49,12 @@ import {
   IPC_SELECT_FOLDER,
   IPC_SELECT_RELEASE_ARCHIVE,
   IPC_SELECT_PFUPDATE_ARCHIVE,
+  IPC_STAGE_TLS_PEM,
+  IPC_RENEW_TLS_PEM,
   IPC_SETUP_API_CALL,
   type SetupApiCallRequest,
 } from '../shared/ipc-channels.js';
+import { SETUP_TLS_ROUTES } from '@praxis-flow/server-shared';
 
 const managerVersion = managerPackage.version;
 
@@ -258,6 +266,50 @@ async function saveHostNetwork(body: HostNetworkInput): Promise<HostNetworkResul
   });
 }
 
+async function prepareHostTls(body: TlsPrepareInput): Promise<TlsPrepareResult> {
+  return callSetupApi<TlsPrepareResult>({ method: 'POST', path: SETUP_TLS_ROUTES.prepare, body });
+}
+
+async function verifyHostTlsDns(): Promise<TlsVerifyDnsResult> {
+  return callSetupApi<TlsVerifyDnsResult>({ method: 'POST', path: SETUP_TLS_ROUTES.verifyDns });
+}
+
+async function obtainHostTlsCertificate(): Promise<TlsActionResult> {
+  return callSetupApi<TlsActionResult>({ method: 'POST', path: SETUP_TLS_ROUTES.obtainCertificate });
+}
+
+async function stageHostTlsCertificate(): Promise<TlsPemSetupResult> {
+  return invokeMain<TlsPemSetupResult>(IPC_STAGE_TLS_PEM);
+}
+
+async function checkHostTlsCertificate(): Promise<TlsActionResult> {
+  return callSetupApi<TlsActionResult>({ method: 'POST', path: SETUP_TLS_ROUTES.checkCertificate });
+}
+
+async function applyHostTls(): Promise<TlsActionResult> {
+  return callSetupApi<TlsActionResult>({ method: 'POST', path: SETUP_TLS_ROUTES.apply });
+}
+
+async function repairHostTls(): Promise<TlsActionResult> {
+  return callSetupApi<TlsActionResult>({ method: 'POST', path: SETUP_TLS_ROUTES.repair });
+}
+
+async function resetHostTls(): Promise<TlsActionResult> {
+  return callSetupApi<TlsActionResult>({ method: 'POST', path: SETUP_TLS_ROUTES.reset });
+}
+
+async function renewHostTls(): Promise<TlsActionResult> {
+  return callSetupApi<TlsActionResult>({
+    method: 'POST',
+    path: SETUP_TLS_ROUTES.renew,
+    body: {},
+  });
+}
+
+async function renewHostTlsFromPem(): Promise<TlsPemSetupResult> {
+  return invokeMain<TlsPemSetupResult>(IPC_RENEW_TLS_PEM);
+}
+
 async function runSetupProbes(body: {
   localAppBaseUrl?: string;
   lanAppBaseUrl?: string;
@@ -321,6 +373,16 @@ contextBridge.exposeInMainWorld('praxisManager', {
   applyPfupdate,
   saveStorageFolders,
   saveHostNetwork,
+  prepareHostTls,
+  verifyHostTlsDns,
+  obtainHostTlsCertificate,
+  stageHostTlsCertificate,
+  checkHostTlsCertificate,
+  applyHostTls,
+  repairHostTls,
+  resetHostTls,
+  renewHostTls,
+  renewHostTlsFromPem,
   getPfbackupInfo,
   resetStaffPins,
   getRoutingMode,

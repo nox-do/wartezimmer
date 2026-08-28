@@ -8,6 +8,7 @@ import {
   composeRestart,
   composeStop,
   composeUp,
+  resolveProductComposeServices,
   detectDocker,
   ensureHomeFolders,
   resolveHomeFolders,
@@ -281,7 +282,10 @@ export async function runComposeAction(
       });
       result = { ok: up.ok, log: up.log };
     } else {
-      result = await composeRestart(runOptions);
+      result = await composeRestart({
+        ...runOptions,
+        services: resolveProductComposeServices(runOptions),
+      });
     }
   }
 
@@ -471,6 +475,7 @@ export function buildHostNetworkStatus(envMap: Map<string, string>): HostNetwork
   const currentLanCandidates = listLanIpv4Candidates().map((candidate) => ({
     address: candidate.address,
     interfaceName: candidate.interfaceName,
+    mac: candidate.mac,
   }));
 
   return {

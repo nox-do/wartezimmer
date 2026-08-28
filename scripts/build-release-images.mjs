@@ -28,7 +28,7 @@ import { pipeline } from 'node:stream/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createGzip } from 'node:zlib';
 import { appDockerBuildArgs } from './release-app-image.mjs';
-import { preparePinnedProxyImage } from './release-proxy-image.mjs';
+import { prepareDeliveryProxyImage } from './release-proxy-image.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -44,7 +44,7 @@ Options:
 Images tagged as:
   praxis-flow/app:<version>
   praxis-flow/sandbox:<version>
-  ${proxyImage}   ← optional offline reverse proxy (not auto-started)
+  ${proxyImage}   ← optional offline reverse proxy with ACME-DNS (not auto-started)
 `);
 }
 
@@ -210,6 +210,7 @@ async function loadProxyReleaseConfig() {
   const pfupdate = await import(pathToFileURL(modulePath).href);
   return {
     imageRef: pfupdate.PRAXIS_FLOW_PROXY_IMAGE_REF,
+    baseImageRef: pfupdate.PRAXIS_FLOW_PROXY_BASE_IMAGE_REF,
     registryDigest: pfupdate.PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
   };
 }
@@ -235,13 +236,16 @@ if (noBuild) {
   console.log('Skipping build (--no-build). Checking local tags …');
   assertImageExists(appImage);
   assertImageExists(sandboxImage);
+  assertImageExists(proxyImage);
 } else {
   buildReleaseImages(version);
 }
 
-const proxyImageDigest = preparePinnedProxyImage({
+const proxyImageDigest = prepareDeliveryProxyImage({
   imageRef: proxyImage,
+  baseImageRef: proxyRelease.baseImageRef,
   registryDigest: proxyRelease.registryDigest,
+  skipBuild: noBuild,
   run,
   runCapture,
 });
@@ -297,7 +301,7 @@ console.log('    manifest.json');
 console.log('    SHA256SUMS.txt');
 console.log('    THIRD_PARTY_NOTICES.txt + licenses/caddy/LICENSE.txt');
 console.log('');
-console.log(`Includes optional offline proxy image ${proxyImage} (~85 MB / ~22 MB gzip).`);
+console.log(`Includes optional offline proxy image ${proxyImage} (xcaddy + acmedns).`);
 console.log('Proxy stays disabled until explicitly enabled in Manager/Setup.');
 console.log('');
 console.log('Upload to customer share (e.g. Google Drive):');

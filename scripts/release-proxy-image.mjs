@@ -1,5 +1,8 @@
 const SHA256_PATTERN = /^sha256:[a-f0-9]{64}$/;
 
+export const PROXY_DOCKERFILE = 'proxy/Dockerfile';
+export const PROXY_ACMEDNS_MODULE = 'dns.providers.acmedns';
+
 function parseImageInspection(raw, imageRef) {
   let inspection;
   try {
@@ -42,40 +45,59 @@ export function pinnedImageRef(imageRef, registryDigest) {
   return `${normalizedRef}@${normalizedDigest}`;
 }
 
-/**
- * Pulls only the immutable, release-approved Caddy digest and then assigns the
- * runtime tag used by Compose. This function is called exclusively by explicit
- * release builders; normal Manager/Compose operation never pulls Caddy.
- */
-export function preparePinnedProxyImage({ imageRef, registryDigest, run, runCapture }) {
-  const sourceRef = pinnedImageRef(imageRef, registryDigest);
+function inspectImage(runCapture, imageRef) {
+  return parseImageInspection(runCapture('docker', ['image', 'inspect', imageRef]), imageRef);
+}
 
-  console.log(`Pulling approved proxy image ${sourceRef} …`);
+/**
+ * Pulls the approved stock Caddy digest, tags the Compose base name, then builds
+ * the delivery proxy (`praxis-flow-proxy:…-acmedns`) from `proxy/Dockerfile`.
+ * Compose HTTP-only defaults stay on stock Caddy; only release packs ship the custom tag.
+ */
+export function prepareDeliveryProxyImage({
+  imageRef,
+  baseImageRef,
+  registryDigest,
+  dockerfile = PROXY_DOCKERFILE,
+  context = '.',
+  skipBuild = false,
+  run,
+  runCapture,
+}) {
+  const sourceRef = pinnedImageRef(baseImageRef, registryDigest);
+
+  console.log(`Pulling approved Caddy base ${sourceRef} …`);
   run('docker', ['pull', sourceRef]);
 
-  const source = parseImageInspection(
-    runCapture('docker', ['image', 'inspect', sourceRef]),
-    sourceRef,
-  );
-
-  run('docker', ['image', 'tag', sourceRef, imageRef]);
-  const tagged = parseImageInspection(
-    runCapture('docker', ['image', 'inspect', imageRef]),
-    imageRef,
-  );
+  const source = inspectImage(runCapture, sourceRef);
+  run('docker', ['image', 'tag', sourceRef, baseImageRef]);
+  const tagged = inspectImage(runCapture, baseImageRef);
 
   if (source.imageId !== tagged.imageId || source.platform !== tagged.platform) {
     throw new Error(
-      `Proxy-Image-Prüfung fehlgeschlagen: ${imageRef} entspricht nicht ${sourceRef}.`,
+      `Proxy-Image-Prüfung fehlgeschlagen: ${baseImageRef} entspricht nicht ${sourceRef}.`,
     );
   }
 
+  if (!skipBuild) {
+    console.log(`Building delivery proxy ${imageRef} from ${dockerfile} …`);
+    run('docker', ['build', '-f', dockerfile, '-t', imageRef, context]);
+  } else {
+    console.log(`Skipping proxy rebuild (--no-build); using local ${imageRef}.`);
+  }
+
+  const custom = inspectImage(runCapture, imageRef);
+  const modules = runCapture('docker', ['run', '--rm', imageRef, 'caddy', 'list-modules']);
+  if (!String(modules).includes(PROXY_ACMEDNS_MODULE)) {
+    throw new Error(`${imageRef} fehlt Modul ${PROXY_ACMEDNS_MODULE}.`);
+  }
+
   console.log(
-    `Verified ${imageRef}: ${tagged.imageId} (${tagged.platform}), registry ${registryDigest}`,
+    `Verified ${imageRef}: ${custom.imageId} (${custom.platform}), base registry ${registryDigest}`,
   );
   return {
-    registryDigest: registryDigest.toLowerCase(),
-    archiveImageId: tagged.imageId,
-    platform: tagged.platform,
+    registryDigest: String(registryDigest).toLowerCase(),
+    archiveImageId: custom.imageId,
+    platform: custom.platform,
   };
 }

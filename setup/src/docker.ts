@@ -51,6 +51,9 @@ export type ComposeRunOptions = {
   composeProjectName: string;
 };
 
+/** Product stack only — never pebble / acme-dns / CoreDNS. */
+export const COMPOSE_TLS_LAB_SERVICES = ['pebble', 'acme-dns', 'coredns'] as const;
+
 function usesDeliveryCompose(projectRoot: string, delivery?: boolean): boolean {
   if (delivery !== undefined) {
     return delivery;
@@ -104,11 +107,19 @@ function wantsProxyTlsCompose(projectRoot: string): boolean {
  * Gateway overlay is included when enabled and the host can run it; callers still
  * pass `--profile gateway` via buildComposeArgv.
  */
+function wantsTlsLabCompose(projectRoot: string): boolean {
+  const envPath = path.join(projectRoot, '.env');
+  if (!fs.existsSync(envPath)) return false;
+  const directory = readEnvMap(envPath).get('TLS_ACME_DIRECTORY')?.trim().toLowerCase();
+  return directory === 'pebble';
+}
+
 export function resolveComposeFiles(input: {
   projectRoot: string;
   delivery?: boolean;
   proxyEnabled?: boolean;
   proxyTlsEnabled?: boolean;
+  tlsLabEnabled?: boolean;
   gatewayEnabled?: boolean;
 }): string[] {
   const useDelivery = usesDeliveryCompose(input.projectRoot, input.delivery);
@@ -120,6 +131,9 @@ export function resolveComposeFiles(input: {
       files.push(
         useDelivery ? 'docker-compose.proxy-tls.delivery.yml' : 'docker-compose.proxy-tls.yml',
       );
+      if (input.tlsLabEnabled && !useDelivery) {
+        files.push('docker-compose.tls-lab.yml', 'docker-compose.tls-lab-proxy.yml');
+      }
     }
   }
 
@@ -130,6 +144,22 @@ export function resolveComposeFiles(input: {
   return files;
 }
 
+export function productComposeServices(input: {
+  proxyEnabled?: boolean;
+  gatewayEnabled?: boolean;
+}): string[] {
+  const services = ['app', 'sandbox'];
+  if (input.proxyEnabled) services.push('proxy');
+  if (input.gatewayEnabled) services.push('gateway');
+  return services;
+}
+
+export function resolveProductComposeServices(options: ComposeRunOptions): string[] {
+  const proxyEnabled = wantsProxyCompose(options.projectRoot, options.withProxy);
+  const { wantGateway } = resolveComposeFileList(options);
+  return productComposeServices({ proxyEnabled, gatewayEnabled: wantGateway });
+}
+
 function resolveComposeFileList(options: ComposeRunOptions): {
   files: string[];
   wantGateway: boolean;
@@ -137,6 +167,11 @@ function resolveComposeFileList(options: ComposeRunOptions): {
 } {
   const proxyEnabled = wantsProxyCompose(options.projectRoot, options.withProxy);
   const proxyTlsEnabled = proxyEnabled && wantsProxyTlsCompose(options.projectRoot);
+  const tlsLabEnabled =
+    proxyTlsEnabled &&
+    wantsTlsLabCompose(options.projectRoot) &&
+    fs.existsSync(path.join(options.projectRoot, 'docker-compose.tls-lab.yml')) &&
+    fs.existsSync(path.join(options.projectRoot, 'docker-compose.tls-lab-proxy.yml'));
   const gatewayWanted = wantsGatewayCompose(options.projectRoot, options.withGateway);
   const wantGateway = gatewayWanted && canRunGatewayCompose();
   const gatewaySkipped = gatewayWanted && !canRunGatewayCompose();
@@ -145,6 +180,7 @@ function resolveComposeFileList(options: ComposeRunOptions): {
     delivery: options.delivery,
     proxyEnabled,
     proxyTlsEnabled,
+    tlsLabEnabled,
     gatewayEnabled: gatewayWanted,
   });
   return { files, wantGateway, gatewaySkipped };
@@ -324,24 +360,39 @@ async function runComposeCommand(
 }
 
 export async function composeStop(
-  options: ComposeRunOptions,
+  options: ComposeRunOptions & { services?: string[] },
 ): Promise<{ ok: boolean; log: string }> {
   const envPath = path.join(options.projectRoot, '.env');
   if (!fs.existsSync(envPath)) {
     return { ok: true, log: 'no .env — skipped compose stop' };
   }
-  const result = await runComposeCommand(options, ['stop']);
+  const result = await runComposeCommand(options, ['stop', ...(options.services ?? [])]);
   return { ok: result.ok, log: result.log };
 }
 
 export async function composeRestart(
-  options: ComposeRunOptions,
+  options: ComposeRunOptions & { services?: string[] },
 ): Promise<{ ok: boolean; log: string }> {
   const envPath = path.join(options.projectRoot, '.env');
   if (!fs.existsSync(envPath)) {
     return { ok: false, log: 'no .env — cannot restart compose stack' };
   }
-  const result = await runComposeCommand(options, ['restart']);
+  const result = await runComposeCommand(options, ['restart', ...(options.services ?? [])]);
+  return { ok: result.ok, log: result.log };
+}
+
+export async function composeExec(
+  options: ComposeRunOptions & { service: string; args: string[] },
+): Promise<{ ok: boolean; log: string }> {
+  const envPath = path.join(options.projectRoot, '.env');
+  if (!fs.existsSync(envPath)) {
+    return { ok: false, log: 'no .env — cannot exec in compose service' };
+  }
+  const service = options.service.trim();
+  if (!service || options.args.length === 0) {
+    return { ok: false, log: 'compose exec requires a service and command' };
+  }
+  const result = await runComposeCommand(options, ['exec', '-T', service, ...options.args]);
   return { ok: result.ok, log: result.log };
 }
 

@@ -8,7 +8,8 @@
 services:
   proxy:
     volumes:
-      - ./lab/tls/pebble.minica.pem:/lab/tls/pebble.minica.pem:ro
+      - ${TLS_LAB_PEBBLE_MINICA_HOST_PATH:-./lab/tls/pebble.minica.pem}:/lab/tls/pebble.minica.pem:ro
     environment:
-      # Append lab CA without replacing Alpine's system store (Go SSL_CERT_DIR is colon-separated).
+      # Minica is only for Pebble's directory/management HTTPS, not for issued leaf certs.
+      SSL_CERT_FILE: /lab/tls/pebble.minica.pem
       SSL_CERT_DIR: /etc/ssl/certs:/lab/tls

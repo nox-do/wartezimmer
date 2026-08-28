@@ -18,7 +18,10 @@ export const PROXY_TLS_RUNTIME_ENV_KEYS = [
   'TLS_ACME_DIRECTORY',
   'TLS_ACME_DIRECTORY_URL',
   'TLS_ACME_DNS_API',
+  'TLS_ACME_DNS_CREDENTIALS_SERVER_URL',
   'TLS_OPERATOR_ZONE',
+  'TLS_DNS_RESOLVERS',
+  'TLS_PEBBLE_ROOT_CA_PATH',
   'TLS_RUNTIME_FAKE',
   'TRUST_PROXY_HEADERS',
 ] as const;
@@ -116,6 +119,10 @@ function tlsDirective(mode: TlsMode, env: Map<string, string>): string {
   if (mode === 'custom') {
     return '\ttls /certs/fullchain.pem /certs/private-key.pem';
   }
+  const pebbleResolvers =
+    (env.get('TLS_ACME_DIRECTORY')?.trim().toLowerCase() || '') === 'pebble'
+      ? ['\t\t\tresolvers coredns:53']
+      : [];
   return [
     '\ttls {',
     '\t\tissuer acme {',
@@ -123,6 +130,7 @@ function tlsDirective(mode: TlsMode, env: Map<string, string>): string {
     '\t\t\tdisable_http_challenge',
     '\t\t\tdisable_tlsalpn_challenge',
     '\t\t\tdns acmedns /run/secrets/acme-dns.json',
+    ...pebbleResolvers,
     '\t\t}',
     '\t}',
   ].join('\n');

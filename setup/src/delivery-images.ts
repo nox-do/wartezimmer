@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY,
-  PRAXIS_FLOW_PROXY_IMAGE_REF,
+  pickLoadedProxyImageRef,
   type DeliveryImagesStatus,
 } from '@praxis-flow/server-shared';
 import type { DockerStatus } from './docker.js';
@@ -401,9 +401,10 @@ export async function loadDeliveryImagesFromArchive(
   });
   writeDeliveryImageEnvFromState(projectRoot);
 
-  if (loadResult.loaded.includes(PRAXIS_FLOW_PROXY_IMAGE_REF)) {
+  const loadedProxyImage = pickLoadedProxyImageRef(loadResult.loaded);
+  if (loadedProxyImage) {
     updateEnvKeys(envPath, {
-      [PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY]: PRAXIS_FLOW_PROXY_IMAGE_REF,
+      [PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY]: loadedProxyImage,
     });
   }
 

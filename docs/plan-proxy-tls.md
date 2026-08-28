@@ -55,7 +55,7 @@ Harte Grenzen im heutigen Code (P2a):
 - Overlay publiziert `0.0.0.0:80`, ohne `/data`, ohne 443
 - `proxy/Caddyfile` ist `:80 { reverse_proxy app:8080 }` und wird bei Update nicht
   überschrieben
-- Delivery pinnt `images.proxy` auf `caddy:2.11.4`
+- Delivery pinnt neue Pakete auf `praxis-flow-proxy:2.11.4-acmedns`; Legacy `caddy:2.11.4` bleibt gültig
 - `TRUST_PROXY_HEADERS` existiert, steht nicht in Compose
 - `.pfbackup` enthält Settings und `.env`, keinen Caddy-/ACME-State
 - Compose hängt das Overlay nur bei `PROXY_ENABLED=true` und `PROXY_MODE=http`

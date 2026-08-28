@@ -5,15 +5,18 @@
   import DeviceUrls from './DeviceUrls.svelte';
   import SetupEntry from './SetupEntry.svelte';
   import StatusGrid from './StatusGrid.svelte';
+  import TlsResumeCard from './TlsResumeCard.svelte';
 
   let {
     onSetupClick,
     onLoadReleaseArchive,
     onOpenUrl,
+    onOpenNetwork,
   }: {
     onSetupClick: () => void;
     onLoadReleaseArchive: () => void;
     onOpenUrl: (url: string) => void;
+    onOpenNetwork: () => void;
   } = $props();
 
   /** Status page shows saved config; live stack/probes live in HealthHeader (runtimeSnapshot). */
@@ -40,6 +43,8 @@
         {onSetupClick}
         {onLoadReleaseArchive}
       />
+    {:else}
+      <TlsResumeCard tls={configSnapshot.tls} onResume={onOpenNetwork} />
     {/if}
     <DeliveryImagesWarning
       status={configSnapshot}

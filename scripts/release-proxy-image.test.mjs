@@ -1,60 +1,121 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { pinnedImageRef, preparePinnedProxyImage } from './release-proxy-image.mjs';
+import {
+  PROXY_ACMEDNS_MODULE,
+  pinnedImageRef,
+  prepareDeliveryProxyImage,
+} from './release-proxy-image.mjs';
 
 const digest = `sha256:${'a'.repeat(64)}`;
-const imageId = `sha256:${'b'.repeat(64)}`;
+const baseId = `sha256:${'b'.repeat(64)}`;
+const customId = `sha256:${'c'.repeat(64)}`;
+const baseRef = 'caddy:2.11.4';
+const customRef = 'praxis-flow-proxy:2.11.4-acmedns';
+
+function inspection(id) {
+  return JSON.stringify([{ Id: id, Os: 'linux', Architecture: 'arm64' }]);
+}
 
 test('pinnedImageRef combines the release tag with an immutable registry digest', () => {
-  assert.equal(pinnedImageRef('caddy:2.11.4', digest), `caddy:2.11.4@${digest}`);
-  assert.throws(() => pinnedImageRef('caddy:2.11.4', 'latest'), /SHA-256/);
+  assert.equal(pinnedImageRef(baseRef, digest), `${baseRef}@${digest}`);
+  assert.throws(() => pinnedImageRef(baseRef, 'latest'), /SHA-256/);
   assert.throws(() => pinnedImageRef(`caddy@${digest}`, digest), /Tag ohne Digest/);
 });
 
-test('preparePinnedProxyImage pulls by digest, retags, and returns archive metadata', () => {
+test('prepareDeliveryProxyImage pulls base by digest, builds custom image, and checks acmedns', () => {
   const calls = [];
-  const inspection = JSON.stringify([{ Id: imageId, Os: 'linux', Architecture: 'arm64' }]);
-  const metadata = preparePinnedProxyImage({
-    imageRef: 'caddy:2.11.4',
+  const metadata = prepareDeliveryProxyImage({
+    imageRef: customRef,
+    baseImageRef: baseRef,
     registryDigest: digest,
     run(command, args) {
       calls.push([command, args]);
     },
-    runCapture() {
-      return inspection;
+    runCapture(command, args) {
+      if (args[0] === 'run') {
+        return `http.handlers.reverse_proxy\n${PROXY_ACMEDNS_MODULE}\n`;
+      }
+      if (args.includes(customRef) && args[0] === 'image') {
+        return inspection(customId);
+      }
+      return inspection(baseId);
     },
   });
 
   assert.deepEqual(calls, [
-    ['docker', ['pull', `caddy:2.11.4@${digest}`]],
-    ['docker', ['image', 'tag', `caddy:2.11.4@${digest}`, 'caddy:2.11.4']],
+    ['docker', ['pull', `${baseRef}@${digest}`]],
+    ['docker', ['image', 'tag', `${baseRef}@${digest}`, baseRef]],
+    ['docker', ['build', '-f', 'proxy/Dockerfile', '-t', customRef, '.']],
   ]);
   assert.deepEqual(metadata, {
     registryDigest: digest,
-    archiveImageId: imageId,
+    archiveImageId: customId,
     platform: 'linux/arm64',
   });
 });
 
-test('preparePinnedProxyImage rejects a tag that does not resolve to the pulled content', () => {
+test('prepareDeliveryProxyImage skips rebuild when skipBuild and the custom tag exists', () => {
+  const calls = [];
+  prepareDeliveryProxyImage({
+    imageRef: customRef,
+    baseImageRef: baseRef,
+    registryDigest: digest,
+    skipBuild: true,
+    run(command, args) {
+      calls.push([command, args]);
+    },
+    runCapture(command, args) {
+      if (args[0] === 'run') {
+        return PROXY_ACMEDNS_MODULE;
+      }
+      if (args.includes(customRef)) {
+        return inspection(customId);
+      }
+      return inspection(baseId);
+    },
+  });
+  assert.equal(
+    calls.some((entry) => entry[1]?.[0] === 'build'),
+    false,
+  );
+});
+
+test('prepareDeliveryProxyImage rejects a base tag that does not resolve to the pulled content', () => {
   let inspectionCount = 0;
   assert.throws(
     () =>
-      preparePinnedProxyImage({
-        imageRef: 'caddy:2.11.4',
+      prepareDeliveryProxyImage({
+        imageRef: customRef,
+        baseImageRef: baseRef,
         registryDigest: digest,
         run() {},
         runCapture() {
           inspectionCount += 1;
-          return JSON.stringify([
-            {
-              Id: inspectionCount === 1 ? imageId : `sha256:${'c'.repeat(64)}`,
-              Os: 'linux',
-              Architecture: 'arm64',
-            },
-          ]);
+          return inspection(inspectionCount === 1 ? baseId : customId);
         },
       }),
     /entspricht nicht/,
+  );
+});
+
+test('prepareDeliveryProxyImage rejects a custom image without acmedns', () => {
+  assert.throws(
+    () =>
+      prepareDeliveryProxyImage({
+        imageRef: customRef,
+        baseImageRef: baseRef,
+        registryDigest: digest,
+        run() {},
+        runCapture(command, args) {
+          if (args[0] === 'run') {
+            return 'http.handlers.reverse_proxy\n';
+          }
+          if (args.includes(customRef) && args[0] === 'image') {
+            return inspection(customId);
+          }
+          return inspection(baseId);
+        },
+      }),
+    /dns\.providers\.acmedns/,
   );
 });

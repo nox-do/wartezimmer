@@ -7,6 +7,8 @@ import {
   PFUPDATE_REQUIRED_FILE_PATHS,
   PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
   PRAXIS_FLOW_PROXY_IMAGE_REF,
+  PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF,
+  pickLoadedProxyImageRef,
   buildPfupdateFilename,
   buildPfupdateManifest,
   compareSemver,
@@ -221,6 +223,34 @@ test('validatePfupdatePackage rejects an unapproved Caddy digest or missing noti
   const noticePaths = new Set<string>(PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS);
   missingNotices.files = missingNotices.files.filter((entry) => !noticePaths.has(entry.path));
   assert.match(validatePfupdateImageRefs(missingNotices).join(' '), /LICENSE\.txt/);
+});
+
+test('pickLoadedProxyImageRef prefers custom over stock and ignores other tags', () => {
+  assert.equal(
+    pickLoadedProxyImageRef([
+      'praxis-flow/app:1',
+      PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF,
+      PRAXIS_FLOW_PROXY_IMAGE_REF,
+    ]),
+    PRAXIS_FLOW_PROXY_IMAGE_REF,
+  );
+  assert.equal(
+    pickLoadedProxyImageRef(['praxis-flow/app:1', PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF]),
+    PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF,
+  );
+  assert.equal(pickLoadedProxyImageRef(['praxis-flow/app:1']), undefined);
+});
+
+test('validatePfupdatePackage still accepts legacy stock Caddy proxy pin', () => {
+  const manifest = sampleManifest({ withProxy: true, withProxyDigest: true });
+  manifest.images.proxy = PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF;
+  const result = validatePfupdatePackage({
+    manifest,
+    files: digestMapFromManifest(manifest),
+    sha256Sums: formatSha256Sums(manifest.files),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.manifest?.images.proxy, PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF);
 });
 
 test('validatePfupdatePackage still accepts legacy packages without proxy', () => {

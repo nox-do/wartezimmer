@@ -25,6 +25,9 @@ mount(App, {
     onStatusOpenUrl: (url: string) => {
       controller.onStatusOpenUrl(url);
     },
+    onOpenNetwork: () => {
+      controller.onOpenNetwork();
+    },
     onAfterMutation: () => controller.onAfterMutation(),
     onWizardComplete: () => {
       controller.onWizardComplete();

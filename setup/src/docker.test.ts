@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildComposeStatus, parseComposePsOutput, resolveComposeFiles } from './docker.js';
+import {
+  buildComposeStatus,
+  COMPOSE_TLS_LAB_SERVICES,
+  parseComposePsOutput,
+  productComposeServices,
+  resolveComposeFiles,
+} from './docker.js';
 
 test('resolveComposeFiles selects base file by delivery flag', () => {
   assert.deepEqual(
@@ -66,6 +72,56 @@ test('resolveComposeFiles adds TLS overlay only when explicitly selected', () =>
       'docker-compose.proxy.delivery.yml',
       'docker-compose.proxy-tls.delivery.yml',
     ],
+  );
+});
+
+test('resolveComposeFiles stacks pebble lab overlays only for non-delivery TLS', () => {
+  assert.deepEqual(
+    resolveComposeFiles({
+      projectRoot: '/tmp/praxis-flow-dev',
+      delivery: false,
+      proxyEnabled: true,
+      proxyTlsEnabled: true,
+      tlsLabEnabled: true,
+    }),
+    [
+      'docker-compose.yml',
+      'docker-compose.proxy.yml',
+      'docker-compose.proxy-tls.yml',
+      'docker-compose.tls-lab.yml',
+      'docker-compose.tls-lab-proxy.yml',
+    ],
+  );
+  assert.deepEqual(
+    resolveComposeFiles({
+      projectRoot: '/tmp/praxis-flow-delivery',
+      delivery: true,
+      proxyEnabled: true,
+      proxyTlsEnabled: true,
+      tlsLabEnabled: true,
+    }),
+    [
+      'docker-compose.delivery.yml',
+      'docker-compose.proxy.delivery.yml',
+      'docker-compose.proxy-tls.delivery.yml',
+    ],
+  );
+});
+
+test('productComposeServices never includes TLS lab services', () => {
+  assert.deepEqual(productComposeServices({}), ['app', 'sandbox']);
+  assert.deepEqual(productComposeServices({ proxyEnabled: true }), ['app', 'sandbox', 'proxy']);
+  assert.deepEqual(productComposeServices({ proxyEnabled: true, gatewayEnabled: true }), [
+    'app',
+    'sandbox',
+    'proxy',
+    'gateway',
+  ]);
+  assert.equal(
+    COMPOSE_TLS_LAB_SERVICES.some((name) =>
+      productComposeServices({ proxyEnabled: true, gatewayEnabled: true }).includes(name),
+    ),
+    false,
   );
 });
 

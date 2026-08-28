@@ -19,7 +19,7 @@ flowchart TB
     DM["dist:manager:mac"]
     RV --> RI
     RV --> RP
-    RI --> TAR[".tar.gz + manifest + SHA256 + Lizenzen<br/>(app + sandbox + Caddy)"]
+    RI --> TAR[".tar.gz + manifest + SHA256 + Lizenzen<br/>(app + sandbox + custom Caddy)"]
     RP --> PFU[".pfupdate<br/>(app + sandbox + templates; gateway optional/lab)"]
     DM --> DMG["Manager DMG<br/>(Manager-Semver)"]
   end
@@ -71,18 +71,28 @@ npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 
 ## Zwei Auslieferungsartefakte
 
-| Artefakt                | Build                      | Manager-Flow                          | Inhalt                                                                                    |
-| ----------------------- | -------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------- |
-| **`.tar.gz` + Sidecar** | `npm run release:images`   | Setup-Wizard → „Release-Paket wählen" | app + sandbox + `caddy:2.11.4`, Manifest mit Digests, Checksummen und Caddy-Lizenz        |
-| **`.pfupdate`**         | `npm run release:pfupdate` | Wartung → Software-Update             | Manifest mit Digests, Checksummen, Images (app+sandbox+caddy), Templates und Caddy-Lizenz |
+| Artefakt                | Build                      | Manager-Flow                          | Inhalt                                                                                                 |
+| ----------------------- | -------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **`.tar.gz` + Sidecar** | `npm run release:images`   | Setup-Wizard → „Release-Paket wählen" | app + sandbox + `praxis-flow-proxy:2.11.4-acmedns`, Manifest mit Digests, Checksummen und Caddy-Lizenz |
+| **`.pfupdate`**         | `npm run release:pfupdate` | Wartung → Software-Update             | Manifest mit Digests, Checksummen, Images (app+sandbox+custom Caddy), Templates und Caddy-Lizenz       |
 
 Updates laufen **nur** über `.pfupdate`. Der Wizard nutzt das ältere Sidecar-Format (Erstinstallation, kein Cutover/Rollback).
 
 **Drittes Artefakt (separater Zyklus):** Manager-DMG via `npm run dist:manager:mac` — Setup-Server und Templates eingebettet, selten neu ausgeliefert.
 
-**Proxy:** `caddy:2.11.4` wird mitgeliefert (~85 MB Image / ~22 MB als `docker save | gzip`), startet aber **nicht** automatisch. Aktivierung bleibt optional über Setup/Manager (`PROXY_ENABLED`). Compose verwendet `pull_policy: never`: Praxis-Systeme laden Caddy weder beim Start noch bei der TLS-Aktivierung aus einer Registry nach.
+**Proxy:** `praxis-flow-proxy:2.11.4-acmedns` (xcaddy + `dns.providers.acmedns`) wird
+mitgeliefert, startet aber **nicht** automatisch. Aktivierung bleibt optional über
+Setup/Manager (`PROXY_ENABLED`). Compose verwendet `pull_policy: never`: Praxis-Systeme
+laden Caddy weder beim Start noch bei der TLS-Aktivierung aus einer Registry nach.
+HTTP-only Compose-Defaults bleiben `caddy:2.11.4`; Install/Update setzt
+`PRAXIS_FLOW_PROXY_IMAGE` auf den tatsächlich geladenen Proxy-Tag (Custom-Image
+in neuen Paketen, `caddy:2.11.4` in älteren v1-Paketen). Ohne Env-Eintrag gilt
+derselbe Stock-Default wie in Compose.
 
-Der Release-Build zieht Caddy ausschließlich über den freigegebenen, unveränderlichen Registry-Digest. Das Manifest dokumentiert zusätzlich die im Archiv enthaltene Docker-Image-ID und Plattform. Ein Caddy-Upgrade erfolgt daher bewusst durch Änderung des Pins, Review, Tests und ein neues Praxis-Flow-Release — niemals automatisch beim Kunden.
+Der Release-Build zieht das Stock-Caddy-**Base**-Image ausschließlich über den
+freigegebenen Registry-Digest und baut daraus das Custom-Image. Das Manifest dokumentiert
+diesen Base-Digest plus die im Archiv enthaltene Docker-Image-ID und Plattform des
+Custom-Tags. Ältere v1-Pakete mit `images.proxy=caddy:2.11.4` bleiben gültig.
 
 Standalone prüfen (ohne App-Stack): `npm run smoke:proxy` — nutzt `proxy/Caddyfile` gegen einen Throwaway-Upstream (`app:8080`). Zum Ausprobieren: `npm run smoke:proxy -- --keep` (danach `curl http://127.0.0.1:18080/`, Aufräumen mit `--cleanup`).
 
@@ -96,7 +106,8 @@ Standalone prüfen (ohne App-Stack): `npm run smoke:proxy` — nutzt `proxy/Cadd
 praxis-flow/app:<releaseVersion>
 praxis-flow/sandbox:<releaseVersion>
 praxis-flow/gateway:<releaseVersion>   ← optional (`--with-gateway`, Lab/openNDS; nicht Produkt-Default)
-caddy:2.11.4   # optional offline reverse proxy (PRAXIS_FLOW_PROXY_IMAGE)
+praxis-flow-proxy:2.11.4-acmedns   # delivery / TLS (PRAXIS_FLOW_PROXY_IMAGE)
+caddy:2.11.4                       # HTTP-only Compose-Default; Legacy-Pakete
 ```
 
 Freigegebener Upstream-Pin:
@@ -105,7 +116,7 @@ Freigegebener Upstream-Pin:
 caddy:2.11.4@sha256:df7f1c2fb114453b951de51a98efc010db1655a92c2e86be6706714e2417a78d
 ```
 
-`<releaseVersion>` muss **identisch** sein mit `manifest.releaseVersion`, allen **gesetzten** versionierten `manifest.images.*` (`app`/`sandbox` Pflicht; `gateway` optional/lab, strikt in `pfupdate.ts` wenn vorhanden) und `manager-state.json` → `release.releaseVersion`. `images.proxy` ist optional und, wenn gesetzt, fest auf `caddy:2.11.4`.
+`<releaseVersion>` muss **identisch** sein mit `manifest.releaseVersion`, allen **gesetzten** versionierten `manifest.images.*` (`app`/`sandbox` Pflicht; `gateway` optional/lab, strikt in `pfupdate.ts` wenn vorhanden) und `manager-state.json` → `release.releaseVersion`. `images.proxy` ist optional; neue Pakete setzen `praxis-flow-proxy:2.11.4-acmedns`, bereits ausgegebene Pakete dürfen `caddy:2.11.4` behalten.
 
 ### Lokale Dev-Tags
 
@@ -133,7 +144,7 @@ npm run release:pfupdate:current   # packt :local in .pfupdate ohne Rebuild
 ### Erstinstallation (`scripts/build-release-images.mjs`)
 
 1. `docker build` → `praxis-flow/app:<version>` + `praxis-flow/sandbox:<version>` (SBOM + Provenance)
-2. `docker pull caddy:2.11.4@sha256:…` → freigegebenen Caddy-Digest laden, als `caddy:2.11.4` taggen und Image-ID/Plattform prüfen
+2. `docker pull caddy:2.11.4@sha256:…` → Base taggen, `praxis-flow-proxy:2.11.4-acmedns` bauen (`proxy/Dockerfile`, Modul `dns.providers.acmedns` prüfen)
 3. `docker save | gzip` → `praxis-flow-<version>-images.tar.gz`
 4. `manifest.json` + `SHA256SUMS.txt` (inkl. `imageDigests.proxy`)
 5. `THIRD_PARTY_NOTICES.txt` + `licenses/caddy/LICENSE.txt`
@@ -144,7 +155,7 @@ Gateway ist **nicht** enthalten — nur app + sandbox (+ optional Caddy).
 
 ### Stack-Update (`scripts/build-pfupdate.mjs`)
 
-1. `docker build` → app + sandbox; optional `--with-gateway` → **gateway** (Lab); gepinnter Digest-Pull → **caddy:2.11.4**
+1. `docker build` → app + sandbox; optional `--with-gateway` → **gateway** (Lab); Base-Digest-Pull + Custom-Proxy-Build → **praxis-flow-proxy:2.11.4-acmedns**
 2. `docker save` → unkomprimiertes `images/praxis-flow-images.tar`
 3. Compose-Templates inkl. Proxy-Overlay + `proxy/Caddyfile` + `.env.example` (Image-Tags gesetzt)
 4. Manifest mit `minimumManagerVersion` (= aktuelle `manager/package.json`-Version), optional `images.proxy`, optional `images.gateway` (nur `--with-gateway`)
@@ -279,7 +290,7 @@ Details zu erhaltenen Settings: [`settings-backup-classification.md`](settings-b
   "images": {
     "app": "praxis-flow/app:2.1.0",
     "sandbox": "praxis-flow/sandbox:2.1.0",
-    "proxy": "caddy:2.11.4"
+    "proxy": "praxis-flow-proxy:2.11.4-acmedns"
   },
   "imageDigests": {
     "proxy": {

@@ -3,6 +3,9 @@ export function resolveSetupApiError(error: unknown): { status: number; error: s
   if (error instanceof Error && error.name === 'TlsRuntimeUnavailableError') {
     return { status: 501, error: message };
   }
+  if (error instanceof Error && error.name === 'TlsPermanentCheckError') {
+    return { status: 501, error: message };
+  }
   if (
     message === 'ENV_MISSING' ||
     message === 'ENV_EXAMPLE_MISSING' ||

@@ -142,14 +142,18 @@ export function networkExpanderDefaults(input: {
   reachabilityOpen: boolean;
   checksOpen: boolean;
   topologyOpen: boolean;
+  tlsOpen: boolean;
 } {
   const checks = networkHostChecksForDisplay(input.status.networkBindings);
+  const tls = input.status.tls;
+  const tlsOpen = Boolean(tls && tls.state !== 'off');
   return {
     lanOpen: Boolean(input.status.network.lanIpStale) || !input.status.network.configuredLanIp,
     proxyOpen: input.proxyEnabled && proxyNeedsRestore(input.status, input.runtime ?? null),
-    reachabilityOpen: true,
+    reachabilityOpen: !tlsOpen,
     checksOpen: networkHostChecksHaveFailures(checks),
     topologyOpen: false,
+    tlsOpen: true,
   };
 }
 

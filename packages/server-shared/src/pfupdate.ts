@@ -7,14 +7,31 @@ export const PFUPDATE_BASENAME_PREFIX = 'praxis-flow-update-';
 
 export const PFUPDATE_IMAGES_TAR_PATH = 'images/praxis-flow-images.tar';
 
-/** Pinned offline reverse-proxy image shipped in release/.pfupdate packages (optional at runtime). */
-export const PRAXIS_FLOW_PROXY_IMAGE_REF = 'caddy:2.11.4' as const;
-/** Immutable upstream multi-platform digest approved for the pinned Caddy release. */
+/** Pinned offline reverse-proxy image shipped in new release/.pfupdate packages. */
+export const PRAXIS_FLOW_PROXY_IMAGE_REF = 'praxis-flow-proxy:2.11.4-acmedns' as const;
+/** Stock Caddy tag still valid in already-issued v1 packages and HTTP-only Compose defaults. */
+export const PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF = 'caddy:2.11.4' as const;
+/** Upstream stock Caddy used as the custom-image Dockerfile base. */
+export const PRAXIS_FLOW_PROXY_BASE_IMAGE_REF = PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF;
+/** Immutable upstream multi-platform digest approved for the pinned Caddy release (base image). */
 export const PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST =
   'sha256:df7f1c2fb114453b951de51a98efc010db1655a92c2e86be6706714e2417a78d' as const;
 export const PRAXIS_FLOW_PROXY_IMAGE_PINNED_REF =
-  `${PRAXIS_FLOW_PROXY_IMAGE_REF}@${PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST}` as const;
+  `${PRAXIS_FLOW_PROXY_BASE_IMAGE_REF}@${PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST}` as const;
 export const PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY = 'PRAXIS_FLOW_PROXY_IMAGE' as const;
+
+export const PRAXIS_FLOW_PROXY_IMAGE_ALLOWED_REFS = [
+  PRAXIS_FLOW_PROXY_IMAGE_REF,
+  PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF,
+] as const;
+
+/** Compose HTTP default when `PRAXIS_FLOW_PROXY_IMAGE` is unset (`:-caddy:2.11.4`). */
+export const PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF = PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF;
+
+/** First allowed proxy tag present in a docker-load result (custom preferred over stock). */
+export function pickLoadedProxyImageRef(loaded: readonly string[]): string | undefined {
+  return PRAXIS_FLOW_PROXY_IMAGE_ALLOWED_REFS.find((ref) => loaded.includes(ref));
+}
 
 export const PFUPDATE_TEMPLATE_PATHS = [
   'templates/docker-compose.delivery.yml',
@@ -96,7 +113,7 @@ export type PfupdateManifestV1 = {
   supportedSettingsFormatVersions: number[];
   targetSchemaVersion: number;
   images: PfupdateImagesV1;
-  /** Optional for backward compatibility; present in newly built releases with Caddy. */
+  /** Optional for backward compatibility; present in newly built releases with the custom proxy. */
   imageDigests?: PfupdateImageDigestsV1;
   files: PfupdateFileEntryV1[];
 };
@@ -564,9 +581,13 @@ export function validatePfupdateImageRefs(manifest: PfupdateManifestV1): string[
   }
 
   if (manifest.images.proxy !== undefined) {
-    if (manifest.images.proxy !== PRAXIS_FLOW_PROXY_IMAGE_REF) {
+    if (
+      !PRAXIS_FLOW_PROXY_IMAGE_ALLOWED_REFS.includes(
+        manifest.images.proxy as (typeof PRAXIS_FLOW_PROXY_IMAGE_ALLOWED_REFS)[number],
+      )
+    ) {
       errors.push(
-        `manifest.json: images.proxy muss "${PRAXIS_FLOW_PROXY_IMAGE_REF}" sein (ist "${manifest.images.proxy}").`,
+        `manifest.json: images.proxy muss "${PRAXIS_FLOW_PROXY_IMAGE_REF}" oder Legacy "${PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF}" sein (ist "${manifest.images.proxy}").`,
       );
     }
     for (const templatePath of PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS) {

@@ -1,5 +1,7 @@
 /** Re-exports Setup Host API DTOs from shared package + Manager-only IPC types. */
 
+import type { TlsLocalCheck, TlsStatus } from '@praxis-flow/server-shared';
+
 export type {
   ApplySetupInput,
   ApplySetupOptions,
@@ -38,11 +40,20 @@ export type {
   ProxyConfigInput,
   ProxyMode,
   ProxyStatus,
+  TlsActionResult,
   TlsCertificateStatus,
+  TlsCustomCertificateInput,
+  TlsDnsCheck,
   TlsErrorClass,
+  TlsLocalCheck,
   TlsMode,
+  TlsOperatorRequest,
+  TlsPrepareInput,
+  TlsPrepareResult,
+  TlsRenewInput,
   TlsState,
   TlsStatus,
+  TlsVerifyDnsResult,
   ResetStaffPinsResult,
   RoutingMode,
   RoutingModeCapabilities,
@@ -82,3 +93,8 @@ export type SelectPfupdateArchiveResult = {
   canceled: boolean;
   path: string | null;
 };
+
+/** Electron IPC: PEM is read in main and posted to Setup. Renderer never sees the bytes. */
+export type TlsPemSetupResult =
+  | { canceled: true }
+  | { canceled: false; tls: TlsStatus; checks?: TlsLocalCheck[] };

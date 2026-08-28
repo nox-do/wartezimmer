@@ -217,6 +217,7 @@ test('TLS cutover network save omits HTTP identity fields', () => {
       cutoverApplied: true,
       certificate: null,
       lastError: null,
+      acmeCnameTarget: null,
     },
   });
   assert.equal(hostNetworkMustPreserveTlsIdentity(config), true);
@@ -245,6 +246,7 @@ test('TLS preparation network save omits proxy and canonical fields', () => {
       cutoverApplied: false,
       certificate: null,
       lastError: null,
+      acmeCnameTarget: null,
     },
   });
   assert.equal(hostNetworkMustPreserveTlsIdentity(config), true);
@@ -290,6 +292,7 @@ test('active TLS ignores HTTP reachability draft drift but keeps LAN drift', () 
       cutoverApplied: true,
       certificate: null,
       lastError: null,
+      acmeCnameTarget: null,
     },
   });
   assert.equal(

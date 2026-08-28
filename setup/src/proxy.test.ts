@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF } from '@praxis-flow/server-shared';
 import {
   assertComposeRemoveSucceeded,
   buildProxyEnvUpdates,
@@ -11,6 +12,7 @@ import {
   readProxyConfig,
   resolveCanonicalBaseUrlForProxyPlan,
   resolveProxyConfigForWrite,
+  resolveProxyImageRef,
 } from './proxy.js';
 
 test('readProxyConfig defaults to off with public app bind', () => {
@@ -444,6 +446,15 @@ test('buildProxyStatus distinguishes missing container from stopped service', ()
   assert.equal(stopped.enabled, true);
   assert.equal(stopped.container?.service, 'proxy');
   assert.equal(stopped.container?.state, 'exited');
+});
+
+test('resolveProxyImageRef falls back to the Compose stock default', () => {
+  assert.equal(resolveProxyImageRef(undefined), PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF);
+  assert.equal(resolveProxyImageRef(new Map()), PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF);
+  assert.equal(
+    resolveProxyImageRef(new Map([['PRAXIS_FLOW_PROXY_IMAGE', 'praxis-flow-proxy:2.11.4-acmedns']])),
+    'praxis-flow-proxy:2.11.4-acmedns',
+  );
 });
 
 test('ensureProxyImageAvailable accepts the release-supplied local image', async () => {

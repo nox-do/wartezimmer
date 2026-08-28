@@ -24,6 +24,16 @@ test('setupApiTimeoutMs uses extended timeout for software update apply', () => 
   );
 });
 
+test('setupApiTimeoutMs uses extended timeout for TLS obtain', () => {
+  assert.equal(
+    setupApiTimeoutMs({
+      method: 'POST',
+      path: '/api/setup/host/tls/obtain-certificate',
+    }),
+    6 * 60 * 1000,
+  );
+});
+
 test('setupApiTimeoutMs keeps default timeout for backup inspect', () => {
   assert.equal(
     setupApiTimeoutMs({

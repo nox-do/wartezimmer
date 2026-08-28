@@ -22,7 +22,7 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { appDockerBuildArgs } from './release-app-image.mjs';
-import { preparePinnedProxyImage } from './release-proxy-image.mjs';
+import { prepareDeliveryProxyImage } from './release-proxy-image.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -52,7 +52,7 @@ Options:
 Package layout (extracted):
   manifest.json
   SHA256SUMS.txt
-  images/praxis-flow-images.tar     ← docker save (app + sandbox + caddy; + gateway if --with-gateway)
+  images/praxis-flow-images.tar     ← docker save (app + sandbox + custom Caddy; + gateway if --with-gateway)
   templates/docker-compose.delivery.yml
   templates/docker-compose.proxy.delivery.yml
   templates/docker-compose.proxy-tls.delivery.yml
@@ -65,7 +65,7 @@ Package layout (extracted):
 Images tagged as:
   praxis-flow/app:<version>
   praxis-flow/sandbox:<version>
-  caddy:2.11.4                      ← optional offline reverse proxy (not auto-started)
+  praxis-flow-proxy:2.11.4-acmedns  ← offline reverse proxy with ACME-DNS (not auto-started)
   praxis-flow/gateway:<version>     ← only with --with-gateway (lab / openNDS reference)
 `);
 }
@@ -334,6 +334,7 @@ if (noBuild) {
   console.log('Skipping build (--no-build). Checking local tags …');
   assertImageExists(appImage);
   assertImageExists(sandboxImage);
+  assertImageExists(proxyImage);
   if (withGateway) {
     assertImageExists(gatewayImage);
   }
@@ -341,9 +342,11 @@ if (noBuild) {
   buildReleaseImages(version, { withGateway });
 }
 
-const proxyImageDigest = preparePinnedProxyImage({
+const proxyImageDigest = prepareDeliveryProxyImage({
   imageRef: proxyImage,
+  baseImageRef: pfupdate.PRAXIS_FLOW_PROXY_BASE_IMAGE_REF,
   registryDigest: pfupdate.PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+  skipBuild: noBuild,
   run,
   runCapture,
 });

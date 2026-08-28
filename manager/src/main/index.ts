@@ -10,12 +10,15 @@ import {
   IPC_SELECT_FOLDER,
   IPC_SELECT_RELEASE_ARCHIVE,
   IPC_SELECT_PFUPDATE_ARCHIVE,
+  IPC_STAGE_TLS_PEM,
+  IPC_RENEW_TLS_PEM,
   IPC_SETUP_API_CALL,
   type SetupApiCallRequest,
 } from '../shared/ipc-channels.js';
 import { selectFolderDialog } from './select-folder.js';
 import { selectReleaseArchiveDialog } from './select-release-archive.js';
 import { selectPfupdateArchiveDialog } from './select-pfupdate-archive.js';
+import { renewTlsCertificateFromPicker, stageTlsCertificateFromPicker } from './select-tls-pem.js';
 import { installMacApplicationMenu } from './mac-app-menu.js';
 import { fetchHostStatusFromApi, callSetupApi } from './setup-api.js';
 import { readPfbackupFromDialog, savePfbackupToDisk } from './pfbackup-dialog.js';
@@ -53,7 +56,10 @@ function registerSetupIpc(handle: SetupServerHandle): void {
   });
 
   ipcMain.handle(IPC_OPEN_EXTERNAL_URL, async (_event, url: string) => {
-    if (typeof url !== 'string' || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+    if (
+      typeof url !== 'string' ||
+      (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('mailto:'))
+    ) {
       throw new Error('Ungültige URL');
     }
     await shell.openExternal(url);
@@ -98,6 +104,24 @@ function registerSetupIpc(handle: SetupServerHandle): void {
   ipcMain.handle(IPC_SELECT_PFUPDATE_ARCHIVE, async () => {
     try {
       return await selectPfupdateArchiveDialog(mainWindow);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(detail, { cause: error });
+    }
+  });
+
+  ipcMain.handle(IPC_STAGE_TLS_PEM, async () => {
+    try {
+      return await stageTlsCertificateFromPicker(mainWindow, handle.apiBase);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(detail, { cause: error });
+    }
+  });
+
+  ipcMain.handle(IPC_RENEW_TLS_PEM, async () => {
+    try {
+      return await renewTlsCertificateFromPicker(mainWindow, handle.apiBase);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new Error(detail, { cause: error });

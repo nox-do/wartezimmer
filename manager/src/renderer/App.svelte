@@ -13,6 +13,7 @@
     onStatusSetupClick,
     onStatusLoadReleaseArchive,
     onStatusOpenUrl,
+    onOpenNetwork,
     onAfterMutation,
     onWizardComplete,
     onWizardCancel,
@@ -21,6 +22,7 @@
     onStatusSetupClick: () => void;
     onStatusLoadReleaseArchive: () => void;
     onStatusOpenUrl: (url: string) => void;
+    onOpenNetwork: () => void;
     onAfterMutation: () => void;
     onWizardComplete: () => void;
     onWizardCancel: () => void;
@@ -39,6 +41,7 @@
         onSetupClick={onStatusSetupClick}
         onLoadReleaseArchive={onStatusLoadReleaseArchive}
         onOpenUrl={onStatusOpenUrl}
+        {onOpenNetwork}
       />
       <MaintenanceView {onAfterMutation} />
       <NetworkView {onAfterMutation} />

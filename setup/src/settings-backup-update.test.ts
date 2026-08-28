@@ -3,7 +3,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { buildPfbackupArchive, serializePfbackupArchive } from '@praxis-flow/server-shared';
+import {
+  buildPfbackupArchive,
+  serializePfbackupArchive,
+  PRAXIS_FLOW_PROXY_IMAGE_REF,
+} from '@praxis-flow/server-shared';
 import { APP_DB_RELATED_FILES, createLocalAppDataAccess } from './app-data-volume.js';
 import { readEnvMap } from './env-file.js';
 import { readManagerState } from './manager-state.js';
@@ -186,7 +190,7 @@ test('applyPfupdate with proxy sets PROXY_IMAGE and seeds Caddyfile without over
     assert.equal(result.ok, true);
 
     const env = readEnvMap(envPath);
-    assert.equal(env.get('PRAXIS_FLOW_PROXY_IMAGE'), 'caddy:2.11.4');
+    assert.equal(env.get('PRAXIS_FLOW_PROXY_IMAGE'), PRAXIS_FLOW_PROXY_IMAGE_REF);
     assert.equal(fs.readFileSync(customCaddy, 'utf8'), '# custom caddyfile\n');
     assert.equal(fs.existsSync(path.join(dir, 'docker-compose.proxy.delivery.yml')), true);
   } finally {
