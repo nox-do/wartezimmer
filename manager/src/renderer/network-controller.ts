@@ -42,7 +42,7 @@ import { createHostNetworkFields, resolvedLanIp } from './wizard-state.js';
 import { DISABLED_GATEWAY_PLAN } from './wizard-flow.js';
 
 export type NetworkCallbacks = {
-  onAfterMutation?: () => void;
+  onAfterMutation?: () => void | Promise<void>;
 };
 
 /** Local network-tab state: draft + phase/notice + network snapshot. No config/runtime copies. */
@@ -103,9 +103,11 @@ function noticeFromVerified(verified: { ok: boolean; message: string }): Network
   return { tone: verified.ok ? 'success' : 'error', message: verified.message };
 }
 
-/** Active TLS owns Canonical and proxy mode; `/host/network` may then save LAN only. */
+/** Started TLS owns Canonical and proxy mode; `/host/network` may then save LAN only. */
 export function hostNetworkMustPreserveTlsIdentity(config: HostStatus | null): boolean {
-  return config?.tls?.cutoverApplied === true;
+  return Boolean(
+    config?.tls && (config.tls.state !== 'off' || config.tls.cutoverApplied === true),
+  );
 }
 
 export function buildHostNetworkSaveInput(input: {
@@ -297,6 +299,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       return;
     }
     const preserveTlsIdentity = hostNetworkMustPreserveTlsIdentity(config);
+    const tlsCutoverApplied = config.tls?.cutoverApplied === true;
     const canonicalBaseUrl = preserveTlsIdentity
       ? config.configuredCanonicalBaseUrl?.trim() || config.appBaseUrl.trim()
       : resolveDraftCanonical();
@@ -304,7 +307,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       setErrorNotice('Keine gespeicherte Geräte-Adresse vorhanden.');
       return;
     }
-    if (preserveTlsIdentity && !canonicalBaseUrl.startsWith('https://')) {
+    if (tlsCutoverApplied && !canonicalBaseUrl.startsWith('https://')) {
       setErrorNotice('Aktives HTTPS hat keine gültige gespeicherte HTTPS-Adresse.');
       return;
     }
@@ -349,7 +352,10 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       return;
     }
 
-    deps.onAfterMutation?.();
+    await deps.onAfterMutation?.();
+    if (generation !== actionGeneration) {
+      return;
+    }
 
     // Env already written — keep saveSubmittedDraft so a following config refresh
     // can still hydrate server-normalized values even if restart/proxy start failed.

@@ -1,22 +1,17 @@
 /*
- * LAN-TLS mock styles.
+ * LAN-TLS mock styles — two sections. Manager canonical: manager/src/renderer/styles.css
  *
- * Class names match manager/src/renderer/styles.css — duplicated here for file://.
+ * 1. MOCK-ONLY (not ported)
+ *    mock-banner, mock-shell, mock-header
+ *    mock-shell .main-nav — standalone preview tabs (Manager uses app-chrome nav)
+ *    data-tls-state on .mock-shell — dev preview only (Manager: GET /host/status → tls)
  *
- * Mock-only: mock-banner, app-shell page chrome
- *
- * Reuse map (Manager ist kanonisch):
- *   notice.is-*     ← erweitert lan-warning (Warn/Ok/Bad-Boxen)
- *   hint + code     ← URL-Vorschau (ReachabilityPanel-Muster)
- *   hint--preview   ← hervorgehobene HTTPS-Adresse
- *   wizard-input    ← Felder; is-monospace/is-compact für Mail-Textarea
- *   status-grid     ← Zertifikats-Meta (wizard-summary-grid)
- *   network-config-block > details ← Mail/DNS-Wiederholung, LAN-Expander
- *   wizard-nested   ← eingerückte Namenswahl
- *   a.btn-primary   ← mailto primär
- *   wizard-step-progress/dot ← einzige echte Neuklasse (HTTPS-Unterschritte)
+ * 2. MANAGER PORT (duplicated below for file://; keep in sync with Manager)
+ *    notice.is-*, hint/hint--preview, wizard-input, wizard-nested, wizard-step-progress/dot,
+ *    network-config-*, status-grid, checklist, setup-entry, device-urls, buttons, …
  */
 
+/* --- Foundation (file:// preview) --- */
 :root {
   color-scheme: light;
   --bg: #f4f6f8;
@@ -50,6 +45,8 @@ body {
   color: var(--text);
 }
 
+/* --- 1. MOCK-ONLY --- */
+
 .mock-banner {
   margin: 0;
   padding: 0.45rem 1.5rem;
@@ -62,13 +59,13 @@ body {
   font-weight: 650;
 }
 
-.app-shell {
+.mock-shell {
   max-width: 640px;
   margin: 0 auto;
   padding: 0 1.5rem 2.5rem;
 }
 
-.app-header {
+.mock-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -76,11 +73,49 @@ body {
   margin: 1rem 0;
 }
 
-.app-header h1 {
+.mock-header h1 {
   margin: 0;
   font-size: 1.35rem;
   font-weight: 600;
 }
+
+/* Standalone tab bar for Status/Netzwerk/Wartung preview — not Manager app chrome. */
+.mock-shell .main-nav {
+  display: flex;
+  margin: 0 0 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.mock-shell .main-nav-tab {
+  flex: 1;
+  padding: 0.55rem 0.4rem;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border-radius: 0;
+}
+
+.mock-shell .main-nav-tab:hover:not(:disabled) {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.mock-shell .main-nav-tab.is-active {
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.mock-shell .main-nav-tab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* --- 2. MANAGER PORT (sync manager/src/renderer/styles.css) --- */
 
 .wizard-steps {
   display: flex;
@@ -593,11 +628,6 @@ a.btn-primary:hover {
   background: var(--accent-hover);
 }
 
-.main-nav-tab:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
 .setup-entry {
   margin: 0 0 1rem;
   padding: 1.1rem 1.15rem;
@@ -646,36 +676,6 @@ a.btn-primary:hover {
 
 .health-banner.is-ok {
   color: var(--ok);
-}
-
-.main-nav {
-  display: flex;
-  margin: 0 0 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--surface);
-}
-
-.main-nav-tab {
-  flex: 1;
-  padding: 0.55rem 0.4rem;
-  text-align: center;
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--muted);
-  background: transparent;
-  border-radius: 0;
-}
-
-.main-nav-tab:hover:not(:disabled) {
-  background: var(--bg);
-  color: var(--text);
-}
-
-.main-nav-tab.is-active {
-  color: var(--text);
-  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 .device-urls h2 {

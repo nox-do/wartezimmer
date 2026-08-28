@@ -16,6 +16,7 @@ import {
   parseHttpBaseUrl,
   resolveCanonicalBaseUrlForLanPlan,
 } from './urls.js';
+import { isTlsPreparationInProgressEnv } from './tls-env.js';
 
 export const DEFAULT_APP_BIND_ADDRESS = '0.0.0.0';
 export const PROXY_APP_BIND_ADDRESS = '127.0.0.1';
@@ -107,7 +108,7 @@ function normalizeProxyModeRaw(value: string | undefined, enabledFlag: boolean):
 }
 
 /**
- * P2a allows only off|http. Unknown modes, invalid PROXY_ENABLED tokens, and
+ * Allows off|http plus the two TLS cutover modes. Unknown modes, invalid PROXY_ENABLED tokens, and
  * inconsistent enabled/mode pairs are rejected — never silently rewritten.
  */
 export function assertProxyEnvValid(env: EnvLike): void {
@@ -115,21 +116,21 @@ export function assertProxyEnvValid(env: EnvLike): void {
   const enabledFlag = parseProxyEnabledFlag(enabledRaw, false);
   const modeRaw = normalizeProxyModeRaw(readEnvValue(env, 'PROXY_MODE'), enabledFlag);
 
-  if (modeRaw !== 'off' && modeRaw !== 'http') {
+  if (!['off', 'http', 'tls-managed', 'tls-custom'].includes(modeRaw)) {
     throw new ProxyConfigError(
-      `PROXY_MODE=${modeRaw} wird in diesem Stand nicht unterstützt (erlaubt: off, http)`,
+      `PROXY_MODE=${modeRaw} ist ungültig (erlaubt: off, http, tls-managed, tls-custom)`,
     );
   }
 
   if (enabledFlag && modeRaw === 'off') {
     throw new ProxyConfigError(
-      'PROXY_ENABLED=true erfordert PROXY_MODE=http (PROXY_MODE=off ist ungültig)',
+      'PROXY_ENABLED=true erfordert einen aktiven PROXY_MODE (http, tls-managed oder tls-custom)',
     );
   }
 
-  if (!enabledFlag && modeRaw === 'http') {
+  if (!enabledFlag && modeRaw !== 'off') {
     throw new ProxyConfigError(
-      'PROXY_MODE=http erfordert PROXY_ENABLED=true (bei deaktiviertem Proxy: PROXY_MODE=off)',
+      `PROXY_MODE=${modeRaw} erfordert PROXY_ENABLED=true (bei deaktiviertem Proxy: PROXY_MODE=off)`,
     );
   }
 
@@ -143,7 +144,7 @@ export function assertProxyEnvValid(env: EnvLike): void {
 }
 
 /**
- * Normalize PROXY_ENABLED / PROXY_MODE for P2a (off | http only).
+ * Normalize PROXY_ENABLED / PROXY_MODE. TLS modes retain the loopback app bind.
  * Invalid combinations throw ProxyConfigError.
  */
 export function readProxyConfig(env: EnvLike): ProxyConfig {
@@ -152,9 +153,9 @@ export function readProxyConfig(env: EnvLike): ProxyConfig {
   const enabledFlag = parseProxyEnabledFlag(readEnvValue(env, 'PROXY_ENABLED'), false);
   const httpPort = readPortEnv(env, 'PROXY_HTTP_PORT', DEFAULT_PROXY_HTTP_PORT);
   const modeRaw = normalizeProxyModeRaw(readEnvValue(env, 'PROXY_MODE'), enabledFlag);
-  const httpActive = enabledFlag && modeRaw === 'http';
+  const active = enabledFlag && modeRaw !== 'off';
 
-  if (!httpActive) {
+  if (!active) {
     return {
       enabled: false,
       mode: 'off',
@@ -165,7 +166,7 @@ export function readProxyConfig(env: EnvLike): ProxyConfig {
 
   return {
     enabled: true,
-    mode: 'http',
+    mode: modeRaw as ProxyMode,
     httpPort,
     appBindAddress: PROXY_APP_BIND_ADDRESS,
   };
@@ -199,8 +200,31 @@ export function resolveCanonicalBaseUrlForProxyPlan(input: {
   previousLanIp: string | null | undefined;
   nextLanIp: string;
   overrideCanonical?: string | null;
+  tlsPreparationActive?: boolean;
 }): string {
   const override = parseHttpBaseUrl(input.overrideCanonical);
+  if (input.tlsPreparationActive && override) {
+    const existing = parseHttpBaseUrl(input.existingCanonical);
+    if (!existing || override !== existing) {
+      throw new ProxyConfigError(
+        'Während der HTTPS-Vorbereitung darf POST /host/network die Erreichbarkeit nicht ändern.',
+      );
+    }
+  }
+  if (input.proxy.mode === 'tls-managed' || input.proxy.mode === 'tls-custom') {
+    const existing = parseHttpBaseUrl(input.existingCanonical);
+    if (!existing || new URL(existing).protocol !== 'https:') {
+      throw new ProxyConfigError(
+        'Aktiver TLS-Proxy erfordert eine bestehende https:// CANONICAL_BASE_URL.',
+      );
+    }
+    if (override && override !== existing) {
+      throw new ProxyConfigError(
+        'POST /host/network darf die Canonical-URL nach dem HTTPS-Cutover nicht ändern.',
+      );
+    }
+    return existing;
+  }
   if (!input.proxy.enabled || input.proxy.mode !== 'http') {
     if (override) {
       return override;
@@ -256,6 +280,14 @@ export function resolveCanonicalBaseUrlForProxyPlan(input: {
 
 /** Env keys written atomically with proxy on/off on apply / saveHostNetwork. */
 export function buildProxyEnvUpdates(proxy: ProxyConfig, env?: EnvLike): Record<string, string> {
+  if (proxy.mode === 'tls-managed' || proxy.mode === 'tls-custom') {
+    return {
+      PROXY_ENABLED: 'true',
+      PROXY_MODE: proxy.mode,
+      PROXY_HTTP_PORT: String(proxy.httpPort),
+      APP_BIND_ADDRESS: PROXY_APP_BIND_ADDRESS,
+    };
+  }
   if (proxy.enabled && proxy.mode === 'http') {
     return {
       PROXY_ENABLED: 'true',
@@ -292,8 +324,21 @@ export function resolveProxyConfigForWrite(
   env: EnvLike,
   override?: { enabled: boolean; httpPort?: number } | null,
 ): { proxy: ProxyConfig; writeEnv: boolean } {
+  const existing = readProxyConfig(env);
   if (override === undefined || override === null) {
-    return { proxy: readProxyConfig(env), writeEnv: false };
+    return { proxy: existing, writeEnv: false };
+  }
+  if (existing.mode === 'tls-managed' || existing.mode === 'tls-custom') {
+    throw new ProxyConfigError(
+      'POST /host/network darf einen aktiven TLS-Proxy weder ändern noch auf HTTP zurücksetzen.',
+    );
+  }
+  if (isTlsPreparationInProgressEnv(env)) {
+    if (!override.enabled || !existing.enabled) {
+      throw new ProxyConfigError(
+        'Während der HTTPS-Vorbereitung darf POST /host/network den Proxy nicht abschalten oder neu konfigurieren.',
+      );
+    }
   }
 
   const httpPort =

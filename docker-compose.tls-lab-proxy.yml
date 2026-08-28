@@ -1,0 +1,14 @@
+# Opt-in: mount Pebble minica into the proxy so Go/Caddy trusts https://pebble:14000/dir.
+# Requires docker-compose.proxy.yml (provides the proxy service). Lab-only — never system-wide.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.proxy.yml \
+#     -f docker-compose.proxy-tls.yml -f docker-compose.tls-lab.yml \
+#     -f docker-compose.tls-lab-proxy.yml up -d
+
+services:
+  proxy:
+    volumes:
+      - ./lab/tls/pebble.minica.pem:/lab/tls/pebble.minica.pem:ro
+    environment:
+      # Append lab CA without replacing Alpine's system store (Go SSL_CERT_DIR is colon-separated).
+      SSL_CERT_DIR: /etc/ssl/certs:/lab/tls

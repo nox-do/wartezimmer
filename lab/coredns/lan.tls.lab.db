@@ -1,0 +1,15 @@
+$ORIGIN lan.tls.lab.
+$TTL 30
+@		IN SOA	ns.lan.tls.lab. admin.lan.tls.lab. (
+				2026082801 ; serial
+				7200       ; refresh
+				3600       ; retry
+				1209600    ; expire
+				30         ; minimum
+				)
+@		IN NS	ns.lan.tls.lab.
+ns		IN A	127.0.0.1
+labhost		IN A	192.0.2.10
+alias		IN CNAME	labhost
+; Challenge CNAME for _acme-challenge.labhost is added by smoke:tls-lab (or
+; manually) to the fulldomain from acme-dns /register — not a fixed placeholder.

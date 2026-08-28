@@ -108,6 +108,9 @@ import { dockerImageExists } from './delivery-images.js';
 import { SetupApiValidationError } from './setup-api-normalize.js';
 import type { SetupContext } from './setup-context.js';
 import type { ProxyConfigInput } from '@praxis-flow/server-shared';
+import { readTlsStatus, TLS_ENV_KEYS } from './host-tls.js';
+import { PROXY_TLS_RUNTIME_ENV_KEYS } from './proxy-tls.js';
+import { isTlsPreparationInProgressEnv, tlsPreparationLanIpSyncUpdates } from './tls-env.js';
 import {
   getRoutingModeCapabilities as readRoutingModeCapabilities,
   setRoutingMode as persistRoutingMode,
@@ -606,6 +609,7 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     : [];
   const bridgePort = readPortEnv(envMap, 'GATEWAY_AUTH_BRIDGE_PORT', DEFAULT_GATEWAY_BRIDGE_PORT);
   const proxy = requireProxyConfig(envMap);
+  const tls = readTlsStatus(envMap);
   const networkPrerequisites = await auditNetworkPrerequisites({
     compose,
     appPublishEnabled: readBooleanEnv(envMap, 'APP_PUBLISH_PORT', true),
@@ -614,7 +618,8 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     proxyEnabled: proxy.enabled,
     proxyHttpPort: proxy.httpPort,
     proxyHttpsPort: readPortEnv(envMap, 'PROXY_HTTPS_PORT', DEFAULT_PROXY_HTTPS_PORT),
-    proxyHttpsEnabled: proxyModeUsesHttps(envMap.get('PROXY_MODE')?.trim() || 'off'),
+    proxyHttpsEnabled:
+      proxyModeUsesHttps(envMap.get('PROXY_MODE')?.trim() || 'off') || tls.state !== 'off',
   });
 
   const deliveryImages = await auditDeliveryImages({
@@ -645,6 +650,7 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
       canonicalBaseUrl: canonicalBaseUrl ?? appBaseUrl,
       compose,
     }),
+    tls,
     deviceUrls,
     probes,
     compose,
@@ -668,6 +674,7 @@ export function buildSetupPlan(
     previousLanIp,
     nextLanIp: input.lanAppIp.trim(),
     overrideCanonical: input.canonicalBaseUrl,
+    tlsPreparationActive: env ? isTlsPreparationInProgressEnv(env) : false,
   });
   const deviceUrls = buildDeviceUrlsFromBaseUrl(canonicalBaseUrl);
   const gateway: GatewayPlan = {
@@ -720,6 +727,8 @@ export async function applySetupPlan(
       : []),
     PROXY_IMAGE_ENV_KEY,
     ...(writeProxyEnv ? [] : [...PROXY_RUNTIME_ENV_KEYS]),
+    ...TLS_ENV_KEYS,
+    ...PROXY_TLS_RUNTIME_ENV_KEYS,
   ];
   const proxyWasEnabled = isProxyCurrentlyEnabled(existingBefore);
   const canonicalToWrite = resolveCanonicalBaseUrlForProxyPlan({
@@ -728,6 +737,7 @@ export async function applySetupPlan(
     previousLanIp,
     nextLanIp: input.lanAppIp.trim(),
     overrideCanonical: input.canonicalBaseUrl,
+    tlsPreparationActive: isTlsPreparationInProgressEnv(existingBefore),
   });
   const deviceUrls = buildDeviceUrlsFromBaseUrl(canonicalToWrite);
   const gateway: GatewayPlan = {
@@ -792,6 +802,7 @@ export async function applySetupPlan(
         ...(writeProxyEnv ? buildProxyEnvUpdates(proxy, existingBefore) : {}),
         SETUP_LAN_APP_IP: input.lanAppIp.trim(),
         CANONICAL_BASE_URL: canonicalToWrite,
+        ...tlsPreparationLanIpSyncUpdates(existingBefore, input.lanAppIp.trim()),
         ...(preparedStorage
           ? {
               IMPORTS_HOST_PATH: preparedStorage.folders.imports,
@@ -963,11 +974,13 @@ export async function saveHostNetwork(
     previousLanIp,
     nextLanIp: lanAppIp,
     overrideCanonical: input.canonicalBaseUrl,
+    tlsPreparationActive: isTlsPreparationInProgressEnv(existing),
   });
   const deviceUrls = buildDeviceUrlsFromBaseUrl(canonicalBaseUrl);
   const updates: Record<string, string> = {
     SETUP_LAN_APP_IP: lanAppIp,
     CANONICAL_BASE_URL: canonicalBaseUrl,
+    ...tlsPreparationLanIpSyncUpdates(existing, lanAppIp),
     ...(writeProxyEnv ? buildProxyEnvUpdates(proxy, existing) : {}),
   };
 

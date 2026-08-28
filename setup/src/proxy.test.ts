@@ -36,17 +36,20 @@ test('readProxyConfig activates http mode with loopback bind', () => {
   });
 });
 
-test('readProxyConfig rejects unknown PROXY_MODE', () => {
-  assert.throws(
-    () =>
-      readProxyConfig(
-        new Map([
-          ['PROXY_ENABLED', 'true'],
-          ['PROXY_MODE', 'tls-custom'],
-        ]),
-      ),
-    (error: unknown) =>
-      error instanceof ProxyConfigError && /PROXY_MODE=tls-custom/.test(error.message),
+test('readProxyConfig accepts TLS modes and rejects unknown PROXY_MODE', () => {
+  assert.deepEqual(
+    readProxyConfig(
+      new Map([
+        ['PROXY_ENABLED', 'true'],
+        ['PROXY_MODE', 'tls-custom'],
+      ]),
+    ),
+    {
+      enabled: true,
+      mode: 'tls-custom',
+      httpPort: 80,
+      appBindAddress: '127.0.0.1',
+    },
   );
   assert.throws(
     () =>
@@ -92,7 +95,64 @@ test('readProxyConfig rejects PROXY_ENABLED=true with PROXY_MODE=off', () => {
           ['PROXY_MODE', 'off'],
         ]),
       ),
-    (error: unknown) => error instanceof ProxyConfigError && /PROXY_MODE=http/.test(error.message),
+    (error: unknown) =>
+      error instanceof ProxyConfigError && /aktiven PROXY_MODE/.test(error.message),
+  );
+});
+
+test('resolveProxyConfigForWrite blocks network payloads after TLS cutover', () => {
+  const activeTls = new Map([
+    ['PROXY_ENABLED', 'true'],
+    ['PROXY_MODE', 'tls-managed'],
+  ]);
+  assert.throws(
+    () => resolveProxyConfigForWrite(activeTls, { enabled: true, httpPort: 80 }),
+    /darf einen aktiven TLS-Proxy weder ändern noch auf HTTP zurücksetzen/,
+  );
+});
+
+test('resolveProxyConfigForWrite blocks proxy disable during TLS preparation', () => {
+  const preparing = new Map([
+    ['PROXY_ENABLED', 'true'],
+    ['PROXY_MODE', 'http'],
+    ['TLS_STATE', 'awaiting-operator-dns'],
+    ['TLS_CUTOVER_APPLIED', 'false'],
+  ]);
+  assert.throws(
+    () => resolveProxyConfigForWrite(preparing, { enabled: false, httpPort: 80 }),
+    /HTTPS-Vorbereitung/,
+  );
+});
+
+test('resolveProxyConfigForWrite allows httpPort tweak while TLS preparation is active', () => {
+  const preparing = new Map([
+    ['PROXY_ENABLED', 'true'],
+    ['PROXY_MODE', 'http'],
+    ['TLS_STATE', 'dns-verified'],
+    ['TLS_CUTOVER_APPLIED', 'false'],
+  ]);
+  const result = resolveProxyConfigForWrite(preparing, { enabled: true, httpPort: 8088 });
+  assert.equal(result.writeEnv, true);
+  assert.equal(result.proxy.httpPort, 8088);
+});
+
+test('resolveCanonicalBaseUrlForProxyPlan blocks reachability override during TLS preparation', () => {
+  assert.throws(
+    () =>
+      resolveCanonicalBaseUrlForProxyPlan({
+        proxy: {
+          enabled: true,
+          mode: 'http',
+          httpPort: 80,
+          appBindAddress: '127.0.0.1',
+        },
+        existingCanonical: 'http://192.168.1.10',
+        previousLanIp: '192.168.1.10',
+        nextLanIp: '192.168.1.10',
+        overrideCanonical: 'http://praxis-flow.local',
+        tlsPreparationActive: true,
+      }),
+    /Erreichbarkeit nicht ändern/,
   );
 });
 

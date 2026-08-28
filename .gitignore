@@ -23,3 +23,7 @@ logs/
 docs_data/
 .tmp/
 .exports-host/
+
+# TLS lab acme-dns sqlite (keep directory via .gitkeep)
+lab/acme-dns/data/*
+!lab/acme-dns/data/.gitkeep

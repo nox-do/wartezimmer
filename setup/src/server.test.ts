@@ -65,3 +65,17 @@ test('setup server preserves route validation errors', async (t) => {
   assert.equal(response.status, 400);
   assert.deepEqual(await response.json(), { error: 'archivePath required' });
 });
+
+test('TLS prepare route validates its contract before touching host state', async (t) => {
+  const server = await startTestServer();
+  t.after(server.close);
+
+  const response = await fetch(`${server.baseUrl}/api/setup/host/tls/prepare`, {
+    method: 'POST',
+    body: JSON.stringify({ mode: 'custom', lanIp: '192.168.178.112' }),
+    headers: { 'content-type': 'application/json' },
+  });
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { error: 'hostname required for custom TLS' });
+});

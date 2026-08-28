@@ -1,5 +1,8 @@
 export function resolveSetupApiError(error: unknown): { status: number; error: string } {
   const message = error instanceof Error ? error.message : 'internal error';
+  if (error instanceof Error && error.name === 'TlsRuntimeUnavailableError') {
+    return { status: 501, error: message };
+  }
   if (
     message === 'ENV_MISSING' ||
     message === 'ENV_EXAMPLE_MISSING' ||

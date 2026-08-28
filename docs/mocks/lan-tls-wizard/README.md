@@ -25,7 +25,7 @@ Schritte 1–3 (Voraussetzungen, Routing, Ordner) sind bewusst **nicht** im Mock
 | --- | --- |
 | `tls-model.js` | Selektiv heben. Kein DOM. Nummern, Phasen, Hostname, Mailtext, Gates, Wizard-Advance. Öffentliche Mock-Fläche: `globalThis.LanTlsModel` (IIFE für `file://`). |
 | `app.js` | Markup/Events und deutsche UI-Texte. Kommentare nennen Ziel-Svelte-Dateien. Lokaler `state` + `deriveTlsState()` nur für die statische Vorschau — **nicht** als zweites State-Modell in den Renderer portieren. |
-| `styles.css` | Klassennamen wie `manager/src/renderer/styles.css`; Reuse-Map im Dateikopf. Mock-only: `mock-banner`, `app-shell`-Page-Chrome. Duplikat nötig, solange der Mock per `file://` läuft. |
+| `styles.css` | Zwei Abschnitte: **mock-*** (Page-Chrome, Preview-Nav) vs. **Manager-Port** (dupliziert für `file://`, sync mit `manager/src/renderer/styles.css`). |
 
 ## TLS-State (Manager-Vertrag)
 
@@ -35,7 +35,7 @@ Im Manager liefert **`GET /host/status` → `tls`** die Autorität (`packages/se
 - Nach `obtain-certificate` / `check-certificate` bleibt der State `dns-verified`, bis `apply` läuft — Cutover-Freigabe über **`tls.applyReady`**
 - `tls.mode` (`managed` / `custom`) und `tls.cutoverApplied` — keine Ableitung aus `PROXY_MODE` oder Zertifikatsfeldern
 
-Der Renderer leitet keinen zweiten TLS-State aus Wizard-Feldern ab. Mock-Helfer `deriveTlsState`, `canObtainCertificate` und `canApplyTls` sind **Mock-only**; im Port Buttons aus `tls.state` / `tls.applyReady` steuern.
+Der Renderer leitet keinen zweiten TLS-State aus Wizard-Feldern ab. Mock-Helfer `deriveTlsState`, `canObtainCertificate` und `canApplyTls` sind **Mock-only**; im Port Buttons aus `tls.state` / `tls.applyReady` steuern. Zur Dev-Vorschau setzt der Mock `data-tls-state` auf `.mock-shell` (nicht portieren).
 
 ## Wizard-Nummern
 
@@ -49,20 +49,18 @@ HTTPS innen (Badge „6“, vier Punkte): Angebot → Hostname → feste IP → 
 
 Schritt-Titel in der App heute: 4 „Netzwerk — Host & Erreichbarkeit“, 5 „Zugang — Proxy & Patientenportal“. Mock verkürzt zu „Netzwerk — Host“ / „Zugang — Proxy“.
 
-## CSS-Reuse (Manager)
+## CSS (`styles.css`)
 
-Keine Mock-eigenen Box-Typen portieren — bestehende Manager-Klassen:
+Zwei Abschnitte — Manager ist kanonisch (`manager/src/renderer/styles.css`):
 
-| Mock-Markup | Manager-Klasse |
+| Mock-only (nicht portieren) | Manager-Port (1:1, im Mock dupliziert für `file://`) |
 | --- | --- |
-| Warn-/Ok-/Fehler-Boxen | `notice is-warn` / `is-ok` / `is-bad` (Warn = Alias zu `lan-warning`) |
-| URL-Vorschau | `hint` + `code`; hervorgehoben: `hint--preview` |
-| Mail-/DNS-Text | `textarea.wizard-input is-monospace` (+ `is-compact` in `<details>`) |
-| Zertifikats-Meta | `status-grid wizard-summary-grid` |
-| Mail/DNS-Wiederholung, LAN-Expander | `<details>` in `network-config-block` |
-| Namenswahl-Zusatz | `wizard-nested` |
-| mailto primär | `a.btn-primary` |
-| HTTPS-Unterschritte | **`wizard-step-progress` / `wizard-step-dot`** (einzige echte Neuklassen) |
+| `mock-banner` | `notice is-*`, `lan-warning` |
+| `mock-shell`, `mock-header` | `hint`, `hint--preview`, `wizard-input`, `wizard-nested` |
+| `mock-shell .main-nav` (Preview-Tabs, nicht App-Chrome) | `wizard-step-progress`, `wizard-step-dot` |
+| `data-tls-state` auf `.mock-shell` (Dev) | `network-config-*`, `status-grid`, `checklist`, `setup-entry`, Buttons, … |
+
+Markup-Klassen (`notice`, `wizard-input`, …) stehen in Abschnitt **2** der CSS-Datei; nur `mock-*` und scoped `.mock-shell .main-nav` in Abschnitt **1**.
 
 ## Ziel im Manager
 

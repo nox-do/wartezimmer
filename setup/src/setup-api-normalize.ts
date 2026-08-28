@@ -7,6 +7,9 @@ import type {
   ProxyConfigInput,
   SetupPlanInput,
   StorageFolderPaths,
+  TlsCustomCertificateInput,
+  TlsPrepareInput,
+  TlsRenewInput,
 } from '@praxis-flow/server-shared';
 import {
   SETUP_DEFAULT_GATEWAY_INTERFACE,
@@ -28,6 +31,60 @@ function coerceSetupRecord(body: unknown): Record<string, unknown> {
   return body !== null && typeof body === 'object' && !Array.isArray(body)
     ? (body as Record<string, unknown>)
     : {};
+}
+
+function requireBodyString(record: Record<string, unknown>, key: string): string {
+  const value = record[key];
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new SetupApiValidationError(`${key} required`);
+  }
+  return value.trim();
+}
+
+export function normalizeTlsPrepareInput(body: unknown): TlsPrepareInput {
+  const record = coerceSetupRecord(body);
+  const mode = record.mode;
+  if (mode !== 'managed' && mode !== 'custom') {
+    throw new SetupApiValidationError('mode must be managed or custom');
+  }
+  const hostname =
+    typeof record.hostname === 'string' && record.hostname.trim()
+      ? record.hostname.trim()
+      : undefined;
+  if (mode === 'custom' && !hostname) {
+    throw new SetupApiValidationError('hostname required for custom TLS');
+  }
+  return {
+    mode,
+    lanIp: requireBodyString(record, 'lanIp'),
+    ...(hostname ? { hostname } : {}),
+  };
+}
+
+export function normalizeTlsCustomCertificateInput(body: unknown): TlsCustomCertificateInput {
+  const record = coerceSetupRecord(body);
+  return {
+    fullchainPem: requireBodyString(record, 'fullchainPem'),
+    privateKeyPem: requireBodyString(record, 'privateKeyPem'),
+  };
+}
+
+export function normalizeTlsRenewInput(body: unknown): TlsRenewInput {
+  const record = coerceSetupRecord(body);
+  const fullchainPem =
+    typeof record.fullchainPem === 'string' && record.fullchainPem.trim()
+      ? record.fullchainPem.trim()
+      : undefined;
+  const privateKeyPem =
+    typeof record.privateKeyPem === 'string' && record.privateKeyPem.trim()
+      ? record.privateKeyPem.trim()
+      : undefined;
+  if (Boolean(fullchainPem) !== Boolean(privateKeyPem)) {
+    throw new SetupApiValidationError(
+      'fullchainPem und privateKeyPem müssen gemeinsam angegeben werden',
+    );
+  }
+  return { ...(fullchainPem ? { fullchainPem, privateKeyPem } : {}) };
 }
 
 function coerceSetupPlanInput(body: unknown): SetupPlanInput {

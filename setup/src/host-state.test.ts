@@ -347,20 +347,79 @@ test('saveHostNetwork derives proxy canonical from env when wire omits proxy', a
   });
 });
 
-test('saveHostNetwork rejects unknown PROXY_MODE', async () => {
+test('saveHostNetwork preserves active TLS mode and canonical URL', async () => {
   await withRoot(async (root) => {
     writeEnv(root, {
       PRACTICE_DISPLAY_NAME: 'Praxis Nord',
       SETUP_LAN_APP_IP: '192.168.1.10',
-      CANONICAL_BASE_URL: 'http://192.168.1.10:8080',
+      CANONICAL_BASE_URL: 'https://7fk3m2.lan.notaus.de',
       PROXY_ENABLED: 'true',
       PROXY_MODE: 'tls-managed',
+      PROXY_HTTP_PORT: '80',
+      APP_BIND_ADDRESS: '127.0.0.1',
+      TLS_STATE: 'active',
+      TLS_MODE: 'managed',
+      TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+      TLS_CUTOVER_APPLIED: 'true',
+    });
+
+    await saveHostNetwork(ctx(root), {
+      lanAppIp: '192.168.1.20',
+      gateway: gwOff('192.168.1.20'),
+    });
+    assert.equal(env(root).get('PROXY_MODE'), 'tls-managed');
+    assert.equal(env(root).get('CANONICAL_BASE_URL'), 'https://7fk3m2.lan.notaus.de');
+  });
+});
+
+test('saveHostNetwork syncs TLS_LAN_IP during TLS preparation', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, {
+      PRACTICE_DISPLAY_NAME: 'Praxis Nord',
+      SETUP_LAN_APP_IP: '192.168.178.112',
+      CANONICAL_BASE_URL: 'http://192.168.178.112',
+      ...proxyOn,
+      TLS_STATE: 'awaiting-operator-dns',
+      TLS_MODE: 'managed',
+      TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+      TLS_LAN_IP: '192.168.178.112',
+      TLS_CUTOVER_APPLIED: 'false',
+    });
+
+    await saveHostNetwork(ctx(root), {
+      lanAppIp: '192.168.178.120',
+      gateway: gwOff('192.168.178.120'),
+    });
+
+    const map = env(root);
+    assert.equal(map.get('SETUP_LAN_APP_IP'), '192.168.178.120');
+    assert.equal(map.get('TLS_LAN_IP'), '192.168.178.120');
+    assert.equal(map.get('CANONICAL_BASE_URL'), 'http://192.168.178.120');
+    assert.equal(map.get('TLS_STATE'), 'awaiting-operator-dns');
+  });
+});
+
+test('saveHostNetwork rejects proxy disable during TLS preparation', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, {
+      PRACTICE_DISPLAY_NAME: 'Praxis Nord',
+      SETUP_LAN_APP_IP: '192.168.178.112',
+      CANONICAL_BASE_URL: 'http://192.168.178.112',
+      ...proxyOn,
+      TLS_STATE: 'awaiting-operator-dns',
+      TLS_MODE: 'managed',
+      TLS_LAN_IP: '192.168.178.112',
+      TLS_CUTOVER_APPLIED: 'false',
     });
 
     await assert.rejects(
       () =>
-        saveHostNetwork(ctx(root), { lanAppIp: '192.168.1.10', gateway: gwOff('192.168.1.10') }),
-      (error: unknown) => error instanceof Error && /PROXY_MODE=tls-managed/.test(error.message),
+        saveHostNetwork(ctx(root), {
+          lanAppIp: '192.168.178.112',
+          gateway: gwOff('192.168.178.112'),
+          proxy: { enabled: false, httpPort: 80 },
+        }),
+      /HTTPS-Vorbereitung/,
     );
   });
 });
@@ -490,6 +549,46 @@ test('applySetupPlan without proxy wire preserves PROXY companion keys', async (
     assert.equal(map.get('APP_BIND_ADDRESS'), '127.0.0.1');
     assert.equal(map.get('PRAXIS_FLOW_PROXY_IMAGE'), 'caddy:2.11.4');
     assert.equal(map.get('CANONICAL_BASE_URL'), 'http://192.168.1.20');
+  });
+});
+
+test('HTTP host apply preserves an in-progress TLS preparation', async () => {
+  await withRoot(async (root) => {
+    writeExample(root, 'PROXY_ENABLED=false\nPROXY_MODE=off\nAPP_BIND_ADDRESS=0.0.0.0');
+    writeEnv(root, {
+      PRACTICE_DISPLAY_NAME: 'Praxis Nord',
+      AUTH_KEY_CAPTIVE: SECRET,
+      SANDBOX_INTERNAL_TOKEN: SECRET,
+      OPENNDS_FAS_KEY: SECRET,
+      SETUP_LAN_APP_IP: '192.168.178.112',
+      CANONICAL_BASE_URL: 'http://192.168.178.112',
+      ...proxyOn,
+      TLS_STATE: 'awaiting-operator-dns',
+      TLS_MODE: 'managed',
+      TLS_INSTALLATION_ID: '7fk3m2q9',
+      TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+      TLS_LAN_IP: '192.168.178.112',
+      TLS_CUTOVER_APPLIED: 'false',
+      TLS_APPLY_READY: 'false',
+      PROXY_CADDYFILE_HOST_PATH: '/install/state/tls/Caddyfile',
+    });
+
+    await applySetupPlan(ctx(root), {
+      lanAppIp: '192.168.178.112',
+      practiceDisplayName: 'Praxis Nord',
+      proxy: { enabled: true, httpPort: 80 },
+      gateway: gwOff('192.168.178.112'),
+      preserveEnv: true,
+      runCompose: false,
+      runProbes: false,
+    });
+
+    const map = env(root);
+    assert.equal(map.get('PROXY_MODE'), 'http');
+    assert.equal(map.get('CANONICAL_BASE_URL'), 'http://192.168.178.112');
+    assert.equal(map.get('TLS_STATE'), 'awaiting-operator-dns');
+    assert.equal(map.get('TLS_INSTALLATION_ID'), '7fk3m2q9');
+    assert.equal(map.get('PROXY_CADDYFILE_HOST_PATH'), '/install/state/tls/Caddyfile');
   });
 });
 

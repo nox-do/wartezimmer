@@ -44,6 +44,31 @@ test('resolveComposeFiles stacks proxy overlays', () => {
   );
 });
 
+test('resolveComposeFiles adds TLS overlay only when explicitly selected', () => {
+  assert.deepEqual(
+    resolveComposeFiles({
+      projectRoot: '/tmp/praxis-flow-dev',
+      delivery: false,
+      proxyEnabled: true,
+      proxyTlsEnabled: true,
+    }),
+    ['docker-compose.yml', 'docker-compose.proxy.yml', 'docker-compose.proxy-tls.yml'],
+  );
+  assert.deepEqual(
+    resolveComposeFiles({
+      projectRoot: '/tmp/praxis-flow-delivery',
+      delivery: true,
+      proxyEnabled: true,
+      proxyTlsEnabled: true,
+    }),
+    [
+      'docker-compose.delivery.yml',
+      'docker-compose.proxy.delivery.yml',
+      'docker-compose.proxy-tls.delivery.yml',
+    ],
+  );
+});
+
 test('parseComposePsOutput handles empty stdout', () => {
   assert.deepEqual(parseComposePsOutput(''), []);
   assert.deepEqual(parseComposePsOutput('   \n'), []);

@@ -25,16 +25,32 @@ import {
   setHostRoutingMode,
   validatePfbackupFull,
 } from './host-state.js';
+import {
+  applyHostTls,
+  checkCustomCertificate,
+  obtainManagedCertificate,
+  prepareHostTls,
+  renewHostTls,
+  repairHostTls,
+  resetHostTls,
+  stageCustomCertificate,
+  verifyHostTlsDns,
+  type TlsRuntimeDependencies,
+} from './host-tls.js';
 import { readEnvMap } from './env-file.js';
 import { resolveSetupApiError } from './api-error.js';
 import {
   normalizeApplySetupInput,
   normalizeHostNetworkInput,
   normalizeSetupPlanInput,
+  normalizeTlsCustomCertificateInput,
+  normalizeTlsPrepareInput,
+  normalizeTlsRenewInput,
   SetupApiValidationError,
 } from './setup-api-normalize.js';
 import { resolveSetupContext, type SetupContext } from './setup-context.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
+import { SETUP_TLS_ROUTES } from '@praxis-flow/server-shared';
 
 const DEFAULT_PORT = 9190;
 
@@ -109,7 +125,7 @@ async function readPfupdateInput(req: http.IncomingMessage) {
   };
 }
 
-function createRuntimeRoutes(ctx: SetupContext): Routes {
+function createRuntimeRoutes(ctx: SetupContext, tlsDeps: TlsRuntimeDependencies): Routes {
   return {
     'GET /api/setup/host/status': async (_req, url) => {
       const includeParam = url.searchParams.get('include') ?? '';
@@ -133,6 +149,27 @@ function createRuntimeRoutes(ctx: SetupContext): Routes {
       const input = normalizeHostNetworkInput(body);
       return routeResult(await saveHostNetwork(ctx, input));
     },
+    [`POST ${SETUP_TLS_ROUTES.prepare}`]: async (req) =>
+      routeResult(
+        await prepareHostTls(ctx, normalizeTlsPrepareInput(await readJsonBody(req)), tlsDeps),
+      ),
+    [`POST ${SETUP_TLS_ROUTES.verifyDns}`]: async () =>
+      routeResult(await verifyHostTlsDns(ctx, tlsDeps)),
+    [`POST ${SETUP_TLS_ROUTES.obtainCertificate}`]: async () =>
+      routeResult(await obtainManagedCertificate(ctx, tlsDeps)),
+    [`POST ${SETUP_TLS_ROUTES.customCertificate}`]: async (req) =>
+      routeResult(
+        stageCustomCertificate(ctx, normalizeTlsCustomCertificateInput(await readJsonBody(req))),
+      ),
+    [`POST ${SETUP_TLS_ROUTES.checkCertificate}`]: async () =>
+      routeResult(await checkCustomCertificate(ctx, tlsDeps)),
+    [`POST ${SETUP_TLS_ROUTES.apply}`]: async () => routeResult(await applyHostTls(ctx, tlsDeps)),
+    [`POST ${SETUP_TLS_ROUTES.repair}`]: async () => routeResult(await repairHostTls(ctx, tlsDeps)),
+    [`POST ${SETUP_TLS_ROUTES.reset}`]: async () => routeResult(await resetHostTls(ctx, tlsDeps)),
+    [`POST ${SETUP_TLS_ROUTES.renew}`]: async (req) =>
+      routeResult(
+        await renewHostTls(ctx, normalizeTlsRenewInput(await readJsonBody(req)), tlsDeps),
+      ),
     'GET /api/setup/host/compose': async () => routeResult(await getComposeStatus(ctx)),
     'GET /api/setup/host/compose/logs': async (_req, url) => {
       const service = url.searchParams.get('service')?.trim() || undefined;
@@ -272,19 +309,26 @@ function createDeliveryRoutes(ctx: SetupContext): Routes {
   };
 }
 
-function createSetupRoutes(ctx: SetupContext): ReadonlyMap<string, RouteHandler> {
+function createSetupRoutes(
+  ctx: SetupContext,
+  tlsDeps: TlsRuntimeDependencies = {},
+): ReadonlyMap<string, RouteHandler> {
   return new Map(
     Object.entries({
       'GET /api/setup/health': () => routeResult({ ok: true }),
-      ...createRuntimeRoutes(ctx),
+      ...createRuntimeRoutes(ctx, tlsDeps),
       ...createManagementRoutes(ctx),
       ...createDeliveryRoutes(ctx),
     }),
   );
 }
 
-export function createSetupRequestHandler(ctx: SetupContext, port = DEFAULT_PORT) {
-  const routes = createSetupRoutes(ctx);
+export function createSetupRequestHandler(
+  ctx: SetupContext,
+  port = DEFAULT_PORT,
+  tlsDeps: TlsRuntimeDependencies = {},
+) {
+  const routes = createSetupRoutes(ctx, tlsDeps);
   return async (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = new URL(req.url ?? '/', `http://127.0.0.1:${port}`);
     const handler = routes.get(`${req.method ?? 'GET'} ${url.pathname}`);

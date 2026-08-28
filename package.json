@@ -52,6 +52,7 @@
     "smoke:ops-settings": "node ./scripts/smoke-ops-settings.mjs",
     "smoke:setup-host": "node ./scripts/smoke-setup-host.mjs",
     "smoke:proxy": "node ./scripts/smoke-proxy.mjs",
+    "smoke:tls-lab": "node ./scripts/smoke-tls-lab.mjs",
     "smoke:all": "npm run smoke:auth-session && npm run smoke:tv-pairing && npm run smoke:terminal-pairing && npm run smoke:openapi-contract && npm run smoke:doc-flow && npm run smoke:day-lifecycle && npm run smoke:messaging-recall && npm run smoke:practice-hours && npm run smoke:emergency && npm run smoke:ops-stream && npm run smoke:ops-settings && npm run smoke:setup-host",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

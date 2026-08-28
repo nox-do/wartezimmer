@@ -2,6 +2,18 @@
 
 import type { SandboxScannerStatus } from './sandbox-scanner.js';
 
+export const SETUP_TLS_ROUTES = {
+  prepare: '/api/setup/host/tls/prepare',
+  verifyDns: '/api/setup/host/tls/verify-dns',
+  obtainCertificate: '/api/setup/host/tls/obtain-certificate',
+  customCertificate: '/api/setup/host/tls/custom-certificate',
+  checkCertificate: '/api/setup/host/tls/check-certificate',
+  apply: '/api/setup/host/tls/apply',
+  repair: '/api/setup/host/tls/repair',
+  reset: '/api/setup/host/tls/reset',
+  renew: '/api/setup/host/tls/renew',
+} as const;
+
 export const SETUP_DEFAULT_GATEWAY_INTERFACE = 'eth1';
 export const SETUP_DEFAULT_GATEWAY_IP = '192.168.88.1';
 
@@ -289,8 +301,8 @@ export type HostGatewayStatus = {
   authBridgeUrl: string | null;
 };
 
-/** P2a: HTTP proxy only. TLS modes are additive later. */
-export type ProxyMode = 'off' | 'http';
+/** Proxy runtime mode. TLS modes are only written by `POST /host/tls/apply`. */
+export type ProxyMode = 'off' | 'http' | 'tls-managed' | 'tls-custom';
 
 export type ProxyStatus = {
   enabled: boolean;
@@ -346,6 +358,62 @@ export type TlsStatus = {
   certificate: TlsCertificateStatus | null;
   lastError: { class: TlsErrorClass; message: string } | null;
 };
+
+export type TlsPrepareInput = {
+  mode: TlsMode;
+  /** Fixed DNS name. Managed setup may omit it to use the installation-ID label. */
+  hostname?: string;
+  /** Confirmed, stable LAN IPv4 address which the public A record must contain. */
+  lanIp: string;
+};
+
+export type TlsOperatorRequest = {
+  installationId: string;
+  /** Returned by prepare, never by status. Removed from disk after consumption/reset. */
+  oneTimeToken: string;
+  aRecord: { name: string; value: string };
+  acmeCname: { name: string; value: string };
+};
+
+export type TlsPrepareResult = {
+  tls: TlsStatus;
+  /** Managed path only. Custom TLS has no operator token or ACME delegation. */
+  operatorRequest: TlsOperatorRequest | null;
+};
+
+export type TlsDnsCheck = {
+  id: 'server-ipv4' | 'a-record' | 'acme-cname';
+  ok: boolean;
+  message: string;
+  detail?: string;
+};
+
+export type TlsVerifyDnsResult = {
+  tls: TlsStatus;
+  checks: TlsDnsCheck[];
+};
+
+export type TlsCustomCertificateInput = {
+  /** PEM certificate followed by optional intermediate certificates. */
+  fullchainPem: string;
+  /** Unencrypted PEM private key. Never persisted in `.env` or returned. */
+  privateKeyPem: string;
+};
+
+export type TlsLocalCheck = {
+  id: 'certificate' | 'tcp-443' | 'http2' | 'sse';
+  ok: boolean;
+  message: string;
+  detail?: string;
+};
+
+export type TlsActionResult = {
+  tls: TlsStatus;
+  checks?: TlsLocalCheck[];
+};
+
+/** Custom renew reuses the staging payload; managed renew has an empty body. */
+export type TlsRenewInput = Partial<TlsCustomCertificateInput>;
 
 export type HostNetworkStatus = {
   configuredLanIp: string | null;
@@ -491,7 +559,7 @@ export type HostStatus = {
   gateway: HostGatewayStatus | null;
   /** Always set: proxy is part of the host model; `enabled: false` / `mode: 'off'` is normal. */
   proxy: ProxyStatus;
-  /** Port hook: absent until the LAN-TLS Setup API is implemented. */
+  /** Present on current Setup hosts; optional only for backward compatibility with older hosts. */
   tls?: TlsStatus;
   deviceUrls: DeviceUrls | null;
   probes: ProbeResult[];

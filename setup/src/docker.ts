@@ -87,7 +87,16 @@ function wantsProxyCompose(projectRoot: string, withProxy?: boolean): boolean {
     return false;
   }
   const mode = (envMap.get('PROXY_MODE')?.trim() || 'http').toLowerCase();
-  return mode === 'http';
+  return mode === 'http' || mode === 'tls-managed' || mode === 'tls-custom';
+}
+
+function wantsProxyTlsCompose(projectRoot: string): boolean {
+  const envPath = path.join(projectRoot, '.env');
+  if (!fs.existsSync(envPath)) return false;
+  const envMap = readEnvMap(envPath);
+  const mode = (envMap.get('PROXY_MODE')?.trim() || '').toLowerCase();
+  const tlsState = (envMap.get('TLS_STATE')?.trim() || 'off').toLowerCase();
+  return mode === 'tls-managed' || mode === 'tls-custom' || tlsState !== 'off';
 }
 
 /**
@@ -99,6 +108,7 @@ export function resolveComposeFiles(input: {
   projectRoot: string;
   delivery?: boolean;
   proxyEnabled?: boolean;
+  proxyTlsEnabled?: boolean;
   gatewayEnabled?: boolean;
 }): string[] {
   const useDelivery = usesDeliveryCompose(input.projectRoot, input.delivery);
@@ -106,6 +116,11 @@ export function resolveComposeFiles(input: {
 
   if (input.proxyEnabled) {
     files.push(useDelivery ? 'docker-compose.proxy.delivery.yml' : 'docker-compose.proxy.yml');
+    if (input.proxyTlsEnabled) {
+      files.push(
+        useDelivery ? 'docker-compose.proxy-tls.delivery.yml' : 'docker-compose.proxy-tls.yml',
+      );
+    }
   }
 
   if (input.gatewayEnabled && canRunGatewayCompose()) {
@@ -121,6 +136,7 @@ function resolveComposeFileList(options: ComposeRunOptions): {
   gatewaySkipped: boolean;
 } {
   const proxyEnabled = wantsProxyCompose(options.projectRoot, options.withProxy);
+  const proxyTlsEnabled = proxyEnabled && wantsProxyTlsCompose(options.projectRoot);
   const gatewayWanted = wantsGatewayCompose(options.projectRoot, options.withGateway);
   const wantGateway = gatewayWanted && canRunGatewayCompose();
   const gatewaySkipped = gatewayWanted && !canRunGatewayCompose();
@@ -128,6 +144,7 @@ function resolveComposeFileList(options: ComposeRunOptions): {
     projectRoot: options.projectRoot,
     delivery: options.delivery,
     proxyEnabled,
+    proxyTlsEnabled,
     gatewayEnabled: gatewayWanted,
   });
   return { files, wantGateway, gatewaySkipped };

@@ -29,6 +29,7 @@ export const PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS = [
 /** Optional in v1 for backward compatibility with packages built before P2c. */
 export const PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS = [
   'templates/docker-compose.proxy.delivery.yml',
+  'templates/docker-compose.proxy-tls.delivery.yml',
   'templates/proxy/Caddyfile',
 ] as const;
 

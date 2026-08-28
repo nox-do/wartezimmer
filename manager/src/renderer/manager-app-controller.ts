@@ -26,7 +26,7 @@ export type ManagerAppController = {
   onStatusSetupClick: () => void;
   onStatusLoadReleaseArchive: () => void;
   onStatusOpenUrl: (url: string) => void;
-  onAfterMutation: () => void;
+  onAfterMutation: () => Promise<void>;
   onWizardComplete: () => void;
   onWizardCancel: () => void;
 };
@@ -120,8 +120,8 @@ export function createManagerAppController(): ManagerAppController {
     navigation.navigateTo(tab);
   }
 
-  function onAfterMutation(): void {
-    void hostRefresh.refresh({ scope: 'full', immediate: true });
+  function onAfterMutation(): Promise<void> {
+    return hostRefresh.refresh({ scope: 'full', immediate: true });
   }
 
   function onWizardLeave(): void {

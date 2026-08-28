@@ -1,0 +1,181 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import type { TlsMode, TlsStatus } from '@praxis-flow/server-shared';
+
+export const GENERATED_CADDYFILE_MARKER = '# PRAXIS-FLOW-GENERATED LAN-TLS v1';
+
+export const PROXY_TLS_HOST_PATH_ENV_KEYS = [
+  'PROXY_HTTPS_PORT',
+  'PROXY_CADDY_DATA_HOST_PATH',
+  'PROXY_CADDY_CONFIG_HOST_PATH',
+  'PROXY_CADDYFILE_HOST_PATH',
+  'PROXY_ACME_DNS_CREDENTIALS_HOST_PATH',
+  'PROXY_CERTS_HOST_PATH',
+] as const;
+
+export const PROXY_TLS_RUNTIME_ENV_KEYS = [
+  ...PROXY_TLS_HOST_PATH_ENV_KEYS,
+  'TLS_ACME_DIRECTORY',
+  'TLS_ACME_DIRECTORY_URL',
+  'TLS_ACME_DNS_API',
+  'TLS_OPERATOR_ZONE',
+  'TLS_RUNTIME_FAKE',
+  'TRUST_PROXY_HEADERS',
+] as const;
+
+export type ProxyTlsPaths = {
+  root: string;
+  caddyData: string;
+  caddyConfig: string;
+  caddyfile: string;
+  acmeDnsCredentials: string;
+  certs: string;
+  customFullchain: string;
+  customPrivateKey: string;
+  operatorToken: string;
+};
+
+export function resolveProxyTlsPaths(installHome: string): ProxyTlsPaths {
+  const root = path.join(installHome, 'state', 'tls');
+  const certs = path.join(root, 'certs');
+  return {
+    root,
+    caddyData: path.join(root, 'caddy-data'),
+    caddyConfig: path.join(root, 'caddy-config'),
+    caddyfile: path.join(root, 'Caddyfile'),
+    acmeDnsCredentials: path.join(root, 'acme-dns.json'),
+    certs,
+    customFullchain: path.join(certs, 'fullchain.pem'),
+    customPrivateKey: path.join(certs, 'private-key.pem'),
+    operatorToken: path.join(root, 'operator-token'),
+  };
+}
+
+export function ensureProxyTlsPaths(installHome: string): ProxyTlsPaths {
+  const paths = resolveProxyTlsPaths(installHome);
+  for (const directory of [paths.root, paths.caddyData, paths.caddyConfig, paths.certs]) {
+    fs.mkdirSync(directory, { recursive: true });
+  }
+  // The TLS overlay always mounts this path. Custom mode deliberately has no account,
+  // but a regular empty JSON file avoids Docker turning a missing file into a directory.
+  if (!fs.existsSync(paths.acmeDnsCredentials)) {
+    writeSecretFileAtomically(paths.acmeDnsCredentials, '{}\n');
+  }
+  return paths;
+}
+
+export function buildProxyTlsEnvUpdates(
+  installHome: string,
+  httpsPort = 443,
+): Record<string, string> {
+  const paths = ensureProxyTlsPaths(installHome);
+  return {
+    PROXY_HTTPS_PORT: String(httpsPort),
+    PROXY_CADDY_DATA_HOST_PATH: paths.caddyData,
+    PROXY_CADDY_CONFIG_HOST_PATH: paths.caddyConfig,
+    PROXY_CADDYFILE_HOST_PATH: paths.caddyfile,
+    PROXY_ACME_DNS_CREDENTIALS_HOST_PATH: paths.acmeDnsCredentials,
+    PROXY_CERTS_HOST_PATH: paths.certs,
+  };
+}
+
+export function writeSecretFileAtomically(filePath: string, content: string): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const temporaryPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(temporaryPath, content, { encoding: 'utf8', mode: 0o600 });
+  fs.renameSync(temporaryPath, filePath);
+  if (process.platform !== 'win32') {
+    fs.chmodSync(filePath, 0o600);
+  }
+}
+
+function caddyAcmeDirectory(env: Map<string, string>): string {
+  const explicit = env.get('TLS_ACME_DIRECTORY_URL')?.trim();
+  if (explicit) {
+    try {
+      const url = new URL(explicit);
+      if ((url.protocol === 'http:' || url.protocol === 'https:') && !/[\s{}]/.test(explicit)) {
+        return explicit;
+      }
+    } catch {
+      // common error below
+    }
+    throw new Error('TLS_ACME_DIRECTORY_URL muss eine gültige http(s)-URL sein.');
+  }
+  const kind = env.get('TLS_ACME_DIRECTORY')?.trim().toLowerCase() || 'production';
+  if (kind === 'staging') {
+    return 'https://acme-staging-v02.api.letsencrypt.org/directory';
+  }
+  if (kind === 'pebble') {
+    return 'https://pebble:14000/dir';
+  }
+  return 'https://acme-v02.api.letsencrypt.org/directory';
+}
+
+function tlsDirective(mode: TlsMode, env: Map<string, string>): string {
+  if (mode === 'custom') {
+    return '\ttls /certs/fullchain.pem /certs/private-key.pem';
+  }
+  return [
+    '\ttls {',
+    '\t\tissuer acme {',
+    `\t\t\tdir ${caddyAcmeDirectory(env)}`,
+    '\t\t\tdisable_http_challenge',
+    '\t\t\tdisable_tlsalpn_challenge',
+    '\t\t\tdns acmedns /run/secrets/acme-dns.json',
+    '\t\t}',
+    '\t}',
+  ].join('\n');
+}
+
+/**
+ * Generated runtime config. Before cutover port 80 remains the application; after
+ * cutover it is redirect-only. A managed config requires an xcaddy image containing
+ * github.com/caddy-dns/acmedns; the stock HTTP image remains valid for customer tests.
+ */
+export function generateTlsCaddyfile(status: TlsStatus, env: Map<string, string>): string {
+  if (!status.hostname || !status.mode) {
+    return `${GENERATED_CADDYFILE_MARKER}\n\n:80 {\n\treverse_proxy app:8080\n}\n`;
+  }
+  const httpBlock = status.cutoverApplied
+    ? `:80 {\n\tredir https://${status.hostname}{uri} permanent\n}`
+    : ':80 {\n\treverse_proxy app:8080\n}';
+  return [
+    GENERATED_CADDYFILE_MARKER,
+    '',
+    '{',
+    '\tservers {',
+    '\t\tprotocols h1 h2',
+    '\t}',
+    '\tauto_https disable_redirects',
+    '}',
+    '',
+    httpBlock,
+    '',
+    `${status.hostname} {`,
+    tlsDirective(status.mode, env),
+    '\t@setupTlsSse path /__praxis-flow/setup/tls-sse',
+    '\thandle @setupTlsSse {',
+    '\t\theader Content-Type "text/event-stream; charset=utf-8"',
+    '\t\trespond "event: tick\\ndata: ok\\n\\n" 200',
+    '\t}',
+    '\thandle {',
+    '\t\treverse_proxy app:8080',
+    '\t}',
+    '}',
+    '',
+  ].join('\n');
+}
+
+export function writeGeneratedTlsCaddyfile(
+  installHome: string,
+  status: TlsStatus,
+  env: Map<string, string>,
+): string {
+  const paths = ensureProxyTlsPaths(installHome);
+  const content = generateTlsCaddyfile(status, env);
+  const temporaryPath = `${paths.caddyfile}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(temporaryPath, content, 'utf8');
+  fs.renameSync(temporaryPath, paths.caddyfile);
+  return paths.caddyfile;
+}

@@ -23,6 +23,7 @@ const DELIVERY_BOOTSTRAP_FILES = [
   'docker-compose.delivery.yml',
   'docker-compose.gateway.delivery.yml',
   'docker-compose.proxy.delivery.yml',
+  'docker-compose.proxy-tls.delivery.yml',
   'proxy/Caddyfile',
 ] as const;
 
@@ -31,6 +32,7 @@ const DEV_BOOTSTRAP_FILES = [
   'docker-compose.yml',
   'docker-compose.gateway.yml',
   'docker-compose.proxy.yml',
+  'docker-compose.proxy-tls.yml',
   'proxy/Caddyfile',
 ] as const;
 

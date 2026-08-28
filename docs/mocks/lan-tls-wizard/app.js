@@ -907,7 +907,7 @@ function renderLanBlock() {
 }
 
 function renderNetwork() {
-  return `<header class="app-header"><h1>Netzwerk</h1></header>
+  return `<header class="mock-header"><h1>Netzwerk</h1></header>
     ${mockNav('network')}
     ${renderNetworkTls()}
     ${renderLanBlock()}`;
@@ -1023,7 +1023,7 @@ function renderStatus() {
               : pending
                 ? `wartet auf DNS · ${escapeHtml(hostname())}`
                 : 'nicht begonnen';
-  return `<header class="app-header"><h1>Status</h1></header>
+  return `<header class="mock-header"><h1>Status</h1></header>
     <p class="health-banner is-ok">Betrieb</p>
     ${mockNav('status')}
     ${card}
@@ -1140,7 +1140,7 @@ function renderMaintenance() {
         'HTTPS-State (Pilot)',
         '<p class="hint">Sobald HTTPS vorbereitet ist, erscheint hier die Sidecar-Sicherung neben dem Praxis-Backup.</p>',
       );
-  return `<header class="app-header"><h1>Wartung</h1></header>
+  return `<header class="mock-header"><h1>Wartung</h1></header>
     ${mockNav('maintenance')}
     ${networkBlock(
       'Praxis-Backup (.pfbackup)',
@@ -1497,7 +1497,7 @@ document.body.addEventListener('input', (event) => {
 });
 
 function render() {
-  document.querySelector('.app-shell').dataset.tlsState = tlsState();
+  document.querySelector('.mock-shell').dataset.tlsState = tlsState();
   const wizard = document.getElementById('wizard-shell');
   const status = document.getElementById('status-shell');
   const network = document.getElementById('network-shell');

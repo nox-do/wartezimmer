@@ -20,8 +20,18 @@ Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-histo
 
 ## Heute (2026-08-28)
 
+- Arbeitspaket 2/4: TLS-Lab-Infra opt-in — `docker-compose.tls-lab.yml` (Pebble 2.10.1, acme-dns v1.0, CoreDNS 1.14.7), Proxy-Minica-Overlay, `docs/tls-lab.md`, `npm run smoke:tls-lab`; kein Setup-obtain
+- TLS-Lab Review: Challenge-CNAME nach `/register` schreiben + Kette prüfen; Start/Smoke als Alternativen; curl-Hilfsimage per Digest
+- Arbeitspaket 1/4: lokales Custom-Caddy-Image `praxis-flow-proxy:2.11.4-acmedns` (`proxy/Dockerfile`, xcaddy + `acmedns@v0.7.0`); Compose weiter über `PRAXIS_FLOW_PROXY_IMAGE`, Default bleibt Stock `caddy:2.11.4`
+- LAN-TLS Backend Schicht 1–3: Shared-Vertrag, persistenter Setup-State und TLS-Routen (Fake-/DNS-/Custom-PEM-Gates), opt-in Caddy-443-Overlay + generierte Caddyfile; Manager/Backup-Sidecar/Pilot weiter separat
 - LAN-TLS UI-Vorbereitung: CSS-Reuse — `notice`/`lan-warning`, `hint`+`code`, `wizard-input is-monospace`, `status-grid`, `network-config-block > details`; nur Dots + `wizard-nested` + `hint--preview` neu
-- Mock: Schritte 1–3 aus UI entfernt (Scope 4–8); Sprungmarken-Footer entfernt — Durchklicken über Assistent + Tab-Nav
+- Mock: Schritte 1–3 + Sprungmarken aus UI; `styles.css` mock-* vs Manager-Port getrennt (`mock-shell`, scoped Preview-Nav)
+
+## Heute (2026-08-28)
+
+- TLS Backend: Network-Save während Vorbereitung — Proxy abschalten/Erreichbarkeit-Override blockiert; `TLS_LAN_IP` sync bei LAN-Wechsel (`tls-env.ts`, `proxy.ts`, `host-state.ts`)
+- Manager Netzwerk-Tab an TLS-Status gebunden: während Vorbereitung Port 80/Erreichbarkeit gesperrt, LAN-Save ohne Proxy/Canonical, Status-Refresh abgewartet; Payload-Tests für Vorbereitung, Cutover und HTTP-only
+
 
 ## Heute (2026-08-27)
 

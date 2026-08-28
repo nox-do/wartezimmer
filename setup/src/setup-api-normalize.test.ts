@@ -6,8 +6,46 @@ import {
   normalizeGatewayPlan,
   normalizeHostNetworkInput,
   normalizeSetupPlanInput,
+  normalizeTlsCustomCertificateInput,
+  normalizeTlsPrepareInput,
+  normalizeTlsRenewInput,
   SetupApiValidationError,
 } from './setup-api-normalize.js';
+
+test('normalizeTlsPrepareInput validates managed/custom bodies', () => {
+  assert.deepEqual(
+    normalizeTlsPrepareInput({
+      mode: 'managed',
+      hostname: ' 7fk3m2.lan.notaus.de ',
+      lanIp: ' 192.168.178.112 ',
+    }),
+    {
+      mode: 'managed',
+      hostname: '7fk3m2.lan.notaus.de',
+      lanIp: '192.168.178.112',
+    },
+  );
+  assert.throws(
+    () => normalizeTlsPrepareInput({ mode: 'custom', lanIp: '192.168.178.112' }),
+    /hostname required/,
+  );
+});
+
+test('normalizeTlsCustomCertificateInput requires both PEM strings', () => {
+  assert.deepEqual(
+    normalizeTlsCustomCertificateInput({ fullchainPem: ' cert ', privateKeyPem: ' key ' }),
+    { fullchainPem: 'cert', privateKeyPem: 'key' },
+  );
+  assert.throws(
+    () => normalizeTlsCustomCertificateInput({ fullchainPem: 'cert' }),
+    /privateKeyPem required/,
+  );
+});
+
+test('normalizeTlsRenewInput accepts empty managed body and paired custom PEM', () => {
+  assert.deepEqual(normalizeTlsRenewInput({}), {});
+  assert.throws(() => normalizeTlsRenewInput({ fullchainPem: 'cert' }), /gemeinsam angegeben/);
+});
 
 test('normalizeGatewayPlan applies defaults when gateway enabled', () => {
   assert.throws(

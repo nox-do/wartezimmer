@@ -45,7 +45,7 @@
   let {
     onAfterMutation,
   }: {
-    onAfterMutation: () => void;
+    onAfterMutation: () => void | Promise<void>;
   } = $props();
 
   let snapshot = $state<NetworkState | null>(null);
@@ -67,6 +67,13 @@
   const runtimeSnapshot = $derived(managerShell.runtimeSnapshot);
   const compose = $derived(effectiveCompose(configSnapshot, runtimeSnapshot));
   const tlsCutoverApplied = $derived(configSnapshot?.tls?.cutoverApplied === true);
+  const tlsPreparationActive = $derived(
+    Boolean(
+      configSnapshot?.tls &&
+        configSnapshot.tls.state !== 'off' &&
+        !configSnapshot.tls.cutoverApplied,
+    ),
+  );
 
   function requireApi(): PraxisManagerApi {
     const api = window.praxisManager;
@@ -247,9 +254,14 @@
           >
             <ProxySettings
               enabled={snapshot.proxyEnabled}
-              disabled={busy}
+              disabled={busy || tlsPreparationActive}
               onChange={(proxyEnabled) => patchFields({ proxyEnabled })}
             />
+            {#if tlsPreparationActive}
+              <p class="hint">
+                Port 80 bleibt während der HTTPS-Vorbereitung unverändert.
+              </p>
+            {/if}
             {#if showProxyRestore}
               <ProxyRecoveryAction disabled={busy} onRestore={() => controller?.restoreProxy()} />
             {/if}
@@ -258,23 +270,32 @@
           <MaintenanceSection
             open={reachabilityOpen}
             title="Adresse für Terminal, TV und MFA"
-            subtitle={networkReachabilitySubtitle(configSnapshot)}
+            subtitle={tlsPreparationActive
+              ? 'HTTPS-Adresse wird separat verwaltet'
+              : networkReachabilitySubtitle(configSnapshot)}
             onToggle={() => {
               reachabilityOpen = !reachabilityOpen;
             }}
           >
-            <!-- OPEN: guest-WLAN / Private-DNS help belongs in this expander (also without TLS). See ReachabilityPanel.svelte. -->
-            <ReachabilityPanel
-              state={snapshot}
-              network={snapshot.network}
-              disabled={busy}
-              savedBaseUrl={savedUrl}
-              verifyBusy={snapshot.phase === 'checking'}
-              verifyEnabled={Boolean(compose?.running)}
-              verifyDisabledHint={NETWORK_STACK_STOPPED_VERIFY_HINT}
-              onChange={patchFields}
-              onVerifySaved={() => controller?.verifyActiveConfiguration(savedUrl)}
-            />
+            {#if tlsPreparationActive}
+              <p class="hint">
+                Die Geräte-Adresse ist während der HTTPS-Vorbereitung gesperrt. Die
+                HTTPS-Adresse wird unter dem HTTPS-Block verwaltet.
+              </p>
+            {:else}
+              <!-- OPEN: guest-WLAN / Private-DNS help belongs in this expander (also without TLS). See ReachabilityPanel.svelte. -->
+              <ReachabilityPanel
+                state={snapshot}
+                network={snapshot.network}
+                disabled={busy}
+                savedBaseUrl={savedUrl}
+                verifyBusy={snapshot.phase === 'checking'}
+                verifyEnabled={Boolean(compose?.running)}
+                verifyDisabledHint={NETWORK_STACK_STOPPED_VERIFY_HINT}
+                onChange={patchFields}
+                onVerifySaved={() => controller?.verifyActiveConfiguration(savedUrl)}
+              />
+            {/if}
           </MaintenanceSection>
         {/if}
       </div>

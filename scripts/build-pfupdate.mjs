@@ -55,6 +55,7 @@ Package layout (extracted):
   images/praxis-flow-images.tar     ← docker save (app + sandbox + caddy; + gateway if --with-gateway)
   templates/docker-compose.delivery.yml
   templates/docker-compose.proxy.delivery.yml
+  templates/docker-compose.proxy-tls.delivery.yml
   templates/proxy/Caddyfile
   templates/.env.example
   THIRD_PARTY_NOTICES.txt
@@ -371,6 +372,10 @@ try {
   copyFileEnsuringDir(
     path.join(root, 'docker-compose.proxy.delivery.yml'),
     path.join(stagingRoot, 'templates', 'docker-compose.proxy.delivery.yml'),
+  );
+  copyFileEnsuringDir(
+    path.join(root, 'docker-compose.proxy-tls.delivery.yml'),
+    path.join(stagingRoot, 'templates', 'docker-compose.proxy-tls.delivery.yml'),
   );
   copyFileEnsuringDir(
     path.join(root, 'proxy', 'Caddyfile'),

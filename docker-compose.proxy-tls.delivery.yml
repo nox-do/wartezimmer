@@ -1,0 +1,13 @@
+# Delivery variant of the opt-in LAN-TLS extension.
+# Layer after docker-compose.proxy.delivery.yml; never selected by the HTTP-only path.
+
+services:
+  proxy:
+    ports:
+      - '${PROXY_HTTPS_PORT:-443}:443'
+    volumes:
+      - ${PROXY_CADDY_DATA_HOST_PATH:?PROXY_CADDY_DATA_HOST_PATH is required}:/data
+      - ${PROXY_CADDY_CONFIG_HOST_PATH:?PROXY_CADDY_CONFIG_HOST_PATH is required}:/config
+      - ${PROXY_CADDYFILE_HOST_PATH:?PROXY_CADDYFILE_HOST_PATH is required}:/etc/caddy/Caddyfile:ro
+      - ${PROXY_ACME_DNS_CREDENTIALS_HOST_PATH:?PROXY_ACME_DNS_CREDENTIALS_HOST_PATH is required}:/run/secrets/acme-dns.json:ro
+      - ${PROXY_CERTS_HOST_PATH:?PROXY_CERTS_HOST_PATH is required}:/certs:ro

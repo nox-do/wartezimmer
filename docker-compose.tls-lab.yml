@@ -1,0 +1,77 @@
+# Opt-in LAN-TLS lab infrastructure (Pebble + acme-dns + CoreDNS).
+# Does not alter the HTTP-only customer path. Setup obtain/verify stays Arbeitspaket 3.
+#
+# Alternatives (do not run both at once — fixed container_name + host ports):
+#   npm run smoke:tls-lab
+#   docker compose -f docker-compose.tls-lab.yml up -d
+#
+# With proxy stack (directory trust on proxy):
+#   docker compose -f docker-compose.yml -f docker-compose.proxy.yml \
+#     -f docker-compose.proxy-tls.yml -f docker-compose.tls-lab.yml \
+#     -f docker-compose.tls-lab-proxy.yml up -d
+#
+# Image pins (tag + digest, 2026-08-28):
+#   ghcr.io/letsencrypt/pebble:2.10.1
+#     @sha256:ddf230642b1a584f519f32e347de1b05a6e4c1f6c35c1863b33effeab5f78199
+#   joohoi/acme-dns:v1.0
+#     @sha256:08435bf0c6cfe7c29816ff48beabcc333743b5bb060cae3867777d9b0d956517
+#     (v2.0.2 Docker image fails at runtime: sql sqlite3 driver missing — #399 follow-up)
+#     (linux/amd64 only — arm64 hosts use emulation)
+#   coredns/coredns:1.14.7
+#     @sha256:7efd3c635b03efd68c4e8398fc45f0d993d0e9ab016f72c1cefb0fd6d01aa286
+
+x-docker-logging: &docker-logging
+  driver: json-file
+  options:
+    max-size: ${DOCKER_LOG_MAX_SIZE:-10m}
+    max-file: ${DOCKER_LOG_MAX_FILE:-5}
+
+services:
+  coredns:
+    logging: *docker-logging
+    image: coredns/coredns:1.14.7@sha256:7efd3c635b03efd68c4e8398fc45f0d993d0e9ab016f72c1cefb0fd6d01aa286
+    container_name: praxis-flow-tls-lab-coredns
+    restart: unless-stopped
+    command: ['-conf', '/etc/coredns/Corefile']
+    ports:
+      - '127.0.0.1:${TLS_LAB_DNS_HOST_PORT:-9053}:53/udp'
+      - '127.0.0.1:${TLS_LAB_DNS_HOST_PORT:-9053}:53/tcp'
+    volumes:
+      - ./lab/coredns/Corefile:/etc/coredns/Corefile:ro
+      - ${TLS_LAB_ZONE_HOST_PATH:-./lab/coredns/lan.tls.lab.db}:/etc/coredns/lan.tls.lab.db:ro
+    depends_on:
+      acme-dns:
+        condition: service_started
+
+  acme-dns:
+    logging: *docker-logging
+    image: joohoi/acme-dns:v1.0@sha256:08435bf0c6cfe7c29816ff48beabcc333743b5bb060cae3867777d9b0d956517
+    container_name: praxis-flow-tls-lab-acme-dns
+    restart: unless-stopped
+    ports:
+      # Host + later Setup: HTTP API on loopback. Containers use http://acme-dns:80.
+      - '127.0.0.1:${TLS_LAB_ACME_DNS_API_HOST_PORT:-8053}:80'
+    volumes:
+      - ./lab/acme-dns/config/config.cfg:/etc/acme-dns/config.cfg:ro
+      - ./lab/acme-dns/data:/var/lib/acme-dns
+
+  pebble:
+    logging: *docker-logging
+    image: ghcr.io/letsencrypt/pebble:2.10.1@sha256:ddf230642b1a584f519f32e347de1b05a6e4c1f6c35c1863b33effeab5f78199
+    container_name: praxis-flow-tls-lab-pebble
+    restart: unless-stopped
+    command:
+      [
+        '-config',
+        'test/config/pebble-config.json',
+        '-dnsserver',
+        'coredns:53',
+      ]
+    environment:
+      PEBBLE_VA_NOSLEEP: '1'
+      PEBBLE_WFE_NONCEREJECT: '0'
+    ports:
+      - '127.0.0.1:${TLS_LAB_PEBBLE_HOST_PORT:-14000}:14000'
+    depends_on:
+      coredns:
+        condition: service_started

@@ -2,7 +2,7 @@
 # Usage (dev):
 #   docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d
 #
-# P2a: HTTP only — no 443 / certs. TLS overlays come later.
+# HTTP base. LAN-TLS adds docker-compose.proxy-tls.yml only while TLS is prepared/active.
 
 x-docker-logging: &docker-logging
   driver: json-file

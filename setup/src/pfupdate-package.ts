@@ -23,6 +23,10 @@ export const PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE =
 /** Installed from .pfupdate when present; rolled back with other compose templates. */
 export const PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE = 'docker-compose.proxy.delivery.yml' as const;
 
+/** Opt-in TLS overlay; still optional so older format-v1 update packages validate. */
+export const PFUPDATE_PROXY_TLS_COMPOSE_TEMPLATE_FILE =
+  'docker-compose.proxy-tls.delivery.yml' as const;
+
 /** Seeded only when missing — never overwritten on update. */
 export const PFUPDATE_PROXY_CADDYFILE_RELATIVE = 'proxy/Caddyfile' as const;
 

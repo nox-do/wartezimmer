@@ -204,7 +204,7 @@ test('applyAndVerify is a no-op when unchanged', async () => {
   assert.equal(controller.getState().phase, 'idle');
 });
 
-test('active TLS network save omits HTTP identity fields', () => {
+test('TLS cutover network save omits HTTP identity fields', () => {
   const config = minimalHostStatus({
     configuredCanonicalBaseUrl: 'https://praxis.lan.notaus.de',
     tls: {
@@ -230,6 +230,51 @@ test('active TLS network save omits HTTP identity fields', () => {
   });
   assert.equal(body.canonicalBaseUrl, undefined);
   assert.equal(body.proxy, undefined);
+});
+
+test('TLS preparation network save omits proxy and canonical fields', () => {
+  const config = minimalHostStatus({
+    configuredCanonicalBaseUrl: 'http://192.168.1.10',
+    tls: {
+      state: 'awaiting-operator-dns',
+      mode: 'managed',
+      hostname: 'praxis.lan.notaus.de',
+      installationId: '7fk3m2q9',
+      tokenConsumed: false,
+      applyReady: false,
+      cutoverApplied: false,
+      certificate: null,
+      lastError: null,
+    },
+  });
+  assert.equal(hostNetworkMustPreserveTlsIdentity(config), true);
+
+  const body = buildHostNetworkSaveInput({
+    lanAppIp: '192.168.1.20',
+    restartCompose: true,
+    canonicalBaseUrl: 'http://192.168.1.10',
+    proxyEnabled: true,
+    preserveTlsIdentity: true,
+  });
+  assert.equal(body.lanAppIp, '192.168.1.20');
+  assert.equal(body.restartCompose, true);
+  assert.equal(body.canonicalBaseUrl, undefined);
+  assert.equal(body.proxy, undefined);
+});
+
+test('HTTP-only network save includes proxy and canonical fields', () => {
+  const config = minimalHostStatus();
+  assert.equal(hostNetworkMustPreserveTlsIdentity(config), false);
+
+  const body = buildHostNetworkSaveInput({
+    lanAppIp: '192.168.1.20',
+    restartCompose: false,
+    canonicalBaseUrl: 'http://192.168.1.20',
+    proxyEnabled: true,
+    preserveTlsIdentity: false,
+  });
+  assert.equal(body.canonicalBaseUrl, 'http://192.168.1.20');
+  assert.deepEqual(body.proxy, { enabled: true, httpPort: 80 });
 });
 
 test('active TLS ignores HTTP reachability draft drift but keeps LAN drift', () => {

@@ -1,0 +1,14 @@
+# Lab resolver for Pebble DNS-01. Not recursive for the public internet.
+auth.acme.tls.lab:53 {
+	forward . acme-dns:53
+	log
+	errors
+}
+
+lan.tls.lab:53 {
+	file /etc/coredns/lan.tls.lab.db {
+		reload 2s
+	}
+	log
+	errors
+}
