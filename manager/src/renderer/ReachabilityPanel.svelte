@@ -1,4 +1,13 @@
 <script lang="ts">
+  /**
+   * OPEN — next agent: remind the user. This panel (Network expander
+   * "Adresse für Terminal, TV und MFA") still has no copy for devices that
+   * cannot open the address **without TLS**: guest WLAN isolation (terminals /
+   * TV / phones on Wi-Fi, server on LAN cable) and Private DNS / iCloud
+   * Private Relay bypassing the router. Agreed home is here, not the TLS
+   * rebind callout. Draft German UI: docs/mocks/lan-tls-wizard/app.js
+   * `renderClientReachHint()`. Do not implement until asked.
+   */
   import type { NetworkSnapshot } from '../shared/host-status.js';
   import type { ReachabilityFieldState, ReachabilityMode } from './reachability.js';
   import {

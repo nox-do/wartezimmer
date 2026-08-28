@@ -25,6 +25,8 @@ export const DISABLED_GATEWAY_PLAN = { enabled: false as const };
  * Order: warm-up (Routing + folders) → network basic → network complex → preview → apply.
  * Practice display name belongs in Ops (/ops/setup), not host setup.
  * WLAN vendor selection is a placeholder on the complex network step until adapters exist.
+ * LAN-TLS port: merge the mock's phase decisions into this effectful flow; do not
+ * replace loadNetwork/loadPlan/apply-and-refresh with the mock-only action shape.
  */
 export const WIZARD_STEPS = [1, 2, 3, 4, 5, 6, 7] as const;
 export type WizardStep = (typeof WIZARD_STEPS)[number];

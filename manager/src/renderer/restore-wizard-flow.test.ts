@@ -7,6 +7,7 @@ import {
   isRestoreRollbackFailed,
   restoreInspectBlockedMessage,
   restoreInspectSummaryLines,
+  restoreTlsInspectSummaryLine,
   restoreSuccessSummary,
   restoreWizardChooseLead,
   shouldOfferCredentialSkip,
@@ -45,6 +46,68 @@ test('restoreInspectSummaryLines includes backup metadata', () => {
   assert.match(lines.join(' '), /2026-07-12/);
   assert.match(lines.join(' '), /simple/);
   assert.match(lines.join(' '), /1\.2\.3/);
+});
+
+test('restoreInspectSummaryLines keeps TLS detail when restore is blocked', () => {
+  const lines = restoreInspectSummaryLines(
+    inspectFixture({
+      ok: false,
+      backup: {
+        ...inspectFixture().backup!,
+        tls: {
+          state: 'active',
+          inBackup: true,
+          preparedInBackup: false,
+          sidecarPresent: false,
+          sidecarMatches: false,
+          metadataConsistent: true,
+        },
+      },
+      compatibility: {
+        archiveValid: true,
+        settingsValid: true,
+        targetAppReachable: true,
+        restoreSupported: false,
+        warnings: [],
+      },
+    }),
+  );
+  assert.match(lines.join(' '), /HTTPS: Sidecar fehlt/);
+});
+
+test('restoreTlsInspectSummaryLine rejects contradictory TLS metadata', () => {
+  assert.equal(
+    restoreTlsInspectSummaryLine({
+      state: 'active',
+      inBackup: false,
+      preparedInBackup: false,
+      sidecarPresent: false,
+      sidecarMatches: false,
+      metadataConsistent: false,
+    }),
+    'HTTPS: Angaben in der Sicherung widersprechen sich',
+  );
+});
+
+test('restoreInspectBlockedMessage explains missing active TLS sidecar', () => {
+  const fixture = inspectFixture();
+  const message = restoreInspectBlockedMessage({
+    ...fixture,
+    ok: false,
+    backup: {
+      ...fixture.backup!,
+      tls: {
+        state: 'active',
+        inBackup: true,
+        preparedInBackup: false,
+        sidecarPresent: false,
+        sidecarMatches: false,
+        metadataConsistent: true,
+      },
+    },
+    compatibility: { ...fixture.compatibility, restoreSupported: false },
+  });
+  assert.match(message ?? '', /Sidecar.*fehlt/);
 });
 
 test('restoreInspectBlockedMessage explains unreachable maintenance API', () => {

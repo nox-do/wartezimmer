@@ -1,4 +1,8 @@
-import type { PfbackupInspectResult, PfbackupRestoreResult } from '../shared/host-status.js';
+import type {
+  PfbackupInspectResult,
+  PfbackupRestoreResult,
+  PfbackupTlsInspectSummary,
+} from '../shared/host-status.js';
 
 export type RestoreWizardMode = 'standalone' | 'pre-update';
 
@@ -50,8 +54,39 @@ export function restoreWizardChooseLead(mode: RestoreWizardMode): string {
   return 'Praxis-Backup (.pfbackup) auswählen und Settings in eine frische Datenbank importieren. Der Stack wird kurz offline sein.';
 }
 
+/** Pure renderer copy for the optional Setup-owned TLS inspect result. */
+export function restoreTlsInspectSummaryLine(
+  tls: PfbackupTlsInspectSummary | undefined,
+): string | null {
+  if (!tls) {
+    return null;
+  }
+  if (!tls.metadataConsistent) {
+    return 'HTTPS: Angaben in der Sicherung widersprechen sich';
+  }
+  if (tls.preparedInBackup) {
+    if (!tls.sidecarPresent) {
+      return 'HTTPS: Vorbereitung ohne Sidecar — wird verworfen';
+    }
+    if (!tls.sidecarMatches) {
+      return 'HTTPS: Vorbereitungs-Sidecar passt nicht — wird verworfen';
+    }
+    return 'HTTPS: Vorbereitung + Sidecar ok';
+  }
+  if (!tls.inBackup) {
+    return null;
+  }
+  if (!tls.sidecarPresent) {
+    return 'HTTPS: Sidecar fehlt';
+  }
+  if (!tls.sidecarMatches) {
+    return 'HTTPS: Sidecar passt nicht';
+  }
+  return 'HTTPS: Sidecar ok';
+}
+
 export function restoreInspectSummaryLines(inspect: PfbackupInspectResult): string[] {
-  if (!inspect.ok || !inspect.backup) {
+  if (!inspect.backup) {
     return [];
   }
   const lines = [
@@ -65,12 +100,30 @@ export function restoreInspectSummaryLines(inspect: PfbackupInspectResult): stri
   if (inspect.backup.providerCredentialsIncluded) {
     lines.push('SMS-Provider-Credentials im Backup enthalten.');
   }
+  const tlsLine = restoreTlsInspectSummaryLine(inspect.backup.tls);
+  if (tlsLine) {
+    lines.push(tlsLine);
+  }
   return lines;
 }
 
+/**
+ * OPEN TLS: if inspect fails only on sidecar, return tlsRestoreBlockedCopy().
+ * Mock: docs/mocks/lan-tls-wizard/tls-model.js
+ */
 export function restoreInspectBlockedMessage(inspect: PfbackupInspectResult): string | null {
   if (inspect.ok && inspect.compatibility.restoreSupported) {
     return null;
+  }
+  const tls = inspect.backup?.tls;
+  if (tls && !tls.metadataConsistent) {
+    return 'Die HTTPS-Angaben in dieser Sicherung widersprechen sich. Wiederherstellen wird abgelehnt, damit HTTPS-State und Canonical nicht still zurückgestuft werden.';
+  }
+  if (tls?.inBackup && !tls.sidecarPresent) {
+    return 'Diese Sicherung erwartet HTTPS, aber der HTTPS-State (Sidecar) fehlt. Wiederherstellen würde Geräte auf https:// zeigen ohne Zertifikat — abgelehnt, kein Zurück auf HTTP.';
+  }
+  if (tls?.inBackup && !tls.sidecarMatches) {
+    return 'Der HTTPS-State gehört zu einer anderen Installation oder einem anderen Hostnamen.';
   }
   const errors = inspect.errors ?? [];
   if (errors.length > 0) {

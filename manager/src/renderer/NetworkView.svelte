@@ -66,6 +66,7 @@
   const configSnapshot = $derived(managerShell.configSnapshot);
   const runtimeSnapshot = $derived(managerShell.runtimeSnapshot);
   const compose = $derived(effectiveCompose(configSnapshot, runtimeSnapshot));
+  const tlsCutoverApplied = $derived(configSnapshot?.tls?.cutoverApplied === true);
 
   function requireApi(): PraxisManagerApi {
     const api = window.praxisManager;
@@ -213,6 +214,8 @@
   {#if configSnapshot && snapshot}
     <section class="panel-section panel-section--network">
       <div class="maintenance-accordion">
+        <!-- LAN-TLS port: the dedicated TLS section is inserted before LAN/HTTP controls.
+             Its actions use a separate controller/API branch, never applyAndVerify(). -->
         <MaintenanceSection
           open={lanOpen}
           title="Adresse dieses Rechners"
@@ -233,44 +236,47 @@
           />
         </MaintenanceSection>
 
-        <MaintenanceSection
-          open={proxyOpen}
-          title="Browserzugriff (Port 80)"
-          subtitle={networkProxySubtitle(configSnapshot, snapshot.proxyEnabled, runtimeSnapshot)}
-          onToggle={() => {
-            proxyOpen = !proxyOpen;
-          }}
-        >
-          <ProxySettings
-            enabled={snapshot.proxyEnabled}
-            disabled={busy}
-            onChange={(proxyEnabled) => patchFields({ proxyEnabled })}
-          />
-          {#if showProxyRestore}
-            <ProxyRecoveryAction disabled={busy} onRestore={() => controller?.restoreProxy()} />
-          {/if}
-        </MaintenanceSection>
+        {#if !tlsCutoverApplied}
+          <MaintenanceSection
+            open={proxyOpen}
+            title="Browserzugriff (Port 80)"
+            subtitle={networkProxySubtitle(configSnapshot, snapshot.proxyEnabled, runtimeSnapshot)}
+            onToggle={() => {
+              proxyOpen = !proxyOpen;
+            }}
+          >
+            <ProxySettings
+              enabled={snapshot.proxyEnabled}
+              disabled={busy}
+              onChange={(proxyEnabled) => patchFields({ proxyEnabled })}
+            />
+            {#if showProxyRestore}
+              <ProxyRecoveryAction disabled={busy} onRestore={() => controller?.restoreProxy()} />
+            {/if}
+          </MaintenanceSection>
 
-        <MaintenanceSection
-          open={reachabilityOpen}
-          title="Adresse für Terminal, TV und MFA"
-          subtitle={networkReachabilitySubtitle(configSnapshot)}
-          onToggle={() => {
-            reachabilityOpen = !reachabilityOpen;
-          }}
-        >
-          <ReachabilityPanel
-            state={snapshot}
-            network={snapshot.network}
-            disabled={busy}
-            savedBaseUrl={savedUrl}
-            verifyBusy={snapshot.phase === 'checking'}
-            verifyEnabled={Boolean(compose?.running)}
-            verifyDisabledHint={NETWORK_STACK_STOPPED_VERIFY_HINT}
-            onChange={patchFields}
-            onVerifySaved={() => controller?.verifyActiveConfiguration(savedUrl)}
-          />
-        </MaintenanceSection>
+          <MaintenanceSection
+            open={reachabilityOpen}
+            title="Adresse für Terminal, TV und MFA"
+            subtitle={networkReachabilitySubtitle(configSnapshot)}
+            onToggle={() => {
+              reachabilityOpen = !reachabilityOpen;
+            }}
+          >
+            <!-- OPEN: guest-WLAN / Private-DNS help belongs in this expander (also without TLS). See ReachabilityPanel.svelte. -->
+            <ReachabilityPanel
+              state={snapshot}
+              network={snapshot.network}
+              disabled={busy}
+              savedBaseUrl={savedUrl}
+              verifyBusy={snapshot.phase === 'checking'}
+              verifyEnabled={Boolean(compose?.running)}
+              verifyDisabledHint={NETWORK_STACK_STOPPED_VERIFY_HINT}
+              onChange={patchFields}
+              onVerifySaved={() => controller?.verifyActiveConfiguration(savedUrl)}
+            />
+          </MaintenanceSection>
+        {/if}
       </div>
 
       {#if warningText}

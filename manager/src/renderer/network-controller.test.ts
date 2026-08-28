@@ -10,7 +10,11 @@ import type {
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { CONFIGURED_GATEWAY, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import { hostNetworkChanged, networkDraftChanged } from './host-network-panels.js';
-import { createNetworkController } from './network-controller.js';
+import {
+  buildHostNetworkSaveInput,
+  createNetworkController,
+  hostNetworkMustPreserveTlsIdentity,
+} from './network-controller.js';
 import { NETWORK_RESTART_CONFIRM_MESSAGE } from './network-view-model.js';
 
 const emptyNetwork: NetworkSnapshot = {
@@ -198,6 +202,79 @@ test('applyAndVerify is a no-op when unchanged', async () => {
   controller.applyAndVerify();
   assert.equal(saves.length, 0);
   assert.equal(controller.getState().phase, 'idle');
+});
+
+test('active TLS network save omits HTTP identity fields', () => {
+  const config = minimalHostStatus({
+    configuredCanonicalBaseUrl: 'https://praxis.lan.notaus.de',
+    tls: {
+      state: 'active',
+      mode: 'managed',
+      hostname: 'praxis.lan.notaus.de',
+      installationId: '7fk3m2q9',
+      tokenConsumed: true,
+      applyReady: false,
+      cutoverApplied: true,
+      certificate: null,
+      lastError: null,
+    },
+  });
+  assert.equal(hostNetworkMustPreserveTlsIdentity(config), true);
+
+  const body = buildHostNetworkSaveInput({
+    lanAppIp: '192.168.1.20',
+    restartCompose: true,
+    canonicalBaseUrl: 'https://praxis.lan.notaus.de',
+    proxyEnabled: true,
+    preserveTlsIdentity: true,
+  });
+  assert.equal(body.canonicalBaseUrl, undefined);
+  assert.equal(body.proxy, undefined);
+});
+
+test('active TLS ignores HTTP reachability draft drift but keeps LAN drift', () => {
+  const config = minimalHostStatus({
+    configuredCanonicalBaseUrl: 'https://praxis.lan.notaus.de',
+    tls: {
+      state: 'active',
+      mode: 'managed',
+      hostname: 'praxis.lan.notaus.de',
+      installationId: '7fk3m2q9',
+      tokenConsumed: true,
+      applyReady: false,
+      cutoverApplied: true,
+      certificate: null,
+      lastError: null,
+    },
+  });
+  assert.equal(
+    networkDraftChanged(
+      {
+        lanAppIp: '__custom__',
+        customLanIp: '192.168.1.10',
+        reachabilityMode: 'custom',
+        customHostname: 'wrong-http-name.example',
+        proxyEnabled: false,
+      },
+      config,
+      emptyNetwork,
+    ),
+    false,
+  );
+  assert.equal(
+    networkDraftChanged(
+      {
+        lanAppIp: '__custom__',
+        customLanIp: '192.168.1.20',
+        reachabilityMode: 'custom',
+        customHostname: 'wrong-http-name.example',
+        proxyEnabled: false,
+      },
+      config,
+      emptyNetwork,
+    ),
+    true,
+  );
 });
 
 test('applyAndVerify confirms restart then probes saved device URL', async () => {

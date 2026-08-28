@@ -159,6 +159,13 @@
     </div>
   {:else if snapshot.phase === 'failed'}
     <h2>Restore fehlgeschlagen</h2>
+    {#if snapshot.inspect && inspectLines.length > 0}
+      <ul class="restore-wizard-summary">
+        {#each inspectLines as line (line)}
+          <li>{line}</li>
+        {/each}
+      </ul>
+    {/if}
     {#if rollbackFailed}
       <p class="error">{RESTORE_ROLLBACK_FAILED_RECOVERY_MESSAGE}</p>
       {#if snapshot.error}

@@ -64,6 +64,12 @@ export function networkDraftChanged(
     return true;
   }
 
+  // After TLS cutover, reachability/proxy identity is owned by the TLS controller.
+  // This draft may still save LAN-IP changes, but must not manufacture an HTTP diff.
+  if (status.tls?.cutoverApplied) {
+    return false;
+  }
+
   const draftCanonical = draftCanonicalBaseUrl(fields, network);
   const configuredCanonical = effectiveCanonicalBaseUrl(status);
   if (draftCanonical && draftCanonical !== configuredCanonical) {

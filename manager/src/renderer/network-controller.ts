@@ -1,5 +1,10 @@
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-import type { HostNetworkResult, HostStatus, NetworkSnapshot } from '../shared/host-status.js';
+import type {
+  HostNetworkInput,
+  HostNetworkResult,
+  HostStatus,
+  NetworkSnapshot,
+} from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import type { LanIpFieldState, ReachabilityFieldState } from './host-network-panels.js';
 import {
@@ -96,6 +101,36 @@ function createInitialState(): NetworkState {
 
 function noticeFromVerified(verified: { ok: boolean; message: string }): NetworkNotice {
   return { tone: verified.ok ? 'success' : 'error', message: verified.message };
+}
+
+/** Active TLS owns Canonical and proxy mode; `/host/network` may then save LAN only. */
+export function hostNetworkMustPreserveTlsIdentity(config: HostStatus | null): boolean {
+  return config?.tls?.cutoverApplied === true;
+}
+
+export function buildHostNetworkSaveInput(input: {
+  lanAppIp: string;
+  restartCompose: boolean;
+  repairProxy?: boolean;
+  canonicalBaseUrl: string;
+  proxyEnabled: boolean;
+  preserveTlsIdentity: boolean;
+}): HostNetworkInput {
+  return {
+    lanAppIp: input.lanAppIp,
+    restartCompose: input.restartCompose,
+    repairProxy: input.repairProxy || undefined,
+    gateway: DISABLED_GATEWAY_PLAN,
+    ...(input.preserveTlsIdentity
+      ? {}
+      : {
+          canonicalBaseUrl: input.canonicalBaseUrl,
+          proxy: {
+            enabled: input.proxyEnabled,
+            httpPort: 80,
+          },
+        }),
+  };
 }
 
 function draftFromConfig(config: HostStatus, network: NetworkSnapshot | null): NetworkDraft {
@@ -257,15 +292,26 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       return;
     }
 
-    const canonicalBaseUrl = resolveDraftCanonical();
-    if (!canonicalBaseUrl || !isHttpOrigin(canonicalBaseUrl)) {
+    const config = deps.getConfig();
+    if (!config) {
+      return;
+    }
+    const preserveTlsIdentity = hostNetworkMustPreserveTlsIdentity(config);
+    const canonicalBaseUrl = preserveTlsIdentity
+      ? config.configuredCanonicalBaseUrl?.trim() || config.appBaseUrl.trim()
+      : resolveDraftCanonical();
+    if (!canonicalBaseUrl) {
+      setErrorNotice('Keine gespeicherte Geräte-Adresse vorhanden.');
+      return;
+    }
+    if (preserveTlsIdentity && !canonicalBaseUrl.startsWith('https://')) {
+      setErrorNotice('Aktives HTTPS hat keine gültige gespeicherte HTTPS-Adresse.');
+      return;
+    }
+    if (!preserveTlsIdentity && !isHttpOrigin(canonicalBaseUrl)) {
       setErrorNotice(
         'Bitte LAN-IP, Rechnername oder eigenen Hostnamen für die Geräte-Adresse wählen.',
       );
-      return;
-    }
-
-    if (!deps.getConfig()) {
       return;
     }
 
@@ -278,17 +324,16 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       if (!input.restartCompose) {
         setPhase('saving');
       }
-      result = await deps.api.saveHostNetwork({
-        lanAppIp,
-        restartCompose: input.restartCompose,
-        repairProxy: input.repairProxy || undefined,
-        canonicalBaseUrl,
-        gateway: DISABLED_GATEWAY_PLAN,
-        proxy: {
-          enabled: proxyEnabled,
-          httpPort: 80,
-        },
-      });
+      result = await deps.api.saveHostNetwork(
+        buildHostNetworkSaveInput({
+          lanAppIp,
+          restartCompose: input.restartCompose,
+          repairProxy: input.repairProxy,
+          canonicalBaseUrl,
+          proxyEnabled,
+          preserveTlsIdentity,
+        }),
+      );
     } catch (error) {
       if (generation !== actionGeneration) {
         return;

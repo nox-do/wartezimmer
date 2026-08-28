@@ -1,6 +1,6 @@
 # Settings-Backup — Klassifikation langlebiger Daten
 
-Stand: 2026-07-12 · geltender Vertrag für `.pfbackup` / Update
+Stand: 2026-07-12 · TLS-Restore-Grenze 2026-08-27 · geltender Vertrag für `.pfbackup` / Update
 
 Dieses Dokument legt fest, **welche Werte** beim Backup/Restore/Update erhalten bleiben. Grundlage für `settingsFormatVersion: 1` und `.pfbackup`.
 
@@ -164,6 +164,18 @@ Nach Import: `syncFlowCoreCatalog` → `validateCatalogIntegrity`.
 | 9   | Kontakt-Lookup-Pfad    | Klartext (Dateisystempfad)                                                                    |
 | 10  | `manager-state`        | Backup-Manifest, nicht Settings-JSON                                                          |
 | 11  | Gateway / ganzer Stack | Ja — alles, was für diese Praxis konfiguriert ist                                             |
+
+---
+
+## TLS / Caddy (nicht `settingsFormatVersion: 1`)
+
+Caddy `/data` + `/config`, ACME-Berechtigung und Custom-PEMs gehören **nicht** ins
+`.pfbackup` v1 (kein Dateibaum). Restore von `PROXY_MODE=tls-*` oder
+`CANONICAL_BASE_URL=https://…` **ohne** passendes TLS-Sidecar: `restoreSupported = false`,
+kein stilles HTTP-Downgrade.
+
+Pilot-Vertrag: [`plan-proxy-tls.md`](plan-proxy-tls.md) § Backup und Restore.
+Volles Paket in `.pfbackup`: Produkthärtung nach dem Pilot.
 
 ---
 

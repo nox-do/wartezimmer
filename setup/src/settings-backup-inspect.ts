@@ -272,6 +272,16 @@ function emptyCompatibility(): PfbackupInspectCompatibility {
   };
 }
 
+/**
+ * OPEN TLS: read Canonical/PROXY_MODE/TLS_STATE from backup env and populate
+ * backup.tls (PfbackupTlsInspectSummary). If HTTPS is active, require sidecar
+ * same timestamp (or second dialog) and tlsSidecarMatches.
+ * Then restoreSupported adds that gate to archiveValid, settingsValid and
+ * targetAppReachable; it must not replace today's compatibility gates.
+ * Contradictory active/degraded state vs HTTP env blocks. Prepare-only TLS without
+ * a matching sidecar is a warning, not a block; restore resets that preparation to off.
+ * Helpers: tls-model.js
+ */
 export async function inspectPfbackup(
   content: string,
   ctx: SetupContext,

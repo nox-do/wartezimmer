@@ -386,6 +386,11 @@ async function commitRestore(input: {
       throw new Error('ENV-Schreiben absichtlich fehlgeschlagen (Test).');
     }
     writeEnvRecordAtomically(input.prepared.envPath, input.prepared.restoreEnv);
+    // OPEN TLS: unpack validated sidecar bytes onto Caddy host paths here (after
+    // stop, before startFullStack). ACLs on Windows. When Inspect classified a
+    // prepare-only backup without a matching sidecar, remove TLS_* preparation
+    // fields here and keep the HTTP Canonical. Never write https Canonical without
+    // the matching sidecar.
   } catch (error) {
     throw new RestorePhaseError(RESTORE_PHASES.writeEnv, [
       errorMessage(error, 'Backup-.env konnte nicht geschrieben werden.'),

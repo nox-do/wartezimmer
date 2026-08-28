@@ -1,4 +1,13 @@
 <script lang="ts">
+  /**
+   * OPEN TLS: second block "HTTPS-State (Pilot)" when tls.state !== off —
+   * sidecar praxis-flow-tls-<timestamp>.tgz next to .pfbackup.
+   * Restore stays this wizard (suggest sibling sidecar, else second file dialog).
+   * Electron-Main owns path/timestamp lookup; Setup receives tlsSidecarBase64,
+   * never a renderer-selected host path. PfbackupInspectBackupSummary.tls carries
+   * the optional typed result back into the existing RestoreWizardDialog.
+   * Mock: docs/mocks/lan-tls-wizard/app.js renderMaintenance / mockInspectTls
+   */
   import IconButton from './IconButton.svelte';
   import { backupInfoText } from './maintenance-view-model.js';
 

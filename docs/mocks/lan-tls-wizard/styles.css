@@ -1,15 +1,20 @@
 /*
  * LAN-TLS mock styles.
  *
- * Classes that already exist in manager/src/renderer/styles.css — keep names:
- *   wizard-steps, wizard-step-*, wizard-panel, wizard-fieldset, wizard-radio,
- *   wizard-checkbox, wizard-step-lead, setup-entry*, actions-row, checklist,
- *   status-grid, main-nav*, health-banner, network-config-*, lan-ip-status*,
- *   hint, device-urls*
+ * Class names match manager/src/renderer/styles.css — duplicated here for file://.
  *
- * Mock-only (add to Manager when porting HTTPS):
- *   wizard-step-progress, wizard-step-dot, wizard-choice*, host-preview,
- *   mail-body, callout, btn-primary-link, network-mail-replay, mock-*
+ * Mock-only: mock-banner, app-shell page chrome
+ *
+ * Reuse map (Manager ist kanonisch):
+ *   notice.is-*     ← erweitert lan-warning (Warn/Ok/Bad-Boxen)
+ *   hint + code     ← URL-Vorschau (ReachabilityPanel-Muster)
+ *   hint--preview   ← hervorgehobene HTTPS-Adresse
+ *   wizard-input    ← Felder; is-monospace/is-compact für Mail-Textarea
+ *   status-grid     ← Zertifikats-Meta (wizard-summary-grid)
+ *   network-config-block > details ← Mail/DNS-Wiederholung, LAN-Expander
+ *   wizard-nested   ← eingerückte Namenswahl
+ *   a.btn-primary   ← mailto primär
+ *   wizard-step-progress/dot ← einzige echte Neuklasse (HTTPS-Unterschritte)
  */
 
 :root {
@@ -268,32 +273,8 @@ body {
   padding-top: 0.05rem;
 }
 
-.radio-meta {
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 400;
-}
-
 .wizard-checkbox {
   margin-top: 0.5rem;
-}
-
-.wizard-choice {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.wizard-choice-extra {
-  margin-left: 1.55rem;
-  display: grid;
-  gap: 0.4rem;
-}
-
-.wizard-choice-extra .wizard-field-label,
-.wizard-choice-extra .wizard-input,
-.wizard-choice-extra .hint,
-.wizard-choice-extra .callout {
-  margin: 0;
 }
 
 .wizard-field-label {
@@ -302,8 +283,7 @@ body {
   font-size: 0.9rem;
 }
 
-.wizard-input,
-.mail-body {
+.wizard-input {
   width: 100%;
   margin: 0;
   padding: 0.55rem 0.65rem;
@@ -313,16 +293,89 @@ body {
   background: var(--surface);
 }
 
-.mail-body {
+textarea.wizard-input {
   min-height: 14rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.78rem;
-  line-height: 1.4;
   resize: vertical;
+  line-height: 1.4;
 }
 
-.host-preview {
-  margin: 0.75rem 0 0;
+textarea.wizard-input.is-monospace,
+.wizard-input.is-monospace {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+textarea.wizard-input.is-compact {
+  min-height: 8rem;
+}
+
+.wizard-nested {
+  margin-left: 1.55rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.wizard-nested .wizard-field-label,
+.wizard-nested .wizard-input,
+.wizard-nested .hint,
+.wizard-nested .notice {
+  margin: 0;
+}
+
+.wizard-subheading {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.lan-warning,
+.notice.is-warn {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: var(--banner-warn);
+  border: 1px solid var(--border);
+  color: var(--warn);
+  font-size: 0.92rem;
+}
+
+.notice.is-ok {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: var(--banner-ok);
+  color: var(--ok);
+  font-size: 0.92rem;
+}
+
+.notice.is-bad {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: var(--banner-bad);
+  color: var(--bad);
+  font-size: 0.92rem;
+}
+
+.notice.is-bad :where(p, ol) {
+  margin: 0 0 0.55rem;
+}
+
+.notice.is-bad :where(p:last-child, ol:last-child) {
+  margin-bottom: 0;
+}
+
+.notice.is-bad ol {
+  padding-left: 1.2rem;
+}
+
+.notice.is-bad li + li {
+  margin-top: 0.35rem;
+}
+
+.hint--preview code {
+  display: block;
+  margin-top: 0.35rem;
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -380,7 +433,10 @@ code {
   color: var(--ok);
 }
 
-.checklist li.is-open,
+.checklist li.is-open {
+  color: var(--muted);
+}
+
 .checklist li.is-muted {
   color: var(--muted);
 }
@@ -436,26 +492,30 @@ code {
   overflow-wrap: anywhere;
 }
 
-.callout {
-  margin: 0 0 0.85rem;
-  padding: 0.65rem 0.75rem;
+.wizard-summary-grid {
+  margin-bottom: 1rem;
+}
+
+.network-config-block > details {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 0.92rem;
+  background: var(--surface);
 }
 
-.callout.is-warn {
-  background: var(--banner-warn);
-  color: var(--warn);
+.network-config-block > details summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--muted);
 }
 
-.callout.is-ok {
-  background: var(--banner-ok);
-  color: var(--ok);
+.network-config-block > details[open] summary {
+  margin-bottom: 0.75rem;
 }
 
-.callout.is-bad {
-  background: var(--banner-bad);
-  color: var(--bad);
+.network-config-block > details .wizard-field-label:first-of-type {
+  margin-top: 0;
 }
 
 .actions-row {
@@ -463,14 +523,6 @@ code {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.65rem;
-}
-
-.mail-body + .actions-row,
-.host-preview + .actions-row,
-.callout + .actions-row,
-.device-urls-list + .actions-row,
-.wizard-checkbox + .actions-row {
-  margin-top: 0.75rem;
 }
 
 .actions-row--footer {
@@ -527,7 +579,7 @@ a.btn-secondary {
   border-radius: 8px;
 }
 
-a.btn-primary-link {
+a.btn-primary {
   display: inline-block;
   text-decoration: none;
   font-weight: 600;
@@ -537,68 +589,13 @@ a.btn-primary-link {
   color: #fff;
 }
 
-a.btn-primary-link:hover {
+a.btn-primary:hover {
   background: var(--accent-hover);
-}
-
-.network-lan-details,
-.network-mail-replay {
-  margin: 1rem 0;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-}
-
-.network-lan-details summary,
-.network-mail-replay summary {
-  cursor: pointer;
-  font-weight: 500;
-  color: var(--muted);
-}
-
-.network-lan-details[open] summary,
-.network-mail-replay[open] summary {
-  margin-bottom: 0.75rem;
-}
-
-.network-mail-replay .mail-body {
-  min-height: 8rem;
-}
-
-.network-mail-replay .wizard-field-label:first-of-type {
-  margin-top: 0;
 }
 
 .main-nav-tab:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
-
-.mock-jumps {
-  margin-top: 2.5rem;
-  padding-top: 1rem;
-  border-top: 1px dashed var(--border);
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
-.mock-jumps summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.mock-jumps-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.65rem;
-}
-
-.mock-jumps button {
-  padding: 0.35rem 0.55rem;
-  font-size: 0.78rem;
-  font-weight: 600;
 }
 
 .setup-entry {

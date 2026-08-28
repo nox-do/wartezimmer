@@ -99,6 +99,18 @@ export type PfbackupValidateResult = {
 
 export type PfbackupInspectInput = {
   content: string;
+  /** Future LAN-TLS sidecar bytes encoded for JSON transport; never a host path. */
+  tlsSidecarBase64?: string;
+};
+
+/** Optional LAN-TLS inspect data; absent for today's HTTP-only backups. */
+export type PfbackupTlsInspectSummary = {
+  state: TlsState;
+  inBackup: boolean;
+  preparedInBackup: boolean;
+  sidecarPresent: boolean;
+  sidecarMatches: boolean;
+  metadataConsistent: boolean;
 };
 
 export type PfbackupInspectBackupSummary = {
@@ -108,6 +120,7 @@ export type PfbackupInspectBackupSummary = {
   routingMode: string | null;
   portalEnabled: boolean;
   providerCredentialsIncluded: boolean;
+  tls?: PfbackupTlsInspectSummary;
 };
 
 export type PfbackupInspectEnvironment = {
@@ -116,6 +129,11 @@ export type PfbackupInspectEnvironment = {
   imageReferences: Record<string, string>;
 };
 
+/**
+ * LAN-TLS later adds the optional backup.tls summary. Its restore gate is
+ * additional: archiveValid, settingsValid and targetAppReachable stay mandatory.
+ * Copy/helpers: docs/mocks/lan-tls-wizard/tls-model.js
+ */
 export type PfbackupInspectCompatibility = {
   archiveValid: boolean;
   settingsValid: boolean;
@@ -135,6 +153,8 @@ export type PfbackupInspectResult = {
 export type PfbackupRestoreInput = {
   content: string;
   skipProviderCredentials?: boolean;
+  /** Future LAN-TLS sidecar bytes encoded for JSON transport; never a host path. */
+  tlsSidecarBase64?: string;
 };
 
 export type PfbackupRestoreReport = {
@@ -282,6 +302,51 @@ export type ProxyStatus = {
   container: ComposeServiceStatus | null;
 };
 
+/** LAN-TLS contract anchor. Setup remains the only authority for these values. */
+export type TlsState =
+  | 'off'
+  | 'preparing'
+  | 'awaiting-operator-dns'
+  | 'dns-verified'
+  | 'obtaining-certificate'
+  | 'active'
+  | 'degraded'
+  | 'error';
+
+export type TlsMode = 'managed' | 'custom';
+
+export type TlsCertificateStatus = {
+  issuer: string;
+  notBefore: string;
+  notAfter: string;
+  names: string[];
+};
+
+export type TlsErrorClass =
+  | 'a-record'
+  | 'collision'
+  | 'dns-filter'
+  | 'isolation'
+  | 'firewall'
+  | 'port-443'
+  | 'clock'
+  | 'acme'
+  | 'cert-name';
+
+export type TlsStatus = {
+  state: TlsState;
+  mode: TlsMode | null;
+  hostname: string | null;
+  installationId: string | null;
+  tokenConsumed: boolean;
+  /** Authoritative local-check gate while state remains `dns-verified`. */
+  applyReady: boolean;
+  /** Distinguishes pre/post-cutover `error` without consulting PROXY_MODE. */
+  cutoverApplied: boolean;
+  certificate: TlsCertificateStatus | null;
+  lastError: { class: TlsErrorClass; message: string } | null;
+};
+
 export type HostNetworkStatus = {
   configuredLanIp: string | null;
   currentLanCandidates: LanCandidate[];
@@ -426,6 +491,8 @@ export type HostStatus = {
   gateway: HostGatewayStatus | null;
   /** Always set: proxy is part of the host model; `enabled: false` / `mode: 'off'` is normal. */
   proxy: ProxyStatus;
+  /** Port hook: absent until the LAN-TLS Setup API is implemented. */
+  tls?: TlsStatus;
   deviceUrls: DeviceUrls | null;
   probes: ProbeResult[];
   compose: ComposeStatus | null;
