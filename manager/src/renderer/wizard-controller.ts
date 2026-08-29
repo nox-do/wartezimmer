@@ -23,8 +23,17 @@ import {
   type WizardStep,
 } from './wizard-flow.js';
 import { tlsDraftMatchesPrepared } from './tls-identity.js';
-import { TLS_RESET_CONFIRM_MESSAGE } from './tls-network-view-model.js';
+import { TLS_RESET_CONFIRM_MESSAGE, tlsErrorCopy } from './tls-network-view-model.js';
 import { resolvedLanIp } from './wizard-state.js';
+
+/**
+ * Gemeinsamer ACME-Titel plus Wizard-Hinweis.
+ * Die Netzwerk-Aktion „Erneut versuchen“ gilt hier nicht: ein zweites prepare
+ * repariert den persistierten Registerfehler nicht.
+ */
+export function wizardManagedPrepareErrorFooter(): string {
+  return `${tlsErrorCopy('acme').title} Zurück und HTTPS später unter Netzwerk fortsetzen.`;
+}
 
 export type WizardCallbacks = {
   onComplete: () => void;
@@ -151,7 +160,15 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     if (!input.lanIp) {
       throw new Error('Bitte zuerst eine LAN-IP wählen.');
     }
-    const result = await deps.api.prepareHostTls(input);
+    let result;
+    try {
+      result = await deps.api.prepareHostTls(input);
+    } catch (error) {
+      if (input.mode === 'managed') {
+        throw new Error(wizardManagedPrepareErrorFooter(), { cause: error });
+      }
+      throw error instanceof Error ? error : new Error(String(error));
+    }
     patch({
       operatorRequest: result.operatorRequest,
       ipv4Reserved: true,
@@ -160,6 +177,9 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       httpsPreparedNameMode: state.nameMode,
       status: state.status ? { ...state.status, tls: result.tls } : state.status,
     });
+    if (input.mode === 'managed' && result.tls.state === 'error') {
+      throw new Error(wizardManagedPrepareErrorFooter());
+    }
   }
 
   async function replacePreparedIdentity(): Promise<void> {
@@ -196,6 +216,9 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
           current,
         )
       ) {
+        if (current.state === 'error' && current.mode === 'managed') {
+          throw new Error(wizardManagedPrepareErrorFooter());
+        }
         await hydrateOperatorRequest();
         if (!state.httpsPreparedNameMode) {
           patch({ httpsPreparedNameMode: state.nameMode });

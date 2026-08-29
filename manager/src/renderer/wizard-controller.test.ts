@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { RoutingModeCapabilities, TlsPrepareInput } from '../shared/host-status.js';
 import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
-import { createWizardController } from './wizard-controller.js';
-import { TLS_RESET_CONFIRM_MESSAGE } from './tls-network-view-model.js';
+import { createWizardController, wizardManagedPrepareErrorFooter } from './wizard-controller.js';
+import { TLS_LEASE_STALE_LAN_COPY, TLS_RESET_CONFIRM_MESSAGE } from './tls-network-view-model.js';
 import {
   wizardBackHidden,
   wizardIsCompleted,
@@ -499,4 +499,399 @@ test('goNext asks before discarding a prepared identity', async () => {
   assert.equal(resetCount, 0);
   assert.equal(controller.getState().httpsPhase, 'lease');
   assert.equal(controller.getState().status?.tls?.hostname, '7fk3m2.lan.notaus.de');
+});
+
+test('wizardManagedPrepareErrorFooter uses the ACME title with a wizard-only hint', () => {
+  assert.equal(
+    wizardManagedPrepareErrorFooter(),
+    'Das Zertifikat konnte nicht ausgestellt werden. Zurück und HTTPS später unter Netzwerk fortsetzen.',
+  );
+  assert.doesNotMatch(wizardManagedPrepareErrorFooter(), /Erneut versuchen/);
+});
+
+test('managed prepare failure uses the shared ACME footer copy', async () => {
+  const controller = createWizardController({
+    api: {
+      prepareHostTls: async () => {
+        throw new Error('register timed out at acme-dns');
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  controller.patchFields({
+    step: 6,
+    proxyEnabled: true,
+    httpsPhase: 'lease',
+    ipv4Reserved: true,
+    lanAppIp: '192.168.1.10',
+    nameMode: 'generated',
+  });
+  await controller.goNext();
+
+  assert.equal(controller.getState().error, wizardManagedPrepareErrorFooter());
+  assert.equal(controller.getState().httpsPhase, 'lease');
+  assert.doesNotMatch(controller.getState().error ?? '', /register timed out/);
+  assert.doesNotMatch(controller.getState().error ?? '', /Erneut versuchen/);
+});
+
+test('managed prepare that returns persisted error stays off the mail phase', async () => {
+  let prepareCount = 0;
+  const controller = createWizardController({
+    api: {
+      prepareHostTls: async () => {
+        prepareCount += 1;
+        return {
+          tls: {
+            state: 'error',
+            mode: 'managed',
+            hostname: '7fk3m2.lan.notaus.de',
+            installationId: '7fk3m2q9',
+            tokenConsumed: false,
+            applyReady: false,
+            cutoverApplied: false,
+            certificate: null,
+            lastError: { class: 'acme', message: 'register failed' },
+            acmeCnameTarget: null,
+          },
+          operatorRequest: null,
+        };
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  controller.patchFields({
+    step: 6,
+    proxyEnabled: true,
+    httpsPhase: 'lease',
+    ipv4Reserved: true,
+    lanAppIp: '192.168.1.10',
+    nameMode: 'generated',
+  });
+  await controller.goNext();
+
+  assert.equal(prepareCount, 1);
+  assert.equal(controller.getState().httpsPhase, 'lease');
+  assert.equal(controller.getState().error, wizardManagedPrepareErrorFooter());
+  assert.equal(controller.getState().operatorRequest, null);
+  assert.equal(controller.getState().status?.tls?.state, 'error');
+
+  await controller.goNext();
+  assert.equal(prepareCount, 1);
+  assert.equal(controller.getState().httpsPhase, 'lease');
+  assert.equal(controller.getState().error, wizardManagedPrepareErrorFooter());
+});
+
+test('existing custom error is not rewritten as ACME', async () => {
+  let prepareCount = 0;
+  const controller = createWizardController({
+    api: {
+      prepareHostTls: async () => {
+        prepareCount += 1;
+        throw new Error('must not prepare');
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(
+    minimalHostStatus({
+      tls: {
+        state: 'error',
+        mode: 'custom',
+        hostname: 'flow.praxis-meyer.de',
+        installationId: '7fk3m2q9',
+        tokenConsumed: false,
+        applyReady: false,
+        cutoverApplied: false,
+        certificate: null,
+        lastError: { class: 'firewall', message: 'Port 443 auf diesem Rechner ist nicht erreichbar.' },
+        acmeCnameTarget: null,
+      },
+    }),
+    'embedded',
+  );
+  controller.patchFields({
+    step: 6,
+    proxyEnabled: true,
+    httpsPhase: 'lease',
+    ipv4Reserved: true,
+    lanAppIp: '192.168.1.10',
+    nameMode: 'domain',
+    customDomain: 'flow.praxis-meyer.de',
+    httpsPreparedNameMode: 'domain',
+  });
+  await controller.goNext();
+
+  assert.equal(prepareCount, 0);
+  assert.notEqual(controller.getState().error, wizardManagedPrepareErrorFooter());
+  assert.doesNotMatch(controller.getState().error ?? '', /Zertifikat konnte nicht ausgestellt/);
+  assert.equal(controller.getState().httpsPhase, 'mail');
+  assert.equal(controller.getState().error, null);
+});
+
+test('custom prepare failure keeps the API exception message', async () => {
+  const controller = createWizardController({
+    api: {
+      prepareHostTls: async () => {
+        throw new Error('Custom TLS_LAN_IP konnte nicht geschrieben werden.');
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  controller.patchFields({
+    step: 6,
+    proxyEnabled: true,
+    httpsPhase: 'lease',
+    ipv4Reserved: true,
+    lanAppIp: '192.168.1.10',
+    nameMode: 'domain',
+    customDomain: 'flow.praxis-meyer.de',
+  });
+  await controller.goNext();
+
+  assert.equal(controller.getState().error, 'Custom TLS_LAN_IP konnte nicht geschrieben werden.');
+  assert.notEqual(controller.getState().error, wizardManagedPrepareErrorFooter());
+  assert.equal(controller.getState().httpsPhase, 'lease');
+});
+
+test('PEM staging failure keeps the API exception message', async () => {
+  const controller = createWizardController({
+    api: {
+      stageHostTlsCertificate: async () => {
+        throw new Error('Die Uhrzeit dieses Rechners wird von der Zertifizierungsstelle abgelehnt.');
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  await controller.stageWizardTlsCertificate();
+
+  assert.equal(
+    controller.getState().error,
+    'Die Uhrzeit dieses Rechners wird von der Zertifizierungsstelle abgelehnt.',
+  );
+  assert.notEqual(controller.getState().error, wizardManagedPrepareErrorFooter());
+  assert.equal(controller.getState().customPemStaged, false);
+});
+
+test('reset failure while changing identity is not rewritten as ACME', async () => {
+  const controller = createWizardController({
+    api: {
+      resetHostTls: async () => {
+        throw new Error('HTTPS-Vorbereitung konnte nicht verworfen werden.');
+      },
+      prepareHostTls: async () => {
+        throw new Error('prepare must not run after reset failure');
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(
+    minimalHostStatus({
+      tls: {
+        state: 'awaiting-operator-dns',
+        mode: 'managed',
+        hostname: '7fk3m2.lan.notaus.de',
+        installationId: '7fk3m2q9',
+        tokenConsumed: false,
+        applyReady: false,
+        cutoverApplied: false,
+        certificate: null,
+        lastError: null,
+        acmeCnameTarget: 'uuid.auth.acme-dns.io',
+      },
+    }),
+    'embedded',
+  );
+  controller.patchFields({
+    step: 6,
+    proxyEnabled: true,
+    httpsPhase: 'lease',
+    ipv4Reserved: true,
+    lanAppIp: '192.168.1.10',
+    nameMode: 'domain',
+    customDomain: 'flow.praxis-meyer.de',
+    httpsPreparedNameMode: 'generated',
+  });
+  await controller.goNext();
+
+  assert.equal(controller.getState().error, 'HTTPS-Vorbereitung konnte nicht verworfen werden.');
+  assert.notEqual(controller.getState().error, wizardManagedPrepareErrorFooter());
+  assert.equal(controller.getState().httpsPhase, 'lease');
+});
+
+test('local HTTPS validation errors stay on the existing footer copy', async () => {
+  const controller = createWizardController({
+    api: {
+      prepareHostTls: async () => {
+        throw new Error('must not prepare');
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  controller.patchFields({
+    step: 6,
+    proxyEnabled: true,
+    httpsPhase: 'hostname',
+    nameMode: 'label',
+    customLabel: '',
+  });
+  await controller.goNext();
+  assert.equal(controller.getState().error, 'Bitte einen gültigen Namen wählen.');
+  assert.equal(controller.getState().httpsPhase, 'hostname');
+
+  controller.patchFields({
+    httpsPhase: 'lease',
+    ipv4Reserved: false,
+    lanAppIp: '192.168.1.10',
+    nameMode: 'generated',
+  });
+  await controller.goNext();
+  assert.equal(controller.getState().error, 'Bitte die feste IP oder DHCP-Reservierung bestätigen.');
+
+  controller.show(
+    minimalHostStatus({
+      network: {
+        configuredLanIp: '192.168.1.10',
+        currentLanCandidates: [],
+        lanIpStale: true,
+      },
+    }),
+    'embedded',
+  );
+  controller.patchFields({
+    step: 6,
+    proxyEnabled: true,
+    httpsPhase: 'lease',
+    ipv4Reserved: true,
+    lanAppIp: '192.168.1.40',
+    nameMode: 'generated',
+  });
+  await controller.goNext();
+  assert.equal(controller.getState().error, TLS_LEASE_STALE_LAN_COPY);
+
+  controller.show(minimalHostStatus(), 'embedded');
+  controller.patchFields({
+    step: 6,
+    proxyEnabled: true,
+    httpsPhase: 'lease',
+    ipv4Reserved: true,
+    lanAppIp: '',
+    nameMode: 'generated',
+  });
+  await controller.goNext();
+  assert.equal(controller.getState().error, 'Bitte zuerst eine LAN-IP wählen.');
+  assert.notEqual(controller.getState().error, wizardManagedPrepareErrorFooter());
+});
+
+test('goNext prepares custom TLS after a confirmed lease', async () => {
+  let prepared: TlsPrepareInput | null = null;
+  const controller = createWizardController({
+    api: {
+      prepareHostTls: async (body: TlsPrepareInput) => {
+        prepared = body;
+        return {
+          tls: {
+            state: 'awaiting-operator-dns',
+            mode: 'custom',
+            hostname: 'flow.praxis-meyer.de',
+            installationId: '7fk3m2q9',
+            tokenConsumed: false,
+            applyReady: false,
+            cutoverApplied: false,
+            certificate: null,
+            lastError: null,
+            acmeCnameTarget: null,
+          },
+          operatorRequest: null,
+        };
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  controller.patchFields({
+    step: 6,
+    proxyEnabled: true,
+    httpsPhase: 'lease',
+    ipv4Reserved: true,
+    lanAppIp: '192.168.1.10',
+    nameMode: 'domain',
+    customDomain: 'flow.praxis-meyer.de',
+  });
+  await controller.goNext();
+
+  assert.equal(controller.getState().httpsPhase, 'mail');
+  assert.equal(controller.getState().error, null);
+  assert.deepEqual(prepared, {
+    mode: 'custom',
+    hostname: 'flow.praxis-meyer.de',
+    lanIp: '192.168.1.10',
+  });
+  assert.equal(controller.getState().httpsPreparedNameMode, 'domain');
+});
+
+test('failed mail replay does not surface an ACME footer', async () => {
+  const controller = createWizardController({
+    api: {
+      prepareHostTls: async () => {
+        throw new Error('identity replay refused');
+      },
+      resetHostTls: async () => {
+        throw new Error('reset must not run when the draft matches');
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(
+    minimalHostStatus({
+      tls: {
+        state: 'awaiting-operator-dns',
+        mode: 'managed',
+        hostname: '7fk3m2.lan.notaus.de',
+        installationId: '7fk3m2q9',
+        tokenConsumed: false,
+        applyReady: false,
+        cutoverApplied: false,
+        certificate: null,
+        lastError: null,
+        acmeCnameTarget: 'uuid.auth.acme-dns.io',
+      },
+    }),
+    'embedded',
+  );
+  controller.patchFields({
+    step: 6,
+    proxyEnabled: true,
+    httpsPhase: 'lease',
+    ipv4Reserved: true,
+    lanAppIp: '192.168.1.10',
+    nameMode: 'generated',
+  });
+  await controller.goNext();
+
+  assert.equal(controller.getState().error, null);
+  assert.equal(controller.getState().httpsPhase, 'mail');
+  assert.equal(controller.getState().operatorRequest, null);
 });

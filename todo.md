@@ -19,13 +19,21 @@ Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-histo
 - TLS / Internet-Portal: [`docs/plan-proxy-tls.md`](docs/plan-proxy-tls.md), Manager: [`docs/plan-proxy-tls-manager.md`](docs/plan-proxy-tls-manager.md) — Mailtext an Praxis Flow, DNS manuell/zeitversetzt, 6-Steller oder Wunsch-Label
 - Captive-Vendor-Adapter (WLAN bleibt Praxis-IT)
 
-## Als Nächstes — Wizard-Schritt 6 HTTPS (Manager)
+## Als Nächstes
 
-Fehlerklassen extra.
+- HTTPS-Aufräumen: Schnitte 1–3 umgesetzt und reviewt.
+- Produkt-Spec bleibt [`docs/plan-proxy-tls-manager.md`](docs/plan-proxy-tls-manager.md).
+- Boot-Aufräumen ist im Code; Plan dazu gelöscht. Hülle-Reste (View-Unmount, IPC) kein Folgeauftrag.
+- `state/tls/` liegt in `.gitignore` (Token, acme-dns, Caddyfile).
 
 ## Heute (2026-08-29)
 
-- Review Manager-Boot: Plan [`docs/plan-manager-boot.md`](docs/plan-manager-boot.md) — mit Code vergleichen vor Schnitt 1. Kein Umbau.
+- Schnitt 3 Status-Resume: Warte-Zusatz nur DNS-Warten; `preparing` nicht als Warten; kein „unter Netzwerk“; Fail-Wörter wie Netzwerk; Apply-Fail mit Cutover-Kontext. Post-Cutover ohne HTTP-Zusage. `TlsResumeCard.svelte` unverändert.
+- Schnitt 1 Netzwerk: Warte-Copy nur `awaiting-operator-dns`; persistierter Fail vs Apply-Fail; Status-Refresh nach Apply/Obtain/Prepare-Catch; Footer nur ohne `lastError`. `error` ohne `lastError`: nur Footer, Repair/Reset bleiben.
+- HTTPS-Plan: Catch ohne Status-Refresh; persistierter Fail nur `error && !cutoverApplied`.
+- HTTPS-Plan Review übernommen: Apply-Fail ≠ `state=error` (erneut apply); `clock`/`cert-name` nicht in `lastError`; Warte-Copy nur `awaiting-operator-dns`. [`docs/plan-manager-https.md`](docs/plan-manager-https.md)
+- HTTPS-Plan geschärft (kein Umbau): welche Klasse Setup wirklich setzt; Aufräumen = Fail vs. Warten auf Netzwerk.
+- Plan Manager-Boot gelöscht (Code war schon da).
 
 - Status-Ampel: Proxy-Kachel nur wenn Proxy enabled (nicht am App/Sandbox-Stack); bei Ersteinrichtung keine Ampel-Kacheln.
 - Boot: Chrome/Status erst nach Config — Runtime kam vorher und hat die Statusleiste vor dem Wizard geblitzt.

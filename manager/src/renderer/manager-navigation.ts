@@ -16,6 +16,8 @@ export type NavigateOptions = {
   wizardPresentation?: WizardPresentation;
   /** Skip a second status fetch when the caller already has config. */
   status?: HostStatus | null;
+  /** Skip host refresh when config is already in the snapshot (boot / wizard leave). */
+  refresh?: boolean;
 };
 
 export type DeferredView = 'maintenance' | 'network';
@@ -68,11 +70,15 @@ export function createManagerNavigation(deps: ManagerNavigationDeps) {
       return;
     }
 
+    if (options.refresh === false) {
+      return;
+    }
+
     if (isDeferredView(view)) {
       deps.sessions.setDeferredLoading(view, true);
     }
 
-    void deps.hostRefresh.refresh({ scope: 'full', immediate: true }).then(() => {
+    void deps.hostRefresh.refresh({ scope: 'full' }).then(() => {
       if (deps.hostRefresh.getView() !== view) {
         if (isDeferredView(view)) {
           deps.sessions.setDeferredLoading(view, false);

@@ -16,6 +16,7 @@ import {
   tlsIsPersistedFailBeforeCutover,
   tlsNeedsNetworkResume,
   tlsNetworkShowsGenericErrorFooter,
+  tlsNetworkSubtitle,
   tlsResumeCard,
   tlsShowsDnsWaitCopy,
   tlsShowsStructuredLastErrorNotice,
@@ -70,11 +71,101 @@ test('tlsNeedsNetworkResume skips idle and healthy active certs', () => {
   );
 });
 
-test('tlsResumeCard stays on the network tab', () => {
-  const card = tlsResumeCard(tls({ state: 'awaiting-operator-dns', mode: 'managed' }));
+test('tlsResumeCard wait extra is only on awaiting-operator-dns', () => {
+  const waiting = tlsResumeCard(tls({ state: 'awaiting-operator-dns', mode: 'managed' }));
+  assert.equal(waiting?.button, 'Fortsetzen');
+  assert.equal(waiting?.title, tlsNetworkSubtitle(tls({ state: 'awaiting-operator-dns', mode: 'managed' })));
+  assert.match(waiting?.copy ?? '', /48 Stunden/);
+  assert.match(waiting?.copy ?? '', /Manager schließen/);
+  assert.doesNotMatch(waiting?.copy ?? '', /unter Netzwerk/);
+
+  const preparing = tlsResumeCard(tls({ state: 'preparing', mode: 'managed' }));
+  assert.equal(preparing?.title, 'Vorbereitung');
+  assert.doesNotMatch(preparing?.copy ?? '', /48 Stunden/);
+  assert.doesNotMatch(preparing?.copy ?? '', /Manager schließen/);
+  assert.doesNotMatch(preparing?.copy ?? '', /unter Netzwerk/);
+  assert.equal(preparing?.button, 'Fortsetzen');
+
+  const obtaining = tlsResumeCard(tls({ state: 'obtaining-certificate', mode: 'managed' }));
+  assert.doesNotMatch(obtaining?.copy ?? '', /48 Stunden/);
+  assert.doesNotMatch(obtaining?.copy ?? '', /Manager schließen/);
+  assert.doesNotMatch(obtaining?.copy ?? '', /unter Netzwerk/);
+});
+
+test('tlsResumeCard persisted fail uses the same words as the network notice', () => {
+  const failed = tls({
+    state: 'error',
+    mode: 'managed',
+    lastError: { class: 'acme', message: 'obtain failed' },
+  });
+  const card = tlsResumeCard(failed);
+  const fail = tlsErrorCopy(failed.lastError?.class, failed.lastError?.message);
+  assert.equal(card?.title, fail.title);
+  assert.equal(card?.copy, fail.action);
   assert.equal(card?.button, 'Fortsetzen');
-  assert.match(card?.copy ?? '', /48 Stunden/);
-  assert.doesNotMatch(card?.copy ?? '', /Fortsetzen unter Netzwerk/);
+  assert.doesNotMatch(`${card?.title} ${card?.copy}`, /unter Netzwerk/);
+});
+
+test('tlsResumeCard apply-fail keeps cutover context instead of a failed install', () => {
+  const applyFail = tls({
+    state: 'dns-verified',
+    mode: 'managed',
+    applyReady: true,
+    lastError: { class: 'firewall', message: 'apply rolled back' },
+  });
+  const card = tlsResumeCard(applyFail);
+  const fail = tlsErrorCopy(applyFail.lastError?.class, applyFail.lastError?.message);
+  assert.equal(card?.title, 'Zertifikat liegt vor');
+  assert.equal(card?.copy, `${fail.title} ${fail.action}`);
+  assert.equal(card?.button, 'Fortsetzen');
+  assert.doesNotMatch(`${card?.title} ${card?.copy}`, /fehlgeschlagen/);
+  assert.doesNotMatch(`${card?.title} ${card?.copy}`, /Installation/);
+  assert.doesNotMatch(`${card?.title} ${card?.copy}`, /unter Netzwerk/);
+});
+
+test('tlsResumeCard post-cutover cards do not promise reachable HTTP', () => {
+  const httpPromise = /HTTP läuft|HTTP bleibt erreichbar|HTTP bleibt/;
+  const soon = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+  const expired = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const postError = tlsResumeCard(
+    tls({
+      state: 'error',
+      cutoverApplied: true,
+      mode: 'managed',
+      lastError: { class: 'acme', message: 'renew failed' },
+    }),
+  );
+  assert.equal(postError?.button, 'Fortsetzen');
+  assert.equal(postError?.title, 'Fehler');
+  assert.equal(postError?.copy, 'Geräte nutzen HTTPS.');
+  assert.doesNotMatch(postError?.copy ?? '', httpPromise);
+
+  const degraded = tlsResumeCard(tls({ state: 'degraded', cutoverApplied: true, mode: 'managed' }));
+  assert.equal(degraded?.title, 'HTTPS braucht Aufmerksamkeit');
+  assert.equal(degraded?.copy, 'Geräte nutzen HTTPS.');
+  assert.doesNotMatch(degraded?.copy ?? '', httpPromise);
+
+  const expiring = tlsResumeCard(
+    tls({
+      state: 'active',
+      cutoverApplied: true,
+      certificate: { issuer: 'Pebble', notBefore: soon, notAfter: soon, names: [] },
+    }),
+  );
+  assert.equal(expiring?.title, 'HTTPS braucht Aufmerksamkeit');
+  assert.equal(expiring?.copy, 'Geräte nutzen HTTPS.');
+  assert.doesNotMatch(expiring?.copy ?? '', httpPromise);
+
+  const expiredCard = tlsResumeCard(
+    tls({
+      state: 'active',
+      cutoverApplied: true,
+      certificate: { issuer: 'Pebble', notBefore: expired, notAfter: expired, names: [] },
+    }),
+  );
+  assert.equal(expiredCard?.title, 'Zertifikat abgelaufen');
+  assert.doesNotMatch(expiredCard?.copy ?? '', httpPromise);
 });
 
 test('tlsExpiryKind warns inside 21 days', () => {

@@ -13,13 +13,13 @@ import type { WizardPresentation } from './manager-navigation.js';
 
 function createMockHostRefresh(options: {
   getView: () => 'status' | 'maintenance' | 'network' | 'wizard';
-  refresh?: () => Promise<void>;
+  refresh?: () => Promise<HostStatus | null>;
   getLastConfig?: () => HostStatus | null;
 }): HostRefreshController {
   return {
     getView: options.getView,
     setView: () => {},
-    refresh: options.refresh ?? (async () => {}),
+    refresh: options.refresh ?? (async () => null),
     getLastConfig: options.getLastConfig ?? (() => minimalHostStatus()),
     getLastRuntime: () => null,
   };
@@ -79,6 +79,7 @@ test('deferred view shows loading until refresh completes', async () => {
       getView: () => 'maintenance',
       refresh: async () => {
         await refreshGate;
+        return null;
       },
     }),
     syncShell: () => {},
@@ -112,6 +113,7 @@ test('does not begin maintenance after navigating to network before refresh reso
       },
       refresh: async () => {
         await refreshGate;
+        return null;
       },
       getLastConfig: () => minimalHostStatus({ practiceDisplayName: 'Fresh' }),
       getLastRuntime: () => null,
@@ -155,6 +157,55 @@ test('wizard reuses provided status without a second fetch', () => {
   assert.equal(sessions.wizardShown.length, 1);
   assert.equal(sessions.wizardShown[0]?.status, status);
   assert.equal(sessions.wizardShown[0]?.presentation, 'fullscreen');
+});
+
+test('status boot navigation skips refresh when refresh is false', () => {
+  let refreshCalls = 0;
+  const sessions = createSessionRecorder();
+  const synced: Array<{ view: string; refresh?: boolean }> = [];
+
+  const navigation = createManagerNavigation({
+    hostRefresh: createMockHostRefresh({
+      getView: () => 'status',
+      refresh: async () => {
+        refreshCalls += 1;
+        return null;
+      },
+    }),
+    syncShell: (view, options) => {
+      synced.push({ view, refresh: options?.refresh });
+    },
+    sessions,
+    fetchSetupStatus: async () => minimalHostStatus(),
+  });
+
+  navigation.navigateTo('status', { refresh: false });
+
+  assert.equal(refreshCalls, 0);
+  assert.equal(sessions.loading.length, 0);
+  assert.deepEqual(synced, [{ view: 'status', refresh: false }]);
+});
+
+test('status tab still runs a full refresh by default', async () => {
+  let refreshCalls = 0;
+  const sessions = createSessionRecorder();
+
+  const navigation = createManagerNavigation({
+    hostRefresh: createMockHostRefresh({
+      getView: () => 'status',
+      refresh: async () => {
+        refreshCalls += 1;
+        return null;
+      },
+    }),
+    syncShell: () => {},
+    sessions,
+    fetchSetupStatus: async () => minimalHostStatus(),
+  });
+
+  navigation.navigateTo('status');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(refreshCalls, 1);
 });
 
 test('does not show wizard after leaving wizard before fetch resolves', async () => {

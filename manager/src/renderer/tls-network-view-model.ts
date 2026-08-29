@@ -241,46 +241,62 @@ export function tlsResumeCard(tls: TlsStatus | undefined): {
   if (!tlsNeedsNetworkResume(tls) || !tls) {
     return null;
   }
-  if (tls.state === 'error') {
+  const button = 'Fortsetzen';
+  if (tlsShowsDnsWaitCopy(tls)) {
     return {
-      title: 'HTTPS fehlgeschlagen',
-      copy: 'HTTP läuft weiter. Fortsetzen unter Netzwerk.',
-      button: 'Fortsetzen',
+      title: tlsNetworkSubtitle(tls),
+      copy: `${tlsDnsWaitCopy(tls.mode)} Den Manager schließen ist in Ordnung.`,
+      button,
+    };
+  }
+  if (tlsIsPersistedFailBeforeCutover(tls)) {
+    if (tls.lastError) {
+      const fail = tlsErrorCopy(tls.lastError.class, tls.lastError.message);
+      return { title: fail.title, copy: fail.action, button };
+    }
+    return { title: tlsNetworkSubtitle(tls), copy: 'HTTP läuft weiter.', button };
+  }
+  if (tlsIsApplyFail(tls)) {
+    const fail = tlsErrorCopy(tls.lastError?.class, tls.lastError?.message);
+    return {
+      title: tlsNetworkSubtitle(tls),
+      copy: `${fail.title} ${fail.action}`,
+      button,
+    };
+  }
+  if (tls.cutoverApplied) {
+    const expiry = tlsExpiryKind(tls.certificate);
+    return {
+      title:
+        expiry === 'expired'
+          ? 'Zertifikat abgelaufen'
+          : tls.state === 'error'
+            ? tlsNetworkSubtitle(tls)
+            : 'HTTPS braucht Aufmerksamkeit',
+      copy: 'Geräte nutzen HTTPS.',
+      button,
     };
   }
   if (tls.state === 'obtaining-certificate') {
     return {
-      title: 'Zertifikat wird geholt',
-      copy: 'HTTP bleibt erreichbar. Fortsetzen unter Netzwerk.',
-      button: 'Fortsetzen',
+      title: tlsNetworkSubtitle(tls),
+      copy: 'HTTP bleibt erreichbar.',
+      button,
     };
   }
   if (tls.state === 'dns-verified') {
     return {
-      title: tls.applyReady ? 'Zertifikat liegt vor' : 'DNS stimmt',
+      title: tlsNetworkSubtitle(tls),
       copy: tls.applyReady
-        ? 'HTTP bleibt, bis Sie unter Netzwerk auf HTTPS umstellen.'
-        : 'Als Nächstes unter Netzwerk das Zertifikat holen — noch nicht umstellen.',
-      button: 'Fortsetzen',
-    };
-  }
-  if (
-    tls.state === 'degraded' ||
-    (tls.state === 'active' && tlsExpiryKind(tls.certificate) !== 'ok')
-  ) {
-    return {
-      title:
-        tlsExpiryKind(tls.certificate) === 'expired'
-          ? 'Zertifikat abgelaufen'
-          : 'HTTPS braucht Aufmerksamkeit',
-      copy: 'Weiter unter Netzwerk.',
-      button: 'Fortsetzen',
+        ? 'HTTP bleibt, bis Sie auf HTTPS umstellen.'
+        : 'Als Nächstes das Zertifikat holen — noch nicht umstellen.',
+      button,
     };
   }
   return {
-    title: 'HTTPS wartet auf DNS',
-    copy: `${tlsDnsWaitCopy(tls.mode)} Den Manager schließen ist in Ordnung.`,
-    button: 'Fortsetzen',
+    title: tlsNetworkSubtitle(tls),
+    copy: 'HTTP bleibt erreichbar.',
+    button,
   };
 }
 

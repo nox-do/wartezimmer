@@ -2,8 +2,7 @@
 
 Stand: 2026-08-29
 
-Status: **Arbeitsplan**, Review eingearbeitet. Kein Umbau-Auftrag, bis Schnitt 1
-explizit startet. Produkt-Happy-Path:
+Status: **Schnitte 1–3 umgesetzt und reviewt.** Produkt-Happy-Path:
 [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md). ACME/Compose/Caddy:
 [`plan-proxy-tls.md`](plan-proxy-tls.md).
 
@@ -201,13 +200,17 @@ Nach mutierendem API-Fehler zuerst Status holen (`onAfterMutation`), dann Gates 
 
 ## Schnitte (Reihenfolge, klein)
 
-Kein Auftrag, bis wir den ersten Schnitt explizit starten.
+- [x] Schnitt 1 — Netzwerk
+- [x] Schnitt 2 — Wizard
+- [x] Schnitt 3 — Status
+
+Schnitte 1–3 umgesetzt und reviewt.
 
 ### 0 — Tabelle in diesem Dokument halten
 
 Wenn Backend eine Klasse neu setzt oder Copy ändert: hier eine Zeile.
 
-### 1 — Netzwerk: drei Fälle sichtbar (nur Renderer)
+### 1 — Netzwerk: drei Fälle sichtbar (nur Renderer) — **erledigt**
 
 Dateien: `tls-network-view-model.ts`, `TlsNetworkPanel.svelte`,
 `tls-network-controller.ts` (Refresh nach mutierendem Catch), deren Tests.
@@ -221,13 +224,13 @@ Kein `host-tls.ts`, keine Setup-API, kein Lab/Smoke.
   Switch darf bleiben; keine Mini-UI, bis Setup sie persistiert.
 - `isolation`: nicht bewerben, solange ungesetzt; kein WLAN-Adapter vortäuschen.
 
-### 2 — Wizard: nur Prepare/PEM
+### 2 — Wizard: nur Prepare/PEM — **erledigt**
 
 Footer-Fehler bleibt. Kein DNS-Diagnose-Wizard. Prepare-Fail darf
 `tlsErrorCopy('acme')` nutzen — ein Import. PEM-Fehler: Exception-`message`
 (Klasse kommt nicht über die API).
 
-### 3 — Status: gemeinsame Begriffe, keine zweite Aktion
+### 3 — Status: gemeinsame Begriffe, keine zweite Aktion — **erledigt**
 
 Resume-Titel an `tlsNetworkSubtitle` / dieselben Warte- vs. Fail-Wörter.
 Button „Fortsetzen“. Kein „unter Netzwerk“ in der Copy. Warte-Zusatz

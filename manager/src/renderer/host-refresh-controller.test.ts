@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { HostRuntimeHealth } from '@praxis-flow/server-shared/setup-api';
 import type { HostStatus } from '../shared/host-status.js';
-import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
+import { freshInstallHostStatus, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import { createHostRefreshController } from './host-refresh-controller.js';
 
 function minimalRuntime(overrides: Partial<HostRuntimeHealth> = {}): HostRuntimeHealth {
@@ -33,7 +33,7 @@ function mockApi(
   } as never;
 }
 
-test('refresh applies runtime and config on full scope', async () => {
+test('refresh applies runtime and config on full scope once ops snapshot exists', async () => {
   const status = minimalHostStatus();
   const runtime = minimalRuntime();
   const runtimes: HostRuntimeHealth[] = [];
@@ -54,12 +54,45 @@ test('refresh applies runtime and config on full scope', async () => {
   });
 
   controller.setView('status');
-  await controller.refresh({ scope: 'full', immediate: true });
+  await controller.refresh({ scope: 'config' });
+  await controller.refresh({ scope: 'full' });
 
+  assert.equal(configs.length, 2);
   assert.equal(runtimes.length, 1);
-  assert.equal(configs.length, 1);
   assert.equal(runtimes[0]?.configuredLanIp, '192.168.1.10');
   assert.equal(runtimes[0]?.checkedAt, runtime.checkedAt);
+});
+
+test('config-only does not fetch runtime or start a poll timer', async () => {
+  let runtimeCalls = 0;
+  const timers: unknown[] = [];
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchSetupStatus: async () => freshInstallHostStatus(),
+        fetchRuntimeHealth: async () => {
+          runtimeCalls += 1;
+          return minimalRuntime();
+        },
+      }),
+    pollIntervalMs: 5_000,
+    onRuntime: () => {},
+    onConfig: () => {},
+    onError: () => {},
+    schedule: (cb) => {
+      timers.push(cb);
+      return timers.length;
+    },
+    clearSchedule: () => {
+      timers.length = 0;
+    },
+  });
+
+  const status = await controller.refresh({ scope: 'config' });
+  assert.equal(status?.envExists, false);
+  assert.equal(runtimeCalls, 0);
+  assert.equal(timers.length, 0);
+  assert.equal(controller.getLastRuntime(), null);
 });
 
 test('runtime refresh does not push config snapshot', async () => {
@@ -74,8 +107,10 @@ test('runtime refresh does not push config snapshot', async () => {
     clearSchedule: () => {},
   });
 
+  await controller.refresh({ scope: 'config' });
+  const configCount = configs.length;
   await controller.refresh({ scope: 'runtime', silent: true });
-  assert.equal(configs.length, 0);
+  assert.equal(configs.length, configCount);
 });
 
 test('stale refresh result is discarded when a newer refresh starts', async () => {
@@ -105,18 +140,18 @@ test('stale refresh result is discarded when a newer refresh starts', async () =
     clearSchedule: () => {},
   });
 
+  await controller.refresh({ scope: 'config' });
   const first = controller.refresh({ scope: 'runtime', silent: true });
-  const second = controller.refresh({ scope: 'runtime', silent: true, immediate: true });
+  const second = controller.refresh({ scope: 'runtime', silent: true });
   resolveSlow();
   await Promise.all([first, second]);
 
   assert.equal(calls, 2);
   assert.equal(runtimes.length, 1);
   assert.equal(runtimes[0], 'gen-2');
-  assert.equal(controller.getLastConfig(), null);
 });
 
-test('poll uses setTimeout after refresh completes', async () => {
+test('poll uses setTimeout after runtime refresh when .env exists', async () => {
   const timers: Array<{ delay: number; cb: () => void }> = [];
   let pollRuns = 0;
 
@@ -138,7 +173,10 @@ test('poll uses setTimeout after refresh completes', async () => {
   });
 
   controller.setView('status');
-  await controller.refresh({ scope: 'full', immediate: true });
+  await controller.refresh({ scope: 'config' });
+  assert.equal(pollRuns, 0);
+  assert.equal(timers.length, 0);
+  await controller.refresh({ scope: 'runtime', silent: true });
   assert.equal(pollRuns, 1);
   assert.equal(timers.length, 1);
   assert.equal(timers[0]?.delay, 5_000);
@@ -148,7 +186,7 @@ test('poll uses setTimeout after refresh completes', async () => {
   assert.equal(pollRuns, 2);
 });
 
-test('poll continues while wizard view is active', async () => {
+test('poll continues while wizard view is active when .env exists', async () => {
   const timers: Array<{ delay: number; cb: () => void }> = [];
 
   const controller = createHostRefreshController({
@@ -166,10 +204,63 @@ test('poll continues while wizard view is active', async () => {
     },
   });
 
+  await controller.refresh({ scope: 'config' });
   controller.setView('wizard');
-  await controller.refresh({ scope: 'full', immediate: true });
+  await controller.refresh({ scope: 'runtime', silent: true });
   assert.equal(timers.length, 1);
   assert.equal(timers[0]?.delay, 5_000);
+});
+
+test('poll continues on status view when .env exists', async () => {
+  const timers: Array<{ delay: number; cb: () => void }> = [];
+
+  const controller = createHostRefreshController({
+    api: () => mockApi(),
+    pollIntervalMs: 5_000,
+    onRuntime: () => {},
+    onConfig: () => {},
+    onError: () => {},
+    schedule: (cb, delay) => {
+      timers.push({ delay, cb });
+      return timers.length;
+    },
+    clearSchedule: () => {
+      timers.length = 0;
+    },
+  });
+
+  controller.setView('status');
+  await controller.refresh({ scope: 'config' });
+  await controller.refresh({ scope: 'runtime', silent: true });
+  assert.equal(timers.length, 1);
+});
+
+test('without .env a config-only refresh does not start a poll timer', async () => {
+  const timers: unknown[] = [];
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchSetupStatus: async () => freshInstallHostStatus(),
+      }),
+    pollIntervalMs: 5_000,
+    onRuntime: () => {},
+    onConfig: () => {},
+    onError: () => {},
+    schedule: (cb) => {
+      timers.push(cb);
+      return timers.length;
+    },
+    clearSchedule: () => {
+      timers.length = 0;
+    },
+  });
+
+  controller.setView('status');
+  await controller.refresh({ scope: 'config' });
+  controller.setView('wizard');
+  await controller.refresh({ scope: 'runtime', silent: true });
+  assert.equal(timers.length, 0);
+  assert.equal(controller.getLastRuntime(), null);
 });
 
 test('full refresh keeps config when only runtime health fails', async () => {
@@ -196,10 +287,11 @@ test('full refresh keeps config when only runtime health fails', async () => {
     clearSchedule: () => {},
   });
 
-  await controller.refresh({ scope: 'full', immediate: true });
+  await controller.refresh({ scope: 'config' });
+  await controller.refresh({ scope: 'full' });
 
-  assert.equal(configs.length, 1);
-  assert.equal(configs[0]?.practiceDisplayName, 'Kept');
+  assert.equal(configs.length, 2);
+  assert.equal(configs[1]?.practiceDisplayName, 'Kept');
   assert.equal(controller.getLastConfig()?.practiceDisplayName, 'Kept');
   assert.equal(runtimes.length, 0);
   assert.deepEqual(errors, [{ message: 'health down', source: 'runtime' }]);
@@ -210,11 +302,16 @@ test('full refresh keeps runtime when only config fetch fails', async () => {
   const configs: HostStatus[] = [];
   const runtimes: HostRuntimeHealth[] = [];
   const errors: Array<{ message: string; source: string }> = [];
+  let configCalls = 0;
 
   const controller = createHostRefreshController({
     api: () =>
       mockApi({
         fetchSetupStatus: async () => {
+          configCalls += 1;
+          if (configCalls === 1) {
+            return minimalHostStatus();
+          }
           throw new Error('config down');
         },
         fetchRuntimeHealth: async () => runtime,
@@ -229,12 +326,13 @@ test('full refresh keeps runtime when only config fetch fails', async () => {
     clearSchedule: () => {},
   });
 
-  await controller.refresh({ scope: 'full', immediate: true });
+  await controller.refresh({ scope: 'config' });
+  await controller.refresh({ scope: 'full' });
 
   assert.equal(runtimes.length, 1);
   assert.equal(controller.getLastRuntime()?.checkedAt, 'runtime-ok');
-  assert.equal(configs.length, 0);
-  assert.equal(controller.getLastConfig(), null);
+  assert.equal(configs.length, 1);
+  assert.equal(controller.getLastConfig()?.envExists, true);
   assert.deepEqual(errors, [{ message: 'config down', source: 'config' }]);
 });
 
@@ -244,11 +342,16 @@ test('full refresh applies runtime before slow config settles', async () => {
     resolveConfig = resolve;
   });
   const order: string[] = [];
+  let configCalls = 0;
 
   const controller = createHostRefreshController({
     api: () =>
       mockApi({
         fetchSetupStatus: async () => {
+          configCalls += 1;
+          if (configCalls === 1) {
+            return minimalHostStatus();
+          }
           await configGate;
           order.push('config');
           return minimalHostStatus();
@@ -270,14 +373,14 @@ test('full refresh applies runtime before slow config settles', async () => {
     clearSchedule: () => {},
   });
 
-  const refreshDone = controller.refresh({ scope: 'full', immediate: true });
+  await controller.refresh({ scope: 'config' });
+  order.length = 0;
+  const refreshDone = controller.refresh({ scope: 'full' });
   await new Promise((resolve) => setTimeout(resolve, 10));
   assert.deepEqual(order, ['runtime', 'onRuntime']);
   assert.equal(controller.getLastRuntime()?.checkedAt, 'fast-runtime');
-  assert.equal(controller.getLastConfig(), null);
 
   resolveConfig();
   await refreshDone;
   assert.deepEqual(order, ['runtime', 'onRuntime', 'config', 'onConfig']);
-  assert.ok(controller.getLastConfig());
 });

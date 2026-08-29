@@ -1,28 +1,42 @@
-import { createHostRefreshController } from './host-refresh-controller.js';
+import {
+  createHostRefreshController,
+  type HostRefreshController,
+  type HostRefreshControllerDeps,
+  type ManagerView,
+} from './host-refresh-controller.js';
 import {
   createManagerNavigation,
   defaultWizardPresentation,
   shouldAutoStartFullscreenWizard,
 } from './manager-navigation.js';
-import type { NavigateOptions } from './manager-navigation.js';
+import type { NavigateOptions, WizardPresentation } from './manager-navigation.js';
 import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
-import type { ManagerView } from './host-refresh-controller.js';
-import {
-  applyConfigSnapshot,
-  applyRuntimeError,
-  applyRuntimeSnapshot,
-  applyShellNavigation,
-  applyStatusError,
-  markBootReady,
-  beginMaintenanceSession,
-  beginNetworkSession,
-  beginWizardSession,
-  clearInactiveViewSessions,
-  setDeferredViewLoading,
-} from './manager-shell-state.svelte.js';
+import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
+import type { HostStatus } from '../shared/host-status.js';
+import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+
+export type ManagerAppShell = {
+  applyConfigSnapshot: (status: HostStatus) => void;
+  applyRuntimeSnapshot: (runtime: HostRuntimeHealth) => void;
+  applyRuntimeError: (message: string) => void;
+  applyStatusError: (message: string) => void;
+  markBootReady: () => void;
+  applyShellNavigation: (view: ManagerView, options?: NavigateOptions) => void;
+  beginMaintenanceSession: () => void;
+  beginNetworkSession: () => void;
+  beginWizardSession: (status: HostStatus | null, presentation: WizardPresentation) => void;
+  clearInactiveViewSessions: (active: ManagerView) => void;
+  setDeferredViewLoading: (view: 'maintenance' | 'network', loading: boolean) => void;
+};
+
+export type ManagerAppControllerDeps = {
+  api: () => PraxisManagerApi;
+  shell: ManagerAppShell;
+  createHostRefresh?: (deps: HostRefreshControllerDeps) => HostRefreshController;
+};
 
 export type ManagerAppController = {
-  start: () => void;
+  start: () => Promise<void>;
   navigateTab: (tab: ManagerView) => void;
   onStatusSetupClick: () => void;
   onStatusLoadReleaseArchive: () => void;
@@ -33,37 +47,38 @@ export type ManagerAppController = {
   onWizardCancel: () => void;
 };
 
-export function createManagerAppController(): ManagerAppController {
-  function requirePraxisManager(): Window['praxisManager'] {
-    const api = window.praxisManager;
-    if (!api) {
-      throw new Error(
-        'Preload nicht geladen — Manager neu starten. (Hinweis: DevTools → Console nach Preload-Fehlern prüfen.)',
-      );
-    }
-    return api;
-  }
+export function createManagerAppController(
+  deps: ManagerAppControllerDeps,
+): ManagerAppController {
+  const shell = deps.shell;
+  const createHostRefresh = deps.createHostRefresh ?? createHostRefreshController;
 
   function syncShell(view: ManagerView, options: NavigateOptions = {}): void {
-    applyShellNavigation(view, options);
+    shell.applyShellNavigation(view, options);
+  }
+
+  async function refreshAfterMutation(): Promise<void> {
+    await hostRefresh.refresh({ scope: 'config' });
+    if (hostRefresh.getLastConfig()?.envExists) {
+      await hostRefresh.refresh({ scope: 'runtime' });
+    }
   }
 
   async function loadReleaseArchiveFromStatus(): Promise<void> {
     try {
-      const api = requirePraxisManager();
-      const result = await pickAndLoadReleaseArchive(api);
+      const result = await pickAndLoadReleaseArchive(deps.api());
       if (result.canceled) {
         return;
       }
       if (!result.ok) {
-        applyStatusError(result.error ?? 'Release-Paket konnte nicht importiert werden.');
+        shell.applyStatusError(result.error ?? 'Release-Paket konnte nicht importiert werden.');
         return;
       }
-      await hostRefresh.refresh({ scope: 'full', immediate: true });
+      await refreshAfterMutation();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Release-Paket konnte nicht importiert werden.';
-      applyStatusError(message);
+      shell.applyStatusError(message);
     }
   }
 
@@ -75,34 +90,19 @@ export function createManagerAppController(): ManagerAppController {
     });
   }
 
-  let bootRouteResolved = false;
-
-  const hostRefresh = createHostRefreshController({
-    api: requirePraxisManager,
+  const hostRefresh = createHostRefresh({
+    api: deps.api,
     onRuntime(runtime) {
-      applyRuntimeSnapshot(runtime);
+      shell.applyRuntimeSnapshot(runtime);
     },
-    onConfig(status, view) {
-      applyConfigSnapshot(status);
-      markBootReady();
-      if (!bootRouteResolved && view === 'status') {
-        bootRouteResolved = true;
-        if (shouldAutoStartFullscreenWizard(status)) {
-          navigation.navigateTo('wizard', {
-            wizardPresentation: 'fullscreen',
-            status,
-          });
-          return;
-        }
-      }
-      syncShell(view);
+    onConfig(status) {
+      shell.applyConfigSnapshot(status);
     },
     onError(message, _view, source) {
       if (source === 'config') {
-        applyStatusError(message);
-        markBootReady();
+        shell.applyStatusError(message);
       } else {
-        applyRuntimeError(message);
+        shell.applyRuntimeError(message);
       }
     },
   });
@@ -111,13 +111,13 @@ export function createManagerAppController(): ManagerAppController {
     hostRefresh,
     syncShell,
     sessions: {
-      clearInactive: clearInactiveViewSessions,
-      setDeferredLoading: setDeferredViewLoading,
-      beginMaintenance: beginMaintenanceSession,
-      beginNetwork: beginNetworkSession,
-      beginWizard: beginWizardSession,
+      clearInactive: shell.clearInactiveViewSessions,
+      setDeferredLoading: shell.setDeferredViewLoading,
+      beginMaintenance: shell.beginMaintenanceSession,
+      beginNetwork: shell.beginNetworkSession,
+      beginWizard: shell.beginWizardSession,
     },
-    fetchSetupStatus: () => requirePraxisManager().fetchSetupStatus(),
+    fetchSetupStatus: () => deps.api().fetchSetupStatus(),
   });
 
   function navigateTab(tab: ManagerView): void {
@@ -132,17 +132,36 @@ export function createManagerAppController(): ManagerAppController {
     navigation.navigateTo(tab);
   }
 
-  function onAfterMutation(): Promise<void> {
-    return hostRefresh.refresh({ scope: 'full', immediate: true });
-  }
-
   function onWizardLeave(): void {
-    navigation.navigateTo('status');
+    navigation.navigateTo('status', { refresh: false });
   }
 
   return {
-    start: () => {
-      navigation.navigateTo('status');
+    start: async () => {
+      try {
+        const status = await hostRefresh.refresh({ scope: 'config' });
+        if (status && shouldAutoStartFullscreenWizard(status)) {
+          navigation.navigateTo('wizard', {
+            wizardPresentation: 'fullscreen',
+            status,
+          });
+          shell.markBootReady();
+          return;
+        }
+        navigation.navigateTo('status', { refresh: false });
+        shell.markBootReady();
+        if (hostRefresh.getLastConfig()?.envExists) {
+          await hostRefresh.refresh({ scope: 'runtime' });
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Setup-API nicht erreichbar — bitte Manager neu starten.';
+        shell.applyStatusError(message);
+        navigation.navigateTo('status', { refresh: false });
+        shell.markBootReady();
+      }
     },
     navigateTab,
     onStatusSetupClick: startFullscreenWizard,
@@ -150,12 +169,12 @@ export function createManagerAppController(): ManagerAppController {
       void loadReleaseArchiveFromStatus();
     },
     onStatusOpenUrl: (url: string) => {
-      void requirePraxisManager().openExternalUrl(url);
+      void deps.api().openExternalUrl(url);
     },
     onOpenNetwork: () => {
       navigateTab('network');
     },
-    onAfterMutation,
+    onAfterMutation: refreshAfterMutation,
     onWizardComplete: onWizardLeave,
     onWizardCancel: onWizardLeave,
   };

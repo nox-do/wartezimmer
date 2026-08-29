@@ -4,7 +4,7 @@ import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 
 export type ManagerView = 'status' | 'maintenance' | 'network' | 'wizard';
 
-export type RefreshScope = 'full' | 'runtime';
+export type RefreshScope = 'full' | 'runtime' | 'config';
 
 export type RefreshErrorSource = 'config' | 'runtime';
 
@@ -12,8 +12,6 @@ export type RefreshOptions = {
   scope: RefreshScope;
   /** Poll / background — errors are ignored. */
   silent?: boolean;
-  /** Queue after any in-flight refresh (default for user actions). */
-  immediate?: boolean;
 };
 
 export type ScheduleFn = (callback: () => void, delayMs: number) => unknown;
@@ -32,7 +30,7 @@ export type HostRefreshControllerDeps = {
 export type HostRefreshController = {
   getView(): ManagerView;
   setView(view: ManagerView): void;
-  refresh(options: RefreshOptions): Promise<void>;
+  refresh(options: RefreshOptions): Promise<HostStatus | null>;
   getLastConfig(): HostStatus | null;
   getLastRuntime(): HostRuntimeHealth | null;
 };
@@ -64,6 +62,10 @@ export function createHostRefreshController(
   let lastConfig: HostStatus | null = null;
   let lastRuntime: HostRuntimeHealth | null = null;
 
+  function envExistsForRuntime(): boolean {
+    return lastConfig?.envExists === true;
+  }
+
   function stopPollTimer(): void {
     if (pollTimerId !== null) {
       clearSchedule(pollTimerId);
@@ -74,6 +76,9 @@ export function createHostRefreshController(
   function schedulePollTimer(myGeneration: number): void {
     stopPollTimer();
     if (myGeneration !== generation) {
+      return;
+    }
+    if (!envExistsForRuntime()) {
       return;
     }
     pollTimerId = schedule(() => {
@@ -89,47 +94,29 @@ export function createHostRefreshController(
     deps.onError(errorMessage(error), currentView, source);
   }
 
-  async function performRefresh(myGeneration: number, options: RefreshOptions): Promise<void> {
+  async function fetchConfig(
+    myGeneration: number,
+    options: RefreshOptions,
+  ): Promise<HostStatus | null> {
     try {
-      if (options.scope === 'full') {
-        // Apply each side as soon as it settles — runtime UI must not wait on full status.
-        await Promise.all([
-          deps
-            .api()
-            .fetchRuntimeHealth()
-            .then((runtime) => {
-              if (myGeneration !== generation) {
-                return;
-              }
-              lastRuntime = runtime;
-              deps.onRuntime(runtime);
-            })
-            .catch((error: unknown) => {
-              if (myGeneration !== generation) {
-                return;
-              }
-              reportError(options, 'runtime', error);
-            }),
-          deps
-            .api()
-            .fetchSetupStatus()
-            .then((status) => {
-              if (myGeneration !== generation) {
-                return;
-              }
-              lastConfig = status;
-              deps.onConfig(status, currentView);
-            })
-            .catch((error: unknown) => {
-              if (myGeneration !== generation) {
-                return;
-              }
-              reportError(options, 'config', error);
-            }),
-        ]);
-        return;
+      const status = await deps.api().fetchSetupStatus();
+      if (myGeneration !== generation) {
+        return null;
       }
+      lastConfig = status;
+      deps.onConfig(status, currentView);
+      return status;
+    } catch (error) {
+      if (myGeneration !== generation) {
+        return null;
+      }
+      reportError(options, 'config', error);
+      return null;
+    }
+  }
 
+  async function fetchRuntime(myGeneration: number, options: RefreshOptions): Promise<void> {
+    try {
       const runtime = await deps.api().fetchRuntimeHealth();
       if (myGeneration !== generation) {
         return;
@@ -137,27 +124,66 @@ export function createHostRefreshController(
       lastRuntime = runtime;
       deps.onRuntime(runtime);
     } catch (error) {
+      if (myGeneration !== generation) {
+        return;
+      }
       reportError(options, 'runtime', error);
+    }
+  }
+
+  async function performRefresh(
+    myGeneration: number,
+    options: RefreshOptions,
+  ): Promise<HostStatus | null> {
+    let configSucceeded = false;
+    try {
+      if (options.scope === 'config') {
+        const status = await fetchConfig(myGeneration, options);
+        configSucceeded = status !== null;
+        return status;
+      }
+
+      if (options.scope === 'full') {
+        if (!envExistsForRuntime()) {
+          const status = await fetchConfig(myGeneration, options);
+          configSucceeded = status !== null;
+          return status;
+        }
+        let configResult: HostStatus | null = null;
+        await Promise.all([
+          fetchRuntime(myGeneration, options),
+          fetchConfig(myGeneration, options).then((status) => {
+            configResult = status;
+          }),
+        ]);
+        return configResult;
+      }
+
+      if (envExistsForRuntime()) {
+        await fetchRuntime(myGeneration, options);
+      }
+      return lastConfig;
     } finally {
-      if (myGeneration === generation) {
-        schedulePollTimer(myGeneration);
+      if (myGeneration === generation && envExistsForRuntime()) {
+        // Successful config-only: caller starts runtime (boot / mutation). Failed
+        // config-only must resume an existing ops poll — refresh() already stopped it.
+        if (!(options.scope === 'config' && configSucceeded)) {
+          schedulePollTimer(myGeneration);
+        }
       }
     }
   }
 
-  function refresh(options: RefreshOptions): Promise<void> {
+  function refresh(options: RefreshOptions): Promise<HostStatus | null> {
     stopPollTimer();
     const myGeneration = ++generation;
 
-    refreshChain = refreshChain
-      .then(async () => {
-        await performRefresh(myGeneration, options);
-      })
-      .catch(() => {
-        // Errors are handled in performRefresh; keep the chain alive.
-      });
+    const done = refreshChain
+      .then(async () => performRefresh(myGeneration, options))
+      .catch(() => null);
+    refreshChain = done.then(() => undefined);
 
-    return refreshChain;
+    return done;
   }
 
   return {

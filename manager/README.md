@@ -31,8 +31,9 @@ npm run dev:manager
 
 ### Refresh / Poll
 
-- **Full refresh** (Tab-Wechsel, Mutation): `fetchSetupStatus` + `fetchRuntimeHealth` — unabhängig; ein Fail verwirft den anderen nicht
-- **Runtime-Poll** alle **12s** (nicht im Wizard): nur `fetchRuntimeHealth` → `runtimeSnapshot` (Header, Compose, Probes, Docker, …)
+- **Config-only** (`scope: 'config'`): nur `fetchSetupStatus` — erster Boot, Apply und andere Mutationen. Kein Runtime-Fetch als Nebeneffekt.
+- **Full refresh** (Tab-Wechsel): Config immer; Runtime parallel nur wenn der letzte erfolgreiche Config-Snapshot `.env` hat (`envExists`). Ein Fail verwirft den anderen nicht.
+- **Runtime-Poll** alle **12s** wenn `lastConfig.envExists` — **jede View**, einschließlich beider Wizard-Presentations. Ohne `.env` kein Timer. Config-Fehler am Start: kein Runtime, kein Poll; späterer Config-Fehler behält den letzten Snapshot und dessen Poll-Regel.
 - **Config** (`configSnapshot`): nur erfolgreicher Config-Fetch; Runtime-Poll schreibt nicht hinein
 - Fehler getrennt: `statusError` (Config) vs. `runtimeError` (Health-Header); Statusseite bleibt bei Health-Fehlern sichtbar
 - Überlappende Felder: reine Selektoren (`effectiveCompose`, …) — keine Mischkopie
