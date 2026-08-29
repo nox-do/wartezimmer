@@ -4,12 +4,14 @@
 
   let {
     compose,
-    busy = false,
+    locked = false,
+    error = null,
     onToggle,
     onRestart,
   }: {
     compose: ComposeStatus | null;
-    busy?: boolean;
+    locked?: boolean;
+    error?: string | null;
     onToggle: (wantRunning: boolean) => void;
     onRestart: () => void;
   } = $props();
@@ -26,7 +28,7 @@
           type="checkbox"
           role="switch"
           checked={running}
-          disabled={busy}
+          disabled={locked}
           aria-describedby="maintenance-stack-status"
           onchange={(event) => {
             const input = event.currentTarget;
@@ -41,7 +43,10 @@
       </span>
       <span id="maintenance-stack-status" class="stack-toggle-status">{stackStatusLabel(running)}</span>
     </label>
-    <button type="button" class="btn-secondary" disabled={busy} onclick={onRestart}>Neustart</button>
+    <button type="button" class="btn-secondary" disabled={locked} onclick={onRestart}>Neustart</button>
   </div>
   <p class="hint">Ist der Stack gestoppt, entspricht Neustart einem Start.</p>
+  {#if error}
+    <p class="error">{error}</p>
+  {/if}
 </div>

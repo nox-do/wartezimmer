@@ -5,13 +5,15 @@
   let {
     logsService,
     logsText,
-    busy = false,
+    locked = false,
+    error = null,
     onServiceChange,
     onRefresh,
   }: {
     logsService: string;
     logsText: string;
-    busy?: boolean;
+    locked?: boolean;
+    error?: string | null;
     onServiceChange: (service: string) => void;
     onRefresh: () => void;
   } = $props();
@@ -38,7 +40,7 @@
       <select
         class="maintenance-select"
         value={logsService}
-        disabled={busy}
+        disabled={locked}
         onchange={(event) => onServiceChange(event.currentTarget.value)}
       >
         {#each MAINTENANCE_LOG_SERVICES as service (service.value)}
@@ -50,7 +52,7 @@
       icon="rotate-cw"
       class="btn-secondary"
       ariaLabel="Logs aktualisieren"
-      disabled={busy}
+      disabled={locked}
       onclick={onRefresh}
     />
   </div>
@@ -59,4 +61,7 @@
     ><span class="maintenance-logs-body">{logsDisplayText(logsText)}</span
     >{#if hasLogs}<span class="maintenance-logs-cursor" aria-hidden="true"></span>{/if}</pre
   >
+  {#if error}
+    <p class="error">{error}</p>
+  {/if}
 </div>

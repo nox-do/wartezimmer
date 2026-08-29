@@ -294,6 +294,18 @@ zusätzlich `if (activeOperation) return`, damit Tests den Interlock nicht
 umgehen. `show` / `hide` / `applyConfigSnapshot` / `applyRuntimeHealth` /
 `recordPfupdateSuccess` bleiben davon ausgenommen.
 
+Accordion (festgelegt): kein Seiten-Footer. Fehler nur in der Fläche. Kinder
+eines zugeklappten `MaintenanceSection` sind nicht im DOM — deshalb:
+
+1. Klick-Fehler bleiben im offenen Block; kein Extra-Umschalten.
+2. Liegt der Fehler in einem anderen Block, genau **einen** Abschnitt öffnen
+   (nicht drei). Nur bei **neuem** Fehler-Key, nicht gegen späteres Zuklappen
+   ankämpfen.
+3. Log-Fail nach Stack- oder PIN-Erfolg bleibt an **Stack bzw. PIN**, nicht
+   unter Diagnose. Log-Fail nach Pfupdate (kein Wartungs-Update-Slot) → `logs`.
+   Bootstrap-Teilfehler: `logs` / `backup` / `routing`; öffnen nach fester
+   Reihenfolge einen Block (`routing` vor `backup` vor `logs`).
+
 ---
 
 ## Schnitte
@@ -385,17 +397,19 @@ heutige Serialisierung zu lockern.
   `errors` nach Fläche. Erfolg/Progress bleiben in den vorhandenen Statuszeilen;
   Fehler erscheinen daneben als lokale `.error`-Zeile. `StackControls` und
   `LogsPanel` brauchen dafür erstmals eine lokale Fehler-Prop, aber kein neues
-  Panel. `inspectTlsSidecar` schreibt heute dieselbe Botschaft in Statuszeile
-  **und** `error` — nach dem Schnitt nur noch `errors.tlsSidecar`, die
-  Statuszeile bleibt Erfolg/Progress.
+  Panel. `BackupPanel` bekommt drei Fehler-Slots (Backup / Sidecar / PIN), kein
+  neues Panel. `inspectTlsSidecar` schreibt heute dieselbe Botschaft in
+  Statuszeile **und** `error` — nach dem Schnitt nur noch `errors.tlsSidecar`.
 - Ein neuer Lauf löscht nur den Fehler seiner Fläche; `show()` darf alle
   flächenbezogenen Fehler für die neue Session zurücksetzen.
+- View: bei neuem Fehler-Key den Ursprungsabschnitt öffnen, siehe Zielbild.
+  Kein neuer Electron-Smoke-Harness.
 - Tests: Während Logs-Refresh bleiben andere Wartungsaktionen gesperrt, aber
   nur Logs zeigen Busy; fremdes Busy erzeugt nie „Update läuft …“; Restore-
   oder Pfupdate-Busy sperrt die übrigen Wartungsaktionen; Routing-/Storage-/
   Backup-/TLS-Sidecar-/PIN-/Stack-/Log-Fehler tragen die richtige Fläche;
-  Bootstrap-Teilfehler landen auf `logs` / `backup` / `routing`. Electron-Smoke:
-  Fehler steht sichtbar im geöffneten Ursprungsabschnitt, kein Seiten-Footer.
+  Bootstrap-Teilfehler landen auf `logs` / `backup` / `routing`;
+  `maintenanceSectionToOpenForErrors` öffnet einen Block.
 
 **Nicht:** Controller in acht Dateien splitten. Keine neuen Panels. Keine
 parallelen Wartungs-Slots.
@@ -407,7 +421,8 @@ parallelen Wartungs-Slots.
 - `subscribe()` aus Wartungs-Controller und Public-API entfernen.
 - Extra-`syncSnapshot` in `MaintenanceView` streichen, wo `onStateChange`
   bereits feuert (`show`, `applyConfigSnapshot`, `applyRuntimeHealth`,
-  `setRoutingMode`, Browse-`.then`, Pfupdate-`onApplySuccess`).
+  `setRoutingMode`, Browse-`.then`, Pfupdate-`onApplySuccess`, Restore- und
+  Pfupdate-Dialog-Callbacks in derselben Datei).
 - `setImportsPath` / `setExportsPath` normal notifyen; `notify: false` und die
   manuellen `oninput`-Syncs entfernen. Der Ist-Code klont heute ohnehin bei
   jedem Tastendruck, daher ist das keine neue Render-Frequenz.

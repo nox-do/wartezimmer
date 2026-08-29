@@ -16,7 +16,10 @@
     backupStatusText = '',
     tlsSidecarStatusText = '',
     pinResetStatusText = '',
-    busy = false,
+    locked = false,
+    backupError = null,
+    tlsSidecarError = null,
+    pinError = null,
     tlsEnabled = false,
     onBackup,
     onValidateBackup,
@@ -30,7 +33,10 @@
     backupStatusText?: string;
     tlsSidecarStatusText?: string;
     pinResetStatusText?: string;
-    busy?: boolean;
+    locked?: boolean;
+    backupError?: string | null;
+    tlsSidecarError?: string | null;
+    pinError?: string | null;
     tlsEnabled?: boolean;
     onBackup: () => void;
     onValidateBackup: () => void;
@@ -72,16 +78,19 @@
     <p class="maintenance-backup-status">{backupStatusText}</p>
   {/if}
   <div class="maintenance-backup-actions">
-    <button type="button" class="btn-secondary" disabled={busy} onclick={onBackup}>
+    <button type="button" class="btn-secondary" disabled={locked} onclick={onBackup}>
       Backup erstellen
     </button>
-    <button type="button" class="btn-secondary" disabled={busy} onclick={onValidateBackup}>
+    <button type="button" class="btn-secondary" disabled={locked} onclick={onValidateBackup}>
       Backup prüfen
     </button>
-    <button type="button" class="btn-secondary" disabled={busy} onclick={onRestore}>
+    <button type="button" class="btn-secondary" disabled={locked} onclick={onRestore}>
       Wiederherstellen …
     </button>
   </div>
+  {#if backupError}
+    <p class="error">{backupError}</p>
+  {/if}
 </div>
 
 {#if tlsEnabled}
@@ -101,11 +110,14 @@
     {#if tlsSidecarStatusText}
       <p class="maintenance-backup-status">{tlsSidecarStatusText}</p>
     {/if}
+    {#if tlsSidecarError}
+      <p class="error">{tlsSidecarError}</p>
+    {/if}
     <div class="maintenance-backup-actions">
-      <button type="button" class="btn-secondary" disabled={busy} onclick={onExportTlsSidecar}>
+      <button type="button" class="btn-secondary" disabled={locked} onclick={onExportTlsSidecar}>
         HTTPS-State sichern
       </button>
-      <button type="button" class="btn-secondary" disabled={busy} onclick={onInspectTlsSidecar}>
+      <button type="button" class="btn-secondary" disabled={locked} onclick={onInspectTlsSidecar}>
         HTTPS-State prüfen
       </button>
     </div>
@@ -122,7 +134,10 @@
   {#if pinResetStatusText}
     <p class="maintenance-backup-status">{pinResetStatusText}</p>
   {/if}
-  <button type="button" class="btn-secondary" disabled={busy} onclick={onPinReset}>
+  {#if pinError}
+    <p class="error">{pinError}</p>
+  {/if}
+  <button type="button" class="btn-secondary" disabled={locked} onclick={onPinReset}>
     MFA- &amp; Ops-PIN auf 0000 zurücksetzen
   </button>
 </div>

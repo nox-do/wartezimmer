@@ -195,15 +195,15 @@ test('createMaintenanceController sets busy during show bootstrap', async () => 
   );
 
   controller.show(minimalHostStatus());
-  assert.equal(controller.getState().busy, true);
+  assert.equal(controller.getState().activeOperation, 'bootstrap');
 
   resolveBackup();
   await backupGate;
   await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().activeOperation, null);
 });
 
-test('applyStorage validates missing folder paths', () => {
+test('applyStorage validates missing folder paths', async () => {
   const confirms: string[] = [];
   const controller = createMaintenanceController(
     createControllerDeps(createMockApi(), {
@@ -212,14 +212,15 @@ test('applyStorage validates missing folder paths', () => {
   );
 
   controller.show(minimalHostStatus());
+  await flush();
   controller.setImportsPath('');
   controller.applyStorage();
 
-  assert.equal(controller.getState().error, STORAGE_PATHS_VALIDATION_ERROR);
+  assert.equal(controller.getState().errors.storage, STORAGE_PATHS_VALIDATION_ERROR);
   assert.equal(confirms.length, 0);
 });
 
-test('applyStorage requests restart confirm when stack runs and paths changed', () => {
+test('applyStorage requests restart confirm when stack runs and paths changed', async () => {
   const confirms: Array<{ message: string; run: boolean }> = [];
   const controller = createMaintenanceController(
     createControllerDeps(createMockApi(), {
@@ -231,6 +232,7 @@ test('applyStorage requests restart confirm when stack runs and paths changed', 
   );
 
   controller.show(minimalHostStatus({ compose: { running: true, services: [] } }));
+  await flush();
   controller.setImportsPath('/other/imports');
   controller.applyStorage();
 
@@ -238,7 +240,7 @@ test('applyStorage requests restart confirm when stack runs and paths changed', 
   assert.equal(confirms[0]?.message, STORAGE_PATHS_RESTART_CONFIRM_MESSAGE);
 });
 
-test('restart and stack stop request offline confirm', () => {
+test('restart and stack stop request offline confirm', async () => {
   const messages: string[] = [];
   const controller = createMaintenanceController(
     createControllerDeps(createMockApi(), {
@@ -247,10 +249,57 @@ test('restart and stack stop request offline confirm', () => {
   );
 
   controller.show(minimalHostStatus());
+  await flush();
   controller.restart();
   controller.handleStackToggle(false);
 
-  assert.deepEqual(messages, [STACK_OFFLINE_CONFIRM_MESSAGE, STACK_OFFLINE_CONFIRM_MESSAGE]);
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0], STACK_OFFLINE_CONFIRM_MESSAGE);
+  assert.equal(controller.getState().activeOperation, 'stack');
+});
+
+test('pending stack confirm blocks other maintenance actions', async () => {
+  const controller = createMaintenanceController(createControllerDeps(createMockApi()));
+  controller.show(minimalHostStatus());
+  await flush();
+  controller.restart();
+  assert.equal(controller.getState().activeOperation, 'stack');
+
+  controller.requestLogsRefresh('sandbox');
+  await flush();
+  assert.equal(controller.getState().logsService, 'app');
+  assert.equal(controller.getState().errors.logs, null);
+  assert.equal(controller.getState().activeOperation, 'stack');
+});
+
+test('cancelling stack confirm unlocks the tab', async () => {
+  let onCancel: (() => void) | undefined;
+  const controller = createMaintenanceController(
+    createControllerDeps(createMockApi(), {
+      requestConfirm: (_message, _onConfirm, cancel) => {
+        onCancel = cancel;
+      },
+    }),
+  );
+  controller.show(minimalHostStatus());
+  await flush();
+  controller.restart();
+  assert.equal(controller.getState().activeOperation, 'stack');
+  onCancel?.();
+  assert.equal(controller.getState().activeOperation, null);
+
+  controller.handleStackToggle(false);
+  assert.equal(controller.getState().activeOperation, 'stack');
+});
+
+test('hide clears a pending confirm lock', async () => {
+  const controller = createMaintenanceController(createControllerDeps(createMockApi()));
+  controller.show(minimalHostStatus());
+  await flush();
+  controller.restart();
+  assert.equal(controller.getState().activeOperation, 'stack');
+  controller.hide();
+  assert.equal(controller.getState().activeOperation, null);
 });
 
 test('recordPfupdateSuccess updates software update status text', async () => {
@@ -291,11 +340,12 @@ test('requestLogsRefresh sets error when log fetch fails', async () => {
   );
 
   controller.show(minimalHostStatus());
+  await flush();
   controller.requestLogsRefresh('app');
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  assert.equal(controller.getState().error, 'compose down');
-  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().errors.logs, 'compose down');
+  assert.equal(controller.getState().activeOperation, null);
 });
 
 test('applyConfigSnapshot updates draft paths only when not busy', async () => {
@@ -391,10 +441,10 @@ test('bootstrap applies other results when one request fails', async () => {
   controller.show(minimalHostStatus());
   await flush();
 
-  assert.equal(controller.getState().error, 'logs down');
+  assert.equal(controller.getState().errors.logs, 'logs down');
   assert.equal(controller.getState().latestBackupPath, '/tmp/latest.pfbackup');
   assert.equal(controller.getState().routingMode, 'simple');
-  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().activeOperation, null);
 });
 
 test('show resets routingMode until the new routing result arrives', async () => {
@@ -450,13 +500,13 @@ test('bootstrap busy stays true until all three requests settle', async () => {
 
   controller.show(minimalHostStatus());
   await flush();
-  assert.equal(controller.getState().busy, true);
+  assert.equal(controller.getState().activeOperation, 'bootstrap');
   assert.equal(controller.getState().routingMode, 'simple');
   assert.equal(controller.getState().latestBackupPath, null);
 
   backupGate.resolve();
   await flush();
-  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().activeOperation, null);
   assert.equal(controller.getState().latestBackupPath, '/tmp/latest.pfbackup');
 });
 
@@ -512,12 +562,12 @@ test('stale action finally does not clear busy after a new show', async () => {
   controller.show(minimalHostStatus());
   actionGate.resolve();
   await flush();
-  assert.equal(controller.getState().busy, true);
+  assert.equal(controller.getState().activeOperation, 'bootstrap');
   assert.equal(composeCalls, 1);
 
   backupGate.resolve();
   await flush();
-  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().activeOperation, null);
 });
 
 test('successful mutation still refreshes host after hide', async () => {
@@ -607,7 +657,7 @@ test('stack success refreshes host even when logs fail', async () => {
   await flush();
 
   assert.equal(refreshCount, 1);
-  assert.equal(controller.getState().error, 'logs down');
+  assert.equal(controller.getState().errors.stack, 'logs down');
 });
 
 test('requestLogsRefresh clears an existing error on retry start', async () => {
@@ -629,13 +679,13 @@ test('requestLogsRefresh clears an existing error on retry start', async () => {
   await flush();
   controller.requestLogsRefresh('app');
   await flush();
-  assert.equal(controller.getState().error, 'compose down');
+  assert.equal(controller.getState().errors.logs, 'compose down');
 
   failLogs = false;
   controller.requestLogsRefresh('app');
-  assert.equal(controller.getState().error, null);
+  assert.equal(controller.getState().errors.logs, null);
   await flush();
-  assert.equal(controller.getState().error, null);
+  assert.equal(controller.getState().errors.logs, null);
   assert.equal(controller.getState().logsText, 'recovered');
 });
 
@@ -655,7 +705,7 @@ test('browse folder rejection is caught', async () => {
   const path = await controller.browseImportsFolder();
 
   assert.equal(path, null);
-  assert.equal(controller.getState().error, 'dialog down');
+  assert.equal(controller.getState().errors.storage, 'dialog down');
 });
 
 test('pin reset log failure does not reject', async () => {
@@ -688,6 +738,50 @@ test('pin reset log failure does not reject', async () => {
   controller.executePinReset();
   await flush();
 
-  assert.equal(controller.getState().error, 'logs down');
+  assert.equal(controller.getState().errors.pin, 'logs down');
   assert.match(controller.getState().pinResetStatusText, /0000/);
+});
+
+test('logs refresh does not run during bootstrap', async () => {
+  const backupGate = deferred<void>();
+  let logCalls = 0;
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        getComposeLogs: async () => {
+          logCalls += 1;
+          return { ok: true, log: 'ok' };
+        },
+        getPfbackupInfo: async () => {
+          await backupGate.promise;
+          return { envPath: '/tmp/pf/.env', latestBackupPath: null };
+        },
+      }),
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  controller.requestLogsRefresh('sandbox');
+  assert.equal(controller.getState().logsService, 'app');
+  assert.equal(logCalls, 1);
+
+  backupGate.resolve();
+  await flush();
+  controller.requestLogsRefresh('sandbox');
+  await flush();
+  assert.equal(controller.getState().logsService, 'sandbox');
+  assert.equal(controller.getState().activeOperation, null);
+});
+
+test('path setter notifies once', () => {
+  let calls = 0;
+  const controller = createMaintenanceController({
+    ...createControllerDeps(createMockApi()),
+    onStateChange: () => {
+      calls += 1;
+    },
+  });
+  controller.setImportsPath('/draft');
+  assert.equal(calls, 1);
+  assert.equal(controller.getState().importsHostPath, '/draft');
 });

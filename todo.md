@@ -21,7 +21,7 @@ Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-histo
 
 ## Als Nächstes
 
-- Manager-Installer aufräumen: [`docs/plan-manager-installer-cleanup.md`](docs/plan-manager-installer-cleanup.md). Zwei Diffs: A = Schnitt 1+2 (drin), B = Schnitt 3+4 (Tag/Fehler/Notify). Keine parallelen Slots. Netzwerk/TLS nicht zusammenlegen.
+- Manager-Installer aufräumen: [`docs/plan-manager-installer-cleanup.md`](docs/plan-manager-installer-cleanup.md). Diff A+B Wartung durch (Generation, Tag/Fehlerort/Notify, Accordion klappt bei neuem Fehler auf). Wizard/Netzwerk-Brücke später.
 - HTTPS-Aufräumen: Schnitte 1–3 umgesetzt und reviewt.
 - Produkt-Spec bleibt [`docs/plan-proxy-tls-manager.md`](docs/plan-proxy-tls-manager.md).
 - Boot-Aufräumen ist im Code; Plan dazu gelöscht. Hülle-Reste (View-Unmount, IPC) kein Folgeauftrag.
@@ -29,7 +29,9 @@ Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-histo
 
 ## Heute (2026-08-29)
 
-- Manager-Aufräumen Diff A (Schnitt 1+2): `lifecycleGeneration`/`hide()`, Bootstrap unabhängig bis alle settled, Routing-Reset, Catch/ein `onAfterMutation` bei Pfupdate, Stack-Refresh vor Logs. Footer/`busy` unverändert. Diff B offen.
+- Manager-Aufräumen Diff B: Confirm/PIN armieren die Sperre schon am Dialog; Abbrechen und `hide()` räumen sie. Bestätigte Stack-/Storage-Aktion verpufft nicht mehr still.
+
+- Manager-Aufräumen Diff A (Schnitt 1+2): `lifecycleGeneration`/`hide()`, Bootstrap unabhängig bis alle settled, Routing-Reset, Catch/ein `onAfterMutation` bei Pfupdate, Stack-Refresh vor Logs.
 
 - Manager-Aufräumen-Plan bereinigt: Bootstrap-Busy bis alle drei settled; `show()` setzt Routing zurück; Sperre ist View + Guard (Restore/Pfupdate ziehen in Schnitt 3 den Tab zu); `getPfbackupInfo` → `errors.backup`.
 

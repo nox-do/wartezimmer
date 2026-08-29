@@ -4,8 +4,10 @@ import type { LoadDeliveryImagesResult, StorageFoldersResult } from '../shared/h
 import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import {
   backupInfoText,
+  emptyMaintenanceErrors,
   fileSharingHintText,
   logsDisplayText,
+  maintenanceSectionToOpenForErrors,
   pinResetSuccessText,
   routingModeSaveDisabled,
   routingModeSuccessText,
@@ -143,6 +145,17 @@ test('softwareUpdateInfoRows falls back to shared image tag without releaseVersi
     }),
   );
   assert.deepEqual(rows, [{ label: 'Aktuell', value: '2026.07.0' }]);
+});
+
+test('maintenanceSectionToOpenForErrors opens one section and prefers routing over logs', () => {
+  const errors = emptyMaintenanceErrors();
+  assert.equal(maintenanceSectionToOpenForErrors(errors), null);
+  errors.logs = 'logs down';
+  assert.equal(maintenanceSectionToOpenForErrors(errors), 'diagnostics');
+  errors.routing = 'routing down';
+  assert.equal(maintenanceSectionToOpenForErrors(errors), 'practice');
+  errors.stack = 'stack down';
+  assert.equal(maintenanceSectionToOpenForErrors(errors), 'operations');
 });
 
 test('routingModeSaveDisabled blocks while busy, unknown, unchanged, or open waiting numbers', () => {

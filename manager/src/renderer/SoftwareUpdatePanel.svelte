@@ -8,12 +8,14 @@
   let {
     status,
     statusText = '',
-    busy = false,
+    locked = false,
+    updateRunning = false,
     onImport,
   }: {
     status: HostStatus | null;
     statusText?: string;
-    busy?: boolean;
+    locked?: boolean;
+    updateRunning?: boolean;
     onImport: () => void;
   } = $props();
 
@@ -36,8 +38,8 @@
       {/each}
     </dl>
     <div class="actions-row">
-      <button type="button" class="btn-secondary" disabled={busy} onclick={onImport}>
-        {busy ? 'Update läuft …' : 'Update-Paket wählen …'}
+      <button type="button" class="btn-secondary" disabled={locked} onclick={onImport}>
+        {updateRunning ? 'Update läuft …' : 'Update-Paket wählen …'}
       </button>
     </div>
     {#if statusText}

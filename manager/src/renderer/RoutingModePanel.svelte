@@ -12,7 +12,8 @@
     complexRoutingLicensed,
     openVisitCount = 0,
     statusText = '',
-    busy = false,
+    locked = false,
+    error = null,
     onChange,
     onSave,
   }: {
@@ -21,7 +22,8 @@
     complexRoutingLicensed: boolean;
     openVisitCount?: number;
     statusText?: string;
-    busy?: boolean;
+    locked?: boolean;
+    error?: string | null;
     onChange: (routingMode: RoutingMode) => void;
     onSave: () => void;
   } = $props();
@@ -30,7 +32,7 @@
     buildRoutingModeOptions('maintenance', complexRoutingLicensed, openVisitCount, routingModeSaved),
   );
   const saveDisabled = $derived(
-    routingModeSaveDisabled(busy, routingMode, routingModeSaved, openVisitCount),
+    routingModeSaveDisabled(locked, routingMode, routingModeSaved, openVisitCount),
   );
   const footnote = $derived(formatRoutingModeMaintenanceFootnote(openVisitCount));
 </script>
@@ -43,7 +45,7 @@
       Praxis Flow steuert den Weg vom Terminal über Wartezimmer und Aufruf bis zum Zielraum.
     </p>
   </div>
-  <fieldset class="routing-mode-card-fieldset" disabled={busy}>
+  <fieldset class="routing-mode-card-fieldset" disabled={locked}>
     {#each options as option (option.value)}
       <label
         class="routing-mode-card"
@@ -56,7 +58,7 @@
           name="routing-mode"
           value={option.value}
           checked={routingMode === option.value}
-          disabled={busy || option.disabled}
+          disabled={locked || option.disabled}
           onchange={() => onChange(option.value)}
         />
         <span class="routing-mode-card-body">
@@ -87,5 +89,8 @@
   </div>
   {#if statusText}
     <p class="maintenance-backup-status">{statusText}</p>
+  {/if}
+  {#if error}
+    <p class="error">{error}</p>
   {/if}
 </div>

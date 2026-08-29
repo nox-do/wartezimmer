@@ -10,7 +10,8 @@
     importsHostPath,
     exportsHostPath,
     storageStatusText = '',
-    busy = false,
+    locked = false,
+    error = null,
     onImportsChange,
     onExportsChange,
     onBrowseImports,
@@ -23,7 +24,8 @@
     importsHostPath: string;
     exportsHostPath: string;
     storageStatusText?: string;
-    busy?: boolean;
+    locked?: boolean;
+    error?: string | null;
     onImportsChange: (value: string) => void;
     onExportsChange: (value: string) => void;
     onBrowseImports: () => void | Promise<string | null>;
@@ -52,14 +54,14 @@
   <FolderPathField
     label="Importordner"
     value={importsHostPath}
-    disabled={busy}
+    disabled={locked}
     onChange={onImportsChange}
     onBrowse={onBrowseImports}
   />
   <FolderPathField
     label="Exportordner"
     value={exportsHostPath}
-    disabled={busy}
+    disabled={locked}
     onChange={onExportsChange}
     onBrowse={onBrowseExports}
   />
@@ -67,9 +69,12 @@
     <p class="hint">{warning}</p>
   {/if}
   <div class="actions-row">
-    <button type="button" class="btn-secondary" disabled={busy} onclick={onApply}>Übernehmen</button>
+    <button type="button" class="btn-secondary" disabled={locked} onclick={onApply}>Übernehmen</button>
   </div>
   {#if storageStatusText}
     <p class="maintenance-backup-status">{storageStatusText}</p>
+  {/if}
+  {#if error}
+    <p class="error">{error}</p>
   {/if}
 </div>

@@ -18,6 +18,78 @@ export const MAINTENANCE_LOG_SERVICES = [
   { value: 'gateway', label: 'gateway' },
 ] as const;
 
+export type MaintenanceOperation =
+  | 'bootstrap'
+  | 'stack'
+  | 'logs'
+  | 'storage'
+  | 'backup'
+  | 'tlsSidecar'
+  | 'routing'
+  | 'pin';
+
+export type MaintenanceErrorSurface =
+  | 'stack'
+  | 'logs'
+  | 'storage'
+  | 'backup'
+  | 'tlsSidecar'
+  | 'routing'
+  | 'pin';
+
+export type MaintenanceErrors = Record<MaintenanceErrorSurface, string | null>;
+
+export type MaintenanceExpanderId = 'operations' | 'practice' | 'security' | 'diagnostics';
+
+export function emptyMaintenanceErrors(): MaintenanceErrors {
+  return {
+    stack: null,
+    logs: null,
+    storage: null,
+    backup: null,
+    tlsSidecar: null,
+    routing: null,
+    pin: null,
+  };
+}
+
+const MAINTENANCE_ERROR_SECTION: Record<MaintenanceErrorSurface, MaintenanceExpanderId> = {
+  stack: 'operations',
+  logs: 'diagnostics',
+  storage: 'practice',
+  backup: 'security',
+  tlsSidecar: 'security',
+  routing: 'practice',
+  pin: 'security',
+};
+
+const MAINTENANCE_ERROR_OPEN_ORDER: MaintenanceErrorSurface[] = [
+  'stack',
+  'routing',
+  'storage',
+  'backup',
+  'tlsSidecar',
+  'pin',
+  'logs',
+];
+
+export function maintenanceErrorFocusKey(errors: MaintenanceErrors): string {
+  return MAINTENANCE_ERROR_OPEN_ORDER.filter((surface) => errors[surface])
+    .map((surface) => `${surface}:${errors[surface]}`)
+    .join('|');
+}
+
+export function maintenanceSectionToOpenForErrors(
+  errors: MaintenanceErrors,
+): MaintenanceExpanderId | null {
+  for (const surface of MAINTENANCE_ERROR_OPEN_ORDER) {
+    if (errors[surface]) {
+      return MAINTENANCE_ERROR_SECTION[surface];
+    }
+  }
+  return null;
+}
+
 export type MaintenanceInfoRow = { label: string; value: string };
 
 export const STACK_OFFLINE_CONFIRM_MESSAGE =
@@ -32,6 +104,7 @@ export const STORAGE_SAVE_PROGRESS_TEXT = 'Speichern …';
 export const ROUTING_MODE_SAVE_PROGRESS_TEXT = 'Speichern …';
 export const SOFTWARE_UPDATE_LOADING_TEXT = 'Update läuft …';
 export const PIN_RESET_PROGRESS_TEXT = 'PIN-Reset läuft …';
+export const MAINTENANCE_OTHER_ACTION_RUNNING = 'Es läuft bereits eine andere Aktion.';
 
 export function backupInfoText(
   latestBackupPath: string | null,

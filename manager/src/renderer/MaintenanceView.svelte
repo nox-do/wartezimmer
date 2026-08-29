@@ -27,10 +27,13 @@
     createPfupdateWizardController,
     type PfupdateWizardController,
   } from './pfupdate-wizard-controller.js';
+  import {
+    maintenanceErrorFocusKey,
+    maintenanceSectionToOpenForErrors,
+    type MaintenanceExpanderId,
+  } from './maintenance-view-model.js';
   import type { RestoreWizardState } from './restore-wizard-flow.js';
   import type { PfupdateWizardState } from './pfupdate-wizard-flow.js';
-
-  type MaintenanceExpanderId = 'operations' | 'practice' | 'security' | 'diagnostics';
 
   let {
     onAfterMutation,
@@ -43,6 +46,7 @@
   let confirmOpen = $state(false);
   let confirmMessage = $state('');
   let confirmAction: (() => void) | null = null;
+  let confirmCancel: (() => void) | null = null;
   let pinResetOpen = $state(false);
 
   let controller = $state<MaintenanceController | null>(null);
@@ -54,8 +58,14 @@
   let lastSessionGeneration = $state<number | null>(null);
   /** Skip config effect once after session show() used this same snapshot ref. */
   let sessionOpenConfig = $state<HostStatus | null>(null);
+  let lastErrorFocusKey = $state('');
 
   const viewLoading = $derived(managerShell.viewLoading.maintenance);
+  const maintenanceLocked = $derived(
+    Boolean(snapshot?.activeOperation) ||
+      Boolean(restoreSnapshot?.busy) ||
+      Boolean(pfupdateSnapshot?.busy),
+  );
 
   function requireApi(): PraxisManagerApi {
     const api = window.praxisManager;
@@ -79,21 +89,27 @@
     pfupdateSnapshot = pfupdateWizard ? { ...pfupdateWizard.getState() } : null;
   }
 
-  function requestConfirm(message: string, onConfirm: () => void): void {
+  function requestConfirm(message: string, onConfirm: () => void, onCancel?: () => void): void {
     confirmMessage = message;
     confirmAction = onConfirm;
+    confirmCancel = onCancel ?? null;
     confirmOpen = true;
   }
 
-  function closeConfirm(): void {
+  function closeConfirm(runCancel: boolean): void {
+    const cancel = confirmCancel;
     confirmOpen = false;
     confirmMessage = '';
     confirmAction = null;
+    confirmCancel = null;
+    if (runCancel) {
+      cancel?.();
+    }
   }
 
   function confirmAndRun(): void {
     const action = confirmAction;
-    closeConfirm();
+    closeConfirm(false);
     action?.();
   }
 
@@ -103,12 +119,10 @@
 
   function onImportsChange(value: string): void {
     controller?.setImportsPath(value);
-    syncSnapshot();
   }
 
   function onExportsChange(value: string): void {
     controller?.setExportsPath(value);
-    syncSnapshot();
   }
 
   onMount(() => {
@@ -132,7 +146,6 @@
       getHostStatus: () => controller?.getState().status ?? null,
       onApplySuccess: (result) => {
         controller?.recordPfupdateSuccess(result);
-        syncSnapshot();
       },
       onStateChange: syncPfupdateSnapshot,
     });
@@ -151,7 +164,6 @@
     if (!session) {
       if (lastSessionGeneration !== null) {
         c.hide();
-        syncSnapshot();
         lastSessionGeneration = null;
         sessionOpenConfig = null;
       }
@@ -171,7 +183,6 @@
       if (runtime) {
         c.applyRuntimeHealth(runtime);
       }
-      syncSnapshot();
     }
   });
 
@@ -187,7 +198,6 @@
       return;
     }
     c.applyConfigSnapshot(status);
-    syncSnapshot();
   });
 
   $effect(() => {
@@ -198,7 +208,26 @@
       return;
     }
     c.applyRuntimeHealth(health);
-    syncSnapshot();
+  });
+
+  $effect(() => {
+    if (!snapshot) {
+      lastErrorFocusKey = '';
+      return;
+    }
+    const key = maintenanceErrorFocusKey(snapshot.errors);
+    if (!key) {
+      lastErrorFocusKey = '';
+      return;
+    }
+    if (key === lastErrorFocusKey) {
+      return;
+    }
+    lastErrorFocusKey = key;
+    const section = maintenanceSectionToOpenForErrors(snapshot.errors);
+    if (section && openSection !== section) {
+      openSection = section;
+    }
   });
 </script>
 
@@ -226,7 +255,8 @@
       >
         <StackControls
           compose={snapshot.compose}
-          busy={snapshot.busy}
+          locked={maintenanceLocked}
+          error={snapshot.errors.stack}
           onToggle={(wantRunning) => controller?.handleStackToggle(wantRunning)}
           onRestart={() => controller?.restart()}
         />
@@ -234,10 +264,10 @@
         <SoftwareUpdatePanel
           status={snapshot.status}
           statusText={snapshot.softwareUpdateStatusText}
-          busy={snapshot.busy || (pfupdateSnapshot?.busy ?? false)}
+          locked={maintenanceLocked}
+          updateRunning={pfupdateSnapshot?.busy ?? false}
           onImport={() => {
             pfupdateWizard?.open();
-            syncPfupdateSnapshot();
           }}
         />
       </MaintenanceSection>
@@ -255,14 +285,14 @@
           complexRoutingLicensed={snapshot.complexRoutingLicensed}
           openVisitCount={snapshot.openVisitCount}
           statusText={snapshot.routingModeStatusText}
-          busy={snapshot.busy}
+          locked={maintenanceLocked}
+          error={snapshot.errors.routing}
           onChange={(routingMode) => {
             controller?.setRoutingMode(routingMode);
-            syncSnapshot();
           }}
           onSave={() => controller?.saveRoutingMode()}
         />
-        {#if snapshot.busy && snapshot.routingMode === null}
+        {#if snapshot.activeOperation === 'bootstrap' && snapshot.routingMode === null}
           <p class="wizard-progress is-active" role="status">
             <span class="spinner" aria-hidden="true"></span>
             Routing-Modus wird geladen …
@@ -276,14 +306,15 @@
           importsHostPath={snapshot.importsHostPath}
           exportsHostPath={snapshot.exportsHostPath}
           storageStatusText={snapshot.storageStatusText}
-          busy={snapshot.busy}
+          locked={maintenanceLocked}
+          error={snapshot.errors.storage}
           onImportsChange={onImportsChange}
           onExportsChange={onExportsChange}
           onBrowseImports={() => {
-            void controller?.browseImportsFolder().then(() => syncSnapshot());
+            void controller?.browseImportsFolder();
           }}
           onBrowseExports={() => {
-            void controller?.browseExportsFolder().then(() => syncSnapshot());
+            void controller?.browseExportsFolder();
           }}
           onApply={() => controller?.applyStorage()}
         />
@@ -302,18 +333,22 @@
           pinResetStatusText={snapshot.pinResetStatusText}
           backupStatusText={snapshot.backupStatusText}
           tlsSidecarStatusText={snapshot.tlsSidecarStatusText}
-          busy={snapshot.busy}
+          locked={maintenanceLocked}
+          backupError={snapshot.errors.backup}
+          tlsSidecarError={snapshot.errors.tlsSidecar}
+          pinError={snapshot.errors.pin}
           tlsEnabled={(snapshot.status?.tls?.state ?? 'off') !== 'off'}
           onBackup={() => controller?.backupPf()}
           onValidateBackup={() => controller?.validatePfbackup()}
           onRestore={() => {
             restoreWizard?.openStandalone();
-            syncRestoreSnapshot();
           }}
           onExportTlsSidecar={() => controller?.exportTlsSidecar()}
           onInspectTlsSidecar={() => controller?.inspectTlsSidecar()}
           onPinReset={() => {
-            pinResetOpen = true;
+            if (controller?.beginPinReset()) {
+              pinResetOpen = true;
+            }
           }}
         />
       </MaintenanceSection>
@@ -328,22 +363,19 @@
         <LogsPanel
           logsService={snapshot.logsService}
           logsText={snapshot.logsText}
-          busy={snapshot.busy}
+          locked={maintenanceLocked}
+          error={snapshot.errors.logs}
           onServiceChange={(service) => controller?.requestLogsRefresh(service)}
           onRefresh={() => controller?.requestLogsRefresh(snapshot!.logsService)}
         />
       </MaintenanceSection>
     </div>
-
-    {#if snapshot.error}
-      <p class="error">{snapshot.error}</p>
-    {/if}
   {/if}
 
   <ConfirmDialog
     open={confirmOpen}
     onConfirm={confirmAndRun}
-    onCancel={closeConfirm}
+    onCancel={() => closeConfirm(true)}
   >
     <p>{confirmMessage}</p>
   </ConfirmDialog>
@@ -357,6 +389,7 @@
     }}
     onCancel={() => {
       pinResetOpen = false;
+      controller?.cancelPinReset();
     }}
   >
     <p>
@@ -370,27 +403,21 @@
       snapshot={restoreSnapshot}
       onChooseRestore={(restore) => {
         restoreWizard?.chooseRestore(restore);
-        syncRestoreSnapshot();
       }}
       onConfirmRestore={() => {
         restoreWizard?.confirmRestore();
-        syncRestoreSnapshot();
       }}
       onRetry={() => {
         restoreWizard?.retryRestore();
-        syncRestoreSnapshot();
       }}
       onSkip={() => {
         restoreWizard?.skipAfterFailure();
-        syncRestoreSnapshot();
       }}
       onClose={() => {
         restoreWizard?.close();
-        syncRestoreSnapshot();
       }}
       onToggleCredentialSkip={(value) => {
         restoreWizard?.setSkipProviderCredentials(value);
-        syncRestoreSnapshot();
       }}
     />
   {/if}
@@ -400,11 +427,9 @@
       snapshot={pfupdateSnapshot}
       onConfirmApply={() => {
         pfupdateWizard?.confirmApply();
-        syncPfupdateSnapshot();
       }}
       onClose={() => {
         pfupdateWizard?.close();
-        syncPfupdateSnapshot();
       }}
     />
   {/if}

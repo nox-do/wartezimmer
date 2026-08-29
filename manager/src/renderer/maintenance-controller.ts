@@ -10,7 +10,9 @@ import {
   STORAGE_PATHS_RESTART_CONFIRM_MESSAGE,
   STORAGE_PATHS_VALIDATION_ERROR,
   STORAGE_SAVE_PROGRESS_TEXT,
+  MAINTENANCE_OTHER_ACTION_RUNNING,
   composeActionErrorMessage,
+  emptyMaintenanceErrors,
   pinResetSuccessText,
   routingModeSuccessText,
   pfbackupValidateSuccessText,
@@ -18,6 +20,9 @@ import {
   storagePathsChanged,
   storageSaveErrorText,
   storageSaveStatusText,
+  type MaintenanceErrorSurface,
+  type MaintenanceErrors,
+  type MaintenanceOperation,
 } from './maintenance-view-model.js';
 import {
   restoreInspectBlockedMessage,
@@ -49,19 +54,22 @@ export type MaintenanceState = {
   pinResetStatusText: string;
   backupStatusText: string;
   tlsSidecarStatusText: string;
-  busy: boolean;
-  error: string | null;
+  activeOperation: MaintenanceOperation | null;
+  errors: MaintenanceErrors;
 };
 
 export type MaintenanceControllerDeps = MaintenanceCallbacks & {
   api: PraxisManagerApi;
   onStateChange?: () => void;
-  requestConfirm: (message: string, onConfirm: () => void) => void;
+  requestConfirm: (
+    message: string,
+    onConfirm: () => void,
+    onCancel?: () => void,
+  ) => void;
 };
 
 export type MaintenanceController = {
   getState: () => Readonly<MaintenanceState>;
-  subscribe: (listener: () => void) => () => void;
   setImportsPath: (value: string) => void;
   setExportsPath: (value: string) => void;
   setRoutingMode: (routingMode: RoutingMode) => void;
@@ -79,11 +87,12 @@ export type MaintenanceController = {
   recordPfupdateSuccess: (result: Extract<PfupdateApplyResult, { ok: true }>) => void;
   saveRoutingMode: () => void;
   executePinReset: () => void;
+  beginPinReset: () => boolean;
+  cancelPinReset: () => void;
   applyRuntimeHealth: (health: HostRuntimeHealth) => void;
   applyConfigSnapshot: (status: HostStatus) => void;
   show: (status: HostStatus) => void;
   hide: () => void;
-  clearError: () => void;
 };
 
 function createInitialState(): MaintenanceState {
@@ -106,8 +115,8 @@ function createInitialState(): MaintenanceState {
     pinResetStatusText: '',
     backupStatusText: '',
     tlsSidecarStatusText: '',
-    busy: false,
-    error: null,
+    activeOperation: null,
+    errors: emptyMaintenanceErrors(),
   };
 }
 
@@ -119,33 +128,61 @@ export function createMaintenanceController(
   deps: MaintenanceControllerDeps,
 ): MaintenanceController {
   const state = createInitialState();
-  const listeners = new Set<() => void>();
   let lifecycleGeneration = 0;
 
   function notify(): void {
     deps.onStateChange?.();
-    for (const listener of listeners) {
-      listener();
-    }
   }
 
   function still(generation: number): boolean {
     return generation === lifecycleGeneration;
   }
 
-  function patch(partial: Partial<MaintenanceState>, options: { notify?: boolean } = {}): void {
+  function patch(partial: Partial<MaintenanceState>): void {
     Object.assign(state, partial);
-    if (options.notify !== false) {
-      notify();
+    notify();
+  }
+
+  function setSurfaceError(surface: MaintenanceErrorSurface, message: string | null): void {
+    patch({ errors: { ...state.errors, [surface]: message } });
+  }
+
+  function beginOperation(operation: MaintenanceOperation): boolean {
+    if (state.activeOperation) {
+      return false;
+    }
+    if (operation === 'bootstrap') {
+      patch({ activeOperation: operation });
+      return true;
+    }
+    patch({
+      activeOperation: operation,
+      errors: { ...state.errors, [operation]: null },
+    });
+    return true;
+  }
+
+  function cancelArmed(operation: Exclude<MaintenanceOperation, 'bootstrap'>): void {
+    if (state.activeOperation === operation) {
+      patch({ activeOperation: null });
     }
   }
 
-  function setBusy(busy: boolean): void {
-    patch({ busy });
+  function ensureOperation(operation: Exclude<MaintenanceOperation, 'bootstrap'>): boolean {
+    if (state.activeOperation === operation) {
+      return true;
+    }
+    if (!beginOperation(operation)) {
+      setSurfaceError(operation, MAINTENANCE_OTHER_ACTION_RUNNING);
+      return false;
+    }
+    return true;
   }
 
-  function setError(message: string | null): void {
-    patch({ error: message });
+  function endOperation(generation: number): void {
+    if (still(generation)) {
+      patch({ activeOperation: null });
+    }
   }
 
   function pathsChanged(): boolean {
@@ -166,15 +203,16 @@ export function createMaintenanceController(
   }
 
   async function runAction(action: 'start' | 'stop' | 'restart'): Promise<void> {
+    if (!ensureOperation('stack')) {
+      return;
+    }
     const generation = lifecycleGeneration;
-    setBusy(true);
-    setError(null);
     try {
       const result = await deps.api.runComposeAction(action);
       if (still(generation)) {
         patch({ compose: result.compose });
         if (!result.ok) {
-          setError(composeActionErrorMessage(action, result.log));
+          setSurfaceError('stack', composeActionErrorMessage(action, result.log));
         }
       }
       deps.onAfterMutation?.();
@@ -183,18 +221,16 @@ export function createMaintenanceController(
           await refreshLogs(undefined, generation);
         } catch (error) {
           if (still(generation) && result.ok) {
-            setError(errorMessage(error, 'Logs konnten nicht geladen werden.'));
+            setSurfaceError('stack', errorMessage(error, 'Logs konnten nicht geladen werden.'));
           }
         }
       }
     } catch (error) {
       if (still(generation)) {
-        setError(errorMessage(error, `Aktion „${action}“ fehlgeschlagen.`));
+        setSurfaceError('stack', errorMessage(error, `Aktion „${action}“ fehlgeschlagen.`));
       }
     } finally {
-      if (still(generation)) {
-        setBusy(false);
-      }
+      endOperation(generation);
     }
   }
 
@@ -202,13 +238,14 @@ export function createMaintenanceController(
     const importsHostPath = state.importsHostPath.trim();
     const exportsHostPath = state.exportsHostPath.trim();
     if (!importsHostPath || !exportsHostPath) {
-      setError(STORAGE_PATHS_VALIDATION_ERROR);
+      setSurfaceError('storage', STORAGE_PATHS_VALIDATION_ERROR);
+      return;
+    }
+    if (!ensureOperation('storage')) {
       return;
     }
 
     const generation = lifecycleGeneration;
-    setBusy(true);
-    setError(null);
     patch({ storageStatusText: STORAGE_SAVE_PROGRESS_TEXT });
 
     void deps.api
@@ -232,7 +269,7 @@ export function createMaintenanceController(
           });
           const storageError = storageSaveErrorText(result, restartCompose);
           if (storageError) {
-            setError(storageError);
+            setSurfaceError('storage', storageError);
           }
         }
         deps.onAfterMutation?.();
@@ -242,12 +279,10 @@ export function createMaintenanceController(
           return;
         }
         patch({ storageStatusText: '' });
-        setError(errorMessage(error, 'Speichern der Ordner fehlgeschlagen.'));
+        setSurfaceError('storage', errorMessage(error, 'Speichern der Ordner fehlgeschlagen.'));
       })
       .finally(() => {
-        if (still(generation)) {
-          setBusy(false);
-        }
+        endOperation(generation);
       });
   }
 
@@ -260,7 +295,7 @@ export function createMaintenanceController(
     });
     void refreshLogs(undefined, generation).catch((error) => {
       if (still(generation)) {
-        setError(errorMessage(error, 'Logs konnten nicht geladen werden.'));
+        setSurfaceError('logs', errorMessage(error, 'Logs konnten nicht geladen werden.'));
       }
     });
   }
@@ -269,6 +304,9 @@ export function createMaintenanceController(
     currentPath: string,
     apply: (path: string) => void,
   ): Promise<string | null> {
+    if (state.activeOperation) {
+      return null;
+    }
     const generation = lifecycleGeneration;
     try {
       const result = await deps.api.selectFolder(currentPath.trim() || undefined);
@@ -279,23 +317,35 @@ export function createMaintenanceController(
       return result.path;
     } catch (error) {
       if (still(generation)) {
-        setError(errorMessage(error, 'Ordnerauswahl fehlgeschlagen.'));
+        setSurfaceError('storage', errorMessage(error, 'Ordnerauswahl fehlgeschlagen.'));
       }
       return null;
     }
   }
 
+  function armStackConfirm(action: 'stop' | 'restart'): void {
+    if (state.activeOperation === 'stack') {
+      return;
+    }
+    if (!ensureOperation('stack')) {
+      return;
+    }
+    deps.requestConfirm(
+      STACK_OFFLINE_CONFIRM_MESSAGE,
+      () => {
+        void runAction(action);
+      },
+      () => cancelArmed('stack'),
+    );
+  }
+
   return {
     getState: () => state,
-    subscribe(listener) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
     setImportsPath(value) {
-      patch({ importsHostPath: value }, { notify: false });
+      patch({ importsHostPath: value });
     },
     setExportsPath(value) {
-      patch({ exportsHostPath: value }, { notify: false });
+      patch({ exportsHostPath: value });
     },
     setRoutingMode(routingMode) {
       patch({ routingMode });
@@ -311,36 +361,32 @@ export function createMaintenanceController(
         void runAction('start');
         return;
       }
-      deps.requestConfirm(STACK_OFFLINE_CONFIRM_MESSAGE, () => {
-        void runAction('stop');
-      });
+      armStackConfirm('stop');
     },
     restart() {
-      deps.requestConfirm(STACK_OFFLINE_CONFIRM_MESSAGE, () => {
-        void runAction('restart');
-      });
+      armStackConfirm('restart');
     },
     refreshLogs,
     requestLogsRefresh(service) {
+      if (!beginOperation('logs')) {
+        return;
+      }
       const generation = lifecycleGeneration;
-      setBusy(true);
-      setError(null);
       void refreshLogs(service, generation)
         .catch((error) => {
           if (still(generation)) {
-            setError(errorMessage(error, 'Logs konnten nicht geladen werden.'));
+            setSurfaceError('logs', errorMessage(error, 'Logs konnten nicht geladen werden.'));
           }
         })
         .finally(() => {
-          if (still(generation)) {
-            setBusy(false);
-          }
+          endOperation(generation);
         });
     },
     backupPf() {
+      if (!beginOperation('backup')) {
+        return;
+      }
       const generation = lifecycleGeneration;
-      setBusy(true);
-      setError(null);
       patch({ backupStatusText: 'Backup wird erstellt …' });
       void deps.api
         .createPfbackup()
@@ -361,7 +407,7 @@ export function createMaintenanceController(
           }
           if (!saveResult.saved) {
             patch({ backupStatusText: '' });
-            setError('Download fehlgeschlagen.');
+            setSurfaceError('backup', 'Download fehlgeschlagen.');
             return;
           }
           patch({ backupStatusText: 'Backup erstellt und exportiert.' });
@@ -371,18 +417,17 @@ export function createMaintenanceController(
             return;
           }
           patch({ backupStatusText: '' });
-          setError(errorMessage(error, 'Backup fehlgeschlagen.'));
+          setSurfaceError('backup', errorMessage(error, 'Backup fehlgeschlagen.'));
         })
         .finally(() => {
-          if (still(generation)) {
-            setBusy(false);
-          }
+          endOperation(generation);
         });
     },
     validatePfbackup() {
+      if (!beginOperation('backup')) {
+        return;
+      }
       const generation = lifecycleGeneration;
-      setBusy(true);
-      setError(null);
       patch({ backupStatusText: 'Backup wird geprüft …' });
       void deps.api
         .readPfbackupForValidate()
@@ -400,12 +445,15 @@ export function createMaintenanceController(
           }
           if (!result.archiveValid) {
             patch({ backupStatusText: '' });
-            setError(result.archiveErrors.join(' ') || 'Backup-Datei ungültig.');
+            setSurfaceError('backup', result.archiveErrors.join(' ') || 'Backup-Datei ungültig.');
             return;
           }
           if (!result.restoreValid) {
             patch({ backupStatusText: pfbackupArchiveOnlyValidText() });
-            setError(result.restoreErrors.join(' ') || 'Settings nicht importierbar.');
+            setSurfaceError(
+              'backup',
+              result.restoreErrors.join(' ') || 'Settings nicht importierbar.',
+            );
             return;
           }
           patch({
@@ -420,23 +468,25 @@ export function createMaintenanceController(
             return;
           }
           patch({ backupStatusText: '' });
-          setError(errorMessage(error, 'Backup-Prüfung fehlgeschlagen.'));
+          setSurfaceError('backup', errorMessage(error, 'Backup-Prüfung fehlgeschlagen.'));
         })
         .finally(() => {
-          if (still(generation)) {
-            setBusy(false);
-          }
+          endOperation(generation);
         });
     },
     exportTlsSidecar() {
       const backupPath = state.latestTlsSidecarPath ?? state.latestBackupPath;
       if (!backupPath) {
-        setError('Kein HTTPS-State zum Sichern. Zuerst ein Praxis-Backup erstellen.');
+        setSurfaceError(
+          'tlsSidecar',
+          'Kein HTTPS-State zum Sichern. Zuerst ein Praxis-Backup erstellen.',
+        );
+        return;
+      }
+      if (!beginOperation('tlsSidecar')) {
         return;
       }
       const generation = lifecycleGeneration;
-      setBusy(true);
-      setError(null);
       patch({ tlsSidecarStatusText: 'HTTPS-State wird exportiert …' });
       void deps.api
         .saveTlsSidecar(backupPath)
@@ -450,7 +500,7 @@ export function createMaintenanceController(
           }
           if (!saveResult.saved) {
             patch({ tlsSidecarStatusText: '' });
-            setError('HTTPS-State-Export fehlgeschlagen.');
+            setSurfaceError('tlsSidecar', 'HTTPS-State-Export fehlgeschlagen.');
             return;
           }
           patch({ tlsSidecarStatusText: 'HTTPS-State exportiert.' });
@@ -460,22 +510,24 @@ export function createMaintenanceController(
             return;
           }
           patch({ tlsSidecarStatusText: '' });
-          setError(errorMessage(error, 'HTTPS-State-Export fehlgeschlagen.'));
+          setSurfaceError(
+            'tlsSidecar',
+            errorMessage(error, 'HTTPS-State-Export fehlgeschlagen.'),
+          );
         })
         .finally(() => {
-          if (still(generation)) {
-            setBusy(false);
-          }
+          endOperation(generation);
         });
     },
     inspectTlsSidecar() {
       if (!state.latestBackupPath) {
-        setError('Kein Praxis-Backup zum Prüfen.');
+        setSurfaceError('tlsSidecar', 'Kein Praxis-Backup zum Prüfen.');
+        return;
+      }
+      if (!beginOperation('tlsSidecar')) {
         return;
       }
       const generation = lifecycleGeneration;
-      setBusy(true);
-      setError(null);
       patch({ tlsSidecarStatusText: 'HTTPS-State wird geprüft …' });
       void deps.api
         .inspectPfbackupFile(state.latestBackupPath)
@@ -483,39 +535,51 @@ export function createMaintenanceController(
           if (!still(generation)) {
             return;
           }
+          if (!inspect.compatibility.restoreSupported) {
+            patch({ tlsSidecarStatusText: '' });
+            setSurfaceError(
+              'tlsSidecar',
+              restoreInspectBlockedMessage(inspect) ?? 'HTTPS-State-Prüfung fehlgeschlagen.',
+            );
+            return;
+          }
           const line = restoreTlsInspectSummaryLine(inspect.backup?.tls);
           patch({
-            tlsSidecarStatusText:
-              line ??
-              (inspect.compatibility.restoreSupported
-                ? 'HTTPS-State: kein HTTPS in dieser Sicherung.'
-                : (restoreInspectBlockedMessage(inspect) ?? 'HTTPS-State-Prüfung fehlgeschlagen.')),
+            tlsSidecarStatusText: line ?? 'HTTPS-State: kein HTTPS in dieser Sicherung.',
           });
-          if (!inspect.compatibility.restoreSupported && inspect.backup?.tls?.inBackup) {
-            setError(restoreInspectBlockedMessage(inspect));
-          }
         })
         .catch((error) => {
           if (!still(generation)) {
             return;
           }
           patch({ tlsSidecarStatusText: '' });
-          setError(errorMessage(error, 'HTTPS-State-Prüfung fehlgeschlagen.'));
+          setSurfaceError(
+            'tlsSidecar',
+            errorMessage(error, 'HTTPS-State-Prüfung fehlgeschlagen.'),
+          );
         })
         .finally(() => {
-          if (still(generation)) {
-            setBusy(false);
-          }
+          endOperation(generation);
         });
     },
     applyStorage() {
       if (!state.importsHostPath.trim() || !state.exportsHostPath.trim()) {
-        setError(STORAGE_PATHS_VALIDATION_ERROR);
+        setSurfaceError('storage', STORAGE_PATHS_VALIDATION_ERROR);
         return;
       }
 
       if ((state.compose?.running ?? false) && pathsChanged()) {
-        deps.requestConfirm(STORAGE_PATHS_RESTART_CONFIRM_MESSAGE, () => saveStorageFolders(true));
+        if (state.activeOperation === 'storage') {
+          return;
+        }
+        if (!ensureOperation('storage')) {
+          return;
+        }
+        deps.requestConfirm(
+          STORAGE_PATHS_RESTART_CONFIRM_MESSAGE,
+          () => saveStorageFolders(true),
+          () => cancelArmed('storage'),
+        );
         return;
       }
 
@@ -526,13 +590,14 @@ export function createMaintenanceController(
     },
     saveRoutingMode() {
       if (!state.routingMode) {
-        setError('Routing-Modus ist noch nicht geladen.');
+        setSurfaceError('routing', 'Routing-Modus ist noch nicht geladen.');
+        return;
+      }
+      if (!beginOperation('routing')) {
         return;
       }
       const routingMode = state.routingMode;
       const generation = lifecycleGeneration;
-      setBusy(true);
-      setError(null);
       patch({ routingModeStatusText: ROUTING_MODE_SAVE_PROGRESS_TEXT });
       void deps.api
         .setRoutingMode({ routingMode })
@@ -540,7 +605,7 @@ export function createMaintenanceController(
           if (still(generation)) {
             if (!result.ok) {
               patch({ routingModeStatusText: '' });
-              setError(formatRoutingModeError(result));
+              setSurfaceError('routing', formatRoutingModeError(result));
               return;
             }
             patch({
@@ -560,18 +625,20 @@ export function createMaintenanceController(
             return;
           }
           patch({ routingModeStatusText: '' });
-          setError(errorMessage(error, 'Routing-Modus konnte nicht gespeichert werden.'));
+          setSurfaceError(
+            'routing',
+            errorMessage(error, 'Routing-Modus konnte nicht gespeichert werden.'),
+          );
         })
         .finally(() => {
-          if (still(generation)) {
-            setBusy(false);
-          }
+          endOperation(generation);
         });
     },
     executePinReset() {
+      if (!ensureOperation('pin')) {
+        return;
+      }
       const generation = lifecycleGeneration;
-      setBusy(true);
-      setError(null);
       patch({ pinResetStatusText: PIN_RESET_PROGRESS_TEXT });
       void deps.api
         .resetStaffPins()
@@ -582,13 +649,13 @@ export function createMaintenanceController(
               patch({ pinResetStatusText: pinResetSuccessText(result.defaultPin) });
             } else {
               patch({ pinResetStatusText: '' });
-              setError(result.log || 'PIN-Reset fehlgeschlagen.');
+              setSurfaceError('pin', result.log || 'PIN-Reset fehlgeschlagen.');
             }
           }
           if (result.ok) {
             void refreshLogs(undefined, generation).catch((error) => {
               if (still(generation)) {
-                setError(errorMessage(error, 'Logs konnten nicht geladen werden.'));
+                setSurfaceError('pin', errorMessage(error, 'Logs konnten nicht geladen werden.'));
               }
             });
             deps.onAfterMutation?.();
@@ -599,20 +666,24 @@ export function createMaintenanceController(
             return;
           }
           patch({ pinResetStatusText: '' });
-          setError(errorMessage(error, 'PIN-Reset fehlgeschlagen.'));
+          setSurfaceError('pin', errorMessage(error, 'PIN-Reset fehlgeschlagen.'));
         })
         .finally(() => {
-          if (still(generation)) {
-            setBusy(false);
-          }
+          endOperation(generation);
         });
+    },
+    beginPinReset() {
+      return ensureOperation('pin');
+    },
+    cancelPinReset() {
+      cancelArmed('pin');
     },
     applyRuntimeHealth(health) {
       patch({ compose: health.compose });
     },
     applyConfigSnapshot(status) {
       const next: Partial<MaintenanceState> = { status };
-      if (!state.busy) {
+      if (!state.activeOperation) {
         next.importsHostPath = status.folders.imports;
         next.exportsHostPath = status.folders.exports;
       }
@@ -638,14 +709,13 @@ export function createMaintenanceController(
         pinResetStatusText: '',
         backupStatusText: '',
         tlsSidecarStatusText: '',
-        error: null,
+        activeOperation: 'bootstrap',
+        errors: emptyMaintenanceErrors(),
       });
-
-      setBusy(true);
 
       const logsDone = refreshLogs('app', generation).catch((error) => {
         if (still(generation)) {
-          setError(errorMessage(error, 'Wartungsdaten konnten nicht geladen werden.'));
+          setSurfaceError('logs', errorMessage(error, 'Wartungsdaten konnten nicht geladen werden.'));
         }
       });
       const backupDone = deps.api
@@ -661,7 +731,10 @@ export function createMaintenanceController(
         })
         .catch((error) => {
           if (still(generation)) {
-            setError(errorMessage(error, 'Wartungsdaten konnten nicht geladen werden.'));
+            setSurfaceError(
+              'backup',
+              errorMessage(error, 'Wartungsdaten konnten nicht geladen werden.'),
+            );
           }
         });
       const routingDone = deps.api
@@ -679,21 +752,22 @@ export function createMaintenanceController(
         })
         .catch((error) => {
           if (still(generation)) {
-            setError(errorMessage(error, 'Wartungsdaten konnten nicht geladen werden.'));
+            setSurfaceError(
+              'routing',
+              errorMessage(error, 'Wartungsdaten konnten nicht geladen werden.'),
+            );
           }
         });
 
       void Promise.allSettled([logsDone, backupDone, routingDone]).then(() => {
-        if (still(generation)) {
-          setBusy(false);
-        }
+        endOperation(generation);
       });
     },
     hide() {
       lifecycleGeneration += 1;
-    },
-    clearError() {
-      setError(null);
+      if (state.activeOperation !== null) {
+        patch({ activeOperation: null });
+      }
     },
   };
 }
