@@ -1,21 +1,38 @@
 import type { ApplySetupResult } from '../shared/host-status.js';
-import type { WizardStep } from './wizard-flow.js';
-import { canLeaveWizardStep1, wizardCompletionLead } from './wizard-flow.js';
+import {
+  canLeaveWizardStep1,
+  wizardCompletionLead,
+  wizardHttpsEligible,
+  wizardHttpsMailReady,
+  type WizardHttpsPhase,
+  type WizardStep,
+} from './wizard-flow.js';
+import { tlsNameValid } from './tls-identity.js';
 import type { WizardControllerState } from './wizard-controller.js';
+
+export const WIZARD_HTTPS_CONTINUE_COPY =
+  'Sie können die Einrichtung fortsetzen und HTTPS in den nächsten Tagen hier in der Manager-App fortsetzen.';
+
+export function wizardHttpsDnsWaitCopy(mode: 'managed' | 'custom' | null | undefined): string {
+  if (mode === 'custom') {
+    return 'A-Record in Ihrem DNS anlegen. Tage sind normal. HTTP bleibt erreichbar.';
+  }
+  return 'Mail ist raus. DNS kommt von Praxis Flow. Tage sind normal. HTTP bleibt erreichbar.';
+}
 
 export function wizardCheckMark(ok: boolean): string {
   return ok ? '✓' : '✗';
 }
 
 export function wizardIsCompleted(state: WizardControllerState): boolean {
-  return state.step === 7 && Boolean(state.applyResult);
+  return state.step === 8 && Boolean(state.applyResult);
 }
 
 export function wizardBackHidden(state: WizardControllerState): boolean {
   if (state.step <= 1) {
     return true;
   }
-  if (state.step === 7 && state.applyResult) {
+  if (state.step === 8 && state.applyResult) {
     return true;
   }
   return false;
@@ -23,12 +40,15 @@ export function wizardBackHidden(state: WizardControllerState): boolean {
 
 export function wizardNextButtonLabel(state: WizardControllerState): string {
   if (state.step === 5) {
-    return 'Vorschau laden';
+    return wizardHttpsEligible(state.proxyEnabled) ? 'Weiter zu HTTPS' : 'Vorschau laden';
   }
   if (state.step === 6) {
-    return 'Anwenden';
+    return state.httpsPhase === 'mail' ? 'Vorschau laden' : 'Weiter';
   }
   if (state.step === 7) {
+    return 'Anwenden';
+  }
+  if (state.step === 8) {
     return state.applyResult ? 'Zum Status' : 'Bitte warten …';
   }
   return 'Weiter';
@@ -47,8 +67,30 @@ export function wizardNextButtonDisabled(state: WizardControllerState): boolean 
   if (state.step === 1) {
     return !canLeaveWizardStep1(state.status, state.busy);
   }
-  if (state.step === 7) {
+  if (state.step === 6) {
+    return wizardHttpsNextDisabled(state.httpsPhase, state);
+  }
+  if (state.step === 8) {
     return !state.applyResult;
+  }
+  return false;
+}
+
+export function wizardHttpsNextDisabled(
+  httpsPhase: WizardHttpsPhase,
+  state: Pick<
+    WizardControllerState,
+    'nameMode' | 'customLabel' | 'customDomain' | 'ipv4Reserved' | 'mailAck' | 'customPemStaged'
+  >,
+): boolean {
+  if (httpsPhase === 'hostname') {
+    return !tlsNameValid(state);
+  }
+  if (httpsPhase === 'lease') {
+    return !state.ipv4Reserved;
+  }
+  if (httpsPhase === 'mail') {
+    return !wizardHttpsMailReady(state);
   }
   return false;
 }
@@ -82,8 +124,10 @@ export function wizardStepTitle(step: WizardStep): string {
     case 5:
       return 'Zugang — Proxy & Patientenportal';
     case 6:
-      return 'Vorschau — Geräte-URLs';
+      return 'HTTPS';
     case 7:
+      return 'Vorschau — Geräte-URLs';
+    case 8:
       return 'Abschluss';
   }
 }

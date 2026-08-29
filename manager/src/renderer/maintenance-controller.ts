@@ -19,6 +19,7 @@ import {
   storageSaveErrorText,
   storageSaveStatusText,
 } from './maintenance-view-model.js';
+import { restoreInspectBlockedMessage, restoreTlsInspectSummaryLine } from './restore-wizard-flow.js';
 import { formatRoutingModeError } from './routing-mode-ui.js';
 
 export type MaintenanceCallbacks = {
@@ -31,6 +32,7 @@ export type MaintenanceState = {
   logsService: string;
   logsText: string;
   latestBackupPath: string | null;
+  latestTlsSidecarPath: string | null;
   importsHostPath: string;
   exportsHostPath: string;
   storageStatusText: string;
@@ -43,6 +45,7 @@ export type MaintenanceState = {
   routingModeStatusText: string;
   pinResetStatusText: string;
   backupStatusText: string;
+  tlsSidecarStatusText: string;
   busy: boolean;
   error: string | null;
 };
@@ -67,6 +70,8 @@ export type MaintenanceController = {
   requestLogsRefresh: (service?: string) => void;
   backupPf: () => void;
   validatePfbackup: () => void;
+  exportTlsSidecar: () => void;
+  inspectTlsSidecar: () => void;
   applyStorage: () => void;
   recordPfupdateSuccess: (result: Extract<PfupdateApplyResult, { ok: true }>) => void;
   saveRoutingMode: () => void;
@@ -84,6 +89,7 @@ function createInitialState(): MaintenanceState {
     logsService: 'app',
     logsText: '',
     latestBackupPath: null,
+    latestTlsSidecarPath: null,
     importsHostPath: '',
     exportsHostPath: '',
     storageStatusText: '',
@@ -95,6 +101,7 @@ function createInitialState(): MaintenanceState {
     routingModeStatusText: '',
     pinResetStatusText: '',
     backupStatusText: '',
+    tlsSidecarStatusText: '',
     busy: false,
     error: null,
   };
@@ -275,7 +282,10 @@ export function createMaintenanceController(
       void deps.api
         .createPfbackup()
         .then(async (result) => {
-          patch({ latestBackupPath: result.backupPath });
+          patch({
+            latestBackupPath: result.backupPath,
+            latestTlsSidecarPath: result.tlsSidecarPath ?? null,
+          });
           const saveResult = await deps.api.savePfbackup(result.backupPath);
           if (saveResult.canceled) {
             patch({ backupStatusText: 'Backup lokal gespeichert (Download abgebrochen).' });
@@ -326,6 +336,64 @@ export function createMaintenanceController(
         .catch((error) => {
           patch({ backupStatusText: '' });
           setError(error instanceof Error ? error.message : 'Backup-Prüfung fehlgeschlagen.');
+        })
+        .finally(() => setBusy(false));
+    },
+    exportTlsSidecar() {
+      const backupPath = state.latestTlsSidecarPath ?? state.latestBackupPath;
+      if (!backupPath) {
+        setError('Kein HTTPS-State zum Sichern. Zuerst ein Praxis-Backup erstellen.');
+        return;
+      }
+      setBusy(true);
+      setError(null);
+      patch({ tlsSidecarStatusText: 'HTTPS-State wird exportiert …' });
+      void deps.api
+        .saveTlsSidecar(backupPath)
+        .then((saveResult) => {
+          if (saveResult.canceled) {
+            patch({ tlsSidecarStatusText: '' });
+            return;
+          }
+          if (!saveResult.saved) {
+            patch({ tlsSidecarStatusText: '' });
+            setError('HTTPS-State-Export fehlgeschlagen.');
+            return;
+          }
+          patch({ tlsSidecarStatusText: 'HTTPS-State exportiert.' });
+        })
+        .catch((error) => {
+          patch({ tlsSidecarStatusText: '' });
+          setError(error instanceof Error ? error.message : 'HTTPS-State-Export fehlgeschlagen.');
+        })
+        .finally(() => setBusy(false));
+    },
+    inspectTlsSidecar() {
+      if (!state.latestBackupPath) {
+        setError('Kein Praxis-Backup zum Prüfen.');
+        return;
+      }
+      setBusy(true);
+      setError(null);
+      patch({ tlsSidecarStatusText: 'HTTPS-State wird geprüft …' });
+      void deps.api
+        .inspectPfbackupFile(state.latestBackupPath)
+        .then((inspect) => {
+          const line = restoreTlsInspectSummaryLine(inspect.backup?.tls);
+          patch({
+            tlsSidecarStatusText:
+              line ??
+              (inspect.compatibility.restoreSupported
+                ? 'HTTPS-State: kein HTTPS in dieser Sicherung.'
+                : (restoreInspectBlockedMessage(inspect) ?? 'HTTPS-State-Prüfung fehlgeschlagen.')),
+          });
+          if (!inspect.compatibility.restoreSupported && inspect.backup?.tls?.inBackup) {
+            setError(restoreInspectBlockedMessage(inspect));
+          }
+        })
+        .catch((error) => {
+          patch({ tlsSidecarStatusText: '' });
+          setError(error instanceof Error ? error.message : 'HTTPS-State-Prüfung fehlgeschlagen.');
         })
         .finally(() => setBusy(false));
     },
@@ -422,6 +490,7 @@ export function createMaintenanceController(
         logsService: 'app',
         logsText: '',
         latestBackupPath: null,
+        latestTlsSidecarPath: null,
         importsHostPath: status.folders.imports,
         exportsHostPath: status.folders.exports,
         storageStatusText: '',
@@ -429,6 +498,7 @@ export function createMaintenanceController(
         routingModeStatusText: '',
         pinResetStatusText: '',
         backupStatusText: '',
+        tlsSidecarStatusText: '',
         error: null,
       });
 
@@ -437,6 +507,7 @@ export function createMaintenanceController(
         .then(([, backupInfoResult, routingCapabilities]) => {
           patch({
             latestBackupPath: backupInfoResult.latestBackupPath,
+            latestTlsSidecarPath: backupInfoResult.latestTlsSidecarPath ?? null,
             routingMode: routingCapabilities.routingMode,
             routingModeSaved: routingCapabilities.routingMode,
             complexRoutingLicensed: routingCapabilities.features.complexRoutingLicensed,

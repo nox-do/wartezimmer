@@ -1,13 +1,12 @@
 <script lang="ts">
   /**
-   * OPEN TLS: second block "HTTPS-State (Pilot)" when tls.state !== off —
-   * sidecar praxis-flow-tls-<timestamp>.tgz next to .pfbackup.
-   * Restore stays this wizard (suggest sibling sidecar, else second file dialog).
+   * HTTPS-State (Pilot) when tls.state !== off — sidecar praxis-flow-tls-<timestamp>.tgz
+   * next to .pfbackup. Restore stays the existing wizard (sibling sidecar, else second file dialog).
    * Electron-Main owns path/timestamp lookup; Setup receives tlsSidecarBase64,
-   * never a renderer-selected host path. PfbackupInspectBackupSummary.tls carries
-   * the optional typed result back into the existing RestoreWizardDialog.
-   * Mock: docs/mocks/lan-tls-wizard/app.js renderMaintenance / mockInspectTls
+   * never a renderer-selected host path.
+   * Mock: docs/mocks/lan-tls-wizard/app.js renderMaintenance
    */
+  import { siblingTlsSidecarBasename } from '@praxis-flow/server-shared';
   import IconButton from './IconButton.svelte';
   import { backupInfoText } from './maintenance-view-model.js';
 
@@ -15,23 +14,35 @@
     latestBackupPath,
     envExists,
     backupStatusText = '',
+    tlsSidecarStatusText = '',
     pinResetStatusText = '',
     busy = false,
+    tlsEnabled = false,
     onBackup,
     onValidateBackup,
     onRestore,
+    onExportTlsSidecar,
+    onInspectTlsSidecar,
     onPinReset,
   }: {
     latestBackupPath: string | null;
     envExists: boolean | undefined;
     backupStatusText?: string;
+    tlsSidecarStatusText?: string;
     pinResetStatusText?: string;
     busy?: boolean;
+    tlsEnabled?: boolean;
     onBackup: () => void;
     onValidateBackup: () => void;
     onRestore: () => void;
+    onExportTlsSidecar: () => void;
+    onInspectTlsSidecar: () => void;
     onPinReset: () => void;
   } = $props();
+
+  const sidecarName = $derived(
+    latestBackupPath ? siblingTlsSidecarBasename(latestBackupPath) : 'praxis-flow-tls-<timestamp>.tgz',
+  );
 </script>
 
 <div class="panel-section">
@@ -72,6 +83,34 @@
     </button>
   </div>
 </div>
+
+{#if tlsEnabled}
+  <div class="panel-section">
+    <h2>HTTPS-State (Pilot)</h2>
+    <p class="hint">
+      Caddy-Daten und ACME-Berechtigung liegen nicht in der <code>.pfbackup</code>. Extra sichern,
+      sobald HTTPS vorbereitet ist — nicht erst nach dem Umstellen. Dateiname
+      <code>{sidecarName}</code> neben der <code>.pfbackup</code>. Beide Dateien zusammen kopieren;
+      nicht nur die Backup-Datei.
+    </p>
+    <p class="hint">
+      Electron-Main liest das Sidecar gleichen Zeitstempels und übergibt den Inhalt an Setup. Nur
+      bei aktivem HTTPS folgt ohne Treffer der zweite Dateidialog — bestehender Restore-Assistent,
+      kein zweiter Assistent. Inspect-Zeile analog Routing/Portal.
+    </p>
+    {#if tlsSidecarStatusText}
+      <p class="maintenance-backup-status">{tlsSidecarStatusText}</p>
+    {/if}
+    <div class="maintenance-backup-actions">
+      <button type="button" class="btn-secondary" disabled={busy} onclick={onExportTlsSidecar}>
+        HTTPS-State sichern
+      </button>
+      <button type="button" class="btn-secondary" disabled={busy} onclick={onInspectTlsSidecar}>
+        HTTPS-State prüfen
+      </button>
+    </div>
+  </div>
+{/if}
 
 <div class="panel-section">
   <h2>Staff-PINs (MFA &amp; Ops)</h2>

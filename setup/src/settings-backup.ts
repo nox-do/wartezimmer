@@ -8,6 +8,7 @@ import {
   parsePfbackupArchive,
   parsePfbackupTimestampFromPath,
   serializePfbackupArchive,
+  siblingTlsSidecarBasename,
   validatePfbackupArchive,
   type ManagerState,
   type PfbackupArchiveValidationResult,
@@ -17,6 +18,7 @@ import { LOCAL_MAINTENANCE_APP_BASE_URL } from './urls.js';
 import { readEnvMap } from './env-file.js';
 import { readManagerStateForBackup } from './manager-state.js';
 import type { SetupContext } from './setup-context.js';
+import { packTlsSidecarArchive } from './tls-backup-sidecar.js';
 
 const DEFAULT_LOCAL_APP = LOCAL_MAINTENANCE_APP_BASE_URL;
 
@@ -280,7 +282,7 @@ function writePfbackupFileAtomically(backupDir: string, serialized: string): str
 export async function createPfbackup(
   ctx: SetupContext,
   localAppBaseUrl = DEFAULT_LOCAL_APP,
-): Promise<{ envPath: string; backupPath: string }> {
+): Promise<{ envPath: string; backupPath: string; tlsSidecarPath?: string | null }> {
   const envPath = path.join(ctx.home, '.env');
   if (!fs.existsSync(envPath)) {
     throw new Error('Keine .env — Setup zuerst ausführen.');
@@ -307,18 +309,52 @@ export async function createPfbackup(
   });
   const serialized = serializePfbackupArchive(archive);
   const backupPath = writePfbackupFileAtomically(backupsDirectory(ctx.home), serialized);
+  const tlsSidecarPath = writeTlsSidecarBesideBackup(ctx, backupPath);
 
-  return { envPath, backupPath };
+  return { envPath, backupPath, tlsSidecarPath };
+}
+
+export function writeTlsSidecarBesideBackup(ctx: SetupContext, backupPath: string): string | null {
+  const envPath = path.join(ctx.home, '.env');
+  if (!fs.existsSync(envPath)) {
+    return null;
+  }
+  const env = hostEnvRecord(envPath);
+  const tlsState = env.TLS_STATE?.trim() || 'off';
+  if (tlsState === 'off') {
+    return null;
+  }
+  const sidecarName = siblingTlsSidecarBasename(backupPath);
+  if (!sidecarName) {
+    throw new Error('Backup-Dateiname hat keinen Zeitstempel für das TLS-Sidecar.');
+  }
+  const destinationPath = path.join(path.dirname(backupPath), sidecarName);
+  packTlsSidecarArchive({
+    installHome: ctx.home,
+    installationId: env.TLS_INSTALLATION_ID?.trim() ?? '',
+    hostname: env.TLS_HOSTNAME?.trim() ?? '',
+    destinationPath,
+  });
+  return destinationPath;
 }
 
 export function getPfbackupInfo(ctx: SetupContext): {
   envPath: string;
   latestBackupPath: string | null;
+  latestTlsSidecarPath: string | null;
 } {
   const envPath = path.join(ctx.home, '.env');
+  const latestBackupPath = findLatestPfbackupPath(ctx.home);
+  const sidecarName = latestBackupPath ? siblingTlsSidecarBasename(latestBackupPath) : null;
+  const latestTlsSidecarPath =
+    latestBackupPath && sidecarName
+      ? path.join(path.dirname(latestBackupPath), sidecarName)
+      : null;
   return {
     envPath,
-    latestBackupPath: findLatestPfbackupPath(ctx.home),
+    latestBackupPath,
+    latestTlsSidecarPath:
+      latestTlsSidecarPath && fs.existsSync(latestTlsSidecarPath) ? latestTlsSidecarPath : null,
   };
 }
 

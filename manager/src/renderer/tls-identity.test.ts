@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   operatorZoneMailBody,
+  tlsDraftHostname,
+  tlsDraftMatchesPrepared,
   tlsNameValid,
   tlsPrepareHostname,
+  tlsWizardDisplayHostname,
 } from './tls-identity.js';
 
 test('tlsNameValid accepts generated and rejects reserved labels', () => {
@@ -20,6 +23,17 @@ test('tlsNameValid accepts generated and rejects reserved labels', () => {
   );
 });
 
+test('tlsDraftHostname keeps generated names anonymous until prepare', () => {
+  assert.equal(
+    tlsDraftHostname({ nameMode: 'generated', customLabel: '', customDomain: '' }),
+    '….lan.notaus.de',
+  );
+  assert.equal(
+    tlsDraftHostname({ nameMode: 'label', customLabel: 'Seidel', customDomain: '' }),
+    'seidel.lan.notaus.de',
+  );
+});
+
 test('tlsPrepareHostname omits generated names so Setup mints the label', () => {
   assert.equal(
     tlsPrepareHostname({ nameMode: 'generated', customLabel: '', customDomain: '' }),
@@ -28,6 +42,105 @@ test('tlsPrepareHostname omits generated names so Setup mints the label', () => 
   assert.equal(
     tlsPrepareHostname({ nameMode: 'label', customLabel: 'Seidel', customDomain: '' }),
     'seidel.lan.notaus.de',
+  );
+});
+
+test('tlsDraftMatchesPrepared keeps generated identity and rejects a fork change', () => {
+  const prepared = {
+    state: 'awaiting-operator-dns',
+    mode: 'managed' as const,
+    hostname: '7fk3m2.lan.notaus.de',
+  };
+  assert.equal(
+    tlsDraftMatchesPrepared(
+      { nameMode: 'generated', customLabel: '', customDomain: '', preparedNameMode: null },
+      prepared,
+    ),
+    true,
+  );
+  assert.equal(
+    tlsDraftMatchesPrepared(
+      {
+        nameMode: 'generated',
+        customLabel: '',
+        customDomain: '',
+        preparedNameMode: 'generated',
+      },
+      prepared,
+    ),
+    true,
+  );
+  assert.equal(
+    tlsDraftMatchesPrepared(
+      {
+        nameMode: 'domain',
+        customLabel: '',
+        customDomain: 'flow.praxis-meyer.de',
+        preparedNameMode: 'generated',
+      },
+      prepared,
+    ),
+    false,
+  );
+  assert.equal(
+    tlsDraftMatchesPrepared(
+      {
+        nameMode: 'generated',
+        customLabel: '',
+        customDomain: '',
+        preparedNameMode: 'label',
+      },
+      prepared,
+    ),
+    false,
+  );
+  assert.equal(
+    tlsDraftMatchesPrepared(
+      {
+        nameMode: 'label',
+        customLabel: 'seidel',
+        customDomain: '',
+        preparedNameMode: 'label',
+      },
+      {
+        state: 'awaiting-operator-dns',
+        mode: 'managed',
+        hostname: 'seidel.lan.notaus.de',
+      },
+    ),
+    true,
+  );
+});
+
+test('tlsWizardDisplayHostname follows the draft after a fork change', () => {
+  const prepared = {
+    state: 'awaiting-operator-dns',
+    mode: 'managed' as const,
+    hostname: '7fk3m2.lan.notaus.de',
+  };
+  assert.equal(
+    tlsWizardDisplayHostname(
+      {
+        nameMode: 'generated',
+        customLabel: '',
+        customDomain: '',
+        preparedNameMode: 'generated',
+      },
+      prepared,
+    ),
+    '7fk3m2.lan.notaus.de',
+  );
+  assert.equal(
+    tlsWizardDisplayHostname(
+      {
+        nameMode: 'domain',
+        customLabel: '',
+        customDomain: 'flow.praxis-meyer.de',
+        preparedNameMode: 'generated',
+      },
+      prepared,
+    ),
+    'flow.praxis-meyer.de',
   );
 });
 

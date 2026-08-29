@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -227,6 +228,7 @@ test('inspectPfbackup returns restore preview when archive and settings validate
     assert.equal(result.compatibility.targetAppReachable, true);
     assert.equal(result.environment?.network.SETUP_LAN_APP_IP, '192.168.1.50');
     assert.equal(result.backup?.providerCredentialsIncluded, true);
+    assert.equal(result.backup?.tls, undefined);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -253,4 +255,140 @@ test('inspectPfbackup marks restore unsupported when maintenance API is unreacha
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+function tlsSettings(overrides: Record<string, string>) {
+  const settings = structuredClone(sampleSettings);
+  settings.env = { ...settings.env, ...overrides };
+  return settings;
+}
+
+function inspectContent(env: Record<string, string>) {
+  return serializePfbackupArchive(
+    buildPfbackupArchive({
+      settings: tlsSettings(env),
+      managerState: sampleManagerState,
+      createdAt: '2026-07-12T10:00:00.000Z',
+    }),
+  );
+}
+
+function packSidecarBase64(installationId: string, hostname: string): string {
+  const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-tls-inspect-sidecar-'));
+  const archivePath = path.join(staging, 'sidecar.tgz');
+  fs.writeFileSync(
+    path.join(staging, 'manifest.json'),
+    `${JSON.stringify({ formatVersion: 1, installationId, hostname }, null, 2)}\n`,
+  );
+  const packed = spawnSync('tar', ['czf', archivePath, '-C', staging, 'manifest.json'], {
+    encoding: 'utf8',
+  });
+  assert.equal(packed.status, 0, packed.stderr || 'tar pack failed');
+  const bytes = fs.readFileSync(archivePath);
+  fs.rmSync(staging, { recursive: true, force: true });
+  return bytes.toString('base64');
+}
+
+async function inspectTls(
+  env: Record<string, string>,
+  tlsSidecarBase64?: string,
+) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-inspect-tls-'));
+  try {
+    return await inspectPfbackup(inspectContent(env), testSetupContext(dir), {
+      checkTargetAppReachable: async () => true,
+      validateSettingsSnapshot: async () => ({ ok: true, errors: [] }),
+    }, { tlsSidecarBase64 });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test('inspectPfbackup blocks active HTTPS without sidecar', async () => {
+  const result = await inspectTls({
+    TLS_STATE: 'active',
+    TLS_INSTALLATION_ID: '7fk3m2q9',
+    TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+    PROXY_MODE: 'tls-managed',
+    CANONICAL_BASE_URL: 'https://7fk3m2.lan.notaus.de',
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.compatibility.restoreSupported, false);
+  assert.equal(result.backup?.tls?.inBackup, true);
+  assert.equal(result.backup?.tls?.sidecarPresent, false);
+  assert.equal(result.backup?.tls?.metadataConsistent, true);
+  assert.match(result.errors?.join(' ') ?? '', /Sidecar.*fehlt/);
+});
+
+test('inspectPfbackup warns on prepare-only TLS without sidecar and still allows restore', async () => {
+  const result = await inspectTls({
+    TLS_STATE: 'awaiting-operator-dns',
+    TLS_INSTALLATION_ID: '7fk3m2q9',
+    TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+    PROXY_MODE: 'http',
+    CANONICAL_BASE_URL: 'http://192.168.1.50',
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.compatibility.restoreSupported, true);
+  assert.equal(result.backup?.tls?.preparedInBackup, true);
+  assert.equal(result.backup?.tls?.inBackup, false);
+  assert.equal(result.backup?.tls?.sidecarPresent, false);
+  assert.match(result.compatibility.warnings.join(' '), /Vorbereitung/);
+});
+
+test('inspectPfbackup sidecar match needs installation id and hostname on both sides', async () => {
+  const sidecar = packSidecarBase64('7fk3m2q9', '7fk3m2.lan.notaus.de');
+  const missingHost = await inspectTls(
+    {
+      TLS_STATE: 'active',
+      TLS_INSTALLATION_ID: '7fk3m2q9',
+      PROXY_MODE: 'tls-managed',
+      CANONICAL_BASE_URL: 'https://7fk3m2.lan.notaus.de',
+    },
+    sidecar,
+  );
+  assert.equal(missingHost.backup?.tls?.sidecarPresent, true);
+  assert.equal(missingHost.backup?.tls?.sidecarMatches, false);
+  assert.equal(missingHost.compatibility.restoreSupported, false);
+
+  const matched = await inspectTls(
+    {
+      TLS_STATE: 'active',
+      TLS_INSTALLATION_ID: '7fk3m2q9',
+      TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+      PROXY_MODE: 'tls-managed',
+      CANONICAL_BASE_URL: 'https://7fk3m2.lan.notaus.de',
+    },
+    sidecar,
+  );
+  assert.equal(matched.backup?.tls?.sidecarMatches, true);
+  assert.equal(matched.compatibility.restoreSupported, true);
+});
+
+test('inspectPfbackup treats unreadable sidecar bytes as missing', async () => {
+  const result = await inspectTls(
+    {
+      TLS_STATE: 'active',
+      TLS_INSTALLATION_ID: '7fk3m2q9',
+      TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+      PROXY_MODE: 'tls-managed',
+      CANONICAL_BASE_URL: 'https://7fk3m2.lan.notaus.de',
+    },
+    Buffer.from('not-a-tarball').toString('base64'),
+  );
+  assert.equal(result.backup?.tls?.sidecarPresent, false);
+  assert.equal(result.compatibility.restoreSupported, false);
+});
+
+test('inspectPfbackup blocks contradictory active TLS with HTTP canonical', async () => {
+  const result = await inspectTls({
+    TLS_STATE: 'active',
+    TLS_INSTALLATION_ID: '7fk3m2q9',
+    TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+    PROXY_MODE: 'http',
+    CANONICAL_BASE_URL: 'http://192.168.1.50',
+  });
+  assert.equal(result.compatibility.restoreSupported, false);
+  assert.equal(result.backup?.tls?.metadataConsistent, false);
+  assert.match(result.errors?.join(' ') ?? '', /widersprechen/);
 });

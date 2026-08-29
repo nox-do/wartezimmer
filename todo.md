@@ -1,6 +1,6 @@
 # Arbeitsstand (intern)
 
-Stand: 2026-08-28
+Stand: 2026-08-29
 
 Kein Kunden-Dokument. Einstieg für Beta/IT: [`docs/README.md`](docs/README.md) · Scope: [`docs/roadmap.md`](docs/roadmap.md).
 Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-history.md).
@@ -20,7 +20,17 @@ Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-histo
 
 ## Als Nächstes — Wizard-Schritt 6 HTTPS (Manager)
 
-Setup-API, Cutover und Netzwerk-Tab stehen. Assistent ist noch 1–7 (nach Zugang direkt Vorschau/Apply, HTTP). Mock: `docs/mocks/lan-tls-wizard/` (nicht 1:1). Reihenfolge: (1) Nummern 1–8, Preview=7/Apply=8, ohne Proxy 5→7; (2) `planWizardAdvance` + https-Phasen im Flow; (3) UI in `WizardSteps.svelte` + Dots. DNS/Cert/Cutover bleiben unter Netzwerk. Kein Sidecar/Restore-Gate/Fehlerklassen in diesem Paket.
+Fehlerklassen extra.
+
+## Heute (2026-08-29)
+
+- TLS-Sidecar Restore rund: Caddyfile nach Unpack neu; Rollback sichert `state/tls`; Unpack/Discard wipen; Export-Sidecar folgt dem Stick-Ordner auch ohne Timestamp im Backup-Namen; unlesbares Geschwister = fehlt (zweiter Dialog). Kein Format v2.
+
+## Heute (2026-08-28)
+
+- LAN-TLS Backup-Sidecar (Pilot): `praxis-flow-tls-<timestamp>.tgz` neben `.pfbackup` v1 ab `tls.state ≠ off`. Inspect/Restore über Bytes; Main Timestamp/zweiter Dialog. Aktives HTTPS ohne Sidecar blockt; prepare-only ohne Sidecar restored HTTP. Wartung-Block HTTPS-State. Kein Format v2, kein zweiter Restore-Wizard.
+- Wizard: Proxy nach Prepare gesperrt; HTTPS-Vorschau folgt dem Draft, wenn der Fork nicht mehr zur Host-Identität passt.
+- Wizard-Schritt 6 HTTPS: 1–8, Phasen Angebot→Name→Lease→Mail/PEM, prepare nach Lease; DNS/Cert/Cutover bleiben unter Netzwerk. Ohne Proxy 5→7.
 
 ## Heute (2026-08-28)
 

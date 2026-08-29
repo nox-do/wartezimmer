@@ -24,10 +24,31 @@ function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManager
       backupPath: '/tmp/backups/praxis-flow-backup-2026-06-25T10-00-00-000Z.pfbackup',
     }),
     savePfbackup: async () => ({ saved: true, canceled: false, filePath: '/tmp/out.pfbackup' }),
+    saveTlsSidecar: async () => ({ saved: true, canceled: false, filePath: '/tmp/out.tgz' }),
     readPfbackupForValidate: async () => ({
       canceled: false,
       content: '{}',
       filePath: '/tmp/sample.pfbackup',
+      tlsSidecarBase64: null,
+    }),
+    readTlsSidecar: async () => ({ canceled: true as const }),
+    inspectPfbackupFile: async () => ({
+      ok: true,
+      backup: {
+        createdAt: '2026-07-12T12:00:00.000Z',
+        settingsFormatVersion: 1,
+        releaseVersion: null,
+        routingMode: 'simple',
+        portalEnabled: false,
+        providerCredentialsIncluded: false,
+      },
+      compatibility: {
+        archiveValid: true,
+        settingsValid: true,
+        targetAppReachable: true,
+        restoreSupported: true,
+        warnings: [],
+      },
     }),
     validatePfbackup: async () => ({
       archiveValid: true,

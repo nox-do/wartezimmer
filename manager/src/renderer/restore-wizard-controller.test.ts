@@ -44,7 +44,11 @@ function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManager
       canceled: false,
       content: 'backup-content',
       filePath: '/tmp/sample.pfbackup',
+      tlsSidecarBase64: null,
     }),
+    readTlsSidecar: async () => ({ canceled: true as const }),
+    saveTlsSidecar: async () => ({ saved: false, canceled: true, filePath: null }),
+    inspectPfbackupFile: async () => inspectOk(),
     validatePfbackup: async () => ({
       archiveValid: true,
       restoreValid: true,
@@ -332,4 +336,88 @@ test('credential import failure preselects skip for retry', async () => {
   controller.retryRestore();
   await flushMicrotasks();
   assert.equal(restoreOptions?.skipProviderCredentials, true);
+});
+
+test('active HTTPS inspect without sidecar opens a second sidecar dialog', async () => {
+  let inspectCalls = 0;
+  let restoreSidecar: string | undefined;
+  const blocked = inspectOk({
+    ok: false,
+    backup: {
+      createdAt: '2026-07-12T12:00:00.000Z',
+      settingsFormatVersion: 1,
+      releaseVersion: null,
+      routingMode: 'simple',
+      portalEnabled: false,
+      providerCredentialsIncluded: false,
+      tls: {
+        state: 'active',
+        inBackup: true,
+        preparedInBackup: false,
+        sidecarPresent: false,
+        sidecarMatches: false,
+        metadataConsistent: true,
+      },
+    },
+    compatibility: {
+      archiveValid: true,
+      settingsValid: true,
+      targetAppReachable: true,
+      restoreSupported: false,
+      warnings: [],
+    },
+  });
+  const okWithSidecar = inspectOk({
+    backup: {
+      createdAt: '2026-07-12T12:00:00.000Z',
+      settingsFormatVersion: 1,
+      releaseVersion: null,
+      routingMode: 'simple',
+      portalEnabled: false,
+      providerCredentialsIncluded: false,
+      tls: {
+        state: 'active',
+        inBackup: true,
+        preparedInBackup: false,
+        sidecarPresent: true,
+        sidecarMatches: true,
+        metadataConsistent: true,
+      },
+    },
+  });
+  const controller = createRestoreWizardController({
+    api: createMockApi({
+      inspectPfbackup: async (_content, options) => {
+        inspectCalls += 1;
+        return options?.tlsSidecarBase64 ? okWithSidecar : blocked;
+      },
+      readTlsSidecar: async () => ({ canceled: false, tlsSidecarBase64: 'c2lkZWNhcg==' }),
+      restorePfbackup: async (_content, options) => {
+        restoreSidecar = options?.tlsSidecarBase64;
+        return {
+          ok: true,
+          restoreId: 'restore-1',
+          report: {
+            restoreId: 'restore-1',
+            routingMode: 'simple',
+            portalEnabled: false,
+            providerCredentialsSkipped: false,
+            disabledProviderIds: [],
+            compose: { running: true, services: [] },
+          },
+        };
+      },
+    }),
+  });
+
+  controller.openStandalone();
+  await flushMicrotasks();
+  await flushMicrotasks();
+  assert.equal(inspectCalls, 2);
+  assert.equal(controller.getState().phase, 'preview');
+  assert.equal(controller.getState().tlsSidecarBase64, 'c2lkZWNhcg==');
+
+  controller.confirmRestore();
+  await flushMicrotasks();
+  assert.equal(restoreSidecar, 'c2lkZWNhcg==');
 });

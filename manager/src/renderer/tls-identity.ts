@@ -57,6 +57,68 @@ export function tlsPrepareHostname(input: {
   return normalizeTlsHostnameInput(input.customDomain);
 }
 
+/** Preview before prepare mints a generated label. */
+export function tlsDraftHostname(input: {
+  nameMode: TlsNameMode;
+  customLabel: string;
+  customDomain: string;
+}): string {
+  if (input.nameMode === 'generated') {
+    return `….${TLS_OPERATOR_ZONE}`;
+  }
+  if (input.nameMode === 'label') {
+    const label = input.customLabel.trim().toLowerCase() || '…';
+    return `${label}.${TLS_OPERATOR_ZONE}`;
+  }
+  return normalizeTlsHostnameInput(input.customDomain) || 'flow.praxis.example';
+}
+
+/** Same fork and hostname as the prepared host identity (generated stays generated). */
+export function tlsDraftMatchesPrepared(
+  draft: {
+    nameMode: TlsNameMode;
+    customLabel: string;
+    customDomain: string;
+    preparedNameMode?: TlsNameMode | null;
+  },
+  tls: { mode: TlsMode | null; hostname: string | null; state: string } | null | undefined,
+): boolean {
+  if (!tls || tls.state === 'off' || tls.mode == null) {
+    return false;
+  }
+  if (tlsModeForNameMode(draft.nameMode) !== tls.mode) {
+    return false;
+  }
+  const prepared = draft.preparedNameMode ?? null;
+  if (draft.nameMode === 'generated') {
+    return prepared === null || prepared === 'generated';
+  }
+  if (prepared && prepared !== draft.nameMode) {
+    return false;
+  }
+  const hostname = tlsPrepareHostname(draft);
+  if (!hostname || !tls.hostname) {
+    return false;
+  }
+  return normalizeTlsHostnameInput(tls.hostname) === hostname;
+}
+
+/** Minted host while the draft still matches; otherwise the live draft preview. */
+export function tlsWizardDisplayHostname(
+  draft: {
+    nameMode: TlsNameMode;
+    customLabel: string;
+    customDomain: string;
+    preparedNameMode?: TlsNameMode | null;
+  },
+  tls: { mode: TlsMode | null; hostname: string | null; state: string } | null | undefined,
+): string {
+  if (tlsDraftMatchesPrepared(draft, tls) && tls?.hostname) {
+    return tls.hostname;
+  }
+  return tlsDraftHostname(draft);
+}
+
 export function operatorMailSubject(hostname: string): string {
   return `Praxis Flow TLS-DNS — ${hostname}`;
 }

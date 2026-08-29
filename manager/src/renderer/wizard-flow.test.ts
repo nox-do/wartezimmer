@@ -7,15 +7,17 @@ import {
   createWizardFlowState,
   DISABLED_GATEWAY_PLAN,
   planWizardAdvance,
+  planWizardBack,
   previousWizardStep,
   wizardCompletionLead,
+  wizardHttpsPrepared,
   wizardProbeFailureHint,
 } from './wizard-flow.js';
 
 test('previousWizardStep walks back through wizard steps', () => {
   assert.equal(previousWizardStep(1), 1);
   assert.equal(previousWizardStep(3), 2);
-  assert.equal(previousWizardStep(7), 6);
+  assert.equal(previousWizardStep(8), 7);
 });
 
 test('canLeaveWizardStep1 requires docker, network prerequisites and delivery images', () => {
@@ -117,21 +119,136 @@ test('planWizardAdvance rejects hostname reachability without network snapshot',
   assert.equal(planWizardAdvance(4, state).type, 'validate-error');
 });
 
-test('planWizardAdvance loads plan when leaving access step 5', () => {
+test('planWizardAdvance skips HTTPS without proxy and loads the plan', () => {
   const state = createWizardFlowState(minimalHostStatus(), 5);
+  assert.equal(state.proxyEnabled, false);
   assert.deepEqual(planWizardAdvance(5, state), {
     type: 'goto',
-    step: 6,
+    step: 7,
     patch: { plan: null },
     after: 'loadPlan',
   });
 });
 
-test('planWizardAdvance applies when leaving preview step 6', () => {
+test('planWizardAdvance enters HTTPS when proxy is on', () => {
+  const state = createWizardFlowState(minimalHostStatus(), 5);
+  state.proxyEnabled = true;
+  assert.deepEqual(planWizardAdvance(5, state), {
+    type: 'goto',
+    step: 6,
+    patch: { httpsPhase: 'offer' },
+  });
+});
+
+test('planWizardAdvance skips prepare when HTTPS is deferred', () => {
   const state = createWizardFlowState(minimalHostStatus(), 6);
+  state.proxyEnabled = true;
+  state.httpsOfferChoice = 'later';
   assert.deepEqual(planWizardAdvance(6, state), {
     type: 'goto',
     step: 7,
+    patch: { plan: null },
+    after: 'loadPlan',
+  });
+});
+
+test('planWizardAdvance walks HTTPS phases and prepares after the lease', () => {
+  const state = createWizardFlowState(minimalHostStatus(), 6);
+  state.proxyEnabled = true;
+  assert.deepEqual(planWizardAdvance(6, state), { type: 'https-phase', phase: 'hostname' });
+
+  state.httpsPhase = 'hostname';
+  state.nameMode = 'label';
+  state.customLabel = 'portal';
+  assert.equal(planWizardAdvance(6, state).type, 'validate-error');
+
+  state.customLabel = 'seidel';
+  assert.deepEqual(planWizardAdvance(6, state), { type: 'https-phase', phase: 'lease' });
+
+  state.httpsPhase = 'lease';
+  assert.equal(planWizardAdvance(6, state).type, 'validate-error');
+
+  state.ipv4Reserved = true;
+  assert.deepEqual(planWizardAdvance(6, state), {
+    type: 'https-phase',
+    phase: 'mail',
+    after: 'prepareTls',
+  });
+
+  state.httpsPhase = 'mail';
+  assert.equal(planWizardAdvance(6, state).type, 'validate-error');
+
+  state.mailAck = true;
+  assert.deepEqual(planWizardAdvance(6, state), {
+    type: 'goto',
+    step: 7,
+    patch: { plan: null },
+    after: 'loadPlan',
+  });
+});
+
+test('planWizardBack returns to mail only after TLS is prepared', () => {
+  const checkboxOnly = createWizardFlowState(minimalHostStatus(), 7);
+  checkboxOnly.ipv4Reserved = true;
+  checkboxOnly.proxyEnabled = true;
+  assert.equal(wizardHttpsPrepared(checkboxOnly.status), false);
+  assert.deepEqual(planWizardBack(checkboxOnly), { type: 'goto', step: 6 });
+
+  const prepared = createWizardFlowState(
+    minimalHostStatus({
+      tls: {
+        state: 'awaiting-operator-dns',
+        mode: 'managed',
+        hostname: '7fk3m2.lan.notaus.de',
+        installationId: '7fk3m2q9',
+        tokenConsumed: false,
+        applyReady: false,
+        cutoverApplied: false,
+        certificate: null,
+        lastError: null,
+        acmeCnameTarget: 'uuid.auth.acme-dns.io',
+      },
+    }),
+    7,
+  );
+  prepared.proxyEnabled = true;
+  assert.deepEqual(planWizardBack(prepared), { type: 'https-phase', phase: 'mail' });
+});
+
+test('planWizardBack skips HTTPS without proxy', () => {
+  const state = createWizardFlowState(minimalHostStatus(), 7);
+  state.proxyEnabled = false;
+  state.ipv4Reserved = true;
+  assert.deepEqual(planWizardBack(state), { type: 'goto', step: 5 });
+});
+
+test('planWizardBack keeps mail after prepare even if the proxy draft is off', () => {
+  const state = createWizardFlowState(
+    minimalHostStatus({
+      tls: {
+        state: 'awaiting-operator-dns',
+        mode: 'managed',
+        hostname: '7fk3m2.lan.notaus.de',
+        installationId: '7fk3m2q9',
+        tokenConsumed: false,
+        applyReady: false,
+        cutoverApplied: false,
+        certificate: null,
+        lastError: null,
+        acmeCnameTarget: 'uuid.auth.acme-dns.io',
+      },
+    }),
+    7,
+  );
+  state.proxyEnabled = false;
+  assert.deepEqual(planWizardBack(state), { type: 'https-phase', phase: 'mail' });
+});
+
+test('planWizardAdvance applies when leaving preview step 7', () => {
+  const state = createWizardFlowState(minimalHostStatus(), 7);
+  assert.deepEqual(planWizardAdvance(7, state), {
+    type: 'goto',
+    step: 8,
     patch: { applyResult: null },
     after: 'apply-and-refresh',
   });

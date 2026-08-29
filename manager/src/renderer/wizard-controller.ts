@@ -7,12 +7,13 @@ import {
 } from './delivery-images-flow.js';
 import {
   applyWizardSetup,
+  buildWizardPrepareTlsInput,
   createWizardFlowState,
   loadWizardNetwork,
   loadWizardPlan,
   persistWizardRoutingMode,
   planWizardAdvance,
-  previousWizardStep,
+  planWizardBack,
   refreshWizardStatus,
   refreshWizardStatusAfterApply,
   wizardReachabilityAfterNetworkLoad,
@@ -21,6 +22,9 @@ import {
   type WizardFlowState,
   type WizardStep,
 } from './wizard-flow.js';
+import { tlsDraftMatchesPrepared } from './tls-identity.js';
+import { TLS_RESET_CONFIRM_MESSAGE } from './tls-network-view-model.js';
+import { resolvedLanIp } from './wizard-state.js';
 
 export type WizardCallbacks = {
   onComplete: () => void;
@@ -41,6 +45,7 @@ export type WizardControllerDeps = WizardCallbacks & {
   onStateChange?: () => void;
   /** Nach Apply / Stack-Start — Health-Header und Shell-Status aktualisieren. */
   onHostMutated?: () => void;
+  requestConfirm?: (message: string, onConfirm: () => void) => void;
 };
 
 export type WizardController = {
@@ -53,6 +58,8 @@ export type WizardController = {
   cancel: () => void;
   complete: () => void;
   openItSettings: () => void;
+  stageWizardTlsCertificate: () => Promise<void>;
+  openMailto: (href: string) => void;
   refreshPrerequisites: () => Promise<void>;
   loadReleaseArchive: () => Promise<void>;
   browseImportsFolder: () => Promise<string | null>;
@@ -107,6 +114,105 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     }
     patch({ [field]: result.path });
     return result.path;
+  }
+
+  async function hydrateOperatorRequest(): Promise<void> {
+    const current = state.status?.tls;
+    const lanIp = resolvedLanIp(state);
+    if (
+      !current ||
+      current.mode !== 'managed' ||
+      current.tokenConsumed ||
+      !current.hostname ||
+      !lanIp ||
+      state.operatorRequest?.oneTimeToken
+    ) {
+      return;
+    }
+    try {
+      const result = await deps.api.prepareHostTls({
+        mode: 'managed',
+        hostname: current.hostname,
+        lanIp,
+      });
+      if (result.operatorRequest) {
+        patch({
+          operatorRequest: result.operatorRequest,
+          status: state.status ? { ...state.status, tls: result.tls } : state.status,
+        });
+      }
+    } catch {
+      /* Mail replay stays without token if Setup refuses identity replay. */
+    }
+  }
+
+  async function prepareDraftTls(): Promise<void> {
+    const input = buildWizardPrepareTlsInput(state);
+    if (!input.lanIp) {
+      throw new Error('Bitte zuerst eine LAN-IP wählen.');
+    }
+    const result = await deps.api.prepareHostTls(input);
+    patch({
+      operatorRequest: result.operatorRequest,
+      ipv4Reserved: true,
+      mailAck: false,
+      customPemStaged: false,
+      httpsPreparedNameMode: state.nameMode,
+      status: state.status ? { ...state.status, tls: result.tls } : state.status,
+    });
+  }
+
+  async function replacePreparedIdentity(): Promise<void> {
+    const reset = await deps.api.resetHostTls();
+    patch({
+      operatorRequest: null,
+      mailAck: false,
+      customPemStaged: false,
+      httpsPreparedNameMode: null,
+      status: state.status ? { ...state.status, tls: reset.tls } : state.status,
+    });
+    await prepareDraftTls();
+  }
+
+  async function runReplacePreparedIdentity(): Promise<void> {
+    setBusy(true);
+    setError(null);
+    try {
+      await replacePreparedIdentity();
+      patch({ step: 6, httpsPhase: 'mail', error: null });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runPrepareTls(): Promise<'ok' | 'awaiting-confirm'> {
+    const current = state.status?.tls;
+    if (current && current.state !== 'off') {
+      if (
+        tlsDraftMatchesPrepared(
+          { ...state, preparedNameMode: state.httpsPreparedNameMode },
+          current,
+        )
+      ) {
+        await hydrateOperatorRequest();
+        if (!state.httpsPreparedNameMode) {
+          patch({ httpsPreparedNameMode: state.nameMode });
+        }
+        return 'ok';
+      }
+      if (deps.requestConfirm) {
+        deps.requestConfirm(TLS_RESET_CONFIRM_MESSAGE, () => {
+          void runReplacePreparedIdentity();
+        });
+        return 'awaiting-confirm';
+      }
+      await replacePreparedIdentity();
+      return 'ok';
+    }
+    await prepareDraftTls();
+    return 'ok';
   }
 
   async function runWizardAfterAction(after: WizardAdvanceAfter): Promise<void> {
@@ -227,6 +333,16 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
           deps.onComplete();
           return;
         }
+        if (action.type === 'https-phase') {
+          if (action.after === 'prepareTls') {
+            const outcome = await runPrepareTls();
+            if (outcome === 'awaiting-confirm') {
+              return;
+            }
+          }
+          patch({ step: 6, httpsPhase: action.phase, error: null });
+          return;
+        }
 
         patch({ step: action.step, ...action.patch });
         await enterStep(action.step);
@@ -244,13 +360,19 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       if (state.step <= 1 || state.busy) {
         return;
       }
-      if (state.step === 7 && state.applyResult) {
+      if (state.step === 8 && state.applyResult) {
         return;
       }
       setError(null);
-      const step = previousWizardStep(state.step);
-      patch({ step });
-      void enterStep(step);
+      const action = planWizardBack(state);
+      if (action.type === 'https-phase') {
+        patch({ step: 6, httpsPhase: action.phase });
+        return;
+      }
+      if (action.type === 'goto') {
+        patch({ step: action.step, ...action.patch });
+        void enterStep(action.step);
+      }
     },
 
     cancel() {
@@ -269,6 +391,31 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       const url = state.status?.deviceUrls?.opsSetup ?? state.plan?.deviceUrls.opsSetup ?? null;
       if (url && !state.busy) {
         void deps.api.openExternalUrl(url);
+      }
+    },
+
+    openMailto(href) {
+      if (!state.busy && href.startsWith('mailto:')) {
+        void deps.api.openExternalUrl(href);
+      }
+    },
+
+    async stageWizardTlsCertificate() {
+      setError(null);
+      setBusy(true);
+      try {
+        const result = await deps.api.stageHostTlsCertificate();
+        if (result.canceled) {
+          return;
+        }
+        patch({
+          customPemStaged: true,
+          status: state.status ? { ...state.status, tls: result.tls } : state.status,
+        });
+      } catch (error) {
+        setError(error instanceof Error ? error.message : String(error));
+      } finally {
+        setBusy(false);
       }
     },
 

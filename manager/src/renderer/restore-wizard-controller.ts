@@ -3,6 +3,7 @@ import {
   canRetryRestoreAfterFailure,
   canSkipRestoreAfterFailure,
   createInitialRestoreWizardState,
+  restoreInspectBlockedMessage,
   suggestCredentialSkipAfterRestoreFailure,
   type RestoreWizardState,
 } from './restore-wizard-flow.js';
@@ -72,6 +73,7 @@ export function createRestoreWizardController(
     patch({
       content: picked.content,
       filePath: picked.filePath,
+      tlsSidecarBase64: picked.tlsSidecarBase64 ?? null,
       phase: 'inspect',
       busy: true,
       statusText: 'Backup wird geprüft …',
@@ -88,7 +90,19 @@ export function createRestoreWizardController(
       return;
     }
     try {
-      const inspect = await deps.api.inspectPfbackup(state.content);
+      let inspect = await deps.api.inspectPfbackup(state.content, {
+        tlsSidecarBase64: state.tlsSidecarBase64 ?? undefined,
+      });
+      if (inspect.backup?.tls?.inBackup && !inspect.backup.tls.sidecarPresent) {
+        patch({ statusText: 'HTTPS-State (Sidecar) wählen …' });
+        const sidecar = await deps.api.readTlsSidecar();
+        if (!sidecar.canceled) {
+          patch({ tlsSidecarBase64: sidecar.tlsSidecarBase64 });
+          inspect = await deps.api.inspectPfbackup(state.content, {
+            tlsSidecarBase64: sidecar.tlsSidecarBase64,
+          });
+        }
+      }
       patch({
         inspect,
         phase: inspect.ok && inspect.compatibility.restoreSupported ? 'preview' : 'failed',
@@ -125,6 +139,7 @@ export function createRestoreWizardController(
     try {
       const result = await deps.api.restorePfbackup(state.content, {
         skipProviderCredentials: state.skipProviderCredentials,
+        tlsSidecarBase64: state.tlsSidecarBase64 ?? undefined,
       });
       if (result.ok) {
         patch({
@@ -263,13 +278,9 @@ export function createRestoreWizardController(
 function restoreInspectError(
   inspect: Awaited<ReturnType<PraxisManagerApi['inspectPfbackup']>>,
 ): string {
-  if (inspect.errors?.length) {
-    return inspect.errors.join(' ');
-  }
-  if (!inspect.compatibility.targetAppReachable) {
-    return 'Maintenance-API (Port 8082) ist nicht erreichbar — Restore nicht möglich.';
-  }
-  return 'Backup ist für Restore nicht geeignet.';
+  return (
+    restoreInspectBlockedMessage(inspect) ?? 'Backup ist für Restore nicht geeignet.'
+  );
 }
 
 function formatRestoreFailure(

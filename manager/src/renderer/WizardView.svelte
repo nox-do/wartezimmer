@@ -16,6 +16,7 @@
   } from './wizard-view-model.js';
   import WizardStepIndicator from './WizardStepIndicator.svelte';
   import WizardSteps from './WizardSteps.svelte';
+  import ConfirmDialog from './ConfirmDialog.svelte';
 
   let {
     onComplete,
@@ -31,6 +32,27 @@
   let controller = $state<WizardController | null>(null);
   let hostPlatform = $state('linux');
   let lastSessionGeneration = $state<number | null>(null);
+  let confirmOpen = $state(false);
+  let confirmMessage = $state('');
+  let confirmAction = $state<(() => void) | null>(null);
+
+  function requestConfirm(message: string, onConfirm: () => void): void {
+    confirmMessage = message;
+    confirmAction = onConfirm;
+    confirmOpen = true;
+  }
+
+  function closeConfirm(): void {
+    confirmOpen = false;
+    confirmMessage = '';
+    confirmAction = null;
+  }
+
+  function confirmAndRun(): void {
+    const action = confirmAction;
+    closeConfirm();
+    action?.();
+  }
 
   function requireApi(): PraxisManagerApi {
     const api = window.praxisManager;
@@ -60,6 +82,7 @@
       onCancel,
       onHostMutated,
       onStateChange: syncSnapshot,
+      requestConfirm,
     });
     syncSnapshot();
   });
@@ -100,7 +123,11 @@
       <h1 id="wizard-title">Einrichtung</h1>
     </header>
 
-    <WizardStepIndicator current={snapshot.step} />
+    <WizardStepIndicator
+      current={snapshot.step}
+      httpsPhase={snapshot.httpsPhase}
+      proxyEnabled={snapshot.proxyEnabled}
+    />
 
     {#if snapshot.error}
       <p id="wizard-error" class="error">{snapshot.error}</p>
@@ -165,4 +192,8 @@
       {/if}
     </footer>
   {/if}
+
+  <ConfirmDialog open={confirmOpen} onConfirm={confirmAndRun} onCancel={closeConfirm}>
+    <p>{confirmMessage}</p>
+  </ConfirmDialog>
 </div>

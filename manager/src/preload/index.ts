@@ -45,6 +45,9 @@ import {
   IPC_GET_SETUP_API_BASE,
   IPC_OPEN_EXTERNAL_URL,
   IPC_READ_PFBACKUP_FOR_VALIDATE,
+  IPC_READ_TLS_SIDECAR,
+  IPC_SAVE_TLS_SIDECAR,
+  IPC_INSPECT_PFBACKUP_FILE,
   IPC_SAVE_PFBACKUP,
   IPC_SELECT_FOLDER,
   IPC_SELECT_RELEASE_ARCHIVE,
@@ -170,9 +173,24 @@ async function savePfbackup(backupPath: string): Promise<SavePfbackupResult> {
 }
 
 async function readPfbackupForValidate(): Promise<
-  { canceled: true } | { canceled: false; content: string; filePath: string }
+  | { canceled: true }
+  | { canceled: false; content: string; filePath: string; tlsSidecarBase64: string | null }
 > {
   return invokeMain(IPC_READ_PFBACKUP_FOR_VALIDATE);
+}
+
+async function readTlsSidecar(): Promise<
+  { canceled: true } | { canceled: false; tlsSidecarBase64: string }
+> {
+  return invokeMain(IPC_READ_TLS_SIDECAR);
+}
+
+async function saveTlsSidecar(backupPath: string): Promise<SavePfbackupResult> {
+  return invokeMain<SavePfbackupResult>(IPC_SAVE_TLS_SIDECAR, backupPath);
+}
+
+async function inspectPfbackupFile(backupPath: string): Promise<PfbackupInspectResult> {
+  return invokeMain<PfbackupInspectResult>(IPC_INSPECT_PFBACKUP_FILE, backupPath);
 }
 
 async function validatePfbackup(content: string): Promise<PfbackupValidateResult> {
@@ -183,17 +201,23 @@ async function validatePfbackup(content: string): Promise<PfbackupValidateResult
   });
 }
 
-async function inspectPfbackup(content: string): Promise<PfbackupInspectResult> {
+async function inspectPfbackup(
+  content: string,
+  options: { tlsSidecarBase64?: string } = {},
+): Promise<PfbackupInspectResult> {
   return callSetupApi<PfbackupInspectResult>({
     method: 'POST',
     path: '/api/setup/host/backup/inspect',
-    body: { content },
+    body: {
+      content,
+      ...(options.tlsSidecarBase64 ? { tlsSidecarBase64: options.tlsSidecarBase64 } : {}),
+    },
   });
 }
 
 async function restorePfbackup(
   content: string,
-  options: { skipProviderCredentials?: boolean } = {},
+  options: { skipProviderCredentials?: boolean; tlsSidecarBase64?: string } = {},
 ): Promise<PfbackupRestoreResult> {
   return callSetupApi<PfbackupRestoreResult>({
     method: 'POST',
@@ -201,6 +225,7 @@ async function restorePfbackup(
     body: {
       content,
       skipProviderCredentials: options.skipProviderCredentials === true,
+      ...(options.tlsSidecarBase64 ? { tlsSidecarBase64: options.tlsSidecarBase64 } : {}),
     },
   });
 }
@@ -361,7 +386,10 @@ contextBridge.exposeInMainWorld('praxisManager', {
   runComposeAction,
   createPfbackup,
   savePfbackup,
+  saveTlsSidecar,
+  inspectPfbackupFile,
   readPfbackupForValidate,
+  readTlsSidecar,
   validatePfbackup,
   inspectPfbackup,
   restorePfbackup,

@@ -3,6 +3,13 @@ import path from 'node:path';
 import {
   parsePfbackupArchive,
   STACK_IMAGE_ENV_KEYS,
+  tlsBackupMetadataConsistent,
+  tlsInBackup,
+  tlsPreparedInBackup,
+  tlsRestoreBlockedCopy,
+  tlsRestoreSupported,
+  tlsRestoreWarningCopy,
+  tlsSidecarMatches,
   validateManagerStateForBackup,
   type ManagerReleaseState,
   type ManagerState,
@@ -10,8 +17,11 @@ import {
   type PfbackupInspectCompatibility,
   type PfbackupInspectEnvironment,
   type PfbackupInspectResult,
+  type PfbackupTlsInspectSummary,
   type StackImageEnvKey,
+  type TlsState,
 } from '@praxis-flow/server-shared';
+import { inspectTlsSidecarIdentity } from './tls-backup-sidecar.js';
 import { readEnvMap } from './env-file.js';
 import { readManagerState } from './manager-state.js';
 import type { SetupContext } from './setup-context.js';
@@ -272,20 +282,75 @@ function emptyCompatibility(): PfbackupInspectCompatibility {
   };
 }
 
+const TLS_STATES = new Set<TlsState>([
+  'off',
+  'preparing',
+  'awaiting-operator-dns',
+  'dns-verified',
+  'obtaining-certificate',
+  'active',
+  'degraded',
+  'error',
+]);
+
+function readTlsState(raw: unknown): TlsState {
+  const value = String(raw ?? 'off').trim();
+  return TLS_STATES.has(value as TlsState) ? (value as TlsState) : 'off';
+}
+
+export function buildPfbackupTlsInspectSummary(
+  backupEnv: Record<string, string>,
+  tlsSidecarBase64?: string,
+): PfbackupTlsInspectSummary | undefined {
+  const tlsStateRaw = backupEnv.TLS_STATE?.trim() || 'off';
+  const tlsClaimsHttps = tlsInBackup({
+    canonicalBaseUrl: backupEnv.CANONICAL_BASE_URL,
+    proxyMode: backupEnv.PROXY_MODE,
+  });
+  const preparedInBackup = tlsPreparedInBackup({
+    tlsState: tlsStateRaw,
+    tlsClaimsHttps,
+  });
+  if (tlsStateRaw === 'off' && !tlsClaimsHttps && !preparedInBackup) {
+    return undefined;
+  }
+
+  const sidecar = inspectTlsSidecarIdentity(tlsSidecarBase64);
+  const sidecarMatches = tlsSidecarMatches({
+    backupInstallId: backupEnv.TLS_INSTALLATION_ID,
+    backupHostname: backupEnv.TLS_HOSTNAME,
+    sidecarInstallId: sidecar.installationId,
+    sidecarHostname: sidecar.hostname,
+  });
+  const metadataConsistent = tlsBackupMetadataConsistent({
+    tlsState: tlsStateRaw,
+    tlsClaimsHttps,
+  });
+
+  return {
+    state: readTlsState(tlsStateRaw),
+    inBackup: tlsClaimsHttps,
+    preparedInBackup,
+    sidecarPresent: sidecar.present,
+    sidecarMatches,
+    metadataConsistent,
+  };
+}
+
 /**
- * OPEN TLS: read Canonical/PROXY_MODE/TLS_STATE from backup env and populate
- * backup.tls (PfbackupTlsInspectSummary). If HTTPS is active, require sidecar
- * same timestamp (or second dialog) and tlsSidecarMatches.
- * Then restoreSupported adds that gate to archiveValid, settingsValid and
+ * Read Canonical/PROXY_MODE/TLS_STATE from backup env and populate backup.tls.
+ * Active HTTPS requires a matching sidecar (bytes from Main, never a host path).
+ * restoreSupported adds that gate to archiveValid, settingsValid and
  * targetAppReachable; it must not replace today's compatibility gates.
  * Contradictory active/degraded state vs HTTP env blocks. Prepare-only TLS without
  * a matching sidecar is a warning, not a block; restore resets that preparation to off.
- * Helpers: tls-model.js
+ * Helpers: packages/server-shared tls-backup.ts (from tls-model.js).
  */
 export async function inspectPfbackup(
   content: string,
   ctx: SetupContext,
   deps: PfbackupInspectDeps = {},
+  options: { tlsSidecarBase64?: string } = {},
 ): Promise<PfbackupInspectResult> {
   const localAppBaseUrl = LOCAL_MAINTENANCE_APP_BASE_URL;
   const validateSettingsSnapshot = deps.validateSettingsSnapshot ?? validateSettingsSnapshotWithApp;
@@ -368,25 +433,59 @@ export async function inspectPfbackup(
     warnings.push(...settingsValidation.errors);
   }
 
+  const tls = buildPfbackupTlsInspectSummary(backupEnv, options.tlsSidecarBase64);
+  if (tls) {
+    backup.tls = tls;
+    const tlsWarning = tlsRestoreWarningCopy({
+      tlsMetadataConsistent: tls.metadataConsistent,
+      tlsPrepared: tls.preparedInBackup,
+      sidecarPresent: tls.sidecarPresent,
+      sidecarMatches: tls.sidecarMatches,
+    });
+    if (tlsWarning) {
+      warnings.push(tlsWarning);
+    }
+  }
+
+  const restoreSupported = tlsRestoreSupported({
+    archiveValid: true,
+    settingsValid,
+    targetAppReachable,
+    tlsMetadataConsistent: tls?.metadataConsistent ?? true,
+    tlsClaimsHttps: tls?.inBackup ?? false,
+    sidecarPresent: tls?.sidecarPresent ?? false,
+    sidecarMatches: tls?.sidecarMatches ?? false,
+  });
+
   const compatibility: PfbackupInspectCompatibility = {
     archiveValid: true,
     settingsValid,
     targetAppReachable,
-    restoreSupported: settingsValid && targetAppReachable,
+    restoreSupported,
     warnings,
   };
 
+  const tlsBlock = tls
+    ? tlsRestoreBlockedCopy({
+        tlsMetadataConsistent: tls.metadataConsistent,
+        tlsClaimsHttps: tls.inBackup,
+        sidecarPresent: tls.sidecarPresent,
+        sidecarMatches: tls.sidecarMatches,
+      })
+    : null;
+  const errors = restoreSupported
+    ? undefined
+    : tlsBlock
+      ? [tlsBlock]
+      : settingsValidation.errors.length
+        ? settingsValidation.errors
+        : archiveResult.errors;
+
   return {
-    ok: compatibility.restoreSupported,
+    ok: restoreSupported,
     backup,
     environment,
     compatibility,
-    ...(compatibility.restoreSupported
-      ? {}
-      : {
-          errors: settingsValidation.errors.length
-            ? settingsValidation.errors
-            : archiveResult.errors,
-        }),
+    ...(errors ? { errors } : {}),
   };
 }

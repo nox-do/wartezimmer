@@ -15,6 +15,7 @@ import {
   getPfbackupInfo,
   validatePfbackupContent,
   validatePfbackupFile,
+  writeTlsSidecarBesideBackup,
 } from './settings-backup.js';
 import { testSetupContext } from './test-setup-context.js';
 
@@ -78,6 +79,7 @@ test('getPfbackupInfo reports latest valid backup path', () => {
     const info = getPfbackupInfo(testSetupContext(dir));
     assert.equal(info.latestBackupPath, backupPath);
     assert.equal(info.envPath, path.join(dir, '.env'));
+    assert.equal(info.latestTlsSidecarPath, null);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -143,6 +145,51 @@ test('validatePfbackupFile reads archive from disk', () => {
       validatePfbackupArchive(JSON.parse(fs.readFileSync(filePath, 'utf8'))).archiveValid,
       true,
     );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('writeTlsSidecarBesideBackup writes timestamp sibling when tls is not off', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-tls-sidecar-write-'));
+  const backupsDir = path.join(dir, 'backups');
+  fs.mkdirSync(backupsDir, { recursive: true });
+  const backupPath = path.join(backupsDir, 'praxis-flow-backup-2026-07-12T10-15-30-123Z.pfbackup');
+  try {
+    fs.writeFileSync(
+      backupPath,
+      serializePfbackupArchive(
+        buildPfbackupArchive({
+          settings: sampleSettings,
+          managerState: { release: null },
+        }),
+      ),
+    );
+    fs.writeFileSync(
+      path.join(dir, '.env'),
+      [
+        'TLS_STATE=preparing',
+        'TLS_INSTALLATION_ID=7fk3m2q9',
+        'TLS_HOSTNAME=7fk3m2.lan.notaus.de',
+        '',
+      ].join('\n'),
+    );
+    const sidecarPath = writeTlsSidecarBesideBackup(testSetupContext(dir), backupPath);
+    assert.equal(sidecarPath, path.join(backupsDir, 'praxis-flow-tls-2026-07-12T10-15-30-123Z.tgz'));
+    assert.equal(fs.existsSync(sidecarPath!), true);
+    assert.equal(getPfbackupInfo(testSetupContext(dir)).latestTlsSidecarPath, sidecarPath);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('writeTlsSidecarBesideBackup skips when tls is off', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-tls-sidecar-off-'));
+  const backupPath = path.join(dir, 'praxis-flow-backup-2026-07-12T10-15-30-123Z.pfbackup');
+  try {
+    fs.writeFileSync(backupPath, '{}');
+    fs.writeFileSync(path.join(dir, '.env'), 'TLS_STATE=off\n');
+    assert.equal(writeTlsSidecarBesideBackup(testSetupContext(dir), backupPath), null);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

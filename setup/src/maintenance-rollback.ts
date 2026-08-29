@@ -8,7 +8,10 @@ import { MANAGER_STATE_FILE, managerStatePath } from './manager-state.js';
 import { runConnectionProbes } from './probes.js';
 import { resolveDeliveryImageConfig } from './delivery-images.js';
 import type { SetupContext } from './setup-context.js';
+import { resolveProxyTlsPaths } from './proxy-tls.js';
 import { resolveCanonicalBaseUrl } from './urls.js';
+
+const TLS_STATE_ROLLBACK_DIR = 'tls-state';
 
 export type MaintenanceStackRuntime = {
   stopStack: (runOptions: ComposeRunOptions) => Promise<{ ok: boolean; log: string }>;
@@ -71,6 +74,10 @@ export async function captureMaintenanceRollback(
   if (fs.existsSync(managerPath)) {
     fs.copyFileSync(managerPath, path.join(rollbackDir, MANAGER_STATE_FILE));
   }
+  const tlsRoot = resolveProxyTlsPaths(ctx.home).root;
+  if (fs.existsSync(tlsRoot)) {
+    fs.cpSync(tlsRoot, path.join(rollbackDir, TLS_STATE_ROLLBACK_DIR), { recursive: true });
+  }
   await appDataAccess.backupDbFiles(appDataDir);
   return { rollbackDir, managerStatePath: managerPath, appDataDir };
 }
@@ -112,6 +119,18 @@ async function restoreMaintenanceFiles(
   await recordFailure(errors, 'Rollback-DB nicht zurückgespielt.', () =>
     input.appDataAccess.restoreDbFiles(input.rollback.appDataDir),
   );
+
+  const tlsRoot = resolveProxyTlsPaths(input.ctx.home).root;
+  const tlsRollback = path.join(input.rollback.rollbackDir, TLS_STATE_ROLLBACK_DIR);
+  await recordFailure(errors, 'HTTPS-State (tls) nicht zurückgespielt.', async () => {
+    if (fs.existsSync(tlsRoot)) {
+      fs.rmSync(tlsRoot, { recursive: true, force: true });
+    }
+    if (fs.existsSync(tlsRollback)) {
+      fs.cpSync(tlsRollback, tlsRoot, { recursive: true });
+    }
+  });
+
   return readEnvMap(path.join(input.ctx.home, '.env'));
 }
 

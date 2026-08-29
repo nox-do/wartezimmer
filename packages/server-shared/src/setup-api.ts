@@ -88,11 +88,13 @@ export type ComposeLogsResult = {
 export type PfbackupResult = {
   envPath: string;
   backupPath: string;
+  tlsSidecarPath?: string | null;
 };
 
 export type PfbackupInfo = {
   envPath: string;
   latestBackupPath: string | null;
+  latestTlsSidecarPath?: string | null;
 };
 
 export type PfbackupValidateInput = {

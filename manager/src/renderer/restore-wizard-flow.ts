@@ -24,6 +24,7 @@ export type RestoreWizardState = {
   inspect: PfbackupInspectResult | null;
   restoreResult: PfbackupRestoreResult | null;
   skipProviderCredentials: boolean;
+  tlsSidecarBase64: string | null;
   statusText: string;
   error: string | null;
 };
@@ -38,6 +39,7 @@ export function createInitialRestoreWizardState(): RestoreWizardState {
     inspect: null,
     restoreResult: null,
     skipProviderCredentials: false,
+    tlsSidecarBase64: null,
     statusText: '',
     error: null,
   };
@@ -108,7 +110,7 @@ export function restoreInspectSummaryLines(inspect: PfbackupInspectResult): stri
 }
 
 /**
- * OPEN TLS: if inspect fails only on sidecar, return tlsRestoreBlockedCopy().
+ * TLS-blocked inspect uses tlsRestoreBlockedCopy via the Setup inspect result.
  * Mock: docs/mocks/lan-tls-wizard/tls-model.js
  */
 export function restoreInspectBlockedMessage(inspect: PfbackupInspectResult): string | null {

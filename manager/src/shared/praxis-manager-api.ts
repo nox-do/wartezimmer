@@ -69,14 +69,18 @@ export type PraxisManagerMaintenanceApi = {
   createPfbackup(): Promise<PfbackupResult>;
   savePfbackup(backupPath: string): Promise<SavePfbackupResult>;
   validatePfbackup(content: string): Promise<PfbackupValidateResult>;
-  inspectPfbackup(content: string): Promise<PfbackupInspectResult>;
+  inspectPfbackup(content: string, options?: { tlsSidecarBase64?: string }): Promise<PfbackupInspectResult>;
   restorePfbackup(
     content: string,
-    options?: { skipProviderCredentials?: boolean },
+    options?: { skipProviderCredentials?: boolean; tlsSidecarBase64?: string },
   ): Promise<PfbackupRestoreResult>;
   readPfbackupForValidate(): Promise<
-    { canceled: true } | { canceled: false; content: string; filePath: string }
+    | { canceled: true }
+    | { canceled: false; content: string; filePath: string; tlsSidecarBase64?: string | null }
   >;
+  readTlsSidecar(): Promise<{ canceled: true } | { canceled: false; tlsSidecarBase64: string }>;
+  saveTlsSidecar(backupPath: string): Promise<SavePfbackupResult>;
+  inspectPfbackupFile(backupPath: string): Promise<PfbackupInspectResult>;
   saveStorageFolders(body: StorageFoldersInput): Promise<StorageFoldersResult>;
   saveHostNetwork(body: HostNetworkInput): Promise<HostNetworkResult>;
   prepareHostTls(body: TlsPrepareInput): Promise<TlsPrepareResult>;

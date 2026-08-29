@@ -7,13 +7,9 @@ import { buildPfbackupArchive, serializePfbackupArchive } from '@praxis-flow/ser
 import { APP_DB_RELATED_FILES, createLocalAppDataAccess } from './app-data-volume.js';
 import { readEnvMap, writeEnvRecordAtomically } from './env-file.js';
 import { readManagerState } from './manager-state.js';
-import {
-  RESTORE_PHASES,
-  mergeConfigRestoreEnv,
-  mergeConfigRestoreManagerState,
-  restorePfbackup,
-  type PfbackupRestoreDeps,
-} from './settings-backup-restore.js';
+import { restorePfbackup, mergeConfigRestoreEnv, mergeConfigRestoreManagerState, RESTORE_PHASES, type PfbackupRestoreDeps } from './settings-backup-restore.js';
+import { packTlsSidecarArchive } from './tls-backup-sidecar.js';
+import { GENERATED_CADDYFILE_MARKER, resolveProxyTlsPaths } from './proxy-tls.js';
 import { testSetupContext } from './test-setup-context.js';
 
 const sampleSettings = {
@@ -678,4 +674,187 @@ test('mergeConfigRestoreManagerState unit', () => {
     mergeConfigRestoreManagerState({ release: null }, currentManagerState),
     currentManagerState,
   );
+});
+
+function successfulRestoreDeps(appDataDir: string): PfbackupRestoreDeps {
+  return workingRestoreDeps(appDataDir, {
+    importSnapshot: async () => ({
+      ok: true,
+      routingMode: 'simple',
+      portalEnabled: true,
+      providerCredentialsSkipped: false,
+      disabledProviderIds: [],
+      errors: [],
+    }),
+  });
+}
+
+test('restorePfbackup unpacks sidecar bytes and does not accept a host path', async () => {
+  const source = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-tls-src-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-tls-dst-'));
+  const { envPath, appDataDir } = seedInstallHome(dir);
+  const sidecarPath = path.join(source, 'sidecar.tgz');
+  try {
+    const destPaths = resolveProxyTlsPaths(dir);
+    fs.mkdirSync(destPaths.caddyData, { recursive: true });
+    fs.writeFileSync(path.join(destPaths.caddyData, 'stale.txt'), 'previous-host');
+    const paths = resolveProxyTlsPaths(source);
+    fs.mkdirSync(paths.caddyData, { recursive: true });
+    fs.writeFileSync(path.join(paths.caddyData, 'marker.txt'), 'caddy-state');
+    packTlsSidecarArchive({
+      installHome: source,
+      installationId: '7fk3m2q9',
+      hostname: '7fk3m2.lan.notaus.de',
+      destinationPath: sidecarPath,
+    });
+    const tlsSidecarBase64 = fs.readFileSync(sidecarPath).toString('base64');
+    const settings = structuredClone(sampleSettings);
+    settings.env = {
+      ...settings.env,
+      TLS_STATE: 'active',
+      TLS_MODE: 'managed',
+      TLS_CUTOVER_APPLIED: 'true',
+      TLS_INSTALLATION_ID: '7fk3m2q9',
+      TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+      PROXY_MODE: 'tls-managed',
+      CANONICAL_BASE_URL: 'https://7fk3m2.lan.notaus.de',
+    } as typeof settings.env;
+    const result = await restorePfbackup(
+      buildArchiveContent(settings),
+      testSetupContext(dir),
+      { tlsSidecarBase64 },
+      successfulRestoreDeps(appDataDir),
+    );
+    assert.equal(result.ok, true);
+    const env = readEnvMap(envPath);
+    assert.equal(env.get('CANONICAL_BASE_URL'), 'https://7fk3m2.lan.notaus.de');
+    assert.equal(env.get('TLS_INSTALLATION_ID'), '7fk3m2q9');
+    const restored = resolveProxyTlsPaths(dir);
+    assert.equal(fs.readFileSync(path.join(restored.caddyData, 'marker.txt'), 'utf8'), 'caddy-state');
+    assert.equal(fs.existsSync(path.join(restored.caddyData, 'stale.txt')), false);
+    const caddyfile = fs.readFileSync(restored.caddyfile, 'utf8');
+    assert.match(caddyfile, new RegExp(GENERATED_CADDYFILE_MARKER));
+    assert.match(caddyfile, /7fk3m2\.lan\.notaus\.de/);
+  } finally {
+    fs.rmSync(source, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('restorePfbackup discards prepare-only TLS without sidecar and keeps HTTP', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-tls-prep-'));
+  const { envPath, appDataDir } = seedInstallHome(dir);
+  fs.appendFileSync(
+    envPath,
+    'TLS_STATE=preparing\nTLS_INSTALLATION_ID=old\nTLS_HOSTNAME=old.example\n',
+  );
+  const leftover = resolveProxyTlsPaths(dir);
+  fs.mkdirSync(leftover.caddyData, { recursive: true });
+  fs.writeFileSync(path.join(leftover.caddyData, 'stale.txt'), 'old-prep');
+  const settings = structuredClone(sampleSettings);
+  settings.env = {
+    ...settings.env,
+    TLS_STATE: 'awaiting-operator-dns',
+    TLS_INSTALLATION_ID: '7fk3m2q9',
+    TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+    PROXY_MODE: 'http',
+    CANONICAL_BASE_URL: 'http://192.168.1.50:8080',
+  } as typeof settings.env;
+  try {
+    const result = await restorePfbackup(
+      buildArchiveContent(settings),
+      testSetupContext(dir),
+      {},
+      successfulRestoreDeps(appDataDir),
+    );
+    assert.equal(result.ok, true);
+    const env = readEnvMap(envPath);
+    assert.equal(env.get('CANONICAL_BASE_URL'), 'http://192.168.1.50:8080');
+    assert.equal(env.has('TLS_STATE'), false);
+    assert.equal(env.has('TLS_INSTALLATION_ID'), false);
+    assert.equal(fs.existsSync(resolveProxyTlsPaths(dir).root), false);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('restorePfbackup rejects active HTTPS without sidecar before writing env', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-tls-block-'));
+  const { envPath, appDataDir } = seedInstallHome(dir);
+  let stopped = false;
+  const settings = structuredClone(sampleSettings);
+  settings.env = {
+    ...settings.env,
+    TLS_STATE: 'active',
+    TLS_INSTALLATION_ID: '7fk3m2q9',
+    TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+    PROXY_MODE: 'tls-managed',
+    CANONICAL_BASE_URL: 'https://7fk3m2.lan.notaus.de',
+  } as typeof settings.env;
+  try {
+    const result = await restorePfbackup(
+      buildArchiveContent(settings),
+      testSetupContext(dir),
+      {},
+      {
+        ...successfulRestoreDeps(appDataDir),
+        stopStack: async () => {
+          stopped = true;
+          return { ok: true, log: 'stopped' };
+        },
+      },
+    );
+    assert.equal(result.ok, false);
+    assert.equal(stopped, false);
+    assert.match(result.ok ? '' : result.errors.join(' '), /Sidecar/);
+    assert.equal(readEnvMap(envPath).get('CANONICAL_BASE_URL'), 'http://192.168.1.10:8080');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('restorePfbackup rolls TLS state back after sidecar unpack if cutover fails', async () => {
+  const source = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-tls-rb-src-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-tls-rb-dst-'));
+  const { appDataDir } = seedInstallHome(dir);
+  const sidecarPath = path.join(source, 'sidecar.tgz');
+  try {
+    const destPaths = resolveProxyTlsPaths(dir);
+    fs.mkdirSync(destPaths.caddyData, { recursive: true });
+    fs.writeFileSync(path.join(destPaths.caddyData, 'current.txt'), 'host-before-restore');
+    const paths = resolveProxyTlsPaths(source);
+    fs.mkdirSync(paths.caddyData, { recursive: true });
+    fs.writeFileSync(path.join(paths.caddyData, 'backup.txt'), 'from-backup');
+    packTlsSidecarArchive({
+      installHome: source,
+      installationId: '7fk3m2q9',
+      hostname: '7fk3m2.lan.notaus.de',
+      destinationPath: sidecarPath,
+    });
+    const settings = structuredClone(sampleSettings);
+    settings.env = {
+      ...settings.env,
+      TLS_STATE: 'active',
+      TLS_MODE: 'managed',
+      TLS_CUTOVER_APPLIED: 'true',
+      TLS_INSTALLATION_ID: '7fk3m2q9',
+      TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+      PROXY_MODE: 'tls-managed',
+      CANONICAL_BASE_URL: 'https://7fk3m2.lan.notaus.de',
+    } as typeof settings.env;
+    const result = await restorePfbackup(
+      buildArchiveContent(settings),
+      testSetupContext(dir),
+      { tlsSidecarBase64: fs.readFileSync(sidecarPath).toString('base64') },
+      workingRestoreDeps(appDataDir, {
+        importSnapshot: async () => ({ ok: false, errors: ['Import fehlgeschlagen.'] }),
+      }),
+    );
+    assert.equal(result.ok, false);
+    assert.equal(fs.readFileSync(path.join(destPaths.caddyData, 'current.txt'), 'utf8'), 'host-before-restore');
+    assert.equal(fs.existsSync(path.join(destPaths.caddyData, 'backup.txt')), false);
+  } finally {
+    fs.rmSync(source, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

@@ -301,13 +301,17 @@
           envExists={snapshot.status?.envExists}
           pinResetStatusText={snapshot.pinResetStatusText}
           backupStatusText={snapshot.backupStatusText}
+          tlsSidecarStatusText={snapshot.tlsSidecarStatusText}
           busy={snapshot.busy}
+          tlsEnabled={(snapshot.status?.tls?.state ?? 'off') !== 'off'}
           onBackup={() => controller?.backupPf()}
           onValidateBackup={() => controller?.validatePfbackup()}
           onRestore={() => {
             restoreWizard?.openStandalone();
             syncRestoreSnapshot();
           }}
+          onExportTlsSidecar={() => controller?.exportTlsSidecar()}
+          onInspectTlsSidecar={() => controller?.inspectTlsSidecar()}
           onPinReset={() => {
             pinResetOpen = true;
           }}

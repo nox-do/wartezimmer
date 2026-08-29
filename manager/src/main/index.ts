@@ -6,6 +6,9 @@ import {
   IPC_GET_SETUP_API_BASE,
   IPC_OPEN_EXTERNAL_URL,
   IPC_READ_PFBACKUP_FOR_VALIDATE,
+  IPC_READ_TLS_SIDECAR,
+  IPC_SAVE_TLS_SIDECAR,
+  IPC_INSPECT_PFBACKUP_FILE,
   IPC_SAVE_PFBACKUP,
   IPC_SELECT_FOLDER,
   IPC_SELECT_RELEASE_ARCHIVE,
@@ -21,7 +24,7 @@ import { selectPfupdateArchiveDialog } from './select-pfupdate-archive.js';
 import { renewTlsCertificateFromPicker, stageTlsCertificateFromPicker } from './select-tls-pem.js';
 import { installMacApplicationMenu } from './mac-app-menu.js';
 import { fetchHostStatusFromApi, callSetupApi } from './setup-api.js';
-import { readPfbackupFromDialog, savePfbackupToDisk } from './pfbackup-dialog.js';
+import { inspectPfbackupFile, readPfbackupFromDialog, readTlsSidecarFromDialog, savePfbackupToDisk, saveTlsSidecarToDisk } from './pfbackup-dialog.js';
 import { startSetupServer, stopSetupServer, type SetupServerHandle } from './setup-server.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -77,6 +80,33 @@ function registerSetupIpc(handle: SetupServerHandle): void {
   ipcMain.handle(IPC_READ_PFBACKUP_FOR_VALIDATE, async () => {
     try {
       return await readPfbackupFromDialog(mainWindow);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(detail, { cause: error });
+    }
+  });
+
+  ipcMain.handle(IPC_READ_TLS_SIDECAR, async () => {
+    try {
+      return await readTlsSidecarFromDialog(mainWindow);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(detail, { cause: error });
+    }
+  });
+
+  ipcMain.handle(IPC_SAVE_TLS_SIDECAR, async (_event, backupPath: string) => {
+    try {
+      return await saveTlsSidecarToDisk(mainWindow, backupPath);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(detail, { cause: error });
+    }
+  });
+
+  ipcMain.handle(IPC_INSPECT_PFBACKUP_FILE, async (_event, backupPath: string) => {
+    try {
+      return await inspectPfbackupFile(handle.apiBase, backupPath);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new Error(detail, { cause: error });

@@ -8,6 +8,7 @@
     dockerReady,
     networkPrerequisitesFailed,
     networkPrerequisitesReady,
+    wizardHttpsPrepared,
     wizardProbeFailureHint,
   } from './wizard-flow.js';
   import { deliveryImagesReady, needsDeliveryImages } from './delivery-images-flow.js';
@@ -21,6 +22,7 @@
     wizardApplyResultItems,
     wizardCheckMark,
     wizardCompletionLeadText,
+    wizardHttpsDnsWaitCopy,
     wizardStepTitle,
   } from './wizard-view-model.js';
   import FolderPathField from './FolderPathField.svelte';
@@ -28,6 +30,7 @@
   import ProxySettings from './ProxySettings.svelte';
   import ReachabilityPanel from './ReachabilityPanel.svelte';
   import WizardRoutingModePanel from './WizardRoutingModePanel.svelte';
+  import WizardHttpsPanel from './WizardHttpsPanel.svelte';
 
   let {
     snapshot,
@@ -253,9 +256,12 @@
         <h3 class="network-config-subheading">Browserzugriff (Port 80)</h3>
         <ProxySettings
           enabled={snapshot.proxyEnabled}
-          disabled={snapshot.busy}
+          disabled={snapshot.busy || wizardHttpsPrepared(snapshot.status)}
           onChange={(proxyEnabled) => patchFields({ proxyEnabled })}
         />
+        {#if wizardHttpsPrepared(snapshot.status)}
+          <p class="hint">Port 80 bleibt während der HTTPS-Vorbereitung unverändert.</p>
+        {/if}
       </section>
 
       <section class="network-config-block">
@@ -275,9 +281,20 @@
         </p>
       </section>
     {:else if snapshot.step === 6}
+      <WizardHttpsPanel {snapshot} {controller} {onPatch} />
+    {:else if snapshot.step === 7}
       {#if !snapshot.plan}
         <p>Plan wird geladen …</p>
       {:else}
+        <p class="wizard-step-lead">
+          {#if wizardHttpsPrepared(snapshot.status)}
+            Vorläufig über die IP, bis HTTPS steht.
+          {:else if snapshot.proxyEnabled}
+            Einrichtung über die IP. HTTPS später unter Netzwerk.
+          {:else}
+            Einrichtung über Port 8080. HTTPS erst, wenn der Proxy an ist.
+          {/if}
+        </p>
         <dl class="status-grid wizard-summary-grid">
           <dt>Terminal</dt><dd>{snapshot.plan.deviceUrls.terminal}</dd>
           <dt>TV</dt><dd>{snapshot.plan.deviceUrls.tv}</dd>
@@ -285,6 +302,23 @@
           <dt>Portal</dt><dd>{snapshot.plan.deviceUrls.portal}</dd>
           <dt>Ops Setup</dt><dd>{snapshot.plan.deviceUrls.opsSetup}</dd>
         </dl>
+        {#if wizardHttpsPrepared(snapshot.status)}
+          <p class="notice is-warn">
+            Geplante HTTPS-Adresse (noch nicht nutzbar):
+            <code>https://{snapshot.status?.tls?.hostname ?? '…'}</code>. Bis dahin über die IP. HTTPS
+            später unter Netzwerk.
+          </p>
+        {:else if snapshot.proxyEnabled}
+          <p class="notice is-warn">
+            HTTPS ist nicht vorbereitet. Weitere Einrichtung jetzt über die IP. Später unter
+            Netzwerk.
+          </p>
+        {:else}
+          <p class="notice is-warn">
+            Ohne Proxy steht HTTPS später nicht zur Verfügung. Proxy und HTTPS können später
+            nachträglich im Tab Netzwerk dieser Manager-App eingerichtet werden.
+          </p>
+        {/if}
         <p class="hint">
           {#if snapshot.proxyEnabled}
             Geräte-URLs nutzen den Reverse Proxy (Port 80). Der App-Port bleibt lokal unter
@@ -301,7 +335,7 @@
           <dt>Export</dt><dd>{snapshot.exportsHostPath.trim()}</dd>
         </dl>
       {/if}
-    {:else if snapshot.step === 7}
+    {:else if snapshot.step === 8}
       {#if !snapshot.applyResult}
         <p>
           Der Manager schreibt die technische Compose-Konfiguration, legt die Host-Ordner an und
@@ -346,6 +380,11 @@
         {/if}
 
         <p>{wizardCompletionLeadText(snapshot)}</p>
+        {#if wizardHttpsPrepared(snapshot.status)}
+          <p class="hint">HTTPS später unter Netzwerk. {wizardHttpsDnsWaitCopy(snapshot.status?.tls?.mode)}</p>
+        {:else if snapshot.proxyEnabled}
+          <p class="hint">HTTPS später unter Netzwerk.</p>
+        {/if}
         <p class="hint">
           MFA-, Ops- und Panel-PIN: Standard 0000 — MFA/Panel in MFA → Betrieb, Ops in System → PIN
           &amp; Sicherheit. Vergessene MFA- oder Ops-PIN: Manager → Wartung.

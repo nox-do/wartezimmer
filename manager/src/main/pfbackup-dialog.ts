@@ -3,7 +3,9 @@ import { dialog } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { PFBACKUP_FILE_EXTENSION, PFBACKUP_BASENAME_PREFIX } from '@praxis-flow/server-shared';
-import type { SavePfbackupResult } from '../shared/host-status.js';
+import type { PfbackupInspectResult, SavePfbackupResult } from '../shared/host-status.js';
+import { callSetupApi } from './setup-api.js';
+import { copyTlsSidecarBesideExportedBackup, readTlsSidecarBase64BesideBackup, siblingTlsSidecarPath } from './tls-sidecar-lookup.js';
 
 function assertAllowedPfbackupPath(backupPath: string): string {
   if (typeof backupPath !== 'string' || !backupPath.trim()) {
@@ -48,13 +50,15 @@ export async function savePfbackupToDisk(
   }
 
   await fs.promises.copyFile(sourcePath, filePath);
+  copyTlsSidecarBesideExportedBackup(sourcePath, filePath);
   return { saved: true, canceled: false, filePath };
 }
 
 export async function readPfbackupFromDialog(
   parentWindow: BrowserWindow | null,
 ): Promise<
-  { canceled: true; content: null } | { canceled: false; content: string; filePath: string }
+  | { canceled: true; content: null }
+  | { canceled: false; content: string; filePath: string; tlsSidecarBase64: string | null }
 > {
   const dialogOptions: OpenDialogOptions = {
     title: 'Praxis-Backup prüfen',
@@ -75,5 +79,85 @@ export async function readPfbackupFromDialog(
 
   const filePath = filePaths[0];
   const content = await fs.promises.readFile(filePath, 'utf8');
-  return { canceled: false, content, filePath };
+  return {
+    canceled: false,
+    content,
+    filePath,
+    tlsSidecarBase64: readTlsSidecarBase64BesideBackup(filePath),
+  };
 }
+
+export async function readTlsSidecarFromDialog(
+  parentWindow: BrowserWindow | null,
+): Promise<{ canceled: true; tlsSidecarBase64: null } | { canceled: false; tlsSidecarBase64: string }> {
+  const dialogOptions: OpenDialogOptions = {
+    title: 'HTTPS-State (Sidecar) wählen',
+    properties: ['openFile'],
+    filters: [
+      { name: 'Praxis Flow TLS-Sidecar', extensions: ['tgz', 'tar.gz'] },
+      { name: 'Alle Dateien', extensions: ['*'] },
+    ],
+  };
+
+  const { canceled, filePaths } = parentWindow
+    ? await dialog.showOpenDialog(parentWindow, dialogOptions)
+    : await dialog.showOpenDialog(dialogOptions);
+
+  if (canceled || !filePaths[0]) {
+    return { canceled: true, tlsSidecarBase64: null };
+  }
+
+  const bytes = await fs.promises.readFile(filePaths[0]);
+  return { canceled: false, tlsSidecarBase64: bytes.toString('base64') };
+}
+
+export async function saveTlsSidecarToDisk(
+  parentWindow: BrowserWindow | null,
+  backupPath: string,
+): Promise<SavePfbackupResult> {
+  const sourceSidecar = backupPath.endsWith('.tgz')
+    ? path.resolve(backupPath)
+    : siblingTlsSidecarPath(assertAllowedPfbackupPath(backupPath));
+
+  if (!sourceSidecar || !fs.existsSync(sourceSidecar)) {
+    throw new Error('HTTPS-State (Sidecar) nicht gefunden.');
+  }
+
+  const dialogOptions: SaveDialogOptions = {
+    title: 'HTTPS-State sichern',
+    defaultPath: path.basename(sourceSidecar),
+    filters: [
+      { name: 'Praxis Flow TLS-Sidecar', extensions: ['tgz'] },
+      { name: 'Alle Dateien', extensions: ['*'] },
+    ],
+  };
+
+  const { canceled, filePath } = parentWindow
+    ? await dialog.showSaveDialog(parentWindow, dialogOptions)
+    : await dialog.showSaveDialog(dialogOptions);
+
+  if (canceled || !filePath) {
+    return { saved: false, canceled: true, filePath: null };
+  }
+
+  await fs.promises.copyFile(sourceSidecar, filePath);
+  return { saved: true, canceled: false, filePath };
+}
+
+export async function inspectPfbackupFile(
+  apiBase: string,
+  backupPath: string,
+): Promise<PfbackupInspectResult> {
+  const sourcePath = assertAllowedPfbackupPath(backupPath);
+  const content = await fs.promises.readFile(sourcePath, 'utf8');
+  const tlsSidecarBase64 = readTlsSidecarBase64BesideBackup(sourcePath);
+  return callSetupApi<PfbackupInspectResult>(apiBase, {
+    method: 'POST',
+    path: '/api/setup/host/backup/inspect',
+    body: {
+      content,
+      ...(tlsSidecarBase64 ? { tlsSidecarBase64 } : {}),
+    },
+  });
+}
+

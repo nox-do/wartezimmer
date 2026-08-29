@@ -4,6 +4,8 @@ import path from 'node:path';
 import {
   parsePfbackupArchive,
   STACK_IMAGE_ENV_KEYS,
+  tlsRestoreBlockedCopy,
+  tlsRestoreSupported,
   validateManagerStateForBackup,
   type ManagerState,
   type PfbackupRestoreResult,
@@ -14,14 +16,14 @@ import {
   type AppDataVolumeAccess,
 } from './app-data-volume.js';
 import { composePs, composeStop, composeUp, type ComposeRunOptions } from './docker.js';
-import { readEnvMap, writeEnvRecordAtomically } from './env-file.js';
+import { readEnvMap, writeEnvRecordAtomically, removeEnvKeys } from './env-file.js';
 import { readManagerState, writeManagerStateAtomically } from './manager-state.js';
 import {
   FRESH_DB_CUTOVER_PHASES,
   runFreshDbSettingsCutover,
   type FreshDbCutoverPhase,
 } from './fresh-db-settings-cutover.js';
-import { checkMaintenanceAppReachable } from './settings-backup-inspect.js';
+import { checkMaintenanceAppReachable, buildPfbackupTlsInspectSummary } from './settings-backup-inspect.js';
 import {
   fetchSettingsDbSnapshotFromApp,
   importSettingsSnapshotViaApp,
@@ -40,6 +42,18 @@ import {
   type MaintenanceRollbackArtifacts,
   type MaintenanceStackRuntime,
 } from './maintenance-rollback.js';
+import { TLS_ENV_KEYS, readTlsStatus } from './host-tls.js';
+import {
+  buildProxyTlsEnvUpdates,
+  PROXY_TLS_HOST_PATH_ENV_KEYS,
+  PROXY_TLS_RUNTIME_ENV_KEYS,
+  writeGeneratedTlsCaddyfile,
+} from './proxy-tls.js';
+import {
+  decodeTlsSidecarBase64,
+  unpackTlsSidecarBytes,
+  wipeTlsStateRoot,
+} from './tls-backup-sidecar.js';
 
 export const RESTORE_PHASES = {
   validateArchive: 'validate_archive',
@@ -62,6 +76,7 @@ export type RestorePhase = (typeof RESTORE_PHASES)[keyof typeof RESTORE_PHASES];
 
 export type PfbackupRestoreOptions = {
   skipProviderCredentials?: boolean;
+  tlsSidecarBase64?: string;
 };
 
 export type PfbackupRestoreTestHooks = {
@@ -113,6 +128,8 @@ type PreparedRestore = {
   envPath: string;
   runOptions: ComposeRunOptions;
   appDataAccess: AppDataVolumeAccess;
+  tlsSidecarBytes: Buffer | null;
+  discardTlsPreparation: boolean;
 };
 
 class RestorePhaseError extends Error {
@@ -311,11 +328,77 @@ function resolveRestoreRuntime(deps: PfbackupRestoreDeps): RestoreRuntime {
   };
 }
 
+function stripTlsPreparationKeys(env: Record<string, string>): void {
+  for (const key of [...TLS_ENV_KEYS, ...PROXY_TLS_HOST_PATH_ENV_KEYS, ...PROXY_TLS_RUNTIME_ENV_KEYS]) {
+    delete env[key];
+  }
+}
+
+function applyTlsRestorePlan(input: {
+  backupEnv: Record<string, string>;
+  restoreEnv: Record<string, string>;
+  tlsSidecarBase64: string | undefined;
+  installHome: string;
+}): { restoreEnv: Record<string, string>; tlsSidecarBytes: Buffer | null; discardTlsPreparation: boolean } {
+  const tls = buildPfbackupTlsInspectSummary(input.backupEnv, input.tlsSidecarBase64);
+  if (!tls) {
+    return { restoreEnv: input.restoreEnv, tlsSidecarBytes: null, discardTlsPreparation: false };
+  }
+
+  const supported = tlsRestoreSupported({
+    archiveValid: true,
+    settingsValid: true,
+    targetAppReachable: true,
+    tlsMetadataConsistent: tls.metadataConsistent,
+    tlsClaimsHttps: tls.inBackup,
+    sidecarPresent: tls.sidecarPresent,
+    sidecarMatches: tls.sidecarMatches,
+  });
+  if (!supported) {
+    const blocked = tlsRestoreBlockedCopy({
+      tlsMetadataConsistent: tls.metadataConsistent,
+      tlsClaimsHttps: tls.inBackup,
+      sidecarPresent: tls.sidecarPresent,
+      sidecarMatches: tls.sidecarMatches,
+    });
+    throw new RestorePhaseError(RESTORE_PHASES.validateArchive, [
+      blocked ?? 'HTTPS-Restore wird nicht unterstützt.',
+    ]);
+  }
+
+  const sidecarBytes = decodeTlsSidecarBase64(input.tlsSidecarBase64);
+  const matchingSidecar = Boolean(tls.sidecarPresent && tls.sidecarMatches && sidecarBytes);
+  if (tls.inBackup && !matchingSidecar) {
+    throw new RestorePhaseError(RESTORE_PHASES.validateArchive, [
+      tlsRestoreBlockedCopy({
+        tlsMetadataConsistent: tls.metadataConsistent,
+        tlsClaimsHttps: true,
+        sidecarPresent: tls.sidecarPresent,
+        sidecarMatches: tls.sidecarMatches,
+      }) ?? 'HTTPS-Restore ohne passendes Sidecar ist abgelehnt.',
+    ]);
+  }
+
+  const restoreEnv = { ...input.restoreEnv };
+  if (tls.preparedInBackup && !matchingSidecar) {
+    stripTlsPreparationKeys(restoreEnv);
+    return { restoreEnv, tlsSidecarBytes: null, discardTlsPreparation: true };
+  }
+
+  if (matchingSidecar) {
+    Object.assign(restoreEnv, buildProxyTlsEnvUpdates(input.installHome));
+    return { restoreEnv, tlsSidecarBytes: sidecarBytes, discardTlsPreparation: false };
+  }
+
+  return { restoreEnv, tlsSidecarBytes: null, discardTlsPreparation: false };
+}
+
 async function prepareRestore(input: {
   content: string;
   ctx: SetupContext;
   runtime: RestoreRuntime;
   localMaintenanceAppBaseUrl: string;
+  tlsSidecarBase64?: string;
 }): Promise<PreparedRestore> {
   const archiveResult = input.runtime.validateArchive(input.content);
   if (!archiveResult.archiveValid) {
@@ -352,9 +435,15 @@ async function prepareRestore(input: {
     !Array.isArray(parsed.settings.env)
       ? (parsed.settings.env as Record<string, string>)
       : {};
+  const tlsPlan = applyTlsRestorePlan({
+    backupEnv,
+    restoreEnv: mergeConfigRestoreEnv(backupEnv, readHostEnvRecord(envPath)),
+    tlsSidecarBase64: input.tlsSidecarBase64,
+    installHome: input.ctx.home,
+  });
   return {
     settings: parsed.settings,
-    restoreEnv: mergeConfigRestoreEnv(backupEnv, readHostEnvRecord(envPath)),
+    restoreEnv: tlsPlan.restoreEnv,
     restoreManagerState: mergeConfigRestoreManagerState(
       parsed.managerState,
       readManagerState(input.ctx.home),
@@ -367,6 +456,8 @@ async function prepareRestore(input: {
         input.ctx.composeProjectName,
         envMap.get('PRAXIS_FLOW_APP_IMAGE')?.trim() ?? '',
       ),
+    tlsSidecarBytes: tlsPlan.tlsSidecarBytes,
+    discardTlsPreparation: tlsPlan.discardTlsPreparation,
   };
 }
 
@@ -386,11 +477,19 @@ async function commitRestore(input: {
       throw new Error('ENV-Schreiben absichtlich fehlgeschlagen (Test).');
     }
     writeEnvRecordAtomically(input.prepared.envPath, input.prepared.restoreEnv);
-    // OPEN TLS: unpack validated sidecar bytes onto Caddy host paths here (after
-    // stop, before startFullStack). ACLs on Windows. When Inspect classified a
-    // prepare-only backup without a matching sidecar, remove TLS_* preparation
-    // fields here and keep the HTTP Canonical. Never write https Canonical without
-    // the matching sidecar.
+    if (input.prepared.discardTlsPreparation) {
+      removeEnvKeys(input.prepared.envPath, [
+        ...TLS_ENV_KEYS,
+        ...PROXY_TLS_HOST_PATH_ENV_KEYS,
+        ...PROXY_TLS_RUNTIME_ENV_KEYS,
+      ]);
+      wipeTlsStateRoot(input.ctx.home);
+    }
+    if (input.prepared.tlsSidecarBytes) {
+      unpackTlsSidecarBytes(input.prepared.tlsSidecarBytes, input.ctx.home);
+      const envAfterTls = readEnvMap(input.prepared.envPath);
+      writeGeneratedTlsCaddyfile(input.ctx.home, readTlsStatus(envAfterTls), envAfterTls);
+    }
   } catch (error) {
     throw new RestorePhaseError(RESTORE_PHASES.writeEnv, [
       errorMessage(error, 'Backup-.env konnte nicht geschrieben werden.'),
@@ -573,7 +672,13 @@ export async function restorePfbackup(
   const skipProviderCredentials = options.skipProviderCredentials === true;
   const runtime = resolveRestoreRuntime(deps);
   try {
-    const prepared = await prepareRestore({ content, ctx, runtime, localMaintenanceAppBaseUrl });
+    const prepared = await prepareRestore({
+      content,
+      ctx,
+      runtime,
+      localMaintenanceAppBaseUrl,
+      tlsSidecarBase64: options.tlsSidecarBase64,
+    });
     return applyPreparedRestore({
       restoreId,
       prepared,

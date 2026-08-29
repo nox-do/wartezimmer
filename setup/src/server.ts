@@ -212,13 +212,16 @@ function createManagementRoutes(ctx: SetupContext): Routes {
     'POST /api/setup/host/backup/inspect': async (req) => {
       const body = readBodyRecord(await readJsonBody(req));
       const content = requireString(body, 'content', 'content is required');
-      return routeResult(await inspectPfbackup(content, ctx));
+      return routeResult(
+        await inspectPfbackup(content, ctx, {}, { tlsSidecarBase64: readOptionalString(body, 'tlsSidecarBase64') }),
+      );
     },
     'POST /api/setup/host/backup/restore': async (req) => {
       const body = readBodyRecord(await readJsonBody(req));
       const content = requireString(body, 'content', 'content is required');
       const result = await restorePfbackup(content, ctx, {
         skipProviderCredentials: body.skipProviderCredentials === true,
+        tlsSidecarBase64: readOptionalString(body, 'tlsSidecarBase64'),
       });
       return routeResult(result, result.ok ? 200 : 500);
     },
