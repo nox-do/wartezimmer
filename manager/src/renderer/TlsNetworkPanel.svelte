@@ -11,6 +11,7 @@
     tlsNameValid,
   } from './tls-identity.js';
   import {
+    TLS_CUTOVER_CONFIRM_MESSAGE,
     TLS_LEASE_STALE_LAN_COPY,
     formatCertNotAfter,
     tlsCanApply,
@@ -24,9 +25,14 @@
     tlsErrorCopy,
     tlsExpiryKind,
     tlsHttpsEligible,
+    tlsIsApplyFail,
     tlsIsOff,
+    tlsIsPersistedFailBeforeCutover,
     tlsLeaseBlockedByStaleLan,
     tlsLocalCheckItems,
+    tlsNetworkShowsGenericErrorFooter,
+    tlsShowsDnsWaitCopy,
+    tlsShowsStructuredLastErrorNotice,
   } from './tls-network-view-model.js';
 
   let {
@@ -184,7 +190,7 @@
   {#if tls.hostname}
     <p class="hint hint--preview"><code>https://{tls.hostname}</code></p>
   {/if}
-  {#if !tls.cutoverApplied}
+  {#if tlsShowsDnsWaitCopy(tls)}
     <p class="hint">{tlsDnsWaitCopy(tls.mode)}</p>
   {/if}
 
@@ -227,10 +233,12 @@
       {/each}
     </ul>
 
-    {#if tls.state === 'error' && !tls.cutoverApplied}
-      {@const copy = tlsErrorCopy(tls.lastError?.class, tls.lastError?.message)}
-      <p class="notice is-bad">{copy.title}</p>
-      <p class="hint">{copy.action}</p>
+    {#if tlsIsPersistedFailBeforeCutover(tls)}
+      {#if tlsShowsStructuredLastErrorNotice(tls)}
+        {@const copy = tlsErrorCopy(tls.lastError?.class, tls.lastError?.message)}
+        <p class="notice is-bad">{copy.title}</p>
+        <p class="hint">{copy.action}</p>
+      {/if}
       <div class="actions-row">
         {#if tlsCanRepair(tls)}
           <button type="button" disabled={busy} onclick={() => void controller.repair()}>Erneut versuchen</button>
@@ -257,6 +265,11 @@
         </button>
       </div>
     {:else if tlsCanApply(tls)}
+      {#if tlsIsApplyFail(tls)}
+        {@const applyFailCopy = tlsErrorCopy(tls.lastError?.class, tls.lastError?.message)}
+        <p class="notice is-bad">{applyFailCopy.title}</p>
+        <p class="hint">{applyFailCopy.action}</p>
+      {/if}
       <ul class="checklist">
         {#each tlsLocalCheckItems({ tls, checks: state.localChecks }) as item (item.text)}
           <li class={item.status}>
@@ -269,10 +282,7 @@
       <p class="notice is-warn">
         Gültiges Zertifikat plus Portweiterleitung 443 legt die ganze App ins Internet. 80 und 443 nicht freigeben.
       </p>
-      <p class="notice is-warn">
-        Auf HTTPS umstellen ist unwiderruflich. Alte HTTP-Adressen und Anmeldungen gelten danach nicht mehr. TV und
-        Tablets danach neu eintragen. Außerhalb der Öffnungszeiten wäre besser.
-      </p>
+      <p class="notice is-warn">{TLS_CUTOVER_CONFIRM_MESSAGE}</p>
       <div class="actions-row">
         <button type="button" disabled={busy} onclick={() => controller.apply()}>Auf HTTPS umstellen</button>
         <button type="button" class="btn-secondary" disabled={busy} onclick={() => controller.reset()}>
@@ -359,6 +369,6 @@
   {/if}
 {/if}
 
-{#if state.error}
+{#if tlsNetworkShowsGenericErrorFooter(tls, state.error)}
   <p class="error">{state.error}</p>
 {/if}

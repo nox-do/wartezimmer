@@ -2,16 +2,23 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { TlsStatus } from '../shared/host-status.js';
 import {
+  TLS_CUTOVER_CONFIRM_MESSAGE,
   TLS_LEASE_STALE_LAN_COPY,
   tlsCanApply,
   tlsCanObtain,
   tlsCanRenew,
+  tlsCanRepair,
   tlsCanVerifyDns,
   tlsDiagnoseItems,
   tlsErrorCopy,
   tlsExpiryKind,
+  tlsIsApplyFail,
+  tlsIsPersistedFailBeforeCutover,
   tlsNeedsNetworkResume,
+  tlsNetworkShowsGenericErrorFooter,
   tlsResumeCard,
+  tlsShowsDnsWaitCopy,
+  tlsShowsStructuredLastErrorNotice,
 } from './tls-network-view-model.js';
 
 function tls(overrides: Partial<TlsStatus>): TlsStatus {
@@ -139,4 +146,132 @@ test('TLS_LEASE_STALE_LAN_COPY stays short', () => {
     TLS_LEASE_STALE_LAN_COPY,
     'Die gespeicherte IP-Adresse passt nicht zur aktuellen Adresse dieses Rechners. Bitte anpassen.',
   );
+});
+
+test('tlsShowsDnsWaitCopy is only true while awaiting operator DNS', () => {
+  assert.equal(tlsShowsDnsWaitCopy(tls({ state: 'awaiting-operator-dns', mode: 'managed' })), true);
+  assert.equal(
+    tlsShowsDnsWaitCopy(
+      tls({
+        state: 'error',
+        mode: 'managed',
+        lastError: { class: 'acme', message: 'register failed' },
+      }),
+    ),
+    false,
+  );
+  assert.equal(
+    tlsShowsDnsWaitCopy(tls({ state: 'dns-verified', mode: 'managed', applyReady: true })),
+    false,
+  );
+  assert.equal(
+    tlsShowsDnsWaitCopy(
+      tls({
+        state: 'dns-verified',
+        mode: 'managed',
+        applyReady: true,
+        lastError: { class: 'firewall', message: '443 closed' },
+      }),
+    ),
+    false,
+  );
+  assert.equal(tlsShowsDnsWaitCopy(tls({ state: 'obtaining-certificate', mode: 'managed' })), false);
+  assert.equal(tlsShowsDnsWaitCopy(tls({ state: 'active', cutoverApplied: true })), false);
+});
+
+test('persisted fail before cutover offers repair and hides wait copy', () => {
+  const failed = tls({
+    state: 'error',
+    mode: 'managed',
+    lastError: { class: 'acme', message: 'obtain failed' },
+  });
+  assert.equal(tlsIsPersistedFailBeforeCutover(failed), true);
+  assert.equal(tlsShowsStructuredLastErrorNotice(failed), true);
+  assert.equal(tlsCanRepair(failed), true);
+  assert.equal(tlsCanApply(failed), false);
+  assert.equal(tlsIsApplyFail(failed), false);
+  assert.equal(tlsShowsDnsWaitCopy(failed), false);
+  const copy = tlsErrorCopy(failed.lastError?.class, failed.lastError?.message);
+  assert.equal(copy.title, 'Das Zertifikat konnte nicht ausgestellt werden.');
+  assert.match(copy.action, /nicht neu anfordern/);
+});
+
+test('apply-fail keeps apply retry and does not offer repair', () => {
+  const applyFail = tls({
+    state: 'dns-verified',
+    mode: 'managed',
+    applyReady: true,
+    lastError: { class: 'firewall', message: 'apply rolled back' },
+  });
+  assert.equal(tlsIsApplyFail(applyFail), true);
+  assert.equal(tlsShowsStructuredLastErrorNotice(applyFail), true);
+  assert.equal(tlsCanApply(applyFail), true);
+  assert.equal(tlsCanRepair(applyFail), false);
+  assert.equal(tlsIsPersistedFailBeforeCutover(applyFail), false);
+  assert.equal(tlsShowsDnsWaitCopy(applyFail), false);
+  const copy = tlsErrorCopy(applyFail.lastError?.class, applyFail.lastError?.message);
+  assert.equal(copy.title, 'Port 443 auf diesem Rechner ist nicht erreichbar.');
+  assert.match(copy.action, /HTTP bleibt/);
+});
+
+test('generic footer stays hidden when a structured lastError is on a pre-cutover gate', () => {
+  const persisted = tls({
+    state: 'error',
+    mode: 'managed',
+    lastError: { class: 'acme', message: 'obtain failed' },
+  });
+  assert.equal(tlsNetworkShowsGenericErrorFooter(persisted, 'obtain failed'), false);
+  const applyFail = tls({
+    state: 'dns-verified',
+    mode: 'managed',
+    applyReady: true,
+    lastError: { class: 'firewall', message: 'apply rolled back' },
+  });
+  assert.equal(tlsNetworkShowsGenericErrorFooter(applyFail, 'apply rolled back'), false);
+});
+
+test('generic footer remains the fallback without a persisted lastError', () => {
+  const pemCheck = tls({ state: 'dns-verified', mode: 'custom', applyReady: false });
+  assert.equal(
+    tlsNetworkShowsGenericErrorFooter(pemCheck, 'Die Uhrzeit dieses Rechners wird abgelehnt.'),
+    true,
+  );
+  const errorWithoutClass = tls({ state: 'error', mode: 'managed', lastError: null });
+  assert.equal(tlsIsPersistedFailBeforeCutover(errorWithoutClass), true);
+  assert.equal(tlsShowsStructuredLastErrorNotice(errorWithoutClass), false);
+  assert.equal(tlsCanRepair(errorWithoutClass), true);
+  assert.equal(tlsNetworkShowsGenericErrorFooter(errorWithoutClass, 'clock skew'), true);
+  assert.equal(tlsNetworkShowsGenericErrorFooter(pemCheck, null), false);
+  const clockFallback = tlsErrorCopy('clock');
+  assert.match(clockFallback.title, /Uhrzeit/);
+  const certNameFallback = tlsErrorCopy('cert-name');
+  assert.match(certNameFallback.title, /Hostnamen/);
+});
+
+test('pre-cutover gates leave post-cutover renew and wait copy unchanged', () => {
+  const future = new Date(Date.now() + 40 * 24 * 60 * 60 * 1000).toISOString();
+  const healthy = tls({
+    state: 'active',
+    cutoverApplied: true,
+    certificate: { issuer: 'Pebble', notBefore: future, notAfter: future, names: [] },
+  });
+  assert.equal(tlsShowsDnsWaitCopy(healthy), false);
+  assert.equal(tlsIsPersistedFailBeforeCutover(healthy), false);
+  assert.equal(tlsIsApplyFail(healthy), false);
+  assert.equal(tlsCanRenew(healthy), false);
+
+  const degraded = tls({ state: 'degraded', cutoverApplied: true, mode: 'managed' });
+  assert.equal(tlsCanRenew(degraded), true);
+  assert.equal(tlsCanRepair(degraded), true);
+  assert.equal(tlsIsPersistedFailBeforeCutover(degraded), false);
+
+  const postCutoverError = tls({
+    state: 'error',
+    cutoverApplied: true,
+    lastError: { class: 'acme', message: 'renew failed' },
+  });
+  assert.equal(tlsIsPersistedFailBeforeCutover(postCutoverError), false);
+  assert.equal(tlsNetworkShowsGenericErrorFooter(postCutoverError, 'renew failed'), true);
+  assert.equal(tlsCanRenew(postCutoverError), true);
+  assert.match(TLS_CUTOVER_CONFIRM_MESSAGE, /unwiderruflich/);
 });

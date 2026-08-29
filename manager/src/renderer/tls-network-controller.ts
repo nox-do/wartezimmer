@@ -102,6 +102,16 @@ export function createTlsNetworkController(deps: {
     });
   }
 
+  /** Apply / obtain / prepare persistieren `lastError` oft trotz geworfener API-Exception. */
+  async function failThenRefreshHost(error: unknown): Promise<void> {
+    fail(error);
+    try {
+      await deps.onAfterMutation();
+    } catch {
+      /* Keep the mutation error; a later poll can still catch up. */
+    }
+  }
+
   async function afterOk(extra: Partial<TlsNetworkState> = {}): Promise<void> {
     set({ busy: false, error: null, ...extra });
     await deps.onAfterMutation();
@@ -113,7 +123,7 @@ export function createTlsNetworkController(deps: {
       const result = await deps.api.applyHostTls();
       await afterOk({ localChecks: result.checks ?? state.localChecks });
     } catch (error) {
-      fail(error);
+      await failThenRefreshHost(error);
     }
   }
 
@@ -222,7 +232,7 @@ export function createTlsNetworkController(deps: {
           ipv4Reserved: true,
         });
       } catch (error) {
-        fail(error);
+        await failThenRefreshHost(error);
       }
     },
 
@@ -255,7 +265,7 @@ export function createTlsNetworkController(deps: {
         });
         await deps.onAfterMutation();
       } catch (error) {
-        fail(error);
+        await failThenRefreshHost(error);
       }
     },
 

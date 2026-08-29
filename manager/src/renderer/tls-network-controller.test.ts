@@ -29,6 +29,7 @@ function createController(options: {
   lanIpStale?: boolean;
   configuredLanIp?: string | null;
   requestConfirm?: (message: string, onConfirm: () => void) => void;
+  onAfterMutation?: () => void | Promise<void>;
 }) {
   return createTlsNetworkController({
     api: options.api as PraxisManagerApi,
@@ -50,7 +51,7 @@ function createController(options: {
         },
       }),
     lanIp: () => options.lanIp ?? '192.168.1.10',
-    onAfterMutation: async () => {},
+    onAfterMutation: options.onAfterMutation ?? (async () => {}),
     onStateChange: () => {},
     requestConfirm: options.requestConfirm ?? ((_message, onConfirm) => onConfirm()),
   });
@@ -195,4 +196,150 @@ test('apply asks for confirmation before cutover', async () => {
   await controller.apply();
   assert.deepEqual(confirms, [TLS_CUTOVER_CONFIRM_MESSAGE]);
   assert.equal(applied, true);
+});
+
+test('failed apply refreshes host status and keeps the API error if refresh throws', async () => {
+  let afterMutationCalls = 0;
+  const controller = createController({
+    status: tls({ state: 'dns-verified', mode: 'managed', applyReady: true }),
+    onAfterMutation: async () => {
+      afterMutationCalls += 1;
+      if (afterMutationCalls === 1) {
+        throw new Error('status refresh failed');
+      }
+    },
+    api: {
+      applyHostTls: async () => {
+        throw new Error('apply rolled back');
+      },
+    },
+  });
+  await controller.apply();
+  assert.equal(afterMutationCalls, 1);
+  assert.equal(controller.getState().error, 'apply rolled back');
+});
+
+test('failed obtain refreshes host status', async () => {
+  let afterMutationCalls = 0;
+  const controller = createController({
+    status: tls({ state: 'dns-verified', mode: 'managed', applyReady: false }),
+    onAfterMutation: async () => {
+      afterMutationCalls += 1;
+    },
+    api: {
+      obtainHostTlsCertificate: async () => {
+        throw new Error('acme obtain failed');
+      },
+    },
+  });
+  await controller.obtainOrCheck();
+  assert.equal(afterMutationCalls, 1);
+  assert.equal(controller.getState().error, 'acme obtain failed');
+});
+
+test('failed custom certificate check refreshes host status', async () => {
+  let afterMutationCalls = 0;
+  const controller = createController({
+    status: tls({ state: 'dns-verified', mode: 'custom', applyReady: false }),
+    onAfterMutation: async () => {
+      afterMutationCalls += 1;
+    },
+    api: {
+      checkHostTlsCertificate: async () => {
+        throw new Error('PEM clock rejected');
+      },
+    },
+  });
+  await controller.obtainOrCheck();
+  assert.equal(afterMutationCalls, 1);
+  assert.equal(controller.getState().error, 'PEM clock rejected');
+});
+
+test('failed prepare refreshes host status', async () => {
+  let afterMutationCalls = 0;
+  const controller = createController({
+    status: tls({ state: 'off' }),
+    onAfterMutation: async () => {
+      afterMutationCalls += 1;
+    },
+    api: {
+      prepareHostTls: async () => {
+        throw new Error('acme register failed');
+      },
+    },
+  });
+  controller.patchDraft({ ipv4Reserved: true, nameMode: 'generated' });
+  await controller.submitLease();
+  assert.equal(afterMutationCalls, 1);
+  assert.equal(controller.getState().error, 'acme register failed');
+});
+
+test('client validation does not refresh host status', async () => {
+  let afterMutationCalls = 0;
+  const stale = createController({
+    status: tls({ state: 'off' }),
+    lanIpStale: true,
+    onAfterMutation: async () => {
+      afterMutationCalls += 1;
+    },
+    api: {
+      prepareHostTls: async () => {
+        throw new Error('must not prepare');
+      },
+    },
+  });
+  stale.patchDraft({ ipv4Reserved: true, nameMode: 'generated' });
+  await stale.submitLease();
+  assert.equal(stale.getState().error, TLS_LEASE_STALE_LAN_COPY);
+
+  const unnamed = createController({
+    status: tls({ state: 'off' }),
+    onAfterMutation: async () => {
+      afterMutationCalls += 1;
+    },
+  });
+  unnamed.patchDraft({ ipv4Reserved: true, nameMode: 'label', customLabel: '' });
+  await unnamed.submitLease();
+  assert.equal(unnamed.getState().error, 'Bitte einen gültigen Namen wählen.');
+
+  const noLan = createController({
+    status: tls({ state: 'off' }),
+    lanIp: '',
+    onAfterMutation: async () => {
+      afterMutationCalls += 1;
+    },
+  });
+  noLan.patchDraft({ ipv4Reserved: true, nameMode: 'generated' });
+  await noLan.submitLease();
+  assert.equal(noLan.getState().error, 'Bitte zuerst die Adresse dieses Rechners speichern.');
+
+  const noLease = createController({
+    status: tls({ state: 'off' }),
+    onAfterMutation: async () => {
+      afterMutationCalls += 1;
+    },
+  });
+  noLease.patchDraft({ ipv4Reserved: false, nameMode: 'generated' });
+  await noLease.submitLease();
+  assert.equal(noLease.getState().error, 'Bitte die feste IP oder DHCP-Reservierung bestätigen.');
+
+  assert.equal(afterMutationCalls, 0);
+});
+
+test('failed verify-dns does not refresh host status', async () => {
+  let afterMutationCalls = 0;
+  const controller = createController({
+    status: tls({ state: 'awaiting-operator-dns', mode: 'managed' }),
+    onAfterMutation: async () => {
+      afterMutationCalls += 1;
+    },
+    api: {
+      verifyHostTlsDns: async () => {
+        throw new Error('resolver down');
+      },
+    },
+  });
+  await controller.verifyDns();
+  assert.equal(afterMutationCalls, 0);
+  assert.equal(controller.getState().error, 'resolver down');
 });

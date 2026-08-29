@@ -66,6 +66,49 @@ export function tlsExpiryKind(
   return 'ok';
 }
 
+/** DNS-Warten: Checkliste + Warte-Copy, nicht bei error / dns-verified / obtain. */
+export function tlsShowsDnsWaitCopy(tls: TlsStatus | undefined): boolean {
+  return tls?.state === 'awaiting-operator-dns';
+}
+
+/** Persistierter Fail vor Cutover: Repair/Reset. Notice nur bei `lastError`. */
+export function tlsIsPersistedFailBeforeCutover(tls: TlsStatus | undefined): boolean {
+  return Boolean(tls && tls.state === 'error' && !tls.cutoverApplied);
+}
+
+/**
+ * Apply-Fail: Graph bleibt `dns-verified` + `applyReady`; Primäraktion erneut Apply.
+ * `lastError` ist hier die Autorität, nicht `state === error`.
+ */
+export function tlsIsApplyFail(tls: TlsStatus | undefined): boolean {
+  return Boolean(
+    tls &&
+    tls.state === 'dns-verified' &&
+    tls.applyReady &&
+    !tls.cutoverApplied &&
+    tls.lastError,
+  );
+}
+
+/** Strukturierte Notice nur aus persistiertem `lastError`, nicht als Default neben dem Footer. */
+export function tlsShowsStructuredLastErrorNotice(tls: TlsStatus | undefined): boolean {
+  return Boolean(tls?.lastError && (tlsIsPersistedFailBeforeCutover(tls) || tlsIsApplyFail(tls)));
+}
+
+/** Footer nur, wenn nach Refresh kein persistiertes `lastError` für die Vor-Cutover-Gates da ist. */
+export function tlsNetworkShowsGenericErrorFooter(
+  tls: TlsStatus | undefined,
+  error: string | null,
+): boolean {
+  if (!error) {
+    return false;
+  }
+  if (!tls?.lastError) {
+    return true;
+  }
+  return !tlsIsPersistedFailBeforeCutover(tls) && !tlsIsApplyFail(tls);
+}
+
 export function tlsCanVerifyDns(tls: TlsStatus | undefined): boolean {
   return Boolean(
     tls &&
@@ -162,8 +205,8 @@ export function tlsErrorCopy(
       };
     case 'firewall':
       return {
-        title: 'Port 443 ist lokal nicht erreichbar.',
-        action: 'Windows-Firewall für Caddy / Praxis Flow prüfen.',
+        title: 'Port 443 auf diesem Rechner ist nicht erreichbar.',
+        action: 'Windows-Firewall für Caddy prüfen. HTTP bleibt, bis HTTPS übernommen wird.',
       };
     case 'port-443':
       return {
@@ -177,8 +220,8 @@ export function tlsErrorCopy(
       };
     case 'acme':
       return {
-        title: 'Zertifikat konnte nicht ausgestellt werden (ACME).',
-        action: 'Erneut versuchen. Das Einmal-Token nicht neu anzeigen.',
+        title: 'Das Zertifikat konnte nicht ausgestellt werden.',
+        action: 'Erneut versuchen. Das Einmal-Token nicht neu anfordern.',
       };
     case 'cert-name':
       return {
