@@ -36,17 +36,14 @@
     snapshot,
     controller,
     hostPlatform,
-    onPatch,
   }: {
     snapshot: WizardControllerState;
     controller: WizardController;
     hostPlatform: string;
-    onPatch: () => void;
   } = $props();
 
   function patchFields(patch: Parameters<WizardController['patchFields']>[0]): void {
     controller.patchFields(patch);
-    onPatch();
   }
 </script>
 
@@ -107,7 +104,7 @@
             class="btn-secondary wizard-install-link"
             disabled={snapshot.busy}
             onclick={() => {
-              void controller.refreshPrerequisites().then(onPatch);
+              void controller.refreshPrerequisites();
             }}
           >
             {snapshot.busy ? 'Prüfe …' : 'Erneut prüfen'}
@@ -128,7 +125,7 @@
             class="btn-secondary wizard-install-link"
             disabled={snapshot.busy}
             onclick={() => {
-              void controller.refreshPrerequisites().then(onPatch);
+              void controller.refreshPrerequisites();
             }}
           >
             {snapshot.busy ? 'Prüfe …' : 'Erneut prüfen'}
@@ -144,7 +141,7 @@
             class="btn-secondary wizard-install-link"
             disabled={snapshot.busy}
             onclick={() => {
-              void controller.loadReleaseArchive().then(onPatch);
+              void controller.loadReleaseArchive();
             }}
           >
             {snapshot.busy ? 'Import läuft …' : 'Release-Paket wählen …'}
@@ -200,9 +197,7 @@
         disabled={snapshot.busy}
         onChange={(value) => patchFields({ importsHostPath: value })}
         onBrowse={async () => {
-          const path = await controller.browseImportsFolder();
-          onPatch();
-          return path;
+          return controller.browseImportsFolder();
         }}
       />
       <FolderPathField
@@ -211,9 +206,7 @@
         disabled={snapshot.busy}
         onChange={(value) => patchFields({ exportsHostPath: value })}
         onBrowse={async () => {
-          const path = await controller.browseExportsFolder();
-          onPatch();
-          return path;
+          return controller.browseExportsFolder();
         }}
       />
     {:else if snapshot.step === 4}
@@ -281,7 +274,7 @@
         </p>
       </section>
     {:else if snapshot.step === 6}
-      <WizardHttpsPanel {snapshot} {controller} {onPatch} />
+      <WizardHttpsPanel {snapshot} {controller} />
     {:else if snapshot.step === 7}
       {#if !snapshot.plan}
         <p>Plan wird geladen …</p>

@@ -48,7 +48,7 @@ Screens, Netzwerk und TLS wieder zusammenlegen.
 - Kein Svelte-Store / Runes-Store als App-State
 - Kein gemeinsamer „AsyncAction“-Framework für alle Tabs
 - Netzwerk-Controller nicht zerlegen, TLS nicht zurück ins Netzwerk
-- Wizard nicht in diesem Plan umbauen (gleiche gelbe Brücke, später)
+- Wizard nicht umbauen (kein Merge mit Netzwerk; Notify wie Wartung)
 - Restore- und Pfupdate-Wizards bleiben eigene Controller
 - Setup-API, Backup-Format, Routing-Vertrag unberührt
 - Keine Freigabe anderer Wartungsaktionen während Stack-, Backup-, Storage-,
@@ -432,8 +432,9 @@ parallelen Wartungs-Slots.
   einen `onStateChange`-Callback aus; entfernte manuelle Syncs ändern keine
   sichtbare Zustandsübernahme.
 
-**Nicht:** Wizard und Netzwerk in demselben PR mitziehen. Dieselbe Regel gilt
-dort später.
+**Nicht:** keine neuen Panels, keine TLS/Setup-API. Dieselbe Notify-Regel gilt
+jetzt auch für Wizard- und Netzwerk-View (keine Extra-`syncSnapshot` nach
+`patch`/`show`/`hide`/`goNext`).
 
 ---
 
@@ -445,7 +446,7 @@ Umsetzung in **zwei Diffs** (Plan-Schnitte bleiben die Checkliste):
    `activeOperation`, kein Footer-Umzug, keine Notify-Hygiene.
 2. **Diff B = Schnitt 3+4** — getaggte Aktion, Fehlerort, eine Notify-Leitung.
 
-Netzwerk/TLS und Wizard bleiben außerhalb, bis Wartung durch ist.
+Netzwerk/TLS zusammenlegen und Wizard-Umbau bleiben außerhalb. Notify-Regel
+nach Wartung auch für Wizard- und Netzwerk-View.
 
-Kein Umbau ohne den jeweiligen Schnitt; kein „nebenbei noch die Brücke am
-Wizard“.
+Kein Umbau ohne den jeweiligen Schnitt.

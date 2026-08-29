@@ -19,11 +19,9 @@
   let {
     snapshot,
     controller,
-    onPatch,
   }: {
     snapshot: WizardControllerState;
     controller: WizardController;
-    onPatch: () => void;
   } = $props();
 
   const lanIp = $derived(resolvedLanIp(snapshot));
@@ -69,7 +67,6 @@
     fields: Parameters<WizardController['patchFields']>[0],
   ): void {
     controller.patchFields(fields);
-    onPatch();
   }
 
   async function copyText(text: string): Promise<void> {
@@ -262,7 +259,7 @@
         type="button"
         class="btn-secondary"
         disabled={snapshot.busy}
-        onclick={() => void controller.stageWizardTlsCertificate().then(onPatch)}
+        onclick={() => void controller.stageWizardTlsCertificate()}
       >
         {snapshot.customPemStaged ? 'PEM erneut einlesen' : 'PEM einlesen'}
       </button>

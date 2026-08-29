@@ -391,18 +391,16 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     getState: () => state,
 
     patchFields(patchFields) {
-      patch(patchFields);
-      if (
+      const clearsNotice =
         'reachabilityMode' in patchFields ||
         'customHostname' in patchFields ||
         'proxyEnabled' in patchFields ||
         'lanAppIp' in patchFields ||
-        'customLanIp' in patchFields
-      ) {
-        if (state.notice) {
-          patch({ phase: 'idle', notice: null });
-        }
-      }
+        'customLanIp' in patchFields;
+      patch({
+        ...patchFields,
+        ...(clearsNotice && state.notice ? { phase: 'idle' as const, notice: null } : {}),
+      });
     },
 
     applyAndVerify() {

@@ -132,7 +132,6 @@
 
   function patchFields(patch: Parameters<NetworkController['patchFields']>[0]): void {
     controller?.patchFields(patch);
-    syncSnapshot();
   }
 
   const dirty = $derived(
@@ -210,7 +209,6 @@
     if (!session) {
       if (lastSessionGeneration !== null) {
         c.hide();
-        syncSnapshot();
         lastSessionGeneration = null;
       }
       return;
@@ -222,7 +220,6 @@
       }
       lastSessionGeneration = session.generation;
       c.show();
-      syncSnapshot();
       applyExpanderDefaults(c.getState());
       void tls?.hydrateOperatorRequest();
       return;
@@ -231,7 +228,6 @@
     // Same session: config refresh → controller decides hydrate vs keep dirty draft.
     if (config) {
       c.syncFromConfig();
-      syncSnapshot();
     }
   });
 </script>
@@ -365,7 +361,6 @@
             disabled={busy}
             onclick={() => {
               controller?.discardDraft();
-              syncSnapshot();
             }}
           >
             Änderungen verwerfen

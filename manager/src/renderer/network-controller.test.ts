@@ -75,6 +75,7 @@ function createController(options: {
   requestConfirm?: (message: string, onConfirm: () => void) => void;
   verifyProbeOptions?: { maxWaitMs?: number; intervalMs?: number; lanGraceMs?: number };
   onAfterMutation?: () => void;
+  onStateChange?: () => void;
 }) {
   let config = options.config;
   let runtime = options.runtime === undefined ? minimalRuntime(config) : options.runtime;
@@ -85,6 +86,7 @@ function createController(options: {
     requestConfirm: options.requestConfirm ?? (() => {}),
     verifyProbeOptions: options.verifyProbeOptions,
     onAfterMutation: options.onAfterMutation,
+    onStateChange: options.onStateChange,
   });
   return {
     controller,
@@ -798,4 +800,42 @@ test('legacy gateway baseline: untouched draft still syncs; apply stays needed',
   controller.syncFromConfig();
   assert.equal(controller.getState().lanAppIp, '192.168.1.10');
   assert.equal(hostNetworkChanged(controller.getState(), cleared), false);
+});
+
+test('patchFields notifies once and clears a leftover notice in the same patch', async () => {
+  let calls = 0;
+  const { controller } = createController({
+    config: minimalHostStatus({
+      configuredCanonicalBaseUrl: 'http://192.168.1.10:8080',
+      compose: { running: false, services: [] },
+      network: {
+        configuredLanIp: '192.168.1.10',
+        currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
+        lanIpStale: false,
+      },
+    }),
+    api: {
+      saveHostNetwork: async () =>
+        saveResult({
+          composeRestarted: false,
+          stackWasRunning: false,
+          compose: { running: false, services: [] },
+        }),
+    },
+    onStateChange: () => {
+      calls += 1;
+    },
+  });
+  controller.show();
+  await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  controller.patchFields({ lanAppIp: '192.168.1.20' });
+  controller.applyAndVerify();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.ok(controller.getState().notice);
+
+  calls = 0;
+  controller.patchFields({ customLanIp: '10.0.0.2' });
+  assert.equal(calls, 1);
+  assert.equal(controller.getState().notice, null);
 });

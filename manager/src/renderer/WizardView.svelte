@@ -97,7 +97,6 @@
     if (!session) {
       if (lastSessionGeneration !== null) {
         c.hide();
-        syncSnapshot();
         lastSessionGeneration = null;
       }
       return;
@@ -106,7 +105,6 @@
     if (session.generation !== lastSessionGeneration) {
       lastSessionGeneration = session.generation;
       c.show(session.status, session.presentation);
-      syncSnapshot();
     }
   });
 </script>
@@ -134,7 +132,7 @@
     {/if}
 
     {#if controller}
-      <WizardSteps {snapshot} {controller} {hostPlatform} onPatch={syncSnapshot} />
+      <WizardSteps {snapshot} {controller} {hostPlatform} />
     {/if}
 
     <footer class="actions-row actions-row--footer" id="wizard-actions">
@@ -165,7 +163,6 @@
           disabled={snapshot.busy}
           onclick={() => {
             controller?.goBack();
-            syncSnapshot();
           }}
         >
           Zurück
@@ -175,7 +172,7 @@
           id="wizard-next"
           disabled={wizardNextButtonDisabled(snapshot)}
           onclick={() => {
-            void controller?.goNext().then(syncSnapshot);
+            void controller?.goNext();
           }}
         >
           {wizardNextButtonLabel(snapshot)}

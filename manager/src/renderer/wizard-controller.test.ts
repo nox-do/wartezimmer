@@ -895,3 +895,20 @@ test('failed mail replay does not surface an ACME footer', async () => {
   assert.equal(controller.getState().httpsPhase, 'mail');
   assert.equal(controller.getState().operatorRequest, null);
 });
+
+test('wizard patchFields notifies once', () => {
+  let calls = 0;
+  const controller = createWizardController({
+    api: {} as never,
+    onComplete: () => {},
+    onCancel: () => {},
+    onStateChange: () => {
+      calls += 1;
+    },
+  });
+  controller.show(minimalHostStatus(), 'embedded');
+  calls = 0;
+  controller.patchFields({ customLabel: 'praxis' });
+  assert.equal(calls, 1);
+  assert.equal(controller.getState().customLabel, 'praxis');
+});
