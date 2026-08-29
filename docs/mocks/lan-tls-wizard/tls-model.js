@@ -489,7 +489,6 @@
   /** Server-side verify-dns rows. Second-device / rebind are practice-confirmed, not here. */
   function diagnoseItems({ ipv4Reserved, dnsVerified, nameMode }) {
     const waiting = dnsVerified ? 'is-done' : 'is-open';
-    const waitLabel = dnsVerified ? '' : ' — bis zu 48 Stunden';
     const items = [
       { status: 'is-done', text: 'Server hat eine IPv4-Adresse' },
       {
@@ -498,13 +497,13 @@
       },
       {
         status: waiting,
-        text: `Öffentlicher A-Record zeigt auf diese IP${waitLabel}`,
+        text: 'Öffentlicher A-Record zeigt auf diese IP',
       },
     ];
     if (!isCustomCert(nameMode)) {
       items.push({
         status: waiting,
-        text: `ACME-CNAME gesetzt${waitLabel}`,
+        text: 'ACME-CNAME gesetzt',
       });
     }
     return items;
@@ -532,12 +531,12 @@
   function tlsErrorCopy(errorClass) {
     const rows = {
       [TLS_ERROR_CLASS.aRecord]: {
-        title: 'A-Record fehlt oder zeigt nicht auf diesen Rechner.',
-        action: 'Warten oder Mail erneut senden, sobald der Eintrag steht.',
+        title: 'A-Record fehlt.',
+        action: 'Warten, bis ein eigener A-Record auf die LAN-IP zeigt.',
       },
       [TLS_ERROR_CLASS.collision]: {
-        title: 'A-Record zeigt auf eine andere IP — Name ist vergeben.',
-        action: 'Anderes Label wählen und neue Mail an Praxis Flow.',
+        title: 'A-Record zeigt auf eine andere IP.',
+        action: 'Ein eigener A-Record zeigt auf eine andere Adresse. Label prüfen oder Mail erneut.',
       },
       [TLS_ERROR_CLASS.dnsFilter]: {
         title: 'Öffentlicher DNS filtert die private Zieladresse.',

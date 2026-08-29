@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { freshInstallHostStatus, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
+import { TLS_LEASE_STALE_LAN_COPY } from './tls-network-view-model.js';
 import {
   buildWizardPlanInput,
   canLeaveWizardStep1,
@@ -185,6 +186,27 @@ test('planWizardAdvance walks HTTPS phases and prepares after the lease', () => 
     patch: { plan: null },
     after: 'loadPlan',
   });
+});
+
+test('planWizardAdvance blocks HTTPS lease while LAN IP is stale', () => {
+  const state = createWizardFlowState(
+    minimalHostStatus({
+      network: {
+        configuredLanIp: '192.168.1.10',
+        currentLanCandidates: [{ address: '192.168.1.40', interfaceName: 'en0' }],
+        lanIpStale: true,
+      },
+    }),
+    6,
+  );
+  state.proxyEnabled = true;
+  state.httpsPhase = 'lease';
+  state.ipv4Reserved = true;
+  const action = planWizardAdvance(6, state);
+  assert.equal(action.type, 'validate-error');
+  if (action.type === 'validate-error') {
+    assert.equal(action.message, TLS_LEASE_STALE_LAN_COPY);
+  }
 });
 
 test('planWizardBack returns to mail only after TLS is prepared', () => {

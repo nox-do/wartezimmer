@@ -452,7 +452,9 @@ test('resolveProxyImageRef falls back to the Compose stock default', () => {
   assert.equal(resolveProxyImageRef(undefined), PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF);
   assert.equal(resolveProxyImageRef(new Map()), PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF);
   assert.equal(
-    resolveProxyImageRef(new Map([['PRAXIS_FLOW_PROXY_IMAGE', 'praxis-flow-proxy:2.11.4-acmedns']])),
+    resolveProxyImageRef(
+      new Map([['PRAXIS_FLOW_PROXY_IMAGE', 'praxis-flow-proxy:2.11.4-acmedns']]),
+    ),
     'praxis-flow-proxy:2.11.4-acmedns',
   );
 });

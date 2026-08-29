@@ -24,7 +24,13 @@ import { selectPfupdateArchiveDialog } from './select-pfupdate-archive.js';
 import { renewTlsCertificateFromPicker, stageTlsCertificateFromPicker } from './select-tls-pem.js';
 import { installMacApplicationMenu } from './mac-app-menu.js';
 import { fetchHostStatusFromApi, callSetupApi } from './setup-api.js';
-import { inspectPfbackupFile, readPfbackupFromDialog, readTlsSidecarFromDialog, savePfbackupToDisk, saveTlsSidecarToDisk } from './pfbackup-dialog.js';
+import {
+  inspectPfbackupFile,
+  readPfbackupFromDialog,
+  readTlsSidecarFromDialog,
+  savePfbackupToDisk,
+  saveTlsSidecarToDisk,
+} from './pfbackup-dialog.js';
 import { startSetupServer, stopSetupServer, type SetupServerHandle } from './setup-server.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));

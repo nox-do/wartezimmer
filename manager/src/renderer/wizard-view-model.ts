@@ -8,16 +8,14 @@ import {
   type WizardStep,
 } from './wizard-flow.js';
 import { tlsNameValid } from './tls-identity.js';
+import { tlsDnsWaitCopy, tlsLeaseBlockedByStaleLan } from './tls-network-view-model.js';
 import type { WizardControllerState } from './wizard-controller.js';
 
 export const WIZARD_HTTPS_CONTINUE_COPY =
   'Sie können die Einrichtung fortsetzen und HTTPS in den nächsten Tagen hier in der Manager-App fortsetzen.';
 
 export function wizardHttpsDnsWaitCopy(mode: 'managed' | 'custom' | null | undefined): string {
-  if (mode === 'custom') {
-    return 'A-Record in Ihrem DNS anlegen. Tage sind normal. HTTP bleibt erreichbar.';
-  }
-  return 'Mail ist raus. DNS kommt von Praxis Flow. Tage sind normal. HTTP bleibt erreichbar.';
+  return tlsDnsWaitCopy(mode === 'custom' ? 'custom' : 'managed');
 }
 
 export function wizardCheckMark(ok: boolean): string {
@@ -80,14 +78,20 @@ export function wizardHttpsNextDisabled(
   httpsPhase: WizardHttpsPhase,
   state: Pick<
     WizardControllerState,
-    'nameMode' | 'customLabel' | 'customDomain' | 'ipv4Reserved' | 'mailAck' | 'customPemStaged'
+    | 'nameMode'
+    | 'customLabel'
+    | 'customDomain'
+    | 'ipv4Reserved'
+    | 'mailAck'
+    | 'customPemStaged'
+    | 'status'
   >,
 ): boolean {
   if (httpsPhase === 'hostname') {
     return !tlsNameValid(state);
   }
   if (httpsPhase === 'lease') {
-    return !state.ipv4Reserved;
+    return tlsLeaseBlockedByStaleLan(state.status?.network.lanIpStale) || !state.ipv4Reserved;
   }
   if (httpsPhase === 'mail') {
     return !wizardHttpsMailReady(state);

@@ -14,6 +14,14 @@ export const TLS_CUTOVER_CONFIRM_MESSAGE =
 export const TLS_RESET_CONFIRM_MESSAGE =
   'HTTPS-Vorbereitung verwerfen? Name, Mailtext und ACME-Delegation gehen verloren. Der Zugriff bleibt HTTP.';
 
+export function tlsLeaseBlockedByStaleLan(lanIpStale: boolean | undefined): boolean {
+  return Boolean(lanIpStale);
+}
+
+/** Lease-Schritt: feste IP erst bestätigen, wenn .env und Rechner-Adresse übereinstimmen. */
+export const TLS_LEASE_STALE_LAN_COPY =
+  'Die gespeicherte IP-Adresse passt nicht zur aktuellen Adresse dieses Rechners. Bitte anpassen.';
+
 export type TlsExpiryKind = 'ok' | 'soon' | 'expired' | 'none';
 
 export type TlsChecklistItem = { status: 'is-done' | 'is-open' | 'is-bad'; text: string };
@@ -61,8 +69,8 @@ export function tlsExpiryKind(
 export function tlsCanVerifyDns(tls: TlsStatus | undefined): boolean {
   return Boolean(
     tls &&
-      (tls.state === 'awaiting-operator-dns' ||
-        (tls.state === 'error' && !tls.cutoverApplied && !tls.applyReady)),
+    (tls.state === 'awaiting-operator-dns' ||
+      (tls.state === 'error' && !tls.cutoverApplied && !tls.applyReady)),
   );
 }
 
@@ -119,25 +127,28 @@ export function tlsNetworkSubtitle(tls: TlsStatus | undefined): string {
 
 export function tlsDnsWaitCopy(mode: TlsStatus['mode']): string {
   if (mode === 'custom') {
-    return 'A-Record in Ihrem DNS anlegen. Tage sind normal. HTTP bleibt erreichbar.';
+    return 'A-Record in Ihrem DNS anlegen. Nach dem Setzen kann es bis zu 48 Stunden dauern. HTTP bleibt erreichbar.';
   }
-  return 'Mail ist raus, DNS kommt vom Betreiber. Tage sind normal. HTTP bleibt erreichbar.';
+  return 'Der Eintrag erfolgt manuell. Nach dem Setzen des DNS-Eintrags kann es bis zu 48 Stunden dauern, bis dieser aktiv ist.';
 }
 
-export function tlsErrorCopy(errorClass: TlsErrorClass | null | undefined): {
+export function tlsErrorCopy(
+  errorClass: TlsErrorClass | null | undefined,
+  message?: string | null,
+): {
   title: string;
   action: string;
 } {
   switch (errorClass) {
     case 'a-record':
       return {
-        title: 'A-Record fehlt oder zeigt nicht auf diesen Rechner.',
-        action: 'Warten oder Mail erneut senden, sobald der Eintrag steht.',
+        title: message?.trim() || 'A-Record fehlt.',
+        action: 'Warten, bis ein eigener A-Record auf die LAN-IP zeigt.',
       };
     case 'collision':
       return {
-        title: 'A-Record zeigt auf eine andere IP — Name ist vergeben.',
-        action: 'Anderes Label wählen und neue Mail an Praxis Flow.',
+        title: message?.trim() || 'A-Record zeigt auf eine andere IP.',
+        action: 'Ein eigener A-Record zeigt auf eine andere Adresse. Label prüfen oder Mail erneut.',
       };
     case 'dns-filter':
       return {
@@ -210,22 +221,24 @@ export function tlsResumeCard(tls: TlsStatus | undefined): {
       button: 'Fortsetzen',
     };
   }
-  if (tls.state === 'degraded' || (tls.state === 'active' && tlsExpiryKind(tls.certificate) !== 'ok')) {
+  if (
+    tls.state === 'degraded' ||
+    (tls.state === 'active' && tlsExpiryKind(tls.certificate) !== 'ok')
+  ) {
     return {
-      title: tlsExpiryKind(tls.certificate) === 'expired' ? 'Zertifikat abgelaufen' : 'HTTPS braucht Aufmerksamkeit',
+      title:
+        tlsExpiryKind(tls.certificate) === 'expired'
+          ? 'Zertifikat abgelaufen'
+          : 'HTTPS braucht Aufmerksamkeit',
       copy: 'Weiter unter Netzwerk.',
       button: 'Fortsetzen',
     };
   }
   return {
     title: 'HTTPS wartet auf DNS',
-    copy: `${tlsDnsWaitCopy(tls.mode)} Fortsetzen unter Netzwerk. Den Manager schließen ist in Ordnung.`,
+    copy: `${tlsDnsWaitCopy(tls.mode)} Den Manager schließen ist in Ordnung.`,
     button: 'Fortsetzen',
   };
-}
-
-function dnsOkLabel(verified: boolean, fallback: string, waitingLabel: string): string {
-  return verified ? fallback : `${fallback}${waitingLabel}`;
 }
 
 export function tlsDiagnoseItems(input: {
@@ -238,14 +251,21 @@ export function tlsDiagnoseItems(input: {
     input.tls.state === 'obtaining-certificate' ||
     input.tls.state === 'active' ||
     input.tls.state === 'degraded';
-  const fromChecks = (id: TlsDnsCheck['id'], fallback: string, waitingLabel: string): TlsChecklistItem => {
+  const fromChecks = (
+    id: TlsDnsCheck['id'],
+    fallback: string,
+  ): TlsChecklistItem => {
     const check = input.checks?.find((item) => item.id === id);
     if (check) {
-      return { status: check.ok ? 'is-done' : 'is-bad', text: check.message };
+      const text =
+        check.detail && !check.message.includes(check.detail)
+          ? `${check.message} (${check.detail})`
+          : check.message;
+      return { status: check.ok ? 'is-done' : 'is-bad', text };
     }
     return {
       status: dnsVerified ? 'is-done' : 'is-open',
-      text: dnsOkLabel(dnsVerified, fallback, waitingLabel),
+      text: fallback,
     };
   };
   const items: TlsChecklistItem[] = [
@@ -254,10 +274,10 @@ export function tlsDiagnoseItems(input: {
       status: input.ipv4Reserved ? 'is-done' : 'is-open',
       text: 'feste IP / DHCP-Reservierung bestätigt',
     },
-    fromChecks('a-record', 'Öffentlicher A-Record zeigt auf diese IP', ' — Tage sind normal'),
+    fromChecks('a-record', 'Öffentlicher A-Record zeigt auf diese IP'),
   ];
   if (input.tls.mode !== 'custom') {
-    items.push(fromChecks('acme-cname', 'ACME-CNAME gesetzt', ' — Tage sind normal'));
+    items.push(fromChecks('acme-cname', 'ACME-CNAME gesetzt'));
   }
   return items;
 }

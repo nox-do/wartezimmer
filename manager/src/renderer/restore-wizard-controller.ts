@@ -278,9 +278,7 @@ export function createRestoreWizardController(
 function restoreInspectError(
   inspect: Awaited<ReturnType<PraxisManagerApi['inspectPfbackup']>>,
 ): string {
-  return (
-    restoreInspectBlockedMessage(inspect) ?? 'Backup ist für Restore nicht geeignet.'
-  );
+  return restoreInspectBlockedMessage(inspect) ?? 'Backup ist für Restore nicht geeignet.';
 }
 
 function formatRestoreFailure(

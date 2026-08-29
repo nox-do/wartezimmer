@@ -1,6 +1,12 @@
 <script lang="ts">
   import { managerShell } from './manager-shell-state.svelte.js';
-  import { isSetupEntryStatus, lanWarningText } from './status-view-model.js';
+  import { deriveOverallStatus } from './health-header.js';
+  import {
+    isSetupEntryStatus,
+    lanWarningText,
+    showStatusOverallNotice,
+    statusOverallNoticeClass,
+  } from './status-view-model.js';
   import DeliveryImagesWarning from './DeliveryImagesWarning.svelte';
   import DeviceUrls from './DeviceUrls.svelte';
   import SetupEntry from './SetupEntry.svelte';
@@ -19,16 +25,30 @@
     onOpenNetwork: () => void;
   } = $props();
 
-  /** Status page shows saved config; live stack/probes live in HealthHeader (runtimeSnapshot). */
+  /** Live stack/probes: HealthHeader tiles. Overall copy + facts live on this page. */
   const configSnapshot = $derived(managerShell.configSnapshot);
   const statusError = $derived(managerShell.statusError);
   const setupEntry = $derived(configSnapshot ? isSetupEntryStatus(configSnapshot) : false);
   const lanWarning = $derived(
     configSnapshot ? lanWarningText(configSnapshot, setupEntry) : null,
   );
+  const overall = $derived(
+    managerShell.runtimeError
+      ? ({ text: 'Unbekannt', level: 'bad' } as const)
+      : managerShell.runtimeSnapshot
+        ? deriveOverallStatus(managerShell.runtimeSnapshot)
+        : null,
+  );
+  const showOverall = $derived(
+    showStatusOverallNotice(setupEntry, overall?.text),
+  );
 </script>
 
-<div id="status-view" class="app" hidden={managerShell.activeView !== 'status'}>
+<div
+  id="status-view"
+  class="app"
+  hidden={managerShell.activeView !== 'status' || !managerShell.bootReady}
+>
   {#if statusError && !configSnapshot}
     <p id="error-message" class="error">
       {statusError || 'Setup-API nicht erreichbar — bitte Manager neu starten.'}
@@ -44,6 +64,15 @@
         {onLoadReleaseArchive}
       />
     {:else}
+      {#if showOverall && overall}
+        <p
+          id="status-overall"
+          class={statusOverallNoticeClass(overall.level)}
+          aria-live="polite"
+        >
+          {overall.text}
+        </p>
+      {/if}
       <TlsResumeCard tls={configSnapshot.tls} onResume={onOpenNetwork} />
     {/if}
     <DeliveryImagesWarning

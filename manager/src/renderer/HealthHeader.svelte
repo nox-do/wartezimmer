@@ -1,22 +1,18 @@
 <script lang="ts">
   import {
     collectHealthTiles,
-    deriveOverallStatus,
     type HealthTileChip,
     type HealthTileSpec,
   } from './health-header.js';
   import { managerShell } from './manager-shell-state.svelte.js';
+  import { isSetupEntryStatus } from './status-view-model.js';
 
-  const overall = $derived(
-    managerShell.runtimeError
-      ? ({ text: 'Unbekannt', level: 'bad' } as const)
-      : managerShell.runtimeSnapshot
-        ? deriveOverallStatus(managerShell.runtimeSnapshot)
-        : ({ text: '…', level: 'ok' } as const),
+  const setupEntry = $derived(
+    !managerShell.configSnapshot || isSetupEntryStatus(managerShell.configSnapshot),
   );
 
   const tiles = $derived(
-    managerShell.runtimeError || !managerShell.runtimeSnapshot
+    managerShell.runtimeError || !managerShell.runtimeSnapshot || setupEntry
       ? []
       : collectHealthTiles(managerShell.runtimeSnapshot),
   );
@@ -48,9 +44,6 @@
 </script>
 
 <header id="health-header" class="health-header">
-  <p id="health-banner" class={`health-banner is-${overall.level}`} aria-live="polite">
-    {overall.text}
-  </p>
   <div id="health-tiles" class="health-tiles">
     {#if managerShell.runtimeError}
       <article class="health-tile health-tile-error">{errorMessage}</article>

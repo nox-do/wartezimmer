@@ -289,16 +289,18 @@ function packSidecarBase64(installationId: string, hostname: string): string {
   return bytes.toString('base64');
 }
 
-async function inspectTls(
-  env: Record<string, string>,
-  tlsSidecarBase64?: string,
-) {
+async function inspectTls(env: Record<string, string>, tlsSidecarBase64?: string) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-inspect-tls-'));
   try {
-    return await inspectPfbackup(inspectContent(env), testSetupContext(dir), {
-      checkTargetAppReachable: async () => true,
-      validateSettingsSnapshot: async () => ({ ok: true, errors: [] }),
-    }, { tlsSidecarBase64 });
+    return await inspectPfbackup(
+      inspectContent(env),
+      testSetupContext(dir),
+      {
+        checkTargetAppReachable: async () => true,
+        validateSettingsSnapshot: async () => ({ ok: true, errors: [] }),
+      },
+      { tlsSidecarBase64 },
+    );
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

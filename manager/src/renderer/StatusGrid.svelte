@@ -14,11 +14,15 @@
 </script>
 
 {#if !setupEntry}
-  <h2 id="status-grid-heading" class="status-grid-heading" hidden>Diagnose</h2>
-  <dl class="status-grid" id="status-grid">
-    {#each rows as row (row.label)}
-      <dt>{row.label}</dt>
-      <dd>{row.value}</dd>
-    {/each}
-  </dl>
+  <section class="status-facts" id="status-facts">
+    <h2 id="status-grid-heading">Host</h2>
+    <div class="lan-ip-status" id="status-grid">
+      {#each rows as row (row.label)}
+        <div class="lan-ip-status-row">
+          <span class="lan-ip-status-label">{row.label}</span>
+          <span class="lan-ip-status-value">{row.value}</span>
+        </div>
+      {/each}
+    </div>
+  </section>
 {/if}

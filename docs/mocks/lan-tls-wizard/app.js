@@ -684,6 +684,7 @@ function renderTlsFollowup(includeLead = true) {
       )}
       <div class="actions-row">
         <button type="button" id="tls-cutover" ${applyOk ? '' : 'disabled'}>Auf HTTPS umstellen</button>
+        <button type="button" class="btn-secondary" id="tls-reset">HTTPS-Vorbereitung verwerfen</button>
       </div>`;
   }
 
@@ -702,7 +703,8 @@ function renderTlsFollowup(includeLead = true) {
       ${networkActions(
         `<button type="button" id="tls-obtain" ${obtainOk ? '' : 'disabled'}>${
           isCustomCert(state.nameMode) ? 'Lokal prüfen' : 'Zertifikat holen'
-        }</button>`,
+        }</button>
+        <button type="button" class="btn-secondary" id="tls-reset">HTTPS-Vorbereitung verwerfen</button>`,
       )}
       <p class="hint">${
         isCustomCert(state.nameMode)
@@ -712,8 +714,9 @@ function renderTlsFollowup(includeLead = true) {
   }
 
   return `${lead}${dnsList}
-    ${networkActions('<button type="button" id="verify-dns">DNS prüfen</button>')}
-    <p class="hint">„DNS prüfen“ sieht nur den öffentlichen Eintrag von diesem Rechner aus — nicht TV oder Tablet.</p>`;
+    ${networkActions(
+      '<button type="button" id="verify-dns">DNS prüfen</button><button type="button" class="btn-secondary" id="tls-reset">HTTPS-Vorbereitung verwerfen</button>',
+    )}`;
 }
 
 function networkStartPhase() {
@@ -861,11 +864,7 @@ function renderNetworkTls() {
     });
     return httpsSection(
       'HTTPS vorbereiten',
-      `${notice(
-        'warn',
-        'Einstieg unter Netzwerk, weil der Assistent „Später“ gewählt hat. Nicht den Assistenten erneut öffnen.',
-      )}
-        ${renderTls()}
+      `${renderTls()}
         ${networkActions(
           `<button type="button" class="btn-link" id="network-tls-back">Zurück</button>
           <button type="button" id="network-tls-next" ${nextDisabled ? 'disabled' : ''}>Weiter</button>`,
@@ -886,7 +885,7 @@ function renderNetworkTls() {
   }
   return httpsSection(
     'HTTPS',
-    `<p class="hint">Noch nicht vorbereitet. HTTPS hier vorbereiten — nicht in den Assistenten zurück.</p>
+    `<p class="hint">Noch nicht vorbereitet. HTTPS hier vorbereiten.</p>
       <button type="button" id="start-tls-network">HTTPS vorbereiten</button>`,
   );
 }
@@ -958,14 +957,14 @@ function renderStatus() {
   } else if (tls === 'error') {
     card = `<section class="setup-entry">
         <p class="setup-entry-eyebrow">HTTPS</p>
-        <h1>HTTPS fehlgeschlagen</h1>
+        <h2 class="network-config-subheading">HTTPS fehlgeschlagen</h2>
         <p class="setup-entry-copy">HTTP läuft weiter. Fortsetzen unter <strong>Netzwerk</strong>.</p>
         <button type="button" class="setup-entry-start" id="resume-tls">Fortsetzen</button>
       </section>`;
   } else if (tls === 'obtaining-certificate') {
     card = `<section class="setup-entry">
         <p class="setup-entry-eyebrow">HTTPS</p>
-        <h1>Zertifikat wird geholt</h1>
+        <h2 class="network-config-subheading">Zertifikat wird geholt</h2>
         <p class="setup-entry-copy">HTTP bleibt erreichbar. Fortsetzen unter <strong>Netzwerk</strong>.</p>
         <button type="button" class="setup-entry-start" id="resume-tls">Fortsetzen</button>
       </section>`;
@@ -973,7 +972,7 @@ function renderStatus() {
     const ready = state.certPhase === CERT_PHASE.ready;
     card = `<section class="setup-entry">
         <p class="setup-entry-eyebrow">HTTPS</p>
-        <h1>${ready ? 'Zertifikat liegt vor' : 'DNS stimmt'}</h1>
+        <h2 class="network-config-subheading">${ready ? 'Zertifikat liegt vor' : 'DNS stimmt'}</h2>
         <p class="setup-entry-copy">${
           ready
             ? 'HTTP bleibt, bis Sie unter Netzwerk auf HTTPS umstellen.'
@@ -984,22 +983,22 @@ function renderStatus() {
   } else if (pending) {
     card = `<section class="setup-entry">
         <p class="setup-entry-eyebrow">HTTPS</p>
-        <h1>HTTPS wartet auf DNS</h1>
-        <p class="setup-entry-copy">${dnsWaitCopy()} ${continueHttpsLaterCopy()} Fortsetzen unter <strong>Netzwerk</strong>.</p>
+        <h2 class="network-config-subheading">HTTPS wartet auf DNS</h2>
+        <p class="setup-entry-copy">${dnsWaitCopy()} ${continueHttpsLaterCopy()}</p>
         <p class="setup-entry-note">Den Manager schließen ist in Ordnung. Nicht zurück in den Assistenten.</p>
         <button type="button" class="setup-entry-start" id="resume-tls">Fortsetzen</button>
       </section>`;
   } else if (httpsEligible(state.proxyEnabled)) {
     card = `<section class="setup-entry">
         <p class="setup-entry-eyebrow">HTTPS</p>
-        <h1>Noch nicht vorbereitet</h1>
+        <h2 class="network-config-subheading">Noch nicht vorbereitet</h2>
         <p class="setup-entry-copy">Einstieg unter <strong>Netzwerk</strong> — nicht zurück in den Assistenten.</p>
         <button type="button" class="setup-entry-start" id="resume-tls">Unter Netzwerk beginnen</button>
       </section>`;
   } else {
     card = `<section class="setup-entry">
         <p class="setup-entry-eyebrow">HTTPS</p>
-        <h1>Noch nicht vorbereitet</h1>
+        <h2 class="network-config-subheading">Noch nicht vorbereitet</h2>
         <p class="setup-entry-copy">${noProxyHttpsWarning()}</p>
         <button type="button" class="setup-entry-start" id="resume-tls">Fortsetzen</button>
       </section>`;

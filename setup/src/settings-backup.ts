@@ -347,9 +347,7 @@ export function getPfbackupInfo(ctx: SetupContext): {
   const latestBackupPath = findLatestPfbackupPath(ctx.home);
   const sidecarName = latestBackupPath ? siblingTlsSidecarBasename(latestBackupPath) : null;
   const latestTlsSidecarPath =
-    latestBackupPath && sidecarName
-      ? path.join(path.dirname(latestBackupPath), sidecarName)
-      : null;
+    latestBackupPath && sidecarName ? path.join(path.dirname(latestBackupPath), sidecarName) : null;
   return {
     envPath,
     latestBackupPath,

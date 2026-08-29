@@ -12,7 +12,13 @@ export type TlsSidecarManifest = {
 };
 
 const MANIFEST_NAME = 'manifest.json';
-const ALLOWED_TOP_LEVEL = new Set(['manifest.json', 'caddy-data', 'caddy-config', 'acme-dns.json', 'certs']);
+const ALLOWED_TOP_LEVEL = new Set([
+  'manifest.json',
+  'caddy-data',
+  'caddy-config',
+  'acme-dns.json',
+  'certs',
+]);
 
 export function decodeTlsSidecarBase64(tlsSidecarBase64: string | undefined): Buffer | null {
   if (typeof tlsSidecarBase64 !== 'string' || tlsSidecarBase64.trim() === '') {
@@ -80,7 +86,8 @@ export function parseTlsSidecarManifestFromBytes(bytes: Buffer): TlsSidecarManif
     if (parsed.formatVersion !== 1) {
       return null;
     }
-    const installationId = typeof parsed.installationId === 'string' ? parsed.installationId.trim() : '';
+    const installationId =
+      typeof parsed.installationId === 'string' ? parsed.installationId.trim() : '';
     const hostname = typeof parsed.hostname === 'string' ? parsed.hostname.trim() : '';
     return { formatVersion: 1, installationId, hostname };
   } catch {
@@ -143,7 +150,9 @@ export function packTlsSidecarArchive(input: {
       encoding: 'utf8',
     });
     if (packed.status !== 0) {
-      throw new Error(packed.stderr || packed.stdout || 'TLS-Sidecar konnte nicht geschrieben werden.');
+      throw new Error(
+        packed.stderr || packed.stdout || 'TLS-Sidecar konnte nicht geschrieben werden.',
+      );
     }
     restrictSecretPath(input.destinationPath);
   } finally {
@@ -189,7 +198,9 @@ export function unpackTlsSidecarBytes(bytes: Buffer, installHome: string): void 
     validateSidecarTarEntries(entries);
     const extracted = spawnSync('tar', ['xzf', archivePath, '-C', staging], { encoding: 'utf8' });
     if (extracted.status !== 0) {
-      throw new Error(extracted.stderr || extracted.stdout || 'TLS-Sidecar konnte nicht entpackt werden.');
+      throw new Error(
+        extracted.stderr || extracted.stdout || 'TLS-Sidecar konnte nicht entpackt werden.',
+      );
     }
     wipeTlsSidecarRestoreTargets(installHome);
     const paths = resolveProxyTlsPaths(installHome);

@@ -155,5 +155,5 @@ test('operatorZoneMailBody redacts the token after consumption', () => {
   });
   assert.equal(consumed.includes('secret-token'), false);
   assert.match(consumed, /bereits verwendet/);
-  assert.match(consumed, /CNAME  uuid\.auth\.acme-dns\.io\./);
+  assert.match(consumed, /CNAME {2}uuid\.auth\.acme-dns\.io\./);
 });

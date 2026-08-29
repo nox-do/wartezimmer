@@ -132,6 +132,31 @@ test('does not begin maintenance after navigating to network before refresh reso
   assert.deepEqual(sessions.cleared, ['maintenance', 'network']);
 });
 
+test('wizard reuses provided status without a second fetch', () => {
+  const sessions = createSessionRecorder();
+  let fetched = 0;
+  const status = minimalHostStatus({ envExists: false });
+
+  const navigation = createManagerNavigation({
+    hostRefresh: createMockHostRefresh({
+      getView: () => 'wizard',
+    }),
+    syncShell: () => {},
+    sessions,
+    fetchSetupStatus: async () => {
+      fetched += 1;
+      return minimalHostStatus();
+    },
+  });
+
+  navigation.navigateTo('wizard', { wizardPresentation: 'fullscreen', status });
+
+  assert.equal(fetched, 0);
+  assert.equal(sessions.wizardShown.length, 1);
+  assert.equal(sessions.wizardShown[0]?.status, status);
+  assert.equal(sessions.wizardShown[0]?.presentation, 'fullscreen');
+});
+
 test('does not show wizard after leaving wizard before fetch resolves', async () => {
   let currentView: 'status' | 'maintenance' | 'network' | 'wizard' = 'status';
   let resolveFetch!: (value: HostStatus) => void;

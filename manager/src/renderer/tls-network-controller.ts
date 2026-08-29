@@ -1,4 +1,10 @@
-import type { HostStatus, TlsDnsCheck, TlsLocalCheck, TlsOperatorRequest, TlsStatus } from '../shared/host-status.js';
+import type {
+  HostStatus,
+  TlsDnsCheck,
+  TlsLocalCheck,
+  TlsOperatorRequest,
+  TlsStatus,
+} from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import {
   tlsModeForNameMode,
@@ -6,7 +12,12 @@ import {
   tlsPrepareHostname,
   type TlsNameMode,
 } from './tls-identity.js';
-import { TLS_CUTOVER_CONFIRM_MESSAGE, TLS_RESET_CONFIRM_MESSAGE } from './tls-network-view-model.js';
+import {
+  TLS_CUTOVER_CONFIRM_MESSAGE,
+  TLS_LEASE_STALE_LAN_COPY,
+  TLS_RESET_CONFIRM_MESSAGE,
+  tlsLeaseBlockedByStaleLan,
+} from './tls-network-view-model.js';
 
 export type TlsStartPhase = 'offer' | 'hostname' | 'lease';
 
@@ -46,7 +57,9 @@ export type TlsNetworkController = {
   startPrepare(): void;
   back(): void;
   patchDraft(
-    patch: Partial<Pick<TlsNetworkState, 'nameMode' | 'customLabel' | 'customDomain' | 'ipv4Reserved'>>,
+    patch: Partial<
+      Pick<TlsNetworkState, 'nameMode' | 'customLabel' | 'customDomain' | 'ipv4Reserved'>
+    >,
   ): void;
   advanceHostname(): void;
   submitLease(): Promise<void>;
@@ -175,6 +188,11 @@ export function createTlsNetworkController(deps: {
     async submitLease() {
       const current = tls();
       const lanIp = deps.lanIp()?.trim();
+      const network = deps.getConfig()?.network;
+      if (tlsLeaseBlockedByStaleLan(network?.lanIpStale)) {
+        set({ error: TLS_LEASE_STALE_LAN_COPY });
+        return;
+      }
       if (!state.ipv4Reserved) {
         set({ error: 'Bitte die feste IP oder DHCP-Reservierung bestätigen.' });
         return;
@@ -214,7 +232,7 @@ export function createTlsNetworkController(deps: {
         const result = await deps.api.verifyHostTlsDns();
         set({
           busy: false,
-          error: result.tls.state === 'error' ? result.tls.lastError?.message ?? null : null,
+          error: null,
           dnsChecks: result.checks,
         });
         await deps.onAfterMutation();
@@ -232,7 +250,7 @@ export function createTlsNetworkController(deps: {
             : await deps.api.obtainHostTlsCertificate();
         set({
           busy: false,
-          error: result.tls.state === 'error' ? result.tls.lastError?.message ?? null : null,
+          error: null,
           localChecks: result.checks ?? null,
         });
         await deps.onAfterMutation();

@@ -91,6 +91,7 @@ copyFile('.env.example');
 copyFile('docker-compose.delivery.yml');
 copyFile('docker-compose.gateway.delivery.yml');
 copyFile('docker-compose.proxy.delivery.yml');
+copyFile('docker-compose.proxy-tls.delivery.yml');
 fs.mkdirSync(path.join(templatesOutput, 'proxy'), { recursive: true });
 copyFile('proxy/Caddyfile');
 

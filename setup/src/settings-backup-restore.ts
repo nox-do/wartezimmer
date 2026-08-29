@@ -23,7 +23,10 @@ import {
   runFreshDbSettingsCutover,
   type FreshDbCutoverPhase,
 } from './fresh-db-settings-cutover.js';
-import { checkMaintenanceAppReachable, buildPfbackupTlsInspectSummary } from './settings-backup-inspect.js';
+import {
+  checkMaintenanceAppReachable,
+  buildPfbackupTlsInspectSummary,
+} from './settings-backup-inspect.js';
 import {
   fetchSettingsDbSnapshotFromApp,
   importSettingsSnapshotViaApp,
@@ -329,7 +332,11 @@ function resolveRestoreRuntime(deps: PfbackupRestoreDeps): RestoreRuntime {
 }
 
 function stripTlsPreparationKeys(env: Record<string, string>): void {
-  for (const key of [...TLS_ENV_KEYS, ...PROXY_TLS_HOST_PATH_ENV_KEYS, ...PROXY_TLS_RUNTIME_ENV_KEYS]) {
+  for (const key of [
+    ...TLS_ENV_KEYS,
+    ...PROXY_TLS_HOST_PATH_ENV_KEYS,
+    ...PROXY_TLS_RUNTIME_ENV_KEYS,
+  ]) {
     delete env[key];
   }
 }
@@ -339,7 +346,11 @@ function applyTlsRestorePlan(input: {
   restoreEnv: Record<string, string>;
   tlsSidecarBase64: string | undefined;
   installHome: string;
-}): { restoreEnv: Record<string, string>; tlsSidecarBytes: Buffer | null; discardTlsPreparation: boolean } {
+}): {
+  restoreEnv: Record<string, string>;
+  tlsSidecarBytes: Buffer | null;
+  discardTlsPreparation: boolean;
+} {
   const tls = buildPfbackupTlsInspectSummary(input.backupEnv, input.tlsSidecarBase64);
   if (!tls) {
     return { restoreEnv: input.restoreEnv, tlsSidecarBytes: null, discardTlsPreparation: false };

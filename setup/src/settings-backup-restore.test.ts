@@ -7,7 +7,13 @@ import { buildPfbackupArchive, serializePfbackupArchive } from '@praxis-flow/ser
 import { APP_DB_RELATED_FILES, createLocalAppDataAccess } from './app-data-volume.js';
 import { readEnvMap, writeEnvRecordAtomically } from './env-file.js';
 import { readManagerState } from './manager-state.js';
-import { restorePfbackup, mergeConfigRestoreEnv, mergeConfigRestoreManagerState, RESTORE_PHASES, type PfbackupRestoreDeps } from './settings-backup-restore.js';
+import {
+  restorePfbackup,
+  mergeConfigRestoreEnv,
+  mergeConfigRestoreManagerState,
+  RESTORE_PHASES,
+  type PfbackupRestoreDeps,
+} from './settings-backup-restore.js';
 import { packTlsSidecarArchive } from './tls-backup-sidecar.js';
 import { GENERATED_CADDYFILE_MARKER, resolveProxyTlsPaths } from './proxy-tls.js';
 import { testSetupContext } from './test-setup-context.js';
@@ -730,7 +736,10 @@ test('restorePfbackup unpacks sidecar bytes and does not accept a host path', as
     assert.equal(env.get('CANONICAL_BASE_URL'), 'https://7fk3m2.lan.notaus.de');
     assert.equal(env.get('TLS_INSTALLATION_ID'), '7fk3m2q9');
     const restored = resolveProxyTlsPaths(dir);
-    assert.equal(fs.readFileSync(path.join(restored.caddyData, 'marker.txt'), 'utf8'), 'caddy-state');
+    assert.equal(
+      fs.readFileSync(path.join(restored.caddyData, 'marker.txt'), 'utf8'),
+      'caddy-state',
+    );
     assert.equal(fs.existsSync(path.join(restored.caddyData, 'stale.txt')), false);
     const caddyfile = fs.readFileSync(restored.caddyfile, 'utf8');
     assert.match(caddyfile, new RegExp(GENERATED_CADDYFILE_MARKER));
@@ -851,7 +860,10 @@ test('restorePfbackup rolls TLS state back after sidecar unpack if cutover fails
       }),
     );
     assert.equal(result.ok, false);
-    assert.equal(fs.readFileSync(path.join(destPaths.caddyData, 'current.txt'), 'utf8'), 'host-before-restore');
+    assert.equal(
+      fs.readFileSync(path.join(destPaths.caddyData, 'current.txt'), 'utf8'),
+      'host-before-restore',
+    );
     assert.equal(fs.existsSync(path.join(destPaths.caddyData, 'backup.txt')), false);
   } finally {
     fs.rmSync(source, { recursive: true, force: true });

@@ -111,29 +111,6 @@ body {
   box-shadow: none;
 }
 
-.health-banner {
-  margin: 0 0 0.55rem;
-  border-radius: 0;
-  padding: 0;
-  font-weight: 600;
-  font-size: 0.82rem;
-  line-height: 1.3;
-  background: transparent;
-  border: none;
-}
-
-.health-banner.is-ok {
-  color: var(--ok);
-}
-
-.health-banner.is-warn {
-  color: var(--warn);
-}
-
-.health-banner.is-bad {
-  color: var(--bad);
-}
-
 .health-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
@@ -534,6 +511,7 @@ body {
   word-break: break-all;
 }
 
+.status-facts h2,
 .device-urls h2 {
   margin: 0 0 0.4rem;
   font-size: 0.95rem;
@@ -1373,6 +1351,14 @@ textarea.wizard-input.is-compact {
 
 .lan-ip-status-badge-warn {
   color: #b45309;
+}
+
+.status-facts .lan-ip-status {
+  margin-bottom: 1.25rem;
+}
+
+.status-facts .lan-ip-status-row {
+  grid-template-columns: 7.5rem 1fr;
 }
 
 .lan-ip-status-hint {

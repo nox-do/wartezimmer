@@ -17,7 +17,13 @@ import {
   matchesHostnameModeBase,
   productPublishPort,
 } from './reachability.js';
-import { tlsModeForNameMode, tlsNameValid, tlsPrepareHostname, type TlsNameMode } from './tls-identity.js';
+import {
+  tlsModeForNameMode,
+  tlsNameValid,
+  tlsPrepareHostname,
+  type TlsNameMode,
+} from './tls-identity.js';
+import { TLS_LEASE_STALE_LAN_COPY, tlsLeaseBlockedByStaleLan } from './tls-network-view-model.js';
 import { createInitialWizardFields, resolvedLanIp } from './wizard-state.js';
 
 /** Product boundary: no captive/gateway hardware in Manager — always disable. */
@@ -244,6 +250,12 @@ function planHttpsAdvance(state: WizardFlowState): WizardAdvanceAction {
     return { type: 'https-phase', phase: 'lease' };
   }
   if (httpsPhase === 'lease') {
+    if (tlsLeaseBlockedByStaleLan(state.status?.network.lanIpStale)) {
+      return {
+        type: 'validate-error',
+        message: TLS_LEASE_STALE_LAN_COPY,
+      };
+    }
     if (!state.ipv4Reserved) {
       return {
         type: 'validate-error',

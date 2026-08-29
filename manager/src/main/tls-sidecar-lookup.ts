@@ -18,7 +18,10 @@ export function readTlsSidecarBase64BesideBackup(backupPath: string): string | n
   return fs.readFileSync(sidecarPath).toString('base64');
 }
 
-export function copyTlsSidecarBesideExportedBackup(sourceBackupPath: string, destBackupPath: string): void {
+export function copyTlsSidecarBesideExportedBackup(
+  sourceBackupPath: string,
+  destBackupPath: string,
+): void {
   const sourceSidecar = siblingTlsSidecarPath(sourceBackupPath);
   if (!sourceSidecar || !fs.existsSync(sourceSidecar) || !fs.statSync(sourceSidecar).isFile()) {
     return;

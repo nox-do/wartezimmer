@@ -213,7 +213,12 @@ function createManagementRoutes(ctx: SetupContext): Routes {
       const body = readBodyRecord(await readJsonBody(req));
       const content = requireString(body, 'content', 'content is required');
       return routeResult(
-        await inspectPfbackup(content, ctx, {}, { tlsSidecarBase64: readOptionalString(body, 'tlsSidecarBase64') }),
+        await inspectPfbackup(
+          content,
+          ctx,
+          {},
+          { tlsSidecarBase64: readOptionalString(body, 'tlsSidecarBase64') },
+        ),
       );
     },
     'POST /api/setup/host/backup/restore': async (req) => {

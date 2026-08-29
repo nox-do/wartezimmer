@@ -69,7 +69,10 @@ export type PraxisManagerMaintenanceApi = {
   createPfbackup(): Promise<PfbackupResult>;
   savePfbackup(backupPath: string): Promise<SavePfbackupResult>;
   validatePfbackup(content: string): Promise<PfbackupValidateResult>;
-  inspectPfbackup(content: string, options?: { tlsSidecarBase64?: string }): Promise<PfbackupInspectResult>;
+  inspectPfbackup(
+    content: string,
+    options?: { tlsSidecarBase64?: string },
+  ): Promise<PfbackupInspectResult>;
   restorePfbackup(
     content: string,
     options?: { skipProviderCredentials?: boolean; tlsSidecarBase64?: string },

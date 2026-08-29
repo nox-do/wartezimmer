@@ -13,6 +13,7 @@ import {
   applyRuntimeSnapshot,
   applyShellNavigation,
   applyStatusError,
+  markBootReady,
   beginMaintenanceSession,
   beginNetworkSession,
   beginWizardSession,
@@ -67,7 +68,11 @@ export function createManagerAppController(): ManagerAppController {
   }
 
   function startFullscreenWizard(): void {
-    navigation.navigateTo('wizard', { wizardPresentation: 'fullscreen' });
+    const status = hostRefresh.getLastConfig();
+    navigation.navigateTo('wizard', {
+      wizardPresentation: 'fullscreen',
+      ...(status ? { status } : {}),
+    });
   }
 
   let bootRouteResolved = false;
@@ -79,10 +84,14 @@ export function createManagerAppController(): ManagerAppController {
     },
     onConfig(status, view) {
       applyConfigSnapshot(status);
+      markBootReady();
       if (!bootRouteResolved && view === 'status') {
         bootRouteResolved = true;
         if (shouldAutoStartFullscreenWizard(status)) {
-          navigation.navigateTo('wizard', { wizardPresentation: 'fullscreen' });
+          navigation.navigateTo('wizard', {
+            wizardPresentation: 'fullscreen',
+            status,
+          });
           return;
         }
       }
@@ -91,6 +100,7 @@ export function createManagerAppController(): ManagerAppController {
     onError(message, _view, source) {
       if (source === 'config') {
         applyStatusError(message);
+        markBootReady();
       } else {
         applyRuntimeError(message);
       }
@@ -115,6 +125,7 @@ export function createManagerAppController(): ManagerAppController {
       const status = hostRefresh.getLastConfig();
       navigation.navigateTo('wizard', {
         wizardPresentation: defaultWizardPresentation(status),
+        ...(status ? { status } : {}),
       });
       return;
     }

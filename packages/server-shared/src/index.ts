@@ -15,21 +15,21 @@ export {
 export {
   PFBACKUP_BASENAME_PREFIX,
   PFBACKUP_FILE_EXTENSION,
+  TLS_SIDECAR_BASENAME_PREFIX,
+  TLS_SIDECAR_FILE_EXTENSION,
   formatPfbackupLabel,
   parsePfbackupTimestampFromPath,
   parsePfbackupTimestampTokenFromPath,
+  siblingTlsSidecarBasename,
+  tlsSidecarFileName,
 } from './backup-path-labels.js';
 export {
-  TLS_SIDECAR_BASENAME_PREFIX,
-  TLS_SIDECAR_FILE_EXTENSION,
-  siblingTlsSidecarBasename,
   tlsBackupMetadataConsistent,
   tlsInBackup,
   tlsPreparedInBackup,
   tlsRestoreBlockedCopy,
   tlsRestoreSupported,
   tlsRestoreWarningCopy,
-  tlsSidecarFileName,
   tlsSidecarMatches,
 } from './tls-backup.js';
 export {

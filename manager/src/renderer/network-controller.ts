@@ -105,9 +105,7 @@ function noticeFromVerified(verified: { ok: boolean; message: string }): Network
 
 /** Started TLS owns Canonical and proxy mode; `/host/network` may then save LAN only. */
 export function hostNetworkMustPreserveTlsIdentity(config: HostStatus | null): boolean {
-  return Boolean(
-    config?.tls && (config.tls.state !== 'off' || config.tls.cutoverApplied === true),
-  );
+  return Boolean(config?.tls && (config.tls.state !== 'off' || config.tls.cutoverApplied === true));
 }
 
 export function buildHostNetworkSaveInput(input: {

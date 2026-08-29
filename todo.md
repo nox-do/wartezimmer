@@ -7,7 +7,8 @@ Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-histo
 
 ## Jetzt — Kunden-Test
 
-- Release-Artefakte bauen und in einer Praxis prüfen: `release:pfupdate` + optional `release:images` ([`docs/delivery.md`](docs/delivery.md))
+- Packaged Manager: TLS-Compose-Template fehlte im Bundle → Setup-API crash. `docker-compose.proxy-tls.delivery.yml` in prepare-packaged.
+- Docker: Lab-Images weg; Build-Basen und 0.3.0-Images bleiben.
 - Test-Scope und Nicht-Ziele: [`docs/roadmap.md`](docs/roadmap.md)
 
 ## Zurückgestellt (nicht Test-Blocker)
@@ -24,6 +25,25 @@ Fehlerklassen extra.
 
 ## Heute (2026-08-29)
 
+- Review Manager-Boot: Plan [`docs/plan-manager-boot.md`](docs/plan-manager-boot.md) — mit Code vergleichen vor Schnitt 1. Kein Umbau.
+
+- Status-Ampel: Proxy-Kachel nur wenn Proxy enabled (nicht am App/Sandbox-Stack); bei Ersteinrichtung keine Ampel-Kacheln.
+- Boot: Chrome/Status erst nach Config — Runtime kam vorher und hat die Statusleiste vor dem Wizard geblitzt.
+
+- Status-HTTPS-Wartekarte: kein „Fortsetzen unter Netzwerk.“ — der Button reicht.
+- DNS: Catch-all `*.lan.notaus.de` → öffentliche IP; Meldung nennt aufgelöste vs. LAN-IP, kein „Name vergeben“.
+- DNS-Fehlercopy: nur was der Resolver zeigt (fehlt / andere IP). Kein „Name ist vergeben“.
+- HTTPS-Resume: Titel mit vorhandenem `network-config-subheading`, kein Extra-CSS.
+- HTTPS-Reise: Status-Resume nicht mehr als große h1; Warte-Copy unter Netzwerk als Hinweis.
+- HTTPS: kein „Mail ist raus“ — User sendet; Warte-Copy wie Mock (bis 48 h). Kein SMTP aus der App.
+- Status-LAN-Warnung: „IP in .env … passt nicht zur aktuellen IP — Bitte unter Netzwerk anpassen.“
+- Status-Host: kein `(repo)`/`(install)` mehr hinter dem Pfad.
+- Status: Überschrift „Host“ wie „Geräte-URLs“ (nicht mehr Caps/Eyebrow).
+- Status-Tab: Meldungen oben (`notice`); Host-Daten kompakt wie LAN-Zeilen. Kein Gesamtstatus mehr über den Ampel-Kacheln.
+- Netzwerk-HTTPS Name wählen: Meta-Hinweis „Einstieg unter Netzwerk … Assistent ‚Später‘“ entfernt.
+- Netzwerk-HTTPS-Lease: bei abweichender IP stoppen — Kurztext „Bitte anpassen.“
+- Netzwerk-HTTPS-Lease: Meta-Hinweis „Portfreigabe … nicht Teil dieser Bestätigung“ entfernt (Warnung bleibt vor Cutover).
+- Setup-Build: `applyHostTls` reicht den schon geprüften Hostname in `runChecks` (tsc unter `dist:mac`).
 - TLS-Sidecar Restore rund: Caddyfile nach Unpack neu; Rollback sichert `state/tls`; Unpack/Discard wipen; Export-Sidecar folgt dem Stick-Ordner auch ohne Timestamp im Backup-Namen; unlesbares Geschwister = fehlt (zweiter Dialog). Kein Format v2.
 
 ## Heute (2026-08-28)

@@ -5,7 +5,11 @@ import path from 'node:path';
 import { PFBACKUP_FILE_EXTENSION, PFBACKUP_BASENAME_PREFIX } from '@praxis-flow/server-shared';
 import type { PfbackupInspectResult, SavePfbackupResult } from '../shared/host-status.js';
 import { callSetupApi } from './setup-api.js';
-import { copyTlsSidecarBesideExportedBackup, readTlsSidecarBase64BesideBackup, siblingTlsSidecarPath } from './tls-sidecar-lookup.js';
+import {
+  copyTlsSidecarBesideExportedBackup,
+  readTlsSidecarBase64BesideBackup,
+  siblingTlsSidecarPath,
+} from './tls-sidecar-lookup.js';
 
 function assertAllowedPfbackupPath(backupPath: string): string {
   if (typeof backupPath !== 'string' || !backupPath.trim()) {
@@ -89,7 +93,9 @@ export async function readPfbackupFromDialog(
 
 export async function readTlsSidecarFromDialog(
   parentWindow: BrowserWindow | null,
-): Promise<{ canceled: true; tlsSidecarBase64: null } | { canceled: false; tlsSidecarBase64: string }> {
+): Promise<
+  { canceled: true; tlsSidecarBase64: null } | { canceled: false; tlsSidecarBase64: string }
+> {
   const dialogOptions: OpenDialogOptions = {
     title: 'HTTPS-State (Sidecar) wählen',
     properties: ['openFile'],
@@ -160,4 +166,3 @@ export async function inspectPfbackupFile(
     },
   });
 }
-

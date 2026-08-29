@@ -57,7 +57,7 @@ import {
   IPC_SETUP_API_CALL,
   type SetupApiCallRequest,
 } from '../shared/ipc-channels.js';
-import { SETUP_TLS_ROUTES } from '@praxis-flow/server-shared';
+import { SETUP_TLS_ROUTES } from '@praxis-flow/server-shared/setup-api';
 
 const managerVersion = managerPackage.version;
 
@@ -300,7 +300,10 @@ async function verifyHostTlsDns(): Promise<TlsVerifyDnsResult> {
 }
 
 async function obtainHostTlsCertificate(): Promise<TlsActionResult> {
-  return callSetupApi<TlsActionResult>({ method: 'POST', path: SETUP_TLS_ROUTES.obtainCertificate });
+  return callSetupApi<TlsActionResult>({
+    method: 'POST',
+    path: SETUP_TLS_ROUTES.obtainCertificate,
+  });
 }
 
 async function stageHostTlsCertificate(): Promise<TlsPemSetupResult> {

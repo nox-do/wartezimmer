@@ -3,10 +3,12 @@
  * Lifted from docs/mocks/lan-tls-wizard/tls-model.js (no DOM / SAMPLE).
  */
 
-import { parsePfbackupTimestampTokenFromPath } from './backup-path-labels.js';
-
-export const TLS_SIDECAR_BASENAME_PREFIX = 'praxis-flow-tls-';
-export const TLS_SIDECAR_FILE_EXTENSION = 'tgz';
+export {
+  TLS_SIDECAR_BASENAME_PREFIX,
+  TLS_SIDECAR_FILE_EXTENSION,
+  siblingTlsSidecarBasename,
+  tlsSidecarFileName,
+} from './backup-path-labels.js';
 
 const TLS_PREPARED_BACKUP_STATES = new Set([
   'preparing',
@@ -15,16 +17,6 @@ const TLS_PREPARED_BACKUP_STATES = new Set([
   'obtaining-certificate',
   'error',
 ]);
-
-/** Sidecar next to `.pfbackup`, same timestamp token. Pilot; later inside the archive. */
-export function tlsSidecarFileName(timestamp: string): string {
-  return `${TLS_SIDECAR_BASENAME_PREFIX}${timestamp}.${TLS_SIDECAR_FILE_EXTENSION}`;
-}
-
-export function siblingTlsSidecarBasename(backupPath: string): string | null {
-  const timestamp = parsePfbackupTimestampTokenFromPath(backupPath);
-  return timestamp ? tlsSidecarFileName(timestamp) : null;
-}
 
 function normalizeOwnDomain(value: unknown): string {
   return String(value ?? '')
@@ -37,10 +29,7 @@ function normalizeOwnDomain(value: unknown): string {
  * Inspect: backup claims HTTPS. Gate is .env after apply, not tls.state.
  * prepare-only backups stay HTTP in Canonical — sidecar still saved, no Inspect-block.
  */
-export function tlsInBackup(input: {
-  canonicalBaseUrl?: unknown;
-  proxyMode?: unknown;
-}): boolean {
+export function tlsInBackup(input: { canonicalBaseUrl?: unknown; proxyMode?: unknown }): boolean {
   const canonical = String(input.canonicalBaseUrl ?? '');
   const mode = String(input.proxyMode ?? '');
   return canonical.startsWith('https://') || mode === 'tls-managed' || mode === 'tls-custom';
@@ -121,7 +110,11 @@ export function tlsRestoreWarningCopy(input: {
   sidecarPresent: boolean;
   sidecarMatches: boolean;
 }): string | null {
-  if (!input.tlsMetadataConsistent || !input.tlsPrepared || (input.sidecarPresent && input.sidecarMatches)) {
+  if (
+    !input.tlsMetadataConsistent ||
+    !input.tlsPrepared ||
+    (input.sidecarPresent && input.sidecarMatches)
+  ) {
     return null;
   }
   return 'Diese Sicherung enthält nur eine noch nicht aktive HTTPS-Vorbereitung. Wiederherstellen bleibt möglich; ohne passendes Sidecar wird die Vorbereitung verworfen und HTTPS steht danach auf „aus“.';

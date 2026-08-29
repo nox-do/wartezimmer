@@ -1,6 +1,6 @@
 import type { HostStatus } from '../shared/host-status.js';
 import { SETUP_API_PATH_PREFIX, type SetupApiCallRequest } from '../shared/ipc-channels.js';
-import { SETUP_TLS_ROUTES } from '@praxis-flow/server-shared';
+import { SETUP_TLS_ROUTES } from '@praxis-flow/server-shared/setup-api';
 
 const DEFAULT_SETUP_API_TIMEOUT_MS = 30_000;
 /** Erstinstallation: docker compose up --build kann deutlich länger als Status-Polls dauern. */

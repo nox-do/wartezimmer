@@ -147,7 +147,7 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
 export function statusGridRows(status: HostStatus): StatusGridRow[] {
   const wlan = currentWlanLabel(status);
   const rows: StatusGridRow[] = [
-    { label: 'Install-Home', value: `${status.installHome} (${status.mode})` },
+    { label: 'Install-Home', value: status.installHome },
     { label: 'Compose', value: status.composeProjectName },
     { label: 'Docker', value: dockerSummary(status) },
     { label: '.env', value: status.envExists ? '✓ vorhanden' : '✗ fehlt' },
@@ -175,7 +175,9 @@ export function statusGridRows(status: HostStatus): StatusGridRow[] {
   if (status.tls && status.tls.state !== 'off' && status.tls.hostname) {
     rows.push({
       label: 'HTTPS',
-      value: status.tls.cutoverApplied ? `aktiv · ${status.tls.hostname}` : `vorbereitet · ${status.tls.hostname}`,
+      value: status.tls.cutoverApplied
+        ? `aktiv · ${status.tls.hostname}`
+        : `vorbereitet · ${status.tls.hostname}`,
     });
   }
 
@@ -213,12 +215,26 @@ export function showDeliveryImagesWarning(status: HostStatus, setupEntry: boolea
 
 export function lanWarningText(status: HostStatus, setupEntry: boolean): string | null {
   if (status.network.lanIpStale && status.network.configuredLanIp) {
-    return `⚠ LAN in .env (${status.network.configuredLanIp}) passt nicht zur aktuellen WLAN-IP — unter Netzwerk anpassen und übernehmen.`;
+    return `⚠ IP in .env (${status.network.configuredLanIp}) passt nicht zur aktuellen IP — Bitte unter Netzwerk anpassen.`;
   }
   if (!status.network.configuredLanIp && !setupEntry) {
     return 'LAN noch nicht konfiguriert — Einrichtung ausführen, damit Terminal, TV und MFA den Host im WLAN erreichen.';
   }
   return null;
+}
+
+export function statusOverallNoticeClass(level: 'ok' | 'warn' | 'bad'): string {
+  if (level === 'bad') {
+    return 'notice is-bad';
+  }
+  if (level === 'warn') {
+    return 'notice is-warn';
+  }
+  return 'notice is-ok';
+}
+
+export function showStatusOverallNotice(setupEntry: boolean, text: string | undefined): boolean {
+  return !setupEntry && Boolean(text) && text !== '…';
 }
 
 export function deviceUrlEntries(status: HostStatus): DeviceUrlEntry[] | null {

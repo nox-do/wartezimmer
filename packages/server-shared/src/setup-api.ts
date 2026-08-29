@@ -2,6 +2,8 @@
 
 import type { SandboxScannerStatus } from './sandbox-scanner.js';
 
+export type { SandboxScannerStatus } from './sandbox-scanner.js';
+
 export const SETUP_TLS_ROUTES = {
   prepare: '/api/setup/host/tls/prepare',
   verifyDns: '/api/setup/host/tls/verify-dns',

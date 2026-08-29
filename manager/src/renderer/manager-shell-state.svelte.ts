@@ -20,6 +20,8 @@ export type WizardSession = {
 export type ManagerShellState = {
   activeView: ManagerView;
   wizardPresentation: WizardPresentation;
+  /** First config (or config error) has arrived — chrome must not paint before this. */
+  bootReady: boolean;
   /** Last full-refresh config — never patched by runtime poll. */
   configSnapshot: HostStatus | null;
   /** Last runtime poll — live compose/probes/docker/…. */
@@ -45,6 +47,7 @@ function nextGeneration(): number {
 export const managerShell = $state<ManagerShellState>({
   activeView: 'status',
   wizardPresentation: 'embedded',
+  bootReady: false,
   configSnapshot: null,
   runtimeSnapshot: null,
   runtimeError: null,
@@ -63,7 +66,11 @@ export function wizardFullscreen(shell: ManagerShellState = managerShell): boole
 }
 
 export function showChrome(shell: ManagerShellState = managerShell): boolean {
-  return !wizardFullscreen(shell);
+  return shell.bootReady && !wizardFullscreen(shell);
+}
+
+export function markBootReady(): void {
+  managerShell.bootReady = true;
 }
 
 export function applyShellNavigation(

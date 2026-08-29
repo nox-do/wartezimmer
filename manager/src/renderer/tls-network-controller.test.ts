@@ -3,7 +3,7 @@ import test from 'node:test';
 import type { TlsPrepareInput, TlsStatus } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { createTlsNetworkController } from './tls-network-controller.js';
-import { TLS_CUTOVER_CONFIRM_MESSAGE } from './tls-network-view-model.js';
+import { TLS_CUTOVER_CONFIRM_MESSAGE, TLS_LEASE_STALE_LAN_COPY } from './tls-network-view-model.js';
 import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 
 function tls(overrides: Partial<TlsStatus>): TlsStatus {
@@ -26,6 +26,8 @@ function createController(options: {
   api?: Partial<PraxisManagerApi>;
   status: TlsStatus;
   lanIp?: string;
+  lanIpStale?: boolean;
+  configuredLanIp?: string | null;
   requestConfirm?: (message: string, onConfirm: () => void) => void;
 }) {
   return createTlsNetworkController({
@@ -33,6 +35,11 @@ function createController(options: {
     getConfig: () =>
       minimalHostStatus({
         tls: options.status,
+        network: {
+          configuredLanIp: options.configuredLanIp ?? '192.168.1.10',
+          currentLanCandidates: [],
+          lanIpStale: options.lanIpStale ?? false,
+        },
         proxy: {
           enabled: true,
           mode: 'http',
@@ -68,7 +75,10 @@ test('submitLease prepares managed TLS without a client-minted hostname', async 
             installationId: '7fk3m2q9',
             oneTimeToken: 'once',
             aRecord: { name: '7fk3m2.lan.notaus.de', value: '192.168.1.10' },
-            acmeCname: { name: '_acme-challenge.7fk3m2.lan.notaus.de', value: 'uuid.auth.acme-dns.io' },
+            acmeCname: {
+              name: '_acme-challenge.7fk3m2.lan.notaus.de',
+              value: 'uuid.auth.acme-dns.io',
+            },
           },
         };
       },
@@ -79,6 +89,26 @@ test('submitLease prepares managed TLS without a client-minted hostname', async 
   await controller.submitLease();
   assert.deepEqual(prepared, { mode: 'managed', hostname: undefined, lanIp: '192.168.1.10' });
   assert.equal(controller.getState().operatorRequest?.oneTimeToken, 'once');
+});
+
+test('submitLease refuses prepare while LAN IP is stale', async () => {
+  let prepared = false;
+  const controller = createController({
+    status: tls({ state: 'off' }),
+    lanIp: '192.168.1.40',
+    lanIpStale: true,
+    configuredLanIp: '192.168.1.10',
+    api: {
+      prepareHostTls: async () => {
+        prepared = true;
+        throw new Error('must not prepare');
+      },
+    },
+  });
+  controller.patchDraft({ ipv4Reserved: true, nameMode: 'generated' });
+  await controller.submitLease();
+  assert.equal(prepared, false);
+  assert.equal(controller.getState().error, TLS_LEASE_STALE_LAN_COPY);
 });
 
 test('hydrateOperatorRequest replays prepare to recover the unused token', async () => {
@@ -103,7 +133,10 @@ test('hydrateOperatorRequest replays prepare to recover the unused token', async
             installationId: '7fk3m2q9',
             oneTimeToken: 'replayed',
             aRecord: { name: '7fk3m2.lan.notaus.de', value: '192.168.1.10' },
-            acmeCname: { name: '_acme-challenge.7fk3m2.lan.notaus.de', value: 'uuid.auth.acme-dns.io' },
+            acmeCname: {
+              name: '_acme-challenge.7fk3m2.lan.notaus.de',
+              value: 'uuid.auth.acme-dns.io',
+            },
           },
         };
       },
@@ -112,6 +145,34 @@ test('hydrateOperatorRequest replays prepare to recover the unused token', async
 
   await controller.hydrateOperatorRequest();
   assert.equal(controller.getState().operatorRequest?.oneTimeToken, 'replayed');
+});
+
+test('verifyDns keeps TLS lastError off the footer error slot', async () => {
+  const controller = createController({
+    status: tls({ state: 'awaiting-operator-dns', mode: 'managed' }),
+    api: {
+      verifyHostTlsDns: async () => ({
+        tls: tls({
+          state: 'error',
+          mode: 'managed',
+          lastError: {
+            class: 'a-record',
+            message: 'Kein eigener A-Record — Catch-all der Zone zeigt auf 213.23.215.150',
+          },
+        }),
+        checks: [
+          {
+            id: 'a-record' as const,
+            ok: false,
+            message: 'Kein eigener A-Record — Catch-all der Zone zeigt auf 213.23.215.150',
+          },
+        ],
+      }),
+    },
+  });
+  await controller.verifyDns();
+  assert.equal(controller.getState().error, null);
+  assert.equal(controller.getState().dnsChecks?.[0]?.ok, false);
 });
 
 test('apply asks for confirmation before cutover', async () => {

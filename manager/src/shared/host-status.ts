@@ -1,6 +1,6 @@
 /** Re-exports Setup Host API DTOs from shared package + Manager-only IPC types. */
 
-import type { TlsLocalCheck, TlsStatus } from '@praxis-flow/server-shared';
+import type { TlsLocalCheck, TlsStatus } from '@praxis-flow/server-shared/setup-api';
 
 export type {
   ApplySetupInput,
@@ -65,9 +65,8 @@ export type {
   StorageFolderPaths,
   StorageFoldersInput,
   StorageFoldersResult,
-} from '@praxis-flow/server-shared';
-
-export type { SandboxScannerStatus } from '@praxis-flow/server-shared';
+  SandboxScannerStatus,
+} from '@praxis-flow/server-shared/setup-api';
 
 /** Electron IPC: save `.pfbackup` via native save dialog. */
 export type SavePfbackupResult = {

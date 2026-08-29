@@ -20,6 +20,10 @@
       "types": "./dist/backup-path-labels.d.ts",
       "import": "./dist/backup-path-labels.js"
     },
+    "./tls-backup": {
+      "types": "./dist/tls-backup.d.ts",
+      "import": "./dist/tls-backup.js"
+    },
     "./gateway-bridge": {
       "types": "./dist/gateway-bridge.d.ts",
       "import": "./dist/gateway-bridge.js"

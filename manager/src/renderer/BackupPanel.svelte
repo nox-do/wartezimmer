@@ -6,7 +6,7 @@
    * never a renderer-selected host path.
    * Mock: docs/mocks/lan-tls-wizard/app.js renderMaintenance
    */
-  import { siblingTlsSidecarBasename } from '@praxis-flow/server-shared';
+  import { siblingTlsSidecarBasename } from '@praxis-flow/server-shared/backup-path-labels';
   import IconButton from './IconButton.svelte';
   import { backupInfoText } from './maintenance-view-model.js';
 

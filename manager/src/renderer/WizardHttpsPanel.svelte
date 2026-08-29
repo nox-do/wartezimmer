@@ -14,6 +14,7 @@
   } from './tls-identity.js';
   import { WIZARD_HTTPS_CONTINUE_COPY, wizardHttpsDnsWaitCopy } from './wizard-view-model.js';
   import { resolvedLanIp } from './wizard-state.js';
+  import { TLS_LEASE_STALE_LAN_COPY, tlsLeaseBlockedByStaleLan } from './tls-network-view-model.js';
 
   let {
     snapshot,
@@ -39,6 +40,7 @@
   );
   const nameOk = $derived(tlsNameValid(snapshot));
   const ownDomain = $derived(isOwnDomainNameMode(snapshot.nameMode));
+  const staleLan = $derived(tlsLeaseBlockedByStaleLan(snapshot.status?.network.lanIpStale));
   const mail = $derived.by(() => {
     const installationId =
       snapshot.operatorRequest?.installationId || snapshot.status?.tls?.installationId;
@@ -230,11 +232,14 @@
       <strong class="lan-ip-status-value">{hostname}</strong>
     </div>
   </div>
+  {#if staleLan}
+    <p class="notice is-warn">{TLS_LEASE_STALE_LAN_COPY}</p>
+  {/if}
   <label class="wizard-checkbox">
     <input
       type="checkbox"
       checked={snapshot.ipv4Reserved}
-      disabled={snapshot.busy}
+      disabled={snapshot.busy || staleLan}
       onchange={(event) => patch({ ipv4Reserved: event.currentTarget.checked })}
     />
     <span>

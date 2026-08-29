@@ -19,7 +19,10 @@ import {
   storageSaveErrorText,
   storageSaveStatusText,
 } from './maintenance-view-model.js';
-import { restoreInspectBlockedMessage, restoreTlsInspectSummaryLine } from './restore-wizard-flow.js';
+import {
+  restoreInspectBlockedMessage,
+  restoreTlsInspectSummaryLine,
+} from './restore-wizard-flow.js';
 import { formatRoutingModeError } from './routing-mode-ui.js';
 
 export type MaintenanceCallbacks = {

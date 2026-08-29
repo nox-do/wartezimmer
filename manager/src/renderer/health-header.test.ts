@@ -110,6 +110,22 @@ test('collectHealthTiles Proxy-Server is yellow when container up but entry fail
   assert.match(proxy.detail, /Einstieg nicht erreichbar/);
 });
 
+test('collectHealthTiles shows Proxy-Server when enabled even without a stack', () => {
+  const tiles = collectHealthTiles(
+    runtime({
+      compose: { running: false, services: [] },
+      proxyServer: { enabled: true, container: null },
+    }),
+  );
+  const proxy = tiles.find((tile) => tile.name === 'Proxy-Server');
+  assert.ok(proxy);
+  assert.equal(proxy.detail, 'Container fehlt');
+  assert.equal(
+    tiles.some((tile) => tile.name === 'app' || tile.name === 'sandbox'),
+    false,
+  );
+});
+
 test('collectHealthTiles shows Proxy-Server missing container as bad', () => {
   const tiles = collectHealthTiles(
     runtime({

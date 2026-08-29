@@ -27,7 +27,10 @@ test('readTlsSidecarBase64BesideBackup reads sibling bytes and skips missing fil
     fs.writeFileSync(backupPath, 'backup');
     assert.equal(readTlsSidecarBase64BesideBackup(backupPath), null);
     fs.writeFileSync(sidecarPath, 'sidecar-bytes');
-    assert.equal(readTlsSidecarBase64BesideBackup(backupPath), Buffer.from('sidecar-bytes').toString('base64'));
+    assert.equal(
+      readTlsSidecarBase64BesideBackup(backupPath),
+      Buffer.from('sidecar-bytes').toString('base64'),
+    );
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -43,7 +46,10 @@ test('copyTlsSidecarBesideExportedBackup copies sibling into the export folder',
   const destBackup = path.join(destDir, 'praxis-flow-backup-2026-07-12T10-15-30-123Z.pfbackup');
   try {
     fs.writeFileSync(sourceBackup, 'backup');
-    fs.writeFileSync(path.join(sourceDir, 'praxis-flow-tls-2026-07-12T10-15-30-123Z.tgz'), 'sidecar-bytes');
+    fs.writeFileSync(
+      path.join(sourceDir, 'praxis-flow-tls-2026-07-12T10-15-30-123Z.tgz'),
+      'sidecar-bytes',
+    );
     fs.writeFileSync(destBackup, 'backup');
     copyTlsSidecarBesideExportedBackup(sourceBackup, destBackup);
     assert.equal(
@@ -65,7 +71,10 @@ test('copyTlsSidecarBesideExportedBackup keeps sidecar when the backup is rename
   const destBackup = path.join(destDir, 'praxis-flow-backup.pfbackup');
   try {
     fs.writeFileSync(sourceBackup, 'backup');
-    fs.writeFileSync(path.join(sourceDir, 'praxis-flow-tls-2026-07-12T10-15-30-123Z.tgz'), 'sidecar-bytes');
+    fs.writeFileSync(
+      path.join(sourceDir, 'praxis-flow-tls-2026-07-12T10-15-30-123Z.tgz'),
+      'sidecar-bytes',
+    );
     fs.writeFileSync(destBackup, 'backup');
     copyTlsSidecarBesideExportedBackup(sourceBackup, destBackup);
     assert.equal(

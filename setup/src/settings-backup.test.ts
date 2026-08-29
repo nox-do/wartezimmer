@@ -175,7 +175,10 @@ test('writeTlsSidecarBesideBackup writes timestamp sibling when tls is not off',
       ].join('\n'),
     );
     const sidecarPath = writeTlsSidecarBesideBackup(testSetupContext(dir), backupPath);
-    assert.equal(sidecarPath, path.join(backupsDir, 'praxis-flow-tls-2026-07-12T10-15-30-123Z.tgz'));
+    assert.equal(
+      sidecarPath,
+      path.join(backupsDir, 'praxis-flow-tls-2026-07-12T10-15-30-123Z.tgz'),
+    );
     assert.equal(fs.existsSync(sidecarPath!), true);
     assert.equal(getPfbackupInfo(testSetupContext(dir)).latestTlsSidecarPath, sidecarPath);
   } finally {

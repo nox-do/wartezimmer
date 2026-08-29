@@ -2,7 +2,7 @@ import {
   TLS_OPERATOR_MAIL,
   TLS_OPERATOR_ZONE_DEFAULT,
   type TlsMode,
-} from '@praxis-flow/server-shared';
+} from '@praxis-flow/server-shared/setup-api';
 
 export const TLS_OPERATOR_ZONE = TLS_OPERATOR_ZONE_DEFAULT;
 export { TLS_OPERATOR_MAIL };

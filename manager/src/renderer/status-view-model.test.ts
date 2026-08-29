@@ -10,7 +10,9 @@ import {
   setupEntryContent,
   setupEntryTone,
   showDeliveryImagesWarning,
+  showStatusOverallNotice,
   statusGridRows,
+  statusOverallNoticeClass,
 } from './status-view-model.js';
 
 test('setupEntryTone classifies fresh install', () => {
@@ -122,6 +124,7 @@ test('statusGridRows includes wlan and lan when configured', () => {
       'Software-Paket',
     ],
   );
+  assert.equal(rows[0]?.value, '/tmp/pf');
   assert.equal(
     currentWlanLabel(
       minimalHostStatus({
@@ -165,13 +168,20 @@ test('lanWarningText covers stale lan and missing lan', () => {
       lanIpStale: true,
     },
   });
-  assert.match(lanWarningText(stale, false) ?? '', /passt nicht zur aktuellen WLAN-IP/);
+  assert.match(lanWarningText(stale, false) ?? '', /passt nicht zur aktuellen IP/);
 
   const missing = minimalHostStatus({
     envExists: true,
     network: { configuredLanIp: null, currentLanCandidates: [], lanIpStale: false },
   });
   assert.match(lanWarningText(missing, false) ?? '', /LAN noch nicht konfiguriert/);
+});
+
+test('showStatusOverallNotice skips setup entry and loading placeholder', () => {
+  assert.equal(showStatusOverallNotice(true, 'Betrieb'), false);
+  assert.equal(showStatusOverallNotice(false, '…'), false);
+  assert.equal(showStatusOverallNotice(false, 'Proxy-Server fehlt'), true);
+  assert.equal(statusOverallNoticeClass('warn'), 'notice is-warn');
 });
 
 test('deviceUrlEntries maps device urls with tv kiosk tip', () => {

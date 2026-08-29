@@ -11,6 +11,7 @@
     tlsNameValid,
   } from './tls-identity.js';
   import {
+    TLS_LEASE_STALE_LAN_COPY,
     formatCertNotAfter,
     tlsCanApply,
     tlsCanObtain,
@@ -24,6 +25,7 @@
     tlsExpiryKind,
     tlsHttpsEligible,
     tlsIsOff,
+    tlsLeaseBlockedByStaleLan,
     tlsLocalCheckItems,
   } from './tls-network-view-model.js';
 
@@ -48,6 +50,7 @@
   const tls = $derived(status.tls);
   const proxyOn = $derived(Boolean(status.proxy?.enabled));
   const eligible = $derived(tlsHttpsEligible(proxyOn));
+  const staleLan = $derived(tlsLeaseBlockedByStaleLan(status.network.lanIpStale));
   const starting = $derived(tlsIsOff(tls) && state.startPhase !== 'offer');
   const candidate = $derived(
     (network?.lanCandidates ?? []).find((item) => item.address === lanIp) ??
@@ -88,14 +91,11 @@
 {#if !eligible && tlsIsOff(tls)}
   <p class="notice is-warn">HTTPS braucht Port 80. Zuerst den Browserzugriff einschalten und übernehmen.</p>
 {:else if tlsIsOff(tls) && state.startPhase === 'offer'}
-  <p class="hint">Noch nicht vorbereitet. HTTPS hier vorbereiten — nicht in den Assistenten zurück.</p>
+  <p class="hint">Noch nicht vorbereitet. HTTPS hier vorbereiten.</p>
   <div class="actions-row">
     <button type="button" disabled={busy} onclick={() => controller.startPrepare()}>HTTPS vorbereiten</button>
   </div>
 {:else if starting && state.startPhase === 'hostname'}
-  <p class="notice is-warn">
-    Einstieg unter Netzwerk, weil der Assistent „Später“ gewählt hat. Nicht den Assistenten erneut öffnen.
-  </p>
   <fieldset class="wizard-fieldset">
     <legend class="wizard-field-label">Adresse wählen</legend>
     <label class="wizard-radio">
@@ -106,7 +106,7 @@
         disabled={busy}
         onchange={() => controller.patchDraft({ nameMode: 'generated' })}
       />
-      <span>Vorschlag unter <code>{TLS_OPERATOR_ZONE}</code> (wird beim Vorbereiten erzeugt)</span>
+      <span>Vorschlag unter <code>{TLS_OPERATOR_ZONE}</code></span>
     </label>
     <label class="wizard-radio">
       <input
@@ -160,21 +160,23 @@
       · {candidate.interfaceName}{#if candidate.mac} · <code>MAC {candidate.mac}</code>{/if}
     {/if}
   </p>
+  {#if staleLan}
+    <p class="notice is-warn">{TLS_LEASE_STALE_LAN_COPY}</p>
+  {/if}
   <label class="wizard-checkbox">
     <input
       type="checkbox"
       checked={state.ipv4Reserved}
-      disabled={busy}
+      disabled={busy || staleLan}
       onchange={(event) => controller.patchDraft({ ipv4Reserved: event.currentTarget.checked })}
     />
     <span>
       Ich bestätige, dass der Praxis-Flow-Server entweder eine statische IP oder einen statischen DHCP-Eintrag hat.
     </span>
   </label>
-  <p class="hint">Portfreigabe 80/443 bleibt ein eigener Warnhinweis, nicht Teil dieser Bestätigung.</p>
   <div class="actions-row">
     <button type="button" class="btn-link" disabled={busy} onclick={() => controller.back()}>Zurück</button>
-    <button type="button" disabled={busy || !state.ipv4Reserved} onclick={() => void controller.submitLease()}>
+    <button type="button" disabled={busy || staleLan || !state.ipv4Reserved} onclick={() => void controller.submitLease()}>
       {state.nameMode === 'domain' ? 'Vorbereiten' : 'Mail vorbereiten'}
     </button>
   </div>
@@ -183,7 +185,7 @@
     <p class="hint hint--preview"><code>https://{tls.hostname}</code></p>
   {/if}
   {#if !tls.cutoverApplied}
-    <p class="wizard-step-lead">{tlsDnsWaitCopy(tls.mode)}</p>
+    <p class="hint">{tlsDnsWaitCopy(tls.mode)}</p>
   {/if}
 
   {#if tls.cutoverApplied}
@@ -226,7 +228,7 @@
     </ul>
 
     {#if tls.state === 'error' && !tls.cutoverApplied}
-      {@const copy = tlsErrorCopy(tls.lastError?.class)}
+      {@const copy = tlsErrorCopy(tls.lastError?.class, tls.lastError?.message)}
       <p class="notice is-bad">{copy.title}</p>
       <p class="hint">{copy.action}</p>
       <div class="actions-row">
@@ -249,6 +251,11 @@
           </li>
         {/each}
       </ul>
+      <div class="actions-row">
+        <button type="button" class="btn-secondary" disabled={busy} onclick={() => controller.reset()}>
+          HTTPS-Vorbereitung verwerfen
+        </button>
+      </div>
     {:else if tlsCanApply(tls)}
       <ul class="checklist">
         {#each tlsLocalCheckItems({ tls, checks: state.localChecks }) as item (item.text)}
@@ -268,6 +275,9 @@
       </p>
       <div class="actions-row">
         <button type="button" disabled={busy} onclick={() => controller.apply()}>Auf HTTPS umstellen</button>
+        <button type="button" class="btn-secondary" disabled={busy} onclick={() => controller.reset()}>
+          HTTPS-Vorbereitung verwerfen
+        </button>
       </div>
     {:else if tlsCanObtain(tls)}
       <p class="notice is-ok">
@@ -286,6 +296,9 @@
         {/if}
         <button type="button" disabled={busy} onclick={() => void controller.obtainOrCheck()}>
           {tls.mode === 'custom' ? 'Lokal prüfen' : 'Zertifikat holen'}
+        </button>
+        <button type="button" class="btn-secondary" disabled={busy} onclick={() => controller.reset()}>
+          HTTPS-Vorbereitung verwerfen
         </button>
       </div>
       <p class="hint">
@@ -308,8 +321,10 @@
       {/if}
       <div class="actions-row">
         <button type="button" disabled={busy} onclick={() => void controller.verifyDns()}>DNS prüfen</button>
+        <button type="button" class="btn-secondary" disabled={busy} onclick={() => controller.reset()}>
+          HTTPS-Vorbereitung verwerfen
+        </button>
       </div>
-      <p class="hint">„DNS prüfen“ sieht nur den öffentlichen Eintrag von diesem Rechner aus — nicht TV oder Tablet.</p>
     {/if}
 
     {#if tls.mode === 'custom' && tls.hostname && lanIp}
@@ -340,14 +355,6 @@
           </button>
         </div>
       </details>
-    {/if}
-
-    {#if tlsCanResetBeforeCutover(tls) && tls.state !== 'error'}
-      <div class="actions-row">
-        <button type="button" class="btn-link" disabled={busy} onclick={() => controller.reset()}>
-          HTTPS-Vorbereitung verwerfen
-        </button>
-      </div>
     {/if}
   {/if}
 {/if}

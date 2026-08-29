@@ -9,21 +9,23 @@ import { readEnvMap } from './env-file.js';
 import {
   applyHostTls,
   checkCustomCertificate,
+  dnsAddressSetsEqual,
   emptyTlsStatus,
   obtainManagedCertificate,
   parseTlsDnsResolvers,
+  parentDnsName,
   pebbleLocalCheckCa,
   planProxyReloadAfterUp,
   isRetryableLocalCheckError,
   prepareHostTls,
   readTlsStatus,
-  repairHostTls,
   resetHostTls,
   stageCustomCertificate,
   TlsPermanentCheckError,
   TLS_DNS_RESOLVERS_DEFAULT,
   transitionTlsStatus,
   verifyHostTlsDns,
+  wildcardProbeHostname,
 } from './host-tls.js';
 import {
   GENERATED_CADDYFILE_MARKER,
@@ -101,6 +103,20 @@ test('readTlsStatus does not expose token or PEM-shaped env keys', () => {
     'tokenConsumed',
   ]);
   assert.equal(JSON.stringify(status).includes('secret'), false);
+});
+
+test('readTlsStatus treats a pre-cutover DNS miss as still waiting', () => {
+  const status = readTlsStatus(
+    new Map([
+      ['TLS_STATE', 'error'],
+      ['TLS_MODE', 'managed'],
+      ['TLS_HOSTNAME', 'mudda.lan.notaus.de'],
+      ['TLS_LAST_ERROR_CLASS', 'a-record'],
+      ['TLS_LAST_ERROR_MESSAGE', 'Kein eigener A-Record — Catch-all der Zone zeigt auf 213.23.215.150'],
+    ]),
+  );
+  assert.equal(status.state, 'awaiting-operator-dns');
+  assert.equal(status.lastError, null);
 });
 
 test('managed fake vertical slice stays HTTP until apply and consumes token after obtain', async () => {
@@ -290,7 +306,7 @@ test('custom PEM is staged inactive and becomes applyReady only after local chec
   });
 });
 
-test('DNS failure persists error class and repair returns to the retry state', async () => {
+test('DNS miss stays waiting for operator DNS', async () => {
   await withRoot(async (root) => {
     writeEnv(root, {
       PROXY_ENABLED: 'true',
@@ -307,11 +323,13 @@ test('DNS failure persists error class and repair returns to the retry state', a
     const failed = await verifyHostTlsDns(ctx, {
       verifyDns: async () => ({ aRecords: ['192.168.178.99'], cnameRecords: [] }),
     });
-    assert.equal(failed.tls.state, 'error');
-    assert.equal(failed.tls.lastError?.class, 'collision');
-    const repaired = await repairHostTls(ctx);
-    assert.equal(repaired.tls.state, 'awaiting-operator-dns');
-    assert.equal(repaired.tls.lastError, null);
+    assert.equal(failed.tls.state, 'awaiting-operator-dns');
+    assert.equal(failed.tls.lastError, null);
+    assert.match(
+      failed.checks.find((check) => check.id === 'a-record')?.message ?? '',
+      /192\.168\.178\.99/,
+    );
+    assert.equal(readEnvMap(path.join(root, '.env')).get('TLS_STATE'), 'awaiting-operator-dns');
   });
 });
 
@@ -383,6 +401,14 @@ test('parseTlsDnsResolvers rejects invalid entries', () => {
   assert.throws(() => parseTlsDnsResolvers('127.0.0.1:99999'), /ungültigen Port/);
 });
 
+test('wildcard probe uses the RFC wildcard label under the same parent', () => {
+  assert.equal(parentDnsName('mudda.lan.notaus.de'), 'lan.notaus.de');
+  assert.equal(wildcardProbeHostname('mudda.lan.notaus.de'), '*.lan.notaus.de');
+  assert.equal(wildcardProbeHostname('localhost'), null);
+  assert.equal(dnsAddressSetsEqual(['213.23.215.150'], ['213.23.215.150']), true);
+  assert.equal(dnsAddressSetsEqual(['213.23.215.150'], ['192.168.1.18']), false);
+});
+
 const managedDeps = {
   randomBytes: ((size: number) =>
     Buffer.alloc(size, 2)) as typeof import('node:crypto').randomBytes,
@@ -446,6 +472,67 @@ test('verify-dns uses public resolvers by default and lab resolvers when set', a
       }),
     });
     assert.deepEqual(servers, ['127.0.0.1:9053']);
+  });
+});
+
+test('verify-dns treats identical sibling A answers as a zone catch-all', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, {
+      PROXY_ENABLED: 'true',
+      PROXY_MODE: 'http',
+      CANONICAL_BASE_URL: 'http://192.168.1.18',
+      TLS_RUNTIME_FAKE: 'true',
+    });
+    const ctx = testSetupContext(root);
+    await prepareHostTls(
+      ctx,
+      { mode: 'managed', hostname: 'mudda.lan.notaus.de', lanIp: '192.168.1.18' },
+      managedDeps,
+    );
+    const failed = await verifyHostTlsDns(ctx, {
+      createDnsResolver: () => ({
+        setServers: () => {},
+        resolve4: async () => ['213.23.215.150'],
+        resolveCname: async () => [],
+      }),
+    });
+    assert.equal(failed.tls.state, 'awaiting-operator-dns');
+    assert.equal(failed.tls.lastError, null);
+    const aCheck = failed.checks.find((check) => check.id === 'a-record');
+    assert.match(aCheck?.message ?? '', /Catch-all/);
+    assert.match(aCheck?.message ?? '', /213\.23\.215\.150/);
+    assert.equal(aCheck?.detail, undefined);
+  });
+});
+
+test('verify-dns keeps collision when the hostname A differs from the sibling probe', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, {
+      PROXY_ENABLED: 'true',
+      PROXY_MODE: 'http',
+      CANONICAL_BASE_URL: 'http://192.168.1.18',
+      TLS_RUNTIME_FAKE: 'true',
+    });
+    const ctx = testSetupContext(root);
+    await prepareHostTls(
+      ctx,
+      { mode: 'managed', hostname: 'mudda.lan.notaus.de', lanIp: '192.168.1.18' },
+      managedDeps,
+    );
+    const failed = await verifyHostTlsDns(ctx, {
+      createDnsResolver: () => ({
+        setServers: () => {},
+        resolve4: async (name) =>
+          name.startsWith('*.') ? ['213.23.215.150'] : ['10.0.0.9'],
+        resolveCname: async () => [],
+      }),
+    });
+    assert.equal(failed.tls.state, 'awaiting-operator-dns');
+    assert.equal(failed.tls.lastError, null);
+    assert.match(
+      failed.checks.find((check) => check.id === 'a-record')?.message ?? '',
+      /10\.0\.0\.9/,
+    );
   });
 });
 

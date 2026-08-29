@@ -92,6 +92,13 @@ const RETRY_STATES = new Set<TlsState>([
   'active',
 ]);
 
+/** Missing/wrong public DNS is still the wait loop, not a failed HTTPS install. */
+const PRE_CUTOVER_DNS_WAIT_CLASSES = new Set<TlsErrorClass>([
+  'a-record',
+  'collision',
+  'dns-filter',
+]);
+
 export class TlsRuntimeUnavailableError extends Error {
   constructor(message: string) {
     super(message);
@@ -242,16 +249,22 @@ export function readTlsStatus(env: Map<string, string>): TlsStatus {
   const rawErrorClass = env.get('TLS_LAST_ERROR_CLASS')?.trim() as TlsErrorClass | undefined;
   const errorClass = rawErrorClass && TLS_ERROR_CLASSES.has(rawErrorClass) ? rawErrorClass : null;
   const errorMessage = env.get('TLS_LAST_ERROR_MESSAGE')?.trim() || '';
+  const cutoverApplied = readBoolean(env, 'TLS_CUTOVER_APPLIED');
+  const dnsWait =
+    state === 'error' &&
+    !cutoverApplied &&
+    Boolean(errorClass && PRE_CUTOVER_DNS_WAIT_CLASSES.has(errorClass));
   return {
-    state,
+    state: dnsWait ? 'awaiting-operator-dns' : state,
     mode,
     hostname: env.get('TLS_HOSTNAME')?.trim() || null,
     installationId: env.get('TLS_INSTALLATION_ID')?.trim() || null,
     tokenConsumed: readBoolean(env, 'TLS_TOKEN_CONSUMED'),
     applyReady: readBoolean(env, 'TLS_APPLY_READY'),
-    cutoverApplied: readBoolean(env, 'TLS_CUTOVER_APPLIED'),
+    cutoverApplied,
     certificate: issuer && notBefore && notAfter ? { issuer, notBefore, notAfter, names } : null,
-    lastError: errorClass && errorMessage ? { class: errorClass, message: errorMessage } : null,
+    lastError:
+      dnsWait || !errorClass || !errorMessage ? null : { class: errorClass, message: errorMessage },
     acmeCnameTarget: env.get('TLS_ACME_CNAME_TARGET')?.trim() || null,
   };
 }
@@ -359,6 +372,29 @@ export function parseTlsDnsResolvers(raw: string | undefined): string[] {
   return servers;
 }
 
+export function parentDnsName(hostname: string): string | null {
+  const dot = hostname.indexOf('.');
+  if (dot <= 0 || dot === hostname.length - 1) {
+    return null;
+  }
+  const parent = hostname.slice(dot + 1);
+  if (!parent.includes('.')) {
+    return null;
+  }
+  return parent;
+}
+
+export function wildcardProbeHostname(hostname: string): string | null {
+  const parent = parentDnsName(hostname);
+  return parent ? `*.${parent}` : null;
+}
+
+export function dnsAddressSetsEqual(left: string[], right: string[]): boolean {
+  const a = [...new Set(left)].sort();
+  const b = [...new Set(right)].sort();
+  return a.length > 0 && a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
 export function requireTlsHttpUrl(value: string, key: string): string {
   const trimmed = value.trim();
   try {
@@ -417,6 +453,8 @@ export type AcmeDnsRegistration = {
 export type TlsDnsObservation = {
   aRecords: string[];
   cnameRecords: string[];
+  /** True when a sibling label under the same parent resolves to the same A set (zone catch-all). */
+  wildcard?: boolean;
   /** Resolver adapters may distinguish filtered RFC1918 answers from ordinary absence. */
   errorClass?: 'a-record' | 'collision' | 'dns-filter';
   message?: string;
@@ -508,11 +546,14 @@ async function verifyDnsDefault(
   const resolver = createResolver?.() ?? new Resolver();
   resolver.setServers(servers);
   const aRecords = await resolver.resolve4(hostname).catch(() => []);
+  const probe = wildcardProbeHostname(hostname);
+  const probeRecords = probe ? await resolver.resolve4(probe).catch(() => []) : [];
+  const wildcard = dnsAddressSetsEqual(aRecords, probeRecords);
   const cnameRecords =
     mode === 'managed'
       ? await resolver.resolveCname(`_acme-challenge.${hostname}`).catch(() => [])
       : [];
-  return { aRecords, cnameRecords };
+  return { aRecords, cnameRecords, wildcard };
 }
 
 export function planProxyReloadAfterUp(input: {
@@ -921,10 +962,6 @@ export async function prepareHostTls(
   }
 }
 
-function dnsFailure(status: TlsStatus, errorClass: TlsErrorClass, message: string): TlsStatus {
-  return transitionTlsStatus(status, { type: 'fail', errorClass, message });
-}
-
 export async function verifyHostTlsDns(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
@@ -943,7 +980,8 @@ export async function verifyHostTlsDns(
   try {
     observation = await (
       deps.verifyDns ??
-      ((name, mode) => verifyDnsDefault(name, mode, resolverServers, deps.createDnsResolver))
+      ((name, mode) =>
+        verifyDnsDefault(name, mode, resolverServers, deps.createDnsResolver))
     )(status.hostname, status.mode);
   } catch (error) {
     observation = {
@@ -961,15 +999,20 @@ export async function verifyHostTlsDns(
     },
   ];
   const aMatches = observation.aRecords.includes(lanIp);
+  const seenAddresses = observation.aRecords.join(', ');
+  const wildcard =
+    Boolean(observation.wildcard) && observation.aRecords.length > 0 && !aMatches;
+  const aRecordMessage = aMatches
+    ? `A-Record zeigt auf ${lanIp}`
+    : observation.aRecords.length === 0
+      ? 'A-Record fehlt'
+      : wildcard
+        ? `Kein eigener A-Record — Catch-all der Zone zeigt auf ${seenAddresses}`
+        : `A-Record zeigt auf ${seenAddresses}, nicht auf ${lanIp}`;
   checks.push({
     id: 'a-record',
     ok: aMatches,
-    message: aMatches
-      ? `A-Record zeigt auf ${lanIp}`
-      : observation.aRecords.length
-        ? 'A-Record zeigt auf eine andere IP'
-        : 'A-Record fehlt',
-    detail: observation.aRecords.length ? observation.aRecords.join(', ') : undefined,
+    message: aRecordMessage,
   });
   let cnameMatches = true;
   if (status.mode === 'managed') {
@@ -987,19 +1030,12 @@ export async function verifyHostTlsDns(
     });
   }
   if (observation.errorClass || !aMatches || !cnameMatches) {
-    const errorClass: TlsErrorClass =
-      observation.errorClass ??
-      (observation.aRecords.length && !aMatches ? 'collision' : 'a-record');
-    status = dnsFailure(
-      status,
-      errorClass,
-      observation.message ??
-        (!aMatches
-          ? checks.find((check) => check.id === 'a-record')!.message
-          : 'ACME-CNAME stimmt nicht.'),
-    );
-    persistStatus(ctx, status, { TLS_RETRY_STATE: 'awaiting-operator-dns' });
-    return { tls: status, checks };
+    const waiting =
+      status.state === 'error'
+        ? transitionTlsStatus(status, { type: 'repair', retryState: 'awaiting-operator-dns' })
+        : { ...status, state: 'awaiting-operator-dns' as const, lastError: null };
+    persistStatus(ctx, waiting, { TLS_RETRY_STATE: 'awaiting-operator-dns' });
+    return { tls: waiting, checks };
   }
   status = transitionTlsStatus(status, { type: 'dns-verified' });
   persistStatus(ctx, status, { TLS_RETRY_STATE: 'dns-verified' });
@@ -1131,20 +1167,21 @@ export async function applyHostTls(
   const current = readTlsStatus(env);
   if (!current.hostname || !current.mode)
     throw new SetupApiValidationError('HTTPS ist nicht vorbereitet.');
+  const hostname = current.hostname;
   const status = transitionTlsStatus(current, { type: 'apply' });
   writeGeneratedTlsCaddyfile(ctx.home, status, env);
   const cutoverEnv = {
     PROXY_ENABLED: 'true',
     PROXY_MODE: `tls-${status.mode}`,
     APP_BIND_ADDRESS: '127.0.0.1',
-    CANONICAL_BASE_URL: `https://${status.hostname}`,
+    CANONICAL_BASE_URL: `https://${hostname}`,
     TRUST_PROXY_HEADERS: 'true',
   };
   try {
     let checks: TlsLocalCheck[] | undefined;
     if (!fakeRuntimeEnabled(env)) {
       await (deps.reloadProxy ?? reloadProxyDefault)(ctx);
-      const checked = await runChecks(readEnvMap(envPath), status.hostname, deps);
+      const checked = await runChecks(readEnvMap(envPath), hostname, deps);
       if (!allChecksPass(checked.checks)) {
         throw new TlsRuntimeUnavailableError(
           'Lokale TLS-Prüfungen sind nach dem Cutover nicht vollständig grün.',

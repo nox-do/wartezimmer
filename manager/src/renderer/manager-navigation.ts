@@ -14,6 +14,8 @@ export function shouldAutoStartFullscreenWizard(status: HostStatus | null): bool
 
 export type NavigateOptions = {
   wizardPresentation?: WizardPresentation;
+  /** Skip a second status fetch when the caller already has config. */
+  status?: HostStatus | null;
 };
 
 export type DeferredView = 'maintenance' | 'network';
@@ -45,6 +47,10 @@ export function createManagerNavigation(deps: ManagerNavigationDeps) {
 
     if (view === 'wizard') {
       const presentation = options.wizardPresentation ?? 'embedded';
+      if (Object.hasOwn(options, 'status')) {
+        deps.sessions.beginWizard(options.status ?? null, presentation);
+        return;
+      }
       void (async () => {
         try {
           const status = await deps.fetchSetupStatus();

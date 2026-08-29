@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostRuntimeHealth } from '@praxis-flow/server-shared';
+import type { HostRuntimeHealth } from '@praxis-flow/server-shared/setup-api';
 import type { HostStatus } from '../shared/host-status.js';
 import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import { createHostRefreshController } from './host-refresh-controller.js';

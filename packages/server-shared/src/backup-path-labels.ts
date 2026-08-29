@@ -3,8 +3,7 @@
 export const PFBACKUP_FILE_EXTENSION = 'pfbackup';
 export const PFBACKUP_BASENAME_PREFIX = 'praxis-flow-backup-';
 
-const PFBACKUP_TIMESTAMP_TOKEN =
-  /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/;
+const PFBACKUP_TIMESTAMP_TOKEN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/;
 
 export function parsePfbackupTimestampTokenFromPath(backupPath: string): string | null {
   const base = backupPath.replace(/\\/g, '/').split('/').pop() ?? backupPath;
@@ -51,4 +50,17 @@ export function formatPfbackupLabel(backupPath: string, locale = 'de-DE'): strin
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date);
+}
+
+export const TLS_SIDECAR_BASENAME_PREFIX = 'praxis-flow-tls-';
+export const TLS_SIDECAR_FILE_EXTENSION = 'tgz';
+
+/** Sidecar next to `.pfbackup`, same timestamp token. Pilot; later inside the archive. */
+export function tlsSidecarFileName(timestamp: string): string {
+  return `${TLS_SIDECAR_BASENAME_PREFIX}${timestamp}.${TLS_SIDECAR_FILE_EXTENSION}`;
+}
+
+export function siblingTlsSidecarBasename(backupPath: string): string | null {
+  const timestamp = parsePfbackupTimestampTokenFromPath(backupPath);
+  return timestamp ? tlsSidecarFileName(timestamp) : null;
 }
