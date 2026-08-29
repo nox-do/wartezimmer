@@ -21,12 +21,17 @@ Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-histo
 
 ## Als Nächstes
 
+- Manager-Installer aufräumen: [`docs/plan-manager-installer-cleanup.md`](docs/plan-manager-installer-cleanup.md). Zwei Diffs: A = Schnitt 1+2 (drin), B = Schnitt 3+4 (Tag/Fehler/Notify). Keine parallelen Slots. Netzwerk/TLS nicht zusammenlegen.
 - HTTPS-Aufräumen: Schnitte 1–3 umgesetzt und reviewt.
 - Produkt-Spec bleibt [`docs/plan-proxy-tls-manager.md`](docs/plan-proxy-tls-manager.md).
 - Boot-Aufräumen ist im Code; Plan dazu gelöscht. Hülle-Reste (View-Unmount, IPC) kein Folgeauftrag.
 - `state/tls/` liegt in `.gitignore` (Token, acme-dns, Caddyfile).
 
 ## Heute (2026-08-29)
+
+- Manager-Aufräumen Diff A (Schnitt 1+2): `lifecycleGeneration`/`hide()`, Bootstrap unabhängig bis alle settled, Routing-Reset, Catch/ein `onAfterMutation` bei Pfupdate, Stack-Refresh vor Logs. Footer/`busy` unverändert. Diff B offen.
+
+- Manager-Aufräumen-Plan bereinigt: Bootstrap-Busy bis alle drei settled; `show()` setzt Routing zurück; Sperre ist View + Guard (Restore/Pfupdate ziehen in Schnitt 3 den Tab zu); `getPfbackupInfo` → `errors.backup`.
 
 - Schnitt 3 Status-Resume: Warte-Zusatz nur DNS-Warten; `preparing` nicht als Warten; kein „unter Netzwerk“; Fail-Wörter wie Netzwerk; Apply-Fail mit Cutover-Kontext. Post-Cutover ohne HTTP-Zusage. `TlsResumeCard.svelte` unverändert.
 - Schnitt 1 Netzwerk: Warte-Copy nur `awaiting-operator-dns`; persistierter Fail vs Apply-Fail; Status-Refresh nach Apply/Obtain/Prepare-Catch; Footer nur ohne `lastError`. `error` ohne `lastError`: nur Footer, Repair/Reset bleiben.

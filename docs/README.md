@@ -60,6 +60,7 @@ Pläne und Arbeitsstände. Historische Dateien: [`archive/README.md`](archive/RE
 | [`plan-proxy-tls.md`](plan-proxy-tls.md)                         | LAN-TLS — Architektur, nicht Kunden-Test               |
 | [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md)         | Manager-UX für LAN-TLS — nicht Kunden-Test             |
 | [`plan-manager-https.md`](plan-manager-https.md)                 | Manager HTTPS aufräumen — Fail vs. Warten, zwei Flächen |
+| [`plan-manager-installer-cleanup.md`](plan-manager-installer-cleanup.md) | Manager Renderer: Wartung-Mutex, Generation, Svelte-Brücke |
 | [`archive/README.md`](archive/README.md)                         | Routing-Pläne, Auth-Slots, HTTP-Proxy-Ist, Gateway-Lab |
 
 ## API-Vertrag

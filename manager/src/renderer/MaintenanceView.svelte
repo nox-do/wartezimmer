@@ -150,7 +150,7 @@
 
     if (!session) {
       if (lastSessionGeneration !== null) {
-        c.clearError();
+        c.hide();
         syncSnapshot();
         lastSessionGeneration = null;
         sessionOpenConfig = null;

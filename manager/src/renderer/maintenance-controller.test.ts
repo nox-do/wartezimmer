@@ -154,12 +154,27 @@ function createControllerDeps(
   api: PraxisManagerApi,
   overrides: {
     requestConfirm?: (message: string, onConfirm: () => void) => void;
+    onAfterMutation?: () => void;
   } = {},
 ) {
   return {
     api,
     requestConfirm: overrides.requestConfirm ?? (() => {}),
+    onAfterMutation: overrides.onAfterMutation,
   };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
+async function flush(): Promise<void> {
+  await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 test('createMaintenanceController sets busy during show bootstrap', async () => {
@@ -324,4 +339,355 @@ test('applyConfigSnapshot updates draft paths only when not busy', async () => {
     }),
   );
   assert.equal(controller.getState().importsHostPath, '/server/imports');
+});
+
+test('second show discards first bootstrap including logs', async () => {
+  const firstLogs = deferred<void>();
+  const secondLogs = deferred<void>();
+  let logCalls = 0;
+
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        getComposeLogs: async () => {
+          logCalls += 1;
+          if (logCalls === 1) {
+            await firstLogs.promise;
+            return { ok: true, log: 'stale-logs' };
+          }
+          await secondLogs.promise;
+          return { ok: true, log: 'fresh-logs' };
+        },
+      }),
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  controller.show(minimalHostStatus());
+  firstLogs.resolve();
+  await flush();
+  assert.notEqual(controller.getState().logsText, 'stale-logs');
+
+  secondLogs.resolve();
+  await flush();
+  assert.equal(controller.getState().logsText, 'fresh-logs');
+});
+
+test('bootstrap applies other results when one request fails', async () => {
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        getComposeLogs: async () => {
+          throw new Error('logs down');
+        },
+        getPfbackupInfo: async () => ({
+          envPath: '/tmp/pf/.env',
+          latestBackupPath: '/tmp/latest.pfbackup',
+        }),
+      }),
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  await flush();
+
+  assert.equal(controller.getState().error, 'logs down');
+  assert.equal(controller.getState().latestBackupPath, '/tmp/latest.pfbackup');
+  assert.equal(controller.getState().routingMode, 'simple');
+  assert.equal(controller.getState().busy, false);
+});
+
+test('show resets routingMode until the new routing result arrives', async () => {
+  const routingGate = deferred<void>();
+  let routingCalls = 0;
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        getRoutingMode: async () => {
+          routingCalls += 1;
+          if (routingCalls > 1) {
+            await routingGate.promise;
+          }
+          return {
+            routingMode: 'simple' as const,
+            openVisitCount: 0,
+            features: {
+              complexRouting: false,
+              journeyDesigner: false,
+              routingSimulator: false,
+              complexRoutingLicensed: true,
+            },
+          };
+        },
+      }),
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  await flush();
+  assert.equal(controller.getState().routingMode, 'simple');
+
+  controller.show(minimalHostStatus());
+  assert.equal(controller.getState().routingMode, null);
+
+  routingGate.resolve();
+  await flush();
+  assert.equal(controller.getState().routingMode, 'simple');
+});
+
+test('bootstrap busy stays true until all three requests settle', async () => {
+  const backupGate = deferred<void>();
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        getPfbackupInfo: async () => {
+          await backupGate.promise;
+          return { envPath: '/tmp/pf/.env', latestBackupPath: '/tmp/latest.pfbackup' };
+        },
+      }),
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  await flush();
+  assert.equal(controller.getState().busy, true);
+  assert.equal(controller.getState().routingMode, 'simple');
+  assert.equal(controller.getState().latestBackupPath, null);
+
+  backupGate.resolve();
+  await flush();
+  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().latestBackupPath, '/tmp/latest.pfbackup');
+});
+
+test('hide during bootstrap drops late results', async () => {
+  const backupGate = deferred<void>();
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        getPfbackupInfo: async () => {
+          await backupGate.promise;
+          return { envPath: '/tmp/pf/.env', latestBackupPath: '/tmp/stale.pfbackup' };
+        },
+      }),
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  controller.hide();
+  backupGate.resolve();
+  await flush();
+
+  assert.equal(controller.getState().latestBackupPath, null);
+  assert.equal(controller.getState().routingMode, null);
+});
+
+test('stale action finally does not clear busy after a new show', async () => {
+  const actionGate = deferred<void>();
+  const backupGate = deferred<void>();
+  let composeCalls = 0;
+  let backupCalls = 0;
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        runComposeAction: async () => {
+          composeCalls += 1;
+          await actionGate.promise;
+          return { ok: true, log: '', compose: { running: true, services: [] } };
+        },
+        getPfbackupInfo: async () => {
+          backupCalls += 1;
+          if (backupCalls > 1) {
+            await backupGate.promise;
+          }
+          return { envPath: '/tmp/pf/.env', latestBackupPath: null };
+        },
+      }),
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  await flush();
+  controller.handleStackToggle(true);
+  controller.show(minimalHostStatus());
+  actionGate.resolve();
+  await flush();
+  assert.equal(controller.getState().busy, true);
+  assert.equal(composeCalls, 1);
+
+  backupGate.resolve();
+  await flush();
+  assert.equal(controller.getState().busy, false);
+});
+
+test('successful mutation still refreshes host after hide', async () => {
+  const actionGate = deferred<void>();
+  let refreshCount = 0;
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        runComposeAction: async () => {
+          await actionGate.promise;
+          return { ok: true, log: '', compose: { running: true, services: [] } };
+        },
+      }),
+      {
+        onAfterMutation: () => {
+          refreshCount += 1;
+        },
+      },
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  await flush();
+  controller.handleStackToggle(true);
+  controller.hide();
+  actionGate.resolve();
+  await flush();
+
+  assert.equal(refreshCount, 1);
+});
+
+test('recordPfupdateSuccess does not trigger host refresh', async () => {
+  let refreshCount = 0;
+  const controller = createMaintenanceController(
+    createControllerDeps(createMockApi(), {
+      onAfterMutation: () => {
+        refreshCount += 1;
+      },
+    }),
+  );
+
+  controller.show(minimalHostStatus({ compose: { running: true, services: [] } }));
+  await flush();
+  controller.recordPfupdateSuccess({
+    ok: true,
+    updateId: 'update-1',
+    report: {
+      previousVersion: '2026.07.1',
+      targetVersion: '2026.08.0',
+      backupPath: '/tmp/backups/pre.pfbackup',
+      compose: { running: true, services: [] },
+    },
+  });
+  await flush();
+
+  assert.equal(refreshCount, 0);
+});
+
+test('stack success refreshes host even when logs fail', async () => {
+  let refreshCount = 0;
+  let composeCalls = 0;
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        getComposeLogs: async () => {
+          if (composeCalls > 0) {
+            throw new Error('logs down');
+          }
+          return { ok: true, log: 'ok' };
+        },
+        runComposeAction: async () => {
+          composeCalls += 1;
+          return { ok: true, log: '', compose: { running: true, services: [] } };
+        },
+      }),
+      {
+        onAfterMutation: () => {
+          refreshCount += 1;
+        },
+      },
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  await flush();
+  controller.handleStackToggle(true);
+  await flush();
+
+  assert.equal(refreshCount, 1);
+  assert.equal(controller.getState().error, 'logs down');
+});
+
+test('requestLogsRefresh clears an existing error on retry start', async () => {
+  let failLogs = true;
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        getComposeLogs: async () => {
+          if (failLogs) {
+            throw new Error('compose down');
+          }
+          return { ok: true, log: 'recovered' };
+        },
+      }),
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  await flush();
+  controller.requestLogsRefresh('app');
+  await flush();
+  assert.equal(controller.getState().error, 'compose down');
+
+  failLogs = false;
+  controller.requestLogsRefresh('app');
+  assert.equal(controller.getState().error, null);
+  await flush();
+  assert.equal(controller.getState().error, null);
+  assert.equal(controller.getState().logsText, 'recovered');
+});
+
+test('browse folder rejection is caught', async () => {
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        selectFolder: async () => {
+          throw new Error('dialog down');
+        },
+      }),
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  await flush();
+  const path = await controller.browseImportsFolder();
+
+  assert.equal(path, null);
+  assert.equal(controller.getState().error, 'dialog down');
+});
+
+test('pin reset log failure does not reject', async () => {
+  let pinDone = false;
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        getComposeLogs: async () => {
+          if (pinDone) {
+            throw new Error('logs down');
+          }
+          return { ok: true, log: 'ok' };
+        },
+        resetStaffPins: async () => {
+          pinDone = true;
+          return {
+            ok: true,
+            log: '',
+            defaultPin: '0000',
+            databaseUpdated: true,
+            compose: { running: true, services: [] },
+          };
+        },
+      }),
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  await flush();
+  controller.executePinReset();
+  await flush();
+
+  assert.equal(controller.getState().error, 'logs down');
+  assert.match(controller.getState().pinResetStatusText, /0000/);
 });

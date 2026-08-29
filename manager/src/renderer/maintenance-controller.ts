@@ -82,6 +82,7 @@ export type MaintenanceController = {
   applyRuntimeHealth: (health: HostRuntimeHealth) => void;
   applyConfigSnapshot: (status: HostStatus) => void;
   show: (status: HostStatus) => void;
+  hide: () => void;
   clearError: () => void;
 };
 
@@ -110,17 +111,26 @@ function createInitialState(): MaintenanceState {
   };
 }
 
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function createMaintenanceController(
   deps: MaintenanceControllerDeps,
 ): MaintenanceController {
   const state = createInitialState();
   const listeners = new Set<() => void>();
+  let lifecycleGeneration = 0;
 
   function notify(): void {
     deps.onStateChange?.();
     for (const listener of listeners) {
       listener();
     }
+  }
+
+  function still(generation: number): boolean {
+    return generation === lifecycleGeneration;
   }
 
   function patch(partial: Partial<MaintenanceState>, options: { notify?: boolean } = {}): void {
@@ -142,30 +152,49 @@ export function createMaintenanceController(
     return storagePathsChanged(state.importsHostPath, state.exportsHostPath, state.status?.folders);
   }
 
-  async function refreshLogs(service?: string): Promise<void> {
+  async function refreshLogs(service?: string, generation = lifecycleGeneration): Promise<void> {
     const logsService = service ?? state.logsService;
+    if (!still(generation)) {
+      return;
+    }
     patch({ logsService });
     const result = await deps.api.getComposeLogs(logsService, 200);
+    if (!still(generation)) {
+      return;
+    }
     patch({ logsText: result.log });
   }
 
   async function runAction(action: 'start' | 'stop' | 'restart'): Promise<void> {
+    const generation = lifecycleGeneration;
     setBusy(true);
     setError(null);
     try {
       const result = await deps.api.runComposeAction(action);
-      patch({ compose: result.compose });
-      if (!result.ok) {
-        setError(composeActionErrorMessage(action, result.log));
-      }
-      if (action !== 'stop') {
-        await refreshLogs();
+      if (still(generation)) {
+        patch({ compose: result.compose });
+        if (!result.ok) {
+          setError(composeActionErrorMessage(action, result.log));
+        }
       }
       deps.onAfterMutation?.();
+      if (action !== 'stop') {
+        try {
+          await refreshLogs(undefined, generation);
+        } catch (error) {
+          if (still(generation) && result.ok) {
+            setError(errorMessage(error, 'Logs konnten nicht geladen werden.'));
+          }
+        }
+      }
     } catch (error) {
-      setError(error instanceof Error ? error.message : `Aktion „${action}“ fehlgeschlagen.`);
+      if (still(generation)) {
+        setError(errorMessage(error, `Aktion „${action}“ fehlgeschlagen.`));
+      }
     } finally {
-      setBusy(false);
+      if (still(generation)) {
+        setBusy(false);
+      }
     }
   }
 
@@ -177,6 +206,7 @@ export function createMaintenanceController(
       return;
     }
 
+    const generation = lifecycleGeneration;
     setBusy(true);
     setError(null);
     patch({ storageStatusText: STORAGE_SAVE_PROGRESS_TEXT });
@@ -188,40 +218,71 @@ export function createMaintenanceController(
         restartCompose,
       })
       .then((result) => {
-        const nextStatus = state.status
-          ? { ...state.status, folders: result.folders }
-          : state.status;
-        patch({
-          importsHostPath: result.folders.imports,
-          exportsHostPath: result.folders.exports,
-          status: nextStatus,
-          latestBackupPath: result.backupPath,
-          compose: result.compose ?? state.compose,
-          storageStatusText: storageSaveStatusText(result, restartCompose),
-        });
-        const storageError = storageSaveErrorText(result, restartCompose);
-        if (storageError) {
-          setError(storageError);
+        if (still(generation)) {
+          const nextStatus = state.status
+            ? { ...state.status, folders: result.folders }
+            : state.status;
+          patch({
+            importsHostPath: result.folders.imports,
+            exportsHostPath: result.folders.exports,
+            status: nextStatus,
+            latestBackupPath: result.backupPath,
+            compose: result.compose ?? state.compose,
+            storageStatusText: storageSaveStatusText(result, restartCompose),
+          });
+          const storageError = storageSaveErrorText(result, restartCompose);
+          if (storageError) {
+            setError(storageError);
+          }
         }
         deps.onAfterMutation?.();
       })
       .catch((error) => {
+        if (!still(generation)) {
+          return;
+        }
         patch({ storageStatusText: '' });
-        setError(error instanceof Error ? error.message : 'Speichern der Ordner fehlgeschlagen.');
+        setError(errorMessage(error, 'Speichern der Ordner fehlgeschlagen.'));
       })
       .finally(() => {
-        setBusy(false);
+        if (still(generation)) {
+          setBusy(false);
+        }
       });
   }
 
   function recordPfupdateSuccess(result: Extract<PfupdateApplyResult, { ok: true }>): void {
+    const generation = lifecycleGeneration;
     patch({
       compose: result.report.compose ?? state.compose,
       softwareUpdateStatusText: formatPfupdateSuccess(result),
       latestBackupPath: result.report.backupPath,
     });
-    deps.onAfterMutation?.();
-    void refreshLogs();
+    void refreshLogs(undefined, generation).catch((error) => {
+      if (still(generation)) {
+        setError(errorMessage(error, 'Logs konnten nicht geladen werden.'));
+      }
+    });
+  }
+
+  async function browseFolder(
+    currentPath: string,
+    apply: (path: string) => void,
+  ): Promise<string | null> {
+    const generation = lifecycleGeneration;
+    try {
+      const result = await deps.api.selectFolder(currentPath.trim() || undefined);
+      if (!still(generation) || result.canceled || !result.path) {
+        return null;
+      }
+      apply(result.path);
+      return result.path;
+    } catch (error) {
+      if (still(generation)) {
+        setError(errorMessage(error, 'Ordnerauswahl fehlgeschlagen.'));
+      }
+      return null;
+    }
   }
 
   return {
@@ -239,21 +300,11 @@ export function createMaintenanceController(
     setRoutingMode(routingMode) {
       patch({ routingMode });
     },
-    async browseImportsFolder() {
-      const result = await deps.api.selectFolder(state.importsHostPath.trim() || undefined);
-      if (!result.canceled && result.path) {
-        patch({ importsHostPath: result.path });
-        return result.path;
-      }
-      return null;
+    browseImportsFolder() {
+      return browseFolder(state.importsHostPath, (path) => patch({ importsHostPath: path }));
     },
-    async browseExportsFolder() {
-      const result = await deps.api.selectFolder(state.exportsHostPath.trim() || undefined);
-      if (!result.canceled && result.path) {
-        patch({ exportsHostPath: result.path });
-        return result.path;
-      }
-      return null;
+    browseExportsFolder() {
+      return browseFolder(state.exportsHostPath, (path) => patch({ exportsHostPath: path }));
     },
     handleStackToggle(wantRunning) {
       if (wantRunning) {
@@ -271,25 +322,39 @@ export function createMaintenanceController(
     },
     refreshLogs,
     requestLogsRefresh(service) {
+      const generation = lifecycleGeneration;
       setBusy(true);
-      void refreshLogs(service)
+      setError(null);
+      void refreshLogs(service, generation)
         .catch((error) => {
-          setError(error instanceof Error ? error.message : 'Logs konnten nicht geladen werden.');
+          if (still(generation)) {
+            setError(errorMessage(error, 'Logs konnten nicht geladen werden.'));
+          }
         })
-        .finally(() => setBusy(false));
+        .finally(() => {
+          if (still(generation)) {
+            setBusy(false);
+          }
+        });
     },
     backupPf() {
+      const generation = lifecycleGeneration;
       setBusy(true);
       setError(null);
       patch({ backupStatusText: 'Backup wird erstellt …' });
       void deps.api
         .createPfbackup()
         .then(async (result) => {
-          patch({
-            latestBackupPath: result.backupPath,
-            latestTlsSidecarPath: result.tlsSidecarPath ?? null,
-          });
+          if (still(generation)) {
+            patch({
+              latestBackupPath: result.backupPath,
+              latestTlsSidecarPath: result.tlsSidecarPath ?? null,
+            });
+          }
           const saveResult = await deps.api.savePfbackup(result.backupPath);
+          if (!still(generation)) {
+            return;
+          }
           if (saveResult.canceled) {
             patch({ backupStatusText: 'Backup lokal gespeichert (Download abgebrochen).' });
             return;
@@ -302,23 +367,37 @@ export function createMaintenanceController(
           patch({ backupStatusText: 'Backup erstellt und exportiert.' });
         })
         .catch((error) => {
+          if (!still(generation)) {
+            return;
+          }
           patch({ backupStatusText: '' });
-          setError(error instanceof Error ? error.message : 'Backup fehlgeschlagen.');
+          setError(errorMessage(error, 'Backup fehlgeschlagen.'));
         })
-        .finally(() => setBusy(false));
+        .finally(() => {
+          if (still(generation)) {
+            setBusy(false);
+          }
+        });
     },
     validatePfbackup() {
+      const generation = lifecycleGeneration;
       setBusy(true);
       setError(null);
       patch({ backupStatusText: 'Backup wird geprüft …' });
       void deps.api
         .readPfbackupForValidate()
         .then(async (picked) => {
+          if (!still(generation)) {
+            return;
+          }
           if (picked.canceled) {
             patch({ backupStatusText: '' });
             return;
           }
           const result = await deps.api.validatePfbackup(picked.content);
+          if (!still(generation)) {
+            return;
+          }
           if (!result.archiveValid) {
             patch({ backupStatusText: '' });
             setError(result.archiveErrors.join(' ') || 'Backup-Datei ungültig.');
@@ -337,10 +416,17 @@ export function createMaintenanceController(
           });
         })
         .catch((error) => {
+          if (!still(generation)) {
+            return;
+          }
           patch({ backupStatusText: '' });
-          setError(error instanceof Error ? error.message : 'Backup-Prüfung fehlgeschlagen.');
+          setError(errorMessage(error, 'Backup-Prüfung fehlgeschlagen.'));
         })
-        .finally(() => setBusy(false));
+        .finally(() => {
+          if (still(generation)) {
+            setBusy(false);
+          }
+        });
     },
     exportTlsSidecar() {
       const backupPath = state.latestTlsSidecarPath ?? state.latestBackupPath;
@@ -348,12 +434,16 @@ export function createMaintenanceController(
         setError('Kein HTTPS-State zum Sichern. Zuerst ein Praxis-Backup erstellen.');
         return;
       }
+      const generation = lifecycleGeneration;
       setBusy(true);
       setError(null);
       patch({ tlsSidecarStatusText: 'HTTPS-State wird exportiert …' });
       void deps.api
         .saveTlsSidecar(backupPath)
         .then((saveResult) => {
+          if (!still(generation)) {
+            return;
+          }
           if (saveResult.canceled) {
             patch({ tlsSidecarStatusText: '' });
             return;
@@ -366,22 +456,33 @@ export function createMaintenanceController(
           patch({ tlsSidecarStatusText: 'HTTPS-State exportiert.' });
         })
         .catch((error) => {
+          if (!still(generation)) {
+            return;
+          }
           patch({ tlsSidecarStatusText: '' });
-          setError(error instanceof Error ? error.message : 'HTTPS-State-Export fehlgeschlagen.');
+          setError(errorMessage(error, 'HTTPS-State-Export fehlgeschlagen.'));
         })
-        .finally(() => setBusy(false));
+        .finally(() => {
+          if (still(generation)) {
+            setBusy(false);
+          }
+        });
     },
     inspectTlsSidecar() {
       if (!state.latestBackupPath) {
         setError('Kein Praxis-Backup zum Prüfen.');
         return;
       }
+      const generation = lifecycleGeneration;
       setBusy(true);
       setError(null);
       patch({ tlsSidecarStatusText: 'HTTPS-State wird geprüft …' });
       void deps.api
         .inspectPfbackupFile(state.latestBackupPath)
         .then((inspect) => {
+          if (!still(generation)) {
+            return;
+          }
           const line = restoreTlsInspectSummaryLine(inspect.backup?.tls);
           patch({
             tlsSidecarStatusText:
@@ -395,10 +496,17 @@ export function createMaintenanceController(
           }
         })
         .catch((error) => {
+          if (!still(generation)) {
+            return;
+          }
           patch({ tlsSidecarStatusText: '' });
-          setError(error instanceof Error ? error.message : 'HTTPS-State-Prüfung fehlgeschlagen.');
+          setError(errorMessage(error, 'HTTPS-State-Prüfung fehlgeschlagen.'));
         })
-        .finally(() => setBusy(false));
+        .finally(() => {
+          if (still(generation)) {
+            setBusy(false);
+          }
+        });
     },
     applyStorage() {
       if (!state.importsHostPath.trim() || !state.exportsHostPath.trim()) {
@@ -422,58 +530,82 @@ export function createMaintenanceController(
         return;
       }
       const routingMode = state.routingMode;
+      const generation = lifecycleGeneration;
       setBusy(true);
       setError(null);
       patch({ routingModeStatusText: ROUTING_MODE_SAVE_PROGRESS_TEXT });
       void deps.api
         .setRoutingMode({ routingMode })
         .then((result) => {
-          if (!result.ok) {
-            patch({ routingModeStatusText: '' });
-            setError(formatRoutingModeError(result));
-            return;
+          if (still(generation)) {
+            if (!result.ok) {
+              patch({ routingModeStatusText: '' });
+              setError(formatRoutingModeError(result));
+              return;
+            }
+            patch({
+              routingMode: result.routingMode,
+              routingModeSaved: result.routingMode,
+              complexRoutingLicensed: result.features.complexRoutingLicensed,
+              openVisitCount: 0,
+              routingModeStatusText: routingModeSuccessText(result.routingMode),
+            });
           }
-          patch({
-            routingMode: result.routingMode,
-            routingModeSaved: result.routingMode,
-            complexRoutingLicensed: result.features.complexRoutingLicensed,
-            openVisitCount: 0,
-            routingModeStatusText: routingModeSuccessText(result.routingMode),
-          });
-          deps.onAfterMutation?.();
+          if (result.ok) {
+            deps.onAfterMutation?.();
+          }
         })
         .catch((error) => {
+          if (!still(generation)) {
+            return;
+          }
           patch({ routingModeStatusText: '' });
-          setError(
-            error instanceof Error
-              ? error.message
-              : 'Routing-Modus konnte nicht gespeichert werden.',
-          );
+          setError(errorMessage(error, 'Routing-Modus konnte nicht gespeichert werden.'));
         })
-        .finally(() => setBusy(false));
+        .finally(() => {
+          if (still(generation)) {
+            setBusy(false);
+          }
+        });
     },
     executePinReset() {
+      const generation = lifecycleGeneration;
       setBusy(true);
       setError(null);
       patch({ pinResetStatusText: PIN_RESET_PROGRESS_TEXT });
       void deps.api
         .resetStaffPins()
         .then((result) => {
-          patch({ compose: result.compose });
+          if (still(generation)) {
+            patch({ compose: result.compose });
+            if (result.ok) {
+              patch({ pinResetStatusText: pinResetSuccessText(result.defaultPin) });
+            } else {
+              patch({ pinResetStatusText: '' });
+              setError(result.log || 'PIN-Reset fehlgeschlagen.');
+            }
+          }
           if (result.ok) {
-            patch({ pinResetStatusText: pinResetSuccessText(result.defaultPin) });
-            void refreshLogs();
+            void refreshLogs(undefined, generation).catch((error) => {
+              if (still(generation)) {
+                setError(errorMessage(error, 'Logs konnten nicht geladen werden.'));
+              }
+            });
             deps.onAfterMutation?.();
-          } else {
-            patch({ pinResetStatusText: '' });
-            setError(result.log || 'PIN-Reset fehlgeschlagen.');
           }
         })
         .catch((error) => {
+          if (!still(generation)) {
+            return;
+          }
           patch({ pinResetStatusText: '' });
-          setError(error instanceof Error ? error.message : 'PIN-Reset fehlgeschlagen.');
+          setError(errorMessage(error, 'PIN-Reset fehlgeschlagen.'));
         })
-        .finally(() => setBusy(false));
+        .finally(() => {
+          if (still(generation)) {
+            setBusy(false);
+          }
+        });
     },
     applyRuntimeHealth(health) {
       patch({ compose: health.compose });
@@ -487,6 +619,7 @@ export function createMaintenanceController(
       patch(next);
     },
     show(status) {
+      const generation = ++lifecycleGeneration;
       patch({
         status,
         compose: status.compose,
@@ -498,6 +631,9 @@ export function createMaintenanceController(
         exportsHostPath: status.folders.exports,
         storageStatusText: '',
         softwareUpdateStatusText: '',
+        routingMode: null,
+        routingModeSaved: null,
+        openVisitCount: 0,
         routingModeStatusText: '',
         pinResetStatusText: '',
         backupStatusText: '',
@@ -506,11 +642,35 @@ export function createMaintenanceController(
       });
 
       setBusy(true);
-      void Promise.all([refreshLogs('app'), deps.api.getPfbackupInfo(), deps.api.getRoutingMode()])
-        .then(([, backupInfoResult, routingCapabilities]) => {
+
+      const logsDone = refreshLogs('app', generation).catch((error) => {
+        if (still(generation)) {
+          setError(errorMessage(error, 'Wartungsdaten konnten nicht geladen werden.'));
+        }
+      });
+      const backupDone = deps.api
+        .getPfbackupInfo()
+        .then((backupInfoResult) => {
+          if (!still(generation)) {
+            return;
+          }
           patch({
             latestBackupPath: backupInfoResult.latestBackupPath,
             latestTlsSidecarPath: backupInfoResult.latestTlsSidecarPath ?? null,
+          });
+        })
+        .catch((error) => {
+          if (still(generation)) {
+            setError(errorMessage(error, 'Wartungsdaten konnten nicht geladen werden.'));
+          }
+        });
+      const routingDone = deps.api
+        .getRoutingMode()
+        .then((routingCapabilities) => {
+          if (!still(generation)) {
+            return;
+          }
+          patch({
             routingMode: routingCapabilities.routingMode,
             routingModeSaved: routingCapabilities.routingMode,
             complexRoutingLicensed: routingCapabilities.features.complexRoutingLicensed,
@@ -518,11 +678,19 @@ export function createMaintenanceController(
           });
         })
         .catch((error) => {
-          setError(
-            error instanceof Error ? error.message : 'Wartungsdaten konnten nicht geladen werden.',
-          );
-        })
-        .finally(() => setBusy(false));
+          if (still(generation)) {
+            setError(errorMessage(error, 'Wartungsdaten konnten nicht geladen werden.'));
+          }
+        });
+
+      void Promise.allSettled([logsDone, backupDone, routingDone]).then(() => {
+        if (still(generation)) {
+          setBusy(false);
+        }
+      });
+    },
+    hide() {
+      lifecycleGeneration += 1;
     },
     clearError() {
       setError(null);
