@@ -17,6 +17,7 @@ import {
   TLS_LEASE_STALE_LAN_COPY,
   TLS_RESET_CONFIRM_MESSAGE,
   tlsLeaseBlockedByStaleLan,
+  tlsOperatorRecordsAreTheTask,
 } from './tls-network-view-model.js';
 
 export type TlsStartPhase = 'offer' | 'hostname' | 'lease';
@@ -29,6 +30,8 @@ export type TlsNetworkState = {
   ipv4Reserved: boolean;
   customPemStaged: boolean;
   operatorRequest: TlsOperatorRequest | null;
+  /** Open Mailtext / DNS-Records once the operator must send or copy them. */
+  revealOperatorRecords: boolean;
   dnsChecks: TlsDnsCheck[] | null;
   localChecks: TlsLocalCheck[] | null;
   busy: boolean;
@@ -44,6 +47,7 @@ const INITIAL: TlsNetworkState = {
   ipv4Reserved: false,
   customPemStaged: false,
   operatorRequest: null,
+  revealOperatorRecords: false,
   dnsChecks: null,
   localChecks: null,
   busy: false,
@@ -54,6 +58,7 @@ const INITIAL: TlsNetworkState = {
 export type TlsNetworkController = {
   getState(): TlsNetworkState;
   hydrateOperatorRequest(): Promise<void>;
+  setRevealOperatorRecords(open: boolean): void;
   startPrepare(): void;
   back(): void;
   patchDraft(
@@ -144,8 +149,15 @@ export function createTlsNetworkController(deps: {
       return state;
     },
 
+    setRevealOperatorRecords(open) {
+      set({ revealOperatorRecords: open });
+    },
+
     async hydrateOperatorRequest() {
       const current = tls();
+      if (tlsOperatorRecordsAreTheTask(current)) {
+        set({ revealOperatorRecords: true });
+      }
       const lanIp = deps.lanIp()?.trim();
       if (
         !current ||
@@ -230,6 +242,7 @@ export function createTlsNetworkController(deps: {
           operatorRequest: result.operatorRequest,
           startPhase: 'offer',
           ipv4Reserved: true,
+          revealOperatorRecords: true,
         });
       } catch (error) {
         await failThenRefreshHost(error);

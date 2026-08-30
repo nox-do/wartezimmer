@@ -71,6 +71,11 @@ export function tlsShowsDnsWaitCopy(tls: TlsStatus | undefined): boolean {
   return tls?.state === 'awaiting-operator-dns';
 }
 
+/** Mailtext / Praxis-DNS-Records: Aufgabe direkt nach „Mail vorbereiten“ / Vorbereiten. */
+export function tlsOperatorRecordsAreTheTask(tls: TlsStatus | undefined): boolean {
+  return tlsShowsDnsWaitCopy(tls);
+}
+
 /** Persistierter Fail vor Cutover: Repair/Reset. Notice nur bei `lastError`. */
 export function tlsIsPersistedFailBeforeCutover(tls: TlsStatus | undefined): boolean {
   return Boolean(tls && tls.state === 'error' && !tls.cutoverApplied);

@@ -90,6 +90,7 @@ test('submitLease prepares managed TLS without a client-minted hostname', async 
   await controller.submitLease();
   assert.deepEqual(prepared, { mode: 'managed', hostname: undefined, lanIp: '192.168.1.10' });
   assert.equal(controller.getState().operatorRequest?.oneTimeToken, 'once');
+  assert.equal(controller.getState().revealOperatorRecords, true);
 });
 
 test('submitLease refuses prepare while LAN IP is stale', async () => {
@@ -146,6 +147,7 @@ test('hydrateOperatorRequest replays prepare to recover the unused token', async
 
   await controller.hydrateOperatorRequest();
   assert.equal(controller.getState().operatorRequest?.oneTimeToken, 'replayed');
+  assert.equal(controller.getState().revealOperatorRecords, true);
 });
 
 test('verifyDns keeps TLS lastError off the footer error slot', async () => {

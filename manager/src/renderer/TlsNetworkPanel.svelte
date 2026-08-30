@@ -345,7 +345,11 @@
     {/if}
 
     {#if tls.mode === 'custom' && tls.hostname && lanIp}
-      <details>
+      <details
+        open={state.revealOperatorRecords}
+        ontoggle={(event) =>
+          controller.setRevealOperatorRecords(event.currentTarget.open)}
+      >
         <summary>DNS-Records anzeigen</summary>
         <textarea class="wizard-input is-monospace is-compact" readonly>{practiceARecordBody(tls.hostname, lanIp)}</textarea>
         <div class="actions-row">
@@ -359,7 +363,11 @@
         </div>
       </details>
     {:else if mail}
-      <details>
+      <details
+        open={state.revealOperatorRecords}
+        ontoggle={(event) =>
+          controller.setRevealOperatorRecords(event.currentTarget.open)}
+      >
         <summary>Mailtext anzeigen</summary>
         <label class="wizard-field-label" for="tls-mail-to">An</label>
         <input id="tls-mail-to" class="wizard-input" readonly value={TLS_OPERATOR_MAIL} />

@@ -66,6 +66,7 @@
   let reachabilityOpen = $state(false);
   let checksOpen = $state(false);
   let topologyOpen = $state(false);
+  let draftOutcomeHost = $state<'lan' | 'proxy' | 'reachability' | null>(null);
 
   let controller = $state<NetworkController | null>(null);
   let lastSessionGeneration = $state<number | null>(null);
@@ -137,6 +138,16 @@
 
   function patchFields(patch: Parameters<NetworkController['patchFields']>[0]): void {
     controller?.patchFields(patch);
+  }
+
+  function applyDraftFrom(host: 'lan' | 'proxy' | 'reachability'): void {
+    draftOutcomeHost = host;
+    controller?.applyAndVerify();
+  }
+
+  function discardDraftFrom(host: 'lan' | 'proxy' | 'reachability'): void {
+    draftOutcomeHost = host;
+    controller?.discardDraft();
   }
 
   const dirty = $derived(
@@ -256,7 +267,7 @@
   <LoadingOverlay loading={viewLoading} />
 
   {#if configSnapshot && snapshot}
-    {#snippet draftCommitActions()}
+    {#snippet draftCommitActions(host: 'lan' | 'proxy' | 'reachability')}
       {#if warningText}
         <p class="hint">{warningText}</p>
       {/if}
@@ -265,7 +276,7 @@
           type="button"
           class="btn-secondary"
           disabled={busy}
-          onclick={() => controller?.applyAndVerify()}
+          onclick={() => applyDraftFrom(host)}
         >
           {NETWORK_APPLY_BUTTON_LABEL}
         </button>
@@ -273,13 +284,28 @@
           type="button"
           class="btn-secondary"
           disabled={busy}
-          onclick={() => {
-            controller?.discardDraft();
-          }}
+          onclick={() => discardDraftFrom(host)}
         >
           {NETWORK_DISCARD_BUTTON_LABEL}
         </button>
       </div>
+    {/snippet}
+    {#snippet draftOutcome(host: 'lan' | 'proxy' | 'reachability')}
+      {#if draftOutcomeHost === host}
+        {#if progressText}
+          <p class="maintenance-backup-status">{progressText}</p>
+        {:else if snapshot?.notice}
+          <p
+            class={snapshot.notice.tone === 'error'
+              ? 'error'
+              : snapshot.notice.tone === 'warning'
+                ? 'lan-warning'
+                : 'maintenance-backup-status'}
+          >
+            {snapshot.notice.message}
+          </p>
+        {/if}
+      {/if}
     {/snippet}
     <section class="panel-section panel-section--network">
       <div class="maintenance-accordion">
@@ -302,8 +328,9 @@
             onChange={patchFields}
           />
           {#if commitPlacement.lan}
-            {@render draftCommitActions()}
+            {@render draftCommitActions('lan')}
           {/if}
+          {@render draftOutcome('lan')}
         </MaintenanceSection>
 
         {#if !tlsCutoverApplied}
@@ -323,8 +350,9 @@
                 HTTPS-Adresse wird unter dem HTTPS-Block verwaltet.
               </p>
               {#if commitPlacement.reachability}
-                {@render draftCommitActions()}
+                {@render draftCommitActions('reachability')}
               {/if}
+              {@render draftOutcome('reachability')}
             {:else}
               <!-- OPEN: guest-WLAN / Private-DNS help belongs in this expander (also without TLS). See ReachabilityPanel.svelte. -->
               <ReachabilityPanel
@@ -336,14 +364,18 @@
                 verifyEnabled={Boolean(compose?.running)}
                 verifyDisabledHint={NETWORK_STACK_STOPPED_VERIFY_HINT}
                 onChange={patchFields}
-                onVerifySaved={() => controller?.verifyActiveConfiguration(savedUrl)}
+                onVerifySaved={() => {
+                  draftOutcomeHost = 'reachability';
+                  controller?.verifyActiveConfiguration(savedUrl);
+                }}
               >
                 {#snippet afterPreview()}
                   {#if commitPlacement.reachability}
-                    {@render draftCommitActions()}
+                    {@render draftCommitActions('reachability')}
                   {/if}
                 {/snippet}
               </ReachabilityPanel>
+              {@render draftOutcome('reachability')}
             {/if}
           </MaintenanceSection>
 
@@ -366,11 +398,18 @@
               </p>
             {/if}
             {#if commitPlacement.proxy}
-              {@render draftCommitActions()}
+              {@render draftCommitActions('proxy')}
             {/if}
             {#if showProxyRestore}
-              <ProxyRecoveryAction disabled={busy} onRestore={() => controller?.restoreProxy()} />
+              <ProxyRecoveryAction
+                disabled={busy}
+                onRestore={() => {
+                  draftOutcomeHost = 'proxy';
+                  controller?.restoreProxy();
+                }}
+              />
             {/if}
+            {@render draftOutcome('proxy')}
           </MaintenanceSection>
         {/if}
 
@@ -396,20 +435,6 @@
           </MaintenanceSection>
         {/if}
       </div>
-
-      {#if progressText}
-        <p class="maintenance-backup-status">{progressText}</p>
-      {:else if snapshot.notice}
-        <p
-          class={snapshot.notice.tone === 'error'
-            ? 'error'
-            : snapshot.notice.tone === 'warning'
-              ? 'lan-warning'
-              : 'maintenance-backup-status'}
-        >
-          {snapshot.notice.message}
-        </p>
-      {/if}
 
       <div class="maintenance-accordion network-diagnose-accordion">
         <MaintenanceSection
