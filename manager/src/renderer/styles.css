@@ -1075,7 +1075,7 @@ textarea.wizard-input.is-compact {
 }
 
 .maintenance-expander-panel {
-  padding: 0 1rem 1rem;
+  padding: 0.85rem 1rem 1rem;
   border-top: 1px solid var(--border);
 }
 

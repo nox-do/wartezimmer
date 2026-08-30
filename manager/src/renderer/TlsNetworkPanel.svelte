@@ -95,7 +95,7 @@
 </script>
 
 {#if !eligible && tlsIsOff(tls)}
-  <p class="notice is-warn">HTTPS braucht Port 80. Zuerst den Browserzugriff einschalten und übernehmen.</p>
+  <p class="notice is-warn">HTTPS braucht Port 80. Zuerst den Browserzugriff (Proxy Port 80) einschalten und übernehmen.</p>
 {:else if tlsIsOff(tls) && state.startPhase === 'offer'}
   <p class="hint">Noch nicht vorbereitet. HTTPS hier vorbereiten.</p>
   <div class="actions-row">

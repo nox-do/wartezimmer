@@ -288,7 +288,7 @@
         {#if !tlsCutoverApplied}
           <MaintenanceSection
             open={proxyOpen}
-            title="Browserzugriff (Port 80)"
+            title="Browserzugriff (Proxy Port 80)"
             subtitle={networkProxySubtitle(configSnapshot, snapshot.proxyEnabled, runtimeSnapshot)}
             onToggle={() => {
               proxyOpen = !proxyOpen;
