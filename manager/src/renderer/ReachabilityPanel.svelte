@@ -8,6 +8,7 @@
    * rebind callout. Draft German UI: docs/mocks/lan-tls-wizard/app.js
    * `renderClientReachHint()`. Do not implement until asked.
    */
+  import type { Snippet } from 'svelte';
   import type { NetworkSnapshot } from '../shared/host-status.js';
   import type { ReachabilityFieldState, ReachabilityMode } from './reachability.js';
   import {
@@ -31,6 +32,7 @@
     verifyDisabledHint = null,
     onChange,
     onVerifySaved,
+    afterPreview,
   }: {
     state: LanIpFieldState & ReachabilityFieldState;
     network: NetworkSnapshot | null;
@@ -41,6 +43,7 @@
     verifyDisabledHint?: string | null;
     onChange: (patch: Partial<ReachabilityFieldState>) => void;
     onVerifySaved?: () => void;
+    afterPreview?: Snippet;
   } = $props();
 
   const lanIp = $derived(resolvedLanIp(state));
@@ -134,6 +137,8 @@
   {#if preview}
     <p class="hint">Vorschau (Entwurf): <code>{preview}</code></p>
   {/if}
+
+  {@render afterPreview?.()}
 
   {#if savedBaseUrl && onVerifySaved}
     <p class="hint">Gespeichert: <code>{savedBaseUrl}</code></p>

@@ -32,7 +32,7 @@ Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-histo
 - Manager-Aufräumen: ConfirmDialog ruft bei programmatischem Close nicht mehr `onCancel`. Accordion öffnet die neu hinzugekommene Fehlerfläche (Routing/Logs/Backup); Löschen schaltet nicht um. `hide()` behält den Lock laufender Host-Aktionen (inkl. PIN).
 - Kunden-Test Reset: packaged Install-Home geleert; Repo-`.env` ohne Proxy/TLS; `state/tls` weg. tgz `dist/releases/praxis-flow-0.3.0/` neu (app+sandbox+`praxis-flow-proxy`). DMG war schon neu.
 - Netzwerk: HTTPS-Warnbox Abstand zur Trennlinie; Titel „Browserzugriff (Proxy Port 80)“.
-- Netzwerk-Commit (vereinbart, noch nicht gebaut): Draft-Übernehmen oft unter dem Fold (HTTPS+Adresse offen, Proxy zu). Ziel: denselben Save sichtbar am Ort der Änderung, ohne zweiten Save und ohne Wartung-Exclusive. Aktionszeile in den drei Draft-Expandern (LAN nach IP-Wahl, Proxy nach Checkbox / Restore darunter, Adresse nach Entwurf / Prüfen darunter); Tab-Zeile nur Fallback wenn dirty und alle drei zu. HTTPS-Warnung öffnet Proxy, nennt denselben Button, kein Übernehmen in HTTPS. Default TLS-aus: Proxy auf, Geräte-Adresse zu.
+- Netzwerk-Commit: derselbe Draft-Save in den offenen Konfig-Expandern (LAN/Proxy/Adresse). Keine Tab-Zeile. HTTPS-Warnung nennt denselben Block und Button. Default TLS-aus: Proxy auf, Geräte-Adresse zu. Expander: LAN → Geräte-Adresse → Browserzugriff → HTTPS → Prüfungen → Erläuterung. Wartung unverändert.
 
 ## Heute (2026-08-29)
 

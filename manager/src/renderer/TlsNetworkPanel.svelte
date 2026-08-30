@@ -34,6 +34,10 @@
     tlsShowsDnsWaitCopy,
     tlsShowsStructuredLastErrorNotice,
   } from './tls-network-view-model.js';
+  import {
+    NETWORK_APPLY_BUTTON_LABEL,
+    NETWORK_PROXY_EXPANDER_TITLE,
+  } from './network-view-model.js';
 
   let {
     status,
@@ -95,7 +99,10 @@
 </script>
 
 {#if !eligible && tlsIsOff(tls)}
-  <p class="notice is-warn">HTTPS braucht Port 80. Zuerst den Browserzugriff (Proxy Port 80) einschalten und übernehmen.</p>
+  <p class="notice is-warn">
+    HTTPS braucht Port 80. Zuerst unter {NETWORK_PROXY_EXPANDER_TITLE} einschalten, dann
+    „{NETWORK_APPLY_BUTTON_LABEL}“.
+  </p>
 {:else if tlsIsOff(tls) && state.startPhase === 'offer'}
   <p class="hint">Noch nicht vorbereitet. HTTPS hier vorbereiten.</p>
   <div class="actions-row">

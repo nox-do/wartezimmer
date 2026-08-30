@@ -33,6 +33,9 @@ export const NETWORK_STACK_STOPPED_VERIFY_HINT =
   'Praxis Flow ist gestoppt. Unter Status starten und danach erneut prüfen.';
 export const NETWORK_PROBE_FAILED_MESSAGE =
   'Die Erreichbarkeit konnte nicht geprüft werden. Bitte kurz warten und erneut versuchen.';
+export const NETWORK_PROXY_EXPANDER_TITLE = 'Browserzugriff (Proxy Port 80)';
+export const NETWORK_APPLY_BUTTON_LABEL = 'Einstellungen übernehmen und prüfen';
+export const NETWORK_DISCARD_BUTTON_LABEL = 'Änderungen verwerfen';
 
 export function networkIsBusy(phase: NetworkPhase): boolean {
   return (
@@ -146,14 +149,39 @@ export function networkExpanderDefaults(input: {
 } {
   const checks = networkHostChecksForDisplay(input.status.networkBindings);
   const tls = input.status.tls;
-  const tlsOpen = Boolean(tls && tls.state !== 'off');
+  const tlsActive = Boolean(tls && tls.state !== 'off');
+  const proxyNeedsRepair =
+    input.proxyEnabled && proxyNeedsRestore(input.status, input.runtime ?? null);
   return {
     lanOpen: Boolean(input.status.network.lanIpStale) || !input.status.network.configuredLanIp,
-    proxyOpen: input.proxyEnabled && proxyNeedsRestore(input.status, input.runtime ?? null),
-    reachabilityOpen: !tlsOpen,
+    // TLS off: Port-80 checkbox + commit in one glance. While TLS is active, only restore.
+    proxyOpen: !tlsActive || proxyNeedsRepair,
+    reachabilityOpen: false,
     checksOpen: networkHostChecksHaveFailures(checks),
     topologyOpen: false,
     tlsOpen: true,
+  };
+}
+
+/** Same draft save: shown in each open, rendered config expander. No tab-wide row. */
+export function networkDraftCommitPlacement(input: {
+  dirty: boolean;
+  lanOpen: boolean;
+  proxyOpen: boolean;
+  reachabilityOpen: boolean;
+  httpDraftExpandersRendered: boolean;
+}): {
+  lan: boolean;
+  proxy: boolean;
+  reachability: boolean;
+} {
+  if (!input.dirty) {
+    return { lan: false, proxy: false, reachability: false };
+  }
+  return {
+    lan: input.lanOpen,
+    proxy: input.httpDraftExpandersRendered && input.proxyOpen,
+    reachability: input.httpDraftExpandersRendered && input.reachabilityOpen,
   };
 }
 

@@ -3,6 +3,7 @@ import test from 'node:test';
 import type { HostNetworkResult } from '../shared/host-status.js';
 import {
   formatActiveReachabilityResult,
+  networkDraftCommitPlacement,
   networkExpanderDefaults,
   networkHostChecksForDisplay,
   networkIsBusy,
@@ -155,4 +156,83 @@ test('networkExpanderDefaults opens checks and proxy when degraded', () => {
   assert.equal(defaults.checksOpen, true);
   assert.equal(defaults.proxyOpen, true);
   assert.equal(defaults.topologyOpen, false);
+});
+
+test('networkExpanderDefaults: TLS off opens proxy and closes device address', () => {
+  const defaults = networkExpanderDefaults({
+    status: minimalHostStatus(),
+    proxyEnabled: false,
+  });
+  assert.equal(defaults.tlsOpen, true);
+  assert.equal(defaults.proxyOpen, true);
+  assert.equal(defaults.reachabilityOpen, false);
+  assert.equal(defaults.lanOpen, false);
+});
+
+test('networkExpanderDefaults: TLS active does not force-open proxy', () => {
+  const defaults = networkExpanderDefaults({
+    status: minimalHostStatus({
+      tls: {
+        state: 'awaiting-operator-dns',
+        mode: 'managed',
+        hostname: 'demo.lan.notaus.de',
+        installationId: 'id',
+        tokenConsumed: false,
+        applyReady: false,
+        cutoverApplied: false,
+        certificate: null,
+        lastError: null,
+        acmeCnameTarget: null,
+      },
+      proxy: {
+        enabled: true,
+        mode: 'http',
+        canonicalBaseUrl: 'http://192.168.1.10',
+        httpPort: 80,
+        appBindAddress: '127.0.0.1',
+        container: {
+          name: 'up',
+          service: 'proxy',
+          state: 'running',
+          health: 'healthy',
+        },
+      },
+    }),
+    proxyEnabled: true,
+  });
+  assert.equal(defaults.proxyOpen, false);
+  assert.equal(defaults.reachabilityOpen, false);
+});
+
+test('networkDraftCommitPlacement follows open, rendered draft expanders', () => {
+  assert.deepEqual(
+    networkDraftCommitPlacement({
+      dirty: true,
+      lanOpen: false,
+      proxyOpen: true,
+      reachabilityOpen: false,
+      httpDraftExpandersRendered: false,
+    }),
+    { lan: false, proxy: false, reachability: false },
+  );
+  assert.deepEqual(
+    networkDraftCommitPlacement({
+      dirty: true,
+      lanOpen: false,
+      proxyOpen: true,
+      reachabilityOpen: false,
+      httpDraftExpandersRendered: true,
+    }),
+    { lan: false, proxy: true, reachability: false },
+  );
+  assert.deepEqual(
+    networkDraftCommitPlacement({
+      dirty: false,
+      lanOpen: true,
+      proxyOpen: true,
+      reachabilityOpen: true,
+      httpDraftExpandersRendered: true,
+    }),
+    { lan: false, proxy: false, reachability: false },
+  );
 });

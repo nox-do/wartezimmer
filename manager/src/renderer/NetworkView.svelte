@@ -1,7 +1,8 @@
 <script lang="ts">
   /**
-   * Network tab layout (IT action order):
-   * 1 Host/LAN → 2 Proxy → 3 Erreichbarkeit → Apply+Verify → 4 Prüfungen → 5 Erläuterung
+   * Network tab layout:
+   * 1 LAN → 2 Geräte-Adresse → 3 Browserzugriff → 4 HTTPS → 5 Prüfungen → 6 Erläuterung
+   * Draft apply lives in the open LAN / Proxy / Geräte-Adresse expander.
    *
    * Shell: configSnapshot + runtimeSnapshot via $derived / selectors.
    * Controller: draft + phase/notice + network snapshot; hydration via syncFromConfig.
@@ -16,6 +17,10 @@
     type NetworkState,
   } from './network-controller.js';
   import {
+    NETWORK_APPLY_BUTTON_LABEL,
+    NETWORK_DISCARD_BUTTON_LABEL,
+    NETWORK_PROXY_EXPANDER_TITLE,
+    networkDraftCommitPlacement,
     networkExpanderDefaults,
     networkHostChecksForDisplay,
     networkHostChecksSubtitle,
@@ -58,7 +63,7 @@
 
   let lanOpen = $state(false);
   let proxyOpen = $state(false);
-  let reachabilityOpen = $state(true);
+  let reachabilityOpen = $state(false);
   let checksOpen = $state(false);
   let topologyOpen = $state(false);
 
@@ -136,6 +141,16 @@
 
   const dirty = $derived(
     snapshot ? hostNetworkChanged(snapshot, configSnapshot, snapshot.network) : false,
+  );
+
+  const commitPlacement = $derived(
+    networkDraftCommitPlacement({
+      dirty,
+      lanOpen,
+      proxyOpen,
+      reachabilityOpen,
+      httpDraftExpandersRendered: !tlsCutoverApplied,
+    }),
   );
 
   const busy = $derived(snapshot ? networkIsBusy(snapshot.phase) : false);
@@ -241,9 +256,125 @@
   <LoadingOverlay loading={viewLoading} />
 
   {#if configSnapshot && snapshot}
+    {#snippet draftCommitActions()}
+      {#if warningText}
+        <p class="hint">{warningText}</p>
+      {/if}
+      <div class="actions-row network-config-actions">
+        <button
+          type="button"
+          class="btn-secondary"
+          disabled={busy}
+          onclick={() => controller?.applyAndVerify()}
+        >
+          {NETWORK_APPLY_BUTTON_LABEL}
+        </button>
+        <button
+          type="button"
+          class="btn-secondary"
+          disabled={busy}
+          onclick={() => {
+            controller?.discardDraft();
+          }}
+        >
+          {NETWORK_DISCARD_BUTTON_LABEL}
+        </button>
+      </div>
+    {/snippet}
     <section class="panel-section panel-section--network">
       <div class="maintenance-accordion">
-        <!-- LAN-TLS port: TLS actions never go through applyAndVerify() / POST /host/network. -->
+        <MaintenanceSection
+          open={lanOpen}
+          title="Adresse dieses Rechners"
+          subtitle={networkLanSubtitle(configSnapshot, snapshot)}
+          onToggle={() => {
+            lanOpen = !lanOpen;
+          }}
+        >
+          <p class="hint">
+            IP dieses Rechners im Praxisnetz. Wenn sie nicht mehr stimmt, hier anpassen und übernehmen.
+          </p>
+          <LanIpPanel
+            state={snapshot}
+            network={snapshot.network}
+            status={configSnapshot}
+            disabled={busy}
+            onChange={patchFields}
+          />
+          {#if commitPlacement.lan}
+            {@render draftCommitActions()}
+          {/if}
+        </MaintenanceSection>
+
+        {#if !tlsCutoverApplied}
+          <MaintenanceSection
+            open={reachabilityOpen}
+            title="Adresse für Terminal, TV und MFA"
+            subtitle={tlsPreparationActive
+              ? 'HTTPS-Adresse wird separat verwaltet'
+              : networkReachabilitySubtitle(configSnapshot)}
+            onToggle={() => {
+              reachabilityOpen = !reachabilityOpen;
+            }}
+          >
+            {#if tlsPreparationActive}
+              <p class="hint">
+                Die Geräte-Adresse ist während der HTTPS-Vorbereitung gesperrt. Die
+                HTTPS-Adresse wird unter dem HTTPS-Block verwaltet.
+              </p>
+              {#if commitPlacement.reachability}
+                {@render draftCommitActions()}
+              {/if}
+            {:else}
+              <!-- OPEN: guest-WLAN / Private-DNS help belongs in this expander (also without TLS). See ReachabilityPanel.svelte. -->
+              <ReachabilityPanel
+                state={snapshot}
+                network={snapshot.network}
+                disabled={busy}
+                savedBaseUrl={savedUrl}
+                verifyBusy={snapshot.phase === 'checking'}
+                verifyEnabled={Boolean(compose?.running)}
+                verifyDisabledHint={NETWORK_STACK_STOPPED_VERIFY_HINT}
+                onChange={patchFields}
+                onVerifySaved={() => controller?.verifyActiveConfiguration(savedUrl)}
+              >
+                {#snippet afterPreview()}
+                  {#if commitPlacement.reachability}
+                    {@render draftCommitActions()}
+                  {/if}
+                {/snippet}
+              </ReachabilityPanel>
+            {/if}
+          </MaintenanceSection>
+
+          <MaintenanceSection
+            open={proxyOpen}
+            title={NETWORK_PROXY_EXPANDER_TITLE}
+            subtitle={networkProxySubtitle(configSnapshot, snapshot.proxyEnabled, runtimeSnapshot)}
+            onToggle={() => {
+              proxyOpen = !proxyOpen;
+            }}
+          >
+            <ProxySettings
+              enabled={snapshot.proxyEnabled}
+              disabled={busy || tlsPreparationActive}
+              onChange={(proxyEnabled) => patchFields({ proxyEnabled })}
+            />
+            {#if tlsPreparationActive}
+              <p class="hint">
+                Port 80 bleibt während der HTTPS-Vorbereitung unverändert.
+              </p>
+            {/if}
+            {#if commitPlacement.proxy}
+              {@render draftCommitActions()}
+            {/if}
+            {#if showProxyRestore}
+              <ProxyRecoveryAction disabled={busy} onRestore={() => controller?.restoreProxy()} />
+            {/if}
+          </MaintenanceSection>
+        {/if}
+
+        <!-- TLS actions never go through applyAndVerify() / POST /host/network. -->
         {#if tlsController && tlsSnapshot}
           <MaintenanceSection
             open={tlsOpen}
@@ -264,109 +395,8 @@
             />
           </MaintenanceSection>
         {/if}
-
-        <MaintenanceSection
-          open={lanOpen}
-          title="Adresse dieses Rechners"
-          subtitle={networkLanSubtitle(configSnapshot, snapshot)}
-          onToggle={() => {
-            lanOpen = !lanOpen;
-          }}
-        >
-          <p class="hint">
-            IP dieses Rechners im Praxisnetz. Wenn sie nicht mehr stimmt, hier anpassen und übernehmen.
-          </p>
-          <LanIpPanel
-            state={snapshot}
-            network={snapshot.network}
-            status={configSnapshot}
-            disabled={busy}
-            onChange={patchFields}
-          />
-        </MaintenanceSection>
-
-        {#if !tlsCutoverApplied}
-          <MaintenanceSection
-            open={proxyOpen}
-            title="Browserzugriff (Proxy Port 80)"
-            subtitle={networkProxySubtitle(configSnapshot, snapshot.proxyEnabled, runtimeSnapshot)}
-            onToggle={() => {
-              proxyOpen = !proxyOpen;
-            }}
-          >
-            <ProxySettings
-              enabled={snapshot.proxyEnabled}
-              disabled={busy || tlsPreparationActive}
-              onChange={(proxyEnabled) => patchFields({ proxyEnabled })}
-            />
-            {#if tlsPreparationActive}
-              <p class="hint">
-                Port 80 bleibt während der HTTPS-Vorbereitung unverändert.
-              </p>
-            {/if}
-            {#if showProxyRestore}
-              <ProxyRecoveryAction disabled={busy} onRestore={() => controller?.restoreProxy()} />
-            {/if}
-          </MaintenanceSection>
-
-          <MaintenanceSection
-            open={reachabilityOpen}
-            title="Adresse für Terminal, TV und MFA"
-            subtitle={tlsPreparationActive
-              ? 'HTTPS-Adresse wird separat verwaltet'
-              : networkReachabilitySubtitle(configSnapshot)}
-            onToggle={() => {
-              reachabilityOpen = !reachabilityOpen;
-            }}
-          >
-            {#if tlsPreparationActive}
-              <p class="hint">
-                Die Geräte-Adresse ist während der HTTPS-Vorbereitung gesperrt. Die
-                HTTPS-Adresse wird unter dem HTTPS-Block verwaltet.
-              </p>
-            {:else}
-              <!-- OPEN: guest-WLAN / Private-DNS help belongs in this expander (also without TLS). See ReachabilityPanel.svelte. -->
-              <ReachabilityPanel
-                state={snapshot}
-                network={snapshot.network}
-                disabled={busy}
-                savedBaseUrl={savedUrl}
-                verifyBusy={snapshot.phase === 'checking'}
-                verifyEnabled={Boolean(compose?.running)}
-                verifyDisabledHint={NETWORK_STACK_STOPPED_VERIFY_HINT}
-                onChange={patchFields}
-                onVerifySaved={() => controller?.verifyActiveConfiguration(savedUrl)}
-              />
-            {/if}
-          </MaintenanceSection>
-        {/if}
       </div>
 
-      {#if warningText}
-        <p class="hint">{warningText}</p>
-      {/if}
-      <div class="actions-row network-config-actions">
-        <button
-          type="button"
-          class="btn-secondary"
-          disabled={busy || !dirty}
-          onclick={() => controller?.applyAndVerify()}
-        >
-          Einstellungen übernehmen und prüfen
-        </button>
-        {#if dirty}
-          <button
-            type="button"
-            class="btn-secondary"
-            disabled={busy}
-            onclick={() => {
-              controller?.discardDraft();
-            }}
-          >
-            Änderungen verwerfen
-          </button>
-        {/if}
-      </div>
       {#if progressText}
         <p class="maintenance-backup-status">{progressText}</p>
       {:else if snapshot.notice}
