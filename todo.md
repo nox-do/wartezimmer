@@ -35,6 +35,8 @@ Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-histo
 - Netzwerk: HTTPS-Warnbox Abstand zur Trennlinie; Titel „Browserzugriff (Proxy Port 80)“.
 - Netzwerk-HTTPS: nach „Mail vorbereiten“ (Zustand wartet auf DNS) Mailtext/DNS-Records aufgeklappt; zuzuklappen bleibt.
 - Netzwerk-Draft-Notice (Gespeichert/Fehler/Fortschritt) im Expander der Aktion, nicht unter HTTPS.
+- Wartung HTTPS-Backup: Praxis-Copy statt Sidecar/Pilot/Inspect (Zertifikatsdatei, Prüfzeile). Extra-Buttons „Zertifikat sichern/prüfen“ in der UI ausgeblendet (Controller bleibt). Hinweis: Kopie im Installationsordner `backups/`.
+- Restore: TLS-Hostpfade nur auflösen (`resolveProxyTlsEnvUpdates`), kein `ensureProxyTlsPaths` vor Rollback. Sidecar-Lookup bei umbenannter `.pfbackup` bleibt — Format später eine Datei.
 
 ## Heute (2026-08-29)
 

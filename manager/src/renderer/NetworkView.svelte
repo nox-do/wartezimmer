@@ -418,7 +418,7 @@
           <MaintenanceSection
             open={tlsOpen}
             title="HTTPS"
-            subtitle={tlsNetworkSubtitle(configSnapshot.tls)}
+            subtitle={tlsNetworkSubtitle(configSnapshot.tls, tlsSnapshot.pendingObtain)}
             onToggle={() => {
               tlsOpen = !tlsOpen;
             }}

@@ -97,10 +97,10 @@ export async function readTlsSidecarFromDialog(
   { canceled: true; tlsSidecarBase64: null } | { canceled: false; tlsSidecarBase64: string }
 > {
   const dialogOptions: OpenDialogOptions = {
-    title: 'HTTPS-State (Sidecar) wählen',
+    title: 'Zertifikatsdatei wählen',
     properties: ['openFile'],
     filters: [
-      { name: 'Praxis Flow TLS-Sidecar', extensions: ['tgz', 'tar.gz'] },
+      { name: 'Praxis Flow Zertifikat', extensions: ['tgz', 'tar.gz'] },
       { name: 'Alle Dateien', extensions: ['*'] },
     ],
   };
@@ -126,14 +126,14 @@ export async function saveTlsSidecarToDisk(
     : siblingTlsSidecarPath(assertAllowedPfbackupPath(backupPath));
 
   if (!sourceSidecar || !fs.existsSync(sourceSidecar)) {
-    throw new Error('HTTPS-State (Sidecar) nicht gefunden.');
+    throw new Error('Zertifikatsdatei nicht gefunden.');
   }
 
   const dialogOptions: SaveDialogOptions = {
-    title: 'HTTPS-State sichern',
+    title: 'Zertifikatsdatei sichern',
     defaultPath: path.basename(sourceSidecar),
     filters: [
-      { name: 'Praxis Flow TLS-Sidecar', extensions: ['tgz'] },
+      { name: 'Praxis Flow Zertifikat', extensions: ['tgz'] },
       { name: 'Alle Dateien', extensions: ['*'] },
     ],
   };

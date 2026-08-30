@@ -47,9 +47,9 @@ import {
 } from './maintenance-rollback.js';
 import { TLS_ENV_KEYS, readTlsStatus } from './host-tls.js';
 import {
-  buildProxyTlsEnvUpdates,
   PROXY_TLS_HOST_PATH_ENV_KEYS,
   PROXY_TLS_RUNTIME_ENV_KEYS,
+  resolveProxyTlsEnvUpdates,
   writeGeneratedTlsCaddyfile,
 } from './proxy-tls.js';
 import {
@@ -386,7 +386,7 @@ function applyTlsRestorePlan(input: {
         tlsClaimsHttps: true,
         sidecarPresent: tls.sidecarPresent,
         sidecarMatches: tls.sidecarMatches,
-      }) ?? 'HTTPS-Restore ohne passendes Sidecar ist abgelehnt.',
+      }) ?? 'Wiederherstellen ohne Zertifikatsdatei ist abgelehnt.',
     ]);
   }
 
@@ -397,7 +397,7 @@ function applyTlsRestorePlan(input: {
   }
 
   if (matchingSidecar) {
-    Object.assign(restoreEnv, buildProxyTlsEnvUpdates(input.installHome));
+    Object.assign(restoreEnv, resolveProxyTlsEnvUpdates(input.installHome));
     return { restoreEnv, tlsSidecarBytes: sidecarBytes, discardTlsPreparation: false };
   }
 

@@ -513,7 +513,7 @@ export function createMaintenanceController(
       if (!backupPath) {
         setSurfaceError(
           'tlsSidecar',
-          'Kein HTTPS-State zum Sichern. Zuerst ein Praxis-Backup erstellen.',
+          'Noch keine Zertifikatsdatei. Zuerst ein Praxis-Backup erstellen.',
         );
         return;
       }
@@ -521,7 +521,7 @@ export function createMaintenanceController(
         return;
       }
       const generation = lifecycleGeneration;
-      patch({ tlsSidecarStatusText: 'HTTPS-State wird exportiert …' });
+      patch({ tlsSidecarStatusText: 'Zertifikatsdatei wird gespeichert …' });
       void deps.api
         .saveTlsSidecar(backupPath)
         .then((saveResult) => {
@@ -534,10 +534,10 @@ export function createMaintenanceController(
           }
           if (!saveResult.saved) {
             patch({ tlsSidecarStatusText: '' });
-            setSurfaceError('tlsSidecar', 'HTTPS-State-Export fehlgeschlagen.');
+            setSurfaceError('tlsSidecar', 'Zertifikatsdatei konnte nicht gespeichert werden.');
             return;
           }
-          patch({ tlsSidecarStatusText: 'HTTPS-State exportiert.' });
+          patch({ tlsSidecarStatusText: 'Zertifikatsdatei gespeichert.' });
         })
         .catch((error) => {
           if (!still(generation)) {
@@ -546,7 +546,7 @@ export function createMaintenanceController(
           patch({ tlsSidecarStatusText: '' });
           setSurfaceError(
             'tlsSidecar',
-            errorMessage(error, 'HTTPS-State-Export fehlgeschlagen.'),
+            errorMessage(error, 'Zertifikatsdatei konnte nicht gespeichert werden.'),
           );
         })
         .finally(() => {
@@ -562,7 +562,7 @@ export function createMaintenanceController(
         return;
       }
       const generation = lifecycleGeneration;
-      patch({ tlsSidecarStatusText: 'HTTPS-State wird geprüft …' });
+      patch({ tlsSidecarStatusText: 'HTTPS-Sicherung wird geprüft …' });
       void deps.api
         .inspectPfbackupFile(state.latestBackupPath)
         .then((inspect) => {
@@ -573,13 +573,13 @@ export function createMaintenanceController(
             patch({ tlsSidecarStatusText: '' });
             setSurfaceError(
               'tlsSidecar',
-              restoreInspectBlockedMessage(inspect) ?? 'HTTPS-State-Prüfung fehlgeschlagen.',
+              restoreInspectBlockedMessage(inspect) ?? 'HTTPS-Sicherung konnte nicht geprüft werden.',
             );
             return;
           }
           const line = restoreTlsInspectSummaryLine(inspect.backup?.tls);
           patch({
-            tlsSidecarStatusText: line ?? 'HTTPS-State: kein HTTPS in dieser Sicherung.',
+            tlsSidecarStatusText: line ?? 'In dieser Sicherung ist kein HTTPS enthalten.',
           });
         })
         .catch((error) => {
@@ -589,7 +589,7 @@ export function createMaintenanceController(
           patch({ tlsSidecarStatusText: '' });
           setSurfaceError(
             'tlsSidecar',
-            errorMessage(error, 'HTTPS-State-Prüfung fehlgeschlagen.'),
+            errorMessage(error, 'HTTPS-Sicherung konnte nicht geprüft werden.'),
           );
         })
         .finally(() => {

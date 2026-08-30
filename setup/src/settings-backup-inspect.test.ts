@@ -319,7 +319,7 @@ test('inspectPfbackup blocks active HTTPS without sidecar', async () => {
   assert.equal(result.backup?.tls?.inBackup, true);
   assert.equal(result.backup?.tls?.sidecarPresent, false);
   assert.equal(result.backup?.tls?.metadataConsistent, true);
-  assert.match(result.errors?.join(' ') ?? '', /Sidecar.*fehlt/);
+  assert.match(result.errors?.join(' ') ?? '', /Zertifikatsdatei fehlt/);
 });
 
 test('inspectPfbackup warns on prepare-only TLS without sidecar and still allows restore', async () => {
@@ -392,5 +392,5 @@ test('inspectPfbackup blocks contradictory active TLS with HTTP canonical', asyn
   });
   assert.equal(result.compatibility.restoreSupported, false);
   assert.equal(result.backup?.tls?.metadataConsistent, false);
-  assert.match(result.errors?.join(' ') ?? '', /widersprechen/);
+  assert.match(result.errors?.join(' ') ?? '', /passen nicht zusammen/);
 });

@@ -32,6 +32,7 @@
     tlsLocalCheckItems,
     tlsNetworkShowsGenericErrorFooter,
     tlsShowsDnsWaitCopy,
+    tlsShowsObtainWait,
     tlsShowsStructuredLastErrorNotice,
   } from './tls-network-view-model.js';
   import {
@@ -256,10 +257,22 @@
           </button>
         {/if}
       </div>
-    {:else if tls.state === 'obtaining-certificate'}
-      <p class="notice is-ok">DNS stimmt. Zertifikat wird geholt — HTTP bleibt erreichbar.</p>
+    {:else if tlsShowsObtainWait(tls, state.pendingObtain)}
+      <p class="notice is-ok">
+        {tls.mode === 'custom'
+          ? 'Zertifikat wird geprüft — HTTP bleibt erreichbar.'
+          : 'DNS stimmt. Zertifikat wird geholt — HTTP bleibt erreichbar.'}
+      </p>
+      <div class="actions-row" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="hint">Kann einige Minuten dauern.</span>
+      </div>
       <ul class="checklist">
-        {#each tlsLocalCheckItems({ tls, checks: state.localChecks }) as item (item.text)}
+        {#each tlsLocalCheckItems({
+          tls,
+          checks: state.localChecks,
+          inFlight: true,
+        }) as item (item.text)}
           <li class={item.status}>
             <span class="checklist-mark">{item.status === 'is-done' ? '✓' : '○'}</span>
             <span>{item.text}</span>

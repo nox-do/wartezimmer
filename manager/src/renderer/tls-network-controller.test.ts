@@ -221,6 +221,30 @@ test('failed apply refreshes host status and keeps the API error if refresh thro
   assert.equal(controller.getState().error, 'apply rolled back');
 });
 
+test('obtainOrCheck sets pendingObtain until the request settles', async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const controller = createController({
+    status: tls({ state: 'dns-verified', mode: 'managed', applyReady: false }),
+    api: {
+      obtainHostTlsCertificate: async () => {
+        await gate;
+        return {
+          tls: tls({ state: 'dns-verified', mode: 'managed', applyReady: true }),
+          checks: [],
+        };
+      },
+    },
+  });
+  const running = controller.obtainOrCheck();
+  assert.equal(controller.getState().pendingObtain, true);
+  release();
+  await running;
+  assert.equal(controller.getState().pendingObtain, false);
+});
+
 test('failed obtain refreshes host status', async () => {
   let afterMutationCalls = 0;
   const controller = createController({
@@ -237,6 +261,7 @@ test('failed obtain refreshes host status', async () => {
   await controller.obtainOrCheck();
   assert.equal(afterMutationCalls, 1);
   assert.equal(controller.getState().error, 'acme obtain failed');
+  assert.equal(controller.getState().pendingObtain, false);
 });
 
 test('failed custom certificate check refreshes host status', async () => {

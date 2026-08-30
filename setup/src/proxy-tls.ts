@@ -67,11 +67,12 @@ export function ensureProxyTlsPaths(installHome: string): ProxyTlsPaths {
   return paths;
 }
 
-export function buildProxyTlsEnvUpdates(
+/** Host-path env for TLS overlay. Does not create directories or files. */
+export function resolveProxyTlsEnvUpdates(
   installHome: string,
   httpsPort = 443,
 ): Record<string, string> {
-  const paths = ensureProxyTlsPaths(installHome);
+  const paths = resolveProxyTlsPaths(installHome);
   return {
     PROXY_HTTPS_PORT: String(httpsPort),
     PROXY_CADDY_DATA_HOST_PATH: paths.caddyData,
@@ -80,6 +81,14 @@ export function buildProxyTlsEnvUpdates(
     PROXY_ACME_DNS_CREDENTIALS_HOST_PATH: paths.acmeDnsCredentials,
     PROXY_CERTS_HOST_PATH: paths.certs,
   };
+}
+
+export function buildProxyTlsEnvUpdates(
+  installHome: string,
+  httpsPort = 443,
+): Record<string, string> {
+  ensureProxyTlsPaths(installHome);
+  return resolveProxyTlsEnvUpdates(installHome, httpsPort);
 }
 
 export function writeSecretFileAtomically(filePath: string, content: string): void {

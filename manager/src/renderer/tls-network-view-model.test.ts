@@ -19,6 +19,7 @@ import {
   tlsNetworkSubtitle,
   tlsResumeCard,
   tlsShowsDnsWaitCopy,
+  tlsShowsObtainWait,
   tlsOperatorRecordsAreTheTask,
   tlsShowsStructuredLastErrorNotice,
 } from './tls-network-view-model.js';
@@ -273,6 +274,17 @@ test('tlsShowsDnsWaitCopy is only true while awaiting operator DNS', () => {
     tlsOperatorRecordsAreTheTask(tls({ state: 'awaiting-operator-dns', mode: 'managed' })),
     true,
   );
+});
+
+test('tlsShowsObtainWait is true while obtaining or pendingObtain', () => {
+  const verified = tls({ state: 'dns-verified', mode: 'managed', applyReady: false });
+  assert.equal(tlsShowsObtainWait(verified, false), false);
+  assert.equal(tlsShowsObtainWait(verified, true), true);
+  assert.equal(
+    tlsShowsObtainWait(tls({ state: 'obtaining-certificate', mode: 'managed' }), false),
+    true,
+  );
+  assert.equal(tlsNetworkSubtitle(verified, true), 'Zertifikat wird geholt');
 });
 
 test('persisted fail before cutover offers repair and hides wait copy', () => {

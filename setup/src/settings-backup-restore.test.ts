@@ -787,6 +787,49 @@ test('restorePfbackup discards prepare-only TLS without sidecar and keeps HTTP',
   }
 });
 
+test('restorePfbackup does not create TLS dirs before rollback when stop fails', async () => {
+  const source = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-tls-nostop-src-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-tls-nostop-dst-'));
+  const { appDataDir } = seedInstallHome(dir);
+  const sidecarPath = path.join(source, 'sidecar.tgz');
+  try {
+    const paths = resolveProxyTlsPaths(source);
+    fs.mkdirSync(paths.caddyData, { recursive: true });
+    fs.writeFileSync(path.join(paths.caddyData, 'marker.txt'), 'caddy-state');
+    packTlsSidecarArchive({
+      installHome: source,
+      installationId: '7fk3m2q9',
+      hostname: '7fk3m2.lan.notaus.de',
+      destinationPath: sidecarPath,
+    });
+    const settings = structuredClone(sampleSettings);
+    settings.env = {
+      ...settings.env,
+      TLS_STATE: 'active',
+      TLS_MODE: 'managed',
+      TLS_CUTOVER_APPLIED: 'true',
+      TLS_INSTALLATION_ID: '7fk3m2q9',
+      TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+      PROXY_MODE: 'tls-managed',
+      CANONICAL_BASE_URL: 'https://7fk3m2.lan.notaus.de',
+    } as typeof settings.env;
+    const result = await restorePfbackup(
+      buildArchiveContent(settings),
+      testSetupContext(dir),
+      { tlsSidecarBase64: fs.readFileSync(sidecarPath).toString('base64') },
+      {
+        ...successfulRestoreDeps(appDataDir),
+        stopStack: async () => ({ ok: false, log: 'stop failed' }),
+      },
+    );
+    assert.equal(result.ok, false);
+    assert.equal(fs.existsSync(resolveProxyTlsPaths(dir).root), false);
+  } finally {
+    fs.rmSync(source, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('restorePfbackup rejects active HTTPS without sidecar before writing env', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-tls-block-'));
   const { envPath, appDataDir } = seedInstallHome(dir);
@@ -815,7 +858,7 @@ test('restorePfbackup rejects active HTTPS without sidecar before writing env', 
     );
     assert.equal(result.ok, false);
     assert.equal(stopped, false);
-    assert.match(result.ok ? '' : result.errors.join(' '), /Sidecar/);
+    assert.match(result.ok ? '' : result.errors.join(' '), /Zertifikatsdatei fehlt/);
     assert.equal(readEnvMap(envPath).get('CANONICAL_BASE_URL'), 'http://192.168.1.10:8080');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });

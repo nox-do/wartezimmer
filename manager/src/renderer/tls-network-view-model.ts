@@ -76,6 +76,14 @@ export function tlsOperatorRecordsAreTheTask(tls: TlsStatus | undefined): boolea
   return tlsShowsDnsWaitCopy(tls);
 }
 
+/** Obtain wait UI: persisted obtaining-certificate or the in-flight request before status refresh. */
+export function tlsShowsObtainWait(
+  tls: TlsStatus | undefined,
+  pendingObtain: boolean,
+): boolean {
+  return tls?.state === 'obtaining-certificate' || pendingObtain;
+}
+
 /** Persistierter Fail vor Cutover: Repair/Reset. Notice nur bei `lastError`. */
 export function tlsIsPersistedFailBeforeCutover(tls: TlsStatus | undefined): boolean {
   return Boolean(tls && tls.state === 'error' && !tls.cutoverApplied);
@@ -149,7 +157,13 @@ export function tlsCanRenew(tls: TlsStatus | undefined): boolean {
   return expiry === 'soon' || expiry === 'expired';
 }
 
-export function tlsNetworkSubtitle(tls: TlsStatus | undefined): string {
+export function tlsNetworkSubtitle(
+  tls: TlsStatus | undefined,
+  pendingObtain = false,
+): string {
+  if (tlsShowsObtainWait(tls, pendingObtain) && tls?.state !== 'obtaining-certificate') {
+    return 'Zertifikat wird geholt';
+  }
   if (!tls || tls.state === 'off') {
     return 'Noch nicht vorbereitet';
   }
@@ -349,8 +363,9 @@ export function tlsDiagnoseItems(input: {
 export function tlsLocalCheckItems(input: {
   tls: TlsStatus;
   checks: TlsLocalCheck[] | null;
+  inFlight?: boolean;
 }): TlsChecklistItem[] {
-  const obtaining = input.tls.state === 'obtaining-certificate';
+  const obtaining = input.tls.state === 'obtaining-certificate' || Boolean(input.inFlight);
   const ready = input.tls.applyReady;
   const labels: Record<TlsLocalCheck['id'], string> = {
     certificate: 'Zertifikatskette und Name',

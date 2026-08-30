@@ -1110,40 +1110,32 @@ function renderMaintenance() {
   const inspect = mockInspectTls();
   const tlsOn = state.ipv4Reserved || state.tlsApplied;
   const inspectHint = inspect.line
-    ? `<p class="hint">Inspect-Zeile (wie Routing/Portal): <code>${escapeHtml(inspect.line)}</code>${
-        inspect.restoreOk ? '' : ' — restoreSupported = false'
+    ? `<p class="hint">${escapeHtml(inspect.line)}${
+        inspect.restoreOk ? '' : ' — Wiederherstellen nicht möglich'
       }</p>`
-    : '<p class="hint">Inspect-Zeile HTTPS nur, wenn Canonical schon <code>https://</code> oder <code>PROXY_MODE=tls-*</code> ist (nach dem Umstellen).</p>';
+    : '';
   const blocked = inspect.blocked ? notice('warn', escapeHtml(inspect.blocked)) : '';
   const restoreWarning = inspect.warning ? notice('warn', escapeHtml(inspect.warning)) : '';
   const tlsBlock = tlsOn
     ? networkBlock(
-        'HTTPS-State (Pilot)',
-        `<p class="hint">Caddy-Daten und ACME-Berechtigung liegen nicht in der <code>.pfbackup</code>. Extra sichern, sobald HTTPS vorbereitet ist — nicht erst nach dem Umstellen. Dateiname <code>${escapeHtml(
+        'HTTPS-Zertifikat',
+        `<p class="hint">Das Praxis-Backup enthält die Einstellungen, aber nicht das Zertifikat. Dafür liegt eine zweite Datei daneben (<code>${escapeHtml(
           sidecarName,
-        )}</code> neben <code>praxis-flow-${escapeHtml(stamp)}.pfbackup</code>.</p>
+        )}</code>). Beide Dateien zusammen aufbewahren — ohne die Zertifikatsdatei lässt sich HTTPS nicht wiederherstellen.</p>
+        <p class="hint">Schon mit „Backup erstellen“ sichern, sobald HTTPS vorbereitet ist — nicht erst nach dem Umstellen. Die Zertifikatsdatei entsteht automatisch neben der Backup-Datei (gewählter Ordner und Installationsordner).</p>
         ${inspectHint}
         ${blocked}
-        ${restoreWarning}
-        <p class="hint">Electron-Main liest das Sidecar gleichen Zeitstempels und übergibt den Inhalt an Setup. Nur bei aktivem HTTPS folgt ohne Treffer der zweite Dateidialog — bestehender Restore-Wizard, kein zweiter Assistent.</p>
-        <div class="actions-row">
-          <button type="button" class="btn-secondary" id="tls-sidecar">HTTPS-State sichern</button>
-        </div>
-        ${
-          state.sidecarSaved
-            ? `<p class="hint">Im Mock nur der Dateiname. Echte Datei: Caddy /data + /config neben dem .pfbackup.</p>`
-            : ''
-        }`,
+        ${restoreWarning}`,
       )
     : networkBlock(
-        'HTTPS-State (Pilot)',
-        '<p class="hint">Sobald HTTPS vorbereitet ist, erscheint hier die Sidecar-Sicherung neben dem Praxis-Backup.</p>',
+        'HTTPS-Zertifikat',
+        '<p class="hint">Sobald HTTPS vorbereitet ist, erscheint hier die Sicherung der Zertifikatsdatei neben dem Praxis-Backup.</p>',
       );
   return `<header class="mock-header"><h1>Wartung</h1></header>
     ${mockNav('maintenance')}
     ${networkBlock(
       'Praxis-Backup (.pfbackup)',
-      `<p class="hint">Settings, Stack-<code>.env</code>, Manager-Stand. Kein Caddy-State, keine Patientendaten.</p>
+      `<p class="hint">Settings, Stack-<code>.env</code>, Manager-Stand. Kein Caddy-State, keine Patientendaten. Praxis Flow schreibt das Backup außerdem in den Installationsordner (<code>backups/</code>); der Speichern-Dialog ist eine Kopie davon.</p>
       <div class="actions-row">
         <button type="button" class="btn-secondary" disabled>Backup erstellen</button>
         <button type="button" class="btn-secondary" disabled>Backup prüfen</button>

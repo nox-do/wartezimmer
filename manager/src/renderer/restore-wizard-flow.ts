@@ -64,27 +64,27 @@ export function restoreTlsInspectSummaryLine(
     return null;
   }
   if (!tls.metadataConsistent) {
-    return 'HTTPS: Angaben in der Sicherung widersprechen sich';
+    return 'HTTPS: Angaben in der Sicherung passen nicht zusammen';
   }
   if (tls.preparedInBackup) {
     if (!tls.sidecarPresent) {
-      return 'HTTPS: Vorbereitung ohne Sidecar — wird verworfen';
+      return 'HTTPS war vorbereitet, Zertifikatsdatei fehlt — Vorbereitung wird verworfen';
     }
     if (!tls.sidecarMatches) {
-      return 'HTTPS: Vorbereitungs-Sidecar passt nicht — wird verworfen';
+      return 'Zertifikatsdatei passt nicht zu diesem Backup — Vorbereitung wird verworfen';
     }
-    return 'HTTPS: Vorbereitung + Sidecar ok';
+    return 'HTTPS ist vorbereitet; Zertifikatsdatei ist dabei';
   }
   if (!tls.inBackup) {
     return null;
   }
   if (!tls.sidecarPresent) {
-    return 'HTTPS: Sidecar fehlt';
+    return 'HTTPS ist vorgesehen, aber die Zertifikatsdatei fehlt';
   }
   if (!tls.sidecarMatches) {
-    return 'HTTPS: Sidecar passt nicht';
+    return 'Zertifikatsdatei gehört nicht zu diesem Computer oder Hostnamen';
   }
-  return 'HTTPS: Sidecar ok';
+  return 'Zertifikat und HTTPS-Daten sind in der Sicherung enthalten';
 }
 
 export function restoreInspectSummaryLines(inspect: PfbackupInspectResult): string[] {
@@ -119,13 +119,13 @@ export function restoreInspectBlockedMessage(inspect: PfbackupInspectResult): st
   }
   const tls = inspect.backup?.tls;
   if (tls && !tls.metadataConsistent) {
-    return 'Die HTTPS-Angaben in dieser Sicherung widersprechen sich. Wiederherstellen wird abgelehnt, damit HTTPS-State und Canonical nicht still zurückgestuft werden.';
+    return 'Die HTTPS-Angaben in dieser Sicherung passen nicht zusammen. Wiederherstellen wird abgelehnt.';
   }
   if (tls?.inBackup && !tls.sidecarPresent) {
-    return 'Diese Sicherung erwartet HTTPS, aber der HTTPS-State (Sidecar) fehlt. Wiederherstellen würde Geräte auf https:// zeigen ohne Zertifikat — abgelehnt, kein Zurück auf HTTP.';
+    return 'Diese Sicherung erwartet HTTPS, aber die Zertifikatsdatei fehlt. Wiederherstellen würde Geräte auf https:// stellen ohne Zertifikat — deshalb abgelehnt.';
   }
   if (tls?.inBackup && !tls.sidecarMatches) {
-    return 'Der HTTPS-State gehört zu einer anderen Installation oder einem anderen Hostnamen.';
+    return 'Die Zertifikatsdatei gehört zu einer anderen Installation oder einem anderen Hostnamen.';
   }
   const errors = inspect.errors ?? [];
   if (errors.length > 0) {

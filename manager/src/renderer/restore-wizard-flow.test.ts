@@ -72,7 +72,7 @@ test('restoreInspectSummaryLines keeps TLS detail when restore is blocked', () =
       },
     }),
   );
-  assert.match(lines.join(' '), /HTTPS: Sidecar fehlt/);
+  assert.match(lines.join(' '), /Zertifikatsdatei fehlt/);
 });
 
 test('restoreTlsInspectSummaryLine rejects contradictory TLS metadata', () => {
@@ -85,7 +85,7 @@ test('restoreTlsInspectSummaryLine rejects contradictory TLS metadata', () => {
       sidecarMatches: false,
       metadataConsistent: false,
     }),
-    'HTTPS: Angaben in der Sicherung widersprechen sich',
+    'HTTPS: Angaben in der Sicherung passen nicht zusammen',
   );
 });
 
@@ -107,7 +107,7 @@ test('restoreInspectBlockedMessage explains missing active TLS sidecar', () => {
     },
     compatibility: { ...fixture.compatibility, restoreSupported: false },
   });
-  assert.match(message ?? '', /Sidecar.*fehlt/);
+  assert.match(message ?? '', /Zertifikatsdatei fehlt/);
 });
 
 test('restoreInspectBlockedMessage explains unreachable maintenance API', () => {

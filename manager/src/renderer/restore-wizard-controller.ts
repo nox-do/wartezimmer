@@ -94,7 +94,7 @@ export function createRestoreWizardController(
         tlsSidecarBase64: state.tlsSidecarBase64 ?? undefined,
       });
       if (inspect.backup?.tls?.inBackup && !inspect.backup.tls.sidecarPresent) {
-        patch({ statusText: 'HTTPS-State (Sidecar) wählen …' });
+        patch({ statusText: 'Zertifikatsdatei wählen …' });
         const sidecar = await deps.api.readTlsSidecar();
         if (!sidecar.canceled) {
           patch({ tlsSidecarBase64: sidecar.tlsSidecarBase64 });

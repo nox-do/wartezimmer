@@ -32,6 +32,8 @@ export type TlsNetworkState = {
   operatorRequest: TlsOperatorRequest | null;
   /** Open Mailtext / DNS-Records once the operator must send or copy them. */
   revealOperatorRecords: boolean;
+  /** True while obtain/check-certificate is in flight (UI wait before status refresh). */
+  pendingObtain: boolean;
   dnsChecks: TlsDnsCheck[] | null;
   localChecks: TlsLocalCheck[] | null;
   busy: boolean;
@@ -48,6 +50,7 @@ const INITIAL: TlsNetworkState = {
   customPemStaged: false,
   operatorRequest: null,
   revealOperatorRecords: false,
+  pendingObtain: false,
   dnsChecks: null,
   localChecks: null,
   busy: false,
@@ -103,6 +106,7 @@ export function createTlsNetworkController(deps: {
   function fail(error: unknown): void {
     set({
       busy: false,
+      pendingObtain: false,
       error: error instanceof Error ? error.message : String(error),
     });
   }
@@ -265,7 +269,7 @@ export function createTlsNetworkController(deps: {
     },
 
     async obtainOrCheck() {
-      set({ busy: true, error: null });
+      set({ busy: true, pendingObtain: true, error: null });
       try {
         const result =
           tls()?.mode === 'custom'
@@ -273,6 +277,7 @@ export function createTlsNetworkController(deps: {
             : await deps.api.obtainHostTlsCertificate();
         set({
           busy: false,
+          pendingObtain: false,
           error: null,
           localChecks: result.checks ?? null,
         });
