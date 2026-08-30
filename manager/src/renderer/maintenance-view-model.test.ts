@@ -8,6 +8,7 @@ import {
   fileSharingHintText,
   logsDisplayText,
   maintenanceSectionToOpenForErrors,
+  maintenanceSectionToOpenForErrorChange,
   pinResetSuccessText,
   routingModeSaveDisabled,
   routingModeSuccessText,
@@ -156,6 +157,15 @@ test('maintenanceSectionToOpenForErrors opens one section and prefers routing ov
   assert.equal(maintenanceSectionToOpenForErrors(errors), 'practice');
   errors.stack = 'stack down';
   assert.equal(maintenanceSectionToOpenForErrors(errors), 'operations');
+});
+
+test('maintenanceSectionToOpenForErrorChange focuses the newly changed error surface', () => {
+  const previous = emptyMaintenanceErrors();
+  previous.stack = 'stack down';
+  const current = { ...previous, backup: 'backup down' };
+
+  assert.equal(maintenanceSectionToOpenForErrorChange(previous, current), 'security');
+  assert.equal(maintenanceSectionToOpenForErrorChange(current, { ...current, backup: null }), null);
 });
 
 test('routingModeSaveDisabled blocks while busy, unknown, unchanged, or open waiting numbers', () => {

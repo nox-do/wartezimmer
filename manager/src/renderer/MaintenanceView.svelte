@@ -29,7 +29,8 @@
   } from './pfupdate-wizard-controller.js';
   import {
     maintenanceErrorFocusKey,
-    maintenanceSectionToOpenForErrors,
+    maintenanceSectionToOpenForErrorChange,
+    type MaintenanceErrors,
     type MaintenanceExpanderId,
   } from './maintenance-view-model.js';
   import type { RestoreWizardState } from './restore-wizard-flow.js';
@@ -58,7 +59,8 @@
   let lastSessionGeneration = $state<number | null>(null);
   /** Skip config effect once after session show() used this same snapshot ref. */
   let sessionOpenConfig = $state<HostStatus | null>(null);
-  let lastErrorFocusKey = $state('');
+  let previousErrors = $state<MaintenanceErrors | null>(null);
+  let previousErrorsKey = $state('');
 
   const viewLoading = $derived(managerShell.viewLoading.maintenance);
   const maintenanceLocked = $derived(
@@ -113,6 +115,21 @@
     action?.();
   }
 
+  function closePinReset(runCancel: boolean): void {
+    if (!pinResetOpen) {
+      return;
+    }
+    pinResetOpen = false;
+    if (runCancel) {
+      controller?.cancelPinReset();
+    }
+  }
+
+  function confirmPinReset(): void {
+    closePinReset(false);
+    controller?.executePinReset();
+  }
+
   function toggleSection(id: MaintenanceExpanderId): void {
     openSection = openSection === id ? null : id;
   }
@@ -163,6 +180,8 @@
 
     if (!session) {
       if (lastSessionGeneration !== null) {
+        closeConfirm(true);
+        closePinReset(true);
         c.hide();
         lastSessionGeneration = null;
         sessionOpenConfig = null;
@@ -212,19 +231,17 @@
 
   $effect(() => {
     if (!snapshot) {
-      lastErrorFocusKey = '';
+      previousErrors = null;
+      previousErrorsKey = '';
       return;
     }
     const key = maintenanceErrorFocusKey(snapshot.errors);
-    if (!key) {
-      lastErrorFocusKey = '';
+    if (key === previousErrorsKey) {
       return;
     }
-    if (key === lastErrorFocusKey) {
-      return;
-    }
-    lastErrorFocusKey = key;
-    const section = maintenanceSectionToOpenForErrors(snapshot.errors);
+    const section = maintenanceSectionToOpenForErrorChange(previousErrors, snapshot.errors);
+    previousErrors = { ...snapshot.errors };
+    previousErrorsKey = key;
     if (section && openSection !== section) {
       openSection = section;
     }
@@ -383,14 +400,8 @@
   <ConfirmDialog
     open={pinResetOpen}
     confirmLabel="Zurücksetzen & neu starten"
-    onConfirm={() => {
-      pinResetOpen = false;
-      controller?.executePinReset();
-    }}
-    onCancel={() => {
-      pinResetOpen = false;
-      controller?.cancelPinReset();
-    }}
+    onConfirm={confirmPinReset}
+    onCancel={() => closePinReset(true)}
   >
     <p>
       MFA- und Ops-PIN werden auf <strong>0000</strong> zurückgesetzt. Der Stack wird gestoppt, die

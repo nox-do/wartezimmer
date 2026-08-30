@@ -90,6 +90,18 @@ export function maintenanceSectionToOpenForErrors(
   return null;
 }
 
+export function maintenanceSectionToOpenForErrorChange(
+  previous: MaintenanceErrors | null,
+  current: MaintenanceErrors,
+): MaintenanceExpanderId | null {
+  for (const surface of MAINTENANCE_ERROR_OPEN_ORDER) {
+    if (current[surface] && current[surface] !== previous?.[surface]) {
+      return MAINTENANCE_ERROR_SECTION[surface];
+    }
+  }
+  return null;
+}
+
 export type MaintenanceInfoRow = { label: string; value: string };
 
 export const STACK_OFFLINE_CONFIRM_MESSAGE =

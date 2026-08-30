@@ -129,6 +129,9 @@ export function createMaintenanceController(
 ): MaintenanceController {
   const state = createInitialState();
   let lifecycleGeneration = 0;
+  let bootstrapGeneration: number | null = null;
+  let inFlightOperation: Exclude<MaintenanceOperation, 'bootstrap'> | null = null;
+  let armedOperation: Exclude<MaintenanceOperation, 'bootstrap'> | null = null;
 
   function notify(): void {
     deps.onStateChange?.();
@@ -147,14 +150,19 @@ export function createMaintenanceController(
     patch({ errors: { ...state.errors, [surface]: message } });
   }
 
-  function beginOperation(operation: MaintenanceOperation): boolean {
-    if (state.activeOperation) {
+  function bootstrapIsActive(): boolean {
+    return bootstrapGeneration !== null && still(bootstrapGeneration);
+  }
+
+  function visibleOperation(): MaintenanceOperation | null {
+    return inFlightOperation ?? (bootstrapIsActive() ? 'bootstrap' : null);
+  }
+
+  function beginOperation(operation: Exclude<MaintenanceOperation, 'bootstrap'>): boolean {
+    if (inFlightOperation || bootstrapIsActive()) {
       return false;
     }
-    if (operation === 'bootstrap') {
-      patch({ activeOperation: operation });
-      return true;
-    }
+    inFlightOperation = operation;
     patch({
       activeOperation: operation,
       errors: { ...state.errors, [operation]: null },
@@ -163,15 +171,31 @@ export function createMaintenanceController(
   }
 
   function cancelArmed(operation: Exclude<MaintenanceOperation, 'bootstrap'>): void {
-    if (state.activeOperation === operation) {
-      patch({ activeOperation: null });
+    if (armedOperation === operation && inFlightOperation === operation) {
+      armedOperation = null;
+      inFlightOperation = null;
+      patch({ activeOperation: visibleOperation() });
     }
   }
 
-  function ensureOperation(operation: Exclude<MaintenanceOperation, 'bootstrap'>): boolean {
-    if (state.activeOperation === operation) {
-      return true;
+  function armOperation(operation: Exclude<MaintenanceOperation, 'bootstrap'>): boolean {
+    if (!beginOperation(operation)) {
+      setSurfaceError(operation, MAINTENANCE_OTHER_ACTION_RUNNING);
+      return false;
     }
+    armedOperation = operation;
+    return true;
+  }
+
+  function startArmedOperation(operation: Exclude<MaintenanceOperation, 'bootstrap'>): boolean {
+    if (armedOperation !== operation || inFlightOperation !== operation) {
+      return false;
+    }
+    armedOperation = null;
+    return true;
+  }
+
+  function startOperation(operation: Exclude<MaintenanceOperation, 'bootstrap'>): boolean {
     if (!beginOperation(operation)) {
       setSurfaceError(operation, MAINTENANCE_OTHER_ACTION_RUNNING);
       return false;
@@ -179,10 +203,15 @@ export function createMaintenanceController(
     return true;
   }
 
-  function endOperation(generation: number): void {
-    if (still(generation)) {
-      patch({ activeOperation: null });
+  function endOperation(operation: Exclude<MaintenanceOperation, 'bootstrap'>): void {
+    if (inFlightOperation !== operation) {
+      return;
     }
+    inFlightOperation = null;
+    if (armedOperation === operation) {
+      armedOperation = null;
+    }
+    patch({ activeOperation: visibleOperation() });
   }
 
   function pathsChanged(): boolean {
@@ -202,8 +231,11 @@ export function createMaintenanceController(
     patch({ logsText: result.log });
   }
 
-  async function runAction(action: 'start' | 'stop' | 'restart'): Promise<void> {
-    if (!ensureOperation('stack')) {
+  async function runAction(
+    action: 'start' | 'stop' | 'restart',
+    operationStarted = false,
+  ): Promise<void> {
+    if (!operationStarted && !startOperation('stack')) {
       return;
     }
     const generation = lifecycleGeneration;
@@ -230,18 +262,18 @@ export function createMaintenanceController(
         setSurfaceError('stack', errorMessage(error, `Aktion „${action}“ fehlgeschlagen.`));
       }
     } finally {
-      endOperation(generation);
+      endOperation('stack');
     }
   }
 
-  function saveStorageFolders(restartCompose: boolean): void {
+  function saveStorageFolders(restartCompose: boolean, operationStarted = false): void {
     const importsHostPath = state.importsHostPath.trim();
     const exportsHostPath = state.exportsHostPath.trim();
     if (!importsHostPath || !exportsHostPath) {
       setSurfaceError('storage', STORAGE_PATHS_VALIDATION_ERROR);
       return;
     }
-    if (!ensureOperation('storage')) {
+    if (!operationStarted && !startOperation('storage')) {
       return;
     }
 
@@ -282,7 +314,7 @@ export function createMaintenanceController(
         setSurfaceError('storage', errorMessage(error, 'Speichern der Ordner fehlgeschlagen.'));
       })
       .finally(() => {
-        endOperation(generation);
+        endOperation('storage');
       });
   }
 
@@ -324,16 +356,18 @@ export function createMaintenanceController(
   }
 
   function armStackConfirm(action: 'stop' | 'restart'): void {
-    if (state.activeOperation === 'stack') {
+    if (inFlightOperation === 'stack') {
       return;
     }
-    if (!ensureOperation('stack')) {
+    if (!armOperation('stack')) {
       return;
     }
     deps.requestConfirm(
       STACK_OFFLINE_CONFIRM_MESSAGE,
       () => {
-        void runAction(action);
+        if (startArmedOperation('stack')) {
+          void runAction(action, true);
+        }
       },
       () => cancelArmed('stack'),
     );
@@ -379,7 +413,7 @@ export function createMaintenanceController(
           }
         })
         .finally(() => {
-          endOperation(generation);
+          endOperation('logs');
         });
     },
     backupPf() {
@@ -420,7 +454,7 @@ export function createMaintenanceController(
           setSurfaceError('backup', errorMessage(error, 'Backup fehlgeschlagen.'));
         })
         .finally(() => {
-          endOperation(generation);
+          endOperation('backup');
         });
     },
     validatePfbackup() {
@@ -471,7 +505,7 @@ export function createMaintenanceController(
           setSurfaceError('backup', errorMessage(error, 'Backup-Prüfung fehlgeschlagen.'));
         })
         .finally(() => {
-          endOperation(generation);
+          endOperation('backup');
         });
     },
     exportTlsSidecar() {
@@ -516,7 +550,7 @@ export function createMaintenanceController(
           );
         })
         .finally(() => {
-          endOperation(generation);
+          endOperation('tlsSidecar');
         });
     },
     inspectTlsSidecar() {
@@ -559,7 +593,7 @@ export function createMaintenanceController(
           );
         })
         .finally(() => {
-          endOperation(generation);
+          endOperation('tlsSidecar');
         });
     },
     applyStorage() {
@@ -569,15 +603,19 @@ export function createMaintenanceController(
       }
 
       if ((state.compose?.running ?? false) && pathsChanged()) {
-        if (state.activeOperation === 'storage') {
+        if (inFlightOperation === 'storage') {
           return;
         }
-        if (!ensureOperation('storage')) {
+        if (!armOperation('storage')) {
           return;
         }
         deps.requestConfirm(
           STORAGE_PATHS_RESTART_CONFIRM_MESSAGE,
-          () => saveStorageFolders(true),
+          () => {
+            if (startArmedOperation('storage')) {
+              saveStorageFolders(true, true);
+            }
+          },
           () => cancelArmed('storage'),
         );
         return;
@@ -631,11 +669,11 @@ export function createMaintenanceController(
           );
         })
         .finally(() => {
-          endOperation(generation);
+          endOperation('routing');
         });
     },
     executePinReset() {
-      if (!ensureOperation('pin')) {
+      if (!startArmedOperation('pin')) {
         return;
       }
       const generation = lifecycleGeneration;
@@ -669,11 +707,11 @@ export function createMaintenanceController(
           setSurfaceError('pin', errorMessage(error, 'PIN-Reset fehlgeschlagen.'));
         })
         .finally(() => {
-          endOperation(generation);
+          endOperation('pin');
         });
     },
     beginPinReset() {
-      return ensureOperation('pin');
+      return armOperation('pin');
     },
     cancelPinReset() {
       cancelArmed('pin');
@@ -691,6 +729,7 @@ export function createMaintenanceController(
     },
     show(status) {
       const generation = ++lifecycleGeneration;
+      bootstrapGeneration = generation;
       patch({
         status,
         compose: status.compose,
@@ -709,7 +748,7 @@ export function createMaintenanceController(
         pinResetStatusText: '',
         backupStatusText: '',
         tlsSidecarStatusText: '',
-        activeOperation: 'bootstrap',
+        activeOperation: visibleOperation(),
         errors: emptyMaintenanceErrors(),
       });
 
@@ -760,14 +799,21 @@ export function createMaintenanceController(
         });
 
       void Promise.allSettled([logsDone, backupDone, routingDone]).then(() => {
-        endOperation(generation);
+        if (!still(generation)) {
+          return;
+        }
+        bootstrapGeneration = null;
+        patch({ activeOperation: visibleOperation() });
       });
     },
     hide() {
       lifecycleGeneration += 1;
-      if (state.activeOperation !== null) {
-        patch({ activeOperation: null });
+      bootstrapGeneration = null;
+      if (armedOperation) {
+        inFlightOperation = null;
+        armedOperation = null;
       }
+      patch({ activeOperation: visibleOperation() });
     },
   };
 }

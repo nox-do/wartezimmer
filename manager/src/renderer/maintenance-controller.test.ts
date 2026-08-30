@@ -153,7 +153,11 @@ function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManager
 function createControllerDeps(
   api: PraxisManagerApi,
   overrides: {
-    requestConfirm?: (message: string, onConfirm: () => void) => void;
+    requestConfirm?: (
+      message: string,
+      onConfirm: () => void,
+      onCancel?: () => void,
+    ) => void;
     onAfterMutation?: () => void;
   } = {},
 ) {
@@ -299,6 +303,36 @@ test('hide clears a pending confirm lock', async () => {
   controller.restart();
   assert.equal(controller.getState().activeOperation, 'stack');
   controller.hide();
+  assert.equal(controller.getState().activeOperation, null);
+});
+
+test('a pending confirm cannot start its action after hide', async () => {
+  let onConfirm: (() => void) | undefined;
+  let composeCalls = 0;
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        runComposeAction: async () => {
+          composeCalls += 1;
+          return { ok: true, log: '', compose: { running: true, services: [] } };
+        },
+      }),
+      {
+        requestConfirm: (_message, confirm) => {
+          onConfirm = confirm;
+        },
+      },
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  await flush();
+  controller.restart();
+  controller.hide();
+  onConfirm?.();
+  await flush();
+
+  assert.equal(composeCalls, 0);
   assert.equal(controller.getState().activeOperation, null);
 });
 
@@ -599,6 +633,46 @@ test('successful mutation still refreshes host after hide', async () => {
   assert.equal(refreshCount, 1);
 });
 
+test('host action stays locked across hide and show until its promise settles', async () => {
+  const actionGate = deferred<void>();
+  let composeCalls = 0;
+  let backupCalls = 0;
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        runComposeAction: async () => {
+          composeCalls += 1;
+          await actionGate.promise;
+          return { ok: true, log: '', compose: { running: true, services: [] } };
+        },
+        createPfbackup: async () => {
+          backupCalls += 1;
+          return {
+            envPath: '/tmp/pf/.env',
+            backupPath: '/tmp/backups/blocked.pfbackup',
+          };
+        },
+      }),
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  await flush();
+  controller.handleStackToggle(true);
+  controller.hide();
+  controller.show(minimalHostStatus());
+  await flush();
+
+  assert.equal(controller.getState().activeOperation, 'stack');
+  controller.backupPf();
+  assert.equal(backupCalls, 0);
+  assert.equal(composeCalls, 1);
+
+  actionGate.resolve();
+  await flush();
+  assert.equal(controller.getState().activeOperation, null);
+});
+
 test('recordPfupdateSuccess does not trigger host refresh', async () => {
   let refreshCount = 0;
   const controller = createMaintenanceController(
@@ -735,6 +809,7 @@ test('pin reset log failure does not reject', async () => {
 
   controller.show(minimalHostStatus());
   await flush();
+  assert.equal(controller.beginPinReset(), true);
   controller.executePinReset();
   await flush();
 
