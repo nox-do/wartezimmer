@@ -95,6 +95,11 @@ export function maintenanceSectionToOpenForErrorChange(
   current: MaintenanceErrors,
 ): MaintenanceExpanderId | null {
   for (const surface of MAINTENANCE_ERROR_OPEN_ORDER) {
+    if (current[surface] && !previous?.[surface]) {
+      return MAINTENANCE_ERROR_SECTION[surface];
+    }
+  }
+  for (const surface of MAINTENANCE_ERROR_OPEN_ORDER) {
     if (current[surface] && current[surface] !== previous?.[surface]) {
       return MAINTENANCE_ERROR_SECTION[surface];
     }

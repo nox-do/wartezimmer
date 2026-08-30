@@ -673,6 +673,84 @@ test('host action stays locked across hide and show until its promise settles', 
   assert.equal(controller.getState().activeOperation, null);
 });
 
+test('cancelPinReset does not unlock an executing pin reset', async () => {
+  const actionGate = deferred<void>();
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        resetStaffPins: async () => {
+          await actionGate.promise;
+          return {
+            ok: true,
+            log: '',
+            defaultPin: '0000',
+            databaseUpdated: true,
+            compose: { running: true, services: [] },
+          };
+        },
+      }),
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  await flush();
+  assert.equal(controller.beginPinReset(), true);
+  controller.executePinReset();
+  controller.cancelPinReset();
+  assert.equal(controller.getState().activeOperation, 'pin');
+
+  actionGate.resolve();
+  await flush();
+  assert.equal(controller.getState().activeOperation, null);
+});
+
+test('pin reset stays locked across hide and show until its promise settles', async () => {
+  const actionGate = deferred<void>();
+  let pinCalls = 0;
+  let backupCalls = 0;
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        resetStaffPins: async () => {
+          pinCalls += 1;
+          await actionGate.promise;
+          return {
+            ok: true,
+            log: '',
+            defaultPin: '0000',
+            databaseUpdated: true,
+            compose: { running: true, services: [] },
+          };
+        },
+        createPfbackup: async () => {
+          backupCalls += 1;
+          return {
+            envPath: '/tmp/pf/.env',
+            backupPath: '/tmp/backups/blocked.pfbackup',
+          };
+        },
+      }),
+    ),
+  );
+
+  controller.show(minimalHostStatus());
+  await flush();
+  assert.equal(controller.beginPinReset(), true);
+  controller.executePinReset();
+  controller.hide();
+  controller.show(minimalHostStatus());
+  await flush();
+
+  assert.equal(controller.getState().activeOperation, 'pin');
+  controller.backupPf();
+  assert.equal(backupCalls, 0);
+  assert.equal(pinCalls, 1);
+
+  actionGate.resolve();
+  await flush();
+  assert.equal(controller.getState().activeOperation, null);
+});
+
 test('recordPfupdateSuccess does not trigger host refresh', async () => {
   let refreshCount = 0;
   const controller = createMaintenanceController(

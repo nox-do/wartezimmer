@@ -18,6 +18,7 @@
   } = $props();
 
   let dialogEl = $state<HTMLDialogElement | null>(null);
+  let ignoreNextClose = false;
 
   $effect(() => {
     if (!dialogEl) {
@@ -28,6 +29,7 @@
       return;
     }
     if (!open && dialogEl.open) {
+      ignoreNextClose = true;
       dialogEl.close();
     }
   });
@@ -39,12 +41,20 @@
   function handleConfirm(): void {
     onConfirm();
   }
+
+  function handleClose(): void {
+    if (ignoreNextClose) {
+      ignoreNextClose = false;
+      return;
+    }
+    handleCancel();
+  }
 </script>
 
 <dialog
   bind:this={dialogEl}
   class="maintenance-dialog"
-  onclose={handleCancel}
+  onclose={handleClose}
   onclick={(event) => {
     if (event.target === dialogEl) {
       handleCancel();

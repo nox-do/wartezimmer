@@ -1,6 +1,6 @@
 # Arbeitsstand (intern)
 
-Stand: 2026-08-29
+Stand: 2026-08-30
 
 Kein Kunden-Dokument. Einstieg für Beta/IT: [`docs/README.md`](docs/README.md) · Scope: [`docs/roadmap.md`](docs/roadmap.md).
 Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-history.md).
@@ -21,11 +21,15 @@ Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-histo
 
 ## Als Nächstes
 
-- Manager-Installer aufräumen: [`docs/plan-manager-installer-cleanup.md`](docs/plan-manager-installer-cleanup.md). Wartung A+B durch; Notify-Regel auch Wizard/Netzwerk.
+- Manager-Installer aufräumen: [`docs/plan-manager-installer-cleanup.md`](docs/plan-manager-installer-cleanup.md). Diff A+B und `7b8300c` liegen. Nächster Plan-Schritt: Wizard-Lifecycle, dann Network/TLS-Safety — nicht in Wartung mischen.
 - HTTPS-Aufräumen: Schnitte 1–3 umgesetzt und reviewt.
 - Produkt-Spec bleibt [`docs/plan-proxy-tls-manager.md`](docs/plan-proxy-tls-manager.md).
 - Boot-Aufräumen ist im Code; Plan dazu gelöscht. Hülle-Reste (View-Unmount, IPC) kein Folgeauftrag.
 - `state/tls/` liegt in `.gitignore` (Token, acme-dns, Caddyfile).
+
+## Heute (2026-08-30)
+
+- Manager-Aufräumen: ConfirmDialog ruft bei programmatischem Close nicht mehr `onCancel`. Accordion öffnet die neu hinzugekommene Fehlerfläche (Routing/Logs/Backup); Löschen schaltet nicht um. `hide()` behält den Lock laufender Host-Aktionen (inkl. PIN).
 
 ## Heute (2026-08-29)
 

@@ -168,6 +168,36 @@ test('maintenanceSectionToOpenForErrorChange focuses the newly changed error sur
   assert.equal(maintenanceSectionToOpenForErrorChange(current, { ...current, backup: null }), null);
 });
 
+test('maintenanceSectionToOpenForErrorChange prefers a newly added error over an older higher-priority one', () => {
+  const previous = emptyMaintenanceErrors();
+  previous.routing = 'routing down';
+
+  assert.equal(
+    maintenanceSectionToOpenForErrorChange(previous, { ...previous, logs: 'logs down' }),
+    'diagnostics',
+  );
+  assert.equal(
+    maintenanceSectionToOpenForErrorChange(previous, { ...previous, backup: 'backup down' }),
+    'security',
+  );
+});
+
+test('maintenanceSectionToOpenForErrorChange does not switch when an error is cleared', () => {
+  const previous = emptyMaintenanceErrors();
+  previous.routing = 'routing down';
+  previous.logs = 'logs down';
+
+  assert.equal(
+    maintenanceSectionToOpenForErrorChange(previous, { ...previous, logs: null }),
+    null,
+  );
+  assert.equal(
+    maintenanceSectionToOpenForErrorChange(previous, { ...previous, routing: null }),
+    null,
+  );
+  assert.equal(maintenanceSectionToOpenForErrorChange(previous, emptyMaintenanceErrors()), null);
+});
+
 test('routingModeSaveDisabled blocks while busy, unknown, unchanged, or open waiting numbers', () => {
   assert.equal(routingModeSaveDisabled(true, 'simple', 'complex'), true);
   assert.equal(routingModeSaveDisabled(false, null, 'simple'), true);

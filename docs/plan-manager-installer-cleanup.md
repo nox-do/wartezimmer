@@ -1,8 +1,8 @@
 # Plan: Manager — Installer-UI aufräumen
 
-Stand: 2026-08-29
+Stand: 2026-08-30
 
-Status: **Gegen Ist-Code geprüft; Schnitt 1 startklar** (Bootstrap-Busy bis alle drei
+Status: **Gegen Ist-Code geprüft; Diff A startklar** (Bootstrap-Busy bis alle drei
 Requests settled; `show()` setzt Routing zurück). Eine Installation, ein Betreiber,
 ein Manager. Kein Multi-Tenant, keine neue Store-Schicht. Keine parallelen
 Wartungs-Slots.
@@ -62,8 +62,8 @@ Screens, Netzwerk und TLS wieder zusammenlegen.
 Shell          configSnapshot + runtimeSnapshot + Sessions + viewLoading
   │
   ├─ Status     Selektoren, keine lokalen Mutationen
-  ├─ Assistent  wizard-controller (busy global, Extra-sync — gelb, später)
-  ├─ Netzwerk   network-controller + tls-network-controller   ← gelb, behalten
+  ├─ Assistent  linear; Async-Lifecycle offen                 ← Safety-Follow-up
+  ├─ Netzwerk   network-controller + tls-network-controller   ← gelb + Follow-up
   └─ Wartung    maintenance-controller                        ← rot, zuerst
 ```
 
@@ -71,7 +71,8 @@ Shell          configSnapshot + runtimeSnapshot + Sessions + viewLoading
 | ------ | ------- | ------------ |
 | Wartung | `maintenance-controller.ts`, `MaintenanceView.svelte` | ein ungetaggtes `busy`, ein globales `error`, Async-Schreibpfade ohne Lifecycle-Generation |
 | Netzwerk | `network-controller.ts`, `NetworkView.svelte` | Draft + Phasen + zwei Generation-Zähler; View orchestriert Shell + zwei Controller |
-| TLS unter Netzwerk | `tls-network-controller.ts`, `TlsNetworkPanel.svelte` | eigener `busy`/`error`; Config über Getter, nicht kopiert |
+| TLS unter Netzwerk | `tls-network-controller.ts`, `TlsNetworkPanel.svelte` | persistenter Controller ohne Session-Gate; Hydrate kann über Tab-Sessions überlappen; LAN→TLS-Lock nur einseitig |
+| Assistent | `wizard-controller.ts`, `WizardView.svelte` | `hide()` invalidiert nur Routing-Request; übrige Async-Pfade können in einen neuen Lauf schreiben |
 | Brücke überall | `onStateChange` → `syncSnapshot()` | plus tote `subscribe()`, plus Extra-Klone nach Notify |
 
 ---
@@ -217,10 +218,9 @@ Save, Refresh oder Tab-Wechsel verlangen Wissen über die Reihenfolge der
 `$effect`s.
 
 **Entscheidung:** Hotspot, **kein** großer Rewrite. Netzwerk und TLS ausdrücklich
-**nicht** zusammenlegen — LAN-Save und HTTPS-Reise sind zwei Strecken.
-
-Wenn dort je etwas: nur festhalten, welche `$effect`-Kette `show` / `hide` /
-`syncFromConfig` in welcher Reihenfolge braucht. Kein API-Umbau in diesem Plan.
+**nicht** zusammenlegen — LAN-Save und HTTPS-Reise sind zwei Strecken. Der
+Basis-Netzwerk-Controller bleibt gelb; beim TLS-Geschwister gibt es aber einen
+separaten Safety-Follow-up, siehe unten.
 
 ---
 
@@ -255,6 +255,62 @@ Auch die beiden Pfad-Setter melden normal. Direkte View-Updates bleiben nur für
 lokale View-Flags (Confirm, Accordion, Dialog-offen) und für das einmalige
 Initialisieren direkt nach `createMaintenanceController`. Tote `subscribe()`
 löschen.
+
+---
+
+## Safety-Follow-ups außerhalb dieser Schnitte
+
+Diese Punkte sind echter Handlungsbedarf, werden aber nicht in die
+Wartungs-Schnitte gemischt.
+
+### Netzwerk/TLS — gezielt, kein pauschales `hide()`
+
+`NetworkView` ruft beim Session-Ende nur `networkController.hide()` auf. Der
+TLS-Controller bleibt persistent und `hydrateOperatorRequest()` kann beim
+schnellen Zu-/Aufmachen mehrfach parallel über idempotentes `prepareHostTls`
+laufen. Der Replay ist damit nicht single-flight und sein Ergebnis nicht an
+die gestartete Host-/LAN-Identität gebunden.
+
+Dass Apply/DNS/Obtain nach dem Verlassen weiterlaufen, ist dagegen **nicht
+automatisch ein Defekt**: derselbe TLS-Controller bleibt erhalten, `busy`
+verhindert einen zweiten TLS-Klick und eine bereits gestartete Host-Mutation
+muss ihren `onAfterMutation`-Refresh beenden dürfen. Ein naives `hide()`, das
+State zurücksetzt oder alle Completion-Pfade verwirft, könnte `busy` stranden
+lassen oder einen notwendigen Refresh verlieren.
+
+Der kleine Safety-Schnitt dafür:
+
+- Operator-Request-Hydration single-flight und an Hostname + LAN-IP binden;
+  veraltetes Ergebnis nicht anwenden, keinen zweiten Replay für dieselbe
+  Identität starten.
+- Offenen Network/TLS-Confirm beim Session-Ende schließen und Callback
+  verwerfen.
+- Mutations-Lock symmetrisch machen: LAN-Busy sperrt TLS heute zu Recht;
+  während `tlsSnapshot.busy` dürfen umgekehrt LAN-/Proxy-Apply und
+  Draft-Verwerfen keine konkurrierende Host-Mutation starten. Accordion und
+  reine Diagnose dürfen weiter bedienbar bleiben.
+- Tests: zwei Session-Starts derselben Identität erzeugen nur einen Replay;
+  ein altes Hydrate-Ergebnis für eine andere Identität wird ignoriert;
+  TLS-Busy sperrt die mutierenden LAN-Aktionen; alter Confirm ist wirkungslos.
+- Kein Setup-API-Umbau, kein Zusammenlegen der Controller, kein Reset des
+  TLS-Drafts beim bloßen Tab-Wechsel.
+
+### Wizard — Lifecycle-Race (rot, eigener Safety-Schnitt)
+
+Der globale `busy`/`error` ist im linearen Assistenten angemessen. Der Defekt
+ist `hide()`: Es invalidiert nur `routingCapabilitiesRequestId` und ersetzt den
+State. Alte `goNext()`-, PEM-, Prerequisite-, Release-Import- und Folder-
+Promises patchen danach über die gemeinsame `state`-Variable den **neuen**
+Lauf; ihr `finally` kann dessen `busy` zu früh lösen. Auch ein alter
+Identity-Reset-Confirm kann später starten.
+
+Eigener kleiner Safety-Schnitt: Lifecycle-Generation für alle asynchronen
+Wizard-UI-Writes und Progress-Callbacks, Confirm beim Session-Ende verwerfen,
+notwendige Host-Mutation-Callbacks trotz ausgeblendeter View ausführen. Kein
+Wizard-FSM-Rewrite und keine Aufteilung des globalen Busy/Error. Tests: alter
+`goNext`-/PEM-/Prerequisite-/Import-/Browse-Abschluss verändert nach
+`hide()` + `show()` weder neuen State noch `busy`; eine bereits ausgeführte
+Host-Mutation meldet sich trotzdem genau einmal; alter Confirm ist wirkungslos.
 
 ---
 
@@ -432,9 +488,8 @@ parallelen Wartungs-Slots.
   einen `onStateChange`-Callback aus; entfernte manuelle Syncs ändern keine
   sichtbare Zustandsübernahme.
 
-**Nicht:** keine neuen Panels, keine TLS/Setup-API. Dieselbe Notify-Regel gilt
-jetzt auch für Wizard- und Netzwerk-View (keine Extra-`syncSnapshot` nach
-`patch`/`show`/`hide`/`goNext`).
+**Nicht:** keine neuen Panels, keine TLS/Setup-API und keine Notify-Hygiene in
+Wizard- oder Netzwerk-View. Deren Regel ist nur als späterer Follow-up notiert.
 
 ---
 
@@ -446,7 +501,10 @@ Umsetzung in **zwei Diffs** (Plan-Schnitte bleiben die Checkliste):
    `activeOperation`, kein Footer-Umzug, keine Notify-Hygiene.
 2. **Diff B = Schnitt 3+4** — getaggte Aktion, Fehlerort, eine Notify-Leitung.
 
-Netzwerk/TLS zusammenlegen und Wizard-Umbau bleiben außerhalb. Notify-Regel
-nach Wartung auch für Wizard- und Netzwerk-View.
+Netzwerk/TLS zusammenlegen und Wizard-FSM-Umbau bleiben außerhalb. Die oben
+notierten Safety-Follow-ups sind eigene Diffs. Defect-first-Reihenfolge über
+diesen Plan hinaus: Diff A, Wizard-Lifecycle, Network/TLS-Safety, danach Diff B.
+Wer den Wartungsplan ohne Unterbrechung abschließt, mischt diese Dateien
+trotzdem nicht in Diff A oder B.
 
 Kein Umbau ohne den jeweiligen Schnitt.
