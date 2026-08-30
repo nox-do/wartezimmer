@@ -29,6 +29,7 @@ Chronik bis 2026-08-24: [`docs/archive/todo-history.md`](docs/archive/todo-histo
 
 ## Heute (2026-08-30)
 
+- MFA Settings Betrieb: Scroll-Clip — `100dvh` von `app-main` auf `.app-shell:has(settings)`; bestehende Flex-Kette (`mfa-page` / `staff-settings-layout` / `staff-settings-main`) unverändert.
 - Manager-Aufräumen: ConfirmDialog ruft bei programmatischem Close nicht mehr `onCancel`. Accordion öffnet die neu hinzugekommene Fehlerfläche (Routing/Logs/Backup); Löschen schaltet nicht um. `hide()` behält den Lock laufender Host-Aktionen (inkl. PIN).
 - Kunden-Test Reset: packaged Install-Home geleert; Repo-`.env` ohne Proxy/TLS; `state/tls` weg. tgz `dist/releases/praxis-flow-0.3.0/` neu (app+sandbox+`praxis-flow-proxy`). DMG war schon neu.
 - Netzwerk: HTTPS-Warnbox Abstand zur Trennlinie; Titel „Browserzugriff (Proxy Port 80)“.
