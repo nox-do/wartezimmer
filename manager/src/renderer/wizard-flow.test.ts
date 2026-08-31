@@ -163,7 +163,7 @@ test('planWizardAdvance walks HTTPS phases and prepares after the lease', () => 
   state.customLabel = 'portal';
   assert.equal(planWizardAdvance(6, state).type, 'validate-error');
 
-  state.customLabel = 'seidel';
+  state.customLabel = 'muster';
   assert.deepEqual(planWizardAdvance(6, state), { type: 'https-phase', phase: 'lease' });
 
   state.httpsPhase = 'lease';

@@ -103,7 +103,7 @@ Während des Manager-Setups (TLS-Strecke) entstehen:
 ```text
 Installations-ID: 7fk3m2q9
 Vorschlag:        7fk3m2.lan.notaus.de
-Optional:         seidel.lan.notaus.de
+Optional:         muster.lan.notaus.de
 Anzeigename:      Praxis Dr. Meyer
 ```
 

@@ -481,7 +481,7 @@ function renderHostnamePhase() {
     mode === NAME_MODE.label
       ? `<div class="wizard-nested">
             <label class="wizard-field-label" for="custom-label">Label</label>
-            <input id="custom-label" class="wizard-input" maxlength="63" value="${escapeHtml(state.customLabel)}" placeholder="seidel" />
+            <input id="custom-label" class="wizard-input" maxlength="63" value="${escapeHtml(state.customLabel)}" placeholder="muster" />
             ${nameOk() ? '' : notice('bad', 'DNS-Label: a–z, 0–9, Bindestrich, 1–63 Zeichen; nicht am Rand Bindestrich; keine Umlaute; nicht lan/acme/www/portal/mail.')}
             <p class="hint">Wunschname in derselben Zone wie der Vorschlag.</p>
           </div>`

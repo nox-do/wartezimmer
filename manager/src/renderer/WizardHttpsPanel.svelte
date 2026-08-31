@@ -153,7 +153,7 @@
           maxlength="63"
           value={snapshot.customLabel}
           disabled={snapshot.busy}
-          placeholder="seidel"
+          placeholder="muster"
           oninput={(event) => patch({ customLabel: event.currentTarget.value })}
         />
         {#if !nameOk}

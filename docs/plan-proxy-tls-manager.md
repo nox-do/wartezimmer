@@ -61,7 +61,7 @@ Während der TLS-Strecke im Setup:
 ```text
 Installations-ID: 7fk3m2q9
 Vorschlag:        7fk3m2.lan.notaus.de
-Eigenes Label:    seidel.lan.notaus.de
+Eigenes Label:    muster.lan.notaus.de
 Eigene Domain:    flow.praxis-meyer.de
 Einmal-Token:     (stark, nicht erneut anzeigen nach Verbrauch)
 ```

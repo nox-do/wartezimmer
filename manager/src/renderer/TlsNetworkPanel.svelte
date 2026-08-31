@@ -137,7 +137,7 @@
         class="wizard-input is-monospace"
         value={state.customLabel}
         disabled={busy}
-        placeholder="seidel"
+        placeholder="muster"
         oninput={(event) => controller.patchDraft({ customLabel: event.currentTarget.value })}
       />
     {/if}

@@ -11,14 +11,14 @@ import {
 
 test('tlsNameValid accepts generated and rejects reserved labels', () => {
   assert.equal(tlsNameValid({ nameMode: 'generated', customLabel: '', customDomain: '' }), true);
-  assert.equal(tlsNameValid({ nameMode: 'label', customLabel: 'seidel', customDomain: '' }), true);
+  assert.equal(tlsNameValid({ nameMode: 'label', customLabel: 'muster', customDomain: '' }), true);
   assert.equal(tlsNameValid({ nameMode: 'label', customLabel: 'portal', customDomain: '' }), false);
   assert.equal(
     tlsNameValid({ nameMode: 'domain', customLabel: '', customDomain: 'flow.praxis-meyer.de' }),
     true,
   );
   assert.equal(
-    tlsNameValid({ nameMode: 'domain', customLabel: '', customDomain: 'seidel.lan.notaus.de' }),
+    tlsNameValid({ nameMode: 'domain', customLabel: '', customDomain: 'muster.lan.notaus.de' }),
     false,
   );
 });
@@ -29,8 +29,8 @@ test('tlsDraftHostname keeps generated names anonymous until prepare', () => {
     '….lan.notaus.de',
   );
   assert.equal(
-    tlsDraftHostname({ nameMode: 'label', customLabel: 'Seidel', customDomain: '' }),
-    'seidel.lan.notaus.de',
+    tlsDraftHostname({ nameMode: 'label', customLabel: 'Muster', customDomain: '' }),
+    'muster.lan.notaus.de',
   );
 });
 
@@ -40,8 +40,8 @@ test('tlsPrepareHostname omits generated names so Setup mints the label', () => 
     undefined,
   );
   assert.equal(
-    tlsPrepareHostname({ nameMode: 'label', customLabel: 'Seidel', customDomain: '' }),
-    'seidel.lan.notaus.de',
+    tlsPrepareHostname({ nameMode: 'label', customLabel: 'Muster', customDomain: '' }),
+    'muster.lan.notaus.de',
   );
 });
 
@@ -98,14 +98,14 @@ test('tlsDraftMatchesPrepared keeps generated identity and rejects a fork change
     tlsDraftMatchesPrepared(
       {
         nameMode: 'label',
-        customLabel: 'seidel',
+        customLabel: 'muster',
         customDomain: '',
         preparedNameMode: 'label',
       },
       {
         state: 'awaiting-operator-dns',
         mode: 'managed',
-        hostname: 'seidel.lan.notaus.de',
+        hostname: 'muster.lan.notaus.de',
       },
     ),
     true,
