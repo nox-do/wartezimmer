@@ -182,6 +182,9 @@ export const QueueMessageDispatch = {
     errorCode: {
       type: 'string',
     },
+    fallbackFrom: {
+      type: 'string',
+    },
   },
 } as const;
 
@@ -222,6 +225,9 @@ export const QueueRecallRetryNotifyResponse = {
           type: 'string',
         },
         errorCode: {
+          type: 'string',
+        },
+        fallbackFrom: {
           type: 'string',
         },
       },
@@ -1695,6 +1701,9 @@ export const QueueVisitTransitionResponse = {
                 errorCode: {
                   type: 'string',
                 },
+                fallbackFrom: {
+                  type: 'string',
+                },
               },
             },
           ],
@@ -1738,6 +1747,9 @@ export const QueueVisitTransitionResponse = {
               type: 'string',
             },
             errorCode: {
+              type: 'string',
+            },
+            fallbackFrom: {
               type: 'string',
             },
           },
@@ -1873,6 +1885,9 @@ export const QueueRecallResponse = {
               type: 'string',
             },
             errorCode: {
+              type: 'string',
+            },
+            fallbackFrom: {
               type: 'string',
             },
           },
@@ -2902,6 +2917,9 @@ export const POST_api_v1_queue_visitId_transitionResponse200 = {
                 errorCode: {
                   type: 'string',
                 },
+                fallbackFrom: {
+                  type: 'string',
+                },
               },
             },
           ],
@@ -2945,6 +2963,9 @@ export const POST_api_v1_queue_visitId_transitionResponse200 = {
               type: 'string',
             },
             errorCode: {
+              type: 'string',
+            },
+            fallbackFrom: {
               type: 'string',
             },
           },

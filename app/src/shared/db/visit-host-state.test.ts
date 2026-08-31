@@ -96,7 +96,7 @@ test('absentModeToQueueDisplayStatus maps host overlay to queue pseudo-status', 
   assert.equal(absentModeToQueueDisplayStatus('return_later'), 'absent_return_later');
 });
 
-test('applyVisitRecall sets return_later window and clears callback', () => {
+test('applyVisitRecall sets return_later window and keeps callback for retry', () => {
   const db = setupDb();
   const runtime = getFlowCoreRuntime(db);
   const visit = runtime.checkIn({
@@ -114,7 +114,7 @@ test('applyVisitRecall sets return_later window and clears callback', () => {
   const row = getVisitHostState(db, visit.id);
   assert.equal(row?.absentMode, 'return_later');
   assert.equal(row?.returnUntil, '2026-07-05T10:15:00.000Z');
-  assert.equal(row?.callbackPhone, null);
+  assert.equal(row?.callbackPhone, '+49172111111');
   assert.equal(row?.recallNotifySent, false);
 });
 

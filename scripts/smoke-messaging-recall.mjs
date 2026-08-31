@@ -82,7 +82,7 @@ async function main() {
     jsonBody: {
       topicId: 'offen',
       authPath: 'phone_dob',
-      phoneNumber: '017612345678',
+      phoneNumber: '+4917612345678',
     },
     expectedStatus: 201,
   });

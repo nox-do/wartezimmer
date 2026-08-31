@@ -4968,6 +4968,10 @@
                                 },
                                 "errorCode": {
                                   "type": "string"
+                                },
+                                "fallbackFrom": {
+                                  "type": "string",
+                                  "description": "Set when WhatsApp was attempted first and SMS completed delivery."
                                 }
                               }
                             }
@@ -5020,6 +5024,10 @@
                             },
                             "errorCode": {
                               "type": "string"
+                            },
+                            "fallbackFrom": {
+                              "type": "string",
+                              "description": "Set when WhatsApp was attempted first and SMS completed delivery."
                             }
                           }
                         }
@@ -17685,6 +17693,10 @@
           },
           "errorCode": {
             "type": "string"
+          },
+          "fallbackFrom": {
+            "type": "string",
+            "description": "Set when WhatsApp was attempted first and SMS completed delivery."
           }
         }
       },
@@ -17733,6 +17745,10 @@
               },
               "errorCode": {
                 "type": "string"
+              },
+              "fallbackFrom": {
+                "type": "string",
+                "description": "Set when WhatsApp was attempted first and SMS completed delivery."
               }
             }
           }
@@ -19329,6 +19345,10 @@
                       },
                       "errorCode": {
                         "type": "string"
+                      },
+                      "fallbackFrom": {
+                        "type": "string",
+                        "description": "Set when WhatsApp was attempted first and SMS completed delivery."
                       }
                     }
                   }
@@ -19381,6 +19401,10 @@
                   },
                   "errorCode": {
                     "type": "string"
+                  },
+                  "fallbackFrom": {
+                    "type": "string",
+                    "description": "Set when WhatsApp was attempted first and SMS completed delivery."
                   }
                 }
               }
@@ -19525,6 +19549,10 @@
                   },
                   "errorCode": {
                     "type": "string"
+                  },
+                  "fallbackFrom": {
+                    "type": "string",
+                    "description": "Set when WhatsApp was attempted first and SMS completed delivery."
                   }
                 }
               }

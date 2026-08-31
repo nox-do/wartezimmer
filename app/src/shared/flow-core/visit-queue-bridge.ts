@@ -244,7 +244,24 @@ const TRIAGE_ELIGIBLE_STATUSES: QueueDisplayStatus[] = [
   'absent_wait_here',
   'absent_return_later',
 ];
+/** Recall from either absent overlay — block separately when an active returnUntil exists. */
 const RECALL_ELIGIBLE_STATUSES: QueueDisplayStatus[] = ['absent_wait_here', 'absent_return_later'];
+
+function hasActiveReturnUntil(
+  returnUntil: string | null | undefined,
+  nowIso: string,
+): boolean {
+  const trimmed = returnUntil?.trim();
+  if (!trimmed) {
+    return false;
+  }
+  const nowMs = Date.parse(nowIso);
+  const deadlineMs = Date.parse(trimmed);
+  if (Number.isNaN(nowMs) || Number.isNaN(deadlineMs)) {
+    return false;
+  }
+  return deadlineMs > nowMs;
+}
 
 function requireVisitForQueueOp(runtime: Runtime, visitId: string): VisitView {
   const visit = runtime.visits().find((entry) => entry.id === visitId);
@@ -312,6 +329,10 @@ export function recallVisit(
   const visit = requireVisitForQueueOp(runtime, visitId);
   const hostState = getVisitHostState(db, visitId);
   const fromStatus = assertEffectiveStatus(visit, hostState, RECALL_ELIGIBLE_STATUSES);
+  // Reject re-recall while a countdown is still running (independent of absent_mode).
+  if (hasActiveReturnUntil(hostState?.returnUntil, updatedAt)) {
+    throw domainError('INVALID_TRANSITION');
+  }
   const notifyPhone = resolveRecallNotifyPhone(hostState?.callbackPhone, hostState?.checkinPhone);
 
   const returnUntil = new Date(

@@ -1,6 +1,6 @@
 # Plan: `.pfbackup` v2 — HTTPS im selben Archiv
 
-Stand: 2026-08-30
+Stand: 2026-08-31
 
 Status: **Äußeres Archiv bleibt JSON.** Branch `backup-v2`. Kein Code in diesem
 Dokument. Nächster Schritt: Schnitt 1. Vertrag ist dieses Dokument, nicht die
@@ -50,7 +50,7 @@ Metadaten blocken.
 ## Festgelegt (Scope)
 
 1. Kein Live-Bestand. Altes Format und Geschwister-`.tgz` werden nicht gelesen
-   und nicht mitgeschrieben. Tests/Fixtures nur Format 2. Kein Hinweis in der UI.
+   und nicht mitgeschrieben. Tests/Fixtures nur Format 2. Kein Format-Migrationshinweis in der UI.
 2. Dateiendung `.pfbackup`, Prefix `praxis-flow-backup-` unverändert. Dateiinhalt
    ist JSON plus optionales `tlsArchiveBase64`. Kein äußeres tar, kein Zip, kein
    Stream. Kein Hash im Dateinamen.
@@ -82,6 +82,10 @@ Metadaten blocken.
 15. Pre-Update-Backup ist dieselbe Format-2-Datei. Kein Extra-Hinweis im
     Update-Wizard. Dieselbe Rückfrage wie beim normalen Restore (nur wenn
     Praxis **und** Sicherung HTTPS).
+16. Sichtbarer Sicherheitshinweis vor Backup-Erstellung/Export und in der
+    Restore-Vorschau: `.pfbackup` ist unverschlüsselt und enthält bei
+    konfiguriertem Messaging API-Keys im Klartext; HTTPS-Payload kann private
+    Schlüssel enthalten. Details unter „Sicherheit und Nutzerhinweis“.
 
 ### Nicht-Ziele
 
@@ -94,6 +98,49 @@ Metadaten blocken.
 - Kein E2E-Let's-Encrypt, kein neues Restore-UI
 - Kein Gesamt-Hash der JSON-Datei, kein Hash im Dateinamen
 - Keine Größen-Decke für `.pfbackup` / `content`
+- Keine Credential-/Backup-Verschlüsselung, keine MFA-PIN-Schlüsselbindung
+  und keine zusätzliche Sicherheits-Bestätigung; der Hinweis ist kein Gate
+
+---
+
+## Sicherheit und Nutzerhinweis
+
+**Geplante Umsetzung in Schnitt 3/4, noch nicht implementiert.** Maßgeblich
+ist das am 2026-08-31 korrigierte Sicherheitsmodell in
+[`settings-backup-classification.md`](settings-backup-classification.md#sicherheitsmodell-entschieden-schlank).
+
+Provider-Credentials liegen als Klartext-JSON in `credentials_json` und werden
+unverändert gesichert. Es gibt keine Verschlüsselung über die MFA-PIN und
+keine Verschlüsselung des Archivs. Auch Base64, tgz-Kompression und
+Manifest-Checksummen schützen nicht vor dem Lesen der enthaltenen Schlüssel.
+In Format 2 kommen bei HTTPS gegebenenfalls private TLS-/ACME-Schlüssel hinzu.
+Der Verzicht auf Anwendungsverschlüsselung ist eine bewusste Beta-Entscheidung;
+die Datei ist trotzdem schützenswert, auch ohne Patientendaten.
+
+**Platzierung:**
+
+- Im bestehenden `BackupPanel` dauerhaft sichtbar vor den Aktionen zum
+  Erstellen und Speichern/Exportieren der Sicherung, nicht erst als Toast
+  nach dem Speichern. Der Hinweis gilt auch für HTTP-only-Sicherungen.
+- In der bestehenden Restore-Vorschau vor „Wiederherstellen“. Die Option
+  `skipProviderCredentials` bereinigt nur den Import, nicht die Backup-Datei;
+  der Hinweis bleibt deshalb auch bei ausgewählter Option sichtbar.
+- Kein zusätzlicher Dialog, keine Checkbox und kein neues Restore-Gate.
+  Bestehende HTTPS-Überschreibbestätigung unverändert. Kein zusätzlicher
+  Hinweis im Update-Wizard; Pre-Update-Backups unterliegen demselben
+  Sicherheitsmodell und dem allgemeinen Hinweis im Backup-Bereich.
+
+**Copy (Praxis, ohne konkrete Schlüsselwerte):**
+
+> Diese Sicherung ist nicht verschlüsselt. Eingerichtete API-Schlüssel für
+> SMS und WhatsApp werden im Klartext mitgesichert. Bei HTTPS kann sie außerdem
+> private Schlüssel enthalten. Bewahren Sie die Datei vor unbefugtem Zugriff
+> geschützt auf, möglichst auf einem verschlüsselten Datenträger. Geben Sie
+> die Sicherung nicht ungeschützt weiter.
+
+Statischer Hinweis, keine neue Credential-Analyse oder Ausgabe von Key-Werten
+in Inspect, UI oder Logs erforderlich. Keine Behauptung „durch PIN geschützt“.
+Erstellen, Exportieren und Restore bleiben ohne zusätzliche Bestätigung möglich.
 
 ---
 
@@ -342,6 +389,9 @@ Anpassen:
 - `createPfbackup` Client-Typ ohne Sidecar-Pfad
 - HTTPS-Block Copy: Zertifikat **in** der `.pfbackup`, sobald HTTPS
   vorbereitet ist; beide Dateien / Timestamp-Namen raus
+- Sicherheitshinweis gemäß „Sicherheit und Nutzerhinweis“ im `BackupPanel`
+  vor Erstellen/Export und in der Restore-Vorschau; unabhängig von HTTPS
+  und `skipProviderCredentials`, ohne zusätzlichen Dialog oder Key-Werte
 - Restore-Wizard: Confirm vor `restorePfbackup` nur wenn `currentTlsClaimsHttps`
   **und** Sicherung `tlsInBackup`; Pre-Update und `retryRestore` dieselbe
   Bedingung. Tests: Confirm nötig / Abbrechen bleibt Preview / Praxis HTTP
@@ -356,7 +406,8 @@ mehr.
 
 **Review:** Wizard-Test ohne zweiten Dateidialog. Create+Save eine Datei.
 Keine toten IPC-Kanäle. Confirm nur bei Praxis **und** Sicherung HTTPS.
-Lesen bleibt utf8.
+Lesen bleibt utf8. Sicherheitshinweis vor Erstellen/Export und Restore
+sichtbar, auch bei HTTP-only und Restore ohne Provider-Credentials.
 
 ### Schnitt 4 — Copy, Mock
 
@@ -365,10 +416,14 @@ Lesen bleibt utf8.
 - Mock `docs/mocks/lan-tls-wizard/` `renderMaintenance` — eine Datei, kein
   Sidecar-Button; Confirm wenn Praxis und Sicherung HTTPS
 - `tls-model.js` Inspect-Copy ohne „Sidecar“
+- Sicherheitshinweis in Produkt-Copy und Mock an denselben Stellen:
+  unverschlüsselte API-Keys, gegebenenfalls private HTTPS-Schlüssel und
+  geschützte Aufbewahrung/Weitergabe; keine PIN-Verschlüsselung behaupten
 - `todo.md` Arbeitsstand
 
 **Review:** Keine Sidecar/Pilot-Wörter in sichtbarer Copy. JSDoc darf intern
-`tlsArchiveBase64` sagen.
+`tlsArchiveBase64` sagen. Sicherheitshinweis verständlich und vor den
+betroffenen Aktionen sichtbar; keine zusätzlichen Bestätigungsschritte.
 
 ---
 
@@ -376,7 +431,7 @@ Lesen bleibt utf8.
 
 | Bereich | Dateien |
 | ------- | ------- |
-| Spec | `docs/plan-backup-v2.md` |
+| Spec | `docs/plan-backup-v2.md`, `docs/settings-backup-classification.md` |
 | Shared | `pfbackup.ts`, `pfbackup.test.ts`, `setup-api.ts`, `tls-backup.ts`, `tls-backup.test.ts`, `index.ts` (`backup-path-labels.ts` nur wenn der Geschwisternamen-Export tot ist) |
 | Setup | `settings-backup.ts`, `settings-backup-inspect.ts`, `settings-backup-restore.ts`, `tls-backup-sidecar.ts`, `env-file.ts` (`removeEnvKeys`), `server.ts`, `host-state.ts`, zugehörige `*.test.ts`; `settings-backup-update.ts` Parse/Create |
 | Manager Main | `pfbackup-dialog.ts`, `tls-sidecar-lookup.ts` + Test löschen, `index.ts`, `setup-api.ts` (Timeout bleibt) |
@@ -437,6 +492,11 @@ Ohne öffentliche ACME-Anträge:
 - Manager: Restore-Wizard ein Dateidialog; kein `readTlsSidecar`; Confirm nur
   wenn Praxis und Sicherung HTTPS; `retryRestore` dieselbe Rückfrage;
   Abbrechen ohne `stopStack`; Datei wird utf8 gelesen
+- Copy/UI (Schnitt 3/4): Sicherheitshinweis vor Backup-Erstellung/Export und
+  in der Restore-Vorschau sichtbar — mit und ohne HTTPS, auch mit
+  `skipProviderCredentials`. Klartext-API-Keys und sichere Aufbewahrung
+  ausdrücklich genannt; keine konkreten Keys und keine behauptete
+  PIN-Verschlüsselung. Kein neuer Dialog und kein zusätzliches Restore-Gate.
 
 Bewusst kein E2E-Let's-Encrypt.
 
@@ -462,6 +522,16 @@ Bewusst kein E2E-Let's-Encrypt.
 10. Äußeres Format JSON. Innere tgz als `tlsArchiveBase64`.
 
 HTTPS-Block: Hinweis, keine Extra-Buttons. Pre-Update: kein Extra-Text.
+
+---
+
+## Ergänzender Review-Beschluss (2026-08-31)
+
+Klartext-Credentials in DB und `.pfbackup` werden für die Beta bewusst
+akzeptiert; die frühere Zusage einer MFA-PIN-gebundenen Verschlüsselung gilt
+nicht. Backup v2 muss den Schutzbedarf mit dem oben festgelegten Hinweis
+sichtbar machen. Das ist eine Copy/UI-Anforderung, kein Verschlüsselungsprojekt
+und kein zusätzlicher Bestätigungsdialog.
 
 ---
 

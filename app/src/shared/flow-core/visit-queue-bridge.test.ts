@@ -556,6 +556,43 @@ test('recallVisit sets return_later with notify phone from checkinPhone', () => 
   assert.equal(row?.returnUntil, recall.returnUntil);
 });
 
+test('recallVisit rejects second recall while return window is active', () => {
+  const { db, visitId, runtime, settings } = setupVisitFlow();
+  setVisitAbsentMode(db, visitId, 'wait_here', '2026-07-04T12:01:00.000Z');
+  recallVisit(db, runtime, settings, visitId, 15, '2026-07-04T12:02:00.000Z');
+
+  assert.throws(
+    () => recallVisit(db, runtime, settings, visitId, 15, '2026-07-04T12:03:00.000Z'),
+    (error: unknown) => error instanceof DomainError && error.domainCode === 'INVALID_TRANSITION',
+  );
+});
+
+test('recallVisit allows first recall from return_later overlay without returnUntil', () => {
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  setVisitAbsent(db, runtime, settings, visitId, 'return_later', '2026-07-04T12:01:00.000Z');
+  assert.equal(listQueue()[0]?.status, 'absent_return_later');
+  assert.equal(listQueue()[0]?.returnUntil ?? null, null);
+
+  const recall = recallVisit(db, runtime, settings, visitId, 15, '2026-07-04T12:02:00.000Z');
+  assert.equal(recall.toStatus, 'absent_return_later');
+  assert.ok(recall.returnUntil);
+});
+
+test('recallVisit rejects re-recall after set_absence(wait_here) while window still active', () => {
+  const { db, visitId, runtime, settings } = setupVisitFlow();
+  setVisitAbsentMode(db, visitId, 'wait_here', '2026-07-04T12:01:00.000Z');
+  const first = recallVisit(db, runtime, settings, visitId, 15, '2026-07-04T12:02:00.000Z');
+  assert.ok(first.returnUntil);
+
+  // Overlay flipped back to wait_here without clearing returnUntil.
+  setVisitAbsentMode(db, visitId, 'wait_here', '2026-07-04T12:03:00.000Z');
+
+  assert.throws(
+    () => recallVisit(db, runtime, settings, visitId, 15, '2026-07-04T12:04:00.000Z'),
+    (error: unknown) => error instanceof DomainError && error.domainCode === 'INVALID_TRANSITION',
+  );
+});
+
 test('setVisitCallbackPhone stores canonical phone in host state', () => {
   const { db, visitId, runtime, settings } = setupVisitFlow();
 

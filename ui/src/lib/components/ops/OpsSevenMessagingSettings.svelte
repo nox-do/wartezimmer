@@ -30,7 +30,7 @@
   let whatsappEnabled = $state(false);
   let whatsappFrom = $state('');
   let whatsappTemplate = $state('');
-  let whatsappLanguage = $state('de');
+  let whatsappLanguage = $state('');
 
   function isSmsReady(): boolean {
     return Boolean(sevenProvider?.configured && sevenProvider.enabled);
@@ -60,14 +60,6 @@
       return;
     }
 
-    if (!setupMode && settingsResult.data.smsProvider !== 'seven') {
-      const patchResult = await patchOpsSystemSettings({ smsProvider: 'seven' });
-      if (!patchResult.ok) {
-        toastStore.error(patchResult.error.message || t('ops.loadError'));
-        return;
-      }
-    }
-
     if (!catalogResult.ok) {
       toastStore.error(catalogResult.error.message || t('ops.loadError'));
       return;
@@ -86,14 +78,12 @@
   async function saveSms() {
     savingTarget = 'sms';
     try {
-      if (setupMode) {
-        const settingsResult = await fetchOpsSystemSettings();
-        if (settingsResult.ok && settingsResult.data.smsProvider !== 'seven') {
-          const providerPatch = await patchOpsSystemSettings({ smsProvider: 'seven' });
-          if (!providerPatch.ok) {
-            toastStore.error(providerPatch.error.message || t('ops.loadError'));
-            return;
-          }
+      const settingsResult = await fetchOpsSystemSettings();
+      if (settingsResult.ok && settingsResult.data.smsProvider !== 'seven') {
+        const providerPatch = await patchOpsSystemSettings({ smsProvider: 'seven' });
+        if (!providerPatch.ok) {
+          toastStore.error(providerPatch.error.message || t('ops.loadError'));
+          return;
         }
       }
       const credentials = buildCredentials(true);
@@ -121,12 +111,16 @@
   async function saveWhatsApp() {
     savingTarget = 'whatsapp';
     try {
-      const credentials = {
-        ...buildCredentials(true),
-        from: whatsappFrom.trim(),
-        template: whatsappTemplate.trim(),
-        language: whatsappLanguage.trim() || 'de',
-      };
+      const credentials = buildCredentials(true);
+      if (whatsappFrom.trim()) {
+        credentials.from = whatsappFrom.trim();
+      }
+      if (whatsappTemplate.trim()) {
+        credentials.template = whatsappTemplate.trim();
+      }
+      if (whatsappLanguage.trim()) {
+        credentials.language = whatsappLanguage.trim();
+      }
       const result = await patchMessagingProvider('seven_whatsapp', {
         enabled: whatsappEnabled,
         credentials,
@@ -138,6 +132,9 @@
       }
       toastStore.success(t('ops.messagingSaveWhatsappOk'));
       sharedApiKey = '';
+      whatsappFrom = '';
+      whatsappTemplate = '';
+      whatsappLanguage = '';
       await load();
     } finally {
       savingTarget = null;

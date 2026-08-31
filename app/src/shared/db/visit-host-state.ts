@@ -260,13 +260,14 @@ export function applyVisitRecall(
   updatedAt: string,
 ): void {
   clearVisitRecallNotifyState(db, visitId, updatedAt);
+  // Keep callbackPhone for the return window so retry / fix-notify can reuse the MFA number.
+  // clearAbsentMode nulls it when leaving return_later.
   upsertVisitHostState(
     db,
     visitId,
     {
       absentMode: 'return_later',
       returnUntil,
-      callbackPhone: null,
     },
     updatedAt,
   );

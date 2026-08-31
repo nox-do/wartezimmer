@@ -2,6 +2,7 @@ import type { CoreDatabase } from '../db/database.js';
 import { isTerminalPatientLocale, type TerminalPatientLocale } from '@praxis-flow/domain';
 import { isRecord } from '../type-guards.js';
 import { parsePracticeProfileJson } from '../practice/practice-profile.js';
+import { resolveBusinessTimeZone } from '../practice-time-windows.js';
 
 export type MessageDispatchResult = {
   provider: string;
@@ -21,6 +22,8 @@ type RecallMessageInput = {
   checkinLocale?: string | null;
   practiceName?: string;
 };
+
+const PROVIDER_FETCH_TIMEOUT_MS = 8_000;
 
 const RECALL_SMS_BY_LOCALE: Record<
   TerminalPatientLocale,
@@ -50,12 +53,17 @@ function resolveRecallSmsLocale(rawLocale: string | null | undefined): TerminalP
   return isTerminalPatientLocale(locale) ? locale : 'de-DE';
 }
 
-function formatReturnUntilTime(returnUntil: string, locale: TerminalPatientLocale): string {
+/** Exported for unit tests (BUSINESS_TZ / UTC process). */
+export function formatReturnUntilTime(
+  returnUntil: string,
+  locale: TerminalPatientLocale = 'de-DE',
+): string {
   const date = new Date(returnUntil);
   if (Number.isNaN(date.getTime())) {
     return '--:--';
   }
   return new Intl.DateTimeFormat(locale, {
+    timeZone: resolveBusinessTimeZone(),
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -67,6 +75,62 @@ function formatRecallMessage(input: RecallMessageInput): string {
   const time = formatReturnUntilTime(input.returnUntil, locale);
   const practiceName = input.practiceName?.trim() || 'Ihre Praxis';
   return RECALL_SMS_BY_LOCALE[locale](practiceName, time, input.ticketId);
+}
+
+function isProviderTimeoutError(error: unknown): boolean {
+  return (
+    error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')
+  );
+}
+
+/** Exported for unit tests. */
+export function isProviderTimeoutErrorForTests(error: unknown): boolean {
+  return isProviderTimeoutError(error);
+}
+
+async function readJsonPayload(
+  response: Response,
+  signal: AbortSignal,
+): Promise<{ payload: unknown; timedOut: boolean }> {
+  try {
+    return { payload: await response.json(), timedOut: false };
+  } catch (error) {
+    if (isProviderTimeoutError(error) || signal.aborted) {
+      return { payload: null, timedOut: true };
+    }
+    return { payload: null, timedOut: false };
+  }
+}
+
+/** Parse seven.io JSON send response (SMS + WhatsApp share the same envelope). */
+export function parseSevenGatewaySendResponse(
+  payload: unknown,
+  provider: 'seven' | 'seven_whatsapp',
+): MessageDispatchResult {
+  const data = isRecord(payload) ? payload : null;
+  const messages = Array.isArray(data?.messages) ? data.messages : undefined;
+  const firstMessage = messages?.[0];
+  const firstMessageRecord = isRecord(firstMessage) ? firstMessage : undefined;
+  const successCode = String(data?.success ?? '');
+  const accepted = successCode === '100' || firstMessageRecord?.success === true;
+
+  if (!accepted) {
+    const fallbackCode =
+      provider === 'seven' ? 'SEVEN_SEND_FAILED' : 'SEVEN_WHATSAPP_INVALID_RESPONSE';
+    return {
+      provider,
+      attempted: true,
+      sent: false,
+      errorCode: String(firstMessageRecord?.error ?? data?.success ?? fallbackCode),
+    };
+  }
+
+  return {
+    provider,
+    attempted: true,
+    sent: true,
+    messageId: typeof firstMessageRecord?.id === 'string' ? firstMessageRecord.id : undefined,
+  };
 }
 
 async function sendWithSeven(
@@ -83,6 +147,7 @@ async function sendWithSeven(
     body.set('from', from.trim());
   }
 
+  const signal = AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS);
   let response: Response;
   try {
     response = await fetch('https://gateway.seven.io/api/sms', {
@@ -93,21 +158,25 @@ async function sendWithSeven(
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: body.toString(),
+      signal,
     });
-  } catch {
+  } catch (error) {
     return {
       provider: 'seven',
       attempted: true,
       sent: false,
-      errorCode: 'SEVEN_UNREACHABLE',
+      errorCode: isProviderTimeoutError(error) ? 'SEVEN_TIMEOUT' : 'SEVEN_UNREACHABLE',
     };
   }
 
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    // keep null payload and return generic parse failure below
+  const { payload, timedOut } = await readJsonPayload(response, signal);
+  if (timedOut) {
+    return {
+      provider: 'seven',
+      attempted: true,
+      sent: false,
+      errorCode: 'SEVEN_TIMEOUT',
+    };
   }
 
   if (!response.ok) {
@@ -119,28 +188,7 @@ async function sendWithSeven(
     };
   }
 
-  const data = isRecord(payload) ? payload : null;
-  const messages = Array.isArray(data?.messages) ? data.messages : undefined;
-  const firstMessage = messages?.[0];
-  const firstMessageRecord = isRecord(firstMessage) ? firstMessage : undefined;
-  const successCode = String(data?.success ?? '');
-  const accepted = successCode === '100' || firstMessageRecord?.success === true;
-
-  if (!accepted) {
-    return {
-      provider: 'seven',
-      attempted: true,
-      sent: false,
-      errorCode: String(firstMessageRecord?.error ?? data?.success ?? 'SEVEN_SEND_FAILED'),
-    };
-  }
-
-  return {
-    provider: 'seven',
-    attempted: true,
-    sent: true,
-    messageId: typeof firstMessageRecord?.id === 'string' ? firstMessageRecord.id : undefined,
-  };
+  return parseSevenGatewaySendResponse(payload, 'seven');
 }
 
 async function sendWithSevenWhatsApp(
@@ -150,6 +198,7 @@ async function sendWithSevenWhatsApp(
   language: string,
   input: RecallMessageInput,
 ): Promise<MessageDispatchResult> {
+  const signal = AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS);
   let response: Response;
   try {
     response = await fetch('https://gateway.seven.io/api/waba/messages', {
@@ -166,21 +215,27 @@ async function sendWithSevenWhatsApp(
         template,
         language,
       }),
+      signal,
     });
-  } catch {
+  } catch (error) {
     return {
       provider: 'seven_whatsapp',
       attempted: true,
       sent: false,
-      errorCode: 'SEVEN_WHATSAPP_UNREACHABLE',
+      errorCode: isProviderTimeoutError(error)
+        ? 'SEVEN_WHATSAPP_TIMEOUT'
+        : 'SEVEN_WHATSAPP_UNREACHABLE',
     };
   }
 
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    // keep null payload and return generic parse failure below
+  const { payload, timedOut } = await readJsonPayload(response, signal);
+  if (timedOut) {
+    return {
+      provider: 'seven_whatsapp',
+      attempted: true,
+      sent: false,
+      errorCode: 'SEVEN_WHATSAPP_TIMEOUT',
+    };
   }
 
   if (!response.ok) {
@@ -192,30 +247,7 @@ async function sendWithSevenWhatsApp(
     };
   }
 
-  const data = isRecord(payload) ? payload : null;
-  const messageId =
-    typeof data?.id === 'string'
-      ? data.id
-      : typeof data?.message_id === 'string'
-        ? data.message_id
-        : undefined;
-  const accepted =
-    Boolean(data) && Boolean(messageId) && (data?.success === true || data?.success == null);
-  if (!accepted) {
-    return {
-      provider: 'seven_whatsapp',
-      attempted: true,
-      sent: false,
-      errorCode: 'SEVEN_WHATSAPP_INVALID_RESPONSE',
-    };
-  }
-
-  return {
-    provider: 'seven_whatsapp',
-    attempted: true,
-    sent: true,
-    messageId,
-  };
+  return parseSevenGatewaySendResponse(payload, 'seven_whatsapp');
 }
 
 export async function dispatchRecallSms(
@@ -305,10 +337,13 @@ export async function dispatchRecallWithFallback(
 
   const sms = await dispatchRecallSms(db, input);
   if (sms.sent) {
-    return {
-      ...sms,
-      fallbackFrom: whatsapp.attempted ? 'seven_whatsapp' : undefined,
-    };
+    if (whatsapp.attempted) {
+      return {
+        ...sms,
+        fallbackFrom: 'seven_whatsapp',
+      };
+    }
+    return sms;
   }
 
   return whatsapp.attempted ? whatsapp : sms;

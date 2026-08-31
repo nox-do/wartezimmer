@@ -34,6 +34,8 @@ export function resolveRecallDispatchErrorKey(
   if (
     code === 'SEVEN_UNREACHABLE' ||
     code === 'SEVEN_WHATSAPP_UNREACHABLE' ||
+    code === 'SEVEN_TIMEOUT' ||
+    code === 'SEVEN_WHATSAPP_TIMEOUT' ||
     code.startsWith('SEVEN_HTTP_') ||
     code.startsWith('SEVEN_WHATSAPP_HTTP_')
   ) {

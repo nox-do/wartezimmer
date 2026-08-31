@@ -606,6 +606,8 @@ export interface components {
       sent: boolean;
       messageId?: string;
       errorCode?: string;
+      /** @description Set when WhatsApp was attempted first and SMS completed delivery. */
+      fallbackFrom?: string;
     };
     QueueRecallRetryNotifyResponse: {
       /** @constant */
@@ -844,6 +846,8 @@ export interface components {
             sent: boolean;
             messageId?: string;
             errorCode?: string;
+            /** @description Set when WhatsApp was attempted first and SMS completed delivery. */
+            fallbackFrom?: string;
           })
         | null;
     };

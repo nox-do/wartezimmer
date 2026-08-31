@@ -17,5 +17,9 @@ describe('resolveRecallDispatchErrorKey', () => {
 
   it('maps network errors', () => {
     expect(resolveRecallDispatchErrorKey('SEVEN_UNREACHABLE')).toBe('mfa.recallSmsErrorNetwork');
+    expect(resolveRecallDispatchErrorKey('SEVEN_TIMEOUT')).toBe('mfa.recallSmsErrorNetwork');
+    expect(resolveRecallDispatchErrorKey('SEVEN_WHATSAPP_TIMEOUT')).toBe(
+      'mfa.recallSmsErrorNetwork',
+    );
   });
 });
