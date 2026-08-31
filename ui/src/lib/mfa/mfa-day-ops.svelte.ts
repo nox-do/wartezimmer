@@ -23,11 +23,13 @@ export function resetMfaDayOps() {
   mfaDayOps.dayStartConfirmOpen = false;
 }
 
-export async function loadMfaDayLifecycle() {
+export async function loadMfaDayLifecycle(): Promise<boolean> {
   const result = await fetchDayLifecycle();
   if (result.ok) {
     mfaDayOps.dayLifecycle = result.data;
+    return true;
   }
+  return false;
 }
 
 export function openMfaDayStartConfirm() {

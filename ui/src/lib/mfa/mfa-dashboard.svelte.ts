@@ -1,3 +1,4 @@
+import { startMfaDayLifecycleWatch } from '$lib/mfa/mfa-day-lifecycle-watch';
 import { loadMfaDayLifecycle, resetMfaDayOps } from '$lib/mfa/mfa-day-ops.svelte';
 import {
   loadMfaPracticeContext,
@@ -11,9 +12,12 @@ export function mountMfaDashboard(): () => void {
   resetMfaQueueActions();
 
   void loadMfaPracticeContext();
-  void loadMfaDayLifecycle();
+  const stopDayLifecycleWatch = startMfaDayLifecycleWatch({
+    load: loadMfaDayLifecycle,
+  });
 
   return () => {
+    stopDayLifecycleWatch();
     resetMfaQueueActions();
   };
 }
