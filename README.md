@@ -6,7 +6,7 @@ Lokales Praxis-System: Check-in am Terminal, Warteschlange (MFA), Wartezimmer-TV
 
 ## Status
 
-Interner **Kunden-Test**: versionierte Images, Manager, `.pfupdate`. Kein öffentliches Release. Scope und Nicht-Ziele: [`docs/roadmap.md`](docs/roadmap.md). Einstieg für IT: [`docs/delivery.md`](docs/delivery.md).
+Produktfähig lokal ausgeliefert: versionierte Images, Manager, `.pfupdate`, optional Proxy und **LAN-TLS**. Kein öffentliches Store-Release. Einstieg IT: [`docs/operations/`](docs/operations/) · TLS: [`docs/operations/tls.md`](docs/operations/tls.md).
 
 ## Voraussetzungen
 
@@ -32,7 +32,7 @@ npm run docker:down
 docker compose logs -f app
 ```
 
-Images lokal: `praxis-flow/app:local`, `praxis-flow/sandbox:local`. Betrieb und Updates: [`docs/deployment-docker.md`](docs/deployment-docker.md).
+Images lokal: `praxis-flow/app:local`, `praxis-flow/sandbox:local`. Betrieb und Updates: [`docs/operations/runtime.md`](docs/operations/runtime.md).
 
 ## Entwicklung ohne Docker
 
@@ -45,7 +45,7 @@ npm run dev:ui                  # SvelteKit-Devserver mit Proxy auf :8080
 
 Dokument-Preview, Form2PDF und Malware-Scan: Stack mit `npm run docker:up` (mindestens `app` + `sandbox`). Selten nativ: `npm run dev:sandbox` (nur Sandbox; App/API weiter separat).
 
-Erstinstallation & Manager: [`docs/delivery.md`](docs/delivery.md) · [`manager/README.md`](manager/README.md).  
+Erstinstallation & Manager: [`docs/operations/delivery.md`](docs/operations/delivery.md) · [`manager/README.md`](manager/README.md).  
 CLI: `npm run setup` · Test-Install: `PRAXIS_FLOW_HOME=/tmp/pf-dev-001 npm run setup` · Reset: `npm run setup:reset`
 
 ## Alltagsbefehle
@@ -77,17 +77,17 @@ Einstieg nach Rolle: **[`docs/README.md`](docs/README.md)**
 | ----------------- | ---------------------------------------------------------------- |
 | Produktinfo       | [`docs/product.md`](docs/product.md)                             |
 | Fachliche Abläufe | [`docs/flows.md`](docs/flows.md)                                 |
-| Architektur       | [`docs/architecture.md`](docs/architecture.md)                   |
-| API-Vertrag       | `openapi/*.yaml` (+ [`docs/apis.md`](docs/apis.md) Rollenmatrix) |
-| Echtzeit (SSE)    | [`docs/realtime-streams.md`](docs/realtime-streams.md)           |
-| Build & Release   | [`docs/delivery.md`](docs/delivery.md)                           |
-| Docker-Betrieb    | [`docs/deployment-docker.md`](docs/deployment-docker.md)         |
+| Architektur       | [`docs/architecture/`](docs/architecture/) · [`system.md`](docs/architecture/system.md) |
+| API-Vertrag       | `openapi/*.yaml` (+ [`docs/architecture/apis.md`](docs/architecture/apis.md) Rollenmatrix) |
+| Echtzeit (SSE)    | [`docs/architecture/realtime.md`](docs/architecture/realtime.md)           |
+| Build & Release   | [`docs/operations/delivery.md`](docs/operations/delivery.md)                           |
+| Docker-Betrieb    | [`docs/operations/runtime.md`](docs/operations/runtime.md)         |
 | Manager           | [`manager/README.md`](manager/README.md)                         |
-| WLAN / Portal     | [`docs/integrations.md`](docs/integrations.md)                   |
+| WLAN / Portal     | [`docs/operations/integrations.md`](docs/operations/integrations.md)                   |
 
 Env-Variablen: [`.env.example`](.env.example) — nicht hier duplizieren.
 
-Kundenbetrieb: `docker-compose.delivery.yml` — Runtime [`docs/deployment-docker.md`](docs/deployment-docker.md), Build/Release [`docs/delivery.md`](docs/delivery.md).
+Kundenbetrieb: `docker-compose.delivery.yml` — Runtime [`docs/operations/runtime.md`](docs/operations/runtime.md), Build/Release [`docs/operations/delivery.md`](docs/operations/delivery.md).
 
 ## Repo-Struktur
 

@@ -1,5 +1,9 @@
 # TLS Lab (Arbeitspaket 2–4)
 
+> **Archiviert (2026-08-31).** Opt-in Lab-Doku. Compose/Smoke bleiben im Repo.
+> Produkt-TLS: Manager + [`../plan-proxy-tls.md`](../plan-proxy-tls.md).
+
+
 Opt-in DNS-01 lab: Pebble + local acme-dns + CoreDNS. Work package 3 wires Setup
 `prepare` → `verify-dns` → `obtain-certificate`. Work package 4 adds HTTPS cutover via
 `POST /api/setup/host/tls/apply`. Canonical and device URLs stay HTTP until apply.

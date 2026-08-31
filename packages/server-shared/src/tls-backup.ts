@@ -1,7 +1,4 @@
-/**
- * Portable LAN-TLS backup inspect helpers.
- * Lifted from docs/mocks/lan-tls-wizard/tls-model.js (no DOM / SAMPLE).
- */
+/** Portable LAN-TLS backup inspect helpers (no DOM). */
 
 export {
   TLS_SIDECAR_BASENAME_PREFIX,

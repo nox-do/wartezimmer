@@ -2,11 +2,10 @@
 
 Stand: 2026-08-27
 
-Status: **Überarbeitetes Zielbild für den LAN-TLS-Pilot. Nicht Teil des laufenden Kunden-Tests.**
+Status: **Produkt umgesetzt (Manager/Setup).** Ops-Ist: [`operations/tls.md`](operations/tls.md). Dieses Dokument bleibt Arbeits-/Architekturquelle bis die Ops-Doku voll ist — kein „Kunden-Test“-Vorbehalt mehr.
 
-HTTP-Proxy auf Port 80 ist Ist — [`delivery.md`](delivery.md),
-[`deployment-docker.md`](deployment-docker.md). Historie:
-[`archive/plan-proxy-container.md`](archive/plan-proxy-container.md).
+HTTP-Proxy auf Port 80 ist Ist — [`delivery.md`](operations/delivery.md),
+[`runtime.md`](operations/runtime.md).
 Manager-Oberfläche und Aktivierungs-UX:
 [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md).
 
@@ -313,7 +312,7 @@ und Internet-Portal sind nicht gekoppelt.
 ## Setup-API und Cutover
 
 TLS-State-Machine hängt **nicht** an `POST /host/network`. Eigene Host-Routen
-(Namen vorschlagsweise; Implementierung nach dem Kunden-Test):
+(Namen vorschlagsweise; LAN-TLS ist Produkt — siehe `operations/tls.md`):
 
 ```text
 POST /api/setup/host/tls/prepare
@@ -496,7 +495,7 @@ Rebind ist **keine** `verify-dns`-Klasse — nur Praxis-Meldung nach Cutover.
 ## Backup und Restore
 
 Zwei Artefakte im Pilot, **kein** Formatbruch von `.pfbackup` v1
-([`settings-backup-classification.md`](settings-backup-classification.md)):
+([`backup.md`](operations/backup.md)):
 
 | Artefakt            | Inhalt                                                                                                                                                                                  | Wann                                                                        |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
@@ -590,8 +589,8 @@ Keine offenen Architektur-Punkte. Manager-Rest (zweites Gerät QR vs. Haken):
 - [Caddy ACME-DNS-Plugin](https://github.com/caddy-dns/acmedns)
 - [Let's Encrypt: Challenge Types](https://letsencrypt.org/docs/challenge-types/)
 - [Let's Encrypt Pebble](https://github.com/letsencrypt/pebble)
-- [`realtime-streams.md`](realtime-streams.md)
+- [`realtime.md`](architecture/realtime.md)
 
-## Umsetzung erst nach dem Kunden-Test
+## Umsetzung (historische Reihenfolge; TLS ist Produkt)
 
 Scope: [`roadmap.md`](roadmap.md).

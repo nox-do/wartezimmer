@@ -5,8 +5,7 @@
    * cannot open the address **without TLS**: guest WLAN isolation (terminals /
    * TV / phones on Wi-Fi, server on LAN cable) and Private DNS / iCloud
    * Private Relay bypassing the router. Agreed home is here, not the TLS
-   * rebind callout. Draft German UI: docs/mocks/lan-tls-wizard/app.js
-   * `renderClientReachHint()`. Do not implement until asked.
+   * rebind callout. Do not implement until asked.
    */
   import type { Snippet } from 'svelte';
   import type { NetworkSnapshot } from '../shared/host-status.js';

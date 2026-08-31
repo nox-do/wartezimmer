@@ -109,10 +109,7 @@ export function restoreInspectSummaryLines(inspect: PfbackupInspectResult): stri
   return lines;
 }
 
-/**
- * TLS-blocked inspect uses tlsRestoreBlockedCopy via the Setup inspect result.
- * Mock: docs/mocks/lan-tls-wizard/tls-model.js
- */
+/** TLS-blocked inspect uses tlsRestoreBlockedCopy via the Setup inspect result. */
 export function restoreInspectBlockedMessage(inspect: PfbackupInspectResult): string | null {
   if (inspect.ok && inspect.compatibility.restoreSupported) {
     return null;

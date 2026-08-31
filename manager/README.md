@@ -1,6 +1,6 @@
 # Praxis Flow Manager
 
-Electron-Hülle für Host-Setup, Status und Wartung. Docker-Stack steuern (Start/Stop/Neustart), Container/Logs, `.env`-Backup, Erreichbarkeit (Poll) — alles über Setup-API + IPC.
+Electron-Hülle für Host-Setup, Status und Wartung. Docker-Stack steuern (Start/Stop/Neustart), Container/Logs, `.pfbackup`, Erreichbarkeit (Poll) — alles über Setup-API + IPC.
 
 ## Dev starten
 
@@ -40,14 +40,16 @@ npm run dev:manager
 
 ### Install-Wizard (Assistent)
 
-1. Voraussetzungen (Docker, ggf. Release-Paket)
-2. Routing — Routing-Modus (Praxisname erst in Ops)
+1. Voraussetzungen (Docker, ggf. Release-Paket, Port-Checks)
+2. Routing — Routing-Modus (Praxisname erst in Ops `/ops/setup`)
 3. Import & Export — Host-Ordner (Kontakte / MFA-Exporte)
-4. Netzwerk — LAN-IP & Erreichbarkeit (Basis)
-5. Zugang — Proxy + Hinweis WLAN-/Portal-Adapter (Auswahl folgt)
-6. Vorschau (`POST /plan`) — Geräte-URLs
-7. Anwenden (`POST /apply`) + Abschluss (Probes, Link zu IT-Einstellungen / Status)
+4. Netzwerk — LAN-IP & Erreichbarkeit
+5. Zugang — optional Port 80 (Proxy); Gateway im Manager immer aus
+6. HTTPS — nur mit Proxy; Mail/PEM im Assistenten, Cutover unter Netzwerk ([`docs/operations/tls.md`](../docs/operations/tls.md))
+7. Vorschau (`POST /plan`) — Geräte-URLs
+8. Anwenden (`POST /apply`) + Abschluss (Probes)
 
+Ops-Detail Erstinstall: [`docs/operations/delivery.md`](../docs/operations/delivery.md) §4.  
 Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unter „Assistent“.
 
 ### Status-Screen
@@ -68,7 +70,7 @@ Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unte
 - Stack: Start / Stop / Neustart (Stop ohne Volume-Löschung; Bestätigung bei Stop/Neustart)
 - **Neustart bei gestopptem Stack** = Start (`compose up -d`)
 - Logs pro Service (`GET /compose/logs`)
-- `.env`-Backup (`POST /backup { target: "env" }`) — keine DB/Staff-PINs
+- Backup/Restore `.pfbackup` (`POST /backup`, validate, restore) — Vertrag: [`docs/operations/backup.md`](../docs/operations/backup.md)
 - Import-/Export-Hostordner (`POST /storage`)
 - Staff-PIN-Reset MFA/Ops (`POST /reset-staff-pins`)
 - **Routing-Modus** Simple/Complex (`GET|POST /routing-mode`) — kein Ops-PIN (Manager-Vertrauenskanal)
@@ -90,8 +92,11 @@ Setup-API (localhost `:9190`):
 | GET     | `/api/setup/host/compose`          | Container-Status                                                                                             |
 | GET     | `/api/setup/host/compose/logs`     | Log-Auszug                                                                                                   |
 | POST    | `/api/setup/host/compose`          | `{ action: start\|stop\|restart }`                                                                           |
-| GET     | `/api/setup/host/backup`           | Letztes `.env`-Backup (nur lesen)                                                                            |
-| POST    | `/api/setup/host/backup`           | `{ target: "env" }`                                                                                          |
+| GET     | `/api/setup/host/backup`           | Info zum letzten `.pfbackup`                                                                                 |
+| POST    | `/api/setup/host/backup`           | `.pfbackup` erzeugen (+ TLS-Sidecar wenn `tls.state ≠ off`)                                                    |
+| POST    | `/api/setup/host/backup/validate`  | Archiv + Settings validieren                                                                                 |
+| POST    | `/api/setup/host/backup/inspect`   | Inspect/Vorschau inkl. Kompatibilität & TLS-Gate                                                             |
+| POST    | `/api/setup/host/backup/restore`   | Fresh-DB-Cutover + Settings-Import                                                                           |
 | POST    | `/api/setup/host/storage`          | `{ importsHostPath, exportsHostPath, restartCompose? }`                                                      |
 | POST    | `/api/setup/host/network`          | `{ lanAppIp, gateway, restartCompose? }` — Wartung/Netzwerk (gateway stets `{ enabled: false }` aus Manager) |
 | POST    | `/api/setup/host/reset-staff-pins` | MFA- & Ops-PIN auf Default `0000` (DB), Stack stop → reset → start                                           |
@@ -104,7 +109,7 @@ Setup-API (localhost `:9190`):
 
 Vollständiger Install-Reset bleibt CLI: `npm run setup:reset`.
 
-Build, Release-Pakete und Versionierung: **[`docs/delivery.md`](../docs/delivery.md)**.
+Build, Release-Pakete und Versionierung: **[`docs/operations/delivery.md`](../docs/operations/delivery.md)**.
 
 ## Internen macOS-Build erstellen
 
@@ -137,4 +142,4 @@ npm run -w @praxis-flow/manager typecheck
 npm run -w @praxis-flow/setup test
 ```
 
-TLS nach dem Kunden-Test: Architektur [`docs/plan-proxy-tls.md`](../docs/plan-proxy-tls.md), Oberfläche [`docs/plan-proxy-tls-manager.md`](../docs/plan-proxy-tls-manager.md).
+LAN-TLS (Produkt): [`docs/operations/tls.md`](../docs/operations/tls.md). Detailquellen: [`docs/plan-proxy-tls.md`](../docs/plan-proxy-tls.md), [`docs/plan-proxy-tls-manager.md`](../docs/plan-proxy-tls-manager.md).

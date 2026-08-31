@@ -1,7 +1,7 @@
 import type { AppDict } from '../core/AppDict';
 import { dict as deDict } from './de-DE';
 
-/** Patient-facing overrides only (terminal + portal). Staff UI always uses de-DE — see docs/i18n.md. */
+/** Patient-facing overrides only (terminal + portal). Staff UI always uses de-DE — see docs/architecture/i18n.md. */
 export const dict = {
   ...deDict,
   ui: {

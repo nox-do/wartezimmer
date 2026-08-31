@@ -4,7 +4,6 @@
    * next to .pfbackup. Restore stays the existing wizard (sibling sidecar, else second file dialog).
    * Electron-Main owns path/timestamp lookup; Setup receives tlsSidecarBase64,
    * never a renderer-selected host path.
-   * Mock: docs/mocks/lan-tls-wizard/app.js renderMaintenance
    */
   import { siblingTlsSidecarBasename } from '@praxis-flow/server-shared/backup-path-labels';
   import IconButton from './IconButton.svelte';

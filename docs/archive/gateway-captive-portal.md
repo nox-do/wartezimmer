@@ -1,7 +1,7 @@
 # Guest-WLAN & Captive Portal — Lab-Referenz (archiviert)
 
 > **Produktgrenze (2026-07):** Praxis Flow stellt **keine** Router, APs oder Captive-Hardware her.
-> Produktkern: Portal + Wartenummer-Prüfung + dünne Vendor-Adapter — siehe [`../integrations.md`](../integrations.md).
+> Produktkern: Portal + Wartenummer-Prüfung + dünne Vendor-Adapter — siehe [`../integrations.md`](../operations/integrations.md).
 > Dieses Dokument beschreibt den früheren **openNDS-`gateway`-Lab-Pfad** (Referenz, nicht Produktkern).
 
 Fachliche Regeln: [`../flows.md`](../flows.md).
@@ -245,7 +245,7 @@ Praxis-AP muss Gast-Clients die Route `192.168.88.1` als Gateway geben (DHCP dur
 ## Weitere Dokumentation
 
 - Gateway-Implementierung: `gateway/README.md`
-- Docker-Betrieb allgemein: `docs/deployment-docker.md`
-- Architektur: `docs/architecture.md`
-- API-Blueprint: `docs/apis.md`
-- Integrationen (eGK/PVS/WLAN): `docs/integrations.md`
+- Docker-Betrieb allgemein: `docs/operations/runtime.md`
+- Architektur: `docs/architecture/system.md`
+- API-Blueprint: `docs/architecture/apis.md`
+- Integrationen (eGK/PVS/WLAN): `docs/operations/integrations.md`

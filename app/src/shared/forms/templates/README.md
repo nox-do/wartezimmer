@@ -1,6 +1,6 @@
 # Form templates
 
-Siehe **`docs/anamnese-templates.md`** für die Projekt-Konvention.
+Siehe **`docs/architecture/documents.md`** für die Projekt-Konvention.
 
 - **Definitionen (Runtime):** `definitions/*.v1.ts` → aggregiert in `template-registry.ts`
 - **Abschnitte (eine Quelle):** `sections/<template-id>.sections.ts` — Portal (`titleKey`) + MFA-PDF (`pdfTitle`) + `fieldIds`

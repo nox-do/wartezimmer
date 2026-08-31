@@ -41,7 +41,7 @@ gemeinsame Prepare-Komponente, Mock als zweiten Vertrag.
    **bindet**. Union nicht streichen.
 6. Kein Boot-, View-Unmount- oder IPC-Mitnahme.
 7. `host-tls.ts` nicht „weil groß“ zerlegen.
-8. Mock (`docs/mocks/lan-tls-wizard/`) zeigt Lücken; `TlsStatus` gilt.
+8. `TlsStatus` / Setup-API gelten als Vertrag.
 9. `state/tls/` (Token, acme-dns, Caddyfile) nicht committen.
 
 ### Nicht-Ziele

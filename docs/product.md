@@ -1,7 +1,7 @@
 # Praxis Flow — Produktinfo
 
 Kurz: Was das Produkt ist, was es kann, und was bewusst **nicht** dazugehört.  
-Detailabläufe: [`flows.md`](flows.md) · Technik: [`architecture.md`](architecture.md) · Integrationen: [`integrations.md`](integrations.md)
+Detailabläufe: [`flows.md`](flows.md) · Technik: [`architecture/system.md`](architecture/system.md) · Integrationen: [`integrations.md`](operations/integrations.md)
 
 ## In einem Satz
 
@@ -37,7 +37,7 @@ Lokales Praxis-System für Check-in, Warteschlange und Wartezimmer — **ohne Cl
 | **TV**         | Wartezimmer-Monitor: Nummern + „Bitte weiter zu …“ (keine Namen)                                                                                  |
 | **Portal**     | Wartenummer → Upload und/oder Erstanamnese (Session = Nummer)                                                                                     |
 | **Raum-Panel** | Tablet an Tür / im Raum: Ankunft, Aufruf, Orientierung                                                                                            |
-| **Betrieb**    | Docker-Stack (`app` + `sandbox`), **Manager** (Install, Status, Netzwerk, Updates), optional **Proxy** (Caddy, Port 80; TLS nicht im Kunden-Test) |
+| **Betrieb**    | Docker-Stack (`app` + `sandbox`), **Manager** (Install, Status, Netzwerk, Updates), optional **Proxy** (Caddy Port 80) und **LAN-TLS** (443) |
 
 **Routing:** praxisweit **Simple** (Default: Thema → Zielraum) oder **Complex** (Journeys; Advanced, Lizenz geplant). Eine Runtime, zwei Config-Modi — [`flows.md`](flows.md).
 
@@ -63,14 +63,14 @@ Lokales Praxis-System für Check-in, Warteschlange und Wartezimmer — **ohne Cl
 
 ## Oberflächen (URLs)
 
-Nach Start (Dev oft `:8080`, mit Proxy kanonisch Port 80): `/terminal` · `/mfa` · `/tv` · `/portal` · `/room-panel` · Ops unter `/ops/*`
+Nach Start (Dev oft `:8080`, mit Proxy kanonisch Port 80, mit TLS `https://…`): `/terminal` · `/mfa` · `/tv` · `/portal` · `/room-panel` · Ops unter `/ops/*`
 
 ## Weiterlesen
 
 | Interesse                      | Dokument                                                                     |
 | ------------------------------ | ---------------------------------------------------------------------------- |
 | Abläufe & UX                   | [`flows.md`](flows.md)                                                       |
-| Nummernkreise / Themen / Räume | [`domain-model.md`](domain-model.md)                                         |
-| Install & Updates              | [`delivery.md`](delivery.md), [`../manager/README.md`](../manager/README.md) |
-| Kunden-Test-Scope              | [`roadmap.md`](roadmap.md)                                                   |
+| Nummernkreise / Themen / Räume | [`domain.md`](architecture/domain.md)                                         |
+| Install & Updates              | [`delivery.md`](operations/delivery.md), [`../manager/README.md`](../manager/README.md) |
+| LAN-TLS                         | [`operations/tls.md`](operations/tls.md)                                      |
 | Preis-/Lizenz-Skizze (intern)  | [`business-revenue-model.md`](business-revenue-model.md)                     |

@@ -152,7 +152,6 @@ export type PfbackupInspectEnvironment = {
 /**
  * LAN-TLS later adds the optional backup.tls summary. Its restore gate is
  * additional: archiveValid, settingsValid and targetAppReachable stay mandatory.
- * Copy/helpers: docs/mocks/lan-tls-wizard/tls-model.js
  */
 export type PfbackupInspectCompatibility = {
   archiveValid: boolean;

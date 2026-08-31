@@ -1,6 +1,6 @@
 # Flows — Fachliche Abläufe
 
-> Runtime-UI deckt Happy Paths ab. Scope des Kunden-Tests: [`roadmap.md`](roadmap.md).
+> Runtime-UI deckt Happy Paths ab. Betrieb/TLS: [`operations/`](operations/).
 
 ## Implementierungsstand Runtime-UI (2026-06)
 
@@ -14,7 +14,7 @@ Abgleich Svelte-Apps (`ui/`) gegen diese Flows — **ohne** eGK-Hardware, SMS/Me
 | Raum-Panel          | Login pro Placement (`/room-panel`), Live-Snapshot (SSE), Ankunft/Entlassen/Aufruf aus `actions`, getrennte `callCandidates`-Liste                                                                                                                                                                                                                                                                                                | —                                                        |
 | TV                  | SSE, Aufruf, Chime, Pagination, Device-Pairing                                                                                                                                                                                                                                                                                                                                                                                    | —                                                        |
 
-**Echtzeit-Zielbild:** `docs/realtime-streams.md` — Presence (offline) und Pairing (PIN) sind getrennte SSE-Events; REST nur fuer Aktionen.
+**Echtzeit-Zielbild:** `docs/architecture/realtime.md` — Presence (offline) und Pairing (PIN) sind getrennte SSE-Events; REST nur fuer Aktionen.
 
 Details und offene fachliche Punkte siehe Abschnitte pro Flow unten.
 
@@ -24,7 +24,7 @@ Details und offene fachliche Punkte siehe Abschnitte pro Flow unten.
 - **Portal:** Wartenummer vom Terminal → Upload (TTL 30 Min) oder Anamnese (Session sofort zu)
 - **MFA:** Metadaten + Vorschau/Export/Verwerfen — kein Patient-Download im Portal
 - **SMS:** nur beim MFA-Rückholen (optional), nicht am Standard-Check-in
-- **Betrieb ≠ Patienten-Flow:** Manager und optionaler Proxy sind Host-/Netz-Hülle — siehe [Betrieb](#betrieb--manager-proxy-gateway); Captive-Hardware und Gateway-Container sind **nicht** Produktkern ([`integrations.md`](integrations.md))
+- **Betrieb ≠ Patienten-Flow:** Manager und optionaler Proxy sind Host-/Netz-Hülle — siehe [Betrieb](#betrieb--manager-proxy-gateway); Captive-Hardware und Gateway-Container sind **nicht** Produktkern ([`integrations.md`](operations/integrations.md))
 
 ### SMS — wo ja, wo nein
 
@@ -210,7 +210,7 @@ Patient weiß: **jetzt oder bald** ist offene Sprechstunde. Thema `offen` verhä
 
 ## Flow 2 — Patientenportal (Upload / Erstanamnese)
 
-**Ziel:** Optional Dokumente und Erstanamnese sicher übergeben — ohne dass Praxis-Personal Patientendaten am Portal _einsehen_ kann. Einstieg oft über Gast-WLAN der Praxis; **Captive-Hardware und Freischaltung sind nicht unser Produkt** ([`integrations.md`](integrations.md)).
+**Ziel:** Optional Dokumente und Erstanamnese sicher übergeben — ohne dass Praxis-Personal Patientendaten am Portal _einsehen_ kann. Einstieg oft über Gast-WLAN der Praxis; **Captive-Hardware und Freischaltung sind nicht unser Produkt** ([`integrations.md`](operations/integrations.md)).
 
 ### Produktgrenze (WLAN / Captive)
 
@@ -298,11 +298,11 @@ Kein Patienten-Flow — Rahmen für Installation und Erreichbarkeit. Fachliche S
 
 | Baustein                   | Rolle                                                                                                                                          |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Manager** (Electron)     | Host-Setup, Status, Netzwerk, Wartung, Updates — [`../manager/README.md`](../manager/README.md), [`delivery.md`](delivery.md)                  |
-| **Proxy** (optional Caddy) | LAN-Einstieg Port 80 (HTTP); TLS und Internet-Portal **nicht** im Kunden-Test — [`roadmap.md`](roadmap.md)                                     |
+| **Manager** (Electron)     | Host-Setup, Status, Netzwerk, Wartung, Updates — [`../manager/README.md`](../manager/README.md), [`delivery.md`](operations/delivery.md)                  |
+| **Proxy / TLS** (optional Caddy) | Port 80 HTTP und/oder LAN-HTTPS 443 — [`operations/tls.md`](operations/tls.md); Internet-Portal weiterhin nicht Produkt |
 | **Gateway** (openNDS)      | **Nicht** Produktkern — Lab-Referenz; Delivery-Default ohne Gateway — [`archive/gateway-captive-portal.md`](archive/gateway-captive-portal.md) |
 
-Mit aktivem Proxy sind Geräte-/Portal-URLs über `CANONICAL_BASE_URL` (ohne `:8080` im LAN) kanonisch; App-Port 8080 bleibt lokal für Setup-Probes. Details und Manager-UI (Proxy an/aus, Wiederherstellen) gehören in Manager-/Proxy-Doku, nicht in die Patienten-Abläufe.
+Mit aktivem Proxy/TLS sind Geräte-/Portal-URLs über `CANONICAL_BASE_URL` kanonisch; App-Port 8080 bleibt lokal für Setup-Probes. Details: [`operations/tls.md`](operations/tls.md), Manager-Doku — nicht in den Patienten-Abläufen.
 
 ---
 
@@ -535,4 +535,4 @@ flowchart LR
 
 ## Geräte: Pairing & Presence
 
-Siehe [`realtime-streams.md`](realtime-streams.md) — **Presence ≠ Pairing** (getrennte SSE-Events).
+Siehe [`realtime.md`](architecture/realtime.md) — **Presence ≠ Pairing** (getrennte SSE-Events).

@@ -1,4 +1,4 @@
-# Container logs: stdout → json-file driver with rotation (see docs/deployment-docker.md).
+# Container logs: stdout → json-file driver with rotation (see docs/operations/runtime.md).
 name: praxis-flow
 
 x-docker-logging: &docker-logging

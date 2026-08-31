@@ -2,6 +2,211 @@
 
 Stand: 2026-08-31
 
+## 2026-08-31 — Architecture i18n.md + `_sources/` entfernt
+
+- Patienten- vs. Staff-Locales, Domain-SSOT, Beitragsregeln (Ist)
+- Alle Architecture-Themenseiten 1–6 ausgearbeitet
+- `docs/architecture/_sources/` gelöscht (Inhalt übernommen)
+
+## 2026-08-31 — Architecture documents.md
+
+- Sandbox-API/Container/Pipeline, Anamnese-Template-Konvention (Ist)
+
+## 2026-08-31 — Bugbot realtime SSE
+
+- Connection-Budget MFA 2 SSE/Tab; HTTP/1.1 vs TLS/h2
+- Presence: streamConnected sofort, status erst nach 5s/10s; TV-Liveness = Queue-SSE
+- Outbox-Namen `DocumentPreviewRequested` / `DocumentRenamed`
+- MFA Queue Stale-Fallback 3s/25s/5s
+
+## 2026-08-31 — Architecture realtime.md
+
+- SSE-Streams, Presence≠Pairing, REST-Rest, Outbox-Audit (Ist)
+- `_sources/realtime-streams.md` + `events.md` → Stubs
+- Offen: documents · i18n
+
+## 2026-08-31 — Architecture apis.md Codegen
+
+- §2: `generate:api` Schritte, Outputs, Drift-Checks, Workflow YAML→Handler→ACL
+
+## 2026-08-31 — Architecture apis.md
+
+- Rollenmatrix, Auth-Mechanismen, Raum-Panel, Portal-Session, Settings-PATCH-Split (Ist)
+- Portal nicht als Fake-`ClientRole`; ACL-SoT = `route-access-rules.ts`
+- Offen: realtime · documents · i18n
+
+## 2026-08-31 — Bugbot system+domain
+
+- Aufrufziel: Check-in setzt oft schon `targetLocation`; Call = Body → Snapshot (kein Quicksettings/`defaultCallTarget`-Pfad)
+- system.md Domänen-Kurztext angepasst
+
+## 2026-08-31 — Architecture domain.md
+
+- Begriffe, Invarianten, Aufrufziel, Entitäten, Catalog-Wahrheit (Ist)
+- `_sources/domain-model.md` + `catalog-source-of-truth.md` → Stubs
+- Offen: apis · realtime · documents · i18n
+
+## 2026-08-31 — Architecture Stil Ist-Sprache
+
+- `system.md`: kein „Zielbild“; WLAN klar Nicht-Produkt; README-Stilregel
+- Abgleich war inhaltlich am Code (Routes/Day-Lifecycle); Formulierungen aus alter Overview-Rhetorik bereinigt
+
+## 2026-08-31 — Architecture system.md
+
+- Stack, Komponenten, Code-Schnitt, Persistenz/Tagesreset in `architecture/system.md`
+- `_sources/overview.md` → Stub
+- Offen: domain · apis · realtime · documents · i18n
+
+## 2026-08-31 — Architecture-Struktur (Skelett)
+
+- Neuer Faden: system · domain · apis · realtime · documents · i18n
+- Alte Dateien → `docs/architecture/_sources/`
+- Links in README/product/flows/archive/Code-Kommentaren angepasst
+- Nächster Schritt: thematisch füllen (vermutlich `system.md` zuerst)
+
+## 2026-08-31 — Ops `_sources/` entfernt
+
+- Stubs gelöscht; History bleibt in Git
+- delivery.md / ops README: `_sources`-Verweise weg
+
+## 2026-08-31 — Bugbot Ops-Nachzug
+
+- runtime §3: korrekte `docker-compose.tls-lab*.yml`-Namen
+- runtime §8: Support-Fallback inkl. Proxy/TLS-Overlays
+- tls §6/§9: Lab-Dateinamen angeglichen
+
+## 2026-08-31 — Ops integrations.md ausgearbeitet
+
+- WLAN/Captive-Grenze, SMS/WhatsApp, CSV vs. PVS, eGK Discovery; keine `roadmap.md`
+- `_sources/integrations.md` → Stub
+- Ops-Lifecycle-Dokumente damit inhaltlich durch (`delivery`, `runtime`, `tls`, `backup`, `integrations`)
+
+## 2026-08-31 — Ops runtime.md ausgearbeitet
+
+- Services, Compose-Stacking, Persistenz, Ports, Tagesbetrieb, Proxy-Hinweis, CLI-Fallback
+- `_sources/deployment-docker.md` → Stub
+- Offen Ops: `integrations.md`
+
+## 2026-08-31 — Ops backup.md ausgearbeitet
+
+- Prinzip, `.pfbackup`, Klassifikation, Manager-Flows, TLS-Grenze, Cutover mit Update
+- Manager-README: Backup-Routen von „env-Backup“ auf `.pfbackup` korrigiert
+- `_sources/settings-backup-classification.md` → Stub (übernommen)
+- Offen Ops: `runtime.md`, `integrations.md`
+
+## 2026-08-31 — Ops tls §8–10 fertig
+
+- §8 Backup/Sidecar-Gate, §9 Lab-Abgrenzung, §10 Pläne vs. Ops-Ist
+- `operations/tls.md` damit inhaltlich durch; nächstes Ops: runtime / backup / integrations
+
+## 2026-08-31 — tls §7.2 Renew-Zeitachse
+
+- Caddy ~⅓ / ~30 Tage vor LE-Ablauf; UI-Warnung 21 Tage; Custom ohne Auto-Renew
+
+## 2026-08-31 — Ops tls §7 Betrieb nach Cutover
+
+- Canonical/Geräte/301, Renew (21 Tage), Fehlerklassen, Fallstricke in `operations/tls.md`
+- Offen: §8 Backup-Grenze, §9 Lab, §10 Pläne
+
+## 2026-08-31 — Ops tls §6 Compose/State
+
+- Overlays, Wann `proxy-tls`, Image/Ports, `state/tls/`, generiertes Caddyfile, Fallstricke
+- Offen: §7 Betrieb nach Cutover, §8 Backup-Grenze, Lab, Pläne
+
+## 2026-08-31 — TLS-Doku Deep-Review Fixes
+
+- §2/§3/§4/§5: Proxy-Persistenz-Gate für `prepare`; Reset vor/nach Cutover; Apply-Fail ≠ Repair; Skelett-Verweis weg
+- Offen: §6 Compose/State …
+
+## 2026-08-31 — TLS-Doku Deep-Review (§1–5)
+
+Befunde (Code-backed, gefixt):
+- high: Wizard `prepare` braucht persistierten Proxy — Checkbox allein reicht nicht (`PROXY_ENABLED` erst bei Apply)
+- medium: `tls/reset` nach Cutover ≠ Abbruch (custom sperrt; managed re-issue gleiche ID)
+- medium: Apply-Fail → Retry `apply`, nicht `repair` (`applyReady` bleibt)
+- low: §2 verweist noch auf „§4–5 Skelett“
+- Residual: §6–8 fehlen → Compose-State, Betrieb nach Cutover, Backup-Grenze
+
+## 2026-08-31 — Ops tls §5 Setup-API
+
+- Routen, TlsStatus, Fehlerklassen, Network-Abgrenzung in `operations/tls.md`
+- Offen: §6 Compose/State, §7 Betrieb, §8 Backup-Grenze, Lab
+
+## 2026-08-31 — Bugbot-Fixes Ops-Doku
+
+- delivery: Sidecar-Dateinamen, Compose-Projektname Default, pfupdate-Template-Namen
+- tls §1: Einmal-Token auch auf Disk (`state/tls/operator-token`)
+
+## 2026-08-31 — Ops tls §4 UI-Strecken
+
+- Assistent HTTPS-Phasen, Netzwerk Resume/Cutover, managed vs custom in `operations/tls.md`
+- Offen: §5 Setup-API / TlsStatus
+
+## 2026-08-31 — Ops tls §3 Proxy
+
+- HTTP-Proxy als TLS-Voraussetzung, Env, Compose-Stacking, Network-Save-Guard in `operations/tls.md`
+- Offen: §4 Aktivierungsstrecken (Wizard + Netzwerk)
+
+## 2026-08-31 — Ops tls §1–2
+
+- Produktmodell (Hostname→private IPv4, DNS-01/custom, Zone `lan.notaus.de`) + Rollen in `operations/tls.md`
+- Am Code: `TLS_OPERATOR_ZONE_DEFAULT`, `tls-identity.ts` Namensmodi
+- Offen: §3 Proxy-Voraussetzung, §4 UI-Strecken, …
+
+## 2026-08-31 — Ops delivery §5 Update
+
+- `.pfupdate` Inspect/Apply, Kompatibilität, Phasen, Fallstricke in `operations/delivery.md`
+- delivery-Kapitel damit inhaltlich durch; nächstes Ops-Thema z. B. runtime oder tls
+
+## 2026-08-31 — Ops delivery §4 Erstinstall
+
+- Voraussetzungen, Install-Home, Wizard 8 Schritte, CLI/Dev, Fallstricke in `operations/delivery.md`
+- Manager-README: Wizard + Backup-Hinweis an Ist angeglichen
+- Offen: §5 Update-Phasen
+
+## 2026-08-31 — Ops delivery §6 Build
+
+- Pipelines Erstinstall `.tar.gz`, `.pfupdate`, Manager-DMG + Checkliste in `operations/delivery.md`
+- Offen: §4 Erstinstall-Wizard-Ist, §5 Update-Phasen
+
+## 2026-08-31 — Ops delivery §1–3
+
+- Prinzip, Versionen, Artefakte/Images in `operations/delivery.md` ausgearbeitet (Code-Abgleich pfupdate/release-scripts)
+- Architektur nur Verweis, keine parallele Release-Doku
+- Offen: §4 Erstinstall (Wizard-Ist), §5 Update, §6 Build kürzen
+
+## 2026-08-31 — TLS = Produkt (Doku)
+
+- Kunden-Test-Vorbehalt für TLS/443 aus README, product, flows, architecture, Manager entfernt
+- Ops-Einstieg: `operations/tls.md`; Plan-Statuszeilen auf Produkt/Quelle umgestellt
+- Weiterhin nicht Produkt: eGK, PVS-Adapter, Captive/Gateway, Internet-Portal, Manager-Auto-Update
+
+## 2026-08-31 — Ops TLS-Skelett
+
+- `docs/operations/tls.md` angelegt (Produkt-LAN-TLS); Lifecycle-Schritt 4 zeigt darauf
+- Quellen: plan-proxy-tls*.md + Setup/Manager-Code; Lab bleibt archive/tls-lab
+- runtime §7 auf Verweis reduziert
+
+## 2026-08-31 — Ops-Doku Skelett
+
+- `docs/operations/`: README Lifecycle + Skelette `delivery` / `runtime` / `backup` / `integrations`
+- Alte Langfassungen nach `docs/operations/_sources/` (Einarbeitung Abschnitt für Abschnitt)
+- Nächster Schritt: ersten Abschnitt aus `_sources` füllen (vermutlich delivery § Prinzip/Versionen)
+
+## 2026-08-31 — Docs: architecture/ + operations/
+
+- `docs/architecture/`: overview, apis, realtime, domain, events, sandbox, catalog, i18n, anamnese
+- `docs/operations/`: delivery, deployment-docker, settings-backup, integrations
+- Produkt/Flows/Pläne bleiben auf `docs/`-Root; `plan-backup-v2` unberührt
+- Verweise in README, Manager, Code-Kommentaren nachgezogen
+
+## 2026-08-31 — Doku aufräumen
+
+- Mock `docs/mocks/lan-tls-wizard/` entfernt (TLS ist im Manager)
+- `docs/tls-lab.md` → `docs/archive/tls-lab.md` (Lab-Compose/Smoke bleiben)
+- Archiv-Ballast gelöscht: todo-history, flow-routing-*, plan-proxy-container
+- `plan-backup-v2.md` unberührt (stale Mock-Verweis bewusst)
+
 ## 2026-08-31 — TLS-Placeholder Seidel → Muster
 
 - TLS-UI-Placeholders, Tests, Docs/Mock: `seidel` → `muster` (kein Praxis-Seed betroffen)

@@ -1,7 +1,7 @@
 import { DEFAULT_LOCALE, getBrowserLocale } from '$lib/i18n/core/I18nConfig';
 import { isAppLocale, type AppLocale } from '$lib/i18n/core/I18nTypes';
 
-/** Staff surfaces (MFA, Ops, TV) are German-only; see docs/i18n.md. */
+/** Staff surfaces (MFA, Ops, TV) are German-only; see docs/architecture/i18n.md. */
 export const STAFF_LOCALE: AppLocale = DEFAULT_LOCALE;
 
 const PATIENT_LOCALE_KEY = 'praxis-flow-patient-locale';

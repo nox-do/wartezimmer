@@ -1,7 +1,7 @@
 /**
  * Reservierter Nummernkreis fuer den MFA-/Empfangs-Assist-Pfad.
  * Konfigurierbare Themen duerfen diesen Lane-Code nicht verwenden
- * (siehe docs/domain-model.md Invariante 5).
+ * (siehe docs/architecture/domain.md Invariante 5).
  */
 export const MFA_ASSIST_LANE_CODE = 'M';
 

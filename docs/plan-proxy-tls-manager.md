@@ -2,7 +2,7 @@
 
 Stand: 2026-08-27
 
-Status: **UI- und Manager-Anforderungen zum LAN-TLS-Pilot, nicht Kunden-Test.**
+Status: **Produkt-UX im Manager.** Ops-Ist: [`operations/tls.md`](operations/tls.md). Dieses Dokument bleibt UX-/Anforderungsquelle bis zur Einarbeitung — kein „Kunden-Test“-Vorbehalt mehr.
 Architektur, Compose, Setup-API und ACME: [`plan-proxy-tls.md`](plan-proxy-tls.md).
 HTTP-Ist: [`../manager/README.md`](../manager/README.md), Netzwerk-Tab.
 
@@ -399,9 +399,5 @@ Ohne öffentliche Let's-Encrypt-Anträge:
 
 ## Reihenfolge
 
-Nach Setup-API-Vertrag in [`plan-proxy-tls.md`](plan-proxy-tls.md). Nicht vor dem
-Kunden-Test bauen.
-
-Statischer Wizard-Mock (nicht verdrahtet):
-[`mocks/lan-tls-wizard/README.md`](mocks/lan-tls-wizard/README.md)
-(`tls-model.js` ist die portable Vorlage für `wizard-flow.ts`).
+Nach Setup-API-Vertrag in [`plan-proxy-tls.md`](plan-proxy-tls.md).
+Manager-Wizard und Netzwerk-TLS sind Ist (`manager/`).
