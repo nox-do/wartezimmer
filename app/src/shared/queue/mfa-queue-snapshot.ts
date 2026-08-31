@@ -70,7 +70,7 @@ export function buildMfaQueueSnapshot(
       arrivedAt: item.createdAt,
       waitMs,
       documentCount: item.documentCount,
-      hasMobilePhone: callbackPhone != null || checkinPhone != null || identityRef != null,
+      hasMobilePhone: callbackPhone != null || checkinPhone != null,
       checkinPhone,
       callbackPhone,
       recallNotifyErrorCode: item.recallNotifyErrorCode?.trim() || null,

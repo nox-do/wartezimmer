@@ -40,7 +40,6 @@ export function applyMfaQueueIdentityRef(visitId: string, identityRef: string): 
   nextItems[index] = {
     ...item,
     identityRef: trimmed,
-    hasMobilePhone: item.hasMobilePhone || true,
   };
   mfaQueueDisplay.queue = {
     ...queue,

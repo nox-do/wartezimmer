@@ -114,6 +114,13 @@ async function main() {
     'Expected smsDispatch sent=true for wait_here recall',
   );
 
+  console.log('4c) zweiter Recall bei laufendem Fenster -> 409');
+  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
+    auth: mfaAuth,
+    jsonBody: { type: 'recall' },
+    expectedStatus: 409,
+  });
+
   await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
     auth: mfaAuth,
     jsonBody: { type: 'return_to_waiting' },
@@ -179,6 +186,109 @@ async function main() {
     'Expected mock SMS fallback when WhatsApp is disabled',
   );
   assert(recallWhatsApp.body?.smsDispatch?.sent === true, 'Expected sent=true via SMS fallback');
+
+  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
+    auth: mfaAuth,
+    jsonBody: { type: 'return_to_waiting' },
+    expectedStatus: 200,
+  });
+
+  console.log('9) Ticket ohne Telefon: recall ohne smsDispatch');
+  const checkinNoPhone = await requestJson(baseUrl, 'POST', '/api/v1/checkins', {
+    auth: terminalAuth,
+    jsonBody: {
+      topicId: 'mfa',
+      authPath: 'none',
+    },
+    expectedStatus: 201,
+  });
+  const visitNoPhone = checkinNoPhone.body?.visitId;
+  assert(typeof visitNoPhone === 'string' && visitNoPhone.length > 0, 'Missing visitId (no phone)');
+  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitNoPhone)}/transition`, {
+    auth: mfaAuth,
+    jsonBody: { type: 'set_absence', mode: 'wait_here' },
+    expectedStatus: 200,
+  });
+  const recallNoPhone = await requestJson(
+    baseUrl,
+    'POST',
+    `/api/v1/queue/${encodeURIComponent(visitNoPhone)}/transition`,
+    {
+      auth: mfaAuth,
+      jsonBody: { type: 'recall' },
+      expectedStatus: 200,
+    },
+  );
+  assert(recallNoPhone.body?.smsDispatch === null, 'Expected smsDispatch=null without phone');
+
+  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitNoPhone)}/transition`, {
+    auth: mfaAuth,
+    jsonBody: { type: 'return_to_waiting' },
+    expectedStatus: 200,
+  });
+
+  console.log('10) Notify-Fehler + retry_recall_notify');
+  await requestJson(baseUrl, 'PATCH', '/api/v1/ops/settings', {
+    auth: opsAuth,
+    jsonBody: { smsProvider: 'seven' },
+    expectedStatus: 200,
+  });
+  await requestJson(baseUrl, 'PATCH', '/api/v1/ops/messaging/providers/seven', {
+    auth: mfaAuth,
+    jsonBody: { enabled: false },
+    expectedStatus: 200,
+  });
+
+  const checkinRetry = await requestJson(baseUrl, 'POST', '/api/v1/checkins', {
+    auth: terminalAuth,
+    jsonBody: {
+      topicId: 'offen',
+      authPath: 'phone_dob',
+      phoneNumber: '+4917612345679',
+    },
+    expectedStatus: 201,
+  });
+  const visitRetry = checkinRetry.body?.visitId;
+  assert(typeof visitRetry === 'string' && visitRetry.length > 0, 'Missing visitId (retry)');
+  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitRetry)}/transition`, {
+    auth: mfaAuth,
+    jsonBody: { type: 'set_absence', mode: 'wait_here' },
+    expectedStatus: 200,
+  });
+  const recallFail = await requestJson(
+    baseUrl,
+    'POST',
+    `/api/v1/queue/${encodeURIComponent(visitRetry)}/transition`,
+    {
+      auth: mfaAuth,
+      jsonBody: { type: 'recall' },
+      expectedStatus: 200,
+    },
+  );
+  assert(recallFail.body?.smsDispatch?.sent === false, 'Expected failed smsDispatch for retry setup');
+  assert(
+    typeof recallFail.body?.smsDispatch?.errorCode === 'string',
+    'Expected errorCode on failed dispatch',
+  );
+
+  await requestJson(baseUrl, 'PATCH', '/api/v1/ops/settings', {
+    auth: opsAuth,
+    jsonBody: { smsProvider: 'mock' },
+    expectedStatus: 200,
+  });
+  const retryOk = await requestJson(
+    baseUrl,
+    'POST',
+    `/api/v1/queue/${encodeURIComponent(visitRetry)}/transition`,
+    {
+      auth: mfaAuth,
+      jsonBody: { type: 'retry_recall_notify' },
+      expectedStatus: 200,
+    },
+  );
+  assert(retryOk.body?.resultType === 'recall_notify_retry', 'Expected recall_notify_retry');
+  assert(retryOk.body?.smsDispatch?.sent === true, 'Expected retry smsDispatch sent=true');
+  assert(retryOk.body?.recallNotifyErrorCode === null, 'Expected cleared recallNotifyErrorCode');
 
   console.log('\nSmoke test erfolgreich: SMS/WhatsApp Recall-Feature ist konsistent.');
 }

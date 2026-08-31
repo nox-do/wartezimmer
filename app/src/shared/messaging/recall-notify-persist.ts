@@ -4,19 +4,32 @@ import {
   dispatchRecallWithFallback,
   type MessageDispatchResult,
 } from './sms-sender.js';
+import { formatTicketCode } from '../queue/ticket-code.js';
 
 export function persistRecallNotifyResult(
   db: CoreDatabase,
-  ticketId: string,
+  visitId: string,
   smsDispatch: MessageDispatchResult,
 ): void {
   if (smsDispatch.sent) {
-    db.setRecallNotifyError(ticketId, null);
-    db.setRecallNotifySent(ticketId, true);
+    db.setRecallNotifyError(visitId, null);
+    db.setRecallNotifySent(visitId, true);
   } else {
-    db.setRecallNotifyError(ticketId, smsDispatch.errorCode ?? 'UNKNOWN');
-    db.setRecallNotifySent(ticketId, false);
+    db.setRecallNotifyError(visitId, smsDispatch.errorCode ?? 'UNKNOWN');
+    db.setRecallNotifySent(visitId, false);
   }
+}
+
+/**
+ * Visit-IDs are `YYYYMMDD-A-001`; SMS/WhatsApp must show the public ticket code `A-001`.
+ * Persist paths keep using the full visitId.
+ */
+export function resolveRecallTicketCode(visitId: string): string {
+  const match = visitId.trim().match(/^([0-9]{8})-([A-Za-z])-([0-9]{1,4})$/);
+  if (!match) {
+    return visitId.trim();
+  }
+  return formatTicketCode(match[2], Number.parseInt(match[3], 10));
 }
 
 /**
@@ -29,7 +42,7 @@ export function persistRecallNotifyResult(
  */
 export async function dispatchRecallNotifyAndPersist(
   db: CoreDatabase,
-  ticketId: string,
+  visitId: string,
   input: {
     callbackPhone: string;
     returnWindowMinutes: number;
@@ -39,7 +52,7 @@ export async function dispatchRecallNotifyAndPersist(
   notifyChannel: 'sms' | 'whatsapp',
 ): Promise<MessageDispatchResult> {
   const dispatchInput = {
-    ticketId,
+    ticketId: resolveRecallTicketCode(visitId),
     callbackPhone: input.callbackPhone,
     returnWindowMinutes: input.returnWindowMinutes,
     returnUntil: input.returnUntil,
@@ -50,7 +63,7 @@ export async function dispatchRecallNotifyAndPersist(
       ? await dispatchRecallWithFallback(db, dispatchInput)
       : await dispatchRecallSms(db, dispatchInput);
 
-  persistRecallNotifyResult(db, ticketId, smsDispatch);
+  persistRecallNotifyResult(db, visitId, smsDispatch);
 
   return smsDispatch;
 }

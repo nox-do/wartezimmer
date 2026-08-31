@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { persistRecallNotifyResult } from './recall-notify-persist.js';
+import {
+  persistRecallNotifyResult,
+  resolveRecallTicketCode,
+} from './recall-notify-persist.js';
 import type { CoreDatabase } from '../db/database.js';
 import type { MessageDispatchResult } from './sms-sender.js';
 
@@ -22,6 +25,12 @@ function createDbStub(): CoreDatabase & {
     },
   } as unknown as CoreDatabase & { errors: Array<string | null>; sentFlags: boolean[] };
 }
+
+test('resolveRecallTicketCode maps visitId to public ticket code', () => {
+  assert.equal(resolveRecallTicketCode('20260831-A-001'), 'A-001');
+  assert.equal(resolveRecallTicketCode('20260831-l-42'), 'L-042');
+  assert.equal(resolveRecallTicketCode('not-a-visit-id'), 'not-a-visit-id');
+});
 
 test('persistRecallNotifyResult stores error when provider is not configured', () => {
   const db = createDbStub();

@@ -77,6 +77,24 @@ function formatRecallMessage(input: RecallMessageInput): string {
   return RECALL_SMS_BY_LOCALE[locale](practiceName, time, input.ticketId);
 }
 
+/** WhatsApp template body params: {{1}} return time, {{2}} ticket code (A-001). */
+export function buildRecallWhatsAppComponents(input: {
+  ticketId: string;
+  returnUntil: string;
+  checkinLocale?: string | null;
+}): {
+  body: Array<{ type: 'text'; text: string }>;
+} {
+  const locale = resolveRecallSmsLocale(input.checkinLocale);
+  const time = formatReturnUntilTime(input.returnUntil, locale);
+  return {
+    body: [
+      { type: 'text', text: time },
+      { type: 'text', text: input.ticketId },
+    ],
+  };
+}
+
 function isProviderTimeoutError(error: unknown): boolean {
   return (
     error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')
@@ -214,6 +232,7 @@ async function sendWithSevenWhatsApp(
         type: 'template',
         template,
         language,
+        components: buildRecallWhatsAppComponents(input),
       }),
       signal,
     });
@@ -346,5 +365,5 @@ export async function dispatchRecallWithFallback(
     return sms;
   }
 
-  return whatsapp.attempted ? whatsapp : sms;
+  return sms.attempted ? sms : whatsapp;
 }

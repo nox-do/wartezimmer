@@ -4,6 +4,7 @@ import {
   dispatchRecallSms,
   dispatchRecallWhatsApp,
   formatReturnUntilTime,
+  buildRecallWhatsAppComponents,
   isProviderTimeoutErrorForTests,
   parseSevenGatewaySendResponse,
 } from './sms-sender.js';
@@ -152,6 +153,71 @@ test('dispatchRecallWhatsApp maps header-phase TimeoutError to SEVEN_WHATSAPP_TI
     const result = await dispatchRecallWhatsApp(sevenDbStub(), recallInput);
     assert.equal(result.sent, false);
     assert.equal(result.errorCode, 'SEVEN_WHATSAPP_TIMEOUT');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('buildRecallWhatsAppComponents uses BUSINESS_TZ time and ticket code', () => {
+  const previousBusinessTz = process.env.BUSINESS_TZ;
+  const previousTz = process.env.TZ;
+  process.env.BUSINESS_TZ = 'Europe/Berlin';
+  process.env.TZ = 'UTC';
+  try {
+    const components = buildRecallWhatsAppComponents({
+      ticketId: 'A-001',
+      returnUntil: '2026-08-31T12:15:00.000Z',
+      checkinLocale: 'de-DE',
+    });
+    assert.deepEqual(components.body, [
+      { type: 'text', text: '14:15' },
+      { type: 'text', text: 'A-001' },
+    ]);
+  } finally {
+    if (previousBusinessTz === undefined) {
+      delete process.env.BUSINESS_TZ;
+    } else {
+      process.env.BUSINESS_TZ = previousBusinessTz;
+    }
+    if (previousTz === undefined) {
+      delete process.env.TZ;
+    } else {
+      process.env.TZ = previousTz;
+    }
+  }
+});
+
+test('dispatchRecallWhatsApp sends template components for time and ticket', async () => {
+  const originalFetch = globalThis.fetch;
+  let requestBody: unknown = null;
+  globalThis.fetch = (async (_url, init) => {
+    requestBody = JSON.parse(String(init?.body ?? '{}'));
+    return {
+      ok: true,
+      status: 200,
+      async json() {
+        return {
+          success: '100',
+          messages: [{ id: 'wa-1', success: true }],
+        };
+      },
+    } as Response;
+  }) as typeof fetch;
+  try {
+    const result = await dispatchRecallWhatsApp(sevenDbStub(), {
+      ...recallInput,
+      ticketId: 'A-017',
+      returnUntil: '2026-08-31T12:15:00.000Z',
+    });
+    assert.equal(result.sent, true);
+    assert.equal(
+      (requestBody as { components?: { body?: unknown } }).components?.body?.[0]?.text != null,
+      true,
+    );
+    assert.equal(
+      (requestBody as { components: { body: Array<{ text: string }> } }).components.body[1].text,
+      'A-017',
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

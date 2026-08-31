@@ -158,7 +158,7 @@ export const dict = {
     messagingSaveSms: 'SMS speichern',
     messagingWhatsappSectionTitle: 'WhatsApp-Rückruf',
     messagingWhatsappSectionHint:
-      'WhatsApp Business über seven.io (WABA). Beim Rückruf wird zuerst WhatsApp versucht; schlägt das fehl oder ist nicht aktiv, wird automatisch SMS verwendet (sofern SMS konfiguriert ist).',
+      'WhatsApp Business über seven.io (WABA). Template braucht zwei Platzhalter: {{1}} Rückkehrzeit, {{2}} Wartenummer (z. B. A-001). Beim Rückruf wird zuerst WhatsApp versucht; schlägt das fehl oder ist nicht aktiv, wird automatisch SMS verwendet (sofern SMS konfiguriert ist).',
     messagingWhatsappFromLabel: 'WABA-Absendernummer',
     messagingWhatsappTemplateLabel: 'Template-Name',
     messagingWhatsappLanguageLabel: 'Template-Sprache',
