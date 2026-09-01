@@ -10,7 +10,6 @@ import {
 import { invalidateContactLookupCache } from '../../shared/contacts/contact-lookup-cache.js';
 import { assertPatchOpsSettingsAllowedForRole } from './ops-settings-patch-by-role.js';
 import { buildOpsSettingsUpdate, toOpsSettingsResponse } from './ops-settings-mapper.js';
-import type { StaffSessionManager } from '../../auth/staff-session-auth.js';
 import { publishTvQueueUpdate } from '../../shared/queue/queue-stream-hub.js';
 import { applyRoomPanelSettingsEffects } from './room-panel-settings-effects.js';
 
@@ -26,11 +25,7 @@ export function createSerializedExecutor() {
   };
 }
 
-export function registerOpsSettingsRoutes(
-  app: FastifyInstance,
-  db: CoreDatabase,
-  sessions: StaffSessionManager,
-): void {
+export function registerOpsSettingsRoutes(app: FastifyInstance, db: CoreDatabase): void {
   const serializeSettingsUpdate = createSerializedExecutor();
 
   app.get(
@@ -189,7 +184,7 @@ export function registerOpsSettingsRoutes(
             applyRoomPanelSettingsEffects({
               previous: previousSettings,
               updated,
-              sessions,
+              grants: db,
               publishQueueUpdate: () => void publishTvQueueUpdate(db),
             });
           }

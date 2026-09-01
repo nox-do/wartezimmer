@@ -28,7 +28,6 @@ const ENV_KEYS = [
   'AUTH_KEY_CAPTIVE',
   'NODE_ENV',
   'STAFF_SESSION_TTL_MS',
-  'ROOM_PANEL_OUTSIDE_SESSION_MAX_PER_CLIENT',
 ] as const;
 
 const savedEnv = new Map<string, string | undefined>();
@@ -300,7 +299,7 @@ test('room-panel rooms endpoint lists only enabled panel rooms', async () => {
         roomLabel: 'Labor',
         placement: 'outside',
         mode: 'arrival',
-        requiresPin: false,
+        requiresPin: true,
       },
       {
         roomId: 'labor',
@@ -314,7 +313,7 @@ test('room-panel rooms endpoint lists only enabled panel rooms', async () => {
         roomLabel: 'Korridor',
         placement: 'outside',
         mode: 'display_only',
-        requiresPin: false,
+        requiresPin: true,
       },
       {
         roomId: 'rezeption',
@@ -369,7 +368,7 @@ test('room-panel login resolves placement when outside and inside are both enabl
   const outsideLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', placement: 'outside', pin: '' },
+    payload: { roomId: 'labor', placement: 'outside', pin: '2222' },
   });
   assert.equal(outsideLogin.statusCode, 200);
   assert.equal(outsideLogin.json().placement, 'outside');
@@ -385,7 +384,7 @@ test('room-panel login resolves placement when outside and inside are both enabl
   const missingPlacement = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', pin: '' },
+    payload: { roomId: 'labor', pin: '2222' },
   });
   assert.equal(missingPlacement.statusCode, 400);
 
@@ -399,14 +398,14 @@ test('multiple room-panel sessions can use the same room profile', async () => {
   const firstLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', placement: 'outside', pin: '' },
+    payload: { roomId: 'labor', placement: 'outside', pin: '2222' },
   });
   const firstCookie = readSetCookie(firstLogin);
 
   const secondLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', placement: 'outside', pin: '' },
+    payload: { roomId: 'labor', placement: 'outside', pin: '2222' },
   });
   assert.equal(secondLogin.statusCode, 200);
 
@@ -420,38 +419,23 @@ test('multiple room-panel sessions can use the same room profile', async () => {
   await app.close();
 });
 
-test('outside room-panel sessions are capped per client without blocking PIN login', async () => {
+test('room-panel enrollment is not capped by client IP', async () => {
   enableTestAuth();
-  process.env.ROOM_PANEL_OUTSIDE_SESSION_MAX_PER_CLIENT = '2';
   const app = await buildAuthApp();
 
-  for (let index = 0; index < 2; index += 1) {
+  for (let index = 0; index < 3; index += 1) {
     const login = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/room-panel/login',
-      payload: { roomId: 'labor', placement: 'outside', pin: '' },
+      payload: { roomId: 'labor', placement: 'outside', pin: '2222' },
     });
     assert.equal(login.statusCode, 200);
   }
 
-  const capped = await app.inject({
-    method: 'POST',
-    url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', placement: 'outside', pin: '' },
-  });
-  assert.equal(capped.statusCode, 429);
-
-  const protectedLogin = await app.inject({
-    method: 'POST',
-    url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'rezeption', placement: 'inside', pin: '2222' },
-  });
-  assert.equal(protectedLogin.statusCode, 200);
-
   await app.close();
 });
 
-test('room-panel login allows empty pin for display_only without patient names', async () => {
+test('room-panel login without PIN does not enroll a grant', async () => {
   enableTestAuth();
   const app = await buildAuthApp();
 
@@ -461,37 +445,28 @@ test('room-panel login allows empty pin for display_only without patient names',
     payload: { roomId: 'korridor', placement: 'outside', pin: '' },
   });
 
-  assert.equal(login.statusCode, 200);
-  assert.deepEqual(
-    {
-      ok: login.json().ok,
-      role: login.json().role,
-      roomId: login.json().roomId,
-      placement: login.json().placement,
-    },
-    { ok: true, role: 'room-panel', roomId: 'korridor', placement: 'outside' },
-  );
+  assert.equal(login.statusCode, 400);
 
   await app.close();
 });
 
-test('room-panel login allows outside interaction and requires pin inside', async () => {
+test('room-panel login requires PIN for outside and inside', async () => {
   enableTestAuth();
   const app = await buildAuthApp();
 
   const patientArrival = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', placement: 'outside', pin: '' },
+    payload: { roomId: 'labor', placement: 'outside', pin: '2222' },
   });
   assert.equal(patientArrival.statusCode, 200);
 
   const namedDisplay = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'rezeption', placement: 'inside', pin: '' },
+    payload: { roomId: 'rezeption', placement: 'inside', pin: '2222' },
   });
-  assert.equal(namedDisplay.statusCode, 401);
+  assert.equal(namedDisplay.statusCode, 200);
 
   await app.close();
 });
@@ -510,7 +485,7 @@ test('room-panel login rejects placement that is not enabled for the room', asyn
   const outsideOnInsideOnlyRoom = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'rezeption', placement: 'outside', pin: '' },
+    payload: { roomId: 'rezeption', placement: 'outside', pin: '2222' },
   });
   assert.equal(outsideOnInsideOnlyRoom.statusCode, 404);
 
@@ -705,7 +680,7 @@ test('MFA can rotate shared room panel PIN after entering current MFA PIN', asyn
   const outsidePanelLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', placement: 'outside', pin: '' },
+    payload: { roomId: 'labor', placement: 'outside', pin: '2222' },
   });
   assert.equal(outsidePanelLogin.statusCode, 200);
   const outsidePanelCookie = readSetCookie(outsidePanelLogin);
@@ -740,12 +715,12 @@ test('MFA can rotate shared room panel PIN after entering current MFA PIN', asyn
   });
   assert.equal(revokedPanelSession.statusCode, 401);
 
-  const preservedOutsidePanelSession = await app.inject({
+  const revokedOutsidePanelSession = await app.inject({
     method: 'GET',
     url: '/api/v1/queue',
     headers: { cookie: outsidePanelCookie, 'x-client-role': 'room-panel' },
   });
-  assert.equal(preservedOutsidePanelSession.statusCode, 200);
+  assert.equal(revokedOutsidePanelSession.statusCode, 401);
 
   await app.close();
 });
@@ -862,7 +837,7 @@ test('room-panel logout leaves mfa session intact', async () => {
   const panelLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/room-panel/login',
-    payload: { roomId: 'labor', placement: 'outside', pin: '' },
+    payload: { roomId: 'labor', placement: 'outside', pin: '2222' },
   });
   assert.equal(panelLogin.statusCode, 200);
   const panelCookie = readSetCookie(panelLogin);

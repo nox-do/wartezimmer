@@ -2,8 +2,10 @@ import { mfaAuthFetch } from '$lib/api/staff-auth-fetch';
 
 export type DeviceAuthorizationListItem = {
   authorizationId: string;
-  role: 'tv' | 'terminal';
-  deviceId: string;
+  role: 'tv' | 'terminal' | 'room-panel';
+  deviceId: string | null;
+  roomId: string | null;
+  placement: 'outside' | 'inside' | null;
   createdAt: string;
   lastSeenAt: string | null;
 };

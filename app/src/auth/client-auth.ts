@@ -9,8 +9,10 @@ import {
   getStaffSessionAuthConfig,
   readCookieValue,
   setDeviceSessionCookie,
+  setRoomPanelSessionCookie,
   type DeviceSession,
   type DeviceSessionRole,
+  type RoomPanelSession,
   type StaffSessionManager,
 } from './staff-session-auth.js';
 import type { DeviceAuthorizationRow } from '../shared/db/database-device-authorizations.js';
@@ -125,6 +127,23 @@ function getDefaultStaffSessionManager(): StaffSessionManager {
 
 const DEVICE_GRANT_EXPIRES_AT = '9999-12-31T23:59:59.000Z';
 
+function roomPanelSessionFromGrant(row: DeviceAuthorizationRow): RoomPanelSession | null {
+  if (row.role !== 'room-panel' || !row.roomId || !row.placement) {
+    return null;
+  }
+  return {
+    kind: 'room-panel',
+    sessionId: row.authorizationId,
+    role: 'room-panel',
+    roomId: row.roomId,
+    placement: row.placement,
+    createdAt: row.createdAt,
+    lastSeenAt: row.lastSeenAt ?? row.createdAt,
+    idleExpiresAt: DEVICE_GRANT_EXPIRES_AT,
+    expiresAt: DEVICE_GRANT_EXPIRES_AT,
+  };
+}
+
 function deviceSessionFromGrant(row: DeviceAuthorizationRow): DeviceSession | null {
   if (row.role !== 'tv' && row.role !== 'terminal') {
     return null;
@@ -144,21 +163,28 @@ function deviceSessionFromGrant(row: DeviceAuthorizationRow): DeviceSession | nu
   };
 }
 
-function isDeviceSlotRole(role: CookieSlotRole): role is DeviceSessionRole {
-  return role === 'tv' || role === 'terminal';
+function isDeviceGrantSlotRole(role: CookieSlotRole): role is DeviceSessionRole | 'room-panel' {
+  return role === 'tv' || role === 'terminal' || role === 'room-panel';
 }
 
 function resolveRoleFromDeviceGrant(
   request: FastifyRequest,
   deviceGrants: DeviceGrantStore,
-  requestedRole: DeviceSessionRole,
+  requestedRole: DeviceSessionRole | 'room-panel',
 ): ClientRole | null {
   const token = readCookieValue(request, getSessionCookieNameForSlot(requestedRole));
   if (!token) {
     return null;
   }
   const row = deviceGrants.authenticateDeviceAuthorization(token);
-  const session = row ? deviceSessionFromGrant(row) : null;
+  const session =
+    requestedRole === 'room-panel'
+      ? row
+        ? roomPanelSessionFromGrant(row)
+        : null
+      : row
+        ? deviceSessionFromGrant(row)
+        : null;
   if (!session || session.role !== requestedRole) {
     return null;
   }
@@ -396,7 +422,7 @@ export function registerClientAuth(
         });
         return;
       }
-      if (isDeviceSlotRole(requestedRole)) {
+      if (isDeviceGrantSlotRole(requestedRole)) {
         if (!deviceGrants) {
           sessionRole = null;
         } else {
@@ -455,6 +481,13 @@ export function registerClientAuth(
     if (token && session?.kind === 'device' && reply.statusCode < 400) {
       try {
         setDeviceSessionCookie(reply, request, session.role, token);
+      } catch {
+        // Hijacked SSE already sent headers; Set-Cookie is on writeHead instead.
+      }
+    }
+    if (token && session?.kind === 'room-panel' && reply.statusCode < 400) {
+      try {
+        setRoomPanelSessionCookie(reply, request, token);
       } catch {
         // Hijacked SSE already sent headers; Set-Cookie is on writeHead instead.
       }

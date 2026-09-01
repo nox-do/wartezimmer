@@ -126,6 +126,24 @@ export function setDeviceSessionCookie(
   appendSetCookie(reply, formatDeviceSessionCookie(request, role, token, ttlMs));
 }
 
+export function setRoomPanelSessionCookie(
+  reply: FastifyReply,
+  request: FastifyRequest,
+  token: string,
+  ttlMs: number = DEVICE_AUTHORIZATION_COOKIE_TTL_MS,
+): void {
+  appendSetCookie(reply, formatRoomPanelSessionCookie(request, token, ttlMs));
+}
+
+export function formatRoomPanelSessionCookie(
+  request: FastifyRequest,
+  token: string,
+  ttlMs: number = DEVICE_AUTHORIZATION_COOKIE_TTL_MS,
+): string {
+  const maxAgeSeconds = Math.floor(ttlMs / 1000);
+  return `${ROOM_PANEL_SESSION_COOKIE}=${encodeURIComponent(token)}; ${tokenCookieOptions(request, maxAgeSeconds)}`;
+}
+
 export function withDeviceGrantSetCookie(
   request: FastifyRequest,
   headers: Record<string, string>,
@@ -138,20 +156,13 @@ export function withDeviceGrantSetCookie(
       'Set-Cookie': formatDeviceSessionCookie(request, session.role, token),
     };
   }
+  if (token && session?.kind === 'room-panel') {
+    return {
+      ...headers,
+      'Set-Cookie': formatRoomPanelSessionCookie(request, token),
+    };
+  }
   return headers;
-}
-
-export function setRoomPanelSessionCookie(
-  reply: FastifyReply,
-  request: FastifyRequest,
-  token: string,
-  ttlMs: number,
-): void {
-  const maxAgeSeconds = Math.floor(ttlMs / 1000);
-  appendSetCookie(
-    reply,
-    `${ROOM_PANEL_SESSION_COOKIE}=${encodeURIComponent(token)}; ${tokenCookieOptions(request, maxAgeSeconds)}`,
-  );
 }
 
 export function clearStaffSessionCookie(

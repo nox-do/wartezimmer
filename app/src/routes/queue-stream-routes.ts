@@ -25,7 +25,10 @@ import type { TvQueueSnapshot } from '../shared/queue/tv-queue-snapshot.js';
 import { SSE_PING_MS } from '../shared/ops/stream-constants.js';
 import { resolveRoomPanelForSession } from '../shared/room-panel/room-panel-policy.js';
 
-const MAX_TIMEOUT_MS = 2_147_483_647;
+function ssePingMs(): number {
+  const fromEnv = Number.parseInt(process.env.PRAXIS_SSE_PING_MS ?? '', 10);
+  return Number.isFinite(fromEnv) && fromEnv > 0 ? fromEnv : SSE_PING_MS;
+}
 
 export function registerQueueStreamRoutes(
   app: FastifyInstance,
@@ -84,57 +87,39 @@ export function registerQueueStreamRoutes(
           },
         );
 
-        const sessionRefreshMs = Math.min(
-          SSE_PING_MS,
-          Math.max(1, Math.floor((Date.parse(session.idleExpiresAt) - Date.now()) / 2)),
-        );
         const pingTimer = setInterval(() => {
-          if (!sessions.refreshSession(session.sessionId)) {
+          const grant = db.getDeviceAuthorizationById(session.sessionId);
+          if (
+            !grant ||
+            grant.revokedAt ||
+            grant.role !== 'room-panel' ||
+            !resolveRoomPanelForSession(db, session)
+          ) {
+            try {
+              if (!reply.raw.writableEnded) {
+                writeEvent('session-revoked', { code: 'SESSION_REVOKED' });
+              }
+            } finally {
+              cleanup();
+              reply.raw.end();
+            }
             return;
           }
+          db.touchDeviceAuthorization(session.sessionId);
           recordDevicePresence({ deviceId: panelDeviceId, kind: 'room-panel' });
           publishExpiredRecallWindows(db);
           reply.raw.write(': ping\n\n');
-        }, sessionRefreshMs);
-        let absoluteExpiryTimer: ReturnType<typeof setTimeout>;
-        const scheduleAbsoluteExpiry = () => {
-          const remainingMs = Math.max(0, Date.parse(session.expiresAt) - Date.now());
-          absoluteExpiryTimer = setTimeout(
-            () => {
-              if (remainingMs > MAX_TIMEOUT_MS) {
-                scheduleAbsoluteExpiry();
-                return;
-              }
-              sessions.refreshSession(session.sessionId, new Date(session.expiresAt));
-            },
-            Math.min(remainingMs, MAX_TIMEOUT_MS),
-          );
-        };
-        scheduleAbsoluteExpiry();
-
+        }, ssePingMs());
         let cleanedUp = false;
-        let unsubscribeRevocation: () => void = () => undefined;
         const cleanup = () => {
           if (cleanedUp) {
             return;
           }
           cleanedUp = true;
           clearInterval(pingTimer);
-          clearTimeout(absoluteExpiryTimer);
           markDeviceStreamDisconnected(panelDeviceId);
           unsubscribe();
-          unsubscribeRevocation();
         };
-        unsubscribeRevocation = sessions.subscribeSessionRevocation(session.sessionId, () => {
-          try {
-            if (!reply.raw.writableEnded) {
-              writeEvent('session-revoked', { code: 'SESSION_REVOKED' });
-            }
-          } finally {
-            cleanup();
-            reply.raw.end();
-          }
-        });
 
         request.raw.on('close', cleanup);
         request.raw.on('error', cleanup);
@@ -153,7 +138,7 @@ export function registerQueueStreamRoutes(
         const pingTimer = setInterval(() => {
           publishExpiredRecallWindows(db);
           reply.raw.write(': ping\n\n');
-        }, SSE_PING_MS);
+        }, ssePingMs());
 
         let cleanedUp = false;
         let unsubscribeRevocation: () => void = () => undefined;
@@ -218,7 +203,7 @@ export function registerQueueStreamRoutes(
         recordDevicePresence({ deviceId, kind: 'tv' });
         publishExpiredRecallWindows(db);
         reply.raw.write(': ping\n\n');
-      }, SSE_PING_MS);
+      }, ssePingMs());
 
       request.raw.on('close', cleanup);
       request.raw.on('error', cleanup);

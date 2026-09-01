@@ -289,4 +289,4 @@ mit PIN; Invalidierungsmatrix wie oben.
 | --- | --- |
 | 1 Schema (inkl. Update-Copy / Restore-leer) | **erledigt** |
 | 2 TV/Terminal + MFA-Liste | **erledigt** |
-| 3 Room-Panels + Aufräumen | offen |
+| 3 Room-Panels + Aufräumen | **erledigt** |

@@ -2,6 +2,15 @@
 
 Stand: 2026-09-01
 
+## 2026-09-01 — Device-Authorizations Schnitt 3
+
+- Room-Panels: PIN-Enrollment (außen+innen), Cookie 365d, Auth über `device_authorizations`
+- SSE ohne Absolute-Timer/`refreshSession`; Ping prüft Grant + Raum/Placement
+- Group-Revoke: Raum/Placement/PIN-Wechsel alle Panels; Relogin-Hotspot = diese ID
+- MFA-Liste enthält Panels (Raum, Placement, `createdAt`); IP-Cap und Blind-Auto-Login ohne PIN entfernt
+- Panel-SSE: Ping schreibt `session-revoked` wie TV, dann Stream zu
+- Als Nächstes: Release (siehe `things-to-do-before-release.md` Enrollment-Hinweis)
+
 ## 2026-09-01 — Device-Authorizations Schnitt 2
 
 - TV/Terminal-Auth liest `device_authorizations`; Device-Sessions aus Staff-Manager entfernt

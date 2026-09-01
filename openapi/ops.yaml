@@ -934,7 +934,6 @@ components:
       required:
         - authorizationId
         - role
-        - deviceId
         - createdAt
         - lastSeenAt
       properties:
@@ -943,10 +942,19 @@ components:
           minLength: 1
         role:
           type: string
-          enum: [tv, terminal]
+          enum: [tv, terminal, room-panel]
         deviceId:
           type: string
           minLength: 1
+          nullable: true
+        roomId:
+          type: string
+          minLength: 1
+          nullable: true
+        placement:
+          type: string
+          enum: [outside, inside]
+          nullable: true
         createdAt:
           type: string
           format: date-time

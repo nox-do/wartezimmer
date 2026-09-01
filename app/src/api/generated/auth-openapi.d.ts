@@ -244,7 +244,7 @@ export interface components {
       roomId: string;
       placement: components['schemas']['RoomPanelPlacement'];
       /** @description Required for inside panels; omit or empty for outside panels without PIN. */
-      pin?: string;
+      pin: string;
     };
     RoomPanelSessionResponse: {
       /** @constant */

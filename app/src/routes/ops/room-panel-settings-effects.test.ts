@@ -30,10 +30,12 @@ test('mode changes publish live without revoking placement session', () => {
     updated: settings({
       inside: { enabled: true, mode: 'staff_full', showPatientNames: true },
     }),
-    sessions: {
-      revokeRoomPanelSessions: () => undefined,
-      revokeRoomPanelSessionPlacement: (roomId, placement) =>
-        void revoked.push({ roomId, placement }),
+    grants: {
+      revokeRoomPanelAuthorizationsByRoom: () => 0,
+      revokeRoomPanelAuthorizationsByPlacement: (roomId, placement) => {
+        revoked.push({ roomId, placement });
+        return 0;
+      },
     },
     publishQueueUpdate: () => {
       published += 1;
@@ -55,10 +57,15 @@ test('disabling inside panel revokes only inside sessions before publishing', ()
       outside: { enabled: true, mode: 'arrival' },
       inside: { enabled: false, mode: 'staff_full', showPatientNames: true },
     }),
-    sessions: {
-      revokeRoomPanelSessions: (roomId) => void events.push(`revoke-all:${roomId}`),
-      revokeRoomPanelSessionPlacement: (roomId, placement) =>
-        void events.push(`revoke:${roomId}:${placement}`),
+    grants: {
+      revokeRoomPanelAuthorizationsByRoom: (roomId) => {
+        events.push(`revoke-all:${roomId}`);
+        return 0;
+      },
+      revokeRoomPanelAuthorizationsByPlacement: (roomId, placement) => {
+        events.push(`revoke:${roomId}:${placement}`);
+        return 0;
+      },
     },
     publishQueueUpdate: () => void events.push('publish'),
   });
@@ -74,10 +81,15 @@ test('disabling outside panel revokes only outside sessions before publishing', 
     updated: settings({
       outside: { enabled: false, mode: 'arrival' },
     }),
-    sessions: {
-      revokeRoomPanelSessions: (roomId) => void events.push(`revoke-all:${roomId}`),
-      revokeRoomPanelSessionPlacement: (roomId, placement) =>
-        void events.push(`revoke:${roomId}:${placement}`),
+    grants: {
+      revokeRoomPanelAuthorizationsByRoom: (roomId) => {
+        events.push(`revoke-all:${roomId}`);
+        return 0;
+      },
+      revokeRoomPanelAuthorizationsByPlacement: (roomId, placement) => {
+        events.push(`revoke:${roomId}:${placement}`);
+        return 0;
+      },
     },
     publishQueueUpdate: () => void events.push('publish'),
   });

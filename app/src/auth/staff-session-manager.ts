@@ -1,8 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type {
   AuthSession,
-  RoomPanelSession,
-  RoomPanelSessionRole,
   StaffRole,
   StaffSession,
   StaffSessionManager,
@@ -92,28 +90,6 @@ export function createStaffSessionManager(options: {
       return { token, session };
     },
 
-    createRoomPanelSession(input, now = new Date()) {
-      pruneExpired(now);
-      const token = randomBytes(32).toString('base64url');
-      const createdAt = now.toISOString();
-      const expiresAt = new Date(now.getTime() + options.sessionTtlMs).toISOString();
-      const idleExpiresAt = idleExpiryFor(now, expiresAt);
-      const session: RoomPanelSession = {
-        kind: 'room-panel',
-        sessionId: randomUUID(),
-        role: 'room-panel',
-        roomId: input.roomId,
-        placement: input.placement,
-        ...(input.clientKey ? { clientKey: input.clientKey } : {}),
-        createdAt,
-        lastSeenAt: createdAt,
-        idleExpiresAt,
-        expiresAt,
-      };
-      sessionsByTokenHash.set(sha256(token), session);
-      return { token, session };
-    },
-
     getSession(token: string | null, now = new Date()) {
       if (!token) {
         return null;
@@ -136,16 +112,6 @@ export function createStaffSessionManager(options: {
       return null;
     },
 
-    countRoomPanelSessions(input) {
-      pruneExpired(new Date());
-      return [...sessionsByTokenHash.values()].filter(
-        (session) =>
-          session.kind === 'room-panel' &&
-          session.clientKey === input.clientKey &&
-          (input.placement === undefined || session.placement === input.placement),
-      ).length;
-    },
-
     revokeSession(token: string | null) {
       if (token) {
         const tokenHash = sha256(token);
@@ -156,42 +122,9 @@ export function createStaffSessionManager(options: {
       }
     },
 
-    revokeSessionsByRole(role: StaffRole | RoomPanelSessionRole, exceptSessionId?: string) {
+    revokeSessionsByRole(role: StaffRole, exceptSessionId?: string) {
       for (const [tokenHash, session] of sessionsByTokenHash) {
         if (session.role === role && session.sessionId !== exceptSessionId) {
-          deleteSession(tokenHash, session);
-        }
-      }
-    },
-
-    revokeRoomPanelSessions(roomId: string, exceptSessionId?: string) {
-      for (const [tokenHash, session] of sessionsByTokenHash) {
-        if (
-          session.kind === 'room-panel' &&
-          session.roomId === roomId &&
-          session.sessionId !== exceptSessionId
-        ) {
-          deleteSession(tokenHash, session);
-        }
-      }
-    },
-
-    revokeRoomPanelSessionsByPlacement(placement) {
-      for (const [tokenHash, session] of sessionsByTokenHash) {
-        if (session.kind === 'room-panel' && session.placement === placement) {
-          deleteSession(tokenHash, session);
-        }
-      }
-    },
-
-    revokeRoomPanelSessionPlacement(roomId, placement, exceptSessionId) {
-      for (const [tokenHash, session] of sessionsByTokenHash) {
-        if (
-          session.kind === 'room-panel' &&
-          session.roomId === roomId &&
-          session.placement === placement &&
-          session.sessionId !== exceptSessionId
-        ) {
           deleteSession(tokenHash, session);
         }
       }

@@ -2127,8 +2127,11 @@ export interface components {
     DeviceAuthorizationListItem: {
       authorizationId: string;
       /** @enum {string} */
-      role: 'tv' | 'terminal';
-      deviceId: string;
+      role: 'tv' | 'terminal' | 'room-panel';
+      deviceId?: string | null;
+      roomId?: string | null;
+      /** @enum {string|null} */
+      placement?: 'outside' | 'inside' | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */

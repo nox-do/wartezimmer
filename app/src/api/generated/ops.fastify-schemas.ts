@@ -1664,7 +1664,7 @@ export const DeviceAuthorizationImportReport = {
 export const DeviceAuthorizationListItem = {
   type: 'object',
   additionalProperties: false,
-  required: ['authorizationId', 'role', 'deviceId', 'createdAt', 'lastSeenAt'],
+  required: ['authorizationId', 'role', 'createdAt', 'lastSeenAt'],
   properties: {
     authorizationId: {
       type: 'string',
@@ -1672,11 +1672,19 @@ export const DeviceAuthorizationListItem = {
     },
     role: {
       type: 'string',
-      enum: ['tv', 'terminal'],
+      enum: ['tv', 'terminal', 'room-panel'],
     },
     deviceId: {
-      type: 'string',
+      type: ['string', 'null'],
       minLength: 1,
+    },
+    roomId: {
+      type: ['string', 'null'],
+      minLength: 1,
+    },
+    placement: {
+      type: ['string', 'null'],
+      enum: ['outside', 'inside', null],
     },
     createdAt: {
       type: 'string',
@@ -1699,7 +1707,7 @@ export const DeviceAuthorizationListResponse = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['authorizationId', 'role', 'deviceId', 'createdAt', 'lastSeenAt'],
+        required: ['authorizationId', 'role', 'createdAt', 'lastSeenAt'],
         properties: {
           authorizationId: {
             type: 'string',
@@ -1707,11 +1715,19 @@ export const DeviceAuthorizationListResponse = {
           },
           role: {
             type: 'string',
-            enum: ['tv', 'terminal'],
+            enum: ['tv', 'terminal', 'room-panel'],
           },
           deviceId: {
-            type: 'string',
+            type: ['string', 'null'],
             minLength: 1,
+          },
+          roomId: {
+            type: ['string', 'null'],
+            minLength: 1,
+          },
+          placement: {
+            type: ['string', 'null'],
+            enum: ['outside', 'inside', null],
           },
           createdAt: {
             type: 'string',
@@ -4820,7 +4836,7 @@ export const GET_api_v1_ops_device_authorizationsResponse200 = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['authorizationId', 'role', 'deviceId', 'createdAt', 'lastSeenAt'],
+        required: ['authorizationId', 'role', 'createdAt', 'lastSeenAt'],
         properties: {
           authorizationId: {
             type: 'string',
@@ -4828,11 +4844,19 @@ export const GET_api_v1_ops_device_authorizationsResponse200 = {
           },
           role: {
             type: 'string',
-            enum: ['tv', 'terminal'],
+            enum: ['tv', 'terminal', 'room-panel'],
           },
           deviceId: {
-            type: 'string',
+            type: ['string', 'null'],
             minLength: 1,
+          },
+          roomId: {
+            type: ['string', 'null'],
+            minLength: 1,
+          },
+          placement: {
+            type: ['string', 'null'],
+            enum: ['outside', 'inside', null],
           },
           createdAt: {
             type: 'string',

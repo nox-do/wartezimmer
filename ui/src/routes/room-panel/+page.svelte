@@ -68,7 +68,6 @@
   let recoveringSession = $state(false);
   let busyVisitId = $state<string | null>(null);
   let checkOutVisit = $state<RoomPanelItem | null>(null);
-  let forceLoginScreen = $state(false);
   let disconnectStream: (() => void) | null = null;
   let practiceProfile = $state(getPracticeProfileFallback());
   let reconcilingRoom = $state(false);
@@ -231,26 +230,6 @@
     }
   }
 
-  function resolveAutoOpenLoginKey(): string | null {
-    const requestedTarget = readRequestedTarget();
-    if (requestedTarget.roomId) {
-      const matches = rooms.filter((entry) => entry.roomId === requestedTarget.roomId);
-      const room =
-        findRequestedRoomEntry(
-          matches,
-          requestedTarget.roomId,
-          requestedTarget.placement,
-        ) ??
-        matches.find((entry) => entry.placement === 'outside') ??
-        matches[0] ??
-        null;
-      return room && !room.requiresPin ? roomPanelLoginKey(room) : null;
-    }
-
-    const pinFreeRooms = rooms.filter((entry) => !entry.requiresPin);
-    return pinFreeRooms.length === 1 ? roomPanelLoginKey(pinFreeRooms[0]!) : null;
-  }
-
   async function reconcileRequestedRoom(): Promise<boolean> {
     if (reconcilingRoom) {
       return false;
@@ -298,19 +277,6 @@
       lifecycle.invalidateSession();
       resetSessionScopedState();
       disconnectStreamInternal();
-
-      if (!requestedEntry.requiresPin) {
-        await completeLogin(requestedEntry, lifecycleGeneration);
-        if (
-          !isReconcileOperationCurrent(lifecycleGeneration, reconcileGeneration, requestedTarget)
-        ) {
-          return false;
-        }
-        return (
-          snapshot?.roomId === requestedTarget.roomId &&
-          snapshot.panel.placement === requestedEntry.placement
-        );
-      }
 
       snapshot = null;
       streamError = null;
@@ -413,18 +379,6 @@
     if (!lifecycle.isActiveLifecycle(lifecycleGeneration)) {
       return;
     }
-
-    const autoOpenLoginKey = resolveAutoOpenLoginKey();
-    if (autoOpenLoginKey && !forceLoginScreen) {
-      const autoOpenEntry = findRoomPanelLoginEntry(rooms, autoOpenLoginKey);
-      if (autoOpenEntry) {
-        await completeLogin(autoOpenEntry, lifecycleGeneration);
-      }
-    }
-    if (!lifecycle.isActiveLifecycle(lifecycleGeneration)) {
-      return;
-    }
-    forceLoginScreen = false;
     loading = false;
   }
 
@@ -568,7 +522,7 @@
       errorMessage = t('roomPanel.noRoomError');
       return;
     }
-    if (selectedRoom.requiresPin && pin.trim().length < 4) {
+    if (pin.trim().length < 4) {
       errorMessage = t('roomPanel.pinError');
       return;
     }
@@ -676,7 +630,6 @@
     clearReloginTimer();
     const lifecycleGeneration = lifecycle.captureLifecycle();
     lifecycle.invalidateSession();
-    forceLoginScreen = true;
     resetSessionScopedState();
     disconnectStreamInternal();
     snapshot = null;

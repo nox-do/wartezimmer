@@ -24,7 +24,7 @@ export function registerOpsRoutes(
   registerOpsDeviceAuthorizationRoutes(app, db);
   registerOpsDeviceStreamRoutes(app, db);
   registerOpsDeploymentRoutes(app, db);
-  registerOpsSettingsRoutes(app, db, sessions);
+  registerOpsSettingsRoutes(app, db);
   registerOpsMaintenanceRoutes(app, db);
   registerOpsMessagingRoutes(app, db);
   registerOpsOutboxRoutes(app, db);

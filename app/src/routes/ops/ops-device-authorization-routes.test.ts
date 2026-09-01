@@ -88,5 +88,26 @@ test('MFA lists and revokes TV/terminal grants without token hashes', async () =
   assert.equal(after.json().authorizations.length, 0);
   assert.equal(deviceGrants.authenticateDeviceAuthorization(issued.token), null);
 
+  const panel = deviceGrants.issueRoomPanelCookie('labor', 'outside');
+  const listedPanels = await app.inject({
+    method: 'GET',
+    url: '/api/v1/ops/device-authorizations',
+    headers,
+  });
+  assert.equal(listedPanels.statusCode, 200);
+  const panelBody = listedPanels.json() as {
+    authorizations: Array<{ role: string; roomId: string | null; placement: string | null }>;
+  };
+  assert.equal(panelBody.authorizations[0]?.role, 'room-panel');
+  assert.equal(panelBody.authorizations[0]?.roomId, 'labor');
+  assert.equal(panelBody.authorizations[0]?.placement, 'outside');
+
+  const revokedPanel = await app.inject({
+    method: 'POST',
+    url: `/api/v1/ops/device-authorizations/${deviceGrants.authenticateDeviceAuthorization(panel.token)?.authorizationId}/revoke`,
+    headers,
+  });
+  assert.equal(revokedPanel.statusCode, 200);
+
   await app.close();
 });

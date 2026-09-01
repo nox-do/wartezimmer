@@ -5,23 +5,41 @@ import type { DeviceAuthorizationRow } from '../../shared/db/database-device-aut
 
 type DeviceAuthorizationListItem = {
   authorizationId: string;
-  role: 'tv' | 'terminal';
-  deviceId: string;
+  role: 'tv' | 'terminal' | 'room-panel';
+  deviceId: string | null;
+  roomId: string | null;
+  placement: 'outside' | 'inside' | null;
   createdAt: string;
   lastSeenAt: string | null;
 };
 
 function toListItem(row: DeviceAuthorizationRow): DeviceAuthorizationListItem | null {
-  if (row.role !== 'tv' && row.role !== 'terminal') {
+  if (row.revokedAt) {
     return null;
   }
-  if (!row.deviceId) {
+  if (row.role === 'tv' || row.role === 'terminal') {
+    if (!row.deviceId) {
+      return null;
+    }
+    return {
+      authorizationId: row.authorizationId,
+      role: row.role,
+      deviceId: row.deviceId,
+      roomId: null,
+      placement: null,
+      createdAt: row.createdAt,
+      lastSeenAt: row.lastSeenAt,
+    };
+  }
+  if (row.role !== 'room-panel' || !row.roomId || !row.placement) {
     return null;
   }
   return {
     authorizationId: row.authorizationId,
-    role: row.role,
-    deviceId: row.deviceId,
+    role: 'room-panel',
+    deviceId: null,
+    roomId: row.roomId,
+    placement: row.placement,
     createdAt: row.createdAt,
     lastSeenAt: row.lastSeenAt,
   };
@@ -61,11 +79,7 @@ export function registerOpsDeviceAuthorizationRoutes(
     },
     async (request, reply) => {
       const existing = db.getDeviceAuthorizationById(request.params.authorizationId);
-      if (
-        !existing ||
-        existing.revokedAt ||
-        (existing.role !== 'tv' && existing.role !== 'terminal')
-      ) {
+      if (!existing || existing.revokedAt) {
         return reply.code(404).send({ code: 'NOT_FOUND', message: 'Authorization not found.' });
       }
       db.revokeDeviceAuthorizationById(request.params.authorizationId);

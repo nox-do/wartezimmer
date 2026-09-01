@@ -43,7 +43,7 @@ test('public app does not expose settings snapshot routes', async (t) => {
 
   const app = Fastify({ logger: false });
   registerClientAuth(app);
-  registerOpsSettingsRoutes(app, {} as unknown as CoreDatabase, {});
+  registerOpsSettingsRoutes(app, {} as unknown as CoreDatabase);
 
   await app.ready();
   const response = await app.inject({
@@ -69,7 +69,7 @@ test('public app does not expose device authorization import', async (t) => {
 
   const app = Fastify({ logger: false });
   registerClientAuth(app);
-  registerOpsSettingsRoutes(app, {} as unknown as CoreDatabase, {});
+  registerOpsSettingsRoutes(app, {} as unknown as CoreDatabase);
 
   await app.ready();
   const response = await app.inject({

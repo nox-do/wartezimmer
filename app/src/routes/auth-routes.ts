@@ -1,5 +1,4 @@
 import { randomBytes } from 'node:crypto';
-import { roomPanelRequiresPin } from '@praxis-flow/domain';
 import { listEnabledRoomPanelPlacements, roomPanelConfigForPlacement } from '@praxis-flow/domain';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type {
@@ -28,6 +27,7 @@ import {
   deviceKindForPairedRole,
 } from '../shared/ops/device-role.js';
 import {
+  DEVICE_AUTHORIZATION_COOKIE_TTL_MS,
   clearSessionCookieForSlot,
   type DeviceSessionRole,
   getRoomPanelSessionCookieName,
@@ -59,7 +59,13 @@ type AuthRoutesDb = {
     deviceId: string;
     token: string;
   }): { authorizationId: string };
+  enrollRoomPanelDeviceAuthorization(input: {
+    roomId: string;
+    placement: RoomPanelPlacement;
+    token: string;
+  }): { authorizationId: string };
   revokeDeviceAuthorizationByToken(token: string): boolean;
+  revokeAllRoomPanelAuthorizations(): number;
 };
 
 const DEFAULT_TV_DISPLAY_ID = defaultDeviceIdForPairedRole('tv');
@@ -88,7 +94,7 @@ function listEnabledRoomPanelRooms(db: AuthRoutesDb) {
           roomLabel: room.roomLabel,
           placement,
           mode: config.mode,
-          requiresPin: roomPanelRequiresPin(placement),
+          requiresPin: true,
         };
       }),
     );
@@ -117,15 +123,6 @@ export function registerAuthRoutes(
     windowMs:
       Number.parseInt(process.env.ROOM_PANEL_LOGIN_RATE_LIMIT_WINDOW_MS ?? '60000', 10) || 60_000,
   });
-  const roomPanelOutsideLoginRateLimiter = createRateLimiter({
-    maxRequests:
-      Number.parseInt(process.env.ROOM_PANEL_OUTSIDE_LOGIN_RATE_LIMIT_MAX ?? '20', 10) || 20,
-    windowMs:
-      Number.parseInt(process.env.ROOM_PANEL_OUTSIDE_LOGIN_RATE_LIMIT_WINDOW_MS ?? '60000', 10) ||
-      60_000,
-  });
-  const maxOutsideSessionsPerClient =
-    Number.parseInt(process.env.ROOM_PANEL_OUTSIDE_SESSION_MAX_PER_CLIENT ?? '8', 10) || 8;
   const pinChangeRateLimiter = createRateLimiter({
     maxRequests: Number.parseInt(process.env.PIN_CHANGE_RATE_LIMIT_MAX ?? '10', 10) || 10,
     windowMs:
@@ -344,47 +341,36 @@ export function registerAuthRoutes(
         return reply.code(404).send({ code: 'NOT_FOUND', message: 'Room panel room not found.' });
       }
 
-      const loginAllowed = room.requiresPin
-        ? roomPanelPinLoginRateLimiter(clientKey)
-        : roomPanelOutsideLoginRateLimiter(clientKey);
-      if (!loginAllowed) {
+      if (!roomPanelPinLoginRateLimiter(clientKey)) {
         return reply
           .code(429)
           .send({ code: 'RATE_LIMITED', message: 'Too many room panel login attempts.' });
       }
 
-      if (room.requiresPin) {
-        const config = getCurrentAuthConfig(db);
-        if (!verifyStaffPin(pin, config.roomPanelPinHash)) {
-          return reply.code(401).send({ code: 'AUTH_UNAUTHORIZED', message: 'Unauthorized.' });
-        }
+      const config = getCurrentAuthConfig(db);
+      if (!verifyStaffPin(pin, config.roomPanelPinHash)) {
+        return reply.code(401).send({ code: 'AUTH_UNAUTHORIZED', message: 'Unauthorized.' });
       }
 
-      sessions.revokeSession(readCookieValue(request, getRoomPanelSessionCookieName()));
-      if (
-        !room.requiresPin &&
-        placement === 'outside' &&
-        sessions.countRoomPanelSessions({ clientKey, placement: 'outside' }) >=
-          maxOutsideSessionsPerClient
-      ) {
-        return reply
-          .code(429)
-          .send({ code: 'RATE_LIMITED', message: 'Too many active room panel sessions.' });
+      const previousToken = readCookieValue(request, getRoomPanelSessionCookieName());
+      if (previousToken) {
+        db.revokeDeviceAuthorizationByToken(previousToken);
       }
 
-      const { token, session } = sessions.createRoomPanelSession({
+      const token = randomBytes(32).toString('base64url');
+      const row = db.enrollRoomPanelDeviceAuthorization({
         roomId: room.roomId,
         placement: room.placement,
-        clientKey,
+        token,
       });
-      setRoomPanelSessionCookie(reply, request, token, sessionConfig.sessionTtlMs);
+      setRoomPanelSessionCookie(reply, request, token);
       return reply.send({
         ok: true,
-        sessionId: session.sessionId,
-        role: session.role,
-        roomId: session.roomId,
-        placement: session.placement,
-        expiresAt: session.expiresAt,
+        sessionId: row.authorizationId,
+        role: 'room-panel' as const,
+        roomId: room.roomId,
+        placement: room.placement,
+        expiresAt: new Date(Date.now() + DEVICE_AUTHORIZATION_COOKIE_TTL_MS).toISOString(),
       });
     },
   );
@@ -459,7 +445,7 @@ export function registerAuthRoutes(
       } else if (target === 'ops') {
         sessions.revokeSessionsByRole('ops');
       } else {
-        sessions.revokeRoomPanelSessionsByPlacement('inside');
+        db.revokeAllRoomPanelAuthorizations();
       }
       return reply.send({
         ok: true,
@@ -514,7 +500,7 @@ export function registerAuthRoutes(
 
       const token = readSessionTokenForSlot(request, role);
       if (token) {
-        if (role === 'tv' || role === 'terminal') {
+        if (role === 'tv' || role === 'terminal' || role === 'room-panel') {
           db.revokeDeviceAuthorizationByToken(token);
         } else {
           sessions.revokeSession(token);

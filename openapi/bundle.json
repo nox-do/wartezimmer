@@ -432,7 +432,7 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["roomId", "placement"],
+                "required": ["roomId", "placement", "pin"],
                 "properties": {
                   "roomId": {
                     "type": "string",
@@ -445,7 +445,7 @@
                   },
                   "pin": {
                     "type": "string",
-                    "minLength": 0,
+                    "minLength": 4,
                     "maxLength": 128,
                     "description": "Required for inside panels; omit or empty for outside panels without PIN."
                   }
@@ -13715,13 +13715,7 @@
                       "items": {
                         "type": "object",
                         "additionalProperties": false,
-                        "required": [
-                          "authorizationId",
-                          "role",
-                          "deviceId",
-                          "createdAt",
-                          "lastSeenAt"
-                        ],
+                        "required": ["authorizationId", "role", "createdAt", "lastSeenAt"],
                         "properties": {
                           "authorizationId": {
                             "type": "string",
@@ -13729,11 +13723,22 @@
                           },
                           "role": {
                             "type": "string",
-                            "enum": ["tv", "terminal"]
+                            "enum": ["tv", "terminal", "room-panel"]
                           },
                           "deviceId": {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "nullable": true
+                          },
+                          "roomId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "nullable": true
+                          },
+                          "placement": {
+                            "type": "string",
+                            "enum": ["outside", "inside"],
+                            "nullable": true
                           },
                           "createdAt": {
                             "type": "string",
@@ -17559,7 +17564,7 @@
       "RoomPanelLoginRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["roomId", "placement"],
+        "required": ["roomId", "placement", "pin"],
         "properties": {
           "roomId": {
             "type": "string",
@@ -17572,7 +17577,7 @@
           },
           "pin": {
             "type": "string",
-            "minLength": 0,
+            "minLength": 4,
             "maxLength": 128,
             "description": "Required for inside panels; omit or empty for outside panels without PIN."
           }
@@ -22297,7 +22302,7 @@
       "DeviceAuthorizationListItem": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["authorizationId", "role", "deviceId", "createdAt", "lastSeenAt"],
+        "required": ["authorizationId", "role", "createdAt", "lastSeenAt"],
         "properties": {
           "authorizationId": {
             "type": "string",
@@ -22305,11 +22310,22 @@
           },
           "role": {
             "type": "string",
-            "enum": ["tv", "terminal"]
+            "enum": ["tv", "terminal", "room-panel"]
           },
           "deviceId": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "nullable": true
+          },
+          "roomId": {
+            "type": "string",
+            "minLength": 1,
+            "nullable": true
+          },
+          "placement": {
+            "type": "string",
+            "enum": ["outside", "inside"],
+            "nullable": true
           },
           "createdAt": {
             "type": "string",
@@ -22332,7 +22348,7 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["authorizationId", "role", "deviceId", "createdAt", "lastSeenAt"],
+              "required": ["authorizationId", "role", "createdAt", "lastSeenAt"],
               "properties": {
                 "authorizationId": {
                   "type": "string",
@@ -22340,11 +22356,22 @@
                 },
                 "role": {
                   "type": "string",
-                  "enum": ["tv", "terminal"]
+                  "enum": ["tv", "terminal", "room-panel"]
                 },
                 "deviceId": {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 1,
+                  "nullable": true
+                },
+                "roomId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "nullable": true
+                },
+                "placement": {
+                  "type": "string",
+                  "enum": ["outside", "inside"],
+                  "nullable": true
                 },
                 "createdAt": {
                   "type": "string",

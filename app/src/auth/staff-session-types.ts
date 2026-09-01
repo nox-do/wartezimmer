@@ -32,7 +32,6 @@ export type RoomPanelSession = {
   role: RoomPanelSessionRole;
   roomId: string;
   placement: RoomPanelPlacement;
-  clientKey?: string;
   createdAt: string;
   lastSeenAt: string;
   idleExpiresAt: string;
@@ -55,22 +54,10 @@ export type StaffPinHashConfig = Pick<
 
 export type StaffSessionManager = {
   createStaffSession(role: StaffRole, now?: Date): { token: string; session: StaffSession };
-  createRoomPanelSession(
-    input: { roomId: string; placement: RoomPanelPlacement; clientKey?: string },
-    now?: Date,
-  ): { token: string; session: RoomPanelSession };
   getSession(token: string | null, now?: Date): AuthSession | null;
   refreshSession(sessionId: string, now?: Date): AuthSession | null;
-  countRoomPanelSessions(input: { clientKey: string; placement?: RoomPanelPlacement }): number;
   revokeSession(token: string | null): void;
-  revokeSessionsByRole(role: StaffRole | RoomPanelSessionRole, exceptSessionId?: string): void;
-  revokeRoomPanelSessions(roomId: string, exceptSessionId?: string): void;
-  revokeRoomPanelSessionsByPlacement(placement: RoomPanelPlacement): void;
-  revokeRoomPanelSessionPlacement(
-    roomId: string,
-    placement: RoomPanelPlacement,
-    exceptSessionId?: string,
-  ): void;
+  revokeSessionsByRole(role: StaffRole, exceptSessionId?: string): void;
   subscribeSessionRevocation(sessionId: string, listener: () => void): () => void;
 };
 

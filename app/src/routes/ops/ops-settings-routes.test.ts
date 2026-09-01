@@ -55,7 +55,6 @@ test('GET /api/v1/ops/settings/capabilities returns simple routing capabilities'
         },
       }),
     } as unknown as CoreDatabase,
-    {},
   );
 
   await app.ready();
@@ -93,7 +92,6 @@ test('GET /api/v1/ops/settings/capabilities returns complex routing capabilities
         },
       }),
     } as unknown as CoreDatabase,
-    {},
   );
 
   await app.ready();

@@ -4,7 +4,6 @@ import Fastify from 'fastify';
 import { registerClientAuth } from './client-auth.js';
 import {
   createStaffSessionManager,
-  getRoomPanelSessionCookieName,
   getStaffSessionCookieName,
   type StaffSessionManager,
 } from './staff-session-auth.js';
@@ -97,12 +96,11 @@ function deviceCookie(
   return `${issued.cookieName}=${issued.token}`;
 }
 
-function roomPanelCookie(sessions: StaffSessionManager): string {
-  const { token } = sessions.createRoomPanelSession({
-    roomId: 'labor',
-    placement: 'outside',
-  });
-  return `${getRoomPanelSessionCookieName()}=${token}`;
+function roomPanelCookie(
+  deviceGrants: ReturnType<typeof createInMemoryDeviceGrantStore>,
+): string {
+  const issued = deviceGrants.issueRoomPanelCookie();
+  return `${issued.cookieName}=${issued.token}`;
 }
 
 beforeEach(() => {
@@ -149,8 +147,8 @@ test('allowed role reaches route handler', async () => {
 
 test('room-panel session reaches queue but is denied ops routes', async () => {
   enableTestAuth();
-  const { app, sessions } = await buildProbeApp();
-  const cookie = roomPanelCookie(sessions);
+  const { app, deviceGrants } = await buildProbeApp();
+  const cookie = roomPanelCookie(deviceGrants);
 
   const queueResponse = await app.inject({
     method: 'GET',
@@ -369,60 +367,31 @@ test('staff sessions enforce idle timeout and absolute expiry', () => {
   assert.equal(absoluteManager.getSession(absoluteToken, new Date(now.getTime() + 10_001)), null);
 });
 
-test('an active stream can refresh idle expiry but not absolute session expiry', () => {
+test('an active staff stream can refresh idle expiry but not absolute session expiry', () => {
   const manager = createStaffSessionManager({ sessionTtlMs: 10_000, sessionIdleTtlMs: 1_000 });
   const now = new Date('2026-06-08T10:00:00.000Z');
-  const { session } = manager.createRoomPanelSession({ roomId: 'labor', placement: 'inside' }, now);
+  const { session } = manager.createStaffSession('ops', now);
 
   assert.equal(
     manager.refreshSession(session.sessionId, new Date(now.getTime() + 500))?.role,
-    'room-panel',
+    'ops',
   );
   assert.equal(
     manager.refreshSession(session.sessionId, new Date(now.getTime() + 1_400))?.role,
-    'room-panel',
+    'ops',
   );
   assert.equal(manager.refreshSession(session.sessionId, new Date(now.getTime() + 10_000)), null);
 });
 
-test('room-panel session operations can target placement without affecting outside panels', () => {
-  const manager = createStaffSessionManager({ sessionTtlMs: 10_000 });
-  const inside = manager.createRoomPanelSession({
-    roomId: 'labor',
-    placement: 'inside',
-    clientKey: 'test-client',
-  });
-  const outside = manager.createRoomPanelSession({
-    roomId: 'labor',
-    placement: 'outside',
-    clientKey: 'test-client',
-  });
+test('room-panel grant revoke can target one room placement without affecting siblings', () => {
+  const deviceGrants = createInMemoryDeviceGrantStore();
+  const inside = deviceGrants.issueRoomPanelCookie('labor', 'inside');
+  const outside = deviceGrants.issueRoomPanelCookie('labor', 'outside');
 
-  assert.equal(manager.countRoomPanelSessions({ clientKey: 'test-client' }), 2);
-  manager.revokeRoomPanelSessionsByPlacement('inside');
+  deviceGrants.revokeRoomPanelAuthorizationsByPlacement('labor', 'inside');
 
-  assert.equal(manager.getSession(inside.token), null);
-  assert.equal(manager.getSession(outside.token)?.sessionId, outside.session.sessionId);
-  assert.equal(manager.countRoomPanelSessions({ clientKey: 'test-client' }), 1);
-});
-
-test('room-panel session revoke can target one room placement without affecting siblings', () => {
-  const manager = createStaffSessionManager({ sessionTtlMs: 10_000 });
-  const inside = manager.createRoomPanelSession({
-    roomId: 'labor',
-    placement: 'inside',
-    clientKey: 'test-client',
-  });
-  const outside = manager.createRoomPanelSession({
-    roomId: 'labor',
-    placement: 'outside',
-    clientKey: 'test-client',
-  });
-
-  manager.revokeRoomPanelSessionPlacement('labor', 'inside');
-
-  assert.equal(manager.getSession(inside.token), null);
-  assert.equal(manager.getSession(outside.token)?.sessionId, outside.session.sessionId);
+  assert.equal(deviceGrants.authenticateDeviceAuthorization(inside.token), null);
+  assert.equal(deviceGrants.authenticateDeviceAuthorization(outside.token)?.placement, 'outside');
 });
 
 test('session revocation notifies listeners and can preserve the current MFA session', () => {

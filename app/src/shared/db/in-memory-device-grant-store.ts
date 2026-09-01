@@ -1,13 +1,18 @@
 import { randomBytes } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import type { DeviceSessionRole } from '../../auth/staff-session-types.js';
+import type { RoomPanelPlacement } from './db-types.js';
 import {
   authenticateDeviceAuthorization,
   createDeviceAuthorizationDeps,
+  enrollRoomPanelDeviceAuthorization,
   getDeviceAuthorizationById,
   listActiveDeviceAuthorizations,
   replaceSlotDeviceAuthorization,
+  revokeAllRoomPanelAuthorizations,
   revokeDeviceAuthorizationById,
+  revokeRoomPanelAuthorizationsByPlacement,
+  revokeRoomPanelAuthorizationsByRoom,
   touchDeviceAuthorization,
   type DeviceAuthorizationRow,
   type DeviceSlotRole,
@@ -28,9 +33,24 @@ export type InMemoryDeviceGrantStore = {
     deviceId: string;
     token: string;
   }): DeviceAuthorizationRow;
+  enrollRoomPanelDeviceAuthorization(input: {
+    roomId: string;
+    placement: RoomPanelPlacement;
+    token: string;
+  }): DeviceAuthorizationRow;
   revokeDeviceAuthorizationById(authorizationId: string): boolean;
   revokeDeviceAuthorizationByToken(token: string): boolean;
+  revokeRoomPanelAuthorizationsByRoom(roomId: string): number;
+  revokeRoomPanelAuthorizationsByPlacement(
+    roomId: string,
+    placement: RoomPanelPlacement,
+  ): number;
+  revokeAllRoomPanelAuthorizations(): number;
   issueDeviceCookie(role: DeviceSessionRole, deviceId?: string): { token: string; cookieName: string };
+  issueRoomPanelCookie(
+    roomId?: string,
+    placement?: RoomPanelPlacement,
+  ): { token: string; cookieName: string };
 };
 
 export function createInMemoryDeviceGrantStore(): InMemoryDeviceGrantStore {
@@ -66,6 +86,8 @@ export function createInMemoryDeviceGrantStore(): InMemoryDeviceGrantStore {
     listActiveDeviceAuthorizations: () => listActiveDeviceAuthorizations(deps),
     replaceSlotDeviceAuthorization: replaceSlot,
     createSlotDeviceAuthorization: replaceSlot,
+    enrollRoomPanelDeviceAuthorization: (input) =>
+      enrollRoomPanelDeviceAuthorization(deps, input),
     revokeDeviceAuthorizationById: (authorizationId) =>
       revokeDeviceAuthorizationById(deps, authorizationId),
     revokeDeviceAuthorizationByToken(token) {
@@ -75,11 +97,21 @@ export function createInMemoryDeviceGrantStore(): InMemoryDeviceGrantStore {
       }
       return revokeDeviceAuthorizationById(deps, row.authorizationId);
     },
+    revokeRoomPanelAuthorizationsByRoom: (roomId) =>
+      revokeRoomPanelAuthorizationsByRoom(deps, roomId),
+    revokeRoomPanelAuthorizationsByPlacement: (roomId, placement) =>
+      revokeRoomPanelAuthorizationsByPlacement(deps, roomId, placement),
+    revokeAllRoomPanelAuthorizations: () => revokeAllRoomPanelAuthorizations(deps),
     issueDeviceCookie(role, deviceId = `test-${role}`) {
       const token = randomBytes(32).toString('base64url');
       replaceSlot({ role, deviceId, token });
       const cookieName = role === 'tv' ? 'pf_tv_device_session' : 'pf_terminal_device_session';
       return { token, cookieName };
+    },
+    issueRoomPanelCookie(roomId = 'labor', placement = 'inside') {
+      const token = randomBytes(32).toString('base64url');
+      enrollRoomPanelDeviceAuthorization(deps, { roomId, placement, token });
+      return { token, cookieName: 'pf_room_panel_session' };
     },
   };
 }

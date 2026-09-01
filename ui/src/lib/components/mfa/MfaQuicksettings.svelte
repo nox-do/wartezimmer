@@ -70,6 +70,15 @@
   const tvGrant = $derived(
     authorizations.find((row) => row.role === 'tv' && row.deviceId === WAITING_ROOM_DEVICE_ID),
   );
+  const panelGrants = $derived(authorizations.filter((row) => row.role === 'room-panel'));
+
+  function formatGrantCreatedAt(iso: string): string {
+    const ms = Date.parse(iso);
+    if (!Number.isFinite(ms)) {
+      return iso;
+    }
+    return new Date(ms).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+  }
 
   async function loadAuthorizations() {
     const result = await fetchDeviceAuthorizations();
@@ -281,6 +290,31 @@
       </button>
     {/if}
   </section>
+
+  {#if panelGrants.length > 0}
+    <section class="panel panel--sm panel--muted">
+      <h3 class="panel__title panel__title--compact">{t('mfa.qsPanels')}</h3>
+      {#each panelGrants as grant (grant.authorizationId)}
+        <div class="qs-panel-desc">
+          <span>
+            {grant.roomId}
+            ·
+            {grant.placement === 'inside' ? t('mfa.devicePanelInside') : t('mfa.devicePanelOutside')}
+            ·
+            {formatGrantCreatedAt(grant.createdAt)}
+          </span>
+          <button
+            type="button"
+            class="qs-panel-desc"
+            disabled={unpairBusyId === grant.authorizationId}
+            onclick={() => void unpair(grant.authorizationId)}
+          >
+            {unpairBusyId === grant.authorizationId ? t('mfa.deviceUnpairBusy') : t('mfa.deviceUnpair')}
+          </button>
+        </div>
+      {/each}
+    </section>
+  {/if}
 
   <div class="qs-divider" role="separator"></div>
 
