@@ -8,7 +8,8 @@ Stand: 2026-09-01
 - Pairing: Confirm nur Registry; Replace beim Poll; Cookie Max-Age 365d gleitet
 - Poll nach Confirm ignoriert Pairing-TTL (nur unbestätigt expired)
 - SSE writeHead Set-Cookie; Ping prüft Revoke
-- MFA-Liste + Entkoppeln in Quicksettings; 403 startet kein Re-Pair
+- MFA-Liste + Entkoppeln in Quicksettings; nach Confirm warten auf Poll-Grant
+- 403 startet kein Re-Pair
 - `database-device-authorizations.ts` leicht gestrafft
 - Als Nächstes: Schnitt 3 Room-Panels
 

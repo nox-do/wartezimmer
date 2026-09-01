@@ -1,7 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { Settings, UserPlus } from '@lucide/svelte';
-  import { confirmDevicePairing } from '$lib/auth/device-pairing-client';
+  import {
+    confirmDevicePairing,
+    type DevicePairingKind,
+  } from '$lib/auth/device-pairing-client';
   import { resolve } from '$app/paths';
   import PairingConfirmForm from '$lib/components/auth/PairingConfirmForm.svelte';
   import WaitingListFilters from '$lib/components/mfa/WaitingListFilters.svelte';
@@ -56,6 +59,10 @@
 
   let authorizations = $state<DeviceAuthorizationListItem[]>([]);
   let unpairBusyId = $state<string | null>(null);
+  let grantWatchGeneration = { tv: 0, terminal: 0 };
+
+  const GRANT_WATCH_MS = 60_000;
+  const GRANT_WATCH_INTERVAL_MS = 500;
 
   const terminalGrant = $derived(
     authorizations.find((row) => row.role === 'terminal' && row.deviceId === TERMINAL_DEVICE_ID),
@@ -68,7 +75,42 @@
     const result = await fetchDeviceAuthorizations();
     if (result.ok) {
       authorizations = result.data.authorizations;
+      return result.data.authorizations;
     }
+    return authorizations;
+  }
+
+  function hasGrant(
+    rows: DeviceAuthorizationListItem[],
+    kind: DevicePairingKind,
+    deviceId: string,
+  ): boolean {
+    return rows.some((row) => row.role === kind && row.deviceId === deviceId);
+  }
+
+  function watchForGrant(kind: DevicePairingKind, deviceId: string) {
+    const generation = ++grantWatchGeneration[kind];
+    void (async () => {
+      const deadline = Date.now() + GRANT_WATCH_MS;
+      while (generation === grantWatchGeneration[kind] && Date.now() < deadline) {
+        const rows = await loadAuthorizations();
+        if (generation !== grantWatchGeneration[kind]) {
+          return;
+        }
+        if (hasGrant(rows, kind, deviceId)) {
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, GRANT_WATCH_INTERVAL_MS));
+      }
+    })();
+  }
+
+  async function confirmAndWatch(kind: DevicePairingKind, deviceId: string, code: string) {
+    const result = await confirmDevicePairing(kind, code);
+    if (result.ok) {
+      watchForGrant(kind, deviceId);
+    }
+    return result;
   }
 
   async function unpair(authorizationId: string) {
@@ -91,6 +133,11 @@
 
   onMount(() => {
     void loadAuthorizations();
+  });
+
+  onDestroy(() => {
+    grantWatchGeneration.tv += 1;
+    grantWatchGeneration.terminal += 1;
   });
 
   function handleOpenMfaCheckin() {
@@ -165,7 +212,7 @@
         errorKey="terminal.pairingConfirmError"
         deviceId={TERMINAL_DEVICE_ID}
         showSuccessMessage={false}
-        confirm={(code) => confirmDevicePairing('terminal', code)}
+        confirm={(code) => confirmAndWatch('terminal', TERMINAL_DEVICE_ID, code)}
       />
     {:else if terminalPhase === 'connecting'}
       <p class="qs-panel-desc qs-connecting" aria-live="polite" aria-busy="true">
@@ -211,7 +258,7 @@
         errorKey="tv.pairingConfirmError"
         deviceId={WAITING_ROOM_DEVICE_ID}
         showSuccessMessage={false}
-        confirm={(code) => confirmDevicePairing('tv', code)}
+        confirm={(code) => confirmAndWatch('tv', WAITING_ROOM_DEVICE_ID, code)}
       />
     {:else if tvPhase === 'connecting'}
       <p class="qs-panel-desc qs-connecting" aria-live="polite" aria-busy="true">
