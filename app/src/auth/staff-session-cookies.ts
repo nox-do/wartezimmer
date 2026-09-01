@@ -13,6 +13,8 @@ const DEVICE_SESSION_COOKIE_BY_ROLE: Record<DeviceSessionRole, string> = {
 };
 const ROOM_PANEL_SESSION_COOKIE = 'pf_room_panel_session';
 
+export const DEVICE_AUTHORIZATION_COOKIE_TTL_MS = 365 * 24 * 60 * 60 * 1000;
+
 function tokenCookieOptions(request: FastifyRequest, maxAgeSeconds: number): string {
   const forwardedProto = request.headers['x-forwarded-proto'];
   const isHttps =
@@ -104,18 +106,39 @@ export function setStaffSessionCookie(
   );
 }
 
+export function formatDeviceSessionCookie(
+  request: FastifyRequest,
+  role: DeviceSessionRole,
+  token: string,
+  ttlMs: number = DEVICE_AUTHORIZATION_COOKIE_TTL_MS,
+): string {
+  const maxAgeSeconds = Math.floor(ttlMs / 1000);
+  return `${getDeviceSessionCookieName(role)}=${encodeURIComponent(token)}; ${tokenCookieOptions(request, maxAgeSeconds)}`;
+}
+
 export function setDeviceSessionCookie(
   reply: FastifyReply,
   request: FastifyRequest,
   role: DeviceSessionRole,
   token: string,
-  ttlMs: number,
+  ttlMs: number = DEVICE_AUTHORIZATION_COOKIE_TTL_MS,
 ): void {
-  const maxAgeSeconds = Math.floor(ttlMs / 1000);
-  appendSetCookie(
-    reply,
-    `${getDeviceSessionCookieName(role)}=${encodeURIComponent(token)}; ${tokenCookieOptions(request, maxAgeSeconds)}`,
-  );
+  appendSetCookie(reply, formatDeviceSessionCookie(request, role, token, ttlMs));
+}
+
+export function withDeviceGrantSetCookie(
+  request: FastifyRequest,
+  headers: Record<string, string>,
+): Record<string, string> {
+  const token = request.deviceGrantToken;
+  const session = request.authSession;
+  if (token && session?.kind === 'device') {
+    return {
+      ...headers,
+      'Set-Cookie': formatDeviceSessionCookie(request, session.role, token),
+    };
+  }
+  return headers;
 }
 
 export function setRoomPanelSessionCookie(

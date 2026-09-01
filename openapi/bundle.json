@@ -13684,6 +13684,388 @@
         }
       }
     },
+    "/api/v1/ops/device-authorizations": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
+      "get": {
+        "summary": "List active TV and terminal device authorizations",
+        "description": "MFA can list and revoke durable TV and terminal grants. Room-panel grants are not included.",
+        "responses": {
+          "200": {
+            "description": "Active TV and terminal grants",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["authorizations"],
+                  "properties": {
+                    "authorizations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "authorizationId",
+                          "role",
+                          "deviceId",
+                          "createdAt",
+                          "lastSeenAt"
+                        ],
+                        "properties": {
+                          "authorizationId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": ["tv", "terminal"]
+                          },
+                          "deviceId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "lastSeenAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ops/device-authorizations/{authorizationId}/revoke": {
+      "parameters": [
+        {
+          "name": "X-Client-Role",
+          "in": "header",
+          "required": true,
+          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
+          "schema": {
+            "type": "string",
+            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
+          }
+        }
+      ],
+      "post": {
+        "summary": "Revoke one TV or terminal device authorization",
+        "parameters": [
+          {
+            "name": "authorizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Grant revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["ok"],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Grant not found or already revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ops/device-authorizations/import": {
+      "post": {
+        "summary": "Import active device authorizations (maintenance listener)",
+        "description": "Writes hashed device grants into the fresh SQLite after settings import.\nUsed only by `.pfupdate` cutover. Restore must not call this endpoint.\nMaintenance listener only; no session auth.\n",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["authorizations"],
+                "properties": {
+                  "authorizations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "authorizationId",
+                        "role",
+                        "deviceId",
+                        "roomId",
+                        "placement",
+                        "tokenHash",
+                        "createdAt",
+                        "lastSeenAt",
+                        "updatedAt"
+                      ],
+                      "properties": {
+                        "authorizationId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": ["tv", "terminal", "room-panel"]
+                        },
+                        "deviceId": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "roomId": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "placement": {
+                          "type": "string",
+                          "nullable": true,
+                          "enum": ["outside", "inside"]
+                        },
+                        "tokenHash": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "lastSeenAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rows imported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["ok", "imported"],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "imported": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid rows or constraint failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ops/settings/onboarding/verify": {
       "parameters": [
         {
@@ -21774,6 +22156,218 @@
               "CATALOG_INTEGRITY_FAILED",
               "IMPORT_FAILED"
             ]
+          }
+        }
+      },
+      "DeviceAuthorizationCopyRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "authorizationId",
+          "role",
+          "deviceId",
+          "roomId",
+          "placement",
+          "tokenHash",
+          "createdAt",
+          "lastSeenAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "authorizationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "enum": ["tv", "terminal", "room-panel"]
+          },
+          "deviceId": {
+            "type": "string",
+            "nullable": true
+          },
+          "roomId": {
+            "type": "string",
+            "nullable": true
+          },
+          "placement": {
+            "type": "string",
+            "nullable": true,
+            "enum": ["outside", "inside"]
+          },
+          "tokenHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DeviceAuthorizationImportRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["authorizations"],
+        "properties": {
+          "authorizations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "authorizationId",
+                "role",
+                "deviceId",
+                "roomId",
+                "placement",
+                "tokenHash",
+                "createdAt",
+                "lastSeenAt",
+                "updatedAt"
+              ],
+              "properties": {
+                "authorizationId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "role": {
+                  "type": "string",
+                  "enum": ["tv", "terminal", "room-panel"]
+                },
+                "deviceId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "roomId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "placement": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": ["outside", "inside"]
+                },
+                "tokenHash": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "lastSeenAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          }
+        }
+      },
+      "DeviceAuthorizationImportReport": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ok", "imported"],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "imported": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "DeviceAuthorizationListItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["authorizationId", "role", "deviceId", "createdAt", "lastSeenAt"],
+        "properties": {
+          "authorizationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "enum": ["tv", "terminal"]
+          },
+          "deviceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "DeviceAuthorizationListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["authorizations"],
+        "properties": {
+          "authorizations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["authorizationId", "role", "deviceId", "createdAt", "lastSeenAt"],
+              "properties": {
+                "authorizationId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "role": {
+                  "type": "string",
+                  "enum": ["tv", "terminal"]
+                },
+                "deviceId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "lastSeenAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "DeviceAuthorizationRevokeReport": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ok"],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
           }
         }
       },

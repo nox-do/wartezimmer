@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { roomPanelRequiresPin } from '@praxis-flow/domain';
 import { listEnabledRoomPanelPlacements, roomPanelConfigForPlacement } from '@praxis-flow/domain';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
@@ -53,6 +54,12 @@ type AuthRoutesDb = {
   getOpsSettings(): Pick<OpsSettings, 'rooms'>;
   getAuthSettings(): AuthSettings;
   updateAuthPinHash(target: AuthPinTarget, pinHash: string): AuthSettings;
+  replaceSlotDeviceAuthorization(input: {
+    role: DeviceSessionRole;
+    deviceId: string;
+    token: string;
+  }): { authorizationId: string };
+  revokeDeviceAuthorizationByToken(token: string): boolean;
 };
 
 const DEFAULT_TV_DISPLAY_ID = defaultDeviceIdForPairedRole('tv');
@@ -191,9 +198,8 @@ export function registerAuthRoutes(
         };
       }
 
-      sessions.revokeDeviceSessions(role, pairing.displayId);
-      const { token, session } = sessions.createDeviceSession(role, pairing.displayId);
-      attachDeviceSessionToPairing(role, pairing, token, session.sessionId);
+      const token = randomBytes(32).toString('base64url');
+      attachDeviceSessionToPairing(role, pairing, token, pairing.pairingId);
 
       return {
         ok: true,
@@ -214,17 +220,16 @@ export function registerAuthRoutes(
         return reply.code(404).send({ code: 'NOT_FOUND', message: 'Pairing request not found.' });
       }
 
-      if (pairing.expiresAtMs <= Date.now()) {
-        removeDevicePairing(pairingId);
-        return {
-          pairingId,
-          status: 'expired',
-          paired: false,
-          expiresAt: new Date(pairing.expiresAtMs).toISOString(),
-        };
-      }
-
       if (!pairing.deviceToken) {
+        if (pairing.expiresAtMs <= Date.now()) {
+          removeDevicePairing(pairingId);
+          return {
+            pairingId,
+            status: 'expired',
+            paired: false,
+            expiresAt: new Date(pairing.expiresAtMs).toISOString(),
+          };
+        }
         recordPairingDevicePresence(role, pairing.displayId);
         return {
           pairingId,
@@ -234,13 +239,18 @@ export function registerAuthRoutes(
         };
       }
 
-      setDeviceSessionCookie(reply, request, role, pairing.deviceToken, sessionConfig.sessionTtlMs);
+      const row = db.replaceSlotDeviceAuthorization({
+        role,
+        deviceId: pairing.displayId,
+        token: pairing.deviceToken,
+      });
+      setDeviceSessionCookie(reply, request, role, pairing.deviceToken);
       removeDevicePairing(pairingId);
       return {
         pairingId,
         status: 'paired',
         paired: true,
-        sessionId: pairing.sessionId,
+        sessionId: row.authorizationId,
       };
     };
   }
@@ -504,7 +514,11 @@ export function registerAuthRoutes(
 
       const token = readSessionTokenForSlot(request, role);
       if (token) {
-        sessions.revokeSession(token);
+        if (role === 'tv' || role === 'terminal') {
+          db.revokeDeviceAuthorizationByToken(token);
+        } else {
+          sessions.revokeSession(token);
+        }
       }
       clearSessionCookieForSlot(reply, request, role);
       return reply.send({ ok: true });

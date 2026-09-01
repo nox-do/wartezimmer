@@ -8,8 +8,12 @@ import {
   getAuthSettingsSeedConfig,
   getStaffSessionAuthConfig,
   readCookieValue,
+  setDeviceSessionCookie,
+  type DeviceSession,
+  type DeviceSessionRole,
   type StaffSessionManager,
 } from './staff-session-auth.js';
+import type { DeviceAuthorizationRow } from '../shared/db/database-device-authorizations.js';
 import { trustProxyHeaders } from '../http/trusted-proxy.js';
 
 export type ClientRole = 'terminal' | 'mfa' | 'tv' | 'captive' | 'ops' | 'room-panel';
@@ -17,8 +21,14 @@ export type ClientRole = 'terminal' | 'mfa' | 'tv' | 'captive' | 'ops' | 'room-p
 declare module 'fastify' {
   interface FastifyRequest {
     clientRole?: ClientRole;
+    deviceGrantToken?: string;
   }
 }
+
+export type DeviceGrantStore = {
+  authenticateDeviceAuthorization(token: string): DeviceAuthorizationRow | null;
+  touchDeviceAuthorization(authorizationId: string): DeviceAuthorizationRow | null;
+};
 
 type AuthConfig = {
   enabled: boolean;
@@ -30,6 +40,7 @@ type AuthConfig = {
 
 type RegisterClientAuthOptions = {
   staffSessions?: StaffSessionManager;
+  deviceGrants?: DeviceGrantStore;
 };
 
 const DEFAULT_CAPTIVE_KEYS = new Set(['change-me-captive-key']);
@@ -110,6 +121,52 @@ function getDefaultStaffSessionManager(): StaffSessionManager {
     sessionTtlMs: config.sessionTtlMs,
     sessionIdleTtlMs: config.sessionIdleTtlMs,
   });
+}
+
+const DEVICE_GRANT_EXPIRES_AT = '9999-12-31T23:59:59.000Z';
+
+function deviceSessionFromGrant(row: DeviceAuthorizationRow): DeviceSession | null {
+  if (row.role !== 'tv' && row.role !== 'terminal') {
+    return null;
+  }
+  if (!row.deviceId) {
+    return null;
+  }
+  return {
+    kind: 'device',
+    sessionId: row.authorizationId,
+    role: row.role,
+    deviceId: row.deviceId,
+    createdAt: row.createdAt,
+    lastSeenAt: row.lastSeenAt ?? row.createdAt,
+    idleExpiresAt: DEVICE_GRANT_EXPIRES_AT,
+    expiresAt: DEVICE_GRANT_EXPIRES_AT,
+  };
+}
+
+function isDeviceSlotRole(role: CookieSlotRole): role is DeviceSessionRole {
+  return role === 'tv' || role === 'terminal';
+}
+
+function resolveRoleFromDeviceGrant(
+  request: FastifyRequest,
+  deviceGrants: DeviceGrantStore,
+  requestedRole: DeviceSessionRole,
+): ClientRole | null {
+  const token = readCookieValue(request, getSessionCookieNameForSlot(requestedRole));
+  if (!token) {
+    return null;
+  }
+  const row = deviceGrants.authenticateDeviceAuthorization(token);
+  const session = row ? deviceSessionFromGrant(row) : null;
+  if (!session || session.role !== requestedRole) {
+    return null;
+  }
+  deviceGrants.touchDeviceAuthorization(session.sessionId);
+  request.authSession = session;
+  request.clientRole = session.role;
+  request.deviceGrantToken = token;
+  return session.role;
 }
 
 function sessionMatchesSlotRole(
@@ -282,6 +339,7 @@ export function registerClientAuth(
   app.decorateRequest('staffSession', undefined);
   const config = getAuthConfig();
   const staffSessions = options.staffSessions ?? getDefaultStaffSessionManager();
+  const deviceGrants = options.deviceGrants;
 
   if (!config.enabled) {
     if (config.missingRoleKeys.length > 0) {
@@ -338,7 +396,15 @@ export function registerClientAuth(
         });
         return;
       }
-      sessionRole = resolveRoleFromSessionCookie(request, staffSessions, requestedRole);
+      if (isDeviceSlotRole(requestedRole)) {
+        if (!deviceGrants) {
+          sessionRole = null;
+        } else {
+          sessionRole = resolveRoleFromDeviceGrant(request, deviceGrants, requestedRole);
+        }
+      } else {
+        sessionRole = resolveRoleFromSessionCookie(request, staffSessions, requestedRole);
+      }
     }
 
     const role = bearerRole ?? localTvRole ?? sessionRole;
@@ -381,6 +447,19 @@ export function registerClientAuth(
       });
       return;
     }
+  });
+
+  app.addHook('onSend', async (request, reply, payload) => {
+    const token = request.deviceGrantToken;
+    const session = request.authSession;
+    if (token && session?.kind === 'device' && reply.statusCode < 400) {
+      try {
+        setDeviceSessionCookie(reply, request, session.role, token);
+      } catch {
+        // Hijacked SSE already sent headers; Set-Cookie is on writeHead instead.
+      }
+    }
+    return payload;
   });
 }
 

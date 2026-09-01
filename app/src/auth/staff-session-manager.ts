@@ -1,8 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type {
   AuthSession,
-  DeviceSession,
-  DeviceSessionRole,
   RoomPanelSession,
   RoomPanelSessionRole,
   StaffRole,
@@ -89,26 +87,6 @@ export function createStaffSessionManager(options: {
         lastSeenAt: createdAt,
         idleExpiresAt,
         expiresAt,
-      };
-      sessionsByTokenHash.set(sha256(token), session);
-      return { token, session };
-    },
-
-    createDeviceSession(role: DeviceSessionRole, deviceId: string, now = new Date()) {
-      pruneExpired(now);
-      const token = randomBytes(32).toString('base64url');
-      const createdAt = now.toISOString();
-      const expiresAt = new Date(now.getTime() + options.sessionTtlMs).toISOString();
-      const idleExpiresAt = idleExpiryFor(now, expiresAt);
-      const session: DeviceSession = {
-        kind: 'device',
-        sessionId: randomUUID(),
-        role,
-        createdAt,
-        lastSeenAt: createdAt,
-        idleExpiresAt,
-        expiresAt,
-        deviceId,
       };
       sessionsByTokenHash.set(sha256(token), session);
       return { token, session };
@@ -214,14 +192,6 @@ export function createStaffSessionManager(options: {
           session.placement === placement &&
           session.sessionId !== exceptSessionId
         ) {
-          deleteSession(tokenHash, session);
-        }
-      }
-    },
-
-    revokeDeviceSessions(role: DeviceSessionRole, deviceId: string) {
-      for (const [tokenHash, session] of sessionsByTokenHash) {
-        if (session.kind === 'device' && session.role === role && session.deviceId === deviceId) {
           deleteSession(tokenHash, session);
         }
       }

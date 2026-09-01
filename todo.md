@@ -2,6 +2,23 @@
 
 Stand: 2026-09-01
 
+## 2026-09-01 — Device-Authorizations Schnitt 2
+
+- TV/Terminal-Auth liest `device_authorizations`; Device-Sessions aus Staff-Manager entfernt
+- Pairing: Confirm nur Registry; Replace beim Poll; Cookie Max-Age 365d gleitet
+- Poll nach Confirm ignoriert Pairing-TTL (nur unbestätigt expired)
+- SSE writeHead Set-Cookie; Ping prüft Revoke
+- MFA-Liste + Entkoppeln in Quicksettings; 403 startet kein Re-Pair
+- `database-device-authorizations.ts` leicht gestrafft
+- Als Nächstes: Schnitt 3 Room-Panels
+
+## 2026-09-01 — Device-Authorizations Schnitt 1
+
+- Tabelle `device_authorizations` in Baseline; DB-Funktionen; Maintenance-Import
+- Update-Cutover kopiert aus Aside via `:8082`; Restore ohne Hook
+- Dev-Volume/SQLite neu anlegen (nicht live)
+- Als Nächstes: Schnitt 2 TV/Terminal-Auth
+
 ## 2026-09-01 — Device-Authorizations (Plan nachgezogen)
 
 - Nicht live: Schema in Baseline, lokale Dev-DB neu initialisieren

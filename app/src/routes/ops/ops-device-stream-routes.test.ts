@@ -5,7 +5,6 @@ import Fastify from 'fastify';
 import { registerClientAuth } from '../../auth/client-auth.js';
 import {
   createStaffSessionManager,
-  getDeviceSessionCookieName,
   getStaffSessionCookieName,
 } from '../../auth/staff-session-auth.js';
 import {
@@ -13,6 +12,8 @@ import {
   resetDevicePresenceForTests,
   TERMINAL_DEVICE_ID,
 } from '../../shared/ops/device-presence-registry.js';
+import { createInMemoryDeviceGrantStore } from '../../shared/db/in-memory-device-grant-store.js';
+import type { CoreDatabase } from '../../shared/db/database.js';
 import { registerOpsDeviceStreamRoutes } from './ops-device-stream-routes.js';
 
 const ENV_KEYS = ['AUTH_ENABLED', 'AUTH_KEY_CAPTIVE', 'NODE_ENV'] as const;
@@ -69,11 +70,14 @@ test('terminal device stream clears streamConnected but keeps fresh heartbeat on
   enableTestAuth();
   const app = Fastify({ logger: false });
   const sessions = createStaffSessionManager({ sessionTtlMs: 60 * 60 * 1000 });
-  const { token } = sessions.createDeviceSession('terminal', TERMINAL_DEVICE_ID);
+  const deviceGrants = createInMemoryDeviceGrantStore();
+  const issued = deviceGrants.issueDeviceCookie('terminal', TERMINAL_DEVICE_ID);
   const { token: staffToken } = sessions.createStaffSession('mfa');
 
-  registerClientAuth(app, { staffSessions: sessions });
-  registerOpsDeviceStreamRoutes(app);
+  registerClientAuth(app, { staffSessions: sessions, deviceGrants });
+  registerOpsDeviceStreamRoutes(app, {
+    getDeviceAuthorizationById: (id: string) => deviceGrants.getDeviceAuthorizationById(id),
+  } as CoreDatabase);
 
   await app.listen({ host: '127.0.0.1', port: 0 });
   const address = app.server.address();
@@ -83,7 +87,7 @@ test('terminal device stream clears streamConnected but keeps fresh heartbeat on
 
   const response = await fetch(`http://127.0.0.1:${port}/api/v1/ops/device/stream`, {
     headers: {
-      cookie: `${getStaffSessionCookieName('mfa')}=${staffToken}; ${getDeviceSessionCookieName('terminal')}=${token}`,
+      cookie: `${getStaffSessionCookieName('mfa')}=${staffToken}; ${issued.cookieName}=${issued.token}`,
       'x-client-role': 'terminal',
     },
   });

@@ -5,7 +5,6 @@ import Fastify from 'fastify';
 import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
 import { registerClientAuth } from '../auth/client-auth.js';
 import {
-  getDeviceSessionCookieName,
   getRoomPanelSessionCookieName,
   getStaffSessionCookieName,
   createStaffSessionManager,
@@ -16,6 +15,7 @@ import {
   resetDevicePresenceForTests,
   WAITING_ROOM_DEVICE_ID,
 } from '../shared/ops/device-presence-registry.js';
+import { createInMemoryDeviceGrantStore } from '../shared/db/in-memory-device-grant-store.js';
 import { registerQueueStreamRoutes } from './queue-stream-routes.js';
 
 const ENV_KEYS = ['AUTH_ENABLED', 'AUTH_KEY_CAPTIVE', 'NODE_ENV'] as const;
@@ -110,11 +110,16 @@ test('TV queue stream marks streamConnected only while the SSE connection is ope
   enableTestAuth();
   const app = Fastify({ logger: false });
   const sessions = createStaffSessionManager({ sessionTtlMs: 60 * 60 * 1000 });
-  const { token } = sessions.createDeviceSession('tv', WAITING_ROOM_DEVICE_ID);
+  const deviceGrants = createInMemoryDeviceGrantStore();
+  const issued = deviceGrants.issueDeviceCookie('tv', WAITING_ROOM_DEVICE_ID);
   const { token: staffToken } = sessions.createStaffSession('mfa');
+  const db = {
+    ...fakeQueueDb(),
+    getDeviceAuthorizationById: (id: string) => deviceGrants.getDeviceAuthorizationById(id),
+  } as CoreDatabase;
 
-  registerClientAuth(app, { staffSessions: sessions });
-  registerQueueStreamRoutes(app, fakeQueueDb(), sessions);
+  registerClientAuth(app, { staffSessions: sessions, deviceGrants });
+  registerQueueStreamRoutes(app, db, sessions);
 
   await app.listen({ host: '127.0.0.1', port: 0 });
   const address = app.server.address();
@@ -124,7 +129,7 @@ test('TV queue stream marks streamConnected only while the SSE connection is ope
 
   const response = await fetch(`http://127.0.0.1:${port}/api/v1/queue/stream`, {
     headers: {
-      cookie: `${getStaffSessionCookieName('mfa')}=${staffToken}; ${getDeviceSessionCookieName('tv')}=${token}`,
+      cookie: `${getStaffSessionCookieName('mfa')}=${staffToken}; ${issued.cookieName}=${issued.token}`,
       'x-client-role': 'tv',
     },
   });

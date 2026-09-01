@@ -16,6 +16,7 @@ export const FRESH_DB_CUTOVER_PHASES = {
   waitMaintenance: 'wait_maintenance',
   prepareImport: 'prepare_import',
   importSnapshot: 'import_snapshot',
+  copyDeviceAuthorizations: 'copy_device_authorizations',
   verifyExport: 'verify_export',
   startFullStack: 'start_full_stack',
   healthCheck: 'health_check',
@@ -43,6 +44,10 @@ export type FreshDbCutoverInput = {
   verifyMismatchMessage?: string;
   localAppBaseUrl: string;
   localMaintenanceAppBaseUrl: string;
+  copyDeviceAuthorizations?: (
+    asideDir: string,
+    localMaintenanceAppBaseUrl: string,
+  ) => Promise<{ ok: true; imported?: number } | { ok: false; errors: string[] }>;
 };
 
 export type FreshDbCutoverDeps = {
@@ -162,6 +167,26 @@ export async function runFreshDbSettingsCutover(
   });
   if (!importResult.ok) {
     return failure(FRESH_DB_CUTOVER_PHASES.importSnapshot, importResult.errors);
+  }
+
+  if (input.copyDeviceAuthorizations) {
+    const asideDir = path.join(input.rollbackDir, input.dbAsideSubdir);
+    let copyResult: { ok: true; imported?: number } | { ok: false; errors: string[] };
+    try {
+      copyResult = await input.copyDeviceAuthorizations(
+        asideDir,
+        input.localMaintenanceAppBaseUrl,
+      );
+    } catch (error) {
+      return failure(FRESH_DB_CUTOVER_PHASES.copyDeviceAuthorizations, [
+        error instanceof Error
+          ? error.message
+          : 'Gerätefreigaben konnten nicht aus der alten Datenbank übernommen werden.',
+      ]);
+    }
+    if (!copyResult.ok) {
+      return failure(FRESH_DB_CUTOVER_PHASES.copyDeviceAuthorizations, copyResult.errors);
+    }
   }
 
   await testHooks.beforeVerifyExport?.();

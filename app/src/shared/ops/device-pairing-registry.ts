@@ -101,6 +101,9 @@ function createDevicePairingCode(existingCodes: Set<string>): string | null {
 
 export function pruneExpiredPairings(nowMs = Date.now()): void {
   for (const [pairingId, pairing] of devicePairingsById) {
+    if (pairing.deviceToken) {
+      continue;
+    }
     if (pairing.expiresAtMs <= nowMs) {
       clearPairingExpiryTimer(pairingId);
       devicePairingsById.delete(pairingId);

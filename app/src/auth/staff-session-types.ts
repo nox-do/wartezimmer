@@ -55,11 +55,6 @@ export type StaffPinHashConfig = Pick<
 
 export type StaffSessionManager = {
   createStaffSession(role: StaffRole, now?: Date): { token: string; session: StaffSession };
-  createDeviceSession(
-    role: DeviceSessionRole,
-    deviceId: string,
-    now?: Date,
-  ): { token: string; session: DeviceSession };
   createRoomPanelSession(
     input: { roomId: string; placement: RoomPanelPlacement; clientKey?: string },
     now?: Date,
@@ -76,7 +71,6 @@ export type StaffSessionManager = {
     placement: RoomPanelPlacement,
     exceptSessionId?: string,
   ): void;
-  revokeDeviceSessions(role: DeviceSessionRole, deviceId: string): void;
   subscribeSessionRevocation(sessionId: string, listener: () => void): () => void;
 };
 

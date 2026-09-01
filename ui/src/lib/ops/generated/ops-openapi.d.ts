@@ -541,6 +541,158 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/ops/device-authorizations': {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+        'X-Client-Role': components['parameters']['XClientRole'];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List active TV and terminal device authorizations
+     * @description MFA can list and revoke durable TV and terminal grants. Room-panel grants are not included.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+          'X-Client-Role': components['parameters']['XClientRole'];
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Active TV and terminal grants */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeviceAuthorizationListResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/ops/device-authorizations/{authorizationId}/revoke': {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+        'X-Client-Role': components['parameters']['XClientRole'];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Revoke one TV or terminal device authorization */
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
+          'X-Client-Role': components['parameters']['XClientRole'];
+        };
+        path: {
+          authorizationId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Grant revoked */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeviceAuthorizationRevokeReport'];
+          };
+        };
+        /** @description Grant not found or already revoked */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/ops/device-authorizations/import': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Import active device authorizations (maintenance listener)
+     * @description Writes hashed device grants into the fresh SQLite after settings import.
+     *     Used only by `.pfupdate` cutover. Restore must not call this endpoint.
+     *     Maintenance listener only; no session auth.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['DeviceAuthorizationImportRequest'];
+        };
+      };
+      responses: {
+        /** @description Rows imported */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeviceAuthorizationImportReport'];
+          };
+        };
+        /** @description Invalid rows or constraint failure */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/ops/settings/onboarding/verify': {
     parameters: {
       query?: never;
@@ -1947,6 +2099,47 @@ export interface components {
         | 'OPS_SETTINGS_INVALID'
         | 'CATALOG_INTEGRITY_FAILED'
         | 'IMPORT_FAILED';
+    };
+    DeviceAuthorizationCopyRow: {
+      authorizationId: string;
+      /** @enum {string} */
+      role: 'tv' | 'terminal' | 'room-panel';
+      deviceId: string | null;
+      roomId: string | null;
+      /** @enum {string|null} */
+      placement: 'outside' | 'inside' | null;
+      tokenHash: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      lastSeenAt: string | null;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    DeviceAuthorizationImportRequest: {
+      authorizations: components['schemas']['DeviceAuthorizationCopyRow'][];
+    };
+    DeviceAuthorizationImportReport: {
+      /** @constant */
+      ok: true;
+      imported: number;
+    };
+    DeviceAuthorizationListItem: {
+      authorizationId: string;
+      /** @enum {string} */
+      role: 'tv' | 'terminal';
+      deviceId: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      lastSeenAt: string | null;
+    };
+    DeviceAuthorizationListResponse: {
+      authorizations: components['schemas']['DeviceAuthorizationListItem'][];
+    };
+    DeviceAuthorizationRevokeReport: {
+      /** @constant */
+      ok: true;
     };
     SettingsSnapshotImportReport: {
       /** @constant */

@@ -196,6 +196,26 @@ import {
   type AuthSettings,
 } from './database-auth-settings.js';
 import {
+  authenticateDeviceAuthorization as authenticateDeviceAuthorizationInDb,
+  createDeviceAuthorizationDeps,
+  createSlotDeviceAuthorization,
+  enrollRoomPanelDeviceAuthorization,
+  getDeviceAuthorizationById,
+  importActiveDeviceAuthorizations,
+  listActiveDeviceAuthorizations,
+  replaceSlotDeviceAuthorization,
+  revokeAllRoomPanelAuthorizations,
+  revokeDeviceAuthorizationById,
+  revokeDeviceAuthorizationsByDevice,
+  revokeRoomPanelAuthorizationsByPlacement,
+  revokeRoomPanelAuthorizationsByRoom,
+  touchDeviceAuthorization,
+  type DeviceAuthorizationCopyRow,
+  type DeviceAuthorizationDeps,
+  type DeviceAuthorizationRow,
+  type DeviceSlotRole,
+} from './database-device-authorizations.js';
+import {
   buildDatabaseCommonHelpers,
   buildOpsSettingsReadParams,
   buildOpsSettingsWriteParams,
@@ -225,6 +245,7 @@ import type {
   QueueDisplayStatus,
   QueueSummary,
   QueueVisitRow,
+  RoomPanelPlacement,
   SessionResolveResult,
   VisitIdentityView,
 } from './db-types.js';
@@ -314,6 +335,7 @@ export class CoreDatabase {
   private readonly updateDocumentStatusStmt: StatementSync;
   private readonly updateDocumentFileNameStmt: StatementSync;
   private readonly listDocumentsByVisitStmt: StatementSync;
+  private readonly deviceAuthorizationDeps: DeviceAuthorizationDeps;
 
   constructor(dbPath: string) {
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -384,6 +406,7 @@ export class CoreDatabase {
       updateDocumentFileNameStmt: this.updateDocumentFileNameStmt,
       listDocumentsByVisitStmt: this.listDocumentsByVisitStmt,
     } = prepareCoreDatabaseStatements(this.db));
+    this.deviceAuthorizationDeps = createDeviceAuthorizationDeps(this.db, nowIso);
 
     const setupStatements = createOpsSetupStatements(this.db);
     this.getOpsSetupStmt = setupStatements.getOpsSetupStmt;
@@ -1332,6 +1355,101 @@ export class CoreDatabase {
         target,
         pinHash,
       ),
+    );
+  }
+
+  createSlotDeviceAuthorization(input: {
+    role: DeviceSlotRole;
+    deviceId: string;
+    token: string;
+  }): DeviceAuthorizationRow {
+    return this.withTransaction('createSlotDeviceAuthorization', () =>
+      createSlotDeviceAuthorization(this.deviceAuthorizationDeps, input),
+    );
+  }
+
+  replaceSlotDeviceAuthorization(input: {
+    role: DeviceSlotRole;
+    deviceId: string;
+    token: string;
+  }): DeviceAuthorizationRow {
+    return this.withTransaction('replaceSlotDeviceAuthorization', () =>
+      replaceSlotDeviceAuthorization(this.deviceAuthorizationDeps, input),
+    );
+  }
+
+  enrollRoomPanelDeviceAuthorization(input: {
+    roomId: string;
+    placement: RoomPanelPlacement;
+    token: string;
+  }): DeviceAuthorizationRow {
+    return this.withTransaction('enrollRoomPanelDeviceAuthorization', () =>
+      enrollRoomPanelDeviceAuthorization(this.deviceAuthorizationDeps, input),
+    );
+  }
+
+  authenticateDeviceAuthorization(token: string): DeviceAuthorizationRow | null {
+    return authenticateDeviceAuthorizationInDb(this.deviceAuthorizationDeps, token);
+  }
+
+  getDeviceAuthorizationById(authorizationId: string): DeviceAuthorizationRow | null {
+    return getDeviceAuthorizationById(this.deviceAuthorizationDeps, authorizationId);
+  }
+
+  listActiveDeviceAuthorizations(): DeviceAuthorizationRow[] {
+    return listActiveDeviceAuthorizations(this.deviceAuthorizationDeps);
+  }
+
+  touchDeviceAuthorization(authorizationId: string): DeviceAuthorizationRow | null {
+    return touchDeviceAuthorization(this.deviceAuthorizationDeps, authorizationId);
+  }
+
+  revokeDeviceAuthorizationById(authorizationId: string): boolean {
+    return this.withTransaction('revokeDeviceAuthorizationById', () =>
+      revokeDeviceAuthorizationById(this.deviceAuthorizationDeps, authorizationId),
+    );
+  }
+
+  revokeDeviceAuthorizationByToken(token: string): boolean {
+    return this.withTransaction('revokeDeviceAuthorizationByToken', () => {
+      const row = authenticateDeviceAuthorizationInDb(this.deviceAuthorizationDeps, token);
+      if (!row) {
+        return false;
+      }
+      return revokeDeviceAuthorizationById(this.deviceAuthorizationDeps, row.authorizationId);
+    });
+  }
+
+  revokeDeviceAuthorizationsByDevice(role: DeviceSlotRole, deviceId: string): number {
+    return this.withTransaction('revokeDeviceAuthorizationsByDevice', () =>
+      revokeDeviceAuthorizationsByDevice(this.deviceAuthorizationDeps, role, deviceId),
+    );
+  }
+
+  revokeRoomPanelAuthorizationsByRoom(roomId: string): number {
+    return this.withTransaction('revokeRoomPanelAuthorizationsByRoom', () =>
+      revokeRoomPanelAuthorizationsByRoom(this.deviceAuthorizationDeps, roomId),
+    );
+  }
+
+  revokeRoomPanelAuthorizationsByPlacement(
+    roomId: string,
+    placement: RoomPanelPlacement,
+  ): number {
+    return this.withTransaction('revokeRoomPanelAuthorizationsByPlacement', () =>
+      revokeRoomPanelAuthorizationsByPlacement(this.deviceAuthorizationDeps, roomId, placement),
+    );
+  }
+
+  revokeAllRoomPanelAuthorizations(): number {
+    return this.withTransaction('revokeAllRoomPanelAuthorizations', () =>
+      revokeAllRoomPanelAuthorizations(this.deviceAuthorizationDeps),
+    );
+  }
+
+  importActiveDeviceAuthorizations(rows: DeviceAuthorizationCopyRow[]): number {
+    return this.withTransaction('importActiveDeviceAuthorizations', () =>
+      importActiveDeviceAuthorizations(this.deviceAuthorizationDeps, rows),
     );
   }
 

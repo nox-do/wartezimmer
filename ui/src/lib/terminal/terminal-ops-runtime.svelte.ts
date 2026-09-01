@@ -110,7 +110,7 @@ export function mountTerminalOpsRuntime(options: MountTerminalOpsRuntimeOptions)
     stopDeviceStream();
     deviceStreamCleanup = connectTerminalDeviceStream({
       onError: (message) => {
-        if (message === SSE_CLIENT_ERROR.unauthorized || message === SSE_CLIENT_ERROR.forbidden) {
+        if (message === SSE_CLIENT_ERROR.unauthorized) {
           resetDeviceAuthorization();
           void pairing.startPairing();
         }
@@ -125,7 +125,7 @@ export function mountTerminalOpsRuntime(options: MountTerminalOpsRuntimeOptions)
     }
     if (!result.ok) {
       terminalOps.loading = false;
-      if (result.error.status === 401 || result.error.status === 403) {
+      if (result.error.status === 401) {
         resetDeviceAuthorization();
         void pairing.startPairing();
         return false;

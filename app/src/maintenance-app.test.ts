@@ -60,6 +60,29 @@ test('public app does not expose settings snapshot routes', async (t) => {
   await app.close();
 });
 
+test('public app does not expose device authorization import', async (t) => {
+  saveEnv();
+  t.after(restoreEnv);
+  process.env.NODE_ENV = 'test';
+  process.env.AUTH_ENABLED = 'true';
+  process.env.AUTH_KEY_CAPTIVE = 'test-captive-key-with-sufficient-length-32';
+
+  const app = Fastify({ logger: false });
+  registerClientAuth(app);
+  registerOpsSettingsRoutes(app, {} as unknown as CoreDatabase, {});
+
+  await app.ready();
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/ops/device-authorizations/import',
+    headers: { 'content-type': 'application/json' },
+    payload: { authorizations: [] },
+  });
+
+  assert.equal(response.statusCode, 404);
+  await app.close();
+});
+
 test('maintenance listener exports settings snapshot without auth headers', async (t) => {
   saveEnv();
   t.after(restoreEnv);
@@ -413,5 +436,44 @@ test('maintenance import rejects invalid skipProviderCredentials query values', 
   });
 
   assert.equal(response.statusCode, 400);
+  await app.close();
+});
+
+test('maintenance imports active device authorizations', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'maintenance-device-auth-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  withContactLookupBasePath(t, dir);
+
+  const db = new CoreDatabase(join(dir, 'fresh.db'));
+  const app = Fastify({ logger: false });
+  registerOpsManagerMaintenanceRoutes(app, db);
+  await app.ready();
+
+  const tokenHash = 'c'.repeat(64);
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/ops/device-authorizations/import',
+    headers: { 'content-type': 'application/json' },
+    payload: {
+      authorizations: [
+        {
+          authorizationId: 'auth-tv-1',
+          role: 'tv',
+          deviceId: 'waiting-room',
+          roomId: null,
+          placement: null,
+          tokenHash,
+          createdAt: '2026-09-01T10:00:00.000Z',
+          lastSeenAt: null,
+          updatedAt: '2026-09-01T10:00:00.000Z',
+        },
+      ],
+    },
+    remoteAddress: '127.0.0.1',
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().imported, 1);
+  assert.equal(db.listActiveDeviceAuthorizations().length, 1);
   await app.close();
 });

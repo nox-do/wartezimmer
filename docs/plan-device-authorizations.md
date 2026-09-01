@@ -2,7 +2,7 @@
 
 Stand: 2026-09-01
 
-Status: **Festgeschrieben, noch nicht umgesetzt.** Vertrag ist dieses Dokument.
+Status: **Schnitt 1 und 2 erledigt.** Vertrag ist dieses Dokument.
 
 Vertrag in einem Satz: Tabelle + Auth liest Zeile statt Staff-Session + Cookie
 Max-Age gleitet am bestehenden Traffic (Token gleich) + Ping prüft Revoke +
@@ -197,6 +197,8 @@ Volume hier neu initialisieren. Kein In-Place-Migrations-Theater, kein
   Freigaben; Restore und fehlendes/altes Backup ergeben leer; Tagesreset
   lässt die Tabelle unangetastet.
 - HTTP-Auth unverändert.
+- Aufräumen von `database-device-authorizations.ts` (Parser/Copy-Typen, dünne
+  Revoke-Wrapper) **nicht** hier — in Schnitt 2.
 
 **Done wenn:** Schema+DB-Funktionen grün; App-Verhalten nach außen unverändert.
 
@@ -210,6 +212,8 @@ Volume hier neu initialisieren. Kein In-Place-Migrations-Theater, kein
   Reconnect; Mount/Wake über `/queue` oder kontrollierten Reconnect).
 - SSE-Ping prüft `revoked_at`.
 - MFA: Liste + gezielter Revoke für TV/Terminal.
+- `database-device-authorizations.ts` straffen (Import-Parser, Copy-Typ,
+  Revoke-Wrapper) — in diesem Schnitt, nicht extra.
 - Presence löscht kein Pairing. `TV_LOCAL_ORIGIN` bleibt.
 - Tests: 2h/12h/Restart/Sleep ohne Re-Pair; Re-Pair ersetzt nur denselben
   Slot; abgebrochene Confirm; Poll-Grace; Revoke schließt spätestens am
@@ -283,6 +287,6 @@ mit PIN; Invalidierungsmatrix wie oben.
 
 | Schnitt | Status |
 | --- | --- |
-| 1 Schema (inkl. Update-Copy / Restore-leer) | offen |
-| 2 TV/Terminal + MFA-Liste | offen |
+| 1 Schema (inkl. Update-Copy / Restore-leer) | **erledigt** |
+| 2 TV/Terminal + MFA-Liste | **erledigt** |
 | 3 Room-Panels + Aufräumen | offen |

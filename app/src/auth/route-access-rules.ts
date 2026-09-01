@@ -57,6 +57,12 @@ export const ROUTE_ACCESS_RULES: RouteAccessRule[] = [
   { method: 'GET', path: '/api/v1/ops/heartbeat', roles: ['tv', 'mfa', 'ops', 'terminal'] },
   { method: 'POST', path: '/api/v1/ops/device/presence', roles: ['tv', 'terminal'] },
   { method: 'GET', path: '/api/v1/ops/device/stream', roles: ['tv', 'terminal'] },
+  { method: 'GET', path: '/api/v1/ops/device-authorizations', roles: ['mfa'] },
+  {
+    method: 'POST',
+    path: '/api/v1/ops/device-authorizations/:authorizationId/revoke',
+    roles: ['mfa'],
+  },
   { method: 'GET', path: '/api/v1/ops/settings/capabilities', roles: ['mfa', 'ops'] },
   {
     method: 'GET',
@@ -71,6 +77,11 @@ export const ROUTE_ACCESS_RULES: RouteAccessRule[] = [
   {
     method: 'POST',
     path: '/api/v1/ops/settings/snapshot/import',
+    maintenanceListenerOnly: true,
+  },
+  {
+    method: 'POST',
+    path: '/api/v1/ops/device-authorizations/import',
     maintenanceListenerOnly: true,
   },
   { method: 'GET', path: '/api/v1/ops/settings', roles: ['mfa', 'ops'] },

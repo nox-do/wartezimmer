@@ -4,11 +4,11 @@ import Fastify from 'fastify';
 import { registerClientAuth } from './client-auth.js';
 import {
   createStaffSessionManager,
-  getDeviceSessionCookieName,
   getRoomPanelSessionCookieName,
   getStaffSessionCookieName,
   type StaffSessionManager,
 } from './staff-session-auth.js';
+import { createInMemoryDeviceGrantStore } from '../shared/db/in-memory-device-grant-store.js';
 
 const ENV_KEYS = [
   'AUTH_ENABLED',
@@ -47,10 +47,12 @@ async function buildProbeApp(): Promise<{
   app: ReturnType<typeof Fastify>;
   getHandlerCalled: () => boolean;
   sessions: StaffSessionManager;
+  deviceGrants: ReturnType<typeof createInMemoryDeviceGrantStore>;
 }> {
   let handlerCalled = false;
   const app = Fastify({ logger: false });
   const sessions = createStaffSessionManager({ sessionTtlMs: 60 * 60 * 1000 });
+  const deviceGrants = createInMemoryDeviceGrantStore();
 
   app.get('/api/v1/ops/deployment/storage', async () => {
     handlerCalled = true;
@@ -59,13 +61,14 @@ async function buildProbeApp(): Promise<{
   app.get('/api/v1/queue', async (request) => ({ role: request.clientRole ?? null }));
   app.post('/api/v1/ops/device/presence', async () => ({ ok: true }));
 
-  registerClientAuth(app, { staffSessions: sessions });
+  registerClientAuth(app, { staffSessions: sessions, deviceGrants });
   await app.ready();
 
   return {
     app,
     getHandlerCalled: () => handlerCalled,
     sessions,
+    deviceGrants,
   };
 }
 
@@ -86,9 +89,12 @@ function staffAuthHeaders(
   };
 }
 
-function deviceCookie(sessions: StaffSessionManager, role: 'terminal' | 'tv'): string {
-  const { token } = sessions.createDeviceSession(role, `test-${role}`);
-  return `${getDeviceSessionCookieName(role)}=${token}`;
+function deviceCookie(
+  deviceGrants: ReturnType<typeof createInMemoryDeviceGrantStore>,
+  role: 'terminal' | 'tv',
+): string {
+  const issued = deviceGrants.issueDeviceCookie(role);
+  return `${issued.cookieName}=${issued.token}`;
 }
 
 function roomPanelCookie(sessions: StaffSessionManager): string {
@@ -109,12 +115,12 @@ afterEach(() => {
 
 test('wrong role is rejected and route handler does not run', async () => {
   enableTestAuth();
-  const { app, getHandlerCalled, sessions } = await buildProbeApp();
+  const { app, getHandlerCalled, deviceGrants } = await buildProbeApp();
 
   const response = await app.inject({
     method: 'GET',
     url: '/api/v1/ops/deployment/storage',
-    headers: { cookie: deviceCookie(sessions, 'tv'), 'x-client-role': 'tv' },
+    headers: { cookie: deviceCookie(deviceGrants, 'tv'), 'x-client-role': 'tv' },
   });
 
   assert.equal(response.statusCode, 403);
@@ -321,13 +327,13 @@ test('local TV origin grants read-only TV access only for explicit same-origin r
 
 test('unsafe cookie requests do not trust spoofed forwarded host by default', async () => {
   enableTestAuth();
-  const { app, sessions } = await buildProbeApp();
+  const { app, deviceGrants } = await buildProbeApp();
 
   const response = await app.inject({
     method: 'POST',
     url: '/api/v1/ops/device/presence',
     headers: {
-      cookie: deviceCookie(sessions, 'terminal'),
+      cookie: deviceCookie(deviceGrants, 'terminal'),
       'x-client-role': 'terminal',
       host: 'praxis.test',
       origin: 'http://evil.test',

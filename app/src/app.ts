@@ -45,7 +45,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   registerDefaultErrorHandler(app);
 
   await registerOpenApiDocs(app);
-  registerClientAuth(app, { staffSessions });
+  registerClientAuth(app, { staffSessions, deviceGrants: db });
   registerAuthRoutes(app, staffSessions, db);
   registerOpsRoutes(app, db, staffSessions);
   registerPracticeRoutes(app, db);

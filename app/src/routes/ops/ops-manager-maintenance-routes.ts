@@ -15,6 +15,7 @@ import {
 } from '../../shared/settings/settings-snapshot-import.js';
 import { SettingsSnapshotError } from '../../shared/settings/settings-snapshot-types.js';
 import { createSerializedExecutor } from './ops-settings-routes.js';
+import { parseDeviceAuthorizationCopyRows } from '../../shared/db/database-device-authorizations.js';
 
 /**
  * Manager maintenance API on a separate listener (e.g. host loopback :8082 via Docker publish).
@@ -86,6 +87,38 @@ export function registerOpsManagerMaintenanceRoutes(app: FastifyInstance, db: Co
           throw error;
         }
       });
+    },
+  );
+
+  app.post(
+    '/api/v1/ops/device-authorizations/import',
+    {
+      schema: {
+        body: opsSchemas.POST_api_v1_ops_device_authorizations_importRequestBody,
+        response: {
+          200: opsSchemas.POST_api_v1_ops_device_authorizations_importResponse200,
+          400: opsSchemas.POST_api_v1_ops_device_authorizations_importResponse400,
+        },
+      },
+    },
+    async (request, reply) => {
+      const parsed = parseDeviceAuthorizationCopyRows(request.body);
+      if (!parsed.ok) {
+        return reply.code(400).send({
+          code: 'INVALID_ARGUMENT',
+          message: parsed.message,
+        });
+      }
+
+      try {
+        const imported = db.importActiveDeviceAuthorizations(parsed.rows);
+        return { ok: true, imported };
+      } catch (error) {
+        return reply.code(400).send({
+          code: 'INVALID_ARGUMENT',
+          message: error instanceof Error ? error.message : 'Import failed.',
+        });
+      }
     },
   );
 

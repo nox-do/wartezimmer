@@ -77,7 +77,7 @@ function startQueueSession(options: { onConnectFailed?: () => void } = {}): () =
   const disconnectStream = connectTvQueueStream({
     onSnapshot: applyQueueSnapshot,
     onError: (message) => {
-      if (message === SSE_CLIENT_ERROR.unauthorized || message === SSE_CLIENT_ERROR.forbidden) {
+      if (message === SSE_CLIENT_ERROR.unauthorized) {
         options.onConnectFailed?.();
       }
       tvDisplay.errorMessage = message;

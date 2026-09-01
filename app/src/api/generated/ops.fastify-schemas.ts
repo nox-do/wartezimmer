@@ -1531,6 +1531,214 @@ export const SettingsSnapshotValidationResult = {
   },
 } as const;
 
+export const DeviceAuthorizationCopyRow = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'authorizationId',
+    'role',
+    'deviceId',
+    'roomId',
+    'placement',
+    'tokenHash',
+    'createdAt',
+    'lastSeenAt',
+    'updatedAt',
+  ],
+  properties: {
+    authorizationId: {
+      type: 'string',
+      minLength: 1,
+    },
+    role: {
+      type: 'string',
+      enum: ['tv', 'terminal', 'room-panel'],
+    },
+    deviceId: {
+      type: ['string', 'null'],
+    },
+    roomId: {
+      type: ['string', 'null'],
+    },
+    placement: {
+      type: ['string', 'null'],
+      enum: ['outside', 'inside', null],
+    },
+    tokenHash: {
+      type: 'string',
+      pattern: '^[a-f0-9]{64}$',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    lastSeenAt: {
+      type: ['string', 'null'],
+      format: 'date-time',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+  },
+} as const;
+
+export const DeviceAuthorizationImportRequest = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['authorizations'],
+  properties: {
+    authorizations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: [
+          'authorizationId',
+          'role',
+          'deviceId',
+          'roomId',
+          'placement',
+          'tokenHash',
+          'createdAt',
+          'lastSeenAt',
+          'updatedAt',
+        ],
+        properties: {
+          authorizationId: {
+            type: 'string',
+            minLength: 1,
+          },
+          role: {
+            type: 'string',
+            enum: ['tv', 'terminal', 'room-panel'],
+          },
+          deviceId: {
+            type: ['string', 'null'],
+          },
+          roomId: {
+            type: ['string', 'null'],
+          },
+          placement: {
+            type: ['string', 'null'],
+            enum: ['outside', 'inside', null],
+          },
+          tokenHash: {
+            type: 'string',
+            pattern: '^[a-f0-9]{64}$',
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          lastSeenAt: {
+            type: ['string', 'null'],
+            format: 'date-time',
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+export const DeviceAuthorizationImportReport = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['ok', 'imported'],
+  properties: {
+    ok: {
+      type: 'boolean',
+      const: true,
+    },
+    imported: {
+      type: 'integer',
+      minimum: 0,
+    },
+  },
+} as const;
+
+export const DeviceAuthorizationListItem = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['authorizationId', 'role', 'deviceId', 'createdAt', 'lastSeenAt'],
+  properties: {
+    authorizationId: {
+      type: 'string',
+      minLength: 1,
+    },
+    role: {
+      type: 'string',
+      enum: ['tv', 'terminal'],
+    },
+    deviceId: {
+      type: 'string',
+      minLength: 1,
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    lastSeenAt: {
+      type: ['string', 'null'],
+      format: 'date-time',
+    },
+  },
+} as const;
+
+export const DeviceAuthorizationListResponse = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['authorizations'],
+  properties: {
+    authorizations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['authorizationId', 'role', 'deviceId', 'createdAt', 'lastSeenAt'],
+        properties: {
+          authorizationId: {
+            type: 'string',
+            minLength: 1,
+          },
+          role: {
+            type: 'string',
+            enum: ['tv', 'terminal'],
+          },
+          deviceId: {
+            type: 'string',
+            minLength: 1,
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          lastSeenAt: {
+            type: ['string', 'null'],
+            format: 'date-time',
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+export const DeviceAuthorizationRevokeReport = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['ok'],
+  properties: {
+    ok: {
+      type: 'boolean',
+      const: true,
+    },
+  },
+} as const;
+
 export const SettingsSnapshotImportReport = {
   type: 'object',
   required: [
@@ -4602,6 +4810,290 @@ export const POST_api_v1_ops_settings_snapshot_importResponse400 = {
   ],
 } as const;
 
+export const GET_api_v1_ops_device_authorizationsResponse200 = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['authorizations'],
+  properties: {
+    authorizations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['authorizationId', 'role', 'deviceId', 'createdAt', 'lastSeenAt'],
+        properties: {
+          authorizationId: {
+            type: 'string',
+            minLength: 1,
+          },
+          role: {
+            type: 'string',
+            enum: ['tv', 'terminal'],
+          },
+          deviceId: {
+            type: 'string',
+            minLength: 1,
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          lastSeenAt: {
+            type: ['string', 'null'],
+            format: 'date-time',
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+export const POST_api_v1_ops_device_authorizations_authorizationId_revokeParams = {
+  type: 'object',
+  required: ['authorizationId'],
+  additionalProperties: false,
+  properties: {
+    authorizationId: {
+      type: 'string',
+      minLength: 1,
+    },
+  },
+} as const;
+
+export const POST_api_v1_ops_device_authorizations_authorizationId_revokeResponse200 = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['ok'],
+  properties: {
+    ok: {
+      type: 'boolean',
+      const: true,
+    },
+  },
+} as const;
+
+export const POST_api_v1_ops_device_authorizations_authorizationId_revokeResponse404 = {
+  type: 'object',
+  required: ['code', 'message'],
+  properties: {
+    code: {
+      type: 'string',
+      enum: [
+        'INVALID_ARGUMENT',
+        'INTERNAL_ERROR',
+        'NOT_FOUND',
+        'AUTH_UNAUTHORIZED',
+        'AUTH_FORBIDDEN',
+        'RATE_LIMITED',
+        'VISIT_NOT_FOUND',
+        'DOCUMENT_NOT_FOUND',
+        'DOCUMENT_FORBIDDEN',
+        'INVALID_TRANSITION',
+        'ROOM_REQUIRED',
+        'MISSING_CALLBACK_PHONE',
+        'CHECKIN_LOCK_REQUIRED',
+        'DAY_CLOSE_IN_PROGRESS',
+        'INVALID_DAY_CLOSE_PHASE',
+        'DAY_CLOSE_NOT_STARTED',
+        'UNKNOWN_MESSAGING_PROVIDER',
+        'CHECKIN_LOCKED',
+        'CHECKIN_AUTH_PATH_DISABLED',
+        'CHECKIN_CLOSED',
+        'TOPIC_DISABLED',
+        'TOPIC_CLOSED',
+        'DOCUMENT_NOT_SCANNED',
+        'EXPORT_BLOCKED_MALWARE',
+        'OPS_SETTINGS_INVALID',
+        'EMERGENCY_DISABLED',
+        'EMERGENCY_NOT_FOUND',
+        'SETUP_INCOMPLETE',
+        'SETUP_ALREADY_COMPLETED',
+        'SESSION_INVALID_TICKET',
+        'SESSION_TICKET_NOT_ACTIVE',
+        'SESSION_ALREADY_ACTIVE',
+        'SESSION_UNAUTHORIZED',
+        'SESSION_EXPIRED',
+        'FORM_TEMPLATE_NOT_FOUND',
+        'DOCUMENT_INTAKE_BLOCKED',
+        'DOCUMENT_TEMPLATE_METADATA_INVALID',
+        'DOCUMENT_SCHEMA_OUTDATED',
+        'SANDBOX_UNAVAILABLE',
+        'CAPTIVE_CLIENT_MISSING',
+        'CAPTIVE_AUTH_FAILED',
+        'CALL_ANNOUNCEMENT_OFFLINE',
+        'ROOM_AT_CAPACITY',
+        'ROOM_BLOCKED_TOPICS',
+        'ROOM_BLOCKED_QUEUE',
+        'ROOM_BLOCKED_CAPACITY',
+        'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+        'RECALL_WINDOW_EXPIRED',
+        'UNKNOWN_TOPIC',
+        'TERMINAL_OFFLINE',
+        'TERMINAL_PHONE_INVALID',
+        'TERMINAL_BIRTH_DATE_INVALID',
+        'TERMINAL_LAST_NAME_INVALID',
+      ],
+    },
+    message: {
+      type: 'string',
+    },
+    details: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+} as const;
+
+export const POST_api_v1_ops_device_authorizations_importRequestBody = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['authorizations'],
+  properties: {
+    authorizations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: [
+          'authorizationId',
+          'role',
+          'deviceId',
+          'roomId',
+          'placement',
+          'tokenHash',
+          'createdAt',
+          'lastSeenAt',
+          'updatedAt',
+        ],
+        properties: {
+          authorizationId: {
+            type: 'string',
+            minLength: 1,
+          },
+          role: {
+            type: 'string',
+            enum: ['tv', 'terminal', 'room-panel'],
+          },
+          deviceId: {
+            type: ['string', 'null'],
+          },
+          roomId: {
+            type: ['string', 'null'],
+          },
+          placement: {
+            type: ['string', 'null'],
+            enum: ['outside', 'inside', null],
+          },
+          tokenHash: {
+            type: 'string',
+            pattern: '^[a-f0-9]{64}$',
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          lastSeenAt: {
+            type: ['string', 'null'],
+            format: 'date-time',
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+export const POST_api_v1_ops_device_authorizations_importResponse200 = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['ok', 'imported'],
+  properties: {
+    ok: {
+      type: 'boolean',
+      const: true,
+    },
+    imported: {
+      type: 'integer',
+      minimum: 0,
+    },
+  },
+} as const;
+
+export const POST_api_v1_ops_device_authorizations_importResponse400 = {
+  type: 'object',
+  required: ['code', 'message'],
+  properties: {
+    code: {
+      type: 'string',
+      enum: [
+        'INVALID_ARGUMENT',
+        'INTERNAL_ERROR',
+        'NOT_FOUND',
+        'AUTH_UNAUTHORIZED',
+        'AUTH_FORBIDDEN',
+        'RATE_LIMITED',
+        'VISIT_NOT_FOUND',
+        'DOCUMENT_NOT_FOUND',
+        'DOCUMENT_FORBIDDEN',
+        'INVALID_TRANSITION',
+        'ROOM_REQUIRED',
+        'MISSING_CALLBACK_PHONE',
+        'CHECKIN_LOCK_REQUIRED',
+        'DAY_CLOSE_IN_PROGRESS',
+        'INVALID_DAY_CLOSE_PHASE',
+        'DAY_CLOSE_NOT_STARTED',
+        'UNKNOWN_MESSAGING_PROVIDER',
+        'CHECKIN_LOCKED',
+        'CHECKIN_AUTH_PATH_DISABLED',
+        'CHECKIN_CLOSED',
+        'TOPIC_DISABLED',
+        'TOPIC_CLOSED',
+        'DOCUMENT_NOT_SCANNED',
+        'EXPORT_BLOCKED_MALWARE',
+        'OPS_SETTINGS_INVALID',
+        'EMERGENCY_DISABLED',
+        'EMERGENCY_NOT_FOUND',
+        'SETUP_INCOMPLETE',
+        'SETUP_ALREADY_COMPLETED',
+        'SESSION_INVALID_TICKET',
+        'SESSION_TICKET_NOT_ACTIVE',
+        'SESSION_ALREADY_ACTIVE',
+        'SESSION_UNAUTHORIZED',
+        'SESSION_EXPIRED',
+        'FORM_TEMPLATE_NOT_FOUND',
+        'DOCUMENT_INTAKE_BLOCKED',
+        'DOCUMENT_TEMPLATE_METADATA_INVALID',
+        'DOCUMENT_SCHEMA_OUTDATED',
+        'SANDBOX_UNAVAILABLE',
+        'CAPTIVE_CLIENT_MISSING',
+        'CAPTIVE_AUTH_FAILED',
+        'CALL_ANNOUNCEMENT_OFFLINE',
+        'ROOM_AT_CAPACITY',
+        'ROOM_BLOCKED_TOPICS',
+        'ROOM_BLOCKED_QUEUE',
+        'ROOM_BLOCKED_CAPACITY',
+        'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+        'RECALL_WINDOW_EXPIRED',
+        'UNKNOWN_TOPIC',
+        'TERMINAL_OFFLINE',
+        'TERMINAL_PHONE_INVALID',
+        'TERMINAL_BIRTH_DATE_INVALID',
+        'TERMINAL_LAST_NAME_INVALID',
+      ],
+    },
+    message: {
+      type: 'string',
+    },
+    details: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+} as const;
+
 export const POST_api_v1_ops_settings_onboarding_verifyResponse200 = {
   type: 'object',
   required: [
@@ -7124,6 +7616,12 @@ export const opsSchemas = {
   SettingsSnapshotDbV1,
   SettingsSnapshotV1,
   SettingsSnapshotValidationResult,
+  DeviceAuthorizationCopyRow,
+  DeviceAuthorizationImportRequest,
+  DeviceAuthorizationImportReport,
+  DeviceAuthorizationListItem,
+  DeviceAuthorizationListResponse,
+  DeviceAuthorizationRevokeReport,
   SettingsSnapshotImportReport,
   SettingsSnapshotImportError,
   DeploymentVolumeStatus,
@@ -7155,6 +7653,13 @@ export const opsSchemas = {
   POST_api_v1_ops_settings_snapshot_importRequestBody,
   POST_api_v1_ops_settings_snapshot_importResponse200,
   POST_api_v1_ops_settings_snapshot_importResponse400,
+  GET_api_v1_ops_device_authorizationsResponse200,
+  POST_api_v1_ops_device_authorizations_authorizationId_revokeParams,
+  POST_api_v1_ops_device_authorizations_authorizationId_revokeResponse200,
+  POST_api_v1_ops_device_authorizations_authorizationId_revokeResponse404,
+  POST_api_v1_ops_device_authorizations_importRequestBody,
+  POST_api_v1_ops_device_authorizations_importResponse200,
+  POST_api_v1_ops_device_authorizations_importResponse400,
   POST_api_v1_ops_settings_onboarding_verifyResponse200,
   POST_api_v1_ops_settings_onboarding_verifyResponse403,
   GET_api_v1_ops_settings_onboardingResponse200,

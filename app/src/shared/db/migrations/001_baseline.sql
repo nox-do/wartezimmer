@@ -263,3 +263,34 @@ WHEN (
 BEGIN
   SELECT RAISE(ABORT, 'OPS_SETTINGS_INVALID');
 END;
+
+CREATE TABLE IF NOT EXISTS device_authorizations (
+  authorization_id TEXT PRIMARY KEY,
+  role TEXT NOT NULL CHECK (role IN ('tv', 'terminal', 'room-panel')),
+  device_id TEXT,
+  room_id TEXT,
+  placement TEXT CHECK (placement IS NULL OR placement IN ('outside', 'inside')),
+  token_hash TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL,
+  last_seen_at TEXT,
+  updated_at TEXT NOT NULL,
+  revoked_at TEXT,
+  CHECK (
+    (
+      role IN ('tv', 'terminal')
+      AND device_id IS NOT NULL
+      AND room_id IS NULL
+      AND placement IS NULL
+    )
+    OR (
+      role = 'room-panel'
+      AND device_id IS NULL
+      AND room_id IS NOT NULL
+      AND placement IS NOT NULL
+    )
+  )
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_device_authorizations_active_slot
+  ON device_authorizations(role, device_id)
+  WHERE revoked_at IS NULL AND role IN ('tv', 'terminal');

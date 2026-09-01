@@ -862,6 +862,117 @@ components:
             - OPS_SETTINGS_INVALID
             - CATALOG_INTEGRITY_FAILED
             - IMPORT_FAILED
+    DeviceAuthorizationCopyRow:
+      type: object
+      additionalProperties: false
+      required:
+        - authorizationId
+        - role
+        - deviceId
+        - roomId
+        - placement
+        - tokenHash
+        - createdAt
+        - lastSeenAt
+        - updatedAt
+      properties:
+        authorizationId:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          enum: [tv, terminal, room-panel]
+        deviceId:
+          type: string
+          nullable: true
+        roomId:
+          type: string
+          nullable: true
+        placement:
+          type: string
+          nullable: true
+          enum: [outside, inside]
+        tokenHash:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        createdAt:
+          type: string
+          format: date-time
+        lastSeenAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+    DeviceAuthorizationImportRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - authorizations
+      properties:
+        authorizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceAuthorizationCopyRow'
+    DeviceAuthorizationImportReport:
+      type: object
+      additionalProperties: false
+      required:
+        - ok
+        - imported
+      properties:
+        ok:
+          type: boolean
+          const: true
+        imported:
+          type: integer
+          minimum: 0
+    DeviceAuthorizationListItem:
+      type: object
+      additionalProperties: false
+      required:
+        - authorizationId
+        - role
+        - deviceId
+        - createdAt
+        - lastSeenAt
+      properties:
+        authorizationId:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          enum: [tv, terminal]
+        deviceId:
+          type: string
+          minLength: 1
+        createdAt:
+          type: string
+          format: date-time
+        lastSeenAt:
+          type: string
+          format: date-time
+          nullable: true
+    DeviceAuthorizationListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - authorizations
+      properties:
+        authorizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceAuthorizationListItem'
+    DeviceAuthorizationRevokeReport:
+      type: object
+      additionalProperties: false
+      required:
+        - ok
+      properties:
+        ok:
+          type: boolean
+          const: true
     SettingsSnapshotImportReport:
       type: object
       required:
@@ -1826,6 +1937,71 @@ paths:
                 oneOf:
                   - $ref: '#/components/schemas/SettingsSnapshotImportError'
                   - $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/device-authorizations:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
+    get:
+      summary: List active TV and terminal device authorizations
+      description: MFA can list and revoke durable TV and terminal grants. Room-panel grants are not included.
+      responses:
+        '200':
+          description: Active TV and terminal grants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceAuthorizationListResponse'
+  /api/v1/ops/device-authorizations/{authorizationId}/revoke:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/XClientRole'
+    post:
+      summary: Revoke one TV or terminal device authorization
+      parameters:
+        - name: authorizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Grant revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceAuthorizationRevokeReport'
+        '404':
+          description: Grant not found or already revoked
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/device-authorizations/import:
+    post:
+      summary: Import active device authorizations (maintenance listener)
+      description: |
+        Writes hashed device grants into the fresh SQLite after settings import.
+        Used only by `.pfupdate` cutover. Restore must not call this endpoint.
+        Maintenance listener only; no session auth.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceAuthorizationImportRequest'
+      responses:
+        '200':
+          description: Rows imported
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceAuthorizationImportReport'
+        '400':
+          description: Invalid rows or constraint failure
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/settings/onboarding/verify:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'

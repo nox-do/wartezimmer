@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { StaffSessionManager } from '../auth/staff-session-auth.js';
 import type { CoreDatabase } from '../shared/db/database.js';
+import { registerOpsDeviceAuthorizationRoutes } from './ops/ops-device-authorization-routes.js';
 import { registerOpsDeviceRoutes } from './ops/ops-device-routes.js';
 import { registerOpsDeviceStreamRoutes } from './ops/ops-device-stream-routes.js';
 import { registerOpsDayLifecycleRoutes } from './ops/ops-day-lifecycle-routes.js';
@@ -20,7 +21,8 @@ export function registerOpsRoutes(
 ): void {
   registerOpsHealthRoutes(app, db);
   registerOpsDeviceRoutes(app);
-  registerOpsDeviceStreamRoutes(app);
+  registerOpsDeviceAuthorizationRoutes(app, db);
+  registerOpsDeviceStreamRoutes(app, db);
   registerOpsDeploymentRoutes(app, db);
   registerOpsSettingsRoutes(app, db, sessions);
   registerOpsMaintenanceRoutes(app, db);

@@ -25,10 +25,12 @@ export {
 export type { CookieSlotRole } from './cookie-slot-role.js';
 export { readRequestedCookieSlotRole } from './cookie-slot-role.js';
 export {
+  DEVICE_AUTHORIZATION_COOKIE_TTL_MS,
   clearDeviceSessionCookie,
   clearRoomPanelSessionCookie,
   clearSessionCookieForSlot,
   clearStaffSessionCookie,
+  formatDeviceSessionCookie,
   getDeviceSessionCookieName,
   getRoomPanelSessionCookieName,
   getSessionCookieNameForSlot,
@@ -38,5 +40,6 @@ export {
   setDeviceSessionCookie,
   setRoomPanelSessionCookie,
   setStaffSessionCookie,
+  withDeviceGrantSetCookie,
 } from './staff-session-cookies.js';
 export { createStaffSessionManager } from './staff-session-manager.js';

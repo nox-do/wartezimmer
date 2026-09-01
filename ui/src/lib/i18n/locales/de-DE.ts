@@ -436,6 +436,9 @@ export const dict = {
     deviceUnpairedHintTerminal:
       'Terminal-Seite am Gerät öffnen — dort erscheint der Kopplungscode.',
     deviceUnpairedHintTv: 'TV-Seite am Gerät öffnen — dort erscheint der Kopplungscode.',
+    deviceUnpair: 'Entkoppeln',
+    deviceUnpairBusy: 'Wird entkoppelt…',
+    deviceUnpairError: 'Entkoppeln fehlgeschlagen.',
     deviceDisconnectedHint: 'Gekoppelt, derzeit nicht erreichbar.',
     qsTv: 'Wartezimmer-TV',
     qsDayStart: 'Praxistag',

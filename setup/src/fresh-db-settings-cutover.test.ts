@@ -200,3 +200,59 @@ test('runFreshDbSettingsCutover uses prepareImport hook after maintenance is rea
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('runFreshDbSettingsCutover copies device authorizations only when hook is set', async () => {
+  const withDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fresh-db-cutover-copy-'));
+  const withoutDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fresh-db-cutover-nocopy-'));
+  const withAppData = seedAppData(path.join(withDir, 'app-data'));
+  const withoutAppData = seedAppData(path.join(withoutDir, 'app-data'));
+  const copied: string[] = [];
+
+  try {
+    const withCopy = await runFreshDbSettingsCutover(
+      {
+        ...cutoverInput(withDir, withAppData),
+        copyDeviceAuthorizations: async (asideDir) => {
+          copied.push(asideDir);
+          return { ok: true, imported: 0 };
+        },
+      },
+      baseDeps(withAppData),
+    );
+    assert.equal(withCopy.ok, true);
+    assert.equal(copied.length, 1);
+    assert.match(copied[0] ?? '', /pre-cutover-db$/);
+
+    const withoutCopy = await runFreshDbSettingsCutover(
+      cutoverInput(withoutDir, withoutAppData),
+      baseDeps(withoutAppData),
+    );
+    assert.equal(withoutCopy.ok, true);
+    assert.equal(copied.length, 1);
+  } finally {
+    fs.rmSync(withDir, { recursive: true, force: true });
+    fs.rmSync(withoutDir, { recursive: true, force: true });
+  }
+});
+
+test('runFreshDbSettingsCutover fails when device authorization copy fails', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fresh-db-cutover-copy-fail-'));
+  const appDataDir = seedAppData(path.join(dir, 'app-data'));
+
+  try {
+    const result = await runFreshDbSettingsCutover(
+      {
+        ...cutoverInput(dir, appDataDir),
+        copyDeviceAuthorizations: async () => ({ ok: false, errors: ['copy failed'] }),
+      },
+      baseDeps(appDataDir),
+    );
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.failedPhase, FRESH_DB_CUTOVER_PHASES.copyDeviceAuthorizations);
+      assert.deepEqual(result.errors, ['copy failed']);
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

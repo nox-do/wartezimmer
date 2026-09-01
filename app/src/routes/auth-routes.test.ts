@@ -9,11 +9,15 @@ import {
   hashStaffPinForConfig,
 } from '../auth/staff-session-auth.js';
 import { DEFAULT_STAFF_PIN_HASH } from '../auth/staff-pin-auth.js';
-import { resetDevicePairingForTests } from '../shared/ops/device-pairing-registry.js';
+import {
+  getDevicePairingById,
+  resetDevicePairingForTests,
+} from '../shared/ops/device-pairing-registry.js';
 import {
   listDevicePresence,
   resetDevicePresenceForTests,
 } from '../shared/ops/device-presence-registry.js';
+import { createInMemoryDeviceGrantStore } from '../shared/db/in-memory-device-grant-store.js';
 import { registerAuthRoutes } from './auth-routes.js';
 import { registerOpsDeviceRoutes } from './ops/ops-device-routes.js';
 import type { AuthPinTarget } from '../api/auth-openapi-types.js';
@@ -126,8 +130,10 @@ function buildAuthSettingsStub(): {
 async function buildAuthApp(): Promise<ReturnType<typeof Fastify>> {
   const app = Fastify({ logger: false });
   const sessions = createStaffSessionManager({ sessionTtlMs: 60 * 60 * 1000 });
+  const deviceGrants = createInMemoryDeviceGrantStore();
   const db = {
     ...buildAuthSettingsStub(),
+    ...deviceGrants,
     getOpsSettings: () => ({
       rooms: [
         {
@@ -206,7 +212,7 @@ async function buildAuthApp(): Promise<ReturnType<typeof Fastify>> {
     }),
   };
 
-  registerClientAuth(app, { staffSessions: sessions });
+  registerClientAuth(app, { staffSessions: sessions, deviceGrants });
   registerAuthRoutes(app, sessions, db);
   registerOpsDeviceRoutes(app);
   app.get('/api/v1/ops/deployment/storage', async (request) => ({
@@ -1213,6 +1219,7 @@ test('TV pairing code creates read-only TV device session on polling TV browser'
   assert.match(tvCookie, /pf_tv_device_session=/);
   assert.match(tvCookie, /HttpOnly/);
   assert.match(tvCookie, /SameSite=Strict/);
+  assert.match(tvCookie, /Max-Age=31536000/);
 
   const queue = await app.inject({
     method: 'GET',
@@ -1221,6 +1228,7 @@ test('TV pairing code creates read-only TV device session on polling TV browser'
   });
   assert.equal(queue.statusCode, 200);
   assert.deepEqual(queue.json(), { role: 'tv' });
+  assert.match(String(queue.headers['set-cookie'] ?? ''), /Max-Age=31536000/);
 
   const mutation = await app.inject({
     method: 'POST',
@@ -1530,6 +1538,7 @@ test('duplicate pairing confirm before device poll is idempotent', async () => {
     payload: { code: started.code },
   });
   assert.equal(firstConfirm.statusCode, 200);
+  assert.equal(readSetCookie(firstConfirm), '');
 
   const secondConfirm = await app.inject({
     method: 'POST',
@@ -1548,6 +1557,42 @@ test('duplicate pairing confirm before device poll is idempotent', async () => {
   });
   assert.equal(paired.statusCode, 200);
   assert.equal(paired.json().paired, true);
+
+  await app.close();
+});
+
+test('confirmed pairing poll still issues a grant after pairing TTL', async () => {
+  enableTestAuth();
+  const app = await buildAuthApp();
+
+  const start = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/terminal/pairing/start',
+    payload: { displayId: 'checkin-terminal' },
+  });
+  assert.equal(start.statusCode, 200);
+  const started = start.json() as { pairingId: string; code: string };
+
+  const mfaCookie = await loginMfa(app);
+  const confirm = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/terminal/pairing/confirm',
+    headers: mfaSessionHeaders(mfaCookie),
+    payload: { code: started.code },
+  });
+  assert.equal(confirm.statusCode, 200);
+
+  const record = getDevicePairingById(started.pairingId);
+  assert.ok(record?.deviceToken);
+  record.expiresAtMs = Date.now() - 1;
+
+  const paired = await app.inject({
+    method: 'GET',
+    url: `/api/v1/auth/terminal/pairing/${started.pairingId}`,
+  });
+  assert.equal(paired.statusCode, 200);
+  assert.equal(paired.json().paired, true);
+  assert.match(readSetCookie(paired), /pf_terminal_device_session=/);
 
   await app.close();
 });

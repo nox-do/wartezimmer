@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { ClientRole } from '../../auth/client-auth.js';
+import { withDeviceGrantSetCookie } from '../../auth/staff-session-auth.js';
+import type { CoreDatabase } from '../../shared/db/database.js';
 import {
   markDeviceStreamConnected,
   markDeviceStreamDisconnected,
@@ -18,7 +20,7 @@ function deviceKindForRole(role: ClientRole): 'tv' | 'terminal' | null {
   return null;
 }
 
-export function registerOpsDeviceStreamRoutes(app: FastifyInstance): void {
+export function registerOpsDeviceStreamRoutes(app: FastifyInstance, db: CoreDatabase): void {
   app.get('/api/v1/ops/device/stream', async (request, reply) => {
     const role = request.clientRole;
     const kind = role ? deviceKindForRole(role) : null;
@@ -32,12 +34,15 @@ export function registerOpsDeviceStreamRoutes(app: FastifyInstance): void {
         : defaultDeviceIdForPairedRole(kind);
 
     reply.hijack();
-    reply.raw.writeHead(200, {
-      'Content-Type': 'text/event-stream; charset=utf-8',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-      'X-Accel-Buffering': 'no',
-    });
+    reply.raw.writeHead(
+      200,
+      withDeviceGrantSetCookie(request, {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      }),
+    );
 
     let cleanedUp = false;
     let pingTimer: ReturnType<typeof setInterval> | null = null;
@@ -65,6 +70,15 @@ export function registerOpsDeviceStreamRoutes(app: FastifyInstance): void {
     pingTimer = setInterval(() => {
       if (reply.raw.writableEnded || reply.raw.destroyed) {
         return;
+      }
+
+      if (request.authSession?.kind === 'device') {
+        const grant = db.getDeviceAuthorizationById(request.authSession.sessionId);
+        if (!grant || grant.revokedAt) {
+          cleanup();
+          reply.raw.end();
+          return;
+        }
       }
 
       recordDevicePresence({ deviceId, kind });

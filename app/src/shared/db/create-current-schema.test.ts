@@ -36,6 +36,7 @@ test('createCurrentSchema builds generation-1 database with portal FKs', () => {
 
   assert.equal(tableHasColumn(db, 'patient_sessions', 'visit_id'), true);
   assert.equal(tableHasColumn(db, 'documents', 'visit_id'), true);
+  assert.equal(tableHasColumn(db, 'device_authorizations', 'token_hash'), true);
   assert.equal(tableReferences(db, 'patient_sessions', 'visits'), true);
   assert.equal(tableReferences(db, 'documents', 'visits'), true);
 

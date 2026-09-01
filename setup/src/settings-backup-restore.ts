@@ -222,6 +222,8 @@ function restorePhaseFromCutover(phase: FreshDbCutoverPhase): RestorePhase {
     case FRESH_DB_CUTOVER_PHASES.prepareImport:
     case FRESH_DB_CUTOVER_PHASES.importSnapshot:
       return RESTORE_PHASES.importSnapshot;
+    case FRESH_DB_CUTOVER_PHASES.copyDeviceAuthorizations:
+      return RESTORE_PHASES.importSnapshot;
     case FRESH_DB_CUTOVER_PHASES.verifyExport:
       return RESTORE_PHASES.verifyExport;
     case FRESH_DB_CUTOVER_PHASES.startFullStack:

@@ -38,6 +38,7 @@ import {
   runFreshDbSettingsCutover,
   type FreshDbCutoverPhase,
 } from './fresh-db-settings-cutover.js';
+import { copyDeviceAuthorizationsFromAsideViaApp } from './device-authorizations-aside.js';
 import { mergeConfigRestoreEnv } from './settings-backup-restore.js';
 import { resolveCurrentSettingsFormatVersion } from './settings-format-version.js';
 import type { SetupContext } from './setup-context.js';
@@ -281,6 +282,8 @@ function updatePhaseFromCutover(phase: FreshDbCutoverPhase): UpdatePhase {
       return UPDATE_PHASES.waitTargetMaintenance;
     case FRESH_DB_CUTOVER_PHASES.prepareImport:
     case FRESH_DB_CUTOVER_PHASES.importSnapshot:
+      return UPDATE_PHASES.importSettings;
+    case FRESH_DB_CUTOVER_PHASES.copyDeviceAuthorizations:
       return UPDATE_PHASES.importSettings;
     case FRESH_DB_CUTOVER_PHASES.verifyExport:
       return UPDATE_PHASES.verifySettings;
@@ -624,6 +627,7 @@ async function commitPreparedUpdate(input: {
         verifyMismatchMessage: 'Re-exportierter Settings-Snapshot weicht vom Pre-Update-Backup ab.',
         localAppBaseUrl: input.localAppBaseUrl,
         localMaintenanceAppBaseUrl: input.localMaintenanceAppBaseUrl,
+        copyDeviceAuthorizations: copyDeviceAuthorizationsFromAsideViaApp,
       },
       {
         appDataAccess: input.prepared.appDataAccess,

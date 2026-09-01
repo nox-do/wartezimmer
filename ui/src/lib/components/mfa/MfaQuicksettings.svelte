@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { Settings, UserPlus } from '@lucide/svelte';
   import { confirmDevicePairing } from '$lib/auth/device-pairing-client';
   import { resolve } from '$app/paths';
@@ -12,6 +13,11 @@
   } from '$lib/mfa/ops-stream-store.svelte';
   import { deviceStatusLabel } from '$lib/ops/device-presence-labels';
   import { TERMINAL_DEVICE_ID, WAITING_ROOM_DEVICE_ID } from '$lib/ops/device-presence-api';
+  import {
+    fetchDeviceAuthorizations,
+    revokeDeviceAuthorization,
+    type DeviceAuthorizationListItem,
+  } from '$lib/mfa/device-authorizations-api';
   import TerminalLockToggle from '$lib/components/mfa/TerminalLockToggle.svelte';
   import { handleClockEasterEggClick } from '$lib/mfa/clock-easter-egg';
   import { spawnMfaEsheep } from '$lib/mfa/esheep';
@@ -47,6 +53,45 @@
   const terminalStatus = $derived(getDevicePresenceStatus(TERMINAL_DEVICE_ID));
   const terminalPhase = $derived(getDeviceQuicksettingsPhase(TERMINAL_DEVICE_ID, 'terminal'));
   const tvPhase = $derived(getDeviceQuicksettingsPhase(WAITING_ROOM_DEVICE_ID, 'tv'));
+
+  let authorizations = $state<DeviceAuthorizationListItem[]>([]);
+  let unpairBusyId = $state<string | null>(null);
+
+  const terminalGrant = $derived(
+    authorizations.find((row) => row.role === 'terminal' && row.deviceId === TERMINAL_DEVICE_ID),
+  );
+  const tvGrant = $derived(
+    authorizations.find((row) => row.role === 'tv' && row.deviceId === WAITING_ROOM_DEVICE_ID),
+  );
+
+  async function loadAuthorizations() {
+    const result = await fetchDeviceAuthorizations();
+    if (result.ok) {
+      authorizations = result.data.authorizations;
+    }
+  }
+
+  async function unpair(authorizationId: string) {
+    if (unpairBusyId) {
+      return;
+    }
+    unpairBusyId = authorizationId;
+    const result = await revokeDeviceAuthorization(authorizationId);
+    unpairBusyId = null;
+    if (!result.ok) {
+      toastStore.add({
+        type: 'error',
+        message: t('mfa.deviceUnpairError'),
+        timeout: 4000,
+      });
+      return;
+    }
+    await loadAuthorizations();
+  }
+
+  onMount(() => {
+    void loadAuthorizations();
+  });
 
   function handleOpenMfaCheckin() {
     if (terminalDisplayLocked) {
@@ -132,6 +177,18 @@
     {:else if terminalPhase === 'unpaired'}
       <p class="qs-panel-desc">{t('mfa.deviceUnpairedHintTerminal')}</p>
     {/if}
+    {#if terminalGrant}
+      <button
+        type="button"
+        class="qs-panel-desc"
+        disabled={unpairBusyId === terminalGrant.authorizationId}
+        onclick={() => void unpair(terminalGrant.authorizationId)}
+      >
+        {unpairBusyId === terminalGrant.authorizationId
+          ? t('mfa.deviceUnpairBusy')
+          : t('mfa.deviceUnpair')}
+      </button>
+    {/if}
   </section>
 
   <section class="panel panel--sm panel--muted">
@@ -165,6 +222,16 @@
       <p class="qs-panel-desc">{t('mfa.deviceDisconnectedHint')}</p>
     {:else if tvPhase === 'unpaired'}
       <p class="qs-panel-desc">{t('mfa.deviceUnpairedHintTv')}</p>
+    {/if}
+    {#if tvGrant}
+      <button
+        type="button"
+        class="qs-panel-desc"
+        disabled={unpairBusyId === tvGrant.authorizationId}
+        onclick={() => void unpair(tvGrant.authorizationId)}
+      >
+        {unpairBusyId === tvGrant.authorizationId ? t('mfa.deviceUnpairBusy') : t('mfa.deviceUnpair')}
+      </button>
     {/if}
   </section>
 

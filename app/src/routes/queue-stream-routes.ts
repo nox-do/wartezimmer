@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { ClientRole } from '../auth/client-auth.js';
 import type { StaffSessionManager } from '../auth/staff-session-auth.js';
+import { withDeviceGrantSetCookie } from '../auth/staff-session-auth.js';
 import type { CoreDatabase } from '../shared/db/database.js';
 import {
   markDeviceStreamConnected,
@@ -52,12 +53,15 @@ export function registerQueueStreamRoutes(
       }
 
       reply.hijack();
-      reply.raw.writeHead(200, {
-        'Content-Type': 'text/event-stream; charset=utf-8',
-        'Cache-Control': 'no-cache, no-transform',
-        Connection: 'keep-alive',
-        'X-Accel-Buffering': 'no',
-      });
+      reply.raw.writeHead(
+        200,
+        withDeviceGrantSetCookie(request, {
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-cache, no-transform',
+          Connection: 'keep-alive',
+          'X-Accel-Buffering': 'no',
+        }),
+      );
 
       const writeEvent = (event: string, data: unknown) => {
         reply.raw.write(`event: ${event}\n`);
@@ -184,12 +188,7 @@ export function registerQueueStreamRoutes(
         writeEvent('snapshot', snapshot);
       });
 
-      const pingTimer = setInterval(() => {
-        recordDevicePresence({ deviceId, kind: 'tv' });
-        publishExpiredRecallWindows(db);
-        reply.raw.write(': ping\n\n');
-      }, SSE_PING_MS);
-
+      let pingTimer: ReturnType<typeof setInterval>;
       let cleanedUp = false;
       const cleanup = () => {
         if (cleanedUp) {
@@ -200,6 +199,26 @@ export function registerQueueStreamRoutes(
         markDeviceStreamDisconnected(deviceId);
         unsubscribe();
       };
+
+      pingTimer = setInterval(() => {
+        if (request.authSession?.kind === 'device') {
+          const grant = db.getDeviceAuthorizationById(request.authSession.sessionId);
+          if (!grant || grant.revokedAt) {
+            try {
+              if (!reply.raw.writableEnded) {
+                writeEvent('session-revoked', { code: 'SESSION_REVOKED' });
+              }
+            } finally {
+              cleanup();
+              reply.raw.end();
+            }
+            return;
+          }
+        }
+        recordDevicePresence({ deviceId, kind: 'tv' });
+        publishExpiredRecallWindows(db);
+        reply.raw.write(': ping\n\n');
+      }, SSE_PING_MS);
 
       request.raw.on('close', cleanup);
       request.raw.on('error', cleanup);
