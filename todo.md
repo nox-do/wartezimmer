@@ -2,6 +2,11 @@
 
 Stand: 2026-09-01
 
+## 2026-09-01 — Stack 0.4.0
+
+- Minor: Root/App/UI/Setup/Sandbox/Packages `0.4.0`; Manager bleibt `0.3.0`
+- Als Nächstes: Release-Cutover (Geräte einmal neu koppeln)
+
 ## 2026-09-01 — Docs Ist nach Device-Authorizations
 
 - `apis.md` / `flows.md`: Panel-PIN außen+innen; Grant statt Staff-Session

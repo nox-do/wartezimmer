@@ -39,13 +39,13 @@ Drei Zahlen — nicht vermischen:
 | Begriff | Beispiel | Wo | Wofür |
 | --- | --- | --- | --- |
 | **Manager-Version** | `0.3.0` | `manager/package.json` | Electron-App, DMG-Name, `minimumManagerVersion` im Update-Paket |
-| **Stack-Release** | `0.3.0` | `--version` / `PRAXIS_FLOW_RELEASE_VERSION` beim Build | Image-Tags `praxis-flow/app:<ver>` + `sandbox:<ver>`, `manager-state`, Manifest `releaseVersion` |
-| **Monorepo** | `0.3.0` | Root-`package.json` | npm-Workspaces — **nur Default**, wenn `--version` fehlt |
+| **Stack-Release** | `0.4.0` | `--version` / `PRAXIS_FLOW_RELEASE_VERSION` beim Build | Image-Tags `praxis-flow/app:<ver>` + `sandbox:<ver>`, `manager-state`, Manifest `releaseVersion` |
+| **Monorepo** | `0.4.0` | Root-`package.json` | npm-Workspaces — **nur Default**, wenn `--version` fehlt |
 
 Stack-Release und Monorepo sind **nicht gekoppelt**. Kunden-Release immer explizit:
 
 ```bash
-export PRAXIS_FLOW_RELEASE_VERSION=0.3.0
+export PRAXIS_FLOW_RELEASE_VERSION=0.4.0
 npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 ```
 

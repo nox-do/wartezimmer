@@ -57,7 +57,7 @@ export async function loadAndMergeOpenApi(root) {
     openapi: '3.1.0',
     info: {
       title: 'Praxis Flow API',
-      version: '0.3.0',
+      version: '0.4.0',
       description: 'Single-praxis REST API. Source of truth for Fastify validation and UI types.',
     },
     paths: {},
