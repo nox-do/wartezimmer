@@ -424,7 +424,10 @@ export function registerAuthRoutes(
       const currentPinHash =
         target === 'ops' ? currentConfig.pinHashesByRole.ops : currentConfig.pinHashesByRole.mfa;
       if (!verifyStaffPin(currentPin, currentPinHash)) {
-        return reply.code(401).send({ code: 'AUTH_UNAUTHORIZED', message: 'Unauthorized.' });
+        return reply.code(400).send({
+          code: 'INVALID_ARGUMENT',
+          message: 'Current PIN is incorrect.',
+        });
       }
       if (target === 'mfa' && verifyStaffPin(newPin, currentConfig.pinHashesByRole.ops)) {
         return reply.code(400).send({

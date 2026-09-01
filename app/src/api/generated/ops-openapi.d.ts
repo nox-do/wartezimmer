@@ -552,8 +552,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * List active TV and terminal device authorizations
-     * @description MFA can list and revoke durable TV and terminal grants. Room-panel grants are not included.
+     * List active device authorizations
+     * @description MFA can list and revoke durable TV, terminal, and room-panel grants.
      */
     get: {
       parameters: {
@@ -567,7 +567,7 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Active TV and terminal grants */
+        /** @description Active device grants */
         200: {
           headers: {
             [name: string]: unknown;
@@ -598,7 +598,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Revoke one TV or terminal device authorization */
+    /** Revoke one device authorization */
     post: {
       parameters: {
         query?: never;

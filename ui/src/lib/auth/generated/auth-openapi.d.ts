@@ -566,7 +566,7 @@ export interface operations {
           'application/json': components['schemas']['ChangePinResponse'];
         };
       };
-      /** @description Invalid target or PIN length. */
+      /** @description Invalid target or PIN length, current PIN is incorrect, or MFA and Ops PINs match. */
       400: {
         headers: {
           [name: string]: unknown;
@@ -575,7 +575,7 @@ export interface operations {
           'application/json': components['schemas']['Error'];
         };
       };
-      /** @description Current PIN is invalid for the requested target. */
+      /** @description Missing or expired staff session. */
       401: {
         headers: {
           [name: string]: unknown;

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import Modal from '$lib/components/Modal.svelte';
   import MfaBooleanSettingToggle from '$lib/components/mfa/MfaBooleanSettingToggle.svelte';
   import Button from '$lib/components/forms/Button.svelte';
@@ -62,6 +62,7 @@
     newPin: '',
     confirmNewPin: '',
   });
+  let currentPinInput: HTMLInputElement | null = $state(null);
 
   async function loadSettings() {
     const settingsResult = await fetchOpsSettings();
@@ -208,6 +209,7 @@
     }
 
     pinBusyTarget = target;
+    let retryCurrentPin = false;
     try {
       const result = await changeAuthPin({
         target,
@@ -216,11 +218,19 @@
         role: 'mfa',
       });
       if (!result.ok) {
+        const currentPinWrong =
+          result.error.status === 400 && !result.error.message?.includes('must be different');
         toastStore.error(
-          result.error.status === 401
-            ? t('mfa.settings.pinChangeCurrentInvalid')
+          result.error.status === 400
+            ? currentPinWrong
+              ? t('mfa.settings.pinChangeCurrentInvalid')
+              : result.error.message
             : result.error.message || t('mfa.settings.settingsSaveError'),
         );
+        if (currentPinWrong) {
+          pinDialogForm = { ...pinDialogForm, currentPin: '' };
+          retryCurrentPin = true;
+        }
         return;
       }
 
@@ -230,6 +240,10 @@
       toastStore.success(t(savedKey));
     } finally {
       pinBusyTarget = null;
+    }
+    if (retryCurrentPin) {
+      await tick();
+      currentPinInput?.focus();
     }
   }
 
@@ -400,11 +414,15 @@
     <label class="modal-form-field">
       <span>{t('mfa.settings.pinCurrentLabel')}</span>
       <input
+        bind:this={currentPinInput}
         class="form-input"
         type="password"
         inputmode="numeric"
         autocomplete="current-password"
+        spellcheck="false"
+        autocapitalize="off"
         bind:value={pinDialogForm.currentPin}
+        onfocus={(event) => event.currentTarget.select()}
         required
         minlength="4"
         pattern={'[0-9]{4,}'}
@@ -424,6 +442,7 @@
         inputmode="numeric"
         autocomplete="new-password"
         bind:value={pinDialogForm.newPin}
+        onfocus={(event) => event.currentTarget.select()}
         required
         minlength="4"
         pattern={'[0-9]{4,}'}
@@ -439,6 +458,7 @@
         inputmode="numeric"
         autocomplete="new-password"
         bind:value={pinDialogForm.confirmNewPin}
+        onfocus={(event) => event.currentTarget.select()}
         required
         minlength="4"
         pattern={'[0-9]{4,}'}

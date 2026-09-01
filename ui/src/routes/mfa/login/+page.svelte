@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { page } from '$app/state';
   import { gotoResolved } from '$lib/navigation/kit-paths';
   import Button from '$lib/components/forms/Button.svelte';
@@ -15,6 +15,7 @@
   const practiceName = $derived(practiceDisplayLabel(practiceProfile, t('terminal.practiceFallback')));
 
   let pin = $state('');
+  let pinInput: HTMLInputElement | null = $state(null);
   let submitting = $state(false);
   let formError = $state<string | null>(null);
 
@@ -49,6 +50,7 @@
   async function handleSubmit() {
     formError = null;
     submitting = true;
+    let retryPin = false;
     try {
       const ok = await submitAuthLogin({
         pin,
@@ -57,12 +59,18 @@
 
       if (!ok) {
         formError = authSlot.errorMessage ?? t('auth.loginFailed');
+        pin = '';
+        retryPin = true;
         return;
       }
 
       await gotoResolved(redirectTarget);
     } finally {
       submitting = false;
+    }
+    if (retryPin) {
+      await tick();
+      pinInput?.focus();
     }
   }
 </script>
@@ -77,17 +85,24 @@
     <label class="modal-form-field">
       {t('auth.pinLabel')}
       <input
+        bind:this={pinInput}
         class="form-input"
         type="password"
         inputmode="numeric"
         autocomplete="current-password"
+        spellcheck="false"
+        autocapitalize="off"
+        autofocus
+        aria-invalid={formError ? 'true' : undefined}
+        aria-describedby={formError ? 'auth-login-error' : undefined}
         bind:value={pin}
+        onfocus={(event) => event.currentTarget.select()}
         required
       />
     </label>
 
     {#if formError}
-      <p class="auth-error">{formError}</p>
+      <p id="auth-login-error" class="auth-error" role="alert">{formError}</p>
     {/if}
 
     <Button type="submit" variant="primary" fullWidth loading={submitting}>

@@ -492,6 +492,7 @@
     }
     if (!result.ok) {
       submitting = false;
+      pin = '';
       errorMessage = result.error.status === 401 ? t('roomPanel.loginInvalid') : result.error.message;
       return;
     }

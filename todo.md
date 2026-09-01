@@ -2,6 +2,18 @@
 
 Stand: 2026-09-01
 
+## 2026-09-01 — PIN-Feld nach Fehlversuch
+
+- Login/PIN-Dialog: Feld leeren, Fokus zurück, Inhalt bei Fokus markieren
+- Room-Panel: PIN nach fehlgeschlagenem Login ebenfalls leer
+- Als Nächstes: unverändert Release-Cutover
+
+## 2026-09-01 — PIN-Wechsel falsche aktuelle PIN
+
+- Falsche aktuelle MFA/OPS-PIN: 400 statt 401, Staff-Session bleibt
+- OpenAPI: `auth.yaml` + `generate:api` (Typen/Bundle)
+- Als Nächstes: unverändert Release-Cutover
+
 ## 2026-09-01 — Stack 0.4.0
 
 - Minor: Root/App/UI/Setup/Sandbox/Packages `0.4.0`; Manager bleibt `0.3.0`

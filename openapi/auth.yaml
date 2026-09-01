@@ -398,13 +398,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChangePinResponse'
         '400':
-          description: Invalid target or PIN length.
+          description: Invalid target or PIN length, current PIN is incorrect, or MFA and Ops PINs match.
           content:
             application/json:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
         '401':
-          description: Current PIN is invalid for the requested target.
+          description: Missing or expired staff session.
           content:
             application/json:
               schema:

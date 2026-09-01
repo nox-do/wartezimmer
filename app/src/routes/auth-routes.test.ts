@@ -736,7 +736,15 @@ test('PIN rotation rejects wrong current MFA PIN', async () => {
     headers: mfaSessionHeaders(cookie),
     payload: { currentPin: '9999', target: 'room-panel', newPin: '4444' },
   });
-  assert.equal(change.statusCode, 401);
+  assert.equal(change.statusCode, 400);
+  assert.equal(change.json().code, 'INVALID_ARGUMENT');
+
+  const stillAuthed = await app.inject({
+    method: 'GET',
+    url: '/api/v1/auth/me',
+    headers: mfaSessionHeaders(cookie),
+  });
+  assert.equal(stillAuthed.statusCode, 200);
 
   const panelLogin = await app.inject({
     method: 'POST',
@@ -744,6 +752,30 @@ test('PIN rotation rejects wrong current MFA PIN', async () => {
     payload: { roomId: 'labor', placement: 'outside', pin: '2222' },
   });
   assert.equal(panelLogin.statusCode, 200);
+
+  await app.close();
+});
+
+test('PIN rotation rejects wrong current Ops PIN without ending the session', async () => {
+  enableTestAuth();
+  const app = await buildAuthApp();
+  const cookie = await loginOps(app);
+
+  const change = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/pin/change',
+    headers: opsSessionHeaders(cookie),
+    payload: { currentPin: '9999', target: 'ops', newPin: '5555' },
+  });
+  assert.equal(change.statusCode, 400);
+  assert.equal(change.json().code, 'INVALID_ARGUMENT');
+
+  const stillAuthed = await app.inject({
+    method: 'GET',
+    url: '/api/v1/auth/me',
+    headers: opsSessionHeaders(cookie),
+  });
+  assert.equal(stillAuthed.statusCode, 200);
 
   await app.close();
 });
@@ -759,7 +791,7 @@ test('PIN rotation treats SQL metacharacter current PIN as wrong credentials', a
     headers: mfaSessionHeaders(cookie),
     payload: { currentPin: "0000' OR '1'='1", target: 'mfa', newPin: '3333' },
   });
-  assert.equal(injectedCurrentPin.statusCode, 401);
+  assert.equal(injectedCurrentPin.statusCode, 400);
 
   const unchangedLogin = await app.inject({
     method: 'POST',
@@ -783,7 +815,7 @@ test('PIN rotation is rate limited per MFA session and client', async () => {
       headers: mfaSessionHeaders(cookie),
       payload: { currentPin: '9999', target: 'room-panel', newPin: '4444' },
     });
-    assert.equal(response.statusCode, 401);
+    assert.equal(response.statusCode, 400);
   }
 
   const limited = await app.inject({
