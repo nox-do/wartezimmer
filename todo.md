@@ -2,6 +2,11 @@
 
 Stand: 2026-09-01
 
+## 2026-09-01 — Ops-Storage-Text
+
+- Ordner anlegen/ändern nur im Manager; Status = ob die App den Host-Ordner erreicht
+- Als Nächstes: unverändert Release-Cutover
+
 ## 2026-09-01 — PIN-Feld nach Fehlversuch
 
 - Login/PIN-Dialog: Feld leeren, Fokus zurück, Inhalt bei Fokus markieren

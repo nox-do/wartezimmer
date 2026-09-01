@@ -83,7 +83,7 @@ export const dict = {
     storageLead: 'Wo Praxis Flow Dateien ablegt — ohne Docker-Pfade konfigurieren.',
     storageExplainTitle: 'So funktioniert das',
     storageExplainBody:
-      'Beim Start legt Praxis Flow zwei Ordner in Ihrem Benutzerprofil an (oder nutzt vorhandene): Kontakte für den Telefon-Abgleich am Terminal, Exporte für Dokumente aus dem MFA. Docker verbindet diese Ordner intern mit der Anwendung — Sie müssen keine Container-Pfade eintragen. Der Pfad kann über den Praxis Flow Manager → Wartung → Import & Export geändert werden.',
+      'Im Manager unter Import & Export werden die Ordner angelegt und die Pfade geändert. Unten sehen Sie diese Pfade auf dem Rechner. Der Status daneben sagt, ob die Anwendung den Ordner nutzen kann: Bereit = erreichbar, Nicht erreichbar = Docker-Freigabe oder Pfad im Manager prüfen.',
     storageImportsLabel: 'Kontakt-Import',
     storageImportsCsvList: 'CSV-Dateien (rekursiv): {files}',
     storageImportsConfigureHint: 'Import-Ordner und Spaltenzuordnung unter System → Kontakt-CSV.',
