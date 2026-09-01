@@ -1,6 +1,6 @@
 # Echtzeit — SSE & Outbox
 
-Stand: 2026-08-31 · Ist (`ops-event-hub`, `queue-stream-hub`, `outbox-worker`, MFA `queue-stream.ts`)
+Stand: 2026-09-01 · Ist (`ops-event-hub`, `queue-stream-hub`, `outbox-worker`, MFA `queue-stream.ts`)
 
 **Scope:** Push-Kanäle, Presence ≠ Pairing, Connection-Budget, Outbox als Audit.  
 Nicht: Rollenmatrix → [`apis.md`](apis.md) · Fachflows → [`../flows.md`](../flows.md) · TLS-Ops → [`../operations/tls.md`](../operations/tls.md)
@@ -20,7 +20,7 @@ In-Memory-Pub/Sub, Single-Praxis — **kein** Redis/Broker.
 
 | Stream | Endpoint | Consumer | Inhalt |
 | --- | --- | --- | --- |
-| Queue | `GET /api/v1/queue/stream` | `mfa`, `tv`, `room-panel` | Snapshots (`event: snapshot`; Panel auch `session-revoked`) |
+| Queue | `GET /api/v1/queue/stream` | `mfa`, `tv`, `room-panel` | Snapshots (`event: snapshot`); TV/Panel bei Grant-Revoke auch `session-revoked` |
 | Ops | `GET /api/v1/ops/stream` | `mfa` | `emergency`, `device.presence`, `device.pairing` |
 | Device | `GET /api/v1/ops/device/stream` | `terminal` (und ggf. TV) | Liveness-SSE; **gekoppeltes TV** nutzt typisch Queue-SSE als Device-Liveness |
 
@@ -70,7 +70,9 @@ Ping ca. alle 25s (`: ping`). Beim Connect: Initial-Snapshot **pro Event-Typ**. 
 
 **Während Pairing** (kein Device-SSE): Heartbeat über Pairing-Poll (&lt;5s online, ≥5s stale, ≥10s offline).
 
-**Pairing:** `pending` → `none` bei Confirm, TTL, Liveness-SSE-Disconnect oder Presence offline. MFA-PIN nur aus `device.pairing`.
+**Pairing (TV/Terminal):** `pending` → `none` bei Confirm (Ops-Snapshot blendet confirmed aus), unbestätigtem TTL, oder Poll-Grace (~60s) ohne Geräte-Poll. Presence und Liveness-SSE-Disconnect löschen **kein** Pairing und **keine** Freigabe. Confirm schreibt keine Tabellenzeile; der erste erfolgreiche Poll insertet die Freigabe und ersetzt denselben Slot. MFA-Code nur aus `device.pairing`.
+
+**Freigabe ≠ Presence:** Widerruf (MFA oder Group-Revoke) wirkt am nächsten SSE-Ping (`revoked_at`); Stream zu, Reconnect **401** → neu koppeln/enrollen. 5xx/Netzwerk behalten Cookie/Freigabe.
 
 Queue-Updates: `publishTvQueueUpdate` → **Queue-Stream**, nicht Ops.
 
@@ -78,7 +80,7 @@ Queue-Updates: `publishTvQueueUpdate` → **Queue-Stream**, nicht Ops.
 
 | REST | Rolle |
 | --- | --- |
-| `POST/GET …/pairing/start\|{id}\|confirm` | Start; Gerät pollt bis Cookie; MFA bestätigt |
+| `POST/GET …/pairing/start\|{id}\|confirm` | Start; MFA bestätigt nur Registry; Gerät pollt → Cookie + Grant |
 | `POST /ops/device/presence` | ergänzende Liveness |
 | `GET /ops/heartbeat` | Terminal-Betriebsflags — **nicht** Primär-Liveness |
 | `POST /ops/emergency/raise\|ack` | auslösen / quittieren |

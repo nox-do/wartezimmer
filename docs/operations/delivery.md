@@ -260,11 +260,11 @@ Cutover (**Stack gestoppt**):
 | `backup_rollback_state` | Snapshot `.env`, `manager-state`, Templates, DB-aside |
 | `install_templates` | Compose/Caddy-Templates aus Paket |
 | `write_release_state` | Image-Tags + `releaseVersion` atomar |
-| Fresh-DB-Cutover | alte DB beiseite → App mit neuem Image → Settings importieren → verifizieren → Full-Stack + Health (`fresh-db-settings-cutover.ts`; Phasen u. a. `move_database` … `health_check`) |
+| Fresh-DB-Cutover | alte DB beiseite → App mit neuem Image → Settings importieren → aktive Gerätefreigaben aus Aside kopieren → verifizieren → Full-Stack + Health (`fresh-db-settings-cutover.ts`; Phasen u. a. `move_database` … `copy_device_authorizations` … `health_check`) |
 
 Bei Fehler **nach** Rollback-Artefakten: `executeUpdateRollback()` stellt den vorherigen Zustand wieder her. Pre-Update-`.pfbackup` bleibt als Datei erhalten.
 
-Fresh-DB-Cutover ist dasselbe Muster wie Restore — Details Klassifikation: [`backup.md`](backup.md).
+Fresh-DB-Cutover ist dasselbe Muster wie Restore, **außer** dass Restore die Gerätefreigaben nicht kopiert — Details: [`backup.md`](backup.md).
 
 ### 5.5 Manifest (Auszug)
 

@@ -1,6 +1,6 @@
 # API — Rollen & Regeln
 
-Stand: 2026-08-31 · Ist (`app/src/auth/route-access-rules.ts`, Session-/Settings-Guards)
+Stand: 2026-09-01 · Ist (`app/src/auth/route-access-rules.ts`, Grant-/Session-Guards)
 
 **Vertrag (maschinenlesbar):** `openapi/*.yaml` · Bundle `openapi/bundle.json` · Swagger `/api/docs` · `npm run generate:api`
 
@@ -18,7 +18,8 @@ Auth-Mechanismen:
 
 | Mechanismus | Wer |
 | --- | --- |
-| Staff-/Device-Cookie + `x-client-role` | `mfa`, `ops`, `terminal`, `tv`, `room-panel` |
+| Staff-Session-Cookie + `x-client-role` | `mfa`, `ops` (Idle-/Absolute-TTL) |
+| Gerätefreigabe-Cookie + `x-client-role` | `terminal`, `tv`, `room-panel` (Hash in `device_authorizations`, kein Staff-TTL) |
 | Bearer = `AUTH_KEY_CAPTIVE` | Rolle `captive` |
 | Bearer = Patient-Session-Token | Portal (`session-auth`); ACL oft `public: true`, Ownership im Handler |
 | Loopback Maintenance `:8082` | Snapshot/Import — nicht LAN ([`../operations/backup.md`](../operations/backup.md)) |
@@ -71,19 +72,21 @@ Neue/geänderte Routen: YAML → `generate:api` → Handler an Schema/Typen → 
 
 ## 4. Raum-Panel
 
-Vertrag: `openapi/auth.yaml`, `openapi/queue.yaml`.
+Vertrag: `openapi/auth.yaml`, `openapi/queue.yaml`. Enrollment einmalig mit der **gemeinsamen Raum-Panel-PIN** (außen und innen). Danach PIN-frei bis Widerruf (Cookie 365d, gleitendes Max-Age). Mehrere aktive Freigaben pro Raum+Placement.
 
 | Endpoint | Zugang | Zweck |
 | --- | --- | --- |
-| `GET /auth/room-panel/rooms` | öffentlich | Placements zum Login (`requiresPin` nur `inside`) |
-| `POST /auth/room-panel/login` | öffentlich | Cookie; Body `roomId`, `placement`, optional `pin` |
+| `GET /auth/room-panel/rooms` | öffentlich | Placements zum Enrollment (`requiresPin` immer true) |
+| `POST /auth/room-panel/login` | öffentlich | Cookie; Body `roomId`, `placement`, **PIN Pflicht** |
 | `GET /queue` | `room-panel` | Snapshot inkl. `capabilities` / Actions |
 | `GET /queue/stream` | `room-panel` | SSE `snapshot` + `session-revoked` |
 | `POST /queue/:visitId/transition` | `room-panel` | nur `check_in_room`, `check_out_room`, `call` |
 
-UI-Buttons aus Snapshot-Actions (`canArrive`, `canCheckOut`, `canCall`); Server bleibt autoritativ. `capabilities.callAnnouncementReachable` steuert Aufruf bei offline WZ-TV.
+UI-Buttons aus Snapshot-Actions (`canArrive`, `canCheckOut`, `canCall`); Server bleibt autoritativ. `capabilities.callAnnouncementReachable` steuert Aufruf bei offline WZ-TV. MFA listet und entkoppelt Freigaben über `GET/POST /ops/device-authorizations`.
 
-Fehler: Transition **403** = Capability/Scope (Snapshot refresh) · **409** = TV offline / Capacity / Race · Queue **401/403** = Re-Login.
+Fehler: Transition **403** = Capability/Scope (Snapshot refresh) · **409** = TV offline / Capacity / Race · Queue **401/403** = Enrollment (Raum/Placement aus oder Grant weg). Netzwerk/5xx kein Re-Enrollment.
+
+Group-Revoke: Raum aus → alle Panels des Raums; Placement aus → dieses Placement; gemeinsame PIN geändert → alle Panels; Relogin-Hotspot → nur diese Freigabe.
 
 Details: [`../flows.md`](../flows.md) § Flow 5 · Raum-Scope [`domain.md`](domain.md) §3.
 

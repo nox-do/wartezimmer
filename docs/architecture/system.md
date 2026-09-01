@@ -1,6 +1,6 @@
 # System — Container, Module, Persistenz
 
-Stand: 2026-08-31 · Ist am Code
+Stand: 2026-09-01 · Ist am Code
 
 **Scope:** Stack, logische Komponenten, Code-Schnitt, Persistenz, Tagesreset, Schutzklassen.  
 Nicht: Domänendetail → [`domain.md`](domain.md) · SSE → [`realtime.md`](realtime.md) · Sandbox-Detail → [`documents.md`](documents.md) · Compose/Ports → [`../operations/runtime.md`](../operations/runtime.md)
@@ -81,7 +81,7 @@ Workspaces u. a. `app`, `ui`, `sandbox`, `setup`, `manager`, `packages/*`.
 | HTTP | `routes/` | Fastify-Registrars (checkin, queue, documents, ops, sessions, …) |
 | Fachlogik | `shared/` | Queue, Documents, Forms, Ops, Contacts, flow-core, … |
 | Persistenz | `shared/db/` | `CoreDatabase`; SQL in `database-*.ts` |
-| Auth | `auth/` | Rollen (`ROUTE_ACCESS_RULES`), Portal-Session |
+| Auth | `auth/` | Rollen (`ROUTE_ACCESS_RULES`); Staff-Session MFA/OPS; Gerätefreigaben TV/Terminal/Panel |
 | Fehler | `http/` | Domain-Error-Codes, API-Mapping |
 
 | Komponente | Routes (Auszug) | Shared / DB |
@@ -112,13 +112,13 @@ Echtzeit: [`realtime.md`](realtime.md) — SSE beobachten, REST tun.
 
 Crash-resilient tagsüber, absichtlich flüchtig über den Praxistag:
 
-| Tagsüber | Nach Tagesreset weg |
+| Bleibt nach Tagesreset | Wird geleert |
 | --- | --- |
-| Queue/Session, Zuordnungen, temp. Dokumente | Dokumente, Anamnese, Tagesdaten (Settings bleiben) |
+| Settings (`ops_settings`), **Gerätefreigaben** (`device_authorizations`) | Queue, Patient-Sessions, Dokumente, Anamnese, sonstige Tagesdaten |
 
 **Tagesabschluss** (`POST /ops/day-close/start`): Phase gestartet, Check-in gesperrt — kein Runtime-Reset (API für späteren Export-/Archiv-Flow).
 
-**Tagesreset** (`POST /ops/day-lifecycle/reset`, MFA „Neuen Tag starten“): Tickets/Outbox leer, `lastResetBusinessDay`, Sandbox purge/restart; **Settings bleiben** (`ops_settings`). SQLite-Datei bleibt. Export-Ordner auf dem Host unangetastet. Kein vorheriger Day-Close nötig.
+**Tagesreset** (`POST /ops/day-lifecycle/reset`, MFA „Neuen Tag starten“): Tickets/Outbox leer, `lastResetBusinessDay`, Sandbox purge/restart; **Settings und Gerätefreigaben bleiben**. SQLite-Datei bleibt. Export-Ordner auf dem Host unangetastet. Kein vorheriger Day-Close nötig.
 
 Nach Crash: Wiederherstellung aus persistierter Runtime — Reset nur bewusst über MFA.
 

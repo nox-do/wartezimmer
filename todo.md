@@ -2,6 +2,18 @@
 
 Stand: 2026-09-01
 
+## 2026-09-01 — Docs Ist nach Device-Authorizations
+
+- `apis.md` / `flows.md`: Panel-PIN außen+innen; Grant statt Staff-Session
+- `realtime.md`: Presence löscht kein Pairing; Poll schreibt Grant
+- `backup.md` / `delivery.md` / `system.md`: Restore leer, Update kopiert, Tagesreset unangetastet
+- Als Nächstes: unverändert Release-Cutover
+
+## 2026-09-01 — Device-Authorizations OpenAPI-Text
+
+- GET/Revoke `device-authorizations`: YAML-Summary erwähnt Panels (Schnitt-3-Ist)
+- Als Nächstes: unverändert Release-Cutover
+
 ## 2026-09-01 — Device-Authorizations Schnitt 3
 
 - Room-Panels: PIN-Enrollment (außen+innen), Cookie 365d, Auth über `device_authorizations`

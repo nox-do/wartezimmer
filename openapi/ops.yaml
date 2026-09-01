@@ -1949,11 +1949,11 @@ paths:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     get:
-      summary: List active TV and terminal device authorizations
-      description: MFA can list and revoke durable TV and terminal grants. Room-panel grants are not included.
+      summary: List active device authorizations
+      description: MFA can list and revoke durable TV, terminal, and room-panel grants.
       responses:
         '200':
-          description: Active TV and terminal grants
+          description: Active device grants
           content:
             application/json:
               schema:
@@ -1962,7 +1962,7 @@ paths:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
-      summary: Revoke one TV or terminal device authorization
+      summary: Revoke one device authorization
       parameters:
         - name: authorizationId
           in: path

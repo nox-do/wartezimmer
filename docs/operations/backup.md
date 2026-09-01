@@ -1,6 +1,6 @@
 # Backup, Restore & Settings-Erhalt
 
-Stand: 2026-08-31 · am Code geprüft (`settings-backup*.ts`, `tls-backup*.ts`, Maintenance `:8082`)
+Stand: 2026-09-01 · am Code geprüft (`settings-backup*.ts`, `tls-backup*.ts`, Maintenance `:8082`)
 
 **Scope:** Was in `.pfbackup` liegt, Restore, TLS-Sidecar-Grenze, gemeinsames Fresh-DB-Muster mit Update.  
 Nicht: `.pfupdate`-Paketformat → [`delivery.md`](delivery.md) · LAN-TLS Betrieb → [`tls.md`](tls.md) · Backup v2 → [`../plan-backup-v2.md`](../plan-backup-v2.md) (**nicht** hier fortschreiben)
@@ -17,7 +17,7 @@ Eine Installation = **eine Praxis**, Stack lokal. Upgrade-/Restore-Vertrag: **Fr
 | **Host / Stack** (`.env`, Pfade, URLs) | Ja, Klartext | Merge (§3) |
 | **Deployment** (`manager-state`) | Im Archiv-Manifest | Rollback-Referenz; Image-Tags am Ziel bleiben |
 | **Projektion** (flow-core-Catalog) | Nein | Neu generieren |
-| **Runtime-DB** | Nein | Verwerfen |
+| **Runtime-DB** | Nein | Verwerfen; Gerätefreigaben nach Restore leer (§3.2) |
 
 **Sicherheitsmodell (Beta):** Keine anwendungsseitige Backup-Verschlüsselung, kein Cloud-KMS, keine MFA-PIN fürs Backup. Provider-API-Keys liegen in DB und `.pfbackup` im Klartext — Datei und Datenträger schützen. Nutzerhinweis vor Export: geplant in Backup v2, noch nicht Ist.
 
@@ -74,7 +74,11 @@ Wahrheit fachlich: **`ops_settings`** (+ JSON-Felder), nicht der Catalog. Nach I
 
 ### 3.2 Nicht im Backup (Runtime)
 
-`visits`, `visit_events`, `patients`, `patient_sessions`, `documents`, `outbox_events`, Catalog-Tabellen, … — komplette Runtime-DB.
+`visits`, `visit_events`, `patients`, `patient_sessions`, `documents`, `outbox_events`, Catalog-Tabellen, `device_authorizations`, … — komplette Runtime-DB. PIN-Hashes liegen in `auth_settings`, nicht als Freigabezeilen.
+
+**Restore:** `device_authorizations` wird **nicht** kopiert. TV, Terminal und Raum-Panels müssen neu koppeln/enrollen.
+
+**Update (`.pfupdate`):** derselbe Fresh-DB-Cutover **mit** Copy-Hook: Setup liest aktive Zeilen read-only aus der Aside-SQLite, Maintenance `:8082` schreibt sie in die neue DB. Alte In-Memory-Sessions (vor diesem Schema) sind nicht übernehmbar.
 
 ### 3.3 `.env`-Restore-Merge
 
@@ -100,7 +104,7 @@ Fläche **Wartung** → Praxis-Backup / Wiederherstellen (`BackupPanel`, Restore
 | --- | --- |
 | Erstellen | Stack oben; schreibt `.pfbackup` (typ. unter Install-Home `backups/`); bei `tls.state ≠ off` zusätzlich Sidecar |
 | Inspect / Vorschau | Archiv, Settings-Format, Release-Vergleich, TLS-Zusammenfassung |
-| Wiederherstellen | Bestätigung; Queue/Runtime weg; Fresh-DB + Import; optional Credentials-Skip nach Fehlern vorschlagen |
+| Wiederherstellen | Bestätigung; Queue/Runtime weg; Fresh-DB + Import **ohne** Gerätefreigaben; optional Credentials-Skip nach Fehlern vorschlagen |
 
 Keine „nur `.env`-Datei“-Produktstrecke mehr — Vertrag ist `.pfbackup` (+ Sidecar).
 
@@ -118,7 +122,7 @@ Produktkontext: [`tls.md`](tls.md) §8. Helpers: `tls-backup.ts` / `tls-backup-s
 
 ## 6. Gemeinsames Cutover mit Update
 
-Restore und `.pfupdate`-Settings-Import teilen dasselbe Muster: alte Runtime-DB beiseite → App mit Ziel-Image → Settings importieren → verifizieren → Full-Stack + Health (`fresh-db-settings-cutover.ts`).
+Restore und `.pfupdate`-Settings-Import teilen dasselbe Muster: alte Runtime-DB beiseite → App mit Ziel-Image → Settings importieren → verifizieren → Full-Stack + Health (`fresh-db-settings-cutover.ts`). Nur der Update-Caller setzt den Copy-Hook für aktive `device_authorizations`.
 
 Update-Phasen (Backup **vor** Stop über `:8082`, dann Cutover/Rollback): [`delivery.md`](delivery.md) §5.  
 Pre-Update-`.pfbackup` bleibt als Datei; bei Fehler nach Rollback-Artefakten: `executeUpdateRollback()`.

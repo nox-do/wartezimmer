@@ -14,7 +14,7 @@ Abgleich Svelte-Apps (`ui/`) gegen diese Flows — **ohne** eGK-Hardware, SMS/Me
 | Raum-Panel          | Login pro Placement (`/room-panel`), Live-Snapshot (SSE), Ankunft/Entlassen/Aufruf aus `actions`, getrennte `callCandidates`-Liste                                                                                                                                                                                                                                                                                                | —                                                        |
 | TV                  | SSE, Aufruf, Chime, Pagination, Device-Pairing                                                                                                                                                                                                                                                                                                                                                                                    | —                                                        |
 
-**Echtzeit-Zielbild:** `docs/architecture/realtime.md` — Presence (offline) und Pairing (PIN) sind getrennte SSE-Events; REST nur fuer Aktionen.
+**Echtzeit-Zielbild:** `docs/architecture/realtime.md` — Presence (offline) und Pairing (Code) sind getrennte SSE-Events; REST nur fuer Aktionen.
 
 Details und offene fachliche Punkte siehe Abschnitte pro Flow unten.
 
@@ -389,7 +389,7 @@ Jedes Terminal-Thema hat ein **Standard-Aufrufziel** (`defaultRoomId`). In der R
 | **Umziehen (MFA)**             | `type: reassign_room` — bei Raumwechsel aus `in_room` zurück auf `called` | Panel zeigt danach kein Check-out mehr am alten Ort                      |
 | **Zurückholen vor Entlassung** | MFA: zurück ins Wartezimmer / erneut aufrufen                             | —                                                                        |
 
-**Backend:** `POST …/transition` mit `type: check_in_room`, `check_out_room` oder `call` (nur Raum-Panel-Session). MFA sendet weiterhin die MFA-Transitions ohne Raum-Einschränkung. Raum-Panel nutzt **Snapshot-Actions** (`canArrive`, `canCheckOut`, `canCall`) — UI leitet Buttons daraus ab, Server antwortet bei Race/Guard mit 403/409.
+**Backend:** `POST …/transition` mit `type: check_in_room`, `check_out_room` oder `call` (nur Raum-Panel-Freigabe). MFA sendet weiterhin die MFA-Transitions ohne Raum-Einschränkung. Raum-Panel nutzt **Snapshot-Actions** (`canArrive`, `canCheckOut`, `canCall`) — UI leitet Buttons daraus ab, Server antwortet bei Race/Guard mit 403/409.
 
 **Scope vs. Aktion:** Gehört der Visit zu diesem Raum? (`visitTargetsRoom` über `targetLocationId`) — separat von: Darf dieses Placement etwas tun? (`capabilities` + Flow-Core). Status und `movementMode` steuern nur Darstellung und erlaubte Aktionen.
 
@@ -468,18 +468,19 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 
 ### Placements
 
-| Placement            | PIN                                                       | Modus                                       | Namen    | Aufruf                            |
-| -------------------- | --------------------------------------------------------- | ------------------------------------------- | -------- | --------------------------------- |
-| **outside** (Tür)    | nein                                                      | `display_only` \| `arrival`                 | nie      | nie                               |
-| **inside** (im Raum) | ja (Raum-Panel-PIN, gemeinsam für alle Inside-Placements) | `display_only` \| `arrival` \| `staff_full` | optional | nur `staff_full` + `allowCalling` |
+| Placement            | PIN beim Enrollment                                      | Modus                                       | Namen    | Aufruf                            |
+| -------------------- | -------------------------------------------------------- | ------------------------------------------- | -------- | --------------------------------- |
+| **outside** (Tür)    | ja (gemeinsame Raum-Panel-PIN)                           | `display_only` \| `arrival`                 | nie      | nie                               |
+| **inside** (im Raum) | ja (dieselbe PIN)                                        | `display_only` \| `arrival` \| `staff_full` | optional | nur `staff_full` + `allowCalling` |
 
 **Settings:** Panel-Modi und Texte: MFA → Themen & Räume → Raum-Expander. **Raum-Panel-PIN** (getrennt von MFA-/Ops-PIN): MFA → Betrieb.
 
-### Login
+### Enrollment
 
-- `GET /auth/room-panel/rooms` — ein Eintrag pro **aktivem Placement** (`roomId`, `roomLabel`, `placement`, `mode`, `requiresPin`)
-- `POST /auth/room-panel/login` — Body: `roomId` + `placement`; `pin` nur für `inside`
-- UI: „Labor – Tür“ / „Labor – im Raum“; URL-Placement wird beim Restore bevorzugt
+- `GET /auth/room-panel/rooms` — ein Eintrag pro **aktivem Placement** (`roomId`, `roomLabel`, `placement`, `mode`, `requiresPin: true`)
+- `POST /auth/room-panel/login` — Body: `roomId` + `placement` + **PIN** (außen und innen)
+- Danach Cookie-Freigabe ohne PIN bis Widerruf, Relogin-Hotspot, Raum-/Placement-Deaktivierung, PIN-Wechsel oder Restore
+- UI: „Labor – Tür“ / „Labor – im Raum“; URL-Placement wird beim Restore des Cookies bevorzugt
 
 ### Live-UI
 
@@ -488,7 +489,7 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 - **Raum-Items** (`called`, `directed`, `in_room`) mit Actions
 - **Aufruf-Liste** (`callCandidates`, Backend-FIFO) nur wenn `capabilities.canCall`; getrennt von Raum-Items
 - Buttons nur bei `actions.canArrive` / `canCheckOut` / `canCall` — kein lokales Ableiten aus Modus; Aufruf disabled wenn `capabilities.callAnnouncementReachable` false (WZ-TV offline, Server-Presence)
-- **409** (TV offline trotzdem versucht, Capacity, Race): Toast + Snapshot-Refresh · **403** Capability: Refresh ohne Logout · Session-Ende nur bei 401 / Queue-403 / Revoke
+- **409** (TV offline trotzdem versucht, Capacity, Race): Toast + Snapshot-Refresh · **403** Capability: Refresh ohne Logout · Enrollment nur bei 401 / Queue-403 / Revoke
 
 ### Device Presence
 
@@ -533,6 +534,8 @@ flowchart LR
 
 ---
 
-## Geräte: Pairing & Presence
+## Geräte: Pairing, Freigabe & Presence
 
-Siehe [`realtime.md`](architecture/realtime.md) — **Presence ≠ Pairing** (getrennte SSE-Events).
+TV und Terminal: Pairing-Code → MFA-Confirm (nur Registry) → Geräte-Poll schreibt die Freigabe. Raum-Panel: einmal PIN-Enrollment. Danach überleben die Cookies Sleep, App-Neustart und normale Updates; neu koppeln/enrollen nach MFA-Entkoppeln, Backup-Restore oder Origin-/Cookie-Verlust.
+
+Presence (online/stale/offline) bleibt getrennt — siehe [`realtime.md`](architecture/realtime.md).
