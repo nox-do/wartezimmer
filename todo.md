@@ -1,6 +1,31 @@
 # Arbeitsstand (intern)
 
-Stand: 2026-08-31
+Stand: 2026-09-01
+
+## 2026-09-01 — Device-Authorizations (Plan nachgezogen)
+
+- Nicht live: Schema in Baseline, lokale Dev-DB neu initialisieren
+- Copy: Setup liest Aside, Maintenance `:8082` schreibt; kein cp auf WAL
+- Confirmed-Pairing nur Poll-Grace, nicht Pairing-`expiresAtMs`
+
+## 2026-09-01 — Device-Authorizations (Plan-Review)
+
+- Review gegen Ist-Code; Canvas: plan-device-authorizations-review
+- Kein P0. Vor Code drei P1: Poll-only INSERT (Unique), Cookie = Sliding Max-Age, Copy-Flag nur Update-Cutover
+- P2: SSE-Hijack Set-Cookie; PIN-Reset alle Panels + OpenAPI; Client 403 ≠ Re-Pair
+
+## 2026-09-01 — Device-Authorizations (Plan reduziert)
+
+- Vertrag: [`docs/plan-device-authorizations.md`](docs/plan-device-authorizations.md)
+- Gestrichen: Snapshot-Feld, Renew-Endpoint, Dual-Presence, In-Process-Event, 5 Schnitte, Service-Schicht
+- Cookie rollt an normalen Responses + SSE-Eröffnung (nicht am Ping)
+- Update kopiert aktive Zeilen aus alter SQLite; Restore/Tagesreset nicht
+- Gestohlenes Cookie gilt bis MFA-Widerruf (LAN/TLS bewusst)
+- Schnitte: 1 Schema → 2 TV/Terminal + MFA-Liste → 3 Panels + Aufräumen
+
+## 2026-09-01 — Device-Pairing / Sleep (Logs)
+
+- Logs: TV 401 nach Wake, Terminal Heartbeats overnight ~16–34 min 200 → Asymmetrie Idle-Refresh, nicht „Terminal überlebt Deep-Sleep >2h“
 
 ## 2026-08-31 — Architecture i18n.md + `_sources/` entfernt
 
