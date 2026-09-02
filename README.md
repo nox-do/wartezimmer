@@ -97,7 +97,7 @@ ui/                     SvelteKit → Build nach app/dist/ui-static
 sandbox/                Dokument-Preview, ClamAV, Form2PDF
 packages/domain/        Geteilte Fachlogik / Typen
 packages/server-shared/ Geteilte Server-Helfer (Logger, …)
-setup/                  Host-CLI + Setup-API (:9190)
+setup/                  Host-CLI + Setup-API (CLI :9190; Manager-Child ephemer)
 manager/                Electron-App: Wizard, Wartung, Updates
 gateway/                Lab-Referenz openNDS (nicht Produktkern)
 openapi/                API-Spezifikation (Source of Truth)

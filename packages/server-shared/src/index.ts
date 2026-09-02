@@ -147,8 +147,15 @@ export {
   type GatewayBridgeValidationContext,
 } from './gateway-bridge.js';
 export {
+  SETUP_API_HEALTH_PATH,
+  SETUP_API_PROTOCOL_VERSION,
+  SETUP_ATTACH_EXISTING_ENV,
+  SETUP_BUILD_ID_ENV,
   SETUP_DEFAULT_GATEWAY_INTERFACE,
   SETUP_DEFAULT_GATEWAY_IP,
+  SETUP_MANAGER_TOKEN_ENV,
+  SETUP_MANAGER_TOKEN_HEADER,
+  SETUP_READY_LOG_PREFIX,
   SETUP_TLS_ROUTES,
   TLS_OPERATOR_MAIL,
   TLS_OPERATOR_ZONE_DEFAULT,
@@ -222,6 +229,7 @@ export {
   type RoutingModeCapabilities,
   type SetRoutingModeInput,
   type SetRoutingModeResult,
+  type SetupHealthIdentity,
   type SetupPlan,
   type SetupPlanInput,
   type SetupProbesResult,

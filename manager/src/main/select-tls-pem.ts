@@ -48,31 +48,41 @@ async function pickPemPair(
 export async function stageTlsCertificateFromPicker(
   parentWindow: BrowserWindow | null,
   apiBase: string,
+  token?: string | null,
 ): Promise<TlsPemSetupResult> {
   const pem = await pickPemPair(parentWindow);
   if (pem.canceled) {
     return { canceled: true };
   }
-  const result = await callSetupApi<TlsActionResult>(apiBase, {
-    method: 'POST',
-    path: SETUP_TLS_ROUTES.customCertificate,
-    body: { fullchainPem: pem.fullchainPem, privateKeyPem: pem.privateKeyPem },
-  });
+  const result = await callSetupApi<TlsActionResult>(
+    apiBase,
+    {
+      method: 'POST',
+      path: SETUP_TLS_ROUTES.customCertificate,
+      body: { fullchainPem: pem.fullchainPem, privateKeyPem: pem.privateKeyPem },
+    },
+    token,
+  );
   return { canceled: false, tls: result.tls, checks: result.checks };
 }
 
 export async function renewTlsCertificateFromPicker(
   parentWindow: BrowserWindow | null,
   apiBase: string,
+  token?: string | null,
 ): Promise<TlsPemSetupResult> {
   const pem = await pickPemPair(parentWindow);
   if (pem.canceled) {
     return { canceled: true };
   }
-  const result = await callSetupApi<TlsActionResult>(apiBase, {
-    method: 'POST',
-    path: SETUP_TLS_ROUTES.renew,
-    body: { fullchainPem: pem.fullchainPem, privateKeyPem: pem.privateKeyPem },
-  });
+  const result = await callSetupApi<TlsActionResult>(
+    apiBase,
+    {
+      method: 'POST',
+      path: SETUP_TLS_ROUTES.renew,
+      body: { fullchainPem: pem.fullchainPem, privateKeyPem: pem.privateKeyPem },
+    },
+    token,
+  );
   return { canceled: false, tls: result.tls, checks: result.checks };
 }

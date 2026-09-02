@@ -1,44 +1,103 @@
+import { randomBytes } from 'node:crypto';
 import { type ChildProcess, spawn } from 'node:child_process';
 import { app } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  SETUP_API_HEALTH_PATH,
+  SETUP_BUILD_ID_ENV,
+  SETUP_MANAGER_TOKEN_ENV,
+  SETUP_MANAGER_TOKEN_HEADER,
+} from '@praxis-flow/server-shared/setup-api';
 import { findProjectRoot } from './project-root.js';
+import {
+  createLineAssembler,
+  evaluateSetupHealthIdentity,
+  expectedSetupBuildId,
+  expectedSetupInstallHome,
+  isAttachExistingSetupEnabled,
+  parseSetupReadyLine,
+  SETUP_API_PROTOCOL_VERSION,
+} from './setup-identity.js';
 
-const DEFAULT_PORT = 9190;
+const DEFAULT_ATTACH_PORT = 9190;
 const STARTUP_TIMEOUT_MS = 15_000;
 
-export function getSetupPort(): number {
-  const port = Number(process.env.SETUP_HOST_PORT ?? DEFAULT_PORT);
+export function getAttachSetupPort(): number {
+  const port = Number(process.env.SETUP_HOST_PORT ?? DEFAULT_ATTACH_PORT);
   if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-    return DEFAULT_PORT;
+    return DEFAULT_ATTACH_PORT;
   }
   return port;
 }
 
-export function getSetupApiBase(port = getSetupPort()): string {
+export function getSetupApiBase(port: number): string {
   return `http://127.0.0.1:${port}`;
 }
 
-async function fetchStatusOk(apiBase: string): Promise<boolean> {
-  try {
-    const response = await fetch(`${apiBase}/api/setup/health`, {
-      signal: AbortSignal.timeout(2_000),
-    });
-    return response.ok;
-  } catch {
-    return false;
+function spawnListenPort(): number {
+  const raw = process.env.SETUP_HOST_PORT?.trim();
+  if (!raw) {
+    return 0;
   }
+  const port = Number(raw);
+  if (!Number.isInteger(port) || port < 0 || port > 65_535) {
+    return 0;
+  }
+  return port;
 }
 
-async function waitForSetupApi(apiBase: string, timeoutMs = STARTUP_TIMEOUT_MS): Promise<void> {
-  const started = Date.now();
-  while (Date.now() - started < timeoutMs) {
-    if (await fetchStatusOk(apiBase)) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 200));
+function readEnvToken(): string | null {
+  const raw = process.env[SETUP_MANAGER_TOKEN_ENV]?.trim();
+  return raw || null;
+}
+
+async function fetchSetupHealth(apiBase: string, token: string | null): Promise<unknown> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers[SETUP_MANAGER_TOKEN_HEADER] = token;
   }
-  throw new Error(`Setup-API nicht erreichbar unter ${apiBase} — bitte Manager neu starten.`);
+  const response = await fetch(`${apiBase}${SETUP_API_HEALTH_PATH}`, {
+    headers,
+    signal: AbortSignal.timeout(2_000),
+  });
+  const text = await response.text();
+  let body: unknown = null;
+  if (text.trim()) {
+    body = JSON.parse(text) as unknown;
+  }
+  if (!response.ok) {
+    throw new Error(`Setup-API Health HTTP ${response.status}`);
+  }
+  return body;
+}
+
+async function waitForMatchingHealth(
+  apiBase: string,
+  token: string | null,
+  expected: { protocolVersion: number; buildId: string; installHome: string },
+  timeoutMs = STARTUP_TIMEOUT_MS,
+): Promise<void> {
+  const started = Date.now();
+  let lastError: string | null = null;
+  while (Date.now() - started < timeoutMs) {
+    let body: unknown;
+    try {
+      body = await fetchSetupHealth(apiBase, token);
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      continue;
+    }
+    const mismatch = evaluateSetupHealthIdentity(body, expected);
+    if (mismatch) {
+      throw new Error(mismatch);
+    }
+    return;
+  }
+  throw new Error(
+    lastError ?? `Setup-API nicht erreichbar unter ${apiBase} — bitte Manager neu starten.`,
+  );
 }
 
 export type SetupServerHandle = {
@@ -46,6 +105,7 @@ export type SetupServerHandle = {
   apiBase: string;
   reusedExisting: boolean;
   child: ChildProcess | null;
+  token: string | null;
 };
 
 function resolvePackagedSetupServerEntry(): string {
@@ -64,60 +124,116 @@ function resolvePackagedTemplateRoot(): string {
   return path.join(process.resourcesPath, 'templates');
 }
 
-function startPackagedSetupServer(port: number): ChildProcess {
+function childEnv(port: number, token: string, buildId: string): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    SETUP_HOST_PORT: String(port),
+    [SETUP_MANAGER_TOKEN_ENV]: token,
+    [SETUP_BUILD_ID_ENV]: buildId,
+  };
+}
+
+function startPackagedSetupServer(port: number, token: string, buildId: string): ChildProcess {
   const serverEntry = resolvePackagedSetupServerEntry();
   const templateRoot = resolvePackagedTemplateRoot();
 
   return spawn(process.execPath, [serverEntry], {
     env: {
-      ...process.env,
+      ...childEnv(port, token, buildId),
       ELECTRON_RUN_AS_NODE: '1',
       PRAXIS_FLOW_TEMPLATE_ROOT: templateRoot,
-      SETUP_HOST_PORT: String(port),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 }
 
-function startDevSetupServer(moduleDir: string, port: number): ChildProcess {
+function startDevSetupServer(
+  moduleDir: string,
+  port: number,
+  token: string,
+  buildId: string,
+): ChildProcess {
   const repoRoot = findProjectRoot(moduleDir);
 
   return spawn('npm', ['run', '-w', '@praxis-flow/setup', 'serve'], {
     cwd: repoRoot,
-    env: {
-      ...process.env,
-      SETUP_HOST_PORT: String(port),
-    },
+    env: childEnv(port, token, buildId),
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 }
 
-export async function startSetupServer(): Promise<SetupServerHandle> {
-  const port = getSetupPort();
-  const apiBase = getSetupApiBase(port);
-
-  if (await fetchStatusOk(apiBase)) {
-    console.log(`Setup-API läuft bereits auf ${apiBase}`);
-    return { port, apiBase, reusedExisting: true, child: null };
+function logSetupChunk(chunk: Buffer, stream: 'stdout' | 'stderr'): void {
+  const line = String(chunk).trim();
+  if (!line) {
+    return;
   }
+  if (stream === 'stderr') {
+    console.error(`[setup] ${line}`);
+    return;
+  }
+  console.log(`[setup] ${line}`);
+}
 
-  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-  const child = app.isPackaged
-    ? startPackagedSetupServer(port)
-    : startDevSetupServer(moduleDir, port);
+function waitForSetupReady(child: ChildProcess, timeoutMs = STARTUP_TIMEOUT_MS): Promise<number> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const stdoutLines = createLineAssembler();
+    const stderrLines = createLineAssembler();
 
-  child.stdout?.on('data', (chunk) => {
-    const line = String(chunk).trim();
-    if (line) {
-      console.log(`[setup] ${line}`);
-    }
+    const finish = (error: Error | null, port?: number) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      child.stdout?.off('data', onReadyStdout);
+      child.stderr?.off('data', onReadyStderr);
+      child.off('exit', onExit);
+      child.off('error', onError);
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(port as number);
+    };
+
+    const considerLines = (lines: string[]) => {
+      for (const line of lines) {
+        const port = parseSetupReadyLine(line);
+        if (port) {
+          finish(null, port);
+          return;
+        }
+      }
+    };
+
+    const onReadyStdout = (chunk: Buffer) => considerLines(stdoutLines.push(chunk));
+    const onReadyStderr = (chunk: Buffer) => considerLines(stderrLines.push(chunk));
+    const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+      finish(
+        new Error(
+          `Setup-Child beendet bevor die API bereit war (code=${code ?? 'null'}, signal=${signal ?? 'none'}).`,
+        ),
+      );
+    };
+    const onError = (error: Error) => {
+      finish(new Error(`Setup-Child konnte nicht gestartet werden: ${error.message}`, { cause: error }));
+    };
+
+    const timer = setTimeout(() => {
+      finish(new Error('Setup-API hat keinen Ready-Handshake gesendet — bitte Manager neu starten.'));
+    }, timeoutMs);
+
+    child.stdout?.on('data', onReadyStdout);
+    child.stderr?.on('data', onReadyStderr);
+    child.once('exit', onExit);
+    child.once('error', onError);
   });
-  child.stderr?.on('data', (chunk) => {
-    const line = String(chunk).trim();
-    if (line) {
-      console.error(`[setup] ${line}`);
-    }
-  });
+}
+
+function attachSetupListeners(child: ChildProcess): void {
+  child.stdout?.on('data', (chunk: Buffer) => logSetupChunk(chunk, 'stdout'));
+  child.stderr?.on('data', (chunk: Buffer) => logSetupChunk(chunk, 'stderr'));
   child.on('error', (error) => {
     console.error('[setup] Prozessfehler:', error);
   });
@@ -129,9 +245,46 @@ export async function startSetupServer(): Promise<SetupServerHandle> {
     }
     console.error(`[setup] Child beendet (code=${code ?? 'null'}, signal=${signalText})`);
   });
+}
 
-  await waitForSetupApi(apiBase);
-  return { port, apiBase, reusedExisting: false, child };
+export async function startSetupServer(): Promise<SetupServerHandle> {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  const isPackaged = app.isPackaged;
+  const expected = {
+    protocolVersion: SETUP_API_PROTOCOL_VERSION,
+    buildId: expectedSetupBuildId(isPackaged, moduleDir),
+    installHome: expectedSetupInstallHome(isPackaged, moduleDir),
+  };
+
+  if (isAttachExistingSetupEnabled()) {
+    const port = getAttachSetupPort();
+    const apiBase = getSetupApiBase(port);
+    const token = readEnvToken();
+    console.log(`Setup-API Attach-Modus: ${apiBase}`);
+    await waitForMatchingHealth(apiBase, token, expected);
+    return { port, apiBase, reusedExisting: true, child: null, token };
+  }
+
+  const token = randomBytes(32).toString('base64url');
+  const listenPort = spawnListenPort();
+  const child = isPackaged
+    ? startPackagedSetupServer(listenPort, token, expected.buildId)
+    : startDevSetupServer(moduleDir, listenPort, token, expected.buildId);
+
+  attachSetupListeners(child);
+
+  let port: number;
+  try {
+    port = await waitForSetupReady(child);
+    const apiBase = getSetupApiBase(port);
+    await waitForMatchingHealth(apiBase, token, expected);
+    return { port, apiBase, reusedExisting: false, child, token };
+  } catch (error) {
+    if (!child.killed) {
+      child.kill('SIGTERM');
+    }
+    throw error;
+  }
 }
 
 export function stopSetupServer(handle: SetupServerHandle | null): void {

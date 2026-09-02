@@ -16,7 +16,7 @@ Der Stack kommt als **versionierte Container-Images** zur Praxis. Dort wird **ni
 ```text
 Build (Repo)  →  Artefakte (.tar.gz / .pfupdate / Manager-DMG)
                      ↓
-Manager + Setup-API (:9190)  →  Install-Home (.env, manager-state, Templates)
+Manager + Setup-API (Loopback, Manager-Child)  →  Install-Home (.env, manager-state, Templates)
                      ↓
 Docker Compose  →  app + sandbox (+ optional proxy)
 ```
@@ -123,7 +123,7 @@ CI: `.github/workflows/release-images.yml` baut bei Tag `v*` das Erstinstall-Art
 | Bedarf | Warum |
 | --- | --- |
 | **Docker** (Desktop oder Engine) + Compose v2, Daemon läuft | Stack starten; Wizard-Schritt 1 prüft Installation/Daemon/Compose |
-| **Manager** (DMG oder `npm run dev:manager`) | Operative Hülle; startet Setup-API auf `127.0.0.1:9190` |
+| **Manager** (DMG oder `npm run dev:manager`) | Operative Hülle; startet die Setup-API als eigenen Child auf Loopback (ephemerer Port, nicht still `:9190`) |
 | **Release-Paket** `.tar.gz` + Sidecar (`manifest.json` / `SHA256SUMS.txt`) | Delivery: Images laden (`POST /api/setup/host/images/load`). Dev-Profil (`PRAXIS_FLOW_COMPOSE_PROFILE=dev`): oft **nicht** erforderlich |
 | **Freie Ports** | App **8080** (ohne Proxy); mit Proxy später **80** (und **443** bei TLS). Belegte 8080 → Netzwerk-Prerequisite „bereits belegt“ |
 | **Import- & Export-Ordner** auf dem Host | Wizard-Schritt 3; unter Docker Desktop: File Sharing für diese Pfade |

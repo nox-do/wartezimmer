@@ -62,7 +62,7 @@ Docker Desktop: File Sharing für Host-Pfade. Kein Log-Volume — stdout + json-
 | --- | --- | --- |
 | `8080` | App | ohne Proxy im LAN; mit Proxy typisch `APP_BIND_ADDRESS=127.0.0.1` |
 | `8082` | Maintenance | nur `127.0.0.1` am Host — Backup/Import ([`backup.md`](backup.md)) |
-| `9190` | Setup-API | Manager auf dem Host, **nicht** Compose-Service |
+| `9190` | Setup-API (CLI `setup:serve`) | Default nur für manuelles Serve; der Manager bindet einen eigenen ephemeren Loopback-Port |
 | `80` / `443` | Proxy | optional; TLS ab prepare/cutover — [`tls.md`](tls.md) |
 
 Sandbox ohne öffentlichen Host-Port. Portal unter `/portal` im `app`-Container.

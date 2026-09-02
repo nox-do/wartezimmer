@@ -4,6 +4,25 @@ import type { SandboxScannerStatus } from './sandbox-scanner.js';
 
 export type { SandboxScannerStatus } from './sandbox-scanner.js';
 
+/** Bumped when the Setup health handshake or host-API shape is incompatible. */
+export const SETUP_API_PROTOCOL_VERSION = 1;
+
+export const SETUP_API_HEALTH_PATH = '/api/setup/health';
+export const SETUP_MANAGER_TOKEN_HEADER = 'x-praxis-setup-token';
+export const SETUP_MANAGER_TOKEN_ENV = 'PRAXIS_FLOW_SETUP_TOKEN';
+export const SETUP_BUILD_ID_ENV = 'PRAXIS_FLOW_SETUP_BUILD_ID';
+/** Explicit Manager attach to an already running Setup-API (never implied). */
+export const SETUP_ATTACH_EXISTING_ENV = 'PRAXIS_FLOW_SETUP_ATTACH';
+export const SETUP_READY_LOG_PREFIX = 'PRAXIS_FLOW_SETUP_READY ';
+
+export type SetupHealthIdentity = {
+  ok: true;
+  protocolVersion: number;
+  buildId: string;
+  installHome: string;
+  composeProjectName: string;
+};
+
 export const SETUP_TLS_ROUTES = {
   prepare: '/api/setup/host/tls/prepare',
   verifyDns: '/api/setup/host/tls/verify-dns',

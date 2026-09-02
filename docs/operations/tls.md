@@ -168,7 +168,7 @@ Hostname nach `prepare`/`apply` fest — Label-Wechsel ⇒ neue Strecke / ggf. R
 ## 5. Setup-API (Vertrag)
 
 Source of Truth: `SETUP_TLS_ROUTES` + `TlsStatus` in `packages/server-shared/src/setup-api.ts`.  
-Implementierung: `setup/src/host-tls.ts` (und Proxy-Helfer). Manager ruft nur über IPC/`127.0.0.1:9190` auf — kein TLS-Setup aus dem Praxis-LAN.
+Implementierung: `setup/src/host-tls.ts` (und Proxy-Helfer). Manager ruft nur über IPC auf `127.0.0.1` (eigenes Setup-Child) auf — kein TLS-Setup aus dem Praxis-LAN.
 
 ### 5.1 Routen
 

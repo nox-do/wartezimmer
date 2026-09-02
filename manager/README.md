@@ -25,7 +25,7 @@ npm run dev:manager
 
 ## Architektur
 
-- **Main:** startet `@praxis-flow/setup serve` als Child (Port `9190`, override via `SETUP_HOST_PORT`); alle Setup-API-Calls über IPC-Proxy (`setup-api.ts`, Allowlist `/api/setup/host/*`, nur `127.0.0.1`)
+- **Main:** startet `@praxis-flow/setup serve` als eigenen Child-Prozess (ephemerer Loopback-Port, Override via `SETUP_HOST_PORT`); Health-Handshake (`protocolVersion`, Build-ID, Install-Home) plus einmaliges Start-Token. Alle Setup-API-Calls über IPC-Proxy (`setup-api.ts`, Allowlist `/api/setup/host/*`, nur `127.0.0.1`)
 - **Preload:** CJS, `sandbox: true` — nur IPC, **kein `fetch`**
 - **Renderer (Svelte 5):** Shell mit Health-Header + Tabs (Status / Netzwerk / Wartung / Assistent). Koordination über `manager-shell-state` (Sessions, Loading) und `createManagerAppController()` → `mount(App)` → `start()`. Browser-Handoff per `shell.openExternal`.
 
@@ -83,7 +83,7 @@ Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unte
 - **Wartung:** Sektion „Routing-Modus“ mit Speichern (ebenfalls erst nach Hydrate).
 - **Lizenz:** `features.complexRoutingLicensed` in Capabilities (Stub: Dev erlaubt, Prod bis Lizenz-Infrastruktur).
 
-Setup-API (localhost `:9190`):
+Setup-API (Manager-Child auf Loopback; CLI-Default `127.0.0.1:9190`):
 
 | Methode | Pfad                               | Zweck                                                                                                        |
 | ------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
@@ -127,9 +127,18 @@ Im gepackten Modus startet der Manager die Setup-API aus diesen Ressourcen und n
 
 ## Dev-Hinweise
 
-**Port bereits belegt:** Läuft auf dem Zielport schon eine Setup-API (z. B. manuell `npm run setup:serve` in anderem Terminal oder anderer `PRAXIS_FLOW_HOME`), nutzt der Manager diese Instanz still — kein eigener Child-Prozess. Status kann dann zu einer fremden Install-Home gehören.
+**Zweite Manager-Instanz:** Produktiv eine Instanz. Im Dev-Modus gilt die Sperre **pro Install-Home** — parallele `PRAXIS_FLOW_HOME=…` bleiben möglich, zweimal dieselbe Home nicht.
 
-**`Failed to fetch` / Setup-API nicht erreichbar:** Status-HTTP läuft über den **Main Process** (IPC), nicht per `fetch` im Preload — Sandbox blockiert localhost dort. Wenn der Fehler bleibt: Terminal mit `[setup]`-Logs prüfen, Port `9190` frei, ggf. `npm run setup:serve` separat testen (`curl http://127.0.0.1:9190/api/setup/host/status`).
+**Fremde Setup-API:** Der Manager übernimmt **nicht** still einen Prozess auf Port 9190. Produktiv startet er immer einen eigenen Child. Expliziter Dev-Attach:
+
+```bash
+npm run setup:serve   # Terminal 1, Default :9190
+PRAXIS_FLOW_SETUP_ATTACH=1 npm run dev:manager
+```
+
+Attach prüft denselben Handshake (Protokoll, Build-ID, Install-Home). Passt die Identität nicht, startet der Manager **nicht** auf der fremden API. Token: `setup:serve` ohne `PRAXIS_FLOW_SETUP_TOKEN` bleibt per curl nutzbar; ein Manager-Child verlangt das Start-Token.
+
+**`Failed to fetch` / Setup-API nicht erreichbar:** Status-HTTP läuft über den **Main Process** (IPC), nicht per `fetch` im Preload — Sandbox blockiert localhost dort. Wenn der Fehler bleibt: Terminal mit `[setup]`-Logs prüfen, ggf. `npm run setup:serve` separat testen (`curl http://127.0.0.1:9190/api/setup/health`).
 
 **LAN rot nach DHCP-Wechsel:** Unter **Netzwerk** aktuelle WLAN-IP wählen und übernehmen (oder Assistent erneut).
 

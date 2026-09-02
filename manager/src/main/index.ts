@@ -32,6 +32,10 @@ import {
   saveTlsSidecarToDisk,
 } from './pfbackup-dialog.js';
 import { startSetupServer, stopSetupServer, type SetupServerHandle } from './setup-server.js';
+import {
+  expectedSetupInstallHome,
+  managerInstanceUserDataKey,
+} from './setup-identity.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -41,12 +45,37 @@ app.setName('Praxis Flow');
 let setupHandle: SetupServerHandle | null = null;
 let mainWindow: BrowserWindow | null = null;
 
+function acquireSingleInstanceLock(): boolean {
+  const installHome = expectedSetupInstallHome(app.isPackaged, moduleDir);
+  if (!app.isPackaged) {
+    app.setPath(
+      'userData',
+      path.join(app.getPath('userData'), `instance-${managerInstanceUserDataKey(installHome)}`),
+    );
+  }
+  const gotLock = app.requestSingleInstanceLock({ installHome });
+  if (!gotLock) {
+    app.quit();
+    return false;
+  }
+  app.on('second-instance', () => {
+    if (!mainWindow) {
+      return;
+    }
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+  });
+  return true;
+}
+
 function registerSetupIpc(handle: SetupServerHandle): void {
   ipcMain.handle(IPC_GET_SETUP_API_BASE, () => handle.apiBase);
 
   ipcMain.handle(IPC_FETCH_SETUP_STATUS, async () => {
     try {
-      return await fetchHostStatusFromApi(handle.apiBase);
+      return await fetchHostStatusFromApi(handle.apiBase, handle.token);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new Error(`Setup-API nicht erreichbar (${handle.apiBase}): ${detail}`, {
@@ -57,7 +86,7 @@ function registerSetupIpc(handle: SetupServerHandle): void {
 
   ipcMain.handle(IPC_SETUP_API_CALL, async (_event, request: SetupApiCallRequest) => {
     try {
-      return await callSetupApi(handle.apiBase, request);
+      return await callSetupApi(handle.apiBase, request, handle.token);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new Error(detail, { cause: error });
@@ -112,7 +141,7 @@ function registerSetupIpc(handle: SetupServerHandle): void {
 
   ipcMain.handle(IPC_INSPECT_PFBACKUP_FILE, async (_event, backupPath: string) => {
     try {
-      return await inspectPfbackupFile(handle.apiBase, backupPath);
+      return await inspectPfbackupFile(handle.apiBase, backupPath, handle.token);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new Error(detail, { cause: error });
@@ -148,7 +177,7 @@ function registerSetupIpc(handle: SetupServerHandle): void {
 
   ipcMain.handle(IPC_STAGE_TLS_PEM, async () => {
     try {
-      return await stageTlsCertificateFromPicker(mainWindow, handle.apiBase);
+      return await stageTlsCertificateFromPicker(mainWindow, handle.apiBase, handle.token);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new Error(detail, { cause: error });
@@ -157,7 +186,7 @@ function registerSetupIpc(handle: SetupServerHandle): void {
 
   ipcMain.handle(IPC_RENEW_TLS_PEM, async () => {
     try {
-      return await renewTlsCertificateFromPicker(mainWindow, handle.apiBase);
+      return await renewTlsCertificateFromPicker(mainWindow, handle.apiBase, handle.token);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new Error(detail, { cause: error });
@@ -209,10 +238,12 @@ async function bootstrap(): Promise<void> {
   }
 }
 
-void app.whenReady().then(() => {
-  installMacApplicationMenu();
-  void bootstrap();
-});
+if (acquireSingleInstanceLock()) {
+  void app.whenReady().then(() => {
+    installMacApplicationMenu();
+    void bootstrap();
+  });
+}
 
 app.on('window-all-closed', () => {
   stopSetupServer(setupHandle);

@@ -1,6 +1,6 @@
 import type { HostStatus } from '../shared/host-status.js';
 import { SETUP_API_PATH_PREFIX, type SetupApiCallRequest } from '../shared/ipc-channels.js';
-import { SETUP_TLS_ROUTES } from '@praxis-flow/server-shared/setup-api';
+import { SETUP_MANAGER_TOKEN_HEADER, SETUP_TLS_ROUTES } from '@praxis-flow/server-shared/setup-api';
 
 const DEFAULT_SETUP_API_TIMEOUT_MS = 30_000;
 /** Erstinstallation: docker compose up --build kann deutlich länger als Status-Polls dauern. */
@@ -79,16 +79,24 @@ export function setupApiTimeoutMs(request: SetupApiCallRequest): number {
   return likelyBuild ? FIRST_INSTALL_APPLY_TIMEOUT_MS : DEFAULT_SETUP_API_TIMEOUT_MS;
 }
 
-export async function fetchHostStatusFromApi(apiBase: string): Promise<HostStatus> {
-  return callSetupApi<HostStatus>(apiBase, {
-    method: 'GET',
-    path: '/api/setup/host/status',
-  });
+export async function fetchHostStatusFromApi(
+  apiBase: string,
+  token?: string | null,
+): Promise<HostStatus> {
+  return callSetupApi<HostStatus>(
+    apiBase,
+    {
+      method: 'GET',
+      path: '/api/setup/host/status',
+    },
+    token,
+  );
 }
 
 export async function callSetupApi<T = unknown>(
   apiBase: string,
   request: SetupApiCallRequest,
+  token?: string | null,
 ): Promise<T> {
   if (!request.path.startsWith(SETUP_API_PATH_PREFIX)) {
     throw new Error(`Setup-API-Pfad nicht erlaubt: ${request.path}`);
@@ -104,9 +112,16 @@ export async function callSetupApi<T = unknown>(
     method: request.method,
     signal: AbortSignal.timeout(setupApiTimeoutMs(request)),
   };
+  const headers: Record<string, string> = {};
   if (request.method === 'POST') {
-    init.headers = { 'content-type': 'application/json' };
+    headers['content-type'] = 'application/json';
     init.body = JSON.stringify(request.body ?? {});
+  }
+  if (token) {
+    headers[SETUP_MANAGER_TOKEN_HEADER] = token;
+  }
+  if (Object.keys(headers).length > 0) {
+    init.headers = headers;
   }
 
   const response = await fetch(url, init);

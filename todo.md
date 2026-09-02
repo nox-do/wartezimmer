@@ -1,6 +1,14 @@
 # Arbeitsstand (intern)
 
-Stand: 2026-09-01
+Stand: 2026-09-02
+
+## 2026-09-02 — Manager bindet nur seine Setup-API
+
+- Eigener Child-Prozess, ephemerer Loopback-Port, Start-Token, Health-Handshake (protocolVersion / Build-ID / Install-Home)
+- `app.requestSingleInstanceLock()` — Prod eine Instanz; Dev pro Install-Home
+- Fremde API nur mit `PRAXIS_FLOW_SETUP_ATTACH=1`
+- Review: Packager-Import/Smoke (isoliertes Temp-Verzeichnis), Ready-Puffer, Spawn-error; npm-Tree-Kill später
+- Als Nächstes: Manager-Cleanup weiter (nicht still 9190)
 
 ## 2026-09-01 — IPv6: kein Publish, kein Blocker
 

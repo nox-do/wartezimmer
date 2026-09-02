@@ -153,16 +153,21 @@ export async function saveTlsSidecarToDisk(
 export async function inspectPfbackupFile(
   apiBase: string,
   backupPath: string,
+  token?: string | null,
 ): Promise<PfbackupInspectResult> {
   const sourcePath = assertAllowedPfbackupPath(backupPath);
   const content = await fs.promises.readFile(sourcePath, 'utf8');
   const tlsSidecarBase64 = readTlsSidecarBase64BesideBackup(sourcePath);
-  return callSetupApi<PfbackupInspectResult>(apiBase, {
-    method: 'POST',
-    path: '/api/setup/host/backup/inspect',
-    body: {
-      content,
-      ...(tlsSidecarBase64 ? { tlsSidecarBase64 } : {}),
+  return callSetupApi<PfbackupInspectResult>(
+    apiBase,
+    {
+      method: 'POST',
+      path: '/api/setup/host/backup/inspect',
+      body: {
+        content,
+        ...(tlsSidecarBase64 ? { tlsSidecarBase64 } : {}),
+      },
     },
-  });
+    token,
+  );
 }

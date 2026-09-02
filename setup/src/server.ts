@@ -49,8 +49,15 @@ import {
   SetupApiValidationError,
 } from './setup-api-normalize.js';
 import { resolveSetupContext, type SetupContext } from './setup-context.js';
+import { resolveSetupBuildId } from './setup-build-id.js';
+import { readSetupManagerTokenFromEnv, setupManagerTokensMatch } from './setup-token.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
-import { SETUP_TLS_ROUTES } from '@praxis-flow/server-shared';
+import {
+  SETUP_API_PROTOCOL_VERSION,
+  SETUP_MANAGER_TOKEN_HEADER,
+  SETUP_READY_LOG_PREFIX,
+  SETUP_TLS_ROUTES,
+} from '@praxis-flow/server-shared';
 
 const DEFAULT_PORT = 9190;
 
@@ -317,13 +324,37 @@ function createDeliveryRoutes(ctx: SetupContext): Routes {
   };
 }
 
+export type SetupRequestHandlerOptions = {
+  managerToken?: string | null;
+  buildId?: string;
+};
+
+function readProvidedSetupToken(req: http.IncomingMessage): string | undefined {
+  const header = req.headers[SETUP_MANAGER_TOKEN_HEADER];
+  if (typeof header === 'string') {
+    return header;
+  }
+  if (Array.isArray(header)) {
+    return header[0];
+  }
+  return undefined;
+}
+
 function createSetupRoutes(
   ctx: SetupContext,
   tlsDeps: TlsRuntimeDependencies = {},
+  buildId = resolveSetupBuildId(),
 ): ReadonlyMap<string, RouteHandler> {
   return new Map(
     Object.entries({
-      'GET /api/setup/health': () => routeResult({ ok: true }),
+      'GET /api/setup/health': () =>
+        routeResult({
+          ok: true,
+          protocolVersion: SETUP_API_PROTOCOL_VERSION,
+          buildId,
+          installHome: ctx.home,
+          composeProjectName: ctx.composeProjectName,
+        }),
       ...createRuntimeRoutes(ctx, tlsDeps),
       ...createManagementRoutes(ctx),
       ...createDeliveryRoutes(ctx),
@@ -335,13 +366,19 @@ export function createSetupRequestHandler(
   ctx: SetupContext,
   port = DEFAULT_PORT,
   tlsDeps: TlsRuntimeDependencies = {},
+  options: SetupRequestHandlerOptions = {},
 ) {
-  const routes = createSetupRoutes(ctx, tlsDeps);
+  const routes = createSetupRoutes(ctx, tlsDeps, options.buildId ?? resolveSetupBuildId());
+  const managerToken =
+    options.managerToken !== undefined ? options.managerToken : readSetupManagerTokenFromEnv();
   return async (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = new URL(req.url ?? '/', `http://127.0.0.1:${port}`);
     const handler = routes.get(`${req.method ?? 'GET'} ${url.pathname}`);
 
     try {
+      if (!setupManagerTokensMatch(managerToken, readProvidedSetupToken(req))) {
+        return sendJson(res, 401, { error: 'setup token required' });
+      }
       if (!handler) {
         return sendJson(res, 404, { error: 'not found' });
       }
@@ -357,13 +394,24 @@ export function createSetupRequestHandler(
   };
 }
 
+function resolveListenPort(port: number): number {
+  if (!Number.isInteger(port) || port < 0 || port > 65_535) {
+    return DEFAULT_PORT;
+  }
+  return port;
+}
+
 export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DEFAULT_PORT)) {
   const ctx = resolveSetupContext();
-  const server = http.createServer(createSetupRequestHandler(ctx, port));
+  const listenPort = resolveListenPort(port);
+  const server = http.createServer(createSetupRequestHandler(ctx, listenPort));
 
-  server.listen(port, '127.0.0.1', () => {
-    console.log(`Setup host API: http://127.0.0.1:${port}`);
+  server.listen(listenPort, '127.0.0.1', () => {
+    const address = server.address();
+    const actualPort = address && typeof address === 'object' ? address.port : listenPort;
+    console.log(`Setup host API: http://127.0.0.1:${actualPort}`);
     console.log(`Project home: ${ctx.home} (${ctx.mode}, compose=${ctx.composeProjectName})`);
+    console.log(`${SETUP_READY_LOG_PREFIX}${JSON.stringify({ port: actualPort })}`);
   });
 
   return server;
