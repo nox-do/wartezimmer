@@ -73,17 +73,17 @@ Basis: `http://localhost:8080`
 
 Einstieg nach Rolle: **[`docs/README.md`](docs/README.md)**
 
-| Thema             | Datei                                                            |
-| ----------------- | ---------------------------------------------------------------- |
-| Produktinfo       | [`docs/product.md`](docs/product.md)                             |
-| Fachliche Abläufe | [`docs/flows.md`](docs/flows.md)                                 |
-| Architektur       | [`docs/architecture/`](docs/architecture/) · [`system.md`](docs/architecture/system.md) |
+| Thema             | Datei                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------ |
+| Produktinfo       | [`docs/product.md`](docs/product.md)                                                       |
+| Fachliche Abläufe | [`docs/flows.md`](docs/flows.md)                                                           |
+| Architektur       | [`docs/architecture/`](docs/architecture/) · [`system.md`](docs/architecture/system.md)    |
 | API-Vertrag       | `openapi/*.yaml` (+ [`docs/architecture/apis.md`](docs/architecture/apis.md) Rollenmatrix) |
-| Echtzeit (SSE)    | [`docs/architecture/realtime.md`](docs/architecture/realtime.md)           |
-| Build & Release   | [`docs/operations/delivery.md`](docs/operations/delivery.md)                           |
-| Docker-Betrieb    | [`docs/operations/runtime.md`](docs/operations/runtime.md)         |
-| Manager           | [`manager/README.md`](manager/README.md)                         |
-| WLAN / Portal     | [`docs/operations/integrations.md`](docs/operations/integrations.md)                   |
+| Echtzeit (SSE)    | [`docs/architecture/realtime.md`](docs/architecture/realtime.md)                           |
+| Build & Release   | [`docs/operations/delivery.md`](docs/operations/delivery.md)                               |
+| Docker-Betrieb    | [`docs/operations/runtime.md`](docs/operations/runtime.md)                                 |
+| Manager           | [`manager/README.md`](manager/README.md)                                                   |
+| WLAN / Portal     | [`docs/operations/integrations.md`](docs/operations/integrations.md)                       |
 
 Env-Variablen: [`.env.example`](.env.example) — nicht hier duplizieren.
 

@@ -64,7 +64,10 @@ test('TV slot unique: second active insert fails; replace revokes previous', () 
     token: 'token-b',
   });
   assert.equal(authenticateDeviceAuthorization(deps, 'token-a'), null);
-  assert.equal(authenticateDeviceAuthorization(deps, 'token-b')?.authorizationId, replaced.authorizationId);
+  assert.equal(
+    authenticateDeviceAuthorization(deps, 'token-b')?.authorizationId,
+    replaced.authorizationId,
+  );
   assert.equal(listActiveDeviceAuthorizations(deps).length, 1);
   db.close();
 });
@@ -108,7 +111,10 @@ test('group revoke room and all panels leave TV grants', () => {
     token: 'warte',
   });
   assert.equal(revokeRoomPanelAuthorizationsByRoom(deps, 'labor'), 1);
-  assert.equal(listActiveDeviceAuthorizations(deps).some((row) => row.roomId === 'labor'), false);
+  assert.equal(
+    listActiveDeviceAuthorizations(deps).some((row) => row.roomId === 'labor'),
+    false,
+  );
   assert.equal(revokeAllRoomPanelAuthorizations(deps), 1);
   assert.equal(listActiveDeviceAuthorizations(deps).length, 1);
   assert.equal(listActiveDeviceAuthorizations(deps)[0]?.role, 'tv');
@@ -137,7 +143,10 @@ test('import copies active rows; revoked rows stay behind', () => {
     listActiveDeviceAuthorizations(sourceDeps).map(toDeviceAuthorizationCopyRow),
   );
   assert.equal(imported, 1);
-  assert.equal(authenticateDeviceAuthorization(targetDeps, 'keep')?.authorizationId, active.authorizationId);
+  assert.equal(
+    authenticateDeviceAuthorization(targetDeps, 'keep')?.authorizationId,
+    active.authorizationId,
+  );
   assert.equal(authenticateDeviceAuthorization(targetDeps, 'drop'), null);
   source.close();
   target.close();

@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { RoutingModeCapabilities, TlsPrepareInput } from '../shared/host-status.js';
 import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
-import { createWizardController, wizardManagedPrepareErrorFooter } from './wizard-controller.js';
+import {
+  createWizardController,
+  wizardManagedPrepareErrorFooter,
+  WIZARD_ROUTING_LOAD_ERROR,
+} from './wizard-controller.js';
 import { TLS_LEASE_STALE_LAN_COPY, TLS_RESET_CONFIRM_MESSAGE } from './tls-network-view-model.js';
 import {
   wizardBackHidden,
@@ -78,6 +82,55 @@ test('goBack does not leave completed wizard', () => {
   assert.equal(controller.getState().step, 8);
 });
 
+test('routing load failure surfaces an error and retries on the same step', async () => {
+  let calls = 0;
+  const second = deferred<RoutingModeCapabilities>();
+  const controller = createWizardController({
+    api: {
+      getRoutingMode: () => {
+        calls += 1;
+        if (calls === 1) {
+          return Promise.reject(new Error('routing unavailable'));
+        }
+        return second.promise;
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  await controller.goNext();
+
+  assert.equal(controller.getState().step, 2);
+  assert.equal(controller.getState().routingCapabilitiesStatus, 'error');
+  assert.equal(controller.getState().error, WIZARD_ROUTING_LOAD_ERROR);
+  assert.equal(controller.getState().busy, false);
+
+  const retry = controller.goNext();
+  await Promise.resolve();
+  assert.equal(controller.getState().routingCapabilitiesStatus, 'loading');
+  assert.equal(controller.getState().error, null);
+  assert.equal(controller.getState().step, 2);
+
+  second.resolve({
+    routingMode: 'simple',
+    openVisitCount: 0,
+    features: {
+      complexRouting: false,
+      journeyDesigner: false,
+      routingSimulator: false,
+      complexRoutingLicensed: false,
+    },
+  });
+  await retry;
+
+  assert.equal(controller.getState().routingCapabilitiesStatus, 'ready');
+  assert.equal(controller.getState().routingMode, 'simple');
+  assert.equal(controller.getState().error, null);
+  assert.equal(controller.getState().step, 2);
+});
+
 test('entering routing step waits for server routing mode', async () => {
   const routingMode = deferred<RoutingModeCapabilities>();
   const controller = createWizardController({
@@ -128,7 +181,18 @@ test('wizardNextButtonLabel adapts to step', () => {
   assert.equal(wizardNextButtonLabel({ ...base, step: 6, httpsPhase: 'offer' }), 'Weiter');
   assert.equal(wizardNextButtonLabel({ ...base, step: 6, httpsPhase: 'mail' }), 'Vorschau laden');
   assert.equal(wizardNextButtonLabel({ ...base, step: 7 }), 'Anwenden');
-  assert.equal(wizardNextButtonLabel({ ...base, step: 8, applyResult: null }), 'Bitte warten …');
+  assert.equal(
+    wizardNextButtonLabel({ ...base, step: 2, routingCapabilitiesStatus: 'error' }),
+    'Erneut versuchen',
+  );
+  assert.equal(
+    wizardNextButtonLabel({ ...base, step: 8, applyResult: null, busy: true }),
+    'Bitte warten …',
+  );
+  assert.equal(
+    wizardNextButtonLabel({ ...base, step: 8, applyResult: null, busy: false }),
+    'Anwenden',
+  );
 });
 
 test('wizardBackHidden hides on step 1 and after completion', () => {
@@ -212,6 +276,42 @@ test('wizardNextButtonDisabled blocks routing step until mode is hydrated', () =
       step: 2,
       routingCapabilitiesStatus: 'ready',
       routingMode: 'simple',
+    }),
+    false,
+  );
+  assert.equal(
+    wizardNextButtonDisabled({
+      ...base,
+      step: 2,
+      routingCapabilitiesStatus: 'error',
+      routingMode: null,
+    }),
+    false,
+  );
+});
+
+test('wizardNextButtonDisabled allows apply retry after a failed apply', () => {
+  const base = createWizardController({
+    api: {} as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  }).getState();
+
+  assert.equal(
+    wizardNextButtonDisabled({
+      ...base,
+      step: 8,
+      applyResult: null,
+      busy: true,
+    }),
+    true,
+  );
+  assert.equal(
+    wizardNextButtonDisabled({
+      ...base,
+      step: 8,
+      applyResult: null,
+      busy: false,
     }),
     false,
   );
@@ -611,7 +711,10 @@ test('existing custom error is not rewritten as ACME', async () => {
         applyReady: false,
         cutoverApplied: false,
         certificate: null,
-        lastError: { class: 'firewall', message: 'Port 443 auf diesem Rechner ist nicht erreichbar.' },
+        lastError: {
+          class: 'firewall',
+          message: 'Port 443 auf diesem Rechner ist nicht erreichbar.',
+        },
         acmeCnameTarget: null,
       },
     }),
@@ -668,7 +771,9 @@ test('PEM staging failure keeps the API exception message', async () => {
   const controller = createWizardController({
     api: {
       stageHostTlsCertificate: async () => {
-        throw new Error('Die Uhrzeit dieses Rechners wird von der Zertifizierungsstelle abgelehnt.');
+        throw new Error(
+          'Die Uhrzeit dieses Rechners wird von der Zertifizierungsstelle abgelehnt.',
+        );
       },
     } as never,
     onComplete: () => {},
@@ -764,7 +869,10 @@ test('local HTTPS validation errors stay on the existing footer copy', async () 
     nameMode: 'generated',
   });
   await controller.goNext();
-  assert.equal(controller.getState().error, 'Bitte die feste IP oder DHCP-Reservierung bestätigen.');
+  assert.equal(
+    controller.getState().error,
+    'Bitte die feste IP oder DHCP-Reservierung bestätigen.',
+  );
 
   controller.show(
     minimalHostStatus({
@@ -985,7 +1093,10 @@ test('stale goNext finally does not clear busy on a new run', async () => {
 });
 
 test('stale PEM staging after hide and show does not change the new run', async () => {
-  const staged = deferred<{ canceled: false; tls: NonNullable<ReturnType<typeof minimalHostStatus>['tls']> }>();
+  const staged = deferred<{
+    canceled: false;
+    tls: NonNullable<ReturnType<typeof minimalHostStatus>['tls']>;
+  }>();
   const controller = createWizardController({
     api: {
       stageHostTlsCertificate: () => staged.promise,
@@ -1158,6 +1269,73 @@ test('identity-reset confirm is ignored after hide', async () => {
 
   assert.equal(resetCount, 0);
   assert.equal(controller.getState().step, 1);
+});
+
+test('failed apply on step 8 can be retried without leaving the step', async () => {
+  let applies = 0;
+  const controller = createWizardController({
+    api: {
+      applySetupPlan: async () => {
+        applies += 1;
+        if (applies === 1) {
+          throw new Error('Compose konnte nicht gestartet werden.');
+        }
+        return minimalApplyResult();
+      },
+      fetchSetupStatus: async () => minimalHostStatus(),
+      runSetupProbes: async () => ({
+        probes: [
+          { id: 'app.health.local', ok: true, message: 'ok' },
+          { id: 'app.health.lan', ok: true, message: 'ok' },
+        ],
+      }),
+      setRoutingMode: async () => {},
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  controller.patchFields({
+    step: 7,
+    routingMode: 'simple',
+    lanAppIp: '192.168.1.10',
+  });
+  await controller.goNext();
+
+  assert.equal(controller.getState().step, 8);
+  assert.equal(controller.getState().applyResult, null);
+  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().error, 'Compose konnte nicht gestartet werden.');
+  assert.equal(wizardNextButtonDisabled(controller.getState()), false);
+  assert.equal(wizardNextButtonLabel(controller.getState()), 'Anwenden');
+
+  await controller.goNext();
+  assert.equal(applies, 2);
+  assert.equal(controller.getState().step, 8);
+  assert.equal(controller.getState().applyResult?.compose?.ok, true);
+  assert.equal(controller.getState().error, null);
+});
+
+test('release import still reports a status refresh failure', async () => {
+  const controller = createWizardController({
+    api: {
+      selectReleaseArchive: async () => ({ canceled: false, path: '/tmp/release.tgz' }),
+      loadDeliveryImages: async () => ({ ok: true }),
+      fetchSetupStatus: async () => {
+        throw new Error('Status nach dem Import nicht lesbar.');
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  await controller.loadReleaseArchive();
+
+  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().releaseImportStatus, null);
+  assert.equal(controller.getState().error, 'Status nach dem Import nicht lesbar.');
 });
 
 test('apply after hide still reports the host mutation once', async () => {

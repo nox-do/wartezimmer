@@ -187,10 +187,7 @@ test('maintenanceSectionToOpenForErrorChange does not switch when an error is cl
   previous.routing = 'routing down';
   previous.logs = 'logs down';
 
-  assert.equal(
-    maintenanceSectionToOpenForErrorChange(previous, { ...previous, logs: null }),
-    null,
-  );
+  assert.equal(maintenanceSectionToOpenForErrorChange(previous, { ...previous, logs: null }), null);
   assert.equal(
     maintenanceSectionToOpenForErrorChange(previous, { ...previous, routing: null }),
     null,

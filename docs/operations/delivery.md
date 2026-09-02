@@ -21,12 +21,12 @@ Manager + Setup-API (Loopback, Manager-Child)  →  Install-Home (.env, manager-
 Docker Compose  →  app + sandbox (+ optional proxy)
 ```
 
-| Rolle | Verantwortung |
-| --- | --- |
-| **Release-Build** | Images taggen, Pakete bauen, Manifest/Checksummen |
-| **Manager** | Operative Hülle: Wizard, Wartung, Update-UI |
-| **Setup-API** | Host schreiben, `docker load` / Compose, Probes |
-| **Architektur** | Was in `app`/`sandbox` läuft — nicht wie es ausgeliefert wird |
+| Rolle             | Verantwortung                                                 |
+| ----------------- | ------------------------------------------------------------- |
+| **Release-Build** | Images taggen, Pakete bauen, Manifest/Checksummen             |
+| **Manager**       | Operative Hülle: Wizard, Wartung, Update-UI                   |
+| **Setup-API**     | Host schreiben, `docker load` / Compose, Probes               |
+| **Architektur**   | Was in `app`/`sandbox` läuft — nicht wie es ausgeliefert wird |
 
 Gateway-Images sind **Lab**, nicht Produkt-Default (`--with-gateway` nur bewusst).
 
@@ -36,11 +36,11 @@ Gateway-Images sind **Lab**, nicht Produkt-Default (`--with-gateway` nur bewusst
 
 Drei Zahlen — nicht vermischen:
 
-| Begriff | Beispiel | Wo | Wofür |
-| --- | --- | --- | --- |
-| **Manager-Version** | `0.3.0` | `manager/package.json` | Electron-App, DMG-Name, `minimumManagerVersion` im Update-Paket |
-| **Stack-Release** | `0.4.0` | `--version` / `PRAXIS_FLOW_RELEASE_VERSION` beim Build | Image-Tags `praxis-flow/app:<ver>` + `sandbox:<ver>`, `manager-state`, Manifest `releaseVersion` |
-| **Monorepo** | `0.4.0` | Root-`package.json` | npm-Workspaces — **nur Default**, wenn `--version` fehlt |
+| Begriff             | Beispiel | Wo                                                     | Wofür                                                                                            |
+| ------------------- | -------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| **Manager-Version** | `0.3.0`  | `manager/package.json`                                 | Electron-App, DMG-Name, `minimumManagerVersion` im Update-Paket                                  |
+| **Stack-Release**   | `0.4.0`  | `--version` / `PRAXIS_FLOW_RELEASE_VERSION` beim Build | Image-Tags `praxis-flow/app:<ver>` + `sandbox:<ver>`, `manager-state`, Manifest `releaseVersion` |
+| **Monorepo**        | `0.4.0`  | Root-`package.json`                                    | npm-Workspaces — **nur Default**, wenn `--version` fehlt                                         |
 
 Stack-Release und Monorepo sind **nicht gekoppelt**. Kunden-Release immer explizit:
 
@@ -55,22 +55,22 @@ npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 
 **Zur Laufzeit sichtbar:**
 
-| Ort | Feld | Bedeutung |
-| --- | --- | --- |
-| Manager → Wartung | aktuelles Release | `HostStatus.deliveryImages` / `manager-state` |
-| `manager-state.json` | `release.releaseVersion` | aktives Stack-Release |
-| `.env` | `PRAXIS_FLOW_*_IMAGE` | Compose-Image-Refs |
-| Health | `stackVersion` | in die App eingebranntes Release |
+| Ort                  | Feld                     | Bedeutung                                     |
+| -------------------- | ------------------------ | --------------------------------------------- |
+| Manager → Wartung    | aktuelles Release        | `HostStatus.deliveryImages` / `manager-state` |
+| `manager-state.json` | `release.releaseVersion` | aktives Stack-Release                         |
+| `.env`               | `PRAXIS_FLOW_*_IMAGE`    | Compose-Image-Refs                            |
+| Health               | `stackVersion`           | in die App eingebranntes Release              |
 
 ---
 
 ## 3. Artefakte
 
-| Artefakt | Build | Manager-Weg | Inhalt (Produkt) |
-| --- | --- | --- | --- |
-| **`.tar.gz` + Sidecar** | `npm run release:images` | Wizard → Release-Paket | `app` + `sandbox` + Proxy-Image, Manifest, SHA256, Caddy-Lizenz |
-| **`.pfupdate`** | `npm run release:pfupdate` | Wartung → Software-Update | dasselbe plus Compose-Templates, `.env.example`; Cutover/Rollback |
-| **Manager-DMG** | `npm run dist:manager:mac` | Installation der Hülle | Electron + eingebettete Setup-API/Templates; eigener Versionszyklus |
+| Artefakt                | Build                      | Manager-Weg               | Inhalt (Produkt)                                                    |
+| ----------------------- | -------------------------- | ------------------------- | ------------------------------------------------------------------- |
+| **`.tar.gz` + Sidecar** | `npm run release:images`   | Wizard → Release-Paket    | `app` + `sandbox` + Proxy-Image, Manifest, SHA256, Caddy-Lizenz     |
+| **`.pfupdate`**         | `npm run release:pfupdate` | Wartung → Software-Update | dasselbe plus Compose-Templates, `.env.example`; Cutover/Rollback   |
+| **Manager-DMG**         | `npm run dist:manager:mac` | Installation der Hülle    | Electron + eingebettete Setup-API/Templates; eigener Versionszyklus |
 
 - Updates laufen **nur** über `.pfupdate`. Das Wizard-`.tar.gz` ist Erstinstall (kein Update-Cutover).
 - Manager-DMG selten neu; unsigned/nicht notarisiert (interne Auslieferung).
@@ -100,11 +100,11 @@ npm run release:pfupdate:current     # packt :local ohne Rebuild
 
 ### Build-Scripts (kurz)
 
-| Script | Zweck |
-| --- | --- |
-| `release:images` / `:pack` / `:current` | Erstinstall-Archiv |
+| Script                                    | Zweck                        |
+| ----------------------------------------- | ---------------------------- |
+| `release:images` / `:pack` / `:current`   | Erstinstall-Archiv           |
 | `release:pfupdate` / `:pack` / `:current` | Update-Paket (+ Validierung) |
-| `dist:manager:mac` | Manager-DMG |
+| `dist:manager:mac`                        | Manager-DMG                  |
 
 Pipelines und Ausgabe-Layouts: [§6](#6-build-wie-die-artefakte-entstehen).
 
@@ -120,24 +120,24 @@ CI: `.github/workflows/release-images.yml` baut bei Tag `v*` das Erstinstall-Art
 
 ### 4.1 Voraussetzungen
 
-| Bedarf | Warum |
-| --- | --- |
-| **Docker** (Desktop oder Engine) + Compose v2, Daemon läuft | Stack starten; Wizard-Schritt 1 prüft Installation/Daemon/Compose |
-| **Manager** (DMG oder `npm run dev:manager`) | Operative Hülle; startet die Setup-API als eigenen Child auf Loopback (ephemerer Port, nicht still `:9190`) |
+| Bedarf                                                                     | Warum                                                                                                                                   |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Docker** (Desktop oder Engine) + Compose v2, Daemon läuft                | Stack starten; Wizard-Schritt 1 prüft Installation/Daemon/Compose                                                                       |
+| **Manager** (DMG oder `npm run dev:manager`)                               | Operative Hülle; startet die Setup-API als eigenen Child auf Loopback (ephemerer Port, nicht still `:9190`)                             |
 | **Release-Paket** `.tar.gz` + Sidecar (`manifest.json` / `SHA256SUMS.txt`) | Delivery: Images laden (`POST /api/setup/host/images/load`). Dev-Profil (`PRAXIS_FLOW_COMPOSE_PROFILE=dev`): oft **nicht** erforderlich |
-| **Freie Ports** | App **8080** (ohne Proxy); mit Proxy später **80** (und **443** bei TLS). Belegte 8080 → Netzwerk-Prerequisite „bereits belegt“ |
-| **Import- & Export-Ordner** auf dem Host | Wizard-Schritt 3; unter Docker Desktop: File Sharing für diese Pfade |
-| Optional: **feste LAN-IPv4** / DHCP-Reservierung | Stabil für Geräte-URLs; später relevant für TLS-Lease |
+| **Freie Ports**                                                            | App **8080** (ohne Proxy); mit Proxy später **80** (und **443** bei TLS). Belegte 8080 → Netzwerk-Prerequisite „bereits belegt“         |
+| **Import- & Export-Ordner** auf dem Host                                   | Wizard-Schritt 3; unter Docker Desktop: File Sharing für diese Pfade                                                                    |
+| Optional: **feste LAN-IPv4** / DHCP-Reservierung                           | Stabil für Geräte-URLs; später relevant für TLS-Lease                                                                                   |
 
 Setup-API und Manager sprechen nur Loopback — kein Setup aus dem Praxis-LAN.
 
 ### 4.2 Install-Home
 
-| Plattform | Default ohne `PRAXIS_FLOW_HOME` |
-| --- | --- |
-| macOS | `~/Library/Application Support/PraxisFlow` |
-| Windows | `%ProgramData%\PraxisFlow` |
-| Linux | `~/.local/share/PraxisFlow` |
+| Plattform | Default ohne `PRAXIS_FLOW_HOME`            |
+| --------- | ------------------------------------------ |
+| macOS     | `~/Library/Application Support/PraxisFlow` |
+| Windows   | `%ProgramData%\PraxisFlow`                 |
+| Linux     | `~/.local/share/PraxisFlow`                |
 
 Override: `PRAXIS_FLOW_HOME` (absolut). Compose-Projektname: Default-Install-Home → `praxis-flow`; abweichender Basename → `pf-<basename>`; Override `COMPOSE_PROJECT_NAME` — isoliert parallele Test-Installs.
 
@@ -149,16 +149,16 @@ Zurücksetzen (Dev/Support): `npm run setup:reset -- --yes` (löscht Install-Hom
 
 Labels: `WIZARD_STEP_LABELS` in `manager/src/renderer/wizard-flow.ts`.
 
-| # | Schritt | Inhalt |
-| --- | --- | --- |
-| 1 | **Voraussetzungen** | Docker OK; Release-Paket laden falls `deliveryImages.required`; Netzwerk-Prerequisites (u. a. Port 8080). Weiter nur wenn `canLeaveWizardStep1` |
-| 2 | **Routing** | Simple/Complex. **Kein** Praxis-Anzeigename hier — der gehört nach Ops `/ops/setup` |
-| 3 | **Import & Export** | Host-Pfade Pflicht (sonst Validierungsfehler) |
-| 4 | **Netzwerk** | LAN-IP + Erreichbarkeit (LAN-IP / Rechnername / Custom-Host) → kanonische `http://`-URL |
-| 5 | **Zugang** | Optional **Port 80** (HTTP-Proxy). Gateway im Manager immer **aus** (`DISABLED_GATEWAY_PLAN`) |
-| 6 | **HTTPS** | Nur wenn Proxy an; sonst Sprung → 7. Phasen: offer → hostname → lease → mail/PEM. Assistent endet bei Mail/Staging — **DNS-Warten, Zertifikat, Cutover unter Netzwerk** |
-| 7 | **Vorschau** | `POST /api/setup/host/plan` → Geräte-URLs |
-| 8 | **Abschluss** | `POST /api/setup/host/apply` (`runCompose`), danach Probes / Links |
+| #   | Schritt             | Inhalt                                                                                                                                                                  |
+| --- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Voraussetzungen** | Docker OK; Release-Paket laden falls `deliveryImages.required`; Netzwerk-Prerequisites (u. a. Port 8080). Weiter nur wenn `canLeaveWizardStep1`                         |
+| 2   | **Routing**         | Simple/Complex. **Kein** Praxis-Anzeigename hier — der gehört nach Ops `/ops/setup`                                                                                     |
+| 3   | **Import & Export** | Host-Pfade Pflicht (sonst Validierungsfehler)                                                                                                                           |
+| 4   | **Netzwerk**        | LAN-IP + Erreichbarkeit (LAN-IP / Rechnername / Custom-Host) → kanonische `http://`-URL                                                                                 |
+| 5   | **Zugang**          | Optional **Port 80** (HTTP-Proxy). Gateway im Manager immer **aus** (`DISABLED_GATEWAY_PLAN`)                                                                           |
+| 6   | **HTTPS**           | Nur wenn Proxy an; sonst Sprung → 7. Phasen: offer → hostname → lease → mail/PEM. Assistent endet bei Mail/Staging — **DNS-Warten, Zertifikat, Cutover unter Netzwerk** |
+| 7   | **Vorschau**        | `POST /api/setup/host/plan` → Geräte-URLs                                                                                                                               |
+| 8   | **Abschluss**       | `POST /api/setup/host/apply` (`runCompose`), danach Probes / Links                                                                                                      |
 
 Ersteinrichtung ohne `.env`: Assistent fullscreen. Späterer Re-Run: Tab „Assistent“.
 
@@ -186,19 +186,19 @@ Dev baut lokal (`docker-compose.yml`); Release-Paket oft nicht nötig.
 
 ### 4.6 Fallstricke
 
-| Symptom | Typische Ursache | Was tun |
-| --- | --- | --- |
-| Schritt 1 blockiert: Docker | Daemon aus / Compose fehlt | Docker Desktop starten; Hinweise aus Setup |
-| „Release-Paket fehlt“ / Images nicht geladen | Delivery ohne `docker load` | `.tar.gz` + passenden Sidecar wählen; Laden kann Minuten dauern |
-| SHA256-Fehler beim Laden | Sidecar ≠ Archiv | Gleichen Release-Ordner verwenden, nicht mischen |
-| Port 8080 belegt | anderer Container/Prozess | Prerequisite-Detail prüfen; Port freigeben oder Konflikt beenden |
-| „Import- und Exportordner angeben“ | leere Pfade | Ordner anlegen; Docker File Sharing |
-| Keine / falsche LAN-IP; `lanIpStale` | DHCP-Wechsel, VPN, Adapter | IP neu wählen; bei TLS-Lease erst IP klären (stale blockiert Lease) |
-| Kein HTTPS-Schritt | Proxy aus | Port 80 in Schritt 5 aktivieren — sonst bewusst HTTP-only |
-| HTTPS „fertig“, Geräte noch HTTP | erwartet | Cutover erst unter **Netzwerk** nach DNS/Zertifikat — [`tls.md`](tls.md) |
-| LAN rot, lokal grün (Dev) | Shell-`HTTP_PROXY` leitet RFC1918 um | `NO_PROXY` um Privatnetze ergänzen; siehe Manager-README |
-| Praxisname fehlt im Wizard | Absicht | Ops `/ops/setup` nach dem ersten Start |
-| Gateway im Manager nicht wählbar | Absicht (Produktgrenze) | Captive = Praxis-IT / Lab — [`integrations.md`](integrations.md) |
+| Symptom                                      | Typische Ursache                     | Was tun                                                                  |
+| -------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------ |
+| Schritt 1 blockiert: Docker                  | Daemon aus / Compose fehlt           | Docker Desktop starten; Hinweise aus Setup                               |
+| „Release-Paket fehlt“ / Images nicht geladen | Delivery ohne `docker load`          | `.tar.gz` + passenden Sidecar wählen; Laden kann Minuten dauern          |
+| SHA256-Fehler beim Laden                     | Sidecar ≠ Archiv                     | Gleichen Release-Ordner verwenden, nicht mischen                         |
+| Port 8080 belegt                             | anderer Container/Prozess            | Prerequisite-Detail prüfen; Port freigeben oder Konflikt beenden         |
+| „Import- und Exportordner angeben“           | leere Pfade                          | Ordner anlegen; Docker File Sharing                                      |
+| Keine / falsche LAN-IP; `lanIpStale`         | DHCP-Wechsel, VPN, Adapter           | IP neu wählen; bei TLS-Lease erst IP klären (stale blockiert Lease)      |
+| Kein HTTPS-Schritt                           | Proxy aus                            | Port 80 in Schritt 5 aktivieren — sonst bewusst HTTP-only                |
+| HTTPS „fertig“, Geräte noch HTTP             | erwartet                             | Cutover erst unter **Netzwerk** nach DNS/Zertifikat — [`tls.md`](tls.md) |
+| LAN rot, lokal grün (Dev)                    | Shell-`HTTP_PROXY` leitet RFC1918 um | `NO_PROXY` um Privatnetze ergänzen; siehe Manager-README                 |
+| Praxisname fehlt im Wizard                   | Absicht                              | Ops `/ops/setup` nach dem ersten Start                                   |
+| Gateway im Manager nicht wählbar             | Absicht (Produktgrenze)              | Captive = Praxis-IT / Lab — [`integrations.md`](integrations.md)         |
 
 ## 5. Update (`.pfupdate`)
 
@@ -209,35 +209,35 @@ Paket bauen: [§6.2](#62-update--npm-run-releasepfupdate). Was Settings behalten
 
 ### 5.1 Voraussetzungen
 
-| Bedarf | Warum |
-| --- | --- |
-| Laufende Installation (`.env`, `manager-state`) | Sonst Apply: „Keine .env — Setup zuerst“ |
-| **Stack läuft** vor Apply | Pre-Update-`.pfbackup` über Maintenance-App `127.0.0.1:8082` |
-| Manager ≥ `minimumManagerVersion` im Paket | Inspect/Apply lehnen ältere Manager ab |
-| Passendes Settings-Format | `supportedSettingsFormatVersions` (heute `[1]`) |
-| Docker Daemon | `docker load` + Compose stop/up |
+| Bedarf                                          | Warum                                                        |
+| ----------------------------------------------- | ------------------------------------------------------------ |
+| Laufende Installation (`.env`, `manager-state`) | Sonst Apply: „Keine .env — Setup zuerst“                     |
+| **Stack läuft** vor Apply                       | Pre-Update-`.pfbackup` über Maintenance-App `127.0.0.1:8082` |
+| Manager ≥ `minimumManagerVersion` im Paket      | Inspect/Apply lehnen ältere Manager ab                       |
+| Passendes Settings-Format                       | `supportedSettingsFormatVersions` (heute `[1]`)              |
+| Docker Daemon                                   | `docker load` + Compose stop/up                              |
 
 Apply-Timeout im Manager: **15 Minuten** (`UPDATE_APPLY_TIMEOUT_MS` / gleich für Image-Load).
 
 ### 5.2 Ablauf (UI)
 
-1. `.pfupdate` wählen  
-2. **Inspect** — `POST /api/setup/host/update/inspect` (Struktur, Checksummen, Kompatibilität, Release-Vergleich)  
-3. **Vorschau** — Ziel-/Ist-Release, Mindest-Manager, Settings-Formate, Schema  
-4. **Bestätigen** — automatisches Praxis-Backup; Queue geht verloren; Praxis kurz offline  
+1. `.pfupdate` wählen
+2. **Inspect** — `POST /api/setup/host/update/inspect` (Struktur, Checksummen, Kompatibilität, Release-Vergleich)
+3. **Vorschau** — Ziel-/Ist-Release, Mindest-Manager, Settings-Formate, Schema
+4. **Bestätigen** — automatisches Praxis-Backup; Queue geht verloren; Praxis kurz offline
 5. **Apply** — `POST /api/setup/host/update/apply`
 
 UI-Phasen: `inspect` → `preview` → `applying` → `success` | `failed` (`pfupdate-wizard-flow.ts`).
 
 ### 5.3 Kompatibilität
 
-| Prüfung | Quelle |
-| --- | --- |
-| Archiv + Manifest + SHA256 | `packages/server-shared/src/pfupdate.ts` / `validateExtractedPfupdate` |
+| Prüfung                           | Quelle                                                                   |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| Archiv + Manifest + SHA256        | `packages/server-shared/src/pfupdate.ts` / `validateExtractedPfupdate`   |
 | Manager ≥ `minimumManagerVersion` | Manager sendet Version mit; Build setzt Default = `manager/package.json` |
-| Settings-Format | laufende Maintenance-App oder Build-Default |
-| Image-Tags = `releaseVersion` | Pflicht für app/sandbox (gateway strikt, falls im Paket) |
-| Nach Cutover | `targetSchemaVersion: 1` → Fresh DB + Settings-Import |
+| Settings-Format                   | laufende Maintenance-App oder Build-Default                              |
+| Image-Tags = `releaseVersion`     | Pflicht für app/sandbox (gateway strikt, falls im Paket)                 |
+| Nach Cutover                      | `targetSchemaVersion: 1` → Fresh DB + Settings-Import                    |
 
 **Regel:** Ein `.pfupdate` darf keine höhere `minimumManagerVersion` verlangen als die Manager-DMG, mit der es freigegeben wurde.
 
@@ -245,22 +245,22 @@ UI-Phasen: `inspect` → `preview` → `applying` → `success` | `failed` (`pfu
 
 Vorbereitung (**Stack noch oben**, Backup über `:8082`):
 
-| Phase | Aktion |
-| --- | --- |
-| `stage_package` | Archiv extrahieren |
-| `validate_package` | Struktur + Kompatibilität |
-| `create_settings_backup` | `.pfbackup` → u. a. `<install-home>/backups/` |
-| `load_images` | `docker load` aus `images/praxis-flow-images.tar` |
+| Phase                    | Aktion                                            |
+| ------------------------ | ------------------------------------------------- |
+| `stage_package`          | Archiv extrahieren                                |
+| `validate_package`       | Struktur + Kompatibilität                         |
+| `create_settings_backup` | `.pfbackup` → u. a. `<install-home>/backups/`     |
+| `load_images`            | `docker load` aus `images/praxis-flow-images.tar` |
 
 Cutover (**Stack gestoppt**):
 
-| Phase | Aktion |
-| --- | --- |
-| `stop_stack` | `compose stop` |
-| `backup_rollback_state` | Snapshot `.env`, `manager-state`, Templates, DB-aside |
-| `install_templates` | Compose/Caddy-Templates aus Paket |
-| `write_release_state` | Image-Tags + `releaseVersion` atomar |
-| Fresh-DB-Cutover | alte DB beiseite → App mit neuem Image → Settings importieren → aktive Gerätefreigaben aus Aside kopieren → verifizieren → Full-Stack + Health (`fresh-db-settings-cutover.ts`; Phasen u. a. `move_database` … `copy_device_authorizations` … `health_check`) |
+| Phase                   | Aktion                                                                                                                                                                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stop_stack`            | `compose stop`                                                                                                                                                                                                                                                |
+| `backup_rollback_state` | Snapshot `.env`, `manager-state`, Templates, DB-aside                                                                                                                                                                                                         |
+| `install_templates`     | Compose/Caddy-Templates aus Paket                                                                                                                                                                                                                             |
+| `write_release_state`   | Image-Tags + `releaseVersion` atomar                                                                                                                                                                                                                          |
+| Fresh-DB-Cutover        | alte DB beiseite → App mit neuem Image → Settings importieren → aktive Gerätefreigaben aus Aside kopieren → verifizieren → Full-Stack + Health (`fresh-db-settings-cutover.ts`; Phasen u. a. `move_database` … `copy_device_authorizations` … `health_check`) |
 
 Bei Fehler **nach** Rollback-Artefakten: `executeUpdateRollback()` stellt den vorherigen Zustand wieder her. Pre-Update-`.pfbackup` bleibt als Datei erhalten.
 
@@ -292,16 +292,16 @@ Fresh-DB-Cutover ist dasselbe Muster wie Restore, **außer** dass Restore die Ge
 
 ### 5.6 Fallstricke
 
-| Symptom | Ursache | Was tun |
-| --- | --- | --- |
-| „Manager-Version … zu alt“ | Paket verlangt neueren Manager | Manager-DMG zuerst aktualisieren |
-| Inspect/Apply: Settings-Format | Format-Mismatch | passendes Paket / neuerer Stack |
-| Update bricht bei Backup ab | Stack/Maintenance `:8082` nicht erreichbar | Stack starten, dann Update erneut |
-| „Keine .env“ | Install unvollständig | Erstinstall (§4) nachholen |
-| Images laden fehlgeschlagen | kaputtes Archiv / Docker voll | Logs prüfen; Disk/Docker |
-| Timeout nach ~15 min | langsamer Host / großer Load | erneut versuchen; Host-Ressourcen |
-| Warteschlange weg nach Update | erwartet (Fresh DB) | Kommunikationshinweis vor Apply |
-| Nur Image-Tags in `.env` geändert | kein Cutover/Rollback | nicht als Produkt-Update nutzen |
+| Symptom                           | Ursache                                    | Was tun                           |
+| --------------------------------- | ------------------------------------------ | --------------------------------- |
+| „Manager-Version … zu alt“        | Paket verlangt neueren Manager             | Manager-DMG zuerst aktualisieren  |
+| Inspect/Apply: Settings-Format    | Format-Mismatch                            | passendes Paket / neuerer Stack   |
+| Update bricht bei Backup ab       | Stack/Maintenance `:8082` nicht erreichbar | Stack starten, dann Update erneut |
+| „Keine .env“                      | Install unvollständig                      | Erstinstall (§4) nachholen        |
+| Images laden fehlgeschlagen       | kaputtes Archiv / Docker voll              | Logs prüfen; Disk/Docker          |
+| Timeout nach ~15 min              | langsamer Host / großer Load               | erneut versuchen; Host-Ressourcen |
+| Warteschlange weg nach Update     | erwartet (Fresh DB)                        | Kommunikationshinweis vor Apply   |
+| Nur Image-Tags in `.env` geändert | kein Cutover/Rollback                      | nicht als Produkt-Update nutzen   |
 
 ## 6. Build — wie die Artefakte entstehen
 

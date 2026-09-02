@@ -3,12 +3,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { DatabaseSync } from 'node:sqlite';
 import {
   buildPfbackupArchive,
   serializePfbackupArchive,
   PRAXIS_FLOW_PROXY_IMAGE_REF,
 } from '@praxis-flow/server-shared';
-import { APP_DB_RELATED_FILES, createLocalAppDataAccess } from './app-data-volume.js';
+import { APP_DB_BASENAME, createLocalAppDataAccess } from './app-data-volume.js';
 import { readEnvMap } from './env-file.js';
 import { readManagerState } from './manager-state.js';
 import { buildTestPfupdateArchive } from './pfupdate-test-fixtures.js';
@@ -78,9 +79,8 @@ function seedInstallHome(dir: string): { envPath: string; appDataDir: string; ba
 
   const appDataDir = path.join(dir, 'app-data');
   fs.mkdirSync(appDataDir, { recursive: true });
-  for (const name of APP_DB_RELATED_FILES) {
-    fs.writeFileSync(path.join(appDataDir, name), `seed-${name}`);
-  }
+  const db = new DatabaseSync(path.join(appDataDir, APP_DB_BASENAME));
+  db.close();
 
   const backupPath = path.join(dir, 'backups', 'pre-update.pfbackup');
   fs.mkdirSync(path.dirname(backupPath), { recursive: true });

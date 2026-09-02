@@ -20,9 +20,7 @@ import {
   tlsOperatorRecordsAreTheTask,
 } from './tls-network-view-model.js';
 
-export function tlsNetworkLocksHost(
-  state: Pick<TlsNetworkState, 'busy' | 'hydrating'>,
-): boolean {
+export function tlsNetworkLocksHost(state: Pick<TlsNetworkState, 'busy' | 'hydrating'>): boolean {
   return state.busy || state.hydrating;
 }
 
@@ -99,11 +97,7 @@ export function createTlsNetworkController(deps: {
   lanIp: () => string | null;
   onAfterMutation: () => void | Promise<void>;
   onStateChange: () => void;
-  requestConfirm: (
-    message: string,
-    onConfirm: () => void,
-    onCancel?: () => void,
-  ) => void;
+  requestConfirm: (message: string, onConfirm: () => void, onCancel?: () => void) => void;
   /** True while LAN/proxy is writing the host (not snapshot loading). */
   isPeerMutating?: () => boolean;
 }): TlsNetworkController {
@@ -482,4 +476,3 @@ export function createTlsNetworkController(deps: {
     },
   };
 }
-

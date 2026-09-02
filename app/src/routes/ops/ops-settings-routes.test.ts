@@ -41,21 +41,18 @@ test('a failed settings update does not block the next update', async () => {
 
 test('GET /api/v1/ops/settings/capabilities returns simple routing capabilities', async () => {
   const app = Fastify({ logger: false });
-  registerOpsSettingsRoutes(
-    app,
-    {
-      getRoutingCapabilities: () => ({
-        routingMode: 'simple',
-        openVisitCount: 0,
-        features: {
-          complexRouting: false,
-          journeyDesigner: false,
-          routingSimulator: true,
-          complexRoutingLicensed: true,
-        },
-      }),
-    } as unknown as CoreDatabase,
-  );
+  registerOpsSettingsRoutes(app, {
+    getRoutingCapabilities: () => ({
+      routingMode: 'simple',
+      openVisitCount: 0,
+      features: {
+        complexRouting: false,
+        journeyDesigner: false,
+        routingSimulator: true,
+        complexRoutingLicensed: true,
+      },
+    }),
+  } as unknown as CoreDatabase);
 
   await app.ready();
   const response = await app.inject({
@@ -78,21 +75,18 @@ test('GET /api/v1/ops/settings/capabilities returns simple routing capabilities'
 
 test('GET /api/v1/ops/settings/capabilities returns complex routing capabilities', async () => {
   const app = Fastify({ logger: false });
-  registerOpsSettingsRoutes(
-    app,
-    {
-      getRoutingCapabilities: () => ({
-        routingMode: 'complex',
-        openVisitCount: 2,
-        features: {
-          complexRouting: true,
-          journeyDesigner: true,
-          routingSimulator: true,
-          complexRoutingLicensed: true,
-        },
-      }),
-    } as unknown as CoreDatabase,
-  );
+  registerOpsSettingsRoutes(app, {
+    getRoutingCapabilities: () => ({
+      routingMode: 'complex',
+      openVisitCount: 2,
+      features: {
+        complexRouting: true,
+        journeyDesigner: true,
+        routingSimulator: true,
+        complexRoutingLicensed: true,
+      },
+    }),
+  } as unknown as CoreDatabase);
 
   await app.ready();
   const response = await app.inject({

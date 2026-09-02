@@ -285,8 +285,8 @@ mit PIN; Invalidierungsmatrix wie oben.
 
 ## Fortschritt
 
-| Schnitt | Status |
-| --- | --- |
+| Schnitt                                     | Status       |
+| ------------------------------------------- | ------------ |
 | 1 Schema (inkl. Update-Copy / Restore-leer) | **erledigt** |
-| 2 TV/Terminal + MFA-Liste | **erledigt** |
-| 3 Room-Panels + Aufräumen | **erledigt** |
+| 2 TV/Terminal + MFA-Liste                   | **erledigt** |
+| 3 Room-Panels + Aufräumen                   | **erledigt** |

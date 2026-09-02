@@ -35,6 +35,9 @@ export function wizardManagedPrepareErrorFooter(): string {
   return `${tlsErrorCopy('acme').title} Zurück und HTTPS später unter Netzwerk fortsetzen.`;
 }
 
+export const WIZARD_ROUTING_LOAD_ERROR =
+  'Routing-Modus konnte nicht geladen werden. Bitte erneut versuchen.';
+
 export type WizardCallbacks = {
   onComplete: () => void;
   onCancel: () => void;
@@ -345,7 +348,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       })
       .catch(() => {
         if (still(generation) && requestId === routingCapabilitiesRequestId && state.step === 2) {
-          patch({ complexRoutingLicensed: true, routingCapabilitiesStatus: 'error' });
+          patch({ routingCapabilitiesStatus: 'error', error: WIZARD_ROUTING_LOAD_ERROR });
         }
       });
 
@@ -386,12 +389,16 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       setBusy(true);
       try {
         if (state.step === 2) {
+          const retryingLoad = state.routingCapabilitiesStatus !== 'ready';
           await ensureRoutingCapabilities();
           if (!still(generation)) {
             return;
           }
           if (state.routingCapabilitiesStatus !== 'ready' || state.routingMode === null) {
-            setError('Routing-Modus konnte nicht geladen werden. Bitte erneut versuchen.');
+            setError(WIZARD_ROUTING_LOAD_ERROR);
+            return;
+          }
+          if (retryingLoad) {
             return;
           }
         }
@@ -561,6 +568,11 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
           return;
         }
         patch({ status, releaseImportStatus: null });
+      } catch (error) {
+        if (still(generation)) {
+          patch({ releaseImportStatus: null });
+          setError(error instanceof Error ? error.message : String(error));
+        }
       } finally {
         if (still(generation)) {
           setBusy(false);

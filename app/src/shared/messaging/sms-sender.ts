@@ -96,9 +96,7 @@ export function buildRecallWhatsAppComponents(input: {
 }
 
 function isProviderTimeoutError(error: unknown): boolean {
-  return (
-    error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')
-  );
+  return error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
 }
 
 /** Exported for unit tests. */

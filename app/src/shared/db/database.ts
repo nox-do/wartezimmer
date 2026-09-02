@@ -1432,10 +1432,7 @@ export class CoreDatabase {
     );
   }
 
-  revokeRoomPanelAuthorizationsByPlacement(
-    roomId: string,
-    placement: RoomPanelPlacement,
-  ): number {
+  revokeRoomPanelAuthorizationsByPlacement(roomId: string, placement: RoomPanelPlacement): number {
     return this.withTransaction('revokeRoomPanelAuthorizationsByPlacement', () =>
       revokeRoomPanelAuthorizationsByPlacement(this.deviceAuthorizationDeps, roomId, placement),
     );

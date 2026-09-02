@@ -102,6 +102,10 @@ export async function copyDeviceAuthorizationsFromAsideViaApp(
     };
   }
 
+  if (rows.length === 0) {
+    return { ok: true, imported: 0 };
+  }
+
   try {
     const response = await fetch(
       `${localMaintenanceAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/device-authorizations/import`,

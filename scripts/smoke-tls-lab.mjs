@@ -125,11 +125,9 @@ function labResolver() {
 }
 
 function containerRunning(name) {
-  const result = spawnSync(
-    'docker',
-    ['inspect', '-f', '{{.State.Running}}', name],
-    { encoding: 'utf8' },
-  );
+  const result = spawnSync('docker', ['inspect', '-f', '{{.State.Running}}', name], {
+    encoding: 'utf8',
+  });
   return result.status === 0 && result.stdout.trim() === 'true';
 }
 

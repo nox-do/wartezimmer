@@ -61,11 +61,7 @@ export type MaintenanceState = {
 export type MaintenanceControllerDeps = MaintenanceCallbacks & {
   api: PraxisManagerApi;
   onStateChange?: () => void;
-  requestConfirm: (
-    message: string,
-    onConfirm: () => void,
-    onCancel?: () => void,
-  ) => void;
+  requestConfirm: (message: string, onConfirm: () => void, onCancel?: () => void) => void;
 };
 
 export type MaintenanceController = {
@@ -573,7 +569,8 @@ export function createMaintenanceController(
             patch({ tlsSidecarStatusText: '' });
             setSurfaceError(
               'tlsSidecar',
-              restoreInspectBlockedMessage(inspect) ?? 'HTTPS-Sicherung konnte nicht geprüft werden.',
+              restoreInspectBlockedMessage(inspect) ??
+                'HTTPS-Sicherung konnte nicht geprüft werden.',
             );
             return;
           }
@@ -754,7 +751,10 @@ export function createMaintenanceController(
 
       const logsDone = refreshLogs('app', generation).catch((error) => {
         if (still(generation)) {
-          setSurfaceError('logs', errorMessage(error, 'Wartungsdaten konnten nicht geladen werden.'));
+          setSurfaceError(
+            'logs',
+            errorMessage(error, 'Wartungsdaten konnten nicht geladen werden.'),
+          );
         }
       });
       const backupDone = deps.api

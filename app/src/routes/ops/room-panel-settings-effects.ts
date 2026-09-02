@@ -7,10 +7,7 @@ export function applyRoomPanelSettingsEffects(input: {
   updated: Pick<OpsSettings, 'rooms'>;
   grants: {
     revokeRoomPanelAuthorizationsByRoom(roomId: string): number;
-    revokeRoomPanelAuthorizationsByPlacement(
-      roomId: string,
-      placement: RoomPanelPlacement,
-    ): number;
+    revokeRoomPanelAuthorizationsByPlacement(roomId: string, placement: RoomPanelPlacement): number;
   };
   publishQueueUpdate: () => void;
 }): void {

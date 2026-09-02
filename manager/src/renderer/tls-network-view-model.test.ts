@@ -76,7 +76,10 @@ test('tlsNeedsNetworkResume skips idle and healthy active certs', () => {
 test('tlsResumeCard wait extra is only on awaiting-operator-dns', () => {
   const waiting = tlsResumeCard(tls({ state: 'awaiting-operator-dns', mode: 'managed' }));
   assert.equal(waiting?.button, 'Fortsetzen');
-  assert.equal(waiting?.title, tlsNetworkSubtitle(tls({ state: 'awaiting-operator-dns', mode: 'managed' })));
+  assert.equal(
+    waiting?.title,
+    tlsNetworkSubtitle(tls({ state: 'awaiting-operator-dns', mode: 'managed' })),
+  );
   assert.match(waiting?.copy ?? '', /48 Stunden/);
   assert.match(waiting?.copy ?? '', /Manager schließen/);
   assert.doesNotMatch(waiting?.copy ?? '', /unter Netzwerk/);
@@ -231,7 +234,10 @@ test('tlsDiagnoseItems does not repeat A-record addresses already in the message
     ],
   });
   const aRecord = items.find((item) => item.text.includes('Catch-all'));
-  assert.equal(aRecord?.text, 'Kein eigener A-Record — Catch-all der Zone zeigt auf 213.23.215.150');
+  assert.equal(
+    aRecord?.text,
+    'Kein eigener A-Record — Catch-all der Zone zeigt auf 213.23.215.150',
+  );
 });
 
 test('TLS_LEASE_STALE_LAN_COPY stays short', () => {
@@ -268,7 +274,10 @@ test('tlsShowsDnsWaitCopy is only true while awaiting operator DNS', () => {
     ),
     false,
   );
-  assert.equal(tlsShowsDnsWaitCopy(tls({ state: 'obtaining-certificate', mode: 'managed' })), false);
+  assert.equal(
+    tlsShowsDnsWaitCopy(tls({ state: 'obtaining-certificate', mode: 'managed' })),
+    false,
+  );
   assert.equal(tlsShowsDnsWaitCopy(tls({ state: 'active', cutoverApplied: true })), false);
   assert.equal(
     tlsOperatorRecordsAreTheTask(tls({ state: 'awaiting-operator-dns', mode: 'managed' })),

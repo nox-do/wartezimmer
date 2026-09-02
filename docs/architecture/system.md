@@ -21,27 +21,27 @@ Kritische Daten bleiben logisch von unkritischen Betriebsdaten getrennt (§2).
 
 ## 2. Schutzbedarfsklassen
 
-| Klasse | Beispiele |
-| --- | --- |
-| **Kritisch** | Name, Mobil, DOB, Anamnese, Dokumente/Vorschau |
-| **Intern sensibel** | Besuchsgrund/Thema (Labor, Rezept, …) |
-| **Unkritisch** | Wartenummer, Queue-/TV ohne Namen, Betriebsparameter |
+| Klasse              | Beispiele                                            |
+| ------------------- | ---------------------------------------------------- |
+| **Kritisch**        | Name, Mobil, DOB, Anamnese, Dokumente/Vorschau       |
+| **Intern sensibel** | Besuchsgrund/Thema (Labor, Rezept, …)                |
+| **Unkritisch**      | Wartenummer, Queue-/TV ohne Namen, Betriebsparameter |
 
 ## 3. Logische Komponenten
 
 Fachliche Schichten im Monolithen — kein Microservice-Schnitt. Abläufe: [`../flows.md`](../flows.md).
 
-| # | Komponente | Schutz | Kurz |
-| --- | --- | --- | --- |
-| 1 | Frontend Gateway | unkritisch | Terminal, MFA, TV, Portal, Raum-Panel; SSE → [`realtime.md`](realtime.md) |
-| 2 | Check-in & Ticket | unkritisch | Wartenummer (`laneCode`), Portal-Session; keine Klarnamen in Queue |
-| 3 | Queue & Aufruf | unkritisch | Status, TV, Rückhol-Fenster, optional `roomId` |
-| 4 | Identity | kritisch | PII für MFA (Mobil, DOB; eGK nur Discovery) |
-| 5 | Dokumente | kritisch | Upload, Anamnese-Output, Host-Export; Vorschau nur Sandbox |
-| 6 | Sandbox Adapter | kritisch, isoliert | Preview-Custody — [`documents.md`](documents.md) |
-| 7 | Tagesbetrieb & Reset | quer | Check-in-Sperre, Day-Close/Reset, Ops, Notfall |
-| 8 | SMS Adapter | extern | Rückhol-SMS über Messaging-Provider |
-| 9 | WLAN-/Captive | extern, **nicht Produkt** | Freigabe später nur per Adapter — kein Gateway-Container im Produkt |
+| #   | Komponente           | Schutz                    | Kurz                                                                      |
+| --- | -------------------- | ------------------------- | ------------------------------------------------------------------------- |
+| 1   | Frontend Gateway     | unkritisch                | Terminal, MFA, TV, Portal, Raum-Panel; SSE → [`realtime.md`](realtime.md) |
+| 2   | Check-in & Ticket    | unkritisch                | Wartenummer (`laneCode`), Portal-Session; keine Klarnamen in Queue        |
+| 3   | Queue & Aufruf       | unkritisch                | Status, TV, Rückhol-Fenster, optional `roomId`                            |
+| 4   | Identity             | kritisch                  | PII für MFA (Mobil, DOB; eGK nur Discovery)                               |
+| 5   | Dokumente            | kritisch                  | Upload, Anamnese-Output, Host-Export; Vorschau nur Sandbox                |
+| 6   | Sandbox Adapter      | kritisch, isoliert        | Preview-Custody — [`documents.md`](documents.md)                          |
+| 7   | Tagesbetrieb & Reset | quer                      | Check-in-Sperre, Day-Close/Reset, Ops, Notfall                            |
+| 8   | SMS Adapter          | extern                    | Rückhol-SMS über Messaging-Provider                                       |
+| 9   | WLAN-/Captive        | extern, **nicht Produkt** | Freigabe später nur per Adapter — kein Gateway-Container im Produkt       |
 
 ```mermaid
 flowchart LR
@@ -62,10 +62,10 @@ TV nutzt `GET /queue` mit Rolle `tv` — kein eigener Read-Service. Trennung üb
 
 ### Container (Produkt)
 
-| Service | Inhalt |
-| --- | --- |
-| `app` | API + Businesslogik + UI-Static + SQLite |
-| `sandbox` | isolierte Vorschau / ClamAV |
+| Service            | Inhalt                                                     |
+| ------------------ | ---------------------------------------------------------- |
+| `app`              | API + Businesslogik + UI-Static + SQLite                   |
+| `sandbox`          | isolierte Vorschau / ClamAV                                |
 | `proxy` (optional) | Caddy — Ops [`../operations/tls.md`](../operations/tls.md) |
 
 Kein separater DB-Container. Lab-Gateway (nicht Produkt): [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md).
@@ -76,22 +76,22 @@ Workspaces u. a. `app`, `ui`, `sandbox`, `setup`, `manager`, `packages/*`.
 
 ### Backend (`app/src/`)
 
-| Bereich | Pfad | Rolle |
-| --- | --- | --- |
-| HTTP | `routes/` | Fastify-Registrars (checkin, queue, documents, ops, sessions, …) |
-| Fachlogik | `shared/` | Queue, Documents, Forms, Ops, Contacts, flow-core, … |
-| Persistenz | `shared/db/` | `CoreDatabase`; SQL in `database-*.ts` |
-| Auth | `auth/` | Rollen (`ROUTE_ACCESS_RULES`); Staff-Session MFA/OPS; Gerätefreigaben TV/Terminal/Panel |
-| Fehler | `http/` | Domain-Error-Codes, API-Mapping |
+| Bereich    | Pfad         | Rolle                                                                                   |
+| ---------- | ------------ | --------------------------------------------------------------------------------------- |
+| HTTP       | `routes/`    | Fastify-Registrars (checkin, queue, documents, ops, sessions, …)                        |
+| Fachlogik  | `shared/`    | Queue, Documents, Forms, Ops, Contacts, flow-core, …                                    |
+| Persistenz | `shared/db/` | `CoreDatabase`; SQL in `database-*.ts`                                                  |
+| Auth       | `auth/`      | Rollen (`ROUTE_ACCESS_RULES`); Staff-Session MFA/OPS; Gerätefreigaben TV/Terminal/Panel |
+| Fehler     | `http/`      | Domain-Error-Codes, API-Mapping                                                         |
 
-| Komponente | Routes (Auszug) | Shared / DB |
-| --- | --- | --- |
-| Check-in / Visit | `checkin-routes`, `sessions-routes` | `flow-core-checkin`, `database-checkin-sessions` |
-| Queue | `queue-routes` | `shared/queue/`, Visit-Bridge |
-| Identity | `identity-routes` | Sessions/Contacts |
-| Dokumente | `documents-routes`, `patient-documents-routes` | `shared/documents/`, `shared/forms/` |
-| Tagesbetrieb | `routes/ops/*` | day-lifecycle, ops-settings |
-| Portal-Auth | `session-auth` (preHandler) | Patient-Session |
+| Komponente       | Routes (Auszug)                                | Shared / DB                                      |
+| ---------------- | ---------------------------------------------- | ------------------------------------------------ |
+| Check-in / Visit | `checkin-routes`, `sessions-routes`            | `flow-core-checkin`, `database-checkin-sessions` |
+| Queue            | `queue-routes`                                 | `shared/queue/`, Visit-Bridge                    |
+| Identity         | `identity-routes`                              | Sessions/Contacts                                |
+| Dokumente        | `documents-routes`, `patient-documents-routes` | `shared/documents/`, `shared/forms/`             |
+| Tagesbetrieb     | `routes/ops/*`                                 | day-lifecycle, ops-settings                      |
+| Portal-Auth      | `session-auth` (preHandler)                    | Patient-Session                                  |
 
 ### Frontend (`ui/src/`)
 
@@ -112,8 +112,8 @@ Echtzeit: [`realtime.md`](realtime.md) — SSE beobachten, REST tun.
 
 Crash-resilient tagsüber, absichtlich flüchtig über den Praxistag:
 
-| Bleibt nach Tagesreset | Wird geleert |
-| --- | --- |
+| Bleibt nach Tagesreset                                                   | Wird geleert                                                      |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------- |
 | Settings (`ops_settings`), **Gerätefreigaben** (`device_authorizations`) | Queue, Patient-Sessions, Dokumente, Anamnese, sonstige Tagesdaten |
 
 **Tagesabschluss** (`POST /ops/day-close/start`): Phase gestartet, Check-in gesperrt — kein Runtime-Reset (API für späteren Export-/Archiv-Flow).
@@ -126,8 +126,8 @@ Catalog = Projektion aus Settings — [`domain.md`](domain.md) § Catalog · Bac
 
 ## 6. Festgelegt / Abgrenzung
 
-| Thema | Stand |
-| --- | --- |
-| Portal-Session-TTL | Formular → sofort revoke; Upload → 30 Min — [`../flows.md`](../flows.md) |
-| LAN-TLS | Produkt — [`../operations/tls.md`](../operations/tls.md) |
+| Thema                              | Stand                                                                            |
+| ---------------------------------- | -------------------------------------------------------------------------------- |
+| Portal-Session-TTL                 | Formular → sofort revoke; Upload → 30 Min — [`../flows.md`](../flows.md)         |
+| LAN-TLS                            | Produkt — [`../operations/tls.md`](../operations/tls.md)                         |
 | Internet-Portal / Captive-Hardware | nicht Produkt — [`../operations/integrations.md`](../operations/integrations.md) |

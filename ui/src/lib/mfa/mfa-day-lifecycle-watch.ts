@@ -58,12 +58,7 @@ export function startMfaDayLifecycleWatch(options: MfaDayLifecycleWatchOptions):
     }
 
     inflight = true;
-    let ok = false;
-    try {
-      ok = await options.load();
-    } catch {
-      ok = false;
-    }
+    const ok = await options.load().catch(() => false);
     inflight = false;
 
     if (stopped) {

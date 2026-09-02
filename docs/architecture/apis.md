@@ -16,13 +16,13 @@ Nicht: Domäne → [`domain.md`](domain.md) · SSE-Detail → [`realtime.md`](re
 
 Auth-Mechanismen:
 
-| Mechanismus | Wer |
-| --- | --- |
-| Staff-Session-Cookie + `x-client-role` | `mfa`, `ops` (Idle-/Absolute-TTL) |
-| Gerätefreigabe-Cookie + `x-client-role` | `terminal`, `tv`, `room-panel` (Hash in `device_authorizations`, kein Staff-TTL) |
-| Bearer = `AUTH_KEY_CAPTIVE` | Rolle `captive` |
-| Bearer = Patient-Session-Token | Portal (`session-auth`); ACL oft `public: true`, Ownership im Handler |
-| Loopback Maintenance `:8082` | Snapshot/Import — nicht LAN ([`../operations/backup.md`](../operations/backup.md)) |
+| Mechanismus                             | Wer                                                                                |
+| --------------------------------------- | ---------------------------------------------------------------------------------- |
+| Staff-Session-Cookie + `x-client-role`  | `mfa`, `ops` (Idle-/Absolute-TTL)                                                  |
+| Gerätefreigabe-Cookie + `x-client-role` | `terminal`, `tv`, `room-panel` (Hash in `device_authorizations`, kein Staff-TTL)   |
+| Bearer = `AUTH_KEY_CAPTIVE`             | Rolle `captive`                                                                    |
+| Bearer = Patient-Session-Token          | Portal (`session-auth`); ACL oft `public: true`, Ownership im Handler              |
+| Loopback Maintenance `:8082`            | Snapshot/Import — nicht LAN ([`../operations/backup.md`](../operations/backup.md)) |
 
 SoT der ACL: `app/src/auth/route-access-rules.ts` (nicht diese Datei).
 
@@ -36,12 +36,12 @@ npm run generate:api
 
 Das orchestriert:
 
-| Schritt | Script | Output |
-| --- | --- | --- |
-| Bundle | `bundle:openapi` | `openapi/bundle.json` |
-| Fastify-Schemas | `generate:api-schemas` | `app/src/api/generated/*.fastify-schemas.ts` |
-| App-Typen | `generate:app-openapi-types` | `app/src/api/*-openapi-types.ts` |
-| UI-Typen | `generate:openapi-types` | `ui/src/lib/**/openapi-types.ts` |
+| Schritt         | Script                       | Output                                       |
+| --------------- | ---------------------------- | -------------------------------------------- |
+| Bundle          | `bundle:openapi`             | `openapi/bundle.json`                        |
+| Fastify-Schemas | `generate:api-schemas`       | `app/src/api/generated/*.fastify-schemas.ts` |
+| App-Typen       | `generate:app-openapi-types` | `app/src/api/*-openapi-types.ts`             |
+| UI-Typen        | `generate:openapi-types`     | `ui/src/lib/**/openapi-types.ts`             |
 
 Zwei Zielgruppen, **kein** gemeinsames Generated-Package. Swagger UI: `/api/docs` (typisch non-production; Override `OPENAPI_DOCS_ENABLED`).
 
@@ -51,15 +51,15 @@ Neue/geänderte Routen: YAML → `generate:api` → Handler an Schema/Typen → 
 
 ## 3. Rollenmatrix
 
-| Rolle | Client | typ. API-Bereiche |
-| --- | --- | --- |
-| `terminal` | Check-in | `checkins`, `checkins/assist/*`, `ops/heartbeat`, `ops/device/presence`/`stream`, `ops/emergency/raise` |
-| `mfa` | MFA | `queue` (+ SSE), `identity`, `documents`, `ops` (Stream, Day-Lifecycle, Settings-Subset, Pairing-confirm) |
-| `tv` | Wartezimmer | `GET /queue`, `GET /queue/stream`, `ops/device/presence`/`stream` |
-| `room-panel` | Raum-Tablet | Auth room-panel, `GET /queue` (+ SSE), Transitions eingeschränkt |
-| `captive` | Gateway-Bridge (Lab/Adapter) | `sessions/verify-ticket-code` |
-| `ops` | IT-Settings | Settings-Subset (CSV/SMS/Profil/Routing), Messaging, Maintenance, Outbox |
-| Portal | Patienten-Web | `sessions/*`, `patient-documents/*` — Session-Bearer, kein `ClientRole`-Eintrag |
+| Rolle        | Client                       | typ. API-Bereiche                                                                                         |
+| ------------ | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `terminal`   | Check-in                     | `checkins`, `checkins/assist/*`, `ops/heartbeat`, `ops/device/presence`/`stream`, `ops/emergency/raise`   |
+| `mfa`        | MFA                          | `queue` (+ SSE), `identity`, `documents`, `ops` (Stream, Day-Lifecycle, Settings-Subset, Pairing-confirm) |
+| `tv`         | Wartezimmer                  | `GET /queue`, `GET /queue/stream`, `ops/device/presence`/`stream`                                         |
+| `room-panel` | Raum-Tablet                  | Auth room-panel, `GET /queue` (+ SSE), Transitions eingeschränkt                                          |
+| `captive`    | Gateway-Bridge (Lab/Adapter) | `sessions/verify-ticket-code`                                                                             |
+| `ops`        | IT-Settings                  | Settings-Subset (CSV/SMS/Profil/Routing), Messaging, Maintenance, Outbox                                  |
+| Portal       | Patienten-Web                | `sessions/*`, `patient-documents/*` — Session-Bearer, kein `ClientRole`-Eintrag                           |
 
 **Harte Regeln:**
 
@@ -74,13 +74,13 @@ Neue/geänderte Routen: YAML → `generate:api` → Handler an Schema/Typen → 
 
 Vertrag: `openapi/auth.yaml`, `openapi/queue.yaml`. Enrollment einmalig mit der **gemeinsamen Raum-Panel-PIN** (außen und innen). Danach PIN-frei bis Widerruf (Cookie 365d, gleitendes Max-Age). Mehrere aktive Freigaben pro Raum+Placement.
 
-| Endpoint | Zugang | Zweck |
-| --- | --- | --- |
-| `GET /auth/room-panel/rooms` | öffentlich | Placements zum Enrollment (`requiresPin` immer true) |
-| `POST /auth/room-panel/login` | öffentlich | Cookie; Body `roomId`, `placement`, **PIN Pflicht** |
-| `GET /queue` | `room-panel` | Snapshot inkl. `capabilities` / Actions |
-| `GET /queue/stream` | `room-panel` | SSE `snapshot` + `session-revoked` |
-| `POST /queue/:visitId/transition` | `room-panel` | nur `check_in_room`, `check_out_room`, `call` |
+| Endpoint                          | Zugang       | Zweck                                                |
+| --------------------------------- | ------------ | ---------------------------------------------------- |
+| `GET /auth/room-panel/rooms`      | öffentlich   | Placements zum Enrollment (`requiresPin` immer true) |
+| `POST /auth/room-panel/login`     | öffentlich   | Cookie; Body `roomId`, `placement`, **PIN Pflicht**  |
+| `GET /queue`                      | `room-panel` | Snapshot inkl. `capabilities` / Actions              |
+| `GET /queue/stream`               | `room-panel` | SSE `snapshot` + `session-revoked`                   |
+| `POST /queue/:visitId/transition` | `room-panel` | nur `check_in_room`, `check_out_room`, `call`        |
 
 UI-Buttons aus Snapshot-Actions (`canArrive`, `canCheckOut`, `canCall`); Server bleibt autoritativ. `capabilities.callAnnouncementReachable` steuert Aufruf bei offline WZ-TV. MFA listet und entkoppelt Freigaben über `GET/POST /ops/device-authorizations`.
 
@@ -109,17 +109,17 @@ Details: [`../flows.md`](../flows.md) § Portal-Session-Lebensdauer.
 
 SSE beobachten, REST mutieren — [`realtime.md`](realtime.md).
 
-| Kanal | Rollen | Inhalt |
-| --- | --- | --- |
-| `GET /queue/stream` | `mfa`, `tv`, `room-panel` | Queue live (View je Rolle) |
-| `GET /ops/stream` | `mfa` | Notfall, `device.presence`, `device.pairing` |
-| `GET /ops/device/stream` | `tv`, `terminal` | Device-Liveness |
+| Kanal                    | Rollen                    | Inhalt                                       |
+| ------------------------ | ------------------------- | -------------------------------------------- |
+| `GET /queue/stream`      | `mfa`, `tv`, `room-panel` | Queue live (View je Rolle)                   |
+| `GET /ops/stream`        | `mfa`                     | Notfall, `device.presence`, `device.pairing` |
+| `GET /ops/device/stream` | `tv`, `terminal`          | Device-Liveness                              |
 
 **Presence ≠ Pairing.** Outbox = Audit, kein Push-Bus — ebenfalls [`realtime.md`](realtime.md).
 
 ## 8. Abgrenzung / Discovery
 
-| Thema | Stand |
-| --- | --- |
-| `POST /identity/egk-lookup` | skizziert in OpenAPI-Doku — kein produktiver Endpoint ([`../operations/integrations.md`](../operations/integrations.md)) |
-| Internet-Portal / Captive-Produkt | nicht Produkt; LAN-TLS schon — [`../operations/tls.md`](../operations/tls.md) |
+| Thema                             | Stand                                                                                                                    |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `POST /identity/egk-lookup`       | skizziert in OpenAPI-Doku — kein produktiver Endpoint ([`../operations/integrations.md`](../operations/integrations.md)) |
+| Internet-Portal / Captive-Produkt | nicht Produkt; LAN-TLS schon — [`../operations/tls.md`](../operations/tls.md)                                            |

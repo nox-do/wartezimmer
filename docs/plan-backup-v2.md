@@ -161,13 +161,13 @@ Erstellen, Exportieren und Restore bleiben ohne zusätzliche Bestätigung mögli
 
 Innere tgz (heute eigene Datei; in Format 2 Feld `tlsArchiveBase64`):
 
-| Pfad im tgz        | Quelle auf dem Host                         |
-| ------------------ | ------------------------------------------- |
-| `manifest.json`    | `installationId`, `hostname`, format 1     |
-| `caddy-data/`      | `state/tls/caddy-data`                      |
-| `caddy-config/`    | `state/tls/caddy-config`                     |
-| `acme-dns.json`    | `state/tls/acme-dns.json`                    |
-| `certs/`           | `state/tls/certs` (Custom-PEM)              |
+| Pfad im tgz     | Quelle auf dem Host                    |
+| --------------- | -------------------------------------- |
+| `manifest.json` | `installationId`, `hostname`, format 1 |
+| `caddy-data/`   | `state/tls/caddy-data`                 |
+| `caddy-config/` | `state/tls/caddy-config`               |
+| `acme-dns.json` | `state/tls/acme-dns.json`              |
+| `certs/`        | `state/tls/certs` (Custom-PEM)         |
 
 Nicht in der inneren tgz: generiertes `Caddyfile`, `operator-token`.
 
@@ -237,16 +237,16 @@ Prepare-only in der Sicherung ist **kein** `tlsInBackup`. Heute kennt
 `applyTlsRestorePlan` das Ziel nicht — Unpack/Wipe nur nach Sicherung; das ist
 der Schnitt-2-Umbau, nicht der Ist-Stand.
 
-| Fall | `restoreSupported` | Aktion |
-| ---- | ------------------ | ------ |
-| HTTP-only, `TLS_STATE=off`, kein Payload, Ziel HTTP | ja, wenn die drei Kern-Gates | kein Unpack, kein Wipe |
-| Prepare-only, Payload passt, Ziel HTTP | ja | Unpack, TLS-Env aus Snapshot, Host-Pfade dieses Install-Home; Proxy darf an |
-| Prepare-only, kein/nicht passendes Payload, Ziel HTTP | ja + Warnung | `TLS_*` und Proxy-TLS-Keys weg, `wipeTlsStateRoot` |
-| `active`/`degraded` ohne HTTPS-Marker in `.env` (Sicherung) | nein | Metadaten |
-| Aktives HTTPS in der Sicherung ohne/nicht passendes Payload | nein | kein Env-Schreiben |
-| Aktives HTTPS in der Sicherung, Payload passt, Ziel HTTP | ja | Unpack, Caddyfile neu, Overlay-Pfade dieses Hosts; Proxy darf an; keine Extra-Frage |
-| Aktives HTTPS in der Sicherung, Payload passt, Ziel HTTPS | ja | Confirm, dann Unpack wie oben |
-| Sicherung ohne HTTPS (`!tlsInBackup`, inkl. Prepare-only mit **oder** ohne Payload), Ziel HTTPS | ja, Kern-Gates | Settings wie heute; Live-HTTPS behalten (siehe unten); kein Unpack, kein Wipe, keine Extra-Frage |
+| Fall                                                                                            | `restoreSupported`           | Aktion                                                                                           |
+| ----------------------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| HTTP-only, `TLS_STATE=off`, kein Payload, Ziel HTTP                                             | ja, wenn die drei Kern-Gates | kein Unpack, kein Wipe                                                                           |
+| Prepare-only, Payload passt, Ziel HTTP                                                          | ja                           | Unpack, TLS-Env aus Snapshot, Host-Pfade dieses Install-Home; Proxy darf an                      |
+| Prepare-only, kein/nicht passendes Payload, Ziel HTTP                                           | ja + Warnung                 | `TLS_*` und Proxy-TLS-Keys weg, `wipeTlsStateRoot`                                               |
+| `active`/`degraded` ohne HTTPS-Marker in `.env` (Sicherung)                                     | nein                         | Metadaten                                                                                        |
+| Aktives HTTPS in der Sicherung ohne/nicht passendes Payload                                     | nein                         | kein Env-Schreiben                                                                               |
+| Aktives HTTPS in der Sicherung, Payload passt, Ziel HTTP                                        | ja                           | Unpack, Caddyfile neu, Overlay-Pfade dieses Hosts; Proxy darf an; keine Extra-Frage              |
+| Aktives HTTPS in der Sicherung, Payload passt, Ziel HTTPS                                       | ja                           | Confirm, dann Unpack wie oben                                                                    |
+| Sicherung ohne HTTPS (`!tlsInBackup`, inkl. Prepare-only mit **oder** ohne Payload), Ziel HTTPS | ja, Kern-Gates               | Settings wie heute; Live-HTTPS behalten (siehe unten); kein Unpack, kein Wipe, keine Extra-Frage |
 
 Match: `tlsSidecarMatches` (Logik gleich; Inspect-Felder `payloadPresent` /
 `payloadMatches`). Leere ID oder leerer Hostname auf einer Seite = kein Match.
@@ -429,16 +429,16 @@ betroffenen Aktionen sichtbar; keine zusätzlichen Bestätigungsschritte.
 
 ## Dateiliste (vollständig für den Cut)
 
-| Bereich | Dateien |
-| ------- | ------- |
-| Spec | `docs/plan-backup-v2.md`, `docs/settings-backup-classification.md` |
-| Shared | `pfbackup.ts`, `pfbackup.test.ts`, `setup-api.ts`, `tls-backup.ts`, `tls-backup.test.ts`, `index.ts` (`backup-path-labels.ts` nur wenn der Geschwisternamen-Export tot ist) |
-| Setup | `settings-backup.ts`, `settings-backup-inspect.ts`, `settings-backup-restore.ts`, `tls-backup-sidecar.ts`, `env-file.ts` (`removeEnvKeys`), `server.ts`, `host-state.ts`, zugehörige `*.test.ts`; `settings-backup-update.ts` Parse/Create |
-| Manager Main | `pfbackup-dialog.ts`, `tls-sidecar-lookup.ts` + Test löschen, `index.ts`, `setup-api.ts` (Timeout bleibt) |
-| Manager Shared | `praxis-manager-api.ts`, `host-status.ts`, `ipc-channels.ts` |
-| Manager Preload | `manager/src/preload/index.ts` |
+| Bereich          | Dateien                                                                                                                                                                                                                                                                     |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Spec             | `docs/plan-backup-v2.md`, `docs/settings-backup-classification.md`                                                                                                                                                                                                          |
+| Shared           | `pfbackup.ts`, `pfbackup.test.ts`, `setup-api.ts`, `tls-backup.ts`, `tls-backup.test.ts`, `index.ts` (`backup-path-labels.ts` nur wenn der Geschwisternamen-Export tot ist)                                                                                                 |
+| Setup            | `settings-backup.ts`, `settings-backup-inspect.ts`, `settings-backup-restore.ts`, `tls-backup-sidecar.ts`, `env-file.ts` (`removeEnvKeys`), `server.ts`, `host-state.ts`, zugehörige `*.test.ts`; `settings-backup-update.ts` Parse/Create                                  |
+| Manager Main     | `pfbackup-dialog.ts`, `tls-sidecar-lookup.ts` + Test löschen, `index.ts`, `setup-api.ts` (Timeout bleibt)                                                                                                                                                                   |
+| Manager Shared   | `praxis-manager-api.ts`, `host-status.ts`, `ipc-channels.ts`                                                                                                                                                                                                                |
+| Manager Preload  | `manager/src/preload/index.ts`                                                                                                                                                                                                                                              |
 | Manager Renderer | `BackupPanel.svelte`, `MaintenanceView.svelte`, `maintenance-controller.ts`, `maintenance-view-model.ts`, `restore-wizard-*.ts`, `RestoreWizardDialog.svelte`, Tests (`restore-wizard-controller.test.ts`, `restore-wizard-flow.test.ts`, `maintenance-controller.test.ts`) |
-| Mock | `app.js`, `tls-model.js`, ggf. `tls-model.test.js` |
+| Mock             | `app.js`, `tls-model.js`, ggf. `tls-model.test.js`                                                                                                                                                                                                                          |
 
 `settings-backup-update.ts` erzeugt das Pre-Update-Backup über `createPfbackup`
 — nach Schnitt 2 Format 2. Parse dort nutzt Settings, nicht die tgz.

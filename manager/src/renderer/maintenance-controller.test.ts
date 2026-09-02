@@ -153,11 +153,7 @@ function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManager
 function createControllerDeps(
   api: PraxisManagerApi,
   overrides: {
-    requestConfirm?: (
-      message: string,
-      onConfirm: () => void,
-      onCancel?: () => void,
-    ) => void;
+    requestConfirm?: (message: string, onConfirm: () => void, onCancel?: () => void) => void;
     onAfterMutation?: () => void;
   } = {},
 ) {

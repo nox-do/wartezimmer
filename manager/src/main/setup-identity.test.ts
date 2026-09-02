@@ -11,10 +11,7 @@ import {
 
 test('parseSetupReadyLine reads the dedicated ready marker even with npm noise', () => {
   assert.equal(parseSetupReadyLine('npm warn something'), null);
-  assert.equal(
-    parseSetupReadyLine('PRAXIS_FLOW_SETUP_READY {"port":43121}'),
-    43121,
-  );
+  assert.equal(parseSetupReadyLine('PRAXIS_FLOW_SETUP_READY {"port":43121}'), 43121);
   assert.equal(
     parseSetupReadyLine('> setup@0.4.0 serve\nPRAXIS_FLOW_SETUP_READY {"port":9190}'),
     9190,
@@ -46,10 +43,7 @@ test('evaluateSetupHealthIdentity rejects leftover { ok: true } health', () => {
     buildId: '0.4.0',
     installHome: '/tmp/pf-dev-001',
   };
-  assert.match(
-    evaluateSetupHealthIdentity({ ok: true }, expected) ?? '',
-    /protocolVersion/,
-  );
+  assert.match(evaluateSetupHealthIdentity({ ok: true }, expected) ?? '', /protocolVersion/);
   assert.equal(
     evaluateSetupHealthIdentity(
       {

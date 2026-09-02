@@ -980,8 +980,7 @@ export async function verifyHostTlsDns(
   try {
     observation = await (
       deps.verifyDns ??
-      ((name, mode) =>
-        verifyDnsDefault(name, mode, resolverServers, deps.createDnsResolver))
+      ((name, mode) => verifyDnsDefault(name, mode, resolverServers, deps.createDnsResolver))
     )(status.hostname, status.mode);
   } catch (error) {
     observation = {
@@ -1000,8 +999,7 @@ export async function verifyHostTlsDns(
   ];
   const aMatches = observation.aRecords.includes(lanIp);
   const seenAddresses = observation.aRecords.join(', ');
-  const wildcard =
-    Boolean(observation.wildcard) && observation.aRecords.length > 0 && !aMatches;
+  const wildcard = Boolean(observation.wildcard) && observation.aRecords.length > 0 && !aMatches;
   const aRecordMessage = aMatches
     ? `A-Record zeigt auf ${lanIp}`
     : observation.aRecords.length === 0

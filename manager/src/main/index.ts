@@ -32,10 +32,7 @@ import {
   saveTlsSidecarToDisk,
 } from './pfbackup-dialog.js';
 import { startSetupServer, stopSetupServer, type SetupServerHandle } from './setup-server.js';
-import {
-  expectedSetupInstallHome,
-  managerInstanceUserDataKey,
-} from './setup-identity.js';
+import { expectedSetupInstallHome, managerInstanceUserDataKey } from './setup-identity.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 

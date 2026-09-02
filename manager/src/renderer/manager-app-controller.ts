@@ -47,9 +47,7 @@ export type ManagerAppController = {
   onWizardCancel: () => void;
 };
 
-export function createManagerAppController(
-  deps: ManagerAppControllerDeps,
-): ManagerAppController {
+export function createManagerAppController(deps: ManagerAppControllerDeps): ManagerAppController {
   const shell = deps.shell;
   const createHostRefresh = deps.createHostRefresh ?? createHostRefreshController;
 

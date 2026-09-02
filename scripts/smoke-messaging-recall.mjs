@@ -204,11 +204,16 @@ async function main() {
   });
   const visitNoPhone = checkinNoPhone.body?.visitId;
   assert(typeof visitNoPhone === 'string' && visitNoPhone.length > 0, 'Missing visitId (no phone)');
-  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitNoPhone)}/transition`, {
-    auth: mfaAuth,
-    jsonBody: { type: 'set_absence', mode: 'wait_here' },
-    expectedStatus: 200,
-  });
+  await requestJson(
+    baseUrl,
+    'POST',
+    `/api/v1/queue/${encodeURIComponent(visitNoPhone)}/transition`,
+    {
+      auth: mfaAuth,
+      jsonBody: { type: 'set_absence', mode: 'wait_here' },
+      expectedStatus: 200,
+    },
+  );
   const recallNoPhone = await requestJson(
     baseUrl,
     'POST',
@@ -221,11 +226,16 @@ async function main() {
   );
   assert(recallNoPhone.body?.smsDispatch === null, 'Expected smsDispatch=null without phone');
 
-  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitNoPhone)}/transition`, {
-    auth: mfaAuth,
-    jsonBody: { type: 'return_to_waiting' },
-    expectedStatus: 200,
-  });
+  await requestJson(
+    baseUrl,
+    'POST',
+    `/api/v1/queue/${encodeURIComponent(visitNoPhone)}/transition`,
+    {
+      auth: mfaAuth,
+      jsonBody: { type: 'return_to_waiting' },
+      expectedStatus: 200,
+    },
+  );
 
   console.log('10) Notify-Fehler + retry_recall_notify');
   await requestJson(baseUrl, 'PATCH', '/api/v1/ops/settings', {
@@ -265,7 +275,10 @@ async function main() {
       expectedStatus: 200,
     },
   );
-  assert(recallFail.body?.smsDispatch?.sent === false, 'Expected failed smsDispatch for retry setup');
+  assert(
+    recallFail.body?.smsDispatch?.sent === false,
+    'Expected failed smsDispatch for retry setup',
+  );
   assert(
     typeof recallFail.body?.smsDispatch?.errorCode === 'string',
     'Expected errorCode on failed dispatch',

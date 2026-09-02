@@ -549,7 +549,10 @@ test('TLS host mutations do not start while LAN is mutating', async () => {
     api: {
       obtainHostTlsCertificate: async () => {
         obtained = true;
-        return { tls: tls({ state: 'dns-verified', mode: 'managed', applyReady: true }), checks: [] };
+        return {
+          tls: tls({ state: 'dns-verified', mode: 'managed', applyReady: true }),
+          checks: [],
+        };
       },
     },
   });

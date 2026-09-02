@@ -71,13 +71,7 @@ services:
     image: ghcr.io/letsencrypt/pebble:2.10.1@sha256:ddf230642b1a584f519f32e347de1b05a6e4c1f6c35c1863b33effeab5f78199
     container_name: praxis-flow-tls-lab-pebble
     restart: unless-stopped
-    command:
-      [
-        '-config',
-        'test/config/pebble-config.json',
-        '-dnsserver',
-        'coredns:53',
-      ]
+    command: ['-config', 'test/config/pebble-config.json', '-dnsserver', 'coredns:53']
     environment:
       PEBBLE_VA_NOSLEEP: '1'
       PEBBLE_WFE_NONCEREJECT: '0'

@@ -45,10 +45,7 @@ function toListItem(row: DeviceAuthorizationRow): DeviceAuthorizationListItem | 
   };
 }
 
-export function registerOpsDeviceAuthorizationRoutes(
-  app: FastifyInstance,
-  db: CoreDatabase,
-): void {
+export function registerOpsDeviceAuthorizationRoutes(app: FastifyInstance, db: CoreDatabase): void {
   app.get(
     '/api/v1/ops/device-authorizations',
     {

@@ -173,19 +173,7 @@ export function registerQueueStreamRoutes(
         writeEvent('snapshot', snapshot);
       });
 
-      let pingTimer: ReturnType<typeof setInterval>;
-      let cleanedUp = false;
-      const cleanup = () => {
-        if (cleanedUp) {
-          return;
-        }
-        cleanedUp = true;
-        clearInterval(pingTimer);
-        markDeviceStreamDisconnected(deviceId);
-        unsubscribe();
-      };
-
-      pingTimer = setInterval(() => {
+      const pingTimer = setInterval(() => {
         if (request.authSession?.kind === 'device') {
           const grant = db.getDeviceAuthorizationById(request.authSession.sessionId);
           if (!grant || grant.revokedAt) {
@@ -204,6 +192,17 @@ export function registerQueueStreamRoutes(
         publishExpiredRecallWindows(db);
         reply.raw.write(': ping\n\n');
       }, ssePingMs());
+
+      let cleanedUp = false;
+      const cleanup = () => {
+        if (cleanedUp) {
+          return;
+        }
+        cleanedUp = true;
+        clearInterval(pingTimer);
+        markDeviceStreamDisconnected(deviceId);
+        unsubscribe();
+      };
 
       request.raw.on('close', cleanup);
       request.raw.on('error', cleanup);

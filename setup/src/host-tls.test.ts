@@ -112,7 +112,10 @@ test('readTlsStatus treats a pre-cutover DNS miss as still waiting', () => {
       ['TLS_MODE', 'managed'],
       ['TLS_HOSTNAME', 'mudda.lan.notaus.de'],
       ['TLS_LAST_ERROR_CLASS', 'a-record'],
-      ['TLS_LAST_ERROR_MESSAGE', 'Kein eigener A-Record — Catch-all der Zone zeigt auf 213.23.215.150'],
+      [
+        'TLS_LAST_ERROR_MESSAGE',
+        'Kein eigener A-Record — Catch-all der Zone zeigt auf 213.23.215.150',
+      ],
     ]),
   );
   assert.equal(status.state, 'awaiting-operator-dns');
@@ -522,8 +525,7 @@ test('verify-dns keeps collision when the hostname A differs from the sibling pr
     const failed = await verifyHostTlsDns(ctx, {
       createDnsResolver: () => ({
         setServers: () => {},
-        resolve4: async (name) =>
-          name.startsWith('*.') ? ['213.23.215.150'] : ['10.0.0.9'],
+        resolve4: async (name) => (name.startsWith('*.') ? ['213.23.215.150'] : ['10.0.0.9']),
         resolveCname: async () => [],
       }),
     });

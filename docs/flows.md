@@ -296,11 +296,11 @@ Patient kann den **generierten** Bogen im Portal **nicht** erneut öffnen oder s
 
 Kein Patienten-Flow — Rahmen für Installation und Erreichbarkeit. Fachliche Screens bleiben Flow 1–5.
 
-| Baustein                   | Rolle                                                                                                                                          |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Manager** (Electron)     | Host-Setup, Status, Netzwerk, Wartung, Updates — [`../manager/README.md`](../manager/README.md), [`delivery.md`](operations/delivery.md)                  |
-| **Proxy / TLS** (optional Caddy) | Port 80 HTTP und/oder LAN-HTTPS 443 — [`operations/tls.md`](operations/tls.md); Internet-Portal weiterhin nicht Produkt |
-| **Gateway** (openNDS)      | **Nicht** Produktkern — Lab-Referenz; Delivery-Default ohne Gateway — [`archive/gateway-captive-portal.md`](archive/gateway-captive-portal.md) |
+| Baustein                         | Rolle                                                                                                                                          |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Manager** (Electron)           | Host-Setup, Status, Netzwerk, Wartung, Updates — [`../manager/README.md`](../manager/README.md), [`delivery.md`](operations/delivery.md)       |
+| **Proxy / TLS** (optional Caddy) | Port 80 HTTP und/oder LAN-HTTPS 443 — [`operations/tls.md`](operations/tls.md); Internet-Portal weiterhin nicht Produkt                        |
+| **Gateway** (openNDS)            | **Nicht** Produktkern — Lab-Referenz; Delivery-Default ohne Gateway — [`archive/gateway-captive-portal.md`](archive/gateway-captive-portal.md) |
 
 Mit aktivem Proxy/TLS sind Geräte-/Portal-URLs über `CANONICAL_BASE_URL` kanonisch; App-Port 8080 bleibt lokal für Setup-Probes. Details: [`operations/tls.md`](operations/tls.md), Manager-Doku — nicht in den Patienten-Abläufen.
 
@@ -468,10 +468,10 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 
 ### Placements
 
-| Placement            | PIN beim Enrollment                                      | Modus                                       | Namen    | Aufruf                            |
-| -------------------- | -------------------------------------------------------- | ------------------------------------------- | -------- | --------------------------------- |
-| **outside** (Tür)    | ja (gemeinsame Raum-Panel-PIN)                           | `display_only` \| `arrival`                 | nie      | nie                               |
-| **inside** (im Raum) | ja (dieselbe PIN)                                        | `display_only` \| `arrival` \| `staff_full` | optional | nur `staff_full` + `allowCalling` |
+| Placement            | PIN beim Enrollment            | Modus                                       | Namen    | Aufruf                            |
+| -------------------- | ------------------------------ | ------------------------------------------- | -------- | --------------------------------- |
+| **outside** (Tür)    | ja (gemeinsame Raum-Panel-PIN) | `display_only` \| `arrival`                 | nie      | nie                               |
+| **inside** (im Raum) | ja (dieselbe PIN)              | `display_only` \| `arrival` \| `staff_full` | optional | nur `staff_full` + `allowCalling` |
 
 **Settings:** Panel-Modi und Texte: MFA → Themen & Räume → Raum-Expander. **Raum-Panel-PIN** (getrennt von MFA-/Ops-PIN): MFA → Betrieb.
 

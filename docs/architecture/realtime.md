@@ -7,9 +7,9 @@ Nicht: Rollenmatrix → [`apis.md`](apis.md) · Fachflows → [`../flows.md`](..
 
 ## 1. Grundsatz
 
-| Kanal | Zweck |
-| --- | --- |
-| **SSE** | Beobachten — schnell sichtbar |
+| Kanal    | Zweck                                              |
+| -------- | -------------------------------------------------- |
+| **SSE**  | Beobachten — schnell sichtbar                      |
 | **REST** | Tun — Mutations, Login, Pairing bestätigen, Export |
 
 Beispiel: Terminal `POST /ops/emergency/raise` → Hub → MFA über Ops-SSE.
@@ -18,11 +18,11 @@ In-Memory-Pub/Sub, Single-Praxis — **kein** Redis/Broker.
 
 ## 2. Streams
 
-| Stream | Endpoint | Consumer | Inhalt |
-| --- | --- | --- | --- |
-| Queue | `GET /api/v1/queue/stream` | `mfa`, `tv`, `room-panel` | Snapshots (`event: snapshot`); TV/Panel bei Grant-Revoke auch `session-revoked` |
-| Ops | `GET /api/v1/ops/stream` | `mfa` | `emergency`, `device.presence`, `device.pairing` |
-| Device | `GET /api/v1/ops/device/stream` | `terminal` (und ggf. TV) | Liveness-SSE; **gekoppeltes TV** nutzt typisch Queue-SSE als Device-Liveness |
+| Stream | Endpoint                        | Consumer                  | Inhalt                                                                          |
+| ------ | ------------------------------- | ------------------------- | ------------------------------------------------------------------------------- |
+| Queue  | `GET /api/v1/queue/stream`      | `mfa`, `tv`, `room-panel` | Snapshots (`event: snapshot`); TV/Panel bei Grant-Revoke auch `session-revoked` |
+| Ops    | `GET /api/v1/ops/stream`        | `mfa`                     | `emergency`, `device.presence`, `device.pairing`                                |
+| Device | `GET /api/v1/ops/device/stream` | `terminal` (und ggf. TV)  | Liveness-SSE; **gekoppeltes TV** nutzt typisch Queue-SSE als Device-Liveness    |
 
 Queue bleibt **separat** (hohe Frequenz). Ops-Events: eigener `event:`-Name je State — nie vermischen.
 
@@ -30,12 +30,12 @@ Hubs: `app/src/shared/ops/ops-event-hub.ts`, `app/src/shared/queue/queue-stream-
 
 ### Connection-Budget (wichtig)
 
-| Client | typ. langlebige SSE pro Tab/Gerät |
-| --- | --- |
-| MFA | **2**: `/ops/stream` + `/queue/stream` |
-| TV (gekoppelt) | **1**: `/queue/stream` (= Liveness) |
-| Terminal (gekoppelt) | **1**: `/ops/device/stream` |
-| Room-Panel | **1**: `/queue/stream` |
+| Client               | typ. langlebige SSE pro Tab/Gerät      |
+| -------------------- | -------------------------------------- |
+| MFA                  | **2**: `/ops/stream` + `/queue/stream` |
+| TV (gekoppelt)       | **1**: `/queue/stream` (= Liveness)    |
+| Terminal (gekoppelt) | **1**: `/ops/device/stream`            |
+| Room-Panel           | **1**: `/queue/stream`                 |
 
 Mehrere MFA-Tabs = Vielfaches von 2. Unter **HTTP/1.1** (Direkt `:8080` oder HTTP-only-Proxy) kann das browserseitige Per-Origin-Limit REST verzögern, während SSE offen bleibt.
 
@@ -58,11 +58,11 @@ Ping ca. alle 25s (`: ping`). Beim Connect: Initial-Snapshot **pro Event-Typ**. 
 
 ## 3. Presence ≠ Pairing ≠ Emergency
 
-| Event | Frage | Kernfelder |
-| --- | --- | --- |
-| `device.presence` | Gerät erreichbar? | `status` online\|stale\|offline, `streamConnected`, `deviceId`, `kind` |
-| `device.pairing` | Code für MFA sichtbar? | `phase` pending\|none, `expiresAt`, `kind`, `deviceId` |
-| `emergency` | Notfall aktiv? | `active`, `emergencyId`, Zeiten |
+| Event             | Frage                  | Kernfelder                                                             |
+| ----------------- | ---------------------- | ---------------------------------------------------------------------- |
+| `device.presence` | Gerät erreichbar?      | `status` online\|stale\|offline, `streamConnected`, `deviceId`, `kind` |
+| `device.pairing`  | Code für MFA sichtbar? | `phase` pending\|none, `expiresAt`, `kind`, `deviceId`                 |
+| `emergency`       | Notfall aktiv?         | `active`, `emergencyId`, Zeiten                                        |
 
 **Liveness-Kanäle:** TV gekoppelt → Queue-SSE; Terminal gekoppelt → Device-SSE. Room-Panel: online nur solange Queue-SSE offen (`streamConnected`).
 
@@ -78,13 +78,13 @@ Queue-Updates: `publishTvQueueUpdate` → **Queue-Stream**, nicht Ops.
 
 ## 4. Was REST bleibt
 
-| REST | Rolle |
-| --- | --- |
+| REST                                      | Rolle                                                           |
+| ----------------------------------------- | --------------------------------------------------------------- |
 | `POST/GET …/pairing/start\|{id}\|confirm` | Start; MFA bestätigt nur Registry; Gerät pollt → Cookie + Grant |
-| `POST /ops/device/presence` | ergänzende Liveness |
-| `GET /ops/heartbeat` | Terminal-Betriebsflags — **nicht** Primär-Liveness |
-| `POST /ops/emergency/raise\|ack` | auslösen / quittieren |
-| Queue-/Ops-Mutationen | Aktionen |
+| `POST /ops/device/presence`               | ergänzende Liveness                                             |
+| `GET /ops/heartbeat`                      | Terminal-Betriebsflags — **nicht** Primär-Liveness              |
+| `POST /ops/emergency/raise\|ack`          | auslösen / quittieren                                           |
+| Queue-/Ops-Mutationen                     | Aktionen                                                        |
 
 Device-Cookie aus Pairing-GET — deshalb Poll am Gerät; MFA-Prompt ist Push.
 
@@ -105,10 +105,10 @@ Payloads: Referenzen, keine medizinischen Freitexte / Dokumentinhalte. Neues aud
 
 ## 7. Abgrenzung
 
-| Nicht | Ersatz / Stand |
-| --- | --- |
-| Separater Emergency-Stream | Ops `event: emergency` |
-| MFA REST-Poll Devices / pairing-prompt | Ops-Stream |
-| Horizontale SSE-Skalierung / Redis | bewusst Single-Host |
-| Async SMS über Outbox | inline Versand |
-| „TLS macht Connection-Budget egal“ | h2 hilft Browser↔Proxy; ohne TLS/h2 und bei vielen Tabs weiter messen |
+| Nicht                                  | Ersatz / Stand                                                        |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| Separater Emergency-Stream             | Ops `event: emergency`                                                |
+| MFA REST-Poll Devices / pairing-prompt | Ops-Stream                                                            |
+| Horizontale SSE-Skalierung / Redis     | bewusst Single-Host                                                   |
+| Async SMS über Outbox                  | inline Versand                                                        |
+| „TLS macht Connection-Budget egal“     | h2 hilft Browser↔Proxy; ohne TLS/h2 und bei vielen Tabs weiter messen |

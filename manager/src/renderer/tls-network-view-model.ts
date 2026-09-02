@@ -77,10 +77,7 @@ export function tlsOperatorRecordsAreTheTask(tls: TlsStatus | undefined): boolea
 }
 
 /** Obtain wait UI: persisted obtaining-certificate or the in-flight request before status refresh. */
-export function tlsShowsObtainWait(
-  tls: TlsStatus | undefined,
-  pendingObtain: boolean,
-): boolean {
+export function tlsShowsObtainWait(tls: TlsStatus | undefined, pendingObtain: boolean): boolean {
   return tls?.state === 'obtaining-certificate' || pendingObtain;
 }
 
@@ -95,11 +92,7 @@ export function tlsIsPersistedFailBeforeCutover(tls: TlsStatus | undefined): boo
  */
 export function tlsIsApplyFail(tls: TlsStatus | undefined): boolean {
   return Boolean(
-    tls &&
-    tls.state === 'dns-verified' &&
-    tls.applyReady &&
-    !tls.cutoverApplied &&
-    tls.lastError,
+    tls && tls.state === 'dns-verified' && tls.applyReady && !tls.cutoverApplied && tls.lastError,
   );
 }
 
@@ -157,10 +150,7 @@ export function tlsCanRenew(tls: TlsStatus | undefined): boolean {
   return expiry === 'soon' || expiry === 'expired';
 }
 
-export function tlsNetworkSubtitle(
-  tls: TlsStatus | undefined,
-  pendingObtain = false,
-): string {
+export function tlsNetworkSubtitle(tls: TlsStatus | undefined, pendingObtain = false): string {
   if (tlsShowsObtainWait(tls, pendingObtain) && tls?.state !== 'obtaining-certificate') {
     return 'Zertifikat wird geholt';
   }
@@ -210,7 +200,8 @@ export function tlsErrorCopy(
     case 'collision':
       return {
         title: message?.trim() || 'A-Record zeigt auf eine andere IP.',
-        action: 'Ein eigener A-Record zeigt auf eine andere Adresse. Label prüfen oder Mail erneut.',
+        action:
+          'Ein eigener A-Record zeigt auf eine andere Adresse. Label prüfen oder Mail erneut.',
       };
     case 'dns-filter':
       return {
@@ -329,10 +320,7 @@ export function tlsDiagnoseItems(input: {
     input.tls.state === 'obtaining-certificate' ||
     input.tls.state === 'active' ||
     input.tls.state === 'degraded';
-  const fromChecks = (
-    id: TlsDnsCheck['id'],
-    fallback: string,
-  ): TlsChecklistItem => {
+  const fromChecks = (id: TlsDnsCheck['id'], fallback: string): TlsChecklistItem => {
     const check = input.checks?.find((item) => item.id === id);
     if (check) {
       const text =

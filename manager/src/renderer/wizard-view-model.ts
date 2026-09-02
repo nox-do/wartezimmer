@@ -47,7 +47,13 @@ export function wizardNextButtonLabel(state: WizardControllerState): string {
     return 'Anwenden';
   }
   if (state.step === 8) {
-    return state.applyResult ? 'Zum Status' : 'Bitte warten …';
+    if (state.applyResult) {
+      return 'Zum Status';
+    }
+    return state.busy ? 'Bitte warten …' : 'Anwenden';
+  }
+  if (state.step === 2 && state.routingCapabilitiesStatus === 'error') {
+    return 'Erneut versuchen';
   }
   return 'Weiter';
 }
@@ -56,11 +62,13 @@ export function wizardNextButtonDisabled(state: WizardControllerState): boolean 
   if (state.busy) {
     return true;
   }
-  if (
-    state.step === 2 &&
-    (state.routingCapabilitiesStatus !== 'ready' || state.routingMode === null)
-  ) {
-    return true;
+  if (state.step === 2) {
+    if (state.routingCapabilitiesStatus === 'error') {
+      return false;
+    }
+    if (state.routingCapabilitiesStatus !== 'ready' || state.routingMode === null) {
+      return true;
+    }
   }
   if (state.step === 1) {
     return !canLeaveWizardStep1(state.status, state.busy);
@@ -69,7 +77,7 @@ export function wizardNextButtonDisabled(state: WizardControllerState): boolean 
     return wizardHttpsNextDisabled(state.httpsPhase, state);
   }
   if (state.step === 8) {
-    return !state.applyResult;
+    return Boolean(state.applyResult);
   }
   return false;
 }

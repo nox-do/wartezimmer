@@ -12,9 +12,7 @@ import {
 } from '@praxis-flow/server-shared/setup-api';
 import { findProjectRoot } from './project-root.js';
 
-export function isAttachExistingSetupEnabled(
-  env: NodeJS.ProcessEnv = process.env,
-): boolean {
+export function isAttachExistingSetupEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   const raw = env[SETUP_ATTACH_EXISTING_ENV]?.trim().toLowerCase();
   return raw === '1' || raw === 'true' || raw === 'yes';
 }

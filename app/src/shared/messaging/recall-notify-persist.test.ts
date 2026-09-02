@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  persistRecallNotifyResult,
-  resolveRecallTicketCode,
-} from './recall-notify-persist.js';
+import { persistRecallNotifyResult, resolveRecallTicketCode } from './recall-notify-persist.js';
 import type { CoreDatabase } from '../db/database.js';
 import type { MessageDispatchResult } from './sms-sender.js';
 

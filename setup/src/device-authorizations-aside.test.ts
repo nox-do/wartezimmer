@@ -6,10 +6,16 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { APP_DB_BASENAME } from './app-data-volume.js';
-import { readActiveDeviceAuthorizationsFromAside } from './device-authorizations-aside.js';
+import {
+  copyDeviceAuthorizationsFromAsideViaApp,
+  readActiveDeviceAuthorizationsFromAside,
+} from './device-authorizations-aside.js';
 
 const baselineSql = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), '../../app/src/shared/db/migrations/001_baseline.sql'),
+  join(
+    dirname(fileURLToPath(import.meta.url)),
+    '../../app/src/shared/db/migrations/001_baseline.sql',
+  ),
   'utf8',
 );
 
@@ -26,6 +32,18 @@ test('readActiveDeviceAuthorizationsFromAside skips missing file and missing tab
   }
 });
 
+test('copyDeviceAuthorizationsFromAsideViaApp skips HTTP when aside has no grants', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'aside-copy-empty-'));
+  try {
+    const empty = new DatabaseSync(join(dir, APP_DB_BASENAME));
+    empty.close();
+    const result = await copyDeviceAuthorizationsFromAsideViaApp(dir, 'http://127.0.0.1:1');
+    assert.deepEqual(result, { ok: true, imported: 0 });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('readActiveDeviceAuthorizationsFromAside copies only active rows', () => {
   const dir = mkdtempSync(join(tmpdir(), 'aside-active-'));
   try {
@@ -36,12 +54,7 @@ test('readActiveDeviceAuthorizationsFromAside copies only active rows', () => {
         authorization_id, role, device_id, room_id, placement,
         token_hash, created_at, last_seen_at, updated_at, revoked_at
       ) VALUES (?, 'tv', 'waiting-room', NULL, NULL, ?, ?, NULL, ?, NULL)`,
-    ).run(
-      'auth-tv',
-      'a'.repeat(64),
-      '2026-09-01T10:00:00.000Z',
-      '2026-09-01T10:00:00.000Z',
-    );
+    ).run('auth-tv', 'a'.repeat(64), '2026-09-01T10:00:00.000Z', '2026-09-01T10:00:00.000Z');
     db.prepare(
       `INSERT INTO device_authorizations (
         authorization_id, role, device_id, room_id, placement,

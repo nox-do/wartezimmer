@@ -636,20 +636,6 @@ button:disabled {
   background: var(--bg);
 }
 
-a.btn-primary {
-  display: inline-block;
-  text-decoration: none;
-  font-weight: 600;
-  padding: 0.65rem 1rem;
-  border-radius: 8px;
-  background: var(--accent);
-  color: #fff;
-}
-
-a.btn-primary:hover {
-  background: var(--accent-hover);
-}
-
 .btn-copy {
   flex-shrink: 0;
 }

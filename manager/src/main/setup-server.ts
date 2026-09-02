@@ -217,11 +217,15 @@ function waitForSetupReady(child: ChildProcess, timeoutMs = STARTUP_TIMEOUT_MS):
       );
     };
     const onError = (error: Error) => {
-      finish(new Error(`Setup-Child konnte nicht gestartet werden: ${error.message}`, { cause: error }));
+      finish(
+        new Error(`Setup-Child konnte nicht gestartet werden: ${error.message}`, { cause: error }),
+      );
     };
 
     const timer = setTimeout(() => {
-      finish(new Error('Setup-API hat keinen Ready-Handshake gesendet — bitte Manager neu starten.'));
+      finish(
+        new Error('Setup-API hat keinen Ready-Handshake gesendet — bitte Manager neu starten.'),
+      );
     }, timeoutMs);
 
     child.stdout?.on('data', onReadyStdout);

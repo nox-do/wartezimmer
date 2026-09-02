@@ -173,10 +173,7 @@ export async function runFreshDbSettingsCutover(
     const asideDir = path.join(input.rollbackDir, input.dbAsideSubdir);
     let copyResult: { ok: true; imported?: number } | { ok: false; errors: string[] };
     try {
-      copyResult = await input.copyDeviceAuthorizations(
-        asideDir,
-        input.localMaintenanceAppBaseUrl,
-      );
+      copyResult = await input.copyDeviceAuthorizations(asideDir, input.localMaintenanceAppBaseUrl);
     } catch (error) {
       return failure(FRESH_DB_CUTOVER_PHASES.copyDeviceAuthorizations, [
         error instanceof Error

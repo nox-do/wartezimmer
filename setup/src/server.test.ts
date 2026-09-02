@@ -3,10 +3,7 @@ import http from 'node:http';
 import test from 'node:test';
 import { createSetupRequestHandler } from './server.js';
 import type { SetupContext } from './setup-context.js';
-import {
-  SETUP_API_PROTOCOL_VERSION,
-  SETUP_MANAGER_TOKEN_HEADER,
-} from '@praxis-flow/server-shared';
+import { SETUP_API_PROTOCOL_VERSION, SETUP_MANAGER_TOKEN_HEADER } from '@praxis-flow/server-shared';
 
 const testContext: SetupContext = {
   home: '/unused',

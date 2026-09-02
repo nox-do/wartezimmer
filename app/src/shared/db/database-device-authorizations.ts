@@ -390,7 +390,8 @@ export function parseDeviceAuthorizationCopyRows(
       return { ok: false, message: `authorizations[${index}].lastSeenAt is invalid.` };
     }
 
-    const deviceId = entry.deviceId === null || entry.deviceId === undefined ? null : entry.deviceId;
+    const deviceId =
+      entry.deviceId === null || entry.deviceId === undefined ? null : entry.deviceId;
     const roomId = entry.roomId === null || entry.roomId === undefined ? null : entry.roomId;
     const placement =
       entry.placement === null || entry.placement === undefined ? null : entry.placement;
@@ -416,7 +417,12 @@ export function parseDeviceAuthorizationCopyRows(
       continue;
     }
 
-    if (typeof deviceId !== 'string' || deviceId.length === 0 || roomId !== null || placement !== null) {
+    if (
+      typeof deviceId !== 'string' ||
+      deviceId.length === 0 ||
+      roomId !== null ||
+      placement !== null
+    ) {
       return { ok: false, message: `authorizations[${index}] slot fields are invalid.` };
     }
     rows.push({

@@ -2,6 +2,14 @@
 
 Stand: 2026-09-02
 
+## 2026-09-02 — Wizard Review-Fixes
+
+- Routing-Load-Fehler: Meldung + Retry auf Schritt 2 (kein Dead-End, Lizenz-Fail-open weg)
+- Apply-Throw auf Schritt 8: Button „Anwenden“, FSM-Retry
+- Release-Import: Status-Refresh-Fehler gefangen
+- Lint: SSE-Ping-Timer const; MFA-Day-Watch ohne tote Assignment; ungenutztes a.btn-primary CSS
+- pfupdate Apply: Fixture echte SQLite; Grant-Copy ohne HTTP bei 0 Zeilen
+
 ## 2026-09-02 — Wizard-Lifecycle
 
 - Generation pro `show()`/`hide()`; UI-Writes und Progress nur für den aktuellen Lauf
@@ -293,6 +301,7 @@ Stand: 2026-09-02
 ## 2026-08-31 — TLS-Doku Deep-Review (§1–5)
 
 Befunde (Code-backed, gefixt):
+
 - high: Wizard `prepare` braucht persistierten Proxy — Checkbox allein reicht nicht (`PROXY_ENABLED` erst bei Apply)
 - medium: `tls/reset` nach Cutover ≠ Abbruch (custom sperrt; managed re-issue gleiche ID)
 - medium: Apply-Fail → Retry `apply`, nicht `repair` (`applyReady` bleibt)
@@ -356,7 +365,7 @@ Befunde (Code-backed, gefixt):
 ## 2026-08-31 — Ops TLS-Skelett
 
 - `docs/operations/tls.md` angelegt (Produkt-LAN-TLS); Lifecycle-Schritt 4 zeigt darauf
-- Quellen: plan-proxy-tls*.md + Setup/Manager-Code; Lab bleibt archive/tls-lab
+- Quellen: plan-proxy-tls\*.md + Setup/Manager-Code; Lab bleibt archive/tls-lab
 - runtime §7 auf Verweis reduziert
 
 ## 2026-08-31 — Ops-Doku Skelett
@@ -376,7 +385,7 @@ Befunde (Code-backed, gefixt):
 
 - Mock `docs/mocks/lan-tls-wizard/` entfernt (TLS ist im Manager)
 - `docs/tls-lab.md` → `docs/archive/tls-lab.md` (Lab-Compose/Smoke bleiben)
-- Archiv-Ballast gelöscht: todo-history, flow-routing-*, plan-proxy-container
+- Archiv-Ballast gelöscht: todo-history, flow-routing-\*, plan-proxy-container
 - `plan-backup-v2.md` unberührt (stale Mock-Verweis bewusst)
 
 ## 2026-08-31 — TLS-Placeholder Seidel → Muster
@@ -392,7 +401,7 @@ MFA über Nacht/Standby: Hat der Banner „Neuen Tag starten“ ohne Refresh geg
 - Kontext + Review-Prompt für E2E-Feature „Abwesend / Rückholen / SMS & WhatsApp“ zusammengestellt
 - Findings 2–12 geprüft: 2–7,9–10,12 bestätigt; 8 optional (kein Fix); 11 Dev-only (kein Fix)
 - Fixes umgesetzt: WA-Parser (#2), fallbackFrom OpenAPI (#3), BUSINESS_TZ SMS-Zeit (#4), callbackPhone behalten (#5), 2. Recall → 409 (#6), 8s Timeout (#7), Ops-UI (#9/#10), Smoke-Telefon (#12)
-- Nachzug: #6 Guard auf aktives returnUntil (nicht nur Status); WA-Sprache Draft leer (#10); TimeoutError+Body → SEVEN_*_TIMEOUT (#7)
+- Nachzug: #6 Guard auf aktives returnUntil (nicht nur Status); WA-Sprache Draft leer (#10); TimeoutError+Body → SEVEN\_\*\_TIMEOUT (#7)
 
 ## 2026-08-31 — Re-Review E2E Kern (Defect-only)
 

@@ -14,11 +14,11 @@ Nicht: Release-Bau → [`delivery.md`](delivery.md) · LAN-TLS → [`tls.md`](tl
 
 ## 2. Product-Services
 
-| Service | Rolle | Sichtbarkeit |
-| --- | --- | --- |
-| `app` | API + UI (Terminal/MFA/TV/Portal) + SQLite | LAN-Port(s); hinter Proxy ggf. nur Loopback `:8080` |
-| `sandbox` | Dokumentenvorschau / Form2PDF, ClamAV | nur Docker-Netz (`expose 8081`) |
-| `proxy` (optional) | Caddy HTTP und ggf. HTTPS | `:80` / `:443` — [`tls.md`](tls.md) |
+| Service            | Rolle                                      | Sichtbarkeit                                        |
+| ------------------ | ------------------------------------------ | --------------------------------------------------- |
+| `app`              | API + UI (Terminal/MFA/TV/Portal) + SQLite | LAN-Port(s); hinter Proxy ggf. nur Loopback `:8080` |
+| `sandbox`          | Dokumentenvorschau / Form2PDF, ClamAV      | nur Docker-Netz (`expose 8081`)                     |
+| `proxy` (optional) | Caddy HTTP und ggf. HTTPS                  | `:80` / `:443` — [`tls.md`](tls.md)                 |
 
 **Nicht Produktkern:** `gateway` (Captive-Lab, nur Linux + Env) · TLS-Lab (`pebble` / `acme-dns` / `coredns`) → [`../archive/tls-lab.md`](../archive/tls-lab.md)
 
@@ -28,13 +28,13 @@ UI-Rollen laufen als statische Assets aus dem `app`-Image. Praxisname/Kontakte: 
 
 Resolver: `resolveComposeFiles` / `resolveComposeFileList` in `setup/src/docker.ts`.
 
-| Schicht | Dev | Delivery | Wann |
-| --- | --- | --- | --- |
-| Base | `docker-compose.yml` | `docker-compose.delivery.yml` | immer |
-| Proxy | `docker-compose.proxy.yml` | `….proxy.delivery.yml` | `PROXY_ENABLED` + Mode `http`/`tls-*` |
-| Proxy-TLS | `….proxy-tls.yml` | `….proxy-tls.delivery.yml` | Mode `tls-*` **oder** `TLS_STATE≠off` |
-| TLS-Lab | `docker-compose.tls-lab.yml` + `docker-compose.tls-lab-proxy.yml` | — | nur Dev + `TLS_ACME_DIRECTORY=pebble` |
-| Gateway | `docker-compose.gateway.yml` | `….gateway.delivery.yml` | Env gesetzt **und** Host Linux (`canRunGatewayCompose`) |
+| Schicht   | Dev                                                               | Delivery                      | Wann                                                    |
+| --------- | ----------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------- |
+| Base      | `docker-compose.yml`                                              | `docker-compose.delivery.yml` | immer                                                   |
+| Proxy     | `docker-compose.proxy.yml`                                        | `….proxy.delivery.yml`        | `PROXY_ENABLED` + Mode `http`/`tls-*`                   |
+| Proxy-TLS | `….proxy-tls.yml`                                                 | `….proxy-tls.delivery.yml`    | Mode `tls-*` **oder** `TLS_STATE≠off`                   |
+| TLS-Lab   | `docker-compose.tls-lab.yml` + `docker-compose.tls-lab-proxy.yml` | —                             | nur Dev + `TLS_ACME_DIRECTORY=pebble`                   |
+| Gateway   | `docker-compose.gateway.yml`                                      | `….gateway.delivery.yml`      | Env gesetzt **und** Host Linux (`canRunGatewayCompose`) |
 
 TLS-Overlay nur nach Proxy-Overlay. Default-Compose-Projektname typisch `praxis-flow` (Volumes z. B. `praxis-flow_app_data`).
 
@@ -42,13 +42,13 @@ Leitplanken: `restart: unless-stopped`, Healthchecks, **feste Image-Tags** (kein
 
 ## 4. Persistenz & Host-Pfade
 
-| Name | Inhalt |
-| --- | --- |
-| Volume `app_data` | SQLite + Runtime-Status (`/var/lib/praxis-flow/app`) |
-| Volume `sandbox_intake_data` | Dokument-Intake (Tagesreset: purge) |
-| Volume `clamav_db` | ClamAV-Signaturen |
-| Bind `EXPORTS_HOST_PATH` → `/exports` | Exporte bleiben liegen |
-| Bind `IMPORTS_HOST_PATH` → `/imports` | z. B. CSV-Kontaktlookup |
+| Name                                  | Inhalt                                               |
+| ------------------------------------- | ---------------------------------------------------- |
+| Volume `app_data`                     | SQLite + Runtime-Status (`/var/lib/praxis-flow/app`) |
+| Volume `sandbox_intake_data`          | Dokument-Intake (Tagesreset: purge)                  |
+| Volume `clamav_db`                    | ClamAV-Signaturen                                    |
+| Bind `EXPORTS_HOST_PATH` → `/exports` | Exporte bleiben liegen                               |
+| Bind `IMPORTS_HOST_PATH` → `/imports` | z. B. CSV-Kontaktlookup                              |
 
 Docker Desktop: File Sharing für Host-Pfade. Kein Log-Volume — stdout + json-file-Rotation:
 
@@ -58,12 +58,12 @@ Docker Desktop: File Sharing für Host-Pfade. Kein Log-Volume — stdout + json-
 
 ## 5. Netz & Ports
 
-| Port | Wer | Hinweis |
-| --- | --- | --- |
-| `8080` | App | ohne Proxy im LAN; mit Proxy typisch `APP_BIND_ADDRESS=127.0.0.1` |
-| `8082` | Maintenance | nur `127.0.0.1` am Host — Backup/Import ([`backup.md`](backup.md)) |
-| `9190` | Setup-API (CLI `setup:serve`) | Default nur für manuelles Serve; der Manager bindet einen eigenen ephemeren Loopback-Port |
-| `80` / `443` | Proxy | optional; TLS ab prepare/cutover — [`tls.md`](tls.md) |
+| Port         | Wer                           | Hinweis                                                                                   |
+| ------------ | ----------------------------- | ----------------------------------------------------------------------------------------- |
+| `8080`       | App                           | ohne Proxy im LAN; mit Proxy typisch `APP_BIND_ADDRESS=127.0.0.1`                         |
+| `8082`       | Maintenance                   | nur `127.0.0.1` am Host — Backup/Import ([`backup.md`](backup.md))                        |
+| `9190`       | Setup-API (CLI `setup:serve`) | Default nur für manuelles Serve; der Manager bindet einen eigenen ephemeren Loopback-Port |
+| `80` / `443` | Proxy                         | optional; TLS ab prepare/cutover — [`tls.md`](tls.md)                                     |
 
 Sandbox ohne öffentlichen Host-Port. Portal unter `/portal` im `app`-Container.
 
@@ -71,14 +71,14 @@ Sandbox ohne öffentlichen Host-Port. Portal unter `/portal` im `app`-Container.
 
 **Produktweg:** Praxis Flow Manager → Status / Wartung.
 
-| Aktion | Bedeutung |
-| --- | --- |
+| Aktion                  | Bedeutung                                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
 | Start / Stop / Neustart | Compose up / **stop** (Volumes bleiben) / restart; Stop bei schon gestopptem Stack → Start |
-| Logs | pro Service über Setup-API |
-| Health | `GET /api/v1/ops/health` (Compose-Healthcheck + Support) |
-| Update | Wartung → `.pfupdate` ([`delivery.md`](delivery.md) §5) |
-| Backup | Wartung → `.pfbackup` ([`backup.md`](backup.md)) |
-| Staff-PIN | Standard nach Install **`0000`**; Reset in Manager-Wartung |
+| Logs                    | pro Service über Setup-API                                                                 |
+| Health                  | `GET /api/v1/ops/health` (Compose-Healthcheck + Support)                                   |
+| Update                  | Wartung → `.pfupdate` ([`delivery.md`](delivery.md) §5)                                    |
+| Backup                  | Wartung → `.pfbackup` ([`backup.md`](backup.md))                                           |
+| Staff-PIN               | Standard nach Install **`0000`**; Reset in Manager-Wartung                                 |
 
 **Fachlicher Tagesreset** (MFA „Tag neu starten“ / Day-Lifecycle) ≠ Container neu spawnen — Tickets/Outbox/Sandbox-Intake, Stack bleibt stehen.
 

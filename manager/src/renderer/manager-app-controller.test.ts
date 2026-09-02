@@ -7,10 +7,7 @@ import { createHostRefreshController } from './host-refresh-controller.js';
 import type { HostRefreshController } from './host-refresh-controller.js';
 import type { ManagerView } from './host-refresh-controller.js';
 import type { NavigateOptions, WizardPresentation } from './manager-navigation.js';
-import {
-  createManagerAppController,
-  type ManagerAppShell,
-} from './manager-app-controller.js';
+import { createManagerAppController, type ManagerAppShell } from './manager-app-controller.js';
 
 function minimalRuntime(overrides: Partial<HostRuntimeHealth> = {}): HostRuntimeHealth {
   const status = minimalHostStatus();
@@ -156,8 +153,7 @@ function createTestController(options: {
 
 function chromeVisible(shell: ReturnType<typeof createFakeShell>): boolean {
   return (
-    shell.bootReady &&
-    !(shell.activeView === 'wizard' && shell.wizardPresentation === 'fullscreen')
+    shell.bootReady && !(shell.activeView === 'wizard' && shell.wizardPresentation === 'fullscreen')
   );
 }
 
@@ -214,10 +210,7 @@ test('boot config error shows status error without wizard or poll', async () => 
   assert.equal(shell.activeView, 'status');
   assert.equal(shell.bootReady, true);
   assert.equal(chromeVisible(shell), true);
-  assert.equal(
-    shell.statusError,
-    'Setup-API nicht erreichbar — bitte Manager neu starten.',
-  );
+  assert.equal(shell.statusError, 'Setup-API nicht erreichbar — bitte Manager neu starten.');
   assert.equal(shell.wizardSessions.length, 0);
   assert.deepEqual(callLog, ['config']);
   assert.equal(timers.length, 0);
@@ -253,8 +246,7 @@ test('apply is one config-only then runtime as soon as .env exists, still on wiz
   let envExists = false;
   const callLog: CallLog = [];
   const { controller, shell, timers } = createTestController({
-    fetchSetupStatus: async () =>
-      envExists ? minimalHostStatus() : freshInstallHostStatus(),
+    fetchSetupStatus: async () => (envExists ? minimalHostStatus() : freshInstallHostStatus()),
     callLog,
   });
 
@@ -288,8 +280,7 @@ test('tools mutation with .env fetches config then runtime immediately', async (
 test('later config without .env stops poll without changing the route', async () => {
   let envExists = true;
   const { controller, shell, timers, hostRefresh } = createTestController({
-    fetchSetupStatus: async () =>
-      envExists ? minimalHostStatus() : freshInstallHostStatus(),
+    fetchSetupStatus: async () => (envExists ? minimalHostStatus() : freshInstallHostStatus()),
   });
 
   await controller.start();

@@ -30,13 +30,13 @@ Lokales Praxis-System für Check-in, Warteschlange und Wartezimmer — **ohne Cl
 
 ## Was wir haben (Kern)
 
-| Bereich        | Inhalt                                                                                                                                            |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Terminal**   | Digitaler Check-in (Phone/DOB, optional Nachname+DOB, Themen, Wartenummer, optional Bon)                                                          |
-| **MFA**        | Warteliste live (SSE), Zonen, Aufruf, Dokumente (Vorschau/Export), Settings, Geräte-Pairing                                                       |
-| **TV**         | Wartezimmer-Monitor: Nummern + „Bitte weiter zu …“ (keine Namen)                                                                                  |
-| **Portal**     | Wartenummer → Upload und/oder Erstanamnese (Session = Nummer)                                                                                     |
-| **Raum-Panel** | Tablet an Tür / im Raum: Ankunft, Aufruf, Orientierung                                                                                            |
+| Bereich        | Inhalt                                                                                                                                       |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Terminal**   | Digitaler Check-in (Phone/DOB, optional Nachname+DOB, Themen, Wartenummer, optional Bon)                                                     |
+| **MFA**        | Warteliste live (SSE), Zonen, Aufruf, Dokumente (Vorschau/Export), Settings, Geräte-Pairing                                                  |
+| **TV**         | Wartezimmer-Monitor: Nummern + „Bitte weiter zu …“ (keine Namen)                                                                             |
+| **Portal**     | Wartenummer → Upload und/oder Erstanamnese (Session = Nummer)                                                                                |
+| **Raum-Panel** | Tablet an Tür / im Raum: Ankunft, Aufruf, Orientierung                                                                                       |
 | **Betrieb**    | Docker-Stack (`app` + `sandbox`), **Manager** (Install, Status, Netzwerk, Updates), optional **Proxy** (Caddy Port 80) und **LAN-TLS** (443) |
 
 **Routing:** praxisweit **Simple** (Default: Thema → Zielraum) oder **Complex** (Journeys; Advanced, Lizenz geplant). Eine Runtime, zwei Config-Modi — [`flows.md`](flows.md).
@@ -67,10 +67,10 @@ Nach Start (Dev oft `:8080`, mit Proxy kanonisch Port 80, mit TLS `https://…`)
 
 ## Weiterlesen
 
-| Interesse                      | Dokument                                                                     |
-| ------------------------------ | ---------------------------------------------------------------------------- |
-| Abläufe & UX                   | [`flows.md`](flows.md)                                                       |
-| Nummernkreise / Themen / Räume | [`domain.md`](architecture/domain.md)                                         |
+| Interesse                      | Dokument                                                                                |
+| ------------------------------ | --------------------------------------------------------------------------------------- |
+| Abläufe & UX                   | [`flows.md`](flows.md)                                                                  |
+| Nummernkreise / Themen / Räume | [`domain.md`](architecture/domain.md)                                                   |
 | Install & Updates              | [`delivery.md`](operations/delivery.md), [`../manager/README.md`](../manager/README.md) |
-| LAN-TLS                         | [`operations/tls.md`](operations/tls.md)                                      |
-| Preis-/Lizenz-Skizze (intern)  | [`business-revenue-model.md`](business-revenue-model.md)                     |
+| LAN-TLS                        | [`operations/tls.md`](operations/tls.md)                                                |
+| Preis-/Lizenz-Skizze (intern)  | [`business-revenue-model.md`](business-revenue-model.md)                                |

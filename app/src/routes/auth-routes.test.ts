@@ -23,12 +23,7 @@ import { registerOpsDeviceRoutes } from './ops/ops-device-routes.js';
 import type { AuthPinTarget } from '../api/auth-openapi-types.js';
 import type { AuthSettings } from '../shared/db/database-auth-settings.js';
 
-const ENV_KEYS = [
-  'AUTH_ENABLED',
-  'AUTH_KEY_CAPTIVE',
-  'NODE_ENV',
-  'STAFF_SESSION_TTL_MS',
-] as const;
+const ENV_KEYS = ['AUTH_ENABLED', 'AUTH_KEY_CAPTIVE', 'NODE_ENV', 'STAFF_SESSION_TTL_MS'] as const;
 
 const savedEnv = new Map<string, string | undefined>();
 

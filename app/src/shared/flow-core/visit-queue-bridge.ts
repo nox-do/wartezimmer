@@ -247,10 +247,7 @@ const TRIAGE_ELIGIBLE_STATUSES: QueueDisplayStatus[] = [
 /** Recall from either absent overlay — block separately when an active returnUntil exists. */
 const RECALL_ELIGIBLE_STATUSES: QueueDisplayStatus[] = ['absent_wait_here', 'absent_return_later'];
 
-function hasActiveReturnUntil(
-  returnUntil: string | null | undefined,
-  nowIso: string,
-): boolean {
+function hasActiveReturnUntil(returnUntil: string | null | undefined, nowIso: string): boolean {
   const trimmed = returnUntil?.trim();
   if (!trimmed) {
     return false;

@@ -67,13 +67,13 @@ Shell          configSnapshot + runtimeSnapshot + Sessions + viewLoading
   └─ Wartung    maintenance-controller                        ← rot, zuerst
 ```
 
-| Fläche | Dateien | Koordination |
-| ------ | ------- | ------------ |
-| Wartung | `maintenance-controller.ts`, `MaintenanceView.svelte` | ein ungetaggtes `busy`, ein globales `error`, Async-Schreibpfade ohne Lifecycle-Generation |
-| Netzwerk | `network-controller.ts`, `NetworkView.svelte` | Draft + Phasen + zwei Generation-Zähler; View orchestriert Shell + zwei Controller |
+| Fläche             | Dateien                                               | Koordination                                                                                                     |
+| ------------------ | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Wartung            | `maintenance-controller.ts`, `MaintenanceView.svelte` | ein ungetaggtes `busy`, ein globales `error`, Async-Schreibpfade ohne Lifecycle-Generation                       |
+| Netzwerk           | `network-controller.ts`, `NetworkView.svelte`         | Draft + Phasen + zwei Generation-Zähler; View orchestriert Shell + zwei Controller                               |
 | TLS unter Netzwerk | `tls-network-controller.ts`, `TlsNetworkPanel.svelte` | persistenter Controller ohne Session-Gate; Hydrate kann über Tab-Sessions überlappen; LAN→TLS-Lock nur einseitig |
-| Assistent | `wizard-controller.ts`, `WizardView.svelte` | `hide()` invalidiert nur Routing-Request; übrige Async-Pfade können in einen neuen Lauf schreiben |
-| Brücke überall | `onStateChange` → `syncSnapshot()` | plus tote `subscribe()`, plus Extra-Klone nach Notify |
+| Assistent          | `wizard-controller.ts`, `WizardView.svelte`           | `hide()` invalidiert nur Routing-Request; übrige Async-Pfade können in einen neuen Lauf schreiben                |
+| Brücke überall     | `onStateChange` → `syncSnapshot()`                    | plus tote `subscribe()`, plus Extra-Klone nach Notify                                                            |
 
 ---
 
@@ -201,13 +201,13 @@ Zusätzliche Catch-/Kopplungslücken:
 Der Netzwerk-Controller speichert Config/Runtime **nicht**. Hydration läuft
 über Getter. Intern braucht er Koordinationszustand:
 
-| Marker | Rolle |
-| ------ | ----- |
-| `showGeneration` | stale `fetchSetupNetwork` nach `show()`/`hide()` verwerfen |
-| `actionGeneration` | Save/Verify nach `hide()` verwerfen |
-| `draftBaseline` | unangetasteter Draft darf von Config nachziehen |
-| `saveSubmittedDraft` | nach Save hydratisieren, wenn der User nicht weiter tippt |
-| `pendingConfigHydrate` | Config während `phase !== idle` merken, später flushen |
+| Marker                 | Rolle                                                      |
+| ---------------------- | ---------------------------------------------------------- |
+| `showGeneration`       | stale `fetchSetupNetwork` nach `show()`/`hide()` verwerfen |
+| `actionGeneration`     | Save/Verify nach `hide()` verwerfen                        |
+| `draftBaseline`        | unangetasteter Draft darf von Config nachziehen            |
+| `saveSubmittedDraft`   | nach Save hydratisieren, wenn der User nicht weiter tippt  |
+| `pendingConfigHydrate` | Config während `phase !== idle` merken, später flushen     |
 
 Das ist die richtige Antwort auf Draft vs. Poll vs. Save. Die Generation-Gates
 sind getestet.

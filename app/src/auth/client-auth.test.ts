@@ -96,9 +96,7 @@ function deviceCookie(
   return `${issued.cookieName}=${issued.token}`;
 }
 
-function roomPanelCookie(
-  deviceGrants: ReturnType<typeof createInMemoryDeviceGrantStore>,
-): string {
+function roomPanelCookie(deviceGrants: ReturnType<typeof createInMemoryDeviceGrantStore>): string {
   const issued = deviceGrants.issueRoomPanelCookie();
   return `${issued.cookieName}=${issued.token}`;
 }

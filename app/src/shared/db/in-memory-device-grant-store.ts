@@ -41,12 +41,12 @@ export type InMemoryDeviceGrantStore = {
   revokeDeviceAuthorizationById(authorizationId: string): boolean;
   revokeDeviceAuthorizationByToken(token: string): boolean;
   revokeRoomPanelAuthorizationsByRoom(roomId: string): number;
-  revokeRoomPanelAuthorizationsByPlacement(
-    roomId: string,
-    placement: RoomPanelPlacement,
-  ): number;
+  revokeRoomPanelAuthorizationsByPlacement(roomId: string, placement: RoomPanelPlacement): number;
   revokeAllRoomPanelAuthorizations(): number;
-  issueDeviceCookie(role: DeviceSessionRole, deviceId?: string): { token: string; cookieName: string };
+  issueDeviceCookie(
+    role: DeviceSessionRole,
+    deviceId?: string,
+  ): { token: string; cookieName: string };
   issueRoomPanelCookie(
     roomId?: string,
     placement?: RoomPanelPlacement,
@@ -79,15 +79,13 @@ export function createInMemoryDeviceGrantStore(): InMemoryDeviceGrantStore {
 
   return {
     authenticateDeviceAuthorization: (token) => authenticateDeviceAuthorization(deps, token),
-    touchDeviceAuthorization: (authorizationId) =>
-      touchDeviceAuthorization(deps, authorizationId),
+    touchDeviceAuthorization: (authorizationId) => touchDeviceAuthorization(deps, authorizationId),
     getDeviceAuthorizationById: (authorizationId) =>
       getDeviceAuthorizationById(deps, authorizationId),
     listActiveDeviceAuthorizations: () => listActiveDeviceAuthorizations(deps),
     replaceSlotDeviceAuthorization: replaceSlot,
     createSlotDeviceAuthorization: replaceSlot,
-    enrollRoomPanelDeviceAuthorization: (input) =>
-      enrollRoomPanelDeviceAuthorization(deps, input),
+    enrollRoomPanelDeviceAuthorization: (input) => enrollRoomPanelDeviceAuthorization(deps, input),
     revokeDeviceAuthorizationById: (authorizationId) =>
       revokeDeviceAuthorizationById(deps, authorizationId),
     revokeDeviceAuthorizationByToken(token) {

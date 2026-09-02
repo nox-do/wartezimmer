@@ -32,7 +32,7 @@ gemeinsame Prepare-Komponente, Mock als zweiten Vertrag.
    keinen zweiten TLS-State aus Wizard-Feldern ab.
 2. Assistent Schritt 6 endet bei Mail/PEM (`prepare`). Vorschau/Apply bleiben
    HTTP. Diagnose, Cert, Cutover, Reset, Renew leben unter **Netzwerk**.
-3. Zwei Einstiege in `prepare` (Assistent *oder* Netzwerk „Später“) bleiben.
+3. Zwei Einstiege in `prepare` (Assistent _oder_ Netzwerk „Später“) bleiben.
    Das ist Produkt, kein Bug.
 4. Apply-Fail: Graph unverändert (`dns-verified` + `applyReady` + `lastError`).
    Sichtbar machen nur im Renderer. Keine `fail`-Transition dafür.
@@ -72,11 +72,11 @@ Netzwerk:     dasselbe, wenn tls.state=off                │
 Status:       nur Hinweis + Button „Fortsetzen“ → Netzwerk
 ```
 
-| Fläche | Dateien | Bis wohin |
-| ------ | ------- | --------- |
-| Assistent | `wizard-controller.ts`, `WizardHttpsPanel.svelte` | `prepare` + Mail/PEM. Fehler = generischer Footer (`error: string`) |
-| Netzwerk | `tls-network-controller.ts`, `TlsNetworkPanel.svelte` | Start *und* Fortsetzung. `tlsErrorCopy` nur bei `tls.state === error` |
-| Status | `tlsResumeCard` / `TlsResumeCard.svelte` | Keine Aktionen außer Tab-Wechsel |
+| Fläche    | Dateien                                               | Bis wohin                                                             |
+| --------- | ----------------------------------------------------- | --------------------------------------------------------------------- |
+| Assistent | `wizard-controller.ts`, `WizardHttpsPanel.svelte`     | `prepare` + Mail/PEM. Fehler = generischer Footer (`error: string`)   |
+| Netzwerk  | `tls-network-controller.ts`, `TlsNetworkPanel.svelte` | Start _und_ Fortsetzung. `tlsErrorCopy` nur bei `tls.state === error` |
+| Status    | `tlsResumeCard` / `TlsResumeCard.svelte`              | Keine Aktionen außer Tab-Wechsel                                      |
 
 Namenswahl (Vorschlag / Label / Domain = Fork managed/custom) sitzt in
 `tls-identity.ts`. Wizard-Phasen: `offer | hostname | lease | mail`.
@@ -109,17 +109,17 @@ Die Setup-API antwortet bei Fehlern nur `{ error: message }` — **kein**
 `errorClass` im HTTP-Body. Die UI liest Klassen aus `GET /host/status` →
 `tls.lastError`, nicht aus der Exception.
 
-| Klasse | Wer setzt persistentes `lastError`? | UI sieht sie wann? |
-| ------ | ------------------------------------- | ------------------- |
-| `a-record` | nur transient in `verify-dns`-Catch auf der Observation | Checkliste, nicht `tlsErrorCopy` |
-| `collision` | **nirgends** als `lastError`. Andere IP vs. Catch-all in `checks[].message` | Checkliste. Copy tot, außer Alt-`.env` |
-| `dns-filter` | Typ auf `TlsDnsObservation`, `verifyDnsDefault` setzt ihn **nicht** | Copy tot |
-| `isolation` | **nirgends** | Copy tot; Text mischt Gast-WLAN und Port 443 |
-| `firewall` | Custom-`check` Catch (Default, nicht PEM-Validierung); **Apply-Fail** schreibt `lastError` auf `dns-verified` ohne `state=error` | Custom-Fail: Error-Block. Apply-Fail: Panel ignoriert `lastError`, nur Controller-`error` |
-| `port-443` | **nirgends** | Copy tot |
-| `clock` | `validateCustomCertificate` wirft `TlsCertificateError` **vor** persistierendem Catch (Staging, `check-certificate`, Custom-Renew). API liefert nur `message`. | **Nicht** verlässlich in `tls.lastError`. Footer/Controller-Text |
-| `acme` | `prepare` (Register), `obtain` (auch Managed-Renew darüber), `repair` (Prepare-Retry) | Network Error-Block; Wizard Exception-Text |
-| `cert-name` | wie `clock`: Wurf vor Persistenz | wie `clock` |
+| Klasse       | Wer setzt persistentes `lastError`?                                                                                                                            | UI sieht sie wann?                                                                        |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `a-record`   | nur transient in `verify-dns`-Catch auf der Observation                                                                                                        | Checkliste, nicht `tlsErrorCopy`                                                          |
+| `collision`  | **nirgends** als `lastError`. Andere IP vs. Catch-all in `checks[].message`                                                                                    | Checkliste. Copy tot, außer Alt-`.env`                                                    |
+| `dns-filter` | Typ auf `TlsDnsObservation`, `verifyDnsDefault` setzt ihn **nicht**                                                                                            | Copy tot                                                                                  |
+| `isolation`  | **nirgends**                                                                                                                                                   | Copy tot; Text mischt Gast-WLAN und Port 443                                              |
+| `firewall`   | Custom-`check` Catch (Default, nicht PEM-Validierung); **Apply-Fail** schreibt `lastError` auf `dns-verified` ohne `state=error`                               | Custom-Fail: Error-Block. Apply-Fail: Panel ignoriert `lastError`, nur Controller-`error` |
+| `port-443`   | **nirgends**                                                                                                                                                   | Copy tot                                                                                  |
+| `clock`      | `validateCustomCertificate` wirft `TlsCertificateError` **vor** persistierendem Catch (Staging, `check-certificate`, Custom-Renew). API liefert nur `message`. | **Nicht** verlässlich in `tls.lastError`. Footer/Controller-Text                          |
+| `acme`       | `prepare` (Register), `obtain` (auch Managed-Renew darüber), `repair` (Prepare-Retry)                                                                          | Network Error-Block; Wizard Exception-Text                                                |
+| `cert-name`  | wie `clock`: Wurf vor Persistenz                                                                                                                               | wie `clock`                                                                               |
 
 `check-certificate` validiert **außerhalb** des `try`; der Catch-Zweig
 `error instanceof TlsCertificateError` ist für Staging-PEM praktisch tot.
@@ -150,15 +150,15 @@ Apply-Rollback-Test bleiben.
 
 Gemeinsame **Quellen**, nicht wortgleiche Sätze überall.
 
-| Thema | Quelle | Kontext-Zusatz erlaubt |
-| ----- | ------ | ---------------------- |
-| DNS warten | `tlsDnsWaitCopy` nur bei `state === awaiting-operator-dns` | Wizard: Einrichtung fortsetzen. Status: Manager schließen. **Nicht** auf `error` / `dns-verified` / Obtain |
-| DNS rot | Check-Message aus Setup | kein „Name vergeben“ |
-| Persistierter Fail | `tlsErrorCopy` bei `state === error && !cutoverApplied` | Status-Resume: gleiche Fail-Wörter, Button „Fortsetzen“. Post-Cutover unverändert |
-| Apply-Fail | `tlsErrorCopy` für `lastError` + Apply-Button | nicht Repair |
-| Stale LAN | `TLS_LEASE_STALE_LAN_COPY` | **wortgleich** (dasselbe Gate) |
-| Cutover | `TLS_CUTOVER_CONFIRM_MESSAGE` | inline und Confirm **dieselbe Konstante** |
-| Port 443 weiterleiten | bestehende Warnung | nicht entfernen |
+| Thema                 | Quelle                                                     | Kontext-Zusatz erlaubt                                                                                     |
+| --------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| DNS warten            | `tlsDnsWaitCopy` nur bei `state === awaiting-operator-dns` | Wizard: Einrichtung fortsetzen. Status: Manager schließen. **Nicht** auf `error` / `dns-verified` / Obtain |
+| DNS rot               | Check-Message aus Setup                                    | kein „Name vergeben“                                                                                       |
+| Persistierter Fail    | `tlsErrorCopy` bei `state === error && !cutoverApplied`    | Status-Resume: gleiche Fail-Wörter, Button „Fortsetzen“. Post-Cutover unverändert                          |
+| Apply-Fail            | `tlsErrorCopy` für `lastError` + Apply-Button              | nicht Repair                                                                                               |
+| Stale LAN             | `TLS_LEASE_STALE_LAN_COPY`                                 | **wortgleich** (dasselbe Gate)                                                                             |
+| Cutover               | `TLS_CUTOVER_CONFIRM_MESSAGE`                              | inline und Confirm **dieselbe Konstante**                                                                  |
+| Port 443 weiterleiten | bestehende Warnung                                         | nicht entfernen                                                                                            |
 
 Heute: Netzwerk zeigt `tlsDnsWaitCopy` bei jedem `!cutoverApplied` — das ist
 die Drift, die Schnitt 1 schließt.
@@ -184,11 +184,11 @@ die Drift, die Schnitt 1 schließt.
 
 Drei Fälle, nicht zwei:
 
-| Fall | Gate | Copy | Primäraktion |
-| ---- | ---- | ---- | ------------ |
-| **Warten** | `state === awaiting-operator-dns` | Checkliste + `tlsDnsWaitCopy` | DNS prüfen |
-| **Persistierter Fail** | `state === error && !cutoverApplied` | `tlsErrorCopy(lastError)` | `repair` wenn `tlsCanRepair`; Reset sekundär |
-| **Apply-Fail** | `dns-verified && applyReady && !cutoverApplied && lastError` | `tlsErrorCopy(lastError)` (heute `firewall`) | **erneut apply**; nicht repair |
+| Fall                   | Gate                                                         | Copy                                         | Primäraktion                                 |
+| ---------------------- | ------------------------------------------------------------ | -------------------------------------------- | -------------------------------------------- |
+| **Warten**             | `state === awaiting-operator-dns`                            | Checkliste + `tlsDnsWaitCopy`                | DNS prüfen                                   |
+| **Persistierter Fail** | `state === error && !cutoverApplied`                         | `tlsErrorCopy(lastError)`                    | `repair` wenn `tlsCanRepair`; Reset sekundär |
+| **Apply-Fail**         | `dns-verified && applyReady && !cutoverApplied && lastError` | `tlsErrorCopy(lastError)` (heute `firewall`) | **erneut apply**; nicht repair               |
 
 `tlsDnsWaitCopy` nicht bei `error`, `dns-verified`, `obtaining-certificate`.
 
@@ -249,10 +249,10 @@ Button „Fortsetzen“. Kein „unter Netzwerk“ in der Copy. Warte-Zusatz
 
 ## Abgrenzung zu den anderen Plänen
 
-| Dokument | Rolle |
-| -------- | ----- |
-| `plan-proxy-tls.md` | Caddy, ACME-DNS, Overlay, Port 443; Klassenliste im Vertrag |
-| `plan-proxy-tls-manager.md` | Mailtext, Namenswahl, Cutover-Warnung, Flächen-Soll |
-| **dieses** | Drift Assistent/Netzwerk/Status; welche Klasse die UI wann zeigt |
+| Dokument                    | Rolle                                                            |
+| --------------------------- | ---------------------------------------------------------------- |
+| `plan-proxy-tls.md`         | Caddy, ACME-DNS, Overlay, Port 443; Klassenliste im Vertrag      |
+| `plan-proxy-tls-manager.md` | Mailtext, Namenswahl, Cutover-Warnung, Flächen-Soll              |
+| **dieses**                  | Drift Assistent/Netzwerk/Status; welche Klasse die UI wann zeigt |
 
 Konflikt: Produktpläne zuerst lesen, dann **hier** eine Zeile entscheiden.

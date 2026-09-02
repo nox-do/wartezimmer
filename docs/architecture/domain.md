@@ -9,16 +9,16 @@ Nicht: Patientenflows → [`../flows.md`](../flows.md) · API-Rollen → [`apis.
 
 ## 1. Begriffe
 
-| Fachlich | Code | Frage |
-| --- | --- | --- |
-| **Nummernkreis** | `laneCode` (A–Z) | Welche Serie? |
-| **Anmeldgrund** | `topic` | Warum ist der Patient da? |
-| **Aufrufziel** | `room` / Visit-`targetLocation` | Wohin? oft ab Check-in, Call kann überschreiben |
+| Fachlich         | Code                            | Frage                                           |
+| ---------------- | ------------------------------- | ----------------------------------------------- |
+| **Nummernkreis** | `laneCode` (A–Z)                | Welche Serie?                                   |
+| **Anmeldgrund**  | `topic`                         | Warum ist der Patient da?                       |
+| **Aufrufziel**   | `room` / Visit-`targetLocation` | Wohin? oft ab Check-in, Call kann überschreiben |
 
-| Ebene | Inhalt |
-| --- | --- |
-| Praxis-Konfiguration | Themen/Räume/Journeys in `ops_settings` — überlebt den Tag |
-| Tagesbetrieb | Tickets + Queue — weg bei Tagesreset ([`system.md`](system.md) §5) |
+| Ebene                | Inhalt                                                             |
+| -------------------- | ------------------------------------------------------------------ |
+| Praxis-Konfiguration | Themen/Räume/Journeys in `ops_settings` — überlebt den Tag         |
+| Tagesbetrieb         | Tickets + Queue — weg bei Tagesreset ([`system.md`](system.md) §5) |
 
 ```mermaid
 flowchart TB
@@ -83,10 +83,10 @@ MFA-Warteliste: rote Linie ab **≥ 25 Min.** (`LONG_WAIT_THRESHOLD_MINUTES` in 
 
 ## 5. Catalog-Wahrheit
 
-| Was | Wahrheit | Wer schreibt |
-| --- | --- | --- |
-| Themen / Räume / Journeys / Routing | `ops_settings.*_json` / Spalten | Ops-API → `updateOpsSettings` |
-| flow-core-Catalog | **Projektion** | **nur** `syncCatalogFromOpsSettings()` |
+| Was                                 | Wahrheit                        | Wer schreibt                           |
+| ----------------------------------- | ------------------------------- | -------------------------------------- |
+| Themen / Räume / Journeys / Routing | `ops_settings.*_json` / Spalten | Ops-API → `updateOpsSettings`          |
+| flow-core-Catalog                   | **Projektion**                  | **nur** `syncCatalogFromOpsSettings()` |
 
 Produktions-App: kein Catalog-DML außerhalb des Sync-Moduls (`catalog-write-guard.test.ts`).  
 Manager/Setup: keine Fach-SQLite-Writes.  
@@ -108,8 +108,8 @@ Reservierte System-IDs (`pf_`, MFA-Assist, …) im Sync-Modul.
 
 ## 6. Verweise
 
-| Thema | Dokument |
-| --- | --- |
-| API-Felder / Rollen | [`apis.md`](apis.md) |
+| Thema                | Dokument                     |
+| -------------------- | ---------------------------- |
+| API-Felder / Rollen  | [`apis.md`](apis.md)         |
 | Check-in / MFA-Flows | [`../flows.md`](../flows.md) |
-| System / Tagesreset | [`system.md`](system.md) |
+| System / Tagesreset  | [`system.md`](system.md)     |

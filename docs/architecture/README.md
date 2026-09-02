@@ -14,14 +14,14 @@ Betrieb: [`../operations/`](../operations/) · Produkt/Abläufe: [`../product.md
 6. UI-Konventionen  i18n Patienten vs. Staff
 ```
 
-| Schritt | Dokument | Status |
-| --- | --- | --- |
-| 1 | [`system.md`](system.md) | ausgearbeitet |
-| 2 | [`domain.md`](domain.md) | ausgearbeitet |
-| 3 | [`apis.md`](apis.md) | ausgearbeitet |
-| 4 | [`realtime.md`](realtime.md) | ausgearbeitet |
-| 5 | [`documents.md`](documents.md) | ausgearbeitet |
-| 6 | [`i18n.md`](i18n.md) | ausgearbeitet |
+| Schritt | Dokument                       | Status        |
+| ------- | ------------------------------ | ------------- |
+| 1       | [`system.md`](system.md)       | ausgearbeitet |
+| 2       | [`domain.md`](domain.md)       | ausgearbeitet |
+| 3       | [`apis.md`](apis.md)           | ausgearbeitet |
+| 4       | [`realtime.md`](realtime.md)   | ausgearbeitet |
+| 5       | [`documents.md`](documents.md) | ausgearbeitet |
+| 6       | [`i18n.md`](i18n.md)           | ausgearbeitet |
 
 **Stil:** Ist-Stand formulieren — kein „Zielbild“/„Leitdokument“ für Umgesetztes; Ausblick nur als Nicht-Produkt oder Discovery.
 
@@ -29,9 +29,9 @@ API-Vertrag (maschinenlesbar): `openapi/*.yaml` → `npm run generate:api` · Sw
 
 ## Nicht hier
 
-| Thema | Wohin |
-| --- | --- |
-| Install, Compose, TLS, Backup | [`../operations/`](../operations/) |
-| Patienten-/MFA-Abläufe | [`../flows.md`](../flows.md) |
-| Endpoint-Listen | `openapi/` |
-| Captive/SMS/CSV-Grenzen | [`../operations/integrations.md`](../operations/integrations.md) |
+| Thema                         | Wohin                                                            |
+| ----------------------------- | ---------------------------------------------------------------- |
+| Install, Compose, TLS, Backup | [`../operations/`](../operations/)                               |
+| Patienten-/MFA-Abläufe        | [`../flows.md`](../flows.md)                                     |
+| Endpoint-Listen               | `openapi/`                                                       |
+| Captive/SMS/CSV-Grenzen       | [`../operations/integrations.md`](../operations/integrations.md) |
