@@ -47,6 +47,7 @@ TLS-Ops-Ist: [`operations/tls.md`](operations/tls.md) — die TLS-Pläne unten s
 | [`plan-manager-installer-cleanup.md`](plan-manager-installer-cleanup.md) | Manager Renderer: Wartung-Mutex, Generation |
 | [`plan-backup-v2.md`](plan-backup-v2.md) | `.pfbackup` v2 (Entwurf) |
 | [`plan-device-authorizations.md`](plan-device-authorizations.md) | TV/Terminal/Room-Panel: persistente Gerätefreigaben (Festgeschrieben) |
+| [`plan-portal-lan-isolation.md`](plan-portal-lan-isolation.md) | Discovery: Portal vs. Staff-URLs im Fritzbox-LAN (kein Beschluss) |
 | [`archive/README.md`](archive/README.md) | Auth-Slots, Gateway-Lab, Audit-OK-Liste, TLS-Lab |
 
 ## API-Vertrag

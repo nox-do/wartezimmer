@@ -1,0 +1,953 @@
+# Patientenportal auf getrenntem Netzwerkanschluss
+
+Stand: 2026-09-01 · **Produktentscheidung, Umsetzung noch offen**
+
+Verwandt: LAN-TLS [`operations/tls.md`](operations/tls.md) · Captive-Grenze
+[`operations/integrations.md`](operations/integrations.md) ·
+[Captive-Adapter-Roadmap](roadmap-captive-portal-adapters.md) · Manager-Topologie
+`manager/src/renderer/network-topology-diagram.ts` (aktueller Ist-Stand noch
+Captive-zentriert; im Rahmen dieses Plans zu ersetzen).
+
+---
+
+## 1. Entscheidung
+
+Der empfohlene, vor Produktfreigabe vollständig zu prüfende Standardweg für das
+lokale Patientenportal verwendet einen **eigenen physischen
+Netzwerkanschluss** am Praxis-Flow-Host:
+
+- **NIC 1 — Praxis-LAN:** Mitarbeiter-, Geräte- und Administrationsoberflächen.
+- **NIC 2 — Patientennetz:** ausschließlich Patientenportal auf HTTPS.
+
+Die Praxis stellt die zweite NIC sowie das daran angeschlossene, vom Praxis-LAN
+getrennte Patientennetz. Das kann ein vorhandener Gastnetz-Port, ein isolierter
+AP-/Router-Port oder ein untagged VLAN-Port sein. Praxis Flow liefert keinen
+Router, Access Point, DHCP-Server, Internetzugang oder Captive-Datenpfad.
+
+Der Manager vergleicht nur die vom Betriebssystem gemeldeten Interfaces. Liegen
+Staff- und Portal-IP auf demselben Interface, warnt er deutlich vor der
+fehlenden Netztrennung. Dieser **Same-NIC-Warnpfad** bleibt nach ausdrücklicher
+Bestätigung erlaubt — vor allem für Demos und Installationen ohne zweite NIC.
+Er ist kein technischer Blocker und keine Isolationszusage. Das gilt auch für
+eine zweite IP im selben Staff-Subnetz. Der Status bleibt dauerhaft
+`aktiv mit Warnung — keine getrennte NIC`; die Zusage aus §11 gilt dort nicht.
+
+Bei verschiedenen Interfaces bestätigt die Praxis, dass das gewählte
+Portal-Interface für das Patientennetz vorgesehen ist. Ob AP, Router oder
+Gastnetz darüber hinaus zur Staff-IP oder ins Praxis-LAN routen, sieht der
+Manager nicht; das bleibt Praxis-IT und ist kein Aktivierungsgate.
+
+`https://staff.<installationsraum>/portal` bleibt **dauerhaft** die interne
+Vorschau im Praxis-LAN (Demo, Test, Mitarbeiter). Das ist kein Patienten-WLAN-
+Weg. Sobald das Portal aktiv ist, ist der Patienteneingang
+`https://portal.<installationsraum>`. Der Portal-Hostname auf der Staff-IP
+bleibt abgewiesen; der Staff-Hostname auf der Portal-IP ebenfalls.
+
+Das ist die Sicherheitsgrenze:
+
+> Praxis Flow veröffentlicht auf der ausgewählten Portal-IP nur den
+> Portal-Origin, leitet keinen Netzwerkverkehr zwischen den Anschlüssen weiter
+> und macht Abweichungen von der empfohlenen Zwei-NIC-Isolation sichtbar.
+
+---
+
+## 2. Warum diese Variante
+
+Die bisher diskutierte Fritzbox-Ausnahme „Gastnetz darf genau einen LAN-Host auf
+TCP 443 erreichen“ ist kein belastbarer Regelfall. Ein vollständig isoliertes
+Gastnetz erreicht den Praxisserver nicht; im gemeinsamen Praxisnetz fehlt
+dagegen jedes Signal „Patient vs. Mitarbeiter“.
+
+Ein zweiter Hostname allein löst das nicht. `Host`, TLS-SNI und Browser-Origin
+sagen, **welche** Oberfläche angefordert wird, aber nicht, **wer** sie anfordert.
+Der Zwei-NIC-Standardweg ergänzt zwei produktseitig bind- und prüfbare
+Merkmale:
+
+1. die Ziel-IP, an der der Proxy lauscht;
+2. das eingehende Netzwerk-Interface, auf das die Host-Firewall filtern kann.
+
+Damit bleibt die Wahl der WLAN-/Router-Technik bei der Praxis, während wir die
+Exposition unseres Hosts selbst begrenzen und prüfen können. Die Same-NIC-
+Ausnahme nutzt dagegen nur eine zweite Ziel-IP sowie getrennte Origin-/Listener-
+Regeln. Sie besitzt keine eigene Interfacegrenze und liefert deshalb
+ausdrücklich keine Netzisolationszusage.
+
+---
+
+## 3. Zieltopologie
+
+```text
+Praxis-LAN                                      Patientennetz
+Terminal / MFA / TV                            Patienten-Handy
+        │                                             │
+        ▼                                             ▼
+NIC 1: 10.0.0.20                               NIC 2: 192.168.50.2
+staff.<installationsraum>                      portal.<installationsraum>
+        │                                             │
+        ▼                                             ▼
+Staff-Listener                                  Portal-Listener
+alle freigegebenen Staff-Pfade                  nur Portal-Allowlist
+        └──────────────────► App ◄────────────────────┘
+                          intern/Loopback
+
+Zwischen NIC 1 und NIC 2: keine Bridge, kein IP-Forwarding, kein ICS/NAT.
+```
+
+Die App bleibt ein Kern mit einer SQLite-Datenbank. Es entstehen keine zweite
+Installation und keine zweite fachliche Datenhaltung. Die Portal-Freigabe ist
+ein eng begrenzter Reverse-Proxy-Pfad zur bestehenden App, keine allgemeine
+Netzweiterleitung.
+
+---
+
+## 4. Verantwortungsgrenze
+
+| Rolle                        | Verantwortet                                                                                                                                                                              | Verantwortet nicht                                                                                                          |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **Praxis / Praxis-IT**       | empfohlen: zweite NIC; physisch oder logisch getrenntes Patientennetz; DHCP/WLAN; optional Internet und Captive; statische Portal-IP bzw. Reservierung; Client-Test aus dem Patientennetz | Caddy-Routen, Container-Ports, Host-Listener oder Praxis-Flow-Firewallregeln                                                |
+| **Praxis Flow**              | Bindung an beide IPs; Host-Firewall für den Portalanschluss; kein Forwarding; Portal-Allowlist; DNS-/TLS-Strecke; Installations- und Laufzeitprüfung; verständliche Diagnose              | Router/AP konfigurieren; VLANs erzeugen; DHCP/NAT für Patienten betreiben; Isolation des übrigen Praxisnetzes zertifizieren |
+| **Patientennetz-Komponente** | Clients zur Portal-IP routen bzw. im selben Segment anbinden; Adressen vergeben; optional Internetzugang                                                                                  | Pfade innerhalb der Praxis-Flow-App unterscheiden                                                                           |
+
+Im empfohlenen Zwei-NIC-Standardweg erfüllt ein einfacher Access Point, der nur
+das normale Praxis-LAN überbrückt, die Isolationsanforderung **nicht**. Nutzt die
+Praxis bewusst den Same-NIC-Warnpfad, ist ein solcher Aufbau eine unterstützte
+Abweichung ohne Isolationszusage und kein Fehler unseres
+Origin-/Listener-Vertrags.
+
+### 4.1 Empfohlene Netzplatzierung
+
+Praxis Flow sollte aus Sicht der Praxis-IT wie eine **DMZ-/Applikationslösung**
+behandelt und nach Möglichkeit auf einem dedizierten Host beziehungsweise in
+einem eigenen internen Applikationssegment platziert werden. Von dort werden nur
+die ausdrücklich benötigten Staff- und Portalzugänge sowie notwendige
+ausgehende Ziele freigegeben. Eine allgemeine Vertrauensstellung gegenüber PVS,
+NAS, Druckern oder dem übrigen Praxis-LAN ist nicht erforderlich.
+
+Der heutige Kernbetrieb benötigt keine pauschale Verbindung zu anderen Systemen
+im Praxisnetz. Eine solche Verbindung dient allenfalls Komfortfunktionen wie der
+Übernahme beziehungsweise Freigabe von Kontakten; diese kann auch manuell
+erfolgen. Wird eine Integration genutzt, sollte die Praxis-IT nur das konkrete
+Ziel und Protokoll freigeben, nicht das gesamte Praxis-LAN.
+
+Diese Platzierung ist eine Empfehlung, kein Aktivierungsgate. Installation auf
+einem vorhandenen Windows- oder macOS-Rechner bleibt unterstützt, besitzt aber
+einen größeren gemeinsamen Angriffsbereich als ein dedizierter Host oder ein
+separates Applikationssegment.
+
+---
+
+## 5. Adressen, Hostnamen und Wildcard-Zertifikat
+
+### 5.1 Zwei IPs, zwei Origins
+
+Jede Installation erhält einen eigenen DNS-Unterraum. Für die Betreiberzone ist
+das Zielbild:
+
+```text
+Installationsraum: <installations-id>.<operator-zone>
+
+Staff-Origin:  https://staff.<installationsraum>   → NIC 1
+Portal-Origin: https://portal.<installationsraum>  → NIC 2
+```
+
+Beispiel:
+
+```text
+staff.7fk3m2.lan.notaus.de   A 10.0.0.20
+portal.7fk3m2.lan.notaus.de  A 192.168.50.2
+```
+
+Beide öffentlichen A-Records zeigen auf die jeweilige **private IPv4**. Der
+Staff-Origin wird damit gegenüber dem bisherigen Zielbild
+`<installations-id>.<operator-zone>` um eine `staff.`-Ebene ergänzt. Da bisher
+nur Testinstallationen existieren, ist dafür keine automatische Migration oder
+Abwärtskompatibilität vorgesehen; alte Testeinträge können manuell entfernt
+werden.
+
+Ein Hostname mit zwei A-Records ist kein Ersatz: Clients könnten zufällig die
+falsche NIC wählen. Split-DNS ist ebenfalls nicht Teil des Standardwegs.
+
+### 5.2 Ein Wildcard-Zertifikat pro Installation
+
+Managed TLS verwendet ein Zertifikat für den installationsbezogenen Wildcard:
+
+```text
+*.<installations-id>.<operator-zone>
+```
+
+Das Zertifikat gilt damit für `staff.<installationsraum>` und
+`portal.<installationsraum>`. Let’s Encrypt stellt Wildcard-Zertifikate per
+DNS-01 aus; das passt zum bestehenden Caddy-/`acme-dns`-Weg. Pro Installation
+bleiben **ein Zertifikat, ein ACME-DNS-Account und ein Challenge-CNAME**:
+
+```text
+_acme-challenge.<installationsraum>
+  CNAME <account>.auth.acme-dns.io
+```
+
+Es kommen zwei A-Records hinzu, aber kein zweiter ACME-DNS-Account und kein
+zweiter Challenge-CNAME. Es gibt **keinen** portal-spezifischen ACME-CNAME
+(`_acme-challenge.portal.<installationsraum>` wäre falsch und unnötig). Der
+eine CNAME unter `_acme-challenge.<installationsraum>` deckt die Wildcard-Order
+ab und damit beide Namen. Caddy muss den Wildcard-Namen ausdrücklich verwalten
+und das Zertifikat auf dem getrennten Staff- und Portal-Listener verwenden.
+
+**Portal-DNS später, Zertifikat nicht extra erneuern:** Bei der Grundeinrichtung
+werden Staff-A-Record, Wildcard-CNAME und Wildcard-Zertifikat angelegt. Der
+Portal-A-Record kommt erst bei der Portal-Aktivierung (zweite, kurzlebige
+Operator-Mail, neues Token, nur dieser A-Record). Weil `portal.<raum>` schon
+unter `*.<raum>` liegt, ist dafür **kein** ACME-Renew und kein zweiter CNAME
+nötig. Ein Renew nur „weil Portal dazukommt“ wäre Verschwendung und
+Rate-Limit-Risiko. Custom-PEM muss beide Namen oder den Wildcard bereits vor
+der Portal-Aktivierung enthalten (§5.2 Gate); sonst neues PEM, kein Let’s-
+Encrypt-Renew.
+
+Die Zertifikatsautomatisierung darf dabei ausschließlich den Namen
+`*.<installationsraum>` bestellen und erneuern. `staff.<installationsraum>` und
+`portal.<installationsraum>` sind nur Host-/SNI-Matcher, keine eigenständigen
+ACME-Bestellnamen. Insbesondere darf der Generator nicht still ein Exact-Name-
+Zertifikat für `staff.<installationsraum>` anfordern: Dessen DNS-01-Challenge
+läge unter `_acme-challenge.staff.<installationsraum>` und wäre durch den oben
+beschriebenen CNAME nicht gedeckt. Ein ACME-Staging-Test prüft die erzeugten
+Orders und schlägt fehl, sobald neben dem Wildcard ein Exact-Name-Zertifikat
+beantragt wird.
+
+Für eine eigene Praxis-Domain (Custom) gilt das Zwei-Namen-PEM-Gate **erst bei
+Portal-Aktivierung**. Bis dahin reicht das eine heutige Zertifikat für den
+einen Staff-FQDN. Fehlt bei der Aktivierung der Portal-Name im PEM, blockiert
+der Manager; ein späterer TLS-Fehler ist dafür kein zulässiger Warnzustand.
+
+Die Labels `staff` und `portal` sind im Manager, Setup und Operatorpfad für
+diese System-Origins reserviert und dürfen nicht als Installationslabel
+vergeben werden.
+
+Der Wildcard schafft Raum für spätere Origins, zum Beispiel einen gesonderten
+Geräte- oder Integrationsendpunkt. Er ist **keine Wildcard-Freigabe am Proxy**:
+Jeder neue Hostname braucht weiterhin einen expliziten Listener-/Host-Matcher;
+unbekannte SNI-/`Host`-Werte werden verworfen.
+
+`CANONICAL_BASE_URL` wird im **Managed**-Pfad die Staff-/Gerätebasis
+`https://staff.<installationsraum>`. Für das Portal ist ein separates
+`PORTAL_BASE_URL=https://portal.<installationsraum>` beziehungsweise
+gleichwertiger persistierter Zustand erforderlich.
+
+**Custom (eigene Domain)** bleibt beim TLS-Umbau ein einzelner Hostname wie
+heute. Es gibt dort keine erzwungenen `staff.`/`portal.`-Prefixes und kein
+Wildcard-PEM, solange das Portal aus ist. `CANONICAL_BASE_URL` bleibt
+`https://<der-eine-name>`.
+
+Bei der Portal-Aktivierung bleibt dieser Staff-FQDN unverändert (kein
+Geräte-Recutover). Die Praxis wählt einen zusätzlichen Host-Prefix
+(Vorschlag im Eingabefeld: `portal`); der Portal-Hostname ist
+`<prefix>.<bisheriger-fqdn>`. DNS trägt die Praxis selbst ein: **A-Record auf
+die Portal-IP**. Ein CNAME auf den Staff-Namen würde Portal-Traffic auf die
+Staff-IP legen und ist unzulässig. Ob das Zertifikat ein Wildcard oder zwei
+konkrete SAN-Namen ist, bleibt Sache der Praxis. Der Manager prüft nur, dass
+das PEM beide Namen deckt. Namenskollisionen in ihrer Zone behandeln sie selbst.
+
+Das ist eine bewusste Ablösung des heutigen Single-Hostname-Modells **für die
+Betreiberzone**. Der aktuelle TLS-Zustand (`TLS_HOSTNAME`/`TlsStatus.hostname`),
+`prepareHostTls`, Operator-Request und Caddy-Generator verwalten nur einen Namen
+und sind für das Managed-Zielbild **nicht wiederverwendbar, ohne erweitert zu
+werden**. Vor Portal-v1 werden sie auf mindestens folgenden persistenten
+Vertrag umgestellt:
+
+```text
+installationDomain   (managed: <id>.<zone>; custom: leer / nicht genutzt)
+staffHostname        (managed: staff.<raum>; custom: der eine FQDN)
+portalHostname       (managed: portal.<raum>, auch bevor A-Record existiert;
+                      custom: leer bis Portal-Aktivierung)
+wildcardCertificateName  (managed: *.<raum>; custom: leer)
+staffIp
+portalIp             (leer bis Portal-Aktivierung)
+```
+
+Neue **Managed**-Installationen erhalten Staff-Hostname und Wildcard-Zertifikat
+bereits bei der Grundeinrichtung, auch wenn das Portal noch deaktiviert bleibt. Eine spätere
+Portal-Aktivierung ergänzt dann Portal-A-Record, Portal-IP und Portal-Listener,
+ändert aber weder Staff-Hostname noch Staff-Origin. Für die vorhandenen
+Testinstallationen ist keine Migration vorgesehen; deren TLS-/DNS-Zustand kann
+manuell neu angelegt werden.
+
+Backup und Restore werden auf denselben Vertrag erweitert: Installationsraum,
+beide Hostnamen, Wildcard-Identität, TLS-Sidecar, ausgewählte IP-Bindings und
+Portalstatus werden konsistent gesichert. Vor dem erneuten Start prüft Restore,
+dass Zertifikat und Zustand zusammenpassen; bei einer Abweichung bleibt der
+betroffene HTTPS-Listener geschlossen. Ein Restore-Test mit aktivem Portal ist
+Teil der Produktfreigabe. Für die vorhandenen Testinstallationen entsteht daraus
+weiterhin keine Migrationspflicht.
+
+Die Operator-Strecke wird dafür inkrementell: Die Grundeinrichtung fordert
+Staff-A-Record und Wildcard-Challenge-CNAME an. Eine spätere Portal-Aktivierung
+erzeugt für dieselbe Installations-ID einen neuen, kurzlebigen
+Autorisierungsvorgang nur für den Portal-A-Record. Ein bereits verbrauchtes
+One-Time-Token wird nicht wiederverwendet; eine neue ACME-Registrierung oder ein
+zweiter Challenge-CNAME ist nicht erforderlich.
+
+### 5.3 Portal-Netz in v1
+
+- **Zwei-NIC-Standardweg:** feste private Portal-IPv4 in einem anderen, nicht
+  überlappenden Subnetz; Portal-Clients liegen in diesem Segment;
+- **Same-NIC-Warnpfad:** eine zweite, lokal bindbare IPv4; sie darf im selben
+  Staff-Subnetz oder in einem zusätzlichen Subnetz liegen. Beides liefert nur
+  IP-/Origin-Trennung, keine nachgewiesene Netztrennung;
+- die Portal-Konfiguration fügt in beiden Fällen **kein Default-Gateway** und
+  keinen DNS-Server hinzu; die Standardroute bleibt ausschließlich die
+  Staff-Konfiguration;
+- IPv6-Adressen auf Staff- oder Portal-NIC sind **kein** Aktivierungsblocker.
+  Der Portal-Listener bindet in v1 nur die gewählte IPv4. Phase 0 verbietet
+  Publishes auf `[::]`/`:::`. Der F1-PoC muss belegen, dass trotzdem kein
+  Portal-/Staff-Port über IPv6 von außen erreichbar ist. Ein IPv6-Patientennetz
+  als gleichwertiger Pfad ist nicht v1.
+
+Ein überlappendes Subnetz auf zwei **verschiedenen** Interfaces wird wegen
+mehrdeutiger Host-Routen blockiert. Geroutete Patientennetze, mehrere getrennte
+Patientensubnetze und IPv6 sind spätere Erweiterungen, nicht Teil des ersten
+Wurfs.
+
+---
+
+## 6. Proxy- und Portgrenze
+
+### 6.1 Phase 0: Wildcard-Publishes vor dem Portal beseitigen
+
+Der heutige Stack ist noch kein sicherer Ausgangspunkt: App und Proxy werden je
+nach Betriebsart ohne Host-IP auf `0.0.0.0:8080`, `0.0.0.0:80` beziehungsweise
+`0.0.0.0:443` veröffentlicht. Sobald eine zweite NIC angeschlossen ist, sind
+diese Ports deshalb auch dort erreichbar, **bevor** der Portalmodus aktiviert
+wird.
+
+Die erste Umsetzungsetappe ist daher eine allgemeine Härtung des
+Auslieferungsstacks, unabhängig vom Portalstatus:
+
+- kein IPv4- oder IPv6-Delivery-Publish ohne explizite Host-IP; insbesondere
+  weder `0.0.0.0:*` noch `[::]:*` beziehungsweise `:::*`;
+- ohne Proxy: App höchstens `<staff-ip>:8080:8080`, niemals `0.0.0.0:8080`;
+- mit Proxy: App nur `127.0.0.1:8080:8080`, Proxy-Ports nur auf der Staff-IP;
+- Maintenance bleibt `127.0.0.1:8082`;
+- Docker-/Proxy-Neustart verweigern, wenn eine erforderliche Bind-Adresse fehlt
+  oder nicht mehr lokal vorhanden ist.
+
+Der heutige Statusvertrag reicht für dieses Audit nicht aus:
+`publishedPortsFromRow` reduziert Docker-Publishes auf `number[]` und verwirft
+damit Host-IP, Container-Zielport und Protokoll. Phase 0 erweitert
+`ComposeServiceStatus` deshalb um die tatsächlichen Laufzeit-Bindings, mindestens
+
+```text
+hostIp + publishedPort + targetPort + protocol
+```
+
+Die Daten werden aus `docker compose ps --format json` einschließlich
+`Publishers[].URL` gelesen und, wo Docker Desktop dies nicht eindeutig liefert,
+mit `docker inspect` (`HostIp`/`HostPort`) verifiziert. `0.0.0.0`, leere
+Wildcard-Angaben sowie `::`/`[::]` werden normalisiert und als globale Bindung
+erkannt. Eine reine Portnummer darf keine Sicherheitsentscheidung mehr
+begründen. Geprüft wird der tatsächlich laufende Container, nicht nur die
+beabsichtigte Compose-Datei.
+
+Portal-Aktivierung setzt den TLS-Proxy und die Loopback-Bindung der App voraus.
+Der Manager prüft diese Phase-0-Grenze schon im normalen Staff-Betrieb. Eine
+zusätzliche NIC darf keinen App-, HTTP-, HTTPS-, Debug- oder Maintenance-Port
+erben. Damit hängt die Absicherung nicht davon ab, dass jemand rechtzeitig auf
+„Portal aktivieren“ klickt.
+
+Diese Härtung wird auf Windows und macOS erst ausgerollt, nachdem das F1-Gate
+in §6.3 auf der jeweiligen freigegebenen Docker-Desktop-Version bestanden hat
+(Compose-Host-IP, Host-Firewall und externer Scan). Die Umstellung sichert den
+bisherigen Compose-Zustand, erzeugt und validiert die neue Konfiguration, legt
+den betroffenen Proxy-Container neu an und prüft Staff von außen. Schlägt
+Bindung, Firewall oder Probe fehl, wird der alte Compose-Zustand
+wiederhergestellt. Bis zur Plattformfreigabe bleiben Portal und der Betrieb mit
+einer zusätzlichen NIC gesperrt; eine ungeprüfte Phase-0-Mutation darf eine
+bestehende Staff-Installation nicht unterbrechen.
+
+### 6.2 Getrennte Host- und Container-Listener
+
+Ein Caddy-`bind <host-ip>` **innerhalb eines Docker-Bridge-Containers** ist keine
+wirksame Host-IP-Grenze: Docker-DNAT liefert Verbindungen an eine
+Containeradresse und erhält die ursprüngliche lokale Host-Ziel-IP nicht als
+Caddy-Listeneradresse. Deshalb werden Staff und Portal über verschiedene
+Container-Ports getrennt:
+
+```text
+Host-Publish                         Caddy intern
+<staff-ip>:80  → proxy:80            Staff-HTTP/Redirect
+<staff-ip>:443 → proxy:443           Staff-Server + Staff-Host-Matcher
+<portal-ip>:443 → proxy:444          Portal-Server + Portal-Host-Matcher
+```
+
+Es gibt keine Publish-Regel `:80`, `:443` oder `0.0.0.0:*` ohne Host-IP. Der
+Portal-Server auf dem internen Port 444 terminiert extern weiterhin normales
+HTTPS auf Port 443. Beide Server verwenden das installationsbezogene
+Wildcard-Zertifikat, haben aber getrennte Host-Matcher und Handler. Diese
+Trennung ist Teil der generierten Caddy-Konfiguration; SNI allein ist keine
+Netzgrenze.
+
+Caddys automatische HTTPS-Konfiguration darf dabei keinen zusätzlichen
+Portal-Handler auf dem Staff-Server oder einen Staff-Handler auf dem
+Portal-Server erzeugen. Falls der Caddyfile-Adapter diese Trennung nicht
+eindeutig abbildet, wird die Serverstruktur als Caddy-JSON generiert. Vor jedem
+Reload oder Proxy-Recreate wird die adaptierte/effektive Konfiguration geprüft:
+Staff-Routen (einschließlich interner `/portal`-Vorschau) dürfen nur am
+internen Listener 443 hängen, der Patienten-Portal-Origin nur am internen
+Listener 444. Zertifikatsverwaltung und Request-Routing werden dabei als
+getrennte Belange behandelt.
+
+Auf der Portal-IP gilt:
+
+- TCP 443 ist der einzige erforderliche eingehende Port.
+- Port 80 bleibt geschlossen; der ausgegebene QR-Code enthält immer `https://`.
+- Unbekannte SNI-/`Host`-Werte werden verworfen.
+- Verbindungen ohne SNI und Requests ohne passenden `Host` treffen auf keinem
+  der beiden Ports einen Staff-Defaultserver, sondern werden abgebrochen.
+- Der Staff-Hostname auf der Portal-IP liefert keine Staff-UI und keine API.
+- Der Portal-Hostname auf der Staff-IP liefert kein Patientenportal.
+- UI-Navigation außerhalb `/portal` wird nicht nur umgeleitet, sondern
+  abgewiesen.
+- Nicht freigegebene APIs liefern 403/404, niemals einen Browser-Redirect.
+- App, Manager, Maintenance und Debug-Ports bleiben Loopback bzw.
+  Docker-intern.
+- Keine veröffentlichten Docker-Ports auf `0.0.0.0` oder der Portal-IP außer
+  dem expliziten Portal-Listener.
+
+Die Positivliste ist ein eigener, ausführbarer Vertrag aus HTTP-Methode und
+exaktem beziehungsweise parametrisiertem Pfad für die tatsächlich vom Portal
+verwendeten UI-Assets, Session-, Upload- und Formularrouten. Das allgemeine
+`public: true` aus `route-access-rules.ts` darf nicht als Ersatz dienen: Dort
+sind auch Login-, Pairing- und Ops-Routen öffentlich markiert, die auf dem
+Portal-Origin nichts zu suchen haben. Generator und Integrationstests verwenden
+dieselbe Portal-Positivliste als Quelle. Ein Negativtest läuft über den gesamten
+App-Routenkatalog und weist nach, dass jede nicht gelistete Route auf dem
+Portal-Listener abgewiesen wird. Eine Präfixfreigabe wie `/api/*` ist
+unzulässig; ohne vollständige Liste gibt es keine Portal-v1-Freigabe.
+
+**v1-Enforcement ist Caddy**, nicht die App. Die App bleibt ein Kern und prüft
+den Portal-Origin in v1 nicht extra (Staff unter `staff.` inklusive `/portal`
+unverändert). Ein App-Gate aus derselben Liste ist spätere Defense-in-Depth,
+sobald der Portal-Listener existiert. Voraussetzung bleibt Phase 0: App nicht
+auf der Portal-IP erreichbar.
+
+Staff-/Geräte-Session-Cookies bleiben host-only: Es wird kein
+`Domain=.<installationsraum>` gesetzt. Das entspricht dem heutigen Cookie-Code
+und wird als Regressionstest für die getrennten Origins festgeschrieben.
+
+Rate-Limits müssen hinter Caddy den ursprünglichen Client unterscheiden. Der
+heutige Fastify-Start ohne `trustProxy` würde andernfalls nur die gemeinsame
+Docker-/Caddy-Adresse als `request.ip` sehen. v1 vertraut Proxy-Header deshalb
+nur für den eindeutig festgelegten Caddy-Hop; Caddy überschreibt eingehende
+Forwarding-Header, bevor er die verifizierte Client-IP weitergibt. Eine globale
+Freigabe beliebiger `X-Forwarded-For`-Werte ist unzulässig. Integrationstests mit
+mindestens zwei Client-IPs sowie einem gespooften Header weisen nach, dass
+Limits weder praxisweit zusammenfallen noch umgangen werden können.
+
+CORS bleibt zusätzliche Browser-Härtung, aber keine Zugriffsgrenze. Maßgeblich
+sind Ziel-IP, Interface, Host-Firewall, SNI/Host und die Proxy-Allowlist.
+
+Die Umsetzungstests müssen die gekreuzte Matrix prüfen: Staff- und Portal-SNI
+jeweils gegen Staff- und Portal-IP sowie unbekanntes SNI gegen beide IPs. Docker
+Port-Inspection und ein externer Scan müssen bestätigen, dass keine weitere
+Publish-Regel existiert.
+
+### 6.3 F1 — Erreichbarkeit erzwingen, nicht nur publizieren
+
+Die Praxis-Hosts sind **Windows und macOS mit Docker Desktop**. Portal, App,
+Sandbox und Proxy bleiben gemeinsam in diesem Stack; es ist weder ein
+Linux-Host noch ein ausgelagerter Portal-Rechner vorgesehen.
+`network_mode: host` ist nicht der Produktweg.
+
+**F1 (Produktanforderung):** Auf der freigegebenen Windows- und
+macOS-/Docker-Desktop-Kombination müssen Portal- und Staff-Endpunkte
+nachweisbar und fail-closed ausschließlich aus den vorgesehenen Segmenten
+erreichbar sein — unabhängig davon, wie Docker Desktop Port-Publishing intern
+umsetzt. Compose-Binding ist ein Mechanismus von F1, nicht die
+Sicherheitsarchitektur.
+
+#### Binding ist Spezifikation, nicht Isolationsgrenze
+
+Compose `HOST_IP:HOST_PORT:CONTAINER_PORT` (zum Beispiel
+`<staff-ip>:443:443` und `<portal-ip>:443:444`) **soll** laut Docker nur diese
+Host-IP publizieren. Unterstützt die Engine Host-IP-Mapping nicht, soll Compose
+das Mapping ablehnen. Das ist die gewünschte Expositionskonfiguration und
+gehört in Phase 0.
+
+Docker Desktop implementiert dasselbe **nicht** wie natives Linux-Host-NAT.
+Die Engine läuft in einer Linux-VM; eingehende Verbindungen auf Windows und
+macOS nimmt `com.docker.backend` entgegen und leitet in die VM weiter. Ein
+erfolgreiches spezifisches Binding, `docker compose ps` oder `docker inspect`
+beweist deshalb keine externe Erreichbarkeit und reicht nicht als
+Sicherheitsnachweis.
+
+Historisch gab es auf macOS Versionen, in denen Bind an eine LAN-IP mit
+`cannot assign requested address` scheiterte, sowie Regressionen bei
+Host-IP-/Port-Bindings und den gemeldeten Metadaten. Das ist PoC-Risiko, kein
+generell zu erwartendes Verhalten der Form „Compose zeigt `10.0.0.20:443`, der
+Host lauscht trotzdem auf `0.0.0.0:443`“. Tritt genau das reproduzierbar auf,
+ist das Bug/Regression und fällt durch F1 — nicht spezifikationskonform.
+
+Interface-/IP-Binding bleibt also nützlich, auf Docker Desktop aber **keine
+hinreichende Netzwerk-Isolationskontrolle**.
+
+#### Drei Ebenen
+
+```text
+                 Praxis-Host
+           ┌─────────────────────┐
+Patient ───┤ NIC / Portal-IP     │
+           │   Host-Firewall     │
+           │      ↓              │
+           │ com.docker.backend  │
+           │      ↓              │
+           │ Docker-Desktop-VM   │
+           │      ↓              │
+           │ Caddy Portal :444   │
+           │                     │
+Staff ─────┤ NIC / Staff-IP      │
+           │   Host-Firewall     │
+           │      ↓              │
+           │ com.docker.backend  │
+           │      ↓              │
+           │ Caddy Staff :443    │
+           └─────────────────────┘
+```
+
+1. **Compose-Binding** — explizite Host-IP, interne Ports wie §6.2. Vermeidet
+   unnötige Exposition; ohne passende Host-IP startet der Publish nicht.
+2. **Host-Firewall** — produktive Enforcement-Grenze am Eingang von
+   `com.docker.backend`. Portal-NIC/IP: eingehend nur TCP 443 zum
+   Portal-Listener; Staff-Publishes auf dieser Adresse verboten. Staff-NIC/IP:
+   Staff-HTTP/HTTPS wie vorgesehen; Portal-Listener dort verboten. Windows:
+   Defender Firewall nach Local Address, Interface/Profil und Remote Network.
+   macOS: paket- und interfacebezogen mit `pf`, nicht die GUI-Application-
+   Firewall. Linux-`DOCKER-USER` ist kein v1-Vertrag.
+3. **Black-Box-Abnahme** — nicht Compose-PS, netstat oder inspect, sondern Scan
+   und HTTPS-Proben von einem Patienten- und einem Staff-Client gegen die
+   realen Host-IPs.
+
+Ohne stabile Ebene 2 gilt F1 auf dieser Plattform als nicht erfüllt, auch wenn
+Ebene 1 im PoC bindet. Schlägt F1 fehl, gibt es innerhalb dieses Plans keinen
+stillen Fallback. Ein plattformnativer Edge-Proxy wäre eine eigene
+Alternativarchitektur mit separater Entscheidung, Implementierung und Abnahme
+für Portbelegung, TLS, Rechte, Packaging, Updates und Rollback. Bis dahin wird
+die betroffene Plattform für das Portal nicht freigegeben; Linux ist keine
+automatische Rückfalllösung.
+
+#### Abnahmematrix (PoC und Freigabe)
+
+Windows und macOS werden jeweils erst freigegeben, wenn die Suite auf der
+festgelegten Mindest-Docker-Desktop-Version besteht. Zusätzlich: Weak-Host,
+virtuelle Adapter, Loopback-App ohne LAN-Erreichbarkeit (Engine mit bekanntem
+L2-Fix), gekreuzte SNI-/Ziel-IP-Matrix.
+
+| Test                                  | Portal-Listener                                                         | Staff-Listener                |
+| ------------------------------------- | ----------------------------------------------------------------------- | ----------------------------- |
+| Patient → Portal-IP                   | erreichbar (nur Allowlist)                                              | abgewiesen                    |
+| Patient → Staff-IP                    | abgewiesen                                                              | abgewiesen                    |
+| Staff → Staff-IP                      | abgewiesen                                                              | erreichbar                    |
+| Staff → Portal-IP                     | nur falls das fremde Netz es routet; kein Host-Publish auf der Staff-IP | abgewiesen                    |
+| nach Reboot / Docker-Desktop-Neustart | unverändert                                                             | unverändert                   |
+| Portal-NIC entfernt / IP weg          | fail-closed                                                             | Staff unverändert             |
+| Staff-NIC entfernt / IP weg           | Portal unverändert, sofern Portal-IP bleibt                             | fail-closed für Staff-Publish |
+| DHCP-/Adresswechsel                   | fail-closed                                                             | fail-closed                   |
+| IPv6                                  | kein `[::]`-Publish; PoC: Port von außen über IPv6 zu                   | dasselbe                      |
+
+IPv6 auf der Karte darf existieren. Ohne explizite Host-IP publiziert Docker
+oft zusätzlich `[::]`. Phase 0 und der PoC müssen das ausschließen; eine
+IPv6-Adresse allein sperrt das Portal nicht.
+
+---
+
+## 7. Keine Weiterleitung zwischen den Netzen
+
+„Ping geht nicht“ ist kein ausreichender Nachweis. ICMP kann blockiert sein,
+während TCP oder IPv6 weiterhin funktionieren. Außerdem besitzt ein Dual-Homed
+Host zwangsläufig lokale Routen zu beiden direkt angeschlossenen Subnetzen.
+
+Wir müssen stattdessen verhindern:
+
+- IPv4- und IPv6-Forwarding;
+- Betriebssystem-Netzwerkbrücken, an denen Staff- oder Portal-Interface
+  beteiligt sind;
+- Internet Connection Sharing, RRAS, NAT oder vergleichbare Dienste zwischen
+  den ausgewählten Interfaces;
+- Forwarding-Regeln zwischen Staff- und Portal-Interface;
+- Listener auf der falschen IP;
+- Docker-Regeln, die die Host-Firewall umgehen;
+- Antworten auf Staff-Dienste, wenn Pakete über das Patienten-Interface
+  eintreffen.
+
+Die Host-Firewall (F1-Ebene 2) filtert nach **eingehendem Interface, lokaler
+Zieladresse und Zielport**, nicht nur nach Ziel-IP. Das ist insbesondere bei
+Betriebssystemen mit schwachem Hostmodell wichtig, die lokal konfigurierte
+Adressen nicht strikt einem Eingangsinterface zuordnen. Sie muss den Verkehr
+zum Docker-Desktop-Backend treffen, nach Reboot fortbestehen und darf nicht
+durch neu erzeugte Publish-Regeln umgangen werden. Maßgeblich bleibt der
+externe Scan aus beiden Netzen.
+
+---
+
+## 8. Setup- und Laufzeitprüfungen
+
+### 8.1 Lokale Prüfungen
+
+Der Manager prüft die Publish-Grenze bereits im Staff-Betrieb und wiederholt die
+vollständigen Prüfungen bei Portal-Aktivierung, bei jedem Stack-Start und nach
+erkannten Netzwerkänderungen:
+
+1. freigegebene Kombination aus Windows/macOS und Docker-Desktop-Version;
+2. keine IPv4-/IPv6-Docker-Publishes auf `0.0.0.0`, `[::]`/`:::` oder einer
+   unerwarteten Host-IP;
+3. App abhängig vom Modus nur auf Staff-IP oder Loopback;
+4. stabile, eindeutig ausgewählte Staff- und Portal-Adressen samt Interface-ID;
+5. ob die Portal-IP auf einem anderen gemeldeten Interface liegt oder nur eine
+   zweite Adresse des Staff-Interface ist;
+6. bei verschiedenen Interfaces: unterschiedliche, nicht überlappende
+   Subnetze; beim selben Interface: Überlappung als ausdrücklicher Warnzustand;
+7. Standardroute nur über die Staff-Konfiguration;
+8. kein zusätzliches Gateway und kein DNS durch die Portal-Konfiguration;
+9. kein IPv4-/IPv6-Forwarding und keine Bridge-/ICS-/NAT-Verbindung zwischen
+   den ausgewählten Staff- und Portal-Interfaces; interne Docker-Desktop-Netze
+   sind kein Fehlerzustand;
+10. erwartete Host-Firewallregeln aktiv;
+11. tatsächliche Host-Publishes und getrennte Container-Listener je IP und Port;
+12. Portal-SNI nur auf Portal-IP erfolgreich;
+13. Staff-SNI und bekannte Staff-/Admin-Pfade auf Portal-IP abgewiesen;
+14. Portal-SNI auf der Staff-IP abgewiesen; `/portal` unter Staff-SNI bleibt
+    als interne Vorschau erlaubt;
+15. Wildcard-Zertifikat gültig und für Staff- sowie Portal-Namen passend;
+16. weder am Staff- noch am Portal-Listener ein Default-Fallback ohne passendes
+    SNI/`Host`.
+
+Eine nicht mehr bindbare oder nicht mehr eindeutig zuordenbare Portal-IP ist
+**fail-closed**: Der Portal-Listener startet nicht beziehungsweise wird
+geschlossen. Der interne Staff-Betrieb bleibt verfügbar. Adapterwechsel,
+Adressänderungen und neue Default-Routen dürfen nicht still akzeptiert werden.
+
+Eine zweite Adresse auf demselben gemeldeten Interface ist dagegen ein
+**Warnzustand**, kein technischer Blocker (Demos, fehlende zweite NIC). Der
+Manager erklärt, dass dabei keine getrennte Interfacegrenze vorhanden ist.
+Liegt sie im Staff-Subnetz, weist er zusätzlich darauf hin, dass Staff-IP und
+andere Geräte im selben LAN erreichbar sein können. Ohne ausdrückliche
+Bestätigung startet kein Portal-Listener. Die Warnung bleibt im Portalstatus
+sichtbar.
+
+### 8.2 Optionale Prüfung durch die Praxis
+
+Der Host kann lokal nicht beweisen, was ein externer AP oder Router tatsächlich
+routet. Diese Netzkonfiguration liegt in der Verantwortung der Praxis
+beziehungsweise ihrer IT und ist kein Aktivierungsgate von Praxis Flow.
+
+Der Manager kann nach der Aktivierung einen QR-Code und eine kurze optionale
+Prüfhilfe anzeigen:
+
+- `https://portal.<installationsraum>` vom Patienten-WLAN aus öffnen;
+- bei Bedarf prüfen, ob Staff-Hostname, Staff-IP oder andere Praxisgeräte aus
+  diesem WLAN erreichbar sind.
+
+Das ist ein Vorschlag zur Unterstützung der Praxis, keine von Praxis Flow
+durchgeführte oder zertifizierte Netzabnahme. Das Ergebnis ändert weder den
+Portalstatus noch unsere Produktzusage. Im Same-NIC-Warnpfad bleibt unabhängig
+davon der Status `aktiv mit Warnung — keine getrennte NIC` sichtbar.
+
+---
+
+## 9. Manager-Strecke
+
+Das Patientenportal ist eine optionale Funktion und kein einmaliger Schritt der
+Erstinstallation. Es kann sowohl während des initialen Setups als auch später
+bei einer bereits laufenden Installation unter **Netzwerk → Patientenportal**
+aktiviert werden. Eine Staff-Installation bleibt bis dahin ohne Portal
+vollständig betriebsfähig.
+
+### 9.1 Erkennung und Auswahl der Portal-IP
+
+Vor der Aktivierung ermittelt der Manager alle lokal konfigurierten, bindbaren
+IPv4-Adressen und gruppiert sie nach dem vom Betriebssystem gemeldeten
+Interface. Die Auswahl zeigt nur Interface-Name, IPv4/CIDR und Linkstatus –
+vergleichbar mit der Service-Bindung üblicher NAS-Oberflächen. VLANs, Bonds,
+Bridges, USB-, Docker-, VPN- und andere Adapter erscheinen so, wie das
+Betriebssystem sie bereitstellt; der Manager versucht nicht, ihre
+Hardwaretopologie zu erraten. Erkennbare virtuelle Adapter (docker, vEthernet,
+utun/VPN, Tethering) werden nicht ausgeblendet, tragen aber einen Warnhinweis
+(keine zuverlässige Patienten-NIC) und brauchen eine Bestätigung.
+
+Nicht angeboten werden:
+
+- Loopback- und Link-Local-Adressen;
+- die vom übrigen Praxis-Flow-Stack verwendete Staff-IP;
+- Adressen auf einem anderen Interface, deren Subnetz mit dem Staff-Netz
+  überlappt und dadurch mehrdeutige Host-Routen erzeugt;
+- Adressen, die nicht lokal gebunden oder bereits widersprüchlich belegt sind.
+
+Der Benutzer wählt daraus die **Portal-IP**. Liegt sie laut Betriebssystem auf
+einem anderen Interface als die Staff-IP, wird dieser Weg als **empfohlen**
+markiert; die Praxis bestätigt, dass dieses Interface für das Patientennetz
+vorgesehen ist. Eine zusätzliche Adresse auf demselben Interface bleibt
+auswählbar, trägt aber den Warnhinweis **keine Interface-Netztrennung** und
+verlangt eine ausdrückliche Bestätigung. Das gilt auch bei einer zweiten Adresse
+im Staff-Subnetz.
+
+Entscheidend ist anschließend nicht die Adapterbezeichnung, sondern der
+tatsächliche Bind-Test: Der Portal-Host-Publish wird ausschließlich an die
+gewählte Adresse gebunden, während der restliche Praxis-Flow-Stack an Staff-IP
+oder Loopback bleibt. Schlägt das fehl, ist die Adresse nicht nutzbar.
+
+Der Manager erfindet oder scannt keine vermeintlich freie Adresse im fremden
+Patientennetz. Ist keine zweite bindbare lokale IP vorhanden, ist die
+Aktivierung nicht möglich. Ist nur eine zusätzliche Adresse auf dem Staff-
+Interface vorhanden, empfiehlt die Meldung konkret ein zweites Interface mit
+fester IPv4 ohne Gateway und DNS, lässt aber die bestätigte Abweichung zu. Nach
+**Erneut prüfen** wird die Adapterliste neu eingelesen; eine Neuinstallation des
+Stacks ist nicht erforderlich.
+
+### 9.2 Aktivierungsablauf
+
+1. **Patientenportal aktivieren** auswählen.
+2. Manager prüft Plattform-/Docker-Desktop-Freigabe, Phase-0-Publishes und
+   aktiven TLS-Proxy.
+3. Manager zeigt neben der Staff-IP die bindbaren Portal-IP-Kandidaten nach
+   Interface gruppiert an.
+4. Portal-IP aus dem Auswahldialog wählen; beim selben Interface die fehlende
+   Interface-Netztrennung ausdrücklich bestätigen, bei einem anderen dessen
+   Verwendung als Patientennetz bestätigen.
+5. Lokale Publish-/Listenergrenze prüfen und erforderliche Host-Firewallregeln
+   anwenden.
+6. Portal-A-Record ergänzen; bei Managed TLS vorhandenen Wildcard-Challenge-
+   CNAME und Wildcard-Zertifikat prüfen, bei Custom PEM die Abdeckung beider
+   konkreten Namen als hartes Aktivierungsgate prüfen.
+7. Neue Caddy-Konfiguration und Compose-Publish-Konfiguration erzeugen, den
+   bisherigen Stand sichern und beides offline validieren.
+8. Portal-Host-Publish auf `portal-ip:443 → proxy:444` und Portal-Positivliste
+   durch Neuerzeugen des Proxy-Containers transaktional aktivieren.
+9. Später: Optional QR-Code und Prüfhilfe für einen Test durch die Praxis anzeigen.
+
+Die Aktivierung ist wiederaufnehmbar: Ein offener DNS- oder Zertifikatsschritt
+verwirft die gewählte Konfiguration nicht. Bis alle blockierenden lokalen
+Sicherheitsprüfungen erfolgreich sind und Warnungen bestätigt wurden, startet
+jedoch kein Portal-Listener. Die optionale Prüfung durch die Praxis blockiert
+den Listener nicht.
+Die Aktivierung erweitert zwangsläufig Docker-/Caddy-Konfiguration. Sie wird
+deshalb transaktional ausgeführt. Ein neuer Host-Publish kann nicht durch einen
+Caddy-Reload entstehen: Nach der Offline-Validierung schreibt der Manager die
+neue Compose- und Proxy-Konfiguration und erzeugt den Proxy-Container neu. Er
+prüft zuerst Staff-HTTPS und Health, danach den Portalpfad. Bei einem Fehler
+stellt er die gesicherte Compose-/Proxy-Konfiguration wieder her, erzeugt den
+Proxy erneut und prüft Staff nochmals. Staff-Hostname, Staff-Routen und Staff-IP
+werden durch eine spätere Portal-Aktivierung nicht geändert. Während des
+Proxy-Recreate ist eine kurze Staff-Unterbrechung zu erwarten und wird vor der
+Bestätigung angekündigt; ein dauerhafter Staff-Ausfall ist nicht akzeptiert.
+
+Wird die gespeicherte Portal-IP später entfernt, der Adapter getauscht oder die
+Adresse zur Staff-IP, setzt der Manager das Portal fail-closed auf
+`gesperrt — Netzkonfiguration unsicher`. Er bietet anschließend eine neue
+Adressauswahl an, ohne den Staff-Stack neu einzurichten.
+
+Der Status unterscheidet mindestens:
+
+- `nicht eingerichtet`;
+- `nicht unterstützt — Hostplattform`;
+- `gesperrt — unsichere Docker-Portfreigabe`;
+- `NIC getrennt, DNS/Zertifikat offen`;
+- `lokal aktivierungsbereit`;
+- `aktiv`;
+- `aktiv mit Warnung — keine getrennte NIC`;
+- `gesperrt — Netzkonfiguration unsicher`;
+- `degradiert — DNS/Zertifikat/Portal-Erreichbarkeit`.
+
+Die Oberfläche verspricht nicht, einen AP oder Router automatisch zu erkennen
+oder zu konfigurieren.
+
+### 9.3 Deaktivierung und Reparatur
+
+Das Portal kann nachträglich deaktiviert werden. Der Manager entfernt dabei
+transaktional:
+
+- den Host-Publish `portal-ip:443 → proxy:444`;
+- Portal-Listener und Portal-Host-Matcher;
+- die von Praxis Flow verwalteten Firewallregeln für den Portalpfad.
+
+App, Staff-Publishes, Staff-Origin und Wildcard-Zertifikat bleiben unverändert.
+Der Portal-A-Record kann für eine spätere Reaktivierung bestehen bleiben; ohne
+Listener antwortet der Host dort nicht. Löschen oder Ändern des DNS-Eintrags
+bleibt Teil der Operator-/Praxis-IT-Strecke. Vor dem Anwenden zeigt der Manager
+die Folgen und prüft nachher explizit, dass Staff weiterhin erreichbar und die
+Portal-IP auf 443 geschlossen ist. Da auch das Entfernen des Host-Publishes ein
+Proxy-Recreate verlangt, gelten dabei dieselbe angekündigte kurze Staff-
+Unterbrechung, Sicherung, Probe und Rollback-Reihenfolge wie bei der
+Aktivierung.
+
+---
+
+## 10. Ausblick: Drittanbieter-Captive-Portal
+
+Captive-Adapter sind nicht Teil von Portal-v1. Das Portal funktioniert ohne
+Internetfreischaltung; Praxis Flow wird auch später weder Gateway noch
+Captive-Datenpfad.
+
+Damit wir den Weg nicht verbauen, bleiben `PORTAL_BASE_URL` und Portal-Origin
+stabil und vendorneutral. Der persistierte Portalzustand sowie die
+Manager-Navigation erhalten einen klaren, zunächst ungenutzten Erweiterungspunkt
+für optionale Adapterkonfiguration und einen vom Portalstatus getrennten
+Adapterstatus. Eine Captive-Einrichtung darf erst nach einer funktionierenden
+Portal-IP und Portal-URL angeboten werden und muss unabhängig aktivier-,
+deaktivier- und diagnostizierbar bleiben. Gesundheitsdaten werden nicht an
+einen Controller übertragen.
+
+Die fachlichen Voraussetzungen, der Adaptervertrag und die spätere
+Manager-Strecke stehen in der separaten
+[Captive-Adapter-Roadmap](roadmap-captive-portal-adapters.md).
+
+---
+
+## 11. Bedrohungsmodell und akzeptiertes Restrisiko
+
+Ein Patientengerät gilt als nicht vertrauenswürdig und darf den Portal-Origin
+aktiv angreifen. Im empfohlenen Standardweg begrenzt die Zwei-NIC-Konfiguration
+die von **unserem Host** über die Portal-IP angebotenen Dienste und verhindert
+dort Host-Forwarding. Ob das externe Patientennetz daneben einen anderen Weg
+zur Staff-IP oder ins Praxis-LAN besitzt, liegt außerhalb dieser Produktgrenze.
+Auch hostintern entsteht keine vollständige Trennung zweier Anwendungen: Portal
+und Staff verwenden weiterhin denselben App-Kern.
+
+Akzeptiertes Restrisiko:
+
+- Eine echte Codeausführungsschwachstelle in Portal oder Backend könnte trotz
+  Netzgrenze den gemeinsamen Host, die SQLite-Datenbank oder das Praxis-LAN
+  gefährden.
+- Portal-Daten können während einer aktiven Session im Speicher oder kurzzeitig
+  auf Disk vorhanden sein, auch wenn keine langfristig wertvollen Bestände im
+  Portal gehalten werden.
+- Die kurze Anwesenheit eines Patienten reduziert die Gelegenheit, ist aber
+  keine eigene Sicherheitskontrolle; Angriffe können automatisiert werden.
+
+Das Risiko wird für den lokalen, nicht aus dem Internet erreichbaren Betrieb als
+vertretbar akzeptiert, wenn mindestens gilt:
+
+- kleine Proxy-Positivliste;
+- kurze Portal-Sessions und kurze temporäre Datenhaltung;
+- Größen-, Typ- und Anzahlgrenzen für Uploads;
+- Rate-Limits pro Client und Session;
+- keine Secrets oder Gesundheitsdaten in Logs;
+- Container ohne Root, Docker-Socket und unnötige Capabilities;
+- kein vom Patienten steuerbares Ziel für serverseitige Requests; App und
+  Sandbox dürfen ausgehend nur fest konfigurierte, fachlich erforderliche
+  Dienste erreichen;
+- zeitnahe Sicherheitsupdates;
+- App-/Host-Härtung bleibt unabhängig von der Netztrennung bestehen.
+
+Diese Punkte sind Freigabekriterien, nicht nur Empfehlungen im
+Bedrohungsmodell. Die Delivery-Konfiguration weist insbesondere Non-Root,
+entfernte Linux-Capabilities, `no-new-privileges`, fehlenden Docker-Socket und
+die tatsächlich notwendigen ausgehenden Ziele nach. Wo eine technische
+Egress-Allowlist auf einem gemeinsam genutzten Praxis-PC nicht zuverlässig
+durchsetzbar ist, reduziert die empfohlene DMZ-/Applikationsplatzierung aus §4.1
+den erreichbaren Netzbereich; der Same-NIC-Warnpfad erhält daraus keine
+zusätzliche Isolationszusage.
+
+Technische Zusage für den geprüften Zwei-NIC-Standardweg:
+
+> Praxis Flow veröffentlicht auf seiner ausgewählten Portal-IP ausschließlich
+> den getrennten Portal-Listener mit Positivliste und leitet auf dem Host keinen
+> Verkehr zwischen Patienten- und Staff-Interface weiter. Staff-SNI und
+> Staff-Pfade werden auf der Portal-IP abgewiesen. Das Portal bleibt ein bewusst
+> erreichbarer Anwendungseingang; das Restrisiko einer Anwendungsschwachstelle
+> wird begrenzt, aber nicht ausgeschlossen.
+
+Diese Zusage bestätigt **nicht**, dass AP, Router oder andere Wege im
+Patientennetz den Zugriff auf die Staff-IP oder das übrige Praxis-LAN
+verhindern. Das verantwortet die Praxis beziehungsweise Praxis-IT. Der externe
+QR-/Kontrolltest ist lediglich eine optionale Prüfhilfe für diese und weder
+Bestandteil unserer Aktivierungsentscheidung noch eine Zertifizierung der
+fremden Netzkonfiguration.
+
+Bei Staff- und Portal-IP auf demselben Interface gilt diese Zusage ausdrücklich
+**nicht**. Praxis Flow kann dort die getrennte Origin-/Listener-Bindung und die
+Portal-Positivliste prüfen, aber keine physische oder logische Netztrennung
+bestätigen. Der Pfad bleibt bewusst erlaubt (Bestätigung plus dauerhafter
+Warnstatus), weil Demos und Ein-NIC-Setups sonst ausgesperrt wären. Ein härteres
+Gate würde fremdes Routing im Patientennetz ohnehin nicht sichtbar machen.
+
+---
+
+## 12. Nicht Teil dieser Entscheidung
+
+- Cloud-/Internet-Portal oder öffentliche Portweiterleitung;
+- Betrieb von Gesundheitsdaten durch einen externen Portal-Dienst;
+- eigener Access Point, Router, DHCP-, DNS- oder Captive-Dienst;
+- Fritzbox-spezifische Automatisierung;
+- automatische Einstufung eines Clients als Patient allein anhand seines CIDR;
+- gemeinsamer Origin mit pfadbasierter Patientenerkennung;
+- Mini-PC als zweiter App-Kern oder zweite SQLite-Installation;
+- IPv6-Patientennetz im ersten Wurf;
+- vollständige Absicherung fremder PVS-, NAS- oder Druckersysteme.
+
+---
+
+## 13. Umsetzungsblöcke
+
+**Gate 0 ist chronologisch zuerst:** Bevor eine Delivery-Bindung verändert oder
+Portal-UI gebaut wird, muss der F1-Machbarkeits-PoC auf den vorgesehenen
+Windows-/macOS- und Docker-Desktop-Versionen bestehen. Der TLS-Namensumbau kann
+parallel erfolgen, weil er ohne Portal-A-Record und Portal-Publish keine zweite
+Netzexposition erzeugt. Phase 0 wird dagegen erst auf einer durch Gate 0
+freigegebenen Plattform ausgerollt.
+
+1. **F1-Machbarkeits-PoC:** zwei explizite Host-IP-Bindings auf Port 443,
+   Defender beziehungsweise `pf`, benötigte Elevation, Firewall-Rollback und
+   Black-Box-Scan aus beiden Netzen; außerdem Reboot, Adressverlust, IPv6 und
+   Weak-Host-Verhalten. Bei Fehlschlag kein Portal auf dieser Plattform und
+   separate Architekturentscheidung statt stillen Edge-Proxy-Fallbacks.
+2. **TLS-Vertrag, parallel möglich:** State, Operator-Mail, Caddy-Generator,
+   Backup-Sidecar und Labels wie in §5.2; nur Wildcard-ACME-Orders; Staff-A und
+   Challenge-CNAME bei Grundeinrichtung; Portal-A erst bei Aktivierung, ohne
+   Zertifikatsrenew.
+3. **Phase 0 nach bestandenem Gate 0:** alle Delivery-Publishes von
+   IPv4-/IPv6-Wildcard-Adressen auf explizite Staff-IP beziehungsweise Loopback
+   umstellen; Docker-Statusvertrag von reinen Portnummern auf vollständige
+   Laufzeit-Bindings erweitern; Manager-Audit, Elevation und transaktionalen
+   Firewall-/Compose-Rollback umsetzen. Zusätzlich zum bestehenden macOS-DMG
+   wird ein Windows-Manager-Artefakt benötigt.
+4. **Proxy (Portal-Listener):** getrennte Host-Publishes auf interne
+   Staff-/Portal-Ports, getrennte Caddy-Server, abweisende Defaults ohne
+   SNI/Host, strikte SNI-/Host-Prüfung, ausführbare Portal-Positivliste und
+   keine globalen IPv4-/IPv6-Docker-Ports.
+5. **App-Vertrag:** `PORTAL_BASE_URL`, host-only Cookies und getrennte
+   Rate-Limits mit verifizierter Client-IP vom ausschließlich vertrauten
+   Caddy-Hop. Origin-Gate in der App ist nicht v1 (siehe §6.2).
+6. **Runtime-Härtung:** App und Sandbox non-root, keine unnötigen Capabilities
+   oder Docker-Socket, `no-new-privileges`, fest konfigurierte ausgehende Ziele
+   und möglichst kleine Egress-Freigaben.
+7. **Manager:** IP-/Adaptererkennung und Auswahldialog, Aktivierung bei Setup
+   oder im laufenden Betrieb, bestätigungspflichtiger und dauerhaft sichtbarer
+   Warnstatus bei gemeinsamer NIC, wiederaufnehmbare Einrichtung,
+   transaktionale Aktivierung/Deaktivierung, Fail-closed-Status, optionale
+   QR-/Praxis-IT-Prüfhilfe und Reparatur nach Adapter-/Adressänderung. Die
+   bestehende Captive-zentrierte Topologieanzeige wird durch
+   Zwei-NIC-Standard, Same-NIC-Warnpfad und optionalen späteren Captive-Adapter
+   ersetzt.
+8. **Betrieb:** Praxis-IT-Checkliste einschließlich der empfohlenen
+   DMZ-/Applikationsplatzierung, unterstützte AP-/Router-Szenarien, Diagnose und
+   Supportgrenze.
+9. **Tests:** gekreuzte Ziel-IP-/SNI-Matrix, Listener-/Firewall-
+   Integrationstests, Zwei-NIC- und Same-NIC/Warnpfad, Docker-Port-Audit,
+   Parserfälle für explizite sowie globale IPv4-/IPv6-Bindings, IPv4/IPv6,
+   Reboot und Docker-Desktop-Neustart, Firewall-/Elevation-Rollback,
+   ACME-Staging-Orders, Restore mit aktivem Portal, getrennte Rate-Limits für
+   mehrere Client-IPs samt Spoofing-Negativtest, Container-/Egress-Härtung,
+   Routenkatalog-Negativtest, NIC-Drift, Aktivierungs-Rollback und
+   Deaktivierung.
+10. **Später, nicht v1:** vendorneutrale Adapter gemäß
+    [Captive-Adapter-Roadmap](roadmap-captive-portal-adapters.md).
+
+Offen vor Implementierungsbeginn:
+
+- Erweiterung der Operator-Mail-/Token-Strecke um zwei A-Records und den
+  installationsbezogenen Wildcard-Namen;
+- vollständige API-Positivliste des Portals;
+- unterstützte Windows-/macOS- und Docker-Desktop-Mindestversionen;
+- F1-PoC: Compose-Host-IP **und** Host-Firewall **und** externer Zwei-NIC-Scan
+  je Plattform; Binding allein schließt F1 nicht;
+- Packaging, Installation, Elevation und Firewall-Rollback des Managers auf
+  Windows und macOS;
+- nur bei gescheitertem F1-PoC: eigene Folgeentscheidung, ob ein nativer
+  Edge-Proxy als separate Alternativarchitektur geplant wird oder die Plattform
+  ohne Portal bleibt.
