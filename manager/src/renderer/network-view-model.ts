@@ -43,6 +43,11 @@ export function networkIsBusy(phase: NetworkPhase): boolean {
   );
 }
 
+/** Host writes / stack probes — not the tab's initial snapshot load. */
+export function networkPhaseIsHostMutation(phase: NetworkPhase): boolean {
+  return phase === 'saving' || phase === 'restarting' || phase === 'checking';
+}
+
 export function networkPhaseProgressText(phase: NetworkPhase): string {
   switch (phase) {
     case 'loading':

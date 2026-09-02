@@ -8,7 +8,13 @@ Stand: 2026-09-02
 - `app.requestSingleInstanceLock()` — Prod eine Instanz; Dev pro Install-Home
 - Fremde API nur mit `PRAXIS_FLOW_SETUP_ATTACH=1`
 - Review: Packager-Import/Smoke (isoliertes Temp-Verzeichnis), Ready-Puffer, Spawn-error; npm-Tree-Kill später
-- Als Nächstes: Manager-Cleanup weiter (nicht still 9190)
+
+## 2026-09-02 — Netzwerk- und TLS-Mutationen verriegelt
+
+- Gemeinsamer Tab-Lock; Hydrate single-flight (hostname+LAN); Confirm beim Session-Ende tot
+- TLS-Controller bleibt über Tab-Wechsel; kein Draft-Reset
+- Host-Write-Latch überlebt hide(); Hydrate merkt den Versuch pro Identität (`lastHydrateKey`)
+- Als Nächstes: Manager-Cleanup weiter
 
 ## 2026-09-01 — IPv6: kein Publish, kein Blocker
 

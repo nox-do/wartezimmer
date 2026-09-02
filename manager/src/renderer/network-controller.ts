@@ -57,7 +57,9 @@ export type NetworkControllerDeps = NetworkCallbacks & {
   getConfig: () => HostStatus | null;
   getRuntime: () => HostRuntimeHealth | null;
   onStateChange?: () => void;
-  requestConfirm: (message: string, onConfirm: () => void) => void;
+  requestConfirm: (message: string, onConfirm: () => void, onCancel?: () => void) => void;
+  /** True while TLS (or hydrate replay) is writing the host. */
+  isPeerMutating?: () => boolean;
   /** Override probe polling (tests / shorter LAN grace). */
   verifyProbeOptions?: {
     maxWaitMs?: number;
@@ -84,6 +86,8 @@ export type NetworkController = {
   syncFromConfig: () => void;
   /** Explicit discard: rehydrate from current config (idle only). */
   discardDraft: () => void;
+  /** Host write still running, even if hide() already reset the UI phase. */
+  isHostWriteInFlight: () => boolean;
 };
 
 function createInitialState(): NetworkState {
@@ -171,6 +175,24 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
   let saveSubmittedDraft: NetworkDraft | null = null;
   /** Config arrived while busy; flush when phase returns to idle. */
   let pendingConfigHydrate = false;
+  /** Survives hide()/idle so TLS cannot start while saveHostNetwork is still in flight. */
+  let hostWriteInFlight = 0;
+
+  function hostLockedByPeer(): boolean {
+    return Boolean(deps.isPeerMutating?.());
+  }
+
+  function beginHostWrite(): void {
+    hostWriteInFlight += 1;
+    notify();
+  }
+
+  function endHostWrite(): void {
+    if (hostWriteInFlight > 0) {
+      hostWriteInFlight -= 1;
+    }
+    notify();
+  }
 
   function notify(): void {
     deps.onStateChange?.();
@@ -318,73 +340,78 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
 
     const proxyEnabled = state.proxyEnabled;
     saveSubmittedDraft = currentDraftSnapshot();
-    setPhase(input.repairProxy || input.restartCompose ? 'restarting' : 'saving');
-
-    let result: HostNetworkResult;
+    beginHostWrite();
     try {
-      if (!input.restartCompose) {
-        setPhase('saving');
+      setPhase(input.repairProxy || input.restartCompose ? 'restarting' : 'saving');
+
+      let result: HostNetworkResult;
+      try {
+        if (!input.restartCompose) {
+          setPhase('saving');
+        }
+        result = await deps.api.saveHostNetwork(
+          buildHostNetworkSaveInput({
+            lanAppIp,
+            restartCompose: input.restartCompose,
+            repairProxy: input.repairProxy,
+            canonicalBaseUrl,
+            proxyEnabled,
+            preserveTlsIdentity,
+          }),
+        );
+      } catch (error) {
+        if (generation !== actionGeneration) {
+          return;
+        }
+        saveSubmittedDraft = null;
+        setErrorNotice(
+          error instanceof Error ? error.message : 'Netzwerk konnte nicht gespeichert werden.',
+        );
+        return;
       }
-      result = await deps.api.saveHostNetwork(
-        buildHostNetworkSaveInput({
-          lanAppIp,
-          restartCompose: input.restartCompose,
-          repairProxy: input.repairProxy,
-          canonicalBaseUrl,
-          proxyEnabled,
-          preserveTlsIdentity,
-        }),
-      );
-    } catch (error) {
+
       if (generation !== actionGeneration) {
         return;
       }
-      saveSubmittedDraft = null;
-      setErrorNotice(
-        error instanceof Error ? error.message : 'Netzwerk konnte nicht gespeichert werden.',
-      );
-      return;
-    }
 
-    if (generation !== actionGeneration) {
-      return;
-    }
-
-    await deps.onAfterMutation?.();
-    if (generation !== actionGeneration) {
-      return;
-    }
-
-    // Env already written — keep saveSubmittedDraft so a following config refresh
-    // can still hydrate server-normalized values even if restart/proxy start failed.
-    if (input.restartCompose && !result.composeRestarted) {
-      setErrorNotice(
-        input.repairProxy
-          ? networkProxyStartFailureMessage()
-          : networkRestartFailureMessage(result),
-      );
-      return;
-    }
-
-    if (input.repairProxy || (proxyEnabled && input.restartCompose)) {
-      if (networkProxyMissingAfterRestart(result, proxyEnabled)) {
-        setErrorNotice(networkProxyStartFailureMessage());
+      await deps.onAfterMutation?.();
+      if (generation !== actionGeneration) {
         return;
       }
-    }
 
-    if (!result.stackWasRunning && !result.composeRestarted) {
-      setWarningNotice(networkSavedWhileStoppedMessage());
-      return;
-    }
+      // Env already written — keep saveSubmittedDraft so a following config refresh
+      // can still hydrate server-normalized values even if restart/proxy start failed.
+      if (input.restartCompose && !result.composeRestarted) {
+        setErrorNotice(
+          input.repairProxy
+            ? networkProxyStartFailureMessage()
+            : networkRestartFailureMessage(result),
+        );
+        return;
+      }
 
-    const savedUrl = result.deviceUrls.appBaseUrl?.trim() || canonicalBaseUrl;
-    const verified = await verifySavedBaseUrl(savedUrl, generation);
-    if (generation !== actionGeneration || !verified.message) {
-      return;
+      if (input.repairProxy || (proxyEnabled && input.restartCompose)) {
+        if (networkProxyMissingAfterRestart(result, proxyEnabled)) {
+          setErrorNotice(networkProxyStartFailureMessage());
+          return;
+        }
+      }
+
+      if (!result.stackWasRunning && !result.composeRestarted) {
+        setWarningNotice(networkSavedWhileStoppedMessage());
+        return;
+      }
+
+      const savedUrl = result.deviceUrls.appBaseUrl?.trim() || canonicalBaseUrl;
+      const verified = await verifySavedBaseUrl(savedUrl, generation);
+      if (generation !== actionGeneration || !verified.message) {
+        return;
+      }
+      patch({ phase: 'idle', notice: noticeFromVerified(verified) });
+      flushPendingConfigHydrate();
+    } finally {
+      endHostWrite();
     }
-    patch({ phase: 'idle', notice: noticeFromVerified(verified) });
-    flushPendingConfigHydrate();
   }
 
   return {
@@ -404,7 +431,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     },
 
     applyAndVerify() {
-      if (networkIsBusy(state.phase)) {
+      if (networkIsBusy(state.phase) || hostWriteInFlight > 0 || hostLockedByPeer()) {
         return;
       }
       if (!needsApply()) {
@@ -416,6 +443,9 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
 
       if (stackRunning()) {
         deps.requestConfirm(networkRestartConfirmMessage(proxyChanging), () => {
+          if (networkIsBusy(state.phase) || hostLockedByPeer()) {
+            return;
+          }
           void saveAndMaybeVerify({ restartCompose: true });
         });
         return;
@@ -425,7 +455,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     },
 
     restoreProxy() {
-      if (networkIsBusy(state.phase)) {
+      if (networkIsBusy(state.phase) || hostWriteInFlight > 0 || hostLockedByPeer()) {
         return;
       }
       if (!proxyNeedsRestore(deps.getConfig(), deps.getRuntime())) {
@@ -437,12 +467,15 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
         return;
       }
       deps.requestConfirm(NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE, () => {
+        if (networkIsBusy(state.phase) || hostLockedByPeer()) {
+          return;
+        }
         void saveAndMaybeVerify({ restartCompose: true, repairProxy: true });
       });
     },
 
     verifyActiveConfiguration(baseUrl) {
-      if (networkIsBusy(state.phase)) {
+      if (networkIsBusy(state.phase) || hostLockedByPeer()) {
         return;
       }
       if (!stackRunning()) {
@@ -538,7 +571,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
 
     discardDraft() {
       const config = deps.getConfig();
-      if (!config || networkIsBusy(state.phase)) {
+      if (!config || networkIsBusy(state.phase) || hostWriteInFlight > 0 || hostLockedByPeer()) {
         return;
       }
       saveSubmittedDraft = null;
@@ -546,6 +579,10 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       const draft = draftFromConfig(config, state.network);
       applyDraft(draft);
       patch({ notice: null });
+    },
+
+    isHostWriteInFlight() {
+      return hostWriteInFlight > 0;
     },
   };
 }

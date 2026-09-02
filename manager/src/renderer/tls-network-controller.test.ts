@@ -26,10 +26,12 @@ function createController(options: {
   api?: Partial<PraxisManagerApi>;
   status: TlsStatus;
   lanIp?: string;
+  lanIpFn?: () => string | null;
   lanIpStale?: boolean;
   configuredLanIp?: string | null;
-  requestConfirm?: (message: string, onConfirm: () => void) => void;
+  requestConfirm?: (message: string, onConfirm: () => void, onCancel?: () => void) => void;
   onAfterMutation?: () => void | Promise<void>;
+  isPeerMutating?: () => boolean;
 }) {
   return createTlsNetworkController({
     api: options.api as PraxisManagerApi,
@@ -50,10 +52,11 @@ function createController(options: {
           container: null,
         },
       }),
-    lanIp: () => options.lanIp ?? '192.168.1.10',
+    lanIp: options.lanIpFn ?? (() => options.lanIp ?? '192.168.1.10'),
     onAfterMutation: options.onAfterMutation ?? (async () => {}),
     onStateChange: () => {},
     requestConfirm: options.requestConfirm ?? ((_message, onConfirm) => onConfirm()),
+    isPeerMutating: options.isPeerMutating,
   });
 }
 
@@ -352,7 +355,6 @@ test('client validation does not refresh host status', async () => {
 
   assert.equal(afterMutationCalls, 0);
 });
-
 test('failed verify-dns does not refresh host status', async () => {
   let afterMutationCalls = 0;
   const controller = createController({
@@ -369,4 +371,189 @@ test('failed verify-dns does not refresh host status', async () => {
   await controller.verifyDns();
   assert.equal(afterMutationCalls, 0);
   assert.equal(controller.getState().error, 'resolver down');
+});
+
+function awaitingManagedReplay() {
+  return tls({
+    state: 'awaiting-operator-dns',
+    mode: 'managed',
+    hostname: '7fk3m2.lan.notaus.de',
+    installationId: '7fk3m2q9',
+    tokenConsumed: false,
+  });
+}
+
+function operatorRequest(token: string, lanIp = '192.168.1.10') {
+  return {
+    installationId: '7fk3m2q9',
+    oneTimeToken: token,
+    aRecord: { name: '7fk3m2.lan.notaus.de', value: lanIp },
+    acmeCname: {
+      name: '_acme-challenge.7fk3m2.lan.notaus.de',
+      value: 'uuid.auth.acme-dns.io',
+    },
+  };
+}
+
+test('hydrateOperatorRequest replays once per hostname and LAN IP', async () => {
+  let prepares = 0;
+  const controller = createController({
+    status: awaitingManagedReplay(),
+    api: {
+      prepareHostTls: async () => {
+        prepares += 1;
+        return {
+          tls: awaitingManagedReplay(),
+          operatorRequest: operatorRequest('replayed'),
+        };
+      },
+    },
+  });
+  await controller.hydrateOperatorRequest();
+  await controller.hydrateOperatorRequest();
+  assert.equal(prepares, 1);
+  assert.equal(controller.getState().operatorRequest?.oneTimeToken, 'replayed');
+});
+
+test('hydrateOperatorRequest does not retry a completed null replay for the same identity', async () => {
+  let prepares = 0;
+  const controller = createController({
+    status: awaitingManagedReplay(),
+    api: {
+      prepareHostTls: async () => {
+        prepares += 1;
+        return { tls: awaitingManagedReplay(), operatorRequest: null };
+      },
+    },
+  });
+  await controller.hydrateOperatorRequest();
+  await controller.hydrateOperatorRequest();
+  assert.equal(prepares, 1);
+  assert.equal(controller.getState().operatorRequest, null);
+});
+
+test('hydrateOperatorRequest ignores a stale result after identity change', async () => {
+  let lanIp = '192.168.1.10';
+  const firstGate = { resolve() {} };
+  const firstHeld = new Promise<void>((resolve) => {
+    firstGate.resolve = resolve;
+  });
+  let firstStarted = false;
+  const controller = createController({
+    status: awaitingManagedReplay(),
+    lanIpFn: () => lanIp,
+    api: {
+      prepareHostTls: async (body) => {
+        if (!firstStarted) {
+          firstStarted = true;
+          await firstHeld;
+          return {
+            tls: awaitingManagedReplay(),
+            operatorRequest: operatorRequest('stale', body.lanIp),
+          };
+        }
+        return {
+          tls: awaitingManagedReplay(),
+          operatorRequest: operatorRequest('fresh', body.lanIp),
+        };
+      },
+    },
+  });
+  const first = controller.hydrateOperatorRequest();
+  lanIp = '192.168.1.40';
+  await controller.hydrateOperatorRequest();
+  assert.equal(controller.getState().operatorRequest?.oneTimeToken, 'fresh');
+  firstGate.resolve();
+  await first;
+  assert.equal(controller.getState().operatorRequest?.oneTimeToken, 'fresh');
+});
+
+test('hydrateOperatorRequest clears stale operator data when identity changes', async () => {
+  let lanIp = '192.168.1.10';
+  const controller = createController({
+    status: awaitingManagedReplay(),
+    lanIpFn: () => lanIp,
+    api: {
+      prepareHostTls: async (body) => {
+        if (body.lanIp === '192.168.1.40') {
+          return { tls: awaitingManagedReplay(), operatorRequest: null };
+        }
+        return {
+          tls: awaitingManagedReplay(),
+          operatorRequest: operatorRequest('old', body.lanIp),
+        };
+      },
+    },
+  });
+  await controller.hydrateOperatorRequest();
+  assert.equal(controller.getState().operatorRequest?.oneTimeToken, 'old');
+  lanIp = '192.168.1.40';
+  await controller.hydrateOperatorRequest();
+  assert.equal(controller.getState().operatorRequest, null);
+});
+
+test('hydrateOperatorRequest clears leftover dnsChecks when identity changes after a null replay', async () => {
+  let lanIp = '192.168.1.10';
+  let prepares = 0;
+  const controller = createController({
+    status: awaitingManagedReplay(),
+    lanIpFn: () => lanIp,
+    api: {
+      prepareHostTls: async () => {
+        prepares += 1;
+        return { tls: awaitingManagedReplay(), operatorRequest: null };
+      },
+      verifyHostTlsDns: async () => ({
+        tls: awaitingManagedReplay(),
+        checks: [{ id: 'a-record' as const, ok: true, message: 'ok' }],
+      }),
+    },
+  });
+  await controller.hydrateOperatorRequest();
+  await controller.verifyDns();
+  assert.equal(controller.getState().dnsChecks?.length, 1);
+  lanIp = '192.168.1.40';
+  await controller.hydrateOperatorRequest();
+  assert.equal(prepares, 2);
+  assert.equal(controller.getState().dnsChecks, null);
+  assert.equal(controller.getState().operatorRequest, null);
+});
+
+test('abandonSession discards an open TLS confirm callback', async () => {
+  let applied = false;
+  const pending = { confirm: null as (() => void) | null };
+  const controller = createController({
+    status: tls({ state: 'dns-verified', mode: 'managed', applyReady: true }),
+    requestConfirm: (_message, onConfirm) => {
+      pending.confirm = onConfirm;
+    },
+    api: {
+      applyHostTls: async () => {
+        applied = true;
+        return { tls: tls({ state: 'active', cutoverApplied: true, applyReady: true }) };
+      },
+    },
+  });
+  const applying = controller.apply();
+  controller.abandonSession();
+  pending.confirm?.();
+  await applying;
+  assert.equal(applied, false);
+});
+
+test('TLS host mutations do not start while LAN is mutating', async () => {
+  let obtained = false;
+  const controller = createController({
+    status: tls({ state: 'dns-verified', mode: 'managed', applyReady: false }),
+    isPeerMutating: () => true,
+    api: {
+      obtainHostTlsCertificate: async () => {
+        obtained = true;
+        return { tls: tls({ state: 'dns-verified', mode: 'managed', applyReady: true }), checks: [] };
+      },
+    },
+  });
+  await controller.obtainOrCheck();
+  assert.equal(obtained, false);
+  assert.equal(controller.getState().busy, false);
 });

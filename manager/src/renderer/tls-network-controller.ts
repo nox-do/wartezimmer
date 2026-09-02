@@ -20,6 +20,16 @@ import {
   tlsOperatorRecordsAreTheTask,
 } from './tls-network-view-model.js';
 
+export function tlsNetworkLocksHost(
+  state: Pick<TlsNetworkState, 'busy' | 'hydrating'>,
+): boolean {
+  return state.busy || state.hydrating;
+}
+
+function operatorHydrateKey(hostname: string, lanIp: string): string {
+  return `${hostname}\0${lanIp}`;
+}
+
 export type TlsStartPhase = 'offer' | 'hostname' | 'lease';
 
 export type TlsNetworkState = {
@@ -34,6 +44,7 @@ export type TlsNetworkState = {
   revealOperatorRecords: boolean;
   /** True while obtain/check-certificate is in flight (UI wait before status refresh). */
   pendingObtain: boolean;
+  hydrating: boolean;
   dnsChecks: TlsDnsCheck[] | null;
   localChecks: TlsLocalCheck[] | null;
   busy: boolean;
@@ -51,6 +62,7 @@ const INITIAL: TlsNetworkState = {
   operatorRequest: null,
   revealOperatorRecords: false,
   pendingObtain: false,
+  hydrating: false,
   dnsChecks: null,
   localChecks: null,
   busy: false,
@@ -61,6 +73,7 @@ const INITIAL: TlsNetworkState = {
 export type TlsNetworkController = {
   getState(): TlsNetworkState;
   hydrateOperatorRequest(): Promise<void>;
+  abandonSession(): void;
   setRevealOperatorRecords(open: boolean): void;
   startPrepare(): void;
   back(): void;
@@ -86,9 +99,19 @@ export function createTlsNetworkController(deps: {
   lanIp: () => string | null;
   onAfterMutation: () => void | Promise<void>;
   onStateChange: () => void;
-  requestConfirm: (message: string, onConfirm: () => void) => void;
+  requestConfirm: (
+    message: string,
+    onConfirm: () => void,
+    onCancel?: () => void,
+  ) => void;
+  /** True while LAN/proxy is writing the host (not snapshot loading). */
+  isPeerMutating?: () => boolean;
 }): TlsNetworkController {
   let state: TlsNetworkState = { ...INITIAL };
+  let sessionGeneration = 0;
+  let hydrateGeneration = 0;
+  let hydrateInFlightKey: string | null = null;
+  let lastHydrateKey: string | null = null;
 
   function emit(): void {
     deps.onStateChange();
@@ -101,6 +124,17 @@ export function createTlsNetworkController(deps: {
   function set(patch: Partial<TlsNetworkState>): void {
     state = { ...state, ...patch };
     emit();
+  }
+
+  function hostLockedByPeer(): boolean {
+    return Boolean(deps.isPeerMutating?.());
+  }
+
+  function beginHostMutation(): boolean {
+    if (state.busy || state.hydrating || hostLockedByPeer()) {
+      return false;
+    }
+    return true;
   }
 
   function fail(error: unknown): void {
@@ -127,6 +161,9 @@ export function createTlsNetworkController(deps: {
   }
 
   async function runApply(): Promise<void> {
+    if (!beginHostMutation()) {
+      return;
+    }
     set({ busy: true, error: null });
     try {
       const result = await deps.api.applyHostTls();
@@ -137,6 +174,9 @@ export function createTlsNetworkController(deps: {
   }
 
   async function runReset(): Promise<void> {
+    if (!beginHostMutation()) {
+      return;
+    }
     set({ busy: true, error: null });
     try {
       await deps.api.resetHostTls();
@@ -157,6 +197,15 @@ export function createTlsNetworkController(deps: {
       set({ revealOperatorRecords: open });
     },
 
+    abandonSession() {
+      sessionGeneration += 1;
+      hydrateGeneration += 1;
+      hydrateInFlightKey = null;
+      if (state.hydrating) {
+        set({ hydrating: false });
+      }
+    },
+
     async hydrateOperatorRequest() {
       const current = tls();
       if (tlsOperatorRecordsAreTheTask(current)) {
@@ -173,17 +222,59 @@ export function createTlsNetworkController(deps: {
       ) {
         return;
       }
+      const key = operatorHydrateKey(current.hostname, lanIp);
+      if (hydrateInFlightKey === key || lastHydrateKey === key) {
+        return;
+      }
+      if (state.busy) {
+        return;
+      }
+      if (hostLockedByPeer()) {
+        return;
+      }
+      const generation = ++hydrateGeneration;
+      const startedInSession = sessionGeneration;
+      const identityChanged = lastHydrateKey !== null && lastHydrateKey !== key;
+      hydrateInFlightKey = key;
+      set({
+        hydrating: true,
+        ...(identityChanged ? { operatorRequest: null, dnsChecks: null } : {}),
+      });
       try {
         const result = await deps.api.prepareHostTls({
           mode: 'managed',
           hostname: current.hostname,
           lanIp,
         });
-        if (result.operatorRequest) {
-          set({ operatorRequest: result.operatorRequest });
+        if (generation !== hydrateGeneration || startedInSession !== sessionGeneration) {
+          return;
         }
+        const still = tls();
+        const stillLan = deps.lanIp()?.trim() ?? '';
+        if (
+          still?.hostname !== current.hostname ||
+          stillLan !== lanIp ||
+          operatorHydrateKey(still.hostname ?? '', stillLan) !== key
+        ) {
+          return;
+        }
+        lastHydrateKey = key;
+        if (result.operatorRequest) {
+          set({ operatorRequest: result.operatorRequest, hydrating: false });
+          return;
+        }
+        set({ hydrating: false });
       } catch {
-        /* Mail replay stays without token if Setup refuses identity replay. */
+        if (generation === hydrateGeneration) {
+          set({ hydrating: false });
+        }
+      } finally {
+        if (generation === hydrateGeneration) {
+          hydrateInFlightKey = null;
+          if (state.hydrating) {
+            set({ hydrating: false });
+          }
+        }
       }
     },
 
@@ -235,6 +326,9 @@ export function createTlsNetworkController(deps: {
         set({ error: 'HTTPS ist bereits vorbereitet.' });
         return;
       }
+      if (!beginHostMutation()) {
+        return;
+      }
       set({ busy: true, error: null });
       try {
         const result = await deps.api.prepareHostTls({
@@ -254,6 +348,9 @@ export function createTlsNetworkController(deps: {
     },
 
     async verifyDns() {
+      if (!beginHostMutation()) {
+        return;
+      }
       set({ busy: true, error: null });
       try {
         const result = await deps.api.verifyHostTlsDns();
@@ -269,6 +366,9 @@ export function createTlsNetworkController(deps: {
     },
 
     async obtainOrCheck() {
+      if (!beginHostMutation()) {
+        return;
+      }
       set({ busy: true, pendingObtain: true, error: null });
       try {
         const result =
@@ -289,13 +389,29 @@ export function createTlsNetworkController(deps: {
 
     apply() {
       return new Promise<void>((resolve, reject) => {
-        deps.requestConfirm(TLS_CUTOVER_CONFIRM_MESSAGE, () => {
-          void runApply().then(resolve, reject);
-        });
+        if (!beginHostMutation()) {
+          resolve();
+          return;
+        }
+        const generation = sessionGeneration;
+        deps.requestConfirm(
+          TLS_CUTOVER_CONFIRM_MESSAGE,
+          () => {
+            if (generation !== sessionGeneration) {
+              resolve();
+              return;
+            }
+            void runApply().then(resolve, reject);
+          },
+          () => resolve(),
+        );
       });
     },
 
     async repair() {
+      if (!beginHostMutation()) {
+        return;
+      }
       set({ busy: true, error: null });
       try {
         const result = await deps.api.repairHostTls();
@@ -307,13 +423,29 @@ export function createTlsNetworkController(deps: {
 
     reset() {
       return new Promise<void>((resolve, reject) => {
-        deps.requestConfirm(TLS_RESET_CONFIRM_MESSAGE, () => {
-          void runReset().then(resolve, reject);
-        });
+        if (!beginHostMutation()) {
+          resolve();
+          return;
+        }
+        const generation = sessionGeneration;
+        deps.requestConfirm(
+          TLS_RESET_CONFIRM_MESSAGE,
+          () => {
+            if (generation !== sessionGeneration) {
+              resolve();
+              return;
+            }
+            void runReset().then(resolve, reject);
+          },
+          () => resolve(),
+        );
       });
     },
 
     async renew() {
+      if (!beginHostMutation()) {
+        return;
+      }
       set({ busy: true, error: null });
       try {
         if (tls()?.mode === 'custom') {
@@ -333,6 +465,9 @@ export function createTlsNetworkController(deps: {
     },
 
     async stageCustomCertificate() {
+      if (!beginHostMutation()) {
+        return;
+      }
       set({ busy: true, error: null });
       try {
         const picked = await deps.api.stageHostTlsCertificate();
@@ -347,3 +482,4 @@ export function createTlsNetworkController(deps: {
     },
   };
 }
+

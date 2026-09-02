@@ -7,6 +7,7 @@ import {
   networkExpanderDefaults,
   networkHostChecksForDisplay,
   networkIsBusy,
+  networkPhaseIsHostMutation,
   networkProxyMissingAfterRestart,
   networkRestartFailureMessage,
   networkSavedWhileStoppedMessage,
@@ -21,6 +22,14 @@ test('networkIsBusy covers in-flight phases only', () => {
   assert.equal(networkIsBusy('saving'), true);
   assert.equal(networkIsBusy('restarting'), true);
   assert.equal(networkIsBusy('loading'), true);
+});
+
+test('networkPhaseIsHostMutation excludes snapshot loading', () => {
+  assert.equal(networkPhaseIsHostMutation('loading'), false);
+  assert.equal(networkPhaseIsHostMutation('idle'), false);
+  assert.equal(networkPhaseIsHostMutation('saving'), true);
+  assert.equal(networkPhaseIsHostMutation('restarting'), true);
+  assert.equal(networkPhaseIsHostMutation('checking'), true);
 });
 
 test('formatActiveReachabilityResult prefers actionable messages', () => {

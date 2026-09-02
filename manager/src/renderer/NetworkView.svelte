@@ -47,7 +47,7 @@
   import LanIpPanel from './LanIpPanel.svelte';
   import ReachabilityPanel from './ReachabilityPanel.svelte';
   import TlsNetworkPanel from './TlsNetworkPanel.svelte';
-  import { createTlsNetworkController, type TlsNetworkController, type TlsNetworkState } from './tls-network-controller.js';
+  import { createTlsNetworkController, tlsNetworkLocksHost, type TlsNetworkController, type TlsNetworkState } from './tls-network-controller.js';
   import { tlsNetworkSubtitle } from './tls-network-view-model.js';
 
   let {
@@ -60,6 +60,7 @@
   let confirmOpen = $state(false);
   let confirmMessage = $state('');
   let confirmAction: (() => void) | null = null;
+  let confirmCancel: (() => void) | null = null;
 
   let lanOpen = $state(false);
   let proxyOpen = $state(false);
@@ -118,21 +119,28 @@
     tlsOpen = defaults.tlsOpen;
   }
 
-  function requestConfirm(message: string, onConfirm: () => void): void {
+  function requestConfirm(message: string, onConfirm: () => void, onCancel?: () => void): void {
     confirmMessage = message;
     confirmAction = onConfirm;
+    confirmCancel = onCancel ?? null;
     confirmOpen = true;
   }
 
   function closeConfirm(): void {
+    const cancel = confirmCancel;
     confirmOpen = false;
     confirmMessage = '';
     confirmAction = null;
+    confirmCancel = null;
+    cancel?.();
   }
 
   function confirmAndRun(): void {
     const action = confirmAction;
-    closeConfirm();
+    confirmOpen = false;
+    confirmMessage = '';
+    confirmAction = null;
+    confirmCancel = null;
     action?.();
   }
 
@@ -164,7 +172,11 @@
     }),
   );
 
-  const busy = $derived(snapshot ? networkIsBusy(snapshot.phase) : false);
+  const busy = $derived(
+    Boolean(snapshot && networkIsBusy(snapshot.phase)) ||
+      Boolean(controller?.isHostWriteInFlight()) ||
+      Boolean(tlsSnapshot && tlsNetworkLocksHost(tlsSnapshot)),
+  );
 
   const progressText = $derived(
     snapshot && busy ? networkPhaseProgressText(snapshot.phase) : '',
@@ -206,6 +218,10 @@
       onAfterMutation,
       requestConfirm,
       onStateChange: syncSnapshot,
+      isPeerMutating: () => {
+        const tls = tlsController?.getState();
+        return Boolean(tls && tlsNetworkLocksHost(tls));
+      },
     });
     tlsController = createTlsNetworkController({
       api: requireApi(),
@@ -218,6 +234,7 @@
       onAfterMutation,
       onStateChange: syncTlsSnapshot,
       requestConfirm,
+      isPeerMutating: () => Boolean(controller?.isHostWriteInFlight()),
     });
     syncSnapshot();
     syncTlsSnapshot();
@@ -235,6 +252,8 @@
     if (!session) {
       if (lastSessionGeneration !== null) {
         c.hide();
+        tls?.abandonSession();
+        closeConfirm();
         lastSessionGeneration = null;
       }
       return;
@@ -429,7 +448,7 @@
               lanIp={diagramLanIp}
               state={tlsSnapshot}
               controller={tlsController}
-              busy={busy || tlsSnapshot.busy}
+              busy={busy}
               onOpenMail={(href) => void requireApi().openExternalUrl(href)}
             />
           </MaintenanceSection>
