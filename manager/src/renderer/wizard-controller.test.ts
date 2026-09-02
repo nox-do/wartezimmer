@@ -912,3 +912,288 @@ test('wizard patchFields notifies once', () => {
   assert.equal(calls, 1);
   assert.equal(controller.getState().customLabel, 'praxis');
 });
+
+const emptyNetwork = {
+  lanCandidates: [],
+  interfaces: [],
+  machineHostname: 'praxis-mac',
+  gatewayComposeSupported: true,
+};
+
+test('stale goNext after hide and show does not change the new run', async () => {
+  const network = deferred<typeof emptyNetwork>();
+  const controller = createWizardController({
+    api: {
+      fetchSetupNetwork: () => network.promise,
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  controller.patchFields({ step: 3 });
+  const pending = controller.goNext();
+  await Promise.resolve();
+  assert.equal(controller.getState().busy, true);
+  assert.equal(controller.getState().step, 4);
+
+  controller.hide();
+  controller.show(minimalHostStatus(), 'embedded');
+  network.resolve({ ...emptyNetwork, machineHostname: 'stale-host' });
+  await pending;
+
+  assert.equal(controller.getState().step, 1);
+  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().network, null);
+});
+
+test('stale goNext finally does not clear busy on a new run', async () => {
+  const first = deferred<typeof emptyNetwork>();
+  const second = deferred<typeof emptyNetwork>();
+  let calls = 0;
+  const controller = createWizardController({
+    api: {
+      fetchSetupNetwork: () => {
+        calls += 1;
+        return calls === 1 ? first.promise : second.promise;
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  controller.patchFields({ step: 3 });
+  const stale = controller.goNext();
+  await Promise.resolve();
+  controller.hide();
+  controller.show(minimalHostStatus(), 'embedded');
+  controller.patchFields({ step: 3 });
+  const fresh = controller.goNext();
+  await Promise.resolve();
+  assert.equal(controller.getState().busy, true);
+
+  first.resolve({ ...emptyNetwork, machineHostname: 'stale-host' });
+  await stale;
+  assert.equal(controller.getState().busy, true);
+  assert.notEqual(controller.getState().network?.machineHostname, 'stale-host');
+
+  second.resolve({ ...emptyNetwork, machineHostname: 'fresh-host' });
+  await fresh;
+  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().network?.machineHostname, 'fresh-host');
+});
+
+test('stale PEM staging after hide and show does not change the new run', async () => {
+  const staged = deferred<{ canceled: false; tls: NonNullable<ReturnType<typeof minimalHostStatus>['tls']> }>();
+  const controller = createWizardController({
+    api: {
+      stageHostTlsCertificate: () => staged.promise,
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  const pending = controller.stageWizardTlsCertificate();
+  await Promise.resolve();
+  controller.hide();
+  controller.show(minimalHostStatus(), 'embedded');
+  staged.resolve({
+    canceled: false,
+    tls: {
+      state: 'awaiting-operator-dns',
+      mode: 'custom',
+      hostname: 'flow.praxis-meyer.de',
+      installationId: '7fk3m2q9',
+      tokenConsumed: false,
+      applyReady: false,
+      cutoverApplied: false,
+      certificate: null,
+      lastError: null,
+      acmeCnameTarget: null,
+    },
+  });
+  await pending;
+
+  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().customPemStaged, false);
+  assert.equal(controller.getState().status?.tls, undefined);
+});
+
+test('stale prerequisite refresh after hide and show does not change the new run', async () => {
+  const status = deferred<ReturnType<typeof minimalHostStatus>>();
+  const controller = createWizardController({
+    api: {
+      fetchSetupStatus: () => status.promise,
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  const pending = controller.refreshPrerequisites();
+  await Promise.resolve();
+  controller.hide();
+  controller.show(minimalHostStatus(), 'embedded');
+  status.resolve(minimalHostStatus({ practiceDisplayName: 'stale-refresh' }));
+  await pending;
+
+  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().status?.practiceDisplayName, 'Test');
+});
+
+test('stale release import after hide and show does not change the new run', async () => {
+  const loaded = deferred<{ ok: true }>();
+  const controller = createWizardController({
+    api: {
+      selectReleaseArchive: async () => ({ canceled: false, path: '/tmp/release.tgz' }),
+      loadDeliveryImages: () => loaded.promise,
+      fetchSetupStatus: async () => minimalHostStatus({ practiceDisplayName: 'stale-import' }),
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  const pending = controller.loadReleaseArchive();
+  await Promise.resolve();
+  controller.hide();
+  controller.show(minimalHostStatus(), 'embedded');
+  loaded.resolve({ ok: true });
+  await pending;
+
+  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().releaseImportStatus, null);
+  assert.equal(controller.getState().status?.practiceDisplayName, 'Test');
+});
+
+test('stale folder browse after hide and show does not change the new run', async () => {
+  const picked = deferred<{ canceled: false; path: string }>();
+  const controller = createWizardController({
+    api: {
+      selectFolder: () => picked.promise,
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  const pending = controller.browseImportsFolder();
+  await Promise.resolve();
+  controller.hide();
+  controller.show(minimalHostStatus(), 'embedded');
+  picked.resolve({ canceled: false, path: '/tmp/stale-imports' });
+  const path = await pending;
+
+  assert.equal(path, null);
+  assert.equal(controller.getState().importsHostPath, '/tmp/imports');
+});
+
+test('identity-reset confirm is ignored after hide', async () => {
+  let resetCount = 0;
+  let onConfirm: (() => void) | undefined;
+  const controller = createWizardController({
+    api: {
+      resetHostTls: async () => {
+        resetCount += 1;
+        return {
+          tls: {
+            state: 'off',
+            mode: null,
+            hostname: null,
+            installationId: null,
+            tokenConsumed: false,
+            applyReady: false,
+            cutoverApplied: false,
+            certificate: null,
+            lastError: null,
+            acmeCnameTarget: null,
+          },
+        };
+      },
+      prepareHostTls: async () => {
+        throw new Error('prepare must not run after discarded confirm');
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+    requestConfirm: (_message, confirm) => {
+      onConfirm = confirm;
+    },
+  });
+
+  controller.show(
+    minimalHostStatus({
+      tls: {
+        state: 'awaiting-operator-dns',
+        mode: 'managed',
+        hostname: '7fk3m2.lan.notaus.de',
+        installationId: '7fk3m2q9',
+        tokenConsumed: false,
+        applyReady: false,
+        cutoverApplied: false,
+        certificate: null,
+        lastError: null,
+        acmeCnameTarget: 'uuid.auth.acme-dns.io',
+      },
+    }),
+    'embedded',
+  );
+  controller.patchFields({
+    step: 6,
+    proxyEnabled: true,
+    httpsPhase: 'lease',
+    ipv4Reserved: true,
+    lanAppIp: '192.168.1.10',
+    nameMode: 'domain',
+    customDomain: 'flow.praxis-meyer.de',
+    httpsPreparedNameMode: 'generated',
+  });
+  await controller.goNext();
+  controller.hide();
+  controller.show(minimalHostStatus(), 'embedded');
+  onConfirm?.();
+  await Promise.resolve();
+
+  assert.equal(resetCount, 0);
+  assert.equal(controller.getState().step, 1);
+});
+
+test('apply after hide still reports the host mutation once', async () => {
+  const applied = deferred<ReturnType<typeof minimalApplyResult>>();
+  let mutateCount = 0;
+  let routingSaves = 0;
+  const controller = createWizardController({
+    api: {
+      applySetupPlan: () => applied.promise,
+      setRoutingMode: async () => {
+        routingSaves += 1;
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+    onHostMutated: () => {
+      mutateCount += 1;
+    },
+  });
+
+  controller.show(minimalHostStatus(), 'embedded');
+  controller.patchFields({
+    step: 7,
+    routingMode: 'simple',
+    lanAppIp: '192.168.1.10',
+  });
+  const pending = controller.goNext();
+  await Promise.resolve();
+  controller.hide();
+  controller.show(minimalHostStatus(), 'embedded');
+  applied.resolve(minimalApplyResult());
+  await pending;
+
+  assert.equal(mutateCount, 1);
+  assert.equal(routingSaves, 1);
+  assert.equal(controller.getState().applyResult, null);
+  assert.equal(controller.getState().busy, false);
+  assert.equal(controller.getState().step, 1);
+});

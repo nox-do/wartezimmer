@@ -54,7 +54,7 @@ export type WizardControllerDeps = WizardCallbacks & {
   onStateChange?: () => void;
   /** Nach Apply / Stack-Start — Health-Header und Shell-Status aktualisieren. */
   onHostMutated?: () => void;
-  requestConfirm?: (message: string, onConfirm: () => void) => void;
+  requestConfirm?: (message: string, onConfirm: () => void, onCancel?: () => void) => void;
 };
 
 export type WizardController = {
@@ -92,12 +92,17 @@ function createInitialState(
 
 export function createWizardController(deps: WizardControllerDeps): WizardController {
   let state = createInitialState(null);
+  let lifecycleGeneration = 0;
   let routingCapabilitiesRequestId = 0;
   let routingCapabilitiesPromise: Promise<void> | null = null;
   let routingModeTouched = false;
 
   function notify(): void {
     deps.onStateChange?.();
+  }
+
+  function still(generation: number): boolean {
+    return generation === lifecycleGeneration;
   }
 
   function patch(partial: Partial<WizardControllerState>): void {
@@ -113,19 +118,27 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     patch({ error: message });
   }
 
+  function beginSession(): void {
+    lifecycleGeneration += 1;
+    routingCapabilitiesRequestId += 1;
+    routingCapabilitiesPromise = null;
+    routingModeTouched = false;
+  }
+
   async function browseFolder(
     field: 'importsHostPath' | 'exportsHostPath',
   ): Promise<string | null> {
+    const generation = lifecycleGeneration;
     const current = state[field].trim() || undefined;
     const result = await deps.api.selectFolder(current);
-    if (result.canceled || !result.path) {
+    if (!still(generation) || result.canceled || !result.path) {
       return null;
     }
     patch({ [field]: result.path });
     return result.path;
   }
 
-  async function hydrateOperatorRequest(): Promise<void> {
+  async function hydrateOperatorRequest(generation: number): Promise<void> {
     const current = state.status?.tls;
     const lanIp = resolvedLanIp(state);
     if (
@@ -144,18 +157,19 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
         hostname: current.hostname,
         lanIp,
       });
-      if (result.operatorRequest) {
-        patch({
-          operatorRequest: result.operatorRequest,
-          status: state.status ? { ...state.status, tls: result.tls } : state.status,
-        });
+      if (!still(generation) || !result.operatorRequest) {
+        return;
       }
+      patch({
+        operatorRequest: result.operatorRequest,
+        status: state.status ? { ...state.status, tls: result.tls } : state.status,
+      });
     } catch {
       /* Mail replay stays without token if Setup refuses identity replay. */
     }
   }
 
-  async function prepareDraftTls(): Promise<void> {
+  async function prepareDraftTls(generation: number): Promise<void> {
     const input = buildWizardPrepareTlsInput(state);
     if (!input.lanIp) {
       throw new Error('Bitte zuerst eine LAN-IP wählen.');
@@ -169,45 +183,56 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       }
       throw error instanceof Error ? error : new Error(String(error));
     }
-    patch({
-      operatorRequest: result.operatorRequest,
-      ipv4Reserved: true,
-      mailAck: false,
-      customPemStaged: false,
-      httpsPreparedNameMode: state.nameMode,
-      status: state.status ? { ...state.status, tls: result.tls } : state.status,
-    });
+    if (still(generation)) {
+      patch({
+        operatorRequest: result.operatorRequest,
+        ipv4Reserved: true,
+        mailAck: false,
+        customPemStaged: false,
+        httpsPreparedNameMode: state.nameMode,
+        status: state.status ? { ...state.status, tls: result.tls } : state.status,
+      });
+    }
     if (input.mode === 'managed' && result.tls.state === 'error') {
       throw new Error(wizardManagedPrepareErrorFooter());
     }
   }
 
-  async function replacePreparedIdentity(): Promise<void> {
+  async function replacePreparedIdentity(generation: number): Promise<void> {
     const reset = await deps.api.resetHostTls();
-    patch({
-      operatorRequest: null,
-      mailAck: false,
-      customPemStaged: false,
-      httpsPreparedNameMode: null,
-      status: state.status ? { ...state.status, tls: reset.tls } : state.status,
-    });
-    await prepareDraftTls();
+    if (still(generation)) {
+      patch({
+        operatorRequest: null,
+        mailAck: false,
+        customPemStaged: false,
+        httpsPreparedNameMode: null,
+        status: state.status ? { ...state.status, tls: reset.tls } : state.status,
+      });
+    }
+    await prepareDraftTls(generation);
   }
 
   async function runReplacePreparedIdentity(): Promise<void> {
+    const generation = lifecycleGeneration;
     setBusy(true);
     setError(null);
     try {
-      await replacePreparedIdentity();
-      patch({ step: 6, httpsPhase: 'mail', error: null });
+      await replacePreparedIdentity(generation);
+      if (still(generation)) {
+        patch({ step: 6, httpsPhase: 'mail', error: null });
+      }
     } catch (error) {
-      setError(error instanceof Error ? error.message : String(error));
+      if (still(generation)) {
+        setError(error instanceof Error ? error.message : String(error));
+      }
     } finally {
-      setBusy(false);
+      if (still(generation)) {
+        setBusy(false);
+      }
     }
   }
 
-  async function runPrepareTls(): Promise<'ok' | 'awaiting-confirm'> {
+  async function runPrepareTls(generation: number): Promise<'ok' | 'awaiting-confirm'> {
     const current = state.status?.tls;
     if (current && current.state !== 'off') {
       if (
@@ -219,54 +244,77 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
         if (current.state === 'error' && current.mode === 'managed') {
           throw new Error(wizardManagedPrepareErrorFooter());
         }
-        await hydrateOperatorRequest();
-        if (!state.httpsPreparedNameMode) {
+        await hydrateOperatorRequest(generation);
+        if (still(generation) && !state.httpsPreparedNameMode) {
           patch({ httpsPreparedNameMode: state.nameMode });
         }
         return 'ok';
       }
       if (deps.requestConfirm) {
         deps.requestConfirm(TLS_RESET_CONFIRM_MESSAGE, () => {
+          if (!still(generation)) {
+            return;
+          }
           void runReplacePreparedIdentity();
         });
         return 'awaiting-confirm';
       }
-      await replacePreparedIdentity();
+      await replacePreparedIdentity(generation);
       return 'ok';
     }
-    await prepareDraftTls();
+    await prepareDraftTls(generation);
     return 'ok';
   }
 
-  async function runWizardAfterAction(after: WizardAdvanceAfter): Promise<void> {
+  async function runWizardAfterAction(
+    after: WizardAdvanceAfter,
+    generation: number,
+  ): Promise<void> {
     if (after === 'loadNetwork') {
       const network = await loadWizardNetwork(deps.api);
+      if (!still(generation)) {
+        return;
+      }
       patch({
         ...wizardReachabilityAfterNetworkLoad(state, network),
       });
       return;
     }
     if (after === 'loadPlan') {
-      patch({ plan: await loadWizardPlan(deps.api, state) });
+      const plan = await loadWizardPlan(deps.api, state);
+      if (still(generation)) {
+        patch({ plan });
+      }
       return;
     }
-    patch({
-      applyResult: await applyWizardSetup(deps.api, state),
-      probeStatusText: WIZARD_PROBE_WAIT_MESSAGE,
-    });
-    patch({
-      status: await refreshWizardStatusAfterApply(deps.api),
-      probeStatusText: null,
-    });
+    const applyState = state;
+    const applyResult = await applyWizardSetup(deps.api, applyState);
+    if (still(generation)) {
+      patch({
+        applyResult,
+        probeStatusText: WIZARD_PROBE_WAIT_MESSAGE,
+      });
+    }
+    if (still(generation)) {
+      const status = await refreshWizardStatusAfterApply(deps.api);
+      if (still(generation)) {
+        patch({
+          status,
+          probeStatusText: null,
+        });
+      }
+    }
     deps.onHostMutated?.();
     try {
-      await persistWizardRoutingMode(deps.api, state);
+      await persistWizardRoutingMode(deps.api, applyState);
     } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : 'Routing-Modus konnte nach der Einrichtung nicht gespeichert werden.',
-      );
+      if (still(generation)) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : 'Routing-Modus konnte nach der Einrichtung nicht gespeichert werden.',
+        );
+      }
     }
   }
 
@@ -279,13 +327,14 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       return;
     }
 
+    const generation = lifecycleGeneration;
     const requestId = ++routingCapabilitiesRequestId;
     patch({ routingCapabilitiesStatus: 'loading' });
 
     routingCapabilitiesPromise = deps.api
       .getRoutingMode()
       .then((capabilities) => {
-        if (requestId !== routingCapabilitiesRequestId || state.step !== 2) {
+        if (!still(generation) || requestId !== routingCapabilitiesRequestId || state.step !== 2) {
           return;
         }
         patch({
@@ -295,7 +344,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
         });
       })
       .catch(() => {
-        if (requestId === routingCapabilitiesRequestId && state.step === 2) {
+        if (still(generation) && requestId === routingCapabilitiesRequestId && state.step === 2) {
           patch({ complexRoutingLicensed: true, routingCapabilitiesStatus: 'error' });
         }
       });
@@ -320,27 +369,27 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     },
 
     show(status, presentation = 'embedded') {
-      routingCapabilitiesRequestId++;
-      routingCapabilitiesPromise = null;
-      routingModeTouched = false;
+      beginSession();
       state = createInitialState(status, presentation);
       notify();
     },
 
     hide() {
-      routingCapabilitiesRequestId++;
-      routingCapabilitiesPromise = null;
-      routingModeTouched = false;
+      beginSession();
       state = createInitialState(null);
       notify();
     },
 
     async goNext() {
+      const generation = lifecycleGeneration;
       setError(null);
       setBusy(true);
       try {
         if (state.step === 2) {
           await ensureRoutingCapabilities();
+          if (!still(generation)) {
+            return;
+          }
           if (state.routingCapabilitiesStatus !== 'ready' || state.routingMode === null) {
             setError('Routing-Modus konnte nicht geladen werden. Bitte erneut versuchen.');
             return;
@@ -353,12 +402,17 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
           return;
         }
         if (action.type === 'complete') {
-          deps.onComplete();
+          if (still(generation)) {
+            deps.onComplete();
+          }
           return;
         }
         if (action.type === 'https-phase') {
           if (action.after === 'prepareTls') {
-            const outcome = await runPrepareTls();
+            const outcome = await runPrepareTls(generation);
+            if (!still(generation)) {
+              return;
+            }
             if (outcome === 'awaiting-confirm') {
               return;
             }
@@ -369,13 +423,20 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
 
         patch({ step: action.step, ...action.patch });
         await enterStep(action.step);
+        if (!still(generation)) {
+          return;
+        }
         if (action.after) {
-          await runWizardAfterAction(action.after);
+          await runWizardAfterAction(action.after, generation);
         }
       } catch (error) {
-        setError(error instanceof Error ? error.message : String(error));
+        if (still(generation)) {
+          setError(error instanceof Error ? error.message : String(error));
+        }
       } finally {
-        setBusy(false);
+        if (still(generation)) {
+          setBusy(false);
+        }
       }
     },
 
@@ -424,11 +485,12 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     },
 
     async stageWizardTlsCertificate() {
+      const generation = lifecycleGeneration;
       setError(null);
       setBusy(true);
       try {
         const result = await deps.api.stageHostTlsCertificate();
-        if (result.canceled) {
+        if (!still(generation) || result.canceled) {
           return;
         }
         patch({
@@ -436,34 +498,53 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
           status: state.status ? { ...state.status, tls: result.tls } : state.status,
         });
       } catch (error) {
-        setError(error instanceof Error ? error.message : String(error));
+        if (still(generation)) {
+          setError(error instanceof Error ? error.message : String(error));
+        }
       } finally {
-        setBusy(false);
+        if (still(generation)) {
+          setBusy(false);
+        }
       }
     },
 
     async refreshPrerequisites() {
+      const generation = lifecycleGeneration;
       setBusy(true);
       try {
-        patch({ status: await refreshWizardStatus(deps.api) });
+        const status = await refreshWizardStatus(deps.api);
+        if (!still(generation)) {
+          return;
+        }
+        patch({ status });
         setError(null);
       } catch (error) {
-        setError(error instanceof Error ? error.message : String(error));
+        if (still(generation)) {
+          setError(error instanceof Error ? error.message : String(error));
+        }
       } finally {
-        setBusy(false);
+        if (still(generation)) {
+          setBusy(false);
+        }
       }
     },
 
     async loadReleaseArchive() {
+      const generation = lifecycleGeneration;
       setError(null);
       setBusy(true);
       try {
         const pickResult = await pickAndLoadReleaseArchive(deps.api, {
           loadingMessage: WIZARD_RELEASE_IMPORT_LOADING_MESSAGE,
           onProgress: (progress) => {
-            patch({ releaseImportStatus: progress.statusText });
+            if (still(generation)) {
+              patch({ releaseImportStatus: progress.statusText });
+            }
           },
         });
+        if (!still(generation)) {
+          return;
+        }
         if (pickResult.canceled) {
           patch({ releaseImportStatus: null });
           return;
@@ -475,9 +556,15 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
           }
           return;
         }
-        patch({ status: await refreshWizardStatus(deps.api), releaseImportStatus: null });
+        const status = await refreshWizardStatus(deps.api);
+        if (!still(generation)) {
+          return;
+        }
+        patch({ status, releaseImportStatus: null });
       } finally {
-        setBusy(false);
+        if (still(generation)) {
+          setBusy(false);
+        }
       }
     },
 

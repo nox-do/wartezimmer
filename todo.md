@@ -2,6 +2,12 @@
 
 Stand: 2026-09-02
 
+## 2026-09-02 — Wizard-Lifecycle
+
+- Generation pro `show()`/`hide()`; UI-Writes und Progress nur für den aktuellen Lauf
+- Confirm beim Session-Ende tot; Apply ruft `onHostMutated` trotzdem genau einmal
+- Kein Wizard-FSM-Umbau, kein Split von busy/error
+
 ## 2026-09-02 — Manager bindet nur seine Setup-API
 
 - Eigener Child-Prozess, ephemerer Loopback-Port, Start-Token, Health-Handshake (protocolVersion / Build-ID / Install-Home)

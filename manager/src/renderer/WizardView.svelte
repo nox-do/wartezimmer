@@ -35,22 +35,30 @@
   let confirmOpen = $state(false);
   let confirmMessage = $state('');
   let confirmAction = $state<(() => void) | null>(null);
+  let confirmCancel = $state<(() => void) | null>(null);
 
-  function requestConfirm(message: string, onConfirm: () => void): void {
+  function requestConfirm(message: string, onConfirm: () => void, onCancel?: () => void): void {
     confirmMessage = message;
     confirmAction = onConfirm;
+    confirmCancel = onCancel ?? null;
     confirmOpen = true;
   }
 
   function closeConfirm(): void {
+    const cancel = confirmCancel;
     confirmOpen = false;
     confirmMessage = '';
     confirmAction = null;
+    confirmCancel = null;
+    cancel?.();
   }
 
   function confirmAndRun(): void {
     const action = confirmAction;
-    closeConfirm();
+    confirmOpen = false;
+    confirmMessage = '';
+    confirmAction = null;
+    confirmCancel = null;
     action?.();
   }
 
@@ -99,10 +107,12 @@
         c.hide();
         lastSessionGeneration = null;
       }
+      closeConfirm();
       return;
     }
 
     if (session.generation !== lastSessionGeneration) {
+      closeConfirm();
       lastSessionGeneration = session.generation;
       c.show(session.status, session.presentation);
     }
