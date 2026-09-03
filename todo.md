@@ -9,9 +9,9 @@ Stand: 2026-09-03
 - Canvas: db-layer-review
 - Plan: [`docs/plan-db-layer-hygiene.md`](docs/plan-db-layer-hygiene.md)
 - Schnitt 1: `clearFlowCoreVisitRuntime` mit FK an; Host/Portal vor visits; Tests Gen-1 + Baseline ohne Visit-CASCADE (32d9410)
-- Schnitt 2: Recall-/Assist-Timer nur nach COMMIT; DB-Clear bleibt in äußerer TX; Rollback lässt Timer-Map
-- Schnitt-2-Nits: press-Fail nach Write; Runtime-Reset-Timer-Tests; Recall-Expiries nach Reset-COMMIT
-- Als Nächstes: Schnitt 3 (Session-GET atomar / listPatientDocuments)
+- Schnitt 2: Recall-/Assist-Timer nur nach COMMIT; DB-Clear bleibt in äußerer TX; Rollback lässt Timer-Map (ea2d51c)
+- Schnitt 3: Session-GET/`listPatientDocuments` in Write-TX; `SESSION_EXPIRED` committed; `require…` Statement-only
+- Halt Plan-DB-Hygiene; nächster Plan: Disk-Docs / Schema-Quellen / …
 
 ## 2026-09-02
 

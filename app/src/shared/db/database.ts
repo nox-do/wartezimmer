@@ -544,6 +544,30 @@ export class CoreDatabase {
     }
   }
 
+  /**
+   * Write-TX for session reads that touch/expire. SESSION_EXPIRED commits so the
+   * expire mark survives (requirePatientSessionFromDb writes then throws).
+   */
+  private withPatientSessionReadTx<T>(operationName: string, fn: () => T): T {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = fn();
+      this.db.exec('COMMIT');
+      return result;
+    } catch (error) {
+      if (error instanceof DomainError && error.domainCode === 'SESSION_EXPIRED') {
+        this.db.exec('COMMIT');
+        throw error;
+      }
+      this.db.exec('ROLLBACK');
+      const reason = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
+      if (!(error instanceof DomainError)) {
+        log.warn(`Transaction rolled back: ${operationName}`, { error: reason });
+      }
+      throw error;
+    }
+  }
+
   private markAbsenceLookupDeps(): MarkAbsenceLookupDeps {
     const common = this.commonHelperDeps();
     return {
@@ -673,11 +697,15 @@ export class CoreDatabase {
   }
 
   getPatientSession(sessionToken: string): PatientSession {
-    return requirePatientSessionFromDb(this.checkinSessionDeps(), sessionToken);
+    return this.withPatientSessionReadTx('getPatientSession', () =>
+      requirePatientSessionFromDb(this.checkinSessionDeps(), sessionToken),
+    );
   }
 
   getPatientSessionMe(sessionToken: string): PatientSessionMe {
-    return getPatientSessionMeFromDb(this.checkinSessionDeps(), sessionToken);
+    return this.withPatientSessionReadTx('getPatientSessionMe', () =>
+      getPatientSessionMeFromDb(this.checkinSessionDeps(), sessionToken),
+    );
   }
 
   submitPatientSession(sessionToken: string): {
@@ -720,7 +748,9 @@ export class CoreDatabase {
   }
 
   listPatientDocuments(sessionToken: string): PatientDocumentRow[] {
-    return listPatientDocumentsInDb(this.documentDeps(), sessionToken);
+    return this.withPatientSessionReadTx('listPatientDocuments', () =>
+      listPatientDocumentsInDb(this.documentDeps(), sessionToken),
+    );
   }
 
   discardPatientDocument(sessionToken: string, documentId: string): PatientDocumentRow {

@@ -2,7 +2,7 @@
 
 Stand: 2026-09-03
 
-Status: **Schnitt 1 + 2 erledigt.** Schnitt 3 offen. Vertrag ist dieses Dokument.
+Status: **Schnitt 1–3 erledigt.** Halt. Vertrag ist dieses Dokument.
 
 Die SQLite-Datei ist das Praxismodell. Drei Stellen nehmen das zu leicht:
 Tages-/Runtime-Reset, In-Memory-Timer neben Write-TX, Session-GET das schreibt.
@@ -23,7 +23,7 @@ sind **nicht** dieser Plan.
 
 ---
 
-## Ist (gebunden; nach Schnitt 1+2)
+## Ist (gebunden; nach Schnitt 1–3)
 
 1. `clearFlowCoreVisitRuntime` lässt `foreign_keys` **an**; löscht in
    Reihenfolge inkl. Host/Portal vor `visits` (Tabellen dürfen fehlen). Wird aus
@@ -45,12 +45,10 @@ sind **nicht** dieser Plan.
    (`recallVisit`, `returnToWaiting`, `pressTerminalAssist`,
    `releaseTerminalAssist`, `clearAllTerminalAssistPending`, beide Resets für
    Assist- **und** Recall-Expiries). Bei Rollback bleibt die Timer-Map.
-5. `requirePatientSessionFromDb` schreibt (`expirePatientSessionStmt`,
-   `touchPatientSessionStmt`) und öffnet **keine** TX.
-   Ohne äußere TX: `getPatientSession`, `getPatientSessionMe`,
-   `listPatientDocuments` (`documentDeps().requirePatientSession` → direkt
-   `requirePatientSessionFromDb`). Mit äußerer TX: `submitPatientSession`,
-   `intakePatientDocument` / `intakeFormDocuments`, `discardPatientDocument`.
+5. Session-Reads mit Touch/Expire: `getPatientSession`, `getPatientSessionMe`,
+   `listPatientDocuments` in Write-TX (`withPatientSessionReadTx`).
+   `requirePatientSessionFromDb` bleibt Statement-only. Caller mit äußerer TX
+   unverändert. Bei `SESSION_EXPIRED` bleibt die Expire-Markierung committed.
 6. `withTransaction` ist `BEGIN IMMEDIATE` ohne Savepoint. Zweites
    `BEGIN IMMEDIATE` in einer offenen TX bricht.
 
@@ -121,7 +119,7 @@ Kernel wie heute.
 
 ## Schnitt 2 — Timer nur nach Commit ✅
 
-**Status:** erledigt (Code + `database-timer-commit.test.ts`; Commit ausstehend).
+**Status:** erledigt (ea2d51c).
 
 **Vertrag:** Prozess-Timer (Recall-Expiry, Terminal-Assist-Expiry) werden nur
 geplant oder gekündigt, wenn die dazugehörige SQLite-TX committed hat. Bei
@@ -157,9 +155,10 @@ Side-Effect testen.
 
 ---
 
-## Schnitt 3 — Session-Mutation atomar ☐
+## Schnitt 3 — Session-Mutation atomar ✅
 
-**Status:** offen. Nächster Schritt.
+**Status:** erledigt (`withPatientSessionReadTx`; Tests:
+`database-session-read-tx.test.ts`).
 
 **Vertrag:** Jeder Pfad, der `patient_sessions` updated (`touch`, `expire`,
 `revoke`), läuft in `withTransaction` oder in einer bereits offenen Write-TX
@@ -193,7 +192,7 @@ schreibt, ist optional wenn die eine TX das erzwingt.
 
 1. ~~Schnitt 1.~~ ✅
 2. ~~Schnitt 2.~~ ✅
-3. Schnitt 3. ← hier
+3. ~~Schnitt 3.~~ ✅
 4. Halt. Nächster Plan (nicht hier): Disk-Dokumente nach Reset, Zombie-Spalte,
    Schema-Quellen zusammenziehen.
 
