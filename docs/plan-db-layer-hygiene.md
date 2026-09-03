@@ -61,7 +61,9 @@ sind **nicht** dieser Plan.
 2. Kein neues Produktverhalten: kein neues Setting, keine neue API, kein
    Disk-Wipe der Export-/Upload-Dateien in Schnitt 1–3.
 3. Kein Umbau Migrations-Runner / `SCHEMA_GENERATION` / `002`/`003`.
-4. `waiting_room_full`, tote Statements, Ticket-Vokabular: nicht dieser Plan.
+4. `waiting_room_full` Soft-Cut (Statements/Import ohne Spalte; Wert bleibt
+   unberührt, kein Reset auf 0) ist Folge-Mini; Hard-Drop / Ticket-Vokabular:
+   nicht dieser Plan.
 5. `resetFlowCoreRuntimeForTests` bleibt der Prozess-Cache-Drop (Name später).
 6. SQLite-FK bleiben `PRAGMA foreign_keys = ON` am Connection-Start wie heute.
 
@@ -193,8 +195,9 @@ schreibt, ist optional wenn die eine TX das erzwingt.
 1. ~~Schnitt 1.~~ ✅
 2. ~~Schnitt 2.~~ ✅
 3. ~~Schnitt 3.~~ ✅
-4. Halt. Nächster Plan (nicht hier): Disk-Dokumente nach Reset, Zombie-Spalte,
-   Schema-Quellen zusammenziehen.
+4. Halt. Soft-Cut `waiting_room_full` (Statements/Import; Spalte physisch da,
+   Wert unberührt) ist Folge-Mini, nicht dieser Plan. Nächster Plan:
+   Disk-Dokumente nach Reset, Hard-Drop Zombie / Schema-Quellen zusammenziehen.
 
 ---
 

@@ -67,7 +67,7 @@ Wahrheit fachlich: **`ops_settings`** (+ JSON-Felder), nicht der Catalog. Nach I
 ### 3.1 Mit im Backup
 
 - `ops_settings`: Themen/Räume/Journey, Routing, Praxisprofil, Portal/Emergency, Pfade, Setup-Marker, …  
-  **Nicht:** `setup_last_step`, `waiting_room_full`, `updated_at` / `id`
+  **Nicht:** `setup_last_step`, `waiting_room_full` (legacy-Spalte, Code ignoriert), `updated_at` / `id`
 - `auth_settings`: Staff-/Raum-PIN-**Hashes**
 - `messaging_provider_configs`: inkl. `credentials_json` (Klartext-Keys); IDs u. a. `mock`, `seven`, `seven_whatsapp`
 - `.env`: gesetzte Stack-Variablen Klartext (Praxis, Pfade, URLs, Gateway-Block wenn gesetzt, Tokens, Tuning)

@@ -372,7 +372,6 @@ function writeOpsSettingsSnapshot(
     `
     UPDATE ops_settings
     SET
-      waiting_room_full = 0,
       routing_mode = ?,
       return_window_minutes = ?,
       practice_open_from = ?,

@@ -415,7 +415,6 @@ export function updateOpsSettingsInDb(
   };
 
   params.updateOpsSettingsStmt.run(
-    0,
     next.routingMode,
     next.returnWindowMinutes,
     next.practiceOpenFrom,

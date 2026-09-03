@@ -88,7 +88,7 @@ test('updateOpsSettingsInDb persists routingMode and returns the saved value', (
 
   assert.equal(settings.routingMode, 'complex');
   assert.equal(savedArgs.length, 1);
-  assert.equal(savedArgs[0]?.[1], 'complex');
+  assert.equal(savedArgs[0]?.[0], 'complex');
 });
 
 test('opsSettingsInvalidHttpStatus maps routing mode guard to 409', () => {

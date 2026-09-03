@@ -12,6 +12,7 @@ Stand: 2026-09-03
 - Schnitt 2: Recall-/Assist-Timer nur nach COMMIT; DB-Clear bleibt in äußerer TX; Rollback lässt Timer-Map (ea2d51c)
 - Schnitt 3: Session-GET/`listPatientDocuments` in Write-TX; `SESSION_EXPIRED` committed; `require…` Statement-only
 - Halt Plan-DB-Hygiene; nächster Plan: Disk-Docs / Schema-Quellen / …
+- Soft-Cut `ops_settings.waiting_room_full`: Statements/Import ohne Spalte; Wert unberührt; Baseline bleibt (kein Gen-Bump)
 
 ## 2026-09-02
 

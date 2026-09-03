@@ -61,7 +61,6 @@ export function prepareOpsDatabaseStatements(db: DatabaseSync) {
     ),
     getOpsSettingsStmt: db.prepare(
       `SELECT
-        waiting_room_full AS waitingRoomFull,
         routing_mode AS routingMode,
         return_window_minutes AS returnWindowMinutes,
         practice_open_from AS practiceOpenFrom,
@@ -89,8 +88,7 @@ export function prepareOpsDatabaseStatements(db: DatabaseSync) {
     ),
     updateOpsSettingsStmt: db.prepare(
       `UPDATE ops_settings
-      SET waiting_room_full = ?,
-          routing_mode = ?,
+      SET routing_mode = ?,
           return_window_minutes = ?,
           practice_open_from = ?,
           practice_open_to = ?,
