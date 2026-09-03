@@ -1,6 +1,6 @@
 # Integrationen — Grenzen
 
-Stand: 2026-08-31 · Abgleich [`product.md`](../product.md), Code/Manager, Archive
+Stand: 2026-09-03 · Abgleich [`product.md`](../product.md), Code/Manager, Archive
 
 **Scope:** Was Praxis Flow anbindet oder bewusst **nicht** ist.  
 Status: **implementiert** · **geplant** · **Discovery**
@@ -14,10 +14,13 @@ Nicht: LAN-TLS/Proxy → [`tls.md`](tls.md) · Compose-Alltag → [`runtime.md`]
 | **Wir liefern**       | Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API; später dünne Vendor-Adapter                                                                                        |
 | **Wir liefern nicht** | Router, AP, Captive-Hardware, eigenen Captive-Datenpfad (DHCP/Firewall/`ndsctl`)                                                                                              |
 | **Session-Hooks**     | u. a. `sessions/resolve-ticket`, `sessions/captive-authorize` (Freigabe über Adapter)                                                                                         |
-| **Manager**           | Gateway stets `enabled: false` (`DISABLED_GATEWAY_PLAN`) — kein Produkt-Captive aus dem Wizard                                                                                |
+| **Manager**           | Gateway heute stets `enabled: false` (`DISABLED_GATEWAY_PLAN`); geplant ist nur die generische eingeschränkte Netzwerkzone, kein Produkt-Captive aus dem Wizard               |
 | **Lab**               | früherer openNDS-`gateway`-Container: [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md); Compose nur Linux + Env ([`runtime.md`](runtime.md) §3) |
 
 WLAN (Omada, UniFi, …) bleibt Praxis-IT. Internet-Portal/Whitelist = **nicht Produkt** (Outlook), kein Ops-Ist.
+Die geplante lokale Restricted-IP-/Listener-Grenze ist davon getrennt:
+[`plan-portal-lan-isolation.md`](../plan-portal-lan-isolation.md) und
+[`plan-manager-restricted-network-access.md`](../plan-manager-restricted-network-access.md).
 
 ## 2. SMS / WhatsApp — implementiert (teilweise)
 

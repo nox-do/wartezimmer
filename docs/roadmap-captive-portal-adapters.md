@@ -1,8 +1,9 @@
 # Roadmap: Drittanbieter-Captive-Portal-Adapter
 
-Stand: 2026-09-01 · **Roadmap, nicht Teil von Portal-v1**
+Stand: 2026-09-03 · **Roadmap, nicht Teil von Portal-v1**
 
-Grundlage: [Patientenportal auf getrenntem Netzwerkanschluss](plan-portal-lan-isolation.md)
+Grundlage:
+[Eingeschränkter Netzwerkzugang für das Patientenportal](plan-portal-lan-isolation.md)
 
 ## 1. Zielbild und Grenze
 
@@ -94,9 +95,9 @@ diesem Vertrag zu kapseln.
 
 ## 4. Spätere Manager-Strecke
 
-Die Captive-Einrichtung erscheint erst, nachdem das Patientenportal mindestens
-eine gültige Portal-IP und Portal-URL besitzt. Sie ist auch später jederzeit
-aktivierbar und unterscheidet klar:
+Die Captive-Einrichtung erscheint erst, nachdem mindestens ein funktionsfähiges
+Restricted-Binding und eine gültige Portal-URL vorhanden sind. Sie ist auch
+später jederzeit aktivierbar und unterscheidet klar:
 
 - **Kein Captive:** Portal direkt im Patientennetz; keine Internetfreigabe durch
   Praxis Flow.
@@ -118,7 +119,8 @@ Der Manager soll dann:
    und Port anzeigen;
 4. Controller-Erreichbarkeit und Credentials ohne Patientenfreigabe prüfen;
 5. einen geführten Funktionstest mit Patientengerät anbieten;
-6. Adapterfehler getrennt vom Portalstatus anzeigen.
+6. Adapterfehler getrennt vom Restricted-Network- und fachlichen Portalstatus
+   anzeigen.
 
 Ein Adapterfehler darf Upload und Formular im bereits erreichbaren Portal nicht
 abschalten; er verhindert lediglich die zugesagte Internetfreigabe. Ob und wann

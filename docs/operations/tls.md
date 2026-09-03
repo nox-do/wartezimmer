@@ -383,13 +383,15 @@ Gateway/Captive/Internet-Portal sind **andere** Themen → [`integrations.md`](i
 
 ## 10. Abgrenzung zu Plänen
 
-| Dokument                                                       | Rolle                                                         |
-| -------------------------------------------------------------- | ------------------------------------------------------------- |
-| **Dieses** (`operations/tls.md`)                               | **Ops-Ist** — was Betreiber/Support/Entwickler heute brauchen |
-| [`../plan-proxy-tls.md`](../plan-proxy-tls.md)                 | Architektur-/Zielhistorie (ACME, Compose, State-Maschine)     |
-| [`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md) | Manager-UX-Historie                                           |
-| [`../plan-manager-https.md`](../plan-manager-https.md)         | HTTPS-UI-Aufräumen                                            |
-| [`../archive/tls-lab.md`](../archive/tls-lab.md)               | Lab, nicht Produkt                                            |
-| [`../plan-backup-v2.md`](../plan-backup-v2.md)                 | Backup-Format v2 — **nicht** hier fortschreiben               |
+| Dokument                                                                                       | Rolle                                                         |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| **Dieses** (`operations/tls.md`)                                                               | **Ops-Ist** — was Betreiber/Support/Entwickler heute brauchen |
+| [`../plan-proxy-tls.md`](../plan-proxy-tls.md)                                                 | Architektur-/Zielhistorie (ACME, Compose, State-Maschine)     |
+| [`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md)                                 | Manager-UX-Historie                                           |
+| [`../plan-manager-https.md`](../plan-manager-https.md)                                         | HTTPS-UI-Aufräumen                                            |
+| [`../plan-portal-lan-isolation.md`](../plan-portal-lan-isolation.md)                           | Zukunft: Staff-/Portal-Origin und Wildcard-Zertifikat         |
+| [`../plan-manager-restricted-network-access.md`](../plan-manager-restricted-network-access.md) | Zukunft: zusätzliche eingeschränkte Host-IP im Manager        |
+| [`../archive/tls-lab.md`](../archive/tls-lab.md)                                               | Lab, nicht Produkt                                            |
+| [`../plan-backup-v2.md`](../plan-backup-v2.md)                                                 | Backup-Format v2 — **nicht** hier fortschreiben               |
 
 Wenn Ist und Plan kollidieren: **Code + dieses Dokument**. Pläne nach und nach auf „übernommen / archivieren“ setzen, nicht parallel als zweite Ops-Wahrheit pflegen.

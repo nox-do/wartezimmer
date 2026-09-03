@@ -38,18 +38,19 @@ LAN-TLS: [`operations/tls.md`](operations/tls.md).
 Arbeitsstände und Entwürfe. Historie: [`archive/README.md`](archive/README.md).  
 TLS-Ops-Ist: [`operations/tls.md`](operations/tls.md) — die TLS-Pläne unten sind Quellen bis zur Einarbeitung.
 
-| Datei                                                                    | Inhalt                                                                |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| [`../todo.md`](../todo.md)                                               | Aktuelle Arbeitsliste (intern)                                        |
-| [`plan-proxy-tls.md`](plan-proxy-tls.md)                                 | LAN-TLS — Architektur (Quelle → `operations/tls.md`)                  |
-| [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md)                 | Manager-UX TLS (Quelle → `operations/tls.md`)                         |
-| [`plan-manager-https.md`](plan-manager-https.md)                         | Manager HTTPS aufräumen                                               |
-| [`plan-manager-installer-cleanup.md`](plan-manager-installer-cleanup.md) | Manager Renderer: Wartung-Mutex, Generation                           |
-| [`plan-backup-v2.md`](plan-backup-v2.md)                                 | `.pfbackup` v2 (Entwurf)                                              |
-| [`plan-device-authorizations.md`](plan-device-authorizations.md)         | TV/Terminal/Room-Panel: persistente Gerätefreigaben (Festgeschrieben) |
-| [`plan-portal-lan-isolation.md`](plan-portal-lan-isolation.md)           | Discovery: Portal vs. Staff-URLs im Fritzbox-LAN (kein Beschluss)     |
-| [`plan-db-layer-hygiene.md`](plan-db-layer-hygiene.md)                   | DB: Reset-Vertrag, Timer nach Commit, Session-Writes (Entwurf)        |
-| [`archive/README.md`](archive/README.md)                                 | Auth-Slots, Gateway-Lab, Audit-OK-Liste, TLS-Lab                      |
+| Datei                                                                                    | Inhalt                                                                |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [`../todo.md`](../todo.md)                                                               | Aktuelle Arbeitsliste (intern)                                        |
+| [`plan-proxy-tls.md`](plan-proxy-tls.md)                                                 | LAN-TLS — Architektur (Quelle → `operations/tls.md`)                  |
+| [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md)                                 | Manager-UX TLS (Quelle → `operations/tls.md`)                         |
+| [`plan-manager-https.md`](plan-manager-https.md)                                         | Manager HTTPS aufräumen                                               |
+| [`plan-manager-installer-cleanup.md`](plan-manager-installer-cleanup.md)                 | Manager Renderer: Wartung-Mutex, Generation                           |
+| [`plan-backup-v2.md`](plan-backup-v2.md)                                                 | `.pfbackup` v2 (Entwurf)                                              |
+| [`plan-device-authorizations.md`](plan-device-authorizations.md)                         | TV/Terminal/Room-Panel: persistente Gerätefreigaben (Festgeschrieben) |
+| [`plan-portal-lan-isolation.md`](plan-portal-lan-isolation.md)                           | Produktentscheidung: eingeschränkte Netzwerkzone für das Portal       |
+| [`plan-manager-restricted-network-access.md`](plan-manager-restricted-network-access.md) | Manager-Umbau für Restricted-IP, Binding, Audit und UI                |
+| [`plan-db-layer-hygiene.md`](plan-db-layer-hygiene.md)                                   | DB: Reset-Vertrag, Timer nach Commit, Session-Writes (Entwurf)        |
+| [`archive/README.md`](archive/README.md)                                                 | Auth-Slots, Gateway-Lab, Audit-OK-Liste, TLS-Lab                      |
 
 ## API-Vertrag
 
