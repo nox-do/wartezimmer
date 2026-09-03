@@ -2,8 +2,7 @@
 
 Stand: 2026-09-03
 
-Status: **Entwurf, Bugbot eingearbeitet.** Kein Code in diesem Dokument.
-Nächster Schritt: Schnitt 1. Vertrag ist dieses Dokument.
+Status: **Schnitt 1 + 2 erledigt.** Schnitt 3 offen. Vertrag ist dieses Dokument.
 
 Die SQLite-Datei ist das Praxismodell. Drei Stellen nehmen das zu leicht:
 Tages-/Runtime-Reset, In-Memory-Timer neben Write-TX, Session-GET das schreibt.
@@ -24,30 +23,28 @@ sind **nicht** dieser Plan.
 
 ---
 
-## Ist (gebunden)
+## Ist (gebunden; nach Schnitt 1+2)
 
-1. `clearFlowCoreVisitRuntime` (`app/src/shared/flow-core/flow-core-schema.ts`)
-   schaltet `foreign_keys` aus, löscht `visit_events`, `visit_topics`, `visits`,
-   `patients`, `daily_queue_counters`, schaltet FK wieder an. Wird aus
+1. `clearFlowCoreVisitRuntime` lässt `foreign_keys` **an**; löscht in
+   Reihenfolge inkl. Host/Portal vor `visits` (Tabellen dürfen fehlen). Wird aus
    `CoreDatabase.resetBusinessDay` und `executeRuntimeReset` **in derselben**
    `BEGIN IMMEDIATE` aufgerufen, nach Kernel und nach
-   `clearAllTerminalAssistPending` (DB-Funktion) plus
-   `clearAllTerminalAssistPendingExpiries()` — nicht über die Public-Methode
-   `this.clearAllTerminalAssistPending()`.
-2. Mit FK aus feuert `ON DELETE CASCADE` nicht. Generation-1 /
-   `ensureVisitPortalSchema`: Sessions/Docs `ON DELETE CASCADE` auf `visits`;
-   `visit_host_state` hat CASCADE ab Create. `user_version` 0 ohne Portal-Ensure:
-   Baseline `documents.visit_id` / `patient_sessions.visit_id` **ohne** Visit-FK
-   (`001_baseline.sql`). `foreign_key_check` sieht solche Waisen nicht.
-   Flow-Core `visit_topics` / `visit_events`: FK ohne CASCADE — blocken
-   `DELETE FROM visits` wenn sie noch Zeilen haben. Catalog-FKs zeigen auf
-   visits nicht; `supersedes_*` ohne FK.
+   `clearAllTerminalAssistPending` (DB-Funktion) — nicht über
+   `this.clearAllTerminalAssistPending()`. Assist- und Recall-Expiries erst
+   **nach** COMMIT.
+2. Generation-1 / `ensureVisitPortalSchema`: Sessions/Docs `ON DELETE CASCADE`
+   auf `visits`; `visit_host_state` hat CASCADE ab Create. `user_version` 0 ohne
+   Portal-Ensure: Baseline `documents.visit_id` / `patient_sessions.visit_id`
+   **ohne** Visit-FK (`001_baseline.sql`). Expliziter Delete-vor-visits deckt
+   das ab. Flow-Core `visit_topics` / `visit_events`: FK ohne CASCADE — deshalb
+   vor `visits` löschen. Catalog-FKs zeigen auf visits nicht; `supersedes_*`
+   ohne FK.
 3. `terminal_assist_pending` hat keine Visit-FK; extra löschen bleibt richtig.
    Outbox bleibt im Kernel. `device_authorizations` ohne Visit-FK — nicht Cut 1.
-4. `recallVisit` plant den Timer **nach** erfolgreichem `withTransaction`.
-   `returnToWaiting` kündigt **vor** der TX. `pressTerminalAssist`,
-   `releaseTerminalAssist`, `clearAllTerminalAssistPending` und beide Resets
-   rufen Scheduler **innerhalb** der TX auf.
+4. Recall-/Assist-Timer: schedule/cancel nur **nach** erfolgreicher TX
+   (`recallVisit`, `returnToWaiting`, `pressTerminalAssist`,
+   `releaseTerminalAssist`, `clearAllTerminalAssistPending`, beide Resets für
+   Assist- **und** Recall-Expiries). Bei Rollback bleibt die Timer-Map.
 5. `requirePatientSessionFromDb` schreibt (`expirePatientSessionStmt`,
    `touchPatientSessionStmt`) und öffnet **keine** TX.
    Ohne äußere TX: `getPatientSession`, `getPatientSessionMe`,
@@ -72,7 +69,9 @@ sind **nicht** dieser Plan.
 
 ---
 
-## Schnitt 1 — Reset löscht Abhängige mit FK an
+## Schnitt 1 — Reset löscht Abhängige mit FK an ✅
+
+**Status:** erledigt (32d9410). Bugbot: no bugs.
 
 **Vertrag:** Nach `resetBusinessDay` und nach `executeRuntimeReset` auf einer
 echten SQLite (nicht Statement-Mocks):
@@ -120,7 +119,9 @@ Kernel wie heute.
 
 ---
 
-## Schnitt 2 — Timer nur nach Commit
+## Schnitt 2 — Timer nur nach Commit ✅
+
+**Status:** erledigt (Code + `database-timer-commit.test.ts`; Commit ausstehend).
 
 **Vertrag:** Prozess-Timer (Recall-Expiry, Terminal-Assist-Expiry) werden nur
 geplant oder gekündigt, wenn die dazugehörige SQLite-TX committed hat. Bei
@@ -135,12 +136,13 @@ Rollback bleibt der Timer-Stand wie vor dem Call.
 | `pressTerminalAssist` | schedule in TX | schedule nach TX |
 | `releaseTerminalAssist` | cancel in TX | cancel nach erfolgreicher TX |
 | `clearAllTerminalAssistPending` | cancel in TX | cancel nach TX |
-| `resetBusinessDay` / `executeRuntimeReset` | `clearAllTerminalAssistPendingExpiries` in der äußeren TX | nur Expiries/cancel **nach** COMMIT der äußeren TX |
+| `resetBusinessDay` / `executeRuntimeReset` | Assist-Expiries in der äußeren TX; Recall-Expiries blieben liegen | Assist- **und** Recall-Expiries **nach** COMMIT der äußeren TX |
 
 Reset/Runtime-Reset: Tabellen-Clear (`clearAllTerminalAssistPending` auf der DB)
 und `clearFlowCoreVisitRuntime` bleiben **in** der äußeren TX. Nicht
 `this.clearAllTerminalAssistPending()` von innen aufrufen (würde eine zweite
-TX öffnen).
+TX öffnen). Nach COMMIT: `clearAllTerminalAssistPendingExpiries` und
+`clearAllRecallWindowExpiries`.
 
 Wenn die TX scheitert: kein cancel/schedule. Bestehende Timer bleiben gültig
 (Recall-Poll `processExpiredRecallWindows` bleibt Sicherheitsnetz).
@@ -155,7 +157,9 @@ Side-Effect testen.
 
 ---
 
-## Schnitt 3 — Session-Mutation atomar
+## Schnitt 3 — Session-Mutation atomar ☐
+
+**Status:** offen. Nächster Schritt.
 
 **Vertrag:** Jeder Pfad, der `patient_sessions` updated (`touch`, `expire`,
 `revoke`), läuft in `withTransaction` oder in einer bereits offenen Write-TX
@@ -187,9 +191,9 @@ schreibt, ist optional wenn die eine TX das erzwingt.
 
 ## Reihenfolge und Halt
 
-1. Schnitt 1. Ohne den ist Schnitt 2/3 Kosmetik am lecken Modell.
-2. Schnitt 2.
-3. Schnitt 3.
+1. ~~Schnitt 1.~~ ✅
+2. ~~Schnitt 2.~~ ✅
+3. Schnitt 3. ← hier
 4. Halt. Nächster Plan (nicht hier): Disk-Dokumente nach Reset, Zombie-Spalte,
    Schema-Quellen zusammenziehen.
 

@@ -8,8 +8,10 @@ Stand: 2026-09-03
 - Timer vs. TX (Recall/Assist); Session-GET schreibt; Schema dreifach; waiting_room_full tot
 - Canvas: db-layer-review
 - Plan: [`docs/plan-db-layer-hygiene.md`](docs/plan-db-layer-hygiene.md)
-- Schnitt 1: `clearFlowCoreVisitRuntime` mit FK an; Host/Portal vor visits; Tests Gen-1 + Baseline ohne Visit-CASCADE
-- Als Nächstes: Schnitt 2 (Timer nach COMMIT)
+- Schnitt 1: `clearFlowCoreVisitRuntime` mit FK an; Host/Portal vor visits; Tests Gen-1 + Baseline ohne Visit-CASCADE (32d9410)
+- Schnitt 2: Recall-/Assist-Timer nur nach COMMIT; DB-Clear bleibt in äußerer TX; Rollback lässt Timer-Map
+- Schnitt-2-Nits: press-Fail nach Write; Runtime-Reset-Timer-Tests; Recall-Expiries nach Reset-COMMIT
+- Als Nächstes: Schnitt 3 (Session-GET atomar / listPatientDocuments)
 
 ## 2026-09-02
 

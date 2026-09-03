@@ -112,6 +112,7 @@ import {
 import type { SetupStatusSnapshot } from '../ops/setup-status.js';
 import {
   cancelRecallWindowExpiry,
+  clearAllRecallWindowExpiries,
   scheduleRecallWindowExpiry,
 } from '../queue/recall-window-expiry-scheduler.js';
 import {
@@ -617,19 +618,20 @@ export class CoreDatabase {
   }
 
   pressTerminalAssist(deviceId: string): TerminalAssistPendingRow {
-    return this.withTransaction('pressTerminalAssist', () => {
+    const row = this.withTransaction('pressTerminalAssist', () => {
       assertTerminalAssistPressAllowed(this.checkinSessionDeps());
-      const row = upsertTerminalAssistPending(this.db, deviceId);
-      scheduleTerminalAssistPendingExpiry(this, row.deviceId, Date.parse(row.expiresAt));
-      return row;
+      return upsertTerminalAssistPending(this.db, deviceId);
     });
+    scheduleTerminalAssistPendingExpiry(this, row.deviceId, Date.parse(row.expiresAt));
+    return row;
   }
 
   releaseTerminalAssist(deviceId: string): boolean {
-    return this.withTransaction('releaseTerminalAssist', () => {
-      cancelTerminalAssistPendingExpiry(deviceId);
-      return clearTerminalAssistPending(this.db, deviceId);
-    });
+    const cleared = this.withTransaction('releaseTerminalAssist', () =>
+      clearTerminalAssistPending(this.db, deviceId),
+    );
+    cancelTerminalAssistPendingExpiry(deviceId);
+    return cleared;
   }
 
   getTerminalAssistPending(deviceId: string, nowMs = Date.now()): TerminalAssistPendingRow | null {
@@ -649,10 +651,11 @@ export class CoreDatabase {
   }
 
   clearAllTerminalAssistPending(): number {
-    return this.withTransaction('clearAllTerminalAssistPending', () => {
-      clearAllTerminalAssistPendingExpiries();
-      return clearAllTerminalAssistPending(this.db);
-    });
+    const cleared = this.withTransaction('clearAllTerminalAssistPending', () =>
+      clearAllTerminalAssistPending(this.db),
+    );
+    clearAllTerminalAssistPendingExpiries();
+    return cleared;
   }
 
   resolvePatientSession(ticketCode: string, ttlMinutes = 30): SessionResolveResult {
@@ -1033,26 +1036,27 @@ export class CoreDatabase {
     fromStatus: QueueDisplayStatus;
     toStatus: QueueDisplayStatus;
   } {
-    cancelRecallWindowExpiry(visitId);
-    return this.withTransaction('returnToWaiting', () => {
+    const transition = this.withTransaction('returnToWaiting', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
       const runtime = getFlowCoreRuntime(this.db);
       const absentTransition = returnAbsentVisitToQueue(this.db, runtime, visitId, updatedAt);
-      const transition = absentTransition ?? returnVisitToWaiting(runtime, visitId, actorId);
+      const result = absentTransition ?? returnVisitToWaiting(runtime, visitId, actorId);
       if (!absentTransition) {
         clearAbsentMode(this.db, visitId, updatedAt);
       }
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
-        fromStatus: transition.fromStatus,
-        toStatus: transition.toStatus,
+        fromStatus: result.fromStatus,
+        toStatus: result.toStatus,
         updatedAt,
         roomId: null,
         roomLabel: null,
       });
-      return transition;
+      return result;
     });
+    cancelRecallWindowExpiry(visitId);
+    return transition;
   }
 
   setAbsence(
@@ -1598,14 +1602,16 @@ export class CoreDatabase {
     emergencyCleared: boolean;
     sandboxRestartRequired: true;
   } {
-    return this.withTransaction('resetBusinessDay', () => {
-      const result = resetBusinessDayInDb(this.dayLifecycleDeps());
-      clearAllTerminalAssistPendingExpiries();
+    const result = this.withTransaction('resetBusinessDay', () => {
+      const resetResult = resetBusinessDayInDb(this.dayLifecycleDeps());
       clearAllTerminalAssistPending(this.db);
       clearFlowCoreVisitRuntime(this.db);
       resetFlowCoreRuntimeForTests();
-      return result;
+      return resetResult;
     });
+    clearAllTerminalAssistPendingExpiries();
+    clearAllRecallWindowExpiries();
+    return result;
   }
 
   getRuntimeResetPreview(): RuntimeResetPreview {
@@ -1613,14 +1619,16 @@ export class CoreDatabase {
   }
 
   executeRuntimeReset(): RuntimeResetResult {
-    return this.withTransaction('executeRuntimeReset', () => {
-      const result = executeRuntimeResetInDb(this.runtimeResetDeps());
-      clearAllTerminalAssistPendingExpiries();
+    const result = this.withTransaction('executeRuntimeReset', () => {
+      const resetResult = executeRuntimeResetInDb(this.runtimeResetDeps());
       clearAllTerminalAssistPending(this.db);
       clearFlowCoreVisitRuntime(this.db);
       resetFlowCoreRuntimeForTests();
-      return result;
+      return resetResult;
     });
+    clearAllTerminalAssistPendingExpiries();
+    clearAllRecallWindowExpiries();
+    return result;
   }
 }
 

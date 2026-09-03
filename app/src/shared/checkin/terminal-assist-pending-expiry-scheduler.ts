@@ -26,6 +26,10 @@ export function resetTerminalAssistPendingExpirySchedulerForTests(): void {
   clearAllTerminalAssistPendingExpiries();
 }
 
+export function hasTerminalAssistPendingExpiryForTests(deviceId: string): boolean {
+  return expiryTimers.has(deviceId.trim());
+}
+
 function runAssistPendingExpiry(db: CoreDatabase, deviceId: string): void {
   clearAssistPendingExpiryTimer(deviceId);
   if (db.expireTerminalAssistPending(deviceId)) {

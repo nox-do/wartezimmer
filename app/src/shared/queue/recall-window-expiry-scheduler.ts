@@ -29,6 +29,10 @@ export function resetRecallWindowExpirySchedulerForTests(): void {
   clearAllRecallWindowExpiries();
 }
 
+export function hasRecallWindowExpiryForTests(visitId: string): boolean {
+  return expiryTimers.has(visitId.trim());
+}
+
 function syncPendingRecallWindowTimers(db: CoreDatabase): void {
   const nowMs = Date.now();
   for (const item of db.listQueue()) {
