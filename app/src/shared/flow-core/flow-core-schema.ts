@@ -26,12 +26,32 @@ export function ensureFlowCoreSchema(db: DatabaseSync): void {
   ensureVisitLegacyDropSchema(db);
 }
 
+function tableExists(db: DatabaseSync, table: string): boolean {
+  const row = db
+    .prepare("SELECT 1 AS exists_flag FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1")
+    .get(table) as { exists_flag?: number } | undefined;
+  return row?.exists_flag === 1;
+}
+
+function deleteAllFromIfExists(db: DatabaseSync, table: string): void {
+  if (!tableExists(db, table)) {
+    return;
+  }
+  db.exec(`DELETE FROM ${table}`);
+}
+
+/**
+ * Clears visit runtime rows with foreign_keys ON.
+ * Children without CASCADE first, then host/portal tables (legacy DBs lack visit CASCADE),
+ * then visits, patients, daily counters.
+ */
 export function clearFlowCoreVisitRuntime(db: DatabaseSync): void {
-  db.exec('PRAGMA foreign_keys = OFF');
-  db.exec('DELETE FROM visit_events');
-  db.exec('DELETE FROM visit_topics');
-  db.exec('DELETE FROM visits');
-  db.exec('DELETE FROM patients');
-  db.exec('DELETE FROM daily_queue_counters');
-  db.exec('PRAGMA foreign_keys = ON');
+  deleteAllFromIfExists(db, 'visit_events');
+  deleteAllFromIfExists(db, 'visit_topics');
+  deleteAllFromIfExists(db, 'documents');
+  deleteAllFromIfExists(db, 'patient_sessions');
+  deleteAllFromIfExists(db, 'visit_host_state');
+  deleteAllFromIfExists(db, 'visits');
+  deleteAllFromIfExists(db, 'patients');
+  deleteAllFromIfExists(db, 'daily_queue_counters');
 }

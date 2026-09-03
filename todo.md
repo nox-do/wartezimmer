@@ -1,6 +1,17 @@
 # Arbeitsstand (intern)
 
-Stand: 2026-09-02
+Stand: 2026-09-03
+
+## 2026-09-03 — DB-Schicht Review (app/src/shared/db)
+
+- Review ohne Codefix: Reset mit FK OFF hinterlässt Waisen (host_state/sessions/docs)
+- Timer vs. TX (Recall/Assist); Session-GET schreibt; Schema dreifach; waiting_room_full tot
+- Canvas: db-layer-review
+- Plan: [`docs/plan-db-layer-hygiene.md`](docs/plan-db-layer-hygiene.md)
+- Schnitt 1: `clearFlowCoreVisitRuntime` mit FK an; Host/Portal vor visits; Tests Gen-1 + Baseline ohne Visit-CASCADE
+- Als Nächstes: Schnitt 2 (Timer nach COMMIT)
+
+## 2026-09-02
 
 ## 2026-09-02 — Wizard Review-Fixes
 

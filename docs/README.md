@@ -48,6 +48,7 @@ TLS-Ops-Ist: [`operations/tls.md`](operations/tls.md) — die TLS-Pläne unten s
 | [`plan-backup-v2.md`](plan-backup-v2.md)                                 | `.pfbackup` v2 (Entwurf)                                              |
 | [`plan-device-authorizations.md`](plan-device-authorizations.md)         | TV/Terminal/Room-Panel: persistente Gerätefreigaben (Festgeschrieben) |
 | [`plan-portal-lan-isolation.md`](plan-portal-lan-isolation.md)           | Discovery: Portal vs. Staff-URLs im Fritzbox-LAN (kein Beschluss)     |
+| [`plan-db-layer-hygiene.md`](plan-db-layer-hygiene.md)                   | DB: Reset-Vertrag, Timer nach Commit, Session-Writes (Entwurf)        |
 | [`archive/README.md`](archive/README.md)                                 | Auth-Slots, Gateway-Lab, Audit-OK-Liste, TLS-Lab                      |
 
 ## API-Vertrag
