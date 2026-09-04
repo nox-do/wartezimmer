@@ -1,4 +1,4 @@
-import { createLogger } from '../logging/logger.js';
+import { createModuleLogger } from '@praxis-flow/server-shared';
 import type { CoreDatabase, OutboxEventRow } from '../db/database.js';
 import { domainError } from '../errors/domain-error.js';
 
@@ -10,7 +10,7 @@ type OutboxWorkerOptions = {
   claimLeaseMs: number;
 };
 
-const log = createLogger('outbox.worker');
+const log = createModuleLogger('outbox.worker');
 
 /** v1: all emitted outbox events are audit-only; no async side-effect handlers. */
 export const AUDIT_ONLY_EVENT_TYPES = new Set([
@@ -69,13 +69,16 @@ export class OutboxWorker {
     }, this.options.pollIntervalMs);
     this.timer.unref();
     void this.tick();
-    log.info('Outbox worker started', {
-      pollIntervalMs: this.options.pollIntervalMs,
-      batchSize: this.options.batchSize,
-      maxAttempts: this.options.maxAttempts,
-      retryBaseMs: this.options.retryBaseMs,
-      claimLeaseMs: this.options.claimLeaseMs,
-    });
+    log.info(
+      {
+        pollIntervalMs: this.options.pollIntervalMs,
+        batchSize: this.options.batchSize,
+        maxAttempts: this.options.maxAttempts,
+        retryBaseMs: this.options.retryBaseMs,
+        claimLeaseMs: this.options.claimLeaseMs,
+      },
+      'Outbox worker started',
+    );
   }
 
   stop(): void {
@@ -101,9 +104,10 @@ export class OutboxWorker {
         await this.processEvent(event);
       }
     } catch (error) {
-      log.error('Outbox tick failed', {
-        error: error instanceof Error ? error.message : 'UNKNOWN_ERROR',
-      });
+      log.error(
+        { error: error instanceof Error ? error.message : 'UNKNOWN_ERROR' },
+        'Outbox tick failed',
+      );
     } finally {
       this.running = false;
     }
@@ -126,9 +130,9 @@ export class OutboxWorker {
           error: message,
         };
         if (AUDIT_ONLY_EVENT_TYPES.has(event.eventType)) {
-          log.debug('Outbox audit event dead-lettered', deadLetterMeta);
+          log.debug(deadLetterMeta, 'Outbox audit event dead-lettered');
         } else {
-          log.error('Outbox event dead-lettered', deadLetterMeta);
+          log.error(deadLetterMeta, 'Outbox event dead-lettered');
         }
         return;
       }
@@ -144,9 +148,9 @@ export class OutboxWorker {
         error: message,
       };
       if (AUDIT_ONLY_EVENT_TYPES.has(event.eventType)) {
-        log.debug('Outbox audit event retry scheduled', retryMeta);
+        log.debug(retryMeta, 'Outbox audit event retry scheduled');
       } else {
-        log.warn('Outbox event retry scheduled', retryMeta);
+        log.warn(retryMeta, 'Outbox event retry scheduled');
       }
     }
   }

@@ -4,12 +4,12 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 import type { CoreDatabase, DocumentExportInfo } from '../db/database.js';
-import { createLogger } from '../logging/logger.js';
+import { createModuleLogger } from '@praxis-flow/server-shared';
 import { getSandboxClient } from '../sandbox/sandbox-client.js';
 import { purgeDocumentArtifacts } from './sandbox-document-cleanup.js';
 import { DomainError, domainError } from '../errors/domain-error.js';
 
-const log = createLogger('documents.export');
+const log = createModuleLogger('documents.export');
 
 function sanitizePathSegment(value: string): string {
   const normalized = value.trim().replace(/[^a-zA-Z0-9._-]+/g, '_');
@@ -89,10 +89,13 @@ async function removeExportPaths(paths: string[]): Promise<void> {
       if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
         continue;
       }
-      log.warn('Failed to remove partial export file during rollback.', {
-        filePath,
-        error: error instanceof Error ? error.message : 'UNKNOWN_ERROR',
-      });
+      log.warn(
+        {
+          filePath,
+          error: error instanceof Error ? error.message : 'UNKNOWN_ERROR',
+        },
+        'Failed to remove partial export file during rollback.',
+      );
     }
   }
 }

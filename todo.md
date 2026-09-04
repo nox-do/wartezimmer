@@ -2,6 +2,13 @@
 
 Stand: 2026-09-04
 
+## 2026-09-04 — Logging-Policy + Pino-Root
+
+- Policy: `docs/architecture/logging.md` (wer nutzt `request.log` / `createModuleLogger` / sandbox-log / console)
+- `buildFastifyLoggerOptions` liefert jetzt den gemeinsamen Pino-Root; `createModuleLogger` für Background
+- App-`createLogger` (console-Wrapper) entfernt; Caller auf Pino-Konvention `(obj, msg)` umgestellt
+- Review-Lücken: paralleler App-Logger war die einzige echte Abweichung — behoben; CLI/UI/sandbox-bootstrap ok
+
 ## 2026-09-04 — Cleanup: openNDS-Gateway / Auth-Bridge
 
 - Entfernt: `gateway/` Lab-Stack, `docker-compose.gateway*.yml`, `app/.../gateway-auth-bridge-client.ts`

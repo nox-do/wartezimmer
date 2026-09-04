@@ -1,8 +1,8 @@
-import { createLogger } from '../logging/logger.js';
+import { createModuleLogger } from '@praxis-flow/server-shared';
 import { domainError } from '../errors/domain-error.js';
 import { getSandboxClient } from '../sandbox/sandbox-client.js';
 
-const log = createLogger('documents.sandbox-cleanup');
+const log = createModuleLogger('documents.sandbox-cleanup');
 
 function readCleanupError(error: unknown): string {
   if (error instanceof Error) {
@@ -21,10 +21,13 @@ export async function purgeSandboxDocumentBestEffort(documentId: string): Promis
   try {
     await getSandboxClient().deleteDocument(normalizedId);
   } catch (error) {
-    log.warn('Sandbox document purge failed (best effort).', {
-      documentId: normalizedId,
-      error: readCleanupError(error),
-    });
+    log.warn(
+      {
+        documentId: normalizedId,
+        error: readCleanupError(error),
+      },
+      'Sandbox document purge failed (best effort).',
+    );
   }
 }
 
@@ -38,10 +41,13 @@ export async function purgeSandboxDocument(documentId: string): Promise<void> {
   try {
     await getSandboxClient().deleteDocument(normalizedId);
   } catch (error) {
-    log.warn('Sandbox document purge failed.', {
-      documentId: normalizedId,
-      error: readCleanupError(error),
-    });
+    log.warn(
+      {
+        documentId: normalizedId,
+        error: readCleanupError(error),
+      },
+      'Sandbox document purge failed.',
+    );
     throw error;
   }
 }
@@ -57,10 +63,13 @@ export async function purgeSandboxPreviewSessionBestEffort(
   try {
     await getSandboxClient().clearPreviewSessionDocument(normalizedId);
   } catch (error) {
-    log.warn('Sandbox preview session purge failed (best effort).', {
-      previewSessionId: normalizedId,
-      error: readCleanupError(error),
-    });
+    log.warn(
+      {
+        previewSessionId: normalizedId,
+        error: readCleanupError(error),
+      },
+      'Sandbox preview session purge failed (best effort).',
+    );
   }
 }
 

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
-import { createLogger } from '../logging/logger.js';
+import { createModuleLogger } from '@praxis-flow/server-shared';
 import {
   assertSupportedSchemaGeneration,
   createCurrentSchema,
@@ -278,7 +278,7 @@ export type {
   VisitIdentityView,
 } from './db-types.js';
 
-const log = createLogger('db.core');
+const log = createModuleLogger('db.core');
 
 export class CoreDatabase {
   private readonly boundEmitOutboxEvent: EmitOutboxEventFn;
@@ -538,7 +538,7 @@ export class CoreDatabase {
       this.db.exec('ROLLBACK');
       const reason = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
       if (!(error instanceof DomainError)) {
-        log.warn(`Transaction rolled back: ${operationName}`, { error: reason });
+        log.warn({ error: reason, operationName }, 'Transaction rolled back');
       }
       throw error;
     }
@@ -562,7 +562,7 @@ export class CoreDatabase {
       this.db.exec('ROLLBACK');
       const reason = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
       if (!(error instanceof DomainError)) {
-        log.warn(`Transaction rolled back: ${operationName}`, { error: reason });
+        log.warn({ error: reason, operationName }, 'Transaction rolled back');
       }
       throw error;
     }

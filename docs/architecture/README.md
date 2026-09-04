@@ -12,6 +12,7 @@ Betrieb: [`../operations/`](../operations/) · Produkt/Abläufe: [`../product.md
 4. Echtzeit         SSE; Outbox vs. Push
 5. Dokumente        Sandbox + Anamnese-Vorlagen
 6. UI-Konventionen  i18n Patienten vs. Staff
+7. Logging          Pino-Root, wer welchen Logger nutzt
 ```
 
 | Schritt | Dokument                       | Status        |
@@ -22,6 +23,7 @@ Betrieb: [`../operations/`](../operations/) · Produkt/Abläufe: [`../product.md
 | 4       | [`realtime.md`](realtime.md)   | ausgearbeitet |
 | 5       | [`documents.md`](documents.md) | ausgearbeitet |
 | 6       | [`i18n.md`](i18n.md)           | ausgearbeitet |
+| 7       | [`logging.md`](logging.md)     | ausgearbeitet |
 
 **Stil:** Ist-Stand formulieren — kein „Zielbild“/„Leitdokument“ für Umgesetztes; Ausblick nur als Nicht-Produkt oder Discovery.
 

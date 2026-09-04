@@ -109,7 +109,10 @@ export {
 } from './pfupdate.js';
 export {
   buildFastifyLoggerOptions,
+  createModuleLogger,
+  getRootLogger,
   readLogLevelFromEnv,
+  resetRootLoggerForTests,
   SILENT_ROUTE_LOG,
 } from './fastify-logger-options.js';
 export {

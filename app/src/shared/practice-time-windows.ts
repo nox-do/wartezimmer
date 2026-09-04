@@ -1,8 +1,8 @@
-import { createLogger } from './logging/logger.js';
+import { createModuleLogger } from '@praxis-flow/server-shared';
 import type { OpsSettings } from './db/db-types.js';
 import { domainError } from './errors/domain-error.js';
 
-const log = createLogger('practice-time-windows');
+const log = createModuleLogger('practice-time-windows');
 const TIME_OF_DAY_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 export function resolveBusinessTimeZone(): string {
@@ -32,10 +32,13 @@ export function getBusinessMinutesOfDay(timeZone: string = resolveBusinessTimeZo
     const minutePart = parts.find((part) => part.type === 'minute')?.value ?? '00';
     return Number.parseInt(hourPart, 10) * 60 + Number.parseInt(minutePart, 10);
   } catch (error) {
-    log.warn('Invalid BUSINESS_TZ, falling back to UTC clock for time window checks', {
-      businessTz: timeZone,
-      error: error instanceof Error ? error.message : 'UNKNOWN_ERROR',
-    });
+    log.warn(
+      {
+        businessTz: timeZone,
+        error: error instanceof Error ? error.message : 'UNKNOWN_ERROR',
+      },
+      'Invalid BUSINESS_TZ, falling back to UTC clock for time window checks',
+    );
     const utcNow = new Date();
     return utcNow.getUTCHours() * 60 + utcNow.getUTCMinutes();
   }

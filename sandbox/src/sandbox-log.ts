@@ -26,7 +26,7 @@ export function truncateLogTail(text: string, maxLength = 500): string {
   return `…${normalized.slice(-maxLength)}`;
 }
 
-/** Bootstrap logging before Fastify is available (entrypoint). */
+/** Bootstrap logging before Fastify is available (entrypoint). See docs/architecture/logging.md. */
 export function logSandboxWarn(message: string, meta?: Record<string, unknown>): void {
   if (!shouldEmit('warn')) {
     return;

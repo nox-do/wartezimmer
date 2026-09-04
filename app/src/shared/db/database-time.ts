@@ -1,9 +1,9 @@
-import { createLogger } from '../logging/logger.js';
+import { createModuleLogger } from '@praxis-flow/server-shared';
 import { domainError } from '../errors/domain-error.js';
 import { resolveBusinessTimeZone } from '../practice-time-windows.js';
 import type { DayClosePhase } from './db-types.js';
 
-const log = createLogger('db.time');
+const log = createModuleLogger('db.time');
 
 export function nowIso(): string {
   return new Date().toISOString();
@@ -25,10 +25,13 @@ export function getBusinessDay(): string {
       return `${year}-${month}-${day}`;
     }
   } catch (error) {
-    log.warn('Invalid BUSINESS_TZ, falling back to UTC business day', {
-      businessTz: timeZone,
-      error: error instanceof Error ? error.message : 'UNKNOWN_ERROR',
-    });
+    log.warn(
+      {
+        businessTz: timeZone,
+        error: error instanceof Error ? error.message : 'UNKNOWN_ERROR',
+      },
+      'Invalid BUSINESS_TZ, falling back to UTC business day',
+    );
   }
   return new Date().toISOString().slice(0, 10);
 }
