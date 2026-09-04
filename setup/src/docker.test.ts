@@ -108,14 +108,13 @@ test('resolveComposeFiles stacks pebble lab overlays only for non-delivery TLS',
   );
 });
 
-test('productComposeServices never includes TLS lab services', () => {
+test('productComposeServices never includes TLS lab or removed gateway', () => {
   assert.deepEqual(productComposeServices({}), ['app', 'sandbox']);
   assert.deepEqual(productComposeServices({ proxyEnabled: true }), ['app', 'sandbox', 'proxy']);
   assert.deepEqual(productComposeServices({ proxyEnabled: true, gatewayEnabled: true }), [
     'app',
     'sandbox',
     'proxy',
-    'gateway',
   ]);
   assert.equal(
     COMPOSE_TLS_LAB_SERVICES.some((name) =>

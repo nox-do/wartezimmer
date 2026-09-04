@@ -99,7 +99,6 @@ packages/domain/        Geteilte Fachlogik / Typen
 packages/server-shared/ Geteilte Server-Helfer (Logger, …)
 setup/                  Host-CLI + Setup-API (CLI :9190; Manager-Child ephemer)
 manager/                Electron-App: Wizard, Wartung, Updates
-gateway/                Lab-Referenz openNDS (nicht Produktkern)
 openapi/                API-Spezifikation (Source of Truth)
 docs/                   Fach- und Architektur-Doku
 

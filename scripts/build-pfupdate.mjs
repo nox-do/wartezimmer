@@ -7,7 +7,6 @@
  *   npm run release:pfupdate -- --version 2026.08.0
  *   PRAXIS_FLOW_RELEASE_VERSION=2026.08.0 npm run release:pfupdate
  *   npm run release:pfupdate:pack -- --version 2026.08.0   # pack only, skip build
- *   npm run release:pfupdate -- --with-gateway             # lab: include openNDS gateway
  *
  * Output:
  *   dist/releases/praxis-flow-update-<version>.pfupdate
@@ -46,13 +45,12 @@ Options:
   --output <dir>               Output directory (default: dist/releases)
   --minimum-manager-version    Minimum Manager semver (default: manager/package.json version)
   --no-build                   Skip docker build; package existing local tags only
-  --with-gateway               Include openNDS gateway image + compose (lab only; not product)
   --help                       Show this help
 
 Package layout (extracted):
   manifest.json
   SHA256SUMS.txt
-  images/praxis-flow-images.tar     ← docker save (app + sandbox + custom Caddy; + gateway if --with-gateway)
+  images/praxis-flow-images.tar     ← docker save (app + sandbox + custom Caddy)
   templates/docker-compose.delivery.yml
   templates/docker-compose.proxy.delivery.yml
   templates/docker-compose.proxy-tls.delivery.yml
@@ -60,20 +58,17 @@ Package layout (extracted):
   templates/.env.example
   THIRD_PARTY_NOTICES.txt
   licenses/caddy/LICENSE.txt
-  templates/docker-compose.gateway.delivery.yml   ← only with --with-gateway
 
 Images tagged as:
   praxis-flow/app:<version>
   praxis-flow/sandbox:<version>
   praxis-flow-proxy:2.11.4-acmedns  ← offline reverse proxy with ACME-DNS (not auto-started)
-  praxis-flow/gateway:<version>     ← only with --with-gateway (lab / openNDS reference)
 `);
 }
 
 function parseArgs(argv) {
   let version = process.env.PRAXIS_FLOW_RELEASE_VERSION?.trim() || null;
   let noBuild = false;
-  let withGateway = false;
   let outputRoot = path.join(root, 'dist', 'releases');
   let minimumManagerVersion = readManagerVersion();
 
@@ -103,7 +98,10 @@ function parseArgs(argv) {
       continue;
     }
     if (arg === '--with-gateway') {
-      withGateway = true;
+      console.error(
+        '--with-gateway was removed: the openNDS lab gateway stack is no longer in the product tree.',
+      );
+      process.exit(1);
     }
   }
 
@@ -117,7 +115,7 @@ function parseArgs(argv) {
     process.exit(1);
   }
 
-  return { version, noBuild, withGateway, outputRoot, minimumManagerVersion };
+  return { version, noBuild, outputRoot, minimumManagerVersion };
 }
 
 function run(command, args, options = {}) {
@@ -158,10 +156,9 @@ function assertImageExists(imageRef) {
   runCapture('docker', ['image', 'inspect', imageRef, '--format', '{{.Id}}']);
 }
 
-function buildReleaseImages(version, { withGateway = false } = {}) {
+function buildReleaseImages(version) {
   const appImage = `praxis-flow/app:${version}`;
   const sandboxImage = `praxis-flow/sandbox:${version}`;
-  const gatewayImage = `praxis-flow/gateway:${version}`;
 
   console.log(`Building ${appImage} …`);
   run('docker', appDockerBuildArgs(version));
@@ -178,21 +175,7 @@ function buildReleaseImages(version, { withGateway = false } = {}) {
     '.',
   ]);
 
-  if (withGateway) {
-    console.log(`Building ${gatewayImage} …`);
-    run('docker', [
-      'build',
-      '-f',
-      'gateway/Dockerfile',
-      '-t',
-      gatewayImage,
-      '--sbom=true',
-      '--provenance=mode=max',
-      '.',
-    ]);
-  }
-
-  return { appImage, sandboxImage, gatewayImage: withGateway ? gatewayImage : null };
+  return { appImage, sandboxImage };
 }
 
 function sha256File(filePath) {
@@ -229,7 +212,7 @@ function copyFileEnsuringDir(sourcePath, targetPath) {
   fs.copyFileSync(sourcePath, targetPath);
 }
 
-function buildDeliveryEnvExample(version, appImage, sandboxImage, gatewayImage, proxyImage) {
+function buildDeliveryEnvExample(version, appImage, sandboxImage, proxyImage) {
   const sourcePath = path.join(root, '.env.example');
   const lines = fs.readFileSync(sourcePath, 'utf8').split(/\r?\n/);
   const imageLines = new Set([
@@ -254,9 +237,6 @@ function buildDeliveryEnvExample(version, appImage, sandboxImage, gatewayImage, 
   out.push('# Delivery image tags (written by .pfupdate install)');
   out.push(`PRAXIS_FLOW_APP_IMAGE=${appImage}`);
   out.push(`PRAXIS_FLOW_SANDBOX_IMAGE=${sandboxImage}`);
-  if (gatewayImage) {
-    out.push(`PRAXIS_FLOW_GATEWAY_IMAGE=${gatewayImage}`);
-  }
   out.push(`PRAXIS_FLOW_PROXY_IMAGE=${proxyImage}`);
 
   return `${out.join('\n').replace(/\n+$/, '')}\n`;
@@ -315,12 +295,9 @@ async function validateBuiltPackage(archivePath) {
   }
 }
 
-const { version, noBuild, withGateway, outputRoot, minimumManagerVersion } = parseArgs(
-  process.argv.slice(2),
-);
+const { version, noBuild, outputRoot, minimumManagerVersion } = parseArgs(process.argv.slice(2));
 const appImage = `praxis-flow/app:${version}`;
 const sandboxImage = `praxis-flow/sandbox:${version}`;
-const gatewayImage = withGateway ? `praxis-flow/gateway:${version}` : null;
 const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-staging-'));
 const archiveFileName = `praxis-flow-update-${version}.pfupdate`;
 const archivePath = path.join(outputRoot, archiveFileName);
@@ -335,11 +312,8 @@ if (noBuild) {
   assertImageExists(appImage);
   assertImageExists(sandboxImage);
   assertImageExists(proxyImage);
-  if (withGateway) {
-    assertImageExists(gatewayImage);
-  }
 } else {
-  buildReleaseImages(version, { withGateway });
+  buildReleaseImages(version);
 }
 
 const proxyImageDigest = prepareDeliveryProxyImage({
@@ -356,9 +330,6 @@ try {
 
   const imagesTarPath = path.join(stagingRoot, 'images', 'praxis-flow-images.tar');
   const imagesToSave = [appImage, sandboxImage, proxyImage];
-  if (withGateway) {
-    imagesToSave.splice(2, 0, gatewayImage);
-  }
   console.log(`Saving images to ${imagesTarPath} …`);
   await dockerSaveTar(imagesTarPath, imagesToSave);
 
@@ -366,12 +337,6 @@ try {
     path.join(root, 'docker-compose.delivery.yml'),
     path.join(stagingRoot, 'templates', 'docker-compose.delivery.yml'),
   );
-  if (withGateway) {
-    copyFileEnsuringDir(
-      path.join(root, 'docker-compose.gateway.delivery.yml'),
-      path.join(stagingRoot, 'templates', 'docker-compose.gateway.delivery.yml'),
-    );
-  }
   copyFileEnsuringDir(
     path.join(root, 'docker-compose.proxy.delivery.yml'),
     path.join(stagingRoot, 'templates', 'docker-compose.proxy.delivery.yml'),
@@ -394,16 +359,13 @@ try {
   );
   fs.writeFileSync(
     path.join(stagingRoot, 'templates', '.env.example'),
-    buildDeliveryEnvExample(version, appImage, sandboxImage, gatewayImage, proxyImage),
+    buildDeliveryEnvExample(version, appImage, sandboxImage, proxyImage),
     'utf8',
   );
 
-  const packagedPaths = pfupdate.PFUPDATE_ALLOWED_FILE_PATHS.filter((relativePath) => {
-    if (!withGateway && pfupdate.PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS.includes(relativePath)) {
-      return false;
-    }
-    return true;
-  });
+  const packagedPaths = pfupdate.PFUPDATE_ALLOWED_FILE_PATHS.filter(
+    (relativePath) => !pfupdate.PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS.includes(relativePath),
+  );
 
   const fileEntries = packagedPaths.map((relativePath) => {
     const absolutePath = path.join(stagingRoot, relativePath);
@@ -421,7 +383,6 @@ try {
     images: {
       app: appImage,
       sandbox: sandboxImage,
-      ...(withGateway ? { gateway: gatewayImage } : {}),
       proxy: proxyImage,
     },
     imageDigests: {
@@ -452,11 +413,6 @@ try {
   console.log('');
   console.log(`Release: ${version} · minimum Manager: ${minimumManagerVersion}`);
   console.log(`Proxy image (optional runtime): ${proxyImage}`);
-  if (withGateway) {
-    console.log(`Gateway image (lab only): ${gatewayImage}`);
-  } else {
-    console.log('Gateway image: omitted (use --with-gateway for lab openNDS packages)');
-  }
   console.log('Import: Manager → Wartung → Betrieb & Updates → Update-Paket wählen …');
   console.log('');
   console.log(

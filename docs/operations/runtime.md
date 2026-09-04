@@ -20,7 +20,7 @@ Nicht: Release-Bau → [`delivery.md`](delivery.md) · LAN-TLS → [`tls.md`](tl
 | `sandbox`          | Dokumentenvorschau / Form2PDF, ClamAV      | nur Docker-Netz (`expose 8081`)                     |
 | `proxy` (optional) | Caddy HTTP und ggf. HTTPS                  | `:80` / `:443` — [`tls.md`](tls.md)                 |
 
-**Nicht Produktkern:** `gateway` (Captive-Lab, nur Linux + Env) · TLS-Lab (`pebble` / `acme-dns` / `coredns`) → [`../archive/tls-lab.md`](../archive/tls-lab.md)
+**Nicht Produktkern:** TLS-Lab (`pebble` / `acme-dns` / `coredns`) → [`../archive/tls-lab.md`](../archive/tls-lab.md). openNDS-Gateway-Stack entfernt → [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md).
 
 UI-Rollen laufen als statische Assets aus dem `app`-Image. Praxisname/Kontakte: DB (Ops), nicht Wizard. Auth-Secrets nur serverseitig in `.env`.
 
@@ -34,7 +34,8 @@ Resolver: `resolveComposeFiles` / `resolveComposeFileList` in `setup/src/docker.
 | Proxy     | `docker-compose.proxy.yml`                                        | `….proxy.delivery.yml`        | `PROXY_ENABLED` + Mode `http`/`tls-*`                   |
 | Proxy-TLS | `….proxy-tls.yml`                                                 | `….proxy-tls.delivery.yml`    | Mode `tls-*` **oder** `TLS_STATE≠off`                   |
 | TLS-Lab   | `docker-compose.tls-lab.yml` + `docker-compose.tls-lab-proxy.yml` | —                             | nur Dev + `TLS_ACME_DIRECTORY=pebble`                   |
-| Gateway   | `docker-compose.gateway.yml`                                      | `….gateway.delivery.yml`      | Env gesetzt **und** Host Linux (`canRunGatewayCompose`) |
+
+openNDS-Gateway-Compose ist entfernt (nicht Produkt). Historie: [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md).
 
 TLS-Overlay nur nach Proxy-Overlay. Default-Compose-Projektname typisch `praxis-flow` (Volumes z. B. `praxis-flow_app_data`).
 

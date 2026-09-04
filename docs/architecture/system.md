@@ -68,7 +68,7 @@ TV nutzt `GET /queue` mit Rolle `tv` — kein eigener Read-Service. Trennung üb
 | `sandbox`          | isolierte Vorschau / ClamAV                                |
 | `proxy` (optional) | Caddy — Ops [`../operations/tls.md`](../operations/tls.md) |
 
-Kein separater DB-Container. Lab-Gateway (nicht Produkt): [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md).
+Kein separater DB-Container. Historisches openNDS-Lab (Stack aus dem Repo entfernt): [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md).
 
 ## 4. Code-Schnitt (Monorepo)
 

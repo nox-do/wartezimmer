@@ -8,10 +8,6 @@ import type {
 import { sessionsSchemas } from '../api/generated/sessions.fastify-schemas.js';
 import { createRateLimiter } from '../http/simple-rate-limit.js';
 import { domainError, resolveDomainError, sendDomainError } from '../http/domain-error-mapper.js';
-import {
-  authorizePatientOnGateway,
-  isGatewayAuthBridgeConfigured,
-} from '../shared/gateway/gateway-auth-bridge-client.js';
 import { createRequirePortalEnabledPreHandler } from './portal-access.js';
 import {
   createRequirePatientSessionPreHandler,
@@ -140,39 +136,13 @@ export function registerSessionRoutes(app: FastifyInstance, db: CoreDatabase): v
       }
 
       try {
-        const sessionMe = db.getPatientSessionMe(sessionToken);
-        const defaultRedirect = redirectUrl || `/portal/menu`;
-
-        if (!isGatewayAuthBridgeConfigured()) {
-          return reply.send({
-            ok: true,
-            wlanAuthorized: false,
-            redirectUrl: defaultRedirect,
-          });
-        }
-
-        const bridgeResult = await authorizePatientOnGateway({
-          ticketCode: db.getTicketCodeByVisitId(sessionMe.visitId),
-          clientIp: clientIp || undefined,
-          clientMac: clientMac || undefined,
-          redirectUrl: defaultRedirect,
-        });
-
-        if (!bridgeResult.ok) {
-          request.log.warn(
-            { bridgeMessage: bridgeResult.message, bridgeStatus: bridgeResult.status },
-            'Captive gateway authorization failed',
-          );
-          return reply.code(502).send({
-            code: 'CAPTIVE_AUTH_FAILED',
-            message: 'WLAN-Freischaltung fehlgeschlagen. Bitte erneut versuchen.',
-          });
-        }
-
+        // Validate session is still live; captive WLAN freischaltung is not product
+        // (lab gateway stack removed). Keep the hook for later adapters.
+        db.getPatientSessionMe(sessionToken);
         return reply.send({
           ok: true,
-          wlanAuthorized: true,
-          redirectUrl: bridgeResult.redirectUrl || defaultRedirect,
+          wlanAuthorized: false,
+          redirectUrl: redirectUrl || `/portal/menu`,
         });
       } catch (error) {
         if (isSessionUnauthorizedError(error)) {

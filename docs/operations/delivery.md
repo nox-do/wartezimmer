@@ -28,8 +28,6 @@ Docker Compose  →  app + sandbox (+ optional proxy)
 | **Setup-API**     | Host schreiben, `docker load` / Compose, Probes               |
 | **Architektur**   | Was in `app`/`sandbox` läuft — nicht wie es ausgeliefert wird |
 
-Gateway-Images sind **Lab**, nicht Produkt-Default (`--with-gateway` nur bewusst).
-
 ---
 
 ## 2. Versionen
@@ -82,14 +80,13 @@ praxis-flow/app:<releaseVersion>       # Pflicht
 praxis-flow/sandbox:<releaseVersion>   # Pflicht
 praxis-flow-proxy:2.11.4-acmedns       # neue Pakete (PRAXIS_FLOW_PROXY_IMAGE)
 caddy:2.11.4                           # Compose-Default / Legacy-Pakete ohne Custom-Proxy
-praxis-flow/gateway:<releaseVersion>   # nur Lab (--with-gateway)
 ```
 
 Konstante im Code: `PRAXIS_FLOW_PROXY_IMAGE_REF` in `packages/server-shared/src/pfupdate.ts`.
 
-`<releaseVersion>` muss übereinstimmen mit Manifest `releaseVersion`, gesetzten versionierten `images.app|sandbox` (und `gateway` falls vorhanden) und `manager-state` → `release.releaseVersion`.
+`<releaseVersion>` muss übereinstimmen mit Manifest `releaseVersion`, gesetzten versionierten `images.app|sandbox` und `manager-state` → `release.releaseVersion`.
 
-**Proxy in der Auslieferung:** Custom-Image (xcaddy + `dns.providers.acmedns`) liegt im Paket, startet **nicht** von allein. Aktivierung über Manager/Setup (`PROXY_ENABLED`). Delivery-Compose setzt `pull_policy: never` für app, sandbox, proxy (und gateway falls geladen) — keine Registry-Nachzüge in der Praxis. Betrieb und TLS: [`tls.md`](tls.md). Base-Image nur über freigegebenen Digest pullen (Build); Manifest trägt Registry-Digest + Archive-Image-ID + Plattform. Ältere Pakete mit `images.proxy=caddy:2.11.4` bleiben gültig.
+**Proxy in der Auslieferung:** Custom-Image (xcaddy + `dns.providers.acmedns`) liegt im Paket, startet **nicht** von allein. Aktivierung über Manager/Setup (`PROXY_ENABLED`). Delivery-Compose setzt `pull_policy: never` für app, sandbox, proxy — keine Registry-Nachzüge in der Praxis. Betrieb und TLS: [`tls.md`](tls.md). Base-Image nur über freigegebenen Digest pullen (Build); Manifest trägt Registry-Digest + Archive-Image-ID + Plattform. Ältere Pakete mit `images.proxy=caddy:2.11.4` bleiben gültig.
 
 **Dev-Tags:**
 
@@ -155,7 +152,7 @@ Labels: `WIZARD_STEP_LABELS` in `manager/src/renderer/wizard-flow.ts`.
 | 2   | **Routing**         | Simple/Complex. **Kein** Praxis-Anzeigename hier — der gehört nach Ops `/ops/setup`                                                                                     |
 | 3   | **Import & Export** | Host-Pfade Pflicht (sonst Validierungsfehler)                                                                                                                           |
 | 4   | **Netzwerk**        | LAN-IP + Erreichbarkeit (LAN-IP / Rechnername / Custom-Host) → kanonische `http://`-URL                                                                                 |
-| 5   | **Zugang**          | Optional **Port 80** (HTTP-Proxy). Gateway im Manager immer **aus** (`DISABLED_GATEWAY_PLAN`)                                                                           |
+| 5   | **Zugang**          | Optional **Port 80** (HTTP-Proxy). Kein Captive-/Gateway-Wizard (`DISABLED_GATEWAY_PLAN`)                                                                              |
 | 6   | **HTTPS**           | Nur wenn Proxy an; sonst Sprung → 7. Phasen: offer → hostname → lease → mail/PEM. Assistent endet bei Mail/Staging — **DNS-Warten, Zertifikat, Cutover unter Netzwerk** |
 | 7   | **Vorschau**        | `POST /api/setup/host/plan` → Geräte-URLs                                                                                                                               |
 | 8   | **Abschluss**       | `POST /api/setup/host/apply` (`runCompose`), danach Probes / Links                                                                                                      |
@@ -167,11 +164,11 @@ Nach Apply: MFA/Ops-PIN Standard **`0000`** (änderbar in der App; Reset im Mana
 ### 4.4 CLI-Fallback
 
 ```bash
-npm run setup                 # interaktiv: LAN-IP, Praxisname, optional Gateway (Linux), Compose
+npm run setup                 # interaktiv: LAN-IP, Praxisname, Compose
 npm run setup:reset -- --yes
 ```
 
-Abweichungen zum Manager: CLI fragt den **Praxisnamen**; Gateway-Option existiert (Lab/Linux). Produktweg bleibt der Manager ohne Gateway.
+Abweichungen zum Manager: CLI fragt den **Praxisnamen**. Captive-/Gateway-Einrichtung gibt es nicht mehr (Portal-v1: Restricted-Netz).
 
 ### 4.5 Dev-Iteration
 
@@ -236,7 +233,7 @@ UI-Phasen: `inspect` → `preview` → `applying` → `success` | `failed` (`pfu
 | Archiv + Manifest + SHA256        | `packages/server-shared/src/pfupdate.ts` / `validateExtractedPfupdate`   |
 | Manager ≥ `minimumManagerVersion` | Manager sendet Version mit; Build setzt Default = `manager/package.json` |
 | Settings-Format                   | laufende Maintenance-App oder Build-Default                              |
-| Image-Tags = `releaseVersion`     | Pflicht für app/sandbox (gateway strikt, falls im Paket)                 |
+| Image-Tags = `releaseVersion`     | Pflicht für app/sandbox                                              |
 | Nach Cutover                      | `targetSchemaVersion: 1` → Fresh DB + Settings-Import                    |
 
 **Regel:** Ein `.pfupdate` darf keine höhere `minimumManagerVersion` verlangen als die Manager-DMG, mit der es freigegeben wurde.
@@ -330,10 +327,10 @@ Kein Gateway im Produkt-Archiv. Keine Compose-Templates in diesem Paket (Templat
 
 Script: `scripts/build-pfupdate.mjs`
 
-1. Optional: `docker build` app + sandbox (+ gateway nur mit `--with-gateway`)
+1. Optional: `docker build` app + sandbox
 2. Proxy-Image wie oben
 3. Staging: `docker save` → **unkomprimiertes** `images/praxis-flow-images.tar`
-4. Templates kopieren: `docker-compose.delivery.yml`, `docker-compose.proxy.delivery.yml`, `docker-compose.proxy-tls.delivery.yml`, `proxy/Caddyfile`, generiertes `templates/.env.example` (Image-Tags gesetzt); Gateway-Compose nur mit Flag
+4. Templates kopieren: `docker-compose.delivery.yml`, `docker-compose.proxy.delivery.yml`, `docker-compose.proxy-tls.delivery.yml`, `proxy/Caddyfile`, generiertes `templates/.env.example` (Image-Tags gesetzt)
 5. `manifest.json` inkl. `minimumManagerVersion` (Default = aktuelle `manager/package.json`-Version), `imageDigests.proxy`, Dateiliste
 6. `SHA256SUMS.txt` + Lizenzen/Notices
 7. `tar czf` → `dist/releases/praxis-flow-update-<ver>.pfupdate`
@@ -354,7 +351,7 @@ THIRD_PARTY_NOTICES.txt
 licenses/caddy/LICENSE.txt
 ```
 
-Ältere Pakete ohne Proxy-/Gateway-Felder bleiben gültig (v1-kompatibel).
+Ältere Pakete ohne Proxy-Felder (und optionale Legacy-Gateway-Felder) bleiben gültig (v1-kompatibel).
 
 ### 6.3 Manager-DMG — `npm run dist:manager:mac`
 

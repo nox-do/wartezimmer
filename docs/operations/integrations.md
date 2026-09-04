@@ -14,9 +14,9 @@ Nicht: LAN-TLS/Proxy → [`tls.md`](tls.md) · Compose-Alltag → [`runtime.md`]
 | **Wir liefern**       | Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API                                                                                                                     |
 | **Wir liefern nicht** | Router, AP, Captive-Hardware, eigenen Captive-Datenpfad (DHCP/Firewall/`ndsctl`)                                                                                              |
 | **Später (nicht v1)** | Erweiterbare Liste **schlanker** Captive-Adapter (von uns gepflegt) mit **Auswahl im Manager**; Praxis-IT bleibt Betreiber von AP/Controller                                  |
-| **Session-Hooks**     | u. a. `sessions/resolve-ticket`, `sessions/captive-authorize` (heute Lab-/Hook-Pfad; später hinter Adapter)                                                                    |
+| **Session-Hooks**     | u. a. `sessions/resolve-ticket`, `sessions/captive-authorize` (Hook bleibt; `wlanAuthorized` derzeit immer `false` — später Adapter)                                    |
 | **Manager heute**     | Gateway stets `enabled: false` (`DISABLED_GATEWAY_PLAN`); Fokus Restricted-Netz / Portal-URL — kein Captive-Wizard in Portal-v1                                               |
-| **Lab**               | openNDS-`gateway`: [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md); Entwurf Adapter: [`../archive/roadmap-captive-portal-adapters.md`](../archive/roadmap-captive-portal-adapters.md) |
+| **Lab**               | openNDS-Gateway-Stack **entfernt** aus dem Repo (Compose/`gateway/`); Historie: [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md); Adapter-Entwurf: [`../archive/roadmap-captive-portal-adapters.md`](../archive/roadmap-captive-portal-adapters.md) |
 
 WLAN-Hardware bleibt Praxis-IT. Internet-Portal/Whitelist = **nicht Produkt** (Outlook).
 Restricted-IP-/Listener-Grenze (Portal-v1) ist davon getrennt:

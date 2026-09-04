@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import * as p from '@clack/prompts';
 import { applySetupPlan, getHostStatus } from './host-state.js';
-import { canRunGatewayCompose, dockerInstallHints, detectDocker } from './docker.js';
-import { listLanIpv4Candidates, listNetworkInterfaces } from './network.js';
+import { dockerInstallHints, detectDocker } from './docker.js';
+import { listLanIpv4Candidates } from './network.js';
 import { resolveSetupContext } from './setup-context.js';
 
 function isCancel<T>(value: T | symbol): value is symbol {
@@ -71,59 +71,10 @@ async function main() {
     'MFA- und Ops-Anmeldung: Standard-PIN 0000 (MFA/Panel: MFA → Betrieb; Ops: System → PIN & Sicherheit; Reset: Praxis Flow Manager → Wartung).',
   );
 
-  const gatewayEnabled = await p.confirm({
-    message: 'Gast-WLAN mit Captive Portal einrichten? (Linux-Host, optional)',
-    initialValue: false,
-  });
-  if (isCancel(gatewayEnabled)) {
-    process.exit(0);
-  }
-
-  let gatewayInterface = 'eth1';
-  let gatewayIp = '192.168.88.1';
-  let portalAppIp = lanAppIp;
-
-  if (gatewayEnabled && !canRunGatewayCompose()) {
-    p.log.warn(
-      'Gast-WLAN-Container läuft nur auf Linux. Auf diesem System werden Gateway-Variablen in .env vorbereitet, Compose startet ohne Gateway-Profil.',
-    );
-  }
-
-  if (gatewayEnabled) {
-    const ifaces = listNetworkInterfaces();
-    const ifaceChoice = await p.select({
-      message: 'Netzwerk-Interface für Gast-LAN (GATEWAY_INTERFACE)',
-      options: [
-        ...ifaces.map((iface) => ({
-          value: iface.name,
-          label: `${iface.name} — ${iface.addresses.map((a) => a.address).join(', ')}`,
-        })),
-        { value: 'eth1', label: 'eth1 (manuell, Standard)' },
-      ],
-    });
-    if (isCancel(ifaceChoice)) {
-      process.exit(0);
-    }
-    gatewayInterface = String(ifaceChoice);
-
-    const gwIp = await p.text({
-      message: 'Gateway-IP im Gast-Netz (GATEWAY_IP)',
-      initialValue: '192.168.88.1',
-    });
-    if (isCancel(gwIp)) {
-      process.exit(0);
-    }
-    gatewayIp = String(gwIp).trim() || '192.168.88.1';
-
-    const portalIp = await p.text({
-      message: 'App-IP für Patienten im Gast-WLAN (APP_PORTAL_URL, oft = LAN-IP)',
-      initialValue: lanAppIp,
-    });
-    if (isCancel(portalIp)) {
-      process.exit(0);
-    }
-    portalAppIp = String(portalIp).trim() || lanAppIp;
-  }
+  const gatewayEnabled = false;
+  const gatewayInterface = 'eth1';
+  const gatewayIp = '192.168.88.1';
+  const portalAppIp = lanAppIp;
 
   const envExists = (await getHostStatus(ctx)).envExists;
   let preserveEnv = false;
@@ -185,11 +136,6 @@ async function main() {
     if (result.folders.created.length > 0) {
       p.log.info(`Ordner angelegt: ${result.folders.created.join(', ')}`);
     }
-    if (result.gatewayComposeSkipped) {
-      p.log.info(
-        'Gateway-Profil übersprungen (macOS/Windows — siehe docs/archive/gateway-captive-portal.md)',
-      );
-    }
     if (result.compose && !result.compose.ok) {
       p.log.error('Docker Compose fehlgeschlagen');
       p.note(result.compose.log, 'Compose-Log');
@@ -209,7 +155,7 @@ async function main() {
         'Anmeldung MFA/Ops: Standard-PIN 0000 (Datenbank, nicht .env).',
         'MFA/Panel unter MFA → Betrieb; Ops unter System → PIN & Sicherheit; bei Vergessen: Praxis Flow Manager → Wartung → Staff-PINs.',
         '',
-        'Server-Secrets stehen in .env (AUTH_KEY_CAPTIVE, SANDBOX_INTERNAL_TOKEN, OPENNDS_FAS_KEY).',
+        'Server-Secrets stehen in .env (AUTH_KEY_CAPTIVE, SANDBOX_INTERNAL_TOKEN).',
         '',
         'Wichtig: Terminal/TV nutzen Pairing, MFA/Ops nutzen Staff-Session; keine Rollen-Keys im UI-Build.',
         'Nach neuen Keys: docker compose --env-file .env up -d --build app',

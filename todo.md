@@ -2,12 +2,21 @@
 
 Stand: 2026-09-04
 
+## 2026-09-04 — Cleanup: openNDS-Gateway / Auth-Bridge
+
+- Entfernt: `gateway/` Lab-Stack, `docker-compose.gateway*.yml`, `app/.../gateway-auth-bridge-client.ts`
+- App: `POST .../captive-authorize` stubbt immer `wlanAuthorized: false` (Hook für spätere Adapter)
+- Compose/App-Env: `GATEWAY_AUTH_BRIDGE_URL` raus; Setup Compose startet Gateway nie mehr; CLI ohne Gast-WLAN-Fragen
+- pfupdate: `--with-gateway` entfernt; Manager-Packaging ohne Gateway-Compose
+- Docs: integrations/runtime/delivery/system/archive + README angepasst
+- Bewusst belassen: `AUTH_KEY_CAPTIVE`, Setup-API-`gateway`-Plan-Felder (Manager `DISABLED_GATEWAY_PLAN`), Legacy-pfupdate-Validierung für alte Pakete
+
 ## 2026-09-04 — Docker-Review (Doku-Abgleich, noch keine Fixes)
 
 - Scope: Dockerfiles + Compose (+ `.dockerignore`) vs. aktuelle Docker Best Practices
 - Schon gut: Multi-Stage, SBOM/Provenance, Secret-Required-Env, Log-Rotation, Digest-Pins (Proxy-Runtime/TLS-Lab), Delivery-Overlays
 - Offen / Nachlässig (Priorität):
-  1. App/Sandbox/Gateway laufen als root — widerspricht eigener Isolation-Plan-Zusage (Non-Root / `no-new-privileges` / cap_drop)
+  1. App/Sandbox laufen als root — widerspricht eigener Isolation-Plan-Zusage (Non-Root / `no-new-privileges` / cap_drop)
   2. `.dockerignore` lässt `manager/` (~300MB) + `lab/` im Build-Context
   3. Base-Images `node:22-alpine` / `debian:bookworm-slim` / `caddy:…-builder` nicht digest-gepinnt
   4. Gateway: `privileged: true` + `network_mode: host` (+ redundantes `cap_add`); Default-FAS-Key

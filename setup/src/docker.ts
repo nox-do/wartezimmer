@@ -62,16 +62,9 @@ function usesDeliveryCompose(projectRoot: string, delivery?: boolean): boolean {
   return !hasDev;
 }
 
-function wantsGatewayCompose(projectRoot: string, withGateway?: boolean): boolean {
-  if (withGateway !== undefined) {
-    return withGateway;
-  }
-  const envPath = path.join(projectRoot, '.env');
-  if (!fs.existsSync(envPath)) {
-    return false;
-  }
-  const envMap = readEnvMap(envPath);
-  return Boolean(envMap.get('GATEWAY_AUTH_BRIDGE_URL')?.trim());
+/** Lab openNDS gateway compose removed from the product tree — never attach. */
+function wantsGatewayCompose(_projectRoot: string, _withGateway?: boolean): boolean {
+  return false;
 }
 
 function wantsProxyCompose(projectRoot: string, withProxy?: boolean): boolean {
@@ -104,8 +97,7 @@ function wantsProxyTlsCompose(projectRoot: string): boolean {
 
 /**
  * Single compose-file resolver for up/ps/stop/restart/logs/down.
- * Gateway overlay is included when enabled and the host can run it; callers still
- * pass `--profile gateway` via buildComposeArgv.
+ * (Former openNDS gateway overlay removed from the product tree.)
  */
 function wantsTlsLabCompose(projectRoot: string): boolean {
   const envPath = path.join(projectRoot, '.env');
@@ -120,6 +112,7 @@ export function resolveComposeFiles(input: {
   proxyEnabled?: boolean;
   proxyTlsEnabled?: boolean;
   tlsLabEnabled?: boolean;
+  /** @deprecated Ignored — openNDS gateway compose removed. */
   gatewayEnabled?: boolean;
 }): string[] {
   const useDelivery = usesDeliveryCompose(input.projectRoot, input.delivery);
@@ -137,20 +130,16 @@ export function resolveComposeFiles(input: {
     }
   }
 
-  if (input.gatewayEnabled && canRunGatewayCompose()) {
-    files.push(useDelivery ? 'docker-compose.gateway.delivery.yml' : 'docker-compose.gateway.yml');
-  }
-
   return files;
 }
 
 export function productComposeServices(input: {
   proxyEnabled?: boolean;
+  /** @deprecated Ignored — openNDS gateway compose removed. */
   gatewayEnabled?: boolean;
 }): string[] {
   const services = ['app', 'sandbox'];
   if (input.proxyEnabled) services.push('proxy');
-  if (input.gatewayEnabled) services.push('gateway');
   return services;
 }
 
