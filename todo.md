@@ -1,18 +1,18 @@
 # Arbeitsstand (intern)
 
-Stand: 2026-09-03
+Stand: 2026-09-04
+
+## 2026-09-04 — DB-Hygiene-Plan abgeschlossen
+
+- Plan entfernt (`docs/plan-db-layer-hygiene.md`): Schnitt 1–3 + Soft-Cut `waiting_room_full` erledigt
+- Offen bewusst woanders: Disk-Docs nach Reset, Hard-Drop/Schema-Quellen, `BUSINESS_TZ`
 
 ## 2026-09-03 — DB-Schicht Review (app/src/shared/db)
 
 - Review ohne Codefix: Reset mit FK OFF hinterlässt Waisen (host_state/sessions/docs)
 - Timer vs. TX (Recall/Assist); Session-GET schreibt; Schema dreifach; waiting_room_full tot
 - Canvas: db-layer-review
-- Plan: [`docs/plan-db-layer-hygiene.md`](docs/plan-db-layer-hygiene.md)
-- Schnitt 1: `clearFlowCoreVisitRuntime` mit FK an; Host/Portal vor visits; Tests Gen-1 + Baseline ohne Visit-CASCADE (32d9410)
-- Schnitt 2: Recall-/Assist-Timer nur nach COMMIT; DB-Clear bleibt in äußerer TX; Rollback lässt Timer-Map (ea2d51c)
-- Schnitt 3: Session-GET/`listPatientDocuments` in Write-TX; `SESSION_EXPIRED` committed; `require…` Statement-only
-- Halt Plan-DB-Hygiene; nächster Plan: Disk-Docs / Schema-Quellen / …
-- Soft-Cut `ops_settings.waiting_room_full`: Statements/Import ohne Spalte; Wert unberührt; Baseline bleibt (kein Gen-Bump)
+- Schnitt 1–3 + Soft-Cut erledigt (32d9410, ea2d51c, 159a377, 3aec562); Plan danach gelöscht
 
 ## 2026-09-02
 
