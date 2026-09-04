@@ -38,6 +38,45 @@ test('saveJourneyTemplate: bei offenen Visits nicht speicherbar', () => {
   );
 });
 
+test('saveJourneyTemplate: abandoned open Visit sperrt Template nicht', () => {
+  const runtime = createRuntime(openDb({ path: ':memory:' }));
+  const catalog = runtime.catalog();
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Abandoned',
+    surfaceId: 'terminal_1',
+  });
+  runtime.redirect(created.id, {
+    targetLocationId: 'room_1',
+    movementMode: 'call',
+    publicDisplayMode: 'visible',
+    actorSurfaceId: 'mfa_dashboard',
+  });
+  assert.equal(
+    runtime.visits().find((visit) => visit.id === created.id)?.journeyState,
+    'abandoned',
+  );
+
+  const steps = catalog.journeySteps.filter((step) => step.templateId === 'journey_general');
+  assert.doesNotThrow(() =>
+    runtime.saveJourneyTemplate('journey_general', {
+      name: 'Nach Redirect editierbar',
+      topicId: 'general',
+      active: true,
+      steps: steps.map((step) => ({
+        id: step.id,
+        sortOrder: step.sortOrder,
+        targetLocationId: step.targetLocationId,
+        queueId: step.queueId,
+        movementMode: step.movementMode,
+        publicDisplayMode: step.publicDisplayMode,
+        completedWhen: step.completedWhen,
+        instructionText: step.instructionText,
+      })),
+    }),
+  );
+});
+
 test('saveJourneyTemplate: ohne offene Visits erlaubt', () => {
   const runtime = createRuntime(openDb({ path: ':memory:' }));
   const catalog = runtime.catalog();

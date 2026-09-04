@@ -41,58 +41,6 @@ const openVisitCount = Number(open?.count ?? 0);
 console.log(JSON.stringify({ routingMode, openVisitCount }));
 `.trim();
 
-const WRITE_ROUTING_MODE_SCRIPT = `
-import { DatabaseSync } from 'node:sqlite';
-
-const nextMode = process.env.ROUTING_MODE;
-if (nextMode !== 'simple' && nextMode !== 'complex') {
-  throw new Error('ROUTING_MODE must be simple or complex');
-}
-
-const dbPath = '/var/lib/praxis-flow/app/praxis-flow.db';
-const db = new DatabaseSync(dbPath);
-const current = db
-  .prepare("SELECT routing_mode AS routingMode FROM ops_settings WHERE id = 'singleton'")
-  .get();
-if (!current) {
-  throw new Error('OPS_SETTINGS_MISSING');
-}
-
-if (current.routingMode !== nextMode) {
-  const terminalStatuses = ['done', 'cancelled', 'no_show'];
-  const placeholders = terminalStatuses.map(() => '?').join(', ');
-  const open = db
-    .prepare(
-      \`SELECT COUNT(*) AS count FROM visits
-       WHERE status NOT IN (\${placeholders})\`,
-    )
-    .get(...terminalStatuses);
-  const openVisitCount = Number(open?.count ?? 0);
-  if (openVisitCount > 0) {
-    console.log(JSON.stringify({
-      ok: false,
-      code: 'ROUTING_MODE_CHANGE_BLOCKED',
-      error: \`Routing mode cannot be changed while \${openVisitCount} waiting number(s) are still open.\`,
-      details: { openVisitCount },
-    }));
-    process.exit(0);
-  }
-
-  if (nextMode === 'complex' && process.env.COMPLEX_ROUTING_LICENSED === 'false') {
-    console.log(JSON.stringify({
-      ok: false,
-      code: 'COMPLEX_ROUTING_NOT_LICENSED',
-      error: 'Complex routing is not included in your license.',
-    }));
-    process.exit(0);
-  }
-
-  db.prepare("UPDATE ops_settings SET routing_mode = ? WHERE id = 'singleton'").run(nextMode);
-}
-
-console.log(JSON.stringify({ ok: true, routingMode: nextMode }));
-`.trim();
-
 async function readRoutingModeFromDatabase(
   composeProjectName: string,
 ): Promise<{ routingMode: RoutingMode; openVisitCount: number } | null> {
@@ -137,74 +85,6 @@ async function readRoutingModeFromDatabase(
     };
   } catch {
     return null;
-  }
-}
-
-async function writeRoutingModeToDatabase(
-  composeProjectName: string,
-  routingMode: RoutingMode,
-): Promise<SetRoutingModeResult> {
-  const volume = appDataVolumeName(composeProjectName);
-  const exists = await runDockerCommand([
-    'run',
-    '--rm',
-    '-v',
-    `${volume}:/var/lib/praxis-flow/app`,
-    'node:22-alpine',
-    'test',
-    '-f',
-    APP_DB_PATH,
-  ]);
-  if (exists.code !== 0) {
-    return {
-      ok: false,
-      error: 'Keine App-Datenbank — Setup zuerst ausführen oder Stack starten.',
-    };
-  }
-
-  const env = [`ROUTING_MODE=${routingMode}`];
-  const licensed = isComplexRoutingLicensed();
-  env.push(`COMPLEX_ROUTING_LICENSED=${licensed ? 'true' : 'false'}`);
-  env.push(`NODE_ENV=${process.env.NODE_ENV ?? 'development'}`);
-
-  const result = await runDockerCommand([
-    'run',
-    '--rm',
-    ...env.flatMap((value) => ['-e', value]),
-    '-v',
-    `${volume}:/var/lib/praxis-flow/app`,
-    'node:22-alpine',
-    'node',
-    '--input-type=module',
-    '-e',
-    WRITE_ROUTING_MODE_SCRIPT,
-  ]);
-
-  if (result.code !== 0) {
-    return {
-      ok: false,
-      error: result.stderr || result.stdout || 'Routing-Modus konnte nicht gespeichert werden.',
-    };
-  }
-
-  try {
-    const parsed = JSON.parse(result.stdout.trim()) as
-      | { ok: true; routingMode: RoutingMode }
-      | { ok: false; code?: string; error: string; details?: Record<string, unknown> };
-    if (!parsed.ok) {
-      return parsed;
-    }
-    const capabilities = buildCapabilities(parsed.routingMode);
-    return {
-      ok: true,
-      routingMode: capabilities.routingMode,
-      features: capabilities.features,
-    };
-  } catch {
-    return {
-      ok: false,
-      error: 'Unerwartete Antwort beim Speichern des Routing-Modus.',
-    };
   }
 }
 
@@ -296,8 +176,12 @@ export async function getRoutingModeCapabilities(
   return buildCapabilities('simple');
 }
 
+/**
+ * Mode-Wechsel nur über Maintenance-API (:8082) — inkl. Catalog-Sync.
+ * Kein SQLite-Direktwrite mehr (früherer Fallback driftete Mode vs. Catalog).
+ */
 export async function setRoutingMode(
-  composeProjectName: string,
+  _composeProjectName: string,
   routingMode: RoutingMode,
   localAppBaseUrl = DEFAULT_LOCAL_APP,
 ): Promise<SetRoutingModeResult> {
@@ -313,24 +197,5 @@ export async function setRoutingMode(
     };
   }
 
-  const viaApp = await patchRoutingModeViaApp(routingMode, localAppBaseUrl);
-  if (viaApp.ok) {
-    return viaApp;
-  }
-
-  const fallbackToDatabase =
-    viaApp.error === 'Praxis Flow Maintenance-API ist nicht erreichbar (Port 8082).' ||
-    viaApp.code === 'AUTH_UNAUTHORIZED' ||
-    viaApp.error === 'Unauthorized.';
-
-  if (!fallbackToDatabase) {
-    return viaApp;
-  }
-
-  const viaDb = await writeRoutingModeToDatabase(composeProjectName, routingMode);
-  if (!viaDb.ok) {
-    return viaDb;
-  }
-
-  return viaDb;
+  return patchRoutingModeViaApp(routingMode, localAppBaseUrl);
 }

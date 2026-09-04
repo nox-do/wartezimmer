@@ -34,6 +34,22 @@ test('stepToVisitPatch: ohne Escort-Remap keine terminalInstruction', () => {
   assert.equal(patch.terminalInstruction, undefined);
 });
 
+test('stepToVisitPatch: instructionText wird als terminalInstruction übernommen', () => {
+  const patch = stepToVisitPatch(
+    {
+      targetLocationId: 'reception',
+      queueId: 'general_queue',
+      movementMode: 'call',
+      publicDisplayMode: 'visible',
+      completedWhen: 'arrive',
+      instructionText: '  Bitte melden Sie sich am Empfang.  ',
+    },
+    { effectiveEscortPolicy: 'none' },
+  );
+
+  assert.equal(patch.terminalInstruction, 'Bitte melden Sie sich am Empfang.');
+});
+
 test('stepToVisitPatch: escort required mappt self_go auf pickup', () => {
   const patch = stepToVisitPatch(
     {

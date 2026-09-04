@@ -307,6 +307,74 @@ test('callVisit starts pending next call journey step before calling', () => {
   assert.equal(visit?.status, 'called');
 });
 
+test('callVisit advances to pickup hop without chaining call', () => {
+  const db = new DatabaseSync(':memory:');
+  db.exec('PRAGMA foreign_keys = ON');
+  ensureFlowCoreSchema(db);
+  const baseSettings = sampleSettings();
+  const settings: OpsSettings = {
+    ...baseSettings,
+    routingMode: 'complex',
+    topics: baseSettings.topics.map((topic) =>
+      topic.topicId === 'blut' ? { ...topic, journeyTemplateId: 'journey_blut_pickup' } : topic,
+    ),
+    journeySettings: {
+      templates: [
+        {
+          id: 'journey_blut_pickup',
+          name: 'Blut Pickup',
+          topicId: 'blut',
+          active: true,
+          steps: [
+            {
+              id: 'step_pickup_0',
+              sortOrder: 0,
+              targetLocationId: 'mfa-tresen',
+              queueId: 'pf_general_queue',
+              movementMode: 'call',
+              publicDisplayMode: 'visible',
+              completedWhen: 'arrive',
+              instructionText: null,
+            },
+            {
+              id: 'step_pickup_1',
+              sortOrder: 1,
+              targetLocationId: 'labor',
+              queueId: 'pf_general_queue',
+              movementMode: 'pickup',
+              publicDisplayMode: 'hidden',
+              completedWhen: 'done',
+              instructionText: null,
+            },
+          ],
+        },
+      ],
+    },
+  };
+  syncFlowCoreCatalog(db, settings);
+  const created = createVisitCheckInInDb(buildDeps(db, settings), {
+    topicId: 'blut',
+    authPath: 'phone_dob',
+    identityRef: 'Pickup Chain',
+  });
+  const runtime = getFlowCoreRuntime(db);
+  const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay(), db);
+  const visitId = created.visitId;
+
+  callVisit(db, runtime, settings, listQueue, visitId, 'mfa-tresen', 'Empfang');
+  arriveVisit(db, runtime, visitId, 'mfa-tresen');
+  assert.ok(runtime.visits().find((entry) => entry.id === visitId)?.journeyStepCompletedAt);
+
+  const advanced = callVisit(db, runtime, settings, listQueue, visitId, 'mfa-tresen', 'Empfang');
+  assert.deepEqual(advanced, { fromStatus: 'in_room', toStatus: 'waiting' });
+
+  const visit = runtime.visits().find((entry) => entry.id === visitId);
+  assert.equal(visit?.journeyStepIndex, 1);
+  assert.equal(visit?.movementMode, 'pickup');
+  assert.equal(visit?.status, 'waiting');
+  assert.equal(visit?.targetLocationId, 'labor');
+});
+
 test('scoped arrive succeeds when acting room matches target', () => {
   const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
   callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');

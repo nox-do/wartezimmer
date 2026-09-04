@@ -86,6 +86,7 @@ export function createAdminService(params: {
             .prepare(
               `SELECT COUNT(*) AS count FROM visits
        WHERE journey_template_id = ?
+       AND journey_state = 'active'
        AND status NOT IN (${sqlIn(terminalStatuses)})`,
             )
             .get(id, ...terminalStatuses) as { count: number }

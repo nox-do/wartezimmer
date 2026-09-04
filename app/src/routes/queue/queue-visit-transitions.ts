@@ -249,6 +249,7 @@ function handleContinueJourney(ctx: TransitionContext): QueueVisitTransitionResp
 }
 
 function handleReassignRoom(ctx: TransitionContext): QueueVisitTransitionResponse | undefined {
+  // Reassign ≠ Redirect — siehe Kommentar an reassignVisitRoom (visit-queue-bridge).
   const { roomId, roomLabel } = roomFields(ctx.body.roomId, ctx.body.roomLabel);
   if (!roomId) {
     sendApiError(ctx.reply, 400, {

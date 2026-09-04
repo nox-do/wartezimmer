@@ -4,6 +4,8 @@ Library für Praxisdurchläufe — Visit-Routing, Queues, Surfaces und Journey-T
 
 **Package:** `@praxis-flow/flow-core` (TypeScript, Build nach `dist/`)
 
+Host-Architektur (Modi, Sync, Guards): [`docs/architecture/routing.md`](../../docs/architecture/routing.md).
+
 Standalone-Referenz (HTTP + UI): `../new_flow_core` (Sibling-Repo neben diesem Monorepo).
 
 ## Domain-Modell

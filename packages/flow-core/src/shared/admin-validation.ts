@@ -79,7 +79,7 @@ export function validateCatalogIntegrity(catalog: Catalog): void {
     validateRoutingRuleDraft(catalog, rule, { ruleId: rule.id });
   }
 
-  for (const template of catalog.journeyTemplates) {
+  for (const template of catalog.journeyTemplates.filter((item) => item.active)) {
     const steps = stepsForJourneyTemplate(template.id, catalog.journeySteps);
     validateJourneyTemplateDraft(catalog, { ...template, steps });
   }

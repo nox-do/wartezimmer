@@ -2,6 +2,80 @@
 
 Stand: 2026-09-04
 
+## 2026-09-04 — Reassign nach Hop-Complete: so lassen (A)
+
+- Reassign = temporärer Raum im Hop; Continue/Call-next folgt Journey (Lesart B)
+- Kein Flag-Clear, kein Abandon; Kommentar an `reassignVisitRoom` ergänzt
+- Routing-Entscheidungsrunde P0–P2 damit durch (P3 optional Aufräumen)
+
+## 2026-09-04 — Template-Lock nur active Journeys (Option A)
+
+- Count/Lock: `journey_template_id` + `journey_state = 'active'` + nicht-terminal
+- Abandoned (z. B. nach Redirect) sperrt Template-Edit nicht; ID darf für Historie bleiben
+
+## 2026-09-04 — done mid-Journey → abandoned (Option A)
+
+- Terminales `done` bei noch `journeyState: active` → `abandoned` + Event (wie Cancel)
+- Advance bei `completedWhen: done` + Folgeschritt unverändert; normales Journey-Ende → `completed`
+
+## 2026-09-04 — Lizenz Runtime: bewusst fail-open (Stub)
+
+- Prod: ohne `COMPLEX_ROUTING_LICENSED=true` → Manager Complex nicht wählbar (`NODE_ENV=production`)
+- Freischalten derzeit nur per `.env` (+ App-Neustart); echte Lizenz-Infra offen
+- Runtime fail-open (Mode schon complex) bewusst ok bis Lizenz-Entscheidung
+
+## 2026-09-04 — Setup Mode-Fallback gestrichen
+
+- `setRoutingMode` nur noch Maintenance-API (:8082) inkl. Catalog-Sync
+- SQLite-Direktwrite + Unauthorized-Fallback entfernt (Drift Mode vs Catalog)
+- Read-Pfad darf weiter aus DB lesen wenn API down
+
+## 2026-09-04 — Redirect vs Reassign: bewusst offen + Kommentar
+
+- Entscheidung: Arztpraxis braucht Redirect selten; Reassign bleibt „Raum im Hop“
+- Redirect ≠ Topic-Wechsel (Supersede); Core hat Redirect, Host/MFA nicht
+- Marker: Kommentar an `reassignVisitRoom` + Pointer in queue-visit-transitions + routing.md §7
+- Kein Host-Redirect verdrahtet (nur Stolperstein für später)
+
+## 2026-09-04 — Entscheidung: return_to_waiting = Lesart B
+
+- Nach Hop-Complete + Zurück-in-WZ: Schritt bleibt **erledigt** (`journeyStepCompletedAt` behalten)
+- MFA-Intent: Aufgabe fertig → kurz WZ → später neue Aktion/Ziel (Continue / Call-next)
+- P0 „Flag clearen“ ist **kein Fix** (wäre falsch); heutiges Core-Verhalten passt
+- Residual: MFA-Button „Aufrufen“ darf nicht wie „nochmal gleicher Raum“ wirken — Advance ist gewollt; UX/Label ggf. nachziehen
+- Offen unverändert: done→abandon, Lizenz Runtime, Template-Lock abandoned, Reassign nach Hop-Complete
+
+## 2026-09-04 — Routing: sichere Fixes (ohne Semantik-Risiko)
+
+- `callVisit`: nach `start_next` nur `call` wenn `canTransition`; sonst Status des Hops; beide Schritte in `runInTransaction`
+- `JOURNEY_TEMPLATE_LOCKED` → HTTP 409
+- `validateCatalogIntegrity`: nur **aktive** Journey-Templates
+- Check-in/Supersede: Step-`instructionText` über `stepToVisitPatch`
+- Bewusst offen (Produktentscheid): done→abandon, Lizenz Runtime fail-open, Template-Lock/Reassign-nach-Complete
+
+## 2026-09-04 — Routing-Findings Verification (Code-Beleg)
+
+- Alle P0–P3 aus Review **bestätigt** am Code (kein Widerlegen)
+- P0 Präzisierung: Skip nur wenn `journeyStepCompletedAt` schon gesetzt (nach Hop-Complete), nicht bei purem Recall vor Complete
+- Template-Lock nach Redirect: Visit bleibt open + `journey_template_id` bleibt → Lock; Cancel terminal → kein Lock
+- Offen: Fixes priorisieren mit User (kein Auto-Umbau)
+
+## 2026-09-04 — Routing-Review (fachlich + Best Practice)
+
+- Verdict fachlich: Kernpfade simple/complex + Check-in-Projektion solide; Journey-Ops am MFA unvollständig/fehleranfällig
+- P0/P1: `return_to_waiting` lässt `journeyStepCompletedAt` stehen → nächster Call überspringt Hop; `callVisit` chained start_next+call blind
+- P1: kein Host-Redirect (nur Reassign); Setup Mode-Fallback ohne Catalog-Sync; Lizenz nur am Mode-Wechsel, Runtime fail-open; compose default NODE_ENV=development
+- P2: simple lässt journey_* aktiv → Integrity kann Settings-Sync hart abbrechen; Reassign nach Hop-Complete inkohärent; done mid-journey ohne abandon; Template-Lock zählt abandoned; JOURNEY_TEMPLATE_LOCKED → 400 statt 409
+- Offen: Fixes priorisieren mit User (kein Auto-Umbau)
+
+## 2026-09-04 — Routing-System (Review + Doku)
+
+- Scope: Domänen-Routing (`simple`/`complex`), Catalog-Rules, Journeys, Redirect, Mode-/Lizenz-Guards — nicht HTTP-Routes
+- Neu: `docs/architecture/routing.md` (funktional + nichtfunktional, Code-Karte, Drift-Risiken)
+- Verlinkt: architecture README/domain/system/apis, `packages/flow-core/README.md`
+- Cleanup: veralteter „Paket 5“-Kommentar an `isSimpleRoutingMode`
+- Offen beobachtet (nur Doku, kein Fix): stale `journey_*` nach Wechsel auf simple; `routingSimulator`-Flag ohne Produktfläche
+
 ## 2026-09-04 — Auth Cleanup (Captive-Doku + Session/Grants)
 
 - Captive: Docs/OpenAPI/Kommentar als Adapter-Hook (kein Gateway); Surface unverändert

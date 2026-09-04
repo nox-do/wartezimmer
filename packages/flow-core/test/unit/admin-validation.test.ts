@@ -275,6 +275,28 @@ test('validateCatalogIntegrity: Seed-Katalog ist konsistent', () => {
   assert.doesNotThrow(() => validateCatalogIntegrity(catalog));
 });
 
+test('validateCatalogIntegrity: inaktive Journey-Templates mit toten Locations werden ignoriert', () => {
+  const catalog = baseCatalog();
+  catalog.journeyTemplates.push({
+    id: 'journey_stale',
+    name: 'Stale',
+    topicId: null,
+    active: false,
+  });
+  catalog.journeySteps.push({
+    id: 'orphan_inactive_step',
+    journeyTemplateId: 'journey_stale',
+    sortOrder: 0,
+    targetLocationId: 'location_does_not_exist',
+    queueId: null,
+    movementMode: 'call',
+    publicDisplayMode: 'visible',
+    completedWhen: 'arrive',
+  });
+
+  assert.doesNotThrow(() => validateCatalogIntegrity(catalog));
+});
+
 test('openDb: Seed-Katalog besteht Integritaetspruefung', () => {
   assert.doesNotThrow(() => openDb({ path: ':memory:' }));
 });

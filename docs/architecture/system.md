@@ -87,6 +87,7 @@ Workspaces u. a. `app`, `ui`, `sandbox`, `setup`, `manager`, `packages/*`.
 | Komponente       | Routes (Auszug)                                | Shared / DB                                      |
 | ---------------- | ---------------------------------------------- | ------------------------------------------------ |
 | Check-in / Visit | `checkin-routes`, `sessions-routes`            | `flow-core-checkin`, `database-checkin-sessions` |
+| Routing / Journey| Catalog-Sync + Visit-Bridge                    | [`routing.md`](routing.md); `sync-catalog-from-ops-settings` |
 | Queue            | `queue-routes`                                 | `shared/queue/`, Visit-Bridge                    |
 | Identity         | `identity-routes`                              | Sessions/Contacts                                |
 | Dokumente        | `documents-routes`, `patient-documents-routes` | `shared/documents/`, `shared/forms/`             |

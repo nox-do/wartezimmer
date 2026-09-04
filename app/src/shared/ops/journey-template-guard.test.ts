@@ -39,7 +39,11 @@ function sampleTemplate(overrides: Partial<JourneySettings['templates'][number]>
   };
 }
 
-function insertOpenVisitForTemplate(db: DatabaseSync, templateId: string): void {
+function insertOpenVisitForTemplate(
+  db: DatabaseSync,
+  templateId: string,
+  journeyState: 'active' | 'abandoned' | 'completed' = 'active',
+): void {
   db.exec('PRAGMA foreign_keys = OFF');
   db.prepare('INSERT INTO patients VALUES (?, ?, ?, ?)').run(
     'p1',
@@ -64,9 +68,9 @@ function insertOpenVisitForTemplate(db: DatabaseSync, templateId: string): void 
       '20260707', 'lane_day', 'L', 1,
       0, 'topic', 'phone_dob', 'none', 'none', 1, 'Bitte warten.', NULL,
       '2026-07-07T10:00:00.000Z', NULL, NULL, NULL, NULL,
-      ?, 0, 'active', '2026-07-07T10:00:00.000Z', '2026-07-07T10:00:00.000Z'
+      ?, 0, ?, '2026-07-07T10:00:00.000Z', '2026-07-07T10:00:00.000Z'
     )`,
-  ).run(templateId);
+  ).run(templateId, journeyState);
   db.exec('PRAGMA foreign_keys = ON');
 }
 
@@ -79,6 +83,20 @@ test('countOpenVisitsForJourneyTemplate counts non-terminal visits on template',
   const db = openDb();
   insertOpenVisitForTemplate(db, TEMPLATE_ID);
   assert.equal(countOpenVisitsForJourneyTemplate(db, TEMPLATE_ID), 1);
+});
+
+test('countOpenVisitsForJourneyTemplate ignores abandoned open visits', () => {
+  const db = openDb();
+  insertOpenVisitForTemplate(db, TEMPLATE_ID, 'abandoned');
+  assert.equal(countOpenVisitsForJourneyTemplate(db, TEMPLATE_ID), 0);
+});
+
+test('validateJourneySettingsEditable allows edits when only abandoned visits remain', () => {
+  const db = openDb();
+  insertOpenVisitForTemplate(db, TEMPLATE_ID, 'abandoned');
+  const current: JourneySettings = { templates: [sampleTemplate()] };
+  const next: JourneySettings = { templates: [sampleTemplate({ name: 'Labor neu' })] };
+  assert.deepEqual(validateJourneySettingsEditable(db, current, next), { ok: true });
 });
 
 test('validateJourneySettingsEditable allows unchanged templates with open visits', () => {

@@ -89,7 +89,9 @@ export function stepToVisitPatch(
     locationConfidence: 'instructed',
   };
 
-  if (
+  if (step.instructionText?.trim()) {
+    patch.terminalInstruction = step.instructionText.trim();
+  } else if (
     options.baseInstruction != null &&
     originalMovementMode === 'self_go' &&
     movementMode === 'pickup'

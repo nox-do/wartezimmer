@@ -8,6 +8,7 @@ export function countOpenVisitsForJourneyTemplate(db: DatabaseSync, templateId: 
     .prepare(
       `SELECT COUNT(*) AS count FROM visits
        WHERE journey_template_id = ?
+       AND journey_state = 'active'
        AND status NOT IN (${terminalStatuses.map(() => '?').join(', ')})`,
     )
     .get(templateId, ...terminalStatuses) as { count: number } | undefined;

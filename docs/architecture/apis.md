@@ -65,7 +65,7 @@ Neue/geänderte Routen: YAML → `generate:api` → Handler an Schema/Typen → 
 
 - `identity/*` nie für `terminal`, `tv`, `captive`
 - Dokument-Aktionen (`preview`, `discard`, `export-filesystem`) nur `mfa`
-- `PATCH /ops/settings`: `mfa` = Themen/Räume/Betrieb/Terminal-Flags; `ops` = CSV-Lookup, `smsProvider`, `practiceProfile`, `routingMode` — fremde Keys → 403 (`ops-settings-patch-by-role.ts`)
+- `PATCH /ops/settings`: `mfa` = Themen/Räume/Betrieb/Terminal-Flags/`journeySettings`; `ops` = CSV-Lookup, `smsProvider`, `practiceProfile`, `routingMode` — fremde Keys → 403 (`ops-settings-patch-by-role.ts`). Routing-Modi/Journeys: [`routing.md`](routing.md)
 - `topics` und `rooms` ersetzen jeweils die **gesamte** Liste (kein partielles Merge)
 - `triageLevel`: nur MFA (`cycle_triage`); TV sieht keinen Triage-Status
 - `identityRef`: MFA `PATCH …/identity-ref` (Namenshinweis CSV/eGK/manuell)

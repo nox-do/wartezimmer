@@ -93,6 +93,7 @@ test('updateOpsSettingsInDb persists routingMode and returns the saved value', (
 
 test('opsSettingsInvalidHttpStatus maps routing mode guard to 409', () => {
   assert.equal(opsSettingsInvalidHttpStatus('ROUTING_MODE_CHANGE_BLOCKED'), 409);
+  assert.equal(opsSettingsInvalidHttpStatus('JOURNEY_TEMPLATE_LOCKED'), 409);
   assert.equal(opsSettingsInvalidHttpStatus('INVALID_ARGUMENT'), 400);
 });
 

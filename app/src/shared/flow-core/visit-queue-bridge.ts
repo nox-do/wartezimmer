@@ -1,6 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { Runtime } from '@praxis-flow/flow-core/server';
+import { runInTransaction } from '@praxis-flow/flow-core/server';
 import type { TransitionAction, VisitView, VisitStatus } from '@praxis-flow/flow-core';
+import { canTransition } from '@praxis-flow/flow-core';
 import type {
   AbsenceMode,
   OpsSettings,
@@ -463,34 +465,47 @@ export function callVisit(
   roomLabel?: string,
   actorId?: string,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
-  let visit = requireVisit(runtime, visitId);
-  const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
-  const startedNextJourneyStep = Boolean(visit.journeyStepCompletedAt);
-  if (startedNextJourneyStep) {
-    visit = runVisitTransition(runtime, visitId, 'start_next_journey_step');
-  }
-  assertNoAbsentHostOverlay(db, visitId);
+  // Host wraps this in BEGIN IMMEDIATE; runInTransaction nests as savepoint or
+  // owns the write TX when called directly (tests) — keeps start_next+call atomic.
+  return runInTransaction(db, () => {
+    let visit = requireVisit(runtime, visitId);
+    const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
+    const startedNextJourneyStep = Boolean(visit.journeyStepCompletedAt);
+    if (startedNextJourneyStep) {
+      visit = runVisitTransition(runtime, visitId, 'start_next_journey_step');
+    }
+    assertNoAbsentHostOverlay(db, visitId);
 
-  const queueRow = visitToQueueVisitRow(visit, settings);
-  const resolvedRoom = resolveCallRoomForVisit(
-    settings,
-    startedNextJourneyStep ? undefined : roomId,
-    startedNextJourneyStep ? undefined : roomLabel,
-    {
-      roomId: queueRow.destinationRoomId,
-      roomLabel: queueRow.destinationRoomLabel,
-    },
-  );
-  if (resolvedRoom?.roomId) {
-    assertRoomHasCapacity(settings, listQueue(), resolvedRoom.roomId);
-  }
+    // Folgeschritt kann pickup/self_go/H7→arrived sein — dann kein Call.
+    if (!canTransition(visit, 'call')) {
+      if (startedNextJourneyStep) {
+        return { fromStatus, toStatus: visitStatusToQueueDisplayStatus(visit.status) };
+      }
+      // Unchanged error path when Call ohne Journey-Advance unzulässig ist.
+      runVisitTransition(runtime, visitId, 'call', { actorId });
+    }
 
-  runVisitTransition(runtime, visitId, 'call', {
-    targetLocationId: resolvedRoom?.roomId ?? visit.targetLocationId ?? undefined,
-    actorId,
+    const queueRow = visitToQueueVisitRow(visit, settings);
+    const resolvedRoom = resolveCallRoomForVisit(
+      settings,
+      startedNextJourneyStep ? undefined : roomId,
+      startedNextJourneyStep ? undefined : roomLabel,
+      {
+        roomId: queueRow.destinationRoomId,
+        roomLabel: queueRow.destinationRoomLabel,
+      },
+    );
+    if (resolvedRoom?.roomId) {
+      assertRoomHasCapacity(settings, listQueue(), resolvedRoom.roomId);
+    }
+
+    runVisitTransition(runtime, visitId, 'call', {
+      targetLocationId: resolvedRoom?.roomId ?? visit.targetLocationId ?? undefined,
+      actorId,
+    });
+
+    return { fromStatus, toStatus: 'called' };
   });
-
-  return { fromStatus, toStatus: 'called' };
 }
 
 export function arriveVisit(
@@ -583,6 +598,21 @@ export function returnVisitToWaiting(
   return { fromStatus, toStatus: 'waiting' };
 }
 
+/**
+ * MFA Raumwechsel (Core: reassignTarget) — Journey bleibt active.
+ *
+ * Nicht verwechseln:
+ * - Reassign = gleicher Besuch/Thema, nur anderes Aufrufziel im aktuellen Hop.
+ * - Redirect (flow-core `runtime.redirect`) = Journey abandoned + neue operative Route;
+ *   Host/MFA verdrahten das bewusst noch nicht (Arztpraxis selten nötig).
+ * - Topic-Wechsel = Supersede (neue Nummer/Thema), nicht Redirect.
+ *
+ * Nach Hop-Complete: `journeyStepCompletedAt` bleibt; Continue/Call-next folgt der Journey
+ * und überschreibt den Reassign-Raum — bewusst (Lesart B), kein dauerhafter Routenwechsel.
+ *
+ * Wenn „falsche Mehrschritt-Route verlassen“ Produkt wird: eigenen Transition-Typ
+ * `redirect` am Queue-Host verdrahten — Reassign nicht still auf abandon umbiegen.
+ */
 export function reassignVisitRoom(
   db: DatabaseSync,
   runtime: Runtime,

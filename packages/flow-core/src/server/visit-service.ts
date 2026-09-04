@@ -533,6 +533,30 @@ export function createVisitService(params: {
           null,
           { actorId: context.actorId },
         );
+        const progressed = applyJourneyProgression(visitId, action, now, catalog);
+        // Terminal done mid-Journey: abandon (Cancel-Parität). Normales Journey-Ende
+        // (completedWhen: done, letzter Hop) setzt vorher journeyState=completed.
+        const afterDone = visitRecordById(visitId);
+        if (afterDone?.status === 'done' && afterDone.journeyState === 'active') {
+          const correlationId = crypto.randomUUID();
+          maybeFail('transition:journeyExit');
+          updateVisit(afterDone, { journeyState: 'abandoned' });
+          addEvent(
+            visitId,
+            'journey_abandoned',
+            'done',
+            'done',
+            afterDone.targetLocationId,
+            afterDone.targetLocationId,
+            afterDone.queueId,
+            afterDone.queueId,
+            'system',
+            'wegen Entlassen',
+            { correlationId },
+          );
+          return visitView(visitId, catalog);
+        }
+        return progressed;
       } else if (action === 'return_to_waiting') {
         const returnPatch = resolveReturnToWaitingVisitPatch(record, catalog);
         const nextStatus = returnPatch.status ?? record.status;

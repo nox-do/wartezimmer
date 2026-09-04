@@ -8,22 +8,24 @@ Betrieb: [`../operations/`](../operations/) · Produkt/Abläufe: [`../product.md
 ```text
 1. System           Container, Module, Persistenz, Schutzklassen
 2. Domäne           Nummernkreis / Thema / Raum; Catalog-Wahrheit
-3. API & Auth       Rollen, fachliche Regeln (Vertrag: OpenAPI)
-4. Echtzeit         SSE; Outbox vs. Push
-5. Dokumente        Sandbox + Anamnese-Vorlagen
-6. UI-Konventionen  i18n Patienten vs. Staff
-7. Logging          Pino-Root, wer welchen Logger nutzt
+3. Routing          simple/complex, Rules, Journeys, Redirect
+4. API & Auth       Rollen, fachliche Regeln (Vertrag: OpenAPI)
+5. Echtzeit         SSE; Outbox vs. Push
+6. Dokumente        Sandbox + Anamnese-Vorlagen
+7. UI-Konventionen  i18n Patienten vs. Staff
+8. Logging          Pino-Root, wer welchen Logger nutzt
 ```
 
 | Schritt | Dokument                       | Status        |
 | ------- | ------------------------------ | ------------- |
 | 1       | [`system.md`](system.md)       | ausgearbeitet |
 | 2       | [`domain.md`](domain.md)       | ausgearbeitet |
-| 3       | [`apis.md`](apis.md)           | ausgearbeitet |
-| 4       | [`realtime.md`](realtime.md)   | ausgearbeitet |
-| 5       | [`documents.md`](documents.md) | ausgearbeitet |
-| 6       | [`i18n.md`](i18n.md)           | ausgearbeitet |
-| 7       | [`logging.md`](logging.md)     | ausgearbeitet |
+| 3       | [`routing.md`](routing.md)     | ausgearbeitet |
+| 4       | [`apis.md`](apis.md)           | ausgearbeitet |
+| 5       | [`realtime.md`](realtime.md)   | ausgearbeitet |
+| 6       | [`documents.md`](documents.md) | ausgearbeitet |
+| 7       | [`i18n.md`](i18n.md)           | ausgearbeitet |
+| 8       | [`logging.md`](logging.md)     | ausgearbeitet |
 
 **Stil:** Ist-Stand formulieren — kein „Zielbild“/„Leitdokument“ für Umgesetztes; Ausblick nur als Nicht-Produkt oder Discovery.
 

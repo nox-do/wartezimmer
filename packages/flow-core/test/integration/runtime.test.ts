@@ -133,6 +133,22 @@ test('checkIn Journey: Schritt 0 und Cursor gesetzt', () => {
   assert.equal(visit.locationConfidence, 'assumed');
 });
 
+test('checkIn Journey: Step-0 instructionText wird übernommen', () => {
+  const { db, runtime } = testRuntime();
+  db.prepare('UPDATE journey_steps SET instruction_text = ? WHERE id = ?').run(
+    'Bitte melden Sie sich am Empfang.',
+    'step_general_0',
+  );
+
+  const visit = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Instruction',
+    surfaceId: 'terminal_1',
+  });
+
+  assert.equal(visit.terminalInstruction, 'Bitte melden Sie sich am Empfang.');
+});
+
 test('Events haben stabile Reihenfolge, Actor-ID und historische Ortsnamen', () => {
   const { db, runtime } = testRuntime();
   const created = runtime.checkIn({
@@ -559,6 +575,28 @@ test('transition done: Raum-Panel darf direkt nach arrive abschliessen', () => {
   const done = runtime.transition(created.id, 'done', { actingLocationId: 'room_1' });
   assert.equal(done.status, 'done');
   assert.ok(done.startedAt);
+  assert.equal(done.journeyState, 'abandoned');
+  assert.ok(runtime.events(created.id).some((event) => event.type === 'journey_abandoned'));
+});
+
+test('transition done mid-Journey: terminal done abandoned die Journey', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'MidDone',
+    surfaceId: 'terminal_1',
+  });
+  runtime.transition(created.id, 'call');
+  runtime.transition(created.id, 'arrive');
+  runtime.transition(created.id, 'start');
+
+  const done = runtime.transition(created.id, 'done');
+  assert.equal(done.status, 'done');
+  assert.equal(done.journeyState, 'abandoned');
+  assert.equal(done.journeyStepIndex, 0);
+  const abandoned = runtime.events(created.id).find((event) => event.type === 'journey_abandoned');
+  assert.ok(abandoned);
+  assert.match(abandoned?.note ?? '', /Entlassen/);
 });
 
 test('transition return_to_waiting: called → waiting, Aufrufziel bleibt, Timestamps gelöscht', () => {

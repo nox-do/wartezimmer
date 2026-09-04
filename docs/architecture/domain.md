@@ -3,7 +3,7 @@
 Stand: 2026-08-31 · Ist am Code (`lane-code.ts`, Ops-Settings, flow-core Sync)
 
 **Scope:** Fachregeln für `laneCode` / topics / rooms; `ops_settings` vs. Catalog-Projektion.  
-Nicht: Patientenflows → [`../flows.md`](../flows.md) · API-Rollen → [`apis.md`](apis.md) · Backup → [`../operations/backup.md`](../operations/backup.md)
+Nicht: Routing-Modi/Journeys → [`routing.md`](routing.md) · Patientenflows → [`../flows.md`](../flows.md) · API-Rollen → [`apis.md`](apis.md) · Backup → [`../operations/backup.md`](../operations/backup.md)
 
 **Leitidee (Ist):** Die Wartenummer gehört zum **Nummernkreis**, nicht zum Anmeldgrund.
 
@@ -86,7 +86,7 @@ MFA-Warteliste: rote Linie ab **≥ 25 Min.** (`LONG_WAIT_THRESHOLD_MINUTES` in 
 | Was                                 | Wahrheit                        | Wer schreibt                           |
 | ----------------------------------- | ------------------------------- | -------------------------------------- |
 | Themen / Räume / Journeys / Routing | `ops_settings.*_json` / Spalten | Ops-API → `updateOpsSettings`          |
-| flow-core-Catalog                   | **Projektion**                  | **nur** `syncCatalogFromOpsSettings()` |
+| flow-core-Catalog                   | **Projektion**                  | **nur** `syncCatalogFromOpsSettings()` — Detail [`routing.md`](routing.md) |
 
 Produktions-App: kein Catalog-DML außerhalb des Sync-Moduls (`catalog-write-guard.test.ts`).  
 Manager/Setup: keine Fach-SQLite-Writes.  
@@ -110,6 +110,7 @@ Reservierte System-IDs (`pf_`, MFA-Assist, …) im Sync-Modul.
 
 | Thema                | Dokument                     |
 | -------------------- | ---------------------------- |
+| Routing / Journeys   | [`routing.md`](routing.md)   |
 | API-Felder / Rollen  | [`apis.md`](apis.md)         |
 | Check-in / MFA-Flows | [`../flows.md`](../flows.md) |
 | System / Tagesreset  | [`system.md`](system.md)     |

@@ -21,7 +21,7 @@ export const PF_FLOW_SURFACE_TERMINAL = 'pf_terminal_1';
 export const PF_FLOW_SURFACE_TV = 'pf_waiting_tv';
 export const PF_FLOW_SURFACE_MFA = 'pf_mfa_dashboard';
 
-/** Simple routing only — complex journey sync is Paket 5. */
+/** True when ops_settings.routingMode is not complex (journeys not projected). */
 export function isSimpleRoutingMode(settings: Pick<OpsSettings, 'routingMode'>): boolean {
   return settings.routingMode === 'simple';
 }
