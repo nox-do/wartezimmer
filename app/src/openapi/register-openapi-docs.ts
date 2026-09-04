@@ -27,13 +27,22 @@ export async function registerOpenApiDocs(app: FastifyInstance): Promise<void> {
     ]);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `OpenAPI docs are enabled but @fastify/swagger / @fastify/swagger-ui are not installed (${detail}). ` +
-        'Install app devDependencies (local/dev) or disable docs (OPENAPI_DOCS_ENABLED=false).',
+    app.log.warn(
+      { err: detail },
+      'OpenAPI docs enabled but @fastify/swagger / @fastify/swagger-ui are not installed; skipping docs',
     );
+    return;
   }
 
-  const bundlePath = resolveOpenApiBundlePath();
+  let bundlePath: string;
+  try {
+    bundlePath = resolveOpenApiBundlePath();
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    app.log.warn({ err: detail }, 'OpenAPI docs enabled but bundle is missing; skipping docs');
+    return;
+  }
+
   const specification = JSON.parse(readFileSync(bundlePath, 'utf8')) as Record<string, unknown>;
 
   await app.register(fastifySwagger, {

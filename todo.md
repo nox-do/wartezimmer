@@ -15,6 +15,11 @@ Stand: 2026-09-04
   6. Kein `# syntax=docker/dockerfile:1`, keine npm BuildKit-Cache-Mounts, keine Resource-Limits
 - Nächster Schritt: mit User priorisieren, was gefixt wird (kein Auto-Umbau)
 
+## 2026-09-04 — App Crash: OpenAPI in Compose-Dev
+
+- Ursache: Compose `NODE_ENV=development` → Docs an, Swagger im Image fehlt → Restart-Loop
+- Fix: `OPENAPI_DOCS_ENABLED` default `false` in `docker-compose.yml`; registerOpenApiDocs soft-fail ohne Packages/Bundle
+
 ## 2026-09-04 — Build-Strip / OpenAPI nur Dev
 
 - OpenAPI: Swagger-Deps → app `devDependencies`; dynamic import; kein `openapi/bundle.json` im Runtime-Image

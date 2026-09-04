@@ -22,6 +22,8 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      # Container images omit swagger/devDeps; docs are for host `npm run dev:app` (or explicit true + rebuild with deps).
+      OPENAPI_DOCS_ENABLED: ${OPENAPI_DOCS_ENABLED:-false}
       LOG_LEVEL: ${LOG_LEVEL:-}
       HOST: 0.0.0.0
       PORT: 8080
