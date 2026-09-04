@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Local custom Caddy with the acmedns DNS-01 plugin (LAN-TLS managed path).
 # Stock HTTP-only default remains caddy:2.11.4 via PRAXIS_FLOW_PROXY_IMAGE unset.
 #

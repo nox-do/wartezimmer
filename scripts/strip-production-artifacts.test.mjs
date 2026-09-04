@@ -23,6 +23,9 @@ test('strip-production-artifacts removes sources and type maps from package tree
   fs.writeFileSync(path.join(distDir, 'index.js'), 'export {};');
   fs.writeFileSync(path.join(distDir, 'index.d.ts'), 'export {};');
   fs.writeFileSync(path.join(distDir, 'index.d.ts.map'), '{}');
+  fs.writeFileSync(path.join(distDir, 'index.js.map'), '{}');
+  fs.writeFileSync(path.join(distDir, 'styles.css.map'), '{}');
+  fs.writeFileSync(path.join(distDir, 'widget.test.js'), 'export {};');
 
   const result = spawnSync(process.execPath, [stripScript, packageDir], {
     cwd: tempRoot,
@@ -35,6 +38,9 @@ test('strip-production-artifacts removes sources and type maps from package tree
   assert.equal(fs.existsSync(path.join(distDir, 'index.js')), true);
   assert.equal(fs.existsSync(path.join(distDir, 'index.d.ts')), false);
   assert.equal(fs.existsSync(path.join(distDir, 'index.d.ts.map')), false);
+  assert.equal(fs.existsSync(path.join(distDir, 'index.js.map')), false);
+  assert.equal(fs.existsSync(path.join(distDir, 'styles.css.map')), false);
+  assert.equal(fs.existsSync(path.join(distDir, 'widget.test.js')), false);
 
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });

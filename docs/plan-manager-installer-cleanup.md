@@ -8,7 +8,7 @@ ein Manager. Kein Multi-Tenant, keine neue Store-Schicht. Keine parallelen
 Wartungs-Slots.
 
 Produkt-HTTPS bleibt [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md).
-HTTPS-Copy-Aufräumen: [`plan-manager-https.md`](plan-manager-https.md). Dieser
+HTTPS-Copy-Aufräumen (erledigt): [`archive/plan-manager-https.md`](archive/plan-manager-https.md). Dieser
 Plan betrifft Renderer-Koordination (Controller, Busy, Fehlerort, Svelte-Brücke),
 nicht Setup-API, Compose oder Caddy.
 

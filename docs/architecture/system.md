@@ -41,7 +41,7 @@ Fachliche Schichten im Monolithen — kein Microservice-Schnitt. Abläufe: [`../
 | 6   | Sandbox Adapter      | kritisch, isoliert        | Preview-Custody — [`documents.md`](documents.md)                          |
 | 7   | Tagesbetrieb & Reset | quer                      | Check-in-Sperre, Day-Close/Reset, Ops, Notfall                            |
 | 8   | SMS Adapter          | extern                    | Rückhol-SMS über Messaging-Provider                                       |
-| 9   | WLAN-/Captive        | extern, **nicht Produkt** | Freigabe später nur per Adapter — kein Gateway-Container im Produkt       |
+| 9   | WLAN-/Captive        | extern, **nicht Produkt** | später erweiterbare schlanke Adapter + Manager-Auswahl — kein Gateway-Produkt |
 
 ```mermaid
 flowchart LR
@@ -102,7 +102,7 @@ Workspaces u. a. `app`, `ui`, `sandbox`, `setup`, `manager`, `packages/*`.
 
 - SoT: `openapi/*.yaml` → `npm run generate:api` (Bundle, Fastify-Schemas, App-/UI-Typen)
 - Checks: `typecheck` (inkl. OpenAPI/Auth-Sync), `test`, `smoke:*`
-- Swagger: `/api/docs` (typisch non-production; `OPENAPI_DOCS_ENABLED`)
+- Swagger: `/api/docs` nur Dev/local (`OPENAPI_DOCS_ENABLED`); nicht im Production-Image
 
 Echtzeit: [`realtime.md`](realtime.md) — SSE beobachten, REST tun.
 

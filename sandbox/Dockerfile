@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Include build-stage packages in SBOM (multi-stage; Docker Scout / Desktop analysis).
 ARG BUILDKIT_SBOM_SCAN_STAGE=true
 
@@ -11,6 +12,7 @@ COPY app/package.json ./app/package.json
 COPY ui/package.json ./ui/package.json
 COPY sandbox/package.json ./sandbox/package.json
 COPY setup/package.json ./setup/package.json
+COPY manager/package.json ./manager/package.json
 COPY packages/domain/package.json ./packages/domain/package.json
 COPY packages/server-shared/package.json ./packages/server-shared/package.json
 

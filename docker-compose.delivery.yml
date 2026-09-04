@@ -8,6 +8,8 @@ services:
   app:
     logging: *docker-logging
     image: ${PRAXIS_FLOW_APP_IMAGE:?PRAXIS_FLOW_APP_IMAGE is required}
+    # Images come from a verified release package (docker load); never pull from a registry.
+    pull_policy: never
     container_name: praxis-flow-app
     restart: unless-stopped
     environment:
@@ -46,6 +48,7 @@ services:
   sandbox:
     logging: *docker-logging
     image: ${PRAXIS_FLOW_SANDBOX_IMAGE:?PRAXIS_FLOW_SANDBOX_IMAGE is required}
+    pull_policy: never
     container_name: praxis-flow-sandbox
     restart: unless-stopped
     environment:

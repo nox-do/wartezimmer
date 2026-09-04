@@ -43,7 +43,7 @@ Das orchestriert:
 | App-Typen       | `generate:app-openapi-types` | `app/src/api/*-openapi-types.ts`             |
 | UI-Typen        | `generate:openapi-types`     | `ui/src/lib/**/openapi-types.ts`             |
 
-Zwei Zielgruppen, **kein** gemeinsames Generated-Package. Swagger UI: `/api/docs` (typisch non-production; Override `OPENAPI_DOCS_ENABLED`).
+Zwei Zielgruppen, **kein** gemeinsames Generated-Package. Swagger UI: `/api/docs` nur Dev/local (Override `OPENAPI_DOCS_ENABLED`); Production-Image ohne `openapi/bundle.json` und ohne Swagger-Deps.
 
 **Drift-Checks** (Teil von `npm run typecheck` / `check:drift`): Bundle, Fastify-Schemas, App-/UI-Typen, Route-Sync, Auth-Route-Rules — bei Drift erneut `generate:api` (bzw. den genannten Teilschritt). Contract-Smoke gegen Bundle: `npm run smoke:openapi-contract`.
 

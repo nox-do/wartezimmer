@@ -1,7 +1,7 @@
 # Praxis Flow — Guest WLAN Gateway (Lab-Referenz)
 
 > **Nicht Produktkern.** Praxis Flow stellt keine Router/Captive-Hardware her.
-> Soll-Grenze: Portal + Wartenummer + dünne Vendor-Adapter — `docs/operations/integrations.md`.
+> Soll-Grenze: Portal + Wartenummer; Captive-Adapter später — `docs/operations/integrations.md`.
 > Dieser Ordner bleibt als **Lab-/Referenz-Scaffold** (openNDS) im Repo.
 
 Optional third container for **Captive Portal + DHCP** on the guest LAN (lab only).  

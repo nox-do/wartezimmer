@@ -1,6 +1,4 @@
 import { readFileSync } from 'node:fs';
-import fastifySwagger from '@fastify/swagger';
-import fastifySwaggerUi from '@fastify/swagger-ui';
 import type { FastifyInstance } from 'fastify';
 import { resolveOpenApiBundlePath } from './bundle-path.js';
 
@@ -18,6 +16,21 @@ export function isOpenApiDocsEnabled(): boolean {
 export async function registerOpenApiDocs(app: FastifyInstance): Promise<void> {
   if (!isOpenApiDocsEnabled()) {
     return;
+  }
+
+  let fastifySwagger: typeof import('@fastify/swagger').default;
+  let fastifySwaggerUi: typeof import('@fastify/swagger-ui').default;
+  try {
+    [{ default: fastifySwagger }, { default: fastifySwaggerUi }] = await Promise.all([
+      import('@fastify/swagger'),
+      import('@fastify/swagger-ui'),
+    ]);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `OpenAPI docs are enabled but @fastify/swagger / @fastify/swagger-ui are not installed (${detail}). ` +
+        'Install app devDependencies (local/dev) or disable docs (OPENAPI_DOCS_ENABLED=false).',
+    );
   }
 
   const bundlePath = resolveOpenApiBundlePath();

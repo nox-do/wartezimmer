@@ -3,8 +3,7 @@
 Stand: 2026-09-03 · **Produktentscheidung, Umsetzung noch offen**
 
 Verwandt: LAN-TLS [`operations/tls.md`](operations/tls.md) · Captive-Grenze
-[`operations/integrations.md`](operations/integrations.md) ·
-[Captive-Adapter-Roadmap](roadmap-captive-portal-adapters.md) · Manager-Topologie
+[`operations/integrations.md`](operations/integrations.md) · Manager-Topologie
 `manager/src/renderer/network-topology-diagram.ts` (aktueller Ist-Stand noch
 Captive-zentriert; im Rahmen dieses Plans zu ersetzen) · detaillierter
 [Manager-Umbau](plan-manager-restricted-network-access.md).
@@ -764,23 +763,23 @@ Probe und Rollback wie das erstmalige Anwenden.
 
 ---
 
-## 10. Ausblick: Drittanbieter-Captive-Portal
+## 10. Ausblick: Captive-Adapter (nicht Portal-v1)
 
 Captive-Adapter sind nicht Teil von Portal-v1. Das Portal funktioniert ohne
 Internetfreischaltung; Praxis Flow wird auch später weder Gateway noch
 Captive-Datenpfad.
 
+**Später:** eine von uns erweiterbare Liste schlanker Captive-Adapter mit
+Auswahl im Manager — Grenze und Kurzvertrag:
+[`operations/integrations.md`](operations/integrations.md); Entwurf im Archiv:
+[`archive/roadmap-captive-portal-adapters.md`](archive/roadmap-captive-portal-adapters.md).
+
 Damit wir den Weg nicht verbauen, bleiben `PORTAL_BASE_URL` und Portal-Origin
 stabil und vendorneutral. Der persistierte Restricted-Network-Zustand erhält
 keine Captive-Felder. Eine spätere Adapterkonfiguration und ihr Adapterstatus
-bleiben davon getrennt. Eine Captive-Einrichtung darf erst nach einem
-funktionierenden Restricted-Binding und einer Portal-URL angeboten werden und
-muss unabhängig aktivier-, deaktivier- und diagnostizierbar bleiben.
-Gesundheitsdaten werden nicht an einen Controller übertragen.
-
-Die fachlichen Voraussetzungen, der Adaptervertrag und die spätere
-Manager-Strecke stehen in der separaten
-[Captive-Adapter-Roadmap](roadmap-captive-portal-adapters.md).
+bleiben davon getrennt. Captive-Einrichtung erst nach funktionierendem
+Restricted-Binding und Portal-URL; unabhängig aktivier-, deaktivier- und
+diagnostizierbar. Keine Gesundheitsdaten an Controller.
 
 ---
 
@@ -921,8 +920,8 @@ freigegebenen Plattform ausgerollt.
    mehrere Client-IPs samt Spoofing-Negativtest, Container-/Egress-Härtung,
    Routenkatalog-Negativtest, NIC-Drift, Apply-Rollback und Entfernen des
    Bindings.
-10. **Später, nicht v1:** vendorneutrale Adapter gemäß
-    [Captive-Adapter-Roadmap](roadmap-captive-portal-adapters.md).
+10. **Später, nicht v1:** erweiterbare schlanke Captive-Adapter mit
+    Manager-Auswahl — [`operations/integrations.md`](operations/integrations.md).
 
 Offen vor Implementierungsbeginn:
 

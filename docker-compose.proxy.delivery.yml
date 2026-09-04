@@ -25,3 +25,9 @@ services:
     depends_on:
       app:
         condition: service_healthy
+    healthcheck:
+      # Hits Caddy :80 (reverse_proxy → app). App is already service_healthy via depends_on.
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:80/']
+      interval: 10s
+      timeout: 3s
+      retries: 5

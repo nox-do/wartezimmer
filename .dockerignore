@@ -19,6 +19,8 @@ ui/.env
 .editorconfig
 .prettierignore
 .DS_Store
+.github
+.vscode
 
 # Local/runtime data not needed for image builds
 data
@@ -27,13 +29,17 @@ docs_data
 .tmp
 .exports-host
 seed
+lab
 
 # Docs and project notes
 docs
 *.md
 todo.md
+licenses
 
 # Host setup sources (only setup/package.json is copied for workspace npm ci)
 setup/src
 
-# Electron/installer work happens outside container builds for now
+# Electron/manager (only package.json for workspace npm ci)
+manager/**
+!manager/package.json

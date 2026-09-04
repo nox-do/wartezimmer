@@ -39,8 +39,9 @@ function buildPortalScenario(lanIp: string): HTMLElement {
       </p>
     </header>
     <p class="net-scenario-lead">
-      Captive und Access Point bleiben bei der Praxis-IT (Omada, UniFi, …). Praxis Flow stellt das
-      Portal (<code>/portal</code>) und prüft die Wartenummer; Freigabe später über einen dünnen Vendor-Adapter.
+      Captive und Access Point bleiben bei der Praxis-IT. Praxis Flow stellt das
+      Portal (<code>/portal</code>) und prüft die Wartenummer; später erweiterbare schlanke
+      Captive-Adapter mit Auswahl im Manager (nicht Portal-v1).
     </p>
     <p class="net-scenario-security hint">
       <strong>Empfehlung:</strong> Dediziertes Gast-Netz und Firewall so, dass Gäste nur das Portal

@@ -2,6 +2,93 @@
 
 Stand: 2026-09-04
 
+## 2026-09-04 — Docker-Review (Doku-Abgleich, noch keine Fixes)
+
+- Scope: Dockerfiles + Compose (+ `.dockerignore`) vs. aktuelle Docker Best Practices
+- Schon gut: Multi-Stage, SBOM/Provenance, Secret-Required-Env, Log-Rotation, Digest-Pins (Proxy-Runtime/TLS-Lab), Delivery-Overlays
+- Offen / Nachlässig (Priorität):
+  1. App/Sandbox/Gateway laufen als root — widerspricht eigener Isolation-Plan-Zusage (Non-Root / `no-new-privileges` / cap_drop)
+  2. `.dockerignore` lässt `manager/` (~300MB) + `lab/` im Build-Context
+  3. Base-Images `node:22-alpine` / `debian:bookworm-slim` / `caddy:…-builder` nicht digest-gepinnt
+  4. Gateway: `privileged: true` + `network_mode: host` (+ redundantes `cap_add`); Default-FAS-Key
+  5. Healthchecks ohne `start_period`; Proxy ohne Healthcheck; Delivery `pull_policy: never` nur am Proxy
+  6. Kein `# syntax=docker/dockerfile:1`, keine npm BuildKit-Cache-Mounts, keine Resource-Limits
+- Nächster Schritt: mit User priorisieren, was gefixt wird (kein Auto-Umbau)
+
+## 2026-09-04 — Build-Strip / OpenAPI nur Dev
+
+- OpenAPI: Swagger-Deps → app `devDependencies`; dynamic import; kein `openapi/bundle.json` im Runtime-Image
+- `removeComments: true` in `tsconfig.base.json`; Sandbox `exclude` `*.test.ts`
+- Strip: zusätzlich `.css.map`, `*.test.js` / `*.test.mjs`
+- Docs: apis.md / system.md — Swagger nur Dev/local
+
+## 2026-09-04 — Build-Artefakte / Strip / Image-Inhalt (Analyse)
+
+- Strip-Script im Docker: entfernt `.js.map`, `.d.ts(.map)`, `.ts/.tsx`, `src`/`test`; UI-Vite: minifiziert, keine Maps (Ist)
+- Server: `tsc` lesbar, kein Minify, `removeComments` nicht gesetzt; Packages `declarationMap: false` (lokale `.d.ts.map` oft Altlast)
+- Gaps: Strip kennt kein `.css.map` / `*.test.js`; Sandbox-tsconfig excludet Tests nicht; `test-runtime-mocks.js` landet in app-Image; `openapi/bundle.json` (~850KB) + swagger-Deps trotz Docs-off in Prod
+- node_modules nach prune: Vendor-`.map` bleiben (z. B. tldts) — optional nachsäubern
+- RE ohne Obfuscation: keine Source Maps (gut); UI minifiziert (gut); Backend-JS + OpenAPI-Bundle = größte Lesbarkeit
+
+## 2026-09-04 — Docker-Findings Schnitte 1–3
+
+- `.dockerignore`: manager/** (außer package.json), lab, .github, .vscode, licenses; Context-Probe OK (~6MB statt Manager-Ballast)
+- Dockerfiles: `# syntax=docker/dockerfile:1`; app/sandbox `COPY manager/package.json`
+- Delivery: `pull_policy: never` auf app/sandbox/gateway; Proxy-Healthcheck (dev+delivery) via wget :80
+- Docs: delivery.md / tls.md pull_policy-Hinweis angepasst
+- Offen bleibt: Non-Root/ClamAV, Digest-Pins Node, Cache-Mounts, Gateway-Privileges
+
+## 2026-09-04 — Docker-Findings Bewertung (ohne Non-Root)
+
+Bewertung Sinn/Aufwand (Non-Root/ClamAV separat):
+
+| Finding | Urteil | Warum |
+| --- | --- | --- |
+| `.dockerignore` manager/lab/.github/dist-Reste | **ja, günstig** | Context ~300MB Manager unnötig; `npm ci` braucht höchstens `manager/package.json` (wie setup) |
+| `# syntax=docker/dockerfile:1` | **ja, trivial** | Doku-Standard, schaltet moderne Frontend-Features frei |
+| Digest-Pin `node`/`debian`/`builder` | **teils** | Proxy-Runtime schon gepinnt + Prozess in pfupdate; Node bei jedem Release `--pull` reicht oft; volle Digests = Pflege wie Proxy |
+| `pull_policy: never` app/sandbox | **optional konsistent** | Kritisch war Proxy (Hub-Tag `caddy:…`); app/sandbox private Tags, Setup lädt via `docker load` |
+| Healthcheck `start_period` | **niedrig** | Sandbox `/ready` liefert bei degraded trotzdem 200 — ClamAV-Kaltstart blockiert Compose nicht |
+| Proxy-Healthcheck | **nice-to-have** | depends_on wartet nur auf app; Caddy-Fehlkonfig separat |
+| Resource-Limits | **nein vorerst** | ClamAV speicherhungrig; Limits ohne Messung → OOM-Risiko auf Praxis-PCs |
+| BuildKit npm-Cache-Mounts | **später / CI** | Dev-DX, kein Runtime-Gewinn; Workspace-Builds etwas fummelig |
+| Gateway privileged/cap_add | **kein Produkt-Fix jetzt** | Lab/Captive; `cap_add` bei privileged redundant (Kosmetik); Root faktisch nötig |
+| OPENNDS Default-Key | **klein, wenn Gateway an** | Setup setzt Secret; Compose-Default nur Fallback |
+| Dev `NODE_ENV:-development` | **bewusst lassen** | Delivery ohne Override → Image `production`; Dev-Override steuert Auth/Logging lokal |
+| PRACTICE_* nur in Dev-Compose | **Aufräumen optional** | Profil primär DB; Env-Fallback legacy |
+| TLS-Lab Doppelkommentar | **trivial** | Copy-Paste |
+
+Empfohlene erste Schnitte (wenn User will): dockerignore (+ ggf. `COPY manager/package.json`) → syntax-Directive → optional Proxy-Konsistenz/`pull_policy` → Rest zurückstellen.
+
+- Sandbox/ClamAV (härtester Punkt): Alpine `clamav` = uid 100/gid 101; `node` = 1000. `/var/lib/clamav` + Log nur clamav-schreibbar. Node schreibt `freshclam-last-attempt.json` in denselben Pfad → reines `USER node` bricht. Bestehende `clamav_db`-Volumes oft root-owned nach bisherigem Betrieb → freshclam: „writable for UID 100 or GID 101“. Braucht Migration/Entrypoint-chown + User-Modell (gosu clamav für Tools / node+Gruppe / State-Datei auslagern)
+- App: Named Volume `app_data` + Host-Binds `~/praxis-flow-exports|imports` (Host-UID ≠ 1000, Desktop/Linux). Setup-Utilities (`staff-pin-reset`, `app-data-volume`) mounten als root — nach UID-Wechsel Ownership-Vertrag nötig
+- Gateway: Root faktisch nötig (iptables/opennds/dnsmasq/host net); Non-Root hier nicht sinnvoll als Erstes
+- Proxy/Caddy: Binary hat `cap_net_bind_service`; Image-User leer (root) — eigener Schnitt, entkoppelt von App/Sandbox
+- Fazit: nicht überall USER setzen; Reihenfolge App (Volume-Vertrag) → Sandbox (ClamAV-Modell) → Compose-Härtung; Gateway später/anders
+
+## 2026-09-04 — plan-manager-https archiviert
+
+- `docs/plan-manager-https.md` → `docs/archive/`; Verweise in `operations/tls.md`, `docs/README`, Installer-Cleanup
+- Nächster TLS-Hebel unverändert: Portal-Isolation (`staff.`/`portal.`)
+
+## 2026-09-04 — Review plan-manager-https
+
+- Schnitte 1–3 erledigt (Gates in `tls-network-view-model`); Plan = UI-Drift-Vertrag, kein offener Bauplan
+- Nächster TLS-Hebel: Portal-Isolation (`staff.`/`portal.`, Zwei-A, Wildcard) — widerspricht noch `plan-proxy-tls*`-Pilot „kein portal.“
+- Ops-Ist: `operations/tls.md`; Aufräum-Plan archivierbar wie Device-Auth
+
+## 2026-09-04 — Captive-Roadmap archiviert
+
+- `docs/roadmap-captive-portal-adapters.md` → `docs/archive/`; Banner + Archive-README
+- Genereller Verweis (Integrations/Flows/Product/Isolation): später erweiterbare schlanke Adapter-Liste (von uns) + Auswahl im Manager; nicht Portal-v1
+- SoT-Grenze: `operations/integrations.md`
+
+## 2026-09-04 — Device-Authorizations-Plan entfernt
+
+- `docs/plan-device-authorizations.md` gelöscht (Schnitte 1–3 erledigt); Eintrag aus `docs/README.md`
+- Ist: `architecture/apis.md` / `flows.md`; operativ: Release-Cutover in `things-to-do-before-release.md`
+- Drift weiter notiert: Domain `roomPanelRequiresPin(outside)=false` vs Auth immer PIN
+
 ## 2026-09-04 — DB-Hygiene-Plan abgeschlossen
 
 - Plan entfernt (`docs/plan-db-layer-hygiene.md`): Schnitt 1–3 + Soft-Cut `waiting_room_full` erledigt
@@ -185,7 +272,7 @@ Stand: 2026-09-04
 
 ## 2026-09-01 — Device-Authorizations (Plan reduziert)
 
-- Vertrag: [`docs/plan-device-authorizations.md`](docs/plan-device-authorizations.md)
+- Vertrag war `docs/plan-device-authorizations.md` (2026-09-04 entfernt)
 - Gestrichen: Snapshot-Feld, Renew-Endpoint, Dual-Presence, In-Process-Event, 5 Schnitte, Service-Schicht
 - Cookie rollt an normalen Responses + SSE-Eröffnung (nicht am Ping)
 - Update kopiert aktive Zeilen aus alter SQLite; Restore/Tagesreset nicht

@@ -5,11 +5,11 @@ Stand: 2026-08-31 · §1–10 ausgearbeitet (Ops-Ist LAN-TLS)
 **Scope:** Vertrauenswürdiges HTTPS im Praxis-LAN — Modell, Aktivierung, Betrieb, Grenzen.  
 **Ist:** Manager-Wizard (Schritt HTTPS) + Netzwerk-Tab; Setup-API `/api/setup/host/tls/*`; Proxy-Service mit Custom-Caddy-Image.
 
-Quellen zum Einarbeiten (danach Pläne ggf. archivieren oder auf „erledigt“ setzen):
+Quellen (Historie; Ops-Ist ist dieses Dokument):
 
 - Architektur/ACME/Compose: [`../plan-proxy-tls.md`](../plan-proxy-tls.md)
 - Manager-UX: [`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md)
-- HTTPS-UI-Aufräumen: [`../plan-manager-https.md`](../plan-manager-https.md)
+- HTTPS-UI-Aufräumen (erledigt): [`../archive/plan-manager-https.md`](../archive/plan-manager-https.md)
 - Lab (Pebble): [`../archive/tls-lab.md`](../archive/tls-lab.md) — **nicht Produkt**
 - Code: `setup/src/host-tls.ts`, `proxy-tls.ts`, `docker.ts`; Manager `wizard-flow.ts`, `tls-network-controller.ts`; `SETUP_TLS_ROUTES` in `packages/server-shared/src/setup-api.ts`
 
@@ -82,7 +82,7 @@ TLS erweitert **denselben** `proxy`-Service (Caddy) — kein zweites System. Ohn
 
 Compose-Stacking (`setup/src/docker.ts`): Base → `docker-compose.proxy(.delivery).yml` wenn `PROXY_ENABLED` + aktiver Mode → optional `proxy-tls(.delivery).yml` → Lab nur bei `TLS_ACME_DIRECTORY=pebble`.
 
-Image: `PRAXIS_FLOW_PROXY_IMAGE` (Delivery: `praxis-flow-proxy:…-acmedns`, sonst Default `caddy:2.11.4`); `pull_policy: never` — siehe [`delivery.md`](delivery.md) §3.
+Image: `PRAXIS_FLOW_PROXY_IMAGE` (Delivery: `praxis-flow-proxy:…-acmedns`, sonst Default `caddy:2.11.4`); Delivery `pull_policy: never` (app/sandbox/proxy/gateway) — siehe [`delivery.md`](delivery.md) §3.
 
 ### Env (Auszug)
 
@@ -246,7 +246,7 @@ Wichtig: `proxy-tls` kommt schon **ab `prepare`** (`TLS_STATE` ≠ `off`), nicht
 |          |                                                                                                                                        |
 | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | Image    | `PRAXIS_FLOW_PROXY_IMAGE` — Delivery: `praxis-flow-proxy:…-acmedns` (xcaddy + `dns.providers.acmedns`); Fallback/Legacy `caddy:2.11.4` |
-| Delivery | `pull_policy: never` — kein Registry-Nachzug in der Praxis                                                                             |
+| Delivery | `pull_policy: never` auf app/sandbox/proxy (+ gateway) — kein Registry-Nachzug in der Praxis                                           |
 | Port 80  | immer mit Proxy-Overlay (`PROXY_HTTP_PORT`, Default 80)                                                                                |
 | Port 443 | nur mit TLS-Overlay (`PROXY_HTTPS_PORT`, Default 443)                                                                                  |
 
@@ -388,7 +388,7 @@ Gateway/Captive/Internet-Portal sind **andere** Themen → [`integrations.md`](i
 | **Dieses** (`operations/tls.md`)                                                               | **Ops-Ist** — was Betreiber/Support/Entwickler heute brauchen |
 | [`../plan-proxy-tls.md`](../plan-proxy-tls.md)                                                 | Architektur-/Zielhistorie (ACME, Compose, State-Maschine)     |
 | [`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md)                                 | Manager-UX-Historie                                           |
-| [`../plan-manager-https.md`](../plan-manager-https.md)                                         | HTTPS-UI-Aufräumen                                            |
+| [`../archive/plan-manager-https.md`](../archive/plan-manager-https.md)                     | HTTPS-UI-Aufräumen (erledigt; Gates in Manager-View-Model)            |
 | [`../plan-portal-lan-isolation.md`](../plan-portal-lan-isolation.md)                           | Zukunft: Staff-/Portal-Origin und Wildcard-Zertifikat         |
 | [`../plan-manager-restricted-network-access.md`](../plan-manager-restricted-network-access.md) | Zukunft: zusätzliche eingeschränkte Host-IP im Manager        |
 | [`../archive/tls-lab.md`](../archive/tls-lab.md)                                               | Lab, nicht Produkt                                            |

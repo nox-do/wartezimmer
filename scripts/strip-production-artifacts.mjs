@@ -14,6 +14,9 @@ function shouldDropDistFile(fileName) {
     fileName.endsWith('.d.ts') ||
     fileName.endsWith('.d.ts.map') ||
     fileName.endsWith('.js.map') ||
+    fileName.endsWith('.css.map') ||
+    fileName.endsWith('.test.js') ||
+    fileName.endsWith('.test.mjs') ||
     fileName.endsWith('.ts') ||
     fileName.endsWith('.tsx')
   );

@@ -1,7 +1,7 @@
 # Guest-WLAN & Captive Portal — Lab-Referenz (archiviert)
 
 > **Produktgrenze (2026-07):** Praxis Flow stellt **keine** Router, APs oder Captive-Hardware her.
-> Produktkern: Portal + Wartenummer-Prüfung + dünne Vendor-Adapter — siehe [`../integrations.md`](../operations/integrations.md).
+> Produktkern: Portal + Wartenummer-Prüfung; Captive-Adapter später — siehe [`../operations/integrations.md`](../operations/integrations.md).
 > Dieses Dokument beschreibt den früheren **openNDS-`gateway`-Lab-Pfad** (Referenz, nicht Produktkern).
 
 Fachliche Regeln: [`../flows.md`](../flows.md).
