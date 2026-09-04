@@ -2,6 +2,20 @@
 
 Stand: 2026-09-04
 
+## 2026-09-04 — Leere Ordner / Reste (Scan + Cleanup)
+
+- Scope: Repo ohne `node_modules`, `dist`, `.svelte-kit`, `build`, `.tmp`
+- Entfernt (waren leer, nicht in Git):
+  - `packages/flow-core/src/ui/`
+  - `ui/scripts/`
+  - `ui/src/lib/mfa/generated/`
+  - `ui/src/lib/portal/anamnese-layouts/`
+  - `ui/src/lib/terminal/name-keyboard/`
+  - `ui/src/routes/mfa/documents/[ticketId]/`
+  - `ui/src/routes/ops/outbox/`
+  - `ui/static/esheep/`
+- Bewusst belassen: `state/` (lokal; `.gitignore` hat `state/tls/`)
+
 ## 2026-09-04 — Logging-Policy + Pino-Root
 
 - Policy: `docs/architecture/logging.md` (wer nutzt `request.log` / `createModuleLogger` / sandbox-log / console)
