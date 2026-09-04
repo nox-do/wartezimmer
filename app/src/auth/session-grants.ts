@@ -1,15 +1,16 @@
+/** Staff sessions (MFA/OPS) + device/room-panel grant cookies & PIN helpers. */
 export type {
   AuthSession,
-  DeviceSession,
+  DeviceGrant,
   DeviceSessionRole,
-  RoomPanelSession,
-  RoomPanelSessionRole,
+  RoomPanelGrant,
+  RoomPanelGrantRole,
   StaffPinHashConfig,
   StaffRole,
   StaffSession,
   StaffSessionAuthConfig,
   StaffSessionManager,
-} from './staff-session-types.js';
+} from './session-grant-types.js';
 export {
   assertStaffPinHashConfigSafeForStartup,
   DEFAULT_ROOM_PANEL_PIN_HASH,

@@ -7,7 +7,7 @@ import { registerClientAuth } from '../auth/client-auth.js';
 import {
   getStaffSessionCookieName,
   createStaffSessionManager,
-} from '../auth/staff-session-auth.js';
+} from '../auth/session-grants.js';
 import type { CoreDatabase } from '../shared/db/database.js';
 import {
   listDevicePresence,

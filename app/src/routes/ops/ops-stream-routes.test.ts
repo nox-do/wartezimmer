@@ -7,7 +7,7 @@ import {
   createStaffSessionManager,
   getAuthSettingsSeedConfig,
   getStaffSessionCookieName,
-} from '../../auth/staff-session-auth.js';
+} from '../../auth/session-grants.js';
 import type { CoreDatabase } from '../../shared/db/database.js';
 import { resetDevicePairingForTests } from '../../shared/ops/device-pairing-registry.js';
 import {

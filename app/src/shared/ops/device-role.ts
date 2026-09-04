@@ -1,4 +1,4 @@
-import type { DeviceSessionRole } from '../../auth/staff-session-auth.js';
+import type { DeviceSessionRole } from '../../auth/session-grants.js';
 import { TERMINAL_DEVICE_ID, WAITING_ROOM_DEVICE_ID } from './device-ids.js';
 
 export function deviceKindForPairedRole(role: DeviceSessionRole): 'tv' | 'terminal' {

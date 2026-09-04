@@ -1,5 +1,5 @@
 import type { FastifyRequest } from 'fastify';
-import type { DeviceSessionRole, StaffRole } from './staff-session-types.js';
+import type { DeviceSessionRole, StaffRole } from './session-grant-types.js';
 
 export type CookieSlotRole = StaffRole | DeviceSessionRole | 'room-panel';
 

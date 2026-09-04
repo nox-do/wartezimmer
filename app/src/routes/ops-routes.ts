@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { StaffSessionManager } from '../auth/staff-session-auth.js';
+import type { StaffSessionManager } from '../auth/session-grants.js';
 import type { CoreDatabase } from '../shared/db/database.js';
 import { registerOpsDeviceAuthorizationRoutes } from './ops/ops-device-authorization-routes.js';
 import { registerOpsDeviceRoutes } from './ops/ops-device-routes.js';

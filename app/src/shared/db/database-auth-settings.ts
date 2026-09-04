@@ -3,7 +3,7 @@ import {
   assertStaffPinHashConfigSafeForStartup,
   getAuthSettingsSeedConfig,
   type StaffPinHashConfig,
-} from '../../auth/staff-session-auth.js';
+} from '../../auth/session-grants.js';
 import type { AuthPinTarget } from '../../api/auth-openapi-types.js';
 
 export type { AuthPinTarget };

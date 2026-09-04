@@ -20,7 +20,7 @@ Auth-Mechanismen:
 | --------------------------------------- | ---------------------------------------------------------------------------------- |
 | Staff-Session-Cookie + `x-client-role`  | `mfa`, `ops` (Idle-/Absolute-TTL)                                                  |
 | Gerätefreigabe-Cookie + `x-client-role` | `terminal`, `tv`, `room-panel` (Hash in `device_authorizations`, kein Staff-TTL)   |
-| Bearer = `AUTH_KEY_CAPTIVE`             | Rolle `captive`                                                                    |
+| Bearer = `AUTH_KEY_CAPTIVE`             | Rolle `captive` (Captive-Adapter-Hook; S2S)                                        |
 | Bearer = Patient-Session-Token          | Portal (`session-auth`); ACL oft `public: true`, Ownership im Handler              |
 | Loopback Maintenance `:8082`            | Snapshot/Import — nicht LAN ([`../operations/backup.md`](../operations/backup.md)) |
 
@@ -57,7 +57,7 @@ Neue/geänderte Routen: YAML → `generate:api` → Handler an Schema/Typen → 
 | `mfa`        | MFA                          | `queue` (+ SSE), `identity`, `documents`, `ops` (Stream, Day-Lifecycle, Settings-Subset, Pairing-confirm) |
 | `tv`         | Wartezimmer                  | `GET /queue`, `GET /queue/stream`, `ops/device/presence`/`stream`                                         |
 | `room-panel` | Raum-Tablet                  | Auth room-panel, `GET /queue` (+ SSE), Transitions eingeschränkt                                          |
-| `captive`    | Gateway-Bridge (Lab/Adapter) | `sessions/verify-ticket-code`                                                                             |
+| `captive`    | Captive-Adapter (S2S-Hook)   | `sessions/verify-ticket-code` (noch kein Vendor; Key trotzdem Pflicht bei Auth)                           |
 | `ops`        | IT-Settings                  | Settings-Subset (CSV/SMS/Profil/Routing), Messaging, Maintenance, Outbox                                  |
 | Portal       | Patienten-Web                | `sessions/*`, `patient-documents/*` — Session-Bearer, kein `ClientRole`-Eintrag                           |
 

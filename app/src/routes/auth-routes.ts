@@ -42,7 +42,7 @@ import {
   type StaffRole,
   type StaffSessionManager,
   verifyStaffPin,
-} from '../auth/staff-session-auth.js';
+} from '../auth/session-grants.js';
 import type { OpsSettings } from '../shared/db/db-types.js';
 import { toStaffPinHashConfig, type AuthSettings } from '../shared/db/database-auth-settings.js';
 

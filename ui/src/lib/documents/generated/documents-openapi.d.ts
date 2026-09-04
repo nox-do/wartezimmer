@@ -336,7 +336,7 @@ export interface paths {
     put?: never;
     /**
      * Authorize guest WLAN client after portal session is active
-     * @description Proxies to the optional gateway auth bridge (openNDS). Requires an active patient session bearer token. When no gateway is configured, returns wlanAuthorized=false and still succeeds.
+     * @description Captive-adapter hook after an active patient session. Requires a patient session bearer token. Until a vendor adapter is wired, always returns wlanAuthorized=false and still succeeds.
      */
     post: {
       parameters: {
@@ -387,7 +387,7 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
-        /** @description Gateway auth bridge failed */
+        /** @description Captive adapter failed (reserved for future vendor adapters) */
         502: {
           headers: {
             [name: string]: unknown;
@@ -415,7 +415,7 @@ export interface paths {
     put?: never;
     /**
      * Verify waiting number (ticketCode) without creating a patient session
-     * @description Used by the gateway auth bridge (role captive). Does not rotate session tokens.
+     * @description Captive-adapter S2S hook (Bearer AUTH_KEY_CAPTIVE → role captive). Does not rotate session tokens. No in-product caller until a vendor adapter exists.
      */
     post: {
       parameters: {

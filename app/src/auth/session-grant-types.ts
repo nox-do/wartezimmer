@@ -3,8 +3,9 @@ import type { RoomPanelPlacement } from '../shared/db/db-types.js';
 
 export type StaffRole = Extract<ClientRole, 'mfa' | 'ops'>;
 export type DeviceSessionRole = Extract<ClientRole, 'terminal' | 'tv'>;
-export type RoomPanelSessionRole = Extract<ClientRole, 'room-panel'>;
+export type RoomPanelGrantRole = Extract<ClientRole, 'room-panel'>;
 
+/** In-memory MFA/OPS session (idle + absolute TTL). */
 export type StaffSession = {
   kind: 'staff';
   sessionId: string;
@@ -15,30 +16,30 @@ export type StaffSession = {
   expiresAt: string;
 };
 
-export type DeviceSession = {
+/** Authenticated device authorization (TV/Terminal); no staff-style TTL. */
+export type DeviceGrant = {
   kind: 'device';
+  /** `device_authorizations.authorization_id` */
   sessionId: string;
   role: DeviceSessionRole;
   createdAt: string;
   lastSeenAt: string;
-  idleExpiresAt: string;
-  expiresAt: string;
   deviceId: string;
 };
 
-export type RoomPanelSession = {
+/** Authenticated room-panel authorization; no staff-style TTL. */
+export type RoomPanelGrant = {
   kind: 'room-panel';
+  /** `device_authorizations.authorization_id` */
   sessionId: string;
-  role: RoomPanelSessionRole;
+  role: RoomPanelGrantRole;
   roomId: string;
   placement: RoomPanelPlacement;
   createdAt: string;
   lastSeenAt: string;
-  idleExpiresAt: string;
-  expiresAt: string;
 };
 
-export type AuthSession = StaffSession | DeviceSession | RoomPanelSession;
+export type AuthSession = StaffSession | DeviceGrant | RoomPanelGrant;
 
 export type StaffSessionAuthConfig = {
   pinHashesByRole: Record<StaffRole, string>;
@@ -54,8 +55,7 @@ export type StaffPinHashConfig = Pick<
 
 export type StaffSessionManager = {
   createStaffSession(role: StaffRole, now?: Date): { token: string; session: StaffSession };
-  getSession(token: string | null, now?: Date): AuthSession | null;
-  refreshSession(sessionId: string, now?: Date): AuthSession | null;
+  getSession(token: string | null, now?: Date): StaffSession | null;
   revokeSession(token: string | null): void;
   revokeSessionsByRole(role: StaffRole, exceptSessionId?: string): void;
   subscribeSessionRevocation(sessionId: string, listener: () => void): () => void;

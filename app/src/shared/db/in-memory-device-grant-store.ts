@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
-import type { DeviceSessionRole } from '../../auth/staff-session-types.js';
+import type { DeviceSessionRole } from '../../auth/session-grant-types.js';
 import type { RoomPanelPlacement } from './db-types.js';
 import {
   authenticateDeviceAuthorization,

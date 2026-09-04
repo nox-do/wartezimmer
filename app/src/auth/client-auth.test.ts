@@ -6,7 +6,7 @@ import {
   createStaffSessionManager,
   getStaffSessionCookieName,
   type StaffSessionManager,
-} from './staff-session-auth.js';
+} from './session-grants.js';
 import { createInMemoryDeviceGrantStore } from '../shared/db/in-memory-device-grant-store.js';
 
 const ENV_KEYS = [
@@ -195,7 +195,7 @@ test('disabled auth ignores stale session cookies', async () => {
   const withStaleCookie = await app.inject({
     method: 'GET',
     url: '/api/v1/queue',
-    headers: { cookie: 'pf_staff_session=stale-token' },
+    headers: { cookie: 'pf_mfa_session=stale-token', 'x-client-role': 'mfa' },
   });
 
   assert.equal(withoutCookie.statusCode, 200);
@@ -365,20 +365,14 @@ test('staff sessions enforce idle timeout and absolute expiry', () => {
   assert.equal(absoluteManager.getSession(absoluteToken, new Date(now.getTime() + 10_001)), null);
 });
 
-test('an active staff stream can refresh idle expiry but not absolute session expiry', () => {
+test('staff session idle sliding does not extend absolute expiry', () => {
   const manager = createStaffSessionManager({ sessionTtlMs: 10_000, sessionIdleTtlMs: 1_000 });
   const now = new Date('2026-06-08T10:00:00.000Z');
-  const { session } = manager.createStaffSession('ops', now);
+  const { token, session } = manager.createStaffSession('ops', now);
 
-  assert.equal(
-    manager.refreshSession(session.sessionId, new Date(now.getTime() + 500))?.role,
-    'ops',
-  );
-  assert.equal(
-    manager.refreshSession(session.sessionId, new Date(now.getTime() + 1_400))?.role,
-    'ops',
-  );
-  assert.equal(manager.refreshSession(session.sessionId, new Date(now.getTime() + 10_000)), null);
+  assert.equal(manager.getSession(token, new Date(now.getTime() + 500))?.sessionId, session.sessionId);
+  assert.equal(manager.getSession(token, new Date(now.getTime() + 1_400))?.sessionId, session.sessionId);
+  assert.equal(manager.getSession(token, new Date(now.getTime() + 10_000)), null);
 });
 
 test('room-panel grant revoke can target one room placement without affecting siblings', () => {

@@ -10,7 +10,7 @@ import { dispatchRecallNotifyAndPersist } from '../../shared/messaging/recall-no
 import type { MessageDispatchResult } from '../../shared/messaging/sms-sender.js';
 import { assertQueueCallAnnouncementReachable } from '../../shared/queue/call-announcement-guard.js';
 import { sendApiError } from '../../http/domain-error-mapper.js';
-import type { AuthSession, RoomPanelSession } from '../../auth/staff-session-auth.js';
+import type { AuthSession, RoomPanelGrant } from '../../auth/session-grants.js';
 import { resolveRoomPanelForSession } from '../../shared/room-panel/room-panel-policy.js';
 import {
   assertRoomPanelCallVisitScope,
@@ -467,7 +467,7 @@ async function applyRoomPanelQueueVisitTransition(
   reply: QueueReply,
   visitId: string,
   body: QueueVisitTransitionBody,
-  session: RoomPanelSession,
+  session: RoomPanelGrant,
 ): Promise<QueueVisitTransitionResponse | undefined> {
   const activePanel = resolveRoomPanelForSession(db, session);
   if (!activePanel) {

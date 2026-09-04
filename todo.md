@@ -2,6 +2,21 @@
 
 Stand: 2026-09-04
 
+## 2026-09-04 — Auth Cleanup (Captive-Doku + Session/Grants)
+
+- Captive: Docs/OpenAPI/Kommentar als Adapter-Hook (kein Gateway); Surface unverändert
+- `refreshSession` entfernt; Staff-Manager nur noch `StaffSession`
+- Typen: `DeviceGrant` / `RoomPanelGrant` ohne Fake-TTL; Barrel `session-grants.ts` (+ `session-grant-types.ts`)
+- Alt: `staff-session-auth.ts` / `staff-session-types.ts` gelöscht; Imports umgestellt
+- Bugbot (uncommitted + Auth-Kontext): keine Findings
+
+## 2026-09-04 — Review app/src/auth (stichprobenartig)
+
+- Scope: `client-auth`, ACL, PIN, Staff-Session-Manager, Cookies/Slots; Kontext Docs `apis.md` + Wiring `app.ts`
+- Gut: fail-closed ACL + Drift-Check; Cookie-Slots + `x-client-role`; CSRF Origin bei Cookie-Mutationen; Prod-Guards; Device-Grants vs. In-Memory Staff getrennt
+- Cleanup erledigt: Fake-TTL, `refreshSession`, Barrel-Rename, Captive-Doku
+- Residual: Cookie-Helfer heißen weiter `*SessionCookie`; Portal-Auth weiter in `routes/session-auth.ts`
+
 ## 2026-09-04 — Leere Ordner / Reste (Scan + Cleanup)
 
 - Scope: Repo ohne `node_modules`, `dist`, `.svelte-kit`, `build`, `.tmp`
@@ -15,6 +30,11 @@ Stand: 2026-09-04
   - `ui/src/routes/ops/outbox/`
   - `ui/static/esheep/`
 - Bewusst belassen: `state/` (lokal; `.gitignore` hat `state/tls/`)
+
+## 2026-09-04 — visit-queue-bridge.test.ts Types
+
+- `panels` + `journeySettings` in `sampleSettings`; Session-Stubs `*ByVisitStmt` (Ticket→Visit Rename)
+- Gleiche Stub-Rename in: `room-panel-queue-snapshot`, `tv-queue-snapshot`, `flow-core-checkin`, `terminal-assist-pending`, `queue-routes` Tests
 
 ## 2026-09-04 — Logging-Policy + Pino-Root
 

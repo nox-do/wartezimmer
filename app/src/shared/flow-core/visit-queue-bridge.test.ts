@@ -40,6 +40,7 @@ function sampleSettings(): OpsSettings {
     practiceOpenTo: '23:59',
     practiceProfileJson: '{}',
     topics: DEFAULT_TERMINAL_TOPIC_DEFINITIONS,
+    journeySettings: { templates: [] },
     rooms: [
       {
         roomId: 'mfa-tresen',
@@ -47,6 +48,7 @@ function sampleSettings(): OpsSettings {
         enabled: true,
         defaultCallTarget: true,
         maxOccupancy: null,
+        panels: normalizeRoomPanelsSettings(null),
       },
       {
         roomId: 'labor',
@@ -113,8 +115,8 @@ function buildDeps(
     getVisitIdentityViewStmt: db.prepare('SELECT 1'),
     getVisitPortalContextStmt: db.prepare('SELECT 1'),
     insertPatientSessionStmt: db.prepare('SELECT 1'),
-    expireActiveSessionsByTicketStmt: db.prepare('SELECT 1'),
-    getActiveSessionByTicketStmt: db.prepare('SELECT 1'),
+    expireActiveSessionsByVisitStmt: db.prepare('SELECT 1'),
+    getActiveSessionByVisitStmt: db.prepare('SELECT 1'),
     getPatientSessionByTokenStmt: db.prepare('SELECT 1'),
     touchPatientSessionStmt: db.prepare('SELECT 1'),
     expirePatientSessionStmt: db.prepare('SELECT 1'),

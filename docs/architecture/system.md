@@ -81,7 +81,7 @@ Workspaces u. a. `app`, `ui`, `sandbox`, `setup`, `manager`, `packages/*`.
 | HTTP       | `routes/`    | Fastify-Registrars (checkin, queue, documents, ops, sessions, …)                        |
 | Fachlogik  | `shared/`    | Queue, Documents, Forms, Ops, Contacts, flow-core, …                                    |
 | Persistenz | `shared/db/` | `CoreDatabase`; SQL in `database-*.ts`                                                  |
-| Auth       | `auth/`      | Rollen (`ROUTE_ACCESS_RULES`); Staff-Session MFA/OPS; Gerätefreigaben TV/Terminal/Panel |
+| Auth       | `auth/`      | Rollen (`ROUTE_ACCESS_RULES`); Staff-Sessions MFA/OPS; Gerätefreigaben TV/Terminal/Panel (`session-grants`) |
 | Fehler     | `http/`      | Domain-Error-Codes, API-Mapping                                                         |
 
 | Komponente       | Routes (Auszug)                                | Shared / DB                                      |

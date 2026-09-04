@@ -1,5 +1,5 @@
 import { randomInt, randomUUID } from 'node:crypto';
-import type { DeviceSessionRole } from '../../auth/staff-session-auth.js';
+import type { DeviceSessionRole } from '../../auth/session-grants.js';
 import {
   publishOpsEvent,
   currentOpsRevision,

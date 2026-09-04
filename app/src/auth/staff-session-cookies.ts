@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { CookieSlotRole } from './cookie-slot-role.js';
-import type { DeviceSessionRole, StaffRole } from './staff-session-types.js';
+import type { DeviceSessionRole, StaffRole } from './session-grant-types.js';
 import { trustProxyHeaders } from '../http/trusted-proxy.js';
 
 const STAFF_SESSION_COOKIE_BY_ROLE: Record<StaffRole, string> = {

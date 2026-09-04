@@ -136,8 +136,8 @@ export function registerSessionRoutes(app: FastifyInstance, db: CoreDatabase): v
       }
 
       try {
-        // Validate session is still live; captive WLAN freischaltung is not product
-        // (lab gateway stack removed). Keep the hook for later adapters.
+        // Validate session is still live. WLAN freischaltung is a future thin vendor
+        // adapter; until then always report wlanAuthorized=false.
         db.getPatientSessionMe(sessionToken);
         return reply.send({
           ok: true,

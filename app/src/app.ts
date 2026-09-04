@@ -6,7 +6,7 @@ import { registerOpsRoutes } from './routes/ops-routes.js';
 import { registerQueueRoutes } from './routes/queue-routes.js';
 import { registerQueueStreamRoutes } from './routes/queue-stream-routes.js';
 import { registerClientAuth } from './auth/client-auth.js';
-import { createStaffSessionManager, getStaffSessionAuthConfig } from './auth/staff-session-auth.js';
+import { createStaffSessionManager, getStaffSessionAuthConfig } from './auth/session-grants.js';
 import { registerAuthRoutes } from './routes/auth-routes.js';
 import { registerSessionRoutes } from './routes/sessions-routes.js';
 import { registerPatientDocumentRoutes } from './routes/patient-documents-routes.js';

@@ -1,10 +1,5 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import type {
-  AuthSession,
-  StaffRole,
-  StaffSession,
-  StaffSessionManager,
-} from './staff-session-types.js';
+import type { StaffRole, StaffSession, StaffSessionManager } from './session-grant-types.js';
 
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
@@ -14,7 +9,7 @@ export function createStaffSessionManager(options: {
   sessionTtlMs: number;
   sessionIdleTtlMs?: number;
 }): StaffSessionManager {
-  const sessionsByTokenHash = new Map<string, AuthSession>();
+  const sessionsByTokenHash = new Map<string, StaffSession>();
   const revocationListenersBySessionId = new Map<string, Set<() => void>>();
   const sessionIdleTtlMs = options.sessionIdleTtlMs ?? options.sessionTtlMs;
 
@@ -30,7 +25,7 @@ export function createStaffSessionManager(options: {
     }
   }
 
-  function deleteSession(tokenHash: string, session: AuthSession): void {
+  function deleteSession(tokenHash: string, session: StaffSession): void {
     sessionsByTokenHash.delete(tokenHash);
     notifySessionRevoked(session.sessionId);
   }
@@ -53,10 +48,10 @@ export function createStaffSessionManager(options: {
   }
 
   function refreshActiveSession(
-    session: AuthSession,
+    session: StaffSession,
     tokenHash: string,
     now: Date,
-  ): AuthSession | null {
+  ): StaffSession | null {
     if (
       Date.parse(session.expiresAt) <= now.getTime() ||
       Date.parse(session.idleExpiresAt) <= now.getTime()
@@ -95,21 +90,13 @@ export function createStaffSessionManager(options: {
         return null;
       }
 
-      const session = sessionsByTokenHash.get(sha256(token));
+      const tokenHash = sha256(token);
+      const session = sessionsByTokenHash.get(tokenHash);
       if (!session) {
         return null;
       }
 
-      return refreshActiveSession(session, sha256(token), now);
-    },
-
-    refreshSession(sessionId: string, now = new Date()) {
-      for (const [tokenHash, session] of sessionsByTokenHash) {
-        if (session.sessionId === sessionId) {
-          return refreshActiveSession(session, tokenHash, now);
-        }
-      }
-      return null;
+      return refreshActiveSession(session, tokenHash, now);
     },
 
     revokeSession(token: string | null) {

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import test, { afterEach } from 'node:test';
 import { DEFAULT_ROOM_PANEL_PIN_HASH, DEFAULT_STAFF_PIN_HASH } from '@praxis-flow/server-shared';
-import { hashStaffPinForConfig } from '../../auth/staff-session-auth.js';
+import { hashStaffPinForConfig } from '../../auth/session-grants.js';
 import {
   ensureAuthSettingsSchema,
   getAuthSettingsFromDb,

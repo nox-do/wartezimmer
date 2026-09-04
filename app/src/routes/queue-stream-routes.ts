@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { ClientRole } from '../auth/client-auth.js';
-import type { StaffSessionManager } from '../auth/staff-session-auth.js';
-import { withDeviceGrantSetCookie } from '../auth/staff-session-auth.js';
+import type { StaffSessionManager } from '../auth/session-grants.js';
+import { withDeviceGrantSetCookie } from '../auth/session-grants.js';
 import type { CoreDatabase } from '../shared/db/database.js';
 import {
   markDeviceStreamConnected,

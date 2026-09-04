@@ -7,7 +7,7 @@ import {
   createStaffSessionManager,
   getAuthSettingsSeedConfig,
   hashStaffPinForConfig,
-} from '../auth/staff-session-auth.js';
+} from '../auth/session-grants.js';
 import { DEFAULT_STAFF_PIN_HASH } from '../auth/staff-pin-auth.js';
 import {
   getDevicePairingById,

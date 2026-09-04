@@ -6,7 +6,7 @@ import { registerClientAuth } from '../../auth/client-auth.js';
 import {
   createStaffSessionManager,
   getStaffSessionCookieName,
-} from '../../auth/staff-session-auth.js';
+} from '../../auth/session-grants.js';
 import {
   listDevicePresence,
   resetDevicePresenceForTests,

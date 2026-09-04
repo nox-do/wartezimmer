@@ -8,7 +8,7 @@ import type {
   RoomPanelTextPreset,
 } from '../db/db-types.js';
 import type { CoreDatabase } from '../db/database.js';
-import type { RoomPanelSession } from '../../auth/staff-session-auth.js';
+import type { RoomPanelGrant } from '../../auth/session-grants.js';
 import { getBusinessDay } from '../db/database-time.js';
 import { emptyFlowCoreRuntimeForMocks } from '../flow-core/test-runtime-mocks.js';
 import { getFlowCoreRuntime } from '../flow-core/flow-core-runtime.js';
@@ -78,7 +78,7 @@ export type BuildRoomPanelQueueSnapshotInput = {
   runtime: Runtime;
   businessDay: string;
   revision: number;
-  session: Pick<RoomPanelSession, 'roomId' | 'placement'>;
+  session: Pick<RoomPanelGrant, 'roomId' | 'placement'>;
 };
 
 function roomPanelCallSortMs(item: Pick<QueueVisitRow, 'calledAt' | 'createdAt'>): number {
@@ -276,7 +276,7 @@ function resolveFlowCoreRuntime(db: CoreDatabase): Runtime {
 export function buildRoomPanelQueueSnapshot(
   db: CoreDatabase,
   revision: number,
-  session: Pick<RoomPanelSession, 'roomId' | 'placement'>,
+  session: Pick<RoomPanelGrant, 'roomId' | 'placement'>,
 ): RoomPanelQueueSnapshot {
   return buildRoomPanelQueueSnapshotFromFlowCore({
     db,
@@ -292,7 +292,7 @@ export function buildRoomPanelQueueSnapshotForSqlite(
   db: CoreDatabase,
   sqlite: Parameters<typeof getFlowCoreRuntime>[0],
   revision: number,
-  session: Pick<RoomPanelSession, 'roomId' | 'placement'>,
+  session: Pick<RoomPanelGrant, 'roomId' | 'placement'>,
 ): RoomPanelQueueSnapshot {
   return buildRoomPanelQueueSnapshotFromFlowCore({
     db,

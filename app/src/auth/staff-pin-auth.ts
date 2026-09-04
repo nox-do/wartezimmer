@@ -4,7 +4,7 @@ import type {
   StaffPinHashConfig,
   StaffRole,
   StaffSessionAuthConfig,
-} from './staff-session-types.js';
+} from './session-grant-types.js';
 
 export {
   DEFAULT_ROOM_PANEL_PIN_HASH,

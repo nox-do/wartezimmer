@@ -5,12 +5,12 @@ import {
   type RoomPanelQueueSnapshot,
 } from './room-panel-queue-snapshot.js';
 import { buildTvQueueSnapshot, type TvQueueSnapshot } from './tv-queue-snapshot.js';
-import type { RoomPanelSession } from '../../auth/staff-session-auth.js';
+import type { RoomPanelGrant } from '../../auth/session-grants.js';
 
 type TvStreamListener = (snapshot: TvQueueSnapshot) => void;
 type MfaStreamListener = (snapshot: MfaQueueSnapshot) => void;
 type RoomPanelStreamListener = {
-  session: Pick<RoomPanelSession, 'roomId' | 'placement'>;
+  session: Pick<RoomPanelGrant, 'roomId' | 'placement'>;
   listener: (snapshot: RoomPanelQueueSnapshot) => void;
 };
 
@@ -38,7 +38,7 @@ export function subscribeMfaQueueStream(listener: MfaStreamListener): () => void
 }
 
 export function subscribeRoomPanelQueueStream(
-  session: Pick<RoomPanelSession, 'roomId' | 'placement'>,
+  session: Pick<RoomPanelGrant, 'roomId' | 'placement'>,
   listener: (snapshot: RoomPanelQueueSnapshot) => void,
 ): () => void {
   const entry = { session, listener };
@@ -104,7 +104,7 @@ export function currentMfaQueueSnapshot(db: CoreDatabase): MfaQueueSnapshot {
 
 export function currentRoomPanelQueueSnapshot(
   db: CoreDatabase,
-  session: Pick<RoomPanelSession, 'roomId' | 'placement'>,
+  session: Pick<RoomPanelGrant, 'roomId' | 'placement'>,
 ): RoomPanelQueueSnapshot {
   return buildRoomPanelQueueSnapshot(db, revision, session);
 }

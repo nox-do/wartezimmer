@@ -10,11 +10,12 @@ import {
   readCookieValue,
   setDeviceSessionCookie,
   setRoomPanelSessionCookie,
-  type DeviceSession,
+  type DeviceGrant,
   type DeviceSessionRole,
-  type RoomPanelSession,
+  type RoomPanelGrant,
+  type StaffRole,
   type StaffSessionManager,
-} from './staff-session-auth.js';
+} from './session-grants.js';
 import type { DeviceAuthorizationRow } from '../shared/db/database-device-authorizations.js';
 import { trustProxyHeaders } from '../http/trusted-proxy.js';
 
@@ -125,9 +126,7 @@ function getDefaultStaffSessionManager(): StaffSessionManager {
   });
 }
 
-const DEVICE_GRANT_EXPIRES_AT = '9999-12-31T23:59:59.000Z';
-
-function roomPanelSessionFromGrant(row: DeviceAuthorizationRow): RoomPanelSession | null {
+function roomPanelGrantFromRow(row: DeviceAuthorizationRow): RoomPanelGrant | null {
   if (row.role !== 'room-panel' || !row.roomId || !row.placement) {
     return null;
   }
@@ -139,12 +138,10 @@ function roomPanelSessionFromGrant(row: DeviceAuthorizationRow): RoomPanelSessio
     placement: row.placement,
     createdAt: row.createdAt,
     lastSeenAt: row.lastSeenAt ?? row.createdAt,
-    idleExpiresAt: DEVICE_GRANT_EXPIRES_AT,
-    expiresAt: DEVICE_GRANT_EXPIRES_AT,
   };
 }
 
-function deviceSessionFromGrant(row: DeviceAuthorizationRow): DeviceSession | null {
+function deviceGrantFromRow(row: DeviceAuthorizationRow): DeviceGrant | null {
   if (row.role !== 'tv' && row.role !== 'terminal') {
     return null;
   }
@@ -158,8 +155,6 @@ function deviceSessionFromGrant(row: DeviceAuthorizationRow): DeviceSession | nu
     deviceId: row.deviceId,
     createdAt: row.createdAt,
     lastSeenAt: row.lastSeenAt ?? row.createdAt,
-    idleExpiresAt: DEVICE_GRANT_EXPIRES_AT,
-    expiresAt: DEVICE_GRANT_EXPIRES_AT,
   };
 }
 
@@ -177,54 +172,38 @@ function resolveRoleFromDeviceGrant(
     return null;
   }
   const row = deviceGrants.authenticateDeviceAuthorization(token);
-  const session =
+  const grant =
     requestedRole === 'room-panel'
       ? row
-        ? roomPanelSessionFromGrant(row)
+        ? roomPanelGrantFromRow(row)
         : null
       : row
-        ? deviceSessionFromGrant(row)
+        ? deviceGrantFromRow(row)
         : null;
-  if (!session || session.role !== requestedRole) {
+  if (!grant || grant.role !== requestedRole) {
     return null;
   }
-  deviceGrants.touchDeviceAuthorization(session.sessionId);
-  request.authSession = session;
-  request.clientRole = session.role;
+  deviceGrants.touchDeviceAuthorization(grant.sessionId);
+  request.authSession = grant;
+  request.clientRole = grant.role;
   request.deviceGrantToken = token;
-  return session.role;
+  return grant.role;
 }
 
-function sessionMatchesSlotRole(
-  session: NonNullable<ReturnType<StaffSessionManager['getSession']>>,
-  role: CookieSlotRole,
-): boolean {
-  if (role === 'mfa' || role === 'ops') {
-    return session.kind === 'staff' && session.role === role;
-  }
-  if (role === 'room-panel') {
-    return session.kind === 'room-panel' && session.role === role;
-  }
-  return session.kind === 'device' && session.role === role;
-}
-
-function resolveRoleFromSessionCookie(
+function resolveRoleFromStaffSessionCookie(
   request: FastifyRequest,
   staffSessions: StaffSessionManager,
-  requestedRole: CookieSlotRole,
+  requestedRole: StaffRole,
 ): ClientRole | null {
   const token = readCookieValue(request, getSessionCookieNameForSlot(requestedRole));
   const session = staffSessions.getSession(token);
-  if (!session || !sessionMatchesSlotRole(session, requestedRole)) {
+  if (!session || session.role !== requestedRole) {
     return null;
   }
 
   request.authSession = session;
   request.clientRole = session.role;
-  if (session.kind === 'staff') {
-    request.staffSession = session;
-  }
-
+  request.staffSession = session;
   return session.role;
 }
 
@@ -429,7 +408,7 @@ export function registerClientAuth(
           sessionRole = resolveRoleFromDeviceGrant(request, deviceGrants, requestedRole);
         }
       } else {
-        sessionRole = resolveRoleFromSessionCookie(request, staffSessions, requestedRole);
+        sessionRole = resolveRoleFromStaffSessionCookie(request, staffSessions, requestedRole);
       }
     }
 
