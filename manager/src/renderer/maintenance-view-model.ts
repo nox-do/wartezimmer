@@ -15,7 +15,7 @@ import { deliveryImagesSummary } from './delivery-images-flow.js';
 export const MAINTENANCE_LOG_SERVICES = [
   { value: 'app', label: 'app' },
   { value: 'sandbox', label: 'sandbox' },
-  { value: 'gateway', label: 'gateway' },
+  { value: 'proxy', label: 'proxy' },
 ] as const;
 
 export type MaintenanceOperation =

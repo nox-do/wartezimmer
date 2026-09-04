@@ -8,6 +8,7 @@ Stand: 2026-09-04
 - `buildFastifyLoggerOptions` liefert jetzt den gemeinsamen Pino-Root; `createModuleLogger` für Background
 - App-`createLogger` (console-Wrapper) entfernt; Caller auf Pino-Konvention `(obj, msg)` umgestellt
 - Review-Lücken: paralleler App-Logger war die einzige echte Abweichung — behoben; CLI/UI/sandbox-bootstrap ok
+- Manager Logs-Dropdown: `gateway` → `proxy` (Container-Liste)
 
 ## 2026-09-04 — Cleanup: openNDS-Gateway / Auth-Bridge
 
