@@ -2,6 +2,30 @@
 
 Stand: 2026-09-04
 
+## 2026-09-04 — Slice-1 Fixes: Meta-Review (Auto)
+
+- Verdict: Fixes zu P1-01/02 und OpenAPI-Drifts ok; keine Regression im Diff
+- S1-P2-02 Pairing-DoS: Residual ok, aber schon Rate-Limit + `DEVICE_PAIRING_MAX_PENDING=50`
+- Offen: PORTAL_DISABLED-403 OpenAPI, Captive/Health, Pairing-Start-DoS (Residual)
+- Testlücke: kein Test „fremde documentId → kein Sandbox-Purge“
+- MFA-Discard (`documents-routes`) noch purge-vor-Check — Slice Documents, nicht Slice-1-Regression
+
+## 2026-09-04 — Slice-1 Fixes (Portal/Public Review)
+
+- Patient-Delete: Ownership/Status **vor** Sandbox-Purge (`assertPatientDocumentDiscardable`)
+- Room-Panel: außen **ohne** PIN (Domain-Policy); innen PIN; Docs `apis.md`/`flows.md` + UI Login
+- OpenAPI: `practice/profile` + `patient-locales` → `security: []`; resolve-ticket **429**; forms **503**; PIN optional
+- Portal `/sessions/me`: **kein** `checkinPhone` mehr; Anamnese Tippen; kein Server-Prefill aus Check-in
+- Bewusst offen: Pairing-Start-DoS (Residual); PORTAL_DISABLED-403 OpenAPI; Captive/Health
+- Generate: `npm run generate:api`
+
+## 2026-09-04 — API/OpenAPI Review (Slice-Plan)
+
+- Scope: Inkonsistenzen, Duplikate, tote Pfade, Security — OpenAPI + Handler + ACL + `apis.md`
+- Fläche: ~80 `/api/v1`-Routen (ACL), ~78 OpenAPI-Ops; Drift-Checks grün; SSE bewusst nur ACL
+- Auth-Schicht (`client-auth`/ACL) schon stichprobenartig reviewed; Residual Portal-Auth in `session-auth.ts`
+- Slice 1 (Public/Portal): Prompt an anderen Bot; Findings später hier reviewen — kein Auto-Fix
+
 ## 2026-09-04 — Reassign nach Hop-Complete: so lassen (A)
 
 - Reassign = temporärer Raum im Hop; Continue/Call-next folgt Journey (Lesart B)
@@ -217,7 +241,7 @@ Empfohlene erste Schnitte (wenn User will): dockerignore (+ ggf. `COPY manager/p
 
 - `docs/plan-device-authorizations.md` gelöscht (Schnitte 1–3 erledigt); Eintrag aus `docs/README.md`
 - Ist: `architecture/apis.md` / `flows.md`; operativ: Release-Cutover in `things-to-do-before-release.md`
-- Drift weiter notiert: Domain `roomPanelRequiresPin(outside)=false` vs Auth immer PIN
+- Panel-PIN: Domain `roomPanelRequiresPin` = Auth-Ist (außen false / innen true) — Drift behoben 2026-09-04
 
 ## 2026-09-04 — DB-Hygiene-Plan abgeschlossen
 
@@ -351,7 +375,7 @@ Empfohlene erste Schnitte (wenn User will): dockerignore (+ ggf. `COPY manager/p
 
 ## 2026-09-01 — Docs Ist nach Device-Authorizations
 
-- `apis.md` / `flows.md`: Panel-PIN außen+innen; Grant statt Staff-Session
+- `apis.md` / `flows.md`: Panel-PIN **innen**; außen ohne PIN (Domain-Policy; Code 2026-09-04 angeglichen)
 - `realtime.md`: Presence löscht kein Pairing; Poll schreibt Grant
 - `backup.md` / `delivery.md` / `system.md`: Restore leer, Update kopiert, Tagesreset unangetastet
 - Als Nächstes: unverändert Release-Cutover

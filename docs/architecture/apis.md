@@ -1,6 +1,6 @@
 # API — Rollen & Regeln
 
-Stand: 2026-09-01 · Ist (`app/src/auth/route-access-rules.ts`, Grant-/Session-Guards)
+Stand: 2026-09-04 · Ist (`app/src/auth/route-access-rules.ts`, Grant-/Session-Guards)
 
 **Vertrag (maschinenlesbar):** `openapi/*.yaml` · Bundle `openapi/bundle.json` · Swagger `/api/docs` · `npm run generate:api`
 
@@ -72,15 +72,15 @@ Neue/geänderte Routen: YAML → `generate:api` → Handler an Schema/Typen → 
 
 ## 4. Raum-Panel
 
-Vertrag: `openapi/auth.yaml`, `openapi/queue.yaml`. Enrollment einmalig mit der **gemeinsamen Raum-Panel-PIN** (außen und innen). Danach PIN-frei bis Widerruf (Cookie 365d, gleitendes Max-Age). Mehrere aktive Freigaben pro Raum+Placement.
+Vertrag: `openapi/auth.yaml`, `openapi/queue.yaml`. Enrollment einmalig: **innen** mit gemeinsamer Raum-Panel-PIN, **außen** ohne PIN. Danach PIN-frei bis Widerruf (Cookie 365d, gleitendes Max-Age). Mehrere aktive Freigaben pro Raum+Placement.
 
-| Endpoint                          | Zugang       | Zweck                                                |
-| --------------------------------- | ------------ | ---------------------------------------------------- |
-| `GET /auth/room-panel/rooms`      | öffentlich   | Placements zum Enrollment (`requiresPin` immer true) |
-| `POST /auth/room-panel/login`     | öffentlich   | Cookie; Body `roomId`, `placement`, **PIN Pflicht**  |
-| `GET /queue`                      | `room-panel` | Snapshot inkl. `capabilities` / Actions              |
-| `GET /queue/stream`               | `room-panel` | SSE `snapshot` + `session-revoked`                   |
-| `POST /queue/:visitId/transition` | `room-panel` | nur `check_in_room`, `check_out_room`, `call`        |
+| Endpoint                          | Zugang       | Zweck                                                                  |
+| --------------------------------- | ------------ | ---------------------------------------------------------------------- |
+| `GET /auth/room-panel/rooms`      | öffentlich   | Placements zum Enrollment (`requiresPin` laut Placement)               |
+| `POST /auth/room-panel/login`     | öffentlich   | Cookie; Body `roomId`, `placement`; **PIN nur innen**                  |
+| `GET /queue`                      | `room-panel` | Snapshot inkl. `capabilities` / Actions                                |
+| `GET /queue/stream`               | `room-panel` | SSE `snapshot` + `session-revoked`                                     |
+| `POST /queue/:visitId/transition` | `room-panel` | nur `check_in_room`, `check_out_room`, `call`                          |
 
 UI-Buttons aus Snapshot-Actions (`canArrive`, `canCheckOut`, `canCall`); Server bleibt autoritativ. `capabilities.callAnnouncementReachable` steuert Aufruf bei offline WZ-TV. MFA listet und entkoppelt Freigaben über `GET/POST /ops/device-authorizations`.
 

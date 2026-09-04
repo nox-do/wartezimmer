@@ -423,7 +423,7 @@
     "/api/v1/auth/room-panel/login": {
       "post": {
         "operationId": "loginRoomPanel",
-        "summary": "Create a room panel session; panels inside the room require the shared panel PIN.",
+        "summary": "Create a room panel session; inside panels require the shared panel PIN, outside panels do not.",
         "security": [],
         "requestBody": {
           "required": true,
@@ -432,7 +432,7 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["roomId", "placement", "pin"],
+                "required": ["roomId", "placement"],
                 "properties": {
                   "roomId": {
                     "type": "string",
@@ -445,9 +445,9 @@
                   },
                   "pin": {
                     "type": "string",
-                    "minLength": 4,
+                    "minLength": 0,
                     "maxLength": 128,
-                    "description": "Required for inside panels; omit or empty for outside panels without PIN."
+                    "description": "Required for inside panels (min 4 chars). Omit for outside panels."
                   }
                 }
               }
@@ -7715,6 +7715,86 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Document schema or intake temporarily unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -7770,7 +7850,7 @@
             }
           },
           "400": {
-            "description": "Invalid request or rate limited",
+            "description": "Invalid request",
             "content": {
               "application/json": {
                 "schema": {
@@ -7930,7 +8010,87 @@
             }
           },
           "409": {
-            "description": "Ticket not active anymore",
+            "description": "Ticket not active anymore, or session conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many resolve-ticket attempts",
             "content": {
               "application/json": {
                 "schema": {
@@ -8549,8 +8709,7 @@
                     "status",
                     "expiresAt",
                     "createdAt",
-                    "authPath",
-                    "checkinPhone"
+                    "authPath"
                   ],
                   "properties": {
                     "sessionId": {
@@ -8572,10 +8731,8 @@
                       "format": "date-time"
                     },
                     "authPath": {
-                      "type": "string"
-                    },
-                    "checkinPhone": {
-                      "type": ["string", "null"]
+                      "type": "string",
+                      "description": "Check-in auth path for this visit (not patient PII)."
                     }
                   }
                 }
@@ -11064,6 +11221,7 @@
       "get": {
         "summary": "Public practice profile for patient-facing UIs",
         "description": "Returns resolved practice contact data for privacy notices and display labels.",
+        "security": [],
         "responses": {
           "200": {
             "description": "Practice profile",
@@ -11129,6 +11287,7 @@
       "get": {
         "summary": "Enabled patient-facing languages (terminal and portal)",
         "description": "Public snapshot of languages patients may choose. German is always included.",
+        "security": [],
         "responses": {
           "200": {
             "description": "Enabled patient locales",
@@ -17564,7 +17723,7 @@
       "RoomPanelLoginRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["roomId", "placement", "pin"],
+        "required": ["roomId", "placement"],
         "properties": {
           "roomId": {
             "type": "string",
@@ -17577,9 +17736,9 @@
           },
           "pin": {
             "type": "string",
-            "minLength": 4,
+            "minLength": 0,
             "maxLength": 128,
-            "description": "Required for inside panels; omit or empty for outside panels without PIN."
+            "description": "Required for inside panels (min 4 chars). Omit for outside panels."
           }
         }
       },

@@ -18,7 +18,6 @@ export type FormPdfBatchContext = {
   laneCode: string;
   ticketNumber: number;
   submittedAt: string;
-  checkinPhone: string | null;
   primaryQuestionnaire?: {
     template: FormTemplateDefinition;
     answers: Record<string, unknown>;
@@ -157,7 +156,7 @@ function buildConsentFormPdfDisplay(input: {
     throw new Error('FORM_CONSENT_REQUIRES_PRIMARY');
   }
 
-  const patient = buildConsentPatientSnapshot(primary.answers, input.batch.checkinPhone);
+  const patient = buildConsentPatientSnapshot(primary.answers);
   const ticketCode = formatTicketCode(input.batch.laneCode, input.batch.ticketNumber);
   const privacyNotice = buildFormPrivacyNoticeV2(getPracticeProfileForDb(getCoreDatabase()));
 

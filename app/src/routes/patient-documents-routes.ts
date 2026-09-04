@@ -500,6 +500,8 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
       const token = getPatientSessionToken(request);
       try {
         const documentId = request.params.documentId.trim();
+        // Ownership/status first — never purge sandbox for a foreign or non-discardable doc.
+        db.assertPatientDocumentDiscardable(token, documentId);
         await purgeDocumentArtifacts(documentId);
         const discarded = db.discardPatientDocument(token, documentId);
         publishTvQueueUpdate(db);

@@ -14,11 +14,10 @@ function readString(value: unknown): string | null {
 
 export function buildConsentPatientSnapshot(
   answers: Record<string, unknown>,
-  sessionPhone: string | null,
 ): ConsentPatientSnapshot {
   return {
     patientFullName: readString(answers.fullName),
     patientBirthDate: readString(answers.birthDate),
-    patientPhone: readString(answers.contactPhone) ?? sessionPhone,
+    patientPhone: readString(answers.contactPhone),
   };
 }

@@ -64,7 +64,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Create a room panel session; panels inside the room require the shared panel PIN. */
+    /** Create a room panel session; inside panels require the shared panel PIN, outside panels do not. */
     post: operations['loginRoomPanel'];
     delete?: never;
     options?: never;
@@ -243,8 +243,8 @@ export interface components {
     RoomPanelLoginRequest: {
       roomId: string;
       placement: components['schemas']['RoomPanelPlacement'];
-      /** @description Required for inside panels; omit or empty for outside panels without PIN. */
-      pin: string;
+      /** @description Required for inside panels (min 4 chars). Omit for outside panels. */
+      pin?: string;
     };
     RoomPanelSessionResponse: {
       /** @constant */

@@ -242,6 +242,15 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
+        /** @description Document schema or intake temporarily unavailable */
+        503: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
       };
     };
     delete?: never;
@@ -290,7 +299,7 @@ export interface paths {
             };
           };
         };
-        /** @description Invalid request or rate limited */
+        /** @description Invalid request */
         400: {
           headers: {
             [name: string]: unknown;
@@ -308,8 +317,17 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
-        /** @description Ticket not active anymore */
+        /** @description Ticket not active anymore, or session conflict */
         409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+        /** @description Too many resolve-ticket attempts */
+        429: {
           headers: {
             [name: string]: unknown;
           };
@@ -503,8 +521,8 @@ export interface paths {
               expiresAt: string;
               /** Format: date-time */
               createdAt: string;
+              /** @description Check-in auth path for this visit (not patient PII). */
               authPath: string;
-              checkinPhone: string | null;
             };
           };
         };

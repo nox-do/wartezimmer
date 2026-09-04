@@ -96,7 +96,6 @@ components:
       required:
         - roomId
         - placement
-        - pin
       properties:
         roomId:
           type: string
@@ -106,9 +105,9 @@ components:
           $ref: '#/components/schemas/RoomPanelPlacement'
         pin:
           type: string
-          minLength: 4
+          minLength: 0
           maxLength: 128
-          description: Required for inside panels; omit or empty for outside panels without PIN.
+          description: Required for inside panels (min 4 chars). Omit for outside panels.
     RoomPanelSessionResponse:
       type: object
       additionalProperties: false
@@ -331,7 +330,7 @@ paths:
   /api/v1/auth/room-panel/login:
     post:
       operationId: loginRoomPanel
-      summary: Create a room panel session; panels inside the room require the shared panel PIN.
+      summary: Create a room panel session; inside panels require the shared panel PIN, outside panels do not.
       security: []
       requestBody:
         required: true

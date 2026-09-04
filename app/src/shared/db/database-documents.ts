@@ -171,11 +171,11 @@ export function listPatientDocumentsInDb(
   return deps.listPatientDocumentsStmt.all(session.sessionId) as PatientDocumentRow[];
 }
 
-export function discardPatientDocumentInDb(
+function requirePatientDiscardableDocument(
   deps: DocumentDeps,
   sessionToken: string,
   documentId: string,
-): PatientDocumentRow {
+): { session: ReturnType<DocumentDeps['requirePatientSession']>; fromStatus: DocumentStatus } {
   const session = deps.requirePatientSession(sessionToken);
   const document = deps.getSessionDocumentStmt.get(documentId) as
     | { id?: string; sessionId?: string; status?: string }
@@ -195,6 +195,24 @@ export function discardPatientDocumentInDb(
   if (!allowedPatientDiscard.has(document.status as DocumentStatus)) {
     throw domainError('INVALID_TRANSITION');
   }
+  return { session, fromStatus: document.status as DocumentStatus };
+}
+
+/** Ownership + transition checks without mutating — call before sandbox purge. */
+export function assertPatientDocumentDiscardableInDb(
+  deps: DocumentDeps,
+  sessionToken: string,
+  documentId: string,
+): void {
+  requirePatientDiscardableDocument(deps, sessionToken, documentId);
+}
+
+export function discardPatientDocumentInDb(
+  deps: DocumentDeps,
+  sessionToken: string,
+  documentId: string,
+): PatientDocumentRow {
+  const { session, fromStatus } = requirePatientDiscardableDocument(deps, sessionToken, documentId);
 
   const updatedAt = deps.nowIso();
   applyDocumentStatusTransition(deps, {
@@ -206,7 +224,7 @@ export function discardPatientDocumentInDb(
       documentId,
       visitId: session.visitId,
       sessionId: session.sessionId,
-      fromStatus: document.status,
+      fromStatus,
       toStatus: 'discarded_by_patient',
       updatedAt,
     },

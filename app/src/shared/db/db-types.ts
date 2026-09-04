@@ -37,7 +37,6 @@ export type CreateTicketInput = CreateTicketCallerInput & {
 
 export type VisitPortalContext = {
   authPath: string;
-  checkinPhone: string | null;
 };
 
 export type PatientSessionMe = PatientSession & VisitPortalContext;

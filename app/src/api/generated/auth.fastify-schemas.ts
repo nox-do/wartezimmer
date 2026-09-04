@@ -120,7 +120,7 @@ export const RoomPanelRoomsResponse = {
 export const RoomPanelLoginRequest = {
   type: 'object',
   additionalProperties: false,
-  required: ['roomId', 'placement', 'pin'],
+  required: ['roomId', 'placement'],
   properties: {
     roomId: {
       type: 'string',
@@ -133,7 +133,7 @@ export const RoomPanelLoginRequest = {
     },
     pin: {
       type: 'string',
-      minLength: 4,
+      minLength: 0,
       maxLength: 128,
     },
   },
@@ -630,7 +630,7 @@ export const GET_api_v1_auth_room_panel_roomsResponse200 = {
 export const POST_api_v1_auth_room_panel_loginRequestBody = {
   type: 'object',
   additionalProperties: false,
-  required: ['roomId', 'placement', 'pin'],
+  required: ['roomId', 'placement'],
   properties: {
     roomId: {
       type: 'string',
@@ -643,7 +643,7 @@ export const POST_api_v1_auth_room_panel_loginRequestBody = {
     },
     pin: {
       type: 'string',
-      minLength: 4,
+      minLength: 0,
       maxLength: 128,
     },
   },

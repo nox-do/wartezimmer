@@ -12,10 +12,8 @@ export function prepareVisitDatabaseStatements(db: DatabaseSync) {
     ),
     getVisitPortalContextStmt: db.prepare(
       `SELECT
-        v.auth_path AS authPath,
-        h.checkin_phone AS checkinPhone
+        v.auth_path AS authPath
       FROM visits v
-      LEFT JOIN visit_host_state h ON h.visit_id = v.id
       WHERE v.id = ?
       LIMIT 1`,
     ),

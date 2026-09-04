@@ -186,7 +186,7 @@ test('visit portal: verify code, resolve session, identity view with host-state'
 
   const portal = getVisitPortalContextFromDb(checkinDeps, visitId);
   assert.equal(portal.authPath, 'phone_dob');
-  assert.equal(portal.checkinPhone, '+49172111111');
+  assert.equal('checkinPhone' in portal, false);
 
   const identity = getVisitIdentityViewFromDb(checkinDeps, visitId);
   assert.equal(identity.visitId, visitId);

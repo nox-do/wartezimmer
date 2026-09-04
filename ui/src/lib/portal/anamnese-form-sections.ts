@@ -3,17 +3,8 @@ import type { PortalFormField } from './anamnese-field-control.js';
 
 export type { FormTemplateSection as AnamneseFormSection };
 
-export function isAnamneseFieldVisible(
-  field: PortalFormField,
-  checkinPhone: string | null,
-): boolean {
-  if (field.hideInPortalForm) {
-    return false;
-  }
-  if (field.hideWhenCheckinPhone && checkinPhone?.trim()) {
-    return false;
-  }
-  return true;
+export function isAnamneseFieldVisible(field: PortalFormField): boolean {
+  return !field.hideInPortalForm;
 }
 
 export function orderFieldsBySections(

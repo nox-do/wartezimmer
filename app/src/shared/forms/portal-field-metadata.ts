@@ -27,7 +27,7 @@ type PortalFieldMeta = Pick<
 const ALLGEMEINMEDIZIN_PORTAL: Record<string, PortalFieldMeta> = {
   fullName: { portalControl: 'input' },
   birthDate: { portalControl: 'compact' },
-  contactPhone: { portalControl: 'compact', hideWhenCheckinPhone: true },
+  contactPhone: { portalControl: 'compact' },
   contactEmail: { portalControl: 'input' },
   mainConcern: { portalControl: 'textarea' },
   symptomSince: { portalControl: 'input' },

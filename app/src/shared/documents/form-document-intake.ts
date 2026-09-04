@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import type { CoreDatabase } from '../db/database.js';
 import type { PatientDocumentRow } from '../db/db-types.js';
 import { buildFormPdfDisplay, type FormPdfDisplay } from '../forms/form-pdf-display.js';
-import { mergeFormAnswersWithSessionPhone } from '../forms/merge-form-session-phone.js';
 import {
   getFormTemplate,
   validateFormAnswers,
@@ -41,7 +40,6 @@ type FormBatchContext = {
   ticketCode: string;
   laneCode: string;
   ticketNumber: number;
-  checkinPhone: string | null;
   primaryQuestionnaire: {
     template: FormTemplateDefinition;
     answers: Record<string, unknown>;
@@ -78,27 +76,25 @@ function prepareFormDocument(
       throw domainError('FORM_CONSENT_REQUIRED');
     }
   } else {
-    const mergedAnswers = mergeFormAnswersWithSessionPhone(answers, context.checkinPhone);
-    const validationErrors = validateFormAnswers(template, mergedAnswers);
+    const validationErrors = validateFormAnswers(template, answers);
     if (validationErrors.length > 0) {
       throw domainError('FORM_ANSWERS_VALIDATION_FAILED');
     }
-    context.primaryQuestionnaire = { template, answers: mergedAnswers };
+    context.primaryQuestionnaire = { template, answers };
     return {
       documentId: randomUUID(),
       templateId: template.id,
       templateVersion: template.version,
       templateName: template.name,
-      answers: mergedAnswers,
+      answers,
       display: buildFormPdfDisplay({
         template,
-        answers: mergedAnswers,
+        answers,
         batch: {
           ticketCode: context.ticketCode,
           laneCode: context.laneCode,
           ticketNumber: context.ticketNumber,
           submittedAt: context.submittedAt,
-          checkinPhone: context.checkinPhone,
           primaryQuestionnaire: context.primaryQuestionnaire,
         },
       }),
@@ -119,7 +115,6 @@ function prepareFormDocument(
         laneCode: context.laneCode,
         ticketNumber: context.ticketNumber,
         submittedAt: context.submittedAt,
-        checkinPhone: context.checkinPhone,
         primaryQuestionnaire: context.primaryQuestionnaire ?? undefined,
       },
     }),
@@ -143,7 +138,6 @@ export function prepareFormDocumentBatch(
     ticketCode: formatTicketCode(ticket.laneCode, ticket.number),
     laneCode: ticket.laneCode,
     ticketNumber: ticket.number,
-    checkinPhone: sessionMe.checkinPhone,
     primaryQuestionnaire: null,
   };
 

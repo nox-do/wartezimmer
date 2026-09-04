@@ -393,6 +393,12 @@ paths:
             application/json:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
+        '503':
+          description: Document schema or intake temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
   /api/v1/sessions/resolve-ticket:
     post:
       summary: Resolve waiting number (ticketCode) to anonymous patient session
@@ -434,7 +440,13 @@ paths:
                   visitId:
                     type: string
         '400':
-          description: Invalid request or rate limited
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '429':
+          description: Too many resolve-ticket attempts
           content:
             application/json:
               schema:
@@ -446,7 +458,7 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
         '409':
-          description: Ticket not active anymore
+          description: Ticket not active anymore, or session conflict
           content:
             application/json:
               schema:
@@ -585,7 +597,6 @@ paths:
                   - expiresAt
                   - createdAt
                   - authPath
-                  - checkinPhone
                 properties:
                   sessionId:
                     type: string
@@ -605,8 +616,7 @@ paths:
                     format: date-time
                   authPath:
                     type: string
-                  checkinPhone:
-                    type: ['string', 'null']
+                    description: Check-in auth path for this visit (not patient PII).
         '401':
           description: Unauthorized session token
           content:

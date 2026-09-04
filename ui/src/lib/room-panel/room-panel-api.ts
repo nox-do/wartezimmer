@@ -40,6 +40,7 @@ export async function loginRoomPanel(input: {
   placement: RoomPanelPlacement;
   pin: string;
 }): Promise<Result<RoomPanelSessionResponse>> {
+  const pin = input.pin.trim();
   return httpFetch<RoomPanelSessionResponse>(
     '/api/v1/auth/room-panel/login',
     {
@@ -48,7 +49,7 @@ export async function loginRoomPanel(input: {
       body: JSON.stringify({
         roomId: input.roomId,
         placement: input.placement,
-        pin: input.pin,
+        ...(pin.length > 0 ? { pin } : {}),
       }),
     },
     { includeClientOriginHeader: true },

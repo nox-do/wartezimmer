@@ -185,15 +185,13 @@ export function getVisitPortalContextFromDb(
   visitId: string,
 ): VisitPortalContext {
   const row = deps.getVisitPortalContextStmt.get(visitId.trim()) as
-    | { authPath?: string; checkinPhone?: string | null }
+    | { authPath?: string }
     | undefined;
   if (!row?.authPath) {
     throw domainError('VISIT_NOT_FOUND');
   }
-  const storedPhone = row.checkinPhone?.trim() || null;
   return {
     authPath: row.authPath,
-    checkinPhone: storedPhone,
   };
 }
 

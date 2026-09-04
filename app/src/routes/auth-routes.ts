@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { listEnabledRoomPanelPlacements, roomPanelConfigForPlacement } from '@praxis-flow/domain';
+import { listEnabledRoomPanelPlacements, roomPanelConfigForPlacement, roomPanelRequiresPin } from '@praxis-flow/domain';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type {
   ChangePinBody,
@@ -94,7 +94,7 @@ function listEnabledRoomPanelRooms(db: AuthRoutesDb) {
           roomLabel: room.roomLabel,
           placement,
           mode: config.mode,
-          requiresPin: true,
+          requiresPin: roomPanelRequiresPin(placement),
         };
       }),
     );
@@ -347,9 +347,17 @@ export function registerAuthRoutes(
           .send({ code: 'RATE_LIMITED', message: 'Too many room panel login attempts.' });
       }
 
-      const config = getCurrentAuthConfig(db);
-      if (!verifyStaffPin(pin, config.roomPanelPinHash)) {
-        return reply.code(401).send({ code: 'AUTH_UNAUTHORIZED', message: 'Unauthorized.' });
+      if (room.requiresPin) {
+        if (pin.length < 4) {
+          return reply.code(400).send({
+            code: 'INVALID_ARGUMENT',
+            message: 'Room panel PIN is required.',
+          });
+        }
+        const config = getCurrentAuthConfig(db);
+        if (!verifyStaffPin(pin, config.roomPanelPinHash)) {
+          return reply.code(401).send({ code: 'AUTH_UNAUTHORIZED', message: 'Unauthorized.' });
+        }
       }
 
       const previousToken = readCookieValue(request, getRoomPanelSessionCookieName());

@@ -523,7 +523,7 @@
       errorMessage = t('roomPanel.noRoomError');
       return;
     }
-    if (pin.trim().length < 4) {
+    if (pinRequired && pin.trim().length < 4) {
       errorMessage = t('roomPanel.pinError');
       return;
     }

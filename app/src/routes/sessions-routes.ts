@@ -48,6 +48,7 @@ export function registerSessionRoutes(app: FastifyInstance, db: CoreDatabase): v
           400: sessionsSchemas.POST_api_v1_sessions_resolve_ticketResponse400,
           404: sessionsSchemas.POST_api_v1_sessions_resolve_ticketResponse404,
           409: sessionsSchemas.POST_api_v1_sessions_resolve_ticketResponse409,
+          429: sessionsSchemas.POST_api_v1_sessions_resolve_ticketResponse429,
         },
       },
     },

@@ -34,7 +34,6 @@
   let submitting = $state(false);
   let submitted = $state(false);
   let formError = $state<string | null>(null);
-  let checkinPhone = $state<string | null>(null);
   let privacyNotice = $state<FormPrivacyNotice | null>(null);
   let privacyModalOpen = $state(false);
   let dynamicTranslations = $state<Map<string, string>>(new Map());
@@ -76,7 +75,7 @@
     return texts;
   }
 
-  function initAnswers(fields: FormTemplateField[], phoneFromCheckin: string | null) {
+  function initAnswers(fields: FormTemplateField[]) {
     const next: Record<string, string | number | boolean> = {};
     for (const field of fields) {
       if (field.type === 'boolean') {
@@ -86,9 +85,6 @@
       } else {
         next[field.id] = '';
       }
-    }
-    if (phoneFromCheckin) {
-      next.contactPhone = phoneFromCheckin;
     }
     answers = next;
   }
@@ -234,12 +230,11 @@
         errorMessage = loaded.error.message || t('portal.anamneseLoadError');
         return;
       }
-      checkinPhone = me.data.checkinPhone;
       template = loaded.data;
       if (privacy.ok) {
         privacyNotice = privacy.data;
       }
-      initAnswers(loaded.data.fields, checkinPhone);
+      initAnswers(loaded.data.fields);
     })();
   });
 </script>
@@ -278,27 +273,10 @@
 
       <form class="modal-form" onsubmit={onSubmit}>
         {#each groupedSections as group (group.section.titleKey)}
-          {@const sectionFields = group.fields.filter((field) =>
-            isAnamneseFieldVisible(field, checkinPhone),
-          )}
-          {#if sectionFields.length > 0 || (checkinPhone && group.section.titleKey === 'portal.anamneseSectionMasterData')}
+          {@const sectionFields = group.fields.filter((field) => isAnamneseFieldVisible(field))}
+          {#if sectionFields.length > 0}
             <section class="form-section">
               <h2 class="form-section__title">{t(group.section.titleKey)}</h2>
-
-              {#if checkinPhone && group.section.titleKey === 'portal.anamneseSectionMasterData'}
-                <label class="modal-form-field modal-form-field--compact" for="anam-contactPhone-prefill">
-                  {t('portal.anamnesePhoneLabel')}
-                  <input
-                    id="anam-contactPhone-prefill"
-                    class="form-input"
-                    type="tel"
-                    autocomplete="tel"
-                    maxlength={40}
-                    bind:value={answers.contactPhone as string}
-                  />
-                  <span class="field-hint">{t('portal.anamnesePhoneFromCheckin')}</span>
-                </label>
-              {/if}
 
               {#each sectionFields as field (field.id)}
               {@const meta = fieldById.get(field.id)}

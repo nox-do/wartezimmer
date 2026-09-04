@@ -470,15 +470,15 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 
 | Placement            | PIN beim Enrollment            | Modus                                       | Namen    | Aufruf                            |
 | -------------------- | ------------------------------ | ------------------------------------------- | -------- | --------------------------------- |
-| **outside** (Tür)    | ja (gemeinsame Raum-Panel-PIN) | `display_only` \| `arrival`                 | nie      | nie                               |
-| **inside** (im Raum) | ja (dieselbe PIN)              | `display_only` \| `arrival` \| `staff_full` | optional | nur `staff_full` + `allowCalling` |
+| **outside** (Tür)    | nein                           | `display_only` \| `arrival`                 | nie      | nie                               |
+| **inside** (im Raum) | ja (gemeinsame Raum-Panel-PIN) | `display_only` \| `arrival` \| `staff_full` | optional | nur `staff_full` + `allowCalling` |
 
-**Settings:** Panel-Modi und Texte: MFA → Themen & Räume → Raum-Expander. **Raum-Panel-PIN** (getrennt von MFA-/Ops-PIN): MFA → Betrieb.
+**Settings:** Panel-Modi und Texte: MFA → Themen & Räume → Raum-Expander. **Raum-Panel-PIN** (getrennt von MFA-/Ops-PIN): MFA → Betrieb — gilt für **innen**-Enrollment.
 
 ### Enrollment
 
-- `GET /auth/room-panel/rooms` — ein Eintrag pro **aktivem Placement** (`roomId`, `roomLabel`, `placement`, `mode`, `requiresPin: true`)
-- `POST /auth/room-panel/login` — Body: `roomId` + `placement` + **PIN** (außen und innen)
+- `GET /auth/room-panel/rooms` — ein Eintrag pro **aktivem Placement** (`roomId`, `roomLabel`, `placement`, `mode`, `requiresPin` aus Domain-Policy)
+- `POST /auth/room-panel/login` — Body: `roomId` + `placement`; **PIN nur wenn `requiresPin`** (innen)
 - Danach Cookie-Freigabe ohne PIN bis Widerruf, Relogin-Hotspot, Raum-/Placement-Deaktivierung, PIN-Wechsel oder Restore
 - UI: „Labor – Tür“ / „Labor – im Raum“; URL-Placement wird beim Restore des Cookies bevorzugt
 

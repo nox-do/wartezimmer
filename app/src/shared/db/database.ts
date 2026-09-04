@@ -141,6 +141,7 @@ import {
   discardDocumentByMfaInDb,
   renameDocumentFileNameInDb,
   discardDocumentAfterMalwareInDb,
+  assertPatientDocumentDiscardableInDb,
   discardPatientDocumentInDb,
   getDocumentByIdFromDb,
   getDocumentExportInfoFromDb,
@@ -750,6 +751,12 @@ export class CoreDatabase {
   listPatientDocuments(sessionToken: string): PatientDocumentRow[] {
     return this.withPatientSessionReadTx('listPatientDocuments', () =>
       listPatientDocumentsInDb(this.documentDeps(), sessionToken),
+    );
+  }
+
+  assertPatientDocumentDiscardable(sessionToken: string, documentId: string): void {
+    return this.withPatientSessionReadTx('assertPatientDocumentDiscardable', () =>
+      assertPatientDocumentDiscardableInDb(this.documentDeps(), sessionToken, documentId),
     );
   }
 
