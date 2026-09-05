@@ -2,11 +2,17 @@
 
 Stand: 2026-09-04
 
+## 2026-09-04 — MFA Quicksettings: Entkoppeln aus
+
+- `QUICKSETTINGS_UNPAIR_ENABLED = false` in `MfaQuicksettings.svelte` — Terminal/TV/Panels ohne Entkoppeln-Button
+- Revoke-API bleibt; später ggf. unter MFA-Settings
+
 ## 2026-09-04 — Slice-1 Fixes: Meta-Review (Auto)
 
 - Verdict: Fixes zu P1-01/02 und OpenAPI-Drifts ok; keine Regression im Diff
 - S1-P2-02 Pairing-DoS: Residual ok, aber schon Rate-Limit + `DEVICE_PAIRING_MAX_PENDING=50`
-- Offen: PORTAL_DISABLED-403 OpenAPI, Captive/Health, Pairing-Start-DoS (Residual)
+- S1-P2-05 erledigt: `checkinPhone` aus Portal `/me` + kein Prefill; Patient tippt neu
+- Offen nur noch: PORTAL_DISABLED-403 OpenAPI, Captive/Health, Pairing-Start-DoS (Residual)
 - Testlücke: kein Test „fremde documentId → kein Sandbox-Purge“
 - MFA-Discard (`documents-routes`) noch purge-vor-Check — Slice Documents, nicht Slice-1-Regression
 

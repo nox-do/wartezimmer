@@ -26,6 +26,9 @@
   import { spawnMfaEsheep } from '$lib/mfa/esheep';
   import type { QueueItem } from '$lib/queue/types';
 
+  /** Entkoppeln in Quicksettings vorübergehend aus — API bleibt für spätere Settings. */
+  const QUICKSETTINGS_UNPAIR_ENABLED = false;
+
   interface Props {
     clockLabel?: string | null;
     checkinLocked: boolean;
@@ -233,7 +236,7 @@
     {:else if terminalPhase === 'unpaired'}
       <p class="qs-panel-desc">{t('mfa.deviceUnpairedHintTerminal')}</p>
     {/if}
-    {#if terminalGrant}
+    {#if QUICKSETTINGS_UNPAIR_ENABLED && terminalGrant}
       <button
         type="button"
         class="qs-panel-desc"
@@ -279,7 +282,7 @@
     {:else if tvPhase === 'unpaired'}
       <p class="qs-panel-desc">{t('mfa.deviceUnpairedHintTv')}</p>
     {/if}
-    {#if tvGrant}
+    {#if QUICKSETTINGS_UNPAIR_ENABLED && tvGrant}
       <button
         type="button"
         class="qs-panel-desc"
@@ -303,14 +306,16 @@
             ·
             {formatGrantCreatedAt(grant.createdAt)}
           </span>
-          <button
-            type="button"
-            class="qs-panel-desc"
-            disabled={unpairBusyId === grant.authorizationId}
-            onclick={() => void unpair(grant.authorizationId)}
-          >
-            {unpairBusyId === grant.authorizationId ? t('mfa.deviceUnpairBusy') : t('mfa.deviceUnpair')}
-          </button>
+          {#if QUICKSETTINGS_UNPAIR_ENABLED}
+            <button
+              type="button"
+              class="qs-panel-desc"
+              disabled={unpairBusyId === grant.authorizationId}
+              onclick={() => void unpair(grant.authorizationId)}
+            >
+              {unpairBusyId === grant.authorizationId ? t('mfa.deviceUnpairBusy') : t('mfa.deviceUnpair')}
+            </button>
+          {/if}
         </div>
       {/each}
     </section>
