@@ -3,6 +3,7 @@ import test from 'node:test';
 import type { HostStatus } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { createPfupdateWizardController } from './pfupdate-wizard-controller.js';
+import { pfupdateInspectSummaryLines } from './pfupdate-wizard-flow.js';
 
 function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManagerApi {
   return {
@@ -95,6 +96,39 @@ test('pfupdate wizard inspects package before apply', async () => {
   assert.equal(applyCalled, true);
   assert.equal(successCalled, true);
   assert.equal(controller.getState().phase, 'success');
+});
+
+test('pfupdate summary labels stay technical and local builds are not mistaken for real releases', () => {
+  const lines = pfupdateInspectSummaryLines({
+    ok: true,
+    currentReleaseVersion: 'local',
+    package: {
+      releaseVersion: '2026.08.0',
+      minimumManagerVersion: '0.2.0',
+      supportedSettingsFormatVersions: [1],
+      targetSchemaVersion: 1,
+      images: {
+        app: 'praxis-flow/app:2026.08.0',
+        sandbox: 'praxis-flow/sandbox:2026.08.0',
+        gateway: 'praxis-flow/gateway:2026.08.0',
+      },
+    },
+    compatibility: {
+      packageValid: true,
+      managerCompatible: true,
+      settingsCompatible: true,
+      updateSupported: true,
+      warnings: [],
+    },
+  });
+
+  assert.deepEqual(lines, [
+    'Target release: 2026.08.0',
+    'Current: local build',
+    'Minimum manager: 0.2.0',
+    'Settings formats: 1',
+    'DB schema after update: 1',
+  ]);
 });
 
 test('pfupdate wizard stops on inspect failure', async () => {

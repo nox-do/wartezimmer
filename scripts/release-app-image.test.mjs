@@ -62,3 +62,20 @@ test('both release scripts prepare the custom proxy through the delivery helper'
     assert.equal(source.includes("['pull', proxyImage]"), false);
   }
 });
+
+test('current release aliases do not force a local version tag', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(scriptsDir, '..', 'package.json'), 'utf8'));
+
+  assert.equal(pkg.scripts['release:images:current'], 'node ./scripts/build-release-images.mjs --no-build');
+  assert.equal(pkg.scripts['release:pfupdate:current'], 'node ./scripts/build-pfupdate.mjs --no-build');
+  assert.doesNotMatch(pkg.scripts['release:images:current'], /--version\s+local/);
+  assert.doesNotMatch(pkg.scripts['release:pfupdate:current'], /--version\s+local/);
+  assert.ok(pkg.version && pkg.version !== 'local');
+});
+
+test('pfupdate artifact uses a versioned output directory and versioned filename', () => {
+  const source = fs.readFileSync(path.join(scriptsDir, 'build-pfupdate.mjs'), 'utf8');
+  assert.match(source, /const releaseDir = path\.join\(outputRoot, `praxis-flow-\$\{version\}`\)/);
+  assert.match(source, /const archiveFileName = `praxis-flow-update-\$\{version\}\.pfupdate`/);
+  assert.match(source, /const archivePath = path\.join\(releaseDir, archiveFileName\)/);
+});

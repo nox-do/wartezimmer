@@ -30,17 +30,29 @@ export function createInitialPfupdateWizardState(): PfupdateWizardState {
   };
 }
 
+export function formatPfupdateVersionLabel(version: string | null | undefined): string {
+  if (!version) {
+    return 'unknown';
+  }
+  const value = version.trim();
+  if (!value) {
+    return 'unknown';
+  }
+  if (value.toLowerCase() === 'local') {
+    return 'local build';
+  }
+  return value;
+}
+
 export function pfupdateInspectSummaryLines(inspect: PfupdateInspectResult): string[] {
   if (!inspect.package) {
     return [];
   }
-  const lines = [`Ziel-Release: ${inspect.package.releaseVersion}`];
-  if (inspect.currentReleaseVersion) {
-    lines.push(`Aktuell: ${inspect.currentReleaseVersion}`);
-  }
-  lines.push(`Mindest-Manager: ${inspect.package.minimumManagerVersion}`);
-  lines.push(`Settings-Formate: ${inspect.package.supportedSettingsFormatVersions.join(', ')}`);
-  lines.push(`DB-Schema nach Update: ${inspect.package.targetSchemaVersion}`);
+  const lines = [`Target release: ${formatPfupdateVersionLabel(inspect.package.releaseVersion)}`];
+  lines.push(`Current: ${formatPfupdateVersionLabel(inspect.currentReleaseVersion)}`);
+  lines.push(`Minimum manager: ${formatPfupdateVersionLabel(inspect.package.minimumManagerVersion)}`);
+  lines.push(`Settings formats: ${inspect.package.supportedSettingsFormatVersions.join(', ')}`);
+  lines.push(`DB schema after update: ${inspect.package.targetSchemaVersion}`);
   return lines;
 }
 
