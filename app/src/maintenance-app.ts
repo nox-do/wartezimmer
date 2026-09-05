@@ -6,7 +6,7 @@ import { buildFastifyLoggerOptions } from '@praxis-flow/server-shared';
 
 export async function buildMaintenanceApp(): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: buildFastifyLoggerOptions(),
+    ...buildFastifyLoggerOptions(),
   });
 
   const db = getCoreDatabase();

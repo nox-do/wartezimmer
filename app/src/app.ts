@@ -26,7 +26,7 @@ import { registerSecurityHeaders } from './http/security-headers.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: buildFastifyLoggerOptions(),
+    ...buildFastifyLoggerOptions(),
   });
 
   await app.register(multipart, {

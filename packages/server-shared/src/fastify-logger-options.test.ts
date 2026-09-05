@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import Fastify from 'fastify';
 import {
+  buildFastifyLoggerOptions,
   createModuleLogger,
   getRootLogger,
   readLogLevelFromEnv,
@@ -56,4 +58,13 @@ test('createModuleLogger shares the process root logger', () => {
     process.env.LOG_LEVEL = previousLogLevel;
   }
   resetRootLoggerForTests();
+});
+
+test('buildFastifyLoggerOptions attaches root loggerInstance to Fastify', () => {
+  resetRootLoggerForTests();
+  const root = getRootLogger();
+  const options = buildFastifyLoggerOptions();
+  assert.equal(options.loggerInstance, root);
+  const app = Fastify({ ...options });
+  assert.equal(typeof app.log.info, 'function');
 });

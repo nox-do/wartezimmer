@@ -1,4 +1,4 @@
-import type { FastifyServerOptions } from 'fastify';
+import type { FastifyBaseLogger } from 'fastify';
 import pino, { type Logger } from 'pino';
 
 const LOG_LEVELS = new Set(['debug', 'info', 'warn', 'error', 'fatal', 'silent']);
@@ -26,8 +26,14 @@ export function createModuleLogger(module: string): Logger {
   return getRootLogger().child({ module });
 }
 
-export function buildFastifyLoggerOptions(): FastifyServerOptions['logger'] {
-  return getRootLogger();
+export interface FastifySharedLoggerOptions {
+  loggerInstance: FastifyBaseLogger;
+}
+
+export function buildFastifyLoggerOptions(): FastifySharedLoggerOptions {
+  return {
+    loggerInstance: getRootLogger(),
+  };
 }
 
 /** Suppress per-request access logs for high-frequency probe routes. */

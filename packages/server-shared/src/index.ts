@@ -114,6 +114,7 @@ export {
   readLogLevelFromEnv,
   resetRootLoggerForTests,
   SILENT_ROUTE_LOG,
+  type FastifySharedLoggerOptions,
 } from './fastify-logger-options.js';
 export {
   decodeIntakeFileNameHeader,

@@ -12,7 +12,7 @@ import { getSandboxConfig, type SandboxConfig } from './sandbox-config.js';
 import { buildFastifyLoggerOptions } from '@praxis-flow/server-shared';
 
 export function buildSandboxApp(config: SandboxConfig = getSandboxConfig()): FastifyInstance {
-  const app = Fastify({ logger: buildFastifyLoggerOptions() });
+  const app = Fastify({ ...buildFastifyLoggerOptions() });
   const scanner = createScannerService(config);
   const previewStore = createPreviewStore();
 
