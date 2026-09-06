@@ -45,7 +45,7 @@ npm run dev:ui                  # SvelteKit-Devserver mit Proxy auf :8080
 
 Dokument-Preview, Form2PDF und Malware-Scan: Stack mit `npm run docker:up` (mindestens `app` + `sandbox`). Selten nativ: `npm run dev:sandbox` (nur Sandbox; App/API weiter separat).
 
-Erstinstallation & Manager: [`docs/operations/delivery.md`](docs/operations/delivery.md) · [`manager/README.md`](manager/README.md).  
+Erstinstallation & Manager: [`docs/operations/delivery.md`](docs/operations/delivery.md) · [`manager/README.md`](manager/README.md).
 CLI: `npm run setup` · Test-Install: `PRAXIS_FLOW_HOME=/tmp/pf-dev-001 npm run setup` · Reset: `npm run setup:reset`
 
 ## Alltagsbefehle
@@ -54,6 +54,9 @@ CLI: `npm run setup` · Test-Install: `PRAXIS_FLOW_HOME=/tmp/pf-dev-001 npm run 
 npm run verify                  # lint + typecheck + tests + UI-Build + Secret-Scan
 npm run generate:api            # nach Änderungen an openapi/*.yaml
 npm run smoke:all               # Integration — braucht laufenden Stack auf :8080
+npm run release:images          # Erstinstallationspaket (.pfinstall + Sidecar)
+npm run release:pfupdate        # Updatepaket (.pfupdate)
+npm run dist:manager:mac        # Manager-DMG für macOS
 ```
 
 ## URLs (nach Start)
