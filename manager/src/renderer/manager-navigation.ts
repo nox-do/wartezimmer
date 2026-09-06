@@ -1,15 +1,16 @@
 import type { HostRefreshController, ManagerView } from './host-refresh-controller.js';
 import type { HostStatus } from '../shared/host-status.js';
+import { isSetupEntryStatus } from './status-view-model.js';
 
 export type WizardPresentation = 'fullscreen' | 'embedded';
 
 export function defaultWizardPresentation(status: HostStatus | null): WizardPresentation {
-  return status?.envExists ? 'embedded' : 'fullscreen';
+  return status && !isSetupEntryStatus(status) ? 'embedded' : 'fullscreen';
 }
 
-/** Erstinstallation ohne `.env` → Wizard fullscreen ohne Tabs (siehe manager/README). */
+/** Unvollständiges Setup → Wizard fullscreen ohne Tabs (siehe manager/README). */
 export function shouldAutoStartFullscreenWizard(status: HostStatus | null): boolean {
-  return !status?.envExists;
+  return !status || isSetupEntryStatus(status);
 }
 
 export type NavigateOptions = {

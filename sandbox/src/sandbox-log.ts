@@ -1,4 +1,4 @@
-import { readLogLevelFromEnv } from '@praxis-flow/server-shared';
+import { readLogLevelFromEnv } from '@praxis-flow/server-shared/logger';
 
 type SandboxLogLevel = 'debug' | 'info' | 'warn' | 'error';
 

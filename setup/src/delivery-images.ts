@@ -1,4 +1,6 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import {
   PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY,
@@ -14,6 +16,11 @@ import {
   writeManagerReleaseState,
   type ManagerReleaseState,
 } from './manager-state.js';
+import {
+  assertRegularFileInStaging,
+  listTarArchiveEntriesVerbose,
+  validateTarArchiveEntries,
+} from './pfupdate-package.js';
 import { sha256File } from './sha256-file.js';
 
 export type { DeliveryImagesStatus } from '@praxis-flow/server-shared';
@@ -167,6 +174,59 @@ export async function dockerLoadArchive(archivePath: string): Promise<{
   const log = [result.stdout, result.stderr].filter(Boolean).join('\n');
   const loaded = parseDockerLoadOutput(log);
   return { ok: result.code === 0 && loaded.length > 0, loaded, log };
+}
+
+const RELEASE_BUNDLE_TEMPLATE_PATHS = [
+  'templates/.env.example',
+  'templates/docker-compose.delivery.yml',
+  'templates/docker-compose.proxy.delivery.yml',
+  'templates/docker-compose.proxy-tls.delivery.yml',
+  'templates/proxy/Caddyfile',
+] as const;
+
+type PreparedReleaseBundle = {
+  dockerArchivePath: string;
+  stagingDir: string | null;
+};
+
+function prepareReleaseBundle(archivePath: string, projectRoot: string): PreparedReleaseBundle {
+  const entries = listTarArchiveEntriesVerbose(archivePath);
+  validateTarArchiveEntries(entries);
+  const dockerArchive = 'images/praxis-flow-images.tar';
+  if (!entries.some((entry) => entry.name === dockerArchive)) {
+    throw new Error('RELEASE_BUNDLE_UNSUPPORTED');
+  }
+
+  const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'praxis-flow-release-'));
+  const extracted = spawnSync('tar', ['-xzf', archivePath, '-C', stagingDir], {
+    encoding: 'utf8',
+  });
+  if (extracted.status !== 0) {
+    fs.rmSync(stagingDir, { recursive: true, force: true });
+    const detail = [extracted.stderr, extracted.stdout].filter(Boolean).join('\n').trim();
+    throw new Error(detail || 'RELEASE_BUNDLE_EXTRACT_FAILED');
+  }
+
+  for (const relativePath of RELEASE_BUNDLE_TEMPLATE_PATHS) {
+    try {
+      assertRegularFileInStaging(stagingDir, relativePath);
+    } catch {
+      fs.rmSync(stagingDir, { recursive: true, force: true });
+      throw new Error(`RELEASE_BUNDLE_TEMPLATE_MISSING: ${relativePath}`);
+    }
+  }
+
+  for (const relativePath of RELEASE_BUNDLE_TEMPLATE_PATHS) {
+    const sourcePath = path.join(stagingDir, relativePath);
+    const targetPath = path.join(projectRoot, relativePath.replace(/^templates\//, ''));
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.copyFileSync(sourcePath, targetPath);
+  }
+
+  return {
+    dockerArchivePath: path.join(stagingDir, dockerArchive),
+    stagingDir,
+  };
 }
 
 export function readExpectedSha256ForArchive(archivePath: string): {
@@ -373,54 +433,61 @@ export async function loadDeliveryImagesFromArchive(
 
   const shaCheck = verifySha(resolvedArchive);
 
-  const loadResult = await dockerLoad(resolvedArchive);
-  if (!loadResult.ok) {
-    throw new Error(`DOCKER_LOAD_FAILED: ${loadResult.log || 'unknown error'}`);
-  }
+  const bundle = prepareReleaseBundle(resolvedArchive, projectRoot);
+  try {
+    const loadResult = await dockerLoad(bundle.dockerArchivePath);
+    if (!loadResult.ok) {
+      throw new Error(`DOCKER_LOAD_FAILED: ${loadResult.log || 'unknown error'}`);
+    }
 
-  const { appImage, sandboxImage } = classifyPraxisFlowImages(loadResult.loaded);
-  if (!appImage || !sandboxImage) {
-    throw new Error(
-      `RELEASE_IMAGES_UNRECOGNIZED: expected app + sandbox images, got ${loadResult.loaded.join(', ')}`,
-    );
-  }
+    const { appImage, sandboxImage } = classifyPraxisFlowImages(loadResult.loaded);
+    if (!appImage || !sandboxImage) {
+      throw new Error(
+        `RELEASE_IMAGES_UNRECOGNIZED: expected app + sandbox images, got ${loadResult.loaded.join(', ')}`,
+      );
+    }
 
-  const envPathTarget = path.join(projectRoot, '.env');
-  const envExistedBeforeImport = fs.existsSync(envPathTarget);
-  const envPath = ensureEnvFromExample(projectRoot);
-  let backupPath: string | null = null;
-  if (envExistedBeforeImport) {
-    backupPath = backupEnvFile(projectRoot).backupPath;
-  }
+    const envPathTarget = path.join(projectRoot, '.env');
+    const envExistedBeforeImport = fs.existsSync(envPathTarget);
+    const envPath = ensureEnvFromExample(projectRoot);
+    let backupPath: string | null = null;
+    if (envExistedBeforeImport) {
+      backupPath = backupEnvFile(projectRoot).backupPath;
+    }
 
-  writeManagerReleaseState(projectRoot, {
-    releaseVersion: shaCheck.releaseVersion,
-    appImage,
-    sandboxImage,
-    archiveSha256: shaCheck.sha256,
-  });
-  writeDeliveryImageEnvFromState(projectRoot);
-
-  const loadedProxyImage = pickLoadedProxyImageRef(loadResult.loaded);
-  if (loadedProxyImage) {
-    updateEnvKeys(envPath, {
-      [PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY]: loadedProxyImage,
+    writeManagerReleaseState(projectRoot, {
+      releaseVersion: shaCheck.releaseVersion,
+      appImage,
+      sandboxImage,
+      archiveSha256: shaCheck.sha256,
     });
+    writeDeliveryImageEnvFromState(projectRoot);
+
+    const loadedProxyImage = pickLoadedProxyImageRef(loadResult.loaded);
+    if (loadedProxyImage) {
+      updateEnvKeys(envPath, {
+        [PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY]: loadedProxyImage,
+      });
+    }
+
+    const envMap = readEnvMap(envPath);
+    const deliveryImages = await auditImages({ projectRoot, envMap, docker });
+
+    return {
+      envPath,
+      backupPath,
+      loadedImages: loadResult.loaded,
+      appImage,
+      sandboxImage,
+      deliveryImages,
+      sha256Verified: true,
+      sha256: shaCheck.sha256,
+      releaseVersion: shaCheck.releaseVersion,
+      sha256Source: shaCheck.sha256Source,
+    };
+  } finally {
+    if (bundle.stagingDir) {
+      fs.rmSync(bundle.stagingDir, { recursive: true, force: true });
+    }
   }
-
-  const envMap = readEnvMap(envPath);
-  const deliveryImages = await auditImages({ projectRoot, envMap, docker });
-
-  return {
-    envPath,
-    backupPath,
-    loadedImages: loadResult.loaded,
-    appImage,
-    sandboxImage,
-    deliveryImages,
-    sha256Verified: true,
-    sha256: shaCheck.sha256,
-    releaseVersion: shaCheck.releaseVersion,
-    sha256Source: shaCheck.sha256Source,
-  };
 }

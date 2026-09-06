@@ -4,7 +4,7 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 import type { CoreDatabase, DocumentExportInfo } from '../db/database.js';
-import { createModuleLogger } from '@praxis-flow/server-shared';
+import { createModuleLogger } from '@praxis-flow/server-shared/logger';
 import { getSandboxClient } from '../sandbox/sandbox-client.js';
 import { purgeDocumentArtifacts } from './sandbox-document-cleanup.js';
 import { DomainError, domainError } from '../errors/domain-error.js';

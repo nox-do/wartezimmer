@@ -23,7 +23,6 @@ const DELIVERY_BOOTSTRAP_FILES = [
   'docker-compose.delivery.yml',
   'docker-compose.proxy.delivery.yml',
   'docker-compose.proxy-tls.delivery.yml',
-  'proxy/Caddyfile',
 ] as const;
 
 const DEV_BOOTSTRAP_FILES = [

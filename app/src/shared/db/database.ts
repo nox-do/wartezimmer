@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
-import { createModuleLogger } from '@praxis-flow/server-shared';
+import { createModuleLogger } from '@praxis-flow/server-shared/logger';
 import {
   assertSupportedSchemaGeneration,
   createCurrentSchema,

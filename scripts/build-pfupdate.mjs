@@ -298,9 +298,10 @@ async function validateBuiltPackage(archivePath) {
 const { version, noBuild, outputRoot, minimumManagerVersion } = parseArgs(process.argv.slice(2));
 const appImage = `praxis-flow/app:${version}`;
 const sandboxImage = `praxis-flow/sandbox:${version}`;
+const releaseDir = path.join(outputRoot, `praxis-flow-${version}`);
 const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-staging-'));
 const archiveFileName = `praxis-flow-update-${version}.pfupdate`;
-const archivePath = path.join(outputRoot, archiveFileName);
+const archivePath = path.join(releaseDir, archiveFileName);
 
 assertDockerReady();
 
@@ -326,7 +327,7 @@ const proxyImageDigest = prepareDeliveryProxyImage({
 });
 
 try {
-  fs.mkdirSync(outputRoot, { recursive: true });
+  fs.mkdirSync(releaseDir, { recursive: true });
 
   const imagesTarPath = path.join(stagingRoot, 'images', 'praxis-flow-images.tar');
   const imagesToSave = [appImage, sandboxImage, proxyImage];
@@ -409,14 +410,15 @@ try {
 
   console.log('');
   console.log('Update package ready:');
-  console.log(`  ${archivePath}`);
+  console.log(`  ${releaseDir}/`);
+  console.log(`    ${archiveFileName}`);
   console.log('');
   console.log(`Release: ${version} · minimum Manager: ${minimumManagerVersion}`);
   console.log(`Proxy image (optional runtime): ${proxyImage}`);
   console.log('Import: Manager → Wartung → Betrieb & Updates → Update-Paket wählen …');
   console.log('');
   console.log(
-    'Hinweis: Erstinstallation (Wizard) nutzt weiter npm run release:images (.tar.gz + Sidecar).',
+    'Hinweis: Erstinstallation (Wizard) nutzt weiter npm run release:images (.pfinstall + Sidecar).',
   );
 } finally {
   fs.rmSync(stagingRoot, { recursive: true, force: true });

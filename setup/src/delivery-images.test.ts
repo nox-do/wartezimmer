@@ -1,12 +1,10 @@
+import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import {
-  PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF,
-  PRAXIS_FLOW_PROXY_IMAGE_REF,
-} from '@praxis-flow/server-shared';
+import { PRAXIS_FLOW_PROXY_IMAGE_REF } from '@praxis-flow/server-shared';
 import {
   auditDeliveryImages,
   classifyPraxisFlowImages,
@@ -21,6 +19,33 @@ import {
 } from './delivery-images.js';
 import { readEnvMap } from './env-file.js';
 import { managerStatePath, writeManagerReleaseState } from './manager-state.js';
+
+function createBundleSource(): string {
+  const bundleRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-unsafe-source-'));
+  const imagesPath = path.join(bundleRoot, 'images', 'praxis-flow-images.tar');
+  fs.mkdirSync(path.dirname(imagesPath), { recursive: true });
+  fs.writeFileSync(imagesPath, 'fake-images');
+  fs.mkdirSync(path.join(bundleRoot, 'templates', 'proxy'), { recursive: true });
+  for (const relativePath of [
+    '.env.example',
+    'docker-compose.delivery.yml',
+    'docker-compose.proxy.delivery.yml',
+    'docker-compose.proxy-tls.delivery.yml',
+    'proxy/Caddyfile',
+  ]) {
+    const targetPath = path.join(bundleRoot, 'templates', relativePath);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, `${relativePath}\n`);
+  }
+  return bundleRoot;
+}
+
+function packBundleSource(bundleRoot: string, archivePath: string): void {
+  const packed = spawnSync('tar', ['-czf', archivePath, '-C', bundleRoot, '.'], {
+    encoding: 'utf8',
+  });
+  assert.equal(packed.status, 0, packed.stderr || 'tar pack failed');
+}
 
 test('parseDockerLoadOutput extracts repository tags', () => {
   const output = [
@@ -88,7 +113,7 @@ test('isDeliveryProfile is true when only delivery compose exists', () => {
 test('readExpectedSha256ForArchive reads manifest.json', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-sha-'));
   try {
-    const archiveName = 'praxis-flow-1.4.2-images.tar.gz';
+    const archiveName = 'praxis-flow-1.4.2.pfinstall';
     const archivePath = path.join(root, archiveName);
     fs.writeFileSync(archivePath, 'dummy');
     fs.writeFileSync(
@@ -231,157 +256,169 @@ test('writeDeliveryImageEnvFromState materializes compose image keys into env', 
   }
 });
 
-test('loadDeliveryImagesFromArchive sets PRAXIS_FLOW_PROXY_IMAGE when Caddy was loaded', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-proxy-load-'));
+test('loadDeliveryImagesFromArchive rejects image-only archives before docker load', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-image-only-'));
+  const source = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-image-only-source-'));
+  let dockerLoadCalled = false;
   try {
-    fs.writeFileSync(path.join(root, 'docker-compose.delivery.yml'), 'services: {}\n');
-    fs.writeFileSync(
-      path.join(root, '.env.example'),
-      [
-        'PRACTICE_DISPLAY_NAME=Praxis Flow',
-        '# PRAXIS_FLOW_APP_IMAGE=ghcr.io/example/app:v1',
-        '# PRAXIS_FLOW_SANDBOX_IMAGE=ghcr.io/example/sandbox:v1',
-        '',
-      ].join('\n'),
-    );
-    const archivePath = path.join(root, 'praxis-flow-1.4.2-images.tar.gz');
-    fs.writeFileSync(archivePath, 'fake-archive');
+    fs.writeFileSync(path.join(root, '.env'), 'PRACTICE_DISPLAY_NAME=Praxis Flow\n');
+    fs.writeFileSync(path.join(source, 'legacy-images.tar'), 'old images');
+    const archivePath = path.join(root, 'praxis-flow-1.4.2.pfinstall');
+    const packed = spawnSync('tar', ['-czf', archivePath, '-C', source, 'legacy-images.tar'], {
+      encoding: 'utf8',
+    });
+    assert.equal(packed.status, 0, packed.stderr || 'tar pack failed');
 
-    const result = await loadDeliveryImagesFromArchive(
-      root,
-      archivePath,
-      { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
-      {
-        verifyReleaseArchiveSha256: () => ({
-          sha256: 'a'.repeat(64),
-          expectedSha256: 'a'.repeat(64),
-          sha256Source: 'manifest.json',
-          releaseVersion: '1.4.2',
-        }),
-        dockerLoadArchive: async () => ({
-          ok: true,
-          loaded: [
-            'praxis-flow/app:1.4.2',
-            'praxis-flow/sandbox:1.4.2',
-            PRAXIS_FLOW_PROXY_IMAGE_REF,
-          ],
-          log: 'loaded',
-        }),
-        auditDeliveryImages: async () => ({
-          required: true,
-          configured: true,
-          appImage: 'praxis-flow/app:1.4.2',
-          sandboxImage: 'praxis-flow/sandbox:1.4.2',
-          releaseVersion: '1.4.2',
-          archiveSha256: 'a'.repeat(64),
-          appPresent: true,
-          sandboxPresent: true,
-          ready: true,
-        }),
-      },
+    await assert.rejects(
+      () =>
+        loadDeliveryImagesFromArchive(
+          root,
+          archivePath,
+          { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
+          {
+            verifyReleaseArchiveSha256: () => ({
+              sha256: 'c'.repeat(64),
+              expectedSha256: 'c'.repeat(64),
+              sha256Source: 'manifest.json',
+              releaseVersion: '1.4.2',
+            }),
+            dockerLoadArchive: async () => {
+              dockerLoadCalled = true;
+              return { ok: true, loaded: [], log: 'unexpected load' };
+            },
+          },
+        ),
+      /RELEASE_BUNDLE_UNSUPPORTED/,
     );
 
-    assert.equal(result.appImage, 'praxis-flow/app:1.4.2');
-    const env = readEnvMap(result.envPath);
-    assert.equal(env.get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:1.4.2');
-    assert.equal(env.get('PRAXIS_FLOW_SANDBOX_IMAGE'), 'praxis-flow/sandbox:1.4.2');
-    assert.equal(env.get('PRAXIS_FLOW_PROXY_IMAGE'), PRAXIS_FLOW_PROXY_IMAGE_REF);
+    assert.equal(dockerLoadCalled, false);
+    assert.equal(
+      fs.readFileSync(path.join(root, '.env'), 'utf8'),
+      'PRACTICE_DISPLAY_NAME=Praxis Flow\n',
+    );
+    assert.equal(fs.existsSync(managerStatePath(root)), false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(source, { recursive: true, force: true });
   }
 });
 
-test('loadDeliveryImagesFromArchive sets PRAXIS_FLOW_PROXY_IMAGE from a legacy stock load', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-proxy-legacy-load-'));
-  try {
-    fs.writeFileSync(path.join(root, 'docker-compose.delivery.yml'), 'services: {}\n');
-    fs.writeFileSync(
-      path.join(root, '.env.example'),
-      [
-        'PRACTICE_DISPLAY_NAME=Praxis Flow',
-        '# PRAXIS_FLOW_APP_IMAGE=ghcr.io/example/app:v1',
-        '# PRAXIS_FLOW_SANDBOX_IMAGE=ghcr.io/example/sandbox:v1',
-        '',
-      ].join('\n'),
-    );
-    const archivePath = path.join(root, 'praxis-flow-1.4.2-images.tar.gz');
-    fs.writeFileSync(archivePath, 'fake-archive');
+test('loadDeliveryImagesFromArchive rejects unsafe tar entry types before extract', async () => {
+  for (const entryType of ['symlink', 'hardlink', 'fifo']) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), `pf-delivery-${entryType}-`));
+    const bundleRoot = createBundleSource();
+    try {
+      const targetPath = path.join(bundleRoot, 'templates', '.env.example');
+      if (entryType === 'symlink') {
+        fs.unlinkSync(targetPath);
+        fs.symlinkSync('/tmp/praxis-flow-outside', targetPath);
+      } else if (entryType === 'hardlink') {
+        const hardlinkSource = path.join(bundleRoot, 'hardlink-source');
+        fs.writeFileSync(hardlinkSource, 'linked');
+        fs.unlinkSync(targetPath);
+        fs.linkSync(hardlinkSource, targetPath);
+      } else {
+        fs.unlinkSync(targetPath);
+        const fifo = spawnSync('mkfifo', [targetPath], { encoding: 'utf8' });
+        assert.equal(fifo.status, 0, fifo.stderr || 'mkfifo failed');
+      }
 
-    const result = await loadDeliveryImagesFromArchive(
-      root,
-      archivePath,
-      { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
-      {
-        verifyReleaseArchiveSha256: () => ({
-          sha256: 'c'.repeat(64),
-          expectedSha256: 'c'.repeat(64),
-          sha256Source: 'manifest.json',
-          releaseVersion: '1.4.2',
-        }),
-        dockerLoadArchive: async () => ({
-          ok: true,
-          loaded: [
-            'praxis-flow/app:1.4.2',
-            'praxis-flow/sandbox:1.4.2',
-            PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF,
-          ],
-          log: 'loaded',
-        }),
-        auditDeliveryImages: async () => ({
-          required: true,
-          configured: true,
-          appImage: 'praxis-flow/app:1.4.2',
-          sandboxImage: 'praxis-flow/sandbox:1.4.2',
-          releaseVersion: '1.4.2',
-          archiveSha256: 'c'.repeat(64),
-          appPresent: true,
-          sandboxPresent: true,
-          ready: true,
-        }),
-      },
-    );
-
-    const env = readEnvMap(result.envPath);
-    assert.equal(env.get('PRAXIS_FLOW_PROXY_IMAGE'), PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF);
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+      const archivePath = path.join(root, 'release.tar.gz');
+      packBundleSource(bundleRoot, archivePath);
+      await assert.rejects(
+        () =>
+          loadDeliveryImagesFromArchive(
+            root,
+            archivePath,
+            { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
+            {
+              verifyReleaseArchiveSha256: () => ({
+                sha256: 'd'.repeat(64),
+                expectedSha256: 'd'.repeat(64),
+                sha256Source: 'manifest.json',
+                releaseVersion: '1.4.2',
+              }),
+              dockerLoadArchive: async () => ({
+                ok: true,
+                loaded: [],
+                log: 'unexpected load',
+              }),
+            },
+          ),
+        /PFUPDATE_TAR_ENTRY_UNSUPPORTED/,
+      );
+      assert.equal(fs.existsSync(path.join(root, 'proxy', 'Caddyfile')), false);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(bundleRoot, { recursive: true, force: true });
+    }
   }
 });
 
-test('loadDeliveryImagesFromArchive leaves PROXY_IMAGE unset without Caddy in load', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-no-proxy-load-'));
+test('loadDeliveryImagesFromArchive installs templates from a complete release bundle', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-bundle-load-'));
+  const bundleRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-bundle-source-'));
   try {
-    fs.writeFileSync(path.join(root, 'docker-compose.delivery.yml'), 'services: {}\n');
+    const imagesPath = path.join(bundleRoot, 'images', 'praxis-flow-images.tar');
+    fs.mkdirSync(path.dirname(imagesPath), { recursive: true });
+    fs.writeFileSync(imagesPath, 'fake-images');
+    fs.mkdirSync(path.join(bundleRoot, 'templates', 'proxy'), { recursive: true });
     fs.writeFileSync(
-      path.join(root, '.env.example'),
-      ['PRACTICE_DISPLAY_NAME=Praxis Flow', ''].join('\n'),
+      path.join(bundleRoot, 'templates', '.env.example'),
+      'PRACTICE_DISPLAY_NAME=x\n',
     );
-    const archivePath = path.join(root, 'praxis-flow-1.4.2-images.tar.gz');
-    fs.writeFileSync(archivePath, 'fake-archive');
+    fs.writeFileSync(
+      path.join(bundleRoot, 'templates', 'docker-compose.delivery.yml'),
+      'services: {}\n',
+    );
+    fs.writeFileSync(
+      path.join(bundleRoot, 'templates', 'docker-compose.proxy.delivery.yml'),
+      'services: {}\n',
+    );
+    fs.writeFileSync(
+      path.join(bundleRoot, 'templates', 'docker-compose.proxy-tls.delivery.yml'),
+      'services: {}\n',
+    );
+    fs.writeFileSync(
+      path.join(bundleRoot, 'templates', 'proxy', 'Caddyfile'),
+      '# release caddyfile\n',
+    );
 
-    const result = await loadDeliveryImagesFromArchive(
+    const archivePath = path.join(root, 'praxis-flow-1.4.2.pfinstall');
+    const packed = spawnSync('tar', ['-czf', archivePath, '-C', bundleRoot, '.']);
+    assert.equal(packed.status, 0);
+    fs.writeFileSync(path.join(root, '.env.example'), 'PRACTICE_DISPLAY_NAME=old\n');
+
+    await loadDeliveryImagesFromArchive(
       root,
       archivePath,
       { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
       {
         verifyReleaseArchiveSha256: () => ({
-          sha256: 'b'.repeat(64),
-          expectedSha256: 'b'.repeat(64),
+          sha256: 'e'.repeat(64),
+          expectedSha256: 'e'.repeat(64),
           sha256Source: 'manifest.json',
           releaseVersion: '1.4.2',
         }),
-        dockerLoadArchive: async () => ({
-          ok: true,
-          loaded: ['praxis-flow/app:1.4.2', 'praxis-flow/sandbox:1.4.2'],
-          log: 'loaded',
-        }),
+        dockerLoadArchive: async (loadedArchive) => {
+          assert.equal(path.basename(loadedArchive), 'praxis-flow-images.tar');
+          return {
+            ok: true,
+            loaded: [
+              'praxis-flow/app:1.4.2',
+              'praxis-flow/sandbox:1.4.2',
+              PRAXIS_FLOW_PROXY_IMAGE_REF,
+            ],
+            log: 'loaded',
+          };
+        },
         auditDeliveryImages: async () => ({
           required: true,
           configured: true,
           appImage: 'praxis-flow/app:1.4.2',
           sandboxImage: 'praxis-flow/sandbox:1.4.2',
           releaseVersion: '1.4.2',
-          archiveSha256: 'b'.repeat(64),
+          archiveSha256: 'e'.repeat(64),
           appPresent: true,
           sandboxPresent: true,
           ready: true,
@@ -389,9 +426,20 @@ test('loadDeliveryImagesFromArchive leaves PROXY_IMAGE unset without Caddy in lo
       },
     );
 
-    const env = readEnvMap(result.envPath);
-    assert.equal(env.get('PRAXIS_FLOW_PROXY_IMAGE'), undefined);
+    assert.equal(
+      fs.readFileSync(path.join(root, 'proxy', 'Caddyfile'), 'utf8'),
+      '# release caddyfile\n',
+    );
+    assert.equal(
+      fs.readFileSync(path.join(root, 'docker-compose.delivery.yml'), 'utf8'),
+      'services: {}\n',
+    );
+    assert.equal(
+      fs.readFileSync(path.join(root, '.env.example'), 'utf8'),
+      'PRACTICE_DISPLAY_NAME=x\n',
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(bundleRoot, { recursive: true, force: true });
   }
 });

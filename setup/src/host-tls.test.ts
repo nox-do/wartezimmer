@@ -182,6 +182,8 @@ test('managed fake vertical slice stays HTTP until apply and consumes token afte
     assert.equal(env.get('TRUST_PROXY_HEADERS'), 'true');
     const caddyfile = fs.readFileSync(resolveProxyTlsPaths(root).caddyfile, 'utf8');
     assert.match(caddyfile, /redir https:\/\/7fk3m2\.lan\.notaus\.de\{uri\} permanent/);
+    assert.match(caddyfile, /https:\/\/127\.0\.0\.1 \{/);
+    assert.match(caddyfile, /respond \/__praxis-flow\/health "ok" 200/);
   });
 });
 

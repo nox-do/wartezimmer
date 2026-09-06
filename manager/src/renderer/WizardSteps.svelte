@@ -132,9 +132,9 @@
           </button>
         {:else if needsDeliveryImages(snapshot.status)}
           <p class="hint">
-            Release-Paket aus Ihrer Praxis-Flow-Freigabe wählen (eine .tar.gz-Datei mit app- und
-            sandbox-Image). manifest.json oder SHA256SUMS.txt muss im selben Ordner liegen — SHA256
-            wird vor dem Import geprüft.
+            Release-Paket aus Ihrer Praxis-Flow-Freigabe wählen (eine .pfinstall-Datei mit Images,
+            Compose-Templates und Basis-Caddyfile). manifest.json oder SHA256SUMS.txt muss im selben
+            Ordner liegen — SHA256 wird vor dem Import geprüft.
           </p>
           <button
             type="button"

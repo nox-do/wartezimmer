@@ -50,8 +50,9 @@ function inspectImage(runCapture, imageRef) {
 }
 
 /**
- * Pulls the approved stock Caddy digest, tags the Compose base name, then builds
- * the delivery proxy (`praxis-flow-proxy:…-acmedns`) from `proxy/Dockerfile`.
+ * For a build, pulls the approved stock Caddy digest, tags the Compose base name,
+ * then builds the delivery proxy (`praxis-flow-proxy:…-acmedns`) from `proxy/Dockerfile`.
+ * Pack-only mode verifies the existing local custom image without contacting the registry.
  * Compose HTTP-only defaults stay on stock Caddy; only release packs ship the custom tag.
  */
 export function prepareDeliveryProxyImage({
@@ -65,6 +66,24 @@ export function prepareDeliveryProxyImage({
   runCapture,
 }) {
   const sourceRef = pinnedImageRef(baseImageRef, registryDigest);
+
+  if (skipBuild) {
+    console.log(`Skipping proxy rebuild (--no-build); using local ${imageRef}.`);
+    const custom = inspectImage(runCapture, imageRef);
+    const modules = runCapture('docker', ['run', '--rm', imageRef, 'caddy', 'list-modules']);
+    if (!String(modules).includes(PROXY_ACMEDNS_MODULE)) {
+      throw new Error(`${imageRef} fehlt Modul ${PROXY_ACMEDNS_MODULE}.`);
+    }
+
+    console.log(
+      `Verified local ${imageRef}: ${custom.imageId} (${custom.platform}), base registry ${registryDigest}`,
+    );
+    return {
+      registryDigest: String(registryDigest).toLowerCase(),
+      archiveImageId: custom.imageId,
+      platform: custom.platform,
+    };
+  }
 
   console.log(`Pulling approved Caddy base ${sourceRef} …`);
   run('docker', ['pull', sourceRef]);
@@ -82,8 +101,6 @@ export function prepareDeliveryProxyImage({
   if (!skipBuild) {
     console.log(`Building delivery proxy ${imageRef} from ${dockerfile} …`);
     run('docker', ['build', '-f', dockerfile, '-t', imageRef, context]);
-  } else {
-    console.log(`Skipping proxy rebuild (--no-build); using local ${imageRef}.`);
   }
 
   const custom = inspectImage(runCapture, imageRef);

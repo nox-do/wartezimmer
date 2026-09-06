@@ -130,12 +130,15 @@ stripPackagedDist(
 );
 
 for (const fileName of fs.readdirSync(path.join(serverSharedOutput, 'dist'))) {
+  if (fileName.startsWith('fastify-logger-options')) {
+    continue;
+  }
   fs.renameSync(
     path.join(serverSharedOutput, 'dist', fileName),
     path.join(serverSharedOutput, fileName),
   );
 }
-fs.rmdirSync(path.join(serverSharedOutput, 'dist'));
+fs.rmSync(path.join(serverSharedOutput, 'dist'), { recursive: true, force: true });
 rewriteSetupImportsForPackagedVendor();
 smokeTestPackagedSetupImport();
 
@@ -144,7 +147,5 @@ copyFile('.env.example');
 copyFile('docker-compose.delivery.yml');
 copyFile('docker-compose.proxy.delivery.yml');
 copyFile('docker-compose.proxy-tls.delivery.yml');
-fs.mkdirSync(path.join(templatesOutput, 'proxy'), { recursive: true });
-copyFile('proxy/Caddyfile');
 
 console.log(`Packaged resources prepared in ${outputRoot}`);

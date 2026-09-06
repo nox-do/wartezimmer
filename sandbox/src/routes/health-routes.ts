@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { ScannerService } from '../scanner-service.js';
-import { SILENT_ROUTE_LOG } from '@praxis-flow/server-shared';
+import { SILENT_ROUTE_LOG } from '@praxis-flow/server-shared/logger';
 
 export function registerHealthRoutes(app: FastifyInstance, scanner: ScannerService): void {
   app.get('/internal/health/live', SILENT_ROUTE_LOG, async () => {

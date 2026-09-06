@@ -241,8 +241,47 @@ test('defaultWizardPresentation uses fullscreen before env exists', () => {
   assert.equal(defaultWizardPresentation(minimalHostStatus({ envExists: true })), 'embedded');
 });
 
-test('shouldAutoStartFullscreenWizard only before .env exists', () => {
+test('defaultWizardPresentation uses fullscreen while setup is incomplete', () => {
+  assert.equal(
+    defaultWizardPresentation(
+      minimalHostStatus({
+        deliveryImages: {
+          required: true,
+          configured: false,
+          appImage: null,
+          sandboxImage: null,
+          releaseVersion: null,
+          archiveSha256: null,
+          appPresent: false,
+          sandboxPresent: false,
+          ready: false,
+        },
+      }),
+    ),
+    'fullscreen',
+  );
+});
+
+test('shouldAutoStartFullscreenWizard for every incomplete setup', () => {
   assert.equal(shouldAutoStartFullscreenWizard(null), true);
   assert.equal(shouldAutoStartFullscreenWizard(minimalHostStatus({ envExists: false })), true);
+  assert.equal(
+    shouldAutoStartFullscreenWizard(
+      minimalHostStatus({
+        deliveryImages: {
+          required: true,
+          configured: false,
+          appImage: null,
+          sandboxImage: null,
+          releaseVersion: null,
+          archiveSha256: null,
+          appPresent: false,
+          sandboxPresent: false,
+          ready: false,
+        },
+      }),
+    ),
+    true,
+  );
   assert.equal(shouldAutoStartFullscreenWizard(minimalHostStatus({ envExists: true })), false);
 });

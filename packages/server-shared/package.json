@@ -1,12 +1,16 @@
 {
   "name": "@praxis-flow/server-shared",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./logger": {
+      "types": "./dist/fastify-logger-options.d.ts",
+      "import": "./dist/fastify-logger-options.js"
     },
     "./env-backup": {
       "types": "./dist/env-backup.d.ts",

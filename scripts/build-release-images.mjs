@@ -12,7 +12,7 @@
  *   npm run release:images:pack -- --version 1.4.2   # pack only, skip build
  *
  * Output (under dist/releases/praxis-flow-<version>/):
- *   praxis-flow-<version>-images.tar.gz
+ *   praxis-flow-<version>.pfinstall (complete offline bundle)
  *   manifest.json
  *   SHA256SUMS.txt
  *   THIRD_PARTY_NOTICES.txt
@@ -23,10 +23,10 @@ import { createHash } from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createGzip } from 'node:zlib';
 import { appDockerBuildArgs } from './release-app-image.mjs';
 import { prepareDeliveryProxyImage } from './release-proxy-image.mjs';
 
@@ -187,10 +187,9 @@ async function packImages(archivePath, imageRefs) {
     stdio: ['ignore', 'pipe', 'inherit'],
   });
 
-  const gzip = createGzip();
   const output = createWriteStream(archivePath);
 
-  const pipeDone = pipeline(docker.stdout, gzip, output);
+  const pipeDone = pipeline(docker.stdout, output);
 
   const exitCode = await new Promise((resolve, reject) => {
     docker.on('error', reject);
@@ -201,6 +200,37 @@ async function packImages(archivePath, imageRefs) {
 
   if (exitCode !== 0) {
     process.exit(exitCode ?? 1);
+  }
+}
+
+async function packReleaseBundle(archivePath, imageRefs) {
+  const stagingRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'praxis-flow-release-'));
+  try {
+    const imagesPath = path.join(stagingRoot, 'images', 'praxis-flow-images.tar');
+    await packImages(imagesPath, imageRefs);
+
+    for (const relativePath of [
+      '.env.example',
+      'docker-compose.delivery.yml',
+      'docker-compose.proxy.delivery.yml',
+      'docker-compose.proxy-tls.delivery.yml',
+      'proxy/Caddyfile',
+    ]) {
+      const targetPath = path.join(stagingRoot, 'templates', relativePath);
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.copyFileSync(path.join(root, relativePath), targetPath);
+    }
+
+    const result = spawnSync('tar', ['-czf', archivePath, '-C', stagingRoot, '.'], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+    if (result.status !== 0) {
+      const detail = [result.stderr, result.stdout].filter(Boolean).join('\n').trim();
+      throw new Error(detail || 'RELEASE_BUNDLE_PACK_FAILED');
+    }
+  } finally {
+    await fs.promises.rm(stagingRoot, { recursive: true, force: true });
   }
 }
 
@@ -227,7 +257,7 @@ if (showHelp) {
 const appImage = `praxis-flow/app:${version}`;
 const sandboxImage = `praxis-flow/sandbox:${version}`;
 const releaseDir = path.join(outputRoot, `praxis-flow-${version}`);
-const archiveName = `praxis-flow-${version}-images.tar.gz`;
+const archiveName = `praxis-flow-${version}.pfinstall`;
 const archivePath = path.join(releaseDir, archiveName);
 
 assertDockerReady();
@@ -250,10 +280,11 @@ const proxyImageDigest = prepareDeliveryProxyImage({
   runCapture,
 });
 
+fs.rmSync(releaseDir, { recursive: true, force: true });
 fs.mkdirSync(releaseDir, { recursive: true });
 
 console.log(`Packing ${archivePath} …`);
-await packImages(archivePath, [appImage, sandboxImage, proxyImage]);
+await packReleaseBundle(archivePath, [appImage, sandboxImage, proxyImage]);
 
 const archiveSha256 = sha256File(archivePath);
 const archiveBytes = fs.statSync(archivePath).size;
@@ -307,4 +338,6 @@ console.log('');
 console.log('Upload to customer share (e.g. Google Drive):');
 console.log(`  kompletter Ordner praxis-flow-${version} (inkl. Lizenznachweise)`);
 console.log('');
-console.log('Manager import expects one .tar.gz containing app, sandbox, and Caddy.');
+console.log(
+  'Manager import expects one .pfinstall containing images, Compose templates, and Caddy.',
+);

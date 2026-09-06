@@ -126,8 +126,8 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
   if (tone === 'needs-release') {
     return {
       eyebrow,
-      title: 'Software-Paket fehlt',
-      copy: 'Die App ist installiert. Jetzt fehlt nur das Release-Paket aus dem Praxis-Flow-Ordner, damit app und sandbox lokal geladen werden.',
+      title: 'Einrichtung fortsetzen',
+      copy: 'Diese Installation hat bereits einen lokalen Installationsstand. Für den nächsten Schritt fehlt noch das passende Release-Paket, damit app und sandbox geladen werden können.',
       note: '',
       startButtonLabel: 'Einrichtung fortsetzen',
       showReleasePicker: status.docker.daemonRunning,
@@ -207,7 +207,7 @@ function proxyStatusLabel(status: HostStatus): string {
 }
 
 export const DELIVERY_IMAGES_WARNING_TEXT =
-  '⚠ Release-Paket fehlt — Software-Images (app + sandbox) importieren, bevor die Einrichtung startet. manifest.json oder SHA256SUMS.txt muss im selben Ordner wie die .tar.gz liegen.';
+  '⚠ Release-Paket fehlt — das vollständige Offline-Release (Images, Compose-Templates und Caddyfile) importieren, bevor die Einrichtung startet. manifest.json oder SHA256SUMS.txt muss im selben Ordner wie die .pfinstall liegen.';
 
 export function showDeliveryImagesWarning(status: HostStatus, setupEntry: boolean): boolean {
   return !setupEntry && needsDeliveryImages(status) && status.docker.daemonRunning;

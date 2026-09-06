@@ -2,7 +2,7 @@
 
 Stand: 2026-08-31 · delivery ausgearbeitet (inkl. Update §5)
 
-**Scope:** Was kommt an, wie Versionen und Artefakte zusammenhängen; danach Install & Update.  
+**Scope:** Was kommt an, wie Versionen und Artefakte zusammenhängen; danach Install & Update.
 **Nicht hier:** Compose/Volumes/Ports → [`runtime.md`](runtime.md) · LAN-TLS-Betrieb → [`tls.md`](tls.md) · Settings-Inhalt → [`backup.md`](backup.md) · Container-Innenleben → [`../architecture/`](../architecture/)
 
 Format-Validierung `.pfupdate`: `packages/server-shared/src/pfupdate.ts` (Code = Vertrag).
@@ -14,7 +14,7 @@ Format-Validierung `.pfupdate`: `packages/server-shared/src/pfupdate.ts` (Code =
 Der Stack kommt als **versionierte Container-Images** zur Praxis. Dort wird **nicht** aus dem Monorepo gebaut — Images laden, Host-Zustand pflegen, Compose starten.
 
 ```text
-Build (Repo)  →  Artefakte (.tar.gz / .pfupdate / Manager-DMG)
+Build (Repo)  →  Artefakte (.pfinstall / .pfupdate / Manager-DMG)
                      ↓
 Manager + Setup-API (Loopback, Manager-Child)  →  Install-Home (.env, manager-state, Templates)
                      ↓
@@ -36,8 +36,8 @@ Drei Zahlen — nicht vermischen:
 
 | Begriff             | Beispiel | Wo                                                     | Wofür                                                                                            |
 | ------------------- | -------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| **Manager-Version** | `0.3.0`  | `manager/package.json`                                 | Electron-App, DMG-Name, `minimumManagerVersion` im Update-Paket                                  |
-| **Stack-Release**   | `0.4.0`  | `--version` / `PRAXIS_FLOW_RELEASE_VERSION` beim Build | Image-Tags `praxis-flow/app:<ver>` + `sandbox:<ver>`, `manager-state`, Manifest `releaseVersion` |
+| **Manager-Version** | `0.4.0`  | `manager/package.json`                                 | Electron-App, DMG-Name, `minimumManagerVersion` im Update-Paket                                  |
+| **Stack-Release**   | `0.5.0`  | `--version` / `PRAXIS_FLOW_RELEASE_VERSION` beim Build | Image-Tags `praxis-flow/app:<ver>` + `sandbox:<ver>`, `manager-state`, Manifest `releaseVersion` |
 | **Monorepo**        | `0.4.0`  | Root-`package.json`                                    | npm-Workspaces — **nur Default**, wenn `--version` fehlt                                         |
 
 Stack-Release und Monorepo sind **nicht gekoppelt**. Kunden-Release immer explizit:
@@ -64,13 +64,13 @@ npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 
 ## 3. Artefakte
 
-| Artefakt                | Build                      | Manager-Weg               | Inhalt (Produkt)                                                    |
-| ----------------------- | -------------------------- | ------------------------- | ------------------------------------------------------------------- |
-| **`.tar.gz` + Sidecar** | `npm run release:images`   | Wizard → Release-Paket    | `app` + `sandbox` + Proxy-Image, Manifest, SHA256, Caddy-Lizenz     |
-| **`.pfupdate`**         | `npm run release:pfupdate` | Wartung → Software-Update | dasselbe plus Compose-Templates, `.env.example`; Cutover/Rollback   |
-| **Manager-DMG**         | `npm run dist:manager:mac` | Installation der Hülle    | Electron + eingebettete Setup-API/Templates; eigener Versionszyklus |
+| Artefakt                   | Build                      | Manager-Weg               | Inhalt (Produkt)                                                           |
+| -------------------------- | -------------------------- | ------------------------- | -------------------------------------------------------------------------- |
+| **`.pfinstall` + Sidecar** | `npm run release:images`   | Wizard → Release-Paket    | Images, Compose-Templates, Basis-Caddyfile, Manifest, SHA256, Caddy-Lizenz |
+| **`.pfupdate`**            | `npm run release:pfupdate` | Wartung → Software-Update | dasselbe plus Compose-Templates, `.env.example`; Cutover/Rollback          |
+| **Manager-DMG**            | `npm run dist:manager:mac` | Installation der Hülle    | Electron + eingebettete Setup-API/Templates; eigener Versionszyklus        |
 
-- Updates laufen **nur** über `.pfupdate`. Das Wizard-`.tar.gz` ist Erstinstall (kein Update-Cutover).
+- Updates laufen **nur** über `.pfupdate`. Das Wizard-`.pfinstall` ist Erstinstall (kein Update-Cutover).
 - Manager-DMG selten neu; unsigned/nicht notarisiert (interne Auslieferung).
 
 ### Image-Refs
@@ -111,20 +111,20 @@ CI: `.github/workflows/release-images.yml` baut bei Tag `v*` das Erstinstall-Art
 
 ## 4. Erstinstallation
 
-**Kundenweg:** Praxis Flow Manager (Assistent).  
-**Support-Fallback:** CLI `npm run setup`.  
+**Kundenweg:** Praxis Flow Manager (Assistent).
+**Support-Fallback:** CLI `npm run setup`.
 **TLS-Details** (Schritt HTTPS + später Cutover): [`tls.md`](tls.md).
 
 ### 4.1 Voraussetzungen
 
-| Bedarf                                                                     | Warum                                                                                                                                   |
-| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| **Docker** (Desktop oder Engine) + Compose v2, Daemon läuft                | Stack starten; Wizard-Schritt 1 prüft Installation/Daemon/Compose                                                                       |
-| **Manager** (DMG oder `npm run dev:manager`)                               | Operative Hülle; startet die Setup-API als eigenen Child auf Loopback (ephemerer Port, nicht still `:9190`)                             |
-| **Release-Paket** `.tar.gz` + Sidecar (`manifest.json` / `SHA256SUMS.txt`) | Delivery: Images laden (`POST /api/setup/host/images/load`). Dev-Profil (`PRAXIS_FLOW_COMPOSE_PROFILE=dev`): oft **nicht** erforderlich |
-| **Freie Ports**                                                            | App **8080** (ohne Proxy); mit Proxy später **80** (und **443** bei TLS). Belegte 8080 → Netzwerk-Prerequisite „bereits belegt“         |
-| **Import- & Export-Ordner** auf dem Host                                   | Wizard-Schritt 3; unter Docker Desktop: File Sharing für diese Pfade                                                                    |
-| Optional: **feste LAN-IPv4** / DHCP-Reservierung                           | Stabil für Geräte-URLs; später relevant für TLS-Lease                                                                                   |
+| Bedarf                                                                        | Warum                                                                                                                                   |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Docker** (Desktop oder Engine) + Compose v2, Daemon läuft                   | Stack starten; Wizard-Schritt 1 prüft Installation/Daemon/Compose                                                                       |
+| **Manager** (DMG oder `npm run dev:manager`)                                  | Operative Hülle; startet die Setup-API als eigenen Child auf Loopback (ephemerer Port, nicht still `:9190`)                             |
+| **Release-Paket** `.pfinstall` + Sidecar (`manifest.json` / `SHA256SUMS.txt`) | Delivery: Images laden (`POST /api/setup/host/images/load`). Dev-Profil (`PRAXIS_FLOW_COMPOSE_PROFILE=dev`): oft **nicht** erforderlich |
+| **Freie Ports**                                                               | App **8080** (ohne Proxy); mit Proxy später **80** (und **443** bei TLS). Belegte 8080 → Netzwerk-Prerequisite „bereits belegt“         |
+| **Import- & Export-Ordner** auf dem Host                                      | Wizard-Schritt 3; unter Docker Desktop: File Sharing für diese Pfade                                                                    |
+| Optional: **feste LAN-IPv4** / DHCP-Reservierung                              | Stabil für Geräte-URLs; später relevant für TLS-Lease                                                                                   |
 
 Setup-API und Manager sprechen nur Loopback — kein Setup aus dem Praxis-LAN.
 
@@ -152,7 +152,7 @@ Labels: `WIZARD_STEP_LABELS` in `manager/src/renderer/wizard-flow.ts`.
 | 2   | **Routing**         | Simple/Complex. **Kein** Praxis-Anzeigename hier — der gehört nach Ops `/ops/setup`                                                                                     |
 | 3   | **Import & Export** | Host-Pfade Pflicht (sonst Validierungsfehler)                                                                                                                           |
 | 4   | **Netzwerk**        | LAN-IP + Erreichbarkeit (LAN-IP / Rechnername / Custom-Host) → kanonische `http://`-URL                                                                                 |
-| 5   | **Zugang**          | Optional **Port 80** (HTTP-Proxy). Kein Captive-/Gateway-Wizard (`DISABLED_GATEWAY_PLAN`)                                                                              |
+| 5   | **Zugang**          | Optional **Port 80** (HTTP-Proxy). Kein Captive-/Gateway-Wizard (`DISABLED_GATEWAY_PLAN`)                                                                               |
 | 6   | **HTTPS**           | Nur wenn Proxy an; sonst Sprung → 7. Phasen: offer → hostname → lease → mail/PEM. Assistent endet bei Mail/Staging — **DNS-Warten, Zertifikat, Cutover unter Netzwerk** |
 | 7   | **Vorschau**        | `POST /api/setup/host/plan` → Geräte-URLs                                                                                                                               |
 | 8   | **Abschluss**       | `POST /api/setup/host/apply` (`runCompose`), danach Probes / Links                                                                                                      |
@@ -186,7 +186,7 @@ Dev baut lokal (`docker-compose.yml`); Release-Paket oft nicht nötig.
 | Symptom                                      | Typische Ursache                     | Was tun                                                                  |
 | -------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------ |
 | Schritt 1 blockiert: Docker                  | Daemon aus / Compose fehlt           | Docker Desktop starten; Hinweise aus Setup                               |
-| „Release-Paket fehlt“ / Images nicht geladen | Delivery ohne `docker load`          | `.tar.gz` + passenden Sidecar wählen; Laden kann Minuten dauern          |
+| „Release-Paket fehlt“ / Images nicht geladen | Delivery ohne `docker load`          | `.pfinstall` + passenden Sidecar wählen; Laden kann Minuten dauern       |
 | SHA256-Fehler beim Laden                     | Sidecar ≠ Archiv                     | Gleichen Release-Ordner verwenden, nicht mischen                         |
 | Port 8080 belegt                             | anderer Container/Prozess            | Prerequisite-Detail prüfen; Port freigeben oder Konflikt beenden         |
 | „Import- und Exportordner angeben“           | leere Pfade                          | Ordner anlegen; Docker File Sharing                                      |
@@ -199,8 +199,8 @@ Dev baut lokal (`docker-compose.yml`); Release-Paket oft nicht nötig.
 
 ## 5. Update (`.pfupdate`)
 
-**Einziger unterstützter Update-Weg:** Manager → Wartung → Software-Update → eine `.pfupdate`-Datei.  
-Erstinstall-`.tar.gz` ist **kein** Update. Manuelles Tag-Tauschen in `.env` + `compose up` ist nur Support-Notfall **ohne** Settings-Cutover/Rollback.
+**Einziger unterstützter Update-Weg:** Manager → Wartung → Software-Update → eine `.pfupdate`-Datei.
+Erstinstall-`.pfinstall` ist **kein** Update. Manuelles Tag-Tauschen in `.env` + `compose up` ist nur Support-Notfall **ohne** Settings-Cutover/Rollback.
 
 Paket bauen: [§6.2](#62-update--npm-run-releasepfupdate). Was Settings behalten: [`backup.md`](backup.md).
 
@@ -233,7 +233,7 @@ UI-Phasen: `inspect` → `preview` → `applying` → `success` | `failed` (`pfu
 | Archiv + Manifest + SHA256        | `packages/server-shared/src/pfupdate.ts` / `validateExtractedPfupdate`   |
 | Manager ≥ `minimumManagerVersion` | Manager sendet Version mit; Build setzt Default = `manager/package.json` |
 | Settings-Format                   | laufende Maintenance-App oder Build-Default                              |
-| Image-Tags = `releaseVersion`     | Pflicht für app/sandbox                                              |
+| Image-Tags = `releaseVersion`     | Pflicht für app/sandbox                                                  |
 | Nach Cutover                      | `targetSchemaVersion: 1` → Fresh DB + Settings-Import                    |
 
 **Regel:** Ein `.pfupdate` darf keine höhere `minimumManagerVersion` verlangen als die Manager-DMG, mit der es freigegeben wurde.
@@ -302,11 +302,11 @@ Fresh-DB-Cutover ist dasselbe Muster wie Restore, **außer** dass Restore die Ge
 
 ## 6. Build — wie die Artefakte entstehen
 
-Gemeinsam (Stack-Pakete): Docker muss laufen. `--version` / `PRAXIS_FLOW_RELEASE_VERSION` setzt den Stack-Tag.  
-`:pack` / `--no-build` überspringt `docker build` und packt vorhandene lokale Tags.  
+Gemeinsam (Stack-Pakete): Docker muss laufen. `--version` / `PRAXIS_FLOW_RELEASE_VERSION` setzt den Stack-Tag.
+`:pack` / `--no-build` überspringt `docker build` und packt vorhandene lokale Tags.
 `:current` = `--no-build --version local`.
 
-Proxy-Schritt (beide Stack-Pakete): `scripts/release-proxy-image.mjs` → Base `caddy:2.11.4@<Registry-Digest>` pullen, Custom-Image `praxis-flow-proxy:2.11.4-acmedns` aus `proxy/Dockerfile` bauen, Modul `dns.providers.acmedns` prüfen, Digest-Metadaten ins Manifest. Konstanten: `packages/server-shared/src/pfupdate.ts`.
+Proxy-Schritt (beide Stack-Pakete): Beim Build Base `caddy:2.11.4@<Registry-Digest>` pullen, Custom-Image `praxis-flow-proxy:2.11.4-acmedns` aus `proxy/Dockerfile` bauen, Modul `dns.providers.acmedns` prüfen, Digest-Metadaten ins Manifest. Im Pack-only-Modus (`--no-build`) werden die vorhandenen lokalen Images inklusive Custom-Proxy nur inspiziert; es gibt keinen Registry-Zugriff. Konstanten: `packages/server-shared/src/pfupdate.ts`.
 
 App/Sandbox-Build: `scripts/release-app-image.mjs` (u. a. Build-Arg `PRAXIS_FLOW_STACK_VERSION`); Release-Builds mit SBOM + Provenance (`--sbom=true`, `--provenance=mode=max`).
 
@@ -316,12 +316,14 @@ Script: `scripts/build-release-images.mjs`
 
 1. Optional: `docker build` → `praxis-flow/app:<ver>`, `praxis-flow/sandbox:<ver>`
 2. Proxy-Image wie oben vorbereiten
-3. `docker save` der drei Images → gzip → `praxis-flow-<ver>-images.tar.gz`
-4. Sidecar daneben: `manifest.json`, `SHA256SUMS.txt`, `THIRD_PARTY_NOTICES.txt`, `licenses/caddy/LICENSE.txt`
+3. `docker save` der drei Images → `images/praxis-flow-images.tar`
+4. Compose-Templates und `proxy/Caddyfile` nach `templates/` kopieren
+5. Bundle → `praxis-flow-<ver>.pfinstall`
+6. Sidecar daneben: `manifest.json`, `SHA256SUMS.txt`, `THIRD_PARTY_NOTICES.txt`, `licenses/caddy/LICENSE.txt`
 
 **Ausgabe:** `dist/releases/praxis-flow-<ver>/`
 
-Kein Gateway im Produkt-Archiv. Keine Compose-Templates in diesem Paket (Templates kommen aus Manager/Setup-Bootstrap bzw. `.pfupdate`).
+Kein Gateway im Produkt-Archiv. Compose-Templates und Basis-Caddyfile kommen aus diesem vollständigen Release-Bundle; das TLS-Caddyfile wird später aus dem Installationszustand erzeugt.
 
 ### 6.2 Update — `npm run release:pfupdate`
 
@@ -355,7 +357,7 @@ licenses/caddy/LICENSE.txt
 
 ### 6.3 Manager-DMG — `npm run dist:manager:mac`
 
-1. `prepare:packaged` (`manager/scripts/prepare-packaged-resources.mjs`): Setup-`dist` + `server-shared` nach `manager/build-resources/setup/` (Imports umschreiben, Production-Strip); Delivery-Templates + `.env.example` + `proxy/Caddyfile` nach `build-resources/templates/`
+1. `prepare:packaged` (`manager/scripts/prepare-packaged-resources.mjs`): Setup-`dist` + `server-shared` nach `manager/build-resources/setup/` (Imports umschreiben, Production-Strip); Delivery-Templates + `.env.example` nach `build-resources/templates/`. Das Basis-Caddyfile kommt aus dem importierten Release-Bundle.
 2. `electron-vite build` (Main, Preload CJS, Renderer)
 3. `electron-builder --mac dmg` → `manager/dist/Praxis Flow Manager-<managerVersion>-<arch>.dmg`
 

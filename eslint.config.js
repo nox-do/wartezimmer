@@ -30,6 +30,14 @@ module.exports = tseslint.config(
   ...tseslint.configs.recommended,
   ...sveltePlugin.configs['flat/recommended'],
   {
+    files: ['**/*.{js,mjs,cjs}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',

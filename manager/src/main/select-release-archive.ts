@@ -9,7 +9,7 @@ export async function selectReleaseArchiveDialog(
     title: 'Praxis-Flow Release-Paket wählen',
     properties: ['openFile'],
     filters: [
-      { name: 'Praxis Flow Images', extensions: ['tar', 'gz', 'tgz'] },
+      { name: 'Praxis Flow Erstinstallation', extensions: ['pfinstall'] },
       { name: 'Alle Dateien', extensions: ['*'] },
     ],
   };

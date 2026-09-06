@@ -37,7 +37,7 @@
     </ul>
     <p id="setup-entry-note" class="setup-entry-note">
       {#if content.showReleasePicker}
-        Release-Ordner vollständig herunterladen, dann die <code>.tar.gz</code> auswählen. Manifest
+        Release-Ordner vollständig herunterladen, dann die <code>.pfinstall</code> auswählen. Manifest
         und Checksums bleiben im selben Ordner.
         <button
           type="button"

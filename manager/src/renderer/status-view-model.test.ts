@@ -73,7 +73,8 @@ test('setupEntryContent adapts copy for release gap', () => {
     docker: { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
   });
   const content = setupEntryContent(status, 'needs-release');
-  assert.equal(content.title, 'Software-Paket fehlt');
+  assert.equal(content.title, 'Einrichtung fortsetzen');
+  assert.match(content.copy, /lokalen Installationsstand/);
   assert.equal(content.showReleasePicker, true);
 });
 

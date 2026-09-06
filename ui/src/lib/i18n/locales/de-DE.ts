@@ -250,7 +250,7 @@ export const dict = {
         'Patienten geben die Wartenummer vom Terminal im Portal ein. Für Gast-WLAN mit Internet-Freischaltung (Captive Portal) richten Sie Gateway und Netzwerk im Praxis Flow Manager ein.',
       portalHostTitle: 'Gast-WLAN & Gateway',
       portalHostBody:
-        'Technische Einrichtung (Interface, DHCP, Gateway-Container) erfolgt im Praxis Flow Manager auf dem Host-PC — nicht in diesem Assistenten.',
+        'Die techniche Einrichtung erfolgt im Praxis Flow Manager auf dem Host-PC — nicht in diesem Assistenten.',
       portalOffNote:
         'Terminal, MFA und TV funktionieren ohne Portal. Sie können das Portal später jederzeit aktivieren.',
       summaryBlocked:

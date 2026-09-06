@@ -78,6 +78,14 @@ test('prepareDeliveryProxyImage skips rebuild when skipBuild and the custom tag 
     calls.some((entry) => entry[1]?.[0] === 'build'),
     false,
   );
+  assert.equal(
+    calls.some((entry) => entry[1]?.[0] === 'pull'),
+    false,
+  );
+  assert.equal(
+    calls.some((entry) => entry[1]?.[0] === 'image' && entry[1]?.[1] === 'tag'),
+    false,
+  );
 });
 
 test('prepareDeliveryProxyImage rejects a base tag that does not resolve to the pulled content', () => {

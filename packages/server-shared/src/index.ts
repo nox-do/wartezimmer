@@ -108,15 +108,6 @@ export {
   type PfupdateValidationResult,
 } from './pfupdate.js';
 export {
-  buildFastifyLoggerOptions,
-  createModuleLogger,
-  getRootLogger,
-  readLogLevelFromEnv,
-  resetRootLoggerForTests,
-  SILENT_ROUTE_LOG,
-  type FastifySharedLoggerOptions,
-} from './fastify-logger-options.js';
-export {
   decodeIntakeFileNameHeader,
   encodeIntakeFileNameHeader,
   INTAKE_FILE_NAME_ENCODING_BASE64URL,
