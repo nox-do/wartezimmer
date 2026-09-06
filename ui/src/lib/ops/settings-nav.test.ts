@@ -5,6 +5,7 @@ describe('Ops settings nav', () => {
   it('uses short sidebar labels in order', () => {
     expect(OPS_SETTINGS_NAV.map((item) => item.id)).toEqual([
       'practice',
+      'routing',
       'storage',
       'contacts',
       'messaging',

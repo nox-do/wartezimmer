@@ -128,7 +128,7 @@ export function wizardStepTitle(step: WizardStep): string {
     case 1:
       return 'Voraussetzungen';
     case 2:
-      return 'Routing';
+      return 'Einrichtung';
     case 3:
       return 'Import & Export — Host-Ordner';
     case 4:

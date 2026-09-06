@@ -9,6 +9,12 @@ export const OPS_SETTINGS_NAV: StaffSettingsNavGroup[] = [
     children: [],
   },
   {
+    id: 'routing',
+    labelKey: 'ops.nav.routing',
+    href: '/ops/routing',
+    children: [],
+  },
+  {
     id: 'storage',
     labelKey: 'ops.nav.storage',
     href: '/ops/storage',

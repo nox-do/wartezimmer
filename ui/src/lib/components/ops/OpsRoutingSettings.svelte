@@ -1,0 +1,174 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import Button from '$lib/components/forms/Button.svelte';
+  import { t } from '$lib/i18n/i18nStore.svelte';
+  import { fetchOpsSystemSettings, patchOpsSystemSettings } from '$lib/ops/ops-system-api';
+  import type { OpsSettingsResponse } from '$lib/ops/openapi-types';
+  import { toastStore } from '$lib/stores/toastStore';
+
+  type RoutingMode = OpsSettingsResponse['routingMode'];
+
+  let loading = $state(true);
+  let busy = $state(false);
+  let loadError = $state<string | null>(null);
+  let settings = $state<OpsSettingsResponse | null>(null);
+  let selectedMode = $state<RoutingMode | null>(null);
+
+  const canSave = $derived(
+    settings !== null &&
+      selectedMode !== null &&
+      selectedMode !== settings.routingMode &&
+      !loading &&
+      !busy,
+  );
+
+  function applySettings(next: OpsSettingsResponse) {
+    settings = next;
+    selectedMode = next.routingMode;
+  }
+
+  async function load() {
+    loading = true;
+    loadError = null;
+    const result = await fetchOpsSystemSettings();
+    loading = false;
+
+    if (!result.ok) {
+      const message = result.error.message || t('ops.loadError');
+      loadError = message;
+      toastStore.error(message);
+      return;
+    }
+
+    applySettings(result.data);
+  }
+
+  async function save() {
+    if (!settings || selectedMode === null || selectedMode === settings.routingMode) {
+      return;
+    }
+
+    busy = true;
+    const result = await patchOpsSystemSettings({ routingMode: selectedMode });
+    busy = false;
+
+    if (!result.ok) {
+      const message = result.error.message || t('ops.routing.saveError');
+      loadError = message;
+      toastStore.error(message);
+      return;
+    }
+
+    applySettings(result.data);
+    toastStore.success(t('ops.routing.saveOk'));
+  }
+
+  onMount(() => {
+    void load();
+  });
+</script>
+
+{#if loading}
+  <p class="text-muted">{t('ops.routing.loading')}</p>
+{:else if !settings}
+  <div class="ops-routing__error">
+    <p>{loadError || t('ops.loadError')}</p>
+    <Button type="button" variant="outline" size="sm" onclick={() => void load()}>
+      {t('ui.retry')}
+    </Button>
+  </div>
+{:else}
+  <div class="ops-routing__stack">
+    <div class="ops-routing__options" role="radiogroup" aria-label={t('ops.routing.title')}>
+      <label class="ops-routing__option">
+        <input
+          type="radio"
+          name="routingMode"
+          value="simple"
+          checked={selectedMode === 'simple'}
+          disabled={loading || busy}
+          onchange={() => {
+            selectedMode = 'simple';
+          }}
+        />
+        <span class="ops-routing__meta">
+          <strong>{t('ops.routing.simpleTitle')}</strong>
+          <span>{t('ops.routing.simpleBody')}</span>
+        </span>
+      </label>
+
+      <label class="ops-routing__option">
+        <input
+          type="radio"
+          name="routingMode"
+          value="complex"
+          checked={selectedMode === 'complex'}
+          disabled={loading || busy}
+          onchange={() => {
+            selectedMode = 'complex';
+          }}
+        />
+        <span class="ops-routing__meta">
+          <strong>{t('ops.routing.complexTitle')}</strong>
+          <span>{t('ops.routing.complexBody')}</span>
+        </span>
+      </label>
+    </div>
+
+    <p class="text-muted">{t('ops.routing.globalHint')}</p>
+    <p class="text-muted">{t('ops.routing.guardHint')}</p>
+
+    {#if loadError}
+      <p class="ops-routing__error-inline">{loadError}</p>
+    {/if}
+
+    <Button type="button" variant="primary" loading={busy} disabled={!canSave} onclick={() => void save()}>
+      {t('ops.routing.save')}
+    </Button>
+  </div>
+{/if}
+
+<style>
+  .ops-routing__stack {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .ops-routing__options {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .ops-routing__option {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel);
+    cursor: pointer;
+  }
+
+  .ops-routing__option input {
+    margin-top: 0.2rem;
+  }
+
+  .ops-routing__meta {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .ops-routing__error {
+    display: grid;
+    gap: 0.75rem;
+    color: var(--destructive);
+  }
+
+  .ops-routing__error-inline {
+    margin: 0;
+    color: var(--destructive);
+    font-size: 0.9rem;
+  }
+</style>

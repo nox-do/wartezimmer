@@ -13,7 +13,6 @@
   import MaintenanceSection from './MaintenanceSection.svelte';
   import StackControls from './StackControls.svelte';
   import SoftwareUpdatePanel from './SoftwareUpdatePanel.svelte';
-  import RoutingModePanel from './RoutingModePanel.svelte';
   import StoragePathsPanel from './StoragePathsPanel.svelte';
   import BackupPanel from './BackupPanel.svelte';
   import LogsPanel from './LogsPanel.svelte';
@@ -292,30 +291,10 @@
       <MaintenanceSection
         open={openSection === 'practice'}
         title="Praxis-Einstellungen"
-        subtitle="Routing-Modus · Import & Export"
-        copy="Patientenwege und Host-Ordner für Import/Export."
+        subtitle="Import & Export"
+        copy="Host-Ordner für Import/Export der Praxis."
         onToggle={() => toggleSection('practice')}
       >
-        <RoutingModePanel
-          routingMode={snapshot.routingMode}
-          routingModeSaved={snapshot.routingModeSaved}
-          complexRoutingLicensed={snapshot.complexRoutingLicensed}
-          openVisitCount={snapshot.openVisitCount}
-          statusText={snapshot.routingModeStatusText}
-          locked={maintenanceLocked}
-          error={snapshot.errors.routing}
-          onChange={(routingMode) => {
-            controller?.setRoutingMode(routingMode);
-          }}
-          onSave={() => controller?.saveRoutingMode()}
-        />
-        {#if snapshot.activeOperation === 'bootstrap' && snapshot.routingMode === null}
-          <p class="wizard-progress is-active" role="status">
-            <span class="spinner" aria-hidden="true"></span>
-            Routing-Modus wird geladen …
-          </p>
-        {/if}
-        <hr class="panel-section-divider" />
         <StoragePathsPanel
           {hostPlatform}
           status={snapshot.status}

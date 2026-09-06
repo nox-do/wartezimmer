@@ -12,10 +12,6 @@
     wizardProbeFailureHint,
   } from './wizard-flow.js';
   import { deliveryImagesReady, needsDeliveryImages } from './delivery-images-flow.js';
-  import {
-    ROUTING_MODE_WIZARD_HEADING,
-    ROUTING_MODE_WIZARD_INTRO_DETAIL,
-  } from './routing-mode-ui.js';
   import type { WizardController } from './wizard-controller.js';
   import type { WizardControllerState } from './wizard-controller.js';
   import {
@@ -29,7 +25,6 @@
   import LanIpPanel from './LanIpPanel.svelte';
   import ProxySettings from './ProxySettings.svelte';
   import ReachabilityPanel from './ReachabilityPanel.svelte';
-  import WizardRoutingModePanel from './WizardRoutingModePanel.svelte';
   import WizardHttpsPanel from './WizardHttpsPanel.svelte';
 
   let {
@@ -157,23 +152,13 @@
       {/if}
     {:else if snapshot.step === 2}
       <p class="wizard-step-lead">
-        Wie sollen Patienten durch die Praxis geführt werden? Praxisname und Kontaktdaten legt die
-        Praxis später im Ops-Assistenten fest.
+        Praxisweite Routing-Entscheidungen werden in den Ops-Einstellungen gepflegt. Der Host-Setup
+        behandelt nur die technische Einrichtung auf diesem Rechner.
       </p>
-      <h3 class="routing-mode-subheading">{ROUTING_MODE_WIZARD_HEADING}</h3>
-      <p class="hint routing-mode-intro-compact">{ROUTING_MODE_WIZARD_INTRO_DETAIL}</p>
-      <WizardRoutingModePanel
-        routingMode={snapshot.routingMode}
-        complexRoutingLicensed={snapshot.complexRoutingLicensed}
-        busy={snapshot.busy || snapshot.routingCapabilitiesStatus !== 'ready'}
-        onChange={(routingMode) => patchFields({ routingMode })}
-      />
-      {#if snapshot.routingCapabilitiesStatus === 'loading'}
-        <p class="wizard-progress is-active" role="status">
-          <span class="spinner" aria-hidden="true"></span>
-          Routing wird geladen …
-        </p>
-      {/if}
+      <p class="hint">
+        Für den aktuellen Host-Setup-Schritt fahren wir mit den technischen Ordnern und Netzwerken
+        fort.
+      </p>
     {:else if snapshot.step === 3}
       <p class="wizard-step-lead">
         Ordner für Kontakt-Import und Dokument-Export auf diesem Rechner.
