@@ -41,7 +41,7 @@ npm run dev:manager
 ### Install-Wizard (Assistent)
 
 1. Voraussetzungen (Docker, ggf. Release-Paket, Port-Checks)
-2. Routing — Routing-Modus (Praxisname erst in Ops `/ops/setup`)
+2. Einrichtung — technische Host-Konfiguration (Routing-Modus in Ops Settings)
 3. Import & Export — Host-Ordner (Kontakte / MFA-Exporte)
 4. Netzwerk — LAN-IP & Erreichbarkeit
 5. Zugang — optional Port 80 (Proxy); Gateway im Manager immer aus
@@ -73,15 +73,15 @@ Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unte
 - Backup/Restore `.pfbackup` (`POST /backup`, validate, restore) — Vertrag: [`docs/operations/backup.md`](../docs/operations/backup.md)
 - Import-/Export-Hostordner (`POST /storage`)
 - Staff-PIN-Reset MFA/Ops (`POST /reset-staff-pins`)
-- **Routing-Modus** Simple/Complex (`GET|POST /routing-mode`) — kein Ops-PIN (Manager-Vertrauenskanal)
+- **Routing-Modus:** wird ausschließlich in der Ops-Web-App konfiguriert. Der Manager enthält keinen Routing-Dialog.
+- **Technischer Kompatibilitätspfad:** Der lokale Setup-Endpunkt `/routing-mode` bleibt für bestehende Host-/Restore-Abläufe verfügbar, ist aber keine zweite fachliche Konfigurationsoberfläche.
 
 ### Routing-Modus
 
-- **Konfigurationsoberfläche:** Praxis Flow Manager (nicht MFA/Ops-Web-UI).
-- **Auth:** Kein Ops-PIN im Manager — Setup-API auf localhost; App akzeptiert `X-Praxis-Manager-Local: 1` nur von loopback für `routingMode`-PATCH.
-- **Wizard:** Schritt 3 — Wert erst nach `getRoutingMode()` (kein Fake-Default); nach `apply` persistiert.
-- **Wartung:** Sektion „Routing-Modus“ mit Speichern (ebenfalls erst nach Hydrate).
-- **Lizenz:** `features.complexRoutingLicensed` in Capabilities (Stub: Dev erlaubt, Prod bis Lizenz-Infrastruktur).
+- **Fachliche Autorität:** Ops Settings unter `/ops/routing`; dort werden `GET/PATCH /api/v1/ops/settings` und die Routing-Capabilities verwendet.
+- **Manager:** Host-Setup, Docker, Netzwerk, Backup und Wartung. Der interaktive Wizard schreibt den Routing-Modus nicht mehr.
+- **Kompatibilität:** Der lokale Setup-Endpunkt darf für technische Restore-/Host-Abläufe bestehen bleiben; er ist explizit kein regulärer UI-Pfad.
+- **Serverregeln:** Moduswechsel werden serverseitig bei offenen Visits abgelehnt. Complex Routing ist standardmäßig erlaubt; nur `COMPLEX_ROUTING_LICENSED=false` optet explizit aus.
 
 Setup-API (Manager-Child auf Loopback; CLI-Default `127.0.0.1:9190`):
 

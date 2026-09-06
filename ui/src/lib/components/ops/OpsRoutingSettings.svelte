@@ -2,7 +2,11 @@
   import { onMount } from 'svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
-  import { fetchOpsSystemSettings, patchOpsSystemSettings } from '$lib/ops/ops-system-api';
+  import {
+    fetchOpsRoutingCapabilities,
+    fetchOpsSystemSettings,
+    patchOpsSystemSettings,
+  } from '$lib/ops/ops-system-api';
   import type { OpsSettingsResponse } from '$lib/ops/openapi-types';
   import { toastStore } from '$lib/stores/toastStore';
 
@@ -12,6 +16,7 @@
   let busy = $state(false);
   let loadError = $state<string | null>(null);
   let settings = $state<OpsSettingsResponse | null>(null);
+  let openVisitCount = $state(0);
   let selectedMode = $state<RoutingMode | null>(null);
 
   const canSave = $derived(
@@ -30,17 +35,24 @@
   async function load() {
     loading = true;
     loadError = null;
-    const result = await fetchOpsSystemSettings();
+    const [settingsResult, capabilitiesResult] = await Promise.all([
+      fetchOpsSystemSettings(),
+      fetchOpsRoutingCapabilities(),
+    ]);
     loading = false;
 
-    if (!result.ok) {
-      const message = result.error.message || t('ops.loadError');
+    if (!settingsResult.ok || !capabilitiesResult.ok) {
+      const message = !settingsResult.ok
+        ? settingsResult.error?.message || t('ops.loadError')
+        : capabilitiesResult.error?.message || t('ops.loadError');
       loadError = message;
       toastStore.error(message);
       return;
     }
 
-    applySettings(result.data);
+    applySettings(settingsResult.data);
+    selectedMode = capabilitiesResult.data.routingMode;
+    openVisitCount = capabilitiesResult.data.openVisitCount;
   }
 
   async function save() {
@@ -59,6 +71,7 @@
       return;
     }
 
+    loadError = null;
     applySettings(result.data);
     toastStore.success(t('ops.routing.saveOk'));
   }
@@ -116,13 +129,23 @@
     </div>
 
     <p class="text-muted">{t('ops.routing.globalHint')}</p>
-    <p class="text-muted">{t('ops.routing.guardHint')}</p>
+    <p class="text-muted">
+      {openVisitCount > 0
+        ? `${t('ops.routing.guardHint')} (${openVisitCount})`
+        : t('ops.routing.guardHint')}
+    </p>
 
     {#if loadError}
       <p class="ops-routing__error-inline">{loadError}</p>
     {/if}
 
-    <Button type="button" variant="primary" loading={busy} disabled={!canSave} onclick={() => void save()}>
+    <Button
+      type="button"
+      variant="primary"
+      loading={busy}
+      disabled={!canSave}
+      onclick={() => void save()}
+    >
       {t('ops.routing.save')}
     </Button>
   </div>

@@ -16,8 +16,32 @@ test('validateComplexRoutingLicenseChange allows simple mode without license', (
   }
 });
 
-test('validateComplexRoutingLicenseChange blocks complex mode without license', () => {
+test('validateComplexRoutingLicenseChange allows complex mode in production by default', () => {
+  const previousNodeEnv = process.env.NODE_ENV;
   const previous = process.env.COMPLEX_ROUTING_LICENSED;
+  process.env.NODE_ENV = 'production';
+  delete process.env.COMPLEX_ROUTING_LICENSED;
+  try {
+    const result = validateComplexRoutingLicenseChange({ nextMode: 'complex' });
+    assert.equal(result.ok, true);
+  } finally {
+    if (previousNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = previousNodeEnv;
+    }
+    if (previous === undefined) {
+      delete process.env.COMPLEX_ROUTING_LICENSED;
+    } else {
+      process.env.COMPLEX_ROUTING_LICENSED = previous;
+    }
+  }
+});
+
+test('validateComplexRoutingLicenseChange blocks complex mode without license when explicitly disabled', () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  const previous = process.env.COMPLEX_ROUTING_LICENSED;
+  process.env.NODE_ENV = 'production';
   process.env.COMPLEX_ROUTING_LICENSED = 'false';
   try {
     const result = validateComplexRoutingLicenseChange({ nextMode: 'complex' });
@@ -26,6 +50,11 @@ test('validateComplexRoutingLicenseChange blocks complex mode without license', 
       assert.equal(result.code, 'COMPLEX_ROUTING_NOT_LICENSED');
     }
   } finally {
+    if (previousNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = previousNodeEnv;
+    }
     if (previous === undefined) {
       delete process.env.COMPLEX_ROUTING_LICENSED;
     } else {

@@ -42,6 +42,7 @@
   });
 
   onMount(() => {
+    void tick().then(() => pinInput?.focus());
     return mountPracticeProfileSync((profile) => {
       practiceProfile = profile;
     });
@@ -92,7 +93,6 @@
         autocomplete="current-password"
         spellcheck="false"
         autocapitalize="off"
-        autofocus
         aria-invalid={formError ? 'true' : undefined}
         aria-describedby={formError ? 'auth-login-error' : undefined}
         bind:value={pin}

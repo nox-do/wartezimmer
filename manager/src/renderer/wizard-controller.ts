@@ -11,7 +11,6 @@ import {
   createWizardFlowState,
   loadWizardNetwork,
   loadWizardPlan,
-  persistWizardRoutingMode,
   planWizardAdvance,
   planWizardBack,
   refreshWizardStatus,
@@ -308,17 +307,6 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       }
     }
     deps.onHostMutated?.();
-    try {
-      await persistWizardRoutingMode(deps.api, applyState);
-    } catch (error) {
-      if (still(generation)) {
-        setError(
-          error instanceof Error
-            ? error.message
-            : 'Routing-Modus konnte nach der Einrichtung nicht gespeichert werden.',
-        );
-      }
-    }
   }
 
   async function ensureRoutingCapabilities(): Promise<void> {
@@ -388,21 +376,6 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       setError(null);
       setBusy(true);
       try {
-        if (state.step === 2) {
-          const retryingLoad = state.routingCapabilitiesStatus !== 'ready';
-          await ensureRoutingCapabilities();
-          if (!still(generation)) {
-            return;
-          }
-          if (state.routingCapabilitiesStatus !== 'ready' || state.routingMode === null) {
-            setError(WIZARD_ROUTING_LOAD_ERROR);
-            return;
-          }
-          if (retryingLoad) {
-            return;
-          }
-        }
-
         const action = planWizardAdvance(state.step, state);
         if (action.type === 'validate-error') {
           setError(action.message);

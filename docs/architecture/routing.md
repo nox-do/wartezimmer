@@ -35,7 +35,7 @@ flowchart TB
 ## 2. `routingMode`: simple vs. complex
 
 Gespeichert: `ops_settings.routing_mode` (`'simple' | 'complex'`).  
-Wer setzt: **Ops**/Manager/Setup — nicht MFA (`ops-settings-patch-by-role.ts`).
+Fachliche Autorität: **Ops Settings** — nicht MFA. Manager/Setup dürfen den lokalen technischen Kompatibilitätspfad nur für Host-/Restore-Abläufe verwenden (`ops-settings-patch-by-role.ts`).
 
 | | **simple** | **complex** |
 | --- | --- | --- |
@@ -51,10 +51,10 @@ Wer setzt: **Ops**/Manager/Setup — nicht MFA (`ops-settings-patch-by-role.ts`)
 `resolveRoutingCapabilities` (`app/src/shared/ops/routing-capabilities.ts`):
 
 - `complexRouting` / `journeyDesigner` = Mode `complex` **und** `isComplexRoutingLicensed()`
-- Lizenz-Stub: Env `COMPLEX_ROUTING_LICENSED=true|false`, sonst lizenziert wenn `NODE_ENV !== 'production'` (`packages/server-shared/src/routing-license-stub.ts`)
+- Lizenz-Stub: Env `COMPLEX_ROUTING_LICENSED=true|false`, sonst standardmäßig lizenziert (`packages/server-shared/src/routing-license-stub.ts`)
 - `routingSimulator: true` immer (Capability-Flag; keine eigene Produktfläche dokumentiert)
 
-Wechsel **nach** `complex` ohne Lizenz → `COMPLEX_ROUTING_NOT_LICENSED`.  
+Wechsel **nach** `complex` bei explizitem Opt-out → `COMPLEX_ROUTING_NOT_LICENSED`.
 Offene Visits (Status ∉ `done` \| `cancelled` \| `no_show`) → Mode-Wechsel blockiert (`ROUTING_MODE_CHANGE_BLOCKED`).
 
 ## 3. Catalog-Entitäten (Routing-relevant)

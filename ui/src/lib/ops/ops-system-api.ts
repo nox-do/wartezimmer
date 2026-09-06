@@ -11,6 +11,7 @@ import type {
   OpsOnboardingStatus,
   OpsPatchSystemSettingsBody,
   OpsSettingsResponse,
+  RoutingCapabilitiesResponse,
   PatchOpsOnboardingBody,
   RuntimeResetPreviewResponse,
   RuntimeResetResponse,
@@ -44,6 +45,10 @@ export type ContactLookupLayout = ContactLookupPreviewResponse['layout'];
 
 export async function fetchOpsSystemSettings() {
   return opsAuthFetch<OpsSettingsResponse>('/api/v1/ops/settings');
+}
+
+export async function fetchOpsRoutingCapabilities() {
+  return opsAuthFetch<RoutingCapabilitiesResponse>('/api/v1/ops/settings/capabilities');
 }
 
 export async function patchOpsSystemSettings(body: OpsPatchSystemSettingsBody) {

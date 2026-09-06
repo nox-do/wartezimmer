@@ -382,16 +382,6 @@ export async function refreshWizardStatus(api: PraxisManagerApi): Promise<HostSt
 
 export const WIZARD_PROBE_WAIT_MESSAGE = 'App startet — Erreichbarkeit wird geprüft …';
 
-export async function persistWizardRoutingMode(
-  api: PraxisManagerApi,
-  state: WizardFlowState,
-): Promise<void> {
-  if (!state.routingMode) {
-    throw new Error('Routing-Modus ist noch nicht geladen.');
-  }
-  await api.setRoutingMode({ routingMode: state.routingMode });
-}
-
 export async function refreshWizardStatusAfterApply(api: PraxisManagerApi): Promise<HostStatus> {
   const status = await api.fetchSetupStatus();
   const probes = await pollSetupProbes(api, buildSetupProbeInput(status));

@@ -2,11 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { RoutingModeCapabilities, TlsPrepareInput } from '../shared/host-status.js';
 import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
-import {
-  createWizardController,
-  wizardManagedPrepareErrorFooter,
-  WIZARD_ROUTING_LOAD_ERROR,
-} from './wizard-controller.js';
+import { createWizardController, wizardManagedPrepareErrorFooter } from './wizard-controller.js';
 import { TLS_LEASE_STALE_LAN_COPY, TLS_RESET_CONFIRM_MESSAGE } from './tls-network-view-model.js';
 import {
   wizardBackHidden,
@@ -80,55 +76,6 @@ test('goBack does not leave completed wizard', () => {
 
   controller.goBack();
   assert.equal(controller.getState().step, 8);
-});
-
-test('routing load failure surfaces an error and retries on the same step', async () => {
-  let calls = 0;
-  const second = deferred<RoutingModeCapabilities>();
-  const controller = createWizardController({
-    api: {
-      getRoutingMode: () => {
-        calls += 1;
-        if (calls === 1) {
-          return Promise.reject(new Error('routing unavailable'));
-        }
-        return second.promise;
-      },
-    } as never,
-    onComplete: () => {},
-    onCancel: () => {},
-  });
-
-  controller.show(minimalHostStatus(), 'embedded');
-  await controller.goNext();
-
-  assert.equal(controller.getState().step, 2);
-  assert.equal(controller.getState().routingCapabilitiesStatus, 'error');
-  assert.equal(controller.getState().error, WIZARD_ROUTING_LOAD_ERROR);
-  assert.equal(controller.getState().busy, false);
-
-  const retry = controller.goNext();
-  await Promise.resolve();
-  assert.equal(controller.getState().routingCapabilitiesStatus, 'loading');
-  assert.equal(controller.getState().error, null);
-  assert.equal(controller.getState().step, 2);
-
-  second.resolve({
-    routingMode: 'simple',
-    openVisitCount: 0,
-    features: {
-      complexRouting: false,
-      journeyDesigner: false,
-      routingSimulator: false,
-      complexRoutingLicensed: false,
-    },
-  });
-  await retry;
-
-  assert.equal(controller.getState().routingCapabilitiesStatus, 'ready');
-  assert.equal(controller.getState().routingMode, 'simple');
-  assert.equal(controller.getState().error, null);
-  assert.equal(controller.getState().step, 2);
 });
 
 test('entering routing step waits for server routing mode', async () => {
@@ -1341,13 +1288,9 @@ test('release import still reports a status refresh failure', async () => {
 test('apply after hide still reports the host mutation once', async () => {
   const applied = deferred<ReturnType<typeof minimalApplyResult>>();
   let mutateCount = 0;
-  let routingSaves = 0;
   const controller = createWizardController({
     api: {
       applySetupPlan: () => applied.promise,
-      setRoutingMode: async () => {
-        routingSaves += 1;
-      },
     } as never,
     onComplete: () => {},
     onCancel: () => {},
@@ -1370,7 +1313,6 @@ test('apply after hide still reports the host mutation once', async () => {
   await pending;
 
   assert.equal(mutateCount, 1);
-  assert.equal(routingSaves, 1);
   assert.equal(controller.getState().applyResult, null);
   assert.equal(controller.getState().busy, false);
   assert.equal(controller.getState().step, 1);
