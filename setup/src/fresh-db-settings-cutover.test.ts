@@ -54,8 +54,15 @@ function baseDeps(
       authSettings: sampleSettings.authSettings,
       messagingProviderConfigs: sampleSettings.messagingProviderConfigs,
     }),
-    composeStatus: async () => ({ running: true, services: [] }),
+    composeStatus: async () => ({
+      running: true,
+      services: [
+        { name: 'app', service: 'app', state: 'running', health: 'healthy' },
+        { name: 'sandbox', service: 'sandbox', state: 'running', health: 'healthy' },
+      ],
+    }),
     runHealthChecks: async () => ({ ok: true, errors: [] }),
+    stackHealthWaitOptions: { timeoutMs: 0 },
     ...overrides,
   };
 }
@@ -166,6 +173,63 @@ test('runFreshDbSettingsCutover fails when health check fails', async () => {
       assert.equal(result.failedPhase, FRESH_DB_CUTOVER_PHASES.healthCheck);
       assert.deepEqual(result.errors, ['Probe failed.']);
     }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runFreshDbSettingsCutover fails when Docker health is bad despite green probes', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fresh-db-cutover-docker-health-'));
+  const appDataDir = seedAppData(path.join(dir, 'app-data'));
+  try {
+    const result = await runFreshDbSettingsCutover(
+      cutoverInput(dir, appDataDir),
+      baseDeps(appDataDir, {
+        composeStatus: async () => ({
+          running: true,
+          services: [
+            { name: 'app', service: 'app', state: 'running', health: 'healthy' },
+            { name: 'sandbox', service: 'sandbox', state: 'running', health: 'unhealthy' },
+          ],
+        }),
+        runHealthChecks: async () => ({ ok: true, errors: [] }),
+      }),
+    );
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.failedPhase, FRESH_DB_CUTOVER_PHASES.healthCheck);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runFreshDbSettingsCutover waits while Docker health is starting', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fresh-db-cutover-starting-'));
+  const appDataDir = seedAppData(path.join(dir, 'app-data'));
+  let polls = 0;
+  try {
+    const result = await runFreshDbSettingsCutover(
+      cutoverInput(dir, appDataDir),
+      baseDeps(appDataDir, {
+        composeStatus: async () => {
+          polls += 1;
+          return {
+            running: true,
+            services: [
+              { name: 'app', service: 'app', state: 'running', health: 'healthy' },
+              {
+                name: 'sandbox',
+                service: 'sandbox',
+                state: 'running',
+                health: polls === 1 ? 'starting' : 'healthy',
+              },
+            ],
+          };
+        },
+        stackHealthWaitOptions: { timeoutMs: 10, intervalMs: 1, sleep: async () => {} },
+      }),
+    );
+    assert.equal(result.ok, true);
+    assert.equal(polls, 2);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

@@ -15,7 +15,6 @@
     patchOpsOnboarding,
     verifyOpsOnboarding,
     type OpsOnboardingStatus,
-    type PatchOpsOnboardingBody,
     type SetupCheck,
     type SetupContactMode,
     type SetupWizardStep,
@@ -255,19 +254,9 @@
     return STEPS.indexOf(current);
   }
 
-  async function persistProgress(
-    nextStep: SetupWizardStep,
-    patch?: { portalEnabled?: boolean; contactMode?: SetupContactMode },
-  ) {
+  async function persistProgress(nextStep: SetupWizardStep) {
     busy = true;
-    const body: PatchOpsOnboardingBody = {
-      setupLastStep: nextStep,
-      portalEnabled: patch?.portalEnabled ?? portalEnabled,
-    };
-    if (patch?.contactMode !== undefined) {
-      body.setupContactMode = patch.contactMode;
-    }
-    const result = await patchOpsOnboarding(body);
+    const result = await patchOpsOnboarding({ setupLastStep: nextStep });
     busy = false;
     if (!result.ok) {
       toastStore.error(result.error.message || t('ops.loadError'));
@@ -633,4 +622,3 @@
   </div>
   {/if}
 </StaffSettingsShell>
-

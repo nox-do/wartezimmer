@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+
 import { buildPfbackupArchive, serializePfbackupArchive } from '@praxis-flow/server-shared';
 import { APP_DB_RELATED_FILES, createLocalAppDataAccess } from './app-data-volume.js';
 import { readEnvMap, writeEnvRecordAtomically } from './env-file.js';
@@ -17,6 +18,14 @@ import {
 import { packTlsSidecarArchive } from './tls-backup-sidecar.js';
 import { GENERATED_CADDYFILE_MARKER, resolveProxyTlsPaths } from './proxy-tls.js';
 import { testSetupContext } from './test-setup-context.js';
+
+const HEALTHY_COMPOSE = {
+  running: true,
+  services: [
+    { name: 'app', service: 'app', state: 'running', health: 'healthy' },
+    { name: 'sandbox', service: 'sandbox', state: 'running', health: 'healthy' },
+  ],
+};
 
 const sampleSettings = {
   settingsFormatVersion: 1,
@@ -154,7 +163,13 @@ function workingRestoreDeps(
       authSettings: sampleSettings.authSettings,
       messagingProviderConfigs: sampleSettings.messagingProviderConfigs,
     }),
-    composeStatus: async () => ({ running: true, services: [] }),
+    composeStatus: async () => ({
+      running: true,
+      services: [
+        { name: 'app', service: 'app', state: 'running', health: 'healthy' },
+        { name: 'sandbox', service: 'sandbox', state: 'running', health: 'healthy' },
+      ],
+    }),
     runHealthChecks: async () => ({ ok: true, errors: [] }),
     appDataAccess: createLocalAppDataAccess(appDataDir),
     ...overrides,
@@ -224,7 +239,7 @@ test('restorePfbackup succeeds and preserves current image tags in .env', async 
       authSettings: sampleSettings.authSettings,
       messagingProviderConfigs: sampleSettings.messagingProviderConfigs,
     }),
-    composeStatus: async () => ({ running: true, services: [] }),
+    composeStatus: async () => HEALTHY_COMPOSE,
     runHealthChecks: async () => ({ ok: true, errors: [] }),
     appDataAccess: createLocalAppDataAccess(appDataDir),
   };
@@ -277,7 +292,7 @@ test('restorePfbackup passes skipProviderCredentials to import', async () => {
         },
       ],
     }),
-    composeStatus: async () => ({ running: true, services: [] }),
+    composeStatus: async () => HEALTHY_COMPOSE,
     runHealthChecks: async () => ({ ok: true, errors: [] }),
     appDataAccess: createLocalAppDataAccess(appDataDir),
   };
@@ -317,7 +332,7 @@ test('restorePfbackup rolls back after import failure', async () => {
       authSettings: sampleSettings.authSettings,
       messagingProviderConfigs: sampleSettings.messagingProviderConfigs,
     }),
-    composeStatus: async () => ({ running: true, services: [] }),
+    composeStatus: async () => HEALTHY_COMPOSE,
     runHealthChecks: async () => ({ ok: true, errors: [] }),
     appDataAccess: createLocalAppDataAccess(appDataDir),
   };
@@ -354,7 +369,7 @@ test('restorePfbackup fails write_env and rolls back', async () => {
       authSettings: sampleSettings.authSettings,
       messagingProviderConfigs: sampleSettings.messagingProviderConfigs,
     }),
-    composeStatus: async () => ({ running: true, services: [] }),
+    composeStatus: async () => HEALTHY_COMPOSE,
     runHealthChecks: async () => ({ ok: true, errors: [] }),
     appDataAccess: createLocalAppDataAccess(appDataDir),
   };
@@ -391,7 +406,7 @@ test('restorePfbackup fails start_app and rolls back', async () => {
       authSettings: sampleSettings.authSettings,
       messagingProviderConfigs: sampleSettings.messagingProviderConfigs,
     }),
-    composeStatus: async () => ({ running: true, services: [] }),
+    composeStatus: async () => HEALTHY_COMPOSE,
     runHealthChecks: async () => ({ ok: true, errors: [] }),
     appDataAccess: createLocalAppDataAccess(appDataDir),
   };
@@ -435,7 +450,7 @@ test('restorePfbackup fails verify_export and rolls back', async () => {
       authSettings: sampleSettings.authSettings,
       messagingProviderConfigs: sampleSettings.messagingProviderConfigs,
     }),
-    composeStatus: async () => ({ running: true, services: [] }),
+    composeStatus: async () => HEALTHY_COMPOSE,
     runHealthChecks: async () => ({ ok: true, errors: [] }),
     appDataAccess: createLocalAppDataAccess(appDataDir),
   };
@@ -478,7 +493,7 @@ test('restorePfbackup backs up db wal and shm into rollback directory', async ()
       authSettings: sampleSettings.authSettings,
       messagingProviderConfigs: sampleSettings.messagingProviderConfigs,
     }),
-    composeStatus: async () => ({ running: true, services: [] }),
+    composeStatus: async () => HEALTHY_COMPOSE,
     runHealthChecks: async () => ({ ok: true, errors: [] }),
     appDataAccess: createLocalAppDataAccess(appDataDir),
   };
@@ -557,7 +572,7 @@ test('restorePfbackup stops stack before backing up runtime db files', async () 
       authSettings: sampleSettings.authSettings,
       messagingProviderConfigs: sampleSettings.messagingProviderConfigs,
     }),
-    composeStatus: async () => ({ running: true, services: [] }),
+    composeStatus: async () => HEALTHY_COMPOSE,
     runHealthChecks: async () => ({ ok: true, errors: [] }),
     appDataAccess: {
       ...localAccess,
@@ -654,7 +669,7 @@ test('restorePfbackup surfaces rollback errors in failure response', async () =>
       authSettings: sampleSettings.authSettings,
       messagingProviderConfigs: sampleSettings.messagingProviderConfigs,
     }),
-    composeStatus: async () => ({ running: true, services: [] }),
+    composeStatus: async () => HEALTHY_COMPOSE,
     runHealthChecks: async () => ({ ok: true, errors: [] }),
     appDataAccess: createLocalAppDataAccess(appDataDir),
   };

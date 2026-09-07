@@ -1,11 +1,10 @@
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-import type { ComposeStatus, HostStatus, RoutingMode } from '../shared/host-status.js';
+import type { ComposeStatus, HostStatus } from '../shared/host-status.js';
 import type { PfupdateApplyResult } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { formatPfupdateSuccess } from './pfupdate-flow.js';
 import {
   PIN_RESET_PROGRESS_TEXT,
-  ROUTING_MODE_SAVE_PROGRESS_TEXT,
   STACK_OFFLINE_CONFIRM_MESSAGE,
   STORAGE_PATHS_RESTART_CONFIRM_MESSAGE,
   STORAGE_PATHS_VALIDATION_ERROR,
@@ -14,7 +13,6 @@ import {
   composeActionErrorMessage,
   emptyMaintenanceErrors,
   pinResetSuccessText,
-  routingModeSuccessText,
   pfbackupValidateSuccessText,
   pfbackupArchiveOnlyValidText,
   storagePathsChanged,
@@ -28,7 +26,6 @@ import {
   restoreInspectBlockedMessage,
   restoreTlsInspectSummaryLine,
 } from './restore-wizard-flow.js';
-import { formatRoutingModeError } from './routing-mode-ui.js';
 
 export type MaintenanceCallbacks = {
   onAfterMutation?: () => void;
@@ -45,12 +42,6 @@ export type MaintenanceState = {
   exportsHostPath: string;
   storageStatusText: string;
   softwareUpdateStatusText: string;
-  /** null until getRoutingMode() hydrates — never show a fake default. */
-  routingMode: RoutingMode | null;
-  routingModeSaved: RoutingMode | null;
-  complexRoutingLicensed: boolean;
-  openVisitCount: number;
-  routingModeStatusText: string;
   pinResetStatusText: string;
   backupStatusText: string;
   tlsSidecarStatusText: string;
@@ -68,7 +59,6 @@ export type MaintenanceController = {
   getState: () => Readonly<MaintenanceState>;
   setImportsPath: (value: string) => void;
   setExportsPath: (value: string) => void;
-  setRoutingMode: (routingMode: RoutingMode) => void;
   browseImportsFolder: () => Promise<string | null>;
   browseExportsFolder: () => Promise<string | null>;
   handleStackToggle: (wantRunning: boolean) => void;
@@ -81,7 +71,6 @@ export type MaintenanceController = {
   inspectTlsSidecar: () => void;
   applyStorage: () => void;
   recordPfupdateSuccess: (result: Extract<PfupdateApplyResult, { ok: true }>) => void;
-  saveRoutingMode: () => void;
   executePinReset: () => void;
   beginPinReset: () => boolean;
   cancelPinReset: () => void;
@@ -103,11 +92,6 @@ function createInitialState(): MaintenanceState {
     exportsHostPath: '',
     storageStatusText: '',
     softwareUpdateStatusText: '',
-    routingMode: null,
-    routingModeSaved: null,
-    complexRoutingLicensed: true,
-    openVisitCount: 0,
-    routingModeStatusText: '',
     pinResetStatusText: '',
     backupStatusText: '',
     tlsSidecarStatusText: '',
@@ -377,9 +361,6 @@ export function createMaintenanceController(
     setExportsPath(value) {
       patch({ exportsHostPath: value });
     },
-    setRoutingMode(routingMode) {
-      patch({ routingMode });
-    },
     browseImportsFolder() {
       return browseFolder(state.importsHostPath, (path) => patch({ importsHostPath: path }));
     },
@@ -623,52 +604,6 @@ export function createMaintenanceController(
     recordPfupdateSuccess(result) {
       recordPfupdateSuccess(result);
     },
-    saveRoutingMode() {
-      if (!state.routingMode) {
-        setSurfaceError('routing', 'Routing-Modus ist noch nicht geladen.');
-        return;
-      }
-      if (!beginOperation('routing')) {
-        return;
-      }
-      const routingMode = state.routingMode;
-      const generation = lifecycleGeneration;
-      patch({ routingModeStatusText: ROUTING_MODE_SAVE_PROGRESS_TEXT });
-      void deps.api
-        .setRoutingMode({ routingMode })
-        .then((result) => {
-          if (still(generation)) {
-            if (!result.ok) {
-              patch({ routingModeStatusText: '' });
-              setSurfaceError('routing', formatRoutingModeError(result));
-              return;
-            }
-            patch({
-              routingMode: result.routingMode,
-              routingModeSaved: result.routingMode,
-              complexRoutingLicensed: result.features.complexRoutingLicensed,
-              openVisitCount: 0,
-              routingModeStatusText: routingModeSuccessText(result.routingMode),
-            });
-          }
-          if (result.ok) {
-            deps.onAfterMutation?.();
-          }
-        })
-        .catch((error) => {
-          if (!still(generation)) {
-            return;
-          }
-          patch({ routingModeStatusText: '' });
-          setSurfaceError(
-            'routing',
-            errorMessage(error, 'Routing-Modus konnte nicht gespeichert werden.'),
-          );
-        })
-        .finally(() => {
-          endOperation('routing');
-        });
-    },
     executePinReset() {
       if (!startArmedOperation('pin')) {
         return;
@@ -738,10 +673,6 @@ export function createMaintenanceController(
         exportsHostPath: status.folders.exports,
         storageStatusText: '',
         softwareUpdateStatusText: '',
-        routingMode: null,
-        routingModeSaved: null,
-        openVisitCount: 0,
-        routingModeStatusText: '',
         pinResetStatusText: '',
         backupStatusText: '',
         tlsSidecarStatusText: '',
@@ -776,29 +707,7 @@ export function createMaintenanceController(
             );
           }
         });
-      const routingDone = deps.api
-        .getRoutingMode()
-        .then((routingCapabilities) => {
-          if (!still(generation)) {
-            return;
-          }
-          patch({
-            routingMode: routingCapabilities.routingMode,
-            routingModeSaved: routingCapabilities.routingMode,
-            complexRoutingLicensed: routingCapabilities.features.complexRoutingLicensed,
-            openVisitCount: Number(routingCapabilities.openVisitCount ?? 0),
-          });
-        })
-        .catch((error) => {
-          if (still(generation)) {
-            setSurfaceError(
-              'routing',
-              errorMessage(error, 'Wartungsdaten konnten nicht geladen werden.'),
-            );
-          }
-        });
-
-      void Promise.allSettled([logsDone, backupDone, routingDone]).then(() => {
+      void Promise.allSettled([logsDone, backupDone]).then(() => {
         if (!still(generation)) {
           return;
         }

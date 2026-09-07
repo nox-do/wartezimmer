@@ -17,6 +17,7 @@
   } = $props();
 
   let loading = $state(false);
+  let saving = $state(false);
 
   async function load() {
     loading = true;
@@ -30,19 +31,25 @@
   }
 
   async function setPortalEnabled(enabled: boolean) {
-    if (enabled === portalEnabled || disabled) {
+    if (enabled === portalEnabled || disabled || saving) {
       return;
     }
+    const previous = portalEnabled;
+    saving = true;
     portalEnabled = enabled;
-    const result = await patchOpsOnboarding({ portalEnabled: enabled });
-    if (!result.ok) {
-      portalEnabled = !enabled;
-      toastStore.error(result.error.message || t('ops.loadError'));
-      return;
-    }
-    portalEnabled = result.data.portalEnabled;
-    if (showSaveToast) {
-      toastStore.success(t('ops.portalSaveOk'));
+    try {
+      const result = await patchOpsOnboarding({ portalEnabled: enabled });
+      if (!result.ok) {
+        portalEnabled = previous;
+        toastStore.error(result.error.message || t('ops.loadError'));
+        return;
+      }
+      portalEnabled = result.data.portalEnabled;
+      if (showSaveToast) {
+        toastStore.success(t('ops.portalSaveOk'));
+      }
+    } finally {
+      saving = false;
     }
   }
 
@@ -58,7 +65,7 @@
 {#if loading}
   <p class="text-muted">{t('ui.loading')}</p>
 {:else}
-  <fieldset class="ops-setup-fieldset" disabled={disabled}>
+  <fieldset class="ops-setup-fieldset" disabled={disabled || saving} aria-busy={saving}>
     <legend class="sr-only">{t('ops.setup.portalTitle')}</legend>
     <label class="ops-setup-radio">
       <input

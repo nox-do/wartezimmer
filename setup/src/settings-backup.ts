@@ -19,6 +19,7 @@ import { readEnvMap } from './env-file.js';
 import { readManagerStateForBackup } from './manager-state.js';
 import type { SetupContext } from './setup-context.js';
 import { packTlsSidecarArchive } from './tls-backup-sidecar.js';
+import { maintenanceRequestHeaders } from './maintenance-auth.js';
 
 const DEFAULT_LOCAL_APP = LOCAL_MAINTENANCE_APP_BASE_URL;
 
@@ -81,6 +82,7 @@ export async function fetchSettingsDbSnapshotFromApp(
     `${localAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/settings/snapshot`,
     {
       method: 'GET',
+      headers: maintenanceRequestHeaders(),
       signal: AbortSignal.timeout(15_000),
     },
   );
@@ -148,7 +150,7 @@ export async function validateSettingsSnapshotWithApp(
       {
         method: 'POST',
         headers: {
-          'content-type': 'application/json',
+          ...maintenanceRequestHeaders({ 'content-type': 'application/json' }),
         },
         body: JSON.stringify(snapshot),
         signal: AbortSignal.timeout(15_000),
@@ -211,7 +213,7 @@ export async function importSettingsSnapshotViaApp(
       {
         method: 'POST',
         headers: {
-          'content-type': 'application/json',
+          ...maintenanceRequestHeaders({ 'content-type': 'application/json' }),
         },
         body: JSON.stringify(snapshot),
         signal: AbortSignal.timeout(60_000),

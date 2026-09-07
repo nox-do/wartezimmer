@@ -80,26 +80,6 @@ function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManager
       throw new Error('not used');
     },
     getPfbackupInfo: async () => ({ envPath: '/tmp/.env', latestBackupPath: null }),
-    getRoutingMode: async () => ({
-      routingMode: 'simple',
-      openVisitCount: 0,
-      features: {
-        complexRouting: false,
-        journeyDesigner: false,
-        routingSimulator: false,
-        complexRoutingLicensed: true,
-      },
-    }),
-    setRoutingMode: async () => ({
-      ok: true as const,
-      routingMode: 'simple' as const,
-      features: {
-        complexRouting: false,
-        journeyDesigner: false,
-        routingSimulator: false,
-        complexRoutingLicensed: true,
-      },
-    }),
     resetStaffPins: async () => ({
       ok: true,
       log: '',

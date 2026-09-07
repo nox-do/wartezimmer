@@ -9,6 +9,10 @@ import type { SettingsSnapshotImportViaAppReport } from './settings-backup.js';
 import type { SettingsSnapshotDbFromApp } from './settings-backup.js';
 import { resolveCanonicalBaseUrl } from './urls.js';
 import { buildExpectedDbSnapshotAfterImport } from './settings-snapshot-db-verify.js';
+import {
+  waitForExpectedStackHealth,
+  type WaitForStackHealthOptions,
+} from './stack-health.js';
 
 export const FRESH_DB_CUTOVER_PHASES = {
   moveDatabase: 'move_database',
@@ -65,6 +69,7 @@ export type FreshDbCutoverDeps = {
   ) => Promise<SettingsSnapshotImportViaAppReport>;
   exportDbSnapshot: (localAppBaseUrl: string) => Promise<SettingsSnapshotDbFromApp>;
   composeStatus: (runOptions: ComposeRunOptions) => Promise<ComposeStatus>;
+  stackHealthWaitOptions?: WaitForStackHealthOptions;
   runHealthChecks: (input: {
     localAppBaseUrl: string;
     lanAppBaseUrl: string | null;
@@ -216,7 +221,14 @@ export async function runFreshDbSettingsCutover(
     ]);
   }
 
-  const compose = await deps.composeStatus(input.runOptions);
+  const stackHealth = await waitForExpectedStackHealth(
+    deps.composeStatus,
+    input.runOptions,
+    deps.stackHealthWaitOptions,
+  );
+  if (!stackHealth.ok) {
+    return failure(FRESH_DB_CUTOVER_PHASES.healthCheck, stackHealth.errors);
+  }
   const lanAppBaseUrl = resolveCanonicalBaseUrl(
     input.envAfterWrite,
     input.envAfterWrite.get('SETUP_LAN_APP_IP'),
@@ -232,6 +244,6 @@ export async function runFreshDbSettingsCutover(
   return {
     ok: true,
     importResult,
-    compose,
+    compose: stackHealth.compose,
   };
 }

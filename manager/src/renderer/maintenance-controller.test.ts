@@ -104,26 +104,6 @@ function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManager
       restartLog: null,
     }),
     getPfbackupInfo: async () => ({ envPath: '/tmp/pf/.env', latestBackupPath: null }),
-    getRoutingMode: async () => ({
-      routingMode: 'simple',
-      openVisitCount: 0,
-      features: {
-        complexRouting: false,
-        journeyDesigner: false,
-        routingSimulator: false,
-        complexRoutingLicensed: true,
-      },
-    }),
-    setRoutingMode: async () => ({
-      ok: true as const,
-      routingMode: 'simple' as const,
-      features: {
-        complexRouting: false,
-        journeyDesigner: false,
-        routingSimulator: false,
-        complexRoutingLicensed: true,
-      },
-    }),
     resetStaffPins: async () => ({
       ok: true,
       log: '',
@@ -473,49 +453,10 @@ test('bootstrap applies other results when one request fails', async () => {
 
   assert.equal(controller.getState().errors.logs, 'logs down');
   assert.equal(controller.getState().latestBackupPath, '/tmp/latest.pfbackup');
-  assert.equal(controller.getState().routingMode, 'simple');
   assert.equal(controller.getState().activeOperation, null);
 });
 
-test('show resets routingMode until the new routing result arrives', async () => {
-  const routingGate = deferred<void>();
-  let routingCalls = 0;
-  const controller = createMaintenanceController(
-    createControllerDeps(
-      createMockApi({
-        getRoutingMode: async () => {
-          routingCalls += 1;
-          if (routingCalls > 1) {
-            await routingGate.promise;
-          }
-          return {
-            routingMode: 'simple' as const,
-            openVisitCount: 0,
-            features: {
-              complexRouting: false,
-              journeyDesigner: false,
-              routingSimulator: false,
-              complexRoutingLicensed: true,
-            },
-          };
-        },
-      }),
-    ),
-  );
-
-  controller.show(minimalHostStatus());
-  await flush();
-  assert.equal(controller.getState().routingMode, 'simple');
-
-  controller.show(minimalHostStatus());
-  assert.equal(controller.getState().routingMode, null);
-
-  routingGate.resolve();
-  await flush();
-  assert.equal(controller.getState().routingMode, 'simple');
-});
-
-test('bootstrap busy stays true until all three requests settle', async () => {
+test('bootstrap busy stays true until both requests settle', async () => {
   const backupGate = deferred<void>();
   const controller = createMaintenanceController(
     createControllerDeps(
@@ -531,7 +472,6 @@ test('bootstrap busy stays true until all three requests settle', async () => {
   controller.show(minimalHostStatus());
   await flush();
   assert.equal(controller.getState().activeOperation, 'bootstrap');
-  assert.equal(controller.getState().routingMode, 'simple');
   assert.equal(controller.getState().latestBackupPath, null);
 
   backupGate.resolve();
@@ -559,7 +499,6 @@ test('hide during bootstrap drops late results', async () => {
   await flush();
 
   assert.equal(controller.getState().latestBackupPath, null);
-  assert.equal(controller.getState().routingMode, null);
 });
 
 test('stale action finally does not clear busy after a new show', async () => {

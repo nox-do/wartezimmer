@@ -7,7 +7,7 @@ import Fastify from 'fastify';
 import { DatabaseSync } from 'node:sqlite';
 import { registerClientAuth } from './auth/client-auth.js';
 import { registerOpsSettingsRoutes } from './routes/ops/ops-settings-routes.js';
-import { registerOpsManagerMaintenanceRoutes } from './routes/ops/ops-manager-maintenance-routes.js';
+import { registerOpsManagerMaintenanceRoutes as registerMaintenanceRoutes } from './routes/ops/ops-manager-maintenance-routes.js';
 import { CoreDatabase } from './shared/db/database.js';
 import { createCurrentSchema } from './shared/db/create-current-schema.js';
 import { settingsDbSnapshotsEquivalentForRestore } from '@praxis-flow/server-shared';
@@ -16,6 +16,14 @@ import { withDefaultEnvForSnapshotParse } from './shared/settings/settings-snaps
 
 const ENV_KEYS = ['AUTH_ENABLED', 'AUTH_KEY_CAPTIVE', 'NODE_ENV'] as const;
 const savedEnv = new Map<string, string | undefined>();
+const TEST_MAINTENANCE_TOKEN = 'test-maintenance-token-with-sufficient-length';
+
+function registerOpsManagerMaintenanceRoutes(app: ReturnType<typeof Fastify>, db: CoreDatabase) {
+  app.addHook('onRequest', async (request) => {
+    request.headers.authorization ??= `Bearer ${TEST_MAINTENANCE_TOKEN}`;
+  });
+  registerMaintenanceRoutes(app, db, TEST_MAINTENANCE_TOKEN);
+}
 
 function saveEnv(): void {
   for (const key of ENV_KEYS) {
@@ -83,7 +91,27 @@ test('public app does not expose device authorization import', async (t) => {
   await app.close();
 });
 
-test('maintenance listener exports settings snapshot without auth headers', async (t) => {
+test('maintenance listener rejects missing and incorrect tokens', async () => {
+  const app = Fastify({ logger: false });
+  registerMaintenanceRoutes(app, {} as CoreDatabase, TEST_MAINTENANCE_TOKEN);
+  await app.ready();
+
+  const missing = await app.inject({
+    method: 'GET',
+    url: '/api/v1/ops/settings/capabilities',
+  });
+  const incorrect = await app.inject({
+    method: 'GET',
+    url: '/api/v1/ops/settings/capabilities',
+    headers: { authorization: 'Bearer wrong-token' },
+  });
+
+  assert.equal(missing.statusCode, 401);
+  assert.equal(incorrect.statusCode, 401);
+  await app.close();
+});
+
+test('maintenance listener exports settings snapshot with its installation token', async (t) => {
   saveEnv();
   t.after(restoreEnv);
   process.env.BUSINESS_TZ = 'Europe/Berlin';
@@ -148,7 +176,7 @@ test('maintenance validate endpoint rejects invalid settings snapshot', async ()
   await app.close();
 });
 
-test('maintenance patch rejects non-routingMode fields', async () => {
+test('maintenance listener does not expose a settings patch route', async () => {
   const app = Fastify({ logger: false });
   registerOpsManagerMaintenanceRoutes(app, {
     getOpsSettings: () => ({ routingMode: 'simple' }),
@@ -166,8 +194,7 @@ test('maintenance patch rejects non-routingMode fields', async () => {
     remoteAddress: '172.18.0.1',
   });
 
-  assert.equal(response.statusCode, 403);
-  assert.equal(response.json().code, 'AUTH_FORBIDDEN');
+  assert.equal(response.statusCode, 404);
   await app.close();
 });
 

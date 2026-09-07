@@ -10,7 +10,6 @@ export async function selectReleaseArchiveDialog(
     properties: ['openFile'],
     filters: [
       { name: 'Praxis Flow Erstinstallation', extensions: ['pfinstall'] },
-      { name: 'Alle Dateien', extensions: ['*'] },
     ],
   };
 
@@ -22,5 +21,9 @@ export async function selectReleaseArchiveDialog(
     return { canceled: true, path: null };
   }
 
-  return { canceled: false, path: result.filePaths[0] ?? null };
+  const selectedPath = result.filePaths[0] ?? null;
+  if (!selectedPath?.toLowerCase().endsWith('.pfinstall')) {
+    return { canceled: true, path: null };
+  }
+  return { canceled: false, path: selectedPath };
 }

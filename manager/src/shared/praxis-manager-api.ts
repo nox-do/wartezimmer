@@ -26,9 +26,6 @@ import type {
   HostRuntimeHealth,
   NetworkSnapshot,
   ResetStaffPinsResult,
-  RoutingModeCapabilities,
-  SetRoutingModeInput,
-  SetRoutingModeResult,
   SetupPlan,
   SetupPlanInput,
   SetupProbesResult,
@@ -98,8 +95,6 @@ export type PraxisManagerMaintenanceApi = {
   renewHostTlsFromPem(): Promise<TlsPemSetupResult>;
   getPfbackupInfo(): Promise<PfbackupInfo>;
   resetStaffPins(): Promise<ResetStaffPinsResult>;
-  getRoutingMode(): Promise<RoutingModeCapabilities>;
-  setRoutingMode(body: SetRoutingModeInput): Promise<SetRoutingModeResult>;
 };
 
 export type PraxisManagerApi = PraxisManagerSetupApi &

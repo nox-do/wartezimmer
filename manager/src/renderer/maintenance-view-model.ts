@@ -5,7 +5,6 @@ import {
 import type {
   HostStatus,
   LoadDeliveryImagesResult,
-  RoutingMode,
   StorageFoldersResult,
 } from '../shared/host-status.js';
 import { formatEnvBackupLabel } from '@praxis-flow/server-shared/env-backup';
@@ -203,21 +202,6 @@ export function softwareUpdateCurrentLabel(status: HostStatus): string {
 
 export function softwareUpdateInfoRows(status: HostStatus): MaintenanceInfoRow[] {
   return [{ label: 'Aktuell', value: softwareUpdateCurrentLabel(status) }];
-}
-
-export function routingModeSaveDisabled(
-  busy: boolean,
-  draft: RoutingMode | null,
-  saved: RoutingMode | null,
-  openVisitCount = 0,
-): boolean {
-  return busy || draft === null || saved === null || draft === saved || openVisitCount > 0;
-}
-
-export function routingModeSuccessText(routingMode: RoutingMode): string {
-  return routingMode === 'complex'
-    ? 'Complex Routing aktiv — Journey-UI in MFA nach Reload sichtbar.'
-    : 'Simple Routing aktiv.';
 }
 
 export function fileSharingHintText(hostPlatform: string): string | null {

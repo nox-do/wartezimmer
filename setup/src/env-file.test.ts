@@ -85,6 +85,7 @@ test('writeEnvFromExample preserves keys that are only commented in the template
         practiceDisplayName: 'Neu',
         secrets: {
           AUTH_KEY_CAPTIVE: 'captive',
+          MAINTENANCE_TOKEN: 'maintenance',
           SANDBOX_INTERNAL_TOKEN: 'sandbox',
           OPENNDS_FAS_KEY: 'fas',
         },

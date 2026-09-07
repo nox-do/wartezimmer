@@ -1,4 +1,4 @@
-import type { HostStatus, RoutingMode } from '../shared/host-status.js';
+import type { HostStatus } from '../shared/host-status.js';
 import {
   inferReachabilityFields,
   type ReachabilityFieldState,
@@ -13,8 +13,6 @@ export type WizardInitialFields = {
   reachabilityMode: ReachabilityMode;
   customHostname: string;
   proxyEnabled: boolean;
-  /** null until getRoutingMode() hydrates — never show a fake default. */
-  routingMode: RoutingMode | null;
 };
 
 export function initialStorageFolderPaths(status: HostStatus | null): {
@@ -60,7 +58,6 @@ export function createInitialWizardFields(status: HostStatus | null): WizardInit
     ...lan,
     ...initialStorageFolderPaths(status),
     ...inferReachabilityFields(status),
-    routingMode: null,
   };
 }
 

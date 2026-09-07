@@ -27,6 +27,7 @@ import { readManagerState } from './manager-state.js';
 import type { SetupContext } from './setup-context.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL } from './urls.js';
 import { validatePfbackupContent, validateSettingsSnapshotWithApp } from './settings-backup.js';
+import { maintenanceRequestHeaders } from './maintenance-auth.js';
 
 const HOST_PATH_ENV_KEYS = [
   'IMPORTS_HOST_PATH',
@@ -257,7 +258,7 @@ export async function checkMaintenanceAppReachable(
   try {
     const response = await fetch(
       `${localAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/settings/capabilities`,
-      { signal: AbortSignal.timeout(5_000) },
+      { headers: maintenanceRequestHeaders(), signal: AbortSignal.timeout(5_000) },
     );
     return response.ok;
   } catch {

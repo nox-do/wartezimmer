@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { RoutingModeCapabilities, TlsPrepareInput } from '../shared/host-status.js';
+import type { TlsPrepareInput } from '../shared/host-status.js';
 import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import { createWizardController, wizardManagedPrepareErrorFooter } from './wizard-controller.js';
 import { TLS_LEASE_STALE_LAN_COPY, TLS_RESET_CONFIRM_MESSAGE } from './tls-network-view-model.js';
@@ -78,44 +78,6 @@ test('goBack does not leave completed wizard', () => {
   assert.equal(controller.getState().step, 8);
 });
 
-test('entering routing step waits for server routing mode', async () => {
-  const routingMode = deferred<RoutingModeCapabilities>();
-  const controller = createWizardController({
-    api: {
-      getRoutingMode: () => routingMode.promise,
-    } as never,
-    onComplete: () => {},
-    onCancel: () => {},
-  });
-
-  controller.show(minimalHostStatus(), 'embedded');
-
-  const advance = controller.goNext();
-  await Promise.resolve();
-
-  assert.equal(controller.getState().step, 2);
-  assert.equal(controller.getState().busy, true);
-  assert.equal(controller.getState().routingCapabilitiesStatus, 'loading');
-  assert.equal(controller.getState().routingMode, null);
-
-  routingMode.resolve({
-    routingMode: 'complex',
-    openVisitCount: 0,
-    features: {
-      complexRouting: true,
-      journeyDesigner: true,
-      routingSimulator: true,
-      complexRoutingLicensed: true,
-    },
-  });
-  await advance;
-
-  assert.equal(controller.getState().step, 2);
-  assert.equal(controller.getState().busy, false);
-  assert.equal(controller.getState().routingCapabilitiesStatus, 'ready');
-  assert.equal(controller.getState().routingMode, 'complex');
-});
-
 test('wizardNextButtonLabel adapts to step', () => {
   const base = createWizardController({
     api: {} as never,
@@ -128,10 +90,6 @@ test('wizardNextButtonLabel adapts to step', () => {
   assert.equal(wizardNextButtonLabel({ ...base, step: 6, httpsPhase: 'offer' }), 'Weiter');
   assert.equal(wizardNextButtonLabel({ ...base, step: 6, httpsPhase: 'mail' }), 'Vorschau laden');
   assert.equal(wizardNextButtonLabel({ ...base, step: 7 }), 'Anwenden');
-  assert.equal(
-    wizardNextButtonLabel({ ...base, step: 2, routingCapabilitiesStatus: 'error' }),
-    'Erneut versuchen',
-  );
   assert.equal(
     wizardNextButtonLabel({ ...base, step: 8, applyResult: null, busy: true }),
     'Bitte warten …',
@@ -189,51 +147,6 @@ test('wizardNextButtonDisabled blocks step 1 until prerequisites ready', () => {
       }),
     }),
     true,
-  );
-});
-
-test('wizardNextButtonDisabled blocks routing step until mode is hydrated', () => {
-  const base = createWizardController({
-    api: {} as never,
-    onComplete: () => {},
-    onCancel: () => {},
-  }).getState();
-
-  assert.equal(
-    wizardNextButtonDisabled({
-      ...base,
-      step: 2,
-      routingCapabilitiesStatus: 'loading',
-      routingMode: null,
-    }),
-    true,
-  );
-  assert.equal(
-    wizardNextButtonDisabled({
-      ...base,
-      step: 2,
-      routingCapabilitiesStatus: 'ready',
-      routingMode: null,
-    }),
-    true,
-  );
-  assert.equal(
-    wizardNextButtonDisabled({
-      ...base,
-      step: 2,
-      routingCapabilitiesStatus: 'ready',
-      routingMode: 'simple',
-    }),
-    false,
-  );
-  assert.equal(
-    wizardNextButtonDisabled({
-      ...base,
-      step: 2,
-      routingCapabilitiesStatus: 'error',
-      routingMode: null,
-    }),
-    false,
   );
 });
 
@@ -1236,7 +1149,6 @@ test('failed apply on step 8 can be retried without leaving the step', async () 
           { id: 'app.health.lan', ok: true, message: 'ok' },
         ],
       }),
-      setRoutingMode: async () => {},
     } as never,
     onComplete: () => {},
     onCancel: () => {},
@@ -1245,7 +1157,6 @@ test('failed apply on step 8 can be retried without leaving the step', async () 
   controller.show(minimalHostStatus(), 'embedded');
   controller.patchFields({
     step: 7,
-    routingMode: 'simple',
     lanAppIp: '192.168.1.10',
   });
   await controller.goNext();
@@ -1302,7 +1213,6 @@ test('apply after hide still reports the host mutation once', async () => {
   controller.show(minimalHostStatus(), 'embedded');
   controller.patchFields({
     step: 7,
-    routingMode: 'simple',
     lanAppIp: '192.168.1.10',
   });
   const pending = controller.goNext();

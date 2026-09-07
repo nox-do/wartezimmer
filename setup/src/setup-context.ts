@@ -8,6 +8,8 @@ import {
   resolveInstallHomeFromEnv,
 } from './install-home.js';
 import { findProjectRootOptional } from './project-root.js';
+import { readEnvMap, writeEnvRecordAtomically } from './env-file.js';
+import { generateToken, isWeakGeneratedSecret } from './secrets.js';
 
 export type SetupMode = 'repo' | 'install';
 
@@ -60,6 +62,37 @@ function bootstrapFilesForProfile(): readonly string[] {
   return profile === 'dev' ? DEV_BOOTSTRAP_FILES : DELIVERY_BOOTSTRAP_FILES;
 }
 
+export function migrateMaintenanceToken(
+  installHome: string,
+  generate: () => string = () => generateToken(),
+): { migrated: boolean; token: string | null } {
+  const envPath = path.join(installHome, '.env');
+  if (!fs.existsSync(envPath)) {
+    return { migrated: false, token: null };
+  }
+
+  const env = readEnvMap(envPath);
+  const current = env.get('MAINTENANCE_TOKEN')?.trim() ?? '';
+  if (!isWeakGeneratedSecret('MAINTENANCE_TOKEN', current)) {
+    return { migrated: false, token: current };
+  }
+
+  const token = generate();
+  if (isWeakGeneratedSecret('MAINTENANCE_TOKEN', token)) {
+    throw new Error('SETUP_MAINTENANCE_TOKEN_GENERATION_FAILED');
+  }
+  writeEnvRecordAtomically(envPath, {
+    ...Object.fromEntries(env),
+    MAINTENANCE_TOKEN: token,
+  });
+  return { migrated: true, token };
+}
+
+function finalizeSetupContext(context: SetupContext): SetupContext {
+  migrateMaintenanceToken(context.home);
+  return context;
+}
+
 export function ensureInstallHomeLayout(installHome: string, templateRoot: string): string[] {
   fs.mkdirSync(installHome, { recursive: true });
   fs.mkdirSync(path.join(installHome, 'state'), { recursive: true });
@@ -88,32 +121,32 @@ export function resolveSetupContext(startDir = process.cwd()): SetupContext {
   if (explicitHome) {
     const home = path.resolve(explicitHome);
     ensureInstallHomeLayout(home, templateRoot);
-    return {
+    return finalizeSetupContext({
       home,
       mode: 'install',
       composeProjectName: resolveComposeProjectName(home),
       templateRoot,
-    };
+    });
   }
 
   const repoRoot = findProjectRootOptional(startDir);
   if (repoRoot) {
-    return {
+    return finalizeSetupContext({
       home: repoRoot,
       mode: 'repo',
       composeProjectName: process.env.COMPOSE_PROJECT_NAME?.trim() || 'praxis-flow',
       templateRoot: repoRoot,
-    };
+    });
   }
 
   const home = resolveInstallHome();
   ensureInstallHomeLayout(home, templateRoot);
-  return {
+  return finalizeSetupContext({
     home,
     mode: 'install',
     composeProjectName: resolveComposeProjectName(home),
     templateRoot,
-  };
+  });
 }
 
 export function describeInstallHomeTargets(): {

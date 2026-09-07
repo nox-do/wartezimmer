@@ -11,6 +11,7 @@ import { readManagerState } from './manager-state.js';
 import { extractPfupdateArchive, validateExtractedPfupdate } from './pfupdate-package.js';
 import { resolveCurrentSettingsFormatVersion } from './settings-format-version.js';
 import type { SetupContext } from './setup-context.js';
+import { requirePackageFileExtension } from './package-file-extension.js';
 
 export type { PfupdateInspectInput };
 
@@ -67,13 +68,17 @@ export async function inspectPfupdate(
     deps.resolveSettingsFormatVersion ?? resolveCurrentSettingsFormatVersion;
 
   try {
+    requirePackageFileExtension(archivePath, '.pfupdate');
+    if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(input.managerVersion?.trim() ?? '')) {
+      throw new Error('Gültige Manager-Version ist für die Update-Prüfung erforderlich.');
+    }
     extractArchive(archivePath, stagingDir);
 
     const settingsFormatVersion =
       input.settingsFormatVersion ?? (await resolveSettingsFormatVersion());
 
     const validation = validatePackage(stagingDir, {
-      managerVersion: input.managerVersion ?? undefined,
+      managerVersion: input.managerVersion,
       settingsFormatVersion,
     });
 

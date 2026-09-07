@@ -29,9 +29,6 @@ import type {
   HostRuntimeHealth,
   NetworkSnapshot,
   ResetStaffPinsResult,
-  RoutingModeCapabilities,
-  SetRoutingModeInput,
-  SetRoutingModeResult,
   SetupPlan,
   SetupPlanInput,
   SetupProbesResult,
@@ -259,7 +256,7 @@ async function inspectPfupdate(body: PfupdateInspectInput): Promise<PfupdateInsp
     path: '/api/setup/host/update/inspect',
     body: {
       ...body,
-      managerVersion: body.managerVersion ?? managerVersion,
+      managerVersion,
     },
   });
 }
@@ -270,7 +267,7 @@ async function applyPfupdate(body: PfupdateApplyInput): Promise<PfupdateApplyRes
     path: '/api/setup/host/update/apply',
     body: {
       ...body,
-      managerVersion: body.managerVersion ?? managerVersion,
+      managerVersion,
     },
   });
 }
@@ -357,20 +354,6 @@ async function resetStaffPins(): Promise<ResetStaffPinsResult> {
   });
 }
 
-async function getRoutingMode(): Promise<RoutingModeCapabilities> {
-  return callSetupApi<RoutingModeCapabilities>({
-    method: 'GET',
-    path: '/api/setup/host/routing-mode',
-  });
-}
-
-async function setRoutingMode(body: SetRoutingModeInput): Promise<SetRoutingModeResult> {
-  return callSetupApi<SetRoutingModeResult>({
-    method: 'POST',
-    path: '/api/setup/host/routing-mode',
-    body,
-  });
-}
 
 async function openExternalUrl(url: string): Promise<void> {
   await invokeMain<void>(IPC_OPEN_EXTERNAL_URL, url);
@@ -416,8 +399,6 @@ contextBridge.exposeInMainWorld('praxisManager', {
   renewHostTlsFromPem,
   getPfbackupInfo,
   resetStaffPins,
-  getRoutingMode,
-  setRoutingMode,
   runSetupProbes,
   openExternalUrl,
 });

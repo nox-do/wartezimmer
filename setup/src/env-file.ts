@@ -73,6 +73,7 @@ export function writeEnvFromExample(
   const preserve = new Set(options?.preserveExistingKeys ?? []);
   const overrides = new Map<string, string>([
     ['AUTH_KEY_CAPTIVE', merge.secrets.AUTH_KEY_CAPTIVE],
+    ['MAINTENANCE_TOKEN', merge.secrets.MAINTENANCE_TOKEN],
     ['SANDBOX_INTERNAL_TOKEN', merge.secrets.SANDBOX_INTERNAL_TOKEN],
     ['OPENNDS_FAS_KEY', merge.secrets.OPENNDS_FAS_KEY],
   ]);

@@ -13,7 +13,7 @@ export async function buildMaintenanceApp(): Promise<FastifyInstance> {
 
   registerDefaultErrorHandler(app);
 
-  registerOpsManagerMaintenanceRoutes(app, db);
+  registerOpsManagerMaintenanceRoutes(app, db, process.env.MAINTENANCE_TOKEN ?? '');
 
   return app;
 }

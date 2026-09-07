@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { maintenanceRequestHeaders } from './maintenance-auth.js';
 import { APP_DB_BASENAME } from './app-data-volume.js';
 
 export type DeviceAuthorizationAsideRow = {
@@ -111,7 +112,7 @@ export async function copyDeviceAuthorizationsFromAsideViaApp(
       `${localMaintenanceAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/device-authorizations/import`,
       {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: maintenanceRequestHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ authorizations: rows }),
         signal: AbortSignal.timeout(30_000),
       },

@@ -4,7 +4,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { PRAXIS_FLOW_PROXY_IMAGE_REF } from '@praxis-flow/server-shared';
+import {
+  PRAXIS_FLOW_PROXY_IMAGE_REF,
+  PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+} from '@praxis-flow/server-shared';
 import {
   auditDeliveryImages,
   classifyPraxisFlowImages,
@@ -45,6 +48,27 @@ function packBundleSource(bundleRoot: string, archivePath: string): void {
     encoding: 'utf8',
   });
   assert.equal(packed.status, 0, packed.stderr || 'tar pack failed');
+}
+
+function testReleaseManifest() {
+  return {
+    installFormatVersion: 1 as const,
+    version: '1.4.2',
+    archive: 'release.pfinstall',
+    sha256: 'a'.repeat(64),
+    images: {
+      app: 'praxis-flow/app:1.4.2',
+      sandbox: 'praxis-flow/sandbox:1.4.2',
+      proxy: PRAXIS_FLOW_PROXY_IMAGE_REF,
+    },
+    imageDigests: {
+      proxy: {
+        registryDigest: PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+        archiveImageId: `sha256:${'d'.repeat(64)}`,
+        platform: `linux/${process.arch === 'x64' ? 'amd64' : process.arch}`,
+      },
+    },
+  };
 }
 
 test('parseDockerLoadOutput extracts repository tags', () => {
@@ -261,7 +285,6 @@ test('loadDeliveryImagesFromArchive rejects image-only archives before docker lo
   const source = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-image-only-source-'));
   let dockerLoadCalled = false;
   try {
-    fs.writeFileSync(path.join(root, '.env'), 'PRACTICE_DISPLAY_NAME=Praxis Flow\n');
     fs.writeFileSync(path.join(source, 'legacy-images.tar'), 'old images');
     const archivePath = path.join(root, 'praxis-flow-1.4.2.pfinstall');
     const packed = spawnSync('tar', ['-czf', archivePath, '-C', source, 'legacy-images.tar'], {
@@ -281,6 +304,7 @@ test('loadDeliveryImagesFromArchive rejects image-only archives before docker lo
               expectedSha256: 'c'.repeat(64),
               sha256Source: 'manifest.json',
               releaseVersion: '1.4.2',
+              manifest: testReleaseManifest(),
             }),
             dockerLoadArchive: async () => {
               dockerLoadCalled = true;
@@ -292,10 +316,7 @@ test('loadDeliveryImagesFromArchive rejects image-only archives before docker lo
     );
 
     assert.equal(dockerLoadCalled, false);
-    assert.equal(
-      fs.readFileSync(path.join(root, '.env'), 'utf8'),
-      'PRACTICE_DISPLAY_NAME=Praxis Flow\n',
-    );
+    assert.equal(fs.existsSync(path.join(root, '.env')), false);
     assert.equal(fs.existsSync(managerStatePath(root)), false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -323,7 +344,7 @@ test('loadDeliveryImagesFromArchive rejects unsafe tar entry types before extrac
         assert.equal(fifo.status, 0, fifo.stderr || 'mkfifo failed');
       }
 
-      const archivePath = path.join(root, 'release.tar.gz');
+      const archivePath = path.join(root, 'release.pfinstall');
       packBundleSource(bundleRoot, archivePath);
       await assert.rejects(
         () =>
@@ -337,6 +358,7 @@ test('loadDeliveryImagesFromArchive rejects unsafe tar entry types before extrac
                 expectedSha256: 'd'.repeat(64),
                 sha256Source: 'manifest.json',
                 releaseVersion: '1.4.2',
+                manifest: testReleaseManifest(),
               }),
               dockerLoadArchive: async () => ({
                 ok: true,
@@ -399,6 +421,7 @@ test('loadDeliveryImagesFromArchive installs templates from a complete release b
           expectedSha256: 'e'.repeat(64),
           sha256Source: 'manifest.json',
           releaseVersion: '1.4.2',
+          manifest: testReleaseManifest(),
         }),
         dockerLoadArchive: async (loadedArchive) => {
           assert.equal(path.basename(loadedArchive), 'praxis-flow-images.tar');
@@ -412,6 +435,11 @@ test('loadDeliveryImagesFromArchive installs templates from a complete release b
             log: 'loaded',
           };
         },
+        imageExists: async () => true,
+        inspectImage: async (ref) => ({
+          imageId: ref === PRAXIS_FLOW_PROXY_IMAGE_REF ? `sha256:${'d'.repeat(64)}` : 'sha256:test',
+          platform: `linux/${process.arch === 'x64' ? 'amd64' : process.arch}`,
+        }),
         auditDeliveryImages: async () => ({
           required: true,
           configured: true,
@@ -441,5 +469,129 @@ test('loadDeliveryImagesFromArchive installs templates from a complete release b
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
     fs.rmSync(bundleRoot, { recursive: true, force: true });
+  }
+});
+
+test('pfinstall leaves live templates unchanged when docker load fails', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-pfinstall-load-rollback-'));
+  const bundleRoot = createBundleSource();
+  try {
+    const archivePath = path.join(root, 'release.pfinstall');
+    packBundleSource(bundleRoot, archivePath);
+    const composePath = path.join(root, 'docker-compose.delivery.yml');
+    fs.writeFileSync(composePath, 'old-compose-bytes\n');
+
+    await assert.rejects(
+      loadDeliveryImagesFromArchive(
+        root,
+        archivePath,
+        { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
+        {
+          verifyReleaseArchiveSha256: () => ({
+            sha256: 'a'.repeat(64),
+            expectedSha256: 'a'.repeat(64),
+            sha256Source: 'manifest.json',
+            releaseVersion: '1.4.2',
+            manifest: testReleaseManifest(),
+          }),
+          dockerLoadArchive: async () => ({ ok: false, loaded: [], log: 'load failed' }),
+        },
+      ),
+      /DOCKER_LOAD_FAILED/,
+    );
+    assert.equal(fs.readFileSync(composePath, 'utf8'), 'old-compose-bytes\n');
+    assert.equal(fs.existsSync(path.join(root, '.env')), false);
+    assert.equal(fs.existsSync(managerStatePath(root)), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(bundleRoot, { recursive: true, force: true });
+  }
+});
+
+test('pfinstall rolls host files back when post-commit audit fails', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-pfinstall-audit-rollback-'));
+  const bundleRoot = createBundleSource();
+  try {
+    const archivePath = path.join(root, 'release.pfinstall');
+    packBundleSource(bundleRoot, archivePath);
+    const composePath = path.join(root, 'docker-compose.delivery.yml');
+    fs.writeFileSync(composePath, 'old-compose-bytes\n');
+
+    await assert.rejects(
+      loadDeliveryImagesFromArchive(
+        root,
+        archivePath,
+        { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
+        {
+          verifyReleaseArchiveSha256: () => ({
+            sha256: 'b'.repeat(64),
+            expectedSha256: 'b'.repeat(64),
+            sha256Source: 'manifest.json',
+            releaseVersion: '1.4.2',
+            manifest: testReleaseManifest(),
+          }),
+          dockerLoadArchive: async () => ({
+            ok: true,
+            loaded: [
+              'praxis-flow/app:1.4.2',
+              'praxis-flow/sandbox:1.4.2',
+              PRAXIS_FLOW_PROXY_IMAGE_REF,
+            ],
+            log: 'loaded',
+          }),
+          imageExists: async () => true,
+          inspectImage: async (ref) => ({
+            imageId:
+              ref === PRAXIS_FLOW_PROXY_IMAGE_REF ? `sha256:${'d'.repeat(64)}` : 'sha256:test',
+            platform: `linux/${process.arch === 'x64' ? 'amd64' : process.arch}`,
+          }),
+          auditDeliveryImages: async () => ({
+            required: true,
+            configured: true,
+            appImage: 'praxis-flow/app:1.4.2',
+            sandboxImage: 'praxis-flow/sandbox:1.4.2',
+            releaseVersion: '1.4.2',
+            archiveSha256: 'b'.repeat(64),
+            appPresent: false,
+            sandboxPresent: true,
+            ready: false,
+          }),
+        },
+      ),
+      /RELEASE_IMAGE_AUDIT_FAILED.*unreferenced cache/,
+    );
+    assert.equal(fs.readFileSync(composePath, 'utf8'), 'old-compose-bytes\n');
+    assert.equal(fs.existsSync(path.join(root, '.env')), false);
+    assert.equal(fs.existsSync(managerStatePath(root)), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(bundleRoot, { recursive: true, force: true });
+  }
+});
+
+test('pfinstall rejects an existing installation before docker load', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-pfinstall-existing-'));
+  let dockerLoadCalled = false;
+  try {
+    fs.writeFileSync(path.join(root, '.env'), 'AUTH_ENABLED=true\n');
+    const archivePath = path.join(root, 'release.pfinstall');
+    fs.writeFileSync(archivePath, 'not inspected');
+    await assert.rejects(
+      loadDeliveryImagesFromArchive(
+        root,
+        archivePath,
+        { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
+        {
+          dockerLoadArchive: async () => {
+            dockerLoadCalled = true;
+            return { ok: true, loaded: [], log: '' };
+          },
+        },
+      ),
+      /PFINSTALL_EXISTING_INSTALLATION/,
+    );
+    assert.equal(dockerLoadCalled, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });

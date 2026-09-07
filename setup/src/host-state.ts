@@ -14,6 +14,7 @@ import {
   resolveHomeFolders,
   type ComposeStatus,
 } from './docker.js';
+import { withExpectedStackRunning } from './stack-health.js';
 import {
   backupEnvFile,
   readEnvMap,
@@ -44,7 +45,6 @@ import {
   auditDeliveryImages,
   loadDeliveryImagesFromArchive,
   resolveDeliveryImageConfig,
-  writeDeliveryImageEnvFromState,
 } from './delivery-images.js';
 import { readManagerState, releaseEnvFromManagerState } from './manager-state.js';
 import {
@@ -112,10 +112,6 @@ import type { ProxyConfigInput } from '@praxis-flow/server-shared';
 import { readTlsStatus, TLS_ENV_KEYS } from './host-tls.js';
 import { PROXY_TLS_RUNTIME_ENV_KEYS } from './proxy-tls.js';
 import { isTlsPreparationInProgressEnv, tlsPreparationLanIpSyncUpdates } from './tls-env.js';
-import {
-  getRoutingModeCapabilities as readRoutingModeCapabilities,
-  setRoutingMode as persistRoutingMode,
-} from './routing-mode.js';
 
 export type {
   ApplySetupOptions,
@@ -249,7 +245,8 @@ export async function getComposeStatus(ctx: SetupContext): Promise<ComposeStatus
     return { running: false, services: [] };
   }
   const envMap = readEnvMap(envPath);
-  return composePs(resolveComposeRunOptions(ctx, envMap));
+  const runOptions = resolveComposeRunOptions(ctx, envMap);
+  return withExpectedStackRunning(await composePs(runOptions), runOptions);
 }
 
 export async function runComposeAction(
@@ -289,7 +286,7 @@ export async function runComposeAction(
     }
   }
 
-  const compose = await composePs(runOptions);
+  const compose = withExpectedStackRunning(await composePs(runOptions), runOptions);
   return { ...result, compose };
 }
 
@@ -495,7 +492,8 @@ export async function readComposeForHost(
     return null;
   }
   try {
-    return await composePs(resolveComposeRunOptions(ctx, envMap));
+    const runOptions = resolveComposeRunOptions(ctx, envMap);
+    return withExpectedStackRunning(await composePs(runOptions), runOptions);
   } catch {
     return { running: false, services: [] };
   }
@@ -894,7 +892,6 @@ export async function loadDeliveryImages(
 ): Promise<LoadDeliveryImagesResult> {
   const docker = await detectDocker();
   const result = await loadDeliveryImagesFromArchive(ctx.home, input.archivePath, docker);
-  writeDeliveryImageEnvFromState(ctx.home);
 
   let composeRestarted = false;
   let compose: ComposeStatus | null = null;
@@ -1100,15 +1097,4 @@ export async function saveStorageFolders(
     compose,
     restartLog,
   };
-}
-
-export async function getHostRoutingModeCapabilities(ctx: SetupContext) {
-  return readRoutingModeCapabilities(ctx.composeProjectName);
-}
-
-export async function setHostRoutingMode(
-  ctx: SetupContext,
-  input: { routingMode: 'simple' | 'complex' },
-) {
-  return persistRoutingMode(ctx.composeProjectName, input.routingMode);
 }

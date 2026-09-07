@@ -9,7 +9,9 @@ import {
   PFUPDATE_ALLOWED_FILE_PATHS,
   PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS,
   PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS,
+  PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS,
   PRAXIS_FLOW_PROXY_IMAGE_REF,
+  PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
   serializePfupdateManifest,
   type PfupdateAllowedFilePath,
 } from '@praxis-flow/server-shared';
@@ -48,7 +50,7 @@ export function buildTestPfupdateArchive(
       : versionOrOptions;
   const version = options.version ?? defaultReleaseVersion;
   const withGateway = options.withGateway === true;
-  const withProxy = options.withProxy === true;
+  const withProxy = options.withProxy !== false;
   const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-build-'));
   try {
     const imagesTar = path.join(staging, 'images', 'praxis-flow-images.tar');
@@ -83,6 +85,9 @@ export function buildTestPfupdateArchive(
           : 'services: {}\n';
         fileEntries.push(writeFileDigest(staging, relativePath, content));
       }
+      for (const relativePath of PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS) {
+        fileEntries.push(writeFileDigest(staging, relativePath, 'test license notice\n'));
+      }
     }
 
     const allowed = new Set<string>(PFUPDATE_ALLOWED_FILE_PATHS);
@@ -99,6 +104,17 @@ export function buildTestPfupdateArchive(
         ...(withGateway ? { gateway: `praxis-flow/gateway:${version}` } : {}),
         ...(withProxy ? { proxy: PRAXIS_FLOW_PROXY_IMAGE_REF } : {}),
       },
+      ...(withProxy
+        ? {
+            imageDigests: {
+              proxy: {
+                registryDigest: PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+                archiveImageId: `sha256:${'d'.repeat(64)}`,
+                platform: `linux/${process.arch === 'x64' ? 'amd64' : process.arch}`,
+              },
+            },
+          }
+        : {}),
       files: fileEntries.map((entry) => ({
         path: entry.path as PfupdateAllowedFilePath,
         sha256: entry.sha256,

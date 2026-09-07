@@ -111,6 +111,10 @@ function mockDeps(appDataDir: string, backupPath: string) {
     createSettingsBackup: async () => ({ envPath: '', backupPath }),
     dockerLoad: async () => ({ ok: true, loaded: [], log: 'loaded' }),
     imageExists: async () => true,
+    inspectImage: async () => ({
+      imageId: `sha256:${'d'.repeat(64)}`,
+      platform: `linux/${process.arch === 'x64' ? 'amd64' : process.arch}`,
+    }),
     stopStack: async () => ({ ok: true, log: 'stopped' }),
     startAppStack: async () => ({ ok: true, log: 'app started', gatewaySkipped: false }),
     startFullStack: async () => ({ ok: true, log: 'full stack started', gatewaySkipped: false }),
@@ -131,7 +135,13 @@ function mockDeps(appDataDir: string, backupPath: string) {
       authSettings: sampleSettings.authSettings,
       messagingProviderConfigs: sampleSettings.messagingProviderConfigs,
     }),
-    composeStatus: async () => ({ running: true, services: [] }),
+    composeStatus: async () => ({
+      running: true,
+      services: [
+        { name: 'app', service: 'app', state: 'running', health: 'healthy' },
+        { name: 'sandbox', service: 'sandbox', state: 'running', health: 'healthy' },
+      ],
+    }),
     runHealthChecks: async () => ({ ok: true, errors: [] }),
     appDataAccess: createLocalAppDataAccess(appDataDir),
   };
@@ -162,6 +172,10 @@ test('applyPfupdate succeeds and writes new image tags', async () => {
     assert.equal(env.get('PRAXIS_FLOW_SANDBOX_IMAGE'), 'praxis-flow/sandbox:2026.08.0');
     // Product packages omit gateway; existing lab image ref is preserved.
     assert.equal(env.get('PRAXIS_FLOW_GATEWAY_IMAGE'), 'praxis-flow/gateway:2026.07.1');
+    assert.match(
+      fs.readFileSync(path.join(dir, '.env.example'), 'utf8'),
+      /PRAXIS_FLOW_APP_IMAGE=praxis-flow\/app:2026\.08\.0/,
+    );
 
     const manager = readManagerState(dir);
     assert.equal(manager.release?.releaseVersion, '2026.08.0');
@@ -231,6 +245,8 @@ test('applyPfupdate rolls back when import fails', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-apply-fail-'));
   const archivePath = path.join(dir, 'update.pfupdate');
   const { envPath, appDataDir, backupPath } = seedInstallHome(dir);
+  const envExamplePath = path.join(dir, '.env.example');
+  fs.writeFileSync(envExamplePath, 'OLD_TEMPLATE=byte-identical\n');
   buildTestPfupdateArchive(archivePath, '2026.08.0');
 
   const deps = {
@@ -256,6 +272,7 @@ test('applyPfupdate rolls back when import fails', async () => {
     assert.equal(env.get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:2026.07.1');
     const manager = readManagerState(dir);
     assert.equal(manager.release?.releaseVersion, '2026.07.1');
+    assert.equal(fs.readFileSync(envExamplePath, 'utf8'), 'OLD_TEMPLATE=byte-identical\n');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -286,6 +303,42 @@ test('applyPfupdate validates its backup before stopping the stack', async () =>
     if (!result.ok) {
       assert.equal(result.failedPhase, UPDATE_PHASES.createSettingsBackup);
       assert.equal(result.rollbackAttempted, false);
+    }
+    assert.equal(stopCalls, 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('applyPfupdate rejects a wrong app platform before stopping the stack', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-platform-'));
+  const archivePath = path.join(dir, 'update.pfupdate');
+  const { appDataDir, backupPath } = seedInstallHome(dir);
+  buildTestPfupdateArchive(archivePath, '2026.08.0');
+  let stopCalls = 0;
+  const hostPlatform = `linux/${process.arch === 'x64' ? 'amd64' : process.arch}`;
+
+  try {
+    const result = await applyPfupdate(
+      { archivePath, managerVersion: '0.2.0', settingsFormatVersion: 1 },
+      testCtx(dir),
+      {
+        ...mockDeps(appDataDir, backupPath),
+        inspectImage: async (ref) => ({
+          imageId: `sha256:${'d'.repeat(64)}`,
+          platform: ref.includes('/app:') ? 'linux/wrong-architecture' : hostPlatform,
+        }),
+        stopStack: async () => {
+          stopCalls += 1;
+          return { ok: true, log: 'stopped' };
+        },
+      },
+    );
+
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.failedPhase, UPDATE_PHASES.loadImages);
+      assert.match(result.errors.join(' '), /PFUPDATE_PLATFORM_MISMATCH.*praxis-flow\/app/);
     }
     assert.equal(stopCalls, 0);
   } finally {

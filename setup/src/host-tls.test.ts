@@ -377,6 +377,25 @@ test('generated Caddyfile keeps HTTP app before cutover and uses ACME-DNS withou
   assert.doesNotMatch(caddyfile, /resolvers coredns/);
 });
 
+test('generated managed and custom Caddyfiles expose the dedicated internal TLS health site', () => {
+  for (const mode of ['managed', 'custom'] as const) {
+    const caddyfile = generateTlsCaddyfile(
+      {
+        ...emptyTlsStatus(),
+        state: 'dns-verified',
+        mode,
+        hostname: 'flow.praxis-meyer.de',
+        installationId: 'test-installation',
+      },
+      new Map(),
+    );
+    assert.match(
+      caddyfile,
+      /https:\/\/127\.0\.0\.1 \{\n\ttls internal\n\trespond \/__praxis-flow\/health "ok" 200\n\}/,
+    );
+  }
+});
+
 test('generated Caddyfile uses CoreDNS resolvers only in pebble directory mode', () => {
   const status = {
     ...emptyTlsStatus(),

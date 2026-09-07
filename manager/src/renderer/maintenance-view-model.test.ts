@@ -10,8 +10,6 @@ import {
   maintenanceSectionToOpenForErrors,
   maintenanceSectionToOpenForErrorChange,
   pinResetSuccessText,
-  routingModeSaveDisabled,
-  routingModeSuccessText,
   softwareUpdateErrorText,
   softwareUpdateInfoRows,
   softwareUpdateSectionVisible,
@@ -193,20 +191,6 @@ test('maintenanceSectionToOpenForErrorChange does not switch when an error is cl
     null,
   );
   assert.equal(maintenanceSectionToOpenForErrorChange(previous, emptyMaintenanceErrors()), null);
-});
-
-test('routingModeSaveDisabled blocks while busy, unknown, unchanged, or open waiting numbers', () => {
-  assert.equal(routingModeSaveDisabled(true, 'simple', 'complex'), true);
-  assert.equal(routingModeSaveDisabled(false, null, 'simple'), true);
-  assert.equal(routingModeSaveDisabled(false, 'simple', null), true);
-  assert.equal(routingModeSaveDisabled(false, 'simple', 'simple'), true);
-  assert.equal(routingModeSaveDisabled(false, 'complex', 'simple'), false);
-  assert.equal(routingModeSaveDisabled(false, 'complex', 'simple', 2), true);
-});
-
-test('routingModeSuccessText names active routing mode', () => {
-  assert.match(routingModeSuccessText('complex'), /Complex Routing aktiv/);
-  assert.match(routingModeSuccessText('simple'), /Simple Routing aktiv/);
 });
 
 test('fileSharingHintText only on platforms that need Docker file sharing', () => {

@@ -70,8 +70,7 @@ export function writeManagerReleaseState(
     },
   };
 
-  fs.mkdirSync(installHome, { recursive: true });
-  fs.writeFileSync(managerStatePath(installHome), `${JSON.stringify(next, null, 2)}\n`, 'utf8');
+  writeManagerStateAtomically(installHome, next);
   return next;
 }
 

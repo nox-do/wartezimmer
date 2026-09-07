@@ -905,20 +905,6 @@ textarea.wizard-input.is-compact {
   margin-bottom: 1rem;
 }
 
-.routing-mode-subheading {
-  margin: 1.25rem 0 0.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.routing-mode-intro-compact {
-  margin: 0 0 0.65rem;
-}
-
-.routing-mode-footnote {
-  margin-top: 0.75rem;
-}
-
 .main-nav {
   display: flex;
   width: auto;
@@ -1063,88 +1049,6 @@ textarea.wizard-input.is-compact {
 .maintenance-expander-panel {
   padding: 0.85rem 1rem 1rem;
   border-top: 1px solid var(--border);
-}
-
-.routing-mode-card-fieldset {
-  border: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 0.75rem;
-}
-
-.routing-mode-card {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.75rem;
-  align-items: start;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  cursor: pointer;
-}
-
-.routing-mode-card.is-selected {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
-}
-
-.routing-mode-card.is-disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.routing-mode-card-input {
-  margin-top: 0.2rem;
-}
-
-.routing-mode-card-body {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.routing-mode-card-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.routing-mode-card-title {
-  font-weight: 700;
-}
-
-.routing-mode-card-hint {
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.45;
-}
-
-.routing-mode-recommended-badge {
-  display: inline-block;
-  margin-left: 0.15rem;
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: lowercase;
-  color: var(--pf-text-muted, #5c6570);
-  background: rgba(92, 101, 112, 0.12);
-}
-
-.routing-mode-pro-badge {
-  display: inline-block;
-  margin-left: 0.35rem;
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  background: var(--accent-soft, #e8f0ff);
-  color: var(--accent, #1d4ed8);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  vertical-align: middle;
 }
 
 .network-config-block + .network-config-block {

@@ -69,6 +69,25 @@ test('setup server preserves route validation errors', async (t) => {
   assert.deepEqual(await response.json(), { error: 'archivePath required' });
 });
 
+test('setup server rejects package paths with the wrong extension', async (t) => {
+  const server = await startTestServer();
+  t.after(server.close);
+
+  for (const [route, archivePath, expected] of [
+    ['/api/setup/host/images/load', '/tmp/release.tar.gz', '.pfinstall'],
+    ['/api/setup/host/update/inspect', '/tmp/update.tar.gz', '.pfupdate'],
+    ['/api/setup/host/update/apply', '/tmp/update.zip', '.pfupdate'],
+  ] as const) {
+    const response = await fetch(`${server.baseUrl}${route}`, {
+      method: 'POST',
+      body: JSON.stringify({ archivePath, managerVersion: '0.4.0' }),
+      headers: { 'content-type': 'application/json' },
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error, `archivePath must end with ${expected}`);
+  }
+});
+
 test('TLS prepare route validates its contract before touching host state', async (t) => {
   const server = await startTestServer();
   t.after(server.close);

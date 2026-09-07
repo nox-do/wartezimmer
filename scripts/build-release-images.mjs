@@ -290,6 +290,7 @@ const archiveSha256 = sha256File(archivePath);
 const archiveBytes = fs.statSync(archivePath).size;
 const thirdPartyNoticePaths = copyThirdPartyNotices(releaseDir);
 const manifest = {
+  installFormatVersion: 1,
   version,
   createdAt: new Date().toISOString(),
   images: {

@@ -103,7 +103,7 @@ Setup-API (Manager-Child auf Loopback; CLI-Default `127.0.0.1:9190`):
 | GET     | `/api/setup/host/routing-mode`     | Capabilities inkl. `routingMode`, `complexRoutingLicensed`                                                   |
 | POST    | `/api/setup/host/routing-mode`     | `{ routingMode: "simple"\|"complex" }` — proxied zur App-API mit Manager-Trust                               |
 
-| POST | `/api/setup/host/images/load` | Erstinstallation: `.tar.gz` + Sidecar (`manifest.json` / `SHA256SUMS.txt`) |
+| POST | `/api/setup/host/images/load` | Erstinstallation: `.pfinstall` mit versioniertem Manifest |
 | POST | `/api/setup/host/update/inspect` | Wartung: `.pfupdate`-Datei prüfen (Release, Kompatibilität, Warnungen) |
 | POST | `/api/setup/host/update/apply` | Wartung: `.pfupdate`-Datei (Pfad), Cutover + Rollback |
 

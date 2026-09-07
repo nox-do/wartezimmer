@@ -10,6 +10,10 @@ import { resolveDeliveryImageConfig } from './delivery-images.js';
 import type { SetupContext } from './setup-context.js';
 import { resolveProxyTlsPaths } from './proxy-tls.js';
 import { resolveCanonicalBaseUrl } from './urls.js';
+import {
+  waitForExpectedStackHealth,
+  type WaitForStackHealthOptions,
+} from './stack-health.js';
 
 const TLS_STATE_ROLLBACK_DIR = 'tls-state';
 
@@ -19,6 +23,7 @@ export type MaintenanceStackRuntime = {
     runOptions: ComposeRunOptions,
   ) => Promise<{ ok: boolean; log: string; gatewaySkipped: boolean }>;
   composeStatus: (runOptions: ComposeRunOptions) => Promise<ComposeStatus>;
+  stackHealthWaitOptions?: WaitForStackHealthOptions;
   runHealthChecks: (input: {
     localAppBaseUrl: string;
     lanAppBaseUrl: string | null;
@@ -144,16 +149,21 @@ async function verifyMaintenanceRollback(
   if (!up.ok) {
     errors.push(up.log || 'Stack konnte nach Rollback nicht gestartet werden.');
   }
+  const stackHealth = await waitForExpectedStackHealth(
+    input.runtime.composeStatus,
+    runOptions,
+    input.runtime.stackHealthWaitOptions,
+  );
+  if (!stackHealth.ok) {
+    errors.push(...stackHealth.errors);
+    return;
+  }
   const health = await input.runtime.runHealthChecks({
     localAppBaseUrl: input.localAppBaseUrl,
     lanAppBaseUrl: resolveCanonicalBaseUrl(envMap, envMap.get('SETUP_LAN_APP_IP')),
   });
   if (!health.ok) {
     errors.push(...health.errors);
-  }
-  const compose = await input.runtime.composeStatus(runOptions);
-  if (!compose.running) {
-    errors.push('Compose meldet nach Rollback keinen laufenden Stack.');
   }
 }
 

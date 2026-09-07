@@ -10,7 +10,6 @@ export async function selectPfupdateArchiveDialog(
     properties: ['openFile'],
     filters: [
       { name: 'Praxis Flow Update', extensions: ['pfupdate'] },
-      { name: 'Alle Dateien', extensions: ['*'] },
     ],
   };
 
@@ -22,5 +21,9 @@ export async function selectPfupdateArchiveDialog(
     return { canceled: true, path: null };
   }
 
-  return { canceled: false, path: result.filePaths[0] ?? null };
+  const selectedPath = result.filePaths[0] ?? null;
+  if (!selectedPath?.toLowerCase().endsWith('.pfupdate')) {
+    return { canceled: true, path: null };
+  }
+  return { canceled: false, path: selectedPath };
 }

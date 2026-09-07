@@ -4,6 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY,
+  PRAXIS_FLOW_PROXY_IMAGE_REF,
+  PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
   pickLoadedProxyImageRef,
   type DeliveryImagesStatus,
 } from '@praxis-flow/server-shared';
@@ -12,6 +14,7 @@ import { runDockerCommand } from './docker-cli.js';
 import { backupEnvFile, readEnvMap, updateEnvKeys } from './env-file.js';
 import {
   readManagerState,
+  managerStatePath,
   releaseEnvFromManagerState,
   writeManagerReleaseState,
   type ManagerReleaseState,
@@ -22,6 +25,7 @@ import {
   validateTarArchiveEntries,
 } from './pfupdate-package.js';
 import { sha256File } from './sha256-file.js';
+import { requirePackageFileExtension } from './package-file-extension.js';
 
 export type { DeliveryImagesStatus } from '@praxis-flow/server-shared';
 
@@ -189,7 +193,49 @@ type PreparedReleaseBundle = {
   stagingDir: string | null;
 };
 
-function prepareReleaseBundle(archivePath: string, projectRoot: string): PreparedReleaseBundle {
+type ReleaseManifest = {
+  installFormatVersion: 1;
+  version: string;
+  archive: string;
+  sha256: string;
+  images: { app: string; sandbox: string; proxy: string };
+  imageDigests: {
+    proxy: { registryDigest: string; archiveImageId: string; platform: string };
+  };
+};
+
+export type DockerImageInspection = { imageId: string; platform: string };
+
+export function hostDockerPlatform(arch = process.arch): string {
+  return `linux/${arch === 'x64' ? 'amd64' : arch}`;
+}
+
+export async function inspectImagesForHostPlatform(
+  refs: readonly string[],
+  inspectImage: (ref: string) => Promise<DockerImageInspection> = inspectDockerImage,
+  errorCode = 'DOCKER_IMAGE_PLATFORM_MISMATCH',
+): Promise<Map<string, DockerImageInspection>> {
+  const inspections = await Promise.all(refs.map(async (ref) => [ref, await inspectImage(ref)] as const));
+  const expected = hostDockerPlatform();
+  for (const [ref, inspection] of inspections) {
+    if (inspection.platform.toLowerCase() !== expected) {
+      throw new Error(`${errorCode}: ${ref} is ${inspection.platform || 'unknown'}, expected ${expected}`);
+    }
+  }
+  return new Map(inspections);
+}
+
+export async function inspectDockerImage(ref: string): Promise<DockerImageInspection> {
+  const result = await runDockerCommand(['image', 'inspect', ref, '--format', '{{json .}}']);
+  if (result.code !== 0) throw new Error(`DOCKER_IMAGE_INSPECT_FAILED: ${ref}`);
+  const parsed = JSON.parse(result.stdout) as { Id?: string; Os?: string; Architecture?: string };
+  return {
+    imageId: String(parsed.Id ?? '').toLowerCase(),
+    platform: `${String(parsed.Os ?? '').toLowerCase()}/${String(parsed.Architecture ?? '').toLowerCase()}`,
+  };
+}
+
+function prepareReleaseBundle(archivePath: string): PreparedReleaseBundle {
   const entries = listTarArchiveEntriesVerbose(archivePath);
   validateTarArchiveEntries(entries);
   const dockerArchive = 'images/praxis-flow-images.tar';
@@ -215,13 +261,7 @@ function prepareReleaseBundle(archivePath: string, projectRoot: string): Prepare
       throw new Error(`RELEASE_BUNDLE_TEMPLATE_MISSING: ${relativePath}`);
     }
   }
-
-  for (const relativePath of RELEASE_BUNDLE_TEMPLATE_PATHS) {
-    const sourcePath = path.join(stagingDir, relativePath);
-    const targetPath = path.join(projectRoot, relativePath.replace(/^templates\//, ''));
-    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-    fs.copyFileSync(sourcePath, targetPath);
-  }
+  assertRegularFileInStaging(stagingDir, dockerArchive);
 
   return {
     dockerArchivePath: path.join(stagingDir, dockerArchive),
@@ -233,17 +273,14 @@ export function readExpectedSha256ForArchive(archivePath: string): {
   expectedSha256: string;
   source: 'manifest.json' | 'SHA256SUMS.txt';
   releaseVersion: string | null;
+  manifest: ReleaseManifest | null;
 } {
   const dir = path.dirname(archivePath);
   const fileName = path.basename(archivePath);
 
   const manifestPath = path.join(dir, 'manifest.json');
   if (fs.existsSync(manifestPath)) {
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
-      sha256?: string;
-      version?: string;
-      archive?: string;
-    };
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as ReleaseManifest;
     const expectedSha256 = manifest.sha256?.trim().toLowerCase();
     if (expectedSha256) {
       if (manifest.archive && manifest.archive !== fileName) {
@@ -255,6 +292,7 @@ export function readExpectedSha256ForArchive(archivePath: string): {
         expectedSha256,
         source: 'manifest.json',
         releaseVersion: manifest.version?.trim() || null,
+        manifest,
       };
     }
   }
@@ -273,6 +311,7 @@ export function readExpectedSha256ForArchive(archivePath: string): {
           expectedSha256,
           source: 'SHA256SUMS.txt',
           releaseVersion: null,
+          manifest: null,
         };
       }
     }
@@ -286,6 +325,7 @@ export function verifyReleaseArchiveSha256(archivePath: string): {
   expectedSha256: string;
   sha256Source: 'manifest.json' | 'SHA256SUMS.txt';
   releaseVersion: string | null;
+  manifest: ReleaseManifest | null;
 } {
   const meta = readExpectedSha256ForArchive(archivePath);
   const actualSha256 = sha256File(archivePath);
@@ -299,6 +339,7 @@ export function verifyReleaseArchiveSha256(archivePath: string): {
     expectedSha256: meta.expectedSha256,
     sha256Source: meta.source,
     releaseVersion: meta.releaseVersion,
+    manifest: meta.manifest,
   };
 }
 
@@ -410,7 +451,65 @@ export type LoadDeliveryImagesDeps = {
   verifyReleaseArchiveSha256?: typeof verifyReleaseArchiveSha256;
   dockerLoadArchive?: typeof dockerLoadArchive;
   auditDeliveryImages?: typeof auditDeliveryImages;
+  imageExists?: typeof dockerImageExists;
+  inspectImage?: typeof inspectDockerImage;
 };
+
+type HostFileSnapshot = { path: string; content: Buffer | null };
+
+function pfinstallHostPaths(projectRoot: string): string[] {
+  return [
+    ...RELEASE_BUNDLE_TEMPLATE_PATHS.map((entry) =>
+      path.join(projectRoot, entry.replace(/^templates\//, '')),
+    ),
+    path.join(projectRoot, '.env'),
+    managerStatePath(projectRoot),
+  ];
+}
+
+function snapshotHostFiles(projectRoot: string): HostFileSnapshot[] {
+  return pfinstallHostPaths(projectRoot).map((filePath) => ({
+    path: filePath,
+    content: fs.existsSync(filePath) ? fs.readFileSync(filePath) : null,
+  }));
+}
+
+function restoreHostFiles(snapshot: HostFileSnapshot[]): void {
+  for (const file of snapshot) {
+    if (file.content === null) {
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      continue;
+    }
+    fs.mkdirSync(path.dirname(file.path), { recursive: true });
+    const tempPath = `${file.path}.rollback-${process.pid}-${Date.now()}`;
+    fs.writeFileSync(tempPath, file.content);
+    fs.renameSync(tempPath, file.path);
+  }
+}
+
+function installBundleTemplatesAtomically(projectRoot: string, stagingDir: string): void {
+  for (const relativePath of RELEASE_BUNDLE_TEMPLATE_PATHS) {
+    const sourcePath = path.join(stagingDir, relativePath);
+    const targetPath = path.join(projectRoot, relativePath.replace(/^templates\//, ''));
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    const tempPath = `${targetPath}.pfinstall-${process.pid}-${Date.now()}`;
+    try {
+      fs.copyFileSync(sourcePath, tempPath);
+      fs.renameSync(tempPath, targetPath);
+    } finally {
+      if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+    }
+  }
+}
+
+function assertFreshInstallation(projectRoot: string): void {
+  if (
+    fs.existsSync(path.join(projectRoot, '.env')) ||
+    fs.existsSync(managerStatePath(projectRoot))
+  ) {
+    throw new Error('PFINSTALL_EXISTING_INSTALLATION: use .pfupdate for an installed system');
+  }
+}
 
 export async function loadDeliveryImagesFromArchive(
   projectRoot: string,
@@ -418,6 +517,7 @@ export async function loadDeliveryImagesFromArchive(
   docker: DockerStatus,
   deps: LoadDeliveryImagesDeps = {},
 ): Promise<LoadDeliveryImagesCoreResult> {
+  requirePackageFileExtension(archivePath, '.pfinstall');
   if (!docker.installed || !docker.daemonRunning) {
     throw new Error('DOCKER_NOT_READY');
   }
@@ -427,64 +527,119 @@ export async function loadDeliveryImagesFromArchive(
     throw new Error('RELEASE_ARCHIVE_NOT_FOUND');
   }
 
+  assertFreshInstallation(projectRoot);
+
   const verifySha = deps.verifyReleaseArchiveSha256 ?? verifyReleaseArchiveSha256;
   const dockerLoad = deps.dockerLoadArchive ?? dockerLoadArchive;
   const auditImages = deps.auditDeliveryImages ?? auditDeliveryImages;
+  const imageExists = deps.imageExists ?? dockerImageExists;
+  const inspectImage = deps.inspectImage ?? inspectDockerImage;
 
   const shaCheck = verifySha(resolvedArchive);
+  const manifest = shaCheck.manifest;
+  if (!manifest) throw new Error('PFINSTALL_MANIFEST_REQUIRED');
+  const expectedApp = `praxis-flow/app:${manifest.version}`;
+  const expectedSandbox = `praxis-flow/sandbox:${manifest.version}`;
+  if (
+    manifest.installFormatVersion !== 1 ||
+    manifest.images?.app !== expectedApp ||
+    manifest.images?.sandbox !== expectedSandbox ||
+    manifest.images?.proxy !== PRAXIS_FLOW_PROXY_IMAGE_REF ||
+    manifest.imageDigests?.proxy?.registryDigest?.toLowerCase() !==
+      PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST
+  ) {
+    throw new Error('PFINSTALL_IMAGE_CONTRACT_INVALID');
+  }
 
-  const bundle = prepareReleaseBundle(resolvedArchive, projectRoot);
+  const bundle = prepareReleaseBundle(resolvedArchive);
+  let loadedImages: string[] = [];
   try {
     const loadResult = await dockerLoad(bundle.dockerArchivePath);
+    loadedImages = loadResult.loaded;
     if (!loadResult.ok) {
       throw new Error(`DOCKER_LOAD_FAILED: ${loadResult.log || 'unknown error'}`);
     }
 
-    const { appImage, sandboxImage } = classifyPraxisFlowImages(loadResult.loaded);
-    if (!appImage || !sandboxImage) {
-      throw new Error(
-        `RELEASE_IMAGES_UNRECOGNIZED: expected app + sandbox images, got ${loadResult.loaded.join(', ')}`,
-      );
+    const appImage = manifest.images.app;
+    const sandboxImage = manifest.images.sandbox;
+    for (const ref of [appImage, sandboxImage, manifest.images.proxy]) {
+      if (!loadResult.loaded.includes(ref)) {
+        throw new Error(`PFINSTALL_EXPECTED_IMAGE_MISSING: ${ref}`);
+      }
     }
 
-    const envPathTarget = path.join(projectRoot, '.env');
-    const envExistedBeforeImport = fs.existsSync(envPathTarget);
-    const envPath = ensureEnvFromExample(projectRoot);
-    let backupPath: string | null = null;
-    if (envExistedBeforeImport) {
-      backupPath = backupEnvFile(projectRoot).backupPath;
+    if (!(await imageExists(appImage)) || !(await imageExists(sandboxImage))) {
+      throw new Error('RELEASE_IMAGES_NOT_PRESENT_AFTER_LOAD');
+    }
+    const inspections = await inspectImagesForHostPlatform(
+      [appImage, sandboxImage, manifest.images.proxy],
+      inspectImage,
+      'PFINSTALL_PLATFORM_MISMATCH',
+    );
+    const proxyInspection = inspections.get(manifest.images.proxy)!;
+    if (
+      proxyInspection.imageId !== manifest.imageDigests?.proxy?.archiveImageId?.toLowerCase() ||
+      proxyInspection.platform !== manifest.imageDigests?.proxy?.platform?.toLowerCase()
+    ) {
+      throw new Error('PFINSTALL_PROXY_DIGEST_CONTRACT_INVALID');
     }
 
-    writeManagerReleaseState(projectRoot, {
-      releaseVersion: shaCheck.releaseVersion,
-      appImage,
-      sandboxImage,
-      archiveSha256: shaCheck.sha256,
-    });
-    writeDeliveryImageEnvFromState(projectRoot);
+    const hostSnapshot = snapshotHostFiles(projectRoot);
+    try {
+      installBundleTemplatesAtomically(projectRoot, bundle.stagingDir!);
+      const envPathTarget = path.join(projectRoot, '.env');
+      const envExistedBeforeImport = fs.existsSync(envPathTarget);
+      const envPath = ensureEnvFromExample(projectRoot);
+      let backupPath: string | null = null;
+      if (envExistedBeforeImport) {
+        backupPath = backupEnvFile(projectRoot).backupPath;
+      }
 
-    const loadedProxyImage = pickLoadedProxyImageRef(loadResult.loaded);
-    if (loadedProxyImage) {
-      updateEnvKeys(envPath, {
-        [PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY]: loadedProxyImage,
+      writeManagerReleaseState(projectRoot, {
+        releaseVersion: shaCheck.releaseVersion,
+        appImage,
+        sandboxImage,
+        archiveSha256: shaCheck.sha256,
+      });
+      writeDeliveryImageEnvFromState(projectRoot);
+
+      const loadedProxyImage = pickLoadedProxyImageRef(loadResult.loaded);
+      if (loadedProxyImage) {
+        updateEnvKeys(envPath, {
+          [PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY]: loadedProxyImage,
+        });
+      }
+
+      const envMap = readEnvMap(envPath);
+      const deliveryImages = await auditImages({ projectRoot, envMap, docker });
+      if (!deliveryImages.ready) {
+        throw new Error('RELEASE_IMAGE_AUDIT_FAILED');
+      }
+
+      return {
+        envPath,
+        backupPath,
+        loadedImages: loadResult.loaded,
+        appImage,
+        sandboxImage,
+        deliveryImages,
+        sha256Verified: true,
+        sha256: shaCheck.sha256,
+        releaseVersion: shaCheck.releaseVersion,
+        sha256Source: shaCheck.sha256Source,
+      };
+    } catch (error) {
+      restoreHostFiles(hostSnapshot);
+      throw error;
+    }
+  } catch (error) {
+    if (loadedImages.length > 0) {
+      const message = error instanceof Error ? error.message : 'PFINSTALL_FAILED';
+      throw new Error(`${message}; loaded Docker images were retained as unreferenced cache`, {
+        cause: error,
       });
     }
-
-    const envMap = readEnvMap(envPath);
-    const deliveryImages = await auditImages({ projectRoot, envMap, docker });
-
-    return {
-      envPath,
-      backupPath,
-      loadedImages: loadResult.loaded,
-      appImage,
-      sandboxImage,
-      deliveryImages,
-      sha256Verified: true,
-      sha256: shaCheck.sha256,
-      releaseVersion: shaCheck.releaseVersion,
-      sha256Source: shaCheck.sha256Source,
-    };
+    throw error;
   } finally {
     if (bundle.stagingDir) {
       fs.rmSync(bundle.stagingDir, { recursive: true, force: true });

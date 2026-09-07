@@ -10,7 +10,6 @@ import {
   getComposeStatus,
   getHostRuntimeHealth,
   getHostStatus,
-  getHostRoutingModeCapabilities,
   getNetworkSnapshot,
   getPfbackupInfo,
   inspectPfbackup,
@@ -22,7 +21,6 @@ import {
   runComposeAction,
   saveHostNetwork,
   saveStorageFolders,
-  setHostRoutingMode,
   validatePfbackupFull,
 } from './host-state.js';
 import {
@@ -38,6 +36,8 @@ import {
   type TlsRuntimeDependencies,
 } from './host-tls.js';
 import { readEnvMap } from './env-file.js';
+import { configureMaintenanceAuthHome } from './maintenance-auth.js';
+import { requirePackageFileExtension } from './package-file-extension.js';
 import { resolveSetupApiError } from './api-error.js';
 import {
   normalizeApplySetupInput,
@@ -122,8 +122,14 @@ function requireString(
 async function readPfupdateInput(req: http.IncomingMessage) {
   const body = readBodyRecord(await readJsonBody(req));
   const settingsFormatVersion = body.settingsFormatVersion;
+  const archivePath = requireString(body, 'archivePath');
+  try {
+    requirePackageFileExtension(archivePath, '.pfupdate');
+  } catch {
+    throw new SetupApiValidationError('archivePath must end with .pfupdate');
+  }
   return {
-    archivePath: requireString(body, 'archivePath'),
+    archivePath,
     managerVersion: readOptionalString(body, 'managerVersion')?.trim() || undefined,
     settingsFormatVersion:
       typeof settingsFormatVersion === 'number' && Number.isInteger(settingsFormatVersion)
@@ -241,21 +247,6 @@ function createManagementRoutes(ctx: SetupContext): Routes {
       const result = await resetStaffPinsAndRestart(ctx);
       return routeResult(result, result.ok ? 200 : 500);
     },
-    'GET /api/setup/host/routing-mode': async () =>
-      routeResult(await getHostRoutingModeCapabilities(ctx)),
-    'POST /api/setup/host/routing-mode': async (req) => {
-      const body = readBodyRecord(await readJsonBody(req));
-      const routingMode = readOptionalString(body, 'routingMode')?.trim();
-      if (routingMode !== 'simple' && routingMode !== 'complex') {
-        throw new SetupApiValidationError('routingMode must be simple or complex');
-      }
-      const result = await setHostRoutingMode(ctx, { routingMode });
-      const errorStatuses: Record<string, number> = {
-        ROUTING_MODE_CHANGE_BLOCKED: 409,
-        COMPLEX_ROUTING_NOT_LICENSED: 403,
-      };
-      return routeResult(result, result.ok ? 200 : (errorStatuses[result.code ?? ''] ?? 400));
-    },
     'POST /api/setup/host/plan': async (req) => {
       const body = await readJsonBody(req);
       const envPath = path.join(ctx.home, '.env');
@@ -298,8 +289,14 @@ function createDeliveryRoutes(ctx: SetupContext): Routes {
     },
     'POST /api/setup/host/images/load': async (req) => {
       const body = readBodyRecord(await readJsonBody(req));
+      const archivePath = requireString(body, 'archivePath');
+      try {
+        requirePackageFileExtension(archivePath, '.pfinstall');
+      } catch {
+        throw new SetupApiValidationError('archivePath must end with .pfinstall');
+      }
       const result = await loadDeliveryImages(ctx, {
-        archivePath: requireString(body, 'archivePath'),
+        archivePath,
         restartCompose: Boolean(body.restartCompose),
       });
       return routeResult(result);
@@ -368,6 +365,7 @@ export function createSetupRequestHandler(
   tlsDeps: TlsRuntimeDependencies = {},
   options: SetupRequestHandlerOptions = {},
 ) {
+  configureMaintenanceAuthHome(ctx.home);
   const routes = createSetupRoutes(ctx, tlsDeps, options.buildId ?? resolveSetupBuildId());
   const managerToken =
     options.managerToken !== undefined ? options.managerToken : readSetupManagerTokenFromEnv();

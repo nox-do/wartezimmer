@@ -6,12 +6,14 @@ export function generateToken(byteLength = 24): string {
 
 export type GeneratedSecrets = {
   AUTH_KEY_CAPTIVE: string;
+  MAINTENANCE_TOKEN: string;
   SANDBOX_INTERNAL_TOKEN: string;
   OPENNDS_FAS_KEY: string;
 };
 
 export const SECRET_ENV_KEYS = [
   'AUTH_KEY_CAPTIVE',
+  'MAINTENANCE_TOKEN',
   'SANDBOX_INTERNAL_TOKEN',
   'OPENNDS_FAS_KEY',
 ] as const satisfies readonly (keyof GeneratedSecrets)[];

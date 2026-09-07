@@ -11,7 +11,13 @@ import {
 } from '@praxis-flow/server-shared';
 import { createDockerAppDataAccess, type AppDataVolumeAccess } from './app-data-volume.js';
 import { composePs, composeStop, composeUp, type ComposeRunOptions } from './docker.js';
-import { dockerImageExists, dockerLoadArchive } from './delivery-images.js';
+import {
+  dockerImageExists,
+  dockerLoadArchive,
+  inspectImagesForHostPlatform,
+  inspectDockerImage,
+  type DockerImageInspection,
+} from './delivery-images.js';
 import { readEnvMap, writeEnvRecordAtomically } from './env-file.js';
 import { readManagerState, writeManagerStateAtomically } from './manager-state.js';
 import {
@@ -42,6 +48,8 @@ import { copyDeviceAuthorizationsFromAsideViaApp } from './device-authorizations
 import { mergeConfigRestoreEnv } from './settings-backup-restore.js';
 import { resolveCurrentSettingsFormatVersion } from './settings-format-version.js';
 import type { SetupContext } from './setup-context.js';
+import { maintenanceRequestHeaders } from './maintenance-auth.js';
+import { requirePackageFileExtension } from './package-file-extension.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
 import {
   captureMaintenanceRollback,
@@ -72,6 +80,8 @@ export const UPDATE_PHASES = {
   cutover: 'cutover',
 } as const;
 
+const PFUPDATE_ENV_EXAMPLE_TEMPLATE_FILE = '.env.example';
+
 export type UpdatePhase = (typeof UPDATE_PHASES)[keyof typeof UPDATE_PHASES];
 
 type UpdateRollbackArtifacts = MaintenanceRollbackArtifacts & {
@@ -86,6 +96,7 @@ export type PfupdateApplyDeps = {
   createSettingsBackup?: typeof createPfbackup;
   dockerLoad?: typeof dockerLoadArchive;
   imageExists?: (ref: string) => Promise<boolean>;
+  inspectImage?: (ref: string) => Promise<DockerImageInspection>;
   stopStack?: MaintenanceStackRuntime['stopStack'];
   startAppStack?: (
     runOptions: ComposeRunOptions,
@@ -112,6 +123,7 @@ type PrepareRuntime = {
   validateSettings: typeof validateSettingsSnapshotWithApp;
   dockerLoad: typeof dockerLoadArchive;
   imageExists: (ref: string) => Promise<boolean>;
+  inspectImage: (ref: string) => Promise<DockerImageInspection>;
   appDataAccess?: AppDataVolumeAccess;
 };
 
@@ -169,7 +181,7 @@ async function defaultWaitForMaintenanceApp(
     try {
       const response = await fetch(
         `${localAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/settings/capabilities`,
-        { signal: AbortSignal.timeout(5_000) },
+        { headers: maintenanceRequestHeaders(), signal: AbortSignal.timeout(5_000) },
       );
       if (response.ok) {
         return true;
@@ -192,6 +204,7 @@ function resolvePrepareRuntime(deps: PfupdateApplyDeps): PrepareRuntime {
     validateSettings: deps.validateSettings ?? validateSettingsSnapshotWithApp,
     dockerLoad: deps.dockerLoad ?? dockerLoadArchive,
     imageExists: deps.imageExists ?? dockerImageExists,
+    inspectImage: deps.inspectImage ?? inspectDockerImage,
     appDataAccess: deps.appDataAccess,
   };
 }
@@ -317,10 +330,22 @@ async function verifyManifestImagesLoaded(
 function composeTemplateFilesForRollback(): readonly string[] {
   return [
     ...PFUPDATE_COMPOSE_TEMPLATE_FILES,
+    PFUPDATE_ENV_EXAMPLE_TEMPLATE_FILE,
     PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE,
     PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE,
     PFUPDATE_PROXY_TLS_COMPOSE_TEMPLATE_FILE,
   ];
+}
+
+function copyFileAtomically(source: string, target: string): void {
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const temporaryPath = `${target}.pfupdate-${process.pid}-${Date.now()}`;
+  try {
+    fs.copyFileSync(source, temporaryPath);
+    fs.renameSync(temporaryPath, target);
+  } finally {
+    if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
+  }
 }
 
 const CADDYFILE_WAS_ABSENT_MARKER = 'caddyfile-was-absent';
@@ -345,11 +370,10 @@ function backupComposeTemplates(home: string, targetDir: string): void {
 }
 
 function installComposeTemplates(stagingDir: string, home: string): void {
-  for (const fileName of PFUPDATE_COMPOSE_TEMPLATE_FILES) {
+  for (const fileName of [...PFUPDATE_COMPOSE_TEMPLATE_FILES, PFUPDATE_ENV_EXAMPLE_TEMPLATE_FILE]) {
     const source = pfupdateTemplatePath(stagingDir, fileName);
     const target = path.join(home, fileName);
-    fs.mkdirSync(home, { recursive: true });
-    fs.copyFileSync(source, target);
+    copyFileAtomically(source, target);
   }
 
   const gatewayComposeSource = pfupdateTemplatePath(
@@ -357,12 +381,12 @@ function installComposeTemplates(stagingDir: string, home: string): void {
     PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE,
   );
   if (fs.existsSync(gatewayComposeSource)) {
-    fs.copyFileSync(gatewayComposeSource, path.join(home, PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE));
+    copyFileAtomically(gatewayComposeSource, path.join(home, PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE));
   }
 
   const proxyComposeSource = pfupdateTemplatePath(stagingDir, PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE);
   if (fs.existsSync(proxyComposeSource)) {
-    fs.copyFileSync(proxyComposeSource, path.join(home, PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE));
+    copyFileAtomically(proxyComposeSource, path.join(home, PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE));
   }
 
   const proxyTlsComposeSource = pfupdateTemplatePath(
@@ -370,7 +394,7 @@ function installComposeTemplates(stagingDir: string, home: string): void {
     PFUPDATE_PROXY_TLS_COMPOSE_TEMPLATE_FILE,
   );
   if (fs.existsSync(proxyTlsComposeSource)) {
-    fs.copyFileSync(
+    copyFileAtomically(
       proxyTlsComposeSource,
       path.join(home, PFUPDATE_PROXY_TLS_COMPOSE_TEMPLATE_FILE),
     );
@@ -392,7 +416,7 @@ function restoreComposeTemplates(composeTemplatesDir: string, home: string): voi
     const source = path.join(composeTemplatesDir, fileName);
     const target = path.join(home, fileName);
     if (fs.existsSync(source)) {
-      fs.copyFileSync(source, target);
+      copyFileAtomically(source, target);
     } else if (fs.existsSync(target)) {
       fs.unlinkSync(target);
     }
@@ -484,9 +508,17 @@ async function prepareUpdate(input: {
     if (!fs.existsSync(envPath)) {
       throw new UpdatePhaseError(phase, ['Keine .env — Setup zuerst ausführen.']);
     }
+    if (
+      !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(input.applyInput.managerVersion?.trim() ?? '')
+    ) {
+      throw new UpdatePhaseError(phase, [
+        'Gültige Manager-Version ist für das Update erforderlich.',
+      ]);
+    }
 
     phase = UPDATE_PHASES.stagePackage;
     const archivePath = input.applyInput.archivePath.trim();
+    requirePackageFileExtension(archivePath, '.pfupdate');
     input.runtime.extractArchive(archivePath, input.stagingDir);
     const outerArchiveSha256 = pfupdateOuterArchiveSha256(archivePath);
 
@@ -495,7 +527,7 @@ async function prepareUpdate(input: {
       input.applyInput.settingsFormatVersion ??
       (await input.runtime.resolveSettingsFormatVersion(input.localMaintenanceAppBaseUrl));
     const validation = input.runtime.validatePackage(input.stagingDir, {
-      managerVersion: input.applyInput.managerVersion ?? undefined,
+      managerVersion: input.applyInput.managerVersion,
       settingsFormatVersion,
     });
     const manifest = requireCompatibleManifest(validation);
@@ -524,6 +556,22 @@ async function prepareUpdate(input: {
     const imageErrors = await verifyManifestImagesLoaded(manifest, input.runtime.imageExists);
     if (imageErrors.length) {
       throw new UpdatePhaseError(phase, imageErrors);
+    }
+    const proxyContract = manifest.imageDigests?.proxy;
+    const inspectedImages = await inspectImagesForHostPlatform(
+      [manifest.images.app, manifest.images.sandbox, manifest.images.proxy!],
+      input.runtime.inspectImage,
+      'PFUPDATE_PLATFORM_MISMATCH',
+    );
+    const proxyInspection = inspectedImages.get(manifest.images.proxy!)!;
+    if (
+      !proxyContract ||
+      proxyInspection.imageId !== proxyContract.archiveImageId ||
+      proxyInspection.platform !== proxyContract.platform
+    ) {
+      throw new UpdatePhaseError(phase, [
+        'Geladenes Proxy-Image entspricht nicht ID und Plattform aus dem Manifest.',
+      ]);
     }
 
     const envMap = readEnvMap(envPath);

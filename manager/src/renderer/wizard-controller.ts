@@ -34,9 +34,6 @@ export function wizardManagedPrepareErrorFooter(): string {
   return `${tlsErrorCopy('acme').title} Zurück und HTTPS später unter Netzwerk fortsetzen.`;
 }
 
-export const WIZARD_ROUTING_LOAD_ERROR =
-  'Routing-Modus konnte nicht geladen werden. Bitte erneut versuchen.';
-
 export type WizardCallbacks = {
   onComplete: () => void;
   onCancel: () => void;
@@ -47,8 +44,6 @@ export type WizardControllerState = WizardFlowState & {
   probeStatusText: string | null;
   error: string | null;
   presentation: WizardPresentation;
-  complexRoutingLicensed: boolean;
-  routingCapabilitiesStatus: 'idle' | 'loading' | 'ready' | 'error';
 };
 
 export type WizardControllerDeps = WizardCallbacks & {
@@ -87,17 +82,12 @@ function createInitialState(
     probeStatusText: null,
     error: null,
     presentation,
-    complexRoutingLicensed: true,
-    routingCapabilitiesStatus: 'idle',
   };
 }
 
 export function createWizardController(deps: WizardControllerDeps): WizardController {
   let state = createInitialState(null);
   let lifecycleGeneration = 0;
-  let routingCapabilitiesRequestId = 0;
-  let routingCapabilitiesPromise: Promise<void> | null = null;
-  let routingModeTouched = false;
 
   function notify(): void {
     deps.onStateChange?.();
@@ -122,9 +112,6 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
 
   function beginSession(): void {
     lifecycleGeneration += 1;
-    routingCapabilitiesRequestId += 1;
-    routingCapabilitiesPromise = null;
-    routingModeTouched = false;
   }
 
   async function browseFolder(
@@ -309,53 +296,12 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     deps.onHostMutated?.();
   }
 
-  async function ensureRoutingCapabilities(): Promise<void> {
-    if (state.routingCapabilitiesStatus === 'ready') {
-      return;
-    }
-    if (state.routingCapabilitiesStatus === 'loading' && routingCapabilitiesPromise) {
-      await routingCapabilitiesPromise;
-      return;
-    }
-
-    const generation = lifecycleGeneration;
-    const requestId = ++routingCapabilitiesRequestId;
-    patch({ routingCapabilitiesStatus: 'loading' });
-
-    routingCapabilitiesPromise = deps.api
-      .getRoutingMode()
-      .then((capabilities) => {
-        if (!still(generation) || requestId !== routingCapabilitiesRequestId || state.step !== 2) {
-          return;
-        }
-        patch({
-          ...(routingModeTouched ? {} : { routingMode: capabilities.routingMode }),
-          complexRoutingLicensed: capabilities.features.complexRoutingLicensed,
-          routingCapabilitiesStatus: 'ready',
-        });
-      })
-      .catch(() => {
-        if (still(generation) && requestId === routingCapabilitiesRequestId && state.step === 2) {
-          patch({ routingCapabilitiesStatus: 'error', error: WIZARD_ROUTING_LOAD_ERROR });
-        }
-      });
-
-    await routingCapabilitiesPromise;
-  }
-
-  async function enterStep(step: WizardStep): Promise<void> {
-    if (step === 2) {
-      await ensureRoutingCapabilities();
-    }
-  }
+  async function enterStep(_step: WizardStep): Promise<void> {}
 
   return {
     getState: () => state,
 
     patchFields(partial) {
-      if (Object.prototype.hasOwnProperty.call(partial, 'routingMode')) {
-        routingModeTouched = true;
-      }
       patch(partial);
     },
 
