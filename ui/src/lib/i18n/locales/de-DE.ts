@@ -389,8 +389,10 @@ export const dict = {
       'Wartenummer direkt in der MFA anlegen. Name/Telefon optional für den CSV-Abgleich.',
     checkinTopicLabel: 'Themenbereich',
     checkinTopicPlaceholder: 'Bitte Thema wählen',
-    checkinLookupLabel: 'Suche (Name oder Telefonnummer)',
-    checkinLookupPlaceholder: 'z. B. Mustermann oder 0172...',
+    checkinLookupLabel: 'Name oder Telefonnummer suchen · Name manuell eingeben',
+    checkinLookupPlaceholder: 'Name oder Telefonnummer',
+    checkinPhoneNeedsSelection:
+      'Eine Telefonnummer kann nicht als Name übernommen werden. Bitte einen Treffer auswählen oder das Feld leeren.',
     checkinNameLabel: 'Name (Vor- oder Nachname)',
     checkinNamePlaceholder: 'z. B. Mustermann',
     checkinBirthDateLabel: 'Geburtsdatum (optional)',

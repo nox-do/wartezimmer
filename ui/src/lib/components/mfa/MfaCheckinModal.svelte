@@ -13,6 +13,7 @@
     lookupMfaIdentityCandidates,
     type MfaLookupCandidate,
   } from '$lib/mfa/mfa-checkin-api';
+  import { manualMfaIdentityRef } from '$lib/mfa/mfa-checkin-identity';
   import { resolveReceiptTopicLabel } from '$lib/terminal/terminal-receipt-topic-label';
   import { requestTerminalReceiptPrint } from '$lib/terminal/terminal-receipt-print.svelte';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
@@ -61,7 +62,12 @@
     candidates.find((candidate) => candidate.identityRef === selectedIdentityRef) ?? null,
   );
   const selectedTopic = $derived(topics.find((topic) => topic.topicId === topicId) ?? null);
-  const submitDisabled = $derived(!topicId || submitBusy || lookupBusy);
+  const phoneLookupNeedsSelection = $derived(
+    isPhoneLikeQuery && lookupQueryTrimmed.length > 0 && selectedCandidate == null,
+  );
+  const submitDisabled = $derived(
+    !topicId || submitBusy || lookupBusy || phoneLookupNeedsSelection,
+  );
   let lookupRunId = 0;
 
   function resetForm() {
@@ -198,7 +204,8 @@
       return;
     }
     submitBusy = true;
-    const identityRef = selectedCandidate?.identityRef ?? undefined;
+    const identityRef =
+      selectedCandidate?.identityRef ?? manualMfaIdentityRef(lookupQueryTrimmed);
     const result = await createMfaCheckin({ topicId, identityRef });
     if (!result.ok) {
       submitBusy = false;
@@ -342,6 +349,12 @@
       </fieldset>
     {:else if hasLookupInput}
       <p class="text-desc mfa-checkin-hint">{t('mfa.checkinLookupNoMatch')}</p>
+    {/if}
+
+    {#if phoneLookupNeedsSelection && !lookupBusy}
+      <p class="text-desc mfa-checkin-hint" role="alert">
+        {t('mfa.checkinPhoneNeedsSelection')}
+      </p>
     {/if}
 
     <div class="form-actions">
