@@ -150,15 +150,6 @@
           </p>
         {/if}
       {/if}
-    {:else if snapshot.step === 2}
-      <p class="wizard-step-lead">
-        Praxisweite Routing-Entscheidungen werden in den Ops-Einstellungen gepflegt. Der Host-Setup
-        behandelt nur die technische Einrichtung auf diesem Rechner.
-      </p>
-      <p class="hint">
-        Für den aktuellen Host-Setup-Schritt fahren wir mit den technischen Ordnern und Netzwerken
-        fort.
-      </p>
     {:else if snapshot.step === 3}
       <p class="wizard-step-lead">
         Ordner für Kontakt-Import und Dokument-Export auf diesem Rechner.

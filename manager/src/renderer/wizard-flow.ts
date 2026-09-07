@@ -33,14 +33,13 @@ export const DISABLED_GATEWAY_PLAN = { enabled: false as const };
  * Order: warm-up → network → access → optional HTTPS (6) → preview → apply.
  * Practice display name belongs in Ops (/ops/setup), not host setup.
  * WLAN vendor selection is a placeholder on the complex network step until adapters exist.
- * HTTPS inner screens stay on badge 6; verify-dns and cutover live on the Network tab.
+ * HTTPS inner screens stay on the HTTPS step; verify-dns and cutover live on the Network tab.
  */
-export const WIZARD_STEPS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+export const WIZARD_STEPS = [1, 3, 4, 5, 6, 7, 8] as const;
 export type WizardStep = (typeof WIZARD_STEPS)[number];
 
 export const WIZARD_STEP_LABELS = [
   'Voraussetzungen',
-  'Routing',
   'Import & Export',
   'Netzwerk',
   'Zugang',
@@ -176,10 +175,6 @@ export function wizardHttpsPrepared(status: HostStatus | null): boolean {
 
 export function planWizardAdvance(step: WizardStep, state: WizardFlowState): WizardAdvanceAction {
   if (step === 1) {
-    return { type: 'goto', step: 2 };
-  }
-
-  if (step === 2) {
     return { type: 'goto', step: 3 };
   }
 

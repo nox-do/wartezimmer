@@ -17,7 +17,7 @@ import {
 
 test('previousWizardStep walks back through wizard steps', () => {
   assert.equal(previousWizardStep(1), 1);
-  assert.equal(previousWizardStep(3), 2);
+  assert.equal(previousWizardStep(3), 1);
   assert.equal(previousWizardStep(8), 7);
 });
 
@@ -73,14 +73,9 @@ test('canLeaveWizardStep1 blocks when network prerequisites fail', () => {
   );
 });
 
-test('planWizardAdvance leaves prerequisites for routing', () => {
+test('planWizardAdvance leaves prerequisites for folders', () => {
   const state = createWizardFlowState(freshInstallHostStatus(), 1);
-  assert.deepEqual(planWizardAdvance(1, state), { type: 'goto', step: 2 });
-});
-
-test('planWizardAdvance advances from routing to folders', () => {
-  const state = createWizardFlowState(minimalHostStatus(), 2);
-  assert.deepEqual(planWizardAdvance(2, state), { type: 'goto', step: 3 });
+  assert.deepEqual(planWizardAdvance(1, state), { type: 'goto', step: 3 });
 });
 
 test('planWizardAdvance validates folders on step 3', () => {

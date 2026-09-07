@@ -36,6 +36,5 @@ test('createInitialWizardFields combines LAN and storage defaults', () => {
     reachabilityMode: 'lan-ip',
     customHostname: '',
     proxyEnabled: false,
-    routingMode: null,
   });
 });

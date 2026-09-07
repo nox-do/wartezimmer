@@ -165,7 +165,7 @@ Wirkung: neues operatives Ziel/Movement/Queue; Call-/Arrive-/Start-Zeiten clear;
 Rollen:
 
 - MFA: Topics + `journeySettings` (wenn Capabilities)
-- Ops/Manager: `routingMode` (+ Maintenance-API darf nur `routingMode` patchen)
+- Ops: `routingMode`; die Manager-API bleibt nur als Kompatibilitätsroute bestehen
 
 Transaktionen: Check-in / Transition / Redirect / Cancel mit `BEGIN IMMEDIATE` (flow-core).  
 Tagesreset leert Visits; Mode, Topics, Journeys bleiben ([`system.md`](system.md) §5).
@@ -173,7 +173,7 @@ Tagesreset leert Visits; Mode, Topics, Journeys bleiben ([`system.md`](system.md
 ### Bekannte Drift-/Rest-Risiken (Ist)
 
 1. **stale `journey_*` nach Wechsel auf simple:** Rules verlieren `journeyTemplateId`; Journey-Tabellen werden im Simple-Zweig nicht deaktiviert — Integrity prüft nur noch aktive Templates.
-2. Host seedet non-Journey Rules immer mit Movement `call`; `self_go`/`pickup` kommen über Journeys oder Redirect/Admin.
+2. Bei Simple Routing wird für ein echtes Raumziel `self_go` und für das Wartezimmer `call` verwendet.
 
 ## 9. Code-Karte
 

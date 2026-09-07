@@ -39,7 +39,7 @@
       aria-current={currentStep ? 'step' : undefined}
       title={skipped ? `${WIZARD_STEP_LABELS[index]} (übersprungen — kein Proxy)` : WIZARD_STEP_LABELS[index]}
     >
-      <span class="wizard-step-badge">{stepNum}</span>
+      <span class="wizard-step-badge">{index + 1}</span>
       {#if currentStep}
         <span class="wizard-step-label">{WIZARD_STEP_LABELS[index]}</span>
         {#if httpsOpen}

@@ -116,8 +116,6 @@ export function wizardStepTitle(step: WizardStep): string {
   switch (step) {
     case 1:
       return 'Voraussetzungen';
-    case 2:
-      return 'Einrichtung';
     case 3:
       return 'Import & Export — Host-Ordner';
     case 4:
