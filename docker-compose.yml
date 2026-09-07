@@ -29,7 +29,8 @@ services:
       PORT: 8080
       MAINTENANCE_HOST: 0.0.0.0
       MAINTENANCE_PORT: 8082
-      MAINTENANCE_TOKEN: ${MAINTENANCE_TOKEN:?MAINTENANCE_TOKEN is required}
+      # Local-dev fallback; delivery requires a generated per-installation secret.
+      MAINTENANCE_TOKEN: ${MAINTENANCE_TOKEN:-praxis-flow-local-dev-maintenance-token}
       EXPORT_BASE_PATH: ${EXPORT_BASE_PATH:-/exports}
       AUTH_ENABLED: ${AUTH_ENABLED:-true}
       AUTH_KEY_CAPTIVE: ${AUTH_KEY_CAPTIVE:?AUTH_KEY_CAPTIVE is required}

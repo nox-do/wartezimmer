@@ -3,7 +3,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { configureMaintenanceAuthHome, maintenanceRequestHeaders } from './maintenance-auth.js';
+import {
+  configureMaintenanceAuthHome,
+  LOCAL_DEV_MAINTENANCE_TOKEN,
+  maintenanceRequestHeaders,
+} from './maintenance-auth.js';
 
 test('maintenance headers use the installation env instead of process.env', () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-maintenance-auth-'));
@@ -16,6 +20,22 @@ test('maintenance headers use the installation env instead of process.env', () =
   } finally {
     if (previous === undefined) delete process.env.MAINTENANCE_TOKEN;
     else process.env.MAINTENANCE_TOKEN = previous;
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('maintenance headers use the matching fixed fallback only in repo mode', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-maintenance-auth-dev-'));
+  try {
+    configureMaintenanceAuthHome(home, 'repo');
+    assert.equal(
+      maintenanceRequestHeaders().authorization,
+      `Bearer ${LOCAL_DEV_MAINTENANCE_TOKEN}`,
+    );
+
+    configureMaintenanceAuthHome(home, 'install');
+    assert.throws(() => maintenanceRequestHeaders(), /Maintenance-Token fehlt/);
+  } finally {
     fs.rmSync(home, { recursive: true, force: true });
   }
 });

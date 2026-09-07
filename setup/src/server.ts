@@ -365,7 +365,7 @@ export function createSetupRequestHandler(
   tlsDeps: TlsRuntimeDependencies = {},
   options: SetupRequestHandlerOptions = {},
 ) {
-  configureMaintenanceAuthHome(ctx.home);
+  configureMaintenanceAuthHome(ctx.home, ctx.mode);
   const routes = createSetupRoutes(ctx, tlsDeps, options.buildId ?? resolveSetupBuildId());
   const managerToken =
     options.managerToken !== undefined ? options.managerToken : readSetupManagerTokenFromEnv();

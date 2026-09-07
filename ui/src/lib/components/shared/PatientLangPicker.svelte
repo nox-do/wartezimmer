@@ -90,7 +90,9 @@
     right: max(10px, env(safe-area-inset-right));
     top: 50%;
     transform: translateY(-50%);
-    max-height: min(80dvh, 360px);
+    max-height: calc(
+      100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+    );
   }
 
   .lang-picker-wrap--corner {
@@ -122,7 +124,9 @@
     overflow-y: auto;
     padding: 8px 4px;
     gap: 12px;
-    max-height: min(80dvh, 360px);
+    max-height: calc(
+      100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+    );
   }
 
   .lang-picker--corner {

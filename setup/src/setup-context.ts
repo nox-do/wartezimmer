@@ -89,7 +89,9 @@ export function migrateMaintenanceToken(
 }
 
 function finalizeSetupContext(context: SetupContext): SetupContext {
-  migrateMaintenanceToken(context.home);
+  if (context.mode === 'install') {
+    migrateMaintenanceToken(context.home);
+  }
   return context;
 }
 
