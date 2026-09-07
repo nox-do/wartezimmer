@@ -229,6 +229,7 @@ export interface paths {
               topicId: string;
               label?: string;
               laneCode?: string;
+              /** @description Simple-routing target; may be pf_waiting. */
               defaultRoomId?: string;
               journeyTemplateId?: string | null;
               iconId?: string | null;
@@ -239,6 +240,7 @@ export interface paths {
               sortOrder?: number;
             }[];
             rooms?: {
+              /** @description Practice-room id. Reserved waiting-room ids such as pf_waiting cannot be used here. */
               roomId: string;
               roomLabel: string;
               enabled?: boolean;
@@ -1956,6 +1958,7 @@ export interface components {
     JourneyStepSetting: {
       id: string;
       sortOrder: number;
+      /** @description Enabled practice-room id or the fixed waiting-room location pf_waiting. */
       targetLocationId?: string | null;
       queueId?: string | null;
       /** @enum {string} */
@@ -1995,6 +1998,7 @@ export interface components {
         label: string;
         /** @description Ticket number series letter for this topic (A–Z). */
         laneCode: string;
+        /** @description Simple-routing target. pf_waiting starts the visit waiting; a practice room starts it directed/self_go. */
         defaultRoomId: string;
         /** @description Complex routing only. When set, the topic routes via this JourneyTemplate instead of the simple default room. */
         journeyTemplateId?: string | null;
@@ -2009,10 +2013,11 @@ export interface components {
       }[];
       journeySettings: components['schemas']['JourneySettings'];
       rooms: {
+        /** @description Practice-room id. Reserved waiting-room ids such as pf_waiting cannot be used here. */
         roomId: string;
         roomLabel: string;
         enabled: boolean;
-        /** @description Default MFA call destination when Quicksettings have no session override. Exactly one enabled room should be marked. */
+        /** @description Default MFA call destination when Quicksettings have no session override. At most one enabled practice room is marked; if none is marked, pf_waiting is the default. */
         defaultCallTarget?: boolean;
         /** @description Maximum concurrent called or in-room visits assigned to this room. Null or omitted means unlimited. */
         maxOccupancy?: number | null;

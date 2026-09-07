@@ -18,6 +18,7 @@
   } from '$lib/mfa/journey-admin-helpers';
   import type { JourneySettings, JourneyTemplateSetting, PracticeRoom } from '$lib/ops/openapi-types';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
+  import { WAITING_ROOM_LABEL, WAITING_ROOM_LOCATION_ID } from '@praxis-flow/domain';
 
   interface Props {
     journeySettings: JourneySettings;
@@ -37,7 +38,7 @@
     onSave,
   }: Props = $props();
 
-  const fallbackLocationId = $derived(enabledRooms[0]?.roomId ?? '');
+  const fallbackLocationId = $derived(enabledRooms[0]?.roomId ?? WAITING_ROOM_LOCATION_ID);
   const selectedTemplate = $derived(
     journeySettings.templates.find((template) => template.id === selectedTemplateId) ?? null,
   );
@@ -224,12 +225,13 @@
                   <select
                     class="form-input"
                     value={step.targetLocationId ?? ''}
-                    disabled={busy || enabledRooms.length === 0}
+                    disabled={busy}
                     onchange={(event) =>
                       updateStep(step.id, {
                         targetLocationId: (event.currentTarget as HTMLSelectElement).value || null,
                       })}
                   >
+                    <option value={WAITING_ROOM_LOCATION_ID}>{WAITING_ROOM_LABEL}</option>
                     {#each enabledRooms as room (room.roomId)}
                       <option value={room.roomId}>{room.roomLabel}</option>
                     {/each}

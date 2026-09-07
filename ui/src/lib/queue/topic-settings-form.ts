@@ -1,4 +1,9 @@
-import { isReservedLaneCode, MFA_ASSIST_LANE_CODE } from '@praxis-flow/domain';
+import {
+  isReservedLaneCode,
+  MFA_ASSIST_LANE_CODE,
+  WAITING_ROOM_LABEL,
+  WAITING_ROOM_LOCATION_ID,
+} from '@praxis-flow/domain';
 import type { PracticeRoom, PracticeTopicSetting } from './ops-settings-api';
 
 /** Re-export canonical reserved-lane helpers from `@praxis-flow/domain`. */
@@ -9,7 +14,7 @@ export function topicsReferencingMissingRooms(
   topics: readonly PracticeTopicSetting[],
   rooms: readonly PracticeRoom[],
 ): PracticeTopicSetting[] {
-  const roomIds = new Set(rooms.map((room) => room.roomId));
+  const roomIds = new Set([WAITING_ROOM_LOCATION_ID, ...rooms.map((room) => room.roomId)]);
   return topics.filter((topic) => !roomIds.has(topic.defaultRoomId));
 }
 
@@ -18,5 +23,6 @@ export function formatTopicLabels(topics: readonly Pick<PracticeTopicSetting, 'l
 }
 
 export function roomLabelById(rooms: PracticeRoom[], roomId: string): string {
+  if (roomId === WAITING_ROOM_LOCATION_ID) return WAITING_ROOM_LABEL;
   return rooms.find((room) => room.roomId === roomId)?.roomLabel ?? roomId;
 }

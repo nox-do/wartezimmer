@@ -15,6 +15,7 @@
   import { fetchOpsSettings, listEnabledRooms, patchOpsSettings } from '$lib/queue/ops-settings-api';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { toastStore } from '$lib/stores/toastStore';
+  import { WAITING_ROOM_LOCATION_ID } from '@praxis-flow/domain';
 
   let loading = $state(true);
   let saving = $state(false);
@@ -48,7 +49,7 @@
   }
 
   function addJourneyTemplate() {
-    const fallbackLocationId = enabledRooms[0]?.roomId ?? '';
+    const fallbackLocationId = enabledRooms[0]?.roomId ?? WAITING_ROOM_LOCATION_ID;
     const taken = new Set(journeySettings.templates.map((template) => template.id));
     const template = createJourneyTemplate(
       t('mfa.settings.journeyNewTemplateName'),

@@ -142,6 +142,9 @@ function setupVisitFlow(): {
   ensureFlowCoreSchema(db);
   const settings = sampleSettings();
   syncFlowCoreCatalog(db, settings);
+  db.prepare(
+    "UPDATE routing_rules SET initial_movement_mode = 'call' WHERE topic_id = 'blut'",
+  ).run();
   const created = createVisitCheckInInDb(buildDeps(db, settings), {
     topicId: 'blut',
     authPath: 'phone_dob',

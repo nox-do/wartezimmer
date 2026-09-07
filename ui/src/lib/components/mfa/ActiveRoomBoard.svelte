@@ -20,7 +20,9 @@
     onContinue: (visitId: string) => void;
     onReassign: (visitId: string) => void;
     onCheckOut: (visitId: string) => void;
+    onCancelVisit: (visitId: string) => void;
     onReturnToWaiting: (visitId: string) => void;
+    onMarkAway: (visitId: string) => void;
     onOpenDocuments: (item: QueueItem) => void;
     onCycleTriage: (visitId: string) => void;
   }
@@ -38,7 +40,9 @@
     onContinue,
     onReassign,
     onCheckOut,
+    onCancelVisit,
     onReturnToWaiting,
+    onMarkAway,
     onOpenDocuments,
     onCycleTriage,
   }: Props = $props();
@@ -51,6 +55,37 @@
 </script>
 
 <div class="active-room-board">
+  <section class="active-room-group active-room-group--underway" aria-label={t('mfa.zoneUnderwayTitle')}>
+    <div class="active-room-group-head">
+      <h3 class="active-room-group-title">{t('mfa.zoneUnderwayTitle')}</h3>
+    </div>
+    <p class="active-room-group-note">{t('mfa.zoneUnderwayDesc')}</p>
+    {#if board.underway.length === 0}
+      <p class="active-room-group-empty">{t('mfa.zoneUnderwayEmpty')}</p>
+    {:else}
+      <ul class="queue-list">
+        {#each board.underway as item (`${item.visitId}:${item.status}`)}
+          <QueueEntry
+            {item}
+            zone="active"
+            dragEnabled={dragEnabled && !isBusy(item.visitId)}
+            dragZone="active"
+            {queueDragging}
+            {nowMs}
+            busy={isBusy(item.visitId)}
+            onCheckIn={() => onCheckIn(item.visitId)}
+            onReassign={() => onReassign(item.visitId)}
+            onCancelVisit={() => onCancelVisit(item.visitId)}
+            onReturnToWaiting={() => onReturnToWaiting(item.visitId)}
+            onMarkAway={() => onMarkAway(item.visitId)}
+            onOpenDocuments={onOpenDocuments}
+            onCycleTriage={() => onCycleTriage(item.visitId)}
+          />
+        {/each}
+      </ul>
+    {/if}
+  </section>
+
   {#each board.groups as group (group.roomId)}
     <QueueDropZone
       dropId={`room:${group.roomId}`}

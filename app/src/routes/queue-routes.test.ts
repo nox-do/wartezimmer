@@ -901,6 +901,9 @@ function buildTvQueueRouteDb(): { db: CoreDatabase; visitId: string } {
   ensureFlowCoreSchema(sqlite);
   const settings = tvQueueTestSettings();
   syncFlowCoreCatalog(sqlite, settings);
+  sqlite
+    .prepare("UPDATE routing_rules SET initial_movement_mode = 'call' WHERE topic_id = 'blut'")
+    .run();
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS ops_state (

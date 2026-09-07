@@ -60,4 +60,23 @@ describe('topicsReferencingMissingRooms', () => {
 
     expect(topicsReferencingMissingRooms(topics, rooms)).toEqual([]);
   });
+
+  it('accepts the built-in waiting room without a pseudo room entry', () => {
+    const topics = [
+      {
+        topicId: 'offen',
+        label: 'Offen',
+        laneCode: 'O',
+        defaultRoomId: 'pf_waiting',
+        iconId: null,
+        accentColor: DEFAULT_TOPIC_ACCENT,
+        enabled: true,
+        availableFrom: null,
+        availableTo: null,
+        sortOrder: 1,
+      },
+    ];
+
+    expect(topicsReferencingMissingRooms(topics, [])).toEqual([]);
+  });
 });

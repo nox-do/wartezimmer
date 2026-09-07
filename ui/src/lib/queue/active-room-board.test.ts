@@ -34,6 +34,7 @@ describe('buildActiveRoomBoard', () => {
     const board = buildActiveRoomBoard([], rooms);
     expect(board.groups.map((group) => group.roomId)).toEqual(['empfang', 'kirche']);
     expect(board.groups.every((group) => group.tickets.length === 0)).toBe(true);
+    expect(board.underway).toEqual([]);
     expect(board.unassigned).toEqual([]);
   });
 
@@ -48,8 +49,22 @@ describe('buildActiveRoomBoard', () => {
       rooms,
     );
 
-    expect(board.groups[0]?.tickets.map((item) => item.visitId)).toEqual(['a']);
+    expect(board.underway.map((item) => item.visitId)).toEqual(['a', 'c', 'd']);
+    expect(board.groups[0]?.tickets.map((item) => item.visitId)).toEqual([]);
     expect(board.groups[1]?.tickets.map((item) => item.visitId)).toEqual(['b']);
-    expect(board.unassigned.map((item) => item.visitId)).toEqual(['c', 'd']);
+    expect(board.unassigned).toEqual([]);
+  });
+
+  it('keeps called and directed underway while counting called for room capacity', () => {
+    const board = buildActiveRoomBoard(
+      [
+        ticket({ visitId: 'called', roomId: 'empfang', status: 'called' }),
+        ticket({ visitId: 'directed', roomId: null, status: 'directed' }),
+      ],
+      [{ ...rooms[0]!, maxOccupancy: 1 }],
+    );
+    expect(board.underway.map((item) => item.visitId)).toEqual(['called', 'directed']);
+    expect(board.groups[0]?.occupantCount).toBe(1);
+    expect(board.groups[0]?.isAtCapacity).toBe(true);
   });
 });

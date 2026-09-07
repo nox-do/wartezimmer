@@ -114,7 +114,7 @@ test('createVisitCheckInInDb writes a visit and exposes it in the queue list', (
   const queueRows = listVisitQueueRows(getFlowCoreRuntime(db), settings, getBusinessDay());
   assert.equal(queueRows.length, 1);
   assert.equal(queueRows[0]?.id, created.visitId);
-  assert.equal(queueRows[0]?.status, 'waiting');
+  assert.equal(queueRows[0]?.status, 'directed');
   assert.equal(queueRows[0]?.topicId, 'blut');
 });
 

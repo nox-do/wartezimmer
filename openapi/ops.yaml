@@ -450,6 +450,7 @@ components:
           nullable: true
           minLength: 1
           maxLength: 64
+          description: Enabled practice-room id or the fixed waiting-room location pf_waiting.
         queueId:
           type: string
           nullable: true
@@ -594,6 +595,7 @@ components:
                 type: string
                 minLength: 1
                 maxLength: 64
+                description: Simple-routing target. pf_waiting starts the visit waiting; a practice room starts it directed/self_go.
               journeyTemplateId:
                 type: string
                 nullable: true
@@ -638,6 +640,7 @@ components:
                 type: string
                 minLength: 1
                 maxLength: 64
+                description: Practice-room id. Reserved waiting-room ids such as pf_waiting cannot be used here.
               roomLabel:
                 type: string
                 minLength: 1
@@ -646,7 +649,7 @@ components:
                 type: boolean
               defaultCallTarget:
                 type: boolean
-                description: Default MFA call destination when Quicksettings have no session override. Exactly one enabled room should be marked.
+                description: Default MFA call destination when Quicksettings have no session override. At most one enabled practice room is marked; if none is marked, pf_waiting is the default.
               maxOccupancy:
                 type: integer
                 nullable: true
@@ -1629,6 +1632,7 @@ paths:
                         type: string
                         minLength: 1
                         maxLength: 64
+                        description: Simple-routing target; may be pf_waiting.
                       journeyTemplateId:
                         type: string
                         nullable: true
@@ -1667,6 +1671,7 @@ paths:
                         type: string
                         minLength: 1
                         maxLength: 64
+                        description: Practice-room id. Reserved waiting-room ids such as pf_waiting cannot be used here.
                       roomLabel:
                         type: string
                         minLength: 1

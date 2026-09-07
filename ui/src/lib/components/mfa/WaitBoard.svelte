@@ -281,49 +281,25 @@
     <section class="wait-zone wait-zone--active">
       <h2 class="wait-zone-title">{t('mfa.zoneActiveTitle')}</h2>
       <p class="wait-zone-desc">{t('mfa.zoneActiveDesc')}</p>
-      {#if enabledRooms.length === 0}
-        {#if active.length === 0}
-          <p class="wait-zone-empty">{zoneEmptyMessage('mfa.zoneActiveEmpty')}</p>
-        {:else}
-          <ul class="queue-list">
-            {#each active as item (`${item.visitId}:${item.roomId ?? 'none'}`)}
-              <QueueEntry
-                {item}
-                zone="active"
-                queueDragging={isQueueDragging}
-                {nowMs}
-                busy={isBusy(item.visitId)}
-                onCheckIn={() => onCheckIn(item.visitId)}
-                onStart={() => onStart(item.visitId)}
-                onContinue={() => onContinue(item.visitId)}
-                onReassign={() => onReassign(item.visitId)}
-                onCheckOut={() => onCheckOut(item.visitId)}
-                onReturnToWaiting={() => onReturnToWaiting(item.visitId)}
-                onOpenDocuments={onOpenDocuments}
-                onCycleTriage={() => onCycleTriage(item.visitId)}
-              />
-            {/each}
-          </ul>
-        {/if}
-      {:else}
-        <ActiveRoomBoard
-          {active}
-          rooms={enabledRooms}
-          dragEnabled={queueDragEnabled}
-          {activeDropTargetId}
-          queueDragging={isQueueDragging}
-          {busyVisitId}
-          {nowMs}
-          {onCheckIn}
-          {onStart}
-          {onContinue}
-          {onReassign}
-          {onCheckOut}
-          {onReturnToWaiting}
-          {onOpenDocuments}
-          {onCycleTriage}
-        />
-      {/if}
+      <ActiveRoomBoard
+        {active}
+        rooms={enabledRooms}
+        dragEnabled={queueDragEnabled}
+        {activeDropTargetId}
+        queueDragging={isQueueDragging}
+        {busyVisitId}
+        {nowMs}
+        {onCheckIn}
+        {onStart}
+        {onContinue}
+        {onReassign}
+        {onCheckOut}
+        {onCancelVisit}
+        {onReturnToWaiting}
+        {onMarkAway}
+        {onOpenDocuments}
+        {onCycleTriage}
+      />
     </section>
   </div>
 </DragDropProvider>

@@ -143,7 +143,7 @@ test('buildOpsSettingsUpdate preserves maxOccupancy on rooms patch', async () =>
     return;
   }
 
-  assert.equal(result.rooms?.[0]?.maxOccupancy, 1);
+  assert.equal(result.rooms?.find((room) => room.roomId === 'empfang')?.maxOccupancy, 1);
 });
 
 test('buildOpsSettingsUpdate preserves topic journeyTemplateId on topic base-data patch', async () => {
@@ -271,10 +271,11 @@ test('buildOpsSettingsUpdate preserves panel settings on rooms patch', async () 
     return;
   }
 
-  assert.equal(result.rooms?.[0]?.panels.inside.enabled, true);
-  assert.equal(result.rooms?.[0]?.panels.inside.mode, 'staff_full');
-  assert.equal(result.rooms?.[0]?.panels.inside.showPatientNames, true);
-  assert.equal(result.rooms?.[0]?.panels.inside.calledTextCustom, 'Bitte eintreten');
+  const room = result.rooms?.find((entry) => entry.roomId === 'empfang');
+  assert.equal(room?.panels.inside.enabled, true);
+  assert.equal(room?.panels.inside.mode, 'staff_full');
+  assert.equal(room?.panels.inside.showPatientNames, true);
+  assert.equal(room?.panels.inside.calledTextCustom, 'Bitte eintreten');
 });
 
 test('buildOpsSettingsUpdate merges partial inside panel patch and preserves outside', async () => {
@@ -324,11 +325,12 @@ test('buildOpsSettingsUpdate merges partial inside panel patch and preserves out
     return;
   }
 
-  assert.equal(result.rooms?.[0]?.panels.inside.allowCalling, true);
-  assert.equal(result.rooms?.[0]?.panels.inside.mode, 'staff_full');
-  assert.equal(result.rooms?.[0]?.panels.outside.enabled, true);
-  assert.equal(result.rooms?.[0]?.panels.outside.mode, 'arrival');
-  assert.equal(result.rooms?.[0]?.panels.outside.calledTextCustom, 'Draußen warten');
+  const room = result.rooms?.find((entry) => entry.roomId === 'empfang');
+  assert.equal(room?.panels.inside.allowCalling, true);
+  assert.equal(room?.panels.inside.mode, 'staff_full');
+  assert.equal(room?.panels.outside.enabled, true);
+  assert.equal(room?.panels.outside.mode, 'arrival');
+  assert.equal(room?.panels.outside.calledTextCustom, 'Draußen warten');
 });
 
 test('buildOpsSettingsUpdate normalizes outside constraints on partial outside patch', async () => {
@@ -377,11 +379,12 @@ test('buildOpsSettingsUpdate normalizes outside constraints on partial outside p
     return;
   }
 
-  assert.equal(result.rooms?.[0]?.panels.outside.enabled, true);
-  assert.equal(result.rooms?.[0]?.panels.outside.mode, 'arrival');
-  assert.equal(result.rooms?.[0]?.panels.outside.showPatientNames, false);
-  assert.equal(result.rooms?.[0]?.panels.inside.enabled, true);
-  assert.equal(result.rooms?.[0]?.panels.inside.mode, 'staff_full');
+  const room = result.rooms?.find((entry) => entry.roomId === 'empfang');
+  assert.equal(room?.panels.outside.enabled, true);
+  assert.equal(room?.panels.outside.mode, 'arrival');
+  assert.equal(room?.panels.outside.showPatientNames, false);
+  assert.equal(room?.panels.inside.enabled, true);
+  assert.equal(room?.panels.inside.mode, 'staff_full');
 });
 
 test('buildOpsSettingsUpdate normalizes protected outside panel settings', async () => {
@@ -411,9 +414,78 @@ test('buildOpsSettingsUpdate normalizes protected outside panel settings', async
     assert.fail(result.message);
   }
 
-  assert.equal(result.rooms?.[0]?.panels.outside.enabled, true);
-  assert.equal(result.rooms?.[0]?.panels.outside.mode, 'arrival');
-  assert.equal(result.rooms?.[0]?.panels.outside.showPatientNames, false);
+  const room = result.rooms?.find((entry) => entry.roomId === 'empfang');
+  assert.equal(room?.panels.outside.enabled, true);
+  assert.equal(room?.panels.outside.mode, 'arrival');
+  assert.equal(room?.panels.outside.showPatientNames, false);
+});
+
+test('buildOpsSettingsUpdate represents a waiting-room default without a pseudo room', async () => {
+  const result = await buildOpsSettingsUpdate(mockDb(), {
+    rooms: [{ roomId: 'empfang', roomLabel: 'Empfang', enabled: true, defaultCallTarget: false }],
+    topics: [{ topicId: 'offen', defaultRoomId: 'pf_waiting' }],
+  });
+  assert.ok(!('code' in result));
+  if (!('code' in result)) {
+    assert.equal(
+      result.rooms?.some((room) => room.defaultCallTarget),
+      false,
+    );
+    assert.equal(
+      result.rooms?.some((room) => room.roomId === 'pf_waiting'),
+      false,
+    );
+    assert.equal(result.topics?.[0]?.defaultRoomId, 'pf_waiting');
+  }
+});
+
+test('buildOpsSettingsUpdate rejects reserved normal room ids and labels', async () => {
+  const waitingLocationId = await buildOpsSettingsUpdate(mockDb(), {
+    rooms: [
+      { roomId: 'empfang', roomLabel: 'Empfang', enabled: true, defaultCallTarget: true },
+      { roomId: 'pf_waiting', roomLabel: 'Nebenraum', enabled: true, defaultCallTarget: false },
+    ],
+  });
+  assert.ok('code' in waitingLocationId);
+
+  const reservedId = await buildOpsSettingsUpdate(mockDb(), {
+    rooms: [
+      { roomId: 'empfang', roomLabel: 'Empfang', enabled: true, defaultCallTarget: true },
+      { roomId: 'waiting-room', roomLabel: 'Nebenraum', enabled: true, defaultCallTarget: false },
+    ],
+  });
+  assert.ok('code' in reservedId);
+
+  const reservedLabel = await buildOpsSettingsUpdate(mockDb(), {
+    rooms: [
+      { roomId: 'empfang', roomLabel: 'Empfang', enabled: true, defaultCallTarget: true },
+      { roomId: 'raum-2', roomLabel: 'Wartezimmer', enabled: true, defaultCallTarget: false },
+    ],
+  });
+  assert.ok('code' in reservedLabel);
+});
+
+test('buildOpsSettingsUpdate removes a legacy Wartezimmer room without mistaking its label for the system room', async () => {
+  const db = {
+    getOpsSettings: () => ({
+      ...mockDb().getOpsSettings(),
+      rooms: [
+        ...mockDb().getOpsSettings().rooms,
+        {
+          roomId: 'legacy-wartezimmer',
+          roomLabel: 'Wartezimmer',
+          enabled: true,
+          defaultCallTarget: false,
+          maxOccupancy: null,
+          panels: DEFAULT_ROOM_PANELS_SETTINGS,
+        },
+      ],
+    }),
+  } as unknown as CoreDatabase;
+  const result = await buildOpsSettingsUpdate(db, {
+    rooms: [{ roomId: 'empfang', roomLabel: 'Empfang', enabled: true, defaultCallTarget: true }],
+  });
+  assert.ok(!('code' in result));
 });
 
 test('buildOpsSettingsUpdate merges practiceProfile partial patch', async () => {

@@ -6,6 +6,7 @@ import type {
   PracticeRoom,
 } from '$lib/ops/openapi-types';
 import { randomId } from '$lib/utils/random-id';
+import { WAITING_ROOM_LABEL, WAITING_ROOM_LOCATION_ID } from '@praxis-flow/domain';
 
 /**
  * Journey admin helpers — defaults, normalize, and UX validation for Ops Settings.
@@ -111,6 +112,7 @@ export function journeyStepRoomBadge(
   rooms: PracticeRoom[],
 ): string {
   const label =
+    (targetLocationId === WAITING_ROOM_LOCATION_ID ? WAITING_ROOM_LABEL : null) ||
     rooms.find((room) => room.roomId === targetLocationId)?.roomLabel?.trim() ||
     targetLocationId?.trim() ||
     '?';
@@ -176,6 +178,7 @@ export function buildJourneyPreview(
     .sort((left, right) => left.sortOrder - right.sortOrder)
     .map((step, index) => {
       const target =
+        (step.targetLocationId === WAITING_ROOM_LOCATION_ID ? WAITING_ROOM_LABEL : null) ??
         rooms.find((room) => room.roomId === step.targetLocationId)?.roomLabel ??
         step.targetLocationId ??
         '?';
@@ -196,7 +199,7 @@ export function validateJourneySettingsForSave(
 
     for (const step of template.steps) {
       const targetId = step.targetLocationId?.trim();
-      if (!targetId || !enabledRoomIds.has(targetId)) {
+      if (!targetId || (targetId !== WAITING_ROOM_LOCATION_ID && !enabledRoomIds.has(targetId))) {
         return { ok: false, messageKey: 'mfa.settings.journeyStepTargetInvalid' };
       }
     }

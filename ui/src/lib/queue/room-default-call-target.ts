@@ -17,7 +17,8 @@ export function ensureSingleDefaultCallTarget(
 }
 
 export function defaultCallRoom(rooms: PracticeRoom[]): PracticeRoom | undefined {
-  return listEnabledRooms(rooms).find((room) => room.defaultCallTarget);
+  const roomId = resolveDefaultCallRoomId(rooms);
+  return roomId ? rooms.find((room) => room.enabled && room.roomId === roomId) : undefined;
 }
 
 export function resolveDefaultCallRoomId(rooms: PracticeRoom[]): string | null {

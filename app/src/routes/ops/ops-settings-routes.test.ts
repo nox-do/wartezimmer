@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import Fastify from 'fastify';
 import type { CoreDatabase } from '../../shared/db/database.js';
+import { DEFAULT_ROOM_PANELS_SETTINGS } from '@praxis-flow/domain';
 import { createSerializedExecutor, registerOpsSettingsRoutes } from './ops-settings-routes.js';
 
 test('settings updates execute sequentially even while an earlier update awaits', async () => {
@@ -104,5 +105,80 @@ test('GET /api/v1/ops/settings/capabilities returns complex routing capabilities
       complexRoutingLicensed: true,
     },
   });
+  await app.close();
+});
+
+test('PATCH /api/v1/ops/settings returns 400 for a normal room named Wartezimmer', async () => {
+  const app = Fastify({ logger: false });
+  app.addHook('preHandler', async (request) => {
+    request.clientRole = 'mfa';
+  });
+  let updateCalled = false;
+  registerOpsSettingsRoutes(app, {
+    getOpsSettings: () => ({
+      routingMode: 'simple',
+      returnWindowMinutes: 15,
+      practiceOpenFrom: '08:00',
+      practiceOpenTo: '18:00',
+      practiceProfileJson: '{}',
+      topics: [
+        {
+          topicId: 'offen',
+          label: 'Offen',
+          laneCode: 'O',
+          defaultRoomId: 'empfang',
+          iconId: null,
+          accentColor: '#000000',
+          enabled: true,
+          availableFrom: null,
+          availableTo: null,
+          sortOrder: 1,
+        },
+      ],
+      journeySettings: { templates: [] },
+      rooms: [
+        {
+          roomId: 'empfang',
+          roomLabel: 'Empfang',
+          enabled: true,
+          defaultCallTarget: true,
+          maxOccupancy: null,
+          panels: DEFAULT_ROOM_PANELS_SETTINGS,
+        },
+      ],
+      contactLookupFolderPath: null,
+      contactLookupDelimiterMode: 'auto',
+      contactLookupHasHeader: true,
+      contactLookupMappingJson: '{}',
+      emergencyEnabled: false,
+      terminalWlanPromoEnabled: false,
+      terminalAuthPhoneEnabled: true,
+      terminalAuthNameDobEnabled: true,
+      terminalAuthEgkEnabled: false,
+      terminalPatientLocales: [],
+      smsProvider: 'mock',
+      exportBasePath: '/tmp',
+      updatedAt: '2026-09-07T10:00:00.000Z',
+    }),
+    updateOpsSettings: () => {
+      updateCalled = true;
+      throw new Error('must not update');
+    },
+  } as unknown as CoreDatabase);
+
+  await app.ready();
+  const response = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/ops/settings',
+    payload: {
+      rooms: [
+        { roomId: 'empfang', roomLabel: 'Empfang', enabled: true, defaultCallTarget: true },
+        { roomId: 'raum-2', roomLabel: 'Wartezimmer', enabled: true },
+      ],
+    },
+  });
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().code, 'INVALID_ARGUMENT');
+  assert.equal(updateCalled, false);
   await app.close();
 });

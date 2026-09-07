@@ -126,6 +126,37 @@ test('getOpsSettingsFromDb defaults missing panels to DEFAULT_ROOM_PANELS_SETTIN
   assert.deepEqual(settings.rooms[0]?.panels, DEFAULT_ROOM_PANELS_SETTINGS);
 });
 
+test('getOpsSettingsFromDb removes a legacy waiting-room pseudo entry', () => {
+  const settings = getOpsSettingsFromDb({
+    getOpsSettingsStmt: {
+      get: () =>
+        minimalOpsSettingsRow({
+          roomsJson: JSON.stringify([
+            {
+              roomId: 'pf_waiting',
+              roomLabel: 'Wartezimmer',
+              enabled: true,
+              defaultCallTarget: true,
+            },
+            {
+              roomId: 'empfang',
+              roomLabel: 'Empfang',
+              enabled: true,
+              defaultCallTarget: false,
+            },
+          ]),
+        }),
+    } as StatementSync,
+    configuredExportBasePath: null,
+  });
+
+  assert.deepEqual(
+    settings.rooms.map((room) => room.roomId),
+    ['empfang'],
+  );
+  assert.equal(settings.rooms[0]?.defaultCallTarget, false);
+});
+
 test('getOpsSettingsFromDb applies outside constraints on panels', () => {
   const settings = getOpsSettingsFromDb({
     getOpsSettingsStmt: {

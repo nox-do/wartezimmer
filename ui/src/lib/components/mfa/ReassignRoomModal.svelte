@@ -41,10 +41,13 @@
       return;
     }
     const current = ticket.roomId?.trim();
+    const configuredDefaultId = defaultCallRoom(rooms)?.roomId;
     selectedRoomId =
       current && enabledRooms.some((room) => room.roomId === current)
         ? current
-        : (defaultCallRoom(rooms)?.roomId ?? enabledRooms[0]?.roomId ?? null);
+        : (enabledRooms.find((room) => room.roomId === configuredDefaultId)?.roomId ??
+          enabledRooms[0]?.roomId ??
+          null);
   });
 
   function handleClose() {

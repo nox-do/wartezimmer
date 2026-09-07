@@ -109,8 +109,10 @@
     callBlockedTitle ?? (callAnnouncementOffline ? t('mfa.callAnnouncementOffline') : undefined),
   );
   const showCall = $derived(zone === 'waiting' && Boolean(onCall));
+  const showDirectedWaitingActions = $derived(zone === 'active' && item.status === 'directed');
   const showCancelVisit = $derived(
-    (zone === 'waiting' || zone === 'away') && Boolean(onCancelVisit),
+    (zone === 'waiting' || zone === 'away' || showDirectedWaitingActions) &&
+      Boolean(onCancelVisit),
   );
   const returnActive = $derived(zone === 'away' && item.status === 'absent_return_later' && !!item.returnUntil);
   const recallPending = $derived(
@@ -136,7 +138,7 @@
   );
   /** Blue staff-attention mark: terminal help and pickup both mean someone must go to the patient. */
   const showStaffAttentionMark = $derived(showNeedsAssistance || showPickupMark);
-  const showDirectedMark = $derived(zone === 'waiting' && item.status === 'directed');
+  const showDirectedMark = $derived(zone === 'active' && item.status === 'directed');
   const movementRoomLabel = $derived(
     item.destinationRoomLabel?.trim() || item.roomLabel?.trim() || '',
   );
@@ -478,12 +480,34 @@
           </MfaActionButton>
         {/if}
       </div>
-    {:else if zone === 'active' && item.status === 'called' && onCheckIn}
+    {:else if zone === 'active' && (item.status === 'called' || item.status === 'directed') && onCheckIn}
       <div class="queue-entry-actions-hover">
         <MfaActionButton icon disabled={busy} ariaLabel={t('mfa.actionCheckIn')} onclick={onCheckIn}>
           <MapPin aria-hidden="true" />
         </MfaActionButton>
         {@render roomManagementActions()}
+        {#if showDirectedWaitingActions && onMarkAway}
+          <MfaActionButton
+            variant="ghost"
+            icon
+            disabled={busy}
+            ariaLabel={t('mfa.actionMarkAway')}
+            onclick={onMarkAway}
+          >
+            <TreePalm aria-hidden="true" />
+          </MfaActionButton>
+        {/if}
+        {#if showDirectedWaitingActions && showCancelVisit}
+          <MfaActionButton
+            variant="danger"
+            icon
+            disabled={busy}
+            ariaLabel={t('mfa.actionCancelVisit')}
+            onclick={onCancelVisit}
+          >
+            <Trash2 aria-hidden="true" />
+          </MfaActionButton>
+        {/if}
       </div>
     {:else if zone === 'active' && item.status === 'in_room'}
       <div class="queue-entry-actions-hover">

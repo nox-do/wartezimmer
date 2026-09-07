@@ -12,11 +12,14 @@ import {
   isReservedLaneCode,
   isValidLaneCode,
   isValidTopicAccentColor,
-  listEnabledRooms,
+  isReservedRoomId,
+  isReservedRoomLabel,
   MFA_ASSIST_LANE_CODE,
   normalizeLaneCode,
   normalizeTopicAccentColor,
   resolveDefaultCallRoomId,
+  WAITING_ROOM_LABEL,
+  WAITING_ROOM_LOCATION_ID,
 } from '@praxis-flow/domain';
 
 export type TopicSetting = OpsSettings['topics'][number];
@@ -31,6 +34,27 @@ export {
 };
 
 const DEFAULT_CENTRAL_ROOM_ID = 'mfa-tresen';
+
+export function validateRoomSettings(
+  rooms: OpsSettings['rooms'],
+): { ok: true } | { ok: false; message: string } {
+  const seenIds = new Set<string>();
+  for (const room of rooms) {
+    const roomId = room.roomId.trim();
+    if (seenIds.has(roomId)) {
+      return { ok: false, message: `Duplicate roomId: ${roomId}` };
+    }
+    seenIds.add(roomId);
+
+    if (isReservedRoomId(roomId)) {
+      return { ok: false, message: `Reserved roomId: ${roomId}` };
+    }
+    if (isReservedRoomLabel(room.roomLabel)) {
+      return { ok: false, message: `Reserved room label: ${WAITING_ROOM_LABEL}` };
+    }
+  }
+  return { ok: true };
+}
 
 export const DEFAULT_TERMINAL_TOPIC_DEFINITIONS: TopicSetting[] = [
   {
@@ -270,19 +294,22 @@ export function resolveDefaultRoomForTopic(
   return settings.rooms.find((room) => room.enabled && room.roomId === topic.defaultRoomId);
 }
 
-function resolveDefaultCallRoom(
+function resolveDefaultCallDestination(
   settings: Pick<OpsSettings, 'rooms'>,
-): OpsSettings['rooms'][number] | undefined {
+): { roomId: string; roomLabel: string } | null {
   const roomId = resolveDefaultCallRoomId(settings.rooms);
   if (!roomId) {
-    return undefined;
+    return null;
   }
-  return listEnabledRooms(settings.rooms).find((room) => room.roomId === roomId);
+  if (roomId === WAITING_ROOM_LOCATION_ID) {
+    return { roomId, roomLabel: WAITING_ROOM_LABEL };
+  }
+  const room = settings.rooms.find((entry) => entry.enabled && entry.roomId === roomId);
+  return room ? { roomId: room.roomId, roomLabel: room.roomLabel.trim() } : null;
 }
 
 function resolveDefaultCallRoomLabel(settings: Pick<OpsSettings, 'rooms'>): string | null {
-  const room = resolveDefaultCallRoom(settings);
-  return room?.roomLabel.trim() || null;
+  return resolveDefaultCallDestination(settings)?.roomLabel || null;
 }
 
 export function resolveDestinationRoomForTopic(
@@ -290,23 +317,19 @@ export function resolveDestinationRoomForTopic(
   topicId: string,
 ): { roomId: string; roomLabel: string } | null {
   if (topicId === MFA_ASSIST_TOPIC_ID) {
-    const room = resolveDefaultCallRoom(settings);
-    if (!room) {
-      return null;
-    }
-    return { roomId: room.roomId, roomLabel: room.roomLabel.trim() };
+    return resolveDefaultCallDestination(settings);
   }
 
+  const topic = settings.topics.find((entry) => entry.topicId === topicId);
+  if (topic?.defaultRoomId === WAITING_ROOM_LOCATION_ID) {
+    return { roomId: WAITING_ROOM_LOCATION_ID, roomLabel: WAITING_ROOM_LABEL };
+  }
   const room = resolveDefaultRoomForTopic(settings, topicId);
   if (room?.roomLabel.trim()) {
     return { roomId: room.roomId, roomLabel: room.roomLabel.trim() };
   }
 
-  const fallback = resolveDefaultCallRoom(settings);
-  if (!fallback) {
-    return null;
-  }
-  return { roomId: fallback.roomId, roomLabel: fallback.roomLabel.trim() };
+  return resolveDefaultCallDestination(settings);
 }
 
 /** Room label shown on the terminal confirmation screen after check-in. */
@@ -318,6 +341,10 @@ export function resolveDestinationRoomLabelForTopic(
     return resolveDefaultCallRoomLabel(settings);
   }
 
+  const topic = settings.topics.find((entry) => entry.topicId === topicId);
+  if (topic?.defaultRoomId === WAITING_ROOM_LOCATION_ID) {
+    return WAITING_ROOM_LABEL;
+  }
   const room = resolveDefaultRoomForTopic(settings, topicId);
   return room?.roomLabel.trim() || resolveDefaultCallRoomLabel(settings);
 }
@@ -341,7 +368,10 @@ export function validateTopicSettings(
     return { ok: false, message: 'At least one topic is required.' };
   }
 
-  const enabledRoomIds = new Set(rooms.filter((room) => room.enabled).map((room) => room.roomId));
+  const enabledRoomIds = new Set([
+    WAITING_ROOM_LOCATION_ID,
+    ...rooms.filter((room) => room.enabled).map((room) => room.roomId),
+  ]);
   const seenTopicIds = new Set<string>();
 
   for (const topic of topics) {

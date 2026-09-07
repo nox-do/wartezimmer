@@ -569,6 +569,20 @@ button.queue-ticket {
   background: var(--amber-warning-bg-glass);
 }
 
+.active-room-group--underway {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-color: var(--blue-info-border, var(--border)) !important;
+  background: var(--blue-info-bg-glass, var(--card-glass-65)) !important;
+}
+
+.active-room-group-note {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--mfa-muted);
+}
+
 .active-room-group-title {
   margin: 0;
   font-size: var(--text-xs);
@@ -708,6 +722,10 @@ button.queue-ticket {
 
 .panel.rooms-editor-panel {
   margin-bottom: 20px;
+}
+
+.rooms-editor-default-target {
+  margin-bottom: 16px;
 }
 
 .mfa-editor-head {

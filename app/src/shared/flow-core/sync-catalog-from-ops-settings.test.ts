@@ -112,7 +112,7 @@ test('syncCatalogFromOpsSettings maps PF topics and rooms into a valid flow-core
     .get('rezept') as { target: string; movementMode: string; displayMode: string } | undefined;
   assert.ok(rezeptRule);
   assert.equal(rezeptRule.target, 'mfa-tresen');
-  assert.equal(rezeptRule.movementMode, 'call');
+  assert.equal(rezeptRule.movementMode, 'self_go');
   assert.equal(rezeptRule.displayMode, 'visible');
 
   const mfaRule = db
@@ -251,6 +251,20 @@ test('buildSimpleRoutingRuleRow: erzeugt Simple-Routing ohne Journey', () => {
   assert.equal(row.initialQueueId, PF_FLOW_QUEUE_GENERAL);
   assert.equal(row.initialLastKnownLocationId, PF_FLOW_LOC_WAITING);
   assert.equal(row.journeyTemplateId, null);
+  assert.equal(row.initialMovementMode, 'self_go');
+});
+
+test('buildSimpleRoutingRuleRow keeps waiting-room targets waiting', () => {
+  const row = buildSimpleRoutingRuleRow({
+    topicId: 'offen',
+    name: 'Offene Sprechstunde',
+    targetLocationId: PF_FLOW_LOC_WAITING,
+    terminalInstructionTemplate: 'Bitte warten.',
+    allowRedirect: true,
+    active: true,
+  });
+
+  assert.equal(row.initialTargetLocationId, PF_FLOW_LOC_WAITING);
   assert.equal(row.initialMovementMode, 'call');
 });
 
@@ -320,6 +334,74 @@ test('syncCatalogFromOpsSettings in complex mode without journeys keeps simple r
     .all() as Array<{ journeyTemplateId: string | null }>;
   assert.ok(rules.length > 0);
   assert.ok(rules.every((rule) => rule.journeyTemplateId === null));
+});
+
+test('complex mode without an active journey keeps the waiting-room simple fallback', () => {
+  const db = openTestFlowCoreDb();
+  const settings: OpsSettings = {
+    ...sampleOpsSettings(),
+    routingMode: 'complex',
+    topics: sampleOpsSettings().topics.map((topic) =>
+      topic.topicId === 'blut'
+        ? { ...topic, defaultRoomId: PF_FLOW_LOC_WAITING, journeyTemplateId: null }
+        : topic,
+    ),
+  };
+  syncCatalogFromOpsSettings(db, settings);
+
+  const rule = db
+    .prepare(
+      'SELECT initial_target_location_id AS target, initial_movement_mode AS movementMode, journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?',
+    )
+    .get('blut') as
+    | { target: string; movementMode: string; journeyTemplateId: string | null }
+    | undefined;
+  assert.equal(rule?.target, PF_FLOW_LOC_WAITING);
+  assert.equal(rule?.movementMode, 'call');
+  assert.equal(rule?.journeyTemplateId, null);
+});
+
+test('complex routing accepts the fixed waiting room as a journey step target', () => {
+  const db = openTestFlowCoreDb();
+  const base = sampleOpsSettings();
+  const settings: OpsSettings = {
+    ...base,
+    routingMode: 'complex',
+    topics: base.topics.map((topic) =>
+      topic.topicId === 'blut' ? { ...topic, journeyTemplateId: 'journey_waiting' } : topic,
+    ),
+    journeySettings: {
+      templates: [
+        {
+          id: 'journey_waiting',
+          name: 'Start im Wartezimmer',
+          topicId: 'blut',
+          active: true,
+          steps: [
+            {
+              id: 'step_waiting',
+              sortOrder: 0,
+              targetLocationId: PF_FLOW_LOC_WAITING,
+              queueId: PF_FLOW_QUEUE_GENERAL,
+              movementMode: 'call',
+              publicDisplayMode: 'visible',
+              completedWhen: 'arrive',
+              instructionText: null,
+            },
+          ],
+        },
+      ],
+    },
+  };
+  syncCatalogFromOpsSettings(db, settings);
+  const visit = getFlowCoreRuntime(db).checkIn({
+    topicId: 'blut',
+    authPath: 'phone_dob',
+    surfaceId: PF_FLOW_SURFACE_TERMINAL,
+  });
+  assert.equal(visit.journeyTemplateId, 'journey_waiting');
+  assert.equal(visit.targetLocationId, PF_FLOW_LOC_WAITING);
+  assert.equal(visit.status, 'waiting');
 });
 
 test('syncCatalogFromOpsSettings in complex mode: mixed topics with and without journey', () => {
@@ -431,6 +513,53 @@ test('syncCatalogFromOpsSettings maps defaultRoomId to routing target location',
     .prepare('SELECT initial_target_location_id AS target FROM routing_rules WHERE topic_id = ?')
     .get('blut') as { target: string } | undefined;
   assert.equal(rule?.target, 'labor');
+});
+
+test('no marked practice room makes the waiting room the MFA default target', () => {
+  const db = openTestFlowCoreDb();
+  const settings = sampleOpsSettings();
+  syncCatalogFromOpsSettings(db, {
+    ...settings,
+    rooms: settings.rooms.map((room) => ({ ...room, defaultCallTarget: false })),
+  });
+
+  const rule = db
+    .prepare(
+      'SELECT initial_target_location_id AS target, initial_movement_mode AS movementMode FROM routing_rules WHERE topic_id = ?',
+    )
+    .get(MFA_ASSIST_TOPIC_ID) as { target: string; movementMode: string } | undefined;
+  assert.equal(rule?.target, PF_FLOW_LOC_WAITING);
+  assert.equal(rule?.movementMode, 'call');
+});
+
+test('simple routing starts room targets directed and waiting-room targets waiting', () => {
+  const db = openTestFlowCoreDb();
+  const settings = {
+    ...sampleOpsSettings(),
+    topics: sampleOpsSettings().topics.map((topic) =>
+      topic.topicId === 'blut'
+        ? { ...topic, defaultRoomId: PF_FLOW_LOC_WAITING }
+        : { ...topic, defaultRoomId: 'labor' },
+    ),
+  };
+  syncCatalogFromOpsSettings(db, settings);
+  const runtime = getFlowCoreRuntime(db);
+
+  const waitingVisit = runtime.checkIn({
+    topicId: 'blut',
+    authPath: 'phone_dob',
+    surfaceId: PF_FLOW_SURFACE_TERMINAL,
+  });
+  assert.equal(waitingVisit.status, 'waiting');
+  assert.equal(waitingVisit.targetLocationId, PF_FLOW_LOC_WAITING);
+
+  const directedVisit = runtime.checkIn({
+    topicId: 'rezept',
+    authPath: 'phone_dob',
+    surfaceId: PF_FLOW_SURFACE_TERMINAL,
+  });
+  assert.equal(directedVisit.status, 'directed');
+  assert.equal(directedVisit.targetLocationId, 'labor');
 });
 
 test('syncCatalogFromOpsSettings reflects ops_settings topic label on resync', () => {

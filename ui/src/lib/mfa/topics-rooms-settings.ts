@@ -19,7 +19,12 @@ import {
   isReservedLaneCode,
   topicsReferencingMissingRooms,
 } from '$lib/queue/topic-settings-form';
-import { isValidLaneCode } from '@praxis-flow/domain';
+import {
+  isReservedRoomId,
+  isReservedRoomLabel,
+  isValidLaneCode,
+  WAITING_ROOM_LOCATION_ID,
+} from '@praxis-flow/domain';
 import { validateTopicTimeWindow } from '$lib/queue/time-of-day';
 import { fetchRoutingCapabilities, type RoutingCapabilities } from '$lib/mfa/practice-ops-api';
 import { t, tf } from '$lib/i18n/i18nStore.svelte';
@@ -95,6 +100,10 @@ export async function persistTopicsRoomsSettings(
       toastStore.error(t('mfa.settings.roomIdDuplicate'));
       return null;
     }
+    if (isReservedRoomId(room.roomId) || isReservedRoomLabel(room.roomLabel)) {
+      toastStore.error(t('mfa.settings.roomReserved'));
+      return null;
+    }
     roomIds.add(room.roomId);
   }
 
@@ -128,7 +137,10 @@ export async function persistTopicsRoomsSettings(
       toastStore.error(t('mfa.settings.topicsLaneReserved'));
       return null;
     }
-    if (!normalizedRooms.some((room) => room.roomId === topic.defaultRoomId && room.enabled)) {
+    if (
+      topic.defaultRoomId !== WAITING_ROOM_LOCATION_ID &&
+      !normalizedRooms.some((room) => room.roomId === topic.defaultRoomId && room.enabled)
+    ) {
       toastStore.error(t('mfa.settings.topicRoomInvalid'));
       return null;
     }

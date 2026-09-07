@@ -10,6 +10,7 @@ import {
   type RoomPanelPlacement,
   type RoomPanelPlacementConfig,
   type RoomPanelTextPreset,
+  WAITING_ROOM_LOCATION_ID,
 } from '@praxis-flow/domain';
 import { isValidConfigurableTopicId } from '../checkin-topics.js';
 import {
@@ -17,6 +18,7 @@ import {
   readPartialNullableId,
   readPartialNullableTimeField,
   validateTopicSettings,
+  validateRoomSettings,
   type TopicSetting,
 } from '../checkin-topic-settings.js';
 import { isRecord } from '../type-guards.js';
@@ -24,7 +26,11 @@ import { OpsSettingsValidationError } from './ops-settings-errors.js';
 import type { OpsSettings, RoutingMode } from './db-types.js';
 import { domainError } from '../errors/domain-error.js';
 import { parseMaxOccupancy } from '../ops/room-capacity.js';
-import { parseJourneySettingsJson, validateTopicJourneyAssignments } from '../journey-settings.js';
+import {
+  parseJourneySettingsJson,
+  validateJourneyStepTargets,
+  validateTopicJourneyAssignments,
+} from '../journey-settings.js';
 
 export { ensureSingleDefaultCallTarget };
 
@@ -278,6 +284,10 @@ function parseRoomSettings(raw: string | undefined): OpsSettings['rooms'] {
         `rooms_json entry at index ${index} is missing roomId or roomLabel.`,
       );
     }
+    // Compatibility with the briefly persisted pseudo-room representation.
+    if (roomId === WAITING_ROOM_LOCATION_ID) {
+      continue;
+    }
     if (seenIds.has(roomId)) {
       throw new OpsSettingsValidationError(`rooms_json contains duplicate roomId "${roomId}".`);
     }
@@ -373,6 +383,10 @@ export function updateOpsSettingsInDb(
   const topics = patch.topics ?? current.topics;
   const journeySettings = patch.journeySettings ?? current.journeySettings;
   const rooms = ensureSingleDefaultCallTarget(patch.rooms ?? current.rooms);
+  const roomValidation = validateRoomSettings(rooms);
+  if (!roomValidation.ok) {
+    throw new OpsSettingsValidationError(roomValidation.message);
+  }
   const topicValidation = validateTopicSettings(topics, rooms);
   if (!topicValidation.ok) {
     throw new OpsSettingsValidationError(topicValidation.message);
@@ -380,6 +394,10 @@ export function updateOpsSettingsInDb(
 
   const nextRoutingMode = patch.routingMode ?? current.routingMode;
   if (nextRoutingMode === 'complex') {
+    const journeyTargetValidation = validateJourneyStepTargets(journeySettings, rooms);
+    if (!journeyTargetValidation.ok) {
+      throw new OpsSettingsValidationError(journeyTargetValidation.message);
+    }
     const journeyAssignmentValidation = validateTopicJourneyAssignments(topics, journeySettings);
     if (!journeyAssignmentValidation.ok) {
       throw new OpsSettingsValidationError(journeyAssignmentValidation.message);

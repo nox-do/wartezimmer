@@ -4,6 +4,7 @@
   import type { PracticeRoomWithPanels } from '$lib/queue/ops-settings-api';
   import { emptyRoomPanels, generateRoomId, isValidRoomId } from '$lib/queue/ops-settings-api';
   import { t } from '$lib/i18n/i18nStore.svelte';
+  import { isReservedRoomLabel } from '@praxis-flow/domain';
   import { toastStore } from '$lib/stores/toastStore';
 
   interface Props {
@@ -55,6 +56,10 @@
     labelError = '';
     if (!draft.roomLabel.trim()) {
       labelError = t('mfa.settings.roomModalLabelRequired');
+      return false;
+    }
+    if (isReservedRoomLabel(draft.roomLabel)) {
+      labelError = t('mfa.settings.roomLabelReserved');
       return false;
     }
     const roomId = draft.roomId.trim();

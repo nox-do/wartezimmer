@@ -3,6 +3,7 @@ import {
   MOVEMENT_MODES,
   PUBLIC_DISPLAY_MODES,
 } from '@praxis-flow/flow-core';
+import { WAITING_ROOM_LOCATION_ID } from '@praxis-flow/domain';
 import { isRecord } from './type-guards.js';
 
 export type JourneyStepSetting = {
@@ -146,6 +147,27 @@ export function validateTopicJourneyAssignments(
         ok: false,
         message: `Topic ${topic.topicId} cannot use journey template bound to ${template.topicId}.`,
       };
+    }
+  }
+  return { ok: true };
+}
+
+export function validateJourneyStepTargets(
+  journeySettings: JourneySettings,
+  rooms: Array<{ roomId: string; enabled: boolean }>,
+): { ok: true } | { ok: false; message: string } {
+  const enabledLocationIds = new Set([
+    WAITING_ROOM_LOCATION_ID,
+    ...rooms.filter((room) => room.enabled).map((room) => room.roomId),
+  ]);
+  for (const template of journeySettings.templates) {
+    for (const step of template.steps) {
+      if (!step.targetLocationId || !enabledLocationIds.has(step.targetLocationId)) {
+        return {
+          ok: false,
+          message: `Journey ${template.id} step ${step.id} targetLocationId is not an enabled room.`,
+        };
+      }
     }
   }
   return { ok: true };

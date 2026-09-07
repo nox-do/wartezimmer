@@ -24,8 +24,14 @@ export {
 } from './lane-code.js';
 export {
   ensureSingleDefaultCallTarget,
+  isReservedRoomId,
+  isReservedRoomLabel,
+  isWaitingRoomLocationId,
   listEnabledRooms,
+  RESERVED_ROOM_IDS,
   resolveDefaultCallRoomId,
+  WAITING_ROOM_LABEL,
+  WAITING_ROOM_LOCATION_ID,
   type RoomDefaultTargetSetting,
   type RoomListing,
 } from './room-default-call-target.js';

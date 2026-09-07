@@ -5,7 +5,11 @@ import type { DatabaseSync } from 'node:sqlite';
  */
 import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
 import { loadCatalog } from '@praxis-flow/flow-core/server';
-import { roomHasAnyEnabledPanel, roomPanelConfigForPlacement } from '@praxis-flow/domain';
+import {
+  resolveDefaultCallRoomId,
+  roomHasAnyEnabledPanel,
+  roomPanelConfigForPlacement,
+} from '@praxis-flow/domain';
 import type { OpsSettings } from '../db/db-types.js';
 import { EMPTY_JOURNEY_SETTINGS } from '../journey-settings.js';
 import {
@@ -60,7 +64,7 @@ export function buildSimpleRoutingRuleRow(input: {
     initialLastKnownLocationId: PF_FLOW_LOC_WAITING,
     initialTargetLocationId: input.targetLocationId,
     initialQueueId: PF_FLOW_QUEUE_GENERAL,
-    initialMovementMode: 'call',
+    initialMovementMode: input.targetLocationId === PF_FLOW_LOC_WAITING ? 'call' : 'self_go',
     initialLocationConfidence: 'assumed',
     publicDisplayMode: 'visible',
     terminalInstructionTemplate: input.terminalInstructionTemplate,
@@ -447,7 +451,11 @@ export function syncComplexRoutingRulesFromOpsSettings(
   for (const topic of settings.topics) {
     const journeyTemplateId = resolveTopicJourneyTemplateId(topic, settings);
     const targetLocationId = resolveTargetLocationId(topic.defaultRoomId, settings);
-    const terminalInstruction = terminalInstructionForTopic(topic.label);
+    const terminalInstruction = terminalInstructionForTopic(
+      topic.label,
+      targetLocationId,
+      settings,
+    );
     const allowRedirect = topic.topicId !== MFA_ASSIST_TOPIC_ID;
 
     if (journeyTemplateId) {
@@ -549,17 +557,30 @@ function resolveReceptionRoomId(settings: OpsSettings): string {
   const reception = settings.rooms.find((room) => room.roomId === 'mfa-tresen' && room.enabled);
   if (reception) return reception.roomId;
   const fallback = settings.rooms.find((room) => room.enabled);
-  return fallback?.roomId ?? 'mfa-tresen';
+  return fallback?.roomId ?? PF_FLOW_LOC_WAITING;
+}
+
+function resolveDefaultCallTargetLocationId(settings: OpsSettings): string {
+  return resolveDefaultCallRoomId(settings.rooms) ?? resolveReceptionRoomId(settings);
 }
 
 function resolveTargetLocationId(topicDefaultRoomId: string, settings: OpsSettings): string {
+  if (topicDefaultRoomId === PF_FLOW_LOC_WAITING) return PF_FLOW_LOC_WAITING;
   const room = settings.rooms.find((entry) => entry.roomId === topicDefaultRoomId);
   if (room?.enabled) return room.roomId;
-  return resolveReceptionRoomId(settings);
+  return resolveDefaultCallTargetLocationId(settings);
 }
 
-function terminalInstructionForTopic(label: string): string {
-  return `Bitte nehmen Sie im Wartezimmer Platz. Sie werden für „${label}“ aufgerufen.`;
+function terminalInstructionForTopic(
+  label: string,
+  targetLocationId: string,
+  settings: OpsSettings,
+): string {
+  if (targetLocationId === PF_FLOW_LOC_WAITING) {
+    return `Bitte nehmen Sie im Wartezimmer Platz. Sie werden für „${label}“ aufgerufen.`;
+  }
+  const roomLabel = settings.rooms.find((room) => room.roomId === targetLocationId)?.roomLabel;
+  return `Bitte gehen Sie direkt zu „${roomLabel?.trim() || targetLocationId}“.`;
 }
 
 function deactivateTopicsOutside(db: DatabaseSync, topicIds: string[]): void {
@@ -617,13 +638,18 @@ export function syncSimpleRoutingRulesFromOpsSettings(
   );
 
   for (const topic of settings.topics) {
+    const targetLocationId = resolveTargetLocationId(topic.defaultRoomId, settings);
     upsertRoutingRule(
       db,
       buildSimpleRoutingRuleRow({
         topicId: topic.topicId,
         name: topic.label,
-        targetLocationId: resolveTargetLocationId(topic.defaultRoomId, settings),
-        terminalInstructionTemplate: terminalInstructionForTopic(topic.label),
+        targetLocationId,
+        terminalInstructionTemplate: terminalInstructionForTopic(
+          topic.label,
+          targetLocationId,
+          settings,
+        ),
         allowRedirect: topic.topicId !== MFA_ASSIST_TOPIC_ID,
         active: topic.enabled,
       }),
@@ -748,7 +774,7 @@ export function syncCatalogFromOpsSettings(
     topicCount += 1;
   }
 
-  syncRoutingRulesFromOpsSettings(db, settings, receptionRoomId);
+  syncRoutingRulesFromOpsSettings(db, settings, resolveDefaultCallTargetLocationId(settings));
 
   upsertSurface(db, {
     id: PF_FLOW_SURFACE_TERMINAL,

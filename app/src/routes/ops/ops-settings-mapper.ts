@@ -7,7 +7,11 @@ import {
   type CsvContactLookupMapping,
 } from '../../shared/contacts/contact-lookup-config.js';
 import { validateCsvContactLookupSettings } from '../../shared/contacts/contact-lookup-preview.js';
-import { validateTopicSettings, type TopicSetting } from '../../shared/checkin-topic-settings.js';
+import {
+  validateRoomSettings,
+  validateTopicSettings,
+  type TopicSetting,
+} from '../../shared/checkin-topic-settings.js';
 import { ensureSingleDefaultCallTarget } from '../../shared/db/database-ops-settings.js';
 import { normalizeMaxOccupancy } from '../../shared/ops/room-capacity.js';
 import {
@@ -207,6 +211,13 @@ export async function buildOpsSettingsUpdate(
         body.rooms.find((room) => room.defaultCallTarget === true)?.roomId?.trim(),
       )
     : undefined;
+
+  if (nextRooms) {
+    const roomValidation = validateRoomSettings(nextRooms);
+    if (!roomValidation.ok) {
+      return { code: 'INVALID_ARGUMENT', message: roomValidation.message };
+    }
+  }
 
   let currentMapping: CsvContactLookupMapping;
   try {

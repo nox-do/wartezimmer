@@ -17,7 +17,11 @@
     roomPanelConfigForPlacement,
     roomPanelsOrDefault,
   } from '$lib/queue/ops-settings-api';
-  import { updateRoomPanelPlacementConfig } from '@praxis-flow/domain';
+  import {
+    isReservedRoomLabel,
+    WAITING_ROOM_LOCATION_ID,
+    updateRoomPanelPlacementConfig,
+  } from '@praxis-flow/domain';
   import { roomPanelPresetOptionLabel } from '$lib/room-panel/room-panel-text';
   import { getDevicePresenceStatus } from '$lib/mfa/ops-stream-store.svelte';
   import { roomPanelDeviceId, type DevicePresenceStatus } from '$lib/ops/device-presence-api';
@@ -53,6 +57,9 @@
 
   const editingIndex = $derived(
     openRoomId == null ? -1 : rooms.findIndex((room) => room.roomId === openRoomId),
+  );
+  const waitingRoomIsDefault = $derived(
+    !rooms.some((room) => room.enabled && room.defaultCallTarget),
   );
 
   $effect(() => {
@@ -117,6 +124,12 @@
     maxOccupancyError = '';
   }
 
+  async function setWaitingRoomAsDefault() {
+    if (waitingRoomIsDefault) return;
+    onChange?.(ensureSingleDefaultCallTarget(rooms, WAITING_ROOM_LOCATION_ID));
+    await onPersist?.();
+  }
+
   function roomQueueGuardContextForSave(
     previous: PracticeRoomWithPanels,
     next: PracticeRoomWithPanels,
@@ -162,6 +175,10 @@
 
     if (!draft.roomLabel.trim()) {
       labelError = t('mfa.settings.roomModalLabelRequired');
+      return false;
+    }
+    if (isReservedRoomLabel(draft.roomLabel)) {
+      labelError = t('mfa.settings.roomLabelReserved');
       return false;
     }
 
@@ -210,11 +227,12 @@
     lastSyncedRoomJson = JSON.stringify(next);
   }
 
-  function requestDelete(index: number) {
+  function requestDelete(roomId: string) {
     if (rooms.length <= 1) {
       return;
     }
-    deleteTargetIndex = index;
+    deleteTargetIndex = rooms.findIndex((room) => room.roomId === roomId);
+    if (deleteTargetIndex < 0) return;
     deleteConfirmOpen = true;
   }
 
@@ -335,11 +353,28 @@
     </Button>
   </div>
 
+  <label class="modal-form-check rooms-editor-default-target">
+    <input
+      type="checkbox"
+      checked={waitingRoomIsDefault}
+      disabled={busy}
+      onchange={(event) => {
+        const input = event.currentTarget as HTMLInputElement;
+        if (input.checked) {
+          void setWaitingRoomAsDefault();
+        } else {
+          input.checked = true;
+        }
+      }}
+    />
+    <span>{t('mfa.settings.waitingRoomDefaultTarget')}</span>
+  </label>
+
   {#if rooms.length === 0}
     <p class="mfa-editor-empty">{t('mfa.settings.roomsEmpty')}</p>
   {:else}
     <ul class="room-expander-list" role="list">
-      {#each rooms as room, index (`room-expander-${room.roomId}`)}
+      {#each rooms as room (`room-expander-${room.roomId}`)}
         {@const isOpen = openRoomId === room.roomId}
         {@const enabledPlacements = listEnabledRoomPanelPlacements(room)}
         <li
@@ -661,7 +696,7 @@
                         type="button"
                         variant="ghost"
                         disabled={busy}
-                        onclick={() => requestDelete(index)}
+                        onclick={() => requestDelete(room.roomId)}
                       >
                         {t('mfa.settings.roomRemove')}
                       </Button>

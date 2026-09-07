@@ -10,7 +10,7 @@
   import type { PracticeRoom, PracticeTopicSetting } from '$lib/queue/ops-settings-api';
   import { slugifyTopicId } from '$lib/queue/ops-settings-api';
   import { isReservedLaneCode } from '$lib/queue/topic-settings-form';
-  import { isValidLaneCode } from '@praxis-flow/domain';
+  import { isValidLaneCode, WAITING_ROOM_LABEL, WAITING_ROOM_LOCATION_ID } from '@praxis-flow/domain';
   import { validateTopicTimeWindow } from '$lib/queue/time-of-day';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
   import type { TopicIconId } from '$lib/topics/topic-icon-catalog';
@@ -121,8 +121,8 @@
 
     if (
       showSimpleRoutingSection &&
-      (enabledRooms.length === 0 ||
-        !enabledRooms.some((room) => room.roomId === draft.defaultRoomId && room.enabled))
+      draft.defaultRoomId !== WAITING_ROOM_LOCATION_ID &&
+      !enabledRooms.some((room) => room.roomId === draft.defaultRoomId && room.enabled)
     ) {
       roomError = t('mfa.settings.topicNoActiveRoom');
       return false;
@@ -253,23 +253,25 @@
       {#if showSimpleRoutingSection}
         <label class="modal-form-field modal-form-field--nested">
           <span>{t('mfa.settings.colDefaultRoom')}</span>
-          {#if enabledRooms.length === 0}
-            <span class="modal-form-error">{t('mfa.settings.topicNoActiveRoom')}</span>
-          {:else}
-            <select
-              class="form-input"
-              value={draft.defaultRoomId}
-              disabled={busy}
-              onchange={(event) => {
-                draft = { ...draft, defaultRoomId: (event.currentTarget as HTMLSelectElement).value };
-                roomError = '';
-              }}
-            >
-              {#each enabledRooms as room (room.roomId)}
-                <option value={room.roomId}>{room.roomLabel}</option>
-              {/each}
-            </select>
-          {/if}
+          <select
+            class="form-input"
+            value={draft.defaultRoomId}
+            disabled={busy}
+            onchange={(event) => {
+              draft = { ...draft, defaultRoomId: (event.currentTarget as HTMLSelectElement).value };
+              roomError = '';
+            }}
+          >
+            <option value={WAITING_ROOM_LOCATION_ID}>{WAITING_ROOM_LABEL}</option>
+            {#each enabledRooms as room (room.roomId)}
+              <option value={room.roomId}>{room.roomLabel}</option>
+            {/each}
+          </select>
+          <p class="modal-form-hint">
+            {draft.defaultRoomId === WAITING_ROOM_LOCATION_ID
+              ? t('mfa.settings.topicWaitingRoomHint')
+              : t('mfa.settings.topicPracticeRoomHint')}
+          </p>
           {#if roomError}
             <span class="modal-form-error">{roomError}</span>
           {/if}

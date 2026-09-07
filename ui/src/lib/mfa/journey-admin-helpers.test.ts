@@ -90,4 +90,12 @@ describe('journey-admin-helpers', () => {
   it('journeyStepRoomBadge uppercases the room label', () => {
     expect(journeyStepRoomBadge('room_a', rooms)).toBe('RAUM A');
   });
+
+  it('accepts and labels the fixed waiting room as a journey target', () => {
+    const template = createJourneyTemplate('Warten', new Set(), 'pf_waiting');
+    expect(validateJourneySettingsForSave({ templates: [template] }, enabledRoomIds)).toEqual({
+      ok: true,
+    });
+    expect(journeyStepRoomBadge('pf_waiting', rooms)).toBe('WARTEZIMMER');
+  });
 });

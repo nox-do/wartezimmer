@@ -12,6 +12,7 @@ export type ActiveRoomGroup = {
 };
 
 export type ActiveRoomBoard = {
+  underway: QueueItem[];
   groups: ActiveRoomGroup[];
   unassigned: QueueItem[];
 };
@@ -34,8 +35,13 @@ export function buildActiveRoomBoard(
   }
 
   const unassigned: QueueItem[] = [];
+  const underway: QueueItem[] = [];
 
   for (const item of active) {
+    if (item.status === 'called' || item.status === 'directed') {
+      underway.push(item);
+      continue;
+    }
     const roomId = ticketRoomId(item);
     if (roomId && roomIds.has(roomId)) {
       ticketsByRoomId.get(roomId)?.push(item);
@@ -57,5 +63,5 @@ export function buildActiveRoomBoard(
     };
   });
 
-  return { groups, unassigned };
+  return { underway, groups, unassigned };
 }

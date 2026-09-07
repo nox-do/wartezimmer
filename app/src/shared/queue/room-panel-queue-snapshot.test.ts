@@ -96,6 +96,9 @@ function setupPanelVisitFlow(showPatientNames = false): {
   ensureFlowCoreSchema(sqlite);
   const settings = panelTestSettings(showPatientNames);
   syncFlowCoreCatalog(sqlite, settings);
+  sqlite
+    .prepare("UPDATE routing_rules SET initial_movement_mode = 'call' WHERE topic_id = 'blut'")
+    .run();
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS ops_state (
@@ -192,6 +195,9 @@ test('buildRoomPanelQueueSnapshot includes identityRef only when room setting al
     },
   });
   syncFlowCoreCatalog(sqlite, settings);
+  sqlite
+    .prepare("UPDATE routing_rules SET initial_movement_mode = 'call' WHERE topic_id = 'blut'")
+    .run();
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS ops_state (
