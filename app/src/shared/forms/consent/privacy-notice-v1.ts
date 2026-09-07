@@ -9,7 +9,7 @@ const PRIVACY_LOCAL_PROCESSING =
   'Ihre Daten bleiben in der Praxis: Sie werden nur auf Geräten in der Praxis verarbeitet und nicht in eine Cloud übertragen.';
 
 const PRIVACY_RETENTION_DAY =
-  'Wir speichern die Daten nur für den laufenden Praxistag. Am Tagesende löscht das Praxisteam den Tagesbetrieb.';
+  'Wir speichern die Daten nur für den laufenden Praxistag. Beim Start des nächsten Praxistags löscht das Praxisteam die Daten des bisherigen Tagesbetriebs.';
 
 function formatPracticeAddress(profile: PracticeProfile): string {
   const cityLine = [profile.postalCode, profile.city].filter(Boolean).join(' ').trim();

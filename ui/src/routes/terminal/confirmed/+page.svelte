@@ -15,7 +15,7 @@
   import { readCheckinResult, resetTerminalFlow } from '$lib/terminal/terminal-session';
   import { resolveReceiptTopicLabel } from '$lib/terminal/terminal-receipt-topic-label';
 
-  const AUTO_CLOSE_SEC = 25;
+  const AUTO_CLOSE_SEC = 10;
 
   let result = $state(readCheckinResult());
   let remainingSec = $state(AUTO_CLOSE_SEC);

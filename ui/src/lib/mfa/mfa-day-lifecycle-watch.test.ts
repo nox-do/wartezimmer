@@ -67,15 +67,16 @@ describe('startMfaDayLifecycleWatch', () => {
       now: () => nowMs,
     });
 
-    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(0);
     expect(load).toHaveBeenCalledTimes(1);
 
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
     document.dispatchEvent(new Event('visibilitychange'));
-    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(0);
     expect(load).toHaveBeenCalledTimes(2);
 
     window.dispatchEvent(new Event('online'));
-    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(0);
     expect(load).toHaveBeenCalledTimes(3);
 
     nowMs += MFA_DAY_LIFECYCLE_GAP_MS + 5_000;
