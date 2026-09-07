@@ -46,7 +46,8 @@ eine zweite IP im selben Staff-Subnetz. Der Status bleibt dauerhaft
 Bei verschiedenen Interfaces bestätigt die Praxis, dass das gewählte
 Restricted-Interface für das Patientennetz vorgesehen ist. Ob AP, Router oder
 Gastnetz darüber hinaus zur Staff-IP oder ins Praxis-LAN routen, sieht der
-Manager nicht; das bleibt Praxis-IT und ist kein Aktivierungsgate.
+Manager nicht; das bleibt Praxis-IT und ist keine Voraussetzung für das
+Restricted-Binding.
 
 `https://staff.<installationsraum>/portal` bleibt **dauerhaft** die interne
 Vorschau im Praxis-LAN (Demo, Test, Mitarbeiter). Das ist kein Patienten-WLAN-
@@ -146,7 +147,7 @@ im Praxisnetz. Eine solche Verbindung dient allenfalls Komfortfunktionen wie der
 erfolgen. Wird eine Integration genutzt, sollte die Praxis-IT nur das konkrete
 Ziel und Protokoll freigeben, nicht das gesamte Praxis-LAN.
 
-Diese Platzierung ist eine Empfehlung, kein Aktivierungsgate. Installation auf
+Diese Platzierung ist eine Empfehlung und keine Voraussetzung für das Binding. Installation auf
 einem vorhandenen Windows- oder macOS-Rechner bleibt unterstützt, besitzt aber
 einen größeren gemeinsamen Angriffsbereich als ein dedizierter Host oder ein
 separates Applikationssegment.
@@ -640,7 +641,7 @@ und Aktionen an, ist aber nicht selbst die Sicherheitsinstanz:
     SNI/`Host`.
 
 Eine nicht mehr bindbare oder nicht mehr eindeutig zuordenbare Restricted-IP ist
-**fail-closed**: Der Portal-Listener startet nicht beziehungsweise wird
+**fail-closed**: Der Restricted-Listener startet nicht beziehungsweise wird
 geschlossen. Der interne Staff-Betrieb bleibt verfügbar. Adapterwechsel,
 Adressänderungen und neue Default-Routen dürfen nicht still akzeptiert werden.
 
@@ -656,9 +657,10 @@ Restricted-Network-Status sichtbar.
 
 Der Host kann lokal nicht beweisen, was ein externer AP oder Router tatsächlich
 routet. Diese Netzkonfiguration liegt in der Verantwortung der Praxis
-beziehungsweise ihrer IT und ist kein Aktivierungsgate von Praxis Flow.
+beziehungsweise ihrer IT und ist keine Voraussetzung für das
+Restricted-Binding von Praxis Flow.
 
-Der Manager kann nach der Aktivierung einen QR-Code und eine kurze optionale
+Der Manager kann nach dem Anwenden des Bindings einen QR-Code und eine kurze optionale
 Prüfhilfe anzeigen:
 
 - `https://portal.<installationsraum>` vom Patienten-WLAN aus öffnen;
@@ -841,7 +843,7 @@ Diese Zusage bestätigt **nicht**, dass AP, Router oder andere Wege im
 Patientennetz den Zugriff auf die Staff-IP oder das übrige Praxis-LAN
 verhindern. Das verantwortet die Praxis beziehungsweise Praxis-IT. Der externe
 QR-/Kontrolltest ist lediglich eine optionale Prüfhilfe für diese und weder
-Bestandteil unserer Aktivierungsentscheidung noch eine Zertifizierung der
+Bestandteil der technischen Freigabeentscheidung noch eine Zertifizierung der
 fremden Netzkonfiguration.
 
 Bei Staff- und Restricted-IP auf demselben Interface gilt diese Zusage ausdrücklich

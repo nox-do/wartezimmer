@@ -38,15 +38,14 @@ LAN-TLS: [`operations/tls.md`](operations/tls.md).
 Arbeitsstände und Entwürfe. Historie: [`archive/README.md`](archive/README.md).  
 TLS-Ops-Ist: [`operations/tls.md`](operations/tls.md) — die TLS-Pläne unten sind Quellen bis zur Einarbeitung.
 
-| Datei                                                                                    | Inhalt                                                                |
-| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| [`../todo.md`](../todo.md)                                                               | Aktuelle Arbeitsliste (intern)                                        |
-| [`plan-proxy-tls.md`](plan-proxy-tls.md)                                                 | LAN-TLS — Architektur (Quelle → `operations/tls.md`)                  |
-| [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md)                                 | Manager-UX TLS (Quelle → `operations/tls.md`)                         |
-| [`plan-manager-installer-cleanup.md`](plan-manager-installer-cleanup.md)                 | Manager Renderer: Wartung-Mutex, Generation                           |
-| [`plan-backup-v2.md`](plan-backup-v2.md)                                                 | `.pfbackup` v2 (Entwurf)                                              |
-| [`plan-portal-lan-isolation.md`](plan-portal-lan-isolation.md)                           | Produktentscheidung: eingeschränkte Netzwerkzone für das Portal       |
-| [`plan-manager-restricted-network-access.md`](plan-manager-restricted-network-access.md) | Manager-Umbau für Restricted-IP, Binding, Audit und UI                |
+| Datei                                                                                    | Inhalt                                                                                             |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [`../todo.md`](../todo.md)                                                               | Aktuelle Arbeitsliste (intern)                                                                     |
+| [`plan-proxy-tls.md`](plan-proxy-tls.md)                                                 | LAN-TLS — Architektur (Quelle → `operations/tls.md`)                                               |
+| [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md)                                 | Manager-UX TLS (Quelle → `operations/tls.md`)                                                      |
+| [`plan-backup-v2.md`](plan-backup-v2.md)                                                 | `.pfbackup` v2 (Entwurf)                                                                           |
+| [`plan-portal-lan-isolation.md`](plan-portal-lan-isolation.md)                           | Produktentscheidung: eingeschränkte Netzwerkzone für das Portal                                    |
+| [`plan-manager-restricted-network-access.md`](plan-manager-restricted-network-access.md) | Manager-Umbau für Restricted-IP, Binding, Audit und UI                                             |
 | [`archive/README.md`](archive/README.md)                                                 | Auth-Slots, Manager-HTTPS-Aufräumen, Gateway-Lab, Captive-Adapter-Entwurf, Audit-OK-Liste, TLS-Lab |
 
 ## API-Vertrag

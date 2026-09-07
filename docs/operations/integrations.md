@@ -9,13 +9,13 @@ Nicht: LAN-TLS/Proxy → [`tls.md`](tls.md) · Compose-Alltag → [`runtime.md`]
 
 ## 1. Guest-WLAN / Captive — Grenze + später Adapter
 
-|                       |                                                                                                                                                                               |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Wir liefern**       | Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API                                                                                                                     |
-| **Wir liefern nicht** | Router, AP, Captive-Hardware, eigenen Captive-Datenpfad (DHCP/Firewall/`ndsctl`)                                                                                              |
-| **Später (nicht v1)** | Erweiterbare Liste **schlanker** Captive-Adapter (von uns gepflegt) mit **Auswahl im Manager**; Praxis-IT bleibt Betreiber von AP/Controller                                  |
-| **Session-Hooks**     | `sessions/captive-authorize` (Portal → App; `wlanAuthorized` immer `false` bis Adapter), `sessions/verify-ticket-code` (S2S Bearer `AUTH_KEY_CAPTIVE` / Rolle `captive`) |
-| **Manager heute**     | Gateway stets `enabled: false` (`DISABLED_GATEWAY_PLAN`); Fokus Restricted-Netz / Portal-URL — kein Captive-Wizard in Portal-v1                                               |
+|                       |                                                                                                                                                                                                                                                                                   |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Wir liefern**       | Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API                                                                                                                                                                                                                         |
+| **Wir liefern nicht** | Router, AP, Captive-Hardware, eigenen Captive-Datenpfad (DHCP/Firewall/`ndsctl`)                                                                                                                                                                                                  |
+| **Später (nicht v1)** | Erweiterbare Liste **schlanker** Captive-Adapter (von uns gepflegt) mit **Auswahl im Manager**; Praxis-IT bleibt Betreiber von AP/Controller                                                                                                                                      |
+| **Session-Hooks**     | `sessions/captive-authorize` (Portal → App; `wlanAuthorized` immer `false` bis Adapter), `sessions/verify-ticket-code` (S2S Bearer `AUTH_KEY_CAPTIVE` / Rolle `captive`)                                                                                                          |
+| **Manager heute**     | Gateway stets `enabled: false` (`DISABLED_GATEWAY_PLAN`); Fokus Restricted-Netz / Portal-URL — kein Captive-Wizard in Portal-v1                                                                                                                                                   |
 | **Lab**               | openNDS-Gateway-Stack **entfernt** aus dem Repo (Compose/`gateway/`); Historie: [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md); Adapter-Entwurf: [`../archive/roadmap-captive-portal-adapters.md`](../archive/roadmap-captive-portal-adapters.md) |
 
 WLAN-Hardware bleibt Praxis-IT. Internet-Portal/Whitelist = **nicht Produkt** (Outlook).
@@ -58,10 +58,10 @@ Ops-Toggle/`terminalAuthEgkEnabled` und Flow-Texte beschreiben das Zielbild; pro
 
 ## 5. Verweise
 
-| Thema                          | Dokument                                                                       |
-| ------------------------------ | ------------------------------------------------------------------------------ |
-| Fachliche Abläufe              | [`../flows.md`](../flows.md)                                                   |
-| Produkt-Abgrenzung             | [`../product.md`](../product.md)                                               |
-| API / OpenAPI                  | [`../architecture/apis.md`](../architecture/apis.md), `openapi/`               |
+| Thema                          | Dokument                                                                                                                                                                         |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fachliche Abläufe              | [`../flows.md`](../flows.md)                                                                                                                                                     |
+| Produkt-Abgrenzung             | [`../product.md`](../product.md)                                                                                                                                                 |
+| API / OpenAPI                  | [`../architecture/apis.md`](../architecture/apis.md), `openapi/`                                                                                                                 |
 | Captive-Lab / Adapter-Entwurf  | [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md), [`../archive/roadmap-captive-portal-adapters.md`](../archive/roadmap-captive-portal-adapters.md) |
-| Docs-Übersicht „nicht Produkt“ | [`../README.md`](../README.md)                                                 |
+| Docs-Übersicht „nicht Produkt“ | [`../README.md`](../README.md)                                                                                                                                                   |

@@ -388,7 +388,7 @@ Gateway/Captive/Internet-Portal sind **andere** Themen → [`integrations.md`](i
 | **Dieses** (`operations/tls.md`)                                                               | **Ops-Ist** — was Betreiber/Support/Entwickler heute brauchen |
 | [`../plan-proxy-tls.md`](../plan-proxy-tls.md)                                                 | Architektur-/Zielhistorie (ACME, Compose, State-Maschine)     |
 | [`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md)                                 | Manager-UX-Historie                                           |
-| [`../archive/plan-manager-https.md`](../archive/plan-manager-https.md)                     | HTTPS-UI-Aufräumen (erledigt; Gates in Manager-View-Model)            |
+| [`../archive/plan-manager-https.md`](../archive/plan-manager-https.md)                         | HTTPS-UI-Aufräumen (erledigt; Gates in Manager-View-Model)    |
 | [`../plan-portal-lan-isolation.md`](../plan-portal-lan-isolation.md)                           | Zukunft: Staff-/Portal-Origin und Wildcard-Zertifikat         |
 | [`../plan-manager-restricted-network-access.md`](../plan-manager-restricted-network-access.md) | Zukunft: zusätzliche eingeschränkte Host-IP im Manager        |
 | [`../archive/tls-lab.md`](../archive/tls-lab.md)                                               | Lab, nicht Produkt                                            |
