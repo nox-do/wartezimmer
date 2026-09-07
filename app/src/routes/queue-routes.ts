@@ -284,7 +284,7 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
           identityRef: result.identityRef,
           updatedAt: result.updatedAt,
         }),
-        invalidTransitionMessage: `Fuer Ticket ${visitId} kann kein Anzeigename gesetzt werden.`,
+        invalidTransitionMessage: `Fuer Ticket ${visitId} kann der Anzeigename nicht geändert werden.`,
       });
     },
   );

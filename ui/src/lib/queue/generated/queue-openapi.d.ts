@@ -381,7 +381,7 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    /** Set MFA display name for a visit without identity (manual entry in waiting list) */
+    /** Set or correct an MFA-entered display name */
     patch: {
       parameters: {
         query?: never;
@@ -429,7 +429,7 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
-        /** @description Visit not in waiting list or already has a display name */
+        /** @description Visit state does not allow editing or the displayed name comes from check-in, CSV, or eGK */
         409: {
           headers: {
             [name: string]: unknown;
@@ -563,6 +563,8 @@ export interface components {
       callbackPhone?: string | null;
       /** @description Display name for MFA (CSV/eGK lookup or manual entry; staff queue only, not on TV; cleared on day reset) */
       identityRef?: string | null;
+      /** @description True when the displayed name is absent or comes from identityRefOverride and may be edited by MFA. */
+      identityRefEditable?: boolean;
       /** Format: date-time */
       returnUntil?: string | null;
       /** @description Set when recall SMS/WhatsApp failed; enables MFA retry (staff queue only) */

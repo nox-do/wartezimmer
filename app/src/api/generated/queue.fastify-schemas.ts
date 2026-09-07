@@ -89,6 +89,9 @@ export const QueueItem = {
     identityRef: {
       type: ['string', 'null'],
     },
+    identityRefEditable: {
+      type: 'boolean',
+    },
     returnUntil: {
       type: ['string', 'null'],
       format: 'date-time',
@@ -438,6 +441,9 @@ export const QueueListMfaResponse = {
           },
           identityRef: {
             type: ['string', 'null'],
+          },
+          identityRefEditable: {
+            type: 'boolean',
           },
           returnUntil: {
             type: ['string', 'null'],
@@ -1044,6 +1050,9 @@ export const QueueListResponse = {
               },
               identityRef: {
                 type: ['string', 'null'],
+              },
+              identityRefEditable: {
+                type: 'boolean',
               },
               returnUntil: {
                 type: ['string', 'null'],
@@ -2025,6 +2034,9 @@ export const GET_api_v1_queueResponse200 = {
               },
               identityRef: {
                 type: ['string', 'null'],
+              },
+              identityRefEditable: {
+                type: 'boolean',
               },
               returnUntil: {
                 type: ['string', 'null'],

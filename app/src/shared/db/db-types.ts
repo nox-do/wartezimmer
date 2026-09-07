@@ -53,6 +53,7 @@ export type QueueVisitRow = {
   createdAt: string;
   calledAt: string | null;
   identityRef: string | null;
+  identityRefEditable?: boolean;
   checkinPhone: string | null;
   roomId: string | null;
   roomLabel: string | null;

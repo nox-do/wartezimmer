@@ -328,6 +328,9 @@
     <span>{t('mfa.checkinQuickAction')}</span>
   </button>
 
+  <div class="qs-divider" role="separator"></div>
+  <h3 class="qs-section-title">{t('mfa.qsFilter')}</h3>
+
   <WaitingListFilters
     items={filterItems}
     bind:searchQuery

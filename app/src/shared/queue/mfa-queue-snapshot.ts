@@ -29,6 +29,7 @@ export type MfaQueueSnapshot = {
     recallNotifyErrorCode: string | null;
     recallNotifySent: boolean;
     identityRef: string | null;
+    identityRefEditable: boolean;
     returnUntil: string | null;
     triageLevel: string | null;
     needsAssistance: boolean;
@@ -76,6 +77,7 @@ export function buildMfaQueueSnapshot(
       recallNotifyErrorCode: item.recallNotifyErrorCode?.trim() || null,
       recallNotifySent: Boolean(item.recallNotifySent),
       identityRef,
+      identityRefEditable: item.identityRefEditable === true,
       returnUntil,
       triageLevel: item.triageLevel?.trim() || null,
       needsAssistance: item.needsAssistance,

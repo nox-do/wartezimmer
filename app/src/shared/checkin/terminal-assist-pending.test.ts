@@ -199,6 +199,7 @@ test('mfa queue snapshot includes assistPending and needsAssistance', () => {
   assert.equal(snapshot.assistPending.length, 1);
   assert.equal(snapshot.items.length, 1);
   assert.equal(snapshot.items[0]?.needsAssistance, true);
+  assert.equal(snapshot.items[0]?.identityRefEditable, true);
 });
 
 test('TERMINAL_ASSIST_PENDING_TIMEOUT_MS is 10 seconds', () => {

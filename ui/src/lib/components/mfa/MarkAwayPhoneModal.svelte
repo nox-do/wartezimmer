@@ -1,6 +1,6 @@
 <script lang="ts">
   import { formatTicketCode } from '@praxis-flow/domain';
-  import { TreePalm } from '@lucide/svelte';
+  import { Pause } from '@lucide/svelte';
   import Modal from '$lib/components/Modal.svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
@@ -58,7 +58,7 @@
   {#snippet header()}
     <div class="modal-header__left">
       <div class="modal-header__icon">
-        <TreePalm size={18} aria-hidden="true" />
+        <Pause size={18} aria-hidden="true" />
       </div>
       <div class="modal-header__texts">
         <h2 id="modal-title" class="modal-title">
@@ -111,4 +111,3 @@
     </form>
   {/if}
 </Modal>
-

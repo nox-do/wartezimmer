@@ -94,6 +94,9 @@ components:
           type: string
           nullable: true
           description: Display name for MFA (CSV/eGK lookup or manual entry; staff queue only, not on TV; cleared on day reset)
+        identityRefEditable:
+          type: boolean
+          description: True when the displayed name is absent or comes from identityRefOverride and may be edited by MFA.
         returnUntil:
           type: string
           format: date-time
@@ -998,7 +1001,7 @@ paths:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     patch:
-      summary: Set MFA display name for a visit without identity (manual entry in waiting list)
+      summary: Set or correct an MFA-entered display name
       parameters:
         - in: path
           name: visitId
@@ -1040,7 +1043,7 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
         '409':
-          description: Visit not in waiting list or already has a display name
+          description: Visit state does not allow editing or the displayed name comes from check-in, CSV, or eGK
           content:
             application/json:
               schema:

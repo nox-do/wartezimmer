@@ -6,6 +6,7 @@ export const dict = {
     loading: 'Laden…',
     retry: 'Erneut versuchen',
     cancel: 'Abbrechen',
+    yes: 'Ja',
     mainNavAria: 'Hauptnavigation',
   },
   privacy: {
@@ -345,7 +346,7 @@ export const dict = {
     zoneAwayDesc: 'Nach Ablauf der Rückholzeit automatisch zurück ins Wartezimmer.',
     zoneAwayEmpty: 'Keine abwesenden Patienten.',
     zoneActiveTitle: 'In der Praxis',
-    zoneActiveDesc: 'Unterwegs und angekommene Patienten — nach Ziel und Raum gruppiert.',
+    zoneActiveDesc: 'Aufgerufen / in Behandlung',
     zoneActiveEmpty: 'Niemand in Behandlung.',
     zoneActiveRoomEmpty: 'Niemand in diesem Raum.',
     zoneActiveUnassigned: 'Ohne Aufrufziel',
@@ -358,6 +359,7 @@ export const dict = {
     waitThresholdAria:
       'Patienten oberhalb dieser Linie warten länger als {minutes} Minuten; darunter kürzer',
     actionCall: 'Aufrufen',
+    actionEditName: 'Namen bearbeiten',
     actionCallOfflineHint: 'Aufrufen — Wartezimmer-TV scheint offline',
     callAnnouncementOffline:
       'Wartezimmer-TV scheint offline. Aufruf wird vom Server geprüft — bitte Gerät prüfen oder koppeln.',
@@ -452,6 +454,7 @@ export const dict = {
     quicksettingsAria: 'Schnellzugriffe',
     quicksettingsTitle: 'Schnellzugriffe',
     qsTerminal: 'Terminal',
+    qsFilter: 'Filter',
     pairingConnecting: 'Gerät verbindet…',
     pairingCodeNotFound:
       'Code ungültig oder abgelaufen. Bitte den aktuellen Code am Gerät prüfen und erneut versuchen.',
@@ -704,6 +707,7 @@ export const dict = {
       dayStartSandboxHint: 'Sandbox-Neustart wurde angefordert.',
       terminalEnable: 'Anmeldung zulassen',
       terminalDisable: 'Anmeldung sperren',
+      terminalDisableConfirmTitle: 'Anmeldung am Terminal deaktivieren?',
       terminalLockedToast: 'Anmeldung ist gesperrt.',
       terminalUnlockedToast: 'Anmeldung ist wieder zugelassen.',
       terminalLockBlockedByDayReset:

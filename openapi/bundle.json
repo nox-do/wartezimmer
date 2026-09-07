@@ -3910,6 +3910,10 @@
                                 "nullable": true,
                                 "description": "Display name for MFA (CSV/eGK lookup or manual entry; staff queue only, not on TV; cleared on day reset)"
                               },
+                              "identityRefEditable": {
+                                "type": "boolean",
+                                "description": "True when the displayed name is absent or comes from identityRefOverride and may be edited by MFA."
+                              },
                               "returnUntil": {
                                 "type": "string",
                                 "format": "date-time",
@@ -5885,7 +5889,7 @@
         }
       ],
       "patch": {
-        "summary": "Set MFA display name for a visit without identity (manual entry in waiting list)",
+        "summary": "Set or correct an MFA-entered display name",
         "parameters": [
           {
             "in": "path",
@@ -6102,7 +6106,7 @@
             }
           },
           "409": {
-            "description": "Visit not in waiting list or already has a display name",
+            "description": "Visit state does not allow editing or the displayed name comes from check-in, CSV, or eGK",
             "content": {
               "application/json": {
                 "schema": {
@@ -18174,6 +18178,10 @@
             "nullable": true,
             "description": "Display name for MFA (CSV/eGK lookup or manual entry; staff queue only, not on TV; cleared on day reset)"
           },
+          "identityRefEditable": {
+            "type": "boolean",
+            "description": "True when the displayed name is absent or comes from identityRefOverride and may be edited by MFA."
+          },
           "returnUntil": {
             "type": "string",
             "format": "date-time",
@@ -18524,6 +18532,10 @@
                   "type": "string",
                   "nullable": true,
                   "description": "Display name for MFA (CSV/eGK lookup or manual entry; staff queue only, not on TV; cleared on day reset)"
+                },
+                "identityRefEditable": {
+                  "type": "boolean",
+                  "description": "True when the displayed name is absent or comes from identityRefOverride and may be edited by MFA."
                 },
                 "returnUntil": {
                   "type": "string",
@@ -19204,6 +19216,10 @@
                       "type": "string",
                       "nullable": true,
                       "description": "Display name for MFA (CSV/eGK lookup or manual entry; staff queue only, not on TV; cleared on day reset)"
+                    },
+                    "identityRefEditable": {
+                      "type": "boolean",
+                      "description": "True when the displayed name is absent or comes from identityRefOverride and may be edited by MFA."
                     },
                     "returnUntil": {
                       "type": "string",

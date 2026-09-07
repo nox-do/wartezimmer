@@ -32,7 +32,7 @@ export function applyMfaQueueIdentityRef(visitId: string, identityRef: string): 
   }
 
   const item = queue.items[index];
-  if (item.identityRef?.trim()) {
+  if (item.identityRefEditable !== true) {
     return;
   }
 
@@ -40,6 +40,7 @@ export function applyMfaQueueIdentityRef(visitId: string, identityRef: string): 
   nextItems[index] = {
     ...item,
     identityRef: trimmed,
+    identityRefEditable: true,
   };
   mfaQueueDisplay.queue = {
     ...queue,

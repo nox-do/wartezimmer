@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createDraggable } from '@dnd-kit/svelte';
   import type { Snippet } from 'svelte';
-  import { ArrowRight, FileText, LogOut, MapPin, Megaphone, Navigation, Play, RotateCcw, Send, Trash2, TreePalm, Users } from '@lucide/svelte';
+  import { ArrowRight, FileText, LogOut, MapPin, Megaphone, Navigation, Pause, Pencil, Play, RotateCcw, Send, Trash2, Users } from '@lucide/svelte';
   import MfaActionButton from '$lib/components/mfa/MfaActionButton.svelte';
   import QueueTriageButton from '$lib/components/mfa/QueueTriageButton.svelte';
   import { setIdentityRefVisit } from '$lib/queue/queue-actions';
@@ -78,7 +78,11 @@
   let nameSaving = $state(false);
   let nameInputRef = $state<HTMLInputElement | null>(null);
 
-  const canNameEdit = $derived(zone === 'waiting' && !item.identityRef?.trim() && !busy && !nameSaving);
+  const nameEditZone = $derived(
+    zone === 'waiting' || (zone === 'active' && item.status === 'directed'),
+  );
+  const nameEditable = $derived(nameEditZone && item.identityRefEditable === true);
+  const canNameEdit = $derived(nameEditable && !busy && !nameSaving);
 
   const liveWaitMs = $derived(computeWaitMs(item.arrivedAt, nowMs));
   const showLongWait = $derived(
@@ -414,6 +418,18 @@
 
     <div class="queue-entry-body">
       {@render queueInfo()}
+      {#if nameEditable && !nameEditing}
+        <button
+          type="button"
+          class="queue-name-edit-btn"
+          disabled={busy || nameSaving}
+          aria-label={t('mfa.actionEditName')}
+          title={t('mfa.actionEditName')}
+          onclick={startNameEdit}
+        >
+          <Pencil size={14} aria-hidden="true" />
+        </button>
+      {/if}
       {#if item.roomLabel && item.status === 'in_room'}
         <span class="queue-room queue-room--here">
           {tf('mfa.entryArrivedHere', { room: item.roomLabel })}
@@ -465,7 +481,7 @@
             ariaLabel={t('mfa.actionMarkAway')}
             onclick={onMarkAway}
           >
-            <TreePalm aria-hidden="true" />
+            <Pause aria-hidden="true" />
           </MfaActionButton>
         {/if}
         {#if showCancelVisit}
@@ -494,7 +510,7 @@
             ariaLabel={t('mfa.actionMarkAway')}
             onclick={onMarkAway}
           >
-            <TreePalm aria-hidden="true" />
+            <Pause aria-hidden="true" />
           </MfaActionButton>
         {/if}
         {#if showDirectedWaitingActions && showCancelVisit}

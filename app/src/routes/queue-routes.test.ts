@@ -183,6 +183,7 @@ test('GET /api/v1/queue serializes MFA items with empty triage marker', async ()
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().items[0].triageLevel, null);
+  assert.equal(response.json().items[0].identityRefEditable, false);
 
   await app.close();
 });

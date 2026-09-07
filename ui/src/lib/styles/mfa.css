@@ -227,6 +227,32 @@ button.queue-ticket {
   outline-offset: 0;
 }
 
+.queue-name-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-3xs);
+  background: transparent;
+  color: var(--mfa-muted);
+  cursor: pointer;
+}
+
+.queue-name-edit-btn:hover:not(:disabled) {
+  border-color: var(--mfa-border);
+  color: var(--mfa-ink);
+}
+
+.queue-name-edit-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+  color: var(--mfa-ink);
+}
+
 .queue-room {
   flex-shrink: 0;
   font-size: var(--text-xs);
@@ -272,18 +298,16 @@ button.queue-ticket {
   gap: 4px;
 }
 
-/* Hide repetitive flow actions until card hover/focus; keep triage + docs visible. */
+/* Keep all row controls discoverable; emphasize them on hover and keyboard focus. */
 @media (hover: hover) {
-  .queue-entry-actions-hover {
-    opacity: 0;
-    pointer-events: none;
+  .queue-entry-actions > *:not(.btn-staff-sm--triage) {
+    opacity: 0.42;
     transition: opacity 120ms ease;
   }
 
-  .queue-entry-card:hover .queue-entry-actions-hover,
-  .queue-entry-card:focus-within .queue-entry-actions-hover {
+  .queue-entry-card:hover .queue-entry-actions > *:not(.btn-staff-sm--triage),
+  .queue-entry-card:focus-within .queue-entry-actions > *:not(.btn-staff-sm--triage) {
     opacity: 1;
-    pointer-events: auto;
   }
 }
 
@@ -292,6 +316,14 @@ button.queue-ticket {
   border-color: var(--mfa-ink);
   background: var(--mfa-ink);
   color: var(--card);
+}
+
+.mfa-page
+  .queue-entry-actions
+  .btn-staff-sm:not(.btn-staff-sm--doc):not(.btn-staff-sm--triage):not(.btn-staff-sm--danger) {
+  border-color: var(--mfa-border);
+  background: var(--card);
+  color: var(--mfa-ink);
 }
 
 .btn-staff-sm--triage {
@@ -514,6 +546,13 @@ button.queue-ticket {
   margin: 2px 0;
   border: 0;
   background: var(--mfa-border);
+}
+
+.qs-section-title {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--mfa-muted);
 }
 
 .wait-soll-divider {

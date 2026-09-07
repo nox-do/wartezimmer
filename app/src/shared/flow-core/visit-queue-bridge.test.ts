@@ -22,6 +22,7 @@ import {
   reassignVisitRoom,
   setVisitAbsent,
   setVisitCallbackPhone,
+  setVisitIdentityRef,
   startVisit,
   visitStatusToQueueDisplayStatus,
   visitToQueueVisitRow,
@@ -130,7 +131,7 @@ function buildDeps(
   };
 }
 
-function setupVisitFlow(): {
+function setupVisitFlow(identityRef: string | null = 'Transition Test'): {
   db: DatabaseSync;
   settings: OpsSettings;
   visitId: string;
@@ -148,12 +149,49 @@ function setupVisitFlow(): {
   const created = createVisitCheckInInDb(buildDeps(db, settings), {
     topicId: 'blut',
     authPath: 'phone_dob',
-    identityRef: 'Transition Test',
+    ...(identityRef ? { identityRef } : {}),
   });
   const runtime = getFlowCoreRuntime(db);
   const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay(), db);
   return { db, settings, visitId: created.visitId, runtime, listQueue };
 }
+
+test('MFA-entered display names stay editable while check-in names stay protected', () => {
+  const protectedVisit = setupVisitFlow();
+  assert.equal(protectedVisit.listQueue()[0]?.identityRefEditable, false);
+  assert.throws(
+    () =>
+      setVisitIdentityRef(
+        protectedVisit.db,
+        protectedVisit.runtime,
+        protectedVisit.visitId,
+        'Nicht erlaubt',
+        '2026-07-04T12:05:00.000Z',
+      ),
+    (error: unknown) => error instanceof DomainError && error.domainCode === 'INVALID_TRANSITION',
+  );
+
+  const manualVisit = setupVisitFlow(null);
+  assert.equal(manualVisit.listQueue()[0]?.identityRefEditable, true);
+  setVisitIdentityRef(
+    manualVisit.db,
+    manualVisit.runtime,
+    manualVisit.visitId,
+    'Erster Name',
+    '2026-07-04T12:05:00.000Z',
+  );
+  assert.equal(manualVisit.listQueue()[0]?.identityRef, 'Erster Name');
+  assert.equal(manualVisit.listQueue()[0]?.identityRefEditable, true);
+
+  setVisitIdentityRef(
+    manualVisit.db,
+    manualVisit.runtime,
+    manualVisit.visitId,
+    'Korrigierter Name',
+    '2026-07-04T12:06:00.000Z',
+  );
+  assert.equal(manualVisit.listQueue()[0]?.identityRef, 'Korrigierter Name');
+});
 
 function setupComplexVisitFlow(): ReturnType<typeof setupVisitFlow> {
   const db = new DatabaseSync(':memory:');

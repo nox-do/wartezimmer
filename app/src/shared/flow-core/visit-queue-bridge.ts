@@ -183,6 +183,8 @@ export function visitToQueueVisitRow(
     createdAt: visit.checkedInAt ?? visit.createdAt,
     calledAt: visit.calledAt ?? null,
     identityRef: hostState?.identityRefOverride ?? visit.patientDisplayName ?? null,
+    identityRefEditable:
+      Boolean(hostState?.identityRefOverride?.trim()) || !visit.patientDisplayName?.trim(),
     checkinPhone: hostState?.checkinPhone ?? null,
     roomId: assignedRoomId,
     roomLabel: assignedRoomId ? resolveLocationLabel(settings, assignedRoomId) : null,
@@ -390,7 +392,7 @@ export function setVisitIdentityRef(
     throw domainError('INVALID_TRANSITION');
   }
   const hostState = getVisitHostState(db, visitId);
-  if (hostState?.identityRefOverride?.trim() || visit.patientDisplayName?.trim()) {
+  if (!hostState?.identityRefOverride?.trim() && visit.patientDisplayName?.trim()) {
     throw domainError('INVALID_TRANSITION');
   }
   const trimmed = setVisitIdentityRefOverride(db, visitId, identityRef, updatedAt);

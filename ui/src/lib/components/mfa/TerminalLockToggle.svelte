@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from '$lib/components/forms/Button.svelte';
+  import Modal from '$lib/components/Modal.svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
 
   interface Props {
@@ -22,11 +23,22 @@
     onToggle,
   }: Props = $props();
 
+  let confirmLockOpen = $state(false);
+
   function handleClick() {
     if (toggleDisabled) {
       return;
     }
-    onToggle?.(!checkinLocked);
+    if (!checkinLocked) {
+      confirmLockOpen = true;
+      return;
+    }
+    onToggle?.(false);
+  }
+
+  function confirmLock() {
+    confirmLockOpen = false;
+    onToggle?.(true);
   }
 </script>
 
@@ -51,3 +63,23 @@
     {checkinLocked ? t('mfa.settings.terminalEnable') : t('mfa.settings.terminalDisable')}
   </Button>
 </div>
+
+<Modal
+  bind:open={confirmLockOpen}
+  title={t('mfa.settings.terminalDisableConfirmTitle')}
+  maxWidth="440px"
+  dimBackdrop={true}
+  closeOnEscape={!busy}
+  onClose={() => {
+    confirmLockOpen = false;
+  }}
+>
+  <div class="form-actions">
+    <Button type="button" variant="outline" disabled={busy} onclick={() => (confirmLockOpen = false)}>
+      {t('ui.cancel')}
+    </Button>
+    <Button type="button" variant="danger" disabled={busy} onclick={confirmLock}>
+      {t('ui.yes')}
+    </Button>
+  </div>
+</Modal>
