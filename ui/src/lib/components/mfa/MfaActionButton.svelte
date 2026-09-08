@@ -8,6 +8,7 @@
     href?: string;
     count?: number;
     disabled?: boolean;
+    invalid?: boolean;
     ariaLabel?: string;
     title?: string;
     onclick?: (event: MouseEvent) => void;
@@ -20,6 +21,7 @@
     href = undefined,
     count = undefined,
     disabled = false,
+    invalid = false,
     ariaLabel = undefined,
     title = undefined,
     onclick,
@@ -33,6 +35,7 @@
       variant === 'ghost' ? 'btn-staff-sm--ghost' : '',
       variant === 'doc' ? 'btn-staff-sm--doc' : '',
       variant === 'danger' ? 'btn-staff-sm--danger' : '',
+      invalid ? 'btn-staff-sm--invalid' : '',
     ]
       .filter(Boolean)
       .join(' '),

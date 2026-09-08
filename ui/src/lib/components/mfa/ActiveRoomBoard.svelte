@@ -148,6 +148,7 @@
             {queueDragging}
             {nowMs}
             busy={isBusy(item.visitId)}
+            routingInvalid
             onReassign={() => onReassign(item.visitId)}
             onReturnToWaiting={() => onReturnToWaiting(item.visitId)}
             onOpenDocuments={onOpenDocuments}

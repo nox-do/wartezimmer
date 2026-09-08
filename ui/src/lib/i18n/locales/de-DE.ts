@@ -363,7 +363,8 @@ export const dict = {
     actionCallOfflineHint: 'Aufrufen — Wartezimmer-TV scheint offline',
     callAnnouncementOffline:
       'Wartezimmer-TV scheint offline. Aufruf wird vom Server geprüft — bitte Gerät prüfen oder koppeln.',
-    callBlockedRoomRequired: 'Bitte das Ticket per Drag & Drop einem Raum zuweisen.',
+    callBlockedRoomRequired:
+      'Kein gültiges Aufrufziel festgelegt. Bitte das Ticket per Drag & Drop einem Raum zuweisen.',
     callBlockedDirected:
       'Patient ist unterwegs zu {room}. Aufrufen entfällt — Ankunft am Raum-Panel quittieren.',
     callBlockedDirectedNoRoom:
@@ -378,6 +379,8 @@ export const dict = {
     actionCheckIn: 'Angekommen',
     actionStart: 'Starten',
     actionContinue: 'Weiter',
+    actionBlockedRoomRequired:
+      'Kein gültiger Raum zugewiesen. Bitte das Ticket per Drag & Drop einem Raum zuweisen.',
     actionCheckOut: 'Entlassen',
     actionCancelVisit: 'Wartenummer löschen',
     actionReassign: 'Raum ändern',

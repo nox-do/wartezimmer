@@ -597,6 +597,14 @@
   color: var(--red-error-ink);
 }
 
+.btn-staff-sm--invalid:disabled {
+  border-color: var(--red-error);
+  background: var(--red-error-bg);
+  color: var(--red-error-ink);
+  box-shadow: 0 0 0 2px var(--red-error);
+  opacity: 1;
+}
+
 .mfa-action-tooltip {
   display: inline-flex;
   line-height: 0;

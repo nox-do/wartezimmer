@@ -34,6 +34,7 @@
     queueDragging?: boolean;
     nowMs?: number;
     busy?: boolean;
+    routingInvalid?: boolean;
     /** SSE hint only — button stays enabled; server decides on call. */
     callAnnouncementOffline?: boolean;
     onCall?: () => void;
@@ -60,6 +61,7 @@
     queueDragging = false,
     nowMs = Date.now(),
     busy = false,
+    routingInvalid = false,
     callAnnouncementOffline = false,
     onCall,
     onCheckIn,
@@ -121,6 +123,8 @@
   const callButtonTitle = $derived(
     callBlockedTitle ?? (callAnnouncementOffline ? t('mfa.callAnnouncementOffline') : undefined),
   );
+  const callTargetInvalid = $derived(callBlockedReason?.kind === 'room_required');
+  const routingInvalidTitle = $derived(t('mfa.actionBlockedRoomRequired'));
   const showCall = $derived(zone === 'waiting' && Boolean(onCall));
   const showPickupAction = $derived(
     isMfaPickupActionPending(item) && Boolean(onCheckIn),
@@ -483,6 +487,7 @@
             <MfaActionButton
               icon
               disabled={busy || !callAllowed}
+              invalid={callTargetInvalid}
               ariaLabel={callBlockedTitle
                 ? callBlockedTitle
                 : callAnnouncementOffline
@@ -556,14 +561,30 @@
             <Users aria-hidden="true" />
             {t('mfa.assistPickedUp')}
           </MfaActionButton>
-        {:else if inRoomPrimary === 'continue' && onContinue}
-          <MfaActionButton icon disabled={busy} ariaLabel={t('mfa.actionContinue')} onclick={onContinue}>
-            <ArrowRight aria-hidden="true" />
-          </MfaActionButton>
-        {:else if inRoomPrimary === 'start' && onStart}
-          <MfaActionButton icon disabled={busy} ariaLabel={t('mfa.actionStart')} onclick={onStart}>
-            <Play aria-hidden="true" />
-          </MfaActionButton>
+        {:else if inRoomPrimary === 'continue' && (onContinue || routingInvalid)}
+          <span class="mfa-action-tooltip" title={routingInvalid ? routingInvalidTitle : undefined}>
+            <MfaActionButton
+              icon
+              disabled={busy || routingInvalid}
+              invalid={routingInvalid}
+              ariaLabel={routingInvalid ? routingInvalidTitle : t('mfa.actionContinue')}
+              onclick={routingInvalid ? undefined : onContinue}
+            >
+              <ArrowRight aria-hidden="true" />
+            </MfaActionButton>
+          </span>
+        {:else if inRoomPrimary === 'start' && (onStart || routingInvalid)}
+          <span class="mfa-action-tooltip" title={routingInvalid ? routingInvalidTitle : undefined}>
+            <MfaActionButton
+              icon
+              disabled={busy || routingInvalid}
+              invalid={routingInvalid}
+              ariaLabel={routingInvalid ? routingInvalidTitle : t('mfa.actionStart')}
+              onclick={routingInvalid ? undefined : onStart}
+            >
+              <Play aria-hidden="true" />
+            </MfaActionButton>
+          </span>
         {:else if inRoomPrimary === 'checkout' && onCheckOut}
           <MfaActionButton
             variant="ghost"
