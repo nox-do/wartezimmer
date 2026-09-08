@@ -67,6 +67,8 @@ export type QueueVisitRow = {
   triageLevel: string | null;
   documentCount: number;
   needsAssistance: boolean;
+  terminalAssistancePending: boolean;
+  escortTransferPending: boolean;
 };
 
 export type QueueDisplayStatus = TicketStatus;

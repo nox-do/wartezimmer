@@ -9,6 +9,9 @@ export type QueueDragSource = {
   status: QueueStatus;
   roomId: string | null;
   movementMode?: QueueItemMovementMode | null;
+  needsAssistance?: boolean;
+  escortTransferPending?: boolean;
+  journeyStepCompleted?: boolean;
 };
 
 type QueueItemMovementMode = 'call' | 'self_go' | 'pickup';
@@ -27,9 +30,28 @@ export type QueueDropTarget =
 
 export type QueueDropCommand =
   | { action: 'call'; visitId: string; room: RoomTarget }
+  | { action: 'continue-journey'; visitId: string; room: RoomTarget }
+  | {
+      action: 'place-in-room';
+      visitId: string;
+      room: RoomTarget;
+      confirmAssistance: boolean;
+    }
   | { action: 'reassign'; visitId: string; room: RoomTarget }
   | { action: 'return-to-waiting'; visitId: string }
   | { action: 'mark-away'; visitId: string };
+
+function placeInRoomCommand(
+  source: QueueDragSource,
+  room: RoomTarget,
+): Extract<QueueDropCommand, { action: 'place-in-room' }> {
+  return {
+    action: 'place-in-room',
+    visitId: source.visitId,
+    room,
+    confirmAssistance: source.needsAssistance === true,
+  };
+}
 
 function normalizeRoomId(roomId: string | null | undefined): string | null {
   const trimmed = roomId?.trim();
@@ -66,6 +88,9 @@ export function resolveQueueDrop(
   };
 
   if (source.zone === 'waiting') {
+    if (source.movementMode === 'pickup' || source.needsAssistance === true) {
+      return placeInRoomCommand(source, targetRoom);
+    }
     if (!canCallFromWaiting(source)) {
       return null;
     }
@@ -73,9 +98,27 @@ export function resolveQueueDrop(
   }
 
   if (source.zone === 'active') {
+    if (source.journeyStepCompleted === true) {
+      if (source.needsAssistance === true) {
+        return placeInRoomCommand(source, targetRoom);
+      }
+      return { action: 'continue-journey', visitId: source.visitId, room: targetRoom };
+    }
+    if (
+      source.status === 'called' ||
+      source.status === 'directed' ||
+      source.escortTransferPending === true
+    ) {
+      return placeInRoomCommand(source, targetRoom);
+    }
     const sourceRoomId = normalizeRoomId(source.roomId);
     if (sourceRoomId === target.roomId) {
       return null;
+    }
+    if (source.needsAssistance === true) {
+      // Dropping an assisted patient onto another room represents the completed,
+      // accompanied transfer. Confirmation therefore retargets and arrives atomically.
+      return placeInRoomCommand(source, targetRoom);
     }
     return { action: 'reassign', visitId: source.visitId, room: targetRoom };
   }
@@ -89,6 +132,9 @@ export function queueDragSourceFromItem(
     status: QueueStatus;
     roomId?: string | null;
     movementMode?: QueueItemMovementMode | null;
+    needsAssistance?: boolean;
+    escortTransferPending?: boolean;
+    journeyStepCompletedAt?: string | null;
   },
   zone: QueueDragZone,
 ): QueueDragSource {
@@ -98,6 +144,9 @@ export function queueDragSourceFromItem(
     status: item.status,
     roomId: normalizeRoomId(item.roomId),
     movementMode: item.movementMode ?? null,
+    needsAssistance: item.needsAssistance === true,
+    escortTransferPending: item.escortTransferPending === true,
+    journeyStepCompleted: Boolean(item.journeyStepCompletedAt),
   };
 }
 

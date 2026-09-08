@@ -29,6 +29,13 @@ function sampleSettings(): OpsSettings {
         defaultCallTarget: true,
         maxOccupancy: null,
       },
+      {
+        roomId: 'labor',
+        roomLabel: 'Labor',
+        enabled: true,
+        defaultCallTarget: false,
+        maxOccupancy: null,
+      },
     ],
     contactLookupFolderPath: null,
     contactLookupDelimiterMode: 'auto',
@@ -147,4 +154,99 @@ test('syncFlowCoreCatalog seeds reserved mfa topic and direct mfa check-in works
   assert.equal(queueRows.length, 1);
   assert.equal(queueRows[0]?.id, created.visitId);
   assert.equal(queueRows[0]?.topicId, MFA_ASSIST_TOPIC_ID);
+  assert.equal(queueRows[0]?.topicLabel, 'Persönliche Anmeldung');
+  assert.equal(queueRows[0]?.needsAssistance, false);
+  assert.equal(queueRows[0]?.terminalAssistancePending, false);
+  assert.equal(queueRows[0]?.escortTransferPending, false);
+  assert.equal(queueRows[0]?.movementMode, 'self_go');
+
+  const assisted = createVisitCheckInInDb(buildDeps(db, settings), {
+    topicId: MFA_ASSIST_TOPIC_ID,
+    authPath: 'none',
+    needsAssistance: true,
+  });
+  const assistedRow = listVisitQueueRows(getFlowCoreRuntime(db), settings, getBusinessDay()).find(
+    (row) => row.id === assisted.visitId,
+  );
+  assert.equal(assistedRow?.needsAssistance, true);
+  assert.equal(assistedRow?.terminalAssistancePending, true);
+  assert.equal(assistedRow?.escortTransferPending, false);
+  assert.equal(assistedRow?.movementMode, 'pickup');
+  assert.equal(assistedRow?.topicLabel, 'Begleitung ab Terminal');
+
+  const runtime = getFlowCoreRuntime(db);
+  runtime.transition(assisted.visitId, 'arrive');
+  runtime.reassignTarget(assisted.visitId, { targetLocationId: 'labor' });
+  const forwardedRow = listVisitQueueRows(runtime, settings, getBusinessDay()).find(
+    (row) => row.id === assisted.visitId,
+  );
+  assert.equal(forwardedRow?.needsAssistance, true);
+  assert.equal(forwardedRow?.movementMode, 'pickup');
+  assert.equal(forwardedRow?.terminalAssistancePending, false);
+  assert.equal(forwardedRow?.escortTransferPending, true);
+  assert.equal(forwardedRow?.status, 'waiting');
+  assert.equal(forwardedRow?.roomId, 'mfa-tresen');
+  assert.equal(forwardedRow?.destinationRoomId, 'labor');
 });
+
+test('returning an assistance visit to waiting does not reopen the terminal alert', () => {
+  const db = new DatabaseSync(':memory:');
+  db.exec('PRAGMA foreign_keys = ON');
+  ensureFlowCoreSchema(db);
+  const settings = sampleSettings();
+  syncFlowCoreCatalog(db, settings);
+
+  const assisted = createVisitCheckInInDb(buildDeps(db, settings), {
+    topicId: MFA_ASSIST_TOPIC_ID,
+    authPath: 'none',
+    needsAssistance: true,
+  });
+  const runtime = getFlowCoreRuntime(db);
+  runtime.transition(assisted.visitId, 'arrive');
+  runtime.transition(assisted.visitId, 'return_to_waiting');
+
+  const visit = runtime.visits().find((entry) => entry.id === assisted.visitId);
+  const row = listVisitQueueRows(runtime, settings, getBusinessDay()).find(
+    (entry) => entry.id === assisted.visitId,
+  );
+  assert.equal(visit?.lastKnownLocationId, 'pf_waiting');
+  assert.equal(row?.terminalAssistancePending, false);
+  assert.equal(row?.needsAssistance, true);
+});
+
+for (const routingMode of ['simple', 'complex'] as const) {
+  test(`${routingMode}: personal registration never opens the terminal assistance alert`, () => {
+    const db = new DatabaseSync(':memory:');
+    db.exec('PRAGMA foreign_keys = ON');
+    ensureFlowCoreSchema(db);
+    const base = sampleSettings();
+    const settings: OpsSettings = {
+      ...base,
+      routingMode,
+      rooms: base.rooms.map((room) => ({ ...room, defaultCallTarget: false })),
+    };
+    syncFlowCoreCatalog(db, settings);
+
+    const direct = createVisitCheckInInDb(buildDeps(db, settings), {
+      topicId: MFA_ASSIST_TOPIC_ID,
+      authPath: 'none',
+    });
+    const assistance = createVisitCheckInInDb(buildDeps(db, settings), {
+      topicId: MFA_ASSIST_TOPIC_ID,
+      authPath: 'none',
+      needsAssistance: true,
+    });
+    const rows = listVisitQueueRows(getFlowCoreRuntime(db), settings, getBusinessDay());
+    const directRow = rows.find((row) => row.id === direct.visitId);
+    const assistanceRow = rows.find((row) => row.id === assistance.visitId);
+
+    assert.equal(directRow?.destinationRoomId, 'pf_waiting');
+    assert.equal(directRow?.needsAssistance, false);
+    assert.equal(directRow?.terminalAssistancePending, false);
+    assert.equal(directRow?.escortTransferPending, false);
+    assert.equal(assistanceRow?.destinationRoomId, 'pf_waiting');
+    assert.equal(assistanceRow?.needsAssistance, true);
+    assert.equal(assistanceRow?.terminalAssistancePending, true);
+    assert.equal(assistanceRow?.escortTransferPending, false);
+  });
+}

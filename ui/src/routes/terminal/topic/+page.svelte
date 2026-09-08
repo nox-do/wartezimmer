@@ -17,7 +17,7 @@
   } from '$lib/terminal/terminal-api';
   import { mountTerminalAuthRouteGuard } from '$lib/terminal/terminal-auth-route-guard.svelte';
   import { terminalOps } from '$lib/terminal/terminal-ops-runtime.svelte';
-  import { readAssistMode, readTerminalSession, writeCheckinResult } from '$lib/terminal/terminal-session';
+  import { readTerminalSession, writeCheckinResult } from '$lib/terminal/terminal-session';
   import { toastStore } from '$lib/stores/toastStore';
 
   let session = $state(readTerminalSession());
@@ -28,9 +28,6 @@
   let labelTranslations = $state<Map<string, string>>(new Map());
 
   mountTerminalAuthRouteGuard(() => terminalOps, () => session?.authPath ?? null);
-
-  // STUB: Assist-Press-UX — siehe terminal-assist.stub.ts (readAssistMode nicht reaktiv).
-  const showAssistHint = $derived(Boolean(session?.assistMode && readAssistMode()));
 
   function displayLabel(label: string): string {
     return labelTranslations.get(label) ?? label;
@@ -136,11 +133,7 @@
       <h1>{t('terminal.topicEmptyReception')}</h1>
     {:else}
       <h1>{t('terminal.topicTitle')}</h1>
-      {#if showAssistHint}
-        <p class="terminal-lead terminal-lead--assist">{t('terminal.topicAssistHint')}</p>
-      {:else}
-        <p class="terminal-lead">{t('terminal.topicLead')}</p>
-      {/if}
+      <p class="terminal-lead">{t('terminal.topicLead')}</p>
     {/if}
 
     {#if loading}
@@ -179,9 +172,7 @@
     {/if}
 
     <nav class="terminal-nav">
-      {#if showAssistHint}
-        <a href={resolve('/terminal')}>{t('terminal.topicAssistBack')}</a>
-      {:else if session.authPath === 'egk'}
+      {#if session.authPath === 'egk'}
         <a href={resolve('/terminal/egk')}>{t('terminal.topicBack')}</a>
       {:else if session.authPath === 'name_dob'}
         <a href={resolve('/terminal/name')}>{t('terminal.topicBack')}</a>

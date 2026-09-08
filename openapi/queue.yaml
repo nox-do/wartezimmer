@@ -35,6 +35,8 @@ components:
         - documentCount
         - hasMobilePhone
         - needsAssistance
+        - terminalAssistancePending
+        - escortTransferPending
       properties:
         visitId:
           type: string
@@ -119,6 +121,16 @@ components:
         needsAssistance:
           type: boolean
           description: Patient requested help at terminal before topic check-in (MFA marker only)
+        terminalAssistancePending:
+          type: boolean
+          description: >-
+            True only while the initial assistance pickup at the terminal is still pending.
+            Later escorted pickup steps keep needsAssistance but must not trigger the terminal alert or chime.
+        escortTransferPending:
+          type: boolean
+          description: >-
+            True while a patient remains at the current practice room and waits to be accompanied
+            to a different target room. MFA presents the ticket at the current room, not in the waiting room.
         movementMode:
           type: string
           nullable: true
@@ -129,29 +141,6 @@ components:
           description: >-
             Visit movement mode. MFA shows Aufrufen only for waiting + call;
             directed/self_go and pickup stay visible without Call.
-    TerminalAssistPendingItem:
-      type: object
-      additionalProperties: false
-      required:
-        - deviceId
-        - deviceLabel
-        - pressedAt
-        - expiresAt
-        - remainingMs
-      properties:
-        deviceId:
-          type: string
-        deviceLabel:
-          type: string
-        pressedAt:
-          type: string
-          format: date-time
-        expiresAt:
-          type: string
-          format: date-time
-        remainingMs:
-          type: integer
-          minimum: 0
     QueueTriageResponse:
       type: object
       additionalProperties: false
@@ -308,7 +297,6 @@ components:
         - view
         - revision
         - items
-        - assistPending
         - checkinLocked
         - serverTime
       properties:
@@ -322,10 +310,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/QueueItem'
-        assistPending:
-          type: array
-          items:
-            $ref: '#/components/schemas/TerminalAssistPendingItem'
         checkinLocked:
           type: boolean
         serverTime:

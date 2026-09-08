@@ -1,11 +1,7 @@
 import type { CheckInPath } from './types.js';
 
-/**
- * Interne Topic-ID fuer den MFA-/Empfangs-Pfad.
- * Dieser Sonderfall repraesentiert keinen frei konfigurierbaren Praxis-Topic-Eintrag,
- * sondern den Systempfad hinter "Persoenliche Anmeldung" / MFA-Assist.
- */
-export const MFA_ASSIST_TOPIC_ID = 'mfa';
+// Gemeinsame Source of Truth mit Host/UI; flow-core exportiert sie nur weiter.
+export { MFA_ASSIST_TOPIC_ID } from '@praxis-flow/domain';
 
 export const CHECK_IN_PATHS = new Set<CheckInPath>(['topic', 'mfa_assist']);
 
@@ -27,7 +23,8 @@ export function assertCheckInCombination(params: {
   const needsAssistance = Boolean(params.needsAssistance);
   const topicId = normalizeCheckInTopicId(params.topicId);
 
-  if (mfaAssist && (topicId || needsAssistance)) throw new Error('CHECKIN_MFA_ASSIST_EXCLUSIVE');
-  if (needsAssistance && !topicId) throw new Error('CHECKIN_ASSISTANCE_REQUIRES_TOPIC');
+  if (mfaAssist && topicId) throw new Error('CHECKIN_MFA_ASSIST_EXCLUSIVE');
+  if (needsAssistance && !topicId && !mfaAssist)
+    throw new Error('CHECKIN_ASSISTANCE_REQUIRES_TOPIC');
   if (!mfaAssist && !topicId) throw new Error('CHECKIN_TOPIC_OR_MFA_ASSIST_REQUIRED');
 }

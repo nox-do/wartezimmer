@@ -34,6 +34,7 @@ import {
   resolveCheckInDestinationRoomLabel,
   resolveTopicLabelFromSettings,
 } from '../checkin-topic-settings.js';
+import { PF_FLOW_LOC_ENTRANCE, PF_FLOW_LOC_WAITING } from './catalog-ids.js';
 
 const VISIT_QUEUE_STATUSES = new Set<VisitStatus>([
   'waiting',
@@ -45,6 +46,12 @@ const VISIT_QUEUE_STATUSES = new Set<VisitStatus>([
 ]);
 
 const ROOM_ASSIGNED_VISIT_STATUSES = new Set<VisitStatus>(['called', 'arrived', 'in_progress']);
+const STAFFED_ROOM_LOCATION_TYPES = new Set([
+  'reception',
+  'treatment_room',
+  'lab',
+  'service_station',
+]);
 
 const INVALID_TRANSITION_CORE_CODES = new Set([
   'CALL_ONLY_FROM_WAITING',
@@ -116,8 +123,8 @@ function resolveLocationLabel(
   if (!locationId) return null;
   const room = settings.rooms.find((entry) => entry.roomId === locationId);
   if (room) return room.roomLabel;
-  if (locationId === 'pf_waiting') return 'Wartezimmer';
-  if (locationId === 'pf_entrance') return 'Eingang';
+  if (locationId === PF_FLOW_LOC_WAITING) return 'Wartezimmer';
+  if (locationId === PF_FLOW_LOC_ENTRANCE) return 'Eingang';
   return locationId;
 }
 
@@ -166,17 +173,29 @@ export function visitToQueueVisitRow(
   const destinationRoomId = visit.targetLocationId ?? '';
   const destinationRoomLabel = resolveCheckInDestinationRoomLabel(visit.targetLocation) ?? '';
   const hasAbsentOverlay = Boolean(hostState?.absentMode);
+  const escortTransferPending =
+    visit.status === 'waiting' &&
+    visit.movementMode === 'pickup' &&
+    visit.lastKnownLocationId !== visit.targetLocationId &&
+    Boolean(
+      visit.lastKnownLocation && STAFFED_ROOM_LOCATION_TYPES.has(visit.lastKnownLocation.type),
+    );
   const assignedRoomId =
-    !hasAbsentOverlay && ROOM_ASSIGNED_VISIT_STATUSES.has(visit.status)
-      ? (visit.targetLocationId ?? null)
-      : null;
+    !hasAbsentOverlay && escortTransferPending
+      ? (visit.lastKnownLocationId ?? null)
+      : !hasAbsentOverlay && ROOM_ASSIGNED_VISIT_STATUSES.has(visit.status)
+        ? (visit.targetLocationId ?? null)
+        : null;
 
   return {
     id: visit.id,
     laneCode: visit.queueLaneCode,
     number: visit.queueSequence,
     topicId,
-    topicLabel: visit.topic?.name ?? resolveTopicLabelFromSettings(settings, topicId),
+    topicLabel:
+      visit.checkInPath === 'mfa_assist'
+        ? 'Begleitung ab Terminal'
+        : (visit.topic?.name ?? resolveTopicLabelFromSettings(settings, topicId)),
     destinationRoomId,
     destinationRoomLabel,
     status: resolveEffectiveQueueDisplayStatus(visit, hostState),
@@ -198,6 +217,12 @@ export function visitToQueueVisitRow(
     triageLevel: hostState?.triageLevel ?? null,
     documentCount,
     needsAssistance: visit.needsAssistance,
+    terminalAssistancePending:
+      visit.checkInPath === 'mfa_assist' &&
+      visit.status === 'waiting' &&
+      visit.movementMode === 'pickup' &&
+      visit.lastKnownLocationId === PF_FLOW_LOC_ENTRANCE,
+    escortTransferPending,
   };
 }
 
@@ -539,11 +564,27 @@ export function startVisit(
 
 export function continueJourneyVisit(
   runtime: Runtime,
+  settings: OpsSettings,
+  listQueue: () => QueueVisitRow[],
   visitId: string,
+  targetLocationId?: string,
+  actorId?: string,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
   const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
-  const after = runVisitTransition(runtime, visitId, 'start_next_journey_step');
+  if (targetLocationId) {
+    const configuredRoom = settings.rooms.find(
+      (room) => room.enabled && room.roomId === targetLocationId,
+    );
+    if (!configuredRoom) {
+      throw domainError('ROOM_REQUIRED');
+    }
+    assertRoomHasCapacity(settings, listQueue(), targetLocationId, visitId);
+  }
+  const after = runVisitTransition(runtime, visitId, 'start_next_journey_step', {
+    targetLocationId,
+    actorId,
+  });
   return { fromStatus, toStatus: visitStatusToQueueDisplayStatus(after.status) };
 }
 
@@ -609,8 +650,8 @@ export function returnVisitToWaiting(
  *   Host/MFA verdrahten das bewusst noch nicht (Arztpraxis selten nötig).
  * - Topic-Wechsel = Supersede (neue Nummer/Thema), nicht Redirect.
  *
- * Nach Hop-Complete: `journeyStepCompletedAt` bleibt; Continue/Call-next folgt der Journey
- * und überschreibt den Reassign-Raum — bewusst (Lesart B), kein dauerhafter Routenwechsel.
+ * Nach Hop-Complete folgt Continue dem geplanten nächsten Step. DnD kann beim selben
+ * Step-Start ein alternatives Ziel setzen; spätere Steps der Journey bleiben unverändert.
  *
  * Wenn „falsche Mehrschritt-Route verlassen“ Produkt wird: eigenen Transition-Typ
  * `redirect` am Queue-Host verdrahten — Reassign nicht still auf abandon umbiegen.

@@ -10,6 +10,7 @@ import { toastStore } from '$lib/stores/toastStore';
 export const mfaPracticeContext = $state({
   practiceRooms: [] as PracticeRoom[],
   practiceTopics: [] as PracticeTopicSetting[],
+  routingMode: 'simple' as 'simple' | 'complex',
   returnWindowMinutes: 15,
 });
 
@@ -26,6 +27,7 @@ export function applyMfaPracticeRooms(rooms: PracticeRoom[]) {
 export function resetMfaPracticeContext() {
   mfaPracticeContext.practiceRooms = [];
   mfaPracticeContext.practiceTopics = [];
+  mfaPracticeContext.routingMode = 'simple';
   mfaPracticeContext.returnWindowMinutes = 15;
   setPracticeTopicCatalog([]);
 }
@@ -39,5 +41,6 @@ export async function loadMfaPracticeContext() {
 
   applyMfaPracticeRooms(settingsResult.data.rooms ?? []);
   applyMfaPracticeTopics(settingsResult.data.topics ?? []);
+  mfaPracticeContext.routingMode = settingsResult.data.routingMode ?? 'simple';
   mfaPracticeContext.returnWindowMinutes = settingsResult.data.returnWindowMinutes ?? 15;
 }

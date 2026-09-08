@@ -578,20 +578,15 @@ export interface components {
       triageLevel?: 'red' | 'yellow' | 'green' | null;
       /** @description Patient requested help at terminal before topic check-in (MFA marker only) */
       needsAssistance: boolean;
+      /** @description True only while the initial assistance pickup at the terminal is still pending. Later escorted pickup steps keep needsAssistance but must not trigger the terminal alert or chime. */
+      terminalAssistancePending: boolean;
+      /** @description True while a patient remains at the current practice room and waits to be accompanied to a different target room. MFA presents the ticket at the current room, not in the waiting room. */
+      escortTransferPending: boolean;
       /**
        * @description Visit movement mode. MFA shows Aufrufen only for waiting + call; directed/self_go and pickup stay visible without Call.
        * @enum {string|null}
        */
       movementMode?: 'call' | 'self_go' | 'pickup' | null;
-    };
-    TerminalAssistPendingItem: {
-      deviceId: string;
-      deviceLabel: string;
-      /** Format: date-time */
-      pressedAt: string;
-      /** Format: date-time */
-      expiresAt: string;
-      remainingMs: number;
     };
     QueueTriageResponse: {
       /** @constant */
@@ -656,7 +651,6 @@ export interface components {
       view: 'mfa';
       revision: number;
       items: components['schemas']['QueueItem'][];
-      assistPending: components['schemas']['TerminalAssistPendingItem'][];
       checkinLocked: boolean;
       /** Format: date-time */
       serverTime: string;

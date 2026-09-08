@@ -51,8 +51,11 @@ export async function startTreatmentVisit(visitId: string) {
   return transitionVisit<QueueTransitionResponse>(visitId, { type: 'start_treatment' });
 }
 
-export async function continueJourneyVisit(visitId: string) {
-  return transitionVisit<QueueTransitionResponse>(visitId, { type: 'continue_journey' });
+export async function continueJourneyVisit(visitId: string, room?: RoomTarget) {
+  return transitionVisit<QueueTransitionResponse>(visitId, {
+    type: 'continue_journey',
+    ...roomActionBody(room),
+  });
 }
 
 export async function reassignRoomVisit(visitId: string, room: RoomTarget) {

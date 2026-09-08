@@ -15,7 +15,11 @@
   import { formatReturnCountdown, returnCountdownRemainingMs } from '$lib/queue/format-return-countdown';
   import { computeWaitMs, formatWaitDuration, isLongWait } from '$lib/queue/format-wait-duration';
   import { formatClockTime } from '$lib/queue/format-time';
-  import { canMfaCallVisit, resolveMfaCallBlockedReason } from '$lib/queue/mfa-call-gate';
+  import {
+    canMfaCallVisit,
+    isMfaPickupActionPending,
+    resolveMfaCallBlockedReason,
+  } from '$lib/queue/mfa-call-gate';
   import { resolveMfaInRoomPrimaryAction } from '$lib/queue/mfa-primary-action';
   import type { QueueItem } from '$lib/queue/types';
   import type { QueueDragZone } from '$lib/queue/queue-drop-resolver';
@@ -97,6 +101,9 @@
     if (!reason) {
       return undefined;
     }
+    if (reason.kind === 'room_required') {
+      return t('mfa.callBlockedRoomRequired');
+    }
     if (reason.kind === 'directed') {
       return reason.roomLabel
         ? tf('mfa.callBlockedDirected', { room: reason.roomLabel })
@@ -113,6 +120,9 @@
     callBlockedTitle ?? (callAnnouncementOffline ? t('mfa.callAnnouncementOffline') : undefined),
   );
   const showCall = $derived(zone === 'waiting' && Boolean(onCall));
+  const showPickupAction = $derived(
+    isMfaPickupActionPending(item) && Boolean(onCheckIn),
+  );
   const showDirectedWaitingActions = $derived(zone === 'active' && item.status === 'directed');
   const showCancelVisit = $derived(
     (zone === 'waiting' || zone === 'away' || showDirectedWaitingActions) &&
@@ -138,9 +148,9 @@
   );
   const showNeedsAssistance = $derived(Boolean(item.needsAssistance));
   const showPickupMark = $derived(
-    zone === 'waiting' && item.status === 'waiting' && item.movementMode === 'pickup',
+    isMfaPickupActionPending(item),
   );
-  /** Blue staff-attention mark: terminal help and pickup both mean someone must go to the patient. */
+  /** Staff-attention mark: assistance and pickup both mean someone must go to the patient. */
   const showStaffAttentionMark = $derived(showNeedsAssistance || showPickupMark);
   const showDirectedMark = $derived(zone === 'active' && item.status === 'directed');
   const movementRoomLabel = $derived(
@@ -454,8 +464,18 @@
       </MfaActionButton>
     {/if}
 
-    {#if zone === 'waiting' && (showCall || onMarkAway || showCancelVisit)}
+    {#if zone === 'waiting' && (showCall || showPickupAction || onMarkAway || showCancelVisit)}
       <div class="queue-entry-actions-hover">
+        {#if showPickupAction}
+          <MfaActionButton
+            disabled={busy}
+            ariaLabel={t('mfa.assistPickedUp')}
+            onclick={onCheckIn}
+          >
+            <Users aria-hidden="true" />
+            {t('mfa.assistPickedUp')}
+          </MfaActionButton>
+        {/if}
         {#if showCall}
           <span class="mfa-action-tooltip" title={callButtonTitle}>
             <MfaActionButton
@@ -496,11 +516,13 @@
           </MfaActionButton>
         {/if}
       </div>
-    {:else if zone === 'active' && (item.status === 'called' || item.status === 'directed') && onCheckIn}
+    {:else if zone === 'active' && (item.status === 'called' || item.status === 'directed')}
       <div class="queue-entry-actions-hover">
-        <MfaActionButton icon disabled={busy} ariaLabel={t('mfa.actionCheckIn')} onclick={onCheckIn}>
-          <MapPin aria-hidden="true" />
-        </MfaActionButton>
+        {#if onCheckIn}
+          <MfaActionButton icon disabled={busy} ariaLabel={t('mfa.actionCheckIn')} onclick={onCheckIn}>
+            <MapPin aria-hidden="true" />
+          </MfaActionButton>
+        {/if}
         {@render roomManagementActions()}
         {#if showDirectedWaitingActions && onMarkAway}
           <MfaActionButton
@@ -527,7 +549,12 @@
       </div>
     {:else if zone === 'active' && item.status === 'in_room'}
       <div class="queue-entry-actions-hover">
-        {#if inRoomPrimary === 'continue' && onContinue}
+        {#if showPickupAction}
+          <MfaActionButton disabled={busy} ariaLabel={t('mfa.assistPickedUp')} onclick={onCheckIn}>
+            <Users aria-hidden="true" />
+            {t('mfa.assistPickedUp')}
+          </MfaActionButton>
+        {:else if inRoomPrimary === 'continue' && onContinue}
           <MfaActionButton icon disabled={busy} ariaLabel={t('mfa.actionContinue')} onclick={onContinue}>
             <ArrowRight aria-hidden="true" />
           </MfaActionButton>

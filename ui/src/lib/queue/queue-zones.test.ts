@@ -21,6 +21,8 @@ function item(visitId: string, status: QueueItem['status']): QueueItem {
     hasMobilePhone: false,
     returnUntil: null,
     needsAssistance: false,
+    terminalAssistancePending: false,
+    escortTransferPending: false,
   };
 }
 

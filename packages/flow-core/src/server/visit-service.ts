@@ -185,7 +185,11 @@ export function createVisitService(params: {
     return applyJourneyPatch(visitId, record, journeyPatch, steps, catalog);
   };
 
-  const startNextJourneyStep = (visitId: string, catalog: Catalog): VisitView | undefined => {
+  const startNextJourneyStep = (
+    visitId: string,
+    catalog: Catalog,
+    targetLocationId?: string,
+  ): VisitView | undefined => {
     const record = visitRecordById(visitId);
     if (
       !record?.journeyTemplateId ||
@@ -195,7 +199,13 @@ export function createVisitService(params: {
       throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
     }
     const steps = stepsForTemplate(record.journeyTemplateId, catalog.journeySteps);
-    const journeyPatch = startNextJourneyStepPatch(record, steps, { locations: catalog.locations });
+    if (targetLocationId) {
+      assertCallTargetLocation(catalog, targetLocationId);
+    }
+    const journeyPatch = startNextJourneyStepPatch(record, steps, {
+      locations: catalog.locations,
+      targetLocationId,
+    });
     if (!journeyPatch || journeyPatch.journeyState === 'completed') {
       throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
     }
@@ -243,10 +253,10 @@ export function createVisitService(params: {
       const authPath = body.authPath ?? (mfaAssist ? 'none' : 'phone_dob');
       const patientId = crypto.randomUUID();
 
+      const visitNeedsAssistance = mfaAssist || (checkInPath === 'topic' && needsAssistance);
       const configuredEscortPolicy = selectedRule.escortPolicy;
-      const effectivePolicy = effectiveEscortPolicy(configuredEscortPolicy);
+      const effectivePolicy = effectiveEscortPolicy(configuredEscortPolicy, visitNeedsAssistance);
       const allowRedirect = selectedRule.allowRedirect;
-      const visitNeedsAssistance = checkInPath === 'topic' && needsAssistance;
 
       const useJourney = Boolean(selectedRule.journeyTemplateId);
       const templateSteps = useJourney
@@ -309,6 +319,16 @@ export function createVisitService(params: {
         visitStatus = routing.status;
         visitConfidence = routing.locationConfidence;
         visitTerminalInstruction = routing.terminalInstruction;
+      }
+
+      // The reserved M topic also serves ordinary walk-in reception check-ins.
+      // Only the explicit mfaAssist path starts at the terminal and requires pickup.
+      if (mfaAssist) {
+        visitLastKnown = checkInSurface.locationId;
+        visitMovement = 'pickup';
+        visitStatus = 'waiting';
+        visitTerminalInstruction =
+          'Bitte bleiben Sie am Terminal. Eine Mitarbeiterin oder ein Mitarbeiter holt Sie hier ab.';
       }
 
       maybeFail('checkIn:patient');
@@ -415,7 +435,7 @@ export function createVisitService(params: {
       assertActingLocationScope(record, context.actingLocationId);
       const now = new Date().toISOString();
       if (action === 'start_next_journey_step') {
-        return startNextJourneyStep(visitId, catalog);
+        return startNextJourneyStep(visitId, catalog, context.targetLocationId ?? undefined);
       }
       if (action === 'call') {
         if (context.targetLocationId) {
@@ -453,11 +473,24 @@ export function createVisitService(params: {
           record.targetLocationId,
           catalog.queues,
         );
+        const targetLocation = catalog.locations.find(
+          (location) => location.id === record.targetLocationId,
+        );
+        const pickupIntoWaitingArea =
+          record.status === 'waiting' &&
+          record.movementMode === 'pickup' &&
+          record.needsAssistance &&
+          targetLocation?.type === 'waiting_area';
+        const destinationQueue = catalog.queues.find((queue) => queue.id === nextQueueId);
+        const nextStatus = pickupIntoWaitingArea ? 'waiting' : 'arrived';
         const arrivePatch: VisitPatch = {
-          status: 'arrived',
+          status: nextStatus,
           locationConfidence: 'confirmed',
-          arrivedAt: now,
+          arrivedAt: pickupIntoWaitingArea ? null : now,
         };
+        if (pickupIntoWaitingArea) {
+          arrivePatch.movementMode = destinationQueue?.defaultMovementMode ?? 'call';
+        }
         // VisitPatch: fehlender Key = preserve; kein explizites undefined (z. B. Raum ohne eigene Queue).
         if (record.targetLocationId !== undefined) {
           arrivePatch.lastKnownLocationId = record.targetLocationId;
@@ -472,7 +505,7 @@ export function createVisitService(params: {
           visitId,
           'arrived',
           record.status,
-          'arrived',
+          nextStatus,
           record.lastKnownLocationId,
           record.targetLocationId,
           record.queueId,
@@ -718,7 +751,13 @@ export function createVisitService(params: {
       const catalog = loadCatalog();
       const record = visitRecordById(visitId);
       if (!record) throw new Error('VISIT_NOT_FOUND');
-      if (!['called', 'arrived', 'in_progress'].includes(record.status)) {
+      const canRetargetPickup = record.status === 'waiting' && record.movementMode === 'pickup';
+      const canRetargetDirected = record.status === 'directed' && record.movementMode === 'self_go';
+      if (
+        !['called', 'arrived', 'in_progress'].includes(record.status) &&
+        !canRetargetPickup &&
+        !canRetargetDirected
+      ) {
         throw new Error('REASSIGN_TARGET_NOT_ALLOWED');
       }
 

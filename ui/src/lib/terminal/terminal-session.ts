@@ -2,7 +2,6 @@ import type { TerminalAuthPath } from './terminal-api';
 
 export type TerminalSession = {
   authPath: TerminalAuthPath;
-  assistMode?: boolean;
   phoneNumber?: string;
   lastName?: string;
   dobDisplay?: string;
@@ -17,40 +16,11 @@ export type TerminalCheckinResult = {
   destinationRoomLabel?: string | null;
   authPath: TerminalAuthPath;
   createdAt: string;
+  needsAssistance?: boolean;
 };
 
 const SESSION_KEY = 'terminal:session';
 const RESULT_KEY = 'terminal:checkin-result';
-/** STUB assist client state — see `terminal-assist.stub.ts`. */
-const ASSIST_EXPIRES_KEY = 'terminal:assist-expires-at';
-
-/** STUB — wire via terminal-assist.stub later */
-export function writeAssistMode(expiresAt: string): void {
-  sessionStorage.setItem(ASSIST_EXPIRES_KEY, expiresAt);
-}
-
-/** STUB — wire via terminal-assist.stub later */
-export function readAssistMode(): boolean {
-  const expiresAt = sessionStorage.getItem(ASSIST_EXPIRES_KEY);
-  if (!expiresAt) {
-    return false;
-  }
-  if (Date.parse(expiresAt) <= Date.now()) {
-    clearAssistMode();
-    return false;
-  }
-  return true;
-}
-
-/** STUB — wire via terminal-assist.stub later */
-export function readAssistExpiresAt(): string | null {
-  return sessionStorage.getItem(ASSIST_EXPIRES_KEY);
-}
-
-export function clearAssistMode(): void {
-  sessionStorage.removeItem(ASSIST_EXPIRES_KEY);
-}
-
 export type TerminalAuthEntryPath = '/terminal/egk' | '/terminal/name' | '/terminal/phone';
 
 export function terminalAuthEntryPath(authPath: TerminalAuthPath): TerminalAuthEntryPath {
@@ -76,8 +46,7 @@ export function readTerminalSession(): TerminalSession | null {
 }
 
 export function writeTerminalSession(session: TerminalSession): void {
-  const payload: TerminalSession = readAssistMode() ? { ...session, assistMode: true } : session;
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(payload));
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
 export function clearTerminalSession(): void {
@@ -107,5 +76,4 @@ export function clearCheckinResult(): void {
 export function resetTerminalFlow(): void {
   clearTerminalSession();
   clearCheckinResult();
-  clearAssistMode();
 }

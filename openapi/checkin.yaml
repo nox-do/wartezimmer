@@ -74,42 +74,6 @@ components:
         availableTo:
           type: string
           nullable: true
-    TerminalAssistPendingItem:
-      type: object
-      additionalProperties: false
-      required:
-        - deviceId
-        - deviceLabel
-        - pressedAt
-        - expiresAt
-        - remainingMs
-      properties:
-        deviceId:
-          type: string
-        deviceLabel:
-          type: string
-        pressedAt:
-          type: string
-          format: date-time
-        expiresAt:
-          type: string
-          format: date-time
-        remainingMs:
-          type: integer
-          minimum: 0
-    TerminalAssistPressed:
-      type: object
-      additionalProperties: false
-      required:
-        - pressedAt
-        - expiresAt
-      properties:
-        pressedAt:
-          type: string
-          format: date-time
-        expiresAt:
-          type: string
-          format: date-time
 paths:
   /api/v1/checkins/topics:
     parameters:
@@ -225,18 +189,18 @@ paths:
                   value:
                     code: OPS_SETTINGS_INVALID
                     message: Praxiszeiten sind ungueltig konfiguriert.
-  /api/v1/checkins/assist/press:
+  /api/v1/checkins/assistance:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
-      summary: Terminal help button pressed — ephemeral assist pending (no visit)
+      summary: Create an assistance visit for pickup at the terminal
       responses:
         '201':
-          description: Assist pending registered
+          description: Assistance ticket created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TerminalAssistPressed'
+                $ref: '#/components/schemas/VisitCreated'
         '400':
           description: Invalid request
           content:
@@ -244,45 +208,14 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
         '409':
-          description: Check-in rejected by configured opening-hour guardrails
+          description: Check-in rejected by practice guardrails
           content:
             application/json:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
         '500':
-          description: Invalid opening-hour configuration
+          description: Invalid practice configuration
           content:
             application/json:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
-  /api/v1/checkins/assist/release:
-    parameters:
-      - $ref: './common.yaml#/components/parameters/XClientRole'
-    post:
-      summary: Clear terminal assist pending (manual or timeout)
-      responses:
-        '204':
-          description: Released or already inactive
-  /api/v1/checkins/assist/pending:
-    parameters:
-      - $ref: './common.yaml#/components/parameters/XClientRole'
-    get:
-      summary: List active terminal assist pending signals (MFA)
-      responses:
-        '200':
-          description: Active assist pending entries
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - items
-                  - serverTime
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/TerminalAssistPendingItem'
-                  serverTime:
-                    type: string
-                    format: date-time

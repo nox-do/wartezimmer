@@ -25,6 +25,9 @@ test('supersede: mfaAssist → general, neue Nummer, Link, checkedInAt erhalten'
   assert.notEqual(result.visit.id, source.id);
   assert.notEqual(result.visit.queueNumber, source.queueNumber);
   assert.equal(result.visit.checkInPath, 'topic');
+  assert.equal(result.visit.needsAssistance, true);
+  assert.equal(result.visit.effectiveEscortPolicy, 'required');
+  assert.equal(result.visit.movementMode, 'call');
 
   const active = runtime.visits();
   assert.equal(
@@ -75,7 +78,6 @@ test('supersede: gleiches Topic abgelehnt', () => {
 test('supersede: terminales Ticket abgelehnt', () => {
   const { runtime } = testRuntime();
   const source = runtime.checkIn({ mfaAssist: true, surfaceId: 'terminal_1' });
-  runtime.transition(source.id, 'call', { targetLocationId: 'reception' });
   runtime.transition(source.id, 'arrive');
   runtime.transition(source.id, 'start');
   runtime.transition(source.id, 'done');

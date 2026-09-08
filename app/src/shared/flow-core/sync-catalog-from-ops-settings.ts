@@ -17,13 +17,23 @@ import {
   MFA_ASSIST_TOPIC_ID,
   resolveTopicLabelFromSettings,
 } from '../checkin-topic-settings.js';
+import {
+  PF_FLOW_LOC_ENTRANCE,
+  PF_FLOW_LOC_WAITING,
+  PF_FLOW_QUEUE_GENERAL,
+  PF_FLOW_SURFACE_MFA,
+  PF_FLOW_SURFACE_TERMINAL,
+  PF_FLOW_SURFACE_TV,
+} from './catalog-ids.js';
 
-export const PF_FLOW_LOC_ENTRANCE = 'pf_entrance';
-export const PF_FLOW_LOC_WAITING = 'pf_waiting';
-export const PF_FLOW_QUEUE_GENERAL = 'pf_general_queue';
-export const PF_FLOW_SURFACE_TERMINAL = 'pf_terminal_1';
-export const PF_FLOW_SURFACE_TV = 'pf_waiting_tv';
-export const PF_FLOW_SURFACE_MFA = 'pf_mfa_dashboard';
+export {
+  PF_FLOW_LOC_ENTRANCE,
+  PF_FLOW_LOC_WAITING,
+  PF_FLOW_QUEUE_GENERAL,
+  PF_FLOW_SURFACE_MFA,
+  PF_FLOW_SURFACE_TERMINAL,
+  PF_FLOW_SURFACE_TV,
+} from './catalog-ids.js';
 
 /** True when ops_settings.routingMode is not complex (journeys not projected). */
 export function isSimpleRoutingMode(settings: Pick<OpsSettings, 'routingMode'>): boolean {
@@ -429,24 +439,28 @@ function resolveTopicJourneyTemplateId(
   return template?.active ? journeyTemplateId : null;
 }
 
-export function syncComplexRoutingRulesFromOpsSettings(
-  db: DatabaseSync,
-  settings: OpsSettings,
-  receptionRoomId: string,
-): void {
-  const mfaTopicLabel = resolveTopicLabelFromSettings(settings, MFA_ASSIST_TOPIC_ID);
-
-  upsertRoutingRule(
-    db,
-    buildSimpleRoutingRuleRow({
+function buildMfaRoutingRuleRow(settings: OpsSettings): SimpleRoutingRuleRow {
+  const label = resolveTopicLabelFromSettings(settings, MFA_ASSIST_TOPIC_ID);
+  const targetLocationId = resolveDefaultCallTargetLocationId(settings);
+  return {
+    ...buildSimpleRoutingRuleRow({
       topicId: MFA_ASSIST_TOPIC_ID,
-      name: mfaTopicLabel,
-      targetLocationId: receptionRoomId,
-      terminalInstructionTemplate: 'Bitte nehmen Sie im Wartezimmer Platz. Sie werden aufgerufen.',
+      name: label,
+      targetLocationId,
+      terminalInstructionTemplate: terminalInstructionForTopic(label, targetLocationId, settings),
       allowRedirect: false,
       active: true,
     }),
-  );
+    initialLastKnownLocationId: PF_FLOW_LOC_ENTRANCE,
+    initialMovementMode: targetLocationId === PF_FLOW_LOC_WAITING ? 'call' : 'self_go',
+  };
+}
+
+export function syncComplexRoutingRulesFromOpsSettings(
+  db: DatabaseSync,
+  settings: OpsSettings,
+): void {
+  upsertRoutingRule(db, buildMfaRoutingRuleRow(settings));
 
   for (const topic of settings.topics) {
     const journeyTemplateId = resolveTopicJourneyTemplateId(topic, settings);
@@ -561,7 +575,7 @@ function resolveReceptionRoomId(settings: OpsSettings): string {
 }
 
 function resolveDefaultCallTargetLocationId(settings: OpsSettings): string {
-  return resolveDefaultCallRoomId(settings.rooms) ?? resolveReceptionRoomId(settings);
+  return resolveDefaultCallRoomId(settings.rooms) ?? PF_FLOW_LOC_WAITING;
 }
 
 function resolveTargetLocationId(topicDefaultRoomId: string, settings: OpsSettings): string {
@@ -621,21 +635,8 @@ function replaceGeneratedDisplayRules(db: DatabaseSync): void {
 export function syncSimpleRoutingRulesFromOpsSettings(
   db: DatabaseSync,
   settings: OpsSettings,
-  receptionRoomId: string,
 ): void {
-  const mfaTopicLabel = resolveTopicLabelFromSettings(settings, MFA_ASSIST_TOPIC_ID);
-
-  upsertRoutingRule(
-    db,
-    buildSimpleRoutingRuleRow({
-      topicId: MFA_ASSIST_TOPIC_ID,
-      name: mfaTopicLabel,
-      targetLocationId: receptionRoomId,
-      terminalInstructionTemplate: 'Bitte nehmen Sie im Wartezimmer Platz. Sie werden aufgerufen.',
-      allowRedirect: false,
-      active: true,
-    }),
-  );
+  upsertRoutingRule(db, buildMfaRoutingRuleRow(settings));
 
   for (const topic of settings.topics) {
     const targetLocationId = resolveTargetLocationId(topic.defaultRoomId, settings);
@@ -657,18 +658,14 @@ export function syncSimpleRoutingRulesFromOpsSettings(
   }
 }
 
-export function syncRoutingRulesFromOpsSettings(
-  db: DatabaseSync,
-  settings: OpsSettings,
-  receptionRoomId: string,
-): void {
+export function syncRoutingRulesFromOpsSettings(db: DatabaseSync, settings: OpsSettings): void {
   if (isSimpleRoutingMode(settings)) {
-    syncSimpleRoutingRulesFromOpsSettings(db, settings, receptionRoomId);
+    syncSimpleRoutingRulesFromOpsSettings(db, settings);
     return;
   }
 
   syncJourneyTemplatesFromOpsSettings(db, settings);
-  syncComplexRoutingRulesFromOpsSettings(db, settings, receptionRoomId);
+  syncComplexRoutingRulesFromOpsSettings(db, settings);
 }
 
 export function syncCatalogFromOpsSettings(
@@ -774,7 +771,7 @@ export function syncCatalogFromOpsSettings(
     topicCount += 1;
   }
 
-  syncRoutingRulesFromOpsSettings(db, settings, resolveDefaultCallTargetLocationId(settings));
+  syncRoutingRulesFromOpsSettings(db, settings);
 
   upsertSurface(db, {
     id: PF_FLOW_SURFACE_TERMINAL,

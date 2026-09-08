@@ -117,13 +117,21 @@ test('syncCatalogFromOpsSettings maps PF topics and rooms into a valid flow-core
 
   const mfaRule = db
     .prepare(
-      'SELECT initial_target_location_id AS target, allow_redirect AS allowRedirect, journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?',
+      'SELECT initial_target_location_id AS target, initial_last_known_location_id AS lastKnown, initial_movement_mode AS movementMode, allow_redirect AS allowRedirect, journey_template_id AS journeyTemplateId FROM routing_rules WHERE topic_id = ?',
     )
     .get(MFA_ASSIST_TOPIC_ID) as
-    | { target: string; allowRedirect: number; journeyTemplateId: string | null }
+    | {
+        target: string;
+        lastKnown: string;
+        movementMode: string;
+        allowRedirect: number;
+        journeyTemplateId: string | null;
+      }
     | undefined;
   assert.ok(mfaRule);
   assert.equal(mfaRule.target, 'mfa-tresen');
+  assert.equal(mfaRule.lastKnown, 'pf_entrance');
+  assert.equal(mfaRule.movementMode, 'self_go');
   assert.equal(mfaRule.allowRedirect, 0);
   assert.equal(mfaRule.journeyTemplateId, null);
 
@@ -334,6 +342,14 @@ test('syncCatalogFromOpsSettings in complex mode without journeys keeps simple r
     .all() as Array<{ journeyTemplateId: string | null }>;
   assert.ok(rules.length > 0);
   assert.ok(rules.every((rule) => rule.journeyTemplateId === null));
+
+  const mfaRule = db
+    .prepare(
+      'SELECT initial_target_location_id AS target, initial_movement_mode AS movementMode FROM routing_rules WHERE topic_id = ?',
+    )
+    .get(MFA_ASSIST_TOPIC_ID) as { target: string; movementMode: string } | undefined;
+  assert.equal(mfaRule?.target, 'mfa-tresen');
+  assert.equal(mfaRule?.movementMode, 'self_go');
 });
 
 test('complex mode without an active journey keeps the waiting-room simple fallback', () => {
@@ -515,12 +531,15 @@ test('syncCatalogFromOpsSettings maps defaultRoomId to routing target location',
   assert.equal(rule?.target, 'labor');
 });
 
-test('no marked practice room makes the waiting room the MFA default target', () => {
+test('MFA routing follows the configured default call target', () => {
   const db = openTestFlowCoreDb();
   const settings = sampleOpsSettings();
   syncCatalogFromOpsSettings(db, {
     ...settings,
-    rooms: settings.rooms.map((room) => ({ ...room, defaultCallTarget: false })),
+    rooms: settings.rooms.map((room) => ({
+      ...room,
+      defaultCallTarget: room.roomId === 'labor',
+    })),
   });
 
   const rule = db
@@ -528,8 +547,8 @@ test('no marked practice room makes the waiting room the MFA default target', ()
       'SELECT initial_target_location_id AS target, initial_movement_mode AS movementMode FROM routing_rules WHERE topic_id = ?',
     )
     .get(MFA_ASSIST_TOPIC_ID) as { target: string; movementMode: string } | undefined;
-  assert.equal(rule?.target, PF_FLOW_LOC_WAITING);
-  assert.equal(rule?.movementMode, 'call');
+  assert.equal(rule?.target, 'labor');
+  assert.equal(rule?.movementMode, 'self_go');
 });
 
 test('simple routing starts room targets directed and waiting-room targets waiting', () => {

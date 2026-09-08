@@ -148,7 +148,6 @@ export function networkExpanderDefaults(input: {
   lanOpen: boolean;
   proxyOpen: boolean;
   reachabilityOpen: boolean;
-  checksOpen: boolean;
   topologyOpen: boolean;
   tlsOpen: boolean;
 } {
@@ -158,11 +157,13 @@ export function networkExpanderDefaults(input: {
   const proxyNeedsRepair =
     input.proxyEnabled && proxyNeedsRestore(input.status, input.runtime ?? null);
   return {
-    lanOpen: Boolean(input.status.network.lanIpStale) || !input.status.network.configuredLanIp,
+    lanOpen:
+      Boolean(input.status.network.lanIpStale) ||
+      !input.status.network.configuredLanIp ||
+      networkHostChecksHaveFailures(checks),
     // TLS off: Port-80 checkbox + commit in one glance. While TLS is active, only restore.
     proxyOpen: !tlsActive || proxyNeedsRepair,
     reachabilityOpen: false,
-    checksOpen: networkHostChecksHaveFailures(checks),
     topologyOpen: false,
     tlsOpen: true,
   };

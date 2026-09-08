@@ -1,9 +1,16 @@
 import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
-import { applyMfaQueueTriageLevel, mfaQueueDisplay } from '$lib/mfa/mfa-queue-display.svelte';
 import {
+  applyMfaQueueSnapshot,
+  applyMfaQueueTriageLevel,
+  mfaQueueDisplay,
+} from '$lib/mfa/mfa-queue-display.svelte';
+import { fetchMfaQueue } from '$lib/mfa/queue-stream';
+import {
+  cancelMfaAssistancePlacement,
   cancelMfaPhoneCorrection,
   handleMfaMarkAway,
   mfaQueueActions,
+  openMfaAssistancePlacement,
 } from '$lib/mfa/mfa-queue-modals.svelte';
 import { resolveCallRoomTarget } from '$lib/queue/call-room-target';
 import { roomHasCapacity } from '$lib/queue/room-capacity';
@@ -25,7 +32,7 @@ import {
   clearCallbackPhoneVisit,
   startTreatmentVisit,
 } from '$lib/queue/queue-actions';
-import { canMfaCallVisit } from '$lib/queue/mfa-call-gate';
+import { canMfaCallTransition, canMfaCallVisit } from '$lib/queue/mfa-call-gate';
 import { getQueueZone } from '$lib/queue/queue-zones';
 import {
   queueDragSourceFromItem,
@@ -56,13 +63,28 @@ function ensureRoomCapacity(roomId: string, excludeVisitId?: string): boolean {
 
 export async function runMfaQueueAction<T>(visitId: string, action: () => Promise<Result<T>>) {
   mfaQueueActions.busyVisitId = visitId;
-  const result = await action();
-  mfaQueueActions.busyVisitId = null;
+  try {
+    const result = await action();
 
-  if (!result.ok) {
-    toastStore.error(result.error.message);
+    if (!result.ok) {
+      toastStore.error(result.error.message);
+      return result;
+    }
+
+    // A mutation response describes only the transition. Keep this ticket locked until the
+    // authoritative queue view has caught up, so a stale button cannot submit a second,
+    // incompatible transition while the SSE snapshot is still in flight.
+    const queueResult = await fetchMfaQueue();
+    if (queueResult.ok) {
+      applyMfaQueueSnapshot(queueResult.data);
+    }
+
+    return result;
+  } finally {
+    if (mfaQueueActions.busyVisitId === visitId) {
+      mfaQueueActions.busyVisitId = null;
+    }
   }
-  return result;
 }
 
 export async function confirmMfaReassign(roomId: string, roomLabel: string) {
@@ -73,6 +95,21 @@ export async function confirmMfaReassign(roomId: string, roomLabel: string) {
 
   await runMfaQueueAction(visitId, () => reassignRoomVisit(visitId, { roomId, roomLabel }));
   mfaQueueActions.reassignVisit = null;
+}
+
+export async function confirmMfaAssistancePlacement() {
+  const pending = mfaQueueActions.assistancePlacementVisit;
+  if (!pending) {
+    return;
+  }
+
+  await runMfaQueueAction(pending.visitId, () =>
+    checkInVisit(pending.visitId, {
+      roomId: pending.roomId,
+      roomLabel: pending.roomLabel,
+    }),
+  );
+  cancelMfaAssistancePlacement();
 }
 
 type RecallSmsDispatch = {
@@ -299,13 +336,36 @@ export function handleMfaQueueDrop(visitId: string, target: QueueDropTarget) {
 
   if (command.action === 'call') {
     const dropItem = queueItem(command.visitId);
-    if (!dropItem || !canMfaCallVisit(dropItem)) {
+    // DnD is the explicit target selection; the ticket snapshot may still be pf_waiting.
+    if (!dropItem || !canMfaCallTransition(dropItem)) {
       return;
     }
     if (!ensureRoomCapacity(command.room.roomId)) {
       return;
     }
     void runMfaQueueAction(command.visitId, () => callVisit(command.visitId, command.room));
+    return;
+  }
+
+  if (command.action === 'continue-journey') {
+    if (!ensureRoomCapacity(command.room.roomId, command.visitId)) {
+      return;
+    }
+    void runMfaQueueAction(command.visitId, () =>
+      continueJourneyVisit(command.visitId, command.room),
+    );
+    return;
+  }
+
+  if (command.action === 'place-in-room') {
+    if (!ensureRoomCapacity(command.room.roomId, command.visitId)) {
+      return;
+    }
+    if (command.confirmAssistance) {
+      openMfaAssistancePlacement(command.visitId, command.room);
+      return;
+    }
+    void runMfaQueueAction(command.visitId, () => checkInVisit(command.visitId, command.room));
     return;
   }
 

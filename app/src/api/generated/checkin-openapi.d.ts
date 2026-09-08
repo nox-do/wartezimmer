@@ -133,7 +133,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/checkins/assist/press': {
+  '/api/v1/checkins/assistance': {
     parameters: {
       query?: never;
       header: {
@@ -145,7 +145,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Terminal help button pressed — ephemeral assist pending (no visit) */
+    /** Create an assistance visit for pickup at the terminal */
     post: {
       parameters: {
         query?: never;
@@ -158,13 +158,13 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Assist pending registered */
+        /** @description Assistance ticket created */
         201: {
           headers: {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['TerminalAssistPressed'];
+            'application/json': components['schemas']['VisitCreated'];
           };
         };
         /** @description Invalid request */
@@ -176,7 +176,7 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
-        /** @description Check-in rejected by configured opening-hour guardrails */
+        /** @description Check-in rejected by practice guardrails */
         409: {
           headers: {
             [name: string]: unknown;
@@ -185,7 +185,7 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
-        /** @description Invalid opening-hour configuration */
+        /** @description Invalid practice configuration */
         500: {
           headers: {
             [name: string]: unknown;
@@ -196,92 +196,6 @@ export interface paths {
         };
       };
     };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/checkins/assist/release': {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
-        'X-Client-Role': components['parameters']['XClientRole'];
-      };
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Clear terminal assist pending (manual or timeout) */
-    post: {
-      parameters: {
-        query?: never;
-        header: {
-          /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
-          'X-Client-Role': components['parameters']['XClientRole'];
-        };
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Released or already inactive */
-        204: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/v1/checkins/assist/pending': {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
-        'X-Client-Role': components['parameters']['XClientRole'];
-      };
-      path?: never;
-      cookie?: never;
-    };
-    /** List active terminal assist pending signals (MFA) */
-    get: {
-      parameters: {
-        query?: never;
-        header: {
-          /** @description Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth. */
-          'X-Client-Role': components['parameters']['XClientRole'];
-        };
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Active assist pending entries */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': {
-              items: components['schemas']['TerminalAssistPendingItem'][];
-              /** Format: date-time */
-              serverTime: string;
-            };
-          };
-        };
-      };
-    };
-    put?: never;
-    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -317,21 +231,6 @@ export interface components {
       accentColor: string;
       availableFrom: string | null;
       availableTo: string | null;
-    };
-    TerminalAssistPendingItem: {
-      deviceId: string;
-      deviceLabel: string;
-      /** Format: date-time */
-      pressedAt: string;
-      /** Format: date-time */
-      expiresAt: string;
-      remainingMs: number;
-    };
-    TerminalAssistPressed: {
-      /** Format: date-time */
-      pressedAt: string;
-      /** Format: date-time */
-      expiresAt: string;
     };
     /** @enum {string} */
     QueueStatus:

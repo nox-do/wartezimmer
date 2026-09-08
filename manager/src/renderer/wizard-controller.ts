@@ -15,6 +15,7 @@ import {
   planWizardBack,
   refreshWizardStatus,
   refreshWizardStatusAfterApply,
+  wizardUsesExistingTlsConfiguration,
   wizardReachabilityAfterNetworkLoad,
   WIZARD_PROBE_WAIT_MESSAGE,
   type WizardAdvanceAfter,
@@ -370,7 +371,10 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       if (state.step <= 1 || state.busy) {
         return;
       }
-      if (state.step === 8 && state.applyResult) {
+      if (
+        state.step === 8 &&
+        (state.applyResult || wizardUsesExistingTlsConfiguration(state.status))
+      ) {
         return;
       }
       setError(null);

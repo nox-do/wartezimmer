@@ -37,6 +37,8 @@ function baseItem(overrides: Partial<QueueItem> = {}): QueueItem {
     identityRef: 'Max Mustermann',
     returnUntil: null,
     needsAssistance: false,
+    terminalAssistancePending: false,
+    escortTransferPending: false,
     ...overrides,
   };
 }
@@ -88,6 +90,23 @@ describe('queueEntrySecondary', () => {
           destinationRoomLabel: 'Labor',
         }),
         'waiting',
+      ),
+    ).toBe('mfa.entryPickupTo:Labor');
+  });
+
+  it('shows the target while an escorted transfer remains at its current room', () => {
+    expect(
+      queueEntrySecondary(
+        baseItem({
+          status: 'in_room',
+          roomId: 'mfa-tresen',
+          roomLabel: 'Empfang',
+          movementMode: 'pickup',
+          destinationRoomId: 'labor',
+          destinationRoomLabel: 'Labor',
+          escortTransferPending: true,
+        }),
+        'active',
       ),
     ).toBe('mfa.entryPickupTo:Labor');
   });

@@ -117,7 +117,7 @@ export function isStepCompletedByAction(
 export function startNextJourneyStepPatch(
   visit: Visit,
   steps: JourneyStep[],
-  options: { locations?: Location[] } = {},
+  options: { locations?: Location[]; targetLocationId?: string } = {},
 ): (JourneyVisitPatch & { journeyStepIndex: number }) | JourneyCompletedPatch | null {
   if (visit.journeyTemplateId == null || visit.journeyStepIndex == null) return null;
 
@@ -127,11 +127,14 @@ export function startNextJourneyStepPatch(
     return { journeyStepIndex: null, journeyStepCompletedAt: null, journeyState: 'completed' };
   }
 
+  const effectiveStep = options.targetLocationId
+    ? { ...nextStep, targetLocationId: options.targetLocationId }
+    : nextStep;
   const targetLocation = options.locations?.find(
-    (location) => location.id === nextStep.targetLocationId,
+    (location) => location.id === effectiveStep.targetLocationId,
   );
-  const patch = stepToVisitPatch(nextStep, visit, { targetLocation });
-  patch.terminalInstruction = nextStep.instructionText?.trim()
+  const patch = stepToVisitPatch(effectiveStep, visit, { targetLocation });
+  patch.terminalInstruction = !options.targetLocationId && nextStep.instructionText?.trim()
     ? nextStep.instructionText.trim()
     : movementTerminalInstruction({
         movementMode: patch.movementMode,
@@ -143,7 +146,7 @@ export function startNextJourneyStepPatch(
   patch.arrivedAt = null;
   patch.journeyStepCompletedAt = null;
   // H7: Patient bereits am Ziel des naechsten Hops — kein erneuter waiting/call-Zyklus.
-  if (visit.lastKnownLocationId === nextStep.targetLocationId) {
+  if (visit.lastKnownLocationId === effectiveStep.targetLocationId) {
     patch.status = 'arrived';
     if (!nextStep.instructionText?.trim()) {
       patch.terminalInstruction = 'Bitte warten Sie im Raum.';

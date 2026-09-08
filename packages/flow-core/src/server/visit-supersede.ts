@@ -195,7 +195,7 @@ export function supersedeVisit(params: {
       );
     }
     const configuredEscortPolicy = selectedRulePreview.escortPolicy;
-    const effectivePolicy = effectiveEscortPolicy(configuredEscortPolicy);
+    const effectivePolicy = effectiveEscortPolicy(configuredEscortPolicy, current.needsAssistance);
     const routing = resolveTopicRouting(catalog, stepsForTemplate, {
       topicId,
       surfaceId,

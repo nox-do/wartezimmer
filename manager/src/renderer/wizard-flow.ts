@@ -173,6 +173,11 @@ export function wizardHttpsPrepared(status: HostStatus | null): boolean {
   return Boolean(status?.tls && status.tls.state !== 'off');
 }
 
+/** A completed TLS cutover makes the first-install writer unsafe and unnecessary. */
+export function wizardUsesExistingTlsConfiguration(status: HostStatus | null): boolean {
+  return Boolean(status?.envExists && status.tls?.cutoverApplied);
+}
+
 export function planWizardAdvance(step: WizardStep, state: WizardFlowState): WizardAdvanceAction {
   if (step === 1) {
     return { type: 'goto', step: 3 };
@@ -201,6 +206,9 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
   }
 
   if (step === 5) {
+    if (wizardUsesExistingTlsConfiguration(state.status)) {
+      return { type: 'goto', step: 7, patch: { plan: null } };
+    }
     if (!wizardHttpsEligible(state.proxyEnabled)) {
       return { type: 'goto', step: 7, patch: { plan: null }, after: 'loadPlan' };
     }
@@ -208,10 +216,16 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
   }
 
   if (step === 6) {
+    if (wizardUsesExistingTlsConfiguration(state.status)) {
+      return { type: 'goto', step: 7, patch: { plan: null } };
+    }
     return planHttpsAdvance(state);
   }
 
   if (step === 7) {
+    if (wizardUsesExistingTlsConfiguration(state.status)) {
+      return { type: 'goto', step: 8, patch: { applyResult: null } };
+    }
     return {
       type: 'goto',
       step: 8,

@@ -147,7 +147,7 @@ test('networkHostChecksForDisplay drops gateway leftover checks', () => {
   );
 });
 
-test('networkExpanderDefaults opens checks and proxy when degraded', () => {
+test('networkExpanderDefaults opens LAN and proxy when host checks are degraded', () => {
   const defaults = networkExpanderDefaults({
     status: minimalHostStatus({
       networkBindings: [{ id: 'app.port', ok: false, message: 'down' }],
@@ -162,7 +162,7 @@ test('networkExpanderDefaults opens checks and proxy when degraded', () => {
     }),
     proxyEnabled: true,
   });
-  assert.equal(defaults.checksOpen, true);
+  assert.equal(defaults.lanOpen, true);
   assert.equal(defaults.proxyOpen, true);
   assert.equal(defaults.topologyOpen, false);
 });

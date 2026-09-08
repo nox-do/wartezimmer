@@ -18,10 +18,7 @@ test('assertCheckInCombination: ungueltige Kombinationen', () => {
     () => assertCheckInCombination({ mfaAssist: true, topicId: 'general' }),
     /CHECKIN_MFA_ASSIST_EXCLUSIVE/,
   );
-  assert.throws(
-    () => assertCheckInCombination({ mfaAssist: true, needsAssistance: true }),
-    /CHECKIN_MFA_ASSIST_EXCLUSIVE/,
-  );
+  assert.doesNotThrow(() => assertCheckInCombination({ mfaAssist: true, needsAssistance: true }));
   assert.throws(
     () => assertCheckInCombination({ topicId: '   ' }),
     /CHECKIN_TOPIC_OR_MFA_ASSIST_REQUIRED/,

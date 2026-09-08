@@ -44,6 +44,9 @@ export function queueEntrySecondary(item: QueueItem, zone: QueueEntryZone): stri
     case 'called':
       return t('mfa.entryCalled');
     case 'in_room':
+      if (item.escortTransferPending) {
+        return destination ? tf('mfa.entryPickupTo', { room: destination }) : t('mfa.entryPickup');
+      }
       return t('mfa.entryArrived');
     case 'directed':
       return destination

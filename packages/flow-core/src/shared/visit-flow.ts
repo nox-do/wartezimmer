@@ -136,13 +136,16 @@ export function resolveReturnToWaitingVisitPatch(visit: Visit, catalog: Catalog)
   const rule = catalog.routingRules.find((item) => item.id === visit.appliedRoutingRuleId);
   const waitingQueueId = rule?.initialQueueId ?? visit.queueId;
   const waitingQueue = catalog.queues.find((item) => item.id === waitingQueueId);
-  const waitingLocationId =
-    rule?.initialLastKnownLocationId ??
-    (waitingQueue?.homeLocationId &&
+  const waitingQueueLocationId =
+    waitingQueue?.homeLocationId &&
     catalog.locations.find((item) => item.id === waitingQueue.homeLocationId)?.type ===
       'waiting_area'
       ? waitingQueue.homeLocationId
-      : undefined);
+      : undefined;
+  // "Zurueck ins Wartezimmer" is a physical staff action. Prefer the queue's
+  // waiting area over the rule's original check-in location (for M that is the
+  // entrance), otherwise a returned assistance ticket looks like a new terminal call.
+  const waitingLocationId = waitingQueueLocationId ?? rule?.initialLastKnownLocationId;
 
   const patch: VisitPatch = {
     status: statusForMovementMode(visit.movementMode),

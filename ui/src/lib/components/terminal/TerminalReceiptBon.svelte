@@ -15,7 +15,9 @@
   <p class="terminal-receipt-bon__ticket">{payload.ticketCode}</p>
   <p class="terminal-receipt-bon__rule" aria-hidden="true">──────────────</p>
   <p class="terminal-receipt-bon__topic">{payload.topicLabel}</p>
-  {#if payload.destinationRoomLabel?.trim()}
+  {#if payload.assistance}
+    <p class="terminal-receipt-bon__room-label">{t('terminal.assistanceReceiptInstruction')}</p>
+  {:else if payload.destinationRoomLabel?.trim()}
     <p class="terminal-receipt-bon__room-label">{t('terminal.confirmedRoomLabel')}</p>
     <p class="terminal-receipt-bon__room">{payload.destinationRoomLabel.trim()}</p>
   {/if}
@@ -23,7 +25,7 @@
   {#if payload.kind === 'test'}
     <p class="terminal-receipt-bon__test">{t('terminal.printSettingsTestMark')}</p>
   {/if}
-  {#if !payload.destinationRoomLabel?.trim()}
+  {#if !payload.assistance && !payload.destinationRoomLabel?.trim()}
     <p class="terminal-receipt-bon__footer">{t('terminal.receiptFooter')}</p>
   {/if}
 </article>

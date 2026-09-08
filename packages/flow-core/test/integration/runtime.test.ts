@@ -23,13 +23,12 @@ test('checkIn: ungueltige Kombinationen werden an der Runtime abgelehnt', () => 
     () => runtime.checkIn({ mfaAssist: true, topicId: 'general', surfaceId: 'terminal_1' }),
     /CHECKIN_MFA_ASSIST_EXCLUSIVE/,
   );
-  assert.throws(
-    () => runtime.checkIn({ mfaAssist: true, needsAssistance: true, surfaceId: 'terminal_1' }),
-    /CHECKIN_MFA_ASSIST_EXCLUSIVE/,
+  assert.doesNotThrow(() =>
+    runtime.checkIn({ mfaAssist: true, needsAssistance: true, surfaceId: 'terminal_1' }),
   );
 });
 
-test('checkIn needsAssistance: Topic und Route unveraendert, nur Flag gesetzt', () => {
+test('checkIn needsAssistance: Topic bleibt erhalten und Escort wird erforderlich', () => {
   const { runtime } = testRuntime();
   const baseline = runtime.checkIn({
     topicId: 'general',
@@ -48,25 +47,55 @@ test('checkIn needsAssistance: Topic und Route unveraendert, nur Flag gesetzt', 
   assert.equal(visit.checkInPath, 'topic');
   assert.equal(visit.movementMode, baseline.movementMode);
   assert.equal(visit.queueId, baseline.queueId);
-  assert.equal(visit.effectiveEscortPolicy, baseline.effectiveEscortPolicy);
+  assert.equal(visit.effectiveEscortPolicy, 'required');
   assert.equal(visit.journeyTemplateId, baseline.journeyTemplateId);
 });
 
-test('checkIn mfaAssist: checkInPath mfa_assist, normale Warteschlange, kein needsAssistance', () => {
+test('checkIn mfaAssist: M-Ticket wartet auf Abholung und traegt Assistance-Flag', () => {
   const { runtime } = testRuntime();
+  const direct = runtime.checkIn({
+    topicId: 'mfa',
+    authPath: 'none',
+    surfaceId: 'terminal_1',
+  });
   const visit = runtime.checkIn({
     mfaAssist: true,
     surfaceId: 'terminal_1',
   });
 
+  assert.equal(direct.checkInPath, 'topic');
+  assert.equal(direct.needsAssistance, false);
+  assert.equal(direct.movementMode, 'self_go');
   assert.equal(visit.primaryTopicId, 'mfa');
   assert.equal(visit.checkInPath, 'mfa_assist');
-  assert.equal(visit.needsAssistance, false);
-  assert.equal(visit.movementMode, 'call');
+  assert.equal(visit.needsAssistance, true);
+  assert.equal(visit.movementMode, 'pickup');
   assert.equal(visit.queueId, 'general_queue');
   assert.equal(visit.publicDisplayMode, 'visible');
   assert.equal(visit.allowRedirect, false);
-  assert.equal(visit.effectiveEscortPolicy, 'none');
+  assert.equal(visit.effectiveEscortPolicy, 'required');
+});
+
+test('pickup in einen Wartebereich bleibt nach Ankunft in der Warteliste', () => {
+  const { runtime } = testRuntime();
+  const visit = runtime.checkIn({
+    topicId: 'general',
+    needsAssistance: true,
+    surfaceId: 'terminal_1',
+  });
+  runtime.redirect(visit.id, {
+    queueId: 'general_queue',
+    targetLocationId: 'waiting_general',
+    movementMode: 'pickup',
+    publicDisplayMode: 'visible',
+  });
+
+  const arrived = runtime.transition(visit.id, 'arrive');
+
+  assert.equal(arrived.status, 'waiting');
+  assert.equal(arrived.lastKnownLocationId, 'waiting_general');
+  assert.equal(arrived.movementMode, 'call');
+  assert.equal(arrived.arrivedAt, undefined);
 });
 
 test('mfaAssist: redirect blockiert bei allowRedirect false', () => {
@@ -85,7 +114,7 @@ test('mfaAssist: redirect blockiert bei allowRedirect false', () => {
   );
 });
 
-test('checkIn infection + needsAssistance: Route und Lane unveraendert', () => {
+test('checkIn infection + needsAssistance: Lane bleibt, Escort wird erforderlich', () => {
   const { runtime } = testRuntime();
   const baseline = runtime.checkIn({ topicId: 'infection', surfaceId: 'terminal_1' });
   const visit = runtime.checkIn({
@@ -98,9 +127,9 @@ test('checkIn infection + needsAssistance: Route und Lane unveraendert', () => {
   assert.equal(visit.queueNumber, 'I-002');
   assert.equal(visit.queueLaneCode, 'I');
   assert.equal(visit.needsAssistance, true);
-  assert.equal(visit.movementMode, baseline.movementMode);
+  assert.equal(visit.movementMode, 'pickup');
   assert.equal(visit.queueId, baseline.queueId);
-  assert.equal(visit.effectiveEscortPolicy, baseline.effectiveEscortPolicy);
+  assert.equal(visit.effectiveEscortPolicy, 'required');
 });
 
 test('checkIn Journey + needsAssistance: Autopilot bleibt aktiv', () => {
@@ -230,6 +259,26 @@ test('Journey next step: letzter Schritt setzt journeyStepIndex auf null', () =>
   assert.equal(after.lastKnownLocationId, 'room_1');
   const visitEvents = runtime.events(created.id);
   assert.ok(visitEvents.some((event) => event.type === 'journey_completed'));
+});
+
+test('Journey next step: optionales Ziel überschreibt nur den gestarteten Hop', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Reroute',
+    surfaceId: 'terminal_1',
+  });
+  runtime.transition(created.id, 'call');
+  runtime.transition(created.id, 'arrive');
+
+  const next = runtime.transition(created.id, 'start_next_journey_step', {
+    targetLocationId: 'room_2',
+  });
+
+  assert.equal(next.journeyStepIndex, 1);
+  assert.equal(next.targetLocationId, 'room_2');
+  assert.equal(next.status, 'waiting');
+  assert.equal(next.journeyState, 'active');
 });
 
 test('Journey next step mit Escort: self_go → pickup + Escort-Terminaltext', () => {
@@ -751,4 +800,18 @@ test('reassignTarget: behält konfigurierte pickup-Bewegung bei', () => {
   assert.equal(reassigned.movementMode, 'pickup');
   assert.equal(reassigned.status, 'waiting');
   assert.match(reassigned.terminalInstruction, /begleitet/);
+});
+
+test('reassignTarget: wartende Abholung kann vor Ankunft bewusst neu platziert werden', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({ mfaAssist: true, surfaceId: 'terminal_1' });
+
+  const reassigned = runtime.reassignTarget(created.id, { targetLocationId: 'room_2' });
+  assert.equal(reassigned.status, 'waiting');
+  assert.equal(reassigned.movementMode, 'pickup');
+  assert.equal(reassigned.targetLocationId, 'room_2');
+
+  const arrived = runtime.transition(created.id, 'arrive');
+  assert.equal(arrived.status, 'arrived');
+  assert.equal(arrived.lastKnownLocationId, 'room_2');
 });

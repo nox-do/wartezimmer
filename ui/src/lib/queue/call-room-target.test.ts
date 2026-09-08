@@ -16,6 +16,8 @@ function waitingTicket(overrides: Partial<QueueItem> = {}): QueueItem {
     destinationRoomId: 'empfang',
     destinationRoomLabel: 'Empfang',
     needsAssistance: false,
+    terminalAssistancePending: false,
+    escortTransferPending: false,
     ...overrides,
   };
 }

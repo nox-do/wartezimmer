@@ -273,7 +273,7 @@ export function resolveTopicLabelFromSettings(
   topicId: string,
 ): string {
   if (topicId === MFA_ASSIST_TOPIC_ID) {
-    return 'Zur MFA';
+    return 'Persönliche Anmeldung';
   }
 
   const topic = settings.topics.find((entry) => entry.topicId === topicId);

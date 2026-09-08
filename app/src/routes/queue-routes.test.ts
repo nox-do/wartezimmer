@@ -55,7 +55,6 @@ function buildQueueRouteDb(overrides: QueueRouteDbOverrides = {}): CoreDatabase 
       ],
     }),
     listQueue: () => [],
-    listActiveTerminalAssistPending: () => [],
     isCheckinLocked: () => false,
     isEffectiveCheckinLocked: () => false,
     processExpiredRecallWindows: () => [],
@@ -173,6 +172,8 @@ test('GET /api/v1/queue serializes MFA items with empty triage marker', async ()
           triageLevel: null,
           documentCount: 0,
           needsAssistance: false,
+          terminalAssistancePending: false,
+          escortTransferPending: false,
         },
       ],
     }),
@@ -824,7 +825,6 @@ function buildRoomPanelCallRouteDb(targetRoomId: 'labor' | 'mfa-tresen'): {
 
   const listQueue = () => listVisitQueueRows(runtime, settings, getBusinessDay());
   const db = {
-    listActiveTerminalAssistPending: () => [],
     isCheckinLocked: () => false,
     isEffectiveCheckinLocked: () => false,
     processExpiredRecallWindows: () => [],

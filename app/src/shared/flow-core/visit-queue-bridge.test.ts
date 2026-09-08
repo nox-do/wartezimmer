@@ -319,7 +319,7 @@ test('continueJourneyVisit applies next call hop from completed step', () => {
   let visit = runtime.visits().find((entry) => entry.id === visitId);
   assert.ok(visit?.journeyStepCompletedAt);
 
-  const continued = continueJourneyVisit(runtime, visitId);
+  const continued = continueJourneyVisit(runtime, settings, listQueue, visitId);
   assert.deepEqual(continued, { fromStatus: 'in_room', toStatus: 'waiting' });
 
   visit = runtime.visits().find((entry) => entry.id === visitId);
@@ -327,6 +327,26 @@ test('continueJourneyVisit applies next call hop from completed step', () => {
   assert.equal(visit?.journeyStepCompletedAt, undefined);
   assert.equal(visit?.targetLocationId, 'labor');
   assert.equal(visit?.status, 'waiting');
+});
+
+test('continueJourneyVisit accepts a DnD target for the next hop', () => {
+  const { db, settings, visitId, runtime, listQueue } = setupComplexVisitFlow();
+
+  callVisit(db, runtime, settings, listQueue, visitId, 'mfa-tresen', 'Empfang');
+  arriveVisit(db, runtime, visitId, 'mfa-tresen');
+  const continued = continueJourneyVisit(
+    runtime,
+    settings,
+    listQueue,
+    visitId,
+    'mfa-tresen',
+  );
+
+  assert.deepEqual(continued, { fromStatus: 'in_room', toStatus: 'in_room' });
+  const visit = runtime.visits().find((entry) => entry.id === visitId);
+  assert.equal(visit?.journeyStepIndex, 1);
+  assert.equal(visit?.targetLocationId, 'mfa-tresen');
+  assert.equal(visit?.status, 'arrived');
 });
 
 test('callVisit starts pending next call journey step before calling', () => {

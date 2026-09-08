@@ -5,6 +5,7 @@
  */
 export {
   cancelMfaCheckOut,
+  cancelMfaAssistancePlacement,
   cancelMfaFixRecallNotify,
   cancelMfaMarkAway,
   cancelMfaPhoneCorrection,
@@ -16,9 +17,11 @@ export {
   handleMfaMarkAway,
   handleMfaReassign,
   handleMfaSupersede,
+  openMfaAssistancePlacement,
   mfaQueueActions,
   resetMfaQueueActions,
   type CheckOutTicket,
+  type AssistancePlacementTicket,
   type PhoneCorrectionPurpose,
   type PhoneCorrectionTicket,
   type ReassignTicket,
@@ -29,6 +32,7 @@ export {
   callMfaTicket,
   checkInMfaTicket,
   confirmMfaCheckOut,
+  confirmMfaAssistancePlacement,
   confirmMfaFixRecallNotifyWithPhone,
   confirmMfaMarkAwayWithPhone,
   confirmMfaPhoneCorrection,

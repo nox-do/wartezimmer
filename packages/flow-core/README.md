@@ -33,17 +33,17 @@ Standalone-Referenz (HTTP + UI): `../new_flow_core` (Sibling-Repo neben diesem M
 
 ### Visit-Ticket-Felder (API)
 
-| Feld               | Bedeutung                                                           |
-| ------------------ | ------------------------------------------------------------------- |
-| `queueNumber`      | Formatiert, z. B. `A-017` — **nicht** numerisch parsen              |
-| `queueLaneCode`    | Snapshot Nummernkreis (A–Z)                                         |
-| `queueSequence`    | Laufnummer im Lane-Tag                                              |
-| `queueNumberDate`  | Geschäftstag (Default: Kalendertag)                                 |
-| `queueNumberScope` | immer `lane_day`                                                    |
-| `needsAssistance`  | MFA-Markierung — **kein** Routing/Escort/Lane-Effekt                |
-| `checkInPath`      | `topic` (Standard) oder `mfa_assist` (Hilfe-Button)                 |
-| `authPath`         | `phone_dob`, `name_dob`, `egk`, `none` — Terminal-Anmeldeweg        |
-| `id` (Visit)       | `formatVisitId(businessDay, laneCode, sequence)` → `20260602-A-017` |
+| Feld               | Bedeutung                                                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `queueNumber`      | Formatiert, z. B. `A-017` — **nicht** numerisch parsen                                                             |
+| `queueLaneCode`    | Snapshot Nummernkreis (A–Z)                                                                                        |
+| `queueSequence`    | Laufnummer im Lane-Tag                                                                                             |
+| `queueNumberDate`  | Geschäftstag (Default: Kalendertag)                                                                                |
+| `queueNumberScope` | immer `lane_day`                                                                                                   |
+| `needsAssistance`  | Persistenter Begleitbedarf; Escort wird `required`, `self_go` wird `pickup`; Topic, Ziel und Lane bleiben erhalten |
+| `checkInPath`      | `topic` (Standard) oder `mfa_assist` (Hilfe-Button)                                                                |
+| `authPath`         | `phone_dob`, `name_dob`, `egk`, `none` — Terminal-Anmeldeweg                                                       |
+| `id` (Visit)       | `formatVisitId(businessDay, laneCode, sequence)` → `20260602-A-017`                                                |
 
 **Wichtig für Adapter:** Ticket-Anzeige und Sortierung über `queueLaneCode` + `queueSequence` (oder `parseTicketCode(queueNumber)`). `visit.topic.laneCode` ist Live-Katalog und kann vom Snapshot abweichen.
 
@@ -114,7 +114,7 @@ Shared-Module (Domain, ohne DB) — vollständige Liste siehe `src/index.ts`.
 | `id` / Visit-ID                   | `formatVisitId(...)`                     | wie PF Ticket-ID                               |
 | `queueLaneCode` + `queueSequence` | `laneCode` + `number`                    | strukturiert bevorzugen                        |
 | `queueNumber`                     | `formatTicketCode(...)`                  | `A-017`; Legacy-Consumer nicht als Zahl parsen |
-| `needsAssistance`                 | _(neu in PF)_                            | reine MFA-Markierung, additiv zum Topic        |
+| `needsAssistance`                 | Begleitbedarf                            | additiv zum Topic; wirkt auf Escort/Movement   |
 
 **Ticket-Format:** `formatTicketCode` mit `padStart(3)` bis 999, danach variable Breite; `parseTicketCode` akzeptiert 1–4 Ziffern und optionalen Bindestrich.
 

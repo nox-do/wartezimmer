@@ -21,6 +21,8 @@ test('applyEscortPolicyToMovementMode: required verhindert self_go', () => {
 test('effectiveEscortPolicy: entspricht konfigurierter Policy', () => {
   assert.equal(effectiveEscortPolicy('recommended'), 'recommended');
   assert.equal(effectiveEscortPolicy('required'), 'required');
+  assert.equal(effectiveEscortPolicy('none', true), 'required');
+  assert.equal(effectiveEscortPolicy('recommended', true), 'required');
   assert.equal(maxEscortPolicy('none', 'recommended', 'required'), 'required');
 });
 

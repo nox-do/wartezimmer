@@ -237,13 +237,20 @@ function handleStartTreatment(ctx: TransitionContext): QueueVisitTransitionRespo
 }
 
 function handleContinueJourney(ctx: TransitionContext): QueueVisitTransitionResponse | undefined {
+  const { roomId, roomLabel } = roomFields(ctx.body.roomId, ctx.body.roomLabel);
   return runVisitTransition({
     reply: ctx.reply,
     visitId: ctx.visitId,
-    execute: () => ctx.db.continueJourney(ctx.visitId),
-    mapSuccess: (transition) => transitionBody(transition, ctx.visitId),
+    execute: () => ctx.db.continueJourney(ctx.visitId, roomId, roomLabel, ctx.actorId),
+    mapSuccess: (transition) => ({
+      ...transitionBody(transition, ctx.visitId),
+      roomId: roomId ?? null,
+      roomLabel: roomLabel ?? null,
+    }),
     errorOptions: {
       invalidTransitionMessage: `Ticket ${ctx.visitId} kann nicht zum nächsten Journey-Schritt weitergeleitet werden.`,
+      roomRequiredMessage: 'Bitte ein gültiges Aufrufziel angeben.',
+      roomAtCapacityMessage,
     },
   });
 }

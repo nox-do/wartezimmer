@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import CheckOutConfirmModal from '$lib/components/mfa/CheckOutConfirmModal.svelte';
+  import AssistancePlacementConfirmModal from '$lib/components/mfa/AssistancePlacementConfirmModal.svelte';
   import DayStartBanner from '$lib/components/mfa/DayStartBanner.svelte';
   import DayStartConfirmModal from '$lib/components/mfa/DayStartConfirmModal.svelte';
   import MfaCheckinModal from '$lib/components/mfa/MfaCheckinModal.svelte';
@@ -24,11 +25,13 @@
   import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
   import {
     callMfaTicket,
+    cancelMfaAssistancePlacement,
     cancelMfaPhoneCorrection,
     cancelMfaReassign,
     checkInMfaTicket,
     cancelMfaCheckOut,
     confirmMfaCheckOut,
+    confirmMfaAssistancePlacement,
     continueMfaJourney,
     handleMfaCancelVisit,
     handleMfaCheckOut,
@@ -120,6 +123,7 @@
       nowMs={mfaQueueDisplay.countdownNowMs}
       callAnnouncementReachable={callAnnouncementReachable}
       queueFilterActive={queueFilterActive}
+      separateUnderway={mfaPracticeContext.routingMode === 'complex'}
       onCall={callMfaTicket}
       onCheckIn={checkInMfaTicket}
       onStart={startMfaTicket}
@@ -188,6 +192,13 @@
     busy={mfaQueueActions.reassignVisit != null && mfaQueueActions.busyVisitId === mfaQueueActions.reassignVisit.visitId}
     onConfirm={(roomId, roomLabel) => void confirmMfaReassign(roomId, roomLabel)}
     onCancel={cancelMfaReassign}
+  />
+
+  <AssistancePlacementConfirmModal
+    ticket={mfaQueueActions.assistancePlacementVisit}
+    busy={mfaQueueActions.assistancePlacementVisit != null && mfaQueueActions.busyVisitId === mfaQueueActions.assistancePlacementVisit.visitId}
+    onConfirm={() => void confirmMfaAssistancePlacement()}
+    onCancel={cancelMfaAssistancePlacement}
   />
 
   <CheckOutConfirmModal

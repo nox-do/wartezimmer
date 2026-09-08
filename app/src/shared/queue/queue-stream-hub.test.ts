@@ -10,7 +10,6 @@ import {
 function fakeDb(): CoreDatabase {
   return {
     listQueue: () => [],
-    listActiveTerminalAssistPending: () => [],
     isCheckinLocked: () => false,
     isEffectiveCheckinLocked: () => false,
     getOpsSettings: () => ({ rooms: [] }),

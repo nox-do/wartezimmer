@@ -4,12 +4,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test, { afterEach } from 'node:test';
 import {
-  hasTerminalAssistPendingExpiryForTests,
-  resetTerminalAssistPendingExpirySchedulerForTests,
-  scheduleTerminalAssistPendingExpiry,
-} from '../checkin/terminal-assist-pending-expiry-scheduler.js';
-import { TERMINAL_DEVICE_ID } from '../ops/device-ids.js';
-import {
   hasRecallWindowExpiryForTests,
   resetRecallWindowExpirySchedulerForTests,
 } from '../queue/recall-window-expiry-scheduler.js';
@@ -17,7 +11,6 @@ import { CoreDatabase } from './database.js';
 
 afterEach(() => {
   resetRecallWindowExpirySchedulerForTests();
-  resetTerminalAssistPendingExpirySchedulerForTests();
 });
 
 function openCoreDatabase(): { core: CoreDatabase; cleanup: () => void } {
@@ -65,10 +58,7 @@ function patchEmitOutboxToThrow(core: CoreDatabase): void {
   };
 }
 
-function patchWithTransactionToThrowAfterFn(
-  core: CoreDatabase,
-  message: string,
-): void {
+function patchWithTransactionToThrowAfterFn(core: CoreDatabase, message: string): void {
   const original = core.withTransaction.bind(core);
   core.withTransaction = ((operationName, fn) =>
     original(operationName, () => {
@@ -135,134 +125,54 @@ test('returnToWaiting cancels recall timer only after successful TX', () => {
   }
 });
 
-test('pressTerminalAssist does not schedule timer when TX fails after write', () => {
-  const { core, cleanup } = openCoreDatabase();
-  try {
-    seedOpenBusinessDay(core);
-    patchWithTransactionToThrowAfterFn(core, 'simulated assist press failure');
-
-    assert.throws(() => core.pressTerminalAssist(TERMINAL_DEVICE_ID));
-    assert.equal(hasTerminalAssistPendingExpiryForTests(TERMINAL_DEVICE_ID), false);
-    assert.equal(core.getTerminalAssistPending(TERMINAL_DEVICE_ID), null);
-  } finally {
-    cleanup();
-  }
-});
-
-test('pressTerminalAssist schedules timer only after successful TX', () => {
-  const { core, cleanup } = openCoreDatabase();
-  try {
-    seedOpenBusinessDay(core);
-    core.pressTerminalAssist(TERMINAL_DEVICE_ID);
-    assert.equal(hasTerminalAssistPendingExpiryForTests(TERMINAL_DEVICE_ID), true);
-  } finally {
-    cleanup();
-  }
-});
-
-test('releaseTerminalAssist leaves assist timer when TX rolls back', () => {
-  const { core, cleanup } = openCoreDatabase();
-  try {
-    seedOpenBusinessDay(core);
-    core.pressTerminalAssist(TERMINAL_DEVICE_ID);
-    assert.equal(hasTerminalAssistPendingExpiryForTests(TERMINAL_DEVICE_ID), true);
-
-    patchWithTransactionToThrowAfterFn(core, 'simulated assist clear failure');
-
-    assert.throws(() => core.releaseTerminalAssist(TERMINAL_DEVICE_ID));
-    assert.equal(hasTerminalAssistPendingExpiryForTests(TERMINAL_DEVICE_ID), true);
-    assert.ok(core.getTerminalAssistPending(TERMINAL_DEVICE_ID));
-  } finally {
-    cleanup();
-  }
-});
-
-test('clearAllTerminalAssistPending leaves timers when TX rolls back', () => {
-  const { core, cleanup } = openCoreDatabase();
-  try {
-    seedOpenBusinessDay(core);
-    core.pressTerminalAssist(TERMINAL_DEVICE_ID);
-    scheduleTerminalAssistPendingExpiry(
-      core,
-      'other-device',
-      Date.now() + 60_000,
-    );
-    assert.equal(hasTerminalAssistPendingExpiryForTests(TERMINAL_DEVICE_ID), true);
-    assert.equal(hasTerminalAssistPendingExpiryForTests('other-device'), true);
-
-    patchWithTransactionToThrowAfterFn(core, 'simulated clear-all failure');
-
-    assert.throws(() => core.clearAllTerminalAssistPending());
-    assert.equal(hasTerminalAssistPendingExpiryForTests(TERMINAL_DEVICE_ID), true);
-    assert.equal(hasTerminalAssistPendingExpiryForTests('other-device'), true);
-    assert.ok(core.getTerminalAssistPending(TERMINAL_DEVICE_ID));
-  } finally {
-    cleanup();
-  }
-});
-
-test('resetBusinessDay leaves assist and recall timers when TX rolls back', () => {
+test('resetBusinessDay leaves recall timers when TX rolls back', () => {
   const { core, cleanup } = openCoreDatabase();
   try {
     seedOpenBusinessDay(core);
     const visitId = seedRecallTimer(core);
-    core.pressTerminalAssist(TERMINAL_DEVICE_ID);
-    assert.equal(hasTerminalAssistPendingExpiryForTests(TERMINAL_DEVICE_ID), true);
-
     patchWithTransactionToThrowAfterFn(core, 'simulated reset failure');
 
     assert.throws(() => core.resetBusinessDay());
-    assert.equal(hasTerminalAssistPendingExpiryForTests(TERMINAL_DEVICE_ID), true);
     assert.equal(hasRecallWindowExpiryForTests(visitId), true);
   } finally {
     cleanup();
   }
 });
 
-test('resetBusinessDay clears assist and recall timers only after successful TX', () => {
+test('resetBusinessDay clears recall timers only after successful TX', () => {
   const { core, cleanup } = openCoreDatabase();
   try {
     seedOpenBusinessDay(core);
     const visitId = seedRecallTimer(core);
-    core.pressTerminalAssist(TERMINAL_DEVICE_ID);
-
     core.resetBusinessDay();
 
-    assert.equal(hasTerminalAssistPendingExpiryForTests(TERMINAL_DEVICE_ID), false);
     assert.equal(hasRecallWindowExpiryForTests(visitId), false);
   } finally {
     cleanup();
   }
 });
 
-test('executeRuntimeReset leaves assist and recall timers when TX rolls back', () => {
+test('executeRuntimeReset leaves recall timers when TX rolls back', () => {
   const { core, cleanup } = openCoreDatabase();
   try {
     seedOpenBusinessDay(core);
     const visitId = seedRecallTimer(core);
-    core.pressTerminalAssist(TERMINAL_DEVICE_ID);
-    assert.equal(hasTerminalAssistPendingExpiryForTests(TERMINAL_DEVICE_ID), true);
-
     patchWithTransactionToThrowAfterFn(core, 'simulated runtime reset failure');
 
     assert.throws(() => core.executeRuntimeReset());
-    assert.equal(hasTerminalAssistPendingExpiryForTests(TERMINAL_DEVICE_ID), true);
     assert.equal(hasRecallWindowExpiryForTests(visitId), true);
   } finally {
     cleanup();
   }
 });
 
-test('executeRuntimeReset clears assist and recall timers only after successful TX', () => {
+test('executeRuntimeReset clears recall timers only after successful TX', () => {
   const { core, cleanup } = openCoreDatabase();
   try {
     seedOpenBusinessDay(core);
     const visitId = seedRecallTimer(core);
-    core.pressTerminalAssist(TERMINAL_DEVICE_ID);
-
     core.executeRuntimeReset();
 
-    assert.equal(hasTerminalAssistPendingExpiryForTests(TERMINAL_DEVICE_ID), false);
     assert.equal(hasRecallWindowExpiryForTests(visitId), false);
   } finally {
     cleanup();

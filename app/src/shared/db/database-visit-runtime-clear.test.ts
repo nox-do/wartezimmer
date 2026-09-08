@@ -14,11 +14,9 @@ import { runMigrations } from './migrations-runner.js';
 import { ensureVisitHostStateSchema, upsertVisitHostState } from './visit-host-state.js';
 import { ensureAuthSettingsSchema } from './database-auth-settings.js';
 import { ensureOpsSetupSchema } from './database-ops-setup.js';
-import { ensureTerminalAssistPendingSchema } from '../checkin/terminal-assist-pending.js';
 import { clearFlowCoreVisitRuntime, flowCoreSchemaSql } from '../flow-core/flow-core-schema.js';
 import { getFlowCoreRuntime, syncFlowCoreCatalog } from '../flow-core/flow-core-runtime.js';
 import { PF_FLOW_SURFACE_TERMINAL } from '../flow-core/sync-catalog-from-ops-settings.js';
-import { TERMINAL_DEVICE_ID } from '../ops/device-ids.js';
 import type { OpsSettings } from './db-types.js';
 
 const VISIT_RUNTIME_TABLES = [
@@ -128,7 +126,6 @@ function seedLiveVisitOnCore(core: CoreDatabase): void {
     status: 'received',
   });
   core.setCallbackPhone(created.visitId, '0172 1111111');
-  core.pressTerminalAssist(TERMINAL_DEVICE_ID);
 }
 
 const legacyOpsSettings: OpsSettings = {
@@ -185,13 +182,11 @@ test('resetBusinessDay on generation-1 schema clears visit runtime and host/port
     assert.ok(countTable(inspect, 'patient_sessions') >= 1);
     assert.ok(countTable(inspect, 'documents') >= 1);
     assert.ok(countTable(inspect, 'visit_host_state') >= 1);
-    assert.ok(countTable(inspect, 'terminal_assist_pending') >= 1);
 
     const topicsBefore = core.getOpsSettings().topics.length;
     core.resetBusinessDay();
 
     assertVisitRuntimeEmpty(inspect);
-    assert.equal(countTable(inspect, 'terminal_assist_pending'), 0);
     assert.equal(core.getOpsSettings().topics.length, topicsBefore);
     assert.equal(core.listQueue().length, 0);
   } finally {
@@ -209,7 +204,6 @@ test('executeRuntimeReset on generation-1 schema clears visit runtime and host/p
     core.executeRuntimeReset();
 
     assertVisitRuntimeEmpty(inspect);
-    assert.equal(countTable(inspect, 'terminal_assist_pending'), 0);
     assert.equal(core.getOpsSettings().topics.length, topicsBefore);
     assert.equal(core.getOpsSettings().rooms.length, roomsBefore);
   } finally {
@@ -227,7 +221,6 @@ test('clearFlowCoreVisitRuntime on baseline without visit CASCADE leaves no host
   ensureVisitSupersedeColumns(db);
   ensureVisitHostStateSchema(db);
   ensureOpsSetupSchema(db);
-  ensureTerminalAssistPendingSchema(db);
   ensureAuthSettingsSchema(db);
 
   assert.equal(tableReferencesVisits(db, 'patient_sessions'), false);

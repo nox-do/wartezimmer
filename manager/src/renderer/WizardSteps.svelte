@@ -9,6 +9,7 @@
     networkPrerequisitesFailed,
     networkPrerequisitesReady,
     wizardHttpsPrepared,
+    wizardUsesExistingTlsConfiguration,
     wizardProbeFailureHint,
   } from './wizard-flow.js';
   import { deliveryImagesReady, needsDeliveryImages } from './delivery-images-flow.js';
@@ -237,22 +238,29 @@
         <h3 class="network-config-subheading">Patientenportal / WLAN-Freigabe</h3>
         <p class="hint">
           Hier kommt später die Auswahl des WLAN-Adapters (z. B. Omada, UniFi): Praxis Flow prüft die
-          Wartenummer und meldet dem Captive der Praxis-IT die Freigabe. Router und Captive Portal
-          stellen wir nicht her.
-        </p>
-        <p class="hint">
-          Bis dahin: Captive bleibt bei der Praxis-IT. Produktiv mit Patientenportal empfohlen;
-          <code>/portal</code> ohne Captive nur zum Test. Details unter Netzwerk → Erläuterung zum
-          Netz.
-        </p>
-        <p class="hint wizard-placeholder-note">
-          <strong>Auswahl folgt:</strong> Vendor-Dropdown und Anschlussdaten — noch nicht verfügbar.
+          Wartenummer und meldet optional einem Drittanbieter die Freigabe. Auswahl folgt:
+          Vendor-Dropdown und Anschlussdaten — noch nicht verfügbar.
         </p>
       </section>
     {:else if snapshot.step === 6}
       <WizardHttpsPanel {snapshot} {controller} />
     {:else if snapshot.step === 7}
-      {#if !snapshot.plan}
+      {#if wizardUsesExistingTlsConfiguration(snapshot.status)}
+        <p class="wizard-step-lead">Praxis Flow ist auf diesem Rechner bereits mit HTTPS eingerichtet.</p>
+        <p class="notice">
+          Die bestehende Host- und TLS-Konfiguration bleibt unverändert. Änderungen daran nehmen Sie
+          gezielt im Tab Netzwerk vor.
+        </p>
+        {#if snapshot.status?.deviceUrls}
+          <dl class="status-grid wizard-summary-grid">
+            <dt>Terminal</dt><dd>{snapshot.status.deviceUrls.terminal}</dd>
+            <dt>TV</dt><dd>{snapshot.status.deviceUrls.tv}</dd>
+            <dt>MFA</dt><dd>{snapshot.status.deviceUrls.mfa}</dd>
+            <dt>Portal</dt><dd>{snapshot.status.deviceUrls.portal}</dd>
+            <dt>Ops Setup</dt><dd>{snapshot.status.deviceUrls.opsSetup}</dd>
+          </dl>
+        {/if}
+      {:else if !snapshot.plan}
         <p>Plan wird geladen …</p>
       {:else}
         <p class="wizard-step-lead">
@@ -305,7 +313,13 @@
         </dl>
       {/if}
     {:else if snapshot.step === 8}
-      {#if !snapshot.applyResult}
+      {#if wizardUsesExistingTlsConfiguration(snapshot.status)}
+        <h3 class="wizard-subheading">Einrichtung bereits abgeschlossen</h3>
+        <p>
+          Die aktive HTTPS-Konfiguration wurde erkannt und nicht erneut geschrieben. Praxis Flow
+          kann mit den bestehenden Einstellungen weiterverwendet werden.
+        </p>
+      {:else if !snapshot.applyResult}
         <p>
           Der Manager schreibt die technische Compose-Konfiguration, legt die Host-Ordner an und
           startet den lokalen Stack.

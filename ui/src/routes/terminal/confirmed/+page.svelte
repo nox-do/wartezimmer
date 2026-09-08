@@ -39,10 +39,11 @@
       practiceName: practiceDisplayLabel(profile, t('terminal.practiceFallback')),
       ticketCode: formatTicketCode(checkin.laneCode, checkin.number),
       topicLabel: resolveReceiptTopicLabel(checkin, t('terminal.receiptTopicEmpfang')),
-      destinationRoomLabel: checkin.destinationRoomLabel,
+      destinationRoomLabel: checkin.needsAssistance ? null : checkin.destinationRoomLabel,
       printedAtLabel: formatReceiptTimestamp(),
       kind: 'ticket',
       visitId: checkin.visitId,
+      assistance: checkin.needsAssistance === true,
     });
   }
 
@@ -79,9 +80,12 @@
   const ticketCode = $derived(result ? formatTicketCode(result.laneCode, result.number) : '—');
   const topicLabel = $derived(result ? (result.topicLabel ?? result.topicId) : '—');
   const destinationRoomLabel = $derived(result?.destinationRoomLabel?.trim() || null);
+  const assistance = $derived(result?.needsAssistance === true);
   const ticketAriaLabel = $derived(
     result
-      ? destinationRoomLabel
+      ? assistance
+        ? tf('terminal.assistanceConfirmedAria', { code: ticketCode })
+        : destinationRoomLabel
         ? tf('terminal.confirmedSummaryAria', { code: ticketCode, room: destinationRoomLabel })
         : tf('terminal.confirmedTicketAria', { code: ticketCode })
       : '',
@@ -91,8 +95,8 @@
 
 {#if result}
   <div class="terminal-body terminal-body--flow">
-    <span class="pill pill--caps pill--ok">{t('terminal.confirmedBadge')}</span>
-    <h1>{t('terminal.confirmedTitle')}</h1>
+    <span class="pill pill--caps pill--ok">{assistance ? t('terminal.assistanceConfirmedBadge') : t('terminal.confirmedBadge')}</span>
+    <h1>{assistance ? t('terminal.assistanceConfirmedTitle') : t('terminal.confirmedTitle')}</h1>
 
     <div
       class="terminal-callout terminal-callout--ticket terminal-confirmed-summary"
@@ -108,21 +112,25 @@
 
       <div class="terminal-confirmed-summary__divider" aria-hidden="true"></div>
       <div class="terminal-confirmed-summary__room">
-        <p class="terminal-callout-label">{t('terminal.confirmedRoomLabel')}</p>
-        {#if destinationRoomLabel}
-          <p class="terminal-confirmed-room-name">
-            <BrowserTranslatedText text={destinationRoomLabel} />
-          </p>
+        {#if assistance}
+          <p class="terminal-confirmed-room-name">{t('terminal.assistanceConfirmedWaitHere')}</p>
         {:else}
-          <p class="terminal-confirmed-room-fallback">{t('terminal.confirmedLead')}</p>
+          <p class="terminal-callout-label">{t('terminal.confirmedRoomLabel')}</p>
+          {#if destinationRoomLabel}
+            <p class="terminal-confirmed-room-name">
+              <BrowserTranslatedText text={destinationRoomLabel} />
+            </p>
+          {:else}
+            <p class="terminal-confirmed-room-fallback">{t('terminal.confirmedLead')}</p>
+          {/if}
         {/if}
       </div>
     </div>
 
     <p class="terminal-confirmed-topic">{t('terminal.confirmedTopicLabel')}: <strong><BrowserTranslatedText text={topicLabel} /></strong></p>
-    <p class="terminal-confirmed-lead">{t('terminal.confirmedLead')}</p>
+    <p class="terminal-confirmed-lead">{assistance ? t('terminal.assistanceConfirmedLead') : t('terminal.confirmedLead')}</p>
 
-    {#if wlanPromoEnabled}
+    {#if wlanPromoEnabled && !assistance}
       <TerminalWlanPromoBanner ticketCode={ticketCode} />
     {/if}
 

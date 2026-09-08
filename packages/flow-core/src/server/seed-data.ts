@@ -6,7 +6,7 @@ export const topics = [
   ['prescription', 'Rezept abholen', 'empfang', '#9a6a2f', 'low', 5, 1, 50, 'R'],
   ['op_prep', 'OP-Vorbereitung', 'behandlung', '#51606f', 'high', 20, 1, 60, 'A'],
   ['lab_question', 'Rueckfrage Labor', 'labor', '#0f7c95', 'normal', 8, 1, 70, 'L'],
-  ['mfa', 'Zur MFA', 'system', '#18181b', 'urgent', 5, 1, 90, 'M'],
+  ['mfa', 'Persönliche Anmeldung', 'system', '#18181b', 'urgent', 5, 1, 90, 'M'],
 ];
 
 export const locations = [
@@ -223,14 +223,14 @@ export const routingRules = [
   [
     'rule_mfa',
     'mfa',
-    'Zur MFA',
-    'waiting_general',
+    'Persönliche Anmeldung',
+    'entrance',
     'reception',
     'general_queue',
-    'call',
+    'self_go',
     'assumed',
     'visible',
-    'Bitte nehmen Sie im Wartezimmer Platz. Sie werden aufgerufen.',
+    'Bitte gehen Sie direkt zum Empfang.',
     0,
     'none',
     0,

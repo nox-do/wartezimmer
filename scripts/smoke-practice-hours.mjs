@@ -76,13 +76,12 @@ async function main() {
       expectedStatus: 201,
     });
 
-    console.log('4) assist press innerhalb Praxiszeiten');
-    const assistPress = await requestJson(baseUrl, 'POST', '/api/v1/checkins/assist/press', {
+    console.log('4) Persönliche Hilfe innerhalb Praxiszeiten');
+    const assistanceCheckin = await requestJson(baseUrl, 'POST', '/api/v1/checkins/assistance', {
       auth: terminalAuth,
       expectedStatus: 201,
     });
-    assert(assistPress.body?.pressedAt, 'Expected pressedAt in assist press response');
-    assert(assistPress.body?.expiresAt, 'Expected expiresAt in assist press response');
+    assert(assistanceCheckin.body?.visitId, 'Expected visitId in assistance response');
 
     console.log('5) Praxisfenster auf wahrscheinlich geschlossenen Ein-Minuten-Slot setzen');
     await requestJson(baseUrl, 'PATCH', '/api/v1/ops/settings', {
@@ -105,14 +104,14 @@ async function main() {
       'Expected CHECKIN_CLOSED for closed practice window',
     );
 
-    console.log('7) assist press wird ebenfalls mit CHECKIN_CLOSED abgewiesen');
-    const closedAssistPress = await requestJson(baseUrl, 'POST', '/api/v1/checkins/assist/press', {
+    console.log('7) Persönliche Hilfe wird ebenfalls mit CHECKIN_CLOSED abgewiesen');
+    const closedAssistance = await requestJson(baseUrl, 'POST', '/api/v1/checkins/assistance', {
       auth: terminalAuth,
       expectedStatus: 409,
     });
     assert(
-      closedAssistPress.body?.code === 'CHECKIN_CLOSED',
-      'Expected CHECKIN_CLOSED for assist press outside practice',
+      closedAssistance.body?.code === 'CHECKIN_CLOSED',
+      'Expected CHECKIN_CLOSED for assistance check-in outside practice',
     );
 
     console.log('\nSmoke test erfolgreich: Praxiszeiten-Guardrails sind konsistent.');

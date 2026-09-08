@@ -17,6 +17,8 @@ export const QueueItem = {
     'documentCount',
     'hasMobilePhone',
     'needsAssistance',
+    'terminalAssistancePending',
+    'escortTransferPending',
   ],
   properties: {
     visitId: {
@@ -109,35 +111,15 @@ export const QueueItem = {
     needsAssistance: {
       type: 'boolean',
     },
+    terminalAssistancePending: {
+      type: 'boolean',
+    },
+    escortTransferPending: {
+      type: 'boolean',
+    },
     movementMode: {
       type: ['string', 'null'],
       enum: ['call', 'self_go', 'pickup', null],
-    },
-  },
-} as const;
-
-export const TerminalAssistPendingItem = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['deviceId', 'deviceLabel', 'pressedAt', 'expiresAt', 'remainingMs'],
-  properties: {
-    deviceId: {
-      type: 'string',
-    },
-    deviceLabel: {
-      type: 'string',
-    },
-    pressedAt: {
-      type: 'string',
-      format: 'date-time',
-    },
-    expiresAt: {
-      type: 'string',
-      format: 'date-time',
-    },
-    remainingMs: {
-      type: 'integer',
-      minimum: 0,
     },
   },
 } as const;
@@ -344,7 +326,7 @@ export const QueueSupersedeResponse = {
 export const QueueListMfaResponse = {
   type: 'object',
   additionalProperties: false,
-  required: ['view', 'revision', 'items', 'assistPending', 'checkinLocked', 'serverTime'],
+  required: ['view', 'revision', 'items', 'checkinLocked', 'serverTime'],
   properties: {
     view: {
       type: 'string',
@@ -370,6 +352,8 @@ export const QueueListMfaResponse = {
           'documentCount',
           'hasMobilePhone',
           'needsAssistance',
+          'terminalAssistancePending',
+          'escortTransferPending',
         ],
         properties: {
           visitId: {
@@ -462,37 +446,15 @@ export const QueueListMfaResponse = {
           needsAssistance: {
             type: 'boolean',
           },
+          terminalAssistancePending: {
+            type: 'boolean',
+          },
+          escortTransferPending: {
+            type: 'boolean',
+          },
           movementMode: {
             type: ['string', 'null'],
             enum: ['call', 'self_go', 'pickup', null],
-          },
-        },
-      },
-    },
-    assistPending: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['deviceId', 'deviceLabel', 'pressedAt', 'expiresAt', 'remainingMs'],
-        properties: {
-          deviceId: {
-            type: 'string',
-          },
-          deviceLabel: {
-            type: 'string',
-          },
-          pressedAt: {
-            type: 'string',
-            format: 'date-time',
-          },
-          expiresAt: {
-            type: 'string',
-            format: 'date-time',
-          },
-          remainingMs: {
-            type: 'integer',
-            minimum: 0,
           },
         },
       },
@@ -953,7 +915,7 @@ export const QueueListResponse = {
     {
       type: 'object',
       additionalProperties: false,
-      required: ['view', 'revision', 'items', 'assistPending', 'checkinLocked', 'serverTime'],
+      required: ['view', 'revision', 'items', 'checkinLocked', 'serverTime'],
       properties: {
         view: {
           type: 'string',
@@ -979,6 +941,8 @@ export const QueueListResponse = {
               'documentCount',
               'hasMobilePhone',
               'needsAssistance',
+              'terminalAssistancePending',
+              'escortTransferPending',
             ],
             properties: {
               visitId: {
@@ -1071,37 +1035,15 @@ export const QueueListResponse = {
               needsAssistance: {
                 type: 'boolean',
               },
+              terminalAssistancePending: {
+                type: 'boolean',
+              },
+              escortTransferPending: {
+                type: 'boolean',
+              },
               movementMode: {
                 type: ['string', 'null'],
                 enum: ['call', 'self_go', 'pickup', null],
-              },
-            },
-          },
-        },
-        assistPending: {
-          type: 'array',
-          items: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['deviceId', 'deviceLabel', 'pressedAt', 'expiresAt', 'remainingMs'],
-            properties: {
-              deviceId: {
-                type: 'string',
-              },
-              deviceLabel: {
-                type: 'string',
-              },
-              pressedAt: {
-                type: 'string',
-                format: 'date-time',
-              },
-              expiresAt: {
-                type: 'string',
-                format: 'date-time',
-              },
-              remainingMs: {
-                type: 'integer',
-                minimum: 0,
               },
             },
           },
@@ -1937,7 +1879,7 @@ export const GET_api_v1_queueResponse200 = {
     {
       type: 'object',
       additionalProperties: false,
-      required: ['view', 'revision', 'items', 'assistPending', 'checkinLocked', 'serverTime'],
+      required: ['view', 'revision', 'items', 'checkinLocked', 'serverTime'],
       properties: {
         view: {
           type: 'string',
@@ -1963,6 +1905,8 @@ export const GET_api_v1_queueResponse200 = {
               'documentCount',
               'hasMobilePhone',
               'needsAssistance',
+              'terminalAssistancePending',
+              'escortTransferPending',
             ],
             properties: {
               visitId: {
@@ -2055,37 +1999,15 @@ export const GET_api_v1_queueResponse200 = {
               needsAssistance: {
                 type: 'boolean',
               },
+              terminalAssistancePending: {
+                type: 'boolean',
+              },
+              escortTransferPending: {
+                type: 'boolean',
+              },
               movementMode: {
                 type: ['string', 'null'],
                 enum: ['call', 'self_go', 'pickup', null],
-              },
-            },
-          },
-        },
-        assistPending: {
-          type: 'array',
-          items: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['deviceId', 'deviceLabel', 'pressedAt', 'expiresAt', 'remainingMs'],
-            properties: {
-              deviceId: {
-                type: 'string',
-              },
-              deviceLabel: {
-                type: 'string',
-              },
-              pressedAt: {
-                type: 'string',
-                format: 'date-time',
-              },
-              expiresAt: {
-                type: 'string',
-                format: 'date-time',
-              },
-              remainingMs: {
-                type: 'integer',
-                minimum: 0,
               },
             },
           },
@@ -4331,7 +4253,6 @@ export const POST_api_v1_queue_visitId_supersedeResponse409 = {
 
 export const queueSchemas = {
   QueueItem,
-  TerminalAssistPendingItem,
   QueueTriageResponse,
   QueueMessageDispatch,
   QueueRecallRetryNotifyResponse,

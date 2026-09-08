@@ -84,7 +84,7 @@ export const errorLabels: Record<string, string> = {
   VISIT_NOT_FOUND: 'Visit nicht gefunden.',
   TOPIC_OR_ROUTING_RULE_MISSING: 'Topic oder RoutingRule fehlt.',
   CHECKIN_TOPIC_OR_MFA_ASSIST_REQUIRED: 'Check-in braucht ein Thema oder den Hilfe-Button.',
-  CHECKIN_MFA_ASSIST_EXCLUSIVE: 'Hilfe-Button schließt Thema und needsAssistance aus.',
+  CHECKIN_MFA_ASSIST_EXCLUSIVE: 'Hilfe-Button schließt ein zusätzliches Thema aus.',
   CHECKIN_ASSISTANCE_REQUIRES_TOPIC: 'needsAssistance setzt ein gewähltes Thema voraus.',
   CHECKIN_SURFACE_INVALID: 'Ungültiges Check-in-Terminal.',
   JOURNEY_TEMPLATE_NOT_FOUND: 'Journey-Template nicht gefunden.',

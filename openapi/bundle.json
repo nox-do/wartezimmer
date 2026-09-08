@@ -2812,7 +2812,7 @@
         }
       }
     },
-    "/api/v1/checkins/assist/press": {
+    "/api/v1/checkins/assistance": {
       "parameters": [
         {
           "name": "X-Client-Role",
@@ -2826,24 +2826,50 @@
         }
       ],
       "post": {
-        "summary": "Terminal help button pressed — ephemeral assist pending (no visit)",
+        "summary": "Create an assistance visit for pickup at the terminal",
         "responses": {
           "201": {
-            "description": "Assist pending registered",
+            "description": "Assistance ticket created",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": false,
-                  "required": ["pressedAt", "expiresAt"],
+                  "required": ["visitId", "laneCode", "number", "queueStatus", "createdAt"],
                   "properties": {
-                    "pressedAt": {
+                    "visitId": {
+                      "type": "string",
+                      "description": "Internal unique visit id.",
+                      "example": "20260530-A-001"
+                    },
+                    "laneCode": {
+                      "type": "string",
+                      "example": "A"
+                    },
+                    "number": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "queueStatus": {
+                      "type": "string",
+                      "enum": [
+                        "waiting",
+                        "directed",
+                        "called",
+                        "in_room",
+                        "done",
+                        "absent_wait_here",
+                        "absent_return_later",
+                        "cancelled"
+                      ]
+                    },
+                    "createdAt": {
                       "type": "string",
                       "format": "date-time"
                     },
-                    "expiresAt": {
+                    "destinationRoomLabel": {
                       "type": "string",
-                      "format": "date-time"
+                      "nullable": true,
+                      "description": "Patient-facing hint — default room for the chosen topic (wayfinding at check-in)."
                     }
                   }
                 }
@@ -2931,7 +2957,7 @@
             }
           },
           "409": {
-            "description": "Check-in rejected by configured opening-hour guardrails",
+            "description": "Check-in rejected by practice guardrails",
             "content": {
               "application/json": {
                 "schema": {
@@ -3011,7 +3037,7 @@
             }
           },
           "500": {
-            "description": "Invalid opening-hour configuration",
+            "description": "Invalid practice configuration",
             "content": {
               "application/json": {
                 "schema": {
@@ -3084,98 +3110,6 @@
                       "type": "object",
                       "additionalProperties": true,
                       "description": "Optional extra context for debugging."
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/checkins/assist/release": {
-      "parameters": [
-        {
-          "name": "X-Client-Role",
-          "in": "header",
-          "required": true,
-          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
-          "schema": {
-            "type": "string",
-            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
-          }
-        }
-      ],
-      "post": {
-        "summary": "Clear terminal assist pending (manual or timeout)",
-        "responses": {
-          "204": {
-            "description": "Released or already inactive"
-          }
-        }
-      }
-    },
-    "/api/v1/checkins/assist/pending": {
-      "parameters": [
-        {
-          "name": "X-Client-Role",
-          "in": "header",
-          "required": true,
-          "description": "Selects the cookie session slot for staff/device/panel authentication. Not used with Bearer (captive/patient) auth.",
-          "schema": {
-            "type": "string",
-            "enum": ["mfa", "ops", "terminal", "tv", "room-panel"]
-          }
-        }
-      ],
-      "get": {
-        "summary": "List active terminal assist pending signals (MFA)",
-        "responses": {
-          "200": {
-            "description": "Active assist pending entries",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": ["items", "serverTime"],
-                  "properties": {
-                    "items": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "required": [
-                          "deviceId",
-                          "deviceLabel",
-                          "pressedAt",
-                          "expiresAt",
-                          "remainingMs"
-                        ],
-                        "properties": {
-                          "deviceId": {
-                            "type": "string"
-                          },
-                          "deviceLabel": {
-                            "type": "string"
-                          },
-                          "pressedAt": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "expiresAt": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "remainingMs": {
-                            "type": "integer",
-                            "minimum": 0
-                          }
-                        }
-                      }
-                    },
-                    "serverTime": {
-                      "type": "string",
-                      "format": "date-time"
                     }
                   }
                 }
@@ -3790,14 +3724,7 @@
                     {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": [
-                        "view",
-                        "revision",
-                        "items",
-                        "assistPending",
-                        "checkinLocked",
-                        "serverTime"
-                      ],
+                      "required": ["view", "revision", "items", "checkinLocked", "serverTime"],
                       "properties": {
                         "view": {
                           "type": "string",
@@ -3822,7 +3749,9 @@
                               "waitMs",
                               "documentCount",
                               "hasMobilePhone",
-                              "needsAssistance"
+                              "needsAssistance",
+                              "terminalAssistancePending",
+                              "escortTransferPending"
                             ],
                             "properties": {
                               "visitId": {
@@ -3938,45 +3867,19 @@
                                 "type": "boolean",
                                 "description": "Patient requested help at terminal before topic check-in (MFA marker only)"
                               },
+                              "terminalAssistancePending": {
+                                "type": "boolean",
+                                "description": "True only while the initial assistance pickup at the terminal is still pending. Later escorted pickup steps keep needsAssistance but must not trigger the terminal alert or chime."
+                              },
+                              "escortTransferPending": {
+                                "type": "boolean",
+                                "description": "True while a patient remains at the current practice room and waits to be accompanied to a different target room. MFA presents the ticket at the current room, not in the waiting room."
+                              },
                               "movementMode": {
                                 "type": "string",
                                 "nullable": true,
                                 "enum": ["call", "self_go", "pickup"],
                                 "description": "Visit movement mode. MFA shows Aufrufen only for waiting + call; directed/self_go and pickup stay visible without Call."
-                              }
-                            }
-                          }
-                        },
-                        "assistPending": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "required": [
-                              "deviceId",
-                              "deviceLabel",
-                              "pressedAt",
-                              "expiresAt",
-                              "remainingMs"
-                            ],
-                            "properties": {
-                              "deviceId": {
-                                "type": "string"
-                              },
-                              "deviceLabel": {
-                                "type": "string"
-                              },
-                              "pressedAt": {
-                                "type": "string",
-                                "format": "date-time"
-                              },
-                              "expiresAt": {
-                                "type": "string",
-                                "format": "date-time"
-                              },
-                              "remainingMs": {
-                                "type": "integer",
-                                "minimum": 0
                               }
                             }
                           }
@@ -18002,46 +17905,6 @@
           }
         }
       },
-      "TerminalAssistPendingItem": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["deviceId", "deviceLabel", "pressedAt", "expiresAt", "remainingMs"],
-        "properties": {
-          "deviceId": {
-            "type": "string"
-          },
-          "deviceLabel": {
-            "type": "string"
-          },
-          "pressedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "remainingMs": {
-            "type": "integer",
-            "minimum": 0
-          }
-        }
-      },
-      "TerminalAssistPressed": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["pressedAt", "expiresAt"],
-        "properties": {
-          "pressedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
       "MfaLookupCandidate": {
         "type": "object",
         "required": ["identityRef", "firstName", "lastName", "birthDate", "phoneNumberMasked"],
@@ -18090,7 +17953,9 @@
           "waitMs",
           "documentCount",
           "hasMobilePhone",
-          "needsAssistance"
+          "needsAssistance",
+          "terminalAssistancePending",
+          "escortTransferPending"
         ],
         "properties": {
           "visitId": {
@@ -18205,6 +18070,14 @@
           "needsAssistance": {
             "type": "boolean",
             "description": "Patient requested help at terminal before topic check-in (MFA marker only)"
+          },
+          "terminalAssistancePending": {
+            "type": "boolean",
+            "description": "True only while the initial assistance pickup at the terminal is still pending. Later escorted pickup steps keep needsAssistance but must not trigger the terminal alert or chime."
+          },
+          "escortTransferPending": {
+            "type": "boolean",
+            "description": "True while a patient remains at the current practice room and waits to be accompanied to a different target room. MFA presents the ticket at the current room, not in the waiting room."
           },
           "movementMode": {
             "type": "string",
@@ -18420,7 +18293,7 @@
       "QueueListMfaResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["view", "revision", "items", "assistPending", "checkinLocked", "serverTime"],
+        "required": ["view", "revision", "items", "checkinLocked", "serverTime"],
         "properties": {
           "view": {
             "type": "string",
@@ -18445,7 +18318,9 @@
                 "waitMs",
                 "documentCount",
                 "hasMobilePhone",
-                "needsAssistance"
+                "needsAssistance",
+                "terminalAssistancePending",
+                "escortTransferPending"
               ],
               "properties": {
                 "visitId": {
@@ -18561,39 +18436,19 @@
                   "type": "boolean",
                   "description": "Patient requested help at terminal before topic check-in (MFA marker only)"
                 },
+                "terminalAssistancePending": {
+                  "type": "boolean",
+                  "description": "True only while the initial assistance pickup at the terminal is still pending. Later escorted pickup steps keep needsAssistance but must not trigger the terminal alert or chime."
+                },
+                "escortTransferPending": {
+                  "type": "boolean",
+                  "description": "True while a patient remains at the current practice room and waits to be accompanied to a different target room. MFA presents the ticket at the current room, not in the waiting room."
+                },
                 "movementMode": {
                   "type": "string",
                   "nullable": true,
                   "enum": ["call", "self_go", "pickup"],
                   "description": "Visit movement mode. MFA shows Aufrufen only for waiting + call; directed/self_go and pickup stay visible without Call."
-                }
-              }
-            }
-          },
-          "assistPending": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["deviceId", "deviceLabel", "pressedAt", "expiresAt", "remainingMs"],
-              "properties": {
-                "deviceId": {
-                  "type": "string"
-                },
-                "deviceLabel": {
-                  "type": "string"
-                },
-                "pressedAt": {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                "expiresAt": {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                "remainingMs": {
-                  "type": "integer",
-                  "minimum": 0
                 }
               }
             }
@@ -19097,14 +18952,7 @@
           {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "view",
-              "revision",
-              "items",
-              "assistPending",
-              "checkinLocked",
-              "serverTime"
-            ],
+            "required": ["view", "revision", "items", "checkinLocked", "serverTime"],
             "properties": {
               "view": {
                 "type": "string",
@@ -19129,7 +18977,9 @@
                     "waitMs",
                     "documentCount",
                     "hasMobilePhone",
-                    "needsAssistance"
+                    "needsAssistance",
+                    "terminalAssistancePending",
+                    "escortTransferPending"
                   ],
                   "properties": {
                     "visitId": {
@@ -19245,39 +19095,19 @@
                       "type": "boolean",
                       "description": "Patient requested help at terminal before topic check-in (MFA marker only)"
                     },
+                    "terminalAssistancePending": {
+                      "type": "boolean",
+                      "description": "True only while the initial assistance pickup at the terminal is still pending. Later escorted pickup steps keep needsAssistance but must not trigger the terminal alert or chime."
+                    },
+                    "escortTransferPending": {
+                      "type": "boolean",
+                      "description": "True while a patient remains at the current practice room and waits to be accompanied to a different target room. MFA presents the ticket at the current room, not in the waiting room."
+                    },
                     "movementMode": {
                       "type": "string",
                       "nullable": true,
                       "enum": ["call", "self_go", "pickup"],
                       "description": "Visit movement mode. MFA shows Aufrufen only for waiting + call; directed/self_go and pickup stay visible without Call."
-                    }
-                  }
-                }
-              },
-              "assistPending": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": ["deviceId", "deviceLabel", "pressedAt", "expiresAt", "remainingMs"],
-                  "properties": {
-                    "deviceId": {
-                      "type": "string"
-                    },
-                    "deviceLabel": {
-                      "type": "string"
-                    },
-                    "pressedAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "expiresAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "remainingMs": {
-                      "type": "integer",
-                      "minimum": 0
                     }
                   }
                 }

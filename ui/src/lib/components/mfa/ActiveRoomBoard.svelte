@@ -10,6 +10,7 @@
   interface Props {
     active: QueueItem[];
     rooms: PracticeRoom[];
+    separateUnderway?: boolean;
     dragEnabled?: boolean;
     activeDropTargetId?: string | null;
     queueDragging?: boolean;
@@ -30,6 +31,7 @@
   let {
     active,
     rooms,
+    separateUnderway = true,
     dragEnabled = false,
     activeDropTargetId = null,
     queueDragging = false,
@@ -47,7 +49,7 @@
     onCycleTriage,
   }: Props = $props();
 
-  const board = $derived(buildActiveRoomBoard(active, rooms));
+  const board = $derived(buildActiveRoomBoard(active, rooms, separateUnderway));
 
   function isBusy(visitId: string): boolean {
     return busyVisitId === visitId;
@@ -55,36 +57,38 @@
 </script>
 
 <div class="active-room-board">
-  <section class="active-room-group active-room-group--underway" aria-label={t('mfa.zoneUnderwayTitle')}>
-    <div class="active-room-group-head">
-      <h3 class="active-room-group-title">{t('mfa.zoneUnderwayTitle')}</h3>
-    </div>
-    <p class="active-room-group-note">{t('mfa.zoneUnderwayDesc')}</p>
-    {#if board.underway.length === 0}
-      <p class="active-room-group-empty">{t('mfa.zoneUnderwayEmpty')}</p>
-    {:else}
-      <ul class="queue-list">
-        {#each board.underway as item (`${item.visitId}:${item.status}`)}
-          <QueueEntry
-            {item}
-            zone="active"
-            dragEnabled={dragEnabled && !isBusy(item.visitId)}
-            dragZone="active"
-            {queueDragging}
-            {nowMs}
-            busy={isBusy(item.visitId)}
-            onCheckIn={() => onCheckIn(item.visitId)}
-            onReassign={() => onReassign(item.visitId)}
-            onCancelVisit={() => onCancelVisit(item.visitId)}
-            onReturnToWaiting={() => onReturnToWaiting(item.visitId)}
-            onMarkAway={() => onMarkAway(item.visitId)}
-            onOpenDocuments={onOpenDocuments}
-            onCycleTriage={() => onCycleTriage(item.visitId)}
-          />
-        {/each}
-      </ul>
-    {/if}
-  </section>
+  {#if separateUnderway}
+    <section class="active-room-group active-room-group--underway" aria-label={t('mfa.zoneUnderwayTitle')}>
+      <div class="active-room-group-head">
+        <h3 class="active-room-group-title">{t('mfa.zoneUnderwayTitle')}</h3>
+      </div>
+      <p class="active-room-group-note">{t('mfa.zoneUnderwayDesc')}</p>
+      {#if board.underway.length === 0}
+        <p class="active-room-group-empty">{t('mfa.zoneUnderwayEmpty')}</p>
+      {:else}
+        <ul class="queue-list">
+          {#each board.underway as item (`${item.visitId}:${item.status}`)}
+            <QueueEntry
+              {item}
+              zone="active"
+              dragEnabled={dragEnabled && !isBusy(item.visitId)}
+              dragZone="active"
+              {queueDragging}
+              {nowMs}
+              busy={isBusy(item.visitId)}
+              onCheckIn={() => onCheckIn(item.visitId)}
+              onReassign={() => onReassign(item.visitId)}
+              onCancelVisit={() => onCancelVisit(item.visitId)}
+              onReturnToWaiting={() => onReturnToWaiting(item.visitId)}
+              onMarkAway={() => onMarkAway(item.visitId)}
+              onOpenDocuments={onOpenDocuments}
+              onCycleTriage={() => onCycleTriage(item.visitId)}
+            />
+          {/each}
+        </ul>
+      {/if}
+    </section>
+  {/if}
 
   {#each board.groups as group (group.roomId)}
     <QueueDropZone
@@ -144,11 +148,7 @@
             {queueDragging}
             {nowMs}
             busy={isBusy(item.visitId)}
-            onCheckIn={() => onCheckIn(item.visitId)}
-            onStart={() => onStart(item.visitId)}
-            onContinue={() => onContinue(item.visitId)}
             onReassign={() => onReassign(item.visitId)}
-            onCheckOut={() => onCheckOut(item.visitId)}
             onReturnToWaiting={() => onReturnToWaiting(item.visitId)}
             onOpenDocuments={onOpenDocuments}
             onCycleTriage={() => onCycleTriage(item.visitId)}

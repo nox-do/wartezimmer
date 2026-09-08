@@ -1,7 +1,7 @@
 /**
  * Reservierte interne Topic-ID fuer den MFA-/Empfangs-Pfad.
- * Sie ist absichtlich nicht in der Themenverwaltung konfigurierbar, damit
- * das Produkt-Topic-Set kein zweites "mfa" neben dem Systempfad anlegen kann.
+ * Sie ist absichtlich kein frei editierbarer Themen-Eintrag, damit das
+ * Produkt-Topic-Set kein zweites "mfa" neben dem Systempfad anlegen kann.
  */
 export const MFA_ASSIST_TOPIC_ID = 'mfa';
 

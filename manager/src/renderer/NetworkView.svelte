@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * Network tab layout:
-   * 1 LAN → 2 Geräte-Adresse → 3 Browserzugriff → 4 HTTPS → 5 Prüfungen → 6 Erläuterung
+   * 1 LAN inklusive Host-Prüfungen → 2 Geräte-Adresse → 3 Browserzugriff → 4 HTTPS → 5 Erläuterung
    * Draft apply lives in the open LAN / Proxy / Geräte-Adresse expander.
    *
    * Shell: configSnapshot + runtimeSnapshot via $derived / selectors.
@@ -65,7 +65,6 @@
   let lanOpen = $state(false);
   let proxyOpen = $state(false);
   let reachabilityOpen = $state(false);
-  let checksOpen = $state(false);
   let topologyOpen = $state(false);
   let draftOutcomeHost = $state<'lan' | 'proxy' | 'reachability' | null>(null);
 
@@ -114,7 +113,6 @@
     lanOpen = defaults.lanOpen;
     proxyOpen = defaults.proxyOpen;
     reachabilityOpen = defaults.reachabilityOpen;
-    checksOpen = defaults.checksOpen;
     topologyOpen = defaults.topologyOpen;
     tlsOpen = defaults.tlsOpen;
   }
@@ -331,7 +329,7 @@
         <MaintenanceSection
           open={lanOpen}
           title="Adresse dieses Rechners"
-          subtitle={networkLanSubtitle(configSnapshot, snapshot)}
+          subtitle={`${networkLanSubtitle(configSnapshot, snapshot)} · ${networkHostChecksSubtitle(hostChecks)}`}
           onToggle={() => {
             lanOpen = !lanOpen;
           }}
@@ -346,6 +344,8 @@
             disabled={busy}
             onChange={patchFields}
           />
+          <h3 class="wizard-subheading">Prüfungen für Adresse und Ports</h3>
+          <NetworkBindingChecks checks={hostChecks} />
           {#if commitPlacement.lan}
             {@render draftCommitActions('lan')}
           {/if}
@@ -456,17 +456,6 @@
       </div>
 
       <div class="maintenance-accordion network-diagnose-accordion">
-        <MaintenanceSection
-          open={checksOpen}
-          title="Prüfungen am Rechner"
-          subtitle={networkHostChecksSubtitle(hostChecks)}
-          onToggle={() => {
-            checksOpen = !checksOpen;
-          }}
-        >
-          <NetworkBindingChecks checks={hostChecks} />
-        </MaintenanceSection>
-
         <MaintenanceSection
           open={topologyOpen}
           title="Erläuterung zum Netz"

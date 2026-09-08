@@ -2,14 +2,13 @@ import { terminalAuthFetch } from '$lib/api/cookie-auth-fetch';
 import { t } from '$lib/i18n/i18nStore.svelte';
 import type { EmergencyRaiseResponse, OpsHeartbeatResponse } from '$lib/ops/openapi-types';
 import type {
-  TerminalAssistPressed,
   TerminalAuthPath,
   TerminalTopic,
   TerminalTopicsResponse,
   TicketCreated,
 } from '$lib/terminal/openapi-types';
 
-export type { TerminalAssistPressed, TerminalAuthPath } from '$lib/terminal/openapi-types';
+export type { TerminalAuthPath } from '$lib/terminal/openapi-types';
 
 export type CheckinCreated = TicketCreated;
 export type TerminalTopicOption = TerminalTopic;
@@ -51,18 +50,14 @@ export async function createCheckin(input: {
   });
 }
 
-/** STUB entry — not called from UI yet; see `terminal-assist.stub.ts`. */
-export async function pressTerminalAssist() {
-  return terminalAuthFetch<TerminalAssistPressed>('/api/v1/checkins/assist/press', {
+export async function createAssistanceCheckin(patientLocale?: string) {
+  const headers: Record<string, string> = {};
+  if (patientLocale?.trim()) {
+    headers['X-Patient-Locale'] = patientLocale.trim();
+  }
+  return terminalAuthFetch<CheckinCreated>('/api/v1/checkins/assistance', {
     method: 'POST',
-    body: JSON.stringify({}),
-  });
-}
-
-/** STUB entry — not called from UI yet; see `terminal-assist.stub.ts`. */
-export async function releaseTerminalAssist() {
-  return terminalAuthFetch<null>('/api/v1/checkins/assist/release', {
-    method: 'POST',
+    headers,
     body: JSON.stringify({}),
   });
 }

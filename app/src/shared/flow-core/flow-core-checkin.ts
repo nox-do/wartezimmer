@@ -6,11 +6,12 @@ import { assertCheckInAllowed } from '../db/database-checkin-sessions.js';
 import { upsertVisitHostState } from '../db/visit-host-state.js';
 import { canonicalizePhone } from '../phone/canonicalize-phone.js';
 import {
+  MFA_ASSIST_TOPIC_ID,
   resolveTopicLabelFromSettings,
   resolveCheckInDestinationRoomLabel,
 } from '../checkin-topic-settings.js';
+import { PF_FLOW_SURFACE_TERMINAL } from './catalog-ids.js';
 import { getFlowCoreRuntime } from './flow-core-runtime.js';
-import { PF_FLOW_SURFACE_TERMINAL } from './sync-catalog-from-ops-settings.js';
 
 export function createVisitCheckInInDb(
   deps: CheckinSessionDeps & { db: DatabaseSync },
@@ -21,13 +22,21 @@ export function createVisitCheckInInDb(
   const settings = deps.getOpsSettings();
   const runtime = getFlowCoreRuntime(deps.db);
 
-  const visit = runtime.checkIn({
-    topicId: input.topicId,
+  const isMfaAssist = input.topicId === MFA_ASSIST_TOPIC_ID && input.needsAssistance === true;
+  const commonCheckIn = {
     authPath: input.authPath as AuthPath,
     surfaceId: PF_FLOW_SURFACE_TERMINAL,
     displayName: input.identityRef?.trim() || undefined,
-    needsAssistance: input.needsAssistance === true,
-  });
+  };
+  const visit = runtime.checkIn(
+    isMfaAssist
+      ? { ...commonCheckIn, mfaAssist: true }
+      : {
+          ...commonCheckIn,
+          topicId: input.topicId,
+          needsAssistance: input.needsAssistance === true,
+        },
+  );
   if (!visit) {
     throw new Error('CHECKIN_FAILED');
   }

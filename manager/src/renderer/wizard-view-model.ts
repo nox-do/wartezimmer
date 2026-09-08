@@ -4,6 +4,7 @@ import {
   wizardCompletionLead,
   wizardHttpsEligible,
   wizardHttpsMailReady,
+  wizardUsesExistingTlsConfiguration,
   type WizardHttpsPhase,
   type WizardStep,
 } from './wizard-flow.js';
@@ -23,14 +24,17 @@ export function wizardCheckMark(ok: boolean): string {
 }
 
 export function wizardIsCompleted(state: WizardControllerState): boolean {
-  return state.step === 8 && Boolean(state.applyResult);
+  return (
+    state.step === 8 &&
+    (Boolean(state.applyResult) || wizardUsesExistingTlsConfiguration(state.status))
+  );
 }
 
 export function wizardBackHidden(state: WizardControllerState): boolean {
   if (state.step <= 1) {
     return true;
   }
-  if (state.step === 8 && state.applyResult) {
+  if (wizardIsCompleted(state)) {
     return true;
   }
   return false;
@@ -38,13 +42,16 @@ export function wizardBackHidden(state: WizardControllerState): boolean {
 
 export function wizardNextButtonLabel(state: WizardControllerState): string {
   if (state.step === 5) {
+    if (wizardUsesExistingTlsConfiguration(state.status)) {
+      return 'Bestehende Einrichtung prüfen';
+    }
     return wizardHttpsEligible(state.proxyEnabled) ? 'Weiter zu HTTPS' : 'Vorschau laden';
   }
   if (state.step === 6) {
     return state.httpsPhase === 'mail' ? 'Vorschau laden' : 'Weiter';
   }
   if (state.step === 7) {
-    return 'Anwenden';
+    return wizardUsesExistingTlsConfiguration(state.status) ? 'Abschließen' : 'Anwenden';
   }
   if (state.step === 8) {
     if (state.applyResult) {

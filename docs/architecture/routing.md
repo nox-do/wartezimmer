@@ -9,11 +9,11 @@ Nicht: Nummernkreis/Themen-Editor-Detail → [`domain.md`](domain.md) · Call-Ra
 
 ## 1. Leitidee
 
-| Ebene | Wahrheit |
-| ----- | -------- |
+| Ebene                | Wahrheit                                                                  |
+| -------------------- | ------------------------------------------------------------------------- |
 | Praxis-Konfiguration | `ops_settings` (`routingMode`, Topics/`defaultRoomId`, `journeySettings`) |
-| Catalog | **Projektion** — nur `syncCatalogFromOpsSettings()` |
-| Visit | **operative Wahrheit** — Status, Ziel, Queue, Movement, Journey-Cursor |
+| Catalog              | **Projektion** — nur `syncCatalogFromOpsSettings()`                       |
+| Visit                | **operative Wahrheit** — Status, Ziel, Queue, Movement, Journey-Cursor    |
 
 Zwei Wege zur ersten Route:
 
@@ -37,12 +37,12 @@ flowchart TB
 Gespeichert: `ops_settings.routing_mode` (`'simple' | 'complex'`).  
 Fachliche Autorität: **Ops Settings** — nicht MFA. Manager/Setup dürfen den lokalen technischen Kompatibilitätspfad nur für Host-/Restore-Abläufe verwenden (`ops-settings-patch-by-role.ts`).
 
-| | **simple** | **complex** |
-| --- | --- | --- |
-| Catalog-Sync | nur `syncSimpleRoutingRulesFromOpsSettings` | + Journey-Templates + `syncComplexRoutingRulesFromOpsSettings` |
-| Topic-`journeyTemplateId` | wird **nicht** in die Rule geschrieben | verknüpft, wenn Template existiert und `active` |
-| UI Journey-Designer | aus (`features.journeyDesigner`) | an, **nur wenn lizenziert** |
-| Host-Default ohne Journey | Rule: waiting → defaultRoom, `call`, `visible` | gleich, wenn kein Template am Topic |
+|                           | **simple**                                     | **complex**                                                    |
+| ------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
+| Catalog-Sync              | nur `syncSimpleRoutingRulesFromOpsSettings`    | + Journey-Templates + `syncComplexRoutingRulesFromOpsSettings` |
+| Topic-`journeyTemplateId` | wird **nicht** in die Rule geschrieben         | verknüpft, wenn Template existiert und `active`                |
+| UI Journey-Designer       | aus (`features.journeyDesigner`)               | an, **nur wenn lizenziert**                                    |
+| Host-Default ohne Journey | Rule: waiting → defaultRoom, `call`, `visible` | gleich, wenn kein Template am Topic                            |
 
 **Wichtig:** `complex` allein aktiviert keine Mehrschritt-Routen. Ohne Templates bleiben Rules single-step-förmig.
 
@@ -59,25 +59,25 @@ Offene Visits (Status ∉ `done` \| `cancelled` \| `no_show`) → Mode-Wechsel b
 
 ## 3. Catalog-Entitäten (Routing-relevant)
 
-| Entität | Rolle |
-| ------- | ----- |
-| **Topic** | Anmeldgrund; Host: `defaultRoomId`, optional `journeyTemplateId` |
-| **Location** | Ort (`pf_entrance`, `pf_waiting`, Praxis-Räume, …) |
-| **Queue** | Host-Sync: eine `pf_general_queue` (Package-Modell erlaubt mehr) |
-| **Surface** | Terminal / TV / MFA / Raum-Panel; Scope & Redirect-Fähigkeit |
-| **RoutingRule** | Policy pro Topic: Escort, `allowRedirect`, Terminal-Scope; **entweder** `initial_*` **oder** Journey |
-| **JourneyTemplate / JourneyStep** | Mehrschritt; Step: Ziel, Queue, `movementMode`, `publicDisplayMode`, `completedWhen` |
+| Entität                           | Rolle                                                                                                |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Topic**                         | Anmeldgrund; Host: `defaultRoomId`, optional `journeyTemplateId`                                     |
+| **Location**                      | Ort (`pf_entrance`, `pf_waiting`, Praxis-Räume, …)                                                   |
+| **Queue**                         | Host-Sync: eine `pf_general_queue` (Package-Modell erlaubt mehr)                                     |
+| **Surface**                       | Terminal / TV / MFA / Raum-Panel; Scope & Redirect-Fähigkeit                                         |
+| **RoutingRule**                   | Policy pro Topic: Escort, `allowRedirect`, Terminal-Scope; **entweder** `initial_*` **oder** Journey |
+| **JourneyTemplate / JourneyStep** | Mehrschritt; Step: Ziel, Queue, `movementMode`, `publicDisplayMode`, `completedWhen`                 |
 
 Typen: `packages/flow-core/src/shared/types.ts`. Schema: `packages/flow-core/db/schema.sql`.
 
 ### Movement & Display
 
-| Typ | Werte | Wirkung (Auszug) |
-| --- | ----- | ---------------- |
-| `MovementMode` | `self_go` \| `call` \| `pickup` | Check-in/Hop: `self_go` → Status `directed`; `call`/`pickup` → `waiting`. `call`-Transition nur bei `movementMode === 'call'` |
-| `PublicDisplayMode` | `visible` \| `hidden` \| `call_only` | TV/public_display; Staff-Panels nutzen `surface_display_rules`, nicht Visit-Display-Mode |
-| `EscortPolicy` | `none` \| `recommended` \| `required` | kann Movement auf `pickup` heben; `required` blockiert Redirect mit `self_go` |
-| `completedWhen` | `arrive` \| `start` \| `done` | wann der aktuelle Journey-Step als erledigt gilt |
+| Typ                 | Werte                                 | Wirkung (Auszug)                                                                                                              |
+| ------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `MovementMode`      | `self_go` \| `call` \| `pickup`       | Check-in/Hop: `self_go` → Status `directed`; `call`/`pickup` → `waiting`. `call`-Transition nur bei `movementMode === 'call'` |
+| `PublicDisplayMode` | `visible` \| `hidden` \| `call_only`  | TV/public_display; Staff-Panels nutzen `surface_display_rules`, nicht Visit-Display-Mode                                      |
+| `EscortPolicy`      | `none` \| `recommended` \| `required` | kann Movement auf `pickup` heben; `required` blockiert Redirect mit `self_go`                                                 |
+| `completedWhen`     | `arrive` \| `start` \| `done`         | wann der aktuelle Journey-Step als erledigt gilt                                                                              |
 
 ## 4. Sync (Host → Catalog)
 
@@ -96,10 +96,10 @@ Ops PATCH / updateOpsSettings
 **Simple-Rule** (`buildSimpleRoutingRuleRow`):
 
 - `initialLastKnown` = `pf_waiting`
-- `initialTarget` = enabled `defaultRoomId`, sonst Empfang
+- `initialTarget` = enabled `defaultRoomId`, sonst Wartezimmer
 - `initialQueueId` = `pf_general_queue`
-- `initialMovementMode` = `'call'`, `publicDisplayMode` = `'visible'`
-- MFA-Assist: `allowRedirect: false`; sonst typisch `true`
+- `initialMovementMode` = am Wartezimmer `'call'`, bei einem Raumziel `'self_go'`; `publicDisplayMode` = `'visible'`
+- Systemthema M: `initialLastKnown` = Eingang, Ziel folgt dem Standard-Aufrufziel, `allowRedirect: false`
 
 **Complex mit Journey** (`buildJourneyRoutingRuleRow`): Rule verknüpft Template; `initial_*` werden weiter befüllt, aber Check-in ignoriert sie.
 
@@ -114,8 +114,9 @@ App-Start: `initializeFlowCore()` synct aus gelesenen `ops_settings`. Backup exp
 1. Topic auflösen (`mfa_assist` → Assist-Topic)
 2. `ruleForTopicAtSurface(catalog, topicId, surfaceId)` — aktive Rule am Terminal
 3. Snapshot `allowRedirect` + Escort von der Rule
-4. **Mit Journey:** Steps laden; Step 0 Pflicht (`JOURNEY_STEP_MISSING`); Route aus `stepToVisitPatch`; `journeyState: 'active'`, Index `0`; Confidence am Check-in `'assumed'`
-5. **Ohne Journey:** `resolveCheckInRouting` kopiert `initial_*`, Escort→Movement, Terminal-Instruction
+4. `needsAssistance` beziehungsweise `mfa_assist` hebt den effektiven Escort auf `required`; dadurch wird `self_go` operativ zu `pickup`
+5. **Mit Journey:** Steps laden; Step 0 Pflicht (`JOURNEY_STEP_MISSING`); Route aus `stepToVisitPatch`; `journeyState: 'active'`, Index `0`; Confidence am Check-in `'assumed'`
+6. **Ohne Journey:** `resolveCheckInRouting` kopiert `initial_*`, Escort→Movement, Terminal-Instruction
 
 Ticket-Felder (`laneCode`, Sequence, `topicLabel`) sind danach immutable; Ziel/Queue/Movement bleiben über Transitions änderbar.
 
@@ -138,6 +139,8 @@ Besonderheiten:
 
 Host-Bridge: `app/src/shared/flow-core/visit-queue-bridge.ts` — u. a. `callVisit` führt zuerst `start_next_journey_step` aus, wenn `journeyStepCompletedAt` gesetzt ist.
 
+MFA-Drag-&-Drop auf einen Raum startet bei abgeschlossenem Hop denselben nächsten Journey-Step wie „Weiter“, übergibt aber den gewählten Raum als operatives Ziel für diesen Hop. Spätere Journey-Steps bleiben unverändert.
+
 Queue-HTTP: Transition-Typ `continue_journey` (`queue-visit-transitions.ts`).
 
 ## 7. Redirect
@@ -154,13 +157,13 @@ Wirkung: neues operatives Ziel/Movement/Queue; Call-/Arrive-/Start-Zeiten clear;
 
 ## 8. Konfiguration & Guards (nichtfunktional)
 
-| Guard | Wann | Code |
-| ----- | ---- | ---- |
-| Offene Visits global | Mode-Wechsel | `ROUTING_MODE_CHANGE_BLOCKED` |
-| Lizenz | Mode → complex | `COMPLEX_ROUTING_NOT_LICENSED` |
+| Guard                                   | Wann                      | Code                                                       |
+| --------------------------------------- | ------------------------- | ---------------------------------------------------------- |
+| Offene Visits global                    | Mode-Wechsel              | `ROUTING_MODE_CHANGE_BLOCKED`                              |
+| Lizenz                                  | Mode → complex            | `COMPLEX_ROUTING_NOT_LICENSED`                             |
 | Offene **aktive** Journeys pro Template | Journey speichern/löschen | `JOURNEY_TEMPLATE_LOCKED` (nur `journey_state = 'active'`) |
-| Topic↔Template | Ops-JSON | `validateTopicJourneyAssignments` |
-| Catalog-Integrität | nach Sync | u. a. keine überlappenden aktiven Rules pro Topic+Surface |
+| Topic↔Template                          | Ops-JSON                  | `validateTopicJourneyAssignments`                          |
+| Catalog-Integrität                      | nach Sync                 | u. a. keine überlappenden aktiven Rules pro Topic+Surface  |
 
 Rollen:
 
@@ -177,18 +180,18 @@ Tagesreset leert Visits; Mode, Topics, Journeys bleiben ([`system.md`](system.md
 
 ## 9. Code-Karte
 
-| Pfad | Verantwortung |
-| ---- | ------------- |
-| `app/src/shared/flow-core/sync-catalog-from-ops-settings.ts` | Catalog-Projektion simple/complex |
-| `app/src/shared/ops/routing-capabilities.ts` | Feature-Flags für UI |
-| `app/src/shared/ops/routing-mode-guard.ts` | Mode + Open-Visit |
-| `app/src/shared/ops/journey-template-guard.ts` | Template-Lock |
-| `app/src/shared/journey-settings.ts` | Ops-JSON Journeys |
-| `app/src/shared/flow-core/visit-queue-bridge.ts` | Queue-Ops ↔ Core-Transitions |
-| `packages/flow-core/src/shared/{journey,visit-flow,redirect-flow,routing-scope}.ts` | Domain-Algorithmen |
-| `packages/flow-core/src/server/visit-service.ts` | Check-in / Transition / Redirect |
-| `setup/src/routing-mode.ts` · Manager Maintenance | Mode lesen/setzen |
-| `ui/.../mfa/settings/topics-rooms/journeys/` | Journey-Designer |
+| Pfad                                                                                | Verantwortung                     |
+| ----------------------------------------------------------------------------------- | --------------------------------- |
+| `app/src/shared/flow-core/sync-catalog-from-ops-settings.ts`                        | Catalog-Projektion simple/complex |
+| `app/src/shared/ops/routing-capabilities.ts`                                        | Feature-Flags für UI              |
+| `app/src/shared/ops/routing-mode-guard.ts`                                          | Mode + Open-Visit                 |
+| `app/src/shared/ops/journey-template-guard.ts`                                      | Template-Lock                     |
+| `app/src/shared/journey-settings.ts`                                                | Ops-JSON Journeys                 |
+| `app/src/shared/flow-core/visit-queue-bridge.ts`                                    | Queue-Ops ↔ Core-Transitions      |
+| `packages/flow-core/src/shared/{journey,visit-flow,redirect-flow,routing-scope}.ts` | Domain-Algorithmen                |
+| `packages/flow-core/src/server/visit-service.ts`                                    | Check-in / Transition / Redirect  |
+| `setup/src/routing-mode.ts` · Manager Maintenance                                   | Mode lesen/setzen                 |
+| `ui/.../mfa/settings/topics-rooms/journeys/`                                        | Journey-Designer                  |
 
 Tests mit hoher Signalstärke: `sync-catalog-from-ops-settings.test.ts`, `routing-mode-guard*.test.ts`, `packages/flow-core/test/integration/runtime.test.ts`, `journey*.test.ts`, `visit-queue-bridge.test.ts`.
 
@@ -210,10 +213,10 @@ Tests mit hoher Signalstärke: `sync-catalog-from-ops-settings.test.ts`, `routin
 
 ## 11. Verweise
 
-| Thema | Dokument |
-| ----- | -------- |
-| Catalog-Wahrheit / Call-Raum | [`domain.md`](domain.md) |
-| API-Rollen Settings-PATCH | [`apis.md`](apis.md) |
-| System / Tagesreset | [`system.md`](system.md) |
-| Backup Catalog-Resync | [`../operations/backup.md`](../operations/backup.md) |
-| Package-Domain kurz | `packages/flow-core/README.md` |
+| Thema                        | Dokument                                             |
+| ---------------------------- | ---------------------------------------------------- |
+| Catalog-Wahrheit / Call-Raum | [`domain.md`](domain.md)                             |
+| API-Rollen Settings-PATCH    | [`apis.md`](apis.md)                                 |
+| System / Tagesreset          | [`system.md`](system.md)                             |
+| Backup Catalog-Resync        | [`../operations/backup.md`](../operations/backup.md) |
+| Package-Domain kurz          | `packages/flow-core/README.md`                       |

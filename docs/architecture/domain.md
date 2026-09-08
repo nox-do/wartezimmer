@@ -45,7 +45,7 @@ flowchart TB
 2. Mehrere Anmeldgründe dürfen denselben Nummernkreis teilen.
 3. Anmeldgrund steuert Terminal/MFA-Text — **nicht** die Zählung.
 4. Aufrufziel: Visit trägt `targetLocationId` oft **schon ab Check-in** (Catalog/Themen-`defaultRoomId` → flow-core). Queue zeigt `destinationRoomId`/`destinationRoomLabel` daraus. Call/`check_in_room` können Body-Raum setzen oder Snapshot übernehmen — **nicht** „Raum erst beim Aufruf“.
-5. Reserviert: Thema/`laneCode` **`M`** für MFA-Hilfe — nicht im Themen-Editor (`MFA_ASSIST_LANE_CODE`).
+5. Reserviert: Thema/`laneCode` **`M`** für persönliche Anmeldung/MFA-Hilfe — im Themen-Editor nur als fester, schreibgeschützter Systemeintrag sichtbar (`MFA_ASSIST_LANE_CODE`).
 6. Am Ticket immutable nach Check-in: `laneCode`, `sequence`, `topicLabel` (Katalog-Änderungen ändern alte Tickets nicht).
 7. Topic-Supersede (MFA): neues Ticket + neue Nummer, altes soft `cancelled`, Verkettung `supersedes`/`superseded_by`; erlaubt bei Core-`waiting`|`directed`; `checkedInAt` bleibt.
 
@@ -83,9 +83,9 @@ MFA-Warteliste: rote Linie ab **≥ 25 Min.** (`LONG_WAIT_THRESHOLD_MINUTES` in 
 
 ## 5. Catalog-Wahrheit
 
-| Was                                 | Wahrheit                        | Wer schreibt                           |
-| ----------------------------------- | ------------------------------- | -------------------------------------- |
-| Themen / Räume / Journeys / Routing | `ops_settings.*_json` / Spalten | Ops-API → `updateOpsSettings`          |
+| Was                                 | Wahrheit                        | Wer schreibt                                                               |
+| ----------------------------------- | ------------------------------- | -------------------------------------------------------------------------- |
+| Themen / Räume / Journeys / Routing | `ops_settings.*_json` / Spalten | Ops-API → `updateOpsSettings`                                              |
 | flow-core-Catalog                   | **Projektion**                  | **nur** `syncCatalogFromOpsSettings()` — Detail [`routing.md`](routing.md) |
 
 Produktions-App: kein Catalog-DML außerhalb des Sync-Moduls (`catalog-write-guard.test.ts`).  

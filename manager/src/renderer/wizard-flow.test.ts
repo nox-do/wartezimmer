@@ -12,8 +12,26 @@ import {
   previousWizardStep,
   wizardCompletionLead,
   wizardHttpsPrepared,
+  wizardUsesExistingTlsConfiguration,
   wizardProbeFailureHint,
 } from './wizard-flow.js';
+
+function activeTlsStatus() {
+  return minimalHostStatus({
+    tls: {
+      state: 'active',
+      mode: 'managed',
+      hostname: 'praxis.lan.notaus.de',
+      installationId: 'installation-id',
+      tokenConsumed: true,
+      applyReady: true,
+      cutoverApplied: true,
+      certificate: null,
+      lastError: null,
+      acmeCnameTarget: null,
+    },
+  });
+}
 
 test('previousWizardStep walks back through wizard steps', () => {
   assert.equal(previousWizardStep(1), 1);
@@ -268,6 +286,24 @@ test('planWizardAdvance applies when leaving preview step 7', () => {
     step: 8,
     patch: { applyResult: null },
     after: 'apply-and-refresh',
+  });
+});
+
+test('active TLS configuration bypasses preview generation and setup apply', () => {
+  const state = createWizardFlowState(activeTlsStatus(), 5);
+
+  assert.equal(wizardUsesExistingTlsConfiguration(state.status), true);
+  assert.deepEqual(planWizardAdvance(5, state), {
+    type: 'goto',
+    step: 7,
+    patch: { plan: null },
+  });
+
+  state.step = 7;
+  assert.deepEqual(planWizardAdvance(7, state), {
+    type: 'goto',
+    step: 8,
+    patch: { applyResult: null },
   });
 });
 

@@ -25,6 +25,8 @@ function ticket(overrides: Partial<QueueItem> & Pick<QueueItem, 'visitId' | 'roo
     hasMobilePhone: false,
     returnUntil: null,
     needsAssistance: false,
+    terminalAssistancePending: false,
+    escortTransferPending: false,
     ...overrides,
   };
 }
@@ -49,22 +51,71 @@ describe('buildActiveRoomBoard', () => {
       rooms,
     );
 
-    expect(board.underway.map((item) => item.visitId)).toEqual(['a', 'c', 'd']);
+    expect(board.underway.map((item) => item.visitId)).toEqual(['a']);
     expect(board.groups[0]?.tickets.map((item) => item.visitId)).toEqual([]);
     expect(board.groups[1]?.tickets.map((item) => item.visitId)).toEqual(['b']);
-    expect(board.unassigned).toEqual([]);
+    expect(board.unassigned.map((item) => item.visitId)).toEqual(['c', 'd']);
   });
 
   it('keeps called and directed underway while counting called for room capacity', () => {
     const board = buildActiveRoomBoard(
       [
         ticket({ visitId: 'called', roomId: 'empfang', status: 'called' }),
-        ticket({ visitId: 'directed', roomId: null, status: 'directed' }),
+        ticket({
+          visitId: 'directed',
+          roomId: null,
+          destinationRoomId: 'empfang',
+          status: 'directed',
+        }),
       ],
       [{ ...rooms[0]!, maxOccupancy: 1 }],
     );
     expect(board.underway.map((item) => item.visitId)).toEqual(['called', 'directed']);
     expect(board.groups[0]?.occupantCount).toBe(1);
     expect(board.groups[0]?.isAtCapacity).toBe(true);
+  });
+
+  it('groups underway tickets by destination when the separate box is hidden', () => {
+    const board = buildActiveRoomBoard(
+      [
+        ticket({
+          visitId: 'called',
+          roomId: 'empfang',
+          destinationRoomId: 'empfang',
+          status: 'called',
+        }),
+        ticket({
+          visitId: 'directed',
+          roomId: null,
+          destinationRoomId: 'kirche',
+          status: 'directed',
+        }),
+      ],
+      rooms,
+      false,
+    );
+
+    expect(board.underway).toEqual([]);
+    expect(board.groups[0]?.tickets.map((item) => item.visitId)).toEqual(['called']);
+    expect(board.groups[1]?.tickets.map((item) => item.visitId)).toEqual(['directed']);
+  });
+
+  it('keeps an escorted transfer at its current room until pickup', () => {
+    const transfer = ticket({
+      visitId: 'transfer',
+      roomId: 'empfang',
+      roomLabel: 'Empfang',
+      status: 'in_room',
+      movementMode: 'pickup',
+      destinationRoomId: 'kirche',
+      destinationRoomLabel: 'kirche',
+      needsAssistance: true,
+      escortTransferPending: true,
+    });
+
+    const board = buildActiveRoomBoard([transfer], rooms);
+    expect(board.groups[0]?.tickets.map((item) => item.visitId)).toEqual(['transfer']);
+    expect(board.groups[1]?.tickets).toEqual([]);
+    expect(board.underway).toEqual([]);
   });
 });

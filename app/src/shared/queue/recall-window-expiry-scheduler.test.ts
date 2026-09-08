@@ -19,7 +19,6 @@ test('scheduleRecallWindowExpiry moves only the scheduled ticket at returnUntil'
   const processed: string[] = [];
   const db = {
     listQueue: () => [],
-    listActiveTerminalAssistPending: () => [],
     getOpsSettings: () => ({ rooms: [] }),
     processExpiredRecallWindows: () => [],
     processExpiredRecallWindowForVisit: (visitId: string) => {
@@ -67,6 +66,8 @@ test('scheduleRecallWindowExpiry reschedules when expiry transition is not yet a
     triageLevel: null,
     documentCount: 0,
     needsAssistance: false,
+    terminalAssistancePending: false,
+    escortTransferPending: false,
   };
 
   let processCalls = 0;

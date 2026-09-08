@@ -76,48 +76,6 @@ export const TerminalTopic = {
   },
 } as const;
 
-export const TerminalAssistPendingItem = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['deviceId', 'deviceLabel', 'pressedAt', 'expiresAt', 'remainingMs'],
-  properties: {
-    deviceId: {
-      type: 'string',
-    },
-    deviceLabel: {
-      type: 'string',
-    },
-    pressedAt: {
-      type: 'string',
-      format: 'date-time',
-    },
-    expiresAt: {
-      type: 'string',
-      format: 'date-time',
-    },
-    remainingMs: {
-      type: 'integer',
-      minimum: 0,
-    },
-  },
-} as const;
-
-export const TerminalAssistPressed = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['pressedAt', 'expiresAt'],
-  properties: {
-    pressedAt: {
-      type: 'string',
-      format: 'date-time',
-    },
-    expiresAt: {
-      type: 'string',
-      format: 'date-time',
-    },
-  },
-} as const;
-
 export const GET_api_v1_checkins_topicsResponse200 = {
   type: 'object',
   required: ['topics'],
@@ -449,23 +407,43 @@ export const POST_api_v1_checkinsResponse500 = {
   },
 } as const;
 
-export const POST_api_v1_checkins_assist_pressResponse201 = {
+export const POST_api_v1_checkins_assistanceResponse201 = {
   type: 'object',
-  additionalProperties: false,
-  required: ['pressedAt', 'expiresAt'],
+  required: ['visitId', 'laneCode', 'number', 'queueStatus', 'createdAt'],
   properties: {
-    pressedAt: {
+    visitId: {
+      type: 'string',
+    },
+    laneCode: {
+      type: 'string',
+    },
+    number: {
+      type: 'integer',
+    },
+    queueStatus: {
+      type: 'string',
+      enum: [
+        'waiting',
+        'directed',
+        'called',
+        'in_room',
+        'done',
+        'absent_wait_here',
+        'absent_return_later',
+        'cancelled',
+      ],
+    },
+    createdAt: {
       type: 'string',
       format: 'date-time',
     },
-    expiresAt: {
-      type: 'string',
-      format: 'date-time',
+    destinationRoomLabel: {
+      type: ['string', 'null'],
     },
   },
 } as const;
 
-export const POST_api_v1_checkins_assist_pressResponse400 = {
+export const POST_api_v1_checkins_assistanceResponse400 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -537,7 +515,7 @@ export const POST_api_v1_checkins_assist_pressResponse400 = {
   },
 } as const;
 
-export const POST_api_v1_checkins_assist_pressResponse409 = {
+export const POST_api_v1_checkins_assistanceResponse409 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -609,7 +587,7 @@ export const POST_api_v1_checkins_assist_pressResponse409 = {
   },
 } as const;
 
-export const POST_api_v1_checkins_assist_pressResponse500 = {
+export const POST_api_v1_checkins_assistanceResponse500 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -677,45 +655,6 @@ export const POST_api_v1_checkins_assist_pressResponse500 = {
     details: {
       type: 'object',
       additionalProperties: true,
-    },
-  },
-} as const;
-
-export const GET_api_v1_checkins_assist_pendingResponse200 = {
-  type: 'object',
-  required: ['items', 'serverTime'],
-  properties: {
-    items: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['deviceId', 'deviceLabel', 'pressedAt', 'expiresAt', 'remainingMs'],
-        properties: {
-          deviceId: {
-            type: 'string',
-          },
-          deviceLabel: {
-            type: 'string',
-          },
-          pressedAt: {
-            type: 'string',
-            format: 'date-time',
-          },
-          expiresAt: {
-            type: 'string',
-            format: 'date-time',
-          },
-          remainingMs: {
-            type: 'integer',
-            minimum: 0,
-          },
-        },
-      },
-    },
-    serverTime: {
-      type: 'string',
-      format: 'date-time',
     },
   },
 } as const;
@@ -723,17 +662,14 @@ export const GET_api_v1_checkins_assist_pendingResponse200 = {
 export const checkinSchemas = {
   VisitCreated,
   TerminalTopic,
-  TerminalAssistPendingItem,
-  TerminalAssistPressed,
   GET_api_v1_checkins_topicsResponse200,
   POST_api_v1_checkinsRequestBody,
   POST_api_v1_checkinsResponse201,
   POST_api_v1_checkinsResponse400,
   POST_api_v1_checkinsResponse409,
   POST_api_v1_checkinsResponse500,
-  POST_api_v1_checkins_assist_pressResponse201,
-  POST_api_v1_checkins_assist_pressResponse400,
-  POST_api_v1_checkins_assist_pressResponse409,
-  POST_api_v1_checkins_assist_pressResponse500,
-  GET_api_v1_checkins_assist_pendingResponse200,
+  POST_api_v1_checkins_assistanceResponse201,
+  POST_api_v1_checkins_assistanceResponse400,
+  POST_api_v1_checkins_assistanceResponse409,
+  POST_api_v1_checkins_assistanceResponse500,
 } as const;

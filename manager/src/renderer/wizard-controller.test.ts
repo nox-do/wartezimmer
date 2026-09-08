@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { TlsPrepareInput } from '../shared/host-status.js';
+import type { HostStatus, TlsPrepareInput } from '../shared/host-status.js';
 import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import { createWizardController, wizardManagedPrepareErrorFooter } from './wizard-controller.js';
 import { TLS_LEASE_STALE_LAN_COPY, TLS_RESET_CONFIRM_MESSAGE } from './tls-network-view-model.js';
@@ -45,6 +45,23 @@ function minimalApplyResult(): import('../shared/host-status.js').ApplySetupResu
       portal: '',
     },
   };
+}
+
+function activeTlsStatus(): HostStatus {
+  return minimalHostStatus({
+    tls: {
+      state: 'active',
+      mode: 'managed',
+      hostname: 'praxis.lan.notaus.de',
+      installationId: 'installation-id',
+      tokenConsumed: true,
+      applyReady: true,
+      cutoverApplied: true,
+      certificate: null,
+      lastError: null,
+      acmeCnameTarget: null,
+    },
+  });
 }
 
 function deferred<T>(): {
@@ -123,6 +140,16 @@ test('wizardBackHidden hides on step 1 and after completion', () => {
       applyResult: minimalApplyResult(),
     }),
     true,
+  );
+
+  const activeTls = activeTlsStatus();
+  assert.equal(
+    wizardIsCompleted({ ...base, step: 8, status: activeTls, applyResult: null }),
+    true,
+  );
+  assert.equal(
+    wizardNextButtonLabel({ ...base, step: 7, status: activeTls }),
+    'Abschließen',
   );
 });
 
@@ -1173,6 +1200,38 @@ test('failed apply on step 8 can be retried without leaving the step', async () 
   assert.equal(controller.getState().step, 8);
   assert.equal(controller.getState().applyResult?.compose?.ok, true);
   assert.equal(controller.getState().error, null);
+});
+
+test('active TLS configuration completes without calling setup plan or apply', async () => {
+  let setupCalls = 0;
+  const controller = createWizardController({
+    api: {
+      fetchSetupPlan: async () => {
+        setupCalls += 1;
+        throw new Error('must not be called');
+      },
+      applySetupPlan: async () => {
+        setupCalls += 1;
+        throw new Error('must not be called');
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+
+  controller.show(activeTlsStatus(), 'embedded');
+  controller.patchFields({ step: 5 });
+  await controller.goNext();
+
+  assert.equal(controller.getState().step, 7);
+  assert.equal(controller.getState().error, null);
+  assert.equal(setupCalls, 0);
+
+  await controller.goNext();
+  assert.equal(controller.getState().step, 8);
+  assert.equal(controller.getState().error, null);
+  assert.equal(wizardIsCompleted(controller.getState()), true);
+  assert.equal(setupCalls, 0);
 });
 
 test('release import still reports a status refresh failure', async () => {

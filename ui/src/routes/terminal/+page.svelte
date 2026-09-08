@@ -3,7 +3,7 @@
   import { resolve } from '$app/paths';
   import { onMount } from 'svelte';
   import { ChevronRight, CreditCard, IdCard, Smartphone, Users } from '@lucide/svelte';
-  import TerminalEmergencyBar from '$lib/components/terminal/TerminalEmergencyBar.svelte';
+  import TerminalAssistanceModal from '$lib/components/terminal/TerminalAssistanceModal.svelte';
   import TerminalPrivacyModal from '$lib/components/terminal/TerminalPrivacyModal.svelte';
   import TerminalWlanPromoBanner from '$lib/components/terminal/TerminalWlanPromoBanner.svelte';
   import TerminalLockedScreen from '$lib/components/terminal/TerminalLockedScreen.svelte';
@@ -12,17 +12,19 @@
     mountPracticeProfileSync,
     practiceDisplayLabel,
   } from '$lib/practice/practice-profile-client';
-  import { t, tf } from '$lib/i18n/i18nStore.svelte';
+  import { locale, t, tf } from '$lib/i18n/i18nStore.svelte';
   import { terminalOps } from '$lib/terminal/terminal-ops-runtime.svelte';
   import {
+    createAssistanceCheckin,
     createCheckin,
     mapCheckinErrorMessage,
   } from '$lib/terminal/terminal-api';
   import { getTerminalPrivacyNotice } from '$lib/privacy/terminal-notice';
-  import { clearAssistMode, writeCheckinResult } from '$lib/terminal/terminal-session';
+  import { writeCheckinResult } from '$lib/terminal/terminal-session';
   import { toastStore } from '$lib/stores/toastStore';
 
   let busy = $state(false);
+  let assistanceConfirmOpen = $state(false);
   let privacyModalOpen = $state(false);
   let practiceProfile = $state(getPracticeProfileFallback());
 
@@ -30,8 +32,6 @@
   const practiceName = $derived(practiceDisplayLabel(practiceProfile, t('terminal.practiceFallback')));
   const loading = $derived(terminalOps.loading);
   const checkinLocked = $derived(terminalOps.checkinLocked);
-  const emergencyEnabled = $derived(terminalOps.emergencyEnabled);
-  const emergencyActive = $derived(terminalOps.emergencyActive);
   const wlanPromoEnabled = $derived(terminalOps.terminalWlanPromoEnabled);
   const authPhoneEnabled = $derived(terminalOps.terminalAuthPhoneEnabled);
   const authNameDobEnabled = $derived(terminalOps.terminalAuthNameDobEnabled);
@@ -46,7 +46,34 @@
     };
   });
 
-  async function onMfaAssist() {
+  async function createAssistance() {
+    if (busy) {
+      return;
+    }
+    busy = true;
+    const result = await createAssistanceCheckin($locale);
+    busy = false;
+    if (!result.ok) {
+      toastStore.error(mapCheckinErrorMessage(result.error.code, result.error.message));
+      return;
+    }
+
+    assistanceConfirmOpen = false;
+    writeCheckinResult({
+      visitId: result.data.visitId,
+      laneCode: result.data.laneCode,
+      number: result.data.number,
+      topicId: 'mfa',
+      topicLabel: t('terminal.assistanceTicketTopic'),
+      destinationRoomLabel: result.data.destinationRoomLabel ?? null,
+      authPath: 'none',
+      createdAt: result.data.createdAt,
+      needsAssistance: true,
+    });
+    void gotoResolved('/terminal/confirmed');
+  }
+
+  async function createReceptionCheckin() {
     if (busy) {
       return;
     }
@@ -54,6 +81,7 @@
     const result = await createCheckin({
       topicId: 'mfa',
       authPath: 'none',
+      patientLocale: $locale,
     });
     busy = false;
     if (!result.ok) {
@@ -61,8 +89,6 @@
       return;
     }
 
-    // Persönliche Anmeldung (Visit M-…) — nicht Assist-Press / needsAssistance (siehe terminal-assist.stub.ts).
-    clearAssistMode();
     writeCheckinResult({
       visitId: result.data.visitId,
       laneCode: result.data.laneCode,
@@ -136,12 +162,7 @@
         </a>
       {/if}
 
-      <button
-        type="button"
-        class="terminal-card"
-        disabled={busy}
-        onclick={onMfaAssist}
-      >
+      <button type="button" class="terminal-card" disabled={busy} onclick={createReceptionCheckin}>
         <span class="terminal-card__icon" aria-hidden="true">
           <Users size={26} />
         </span>
@@ -151,16 +172,33 @@
         </span>
         <ChevronRight class="terminal-card__chevron" aria-hidden="true" />
       </button>
+
+      <button
+        type="button"
+        class="terminal-card terminal-card--assistance"
+        disabled={busy}
+        onclick={() => (assistanceConfirmOpen = true)}
+      >
+        <span class="terminal-card__icon" aria-hidden="true">
+          <Users size={26} />
+        </span>
+        <span class="terminal-card__text">
+          <strong>{t('terminal.assistanceTitle')}</strong>
+          <span>{t('terminal.assistanceSubtitle')}</span>
+        </span>
+        <ChevronRight class="terminal-card__chevron" aria-hidden="true" />
+      </button>
     </div>
 
     {#if wlanPromoEnabled}
       <TerminalWlanPromoBanner />
     {/if}
 
-    {#if emergencyEnabled}
-      <TerminalEmergencyBar emergencyActive={emergencyActive} />
-    {/if}
-
     <TerminalPrivacyModal bind:open={privacyModalOpen} notice={privacyNotice} />
+    <TerminalAssistanceModal
+      bind:open={assistanceConfirmOpen}
+      {busy}
+      onConfirm={() => void createAssistance()}
+    />
   {/if}
 </div>

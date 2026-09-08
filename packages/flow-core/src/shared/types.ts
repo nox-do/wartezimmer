@@ -182,7 +182,7 @@ export interface Visit {
   queueNumberScope: QueueNumberScope;
   queueLaneCode: string;
   queueSequence: number;
-  /** MFA-Markierung: Patient braucht Begleitung — aendert Routing nicht. */
+  /** Persistenter Begleitbedarf; hebt effectiveEscortPolicy auf required und self_go auf pickup. */
   needsAssistance: boolean;
   /** topic = Standard-Check-in; mfa_assist = interner Assist-/Empfangs-Pfad. */
   checkInPath: CheckInPath;

@@ -21,6 +21,8 @@
     callAnnouncementReachable?: boolean;
     /** True when sidebar search/lane filter is active (empty copy). */
     queueFilterActive?: boolean;
+    /** Complex routing keeps in-flight hops separate; simple routing groups them by target room. */
+    separateUnderway?: boolean;
     onCall: (visitId: string) => void;
     onCheckIn: (visitId: string) => void;
     onStart: (visitId: string) => void;
@@ -47,6 +49,7 @@
     nowMs = Date.now(),
     callAnnouncementReachable = true,
     queueFilterActive = false,
+    separateUnderway = true,
     onCall,
     onCheckIn,
     onStart,
@@ -199,6 +202,7 @@
             busy={isBusy(row.item.visitId)}
             callAnnouncementOffline={!callAnnouncementReachable}
             onCall={() => onCall(row.item.visitId)}
+            onCheckIn={() => onCheckIn(row.item.visitId)}
             onMarkAway={() => onMarkAway(row.item.visitId)}
             onCancelVisit={() => onCancelVisit(row.item.visitId)}
             onOpenDocuments={onOpenDocuments}
@@ -284,6 +288,7 @@
       <ActiveRoomBoard
         {active}
         rooms={enabledRooms}
+        {separateUnderway}
         dragEnabled={queueDragEnabled}
         {activeDropTargetId}
         queueDragging={isQueueDragging}

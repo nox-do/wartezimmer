@@ -172,6 +172,19 @@
   cursor: not-allowed;
 }
 
+.terminal-page button.terminal-card--assistance {
+  border-color: var(--amber-warning-border, #d97706);
+  background: var(--amber-warning-bg, #fffbeb);
+}
+
+.terminal-page button.terminal-card--assistance:hover:not(:disabled) {
+  background: var(--amber-warning-bg-soft, #fef3c7);
+}
+
+.terminal-page .terminal-card--assistance .terminal-card__icon {
+  background: var(--amber-warning-ink, #92400e);
+}
+
 .terminal-page .terminal-card__icon {
   display: flex;
   align-items: center;

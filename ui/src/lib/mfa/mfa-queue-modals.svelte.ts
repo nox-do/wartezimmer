@@ -35,12 +35,21 @@ export type CheckOutTicket = {
   purpose: 'checkout' | 'cancel';
 };
 
+export type AssistancePlacementTicket = {
+  visitId: string;
+  laneCode: string;
+  number: number;
+  roomId: string;
+  roomLabel: string;
+};
+
 export const mfaQueueActions = $state({
   busyVisitId: null as string | null,
   phoneCorrectionVisit: null as PhoneCorrectionTicket | null,
   reassignVisit: null as ReassignTicket | null,
   supersedeVisit: null as SupersedeTicket | null,
   checkOutVisit: null as CheckOutTicket | null,
+  assistancePlacementVisit: null as AssistancePlacementTicket | null,
 });
 
 export function resetMfaQueueActions() {
@@ -49,6 +58,7 @@ export function resetMfaQueueActions() {
   mfaQueueActions.reassignVisit = null;
   mfaQueueActions.supersedeVisit = null;
   mfaQueueActions.checkOutVisit = null;
+  mfaQueueActions.assistancePlacementVisit = null;
 }
 
 function queueItem(visitId: string) {
@@ -179,4 +189,25 @@ export function handleMfaCancelVisit(visitId: string) {
 
 export function cancelMfaCheckOut() {
   mfaQueueActions.checkOutVisit = null;
+}
+
+export function openMfaAssistancePlacement(
+  visitId: string,
+  room: { roomId: string; roomLabel: string },
+) {
+  const item = queueItem(visitId);
+  if (!item) {
+    return;
+  }
+  mfaQueueActions.assistancePlacementVisit = {
+    visitId: item.visitId,
+    laneCode: item.laneCode,
+    number: item.number,
+    roomId: room.roomId,
+    roomLabel: room.roomLabel,
+  };
+}
+
+export function cancelMfaAssistancePlacement() {
+  mfaQueueActions.assistancePlacementVisit = null;
 }

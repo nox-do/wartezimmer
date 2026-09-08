@@ -5,6 +5,12 @@
   import TopicEditorModal from '$lib/components/mfa/TopicEditorModal.svelte';
   import TopicSortableRow from '$lib/components/mfa/TopicSortableRow.svelte';
   import { DEFAULT_TOPIC_ACCENT } from '$lib/topics/topic-accent';
+  import {
+    MFA_ASSIST_LANE_CODE,
+    MFA_ASSIST_TOPIC_ID,
+    WAITING_ROOM_LABEL,
+    WAITING_ROOM_LOCATION_ID,
+  } from '@praxis-flow/domain';
   import type { JourneyTemplateSetting } from '$lib/ops/openapi-types';
   import type { RoutingCapabilities } from '$lib/mfa/practice-ops-api';
   import type { PracticeRoom, PracticeTopicSetting } from '$lib/queue/ops-settings-api';
@@ -16,7 +22,10 @@
     readTopicIdFromSortTargetId,
     topicSortInsertBeforeIndex,
   } from '$lib/queue/topic-sort-drop';
-  import { topicTimeWindowLabel } from '$lib/queue/ops-settings-api';
+  import {
+    resolveDefaultCallRoomId,
+    topicTimeWindowLabel,
+  } from '$lib/queue/ops-settings-api';
   import { roomLabelById } from '$lib/queue/topic-settings-form';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
 
@@ -59,6 +68,25 @@
   const complexRoutingVisible = $derived(
     routingCapabilities?.features.complexRouting === true && routingCapabilities?.routingMode === 'complex',
   );
+  const systemTopicTargetId = $derived(
+    resolveDefaultCallRoomId(enabledRooms) ?? WAITING_ROOM_LOCATION_ID,
+  );
+  const systemTopic = $derived({
+    topicId: MFA_ASSIST_TOPIC_ID,
+    label: t('terminal.authMfaTitle'),
+    laneCode: MFA_ASSIST_LANE_CODE,
+    iconId: null,
+    accentColor: '#2563eb',
+    enabled: true,
+  });
+  const systemTopicMeta = $derived.by(() => {
+    const targetId = systemTopicTargetId;
+    const targetLabel =
+      targetId === WAITING_ROOM_LOCATION_ID
+        ? WAITING_ROOM_LABEL
+        : (enabledRooms.find((room) => room.roomId === targetId)?.roomLabel ?? targetId);
+    return `${tf('mfa.settings.topicMetaLane', { lane: MFA_ASSIST_LANE_CODE })} · ${targetLabel} · ${t('mfa.settings.topicSystemHint')}`;
+  });
 
   const sortLineOffsetPx = $derived.by(() => {
     const insertBefore = sortInsertBeforeIndex;
@@ -271,42 +299,39 @@
     </Button>
   </div>
 
-  {#if topics.length === 0}
-    <p class="mfa-editor-empty">{t('mfa.settings.topicsEmpty')}</p>
-  {:else}
-    <DragDropProvider
-      sensors={sortDragSensors}
-      onDragStart={handleSortDragStart}
-      onDragOver={handleSortDragOver}
-      onDragEnd={(event) => void handleSortDragEnd(event)}
+  <DragDropProvider
+    sensors={sortDragSensors}
+    onDragStart={handleSortDragStart}
+    onDragOver={handleSortDragOver}
+    onDragEnd={(event) => void handleSortDragEnd(event)}
+  >
+    <ul
+      bind:this={sortListRef}
+      class="mfa-editor-list"
+      class:mfa-editor-list--sorting={isSortDragging}
+      role="list"
     >
-      <ul
-        bind:this={sortListRef}
-        class="mfa-editor-list"
-        class:mfa-editor-list--sorting={isSortDragging}
-        role="list"
-      >
-        {#if sortLineOffsetPx != null}
-          <li
-            class="mfa-editor-sort-line"
-            style:top="{sortLineOffsetPx}px"
-            aria-hidden="true"
-          ></li>
-        {/if}
-        {#each topics as topic, index (topic.topicId)}
-          <TopicSortableRow
-            {topic}
-            {index}
-            topicMeta={topicMeta(topic)}
-            {busy}
-            dragEnabled={sortDragEnabled}
-            sortDragging={isSortDragging}
-            onEdit={() => openEdit(index)}
-          />
-        {/each}
-      </ul>
-    </DragDropProvider>
-  {/if}
+      <TopicSortableRow topic={systemTopic} index={-1} topicMeta={systemTopicMeta} persistent />
+      {#if sortLineOffsetPx != null}
+        <li
+          class="mfa-editor-sort-line"
+          style:top="{sortLineOffsetPx}px"
+          aria-hidden="true"
+        ></li>
+      {/if}
+      {#each topics as topic, index (topic.topicId)}
+        <TopicSortableRow
+          {topic}
+          {index}
+          topicMeta={topicMeta(topic)}
+          {busy}
+          dragEnabled={sortDragEnabled}
+          sortDragging={isSortDragging}
+          onEdit={() => openEdit(index)}
+        />
+      {/each}
+    </ul>
+  </DragDropProvider>
 
   <p class="panel panel--sm panel--flat panel--muted">{t('mfa.settings.topicsReorderHint')}</p>
   <p class="panel panel--sm panel--flat panel--muted">{t('mfa.settings.topicsCounterHint')}</p>

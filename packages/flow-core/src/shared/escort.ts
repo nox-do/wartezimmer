@@ -15,8 +15,13 @@ export function maxEscortPolicy(...policies: EscortPolicy[]): EscortPolicy {
   return best;
 }
 
-export function effectiveEscortPolicy(configuredEscortPolicy: EscortPolicy): EscortPolicy {
-  return configuredEscortPolicy;
+export function effectiveEscortPolicy(
+  configuredEscortPolicy: EscortPolicy,
+  needsAssistance = false,
+): EscortPolicy {
+  return needsAssistance
+    ? maxEscortPolicy(configuredEscortPolicy, 'required')
+    : configuredEscortPolicy;
 }
 
 /** EscortPolicy required verhindert self_go — operativ immer pickup. */

@@ -17,8 +17,8 @@ export type ActiveRoomBoard = {
   unassigned: QueueItem[];
 };
 
-function ticketRoomId(item: QueueItem): string | null {
-  const roomId = item.roomId?.trim();
+function ticketRoomId(item: QueueItem, includeDestination: boolean): string | null {
+  const roomId = item.roomId?.trim() || (includeDestination ? item.destinationRoomId?.trim() : '');
   return roomId ? roomId : null;
 }
 
@@ -26,6 +26,7 @@ function ticketRoomId(item: QueueItem): string | null {
 export function buildActiveRoomBoard(
   active: QueueItem[],
   enabledRooms: PracticeRoom[],
+  separateUnderway = true,
 ): ActiveRoomBoard {
   const roomIds = new Set(enabledRooms.map((room) => room.roomId));
   const ticketsByRoomId = new Map<string, QueueItem[]>();
@@ -38,12 +39,14 @@ export function buildActiveRoomBoard(
   const underway: QueueItem[] = [];
 
   for (const item of active) {
-    if (item.status === 'called' || item.status === 'directed') {
+    const isUnderway = item.status === 'called' || item.status === 'directed';
+    const roomId = ticketRoomId(item, isUnderway);
+    const hasConfiguredRoom = Boolean(roomId && roomIds.has(roomId));
+    if (separateUnderway && isUnderway && hasConfiguredRoom) {
       underway.push(item);
       continue;
     }
-    const roomId = ticketRoomId(item);
-    if (roomId && roomIds.has(roomId)) {
+    if (roomId && hasConfiguredRoom) {
       ticketsByRoomId.get(roomId)?.push(item);
       continue;
     }

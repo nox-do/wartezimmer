@@ -1,5 +1,4 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { ensureTerminalAssistPendingSchema } from '../checkin/terminal-assist-pending.js';
 import { ensureFlowCoreSchema } from '../flow-core/flow-core-schema.js';
 import { ensureAuthSettingsSchema } from './database-auth-settings.js';
 import { ensureOpsSetupSchema } from './database-ops-setup.js';
@@ -55,14 +54,13 @@ export function assertForeignKeyIntegrity(db: DatabaseSync): void {
 /** Release A transition path for legacy databases (user_version 0). */
 export function runTransitionSchemaEnsures(db: DatabaseSync): void {
   ensureOpsSetupSchema(db);
-  ensureTerminalAssistPendingSchema(db);
   ensureAuthSettingsSchema(db);
   ensureFlowCoreSchema(db);
 }
 
 /**
  * Canonical fresh-database schema: app baseline, flow-core, portal FKs, host-state,
- * terminal-assist, auth defaults. Sets `PRAGMA user_version` and validates FK integrity.
+ * auth defaults. Sets `PRAGMA user_version` and validates FK integrity.
  */
 export function createCurrentSchema(db: DatabaseSync): void {
   runMigrations(db);

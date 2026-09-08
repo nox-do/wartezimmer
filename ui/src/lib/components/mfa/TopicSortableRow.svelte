@@ -7,14 +7,20 @@
   import { topicSortDragId, topicSortTargetId } from '$lib/queue/topic-sort-drop';
   import { t } from '$lib/i18n/i18nStore.svelte';
 
+  type TopicRow = Pick<
+    PracticeTopicSetting,
+    'topicId' | 'label' | 'laneCode' | 'iconId' | 'accentColor' | 'enabled'
+  >;
+
   interface Props {
-    topic: PracticeTopicSetting;
+    topic: TopicRow;
     index: number;
     topicMeta: string;
     busy?: boolean;
     dragEnabled?: boolean;
     sortDragging?: boolean;
-    onEdit: () => void;
+    persistent?: boolean;
+    onEdit?: () => void;
   }
 
   let {
@@ -24,6 +30,7 @@
     busy = false,
     dragEnabled = false,
     sortDragging = false,
+    persistent = false,
     onEdit,
   }: Props = $props();
 
@@ -94,11 +101,16 @@
     </div>
   </div>
   <div class="mfa-editor-list-item__actions">
+    {#if persistent}
+      <span class="pill pill--caps pill--ok">{t('mfa.settings.topicPersistent')}</span>
+    {/if}
     {#if !topic.enabled}
       <span class="pill pill--caps">{t('mfa.settings.topicInactive')}</span>
     {/if}
-    <Button variant="outline" size="sm" disabled={busy} onclick={onEdit}>
-      {t('mfa.settings.topicEdit')}
-    </Button>
+    {#if onEdit}
+      <Button variant="outline" size="sm" disabled={busy} onclick={onEdit}>
+        {t('mfa.settings.topicEdit')}
+      </Button>
+    {/if}
   </div>
 </li>

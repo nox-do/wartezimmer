@@ -116,21 +116,6 @@ import {
   scheduleRecallWindowExpiry,
 } from '../queue/recall-window-expiry-scheduler.js';
 import {
-  cancelTerminalAssistPendingExpiry,
-  clearAllTerminalAssistPendingExpiries,
-  scheduleTerminalAssistPendingExpiry,
-} from '../checkin/terminal-assist-pending-expiry-scheduler.js';
-import {
-  clearAllTerminalAssistPending,
-  clearTerminalAssistPending,
-  expireTerminalAssistPending,
-  getTerminalAssistPending as getTerminalAssistPendingRow,
-  isTerminalAssistPendingActive,
-  listActiveTerminalAssistPending,
-  upsertTerminalAssistPending,
-  type TerminalAssistPendingRow,
-} from '../checkin/terminal-assist-pending.js';
-import {
   resolveMarkAbsenceTicket,
   type MarkAbsenceLookupDeps,
   type MarkAbsenceLookupInput,
@@ -167,7 +152,6 @@ import {
   setCheckinLockInDb,
   submitPatientSessionInDb,
   verifyTicketCodeInDb,
-  assertTerminalAssistPressAllowed,
   type CheckinSessionDeps,
 } from './database-checkin-sessions.js';
 import {
@@ -642,47 +626,6 @@ export class CoreDatabase {
     );
   }
 
-  pressTerminalAssist(deviceId: string): TerminalAssistPendingRow {
-    const row = this.withTransaction('pressTerminalAssist', () => {
-      assertTerminalAssistPressAllowed(this.checkinSessionDeps());
-      return upsertTerminalAssistPending(this.db, deviceId);
-    });
-    scheduleTerminalAssistPendingExpiry(this, row.deviceId, Date.parse(row.expiresAt));
-    return row;
-  }
-
-  releaseTerminalAssist(deviceId: string): boolean {
-    const cleared = this.withTransaction('releaseTerminalAssist', () =>
-      clearTerminalAssistPending(this.db, deviceId),
-    );
-    cancelTerminalAssistPendingExpiry(deviceId);
-    return cleared;
-  }
-
-  getTerminalAssistPending(deviceId: string, nowMs = Date.now()): TerminalAssistPendingRow | null {
-    return getTerminalAssistPendingRow(this.db, deviceId, nowMs);
-  }
-
-  listActiveTerminalAssistPending(nowMs = Date.now()): TerminalAssistPendingRow[] {
-    return listActiveTerminalAssistPending(this.db, nowMs);
-  }
-
-  isTerminalAssistPendingActive(deviceId: string, nowMs = Date.now()): boolean {
-    return isTerminalAssistPendingActive(this.db, deviceId, nowMs);
-  }
-
-  expireTerminalAssistPending(deviceId: string, nowMs = Date.now()): boolean {
-    return expireTerminalAssistPending(this.db, deviceId, nowMs);
-  }
-
-  clearAllTerminalAssistPending(): number {
-    const cleared = this.withTransaction('clearAllTerminalAssistPending', () =>
-      clearAllTerminalAssistPending(this.db),
-    );
-    clearAllTerminalAssistPendingExpiries();
-    return cleared;
-  }
-
   resolvePatientSession(ticketCode: string, ttlMinutes = 30): SessionResolveResult {
     return this.withTransaction('resolvePatientSession', () =>
       resolvePatientSessionInDb(this.checkinSessionDeps(), ticketCode, ttlMinutes),
@@ -931,13 +874,81 @@ export class CoreDatabase {
     return this.withTransaction('checkInRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const transition = arriveVisit(
-        this.db,
-        getFlowCoreRuntime(this.db),
-        visitId,
-        actingRoomId,
-        actorId,
-      );
+      const runtime = getFlowCoreRuntime(this.db);
+      const requestedRoomId = roomId?.trim();
+      const settings = requestedRoomId ? this.getOpsSettings() : undefined;
+      let currentVisit = runtime.visits().find((visit) => visit.id === visitId);
+      let journeyTransition: { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } | null =
+        null;
+
+      // An MFA drop onto a room is stronger than a plain target reassignment: staff
+      // confirms that the patient is physically there. Retarget and arrive in the same
+      // outer transaction so assisted pickup and underway tickets cannot stop halfway.
+      if (requestedRoomId && settings && currentVisit?.journeyStepCompletedAt) {
+        journeyTransition = continueJourneyVisit(
+          runtime,
+          settings,
+          () => this.listQueue(),
+          visitId,
+          requestedRoomId,
+          actorId,
+        );
+        currentVisit = runtime.visits().find((visit) => visit.id === visitId);
+      }
+      if (
+        requestedRoomId &&
+        settings &&
+        currentVisit &&
+        currentVisit.targetLocationId !== requestedRoomId
+      ) {
+        if (currentVisit.status === 'waiting' && currentVisit.movementMode === 'call') {
+          // Assisted DnD from the waiting room selects the destination and confirms
+          // the accompanied arrival in one transaction, without exposing transit.
+          callVisit(
+            this.db,
+            runtime,
+            settings,
+            () => this.listQueue(),
+            visitId,
+            requestedRoomId,
+            roomLabel,
+            actorId,
+          );
+        } else {
+          reassignVisitRoom(
+            this.db,
+            runtime,
+            settings,
+            () => this.listQueue(),
+            visitId,
+            requestedRoomId,
+            roomLabel,
+            actorId,
+          );
+        }
+        currentVisit = runtime.visits().find((visit) => visit.id === visitId);
+      }
+      if (
+        requestedRoomId &&
+        settings &&
+        currentVisit?.status === 'waiting' &&
+        currentVisit.movementMode === 'call'
+      ) {
+        callVisit(
+          this.db,
+          runtime,
+          settings,
+          () => this.listQueue(),
+          visitId,
+          requestedRoomId,
+          roomLabel,
+          actorId,
+        );
+      }
+      const transition =
+        journeyTransition && currentVisit?.status === 'arrived'
+          ? journeyTransition
+          : arriveVisit(this.db, runtime, visitId, actingRoomId, actorId);
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
         fromStatus: transition.fromStatus,
@@ -971,21 +982,33 @@ export class CoreDatabase {
     });
   }
 
-  continueJourney(visitId: string): {
+  continueJourney(
+    visitId: string,
+    roomId?: string,
+    roomLabel?: string,
+    actorId?: string,
+  ): {
     fromStatus: QueueDisplayStatus;
     toStatus: QueueDisplayStatus;
   } {
     return this.withTransaction('continueJourney', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const transition = continueJourneyVisit(getFlowCoreRuntime(this.db), visitId);
+      const transition = continueJourneyVisit(
+        getFlowCoreRuntime(this.db),
+        this.getOpsSettings(),
+        () => this.listQueue(),
+        visitId,
+        roomId,
+        actorId,
+      );
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
         fromStatus: transition.fromStatus,
         toStatus: transition.toStatus,
         updatedAt,
-        roomId: null,
-        roomLabel: null,
+        roomId: roomId ?? null,
+        roomLabel: roomLabel ?? null,
       });
       return transition;
     });
@@ -1641,12 +1664,10 @@ export class CoreDatabase {
   } {
     const result = this.withTransaction('resetBusinessDay', () => {
       const resetResult = resetBusinessDayInDb(this.dayLifecycleDeps());
-      clearAllTerminalAssistPending(this.db);
       clearFlowCoreVisitRuntime(this.db);
       resetFlowCoreRuntimeForTests();
       return resetResult;
     });
-    clearAllTerminalAssistPendingExpiries();
     clearAllRecallWindowExpiries();
     return result;
   }
@@ -1658,12 +1679,10 @@ export class CoreDatabase {
   executeRuntimeReset(): RuntimeResetResult {
     const result = this.withTransaction('executeRuntimeReset', () => {
       const resetResult = executeRuntimeResetInDb(this.runtimeResetDeps());
-      clearAllTerminalAssistPending(this.db);
       clearFlowCoreVisitRuntime(this.db);
       resetFlowCoreRuntimeForTests();
       return resetResult;
     });
-    clearAllTerminalAssistPendingExpiries();
     clearAllRecallWindowExpiries();
     return result;
   }

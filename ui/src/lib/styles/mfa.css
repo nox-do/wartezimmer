@@ -172,7 +172,7 @@ button.queue-ticket {
 .queue-assist-mark {
   display: inline-flex;
   align-items: center;
-  color: var(--blue-700, #1d4ed8);
+  color: var(--amber-700, #b45309);
 }
 
 .queue-directed-mark {

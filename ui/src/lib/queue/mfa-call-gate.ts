@@ -1,11 +1,13 @@
+import { isWaitingRoomLocationId } from '@praxis-flow/domain';
 import type { QueueItem } from './types';
 
 export type MfaCallGateInput = Pick<
   QueueItem,
-  'status' | 'movementMode' | 'destinationRoomLabel' | 'roomLabel'
+  'status' | 'movementMode' | 'destinationRoomId' | 'destinationRoomLabel' | 'roomLabel'
 >;
 
 export type MfaCallBlockedReason =
+  | { kind: 'room_required' }
   | { kind: 'directed'; roomLabel: string | null }
   | { kind: 'pickup'; roomLabel: string | null }
   | { kind: 'other' };
@@ -14,11 +16,33 @@ export type MfaCallBlockedReason =
  * MFA Aufrufen only for patients waiting on a call hop.
  * directed/self_go and pickup stay visible; Call is shown disabled with a reason.
  */
-export function canMfaCallVisit(item: Pick<QueueItem, 'status' | 'movementMode'>): boolean {
+export function canMfaCallTransition(item: Pick<QueueItem, 'status' | 'movementMode'>): boolean {
   if (item.status !== 'waiting') {
     return false;
   }
   return item.movementMode === 'call' || item.movementMode == null;
+}
+
+/** One-click Call can only use a concrete route target; DnD supplies its own room. */
+export function canMfaCallVisit(
+  item: Pick<QueueItem, 'status' | 'movementMode' | 'destinationRoomId'>,
+): boolean {
+  const destinationRoomId = item.destinationRoomId?.trim();
+  return (
+    canMfaCallTransition(item) &&
+    Boolean(destinationRoomId) &&
+    !isWaitingRoomLocationId(destinationRoomId)
+  );
+}
+
+export function isMfaPickupActionPending(
+  item: Pick<QueueItem, 'status' | 'movementMode' | 'escortTransferPending'>,
+): boolean {
+  return (
+    item.movementMode === 'pickup' &&
+    (item.status === 'waiting' ||
+      (item.status === 'in_room' && item.escortTransferPending === true))
+  );
 }
 
 function roomLabelOf(item: MfaCallGateInput): string | null {
@@ -30,6 +54,9 @@ function roomLabelOf(item: MfaCallGateInput): string | null {
 export function resolveMfaCallBlockedReason(item: MfaCallGateInput): MfaCallBlockedReason | null {
   if (canMfaCallVisit(item)) {
     return null;
+  }
+  if (canMfaCallTransition(item)) {
+    return { kind: 'room_required' };
   }
   if (item.status === 'directed' || item.movementMode === 'self_go') {
     return { kind: 'directed', roomLabel: roomLabelOf(item) };

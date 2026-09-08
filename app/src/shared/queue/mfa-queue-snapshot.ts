@@ -1,8 +1,4 @@
 import type { CoreDatabase } from '../db/database.js';
-import {
-  toAssistPendingItem,
-  type TerminalAssistPendingItem,
-} from '../checkin/terminal-assist-pending.js';
 
 export type MfaQueueSnapshot = {
   revision: number;
@@ -33,12 +29,20 @@ export type MfaQueueSnapshot = {
     returnUntil: string | null;
     triageLevel: string | null;
     needsAssistance: boolean;
+    terminalAssistancePending: boolean;
+    escortTransferPending: boolean;
     movementMode: 'call' | 'self_go' | 'pickup' | null;
   }>;
-  assistPending: TerminalAssistPendingItem[];
   checkinLocked: boolean;
   serverTime: string;
 };
+
+export function mfaQueueSnapshotStatus(item: {
+  status: string;
+  escortTransferPending: boolean;
+}): string {
+  return item.escortTransferPending ? 'in_room' : item.status;
+}
 
 export function buildMfaQueueSnapshot(
   db: CoreDatabase,
@@ -63,7 +67,7 @@ export function buildMfaQueueSnapshot(
       topicLabel: item.topicLabel,
       destinationRoomId: item.destinationRoomId,
       destinationRoomLabel: item.destinationRoomLabel,
-      status: item.status,
+      status: mfaQueueSnapshotStatus(item),
       roomId: item.roomId,
       roomLabel: item.roomLabel,
       journeyStepCompletedAt: item.journeyStepCompletedAt,
@@ -81,19 +85,16 @@ export function buildMfaQueueSnapshot(
       returnUntil,
       triageLevel: item.triageLevel?.trim() || null,
       needsAssistance: item.needsAssistance,
+      terminalAssistancePending: item.terminalAssistancePending,
+      escortTransferPending: item.escortTransferPending,
       movementMode: item.movementMode ?? null,
     };
   });
-
-  const assistPending = db
-    .listActiveTerminalAssistPending(nowMs)
-    .map((row) => toAssistPendingItem(row, nowMs));
 
   return {
     revision,
     view: 'mfa',
     items,
-    assistPending,
     checkinLocked: db.isEffectiveCheckinLocked(),
     serverTime: new Date(nowMs).toISOString(),
   };

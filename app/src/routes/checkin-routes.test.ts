@@ -7,7 +7,6 @@ import { registerCheckinRoutes } from './checkin-routes.js';
 function fakeCheckinDb(overrides?: {
   terminalAuthPhoneEnabled?: boolean;
   terminalAuthNameDobEnabled?: boolean;
-  isTerminalAssistPendingActive?: () => boolean;
   onCreateTicket?: (input: {
     topicId: string;
     identityRef?: string;
@@ -15,7 +14,6 @@ function fakeCheckinDb(overrides?: {
     checkinLocale?: string | null;
     needsAssistance?: boolean;
   }) => void;
-  onReleaseTerminalAssist?: () => void;
 }): CoreDatabase {
   return {
     getOpsSettings: () => ({
@@ -56,17 +54,6 @@ function fakeCheckinDb(overrides?: {
         destinationRoomLabel: 'Empfang',
       };
     },
-    isTerminalAssistPendingActive: overrides?.isTerminalAssistPendingActive ?? (() => false),
-    releaseTerminalAssist: () => {
-      overrides?.onReleaseTerminalAssist?.();
-      return true;
-    },
-    pressTerminalAssist: () => ({
-      deviceId: 'checkin-terminal',
-      pressedAt: '2026-06-17T12:00:00.000Z',
-      expiresAt: '2026-06-17T12:00:10.000Z',
-    }),
-    listActiveTerminalAssistPending: () => [],
   } as unknown as CoreDatabase;
 }
 
@@ -232,35 +219,6 @@ test('POST /api/v1/checkins rejects unknown auth path', async () => {
   await app.close();
 });
 
-test('POST /api/v1/checkins sets needsAssistance when terminal assist press is active', async () => {
-  let capturedNeedsAssistance: boolean | undefined;
-  const app = Fastify({ logger: false });
-  registerCheckinRoutes(
-    app,
-    fakeCheckinDb({
-      isTerminalAssistPendingActive: () => true,
-      onCreateTicket: (input) => {
-        capturedNeedsAssistance = input.needsAssistance;
-      },
-    }),
-  );
-
-  await app.ready();
-  const response = await app.inject({
-    method: 'POST',
-    url: '/api/v1/checkins',
-    payload: {
-      topicId: 'offen',
-      authPath: 'phone_dob',
-      phoneNumber: '+4915123456789',
-    },
-  });
-
-  assert.equal(response.statusCode, 201);
-  assert.equal(capturedNeedsAssistance, true);
-  await app.close();
-});
-
 test('POST /api/v1/checkins accepts none auth path for direct MFA topic check-in', async () => {
   let capturedAuthPath: string | undefined;
   let capturedTopicId: string | undefined;
@@ -290,6 +248,33 @@ test('POST /api/v1/checkins accepts none auth path for direct MFA topic check-in
   assert.equal(response.statusCode, 201);
   assert.equal(capturedAuthPath, 'none');
   assert.equal(capturedTopicId, 'mfa');
-  assert.equal(capturedNeedsAssistance, false);
+  assert.equal(capturedNeedsAssistance, undefined);
+  await app.close();
+});
+
+test('POST /api/v1/checkins/assistance creates an M ticket with Assistance-Flag', async () => {
+  let capturedTopicId: string | undefined;
+  let capturedNeedsAssistance: boolean | undefined;
+  const app = Fastify({ logger: false });
+  registerCheckinRoutes(
+    app,
+    fakeCheckinDb({
+      onCreateTicket: (input) => {
+        capturedTopicId = input.topicId;
+        capturedNeedsAssistance = input.needsAssistance;
+      },
+    }),
+  );
+
+  await app.ready();
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/checkins/assistance',
+  });
+
+  assert.equal(response.statusCode, 201);
+  assert.equal(response.json().laneCode, 'M');
+  assert.equal(capturedTopicId, 'mfa');
+  assert.equal(capturedNeedsAssistance, true);
   await app.close();
 });
