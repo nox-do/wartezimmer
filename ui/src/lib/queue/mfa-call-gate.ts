@@ -1,4 +1,5 @@
 import { isWaitingRoomLocationId } from '@praxis-flow/domain';
+import type { PracticeRoom } from './ops-settings-api';
 import type { QueueItem } from './types';
 
 export type MfaCallGateInput = Pick<
@@ -26,12 +27,14 @@ export function canMfaCallTransition(item: Pick<QueueItem, 'status' | 'movementM
 /** One-click Call can only use a concrete route target; DnD supplies its own room. */
 export function canMfaCallVisit(
   item: Pick<QueueItem, 'status' | 'movementMode' | 'destinationRoomId'>,
+  rooms: readonly Pick<PracticeRoom, 'roomId' | 'enabled'>[],
 ): boolean {
   const destinationRoomId = item.destinationRoomId?.trim();
   return (
     canMfaCallTransition(item) &&
     Boolean(destinationRoomId) &&
-    !isWaitingRoomLocationId(destinationRoomId)
+    !isWaitingRoomLocationId(destinationRoomId) &&
+    rooms.some((room) => room.enabled && room.roomId === destinationRoomId)
   );
 }
 
@@ -51,8 +54,11 @@ function roomLabelOf(item: MfaCallGateInput): string | null {
 }
 
 /** Null when Call is allowed; otherwise why it is blocked + what to do instead. */
-export function resolveMfaCallBlockedReason(item: MfaCallGateInput): MfaCallBlockedReason | null {
-  if (canMfaCallVisit(item)) {
+export function resolveMfaCallBlockedReason(
+  item: MfaCallGateInput,
+  rooms: readonly Pick<PracticeRoom, 'roomId' | 'enabled'>[],
+): MfaCallBlockedReason | null {
+  if (canMfaCallVisit(item, rooms)) {
     return null;
   }
   if (canMfaCallTransition(item)) {

@@ -1,9 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
-  canMfaCallVisit,
+  canMfaCallVisit as canMfaCallVisitWithRooms,
   isMfaPickupActionPending,
-  resolveMfaCallBlockedReason,
+  resolveMfaCallBlockedReason as resolveMfaCallBlockedReasonWithRooms,
 } from './mfa-call-gate';
+
+const rooms = [
+  { roomId: 'labor', enabled: true },
+  { roomId: 'deaktiviert', enabled: false },
+];
+
+const canMfaCallVisit = (item: Parameters<typeof canMfaCallVisitWithRooms>[0]) =>
+  canMfaCallVisitWithRooms(item, rooms);
+
+const resolveMfaCallBlockedReason = (
+  item: Parameters<typeof resolveMfaCallBlockedReasonWithRooms>[0],
+) => resolveMfaCallBlockedReasonWithRooms(item, rooms);
 
 describe('canMfaCallVisit', () => {
   it('allows call for waiting + call', () => {
@@ -32,6 +44,23 @@ describe('canMfaCallVisit', () => {
         status: 'waiting',
         movementMode: 'call',
         destinationRoomId: 'pf_waiting',
+      }),
+    ).toBe(false);
+  });
+
+  it('requires DnD when the stored target is missing or disabled', () => {
+    expect(
+      canMfaCallVisit({
+        status: 'waiting',
+        movementMode: 'call',
+        destinationRoomId: 'geloescht',
+      }),
+    ).toBe(false);
+    expect(
+      canMfaCallVisit({
+        status: 'waiting',
+        movementMode: 'call',
+        destinationRoomId: 'deaktiviert',
       }),
     ).toBe(false);
   });

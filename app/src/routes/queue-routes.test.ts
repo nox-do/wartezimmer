@@ -67,6 +67,7 @@ function buildQueueRouteDb(overrides: QueueRouteDbOverrides = {}): CoreDatabase 
     }),
     getOpsState: () => ({ checkinLocked: false, dayClosePhase: 'open' }),
     callVisit: () => transition('waiting', 'called'),
+    placeVisitInRoom: () => transition('waiting', 'in_room'),
     reassignRoom: () => transition('called', 'called'),
     setAbsence: () => transition('waiting', 'absent_wait_here'),
     recallVisit: () => ({
@@ -113,6 +114,82 @@ test('POST /api/v1/queue/:visitId/transition dispatches call transitions with ro
 
   await app.close();
   resetDevicePresenceForTests();
+});
+
+test('staff check_in_room uses explicit placement and returns its composite status', async () => {
+  const placements: Array<{ visitId: string; roomId: string; roomLabel?: string }> = [];
+  const app = Fastify({ logger: false });
+  registerQueueRoutes(
+    app,
+    buildQueueRouteDb({
+      placeVisitInRoom: (visitId: string, roomId: string, roomLabel?: string) => {
+        placements.push({ visitId, roomId, roomLabel });
+        return {
+          ...transition('waiting', 'in_room'),
+          roomId: 'labor',
+          roomLabel: 'Labor aktuell',
+        };
+      },
+    }),
+  );
+  await app.ready();
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/queue/A-001/transition',
+    payload: { type: 'check_in_room', roomId: 'labor', roomLabel: 'Veralteter Name' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().fromStatus, 'waiting');
+  assert.equal(response.json().toStatus, 'in_room');
+  assert.equal(response.json().roomId, 'labor');
+  assert.equal(response.json().roomLabel, 'Labor aktuell');
+  assert.deepEqual(placements, [
+    { visitId: 'A-001', roomId: 'labor', roomLabel: 'Veralteter Name' },
+  ]);
+
+  await app.close();
+});
+
+test('staff waiting-room arrival scopes the simple check-in path to pf_waiting', async () => {
+  const checkIns: Array<{ visitId: string; actingRoomId?: string; actorId?: string }> = [];
+  let placementCalled = false;
+  const app = Fastify({ logger: false });
+  registerQueueRoutes(
+    app,
+    buildQueueRouteDb({
+      checkInRoom: (visitId: string, actingRoomId?: string, actorId?: string) => {
+        checkIns.push({ visitId, actingRoomId, actorId });
+        return transition('waiting', 'waiting');
+      },
+      placeVisitInRoom: () => {
+        placementCalled = true;
+        return transition('waiting', 'in_room');
+      },
+    }),
+  );
+  await app.ready();
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/queue/M-001/transition',
+    payload: {
+      type: 'check_in_room',
+      roomId: 'pf_waiting',
+      roomLabel: 'Wartezimmer',
+      actingRoomId: 'labor',
+    },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().roomId, 'pf_waiting');
+  assert.deepEqual(checkIns, [
+    { visitId: 'M-001', actingRoomId: 'pf_waiting', actorId: undefined },
+  ]);
+  assert.equal(placementCalled, false);
+
+  await app.close();
 });
 
 test('GET /api/v1/queue rejects room-panel sessions after placement changes', async () => {
@@ -420,9 +497,8 @@ test('legacy per-action queue ticket routes are removed', async () => {
 test('room-panel transition uses session room for check_in_room and ignores body actingRoomId', async () => {
   const checkIns: Array<{
     visitId: string;
-    roomId?: string;
-    roomLabel?: string;
     actingRoomId?: string;
+    actorId?: string;
   }> = [];
   const app = Fastify({ logger: false });
   app.addHook('preHandler', async (request) => {
@@ -442,13 +518,8 @@ test('room-panel transition uses session room for check_in_room and ignores body
   registerQueueRoutes(
     app,
     buildQueueRouteDb({
-      checkInRoom: (
-        visitId: string,
-        roomId?: string,
-        roomLabel?: string,
-        actingRoomId?: string,
-      ) => {
-        checkIns.push({ visitId, roomId, roomLabel, actingRoomId });
+      checkInRoom: (visitId: string, actingRoomId?: string, actorId?: string) => {
+        checkIns.push({ visitId, actingRoomId, actorId });
         return transition('called', 'in_room');
       },
     }),
@@ -462,9 +533,7 @@ test('room-panel transition uses session room for check_in_room and ignores body
   });
 
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(checkIns, [
-    { visitId: 'A-001', roomId: undefined, roomLabel: undefined, actingRoomId: 'labor' },
-  ]);
+  assert.deepEqual(checkIns, [{ visitId: 'A-001', actingRoomId: 'labor', actorId: 'rp-1' }]);
 
   await app.close();
 });

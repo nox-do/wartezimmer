@@ -499,7 +499,7 @@ export function callVisit(
     const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
     const startedNextJourneyStep = Boolean(visit.journeyStepCompletedAt);
     if (startedNextJourneyStep) {
-      visit = runVisitTransition(runtime, visitId, 'start_next_journey_step');
+      visit = runVisitTransition(runtime, visitId, 'start_next_journey_step', { actorId });
     }
     assertNoAbsentHostOverlay(db, visitId);
 
@@ -522,12 +522,13 @@ export function callVisit(
         roomLabel: queueRow.destinationRoomLabel,
       },
     );
-    if (resolvedRoom?.roomId) {
-      assertRoomHasCapacity(settings, listQueue(), resolvedRoom.roomId);
+    if (!resolvedRoom) {
+      throw domainError('ROOM_REQUIRED');
     }
+    assertRoomHasCapacity(settings, listQueue(), resolvedRoom.roomId);
 
     runVisitTransition(runtime, visitId, 'call', {
-      targetLocationId: resolvedRoom?.roomId ?? visit.targetLocationId ?? undefined,
+      targetLocationId: resolvedRoom.roomId,
       actorId,
     });
 

@@ -349,7 +349,7 @@ export const dict = {
     zoneActiveDesc: 'Aufgerufen / in Behandlung',
     zoneActiveEmpty: 'Niemand in Behandlung.',
     zoneActiveRoomEmpty: 'Niemand in diesem Raum.',
-    zoneActiveUnassigned: 'Journey Fehlerhaft konfiguriert',
+    zoneActiveUnassigned: 'Routing/Journey fehlerhaft konfiguriert',
     zoneUnderwayTitle: 'Unterwegs / Aufgerufen',
     zoneUnderwayDesc: 'Aufgerufene und direkt zum Ziel geschickte Patienten.',
     zoneUnderwayEmpty: 'Niemand ist unterwegs oder aufgerufen.',

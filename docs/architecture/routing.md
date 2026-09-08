@@ -141,6 +141,10 @@ Host-Bridge: `app/src/shared/flow-core/visit-queue-bridge.ts` — u. a. `callVis
 
 MFA-Drag-&-Drop auf einen Raum startet bei abgeschlossenem Hop denselben nächsten Journey-Step wie „Weiter“, übergibt aber den gewählten Raum als operatives Ziel für diesen Hop. Spätere Journey-Steps bleiben unverändert.
 
+Die explizite Platzierung wird im Host-Workflow `placeVisitInRoom` (`app/src/shared/queue/place-visit-in-room.ts`) komponiert: optionaler Journey-Start, Call/Reassign und Arrival laufen unter einer gemeinsamen SQLite-Transaktion. `CoreDatabase.checkInRoom()` bleibt dagegen die einfache Ankunftsbestätigung, wie sie insbesondere Raum-Panels und die begleitete Ankunft in `pf_waiting` benötigen. Nach außen meldet der Platzierungsworkflow genau einen Übergang vom Status vor der Benutzeraktion zum finalen Status; die einzelnen Flow-Core-Events bleiben für das Audit erhalten.
+
+Ein normaler Aufruf und eine explizite Platzierung akzeptieren serverseitig nur aktuell aktivierte Praxisräume. Das gilt auch, wenn dieselbe Ziel-ID bereits am Visit gespeichert ist. `pf_waiting` ist ausschließlich als Ziel der begleiteten Wartezimmer-Ankunft zulässig und nie als Ein-Klick-Aufrufziel.
+
 Queue-HTTP: Transition-Typ `continue_journey` (`queue-visit-transitions.ts`).
 
 ## 7. Redirect

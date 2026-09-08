@@ -280,6 +280,19 @@ test('visit flow call → arrive → done end-to-end', () => {
   assert.equal(rows.length, 0);
 });
 
+test('callVisit rejects an unknown explicit room before persisting a call', () => {
+  const { db, settings, visitId, runtime, listQueue } = setupVisitFlow();
+  const eventsBefore = runtime.events(visitId);
+
+  assert.throws(
+    () => callVisit(db, runtime, settings, listQueue, visitId, 'geloescht', 'Alter Raum'),
+    (error: unknown) => error instanceof DomainError && error.domainCode === 'ROOM_REQUIRED',
+  );
+
+  assert.equal(runtime.visits().find((visit) => visit.id === visitId)?.status, 'waiting');
+  assert.deepEqual(runtime.events(visitId), eventsBefore);
+});
+
 test('MFA done from arrived auto-starts before completing', () => {
   const { visitId, runtime, settings, listQueue, db } = setupVisitFlow();
   callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
@@ -334,13 +347,7 @@ test('continueJourneyVisit accepts a DnD target for the next hop', () => {
 
   callVisit(db, runtime, settings, listQueue, visitId, 'mfa-tresen', 'Empfang');
   arriveVisit(db, runtime, visitId, 'mfa-tresen');
-  const continued = continueJourneyVisit(
-    runtime,
-    settings,
-    listQueue,
-    visitId,
-    'mfa-tresen',
-  );
+  const continued = continueJourneyVisit(runtime, settings, listQueue, visitId, 'mfa-tresen');
 
   assert.deepEqual(continued, { fromStatus: 'in_room', toStatus: 'in_room' });
   const visit = runtime.visits().find((entry) => entry.id === visitId);
@@ -359,13 +366,31 @@ test('callVisit starts pending next call journey step before calling', () => {
   assert.ok(visit?.journeyStepCompletedAt);
   assert.equal(visit?.targetLocationId, 'mfa-tresen');
 
-  const call = callVisit(db, runtime, settings, listQueue, visitId, 'mfa-tresen', 'Empfang');
+  const call = callVisit(
+    db,
+    runtime,
+    settings,
+    listQueue,
+    visitId,
+    'mfa-tresen',
+    'Empfang',
+    'mfa-session-journey',
+  );
   assert.deepEqual(call, { fromStatus: 'in_room', toStatus: 'called' });
   visit = runtime.visits().find((entry) => entry.id === visitId);
   assert.equal(visit?.journeyStepIndex, 1);
   assert.equal(visit?.journeyStepCompletedAt, undefined);
   assert.equal(visit?.targetLocationId, 'labor');
   assert.equal(visit?.status, 'called');
+  const compositeEvents = runtime
+    .events(visitId)
+    .filter((event) => event.type === 'routed' || event.type === 'called')
+    .slice(-2);
+  assert.deepEqual(
+    compositeEvents.map((event) => event.type),
+    ['routed', 'called'],
+  );
+  assert.ok(compositeEvents.every((event) => event.actorId === 'mfa-session-journey'));
 });
 
 test('callVisit advances to pickup hop without chaining call', () => {

@@ -38,5 +38,11 @@ export function roomTargetFromTicketDestination(
 }
 
 export function resolveRoomTargetForCheckIn(item: QueueItem | undefined): RoomTarget | undefined {
+  // During an escorted room-to-room transfer, roomId is deliberately the last
+  // known (origin) room while destinationRoomId is the pending Journey target.
+  // "Abgeholt" completes that accompanied transfer at its destination.
+  if (item?.escortTransferPending) {
+    return roomTargetFromTicketDestination(item) ?? roomTargetFromQueueItem(item);
+  }
   return roomTargetFromQueueItem(item) ?? roomTargetFromTicketDestination(item);
 }

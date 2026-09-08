@@ -16,6 +16,7 @@ import {
   assertRoomPanelCallVisitScope,
   resolveRoomPanelSnapshotPolicy,
 } from '../../shared/room-panel/room-panel-snapshot-policy.js';
+import { PF_FLOW_LOC_WAITING } from '../../shared/flow-core/catalog-ids.js';
 import { handleQueueRouteError } from './queue-errors.js';
 
 type QueueReply = Parameters<typeof handleQueueRouteError>[0];
@@ -27,6 +28,7 @@ const callAnnouncementOfflineMessage =
   'Aufruf nicht möglich — Wartezimmer-Anzeige ist offline. Bitte TV prüfen oder koppeln.';
 
 type StatusTransition = { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus };
+type RoomPlacementTransition = StatusTransition & { roomId?: string; roomLabel?: string };
 
 type TransitionContext = {
   db: CoreDatabase;
@@ -152,6 +154,8 @@ function runCallTransition(
     }),
     errorOptions: {
       invalidTransitionMessage: `Ticket ${ctx.visitId} kann im aktuellen Routing nicht aufgerufen werden.`,
+      roomRequiredMessage:
+        'Das Aufrufziel ist nicht mehr verfügbar. Bitte das Ticket per Drag & Drop einem gültigen Raum zuweisen.',
       roomAtCapacityMessage,
       callAnnouncementOfflineMessage,
       roomScopeMismatchMessage: input.roomScopeMismatchMessage,
@@ -167,21 +171,27 @@ function runCheckInRoomTransition(
     actingRoomId?: string;
     responseRoomId?: string | null;
     responseRoomLabel?: string | null;
+    explicitPlacement?: boolean;
   },
 ): QueueVisitTransitionResponse | undefined {
   const { roomId, roomLabel, actingRoomId } = input;
 
-  return runVisitTransition({
+  return runVisitTransition<RoomPlacementTransition, QueueVisitTransitionResponse>({
     reply: ctx.reply,
     visitId: ctx.visitId,
-    execute: () => ctx.db.checkInRoom(ctx.visitId, roomId, roomLabel, actingRoomId, ctx.actorId),
+    execute: () =>
+      input.explicitPlacement && roomId
+        ? ctx.db.placeVisitInRoom(ctx.visitId, roomId, roomLabel, actingRoomId, ctx.actorId)
+        : ctx.db.checkInRoom(ctx.visitId, actingRoomId, ctx.actorId),
     mapSuccess: (transition) => ({
       ...transitionBody(transition, ctx.visitId),
-      roomId: input.responseRoomId ?? roomId ?? null,
-      roomLabel: input.responseRoomLabel ?? roomLabel ?? null,
+      roomId: input.responseRoomId ?? transition.roomId ?? roomId ?? null,
+      roomLabel: input.responseRoomLabel ?? transition.roomLabel ?? roomLabel ?? null,
     }),
     errorOptions: {
       invalidTransitionMessage: `Ticket ${ctx.visitId} kann nicht in Behandlung gesetzt werden.`,
+      roomRequiredMessage:
+        'Das Aufrufziel ist nicht mehr verfügbar. Bitte das Ticket per Drag & Drop einem gültigen Raum zuweisen.',
       roomAtCapacityMessage,
       roomScopeMismatchMessage: checkInRoomScopeMismatchMessage,
     },
@@ -216,9 +226,19 @@ function handleCall(ctx: TransitionContext): QueueVisitTransitionResponse | unde
 
 function handleCheckInRoom(ctx: TransitionContext): QueueVisitTransitionResponse | undefined {
   const { roomId, roomLabel } = roomFields(ctx.body.roomId, ctx.body.roomLabel);
-  const actingRoomId = ctx.body.actingRoomId?.trim();
+  const waitingRoomArrival = roomId === PF_FLOW_LOC_WAITING;
+  const actingRoomId = waitingRoomArrival
+    ? PF_FLOW_LOC_WAITING
+    : ctx.body.actingRoomId?.trim();
 
-  return runCheckInRoomTransition(ctx, { roomId, roomLabel, actingRoomId });
+  return runCheckInRoomTransition(ctx, {
+    roomId,
+    roomLabel,
+    actingRoomId,
+    // This reserved destination confirms an escorted arrival in the waiting room.
+    // Pass it as actingRoomId so the Core rejects a Visit whose real target differs.
+    explicitPlacement: Boolean(roomId && !waitingRoomArrival),
+  });
 }
 
 function handleStartTreatment(ctx: TransitionContext): QueueVisitTransitionResponse | undefined {

@@ -262,7 +262,7 @@ export function callMfaTicket(visitId: string) {
   // Call announcement reachability is server-authoritative (presence registry).
   // UI may warn via SSE status; do not pre-block the request here.
   const item = queueItem(visitId);
-  if (!item || !canMfaCallVisit(item)) {
+  if (!item || !canMfaCallVisit(item, mfaPracticeContext.practiceRooms)) {
     return Promise.resolve();
   }
   const room = resolveCallRoomTarget(item);

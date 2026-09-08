@@ -115,6 +115,8 @@ import {
   clearAllRecallWindowExpiries,
   scheduleRecallWindowExpiry,
 } from '../queue/recall-window-expiry-scheduler.js';
+import { placeVisitInRoom as runPlaceVisitInRoom } from '../queue/place-visit-in-room.js';
+import type { PlacementTransition } from '../queue/place-visit-in-room.js';
 import {
   resolveMarkAbsenceTicket,
   type MarkAbsenceLookupDeps,
@@ -866,96 +868,59 @@ export class CoreDatabase {
 
   checkInRoom(
     visitId: string,
-    roomId?: string,
-    roomLabel?: string,
     actingRoomId?: string,
     actorId?: string,
   ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
     return this.withTransaction('checkInRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const runtime = getFlowCoreRuntime(this.db);
-      const requestedRoomId = roomId?.trim();
-      const settings = requestedRoomId ? this.getOpsSettings() : undefined;
-      let currentVisit = runtime.visits().find((visit) => visit.id === visitId);
-      let journeyTransition: { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } | null =
-        null;
-
-      // An MFA drop onto a room is stronger than a plain target reassignment: staff
-      // confirms that the patient is physically there. Retarget and arrive in the same
-      // outer transaction so assisted pickup and underway tickets cannot stop halfway.
-      if (requestedRoomId && settings && currentVisit?.journeyStepCompletedAt) {
-        journeyTransition = continueJourneyVisit(
-          runtime,
-          settings,
-          () => this.listQueue(),
-          visitId,
-          requestedRoomId,
-          actorId,
-        );
-        currentVisit = runtime.visits().find((visit) => visit.id === visitId);
-      }
-      if (
-        requestedRoomId &&
-        settings &&
-        currentVisit &&
-        currentVisit.targetLocationId !== requestedRoomId
-      ) {
-        if (currentVisit.status === 'waiting' && currentVisit.movementMode === 'call') {
-          // Assisted DnD from the waiting room selects the destination and confirms
-          // the accompanied arrival in one transaction, without exposing transit.
-          callVisit(
-            this.db,
-            runtime,
-            settings,
-            () => this.listQueue(),
-            visitId,
-            requestedRoomId,
-            roomLabel,
-            actorId,
-          );
-        } else {
-          reassignVisitRoom(
-            this.db,
-            runtime,
-            settings,
-            () => this.listQueue(),
-            visitId,
-            requestedRoomId,
-            roomLabel,
-            actorId,
-          );
-        }
-        currentVisit = runtime.visits().find((visit) => visit.id === visitId);
-      }
-      if (
-        requestedRoomId &&
-        settings &&
-        currentVisit?.status === 'waiting' &&
-        currentVisit.movementMode === 'call'
-      ) {
-        callVisit(
-          this.db,
-          runtime,
-          settings,
-          () => this.listQueue(),
-          visitId,
-          requestedRoomId,
-          roomLabel,
-          actorId,
-        );
-      }
-      const transition =
-        journeyTransition && currentVisit?.status === 'arrived'
-          ? journeyTransition
-          : arriveVisit(this.db, runtime, visitId, actingRoomId, actorId);
+      const transition = arriveVisit(
+        this.db,
+        getFlowCoreRuntime(this.db),
+        visitId,
+        actingRoomId,
+        actorId,
+      );
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
         fromStatus: transition.fromStatus,
         toStatus: transition.toStatus,
         updatedAt,
-        roomId: roomId ?? null,
-        roomLabel: roomLabel ?? null,
+        roomId: null,
+        roomLabel: null,
+      });
+      return transition;
+    });
+  }
+
+  placeVisitInRoom(
+    visitId: string,
+    roomId: string,
+    roomLabel?: string,
+    actingRoomId?: string,
+    actorId?: string,
+  ): PlacementTransition {
+    return this.withTransaction('placeVisitInRoom', () => {
+      requireVisitExistsInDb(this.db, visitId);
+      const updatedAt = this.commonHelperDeps().nowIso();
+      const transition = runPlaceVisitInRoom({
+        db: this.db,
+        runtime: getFlowCoreRuntime(this.db),
+        settings: this.getOpsSettings(),
+        listQueue: () => this.listQueue(),
+        visitId,
+        roomId,
+        roomLabel,
+        actingRoomId,
+        actorId,
+      });
+      this.emitOutboxEvent('QueueStatusChanged', visitId, {
+        visitId,
+        fromStatus: transition.fromStatus,
+        toStatus: transition.toStatus,
+        updatedAt,
+        roomId: transition.roomId,
+        roomLabel: transition.roomLabel,
       });
       return transition;
     });

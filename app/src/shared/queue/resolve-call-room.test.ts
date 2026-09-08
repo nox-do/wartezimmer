@@ -32,10 +32,29 @@ test('resolveCallRoomForVisit uses ticket destination snapshot when body is empt
 });
 
 test('resolveCallRoomForVisit uses explicit room from client when provided', () => {
-  assert.deepEqual(resolveCallRoomForVisit(settings, 'labor', 'Labor'), {
+  assert.deepEqual(resolveCallRoomForVisit(settings, 'labor', 'Veralteter Client-Name'), {
     roomId: 'labor',
     roomLabel: 'Labor',
   });
+});
+
+test('resolveCallRoomForVisit rejects unknown, disabled, and waiting-room targets', () => {
+  const guardedSettings = {
+    rooms: [
+      ...settings.rooms,
+      { ...settings.rooms[0], roomId: 'disabled', roomLabel: 'Alt', enabled: false },
+    ],
+  };
+  assert.equal(resolveCallRoomForVisit(guardedSettings, 'missing', 'Missing'), null);
+  assert.equal(resolveCallRoomForVisit(guardedSettings, 'disabled', 'Alt'), null);
+  assert.equal(resolveCallRoomForVisit(guardedSettings, 'pf_waiting', 'Wartezimmer'), null);
+  assert.equal(
+    resolveCallRoomForVisit(guardedSettings, undefined, undefined, {
+      roomId: 'disabled',
+      roomLabel: 'Alt',
+    }),
+    null,
+  );
 });
 
 test('resolveCallRoomForVisit returns null without snapshot or explicit body', () => {

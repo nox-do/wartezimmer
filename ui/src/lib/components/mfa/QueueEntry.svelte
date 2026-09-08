@@ -94,8 +94,10 @@
   );
   const hasDocuments = $derived(item.documentCount > 0);
   const inRoomPrimary = $derived(resolveMfaInRoomPrimaryAction(item));
-  const callAllowed = $derived(canMfaCallVisit(item));
-  const callBlockedReason = $derived(resolveMfaCallBlockedReason(item));
+  const callAllowed = $derived(canMfaCallVisit(item, mfaPracticeContext.practiceRooms));
+  const callBlockedReason = $derived(
+    resolveMfaCallBlockedReason(item, mfaPracticeContext.practiceRooms),
+  );
   const callBlockedTitle = $derived.by(() => {
     const reason = callBlockedReason;
     if (!reason) {
