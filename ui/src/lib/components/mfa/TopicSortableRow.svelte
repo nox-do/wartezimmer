@@ -20,6 +20,7 @@
     dragEnabled?: boolean;
     sortDragging?: boolean;
     persistent?: boolean;
+    iconFallbackLabel?: string;
     onEdit?: () => void;
   }
 
@@ -31,6 +32,7 @@
     dragEnabled = false,
     sortDragging = false,
     persistent = false,
+    iconFallbackLabel,
     onEdit,
   }: Props = $props();
 
@@ -92,9 +94,21 @@
       <span class="queue-drag-grip mfa-editor-sort-grip" aria-hidden="true">
         <span></span><span></span><span></span><span></span>
       </span>
+    {:else if persistent}
+      <span
+        class="queue-drag-grip queue-drag-grip--spacer mfa-editor-sort-grip"
+        aria-hidden="true"
+      >
+        <span></span><span></span><span></span><span></span>
+      </span>
     {/if}
     <TopicLaneBadge laneCode={topic.laneCode} accentColor={topic.accentColor} />
-    <TopicIconDisplay iconId={topic.iconId} label={topic.label} size={22} accentColor={topic.accentColor} />
+    <TopicIconDisplay
+      iconId={topic.iconId}
+      label={iconFallbackLabel ?? topic.label}
+      size={22}
+      accentColor={topic.accentColor}
+    />
     <div class="mfa-editor-list-item__text">
       <span class="mfa-editor-list-item__label">{topic.label.trim() || t('mfa.settings.topicDefaultLabel')}</span>
       <span class="mfa-editor-list-item__meta">{topicMeta}</span>

@@ -8,6 +8,7 @@ const MFA_PATCH_KEYS = new Set([
   'topics',
   'journeySettings',
   'rooms',
+  'postWaitingCallTargetId',
   'emergencyEnabled',
   'terminalWlanPromoEnabled',
   'terminalAuthPhoneEnabled',

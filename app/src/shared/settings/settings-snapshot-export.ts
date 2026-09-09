@@ -122,6 +122,7 @@ export function buildOpsSettingsSnapshotV1(
 
   return {
     routingMode: settings.routingMode,
+    postWaitingCallTargetId: settings.postWaitingCallTargetId,
     returnWindowMinutes: settings.returnWindowMinutes,
     practiceOpenFrom: settings.practiceOpenFrom,
     practiceOpenTo: settings.practiceOpenTo,

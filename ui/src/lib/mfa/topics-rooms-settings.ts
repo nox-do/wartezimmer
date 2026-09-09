@@ -33,6 +33,7 @@ import { toastStore } from '$lib/stores/toastStore';
 export type TopicsRoomsSettings = {
   rooms: PracticeRoomWithPanels[];
   topics: PracticeTopicSetting[];
+  postWaitingCallTargetId: string | null;
   journeySettings: JourneySettings;
   routingCapabilities: RoutingCapabilities;
   savedTopicsSnapshot: string;
@@ -40,6 +41,7 @@ export type TopicsRoomsSettings = {
 
 export type PersistTopicsRoomsOptions = {
   silent?: boolean;
+  postWaitingCallTargetId?: string | null;
   routingCapabilities?: RoutingCapabilities | null;
   roomQueueGuardContext?: RoomQueueGuardContext;
 };
@@ -71,6 +73,7 @@ export async function loadTopicsRoomsSettings(): Promise<TopicsRoomsSettings | n
   return {
     rooms: [...result.data.rooms],
     topics,
+    postWaitingCallTargetId: result.data.postWaitingCallTargetId,
     journeySettings: structuredClone(result.data.journeySettings),
     routingCapabilities: capabilitiesResult.data,
     savedTopicsSnapshot: JSON.stringify(normalizeTopicsForSave(topics)),
@@ -159,7 +162,31 @@ export async function persistTopicsRoomsSettings(
     }
   }
 
-  const result = await patchOpsSettings({ rooms: normalizedRooms, topics: normalizedTopics });
+  const postWaitingCallTargetId = options?.postWaitingCallTargetId;
+  const waitingRoomIsDefault = !normalizedRooms.some(
+    (room) => room.enabled && room.defaultCallTarget,
+  );
+  if (
+    options?.routingCapabilities?.routingMode === 'simple' &&
+    waitingRoomIsDefault &&
+    postWaitingCallTargetId === null
+  ) {
+    toastStore.error(t('mfa.settings.postWaitingCallTargetInvalid'));
+    return null;
+  }
+  if (
+    postWaitingCallTargetId != null &&
+    !normalizedRooms.some((room) => room.enabled && room.roomId === postWaitingCallTargetId)
+  ) {
+    toastStore.error(t('mfa.settings.postWaitingCallTargetInvalid'));
+    return null;
+  }
+
+  const result = await patchOpsSettings({
+    rooms: normalizedRooms,
+    topics: normalizedTopics,
+    ...(postWaitingCallTargetId === undefined ? {} : { postWaitingCallTargetId }),
+  });
   if (!result.ok) {
     toastStore.error(
       roomGuardErrorMessage(result.error, options?.roomQueueGuardContext ?? 'remove'),
@@ -178,6 +205,7 @@ export async function persistTopicsRoomsSettings(
   return {
     rooms: [...result.data.rooms],
     topics: nextTopics,
+    postWaitingCallTargetId: result.data.postWaitingCallTargetId,
     journeySettings: structuredClone(result.data.journeySettings),
     routingCapabilities: await loadRoutingCapabilitiesAfterSave(
       options?.routingCapabilities ?? null,

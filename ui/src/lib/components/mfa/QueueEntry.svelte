@@ -9,7 +9,8 @@
   import { toastStore } from '$lib/stores/toastStore';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
   import { queueEntryPrimary, queueEntrySecondary } from '$lib/queue/entry-copy';
-  import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
+  import { mfaCallRoomTargetOptions, mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
+  import { resolveCallRoomTarget } from '$lib/queue/call-room-target';
   import { getTopicAccentColor } from '$lib/queue/practice-catalog';
   import TopicLaneBadge from '$lib/components/topics/TopicLaneBadge.svelte';
   import { formatReturnCountdown, returnCountdownRemainingMs } from '$lib/queue/format-return-countdown';
@@ -97,9 +98,14 @@
   );
   const hasDocuments = $derived(item.documentCount > 0);
   const inRoomPrimary = $derived(resolveMfaInRoomPrimaryAction(item));
-  const callAllowed = $derived(canMfaCallVisit(item, mfaPracticeContext.practiceRooms));
+  const resolvedCallTarget = $derived.by(() =>
+    resolveCallRoomTarget(item, mfaCallRoomTargetOptions()),
+  );
+  const callAllowed = $derived(
+    canMfaCallVisit(item, mfaPracticeContext.practiceRooms, resolvedCallTarget?.roomId),
+  );
   const callBlockedReason = $derived(
-    resolveMfaCallBlockedReason(item, mfaPracticeContext.practiceRooms),
+    resolveMfaCallBlockedReason(item, mfaPracticeContext.practiceRooms, resolvedCallTarget?.roomId),
   );
   const callBlockedTitle = $derived.by(() => {
     const reason = callBlockedReason;
@@ -122,7 +128,7 @@
     return t('mfa.callBlockedOther');
   });
   const callTargetInvalid = $derived(
-    !hasValidMfaCallTarget(item, mfaPracticeContext.practiceRooms),
+    !hasValidMfaCallTarget(item, mfaPracticeContext.practiceRooms, resolvedCallTarget?.roomId),
   );
   const callButtonTooltip = $derived(
     callTargetInvalid ? t('mfa.callBlockedRoomRequired') : callBlockedTitle,

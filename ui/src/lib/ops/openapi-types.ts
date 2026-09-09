@@ -19,6 +19,7 @@ export type MfaPatchOpsSettingsBody = Pick<
   | 'topics'
   | 'journeySettings'
   | 'rooms'
+  | 'postWaitingCallTargetId'
   | 'emergencyEnabled'
   | 'terminalWlanPromoEnabled'
   | 'terminalAuthPhoneEnabled'

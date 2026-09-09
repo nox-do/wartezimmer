@@ -222,6 +222,7 @@ export interface paths {
           'application/json': {
             /** @enum {string} */
             routingMode?: 'simple' | 'complex';
+            postWaitingCallTargetId?: string | null;
             returnWindowMinutes?: number;
             practiceOpenFrom?: string;
             practiceOpenTo?: string;
@@ -1987,6 +1988,8 @@ export interface components {
        * @enum {string}
        */
       routingMode: 'simple' | 'complex';
+      /** @description Simple-routing target used when a non-assisted patient waits at pf_waiting and is called without an explicit room selection. */
+      postWaitingCallTargetId: string | null;
       /** @description Single recall window for countdown, SMS text, and return with/without phone. MFA-editable under Betrieb settings. */
       returnWindowMinutes: number;
       /** @description Daily check-in window start (BUSINESS_TZ local time, HH:mm). */
@@ -2017,7 +2020,7 @@ export interface components {
         roomId: string;
         roomLabel: string;
         enabled: boolean;
-        /** @description Default MFA call destination when Quicksettings have no session override. At most one enabled practice room is marked; if none is marked, pf_waiting is the default. */
+        /** @description General catalog fallback when a topic target is unavailable. At most one enabled practice room is marked; if none is marked, pf_waiting is the fallback. */
         defaultCallTarget?: boolean;
         /** @description Maximum concurrent called or in-room visits assigned to this room. Null or omitted means unlimited. */
         maxOccupancy?: number | null;

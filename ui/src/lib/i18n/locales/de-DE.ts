@@ -365,6 +365,7 @@ export const dict = {
       'Wartezimmer-TV scheint offline. Aufruf wird vom Server geprüft — bitte Gerät prüfen oder koppeln.',
     callBlockedRoomRequired:
       'Kein gültiges Aufrufziel festgelegt. Bitte das Ticket per Drag & Drop einem Raum zuweisen.',
+    temporaryCallTarget: 'Temporär als Aufrufziel verwenden',
     callBlockedDirected:
       'Patient ist unterwegs zu {room}. Aufrufen entfällt — Ankunft am Raum-Panel quittieren.',
     callBlockedDirectedNoRoom:
@@ -806,18 +807,24 @@ export const dict = {
       roomIdDuplicate: 'Jede interne Kennung darf nur einmal vorkommen.',
       roomLabelReserved: '„Wartezimmer“ ist für den festen Systemraum reserviert.',
       roomReserved: 'Wartezimmer-Name oder technische Kennung ist reserviert.',
-      waitingRoomDefaultTarget: 'Wartezimmer ist Standardaufrufziel',
+      waitingRoomDefaultTarget: 'Wartezimmer als Standardziel',
+      waitingRoomDefaultTargetHint:
+        'Entweder einen Raum oder das Wartezimmer als Standardziel wählen.',
+      postWaitingCallTarget: 'Standardaufrufziel nach Wartezimmer',
+      postWaitingCallTargetPlaceholder: 'Bitte Raum wählen',
+      postWaitingCallTargetInvalid:
+        'Bitte ein aktives Standardaufrufziel nach dem Wartezimmer wählen.',
       roomEnabled: 'Aktiv',
-      roomDefaultCallTarget: 'Standard-Aufrufziel',
+      roomDefaultCallTarget: 'Als Standard-Aufrufziel nutzen',
       roomDefaultCallTargetHint:
-        'Vorauswahl in den MFA-Schnellzugriffen. Ein Raum ersetzt das Wartezimmer oder den bisherigen Raum als Standard.',
+        'Greift, wenn ein Themenziel fehlt oder nicht nutzbar ist. Ohne markierten Raum ist das Wartezimmer der Fallback.',
       roomMaxOccupancy: 'Max. Personen gleichzeitig',
       roomMaxOccupancyHint:
         'Leer lassen für unbegrenzt. Zählt aufgerufene und eingecheckte Patienten (called + in_room).',
       roomMaxOccupancyInvalid: 'Bitte eine Zahl ab 1 eingeben oder das Feld leer lassen.',
       roomCapacityUnlimited: 'Unbegrenzt',
       roomCapacityLimited: 'Max. {count}',
-      roomDefaultCallTargetBadge: 'Standard-Aufrufziel',
+      roomDefaultCallTargetBadge: 'Fallback-Aufrufziel',
       roomPanelSectionTitle: 'Raum-Panel',
       roomPanelSectionHint:
         'Optionales Tablet für diesen Raum. Platzierung, Anzeige und Bedienumfang werden hier festgelegt.',

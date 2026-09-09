@@ -311,7 +311,13 @@
       class:mfa-editor-list--sorting={isSortDragging}
       role="list"
     >
-      <TopicSortableRow topic={systemTopic} index={-1} topicMeta={systemTopicMeta} persistent />
+      <TopicSortableRow
+        topic={systemTopic}
+        index={-1}
+        topicMeta={systemTopicMeta}
+        persistent
+        iconFallbackLabel={MFA_ASSIST_LANE_CODE}
+      />
       {#if sortLineOffsetPx != null}
         <li
           class="mfa-editor-sort-line"

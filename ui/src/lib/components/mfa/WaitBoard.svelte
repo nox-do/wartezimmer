@@ -23,6 +23,9 @@
     queueFilterActive?: boolean;
     /** Complex routing keeps in-flight hops separate; simple routing groups them by target room. */
     separateUnderway?: boolean;
+    callRoomTargetId?: string | null;
+    showCallRoomTargetControls?: boolean;
+    onSelectCallRoomTarget?: (roomId: string) => void;
     onCall: (visitId: string) => void;
     onCheckIn: (visitId: string) => void;
     onStart: (visitId: string) => void;
@@ -50,6 +53,9 @@
     callAnnouncementReachable = true,
     queueFilterActive = false,
     separateUnderway = true,
+    callRoomTargetId = null,
+    showCallRoomTargetControls = false,
+    onSelectCallRoomTarget,
     onCall,
     onCheckIn,
     onStart,
@@ -289,6 +295,9 @@
         {active}
         rooms={enabledRooms}
         {separateUnderway}
+        {callRoomTargetId}
+        {showCallRoomTargetControls}
+        {onSelectCallRoomTarget}
         dragEnabled={queueDragEnabled}
         {activeDropTargetId}
         queueDragging={isQueueDragging}

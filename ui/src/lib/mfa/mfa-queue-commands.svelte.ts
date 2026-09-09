@@ -33,6 +33,7 @@ import {
   startTreatmentVisit,
 } from '$lib/queue/queue-actions';
 import { canMfaCallTransition, canMfaCallVisit } from '$lib/queue/mfa-call-gate';
+import { mfaCallRoomTargetOptions } from '$lib/mfa/mfa-practice-context.svelte';
 import { getQueueZone } from '$lib/queue/queue-zones';
 import {
   queueDragSourceFromItem,
@@ -262,10 +263,11 @@ export function callMfaTicket(visitId: string) {
   // Call announcement reachability is server-authoritative (presence registry).
   // UI may warn via SSE status; do not pre-block the request here.
   const item = queueItem(visitId);
-  if (!item || !canMfaCallVisit(item, mfaPracticeContext.practiceRooms)) {
+  const callTargetOptions = mfaCallRoomTargetOptions();
+  const room = resolveCallRoomTarget(item, callTargetOptions);
+  if (!item || !canMfaCallVisit(item, mfaPracticeContext.practiceRooms, room?.roomId)) {
     return Promise.resolve();
   }
-  const room = resolveCallRoomTarget(item);
   if (room && !ensureRoomCapacity(room.roomId)) {
     return Promise.resolve();
   }

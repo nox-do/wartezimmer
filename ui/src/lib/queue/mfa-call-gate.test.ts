@@ -7,8 +7,8 @@ import {
 } from './mfa-call-gate';
 
 const rooms = [
-  { roomId: 'labor', enabled: true },
-  { roomId: 'deaktiviert', enabled: false },
+  { roomId: 'labor', roomLabel: 'Labor', enabled: true },
+  { roomId: 'deaktiviert', roomLabel: 'Deaktiviert', enabled: false },
 ];
 
 const canMfaCallVisit = (item: Parameters<typeof canMfaCallVisitWithRooms>[0]) =>
@@ -45,6 +45,31 @@ describe('canMfaCallVisit', () => {
         status: 'waiting',
         movementMode: 'call',
         destinationRoomId: 'pf_waiting',
+      }),
+    ).toBe(false);
+  });
+
+  it('allows a simple waiting-room call when a follow-up target is configured', () => {
+    expect(
+      canMfaCallVisitWithRooms(
+        {
+          status: 'waiting',
+          movementMode: 'call',
+          destinationRoomId: 'pf_waiting',
+        },
+        rooms,
+        'labor',
+      ),
+    ).toBe(true);
+  });
+
+  it('blocks the normal call path for assisted patients even with a concrete room', () => {
+    expect(
+      canMfaCallVisit({
+        status: 'waiting',
+        movementMode: 'call',
+        destinationRoomId: 'labor',
+        needsAssistance: true,
       }),
     ).toBe(false);
   });

@@ -69,6 +69,11 @@ export function ensureOpsSetupSchema(db: DatabaseSync): void {
       "ALTER TABLE ops_settings ADD COLUMN routing_mode TEXT NOT NULL DEFAULT 'simple' CHECK (routing_mode IN ('simple', 'complex'))",
     );
   }
+  if (!columns.has('post_waiting_call_target_id')) {
+    db.exec(
+      "ALTER TABLE ops_settings ADD COLUMN post_waiting_call_target_id TEXT DEFAULT 'mfa-tresen'",
+    );
+  }
   if (!columns.has('setup_last_step')) {
     db.exec("ALTER TABLE ops_settings ADD COLUMN setup_last_step TEXT NOT NULL DEFAULT 'welcome'");
   }

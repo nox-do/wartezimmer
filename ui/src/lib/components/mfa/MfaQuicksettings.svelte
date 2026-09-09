@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { Settings, UserPlus } from '@lucide/svelte';
+  import { DoorClosed, DoorOpen, Settings, UserPlus } from '@lucide/svelte';
   import {
     confirmDevicePairing,
     type DevicePairingKind,
@@ -15,7 +15,11 @@
     getDeviceQuicksettingsPhase,
   } from '$lib/mfa/ops-stream-store.svelte';
   import { deviceStatusLabel } from '$lib/ops/device-presence-labels';
-  import { TERMINAL_DEVICE_ID, WAITING_ROOM_DEVICE_ID } from '$lib/ops/device-presence-api';
+  import {
+    roomPanelDeviceId,
+    TERMINAL_DEVICE_ID,
+    WAITING_ROOM_DEVICE_ID,
+  } from '$lib/ops/device-presence-api';
   import {
     fetchDeviceAuthorizations,
     revokeDeviceAuthorization,
@@ -35,6 +39,7 @@
     terminalLockBusy?: boolean;
     needsDayStartHint?: boolean;
     filterItems?: QueueItem[];
+    rooms?: Array<{ roomId: string; roomLabel: string }>;
     searchQuery?: string;
     laneCode?: string | null;
     onTerminalLockToggle?: (nextLocked: boolean) => void;
@@ -47,6 +52,7 @@
     terminalLockBusy = false,
     needsDayStartHint = false,
     filterItems = [],
+    rooms = [],
     searchQuery = $bindable(''),
     laneCode = $bindable<string | null>(null),
     onTerminalLockToggle,
@@ -81,6 +87,26 @@
       return iso;
     }
     return new Date(ms).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+  }
+
+  function roomLabel(roomId: string | null): string {
+    if (!roomId) {
+      return '—';
+    }
+    return rooms.find((room) => room.roomId === roomId)?.roomLabel?.trim() || roomId;
+  }
+
+  function panelPresenceStatus(grant: DeviceAuthorizationListItem) {
+    if (!grant.roomId || !grant.placement) {
+      return 'offline' as const;
+    }
+    return getDevicePresenceStatus(roomPanelDeviceId(grant.roomId, grant.placement));
+  }
+
+  function panelTooltip(grant: DeviceAuthorizationListItem): string {
+    const placement =
+      grant.placement === 'inside' ? t('mfa.devicePanelInside') : t('mfa.devicePanelOutside');
+    return `${grant.roomId ?? '—'} · ${placement} · ${formatGrantCreatedAt(grant.createdAt)}`;
   }
 
   async function loadAuthorizations() {
@@ -201,6 +227,23 @@
     onToggle={onTerminalLockToggle}
   />
 
+  <button type="button" class="qs-action-btn" onclick={handleOpenMfaCheckin}>
+    <UserPlus size={18} aria-hidden="true" />
+    <span>{t('mfa.checkinQuickAction')}</span>
+  </button>
+
+  <h3 class="qs-section-title">{t('mfa.qsFilter')}</h3>
+
+  <WaitingListFilters
+    items={filterItems}
+    bind:searchQuery
+    bind:laneCode
+    alwaysShow={true}
+    compact={true}
+  />
+
+  <div class="qs-divider" role="separator"></div>
+
   <section class="panel panel--sm panel--muted">
     <h3 class="panel__title panel__title--compact">{t('mfa.qsTerminal')}</h3>
     <span
@@ -298,13 +341,23 @@
     <section class="panel panel--sm panel--muted">
       <h3 class="panel__title panel__title--compact">{t('mfa.qsPanels')}</h3>
       {#each panelGrants as grant (grant.authorizationId)}
-        <div class="qs-panel-desc">
-          <span>
-            {grant.roomId}
-            ·
-            {grant.placement === 'inside' ? t('mfa.devicePanelInside') : t('mfa.devicePanelOutside')}
-            ·
-            {formatGrantCreatedAt(grant.createdAt)}
+        {@const status = panelPresenceStatus(grant)}
+        <div class="qs-panel-grant mfa-action-tooltip" data-tooltip={panelTooltip(grant)}>
+          <span class="qs-panel-grant__identity">
+            {#if grant.placement === 'inside'}
+              <DoorOpen size={16} aria-hidden="true" />
+            {:else}
+              <DoorClosed size={16} aria-hidden="true" />
+            {/if}
+            <span>{roomLabel(grant.roomId)}</span>
+          </span>
+          <span
+            class="pill"
+            class:pill--on={status === 'online'}
+            class:pill--warn={status === 'stale'}
+            class:pill--off={status === 'offline'}
+          >
+            {deviceStatusLabel(status)}
           </span>
           {#if QUICKSETTINGS_UNPAIR_ENABLED}
             <button
@@ -320,22 +373,4 @@
       {/each}
     </section>
   {/if}
-
-  <div class="qs-divider" role="separator"></div>
-
-  <button type="button" class="qs-action-btn" onclick={handleOpenMfaCheckin}>
-    <UserPlus size={18} aria-hidden="true" />
-    <span>{t('mfa.checkinQuickAction')}</span>
-  </button>
-
-  <div class="qs-divider" role="separator"></div>
-  <h3 class="qs-section-title">{t('mfa.qsFilter')}</h3>
-
-  <WaitingListFilters
-    items={filterItems}
-    bind:searchQuery
-    bind:laneCode
-    alwaysShow={true}
-    compact={true}
-  />
 </aside>

@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { importSettingsSnapshotIntoDb } from '../settings/settings-snapshot-import.js';
@@ -14,6 +17,7 @@ import {
   runTransitionSchemaEnsures,
 } from './create-current-schema.js';
 import { runMigrations } from './migrations-runner.js';
+import { CoreDatabase } from './database.js';
 
 function tableHasColumn(db: DatabaseSync, table: string, column: string): boolean {
   const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name?: string }>;
@@ -99,4 +103,36 @@ test('legacy database path: runTransitionSchemaEnsures without bumping user_vers
   assert.equal(readSchemaGeneration(db), 0);
   assert.equal(tableReferences(db, 'patient_sessions', 'visits'), true);
   assert.doesNotThrow(() => assertForeignKeyIntegrity(db));
+});
+
+test('CoreDatabase ensures additive columns for an existing current-generation database', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pf-current-schema-'));
+  const dbPath = join(dir, 'praxis-flow.db');
+  const previousNodeEnv = process.env.NODE_ENV;
+  const previousContactLookupBase = process.env.CONTACT_LOOKUP_BASE_PATH;
+  process.env.NODE_ENV = 'test';
+  process.env.CONTACT_LOOKUP_BASE_PATH = join(dir, 'imports');
+
+  try {
+    const existing = new DatabaseSync(dbPath);
+    createCurrentSchema(existing);
+    existing.exec('ALTER TABLE ops_settings DROP COLUMN post_waiting_call_target_id');
+    assert.equal(readSchemaGeneration(existing), SCHEMA_GENERATION);
+    existing.close();
+
+    const core = new CoreDatabase(dbPath);
+    assert.equal(core.getOpsSettings().postWaitingCallTargetId, 'mfa-tresen');
+  } finally {
+    if (previousNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = previousNodeEnv;
+    }
+    if (previousContactLookupBase === undefined) {
+      delete process.env.CONTACT_LOOKUP_BASE_PATH;
+    } else {
+      process.env.CONTACT_LOOKUP_BASE_PATH = previousContactLookupBase;
+    }
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

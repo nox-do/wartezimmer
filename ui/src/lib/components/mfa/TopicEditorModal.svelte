@@ -199,6 +199,17 @@
       {/if}
     </label>
 
+    <label class="modal-form-check topic-editor-active-check">
+      <input
+        type="checkbox"
+        checked={draft.enabled}
+        disabled={busy}
+        onchange={(event) =>
+          (draft = { ...draft, enabled: (event.currentTarget as HTMLInputElement).checked })}
+      />
+      <span>{t('mfa.settings.colEnabled')}</span>
+    </label>
+
     <div class="modal-form-field">
       <span>{t('mfa.settings.colIcon')}</span>
       <button
@@ -304,17 +315,6 @@
         </label>
       {/if}
     </fieldset>
-
-    <label class="modal-form-check">
-      <input
-        type="checkbox"
-        checked={draft.enabled}
-        disabled={busy}
-        onchange={(event) =>
-          (draft = { ...draft, enabled: (event.currentTarget as HTMLInputElement).checked })}
-      />
-      <span>{t('mfa.settings.colEnabled')}</span>
-    </label>
 
     <fieldset class="modal-form-field">
       <legend>{t('mfa.settings.colTimeWindow')}</legend>

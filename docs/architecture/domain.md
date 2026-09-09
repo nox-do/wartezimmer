@@ -61,9 +61,9 @@ Schema: Baseline `app/src/shared/db/migrations/001_baseline.sql` (kein Migration
 2. sonst Visit-/Ticket-Destination-Snapshot (`targetLocationId` + Label)
 3. sonst `null` (kein stiller Fallback auf Themen-Default oder `defaultCallTarget` in dieser Funktion)
 
-**MFA-Client** (`resolveCallRoomTarget` / `call-room-target.ts`): sendet nur den Queue-Destination-Snapshot des Tickets — **kein** Quicksettings-Raumwahl-Pfad im Call.
+**MFA-Client** (`resolveCallRoomTarget` / `call-room-target.ts`): sendet grundsätzlich den Queue-Destination-Snapshot. Nur im Simple Routing darf ein nicht begleiteter, wartender `call`-Visit mit Ziel `pf_waiting` clientseitig auf `postWaitingCallTargetId` bzw. dessen Session-Override aufgelöst werden. Explizites Drag & Drop bleibt davon unabhängig; Complex Routing und `needsAssistance` ignorieren diesen Komfortpfad.
 
-`defaultCallTarget` bleibt Settings-Feld (Raumliste / Boards), steuert den Call-Transition **nicht**. Themen-`defaultRoomId` wirkt über Catalog-Routing **beim Check-in** auf `targetLocation`, nicht als Call-Prio-3.
+`defaultCallTarget` bleibt das bisherige Settings-Feld für den allgemeinen Katalog-Fallback. Das davon getrennte `postWaitingCallTargetId` steuert ausschließlich den beschriebenen Simple-Routing-Aufruf aus `pf_waiting`. Themen-`defaultRoomId` wirkt über Catalog-Routing **beim Check-in** auf `targetLocation`.
 
 TV/MFA zeigen den gespeicherten Destination-Snapshot, nicht live den Katalog.
 

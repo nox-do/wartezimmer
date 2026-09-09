@@ -40,6 +40,7 @@ function isStringSetMember<T extends string>(values: ReadonlySet<T>, value: unkn
 
 type OpsSettingsRow = {
   routingMode?: string;
+  postWaitingCallTargetId?: string | null;
   returnWindowMinutes?: number;
   practiceOpenFrom?: string;
   practiceOpenTo?: string;
@@ -66,6 +67,7 @@ export type OpsSettingsPatch = Partial<
   Pick<
     OpsSettings,
     | 'routingMode'
+    | 'postWaitingCallTargetId'
     | 'returnWindowMinutes'
     | 'practiceOpenFrom'
     | 'practiceOpenTo'
@@ -91,6 +93,14 @@ const ROUTING_MODES = new Set<RoutingMode>(['simple', 'complex']);
 
 function normalizeRoutingMode(raw: unknown): RoutingMode {
   return isStringSetMember(ROUTING_MODES, raw) ? raw : 'simple';
+}
+
+function normalizePostWaitingCallTargetId(
+  raw: unknown,
+  rooms: OpsSettings['rooms'],
+): string | null {
+  const candidate = raw === undefined ? 'mfa-tresen' : typeof raw === 'string' ? raw.trim() : '';
+  return rooms.some((room) => room.enabled && room.roomId === candidate) ? candidate : null;
 }
 
 function parseTerminalPatientLocalesRaw(
@@ -343,6 +353,7 @@ export function getOpsSettingsFromDb(params: {
 
   return {
     routingMode: normalizeRoutingMode(row.routingMode),
+    postWaitingCallTargetId: normalizePostWaitingCallTargetId(row.postWaitingCallTargetId, rooms),
     returnWindowMinutes: row.returnWindowMinutes ?? 15,
     practiceOpenFrom: row.practiceOpenFrom,
     practiceOpenTo: row.practiceOpenTo,
@@ -393,6 +404,22 @@ export function updateOpsSettingsInDb(
   }
 
   const nextRoutingMode = patch.routingMode ?? current.routingMode;
+  let postWaitingCallTargetId =
+    patch.postWaitingCallTargetId === undefined
+      ? current.postWaitingCallTargetId
+      : patch.postWaitingCallTargetId?.trim() || null;
+  if (
+    postWaitingCallTargetId != null &&
+    !rooms.some((room) => room.enabled && room.roomId === postWaitingCallTargetId)
+  ) {
+    if (nextRoutingMode === 'complex' && patch.postWaitingCallTargetId === undefined) {
+      postWaitingCallTargetId = null;
+    } else {
+      throw new OpsSettingsValidationError(
+        'postWaitingCallTargetId must reference an enabled practice room.',
+      );
+    }
+  }
   if (nextRoutingMode === 'complex') {
     const journeyTargetValidation = validateJourneyStepTargets(journeySettings, rooms);
     if (!journeyTargetValidation.ok) {
@@ -406,6 +433,7 @@ export function updateOpsSettingsInDb(
 
   const next: OpsSettings = {
     routingMode: nextRoutingMode,
+    postWaitingCallTargetId,
     returnWindowMinutes: patch.returnWindowMinutes ?? current.returnWindowMinutes,
     practiceOpenFrom: patch.practiceOpenFrom ?? current.practiceOpenFrom,
     practiceOpenTo: patch.practiceOpenTo ?? current.practiceOpenTo,
@@ -434,6 +462,7 @@ export function updateOpsSettingsInDb(
 
   params.updateOpsSettingsStmt.run(
     next.routingMode,
+    next.postWaitingCallTargetId,
     next.returnWindowMinutes,
     next.practiceOpenFrom,
     next.practiceOpenTo,

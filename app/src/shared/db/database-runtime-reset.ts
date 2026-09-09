@@ -119,6 +119,7 @@ function snapshotMessagingProviders(deps: RuntimeResetDeps): MessagingSnapshotRo
 function settingsToPatch(settings: OpsSettings): OpsSettingsPatch {
   return {
     routingMode: settings.routingMode,
+    postWaitingCallTargetId: settings.postWaitingCallTargetId,
     returnWindowMinutes: settings.returnWindowMinutes,
     practiceOpenFrom: settings.practiceOpenFrom,
     practiceOpenTo: settings.practiceOpenTo,

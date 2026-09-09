@@ -22,7 +22,10 @@
     openMfaDayStartConfirm,
   } from '$lib/mfa/mfa-day-ops.svelte';
   import { mountMfaDashboard } from '$lib/mfa/mfa-dashboard.svelte';
-  import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
+  import {
+    mfaPracticeContext,
+    setMfaCallRoomOverride,
+  } from '$lib/mfa/mfa-practice-context.svelte';
   import {
     callMfaTicket,
     cancelMfaAssistancePlacement,
@@ -65,6 +68,9 @@
   const mfaZones = $derived(getMfaZones());
   const mfaClockLabel = $derived(getMfaClockLabel());
   const callAnnouncementReachable = $derived(isQueueCallAnnouncementReachable());
+  const effectiveCallRoomTargetId = $derived(
+    mfaPracticeContext.callRoomOverrideId ?? mfaPracticeContext.postWaitingCallTargetId,
+  );
   let mfaCheckinModalOpen = $state(false);
   let queueSearchQuery = $state('');
   let queueLaneCode = $state<string | null>(null);
@@ -124,6 +130,12 @@
       callAnnouncementReachable={callAnnouncementReachable}
       queueFilterActive={queueFilterActive}
       separateUnderway={mfaPracticeContext.routingMode === 'complex'}
+      callRoomTargetId={effectiveCallRoomTargetId}
+      showCallRoomTargetControls={mfaPracticeContext.routingMode === 'simple'}
+      onSelectCallRoomTarget={(roomId) =>
+        setMfaCallRoomOverride(
+          roomId === mfaPracticeContext.postWaitingCallTargetId ? null : roomId,
+        )}
       onCall={callMfaTicket}
       onCheckIn={checkInMfaTicket}
       onStart={startMfaTicket}
@@ -147,6 +159,7 @@
       terminalLockBusy={mfaDayOps.terminalLockBusy}
       needsDayStartHint={mfaDayOps.dayLifecycle?.needsDayStartHint ?? false}
       filterItems={queueFilterItems}
+      rooms={mfaPracticeContext.practiceRooms}
       bind:searchQuery={queueSearchQuery}
       bind:laneCode={queueLaneCode}
       onTerminalLockToggle={(nextLocked) => void handleMfaTerminalLockToggle(nextLocked)}

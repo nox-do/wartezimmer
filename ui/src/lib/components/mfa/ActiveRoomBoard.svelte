@@ -6,6 +6,7 @@
   import { roomOccupancyLabel } from '$lib/queue/room-capacity';
   import type { PracticeRoom } from '$lib/queue/ops-settings-api';
   import type { QueueItem } from '$lib/queue/types';
+  import { Crosshair } from '@lucide/svelte';
 
   interface Props {
     active: QueueItem[];
@@ -16,6 +17,9 @@
     queueDragging?: boolean;
     busyVisitId?: string | null;
     nowMs?: number;
+    callRoomTargetId?: string | null;
+    showCallRoomTargetControls?: boolean;
+    onSelectCallRoomTarget?: (roomId: string) => void;
     onCheckIn: (visitId: string) => void;
     onStart: (visitId: string) => void;
     onContinue: (visitId: string) => void;
@@ -37,6 +41,9 @@
     queueDragging = false,
     busyVisitId = null,
     nowMs = Date.now(),
+    callRoomTargetId = null,
+    showCallRoomTargetControls = false,
+    onSelectCallRoomTarget,
     onCheckIn,
     onStart,
     onContinue,
@@ -97,15 +104,29 @@
       dropLabel={group.roomLabel}
       dropDisabled={group.isAtCapacity}
       highlighted={activeDropTargetId === `room:${group.roomId}`}
-      class="active-room-group{group.isAtCapacity ? ' active-room-group--full' : ''}"
+      class="active-room-group{group.isAtCapacity ? ' active-room-group--full' : ''}{callRoomTargetId === group.roomId ? ' active-room-group--selected' : ''}"
     >
       <div class="active-room-group-head">
         <h3 class="active-room-group-title">{group.roomLabel}</h3>
-        {#if roomOccupancyLabel(group.occupantCount, group.maxOccupancy)}
-          <span class="pill pill--ok" class:pill--bad={group.isAtCapacity}>
-            {roomOccupancyLabel(group.occupantCount, group.maxOccupancy)}
-          </span>
-        {/if}
+        <div class="active-room-group-actions">
+          {#if roomOccupancyLabel(group.occupantCount, group.maxOccupancy)}
+            <span class="pill pill--ok" class:pill--bad={group.isAtCapacity}>
+              {roomOccupancyLabel(group.occupantCount, group.maxOccupancy)}
+            </span>
+          {/if}
+          {#if showCallRoomTargetControls}
+            <button
+              type="button"
+              class="icon-btn active-room-target-button"
+              class:active-room-target-button--selected={callRoomTargetId === group.roomId}
+              aria-label={t('mfa.temporaryCallTarget')}
+              aria-pressed={callRoomTargetId === group.roomId}
+              onclick={() => onSelectCallRoomTarget?.(group.roomId)}
+            >
+              <Crosshair size={14} aria-hidden="true" />
+            </button>
+          {/if}
+        </div>
       </div>
       {#if group.tickets.length === 0}
         <p class="active-room-group-empty">{t('mfa.zoneActiveRoomEmpty')}</p>

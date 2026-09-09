@@ -312,7 +312,8 @@ Mit aktivem Proxy/TLS sind Geräte-/Portal-URLs über `CANONICAL_BASE_URL` kanon
 
 ### Warteliste (Dashboard, vertikal)
 
-- **Quicksettings (rechts):** **Terminal** ein/aus · Aufrufziel-Raum · Geräte-Presence/Pairing
+- **Quicksettings (rechts):** **Terminal** ein/aus · Geräte-Presence/Pairing
+- **Raum-Board:** Im Simple Routing kann ein Raum temporär als Aufrufziel nach dem Wartezimmer markiert werden; der ausgewählte Raum ist hervorgehoben.
 - **Überlast (Offene Sprechstunde):** Terminal sperren — keine neuen Check-ins; Empfang + gelbe Zone/Rückholen für laufende Fälle
 
 1. **Grün — noch in der Praxis:** nach **Aufrufen** nacheinander **Check-in** (ein Button) → **Check-out** (ersetzt Check-in, mit Rückfrage-Modal); mehrere Räume möglich. **Ausnahme:** MFA kann Patient **zurück ins Wartezimmer** (Warteschlange) — z. B. Rückfrage, falsches Zimmer, nochmal warten (s. unten). **MFA darf Check-in/out ohne Raum-Einschränkung**; späteres Raum-Panel nur im zugewiesenen Raum (s. unten).
@@ -367,7 +368,7 @@ Anzeige z. B. **L-042** — Patient tippt dieselbe Nummer im Portal. Beim nächs
 
 ### Aufrufziel (Raum)
 
-Jedes Terminal-Thema hat ein **Standard-Aufrufziel** (`defaultRoomId`). In der Raumliste markiert **`defaultCallTarget`** den MFA-Standard (Quicksettings-Vorauswahl). MFA **Aufrufen** nutzt Quicksettings → `defaultCallTarget` → Themen-Default; der Quicksettings-Chip ist eine **temporäre Überschreibung**.
+Jedes Terminal-Thema hat ein **Standard-Aufrufziel** (`defaultRoomId`). `defaultCallTarget` bleibt der allgemeine Katalog-Fallback, falls ein Themenziel nicht nutzbar ist. Für Themen, die im Simple Routing bewusst im Wartezimmer (`pf_waiting`) beginnen, wird zusätzlich **„Standardaufrufziel nach Wartezimmer“** (`postWaitingCallTargetId`) gespeichert. Im Raum-Board kann die MFA dieses Ziel für ihre Browser-Session temporär überschreiben. Complex Routing und `needsAssistance` verwenden diesen Komfortpfad nicht; Drag & Drop bleibt immer eine explizite Zielwahl.
 
 **Raum-Guards** (`ROOM_BLOCKED_TOPICS` / `ROOM_BLOCKED_QUEUE` / `ROOM_BLOCKED_CAPACITY`):
 

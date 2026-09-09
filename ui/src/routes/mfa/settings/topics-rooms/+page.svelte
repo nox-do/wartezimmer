@@ -12,6 +12,7 @@
   let saving = $state(false);
   let rooms = $state<PracticeRoomWithPanels[]>([]);
   let topics = $state<PracticeTopicSetting[]>([]);
+  let postWaitingCallTargetId = $state<string | null>(null);
   let routingCapabilities = $state<RoutingCapabilities | null>(null);
 
   function handleRoomsChange(nextRooms: PracticeRoomWithPanels[]) {
@@ -27,6 +28,7 @@
     }
     rooms = result.rooms;
     topics = result.topics;
+    postWaitingCallTargetId = result.postWaitingCallTargetId;
     routingCapabilities = result.routingCapabilities;
   }
 
@@ -38,6 +40,8 @@
     const result = await persistTopicsRoomsSettings(rooms, topics, {
       ...options,
       routingCapabilities,
+      postWaitingCallTargetId:
+        routingCapabilities?.routingMode === 'simple' ? postWaitingCallTargetId : undefined,
     });
     saving = false;
     if (!result) {
@@ -46,6 +50,7 @@
     }
     rooms = result.rooms;
     topics = result.topics;
+    postWaitingCallTargetId = result.postWaitingCallTargetId;
     return true;
   }
 
@@ -58,6 +63,14 @@
   {#if loading}
     <p class="text-muted">{t('ui.loading')}</p>
   {:else}
-    <RoomsEditor {rooms} busy={saving} onChange={handleRoomsChange} onPersist={persistSettings} />
+    <RoomsEditor
+      {rooms}
+      {postWaitingCallTargetId}
+      showPostWaitingCallTarget={routingCapabilities?.routingMode === 'simple'}
+      busy={saving}
+      onChange={handleRoomsChange}
+      onPostWaitingCallTargetChange={(roomId) => (postWaitingCallTargetId = roomId)}
+      onPersist={persistSettings}
+    />
   {/if}
 </StaffSettingsShell>

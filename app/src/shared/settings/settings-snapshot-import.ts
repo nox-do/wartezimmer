@@ -222,6 +222,12 @@ function parseOpsSettingsSnapshot(raw: unknown): OpsSettingsSnapshotV1 {
 
   return {
     routingMode: routingMode as RoutingMode,
+    postWaitingCallTargetId:
+      raw.postWaitingCallTargetId == null
+        ? raw.postWaitingCallTargetId === undefined
+          ? undefined
+          : null
+        : assertString(raw.postWaitingCallTargetId, 'opsSettings.postWaitingCallTargetId'),
     returnWindowMinutes: assertNumber(raw.returnWindowMinutes, 'opsSettings.returnWindowMinutes'),
     practiceOpenFrom: assertString(raw.practiceOpenFrom, 'opsSettings.practiceOpenFrom'),
     practiceOpenTo: assertString(raw.practiceOpenTo, 'opsSettings.practiceOpenTo'),
@@ -317,6 +323,16 @@ function validateOpsSettingsSnapshot(snapshot: OpsSettingsSnapshotV1): OpsSettin
 
   return {
     routingMode: snapshot.routingMode,
+    postWaitingCallTargetId: (() => {
+      const targetId =
+        snapshot.postWaitingCallTargetId === undefined
+          ? 'mfa-tresen'
+          : snapshot.postWaitingCallTargetId;
+      if (targetId === null) {
+        return null;
+      }
+      return rooms.some((room) => room.enabled && room.roomId === targetId) ? targetId : null;
+    })(),
     returnWindowMinutes: snapshot.returnWindowMinutes,
     practiceOpenFrom: snapshot.practiceOpenFrom,
     practiceOpenTo: snapshot.practiceOpenTo,
@@ -373,6 +389,7 @@ function writeOpsSettingsSnapshot(
     UPDATE ops_settings
     SET
       routing_mode = ?,
+      post_waiting_call_target_id = ?,
       return_window_minutes = ?,
       practice_open_from = ?,
       practice_open_to = ?,
@@ -400,6 +417,7 @@ function writeOpsSettingsSnapshot(
   `,
   ).run(
     opsSettings.routingMode,
+    opsSettings.postWaitingCallTargetId,
     opsSettings.returnWindowMinutes,
     opsSettings.practiceOpenFrom,
     opsSettings.practiceOpenTo,

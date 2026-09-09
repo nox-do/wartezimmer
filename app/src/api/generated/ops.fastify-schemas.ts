@@ -770,6 +770,7 @@ export const OpsSettingsResponse = {
   type: 'object',
   required: [
     'routingMode',
+    'postWaitingCallTargetId',
     'returnWindowMinutes',
     'practiceOpenFrom',
     'practiceOpenTo',
@@ -795,6 +796,11 @@ export const OpsSettingsResponse = {
     routingMode: {
       type: 'string',
       enum: ['simple', 'complex'],
+    },
+    postWaitingCallTargetId: {
+      type: ['string', 'null'],
+      minLength: 1,
+      maxLength: 64,
     },
     returnWindowMinutes: {
       type: 'integer',
@@ -2680,6 +2686,7 @@ export const GET_api_v1_ops_settingsResponse200 = {
   type: 'object',
   required: [
     'routingMode',
+    'postWaitingCallTargetId',
     'returnWindowMinutes',
     'practiceOpenFrom',
     'practiceOpenTo',
@@ -2705,6 +2712,11 @@ export const GET_api_v1_ops_settingsResponse200 = {
     routingMode: {
       type: 'string',
       enum: ['simple', 'complex'],
+    },
+    postWaitingCallTargetId: {
+      type: ['string', 'null'],
+      minLength: 1,
+      maxLength: 64,
     },
     returnWindowMinutes: {
       type: 'integer',
@@ -3198,6 +3210,11 @@ export const PATCH_api_v1_ops_settingsRequestBody = {
       type: 'string',
       enum: ['simple', 'complex'],
     },
+    postWaitingCallTargetId: {
+      type: ['string', 'null'],
+      minLength: 1,
+      maxLength: 64,
+    },
     returnWindowMinutes: {
       type: 'integer',
       minimum: 1,
@@ -3644,6 +3661,7 @@ export const PATCH_api_v1_ops_settingsResponse200 = {
   type: 'object',
   required: [
     'routingMode',
+    'postWaitingCallTargetId',
     'returnWindowMinutes',
     'practiceOpenFrom',
     'practiceOpenTo',
@@ -3669,6 +3687,11 @@ export const PATCH_api_v1_ops_settingsResponse200 = {
     routingMode: {
       type: 'string',
       enum: ['simple', 'complex'],
+    },
+    postWaitingCallTargetId: {
+      type: ['string', 'null'],
+      minLength: 1,
+      maxLength: 64,
     },
     returnWindowMinutes: {
       type: 'integer',

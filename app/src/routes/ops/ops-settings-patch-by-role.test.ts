@@ -16,6 +16,13 @@ test('mfa may not patch routingMode', () => {
   );
 });
 
+test('mfa may patch the simple post-waiting call target', () => {
+  assert.deepEqual(
+    assertPatchOpsSettingsAllowedForRole('mfa', { postWaitingCallTargetId: 'labor' }),
+    { ok: true },
+  );
+});
+
 test('unknown roles may not patch routingMode', () => {
   assert.deepEqual(
     assertPatchOpsSettingsAllowedForRole(undefined, { routingMode: 'complex' }),

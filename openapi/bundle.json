@@ -11350,6 +11350,7 @@
                   "type": "object",
                   "required": [
                     "routingMode",
+                    "postWaitingCallTargetId",
                     "returnWindowMinutes",
                     "practiceOpenFrom",
                     "practiceOpenTo",
@@ -11376,6 +11377,13 @@
                       "type": "string",
                       "enum": ["simple", "complex"],
                       "description": "Practice-wide routing mode. simple preserves RoutingRules-only behavior; complex allows mixed topics with journeys later."
+                    },
+                    "postWaitingCallTargetId": {
+                      "type": "string",
+                      "nullable": true,
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "description": "Simple-routing target used when a non-assisted patient waits at pf_waiting and is called without an explicit room selection."
                     },
                     "returnWindowMinutes": {
                       "type": "integer",
@@ -11589,7 +11597,7 @@
                           },
                           "defaultCallTarget": {
                             "type": "boolean",
-                            "description": "Default MFA call destination when Quicksettings have no session override. At most one enabled practice room is marked; if none is marked, pf_waiting is the default."
+                            "description": "General catalog fallback when a topic target is unavailable. At most one enabled practice room is marked; if none is marked, pf_waiting is the fallback."
                           },
                           "maxOccupancy": {
                             "type": "integer",
@@ -11919,6 +11927,12 @@
                   "routingMode": {
                     "type": "string",
                     "enum": ["simple", "complex"]
+                  },
+                  "postWaitingCallTargetId": {
+                    "type": "string",
+                    "nullable": true,
+                    "minLength": 1,
+                    "maxLength": 64
                   },
                   "returnWindowMinutes": {
                     "type": "integer",
@@ -12395,6 +12409,7 @@
                   "type": "object",
                   "required": [
                     "routingMode",
+                    "postWaitingCallTargetId",
                     "returnWindowMinutes",
                     "practiceOpenFrom",
                     "practiceOpenTo",
@@ -12421,6 +12436,13 @@
                       "type": "string",
                       "enum": ["simple", "complex"],
                       "description": "Practice-wide routing mode. simple preserves RoutingRules-only behavior; complex allows mixed topics with journeys later."
+                    },
+                    "postWaitingCallTargetId": {
+                      "type": "string",
+                      "nullable": true,
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "description": "Simple-routing target used when a non-assisted patient waits at pf_waiting and is called without an explicit room selection."
                     },
                     "returnWindowMinutes": {
                       "type": "integer",
@@ -12634,7 +12656,7 @@
                           },
                           "defaultCallTarget": {
                             "type": "boolean",
-                            "description": "Default MFA call destination when Quicksettings have no session override. At most one enabled practice room is marked; if none is marked, pf_waiting is the default."
+                            "description": "General catalog fallback when a topic target is unavailable. At most one enabled practice room is marked; if none is marked, pf_waiting is the fallback."
                           },
                           "maxOccupancy": {
                             "type": "integer",
@@ -21380,6 +21402,7 @@
         "type": "object",
         "required": [
           "routingMode",
+          "postWaitingCallTargetId",
           "returnWindowMinutes",
           "practiceOpenFrom",
           "practiceOpenTo",
@@ -21406,6 +21429,13 @@
             "type": "string",
             "enum": ["simple", "complex"],
             "description": "Practice-wide routing mode. simple preserves RoutingRules-only behavior; complex allows mixed topics with journeys later."
+          },
+          "postWaitingCallTargetId": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Simple-routing target used when a non-assisted patient waits at pf_waiting and is called without an explicit room selection."
           },
           "returnWindowMinutes": {
             "type": "integer",
@@ -21619,7 +21649,7 @@
                 },
                 "defaultCallTarget": {
                   "type": "boolean",
-                  "description": "Default MFA call destination when Quicksettings have no session override. At most one enabled practice room is marked; if none is marked, pf_waiting is the default."
+                  "description": "General catalog fallback when a topic target is unavailable. At most one enabled practice room is marked; if none is marked, pf_waiting is the fallback."
                 },
                 "maxOccupancy": {
                   "type": "integer",

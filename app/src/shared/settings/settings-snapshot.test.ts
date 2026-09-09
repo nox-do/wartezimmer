@@ -230,6 +230,37 @@ test('parseSettingsSnapshotV1 accepts exported JSON shape', () => {
   assert.equal(parsed.env.BUSINESS_TZ, 'Europe/Berlin');
 });
 
+test('settings snapshot import preserves an explicit null post-waiting call target', () => {
+  const sourceDb = openFreshDb();
+  sourceDb.prepare('UPDATE ops_settings SET post_waiting_call_target_id = NULL').run();
+  const snapshot = exportSettingsSnapshotFromDb(sourceDb, sampleEnv());
+
+  const targetDb = openFreshDb();
+  importSettingsSnapshotIntoDb(targetDb, snapshot);
+
+  const restored = targetDb
+    .prepare('SELECT post_waiting_call_target_id AS value FROM ops_settings WHERE id = ?')
+    .get('singleton') as { value: string | null };
+  assert.equal(restored.value, null);
+});
+
+test('settings snapshot import defaults a missing legacy post-waiting target to reception', () => {
+  const sourceDb = openFreshDb();
+  const snapshot = exportSettingsSnapshotFromDb(sourceDb, sampleEnv());
+  const { postWaitingCallTargetId: _omitted, ...legacyOpsSettings } = snapshot.opsSettings;
+
+  const targetDb = openFreshDb();
+  importSettingsSnapshotIntoDb(targetDb, {
+    ...snapshot,
+    opsSettings: legacyOpsSettings,
+  });
+
+  const restored = targetDb
+    .prepare('SELECT post_waiting_call_target_id AS value FROM ops_settings WHERE id = ?')
+    .get('singleton') as { value: string | null };
+  assert.equal(restored.value, 'mfa-tresen');
+});
+
 test('settings snapshot roundtrip on file db', () => {
   const dir = mkdtempSync(join(tmpdir(), 'settings-snapshot-'));
   const dbPath = join(dir, 'test.db');

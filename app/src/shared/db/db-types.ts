@@ -153,6 +153,7 @@ export type RoutingMode = 'simple' | 'complex';
 
 export type OpsSettings = {
   routingMode: RoutingMode;
+  postWaitingCallTargetId: string | null;
   returnWindowMinutes: number;
   practiceOpenFrom: string;
   practiceOpenTo: string;

@@ -32,15 +32,21 @@
 
   interface Props {
     rooms: PracticeRoomWithPanels[];
+    postWaitingCallTargetId?: string | null;
+    showPostWaitingCallTarget?: boolean;
     busy?: boolean;
     onChange?: (rooms: PracticeRoomWithPanels[]) => void;
+    onPostWaitingCallTargetChange?: (roomId: string | null) => void;
     onPersist?: (options?: { roomQueueGuardContext?: RoomQueueGuardContext }) => void | Promise<boolean>;
   }
 
   let {
     rooms,
+    postWaitingCallTargetId = null,
+    showPostWaitingCallTarget = false,
     busy = false,
     onChange,
+    onPostWaitingCallTargetChange,
     onPersist,
   }: Props = $props();
 
@@ -61,6 +67,7 @@
   const waitingRoomIsDefault = $derived(
     !rooms.some((room) => room.enabled && room.defaultCallTarget),
   );
+  const enabledRooms = $derived(rooms.filter((room) => room.enabled));
 
   $effect(() => {
     if (openRoomId == null) {
@@ -127,6 +134,11 @@
   async function setWaitingRoomAsDefault() {
     if (waitingRoomIsDefault) return;
     onChange?.(ensureSingleDefaultCallTarget(rooms, WAITING_ROOM_LOCATION_ID));
+    await onPersist?.();
+  }
+
+  async function setPostWaitingCallTarget(value: string) {
+    onPostWaitingCallTargetChange?.(value.trim() || null);
     await onPersist?.();
   }
 
@@ -353,22 +365,45 @@
     </Button>
   </div>
 
-  <label class="modal-form-check rooms-editor-default-target">
-    <input
-      type="checkbox"
-      checked={waitingRoomIsDefault}
-      disabled={busy}
-      onchange={(event) => {
-        const input = event.currentTarget as HTMLInputElement;
-        if (input.checked) {
-          void setWaitingRoomAsDefault();
-        } else {
-          input.checked = true;
-        }
-      }}
-    />
-    <span>{t('mfa.settings.waitingRoomDefaultTarget')}</span>
-  </label>
+  <div class="rooms-editor-default-routing">
+    <label class="modal-form-check rooms-editor-default-target">
+      <input
+        type="checkbox"
+        checked={waitingRoomIsDefault}
+        disabled={busy}
+        onchange={(event) => {
+          const input = event.currentTarget as HTMLInputElement;
+          if (input.checked) {
+            void setWaitingRoomAsDefault();
+          } else {
+            input.checked = true;
+          }
+        }}
+      />
+      <span class="rooms-editor-default-target__text">
+        <span>{t('mfa.settings.waitingRoomDefaultTarget')}</span>
+        <small>{t('mfa.settings.waitingRoomDefaultTargetHint')}</small>
+      </span>
+    </label>
+
+    {#if showPostWaitingCallTarget}
+      <label class="modal-form-field rooms-editor-post-waiting-target">
+        <span>{t('mfa.settings.postWaitingCallTarget')}</span>
+        <select
+          class="form-input"
+          value={postWaitingCallTargetId ?? ''}
+          disabled={busy || !waitingRoomIsDefault}
+          onchange={(event) =>
+            void setPostWaitingCallTarget((event.currentTarget as HTMLSelectElement).value)}
+        >
+          <option value="" disabled>{t('mfa.settings.postWaitingCallTargetPlaceholder')}</option>
+          {#each enabledRooms as room (room.roomId)}
+            <option value={room.roomId}>{room.roomLabel}</option>
+          {/each}
+        </select>
+      </label>
+    {/if}
+  </div>
 
   {#if rooms.length === 0}
     <p class="mfa-editor-empty">{t('mfa.settings.roomsEmpty')}</p>

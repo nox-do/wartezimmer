@@ -55,6 +55,23 @@ test('getOpsSettingsFromDb defaults missing routingMode to simple', () => {
   });
 
   assert.equal(settings.routingMode, 'simple');
+  assert.equal(settings.postWaitingCallTargetId, null);
+});
+
+test('getOpsSettingsFromDb keeps a configured active post-waiting target', () => {
+  const settings = getOpsSettingsFromDb({
+    getOpsSettingsStmt: {
+      get: () =>
+        minimalOpsSettingsRow({
+          postWaitingCallTargetId: 'labor',
+          roomsJson:
+            '[{"roomId":"empfang","roomLabel":"Empfang","enabled":true},{"roomId":"labor","roomLabel":"Labor","enabled":true}]',
+        }),
+    } as StatementSync,
+    configuredExportBasePath: null,
+  });
+
+  assert.equal(settings.postWaitingCallTargetId, 'labor');
 });
 
 test('getOpsSettingsFromDb reads stored complex routingMode', () => {
@@ -89,6 +106,65 @@ test('updateOpsSettingsInDb persists routingMode and returns the saved value', (
   assert.equal(settings.routingMode, 'complex');
   assert.equal(savedArgs.length, 1);
   assert.equal(savedArgs[0]?.[0], 'complex');
+});
+
+test('updateOpsSettingsInDb persists only an enabled post-waiting target', () => {
+  const savedArgs: unknown[][] = [];
+  const deps = {
+    getOpsSettingsStmt: {
+      get: () =>
+        minimalOpsSettingsRow({
+          roomsJson:
+            '[{"roomId":"empfang","roomLabel":"Empfang","enabled":true},{"roomId":"labor","roomLabel":"Labor","enabled":true}]',
+        }),
+    } as StatementSync,
+    updateOpsSettingsStmt: {
+      run: (...args: unknown[]) => savedArgs.push(args),
+    } as StatementSync,
+    nowIso: () => '2026-01-01T01:00:00.000Z',
+    configuredExportBasePath: null,
+  };
+
+  const settings = updateOpsSettingsInDb(deps, { postWaitingCallTargetId: 'labor' });
+  assert.equal(settings.postWaitingCallTargetId, 'labor');
+  assert.equal(savedArgs[0]?.[1], 'labor');
+  assert.throws(
+    () => updateOpsSettingsInDb(deps, { postWaitingCallTargetId: 'geloescht' }),
+    OpsSettingsValidationError,
+  );
+});
+
+test('complex routing clears an obsolete hidden post-waiting target on room updates', () => {
+  const settings = updateOpsSettingsInDb(
+    {
+      getOpsSettingsStmt: {
+        get: () =>
+          minimalOpsSettingsRow({
+            routingMode: 'complex',
+            postWaitingCallTargetId: 'labor',
+            roomsJson:
+              '[{"roomId":"empfang","roomLabel":"Empfang","enabled":true},{"roomId":"labor","roomLabel":"Labor","enabled":true}]',
+          }),
+      } as StatementSync,
+      updateOpsSettingsStmt: { run: () => undefined } as unknown as StatementSync,
+      nowIso: () => '2026-01-01T01:00:00.000Z',
+      configuredExportBasePath: null,
+    },
+    {
+      rooms: [
+        {
+          roomId: 'empfang',
+          roomLabel: 'Empfang',
+          enabled: true,
+          defaultCallTarget: false,
+          maxOccupancy: null,
+          panels: DEFAULT_ROOM_PANELS_SETTINGS,
+        },
+      ],
+    },
+  );
+
+  assert.equal(settings.postWaitingCallTargetId, null);
 });
 
 test('opsSettingsInvalidHttpStatus maps routing mode guard to 409', () => {

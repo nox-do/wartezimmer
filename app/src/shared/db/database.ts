@@ -6,7 +6,6 @@ import {
   assertSupportedSchemaGeneration,
   createCurrentSchema,
   isUninitializedDatabase,
-  readSchemaGeneration,
   runTransitionSchemaEnsures,
 } from './create-current-schema.js';
 import {
@@ -336,9 +335,9 @@ export class CoreDatabase {
       createCurrentSchema(this.db);
     } else {
       assertSupportedSchemaGeneration(this.db);
-      if (readSchemaGeneration(this.db) === 0) {
-        runTransitionSchemaEnsures(this.db);
-      }
+      // Additive transition ensures are idempotent and must run before statements
+      // are prepared, including for databases already on the current generation.
+      runTransitionSchemaEnsures(this.db);
     }
 
     ensureDemoContactLookupSeed(this.db);

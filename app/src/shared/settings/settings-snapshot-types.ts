@@ -14,6 +14,8 @@ export type SettingsSnapshotDbV1 = Omit<SettingsSnapshotV1, 'env'>;
 
 export type OpsSettingsSnapshotV1 = {
   routingMode: 'simple' | 'complex';
+  /** Optional for backwards-compatible import of v1 snapshots created before this setting. */
+  postWaitingCallTargetId?: string | null;
   returnWindowMinutes: number;
   practiceOpenFrom: string;
   practiceOpenTo: string;

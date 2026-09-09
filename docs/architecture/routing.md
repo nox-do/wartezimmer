@@ -88,6 +88,8 @@ Am Visit sind Aufenthaltsort und Ziel strikt getrennt:
 
 Das Themenfeld `defaultRoomId` ist das primäre Ziel im Simple Routing. Zeigt es auf einen fehlenden oder deaktivierten Raum, greift der mit `defaultCallTarget` markierte aktive Praxisraum. Ist kein Raum markiert, ist `pf_waiting` der definierte Fallback. Das feste Systemthema M verwendet ebenfalls dieses Standard-Aufrufziel.
 
+Beginnt ein normaler Simple-Routing-Fall bewusst in `pf_waiting`, liefert `postWaitingCallTargetId` das Ein-Klick-Ziel für den späteren MFA-Aufruf. Die MFA kann dieses Ziel im Raum-Board für die Browser-Session temporär überschreiben. Diese Auflösung findet ausschließlich im MFA-Client statt und wird als explizites Raumziel an die normale Call-API gesendet. Sie gilt nicht für Complex Routing, begleitete Patienten (`needsAssistance`) oder Drag & Drop.
+
 ### Movement & Display
 
 | Typ                 | Werte                                 | Wirkung (Auszug)                                                                                                              |
@@ -179,7 +181,7 @@ Der Resolver ändert keinen Visit und entscheidet nicht verbindlich, ob die Oper
 
 Die explizite Platzierung wird im Host-Workflow `placeVisitInRoom` (`app/src/shared/queue/place-visit-in-room.ts`) komponiert: optionaler Journey-Start, Call/Reassign und Arrival laufen unter einer gemeinsamen SQLite-Transaktion. `CoreDatabase.checkInRoom()` bleibt dagegen die einfache Ankunftsbestätigung, wie sie insbesondere Raum-Panels und die begleitete Ankunft in `pf_waiting` benötigen. Nach außen meldet der Platzierungsworkflow genau einen Übergang vom Status vor der Benutzeraktion zum finalen Status; die einzelnen Flow-Core-Events bleiben für das Audit erhalten.
 
-Ein normaler Aufruf und eine explizite Platzierung akzeptieren serverseitig nur aktuell aktivierte Praxisräume. Das gilt auch, wenn dieselbe Ziel-ID bereits am Visit gespeichert ist. `pf_waiting` ist ausschließlich als Ziel der begleiteten Wartezimmer-Ankunft zulässig und nie als Ein-Klick-Aufrufziel.
+Ein normaler Aufruf und eine explizite Platzierung akzeptieren serverseitig nur aktuell aktivierte Praxisräume. Das gilt auch, wenn dieselbe Ziel-ID bereits am Visit gespeichert ist. `pf_waiting` selbst ist ausschließlich als Ziel der begleiteten Wartezimmer-Ankunft zulässig und nie das finale Ein-Klick-Aufrufziel; der Simple-Routing-Komfortpfad löst es vorher auf einen aktiven Praxisraum auf.
 
 Queue-HTTP: Transition-Typ `continue_journey` (`queue-visit-transitions.ts`).
 

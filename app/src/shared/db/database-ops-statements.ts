@@ -62,6 +62,7 @@ export function prepareOpsDatabaseStatements(db: DatabaseSync) {
     getOpsSettingsStmt: db.prepare(
       `SELECT
         routing_mode AS routingMode,
+        post_waiting_call_target_id AS postWaitingCallTargetId,
         return_window_minutes AS returnWindowMinutes,
         practice_open_from AS practiceOpenFrom,
         practice_open_to AS practiceOpenTo,
@@ -89,6 +90,7 @@ export function prepareOpsDatabaseStatements(db: DatabaseSync) {
     updateOpsSettingsStmt: db.prepare(
       `UPDATE ops_settings
       SET routing_mode = ?,
+          post_waiting_call_target_id = ?,
           return_window_minutes = ?,
           practice_open_from = ?,
           practice_open_to = ?,
