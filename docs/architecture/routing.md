@@ -1,6 +1,6 @@
 # Routing — Modi, Catalog-Regeln, Journeys
 
-Stand: 2026-09-04 · Ist am Code (`sync-catalog-from-ops-settings`, `flow-core` Visit-/Journey-Flow)
+Stand: 2026-09-09 · Ist am Code (`sync-catalog-from-ops-settings`, `flow-core` Visit-/Journey-Flow)
 
 **Scope:** Wie ein Check-in zum operativen Ziel wird; `simple` vs. `complex`; Journey-Autopilot; Redirect; Mode-/Lizenz-Guards.  
 Nicht: Nummernkreis/Themen-Editor-Detail → [`domain.md`](domain.md) · Call-Raum-Resolver → [`domain.md`](domain.md) §3 · Fachflows UI → [`../flows.md`](../flows.md) · Package-API → `packages/flow-core/README.md`
@@ -9,15 +9,18 @@ Nicht: Nummernkreis/Themen-Editor-Detail → [`domain.md`](domain.md) · Call-Ra
 
 ## 1. Leitidee
 
-| Ebene                | Wahrheit                                                                  |
-| -------------------- | ------------------------------------------------------------------------- |
-| Praxis-Konfiguration | `ops_settings` (`routingMode`, Topics/`defaultRoomId`, `journeySettings`) |
-| Catalog              | **Projektion** — nur `syncCatalogFromOpsSettings()`                       |
-| Visit                | **operative Wahrheit** — Status, Ziel, Queue, Movement, Journey-Cursor    |
+| Ebene                | Verantwortung                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| Praxis-Konfiguration | **Konfigurationswahrheit** in `ops_settings`: Mode, Topics, Räume und Journeys                   |
+| Catalog              | **Ausführbare Projektion** durch `syncCatalogFromOpsSettings()`                                  |
+| Visit                | **Operative Wahrheit**: Status, Aufenthaltsort, Ziel, Queue, Movement und Journey-Cursor         |
+| Flow-Core            | Zustandsautomat, Journey-Fortschritt und fachliche Guards                                        |
+| Host-Workflows       | Komponieren Core-Transitions atomar und prüfen konfigurierte Räume sowie Kapazitäten             |
+| UI / Surfaces        | Übersetzen Bedienhandlungen in API-Kommandos und zeigen Sichten; sie sind keine Routing-Wahrheit |
 
 Zwei Wege zur ersten Route:
 
-1. **Single-step** — `RoutingRule.initial_*` (Wartezimmer → Themen-`defaultRoomId`, Movement `call`)
+1. **Single-step** — `RoutingRule.initial_*` (Ziel Wartezimmer → `call`, echtes Raumziel → `self_go`)
 2. **Journey** — Rule trägt `journeyTemplateId`; Check-in nimmt **nur Step 0**; `initial_*` wird ignoriert
 
 ```mermaid
@@ -37,12 +40,12 @@ flowchart TB
 Gespeichert: `ops_settings.routing_mode` (`'simple' | 'complex'`).  
 Fachliche Autorität: **Ops Settings** — nicht MFA. Manager/Setup dürfen den lokalen technischen Kompatibilitätspfad nur für Host-/Restore-Abläufe verwenden (`ops-settings-patch-by-role.ts`).
 
-|                           | **simple**                                     | **complex**                                                    |
-| ------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
-| Catalog-Sync              | nur `syncSimpleRoutingRulesFromOpsSettings`    | + Journey-Templates + `syncComplexRoutingRulesFromOpsSettings` |
-| Topic-`journeyTemplateId` | wird **nicht** in die Rule geschrieben         | verknüpft, wenn Template existiert und `active`                |
-| UI Journey-Designer       | aus (`features.journeyDesigner`)               | an, **nur wenn lizenziert**                                    |
-| Host-Default ohne Journey | Rule: waiting → defaultRoom, `call`, `visible` | gleich, wenn kein Template am Topic                            |
+|                           | **simple**                                  | **complex**                                                    |
+| ------------------------- | ------------------------------------------- | -------------------------------------------------------------- |
+| Catalog-Sync              | nur `syncSimpleRoutingRulesFromOpsSettings` | + Journey-Templates + `syncComplexRoutingRulesFromOpsSettings` |
+| Topic-`journeyTemplateId` | wird **nicht** in die Rule geschrieben      | verknüpft, wenn Template existiert und `active`                |
+| UI Journey-Designer       | aus (`features.journeyDesigner`)            | an, **nur wenn lizenziert**                                    |
+| Host-Default ohne Journey | Wartezimmer → `call`; Raumziel → `self_go`  | gleich, wenn kein aktives Template am Topic                    |
 
 **Wichtig:** `complex` allein aktiviert keine Mehrschritt-Routen. Ohne Templates bleiben Rules single-step-förmig.
 
@@ -69,6 +72,21 @@ Offene Visits (Status ∉ `done` \| `cancelled` \| `no_show`) → Mode-Wechsel b
 | **JourneyTemplate / JourneyStep** | Mehrschritt; Step: Ziel, Queue, `movementMode`, `publicDisplayMode`, `completedWhen`                 |
 
 Typen: `packages/flow-core/src/shared/types.ts`. Schema: `packages/flow-core/db/schema.sql`.
+
+### Raumbegriffe und Zuständigkeiten
+
+Ein Praxisraum existiert absichtlich auf zwei Ebenen:
+
+- `ops_settings.rooms` enthält die administrativen Eigenschaften: Bezeichnung, Aktivierung, `defaultCallTarget`, Kapazität und Panel-Konfiguration.
+- Der Catalog projiziert jeden Raum als `Location`; ein aktiviertes Raum-Panel wird zusätzlich als `Surface` angelegt.
+
+Am Visit sind Aufenthaltsort und Ziel strikt getrennt:
+
+- `lastKnownLocationId`: letzter bekannter tatsächlicher Aufenthaltsort
+- `targetLocationId`: operatives Ziel des aktuellen Hops
+- `locationConfidence`: ob der Aufenthaltsort angenommen, angewiesen oder bestätigt ist
+
+Das Themenfeld `defaultRoomId` ist das primäre Ziel im Simple Routing. Zeigt es auf einen fehlenden oder deaktivierten Raum, greift der mit `defaultCallTarget` markierte aktive Praxisraum. Ist kein Raum markiert, ist `pf_waiting` der definierte Fallback. Das feste Systemthema M verwendet ebenfalls dieses Standard-Aufrufziel.
 
 ### Movement & Display
 
@@ -148,6 +166,17 @@ Host-Bridge: `app/src/shared/flow-core/visit-queue-bridge.ts` — u. a. `callVis
 
 MFA-Drag-&-Drop auf einen Raum startet bei abgeschlossenem Hop denselben nächsten Journey-Step wie „Weiter“, übergibt aber den gewählten Raum als operatives Ziel für diesen Hop. Spätere Journey-Steps bleiben unverändert.
 
+### Drag & Drop: UI-Absicht, serverseitige Autorität
+
+Der Resolver `ui/src/lib/queue/queue-drop-resolver.ts` ist reine UI-Logik. Er kennt Drag-Quelle und Drop-Zone und übersetzt die abgeschlossene Geste in ein Kommando:
+
+- Wartebereich → Raum: `call` oder `place-in-room`
+- aktiver Bereich → Raum: `reassign`, `continue-journey` oder `place-in-room`
+- aktiver Bereich → Wartezimmer: `return-to-waiting`
+- Wartebereich → abwesend: `mark-away`
+
+Der Resolver ändert keinen Visit und entscheidet nicht verbindlich, ob die Operation erlaubt ist. `mfa-queue-commands.svelte.ts` ruft lediglich die passende Queue-API auf. API, Host-Workflow und Flow-Core prüfen anschließend erneut Transition, aktiven Praxisraum, Kapazität, Location-Scope und Assistenzregeln. Die Assistenz-Bestätigung vor der Platzierung ist eine UI-Sicherheitsabfrage; fachlich ausgeführt wird danach derselbe serverseitige atomare Platzierungsworkflow.
+
 Die explizite Platzierung wird im Host-Workflow `placeVisitInRoom` (`app/src/shared/queue/place-visit-in-room.ts`) komponiert: optionaler Journey-Start, Call/Reassign und Arrival laufen unter einer gemeinsamen SQLite-Transaktion. `CoreDatabase.checkInRoom()` bleibt dagegen die einfache Ankunftsbestätigung, wie sie insbesondere Raum-Panels und die begleitete Ankunft in `pf_waiting` benötigen. Nach außen meldet der Platzierungsworkflow genau einen Übergang vom Status vor der Benutzeraktion zum finalen Status; die einzelnen Flow-Core-Events bleiben für das Audit erhalten.
 
 Ein normaler Aufruf und eine explizite Platzierung akzeptieren serverseitig nur aktuell aktivierte Praxisräume. Das gilt auch, wenn dieselbe Ziel-ID bereits am Visit gespeichert ist. `pf_waiting` ist ausschließlich als Ziel der begleiteten Wartezimmer-Ankunft zulässig und nie als Ein-Klick-Aufrufziel.
@@ -199,9 +228,11 @@ Tagesreset leert Visits; Mode, Topics, Journeys bleiben ([`system.md`](system.md
 | `app/src/shared/ops/journey-template-guard.ts`                                      | Template-Lock                     |
 | `app/src/shared/journey-settings.ts`                                                | Ops-JSON Journeys                 |
 | `app/src/shared/flow-core/visit-queue-bridge.ts`                                    | Queue-Ops ↔ Core-Transitions      |
+| `app/src/shared/queue/place-visit-in-room.ts`                                       | Atomare explizite Raumplatzierung |
 | `packages/flow-core/src/shared/{journey,visit-flow,redirect-flow,routing-scope}.ts` | Domain-Algorithmen                |
 | `packages/flow-core/src/server/visit-service.ts`                                    | Check-in / Transition / Redirect  |
 | `setup/src/routing-mode.ts` · Manager Maintenance                                   | Mode lesen/setzen                 |
+| `ui/src/lib/queue/queue-drop-resolver.ts`                                           | Drop-Geste → UI-Kommando          |
 | `ui/.../mfa/settings/topics-rooms/journeys/`                                        | Journey-Designer                  |
 
 Tests mit hoher Signalstärke: `sync-catalog-from-ops-settings.test.ts`, `routing-mode-guard*.test.ts`, `packages/flow-core/test/integration/runtime.test.ts`, `journey*.test.ts`, `visit-queue-bridge.test.ts`.
@@ -211,9 +242,9 @@ Tests mit hoher Signalstärke: `sync-catalog-from-ops-settings.test.ts`, `routin
 **Simple — Thema Blut → Labor**
 
 1. Topic `defaultRoomId: labor`, Mode `simple`
-2. Sync: Rule waiting→labor, `call`, kein Journey
-3. Check-in: Visit `waiting`, Ziel Labor
-4. MFA `call` → Panel arrive/start/done
+2. Sync: Rule waiting→labor, `self_go`, kein Journey
+3. Check-in: Visit `directed`, Ziel Labor; Wegweisung erfolgt am Terminal
+4. Ankunft bestätigen → `arrived`; danach `start` / `done`
 
 **Complex — Empfang dann Labor**
 
