@@ -37,13 +37,12 @@ function mapVisitToTvItem(
   settings: OpsSettings,
 ): TvQueueItem {
   const row = visitToQueueVisitRow(visit, settings);
-  const wayfinding =
-    row.status === 'directed' || (row.status === 'waiting' && row.movementMode === 'pickup');
+  const pickup = row.status === 'waiting' && row.movementMode === 'pickup';
   return {
     laneCode: row.laneCode,
     number: row.number,
     status: row.status,
-    roomLabel: wayfinding ? row.destinationRoomLabel?.trim() || row.roomLabel : row.roomLabel,
+    roomLabel: pickup ? row.destinationRoomLabel?.trim() || row.roomLabel : row.roomLabel,
     movementMode: row.movementMode,
   };
 }

@@ -28,7 +28,7 @@ export function partitionTvQueue(items: TvQueueItem[]): {
   for (const item of items) {
     const ticketCode = formatTicketCode(item.laneCode, item.number);
 
-    if (item.status === 'called' || item.status === 'directed' || isPickupWaiting(item)) {
+    if (item.status === 'called' || isPickupWaiting(item)) {
       const where = isPickupWaiting(item)
         ? t('tv.pickupHint')
         : item.roomLabel?.trim() || t('tv.callTargetFallback');

@@ -89,8 +89,9 @@ export const surfaceDisplayRules = [
 
 /**
  * publicDisplayMode in RoutingRules:
- * - Default fuer Warten am oeffentlichen Display: visible (Patient sieht sich auf dem TV)
- * - hidden nur als Ausnahme (Direktwege, Infekt aus Datenschutz)
+ * - Default fuer lokales Warten am oeffentlichen Display: visible
+ * - hidden als Ausnahme (z. B. Infekt aus Datenschutz)
+ * - self_go wird nicht als oeffentlicher Aufruf angezeigt
  * allowedSurfaceIds: null = alle Terminals; sonst JSON-Liste (z. B. Labor-Themen nur terminal_2)
  */
 export const routingRules = [

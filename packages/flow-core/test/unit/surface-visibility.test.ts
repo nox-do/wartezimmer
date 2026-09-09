@@ -262,7 +262,7 @@ test('Konfliktaufloesung: spezifisch schlaegt allgemein', () => {
   assert.equal(resolveSurfaceDisplayRule([general, specific])?.id, 'narrow');
 });
 
-test('directed + visible: auf waiting_tv auch ohne Queue und ohne lastKnown im Wartezimmer', () => {
+test('directed + visible: nicht als öffentlicher Aufruf sichtbar', () => {
   const visit = {
     primaryTopicId: 'blood',
     queueId: null,
@@ -274,8 +274,22 @@ test('directed + visible: auf waiting_tv auch ohne Queue und ohne lastKnown im W
   };
 
   const explanation = explainVisibility(visit, surfaces.waiting_tv, rules.waiting_tv);
-  assert.equal(explanation.visible, true);
-  assert.match(explanation.reason, /Wayfinding|publicDisplayMode/);
+  assert.equal(explanation.visible, false);
+  assert.match(explanation.reason, /self_go/);
+});
+
+test('directed + visible: auch am Display-Standort nicht als öffentlicher Aufruf sichtbar', () => {
+  const visit = {
+    primaryTopicId: 'blood',
+    queueId: 'general_queue',
+    targetLocationId: 'lab',
+    lastKnownLocationId: 'waiting_general',
+    status: 'directed',
+    movementMode: 'self_go',
+    publicDisplayMode: 'visible',
+  };
+
+  assert.equal(isVisitVisibleOnSurface(visit, surfaces.waiting_tv, rules.waiting_tv), false);
 });
 
 test('directed + hidden: nicht auf waiting_tv', () => {
@@ -292,12 +306,26 @@ test('directed + hidden: nicht auf waiting_tv', () => {
   assert.equal(isVisitVisibleOnSurface(visit, surfaces.waiting_tv, rules.waiting_tv), false);
 });
 
-test('pickup + visible: auf waiting_tv auch wenn lastKnown nicht Wartezimmer', () => {
+test('pickup + visible: nicht auf standortfremdem waiting_tv', () => {
   const visit = {
     primaryTopicId: 'blood',
     queueId: null,
     targetLocationId: 'lab',
     lastKnownLocationId: 'reception',
+    status: 'waiting',
+    movementMode: 'pickup',
+    publicDisplayMode: 'visible',
+  };
+
+  assert.equal(isVisitVisibleOnSurface(visit, surfaces.waiting_tv, rules.waiting_tv), false);
+});
+
+test('pickup + visible: lokal auch ohne Queue-Regel auf waiting_tv', () => {
+  const visit = {
+    primaryTopicId: 'mfa_assist',
+    queueId: null,
+    targetLocationId: 'lab',
+    lastKnownLocationId: 'waiting_general',
     status: 'waiting',
     movementMode: 'pickup',
     publicDisplayMode: 'visible',

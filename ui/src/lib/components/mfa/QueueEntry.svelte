@@ -17,6 +17,7 @@
   import { formatClockTime } from '$lib/queue/format-time';
   import {
     canMfaCallVisit,
+    hasValidMfaCallTarget,
     isMfaPickupActionPending,
     resolveMfaCallBlockedReason,
   } from '$lib/queue/mfa-call-gate';
@@ -120,10 +121,12 @@
     }
     return t('mfa.callBlockedOther');
   });
-  const callButtonTitle = $derived(
-    callBlockedTitle ?? (callAnnouncementOffline ? t('mfa.callAnnouncementOffline') : undefined),
+  const callTargetInvalid = $derived(
+    !hasValidMfaCallTarget(item, mfaPracticeContext.practiceRooms),
   );
-  const callTargetInvalid = $derived(callBlockedReason?.kind === 'room_required');
+  const callButtonTooltip = $derived(
+    callTargetInvalid ? t('mfa.callBlockedRoomRequired') : callBlockedTitle,
+  );
   const routingInvalidTitle = $derived(t('mfa.actionBlockedRoomRequired'));
   const showCall = $derived(zone === 'waiting' && Boolean(onCall));
   const showPickupAction = $derived(
@@ -483,17 +486,18 @@
           </MfaActionButton>
         {/if}
         {#if showCall}
-          <span class="mfa-action-tooltip" title={callButtonTitle}>
+          <span class="mfa-action-tooltip" data-tooltip={callButtonTooltip}>
             <MfaActionButton
               icon
               disabled={busy || !callAllowed}
               invalid={callTargetInvalid}
-              ariaLabel={callBlockedTitle
-                ? callBlockedTitle
-                : callAnnouncementOffline
-                  ? t('mfa.actionCallOfflineHint')
-                  : t('mfa.actionCall')}
-              title={callButtonTitle}
+              ariaLabel={callTargetInvalid
+                ? t('mfa.callBlockedRoomRequired')
+                : callBlockedTitle
+                  ? callBlockedTitle
+                  : callAnnouncementOffline
+                    ? t('mfa.actionCallOfflineHint')
+                    : t('mfa.actionCall')}
               onclick={onCall}
             >
               <Megaphone aria-hidden="true" />
@@ -562,7 +566,10 @@
             {t('mfa.assistPickedUp')}
           </MfaActionButton>
         {:else if inRoomPrimary === 'continue' && (onContinue || routingInvalid)}
-          <span class="mfa-action-tooltip" title={routingInvalid ? routingInvalidTitle : undefined}>
+          <span
+            class="mfa-action-tooltip"
+            data-tooltip={routingInvalid ? routingInvalidTitle : undefined}
+          >
             <MfaActionButton
               icon
               disabled={busy || routingInvalid}
@@ -574,7 +581,10 @@
             </MfaActionButton>
           </span>
         {:else if inRoomPrimary === 'start' && (onStart || routingInvalid)}
-          <span class="mfa-action-tooltip" title={routingInvalid ? routingInvalidTitle : undefined}>
+          <span
+            class="mfa-action-tooltip"
+            data-tooltip={routingInvalid ? routingInvalidTitle : undefined}
+          >
             <MfaActionButton
               icon
               disabled={busy || routingInvalid}

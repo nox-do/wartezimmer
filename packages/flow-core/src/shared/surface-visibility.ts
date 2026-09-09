@@ -22,9 +22,8 @@ export function allowsByDisplayMode(
   return true;
 }
 
-/** TV wayfinding: self_go underwegs or pickup waiting for escort. */
-export function isPublicWayfindingVisit(visit: Pick<Visit, 'status' | 'movementMode'>): boolean {
-  if (visit.status === 'directed') return true;
+/** Patient-facing pickup notice on a public display. self_go stays on terminal/staff surfaces. */
+export function isPublicPickupVisit(visit: Pick<Visit, 'status' | 'movementMode'>): boolean {
   return visit.status === 'waiting' && visit.movementMode === 'pickup';
 }
 
@@ -101,17 +100,45 @@ export function explainVisibility(
   const matchingRuleIds = matching.map((rule) => rule.id);
   const rule = resolveSurfaceDisplayRule(matching);
 
+  if (rule && !allowsByDisplayMode(rule.displayMode, visit)) {
+    return {
+      visible: false,
+      rule,
+      reason: `Versteckt wegen Regel ${rule.id} (displayMode=${rule.displayMode})`,
+      matchingRuleIds,
+    };
+  }
+
+  if (surface.type === 'public_display') {
+    if (visit.status === 'directed') {
+      return {
+        visible: false,
+        rule,
+        reason: 'self_go wird nicht als öffentlicher Aufruf angezeigt',
+        matchingRuleIds,
+      };
+    }
+    if (!isPatientAtSurfaceLocation(visit, surface)) {
+      return {
+        visible: false,
+        rule,
+        reason: `Nicht am Standort des Displays (${surface.locationId})`,
+        matchingRuleIds,
+      };
+    }
+  }
+
   if (!rule) {
-    // directed/self_go or pickup: visit.publicDisplayMode alone can put the ticket on TV
-    // ("Bitte weiter zu" / "Sie werden abgeholt") even without a queue-scoped SurfaceDisplayRule.
+    // A local pickup may be shown without a queue-scoped rule. This keeps the
+    // assistance lane visible while explicit hidden rules still take precedence.
     if (
       surface.type === 'public_display' &&
-      isPublicWayfindingVisit(visit) &&
+      isPublicPickupVisit(visit) &&
       allowsByDisplayMode(visit.publicDisplayMode, visit)
     ) {
       return {
         visible: true,
-        reason: 'Sichtbar wegen visit.publicDisplayMode (Wayfinding)',
+        reason: 'Sichtbar wegen visit.publicDisplayMode (lokale Abholung)',
         matchingRuleIds,
       };
     }
@@ -122,40 +149,7 @@ export function explainVisibility(
     };
   }
 
-  if (!allowsByDisplayMode(rule.displayMode, visit)) {
-    return {
-      visible: false,
-      rule,
-      reason: `Versteckt wegen Regel ${rule.id} (displayMode=${rule.displayMode})`,
-      matchingRuleIds,
-    };
-  }
-
   if (surface.type === 'public_display') {
-    if (isPublicWayfindingVisit(visit)) {
-      if (!allowsByDisplayMode(visit.publicDisplayMode, visit)) {
-        return {
-          visible: false,
-          rule,
-          reason: `visit.publicDisplayMode=${visit.publicDisplayMode}`,
-          matchingRuleIds,
-        };
-      }
-      return {
-        visible: true,
-        rule,
-        reason: `Sichtbar wegen Regel ${rule.id} (Wayfinding)`,
-        matchingRuleIds,
-      };
-    }
-    if (!isPatientAtSurfaceLocation(visit, surface)) {
-      return {
-        visible: false,
-        rule,
-        reason: `Nicht am Wartezimmer (${surface.locationId})`,
-        matchingRuleIds,
-      };
-    }
     if (!allowsByDisplayMode(visit.publicDisplayMode, visit)) {
       return {
         visible: false,

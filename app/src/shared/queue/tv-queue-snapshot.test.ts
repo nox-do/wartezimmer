@@ -114,7 +114,7 @@ function buildDeps(
   };
 }
 
-function setupVisitFlow(): {
+function setupVisitFlow(initialMovementMode: 'call' | 'self_go' = 'call'): {
   db: DatabaseSync;
   settings: OpsSettings;
   visitId: string;
@@ -125,9 +125,10 @@ function setupVisitFlow(): {
   ensureFlowCoreSchema(db);
   const settings = sampleSettings();
   syncFlowCoreCatalog(db, settings);
-  db.prepare(
-    "UPDATE routing_rules SET initial_movement_mode = 'call' WHERE topic_id = 'blut'",
-  ).run();
+  db.prepare('UPDATE routing_rules SET initial_movement_mode = ? WHERE topic_id = ?').run(
+    initialMovementMode,
+    'blut',
+  );
   const created = createVisitCheckInInDb(buildDeps(db, settings), {
     topicId: 'blut',
     authPath: 'phone_dob',
@@ -147,6 +148,14 @@ test('buildTvQueueSnapshotFromFlowCore shows waiting visit when explainVisibilit
   assert.equal(snapshot.items[0]?.laneCode, 'L');
   assert.equal(snapshot.items[0]?.status, 'waiting');
   assert.equal(snapshot.items[0]?.roomLabel, null);
+});
+
+test('buildTvQueueSnapshotFromFlowCore hides direct self_go route to a room', () => {
+  const { db, settings } = setupVisitFlow('self_go');
+
+  const snapshot = buildTvQueueSnapshotForSqlite(db, settings, false, 1);
+
+  assert.equal(snapshot.items.length, 0);
 });
 
 test('buildTvQueueSnapshotFromFlowCore includes called visit with room label', () => {

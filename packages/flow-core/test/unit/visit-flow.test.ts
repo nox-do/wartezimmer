@@ -46,7 +46,7 @@ test('assertTransitionAllowed: pickup start nur nach Ankunft', () => {
   assert.doesNotThrow(() => assertTransitionAllowed(afterArrive, 'start'));
 });
 
-test('assertTransitionAllowed: return_to_waiting nur aus called/arrived/in_progress', () => {
+test('assertTransitionAllowed: return_to_waiting erlaubt aktive und begleitete Rückwege', () => {
   const base = { movementMode: 'call' as const, needsAssistance: false };
   assert.doesNotThrow(() =>
     assertTransitionAllowed({ ...base, status: 'called' }, 'return_to_waiting'),
@@ -56,6 +56,18 @@ test('assertTransitionAllowed: return_to_waiting nur aus called/arrived/in_progr
   );
   assert.doesNotThrow(() =>
     assertTransitionAllowed({ ...base, status: 'in_progress' }, 'return_to_waiting'),
+  );
+  assert.doesNotThrow(() =>
+    assertTransitionAllowed(
+      { ...base, status: 'directed', movementMode: 'self_go' },
+      'return_to_waiting',
+    ),
+  );
+  assert.doesNotThrow(() =>
+    assertTransitionAllowed(
+      { ...base, status: 'waiting', movementMode: 'pickup' },
+      'return_to_waiting',
+    ),
   );
   assert.throws(
     () => assertTransitionAllowed({ ...base, status: 'waiting' }, 'return_to_waiting'),

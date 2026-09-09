@@ -25,17 +25,23 @@ export function canMfaCallTransition(item: Pick<QueueItem, 'status' | 'movementM
 }
 
 /** One-click Call can only use a concrete route target; DnD supplies its own room. */
-export function canMfaCallVisit(
-  item: Pick<QueueItem, 'status' | 'movementMode' | 'destinationRoomId'>,
+export function hasValidMfaCallTarget(
+  item: Pick<QueueItem, 'destinationRoomId'>,
   rooms: readonly Pick<PracticeRoom, 'roomId' | 'enabled'>[],
 ): boolean {
   const destinationRoomId = item.destinationRoomId?.trim();
   return (
-    canMfaCallTransition(item) &&
     Boolean(destinationRoomId) &&
     !isWaitingRoomLocationId(destinationRoomId) &&
     rooms.some((room) => room.enabled && room.roomId === destinationRoomId)
   );
+}
+
+export function canMfaCallVisit(
+  item: Pick<QueueItem, 'status' | 'movementMode' | 'destinationRoomId'>,
+  rooms: readonly Pick<PracticeRoom, 'roomId' | 'enabled'>[],
+): boolean {
+  return canMfaCallTransition(item) && hasValidMfaCallTarget(item, rooms);
 }
 
 export function isMfaPickupActionPending(

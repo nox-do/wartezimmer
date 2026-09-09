@@ -606,6 +606,7 @@
 }
 
 .mfa-action-tooltip {
+  position: relative;
   display: inline-flex;
   line-height: 0;
 }

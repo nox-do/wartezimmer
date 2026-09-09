@@ -79,6 +79,13 @@ Typen: `packages/flow-core/src/shared/types.ts`. Schema: `packages/flow-core/db/
 | `EscortPolicy`      | `none` \| `recommended` \| `required` | kann Movement auf `pickup` heben; `required` blockiert Redirect mit `self_go`                                                 |
 | `completedWhen`     | `arrive` \| `start` \| `done`         | wann der aktuelle Journey-Step als erledigt gilt                                                                              |
 
+Das Wartezimmer-TV ist eine lokale Patientenanzeige, keine praxisweite Routing-Übersicht:
+
+- Sichtbarkeit setzt voraus, dass `lastKnownLocationId` dem Standort des Displays entspricht.
+- `called` wird als Aufruf und lokales `pickup` als Abholhinweis angezeigt.
+- `directed`/`self_go` bleibt eine Anweisung am Terminal beziehungsweise durch das Personal und erscheint nicht auf dem TV.
+- Das MFA-Dashboard bleibt die globale operative Übersicht. `publicDisplayMode` schränkt die lokale TV-Sichtbarkeit zusätzlich ein, erweitert sie aber nicht auf andere Standorte.
+
 ## 4. Sync (Host → Catalog)
 
 Einziger Produktions-Writer: `app/src/shared/flow-core/sync-catalog-from-ops-settings.ts`.

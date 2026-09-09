@@ -629,7 +629,8 @@ export function cancelVisit(
 
 /**
  * MFA zieht Patient aus grüner Zone zurück ins Wartezimmer (Core: return_to_waiting).
- * Nur called/arrived/in_progress — absent_* hat keinen Visit-Status und bleibt auf returnToWaitingInDb.
+ * Auch directed/self_go und ein laufender waiting/pickup-Transfer sind aktive Rückwege.
+ * absent_* hat keinen Visit-Status und bleibt auf returnToWaitingInDb.
  */
 export function returnVisitToWaiting(
   runtime: Runtime,

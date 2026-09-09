@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canMfaCallVisit as canMfaCallVisitWithRooms,
+  hasValidMfaCallTarget,
   isMfaPickupActionPending,
   resolveMfaCallBlockedReason as resolveMfaCallBlockedReasonWithRooms,
 } from './mfa-call-gate';
@@ -76,6 +77,14 @@ describe('canMfaCallVisit', () => {
   it('blocks call for called/in_room', () => {
     expect(canMfaCallVisit({ status: 'called', movementMode: 'call' })).toBe(false);
     expect(canMfaCallVisit({ status: 'in_room', movementMode: 'call' })).toBe(false);
+  });
+});
+
+describe('hasValidMfaCallTarget', () => {
+  it('validates the destination independently of call or pickup movement', () => {
+    expect(hasValidMfaCallTarget({ destinationRoomId: 'labor' }, rooms)).toBe(true);
+    expect(hasValidMfaCallTarget({ destinationRoomId: 'pf_waiting' }, rooms)).toBe(false);
+    expect(hasValidMfaCallTarget({ destinationRoomId: 'deaktiviert' }, rooms)).toBe(false);
   });
 });
 

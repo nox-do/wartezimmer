@@ -669,6 +669,25 @@ test('transition return_to_waiting: called → waiting, Aufrufziel bleibt, Times
   assert.ok(events.some((event) => event.type === 'returned_to_waiting'));
 });
 
+test('transition return_to_waiting: directed/self_go → waiting/call', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({
+    topicId: 'mfa',
+    displayName: 'Direct Return',
+    surfaceId: 'terminal_1',
+  });
+  assert.equal(created.status, 'directed');
+  assert.equal(created.movementMode, 'self_go');
+
+  const after = runtime.transition(created.id, 'return_to_waiting');
+
+  assert.equal(after.status, 'waiting');
+  assert.equal(after.movementMode, 'call');
+  assert.equal(after.targetLocationId, created.targetLocationId);
+  assert.equal(after.lastKnownLocationId, 'waiting_general');
+  assert.match(after.terminalInstruction, /aufgerufen/);
+});
+
 test('transition return_to_waiting: arrive → waiting', () => {
   const { runtime } = testRuntime();
   const created = runtime.checkIn({

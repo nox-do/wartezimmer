@@ -38,8 +38,8 @@
 }
 
 .icon-btn[aria-label]:not(:disabled):hover::after,
-.icon-btn[aria-label]:not(:disabled):focus-visible::after {
-  content: attr(aria-label);
+.icon-btn[aria-label]:not(:disabled):focus-visible::after,
+.mfa-action-tooltip[data-tooltip]:hover::after {
   position: absolute;
   left: 50%;
   bottom: calc(100% + 5px);
@@ -56,4 +56,13 @@
   white-space: nowrap;
   pointer-events: none;
   box-shadow: 0 2px 6px var(--shadow-color-sm);
+}
+
+.icon-btn[aria-label]:not(:disabled):hover::after,
+.icon-btn[aria-label]:not(:disabled):focus-visible::after {
+  content: attr(aria-label);
+}
+
+.mfa-action-tooltip[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
 }

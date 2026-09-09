@@ -10,6 +10,7 @@ import type {
   VisitStatus,
 } from './types.js';
 import type { TransitionAction } from './domain-enums.js';
+import { movementTerminalInstruction } from './escort.js';
 import { stepsForJourneyTemplate } from './visit-context.js';
 
 /** Operativ steuerbar — Dashboard, Arbeitslisten, Surface-Filter. */
@@ -79,7 +80,11 @@ export function assertTransitionAllowed(
       if (context.actingLocationId && visit.status === 'arrived') return;
       throw new Error('DONE_ONLY_WHEN_IN_PROGRESS');
     case 'return_to_waiting':
-      if (!['called', 'arrived', 'in_progress'].includes(visit.status)) {
+      if (
+        !['called', 'arrived', 'in_progress'].includes(visit.status) &&
+        !(visit.status === 'directed' && visit.movementMode === 'self_go') &&
+        !(visit.status === 'waiting' && visit.movementMode === 'pickup')
+      ) {
         throw new Error('RETURN_TO_WAITING_NOT_ALLOWED');
       }
       return;
@@ -146,16 +151,26 @@ export function resolveReturnToWaitingVisitPatch(visit: Visit, catalog: Catalog)
   // waiting area over the rule's original check-in location (for M that is the
   // entrance), otherwise a returned assistance ticket looks like a new terminal call.
   const waitingLocationId = waitingQueueLocationId ?? rule?.initialLastKnownLocationId;
+  const queueMovementMode =
+    waitingQueue?.defaultMovementMode === 'self_go'
+      ? 'call'
+      : (waitingQueue?.defaultMovementMode ?? 'call');
+  // A conscious return cancels a self-directed route. Call/pickup already encode
+  // the correct next interaction and must survive (especially needs_assistance).
+  const movementMode = visit.movementMode === 'self_go' ? queueMovementMode : visit.movementMode;
+  const targetLocationId = resolveReturnToWaitingTargetLocationId(visit, rule, catalog);
+  const targetLocation = catalog.locations.find((item) => item.id === targetLocationId);
 
   const patch: VisitPatch = {
-    status: statusForMovementMode(visit.movementMode),
+    status: statusForMovementMode(movementMode),
+    movementMode,
     locationConfidence: 'assumed',
+    terminalInstruction: movementTerminalInstruction({ movementMode, targetLocation }),
     calledAt: null,
     arrivedAt: null,
     startedAt: null,
   };
 
-  const targetLocationId = resolveReturnToWaitingTargetLocationId(visit, rule, catalog);
   if (targetLocationId !== undefined) {
     patch.targetLocationId = targetLocationId;
   }

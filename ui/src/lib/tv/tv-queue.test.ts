@@ -33,7 +33,7 @@ describe('partitionTvQueue', () => {
     expect(calls).toEqual([{ ticketCode: 'L-002', where: 'Labor' }]);
   });
 
-  it('puts directed self_go on the right with destination', () => {
+  it('does not render directed self_go as a public call', () => {
     const { waiting, calls } = partitionTvQueue([
       item({
         laneCode: 'L',
@@ -44,7 +44,7 @@ describe('partitionTvQueue', () => {
       }),
     ]);
     expect(waiting).toEqual([]);
-    expect(calls).toEqual([{ ticketCode: 'L-004', where: 'Labor' }]);
+    expect(calls).toEqual([]);
   });
 
   it('puts pickup waiting on the right with pickup copy', () => {

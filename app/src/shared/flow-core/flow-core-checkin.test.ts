@@ -187,6 +187,17 @@ test('syncFlowCoreCatalog seeds reserved mfa topic and direct mfa check-in works
   assert.equal(forwardedRow?.status, 'waiting');
   assert.equal(forwardedRow?.roomId, 'mfa-tresen');
   assert.equal(forwardedRow?.destinationRoomId, 'labor');
+
+  runtime.transition(assisted.visitId, 'return_to_waiting');
+  const returnedRow = listVisitQueueRows(runtime, settings, getBusinessDay()).find(
+    (row) => row.id === assisted.visitId,
+  );
+  assert.equal(returnedRow?.status, 'waiting');
+  assert.equal(returnedRow?.movementMode, 'pickup');
+  assert.equal(returnedRow?.terminalAssistancePending, false);
+  assert.equal(returnedRow?.escortTransferPending, false);
+  assert.equal(returnedRow?.roomId, null);
+  assert.equal(returnedRow?.destinationRoomId, 'labor');
 });
 
 test('returning an assistance visit to waiting does not reopen the terminal alert', () => {
@@ -210,6 +221,8 @@ test('returning an assistance visit to waiting does not reopen the terminal aler
     (entry) => entry.id === assisted.visitId,
   );
   assert.equal(visit?.lastKnownLocationId, 'pf_waiting');
+  assert.equal(visit?.status, 'waiting');
+  assert.equal(visit?.movementMode, 'pickup');
   assert.equal(row?.terminalAssistancePending, false);
   assert.equal(row?.needsAssistance, true);
 });
