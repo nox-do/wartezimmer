@@ -96,6 +96,70 @@ test('placeVisitInRoom reports the full waiting-to-room transition and keeps aud
   }
 });
 
+test('placeVisitInRoom returns an absent visit and places it in the room atomically', () => {
+  const { core, cleanup } = openCoreDatabase();
+  try {
+    const visitId = seedPlacementVisit(core);
+    core.setAbsence(visitId, 'return_later');
+    core.setCallbackPhone(visitId, '+49 176 12345678');
+    core.recallVisit(visitId, 15);
+
+    const absentRow = core.listQueue().find((entry) => entry.id === visitId);
+    assert.equal(absentRow?.status, 'absent_return_later');
+    assert.ok(absentRow?.returnUntil);
+    assert.equal(absentRow?.callbackPhone, '+4917612345678');
+
+    const transition = core.placeVisitInRoom(
+      visitId,
+      'labor',
+      'Labor',
+      undefined,
+      'mfa-session-away',
+    );
+
+    assert.deepEqual(transition, {
+      fromStatus: 'absent_return_later',
+      toStatus: 'in_room',
+      roomId: 'labor',
+      roomLabel: 'Labor',
+    });
+    const row = core.listQueue().find((entry) => entry.id === visitId);
+    assert.equal(row?.status, 'in_room');
+    assert.equal(row?.roomId, 'labor');
+    assert.equal(row?.callbackPhone, null);
+    assert.equal(row?.returnUntil, null);
+  } finally {
+    cleanup();
+  }
+});
+
+test('placeVisitInRoom keeps an absent visit absent when placement rolls back', () => {
+  const { core, cleanup } = openCoreDatabase();
+  try {
+    const visitId = seedPlacementVisit(core);
+    core.setAbsence(visitId, 'wait_here');
+    const eventsBefore = core.getFlowCoreRuntimeInstance().events(visitId);
+    const original = core.withTransaction.bind(core);
+    core.withTransaction = ((operationName, fn) =>
+      original(operationName, () => {
+        fn();
+        throw new Error('simulated absent placement failure');
+      })) as typeof core.withTransaction;
+
+    assert.throws(
+      () => core.placeVisitInRoom(visitId, 'labor', 'Labor'),
+      /simulated absent placement failure/,
+    );
+
+    const row = core.listQueue().find((entry) => entry.id === visitId);
+    assert.equal(row?.status, 'absent_wait_here');
+    assert.notEqual(row?.destinationRoomId, 'labor');
+    assert.deepEqual(core.getFlowCoreRuntimeInstance().events(visitId), eventsBefore);
+  } finally {
+    cleanup();
+  }
+});
+
 test('placeVisitInRoom rolls back every Core event and the outbox event on failure', () => {
   const { core, cleanup } = openCoreDatabase();
   try {

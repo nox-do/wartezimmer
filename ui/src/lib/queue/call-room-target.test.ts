@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { QueueItem } from './types';
-import { resolveCallRoomTarget } from './call-room-target';
+import { nextCallRoomOverrideId, resolveCallRoomTarget } from './call-room-target';
 
 function waitingTicket(overrides: Partial<QueueItem> = {}): QueueItem {
   return {
@@ -78,5 +78,16 @@ describe('resolveCallRoomTarget', () => {
       roomId: 'pf_waiting',
       roomLabel: 'Wartezimmer',
     });
+  });
+});
+
+describe('nextCallRoomOverrideId', () => {
+  it('toggles a temporary room off when it is selected again', () => {
+    expect(nextCallRoomOverrideId('labor', null, 'empfang')).toBe('labor');
+    expect(nextCallRoomOverrideId('labor', 'labor', 'empfang')).toBeNull();
+  });
+
+  it('uses the persisted target without creating a redundant override', () => {
+    expect(nextCallRoomOverrideId('empfang', 'labor', 'empfang')).toBeNull();
   });
 });

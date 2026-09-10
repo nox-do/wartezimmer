@@ -8,6 +8,7 @@ import {
 import { applyMfaQueueSnapshot, mfaQueueDisplay } from '$lib/mfa/mfa-queue-display.svelte';
 import { t, tf } from '$lib/i18n/i18nStore.svelte';
 import { toastStore } from '$lib/stores/toastStore';
+import { broadcastMfaRuntimeReset } from '$lib/mfa/mfa-practice-context.svelte';
 
 export const mfaDayOps = $state({
   dayLifecycle: null as DayLifecycleState | null,
@@ -46,6 +47,7 @@ export async function confirmMfaDayStart() {
     }
 
     mfaDayOps.dayStartConfirmOpen = false;
+    broadcastMfaRuntimeReset();
 
     if (mfaDayOps.dayLifecycle) {
       mfaDayOps.dayLifecycle = {

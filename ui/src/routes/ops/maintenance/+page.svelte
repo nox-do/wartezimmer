@@ -11,6 +11,7 @@
   } from '$lib/ops/ops-system-api';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
   import { toastStore } from '$lib/stores/toastStore';
+  import { broadcastMfaRuntimeReset } from '$lib/mfa/mfa-practice-context.svelte';
 
   let { data } = $props();
 
@@ -57,6 +58,8 @@
       toastStore.error(result.error.message);
       return;
     }
+
+    broadcastMfaRuntimeReset();
 
     toastStore.success(
       tf('ops.maintenanceResetOk', {

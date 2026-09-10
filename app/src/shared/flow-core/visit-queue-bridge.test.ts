@@ -675,6 +675,24 @@ test('setVisitAbsent overlays absent_wait_here on waiting visit', () => {
   assert.equal(runtime.visits().find((v) => v.id === visitId)?.status, 'waiting');
 });
 
+test('setVisitAbsent rejects visits outside the waiting room', () => {
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+
+  assert.throws(
+    () =>
+      setVisitAbsent(
+        db,
+        runtime,
+        settings,
+        visitId,
+        'wait_here',
+        '2026-07-04T12:05:00.000Z',
+      ),
+    (error: unknown) => error instanceof DomainError && error.domainCode === 'INVALID_TRANSITION',
+  );
+});
+
 test('callVisit rejects waiting visit with absent host overlay', () => {
   const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
   setVisitAbsent(db, runtime, settings, visitId, 'wait_here', '2026-07-04T12:05:00.000Z');
@@ -685,10 +703,10 @@ test('callVisit rejects waiting visit with absent host overlay', () => {
   );
 });
 
-test('arriveVisit rejects called visit with absent host overlay', () => {
+test('arriveVisit rejects called visit with a legacy absent host overlay', () => {
   const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
   callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
-  setVisitAbsent(db, runtime, settings, visitId, 'wait_here', '2026-07-04T12:05:00.000Z');
+  setVisitAbsentMode(db, visitId, 'wait_here', '2026-07-04T12:05:00.000Z');
 
   assert.throws(
     () => arriveVisit(db, runtime, visitId, 'labor'),

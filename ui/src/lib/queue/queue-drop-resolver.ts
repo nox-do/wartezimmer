@@ -1,7 +1,7 @@
 import type { QueueStatus } from './types';
 import type { RoomTarget } from './room-target';
 
-export type QueueDragZone = 'waiting' | 'active';
+export type QueueDragZone = 'waiting' | 'active' | 'away';
 
 export type QueueDragSource = {
   visitId: string;
@@ -76,7 +76,7 @@ export function resolveQueueDrop(
   }
 
   if (target.kind === 'waiting') {
-    if (source.zone !== 'active') {
+    if (source.zone !== 'active' && source.zone !== 'away') {
       return null;
     }
     return { action: 'return-to-waiting', visitId: source.visitId };
@@ -95,6 +95,10 @@ export function resolveQueueDrop(
       return null;
     }
     return { action: 'call', visitId: source.visitId, room: targetRoom };
+  }
+
+  if (source.zone === 'away') {
+    return placeInRoomCommand(source, targetRoom);
   }
 
   if (source.zone === 'active') {

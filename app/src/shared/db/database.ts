@@ -899,12 +899,14 @@ export class CoreDatabase {
     actingRoomId?: string,
     actorId?: string,
   ): PlacementTransition {
-    return this.withTransaction('placeVisitInRoom', () => {
+    const result = this.withTransaction('placeVisitInRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
+      const runtime = getFlowCoreRuntime(this.db);
+      const absentTransition = returnAbsentVisitToQueue(this.db, runtime, visitId, updatedAt);
       const transition = runPlaceVisitInRoom({
         db: this.db,
-        runtime: getFlowCoreRuntime(this.db),
+        runtime,
         settings: this.getOpsSettings(),
         listQueue: () => this.listQueue(),
         visitId,
@@ -913,6 +915,9 @@ export class CoreDatabase {
         actingRoomId,
         actorId,
       });
+      if (absentTransition) {
+        transition.fromStatus = absentTransition.fromStatus;
+      }
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId,
         fromStatus: transition.fromStatus,
@@ -921,8 +926,12 @@ export class CoreDatabase {
         roomId: transition.roomId,
         roomLabel: transition.roomLabel,
       });
-      return transition;
+      return { transition, returnedFromAbsence: absentTransition !== null };
     });
+    if (result.returnedFromAbsence) {
+      cancelRecallWindowExpiry(visitId);
+    }
+    return result.transition;
   }
 
   startTreatment(

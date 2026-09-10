@@ -27,7 +27,6 @@
     onCheckOut: (visitId: string) => void;
     onCancelVisit: (visitId: string) => void;
     onReturnToWaiting: (visitId: string) => void;
-    onMarkAway: (visitId: string) => void;
     onOpenDocuments: (item: QueueItem) => void;
     onCycleTriage: (visitId: string) => void;
   }
@@ -51,7 +50,6 @@
     onCheckOut,
     onCancelVisit,
     onReturnToWaiting,
-    onMarkAway,
     onOpenDocuments,
     onCycleTriage,
   }: Props = $props();
@@ -87,7 +85,6 @@
               onReassign={() => onReassign(item.visitId)}
               onCancelVisit={() => onCancelVisit(item.visitId)}
               onReturnToWaiting={() => onReturnToWaiting(item.visitId)}
-              onMarkAway={() => onMarkAway(item.visitId)}
               onOpenDocuments={onOpenDocuments}
               onCycleTriage={() => onCycleTriage(item.visitId)}
             />

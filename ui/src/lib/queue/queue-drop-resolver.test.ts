@@ -189,6 +189,29 @@ describe('resolveQueueDrop', () => {
     ).toEqual({ action: 'return-to-waiting', visitId: 't3' });
   });
 
+  it('returns an away ticket immediately when dropped on the waiting zone', () => {
+    expect(
+      resolveQueueDrop(
+        { visitId: 't3-away', zone: 'away', status: 'absent_return_later', roomId: null },
+        { kind: 'waiting' },
+      ),
+    ).toEqual({ action: 'return-to-waiting', visitId: 't3-away' });
+  });
+
+  it('places an away ticket directly in the dropped room', () => {
+    expect(
+      resolveQueueDrop(
+        { visitId: 't3-room', zone: 'away', status: 'absent_wait_here', roomId: null },
+        { kind: 'room', roomId: 'labor', roomLabel: 'Labor' },
+      ),
+    ).toEqual({
+      action: 'place-in-room',
+      visitId: 't3-room',
+      room: { roomId: 'labor', roomLabel: 'Labor' },
+      confirmAssistance: false,
+    });
+  });
+
   it('opens mark-away when waiting ticket is dropped on away zone', () => {
     expect(
       resolveQueueDrop(

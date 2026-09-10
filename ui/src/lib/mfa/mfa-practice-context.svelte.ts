@@ -6,9 +6,13 @@ import {
 import { setPracticeTopicCatalog } from '$lib/queue/practice-catalog';
 import { t } from '$lib/i18n/i18nStore.svelte';
 import { toastStore } from '$lib/stores/toastStore';
-import type { CallRoomTargetOptions } from '$lib/queue/call-room-target';
+import {
+  nextCallRoomOverrideId,
+  type CallRoomTargetOptions,
+} from '$lib/queue/call-room-target';
 
 const CALL_ROOM_OVERRIDE_STORAGE_KEY = 'mfa:call-room-override-id';
+const MFA_RUNTIME_RESET_SIGNAL_KEY = 'mfa:runtime-reset-signal';
 
 export const mfaPracticeContext = $state({
   practiceRooms: [] as PracticeRoom[],
@@ -43,6 +47,37 @@ export function setMfaCallRoomOverride(roomId: string | null) {
   } else {
     sessionStorage.removeItem(CALL_ROOM_OVERRIDE_STORAGE_KEY);
   }
+}
+
+export function toggleMfaCallRoomOverride(roomId: string) {
+  setMfaCallRoomOverride(
+    nextCallRoomOverrideId(
+      roomId,
+      mfaPracticeContext.callRoomOverrideId,
+      mfaPracticeContext.postWaitingCallTargetId,
+    ),
+  );
+}
+
+/** Clears browser-session routing state after a server runtime reset. */
+export function broadcastMfaRuntimeReset() {
+  setMfaCallRoomOverride(null);
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(
+    MFA_RUNTIME_RESET_SIGNAL_KEY,
+    `${Date.now()}:${Math.random().toString(36).slice(2)}`,
+  );
+}
+
+export function startMfaRuntimeResetWatch(): () => void {
+  if (typeof window === 'undefined') return () => undefined;
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === MFA_RUNTIME_RESET_SIGNAL_KEY) {
+      setMfaCallRoomOverride(null);
+    }
+  };
+  window.addEventListener('storage', handleStorage);
+  return () => window.removeEventListener('storage', handleStorage);
 }
 
 export function mfaCallRoomTargetOptions(): CallRoomTargetOptions {

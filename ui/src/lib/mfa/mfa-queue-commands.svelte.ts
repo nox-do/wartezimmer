@@ -326,11 +326,11 @@ export function handleMfaQueueDrop(visitId: string, target: QueueDropTarget) {
   }
 
   const zone = getQueueZone(item.status);
-  if (zone !== 'waiting' && zone !== 'active') {
+  if (zone !== 'waiting' && zone !== 'active' && zone !== 'away') {
     return;
   }
 
-  const source = queueDragSourceFromItem(item, zone === 'waiting' ? 'waiting' : 'active');
+  const source = queueDragSourceFromItem(item, zone);
   const command = resolveQueueDrop(source, target);
   if (!command) {
     return;

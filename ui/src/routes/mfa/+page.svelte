@@ -24,7 +24,7 @@
   import { mountMfaDashboard } from '$lib/mfa/mfa-dashboard.svelte';
   import {
     mfaPracticeContext,
-    setMfaCallRoomOverride,
+    toggleMfaCallRoomOverride,
   } from '$lib/mfa/mfa-practice-context.svelte';
   import {
     callMfaTicket,
@@ -132,10 +132,7 @@
       separateUnderway={mfaPracticeContext.routingMode === 'complex'}
       callRoomTargetId={effectiveCallRoomTargetId}
       showCallRoomTargetControls={mfaPracticeContext.routingMode === 'simple'}
-      onSelectCallRoomTarget={(roomId) =>
-        setMfaCallRoomOverride(
-          roomId === mfaPracticeContext.postWaitingCallTargetId ? null : roomId,
-        )}
+      onSelectCallRoomTarget={toggleMfaCallRoomOverride}
       onCall={callMfaTicket}
       onCheckIn={checkInMfaTicket}
       onStart={startMfaTicket}

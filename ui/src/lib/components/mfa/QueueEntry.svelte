@@ -541,17 +541,6 @@
           </MfaActionButton>
         {/if}
         {@render roomManagementActions()}
-        {#if showDirectedWaitingActions && onMarkAway}
-          <MfaActionButton
-            variant="ghost"
-            icon
-            disabled={busy}
-            ariaLabel={t('mfa.actionMarkAway')}
-            onclick={onMarkAway}
-          >
-            <Pause aria-hidden="true" />
-          </MfaActionButton>
-        {/if}
         {#if showDirectedWaitingActions && showCancelVisit}
           <MfaActionButton
             variant="danger"

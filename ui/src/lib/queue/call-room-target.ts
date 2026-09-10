@@ -12,6 +12,16 @@ export type CallRoomTargetOptions = {
   callRoomOverrideId: string | null;
 };
 
+export function nextCallRoomOverrideId(
+  selectedRoomId: string,
+  currentOverrideId: string | null,
+  persistedTargetId: string | null,
+): string | null {
+  return selectedRoomId === currentOverrideId || selectedRoomId === persistedTargetId
+    ? null
+    : selectedRoomId;
+}
+
 export function resolveCallRoomTarget(
   item: QueueItem | undefined,
   options?: CallRoomTargetOptions,

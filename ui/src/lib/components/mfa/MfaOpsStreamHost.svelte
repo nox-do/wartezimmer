@@ -14,6 +14,7 @@
     mountMfaQueueDisplay,
     resetMfaQueueDisplay,
   } from '$lib/mfa/mfa-queue-display.svelte';
+  import { startMfaRuntimeResetWatch } from '$lib/mfa/mfa-practice-context.svelte';
 
   interface Props {
     children?: Snippet;
@@ -28,12 +29,14 @@
   onMount(() => {
     resetMfaQueueDisplay();
     const disconnectOpsStream = connectOpsStream();
+    const stopRuntimeResetWatch = startMfaRuntimeResetWatch();
     const stopQueueDisplay = mountMfaQueueDisplay({
       onBackendRecovered: handleMfaBackendRecovered,
     });
 
     return () => {
       disconnectOpsStream();
+      stopRuntimeResetWatch();
       stopQueueDisplay();
     };
   });

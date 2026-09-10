@@ -106,7 +106,7 @@ export function cancelMfaSupersede() {
 
 export function handleMfaMarkAway(visitId: string) {
   const item = queueItem(visitId);
-  if (!item) {
+  if (!item || item.status !== 'waiting') {
     return;
   }
 

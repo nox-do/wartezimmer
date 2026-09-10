@@ -221,7 +221,7 @@
   {/if}
 {/snippet}
 
-{#snippet awayZoneBody()}
+{#snippet awayZoneBody(entryDragEnabled: boolean)}
   <h2 class="wait-zone-title">{t('mfa.zoneAwayTitle')}</h2>
   <p class="wait-zone-desc">{t('mfa.zoneAwayDesc')}</p>
   {#if away.length === 0}
@@ -232,6 +232,9 @@
         <QueueEntry
           {item}
           zone="away"
+          dragEnabled={entryDragEnabled && !isBusy(item.visitId)}
+          dragZone={entryDragEnabled ? 'away' : null}
+          queueDragging={isQueueDragging}
           {nowMs}
           busy={isBusy(item.visitId)}
           onRecall={() => onRecall(item.visitId)}
@@ -279,11 +282,11 @@
           variant="away"
           class="wait-zone wait-zone--away"
         >
-          {@render awayZoneBody()}
+          {@render awayZoneBody(true)}
         </QueueDropZone>
       {:else}
         <section class="wait-zone wait-zone--away">
-          {@render awayZoneBody()}
+          {@render awayZoneBody(false)}
         </section>
       {/if}
     </div>
@@ -310,7 +313,6 @@
         {onCheckOut}
         {onCancelVisit}
         {onReturnToWaiting}
-        {onMarkAway}
         {onOpenDocuments}
         {onCycleTriage}
       />

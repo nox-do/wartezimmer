@@ -257,7 +257,7 @@ export function listVisitQueueRows(
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
 }
 
-const ABSENCE_ELIGIBLE_VISIT_STATUSES = new Set<VisitStatus>(['waiting', 'directed', 'called']);
+const ABSENCE_ELIGIBLE_VISIT_STATUSES = new Set<VisitStatus>(['waiting']);
 const CALLBACK_PHONE_ELIGIBLE_STATUSES: QueueDisplayStatus[] = [
   'waiting',
   'directed',
