@@ -1,4 +1,3 @@
-export const IPC_GET_SETUP_API_BASE = 'praxis:get-setup-api-base';
 export const IPC_FETCH_SETUP_STATUS = 'praxis:fetch-setup-status';
 export const IPC_SETUP_API_CALL = 'praxis:setup-api-call';
 export const IPC_OPEN_EXTERNAL_URL = 'praxis:open-external-url';

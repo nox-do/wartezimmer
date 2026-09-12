@@ -253,10 +253,10 @@ Button „Fortsetzen“. Kein „unter Netzwerk“ in der Copy. Warte-Zusatz
 
 ## Abgrenzung zu den anderen Plänen
 
-| Dokument                    | Rolle                                                            |
-| --------------------------- | ---------------------------------------------------------------- |
-| [`../plan-proxy-tls.md`](../plan-proxy-tls.md)         | Caddy, ACME-DNS, Overlay, Port 443; Klassenliste im Vertrag      |
-| [`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md) | Mailtext, Namenswahl, Cutover-Warnung, Flächen-Soll              |
-| **dieses (Archiv)**                  | Drift Assistent/Netzwerk/Status; welche Klasse die UI wann zeigte |
+| Dokument                                                       | Rolle                                                             |
+| -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| [`../plan-proxy-tls.md`](../plan-proxy-tls.md)                 | Caddy, ACME-DNS, Overlay, Port 443; Klassenliste im Vertrag       |
+| [`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md) | Mailtext, Namenswahl, Cutover-Warnung, Flächen-Soll               |
+| **dieses (Archiv)**                                            | Drift Assistent/Netzwerk/Status; welche Klasse die UI wann zeigte |
 
 Konflikt: Ops-Ist und Produktpläne zuerst; dieses Dokument nicht fortschreiben.

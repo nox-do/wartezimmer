@@ -4,7 +4,10 @@ import { isOpenApiDocsEnabled } from './register-openapi-docs.js';
 
 const ENV_KEYS = ['NODE_ENV', 'OPENAPI_DOCS_ENABLED'] as const;
 
-function withEnv(values: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>>, run: () => void): void {
+function withEnv(
+  values: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>>,
+  run: () => void,
+): void {
   const previous = new Map<string, string | undefined>();
   for (const key of ENV_KEYS) {
     previous.set(key, process.env[key]);

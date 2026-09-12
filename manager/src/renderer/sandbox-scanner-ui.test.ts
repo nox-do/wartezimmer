@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { SandboxScannerStatus } from '../shared/host-status.js';
-import { sandboxClamAvChip, sandboxScannerLevel } from './sandbox-scanner-ui.js';
+import { sandboxClamAvChip } from './sandbox-scanner-ui.js';
 
 function scanner(overrides: Partial<SandboxScannerStatus> = {}): SandboxScannerStatus {
   return {
@@ -21,27 +21,6 @@ function scanner(overrides: Partial<SandboxScannerStatus> = {}): SandboxScannerS
     ...overrides,
   };
 }
-
-test('sandboxScannerLevel: engine missing is bad; signature issues are warn', () => {
-  assert.equal(sandboxScannerLevel(scanner({ engineVersion: null })), 'bad');
-  assert.equal(
-    sandboxScannerLevel(
-      scanner({
-        definitionsAgeHours: null,
-        freshclamLastAttemptOk: false,
-        signaturesFreshEnough: false,
-        ready: false,
-      }),
-    ),
-    'warn',
-  );
-  assert.equal(
-    sandboxScannerLevel(
-      scanner({ signaturesFreshEnough: false, definitionsAgeHours: 30, ready: false }),
-    ),
-    'warn',
-  );
-});
 
 test('sandboxClamAvChip prefers update failed over Signatures missing', () => {
   assert.deepEqual(

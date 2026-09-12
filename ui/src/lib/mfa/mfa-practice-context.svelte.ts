@@ -6,10 +6,7 @@ import {
 import { setPracticeTopicCatalog } from '$lib/queue/practice-catalog';
 import { t } from '$lib/i18n/i18nStore.svelte';
 import { toastStore } from '$lib/stores/toastStore';
-import {
-  nextCallRoomOverrideId,
-  type CallRoomTargetOptions,
-} from '$lib/queue/call-room-target';
+import { nextCallRoomOverrideId, type CallRoomTargetOptions } from '$lib/queue/call-room-target';
 
 const CALL_ROOM_OVERRIDE_STORAGE_KEY = 'mfa:call-room-override-id';
 const MFA_RUNTIME_RESET_SIGNAL_KEY = 'mfa:runtime-reset-signal';

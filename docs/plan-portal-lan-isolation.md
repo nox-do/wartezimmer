@@ -6,7 +6,8 @@ Verwandt: LAN-TLS [`operations/tls.md`](operations/tls.md) · Captive-Grenze
 [`operations/integrations.md`](operations/integrations.md) · Manager-Topologie
 `manager/src/renderer/network-topology-diagram.ts` (aktueller Ist-Stand noch
 Captive-zentriert; im Rahmen dieses Plans zu ersetzen) · detaillierter
-[Manager-Umbau](plan-manager-restricted-network-access.md).
+[Manager-Umbau](plan-manager-restricted-network-access.md) · aufbereitete
+[Hinweise für die Praxis-IT](operations/praxis-it-network-isolation.md).
 
 ---
 
@@ -151,6 +152,13 @@ Diese Platzierung ist eine Empfehlung und keine Voraussetzung für das Binding. 
 einem vorhandenen Windows- oder macOS-Rechner bleibt unterstützt, besitzt aber
 einen größeren gemeinsamen Angriffsbereich als ein dedizierter Host oder ein
 separates Applikationssegment.
+
+Eine weitergehende Trennung in Portal- und Core-VM wäre eine eigene
+Produktarchitektur und keine von der Praxis-IT ausführbare Härtungsoption des
+heutigen Stacks. Ein möglicher Hyper-V-Ausblick samt Voraussetzungen und
+Betriebsfolgen ist deshalb nur als Discovery in den
+[Praxis-IT-Hinweisen](operations/praxis-it-network-isolation.md#stufe-c--getrennte-portal--und-core-vms-discovery)
+dokumentiert.
 
 ---
 
@@ -913,7 +921,8 @@ freigegebenen Plattform ausgerollt.
    Zone, Same-NIC-Warnpfad und optionalen späteren Captive-Adapter ersetzt.
 8. **Betrieb:** Praxis-IT-Checkliste einschließlich der empfohlenen
    DMZ-/Applikationsplatzierung, unterstützte AP-/Router-Szenarien, Diagnose und
-   Supportgrenze.
+   Supportgrenze. Aufbereiteter Entwurf:
+   [`operations/praxis-it-network-isolation.md`](operations/praxis-it-network-isolation.md).
 9. **Tests:** gekreuzte Ziel-IP-/SNI-Matrix, Listener-/Firewall-
    Integrationstests, Zwei-NIC- und Same-NIC/Warnpfad, Docker-Port-Audit,
    Parserfälle für explizite sowie globale IPv4-/IPv6-Bindings, IPv4/IPv6,

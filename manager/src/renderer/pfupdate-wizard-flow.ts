@@ -50,7 +50,9 @@ export function pfupdateInspectSummaryLines(inspect: PfupdateInspectResult): str
   }
   const lines = [`Target release: ${formatPfupdateVersionLabel(inspect.package.releaseVersion)}`];
   lines.push(`Current: ${formatPfupdateVersionLabel(inspect.currentReleaseVersion)}`);
-  lines.push(`Minimum manager: ${formatPfupdateVersionLabel(inspect.package.minimumManagerVersion)}`);
+  lines.push(
+    `Minimum manager: ${formatPfupdateVersionLabel(inspect.package.minimumManagerVersion)}`,
+  );
   lines.push(`Settings formats: ${inspect.package.supportedSettingsFormatVersions.join(', ')}`);
   lines.push(`DB schema after update: ${inspect.package.targetSchemaVersion}`);
   return lines;

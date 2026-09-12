@@ -3,10 +3,7 @@ import type { AddressInfo } from 'node:net';
 import test, { afterEach, beforeEach } from 'node:test';
 import Fastify from 'fastify';
 import { registerClientAuth } from '../../auth/client-auth.js';
-import {
-  createStaffSessionManager,
-  getStaffSessionCookieName,
-} from '../../auth/session-grants.js';
+import { createStaffSessionManager, getStaffSessionCookieName } from '../../auth/session-grants.js';
 import {
   listDevicePresence,
   resetDevicePresenceForTests,

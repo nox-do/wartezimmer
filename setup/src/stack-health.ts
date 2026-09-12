@@ -54,7 +54,9 @@ export async function waitForExpectedStackHealth(
   const timeoutMs = options.timeoutMs ?? 120_000;
   const intervalMs = options.intervalMs ?? 2_000;
   const now = options.now ?? Date.now;
-  const sleep = options.sleep ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+  const sleep =
+    options.sleep ??
+    ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
   const deadline = now() + timeoutMs;
 
   while (true) {

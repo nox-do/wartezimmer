@@ -66,8 +66,14 @@ test('both release scripts prepare the custom proxy through the delivery helper'
 test('current release aliases do not force a local version tag', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(scriptsDir, '..', 'package.json'), 'utf8'));
 
-  assert.equal(pkg.scripts['release:images:current'], 'node ./scripts/build-release-images.mjs --no-build');
-  assert.equal(pkg.scripts['release:pfupdate:current'], 'node ./scripts/build-pfupdate.mjs --no-build');
+  assert.equal(
+    pkg.scripts['release:images:current'],
+    'node ./scripts/build-release-images.mjs --no-build',
+  );
+  assert.equal(
+    pkg.scripts['release:pfupdate:current'],
+    'node ./scripts/build-pfupdate.mjs --no-build',
+  );
   assert.doesNotMatch(pkg.scripts['release:images:current'], /--version\s+local/);
   assert.doesNotMatch(pkg.scripts['release:pfupdate:current'], /--version\s+local/);
   assert.ok(pkg.version && pkg.version !== 'local');

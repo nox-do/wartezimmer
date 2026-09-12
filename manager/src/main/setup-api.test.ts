@@ -1,6 +1,30 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { setupApiTimeoutMs } from './setup-api.js';
+import { resolveSetupApiUrl, setupApiTimeoutMs } from './setup-api.js';
+
+test('resolveSetupApiUrl keeps normalized host routes and query parameters', () => {
+  const url = resolveSetupApiUrl('http://127.0.0.1:9190', '/api/setup/host/status?include=probes');
+  assert.equal(url.href, 'http://127.0.0.1:9190/api/setup/host/status?include=probes');
+});
+
+test('resolveSetupApiUrl rejects dot-segment escapes after URL normalization', () => {
+  assert.throws(
+    () => resolveSetupApiUrl('http://127.0.0.1:9190', '/api/setup/host/../../admin'),
+    /Pfad nicht erlaubt/,
+  );
+  assert.throws(
+    () => resolveSetupApiUrl('http://127.0.0.1:9190', '/api/setup/host/%2e%2e/%2e%2e/admin'),
+    /Pfad nicht erlaubt/,
+  );
+});
+
+test('resolveSetupApiUrl rejects a different origin', () => {
+  assert.throws(
+    () =>
+      resolveSetupApiUrl('http://127.0.0.1:9190', 'http://localhost:9190/api/setup/host/status'),
+    /konfigurierten Ursprung/,
+  );
+});
 
 test('setupApiTimeoutMs uses extended timeout for backup restore', () => {
   assert.equal(

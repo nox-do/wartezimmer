@@ -3,8 +3,6 @@ import type {
   ComposeStatus,
   DockerStatus,
   HostStatus,
-  ProbeResult,
-  SandboxScannerStatus,
 } from '../shared/host-status.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 
@@ -27,20 +25,6 @@ export function effectiveDocker(
   return runtime?.docker ?? config?.docker ?? null;
 }
 
-export function effectiveProbes(
-  config: HostStatus | null,
-  runtime: HostRuntimeHealth | null,
-): ProbeResult[] {
-  return runtime?.probes ?? config?.probes ?? [];
-}
-
-export function effectiveSandboxScanner(
-  config: HostStatus | null,
-  runtime: HostRuntimeHealth | null,
-): SandboxScannerStatus | null {
-  return runtime?.sandboxScanner ?? config?.sandboxScanner ?? null;
-}
-
 export function effectiveEnvExists(
   config: HostStatus | null,
   runtime: HostRuntimeHealth | null,
@@ -57,13 +41,6 @@ export function effectiveConfiguredLanIp(
     return runtime.configuredLanIp;
   }
   return config?.network.configuredLanIp ?? null;
-}
-
-export function effectiveAppBaseUrl(
-  config: HostStatus | null,
-  runtime: HostRuntimeHealth | null,
-): string | null {
-  return runtime?.appBaseUrl ?? config?.appBaseUrl ?? null;
 }
 
 /**

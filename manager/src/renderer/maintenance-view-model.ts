@@ -2,11 +2,7 @@ import {
   DOCKER_FILE_SHARING_HINT,
   needsDockerFileSharingHint,
 } from '../shared/docker-file-sharing-hint.js';
-import type {
-  HostStatus,
-  LoadDeliveryImagesResult,
-  StorageFoldersResult,
-} from '../shared/host-status.js';
+import type { HostStatus, StorageFoldersResult } from '../shared/host-status.js';
 import { formatEnvBackupLabel } from '@praxis-flow/server-shared/env-backup';
 import { formatPfbackupLabel } from '@praxis-flow/server-shared/backup-path-labels';
 import { deliveryImagesSummary } from './delivery-images-flow.js';
@@ -24,7 +20,6 @@ export type MaintenanceOperation =
   | 'storage'
   | 'backup'
   | 'tlsSidecar'
-  | 'routing'
   | 'pin';
 
 export type MaintenanceErrorSurface =
@@ -33,7 +28,6 @@ export type MaintenanceErrorSurface =
   | 'storage'
   | 'backup'
   | 'tlsSidecar'
-  | 'routing'
   | 'pin';
 
 export type MaintenanceErrors = Record<MaintenanceErrorSurface, string | null>;
@@ -47,7 +41,6 @@ export function emptyMaintenanceErrors(): MaintenanceErrors {
     storage: null,
     backup: null,
     tlsSidecar: null,
-    routing: null,
     pin: null,
   };
 }
@@ -58,13 +51,11 @@ const MAINTENANCE_ERROR_SECTION: Record<MaintenanceErrorSurface, MaintenanceExpa
   storage: 'practice',
   backup: 'security',
   tlsSidecar: 'security',
-  routing: 'practice',
   pin: 'security',
 };
 
 const MAINTENANCE_ERROR_OPEN_ORDER: MaintenanceErrorSurface[] = [
   'stack',
-  'routing',
   'storage',
   'backup',
   'tlsSidecar',
@@ -117,7 +108,6 @@ export const STORAGE_PATHS_RESTART_CONFIRM_MESSAGE =
 export const STORAGE_PATHS_VALIDATION_ERROR = 'Bitte Import- und Exportordner angeben.';
 
 export const STORAGE_SAVE_PROGRESS_TEXT = 'Speichern …';
-export const ROUTING_MODE_SAVE_PROGRESS_TEXT = 'Speichern …';
 export const SOFTWARE_UPDATE_LOADING_TEXT = 'Update läuft …';
 export const PIN_RESET_PROGRESS_TEXT = 'PIN-Reset läuft …';
 export const MAINTENANCE_OTHER_ACTION_RUNNING = 'Es läuft bereits eine andere Aktion.';
@@ -242,43 +232,6 @@ export function storageSaveErrorText(
 ): string | null {
   if (result.stackWasRunning && restartCompose && !result.composeRestarted) {
     return result.restartLog || 'Stack-Neustart fehlgeschlagen.';
-  }
-  return null;
-}
-
-export function softwareUpdateStatusText(
-  result: LoadDeliveryImagesResult,
-  restartCompose: boolean,
-): string {
-  const parts = [
-    `Import OK — SHA256 (${result.sha256Source}) verifiziert.`,
-    `app: ${result.appImage}`,
-    `sandbox: ${result.sandboxImage}`,
-  ];
-  if (result.releaseVersion) {
-    parts.push(`Version: ${result.releaseVersion}`);
-  }
-  if (result.backupPath) {
-    parts.push(`Backup: ${formatEnvBackupLabel(result.backupPath)}`);
-  }
-  if (restartCompose) {
-    parts.push(
-      result.composeRestarted
-        ? 'Stack mit neuen Images neu gestartet.'
-        : 'Stack-Neustart fehlgeschlagen — bitte manuell neu starten.',
-    );
-  } else {
-    parts.push('Stack unverändert — bei laufendem Betrieb Neustart ausführen.');
-  }
-  return parts.join(' ');
-}
-
-export function softwareUpdateErrorText(
-  result: LoadDeliveryImagesResult,
-  restartCompose: boolean,
-): string | null {
-  if (restartCompose && !result.composeRestarted && result.restartLog) {
-    return result.restartLog;
   }
   return null;
 }

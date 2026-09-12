@@ -3,7 +3,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   IPC_FETCH_SETUP_STATUS,
-  IPC_GET_SETUP_API_BASE,
   IPC_OPEN_EXTERNAL_URL,
   IPC_READ_PFBACKUP_FOR_VALIDATE,
   IPC_READ_TLS_SIDECAR,
@@ -23,6 +22,7 @@ import { selectReleaseArchiveDialog } from './select-release-archive.js';
 import { selectPfupdateArchiveDialog } from './select-pfupdate-archive.js';
 import { renewTlsCertificateFromPicker, stageTlsCertificateFromPicker } from './select-tls-pem.js';
 import { installMacApplicationMenu } from './mac-app-menu.js';
+import { installNavigationGuards } from './navigation-guards.js';
 import { fetchHostStatusFromApi, callSetupApi } from './setup-api.js';
 import {
   inspectPfbackupFile,
@@ -68,8 +68,6 @@ function acquireSingleInstanceLock(): boolean {
 }
 
 function registerSetupIpc(handle: SetupServerHandle): void {
-  ipcMain.handle(IPC_GET_SETUP_API_BASE, () => handle.apiBase);
-
   ipcMain.handle(IPC_FETCH_SETUP_STATUS, async () => {
     try {
       return await fetchHostStatusFromApi(handle.apiBase, handle.token);
@@ -209,6 +207,8 @@ function createWindow(): void {
       sandbox: true,
     },
   });
+
+  installNavigationGuards(mainWindow.webContents);
 
   const rendererUrl = process.env.ELECTRON_RENDERER_URL;
   if (rendererUrl) {

@@ -8,9 +8,7 @@ export async function selectReleaseArchiveDialog(
   const dialogOptions: OpenDialogOptions = {
     title: 'Praxis-Flow Release-Paket wählen',
     properties: ['openFile'],
-    filters: [
-      { name: 'Praxis Flow Erstinstallation', extensions: ['pfinstall'] },
-    ],
+    filters: [{ name: 'Praxis Flow Erstinstallation', extensions: ['pfinstall'] }],
   };
 
   const result = parentWindow

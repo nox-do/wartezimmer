@@ -10,6 +10,7 @@ import {
   SETUP_MANAGER_TOKEN_HEADER,
 } from '@praxis-flow/server-shared/setup-api';
 import { findProjectRoot } from './project-root.js';
+import { npmExecutable } from './process-command.js';
 import {
   createLineAssembler,
   evaluateSetupHealthIdentity,
@@ -155,7 +156,7 @@ function startDevSetupServer(
 ): ChildProcess {
   const repoRoot = findProjectRoot(moduleDir);
 
-  return spawn('npm', ['run', '-w', '@praxis-flow/setup', 'serve'], {
+  return spawn(npmExecutable(), ['run', '-w', '@praxis-flow/setup', 'serve'], {
     cwd: repoRoot,
     env: childEnv(port, token, buildId),
     stdio: ['ignore', 'pipe', 'pipe'],

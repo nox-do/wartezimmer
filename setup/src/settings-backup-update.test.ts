@@ -154,10 +154,25 @@ test('applyPfupdate succeeds and writes new image tags', async () => {
   buildTestPfupdateArchive(archivePath, '2026.08.0');
 
   try {
+    const deps = mockDeps(appDataDir, backupPath);
     const result = await applyPfupdate(
       { archivePath, managerVersion: '0.2.0', settingsFormatVersion: 1 },
       testCtx(dir),
-      mockDeps(appDataDir, backupPath),
+      {
+        ...deps,
+        createSettingsBackup: async () => {
+          assert.equal(readEnvMap(envPath).has('MAINTENANCE_TOKEN'), false);
+          return { envPath: '', backupPath };
+        },
+        stopStack: async () => {
+          assert.equal(readEnvMap(envPath).has('MAINTENANCE_TOKEN'), false);
+          return { ok: true, log: 'stopped' };
+        },
+        startAppStack: async (...args: Parameters<typeof deps.startAppStack>) => {
+          assert.equal((readEnvMap(envPath).get('MAINTENANCE_TOKEN')?.length ?? 0) >= 32, true);
+          return deps.startAppStack(...args);
+        },
+      },
     );
 
     assert.equal(result.ok, true);
@@ -172,6 +187,7 @@ test('applyPfupdate succeeds and writes new image tags', async () => {
     assert.equal(env.get('PRAXIS_FLOW_SANDBOX_IMAGE'), 'praxis-flow/sandbox:2026.08.0');
     // Product packages omit gateway; existing lab image ref is preserved.
     assert.equal(env.get('PRAXIS_FLOW_GATEWAY_IMAGE'), 'praxis-flow/gateway:2026.07.1');
+    assert.equal((env.get('MAINTENANCE_TOKEN')?.length ?? 0) >= 32, true);
     assert.match(
       fs.readFileSync(path.join(dir, '.env.example'), 'utf8'),
       /PRAXIS_FLOW_APP_IMAGE=praxis-flow\/app:2026\.08\.0/,

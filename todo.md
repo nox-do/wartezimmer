@@ -95,7 +95,7 @@ Stand: 2026-09-04
 - Verdict fachlich: Kernpfade simple/complex + Check-in-Projektion solide; Journey-Ops am MFA unvollständig/fehleranfällig
 - P0/P1: `return_to_waiting` lässt `journeyStepCompletedAt` stehen → nächster Call überspringt Hop; `callVisit` chained start_next+call blind
 - P1: kein Host-Redirect (nur Reassign); Setup Mode-Fallback ohne Catalog-Sync; Lizenz nur am Mode-Wechsel, Runtime fail-open; compose default NODE_ENV=development
-- P2: simple lässt journey_* aktiv → Integrity kann Settings-Sync hart abbrechen; Reassign nach Hop-Complete inkohärent; done mid-journey ohne abandon; Template-Lock zählt abandoned; JOURNEY_TEMPLATE_LOCKED → 400 statt 409
+- P2: simple lässt journey\_\* aktiv → Integrity kann Settings-Sync hart abbrechen; Reassign nach Hop-Complete inkohärent; done mid-journey ohne abandon; Template-Lock zählt abandoned; JOURNEY_TEMPLATE_LOCKED → 400 statt 409
 - Offen: Fixes priorisieren mit User (kein Auto-Umbau)
 
 ## 2026-09-04 — Routing-System (Review + Doku)
@@ -192,7 +192,7 @@ Stand: 2026-09-04
 
 ## 2026-09-04 — Docker-Findings Schnitte 1–3
 
-- `.dockerignore`: manager/** (außer package.json), lab, .github, .vscode, licenses; Context-Probe OK (~6MB statt Manager-Ballast)
+- `.dockerignore`: manager/\*\* (außer package.json), lab, .github, .vscode, licenses; Context-Probe OK (~6MB statt Manager-Ballast)
 - Dockerfiles: `# syntax=docker/dockerfile:1`; app/sandbox `COPY manager/package.json`
 - Delivery: `pull_policy: never` auf app/sandbox/gateway; Proxy-Healthcheck (dev+delivery) via wget :80
 - Docs: delivery.md / tls.md pull_policy-Hinweis angepasst
@@ -202,21 +202,21 @@ Stand: 2026-09-04
 
 Bewertung Sinn/Aufwand (Non-Root/ClamAV separat):
 
-| Finding | Urteil | Warum |
-| --- | --- | --- |
-| `.dockerignore` manager/lab/.github/dist-Reste | **ja, günstig** | Context ~300MB Manager unnötig; `npm ci` braucht höchstens `manager/package.json` (wie setup) |
-| `# syntax=docker/dockerfile:1` | **ja, trivial** | Doku-Standard, schaltet moderne Frontend-Features frei |
-| Digest-Pin `node`/`debian`/`builder` | **teils** | Proxy-Runtime schon gepinnt + Prozess in pfupdate; Node bei jedem Release `--pull` reicht oft; volle Digests = Pflege wie Proxy |
-| `pull_policy: never` app/sandbox | **optional konsistent** | Kritisch war Proxy (Hub-Tag `caddy:…`); app/sandbox private Tags, Setup lädt via `docker load` |
-| Healthcheck `start_period` | **niedrig** | Sandbox `/ready` liefert bei degraded trotzdem 200 — ClamAV-Kaltstart blockiert Compose nicht |
-| Proxy-Healthcheck | **nice-to-have** | depends_on wartet nur auf app; Caddy-Fehlkonfig separat |
-| Resource-Limits | **nein vorerst** | ClamAV speicherhungrig; Limits ohne Messung → OOM-Risiko auf Praxis-PCs |
-| BuildKit npm-Cache-Mounts | **später / CI** | Dev-DX, kein Runtime-Gewinn; Workspace-Builds etwas fummelig |
-| Gateway privileged/cap_add | **kein Produkt-Fix jetzt** | Lab/Captive; `cap_add` bei privileged redundant (Kosmetik); Root faktisch nötig |
-| OPENNDS Default-Key | **klein, wenn Gateway an** | Setup setzt Secret; Compose-Default nur Fallback |
-| Dev `NODE_ENV:-development` | **bewusst lassen** | Delivery ohne Override → Image `production`; Dev-Override steuert Auth/Logging lokal |
-| PRACTICE_* nur in Dev-Compose | **Aufräumen optional** | Profil primär DB; Env-Fallback legacy |
-| TLS-Lab Doppelkommentar | **trivial** | Copy-Paste |
+| Finding                                        | Urteil                     | Warum                                                                                                                           |
+| ---------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `.dockerignore` manager/lab/.github/dist-Reste | **ja, günstig**            | Context ~300MB Manager unnötig; `npm ci` braucht höchstens `manager/package.json` (wie setup)                                   |
+| `# syntax=docker/dockerfile:1`                 | **ja, trivial**            | Doku-Standard, schaltet moderne Frontend-Features frei                                                                          |
+| Digest-Pin `node`/`debian`/`builder`           | **teils**                  | Proxy-Runtime schon gepinnt + Prozess in pfupdate; Node bei jedem Release `--pull` reicht oft; volle Digests = Pflege wie Proxy |
+| `pull_policy: never` app/sandbox               | **optional konsistent**    | Kritisch war Proxy (Hub-Tag `caddy:…`); app/sandbox private Tags, Setup lädt via `docker load`                                  |
+| Healthcheck `start_period`                     | **niedrig**                | Sandbox `/ready` liefert bei degraded trotzdem 200 — ClamAV-Kaltstart blockiert Compose nicht                                   |
+| Proxy-Healthcheck                              | **nice-to-have**           | depends_on wartet nur auf app; Caddy-Fehlkonfig separat                                                                         |
+| Resource-Limits                                | **nein vorerst**           | ClamAV speicherhungrig; Limits ohne Messung → OOM-Risiko auf Praxis-PCs                                                         |
+| BuildKit npm-Cache-Mounts                      | **später / CI**            | Dev-DX, kein Runtime-Gewinn; Workspace-Builds etwas fummelig                                                                    |
+| Gateway privileged/cap_add                     | **kein Produkt-Fix jetzt** | Lab/Captive; `cap_add` bei privileged redundant (Kosmetik); Root faktisch nötig                                                 |
+| OPENNDS Default-Key                            | **klein, wenn Gateway an** | Setup setzt Secret; Compose-Default nur Fallback                                                                                |
+| Dev `NODE_ENV:-development`                    | **bewusst lassen**         | Delivery ohne Override → Image `production`; Dev-Override steuert Auth/Logging lokal                                            |
+| PRACTICE\_\* nur in Dev-Compose                | **Aufräumen optional**     | Profil primär DB; Env-Fallback legacy                                                                                           |
+| TLS-Lab Doppelkommentar                        | **trivial**                | Copy-Paste                                                                                                                      |
 
 Empfohlene erste Schnitte (wenn User will): dockerignore (+ ggf. `COPY manager/package.json`) → syntax-Directive → optional Proxy-Konsistenz/`pull_policy` → Rest zurückstellen.
 

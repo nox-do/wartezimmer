@@ -227,9 +227,7 @@ function handleCall(ctx: TransitionContext): QueueVisitTransitionResponse | unde
 function handleCheckInRoom(ctx: TransitionContext): QueueVisitTransitionResponse | undefined {
   const { roomId, roomLabel } = roomFields(ctx.body.roomId, ctx.body.roomLabel);
   const waitingRoomArrival = roomId === PF_FLOW_LOC_WAITING;
-  const actingRoomId = waitingRoomArrival
-    ? PF_FLOW_LOC_WAITING
-    : ctx.body.actingRoomId?.trim();
+  const actingRoomId = waitingRoomArrival ? PF_FLOW_LOC_WAITING : ctx.body.actingRoomId?.trim();
 
   return runCheckInRoomTransition(ctx, {
     roomId,

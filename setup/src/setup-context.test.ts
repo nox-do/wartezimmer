@@ -3,8 +3,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { readEnvMap } from './env-file.js';
-import { migrateMaintenanceToken } from './setup-context.js';
+import { migrateMaintenanceToken, resolveSetupContext } from './setup-context.js';
 
 function withInstall(run: (home: string) => void): void {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-token-migration-'));
@@ -15,7 +16,7 @@ function withInstall(run: (home: string) => void): void {
   }
 }
 
-test('startup migration atomically adds a maintenance token to an existing env', () => {
+test('maintenance token migration atomically adds a token to an existing env', () => {
   withInstall((home) => {
     const envPath = path.join(home, '.env');
     fs.writeFileSync(envPath, '# existing install\nPRACTICE_DISPLAY_NAME=Meyer\n');
@@ -29,7 +30,7 @@ test('startup migration atomically adds a maintenance token to an existing env',
   });
 });
 
-test('startup migration replaces weak tokens once and then remains idempotent', () => {
+test('maintenance token migration replaces weak tokens once and then remains idempotent', () => {
   withInstall((home) => {
     const envPath = path.join(home, '.env');
     fs.writeFileSync(envPath, 'MAINTENANCE_TOKEN=change-me-maintenance-token\n');
@@ -46,17 +47,14 @@ test('startup migration replaces weak tokens once and then remains idempotent', 
   });
 });
 
-test('startup migration ignores a token inherited through process.env', () => {
+test('maintenance token migration ignores a token inherited through process.env', () => {
   withInstall((home) => {
     fs.writeFileSync(path.join(home, '.env'), 'PRACTICE_DISPLAY_NAME=Meyer\n');
     const previous = process.env.MAINTENANCE_TOKEN;
     process.env.MAINTENANCE_TOKEN = 'process-token-that-must-not-win-1234';
     try {
       migrateMaintenanceToken(home, () => 'f'.repeat(32));
-      assert.equal(
-        readEnvMap(path.join(home, '.env')).get('MAINTENANCE_TOKEN'),
-        'f'.repeat(32),
-      );
+      assert.equal(readEnvMap(path.join(home, '.env')).get('MAINTENANCE_TOKEN'), 'f'.repeat(32));
     } finally {
       if (previous === undefined) delete process.env.MAINTENANCE_TOKEN;
       else process.env.MAINTENANCE_TOKEN = previous;
@@ -64,12 +62,41 @@ test('startup migration ignores a token inherited through process.env', () => {
   });
 });
 
-test('startup migration does not create env for an uninstalled home', () => {
+test('maintenance token migration does not create env for an uninstalled home', () => {
   withInstall((home) => {
-    assert.deepEqual(migrateMaintenanceToken(home, () => 'n'.repeat(32)), {
-      migrated: false,
-      token: null,
-    });
+    assert.deepEqual(
+      migrateMaintenanceToken(home, () => 'n'.repeat(32)),
+      {
+        migrated: false,
+        token: null,
+      },
+    );
     assert.equal(fs.existsSync(path.join(home, '.env')), false);
+  });
+});
+
+test('resolving an install context does not rotate the running stack token', () => {
+  withInstall((home) => {
+    const envPath = path.join(home, '.env');
+    fs.writeFileSync(envPath, 'MAINTENANCE_TOKEN=change-me-maintenance-token\n');
+    const previousHome = process.env.PRAXIS_FLOW_HOME;
+    const previousTemplateRoot = process.env.PRAXIS_FLOW_TEMPLATE_ROOT;
+    process.env.PRAXIS_FLOW_HOME = home;
+    process.env.PRAXIS_FLOW_TEMPLATE_ROOT = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '../..',
+    );
+    try {
+      assert.equal(resolveSetupContext().home, home);
+      assert.equal(
+        readEnvMap(envPath).get('MAINTENANCE_TOKEN'),
+        'change-me-maintenance-token',
+      );
+    } finally {
+      if (previousHome === undefined) delete process.env.PRAXIS_FLOW_HOME;
+      else process.env.PRAXIS_FLOW_HOME = previousHome;
+      if (previousTemplateRoot === undefined) delete process.env.PRAXIS_FLOW_TEMPLATE_ROOT;
+      else process.env.PRAXIS_FLOW_TEMPLATE_ROOT = previousTemplateRoot;
+    }
   });
 });

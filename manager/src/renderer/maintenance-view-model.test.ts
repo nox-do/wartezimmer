@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { LoadDeliveryImagesResult, StorageFoldersResult } from '../shared/host-status.js';
+import type { StorageFoldersResult } from '../shared/host-status.js';
 import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import {
   backupInfoText,
@@ -10,10 +10,8 @@ import {
   maintenanceSectionToOpenForErrors,
   maintenanceSectionToOpenForErrorChange,
   pinResetSuccessText,
-  softwareUpdateErrorText,
   softwareUpdateInfoRows,
   softwareUpdateSectionVisible,
-  softwareUpdateStatusText,
   stackStatusLabel,
   storagePathsChanged,
   storageSaveErrorText,
@@ -29,27 +27,6 @@ function minimalStorageResult(overrides: Partial<StorageFoldersResult> = {}): St
     created: [],
     composeRestarted: false,
     stackWasRunning: false,
-    compose: null,
-    restartLog: null,
-    ...overrides,
-  };
-}
-
-function minimalSoftwareResult(
-  overrides: Partial<LoadDeliveryImagesResult> = {},
-): LoadDeliveryImagesResult {
-  return {
-    envPath: '/tmp/pf/.env',
-    backupPath: null,
-    loadedImages: [],
-    appImage: 'praxis-flow/app:1.0',
-    sandboxImage: 'praxis-flow/sandbox:1.0',
-    deliveryImages: minimalHostStatus().deliveryImages,
-    sha256Verified: true,
-    sha256: 'abc',
-    releaseVersion: null,
-    sha256Source: 'manifest.json',
-    composeRestarted: false,
     compose: null,
     restartLog: null,
     ...overrides,
@@ -146,12 +123,12 @@ test('softwareUpdateInfoRows falls back to shared image tag without releaseVersi
   assert.deepEqual(rows, [{ label: 'Aktuell', value: '2026.07.0' }]);
 });
 
-test('maintenanceSectionToOpenForErrors opens one section and prefers routing over logs', () => {
+test('maintenanceSectionToOpenForErrors opens the highest-priority section', () => {
   const errors = emptyMaintenanceErrors();
   assert.equal(maintenanceSectionToOpenForErrors(errors), null);
   errors.logs = 'logs down';
   assert.equal(maintenanceSectionToOpenForErrors(errors), 'diagnostics');
-  errors.routing = 'routing down';
+  errors.storage = 'storage down';
   assert.equal(maintenanceSectionToOpenForErrors(errors), 'practice');
   errors.stack = 'stack down';
   assert.equal(maintenanceSectionToOpenForErrors(errors), 'operations');
@@ -168,7 +145,7 @@ test('maintenanceSectionToOpenForErrorChange focuses the newly changed error sur
 
 test('maintenanceSectionToOpenForErrorChange prefers a newly added error over an older higher-priority one', () => {
   const previous = emptyMaintenanceErrors();
-  previous.routing = 'routing down';
+  previous.storage = 'storage down';
 
   assert.equal(
     maintenanceSectionToOpenForErrorChange(previous, { ...previous, logs: 'logs down' }),
@@ -182,12 +159,12 @@ test('maintenanceSectionToOpenForErrorChange prefers a newly added error over an
 
 test('maintenanceSectionToOpenForErrorChange does not switch when an error is cleared', () => {
   const previous = emptyMaintenanceErrors();
-  previous.routing = 'routing down';
+  previous.storage = 'storage down';
   previous.logs = 'logs down';
 
   assert.equal(maintenanceSectionToOpenForErrorChange(previous, { ...previous, logs: null }), null);
   assert.equal(
-    maintenanceSectionToOpenForErrorChange(previous, { ...previous, routing: null }),
+    maintenanceSectionToOpenForErrorChange(previous, { ...previous, storage: null }),
     null,
   );
   assert.equal(maintenanceSectionToOpenForErrorChange(previous, emptyMaintenanceErrors()), null);
@@ -239,36 +216,6 @@ test('storageSaveErrorText surfaces restart failure log', () => {
     'compose down failed',
   );
   assert.equal(storageSaveErrorText(minimalStorageResult(), false), null);
-});
-
-test('softwareUpdateStatusText summarizes import and restart outcome', () => {
-  const withoutRestart = softwareUpdateStatusText(
-    minimalSoftwareResult({
-      releaseVersion: '2.0.0',
-      backupPath: '/tmp/.env.backup-2',
-    }),
-    false,
-  );
-  assert.match(withoutRestart, /Import OK/);
-  assert.match(withoutRestart, /Version: 2.0.0/);
-  assert.match(withoutRestart, /Stack unverändert/);
-
-  const withRestart = softwareUpdateStatusText(
-    minimalSoftwareResult({ composeRestarted: true }),
-    true,
-  );
-  assert.match(withRestart, /neu gestartet/);
-});
-
-test('softwareUpdateErrorText returns restart log on failed restart', () => {
-  assert.equal(
-    softwareUpdateErrorText(
-      minimalSoftwareResult({ composeRestarted: false, restartLog: 'pull failed' }),
-      true,
-    ),
-    'pull failed',
-  );
-  assert.equal(softwareUpdateErrorText(minimalSoftwareResult(), true), null);
 });
 
 test('pinResetSuccessText mentions default pin', () => {

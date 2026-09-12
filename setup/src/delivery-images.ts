@@ -215,11 +215,15 @@ export async function inspectImagesForHostPlatform(
   inspectImage: (ref: string) => Promise<DockerImageInspection> = inspectDockerImage,
   errorCode = 'DOCKER_IMAGE_PLATFORM_MISMATCH',
 ): Promise<Map<string, DockerImageInspection>> {
-  const inspections = await Promise.all(refs.map(async (ref) => [ref, await inspectImage(ref)] as const));
+  const inspections = await Promise.all(
+    refs.map(async (ref) => [ref, await inspectImage(ref)] as const),
+  );
   const expected = hostDockerPlatform();
   for (const [ref, inspection] of inspections) {
     if (inspection.platform.toLowerCase() !== expected) {
-      throw new Error(`${errorCode}: ${ref} is ${inspection.platform || 'unknown'}, expected ${expected}`);
+      throw new Error(
+        `${errorCode}: ${ref} is ${inspection.platform || 'unknown'}, expected ${expected}`,
+      );
     }
   }
   return new Map(inspections);

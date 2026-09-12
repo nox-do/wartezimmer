@@ -51,15 +51,15 @@ Neue/geänderte Routen: YAML → `generate:api` → Handler an Schema/Typen → 
 
 ## 3. Rollenmatrix
 
-| Rolle        | Client                       | typ. API-Bereiche                                                                                         |
-| ------------ | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `terminal`   | Check-in                     | `checkins`, `checkins/assist/*`, `ops/heartbeat`, `ops/device/presence`/`stream`, `ops/emergency/raise`   |
-| `mfa`        | MFA                          | `queue` (+ SSE), `identity`, `documents`, `ops` (Stream, Day-Lifecycle, Settings-Subset, Pairing-confirm) |
-| `tv`         | Wartezimmer                  | `GET /queue`, `GET /queue/stream`, `ops/device/presence`/`stream`                                         |
-| `room-panel` | Raum-Tablet                  | Auth room-panel, `GET /queue` (+ SSE), Transitions eingeschränkt                                          |
-| `captive`    | Captive-Adapter (S2S-Hook)   | `sessions/verify-ticket-code` (noch kein Vendor; Key trotzdem Pflicht bei Auth)                           |
-| `ops`        | IT-Settings                  | Settings-Subset (CSV/SMS/Profil/Routing), Messaging, Maintenance, Outbox                                  |
-| Portal       | Patienten-Web                | `sessions/*`, `patient-documents/*` — Session-Bearer, kein `ClientRole`-Eintrag                           |
+| Rolle        | Client                     | typ. API-Bereiche                                                                                         |
+| ------------ | -------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `terminal`   | Check-in                   | `checkins`, `checkins/assist/*`, `ops/heartbeat`, `ops/device/presence`/`stream`, `ops/emergency/raise`   |
+| `mfa`        | MFA                        | `queue` (+ SSE), `identity`, `documents`, `ops` (Stream, Day-Lifecycle, Settings-Subset, Pairing-confirm) |
+| `tv`         | Wartezimmer                | `GET /queue`, `GET /queue/stream`, `ops/device/presence`/`stream`                                         |
+| `room-panel` | Raum-Tablet                | Auth room-panel, `GET /queue` (+ SSE), Transitions eingeschränkt                                          |
+| `captive`    | Captive-Adapter (S2S-Hook) | `sessions/verify-ticket-code` (noch kein Vendor; Key trotzdem Pflicht bei Auth)                           |
+| `ops`        | IT-Settings                | Settings-Subset (CSV/SMS/Profil/Routing), Messaging, Maintenance, Outbox                                  |
+| Portal       | Patienten-Web              | `sessions/*`, `patient-documents/*` — Session-Bearer, kein `ClientRole`-Eintrag                           |
 
 **Harte Regeln:**
 
@@ -74,13 +74,13 @@ Neue/geänderte Routen: YAML → `generate:api` → Handler an Schema/Typen → 
 
 Vertrag: `openapi/auth.yaml`, `openapi/queue.yaml`. Enrollment einmalig: **innen** mit gemeinsamer Raum-Panel-PIN, **außen** ohne PIN. Danach PIN-frei bis Widerruf (Cookie 365d, gleitendes Max-Age). Mehrere aktive Freigaben pro Raum+Placement.
 
-| Endpoint                          | Zugang       | Zweck                                                                  |
-| --------------------------------- | ------------ | ---------------------------------------------------------------------- |
-| `GET /auth/room-panel/rooms`      | öffentlich   | Placements zum Enrollment (`requiresPin` laut Placement)               |
-| `POST /auth/room-panel/login`     | öffentlich   | Cookie; Body `roomId`, `placement`; **PIN nur innen**                  |
-| `GET /queue`                      | `room-panel` | Snapshot inkl. `capabilities` / Actions                                |
-| `GET /queue/stream`               | `room-panel` | SSE `snapshot` + `session-revoked`                                     |
-| `POST /queue/:visitId/transition` | `room-panel` | nur `check_in_room`, `check_out_room`, `call`                          |
+| Endpoint                          | Zugang       | Zweck                                                    |
+| --------------------------------- | ------------ | -------------------------------------------------------- |
+| `GET /auth/room-panel/rooms`      | öffentlich   | Placements zum Enrollment (`requiresPin` laut Placement) |
+| `POST /auth/room-panel/login`     | öffentlich   | Cookie; Body `roomId`, `placement`; **PIN nur innen**    |
+| `GET /queue`                      | `room-panel` | Snapshot inkl. `capabilities` / Actions                  |
+| `GET /queue/stream`               | `room-panel` | SSE `snapshot` + `session-revoked`                       |
+| `POST /queue/:visitId/transition` | `room-panel` | nur `check_in_room`, `check_out_room`, `call`            |
 
 UI-Buttons aus Snapshot-Actions (`canArrive`, `canCheckOut`, `canCall`); Server bleibt autoritativ. `capabilities.callAnnouncementReachable` steuert Aufruf bei offline WZ-TV. MFA listet und entkoppelt Freigaben über `GET/POST /ops/device-authorizations`.
 

@@ -37,7 +37,6 @@ import type {
 } from './host-status.js';
 
 export type PraxisManagerSetupApi = {
-  getSetupApiBase(): Promise<string>;
   fetchSetupStatus(options?: { includeProbes?: boolean }): Promise<HostStatus>;
   fetchRuntimeHealth(): Promise<HostRuntimeHealth>;
   fetchSetupNetwork(): Promise<NetworkSnapshot>;

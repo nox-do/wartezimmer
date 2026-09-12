@@ -8,9 +8,7 @@ export async function selectPfupdateArchiveDialog(
   const dialogOptions: OpenDialogOptions = {
     title: 'Praxis-Flow Update-Paket wählen',
     properties: ['openFile'],
-    filters: [
-      { name: 'Praxis Flow Update', extensions: ['pfupdate'] },
-    ],
+    filters: [{ name: 'Praxis Flow Update', extensions: ['pfupdate'] }],
   };
 
   const result = parentWindow

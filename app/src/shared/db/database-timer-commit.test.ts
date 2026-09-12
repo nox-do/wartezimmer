@@ -72,6 +72,7 @@ function seedRecallTimer(core: CoreDatabase): string {
     topicId: 'blut',
     authPath: 'phone_dob',
     identityRef: 'Recall Timer',
+    needsAssistance: true,
   });
   core.setAbsence(created.visitId, 'wait_here');
   core.recallVisit(created.visitId, 15);
@@ -87,6 +88,7 @@ test('returnToWaiting leaves recall timer when TX rolls back', () => {
       topicId: 'blut',
       authPath: 'phone_dob',
       identityRef: 'Timer Rollback',
+      needsAssistance: true,
     });
     core.setAbsence(created.visitId, 'wait_here');
     core.recallVisit(created.visitId, 15);
@@ -113,6 +115,7 @@ test('returnToWaiting cancels recall timer only after successful TX', () => {
       topicId: 'blut',
       authPath: 'phone_dob',
       identityRef: 'Timer Commit',
+      needsAssistance: true,
     });
     core.setAbsence(created.visitId, 'wait_here');
     core.recallVisit(created.visitId, 15);

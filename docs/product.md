@@ -43,16 +43,16 @@ Lokales Praxis-System für Check-in, Warteschlange und Wartezimmer — **ohne Cl
 
 ## Was wir nicht sind / nicht liefern
 
-| Thema                      | Abgrenzung                                                                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Cloud als Pflicht**      | Kein Cloud-Backend als Produktkern                                                                                             |
-| **Patient-App**            | Kein App-Store-Download für Patienten (Portal im Browser; Abgrenzung, kein USP)                                                |
-| **PVS / KIS**              | Kein Praxisverwaltungssystem — Anbindung später per Adapter; heute CSV-Import-Ordner                                           |
-| **eGK-Hardware**           | Kein Kartenterminal-Produkt — eGK-Check-in ist Discovery/Adapter                                                               |
+| Thema                      | Abgrenzung                                                                                                                                           |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cloud als Pflicht**      | Kein Cloud-Backend als Produktkern                                                                                                                   |
+| **Patient-App**            | Kein App-Store-Download für Patienten (Portal im Browser; Abgrenzung, kein USP)                                                                      |
+| **PVS / KIS**              | Kein Praxisverwaltungssystem — Anbindung später per Adapter; heute CSV-Import-Ordner                                                                 |
+| **eGK-Hardware**           | Kein Kartenterminal-Produkt — eGK-Check-in ist Discovery/Adapter                                                                                     |
 | **WLAN / Captive**         | Keine Router, APs, Captive-Hardware, kein eigener Captive-Datenpfad — Portal + Wartenummer; später erweiterbare schlanke Adapter mit Manager-Auswahl |
-| **Gateway (openNDS)**      | Lab-Referenz, **nicht** Produktkern / Delivery-Default                                                                         |
-| **Hardware-Verkauf**       | Hardware nur empfohlen, nicht verkauft                                                                                         |
-| **Volles Internet-Expose** | Von außen nur Portal (Whitelist, geplant); MFA/Terminal/TV/Ops bleiben LAN                                                     |
+| **Gateway (openNDS)**      | Lab-Referenz, **nicht** Produktkern / Delivery-Default                                                                                               |
+| **Hardware-Verkauf**       | Hardware nur empfohlen, nicht verkauft                                                                                                               |
+| **Volles Internet-Expose** | Von außen nur Portal (Whitelist, geplant); MFA/Terminal/TV/Ops bleiben LAN                                                                           |
 
 ## Prinzipien
 

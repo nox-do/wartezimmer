@@ -33,7 +33,9 @@ test('updateOpsSettings leaves waiting_room_full untouched and omits it from set
     assert.equal('waitingRoomFull' in after, false);
 
     const row = inspect
-      .prepare(`SELECT waiting_room_full AS waitingRoomFull FROM ops_settings WHERE id = 'singleton'`)
+      .prepare(
+        `SELECT waiting_room_full AS waitingRoomFull FROM ops_settings WHERE id = 'singleton'`,
+      )
       .get() as { waitingRoomFull?: number };
     assert.equal(row.waitingRoomFull, 1);
 

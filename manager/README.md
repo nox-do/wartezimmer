@@ -100,8 +100,8 @@ Setup-API (Manager-Child auf Loopback; CLI-Default `127.0.0.1:9190`):
 | POST    | `/api/setup/host/storage`          | `{ importsHostPath, exportsHostPath, restartCompose? }`                                                      |
 | POST    | `/api/setup/host/network`          | `{ lanAppIp, gateway, restartCompose? }` — Wartung/Netzwerk (gateway stets `{ enabled: false }` aus Manager) |
 | POST    | `/api/setup/host/reset-staff-pins` | MFA- & Ops-PIN auf Default `0000` (DB), Stack stop → reset → start                                           |
-| GET     | `/api/setup/host/routing-mode`     | Kompatibilitätsroute: Capabilities inkl. `routingMode`, `complexRoutingLicensed`                              |
-| POST    | `/api/setup/host/routing-mode`     | Kompatibilitätsroute: `{ routingMode: "simple"\|"complex" }` — proxied zur App-API mit Manager-Trust          |
+| GET     | `/api/setup/host/routing-mode`     | Kompatibilitätsroute: Capabilities inkl. `routingMode`, `complexRoutingLicensed`                             |
+| POST    | `/api/setup/host/routing-mode`     | Kompatibilitätsroute: `{ routingMode: "simple"\|"complex" }` — proxied zur App-API mit Manager-Trust         |
 
 | POST | `/api/setup/host/images/load` | Erstinstallation: `.pfinstall` mit versioniertem Manifest |
 | POST | `/api/setup/host/update/inspect` | Wartung: `.pfupdate`-Datei prüfen (Release, Kompatibilität, Warnungen) |

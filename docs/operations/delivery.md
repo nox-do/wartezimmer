@@ -304,7 +304,9 @@ Fresh-DB-Cutover ist dasselbe Muster wie Restore, **außer** dass Restore die Ge
 
 Gemeinsam (Stack-Pakete): Docker muss laufen. `--version` / `PRAXIS_FLOW_RELEASE_VERSION` setzt den Stack-Tag.
 `:pack` / `--no-build` überspringt `docker build` und packt vorhandene lokale Tags.
-`:current` = `--no-build --version local`.
+`:current` = `--no-build`; es verwendet den explizit gesetzten
+`PRAXIS_FLOW_RELEASE_VERSION` oder sonst die Version aus `package.json` und erzwingt keinen
+`local`-Tag.
 
 Proxy-Schritt (beide Stack-Pakete): Beim Build Base `caddy:2.11.4@<Registry-Digest>` pullen, Custom-Image `praxis-flow-proxy:2.11.4-acmedns` aus `proxy/Dockerfile` bauen, Modul `dns.providers.acmedns` prüfen, Digest-Metadaten ins Manifest. Im Pack-only-Modus (`--no-build`) werden die vorhandenen lokalen Images inklusive Custom-Proxy nur inspiziert; es gibt keinen Registry-Zugriff. Konstanten: `packages/server-shared/src/pfupdate.ts`.
 

@@ -1,5 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import { listEnabledRoomPanelPlacements, roomPanelConfigForPlacement, roomPanelRequiresPin } from '@praxis-flow/domain';
+import {
+  listEnabledRoomPanelPlacements,
+  roomPanelConfigForPlacement,
+  roomPanelRequiresPin,
+} from '@praxis-flow/domain';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type {
   ChangePinBody,

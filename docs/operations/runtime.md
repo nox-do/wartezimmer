@@ -28,12 +28,12 @@ UI-Rollen laufen als statische Assets aus dem `app`-Image. Praxisname/Kontakte: 
 
 Resolver: `resolveComposeFiles` / `resolveComposeFileList` in `setup/src/docker.ts`.
 
-| Schicht   | Dev                                                               | Delivery                      | Wann                                                    |
-| --------- | ----------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------- |
-| Base      | `docker-compose.yml`                                              | `docker-compose.delivery.yml` | immer                                                   |
-| Proxy     | `docker-compose.proxy.yml`                                        | `….proxy.delivery.yml`        | `PROXY_ENABLED` + Mode `http`/`tls-*`                   |
-| Proxy-TLS | `….proxy-tls.yml`                                                 | `….proxy-tls.delivery.yml`    | Mode `tls-*` **oder** `TLS_STATE≠off`                   |
-| TLS-Lab   | `docker-compose.tls-lab.yml` + `docker-compose.tls-lab-proxy.yml` | —                             | nur Dev + `TLS_ACME_DIRECTORY=pebble`                   |
+| Schicht   | Dev                                                               | Delivery                      | Wann                                  |
+| --------- | ----------------------------------------------------------------- | ----------------------------- | ------------------------------------- |
+| Base      | `docker-compose.yml`                                              | `docker-compose.delivery.yml` | immer                                 |
+| Proxy     | `docker-compose.proxy.yml`                                        | `….proxy.delivery.yml`        | `PROXY_ENABLED` + Mode `http`/`tls-*` |
+| Proxy-TLS | `….proxy-tls.yml`                                                 | `….proxy-tls.delivery.yml`    | Mode `tls-*` **oder** `TLS_STATE≠off` |
+| TLS-Lab   | `docker-compose.tls-lab.yml` + `docker-compose.tls-lab-proxy.yml` | —                             | nur Dev + `TLS_ACME_DIRECTORY=pebble` |
 
 openNDS-Gateway-Compose ist entfernt (nicht Produkt). Historie: [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md).
 

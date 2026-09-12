@@ -16,13 +16,14 @@ Technik/Internals: [`../architecture/`](../architecture/) · Manager-UI: [`../..
 7. Anbinden       SMS / CSV / Portal-Hook vs. Nicht-Ziele
 ```
 
-| Schritt       | Dokument                             | Status                                                    |
-| ------------- | ------------------------------------ | --------------------------------------------------------- |
-| 1–2, 6        | [`delivery.md`](delivery.md)         | ausgearbeitet (Prinzip → Install → Update → Build)        |
-| 3             | [`runtime.md`](runtime.md)           | ausgearbeitet (Services → Compose → Ports → Alltag)       |
-| 4             | [`tls.md`](tls.md)                   | ausgearbeitet (§1–10 Ops-Ist LAN-TLS)                     |
-| 5 (+ Cutover) | [`backup.md`](backup.md)             | ausgearbeitet (Prinzip → Artefakt → TLS-Grenze → Cutover) |
-| 7             | [`integrations.md`](integrations.md) | ausgearbeitet (WLAN/SMS/CSV/eGK + Verweise)               |
+| Schritt       | Dokument                                                           | Status                                                    |
+| ------------- | ------------------------------------------------------------------ | --------------------------------------------------------- |
+| 1–2, 6        | [`delivery.md`](delivery.md)                                       | ausgearbeitet (Prinzip → Install → Update → Build)        |
+| 3             | [`runtime.md`](runtime.md)                                         | ausgearbeitet (Services → Compose → Ports → Alltag)       |
+| 4             | [`tls.md`](tls.md)                                                 | ausgearbeitet (§1–10 Ops-Ist LAN-TLS)                     |
+| 5 (+ Cutover) | [`backup.md`](backup.md)                                           | ausgearbeitet (Prinzip → Artefakt → TLS-Grenze → Cutover) |
+| 7             | [`integrations.md`](integrations.md)                               | ausgearbeitet (WLAN/SMS/CSV/eGK + Verweise)               |
+| 7 (Plan)      | [`praxis-it-network-isolation.md`](praxis-it-network-isolation.md) | IT-Hinweise zur geplanten Portal-Netzgrenze               |
 
 **Status:** Lifecycle-Dokumente ausgearbeitet. Pläne (`plan-proxy-tls*`, `plan-backup-v2`) bleiben Historie/Entwurf — nicht parallel als Ops-SoT.
 

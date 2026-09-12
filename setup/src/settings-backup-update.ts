@@ -47,7 +47,7 @@ import {
 import { copyDeviceAuthorizationsFromAsideViaApp } from './device-authorizations-aside.js';
 import { mergeConfigRestoreEnv } from './settings-backup-restore.js';
 import { resolveCurrentSettingsFormatVersion } from './settings-format-version.js';
-import type { SetupContext } from './setup-context.js';
+import { migrateMaintenanceToken, type SetupContext } from './setup-context.js';
 import { maintenanceRequestHeaders } from './maintenance-auth.js';
 import { requirePackageFileExtension } from './package-file-extension.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
@@ -381,7 +381,10 @@ function installComposeTemplates(stagingDir: string, home: string): void {
     PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE,
   );
   if (fs.existsSync(gatewayComposeSource)) {
-    copyFileAtomically(gatewayComposeSource, path.join(home, PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE));
+    copyFileAtomically(
+      gatewayComposeSource,
+      path.join(home, PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE),
+    );
   }
 
   const proxyComposeSource = pfupdateTemplatePath(stagingDir, PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE);
@@ -729,6 +732,11 @@ async function applyPreparedUpdate(input: {
       input.prepared.preUpdateBackupPath,
       input.prepared.appDataAccess,
     );
+
+    // Rotating this token while the app is running immediately breaks the
+    // maintenance API used by backup/restore. Migrate only after the
+    // pre-update backup and stack shutdown; rollback already covers .env.
+    migrateMaintenanceToken(input.ctx.home);
 
     const compose = await commitPreparedUpdate({ ...input, rollback });
     return {

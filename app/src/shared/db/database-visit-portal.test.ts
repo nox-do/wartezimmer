@@ -145,6 +145,7 @@ function setupVisitPortalFlow(): {
       checkinPhone: '+49172111111',
       checkinLocale: 'de',
       identityRef: 'Portal Patient',
+      needsAssistance: true,
     },
   );
   const visit = getFlowCoreRuntime(db)

@@ -680,15 +680,7 @@ test('setVisitAbsent rejects visits outside the waiting room', () => {
   callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
 
   assert.throws(
-    () =>
-      setVisitAbsent(
-        db,
-        runtime,
-        settings,
-        visitId,
-        'wait_here',
-        '2026-07-04T12:05:00.000Z',
-      ),
+    () => setVisitAbsent(db, runtime, settings, visitId, 'wait_here', '2026-07-04T12:05:00.000Z'),
     (error: unknown) => error instanceof DomainError && error.domainCode === 'INVALID_TRANSITION',
   );
 });

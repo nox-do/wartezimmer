@@ -88,13 +88,6 @@ export function migrateMaintenanceToken(
   return { migrated: true, token };
 }
 
-function finalizeSetupContext(context: SetupContext): SetupContext {
-  if (context.mode === 'install') {
-    migrateMaintenanceToken(context.home);
-  }
-  return context;
-}
-
 export function ensureInstallHomeLayout(installHome: string, templateRoot: string): string[] {
   fs.mkdirSync(installHome, { recursive: true });
   fs.mkdirSync(path.join(installHome, 'state'), { recursive: true });
@@ -123,32 +116,32 @@ export function resolveSetupContext(startDir = process.cwd()): SetupContext {
   if (explicitHome) {
     const home = path.resolve(explicitHome);
     ensureInstallHomeLayout(home, templateRoot);
-    return finalizeSetupContext({
+    return {
       home,
       mode: 'install',
       composeProjectName: resolveComposeProjectName(home),
       templateRoot,
-    });
+    };
   }
 
   const repoRoot = findProjectRootOptional(startDir);
   if (repoRoot) {
-    return finalizeSetupContext({
+    return {
       home: repoRoot,
       mode: 'repo',
       composeProjectName: process.env.COMPOSE_PROJECT_NAME?.trim() || 'praxis-flow',
       templateRoot: repoRoot,
-    });
+    };
   }
 
   const home = resolveInstallHome();
   ensureInstallHomeLayout(home, templateRoot);
-  return finalizeSetupContext({
+  return {
     home,
     mode: 'install',
     composeProjectName: resolveComposeProjectName(home),
     templateRoot,
-  });
+  };
 }
 
 export function describeInstallHomeTargets(): {

@@ -1,7 +1,5 @@
 import type { SandboxScannerStatus } from '../shared/host-status.js';
 
-export type SandboxScannerLevel = 'ok' | 'warn' | 'bad' | 'neutral' | 'unknown';
-
 export type SandboxClamAvChip = {
   label: string;
   ok: boolean | null;
@@ -19,30 +17,6 @@ export type SandboxClamAvChip = {
  * "Signatures missing" is usually the result of a failed update; prefer
  * "update failed" when freshclamLastAttemptOk is false.
  */
-export function sandboxScannerLevel(
-  scanner: SandboxScannerStatus | null | undefined,
-): SandboxScannerLevel {
-  if (!scanner) {
-    return 'unknown';
-  }
-  if (!scanner.enabled) {
-    return 'neutral';
-  }
-  if (!scanner.engineVersion) {
-    return 'bad';
-  }
-  if (scanner.freshclamLastAttemptOk === false) {
-    return 'warn';
-  }
-  if (scanner.definitionsAgeHours == null) {
-    return 'warn';
-  }
-  if (!scanner.signaturesFreshEnough) {
-    return 'warn';
-  }
-  return 'ok';
-}
-
 export function sandboxClamAvChip(
   scanner: SandboxScannerStatus | null | undefined,
 ): SandboxClamAvChip | null {

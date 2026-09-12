@@ -31,16 +31,16 @@ Kritische Daten bleiben logisch von unkritischen Betriebsdaten getrennt (§2).
 
 Fachliche Schichten im Monolithen — kein Microservice-Schnitt. Abläufe: [`../flows.md`](../flows.md).
 
-| #   | Komponente           | Schutz                    | Kurz                                                                      |
-| --- | -------------------- | ------------------------- | ------------------------------------------------------------------------- |
-| 1   | Frontend Gateway     | unkritisch                | Terminal, MFA, TV, Portal, Raum-Panel; SSE → [`realtime.md`](realtime.md) |
-| 2   | Check-in & Ticket    | unkritisch                | Wartenummer (`laneCode`), Portal-Session; keine Klarnamen in Queue        |
-| 3   | Queue & Aufruf       | unkritisch                | Status, TV, Rückhol-Fenster, optional `roomId`                            |
-| 4   | Identity             | kritisch                  | PII für MFA (Mobil, DOB; eGK nur Discovery)                               |
-| 5   | Dokumente            | kritisch                  | Upload, Anamnese-Output, Host-Export; Vorschau nur Sandbox                |
-| 6   | Sandbox Adapter      | kritisch, isoliert        | Preview-Custody — [`documents.md`](documents.md)                          |
-| 7   | Tagesbetrieb & Reset | quer                      | Check-in-Sperre, Day-Close/Reset, Ops, Notfall                            |
-| 8   | SMS Adapter          | extern                    | Rückhol-SMS über Messaging-Provider                                       |
+| #   | Komponente           | Schutz                    | Kurz                                                                          |
+| --- | -------------------- | ------------------------- | ----------------------------------------------------------------------------- |
+| 1   | Frontend Gateway     | unkritisch                | Terminal, MFA, TV, Portal, Raum-Panel; SSE → [`realtime.md`](realtime.md)     |
+| 2   | Check-in & Ticket    | unkritisch                | Wartenummer (`laneCode`), Portal-Session; keine Klarnamen in Queue            |
+| 3   | Queue & Aufruf       | unkritisch                | Status, TV, Rückhol-Fenster, optional `roomId`                                |
+| 4   | Identity             | kritisch                  | PII für MFA (Mobil, DOB; eGK nur Discovery)                                   |
+| 5   | Dokumente            | kritisch                  | Upload, Anamnese-Output, Host-Export; Vorschau nur Sandbox                    |
+| 6   | Sandbox Adapter      | kritisch, isoliert        | Preview-Custody — [`documents.md`](documents.md)                              |
+| 7   | Tagesbetrieb & Reset | quer                      | Check-in-Sperre, Day-Close/Reset, Ops, Notfall                                |
+| 8   | SMS Adapter          | extern                    | Rückhol-SMS über Messaging-Provider                                           |
 | 9   | WLAN-/Captive        | extern, **nicht Produkt** | später erweiterbare schlanke Adapter + Manager-Auswahl — kein Gateway-Produkt |
 
 ```mermaid
@@ -76,23 +76,23 @@ Workspaces u. a. `app`, `ui`, `sandbox`, `setup`, `manager`, `packages/*`.
 
 ### Backend (`app/src/`)
 
-| Bereich    | Pfad         | Rolle                                                                                   |
-| ---------- | ------------ | --------------------------------------------------------------------------------------- |
-| HTTP       | `routes/`    | Fastify-Registrars (checkin, queue, documents, ops, sessions, …)                        |
-| Fachlogik  | `shared/`    | Queue, Documents, Forms, Ops, Contacts, flow-core, …                                    |
-| Persistenz | `shared/db/` | `CoreDatabase`; SQL in `database-*.ts`                                                  |
+| Bereich    | Pfad         | Rolle                                                                                                       |
+| ---------- | ------------ | ----------------------------------------------------------------------------------------------------------- |
+| HTTP       | `routes/`    | Fastify-Registrars (checkin, queue, documents, ops, sessions, …)                                            |
+| Fachlogik  | `shared/`    | Queue, Documents, Forms, Ops, Contacts, flow-core, …                                                        |
+| Persistenz | `shared/db/` | `CoreDatabase`; SQL in `database-*.ts`                                                                      |
 | Auth       | `auth/`      | Rollen (`ROUTE_ACCESS_RULES`); Staff-Sessions MFA/OPS; Gerätefreigaben TV/Terminal/Panel (`session-grants`) |
-| Fehler     | `http/`      | Domain-Error-Codes, API-Mapping                                                         |
+| Fehler     | `http/`      | Domain-Error-Codes, API-Mapping                                                                             |
 
-| Komponente       | Routes (Auszug)                                | Shared / DB                                      |
-| ---------------- | ---------------------------------------------- | ------------------------------------------------ |
-| Check-in / Visit | `checkin-routes`, `sessions-routes`            | `flow-core-checkin`, `database-checkin-sessions` |
-| Routing / Journey| Catalog-Sync + Visit-Bridge                    | [`routing.md`](routing.md); `sync-catalog-from-ops-settings` |
-| Queue            | `queue-routes`                                 | `shared/queue/`, Visit-Bridge                    |
-| Identity         | `identity-routes`                              | Sessions/Contacts                                |
-| Dokumente        | `documents-routes`, `patient-documents-routes` | `shared/documents/`, `shared/forms/`             |
-| Tagesbetrieb     | `routes/ops/*`                                 | day-lifecycle, ops-settings                      |
-| Portal-Auth      | `session-auth` (preHandler)                    | Patient-Session                                  |
+| Komponente        | Routes (Auszug)                                | Shared / DB                                                  |
+| ----------------- | ---------------------------------------------- | ------------------------------------------------------------ |
+| Check-in / Visit  | `checkin-routes`, `sessions-routes`            | `flow-core-checkin`, `database-checkin-sessions`             |
+| Routing / Journey | Catalog-Sync + Visit-Bridge                    | [`routing.md`](routing.md); `sync-catalog-from-ops-settings` |
+| Queue             | `queue-routes`                                 | `shared/queue/`, Visit-Bridge                                |
+| Identity          | `identity-routes`                              | Sessions/Contacts                                            |
+| Dokumente         | `documents-routes`, `patient-documents-routes` | `shared/documents/`, `shared/forms/`                         |
+| Tagesbetrieb      | `routes/ops/*`                                 | day-lifecycle, ops-settings                                  |
+| Portal-Auth       | `session-auth` (preHandler)                    | Patient-Session                                              |
 
 ### Frontend (`ui/src/`)
 

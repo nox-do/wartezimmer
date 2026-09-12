@@ -10,10 +10,7 @@ import { resolveDeliveryImageConfig } from './delivery-images.js';
 import type { SetupContext } from './setup-context.js';
 import { resolveProxyTlsPaths } from './proxy-tls.js';
 import { resolveCanonicalBaseUrl } from './urls.js';
-import {
-  waitForExpectedStackHealth,
-  type WaitForStackHealthOptions,
-} from './stack-health.js';
+import { waitForExpectedStackHealth, type WaitForStackHealthOptions } from './stack-health.js';
 
 const TLS_STATE_ROLLBACK_DIR = 'tls-state';
 

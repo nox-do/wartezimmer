@@ -39,7 +39,6 @@ import type {
 } from '../shared/host-status.js';
 import {
   IPC_FETCH_SETUP_STATUS,
-  IPC_GET_SETUP_API_BASE,
   IPC_OPEN_EXTERNAL_URL,
   IPC_READ_PFBACKUP_FOR_VALIDATE,
   IPC_READ_TLS_SIDECAR,
@@ -60,19 +59,6 @@ const managerVersion = managerPackage.version;
 
 async function invokeMain<T>(channel: string, ...args: unknown[]): Promise<T> {
   return ipcRenderer.invoke(channel, ...args) as Promise<T>;
-}
-
-function assertLocalhostApiBase(apiBase: string): void {
-  const url = new URL(apiBase);
-  if (url.hostname !== '127.0.0.1' && url.hostname !== 'localhost') {
-    throw new Error('Setup-API nur auf localhost erlaubt');
-  }
-}
-
-async function getSetupApiBase(): Promise<string> {
-  const apiBase = await invokeMain<string>(IPC_GET_SETUP_API_BASE);
-  assertLocalhostApiBase(apiBase);
-  return apiBase;
 }
 
 async function callSetupApi<T>(request: SetupApiCallRequest): Promise<T> {
@@ -354,14 +340,12 @@ async function resetStaffPins(): Promise<ResetStaffPinsResult> {
   });
 }
 
-
 async function openExternalUrl(url: string): Promise<void> {
   await invokeMain<void>(IPC_OPEN_EXTERNAL_URL, url);
 }
 
 contextBridge.exposeInMainWorld('praxisManager', {
   hostPlatform: process.platform,
-  getSetupApiBase,
   fetchSetupStatus,
   fetchRuntimeHealth,
   fetchSetupNetwork,

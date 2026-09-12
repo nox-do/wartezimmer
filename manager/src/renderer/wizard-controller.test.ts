@@ -143,14 +143,8 @@ test('wizardBackHidden hides on step 1 and after completion', () => {
   );
 
   const activeTls = activeTlsStatus();
-  assert.equal(
-    wizardIsCompleted({ ...base, step: 8, status: activeTls, applyResult: null }),
-    true,
-  );
-  assert.equal(
-    wizardNextButtonLabel({ ...base, step: 7, status: activeTls }),
-    'Abschließen',
-  );
+  assert.equal(wizardIsCompleted({ ...base, step: 8, status: activeTls, applyResult: null }), true);
+  assert.equal(wizardNextButtonLabel({ ...base, step: 7, status: activeTls }), 'Abschließen');
 });
 
 test('wizardNextButtonDisabled blocks step 1 until prerequisites ready', () => {

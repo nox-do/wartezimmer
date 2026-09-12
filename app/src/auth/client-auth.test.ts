@@ -370,8 +370,14 @@ test('staff session idle sliding does not extend absolute expiry', () => {
   const now = new Date('2026-06-08T10:00:00.000Z');
   const { token, session } = manager.createStaffSession('ops', now);
 
-  assert.equal(manager.getSession(token, new Date(now.getTime() + 500))?.sessionId, session.sessionId);
-  assert.equal(manager.getSession(token, new Date(now.getTime() + 1_400))?.sessionId, session.sessionId);
+  assert.equal(
+    manager.getSession(token, new Date(now.getTime() + 500))?.sessionId,
+    session.sessionId,
+  );
+  assert.equal(
+    manager.getSession(token, new Date(now.getTime() + 1_400))?.sessionId,
+    session.sessionId,
+  );
   assert.equal(manager.getSession(token, new Date(now.getTime() + 10_000)), null);
 });
 

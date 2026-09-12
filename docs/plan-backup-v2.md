@@ -86,6 +86,14 @@ Metadaten blocken.
     Restore-Vorschau: `.pfbackup` ist unverschlüsselt und enthält bei
     konfiguriertem Messaging API-Keys im Klartext; HTTPS-Payload kann private
     Schlüssel enthalten. Details unter „Sicherheit und Nutzerhinweis“.
+17. Ergänzung 2026-09-10: Installationsinterne Secrets der lebenden
+    Zielinstallation gewinnen beim Restore immer gegen das Backup. Die
+    kanonische Liste ist gemeinsam typisiert aus `SECRET_ENV_KEYS`; zusammen
+    mit `STACK_IMAGE_ENV_KEYS` bildet sie
+    `NON_RESTORABLE_INSTALL_ENV_KEYS`. Provider-Credentials bleiben
+    wiederherstellbare Praxisdaten. Diese Regel gilt für manuellen Restore,
+    Update-Cutover und Reinstall-Recovery gleichermaßen; siehe
+    [`plan-reinstall-recovery.md`](plan-reinstall-recovery.md#9-restore-regeln-für-release-und-secrets).
 
 ### Nicht-Ziele
 

@@ -134,12 +134,13 @@ export function startNextJourneyStepPatch(
     (location) => location.id === effectiveStep.targetLocationId,
   );
   const patch = stepToVisitPatch(effectiveStep, visit, { targetLocation });
-  patch.terminalInstruction = !options.targetLocationId && nextStep.instructionText?.trim()
-    ? nextStep.instructionText.trim()
-    : movementTerminalInstruction({
-        movementMode: patch.movementMode,
-        targetLocation,
-      });
+  patch.terminalInstruction =
+    !options.targetLocationId && nextStep.instructionText?.trim()
+      ? nextStep.instructionText.trim()
+      : movementTerminalInstruction({
+          movementMode: patch.movementMode,
+          targetLocation,
+        });
   /** Neuer Hop: Aufruf-/Start-Zeiten zuruecksetzen. */
   patch.calledAt = null;
   patch.startedAt = null;

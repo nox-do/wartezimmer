@@ -34,7 +34,9 @@ export function registerOpsManagerMaintenanceRoutes(
       providedBuffer.length === expectedBuffer.length &&
       timingSafeEqual(providedBuffer, expectedBuffer);
     if (!authorized) {
-      return reply.code(401).send({ code: 'AUTH_REQUIRED', message: 'Maintenance token required.' });
+      return reply
+        .code(401)
+        .send({ code: 'AUTH_REQUIRED', message: 'Maintenance token required.' });
     }
   });
 
@@ -136,5 +138,4 @@ export function registerOpsManagerMaintenanceRoutes(
       }
     },
   );
-
 }

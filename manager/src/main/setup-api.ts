@@ -93,20 +93,31 @@ export async function fetchHostStatusFromApi(
   );
 }
 
+export function resolveSetupApiUrl(apiBase: string, requestPath: string): URL {
+  const baseUrl = new URL(apiBase);
+  const url = new URL(requestPath, baseUrl);
+
+  if (url.origin !== baseUrl.origin) {
+    throw new Error('Setup-API nur auf dem konfigurierten Ursprung erlaubt');
+  }
+  if (url.hostname !== '127.0.0.1' && url.hostname !== 'localhost') {
+    throw new Error('Setup-API nur auf localhost erlaubt');
+  }
+  // URL resolves dot segments (including percent-encoded ones). Check the
+  // normalized pathname so an allowed-looking input cannot escape /host/.
+  if (!url.pathname.startsWith(SETUP_API_PATH_PREFIX)) {
+    throw new Error(`Setup-API-Pfad nicht erlaubt: ${requestPath}`);
+  }
+
+  return url;
+}
+
 export async function callSetupApi<T = unknown>(
   apiBase: string,
   request: SetupApiCallRequest,
   token?: string | null,
 ): Promise<T> {
-  if (!request.path.startsWith(SETUP_API_PATH_PREFIX)) {
-    throw new Error(`Setup-API-Pfad nicht erlaubt: ${request.path}`);
-  }
-
-  const url = new URL(request.path, apiBase);
-  const hostname = url.hostname;
-  if (hostname !== '127.0.0.1' && hostname !== 'localhost') {
-    throw new Error('Setup-API nur auf localhost erlaubt');
-  }
+  const url = resolveSetupApiUrl(apiBase, request.path);
 
   const init: RequestInit = {
     method: request.method,

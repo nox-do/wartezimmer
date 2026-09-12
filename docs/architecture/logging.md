@@ -11,14 +11,14 @@ Ein **gemeinsamer Pino-Root** pro Prozess (über `buildFastifyLoggerOptions` /
 `createModuleLogger` in `@praxis-flow/server-shared/logger`). Fastify und Hintergrundcode
 teilen denselben Logger — kein paralleler `console`-Wrapper in der App.
 
-| Kontext | Nutzen | Nicht |
-| ------- | ------ | ----- |
-| HTTP-Handler / Hooks | `request.log` oder `app.log` (Pino, Request-Kind) | eigener Module-Logger nur für Request-Pfad |
-| Hintergrund im App-Prozess (Worker, DB-Helfer, Export, Cleanup) | `createModuleLogger('module.name')` | `console.*` |
-| Sandbox **vor** Fastify (Entrypoint/Bootstrap) | `sandbox-log` (`logSandboxWarn` / `logSandboxInfo`) | App-`createModuleLogger` |
-| Sandbox **nach** Fastify | `request.log` / `app.log` | — |
-| Setup-/Manager-CLI, Smoke, Build-Scripts | `console` bzw. Clack/`p.log` | Server-Pino |
-| UI (Browser) | — | kein Server-Logger |
+| Kontext                                                         | Nutzen                                              | Nicht                                      |
+| --------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------ |
+| HTTP-Handler / Hooks                                            | `request.log` oder `app.log` (Pino, Request-Kind)   | eigener Module-Logger nur für Request-Pfad |
+| Hintergrund im App-Prozess (Worker, DB-Helfer, Export, Cleanup) | `createModuleLogger('module.name')`                 | `console.*`                                |
+| Sandbox **vor** Fastify (Entrypoint/Bootstrap)                  | `sandbox-log` (`logSandboxWarn` / `logSandboxInfo`) | App-`createModuleLogger`                   |
+| Sandbox **nach** Fastify                                        | `request.log` / `app.log`                           | —                                          |
+| Setup-/Manager-CLI, Smoke, Build-Scripts                        | `console` bzw. Clack/`p.log`                        | Server-Pino                                |
+| UI (Browser)                                                    | —                                                   | kein Server-Logger                         |
 
 Startup-Banner außerhalb von Fastify (z. B. Maintenance-URL in `server.ts`)
 dürfen `console` bleiben.
@@ -46,12 +46,12 @@ Tokens), keine vollständigen Dokument-/Upload-Inhalte. Fehlertexte und IDs
 
 ## 5. Abgleich (Review)
 
-| Stelle | Urteil |
-| ------ | ------ |
-| Fastify `app` / Maintenance / Sandbox | Root-Pino — ok |
-| Outbox-Worker, DB-TX, Export, Sandbox-Cleanup, Praxiszeiten | Module-Logger — ok |
-| Contact-Lookup Day-Refresh | bekommt `FastifyBaseLogger` — ok |
-| `sandbox-log` nur Bootstrap | ok (Policy §1) |
-| CLI / Smoke / Manager `console` | ok |
-| UI ohne Server-Logger | ok |
-| Früherer App-`createLogger` (`console`-Wrapper) | **entfernt** zugunsten Pino |
+| Stelle                                                      | Urteil                           |
+| ----------------------------------------------------------- | -------------------------------- |
+| Fastify `app` / Maintenance / Sandbox                       | Root-Pino — ok                   |
+| Outbox-Worker, DB-TX, Export, Sandbox-Cleanup, Praxiszeiten | Module-Logger — ok               |
+| Contact-Lookup Day-Refresh                                  | bekommt `FastifyBaseLogger` — ok |
+| `sandbox-log` nur Bootstrap                                 | ok (Policy §1)                   |
+| CLI / Smoke / Manager `console`                             | ok                               |
+| UI ohne Server-Logger                                       | ok                               |
+| Früherer App-`createLogger` (`console`-Wrapper)             | **entfernt** zugunsten Pino      |
