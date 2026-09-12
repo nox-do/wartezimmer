@@ -26,3 +26,8 @@ docs_data/
 
 # Runtime TLS secrets and generated Caddyfile
 state/tls/
+
+# Local backup, diagnostic, and source export artifacts
+backups/
+dumps/
+praxis-flow-source-*.tar.gz
