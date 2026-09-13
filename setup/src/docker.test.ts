@@ -9,8 +9,85 @@ import {
   parseComposePsOutput,
   productComposeServices,
   resolveComposeFiles,
+  validateStaffBindingEnv,
   withInspectedPublishedBindings,
 } from './docker.js';
+
+const interfaces = [
+  {
+    name: 'en7',
+    addresses: [
+      {
+        family: 'IPv4' as const,
+        address: '192.168.1.20',
+        internal: false,
+      },
+    ],
+  },
+];
+
+test('validateStaffBindingEnv allows the deliberate proxy-free demo binding', () => {
+  assert.equal(
+    validateStaffBindingEnv(
+      new Map([
+        ['PROXY_ENABLED', 'false'],
+        ['APP_BIND_ADDRESS', '0.0.0.0'],
+      ]),
+      interfaces,
+    ),
+    null,
+  );
+  assert.equal(validateStaffBindingEnv(new Map(), interfaces), null);
+});
+
+test('validateStaffBindingEnv requires a local Staff-IP when proxy is enabled', () => {
+  assert.match(
+    validateStaffBindingEnv(
+      new Map([
+        ['PROXY_ENABLED', 'true'],
+        ['APP_BIND_ADDRESS', '127.0.0.1'],
+      ]),
+      interfaces,
+    ) || '',
+    /SETUP_LAN_APP_IP fehlt/,
+  );
+  assert.match(
+    validateStaffBindingEnv(
+      new Map([
+        ['SETUP_LAN_APP_IP', '192.168.1.99'],
+        ['PROXY_ENABLED', 'true'],
+        ['APP_BIND_ADDRESS', '127.0.0.1'],
+      ]),
+      interfaces,
+    ) || '',
+    /nicht vorhanden/,
+  );
+});
+
+test('validateStaffBindingEnv requires loopback app bind when proxy is enabled', () => {
+  assert.equal(
+    validateStaffBindingEnv(
+      new Map([
+        ['SETUP_LAN_APP_IP', '192.168.1.20'],
+        ['PROXY_ENABLED', 'true'],
+        ['APP_BIND_ADDRESS', '127.0.0.1'],
+      ]),
+      interfaces,
+    ),
+    null,
+  );
+  assert.match(
+    validateStaffBindingEnv(
+      new Map([
+        ['SETUP_LAN_APP_IP', '192.168.1.20'],
+        ['PROXY_ENABLED', 'true'],
+        ['APP_BIND_ADDRESS', '192.168.1.20'],
+      ]),
+      interfaces,
+    ) || '',
+    /erwartet 127\.0\.0\.1/,
+  );
+});
 
 test('resolveComposeFiles selects base file by delivery flag', () => {
   assert.deepEqual(

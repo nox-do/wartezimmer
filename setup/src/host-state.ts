@@ -38,8 +38,10 @@ import { runConnectionProbes } from './probes.js';
 import {
   DEFAULT_GATEWAY_BRIDGE_PORT,
   DEFAULT_PROXY_HTTPS_PORT,
+  auditStaffPublishedBindings,
   auditNetworkBindings,
   auditNetworkPrerequisites,
+  hostHasLanIp,
 } from './network-bindings.js';
 import {
   auditDeliveryImages,
@@ -104,6 +106,7 @@ import {
   resolveCanonicalBaseUrlForProxyPlan,
   resolveProxyConfigForWrite,
   resolveProxyImageRef,
+  resolveAppBindAddress,
 } from './proxy.js';
 import { dockerImageExists } from './delivery-images.js';
 import { SetupApiValidationError } from './setup-api-normalize.js';
@@ -143,7 +146,58 @@ export type HostWriteRuntimeHooks = {
   composeUp?: typeof composeUp;
   auditNetworkPrerequisites?: typeof auditNetworkPrerequisites;
   ensureProxyImageAvailable?: typeof ensureProxyImageAvailable;
+  validateStaffIp?: (staffIp: string) => string | null;
+  auditStaffBindings?: typeof auditStaffPublishedBindings;
 };
+
+function assertStaffIpAvailable(staffIp: string, hooks?: HostWriteRuntimeHooks): void {
+  const error = hooks?.validateStaffIp
+    ? hooks.validateStaffIp(staffIp)
+    : hostHasLanIp(listNetworkInterfaces(), staffIp)
+      ? null
+      : `Staff-Bindung gesperrt: ${staffIp} ist an diesem Rechner nicht vorhanden.`;
+  if (error) {
+    throw new SetupApiValidationError(error);
+  }
+}
+
+function failedStaffBindingAudit(input: {
+  compose: ComposeStatus | null;
+  env: Map<string, string>;
+  staffIp: string;
+  proxyEnabled: boolean;
+  hooks?: HostWriteRuntimeHooks;
+}): string | null {
+  if (!input.proxyEnabled) {
+    return null;
+  }
+  const audit = input.hooks?.auditStaffBindings ?? auditStaffPublishedBindings;
+  const proxyMode = input.env.get('PROXY_MODE')?.trim().toLowerCase() || 'off';
+  const tlsState = input.env.get('TLS_STATE')?.trim().toLowerCase() || 'off';
+  const checks = audit({
+    compose: input.compose,
+    staffIp: input.staffIp,
+    proxyEnabled: input.proxyEnabled,
+    proxyHttpPort: readPortEnv(input.env, 'PROXY_HTTP_PORT', 80),
+    proxyHttpsEnabled:
+      proxyMode === 'tls-managed' || proxyMode === 'tls-custom' || tlsState !== 'off',
+    proxyHttpsPort: readPortEnv(input.env, 'PROXY_HTTPS_PORT', 443),
+  });
+  const required = new Set([
+    'staff.binding.app',
+    'staff.binding.sandbox',
+    ...(input.proxyEnabled ? ['staff.binding.proxy'] : []),
+  ]);
+  const failed = checks.find((check) => required.has(check.id) && !check.ok);
+  const observed = new Set(
+    checks.filter((check) => required.has(check.id)).map((check) => check.id),
+  );
+  const missing = [...required].find((id) => !observed.has(id));
+  if (failed) {
+    return failed.detail ? `${failed.message} ${failed.detail}` : failed.message;
+  }
+  return missing ? `Runtime-Audit unvollständig: ${missing} fehlt.` : null;
+}
 
 function requireProxyConfig(env: Map<string, string> | null | undefined) {
   try {
@@ -753,6 +807,10 @@ export async function applySetupPlan(
   const runComposeRemove = hooks?.composeRemoveServices ?? composeRemoveServices;
   const runComposeUp = hooks?.composeUp ?? composeUp;
 
+  if (input.runCompose && proxy.enabled) {
+    assertStaffIpAvailable(input.lanAppIp.trim(), hooks);
+  }
+
   const deliveryEarly = Boolean(
     resolveDeliveryImageConfig({ projectRoot, envMap: existingBefore })?.appImage || input.delivery,
   );
@@ -761,6 +819,7 @@ export async function applySetupPlan(
     delivery: deliveryEarly,
     composeProjectName: ctx.composeProjectName,
   };
+  const composeBeforeApply = input.runCompose ? await runComposePs(runOptionsEarly) : null;
 
   if (writeProxyEnv && proxy.enabled && !proxyWasEnabled) {
     // Force proxy overlay so a still-running own proxy is visible (not treated as foreign).
@@ -803,6 +862,7 @@ export async function applySetupPlan(
         ...releaseEnv,
         ...gatewayEnv,
         ...(writeProxyEnv ? buildProxyEnvUpdates(proxy, existingBefore) : {}),
+        APP_BIND_ADDRESS: resolveAppBindAddress(proxy.enabled),
         SETUP_LAN_APP_IP: input.lanAppIp.trim(),
         CANONICAL_BASE_URL: canonicalToWrite,
         ...tlsPreparationLanIpSyncUpdates(existingBefore, input.lanAppIp.trim()),
@@ -839,8 +899,50 @@ export async function applySetupPlan(
       delivery,
       composeProjectName: ctx.composeProjectName,
     };
+    const rollbackFailedSetupApply = async (reason: string): Promise<never> => {
+      let cleanupLog = '';
+      if (!backupPath) {
+        const cleanup = await runComposeRemove(
+          { ...runOptions, withProxy: proxy.enabled },
+          resolveProductComposeServices({ ...runOptions, withProxy: proxy.enabled }),
+        );
+        cleanupLog = cleanup.ok ? cleanup.log : `Cleanup fehlgeschlagen: ${cleanup.log}`;
+      } else if (proxy.enabled && !proxyWasEnabled) {
+        const cleanup = await runComposeRemove({ ...runOptions, withProxy: true }, ['proxy']);
+        cleanupLog = cleanup.ok ? cleanup.log : `Proxy-Cleanup fehlgeschlagen: ${cleanup.log}`;
+      }
+      if (backupPath) {
+        fs.copyFileSync(backupPath, envPath);
+      } else if (fs.existsSync(envPath)) {
+        fs.unlinkSync(envPath);
+      }
+      let rollbackLog = '';
+      if (composeBeforeApply?.running && backupPath) {
+        const rollback = await runComposeUp({
+          ...runOptionsEarly,
+          build: false,
+          withGateway: input.gateway.enabled,
+          withProxy: proxyWasEnabled,
+        });
+        rollbackLog = rollback.log;
+      }
+      const detail = [
+        reason,
+        cleanupLog && `Cleanup: ${cleanupLog}`,
+        rollbackLog && `Rollback: ${rollbackLog}`,
+      ]
+        .filter(Boolean)
+        .join('\n');
+      throw new SetupApiValidationError(
+        `Setup konnte das Staff-Binding nicht anwenden; vorheriger Zustand wurde wiederhergestellt.${detail ? ` ${detail}` : ''}`,
+      );
+    };
     if (proxy.enabled) {
-      await ensureProxyImageForCompose(envAfterWrite, hooks);
+      try {
+        await ensureProxyImageForCompose(envAfterWrite, hooks);
+      } catch (error) {
+        await rollbackFailedSetupApply(error instanceof Error ? error.message : String(error));
+      }
     }
     compose = await runComposeUp({
       ...runOptions,
@@ -848,6 +950,20 @@ export async function applySetupPlan(
       withProxy: proxy.enabled,
       build: resolveComposeBuild({ ...input, delivery }),
     });
+    if (!compose.ok) {
+      await rollbackFailedSetupApply(compose.log);
+    }
+    const runtimeCompose = await runComposePs({ ...runOptions, withProxy: proxy.enabled });
+    const auditError = failedStaffBindingAudit({
+      compose: runtimeCompose,
+      env: envAfterWrite,
+      staffIp: input.lanAppIp.trim(),
+      proxyEnabled: proxy.enabled,
+      hooks,
+    });
+    if (auditError) {
+      await rollbackFailedSetupApply(auditError);
+    }
   }
 
   const probes =
@@ -961,6 +1077,10 @@ export async function saveHostNetwork(
     );
   }
 
+  if ((Boolean(input.restartCompose) || repairProxy) && proxy.enabled) {
+    assertStaffIpAvailable(lanAppIp, hooks);
+  }
+
   if ((writeProxyEnv && proxy.enabled && !proxyWasEnabled) || (repairProxy && proxy.enabled)) {
     // Force proxy overlay so a still-running own proxy is visible (not treated as foreign).
     const composeForPortCheck = await runComposePs({ ...runOptions, withProxy: true });
@@ -984,6 +1104,7 @@ export async function saveHostNetwork(
     CANONICAL_BASE_URL: canonicalBaseUrl,
     ...tlsPreparationLanIpSyncUpdates(existing, lanAppIp),
     ...(writeProxyEnv ? buildProxyEnvUpdates(proxy, existing) : {}),
+    APP_BIND_ADDRESS: resolveAppBindAddress(proxy.enabled),
   };
 
   if (gateway.enabled) {
@@ -1027,10 +1148,46 @@ export async function saveHostNetwork(
     keysWritten.push(...keysRemoved);
   }
 
+  const rollbackFailedBindingApply = async (reason: string): Promise<never> => {
+    let cleanupLog = '';
+    if (proxy.enabled && !proxyWasEnabled) {
+      const cleanup = await runComposeRemove(
+        { ...resolveComposeRunOptions(ctx, readEnvMap(envPath)), withProxy: true },
+        ['proxy'],
+      );
+      cleanupLog = cleanup.ok ? cleanup.log : `Proxy-Cleanup fehlgeschlagen: ${cleanup.log}`;
+    }
+    fs.copyFileSync(backup.backupPath, envPath);
+    let rollbackLog = '';
+    if (stackWasRunning) {
+      const rollback = await runComposeUp({
+        ...runOptions,
+        build: false,
+        withGateway: gateway.enabled,
+        withProxy: proxyWasEnabled,
+      });
+      rollbackLog = rollback.log;
+    }
+    const detail = [
+      reason,
+      cleanupLog && `Cleanup: ${cleanupLog}`,
+      rollbackLog && `Rollback: ${rollbackLog}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+    throw new SetupApiValidationError(
+      `Staff-Binding konnte nicht angewendet werden; vorherige Konfiguration wurde wiederhergestellt.${detail ? ` ${detail}` : ''}`,
+    );
+  };
+
   if (shouldComposeUp) {
     const envAfter = readEnvMap(envPath);
     if (proxy.enabled) {
-      await ensureProxyImageForCompose(envAfter, hooks);
+      try {
+        await ensureProxyImageForCompose(envAfter, hooks);
+      } catch (error) {
+        await rollbackFailedBindingApply(error instanceof Error ? error.message : String(error));
+      }
     }
     const up = await runComposeUp({
       ...resolveComposeRunOptions(ctx, envAfter),
@@ -1038,6 +1195,9 @@ export async function saveHostNetwork(
       withGateway: gateway.enabled,
       withProxy: proxy.enabled,
     });
+    if (!up.ok) {
+      await rollbackFailedBindingApply(up.log);
+    }
     composeRestarted = up.ok;
     gatewayComposeSkipped = up.gatewaySkipped;
     restartLog = [restartLog, up.log].filter(Boolean).join('\n') || null;
@@ -1045,6 +1205,16 @@ export async function saveHostNetwork(
       ...resolveComposeRunOptions(ctx, envAfter),
       withProxy: proxy.enabled,
     });
+    const auditError = failedStaffBindingAudit({
+      compose,
+      env: envAfter,
+      staffIp: lanAppIp,
+      proxyEnabled: proxy.enabled,
+      hooks,
+    });
+    if (auditError) {
+      await rollbackFailedBindingApply(auditError);
+    }
   }
 
   return {

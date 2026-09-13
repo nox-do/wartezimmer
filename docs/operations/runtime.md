@@ -1,6 +1,6 @@
 # Runtime — Compose, Host, Tagesbetrieb
 
-Stand: 2026-08-31 · am Code geprüft (`setup/src/docker.ts`, Compose Delivery/Dev)
+Stand: 2026-09-13 · am Code geprüft (`setup/src/docker.ts`, Compose Delivery/Dev)
 
 **Scope:** Was nach der Installation läuft — Services, Compose-Stacking, Ports/Volumes, Alltag.  
 Nicht: Release-Bau → [`delivery.md`](delivery.md) · LAN-TLS → [`tls.md`](tls.md) · Backup → [`backup.md`](backup.md) · Anbindungen → [`integrations.md`](integrations.md)
@@ -16,7 +16,7 @@ Nicht: Release-Bau → [`delivery.md`](delivery.md) · LAN-TLS → [`tls.md`](tl
 
 | Service            | Rolle                                      | Sichtbarkeit                                        |
 | ------------------ | ------------------------------------------ | --------------------------------------------------- |
-| `app`              | API + UI (Terminal/MFA/TV/Portal) + SQLite | LAN-Port(s); hinter Proxy ggf. nur Loopback `:8080` |
+| `app`              | API + UI (Terminal/MFA/TV/Portal) + SQLite | ohne Proxy offen `:8080`; hinter Proxy nur Loopback |
 | `sandbox`          | Dokumentenvorschau / Form2PDF, ClamAV      | nur Docker-Netz (`expose 8081`)                     |
 | `proxy` (optional) | Caddy HTTP und ggf. HTTPS                  | `:80` / `:443` — [`tls.md`](tls.md)                 |
 
@@ -61,12 +61,16 @@ Docker Desktop: File Sharing für Host-Pfade. Kein Log-Volume — stdout + json-
 
 | Port         | Wer                           | Hinweis                                                                                   |
 | ------------ | ----------------------------- | ----------------------------------------------------------------------------------------- |
-| `8080`       | App                           | ohne Proxy im LAN; mit Proxy typisch `APP_BIND_ADDRESS=127.0.0.1`                         |
+| `8080`       | App                           | ohne Proxy bewusst `0.0.0.0` für Demo/Erststart; mit Proxy zwingend `127.0.0.1`           |
 | `8082`       | Maintenance                   | nur `127.0.0.1` am Host — Backup/Import ([`backup.md`](backup.md))                        |
 | `9190`       | Setup-API (CLI `setup:serve`) | Default nur für manuelles Serve; der Manager bindet einen eigenen ephemeren Loopback-Port |
-| `80` / `443` | Proxy                         | optional; TLS ab prepare/cutover — [`tls.md`](tls.md)                                     |
+| `80` / `443` | Proxy                         | nur an `SETUP_LAN_APP_IP`; TLS ab prepare/cutover — [`tls.md`](tls.md)                    |
 
 Sandbox ohne öffentlichen Host-Port. Portal unter `/portal` im `app`-Container.
+Der proxyfreie Modus bietet bewusst keine NIC-Isolation. Explizites
+Staff-Binding, TLS und ein späteres Restricted-/Portal-Binding setzen den Proxy
+voraus; dann blockiert Setup Start/Recreate bei fehlender oder nicht lokaler
+Staff-IP und prüft nach dem Apply die tatsächlichen Docker-Publishes.
 
 ## 6. Tagesbetrieb
 

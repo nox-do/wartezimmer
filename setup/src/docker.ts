@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { runDockerCommand } from './docker-cli.js';
 import { readEnvMap, ensureEnvComposeEscaping } from './env-file.js';
+import { listNetworkInterfaces, type NetworkInterfaceInfo } from './network.js';
 import { resolveStorageFoldersFromSources, type StorageFolders } from './storage-folders.js';
 
 import type {
@@ -181,10 +182,51 @@ function resolveComposeFileList(options: ComposeRunOptions): {
 }
 
 function buildComposeEnv(composeProjectName: string): NodeJS.ProcessEnv {
-  return {
+  const env: NodeJS.ProcessEnv = {
     ...process.env,
     COMPOSE_PROJECT_NAME: composeProjectName,
   };
+  // Persisted setup state is authoritative for security-sensitive host binds.
+  // Parent-shell overrides must not silently publish on another address.
+  delete env.SETUP_LAN_APP_IP;
+  delete env.APP_BIND_ADDRESS;
+  return env;
+}
+
+export function validateStaffBindingEnv(
+  env: Map<string, string>,
+  interfaces: NetworkInterfaceInfo[],
+): string | null {
+  const proxyEnabled = ['1', 'true', 'yes', 'on'].includes(
+    (env.get('PROXY_ENABLED')?.trim() || '').toLowerCase(),
+  );
+  if (!proxyEnabled) {
+    return null;
+  }
+  const staffIp = env.get('SETUP_LAN_APP_IP')?.trim() || '';
+  if (!staffIp) {
+    return 'Staff-Bindung gesperrt: SETUP_LAN_APP_IP fehlt.';
+  }
+  const isLocal = interfaces.some((iface) =>
+    iface.addresses.some((address) => address.address === staffIp),
+  );
+  if (!isLocal) {
+    return `Staff-Bindung gesperrt: ${staffIp} ist an diesem Rechner nicht vorhanden.`;
+  }
+  const expectedAppBind = '127.0.0.1';
+  const appBind = env.get('APP_BIND_ADDRESS')?.trim() || '';
+  if (appBind !== expectedAppBind) {
+    return `Staff-Bindung gesperrt: APP_BIND_ADDRESS=${appBind || '<fehlt>'}, erwartet ${expectedAppBind}.`;
+  }
+  return null;
+}
+
+function composeStaffBindingError(projectRoot: string): string | null {
+  const envPath = path.join(projectRoot, '.env');
+  if (!fs.existsSync(envPath)) {
+    return 'Staff-Bindung gesperrt: .env fehlt.';
+  }
+  return validateStaffBindingEnv(readEnvMap(envPath), listNetworkInterfaces());
 }
 
 export type ComposeUpOptions = ComposeRunOptions & {
@@ -202,6 +244,10 @@ export async function composeUp(options: ComposeUpOptions & { services?: string[
   gatewaySkipped: boolean;
 }> {
   const { files, wantGateway, gatewaySkipped } = resolveComposeFileList(options);
+  const bindingError = composeStaffBindingError(options.projectRoot);
+  if (bindingError) {
+    return { ok: false, log: bindingError, gatewaySkipped };
+  }
   // Gateway profile only when not targeting a subset of services.
   const useGatewayProfile = wantGateway && (!options.services || options.services.length === 0);
 
@@ -495,6 +541,10 @@ export async function composeRestart(
   const envPath = path.join(options.projectRoot, '.env');
   if (!fs.existsSync(envPath)) {
     return { ok: false, log: 'no .env — cannot restart compose stack' };
+  }
+  const bindingError = composeStaffBindingError(options.projectRoot);
+  if (bindingError) {
+    return { ok: false, log: bindingError };
   }
   const result = await runComposeCommand(options, ['restart', ...(options.services ?? [])]);
   return { ok: result.ok, log: result.log };

@@ -96,7 +96,7 @@ test('auditStaffPublishedBindings accepts exact TLS proxy, app and sandbox bindi
   );
 });
 
-test('auditStaffPublishedBindings rejects wildcard and unknown runtime bindings', () => {
+test('auditStaffPublishedBindings accepts the proxy-free demo bind but rejects unknown bindings', () => {
   const checks = auditStaffPublishedBindings({
     compose: {
       running: true,
@@ -123,11 +123,12 @@ test('auditStaffPublishedBindings rejects wildcard and unknown runtime bindings'
     proxyEnabled: false,
   });
 
-  assert.equal(checks.find((check) => check.id === 'staff.binding.app')?.ok, false);
+  assert.equal(checks.find((check) => check.id === 'staff.binding.app')?.ok, true);
   assert.match(
-    checks.find((check) => check.id === 'staff.binding.app')?.detail ?? '',
-    /0\.0\.0\.0:8080/,
+    checks.find((check) => check.id === 'staff.binding.app')?.message ?? '',
+    /offenen Demo-/,
   );
+  assert.match(checks.find((check) => check.id === 'staff.binding.app')?.detail ?? '', /allen/);
   assert.equal(checks.find((check) => check.id === 'staff.binding.sandbox')?.ok, false);
   assert.match(
     checks.find((check) => check.id === 'staff.binding.sandbox')?.message ?? '',

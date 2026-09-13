@@ -328,14 +328,16 @@
       <div class="maintenance-accordion">
         <MaintenanceSection
           open={lanOpen}
-          title="Adresse dieses Rechners"
+          title="Staff-Adresse dieses Rechners"
           subtitle={`${networkLanSubtitle(configSnapshot, snapshot)} · ${networkHostChecksSubtitle(hostChecks)}`}
           onToggle={() => {
             lanOpen = !lanOpen;
           }}
         >
           <p class="hint">
-            IP dieses Rechners im Praxisnetz. Wenn sie nicht mehr stimmt, hier anpassen und übernehmen.
+            Diese IP wird beim Proxy als einzige Staff-Bindung verwendet. Ohne Proxy dient sie der
+            Geräte-Adresse, während Port 8080 für Demo und Erststart auf allen Netzwerkkarten offen ist.
+            Wenn die IP nicht mehr stimmt, hier anpassen und übernehmen.
           </p>
           <LanIpPanel
             state={snapshot}

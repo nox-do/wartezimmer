@@ -21,6 +21,11 @@ import { isTlsPreparationInProgressEnv } from './tls-env.js';
 export const DEFAULT_APP_BIND_ADDRESS = '0.0.0.0';
 export const PROXY_APP_BIND_ADDRESS = '127.0.0.1';
 
+/** Proxy mode closes the app behind host loopback; proxy-free mode stays demo-friendly. */
+export function resolveAppBindAddress(proxyEnabled: boolean): string {
+  return proxyEnabled ? PROXY_APP_BIND_ADDRESS : DEFAULT_APP_BIND_ADDRESS;
+}
+
 /** Always survive applySetupPlan (not part of the proxy wire payload). */
 export const PROXY_IMAGE_ENV_KEY = PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY;
 
@@ -160,7 +165,7 @@ export function readProxyConfig(env: EnvLike): ProxyConfig {
       enabled: false,
       mode: 'off',
       httpPort,
-      appBindAddress: DEFAULT_APP_BIND_ADDRESS,
+      appBindAddress: resolveAppBindAddress(false),
     };
   }
 
@@ -311,7 +316,7 @@ export function buildProxyEnvUpdates(proxy: ProxyConfig, env?: EnvLike): Record<
     PROXY_ENABLED: 'false',
     PROXY_MODE: 'off',
     PROXY_HTTP_PORT: String(proxy.httpPort || DEFAULT_PROXY_HTTP_PORT),
-    APP_BIND_ADDRESS: DEFAULT_APP_BIND_ADDRESS,
+    APP_BIND_ADDRESS: resolveAppBindAddress(false),
   };
 }
 
@@ -365,7 +370,7 @@ export function resolveProxyConfigForWrite(
       enabled: false,
       mode: 'off',
       httpPort,
-      appBindAddress: DEFAULT_APP_BIND_ADDRESS,
+      appBindAddress: resolveAppBindAddress(false),
     },
     writeEnv: true,
   };

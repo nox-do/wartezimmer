@@ -90,9 +90,16 @@ TLS erweitert **denselben** `proxy`-Service (Caddy) — kein zweites System. Ohn
 
 | Zustand                                                                   | Verhalten                                                                                        |
 | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Proxy **aus**                                                             | App lauscht `0.0.0.0:8080` im LAN; kein Caddy                                                    |
-| Proxy **an**, `PROXY_MODE=http`                                           | Caddy `:80` → `app:8080`; App nur noch `127.0.0.1:8080` (Setup-Probes lokal)                     |
+| Proxy **aus**                                                             | bewusster Demo-/Erststart: App lauscht `0.0.0.0:8080` im LAN; keine NIC-Isolation, kein Caddy    |
+| Proxy **an**, `PROXY_MODE=http`                                           | Caddy nur `<staff-ip>:80` → `app:8080`; App nur noch `127.0.0.1:8080`                            |
 | TLS vorbereitet/aktiv (`tls-managed` / `tls-custom` oder `TLS_STATE≠off`) | zusätzlich Overlay `proxy-tls`: Port **443**, `/data`/`/config`, Caddyfile/Certs/acme-dns-Mounts |
+
+Die explizite Staff-Bindung ist eine Eigenschaft des Proxy-Betriebs. Der
+proxyfreie Modus bleibt absichtlich unkompliziert und offen auf allen
+Host-Interfaces; er ist daher weder Staff-isoliert noch als Grundlage für ein
+Restricted-/Portal-Binding zulässig. Sobald der Proxy aktiviert wird, bindet
+Setup dessen HTTP-/HTTPS-Publishes ausschließlich an `SETUP_LAN_APP_IP` und
+verweigert Start oder Recreate, wenn diese Adresse fehlt oder nicht lokal ist.
 
 Compose-Stacking (`setup/src/docker.ts`): Base → `docker-compose.proxy(.delivery).yml` wenn `PROXY_ENABLED` + aktiver Mode → optional `proxy-tls(.delivery).yml` → Lab nur bei `TLS_ACME_DIRECTORY=pebble`.
 
@@ -104,7 +111,7 @@ Image: `PRAXIS_FLOW_PROXY_IMAGE` (Delivery: `praxis-flow-proxy:…-acmedns`, son
 | -------------------- | -------------------------------------------------------------- |
 | `PROXY_ENABLED`      | `true`/`false`                                                 |
 | `PROXY_MODE`         | `off` \| `http` \| `tls-managed` \| `tls-custom`               |
-| `APP_BIND_ADDRESS`   | mit Proxy `127.0.0.1`, sonst typisch `0.0.0.0`                 |
+| `APP_BIND_ADDRESS`   | mit Proxy zwingend `127.0.0.1`, ohne Proxy bewusst `0.0.0.0`   |
 | `PROXY_HTTP_PORT`    | Host-Port, Default 80                                          |
 | `CANONICAL_BASE_URL` | Geräte-/Portal-Basis; nach TLS-Cutover `https://…` ohne `:443` |
 

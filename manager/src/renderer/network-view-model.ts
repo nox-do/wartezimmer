@@ -117,7 +117,7 @@ export function networkProxySubtitle(
   runtime: HostRuntimeHealth | null = null,
 ): string {
   if (!proxyEnabled) {
-    return 'Aus — Geräte-Adresse mit :8080';
+    return 'Aus — offener Demo-/Erststart auf :8080';
   }
   if (proxyNeedsRestore(config, runtime)) {
     return 'An — Proxy-Dienst fehlt';

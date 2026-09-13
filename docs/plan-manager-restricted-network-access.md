@@ -1,7 +1,7 @@
 # Plan: Manager — eingeschränkter Netzwerkzugang
 
-Stand: 2026-09-13 · **TLS-Fundament umgesetzt; Staff- und Restricted-Binding
-offen**
+Stand: 2026-09-13 · **TLS-Fundament und Proxy-Staff-Publishes umgesetzt;
+Firewall, Manager-Diagnose und Restricted-Binding offen**
 
 Grundlage: [Eingeschränkter Netzwerkzugang für das Patientenportal](plan-portal-lan-isolation.md) ·
 TLS-Ist: [`operations/tls.md`](operations/tls.md)
@@ -320,18 +320,26 @@ gesperrt.
 - [x] Backup-Sidecar und Restore-Gate für die TLS-Identität;
 - [x] Custom- und Legacy-Single-Hostname-Pfad bleiben erhalten.
 
-### Schnitt 1b — Staff-Binding und Runtime-Audit (offen, nach Schnitt 0)
+### Schnitt 1b — Staff-Binding und Runtime-Audit (teilweise umgesetzt)
 
 - [x] vollständige Runtime-Publish-Bindings zusätzlich zu den kompatibel
       beibehaltenen Portnummern;
-- [ ] Staff-/Loopback-Bindings ohne `0.0.0.0` und `[::]`;
+- [x] Proxy-Betrieb: Staff-/Loopback-Bindings ohne `0.0.0.0` und `[::]`;
+      proxyfrei bleibt `0.0.0.0:8080` als bewusster Demo-/Erststart ohne
+      NIC-Isolationszusage;
 - [x] `SETUP_LAN_APP_IP` als festgelegte einzige persistierte Quelle der Staff-IP, ohne
       paralleles Binding-Identitätsfeld;
-- [ ] Fail-closed vor Start/Recreate, wenn die Staff-IP fehlt oder nicht lokal ist;
-- [ ] transaktionaler Compose-/Firewall-Apply mit Runtime-Audit und Rollback;
+- [x] Fail-closed vor Proxy-Start/Recreate, wenn die Staff-IP fehlt oder nicht
+      lokal ist;
+- [x] transaktionaler Compose-Apply mit Runtime-Audit und Rollback einschließlich
+      Cleanup von Teilzuständen;
+- [ ] verwaltete Host-Firewall mit eigenem Apply-/Rollback-Schritt;
 - [x] read-only Runtime-Audit im bestehenden Netzwerk-Prüffeld;
-- [ ] Zuordnungsanzeige und Apply-/Repair-Diagnose im bestehenden
-      Netzwerkbereich des Managers.
+- [x] Staff-Adresse, zugehörige Adapterbezeichnung und beobachtete Bindings im
+      bestehenden Netzwerkbereich anzeigen; proxyfreien Modus als offenen
+      Demo-/Erststart kennzeichnen;
+- [ ] Plattformfreigabe, Firewallzustand und vollständige Apply-/Repair-Diagnose
+      ergänzen.
 
 ### Schnitt 2 — Setup vertical slice (Restricted, offen)
 

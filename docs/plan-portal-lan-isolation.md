@@ -1,7 +1,7 @@
 # Eingeschränkter Netzwerkzugang für das Patientenportal
 
-Stand: 2026-09-13 · **Produktentscheidung; TLS-/Wildcard-Pfad umgesetzt und per
-Pebble geprüft, Restricted-Binding weiter offen**
+Stand: 2026-09-13 · **TLS-/Wildcard-Pfad und explizite Proxy-Staff-Publishes
+umgesetzt; Host-Firewall, Manager-Diagnose und Restricted-Binding offen**
 
 Verwandt: LAN-TLS [`operations/tls.md`](operations/tls.md) · Captive-Grenze
 [`operations/integrations.md`](operations/integrations.md) · Manager-Topologie
@@ -338,24 +338,23 @@ Wurfs.
 
 ## 6. Proxy- und Portgrenze
 
-### 6.1 Phase 0: Wildcard-Publishes vor dem Restricted-Binding beseitigen
+### 6.1 Phase 0: Proxy-Publishes vor dem Restricted-Binding explizit binden
 
-Der heutige Stack ist noch kein sicherer Ausgangspunkt: App und Proxy werden je
-nach Betriebsart ohne Host-IP auf `0.0.0.0:8080`, `0.0.0.0:80` beziehungsweise
-`0.0.0.0:443` veröffentlicht. Sobald eine zweite NIC angeschlossen ist, sind
-diese Ports deshalb auch dort erreichbar, **bevor** die eingeschränkte Zone
-eingerichtet wird.
+Der proxyfreie Stack bleibt für Demo und Erststart bewusst einfach: Die App
+wird auf `0.0.0.0:8080` veröffentlicht und besitzt damit keine NIC-
+Isolationszusage. Dieser Zustand ist sichtbar zu kennzeichnen und darf nicht in
+ein Restricted-Binding überführt werden. Der gehärtete Ausgangspunkt beginnt
+mit dem Proxy: App nur auf Loopback, Proxy-Ports nur auf der Staff-IP.
 
-Die erste Umsetzungsetappe ist daher eine allgemeine Härtung des
-Auslieferungsstacks, unabhängig vom Restricted-Network-Zustand:
+Die erste Umsetzungsetappe härtet daher den Proxy-Betrieb:
 
-- kein IPv4- oder IPv6-Delivery-Publish ohne explizite Host-IP; insbesondere
-  weder `0.0.0.0:*` noch `[::]:*` beziehungsweise `:::*`;
-- ohne Proxy: App höchstens `<staff-ip>:8080:8080`, niemals `0.0.0.0:8080`;
+- ohne Proxy: App bewusst `0.0.0.0:8080` für Demo/Erststart; keine Staff-
+  Isolation und kein Restricted-Binding;
 - mit Proxy: App nur `127.0.0.1:8080:8080`, Proxy-Ports nur auf der Staff-IP;
 - Maintenance bleibt `127.0.0.1:8082`;
-- Docker-/Proxy-Neustart verweigern, wenn eine erforderliche Bind-Adresse fehlt
-  oder nicht mehr lokal vorhanden ist.
+- im Proxy-Betrieb weder `0.0.0.0:*` noch `[::]:*` beziehungsweise `:::*`;
+- Proxy-Start/-Recreate verweigern, wenn die Staff-IP fehlt oder nicht mehr
+  lokal vorhanden ist.
 
 Der heutige Statusvertrag reicht für dieses Audit nicht aus:
 `publishedPortsFromRow` reduziert Docker-Publishes auf `number[]` und verwirft
@@ -376,10 +375,11 @@ beabsichtigte Compose-Datei.
 
 Die Einrichtung des Restricted-Bindings setzt den TLS-Proxy und die
 Loopback-Bindung der App voraus.
-Setup prüft diese Phase-0-Grenze schon im normalen Staff-Betrieb; der Manager
-zeigt das Ergebnis. Eine zusätzliche NIC darf keinen App-, HTTP-, HTTPS-,
-Debug- oder Maintenance-Port erben. Damit hängt die Absicherung nicht davon ab,
-dass jemand rechtzeitig ein Restricted-Binding einrichtet.
+Setup prüft diese Phase-0-Grenze im Proxy-Betrieb; der Manager zeigt das
+Ergebnis. Eine zusätzliche NIC darf dort keinen App-, HTTP-, HTTPS-, Debug-
+oder Maintenance-Port erben. Im bewusst offenen proxyfreien Modus bleibt Port
+8080 dagegen auf allen NICs erreichbar; vor einer Restricted-Konfiguration ist
+deshalb zuerst der Proxy einzuschalten und erfolgreich zu auditieren.
 
 Diese Härtung wird auf Windows und macOS erst ausgerollt, nachdem das F1-Gate
 in §6.3 auf der jeweiligen freigegebenen Docker-Desktop-Version bestanden hat
@@ -619,15 +619,15 @@ externe Scan aus beiden Netzen.
 
 ### 8.1 Lokale Prüfungen
 
-Setup prüft die Publish-Grenze bereits im Staff-Betrieb und wiederholt die
+Setup prüft die Publish-Grenze bereits im Proxy-Staff-Betrieb und wiederholt die
 vollständigen Prüfungen beim Einrichten des Restricted-Bindings, bei jedem
 Stack-Start und nach erkannten Netzwerkänderungen. Der Manager zeigt Ergebnisse
 und Aktionen an, ist aber nicht selbst die Sicherheitsinstanz:
 
 1. freigegebene Kombination aus Windows/macOS und Docker-Desktop-Version;
-2. keine IPv4-/IPv6-Docker-Publishes auf `0.0.0.0`, `[::]`/`:::` oder einer
-   unerwarteten Host-IP;
-3. App abhängig vom Modus nur auf Staff-IP oder Loopback;
+2. im Proxy-/Restricted-Betrieb keine IPv4-/IPv6-Docker-Publishes auf
+   `0.0.0.0`, `[::]`/`:::` oder einer unerwarteten Host-IP;
+3. App ohne Proxy bewusst global, mit Proxy ausschließlich auf Loopback;
 4. stabile, eindeutig ausgewählte Staff- und Restricted-Adressen samt Interface-ID;
 5. ob die Restricted-IP auf einem anderen gemeldeten Interface liegt oder nur eine
    zweite Adresse des Staff-Interface ist;
@@ -888,8 +888,10 @@ Status der groben Blöcke:
       erforderliche Host-Firewall je freigegebener Plattform praktisch belegen;
       macOS ist für die nachgewiesene Kombination bestanden, Windows ist
       zurückgestellt und bleibt gesperrt.
-- [ ] **Phase 0 / Staff-Binding:** bestehende Staff-Auslieferung ohne globale
-      Publishes betreiben und ihren tatsächlichen Laufzeitzustand diagnostizieren.
+- [ ] **Phase 0 / Staff-Binding:** Proxy-Publishes und Runtime-Audit sind
+      umgesetzt; Produkt-Firewall, vollständige Manager-Diagnose und
+      End-to-End-Abnahme bleiben offen. Der proxyfreie Demo-/Erststart ist
+      bewusst nicht NIC-isoliert.
 - [ ] **Restricted-Binding:** zweite IP, Portal-A-Record, getrennter
       Portal-Listener, Portal-Positivliste und Firewallregeln einführen.
 - [ ] **Portal-Härtung und Freigabe:** App-Vertrag, Runtime-Härtung,
@@ -908,12 +910,12 @@ Die verbleibenden Blöcke sind:
    Black-Box-Scan aus beiden Netzen; außerdem Reboot, Adressverlust, IPv6 und
    Weak-Host-Verhalten. Bei Fehlschlag kein Portal auf dieser Plattform und
    separate Architekturentscheidung statt stillen Edge-Proxy-Fallbacks.
-2. **Phase 0 nach bestandenem plattformspezifischem Gate 0:** alle
-   Delivery-Publishes von
-   IPv4-/IPv6-Wildcard-Adressen auf explizite Staff-IP beziehungsweise Loopback
-   umstellen; Docker-Statusvertrag von reinen Portnummern auf vollständige
-   Laufzeit-Bindings erweitern; Setup-Audit, Elevation und transaktionalen
-   Firewall-/Compose-Rollback umsetzen und im Manager darstellen. Zusätzlich
+2. **Phase 0 nach bestandenem plattformspezifischem Gate 0:** im Proxy-Betrieb
+   alle Delivery-Publishes von IPv4-/IPv6-Wildcard-Adressen auf explizite
+   Staff-IP beziehungsweise Loopback umstellen; der proxyfreie Demo-/Erststart
+   bleibt bewusst offen. Docker-Statusvertrag, Proxy-Compose-Apply und
+   Runtime-Audit sind umgesetzt; Elevation, Host-Firewall-Rollback und die
+   vollständige Manager-Darstellung bleiben offen. Zusätzlich
    zum bestehenden macOS-DMG wird vor einer späteren Windows-Freigabe ein
    Windows-Manager-Artefakt benötigt.
 3. **Proxy (Portal-Listener):** getrennte Host-Publishes auf interne
@@ -1046,39 +1048,50 @@ Stack umgestellt wird.
 
 #### Schritt 3 — Compose-Publishes auf Staff-IP beziehungsweise Loopback
 
-- Ohne Proxy: App ausschließlich `<staff-ip>:8080 -> app:8080`.
-- Mit Proxy: App ausschließlich `127.0.0.1:8080 -> app:8080`; HTTP und HTTPS
-  ausschließlich `<staff-ip>:80/443 -> proxy:80/443`.
-- Maintenance bleibt `127.0.0.1:8082`; Sandbox und interne Dienste erhalten
-  keinen Host-Publish.
-- Basis-, Delivery-, Proxy- und TLS-Compose-Dateien werden gemeinsam geprüft,
-  damit Overlay-Merging keine alte globale Publish-Regel stehen lässt.
-- Eine fehlende oder nicht lokale Staff-IP darf niemals auf `0.0.0.0`, einen
-  leeren Host oder IPv6-Wildcard zurückfallen.
+Arbeitsstand: Der Compose-/Env-Vertrag ist umgesetzt.
+
+- [x] Ohne Proxy: bewusster Demo-/Erststart auf `0.0.0.0:8080`, ausdrücklich
+      ohne NIC-Isolationszusage.
+- [x] Mit Proxy: App ausschließlich `127.0.0.1:8080 -> app:8080`; HTTP und
+      HTTPS ausschließlich `<staff-ip>:80/443 -> proxy:80/443`.
+- [x] Maintenance bleibt `127.0.0.1:8082`; Sandbox und interne Dienste erhalten
+      keinen Host-Publish.
+- [x] Basis-, Delivery-, Proxy- und TLS-Compose-Dateien werden gemeinsam
+      geprüft, damit Overlay-Merging im Proxy-Pfad keine globale Publish-Regel
+      stehen lässt.
+- [x] Eine fehlende oder nicht lokale Staff-IP darf im Proxy-Pfad niemals auf
+      `0.0.0.0`, einen leeren Host oder IPv6-Wildcard zurückfallen.
 
 #### Schritt 4 — kontrollierte Migration, Apply und Rollback
 
-- Bestandsinstallationen zuerst nur inspizieren. Fehlt eine gültige
-  `SETUP_LAN_APP_IP`, bleibt der laufende Stack unberührt und der Manager fordert
-  eine Staff-IP-Auswahl an; ein späterer Start/Apply mit globalem Fallback ist
-  gesperrt.
-- Vor Recreate: lokale IP, Portbelegung, gerenderte Compose-Konfiguration und
-  Plattformfreigabe prüfen; bisherigen Env-/Compose-/Firewallzustand sichern.
-- Danach Container neu erzeugen und die **tatsächlichen** Runtime-Bindings
-  auditieren. Staff-Erreichbarkeit wird vor Abschluss positiv geprüft.
+Arbeitsstand: Proxy-Preflight, Compose-Apply, Runtime-Audit und Env-/Stack-
+Rollback sind umgesetzt. Host-Firewall und abschließende externe Staff-Probe
+bleiben offen.
+
+- [x] Bestandsinstallationen zuerst nur inspizieren. Fehlt im Proxy-Betrieb eine gültige
+      `SETUP_LAN_APP_IP`, bleibt der laufende Stack unberührt und der Manager fordert
+      eine Staff-IP-Auswahl an; ein späterer Start/Apply mit globalem Fallback ist
+      gesperrt.
+- [ ] Vor Recreate: lokale IP und Portbelegung werden geprüft; automatisierte
+      Plattformfreigabe und Host-Firewall-Sicherung fehlen noch.
+- [x] Danach Container neu erzeugen und die **tatsächlichen** Runtime-Bindings
+      auditieren.
+- [ ] Staff-Erreichbarkeit vor Abschluss zusätzlich positiv prüfen.
 - Nach Rückkehr einer zuvor fehlenden Staff-IP darf nicht auf einen automatischen
   Docker-Retry vertraut werden: Status und Manager müssen den gestoppten Dienst
   erkennen und einen kontrollierten Repair ermöglichen.
-- Bei Bind-, Firewall- oder Staff-Probe-Fehlern den gesicherten Zustand
-  wiederherstellen und den Fehler sichtbar lassen. Kein Teilzustand darf einen
-  Portal-A-Record oder Portal-Listener anlegen.
+- [x] Bei Compose- oder Binding-Audit-Fehlern den gesicherten Env-/Stack-Zustand
+      wiederherstellen und neu entstandene Teil-Container entfernen.
+- [ ] Firewall- und Staff-Probe-Fehler in dieselbe Transaktion aufnehmen. Kein
+      Teilzustand darf einen Portal-A-Record oder Portal-Listener anlegen.
 
 #### Schritt 5 — Manager-Diagnose
 
 - [x] Das bestehende Netzwerk-Prüffeld übernimmt die read-only Ergebnisse des
       Staff-Runtime-Audits und verwirft sie nicht als alten Gateway-Status.
-- Im vorhandenen Netzwerkbereich Staff-IP und die beobachteten Bindings
-  lesbar anzeigen; kein neuer Haupt-Tab.
+- [x] Im vorhandenen Netzwerkbereich Staff-IP, Adapterbezeichnung und die
+      beobachteten Bindings lesbar anzeigen; den proxyfreien Modus ausdrücklich
+      als offenen Demo-/Erststart kennzeichnen; kein neuer Haupt-Tab.
 - Klare Zustände für `bereit`, `globale Bindung`, `Bindung unbekannt`,
   `Staff-IP fehlt/nicht lokal` und `Plattform nicht freigegeben` ausgeben.
 - Start, Neustart und Repair an dieselbe Setup-Prüfung koppeln; der Renderer

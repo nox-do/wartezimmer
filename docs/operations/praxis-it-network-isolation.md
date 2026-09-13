@@ -3,8 +3,10 @@
 Stand: 2026-09-13 · **Beratungsunterlage zum geplanten Restricted-Binding, kein umgesetzter Produktvertrag**
 
 Das vorausgesetzte Wildcard-TLS-Namensmodell ist umgesetzt und per lokalem
-Pebble-Smoke geprüft. Explizites Staff-Binding, Plattform-/Firewall-Gate und
-Restricted-Binding sind weiterhin offen; die nachfolgenden Netzempfehlungen
+Pebble-Smoke geprüft. Explizite Proxy-Publishes an der Staff-IP und ihr
+Runtime-Audit sind umgesetzt; Produkt-Firewall, vollständige Manager-Diagnose
+und Restricted-Binding sind weiterhin offen. Der proxyfreie Demo-/Erststart
+bleibt bewusst auf allen Host-Interfaces erreichbar. Die Netzempfehlungen
 dürfen daher noch nicht als verfügbare Manager-Funktion verstanden werden.
 
 Produktplan: [Eingeschränkter Netzwerkzugang für das Patientenportal](../plan-portal-lan-isolation.md) ·

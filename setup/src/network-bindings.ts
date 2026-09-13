@@ -131,7 +131,7 @@ function checkServiceBindings(input: {
   ];
 }
 
-/** Pure runtime audit for the Staff-only publish policy; it never changes Docker state. */
+/** Pure runtime audit for the mode-dependent app/proxy publish policy. */
 export function auditStaffPublishedBindings(input: {
   compose: ComposeStatus | null;
   staffIp: string | null;
@@ -148,7 +148,7 @@ export function auditStaffPublishedBindings(input: {
   const proxyHttpsPort = input.proxyHttpsPort ?? DEFAULT_PROXY_HTTPS_PORT;
   const appExpected: ComposePublishedBinding[] = [
     {
-      hostIp: input.proxyEnabled ? '127.0.0.1' : staffIp || '<staff-ip-fehlt>',
+      hostIp: input.proxyEnabled ? '127.0.0.1' : '0.0.0.0',
       publishedPort: DEFAULT_APP_PORT,
       targetPort: DEFAULT_APP_PORT,
       protocol: 'tcp',
@@ -185,6 +185,14 @@ export function auditStaffPublishedBindings(input: {
       expected: [],
     }),
   ];
+  if (!input.proxyEnabled) {
+    const appCheck = checks.find((check) => check.id === 'staff.binding.app');
+    if (appCheck?.ok) {
+      appCheck.message = 'App läuft im offenen Demo-/Erststart';
+      appCheck.detail =
+        '0.0.0.0:8080 ist auf allen Host-Interfaces erreichbar. Für Staff-Isolation den Proxy aktivieren.';
+    }
+  }
   if (input.proxyEnabled) {
     if (!staffIp) {
       checks.push({

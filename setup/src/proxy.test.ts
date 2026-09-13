@@ -15,7 +15,7 @@ import {
   resolveProxyImageRef,
 } from './proxy.js';
 
-test('readProxyConfig defaults to off with public app bind', () => {
+test('readProxyConfig defaults to off with public demo app bind', () => {
   assert.deepEqual(readProxyConfig(new Map()), {
     enabled: false,
     mode: 'off',
@@ -252,7 +252,7 @@ test('buildProxyEnvUpdates writes companion keys only when proxy is active or al
       enabled: false,
       mode: 'off',
       httpPort: 80,
-      appBindAddress: '0.0.0.0',
+      appBindAddress: '127.0.0.1',
     }),
     {},
   );

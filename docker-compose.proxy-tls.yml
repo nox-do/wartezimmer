@@ -5,7 +5,7 @@
 services:
   proxy:
     ports:
-      - '${PROXY_HTTPS_PORT:-443}:443'
+      - '${SETUP_LAN_APP_IP:?SETUP_LAN_APP_IP is required}:${PROXY_HTTPS_PORT:-443}:443'
     volumes:
       - ${PROXY_CADDY_DATA_HOST_PATH:?PROXY_CADDY_DATA_HOST_PATH is required}:/data
       - ${PROXY_CADDY_CONFIG_HOST_PATH:?PROXY_CADDY_CONFIG_HOST_PATH is required}:/config

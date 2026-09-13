@@ -11,8 +11,9 @@
 </script>
 
 <p class="hint">
-  Optional: Geräte erreichen Praxis Flow ohne <code>:8080</code> in der Adresse. Intern wird dafür ein
-  zusätzlicher Proxy-Dienst gestartet.
+  Ohne Proxy ist der Demo-/Erststart über <code>:8080</code> auf allen Netzwerkkarten erreichbar. Mit
+  Proxy läuft die App nur lokal; Port 80 und später HTTPS werden ausschließlich an die gewählte
+  Staff-Adresse gebunden.
 </p>
 <label class="wizard-checkbox">
   <input
@@ -24,5 +25,8 @@
   <span>Einfacher Gerätezugriff über Port 80</span>
 </label>
 {#if enabled}
-  <p class="hint">Zielport für Geräte: <code>80</code> (statt <code>8080</code>).</p>
+  <p class="hint">
+    Zielport für Geräte: <code>80</code> (statt <code>8080</code>). Die Staff-Adresse muss beim Start
+    am Rechner vorhanden sein.
+  </p>
 {/if}

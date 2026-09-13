@@ -7,6 +7,7 @@ import {
   networkExpanderDefaults,
   networkHostChecksForDisplay,
   networkIsBusy,
+  networkProxySubtitle,
   networkProxyMissingAfterRestart,
   networkRestartFailureMessage,
   networkSavedWhileStoppedMessage,
@@ -21,6 +22,13 @@ test('networkIsBusy covers in-flight phases only', () => {
   assert.equal(networkIsBusy('saving'), true);
   assert.equal(networkIsBusy('restarting'), true);
   assert.equal(networkIsBusy('loading'), true);
+});
+
+test('networkProxySubtitle labels the proxy-free mode as an open demo start', () => {
+  assert.equal(
+    networkProxySubtitle(minimalHostStatus(), false),
+    'Aus — offener Demo-/Erststart auf :8080',
+  );
 });
 
 test('formatActiveReachabilityResult prefers actionable messages', () => {
