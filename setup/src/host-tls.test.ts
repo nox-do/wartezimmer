@@ -31,6 +31,8 @@ import {
   GENERATED_CADDYFILE_MARKER,
   generateTlsCaddyfile,
   resolveProxyTlsPaths,
+  writeGeneratedTlsCaddyfile,
+  writeSecretFileAtomically,
 } from './proxy-tls.js';
 import { testSetupContext } from './test-setup-context.js';
 
@@ -96,11 +98,15 @@ test('readTlsStatus does not expose token or PEM-shaped env keys', () => {
     'certificate',
     'cutoverApplied',
     'hostname',
+    'installationDomain',
     'installationId',
     'lastError',
     'mode',
+    'portalHostname',
+    'staffHostname',
     'state',
     'tokenConsumed',
+    'wildcardCertificateName',
   ]);
   assert.equal(JSON.stringify(status).includes('secret'), false);
 });
@@ -155,6 +161,13 @@ test('managed fake vertical slice stays HTTP until apply and consumes token afte
       deps,
     );
     assert.equal(prepared.tls.state, 'awaiting-operator-dns');
+    assert.equal(prepared.tls.installationDomain, '7fk3m2.lan.notaus.de');
+    assert.equal(prepared.tls.staffHostname, 'staff.7fk3m2.lan.notaus.de');
+    assert.equal(prepared.tls.hostname, 'staff.7fk3m2.lan.notaus.de');
+    assert.equal(prepared.tls.portalHostname, 'portal.7fk3m2.lan.notaus.de');
+    assert.equal(prepared.tls.wildcardCertificateName, '*.7fk3m2.lan.notaus.de');
+    assert.equal(prepared.operatorRequest?.aRecord.name, 'staff.7fk3m2.lan.notaus.de');
+    assert.equal(prepared.operatorRequest?.acmeCname.name, '_acme-challenge.7fk3m2.lan.notaus.de');
     assert.ok(prepared.operatorRequest?.oneTimeToken);
     assert.equal(readEnvMap(path.join(root, '.env')).get('PROXY_MODE'), 'http');
 
@@ -171,6 +184,7 @@ test('managed fake vertical slice stays HTTP until apply and consumes token afte
     assert.equal(obtained.tls.state, 'dns-verified');
     assert.equal(obtained.tls.applyReady, true);
     assert.equal(obtained.tls.tokenConsumed, true);
+    assert.deepEqual(obtained.tls.certificate?.names, ['*.7fk3m2.lan.notaus.de']);
     assert.equal(fs.existsSync(resolveProxyTlsPaths(root).operatorToken), false);
     assert.equal(readEnvMap(path.join(root, '.env')).get('PROXY_MODE'), 'http');
 
@@ -178,12 +192,51 @@ test('managed fake vertical slice stays HTTP until apply and consumes token afte
     assert.equal(applied.tls.state, 'active');
     const env = readEnvMap(path.join(root, '.env'));
     assert.equal(env.get('PROXY_MODE'), 'tls-managed');
-    assert.equal(env.get('CANONICAL_BASE_URL'), 'https://7fk3m2.lan.notaus.de');
+    assert.equal(env.get('CANONICAL_BASE_URL'), 'https://staff.7fk3m2.lan.notaus.de');
+    assert.equal(env.get('TLS_INSTALLATION_DOMAIN'), '7fk3m2.lan.notaus.de');
+    assert.equal(env.get('TLS_STAFF_HOSTNAME'), 'staff.7fk3m2.lan.notaus.de');
+    assert.equal(env.get('TLS_PORTAL_HOSTNAME'), 'portal.7fk3m2.lan.notaus.de');
+    assert.equal(env.get('TLS_WILDCARD_CERTIFICATE_NAME'), '*.7fk3m2.lan.notaus.de');
     assert.equal(env.get('TRUST_PROXY_HEADERS'), 'true');
     const caddyfile = fs.readFileSync(resolveProxyTlsPaths(root).caddyfile, 'utf8');
-    assert.match(caddyfile, /redir https:\/\/7fk3m2\.lan\.notaus\.de\{uri\} permanent/);
+    assert.match(caddyfile, /redir https:\/\/staff\.7fk3m2\.lan\.notaus\.de\{uri\} permanent/);
+    assert.match(caddyfile, /\*\.7fk3m2\.lan\.notaus\.de \{/);
+    assert.match(caddyfile, /@staff host staff\.7fk3m2\.lan\.notaus\.de/);
+    assert.doesNotMatch(caddyfile, /\nstaff\.7fk3m2\.lan\.notaus\.de \{/);
+    assert.match(caddyfile, /\n\t\tabort\n/);
     assert.match(caddyfile, /https:\/\/127\.0\.0\.1 \{/);
     assert.match(caddyfile, /respond \/__praxis-flow\/health "ok" 200/);
+  });
+});
+
+test('rewriting generated TLS mount files preserves their inode for Docker bind mounts', async () => {
+  await withRoot(async (root) => {
+    const paths = resolveProxyTlsPaths(root);
+    fs.mkdirSync(paths.root, { recursive: true });
+    fs.writeFileSync(paths.caddyfile, ':80 { respond "old" }\n', 'utf8');
+    fs.writeFileSync(paths.acmeDnsCredentials, '{}\n', { encoding: 'utf8', mode: 0o600 });
+    const caddyfileInodeBefore = fs.statSync(paths.caddyfile).ino;
+    const credentialsInodeBefore = fs.statSync(paths.acmeDnsCredentials).ino;
+
+    writeGeneratedTlsCaddyfile(
+      root,
+      {
+        ...emptyTlsStatus(),
+        state: 'dns-verified',
+        mode: 'managed',
+        hostname: 'staff.7fk3m2.lan.notaus.de',
+        staffHostname: 'staff.7fk3m2.lan.notaus.de',
+        wildcardCertificateName: '*.7fk3m2.lan.notaus.de',
+      },
+      new Map(),
+    );
+
+    writeSecretFileAtomically(paths.acmeDnsCredentials, '{"username":"account"}\n');
+
+    assert.equal(fs.statSync(paths.caddyfile).ino, caddyfileInodeBefore);
+    assert.equal(fs.statSync(paths.acmeDnsCredentials).ino, credentialsInodeBefore);
+    assert.match(fs.readFileSync(paths.caddyfile, 'utf8'), /\*\.7fk3m2\.lan\.notaus\.de/);
+    assert.equal(fs.readFileSync(paths.acmeDnsCredentials, 'utf8'), '{"username":"account"}\n');
   });
 });
 
@@ -364,7 +417,11 @@ test('generated Caddyfile keeps HTTP app before cutover and uses ACME-DNS withou
     ...emptyTlsStatus(),
     state: 'dns-verified' as const,
     mode: 'managed' as const,
-    hostname: '7fk3m2.lan.notaus.de',
+    hostname: 'staff.7fk3m2.lan.notaus.de',
+    installationDomain: '7fk3m2.lan.notaus.de',
+    staffHostname: 'staff.7fk3m2.lan.notaus.de',
+    portalHostname: 'portal.7fk3m2.lan.notaus.de',
+    wildcardCertificateName: '*.7fk3m2.lan.notaus.de',
     installationId: '7fk3m2q9',
   };
   const caddyfile = generateTlsCaddyfile(status, new Map());
@@ -375,6 +432,10 @@ test('generated Caddyfile keeps HTTP app before cutover and uses ACME-DNS withou
   assert.match(caddyfile, /disable_tlsalpn_challenge/);
   assert.doesNotMatch(caddyfile, /password|oneTimeToken/);
   assert.doesNotMatch(caddyfile, /resolvers coredns/);
+  assert.match(caddyfile, /\*\.7fk3m2\.lan\.notaus\.de \{/);
+  assert.match(caddyfile, /@staff host staff\.7fk3m2\.lan\.notaus\.de/);
+  assert.doesNotMatch(caddyfile, /\nstaff\.7fk3m2\.lan\.notaus\.de \{/);
+  assert.doesNotMatch(caddyfile, /portal\.7fk3m2\.lan\.notaus\.de/);
 });
 
 test('generated managed and custom Caddyfiles expose the dedicated internal TLS health site', () => {
@@ -460,16 +521,21 @@ test('verify-dns uses public resolvers by default and lab resolvers when set', a
       managedDeps,
     );
     let servers: string[] = [];
+    const cnameQueries: string[] = [];
     const verified = await verifyHostTlsDns(ctx, {
       createDnsResolver: () => ({
         setServers: (value) => {
           servers = value;
         },
         resolve4: async () => ['192.168.178.112'],
-        resolveCname: async () => ['challenge-id.auth.acme-dns.io'],
+        resolveCname: async (name) => {
+          cnameQueries.push(name);
+          return ['challenge-id.auth.acme-dns.io'];
+        },
       }),
     });
     assert.deepEqual(servers, [...TLS_DNS_RESOLVERS_DEFAULT]);
+    assert.deepEqual(cnameQueries, ['_acme-challenge.7fk3m2.lan.notaus.de']);
     assert.equal(verified.tls.state, 'dns-verified');
 
     await resetHostTls(ctx);

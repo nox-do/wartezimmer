@@ -12,7 +12,7 @@ export type TlsNameMode = 'generated' | 'label' | 'domain';
 const DNS_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const DNS_HOSTNAME =
   /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
-const RESERVED_LABELS = new Set(['lan', 'acme', 'www', 'portal', 'mail']);
+const RESERVED_LABELS = new Set(['lan', 'acme', 'www', 'staff', 'portal', 'mail']);
 
 export function normalizeTlsHostnameInput(value: string): string {
   return value.trim().toLowerCase().replace(/\.$/, '');
@@ -64,11 +64,11 @@ export function tlsDraftHostname(input: {
   customDomain: string;
 }): string {
   if (input.nameMode === 'generated') {
-    return `….${TLS_OPERATOR_ZONE}`;
+    return `staff.….${TLS_OPERATOR_ZONE}`;
   }
   if (input.nameMode === 'label') {
     const label = input.customLabel.trim().toLowerCase() || '…';
-    return `${label}.${TLS_OPERATOR_ZONE}`;
+    return `staff.${label}.${TLS_OPERATOR_ZONE}`;
   }
   return normalizeTlsHostnameInput(input.customDomain) || 'flow.praxis.example';
 }
@@ -81,7 +81,15 @@ export function tlsDraftMatchesPrepared(
     customDomain: string;
     preparedNameMode?: TlsNameMode | null;
   },
-  tls: { mode: TlsMode | null; hostname: string | null; state: string } | null | undefined,
+  tls:
+    | {
+        mode: TlsMode | null;
+        hostname: string | null;
+        installationDomain?: string | null;
+        state: string;
+      }
+    | null
+    | undefined,
 ): boolean {
   if (!tls || tls.state === 'off' || tls.mode == null) {
     return false;
@@ -97,10 +105,11 @@ export function tlsDraftMatchesPrepared(
     return false;
   }
   const hostname = tlsPrepareHostname(draft);
-  if (!hostname || !tls.hostname) {
+  const preparedIdentity = tls.mode === 'managed' ? tls.installationDomain : tls.hostname;
+  if (!hostname || !preparedIdentity) {
     return false;
   }
-  return normalizeTlsHostnameInput(tls.hostname) === hostname;
+  return normalizeTlsHostnameInput(preparedIdentity) === hostname;
 }
 
 /** Minted host while the draft still matches; otherwise the live draft preview. */
@@ -111,10 +120,19 @@ export function tlsWizardDisplayHostname(
     customDomain: string;
     preparedNameMode?: TlsNameMode | null;
   },
-  tls: { mode: TlsMode | null; hostname: string | null; state: string } | null | undefined,
+  tls:
+    | {
+        mode: TlsMode | null;
+        hostname: string | null;
+        staffHostname?: string | null;
+        installationDomain?: string | null;
+        state: string;
+      }
+    | null
+    | undefined,
 ): string {
   if (tlsDraftMatchesPrepared(draft, tls) && tls?.hostname) {
-    return tls.hostname;
+    return tls.staffHostname || tls.hostname;
   }
   return tlsDraftHostname(draft);
 }
@@ -125,28 +143,43 @@ export function operatorMailSubject(hostname: string): string {
 
 export function operatorZoneMailBody(input: {
   hostname: string;
+  installationDomain?: string | null;
+  staffHostname?: string | null;
+  portalHostname?: string | null;
+  wildcardCertificateName?: string | null;
+  acmeCnameName?: string | null;
   lanIp: string;
   installationId: string;
   token?: string | null;
   tokenConsumed: boolean;
   acmeCnameTarget: string | null;
 }): string {
+  const staffHostname = input.staffHostname || input.hostname;
+  const installationDomain = input.installationDomain || staffHostname;
+  const acmeCnameName = input.acmeCnameName || `_acme-challenge.${installationDomain}`;
   const tokenLine = input.tokenConsumed
     ? 'Einmal-Token:      (bereits verwendet, nicht erneut anzeigen)'
     : `Einmal-Token:      ${input.token ?? '…'}`;
   const cnameTarget = (input.acmeCnameTarget || '').replace(/\.$/, '');
   const cnameLine = cnameTarget
-    ? `_acme-challenge.${input.hostname}.   CNAME  ${cnameTarget}.`
-    : `_acme-challenge.${input.hostname}.   CNAME  (nach Vorbereitung)`;
+    ? `${acmeCnameName}.   CNAME  ${cnameTarget}.`
+    : `${acmeCnameName}.   CNAME  (nach Vorbereitung)`;
   return [
     `Installations-ID:  ${input.installationId}`,
     tokenLine,
-    `Hostname:          ${input.hostname}`,
+    `Installationsraum: ${installationDomain}`,
+    `Staff-Hostname:    ${staffHostname}`,
+    ...(input.portalHostname
+      ? [`Portal reserviert: ${input.portalHostname} (noch kein A-Record)`]
+      : []),
+    ...(input.wildcardCertificateName
+      ? [`Zertifikatsname:  ${input.wildcardCertificateName}`]
+      : []),
     `LAN-IP:            ${input.lanIp}`,
     '',
     'Bitte anlegen:',
     '',
-    `${input.hostname}.                   A      ${input.lanIp}`,
+    `${staffHostname}.                   A      ${input.lanIp}`,
     cnameLine,
   ].join('\n');
 }

@@ -52,6 +52,46 @@ test('sidecar match requires non-empty installation id and hostname on both side
   );
 });
 
+test('sidecar match validates the complete managed wildcard identity when present', () => {
+  const identity = {
+    backupInstallId: 'id-1',
+    backupHostname: 'staff.room.example',
+    backupInstallationDomain: 'room.example',
+    backupStaffHostname: 'staff.room.example',
+    backupPortalHostname: 'portal.room.example',
+    backupWildcardCertificateName: '*.room.example',
+    sidecarInstallId: 'id-1',
+    sidecarHostname: 'staff.room.example',
+    sidecarInstallationDomain: 'room.example',
+    sidecarStaffHostname: 'staff.room.example',
+    sidecarPortalHostname: 'portal.room.example',
+    sidecarWildcardCertificateName: '*.room.example',
+  };
+  assert.equal(tlsSidecarMatches(identity), true);
+  assert.equal(
+    tlsSidecarMatches({ ...identity, sidecarPortalHostname: 'portal.other.example' }),
+    false,
+  );
+  assert.equal(
+    tlsSidecarMatches({ ...identity, sidecarWildcardCertificateName: undefined }),
+    false,
+  );
+});
+
+test('sidecar match accepts a matching custom v2 staff alias without managed fields', () => {
+  assert.equal(
+    tlsSidecarMatches({
+      backupInstallId: 'id-1',
+      backupHostname: 'flow.practice.example',
+      backupStaffHostname: 'flow.practice.example',
+      sidecarInstallId: 'id-1',
+      sidecarHostname: 'flow.practice.example',
+      sidecarStaffHostname: 'flow.practice.example',
+    }),
+    true,
+  );
+});
+
 test('backup metadata rejects active TLS without HTTPS markers', () => {
   assert.equal(tlsBackupMetadataConsistent({ tlsState: 'active', tlsClaimsHttps: false }), false);
   assert.equal(tlsBackupMetadataConsistent({ tlsState: 'degraded', tlsClaimsHttps: false }), false);

@@ -334,7 +334,11 @@ export function writeTlsSidecarBesideBackup(ctx: SetupContext, backupPath: strin
   packTlsSidecarArchive({
     installHome: ctx.home,
     installationId: env.TLS_INSTALLATION_ID?.trim() ?? '',
-    hostname: env.TLS_HOSTNAME?.trim() ?? '',
+    hostname: env.TLS_STAFF_HOSTNAME?.trim() || env.TLS_HOSTNAME?.trim() || '',
+    installationDomain: env.TLS_INSTALLATION_DOMAIN?.trim(),
+    staffHostname: env.TLS_STAFF_HOSTNAME?.trim(),
+    portalHostname: env.TLS_PORTAL_HOSTNAME?.trim(),
+    wildcardCertificateName: env.TLS_WILDCARD_CERTIFICATE_NAME?.trim(),
     destinationPath,
   });
   return destinationPath;

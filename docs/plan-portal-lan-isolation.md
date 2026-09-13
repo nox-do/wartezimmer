@@ -1,6 +1,7 @@
 # Eingeschränkter Netzwerkzugang für das Patientenportal
 
-Stand: 2026-09-03 · **Produktentscheidung, Umsetzung noch offen**
+Stand: 2026-09-13 · **Produktentscheidung; TLS-/Wildcard-Pfad umgesetzt und per
+Pebble geprüft, Restricted-Binding weiter offen**
 
 Verwandt: LAN-TLS [`operations/tls.md`](operations/tls.md) · Captive-Grenze
 [`operations/integrations.md`](operations/integrations.md) · Manager-Topologie
@@ -221,8 +222,10 @@ und das Zertifikat auf dem getrennten Staff- und Portal-Listener verwenden.
 **Restricted-Binding und Portal-DNS später, Zertifikat nicht extra erneuern:** Bei der Grundeinrichtung
 werden Staff-A-Record, Wildcard-CNAME und Wildcard-Zertifikat angelegt. Der
 Portal-A-Record kommt erst bei der Einrichtung des eingeschränkten Zugangs
-(zweite, kurzlebige
-Operator-Mail, neues Token, nur dieser A-Record). Weil `portal.<raum>` schon
+(zweite, kurzlebige Operator-Mail, nur dieser A-Record). Ob diese spätere
+Strecke einen verifizierten Autorisierungsnachweis benötigt und wie dieser
+geprüft wird, ist noch festzulegen; der heutige lokale Mail-Korrelationswert
+leistet das nicht. Weil `portal.<raum>` schon
 unter `*.<raum>` liegt, ist dafür **kein** ACME-Renew und kein zweiter CNAME
 nötig. Ein Renew nur „weil Portal dazukommt“ wäre Verschwendung und
 Rate-Limit-Risiko. Custom-PEM muss beide Namen oder den Wildcard bereits vor
@@ -235,9 +238,9 @@ Die Zertifikatsautomatisierung darf dabei ausschließlich den Namen
 ACME-Bestellnamen. Insbesondere darf der Generator nicht still ein Exact-Name-
 Zertifikat für `staff.<installationsraum>` anfordern: Dessen DNS-01-Challenge
 läge unter `_acme-challenge.staff.<installationsraum>` und wäre durch den oben
-beschriebenen CNAME nicht gedeckt. Ein ACME-Staging-Test prüft die erzeugten
-Orders und schlägt fehl, sobald neben dem Wildcard ein Exact-Name-Zertifikat
-beantragt wird.
+beschriebenen CNAME nicht gedeckt. Der Pebble-Smoke prüft genau einen
+`newOrder`-Request und als einzigen Zertifikatsnamen `*.<installationsraum>`;
+er schlägt fehl, sobald daneben ein Exact-Name-Zertifikat beantragt wird.
 
 Für eine eigene Praxis-Domain (Custom) gilt das Zwei-Namen-PEM-Gate **erst bei
 Einrichtung des Restricted-Bindings**. Bis dahin reicht das eine heutige Zertifikat für den
@@ -273,12 +276,9 @@ Staff-IP legen und ist unzulässig. Ob das Zertifikat ein Wildcard oder zwei
 konkrete SAN-Namen ist, bleibt Sache der Praxis. Der Manager prüft nur, dass
 das PEM beide Namen deckt. Namenskollisionen in ihrer Zone behandeln sie selbst.
 
-Das ist eine bewusste Ablösung des heutigen Single-Hostname-Modells **für die
-Betreiberzone**. Der aktuelle TLS-Zustand (`TLS_HOSTNAME`/`TlsStatus.hostname`),
-`prepareHostTls`, Operator-Request und Caddy-Generator verwalten nur einen Namen
-und sind für das Managed-Zielbild **nicht wiederverwendbar, ohne erweitert zu
-werden**. Vor Portal-v1 werden sie auf mindestens folgenden persistenten
-Vertrag umgestellt:
+Das Single-Hostname-Modell der Betreiberzone ist dafür seit 2026-09-13 auf
+folgenden persistenten TLS-Vertrag umgestellt (`TLS_HOSTNAME` und
+`TlsStatus.hostname` bleiben als Staff-Kompatibilitätsalias erhalten):
 
 ```text
 installationDomain   (managed: <id>.<zone>; custom: leer / nicht genutzt)
@@ -286,32 +286,32 @@ staffHostname        (managed: staff.<raum>; custom: der eine FQDN)
 portalHostname       (managed: portal.<raum>, auch bevor A-Record existiert;
                       custom: leer bis zur Einrichtung des Restricted-Bindings)
 wildcardCertificateName  (managed: *.<raum>; custom: leer)
-staffIp
-restrictedBindIp     (leer bis zur Einrichtung der eingeschränkten Zone)
+staffIp              (im TLS-Schritt weiterhin die bestätigte LAN-IP)
+restrictedBindIp     (noch nicht umgesetzt; folgt mit Restricted-Binding)
 ```
 
 Neue **Managed**-Installationen erhalten Staff-Hostname und Wildcard-Zertifikat
 bereits bei der Grundeinrichtung, auch wenn noch kein Restricted-Binding
 eingerichtet ist. Dessen spätere Einrichtung ergänzt dann Portal-A-Record,
 Restricted-IP und Portal-Listener, ändert aber weder Staff-Hostname noch
-Staff-Origin. Für die vorhandenen
-Testinstallationen ist keine Migration vorgesehen; deren TLS-/DNS-Zustand kann
-manuell neu angelegt werden.
+Staff-Origin. Legacy-Zustände ohne die neuen Felder werden weiterhin als
+Exact-Hostname gelesen und lösen nicht still eine neue Wildcard-Order aus.
+Testinstallationen können für das neue Zielbild manuell neu angelegt werden.
 
-Backup und Restore werden auf denselben Vertrag erweitert: Installationsraum,
-beide Hostnamen, Wildcard-Identität, TLS-Sidecar, ausgewählte IP-Bindings und
-Restricted-Network-Zustand werden konsistent gesichert. Vor dem erneuten Start prüft Restore,
-dass Zertifikat und Zustand zusammenpassen; bei einer Abweichung bleibt der
-betroffene HTTPS-Listener geschlossen. Ein Restore-Test mit aktivem Portal ist
-Teil der Produktfreigabe. Für die vorhandenen Testinstallationen entsteht daraus
-weiterhin keine Migrationspflicht.
+Backup und Restore führen Installationsraum, beide Hostnamen und
+Wildcard-Identität bereits im Sidecar-Manifest v2 und prüfen sie beim Restore
+konsistent. Ausgewählte IP-Bindings und Restricted-Network-Zustand folgen mit
+dem Restricted-Binding. Ein Restore-Test mit aktivem Portal bleibt Teil der
+Produktfreigabe.
 
 Die Operator-Strecke wird dafür inkrementell: Die Grundeinrichtung fordert
 Staff-A-Record und Wildcard-Challenge-CNAME an. Die spätere Einrichtung des
-eingeschränkten Zugangs erzeugt für dieselbe Installations-ID einen neuen, kurzlebigen
-Autorisierungsvorgang nur für den Portal-A-Record. Ein bereits verbrauchtes
-One-Time-Token wird nicht wiederverwendet; eine neue ACME-Registrierung oder ein
-zweiter Challenge-CNAME ist nicht erforderlich.
+eingeschränkten Zugangs erzeugt für dieselbe Installations-ID einen neuen,
+kurzlebigen Vorgang nur für den Portal-A-Record. Falls dafür ein echter
+Autorisierungsnachweis eingeführt wird, braucht er eine unabhängige Prüfung;
+der heutige unverifizierte Mail-Korrelationswert wird dafür nicht als Sicherheit
+angerechnet. Eine neue ACME-Registrierung oder ein zweiter Challenge-CNAME ist
+nicht erforderlich.
 
 ### 5.3 Eingeschränkte Netzwerkzone in v1
 
@@ -879,22 +879,23 @@ Gate würde fremdes Routing im Patientennetz ohnehin nicht sichtbar machen.
 
 ## 13. Umsetzungsblöcke
 
-**Gate 0 ist chronologisch zuerst:** Bevor eine Delivery-Bindung verändert oder
-Restricted-Network-UI gebaut wird, muss der F1-Machbarkeits-PoC auf den vorgesehenen
-Windows-/macOS- und Docker-Desktop-Versionen bestehen. Der TLS-Namensumbau kann
-parallel erfolgen, weil er ohne Portal-A-Record und Portal-Publish keine zweite
-Netzexposition erzeugt. Phase 0 wird dagegen erst auf einer durch Gate 0
-freigegebenen Plattform ausgerollt.
+**Zuerst wird der TLS-Namensumbau technisch abgeschlossen:** Dev-Proxy-Image,
+Wildcard-/Cutover-Smoke, genau eine Wildcard-Order und der abgewiesene Portal-SNI
+bilden das abgeschlossene Fundament. Erst danach werden Delivery-Bindings oder
+Restricted-Network-UI verändert. Vor deren Ausrollung muss zusätzlich Gate 0,
+der F1-Machbarkeits-PoC auf den vorgesehenen Windows-/macOS- und
+Docker-Desktop-Versionen, bestanden sein.
 
 1. **F1-Machbarkeits-PoC:** zwei explizite Host-IP-Bindings auf Port 443,
    Defender beziehungsweise `pf`, benötigte Elevation, Firewall-Rollback und
    Black-Box-Scan aus beiden Netzen; außerdem Reboot, Adressverlust, IPv6 und
    Weak-Host-Verhalten. Bei Fehlschlag kein Portal auf dieser Plattform und
    separate Architekturentscheidung statt stillen Edge-Proxy-Fallbacks.
-2. **TLS-Vertrag, parallel möglich:** State, Operator-Mail, Caddy-Generator,
-   Backup-Sidecar und Labels wie in §5.2; nur Wildcard-ACME-Orders; Staff-A und
-   Challenge-CNAME bei Grundeinrichtung; Portal-A erst beim Restricted-Binding, ohne
-   Zertifikatsrenew.
+2. **TLS-Vertrag, umgesetzt:** State, Operator-Mail, Caddy-Generator,
+   Backup-Sidecar und Labels wie in §5.2; genau eine Wildcard-ACME-Order; Staff-A
+   und Challenge-CNAME bei Grundeinrichtung; Portal-A erst beim
+   Restricted-Binding, ohne Zertifikatsrenew. Pebble prüft Staff positiv sowie
+   Portal-SNI und unbekannte Wildcard-Hosts negativ.
 3. **Phase 0 nach bestandenem Gate 0:** alle Delivery-Publishes von
    IPv4-/IPv6-Wildcard-Adressen auf explizite Staff-IP beziehungsweise Loopback
    umstellen; Docker-Statusvertrag von reinen Portnummern auf vollständige
@@ -927,7 +928,7 @@ freigegebenen Plattform ausgerollt.
    Integrationstests, Zwei-NIC- und Same-NIC/Warnpfad, Docker-Port-Audit,
    Parserfälle für explizite sowie globale IPv4-/IPv6-Bindings, IPv4/IPv6,
    Reboot und Docker-Desktop-Neustart, Firewall-/Elevation-Rollback,
-   ACME-Staging-Orders, Restore mit angewendetem Restricted-Binding, getrennte Rate-Limits für
+   manuelle ACME-Staging-Abnahme vor Releases, Restore mit angewendetem Restricted-Binding, getrennte Rate-Limits für
    mehrere Client-IPs samt Spoofing-Negativtest, Container-/Egress-Härtung,
    Routenkatalog-Negativtest, NIC-Drift, Apply-Rollback und Entfernen des
    Bindings.
@@ -936,8 +937,6 @@ freigegebenen Plattform ausgerollt.
 
 Offen vor Implementierungsbeginn:
 
-- Erweiterung der Operator-Mail-/Token-Strecke um zwei A-Records und den
-  installationsbezogenen Wildcard-Namen;
 - vollständige API-Positivliste des Portals;
 - unterstützte Windows-/macOS- und Docker-Desktop-Mindestversionen;
 - F1-PoC: Compose-Host-IP **und** Host-Firewall **und** externer Zwei-NIC-Scan

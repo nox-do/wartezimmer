@@ -48,6 +48,10 @@ export const TLS_ENV_KEYS = [
   'TLS_MODE',
   'TLS_INSTALLATION_ID',
   'TLS_HOSTNAME',
+  'TLS_INSTALLATION_DOMAIN',
+  'TLS_STAFF_HOSTNAME',
+  'TLS_PORTAL_HOSTNAME',
+  'TLS_WILDCARD_CERTIFICATE_NAME',
   'TLS_LAN_IP',
   'TLS_TOKEN_CONSUMED',
   'TLS_APPLY_READY',
@@ -125,7 +129,16 @@ export class TlsCertificateError extends SetupApiValidationError {
 }
 
 export type TlsTransitionEvent =
-  | { type: 'prepare-started'; mode: TlsMode; hostname: string; installationId: string }
+  | {
+      type: 'prepare-started';
+      mode: TlsMode;
+      hostname: string;
+      installationId: string;
+      installationDomain?: string | null;
+      staffHostname?: string | null;
+      portalHostname?: string | null;
+      wildcardCertificateName?: string | null;
+    }
   | { type: 'prepared' }
   | { type: 'dns-verified' }
   | { type: 'certificate-started' }
@@ -141,6 +154,10 @@ export function emptyTlsStatus(): TlsStatus {
     state: 'off',
     mode: null,
     hostname: null,
+    installationDomain: null,
+    staffHostname: null,
+    portalHostname: null,
+    wildcardCertificateName: null,
     installationId: null,
     tokenConsumed: false,
     applyReady: false,
@@ -167,6 +184,10 @@ export function transitionTlsStatus(status: TlsStatus, event: TlsTransitionEvent
         state: 'preparing',
         mode: event.mode,
         hostname: event.hostname,
+        installationDomain: event.installationDomain ?? null,
+        staffHostname: event.staffHostname ?? event.hostname,
+        portalHostname: event.portalHostname ?? null,
+        wildcardCertificateName: event.wildcardCertificateName ?? null,
         installationId: event.installationId,
       };
     case 'prepared':
@@ -254,10 +275,16 @@ export function readTlsStatus(env: Map<string, string>): TlsStatus {
     state === 'error' &&
     !cutoverApplied &&
     Boolean(errorClass && PRE_CUTOVER_DNS_WAIT_CLASSES.has(errorClass));
+  const legacyHostname = env.get('TLS_HOSTNAME')?.trim() || null;
+  const staffHostname = env.get('TLS_STAFF_HOSTNAME')?.trim() || legacyHostname;
   return {
     state: dnsWait ? 'awaiting-operator-dns' : state,
     mode,
-    hostname: env.get('TLS_HOSTNAME')?.trim() || null,
+    hostname: staffHostname,
+    installationDomain: env.get('TLS_INSTALLATION_DOMAIN')?.trim() || null,
+    staffHostname,
+    portalHostname: env.get('TLS_PORTAL_HOSTNAME')?.trim() || null,
+    wildcardCertificateName: env.get('TLS_WILDCARD_CERTIFICATE_NAME')?.trim() || null,
     installationId: env.get('TLS_INSTALLATION_ID')?.trim() || null,
     tokenConsumed: readBoolean(env, 'TLS_TOKEN_CONSUMED'),
     applyReady: readBoolean(env, 'TLS_APPLY_READY'),
@@ -275,7 +302,11 @@ function statusEnv(status: TlsStatus): Record<string, string> {
     TLS_STATE: status.state,
     TLS_MODE: status.mode ?? '',
     TLS_INSTALLATION_ID: status.installationId ?? '',
-    TLS_HOSTNAME: status.hostname ?? '',
+    TLS_HOSTNAME: status.staffHostname ?? status.hostname ?? '',
+    TLS_INSTALLATION_DOMAIN: status.installationDomain ?? '',
+    TLS_STAFF_HOSTNAME: status.staffHostname ?? status.hostname ?? '',
+    TLS_PORTAL_HOSTNAME: status.portalHostname ?? '',
+    TLS_WILDCARD_CERTIFICATE_NAME: status.wildcardCertificateName ?? '',
     TLS_TOKEN_CONSUMED: String(status.tokenConsumed),
     TLS_APPLY_READY: String(status.applyReady),
     TLS_CUTOVER_APPLIED: String(status.cutoverApplied),
@@ -316,7 +347,7 @@ function createOneTimeToken(randomBytes = crypto.randomBytes): string {
 
 const DNS_HOSTNAME =
   /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
-const RESERVED_OPERATOR_LABELS = new Set(['lan', 'acme', 'www', 'portal', 'mail']);
+const RESERVED_OPERATOR_LABELS = new Set(['lan', 'acme', 'www', 'staff', 'portal', 'mail']);
 
 export function normalizeTlsHostname(value: string): string {
   const hostname = value.trim().toLowerCase().replace(/\.$/, '');
@@ -324,6 +355,61 @@ export function normalizeTlsHostname(value: string): string {
     throw new SetupApiValidationError('hostname muss ein gültiger DNS-Hostname ohne Umlaute sein.');
   }
   return hostname;
+}
+
+type TlsIdentity = {
+  hostname: string;
+  installationDomain: string | null;
+  staffHostname: string;
+  portalHostname: string | null;
+  wildcardCertificateName: string | null;
+};
+
+function buildTlsIdentity(input: {
+  mode: TlsMode;
+  requestedHostname?: string;
+  installationId: string;
+  operatorZone: string;
+}): TlsIdentity {
+  if (input.mode === 'custom') {
+    const staffHostname = normalizeTlsHostname(input.requestedHostname || '');
+    if (staffHostname === input.operatorZone || staffHostname.endsWith(`.${input.operatorZone}`)) {
+      throw new SetupApiValidationError(
+        'Custom TLS erfordert eine eigene Domain außerhalb der Betreiber-Zone.',
+      );
+    }
+    return {
+      hostname: staffHostname,
+      installationDomain: null,
+      staffHostname,
+      portalHostname: null,
+      wildcardCertificateName: null,
+    };
+  }
+
+  const installationDomain = normalizeTlsHostname(
+    input.requestedHostname || `${input.installationId.slice(0, 6)}.${input.operatorZone}`,
+  );
+  const suffix = `.${input.operatorZone}`;
+  const label = installationDomain.endsWith(suffix)
+    ? installationDomain.slice(0, -suffix.length)
+    : '';
+  if (!label || label.includes('.')) {
+    throw new SetupApiValidationError(
+      `Managed TLS erfordert genau ein DNS-Label unter ${input.operatorZone}.`,
+    );
+  }
+  if (RESERVED_OPERATOR_LABELS.has(label)) {
+    throw new SetupApiValidationError(`Das DNS-Label ${label} ist reserviert.`);
+  }
+  const staffHostname = `staff.${installationDomain}`;
+  return {
+    hostname: staffHostname,
+    installationDomain,
+    staffHostname,
+    portalHostname: `portal.${installationDomain}`,
+    wildcardCertificateName: `*.${installationDomain}`,
+  };
 }
 
 export function requirePrivateLanIpv4(value: string): string {
@@ -475,7 +561,11 @@ export type TlsLocalCheckRetryOptions = {
 
 export type TlsRuntimeDependencies = {
   registerAcmeDns?: (serverUrl: string) => Promise<AcmeDnsRegistration>;
-  verifyDns?: (hostname: string, mode: TlsMode) => Promise<TlsDnsObservation>;
+  verifyDns?: (
+    hostname: string,
+    mode: TlsMode,
+    managedInstallationDomain?: string,
+  ) => Promise<TlsDnsObservation>;
   createDnsResolver?: () => DnsResolverLike;
   reloadProxy?: (ctx: SetupContext) => Promise<void>;
   runLocalChecks?: (
@@ -542,6 +632,7 @@ async function verifyDnsDefault(
   mode: TlsMode,
   servers: string[],
   createResolver?: () => DnsResolverLike,
+  managedInstallationDomain?: string,
 ): Promise<TlsDnsObservation> {
   const resolver = createResolver?.() ?? new Resolver();
   resolver.setServers(servers);
@@ -551,7 +642,9 @@ async function verifyDnsDefault(
   const wildcard = dnsAddressSetsEqual(aRecords, probeRecords);
   const cnameRecords =
     mode === 'managed'
-      ? await resolver.resolveCname(`_acme-challenge.${hostname}`).catch(() => [])
+      ? await resolver
+          .resolveCname(`_acme-challenge.${managedInstallationDomain || hostname}`)
+          .catch(() => [])
       : [];
   return { aRecords, cnameRecords, wildcard };
 }
@@ -755,13 +848,13 @@ function fakeRuntimeEnabled(env: Map<string, string>): boolean {
   return readBoolean(env, 'TLS_RUNTIME_FAKE');
 }
 
-function fakeCertificate(hostname: string): TlsCertificateStatus {
+function fakeCertificate(certificateName: string): TlsCertificateStatus {
   const now = Date.now();
   return {
     issuer: 'Praxis Flow TLS Fake (kein Produktzertifikat)',
     notBefore: new Date(now - 60_000).toISOString(),
     notAfter: new Date(now + 30 * 86_400_000).toISOString(),
-    names: [hostname],
+    names: [certificateName],
   };
 }
 
@@ -773,10 +866,11 @@ async function runChecks(
   env: Map<string, string>,
   hostname: string,
   deps: TlsRuntimeDependencies,
+  certificateName = hostname,
 ): Promise<{ certificate: TlsCertificateStatus; checks: TlsLocalCheck[] }> {
   if (fakeRuntimeEnabled(env)) {
     return {
-      certificate: fakeCertificate(hostname),
+      certificate: fakeCertificate(certificateName),
       checks: [
         { id: 'certificate', ok: true, message: 'Fake: Zertifikat geprüft' },
         { id: 'tcp-443', ok: true, message: 'Fake: Port 443 geprüft' },
@@ -805,9 +899,10 @@ async function runChecksUntilReady(
   env: Map<string, string>,
   hostname: string,
   deps: TlsRuntimeDependencies,
+  certificateName = hostname,
 ): Promise<{ certificate: TlsCertificateStatus; checks: TlsLocalCheck[] }> {
   if (fakeRuntimeEnabled(env)) {
-    return runChecks(env, hostname, deps);
+    return runChecks(env, hostname, deps, certificateName);
   }
   const retry = deps.localCheckRetry ?? {};
   const intervalMs = retry.intervalMs ?? TLS_LOCAL_CHECK_RETRY_INTERVAL_MS;
@@ -820,7 +915,7 @@ async function runChecksUntilReady(
   let attempts = 0;
   while (true) {
     try {
-      return await runChecks(env, hostname, deps);
+      return await runChecks(env, hostname, deps, certificateName);
     } catch (error) {
       lastError = error;
       if (!isRetryableLocalCheckError(error)) {
@@ -846,11 +941,19 @@ function buildOperatorRequest(
   oneTimeToken: string,
   cnameTarget: string,
 ): TlsOperatorRequest {
+  const staffHostname = status.staffHostname ?? status.hostname!;
+  const installationDomain = status.installationDomain ?? staffHostname;
+  const staffARecord = { name: staffHostname, value: lanIp };
   return {
     installationId: status.installationId!,
     oneTimeToken,
-    aRecord: { name: status.hostname!, value: lanIp },
-    acmeCname: { name: `_acme-challenge.${status.hostname}`, value: cnameTarget },
+    aRecord: staffARecord,
+    staffARecord,
+    acmeCname: { name: `_acme-challenge.${installationDomain}`, value: cnameTarget },
+    installationDomain,
+    staffHostname,
+    portalHostname: status.portalHostname ?? undefined,
+    wildcardCertificateName: status.wildcardCertificateName ?? undefined,
   };
 }
 
@@ -868,9 +971,14 @@ export async function prepareHostTls(
   const lanIp = requirePrivateLanIpv4(input.lanIp);
 
   if (existing.state !== 'off') {
+    const requestedIdentity = input.hostname ? normalizeTlsHostname(input.hostname) : null;
+    const existingRequestedIdentity =
+      existing.mode === 'managed'
+        ? (existing.installationDomain ?? existing.hostname)
+        : existing.hostname;
     if (
       existing.mode !== input.mode ||
-      (input.hostname && existing.hostname !== normalizeTlsHostname(input.hostname))
+      (requestedIdentity && existingRequestedIdentity !== requestedIdentity)
     ) {
       throw new SetupApiValidationError(
         'HTTPS ist bereits mit einer anderen Identität vorbereitet.',
@@ -895,29 +1003,17 @@ export async function prepareHostTls(
   const zone = normalizeTlsHostname(
     env.get('TLS_OPERATOR_ZONE')?.trim() || TLS_OPERATOR_ZONE_DEFAULT,
   );
-  const hostname = normalizeTlsHostname(
-    input.hostname || (input.mode === 'managed' ? `${installationId.slice(0, 6)}.${zone}` : ''),
-  );
-  if (input.mode === 'managed') {
-    const suffix = `.${zone}`;
-    const label = hostname.endsWith(suffix) ? hostname.slice(0, -suffix.length) : '';
-    if (!label || label.includes('.')) {
-      throw new SetupApiValidationError(`Managed TLS erfordert genau ein DNS-Label unter ${zone}.`);
-    }
-    if (RESERVED_OPERATOR_LABELS.has(label)) {
-      throw new SetupApiValidationError(`Das DNS-Label ${label} ist reserviert.`);
-    }
-  }
-  if (input.mode === 'custom' && (hostname === zone || hostname.endsWith(`.${zone}`))) {
-    throw new SetupApiValidationError(
-      'Custom TLS erfordert eine eigene Domain außerhalb der Betreiber-Zone.',
-    );
-  }
+  const identity = buildTlsIdentity({
+    mode: input.mode,
+    requestedHostname: input.hostname,
+    installationId,
+    operatorZone: zone,
+  });
 
   let status = transitionTlsStatus(existing, {
     type: 'prepare-started',
     mode: input.mode,
-    hostname,
+    ...identity,
     installationId,
   });
   persistStatus(ctx, status, { TLS_LAN_IP: lanIp, ...buildProxyTlsEnvUpdates(ctx.home, 443) });
@@ -980,8 +1076,9 @@ export async function verifyHostTlsDns(
   try {
     observation = await (
       deps.verifyDns ??
-      ((name, mode) => verifyDnsDefault(name, mode, resolverServers, deps.createDnsResolver))
-    )(status.hostname, status.mode);
+      ((name, mode, installationDomain) =>
+        verifyDnsDefault(name, mode, resolverServers, deps.createDnsResolver, installationDomain))
+    )(status.hostname, status.mode, status.installationDomain ?? undefined);
   } catch (error) {
     observation = {
       aRecords: [],
@@ -1073,8 +1170,18 @@ async function prepareRuntimeAndCheck(
   const envAfter = readEnvMap(envPathOf(ctx));
   const checked =
     options?.waitUntilReady === false
-      ? await runChecks(envAfter, status.hostname!, deps)
-      : await runChecksUntilReady(envAfter, status.hostname!, deps);
+      ? await runChecks(
+          envAfter,
+          status.hostname!,
+          deps,
+          status.wildcardCertificateName ?? status.hostname!,
+        )
+      : await runChecksUntilReady(
+          envAfter,
+          status.hostname!,
+          deps,
+          status.wildcardCertificateName ?? status.hostname!,
+        );
   if (!allChecksPass(checked.checks)) {
     throw new TlsRuntimeUnavailableError('Lokale TLS-Prüfungen sind nicht vollständig grün.');
   }

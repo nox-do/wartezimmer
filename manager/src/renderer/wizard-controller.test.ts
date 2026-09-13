@@ -208,7 +208,11 @@ test('goNext prepares TLS after a confirmed lease and stays on step 6', async ()
           tls: {
             state: 'awaiting-operator-dns',
             mode: 'managed',
-            hostname: '7fk3m2.lan.notaus.de',
+            hostname: 'staff.7fk3m2.lan.notaus.de',
+            installationDomain: '7fk3m2.lan.notaus.de',
+            staffHostname: 'staff.7fk3m2.lan.notaus.de',
+            portalHostname: 'portal.7fk3m2.lan.notaus.de',
+            wildcardCertificateName: '*.7fk3m2.lan.notaus.de',
             installationId: '7fk3m2q9',
             tokenConsumed: false,
             applyReady: false,
@@ -220,7 +224,7 @@ test('goNext prepares TLS after a confirmed lease and stays on step 6', async ()
           operatorRequest: {
             installationId: '7fk3m2q9',
             oneTimeToken: 'once',
-            aRecord: { name: '7fk3m2.lan.notaus.de', value: '192.168.1.10' },
+            aRecord: { name: 'staff.7fk3m2.lan.notaus.de', value: '192.168.1.10' },
             acmeCname: {
               name: '_acme-challenge.7fk3m2.lan.notaus.de',
               value: 'uuid.auth.acme-dns.io',
@@ -260,7 +264,11 @@ test('goNext hydrates the operator token when TLS is already prepared', async ()
           tls: {
             state: 'awaiting-operator-dns',
             mode: 'managed',
-            hostname: '7fk3m2.lan.notaus.de',
+            hostname: 'staff.7fk3m2.lan.notaus.de',
+            installationDomain: '7fk3m2.lan.notaus.de',
+            staffHostname: 'staff.7fk3m2.lan.notaus.de',
+            portalHostname: 'portal.7fk3m2.lan.notaus.de',
+            wildcardCertificateName: '*.7fk3m2.lan.notaus.de',
             installationId: '7fk3m2q9',
             tokenConsumed: false,
             applyReady: false,
@@ -272,7 +280,7 @@ test('goNext hydrates the operator token when TLS is already prepared', async ()
           operatorRequest: {
             installationId: '7fk3m2q9',
             oneTimeToken: 'replayed',
-            aRecord: { name: '7fk3m2.lan.notaus.de', value: '192.168.1.10' },
+            aRecord: { name: 'staff.7fk3m2.lan.notaus.de', value: '192.168.1.10' },
             acmeCname: {
               name: '_acme-challenge.7fk3m2.lan.notaus.de',
               value: 'uuid.auth.acme-dns.io',
@@ -293,7 +301,11 @@ test('goNext hydrates the operator token when TLS is already prepared', async ()
       tls: {
         state: 'awaiting-operator-dns',
         mode: 'managed',
-        hostname: '7fk3m2.lan.notaus.de',
+        hostname: 'staff.7fk3m2.lan.notaus.de',
+        installationDomain: '7fk3m2.lan.notaus.de',
+        staffHostname: 'staff.7fk3m2.lan.notaus.de',
+        portalHostname: 'portal.7fk3m2.lan.notaus.de',
+        wildcardCertificateName: '*.7fk3m2.lan.notaus.de',
         installationId: '7fk3m2q9',
         tokenConsumed: false,
         applyReady: false,

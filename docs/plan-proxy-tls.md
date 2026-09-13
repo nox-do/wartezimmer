@@ -1,8 +1,20 @@
 # Plan: Vertrauenswürdiges TLS im Praxis-LAN
 
-Stand: 2026-08-27
+Stand: 2026-09-13
 
-Status: **Produkt umgesetzt (Manager/Setup).** Ops-Ist: [`operations/tls.md`](operations/tls.md). Dieses Dokument bleibt Arbeits-/Architekturquelle bis die Ops-Doku voll ist — kein „Kunden-Test“-Vorbehalt mehr.
+Status: **Historischer Ausgangsplan; Produkt umgesetzt.** Normativer Ops-Ist:
+[`operations/tls.md`](operations/tls.md). Der aktuelle Managed-Namensvertrag und
+die Reihenfolge vor dem Restricted-/Portal-Binding stehen in
+[`plan-portal-lan-isolation.md`](plan-portal-lan-isolation.md#52-ein-wildcard-zertifikat-pro-installation).
+Die nachfolgenden Single-Hostname-Beispiele dokumentieren den früheren
+Ausgangspunkt und sind kein aktueller Implementierungsvertrag.
+
+Aktueller Managed-Vertrag: Installationsraum `<id>.<zone>`, Staff-A-Record für
+`staff.<raum>`, genau ein CNAME `_acme-challenge.<raum>` und genau eine
+ACME-Order für `*.<raum>`. Canonical ist `https://staff.<raum>`.
+`portal.<raum>` ist reserviert, besitzt noch keinen A-Record und wird wie jeder
+unbekannte Wildcard-Host von Caddy abgebrochen. Custom und Legacy bleiben beim
+einzelnen Exact-FQDN.
 
 HTTP-Proxy auf Port 80 ist Ist — [`delivery.md`](operations/delivery.md),
 [`runtime.md`](operations/runtime.md).
@@ -20,8 +32,10 @@ erhält per ACME DNS-01 ein öffentlich vertrauenswürdiges Zertifikat.
 
 Es gibt **kein Zentral-Produkt** (kein Installationsregister, keine API „Zentrale“).
 Betreiber der DNS-Zone und der ACME-Challenge-Infrastruktur ist der
-Produktbetreiber. Installations-ID und Einmal-Token erzeugt der **Manager während
-des Setups**.
+Produktbetreiber. Installations-ID und einen lokalen Mail-Korrelationswert
+erzeugt der **Manager während des Setups**. Dieser Wert wird im heutigen Stand
+nicht durch einen Betreiberdienst verifiziert und ist kein
+Authentifizierungsmerkmal.
 
 ```text
 Jetzt/Test:     7fk3m2.lan.notaus.de          (Testdomain, kein Produkt)
@@ -77,7 +91,7 @@ Caddy terminiert TLS und handelt `h2` aus; der Hop `proxy → app` bleibt HTTP/1
 | ------------------- | ---------------------------------------------------------------------------------------------------- |
 | **Betreiber**       | öffentliche DNS-Zone, A-Record je Installation, isolierte DNS-01-Berechtigung; kein Produkt-Register |
 | **Praxisserver**    | feste private IPv4, Praxis Flow und Caddy, lokaler Schlüssel und Zertifikats-State                   |
-| **Manager / Setup** | Installations-ID und Einmal-Token erzeugen, IPv4 bestätigen, Cutover, Diagnose                       |
+| **Manager / Setup** | Installations-ID und Mail-Korrelationswert erzeugen, IPv4 bestätigen, Cutover, Diagnose              |
 | **Client**          | normaler Browser, vorhandene DNS-Infrastruktur, HTTPS direkt zum Praxisserver im LAN                 |
 
 ```text
@@ -117,7 +131,9 @@ Anzeigename:      Praxis Dr. Meyer
 - ACME-Delegation hängt nicht am sichtbaren Namen. **Jetzt/PoC:** CNAME-Ziel kommt
   von `POST https://auth.acme-dns.io/register` (UUID-Subdomain). **Später/Produkt:**
   `{id}.auth.acme.praxis-flow.de`.
-- Die Aktivierung verwendet ein **separates starkes Einmal-Token** im Mailtext.
+- Die Aktivierung führt einen zufälligen Mail-Korrelationswert mit. Solange kein
+  Betreiberdienst ihn gegen eine unabhängige Quelle prüft, darf er nicht als
+  Einmal-Token oder Autorisierung dargestellt werden.
 - Der neutrale Default bleibt bei Praxisumbenennung stabil. Ein Wunsch-Label kann in
   CT-Logs erkennbar sein — deshalb ist der 6-Steller der Default.
 - Der Anzeigename kommt aus der Anwendung, nicht aus DNS.
@@ -133,8 +149,8 @@ Anzeigename:      Praxis Dr. Meyer
 
 Testdomain. Produkt später: `praxis-7fk3.lan.praxis-flow.de`.
 
-Der Manager erzeugt einen **kopierbaren Mailtext** (Betreff, Records, ID, Token,
-bestätigte LAN-IP). Die Praxis schickt ihn an den Betreiber. Der Betreiber legt
+Der Manager erzeugt einen **kopierbaren Mailtext** (Betreff, Records, ID,
+Korrelationswert, bestätigte LAN-IP). Die Praxis schickt ihn an den Betreiber. Der Betreiber legt
 A-Record und ACME-Challenge **manuell** an — das darf Tage dauern. Die Praxis muss
 keinen DNS-Anbieter kontaktieren. `verify-dns` / TLS-`apply` warten unter Netzwerk;
 der Rest der Installation (Vorschau, Host-Apply) läuft auf HTTP weiter.
@@ -235,7 +251,7 @@ Lab ohne öffentliche LE: Pebble/Staging. Erster PoC-Cutover gegen Let's Encrypt
 
 - aktuelle IPv4 und MAC-Adresse erkennen und anzeigen
 - Bestätigung einer festen IP / DHCP-Reservierung verlangen
-- Installations-ID und Einmal-Token erzeugen; **Mailtext** erzeugen (Copy / Senden an
+- Installations-ID und Mail-Korrelationswert erzeugen; **Mailtext** erzeugen (Copy / Senden an
   den Betreiber)
 - lokales Schlüsselpaar erzeugen
 - Zertifikat anfordern und automatisch erneuern
@@ -364,7 +380,7 @@ Gates nicht aus `PROXY_MODE` oder Zertifikatsmetadaten ab.
 ### Sequenz
 
 1. `prepare` nach festem Hostname (Namensmodus bekannt), spätestens wenn der
-   Mail-/PEM-Schritt den Assistenten verlässt. `tls-managed`: ID + Einmal-Token +
+   Mail-/PEM-Schritt den Assistenten verlässt. `tls-managed`: ID + lokaler Korrelationswert +
    Mailtext. `tls-custom`: ID, aber kein Token und kein ACME-Konto.
 2. Warten, bis der Betreiber den A-Record auf die **bestätigte** LAN-IP gesetzt hat.
    Kein Timeout.
@@ -377,8 +393,9 @@ Gates nicht aus `PROXY_MODE` oder Zertifikatsmetadaten ab.
    Port 80 nur 301, Secure-Cookies.
 6. Praxis bestätigt ein zweites LAN-Gerät (kein Server-Haken).
 
-Token-Verbrauch: nach erfolgreichem `obtain-certificate` (ACME-Konto / Creds liegen vor).
-Bis dahin darf die Mail-Wiederholung das Token noch zeigen. Kein zweites Token ohne
+Lebenszyklus des Korrelationswerts: Nach erfolgreichem `obtain-certificate`
+wird er lokal als verbraucht markiert und nicht mehr in der Mail-Wiederholung
+gezeigt. Das ist keine Bestätigung durch den Betreiber. Kein zweiter Wert ohne
 `reset-tls`.
 
 `tls-custom`: Manager-Main liest und prüft die PEM-Dateien bereits im Wizard und sendet
@@ -545,14 +562,17 @@ nicht Teil dieser Strecke.
 - kein Zwang, Entwicklung über Port 443 zu betreiben
 - keine TLS-State-Machine in `POST /host/network`
 
-## Pilot
+## Aktuelle Abnahme des TLS-Fundaments
 
-Hostname-Beispiel Test `7fk3m2.lan.notaus.de`. Keine Portweiterleitung. Caddy-State behalten.
-CAA, Uhrzeit, Outbound sind Pilot-Risiken.
+Installationsraum-Beispiel `7fk3m2.lan.notaus.de`, Staff-Origin
+`staff.7fk3m2.lan.notaus.de`. Keine Portweiterleitung. Caddy-State behalten.
+CAA, Uhrzeit und Outbound bleiben Betriebsrisiken.
 
-Erfolg: A-Record zeigt auf die LAN-IP, gültiges Zertifikat (ein Name, kein Portal-SAN),
-`h2`, SSE nicht am HTTP/1.1-Limit, Repair ohne Neuausstellung, Cutover mit
-HTTP→HTTPS-Redirect, zweites LAN-Gerät erreicht den Host.
+Erfolg: Staff-A-Record zeigt auf die LAN-IP, genau ein Challenge-CNAME und eine
+Pebble-Order erzeugen ein Zertifikat mit ausschließlich `*.7fk3m2.lan.notaus.de`.
+Staff liefert App, `h2` und SSE; Portal schafft den Wildcard-TLS-Handshake,
+erhält aber keine HTTP-Antwort. Cutover setzt Canonical und HTTP→HTTPS-Redirect
+auf Staff. Ein zweites LAN-Gerät erreicht den Staff-Host.
 Manager-Abnahme: [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md).
 
 ## Tests
@@ -560,12 +580,13 @@ Manager-Abnahme: [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md).
 Keine fortlaufenden produktiven Let's-Encrypt-Zertifikate.
 
 1. Unit/Fakes (Setup-Vertrag, Canonical, Forwarded-Header, `verify-dns`)
-2. Pebble, sobald Caddy startet (erster Cutover darf headless sein)
+2. Pebble für vorbereiteten Managed-Pfad und vollständigen Cutover; exakt eine
+   Wildcard-Order sowie Portal-Negativtest
 3. Staging manuell vor Releases
 4. Eine produktive Abnahme für einen Host `*.lan.notaus.de` (Testdomain). Produktzone
    später `*.lan.praxis-flow.de`.
 
-## Umsetzungsreihenfolge
+## Umsetzungsreihenfolge (historisches TLS-Fundament)
 
 1. Vertrag und Fakes (ID/Token, Hostname, Canonical-HTTPS, `verify-dns`)
 2. Setup-API (managed: `prepare` … `obtain-certificate` … `apply`; custom:
@@ -575,7 +596,9 @@ Keine fortlaufenden produktiven Let's-Encrypt-Zertifikate.
    [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md)
 5. Pilot
 6. Produkthärtung (Backup inkl. Caddy-State in `.pfbackup`, HSTS)
-7. Internet-Portal (eigener Host, eigenes Cert, Allow-VHost)
+7. Danach getrennt: explizites Staff-IP-Binding, erst anschließend
+   Restricted-IP und Portal-Listener; das bestehende Wildcard-Zertifikat wird
+   weiterverwendet
 
 ## Offene Entscheidungen
 

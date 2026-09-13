@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { TlsMode, TlsStatus } from '@praxis-flow/server-shared';
 
-export const GENERATED_CADDYFILE_MARKER = '# PRAXIS-FLOW-GENERATED LAN-TLS v1';
+export const GENERATED_CADDYFILE_MARKER = '# PRAXIS-FLOW-GENERATED LAN-TLS v2';
 
 export const PROXY_TLS_HOST_PATH_ENV_KEYS = [
   'PROXY_HTTPS_PORT',
@@ -93,9 +93,15 @@ export function buildProxyTlsEnvUpdates(
 
 export function writeSecretFileAtomically(filePath: string, content: string): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  const temporaryPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
-  fs.writeFileSync(temporaryPath, content, { encoding: 'utf8', mode: 0o600 });
-  fs.renameSync(temporaryPath, filePath);
+  if (fs.existsSync(filePath)) {
+    // Credentials and custom PEM files may already be individual Docker bind
+    // mounts. Keep their inode so the running container sees the new bytes.
+    fs.writeFileSync(filePath, content, { encoding: 'utf8', mode: 0o600 });
+  } else {
+    const temporaryPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+    fs.writeFileSync(temporaryPath, content, { encoding: 'utf8', mode: 0o600 });
+    fs.renameSync(temporaryPath, filePath);
+  }
   if (process.platform !== 'win32') {
     fs.chmodSync(filePath, 0o600);
   }
@@ -157,6 +163,31 @@ export function generateTlsCaddyfile(status: TlsStatus, env: Map<string, string>
   const httpBlock = status.cutoverApplied
     ? `:80 {\n\tredir https://${status.hostname}{uri} permanent\n}`
     : ':80 {\n\treverse_proxy app:8080\n}';
+  const staffHostname = status.staffHostname ?? status.hostname;
+  const managedWildcard =
+    status.mode === 'managed' ? (status.wildcardCertificateName ?? null) : null;
+  const siteAddress = managedWildcard ?? staffHostname;
+  const applicationHandlers = [
+    '\t@setupTlsSse path /__praxis-flow/setup/tls-sse',
+    '\thandle @setupTlsSse {',
+    '\t\theader Content-Type "text/event-stream; charset=utf-8"',
+    '\t\trespond "event: tick\\ndata: ok\\n\\n" 200',
+    '\t}',
+    '\thandle {',
+    '\t\treverse_proxy app:8080',
+    '\t}',
+  ];
+  const siteHandlers = managedWildcard
+    ? [
+        `\t@staff host ${staffHostname}`,
+        '\thandle @staff {',
+        ...applicationHandlers.map((line) => `\t${line}`),
+        '\t}',
+        '\thandle {',
+        '\t\tabort',
+        '\t}',
+      ]
+    : applicationHandlers;
   return [
     GENERATED_CADDYFILE_MARKER,
     '',
@@ -174,16 +205,9 @@ export function generateTlsCaddyfile(status: TlsStatus, env: Map<string, string>
     '\trespond /__praxis-flow/health "ok" 200',
     '}',
     '',
-    `${status.hostname} {`,
+    `${siteAddress} {`,
     tlsDirective(status.mode, env),
-    '\t@setupTlsSse path /__praxis-flow/setup/tls-sse',
-    '\thandle @setupTlsSse {',
-    '\t\theader Content-Type "text/event-stream; charset=utf-8"',
-    '\t\trespond "event: tick\\ndata: ok\\n\\n" 200',
-    '\t}',
-    '\thandle {',
-    '\t\treverse_proxy app:8080',
-    '\t}',
+    ...siteHandlers,
     '}',
     '',
   ].join('\n');
@@ -196,6 +220,12 @@ export function writeGeneratedTlsCaddyfile(
 ): string {
   const paths = ensureProxyTlsPaths(installHome);
   const content = generateTlsCaddyfile(status, env);
+  if (fs.existsSync(paths.caddyfile)) {
+    // Docker file bind-mounts keep referring to the original inode. Replacing the
+    // path via rename would leave a running Caddy container on the old config.
+    fs.writeFileSync(paths.caddyfile, content, 'utf8');
+    return paths.caddyfile;
+  }
   const temporaryPath = `${paths.caddyfile}.tmp-${process.pid}-${Date.now()}`;
   fs.writeFileSync(temporaryPath, content, 'utf8');
   fs.renameSync(temporaryPath, paths.caddyfile);

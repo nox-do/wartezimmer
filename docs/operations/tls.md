@@ -1,6 +1,6 @@
 # LAN-TLS (Produkt)
 
-Stand: 2026-08-31 · §1–10 ausgearbeitet (Ops-Ist LAN-TLS)
+Stand: 2026-09-13 · §1–10 ausgearbeitet (Ops-Ist LAN-TLS)
 
 **Scope:** Vertrauenswürdiges HTTPS im Praxis-LAN — Modell, Aktivierung, Betrieb, Grenzen.  
 **Ist:** Manager-Wizard (Schritt HTTPS) + Netzwerk-Tab; Setup-API `/api/setup/host/tls/*`; Proxy-Service mit Custom-Caddy-Image.
@@ -19,36 +19,50 @@ Verwandt: Runtime/Compose → [`runtime.md`](runtime.md) · Backup-Grenze → [`
 
 ## 1. Entscheidung (Produktmodell)
 
-Pro Installation ein **stabiler öffentlicher Hostname**. Sein A-Record zeigt auf die **feste private IPv4** des Praxisservers. Caddy holt (managed) ein öffentlich vertrauenswürdiges Zertifikat per **ACME DNS-01** — oder die Praxis liefert **Custom-PEM**.
+Pro Managed-Installation gibt es einen stabilen **Installationsraum**
+`<id>.<zone>`. Der aktive Staff-Hostname ist `staff.<installationsraum>`; sein
+A-Record zeigt auf die **feste private IPv4** des Praxisservers. Caddy holt
+ausschließlich `*.<installationsraum>` per **ACME DNS-01**. Der damit bereits
+abgedeckte Name `portal.<installationsraum>` bleibt ohne Restricted-Binding
+reserviert und am Proxy geschlossen. Custom TLS bleibt ein einzelner FQDN mit
+von der Praxis geliefertem PEM.
 
 ```text
 Browser (LAN) ── HTTPS/h2 ──► proxy:443 ── HTTP/1.1 ──► app:8080
 Browser (LAN) ── HTTP      ──► proxy:80  ── 301 → HTTPS   (nach Cutover)
 ```
 
-| Festlegung                       | Ist                                                                                                        |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Öffentlicher Name → private IPv4 | ja (A-Record öffentlich sichtbar, Ziel aus dem Internet nicht routbar)                                     |
-| Portfreigabe 443 ins Internet    | **nicht** nötig für LAN-Nutzung; Warnung wenn jemand weiterleitet                                          |
-| DNS-API / Installationsregister  | **nein** — Betreiber legt DNS manuell/zeitversetzt an                                                      |
-| Wer erzeugt ID + Einmal-Token    | **Manager/Setup** bei `tls/prepare`                                                                        |
-| Wer schreibt DNS                 | **Betreiber** (managed Zone) bzw. Praxis (eigene Domain); Mailtext aus dem Manager                         |
-| Router-DNS-Rebind                | Praxis richtet **gezielte** Ausnahme ein, falls der Router öffentliche Namen mit privaten Zielen blockiert |
-| Eigener Resolver von Praxis Flow | **nein**                                                                                                   |
-| TLS ohne HTTP-Proxy              | **nein** — Port 80 ist Voraussetzung (siehe §3)                                                            |
-| App terminiert TLS               | **nein** — nur Caddy/`proxy`                                                                               |
+| Festlegung                        | Ist                                                                                                        |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Öffentlicher Name → private IPv4  | ja (A-Record öffentlich sichtbar, Ziel aus dem Internet nicht routbar)                                     |
+| Portfreigabe 443 ins Internet     | **nicht** nötig für LAN-Nutzung; Warnung wenn jemand weiterleitet                                          |
+| DNS-API / Installationsregister   | **nein** — Betreiber legt DNS manuell/zeitversetzt an                                                      |
+| Wer erzeugt ID + Korrelationswert | **Manager/Setup** bei `tls/prepare`; derzeit keine Authentifizierung oder serverseitige Prüfung            |
+| Wer schreibt DNS                  | **Betreiber** (managed Zone) bzw. Praxis (eigene Domain); Mailtext aus dem Manager                         |
+| Router-DNS-Rebind                 | Praxis richtet **gezielte** Ausnahme ein, falls der Router öffentliche Namen mit privaten Zielen blockiert |
+| Eigener Resolver von Praxis Flow  | **nein**                                                                                                   |
+| TLS ohne HTTP-Proxy               | **nein** — Port 80 ist Voraussetzung (siehe §3)                                                            |
+| App terminiert TLS                | **nein** — nur Caddy/`proxy`                                                                               |
 
 **Zone heute (Code):** `TLS_OPERATOR_ZONE_DEFAULT = lan.notaus.de`, Betreiber-Mail `cert@notaus.de` (`packages/server-shared/src/setup-api.ts`). Das ist die **aktuelle Betreiber-/Testzone**, nicht die spätere Marken-Domain (`*.lan.praxis-flow.de` nur Zielbild in den Plänen).
 
 **Namenswahl (Manager, ein Schritt):**
 
-| Modus         | Ergebnis                                                                                 | Zertifikat                        |
-| ------------- | ---------------------------------------------------------------------------------------- | --------------------------------- |
-| Vorschlag     | 6-Zeichen-Label aus Installations-ID + `.<zone>`                                         | managed / ACME                    |
-| Eigenes Label | `label.<zone>` (RFC-1123-Label; reserviert u. a. `lan`, `acme`, `www`, `portal`, `mail`) | managed / ACME                    |
-| Eigene Domain | voller Hostname außerhalb der Betreiber-Zone                                             | **custom** / PEM, kein ACME-CNAME |
+| Modus         | Ergebnis                                                                                             | Zertifikat                        |
+| ------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------- |
+| Vorschlag     | Installationsraum aus 6-Zeichen-Label + `.<zone>`; Staff unter `staff.<raum>`                        | managed / ACME, nur `*.<raum>`    |
+| Eigenes Label | `label.<zone>` als Raum (RFC-1123; reserviert u. a. `staff`, `portal`, `lan`, `acme`, `www`, `mail`) | managed / ACME, nur `*.<raum>`    |
+| Eigene Domain | voller Hostname außerhalb der Betreiber-Zone                                                         | **custom** / PEM, kein ACME-CNAME |
 
-Installations-ID: zufällig, stabil, kein Geheimnis. Einmal-Token (stark): im Mailtext für den Betreiber und lokal unter `<install-home>/state/tls/operator-token` (nicht in der UI, nicht in `GET /status`). ACME-Delegation (CNAME auf acme-dns) hängt nicht am sichtbaren Label — PoC-Ziel aus `auth.acme-dns.io` `/register`.
+Installations-ID: zufällig, stabil, kein Geheimnis. Der heute als
+`oneTimeToken` bezeichnete Zufallswert wird im Mailtext mitgeführt und lokal
+unter `<install-home>/state/tls/operator-token` gespeichert (nicht in
+`GET /status`). Er wird von keinem Betreiberdienst entgegengenommen oder
+verifiziert und ist deshalb **derzeit kein Authentifizierungs- oder
+Autorisierungsmerkmal**. `tokenConsumed` beschreibt nur den lokalen
+Lebenszyklus der Mail-Wiederholung. ACME-Delegation:
+`_acme-challenge.<installationsraum>` zeigt per CNAME auf den acme-dns-Account.
+Es gibt keinen zusätzlichen Challenge-CNAME für `staff.` oder `portal.`.
 
 Warum HTTPS zusätzlich zur Vertraulichkeit: HTTP/2 über TLS umgeht Browser-Limits bei parallelen lang laufenden HTTP/1.1-Verbindungen (Queue-/Ops-SSE). Hop `proxy → app` bleibt HTTP/1.1.
 
@@ -59,11 +73,11 @@ Warum HTTPS zusätzlich zur Vertraulichkeit: HTTP/2 über TLS umgeht Browser-Lim
 | Rolle                                | Tut                                                                                                                                                         | Tut nicht                                                                           |
 | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | **Praxis / Praxis-IT**               | feste IPv4 oder DHCP-Reservierung; Rebind-Ausnahme; Mail an Betreiber (managed) bzw. A-Record + PEM (custom); nach Cutover Geräte-URLs/`CANONICAL_BASE_URL` | DNS-Zone des Betreibers pflegen; ACME-Credentials oder Private Keys in der UI sehen |
-| **Produktbetreiber**                 | Zone `lan.notaus.de` (heute); A- + CNAME-Einträge nach Mail; ACME-DNS-Infrastruktur                                                                         | Host vor Ort administrieren; automatische DNS-API ans Setup                         |
-| **Manager / Setup**                  | `prepare` (ID, Token, Hostname); Lease-Bestätigung; Mail-/PEM-Texte; `verify-dns`, Zertifikat, Cutover, Repair/Renew/Reset                                  | DNS schreiben; Wizard auf DNS-Warten blockieren                                     |
+| **Produktbetreiber**                 | Zone `lan.notaus.de` (heute); Staff-A-Record + Wildcard-Challenge-CNAME nach Mail; ACME-DNS-Infrastruktur                                                   | Portal-A-Record vor Restricted-Binding; Host vor Ort administrieren                 |
+| **Manager / Setup**                  | `prepare` (ID, Korrelationswert, Raum/Staff/Portal/Wildcard); Lease-Bestätigung; Mail-/PEM-Texte; `verify-dns`, Zertifikat, Cutover, Repair/Renew/Reset     | DNS schreiben; Portal-Listener vor Restricted-Binding öffnen                        |
 | **Client (Terminal/TV/MFA/Browser)** | normalen DNS + HTTPS zum Praxisserver im LAN                                                                                                                | Zertifikate installieren; Hosts-Datei im Happy Path                                 |
 
-**Happy Path (managed):** HTTP-Proxy **persistiert** (§3) → Name wählen → IPv4 bestätigen → Mail an `cert@notaus.de` → Assistent geht mit **HTTP** weiter → unter **Netzwerk** warten/`verify-dns` → Zertifikat → Cutover.  
+**Happy Path (managed):** HTTP-Proxy **persistiert** (§3) → Installationsraum wählen → IPv4 bestätigen → Mail mit Staff-A-Record und Wildcard-CNAME an `cert@notaus.de` → Assistent geht mit **HTTP** weiter → unter **Netzwerk** warten/`verify-dns` → Wildcard-Zertifikat → Cutover auf `https://staff.<raum>`.
 **Custom:** PEM stagen + A-Record bei der eigenen Domain → `verify-dns` (A) → Checks → Cutover (`tls-custom`).
 
 Detailstrecken UI/API: §4–5.
@@ -117,12 +131,12 @@ Persistenz ab `prepare`: `GET /host/status` → `tls` (`TlsStatus`). Offenes HTT
 
 Phasen: `offer` → `hostname` → `lease` → `mail` (`HTTPS_PHASES` / `wizard-flow.ts`).
 
-| Phase        | Inhalt                                                                                                                                                                                                                     |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **offer**    | Jetzt vorbereiten oder **später** → direkt Vorschau (Schritt 7), HTTP-only                                                                                                                                                 |
-| **hostname** | Vorschlag / eigenes Label / eigene Domain (§1); Validierung `tlsNameValid`                                                                                                                                                 |
-| **lease**    | feste IPv4 / DHCP-Reservierung bestätigen; blockiert bei `lanIpStale`                                                                                                                                                      |
-| **mail**     | Beim Eintritt: `prepare` (`tls/prepare`) — ID, Token, Hostname fest. Scheitert, wenn `.env` noch keinen aktiven Proxy hat (§3). Managed: Mail an `cert@notaus.de` bestätigen. Custom: PEM einlesen (`custom-certificate`). |
+| Phase        | Inhalt                                                                                                                                                                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **offer**    | Jetzt vorbereiten oder **später** → direkt Vorschau (Schritt 7), HTTP-only                                                                                                                                                                       |
+| **hostname** | Vorschlag / eigenes Label / eigene Domain (§1); Validierung `tlsNameValid`                                                                                                                                                                       |
+| **lease**    | feste IPv4 / DHCP-Reservierung bestätigen; blockiert bei `lanIpStale`                                                                                                                                                                            |
+| **mail**     | Beim Eintritt: `prepare` (`tls/prepare`) — ID, lokaler Korrelationswert und Hostname fest. Scheitert, wenn `.env` noch keinen aktiven Proxy hat (§3). Managed: Mail an `cert@notaus.de` bestätigen. Custom: PEM einlesen (`custom-certificate`). |
 
 Danach: Vorschau + Apply des **Stacks noch mit HTTP**-URLs. Hinweis: DNS/Zertifikat/Cutover folgen unter Netzwerk.
 
@@ -149,21 +163,24 @@ Einstieg auch nachträglich (Status/Wartung verweisen hierher, nicht zurück in 
 | Reset (nach Cutover)            | `tls/reset`                                   | **kein** HTTP-Rollback: Custom wirft; Managed stellt unter gleicher HTTPS-Identität neu aus                                           |
 | Erneuern                        | `tls/renew` (managed) bzw. PEM neu (custom)   | nach Cutover / Ablauf                                                                                                                 |
 
-Vor Cutover: Warnung **keine Portweiterleitung 80/443** (sonst ggf. Internet-Expose). Nach erfolgreichem Obtain: Token in Mail-Wiederholung nicht mehr; `applyReady` freigeben.
+Vor Cutover: Warnung **keine Portweiterleitung 80/443** (sonst ggf. Internet-Expose). Nach erfolgreichem Obtain: lokaler Korrelationswert in der Mail-Wiederholung nicht mehr anzeigen; `applyReady` freigeben.
 
 `POST /host/network` darf aktiven TLS-Mode nicht auf HTTP setzen (§3).
 
 ### 4.3 Managed vs. Custom
 
-|                 | Managed (Betreiber-Zone) | Custom (eigene Domain)             |
-| --------------- | ------------------------ | ---------------------------------- |
-| Namensmodus     | `generated` / `label`    | `domain`                           |
-| `tls.mode`      | `managed`                | `custom`                           |
-| Nach prepare    | Mail + A + ACME-CNAME    | PEM stagen + A bei Domain-Anbieter |
-| Nach grünem DNS | `obtain-certificate`     | `check-certificate`                |
-| ACME            | ja (DNS-01)              | nein                               |
+|                 | Managed (Betreiber-Zone)        | Custom (eigene Domain)             |
+| --------------- | ------------------------------- | ---------------------------------- |
+| Namensmodus     | `generated` / `label`           | `domain`                           |
+| `tls.mode`      | `managed`                       | `custom`                           |
+| Nach prepare    | Mail + Staff-A + Wildcard-CNAME | PEM stagen + A bei Domain-Anbieter |
+| Nach grünem DNS | `obtain-certificate`            | `check-certificate`                |
+| ACME            | ja (DNS-01)                     | nein                               |
 
-Hostname nach `prepare`/`apply` fest — Label-Wechsel ⇒ neue Strecke / ggf. Reset.
+Installationsraum und daraus abgeleitete Namen sind nach `prepare` fest —
+Label-Wechsel ⇒ neue Strecke / ggf. Reset. Der Managed-Proxy leitet nur den
+expliziten Matcher `staff.<raum>` zur App; andere Wildcard-Namen, insbesondere
+`portal.<raum>`, werden abgebrochen.
 
 ## 5. Setup-API (Vertrag)
 
@@ -172,19 +189,21 @@ Implementierung: `setup/src/host-tls.ts` (und Proxy-Helfer). Manager ruft nur ü
 
 ### 5.1 Routen
 
-| Route                              | Zweck                                                                                                        |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `POST /api/setup/host/tls/prepare` | ID, Token, Hostname fest; State auf Disk; Operator-Mail/Records. Gate: persistierter HTTP-Proxy              |
-| `POST …/tls/verify-dns`            | A-Record (managed + CNAME); custom nur A                                                                     |
-| `POST …/tls/obtain-certificate`    | managed: ACME DNS-01                                                                                         |
-| `POST …/tls/custom-certificate`    | PEM stagen (vor/bei Custom-Pfad)                                                                             |
-| `POST …/tls/check-certificate`     | custom: gestagtes PEM lokal prüfen                                                                           |
-| `POST …/tls/apply`                 | Cutover — schreibt u. a. `PROXY_MODE=tls-*`, `CANONICAL_BASE_URL=https://…`. Bei Fail: Retry derselben Route |
-| `POST …/tls/repair`                | `error`/`degraded` → Retry-State (nicht Apply-Fail)                                                          |
-| `POST …/tls/reset`                 | vor Cutover: Abbruch; nach Cutover: Custom gesperrt, Managed = Re-Issue gleiche ID                           |
-| `POST …/tls/renew`                 | Erneuerung (managed ACME bzw. neuer PEM-Pfad)                                                                |
+| Route                              | Zweck                                                                                                         |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `POST /api/setup/host/tls/prepare` | ID, Korrelationswert und Hostname fest; State auf Disk; Operator-Mail/Records. Gate: persistierter HTTP-Proxy |
+| `POST …/tls/verify-dns`            | A-Record (managed + CNAME); custom nur A                                                                      |
+| `POST …/tls/obtain-certificate`    | managed: ACME DNS-01                                                                                          |
+| `POST …/tls/custom-certificate`    | PEM stagen (vor/bei Custom-Pfad)                                                                              |
+| `POST …/tls/check-certificate`     | custom: gestagtes PEM lokal prüfen                                                                            |
+| `POST …/tls/apply`                 | Cutover — schreibt u. a. `PROXY_MODE=tls-*`, `CANONICAL_BASE_URL=https://…`. Bei Fail: Retry derselben Route  |
+| `POST …/tls/repair`                | `error`/`degraded` → Retry-State (nicht Apply-Fail)                                                           |
+| `POST …/tls/reset`                 | vor Cutover: Abbruch; nach Cutover: Custom gesperrt, Managed = Re-Issue gleiche ID                            |
+| `POST …/tls/renew`                 | Erneuerung (managed ACME bzw. neuer PEM-Pfad)                                                                 |
 
-`prepare`-Input: `{ mode: managed\|custom, hostname?, lanIp }`. Leeres managed-`hostname` → Setup mintet 6-Zeichen-Label.
+`prepare`-Input: `{ mode: managed\|custom, hostname?, lanIp }`. Im Managed-Modus
+bedeutet `hostname` den Installationsraum `<label>.<operator-zone>`; leer → Setup
+mintet ein 6-Zeichen-Label. Im Custom-Modus bleibt `hostname` der eine FQDN.
 
 ### 5.2 `TlsStatus` (in `GET /host/status`)
 
@@ -194,8 +213,12 @@ Kein Token, kein Private Key in der Status-Antwort.
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `state`                       | `off` \| `preparing` \| `awaiting-operator-dns` \| `dns-verified` \| `obtaining-certificate` \| `active` \| `degraded` \| `error` |
 | `mode`                        | `managed` \| `custom` \| `null`                                                                                                   |
-| `hostname` / `installationId` | fest nach prepare                                                                                                                 |
-| `tokenConsumed`               | Einmal-Token verbraucht (Mail-Replay ohne Secret)                                                                                 |
+| `hostname` / `installationId` | `hostname` bleibt Kompatibilitätsalias für den aktiven Staff-FQDN; ID fest nach prepare                                           |
+| `installationDomain`          | managed: `<label>.<operator-zone>`; custom/Legacy: `null`                                                                         |
+| `staffHostname`               | managed: `staff.<raum>`; custom: der einzelne FQDN                                                                                |
+| `portalHostname`              | managed: reserviertes `portal.<raum>`; noch keine Freigabe                                                                        |
+| `wildcardCertificateName`     | managed: einziger ACME-Bestellname `*.<raum>`                                                                                     |
+| `tokenConsumed`               | lokaler Korrelationswert nach erfolgreichem Obtain entfernt; keine Aussage über Betreiber-Authentifizierung                       |
 | `applyReady`                  | lokale Checks grün — Gate für Cutover, oft bei `state=dns-verified`                                                               |
 | `cutoverApplied`              | unterscheidet `error` vor vs. nach Cutover (nicht aus `PROXY_MODE` ableiten)                                                      |
 | `certificate`                 | issuer, notBefore/After, names — oder `null`                                                                                      |
@@ -258,18 +281,22 @@ Pfade: `resolveProxyTlsPaths` → `{installHome}/state/tls/`. **Nicht** in Git, 
 
 | Pfad                                           | Inhalt                                                                                                                                                   |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Caddyfile`                                    | generiert (`writeGeneratedTlsCaddyfile`, Marker `# PRAXIS-FLOW-GENERATED LAN-TLS v1`) — ersetzt den Stock-`proxy/Caddyfile`-Mount, sobald Overlay an ist |
+| `Caddyfile`                                    | generiert (`writeGeneratedTlsCaddyfile`, Marker `# PRAXIS-FLOW-GENERATED LAN-TLS v2`) — ersetzt den Stock-`proxy/Caddyfile`-Mount, sobald Overlay an ist |
 | `caddy-data/`, `caddy-config/`                 | Caddy ACME/Storage (`/data`, `/config`)                                                                                                                  |
 | `acme-dns.json`                                | ACME-DNS-Credentials (managed); Custom: leeres `{}` damit Docker die Datei nicht als Dir anlegt                                                          |
 | `certs/fullchain.pem`, `certs/private-key.pem` | Custom-PEM                                                                                                                                               |
-| `operator-token`                               | Einmal-Token (managed), Mode `0600`                                                                                                                      |
+| `operator-token`                               | lokaler Mail-Korrelationswert (managed), Mode `0600`; derzeit nicht extern verifiziert                                                                   |
 
-Compose bind-mountet über Host-Pfad-Env (`PROXY_CADDY_*_HOST_PATH`, `PROXY_ACME_DNS_CREDENTIALS_HOST_PATH`, `PROXY_CERTS_HOST_PATH`) — gesetzt bei `prepare` (`buildProxyTlsEnvUpdates`). Fehlende `:?`-Pfade → Compose startet nicht.
+Compose bind-mountet über Host-Pfad-Env (`PROXY_CADDY_*_HOST_PATH`, `PROXY_ACME_DNS_CREDENTIALS_HOST_PATH`, `PROXY_CERTS_HOST_PATH`) — gesetzt bei `prepare` (`buildProxyTlsEnvUpdates`). Fehlende `:?`-Pfade → Compose startet nicht. Bereits gemountete Einzeldateien werden beim Umschalten und Erneuern inode-erhaltend überschrieben; ein Rename würde im laufenden Container am alten Dateiinhalt hängen bleiben.
 
 ### 6.5 Generiertes Caddyfile (Verhalten)
 
-Vor Cutover: `:80` → `app:8080`; Hostname-Block mit TLS (ACME DNS-01 bzw. PEM) + lokaler Check-Pfad `/__praxis-flow/setup/tls-sse`.  
-Nach Cutover: `:80` → **301** auf `https://{hostname}{uri}`; App nur noch über 443.
+Vor Cutover: `:80` → `app:8080`; HTTPS-Block mit TLS (ACME DNS-01 bzw. PEM) + lokaler Check-Pfad `/__praxis-flow/setup/tls-sse`.
+Nach Cutover: `:80` → **301** auf den Staff-FQDN; App nur noch über 443.
+Managed ist der Caddy-Site-Name ausschließlich `*.<raum>`, damit keine zweite
+Exact-Name-Order entsteht. Ein expliziter Host-Matcher leitet nur
+`staff.<raum>` zur App; der Fallback `abort` hält `portal.<raum>` und unbekannte
+Wildcard-Namen geschlossen. Custom/Legacy bleibt ein Exact-FQDN.
 
 TLS-Status-Felder und Mode liegen parallel in `.env` (`TLS_*`, siehe §5). Overlay-Auswahl liest `TLS_STATE` / `PROXY_MODE`; Secrets liegen auf Disk unter `state/tls/`, nicht in der Status-API.
 
@@ -288,13 +315,13 @@ Nach erfolgreichem `tls/apply` ist HTTPS die Geräte-Identität. Fläche: **Netz
 
 ### 7.1 Was sich ändert
 
-| Vorher (HTTP)                 | Nachher                                                |
-| ----------------------------- | ------------------------------------------------------ |
-| `CANONICAL_BASE_URL=http://…` | `https://{hostname}` **ohne** `:443`                   |
-| `PROXY_MODE=http`             | `tls-managed` oder `tls-custom`                        |
-| `:80` → App                   | `:80` → **301** auf `https://{hostname}{uri}`          |
-| Geräte-/Portal-URLs HTTP      | nur noch `https://{hostname}` (Portal unter `/portal`) |
-| App im LAN ggf. `:8080`       | App nur Loopback hinter Proxy — Geräte nicht auf 8080  |
+| Vorher (HTTP)                 | Nachher                                                                     |
+| ----------------------------- | --------------------------------------------------------------------------- |
+| `CANONICAL_BASE_URL=http://…` | managed `https://staff.<raum>`; custom `https://{hostname}` **ohne** `:443` |
+| `PROXY_MODE=http`             | `tls-managed` oder `tls-custom`                                             |
+| `:80` → App                   | `:80` → **301** auf den aktiven Staff-FQDN                                  |
+| Geräte-/Portal-URLs HTTP      | Staff-FQDN (Portal-Vorschau weiter intern unter `/portal`)                  |
+| App im LAN ggf. `:8080`       | App nur Loopback hinter Proxy — Geräte nicht auf 8080                       |
 
 `TRUST_PROXY_HEADERS=true` nach Cutover. Sessions und Pairing sind ungültig (host-only Cookies, `SameSite=Strict`) — Terminal/TV/MFA **neu koppeln**, Browser-URLs aktualisieren.
 
@@ -317,19 +344,19 @@ Caddy renewt managed-Zertifikate im Normalfall **selbst**. Praxis Flow setzt kei
 
 UI-Copy: `tlsErrorCopy` (`tls-network-view-model.ts`). Rebind (Router filtert private A-Ziele) ist Diagnosehinweis an Praxis-IT, **keine** eigene `TlsErrorClass`.
 
-| Klasse       | Bedeutung                                      | typ. Maßnahme                                     |
-| ------------ | ---------------------------------------------- | ------------------------------------------------- |
-| `a-record`   | A-Record fehlt / zeigt nicht auf LAN-IP        | warten / Eintrag setzen                           |
-| `collision`  | A zeigt auf **andere** IP                      | Label/Mail prüfen                                 |
-| `dns-filter` | öffentlicher Resolver filtert private Ziel-IP  | Filter/Resolver in der Praxis                     |
-| `isolation`  | Client erreicht Server nicht (z. B. Gast-WLAN) | LAN: TCP 443 zum Host                             |
-| `firewall`   | Port 443 am Host nicht erreichbar              | Host-Firewall (z. B. Windows) für Caddy           |
-| `port-443`   | Port belegt                                    | anderen Dienst beenden                            |
-| `clock`      | Host-Uhr von CA abgelehnt                      | Zeit sync                                         |
-| `acme`       | Ausstellung/Challenge/Rate-Limit               | `repair`/`renew`; Token nicht neu anfordern       |
-| `cert-name`  | SAN ≠ Hostname                                 | vor Cutover: retry/`reset`; nach Cutover: `renew` |
+| Klasse       | Bedeutung                                      | typ. Maßnahme                                         |
+| ------------ | ---------------------------------------------- | ----------------------------------------------------- |
+| `a-record`   | A-Record fehlt / zeigt nicht auf LAN-IP        | warten / Eintrag setzen                               |
+| `collision`  | A zeigt auf **andere** IP                      | Label/Mail prüfen                                     |
+| `dns-filter` | öffentlicher Resolver filtert private Ziel-IP  | Filter/Resolver in der Praxis                         |
+| `isolation`  | Client erreicht Server nicht (z. B. Gast-WLAN) | LAN: TCP 443 zum Host                                 |
+| `firewall`   | Port 443 am Host nicht erreichbar              | Host-Firewall (z. B. Windows) für Caddy               |
+| `port-443`   | Port belegt                                    | anderen Dienst beenden                                |
+| `clock`      | Host-Uhr von CA abgelehnt                      | Zeit sync                                             |
+| `acme`       | Ausstellung/Challenge/Rate-Limit               | `repair`/`renew`; Korrelationswert nicht neu erzeugen |
+| `cert-name`  | SAN ≠ Hostname                                 | vor Cutover: retry/`reset`; nach Cutover: `renew`     |
 
-LAN-IP veraltet bei noch gültigem Cert: oft `degraded` — IP korrigieren bzw. Operator-Mail **ohne** neues Token (Delegation bleibt); Details UI Netzwerk.
+LAN-IP veraltet bei noch gültigem Cert: oft `degraded` — IP korrigieren bzw. Operator-Mail **ohne** neuen Korrelationswert (Delegation bleibt); Details UI Netzwerk.
 
 ### 7.4 Fallstricke
 
@@ -344,14 +371,20 @@ LAN-IP veraltet bei noch gültigem Cert: oft `degraded` — IP korrigieren bzw. 
 
 Kurz die TLS-Grenze; Tiefe (Export-Allowlist, Cutover mit Update, Manager-Wizard): [`backup.md`](backup.md). Code: `packages/server-shared/src/tls-backup.ts`, `setup/src/tls-backup-sidecar.ts`.
 
-### 8.1 Zwei Artefakte (v1)
+### 8.1 Zwei Artefakte
 
-| Artefakt                                  | Enthält TLS?                                                                                                   | Wann                                                        |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `.pfbackup`                               | **keinen** Caddy-/ACME-/PEM-State unter `state/tls/`                                                           | immer Settings-Backup                                       |
-| Sidecar `praxis-flow-tls-<timestamp>.tgz` | `caddy-data/`, `caddy-config/`, `acme-dns.json`, `certs/`, plus `manifest.json` (`installationId`, `hostname`) | sobald `tls.state ≠ off` (ab `prepare`, nicht erst Cutover) |
+| Artefakt                                  | Enthält TLS?                                                                                               | Wann                                                        |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `.pfbackup`                               | **keinen** Caddy-/ACME-/PEM-State unter `state/tls/`                                                       | immer Settings-Backup                                       |
+| Sidecar `praxis-flow-tls-<timestamp>.tgz` | `caddy-data/`, `caddy-config/`, `acme-dns.json`, `certs/`, plus Manifest v2 mit ID und TLS-Namensidentität | sobald `tls.state ≠ off` (ab `prepare`, nicht erst Cutover) |
 
-`.pfbackup` kann trotzdem nicht-geheime Marker tragen (`TLS_STATE`, `TLS_HOSTNAME`, `TLS_INSTALLATION_ID`) und nach Cutover `PROXY_MODE=tls-*` / `CANONICAL_BASE_URL=https://…`. Generiertes Caddyfile und `operator-token` sind **nicht** im Sidecar — nach Restore regeneriert Setup / Token bleibt Einmal-Secret.
+`.pfbackup` kann trotzdem nicht-geheime Marker tragen (`TLS_STATE`,
+`TLS_HOSTNAME`, `TLS_INSTALLATION_ID` und bei Managed die vier Felder für Raum,
+Staff, Portal und Wildcard) und nach Cutover `PROXY_MODE=tls-*` /
+`CANONICAL_BASE_URL=https://…`. Generiertes Caddyfile und `operator-token` sind
+**nicht** im Sidecar — nach Restore regeneriert Setup den Laufzeitzustand; der
+lokale Mail-Korrelationswert wird nicht restauriert. Sidecar-Manifeste v1
+bleiben lesbar; neue Sicherungen schreiben v2.
 
 Gleicher Timestamp wie die `.pfbackup`-Datei; Ablage im selben Backup-Ordner. Electron-Main findet Geschwisterdatei bzw. zweiten Dateidialog; Setup bekommt nur `tlsSidecarBase64` — **keinen** Host-Pfad.
 
@@ -361,11 +394,13 @@ Gleicher Timestamp wie die `.pfbackup`-Datei; Ablage im selben Backup-Ordner. El
 
 | Lage                                                                       | Restore                                                                       |
 | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| aktives HTTPS, Sidecar fehlt oder ID/Hostname mismatch                     | **abgelehnt** (`restoreSupported = false`) — sonst Geräte auf https ohne Cert |
+| aktives HTTPS, Sidecar fehlt oder TLS-Namensidentität stimmt nicht überein | **abgelehnt** (`restoreSupported = false`) — sonst Geräte auf https ohne Cert |
 | nur vorbereitet (`TLS_STATE` prepared, Canonical noch HTTP), Sidecar fehlt | **erlaubt** mit Warnung; Vorbereitung wird verworfen (`off`), HTTP bleibt     |
 | Metadaten widersprüchlich (z. B. `active` ohne HTTPS-Canonical)            | **abgelehnt**                                                                 |
 
-Match: `installationId` + Hostname in Backup-`.env` und Sidecar-Manifest müssen übereinstimmen und nicht leer sein.
+Match: `installationId` + Staff-Kompatibilitätshostname müssen übereinstimmen
+und nicht leer sein. Sobald Managed-v2-Felder vorhanden sind, müssen außerdem
+Installationsraum, Staff-, Portal- und Wildcard-Name vollständig übereinstimmen.
 
 ### 8.3 v2
 
@@ -377,7 +412,13 @@ Produkt-Stack enthält **nie** Pebble / Lab-acme-dns / CoreDNS (`COMPOSE_TLS_LAB
 
 - Env: `TLS_ACME_DIRECTORY=pebble` (+ typ. Lab-URLs)
 - Compose: `docker-compose.tls-lab.yml` + `docker-compose.tls-lab-proxy.yml` — nur non-Delivery und nur wenn TLS-Overlay an (§6)
-- Doku/Smoke: [`../archive/tls-lab.md`](../archive/tls-lab.md), `scripts/smoke-tls-lab.mjs`
+- Doku/Smokes: [`../archive/tls-lab.md`](../archive/tls-lab.md),
+  `scripts/smoke-tls-managed.mjs` und `scripts/smoke-tls-cutover.mjs`. Beide
+  prüfen genau eine Pebble-Order und als einzigen Zertifikatsnamen `*.<raum>`.
+  Die Lab-Zone enthält nur den Staff-A-Record und
+  `_acme-challenge.<raum>` als CNAME; `portal.<raum>` hat keinen A-Record.
+  Der Portal-SNI muss trotzdem den Wildcard-TLS-Handshake schaffen und wird
+  anschließend ohne HTTP-Antwort abgebrochen.
 
 Gateway/Captive/Internet-Portal sind **andere** Themen → [`integrations.md`](integrations.md), nicht LAN-TLS.
 

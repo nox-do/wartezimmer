@@ -144,7 +144,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     try {
       const result = await deps.api.prepareHostTls({
         mode: 'managed',
-        hostname: current.hostname,
+        hostname: current.installationDomain || current.hostname,
         lanIp,
       });
       if (!still(generation) || !result.operatorRequest) {

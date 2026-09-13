@@ -121,7 +121,11 @@ test('hydrateOperatorRequest replays prepare to recover the unused token', async
     status: tls({
       state: 'awaiting-operator-dns',
       mode: 'managed',
-      hostname: '7fk3m2.lan.notaus.de',
+      hostname: 'staff.7fk3m2.lan.notaus.de',
+      installationDomain: '7fk3m2.lan.notaus.de',
+      staffHostname: 'staff.7fk3m2.lan.notaus.de',
+      portalHostname: 'portal.7fk3m2.lan.notaus.de',
+      wildcardCertificateName: '*.7fk3m2.lan.notaus.de',
       installationId: '7fk3m2q9',
       tokenConsumed: false,
     }),
@@ -132,7 +136,8 @@ test('hydrateOperatorRequest replays prepare to recover the unused token', async
           tls: tls({
             state: 'awaiting-operator-dns',
             mode: 'managed',
-            hostname: '7fk3m2.lan.notaus.de',
+            hostname: 'staff.7fk3m2.lan.notaus.de',
+            installationDomain: '7fk3m2.lan.notaus.de',
           }),
           operatorRequest: {
             installationId: '7fk3m2q9',

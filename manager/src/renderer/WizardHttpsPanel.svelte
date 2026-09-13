@@ -50,7 +50,18 @@
     const cname =
       snapshot.operatorRequest?.acmeCname.value || snapshot.status?.tls?.acmeCnameTarget;
     const body = operatorZoneMailBody({
-      hostname,
+      hostname: snapshot.status?.tls?.staffHostname || hostname,
+      installationDomain:
+        snapshot.operatorRequest?.installationDomain ||
+        snapshot.status?.tls?.installationDomain,
+      staffHostname:
+        snapshot.operatorRequest?.staffHostname || snapshot.status?.tls?.staffHostname,
+      portalHostname:
+        snapshot.operatorRequest?.portalHostname || snapshot.status?.tls?.portalHostname,
+      wildcardCertificateName:
+        snapshot.operatorRequest?.wildcardCertificateName ||
+        snapshot.status?.tls?.wildcardCertificateName,
+      acmeCnameName: snapshot.operatorRequest?.acmeCname.name,
       lanIp,
       installationId,
       token,

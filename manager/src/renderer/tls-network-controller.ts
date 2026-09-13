@@ -237,7 +237,7 @@ export function createTlsNetworkController(deps: {
       try {
         const result = await deps.api.prepareHostTls({
           mode: 'managed',
-          hostname: current.hostname,
+          hostname: current.installationDomain || current.hostname,
           lanIp,
         });
         if (generation !== hydrateGeneration || startedInSession !== sessionGeneration) {

@@ -6,9 +6,14 @@ import { listTarArchiveEntriesVerbose, type TarArchiveEntry } from './pfupdate-p
 import { resolveProxyTlsPaths } from './proxy-tls.js';
 
 export type TlsSidecarManifest = {
-  formatVersion: 1;
+  formatVersion: 1 | 2;
   installationId: string;
+  /** Compatibility identity; equals staffHostname in format v2. */
   hostname: string;
+  installationDomain?: string;
+  staffHostname?: string;
+  portalHostname?: string;
+  wildcardCertificateName?: string;
 };
 
 const MANIFEST_NAME = 'manifest.json';
@@ -83,13 +88,29 @@ export function parseTlsSidecarManifestFromBytes(bytes: Buffer): TlsSidecarManif
       return null;
     }
     const parsed = JSON.parse(listed.stdout) as Partial<TlsSidecarManifest>;
-    if (parsed.formatVersion !== 1) {
+    if (parsed.formatVersion !== 1 && parsed.formatVersion !== 2) {
       return null;
     }
     const installationId =
       typeof parsed.installationId === 'string' ? parsed.installationId.trim() : '';
     const hostname = typeof parsed.hostname === 'string' ? parsed.hostname.trim() : '';
-    return { formatVersion: 1, installationId, hostname };
+    const optionalName = (key: keyof TlsSidecarManifest): string | undefined => {
+      const value = parsed[key];
+      return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+    };
+    return {
+      formatVersion: parsed.formatVersion,
+      installationId,
+      hostname,
+      ...(optionalName('installationDomain')
+        ? { installationDomain: optionalName('installationDomain') }
+        : {}),
+      ...(optionalName('staffHostname') ? { staffHostname: optionalName('staffHostname') } : {}),
+      ...(optionalName('portalHostname') ? { portalHostname: optionalName('portalHostname') } : {}),
+      ...(optionalName('wildcardCertificateName')
+        ? { wildcardCertificateName: optionalName('wildcardCertificateName') }
+        : {}),
+    };
   } catch {
     return null;
   } finally {
@@ -130,15 +151,25 @@ export function packTlsSidecarArchive(input: {
   installHome: string;
   installationId: string;
   hostname: string;
+  installationDomain?: string;
+  staffHostname?: string;
+  portalHostname?: string;
+  wildcardCertificateName?: string;
   destinationPath: string;
 }): void {
   const paths = resolveProxyTlsPaths(input.installHome);
   const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-tls-sidecar-pack-'));
   try {
     const manifest: TlsSidecarManifest = {
-      formatVersion: 1,
+      formatVersion: 2,
       installationId: input.installationId,
-      hostname: input.hostname,
+      hostname: input.staffHostname || input.hostname,
+      ...(input.installationDomain ? { installationDomain: input.installationDomain } : {}),
+      ...(input.staffHostname ? { staffHostname: input.staffHostname } : {}),
+      ...(input.portalHostname ? { portalHostname: input.portalHostname } : {}),
+      ...(input.wildcardCertificateName
+        ? { wildcardCertificateName: input.wildcardCertificateName }
+        : {}),
     };
     fs.writeFileSync(path.join(staging, MANIFEST_NAME), `${JSON.stringify(manifest, null, 2)}\n`);
     copyIfExists(paths.caddyData, path.join(staging, 'caddy-data'));
@@ -231,6 +262,10 @@ export function inspectTlsSidecarIdentity(tlsSidecarBase64: string | undefined):
   present: boolean;
   installationId: string;
   hostname: string;
+  installationDomain?: string;
+  staffHostname?: string;
+  portalHostname?: string;
+  wildcardCertificateName?: string;
 } {
   const bytes = decodeTlsSidecarBase64(tlsSidecarBase64);
   if (!bytes) {
@@ -244,5 +279,11 @@ export function inspectTlsSidecarIdentity(tlsSidecarBase64: string | undefined):
     present: true,
     installationId: manifest.installationId,
     hostname: manifest.hostname,
+    ...(manifest.installationDomain ? { installationDomain: manifest.installationDomain } : {}),
+    ...(manifest.staffHostname ? { staffHostname: manifest.staffHostname } : {}),
+    ...(manifest.portalHostname ? { portalHostname: manifest.portalHostname } : {}),
+    ...(manifest.wildcardCertificateName
+      ? { wildcardCertificateName: manifest.wildcardCertificateName }
+      : {}),
   };
 }

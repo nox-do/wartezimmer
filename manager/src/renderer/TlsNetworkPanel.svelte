@@ -75,7 +75,7 @@
     operator: TlsOperatorRequest | null,
     ip: string | null,
   ): { body: string; href: string } | null {
-    const hostname = current?.hostname;
+    const hostname = current?.staffHostname || current?.hostname;
     const installationId = operator?.installationId || current?.installationId;
     if (!hostname || !installationId || !ip) {
       return null;
@@ -86,6 +86,12 @@
     const cname = operator?.acmeCname.value || current?.acmeCnameTarget;
     const body = operatorZoneMailBody({
       hostname,
+      installationDomain: operator?.installationDomain || current?.installationDomain,
+      staffHostname: operator?.staffHostname || current?.staffHostname || hostname,
+      portalHostname: operator?.portalHostname || current?.portalHostname,
+      wildcardCertificateName:
+        operator?.wildcardCertificateName || current?.wildcardCertificateName,
+      acmeCnameName: operator?.acmeCname.name,
       lanIp: ip,
       installationId,
       token,

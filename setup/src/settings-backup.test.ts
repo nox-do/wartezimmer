@@ -18,6 +18,7 @@ import {
   writeTlsSidecarBesideBackup,
 } from './settings-backup.js';
 import { testSetupContext } from './test-setup-context.js';
+import { parseTlsSidecarManifestFromBytes } from './tls-backup-sidecar.js';
 
 const sampleDbSnapshot = {
   settingsFormatVersion: 1,
@@ -170,7 +171,11 @@ test('writeTlsSidecarBesideBackup writes timestamp sibling when tls is not off',
       [
         'TLS_STATE=preparing',
         'TLS_INSTALLATION_ID=7fk3m2q9',
-        'TLS_HOSTNAME=7fk3m2.lan.notaus.de',
+        'TLS_HOSTNAME=staff.7fk3m2.lan.notaus.de',
+        'TLS_INSTALLATION_DOMAIN=7fk3m2.lan.notaus.de',
+        'TLS_STAFF_HOSTNAME=staff.7fk3m2.lan.notaus.de',
+        'TLS_PORTAL_HOSTNAME=portal.7fk3m2.lan.notaus.de',
+        'TLS_WILDCARD_CERTIFICATE_NAME=*.7fk3m2.lan.notaus.de',
         '',
       ].join('\n'),
     );
@@ -180,6 +185,15 @@ test('writeTlsSidecarBesideBackup writes timestamp sibling when tls is not off',
       path.join(backupsDir, 'praxis-flow-tls-2026-07-12T10-15-30-123Z.tgz'),
     );
     assert.equal(fs.existsSync(sidecarPath!), true);
+    assert.deepEqual(parseTlsSidecarManifestFromBytes(fs.readFileSync(sidecarPath!)), {
+      formatVersion: 2,
+      installationId: '7fk3m2q9',
+      hostname: 'staff.7fk3m2.lan.notaus.de',
+      installationDomain: '7fk3m2.lan.notaus.de',
+      staffHostname: 'staff.7fk3m2.lan.notaus.de',
+      portalHostname: 'portal.7fk3m2.lan.notaus.de',
+      wildcardCertificateName: '*.7fk3m2.lan.notaus.de',
+    });
     assert.equal(getPfbackupInfo(testSetupContext(dir)).latestTlsSidecarPath, sidecarPath);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });

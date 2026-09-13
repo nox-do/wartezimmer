@@ -13,6 +13,7 @@ test('tlsNameValid accepts generated and rejects reserved labels', () => {
   assert.equal(tlsNameValid({ nameMode: 'generated', customLabel: '', customDomain: '' }), true);
   assert.equal(tlsNameValid({ nameMode: 'label', customLabel: 'muster', customDomain: '' }), true);
   assert.equal(tlsNameValid({ nameMode: 'label', customLabel: 'portal', customDomain: '' }), false);
+  assert.equal(tlsNameValid({ nameMode: 'label', customLabel: 'staff', customDomain: '' }), false);
   assert.equal(
     tlsNameValid({ nameMode: 'domain', customLabel: '', customDomain: 'flow.praxis-meyer.de' }),
     true,
@@ -26,11 +27,11 @@ test('tlsNameValid accepts generated and rejects reserved labels', () => {
 test('tlsDraftHostname keeps generated names anonymous until prepare', () => {
   assert.equal(
     tlsDraftHostname({ nameMode: 'generated', customLabel: '', customDomain: '' }),
-    '….lan.notaus.de',
+    'staff.….lan.notaus.de',
   );
   assert.equal(
     tlsDraftHostname({ nameMode: 'label', customLabel: 'Muster', customDomain: '' }),
-    'muster.lan.notaus.de',
+    'staff.muster.lan.notaus.de',
   );
 });
 
@@ -49,7 +50,8 @@ test('tlsDraftMatchesPrepared keeps generated identity and rejects a fork change
   const prepared = {
     state: 'awaiting-operator-dns',
     mode: 'managed' as const,
-    hostname: '7fk3m2.lan.notaus.de',
+    hostname: 'staff.7fk3m2.lan.notaus.de',
+    installationDomain: '7fk3m2.lan.notaus.de',
   };
   assert.equal(
     tlsDraftMatchesPrepared(
@@ -105,7 +107,8 @@ test('tlsDraftMatchesPrepared keeps generated identity and rejects a fork change
       {
         state: 'awaiting-operator-dns',
         mode: 'managed',
-        hostname: 'muster.lan.notaus.de',
+        hostname: 'staff.muster.lan.notaus.de',
+        installationDomain: 'muster.lan.notaus.de',
       },
     ),
     true,
@@ -116,7 +119,9 @@ test('tlsWizardDisplayHostname follows the draft after a fork change', () => {
   const prepared = {
     state: 'awaiting-operator-dns',
     mode: 'managed' as const,
-    hostname: '7fk3m2.lan.notaus.de',
+    hostname: 'staff.7fk3m2.lan.notaus.de',
+    staffHostname: 'staff.7fk3m2.lan.notaus.de',
+    installationDomain: '7fk3m2.lan.notaus.de',
   };
   assert.equal(
     tlsWizardDisplayHostname(
@@ -128,7 +133,7 @@ test('tlsWizardDisplayHostname follows the draft after a fork change', () => {
       },
       prepared,
     ),
-    '7fk3m2.lan.notaus.de',
+    'staff.7fk3m2.lan.notaus.de',
   );
   assert.equal(
     tlsWizardDisplayHostname(
@@ -146,7 +151,11 @@ test('tlsWizardDisplayHostname follows the draft after a fork change', () => {
 
 test('operatorZoneMailBody redacts the token after consumption', () => {
   const consumed = operatorZoneMailBody({
-    hostname: '7fk3m2.lan.notaus.de',
+    hostname: 'staff.7fk3m2.lan.notaus.de',
+    installationDomain: '7fk3m2.lan.notaus.de',
+    staffHostname: 'staff.7fk3m2.lan.notaus.de',
+    portalHostname: 'portal.7fk3m2.lan.notaus.de',
+    wildcardCertificateName: '*.7fk3m2.lan.notaus.de',
     lanIp: '192.168.178.112',
     installationId: '7fk3m2q9',
     token: 'secret-token',
@@ -155,5 +164,9 @@ test('operatorZoneMailBody redacts the token after consumption', () => {
   });
   assert.equal(consumed.includes('secret-token'), false);
   assert.match(consumed, /bereits verwendet/);
+  assert.match(consumed, /staff\.7fk3m2\.lan\.notaus\.de\. +A +192\.168\.178\.112/);
+  assert.match(consumed, /Portal reserviert: portal\.7fk3m2\.lan\.notaus\.de/);
+  assert.match(consumed, /Zertifikatsname: +\*\.7fk3m2\.lan\.notaus\.de/);
+  assert.match(consumed, /_acme-challenge\.7fk3m2\.lan\.notaus\.de\./);
   assert.match(consumed, /CNAME {2}uuid\.auth\.acme-dns\.io\./);
 });

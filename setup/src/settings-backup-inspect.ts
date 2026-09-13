@@ -320,8 +320,16 @@ export function buildPfbackupTlsInspectSummary(
   const sidecarMatches = tlsSidecarMatches({
     backupInstallId: backupEnv.TLS_INSTALLATION_ID,
     backupHostname: backupEnv.TLS_HOSTNAME,
+    backupInstallationDomain: backupEnv.TLS_INSTALLATION_DOMAIN,
+    backupStaffHostname: backupEnv.TLS_STAFF_HOSTNAME,
+    backupPortalHostname: backupEnv.TLS_PORTAL_HOSTNAME,
+    backupWildcardCertificateName: backupEnv.TLS_WILDCARD_CERTIFICATE_NAME,
     sidecarInstallId: sidecar.installationId,
     sidecarHostname: sidecar.hostname,
+    sidecarInstallationDomain: sidecar.installationDomain,
+    sidecarStaffHostname: sidecar.staffHostname,
+    sidecarPortalHostname: sidecar.portalHostname,
+    sidecarWildcardCertificateName: sidecar.wildcardCertificateName,
   });
   const metadataConsistent = tlsBackupMetadataConsistent({
     tlsState: tlsStateRaw,

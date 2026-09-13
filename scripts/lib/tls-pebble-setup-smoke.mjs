@@ -39,7 +39,11 @@ let ZONE_RUNTIME = path.join(RUNTIME, 'lab', 'coredns', 'lan.tls.lab.db');
 let PEBBLE_ROOT = path.join(RUNTIME, 'pebble-root.pem');
 const ZONE_TEMPLATE = path.join(root, 'lab', 'coredns', 'lan.tls.lab.db');
 const MINICA = path.join(root, 'lab', 'tls', 'pebble.minica.pem');
-const HOSTNAME = 'labhost.lan.tls.lab';
+const INSTALLATION_DOMAIN = 'labhost.lan.tls.lab';
+const STAFF_HOSTNAME = `staff.${INSTALLATION_DOMAIN}`;
+const PORTAL_HOSTNAME = `portal.${INSTALLATION_DOMAIN}`;
+const UNKNOWN_HOSTNAME = `unknown.${INSTALLATION_DOMAIN}`;
+const WILDCARD_CERTIFICATE_NAME = `*.${INSTALLATION_DOMAIN}`;
 const COMPOSE_FILES = [
   'docker-compose.yml',
   'docker-compose.proxy.yml',
@@ -286,13 +290,35 @@ function writeRuntimeZone(lanIp, fulldomain = null) {
   if (!/^\t*\d{10} ; serial/m.test(base)) {
     zone = base.replace(/2026082801/, String(serial));
   }
-  zone = zone.replace(/labhost\s+IN A\s+\S+/, `labhost\t\tIN A\t${lanIp}`);
+  zone = zone.replace(/^labhost\s+IN A\s+\S+\s*$/m, '');
+  zone += `staff.labhost\tIN A\t${lanIp}\n`;
   if (fulldomain) {
     const target = fulldomain.endsWith('.') ? fulldomain : `${fulldomain}.`;
     zone += `_acme-challenge.labhost\tIN CNAME\t${target}\n`;
   }
   fs.mkdirSync(path.dirname(ZONE_RUNTIME), { recursive: true });
   fs.writeFileSync(ZONE_RUNTIME, zone, 'utf8');
+}
+
+function assertSinglePebbleWildcardOrder(certificateNames) {
+  const pebbleLogs = compose(['logs', '--no-color', 'pebble']);
+  const orderRequests = pebbleLogs.match(/POST \/order-plz -> calling handler\(\)/g) ?? [];
+  assert(
+    orderRequests.length === 1,
+    `Pebble received ${orderRequests.length} ACME newOrder requests, expected exactly one`,
+  );
+  assert(
+    pebbleLogs.includes(`Identifier:acme.Identifier{Type:"dns", Value:"${INSTALLATION_DOMAIN}"}`) &&
+      pebbleLogs.includes('Wildcard:true'),
+    `Pebble did not validate the expected wildcard identifier ${WILDCARD_CERTIFICATE_NAME}`,
+  );
+  assert(
+    Array.isArray(certificateNames) &&
+      certificateNames.length === 1 &&
+      certificateNames[0] === WILDCARD_CERTIFICATE_NAME,
+    `certificate names must be exactly [${WILDCARD_CERTIFICATE_NAME}], got ${JSON.stringify(certificateNames)}`,
+  );
+  console.log(`OK  Pebble received exactly one ACME order for ${WILDCARD_CERTIFICATE_NAME}`);
 }
 
 function writeRuntimeEnv(lanIp) {
@@ -496,7 +522,7 @@ async function assertHttpRedirectsToHttps() {
   );
   const location = response.headers.get('location') || '';
   assert(
-    location.startsWith(`https://${HOSTNAME}`),
+    location.startsWith(`https://${STAFF_HOSTNAME}`),
     `port 80 Location is not HTTPS canonical: ${location}`,
   );
 }
@@ -506,7 +532,7 @@ async function assertHttpsH2AndSse(ca) {
     const socket = tls.connect({
       host: '127.0.0.1',
       port: 443,
-      servername: HOSTNAME,
+      servername: STAFF_HOSTNAME,
       ALPNProtocols: ['h2'],
       rejectUnauthorized: true,
       ca,
@@ -530,7 +556,7 @@ async function assertHttpsH2AndSse(ca) {
   await new Promise((resolve, reject) => {
     const session = http2.connect(`https://127.0.0.1:443`, {
       ca,
-      servername: HOSTNAME,
+      servername: STAFF_HOSTNAME,
       rejectUnauthorized: true,
     });
     const timer = setTimeout(() => {
@@ -567,6 +593,50 @@ async function assertHttpsH2AndSse(ca) {
   });
 }
 
+async function assertWildcardHostnameRejected(ca, hostname) {
+  await new Promise((resolve, reject) => {
+    const socket = tls.connect({
+      host: '127.0.0.1',
+      port: 443,
+      servername: hostname,
+      ALPNProtocols: ['http/1.1'],
+      rejectUnauthorized: true,
+      ca,
+    });
+    let tlsReady = false;
+    let received = '';
+    const timer = setTimeout(() => {
+      socket.destroy();
+      reject(new Error(`${hostname} rejection timeout`));
+    }, 8_000);
+    const finishRejected = () => {
+      clearTimeout(timer);
+      socket.destroy();
+      if (!tlsReady) {
+        reject(new Error(`${hostname} TLS handshake failed before host rejection`));
+      } else if (received.length > 0) {
+        reject(new Error(`${hostname} returned application bytes: ${received.slice(0, 80)}`));
+      } else {
+        resolve();
+      }
+    };
+    socket.once('secureConnect', () => {
+      tlsReady = true;
+      socket.write(`GET / HTTP/1.1\r\nHost: ${hostname}\r\nConnection: close\r\n\r\n`);
+    });
+    socket.on('data', (chunk) => {
+      received += chunk.toString('utf8');
+    });
+    socket.once('end', finishRejected);
+    socket.once('close', finishRejected);
+    socket.once('error', (error) => {
+      clearTimeout(timer);
+      if (tlsReady && received.length === 0) resolve();
+      else reject(error);
+    });
+  });
+}
+
 async function applyCutoverAndAssert() {
   const appliedAt = Date.now();
   const applied = await fetchJson(
@@ -593,20 +663,23 @@ async function applyCutoverAndAssert() {
   );
   assert(envMap.PROXY_MODE === 'tls-managed', `PROXY_MODE=${envMap.PROXY_MODE}`);
   assert(
-    envMap.CANONICAL_BASE_URL === `https://${HOSTNAME}`,
+    envMap.CANONICAL_BASE_URL === `https://${STAFF_HOSTNAME}`,
     `CANONICAL_BASE_URL=${envMap.CANONICAL_BASE_URL}`,
   );
 
   const status = await fetchJson(setupUrl('/api/setup/host/status'));
   assert(status.status === 200, `status HTTP ${status.status}`);
   const canonical = status.body?.configuredCanonicalBaseUrl || '';
-  assert(canonical === `https://${HOSTNAME}`, `Canonical is not HTTPS hostname: ${canonical}`);
+  assert(
+    canonical === `https://${STAFF_HOSTNAME}`,
+    `Canonical is not HTTPS staff hostname: ${canonical}`,
+  );
   const deviceUrls = status.body?.deviceUrls;
   assert(deviceUrls, 'deviceUrls missing after apply');
   for (const [key, value] of Object.entries(deviceUrls)) {
     if (typeof value === 'string') {
       assert(
-        value.startsWith(`https://${HOSTNAME}`),
+        value.startsWith(`https://${STAFF_HOSTNAME}`),
         `device URL ${key} is not HTTPS hostname: ${value}`,
       );
     }
@@ -678,7 +751,7 @@ export async function runTlsPebbleSetupSmoke(kind) {
     const prepared = await fetchJson(setupUrl('/api/setup/host/tls/prepare'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ mode: 'managed', hostname: HOSTNAME, lanIp }),
+      body: JSON.stringify({ mode: 'managed', hostname: INSTALLATION_DOMAIN, lanIp }),
     });
     assert(
       prepared.status === 200,
@@ -688,8 +761,32 @@ export async function runTlsPebbleSetupSmoke(kind) {
       prepared.body?.tls?.state === 'awaiting-operator-dns',
       'prepare did not reach awaiting-operator-dns',
     );
+    assert(
+      prepared.body?.tls?.installationDomain === INSTALLATION_DOMAIN,
+      `installationDomain=${prepared.body?.tls?.installationDomain}`,
+    );
+    assert(
+      prepared.body?.tls?.staffHostname === STAFF_HOSTNAME,
+      `staffHostname=${prepared.body?.tls?.staffHostname}`,
+    );
+    assert(
+      prepared.body?.tls?.portalHostname === PORTAL_HOSTNAME,
+      `portalHostname=${prepared.body?.tls?.portalHostname}`,
+    );
+    assert(
+      prepared.body?.tls?.wildcardCertificateName === WILDCARD_CERTIFICATE_NAME,
+      `wildcardCertificateName=${prepared.body?.tls?.wildcardCertificateName}`,
+    );
     const operatorRequest = prepared.body.operatorRequest;
+    assert(
+      operatorRequest?.aRecord?.name === STAFF_HOSTNAME,
+      `prepare A-record name ${operatorRequest?.aRecord?.name}`,
+    );
     assert(operatorRequest?.aRecord?.value === lanIp, 'prepare.lanIp / A-record mismatch');
+    assert(
+      operatorRequest?.acmeCname?.name === `_acme-challenge.${INSTALLATION_DOMAIN}`,
+      `prepare CNAME name ${operatorRequest?.acmeCname?.name}`,
+    );
     assert(operatorRequest?.acmeCname?.value, 'operatorRequest.acmeCname missing');
     writeRuntimeZone(lanIp, operatorRequest.acmeCname.value);
     compose(['restart', 'coredns'], { stdio: 'inherit' });
@@ -733,10 +830,7 @@ export async function runTlsPebbleSetupSmoke(kind) {
     assert(tls?.applyReady === true, 'applyReady is not true');
     assert(tls?.tokenConsumed === true, 'tokenConsumed is not true');
     assert(tls?.cutoverApplied === false, 'cutover must stay false until apply');
-    assert(
-      Array.isArray(tls?.certificate?.names) && tls.certificate.names.includes(HOSTNAME),
-      `certificate names ${JSON.stringify(tls?.certificate?.names)} missing ${HOSTNAME}`,
-    );
+    assertSinglePebbleWildcardOrder(tls?.certificate?.names);
     assert(
       tls.certificate?.issuer && !/fake/i.test(tls.certificate.issuer),
       `expected a real Pebble issuer, got ${tls.certificate?.issuer}`,
@@ -746,6 +840,11 @@ export async function runTlsPebbleSetupSmoke(kind) {
       const check = localChecks.find((item) => item.id === id);
       assert(check?.ok, `${id} check is not green: ${JSON.stringify(check)}`);
     }
+    const pebbleCa = fs.readFileSync(PEBBLE_ROOT);
+    await assertWildcardHostnameRejected(pebbleCa, PORTAL_HOSTNAME);
+    console.log('OK  reserved Portal hostname is rejected by the wildcard listener');
+    await assertWildcardHostnameRejected(pebbleCa, UNKNOWN_HOSTNAME);
+    console.log('OK  unknown hostname is rejected by the wildcard listener');
 
     const secret = JSON.parse(
       fs.readFileSync(path.join(RUNTIME, 'state', 'tls', 'acme-dns.json'), 'utf8'),

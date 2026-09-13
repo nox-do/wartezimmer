@@ -59,21 +59,54 @@ export function tlsBackupMetadataConsistent(input: {
 export function tlsSidecarMatches(input: {
   backupInstallId?: unknown;
   backupHostname?: unknown;
+  backupInstallationDomain?: unknown;
+  backupStaffHostname?: unknown;
+  backupPortalHostname?: unknown;
+  backupWildcardCertificateName?: unknown;
   sidecarInstallId?: unknown;
   sidecarHostname?: unknown;
+  sidecarInstallationDomain?: unknown;
+  sidecarStaffHostname?: unknown;
+  sidecarPortalHostname?: unknown;
+  sidecarWildcardCertificateName?: unknown;
 }): boolean {
   const backupId = String(input.backupInstallId ?? '').trim();
   const sidecarId = String(input.sidecarInstallId ?? '').trim();
   const backupHost = normalizeOwnDomain(input.backupHostname);
   const sidecarHost = normalizeOwnDomain(input.sidecarHostname);
-  return (
+  const baseMatches =
     Boolean(backupId) &&
     Boolean(sidecarId) &&
     Boolean(backupHost) &&
     Boolean(sidecarHost) &&
     backupId === sidecarId &&
-    backupHost === sidecarHost
+    backupHost === sidecarHost;
+  if (!baseMatches) {
+    return false;
+  }
+
+  const managedPairs = [
+    [input.backupInstallationDomain, input.sidecarInstallationDomain],
+    [input.backupStaffHostname, input.sidecarStaffHostname],
+    [input.backupPortalHostname, input.sidecarPortalHostname],
+    [input.backupWildcardCertificateName, input.sidecarWildcardCertificateName],
+  ] as const;
+  const managedMarkerPairs = [managedPairs[0], managedPairs[2], managedPairs[3]];
+  const hasManagedIdentity = managedMarkerPairs.some(([backup, sidecar]) =>
+    Boolean(normalizeOwnDomain(backup) || normalizeOwnDomain(sidecar)),
   );
+  const backupStaff = normalizeOwnDomain(input.backupStaffHostname);
+  const sidecarStaff = normalizeOwnDomain(input.sidecarStaffHostname);
+  if (!hasManagedIdentity) {
+    return !backupStaff && !sidecarStaff
+      ? true
+      : Boolean(backupStaff && backupStaff === sidecarStaff);
+  }
+  return managedPairs.every(([backup, sidecar]) => {
+    const backupValue = normalizeOwnDomain(backup);
+    const sidecarValue = normalizeOwnDomain(sidecar);
+    return Boolean(backupValue) && backupValue === sidecarValue;
+  });
 }
 
 /** TLS adds to, and never replaces, today's three Restore compatibility gates. */

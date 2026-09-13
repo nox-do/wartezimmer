@@ -375,7 +375,16 @@ export type TlsErrorClass =
 export type TlsStatus = {
   state: TlsState;
   mode: TlsMode | null;
+  /** Compatibility alias for staffHostname while existing Manager clients migrate. */
   hostname: string | null;
+  /** Managed TLS parent below the operator zone; null for custom and legacy identities. */
+  installationDomain?: string | null;
+  /** Canonical Staff/device origin. Equals hostname for compatibility. */
+  staffHostname?: string | null;
+  /** Reserved managed Portal origin. It has no A record or listener during TLS setup. */
+  portalHostname?: string | null;
+  /** Sole managed ACME certificate identifier, for example *.abc123.lan.example. */
+  wildcardCertificateName?: string | null;
   installationId: string | null;
   tokenConsumed: boolean;
   /** Authoritative local-check gate while state remains `dns-verified`. */
@@ -401,7 +410,13 @@ export type TlsOperatorRequest = {
   /** Returned by prepare, never by status. Removed from disk after consumption/reset. */
   oneTimeToken: string;
   aRecord: { name: string; value: string };
+  /** Explicit name for new clients; aRecord remains its compatibility alias. */
+  staffARecord?: { name: string; value: string };
   acmeCname: { name: string; value: string };
+  installationDomain?: string;
+  staffHostname?: string;
+  portalHostname?: string;
+  wildcardCertificateName?: string;
 };
 
 export type TlsPrepareResult = {
