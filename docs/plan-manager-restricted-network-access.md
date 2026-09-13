@@ -298,11 +298,19 @@ erst mit dem beobachtbaren Staff-Binding.
 - [x] macOS: Docker-Desktop-Neustart mit automatisch neu gestartetem,
       explizit an die Staff-IP gebundenem Testcontainer und externem Positiv-/
       Negativtest;
-- [ ] macOS: Host-Reboot und Adressverlust/-wiederkehr;
-- [ ] F1-PoC auf der vorgesehenen Windows-/Docker-Desktop-Kombination;
-- [ ] freigegebene Mindestversionen aus den Ergebnissen festlegen.
+- [x] macOS: Verlust und Wiederkehr der Staff-IP einschließlich fail-closed
+      Startversuch ohne Adresse und kontrolliertem Repair nach ihrer Rückkehr;
+- [x] macOS: Host-Reboot mit automatischem Containerstart, unverändert
+      exklusivem Staff-IP-Binding und externem Positiv-/Negativtest;
+- [x] macOS zunächst ausschließlich für die nachgewiesene Kombination aus
+      macOS 26.5.1 und Docker Desktop 4.89.0 freigeben; eine breitere
+      Mindestversionsaussage braucht weitere Plattformtests;
+- [ ] Windows-F1 und Windows-Mindestversion sind zurückgestellt; bis dahin
+      keine Windows-Freigabe für Staff- oder Restricted-Binding.
 
-Ohne bestandenes F1-Gate keine produktive Restricted-Network-Implementierung.
+Das F1-Gate gilt je Plattform. Die macOS-Umsetzung darf auf der nachgewiesenen
+Kombination fortgesetzt werden; Windows bleibt bis zu seinem eigenen Nachweis
+gesperrt.
 
 ### Schnitt 1a — TLS-Identität und Backup (erledigt)
 

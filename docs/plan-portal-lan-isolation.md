@@ -885,7 +885,9 @@ Status der groben Blöcke:
       Pebble bestanden; genau eine ACME-Order für `*.<raum>`; Staff positiv sowie
       Portal-SNI und unbekannter Wildcard-Host negativ geprüft.
 - [ ] **Gate 0 / F1-Machbarkeit:** explizite Host-IP-Publishes und die
-      erforderliche Host-Firewall je freigegebener Plattform praktisch belegen.
+      erforderliche Host-Firewall je freigegebener Plattform praktisch belegen;
+      macOS ist für die nachgewiesene Kombination bestanden, Windows ist
+      zurückgestellt und bleibt gesperrt.
 - [ ] **Phase 0 / Staff-Binding:** bestehende Staff-Auslieferung ohne globale
       Publishes betreiben und ihren tatsächlichen Laufzeitzustand diagnostizieren.
 - [ ] **Restricted-Binding:** zweite IP, Portal-A-Record, getrennter
@@ -895,8 +897,9 @@ Status der groben Blöcke:
 
 Damit ist der TLS-Namensumbau technisch abgeschlossen. Delivery-Bindings und
 Restricted-Network-UI werden weiterhin nicht in einem Schritt verändert. Vor
-der produktiven Ausrollung der Phase 0 muss Gate 0 auf den vorgesehenen
-Windows-/macOS- und Docker-Desktop-Versionen bestanden sein.
+der produktiven Ausrollung der Phase 0 muss Gate 0 auf der jeweiligen
+Betriebssystem-/Docker-Desktop-Kombination bestanden sein. Eine bestandene
+Plattformfreigabe entsperrt nicht automatisch eine andere Plattform.
 
 Die verbleibenden Blöcke sind:
 
@@ -905,12 +908,14 @@ Die verbleibenden Blöcke sind:
    Black-Box-Scan aus beiden Netzen; außerdem Reboot, Adressverlust, IPv6 und
    Weak-Host-Verhalten. Bei Fehlschlag kein Portal auf dieser Plattform und
    separate Architekturentscheidung statt stillen Edge-Proxy-Fallbacks.
-2. **Phase 0 nach bestandenem Gate 0:** alle Delivery-Publishes von
+2. **Phase 0 nach bestandenem plattformspezifischem Gate 0:** alle
+   Delivery-Publishes von
    IPv4-/IPv6-Wildcard-Adressen auf explizite Staff-IP beziehungsweise Loopback
    umstellen; Docker-Statusvertrag von reinen Portnummern auf vollständige
    Laufzeit-Bindings erweitern; Setup-Audit, Elevation und transaktionalen
    Firewall-/Compose-Rollback umsetzen und im Manager darstellen. Zusätzlich
-   zum bestehenden macOS-DMG wird ein Windows-Manager-Artefakt benötigt.
+   zum bestehenden macOS-DMG wird vor einer späteren Windows-Freigabe ein
+   Windows-Manager-Artefakt benötigt.
 3. **Proxy (Portal-Listener):** getrennte Host-Publishes auf interne
    Staff-/Portal-Ports, getrennte Caddy-Server, abweisende Defaults ohne
    SNI/Host, strikte SNI-/Host-Prüfung, ausführbare Portal-Positivliste und
@@ -966,8 +971,8 @@ Erst nach einem positiven Ergebnis wird der produktive Binding-Code aktiviert.
 Der PoC bekommt keine Portalroute und braucht weder Portal-DNS noch eine
 fachliche Portal-API-Allowlist.
 
-macOS-F1-Kernnachweis vom 13.09.2026, **bestanden für die unten genannte
-Version; noch kein vollständiges Gate 0**:
+macOS-F1-Nachweis vom 13.09.2026, **Plattform-Gate bestanden für die unten
+genannte Kombination**:
 
 - macOS 26.5.1, Docker Desktop 4.89.0, Engine 29.7.2 und Compose 5.5.0;
 - WLAN `en0` mit `192.168.0.93`, Gigabit-LAN `en7` mit `192.168.0.83`;
@@ -993,15 +998,29 @@ Version; noch kein vollständiges Gate 0**:
   ausschließlich `192.168.0.83:18443 -> container:8080` bei, der externe Client
   erhielt über `.83` weiterhin HTTP 200 und `.93` lehnte den Verbindungsaufbau
   weiterhin ab;
+- nach Verlust der LAN-Adresse blieb der bereits laufende Container intern
+  `running`, war über `.83` aber nicht mehr erreichbar und wich nicht auf `.93`
+  aus; ein Startversuch ohne `.83` scheiterte mit
+  `can't assign requested address`, ohne einen Listener anzulegen;
+- nach Rückkehr von `.83` wiederholte Docker den fehlgeschlagenen Start nicht
+  selbstständig; ein kontrollierter Start stellte dasselbe exklusive Binding
+  wieder her, extern mit HTTP 200 über `.83` und abgewiesener Verbindung über
+  `.93`;
+- nach einem vollständigen macOS-Reboot und anschließendem Start von Docker
+  Desktop nahm `restart=unless-stopped` den Testcontainer automatisch wieder
+  auf; `docker inspect` zeigte weiterhin ausschließlich
+  `192.168.0.83:18443 -> container:8080`, extern antwortete `.83` mit HTTP 200
+  und `.93` lehnte die Verbindung ab;
 - Docker- und Kontrollserver wurden entfernt; auf den Testports lauscht kein
   Prozess und es blieb kein PoC-Container zurück.
 
 Die zwei echten NICs liegen derzeit im selben `/24`; der externe Test belegt
 deshalb die Ziel-IP-/Interface-Selektion dieses Hosts, aber keine Trennung
-zweier gerouteter Subnetze. Offen bleiben auf macOS der Host-Reboot sowie echter
-Verlust und Wiederkehr der Bind-Adresse. Außerdem stehen der vollständige
-Nachweis auf Windows und die Festlegung der freigegebenen Plattformversionen
-aus. Gate 0 bleibt bis dahin offen.
+zweier gerouteter Subnetze. macOS wird deshalb zunächst nur für die konkret
+nachgewiesene Kombination freigegeben; eine allgemeinere Mindestversion wird
+nicht abgeleitet. Der Windows-Nachweis ist zurückgestellt. Windows bleibt bis
+dahin für Staff- und Restricted-Binding gesperrt, blockiert aber die weitere
+macOS-Umsetzung nicht.
 
 #### Schritt 2 — Binding- und Statusvertrag ohne Verhaltensänderung
 
@@ -1047,6 +1066,9 @@ Stack umgestellt wird.
   Plattformfreigabe prüfen; bisherigen Env-/Compose-/Firewallzustand sichern.
 - Danach Container neu erzeugen und die **tatsächlichen** Runtime-Bindings
   auditieren. Staff-Erreichbarkeit wird vor Abschluss positiv geprüft.
+- Nach Rückkehr einer zuvor fehlenden Staff-IP darf nicht auf einen automatischen
+  Docker-Retry vertraut werden: Status und Manager müssen den gestoppten Dienst
+  erkennen und einen kontrollierten Repair ermöglichen.
 - Bei Bind-, Firewall- oder Staff-Probe-Fehlern den gesicherten Zustand
   wiederherstellen und den Fehler sichtbar lassen. Kein Teilzustand darf einen
   Portal-A-Record oder Portal-Listener anlegen.
@@ -1090,11 +1112,12 @@ wenn Phase 0 auf den Zielplattformen abgenommen ist.
 
 Vor **Gate 0 / Staff-Binding** offen:
 
-- unterstützte Windows-/macOS- und Docker-Desktop-Mindestversionen;
+- breitere macOS-Mindestversionen jenseits der konkret nachgewiesenen
+  Kombination;
 - F1-PoC: Compose-Host-IP **und** Host-Firewall **und** externer Zwei-NIC-Scan
-  je Plattform; Binding allein schließt F1 nicht;
-- Packaging, Installation, Elevation und Firewall-Rollback des Managers auf
-  Windows und macOS.
+  vor jeder zusätzlichen Plattformfreigabe; Binding allein schließt F1 nicht;
+- Windows-PoC, Packaging, Installation, Elevation und Firewall-Rollback vor
+  einer späteren Windows-Freigabe.
 
 Erst vor dem **Restricted-/Portal-Block** offen:
 
