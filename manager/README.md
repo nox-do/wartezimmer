@@ -43,8 +43,8 @@ npm run dev:manager
 1. Voraussetzungen (Docker, ggf. Release-Paket, Port-Checks)
 2. Einrichtung — technische Host-Konfiguration (Routing-Modus in Ops Settings)
 3. Import & Export — Host-Ordner (Kontakte / MFA-Exporte)
-4. Netzwerk — LAN-IP & Erreichbarkeit
-5. Zugang — optional Port 80 (Proxy); Gateway im Manager immer aus
+4. Netzwerk — Staff-Adresse/Adapter & Erreichbarkeit
+5. Zugang — optional Port 80 (Proxy); ohne Proxy offener Demo-/Erststart auf `:8080`
 6. HTTPS — nur mit Proxy; Mail/PEM im Assistenten, Cutover unter Netzwerk ([`docs/operations/tls.md`](../docs/operations/tls.md))
 7. Vorschau (`POST /plan`) — Geräte-URLs
 8. Anwenden (`POST /apply`) + Abschluss (Probes)
@@ -62,8 +62,10 @@ Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unte
 
 ### Netzwerk-Tab
 
-- LAN-IP und optional Proxy (`POST /network` mit optionalem Stack-Neustart)
-- Topology-Übersicht + Binding-Checks
+- Staff-Adresse samt Adapter und optional Proxy (`POST /network` mit optionalem Stack-Neustart)
+- ohne Proxy bewusst offener Demo-/Erststart auf `0.0.0.0:8080`
+- mit Proxy App nur auf Loopback und Port 80/443 nur an der Staff-Adresse;
+  Topology-Übersicht + tatsächliche Runtime-Binding-Checks
 
 ### Wartung
 
@@ -85,23 +87,23 @@ Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unte
 
 Setup-API (Manager-Child auf Loopback; CLI-Default `127.0.0.1:9190`):
 
-| Methode | Pfad                               | Zweck                                                                                                        |
-| ------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| GET     | `/api/setup/host/status`           | Config-Snapshot (`HostStatus`)                                                                               |
-| GET     | `/api/setup/host/runtime-health`   | Pollbarer Runtime-Snapshot                                                                                   |
-| GET     | `/api/setup/host/compose`          | Container-Status                                                                                             |
-| GET     | `/api/setup/host/compose/logs`     | Log-Auszug                                                                                                   |
-| POST    | `/api/setup/host/compose`          | `{ action: start\|stop\|restart }`                                                                           |
-| GET     | `/api/setup/host/backup`           | Info zum letzten `.pfbackup`                                                                                 |
-| POST    | `/api/setup/host/backup`           | `.pfbackup` erzeugen (+ TLS-Sidecar wenn `tls.state ≠ off`)                                                  |
-| POST    | `/api/setup/host/backup/validate`  | Archiv + Settings validieren                                                                                 |
-| POST    | `/api/setup/host/backup/inspect`   | Inspect/Vorschau inkl. Kompatibilität & TLS-Gate                                                             |
-| POST    | `/api/setup/host/backup/restore`   | Fresh-DB-Cutover + Settings-Import                                                                           |
-| POST    | `/api/setup/host/storage`          | `{ importsHostPath, exportsHostPath, restartCompose? }`                                                      |
-| POST    | `/api/setup/host/network`          | `{ lanAppIp, gateway, restartCompose? }` — Wartung/Netzwerk (gateway stets `{ enabled: false }` aus Manager) |
-| POST    | `/api/setup/host/reset-staff-pins` | MFA- & Ops-PIN auf Default `0000` (DB), Stack stop → reset → start                                           |
-| GET     | `/api/setup/host/routing-mode`     | Kompatibilitätsroute: Capabilities inkl. `routingMode`, `complexRoutingLicensed`                             |
-| POST    | `/api/setup/host/routing-mode`     | Kompatibilitätsroute: `{ routingMode: "simple"\|"complex" }` — proxied zur App-API mit Manager-Trust         |
+| Methode | Pfad                               | Zweck                                                                                                  |
+| ------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| GET     | `/api/setup/host/status`           | Config-Snapshot (`HostStatus`)                                                                         |
+| GET     | `/api/setup/host/runtime-health`   | Pollbarer Runtime-Snapshot                                                                             |
+| GET     | `/api/setup/host/compose`          | Container-Status                                                                                       |
+| GET     | `/api/setup/host/compose/logs`     | Log-Auszug                                                                                             |
+| POST    | `/api/setup/host/compose`          | `{ action: start\|stop\|restart }`                                                                     |
+| GET     | `/api/setup/host/backup`           | Info zum letzten `.pfbackup`                                                                           |
+| POST    | `/api/setup/host/backup`           | `.pfbackup` erzeugen (+ TLS-Sidecar wenn `tls.state ≠ off`)                                            |
+| POST    | `/api/setup/host/backup/validate`  | Archiv + Settings validieren                                                                           |
+| POST    | `/api/setup/host/backup/inspect`   | Inspect/Vorschau inkl. Kompatibilität & TLS-Gate                                                       |
+| POST    | `/api/setup/host/backup/restore`   | Fresh-DB-Cutover + Settings-Import                                                                     |
+| POST    | `/api/setup/host/storage`          | `{ importsHostPath, exportsHostPath, restartCompose? }`                                                |
+| POST    | `/api/setup/host/network`          | `{ lanAppIp, proxy?, gateway, restartCompose? }` — Staff-/Proxy-Binding (gateway im Manager stets aus) |
+| POST    | `/api/setup/host/reset-staff-pins` | MFA- & Ops-PIN auf Default `0000` (DB), Stack stop → reset → start                                     |
+| GET     | `/api/setup/host/routing-mode`     | Kompatibilitätsroute: Capabilities inkl. `routingMode`, `complexRoutingLicensed`                       |
+| POST    | `/api/setup/host/routing-mode`     | Kompatibilitätsroute: `{ routingMode: "simple"\|"complex" }` — proxied zur App-API mit Manager-Trust   |
 
 | POST | `/api/setup/host/images/load` | Erstinstallation: `.pfinstall` mit versioniertem Manifest |
 | POST | `/api/setup/host/update/inspect` | Wartung: `.pfupdate`-Datei prüfen (Release, Kompatibilität, Warnungen) |

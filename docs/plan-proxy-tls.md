@@ -18,6 +18,10 @@ einzelnen Exact-FQDN.
 
 HTTP-Proxy auf Port 80 ist Ist — [`delivery.md`](operations/delivery.md),
 [`runtime.md`](operations/runtime.md).
+Die weiter unten genannten globalen Proxy-Publishes beschreiben ausschließlich
+den historischen Ausgangspunkt. Im aktuellen Produkt bindet der Proxy Port 80
+und 443 an `SETUP_LAN_APP_IP`; nur der proxyfreie Demo-/Erststart bleibt bewusst
+auf `0.0.0.0:8080` offen.
 Manager-Oberfläche und Aktivierungs-UX:
 [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md).
 

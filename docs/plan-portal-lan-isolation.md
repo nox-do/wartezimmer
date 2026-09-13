@@ -1104,12 +1104,13 @@ Commit-/Rollout-Gate:
 
 - Parserfälle für konkrete, globale, leere und IPv6-Publisher sowie den
   Inspect-Fallback;
-- Compose-Rendering für Proxy aus/an und TLS aus/an ohne globale Publishes;
-- ungültige oder verschwundene Staff-IP blockiert vor dem Recreate;
+- Compose-Rendering für den bewusst globalen proxyfreien Demo-Pfad sowie für
+  Proxy/TLS ohne globale Publishes;
+- ungültige oder verschwundene Staff-IP blockiert vor einem Proxy-Recreate;
 - erfolgreicher Apply sowie Fehler nach Env-, Compose- und Firewall-Schritt mit
   Rollback;
-- Staff positiv an der Staff-IP; Ports 80, 443 und 8080 an einer zweiten IP
-  negativ; Maintenance von außen negativ;
+- im Proxy-Pfad Staff positiv an der Staff-IP; Ports 80, 443 und 8080 an einer
+  zweiten IP negativ; Maintenance von außen negativ;
 - bestehender Managed-, Custom- und Legacy-TLS-Zustand bleibt identisch und
   löst keine ACME-Order aus;
 - Backup/Restore übernimmt die Staff-IP konsistent und ein inkonsistenter

@@ -122,9 +122,9 @@ CI: `.github/workflows/release-images.yml` baut bei Tag `v*` das Erstinstall-Art
 | **Docker** (Desktop oder Engine) + Compose v2, Daemon läuft                   | Stack starten; Wizard-Schritt 1 prüft Installation/Daemon/Compose                                                                       |
 | **Manager** (DMG oder `npm run dev:manager`)                                  | Operative Hülle; startet die Setup-API als eigenen Child auf Loopback (ephemerer Port, nicht still `:9190`)                             |
 | **Release-Paket** `.pfinstall` + Sidecar (`manifest.json` / `SHA256SUMS.txt`) | Delivery: Images laden (`POST /api/setup/host/images/load`). Dev-Profil (`PRAXIS_FLOW_COMPOSE_PROFILE=dev`): oft **nicht** erforderlich |
-| **Freie Ports**                                                               | App **8080** (ohne Proxy); mit Proxy später **80** (und **443** bei TLS). Belegte 8080 → Netzwerk-Prerequisite „bereits belegt“         |
+| **Freie Ports**                                                               | App intern am Host immer **8080** (ohne Proxy offen, mit Proxy nur Loopback); Proxy zusätzlich **80** und bei TLS **443**               |
 | **Import- & Export-Ordner** auf dem Host                                      | Wizard-Schritt 3; unter Docker Desktop: File Sharing für diese Pfade                                                                    |
-| Optional: **feste LAN-IPv4** / DHCP-Reservierung                              | Stabil für Geräte-URLs; später relevant für TLS-Lease                                                                                   |
+| **Feste LAN-IPv4** / DHCP-Reservierung                                        | Für Demo ohne Proxy optional; für Proxy-Staff-Binding, Geräte-URLs und TLS verbindlich                                                  |
 
 Setup-API und Manager sprechen nur Loopback — kein Setup aus dem Praxis-LAN.
 

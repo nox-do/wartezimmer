@@ -19,8 +19,8 @@ Technik/Internals: [`../architecture/`](../architecture/) · Manager-UI: [`../..
 | Schritt       | Dokument                                                           | Status                                                    |
 | ------------- | ------------------------------------------------------------------ | --------------------------------------------------------- |
 | 1–2, 6        | [`delivery.md`](delivery.md)                                       | ausgearbeitet (Prinzip → Install → Update → Build)        |
-| 3             | [`runtime.md`](runtime.md)                                         | ausgearbeitet (Services → Compose → Ports → Alltag)       |
-| 4             | [`tls.md`](tls.md)                                                 | ausgearbeitet (§1–10 Ops-Ist LAN-TLS)                     |
+| 3             | [`runtime.md`](runtime.md)                                         | ausgearbeitet inkl. Demo-/Proxy-Binding-Vertrag           |
+| 4             | [`tls.md`](tls.md)                                                 | ausgearbeitet inkl. explizitem Proxy-Staff-Binding        |
 | 5 (+ Cutover) | [`backup.md`](backup.md)                                           | ausgearbeitet (Prinzip → Artefakt → TLS-Grenze → Cutover) |
 | 7             | [`integrations.md`](integrations.md)                               | ausgearbeitet (WLAN/SMS/CSV/eGK + Verweise)               |
 | 7 (Plan)      | [`praxis-it-network-isolation.md`](praxis-it-network-isolation.md) | IT-Hinweise zur geplanten Portal-Netzgrenze               |
