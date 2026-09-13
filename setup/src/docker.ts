@@ -4,7 +4,12 @@ import { runDockerCommand } from './docker-cli.js';
 import { readEnvMap, ensureEnvComposeEscaping } from './env-file.js';
 import { resolveStorageFoldersFromSources, type StorageFolders } from './storage-folders.js';
 
-import type { DockerStatus, ComposeServiceStatus, ComposeStatus } from '@praxis-flow/server-shared';
+import type {
+  ComposePublishedBinding,
+  ComposeServiceStatus,
+  ComposeStatus,
+  DockerStatus,
+} from '@praxis-flow/server-shared';
 
 export type { DockerStatus, ComposeServiceStatus, ComposeStatus } from '@praxis-flow/server-shared';
 
@@ -233,8 +238,14 @@ export async function composeUp(options: ComposeUpOptions & { services?: string[
 }
 
 type ComposePsPublisher = {
+  URL?: string;
+  url?: string;
+  TargetPort?: number;
+  targetPort?: number;
   PublishedPort?: number;
   publishedPort?: number;
+  Protocol?: string;
+  protocol?: string;
 };
 
 type ComposePsJsonRow = {
@@ -279,15 +290,70 @@ export function parseComposePsOutput(stdout: string): ComposeServiceStatus[] {
   return services;
 }
 
+function publishersFromRow(row: ComposePsJsonRow): ComposePsPublisher[] | null | undefined {
+  return row.Publishers !== undefined ? row.Publishers : row.publishers;
+}
+
+function positivePort(value: unknown): number | null {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 && value <= 65_535
+    ? value
+    : null;
+}
+
+/** Empty Docker HostIp/URL is the IPv4 wildcard; brackets around IPv6 are presentation only. */
+export function normalizePublishedHostIp(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '0.0.0.0';
+  }
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+export function isWildcardPublishedHostIp(hostIp: string): boolean {
+  const normalized = normalizePublishedHostIp(hostIp);
+  return normalized === '0.0.0.0' || normalized === '::';
+}
+
+function publishedBindingsFromRow(row: ComposePsJsonRow): ComposePublishedBinding[] | undefined {
+  const publishers = publishersFromRow(row);
+  if (publishers === null) {
+    return [];
+  }
+  if (!Array.isArray(publishers)) {
+    return undefined;
+  }
+  const bindings: ComposePublishedBinding[] = [];
+  for (const entry of publishers) {
+    const publishedPort = positivePort(entry.PublishedPort ?? entry.publishedPort);
+    if (publishedPort === null) {
+      continue;
+    }
+    const targetPort = positivePort(entry.TargetPort ?? entry.targetPort);
+    const hostIp = normalizePublishedHostIp(entry.URL ?? entry.url);
+    const protocol = (entry.Protocol ?? entry.protocol)?.trim().toLowerCase();
+    if (targetPort === null || hostIp === null || !protocol) {
+      return undefined;
+    }
+    bindings.push({ hostIp, publishedPort, targetPort, protocol });
+  }
+  return bindings;
+}
+
 function publishedPortsFromRow(row: ComposePsJsonRow): number[] {
-  const publishers = row.Publishers ?? row.publishers;
+  const publishers = publishersFromRow(row);
   if (!Array.isArray(publishers)) {
     return [];
   }
   const ports: number[] = [];
   for (const entry of publishers) {
-    const port = entry.PublishedPort ?? entry.publishedPort;
-    if (typeof port === 'number' && Number.isFinite(port) && port > 0) {
+    const port = positivePort(entry.PublishedPort ?? entry.publishedPort);
+    if (port !== null && !ports.includes(port)) {
       ports.push(port);
     }
   }
@@ -304,6 +370,70 @@ function mapComposePsRow(row: ComposePsJsonRow): ComposeServiceStatus {
     state,
     health,
     publishedPorts: publishedPortsFromRow(row),
+    publishedBindings: publishedBindingsFromRow(row),
+  };
+}
+
+type DockerInspectHostBinding = {
+  HostIp?: string;
+  HostPort?: string;
+};
+
+type DockerInspectPortMap = Record<string, DockerInspectHostBinding[] | null>;
+
+/** Parse `.NetworkSettings.Ports` from `docker inspect`. */
+export function parseDockerInspectPublishedBindings(
+  stdout: string,
+): ComposePublishedBinding[] | undefined {
+  let ports: DockerInspectPortMap;
+  try {
+    const parsed = JSON.parse(stdout.trim()) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return undefined;
+    }
+    ports = parsed as DockerInspectPortMap;
+  } catch {
+    return undefined;
+  }
+
+  const bindings: ComposePublishedBinding[] = [];
+  for (const [target, hostBindings] of Object.entries(ports)) {
+    if (hostBindings === null) {
+      continue;
+    }
+    if (!Array.isArray(hostBindings)) {
+      return undefined;
+    }
+    const match = /^(\d+)\/([^/]+)$/.exec(target);
+    const targetPort = positivePort(match ? Number(match[1]) : null);
+    const protocol = match?.[2]?.trim().toLowerCase();
+    if (targetPort === null || !protocol) {
+      return undefined;
+    }
+    for (const hostBinding of hostBindings) {
+      const hostIp = normalizePublishedHostIp(hostBinding.HostIp);
+      const publishedPort = positivePort(Number(hostBinding.HostPort));
+      if (hostIp === null || publishedPort === null) {
+        return undefined;
+      }
+      bindings.push({ hostIp, publishedPort, targetPort, protocol });
+    }
+  }
+  return bindings;
+}
+
+export function withInspectedPublishedBindings(
+  service: ComposeServiceStatus,
+  inspectStdout: string,
+): ComposeServiceStatus {
+  const publishedBindings = parseDockerInspectPublishedBindings(inspectStdout);
+  if (publishedBindings === undefined) {
+    return service;
+  }
+  return {
+    ...service,
+    publishedPorts: [...new Set(publishedBindings.map((binding) => binding.publishedPort))],
+    publishedBindings,
   };
 }
 
@@ -396,7 +526,20 @@ export async function composePs(options: ComposeRunOptions): Promise<ComposeStat
   if (!result.ok && !result.stdout) {
     return { running: false, services: [] };
   }
-  return buildComposeStatus(parseComposePsOutput(result.stdout));
+  const parsed = parseComposePsOutput(result.stdout);
+  const services = await Promise.all(
+    parsed.map(async (service) => {
+      if (service.publishedBindings !== undefined || !service.name) {
+        return service;
+      }
+      const inspect = await runDockerCommand(
+        ['inspect', '--format', '{{json .NetworkSettings.Ports}}', service.name],
+        { cwd: options.projectRoot, env: buildComposeEnv(options.composeProjectName) },
+      );
+      return inspect.code === 0 ? withInspectedPublishedBindings(service, inspect.stdout) : service;
+    }),
+  );
+  return buildComposeStatus(services);
 }
 
 /** Stop and remove named services. Use `withProxy: true` when tearing down proxy after disable. */

@@ -160,6 +160,7 @@ export {
   type ComposeAction,
   type ComposeActionResult,
   type ComposeLogsResult,
+  type ComposePublishedBinding,
   type ComposeServiceStatus,
   type ComposeStatus,
   type DeliveryImagesStatus,

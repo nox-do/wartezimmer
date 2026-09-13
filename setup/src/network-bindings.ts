@@ -1,5 +1,10 @@
 import net from 'node:net';
-import type { ComposeStatus, NetworkBindingCheck } from '@praxis-flow/server-shared';
+import type {
+  ComposePublishedBinding,
+  ComposeServiceStatus,
+  ComposeStatus,
+  NetworkBindingCheck,
+} from '@praxis-flow/server-shared';
 import { assessGatewayBridgeBind } from '@praxis-flow/server-shared';
 import { runProcessCommand } from './command-runner.js';
 import { canRunGatewayCompose } from './docker.js';
@@ -55,6 +60,151 @@ function composeServiceRunning(compose: ComposeStatus | null, serviceName: strin
       return name === serviceName && service.state.toLowerCase().includes('running');
     }) ?? false
   );
+}
+
+function runningComposeService(
+  compose: ComposeStatus | null,
+  serviceName: string,
+): ComposeServiceStatus | null {
+  return (
+    compose?.services.find((service) => {
+      const name = service.service || service.name;
+      return name === serviceName && service.state.toLowerCase().includes('running');
+    }) ?? null
+  );
+}
+
+function bindingKey(binding: ComposePublishedBinding): string {
+  return [
+    binding.hostIp,
+    binding.publishedPort,
+    binding.targetPort,
+    binding.protocol.toLowerCase(),
+  ].join('|');
+}
+
+function describeBindings(bindings: ComposePublishedBinding[]): string {
+  if (bindings.length === 0) {
+    return 'keine Host-Publishes';
+  }
+  return bindings
+    .map(
+      (binding) =>
+        `${binding.hostIp}:${binding.publishedPort} -> ${binding.targetPort}/${binding.protocol}`,
+    )
+    .join(', ');
+}
+
+function checkServiceBindings(input: {
+  service: ComposeServiceStatus | null;
+  serviceLabel: string;
+  checkId: string;
+  expected: ComposePublishedBinding[];
+}): NetworkBindingCheck[] {
+  if (!input.service) {
+    return [];
+  }
+  const actual = input.service.publishedBindings;
+  if (actual === undefined) {
+    return [
+      {
+        id: input.checkId,
+        ok: false,
+        message: `${input.serviceLabel}-Bindung konnte nicht vollständig ermittelt werden`,
+        detail: 'Docker-Publisher und docker inspect lieferten keinen eindeutigen Host-IP-Vertrag.',
+      },
+    ];
+  }
+  const expectedKeys = new Set(input.expected.map(bindingKey));
+  const actualKeys = new Set(actual.map(bindingKey));
+  const matches =
+    expectedKeys.size === actualKeys.size && [...expectedKeys].every((key) => actualKeys.has(key));
+  return [
+    {
+      id: input.checkId,
+      ok: matches,
+      message: matches
+        ? `${input.serviceLabel} ist nur an die vorgesehenen Host-Adressen gebunden`
+        : `${input.serviceLabel} besitzt unerwartete Host-Bindings`,
+      detail: `Ist: ${describeBindings(actual)}. Soll: ${describeBindings(input.expected)}.`,
+    },
+  ];
+}
+
+/** Pure runtime audit for the Staff-only publish policy; it never changes Docker state. */
+export function auditStaffPublishedBindings(input: {
+  compose: ComposeStatus | null;
+  staffIp: string | null;
+  proxyEnabled: boolean;
+  proxyHttpPort?: number;
+  proxyHttpsEnabled?: boolean;
+  proxyHttpsPort?: number;
+}): NetworkBindingCheck[] {
+  if (!input.compose?.services.some((service) => service.state.toLowerCase().includes('running'))) {
+    return [];
+  }
+  const staffIp = input.staffIp?.trim() || null;
+  const proxyHttpPort = input.proxyHttpPort ?? DEFAULT_PROXY_HTTP_PORT;
+  const proxyHttpsPort = input.proxyHttpsPort ?? DEFAULT_PROXY_HTTPS_PORT;
+  const appExpected: ComposePublishedBinding[] = [
+    {
+      hostIp: input.proxyEnabled ? '127.0.0.1' : staffIp || '<staff-ip-fehlt>',
+      publishedPort: DEFAULT_APP_PORT,
+      targetPort: DEFAULT_APP_PORT,
+      protocol: 'tcp',
+    },
+    { hostIp: '127.0.0.1', publishedPort: 8082, targetPort: 8082, protocol: 'tcp' },
+  ];
+  const proxyExpected: ComposePublishedBinding[] = staffIp
+    ? [
+        { hostIp: staffIp, publishedPort: proxyHttpPort, targetPort: 80, protocol: 'tcp' },
+        ...(input.proxyHttpsEnabled
+          ? [
+              {
+                hostIp: staffIp,
+                publishedPort: proxyHttpsPort,
+                targetPort: 443,
+                protocol: 'tcp',
+              },
+            ]
+          : []),
+      ]
+    : [];
+
+  const checks = [
+    ...checkServiceBindings({
+      service: runningComposeService(input.compose, 'app'),
+      serviceLabel: 'App',
+      checkId: 'staff.binding.app',
+      expected: appExpected,
+    }),
+    ...checkServiceBindings({
+      service: runningComposeService(input.compose, 'sandbox'),
+      serviceLabel: 'Sandbox',
+      checkId: 'staff.binding.sandbox',
+      expected: [],
+    }),
+  ];
+  if (input.proxyEnabled) {
+    if (!staffIp) {
+      checks.push({
+        id: 'staff.binding.proxy',
+        ok: false,
+        message: 'Proxy-Bindung gesperrt — Staff-IP fehlt',
+        detail: 'Im Manager zuerst die Adresse dieses Rechners auswählen und bestätigen.',
+      });
+    } else {
+      checks.push(
+        ...checkServiceBindings({
+          service: runningComposeService(input.compose, 'proxy'),
+          serviceLabel: 'Proxy',
+          checkId: 'staff.binding.proxy',
+          expected: proxyExpected,
+        }),
+      );
+    }
+  }
+  return checks;
 }
 
 /** True only when a running compose service actually publishes this host port. */
@@ -202,6 +352,11 @@ function readGatewayFromEnv(env: Map<string, string>): {
   };
 }
 
+function readEnvPort(env: Map<string, string>, key: string, fallback: number): number {
+  const parsed = Number.parseInt(env.get(key)?.trim() || String(fallback), 10);
+  return Number.isInteger(parsed) && parsed > 0 && parsed <= 65_535 ? parsed : fallback;
+}
+
 export async function auditNetworkBindings(input: {
   env: Map<string, string>;
   compose: ComposeStatus | null;
@@ -248,6 +403,25 @@ export async function auditNetworkBindings(input: {
         : 'IP hat sich geändert oder ist falsch — unter „Adresse dieses Rechners“ anpassen und übernehmen.',
     });
   }
+
+  const proxyEnabled = ['1', 'true', 'yes', 'on'].includes(
+    (input.env.get('PROXY_ENABLED')?.trim() || '').toLowerCase(),
+  );
+  const proxyMode = input.env.get('PROXY_MODE')?.trim().toLowerCase() || 'off';
+  const tlsState = input.env.get('TLS_STATE')?.trim().toLowerCase() || 'off';
+  const proxyHttpPort = readEnvPort(input.env, 'PROXY_HTTP_PORT', DEFAULT_PROXY_HTTP_PORT);
+  const proxyHttpsPort = readEnvPort(input.env, 'PROXY_HTTPS_PORT', DEFAULT_PROXY_HTTPS_PORT);
+  checks.push(
+    ...auditStaffPublishedBindings({
+      compose: input.compose,
+      staffIp: input.configuredLanIp,
+      proxyEnabled,
+      proxyHttpPort,
+      proxyHttpsEnabled:
+        proxyMode === 'tls-managed' || proxyMode === 'tls-custom' || tlsState !== 'off',
+      proxyHttpsPort,
+    }),
+  );
 
   if (!gateway.enabled) {
     return checks;

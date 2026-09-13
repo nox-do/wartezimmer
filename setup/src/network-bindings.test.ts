@@ -5,6 +5,7 @@ import type { NetworkInterfaceInfo } from './network.js';
 import {
   auditNetworkBindings,
   auditNetworkPrerequisites,
+  auditStaffPublishedBindings,
   hostHasLanIp,
   interfaceExists,
   interfaceHasIpv4,
@@ -34,6 +35,158 @@ test('interfaceHasIpv4 matches address on interface', () => {
 test('hostHasLanIp detects configured LAN address', () => {
   assert.equal(hostHasLanIp(sampleInterfaces, '192.168.1.13'), true);
   assert.equal(hostHasLanIp(sampleInterfaces, '192.168.1.99'), false);
+});
+
+test('auditStaffPublishedBindings accepts exact TLS proxy, app and sandbox bindings', () => {
+  const checks = auditStaffPublishedBindings({
+    compose: {
+      running: true,
+      services: [
+        {
+          name: 'app',
+          service: 'app',
+          state: 'running',
+          health: 'healthy',
+          publishedBindings: [
+            { hostIp: '127.0.0.1', publishedPort: 8080, targetPort: 8080, protocol: 'tcp' },
+            { hostIp: '127.0.0.1', publishedPort: 8082, targetPort: 8082, protocol: 'tcp' },
+          ],
+        },
+        {
+          name: 'sandbox',
+          service: 'sandbox',
+          state: 'running',
+          health: 'healthy',
+          publishedBindings: [],
+        },
+        {
+          name: 'proxy',
+          service: 'proxy',
+          state: 'running',
+          health: 'healthy',
+          publishedBindings: [
+            {
+              hostIp: '192.168.1.13',
+              publishedPort: 80,
+              targetPort: 80,
+              protocol: 'tcp',
+            },
+            {
+              hostIp: '192.168.1.13',
+              publishedPort: 443,
+              targetPort: 443,
+              protocol: 'tcp',
+            },
+          ],
+        },
+      ],
+    },
+    staffIp: '192.168.1.13',
+    proxyEnabled: true,
+    proxyHttpsEnabled: true,
+  });
+
+  assert.deepEqual(
+    checks.map((check) => [check.id, check.ok]),
+    [
+      ['staff.binding.app', true],
+      ['staff.binding.sandbox', true],
+      ['staff.binding.proxy', true],
+    ],
+  );
+});
+
+test('auditStaffPublishedBindings rejects wildcard and unknown runtime bindings', () => {
+  const checks = auditStaffPublishedBindings({
+    compose: {
+      running: true,
+      services: [
+        {
+          name: 'app',
+          service: 'app',
+          state: 'running',
+          health: 'healthy',
+          publishedBindings: [
+            { hostIp: '0.0.0.0', publishedPort: 8080, targetPort: 8080, protocol: 'tcp' },
+            { hostIp: '127.0.0.1', publishedPort: 8082, targetPort: 8082, protocol: 'tcp' },
+          ],
+        },
+        {
+          name: 'sandbox',
+          service: 'sandbox',
+          state: 'running',
+          health: 'healthy',
+        },
+      ],
+    },
+    staffIp: '192.168.1.13',
+    proxyEnabled: false,
+  });
+
+  assert.equal(checks.find((check) => check.id === 'staff.binding.app')?.ok, false);
+  assert.match(
+    checks.find((check) => check.id === 'staff.binding.app')?.detail ?? '',
+    /0\.0\.0\.0:8080/,
+  );
+  assert.equal(checks.find((check) => check.id === 'staff.binding.sandbox')?.ok, false);
+  assert.match(
+    checks.find((check) => check.id === 'staff.binding.sandbox')?.message ?? '',
+    /nicht vollständig ermittelt/,
+  );
+});
+
+test('auditStaffPublishedBindings still audits running services when expected stack is incomplete', () => {
+  const checks = auditStaffPublishedBindings({
+    compose: {
+      running: false,
+      services: [
+        {
+          name: 'app',
+          service: 'app',
+          state: 'running',
+          health: 'healthy',
+          publishedBindings: [
+            { hostIp: '0.0.0.0', publishedPort: 8080, targetPort: 8080, protocol: 'tcp' },
+            { hostIp: '127.0.0.1', publishedPort: 8082, targetPort: 8082, protocol: 'tcp' },
+          ],
+        },
+      ],
+    },
+    staffIp: '192.168.1.13',
+    proxyEnabled: true,
+  });
+
+  assert.equal(checks.find((check) => check.id === 'staff.binding.app')?.ok, false);
+});
+
+test('auditStaffPublishedBindings blocks proxy assessment when Staff IP is missing', () => {
+  const checks = auditStaffPublishedBindings({
+    compose: {
+      running: true,
+      services: [
+        {
+          name: 'proxy',
+          service: 'proxy',
+          state: 'running',
+          health: 'healthy',
+          publishedBindings: [
+            { hostIp: '0.0.0.0', publishedPort: 80, targetPort: 80, protocol: 'tcp' },
+          ],
+        },
+      ],
+    },
+    staffIp: null,
+    proxyEnabled: true,
+  });
+
+  assert.deepEqual(checks, [
+    {
+      id: 'staff.binding.proxy',
+      ok: false,
+      message: 'Proxy-Bindung gesperrt — Staff-IP fehlt',
+      detail: 'Im Manager zuerst die Adresse dieses Rechners auswählen und bestätigen.',
+    },
+  ]);
 });
 
 test('auditNetworkBindings skips gateway NIC checks when compose unsupported', async () => {

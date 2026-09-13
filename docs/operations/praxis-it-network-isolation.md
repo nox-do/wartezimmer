@@ -1,6 +1,11 @@
 # Praxis-IT-Hinweise zur Netzwerkisolation
 
-Stand: 2026-09-12 · **Beratungsunterlage zum geplanten Restricted-Binding, kein umgesetzter Produktvertrag**
+Stand: 2026-09-13 · **Beratungsunterlage zum geplanten Restricted-Binding, kein umgesetzter Produktvertrag**
+
+Das vorausgesetzte Wildcard-TLS-Namensmodell ist umgesetzt und per lokalem
+Pebble-Smoke geprüft. Explizites Staff-Binding, Plattform-/Firewall-Gate und
+Restricted-Binding sind weiterhin offen; die nachfolgenden Netzempfehlungen
+dürfen daher noch nicht als verfügbare Manager-Funktion verstanden werden.
 
 Produktplan: [Eingeschränkter Netzwerkzugang für das Patientenportal](../plan-portal-lan-isolation.md) ·
 Manager-Plan: [Restricted Network Access](../plan-manager-restricted-network-access.md) ·

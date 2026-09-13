@@ -9,6 +9,7 @@ export type {
   ComposeAction,
   ComposeActionResult,
   ComposeLogsResult,
+  ComposePublishedBinding,
   ComposeServiceStatus,
   ComposeStatus,
   DeliveryImagesStatus,

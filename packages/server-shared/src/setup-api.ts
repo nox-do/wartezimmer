@@ -79,6 +79,14 @@ export type ProbeResult = {
   detail?: string;
 };
 
+/** One concrete Docker host publish observed at runtime. */
+export type ComposePublishedBinding = {
+  hostIp: string;
+  publishedPort: number;
+  targetPort: number;
+  protocol: string;
+};
+
 export type ComposeServiceStatus = {
   name: string;
   service: string;
@@ -86,6 +94,11 @@ export type ComposeServiceStatus = {
   health: string | null;
   /** Host ports published by this container (from compose ps Publishers). */
   publishedPorts?: number[];
+  /**
+   * Complete runtime bindings. `undefined` means the Docker response was
+   * incomplete; an empty array means the container has no host publishes.
+   */
+  publishedBindings?: ComposePublishedBinding[];
 };
 
 export type ComposeStatus = {

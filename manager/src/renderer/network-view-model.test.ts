@@ -138,6 +138,16 @@ test('networkHostChecksForDisplay drops gateway leftover checks', () => {
   );
 });
 
+test('networkHostChecksForDisplay keeps Staff runtime binding failures', () => {
+  assert.deepEqual(
+    networkHostChecksForDisplay([
+      { id: 'staff.binding.app', ok: false, message: 'Globale App-Bindung' },
+      { id: 'staff.binding.proxy', ok: true, message: 'Proxy-Bindung korrekt' },
+    ]).map((check) => check.id),
+    ['staff.binding.app', 'staff.binding.proxy'],
+  );
+});
+
 test('networkExpanderDefaults opens LAN and proxy when host checks are degraded', () => {
   const defaults = networkExpanderDefaults({
     status: minimalHostStatus({

@@ -1,6 +1,7 @@
 # Plan: Manager — eingeschränkter Netzwerkzugang
 
-Stand: 2026-09-03 · **Architekturentscheidung, Umsetzung offen**
+Stand: 2026-09-13 · **TLS-Fundament umgesetzt; Staff- und Restricted-Binding
+offen**
 
 Grundlage: [Eingeschränkter Netzwerkzugang für das Patientenportal](plan-portal-lan-isolation.md) ·
 TLS-Ist: [`operations/tls.md`](operations/tls.md)
@@ -284,22 +285,47 @@ HTTPS-Vertrag aus.
 
 ## 10. Umsetzungsschnitte
 
-### Schnitt 0 — Machbarkeit
+Der ausführbare nächste Arbeitsblock ist in
+[`plan-portal-lan-isolation.md` §13.1](plan-portal-lan-isolation.md#131-nächster-arbeitsblock-explizites-staff-binding)
+festgelegt. Dieser Manager-Plan beginnt nicht mit der Restricted-UI, sondern
+erst mit dem beobachtbaren Staff-Binding.
 
-- F1-PoC je unterstützter Windows-/macOS-/Docker-Desktop-Kombination;
-- spezifische Host-IP-Publishes, Host-Firewall, Elevation und Rollback;
-- externer Scan aus beiden Netzen, Reboot und Adressverlust.
+### Schnitt 0 — Machbarkeit (offen, als Nächstes)
+
+- [x] macOS 26.5.1 / Docker Desktop 4.89.0: spezifische Host-IP-Publishes,
+      isolierter `pf`-Anchor, Elevation, externer Scan über LAN und WLAN sowie
+      Firewall-Rollback;
+- [x] macOS: Docker-Desktop-Neustart mit automatisch neu gestartetem,
+      explizit an die Staff-IP gebundenem Testcontainer und externem Positiv-/
+      Negativtest;
+- [ ] macOS: Host-Reboot und Adressverlust/-wiederkehr;
+- [ ] F1-PoC auf der vorgesehenen Windows-/Docker-Desktop-Kombination;
+- [ ] freigegebene Mindestversionen aus den Ergebnissen festlegen.
 
 Ohne bestandenes F1-Gate keine produktive Restricted-Network-Implementierung.
 
-### Schnitt 1 — technische Basis
+### Schnitt 1a — TLS-Identität und Backup (erledigt)
 
-- vollständige Runtime-Publish-Bindings statt bloßer Portnummern;
-- Staff-/Loopback-Bindings ohne `0.0.0.0` und `[::]`;
-- Wildcard-/Origin-Vertrag im TLS-Modul;
-- Backup-/Restore-Erweiterung.
+- [x] Wildcard-/Origin-Vertrag im TLS-Modul;
+- [x] Managed: genau eine Wildcard-Order, Staff-A und Challenge-CNAME;
+- [x] Portal und unbekannte Wildcard-Hosts ohne App-Antwort;
+- [x] Backup-Sidecar und Restore-Gate für die TLS-Identität;
+- [x] Custom- und Legacy-Single-Hostname-Pfad bleiben erhalten.
 
-### Schnitt 2 — Setup vertical slice
+### Schnitt 1b — Staff-Binding und Runtime-Audit (offen, nach Schnitt 0)
+
+- [x] vollständige Runtime-Publish-Bindings zusätzlich zu den kompatibel
+      beibehaltenen Portnummern;
+- [ ] Staff-/Loopback-Bindings ohne `0.0.0.0` und `[::]`;
+- [x] `SETUP_LAN_APP_IP` als festgelegte einzige persistierte Quelle der Staff-IP, ohne
+      paralleles Binding-Identitätsfeld;
+- [ ] Fail-closed vor Start/Recreate, wenn die Staff-IP fehlt oder nicht lokal ist;
+- [ ] transaktionaler Compose-/Firewall-Apply mit Runtime-Audit und Rollback;
+- [x] read-only Runtime-Audit im bestehenden Netzwerk-Prüffeld;
+- [ ] Zuordnungsanzeige und Apply-/Repair-Diagnose im bestehenden
+      Netzwerkbereich des Managers.
+
+### Schnitt 2 — Setup vertical slice (Restricted, offen)
 
 - DTOs und neue Operationsdeskriptoren;
 - Persistenz, Inspect, Prepare und Apply;
@@ -307,7 +333,7 @@ Ohne bestandenes F1-Gate keine produktive Restricted-Network-Implementierung.
 - Compose/Caddy/Firewall-Transaktion und Rollback;
 - Fail-closed bei fehlender Restricted-IP.
 
-### Schnitt 3 — Manager
+### Schnitt 3 — Manager (Restricted, offen)
 
 - Bereich im Netzwerk-Tab;
 - Kandidatenauswahl und Same-NIC-Bestätigung;
@@ -315,7 +341,7 @@ Ohne bestandenes F1-Gate keine produktive Restricted-Network-Implementierung.
 - HTTPS-Verweis bei TLS-/DNS-Blockern;
 - neue Zwei-Zonen-Topologie statt Captive-zentrierter Erklärung.
 
-### Schnitt 4 — Betrieb und Reparatur
+### Schnitt 4 — Betrieb und Reparatur (Restricted, offen)
 
 - Drift-Erkennung bei Stack-Start und Netzwerkänderung;
 - Repair nur für tatsächlich beobachtete Fehlerfälle;

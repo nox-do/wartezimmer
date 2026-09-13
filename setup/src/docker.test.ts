@@ -3,9 +3,13 @@ import test from 'node:test';
 import {
   buildComposeStatus,
   COMPOSE_TLS_LAB_SERVICES,
+  isWildcardPublishedHostIp,
+  normalizePublishedHostIp,
+  parseDockerInspectPublishedBindings,
   parseComposePsOutput,
   productComposeServices,
   resolveComposeFiles,
+  withInspectedPublishedBindings,
 } from './docker.js';
 
 test('resolveComposeFiles selects base file by delivery flag', () => {
@@ -142,6 +146,9 @@ test('parseComposePsOutput parses line-delimited json rows', () => {
       state: 'running',
       health: 'healthy',
       publishedPorts: [8080],
+      publishedBindings: [
+        { hostIp: '0.0.0.0', publishedPort: 8080, targetPort: 8080, protocol: 'tcp' },
+      ],
     },
     {
       name: 'pf-dev-001-sandbox-1',
@@ -149,6 +156,7 @@ test('parseComposePsOutput parses line-delimited json rows', () => {
       state: 'exited',
       health: null,
       publishedPorts: [],
+      publishedBindings: [],
     },
   ]);
 });
@@ -160,15 +168,91 @@ test('parseComposePsOutput parses json array payload', () => {
   ]);
 
   assert.deepEqual(parseComposePsOutput(stdout), [
-    { name: 'app-1', service: 'app', state: 'running', health: null, publishedPorts: [] },
+    {
+      name: 'app-1',
+      service: 'app',
+      state: 'running',
+      health: null,
+      publishedPorts: [],
+      publishedBindings: undefined,
+    },
     {
       name: 'sandbox-1',
       service: 'sandbox',
       state: 'running',
       health: 'starting',
       publishedPorts: [],
+      publishedBindings: undefined,
     },
   ]);
+});
+
+test('parseComposePsOutput keeps compatibility ports but marks incomplete bindings unknown', () => {
+  const stdout = JSON.stringify({
+    name: 'proxy-1',
+    service: 'proxy',
+    state: 'running',
+    publishers: [{ publishedPort: 443 }],
+  });
+
+  assert.deepEqual(parseComposePsOutput(stdout), [
+    {
+      name: 'proxy-1',
+      service: 'proxy',
+      state: 'running',
+      health: null,
+      publishedPorts: [443],
+      publishedBindings: undefined,
+    },
+  ]);
+});
+
+test('published host IP normalization recognizes IPv4, IPv6 and empty wildcards', () => {
+  assert.equal(normalizePublishedHostIp(' 192.168.1.20 '), '192.168.1.20');
+  assert.equal(normalizePublishedHostIp('[::]'), '::');
+  assert.equal(normalizePublishedHostIp(''), '0.0.0.0');
+  assert.equal(normalizePublishedHostIp(undefined), null);
+  assert.equal(isWildcardPublishedHostIp('0.0.0.0'), true);
+  assert.equal(isWildcardPublishedHostIp('[::]'), true);
+  assert.equal(isWildcardPublishedHostIp('127.0.0.1'), false);
+});
+
+test('parseDockerInspectPublishedBindings reads concrete and wildcard bindings', () => {
+  const stdout = JSON.stringify({
+    '443/tcp': [
+      { HostIp: '192.168.1.20', HostPort: '443' },
+      { HostIp: '::', HostPort: '443' },
+    ],
+    '8080/tcp': null,
+  });
+
+  assert.deepEqual(parseDockerInspectPublishedBindings(stdout), [
+    { hostIp: '192.168.1.20', publishedPort: 443, targetPort: 443, protocol: 'tcp' },
+    { hostIp: '::', publishedPort: 443, targetPort: 443, protocol: 'tcp' },
+  ]);
+  assert.equal(parseDockerInspectPublishedBindings('not-json'), undefined);
+});
+
+test('withInspectedPublishedBindings enriches incomplete compose status', () => {
+  const service = {
+    name: 'proxy-1',
+    service: 'proxy',
+    state: 'running',
+    health: 'healthy',
+    publishedPorts: [443],
+  };
+  const enriched = withInspectedPublishedBindings(
+    service,
+    JSON.stringify({ '443/tcp': [{ HostIp: '192.168.1.20', HostPort: '443' }] }),
+  );
+
+  assert.deepEqual(enriched, {
+    ...service,
+    publishedPorts: [443],
+    publishedBindings: [
+      { hostIp: '192.168.1.20', publishedPort: 443, targetPort: 443, protocol: 'tcp' },
+    ],
+  });
 });
 
 test('buildComposeStatus marks running when any service is running', () => {
