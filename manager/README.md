@@ -23,6 +23,24 @@ npm run dev:manager
 
 **macOS-Menü „Electron“:** Im Dev-Modus startet die generische `Electron.app`; der sichtbare Menüname kommt aus deren `Info.plist`, nicht aus `app.setName()`. `npm run dev:manager` patcht das lokal automatisch auf **Praxis Flow** (wird bei `npm install electron` zurückgesetzt). Dauerhaft korrekt erst nach Packaging mit `productName`.
 
+## Geräteadresse
+
+Im Wizard wird die IP-Adresse ausgewählt; der Proxy-Schalter bestimmt den HTTP-Port:
+`http://<IP>:8080` ohne Proxy, `http://<IP>` mit Proxy. Eine zusätzliche Auswahl
+zwischen IP, Rechnername und eigener HTTP-Domain entfällt. Die Namenswahl gehört
+zur HTTPS-Einrichtung. Der Manager hält keine editierbaren `reachabilityMode`-/
+`customHostname`-Felder mehr. Plan-, Apply- und Netzwerk-API akzeptieren kein
+`canonicalBaseUrl` mehr; veraltete Anfragen werden vor Änderungen abgewiesen.
+Backend und Vorschau verwenden dieselbe HTTP-Adressableitung. `CANONICAL_BASE_URL`
+bleibt als abgeleiteter persistierter Wert für Geräte-URLs und TLS erhalten.
+Bestehende eigene HTTP-Adressen werden weiterhin gelesen
+und beim Laden der Netzwerkkonfiguration nicht auf IP oder einen neuen Rechnernamen umgeschrieben.
+
+Im Netzwerk-Tab stehen die gespeicherte Geräteadresse, Öffnen/Kopieren und die
+Erreichbarkeitsprüfung direkt unter „Praxisadresse dieses Rechners“. Änderungen
+zeigen eine getrennte Vorschau; die Aktionen beziehen sich auf die gespeicherte
+Adresse. Während der TLS-Vorbereitung und nach dem Cutover bleibt die TLS-Identität maßgeblich.
+
 ## Architektur
 
 - **Main:** startet `@praxis-flow/setup serve` als eigenen Child-Prozess (ephemerer Loopback-Port, Override via `SETUP_HOST_PORT`); Health-Handshake (`protocolVersion`, Build-ID, Install-Home) plus einmaliges Start-Token. Alle Setup-API-Calls über IPC-Proxy (`setup-api.ts`, Allowlist `/api/setup/host/*`, nur `127.0.0.1`)
@@ -40,14 +58,13 @@ npm run dev:manager
 
 ### Install-Wizard (Assistent)
 
-1. Voraussetzungen (Docker, ggf. Release-Paket, Port-Checks)
-2. Einrichtung — technische Host-Konfiguration (Routing-Modus in Ops Settings)
-3. Import & Export — Host-Ordner (Kontakte / MFA-Exporte)
-4. Netzwerk — Staff-Adresse/Adapter & Erreichbarkeit
-5. Zugang — optional Port 80 (Proxy); ohne Proxy offener Demo-/Erststart auf `:8080`
-6. HTTPS — nur mit Proxy; Mail/PEM im Assistenten, Cutover unter Netzwerk ([`docs/operations/tls.md`](../docs/operations/tls.md))
-7. Vorschau (`POST /plan`) — Geräte-URLs
-8. Anwenden (`POST /apply`) + Abschluss (Probes)
+1. Voraussetzungen (Docker, ggf. Release-Paket, lokale Port-Checks)
+2. Import & Export (Kontakte / MFA-Exporte)
+3. Praxisadresse und Gerätezugriff (Adresse und zugehöriger Adapter)
+4. Zugriff im Praxisnetz: initialer interner HTTP-Betrieb oder Proxy an ausgewählter Adresse
+5. Optional HTTPS: Mail/PEM im Assistenten, Cutover unter Netzwerk ([`docs/operations/tls.md`](../docs/operations/tls.md))
+6. Zusammenfassung des internen Betriebs (`POST /plan`)
+7. Anwenden (`POST /apply`), Prüfung und Abschluss mit MFA-Einstieg
 
 Ops-Detail Erstinstall: [`docs/operations/delivery.md`](../docs/operations/delivery.md) §4.  
 Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unter „Assistent“.
@@ -56,16 +73,21 @@ Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unte
 
 - Setup-Einstieg, wenn Einrichtung noch nicht fertig (Docker / Release / LAN)
 - DHCP-Hinweis bei `network.lanIpStale`
-- Geräte-URLs mit Kopieren / Öffnen
-- Status-Grid: Install-Home, Compose-Projektname, Docker-Kurzstatus, `.env`, WLAN/LAN
+- Interne Zugänge mit Kopieren / Öffnen; Portal ausdrücklich für interne Nutzung
+- Zugangszusammenfassung: Praxisadresse/Adapter, HTTP/HTTPS, Publikationsumfang,
+  Laufzustand und letzte Host-Prüfung; Patientenzugang bleibt separat noch nicht eingerichtet
+- Installationsdetails aufklappbar: Install-Home, Compose-Projektname, Docker, `.env`
 - **Stack läuft / gestoppt** und Probe-Kacheln: Health-Header (aus Runtime-Poll)
 
 ### Netzwerk-Tab
 
 - Staff-Adresse samt Adapter und optional Proxy (`POST /network` mit optionalem Stack-Neustart)
-- ohne Proxy bewusst offener Demo-/Erststart auf `0.0.0.0:8080`
+- ohne Proxy bewusst offener initialer interner Betrieb auf `0.0.0.0:8080`
 - mit Proxy App nur auf Loopback und Port 80/443 nur an der Staff-Adresse;
-  Topology-Übersicht + tatsächliche Runtime-Binding-Checks
+  Netzwerkdiagramm + tatsächliche Runtime-Binding-Checks
+- Proxy-Wiederherstellung auch nach HTTPS-Cutover; offene Entwürfe zuerst übernehmen/verwerfen
+- Docker/Caddy als Produktgrenze; Host-Firewall und Netztrennung bleiben bei Praxis-IT
+- „HTTPS eingerichtet“ wird nicht mit einem tatsächlich laufenden Proxy gleichgesetzt
 
 ### Wartung
 

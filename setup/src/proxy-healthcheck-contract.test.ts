@@ -27,6 +27,10 @@ for (const fileName of ['docker-compose.proxy.yml', 'docker-compose.proxy.delive
     assert.match(compose, /http:\/\/127\.0\.0\.1:80\//);
     assert.match(compose, /https:\/\/127\.0\.0\.1:443\/__praxis-flow\/health/);
     assert.doesNotMatch(compose, /127\.0\.0\.1:\$\{PROXY_(?:HTTP|HTTPS)_PORT/);
+    assert.match(
+      compose,
+      /app:\n(?:.|\n)*?ports: !override\n\s+- '127\.0\.0\.1:8080:8080'\n\s+- '127\.0\.0\.1:8082:8082'/,
+    );
   });
 }
 

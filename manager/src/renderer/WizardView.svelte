@@ -155,6 +155,9 @@
         >
           Zum Status
         </button>
+        {#if snapshot.status?.deviceUrls?.mfa}
+          <button type="button" disabled={snapshot.busy} onclick={() => void requireApi().openExternalUrl(snapshot!.status!.deviceUrls!.mfa)}>MFA öffnen</button>
+        {/if}
         <button
           type="button"
           id="wizard-complete-it-settings"
@@ -162,7 +165,7 @@
           disabled={snapshot.busy || !itSettingsUrl}
           onclick={() => controller?.openItSettings()}
         >
-          IT-Einstellungen
+          Administration öffnen
         </button>
       {:else}
         <button

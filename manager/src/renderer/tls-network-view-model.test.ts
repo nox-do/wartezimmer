@@ -199,11 +199,11 @@ test('tlsCanRenew stays off while a healthy certificate is active', () => {
 test('tlsErrorCopy does not claim a missing A-record is a taken name', () => {
   const missing = tlsErrorCopy('a-record', 'A-Record fehlt');
   assert.equal(missing.title, 'A-Record fehlt');
-  assert.match(missing.action, /Warten/);
+  assert.match(missing.action, /DNS-Eintrag.*Praxis-IP/);
   const otherIp = tlsErrorCopy('collision', 'A-Record zeigt auf eine andere IP');
   assert.equal(otherIp.title, 'A-Record zeigt auf eine andere IP');
   assert.doesNotMatch(otherIp.title, /vergeben/);
-  assert.match(otherIp.action, /andere Adresse/);
+  assert.match(otherIp.action, /Ziel-IP.*korrigieren/);
 });
 
 test('tlsDiagnoseItems does not mark DNS green after a pre-cutover error', () => {
@@ -328,7 +328,7 @@ test('apply-fail keeps apply retry and does not offer repair', () => {
   assert.equal(tlsShowsDnsWaitCopy(applyFail), false);
   const copy = tlsErrorCopy(applyFail.lastError?.class, applyFail.lastError?.message);
   assert.equal(copy.title, 'Port 443 auf diesem Rechner ist nicht erreichbar.');
-  assert.match(copy.action, /HTTP bleibt/);
+  assert.match(copy.action, /Proxy-Dienst.*Praxisadresse/);
 });
 
 test('generic footer stays hidden when a structured lastError is on a pre-cutover gate', () => {

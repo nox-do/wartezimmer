@@ -61,6 +61,7 @@ export function createHostRefreshController(
   let pollTimerId: unknown = null;
   let lastConfig: HostStatus | null = null;
   let lastRuntime: HostRuntimeHealth | null = null;
+  let foregroundRefreshes = 0;
 
   function envExistsForRuntime(): boolean {
     return lastConfig?.envExists === true;
@@ -161,6 +162,20 @@ export function createHostRefreshController(
 
       if (envExistsForRuntime()) {
         await fetchRuntime(myGeneration, options);
+        // A runtime poll may supersede a mutation's config refresh. Reconcile by
+        // fetching authoritative config, never by mixing runtime fields into it.
+        if (
+          myGeneration === generation &&
+          lastConfig &&
+          lastRuntime &&
+          (lastRuntime.envExists !== lastConfig.envExists ||
+            lastRuntime.configuredLanIp !== lastConfig.network.configuredLanIp ||
+            (lastRuntime.appBaseUrl !== null && lastRuntime.appBaseUrl !== lastConfig.appBaseUrl) ||
+            (lastRuntime.proxyServer !== null &&
+              lastRuntime.proxyServer.enabled !== lastConfig.proxy.enabled))
+        ) {
+          await fetchConfig(myGeneration, options);
+        }
       }
       return lastConfig;
     } finally {
@@ -176,14 +191,32 @@ export function createHostRefreshController(
 
   function refresh(options: RefreshOptions): Promise<HostStatus | null> {
     stopPollTimer();
+
+    // A poll whose timer fired just before a user-triggered mutation refresh was
+    // stopped must not invalidate that authoritative config response. Waiting for
+    // the foreground chain is sufficient: its caller starts the next runtime
+    // refresh, and full foreground refreshes schedule the next poll themselves.
+    if (options.scope === 'runtime' && options.silent && foregroundRefreshes > 0) {
+      return refreshChain.then(() => lastConfig);
+    }
+
+    const foreground = !options.silent;
+    if (foreground) {
+      foregroundRefreshes += 1;
+    }
     const myGeneration = ++generation;
 
     const done = refreshChain
       .then(async () => performRefresh(myGeneration, options))
       .catch(() => null);
-    refreshChain = done.then(() => undefined);
+    const finalized = done.finally(() => {
+      if (foreground) {
+        foregroundRefreshes -= 1;
+      }
+    });
+    refreshChain = finalized.then(() => undefined);
 
-    return done;
+    return finalized;
   }
 
   return {

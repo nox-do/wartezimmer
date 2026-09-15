@@ -1,24 +1,4 @@
 /* Network topology diagram (NetworkTopologyDiagram / network-topology-diagram.ts) */
-.network-diagram-intro {
-  margin: 0 0 0.85rem;
-  color: var(--muted);
-  font-size: 0.92rem;
-  line-height: 1.45;
-}
-
-.network-diagram-intro > p {
-  margin: 0 0 0.35rem;
-}
-
-.network-diagram-intro-list {
-  margin: 0;
-  padding-left: 1.15rem;
-}
-
-.network-diagram-intro-list li + li {
-  margin-top: 0.2rem;
-}
-
 .net-scenario {
   margin-bottom: 1rem;
   padding: 0.85rem 0.9rem;
@@ -40,42 +20,10 @@
   font-size: 0.98rem;
 }
 
-.net-scenario-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin: 0.35rem 0 0;
-}
-
-.net-scenario-badge {
-  display: inline-block;
-  padding: 0.12rem 0.45rem;
-  border-radius: 4px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  background: var(--surface, rgba(0, 0, 0, 0.12));
-  color: var(--muted);
-}
-
-.net-scenario-badge--recommended {
-  background: color-mix(in srgb, var(--accent, #3b82f6) 16%, var(--surface, rgba(0, 0, 0, 0.12)));
-  color: color-mix(in srgb, var(--accent, #3b82f6) 80%, var(--text, #fff));
-}
-
 .net-scenario-lead {
   margin: 0 0 0.75rem;
   font-size: 0.86rem;
   color: var(--muted);
-  line-height: 1.45;
-}
-
-.net-scenario-security {
-  margin: 0 0 0.85rem;
-  padding: 0.55rem 0.65rem;
-  border-left: 3px solid color-mix(in srgb, var(--accent, #3b82f6) 55%, var(--border));
-  background: color-mix(in srgb, var(--accent, #3b82f6) 6%, transparent);
-  font-size: 0.84rem;
   line-height: 1.45;
 }
 
@@ -88,13 +36,6 @@
   margin: 0 auto 0.5rem;
 }
 
-.net-flow-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
-  width: 100%;
-}
-
 .net-flow-step {
   width: 100%;
   padding: 0.55rem 0.7rem;
@@ -104,11 +45,6 @@
   font-size: 0.88rem;
   line-height: 1.35;
   background: var(--surface, rgba(0, 0, 0, 0.08));
-}
-
-.net-flow-step--extern {
-  border-color: color-mix(in srgb, #b45309 40%, var(--border));
-  background: color-mix(in srgb, #b45309 8%, var(--surface, rgba(0, 0, 0, 0.08)));
 }
 
 .net-flow-step--ours {

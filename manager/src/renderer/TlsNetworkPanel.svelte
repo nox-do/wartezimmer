@@ -106,12 +106,12 @@
 </script>
 
 {#if !eligible && tlsIsOff(tls)}
-  <p class="notice is-warn">
-    HTTPS braucht Port 80. Zuerst unter {NETWORK_PROXY_EXPANDER_TITLE} einschalten, dann
-    „{NETWORK_APPLY_BUTTON_LABEL}“.
+  <p class="hint">
+    Für HTTPS zuerst unter „{NETWORK_PROXY_EXPANDER_TITLE}“ „Proxy an“ auswählen und
+    „{NETWORK_APPLY_BUTTON_LABEL}“ wählen. Der interne HTTP-Betrieb bleibt bis dahin möglich.
   </p>
 {:else if tlsIsOff(tls) && state.startPhase === 'offer'}
-  <p class="hint">Noch nicht vorbereitet. HTTPS hier vorbereiten.</p>
+  <p class="hint">HTTPS verschlüsselt die Verbindung Ihrer Praxisgeräte. Während der Vorbereitung bleibt der bisherige HTTP-Zugang bestehen.</p>
   <div class="actions-row">
     <button type="button" disabled={busy} onclick={() => controller.startPrepare()}>HTTPS vorbereiten</button>
   </div>
@@ -136,7 +136,7 @@
         disabled={busy}
         onchange={() => controller.patchDraft({ nameMode: 'label' })}
       />
-      <span>Eigenes Label unter <code>{TLS_OPERATOR_ZONE}</code></span>
+      <span>Eigener Name unter <code>{TLS_OPERATOR_ZONE}</code></span>
     </label>
     {#if state.nameMode === 'label'}
       <input
@@ -155,7 +155,7 @@
         disabled={busy}
         onchange={() => controller.patchDraft({ nameMode: 'domain' })}
       />
-      <span>Eigene Domain (PEM statt Let's Encrypt)</span>
+      <span>Eigene Domain mit vorhandenem Zertifikat (PEM)</span>
     </label>
     {#if state.nameMode === 'domain'}
       <input
@@ -209,8 +209,8 @@
   {/if}
 
   {#if tls.cutoverApplied}
-    <p class="notice is-ok">
-      Geräte nutzen <code>https://{tls.hostname}</code>. Proxy nur Weiterleitung.
+    <p class="hint">
+      Konfigurierte Geräteadresse: <code>https://{tls.hostname}</code>. Den aktuellen Laufzustand sehen Sie unter „Interner Praxisbetrieb“.
     </p>
     <dl class="status-grid wizard-summary-grid">
       <dt>Hostname</dt>
@@ -228,7 +228,7 @@
       <p class="notice is-bad">Zertifikat ist abgelaufen und muss jetzt erneuert werden.</p>
     {/if}
     <p class="notice is-warn">
-      Gültiges Zertifikat plus Portweiterleitung 443 legt die ganze App ins Internet. 80 und 443 nicht freigeben.
+      Für internen Betrieb vorgesehen. Keine Router-Portweiterleitung für Port 80 oder 443 ins Internet einrichten.
     </p>
     {#if tlsCanRenew(tls)}
       <div class="actions-row">
@@ -267,7 +267,7 @@
       <p class="notice is-ok">
         {tls.mode === 'custom'
           ? 'Zertifikat wird geprüft — HTTP bleibt erreichbar.'
-          : 'DNS stimmt. Zertifikat wird geholt — HTTP bleibt erreichbar.'}
+          : 'DNS-Einträge stimmen. Zertifikat wird angefordert — HTTP bleibt erreichbar.'}
       </p>
       <div class="actions-row" role="status">
         <span class="spinner" aria-hidden="true"></span>
@@ -306,7 +306,7 @@
       </ul>
       <p class="notice is-ok">Zertifikat liegt vor. Geräte nutzen noch HTTP.</p>
       <p class="notice is-warn">
-        Gültiges Zertifikat plus Portweiterleitung 443 legt die ganze App ins Internet. 80 und 443 nicht freigeben.
+        Für internen Betrieb vorgesehen. Keine Router-Portweiterleitung für Port 80 oder 443 ins Internet einrichten.
       </p>
       <p class="notice is-warn">{TLS_CUTOVER_CONFIRM_MESSAGE}</p>
       <div class="actions-row">
@@ -327,11 +327,11 @@
             disabled={busy}
             onclick={() => void controller.stageCustomCertificate()}
           >
-            PEM einlesen
+            Zertifikat einlesen (PEM)
           </button>
         {/if}
         <button type="button" disabled={busy} onclick={() => void controller.obtainOrCheck()}>
-          {tls.mode === 'custom' ? 'Lokal prüfen' : 'Zertifikat holen'}
+          {tls.mode === 'custom' ? 'Lokal prüfen' : 'Zertifikat anfordern'}
         </button>
         <button type="button" class="btn-secondary" disabled={busy} onclick={() => controller.reset()}>
           HTTPS-Vorbereitung verwerfen
@@ -339,7 +339,7 @@
       </div>
       <p class="hint">
         {tls.mode === 'custom'
-          ? 'Prüft 443, Kette, HTTP/2 und SSE, während HTTP weiterläuft.'
+          ? 'Prüft das Zertifikat und die HTTPS-Verbindung einschließlich laufender Aktualisierungen. HTTP bleibt dabei bestehen.'
           : 'Holt das Zertifikat, während die Praxis weiter über HTTP arbeitet. Umstellen ist ein eigener Schritt.'}
       </p>
     {:else if tlsCanVerifyDns(tls)}
@@ -351,7 +351,7 @@
             disabled={busy}
             onclick={() => void controller.stageCustomCertificate()}
           >
-            {state.customPemStaged ? 'PEM erneut einlesen' : 'PEM einlesen'}
+            {state.customPemStaged ? 'Zertifikat erneut einlesen (PEM)' : 'Zertifikat einlesen (PEM)'}
           </button>
         </div>
       {/if}
@@ -369,7 +369,7 @@
         ontoggle={(event) =>
           controller.setRevealOperatorRecords(event.currentTarget.open)}
       >
-        <summary>DNS-Records anzeigen</summary>
+        <summary>DNS-Einträge anzeigen</summary>
         <textarea class="wizard-input is-monospace is-compact" readonly>{practiceARecordBody(tls.hostname, lanIp)}</textarea>
         <div class="actions-row">
           <button

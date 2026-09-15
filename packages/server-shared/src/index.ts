@@ -233,3 +233,5 @@ export {
   type StorageFoldersInput,
   type StorageFoldersResult,
 } from './setup-api.js';
+
+export { deriveHttpDeviceAddress, persistedHttpHostname } from './device-address.js';

@@ -1,6 +1,6 @@
 # LAN-TLS (Produkt)
 
-Stand: 2026-09-13 · §1–10 ausgearbeitet (Ops-Ist LAN-TLS)
+Stand: 2026-09-14 · §1–10 ausgearbeitet (Ops-Ist LAN-TLS)
 
 **Scope:** Vertrauenswürdiges HTTPS im Praxis-LAN — Modell, Aktivierung, Betrieb, Grenzen.  
 **Ist:** Manager-Wizard (Schritt HTTPS) + Netzwerk-Tab; Setup-API `/api/setup/host/tls/*`; Proxy-Service mit Custom-Caddy-Image.
@@ -187,7 +187,7 @@ Vor Cutover: Warnung **keine Portweiterleitung 80/443** (sonst ggf. Internet-Exp
 Installationsraum und daraus abgeleitete Namen sind nach `prepare` fest —
 Label-Wechsel ⇒ neue Strecke / ggf. Reset. Der Managed-Proxy leitet nur den
 expliziten Matcher `staff.<raum>` zur App; andere Wildcard-Namen, insbesondere
-`portal.<raum>`, werden abgebrochen.
+`portal.<raum>`, werden auf HTTP und HTTPS abgebrochen.
 
 ## 5. Setup-API (Vertrag)
 
@@ -298,12 +298,15 @@ Compose bind-mountet über Host-Pfad-Env (`PROXY_CADDY_*_HOST_PATH`, `PROXY_ACME
 
 ### 6.5 Generiertes Caddyfile (Verhalten)
 
-Vor Cutover: `:80` → `app:8080`; HTTPS-Block mit TLS (ACME DNS-01 bzw. PEM) + lokaler Check-Pfad `/__praxis-flow/setup/tls-sse`.
-Nach Cutover: `:80` → **301** auf den Staff-FQDN; App nur noch über 443.
+Vor Cutover: Staff-Host und direkter IP-Zugang auf `:80` → `app:8080`;
+HTTPS-Block mit TLS (ACME DNS-01 bzw. PEM) + lokaler Check-Pfad
+`/__praxis-flow/setup/tls-sse`. Nach Cutover werden Staff-Host und direkter
+IP-Zugang auf `:80` zum Staff-FQDN umgeleitet; die App läuft regulär über 443.
 Managed ist der Caddy-Site-Name ausschließlich `*.<raum>`, damit keine zweite
 Exact-Name-Order entsteht. Ein expliziter Host-Matcher leitet nur
 `staff.<raum>` zur App; der Fallback `abort` hält `portal.<raum>` und unbekannte
-Wildcard-Namen geschlossen. Custom/Legacy bleibt ein Exact-FQDN.
+Wildcard-Namen auf beiden Ports geschlossen. Custom/Legacy bleibt ein
+Exact-FQDN.
 
 TLS-Status-Felder und Mode liegen parallel in `.env` (`TLS_*`, siehe §5). Overlay-Auswahl liest `TLS_STATE` / `PROXY_MODE`; Secrets liegen auf Disk unter `state/tls/`, nicht in der Status-API.
 
@@ -425,21 +428,23 @@ Produkt-Stack enthält **nie** Pebble / Lab-acme-dns / CoreDNS (`COMPOSE_TLS_LAB
   Die Lab-Zone enthält nur den Staff-A-Record und
   `_acme-challenge.<raum>` als CNAME; `portal.<raum>` hat keinen A-Record.
   Der Portal-SNI muss trotzdem den Wildcard-TLS-Handshake schaffen und wird
-  anschließend ohne HTTP-Antwort abgebrochen.
+  anschließend ohne HTTP-Antwort abgebrochen. Die Smokes prüfen Portal und
+  unbekannte Raum-Hosts zusätzlich auf Port 80 sowie die Bindung von 80/443 an
+  die gewählte Staff-IP; 8080/8082 und weitere lokale LAN-IPs bleiben negativ.
 
 Gateway/Captive/Internet-Portal sind **andere** Themen → [`integrations.md`](integrations.md), nicht LAN-TLS.
 
 ## 10. Abgrenzung zu Plänen
 
-| Dokument                                                                                       | Rolle                                                         |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| **Dieses** (`operations/tls.md`)                                                               | **Ops-Ist** — was Betreiber/Support/Entwickler heute brauchen |
-| [`../plan-proxy-tls.md`](../plan-proxy-tls.md)                                                 | Architektur-/Zielhistorie (ACME, Compose, State-Maschine)     |
-| [`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md)                                 | Manager-UX-Historie                                           |
-| [`../archive/plan-manager-https.md`](../archive/plan-manager-https.md)                         | HTTPS-UI-Aufräumen (erledigt; Gates in Manager-View-Model)    |
-| [`../plan-portal-lan-isolation.md`](../plan-portal-lan-isolation.md)                           | Zukunft: Staff-/Portal-Origin und Wildcard-Zertifikat         |
-| [`../plan-manager-restricted-network-access.md`](../plan-manager-restricted-network-access.md) | Zukunft: zusätzliche eingeschränkte Host-IP im Manager        |
-| [`../archive/tls-lab.md`](../archive/tls-lab.md)                                               | Lab, nicht Produkt                                            |
-| [`../plan-backup-v2.md`](../plan-backup-v2.md)                                                 | Backup-Format v2 — **nicht** hier fortschreiben               |
+| Dokument                                                                                       | Rolle                                                                |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **Dieses** (`operations/tls.md`)                                                               | **Ops-Ist** — was Betreiber/Support/Entwickler heute brauchen        |
+| [`../plan-proxy-tls.md`](../plan-proxy-tls.md)                                                 | Architektur-/Zielhistorie (ACME, Compose, State-Maschine)            |
+| [`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md)                                 | Manager-UX-Historie                                                  |
+| [`../archive/plan-manager-https.md`](../archive/plan-manager-https.md)                         | HTTPS-UI-Aufräumen (erledigt; Gates in Manager-View-Model)           |
+| [`../plan-portal-lan-isolation.md`](../plan-portal-lan-isolation.md)                           | Staff-/Wildcard-Basis umgesetzt; Restricted-/Portal-Listener geplant |
+| [`../plan-manager-restricted-network-access.md`](../plan-manager-restricted-network-access.md) | Zukunft: zusätzliche eingeschränkte Host-IP im Manager               |
+| [`../archive/tls-lab.md`](../archive/tls-lab.md)                                               | Lab, nicht Produkt                                                   |
+| [`../plan-backup-v2.md`](../plan-backup-v2.md)                                                 | Backup-Format v2 — **nicht** hier fortschreiben                      |
 
 Wenn Ist und Plan kollidieren: **Code + dieses Dokument**. Pläne nach und nach auf „übernommen / archivieren“ setzen, nicht parallel als zweite Ops-Wahrheit pflegen.

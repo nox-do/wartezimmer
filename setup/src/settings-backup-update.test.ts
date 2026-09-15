@@ -505,3 +505,42 @@ test('applyPfupdate returns validate_package for invalid manifest JSON', async (
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('applyPfupdate rejects a missing local Staff address before stopping the stack', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-staff-preflight-'));
+  const archivePath = path.join(dir, 'update.pfupdate');
+  const { envPath, appDataDir, backupPath } = seedInstallHome(dir);
+  fs.appendFileSync(
+    envPath,
+    [
+      'PROXY_ENABLED=true',
+      'PROXY_MODE=http',
+      'SETUP_LAN_APP_IP=203.0.113.77',
+      'APP_BIND_ADDRESS=127.0.0.1',
+      '',
+    ].join('\n'),
+  );
+  buildTestPfupdateArchive(archivePath, '2026.08.0');
+  let stopCalls = 0;
+  try {
+    const result = await applyPfupdate(
+      { archivePath, managerVersion: '0.2.0', settingsFormatVersion: 1 },
+      testCtx(dir),
+      {
+        ...mockDeps(appDataDir, backupPath),
+        stopStack: async () => {
+          stopCalls += 1;
+          return { ok: true, log: 'stopped' };
+        },
+      },
+    );
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.failedPhase, UPDATE_PHASES.stopStack);
+      assert.match(result.errors.join(' '), /vor dem Stack-Stopp gesperrt/);
+    }
+    assert.equal(stopCalls, 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

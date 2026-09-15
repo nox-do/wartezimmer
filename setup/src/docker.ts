@@ -524,6 +524,14 @@ async function runComposeCommand(
   return { ok: result.code === 0, log, stdout: result.stdout };
 }
 
+/** Validate interpolation and the merged model without creating/stopping containers or printing secrets. */
+export async function composeValidateConfig(
+  options: ComposeRunOptions,
+): Promise<{ ok: boolean; log: string }> {
+  const result = await runComposeCommand(options, ['config', '--quiet']);
+  return { ok: result.ok, log: result.log };
+}
+
 export async function composeStop(
   options: ComposeRunOptions & { services?: string[] },
 ): Promise<{ ok: boolean; log: string }> {
@@ -546,7 +554,14 @@ export async function composeRestart(
   if (bindingError) {
     return { ok: false, log: bindingError };
   }
-  const result = await runComposeCommand(options, ['restart', ...(options.services ?? [])]);
+  // `compose restart` retains the container's original port publishers. Recreate the
+  // selected services so a changed Staff binding is actually applied at runtime.
+  const result = await runComposeCommand(options, [
+    'up',
+    '-d',
+    '--force-recreate',
+    ...(options.services ?? []),
+  ]);
   return { ok: result.ok, log: result.log };
 }
 

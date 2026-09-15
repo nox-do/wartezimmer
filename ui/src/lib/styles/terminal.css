@@ -112,14 +112,6 @@
   line-height: 1.45;
 }
 
-.terminal-page .terminal-lead--assist {
-  padding: 12px 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid color-mix(in srgb, var(--blue-500, #3b82f6) 35%, transparent);
-  background: color-mix(in srgb, var(--blue-500, #3b82f6) 10%, var(--card));
-  color: var(--terminal-emphasis);
-}
-
 .terminal-page .terminal-nav {
   margin-top: 20px;
   font-size: var(--text-base);

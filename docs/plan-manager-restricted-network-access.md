@@ -1,10 +1,31 @@
 # Plan: Manager — eingeschränkter Netzwerkzugang
 
-Stand: 2026-09-13 · **TLS-Fundament und Proxy-Staff-Publishes umgesetzt;
-Firewall, Manager-Diagnose und Restricted-Binding offen**
+Stand: 2026-09-14 · **TLS-Fundament und Proxy-Staff-Publishes umgesetzt;
+Manager-Diagnose und Restricted-Binding offen; Host-Firewall außerhalb des Produkts**
 
 Grundlage: [Eingeschränkter Netzwerkzugang für das Patientenportal](plan-portal-lan-isolation.md) ·
 TLS-Ist: [`operations/tls.md`](operations/tls.md)
+
+## Gültige Systemgrenze — Entscheidung vom 14.09.2026
+
+Praxis Flow verwaltet seine Docker-/Compose-Konfiguration, Caddy-Listener,
+TLS und den tatsächlichen Runtime-Publish-Vertrag. Host-Firewall, Routing,
+Forwarding und die Trennung der Praxisnetze verantwortet die Praxis-IT.
+Der Manager ändert keine Host-Firewallregeln und benötigt dafür keine
+Elevation. Er bietet verständliche Hinweise, insbesondere im Netzwerkdiagramm.
+
+Die Produktzusage lautet: explizite Ziel-IP-Bindings und geprüfte Listener-Policy.
+Die Auswahl eines Adapters über seine lokale IPv4-Adresse garantiert keine
+Filterung nach eingehendem Interface und keine Isolation des Praxisnetzes.
+Ein grüner Docker-/Listener-Status darf daher nicht „Netz sicher isoliert“ bedeuten.
+IPv6 bleibt ein Negativtest auf unbeabsichtigte Erreichbarkeit, kein angebotener
+Zugangspfad. Windows bleibt bis zu einem eigenen Binding-Nachweis zurückgestellt.
+
+Diese Entscheidung ersetzt die frühere Planung einer produktverwalteten
+Host-Firewall einschließlich Elevation, Apply/Rollback und Firewall-Release-Gates.
+Entsprechende ältere Architekturpassagen und F1-Enforcement-Zusagen in diesem
+Dokument sind historisch und kein gültiger Produktvertrag. Die dokumentierten
+Firewall-PoCs bleiben als Versuchsprotokolle erhalten, nicht als Produktfunktion.
 
 ## 1. Entscheidung
 
@@ -16,8 +37,9 @@ Der Manager bekommt kein eigenes Portal-Feature und keinen zweiten
 
 Das Patientenportal ist der erste und in v1 einzige Konsument. Seine fachliche
 Verfügbarkeit bleibt die Ops-Einstellung `portalEnabled` in der App. Der
-Manager konfiguriert nur IP-/Interface-Binding, Listener, Firewall und deren
-technische Prüfung.
+Manager konfiguriert nur Docker-Bindings an ausgewählte lokale IPs, Listener
+und deren technische Prüfung. Die Adapterzuordnung dient der Orientierung;
+Host-Firewall und Netztrennung bleiben bei der Praxis-IT.
 
 ```text
 Praxis-Flow-Host
@@ -310,7 +332,7 @@ erst mit dem beobachtbaren Staff-Binding.
 
 Das F1-Gate gilt je Plattform. Die macOS-Umsetzung darf auf der nachgewiesenen
 Kombination fortgesetzt werden; Windows bleibt bis zu seinem eigenen Nachweis
-gesperrt.
+nicht freigegeben. Eine technische Windows-Sperre ist noch nicht umgesetzt.
 
 ### Schnitt 1a — TLS-Identität und Backup (erledigt)
 
@@ -325,7 +347,7 @@ gesperrt.
 - [x] vollständige Runtime-Publish-Bindings zusätzlich zu den kompatibel
       beibehaltenen Portnummern;
 - [x] Proxy-Betrieb: Staff-/Loopback-Bindings ohne `0.0.0.0` und `[::]`;
-      proxyfrei bleibt `0.0.0.0:8080` als bewusster Demo-/Erststart ohne
+      proxyfrei bleibt `0.0.0.0:8080` als bewusster initialer interner Betrieb ohne
       NIC-Isolationszusage;
 - [x] `SETUP_LAN_APP_IP` als festgelegte einzige persistierte Quelle der Staff-IP, ohne
       paralleles Binding-Identitätsfeld;
@@ -333,13 +355,50 @@ gesperrt.
       lokal ist;
 - [x] transaktionaler Compose-Apply mit Runtime-Audit und Rollback einschließlich
       Cleanup von Teilzuständen;
-- [ ] verwaltete Host-Firewall mit eigenem Apply-/Rollback-Schritt;
+- [x] Image-Preflight-Fehler ohne Container-Mutation behandeln; Env restaurieren;
+- [x] Rollback wartet begrenzt auf Healthchecks und prüft danach die Bindings;
+      Tests für `starting → healthy`, Timeout und Rollbackfehler;
+- [x] Proxy-Image am 2026-09-14 ohne Build-Cache neu gebaut und Managed-/Cutover-
+      Pebble-Smoke mit diesem Image bestanden (Details im Produktplan §13.1);
 - [x] read-only Runtime-Audit im bestehenden Netzwerk-Prüffeld;
 - [x] Staff-Adresse, zugehörige Adapterbezeichnung und beobachtete Bindings im
       bestehenden Netzwerkbereich anzeigen; proxyfreien Modus als offenen
-      Demo-/Erststart kennzeichnen;
-- [ ] Plattformfreigabe, Firewallzustand und vollständige Apply-/Repair-Diagnose
-      ergänzen.
+      initialen internen Betrieb kennzeichnen;
+- [x] Apply-/Repair-Diagnose für Staff-Zugang und aktives TLS ergänzen;
+      externe Netzsicherheit als ungeprüft kennzeichnen.
+- [ ] Plattformfreigabe und praktische vollständige Repair-Abnahme ergänzen.
+
+### Staff-UI — umgesetzt am 14.09.2026, praktische Abnahme offen
+
+- [x] „Interner Praxisbetrieb“ / „initialer Betriebsmodus“ statt Demo-Einstufung;
+      interne Portalnutzung separat vom noch nicht eingerichteten Patientenzugang.
+- [x] Gemeinsame Zugangszusammenfassung auf Status und Netzwerk: gespeicherte
+      Adresse/Verbindung, zugeordneter Adapter, beobachteter Laufzustand und letzte
+      Host-Prüfung. Kein „Läuft“ allein wegen einer gespeicherten TLS-Konfiguration.
+- [x] Netzwerkdiagramm für direkten HTTP-Zugang und Proxy HTTP/HTTPS;
+      konfigurierter Datenpfad und Laufzustand getrennt, Host-Firewall/Netztrennung
+      bei Praxis-IT. Keine Captive-Voraussetzung und kein aktiver Patientenlistener.
+- [x] Wiederherstellung auch nach TLS-Cutover sichtbar; Entwürfe vor Repair
+      übernehmen/verwerfen. Ergebnis bleibt nach Rückkehr des Proxys sichtbar.
+- [x] Wizard-Texte, interne Portal-Links, deutsche Ops-Portaltexte und
+      Wartungsbegriffe angeglichen; optionale HTTPS-Einrichtung ohne Demo-Einstufung.
+- [x] Manager-Regressionen einschließlich initialem Betrieb, Adapterzuordnung,
+      fehlendem TLS-Proxy, unbekannten Bindings und Repair mit TLS-Identitätsschutz.
+- [x] Backend-Regressionen: Repair erhält Managed-/Custom-/Legacy-TLS-Env-Identität.
+- [x] Visuelle Prüfung der Originalkomponenten mit isolierten Beispieldaten für
+      initialen Betrieb und HTTPS mit fehlendem Proxy; Recovery-Dialog geöffnet
+      und abgebrochen. Kein echter Stack bei dieser UI-Abnahme verändert.
+- [ ] Praktischer Repair-Durchlauf im installierten Manager nach Adressrückkehr,
+      insbesondere mit aktivem TLS. Die Vorschau ersetzt diese Abnahme nicht.
+- [ ] Automatisierte Plattformfreigabe und vollständige native Abnahmematrix.
+- [ ] Optionale weitere Vereinfachung: Netzwerk/Zugang im Wizard zusammenführen
+      und eigene Domains/PEM unter erweiterter Einrichtung bündeln.
+
+Der Runtime-Poll liefert Laufzustand und Publisher; die vorhandenen
+Host-Prüfmeldungen stammen weiterhin aus dem letzten vollständigen Refresh
+und sind entsprechend beschriftet. Keine neue persistierte Netzwerkidentität,
+kein Host-Firewall-Apply, keine Elevation. Details und Bestandsaufnahme:
+[`reviews/manager-network-ux-2026-09-14.md`](reviews/manager-network-ux-2026-09-14.md).
 
 ### Schnitt 2 — Setup vertical slice (Restricted, offen)
 

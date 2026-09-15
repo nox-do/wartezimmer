@@ -17,10 +17,11 @@
   } = $props();
 
   const running = $derived(compose?.running ?? false);
+  const partial = $derived(!running && Boolean(compose?.services.some((service) => service.state.toLowerCase().includes('running'))));
 </script>
 
 <div class="panel-section">
-  <h2>Stack</h2>
+  <h2>Praxis-Flow-Dienste</h2>
   <div class="actions-row">
     <label class="stack-toggle">
       <span class="toggle-switch">
@@ -41,11 +42,11 @@
         />
         <span class="toggle-track" aria-hidden="true"></span>
       </span>
-      <span id="maintenance-stack-status" class="stack-toggle-status">{stackStatusLabel(running)}</span>
+      <span id="maintenance-stack-status" class="stack-toggle-status">{partial ? 'Teilweise gestartet' : stackStatusLabel(running)}</span>
     </label>
     <button type="button" class="btn-secondary" disabled={locked} onclick={onRestart}>Neustart</button>
   </div>
-  <p class="hint">Ist der Stack gestoppt, entspricht Neustart einem Start.</p>
+  <p class="hint">Sind die Dienste gestoppt, entspricht Neustart einem Start.</p>
   {#if error}
     <p class="error">{error}</p>
   {/if}

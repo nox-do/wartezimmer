@@ -384,3 +384,112 @@ test('full refresh applies runtime before slow config settles', async () => {
   await refreshDone;
   assert.deepEqual(order, ['runtime', 'onRuntime', 'config', 'onConfig']);
 });
+
+test('runtime poll refreshes stale device URLs after proxy activation', async () => {
+  const old = minimalHostStatus();
+  const updated = minimalHostStatus({
+    appBaseUrl: 'http://192.168.1.10',
+    configuredCanonicalBaseUrl: 'http://192.168.1.10',
+    proxy: { ...old.proxy, enabled: true, mode: 'http', httpPort: 80 },
+    deviceUrls: {
+      ...old.deviceUrls!,
+      appBaseUrl: 'http://192.168.1.10',
+      terminal: 'http://192.168.1.10/terminal',
+    },
+  });
+  let calls = 0;
+  const configs: HostStatus[] = [];
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchSetupStatus: async () => (++calls === 1 ? old : updated),
+        fetchRuntimeHealth: async () =>
+          minimalRuntime({
+            appBaseUrl: updated.appBaseUrl,
+            proxyServer: { enabled: true, container: null },
+          }),
+      }),
+    onConfig: (status) => configs.push(status),
+    onRuntime: () => {},
+    onError: () => {},
+    schedule: () => 0,
+    clearSchedule: () => {},
+  });
+  await controller.refresh({ scope: 'config' });
+  await controller.refresh({ scope: 'runtime' });
+  assert.equal(calls, 2);
+  assert.equal(controller.getLastConfig()?.proxy.enabled, true);
+  assert.equal(configs.at(-1)?.deviceUrls?.terminal, 'http://192.168.1.10/terminal');
+});
+
+test('runtime poll cannot supersede a mutation config refresh', async () => {
+  const disabled = minimalHostStatus({
+    deviceUrls: {
+      appBaseUrl: 'http://192.168.1.10:8080',
+      terminal: 'http://192.168.1.10:8080/terminal',
+      mfa: 'http://192.168.1.10:8080/mfa',
+      tv: 'http://192.168.1.10:8080/tv',
+      ops: 'http://192.168.1.10:8080/ops',
+      opsSetup: 'http://192.168.1.10:8080/ops/setup',
+      portal: 'http://192.168.1.10:8080/portal',
+    },
+  });
+  const enabled = minimalHostStatus({
+    appBaseUrl: 'http://192.168.1.10',
+    configuredCanonicalBaseUrl: 'http://192.168.1.10',
+    proxy: { ...disabled.proxy, enabled: true, mode: 'http' },
+    deviceUrls: {
+      appBaseUrl: 'http://192.168.1.10',
+      terminal: 'http://192.168.1.10/terminal',
+      mfa: 'http://192.168.1.10/mfa',
+      tv: 'http://192.168.1.10/tv',
+      ops: 'http://192.168.1.10/ops',
+      opsSetup: 'http://192.168.1.10/ops/setup',
+      portal: 'http://192.168.1.10/portal',
+    },
+  });
+  let release!: (status: HostStatus) => void;
+  let started!: () => void;
+  const pending = new Promise<HostStatus>((resolve) => {
+    release = resolve;
+  });
+  const startedPromise = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  let calls = 0;
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchSetupStatus: async () => {
+          calls++;
+          if (calls === 1) return enabled;
+          if (calls === 2) {
+            started();
+            return pending;
+          }
+          return disabled;
+        },
+        // A restarting stack may not expose enough runtime data to detect the
+        // config mismatch. The foreground refresh must still win.
+        fetchRuntimeHealth: async () => minimalRuntime({ appBaseUrl: null, proxyServer: null }),
+      }),
+    onConfig: () => {},
+    onRuntime: () => {},
+    onError: () => {},
+    schedule: () => 0,
+    clearSchedule: () => {},
+  });
+  await controller.refresh({ scope: 'config' });
+  const mutationRefresh = controller.refresh({ scope: 'config' });
+  await startedPromise;
+  const poll = controller.refresh({ scope: 'runtime', silent: true });
+  release(disabled);
+  await Promise.all([mutationRefresh, poll]);
+  assert.equal(calls, 2);
+  assert.equal(controller.getLastConfig()?.appBaseUrl, 'http://192.168.1.10:8080');
+  assert.equal(controller.getLastConfig()?.proxy.enabled, false);
+  assert.equal(
+    controller.getLastConfig()?.deviceUrls?.terminal,
+    'http://192.168.1.10:8080/terminal',
+  );
+});

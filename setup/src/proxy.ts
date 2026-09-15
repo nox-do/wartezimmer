@@ -5,17 +5,13 @@ import type {
   ProxyStatus,
 } from '@praxis-flow/server-shared';
 import {
+  deriveHttpDeviceAddress,
   PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF,
   PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY,
 } from '@praxis-flow/server-shared';
 import { runDockerCommand } from './docker-cli.js';
 import { DEFAULT_PROXY_HTTP_PORT } from './network-bindings.js';
-import {
-  DEFAULT_APP_PORT,
-  fallbackCanonicalBaseUrl,
-  parseHttpBaseUrl,
-  resolveCanonicalBaseUrlForLanPlan,
-} from './urls.js';
+import { DEFAULT_APP_PORT, parseHttpBaseUrl } from './urls.js';
 import { isTlsPreparationInProgressEnv } from './tls-env.js';
 
 export const DEFAULT_APP_BIND_ADDRESS = '0.0.0.0';
@@ -202,20 +198,8 @@ export function buildProxyHttpCanonicalBaseUrl(host: string, httpPort: number): 
 export function resolveCanonicalBaseUrlForProxyPlan(input: {
   proxy: ProxyConfig;
   existingCanonical: string | null | undefined;
-  previousLanIp: string | null | undefined;
   nextLanIp: string;
-  overrideCanonical?: string | null;
-  tlsPreparationActive?: boolean;
 }): string {
-  const override = parseHttpBaseUrl(input.overrideCanonical);
-  if (input.tlsPreparationActive && override) {
-    const existing = parseHttpBaseUrl(input.existingCanonical);
-    if (!existing || override !== existing) {
-      throw new ProxyConfigError(
-        'Während der HTTPS-Vorbereitung darf POST /host/network die Erreichbarkeit nicht ändern.',
-      );
-    }
-  }
   if (input.proxy.mode === 'tls-managed' || input.proxy.mode === 'tls-custom') {
     const existing = parseHttpBaseUrl(input.existingCanonical);
     if (!existing || new URL(existing).protocol !== 'https:') {
@@ -223,64 +207,13 @@ export function resolveCanonicalBaseUrlForProxyPlan(input: {
         'Aktiver TLS-Proxy erfordert eine bestehende https:// CANONICAL_BASE_URL.',
       );
     }
-    if (override && override !== existing) {
-      throw new ProxyConfigError(
-        'POST /host/network darf die Canonical-URL nach dem HTTPS-Cutover nicht ändern.',
-      );
-    }
     return existing;
   }
-  if (!input.proxy.enabled || input.proxy.mode !== 'http') {
-    if (override) {
-      return override;
-    }
-
-    const existing = parseHttpBaseUrl(input.existingCanonical);
-    const previousLan = input.previousLanIp?.trim();
-    const nextLan = input.nextLanIp.trim();
-    if (existing) {
-      const url = new URL(existing);
-      const port = url.port ? Number(url.port) : url.protocol === 'https:' ? 443 : 80;
-      // Leaving proxy: restore P0 :8080 for any http origin that was not already on :8080
-      // (LAN IP or custom hostname; Manager may also send an explicit override).
-      if (url.protocol === 'http:' && port !== DEFAULT_APP_PORT) {
-        const host =
-          (previousLan && url.hostname === previousLan) || url.hostname === nextLan
-            ? nextLan
-            : url.hostname;
-        return fallbackCanonicalBaseUrl(host, DEFAULT_APP_PORT);
-      }
-    }
-
-    return resolveCanonicalBaseUrlForLanPlan({
-      existingCanonical: input.existingCanonical,
-      previousLanIp: input.previousLanIp,
-      nextLanIp: input.nextLanIp,
-      port: DEFAULT_APP_PORT,
-    });
-  }
-
-  if (override) {
-    return buildProxyHttpCanonicalBaseUrl(new URL(override).hostname, input.proxy.httpPort);
-  }
-
-  const existing = parseHttpBaseUrl(input.existingCanonical);
-  const previousLan = input.previousLanIp?.trim();
-  if (existing && previousLan) {
-    const existingHost = new URL(existing).hostname;
-    if (existingHost === previousLan) {
-      // IP-derived (P0 :8080 or proxy form) follows the LAN plan.
-      return buildProxyHttpCanonicalBaseUrl(input.nextLanIp, input.proxy.httpPort);
-    }
-    // Custom hostname: keep host, rebuild port from proxy config.
-    return buildProxyHttpCanonicalBaseUrl(existingHost, input.proxy.httpPort);
-  }
-
-  if (existing) {
-    return buildProxyHttpCanonicalBaseUrl(new URL(existing).hostname, input.proxy.httpPort);
-  }
-
-  return buildProxyHttpCanonicalBaseUrl(input.nextLanIp, input.proxy.httpPort);
+  return deriveHttpDeviceAddress({
+    lanIp: input.nextLanIp,
+    port: input.proxy.enabled ? input.proxy.httpPort : DEFAULT_APP_PORT,
+    existingCanonical: input.existingCanonical,
+  });
 }
 
 /** Env keys written atomically with proxy on/off on apply / saveHostNetwork. */

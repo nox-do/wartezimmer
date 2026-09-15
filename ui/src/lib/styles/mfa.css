@@ -1479,13 +1479,6 @@ button.queue-ticket {
   color: var(--green-chip-ink);
 }
 
-.mfa-emergency-banner {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  margin-bottom: 12px;
-}
-
 .mfa-assist-banner {
   position: sticky;
   top: 0;

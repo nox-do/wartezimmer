@@ -160,12 +160,29 @@ export function generateTlsCaddyfile(status: TlsStatus, env: Map<string, string>
   if (!status.hostname || !status.mode) {
     return `${GENERATED_CADDYFILE_MARKER}\n\n:80 {\n\treverse_proxy app:8080\n}\n`;
   }
-  const httpBlock = status.cutoverApplied
-    ? `:80 {\n\tredir https://${status.hostname}{uri} permanent\n}`
-    : ':80 {\n\treverse_proxy app:8080\n}';
   const staffHostname = status.staffHostname ?? status.hostname;
   const managedWildcard =
     status.mode === 'managed' ? (status.wildcardCertificateName ?? null) : null;
+  const httpApplicationAction = status.cutoverApplied
+    ? `redir https://${staffHostname}{uri} permanent`
+    : 'reverse_proxy app:8080';
+  const httpBlock = managedWildcard
+    ? [
+        ':80 {',
+        `\t@staff host ${staffHostname}`,
+        '\thandle @staff {',
+        `\t\t${httpApplicationAction}`,
+        '\t}',
+        `\t@installationRoom host ${managedWildcard}`,
+        '\thandle @installationRoom {',
+        '\t\tabort',
+        '\t}',
+        '\thandle {',
+        `\t\t${httpApplicationAction}`,
+        '\t}',
+        '}',
+      ].join('\n')
+    : `:80 {\n\t${httpApplicationAction}\n}`;
   const siteAddress = managedWildcard ?? staffHostname;
   const applicationHandlers = [
     '\t@setupTlsSse path /__praxis-flow/setup/tls-sse',

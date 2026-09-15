@@ -12,6 +12,7 @@ import {
   pickLanIpFromEnv,
   pickPracticeDisplayNameFromEnv,
   resolveComposeBuild,
+  runComposeAction,
   saveHostNetwork,
   type HostWriteRuntimeHooks,
 } from './host-state.js';
@@ -60,6 +61,19 @@ function env(root: string) {
   return readEnvMap(path.join(root, '.env'));
 }
 
+function healthyCompose(proxyEnabled = false) {
+  return {
+    running: true,
+    services: [
+      { name: 'app', service: 'app', state: 'running', health: 'healthy' },
+      { name: 'sandbox', service: 'sandbox', state: 'running', health: 'healthy' },
+      ...(proxyEnabled
+        ? [{ name: 'proxy', service: 'proxy', state: 'running', health: 'healthy' }]
+        : []),
+    ],
+  };
+}
+
 async function withRoot(run: (root: string) => Promise<void>) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-host-state-'));
   try {
@@ -89,6 +103,46 @@ async function listenEphemeral(): Promise<{ port: number; close: () => Promise<v
   };
 }
 
+test('runComposeAction stops a proxy stack when the post-start binding audit fails', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, {
+      PROXY_ENABLED: 'true',
+      PROXY_MODE: 'http',
+      SETUP_LAN_APP_IP: '192.168.1.10',
+      APP_BIND_ADDRESS: '127.0.0.1',
+    });
+    const running = {
+      running: true,
+      services: [
+        { name: 'app', service: 'app', state: 'running', health: 'healthy' },
+        { name: 'sandbox', service: 'sandbox', state: 'running', health: 'healthy' },
+        { name: 'proxy', service: 'proxy', state: 'running', health: 'healthy' },
+      ],
+    };
+    let stoppedServices: string[] = [];
+    const result = await runComposeAction(ctx(root), 'restart', undefined, {
+      composePs: async () => running,
+      composeRestart: async () => ({ ok: true, log: 'recreated' }),
+      composeStop: async (options) => {
+        stoppedServices = options.services ?? [];
+        return { ok: true, log: 'stopped' };
+      },
+      auditStaffBindings: () => [
+        {
+          id: 'staff.binding.proxy',
+          ok: false,
+          message: 'Proxy besitzt unerwartete Host-Bindings',
+        },
+      ],
+    });
+
+    assert.equal(result.ok, false);
+    assert.match(result.log, /Runtime-Bindung unsicher/);
+    assert.match(result.log, /vorsorglich gestoppt/);
+    assert.deepEqual(stoppedServices, ['app', 'sandbox', 'proxy']);
+  });
+});
+
 const proxyOn = {
   PROXY_ENABLED: 'true',
   PROXY_MODE: 'http',
@@ -97,6 +151,7 @@ const proxyOn = {
 };
 
 const allowProxyPort: HostWriteRuntimeHooks = {
+  composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
   validateStaffIp: () => null,
   auditStaffBindings: (input) => [
     { id: 'staff.binding.app', ok: true, message: 'App korrekt' },
@@ -125,6 +180,7 @@ const removeFails: HostWriteRuntimeHooks = {
     ],
   }),
   composeRemoveServices: async () => ({ ok: false, log: 'compose rm failed' }),
+  composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
   composeUp: async () => ({ ok: true, log: '', gatewaySkipped: false }),
 };
 
@@ -274,7 +330,9 @@ test('applySetupPlan restores an existing env and stack when Staff binding compo
           },
           {
             validateStaffIp: () => null,
-            composePs: async () => ({ running: true, services: [] }),
+            composePs: async () => healthyCompose(),
+            composeRemoveServices: async () => ({ ok: true, log: 'cleaned' }),
+            composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
             composeUp: async (options) => {
               composeBindings.push(
                 readEnvMap(path.join(options.projectRoot, '.env')).get('APP_BIND_ADDRESS') || '',
@@ -290,6 +348,54 @@ test('applySetupPlan restores an existing env and stack when Staff binding compo
 
     assert.deepEqual(composeBindings, ['0.0.0.0', '0.0.0.0']);
     assert.equal(fs.readFileSync(path.join(root, '.env'), 'utf8'), before);
+  });
+});
+
+test('applySetupPlan does not claim success when the runtime rollback fails', async () => {
+  await withRoot(async (root) => {
+    writeExample(root);
+    writeEnv(root, {
+      PRACTICE_DISPLAY_NAME: 'Praxis Nord',
+      AUTH_KEY_CAPTIVE: SECRET,
+      SANDBOX_INTERNAL_TOKEN: SECRET,
+      SETUP_LAN_APP_IP: '192.168.1.10',
+      APP_BIND_ADDRESS: '0.0.0.0',
+      CANONICAL_BASE_URL: 'http://192.168.1.10:8080',
+      PROXY_ENABLED: 'false',
+      PROXY_MODE: 'off',
+    });
+    let composeUpCalls = 0;
+
+    await assert.rejects(
+      () =>
+        applySetupPlan(
+          ctx(root),
+          {
+            lanAppIp: '192.168.1.20',
+            practiceDisplayName: 'Praxis Nord',
+            gateway: gwOff('192.168.1.20'),
+            preserveEnv: true,
+            runCompose: true,
+            runProbes: false,
+          },
+          {
+            validateStaffIp: () => null,
+            composePs: async () => healthyCompose(),
+            composeRemoveServices: async () => ({ ok: true, log: 'cleaned' }),
+            composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
+            composeUp: async () => {
+              composeUpCalls += 1;
+              return {
+                ok: false,
+                log: composeUpCalls === 1 ? 'apply failed' : 'rollback failed',
+                gatewaySkipped: false,
+              };
+            },
+          },
+        ),
+      /Env wurde restauriert, die Laufzeit jedoch nicht vollständig wiederhergestellt/,
+    );
+    assert.equal(composeUpCalls, 2);
   });
 });
 
@@ -313,6 +419,7 @@ test('applySetupPlan removes partial services when a fresh compose apply fails',
           {
             validateStaffIp: () => null,
             composePs: async () => ({ running: false, services: [] }),
+            composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
             composeUp: async () => ({
               ok: false,
               log: 'partial apply failed',
@@ -406,17 +513,16 @@ test('saveHostNetwork keeps custom CANONICAL_BASE_URL hostname when LAN IP chang
   });
 });
 
-test('saveHostNetwork writes explicit canonicalBaseUrl override', async () => {
+test('saveHostNetwork preserves a persisted HTTP hostname without an override', async () => {
   await withRoot(async (root) => {
     writeEnv(root, {
       PRACTICE_DISPLAY_NAME: 'Praxis Nord',
       SETUP_LAN_APP_IP: '192.168.1.10',
-      CANONICAL_BASE_URL: 'http://192.168.1.10:8080',
+      CANONICAL_BASE_URL: 'http://praxis-flow.local:8080',
     });
 
     const result = await saveHostNetwork(ctx(root), {
       lanAppIp: '192.168.1.10',
-      canonicalBaseUrl: 'http://praxis-flow.local:8080',
       gateway: gwOff('192.168.1.10'),
     });
 
@@ -786,6 +892,7 @@ test('saveHostNetwork repairProxy ensures image and compose-up even when stack w
           ensureCalled = true;
           return { imageRef: 'caddy:2.11.4' };
         },
+        composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
         composeUp: async () => {
           composeUpCalled = true;
           return { ok: true, log: 'up', gatewaySkipped: false };
@@ -797,6 +904,51 @@ test('saveHostNetwork repairProxy ensures image and compose-up even when stack w
     assert.equal(composeUpCalled, true);
     assert.equal(result.composeRestarted, true);
     assert.equal(result.stackWasRunning, false);
+  });
+});
+
+test('saveHostNetwork removes partial services when repair of a stopped stack fails', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, {
+      PRACTICE_DISPLAY_NAME: 'Praxis Nord',
+      SETUP_LAN_APP_IP: '192.168.1.10',
+      CANONICAL_BASE_URL: 'http://192.168.1.10',
+      ...proxyOn,
+    });
+    const removed: string[][] = [];
+    let psCalls = 0;
+
+    await assert.rejects(
+      () =>
+        saveHostNetwork(
+          ctx(root),
+          {
+            lanAppIp: '192.168.1.10',
+            proxy: { enabled: true, httpPort: 80 },
+            gateway: gwOff('192.168.1.10'),
+            repairProxy: true,
+          },
+          {
+            ...allowProxyPort,
+            composePs: async () => {
+              psCalls += 1;
+              return { running: false, services: [] };
+            },
+            composeRemoveServices: async (_options, services) => {
+              removed.push(services);
+              return { ok: true, log: 'partial services removed' };
+            },
+            composeStop: async () => ({ ok: true, log: 'stopped' }),
+            ensureProxyImageAvailable: async () => ({ imageRef: 'caddy:2.11.4' }),
+            composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
+            composeUp: async () => ({ ok: false, log: 'proxy failed', gatewaySkipped: false }),
+          },
+        ),
+      /Konfiguration und Laufzeit wurden wiederhergestellt/,
+    );
+
+    assert.ok(psCalls >= 2);
+    assert.deepEqual(removed, [['app', 'sandbox', 'proxy']]);
   });
 });
 
@@ -844,7 +996,7 @@ test('saveHostNetwork blocks a restart before writes when Staff-IP is not local'
             restartCompose: true,
           },
           {
-            composePs: async () => ({ running: true, services: [] }),
+            composePs: async () => healthyCompose(),
             composeRemoveServices: async () => {
               removeCalled = true;
               return { ok: true, log: '' };
@@ -882,9 +1034,10 @@ test('saveHostNetwork restores env and previous stack when compose apply fails',
             restartCompose: true,
           },
           {
-            composePs: async () => ({ running: true, services: [] }),
+            composePs: async () => healthyCompose(),
             composeRemoveServices: async () => ({ ok: true, log: '' }),
             validateStaffIp: () => null,
+            composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
             composeUp: async (options) => {
               composeBindings.push(
                 readEnvMap(path.join(options.projectRoot, '.env')).get('APP_BIND_ADDRESS') || '',
@@ -895,11 +1048,52 @@ test('saveHostNetwork restores env and previous stack when compose apply fails',
             },
           },
         ),
-      /vorherige Konfiguration wurde wiederhergestellt/,
+      /vorherige Konfiguration und Laufzeit wurden wiederhergestellt/,
     );
 
     assert.deepEqual(composeBindings, ['0.0.0.0', '0.0.0.0']);
     assert.equal(fs.readFileSync(path.join(root, '.env'), 'utf8'), before);
+  });
+});
+
+test('saveHostNetwork reports an incomplete runtime rollback truthfully', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, {
+      SETUP_LAN_APP_IP: '192.168.1.10',
+      APP_BIND_ADDRESS: '0.0.0.0',
+      CANONICAL_BASE_URL: 'http://192.168.1.10:8080',
+      PROXY_ENABLED: 'false',
+      PROXY_MODE: 'off',
+    });
+    let composeUpCalls = 0;
+
+    await assert.rejects(
+      () =>
+        saveHostNetwork(
+          ctx(root),
+          {
+            lanAppIp: '192.168.1.20',
+            gateway: gwOff('192.168.1.20'),
+            restartCompose: true,
+          },
+          {
+            composePs: async () => healthyCompose(),
+            composeRemoveServices: async () => ({ ok: true, log: 'cleaned' }),
+            validateStaffIp: () => null,
+            composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
+            composeUp: async () => {
+              composeUpCalls += 1;
+              return {
+                ok: false,
+                log: composeUpCalls === 1 ? 'apply failed' : 'rollback failed',
+                gatewaySkipped: false,
+              };
+            },
+          },
+        ),
+      /Env wurde restauriert, die Laufzeit jedoch nicht vollständig wiederhergestellt/,
+    );
+    assert.equal(composeUpCalls, 2);
   });
 });
 
@@ -928,12 +1122,13 @@ test('saveHostNetwork removes a newly enabled proxy before rolling back a failed
           },
           {
             ...allowProxyPort,
-            composePs: async () => ({ running: true, services: [] }),
+            composePs: async () => healthyCompose(),
             composeRemoveServices: async (_options, services) => {
               removed.push(services);
               return { ok: true, log: 'proxy removed' };
             },
             ensureProxyImageAvailable: async () => ({ imageRef: 'caddy:2.11.4' }),
+            composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
             composeUp: async () => {
               composeUpCalls += 1;
               return composeUpCalls === 1
@@ -942,10 +1137,10 @@ test('saveHostNetwork removes a newly enabled proxy before rolling back a failed
             },
           },
         ),
-      /vorherige Konfiguration wurde wiederhergestellt/,
+      /vorherige Konfiguration und Laufzeit wurden wiederhergestellt/,
     );
 
-    assert.deepEqual(removed, [['proxy']]);
+    assert.deepEqual(removed, [['app', 'sandbox', 'proxy']]);
     assert.equal(env(root).get('PROXY_ENABLED'), 'false');
     assert.equal(env(root).get('APP_BIND_ADDRESS'), '0.0.0.0');
   });
@@ -975,24 +1170,181 @@ test('saveHostNetwork restores the open mode when proxy image preflight fails', 
           },
           {
             ...allowProxyPort,
-            composePs: async () => ({ running: true, services: [] }),
-            composeRemoveServices: async () => ({ ok: true, log: 'proxy absent' }),
+            composePs: async () => healthyCompose(),
+            composeRemoveServices: async () => {
+              assert.fail('Image preflight must not remove existing services');
+            },
             ensureProxyImageAvailable: async () => {
               throw new Error('proxy image preflight failed');
             },
+            composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
             composeUp: async () => {
               composeUpCalls += 1;
               return { ok: true, log: '', gatewaySkipped: false };
             },
           },
         ),
-      /vorherige Konfiguration wurde wiederhergestellt/,
+      /Laufzeit blieb unverändert/,
     );
 
-    assert.equal(composeUpCalls, 1);
+    assert.equal(composeUpCalls, 0);
     assert.equal(fs.readFileSync(path.join(root, '.env'), 'utf8'), before);
   });
 });
+
+for (const operation of ['network', 'setup'] as const) {
+  for (const initialState of ['partial', 'stopped', 'fresh'] as const) {
+    if (operation === 'network' && initialState === 'fresh') continue;
+    test(`${operation} image preflight failure preserves ${initialState} runtime and env`, async () => {
+      await withRoot(async (root) => {
+        writeExample(root);
+        if (initialState !== 'fresh') {
+          writeEnv(root, {
+            SETUP_LAN_APP_IP: '192.168.1.10',
+            CANONICAL_BASE_URL: 'http://192.168.1.10',
+            ...proxyOn,
+          });
+        }
+        const envPath = path.join(root, '.env');
+        const before = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : null;
+        const initialCompose =
+          initialState === 'partial' ? healthyCompose(false) : { running: false, services: [] };
+        const hooks: HostWriteRuntimeHooks = {
+          ...allowProxyPort,
+          composePs: async () => initialCompose,
+          ensureProxyImageAvailable: async () => {
+            throw new Error('proxy image missing');
+          },
+          composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
+          composeUp: async () => {
+            assert.fail('No up before image preflight passes');
+          },
+          composeStop: async () => {
+            assert.fail('No stop before image preflight passes');
+          },
+          composeRemoveServices: async () => {
+            assert.fail('No cleanup before image preflight passes');
+          },
+        };
+        await assert.rejects(
+          () =>
+            operation === 'network'
+              ? saveHostNetwork(
+                  ctx(root),
+                  {
+                    lanAppIp: '192.168.1.20',
+                    gateway: gwOff('192.168.1.20'),
+                    repairProxy: true,
+                  },
+                  hooks,
+                )
+              : applySetupPlan(
+                  ctx(root),
+                  {
+                    lanAppIp: '192.168.1.20',
+                    practiceDisplayName: 'Praxis Nord',
+                    gateway: gwOff('192.168.1.20'),
+                    proxy: { enabled: true, httpPort: 80 },
+                    preserveEnv: true,
+                    runCompose: true,
+                    runProbes: false,
+                  },
+                  hooks,
+                ),
+          /Laufzeit blieb unverändert.*proxy image missing/,
+        );
+        assert.equal(fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : null, before);
+      });
+    });
+  }
+
+  for (const outcome of ['healthy', 'timeout', 'bad-bindings'] as const) {
+    test(`${operation} rollback waits for health and checks bindings (${outcome})`, async () => {
+      await withRoot(async (root) => {
+        writeExample(root);
+        writeEnv(root, {
+          SETUP_LAN_APP_IP: '192.168.1.10',
+          CANONICAL_BASE_URL: 'http://192.168.1.10',
+          ...proxyOn,
+        });
+        let upCalls = 0;
+        let sleeps = 0;
+        let audits = 0;
+        let now = 0;
+        const hooks: HostWriteRuntimeHooks = {
+          ...allowProxyPort,
+          ensureProxyImageAvailable: async () => ({ imageRef: 'caddy:2.11.4' }),
+          composeRemoveServices: async () => ({ ok: true, log: 'cleaned' }),
+          composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
+          composeUp: async () => {
+            upCalls += 1;
+            return {
+              ok: upCalls > 1,
+              log: upCalls === 1 ? 'apply failed' : 'started',
+              gatewaySkipped: false,
+            };
+          },
+          composePs: async () => {
+            const compose = healthyCompose(true);
+            if (upCalls >= 2 && (sleeps === 0 || outcome === 'timeout')) {
+              compose.services[2]!.health = 'starting';
+            }
+            return compose;
+          },
+          stackHealthWaitOptions: {
+            timeoutMs: 20,
+            intervalMs: 10,
+            now: () => now,
+            sleep: async (ms) => {
+              sleeps += 1;
+              now += ms;
+            },
+          },
+          auditStaffBindings: (input) => {
+            audits += 1;
+            assert.ok(sleeps > 0, 'Audit follows health readiness');
+            return outcome === 'bad-bindings'
+              ? [{ id: 'staff.binding.proxy', ok: false, message: 'unexpected publisher' }]
+              : allowProxyPort.auditStaffBindings!(input);
+          },
+        };
+        await assert.rejects(
+          () =>
+            operation === 'network'
+              ? saveHostNetwork(
+                  ctx(root),
+                  {
+                    lanAppIp: '192.168.1.20',
+                    gateway: gwOff('192.168.1.20'),
+                    repairProxy: true,
+                  },
+                  hooks,
+                )
+              : applySetupPlan(
+                  ctx(root),
+                  {
+                    lanAppIp: '192.168.1.20',
+                    practiceDisplayName: 'Praxis Nord',
+                    gateway: gwOff('192.168.1.20'),
+                    preserveEnv: true,
+                    runCompose: true,
+                    runProbes: false,
+                  },
+                  hooks,
+                ),
+          outcome === 'healthy'
+            ? /wurde[n]? wiederhergestellt/
+            : outcome === 'timeout'
+              ? /nicht vollständig wiederhergestellt[\s\S]*nicht healthy.*starting/
+              : /nicht vollständig wiederhergestellt/,
+        );
+        assert.equal(upCalls, 2);
+        assert.equal(sleeps, outcome === 'timeout' ? 2 : 1);
+        assert.equal(audits, outcome === 'timeout' ? 0 : 1);
+      });
+    });
+  }
+}
 
 test('saveHostNetwork rolls back when runtime binding audit rejects compose result', async () => {
   await withRoot(async (root) => {
@@ -1013,8 +1365,9 @@ test('saveHostNetwork rolls back when runtime binding audit rejects compose resu
             restartCompose: true,
           },
           {
-            composePs: async () => ({ running: true, services: [] }),
+            composePs: async () => healthyCompose(true),
             composeRemoveServices: async () => ({ ok: true, log: '' }),
+            composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
             composeUp: async () => {
               composeUpCalls += 1;
               return { ok: true, log: '', gatewaySkipped: false };
@@ -1093,7 +1446,7 @@ test('disable cutover aborts when compose remove fails (network + apply)', async
         ),
       (error: unknown) =>
         error instanceof SetupApiValidationError &&
-        /Proxy-Container konnte nicht entfernt werden/.test(error.message),
+        /Laufzeit jedoch nicht vollständig wiederhergestellt/.test(error.message),
     );
     assert.equal(env(root).get('PROXY_ENABLED'), 'true');
 
@@ -1125,8 +1478,178 @@ test('disable cutover aborts when compose remove fails (network + apply)', async
         ),
       (error: unknown) =>
         error instanceof SetupApiValidationError &&
-        /Proxy-Container konnte nicht entfernt werden/.test(error.message),
+        /Laufzeit jedoch nicht vollständig wiederhergestellt/.test(error.message),
     );
     assert.equal(env(root).get('PROXY_ENABLED'), 'true');
   });
 });
+
+for (const mode of ['managed', 'custom', 'legacy'] as const) {
+  test(`repairProxy preserves active ${mode} TLS identity when proxy was stopped`, async () => {
+    await withRoot(async (root) => {
+      const tlsMode = mode === 'legacy' ? 'managed' : mode;
+      const identity: Record<string, string> = {
+        TLS_STATE: 'active',
+        TLS_MODE: tlsMode,
+        TLS_HOSTNAME: 'staff.example.test',
+        TLS_CUTOVER_APPLIED: 'true',
+        ...(mode === 'managed'
+          ? {
+              TLS_INSTALLATION_ID: 'example',
+              TLS_INSTALLATION_DOMAIN: 'example.test',
+              TLS_STAFF_HOSTNAME: 'staff.example.test',
+              TLS_PORTAL_HOSTNAME: 'portal.example.test',
+            }
+          : {}),
+        TLS_LAN_IP: '192.168.1.10',
+      };
+      writeEnv(root, {
+        ...proxyOn,
+        ...identity,
+        PROXY_MODE: `tls-${tlsMode}`,
+        SETUP_LAN_APP_IP: '192.168.1.10',
+        CANONICAL_BASE_URL: 'https://staff.example.test',
+      });
+      let upCalls = 0;
+      const result = await saveHostNetwork(
+        ctx(root),
+        { lanAppIp: '192.168.1.10', gateway: gwOff('192.168.1.10'), repairProxy: true },
+        {
+          ...allowProxyPort,
+          composePs: async () => ({ running: false, services: [] }),
+          ensureProxyImageAvailable: async () => ({ imageRef: 'caddy:2.11.4' }),
+          composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
+          composeUp: async () => {
+            upCalls++;
+            return { ok: true, log: 'up', gatewaySkipped: false };
+          },
+        },
+      );
+      assert.equal(upCalls, 1);
+      assert.equal(result.composeRestarted, true);
+      const after = env(root);
+      for (const [key, value] of Object.entries(identity)) assert.equal(after.get(key), value, key);
+      assert.equal(after.get('CANONICAL_BASE_URL'), 'https://staff.example.test');
+      assert.equal(after.get('APP_BIND_ADDRESS'), '127.0.0.1');
+      if (mode !== 'managed') assert.equal(after.has('TLS_INSTALLATION_DOMAIN'), false);
+    });
+  });
+}
+
+for (const delivery of [false, true]) {
+  test(`repair selects ${delivery ? 'delivery' : 'dev'} compose independently of persisted release images`, async () => {
+    await withRoot(async (root) => {
+      fs.writeFileSync(
+        path.join(root, delivery ? 'docker-compose.delivery.yml' : 'docker-compose.yml'),
+        'services: {}\n',
+      );
+      writeEnv(root, {
+        ...proxyOn,
+        SETUP_LAN_APP_IP: '192.168.1.10',
+        PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:0.4.0',
+        PRAXIS_FLOW_SANDBOX_IMAGE: 'praxis-flow/sandbox:0.4.0',
+      });
+      const profiles: (boolean | undefined)[] = [];
+      await saveHostNetwork(
+        ctx(root),
+        {
+          lanAppIp: '192.168.1.10',
+          gateway: gwOff('192.168.1.10'),
+          repairProxy: true,
+        },
+        {
+          ...allowProxyPort,
+          composePs: async (options) => {
+            profiles.push(options.delivery);
+            return { running: false, services: [] };
+          },
+          composeValidateConfig: async (options) => {
+            profiles.push(options.delivery);
+            return { ok: true, log: '' };
+          },
+          ensureProxyImageAvailable: async () => ({ imageRef: 'caddy:2.11.4' }),
+          composeUp: async (options) => {
+            profiles.push(options.delivery);
+            return { ok: true, log: '', gatewaySkipped: false };
+          },
+        },
+      );
+      assert.ok(profiles.length >= 3);
+      assert.ok(profiles.every((profile) => profile === delivery));
+    });
+  });
+}
+
+for (const action of ['repair', 'disable', 'setup', 'fresh-setup', 'throw'] as const) {
+  test(`Compose preflight failure during ${action} restores env without touching containers or images`, async () => {
+    await withRoot(async (root) => {
+      writeExample(root);
+      if (action !== 'fresh-setup')
+        writeEnv(root, {
+          ...proxyOn,
+          SETUP_LAN_APP_IP: '192.168.1.10',
+          CANONICAL_BASE_URL: 'http://192.168.1.10',
+          AUTH_KEY_CAPTIVE: SECRET,
+        });
+      const before =
+        action === 'fresh-setup' ? null : fs.readFileSync(path.join(root, '.env'), 'utf8');
+      const mutations: string[] = [];
+      const hooks: HostWriteRuntimeHooks = {
+        ...allowProxyPort,
+        composePs: async () => healthyCompose(true),
+        composeValidateConfig: async () => {
+          if (action === 'throw') throw new Error('validation process failed');
+          return { ok: false, log: 'MAINTENANCE_TOKEN is required' };
+        },
+        composeUp: async () => {
+          mutations.push('up');
+          return { ok: true, log: '', gatewaySkipped: false };
+        },
+        composeRemoveServices: async () => {
+          mutations.push('remove');
+          return { ok: true, log: '' };
+        },
+        composeStop: async () => {
+          mutations.push('stop');
+          return { ok: true, log: '' };
+        },
+        ensureProxyImageAvailable: async () => {
+          mutations.push('image');
+          return { imageRef: 'caddy:2.11.4' };
+        },
+      };
+      await assert.rejects(
+        () =>
+          action.includes('setup')
+            ? applySetupPlan(
+                ctx(root),
+                {
+                  lanAppIp: '192.168.1.10',
+                  practiceDisplayName: 'Praxis',
+                  proxy: { enabled: true, httpPort: 80 },
+                  gateway: gwOff('192.168.1.10'),
+                  preserveEnv: true,
+                  runCompose: true,
+                  runProbes: false,
+                },
+                hooks,
+              )
+            : saveHostNetwork(
+                ctx(root),
+                {
+                  lanAppIp: '192.168.1.10',
+                  gateway: gwOff('192.168.1.10'),
+                  ...(action === 'disable'
+                    ? { proxy: { enabled: false }, restartCompose: true }
+                    : { repairProxy: true }),
+                },
+                hooks,
+              ),
+        /Compose-Konfigurationsprüfung fehlgeschlagen.*Laufzeit blieb unverändert/,
+      );
+      assert.deepEqual(mutations, []);
+      if (before === null) assert.equal(fs.existsSync(path.join(root, '.env')), false);
+      else assert.equal(fs.readFileSync(path.join(root, '.env'), 'utf8'), before);
+    });
+  });
+}

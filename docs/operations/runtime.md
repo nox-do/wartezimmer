@@ -1,6 +1,6 @@
 # Runtime — Compose, Host, Tagesbetrieb
 
-Stand: 2026-09-13 · am Code geprüft (`setup/src/docker.ts`, Compose Delivery/Dev)
+Stand: 2026-09-14 · am Code geprüft (`setup/src/docker.ts`, Compose Delivery/Dev)
 
 **Scope:** Was nach der Installation läuft — Services, Compose-Stacking, Ports/Volumes, Alltag.  
 Nicht: Release-Bau → [`delivery.md`](delivery.md) · LAN-TLS → [`tls.md`](tls.md) · Backup → [`backup.md`](backup.md) · Anbindungen → [`integrations.md`](integrations.md)
@@ -35,6 +35,10 @@ Resolver: `resolveComposeFiles` / `resolveComposeFileList` in `setup/src/docker.
 | Proxy-TLS | `….proxy-tls.yml`                                                 | `….proxy-tls.delivery.yml`    | Mode `tls-*` **oder** `TLS_STATE≠off` |
 | TLS-Lab   | `docker-compose.tls-lab.yml` + `docker-compose.tls-lab-proxy.yml` | —                             | nur Dev + `TLS_ACME_DIRECTORY=pebble` |
 
+Die vorhandene `docker-compose.yml` kennzeichnet das Dev-Profil; reine Delivery-Verzeichnisse
+verwenden `docker-compose.delivery.yml`. Gespeicherte Release-Image-Referenzen in `.env`
+oder Manager-Metadaten schalten ein Repository nicht auf Delivery um.
+
 openNDS-Gateway-Compose ist entfernt (nicht Produkt). Historie: [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md).
 
 TLS-Overlay nur nach Proxy-Overlay. Default-Compose-Projektname typisch `praxis-flow` (Volumes z. B. `praxis-flow_app_data`).
@@ -59,12 +63,12 @@ Docker Desktop: File Sharing für Host-Pfade. Kein Log-Volume — stdout + json-
 
 ## 5. Netz & Ports
 
-| Port         | Wer                           | Hinweis                                                                                   |
-| ------------ | ----------------------------- | ----------------------------------------------------------------------------------------- |
-| `8080`       | App                           | ohne Proxy bewusst `0.0.0.0` für Demo/Erststart; mit Proxy zwingend `127.0.0.1`           |
-| `8082`       | Maintenance                   | nur `127.0.0.1` am Host — Backup/Import ([`backup.md`](backup.md))                        |
-| `9190`       | Setup-API (CLI `setup:serve`) | Default nur für manuelles Serve; der Manager bindet einen eigenen ephemeren Loopback-Port |
-| `80` / `443` | Proxy                         | nur an `SETUP_LAN_APP_IP`; TLS ab prepare/cutover — [`tls.md`](tls.md)                    |
+| Port         | Wer                           | Hinweis                                                                                         |
+| ------------ | ----------------------------- | ----------------------------------------------------------------------------------------------- |
+| `8080`       | App                           | ohne Proxy bewusst `0.0.0.0` für den initialen internen Betrieb; mit Proxy zwingend `127.0.0.1` |
+| `8082`       | Maintenance                   | nur `127.0.0.1` am Host — Backup/Import ([`backup.md`](backup.md))                              |
+| `9190`       | Setup-API (CLI `setup:serve`) | Default nur für manuelles Serve; der Manager bindet einen eigenen ephemeren Loopback-Port       |
+| `80` / `443` | Proxy                         | nur an `SETUP_LAN_APP_IP`; TLS ab prepare/cutover — [`tls.md`](tls.md)                          |
 
 Sandbox ohne öffentlichen Host-Port. Portal unter `/portal` im `app`-Container.
 Der proxyfreie Modus bietet bewusst keine NIC-Isolation. Explizites
@@ -76,18 +80,40 @@ Staff-IP und prüft nach dem Apply die tatsächlichen Docker-Publishes.
 
 **Produktweg:** Praxis Flow Manager → Status / Wartung.
 
-| Aktion                  | Bedeutung                                                                                  |
-| ----------------------- | ------------------------------------------------------------------------------------------ |
-| Start / Stop / Neustart | Compose up / **stop** (Volumes bleiben) / restart; Stop bei schon gestopptem Stack → Start |
-| Logs                    | pro Service über Setup-API                                                                 |
-| Health                  | `GET /api/v1/ops/health` (Compose-Healthcheck + Support)                                   |
-| Update                  | Wartung → `.pfupdate` ([`delivery.md`](delivery.md) §5)                                    |
-| Backup                  | Wartung → `.pfbackup` ([`backup.md`](backup.md))                                           |
-| Staff-PIN               | Standard nach Install **`0000`**; Reset in Manager-Wartung                                 |
+| Aktion                  | Bedeutung                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------- |
+| Start / Stop / Neustart | Compose up / **stop** (Volumes bleiben) / kontrolliertes Recreate; gestoppter Stack → Start |
+| Logs                    | pro Service über Setup-API                                                                  |
+| Health                  | `GET /api/v1/ops/health` (Compose-Healthcheck + Support)                                    |
+| Update                  | Wartung → `.pfupdate` ([`delivery.md`](delivery.md) §5)                                     |
+| Backup                  | Wartung → `.pfbackup` ([`backup.md`](backup.md))                                            |
+| Staff-PIN               | Standard nach Install **`0000`**; Reset in Manager-Wartung                                  |
 
 **Fachlicher Tagesreset** (MFA „Tag neu starten“ / Day-Lifecycle) ≠ Container neu spawnen — Tickets/Outbox/Sandbox-Intake, Stack bleibt stehen.
 
 Nach Update (Stichprobe): Health OK, Check-in, MFA-Queue; optional Smoke `smoke:practice-hours` / `smoke:day-lifecycle`.
+
+Die Proxy-Overlays ersetzen die offene Portliste des initialen Betriebs mit Compose `!override`.
+Direkte Compose-Aufrufe benötigen deshalb Compose **≥ 2.24.4**; der
+Manager-/Delivery-Weg setzt ebenfalls eine aktuelle Compose-v2-Installation
+voraus.
+
+Netzwerk-Apply und Proxy-Repair sichern die bisherige `.env` vor Änderungen.
+Vor Container-Eingriffen wird die zusammengeführte Compose-Konfiguration mit
+`config --quiet` auf fehlende Pflichtwerte und Konfigurationsfehler geprüft.
+Scheitert diese Prüfung oder die Proxy-Image-Prüfung, wird nur der Env-Zustand restauriert;
+laufende oder gestoppte Container bleiben unverändert. Bei einer frischen
+Installation wird die dabei angelegte `.env` wieder entfernt.
+
+Nach einem begonnenen Compose-Apply werden bei Fehlern Teil-Container ohne
+Volume-Löschung bereinigt und die vorherige Env zurückgespielt. War der Stack
+vorher gestoppt, bleibt er gestoppt. Beim Wiederanlauf wartet Setup bis zu
+120 Sekunden auf gesunde Services (Prüfintervall 2 Sekunden) und prüft danach
+im Proxy-Modus die tatsächlichen Bindings. `health=starting` ist während dieser
+Wartezeit kein endgültiger Rollback-Fehler. Scheitern Cleanup, Wiederanlauf,
+Healthchecks oder Binding-Prüfung, meldet Setup ausdrücklich, dass die Laufzeit
+nicht vollständig wiederhergestellt wurde. Fehlerdetails bleiben in der Meldung;
+bei nicht bereinigter Erstinstallation bleibt die `.env` für die Reparatur erhalten.
 
 ## 7. Proxy / TLS
 

@@ -256,7 +256,7 @@
   <LoadingOverlay loading={viewLoading} />
 
   <p class="maintenance-page-intro">
-    Vier Bereiche für den Alltag der Praxis-IT. Klicke einen Bereich, um die Details ein- oder
+    Vier Bereiche für den Alltag der Praxis-IT. Öffnen Sie einen Bereich, um die Details ein- oder
     auszuklappen.
   </p>
 
@@ -290,7 +290,7 @@
 
       <MaintenanceSection
         open={openSection === 'practice'}
-        title="Praxis-Einstellungen"
+        title="Import & Export"
         subtitle="Import & Export"
         copy="Host-Ordner für Import/Export der Praxis."
         onToggle={() => toggleSection('practice')}

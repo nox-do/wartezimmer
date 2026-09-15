@@ -11,12 +11,7 @@ import type {
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { deliveryImagesReady } from './delivery-images-flow.js';
 import { buildSetupProbeInput, pollSetupProbes } from './setup-probes.js';
-import {
-  draftCanonicalBaseUrl,
-  isHttpOrigin,
-  matchesHostnameModeBase,
-  productPublishPort,
-} from './reachability.js';
+import { draftCanonicalBaseUrl, isHttpOrigin } from './reachability.js';
 import {
   tlsModeForNameMode,
   tlsNameValid,
@@ -194,12 +189,12 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
     if (!resolvedLanIp(state)) {
       return { type: 'validate-error', message: 'Bitte eine LAN-IP wählen oder eingeben.' };
     }
-    const canonical = draftCanonicalBaseUrl(state, state.network);
+    const canonical = draftCanonicalBaseUrl(state, state.status);
     if (!canonical || !isHttpOrigin(canonical)) {
       return {
         type: 'validate-error',
         message:
-          'Bitte eine gültige Erreichbarkeit wählen (LAN-IP, Rechnername oder eigener Hostname).',
+          'Die Geräteadresse konnte nicht gebildet werden. Bitte prüfen Sie die ausgewählte IP-Adresse.',
       };
     }
     return { type: 'goto', step: 5 };
@@ -319,38 +314,16 @@ export function buildWizardPrepareTlsInput(state: WizardFlowState): {
 
 export function buildWizardPlanInput(state: WizardFlowState): {
   lanAppIp: string;
-  canonicalBaseUrl?: string;
   gateway: typeof DISABLED_GATEWAY_PLAN;
   proxy: { enabled: boolean; httpPort: number };
 } {
-  const canonicalBaseUrl = draftCanonicalBaseUrl(state, state.network) ?? undefined;
   return {
     lanAppIp: resolvedLanIp(state),
-    ...(canonicalBaseUrl ? { canonicalBaseUrl } : {}),
     gateway: DISABLED_GATEWAY_PLAN,
     proxy: {
       enabled: state.proxyEnabled,
       httpPort: 80,
     },
-  };
-}
-
-/** After network snapshot loads: prefer hostname mode only for exact hostname serialization. */
-export function wizardReachabilityAfterNetworkLoad(
-  state: WizardFlowState,
-  network: NetworkSnapshot,
-): Partial<WizardFlowState> {
-  const configured = state.status?.configuredCanonicalBaseUrl?.trim();
-  const port = productPublishPort(state.proxyEnabled);
-  if (matchesHostnameModeBase(configured, network.machineHostname, port)) {
-    return {
-      network,
-      reachabilityMode: 'hostname',
-      customHostname: '',
-    };
-  }
-  return {
-    network,
   };
 }
 

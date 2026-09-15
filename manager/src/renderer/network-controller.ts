@@ -6,7 +6,7 @@ import type {
   NetworkSnapshot,
 } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
-import type { LanIpFieldState, ReachabilityFieldState } from './host-network-panels.js';
+import type { LanIpFieldState, ProxyFieldState } from './host-network-panels.js';
 import {
   hostNetworkChanged,
   networkDraftEquals,
@@ -31,12 +31,7 @@ import {
   type NetworkNotice,
   type NetworkPhase,
 } from './network-view-model.js';
-import {
-  draftCanonicalBaseUrl,
-  isHttpOrigin,
-  matchesHostnameModeBase,
-  productPublishPort,
-} from './reachability.js';
+import { draftCanonicalBaseUrl, isHttpOrigin } from './reachability.js';
 import { pollSetupProbes } from './setup-probes.js';
 import { createHostNetworkFields, resolvedLanIp } from './wizard-state.js';
 import { DISABLED_GATEWAY_PLAN } from './wizard-flow.js';
@@ -70,7 +65,7 @@ export type NetworkControllerDeps = NetworkCallbacks & {
 
 export type NetworkController = {
   getState: () => Readonly<NetworkState>;
-  patchFields: (patch: Partial<LanIpFieldState & ReachabilityFieldState>) => void;
+  patchFields: (patch: Partial<LanIpFieldState & ProxyFieldState>) => void;
   applyAndVerify: () => void;
   restoreProxy: () => void;
   /** Probe an already-saved device base URL (never the draft). */
@@ -95,8 +90,6 @@ function createInitialState(): NetworkState {
     network: null,
     lanAppIp: '__custom__',
     customLanIp: '',
-    reachabilityMode: 'lan-ip',
-    customHostname: '',
     proxyEnabled: false,
     phase: 'idle',
     notice: null,
@@ -116,7 +109,6 @@ export function buildHostNetworkSaveInput(input: {
   lanAppIp: string;
   restartCompose: boolean;
   repairProxy?: boolean;
-  canonicalBaseUrl: string;
   proxyEnabled: boolean;
   preserveTlsIdentity: boolean;
 }): HostNetworkInput {
@@ -128,7 +120,6 @@ export function buildHostNetworkSaveInput(input: {
     ...(input.preserveTlsIdentity
       ? {}
       : {
-          canonicalBaseUrl: input.canonicalBaseUrl,
           proxy: {
             enabled: input.proxyEnabled,
             httpPort: 80,
@@ -137,23 +128,11 @@ export function buildHostNetworkSaveInput(input: {
   };
 }
 
-function draftFromConfig(config: HostStatus, network: NetworkSnapshot | null): NetworkDraft {
+function draftFromConfig(config: HostStatus): NetworkDraft {
   const fields = createHostNetworkFields(config);
-  let reachabilityMode = fields.reachabilityMode;
-  let customHostname = fields.customHostname;
-  if (network) {
-    const host = network.machineHostname?.trim();
-    const configured = config.configuredCanonicalBaseUrl?.trim();
-    if (matchesHostnameModeBase(configured, host, productPublishPort(fields.proxyEnabled))) {
-      reachabilityMode = 'hostname';
-      customHostname = '';
-    }
-  }
   return {
     lanAppIp: fields.lanAppIp,
     customLanIp: fields.customLanIp,
-    reachabilityMode,
-    customHostname,
     proxyEnabled: fields.proxyEnabled,
   };
 }
@@ -216,7 +195,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
   }
 
   function tryHydrateFromConfig(config: HostStatus): void {
-    const next = draftFromConfig(config, state.network);
+    const next = draftFromConfig(config);
     if (saveSubmittedDraft) {
       if (!networkDraftEquals(currentDraftSnapshot(), saveSubmittedDraft)) {
         // User edited after save started — keep their draft.
@@ -260,12 +239,12 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
   }
 
   function resolveDraftCanonical(): string | null {
-    return draftCanonicalBaseUrl(state, state.network);
+    return draftCanonicalBaseUrl(state, deps.getConfig());
   }
 
   /** Apply button: field drift or leftover gateway cleanup. */
   function needsApply(): boolean {
-    return hostNetworkChanged(state, deps.getConfig(), state.network);
+    return hostNetworkChanged(state, deps.getConfig());
   }
 
   function stackRunning(): boolean {
@@ -332,9 +311,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       return;
     }
     if (!preserveTlsIdentity && !isHttpOrigin(canonicalBaseUrl)) {
-      setErrorNotice(
-        'Bitte LAN-IP, Rechnername oder eigenen Hostnamen für die Geräte-Adresse wählen.',
-      );
+      setErrorNotice('Bitte eine gültige IP-Adresse für die Praxisgeräte wählen.');
       return;
     }
 
@@ -354,7 +331,6 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
             lanAppIp,
             restartCompose: input.restartCompose,
             repairProxy: input.repairProxy,
-            canonicalBaseUrl,
             proxyEnabled,
             preserveTlsIdentity,
           }),
@@ -419,11 +395,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
 
     patchFields(patchFields) {
       const clearsNotice =
-        'reachabilityMode' in patchFields ||
-        'customHostname' in patchFields ||
-        'proxyEnabled' in patchFields ||
-        'lanAppIp' in patchFields ||
-        'customLanIp' in patchFields;
+        'proxyEnabled' in patchFields || 'lanAppIp' in patchFields || 'customLanIp' in patchFields;
       patch({
         ...patchFields,
         ...(clearsNotice && state.notice ? { phase: 'idle' as const, notice: null } : {}),
@@ -458,12 +430,18 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       if (networkIsBusy(state.phase) || hostWriteInFlight > 0 || hostLockedByPeer()) {
         return;
       }
+      if (needsApply()) {
+        setErrorNotice(
+          'Bitte zuerst die Änderungen übernehmen oder verwerfen. Wiederherstellen verwendet die gespeicherte Einrichtung.',
+        );
+        return;
+      }
       if (!proxyNeedsRestore(deps.getConfig(), deps.getRuntime())) {
         setErrorNotice('Proxy-Dienst läuft bereits oder ist nicht aktiviert.');
         return;
       }
       if (!state.proxyEnabled) {
-        setErrorNotice('Bitte den Zugriff über Port 80 aktiviert lassen und wiederherstellen.');
+        setErrorNotice('Bitte den Zugriff über die ausgewählte Adresse aktiviert lassen.');
         return;
       }
       deps.requestConfirm(NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE, () => {
@@ -508,7 +486,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       pendingConfigHydrate = false;
 
       const openingConfig = deps.getConfig()!;
-      const openingDraft = draftFromConfig(openingConfig, null);
+      const openingDraft = draftFromConfig(openingConfig);
       patch({
         phase: 'loading',
         notice: null,
@@ -525,7 +503,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
           }
           // Always re-read config — a newer snapshot may have arrived during fetch.
           const config = deps.getConfig() ?? openingConfig;
-          const draft = draftFromConfig(config, network);
+          const draft = draftFromConfig(config);
           patch({
             network,
             ...draft,
@@ -576,7 +554,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
       }
       saveSubmittedDraft = null;
       pendingConfigHydrate = false;
-      const draft = draftFromConfig(config, state.network);
+      const draft = draftFromConfig(config);
       applyDraft(draft);
       patch({ notice: null });
     },

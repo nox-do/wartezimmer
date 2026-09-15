@@ -36,6 +36,11 @@ import {
 } from './settings-backup.js';
 import type { SetupContext } from './setup-context.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
+import { listNetworkInterfaces } from './network.js';
+import {
+  maintenanceStaffBindingPreflightError,
+  maintenanceStaffBindingRuntimeError,
+} from './maintenance-staff-binding.js';
 import {
   captureMaintenanceRollback,
   executeMaintenanceRollback,
@@ -559,6 +564,13 @@ async function commitRestore(input: {
   if (!cutover.ok) {
     throw new RestorePhaseError(restorePhaseFromCutover(cutover.failedPhase), cutover.errors);
   }
+  const envAfterCutover = readEnvMap(input.prepared.envPath);
+  const runtimeBindingError = maintenanceStaffBindingRuntimeError(envAfterCutover, cutover.compose);
+  if (runtimeBindingError) {
+    throw new RestorePhaseError(RESTORE_PHASES.healthCheck, [
+      `Restore-Runtime-Binding ungültig: ${runtimeBindingError}`,
+    ]);
+  }
   return cutover;
 }
 
@@ -625,6 +637,20 @@ async function applyPreparedRestore(input: {
   localMaintenanceAppBaseUrl: string;
   testHooks: PfbackupRestoreTestHooks;
 }): Promise<PfbackupRestoreResult> {
+  const bindingError = maintenanceStaffBindingPreflightError({
+    currentEnv: readEnvMap(input.prepared.envPath),
+    targetEnv: new Map(Object.entries(input.prepared.restoreEnv)),
+    interfaces: listNetworkInterfaces(),
+  });
+  if (bindingError) {
+    return failureResult(
+      input.restoreId,
+      RESTORE_PHASES.stopStack,
+      [`Restore vor dem Stack-Stopp gesperrt: ${bindingError}`],
+      false,
+      false,
+    );
+  }
   const stop = await input.runtime.stopStack(input.prepared.runOptions);
   if (!stop.ok) {
     return failureResult(

@@ -23,7 +23,7 @@ export type StatusGridRow = { label: string; value: string };
 
 export type DeviceUrlEntry = { label: string; url: string; showKioskTip: boolean };
 
-const DEVICE_URL_LABELS = ['Terminal', 'TV', 'MFA', 'Portal', 'Ops'] as const;
+const DEVICE_URL_LABELS = ['Terminal', 'TV', 'MFA', 'Portal – intern', 'Administration'] as const;
 
 function mark(ok: boolean): string {
   return ok ? '✓' : '✗';
@@ -58,12 +58,15 @@ export function dockerSummary(status: HostStatus): string {
   return parts.join(', ');
 }
 
-export function currentWlanLabel(status: HostStatus): string | null {
+export function configuredAdapterLabel(status: HostStatus): string | null {
   const candidates = status.network.currentLanCandidates;
   if (candidates.length === 0) {
     return null;
   }
-  const primary = candidates[0];
+  const primary = candidates.find(
+    (candidate) => candidate.address === status.network.configuredLanIp,
+  );
+  if (!primary) return null;
   return `${primary.address} (${primary.interfaceName})`;
 }
 
@@ -145,65 +148,26 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
 }
 
 export function statusGridRows(status: HostStatus): StatusGridRow[] {
-  const wlan = currentWlanLabel(status);
   const rows: StatusGridRow[] = [
-    { label: 'Install-Home', value: status.installHome },
-    { label: 'Compose', value: status.composeProjectName },
-    { label: 'Docker', value: dockerSummary(status) },
-    { label: '.env', value: status.envExists ? '✓ vorhanden' : '✗ fehlt' },
+    {
+      label: 'Installations-ID',
+      value: status.tls?.installationId?.trim() || 'Noch nicht vergeben',
+    },
+    { label: 'Installationsordner', value: status.installHome },
+    { label: 'Konfiguration (.env)', value: status.envExists ? '✓ vorhanden' : '✗ fehlt' },
   ];
 
-  if (wlan) {
-    rows.push({ label: 'WLAN aktuell', value: wlan });
+  if (status.deliveryImages.releaseVersion) {
+    rows.push({ label: 'Software-Version', value: status.deliveryImages.releaseVersion });
   }
-
-  if (status.network.configuredLanIp) {
-    rows.push({ label: 'LAN in .env', value: status.network.configuredLanIp });
-  }
-
-  const accessUrl =
-    status.configuredCanonicalBaseUrl?.trim() ||
-    status.deviceUrls?.appBaseUrl?.trim() ||
-    status.appBaseUrl?.trim() ||
-    null;
-  if (accessUrl) {
-    rows.push({ label: 'Zugriff', value: accessUrl });
-  }
-
-  rows.push({ label: 'Proxy-Server', value: proxyStatusLabel(status) });
-
-  if (status.tls && status.tls.state !== 'off' && status.tls.hostname) {
-    rows.push({
-      label: 'HTTPS',
-      value: status.tls.cutoverApplied
-        ? `aktiv · ${status.tls.hostname}`
-        : `vorbereitet · ${status.tls.hostname}`,
-    });
-  }
-
   if (status.deliveryImages.required) {
-    rows.push({ label: 'Software-Paket', value: deliveryImagesSummary(status) });
+    rows.push({ label: 'Docker-Images', value: deliveryImagesSummary(status) });
   }
-
+  rows.push(
+    { label: 'Compose-Projekt', value: status.composeProjectName },
+    { label: 'Docker', value: dockerSummary(status) },
+  );
   return rows;
-}
-
-function proxyStatusLabel(status: HostStatus): string {
-  if (!status.proxy?.enabled) {
-    return 'Aus';
-  }
-  if (status.tls?.cutoverApplied) {
-    return 'Läuft · HTTPS (Proxy nur Weiterleitung)';
-  }
-  const port = status.proxy.httpPort || 80;
-  const state = status.proxy.container?.state?.toLowerCase() ?? '';
-  if (state.includes('running')) {
-    return `Läuft · Port ${port}`;
-  }
-  if (status.proxy.container) {
-    return `Gestoppt · Port ${port}`;
-  }
-  return `Aktiv · Port ${port} (Container fehlt)`;
 }
 
 export const DELIVERY_IMAGES_WARNING_TEXT =
@@ -215,7 +179,7 @@ export function showDeliveryImagesWarning(status: HostStatus, setupEntry: boolea
 
 export function lanWarningText(status: HostStatus, setupEntry: boolean): string | null {
   if (status.network.lanIpStale && status.network.configuredLanIp) {
-    return `⚠ IP in .env (${status.network.configuredLanIp}) passt nicht zur aktuellen IP — Bitte unter Netzwerk anpassen.`;
+    return `⚠ Konfigurierte Praxisadresse (${status.network.configuredLanIp}) passt nicht zur aktuellen IP — Bitte unter Netzwerk anpassen.`;
   }
   if (!status.network.configuredLanIp && !setupEntry) {
     return 'LAN noch nicht konfiguriert — Einrichtung ausführen, damit Terminal, TV und MFA den Host im WLAN erreichen.';

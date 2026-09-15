@@ -43,11 +43,11 @@ export function resolveDockerCli(): string {
   return 'docker';
 }
 
-export function buildDockerEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+export function buildDockerEnv(env?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const source = env ?? process.env;
   return {
-    ...process.env,
-    ...env,
-    PATH: [...fallbackDockerCliDirs(), env.PATH ?? process.env.PATH ?? ''].join(path.delimiter),
+    ...source,
+    PATH: [...fallbackDockerCliDirs(), source.PATH ?? process.env.PATH ?? ''].join(path.delimiter),
   };
 }
 

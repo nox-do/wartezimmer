@@ -5,11 +5,11 @@
 </script>
 
 {#if checks.length === 0}
-  <p class="hint">Keine Host-Prüfungen (Stack/Ports noch nicht relevant).</p>
+  <p class="hint">Die Bindung von Adresse und Ports wurde noch nicht geprüft.</p>
 {:else}
   <p class="hint">
-    Ob Port und Adresse an diesem Rechner passen — nicht die Erreichbarkeit aus dem Praxisnetz (dazu
-    „Adresse für Terminal, TV und MFA“ prüfen).
+    Diese Prüfung kontrolliert Adresse und Ports auf diesem Rechner. Prüfen Sie zusätzlich
+    auf einem Praxisgerät, ob sich die angezeigte Praxisadresse öffnen lässt.
   </p>
   <ul class="checklist network-bindings-list" id="network-bindings-panel">
     {#each checks as check (check.id)}
@@ -17,7 +17,7 @@
         {check.ok ? '✓' : '✗'} {check.message}
       </li>
       {#if check.detail}
-        <li class="network-binding-detail">{check.detail}</li>
+        <li class="network-binding-detail"><details><summary>Technische Details</summary>{check.detail}</details></li>
       {/if}
     {/each}
   </ul>

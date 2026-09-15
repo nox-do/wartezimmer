@@ -92,7 +92,7 @@
 
 {#if snapshot.httpsPhase === 'offer'}
   <p class="wizard-step-lead">
-    HTTPS: Schloss im Browser. Jetzt vorbereiten oder später hier in der Manager-App einrichten.
+    HTTPS verschlüsselt die Verbindung Ihrer Praxisgeräte. Jetzt vorbereiten oder später einrichten; der interne Betrieb über HTTP bleibt möglich.
   </p>
   <fieldset class="wizard-fieldset">
     <label class="wizard-radio">
@@ -113,7 +113,7 @@
         disabled={snapshot.busy}
         onchange={() => patch({ httpsOfferChoice: 'later' })}
       />
-      <span>Später — vorerst nur die IP</span>
+      <span>Später – intern über HTTP weiterarbeiten</span>
     </label>
   </fieldset>
 {:else if snapshot.httpsPhase === 'hostname'}
@@ -330,7 +330,7 @@
       <p class="notice is-ok">{wizardHttpsDnsWaitCopy('managed')} {WIZARD_HTTPS_CONTINUE_COPY}</p>
     {:else}
       <p class="notice is-warn">
-        Ohne diese Mail an Praxis Flow gibt es kein Zertifikat. Weiter ist erst nach dem Haken frei.
+        Senden Sie die vorbereitete Mail für die DNS-Einrichtung und bestätigen Sie den Versand. Während der Bearbeitung können Sie intern über HTTP weiterarbeiten.
       </p>
     {/if}
   {:else}

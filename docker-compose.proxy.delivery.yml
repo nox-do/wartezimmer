@@ -11,6 +11,12 @@ x-docker-logging: &docker-logging
     max-file: ${DOCKER_LOG_MAX_FILE:-5}
 
 services:
+  app:
+    # A proxy-enabled stack must never retain the open demo publish from the base file.
+    ports: !override
+      - '127.0.0.1:8080:8080'
+      - '127.0.0.1:8082:8082'
+
   proxy:
     logging: *docker-logging
     image: ${PRAXIS_FLOW_PROXY_IMAGE:-caddy:2.11.4}

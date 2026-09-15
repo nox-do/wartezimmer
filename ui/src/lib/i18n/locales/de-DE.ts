@@ -65,7 +65,7 @@ export const dict = {
       mfaLink: 'Praxis-Einstellungen',
       mfaLinkAria: 'Praxis-Einstellungen in neuem Tab öffnen',
     },
-    portalTitle: 'Patientenportal',
+    portalTitle: 'Portalfunktion',
     portalLead:
       'Steuert, ob Patienten das Portal (Wartenummer, Upload, Erstanamnese) nutzen können. Technische Gast-WLAN-Einrichtung erfolgt im Praxis Flow Manager.',
     portalSaveOk: 'Portal-Einstellung gespeichert.',
@@ -261,16 +261,16 @@ export const dict = {
       messagingReady: 'SMS ist konfiguriert.',
       messagingSkipNote:
         'Ohne Eintrag können Sie direkt auf „Weiter“ — SMS-Rückrufe funktionieren erst nach Konfiguration in den Systemeinstellungen.',
-      portalTitle: 'Patientenportal',
+      portalTitle: 'Portalfunktion',
       portalLead:
-        'Soll das Patientenportal (Wartenummer, Upload, Erstanamnese) für Ihre Praxis angeboten werden?',
+        'Soll die Portalfunktion (Wartenummer, Upload, Erstanamnese) intern in Ihrer Praxis genutzt werden?',
       portalOff: 'Nein — Portal nicht nutzen',
-      portalOn: 'Ja — Patientenportal aktivieren',
+      portalOn: 'Ja — Portalfunktion nutzen',
       portalOnHint:
-        'Patienten geben die Wartenummer vom Terminal im Portal ein. Für Gast-WLAN mit Internet-Freischaltung (Captive Portal) richten Sie Gateway und Netzwerk im Praxis Flow Manager ein.',
-      portalHostTitle: 'Gast-WLAN & Gateway',
+        'Die Portalfunktion kann intern durch Mitarbeitende genutzt werden. Das Einschalten richtet keinen separaten Patientenzugang ein.',
+      portalHostTitle: 'Interne Nutzung und Patientenzugang',
       portalHostBody:
-        'Die techniche Einrichtung erfolgt im Praxis Flow Manager auf dem Host-PC — nicht in diesem Assistenten.',
+        'Die interne Praxisadresse verwalten Sie im Praxis Flow Manager. Ein getrennter Zugang für Patienten ist noch nicht eingerichtet. Dieser Hinweis ist keine technische Zugangssperre; die Trennung der Praxisnetze verantwortet Ihre Praxis-IT.',
       portalOffNote:
         'Terminal, MFA und TV funktionieren ohne Portal. Sie können das Portal später jederzeit aktivieren.',
       summaryBlocked:

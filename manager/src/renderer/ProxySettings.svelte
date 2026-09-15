@@ -8,25 +8,27 @@
     disabled?: boolean;
     onChange: (enabled: boolean) => void;
   } = $props();
+  const groupName = $props.id();
 </script>
 
-<p class="hint">
-  Ohne Proxy ist der Demo-/Erststart über <code>:8080</code> auf allen Netzwerkkarten erreichbar. Mit
-  Proxy läuft die App nur lokal; Port 80 und später HTTPS werden ausschließlich an die gewählte
-  Staff-Adresse gebunden.
-</p>
-<label class="wizard-checkbox">
-  <input
-    type="checkbox"
-    checked={enabled}
-    {disabled}
-    onchange={(event) => onChange((event.currentTarget as HTMLInputElement).checked)}
-  />
-  <span>Einfacher Gerätezugriff über Port 80</span>
-</label>
-{#if enabled}
+<fieldset class="wizard-fieldset" {disabled}>
+  <legend class="lan-ip-prompt">Wie möchten Sie Praxis Flow erreichen?</legend>
+
+  <label class="wizard-radio">
+    <input type="radio" name={groupName} checked={enabled} onchange={() => onChange(true)} />
+    <span>Proxy an</span>
+  </label>
   <p class="hint">
-    Zielport für Geräte: <code>80</code> (statt <code>8080</code>). Die Staff-Adresse muss beim Start
-    am Rechner vorhanden sein.
+    Zugriff ohne Portangabe in der Adresse (HTTP-Port 80 statt 8080), ausschließlich über die
+    ausgewählte Praxisadresse. HTTPS kann anschließend eingerichtet werden.
   </p>
-{/if}
+
+  <label class="wizard-radio">
+    <input type="radio" name={groupName} checked={!enabled} onchange={() => onChange(false)} />
+    <span>Proxy aus</span>
+  </label>
+  <p class="hint">
+    Direkter Zugriff mit <code>:8080</code> in der Adresse. Praxis Flow ist auf allen Netzwerkkarten
+    erreichbar. Für HTTPS muss der Proxy eingeschaltet werden.
+  </p>
+</fieldset>

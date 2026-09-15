@@ -115,51 +115,6 @@ export function buildDeviceUrlsFromBaseUrl(baseUrl: string): DeviceUrls {
   };
 }
 
-/**
- * When LAN IP changes, rewrite CANONICAL_BASE_URL only if it was missing
- * or exactly equal to the previous IP fallback (`http://<previous-ip>:8080`).
- * Hostnames, TLS, alternate ports, and other IP forms stay unchanged.
- * Returns null when the existing base should be kept.
- */
-export function nextCanonicalBaseUrlForLanChange(input: {
-  existingCanonical: string | null | undefined;
-  previousLanIp: string | null | undefined;
-  nextLanIp: string;
-  port?: number;
-}): string | null {
-  const nextFallback = fallbackCanonicalBaseUrl(input.nextLanIp, input.port);
-  const existing = parseHttpBaseUrl(input.existingCanonical);
-  if (!existing) {
-    return nextFallback;
-  }
-
-  const previousLan = input.previousLanIp?.trim();
-  if (previousLan && existing === fallbackCanonicalBaseUrl(previousLan, input.port)) {
-    return nextFallback;
-  }
-  return null;
-}
-
-/**
- * Canonical base that Plan/Apply/saveHostNetwork should show and write
- * for a planned LAN IP (same derivation everywhere).
- */
-export function resolveCanonicalBaseUrlForLanPlan(input: {
-  existingCanonical: string | null | undefined;
-  previousLanIp: string | null | undefined;
-  nextLanIp: string;
-  port?: number;
-}): string {
-  const existing = parseHttpBaseUrl(input.existingCanonical);
-  const nextCanonical = nextCanonicalBaseUrlForLanChange({
-    existingCanonical: existing,
-    previousLanIp: input.previousLanIp,
-    nextLanIp: input.nextLanIp,
-    port: input.port,
-  });
-  return nextCanonical ?? existing ?? fallbackCanonicalBaseUrl(input.nextLanIp, input.port);
-}
-
 export function buildGatewayEnv(
   gateway: GatewayPlan,
   deviceUrls: DeviceUrls,

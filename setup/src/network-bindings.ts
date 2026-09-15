@@ -188,7 +188,7 @@ export function auditStaffPublishedBindings(input: {
   if (!input.proxyEnabled) {
     const appCheck = checks.find((check) => check.id === 'staff.binding.app');
     if (appCheck?.ok) {
-      appCheck.message = 'App läuft im offenen Demo-/Erststart';
+      appCheck.message = 'App läuft im initialen Betriebsmodus';
       appCheck.detail =
         '0.0.0.0:8080 ist auf allen Host-Interfaces erreichbar. Für Staff-Isolation den Proxy aktivieren.';
     }

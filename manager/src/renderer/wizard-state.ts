@@ -1,17 +1,11 @@
 import type { HostStatus } from '../shared/host-status.js';
-import {
-  inferReachabilityFields,
-  type ReachabilityFieldState,
-  type ReachabilityMode,
-} from './reachability.js';
+import type { ProxyFieldState } from './reachability.js';
 
 export type WizardInitialFields = {
   lanAppIp: string;
   customLanIp: string;
   importsHostPath: string;
   exportsHostPath: string;
-  reachabilityMode: ReachabilityMode;
-  customHostname: string;
   proxyEnabled: boolean;
 };
 
@@ -57,18 +51,18 @@ export function createInitialWizardFields(status: HostStatus | null): WizardInit
   return {
     ...lan,
     ...initialStorageFolderPaths(status),
-    ...inferReachabilityFields(status),
+    proxyEnabled: Boolean(status?.proxy?.enabled),
   };
 }
 
 /** LAN + reachability fields for maintenance (no practice/storage). */
 export function createHostNetworkFields(
   status: HostStatus | null,
-): Pick<WizardInitialFields, 'lanAppIp' | 'customLanIp'> & ReachabilityFieldState {
+): Pick<WizardInitialFields, 'lanAppIp' | 'customLanIp'> & ProxyFieldState {
   const lan = initialLanIpSelection(status);
   return {
     ...lan,
-    ...inferReachabilityFields(status),
+    proxyEnabled: Boolean(status?.proxy?.enabled),
   };
 }
 

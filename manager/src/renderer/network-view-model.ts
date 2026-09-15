@@ -5,7 +5,7 @@ import type {
   ProbeResult,
 } from '../shared/host-status.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-import type { LanIpFieldState, ReachabilityFieldState } from './host-network-panels.js';
+import type { LanIpFieldState, ProxyFieldState } from './host-network-panels.js';
 import { effectiveProxyContainer } from './host-snapshot-selectors.js';
 import { resolvedLanIp } from './wizard-state.js';
 
@@ -17,7 +17,7 @@ export type NetworkNotice =
   | { tone: 'warning'; message: string }
   | { tone: 'error'; message: string };
 
-export type NetworkDraft = LanIpFieldState & ReachabilityFieldState;
+export type NetworkDraft = LanIpFieldState & ProxyFieldState;
 
 export const NETWORK_LAN_REQUIRED_ERROR =
   'Bitte eine Adresse dieses Rechners wählen oder eingeben.';
@@ -28,12 +28,12 @@ export const NETWORK_RESTART_CONFIRM_PROXY_MESSAGE =
 export const NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE =
   'Proxy-Dienst prüfen und starten? Praxis Flow wird dafür neu gestartet.';
 export const NETWORK_PROXY_RESTORE_HINT =
-  'Zugriff über Port 80 ist eingeschaltet, aber der Proxy-Dienst läuft nicht. Hier wiederherstellen oder den Zugriff wieder ausschalten und übernehmen.';
+  'Der Zugang ist eingerichtet, aber der Proxy-Dienst läuft nicht. Wiederherstellen verwendet die gespeicherte Einrichtung einschließlich vorhandenem HTTPS.';
 export const NETWORK_STACK_STOPPED_VERIFY_HINT =
-  'Praxis Flow ist gestoppt. Unter Status starten und danach erneut prüfen.';
+  'Praxis Flow ist gestoppt. Unter Wartung starten und danach erneut prüfen.';
 export const NETWORK_PROBE_FAILED_MESSAGE =
   'Die Erreichbarkeit konnte nicht geprüft werden. Bitte kurz warten und erneut versuchen.';
-export const NETWORK_PROXY_EXPANDER_TITLE = 'Browserzugriff (Proxy Port 80)';
+export const NETWORK_PROXY_EXPANDER_TITLE = 'Zugriff über ausgewählte IP-Adresse (Proxy)';
 export const NETWORK_APPLY_BUTTON_LABEL = 'Einstellungen übernehmen und prüfen';
 export const NETWORK_DISCARD_BUTTON_LABEL = 'Änderungen verwerfen';
 
@@ -66,6 +66,7 @@ export function proxyNeedsRestore(
   if (!config?.proxy?.enabled) {
     return false;
   }
+  if (runtime && !runtime.compose) return false;
   const container = effectiveProxyContainer(config, runtime);
   const state = container?.state?.toLowerCase() ?? '';
   return !state.includes('running');
@@ -117,24 +118,14 @@ export function networkProxySubtitle(
   runtime: HostRuntimeHealth | null = null,
 ): string {
   if (!proxyEnabled) {
-    return 'Aus — offener Demo-/Erststart auf :8080';
+    return 'Proxy aus · HTTP mit :8080';
   }
   if (proxyNeedsRestore(config, runtime)) {
-    return 'An — Proxy-Dienst fehlt';
+    return 'Proxy an · Dienst läuft nicht';
   }
-  return 'An — Geräte-Adresse ohne :8080 (Port 80)';
+  return 'Proxy an · HTTP ohne Portangabe';
 }
 
-export function networkReachabilitySubtitle(status: HostStatus | null | undefined): string {
-  return (
-    status?.configuredCanonicalBaseUrl ||
-    status?.deviceUrls?.appBaseUrl ||
-    status?.appBaseUrl ||
-    'Adresse für Terminal, TV und MFA wählen'
-  );
-}
-
-/** Default expander open flags for a Network-tab session (IT action order). */
 export function networkExpanderDefaults(input: {
   status: HostStatus;
   proxyEnabled: boolean;
@@ -142,7 +133,6 @@ export function networkExpanderDefaults(input: {
 }): {
   lanOpen: boolean;
   proxyOpen: boolean;
-  reachabilityOpen: boolean;
   topologyOpen: boolean;
   tlsOpen: boolean;
 } {
@@ -158,9 +148,8 @@ export function networkExpanderDefaults(input: {
       networkHostChecksHaveFailures(checks),
     // TLS off: Port-80 checkbox + commit in one glance. While TLS is active, only restore.
     proxyOpen: !tlsActive || proxyNeedsRepair,
-    reachabilityOpen: false,
     topologyOpen: false,
-    tlsOpen: true,
+    tlsOpen: tlsActive,
   };
 }
 
@@ -169,20 +158,17 @@ export function networkDraftCommitPlacement(input: {
   dirty: boolean;
   lanOpen: boolean;
   proxyOpen: boolean;
-  reachabilityOpen: boolean;
   httpDraftExpandersRendered: boolean;
 }): {
   lan: boolean;
   proxy: boolean;
-  reachability: boolean;
 } {
   if (!input.dirty) {
-    return { lan: false, proxy: false, reachability: false };
+    return { lan: false, proxy: false };
   }
   return {
     lan: input.lanOpen,
     proxy: input.httpDraftExpandersRendered && input.proxyOpen,
-    reachability: input.httpDraftExpandersRendered && input.reachabilityOpen,
   };
 }
 

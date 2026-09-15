@@ -107,7 +107,7 @@ const currentManagerState = {
   },
 };
 
-function buildArchiveContent(settings = sampleSettings) {
+function buildArchiveContent(settings: Record<string, unknown> = sampleSettings) {
   return serializePfbackupArchive(
     buildPfbackupArchive({
       settings,
@@ -925,6 +925,43 @@ test('restorePfbackup rolls TLS state back after sidecar unpack if cutover fails
     assert.equal(fs.existsSync(path.join(destPaths.caddyData, 'backup.txt')), false);
   } finally {
     fs.rmSync(source, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('restorePfbackup rejects a non-local target Staff address before stopping the stack', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-staff-preflight-'));
+  const { appDataDir } = seedInstallHome(dir);
+  const content = buildArchiveContent({
+    ...sampleSettings,
+    env: {
+      ...sampleSettings.env,
+      PROXY_ENABLED: 'true',
+      PROXY_MODE: 'http',
+      SETUP_LAN_APP_IP: '203.0.113.77',
+      APP_BIND_ADDRESS: '127.0.0.1',
+    } as Record<string, string>,
+  });
+  let stopCalls = 0;
+  try {
+    const result = await restorePfbackup(
+      content,
+      testSetupContext(dir),
+      {},
+      workingRestoreDeps(appDataDir, {
+        stopStack: async () => {
+          stopCalls += 1;
+          return { ok: true, log: 'stopped' };
+        },
+      }),
+    );
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.failedPhase, 'stop_stack');
+      assert.match(result.errors.join(' '), /vor dem Stack-Stopp gesperrt/);
+    }
+    assert.equal(stopCalls, 0);
+  } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });

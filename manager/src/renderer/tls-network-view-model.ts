@@ -12,7 +12,7 @@ export const TLS_CUTOVER_CONFIRM_MESSAGE =
   'Auf HTTPS umstellen ist unwiderruflich. Alte HTTP-Adressen und Anmeldungen gelten danach nicht mehr. TV und Tablets danach neu eintragen. Außerhalb der Öffnungszeiten wäre besser.';
 
 export const TLS_RESET_CONFIRM_MESSAGE =
-  'HTTPS-Vorbereitung verwerfen? Name, Mailtext und ACME-Delegation gehen verloren. Der Zugriff bleibt HTTP.';
+  'HTTPS-Vorbereitung verwerfen? Die vorbereitete Adresse und der Mailtext werden verworfen. Bereits angelegte DNS-Einträge werden nicht automatisch gelöscht. Der Zugriff bleibt HTTP.';
 
 export function tlsLeaseBlockedByStaleLan(lanIpStale: boolean | undefined): boolean {
   return Boolean(lanIpStale);
@@ -167,7 +167,7 @@ export function tlsNetworkSubtitle(tls: TlsStatus | undefined, pendingObtain = f
     case 'obtaining-certificate':
       return 'Zertifikat wird geholt';
     case 'active':
-      return tls.hostname ? `Aktiv · ${tls.hostname}` : 'Aktiv';
+      return tls.hostname ? `Eingerichtet · ${tls.hostname}` : 'Aktiv';
     case 'degraded':
       return 'Warnung';
     case 'error':
@@ -195,28 +195,30 @@ export function tlsErrorCopy(
     case 'a-record':
       return {
         title: message?.trim() || 'A-Record fehlt.',
-        action: 'Warten, bis ein eigener A-Record auf die LAN-IP zeigt.',
+        action:
+          'Lassen Sie den DNS-Eintrag für diese Adresse auf die ausgewählte Praxis-IP setzen und prüfen Sie anschließend erneut.',
       };
     case 'collision':
       return {
         title: message?.trim() || 'A-Record zeigt auf eine andere IP.',
-        action:
-          'Ein eigener A-Record zeigt auf eine andere Adresse. Label prüfen oder Mail erneut.',
+        action: 'Prüfen Sie den gewählten Namen und lassen Sie die Ziel-IP im DNS korrigieren.',
       };
     case 'dns-filter':
       return {
         title: 'Öffentlicher DNS filtert die private Zieladresse.',
-        action: 'Kein eigener Resolver. Praxis-IT: Filter für diesen Host prüfen.',
+        action: 'Bitten Sie Ihre Praxis-IT, die DNS-Filterung für diese Adresse zu prüfen.',
       };
     case 'isolation':
       return {
         title: 'Gerät erreicht den Praxisserver nicht (typisch Gast-WLAN).',
-        action: 'Firewall im LAN: TCP 443 zum Praxisserver.',
+        action:
+          'Bitten Sie Ihre Praxis-IT, den Zugriff vom Praxisgerät auf die ausgewählte Serveradresse über Port 443 zu prüfen.',
       };
     case 'firewall':
       return {
         title: 'Port 443 auf diesem Rechner ist nicht erreichbar.',
-        action: 'Windows-Firewall für Caddy prüfen. HTTP bleibt, bis HTTPS übernommen wird.',
+        action:
+          'Prüfen Sie den Proxy-Dienst und die ausgewählte Praxisadresse. Falls nötig, lassen Sie Ihre Praxis-IT die Firewall-Regeln für Port 443 prüfen.',
       };
     case 'port-443':
       return {
@@ -226,7 +228,8 @@ export function tlsErrorCopy(
     case 'clock':
       return {
         title: 'Die Uhrzeit dieses Rechners wird von der Zertifizierungsstelle abgelehnt.',
-        action: 'Windows-Zeit synchronisieren, dann erneut versuchen.',
+        action:
+          'Datum und Uhrzeit dieses Rechners automatisch synchronisieren und erneut versuchen.',
       };
     case 'acme':
       return {
@@ -359,7 +362,7 @@ export function tlsLocalCheckItems(input: {
     certificate: 'Zertifikatskette und Name',
     'tcp-443': 'TCP 443 lokal',
     http2: 'HTTP/2',
-    sse: 'SSE-Tick',
+    sse: 'Laufende Aktualisierungen (SSE)',
   };
   const ids: TlsLocalCheck['id'][] = ['tcp-443', 'certificate', 'http2', 'sse'];
   return ids.map((id) => {

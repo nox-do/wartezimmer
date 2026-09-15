@@ -530,7 +530,7 @@ body {
 
 .device-url-item {
   display: grid;
-  grid-template-columns: 4.25rem minmax(0, 1fr) auto;
+  grid-template-columns: 7rem minmax(0, 1fr) auto;
   gap: 0.35rem;
   align-items: center;
   padding: 0.3rem 0.45rem;
@@ -810,13 +810,6 @@ button:disabled {
 
 .wizard-panel p {
   margin: 0 0 0.75rem;
-}
-
-.wizard-placeholder-note {
-  margin-top: 0.65rem;
-  padding: 0.55rem 0.65rem;
-  border-left: 3px solid color-mix(in srgb, var(--accent, #3b82f6) 55%, var(--border));
-  background: color-mix(in srgb, var(--accent, #3b82f6) 6%, transparent);
 }
 
 .wizard-progress {

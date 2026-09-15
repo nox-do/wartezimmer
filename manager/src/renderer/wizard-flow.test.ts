@@ -1,3 +1,4 @@
+import { draftCanonicalBaseUrl } from './reachability.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { freshInstallHostStatus, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
@@ -122,15 +123,7 @@ test('planWizardAdvance validates LAN IP on network step 4', () => {
 test('planWizardAdvance advances from network to access when LAN and reachability are set', () => {
   const state = createWizardFlowState(minimalHostStatus(), 4);
   state.lanAppIp = '192.168.1.10';
-  state.reachabilityMode = 'lan-ip';
   assert.deepEqual(planWizardAdvance(4, state), { type: 'goto', step: 5 });
-});
-
-test('planWizardAdvance rejects hostname reachability without network snapshot', () => {
-  const state = createWizardFlowState(minimalHostStatus(), 4);
-  state.lanAppIp = '192.168.1.10';
-  state.reachabilityMode = 'hostname';
-  assert.equal(planWizardAdvance(4, state).type, 'validate-error');
 });
 
 test('planWizardAdvance skips HTTPS without proxy and loads the plan', () => {
@@ -352,4 +345,41 @@ test('wizardProbeFailureHint distinguishes local startup from LAN issues', () =>
     ]),
     null,
   );
+});
+
+for (const proxyEnabled of [false, true]) {
+  test(`new setup derives device address from IP with proxy ${proxyEnabled}`, () => {
+    const state = createWizardFlowState(freshInstallHostStatus(), 4);
+    state.lanAppIp = '192.168.1.25';
+    state.proxyEnabled = proxyEnabled;
+    state.network = {
+      interfaces: [],
+      lanCandidates: [],
+      machineHostname: 'some-computer',
+      gatewayComposeSupported: false,
+    };
+    assert.equal(
+      draftCanonicalBaseUrl(state, state.status),
+      proxyEnabled ? 'http://192.168.1.25' : 'http://192.168.1.25:8080',
+    );
+  });
+}
+
+test('network discovery preserves an existing HTTP name when the computer name changes', () => {
+  const state = createWizardFlowState(
+    minimalHostStatus({
+      configuredCanonicalBaseUrl: 'http://practice-server:8080',
+    }),
+    4,
+  );
+  state.lanAppIp = '192.168.1.25';
+  for (const machineHostname of ['practice-server', 'renamed-server']) {
+    state.network = {
+      interfaces: [],
+      lanCandidates: [],
+      machineHostname,
+      gatewayComposeSupported: false,
+    };
+    assert.equal(draftCanonicalBaseUrl(state, state.status), 'http://practice-server:8080');
+  }
 });

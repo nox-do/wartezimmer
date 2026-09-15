@@ -15,7 +15,7 @@
 
 {#if !setupEntry}
   <section class="status-facts" id="status-facts">
-    <h2 id="status-grid-heading">Host</h2>
+    <h2 id="status-grid-heading">Installation und Laufzeit</h2>
     <div class="lan-ip-status" id="status-grid">
       {#each rows as row (row.label)}
         <div class="lan-ip-status-row">

@@ -25,7 +25,8 @@
   import FolderPathField from './FolderPathField.svelte';
   import LanIpPanel from './LanIpPanel.svelte';
   import ProxySettings from './ProxySettings.svelte';
-  import ReachabilityPanel from './ReachabilityPanel.svelte';
+  import DeviceAddressPreview from './DeviceAddressPreview.svelte';
+  import { draftCanonicalBaseUrl, existingHttpHostname } from './reachability.js';
   import WizardHttpsPanel from './WizardHttpsPanel.svelte';
 
   let {
@@ -68,7 +69,7 @@
             <span class="checklist-mark"
               >{networkPrerequisitesReady(snapshot.status) ? '✓' : '○'}</span
             >
-            <span>Netzwerkvoraussetzungen prüfen / ok</span>
+            <span>Lokale Netzwerkvoraussetzungen geprüft</span>
           </li>
           {#if snapshot.status.deliveryImages.required}
             <li class={deliveryImagesReady(snapshot.status) ? 'is-done' : 'is-open'}>
@@ -128,9 +129,8 @@
           </button>
         {:else if needsDeliveryImages(snapshot.status)}
           <p class="hint">
-            Release-Paket aus Ihrer Praxis-Flow-Freigabe wählen (eine .pfinstall-Datei mit Images,
-            Compose-Templates und Basis-Caddyfile). manifest.json oder SHA256SUMS.txt muss im selben
-            Ordner liegen — SHA256 wird vor dem Import geprüft.
+            Wählen Sie für die Erstinstallation eine .pfinstall-Datei. Dateien mit der Endung
+            .pfupdate sind für spätere Updates bestimmt.
           </p>
           <button
             type="button"
@@ -140,7 +140,7 @@
               void controller.loadReleaseArchive();
             }}
           >
-            {snapshot.busy ? 'Import läuft …' : 'Release-Paket wählen …'}
+            {snapshot.busy ? 'Import läuft …' : 'Installationsdatei wählen …'}
           </button>
         {/if}
 
@@ -156,15 +156,15 @@
         Ordner für Kontakt-Import und Dokument-Export auf diesem Rechner.
       </p>
       <p>
-        Diese Ordner werden per Docker-Bind-Mount mit /imports und /exports im app-Container
-        verbunden — für Kontakt-CSV und MFA-Exporte.
+        Praxis Flow liest Kontaktdateien aus dem Importordner und legt Dokumente aus MFA
+        im Exportordner ab.
       </p>
       {#if needsDockerFileSharingHint(hostPlatform)}
         <p class="hint">{DOCKER_FILE_SHARING_HINT}</p>
       {/if}
       {#if snapshot.status?.envExists}
         <p class="hint">
-          Aktuelle Pfade aus .env sind vorausgefüllt. Beim Anwenden werden sie in die Konfiguration
+          Die gespeicherten Ordner sind vorausgefüllt. Beim Anwenden werden sie in die Konfiguration
           übernommen.
         </p>
       {/if}
@@ -188,13 +188,13 @@
       />
     {:else if snapshot.step === 4}
       <p class="wizard-step-lead">
-        Unter welcher Adresse — optional mit internem DNS-Namen — soll Praxis Flow erreichbar sein?
+        Wählen Sie die IP-Adresse dieses Rechners für Ihre Praxisgeräte. Die Geräteadresse wird daraus automatisch gebildet.
       </p>
 
       <section class="network-config-block">
-        <h3 class="network-config-subheading">1. Host im Praxisnetz</h3>
+        <h3 class="network-config-subheading">Praxisadresse</h3>
         <p class="hint">
-          Adresse dieses Rechners — Fallback, wenn ein Hostname im LAN nicht auflöst.
+          Ohne Proxy bleibt Praxis Flow auch über die anderen Netzwerkanschlüsse erreichbar.
         </p>
         <LanIpPanel
           state={snapshot}
@@ -208,40 +208,29 @@
         />
       </section>
 
-      <section class="network-config-block">
-        <h3 class="network-config-subheading">2. Geräte-URL (Basis)</h3>
-        <ReachabilityPanel
-          state={snapshot}
-          network={snapshot.network}
-          disabled={snapshot.busy}
-          onChange={patchFields}
-        />
-      </section>
     {:else if snapshot.step === 5}
       <p class="wizard-step-lead">
-        Optionaler Zugang: Reverse Proxy und später die WLAN-/Captive-Anbindung fürs Patientenportal.
+        Wählen Sie den Zugang für den internen Praxisbetrieb. HTTPS kann anschließend oder später eingerichtet werden.
       </p>
 
       <section class="network-config-block">
-        <h3 class="network-config-subheading">Browserzugriff (Proxy Port 80)</h3>
+        <h3 class="network-config-subheading">Zugriff über ausgewählte Adresse</h3>
         <ProxySettings
           enabled={snapshot.proxyEnabled}
           disabled={snapshot.busy || wizardHttpsPrepared(snapshot.status)}
           onChange={(proxyEnabled) => patchFields({ proxyEnabled })}
         />
+        {#if !wizardHttpsPrepared(snapshot.status)}
+          <DeviceAddressPreview
+            address={draftCanonicalBaseUrl(snapshot, snapshot.status)}
+            legacy={Boolean(existingHttpHostname(snapshot.status))}
+          />
+        {/if}
         {#if wizardHttpsPrepared(snapshot.status)}
           <p class="hint">Port 80 bleibt während der HTTPS-Vorbereitung unverändert.</p>
         {/if}
       </section>
 
-      <section class="network-config-block">
-        <h3 class="network-config-subheading">Patientenportal / WLAN-Freigabe</h3>
-        <p class="hint">
-          Hier kommt später die Auswahl des WLAN-Adapters (z. B. Omada, UniFi): Praxis Flow prüft die
-          Wartenummer und meldet optional einem Drittanbieter die Freigabe. Auswahl folgt:
-          Vendor-Dropdown und Anschlussdaten — noch nicht verfügbar.
-        </p>
-      </section>
     {:else if snapshot.step === 6}
       <WizardHttpsPanel {snapshot} {controller} />
     {:else if snapshot.step === 7}
@@ -256,7 +245,7 @@
             <dt>Terminal</dt><dd>{snapshot.status.deviceUrls.terminal}</dd>
             <dt>TV</dt><dd>{snapshot.status.deviceUrls.tv}</dd>
             <dt>MFA</dt><dd>{snapshot.status.deviceUrls.mfa}</dd>
-            <dt>Portal</dt><dd>{snapshot.status.deviceUrls.portal}</dd>
+            <dt>Portal – intern</dt><dd>{snapshot.status.deviceUrls.portal}</dd>
             <dt>Ops Setup</dt><dd>{snapshot.status.deviceUrls.opsSetup}</dd>
           </dl>
         {/if}
@@ -267,16 +256,17 @@
           {#if wizardHttpsPrepared(snapshot.status)}
             Vorläufig über die IP, bis HTTPS steht.
           {:else if snapshot.proxyEnabled}
-            Einrichtung über die IP. HTTPS später unter Netzwerk.
+            Interner Zugriff über die ausgewählte Praxisadresse. HTTPS kann später eingerichtet werden.
           {:else}
-            Einrichtung über Port 8080. HTTPS erst, wenn der Proxy an ist.
+            Initialer Betriebsmodus: interner Zugriff über HTTP auf Port 8080.
           {/if}
         </p>
+        <p class="hint">MFA, Terminal, TV und Portal sind für die interne Nutzung vorgesehen. Ein separater Patientenzugang ist noch nicht eingerichtet.</p>
         <dl class="status-grid wizard-summary-grid">
           <dt>Terminal</dt><dd>{snapshot.plan.deviceUrls.terminal}</dd>
           <dt>TV</dt><dd>{snapshot.plan.deviceUrls.tv}</dd>
           <dt>MFA</dt><dd>{snapshot.plan.deviceUrls.mfa}</dd>
-          <dt>Portal</dt><dd>{snapshot.plan.deviceUrls.portal}</dd>
+          <dt>Portal – intern</dt><dd>{snapshot.plan.deviceUrls.portal}</dd>
           <dt>Ops Setup</dt><dd>{snapshot.plan.deviceUrls.opsSetup}</dd>
         </dl>
         {#if wizardHttpsPrepared(snapshot.status)}
@@ -286,14 +276,14 @@
             später unter Netzwerk.
           </p>
         {:else if snapshot.proxyEnabled}
-          <p class="notice is-warn">
-            HTTPS ist nicht vorbereitet. Weitere Einrichtung jetzt über die IP. Später unter
+          <p class="hint">
+            HTTPS ist noch nicht eingerichtet. Weitere Einrichtung jetzt über die IP. Später unter
             Netzwerk.
           </p>
         {:else}
-          <p class="notice is-warn">
-            Ohne Proxy steht HTTPS später nicht zur Verfügung. Proxy und HTTPS können später
-            nachträglich im Tab Netzwerk dieser Manager-App eingerichtet werden.
+          <p class="hint">
+            Vorgesehen ist der interne HTTP-Betrieb.
+            HTTPS können Sie später unter Netzwerk einrichten.
           </p>
         {/if}
         <p class="hint">
@@ -306,7 +296,7 @@
           {/if}
         </p>
 
-        <h3 class="wizard-subheading">Host-Ordner (Docker-Mounts)</h3>
+        <h3 class="wizard-subheading">Import- und Exportordner</h3>
         <dl class="status-grid wizard-summary-grid">
           <dt>Import</dt><dd>{snapshot.importsHostPath.trim()}</dd>
           <dt>Export</dt><dd>{snapshot.exportsHostPath.trim()}</dd>

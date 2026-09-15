@@ -1,10 +1,10 @@
 # Praxis-IT-Hinweise zur Netzwerkisolation
 
-Stand: 2026-09-13 · **Beratungsunterlage zum geplanten Restricted-Binding, kein umgesetzter Produktvertrag**
+Stand: 2026-09-14 · **Beratungsunterlage zum geplanten Restricted-Binding, kein umgesetzter Produktvertrag**
 
 Das vorausgesetzte Wildcard-TLS-Namensmodell ist umgesetzt und per lokalem
 Pebble-Smoke geprüft. Explizite Proxy-Publishes an der Staff-IP und ihr
-Runtime-Audit sind umgesetzt; Produkt-Firewall, vollständige Manager-Diagnose
+Runtime-Audit sind umgesetzt; vollständige Manager-Diagnose
 und Restricted-Binding sind weiterhin offen. Der proxyfreie Demo-/Erststart
 bleibt bewusst auf allen Host-Interfaces erreichbar. Die Netzempfehlungen
 dürfen daher noch nicht als verfügbare Manager-Funktion verstanden werden.
@@ -13,13 +13,36 @@ Produktplan: [Eingeschränkter Netzwerkzugang für das Patientenportal](../plan-
 Manager-Plan: [Restricted Network Access](../plan-manager-restricted-network-access.md) ·
 heutiger Betrieb: [`runtime.md`](runtime.md)
 
+## Gültige Systemgrenze — Entscheidung vom 14.09.2026
+
+Praxis Flow verwaltet seine Docker-/Compose-Konfiguration, Caddy-Listener,
+TLS und den tatsächlichen Runtime-Publish-Vertrag. Host-Firewall, Routing,
+Forwarding und die Trennung der Praxisnetze verantwortet die Praxis-IT.
+Der Manager ändert keine Host-Firewallregeln und benötigt dafür keine
+Elevation. Er bietet verständliche Hinweise, insbesondere im Netzwerkdiagramm.
+
+Die Produktzusage lautet: explizite Ziel-IP-Bindings und geprüfte Listener-Policy.
+Die Auswahl eines Adapters über seine lokale IPv4-Adresse garantiert keine
+Filterung nach eingehendem Interface und keine Isolation des Praxisnetzes.
+Ein grüner Docker-/Listener-Status darf daher nicht „Netz sicher isoliert“ bedeuten.
+IPv6 bleibt ein Negativtest auf unbeabsichtigte Erreichbarkeit, kein angebotener
+Zugangspfad. Windows bleibt bis zu einem eigenen Binding-Nachweis zurückgestellt.
+
+Diese Entscheidung ersetzt die frühere Planung einer produktverwalteten
+Host-Firewall einschließlich Elevation, Apply/Rollback und Firewall-Release-Gates.
+Entsprechende ältere Architekturpassagen und F1-Enforcement-Zusagen in diesem
+Dokument sind historisch und kein gültiger Produktvertrag. Die dokumentierten
+Firewall-PoCs bleiben als Versuchsprotokolle erhalten, nicht als Produktfunktion.
+
 ## 1. Zweck und Verantwortungsgrenze
 
 Dieses Dokument bündelt Hinweise, die wir der Praxis beziehungsweise ihrer IT
 für Netzplanung, Abnahme und eine mögliche spätere Härtung mitgeben können.
 Praxis Flow unterstützt mit Produktinformationen und Prüfhinweisen. Planung,
 Konfiguration und Betrieb von Switches, VLANs, WLAN, Router, DHCP, DNS und
-Praxis-Firewalls bleiben Aufgabe der Praxis-IT.
+Host- und Praxis-Firewalls bleiben Aufgabe der Praxis-IT. Praxis Flow
+verwaltet ausschließlich seine Docker-/Caddy-Konfiguration; der Manager gibt
+Hinweise und bestätigt keine Isolation des Praxisnetzes.
 
 Die Hinweise ersetzen weder eine Prüfung der konkreten Umgebung noch eine
 Sicherheitsfreigabe durch die verantwortliche IT. Aussagen zum Restricted-

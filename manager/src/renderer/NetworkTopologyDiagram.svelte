@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { mountNetworkTopologyDiagram } from './network-topology-diagram.js';
+  import { mountNetworkTopologyDiagram, type NetworkTopologyLabels } from './network-topology-diagram.js';
 
   let {
-    lanIp,
+    labels,
   }: {
-    lanIp?: string | null;
+    labels: NetworkTopologyLabels;
   } = $props();
 
   let host = $state<HTMLElement | null>(null);
@@ -13,7 +13,7 @@
     if (!host) {
       return;
     }
-    mountNetworkTopologyDiagram(host, { lanIp });
+    mountNetworkTopologyDiagram(host, labels);
   });
 </script>
 

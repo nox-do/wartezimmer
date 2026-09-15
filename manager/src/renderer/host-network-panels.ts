@@ -1,8 +1,8 @@
-import type { HostStatus, NetworkSnapshot } from '../shared/host-status.js';
+import type { HostStatus } from '../shared/host-status.js';
 import {
   draftCanonicalBaseUrl,
   effectiveCanonicalBaseUrl,
-  type ReachabilityFieldState,
+  type ProxyFieldState,
 } from './reachability.js';
 import { resolvedLanIp } from './wizard-state.js';
 
@@ -11,9 +11,9 @@ export type LanIpFieldState = {
   customLanIp: string;
 };
 
-export type HostNetworkDraftFields = LanIpFieldState & ReachabilityFieldState;
+export type HostNetworkDraftFields = LanIpFieldState & ProxyFieldState;
 
-export type { ReachabilityFieldState, ReachabilityMode } from './reachability.js';
+export type { ProxyFieldState } from './reachability.js';
 
 /** Manual LAN IP is only needed when auto-detection is ambiguous or insufficient. */
 export function shouldOfferManualLanIpEntry(candidateCount: number, lanIpStale: boolean): boolean {
@@ -30,8 +30,6 @@ export function snapshotNetworkDraft(draft: HostNetworkDraftFields): HostNetwork
   return {
     lanAppIp: draft.lanAppIp,
     customLanIp: draft.customLanIp,
-    reachabilityMode: draft.reachabilityMode,
-    customHostname: draft.customHostname,
     proxyEnabled: draft.proxyEnabled,
   };
 }
@@ -40,8 +38,6 @@ export function networkDraftEquals(a: HostNetworkDraftFields, b: HostNetworkDraf
   return (
     a.lanAppIp === b.lanAppIp &&
     a.customLanIp === b.customLanIp &&
-    a.reachabilityMode === b.reachabilityMode &&
-    a.customHostname === b.customHostname &&
     a.proxyEnabled === b.proxyEnabled
   );
 }
@@ -53,7 +49,6 @@ export function networkDraftEquals(a: HostNetworkDraftFields, b: HostNetworkDraf
 export function networkDraftChanged(
   fields: HostNetworkDraftFields,
   status: HostStatus | null,
-  network: Pick<NetworkSnapshot, 'machineHostname'> | null = null,
 ): boolean {
   if (!status) {
     return false;
@@ -70,7 +65,7 @@ export function networkDraftChanged(
     return false;
   }
 
-  const draftCanonical = draftCanonicalBaseUrl(fields, network);
+  const draftCanonical = draftCanonicalBaseUrl(fields, status);
   const configuredCanonical = effectiveCanonicalBaseUrl(status);
   if (draftCanonical && draftCanonical !== configuredCanonical) {
     return true;
@@ -89,9 +84,8 @@ export function networkDraftChanged(
 export function hostNetworkChanged(
   fields: HostNetworkDraftFields,
   status: HostStatus | null,
-  network: Pick<NetworkSnapshot, 'machineHostname'> | null = null,
 ): boolean {
-  if (networkDraftChanged(fields, status, network)) {
+  if (networkDraftChanged(fields, status)) {
     return true;
   }
   // Leftover openNDS GATEWAY_* from older installs — cleared on next network save.

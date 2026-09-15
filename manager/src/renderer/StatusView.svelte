@@ -10,6 +10,7 @@
   import DeliveryImagesWarning from './DeliveryImagesWarning.svelte';
   import DeviceUrls from './DeviceUrls.svelte';
   import SetupEntry from './SetupEntry.svelte';
+  import NetworkAccessSummary from './NetworkAccessSummary.svelte';
   import StatusGrid from './StatusGrid.svelte';
   import TlsResumeCard from './TlsResumeCard.svelte';
 
@@ -83,7 +84,14 @@
     {#if lanWarning}
       <p id="lan-warning" class="lan-warning">{lanWarning}</p>
     {/if}
-    <StatusGrid status={configSnapshot} {setupEntry} />
+    {#if !setupEntry}
+      <NetworkAccessSummary status={configSnapshot} runtime={managerShell.runtimeSnapshot} runtimeError={managerShell.runtimeError} />
+    {/if}
     <DeviceUrls status={configSnapshot} {setupEntry} {onOpenUrl} />
+    {#if !setupEntry}
+      <details><summary>Technische Installationsdetails</summary>
+        <StatusGrid status={configSnapshot} {setupEntry} />
+      </details>
+    {/if}
   {/if}
 </div>

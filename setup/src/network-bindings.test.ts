@@ -126,7 +126,7 @@ test('auditStaffPublishedBindings accepts the proxy-free demo bind but rejects u
   assert.equal(checks.find((check) => check.id === 'staff.binding.app')?.ok, true);
   assert.match(
     checks.find((check) => check.id === 'staff.binding.app')?.message ?? '',
-    /offenen Demo-/,
+    /initialen Betriebsmodus/,
   );
   assert.match(checks.find((check) => check.id === 'staff.binding.app')?.detail ?? '', /allen/);
   assert.equal(checks.find((check) => check.id === 'staff.binding.sandbox')?.ok, false);

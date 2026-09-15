@@ -109,7 +109,7 @@ export function wizardCompletionItSettingsUrl(state: WizardControllerState): str
 
 export function wizardApplyResultItems(result: ApplySetupResult): string[] {
   const composeOk = result.compose?.ok === true;
-  return [`✓ .env geschrieben (${result.envPath})`, `${wizardCheckMark(composeOk)} Docker Compose`];
+  return ['✓ Konfiguration gespeichert', `${wizardCheckMark(composeOk)} Docker Compose`];
 }
 
 export function wizardCompletionLeadText(state: WizardControllerState): string {
@@ -124,15 +124,15 @@ export function wizardStepTitle(step: WizardStep): string {
     case 1:
       return 'Voraussetzungen';
     case 3:
-      return 'Import & Export — Host-Ordner';
+      return 'Import & Export';
     case 4:
-      return 'Netzwerk — Host & Erreichbarkeit';
+      return 'Praxisadresse und Gerätezugriff';
     case 5:
-      return 'Zugang — Proxy & Patientenportal';
+      return 'Zugriff im Praxisnetz';
     case 6:
       return 'HTTPS';
     case 7:
-      return 'Vorschau — Geräte-URLs';
+      return 'Zusammenfassung – interner Betrieb';
     case 8:
       return 'Abschluss';
   }

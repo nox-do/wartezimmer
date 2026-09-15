@@ -1,139 +1,68 @@
 export type NetworkTopologyLabels = {
   lanIp?: string | null;
+  proxyEnabled?: boolean;
+  httpsEnabled?: boolean;
+  baseUrl?: string | null;
+  operation?: string;
+  diagnosis?: string;
 };
 
-/**
- * Two operating pictures — product boundary vs. recommendation:
- * - Recommended for patient portal: Praxis-IT captive → our /portal → thin adapter release
- * - Practice-internal only: staff devices → app (portal without captive is limited / lab)
- */
+/** Saved configuration only; observed health is labelled separately. No network-isolation claim. */
 export function mountNetworkTopologyDiagram(
   host: HTMLElement,
   labels: NetworkTopologyLabels = {},
 ): void {
-  const lanIp = labels.lanIp?.trim() || '192.168.1.x';
-
   host.replaceChildren();
-
-  const intro = document.createElement('div');
-  intro.className = 'network-diagram-intro';
-  intro.innerHTML = `
-    <p>Zwei Betriebsarten — Praxis Flow liefert <strong>kein</strong> Captive Portal und keinen Router.</p>
-    <ul class="network-diagram-intro-list">
-      <li><strong>Mit Patientenportal:</strong> WLAN/Captive stellt die Praxis-IT; wir prüfen die Wartenummer und geben über Adapter frei.</li>
-      <li><strong>Nur Praxis-intern:</strong> Terminal, TV und MFA — Portal ohne Captive höchstens zum Test.</li>
-    </ul>
-  `;
-  host.append(intro, buildPortalScenario(lanIp), buildInternalScenario(lanIp));
-}
-
-function buildPortalScenario(lanIp: string): HTMLElement {
-  const section = document.createElement('section');
-  section.className = 'net-scenario net-scenario--portal';
-
-  section.innerHTML = `
-    <header class="net-scenario-header">
-      <h3 class="net-scenario-title">Patientenportal im Gast-WLAN</h3>
-      <p class="net-scenario-badges">
-        <span class="net-scenario-badge net-scenario-badge--recommended">empfohlen bei Portal</span>
-      </p>
-    </header>
-    <p class="net-scenario-lead">
-      Captive und Access Point bleiben bei der Praxis-IT. Praxis Flow stellt das
-      Portal (<code>/portal</code>) und prüft die Wartenummer; später erweiterbare schlanke
-      Captive-Adapter mit Auswahl im Manager (nicht Portal-v1).
-    </p>
-    <p class="net-scenario-security hint">
-      <strong>Empfehlung:</strong> Dediziertes Gast-Netz und Firewall so, dass Gäste nur das Portal
-      erreichen. Praxis Flow ersetzt keine Netzwerksicherheit.
-    </p>
-  `;
-
-  const flow = document.createElement('div');
-  flow.className = 'net-flow';
-  flow.setAttribute('aria-label', 'Datenpfad Patientenportal');
-  flow.innerHTML = `
-    ${flowStep('Patienten-Handy', { variant: 'neutral', detail: 'Gast-WLAN' })}
-    ${flowArrow('Captive')}
-    ${flowStep('Router / AP / Controller', {
-      variant: 'extern',
-      detail: 'Praxis-IT — nicht unser Produkt',
-    })}
-    ${flowArrow('Redirect')}
-    ${flowStep('Portal (/portal)', {
-      variant: 'ours',
-      detail: 'Wartenummer · Session',
-      note: `app auf ${escapeHtml(lanIp)}`,
-    })}
-    ${flowArrow('nach OK')}
-    <div class="net-flow-row">
-      ${flowStep('Upload · Formulare', { variant: 'ours' })}
-      ${flowStep('Internet freigeben', {
-        variant: 'extern',
-        detail: 'Adapter → Controller',
-      })}
-    </div>
-    <p class="net-flow-footnote">
-      Staff (Terminal, TV, MFA) nutzt das Praxis-LAN direkt zur app — ohne Captive.
-    </p>
-  `;
-  section.append(flow);
-
-  section.append(
-    buildChecklist([
-      'Captive External Portal / Splash zeigt auf die Portal-URL der app.',
-      'Ohne Captive ist das Patientenportal im Gast-WLAN nicht der vorgesehene Betrieb.',
-      'Vendor-Adapter (Freigabe nach Wartenummer) sind geplant — noch nicht konfigurierbar.',
-    ]),
-  );
-
-  return section;
-}
-
-function buildInternalScenario(lanIp: string): HTMLElement {
+  const ip = labels.lanIp?.trim() || 'noch nicht gewählt';
+  const proxy = Boolean(labels.proxyEnabled);
+  const tls = Boolean(labels.httpsEnabled);
   const section = document.createElement('section');
   section.className = 'net-scenario net-scenario--internal';
-
   section.innerHTML = `
     <header class="net-scenario-header">
-      <h3 class="net-scenario-title">Nur Praxis-intern</h3>
+      <h3 class="net-scenario-title">Interner Praxisbetrieb</h3>
     </header>
-    <p class="net-scenario-lead">
-      Ein Netzanschluss reicht. Terminal, TV und MFA erreichen die app direkt — kein Gast-WLAN nötig.
-    </p>
+    <p class="net-scenario-lead">Konfigurierter Zugang: ${escapeHtml(labels.baseUrl || 'noch nicht eingerichtet')}.</p>
+    <div class="net-flow" aria-label="Konfigurierter interner Datenpfad">
+      ${flowStep('Mitarbeiter · Terminal · TV · MFA', { variant: 'neutral' })}
+      ${flowArrow('Praxisnetz – Verantwortung der Praxis-IT')}
+      ${flowStep('Freigegebene Adresse und Ports', { variant: 'ours', detail: proxy ? `Ausgewählte IPv4: ${ip}` : 'Alle Host-Netzwerkanschlüsse · HTTP :8080' })}
+      ${proxy ? flowArrow() + flowStep('Proxy-Dienst', { variant: 'ours', detail: tls ? 'HTTPS :443 · HTTP-Weiterleitung :80' : 'HTTP :80' }) : ''}
+      ${flowArrow()}
+      ${flowStep('Praxis Flow', { variant: 'ours', detail: 'App · interne Portalfunktion', note: 'Sandbox nur intern erreichbar' })}
+    </div>
+    <p class="net-flow-footnote">Praxis Flow konfiguriert Docker, Proxy und App. Welche Geräte im Praxisnetz diese Adresse erreichen können, legt Ihre Praxis-IT fest.</p>
+    <p class="hint">Laufzustand: ${escapeHtml(labels.operation || 'nicht geprüft')}.<br>Letzte Host-Prüfung: ${escapeHtml(labels.diagnosis || 'nicht geprüft')}.</p>
   `;
+  host.append(section);
 
-  const flow = document.createElement('div');
-  flow.className = 'net-flow';
-  flow.setAttribute('aria-label', 'Datenpfad Praxis-intern');
-  flow.innerHTML = `
-    ${flowStep('Terminal · TV · MFA · Ops', { variant: 'neutral' })}
-    ${flowArrow('Praxis-LAN')}
-    ${flowStep('Praxis-Flow-Host', {
-      variant: 'ours',
-      detail: 'app · sandbox',
-      note: `LAN-IP ${escapeHtml(lanIp)} :8080`,
-    })}
-    <p class="net-flow-footnote">
-      <code>/portal</code> im Browser nur für Entwicklung/Test — nicht als Patienten-Gast-Zugang ohne Captive.
-    </p>
-  `;
-  section.append(flow);
-
-  section.append(
+  const advice = document.createElement('section');
+  advice.className = 'net-scenario';
+  advice.innerHTML = '<h3 class="net-scenario-title">Hinweise für Ihre Praxis-IT</h3>';
+  advice.append(
     buildChecklist([
-      'Geräte-URLs stehen auf dem Status-Screen.',
-      'Für produktives Patientenportal: Betriebsart oben (Praxis-IT-Captive).',
+      'Praxisgeräte müssen die angezeigte Adresse erreichen können. Gast-WLAN-Isolation kann den Zugriff verhindern.',
+      'Host-Firewall, Router, VLAN und Netztrennung werden durch Ihre Praxis-IT eingerichtet. Der Manager verändert sie nicht.',
+      'Keine Router-Portweiterleitung ins Internet einrichten. Ein korrektes Docker-Binding bestätigt keine Isolation des Praxisnetzes.',
     ]),
   );
+  host.append(advice);
 
-  return section;
+  const future = document.createElement('section');
+  future.className = 'net-scenario net-scenario--portal';
+  future.innerHTML = `
+    <h3 class="net-scenario-title">Separater Patientenzugang</h3>
+    <p class="net-scenario-lead">Ein separater Patientenzugang ist derzeit noch nicht verfügbar. HTTPS schützt die Verbindung, trennt den Patienten- und den internen Praxiszugang aber nicht.</p>
+    <p class="hint">Für eine spätere Bereitstellung sind HTTPS und eine von der Praxis-IT eingerichtete, getrennte Netzwerkzone erforderlich. Empfohlen wird ein eigenes Applikationssegment oder eine DMZ mit ausschließlich notwendigen Freigaben zum Praxisnetz.</p>
+    <p class="hint">Mitarbeitende können die Portalfunktion intern immer nutzen. Die Aktivierung erfolgt in den OPS-Einstellungen.</p>
+  `;
+  host.append(future);
 }
 
 function flowStep(
   label: string,
   options: {
-    variant?: 'neutral' | 'extern' | 'ours';
+    variant?: 'neutral' | 'ours';
     detail?: string;
     note?: string;
   } = {},

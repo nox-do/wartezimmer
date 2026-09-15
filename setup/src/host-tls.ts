@@ -571,6 +571,7 @@ export type TlsRuntimeDependencies = {
   runLocalChecks?: (
     hostname: string,
     httpsPort: number,
+    connectHost: string,
   ) => Promise<{ certificate: TlsCertificateStatus; checks: TlsLocalCheck[] }>;
   localCheckRetry?: TlsLocalCheckRetryOptions;
   randomBytes?: typeof crypto.randomBytes;
@@ -767,12 +768,13 @@ function readPeerCertificate(socket: tls.TLSSocket): TlsCertificateStatus {
 async function localChecksDefault(
   hostname: string,
   httpsPort: number,
+  connectHost: string,
   env: Map<string, string>,
 ): Promise<{ certificate: TlsCertificateStatus; checks: TlsLocalCheck[] }> {
   const timeoutMs = 8_000;
   const ca = pebbleLocalCheckCa(env);
   const tlsOptions = {
-    host: '127.0.0.1',
+    host: connectHost,
     port: httpsPort,
     servername: hostname,
     ALPNProtocols: ['h2'],
@@ -880,8 +882,12 @@ async function runChecks(
     };
   }
   const checked = await (
-    deps.runLocalChecks ?? ((name, port) => localChecksDefault(name, port, env))
-  )(hostname, Number(env.get('PROXY_HTTPS_PORT') || 443));
+    deps.runLocalChecks ?? ((name, port, host) => localChecksDefault(name, port, host, env))
+  )(
+    hostname,
+    Number(env.get('PROXY_HTTPS_PORT') || 443),
+    env.get('SETUP_LAN_APP_IP')?.trim() || env.get('TLS_LAN_IP')?.trim() || '127.0.0.1',
+  );
   if (!allChecksPass(checked.checks)) {
     const failed = checked.checks.find((check) => !check.ok);
     throw new TlsRuntimeUnavailableError(

@@ -16,7 +16,6 @@ import {
   refreshWizardStatus,
   refreshWizardStatusAfterApply,
   wizardUsesExistingTlsConfiguration,
-  wizardReachabilityAfterNetworkLoad,
   WIZARD_PROBE_WAIT_MESSAGE,
   type WizardAdvanceAfter,
   type WizardFlowState,
@@ -266,7 +265,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
         return;
       }
       patch({
-        ...wizardReachabilityAfterNetworkLoad(state, network),
+        network,
       });
       return;
     }

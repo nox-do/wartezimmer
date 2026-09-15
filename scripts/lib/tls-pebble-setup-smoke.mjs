@@ -174,6 +174,18 @@ function isPrivateLanIpv4(address) {
   return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
 }
 
+function privateLanIpv4Candidates() {
+  const found = [];
+  for (const entries of Object.values(os.networkInterfaces())) {
+    for (const entry of entries ?? []) {
+      const family = entry.family === 4 || entry.family === 'IPv4';
+      if (!family || entry.internal || !isPrivateLanIpv4(entry.address)) continue;
+      if (!found.includes(entry.address)) found.push(entry.address);
+    }
+  }
+  return found;
+}
+
 function detectLabLanIp() {
   const override = process.env.TLS_LAB_LAN_IP?.trim();
   if (override) {
@@ -184,14 +196,7 @@ function detectLabLanIp() {
     }
     return override;
   }
-  const found = [];
-  for (const entries of Object.values(os.networkInterfaces())) {
-    for (const entry of entries ?? []) {
-      const family = entry.family === 4 || entry.family === 'IPv4';
-      if (!family || entry.internal || !isPrivateLanIpv4(entry.address)) continue;
-      if (!found.includes(entry.address)) found.push(entry.address);
-    }
-  }
+  const found = privateLanIpv4Candidates();
   if (found.length === 1) {
     return found[0];
   }
@@ -200,6 +205,41 @@ function detectLabLanIp() {
       ? 'No private LAN IPv4 found. Set TLS_LAB_LAN_IP to the address that should appear in the A-record.'
       : `Multiple private LAN IPv4 candidates (${found.join(', ')}). Set TLS_LAB_LAN_IP to the address that should appear in the A-record.`,
   );
+}
+
+function probeTcp(host, port, timeoutMs = 1500) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ host, port });
+    const finish = (reachable) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(reachable);
+    };
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => finish(true));
+    socket.once('timeout', () => finish(false));
+    socket.once('error', () => finish(false));
+  });
+}
+
+async function assertHostBindingIsolation(lanIp) {
+  for (const port of [80, 443]) {
+    assert(await probeTcp(lanIp, port), `${lanIp}:${port} is not reachable on the Staff address`);
+  }
+  for (const port of [8080, 8082]) {
+    assert(
+      !(await probeTcp(lanIp, port)),
+      `${lanIp}:${port} unexpectedly exposes an app-internal port`,
+    );
+  }
+  for (const otherIp of privateLanIpv4Candidates().filter((address) => address !== lanIp)) {
+    for (const port of [80, 443, 8080, 8082]) {
+      assert(
+        !(await probeTcp(otherIp, port)),
+        `${otherIp}:${port} unexpectedly exposes the Staff stack`,
+      );
+    }
+  }
 }
 
 function sleep(ms) {
@@ -510,11 +550,14 @@ function cleanupRuntime(startedCompose) {
   fs.rmSync(RUNTIME, { recursive: true, force: true });
 }
 
-async function assertHttpRedirectsToHttps() {
-  const response = await fetch('http://127.0.0.1/', {
+async function assertHttpRedirectsToHttps(lanIp) {
+  const response = await fetch(`http://${lanIp}/`, {
     method: 'GET',
     redirect: 'manual',
-    headers: { 'User-Agent': 'praxis-flow-tls-pebble-smoke/1.0' },
+    headers: {
+      Host: STAFF_HOSTNAME,
+      'User-Agent': 'praxis-flow-tls-pebble-smoke/1.0',
+    },
   });
   assert(
     response.status === 301 || response.status === 308,
@@ -527,10 +570,10 @@ async function assertHttpRedirectsToHttps() {
   );
 }
 
-async function assertHttpsH2AndSse(ca) {
+async function assertHttpsH2AndSse(ca, lanIp) {
   await new Promise((resolve, reject) => {
     const socket = tls.connect({
-      host: '127.0.0.1',
+      host: lanIp,
       port: 443,
       servername: STAFF_HOSTNAME,
       ALPNProtocols: ['h2'],
@@ -554,7 +597,7 @@ async function assertHttpsH2AndSse(ca) {
     });
   });
   await new Promise((resolve, reject) => {
-    const session = http2.connect(`https://127.0.0.1:443`, {
+    const session = http2.connect(`https://${lanIp}:443`, {
       ca,
       servername: STAFF_HOSTNAME,
       rejectUnauthorized: true,
@@ -593,10 +636,10 @@ async function assertHttpsH2AndSse(ca) {
   });
 }
 
-async function assertWildcardHostnameRejected(ca, hostname) {
+async function assertWildcardHostnameRejected(ca, hostname, lanIp) {
   await new Promise((resolve, reject) => {
     const socket = tls.connect({
-      host: '127.0.0.1',
+      host: lanIp,
       port: 443,
       servername: hostname,
       ALPNProtocols: ['http/1.1'],
@@ -637,7 +680,47 @@ async function assertWildcardHostnameRejected(ca, hostname) {
   });
 }
 
-async function applyCutoverAndAssert() {
+async function assertHttpHostnameRejected(hostname, lanIp) {
+  await new Promise((resolve, reject) => {
+    const socket = net.connect({ host: lanIp, port: 80 });
+    let connected = false;
+    let received = '';
+    let settled = false;
+    const timer = setTimeout(() => {
+      settled = true;
+      socket.destroy();
+      reject(new Error(`${hostname} HTTP rejection timeout`));
+    }, 8_000);
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      socket.destroy();
+      if (!connected) reject(new Error(`${hostname} HTTP connection failed before rejection`));
+      else if (received.length > 0)
+        reject(new Error(`${hostname} returned HTTP bytes: ${received.slice(0, 80)}`));
+      else resolve();
+    };
+    socket.once('connect', () => {
+      connected = true;
+      socket.write(`GET / HTTP/1.1\r\nHost: ${hostname}\r\nConnection: close\r\n\r\n`);
+    });
+    socket.on('data', (chunk) => {
+      received += String(chunk);
+    });
+    socket.once('end', finish);
+    socket.once('close', finish);
+    socket.once('error', (error) => {
+      if (connected && received.length === 0) finish();
+      else {
+        clearTimeout(timer);
+        reject(error);
+      }
+    });
+  });
+}
+
+async function applyCutoverAndAssert(lanIp) {
   const appliedAt = Date.now();
   const applied = await fetchJson(
     setupUrl('/api/setup/host/tls/apply'),
@@ -688,10 +771,13 @@ async function applyCutoverAndAssert() {
   assert(status.body?.tls?.cutoverApplied === true, 'status.tls.cutoverApplied is not true');
   assert(status.body?.proxy?.mode === 'tls-managed', `proxy.mode=${status.body?.proxy?.mode}`);
 
-  await assertHttpRedirectsToHttps();
+  await assertHttpRedirectsToHttps(lanIp);
   console.log('OK  port 80 redirects to HTTPS');
+  await assertHttpHostnameRejected(PORTAL_HOSTNAME, lanIp);
+  await assertHttpHostnameRejected(UNKNOWN_HOSTNAME, lanIp);
+  console.log('OK  reserved and unknown installation-room hosts stay rejected on HTTP');
   const ca = fs.readFileSync(PEBBLE_ROOT);
-  await assertHttpsH2AndSse(ca);
+  await assertHttpsH2AndSse(ca, lanIp);
   console.log('OK  HTTPS / h2 / SSE still green');
 }
 
@@ -840,11 +926,17 @@ export async function runTlsPebbleSetupSmoke(kind) {
       const check = localChecks.find((item) => item.id === id);
       assert(check?.ok, `${id} check is not green: ${JSON.stringify(check)}`);
     }
+    await assertHostBindingIsolation(lanIp);
+    console.log('OK  Staff ports bind only to the selected address; app ports stay local');
     const pebbleCa = fs.readFileSync(PEBBLE_ROOT);
-    await assertWildcardHostnameRejected(pebbleCa, PORTAL_HOSTNAME);
+    await assertWildcardHostnameRejected(pebbleCa, PORTAL_HOSTNAME, lanIp);
     console.log('OK  reserved Portal hostname is rejected by the wildcard listener');
-    await assertWildcardHostnameRejected(pebbleCa, UNKNOWN_HOSTNAME);
+    await assertWildcardHostnameRejected(pebbleCa, UNKNOWN_HOSTNAME, lanIp);
     console.log('OK  unknown hostname is rejected by the wildcard listener');
+    await assertHttpHostnameRejected(PORTAL_HOSTNAME, lanIp);
+    console.log('OK  reserved Portal hostname is rejected on HTTP');
+    await assertHttpHostnameRejected(UNKNOWN_HOSTNAME, lanIp);
+    console.log('OK  unknown installation-room hostname is rejected on HTTP');
 
     const secret = JSON.parse(
       fs.readFileSync(path.join(RUNTIME, 'state', 'tls', 'acme-dns.json'), 'utf8'),
@@ -856,7 +948,7 @@ export async function runTlsPebbleSetupSmoke(kind) {
     assert(!envText.includes(secret.password), 'acme-dns password leaked into .env');
 
     if (APPLY) {
-      await applyCutoverAndAssert();
+      await applyCutoverAndAssert(lanIp);
       console.log('TLS cutover smoke passed (active, HTTPS Canonical, apply called)');
     } else {
       const status = await fetchJson(setupUrl('/api/setup/host/status'));

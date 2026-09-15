@@ -229,11 +229,10 @@ test('TLS cutover network save omits HTTP identity fields', () => {
   const body = buildHostNetworkSaveInput({
     lanAppIp: '192.168.1.20',
     restartCompose: true,
-    canonicalBaseUrl: 'https://praxis.lan.notaus.de',
     proxyEnabled: true,
     preserveTlsIdentity: true,
   });
-  assert.equal(body.canonicalBaseUrl, undefined);
+  assert.equal('canonicalBaseUrl' in body, false);
   assert.equal(body.proxy, undefined);
 });
 
@@ -258,13 +257,12 @@ test('TLS preparation network save omits proxy and canonical fields', () => {
   const body = buildHostNetworkSaveInput({
     lanAppIp: '192.168.1.20',
     restartCompose: true,
-    canonicalBaseUrl: 'http://192.168.1.10',
     proxyEnabled: true,
     preserveTlsIdentity: true,
   });
   assert.equal(body.lanAppIp, '192.168.1.20');
   assert.equal(body.restartCompose, true);
-  assert.equal(body.canonicalBaseUrl, undefined);
+  assert.equal('canonicalBaseUrl' in body, false);
   assert.equal(body.proxy, undefined);
 });
 
@@ -275,11 +273,10 @@ test('HTTP-only network save includes proxy and canonical fields', () => {
   const body = buildHostNetworkSaveInput({
     lanAppIp: '192.168.1.20',
     restartCompose: false,
-    canonicalBaseUrl: 'http://192.168.1.20',
     proxyEnabled: true,
     preserveTlsIdentity: false,
   });
-  assert.equal(body.canonicalBaseUrl, 'http://192.168.1.20');
+  assert.equal('canonicalBaseUrl' in body, false);
   assert.deepEqual(body.proxy, { enabled: true, httpPort: 80 });
 });
 
@@ -304,12 +301,9 @@ test('active TLS ignores HTTP reachability draft drift but keeps LAN drift', () 
       {
         lanAppIp: '__custom__',
         customLanIp: '192.168.1.10',
-        reachabilityMode: 'custom',
-        customHostname: 'wrong-http-name.example',
         proxyEnabled: false,
       },
       config,
-      emptyNetwork,
     ),
     false,
   );
@@ -318,12 +312,9 @@ test('active TLS ignores HTTP reachability draft drift but keeps LAN drift', () 
       {
         lanAppIp: '__custom__',
         customLanIp: '192.168.1.20',
-        reachabilityMode: 'custom',
-        customHostname: 'wrong-http-name.example',
         proxyEnabled: false,
       },
       config,
-      emptyNetwork,
     ),
     true,
   );
@@ -456,10 +447,7 @@ test('save then config during probe hydrates draft and clears apply dirty', asyn
 
   assert.equal(controller.getState().phase, 'idle');
   assert.equal(controller.getState().lanAppIp, '192.168.1.20');
-  assert.equal(
-    hostNetworkChanged(controller.getState(), savedConfig, controller.getState().network),
-    false,
-  );
+  assert.equal(hostNetworkChanged(controller.getState(), savedConfig), false);
 });
 
 test('verifyActiveConfiguration uses the provided saved URL only', async () => {
@@ -732,10 +720,7 @@ test('restart failure keeps save marker so config refresh still hydrates', async
   assert.equal(controller.getState().notice?.tone, 'error');
   assert.match(controller.getState().notice?.message ?? '', /nicht neu gestartet/);
   assert.equal(controller.getState().lanAppIp, '192.168.1.20');
-  assert.equal(
-    hostNetworkChanged(controller.getState(), afterSave, controller.getState().network),
-    false,
-  );
+  assert.equal(hostNetworkChanged(controller.getState(), afterSave), false);
 });
 
 test('dirty draft survives config refresh; discardDraft restores config', async () => {
@@ -912,4 +897,76 @@ test('hide() clears the UI phase but keeps the host-write latch until saveHostNe
   held.resolve();
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(controller.isHostWriteInFlight(), false);
+});
+
+test('restoreProxy with active TLS preserves saved identity and does not call TLS issuance', async () => {
+  const config = minimalHostStatus({
+    configuredCanonicalBaseUrl: 'https://staff.example.test',
+    appBaseUrl: 'https://staff.example.test',
+  });
+  config.proxy = {
+    ...config.proxy,
+    enabled: true,
+    mode: 'http',
+    container: null,
+  };
+  config.tls = {
+    state: 'active',
+    mode: 'managed',
+    hostname: 'staff.example.test',
+    installationId: 'example',
+    tokenConsumed: true,
+    applyReady: false,
+    cutoverApplied: true,
+    certificate: null,
+    lastError: null,
+    acmeCnameTarget: null,
+  };
+  let received: HostNetworkInput | null = null;
+  const { controller } = createController({
+    config,
+    requestConfirm: (_message, confirm) => confirm(),
+    api: {
+      saveHostNetwork: async (body) => {
+        received = body;
+        return saveResult({ composeRestarted: false });
+      },
+      prepareHostTls: async () => {
+        throw new Error('must not prepare TLS');
+      },
+      obtainHostTlsCertificate: async () => {
+        throw new Error('must not issue a certificate');
+      },
+    },
+  });
+  controller.show();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  controller.restoreProxy();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.ok(received);
+  const body = received as HostNetworkInput;
+  assert.equal(body.repairProxy, true);
+  assert.equal('canonicalBaseUrl' in body, false);
+  assert.equal(config.configuredCanonicalBaseUrl, 'https://staff.example.test');
+  assert.equal(body.proxy, undefined);
+  assert.equal(body.lanAppIp, config.network.configuredLanIp);
+});
+
+test('restoreProxy refuses unapplied address drafts', async () => {
+  const config = minimalHostStatus();
+  config.proxy = { ...config.proxy, enabled: true, mode: 'http', container: null };
+  const { controller } = createController({
+    config,
+    requestConfirm: () => assert.fail('must not confirm'),
+    api: {
+      saveHostNetwork: async () => {
+        throw new Error('must not mutate');
+      },
+    },
+  });
+  controller.show();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  controller.patchFields({ lanAppIp: '192.168.1.99' });
+  controller.restoreProxy();
+  assert.match(controller.getState().notice?.message ?? '', /Änderungen übernehmen oder verwerfen/);
 });

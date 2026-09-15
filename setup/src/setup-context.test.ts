@@ -88,10 +88,7 @@ test('resolving an install context does not rotate the running stack token', () 
     );
     try {
       assert.equal(resolveSetupContext().home, home);
-      assert.equal(
-        readEnvMap(envPath).get('MAINTENANCE_TOKEN'),
-        'change-me-maintenance-token',
-      );
+      assert.equal(readEnvMap(envPath).get('MAINTENANCE_TOKEN'), 'change-me-maintenance-token');
     } finally {
       if (previousHome === undefined) delete process.env.PRAXIS_FLOW_HOME;
       else process.env.PRAXIS_FLOW_HOME = previousHome;

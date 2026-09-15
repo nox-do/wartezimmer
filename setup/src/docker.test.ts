@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 import {
   buildComposeStatus,
   COMPOSE_TLS_LAB_SERVICES,
+  composeRestart,
   isWildcardPublishedHostIp,
   normalizePublishedHostIp,
   parseDockerInspectPublishedBindings,
@@ -339,4 +343,50 @@ test('buildComposeStatus marks running when any service is running', () => {
   ];
   assert.equal(buildComposeStatus(services).running, true);
   assert.equal(buildComposeStatus([services[0]]).running, false);
+});
+
+test('composeRestart recreates services and ignores shell binding overrides', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'praxis-flow-compose-restart-'));
+  const fakeDocker = path.join(root, 'docker');
+  fs.writeFileSync(
+    path.join(root, '.env'),
+    [
+      'PROXY_ENABLED=true',
+      'PROXY_MODE=http',
+      'SETUP_LAN_APP_IP=127.0.0.1',
+      'APP_BIND_ADDRESS=127.0.0.1',
+      '',
+    ].join('\n'),
+  );
+  fs.writeFileSync(
+    fakeDocker,
+    '#!/bin/sh\nprintf "%s\\n%s|%s" "$*" "${APP_BIND_ADDRESS-unset}" "${SETUP_LAN_APP_IP-unset}"\n',
+    { mode: 0o755 },
+  );
+  const previousCli = process.env.PRAXIS_FLOW_DOCKER_CLI;
+  const previousAppBind = process.env.APP_BIND_ADDRESS;
+  const previousStaffIp = process.env.SETUP_LAN_APP_IP;
+  process.env.PRAXIS_FLOW_DOCKER_CLI = fakeDocker;
+  process.env.APP_BIND_ADDRESS = '0.0.0.0';
+  process.env.SETUP_LAN_APP_IP = '0.0.0.0';
+  try {
+    const result = await composeRestart({
+      projectRoot: root,
+      composeProjectName: 'praxis-flow-test',
+      delivery: false,
+      withProxy: true,
+      services: ['app', 'sandbox', 'proxy'],
+    });
+    assert.equal(result.ok, true);
+    assert.match(result.log, /up -d --force-recreate app sandbox proxy/);
+    assert.match(result.log, /unset\|unset/);
+  } finally {
+    if (previousCli === undefined) delete process.env.PRAXIS_FLOW_DOCKER_CLI;
+    else process.env.PRAXIS_FLOW_DOCKER_CLI = previousCli;
+    if (previousAppBind === undefined) delete process.env.APP_BIND_ADDRESS;
+    else process.env.APP_BIND_ADDRESS = previousAppBind;
+    if (previousStaffIp === undefined) delete process.env.SETUP_LAN_APP_IP;
+    else process.env.SETUP_LAN_APP_IP = previousStaffIp;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

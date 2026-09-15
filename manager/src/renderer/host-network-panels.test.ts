@@ -12,8 +12,6 @@ import {
 const matchingDraft = {
   lanAppIp: '192.168.1.10',
   customLanIp: '',
-  reachabilityMode: 'lan-ip' as const,
-  customHostname: '',
   proxyEnabled: false,
 };
 

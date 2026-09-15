@@ -245,6 +245,7 @@ test('apply rolls back Canonical and Caddyfile when proxy reload fails', async (
     writeEnv(root, {
       PROXY_ENABLED: 'true',
       PROXY_MODE: 'http',
+      SETUP_LAN_APP_IP: '192.168.178.112',
       CANONICAL_BASE_URL: 'http://192.168.178.112',
     });
     const ctx = testSetupContext(root);
@@ -259,10 +260,15 @@ test('apply rolls back Canonical and Caddyfile when proxy reload fails', async (
         cnameRecords: ['challenge-id.auth.acme-dns.io'],
       }),
     });
+    let checkedConnectHost = '';
     await obtainManagedCertificate(ctx, {
       reloadProxy: async () => undefined,
-      runLocalChecks: async () => greenLocal,
+      runLocalChecks: async (_hostname, _port, connectHost) => {
+        checkedConnectHost = connectHost;
+        return greenLocal;
+      },
     });
+    assert.equal(checkedConnectHost, '192.168.178.112');
     await assert.rejects(
       () =>
         applyHostTls(ctx, {
@@ -426,7 +432,10 @@ test('generated Caddyfile keeps HTTP app before cutover and uses ACME-DNS withou
   };
   const caddyfile = generateTlsCaddyfile(status, new Map());
   assert.match(caddyfile, new RegExp(GENERATED_CADDYFILE_MARKER));
-  assert.match(caddyfile, /:80 \{\n\treverse_proxy app:8080/);
+  assert.match(caddyfile, /:80 \{\n\t@staff host staff\.7fk3m2\.lan\.notaus\.de/);
+  assert.match(caddyfile, /@installationRoom host \*\.7fk3m2\.lan\.notaus\.de/);
+  assert.match(caddyfile, /handle @installationRoom \{\n\t\tabort/);
+  assert.match(caddyfile, /handle @staff \{\n\t\treverse_proxy app:8080/);
   assert.match(caddyfile, /dns acmedns \/run\/secrets\/acme-dns\.json/);
   assert.match(caddyfile, /disable_http_challenge/);
   assert.match(caddyfile, /disable_tlsalpn_challenge/);

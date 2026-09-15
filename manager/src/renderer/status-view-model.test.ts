@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { freshInstallHostStatus, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import {
-  currentWlanLabel,
+  configuredAdapterLabel,
   deviceUrlEntries,
   isSetupEntryStatus,
   lanWarningText,
@@ -89,13 +89,13 @@ test('setupChecklistItems marks docker step open when daemon is down', () => {
   assert.match(items[0].label, /Docker Desktop starten/);
 });
 
-test('statusGridRows includes wlan and lan when configured', () => {
+test('statusGridRows shows installation details without duplicate network facts', () => {
   const rows = statusGridRows(
     minimalHostStatus({
       envExists: true,
       network: {
         configuredLanIp: '192.168.1.10',
-        currentLanCandidates: [{ address: '192.168.1.20', interfaceName: 'en0' }],
+        currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en7' }],
         lanIpStale: false,
       },
       deliveryImages: {
@@ -114,29 +114,27 @@ test('statusGridRows includes wlan and lan when configured', () => {
   assert.deepEqual(
     rows.map((row) => row.label),
     [
-      'Install-Home',
-      'Compose',
+      'Installations-ID',
+      'Installationsordner',
+      'Konfiguration (.env)',
+      'Docker-Images',
+      'Compose-Projekt',
       'Docker',
-      '.env',
-      'WLAN aktuell',
-      'LAN in .env',
-      'Zugriff',
-      'Proxy-Server',
-      'Software-Paket',
     ],
   );
-  assert.equal(rows[0]?.value, '/tmp/pf');
+  assert.equal(rows[0]?.value, 'Noch nicht vergeben');
+  assert.equal(rows[1]?.value, '/tmp/pf');
   assert.equal(
-    currentWlanLabel(
+    configuredAdapterLabel(
       minimalHostStatus({
         network: {
           configuredLanIp: null,
-          currentLanCandidates: [{ address: '192.168.1.20', interfaceName: 'en0' }],
+          currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en7' }],
           lanIpStale: false,
         },
       }),
     ),
-    '192.168.1.20 (en0)',
+    null,
   );
 });
 
@@ -201,4 +199,27 @@ test('deviceUrlEntries maps device urls with tv kiosk tip', () => {
   );
   assert.equal(entries?.length, 5);
   assert.equal(entries?.find((entry) => entry.label === 'TV')?.showKioskTip, true);
+});
+
+test('installation ID is visible before TLS cutover', () => {
+  const status = minimalHostStatus();
+  status.proxy = { ...status.proxy, enabled: true, mode: 'http', container: null };
+  status.tls = {
+    state: 'awaiting-operator-dns',
+    mode: 'managed',
+    hostname: 'staff.example.test',
+    installationId: 'example',
+    tokenConsumed: true,
+    applyReady: false,
+    cutoverApplied: false,
+    certificate: null,
+    lastError: null,
+    acmeCnameTarget: null,
+  };
+  const rows = statusGridRows(status);
+  assert.equal(rows.find((row) => row.label === 'Installations-ID')?.value, 'example');
+  assert.equal(
+    rows.some((row) => row.label === 'Proxy-Server'),
+    false,
+  );
 });

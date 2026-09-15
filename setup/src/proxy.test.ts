@@ -138,26 +138,6 @@ test('resolveProxyConfigForWrite allows httpPort tweak while TLS preparation is 
   assert.equal(result.proxy.httpPort, 8088);
 });
 
-test('resolveCanonicalBaseUrlForProxyPlan blocks reachability override during TLS preparation', () => {
-  assert.throws(
-    () =>
-      resolveCanonicalBaseUrlForProxyPlan({
-        proxy: {
-          enabled: true,
-          mode: 'http',
-          httpPort: 80,
-          appBindAddress: '127.0.0.1',
-        },
-        existingCanonical: 'http://192.168.1.10',
-        previousLanIp: '192.168.1.10',
-        nextLanIp: '192.168.1.10',
-        overrideCanonical: 'http://praxis-flow.local',
-        tlsPreparationActive: true,
-      }),
-    /Erreichbarkeit nicht ändern/,
-  );
-});
-
 test('buildProxyHttpCanonicalBaseUrl omits standard port 80', () => {
   assert.equal(buildProxyHttpCanonicalBaseUrl('192.168.1.50', 80), 'http://192.168.1.50');
   assert.equal(buildProxyHttpCanonicalBaseUrl('192.168.1.50', 8088), 'http://192.168.1.50:8088');
@@ -173,7 +153,6 @@ test('resolveCanonicalBaseUrlForProxyPlan derives http URL from LAN host when pr
         appBindAddress: '127.0.0.1',
       },
       existingCanonical: 'http://192.168.1.10:8080',
-      previousLanIp: '192.168.1.10',
       nextLanIp: '192.168.1.50',
     }),
     'http://192.168.1.50',
@@ -190,7 +169,6 @@ test('resolveCanonicalBaseUrlForProxyPlan keeps custom hostname host with proxy 
         appBindAddress: '127.0.0.1',
       },
       existingCanonical: 'http://praxis-flow.local:8080',
-      previousLanIp: '192.168.1.10',
       nextLanIp: '192.168.1.50',
     }),
     'http://praxis-flow.local',
@@ -207,7 +185,6 @@ test('resolveCanonicalBaseUrlForProxyPlan rewrites proxy-derived IP on LAN chang
         appBindAddress: '127.0.0.1',
       },
       existingCanonical: 'http://192.168.1.10:8088',
-      previousLanIp: '192.168.1.10',
       nextLanIp: '192.168.1.20',
     }),
     'http://192.168.1.20:8088',
@@ -224,7 +201,6 @@ test('resolveCanonicalBaseUrlForProxyPlan keeps P0 :8080 when proxy off', () => 
         appBindAddress: '0.0.0.0',
       },
       existingCanonical: 'http://192.168.1.10:8080',
-      previousLanIp: '192.168.1.10',
       nextLanIp: '192.168.1.20',
     }),
     'http://192.168.1.20:8080',
@@ -313,7 +289,6 @@ test('resolveCanonicalBaseUrlForProxyPlan restores :8080 when leaving proxy', ()
         appBindAddress: '0.0.0.0',
       },
       existingCanonical: 'http://192.168.1.50',
-      previousLanIp: '192.168.1.50',
       nextLanIp: '192.168.1.50',
     }),
     'http://192.168.1.50:8080',
@@ -327,7 +302,6 @@ test('resolveCanonicalBaseUrlForProxyPlan restores :8080 when leaving proxy', ()
         appBindAddress: '0.0.0.0',
       },
       existingCanonical: 'http://192.168.1.50:8088',
-      previousLanIp: '192.168.1.50',
       nextLanIp: '192.168.1.50',
     }),
     'http://192.168.1.50:8080',
@@ -344,7 +318,6 @@ test('resolveCanonicalBaseUrlForProxyPlan restores :8080 for custom hostname whe
         appBindAddress: '0.0.0.0',
       },
       existingCanonical: 'http://praxis-flow.local',
-      previousLanIp: '192.168.1.50',
       nextLanIp: '192.168.1.50',
     }),
     'http://praxis-flow.local:8080',

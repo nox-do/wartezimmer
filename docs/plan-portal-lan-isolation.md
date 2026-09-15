@@ -1,7 +1,7 @@
 # Eingeschränkter Netzwerkzugang für das Patientenportal
 
-Stand: 2026-09-13 · **TLS-/Wildcard-Pfad und explizite Proxy-Staff-Publishes
-umgesetzt; Host-Firewall, Manager-Diagnose und Restricted-Binding offen**
+Stand: 2026-09-14 · **TLS-/Wildcard-Pfad und explizite Proxy-Staff-Publishes
+umgesetzt; Manager-Diagnose und Restricted-Binding offen; Host-Firewall außerhalb des Produkts**
 
 Verwandt: LAN-TLS [`operations/tls.md`](operations/tls.md) · Captive-Grenze
 [`operations/integrations.md`](operations/integrations.md) · Manager-Topologie
@@ -11,6 +11,27 @@ Captive-zentriert; im Rahmen dieses Plans zu ersetzen) · detaillierter
 [Hinweise für die Praxis-IT](operations/praxis-it-network-isolation.md).
 
 ---
+
+## Gültige Systemgrenze — Entscheidung vom 14.09.2026
+
+Praxis Flow verwaltet seine Docker-/Compose-Konfiguration, Caddy-Listener,
+TLS und den tatsächlichen Runtime-Publish-Vertrag. Host-Firewall, Routing,
+Forwarding und die Trennung der Praxisnetze verantwortet die Praxis-IT.
+Der Manager ändert keine Host-Firewallregeln und benötigt dafür keine
+Elevation. Er bietet verständliche Hinweise, insbesondere im Netzwerkdiagramm.
+
+Die Produktzusage lautet: explizite Ziel-IP-Bindings und geprüfte Listener-Policy.
+Die Auswahl eines Adapters über seine lokale IPv4-Adresse garantiert keine
+Filterung nach eingehendem Interface und keine Isolation des Praxisnetzes.
+Ein grüner Docker-/Listener-Status darf daher nicht „Netz sicher isoliert“ bedeuten.
+IPv6 bleibt ein Negativtest auf unbeabsichtigte Erreichbarkeit, kein angebotener
+Zugangspfad. Windows bleibt bis zu einem eigenen Binding-Nachweis zurückgestellt.
+
+Diese Entscheidung ersetzt die frühere Planung einer produktverwalteten
+Host-Firewall einschließlich Elevation, Apply/Rollback und Firewall-Release-Gates.
+Entsprechende ältere Architekturpassagen und F1-Enforcement-Zusagen in diesem
+Dokument sind historisch und kein gültiger Produktvertrag. Die dokumentierten
+Firewall-PoCs bleiben als Versuchsprotokolle erhalten, nicht als Produktfunktion.
 
 ## 1. Entscheidung
 
@@ -879,43 +900,53 @@ Gate würde fremdes Routing im Patientennetz ohnehin nicht sichtbar machen.
 
 ## 13. Umsetzungsblöcke
 
+Status nach Code-/Testabgleich vom 14.09.2026: `[x]` bezeichnet einen
+belegten Abschluss im genannten Umfang; `[ ]` einen offenen Restpunkt.
+Plattform-PoC, implementierter Produktcode und externe Produktabnahme sind
+getrennte Nachweise. Zurückgestelltes Windows blockiert den macOS-Pfad nicht.
+
 Status der groben Blöcke:
 
 - [x] **TLS-Fundament:** Dev-Proxy-Image gebaut; Managed- und Cutover-Smoke mit
       Pebble bestanden; genau eine ACME-Order für `*.<raum>`; Staff positiv sowie
       Portal-SNI und unbekannter Wildcard-Host negativ geprüft.
-- [ ] **Gate 0 / F1-Machbarkeit:** explizite Host-IP-Publishes und die
-      erforderliche Host-Firewall je freigegebener Plattform praktisch belegen;
-      macOS ist für die nachgewiesene Kombination bestanden, Windows ist
-      zurückgestellt und bleibt gesperrt.
+- [x] **Gate 0 / F1-Machbarkeit für macOS:** explizite Host-IP-Publishes,
+      Host-Firewall-PoC und externe Prüfung für die in §13.1 genannte
+      Kombination bestanden. Der Firewall-PoC ist historisch; eine Produkt-Firewall ist nicht vorgesehen.
+- [ ] **Weitere Plattformfreigaben:** Windows-PoC ist zurückgestellt;
+      Windows bleibt nicht freigegeben. Breitere macOS-Versionen sind nicht
+      durch den bisherigen Nachweis abgedeckt.
 - [ ] **Phase 0 / Staff-Binding:** Proxy-Publishes und Runtime-Audit sind
-      umgesetzt; Produkt-Firewall, vollständige Manager-Diagnose und
-      End-to-End-Abnahme bleiben offen. Der proxyfreie Demo-/Erststart ist
-      bewusst nicht NIC-isoliert.
+      umgesetzt und mit frisch gebautem Proxy per Managed-/Cutover-Smoke
+      geprüft; automatisierte Plattformfreigabe und externe
+      Produktabnahme bleiben offen; die Staff-UI ist überarbeitet. Der proxyfreie initiale Betrieb ist bewusst
+      nicht NIC-isoliert.
 - [ ] **Restricted-Binding:** zweite IP, Portal-A-Record, getrennter
-      Portal-Listener, Portal-Positivliste und Firewallregeln einführen.
+      Portal-Listener und Portal-Positivliste einführen.
 - [ ] **Portal-Härtung und Freigabe:** App-Vertrag, Runtime-Härtung,
       Plattformmatrix, Betriebsabnahme und Release-Tests abschließen.
 
-Damit ist der TLS-Namensumbau technisch abgeschlossen. Delivery-Bindings und
-Restricted-Network-UI werden weiterhin nicht in einem Schritt verändert. Vor
+Damit sind der TLS-Namensumbau und die Staff-Publish-Umstellung in Dev und
+Delivery implementiert. Die Restricted-Network-UI ist ein späterer Arbeitsblock. Vor
 der produktiven Ausrollung der Phase 0 muss Gate 0 auf der jeweiligen
 Betriebssystem-/Docker-Desktop-Kombination bestanden sein. Eine bestandene
 Plattformfreigabe entsperrt nicht automatisch eine andere Plattform.
 
-Die verbleibenden Blöcke sind:
+Die weitere Reihenfolge mit bereits erledigten Anteilen:
 
-1. **F1-Machbarkeits-PoC:** zwei explizite Host-IP-Bindings auf Port 443,
-   Defender beziehungsweise `pf`, benötigte Elevation, Firewall-Rollback und
-   Black-Box-Scan aus beiden Netzen; außerdem Reboot, Adressverlust, IPv6 und
-   Weak-Host-Verhalten. Bei Fehlschlag kein Portal auf dieser Plattform und
-   separate Architekturentscheidung statt stillen Edge-Proxy-Fallbacks.
-2. **Phase 0 nach bestandenem plattformspezifischem Gate 0:** im Proxy-Betrieb
-   alle Delivery-Publishes von IPv4-/IPv6-Wildcard-Adressen auf explizite
-   Staff-IP beziehungsweise Loopback umstellen; der proxyfreie Demo-/Erststart
+1. **F1-Machbarkeits-PoC für zusätzliche Plattformen:** explizite Host-IP-
+   Bindings und externe Ziel-IP-Prüfung; außerdem Reboot, Adressverlust und
+   IPv6. Der dokumentierte macOS-PoC ist bestanden, Windows zurückgestellt.
+   Zwei gleichzeitige Staff-/Portal-Publishes auf Port 443 und die Prüfung
+   aus getrennten Netzen gehören zur späteren Restricted-Abnahme. Bei
+   Fehlschlag kein Portal auf dieser Plattform und separate
+   Architekturentscheidung statt stillen Edge-Proxy-Fallbacks.
+2. **Phase 0 nach bestandenem plattformspezifischem Gate 0 abschließen:**
+   Dev-/Delivery-Publishes sind im Proxy-Betrieb bereits an die explizite
+   Staff-IP beziehungsweise Loopback gebunden; der proxyfreie initiale Betrieb
    bleibt bewusst offen. Docker-Statusvertrag, Proxy-Compose-Apply und
-   Runtime-Audit sind umgesetzt; Elevation, Host-Firewall-Rollback und die
-   vollständige Manager-Darstellung bleiben offen. Zusätzlich
+   Runtime-Audit sind umgesetzt; die vollständige Manager-Darstellung und
+   externe Produktabnahme bleiben offen. Host-Firewall bleibt bei der Praxis-IT. Zusätzlich
    zum bestehenden macOS-DMG wird vor einer späteren Windows-Freigabe ein
    Windows-Manager-Artefakt benötigt.
 3. **Proxy (Portal-Listener):** getrennte Host-Publishes auf interne
@@ -940,10 +971,9 @@ Die verbleibenden Blöcke sind:
    DMZ-/Applikationsplatzierung, unterstützte AP-/Router-Szenarien, Diagnose und
    Supportgrenze. Aufbereiteter Entwurf:
    [`operations/praxis-it-network-isolation.md`](operations/praxis-it-network-isolation.md).
-8. **Tests:** gekreuzte Ziel-IP-/SNI-Matrix, Listener-/Firewall-
-   Integrationstests, Zwei-NIC- und Same-NIC/Warnpfad, Docker-Port-Audit,
+8. **Tests:** gekreuzte Ziel-IP-/SNI-Matrix, Listener-Integrationstests, Zwei-NIC- und Same-NIC/Warnpfad, Docker-Port-Audit,
    Parserfälle für explizite sowie globale IPv4-/IPv6-Bindings, IPv4/IPv6,
-   Reboot und Docker-Desktop-Neustart, Firewall-/Elevation-Rollback,
+   Reboot und Docker-Desktop-Neustart,
    manuelle ACME-Staging-Abnahme vor Releases, Restore mit angewendetem Restricted-Binding, getrennte Rate-Limits für
    mehrere Client-IPs samt Spoofing-Negativtest, Container-/Egress-Härtung,
    Routenkatalog-Negativtest, NIC-Drift, Apply-Rollback und Entfernen des
@@ -951,7 +981,7 @@ Die verbleibenden Blöcke sind:
 9. **Später, nicht v1:** erweiterbare schlanke Captive-Adapter mit
    Manager-Auswahl — [`operations/integrations.md`](operations/integrations.md).
 
-### 13.1 Nächster Arbeitsblock: explizites Staff-Binding
+### 13.1 Laufender Arbeitsblock: Staff-Binding und Abschluss der Phase 0
 
 Dieser Arbeitsblock verändert noch keinen Portalpfad. Er macht ausschließlich
 den heutigen Staff-Zugang sicher gegenüber einer später zusätzlich
@@ -959,15 +989,18 @@ angeschlossenen NIC.
 
 #### Schritt 1 — Gate 0 als kleiner Plattform-PoC
 
-- Auf den konkret freizugebenden Docker-Desktop-Versionen zwei lokale IPv4-
-  Adressen verwenden und einen Testcontainer explizit nur an eine davon
-  publizieren.
-- Von außen gegen beide Ziel-IPs sowie gegen IPv6 scannen; anschließend
-  Docker-Neustart, Host-Reboot und Verlust der Bind-Adresse prüfen.
-- Die kleinste nötige Firewallregel, Elevation sowie deren sauberen Rollback
-  für Windows und macOS erproben und die getesteten Versionsstände festhalten.
-- Ergebnis pro Plattform binär dokumentieren: `freigegeben` oder `gesperrt`.
-  Ein nur lokal plausibles Compose-Rendering schließt F1 nicht.
+- [x] Auf der dokumentierten macOS-/Docker-Desktop-Kombination zwei lokale IPv4-
+      Adressen verwenden und einen Testcontainer explizit nur an eine davon
+      publizieren.
+- [x] Von außen gegen beide Ziel-IPs sowie gegen IPv6 scannen; anschließend
+      Docker-Neustart, Host-Reboot und Verlust der Bind-Adresse prüfen.
+- [x] Firewallregel, Elevation und sauberen Rollback für macOS im isolierten
+      `pf`-PoC erproben und die getesteten Versionsstände festhalten.
+- [x] macOS-Ergebnis für diese Kombination dokumentieren; siehe Nachweis unten.
+- [ ] Windows-Binding-PoC einschließlich externer Erreichbarkeitsprüfung durchführen
+      (zurückgestellt).
+
+Ein nur lokal plausibles Compose-Rendering schließt F1 nicht.
 
 Erst nach einem positiven Ergebnis wird der produktive Binding-Code aktiviert.
 Der PoC bekommt keine Portalroute und braucht weder Portal-DNS noch eine
@@ -1021,19 +1054,20 @@ deshalb die Ziel-IP-/Interface-Selektion dieses Hosts, aber keine Trennung
 zweier gerouteter Subnetze. macOS wird deshalb zunächst nur für die konkret
 nachgewiesene Kombination freigegeben; eine allgemeinere Mindestversion wird
 nicht abgeleitet. Der Windows-Nachweis ist zurückgestellt. Windows bleibt bis
-dahin für Staff- und Restricted-Binding gesperrt, blockiert aber die weitere
+dahin für Staff- und Restricted-Binding **nicht freigegeben**; eine technische
+Windows-Sperre ist noch nicht umgesetzt. Das blockiert die weitere
 macOS-Umsetzung nicht.
 
-#### Schritt 2 — Binding- und Statusvertrag ohne Verhaltensänderung
+#### Schritt 2 — Binding- und Statusvertrag (umgesetzt)
 
-Arbeitsstand: Der abwärtskompatible DTO-/Parser-Schnitt und das read-only
-Runtime-Audit sind umgesetzt. Die kontrollierte Publish-Umstellung und die
-ausführliche Manager-Zuordnungsanzeige bleiben offen.
+Arbeitsstand: Der abwärtskompatible DTO-/Parser-Schnitt, das Runtime-Audit und
+die kontrollierte Publish-Umstellung sind umgesetzt. Die vollständige
+Manager-Zuordnungsanzeige bleibt offen.
 
-- `SETUP_LAN_APP_IP` wird begrifflich zur bereits persistierten Quelle der
-  Staff-IP. Es wird kein paralleles `STAFF_BIND_IP` eingeführt.
-- `TLS_LAN_IP` bleibt TLS-/DNS-Snapshot und wird nicht als zweite Quelle für
-  Docker-Publishes verwendet.
+- [x] `SETUP_LAN_APP_IP` wird begrifflich zur bereits persistierten Quelle der
+      Staff-IP. Es wird kein paralleles `STAFF_BIND_IP` eingeführt.
+- [x] `TLS_LAN_IP` bleibt TLS-/DNS-Snapshot und wird nicht als zweite Quelle für
+      Docker-Publishes verwendet.
 - [x] `ComposeServiceStatus` erhält zusätzlich zu den vorerst kompatibel
       beibehaltenen `publishedPorts` vollständige Bindings aus
       `hostIp + publishedPort + targetPort + protocol`.
@@ -1043,14 +1077,14 @@ ausführliche Manager-Zuordnungsanzeige bleiben offen.
 - [x] Sicherheitsentscheidungen verwenden nur die vollständigen Bindings. Fehlen
       sie, lautet das Ergebnis `unbekannt/gesperrt`, nicht `in Ordnung`.
 
-Dieser Schnitt lässt sich separat testen und committen, bevor ein laufender
-Stack umgestellt wird.
+Der DTO-/Parser-Schnitt ist implementiert und separat getestet; die darauf
+aufbauende Publish-Umstellung aus Schritt 3 ist ebenfalls umgesetzt.
 
 #### Schritt 3 — Compose-Publishes auf Staff-IP beziehungsweise Loopback
 
 Arbeitsstand: Der Compose-/Env-Vertrag ist umgesetzt.
 
-- [x] Ohne Proxy: bewusster Demo-/Erststart auf `0.0.0.0:8080`, ausdrücklich
+- [x] Ohne Proxy: bewusster initialer interner Betrieb auf `0.0.0.0:8080`, ausdrücklich
       ohne NIC-Isolationszusage.
 - [x] Mit Proxy: App ausschließlich `127.0.0.1:8080 -> app:8080`; HTTP und
       HTTPS ausschließlich `<staff-ip>:80/443 -> proxy:80/443`.
@@ -1065,72 +1099,132 @@ Arbeitsstand: Der Compose-/Env-Vertrag ist umgesetzt.
 #### Schritt 4 — kontrollierte Migration, Apply und Rollback
 
 Arbeitsstand: Proxy-Preflight, Compose-Apply, Runtime-Audit und Env-/Stack-
-Rollback sind umgesetzt. Host-Firewall und abschließende externe Staff-Probe
-bleiben offen.
+Rollback sind umgesetzt. Abschließende Staff-Probe und externe Produktabnahme
+bleiben offen. Host-Firewall ist kein Produkt-Arbeitspaket mehr.
 
 - [x] Bestandsinstallationen zuerst nur inspizieren. Fehlt im Proxy-Betrieb eine gültige
       `SETUP_LAN_APP_IP`, bleibt der laufende Stack unberührt und der Manager fordert
       eine Staff-IP-Auswahl an; ein späterer Start/Apply mit globalem Fallback ist
       gesperrt.
-- [ ] Vor Recreate: lokale IP und Portbelegung werden geprüft; automatisierte
-      Plattformfreigabe und Host-Firewall-Sicherung fehlen noch.
+- [x] Vor Proxy-Start/Recreate die lokale Staff-IP prüfen. Beim Einschalten
+      und Repair zusätzlich den vorhandenen HTTP-Port-Preflight ausführen.
+- [ ] Vollständigen zieladressbezogenen Port-Preflight für HTTP/HTTPS vor
+      jedem Recreate ergänzen; der bisherige HTTP-Preflight deckt dies nicht ab.
+- [ ] Automatisierte Plattformfreigabe ergänzen.
 - [x] Danach Container neu erzeugen und die **tatsächlichen** Runtime-Bindings
       auditieren.
+- [x] Start, Neustart, Update und Restore dürfen einen abweichenden
+      Runtime-Vertrag nicht als Erfolg melden. Update/Restore prüfen aktuelle
+      und geplante Staff-IP vor dem ersten Stack-Stopp.
 - [ ] Staff-Erreichbarkeit vor Abschluss zusätzlich positiv prüfen.
-- Nach Rückkehr einer zuvor fehlenden Staff-IP darf nicht auf einen automatischen
-  Docker-Retry vertraut werden: Status und Manager müssen den gestoppten Dienst
-  erkennen und einen kontrollierten Repair ermöglichen.
+- [x] Kontrollierter HTTP-Proxy-Repair ist im Netzwerkbereich vorhanden und
+      startet auch einen zuvor gestoppten Stack nach erneuter Staff-IP-Prüfung.
+      Docker führt nach Rückkehr der Adresse keinen automatischen Retry aus.
+- [ ] Durchgängige Repair-Diagnose nach Adressverlust auch mit aktivem
+      TLS-Cutover praktisch abnehmen. Der Recovery-Einstieg ist jetzt unabhängig
+      vom ausgeblendeten HTTP-Konfigurationsbereich sichtbar; Komponentenprüfung
+      und automatisierte Identitätstests sind bestanden.
 - [x] Bei Compose- oder Binding-Audit-Fehlern den gesicherten Env-/Stack-Zustand
       wiederherstellen und neu entstandene Teil-Container entfernen.
-- [ ] Firewall- und Staff-Probe-Fehler in dieselbe Transaktion aufnehmen. Kein
-      Teilzustand darf einen Portal-A-Record oder Portal-Listener anlegen.
+- [x] Ein Proxy-Image-Preflight-Fehler restauriert nur die Env und verändert
+      keine Container, auch bei fehlendem Proxy und weiter laufender App.
+- [x] Nach Rollback begrenzt auf gesunde Services warten, danach Bindings
+      prüfen; `starting` abwarten, Timeout und fehlgeschlagenen Rollback
+      ausdrücklich melden. Gestoppte Stacks bleiben gestoppt.
+- [ ] Staff-Probe-Fehler in dieselbe Transaktion aufnehmen.
+- [x] Dieser Staff-Binding-Pfad legt keinen Portal-A-Record und keinen
+      Portal-Listener an; beide bleiben einem späteren Arbeitsblock vorbehalten.
 
-#### Schritt 5 — Manager-Diagnose
+#### Schritt 5 — Manager-Diagnose (Staff-UI überarbeitet)
 
 - [x] Das bestehende Netzwerk-Prüffeld übernimmt die read-only Ergebnisse des
       Staff-Runtime-Audits und verwirft sie nicht als alten Gateway-Status.
 - [x] Im vorhandenen Netzwerkbereich Staff-IP, Adapterbezeichnung und die
       beobachteten Bindings lesbar anzeigen; den proxyfreien Modus ausdrücklich
-      als offenen Demo-/Erststart kennzeichnen; kein neuer Haupt-Tab.
-- Klare Zustände für `bereit`, `globale Bindung`, `Bindung unbekannt`,
-  `Staff-IP fehlt/nicht lokal` und `Plattform nicht freigegeben` ausgeben.
-- Start, Neustart und Repair an dieselbe Setup-Prüfung koppeln; der Renderer
-  entscheidet nicht selbst über Sicherheit.
+      als initialen internen Betriebsmodus kennzeichnen; kein neuer Haupt-Tab.
+- [x] Korrekte, unerwartete/globale und unbekannte Runtime-Bindings sowie
+      fehlende/nicht lokale Staff-IP über die bestehenden Prüfmeldungen anzeigen.
+- [ ] Einheitlichen Gesamtstatus einschließlich `Plattform nicht freigegeben`
+      ergänzen; externe Netzsicherheit ausdrücklich als ungeprüft kennzeichnen.
+- [x] Start, Neustart und HTTP-Proxy-Repair prüfen die Staff-Bindung im
+      Setup-Backend; der Renderer entscheidet nicht selbst über Sicherheit.
+
+- [x] Netzwerkdiagramm auf initialen internen Betrieb / Staff-Proxy umstellen;
+      Restricted/Portal nur als geplant darstellen. Captive ist keine Voraussetzung.
+- [x] Docker-/Caddy-Produktgrenze und Praxis-IT-Verantwortung für Host-Firewall,
+      Router und Netztrennung im Diagramm verständlich erklären; keine grüne
+      Gesamtfreigabe für ein ungeprüftes Praxisnetz.
+
+- [x] Status/Netzwerk mit gemeinsamer Zugangszusammenfassung, korrekter
+      Adapterzuordnung und getrenntem Konfigurations-/Laufzustand versehen.
+- [x] Repair auch mit aktivem HTTPS anbieten; ungespeicherte Entwürfe schützen
+      und das Ergebnis nach Rückkehr des Proxys sichtbar halten.
+- [x] Wizard, interne Portal-Links und deutsche Ops-Texte auf internen Betrieb
+      ausrichten. Native praktische Abnahme bleibt separat offen.
 
 #### Schritt 6 — Abnahme des Staff-Bindings
 
-Mindestens folgende automatisierte beziehungsweise Plattformtests sind das
-Commit-/Rollout-Gate:
+Automatisierte Regressionen und vorhandene Smoke-Nachweise sind unten
+abgehakt. Die offenen externen Abnahmepunkte bleiben
+Rollout-Gates für den Abschluss der Phase 0; sie verhindern keinen
+Zwischencommit des bereits geprüften Staff-Binding-Codes:
 
-- Parserfälle für konkrete, globale, leere und IPv6-Publisher sowie den
-  Inspect-Fallback;
-- Compose-Rendering für den bewusst globalen proxyfreien Demo-Pfad sowie für
-  Proxy/TLS ohne globale Publishes;
-- ungültige oder verschwundene Staff-IP blockiert vor einem Proxy-Recreate;
-- erfolgreicher Apply sowie Fehler nach Env-, Compose- und Firewall-Schritt mit
-  Rollback;
-- im Proxy-Pfad Staff positiv an der Staff-IP; Ports 80, 443 und 8080 an einer
-  zweiten IP negativ; Maintenance von außen negativ;
-- bestehender Managed-, Custom- und Legacy-TLS-Zustand bleibt identisch und
-  löst keine ACME-Order aus;
-- Backup/Restore übernimmt die Staff-IP konsistent und ein inkonsistenter
-  Restore startet nicht mit globalem Fallback;
-- bestehende Managed- und Cutover-Pebble-Smokes bleiben grün.
+- [x] Parserfälle für konkrete, globale, leere und IPv6-Publisher sowie den
+      Inspect-Fallback;
+- [x] Compose-Rendering für initialen Betrieb/HTTP-Proxy/TLS in Dev und Delivery: 18 Fälle mit
+      fehlendem, globalem oder Loopback-`APP_BIND_ADDRESS` geprüft;
+- [x] ungültige oder verschwundene Staff-IP blockiert vor einem Proxy-Recreate;
+- [x] Tests für Image-Preflight ohne Laufzeiteingriff sowie Compose-/Audit-Fehler,
+      Env-Restaurierung, gestoppten Stack, Rollbackfehler und `starting → healthy`
+      einschließlich Healthcheck-Timeout;
+- [x] lokale Zwei-IP-Prüfung: Staff-IP auf 80/443 positiv, 8080/8082 negativ;
+      zweite IP auf 80/443/8080/8082 negativ;
+- [ ] zusätzliche externe Produktabnahme von einem zweiten Gerät einschließlich
+      Maintenance und IPv6 (der dokumentierte Plattform-PoC bleibt separat);
+- [ ] bestehender Managed-, Custom- und Legacy-TLS-Zustand bleibt beim
+      Binding-Wechsel identisch und löst keine ACME-Order aus;
+- [x] automatisierte Backup-/Restore-Gates einschließlich nicht lokaler
+      Staff-IP vor dem Stack-Stopp und Prüfung des Runtime-Vertrags;
+- [x] Managed- und Cutover-Pebble-Smokes mit frisch gebautem Proxy grün.
+
+Abnahme 2026-09-14 auf der in §13.1 dokumentierten macOS-/Docker-Kombination:
+Managed- und Cutover-Pebble-Smoke grün, jeweils genau eine Order für
+`*.<raum>`; `.83:80/443` positiv, `.83:8080/8082` sowie `.93:80/443/8080/8082`
+negativ; Portal und unbekannter Raum-Host auf HTTP und HTTPS ohne
+Anwendungsantwort.
+
+Neubau am 2026-09-14 mit `docker build --pull --no-cache` erfolgreich;
+der vorherige Registry-Timeout ist damit erledigt. Geprüft wurde
+`praxis-flow-proxy:2.11.4-acmedns` auf `linux/arm64`, Image-ID
+`sha256:3f5276f3dc3ad73bd6df7badffceef65d13f762ce5f42679d74b9fb0cbc3cc1f`.
+Beide Smokes liefen anschließend mit diesem Image. Die letzten
+Rollback-Nacharbeiten sind durch gezielte Tests abgesichert; sie ändern
+weder das Proxy-Image noch den TLS-Namensvertrag.
+
+Code-/Testabgleich am 14.09.2026: `setup/src/network-bindings.ts`,
+`setup/src/docker.ts`, `setup/src/host-state.ts` sowie die Netzwerk-Ansicht
+und der Netzwerk-Controller im Manager geprüft. Die sechs Testsuites
+`network-bindings`, `docker`, `stack-health`, `network-controller`,
+`network-view-model` und `host-network-panels` erneut erfolgreich ausgeführt.
+Die oben dokumentierten Image-/Pebble- und Plattformnachweise wurden bei
+diesem reinen Planabgleich nicht erneut ausgeführt.
 
 Nicht Teil dieses Arbeitsblocks sind Restricted-IP-Auswahl, Portal-A-Record,
 Proxy-Port 444, Portal-Listener, Portal-Routenfreigabe, `PORTAL_BASE_URL`,
-Portal-spezifische Firewallregeln oder Captive-Adapter. Diese beginnen erst,
-wenn Phase 0 auf den Zielplattformen abgenommen ist.
+oder Captive-Adapter. Host-Firewallregeln bleiben dauerhaft außerhalb der Produktgrenze. Diese beginnen erst,
+wenn Phase 0 auf der jeweils freizugebenden Zielplattform abgenommen ist.
+Die zurückgestellte Windows-Freigabe blockiert den macOS-Pfad nicht.
 
 ### 13.2 Noch offene Entscheidungen
 
-Vor **Gate 0 / Staff-Binding** offen:
+Vor **zusätzlichen Plattformfreigaben** offen (macOS-Gate für die oben
+genannte Kombination ist bestanden):
 
 - breitere macOS-Mindestversionen jenseits der konkret nachgewiesenen
   Kombination;
-- F1-PoC: Compose-Host-IP **und** Host-Firewall **und** externer Zwei-NIC-Scan
-  vor jeder zusätzlichen Plattformfreigabe; Binding allein schließt F1 nicht;
-- Windows-PoC, Packaging, Installation, Elevation und Firewall-Rollback vor
+- Binding-PoC: Compose-Host-IP und externe Ziel-IP-/IPv6-Negativprüfung
+  vor jeder zusätzlichen Plattformfreigabe; Compose-Rendering allein reicht nicht;
+- Windows-PoC, Packaging und Installation vor
   einer späteren Windows-Freigabe.
 
 Erst vor dem **Restricted-/Portal-Block** offen:

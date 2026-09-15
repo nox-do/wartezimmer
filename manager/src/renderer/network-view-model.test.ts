@@ -24,11 +24,8 @@ test('networkIsBusy covers in-flight phases only', () => {
   assert.equal(networkIsBusy('loading'), true);
 });
 
-test('networkProxySubtitle labels the proxy-free mode as an open demo start', () => {
-  assert.equal(
-    networkProxySubtitle(minimalHostStatus(), false),
-    'Aus — offener Demo-/Erststart auf :8080',
-  );
+test('networkProxySubtitle labels the initial internal HTTP mode', () => {
+  assert.equal(networkProxySubtitle(minimalHostStatus(), false), 'Proxy aus · HTTP mit :8080');
 });
 
 test('formatActiveReachabilityResult prefers actionable messages', () => {
@@ -101,7 +98,7 @@ test('proxyNeedsRestore uses runtime container when runtime snapshot exists', ()
       configuredLanIp: '192.168.1.10',
       appBaseUrl: null,
       docker: config.docker,
-      compose: null,
+      compose: { running: false, services: [] },
       probes: [],
       sandboxScanner: null,
       proxyServer: null,
@@ -115,7 +112,7 @@ test('proxyNeedsRestore uses runtime container when runtime snapshot exists', ()
       configuredLanIp: '192.168.1.10',
       appBaseUrl: null,
       docker: config.docker,
-      compose: null,
+      compose: { running: false, services: [] },
       probes: [],
       sandboxScanner: null,
       proxyServer: {
@@ -181,9 +178,8 @@ test('networkExpanderDefaults: TLS off opens proxy and closes device address', (
     status: minimalHostStatus(),
     proxyEnabled: false,
   });
-  assert.equal(defaults.tlsOpen, true);
+  assert.equal(defaults.tlsOpen, false);
   assert.equal(defaults.proxyOpen, true);
-  assert.equal(defaults.reachabilityOpen, false);
   assert.equal(defaults.lanOpen, false);
 });
 
@@ -219,7 +215,6 @@ test('networkExpanderDefaults: TLS active does not force-open proxy', () => {
     proxyEnabled: true,
   });
   assert.equal(defaults.proxyOpen, false);
-  assert.equal(defaults.reachabilityOpen, false);
 });
 
 test('networkDraftCommitPlacement follows open, rendered draft expanders', () => {
@@ -228,29 +223,26 @@ test('networkDraftCommitPlacement follows open, rendered draft expanders', () =>
       dirty: true,
       lanOpen: false,
       proxyOpen: true,
-      reachabilityOpen: false,
       httpDraftExpandersRendered: false,
     }),
-    { lan: false, proxy: false, reachability: false },
+    { lan: false, proxy: false },
   );
   assert.deepEqual(
     networkDraftCommitPlacement({
       dirty: true,
       lanOpen: false,
       proxyOpen: true,
-      reachabilityOpen: false,
       httpDraftExpandersRendered: true,
     }),
-    { lan: false, proxy: true, reachability: false },
+    { lan: false, proxy: true },
   );
   assert.deepEqual(
     networkDraftCommitPlacement({
       dirty: false,
       lanOpen: true,
       proxyOpen: true,
-      reachabilityOpen: true,
       httpDraftExpandersRendered: true,
     }),
-    { lan: false, proxy: false, reachability: false },
+    { lan: false, proxy: false },
   );
 });

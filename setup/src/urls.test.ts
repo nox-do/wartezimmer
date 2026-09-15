@@ -3,11 +3,8 @@ import test from 'node:test';
 import {
   buildDeviceUrlsFromBaseUrl,
   buildGatewayEnv,
-  fallbackCanonicalBaseUrl,
-  nextCanonicalBaseUrlForLanChange,
   parseHttpBaseUrl,
   resolveCanonicalBaseUrl,
-  resolveCanonicalBaseUrlForLanPlan,
 } from './urls.js';
 
 test('buildDeviceUrlsFromBaseUrl derives role URLs from a base', () => {
@@ -59,88 +56,6 @@ test('resolveCanonicalBaseUrl ignores invalid or non-http CANONICAL_BASE_URL', (
   assert.equal(
     resolveCanonicalBaseUrl(new Map([['CANONICAL_BASE_URL', 'file:///tmp/x']]), '10.0.0.5'),
     'http://10.0.0.5:8080',
-  );
-});
-
-test('nextCanonicalBaseUrlForLanChange rewrites IP-derived bases', () => {
-  assert.equal(
-    nextCanonicalBaseUrlForLanChange({
-      existingCanonical: 'http://192.168.1.10:8080',
-      previousLanIp: '192.168.1.10',
-      nextLanIp: '192.168.1.20',
-    }),
-    'http://192.168.1.20:8080',
-  );
-});
-
-test('nextCanonicalBaseUrlForLanChange keeps custom hostnames', () => {
-  assert.equal(
-    nextCanonicalBaseUrlForLanChange({
-      existingCanonical: 'http://praxis-flow.local:8080',
-      previousLanIp: '192.168.1.10',
-      nextLanIp: '192.168.1.20',
-    }),
-    null,
-  );
-});
-
-test('nextCanonicalBaseUrlForLanChange keeps non-exact IP forms (TLS / other ports)', () => {
-  assert.equal(
-    nextCanonicalBaseUrlForLanChange({
-      existingCanonical: 'https://192.168.1.10',
-      previousLanIp: '192.168.1.10',
-      nextLanIp: '192.168.1.20',
-    }),
-    null,
-  );
-  assert.equal(
-    nextCanonicalBaseUrlForLanChange({
-      existingCanonical: 'http://192.168.1.10',
-      previousLanIp: '192.168.1.10',
-      nextLanIp: '192.168.1.20',
-    }),
-    null,
-  );
-  assert.equal(
-    nextCanonicalBaseUrlForLanChange({
-      existingCanonical: 'http://192.168.1.10:9000',
-      previousLanIp: '192.168.1.10',
-      nextLanIp: '192.168.1.20',
-    }),
-    null,
-  );
-});
-
-test('nextCanonicalBaseUrlForLanChange seeds missing canonical from next LAN IP', () => {
-  assert.equal(
-    nextCanonicalBaseUrlForLanChange({
-      existingCanonical: null,
-      previousLanIp: null,
-      nextLanIp: '192.168.1.13',
-    }),
-    fallbackCanonicalBaseUrl('192.168.1.13'),
-  );
-});
-
-test('resolveCanonicalBaseUrlForLanPlan rewrites IP-derived preview to next LAN IP', () => {
-  assert.equal(
-    resolveCanonicalBaseUrlForLanPlan({
-      existingCanonical: 'http://192.168.1.10:8080',
-      previousLanIp: '192.168.1.10',
-      nextLanIp: '192.168.1.20',
-    }),
-    'http://192.168.1.20:8080',
-  );
-});
-
-test('resolveCanonicalBaseUrlForLanPlan keeps custom hostname for preview', () => {
-  assert.equal(
-    resolveCanonicalBaseUrlForLanPlan({
-      existingCanonical: 'http://praxis-flow.local:8080',
-      previousLanIp: '192.168.1.10',
-      nextLanIp: '192.168.1.20',
-    }),
-    'http://praxis-flow.local:8080',
   );
 });
 

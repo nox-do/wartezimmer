@@ -51,6 +51,11 @@ import { migrateMaintenanceToken, type SetupContext } from './setup-context.js';
 import { maintenanceRequestHeaders } from './maintenance-auth.js';
 import { requirePackageFileExtension } from './package-file-extension.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
+import { listNetworkInterfaces } from './network.js';
+import {
+  maintenanceStaffBindingPreflightError,
+  maintenanceStaffBindingRuntimeError,
+} from './maintenance-staff-binding.js';
 import {
   captureMaintenanceRollback,
   executeMaintenanceRollback,
@@ -703,6 +708,15 @@ async function commitPreparedUpdate(input: {
       cutoverResult.errors,
     );
   }
+  const runtimeBindingError = maintenanceStaffBindingRuntimeError(
+    envAfterWrite,
+    cutoverResult.compose,
+  );
+  if (runtimeBindingError) {
+    throw new UpdatePhaseError(UPDATE_PHASES.healthCheck, [
+      `Update-Runtime-Binding ungültig: ${runtimeBindingError}`,
+    ]);
+  }
   return cutoverResult.compose;
 }
 
@@ -718,6 +732,23 @@ async function applyPreparedUpdate(input: {
   let phase: UpdatePhase = UPDATE_PHASES.stopStack;
   let stackStopped = false;
   let rollback: UpdateRollbackArtifacts | null = null;
+
+  const currentEnv = readEnvMap(input.prepared.envPath);
+  const targetEnv = new Map(
+    Object.entries(
+      buildUpdateEnv(readHostEnvRecord(input.prepared.envPath), input.prepared.manifest),
+    ),
+  );
+  const bindingError = maintenanceStaffBindingPreflightError({
+    currentEnv,
+    targetEnv,
+    interfaces: listNetworkInterfaces(),
+  });
+  if (bindingError) {
+    return failureResult(input.updateId, phase, [
+      `Update vor dem Stack-Stopp gesperrt: ${bindingError}`,
+    ]);
+  }
 
   try {
     const stop = await input.runtime.stopStack(input.prepared.runOptions);

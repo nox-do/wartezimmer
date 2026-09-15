@@ -258,8 +258,6 @@ export type HostNetworkInput = {
    * container/image is missing). Implies restartCompose semantics for compose.
    */
   repairProxy?: boolean;
-  /** Optional product base override (http(s) origin). When omitted, setup derives from LAN plan. */
-  canonicalBaseUrl?: string;
   gateway: GatewayPlanInput;
   /** When omitted, existing PROXY_* / APP_BIND_ADDRESS keys stay unchanged. */
   proxy?: ProxyConfigInput;
@@ -672,8 +670,6 @@ export type SetupPlanInput = {
   lanAppIp: string;
   /** Optional seed for PRACTICE_DISPLAY_NAME; practice truth lives in Ops DB. */
   practiceDisplayName?: string;
-  /** Optional product base override (http(s) origin). When omitted, setup derives from LAN plan. */
-  canonicalBaseUrl?: string;
   gateway?: GatewayPlanInput;
   /** When omitted, existing PROXY_* / APP_BIND_ADDRESS keys stay unchanged. */
   proxy?: ProxyConfigInput;
@@ -711,7 +707,6 @@ export type NormalizedSetupPlanInput = {
   practiceDisplayName: string;
   gateway: GatewayPlan;
   portalAppIp?: string;
-  canonicalBaseUrl?: string;
   delivery?: boolean;
   folders?: StorageFolderPaths;
   /** Present only when the wire body included `proxy`. */

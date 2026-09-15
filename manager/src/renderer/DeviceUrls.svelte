@@ -19,7 +19,7 @@
 
 {#if visible && entries}
   <section class="device-urls" id="device-urls-section">
-    <h2>Geräte-URLs</h2>
+    <h2>Interne Zugänge</h2>
     <ul id="device-urls-list" class="device-urls-list">
       {#each entries as entry (entry.label)}
         <DeviceUrlItem {entry} {onOpenUrl} />

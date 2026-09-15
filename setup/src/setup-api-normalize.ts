@@ -18,7 +18,6 @@ import {
   validateGatewayManagementIp,
 } from '@praxis-flow/server-shared';
 import { DEFAULT_PROXY_HTTP_PORT } from './network-bindings.js';
-import { parseHttpBaseUrl } from './urls.js';
 
 export class SetupApiValidationError extends Error {
   constructor(message: string) {
@@ -224,13 +223,12 @@ export function normalizeSetupPlanInput(body: unknown): NormalizedSetupPlanInput
   const input = coerceSetupPlanInput(body);
   const lanAppIp = requireTrimmedLanAppIp(input.lanAppIp);
   const proxy = normalizeOptionalProxyConfig(input.proxy);
-  const canonicalBaseUrl = normalizeOptionalCanonicalBaseUrl(input.canonicalBaseUrl);
+  rejectCanonicalOverride(body);
   return {
     lanAppIp,
     practiceDisplayName: input.practiceDisplayName?.trim() || '',
     portalAppIp: input.gateway?.portalAppIp?.trim() || undefined,
     gateway: normalizeGatewayPlan(input.gateway, lanAppIp),
-    ...(canonicalBaseUrl ? { canonicalBaseUrl } : {}),
     ...(proxy ? { proxy } : {}),
   };
 }
@@ -254,21 +252,12 @@ export function normalizeApplySetupInput(body: unknown): NormalizedSetupPlanInpu
   };
 }
 
-function normalizeOptionalCanonicalBaseUrl(value: string | undefined): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return undefined;
-  }
-  const parsed = parseHttpBaseUrl(trimmed);
-  if (!parsed) {
+function rejectCanonicalOverride(body: unknown): void {
+  if (body && typeof body === 'object' && 'canonicalBaseUrl' in body) {
     throw new SetupApiValidationError(
-      'canonicalBaseUrl muss eine http(s)-Origin sein (ohne Pfad/Query), z. B. http://192.168.1.10:8080',
+      'canonicalBaseUrl wird nicht mehr unterstützt. Die HTTP-Adresse wird aus IP und Proxy-Modus gebildet; HTTPS-Adressen werden über die HTTPS-Einrichtung verwaltet.',
     );
   }
-  return parsed;
 }
 
 export function normalizeHostNetworkInput(body: unknown): {
@@ -276,20 +265,18 @@ export function normalizeHostNetworkInput(body: unknown): {
   gateway: GatewayPlan;
   restartCompose: boolean;
   repairProxy: boolean;
-  canonicalBaseUrl?: string;
   proxy?: ProxyConfigInput;
 } {
   const input = coerceHostNetworkInput(body);
   const lanAppIp = requireTrimmedLanAppIp(input.lanAppIp);
   const proxy = normalizeOptionalProxyConfig(input.proxy);
-  const canonicalBaseUrl = normalizeOptionalCanonicalBaseUrl(input.canonicalBaseUrl);
+  rejectCanonicalOverride(body);
   const repairProxy = Boolean(input.repairProxy);
   return {
     lanAppIp,
     restartCompose: Boolean(input.restartCompose) || repairProxy,
     repairProxy,
     gateway: normalizeGatewayPlan(requireHostNetworkGateway(input.gateway), lanAppIp),
-    ...(canonicalBaseUrl ? { canonicalBaseUrl } : {}),
     ...(proxy ? { proxy } : {}),
   };
 }

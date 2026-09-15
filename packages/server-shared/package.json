@@ -31,6 +31,10 @@
     "./gateway-bridge": {
       "types": "./dist/gateway-bridge.d.ts",
       "import": "./dist/gateway-bridge.js"
+    },
+    "./device-address": {
+      "types": "./dist/device-address.d.ts",
+      "import": "./dist/device-address.js"
     }
   },
   "scripts": {

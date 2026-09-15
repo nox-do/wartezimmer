@@ -56,7 +56,7 @@
   <div class="lan-ip-status">
     {#if hasEnv && configuredLanIp}
       <div class="lan-ip-status-row">
-        <span class="lan-ip-status-label">Staff-Adresse</span>
+        <span class="lan-ip-status-label">Praxisadresse</span>
         <span class="lan-ip-status-value">{configuredLanIp}</span>
         {#if stale}
           <span class="lan-ip-status-badge lan-ip-status-badge-warn">abweichend</span>
@@ -93,8 +93,8 @@
   {#if candidates.length > 0}
     <p class="lan-ip-prompt">
       {candidates.length === 1
-        ? 'Eine Staff-Adresse gefunden — für Terminal, TV und MFA verwenden:'
-        : 'Staff-Adresse und damit die gewünschte Netzwerkkarte wählen:'}
+        ? 'Eine Praxisadresse gefunden — für Terminal, TV und MFA verwenden:'
+        : 'Praxisadresse und damit die gewünschte Netzwerkkarte wählen:'}
     </p>
     <fieldset class="wizard-fieldset">
       {#each candidates as candidate (candidate.address)}
@@ -112,7 +112,7 @@
       {/each}
     </fieldset>
   {:else}
-    <p class="hint">Keine LAN-Adresse am Host erkannt — bitte IP manuell eingeben.</p>
+    <p class="hint">Keine Netzwerkadresse gefunden. Prüfen Sie die Netzwerkverbindung oder geben Sie eine am Rechner vorhandene IP-Adresse ein.</p>
   {/if}
 
   {#if offerManualEntry}
@@ -155,7 +155,7 @@
         }
       }}
     >
-      {candidates.length === 1 ? 'Gefundene Host-Adresse verwenden' : 'Aus Liste wählen'}
+      {candidates.length === 1 ? 'Gefundene Rechneradresse verwenden' : 'Aus Liste wählen'}
     </button>
   {/if}
 {/if}

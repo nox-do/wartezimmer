@@ -186,27 +186,19 @@ test('normalizeHostNetworkInput keeps explicit gateway bridge URL', () => {
   );
 });
 
-test('normalizeHostNetworkInput accepts optional canonicalBaseUrl origin', () => {
-  assert.deepEqual(
-    normalizeHostNetworkInput({
-      lanAppIp: '10.0.0.5',
-      canonicalBaseUrl: ' http://praxis-flow.local:8080/ ',
-      gateway: { enabled: false },
-    }),
-    {
-      lanAppIp: '10.0.0.5',
-      restartCompose: false,
-      repairProxy: false,
-      canonicalBaseUrl: 'http://praxis-flow.local:8080',
-      gateway: {
-        enabled: false,
-        gatewayInterface: 'eth1',
-        gatewayIp: '192.168.88.1',
-        portalAppIp: '10.0.0.5',
-        authBridgeUrl: '',
-      },
-    },
-  );
+test('network and setup API reject retired canonical overrides', () => {
+  for (const normalize of [
+    normalizeHostNetworkInput,
+    normalizeSetupPlanInput,
+    normalizeApplySetupInput,
+  ]) {
+    for (const canonicalBaseUrl of ['http://practice.local', 'https://staff.example.test', '']) {
+      assert.throws(
+        () => normalize({ lanAppIp: '10.0.0.5', canonicalBaseUrl, gateway: { enabled: false } }),
+        /canonicalBaseUrl wird nicht mehr unterstützt/,
+      );
+    }
+  }
 });
 
 test('normalizeHostNetworkInput accepts optional proxy config', () => {

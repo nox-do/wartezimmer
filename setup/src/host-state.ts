@@ -8,13 +8,18 @@ import {
   composeRestart,
   composeStop,
   composeUp,
+  composeValidateConfig,
   resolveProductComposeServices,
   detectDocker,
   ensureHomeFolders,
   resolveHomeFolders,
   type ComposeStatus,
 } from './docker.js';
-import { withExpectedStackRunning } from './stack-health.js';
+import {
+  waitForExpectedStackHealth,
+  withExpectedStackRunning,
+  type WaitForStackHealthOptions,
+} from './stack-health.js';
 import {
   backupEnvFile,
   readEnvMap,
@@ -46,7 +51,7 @@ import {
 import {
   auditDeliveryImages,
   loadDeliveryImagesFromArchive,
-  resolveDeliveryImageConfig,
+  isDeliveryProfile,
 } from './delivery-images.js';
 import { readManagerState, releaseEnvFromManagerState } from './manager-state.js';
 import {
@@ -93,7 +98,6 @@ import {
   resolveCanonicalBaseUrl,
 } from './urls.js';
 import {
-  assertComposeRemoveSucceeded,
   buildProxyEnvUpdates,
   buildProxyStatus,
   ensureProxyImageAvailable,
@@ -114,7 +118,7 @@ import type { SetupContext } from './setup-context.js';
 import type { ProxyConfigInput } from '@praxis-flow/server-shared';
 import { readTlsStatus, TLS_ENV_KEYS } from './host-tls.js';
 import { PROXY_TLS_RUNTIME_ENV_KEYS } from './proxy-tls.js';
-import { isTlsPreparationInProgressEnv, tlsPreparationLanIpSyncUpdates } from './tls-env.js';
+import { tlsPreparationLanIpSyncUpdates } from './tls-env.js';
 
 export type {
   ApplySetupOptions,
@@ -141,9 +145,12 @@ export type { ComposeStatus } from './docker.js';
 
 /** Optional hooks for tests (compose / port preflight). */
 export type HostWriteRuntimeHooks = {
+  stackHealthWaitOptions?: WaitForStackHealthOptions;
   composePs?: typeof composePs;
   composeRemoveServices?: typeof composeRemoveServices;
+  composeStop?: typeof composeStop;
   composeUp?: typeof composeUp;
+  composeValidateConfig?: typeof composeValidateConfig;
   auditNetworkPrerequisites?: typeof auditNetworkPrerequisites;
   ensureProxyImageAvailable?: typeof ensureProxyImageAvailable;
   validateStaffIp?: (staffIp: string) => string | null;
@@ -159,6 +166,23 @@ function assertStaffIpAvailable(staffIp: string, hooks?: HostWriteRuntimeHooks):
   if (error) {
     throw new SetupApiValidationError(error);
   }
+}
+
+/** No Compose mutation has happened when the proxy image preflight fails. */
+function restoreEnvAfterPreflightFailure(
+  envPath: string,
+  backupPath: string | null,
+  error: unknown,
+  stage = 'Proxy-Image-Prüfung',
+): never {
+  if (backupPath) {
+    fs.copyFileSync(backupPath, envPath);
+  } else {
+    fs.unlinkSync(envPath);
+  }
+  throw new SetupApiValidationError(
+    `${stage} fehlgeschlagen; vorheriger Env-Zustand wurde wiederhergestellt, die Laufzeit blieb unverändert. ${error instanceof Error ? error.message : String(error)}`,
+  );
 }
 
 function failedStaffBindingAudit(input: {
@@ -277,14 +301,10 @@ async function assertDesiredProxyHttpPortAvailable(
   );
 }
 
-function resolveComposeRunOptions(ctx: SetupContext, envMap: Map<string, string>) {
-  const deliveryConfig = resolveDeliveryImageConfig({
-    projectRoot: ctx.home,
-    envMap,
-  });
+function resolveComposeRunOptions(ctx: SetupContext) {
   return {
     projectRoot: ctx.home,
-    delivery: Boolean(deliveryConfig?.appImage),
+    delivery: isDeliveryProfile(ctx.home),
     composeProjectName: ctx.composeProjectName,
   };
 }
@@ -298,8 +318,7 @@ export async function getComposeStatus(ctx: SetupContext): Promise<ComposeStatus
   if (!docker.daemonRunning || !docker.composeAvailable) {
     return { running: false, services: [] };
   }
-  const envMap = readEnvMap(envPath);
-  const runOptions = resolveComposeRunOptions(ctx, envMap);
+  const runOptions = resolveComposeRunOptions(ctx);
   return withExpectedStackRunning(await composePs(runOptions), runOptions);
 }
 
@@ -307,40 +326,81 @@ export async function runComposeAction(
   ctx: SetupContext,
   action: ComposeAction,
   options?: { build?: boolean },
+  hooks?: {
+    composeUp?: typeof composeUp;
+    composeStop?: typeof composeStop;
+    composeRestart?: typeof composeRestart;
+    composePs?: typeof composePs;
+    auditStaffBindings?: typeof auditStaffPublishedBindings;
+  },
 ): Promise<{ ok: boolean; log: string; compose: ComposeStatus }> {
   const envPath = path.join(ctx.home, '.env');
   if (!fs.existsSync(envPath)) {
     throw new Error('ENV_MISSING');
   }
   const envMap = readEnvMap(envPath);
-  const runOptions = resolveComposeRunOptions(ctx, envMap);
+  const runOptions = resolveComposeRunOptions(ctx);
+  const runComposeUp = hooks?.composeUp ?? composeUp;
+  const runComposeStop = hooks?.composeStop ?? composeStop;
+  const runComposeRestart = hooks?.composeRestart ?? composeRestart;
+  const runComposePs = hooks?.composePs ?? composePs;
 
   let result: { ok: boolean; log: string };
   if (action === 'start') {
-    const up = await composeUp({
+    const up = await runComposeUp({
       ...runOptions,
       build: Boolean(options?.build),
     });
     result = { ok: up.ok, log: up.log };
   } else if (action === 'stop') {
-    result = await composeStop(runOptions);
+    result = await runComposeStop(runOptions);
   } else {
-    const current = await composePs(runOptions);
+    const current = await runComposePs(runOptions);
     if (!current.running) {
-      const up = await composeUp({
+      const up = await runComposeUp({
         ...runOptions,
         build: Boolean(options?.build),
       });
       result = { ok: up.ok, log: up.log };
     } else {
-      result = await composeRestart({
+      result = await runComposeRestart({
         ...runOptions,
         services: resolveProductComposeServices(runOptions),
       });
     }
   }
 
-  const compose = withExpectedStackRunning(await composePs(runOptions), runOptions);
+  let compose = withExpectedStackRunning(await runComposePs(runOptions), runOptions);
+  if (result.ok && action !== 'stop') {
+    const proxy = requireProxyConfig(envMap);
+    const bindingError = failedStaffBindingAudit({
+      compose,
+      env: envMap,
+      staffIp: envMap.get('SETUP_LAN_APP_IP')?.trim() || '',
+      proxyEnabled: proxy.enabled,
+      hooks: { auditStaffBindings: hooks?.auditStaffBindings },
+    });
+    if (bindingError) {
+      const stopped = await runComposeStop({
+        ...runOptions,
+        services: resolveProductComposeServices(runOptions),
+      });
+      compose = withExpectedStackRunning(await runComposePs(runOptions), runOptions);
+      return {
+        ok: false,
+        log: [
+          result.log,
+          `Runtime-Bindung unsicher: ${bindingError}`,
+          stopped.ok
+            ? 'Produktstack wurde vorsorglich gestoppt.'
+            : `Produktstack konnte nicht vollständig gestoppt werden: ${stopped.log}`,
+        ]
+          .filter(Boolean)
+          .join('\n'),
+        compose,
+      };
+    }
+  }
   return { ...result, compose };
 }
 
@@ -352,10 +412,9 @@ export async function getComposeLogs(
   if (!fs.existsSync(envPath)) {
     return { ok: false, log: 'no .env — cannot fetch compose logs' };
   }
-  const envMap = readEnvMap(envPath);
   const service = options?.service?.trim();
   const result = await composeLogs({
-    ...resolveComposeRunOptions(ctx, envMap),
+    ...resolveComposeRunOptions(ctx),
     service,
     tail: options?.tail,
   });
@@ -388,8 +447,7 @@ export async function resetStaffPinsAndRestart(ctx: SetupContext): Promise<Reset
     };
   }
 
-  const envMap = readEnvMap(envPath);
-  const runOptions = resolveComposeRunOptions(ctx, envMap);
+  const runOptions = resolveComposeRunOptions(ctx);
   const lines: string[] = [];
 
   const current = await composePs(runOptions);
@@ -540,13 +598,13 @@ export async function readComposeForHost(
   ctx: SetupContext,
   envExists: boolean,
   docker: DockerStatus,
-  envMap: Map<string, string>,
+  _envMap: Map<string, string>,
 ): Promise<ComposeStatus | null> {
   if (!envExists || !docker.daemonRunning || !docker.composeAvailable) {
     return null;
   }
   try {
-    const runOptions = resolveComposeRunOptions(ctx, envMap);
+    const runOptions = resolveComposeRunOptions(ctx);
     return withExpectedStackRunning(await composePs(runOptions), runOptions);
   } catch {
     return { running: false, services: [] };
@@ -723,15 +781,11 @@ export function buildSetupPlan(
   input: NormalizedSetupPlanInput,
   env: Map<string, string> | null = null,
 ): SetupPlan {
-  const previousLanIp = env ? pickLanIpFromEnv(env) : null;
   const { proxy } = resolveProxyForHostWrite(env, input.proxy);
   const canonicalBaseUrl = resolveCanonicalBaseUrlForProxyPlan({
     proxy,
     existingCanonical: env?.get('CANONICAL_BASE_URL'),
-    previousLanIp,
     nextLanIp: input.lanAppIp.trim(),
-    overrideCanonical: input.canonicalBaseUrl,
-    tlsPreparationActive: env ? isTlsPreparationInProgressEnv(env) : false,
   });
   const deviceUrls = buildDeviceUrlsFromBaseUrl(canonicalBaseUrl);
   const gateway: GatewayPlan = {
@@ -770,7 +824,6 @@ export async function applySetupPlan(
     preserve: Boolean(input.preserveEnv),
   });
   const releaseEnv = releaseEnvFromManagerState(readManagerState(projectRoot));
-  const previousLanIp = pickLanIpFromEnv(existingBefore);
   const { proxy, writeEnv: writeProxyEnv } = resolveProxyForHostWrite(existingBefore, input.proxy);
   // Image always; runtime PROXY_* only when wire omits proxy (else overrides cannot flip enable).
   const preserveExistingKeys = [
@@ -791,10 +844,7 @@ export async function applySetupPlan(
   const canonicalToWrite = resolveCanonicalBaseUrlForProxyPlan({
     proxy,
     existingCanonical: existingBefore.get('CANONICAL_BASE_URL'),
-    previousLanIp,
     nextLanIp: input.lanAppIp.trim(),
-    overrideCanonical: input.canonicalBaseUrl,
-    tlsPreparationActive: isTlsPreparationInProgressEnv(existingBefore),
   });
   const deviceUrls = buildDeviceUrlsFromBaseUrl(canonicalToWrite);
   const gateway: GatewayPlan = {
@@ -805,15 +855,14 @@ export async function applySetupPlan(
 
   const runComposePs = hooks?.composePs ?? composePs;
   const runComposeRemove = hooks?.composeRemoveServices ?? composeRemoveServices;
+  const runComposeStop = hooks?.composeStop ?? composeStop;
   const runComposeUp = hooks?.composeUp ?? composeUp;
 
   if (input.runCompose && proxy.enabled) {
     assertStaffIpAvailable(input.lanAppIp.trim(), hooks);
   }
 
-  const deliveryEarly = Boolean(
-    resolveDeliveryImageConfig({ projectRoot, envMap: existingBefore })?.appImage || input.delivery,
-  );
+  const deliveryEarly = Boolean(isDeliveryProfile(projectRoot) || input.delivery);
   const runOptionsEarly = {
     projectRoot,
     delivery: deliveryEarly,
@@ -830,28 +879,14 @@ export async function applySetupPlan(
     );
   }
 
-  if (input.runCompose) {
-    if (
-      !proxy.enabled &&
-      writeProxyEnv &&
-      (existingBefore.has('PROXY_ENABLED') ||
-        existingBefore.has('PROXY_MODE') ||
-        existingBefore.get('APP_BIND_ADDRESS') === '127.0.0.1')
-    ) {
-      const removed = await runComposeRemove(
-        {
-          ...runOptionsEarly,
-          withProxy: true,
-        },
-        ['proxy'],
-      );
-      try {
-        assertComposeRemoveSucceeded(removed);
-      } catch (error) {
-        mapProxyError(error);
-      }
-    }
-  }
+  const removeProxyAfterWrite = Boolean(
+    input.runCompose &&
+    !proxy.enabled &&
+    writeProxyEnv &&
+    (existingBefore.has('PROXY_ENABLED') ||
+      existingBefore.has('PROXY_MODE') ||
+      existingBefore.get('APP_BIND_ADDRESS') === '127.0.0.1'),
+  );
 
   const { envPath, backupPath, keysWritten } = writeEnvFromExample(
     projectRoot,
@@ -890,32 +925,27 @@ export async function applySetupPlan(
 
   let compose: Awaited<ReturnType<typeof composeUp>> | null = null;
   if (input.runCompose) {
-    const delivery = Boolean(
-      resolveDeliveryImageConfig({ projectRoot, envMap: envAfterWrite })?.appImage ||
-      input.delivery,
-    );
+    const delivery = Boolean(isDeliveryProfile(projectRoot) || input.delivery);
     const runOptions = {
       projectRoot,
       delivery,
       composeProjectName: ctx.composeProjectName,
     };
     const rollbackFailedSetupApply = async (reason: string): Promise<never> => {
-      let cleanupLog = '';
-      if (!backupPath) {
-        const cleanup = await runComposeRemove(
-          { ...runOptions, withProxy: proxy.enabled },
-          resolveProductComposeServices({ ...runOptions, withProxy: proxy.enabled }),
-        );
-        cleanupLog = cleanup.ok ? cleanup.log : `Cleanup fehlgeschlagen: ${cleanup.log}`;
-      } else if (proxy.enabled && !proxyWasEnabled) {
-        const cleanup = await runComposeRemove({ ...runOptions, withProxy: true }, ['proxy']);
-        cleanupLog = cleanup.ok ? cleanup.log : `Proxy-Cleanup fehlgeschlagen: ${cleanup.log}`;
-      }
+      const cleanup = await runComposeRemove(
+        { ...runOptions, withProxy: proxy.enabled || proxyWasEnabled },
+        resolveProductComposeServices({
+          ...runOptions,
+          withProxy: proxy.enabled || proxyWasEnabled,
+        }),
+      );
+      const cleanupLog = cleanup.ok ? cleanup.log : `Cleanup fehlgeschlagen: ${cleanup.log}`;
       if (backupPath) {
         fs.copyFileSync(backupPath, envPath);
-      } else if (fs.existsSync(envPath)) {
+      } else if (cleanup.ok && fs.existsSync(envPath)) {
         fs.unlinkSync(envPath);
       }
+      let rollbackOk = cleanup.ok;
       let rollbackLog = '';
       if (composeBeforeApply?.running && backupPath) {
         const rollback = await runComposeUp({
@@ -925,6 +955,50 @@ export async function applySetupPlan(
           withProxy: proxyWasEnabled,
         });
         rollbackLog = rollback.log;
+        rollbackOk = rollbackOk && rollback.ok;
+      } else if (backupPath) {
+        const stopped = await runComposeStop({
+          ...runOptionsEarly,
+          withProxy: proxyWasEnabled,
+          services: resolveProductComposeServices({
+            ...runOptionsEarly,
+            withProxy: proxyWasEnabled,
+          }),
+        });
+        rollbackLog = stopped.log;
+        rollbackOk = rollbackOk && stopped.ok;
+      }
+      if (backupPath) {
+        if (rollbackOk && composeBeforeApply?.running) {
+          const health = await waitForExpectedStackHealth(
+            runComposePs,
+            { ...runOptionsEarly, withProxy: proxyWasEnabled },
+            hooks?.stackHealthWaitOptions,
+          );
+          rollbackOk = health.ok;
+          if (!health.ok) rollbackLog = [rollbackLog, ...health.errors].filter(Boolean).join('\n');
+        }
+        const restoredCompose = await runComposePs({
+          ...runOptionsEarly,
+          withProxy: proxyWasEnabled,
+        });
+        const restoredExpected = withExpectedStackRunning(restoredCompose, {
+          ...runOptionsEarly,
+          withProxy: proxyWasEnabled,
+        });
+        rollbackOk =
+          rollbackOk &&
+          (composeBeforeApply?.running ? restoredExpected.running : !restoredCompose.running);
+        if (rollbackOk && composeBeforeApply?.running && proxyWasEnabled) {
+          rollbackOk =
+            failedStaffBindingAudit({
+              compose: restoredCompose,
+              env: existingBefore,
+              staffIp: existingBefore.get('SETUP_LAN_APP_IP')?.trim() || '',
+              proxyEnabled: true,
+              hooks,
+            }) === null;
+        }
       }
       const detail = [
         reason,
@@ -933,15 +1007,36 @@ export async function applySetupPlan(
       ]
         .filter(Boolean)
         .join('\n');
+      const outcome = rollbackOk
+        ? 'vorheriger Zustand wurde wiederhergestellt.'
+        : backupPath
+          ? 'Env wurde restauriert, die Laufzeit jedoch nicht vollständig wiederhergestellt.'
+          : 'Teilzustand konnte nicht vollständig bereinigt werden; die .env bleibt für die Wiederherstellung erhalten.';
       throw new SetupApiValidationError(
-        `Setup konnte das Staff-Binding nicht anwenden; vorheriger Zustand wurde wiederhergestellt.${detail ? ` ${detail}` : ''}`,
+        `Setup konnte das Staff-Binding nicht anwenden; ${outcome}${detail ? ` ${detail}` : ''}`,
       );
     };
+    try {
+      const configCheck = await (hooks?.composeValidateConfig ?? composeValidateConfig)({
+        ...runOptions,
+        withGateway: input.gateway.enabled,
+        withProxy: proxy.enabled,
+      });
+      if (!configCheck.ok) throw new Error(configCheck.log);
+    } catch (error) {
+      restoreEnvAfterPreflightFailure(envPath, backupPath, error, 'Compose-Konfigurationsprüfung');
+    }
+    if (removeProxyAfterWrite) {
+      const removed = await runComposeRemove({ ...runOptionsEarly, withProxy: true }, ['proxy']);
+      if (!removed.ok) {
+        await rollbackFailedSetupApply(removed.log || 'Proxy konnte nicht entfernt werden.');
+      }
+    }
     if (proxy.enabled) {
       try {
         await ensureProxyImageForCompose(envAfterWrite, hooks);
       } catch (error) {
-        await rollbackFailedSetupApply(error instanceof Error ? error.message : String(error));
+        restoreEnvAfterPreflightFailure(envPath, backupPath, error);
       }
     }
     compose = await runComposeUp({
@@ -1014,8 +1109,7 @@ export async function loadDeliveryImages(
   let restartLog: string | null = null;
 
   if (input.restartCompose) {
-    const envMap = readEnvMap(result.envPath);
-    const runOptions = resolveComposeRunOptions(ctx, envMap);
+    const runOptions = resolveComposeRunOptions(ctx);
     const up = await composeUp({
       ...runOptions,
       build: false,
@@ -1039,7 +1133,6 @@ export type SaveHostNetworkInput = {
   restartCompose?: boolean;
   /** Force proxy image ensure + compose up while proxy stays enabled. */
   repairProxy?: boolean;
-  canonicalBaseUrl?: string;
   proxy?: ProxyConfigInput;
 };
 
@@ -1059,15 +1152,15 @@ export async function saveHostNetwork(
     portalAppIp: input.gateway.portalAppIp.trim() || lanAppIp,
   };
   const existing = readEnvMap(envPath);
-  const runOptions = resolveComposeRunOptions(ctx, existing);
+  const runOptions = resolveComposeRunOptions(ctx);
   const runComposePs = hooks?.composePs ?? composePs;
   const runComposeRemove = hooks?.composeRemoveServices ?? composeRemoveServices;
+  const runComposeStop = hooks?.composeStop ?? composeStop;
   const runComposeUp = hooks?.composeUp ?? composeUp;
   const composeBefore = await runComposePs(runOptions);
   const stackWasRunning = composeBefore.running;
   const repairProxy = Boolean(input.repairProxy);
 
-  const previousLanIp = pickLanIpFromEnv(existing);
   const { proxy, writeEnv: writeProxyEnv } = resolveProxyForHostWrite(existing, input.proxy);
   const proxyWasEnabled = isProxyCurrentlyEnabled(existing);
 
@@ -1093,10 +1186,7 @@ export async function saveHostNetwork(
   const canonicalBaseUrl = resolveCanonicalBaseUrlForProxyPlan({
     proxy,
     existingCanonical: existing.get('CANONICAL_BASE_URL'),
-    previousLanIp,
     nextLanIp: lanAppIp,
-    overrideCanonical: input.canonicalBaseUrl,
-    tlsPreparationActive: isTlsPreparationInProgressEnv(existing),
   });
   const deviceUrls = buildDeviceUrlsFromBaseUrl(canonicalBaseUrl);
   const updates: Record<string, string> = {
@@ -1129,18 +1219,6 @@ export async function saveHostNetwork(
   // Repair must compose-up even when the stack was stopped (missing image/container).
   const shouldComposeUp = proxyActions.composeUp || (repairProxy && proxy.enabled);
 
-  if (proxyActions.removeProxyFirst) {
-    // Remove while forcing the overlay — must happen before env drops PROXY_ENABLED
-    // for compose file resolution (withProxy: true keeps the overlay either way).
-    const removed = await runComposeRemove({ ...runOptions, withProxy: true }, ['proxy']);
-    try {
-      assertComposeRemoveSucceeded(removed);
-    } catch (error) {
-      mapProxyError(error);
-    }
-    restartLog = removed.log || null;
-  }
-
   const backup = backupEnvFile(ctx.home);
   const { keysWritten } = updateEnvKeys(envPath, updates);
   if (!gateway.enabled) {
@@ -1149,16 +1227,18 @@ export async function saveHostNetwork(
   }
 
   const rollbackFailedBindingApply = async (reason: string): Promise<never> => {
-    let cleanupLog = '';
-    if (proxy.enabled && !proxyWasEnabled) {
-      const cleanup = await runComposeRemove(
-        { ...resolveComposeRunOptions(ctx, readEnvMap(envPath)), withProxy: true },
-        ['proxy'],
-      );
-      cleanupLog = cleanup.ok ? cleanup.log : `Proxy-Cleanup fehlgeschlagen: ${cleanup.log}`;
-    }
+    const failedRunOptions = resolveComposeRunOptions(ctx);
+    const cleanup = await runComposeRemove(
+      { ...failedRunOptions, withProxy: proxy.enabled || proxyWasEnabled },
+      resolveProductComposeServices({
+        ...failedRunOptions,
+        withProxy: proxy.enabled || proxyWasEnabled,
+      }),
+    );
+    const cleanupLog = cleanup.ok ? cleanup.log : `Cleanup fehlgeschlagen: ${cleanup.log}`;
     fs.copyFileSync(backup.backupPath, envPath);
-    let rollbackLog = '';
+    let rollbackOk = cleanup.ok;
+    let rollbackLog: string;
     if (stackWasRunning) {
       const rollback = await runComposeUp({
         ...runOptions,
@@ -1167,6 +1247,41 @@ export async function saveHostNetwork(
         withProxy: proxyWasEnabled,
       });
       rollbackLog = rollback.log;
+      rollbackOk = rollbackOk && rollback.ok;
+    } else {
+      const stopped = await runComposeStop({
+        ...runOptions,
+        withProxy: proxyWasEnabled,
+        services: resolveProductComposeServices({ ...runOptions, withProxy: proxyWasEnabled }),
+      });
+      rollbackLog = stopped.log;
+      rollbackOk = rollbackOk && stopped.ok;
+    }
+    if (rollbackOk && stackWasRunning) {
+      const health = await waitForExpectedStackHealth(
+        runComposePs,
+        { ...runOptions, withProxy: proxyWasEnabled },
+        hooks?.stackHealthWaitOptions,
+      );
+      rollbackOk = health.ok;
+      if (!health.ok) rollbackLog = [rollbackLog, ...health.errors].filter(Boolean).join('\n');
+    }
+    const restoredCompose = await runComposePs({ ...runOptions, withProxy: proxyWasEnabled });
+    const restoredExpected = withExpectedStackRunning(restoredCompose, {
+      ...runOptions,
+      withProxy: proxyWasEnabled,
+    });
+    rollbackOk =
+      rollbackOk && (stackWasRunning ? restoredExpected.running : !restoredCompose.running);
+    if (rollbackOk && stackWasRunning && proxyWasEnabled) {
+      rollbackOk =
+        failedStaffBindingAudit({
+          compose: restoredCompose,
+          env: existing,
+          staffIp: existing.get('SETUP_LAN_APP_IP')?.trim() || '',
+          proxyEnabled: true,
+          hooks,
+        }) === null;
     }
     const detail = [
       reason,
@@ -1175,10 +1290,38 @@ export async function saveHostNetwork(
     ]
       .filter(Boolean)
       .join('\n');
+    const outcome = rollbackOk
+      ? 'vorherige Konfiguration und Laufzeit wurden wiederhergestellt.'
+      : 'Env wurde restauriert, die Laufzeit jedoch nicht vollständig wiederhergestellt.';
     throw new SetupApiValidationError(
-      `Staff-Binding konnte nicht angewendet werden; vorherige Konfiguration wurde wiederhergestellt.${detail ? ` ${detail}` : ''}`,
+      `Staff-Binding konnte nicht angewendet werden; ${outcome}${detail ? ` ${detail}` : ''}`,
     );
   };
+
+  if (shouldComposeUp || proxyActions.removeProxyFirst) {
+    try {
+      const configCheck = await (hooks?.composeValidateConfig ?? composeValidateConfig)({
+        ...resolveComposeRunOptions(ctx),
+        withGateway: gateway.enabled,
+        withProxy: proxy.enabled,
+      });
+      if (!configCheck.ok) throw new Error(configCheck.log);
+    } catch (error) {
+      restoreEnvAfterPreflightFailure(
+        envPath,
+        backup.backupPath,
+        error,
+        'Compose-Konfigurationsprüfung',
+      );
+    }
+  }
+  if (proxyActions.removeProxyFirst) {
+    const removed = await runComposeRemove({ ...runOptions, withProxy: true }, ['proxy']);
+    restartLog = removed.log || null;
+    if (!removed.ok) {
+      await rollbackFailedBindingApply(removed.log || 'Proxy konnte nicht entfernt werden.');
+    }
+  }
 
   if (shouldComposeUp) {
     const envAfter = readEnvMap(envPath);
@@ -1186,11 +1329,11 @@ export async function saveHostNetwork(
       try {
         await ensureProxyImageForCompose(envAfter, hooks);
       } catch (error) {
-        await rollbackFailedBindingApply(error instanceof Error ? error.message : String(error));
+        restoreEnvAfterPreflightFailure(envPath, backup.backupPath, error);
       }
     }
     const up = await runComposeUp({
-      ...resolveComposeRunOptions(ctx, envAfter),
+      ...resolveComposeRunOptions(ctx),
       build: false,
       withGateway: gateway.enabled,
       withProxy: proxy.enabled,
@@ -1202,7 +1345,7 @@ export async function saveHostNetwork(
     gatewayComposeSkipped = up.gatewaySkipped;
     restartLog = [restartLog, up.log].filter(Boolean).join('\n') || null;
     compose = await runComposePs({
-      ...resolveComposeRunOptions(ctx, envAfter),
+      ...resolveComposeRunOptions(ctx),
       withProxy: proxy.enabled,
     });
     const auditError = failedStaffBindingAudit({
@@ -1240,8 +1383,7 @@ export async function saveStorageFolders(
   }
 
   const folders = normalizeStorageFoldersInput(input);
-  const envMap = readEnvMap(envPath);
-  const runOptions = resolveComposeRunOptions(ctx, envMap);
+  const runOptions = resolveComposeRunOptions(ctx);
   const composeBefore = await composePs(runOptions);
   const stackWasRunning = composeBefore.running;
 

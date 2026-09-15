@@ -33,8 +33,6 @@ test('createInitialWizardFields combines LAN and storage defaults', () => {
     customLanIp: '',
     importsHostPath: '/data/imports',
     exportsHostPath: '/data/exports',
-    reachabilityMode: 'lan-ip',
-    customHostname: '',
     proxyEnabled: false,
   });
 });

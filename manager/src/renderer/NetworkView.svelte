@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
    * Network tab layout:
-   * 1 LAN inklusive Host-Prüfungen → 2 Geräte-Adresse → 3 Browserzugriff → 4 HTTPS → 5 Erläuterung
-   * Draft apply lives in the open LAN / Proxy / Geräte-Adresse expander.
+   * 1 IP und Geräteadresse inklusive Prüfungen → 2 Proxy → 3 HTTPS → 4 Erläuterung
+   * Draft apply lives in the open LAN / Proxy expander.
    *
    * Shell: configSnapshot + runtimeSnapshot via $derived / selectors.
    * Controller: draft + phase/notice + network snapshot; hydration via syncFromConfig.
@@ -28,7 +28,6 @@
     networkLanSubtitle,
     networkPhaseProgressText,
     networkProxySubtitle,
-    networkReachabilitySubtitle,
     networkWarningText,
     NETWORK_STACK_STOPPED_VERIFY_HINT,
     proxyNeedsRestore,
@@ -37,15 +36,20 @@
   import { effectiveCompose, effectiveConfiguredLanIp } from './host-snapshot-selectors.js';
   import { resolvedLanIp } from './wizard-state.js';
   import { managerShell } from './manager-shell-state.svelte.js';
+  import { deriveOverallStatus } from './health-header.js';
+  import { statusOverallNoticeClass } from './status-view-model.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import LoadingOverlay from './LoadingOverlay.svelte';
   import MaintenanceSection from './MaintenanceSection.svelte';
+  import NetworkAccessSummary from './NetworkAccessSummary.svelte';
+  import { networkAccessSummary } from './network-access-view-model.js';
   import NetworkTopologyDiagram from './NetworkTopologyDiagram.svelte';
   import NetworkBindingChecks from './NetworkBindingChecks.svelte';
   import ProxySettings from './ProxySettings.svelte';
   import ProxyRecoveryAction from './ProxyRecoveryAction.svelte';
   import LanIpPanel from './LanIpPanel.svelte';
-  import ReachabilityPanel from './ReachabilityPanel.svelte';
+  import DeviceAddressPreview from './DeviceAddressPreview.svelte';
+  import { draftCanonicalBaseUrl, existingHttpHostname } from './reachability.js';
   import TlsNetworkPanel from './TlsNetworkPanel.svelte';
   import { createTlsNetworkController, tlsNetworkLocksHost, type TlsNetworkController, type TlsNetworkState } from './tls-network-controller.js';
   import { tlsNetworkSubtitle } from './tls-network-view-model.js';
@@ -64,9 +68,8 @@
 
   let lanOpen = $state(false);
   let proxyOpen = $state(false);
-  let reachabilityOpen = $state(false);
   let topologyOpen = $state(false);
-  let draftOutcomeHost = $state<'lan' | 'proxy' | 'reachability' | null>(null);
+  let draftOutcomeHost = $state<'lan' | 'proxy' | 'repair' | null>(null);
 
   let controller = $state<NetworkController | null>(null);
   let lastSessionGeneration = $state<number | null>(null);
@@ -112,7 +115,6 @@
     });
     lanOpen = defaults.lanOpen;
     proxyOpen = defaults.proxyOpen;
-    reachabilityOpen = defaults.reachabilityOpen;
     topologyOpen = defaults.topologyOpen;
     tlsOpen = defaults.tlsOpen;
   }
@@ -146,18 +148,18 @@
     controller?.patchFields(patch);
   }
 
-  function applyDraftFrom(host: 'lan' | 'proxy' | 'reachability'): void {
+  function applyDraftFrom(host: 'lan' | 'proxy'): void {
     draftOutcomeHost = host;
     controller?.applyAndVerify();
   }
 
-  function discardDraftFrom(host: 'lan' | 'proxy' | 'reachability'): void {
+  function discardDraftFrom(host: 'lan' | 'proxy'): void {
     draftOutcomeHost = host;
     controller?.discardDraft();
   }
 
   const dirty = $derived(
-    snapshot ? hostNetworkChanged(snapshot, configSnapshot, snapshot.network) : false,
+    snapshot ? hostNetworkChanged(snapshot, configSnapshot) : false,
   );
 
   const commitPlacement = $derived(
@@ -165,7 +167,6 @@
       dirty,
       lanOpen,
       proxyOpen,
-      reachabilityOpen,
       httpDraftExpandersRendered: !tlsCutoverApplied,
     }),
   );
@@ -200,6 +201,16 @@
     snapshot
       ? resolvedLanIp(snapshot) || effectiveConfiguredLanIp(configSnapshot, runtimeSnapshot)
       : null,
+  );
+
+  const accessSummary = $derived(configSnapshot ? networkAccessSummary(configSnapshot, runtimeSnapshot, managerShell.runtimeError) : null);
+
+  const overall = $derived(
+    managerShell.runtimeError
+      ? ({ text: 'Unbekannt', level: 'bad' } as const)
+      : runtimeSnapshot
+        ? deriveOverallStatus(runtimeSnapshot)
+        : null,
   );
 
   const savedUrl = $derived(savedDeviceBaseUrl(configSnapshot));
@@ -284,7 +295,7 @@
   <LoadingOverlay loading={viewLoading} />
 
   {#if configSnapshot && snapshot}
-    {#snippet draftCommitActions(host: 'lan' | 'proxy' | 'reachability')}
+    {#snippet draftCommitActions(host: 'lan' | 'proxy')}
       {#if warningText}
         <p class="hint">{warningText}</p>
       {/if}
@@ -307,12 +318,13 @@
         </button>
       </div>
     {/snippet}
-    {#snippet draftOutcome(host: 'lan' | 'proxy' | 'reachability')}
+    {#snippet draftOutcome(host: 'lan' | 'proxy' | 'repair')}
       {#if draftOutcomeHost === host}
         {#if progressText}
-          <p class="maintenance-backup-status">{progressText}</p>
+          <p class="maintenance-backup-status" role="status">{progressText}</p>
         {:else if snapshot?.notice}
           <p
+            role="status"
             class={snapshot.notice.tone === 'error'
               ? 'error'
               : snapshot.notice.tone === 'warning'
@@ -324,20 +336,48 @@
         {/if}
       {/if}
     {/snippet}
+    {#if overall && overall.level !== 'ok'}
+      <p class={statusOverallNoticeClass(overall.level)} aria-live="polite">
+        {overall.text}
+      </p>
+    {/if}
+    <NetworkAccessSummary
+      status={configSnapshot}
+      runtime={runtimeSnapshot}
+      runtimeError={managerShell.runtimeError}
+    />
+    {#if showProxyRestore || draftOutcomeHost === 'repair'}
+      <section class="panel-section" aria-label="Zugriff wiederherstellen">
+        <h2>Wiederherstellung des Zugangs</h2>
+        {#if showProxyRestore}
+          <ProxyRecoveryAction
+            disabled={busy || dirty || Boolean(managerShell.runtimeError)}
+            onRestore={() => {
+              draftOutcomeHost = 'repair';
+              controller?.restoreProxy();
+            }}
+          />
+          {#if dirty}
+            <p class="hint">Übernehmen oder verwerfen Sie zuerst die Adressänderungen.</p>
+          {/if}
+        {/if}
+        {@render draftOutcome('repair')}
+      </section>
+    {/if}
     <section class="panel-section panel-section--network">
       <div class="maintenance-accordion">
         <MaintenanceSection
           open={lanOpen}
-          title="Staff-Adresse dieses Rechners"
+          title="Praxisadresse dieses Rechners"
           subtitle={`${networkLanSubtitle(configSnapshot, snapshot)} · ${networkHostChecksSubtitle(hostChecks)}`}
           onToggle={() => {
             lanOpen = !lanOpen;
           }}
         >
           <p class="hint">
-            Diese IP wird beim Proxy als einzige Staff-Bindung verwendet. Ohne Proxy dient sie der
-            Geräte-Adresse, während Port 8080 für Demo und Erststart auf allen Netzwerkkarten offen ist.
-            Wenn die IP nicht mehr stimmt, hier anpassen und übernehmen.
+            Wählen Sie die IP-Adresse dieses Rechners, über die Ihre Praxisgeräte zugreifen sollen.
+            Bei eingeschaltetem Proxy wird der Zugriff an diese Adresse gebunden. Ohne Proxy bleibt
+            Port 8080 auf allen Netzwerkkarten erreichbar.
           </p>
           <LanIpPanel
             state={snapshot}
@@ -345,6 +385,19 @@
             status={configSnapshot}
             disabled={busy}
             onChange={patchFields}
+          />
+          <DeviceAddressPreview
+            address={tlsPreparationActive || tlsCutoverApplied ? savedUrl : draftCanonicalBaseUrl(snapshot, configSnapshot)}
+            savedAddress={savedUrl}
+            legacy={!tlsPreparationActive && !tlsCutoverApplied && Boolean(existingHttpHostname(configSnapshot))}
+            disabled={busy}
+            checking={snapshot.phase === 'checking'}
+            canVerify={Boolean(compose?.running)}
+            verifyHint={NETWORK_STACK_STOPPED_VERIFY_HINT}
+            onVerify={() => {
+              draftOutcomeHost = 'lan';
+              controller?.verifyActiveConfiguration(savedUrl);
+            }}
           />
           <h3 class="wizard-subheading">Prüfungen für Adresse und Ports</h3>
           <NetworkBindingChecks checks={hostChecks} />
@@ -355,51 +408,6 @@
         </MaintenanceSection>
 
         {#if !tlsCutoverApplied}
-          <MaintenanceSection
-            open={reachabilityOpen}
-            title="Adresse für Terminal, TV und MFA"
-            subtitle={tlsPreparationActive
-              ? 'HTTPS-Adresse wird separat verwaltet'
-              : networkReachabilitySubtitle(configSnapshot)}
-            onToggle={() => {
-              reachabilityOpen = !reachabilityOpen;
-            }}
-          >
-            {#if tlsPreparationActive}
-              <p class="hint">
-                Die Geräte-Adresse ist während der HTTPS-Vorbereitung gesperrt. Die
-                HTTPS-Adresse wird unter dem HTTPS-Block verwaltet.
-              </p>
-              {#if commitPlacement.reachability}
-                {@render draftCommitActions('reachability')}
-              {/if}
-              {@render draftOutcome('reachability')}
-            {:else}
-              <!-- OPEN: guest-WLAN / Private-DNS help belongs in this expander (also without TLS). See ReachabilityPanel.svelte. -->
-              <ReachabilityPanel
-                state={snapshot}
-                network={snapshot.network}
-                disabled={busy}
-                savedBaseUrl={savedUrl}
-                verifyBusy={snapshot.phase === 'checking'}
-                verifyEnabled={Boolean(compose?.running)}
-                verifyDisabledHint={NETWORK_STACK_STOPPED_VERIFY_HINT}
-                onChange={patchFields}
-                onVerifySaved={() => {
-                  draftOutcomeHost = 'reachability';
-                  controller?.verifyActiveConfiguration(savedUrl);
-                }}
-              >
-                {#snippet afterPreview()}
-                  {#if commitPlacement.reachability}
-                    {@render draftCommitActions('reachability')}
-                  {/if}
-                {/snippet}
-              </ReachabilityPanel>
-              {@render draftOutcome('reachability')}
-            {/if}
-          </MaintenanceSection>
-
           <MaintenanceSection
             open={proxyOpen}
             title={NETWORK_PROXY_EXPANDER_TITLE}
@@ -415,20 +423,12 @@
             />
             {#if tlsPreparationActive}
               <p class="hint">
-                Port 80 bleibt während der HTTPS-Vorbereitung unverändert.
+                Der Proxy bleibt während der HTTPS-Vorbereitung eingeschaltet. Um diese Auswahl zu ändern,
+                verwerfen Sie zuerst die Vorbereitung im Abschnitt „HTTPS“.
               </p>
             {/if}
             {#if commitPlacement.proxy}
               {@render draftCommitActions('proxy')}
-            {/if}
-            {#if showProxyRestore}
-              <ProxyRecoveryAction
-                disabled={busy}
-                onRestore={() => {
-                  draftOutcomeHost = 'proxy';
-                  controller?.restoreProxy();
-                }}
-              />
             {/if}
             {@render draftOutcome('proxy')}
           </MaintenanceSection>
@@ -461,12 +461,19 @@
         <MaintenanceSection
           open={topologyOpen}
           title="Erläuterung zum Netz"
-          subtitle="Portal mit Praxis-IT-Captive oder nur Praxis-intern"
+          subtitle="Verbindungsweg und Hinweise für die Praxis-IT"
           onToggle={() => {
             topologyOpen = !topologyOpen;
           }}
         >
-          <NetworkTopologyDiagram lanIp={diagramLanIp} />
+          <NetworkTopologyDiagram labels={{
+            lanIp: configSnapshot.network.configuredLanIp,
+            proxyEnabled: configSnapshot.proxy.enabled,
+            httpsEnabled: Boolean(configSnapshot.tls?.cutoverApplied),
+            baseUrl: savedUrl,
+            operation: accessSummary?.operation,
+            diagnosis: accessSummary?.diagnosis,
+          }} />
         </MaintenanceSection>
       </div>
     </section>
