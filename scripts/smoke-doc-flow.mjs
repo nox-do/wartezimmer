@@ -130,7 +130,7 @@ async function main() {
   console.log(`   -> Ticket ${ticketCode} (${visitId})`);
 
   console.log('2) Session aus Wartenummer aufloesen');
-  const resolved = await requestJson(baseUrl, 'POST', '/api/v1/sessions/resolve-ticket', {
+  const resolved = await requestJson(baseUrl, 'POST', '/api/v1/portal/sessions/resolve-ticket', {
     jsonBody: { ticketCode },
     expectedStatus: 201,
   });
@@ -140,7 +140,7 @@ async function main() {
   assert(firstSessionId, 'Missing session id');
 
   console.log('3) Session-Status lesen');
-  const me = await requestJson(baseUrl, 'GET', '/api/v1/sessions/me', {
+  const me = await requestJson(baseUrl, 'GET', '/api/v1/portal/sessions/me', {
     bearerToken: firstSessionToken,
     expectedStatus: 200,
   });
@@ -153,7 +153,7 @@ async function main() {
     new Blob([MINIMAL_PDF_BYTES], { type: 'application/pdf' }),
     'Laborzettel_Medikament.pdf',
   );
-  const intakeA = await requestMultipart(baseUrl, '/api/v1/patient-documents/intake', {
+  const intakeA = await requestMultipart(baseUrl, '/api/v1/portal/documents/intake', {
     bearerToken: firstSessionToken,
     formData: formA,
     expectedStatus: 201,
@@ -165,7 +165,7 @@ async function main() {
     new Blob([MINIMAL_PDF_BYTES], { type: 'application/pdf' }),
     'Anamnese_Notizen.pdf',
   );
-  const intakeB = await requestMultipart(baseUrl, '/api/v1/patient-documents/intake', {
+  const intakeB = await requestMultipart(baseUrl, '/api/v1/portal/documents/intake', {
     bearerToken: firstSessionToken,
     formData: formB,
     expectedStatus: 201,
@@ -175,7 +175,7 @@ async function main() {
   assert(documentA && documentB, 'Missing document ids after intake');
 
   console.log('5) Upload-Liste sehen und ein Dokument patientenseitig loeschen');
-  const listBeforeDelete = await requestJson(baseUrl, 'GET', '/api/v1/patient-documents', {
+  const listBeforeDelete = await requestJson(baseUrl, 'GET', '/api/v1/portal/documents', {
     bearerToken: firstSessionToken,
     expectedStatus: 200,
   });
@@ -185,7 +185,7 @@ async function main() {
   const deleted = await requestJson(
     baseUrl,
     'POST',
-    `/api/v1/patient-documents/${encodeURIComponent(documentA)}/delete`,
+    `/api/v1/portal/documents/${encodeURIComponent(documentA)}/delete`,
     {
       bearerToken: firstSessionToken,
       expectedStatus: 200,
@@ -197,33 +197,38 @@ async function main() {
   );
 
   console.log('6) Session mit "Senden" abschliessen');
-  const submit = await requestJson(baseUrl, 'POST', '/api/v1/sessions/submit', {
+  const submit = await requestJson(baseUrl, 'POST', '/api/v1/portal/sessions/submit', {
     bearerToken: firstSessionToken,
     expectedStatus: 200,
   });
   assert(submit.body?.status === 'revoked', 'Submitted session should be revoked');
 
   console.log('7) Alte Session darf nicht mehr genutzt werden');
-  await requestJson(baseUrl, 'GET', '/api/v1/sessions/me', {
+  await requestJson(baseUrl, 'GET', '/api/v1/portal/sessions/me', {
     bearerToken: firstSessionToken,
     expectedStatus: 401,
   });
-  await requestJson(baseUrl, 'GET', '/api/v1/patient-documents', {
+  await requestJson(baseUrl, 'GET', '/api/v1/portal/documents', {
     bearerToken: firstSessionToken,
     expectedStatus: 401,
   });
 
   console.log('8) Gleiche Wartenummer startet neue Session ohne alte Liste');
-  const resolvedAgain = await requestJson(baseUrl, 'POST', '/api/v1/sessions/resolve-ticket', {
-    jsonBody: { ticketCode },
-    expectedStatus: 201,
-  });
+  const resolvedAgain = await requestJson(
+    baseUrl,
+    'POST',
+    '/api/v1/portal/sessions/resolve-ticket',
+    {
+      jsonBody: { ticketCode },
+      expectedStatus: 201,
+    },
+  );
   const secondSessionToken = resolvedAgain.body?.sessionToken;
   const secondSessionId = resolvedAgain.body?.sessionId;
   assert(secondSessionToken && secondSessionId, 'Missing second session');
   assert(secondSessionId !== firstSessionId, 'Expected a new session id');
 
-  const listSecondSession = await requestJson(baseUrl, 'GET', '/api/v1/patient-documents', {
+  const listSecondSession = await requestJson(baseUrl, 'GET', '/api/v1/portal/documents', {
     bearerToken: secondSessionToken,
     expectedStatus: 200,
   });
@@ -344,7 +349,7 @@ async function main() {
   );
   const eicarForm = new FormData();
   eicarForm.append('file', new Blob([eicarBytes], { type: 'application/pdf' }), 'eicar-test.pdf');
-  const eicarIntake = await requestMultipart(baseUrl, '/api/v1/patient-documents/intake', {
+  const eicarIntake = await requestMultipart(baseUrl, '/api/v1/portal/documents/intake', {
     bearerToken: secondSessionToken,
     formData: eicarForm,
     expectedStatus: 201,

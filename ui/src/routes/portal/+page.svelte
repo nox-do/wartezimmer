@@ -6,7 +6,7 @@
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { getPortalEntryPrivacyNotice } from '$lib/privacy/portal-entry-notice';
   import { getWlanTermsNotice } from '$lib/privacy/wlan-terms-notice';
-  import { getPracticeProfileFallback, mountPracticeProfileSync } from '$lib/practice/practice-profile-client';
+  import { getPracticeProfileFallback, subscribePracticeProfile } from '$lib/practice/practice-profile-client';
   import {
     clearCaptivePortalContext,
     readCaptivePortalContext,
@@ -39,7 +39,7 @@
   let submitting = $state(false);
 
   onMount(() => {
-    const stopProfile = mountPracticeProfileSync((profile) => {
+    const stopProfile = subscribePracticeProfile((profile) => {
       practiceProfile = profile;
     });
 

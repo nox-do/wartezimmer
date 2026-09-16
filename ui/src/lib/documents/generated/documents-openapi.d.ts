@@ -4,7 +4,46 @@
  */
 
 export interface paths {
-  '/api/v1/patient-documents/form-templates': {
+  '/api/v1/portal/config': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Portal bootstrap configuration
+     * @description Patient-facing languages, portal availability and public practice profile.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Portal configuration */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['PortalConfig'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/portal/documents/form-templates': {
     parameters: {
       query?: never;
       header?: never;
@@ -51,7 +90,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/patient-documents/form-templates/{templateId}': {
+  '/api/v1/portal/documents/form-templates/{templateId}': {
     parameters: {
       query?: never;
       header?: never;
@@ -118,7 +157,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/patient-documents/privacy-notice': {
+  '/api/v1/portal/documents/privacy-notice': {
     parameters: {
       query?: never;
       header?: never;
@@ -163,7 +202,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/patient-documents/forms': {
+  '/api/v1/portal/documents/forms': {
     parameters: {
       query?: never;
       header?: never;
@@ -259,7 +298,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/sessions/resolve-ticket': {
+  '/api/v1/portal/sessions/resolve-ticket': {
     parameters: {
       query?: never;
       header?: never;
@@ -343,7 +382,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/sessions/captive-authorize': {
+  '/api/v1/portal/sessions/captive-authorize': {
     parameters: {
       query?: never;
       header?: never;
@@ -422,7 +461,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/sessions/verify-ticket-code': {
+  '/api/v1/portal/sessions/verify-ticket-code': {
     parameters: {
       query?: never;
       header?: never;
@@ -489,7 +528,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/sessions/me': {
+  '/api/v1/portal/sessions/me': {
     parameters: {
       query?: never;
       header?: never;
@@ -545,7 +584,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/sessions/submit': {
+  '/api/v1/portal/sessions/submit': {
     parameters: {
       query?: never;
       header?: never;
@@ -596,7 +635,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/patient-documents/intake': {
+  '/api/v1/portal/documents/intake': {
     parameters: {
       query?: never;
       header?: never;
@@ -660,7 +699,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/patient-documents': {
+  '/api/v1/portal/documents': {
     parameters: {
       query?: never;
       header?: never;
@@ -705,7 +744,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/v1/patient-documents/{documentId}/delete': {
+  '/api/v1/portal/documents/{documentId}/delete': {
     parameters: {
       query?: never;
       header?: never;
@@ -1194,6 +1233,27 @@ export interface components {
         /** Format: date-time */
         updatedAt: string;
       };
+    };
+    PortalConfig: {
+      terminalPatientLocales: components['schemas']['TerminalPatientLocales'];
+      portalEnabled: boolean;
+      practiceProfile: components['schemas']['PracticeProfile'];
+    };
+    /** @enum {string} */
+    TerminalPatientLocale: 'de-DE' | 'en-GB' | 'tr-TR' | 'ru-RU' | 'uk-UA';
+    /** @description Patient-facing languages on terminal and portal. de-DE is always included. */
+    TerminalPatientLocales: components['schemas']['TerminalPatientLocale'][];
+    PracticeProfile: {
+      /** @description Public practice name shown on terminal, TV, and privacy notices. */
+      displayName: string;
+      street: string;
+      postalCode: string;
+      city: string;
+      phone: string;
+      email: string;
+      /** @description Name or contact of the data protection officer, if appointed. */
+      dataProtectionOfficer: string;
+      website: string;
     };
     /**
      * @description Machine-readable API error code returned in Error responses.

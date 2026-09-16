@@ -3,7 +3,7 @@ export type RouteAccessRole = 'terminal' | 'mfa' | 'tv' | 'captive' | 'ops' | 'r
 export type RouteAccessRule = {
   method: string;
   path: string;
-  roles?: RouteAccessRole[];
+  roles?: readonly RouteAccessRole[];
   public?: boolean;
   /** Registered only on the loopback maintenance listener (port 8082), not the LAN-facing app. */
   maintenanceListenerOnly?: boolean;
@@ -28,18 +28,31 @@ export const ROUTE_ACCESS_RULES: RouteAccessRule[] = [
   { method: 'POST', path: '/api/v1/identity/phone-dob-lookup', roles: ['mfa'] },
   { method: 'POST', path: '/api/v1/identity/mfa-lookup', roles: ['mfa'] },
   { method: 'GET', path: '/api/v1/identity/:visitId', roles: ['mfa'] },
-  { method: 'POST', path: '/api/v1/sessions/resolve-ticket', public: true },
-  { method: 'POST', path: '/api/v1/sessions/verify-ticket-code', roles: ['captive'] },
-  { method: 'POST', path: '/api/v1/sessions/captive-authorize', public: true },
-  { method: 'GET', path: '/api/v1/sessions/me', public: true },
-  { method: 'POST', path: '/api/v1/sessions/submit', public: true },
-  { method: 'POST', path: '/api/v1/patient-documents/intake', public: true },
-  { method: 'GET', path: '/api/v1/patient-documents', public: true },
-  { method: 'POST', path: '/api/v1/patient-documents/:documentId/delete', public: true },
-  { method: 'GET', path: '/api/v1/patient-documents/form-templates', public: true },
-  { method: 'GET', path: '/api/v1/patient-documents/form-templates/:templateId', public: true },
-  { method: 'GET', path: '/api/v1/patient-documents/privacy-notice', public: true },
-  { method: 'POST', path: '/api/v1/patient-documents/forms', public: true },
+  { method: 'GET', path: '/api/v1/portal/config', public: true },
+  { method: 'POST', path: '/api/v1/portal/sessions/resolve-ticket', public: true },
+  {
+    method: 'POST',
+    path: '/api/v1/portal/sessions/verify-ticket-code',
+    roles: ['captive'],
+  },
+  { method: 'POST', path: '/api/v1/portal/sessions/captive-authorize', public: true },
+  { method: 'GET', path: '/api/v1/portal/sessions/me', public: true },
+  { method: 'POST', path: '/api/v1/portal/sessions/submit', public: true },
+  { method: 'POST', path: '/api/v1/portal/documents/intake', public: true },
+  { method: 'GET', path: '/api/v1/portal/documents', public: true },
+  {
+    method: 'POST',
+    path: '/api/v1/portal/documents/:documentId/delete',
+    public: true,
+  },
+  { method: 'GET', path: '/api/v1/portal/documents/form-templates', public: true },
+  {
+    method: 'GET',
+    path: '/api/v1/portal/documents/form-templates/:templateId',
+    public: true,
+  },
+  { method: 'GET', path: '/api/v1/portal/documents/privacy-notice', public: true },
+  { method: 'POST', path: '/api/v1/portal/documents/forms', public: true },
   { method: 'GET', path: '/api/v1/queue', roles: ['mfa', 'tv', 'room-panel'] },
   { method: 'GET', path: '/api/v1/queue/stream', roles: ['tv', 'mfa', 'room-panel'] },
   { method: 'GET', path: '/api/v1/queue/summary', roles: ['mfa'] },

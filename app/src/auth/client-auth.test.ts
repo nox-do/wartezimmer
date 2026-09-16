@@ -252,7 +252,7 @@ test('captive bearer token is still accepted for captive routes', async () => {
   let handlerCalled = false;
   const app = Fastify({ logger: false });
 
-  app.post('/api/v1/sessions/verify-ticket-code', async (request) => {
+  app.post('/api/v1/portal/sessions/verify-ticket-code', async (request) => {
     handlerCalled = true;
     return { role: request.clientRole ?? null };
   });
@@ -262,7 +262,7 @@ test('captive bearer token is still accepted for captive routes', async () => {
 
   const response = await app.inject({
     method: 'POST',
-    url: '/api/v1/sessions/verify-ticket-code',
+    url: '/api/v1/portal/sessions/verify-ticket-code',
     headers: { authorization: 'Bearer test-captive-key' },
     payload: { code: 'A-001' },
   });

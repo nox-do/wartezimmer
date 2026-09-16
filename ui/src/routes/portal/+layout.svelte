@@ -2,7 +2,8 @@
   import '$lib/styles/portal.css';
   import { onMount } from 'svelte';
   import PatientLangPicker from '$lib/components/shared/PatientLangPicker.svelte';
-  import { fetchPatientLocales } from '$lib/ops/patient-locales-api';
+  import { fetchPortalConfig } from '$lib/portal/config-api';
+  import { updatePracticeProfileCache } from '$lib/practice/practice-profile-client';
   import { clearPortalSession } from '$lib/portal/portal-session';
   import { DEFAULT_TERMINAL_PATIENT_LOCALES, type TerminalPatientLocale } from '@praxis-flow/domain';
   import { t } from '$lib/i18n/i18nStore.svelte';
@@ -19,11 +20,12 @@
     let stopped = false;
 
     async function refresh() {
-      const result = await fetchPatientLocales();
+      const result = await fetchPortalConfig();
       if (stopped || !result.ok) {
         return;
       }
       enabledLocales = result.data.terminalPatientLocales;
+      updatePracticeProfileCache(result.data.practiceProfile);
       if (result.data.portalEnabled === false) {
         clearPortalSession();
       }

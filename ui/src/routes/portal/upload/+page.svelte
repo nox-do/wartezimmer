@@ -7,7 +7,7 @@
   import { formatFileSize } from '$lib/documents/format-file-size';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { getUploadPrivacyNotice } from '$lib/privacy/upload-notice';
-  import { getPracticeProfileFallback, mountPracticeProfileSync } from '$lib/practice/practice-profile-client';
+  import { getPracticeProfileFallback, subscribePracticeProfile } from '$lib/practice/practice-profile-client';
   import { ensurePortalSession } from '$lib/portal/ensure-portal-session';
   import { formatRelativeTime } from '$lib/portal/format-relative-time';
   import {
@@ -143,7 +143,7 @@
   }
 
   onMount(() => {
-    const stopProfile = mountPracticeProfileSync((profile) => {
+    const stopProfile = subscribePracticeProfile((profile) => {
       practiceProfile = profile;
     });
 

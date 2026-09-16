@@ -260,7 +260,7 @@ Patient weiß: **jetzt oder bald** ist offene Sprechstunde. Thema `offen` verhä
 
 **Empfohlene Patienten-Reihenfolge:** zuerst Upload, dann Formular — oder zwei getrennte Portal-Einstiege am selben Tag.
 
-**Konfiguration:** `SESSION_TTL_MINUTES` (Default **30**). `POST /api/v1/sessions/submit` bleibt als expliziter Endpunkt für künftige UI-Flows; v1 nutzt ihn intern nach Formular-Intake.
+**Konfiguration:** `SESSION_TTL_MINUTES` (Default **30**). `POST /api/v1/portal/sessions/submit` bleibt als expliziter Endpunkt für künftige UI-Flows; v1 nutzt ihn intern nach Formular-Intake.
 
 **Bewusst nicht in v1:** Upload-Erfolg ruft kein `sessions/submit` auf; kein zweiter Faktor neben Wartenummer (siehe `README.md`).
 

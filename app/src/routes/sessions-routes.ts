@@ -38,17 +38,17 @@ export function registerSessionRoutes(app: FastifyInstance, db: CoreDatabase): v
   const requirePortalEnabled = createRequirePortalEnabledPreHandler(db);
 
   app.post<{ Body: ResolveTicketBody }>(
-    '/api/v1/sessions/resolve-ticket',
+    '/api/v1/portal/sessions/resolve-ticket',
     {
       preHandler: requirePortalEnabled,
       schema: {
-        body: sessionsSchemas.POST_api_v1_sessions_resolve_ticketRequestBody,
+        body: sessionsSchemas.POST_api_v1_portal_sessions_resolve_ticketRequestBody,
         response: {
-          201: sessionsSchemas.POST_api_v1_sessions_resolve_ticketResponse201,
-          400: sessionsSchemas.POST_api_v1_sessions_resolve_ticketResponse400,
-          404: sessionsSchemas.POST_api_v1_sessions_resolve_ticketResponse404,
-          409: sessionsSchemas.POST_api_v1_sessions_resolve_ticketResponse409,
-          429: sessionsSchemas.POST_api_v1_sessions_resolve_ticketResponse429,
+          201: sessionsSchemas.POST_api_v1_portal_sessions_resolve_ticketResponse201,
+          400: sessionsSchemas.POST_api_v1_portal_sessions_resolve_ticketResponse400,
+          404: sessionsSchemas.POST_api_v1_portal_sessions_resolve_ticketResponse404,
+          409: sessionsSchemas.POST_api_v1_portal_sessions_resolve_ticketResponse409,
+          429: sessionsSchemas.POST_api_v1_portal_sessions_resolve_ticketResponse429,
         },
       },
     },
@@ -80,15 +80,15 @@ export function registerSessionRoutes(app: FastifyInstance, db: CoreDatabase): v
   );
 
   app.post<{ Body: VerifyTicketBody }>(
-    '/api/v1/sessions/verify-ticket-code',
+    '/api/v1/portal/sessions/verify-ticket-code',
     {
       preHandler: requirePortalEnabled,
       schema: {
-        body: sessionsSchemas.POST_api_v1_sessions_verify_ticket_codeRequestBody,
+        body: sessionsSchemas.POST_api_v1_portal_sessions_verify_ticket_codeRequestBody,
         response: {
-          200: sessionsSchemas.POST_api_v1_sessions_verify_ticket_codeResponse200,
-          404: sessionsSchemas.POST_api_v1_sessions_verify_ticket_codeResponse404,
-          409: sessionsSchemas.POST_api_v1_sessions_verify_ticket_codeResponse409,
+          200: sessionsSchemas.POST_api_v1_portal_sessions_verify_ticket_codeResponse200,
+          404: sessionsSchemas.POST_api_v1_portal_sessions_verify_ticket_codeResponse404,
+          409: sessionsSchemas.POST_api_v1_portal_sessions_verify_ticket_codeResponse409,
         },
       },
     },
@@ -109,16 +109,16 @@ export function registerSessionRoutes(app: FastifyInstance, db: CoreDatabase): v
   );
 
   app.post<{ Body: CaptiveAuthorizeBody }>(
-    '/api/v1/sessions/captive-authorize',
+    '/api/v1/portal/sessions/captive-authorize',
     {
       preHandler: [requirePortalEnabled, requirePatientSession],
       schema: {
-        body: sessionsSchemas.POST_api_v1_sessions_captive_authorizeRequestBody,
+        body: sessionsSchemas.POST_api_v1_portal_sessions_captive_authorizeRequestBody,
         response: {
-          200: sessionsSchemas.POST_api_v1_sessions_captive_authorizeResponse200,
-          400: sessionsSchemas.POST_api_v1_sessions_captive_authorizeResponse400,
-          401: sessionsSchemas.POST_api_v1_sessions_captive_authorizeResponse401,
-          502: sessionsSchemas.POST_api_v1_sessions_captive_authorizeResponse502,
+          200: sessionsSchemas.POST_api_v1_portal_sessions_captive_authorizeResponse200,
+          400: sessionsSchemas.POST_api_v1_portal_sessions_captive_authorizeResponse400,
+          401: sessionsSchemas.POST_api_v1_portal_sessions_captive_authorizeResponse401,
+          502: sessionsSchemas.POST_api_v1_portal_sessions_captive_authorizeResponse502,
         },
       },
     },
@@ -156,13 +156,13 @@ export function registerSessionRoutes(app: FastifyInstance, db: CoreDatabase): v
   );
 
   app.get(
-    '/api/v1/sessions/me',
+    '/api/v1/portal/sessions/me',
     {
       preHandler: [requirePortalEnabled, requirePatientSession],
       schema: {
         response: {
-          200: sessionsSchemas.GET_api_v1_sessions_meResponse200,
-          401: sessionsSchemas.GET_api_v1_sessions_meResponse401,
+          200: sessionsSchemas.GET_api_v1_portal_sessions_meResponse200,
+          401: sessionsSchemas.GET_api_v1_portal_sessions_meResponse401,
         },
       },
     },
@@ -181,13 +181,13 @@ export function registerSessionRoutes(app: FastifyInstance, db: CoreDatabase): v
   );
 
   app.post(
-    '/api/v1/sessions/submit',
+    '/api/v1/portal/sessions/submit',
     {
       preHandler: [requirePortalEnabled, requirePatientSession],
       schema: {
         response: {
-          200: sessionsSchemas.POST_api_v1_sessions_submitResponse200,
-          401: sessionsSchemas.POST_api_v1_sessions_submitResponse401,
+          200: sessionsSchemas.POST_api_v1_portal_sessions_submitResponse200,
+          401: sessionsSchemas.POST_api_v1_portal_sessions_submitResponse401,
         },
       },
     },

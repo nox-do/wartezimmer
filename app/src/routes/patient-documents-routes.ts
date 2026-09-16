@@ -84,7 +84,7 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
   }
 
   app.get(
-    '/api/v1/patient-documents/form-templates',
+    '/api/v1/portal/documents/form-templates',
     withPatientSession({
       schema: {
         response: {
@@ -114,7 +114,7 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
   );
 
   app.get<{ Params: { templateId: string }; Querystring: { version?: string } }>(
-    '/api/v1/patient-documents/form-templates/:templateId',
+    '/api/v1/portal/documents/form-templates/:templateId',
     withPatientSession({
       schema: {
         params: {
@@ -218,7 +218,7 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
   );
 
   app.get(
-    '/api/v1/patient-documents/privacy-notice',
+    '/api/v1/portal/documents/privacy-notice',
     withPatientSession({
       schema: {
         response: {
@@ -242,7 +242,7 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
   );
 
   app.post<{ Body: { items?: PatientFormDocumentItem[] } }>(
-    '/api/v1/patient-documents/forms',
+    '/api/v1/portal/documents/forms',
     withPatientSession({
       schema: {
         body: {
@@ -359,7 +359,7 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
   );
 
   app.post(
-    '/api/v1/patient-documents/intake',
+    '/api/v1/portal/documents/intake',
     withPatientSession({
       schema: {
         response: {
@@ -439,7 +439,7 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
   );
 
   app.get(
-    '/api/v1/patient-documents',
+    '/api/v1/portal/documents',
     withPatientSession({
       schema: {
         response: {
@@ -476,7 +476,7 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
   );
 
   app.post<{ Params: { documentId: string } }>(
-    '/api/v1/patient-documents/:documentId/delete',
+    '/api/v1/portal/documents/:documentId/delete',
     withPatientSession({
       schema: {
         params: {

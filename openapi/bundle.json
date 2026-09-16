@@ -6519,7 +6519,93 @@
         }
       }
     },
-    "/api/v1/patient-documents/form-templates": {
+    "/api/v1/portal/config": {
+      "get": {
+        "summary": "Portal bootstrap configuration",
+        "description": "Patient-facing languages, portal availability and public practice profile.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Portal configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["terminalPatientLocales", "portalEnabled", "practiceProfile"],
+                  "properties": {
+                    "terminalPatientLocales": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": ["de-DE", "en-GB", "tr-TR", "ru-RU", "uk-UA"]
+                      },
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "description": "Patient-facing languages on terminal and portal. de-DE is always included."
+                    },
+                    "portalEnabled": {
+                      "type": "boolean"
+                    },
+                    "practiceProfile": {
+                      "type": "object",
+                      "required": [
+                        "displayName",
+                        "street",
+                        "postalCode",
+                        "city",
+                        "phone",
+                        "email",
+                        "dataProtectionOfficer",
+                        "website"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "displayName": {
+                          "type": "string",
+                          "maxLength": 160,
+                          "description": "Public practice name shown on terminal, TV, and privacy notices."
+                        },
+                        "street": {
+                          "type": "string",
+                          "maxLength": 160
+                        },
+                        "postalCode": {
+                          "type": "string",
+                          "maxLength": 16
+                        },
+                        "city": {
+                          "type": "string",
+                          "maxLength": 120
+                        },
+                        "phone": {
+                          "type": "string",
+                          "maxLength": 64
+                        },
+                        "email": {
+                          "type": "string",
+                          "maxLength": 160
+                        },
+                        "dataProtectionOfficer": {
+                          "type": "string",
+                          "maxLength": 160,
+                          "description": "Name or contact of the data protection officer, if appointed."
+                        },
+                        "website": {
+                          "type": "string",
+                          "maxLength": 200
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/documents/form-templates": {
       "get": {
         "summary": "List available versioned form templates",
         "security": [
@@ -6642,7 +6728,7 @@
         }
       }
     },
-    "/api/v1/patient-documents/form-templates/{templateId}": {
+    "/api/v1/portal/documents/form-templates/{templateId}": {
       "get": {
         "summary": "Read a form template by id (optional version query)",
         "security": [
@@ -7000,7 +7086,7 @@
         }
       }
     },
-    "/api/v1/patient-documents/privacy-notice": {
+    "/api/v1/portal/documents/privacy-notice": {
       "get": {
         "summary": "Privacy notice text for portal consent modal",
         "security": [
@@ -7117,7 +7203,7 @@
         }
       }
     },
-    "/api/v1/patient-documents/forms": {
+    "/api/v1/portal/documents/forms": {
       "post": {
         "summary": "Submit one or more form documents (PDF per item)",
         "security": [
@@ -7706,7 +7792,7 @@
         }
       }
     },
-    "/api/v1/sessions/resolve-ticket": {
+    "/api/v1/portal/sessions/resolve-ticket": {
       "post": {
         "summary": "Resolve waiting number (ticketCode) to anonymous patient session",
         "security": [],
@@ -8079,7 +8165,7 @@
         }
       }
     },
-    "/api/v1/sessions/captive-authorize": {
+    "/api/v1/portal/sessions/captive-authorize": {
       "post": {
         "summary": "Authorize guest WLAN client after portal session is active",
         "description": "Captive-adapter hook after an active patient session. Requires a patient session bearer token. Until a vendor adapter is wired, always returns wlanAuthorized=false and still succeeds.\n",
@@ -8383,7 +8469,7 @@
         }
       }
     },
-    "/api/v1/sessions/verify-ticket-code": {
+    "/api/v1/portal/sessions/verify-ticket-code": {
       "post": {
         "summary": "Verify waiting number (ticketCode) without creating a patient session",
         "description": "Captive-adapter S2S hook (Bearer AUTH_KEY_CAPTIVE → role captive). Does not rotate session tokens. No in-product caller until a vendor adapter exists.\n",
@@ -8595,7 +8681,7 @@
         }
       }
     },
-    "/api/v1/sessions/me": {
+    "/api/v1/portal/sessions/me": {
       "get": {
         "summary": "Get current anonymous patient session state",
         "security": [
@@ -8729,7 +8815,7 @@
         }
       }
     },
-    "/api/v1/sessions/submit": {
+    "/api/v1/portal/sessions/submit": {
       "post": {
         "summary": "Close anonymous upload session after patient confirms send",
         "security": [
@@ -8845,7 +8931,7 @@
         }
       }
     },
-    "/api/v1/patient-documents/intake": {
+    "/api/v1/portal/documents/intake": {
       "post": {
         "summary": "Intake patient document within anonymous session (multipart upload)",
         "security": [
@@ -9083,7 +9169,7 @@
         }
       }
     },
-    "/api/v1/patient-documents": {
+    "/api/v1/portal/documents": {
       "get": {
         "summary": "List patient-owned documents in current session",
         "security": [
@@ -9237,7 +9323,7 @@
         }
       }
     },
-    "/api/v1/patient-documents/{documentId}/delete": {
+    "/api/v1/portal/documents/{documentId}/delete": {
       "post": {
         "summary": "Delete patient-owned document in current session",
         "security": [
@@ -20562,6 +20648,76 @@
             }
           }
         ]
+      },
+      "PortalConfig": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["terminalPatientLocales", "portalEnabled", "practiceProfile"],
+        "properties": {
+          "terminalPatientLocales": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["de-DE", "en-GB", "tr-TR", "ru-RU", "uk-UA"]
+            },
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "Patient-facing languages on terminal and portal. de-DE is always included."
+          },
+          "portalEnabled": {
+            "type": "boolean"
+          },
+          "practiceProfile": {
+            "type": "object",
+            "required": [
+              "displayName",
+              "street",
+              "postalCode",
+              "city",
+              "phone",
+              "email",
+              "dataProtectionOfficer",
+              "website"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "displayName": {
+                "type": "string",
+                "maxLength": 160,
+                "description": "Public practice name shown on terminal, TV, and privacy notices."
+              },
+              "street": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "postalCode": {
+                "type": "string",
+                "maxLength": 16
+              },
+              "city": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "phone": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "email": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "dataProtectionOfficer": {
+                "type": "string",
+                "maxLength": 160,
+                "description": "Name or contact of the data protection officer, if appointed."
+              },
+              "website": {
+                "type": "string",
+                "maxLength": 200
+              }
+            }
+          }
+        }
       },
       "RoomPanelPlacementConfig": {
         "type": "object",

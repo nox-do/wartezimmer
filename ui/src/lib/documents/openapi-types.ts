@@ -20,8 +20,8 @@ export type FormPrivacyNotice = DocumentSchemas['FormPrivacyNotice'];
 export type PatientFormDocumentItem = DocumentSchemas['PatientFormDocumentItem'];
 
 export type SessionResolveResponse =
-  paths['/api/v1/sessions/resolve-ticket']['post']['responses']['201']['content']['application/json'];
+  paths['/api/v1/portal/sessions/resolve-ticket']['post']['responses']['201']['content']['application/json'];
 export type SessionMeResponse =
-  paths['/api/v1/sessions/me']['get']['responses']['200']['content']['application/json'];
+  paths['/api/v1/portal/sessions/me']['get']['responses']['200']['content']['application/json'];
 export type CaptiveAuthorizeResponse =
-  paths['/api/v1/sessions/captive-authorize']['post']['responses']['200']['content']['application/json'];
+  paths['/api/v1/portal/sessions/captive-authorize']['post']['responses']['200']['content']['application/json'];

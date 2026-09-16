@@ -123,8 +123,8 @@ async function main() {
     'identity ticket view',
   );
 
-  console.log('sessions) POST /api/v1/sessions/resolve-ticket');
-  const resolved = await requestJson(baseUrl, '/api/v1/sessions/resolve-ticket', null, {
+  console.log('sessions) POST /api/v1/portal/sessions/resolve-ticket');
+  const resolved = await requestJson(baseUrl, '/api/v1/portal/sessions/resolve-ticket', null, {
     method: 'POST',
     expectedStatus: 201,
     jsonBody: { ticketCode },
@@ -132,7 +132,7 @@ async function main() {
   assertResponseSchema(
     bundle,
     'POST',
-    '/api/v1/sessions/resolve-ticket',
+    '/api/v1/portal/sessions/resolve-ticket',
     201,
     resolved,
     'session resolve',
@@ -140,14 +140,14 @@ async function main() {
   const sessionToken = resolved.sessionToken;
   assert(sessionToken, 'resolve-ticket must return sessionToken');
 
-  console.log('sessions) GET /api/v1/sessions/me');
-  const sessionMe = await requestJson(baseUrl, '/api/v1/sessions/me', sessionToken);
-  assertResponseSchema(bundle, 'GET', '/api/v1/sessions/me', 200, sessionMe, 'session me');
+  console.log('sessions) GET /api/v1/portal/sessions/me');
+  const sessionMe = await requestJson(baseUrl, '/api/v1/portal/sessions/me', sessionToken);
+  assertResponseSchema(bundle, 'GET', '/api/v1/portal/sessions/me', 200, sessionMe, 'session me');
 
-  console.log('sessions) POST /api/v1/sessions/verify-ticket-code');
+  console.log('sessions) POST /api/v1/portal/sessions/verify-ticket-code');
   const verifiedTicket = await requestJson(
     baseUrl,
-    '/api/v1/sessions/verify-ticket-code',
+    '/api/v1/portal/sessions/verify-ticket-code',
     captiveAuth,
     {
       method: 'POST',
@@ -157,22 +157,27 @@ async function main() {
   assertResponseSchema(
     bundle,
     'POST',
-    '/api/v1/sessions/verify-ticket-code',
+    '/api/v1/portal/sessions/verify-ticket-code',
     200,
     verifiedTicket,
     'session verify ticket code',
   );
 
-  console.log('sessions) POST /api/v1/sessions/resolve-ticket (404 invalid code)');
-  const resolveMissing = await requestJson(baseUrl, '/api/v1/sessions/resolve-ticket', null, {
-    method: 'POST',
-    expectedStatus: 404,
-    jsonBody: { ticketCode: 'ZZ-999' },
-  });
+  console.log('sessions) POST /api/v1/portal/sessions/resolve-ticket (404 invalid code)');
+  const resolveMissing = await requestJson(
+    baseUrl,
+    '/api/v1/portal/sessions/resolve-ticket',
+    null,
+    {
+      method: 'POST',
+      expectedStatus: 404,
+      jsonBody: { ticketCode: 'ZZ-999' },
+    },
+  );
   assertResponseSchema(
     bundle,
     'POST',
-    '/api/v1/sessions/resolve-ticket',
+    '/api/v1/portal/sessions/resolve-ticket',
     404,
     resolveMissing,
     'session resolve not found',

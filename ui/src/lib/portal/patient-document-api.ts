@@ -26,7 +26,7 @@ export const PRIVACY_CONSENT_TEMPLATE_VERSION = 1;
 
 export async function fetchPatientDocuments(sessionToken: string) {
   return patientBearerFetch<PatientDocumentListResponse & { uploadMaxBytes?: number }>(
-    '/api/v1/patient-documents',
+    '/api/v1/portal/documents',
     sessionToken,
   );
 }
@@ -35,7 +35,7 @@ export async function intakePatientDocument(sessionToken: string, file: File) {
   const formData = new FormData();
   formData.append('file', file, file.name);
 
-  return patientBearerFetch<PatientDocument>('/api/v1/patient-documents/intake', sessionToken, {
+  return patientBearerFetch<PatientDocument>('/api/v1/portal/documents/intake', sessionToken, {
     method: 'POST',
     body: formData,
   });
@@ -46,7 +46,7 @@ export async function submitPatientFormDocuments(
   items: PatientFormDocumentItem[],
 ) {
   return patientBearerFetch<PatientFormDocumentsResponse>(
-    '/api/v1/patient-documents/forms',
+    '/api/v1/portal/documents/forms',
     sessionToken,
     {
       method: 'POST',
@@ -57,7 +57,7 @@ export async function submitPatientFormDocuments(
 
 export async function fetchFormPrivacyNotice(sessionToken: string) {
   return patientBearerFetch<FormPrivacyNotice>(
-    '/api/v1/patient-documents/privacy-notice',
+    '/api/v1/portal/documents/privacy-notice',
     sessionToken,
   );
 }
@@ -69,14 +69,14 @@ export async function fetchFormTemplate(
 ) {
   const query = version != null ? `?version=${version}` : '';
   return patientBearerFetch<FormTemplate>(
-    `/api/v1/patient-documents/form-templates/${encodeURIComponent(templateId)}${query}`,
+    `/api/v1/portal/documents/form-templates/${encodeURIComponent(templateId)}${query}`,
     sessionToken,
   );
 }
 
 export async function deletePatientDocument(sessionToken: string, documentId: string) {
   return patientBearerFetch<PatientDocument>(
-    `/api/v1/patient-documents/${encodeURIComponent(documentId)}/delete`,
+    `/api/v1/portal/documents/${encodeURIComponent(documentId)}/delete`,
     sessionToken,
     {
       method: 'POST',

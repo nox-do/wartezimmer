@@ -28,7 +28,7 @@ const DOMAIN_FILES = [
     outSpec: 'sessions',
     exportName: 'sessionsSchemas',
     componentsOnly: false,
-    pathPrefix: '/api/v1/sessions',
+    pathPrefix: '/api/v1/portal/sessions',
     includeComponents: false,
   },
   { spec: 'ops.yaml', exportName: 'opsSchemas', componentsOnly: false },

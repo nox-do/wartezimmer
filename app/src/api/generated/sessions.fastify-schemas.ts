@@ -1,9 +1,9 @@
 /**
- * AUTO-GENERATED from openapi/documents.yaml (/api/v1/sessions) — do not edit.
+ * AUTO-GENERATED from openapi/documents.yaml (/api/v1/portal/sessions) — do not edit.
  * Run: npm run generate:api-schemas
  */
 
-export const POST_api_v1_sessions_resolve_ticketRequestBody = {
+export const POST_api_v1_portal_sessions_resolve_ticketRequestBody = {
   type: 'object',
   additionalProperties: false,
   required: ['ticketCode'],
@@ -16,7 +16,7 @@ export const POST_api_v1_sessions_resolve_ticketRequestBody = {
   },
 } as const;
 
-export const POST_api_v1_sessions_resolve_ticketResponse201 = {
+export const POST_api_v1_portal_sessions_resolve_ticketResponse201 = {
   type: 'object',
   required: ['sessionId', 'sessionToken', 'expiresAt', 'visitId'],
   properties: {
@@ -36,7 +36,7 @@ export const POST_api_v1_sessions_resolve_ticketResponse201 = {
   },
 } as const;
 
-export const POST_api_v1_sessions_resolve_ticketResponse400 = {
+export const POST_api_v1_portal_sessions_resolve_ticketResponse400 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -108,7 +108,7 @@ export const POST_api_v1_sessions_resolve_ticketResponse400 = {
   },
 } as const;
 
-export const POST_api_v1_sessions_resolve_ticketResponse404 = {
+export const POST_api_v1_portal_sessions_resolve_ticketResponse404 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -180,7 +180,7 @@ export const POST_api_v1_sessions_resolve_ticketResponse404 = {
   },
 } as const;
 
-export const POST_api_v1_sessions_resolve_ticketResponse409 = {
+export const POST_api_v1_portal_sessions_resolve_ticketResponse409 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -252,7 +252,7 @@ export const POST_api_v1_sessions_resolve_ticketResponse409 = {
   },
 } as const;
 
-export const POST_api_v1_sessions_resolve_ticketResponse429 = {
+export const POST_api_v1_portal_sessions_resolve_ticketResponse429 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -324,7 +324,7 @@ export const POST_api_v1_sessions_resolve_ticketResponse429 = {
   },
 } as const;
 
-export const POST_api_v1_sessions_captive_authorizeRequestBody = {
+export const POST_api_v1_portal_sessions_captive_authorizeRequestBody = {
   type: 'object',
   additionalProperties: false,
   properties: {
@@ -346,7 +346,7 @@ export const POST_api_v1_sessions_captive_authorizeRequestBody = {
   },
 } as const;
 
-export const POST_api_v1_sessions_captive_authorizeResponse200 = {
+export const POST_api_v1_portal_sessions_captive_authorizeResponse200 = {
   type: 'object',
   required: ['ok', 'wlanAuthorized', 'redirectUrl'],
   properties: {
@@ -363,7 +363,7 @@ export const POST_api_v1_sessions_captive_authorizeResponse200 = {
   },
 } as const;
 
-export const POST_api_v1_sessions_captive_authorizeResponse400 = {
+export const POST_api_v1_portal_sessions_captive_authorizeResponse400 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -435,7 +435,7 @@ export const POST_api_v1_sessions_captive_authorizeResponse400 = {
   },
 } as const;
 
-export const POST_api_v1_sessions_captive_authorizeResponse401 = {
+export const POST_api_v1_portal_sessions_captive_authorizeResponse401 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -507,7 +507,7 @@ export const POST_api_v1_sessions_captive_authorizeResponse401 = {
   },
 } as const;
 
-export const POST_api_v1_sessions_captive_authorizeResponse502 = {
+export const POST_api_v1_portal_sessions_captive_authorizeResponse502 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -579,7 +579,7 @@ export const POST_api_v1_sessions_captive_authorizeResponse502 = {
   },
 } as const;
 
-export const POST_api_v1_sessions_verify_ticket_codeRequestBody = {
+export const POST_api_v1_portal_sessions_verify_ticket_codeRequestBody = {
   type: 'object',
   additionalProperties: false,
   required: ['ticketCode'],
@@ -592,7 +592,7 @@ export const POST_api_v1_sessions_verify_ticket_codeRequestBody = {
   },
 } as const;
 
-export const POST_api_v1_sessions_verify_ticket_codeResponse200 = {
+export const POST_api_v1_portal_sessions_verify_ticket_codeResponse200 = {
   type: 'object',
   required: ['ok', 'visitId'],
   properties: {
@@ -606,7 +606,7 @@ export const POST_api_v1_sessions_verify_ticket_codeResponse200 = {
   },
 } as const;
 
-export const POST_api_v1_sessions_verify_ticket_codeResponse404 = {
+export const POST_api_v1_portal_sessions_verify_ticket_codeResponse404 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -678,7 +678,7 @@ export const POST_api_v1_sessions_verify_ticket_codeResponse404 = {
   },
 } as const;
 
-export const POST_api_v1_sessions_verify_ticket_codeResponse409 = {
+export const POST_api_v1_portal_sessions_verify_ticket_codeResponse409 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -750,7 +750,7 @@ export const POST_api_v1_sessions_verify_ticket_codeResponse409 = {
   },
 } as const;
 
-export const GET_api_v1_sessions_meResponse200 = {
+export const GET_api_v1_portal_sessions_meResponse200 = {
   type: 'object',
   required: ['sessionId', 'visitId', 'status', 'expiresAt', 'createdAt', 'authPath'],
   properties: {
@@ -778,7 +778,7 @@ export const GET_api_v1_sessions_meResponse200 = {
   },
 } as const;
 
-export const GET_api_v1_sessions_meResponse401 = {
+export const GET_api_v1_portal_sessions_meResponse401 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -850,7 +850,7 @@ export const GET_api_v1_sessions_meResponse401 = {
   },
 } as const;
 
-export const POST_api_v1_sessions_submitResponse200 = {
+export const POST_api_v1_portal_sessions_submitResponse200 = {
   type: 'object',
   required: ['sessionId', 'status', 'closedAt'],
   properties: {
@@ -868,7 +868,7 @@ export const POST_api_v1_sessions_submitResponse200 = {
   },
 } as const;
 
-export const POST_api_v1_sessions_submitResponse401 = {
+export const POST_api_v1_portal_sessions_submitResponse401 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -941,23 +941,23 @@ export const POST_api_v1_sessions_submitResponse401 = {
 } as const;
 
 export const sessionsSchemas = {
-  POST_api_v1_sessions_resolve_ticketRequestBody,
-  POST_api_v1_sessions_resolve_ticketResponse201,
-  POST_api_v1_sessions_resolve_ticketResponse400,
-  POST_api_v1_sessions_resolve_ticketResponse404,
-  POST_api_v1_sessions_resolve_ticketResponse409,
-  POST_api_v1_sessions_resolve_ticketResponse429,
-  POST_api_v1_sessions_captive_authorizeRequestBody,
-  POST_api_v1_sessions_captive_authorizeResponse200,
-  POST_api_v1_sessions_captive_authorizeResponse400,
-  POST_api_v1_sessions_captive_authorizeResponse401,
-  POST_api_v1_sessions_captive_authorizeResponse502,
-  POST_api_v1_sessions_verify_ticket_codeRequestBody,
-  POST_api_v1_sessions_verify_ticket_codeResponse200,
-  POST_api_v1_sessions_verify_ticket_codeResponse404,
-  POST_api_v1_sessions_verify_ticket_codeResponse409,
-  GET_api_v1_sessions_meResponse200,
-  GET_api_v1_sessions_meResponse401,
-  POST_api_v1_sessions_submitResponse200,
-  POST_api_v1_sessions_submitResponse401,
+  POST_api_v1_portal_sessions_resolve_ticketRequestBody,
+  POST_api_v1_portal_sessions_resolve_ticketResponse201,
+  POST_api_v1_portal_sessions_resolve_ticketResponse400,
+  POST_api_v1_portal_sessions_resolve_ticketResponse404,
+  POST_api_v1_portal_sessions_resolve_ticketResponse409,
+  POST_api_v1_portal_sessions_resolve_ticketResponse429,
+  POST_api_v1_portal_sessions_captive_authorizeRequestBody,
+  POST_api_v1_portal_sessions_captive_authorizeResponse200,
+  POST_api_v1_portal_sessions_captive_authorizeResponse400,
+  POST_api_v1_portal_sessions_captive_authorizeResponse401,
+  POST_api_v1_portal_sessions_captive_authorizeResponse502,
+  POST_api_v1_portal_sessions_verify_ticket_codeRequestBody,
+  POST_api_v1_portal_sessions_verify_ticket_codeResponse200,
+  POST_api_v1_portal_sessions_verify_ticket_codeResponse404,
+  POST_api_v1_portal_sessions_verify_ticket_codeResponse409,
+  GET_api_v1_portal_sessions_meResponse200,
+  GET_api_v1_portal_sessions_meResponse401,
+  POST_api_v1_portal_sessions_submitResponse200,
+  POST_api_v1_portal_sessions_submitResponse401,
 } as const;
