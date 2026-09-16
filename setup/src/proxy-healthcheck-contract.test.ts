@@ -46,3 +46,17 @@ for (const fileName of ['docker-compose.proxy-tls.yml', 'docker-compose.proxy-tl
     );
   });
 }
+
+for (const fileName of [
+  'docker-compose.proxy-restricted.yml',
+  'docker-compose.proxy-restricted.delivery.yml',
+]) {
+  test(`${fileName} maps external restricted HTTPS 443 to the isolated internal listener 444`, () => {
+    const compose = fs.readFileSync(path.join(projectRoot, fileName), 'utf8');
+    assert.match(
+      compose,
+      /'\$\{SETUP_RESTRICTED_APP_IP:\?SETUP_RESTRICTED_APP_IP is required\}:443:444'/,
+    );
+    assert.doesNotMatch(compose, /0\.0\.0\.0|\[::\]|:::/);
+  });
+}

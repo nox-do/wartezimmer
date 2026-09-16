@@ -214,6 +214,7 @@ async function packReleaseBundle(archivePath, imageRefs) {
       'docker-compose.delivery.yml',
       'docker-compose.proxy.delivery.yml',
       'docker-compose.proxy-tls.delivery.yml',
+      'docker-compose.proxy-restricted.delivery.yml',
       'proxy/Caddyfile',
     ]) {
       const targetPath = path.join(stagingRoot, 'templates', relativePath);

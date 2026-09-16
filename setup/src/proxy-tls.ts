@@ -1,8 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { TlsMode, TlsStatus } from '@praxis-flow/server-shared';
+import {
+  PORTAL_STATIC_SURFACE_ROUTES,
+  PORTAL_SURFACE_ROUTES,
+  PORTAL_UI_SURFACE_ROUTES,
+  type PortalSurfaceRoute,
+  type TlsMode,
+  type TlsStatus,
+} from '@praxis-flow/server-shared';
 
-export const GENERATED_CADDYFILE_MARKER = '# PRAXIS-FLOW-GENERATED LAN-TLS v2';
+export const GENERATED_CADDYFILE_MARKER = '# PRAXIS-FLOW-GENERATED LAN-TLS v3';
 
 export const PROXY_TLS_HOST_PATH_ENV_KEYS = [
   'PROXY_HTTPS_PORT',
@@ -151,6 +158,76 @@ function tlsDirective(mode: TlsMode, env: Map<string, string>): string {
   ].join('\n');
 }
 
+function escapeCaddyRegexp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function portalSurfacePathRegexp(pathTemplate: string): string {
+  const segments = pathTemplate
+    .split('/')
+    .map((segment) => (segment.startsWith(':') ? '[^/]+' : escapeCaddyRegexp(segment)));
+  return `^${segments.join('/')}$`;
+}
+
+export function portalApiCaddyMatcher(route: PortalSurfaceRoute, index: number): string[] {
+  const name = `portalApi${index}`;
+  const pathLine = route.path.includes(':')
+    ? `\t\tpath_regexp ${name} ${portalSurfacePathRegexp(route.path)}`
+    : `\t\tpath ${route.path}`;
+  return [`\t@${name} {`, `\t\tmethod ${route.method}`, pathLine, '\t}'];
+}
+
+function portalRestrictedSite(
+  status: TlsStatus,
+  env: Map<string, string>,
+  managedWildcard: string | null,
+): string[] {
+  const portalHostname = status.portalHostname;
+  if (!portalHostname || !status.mode) return [];
+  const siteAddress = managedWildcard ?? portalHostname;
+  const uiPaths = PORTAL_UI_SURFACE_ROUTES.map((route) => route.path).join(' ');
+  const staticPaths = PORTAL_STATIC_SURFACE_ROUTES.map((route) => route.path).join(' ');
+  const apiMatchers = PORTAL_SURFACE_ROUTES.flatMap((route, index) => [
+    ...portalApiCaddyMatcher(route, index),
+    `\thandle @portalApi${index} {`,
+    '\t\treverse_proxy app:8080',
+    '\t}',
+  ]);
+  return [
+    '',
+    `https://${siteAddress}:444 {`,
+    tlsDirective(status.mode, env),
+    '\t@portalOrigin {',
+    `\t\thost ${portalHostname}`,
+    `\t\texpression {http.request.tls.server_name} == "${portalHostname}"`,
+    '\t}',
+    '\t@portalUi {',
+    '\t\tmethod GET HEAD',
+    `\t\tpath ${uiPaths}`,
+    '\t}',
+    '\t@portalStatic {',
+    '\t\tmethod GET HEAD',
+    `\t\tpath ${staticPaths}`,
+    '\t}',
+    '\thandle @portalOrigin {',
+    '\t\thandle @portalUi {',
+    '\t\t\treverse_proxy app:8080',
+    '\t\t}',
+    '\t\thandle @portalStatic {',
+    '\t\t\treverse_proxy app:8080',
+    '\t\t}',
+    ...apiMatchers.map((line) => `\t${line}`),
+    '\t\thandle {',
+    '\t\t\trespond 404',
+    '\t\t}',
+    '\t}',
+    '\thandle {',
+    '\t\tabort',
+    '\t}',
+    '}',
+  ];
+}
+
 /**
  * Generated runtime config. Before cutover port 80 remains the application; after
  * cutover it is redirect-only. A managed config requires an xcaddy image containing
@@ -196,7 +273,10 @@ export function generateTlsCaddyfile(status: TlsStatus, env: Map<string, string>
   ];
   const siteHandlers = managedWildcard
     ? [
-        `\t@staff host ${staffHostname}`,
+        '\t@staff {',
+        `\t\thost ${staffHostname}`,
+        `\t\texpression {http.request.tls.server_name} == "${staffHostname}"`,
+        '\t}',
         '\thandle @staff {',
         ...applicationHandlers.map((line) => `\t${line}`),
         '\t}',
@@ -226,6 +306,7 @@ export function generateTlsCaddyfile(status: TlsStatus, env: Map<string, string>
     tlsDirective(status.mode, env),
     ...siteHandlers,
     '}',
+    ...portalRestrictedSite(status, env, managedWildcard),
     '',
   ].join('\n');
 }

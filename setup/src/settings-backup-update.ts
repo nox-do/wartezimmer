@@ -26,6 +26,7 @@ import {
   PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE,
   PFUPDATE_PROXY_CADDYFILE_RELATIVE,
   PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE,
+  PFUPDATE_PROXY_RESTRICTED_COMPOSE_TEMPLATE_FILE,
   PFUPDATE_PROXY_TLS_COMPOSE_TEMPLATE_FILE,
   pfupdateImagesTarPath,
   pfupdateOuterArchiveSha256,
@@ -339,6 +340,7 @@ function composeTemplateFilesForRollback(): readonly string[] {
     PFUPDATE_GATEWAY_COMPOSE_TEMPLATE_FILE,
     PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE,
     PFUPDATE_PROXY_TLS_COMPOSE_TEMPLATE_FILE,
+    PFUPDATE_PROXY_RESTRICTED_COMPOSE_TEMPLATE_FILE,
   ];
 }
 
@@ -405,6 +407,17 @@ function installComposeTemplates(stagingDir: string, home: string): void {
     copyFileAtomically(
       proxyTlsComposeSource,
       path.join(home, PFUPDATE_PROXY_TLS_COMPOSE_TEMPLATE_FILE),
+    );
+  }
+
+  const proxyRestrictedComposeSource = pfupdateTemplatePath(
+    stagingDir,
+    PFUPDATE_PROXY_RESTRICTED_COMPOSE_TEMPLATE_FILE,
+  );
+  if (fs.existsSync(proxyRestrictedComposeSource)) {
+    copyFileAtomically(
+      proxyRestrictedComposeSource,
+      path.join(home, PFUPDATE_PROXY_RESTRICTED_COMPOSE_TEMPLATE_FILE),
     );
   }
 

@@ -1,7 +1,8 @@
 # Eingeschränkter Netzwerkzugang für das Patientenportal
 
-Stand: 2026-09-14 · **TLS-/Wildcard-Pfad und explizite Proxy-Staff-Publishes
-umgesetzt; Manager-Diagnose und Restricted-Binding offen; Host-Firewall außerhalb des Produkts**
+Stand: 2026-09-16 · **TLS-/Wildcard-Pfad, explizite Proxy-Staff-Publishes und
+ausführbarer Restricted-Proxyvertrag umgesetzt; Restricted-Binding offen;
+Host-Firewall außerhalb des Produkts**
 
 Verwandt: LAN-TLS [`operations/tls.md`](operations/tls.md) · Captive-Grenze
 [`operations/integrations.md`](operations/integrations.md) · Manager-Topologie
@@ -86,9 +87,9 @@ Netzweg technisch vorhanden und die App weist Portalaktionen wie heute ab.
 Das ist die Sicherheitsgrenze:
 
 > Praxis Flow veröffentlicht auf der ausgewählten Restricted-IP nur explizit
-> freigegebene Funktionen — in v1 den Portal-Origin —, leitet keinen
-> Netzwerkverkehr zwischen den Anschlüssen weiter und macht Abweichungen von
-> der empfohlenen Zwei-NIC-Isolation sichtbar.
+> freigegebene Funktionen — in v1 den Portal-Origin — und macht die gewählte
+> Ziel-IP sowie die Listener-Policy prüfbar. Host-Firewall, Routing, Forwarding
+> und die tatsächliche Netztrennung verantwortet die Praxis-IT.
 
 ---
 
@@ -143,11 +144,11 @@ Netzweiterleitung.
 
 ## 4. Verantwortungsgrenze
 
-| Rolle                        | Verantwortet                                                                                                                                                                                  | Verantwortet nicht                                                                                                          |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| **Praxis / Praxis-IT**       | empfohlen: zweite NIC; physisch oder logisch getrenntes Patientennetz; DHCP/WLAN; optional Internet und Captive; statische Restricted-IP bzw. Reservierung; Client-Test aus dem Patientennetz | Caddy-Routen, Container-Ports, Host-Listener oder Praxis-Flow-Firewallregeln                                                |
-| **Praxis Flow**              | generisches Binding der eingeschränkten Zone; Host-Firewall; kein Forwarding; explizite Funktions-Allowlist; DNS-/TLS-Zuordnung; Installations- und Laufzeitprüfung; verständliche Diagnose   | Router/AP konfigurieren; VLANs erzeugen; DHCP/NAT für Patienten betreiben; Isolation des übrigen Praxisnetzes zertifizieren |
-| **Patientennetz-Komponente** | Clients zur Restricted-IP routen bzw. im selben Segment anbinden; Adressen vergeben; optional Internetzugang                                                                                  | Pfade innerhalb der Praxis-Flow-App unterscheiden                                                                           |
+| Rolle                        | Verantwortet                                                                                                                                                                                                                         | Verantwortet nicht                                                                                                                 |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Praxis / Praxis-IT**       | empfohlen: zweite NIC; physisch oder logisch getrenntes Patientennetz; DHCP/WLAN; optional Internet und Captive; statische Restricted-IP bzw. Reservierung; Host-Firewall, Routing, Forwarding und Client-Test aus dem Patientennetz | Caddy-Routen, Container-Ports oder Host-Listener                                                                                   |
+| **Praxis Flow**              | generisches Binding der eingeschränkten Zone; explizite Ziel-IP-Publishes und Funktions-Allowlist; DNS-/TLS-Zuordnung; Installations- und Laufzeitprüfung; verständliche Diagnose                                                    | Router/AP oder Host-Firewall konfigurieren; VLANs erzeugen; DHCP/NAT betreiben; Interface- oder Praxisnetz-Isolation zertifizieren |
+| **Patientennetz-Komponente** | Clients zur Restricted-IP routen bzw. im selben Segment anbinden; Adressen vergeben; optional Internetzugang                                                                                                                         | Pfade innerhalb der Praxis-Flow-App unterscheiden                                                                                  |
 
 Im empfohlenen Zwei-NIC-Standardweg erfüllt ein einfacher Access Point, der nur
 das normale Praxis-LAN überbrückt, die Isolationsanforderung **nicht**. Nutzt die
@@ -922,10 +923,12 @@ Status der groben Blöcke:
       Produktabnahme bleiben offen; die Staff-UI ist überarbeitet. Der proxyfreie initiale Betrieb ist bewusst
       nicht NIC-isoliert.
 - [ ] **Restricted-Binding:** zweite IP, Portal-A-Record und getrennten
-      Portal-Listener einführen. Die Portal-API ist bereits unter
+      Portal-Listener anwenden. Der ausführbare Proxyvertrag ist vorbereitet:
+      interner Listener 444, strikte Host-/SNI-Prüfung, separate Publish-
+      Overlays und generierte Positivliste. Die Portal-API ist unter
       `/api/v1/portal/*` gebündelt; der ausführbare Methoden-/Pfadvertrag
-      `PORTAL_SURFACE_ROUTES` ist die vorbereitete Positivliste für den späteren
-      Listener. Der Gateway-interne Verify-Endpunkt ist davon getrennt.
+      `PORTAL_SURFACE_ROUTES` ist die einzige fachliche Quelle. Der Gateway-
+      interne Verify-Endpunkt ist dort nicht enthalten.
 - [ ] **Portal-Härtung und Freigabe:** App-Vertrag, Runtime-Härtung,
       Plattformmatrix, Betriebsabnahme und Release-Tests abschließen.
 
@@ -1246,11 +1249,37 @@ genannte Kombination ist bestanden):
 - Windows-PoC, Packaging und Installation vor
   einer späteren Windows-Freigabe.
 
-Erst vor dem **Restricted-/Portal-Block** offen:
+Für den weiteren **Restricted-/Portal-Block** offen:
 
-- den vorhandenen `PORTAL_SURFACE_ROUTES`-Vertrag in die Caddy-Konfiguration
-  des Restricted-Listeners übersetzen und dessen Vollständigkeit gegen den
-  registrierten Routenkatalog als Release-Gate prüfen;
+- Restricted-IP persistieren, das separate Publish-Overlay transaktional
+  auswählen/anwenden/entfernen und die tatsächlichen Runtime-Bindings auditieren;
+- Manager-UI, Drift-/Repair-Pfad und reale Zwei-NIC-Abnahme ergänzen;
 - nur bei gescheitertem F1-PoC: eigene Folgeentscheidung, ob ein nativer
   Edge-Proxy als separate Alternativarchitektur geplant wird oder die Plattform
   ohne Portal bleibt.
+
+### 13.3 Arbeitsblock 16.09.2026 — ausführbarer Restricted-Proxyvertrag
+
+Umgesetzt ist der noch nicht veröffentlichte Caddy-Server auf Container-Port 444. Der Staff-Server auf 443 und der Portal-Server auf 444 verlangen jeweils
+den passenden Host **und** TLS-SNI. Falsche oder unbekannte Origins werden
+abgebrochen. Der Restricted-Server leitet nur die fünf inventarisierten
+Portal-SPA-Einstiege, die technisch benötigten Svelte-Assets und die direkt aus
+`PORTAL_SURFACE_ROUTES` erzeugten Methoden-/Pfadmatcher weiter. Alle übrigen
+Pfade, einschließlich `PORTAL_INTERNAL_ROUTES`, bleiben geschlossen.
+
+Separate Dev-/Delivery-Compose-Overlays bilden den späteren Publish-Vertrag
+`<restricted-ip>:443 → proxy:444` ab. Extern bleibt es damit bei normalem HTTPS
+auf 443; 444 ist kein Betreiber- oder Client-Port. Die Overlays werden bereits
+mit Release-/Update-Artefakten ausgeliefert, aber noch nicht automatisch vom
+Setup gewählt. Das bestehende Wildcard-Zertifikat wird auf beiden internen
+Listenern verwendet; die effektive Caddy-Konfiguration enthält weiterhin nur
+eine Automations-Policy für `*.<installationsraum>`. Dieser Block erzeugt weder
+einen Portal-A-Record noch eine zweite ACME-Order.
+
+Die nun tatsächlich geltende Sicherheitsgrenze ist zunächst ein **ausführbarer,
+getesteter Proxyvertrag**, noch kein aktives Restricted-Binding. Offen bleiben
+Restricted-IP-Persistenz und Kandidatenprüfung, transaktionales Apply/Remove und
+Rollback, Runtime-Audit beider Publishes, Manager-UI, Drift/Repair sowie die
+reale Abnahme mit zwei NICs. Host-Firewall, Routing und Netztrennung bleiben
+vollständig Aufgabe der Praxis-IT; aus dem IP-Binding allein folgt keine
+Isolationszusage.

@@ -4,7 +4,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import type { TlsCertificateStatus } from '@praxis-flow/server-shared';
+import {
+  PORTAL_INTERNAL_ROUTES,
+  PORTAL_STATIC_SURFACE_ROUTES,
+  PORTAL_SURFACE_ROUTES,
+  PORTAL_UI_SURFACE_ROUTES,
+  type TlsCertificateStatus,
+} from '@praxis-flow/server-shared';
 import { readEnvMap } from './env-file.js';
 import {
   applyHostTls,
@@ -30,6 +36,8 @@ import {
 import {
   GENERATED_CADDYFILE_MARKER,
   generateTlsCaddyfile,
+  portalApiCaddyMatcher,
+  portalSurfacePathRegexp,
   resolveProxyTlsPaths,
   writeGeneratedTlsCaddyfile,
   writeSecretFileAtomically,
@@ -444,7 +452,60 @@ test('generated Caddyfile keeps HTTP app before cutover and uses ACME-DNS withou
   assert.match(caddyfile, /\*\.7fk3m2\.lan\.notaus\.de \{/);
   assert.match(caddyfile, /@staff host staff\.7fk3m2\.lan\.notaus\.de/);
   assert.doesNotMatch(caddyfile, /\nstaff\.7fk3m2\.lan\.notaus\.de \{/);
-  assert.doesNotMatch(caddyfile, /portal\.7fk3m2\.lan\.notaus\.de/);
+  assert.match(caddyfile, /host portal\.7fk3m2\.lan\.notaus\.de/);
+  assert.match(caddyfile, /https:\/\/\*\.7fk3m2\.lan\.notaus\.de:444 \{/);
+});
+
+test('generated managed Caddyfile derives a strict restricted listener from the portal contract', () => {
+  const status = {
+    ...emptyTlsStatus(),
+    state: 'active' as const,
+    mode: 'managed' as const,
+    hostname: 'staff.7fk3m2.lan.notaus.de',
+    installationDomain: '7fk3m2.lan.notaus.de',
+    staffHostname: 'staff.7fk3m2.lan.notaus.de',
+    portalHostname: 'portal.7fk3m2.lan.notaus.de',
+    wildcardCertificateName: '*.7fk3m2.lan.notaus.de',
+    installationId: '7fk3m2q9',
+    cutoverApplied: true,
+  };
+  const caddyfile = generateTlsCaddyfile(status, new Map());
+
+  assert.match(caddyfile, /https:\/\/\*\.7fk3m2\.lan\.notaus\.de:444 \{/);
+  assert.doesNotMatch(caddyfile, /https:\/\/portal\.7fk3m2\.lan\.notaus\.de:444/);
+  assert.match(
+    caddyfile,
+    /@portalOrigin \{\n\t\thost portal\.7fk3m2\.lan\.notaus\.de\n\t\texpression \{http\.request\.tls\.server_name\} == "portal\.7fk3m2\.lan\.notaus\.de"/,
+  );
+  assert.match(
+    caddyfile,
+    /@staff \{\n\t\thost staff\.7fk3m2\.lan\.notaus\.de\n\t\texpression \{http\.request\.tls\.server_name\} == "staff\.7fk3m2\.lan\.notaus\.de"/,
+  );
+
+  for (const [index, route] of PORTAL_SURFACE_ROUTES.entries()) {
+    assert.ok(portalApiCaddyMatcher(route, index).every((line) => caddyfile.includes(line)));
+  }
+  assert.equal(
+    (caddyfile.match(/\n\t\t@portalApi\d+ \{/g) ?? []).length,
+    PORTAL_SURFACE_ROUTES.length,
+  );
+  for (const route of PORTAL_INTERNAL_ROUTES)
+    assert.doesNotMatch(caddyfile, new RegExp(route.path));
+
+  for (const route of PORTAL_UI_SURFACE_ROUTES) assert.match(caddyfile, new RegExp(route.path));
+  for (const route of PORTAL_STATIC_SURFACE_ROUTES) {
+    assert.ok(caddyfile.includes(route.path));
+  }
+  assert.doesNotMatch(caddyfile, /path \/api\/\*/);
+  assert.doesNotMatch(caddyfile, /path \/\*/);
+  assert.match(caddyfile, /handle \{\n\t\t\trespond 404\n\t\t\}/);
+});
+
+test('portal parameter templates become anchored single-segment Caddy regexps', () => {
+  assert.equal(
+    portalSurfacePathRegexp('/api/v1/portal/documents/:documentId/delete'),
+    '^/api/v1/portal/documents/[^/]+/delete$',
+  );
 });
 
 test('generated managed and custom Caddyfiles expose the dedicated internal TLS health site', () => {

@@ -1,7 +1,8 @@
 # Plan: Manager — eingeschränkter Netzwerkzugang
 
-Stand: 2026-09-14 · **TLS-Fundament und Proxy-Staff-Publishes umgesetzt;
-Manager-Diagnose und Restricted-Binding offen; Host-Firewall außerhalb des Produkts**
+Stand: 2026-09-16 · **TLS-Fundament, Proxy-Staff-Publishes und ausführbarer
+Restricted-Proxyvertrag umgesetzt; Manager und Restricted-Binding offen;
+Host-Firewall außerhalb des Produkts**
 
 Grundlage: [Eingeschränkter Netzwerkzugang für das Patientenportal](plan-portal-lan-isolation.md) ·
 TLS-Ist: [`operations/tls.md`](operations/tls.md)
@@ -69,8 +70,8 @@ Verantwortungsgrenzen:
   Formulare autorisieren.
 - **TLS:** Installationsraum, Staff-/Portal-Hostname, Zertifikatsname,
   Zertifikatsmaterial und DNS-Voraussetzungen.
-- **Setup:** Restricted-Binding persistieren, prüfen und transaktional auf
-  Compose, Caddy und Host-Firewall anwenden.
+- **Setup:** Restricted-Binding künftig persistieren, prüfen und transaktional
+  auf Compose und Caddy anwenden.
 - **Manager-Renderer:** Setup-Zustand darstellen, IP-Auswahl als Draft halten
   und Aktionen auslösen.
 
@@ -101,7 +102,7 @@ Nur lesbar werden angezeigt:
 - Staff-IP und gewählte Restricted-IP;
 - `Patientenportal` als aktuell freigegebene Funktion;
 - technischer Status und konkrete Blocker;
-- Ergebnis der relevanten Binding-, Firewall-, Listener- und
+- Ergebnis der relevanten Binding-, Listener- und
   Erreichbarkeitsprüfungen;
 - Portal-URL, sobald DNS-/TLS-Vertrag sie bereitstellt.
 
@@ -201,7 +202,7 @@ Der erste vertikale Schnitt braucht höchstens diese Operationen:
 | --------------------------------- | --------------------------------------------------------------- |
 | `inspectRestrictedNetwork()`      | Status, Capabilities, Kandidaten und aktuelles Audit laden      |
 | `prepareRestrictedNetwork(input)` | Auswahl validieren, bestätigen und resumierbar persistieren     |
-| `applyRestrictedNetwork()`        | Firewall/Compose/Caddy transaktional anwenden und prüfen        |
+| `applyRestrictedNetwork()`        | Compose/Caddy transaktional anwenden und prüfen                 |
 | `removeRestrictedNetwork()`       | Binding und verwaltete Regeln transaktional entfernen           |
 | `repairRestrictedNetwork()`       | Erst ergänzen, wenn die Semantik über erneutes Apply hinausgeht |
 
@@ -226,12 +227,11 @@ Setup besitzt den gesamten Host-Lifecycle:
 
 1. Kandidat und Same-NIC-Bestätigung validieren.
 2. TLS-/DNS-Voraussetzungen prüfen.
-3. aktuellen Compose-, Caddy-, Env- und Firewallzustand sichern.
+3. aktuellen Compose-, Caddy- und Env-Zustand sichern.
 4. neue Dateien erzeugen und offline validieren.
-5. Host-Firewall anwenden.
-6. Proxy mit explizitem Restricted-Publish neu erzeugen.
-7. zuerst Staff, danach Restricted-Listener und Portal-Policy prüfen.
-8. Erfolg persistieren oder vollständig zurückrollen und Staff erneut prüfen.
+5. Proxy mit explizitem Restricted-Publish neu erzeugen.
+6. zuerst Staff, danach Restricted-Listener und Portal-Policy prüfen.
+7. Erfolg persistieren oder vollständig zurückrollen und Staff erneut prüfen.
 
 Nach Prozessabbruch oder Neustart erkennt Setup einen unvollständigen
 Journalzustand und setzt die Operation kontrolliert fort oder rollt zurück. Der
@@ -416,9 +416,12 @@ kein Host-Firewall-Apply, keine Elevation. Details und Bestandsaufnahme:
 
 - DTOs und neue Operationsdeskriptoren;
 - Persistenz, Inspect, Prepare und Apply;
-- den bereits im gemeinsamen Server-Paket vorhandenen Methoden-/Pfadvertrag
-  `PORTAL_SURFACE_ROUTES` als feste Proxy-Positivliste anwenden;
-- Compose/Caddy/Firewall-Transaktion und Rollback;
+- [x] getrennten internen Listener 444, strikte Host-/SNI-Prüfung und den
+      Methoden-/Pfadvertrag `PORTAL_SURFACE_ROUTES` als generierte
+      Proxy-Positivliste vorbereiten;
+- [x] separate Dev-/Delivery-Overlays für
+      `<restricted-ip>:443 → proxy:444` ausliefern, ohne sie automatisch zu wählen;
+- Compose/Caddy-Transaktion und Rollback;
 - Fail-closed bei fehlender Restricted-IP.
 
 ### Schnitt 3 — Manager (Restricted, offen)

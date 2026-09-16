@@ -34,6 +34,7 @@ function createBundleSource(): string {
     'docker-compose.delivery.yml',
     'docker-compose.proxy.delivery.yml',
     'docker-compose.proxy-tls.delivery.yml',
+    'docker-compose.proxy-restricted.delivery.yml',
     'proxy/Caddyfile',
   ]) {
     const targetPath = path.join(bundleRoot, 'templates', relativePath);
@@ -399,6 +400,10 @@ test('loadDeliveryImagesFromArchive installs templates from a complete release b
     );
     fs.writeFileSync(
       path.join(bundleRoot, 'templates', 'docker-compose.proxy-tls.delivery.yml'),
+      'services: {}\n',
+    );
+    fs.writeFileSync(
+      path.join(bundleRoot, 'templates', 'docker-compose.proxy-restricted.delivery.yml'),
       'services: {}\n',
     );
     fs.writeFileSync(

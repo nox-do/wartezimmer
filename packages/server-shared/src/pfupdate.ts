@@ -47,6 +47,7 @@ export const PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS = [
 export const PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS = [
   'templates/docker-compose.proxy.delivery.yml',
   'templates/docker-compose.proxy-tls.delivery.yml',
+  'templates/docker-compose.proxy-restricted.delivery.yml',
   'templates/proxy/Caddyfile',
 ] as const;
 

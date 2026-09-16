@@ -36,6 +36,8 @@ const AREA_PATHS = {
     'docker-compose.proxy.delivery.yml',
     'docker-compose.proxy-tls.yml',
     'docker-compose.proxy-tls.delivery.yml',
+    'docker-compose.proxy-restricted.yml',
+    'docker-compose.proxy-restricted.delivery.yml',
   ],
 };
 

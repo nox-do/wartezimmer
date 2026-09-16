@@ -1,6 +1,6 @@
 # LAN-TLS (Produkt)
 
-Stand: 2026-09-14 · §1–10 ausgearbeitet (Ops-Ist LAN-TLS)
+Stand: 2026-09-16 · §1–10 ausgearbeitet (Ops-Ist LAN-TLS)
 
 **Scope:** Vertrauenswürdiges HTTPS im Praxis-LAN — Modell, Aktivierung, Betrieb, Grenzen.  
 **Ist:** Manager-Wizard (Schritt HTTPS) + Netzwerk-Tab; Setup-API `/api/setup/host/tls/*`; Proxy-Service mit Custom-Caddy-Image.
@@ -264,14 +264,18 @@ Ein `proxy`-Service, gestapelte Compose-Dateien. Setup wählt Overlays über `.e
 
 ### 6.1 Dateien
 
-| Schicht             | Dev                                                               | Delivery                                |
-| ------------------- | ----------------------------------------------------------------- | --------------------------------------- |
-| Base                | `docker-compose.yml`                                              | `docker-compose.delivery.yml`           |
-| HTTP-Proxy          | `docker-compose.proxy.yml`                                        | `docker-compose.proxy.delivery.yml`     |
-| LAN-TLS             | `docker-compose.proxy-tls.yml`                                    | `docker-compose.proxy-tls.delivery.yml` |
-| Lab (nicht Produkt) | `docker-compose.tls-lab.yml` + `docker-compose.tls-lab-proxy.yml` | —                                       |
+| Schicht             | Dev                                                               | Delivery                                       |
+| ------------------- | ----------------------------------------------------------------- | ---------------------------------------------- |
+| Base                | `docker-compose.yml`                                              | `docker-compose.delivery.yml`                  |
+| HTTP-Proxy          | `docker-compose.proxy.yml`                                        | `docker-compose.proxy.delivery.yml`            |
+| LAN-TLS             | `docker-compose.proxy-tls.yml`                                    | `docker-compose.proxy-tls.delivery.yml`        |
+| Restricted-Publish  | `docker-compose.proxy-restricted.yml`                             | `docker-compose.proxy-restricted.delivery.yml` |
+| Lab (nicht Produkt) | `docker-compose.tls-lab.yml` + `docker-compose.tls-lab-proxy.yml` | —                                              |
 
 **Regel:** TLS-Overlay nur **nach** Proxy-Overlay. Lab nur wenn TLS-Overlay an **und** `TLS_ACME_DIRECTORY=pebble` **und** Dev-Compose (nie Delivery). Gateway bleibt orthogonal.
+Das Restricted-Overlay ist bereits als ausführbarer Vertrag vorhanden, wird
+vom Setup aber noch nicht automatisch ausgewählt. Es darf erst nach der späteren
+Restricted-IP-Validierung und dem transaktionalen Apply ergänzt werden.
 
 ### 6.2 Wann welches Overlay
 
@@ -293,12 +297,13 @@ verwenden den vorhandenen Rollback. Die Prüfung der lokalen Staff-IP und der
 tatsächlichen Docker-Publishes bleibt bestehen. Eine Belegung auf einer nicht
 verwendeten Host-IP ist kein zusätzlicher Blocker.
 
-|          |                                                                                                                                        |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Image    | `PRAXIS_FLOW_PROXY_IMAGE` — Delivery: `praxis-flow-proxy:…-acmedns` (xcaddy + `dns.providers.acmedns`); Fallback/Legacy `caddy:2.11.4` |
-| Delivery | `pull_policy: never` auf app/sandbox/proxy (+ gateway) — kein Registry-Nachzug in der Praxis                                           |
-| Port 80  | immer mit Proxy-Overlay (`PROXY_HTTP_PORT`, Default 80)                                                                                |
-| Port 443 | nur mit TLS-Overlay (`PROXY_HTTPS_PORT`, Default 443)                                                                                  |
+|                |                                                                                                                                        |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Image          | `PRAXIS_FLOW_PROXY_IMAGE` — Delivery: `praxis-flow-proxy:…-acmedns` (xcaddy + `dns.providers.acmedns`); Fallback/Legacy `caddy:2.11.4` |
+| Delivery       | `pull_policy: never` auf app/sandbox/proxy (+ gateway) — kein Registry-Nachzug in der Praxis                                           |
+| Port 80        | immer mit Proxy-Overlay (`PROXY_HTTP_PORT`, Default 80)                                                                                |
+| Port 443       | nur mit TLS-Overlay (`PROXY_HTTPS_PORT`, Default 443)                                                                                  |
+| Restricted 443 | separates Opt-in-Overlay: `<restricted-ip>:443 → proxy:444`; 444 ist nur containerintern                                               |
 
 Managed-ACME braucht das Custom-Image. Stock-Caddy reicht für reines HTTP und kann Custom-PEM technisch bedienen; ohne `acmedns`-Modul scheitert managed Obtain.
 
@@ -308,7 +313,7 @@ Pfade: `resolveProxyTlsPaths` → `{installHome}/state/tls/`. **Nicht** in Git, 
 
 | Pfad                                           | Inhalt                                                                                                                                                   |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Caddyfile`                                    | generiert (`writeGeneratedTlsCaddyfile`, Marker `# PRAXIS-FLOW-GENERATED LAN-TLS v2`) — ersetzt den Stock-`proxy/Caddyfile`-Mount, sobald Overlay an ist |
+| `Caddyfile`                                    | generiert (`writeGeneratedTlsCaddyfile`, Marker `# PRAXIS-FLOW-GENERATED LAN-TLS v3`) — ersetzt den Stock-`proxy/Caddyfile`-Mount, sobald Overlay an ist |
 | `caddy-data/`, `caddy-config/`                 | Caddy ACME/Storage (`/data`, `/config`)                                                                                                                  |
 | `acme-dns.json`                                | ACME-DNS-Credentials (managed); Custom: leeres `{}` damit Docker die Datei nicht als Dir anlegt                                                          |
 | `certs/fullchain.pem`, `certs/private-key.pem` | Custom-PEM                                                                                                                                               |
@@ -327,6 +332,22 @@ Exact-Name-Order entsteht. Ein expliziter Host-Matcher leitet nur
 `staff.<raum>` zur App; der Fallback `abort` hält `portal.<raum>` und unbekannte
 Wildcard-Namen auf beiden Ports geschlossen. Custom/Legacy bleibt ein
 Exact-FQDN.
+
+Der Generator enthält zusätzlich den noch nicht hostseitig veröffentlichten
+Restricted-Server auf dem internen Port 444. Er verwendet bei Managed TLS
+denselben Wildcard-Site-Namen und dieselbe TLS-Automations-Policy. Freigegeben
+sind dort nur Host **und** TLS-SNI `portal.<raum>`, die fünf Portal-SPA-Einstiege
+`/portal`, `/portal/`, `/portal/menu`, `/portal/upload`, `/portal/anamnese`, die
+benötigten Svelte-Build-Assets (`/_app/immutable/*`, `/_app/version.json` und
+Favicons) sowie die direkt aus `PORTAL_SURFACE_ROUTES` erzeugten Methoden-/
+Pfadmatcher. Andere Pfade erhalten 404; falsche oder unbekannte Hosts/SNI werden
+abgebrochen. `PORTAL_INTERNAL_ROUTES` wird nicht erzeugt. Der Staff-Server prüft
+ebenfalls Host und TLS-SNI gemeinsam; die interne Staff-Nutzung von `/portal`
+bleibt dadurch unverändert.
+
+Dieser interne Listener allein ist noch kein eingerichteter Restricted-Zugang:
+Es gibt weiterhin keinen automatisch ausgewählten Restricted-Publish, keinen
+Portal-A-Record und keinen Apply-/Remove-Zustand.
 
 TLS-Status-Felder und Mode liegen parallel in `.env` (`TLS_*`, siehe §5). Overlay-Auswahl liest `TLS_STATE` / `PROXY_MODE`; Secrets liegen auf Disk unter `state/tls/`, nicht in der Status-API.
 

@@ -1,8 +1,11 @@
 export { isComplexRoutingLicensed } from './routing-license-stub.js';
 export {
   PORTAL_INTERNAL_ROUTES,
+  PORTAL_STATIC_SURFACE_ROUTES,
   PORTAL_SURFACE_ROUTES,
+  PORTAL_UI_SURFACE_ROUTES,
   type PortalSurfaceRoute,
+  type PortalUiSurfaceRoute,
 } from './portal-surface.js';
 export {
   DEFAULT_ROOM_PANEL_PIN_HASH,

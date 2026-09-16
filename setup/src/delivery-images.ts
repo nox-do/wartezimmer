@@ -185,6 +185,7 @@ const RELEASE_BUNDLE_TEMPLATE_PATHS = [
   'templates/docker-compose.delivery.yml',
   'templates/docker-compose.proxy.delivery.yml',
   'templates/docker-compose.proxy-tls.delivery.yml',
+  'templates/docker-compose.proxy-restricted.delivery.yml',
   'templates/proxy/Caddyfile',
 ] as const;
 

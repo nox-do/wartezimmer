@@ -31,6 +31,10 @@ export const PFUPDATE_PROXY_COMPOSE_TEMPLATE_FILE = 'docker-compose.proxy.delive
 export const PFUPDATE_PROXY_TLS_COMPOSE_TEMPLATE_FILE =
   'docker-compose.proxy-tls.delivery.yml' as const;
 
+/** Restricted publish overlay; selection and lifecycle are implemented by the later binding flow. */
+export const PFUPDATE_PROXY_RESTRICTED_COMPOSE_TEMPLATE_FILE =
+  'docker-compose.proxy-restricted.delivery.yml' as const;
+
 /** Seeded only when missing — never overwritten on update. */
 export const PFUPDATE_PROXY_CADDYFILE_RELATIVE = 'proxy/Caddyfile' as const;
 

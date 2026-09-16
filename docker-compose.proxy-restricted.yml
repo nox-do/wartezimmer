@@ -1,0 +1,9 @@
+# Opt-in restricted-network publish for the TLS proxy.
+# Layer after docker-compose.proxy.yml and docker-compose.proxy-tls.yml only after
+# Setup has validated and persisted the selected Restricted IPv4 address.
+# External clients still use HTTPS port 443; port 444 is container-internal only.
+
+services:
+  proxy:
+    ports:
+      - '${SETUP_RESTRICTED_APP_IP:?SETUP_RESTRICTED_APP_IP is required}:443:444'
