@@ -92,3 +92,15 @@ test('missing, non-local and failed binding checks remain visible', () => {
   assert.equal(networkAccessSummary(status).diagnosis, 'Bindung unbekannt');
   assert.equal(networkAccessSummary(status).needsAttention, true);
 });
+
+test('network summary exposes DNS filter guidance and removes it after recovery', () => {
+  const status = minimalHostStatus({
+    appBaseUrl: 'https://staff.abc.lan.notaus.de',
+    configuredCanonicalBaseUrl: 'https://staff.abc.lan.notaus.de',
+    probes: [{ id: 'app.health.lan', ok: false, message: 'DNS', reason: 'dns-rebind' }],
+  });
+  assert.match(networkAccessSummary(status).dnsWarning!, /lan\.notaus\.de als Ausnahme/);
+  assert.equal(networkAccessSummary(status, null, 'offline').dnsWarning, null);
+  status.probes = [{ id: 'app.health.lan', ok: true, message: 'ok' }];
+  assert.equal(networkAccessSummary(status).dnsWarning, null);
+});

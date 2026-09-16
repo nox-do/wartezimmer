@@ -77,6 +77,8 @@ export type ProbeResult = {
   ok: boolean;
   message: string;
   detail?: string;
+  /** Public DNS returns a private IPv4 while system name resolution failed; a suspicion, not proof. */
+  reason?: 'dns-rebind';
 };
 
 /** One concrete Docker host publish observed at runtime. */

@@ -224,6 +224,17 @@ export function networkProxyMissingAfterRestart(
   return proxyEnabled && result.composeRestarted && !proxyContainerRunning(result);
 }
 
+export function dnsRebindHelp(baseUrl: string): string {
+  let exception = 'den Praxis-Hostnamen';
+  try {
+    const hostname = new URL(baseUrl).hostname.toLowerCase().replace(/\.$/, '');
+    exception = hostname === 'lan.notaus.de' || hostname.endsWith('.lan.notaus.de')
+      ? 'lan.notaus.de'
+      : hostname;
+  } catch { /* Keep a neutral instruction if no valid address is available. */ }
+  return `DNS-Rebind-Schutz oder lokaler DNS-Filter möglich. Die lokale Namensauflösung scheitert, während ein öffentlicher DNS-Server eine private LAN-IP liefert. Prüfen Sie die DNS-Rebind-Ausnahmen im Router bzw. lokalen DNS-Filter und tragen Sie dort ${exception} als Ausnahme ein. Anschließend die Praxisadresse erneut prüfen.`;
+}
+
 export function formatActiveReachabilityResult(
   probes: ProbeResult[],
   baseUrl: string,
@@ -240,6 +251,9 @@ export function formatActiveReachabilityResult(
   }
 
   if (lan && !lan.ok) {
+    if (lan.reason === 'dns-rebind') {
+      return { ok: false, message: dnsRebindHelp(baseUrl) };
+    }
     return {
       ok: false,
       message: `Lokal erreichbar, aber nicht über das Praxisnetz (${baseUrl}). IP-Adresse und Firewall prüfen.`,

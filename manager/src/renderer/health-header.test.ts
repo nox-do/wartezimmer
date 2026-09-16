@@ -277,3 +277,19 @@ test('collectHealthTiles shows Keine Container without waiting when stack is dow
   );
   assert.deepEqual(tiles, [{ name: 'Stack', detail: 'Keine Container', status: null }]);
 });
+
+test('DNS filter suspicion appears on the entry tile as a warning with and without proxy', () => {
+  for (const proxy of [false, true]) {
+    const tiles = collectHealthTiles(runtime({
+      proxyServer: proxy ? { enabled: true, container: proxyContainer } : null,
+      probes: [
+        { id: 'app.health.local', ok: true, message: 'ok' },
+        { id: 'app.health.lan', ok: false, message: 'DNS', reason: 'dns-rebind' },
+      ],
+    }));
+    const tile = tiles.find((item) => item.name === (proxy ? 'Proxy-Server' : 'app'))!;
+    assert.equal(tile.status, 'warn');
+    assert.match(tile.detail, /DNS-Rebind-Schutz.*möglich/);
+    assert.doesNotMatch(tile.detail, /Einstieg nicht erreichbar/);
+  }
+});

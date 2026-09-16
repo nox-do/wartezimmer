@@ -132,6 +132,9 @@ function entryDetail(
     return `${stackDetail} — Einstieg wird geprüft …`;
   }
   if (!lanProbe.ok) {
+    if (lanProbe.reason === 'dns-rebind') {
+      return `${stackDetail} — DNS-Rebind-Schutz oder lokaler DNS-Filter möglich`;
+    }
     return `${stackDetail} — Einstieg nicht erreichbar`;
   }
   return stackDetail;

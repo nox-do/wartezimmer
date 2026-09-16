@@ -29,6 +29,9 @@
       Praxis Flow ist auf allen Netzwerkkarten über Port 8080 erreichbar.
     {/if}
   </p>
+  {#if summary.dnsWarning}
+    <p class="notice is-warn" role="status">{summary.dnsWarning}</p>
+  {/if}
   {#if summary.tls}
     <p class="hint">Die Verbindung ist verschlüsselt.</p>
   {:else}

@@ -1,6 +1,7 @@
 import type { HostStatus } from '../shared/host-status.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import { effectiveProxyContainer } from './host-snapshot-selectors.js';
+import { dnsRebindHelp } from './network-view-model.js';
 
 /** Presentation only: saved configuration and observed runtime remain separate. */
 export function networkAccessSummary(
@@ -46,6 +47,9 @@ export function networkAccessSummary(
       : (failure?.message ??
         (checks.length ? 'Keine Abweichung erkannt' : 'Host-Bindings noch nicht geprüft'));
   return {
+    dnsWarning: !runtimeError && (runtime?.probes ?? status.probes).some(
+      (probe) => probe.id === 'app.health.lan' && !probe.ok && probe.reason === 'dns-rebind',
+    ) ? dnsRebindHelp(runtime?.appBaseUrl || status.configuredCanonicalBaseUrl || status.appBaseUrl) : null,
     operation,
     diagnosis,
     needsAttention: Boolean(runtimeError || !ip || status.network.lanIpStale || failure),

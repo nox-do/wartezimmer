@@ -240,6 +240,18 @@ Kein Token, kein Private Key in der Status-Antwort.
 
 UI-Copy: `tlsErrorCopy` in `tls-network-view-model.ts`. Rebind ist vor allem UX-/Diagnosehinweis (Router), keine eigene Error-Class.
 
+Bei `ENOTFOUND` oder `EAI_AGAIN` der LAN-Erreichbarkeitsprobe fragt Setup zusätzlich
+die öffentlichen Resolver `1.1.1.1` und `8.8.8.8` nach dem A-Record. Für beide
+Abfragen zusammen gilt eine Frist von 1,5 Sekunden; danach werden offene Abfragen
+abgebrochen. Liefert mindestens einer eine private IPv4 (RFC 1918), erhält die
+fehlgeschlagene Probe `reason: dns-rebind`. Der Manager zeigt einen **Verdacht auf
+DNS-Rebind-Schutz oder lokalen DNS-Filter**, keinen bewiesenen Routerfehler.
+Als Ausnahme nennt er für die verwaltete Zone `lan.notaus.de`, sonst den konkreten
+Praxis-Hostnamen. Der Hinweis erscheint auch ohne manuell ausgelöste Prüfung im
+Netzwerkbereich. NXDOMAIN, Timeout oder öffentliche IPs lassen die ursprüngliche
+Fehlermeldung bestehen. Die Zusatzabfrage verändert weder System-DNS noch Router
+und ersetzt keine erfolgreiche LAN-Erreichbarkeitsprüfung.
+
 ### 5.4 Abgrenzung `POST /host/network`
 
 - Darf Proxy an/aus und `http`-Mode setzen, **solange** kein aktiver TLS-Mode und keine HTTPS-Vorbereitung blockiert (§3).
