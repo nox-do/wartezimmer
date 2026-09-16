@@ -40,7 +40,7 @@ test('previousWizardStep walks back through wizard steps', () => {
   assert.equal(previousWizardStep(8), 7);
 });
 
-test('canLeaveWizardStep1 requires docker, network prerequisites and delivery images', () => {
+test('canLeaveWizardStep1 requires docker and delivery images', () => {
   const status = minimalHostStatus();
   assert.equal(canLeaveWizardStep1(status, false), true);
   assert.equal(
@@ -64,32 +64,8 @@ test('canLeaveWizardStep1 requires docker, network prerequisites and delivery im
   );
 });
 
-test('canLeaveWizardStep1 blocks when network prerequisites fail', () => {
-  assert.equal(
-    canLeaveWizardStep1(
-      minimalHostStatus({
-        networkPrerequisites: [
-          {
-            id: 'preflight.app-port',
-            ok: false,
-            message: 'Port 8080 ist bereits belegt. Praxis Flow kann die App so nicht starten.',
-            detail: 'Belegt durch: Docker-Container other-app',
-          },
-        ],
-      }),
-      false,
-    ),
-    false,
-  );
-  assert.equal(
-    canLeaveWizardStep1(
-      minimalHostStatus({
-        networkPrerequisites: [],
-      }),
-      false,
-    ),
-    false,
-  );
+test('canLeaveWizardStep1 allows installation without a separate port preflight', () => {
+  assert.equal(canLeaveWizardStep1(minimalHostStatus({ networkPrerequisites: [] }), false), true);
 });
 
 test('planWizardAdvance leaves prerequisites for folders', () => {

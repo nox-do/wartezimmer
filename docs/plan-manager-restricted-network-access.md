@@ -334,6 +334,14 @@ Das F1-Gate gilt je Plattform. Die macOS-Umsetzung darf auf der nachgewiesenen
 Kombination fortgesetzt werden; Windows bleibt bis zu seinem eigenen Nachweis
 nicht freigegeben. Eine technische Windows-Sperre ist noch nicht umgesetzt.
 
+Einordnung vom 15.09.2026: Für die nachgewiesene macOS-Kombination ist kein
+erneuter grundlegender Plattform-PoC als Vorbereitung des Portal-Blocks nötig.
+Die Produkt-Smokes vom 14.09. prüfen bereits die Staff-IP auf 80/443 positiv und
+die zweite IP auf diesen Ports negativ. Windows und breitere macOS-Freigaben
+bleiben separate spätere Arbeitspakete. Automatisierte Plattformprüfung,
+Staff-Produktabnahme und die spätere Prüfung gleichzeitiger Staff-/Portal-
+Publishes sind weiterhin offen; der vorhandene Nachweis ersetzt diese nicht.
+
 ### Schnitt 1a — TLS-Identität und Backup (erledigt)
 
 - [x] Wildcard-/Origin-Vertrag im TLS-Modul;
@@ -353,6 +361,10 @@ nicht freigegeben. Eine technische Windows-Sperre ist noch nicht umgesetzt.
       paralleles Binding-Identitätsfeld;
 - [x] Fail-closed vor Proxy-Start/Recreate, wenn die Staff-IP fehlt oder nicht
       lokal ist;
+- [x] Portkonflikte beim Start/Recreate durch Docker behandeln; eigener
+      Port-Preflight einschließlich plattformspezifischer Abfragen entfernt.
+      Staff-IP-Prüfung, Runtime-Binding-Audit und Apply-Rollback bleiben erhalten
+      (Entscheidung 15.09.2026).
 - [x] transaktionaler Compose-Apply mit Runtime-Audit und Rollback einschließlich
       Cleanup von Teilzuständen;
 - [x] Image-Preflight-Fehler ohne Container-Mutation behandeln; Env restaurieren;
@@ -404,7 +416,8 @@ kein Host-Firewall-Apply, keine Elevation. Details und Bestandsaufnahme:
 
 - DTOs und neue Operationsdeskriptoren;
 - Persistenz, Inspect, Prepare und Apply;
-- feste Portal-Positivliste;
+- den bereits im gemeinsamen Server-Paket vorhandenen Methoden-/Pfadvertrag
+  `PORTAL_SURFACE_ROUTES` als feste Proxy-Positivliste anwenden;
 - Compose/Caddy/Firewall-Transaktion und Rollback;
 - Fail-closed bei fehlender Restricted-IP.
 

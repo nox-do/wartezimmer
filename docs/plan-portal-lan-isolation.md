@@ -921,8 +921,11 @@ Status der groben Blöcke:
       geprüft; automatisierte Plattformfreigabe und externe
       Produktabnahme bleiben offen; die Staff-UI ist überarbeitet. Der proxyfreie initiale Betrieb ist bewusst
       nicht NIC-isoliert.
-- [ ] **Restricted-Binding:** zweite IP, Portal-A-Record, getrennter
-      Portal-Listener und Portal-Positivliste einführen.
+- [ ] **Restricted-Binding:** zweite IP, Portal-A-Record und getrennten
+      Portal-Listener einführen. Die Portal-API ist bereits unter
+      `/api/v1/portal/*` gebündelt; der ausführbare Methoden-/Pfadvertrag
+      `PORTAL_SURFACE_ROUTES` ist die vorbereitete Positivliste für den späteren
+      Listener. Der Gateway-interne Verify-Endpunkt ist davon getrennt.
 - [ ] **Portal-Härtung und Freigabe:** App-Vertrag, Runtime-Härtung,
       Plattformmatrix, Betriebsabnahme und Release-Tests abschließen.
 
@@ -1058,6 +1061,16 @@ dahin für Staff- und Restricted-Binding **nicht freigegeben**; eine technische
 Windows-Sperre ist noch nicht umgesetzt. Das blockiert die weitere
 macOS-Umsetzung nicht.
 
+Einordnung für den nächsten Arbeitsblock (15.09.2026): Die dokumentierte
+macOS-Kombination benötigt keinen erneuten grundlegenden Binding-PoC, um die
+Portal-Arbeiten vorzubereiten. Die Produkt-Smokes vom 14.09. haben bereits
+Staff-IP:80 und Staff-IP:443 positiv sowie dieselben Ports auf der zweiten IP
+negativ geprüft. Weitere Plattformnachweise betreffen die spätere Freigabe
+dieser Plattformen; Windows bleibt zurückgestellt. Eine automatische
+Versions-/Plattformsperre ist weiterhin offen und wird hier nicht als umgesetzt
+ausgewiesen. Die noch offene Staff-Produktabnahme und die spätere Abnahme zweier
+gleichzeitiger Staff-/Portal-Publishes bleiben davon getrennt.
+
 #### Schritt 2 — Binding- und Statusvertrag (umgesetzt)
 
 Arbeitsstand: Der abwärtskompatible DTO-/Parser-Schnitt, das Runtime-Audit und
@@ -1098,7 +1111,7 @@ Arbeitsstand: Der Compose-/Env-Vertrag ist umgesetzt.
 
 #### Schritt 4 — kontrollierte Migration, Apply und Rollback
 
-Arbeitsstand: Proxy-Preflight, Compose-Apply, Runtime-Audit und Env-/Stack-
+Arbeitsstand: Staff-IP-/Image-Prüfung, Compose-Apply, Runtime-Audit und Env-/Stack-
 Rollback sind umgesetzt. Abschließende Staff-Probe und externe Produktabnahme
 bleiben offen. Host-Firewall ist kein Produkt-Arbeitspaket mehr.
 
@@ -1106,10 +1119,16 @@ bleiben offen. Host-Firewall ist kein Produkt-Arbeitspaket mehr.
       `SETUP_LAN_APP_IP`, bleibt der laufende Stack unberührt und der Manager fordert
       eine Staff-IP-Auswahl an; ein späterer Start/Apply mit globalem Fallback ist
       gesperrt.
-- [x] Vor Proxy-Start/Recreate die lokale Staff-IP prüfen. Beim Einschalten
-      und Repair zusätzlich den vorhandenen HTTP-Port-Preflight ausführen.
-- [ ] Vollständigen zieladressbezogenen Port-Preflight für HTTP/HTTPS vor
-      jedem Recreate ergänzen; der bisherige HTTP-Preflight deckt dies nicht ab.
+- [x] Vor Proxy-Start/Recreate die lokale Staff-IP prüfen.
+- [x] Portkonflikte durch Docker beim Anwenden der vorgesehenen IP-/Port-
+      Publishes behandeln (Entscheidung 15.09.2026). Kein eigener Port-Preflight,
+      keine Testlistener auf 80/443, keine plattformspezifischen Listener-Abfragen.
+      Der generische Preflight wurde entfernt: Ein unprivilegierter Manager darf
+      Port 80/443 nicht auf allen Plattformen selbst öffnen. Docker meldet
+      tatsächliche Binding-Konflikte; vorhandene Apply-/Rollback-Pfade und der
+      Runtime-Binding-Audit bleiben erhalten. Belegungen auf ungenutzten NICs
+      werden nicht pauschal blockiert. Dies ersetzt den zuvor geplanten
+      flächendeckenden Port-Preflight; er ist kein offener Phase-0-Punkt mehr.
 - [ ] Automatisierte Plattformfreigabe ergänzen.
 - [x] Danach Container neu erzeugen und die **tatsächlichen** Runtime-Bindings
       auditieren.
@@ -1229,7 +1248,9 @@ genannte Kombination ist bestanden):
 
 Erst vor dem **Restricted-/Portal-Block** offen:
 
-- vollständige API-Positivliste des Portals;
+- den vorhandenen `PORTAL_SURFACE_ROUTES`-Vertrag in die Caddy-Konfiguration
+  des Restricted-Listeners übersetzen und dessen Vollständigkeit gegen den
+  registrierten Routenkatalog als Release-Gate prüfen;
 - nur bei gescheitertem F1-PoC: eigene Folgeentscheidung, ob ein nativer
   Edge-Proxy als separate Alternativarchitektur geplant wird oder die Plattform
   ohne Portal bleibt.

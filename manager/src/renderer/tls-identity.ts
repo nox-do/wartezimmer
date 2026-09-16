@@ -181,6 +181,8 @@ export function operatorZoneMailBody(input: {
     '',
     `${staffHostname}.                   A      ${input.lanIp}`,
     cnameLine,
+    '',
+    'Der abschließende Punkt kennzeichnet einen vollständigen DNS-Namen. Falls Ihr DNS-Anbieter diesen im Eingabeformular nicht akzeptiert, lassen Sie nur den letzten Punkt weg.',
   ].join('\n');
 }
 

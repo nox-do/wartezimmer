@@ -346,23 +346,23 @@
       runtime={runtimeSnapshot}
       runtimeError={managerShell.runtimeError}
     />
-    {#if showProxyRestore || draftOutcomeHost === 'repair'}
+    {#if showProxyRestore}
       <section class="panel-section" aria-label="Zugriff wiederherstellen">
         <h2>Wiederherstellung des Zugangs</h2>
-        {#if showProxyRestore}
-          <ProxyRecoveryAction
-            disabled={busy || dirty || Boolean(managerShell.runtimeError)}
-            onRestore={() => {
-              draftOutcomeHost = 'repair';
-              controller?.restoreProxy();
-            }}
-          />
-          {#if dirty}
-            <p class="hint">Übernehmen oder verwerfen Sie zuerst die Adressänderungen.</p>
-          {/if}
+        <ProxyRecoveryAction
+          disabled={busy || dirty || Boolean(managerShell.runtimeError)}
+          onRestore={() => {
+            draftOutcomeHost = 'repair';
+            controller?.restoreProxy();
+          }}
+        />
+        {#if dirty}
+          <p class="hint">Übernehmen oder verwerfen Sie zuerst die Adressänderungen.</p>
         {/if}
         {@render draftOutcome('repair')}
       </section>
+    {:else}
+      {@render draftOutcome('repair')}
     {/if}
     <section class="panel-section panel-section--network">
       <div class="maintenance-accordion">

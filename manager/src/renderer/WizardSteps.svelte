@@ -6,8 +6,6 @@
   } from '../shared/docker-file-sharing-hint.js';
   import {
     dockerReady,
-    networkPrerequisitesFailed,
-    networkPrerequisitesReady,
     wizardHttpsPrepared,
     wizardUsesExistingTlsConfiguration,
     wizardProbeFailureHint,
@@ -65,12 +63,6 @@
             <span class="checklist-mark">{snapshot.status.docker.composeAvailable ? '✓' : '○'}</span>
             <span>Docker Compose verfügbar</span>
           </li>
-          <li class={networkPrerequisitesReady(snapshot.status) ? 'is-done' : 'is-open'}>
-            <span class="checklist-mark"
-              >{networkPrerequisitesReady(snapshot.status) ? '✓' : '○'}</span
-            >
-            <span>Lokale Netzwerkvoraussetzungen geprüft</span>
-          </li>
           {#if snapshot.status.deliveryImages.required}
             <li class={deliveryImagesReady(snapshot.status) ? 'is-done' : 'is-open'}>
               <span class="checklist-mark">{deliveryImagesReady(snapshot.status) ? '✓' : '○'}</span>
@@ -95,27 +87,6 @@
             >
               {hints.installLink.buttonLabel}
             </button>
-          {/if}
-          <button
-            type="button"
-            class="btn-secondary wizard-install-link"
-            disabled={snapshot.busy}
-            onclick={() => {
-              void controller.refreshPrerequisites();
-            }}
-          >
-            {snapshot.busy ? 'Prüfe …' : 'Erneut prüfen'}
-          </button>
-        {:else if !networkPrerequisitesReady(snapshot.status)}
-          {#if networkPrerequisitesFailed(snapshot.status).length > 0}
-            {#each networkPrerequisitesFailed(snapshot.status) as check (check.id)}
-              <p class="hint">{check.message}</p>
-              {#if check.detail}
-                <p class="hint">{check.detail}</p>
-              {/if}
-            {/each}
-          {:else}
-            <p class="hint">Netzwerkvoraussetzungen konnten noch nicht geprüft werden.</p>
           {/if}
           <button
             type="button"

@@ -248,7 +248,13 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
   }
 
   function stackRunning(): boolean {
-    return effectiveCompose(deps.getConfig(), deps.getRuntime())?.running ?? false;
+    const compose = effectiveCompose(deps.getConfig(), deps.getRuntime());
+    // `running` summarizes health of all expected services. A partially running
+    // stack still needs recreation when bindings or proxy mode change.
+    return Boolean(
+      compose?.running ||
+        compose?.services.some((service) => service.state.toLowerCase().includes('running')),
+    );
   }
 
   async function verifySavedBaseUrl(
@@ -340,6 +346,17 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
           return;
         }
         saveSubmittedDraft = null;
+        // The backend may have persisted the proxy setting before a restart or
+        // the request failed. Refresh the saved config so HTTPS eligibility does
+        // not remain stale until the next tab navigation.
+        try {
+          await deps.onAfterMutation?.();
+        } catch {
+          // Keep the original save error if the refresh also fails.
+        }
+        if (generation !== actionGeneration) {
+          return;
+        }
         setErrorNotice(
           error instanceof Error ? error.message : 'Netzwerk konnte nicht gespeichert werden.',
         );

@@ -32,7 +32,8 @@ import {
   saveTlsSidecarToDisk,
 } from './pfbackup-dialog.js';
 import { startSetupServer, stopSetupServer, type SetupServerHandle } from './setup-server.js';
-import { expectedSetupInstallHome, managerInstanceUserDataKey } from './setup-identity.js';
+import { defaultOsInstallHome, expectedSetupInstallHome } from './setup-identity.js';
+import { prepareManagerProfile } from './manager-profile.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -44,11 +45,23 @@ let mainWindow: BrowserWindow | null = null;
 
 function acquireSingleInstanceLock(): boolean {
   const installHome = expectedSetupInstallHome(app.isPackaged, moduleDir);
-  if (!app.isPackaged) {
-    app.setPath(
-      'userData',
-      path.join(app.getPath('userData'), `instance-${managerInstanceUserDataKey(installHome)}`),
+  try {
+    const profile = prepareManagerProfile({
+      // Dev profiles share the product root but stay isolated by repository/install.
+      profileHome: app.isPackaged ? installHome : defaultOsInstallHome(),
+      installHome,
+      isPackaged: app.isPackaged,
+    });
+    app.setPath('userData', profile);
+    app.setPath('sessionData', profile);
+    app.setAppLogsPath(path.join(profile, 'logs'));
+  } catch (error) {
+    dialog.showErrorBox(
+      'Praxis Flow Manager',
+      `Manager-Profil konnte nicht eingerichtet werden: ${error instanceof Error ? error.message : String(error)}`,
     );
+    app.quit();
+    return false;
   }
   const gotLock = app.requestSingleInstanceLock({ installHome });
   if (!gotLock) {

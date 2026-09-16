@@ -34,16 +34,12 @@ services:
       app:
         condition: service_healthy
     healthcheck:
-      # Use the port that matches the active proxy mode. In TLS mode, :80 is a redirect endpoint,
-      # not the real app-facing health signal.
+      # Use internal loopback probe: checks port 443 first (healthy if TLS mode is active),
+      # falls back to port 80 (healthy if HTTP-only mode is active).
       test:
         - CMD-SHELL
         - |
-          if [ "${PROXY_MODE:-http}" = "tls-managed" ] || [ "${PROXY_MODE:-http}" = "tls-custom" ]; then
-            wget -qO- --no-check-certificate "https://127.0.0.1:443/__praxis-flow/health" >/dev/null 2>&1
-          else
-            wget -qO- "http://127.0.0.1:80/" >/dev/null 2>&1
-          fi
+          wget -qO- --no-check-certificate "https://127.0.0.1:443/__praxis-flow/health" >/dev/null 2>&1 || wget -qO- "http://127.0.0.1:80/" >/dev/null 2>&1
       interval: 10s
       timeout: 3s
       retries: 5

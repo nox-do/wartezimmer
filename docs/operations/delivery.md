@@ -138,6 +138,23 @@ Setup-API und Manager sprechen nur Loopback — kein Setup aus dem Praxis-LAN.
 
 Override: `PRAXIS_FLOW_HOME` (absolut). Compose-Projektname: Default-Install-Home → `praxis-flow`; abweichender Basename → `pf-<basename>`; Override `COMPOSE_PROJECT_NAME` — isoliert parallele Test-Installs.
 
+Der Manager speichert sein Electron-Profil einschließlich Chromium-Cache,
+Preferences und Session Storage im Unterordner `manager/` des Install-Home;
+Manager-Logs liegen in `manager/logs/`. `.env`, Compose-Dateien, `state/`,
+`updates/`, `rollback/` und `backups/` behalten ihre bestehenden Pfade.
+Diese Profildaten gehören nicht zum fachlichen `.pfbackup`.
+
+Der Manager legt ausschließlich die neue Profilstruktur an. Es gibt keine
+Migration oder Übernahme aus dem bisherigen separaten Ordner `Praxis Flow`.
+
+Dev-Manager verwenden `manager/instance-<Hash des Install-Home>` unter dem
+plattformüblichen `PraxisFlow`-Ordner. Ihr Setup arbeitet weiterhin im
+Repository beziehungsweise im expliziten `PRAXIS_FLOW_HOME`. So landen
+Electron-Profile nicht im Quellcode und verschiedene Dev-Instanzen bleiben
+getrennt. Die Profilpfade werden vor dem Single-Instance-Lock und `app.ready`
+festgelegt. Diese Änderung benötigt einen neuen Manager-Build; ein reines
+`.pfupdate` ersetzt den Electron-Main-Prozess nicht.
+
 Beim ersten Start kopiert Setup fehlende Templates (`.env.example`, Delivery-Compose, Proxy-Overlays) ins Install-Home.
 
 Zurücksetzen (Dev/Support): `npm run setup:reset -- --yes` (löscht Install-Home-Inhalt nach Compose-Down — mit Bedacht).
@@ -188,7 +205,7 @@ Dev baut lokal (`docker-compose.yml`); Release-Paket oft nicht nötig.
 | Schritt 1 blockiert: Docker                  | Daemon aus / Compose fehlt           | Docker Desktop starten; Hinweise aus Setup                               |
 | „Release-Paket fehlt“ / Images nicht geladen | Delivery ohne `docker load`          | `.pfinstall` + passenden Sidecar wählen; Laden kann Minuten dauern       |
 | SHA256-Fehler beim Laden                     | Sidecar ≠ Archiv                     | Gleichen Release-Ordner verwenden, nicht mischen                         |
-| Port 8080 belegt                             | anderer Container/Prozess            | Prerequisite-Detail prüfen; Port freigeben oder Konflikt beenden         |
+| Port 8080 belegt                             | anderer Container/Prozess            | Docker-Fehler im Start-/Apply-Ergebnis prüfen; Portkonflikt beheben         |
 | „Import- und Exportordner angeben“           | leere Pfade                          | Ordner anlegen; Docker File Sharing                                      |
 | Keine / falsche LAN-IP; `lanIpStale`         | DHCP-Wechsel, VPN, Adapter           | IP neu wählen; bei TLS-Lease erst IP klären (stale blockiert Lease)      |
 | Kein HTTPS-Schritt                           | Proxy aus                            | Port 80 in Schritt 5 aktivieren — sonst bewusst HTTP-only                |

@@ -74,7 +74,7 @@ function createController(options: {
   api?: Partial<PraxisManagerApi>;
   requestConfirm?: (message: string, onConfirm: () => void) => void;
   verifyProbeOptions?: { maxWaitMs?: number; intervalMs?: number; lanGraceMs?: number };
-  onAfterMutation?: () => void;
+  onAfterMutation?: () => void | Promise<void>;
   onStateChange?: () => void;
   isPeerMutating?: () => boolean;
 }) {
@@ -320,6 +320,38 @@ test('active TLS ignores HTTP reachability draft drift but keeps LAN drift', () 
   );
 });
 
+test('re-enabling proxy recreates a running stack whose healthcheck is still starting', async () => {
+  const saves: HostNetworkInput[] = [];
+  let confirmations = 0;
+  const { controller } = createController({
+    config: minimalHostStatus({
+      compose: {
+        running: false,
+        services: [{ name: 'praxis-flow-app', service: 'app', state: 'running', health: 'starting' }],
+      },
+    }),
+    requestConfirm: (_message, confirm) => {
+      confirmations += 1;
+      confirm();
+    },
+    api: {
+      saveHostNetwork: async (input) => {
+        saves.push(input);
+        return saveResult({ composeRestarted: false });
+      },
+    },
+  });
+  controller.show();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  controller.patchFields({ proxyEnabled: true });
+  controller.applyAndVerify();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(confirmations, 1);
+  assert.equal(saves.length, 1);
+  assert.equal(saves[0].restartCompose, true);
+  assert.equal(saves[0].proxy?.enabled, true);
+});
+
 test('applyAndVerify confirms restart then probes saved device URL', async () => {
   const confirms: string[] = [];
   const saves: HostNetworkInput[] = [];
@@ -448,6 +480,40 @@ test('save then config during probe hydrates draft and clears apply dirty', asyn
   assert.equal(controller.getState().phase, 'idle');
   assert.equal(controller.getState().lanAppIp, '192.168.1.20');
   assert.equal(hostNetworkChanged(controller.getState(), savedConfig), false);
+});
+
+test('failed network request refreshes persisted proxy configuration without tab navigation', async () => {
+  const opening = minimalHostStatus();
+  let savedConfig = opening;
+  let displayedConfig = opening;
+  const { controller, setConfig } = createController({
+    config: opening,
+    requestConfirm: (_message, confirm) => confirm(),
+    api: {
+      saveHostNetwork: async () => {
+        savedConfig = {
+          ...opening,
+          proxy: { ...opening.proxy, enabled: true },
+        };
+        throw new Error('Zeitlimit beim Neustart');
+      },
+    },
+    onAfterMutation: async () => {
+      await Promise.resolve();
+      displayedConfig = savedConfig;
+      setConfig(savedConfig);
+      controller.syncFromConfig();
+    },
+  });
+  controller.show();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  controller.patchFields({ proxyEnabled: true });
+  controller.applyAndVerify();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(displayedConfig.proxy.enabled, true);
+  assert.equal(controller.getState().phase, 'idle');
+  assert.match(JSON.stringify(controller.getState().notice), /Zeitlimit beim Neustart/);
 });
 
 test('verifyActiveConfiguration uses the provided saved URL only', async () => {

@@ -42,7 +42,7 @@ export function minimalHostStatus(overrides: Partial<HostStatus> = {}): HostStat
     compose: { running: true, services: [] },
     sandboxScanner: null,
     networkBindings: [],
-    networkPrerequisites: [{ id: 'preflight.app-port', ok: true, message: 'Port 8080 ist frei' }],
+    networkPrerequisites: [],
     deliveryImages: {
       required: false,
       configured: true,

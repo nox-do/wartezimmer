@@ -2,7 +2,6 @@ import type {
   ApplySetupInput,
   ApplySetupResult,
   HostStatus,
-  NetworkBindingCheck,
   NetworkSnapshot,
   ProbeResult,
   SetupPlan,
@@ -122,22 +121,8 @@ export function dockerReady(status: HostStatus | null): boolean {
   return status.docker.installed && status.docker.daemonRunning && status.docker.composeAvailable;
 }
 
-export function networkPrerequisitesReady(status: HostStatus | null): boolean {
-  if (!status) {
-    return false;
-  }
-  const checks = status.networkPrerequisites ?? [];
-  return checks.length > 0 && checks.every((check) => check.ok);
-}
-
-export function networkPrerequisitesFailed(status: HostStatus | null): NetworkBindingCheck[] {
-  return (status?.networkPrerequisites ?? []).filter((check) => !check.ok);
-}
-
 export function canLeaveWizardStep1(status: HostStatus | null, busy: boolean): boolean {
-  return (
-    dockerReady(status) && deliveryImagesReady(status) && networkPrerequisitesReady(status) && !busy
-  );
+  return dockerReady(status) && deliveryImagesReady(status) && !busy;
 }
 
 export function httpsPhaseIndex(phase: WizardHttpsPhase): number {

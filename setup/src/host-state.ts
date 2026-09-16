@@ -41,11 +41,8 @@ import {
 import { listLanIpv4Candidates, listNetworkInterfaces, machineHostname } from './network.js';
 import { runConnectionProbes } from './probes.js';
 import {
-  DEFAULT_GATEWAY_BRIDGE_PORT,
-  DEFAULT_PROXY_HTTPS_PORT,
   auditStaffPublishedBindings,
   auditNetworkBindings,
-  auditNetworkPrerequisites,
   hostHasLanIp,
 } from './network-bindings.js';
 import {
@@ -143,7 +140,7 @@ export type { SandboxScannerStatus } from './sandbox-health.js';
 
 export type { ComposeStatus } from './docker.js';
 
-/** Optional hooks for tests (compose / port preflight). */
+/** Optional runtime hooks for tests. */
 export type HostWriteRuntimeHooks = {
   stackHealthWaitOptions?: WaitForStackHealthOptions;
   composePs?: typeof composePs;
@@ -151,7 +148,6 @@ export type HostWriteRuntimeHooks = {
   composeStop?: typeof composeStop;
   composeUp?: typeof composeUp;
   composeValidateConfig?: typeof composeValidateConfig;
-  auditNetworkPrerequisites?: typeof auditNetworkPrerequisites;
   ensureProxyImageAvailable?: typeof ensureProxyImageAvailable;
   validateStaffIp?: (staffIp: string) => string | null;
   auditStaffBindings?: typeof auditStaffPublishedBindings;
@@ -273,32 +269,6 @@ function isProxyCurrentlyEnabled(env: Map<string, string>): boolean {
   } catch {
     return false;
   }
-}
-
-/**
- * Before enabling proxy: desired HTTP port must be free, or already published by our proxy.
- */
-async function assertDesiredProxyHttpPortAvailable(
-  input: {
-    compose: ComposeStatus | null;
-    httpPort: number;
-  },
-  hooks?: HostWriteRuntimeHooks,
-): Promise<void> {
-  const audit = hooks?.auditNetworkPrerequisites ?? auditNetworkPrerequisites;
-  const checks = await audit({
-    compose: input.compose,
-    proxyEnabled: true,
-    proxyHttpPort: input.httpPort,
-    appPublishEnabled: false,
-  });
-  const failed = checks.find((check) => check.id === 'preflight.proxy-http-port' && !check.ok);
-  if (!failed) {
-    return;
-  }
-  throw new SetupApiValidationError(
-    failed.detail ? `${failed.message} ${failed.detail}` : failed.message,
-  );
 }
 
 function resolveComposeRunOptions(ctx: SetupContext) {
@@ -535,21 +505,9 @@ export function pickPracticeDisplayNameFromEnv(env: Map<string, string>): string
   return name || null;
 }
 
-function readBooleanEnv(env: Map<string, string>, key: string, fallback: boolean): boolean {
-  const raw = env.get(key)?.trim().toLowerCase();
-  if (!raw) {
-    return fallback;
-  }
-  return ['1', 'true', 'yes', 'on'].includes(raw);
-}
-
 function readPortEnv(env: Map<string, string>, key: string, fallback: number): number {
   const parsed = Number.parseInt(env.get(key)?.trim() || String(fallback), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-function proxyModeUsesHttps(mode: string): boolean {
-  return mode === 'tls-custom' || mode === 'tls-managed';
 }
 
 export function pickLanIpFromEnv(env: Map<string, string>): string | null {
@@ -722,20 +680,8 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
         gatewayComposeSupported: canRunGatewayCompose(),
       })
     : [];
-  const bridgePort = readPortEnv(envMap, 'GATEWAY_AUTH_BRIDGE_PORT', DEFAULT_GATEWAY_BRIDGE_PORT);
   const proxy = requireProxyConfig(envMap);
   const tls = readTlsStatus(envMap);
-  const networkPrerequisites = await auditNetworkPrerequisites({
-    compose,
-    appPublishEnabled: readBooleanEnv(envMap, 'APP_PUBLISH_PORT', true),
-    gatewayEnabled: Boolean(gateway?.enabled),
-    gatewayBridgePort: bridgePort,
-    proxyEnabled: proxy.enabled,
-    proxyHttpPort: proxy.httpPort,
-    proxyHttpsPort: readPortEnv(envMap, 'PROXY_HTTPS_PORT', DEFAULT_PROXY_HTTPS_PORT),
-    proxyHttpsEnabled:
-      proxyModeUsesHttps(envMap.get('PROXY_MODE')?.trim() || 'off') || tls.state !== 'off',
-  });
 
   const deliveryImages = await auditDeliveryImages({
     projectRoot: root,
@@ -771,7 +717,8 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     compose,
     sandboxScanner,
     networkBindings,
-    networkPrerequisites,
+    // Port availability is determined by Docker when applying the planned publishes.
+    networkPrerequisites: [],
     deliveryImages,
     settingsFormatVersion,
   };
@@ -869,15 +816,6 @@ export async function applySetupPlan(
     composeProjectName: ctx.composeProjectName,
   };
   const composeBeforeApply = input.runCompose ? await runComposePs(runOptionsEarly) : null;
-
-  if (writeProxyEnv && proxy.enabled && !proxyWasEnabled) {
-    // Force proxy overlay so a still-running own proxy is visible (not treated as foreign).
-    const composeBefore = await runComposePs({ ...runOptionsEarly, withProxy: true });
-    await assertDesiredProxyHttpPortAvailable(
-      { compose: composeBefore, httpPort: proxy.httpPort },
-      hooks,
-    );
-  }
 
   const removeProxyAfterWrite = Boolean(
     input.runCompose &&
@@ -1172,15 +1110,6 @@ export async function saveHostNetwork(
 
   if ((Boolean(input.restartCompose) || repairProxy) && proxy.enabled) {
     assertStaffIpAvailable(lanAppIp, hooks);
-  }
-
-  if ((writeProxyEnv && proxy.enabled && !proxyWasEnabled) || (repairProxy && proxy.enabled)) {
-    // Force proxy overlay so a still-running own proxy is visible (not treated as foreign).
-    const composeForPortCheck = await runComposePs({ ...runOptions, withProxy: true });
-    await assertDesiredProxyHttpPortAvailable(
-      { compose: composeForPortCheck, httpPort: proxy.httpPort },
-      hooks,
-    );
   }
 
   const canonicalBaseUrl = resolveCanonicalBaseUrlForProxyPlan({

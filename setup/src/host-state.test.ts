@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -83,26 +82,6 @@ async function withRoot(run: (root: string) => Promise<void>) {
   }
 }
 
-async function listenEphemeral(): Promise<{ port: number; close: () => Promise<void> }> {
-  const server = createServer();
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => resolve());
-  });
-  const address = server.address();
-  if (!address || typeof address === 'string') {
-    server.close();
-    throw new Error('ephemeral listen failed');
-  }
-  return {
-    port: address.port,
-    close: () =>
-      new Promise((resolve, reject) => {
-        server.close((error) => (error ? reject(error) : resolve()));
-      }),
-  };
-}
-
 test('runComposeAction stops a proxy stack when the post-start binding audit fails', async () => {
   await withRoot(async (root) => {
     writeEnv(root, {
@@ -159,9 +138,6 @@ const allowProxyPort: HostWriteRuntimeHooks = {
     ...(input.proxyEnabled
       ? [{ id: 'staff.binding.proxy', ok: true, message: 'Proxy korrekt' }]
       : []),
-  ],
-  auditNetworkPrerequisites: async () => [
-    { id: 'preflight.proxy-http-port', ok: true, message: 'Port frei' },
   ],
 };
 
@@ -837,35 +813,6 @@ test('applySetupPlan with proxy wire can flip PROXY_ENABLED despite template pre
   });
 });
 
-test('proxy enable preflight calls composePs with withProxy true', async () => {
-  await withRoot(async (root) => {
-    writeEnv(root, {
-      PRACTICE_DISPLAY_NAME: 'Praxis Nord',
-      SETUP_LAN_APP_IP: '192.168.1.10',
-      CANONICAL_BASE_URL: 'http://192.168.1.10:8080',
-    });
-
-    const withProxyFlags: Array<boolean | undefined> = [];
-    await saveHostNetwork(
-      ctx(root),
-      {
-        lanAppIp: '192.168.1.10',
-        proxy: { enabled: true, httpPort: 80 },
-        gateway: gwOff('192.168.1.10'),
-      },
-      {
-        ...allowProxyPort,
-        composePs: async (options) => {
-          withProxyFlags.push(options.withProxy);
-          return { running: false, services: [] };
-        },
-      },
-    );
-
-    assert.ok(withProxyFlags.includes(true));
-  });
-});
-
 test('saveHostNetwork repairProxy ensures image and compose-up even when stack was stopped', async () => {
   await withRoot(async (root) => {
     writeEnv(root, {
@@ -1391,36 +1338,6 @@ test('saveHostNetwork rolls back when runtime binding audit rejects compose resu
     assert.equal(env(root).get('SETUP_LAN_APP_IP'), '192.168.1.10');
     assert.equal(env(root).get('APP_BIND_ADDRESS'), '127.0.0.1');
   });
-});
-
-test('saveHostNetwork blocks proxy enable when desired HTTP port is occupied', async () => {
-  const listener = await listenEphemeral();
-  try {
-    await withRoot(async (root) => {
-      writeEnv(root, {
-        PRACTICE_DISPLAY_NAME: 'Praxis Nord',
-        SETUP_LAN_APP_IP: '192.168.1.10',
-        CANONICAL_BASE_URL: 'http://192.168.1.10:8080',
-      });
-
-      await assert.rejects(
-        () =>
-          saveHostNetwork(ctx(root), {
-            lanAppIp: '192.168.1.10',
-            proxy: { enabled: true, httpPort: listener.port },
-            gateway: gwOff('192.168.1.10'),
-          }),
-        (error: unknown) =>
-          error instanceof SetupApiValidationError &&
-          new RegExp(`Port ${listener.port} ist bereits belegt`).test(error.message),
-      );
-
-      assert.equal(env(root).get('PROXY_ENABLED'), undefined);
-      assert.equal(env(root).get('CANONICAL_BASE_URL'), 'http://192.168.1.10:8080');
-    });
-  } finally {
-    await listener.close();
-  }
 });
 
 test('disable cutover aborts when compose remove fails (network + apply)', async () => {

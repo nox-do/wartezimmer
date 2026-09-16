@@ -285,6 +285,14 @@ Wichtig: `proxy-tls` kommt schon **ab `prepare`** (`TLS_STATE` ≠ `off`), nicht
 
 ### 6.3 Image & Ports
 
+Portkonflikte werden beim Start beziehungsweise Recreate durch Docker für die
+konfigurierten Host-IP-/Port-Bindings erkannt. Setup öffnet dafür keine eigenen
+Testlistener und fragt keine betriebssystemspezifischen Listener-Tabellen ab.
+Fehler werden im Start-/Apply-Ergebnis gemeldet; transaktionale Apply-Pfade
+verwenden den vorhandenen Rollback. Die Prüfung der lokalen Staff-IP und der
+tatsächlichen Docker-Publishes bleibt bestehen. Eine Belegung auf einer nicht
+verwendeten Host-IP ist kein zusätzlicher Blocker.
+
 |          |                                                                                                                                        |
 | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | Image    | `PRAXIS_FLOW_PROXY_IMAGE` — Delivery: `praxis-flow-proxy:…-acmedns` (xcaddy + `dns.providers.acmedns`); Fallback/Legacy `caddy:2.11.4` |

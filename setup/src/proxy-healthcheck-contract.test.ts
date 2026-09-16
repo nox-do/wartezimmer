@@ -22,10 +22,13 @@ for (const fileName of ['docker-compose.proxy.yml', 'docker-compose.proxy.delive
       compose,
       /'\$\{SETUP_LAN_APP_IP:\?SETUP_LAN_APP_IP is required\}:\$\{PROXY_HTTP_PORT:-80\}:80'/,
     );
-    assert.match(compose, /PROXY_MODE:-http.*tls-managed/s);
-    assert.match(compose, /PROXY_MODE:-http.*tls-custom/s);
+    assert.match(compose, /PROXY_MODE: \$\{PROXY_MODE:-http\}/);
     assert.match(compose, /http:\/\/127\.0\.0\.1:80\//);
     assert.match(compose, /https:\/\/127\.0\.0\.1:443\/__praxis-flow\/health/);
+    assert.match(
+      compose,
+      /wget -qO- --no-check-certificate "https:\/\/127\.0\.0\.1:443\/__praxis-flow\/health" >\/dev\/null 2>&1 \|\| wget -qO- "http:\/\/127\.0\.0\.1:80\/"/,
+    );
     assert.doesNotMatch(compose, /127\.0\.0\.1:\$\{PROXY_(?:HTTP|HTTPS)_PORT/);
     assert.match(
       compose,
