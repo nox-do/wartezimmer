@@ -1,6 +1,7 @@
 <script lang="ts">
   import { managerShell } from './manager-shell-state.svelte.js';
   import { deriveOverallStatus } from './health-header.js';
+  import { sandboxSignatureAgeNotice } from './sandbox-scanner-ui.js';
   import {
     isSetupEntryStatus,
     lanWarningText,
@@ -40,8 +41,16 @@
         ? deriveOverallStatus(managerShell.runtimeSnapshot)
         : null,
   );
+  const signatureNotice = $derived(
+    sandboxSignatureAgeNotice(managerShell.runtimeSnapshot?.sandboxScanner),
+  );
+  const overallNotice = $derived(
+    overall?.level === 'ok' && signatureNotice
+      ? { text: signatureNotice, level: 'warn' as const }
+      : overall,
+  );
   const showOverall = $derived(
-    showStatusOverallNotice(setupEntry, overall?.text),
+    showStatusOverallNotice(setupEntry, overallNotice?.text),
   );
 </script>
 
@@ -65,13 +74,13 @@
         {onLoadReleaseArchive}
       />
     {:else}
-      {#if showOverall && overall}
+      {#if showOverall && overallNotice}
         <p
           id="status-overall"
-          class={statusOverallNoticeClass(overall.level)}
+          class={statusOverallNoticeClass(overallNotice.level)}
           aria-live="polite"
         >
-          {overall.text}
+          {overallNotice.text}
         </p>
       {/if}
       <TlsResumeCard tls={configSnapshot.tls} onResume={onOpenNetwork} />
