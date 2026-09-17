@@ -1,6 +1,6 @@
 # Betriebsmodi im Manager
 
-Erster Umsetzungsschritt: zentrale, lesende Einordnung im Setup-Backend.
+Zentrale, lesende Einordnung im Setup-Backend mit Darstellung und Navigation im Manager.
 Es gibt keinen zusätzlich gespeicherten Betriebsmodus und keine Datenmigration.
 
 | Modus                            | Bestätigte Konfiguration                                                                                          |
@@ -26,6 +26,14 @@ sind keine Betriebsmodi. Ihre vorhandenen Prüfungen bleiben zuständig.
   abgeleiteter Metadaten. Änderungen lösen einen Config-Refresh aus, auch wenn
   Praxisadresse und Proxy-Flag unverändert bleiben. Runtime überschreibt Config nicht.
 - `HostLifecycleSummary`: Anzeige auf der Statusseite; UI-Entwürfe bleiben lokal.
+- Erststart: Nur ein bestätigt nicht installierter Zustand öffnet automatisch den
+  Vollbild-Assistenten. Vorhandene Installationen bleiben auch bei Docker-Ausfall
+  auf der Statusseite. Unklare oder inkonsistente Zustände zeigen die Diagnose und
+  einen bewussten Einstieg in den eingebetteten Assistenten.
+- Netzwerkübersicht: Verbindung und Publikationsumfang folgen dem bestätigten Modus.
+  Bei unbekannter Einordnung wird weder HTTP noch eine Freigabe auf allen NICs
+  behauptet. Offene Portaländerungen werden als noch nicht abgeschlossen angezeigt.
+  Alte Setup-Hosts ohne Lifecycle-Feld behalten die bisherige UI-Ableitung.
 
 Ein offenes Restricted-Journal hat Vorrang vor der aktuellen `.env`: Die vorherige
 Konfiguration bestimmt den Modus bis zum Journalabschluss. Das berücksichtigt auch
@@ -46,7 +54,7 @@ Die bisherigen Statusfehler (z. B. ungültige Proxy-Konfiguration) und die vorge
 Recovery-Sperre des Setup-Servers bleiben bestehen. Wenn sie eine Statusantwort
 verhindern, erscheint weiterhin der vorhandene API-Fehler; es wird kein Ersatzmodus
 angezeigt. Andere Schreibabläufe erhalten hier kein neues Journal oder Commit-Protokoll.
-Wizard-Navigation und Aktionsfreigaben werden noch nicht aus dem neuen Modell gesteuert.
+Aktionsfreigaben und die vorhandenen Detailprüfungen bleiben unverändert.
 
 Wiederaufbau und erneute Einrichtung sind die bevorzugten weiteren Reparaturwege.
 Generierte Konfiguration und Container dürfen neu erzeugt werden; Praxisdaten,
@@ -54,6 +62,6 @@ Zertifikate, private Schlüssel, ACME-Zugang und die zugehörige TLS-Identität 
 erhalten bleiben. Dieser Schritt bietet dafür noch keine neue Reparaturaktion an
 und darf insbesondere nicht auf den destruktiven Install-Reset verweisen.
 
-Nächste Schritte: Anzeigeabläufe vereinheitlichen, einen ausdrücklich datenerhaltenden
+Nächste Schritte: Einen ausdrücklich datenerhaltenden
 Wiederaufbau konkretisieren und anschließend vorhandene Übergangsprüfungen gemeinsam
 nutzen. Eigene Domains für den separaten Portalzugang bleiben ein eigener Funktionsausbau.

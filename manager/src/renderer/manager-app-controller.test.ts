@@ -318,3 +318,43 @@ test('later config error keeps last ops snapshot and poll', async () => {
   assert.equal(shell.statusError, 'config later down');
   assert.equal(timers.length, 1);
 });
+
+test('boot with configured HTTPS and stopped Docker keeps status and starts runtime polling', async () => {
+  const status = minimalHostStatus({
+    docker: { installed: true, daemonRunning: false, composeAvailable: true, detail: null },
+  });
+  status.lifecycle = {
+    assessment: 'known',
+    mode: 'https',
+    preparation: 'none',
+    operation: 'none',
+    recovery: 'none',
+    issues: [],
+  };
+  const { controller, shell, timers } = createTestController({
+    fetchSetupStatus: async () => status,
+  });
+  await controller.start();
+  assert.equal(shell.activeView, 'status');
+  assert.equal(shell.wizardSessions.length, 0);
+  assert.ok(timers.length > 0);
+});
+
+test('boot with remnants keeps diagnosis visible and explicit wizard entry embedded', async () => {
+  const status = freshInstallHostStatus();
+  status.lifecycle = {
+    assessment: 'inconsistent',
+    mode: null,
+    preparation: 'none',
+    operation: 'none',
+    recovery: 'none',
+    issues: [],
+  };
+  const { controller, shell } = createTestController({ fetchSetupStatus: async () => status });
+  await controller.start();
+  assert.equal(shell.activeView, 'status');
+  assert.equal(shell.wizardSessions.length, 0);
+  controller.onStatusSetupClick();
+  assert.equal(shell.activeView, 'wizard');
+  assert.equal(shell.wizardPresentation, 'embedded');
+});

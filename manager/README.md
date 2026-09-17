@@ -67,13 +67,17 @@ Adresse. Während der TLS-Vorbereitung und nach dem Cutover bleibt die TLS-Ident
 7. Anwenden (`POST /apply`), Prüfung und Abschluss mit MFA-Einstieg
 
 Ops-Detail Erstinstall: [`docs/operations/delivery.md`](../docs/operations/delivery.md) §4.  
-Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unter „Assistent“.
+Ein zentral als sauber nicht installiert erkannter Zustand startet den Assistenten
+fullscreen ohne Tabs. Unklare oder unvollständige Installationen bleiben auf der
+Statusseite und öffnen den Assistenten auf Wunsch eingebettet. Ältere Setup-Hosts
+ohne Lifecycle-Feld behalten die bisherige Einstiegslogik.
 
 ### Status-Screen
 
 - Betriebsmodus aus der zentralen Setup-Auswertung, getrennt von Runtime und offenen
   Portaländerungen; [Vertrag und Grenzen](../docs/architecture/manager-operating-modes.md)
-- Setup-Einstieg, wenn Einrichtung noch nicht fertig (Docker / Release / LAN)
+- Bewusster Setup-Einstieg bei unklarer oder widersprüchlicher Einrichtung;
+  Docker-Ausfall einer bestehenden Installation bleibt ein Betriebsproblem
 - DHCP-Hinweis bei `network.lanIpStale`
 - Interne Zugänge mit Kopieren / Öffnen; Portal ausdrücklich für interne Nutzung
 - Zugangszusammenfassung: Praxisadresse/Adapter, HTTP/HTTPS, Publikationsumfang,

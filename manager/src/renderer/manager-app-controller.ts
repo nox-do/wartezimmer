@@ -80,10 +80,10 @@ export function createManagerAppController(deps: ManagerAppControllerDeps): Mana
     }
   }
 
-  function startFullscreenWizard(): void {
+  function startSetupWizard(): void {
     const status = hostRefresh.getLastConfig();
     navigation.navigateTo('wizard', {
-      wizardPresentation: 'fullscreen',
+      wizardPresentation: defaultWizardPresentation(status),
       ...(status ? { status } : {}),
     });
   }
@@ -162,7 +162,7 @@ export function createManagerAppController(deps: ManagerAppControllerDeps): Mana
       }
     },
     navigateTab,
-    onStatusSetupClick: startFullscreenWizard,
+    onStatusSetupClick: startSetupWizard,
     onStatusLoadReleaseArchive: () => {
       void loadReleaseArchiveFromStatus();
     },

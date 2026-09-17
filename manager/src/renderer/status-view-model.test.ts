@@ -223,3 +223,34 @@ test('installation ID is visible before TLS cutover', () => {
     false,
   );
 });
+
+test('configured HTTPS remains an operational status page when Docker is down', () => {
+  const status = minimalHostStatus({
+    docker: { installed: true, daemonRunning: false, composeAvailable: true, detail: null },
+  });
+  status.lifecycle = {
+    assessment: 'known',
+    mode: 'https',
+    preparation: 'none',
+    operation: 'none',
+    recovery: 'none',
+    issues: [],
+  };
+  assert.equal(setupEntryTone(status), 'maintenance');
+  assert.equal(isSetupEntryStatus(status), false);
+});
+
+test('missing env with residues offers a deliberate review, never fresh-install copy', () => {
+  const status = freshInstallHostStatus();
+  status.lifecycle = {
+    assessment: 'inconsistent',
+    mode: null,
+    preparation: 'none',
+    operation: 'none',
+    recovery: 'none',
+    issues: [],
+  };
+  assert.equal(setupEntryTone(status), 'review');
+  assert.equal(isSetupEntryStatus(status), true);
+  assert.equal(setupEntryContent(status, 'review').startButtonLabel, 'Assistent öffnen');
+});

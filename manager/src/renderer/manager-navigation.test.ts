@@ -285,3 +285,27 @@ test('shouldAutoStartFullscreenWizard for every incomplete setup', () => {
   );
   assert.equal(shouldAutoStartFullscreenWizard(minimalHostStatus({ envExists: true })), false);
 });
+
+test('lifecycle only auto-starts the wizard for a confirmed fresh installation', () => {
+  const base = { preparation: 'none', operation: 'none', recovery: 'none', issues: [] } as const;
+  for (const assessment of ['known', 'inconsistent', 'unknown'] as const) {
+    const status = minimalHostStatus({ envExists: false });
+    status.lifecycle = {
+      ...base,
+      issues: [],
+      assessment,
+      mode: assessment === 'known' ? 'uninstalled' : null,
+    };
+    assert.equal(shouldAutoStartFullscreenWizard(status), assessment === 'known');
+    assert.equal(
+      defaultWizardPresentation(status),
+      assessment === 'known' ? 'fullscreen' : 'embedded',
+    );
+  }
+  const installed = minimalHostStatus({
+    docker: { installed: true, daemonRunning: false, composeAvailable: true, detail: null },
+  });
+  installed.lifecycle = { ...base, issues: [], assessment: 'known', mode: 'https' };
+  assert.equal(shouldAutoStartFullscreenWizard(installed), false);
+  assert.equal(defaultWizardPresentation(installed), 'embedded');
+});

@@ -104,3 +104,40 @@ test('network summary exposes DNS filter guidance and removes it after recovery'
   status.probes = [{ id: 'app.health.lan', ok: true, message: 'ok' }];
   assert.equal(networkAccessSummary(status).dnsWarning, null);
 });
+
+test('central mode takes precedence over tentative TLS/proxy flags', () => {
+  const status = minimalHostStatus();
+  status.lifecycle = {
+    assessment: 'known',
+    mode: 'https',
+    preparation: 'none',
+    operation: 'portal-apply',
+    recovery: 'none',
+    issues: [],
+  };
+  // Legacy flags intentionally disagree: UI must use the confirmed backend assessment.
+  status.proxy.enabled = false;
+  const summary = networkAccessSummary(status);
+  assert.equal(summary.connection, 'HTTPS eingerichtet');
+  assert.equal(summary.proxy, true);
+  assert.equal(summary.operatingMode, 'HTTPS');
+  assert.match(summary.portalState!, /noch nicht abgeschlossen/);
+});
+
+test('unknown configuration does not claim HTTP or open publication on all NICs', () => {
+  const status = minimalHostStatus();
+  status.lifecycle = {
+    assessment: 'unknown',
+    mode: null,
+    preparation: 'none',
+    operation: 'none',
+    recovery: 'none',
+    issues: [],
+  };
+  const summary = networkAccessSummary(status);
+  assert.equal(summary.tls, null);
+  assert.equal(summary.proxy, null);
+  assert.equal(summary.connection, 'Nicht sicher bestimmbar');
+  assert.equal(summary.needsAttention, true);
+  assert.doesNotMatch(summary.access, /alle Netzwerkanschlüsse/);
+});

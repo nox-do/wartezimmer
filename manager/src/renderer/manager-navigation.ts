@@ -5,11 +5,17 @@ import { isSetupEntryStatus } from './status-view-model.js';
 export type WizardPresentation = 'fullscreen' | 'embedded';
 
 export function defaultWizardPresentation(status: HostStatus | null): WizardPresentation {
+  if (status?.lifecycle) {
+    return shouldAutoStartFullscreenWizard(status) ? 'fullscreen' : 'embedded';
+  }
   return status && !isSetupEntryStatus(status) ? 'embedded' : 'fullscreen';
 }
 
-/** Unvollständiges Setup → Wizard fullscreen ohne Tabs (siehe manager/README). */
+/** Only a confirmed fresh lifecycle auto-starts; old hosts retain their legacy fallback. */
 export function shouldAutoStartFullscreenWizard(status: HostStatus | null): boolean {
+  if (status?.lifecycle) {
+    return status.lifecycle.assessment === 'known' && status.lifecycle.mode === 'uninstalled';
+  }
   return !status || isSetupEntryStatus(status);
 }
 

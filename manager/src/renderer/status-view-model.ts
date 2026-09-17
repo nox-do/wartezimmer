@@ -6,6 +6,7 @@ export type SetupEntryTone =
   | 'needs-docker'
   | 'needs-release'
   | 'needs-lan'
+  | 'review'
   | 'maintenance';
 
 export type SetupChecklistItem = { label: string; done: boolean; muted?: boolean };
@@ -30,6 +31,10 @@ function mark(ok: boolean): string {
 }
 
 export function setupEntryTone(status: HostStatus): SetupEntryTone {
+  if (status.lifecycle) {
+    if (status.lifecycle.assessment !== 'known' || !status.lifecycle.mode) return 'review';
+    return status.lifecycle.mode === 'uninstalled' ? 'fresh' : 'maintenance';
+  }
   if (!status.envExists) {
     return 'fresh';
   }
@@ -101,6 +106,17 @@ export function setupChecklistItems(status: HostStatus): SetupChecklistItem[] {
 
 export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): SetupEntryContent {
   const eyebrow = status.mode === 'install' ? 'Ersteinrichtung' : 'Entwicklungsmodus';
+
+  if (tone === 'review') {
+    return {
+      eyebrow: 'Einrichtung prüfen',
+      title: 'Einrichtungsstand prüfen',
+      copy: 'Der Betriebsmodus ist nicht sicher bestimmbar. Die Hinweise oben zeigen, welche Angaben fehlen oder widersprüchlich sind.',
+      note: 'Das Öffnen des Assistenten ändert noch keine Einstellungen.',
+      startButtonLabel: 'Assistent öffnen',
+      showReleasePicker: false,
+    };
+  }
 
   if (tone === 'fresh') {
     return {
