@@ -165,7 +165,10 @@ test('operatorZoneMailBody redacts the token after consumption', () => {
   assert.equal(consumed.includes('secret-token'), false);
   assert.match(consumed, /bereits verwendet/);
   assert.match(consumed, /staff\.7fk3m2\.lan\.notaus\.de\. +A +192\.168\.178\.112/);
-  assert.match(consumed, /Portal reserviert: portal\.7fk3m2\.lan\.notaus\.de/);
+  assert.match(consumed, /portal\.7fk3m2\.lan\.notaus\.de\. +A +<PORTAL-ZIEL-IP>/);
+  assert.match(consumed, /Vor dem Versand: <PORTAL-ZIEL-IP>/);
+  assert.match(consumed, /Bitte den Portal-A-Record bereits jetzt anlegen/);
+  assert.equal(consumed.includes('noch kein A-Record'), false);
   assert.match(consumed, /Zertifikatsname: +\*\.7fk3m2\.lan\.notaus\.de/);
   assert.match(consumed, /_acme-challenge\.7fk3m2\.lan\.notaus\.de\./);
   assert.match(consumed, /CNAME {2}uuid\.auth\.acme-dns\.io\./);

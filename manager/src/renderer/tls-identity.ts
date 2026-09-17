@@ -169,9 +169,7 @@ export function operatorZoneMailBody(input: {
     tokenLine,
     `Installationsraum: ${installationDomain}`,
     `Staff-Hostname:    ${staffHostname}`,
-    ...(input.portalHostname
-      ? [`Portal reserviert: ${input.portalHostname} (noch kein A-Record)`]
-      : []),
+    ...(input.portalHostname ? [`Portal-Hostname:   ${input.portalHostname}`] : []),
     ...(input.wildcardCertificateName
       ? [`Zertifikatsname:  ${input.wildcardCertificateName}`]
       : []),
@@ -180,8 +178,18 @@ export function operatorZoneMailBody(input: {
     'Bitte anlegen:',
     '',
     `${staffHostname}.                   A      ${input.lanIp}`,
+    ...(input.portalHostname
+      ? [`${input.portalHostname}.                   A      <PORTAL-ZIEL-IP>`]
+      : []),
     cnameLine,
     '',
+    ...(input.portalHostname
+      ? [
+          'Vor dem Versand: <PORTAL-ZIEL-IP> durch die mit der Praxis-IT festgelegte feste private IPv4 für den separaten Portalzugang ersetzen.',
+          'Bitte den Portal-A-Record bereits jetzt anlegen. Der separate Portalzugang wird später im Manager aktiviert; die DNS-Anlage allein aktiviert ihn nicht.',
+          '',
+        ]
+      : []),
     'Der abschließende Punkt kennzeichnet einen vollständigen DNS-Namen. Falls Ihr DNS-Anbieter diesen im Eingabeformular nicht akzeptiert, lassen Sie nur den letzten Punkt weg.',
   ].join('\n');
 }

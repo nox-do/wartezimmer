@@ -24,7 +24,9 @@ Pro Managed-Installation gibt es einen stabilen **Installationsraum**
 A-Record zeigt auf die **feste private IPv4** des Praxisservers. Caddy holt
 ausschließlich `*.<installationsraum>` per **ACME DNS-01**. Der damit bereits
 abgedeckte Name `portal.<installationsraum>` bleibt ohne Restricted-Binding
-reserviert und am Proxy geschlossen. Custom TLS bleibt ein einzelner FQDN mit
+am Proxy geschlossen. Der Mailtext fordert seinen A-Record bereits bei der
+HTTPS-Vorbereitung mit an; vor dem Versand ergänzt die Praxis die mit ihrer IT
+festgelegte Portal-Ziel-IP im Platzhalter. Custom TLS bleibt ein einzelner FQDN mit
 von der Praxis geliefertem PEM.
 
 ```text
@@ -73,11 +75,11 @@ Warum HTTPS zusätzlich zur Vertraulichkeit: HTTP/2 über TLS umgeht Browser-Lim
 | Rolle                                | Tut                                                                                                                                                                                        | Tut nicht                                                                           |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
 | **Praxis / Praxis-IT**               | feste IPv4 oder DHCP-Reservierung; Rebind-Ausnahme; Mail an Betreiber (managed) bzw. A-Record + PEM (custom); nach Cutover Geräte-URLs/`CANONICAL_BASE_URL`                                | DNS-Zone des Betreibers pflegen; ACME-Credentials oder Private Keys in der UI sehen |
-| **Produktbetreiber**                 | Zone `lan.notaus.de` (heute); Staff-A-Record + Wildcard-Challenge-CNAME nach Mail; ACME-DNS-Infrastruktur                                                                                  | Portal-A-Record vor Restricted-Binding; Host vor Ort administrieren                 |
+| **Produktbetreiber**                 | Zone `lan.notaus.de` (heute); Staff-/Portal-A-Record + Wildcard-Challenge-CNAME nach Mail; ACME-DNS-Infrastruktur                                                                          | Host vor Ort administrieren                                                         |
 | **Manager / Setup**                  | `prepare` (ID, Korrelationswert, Raum/Staff/Portal/Wildcard); Lease-Bestätigung; Mail-/PEM-Texte; `verify-dns`, Zertifikat, Cutover, Repair/Renew/Reset; Restricted-IP prüfen und anwenden | DNS schreiben; Host-Firewall, Routing oder Netztrennung verwalten                   |
 | **Client (Terminal/TV/MFA/Browser)** | normalen DNS + HTTPS zum Praxisserver im LAN                                                                                                                                               | Zertifikate installieren; Hosts-Datei im Happy Path                                 |
 
-**Happy Path (managed):** HTTP-Proxy **persistiert** (§3) → Installationsraum wählen → IPv4 bestätigen → Mail mit Staff-A-Record und Wildcard-CNAME an `cert@notaus.de` → Assistent geht mit **HTTP** weiter → unter **Netzwerk** warten/`verify-dns` → Wildcard-Zertifikat → Cutover auf `https://staff.<raum>`.
+**Happy Path (managed):** HTTP-Proxy **persistiert** (§3) → Installationsraum wählen → IPv4 bestätigen → Portal-Ziel-IP im Mailtext ergänzen → Mail mit Staff- und Portal-A-Record sowie Wildcard-CNAME an `cert@notaus.de` → Assistent geht mit **HTTP** weiter → unter **Netzwerk** warten/`verify-dns` → Wildcard-Zertifikat → Cutover auf `https://staff.<raum>`.
 **Custom:** PEM stagen + A-Record bei der eigenen Domain → `verify-dns` (A) → Checks → Cutover (`tls-custom`).
 
 Detailstrecken UI/API: §4–5.
