@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const managerRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = path.resolve(managerRoot, '..');
@@ -142,10 +142,15 @@ fs.rmSync(path.join(serverSharedOutput, 'dist'), { recursive: true, force: true 
 rewriteSetupImportsForPackagedVendor();
 smokeTestPackagedSetupImport();
 
-copyFile('.env.example');
-// Source of truth for packaged installs — maintenance port: 127.0.0.1:8082 host publish, 0.0.0.0 in container.
-copyFile('docker-compose.delivery.yml');
-copyFile('docker-compose.proxy.delivery.yml');
-copyFile('docker-compose.proxy-tls.delivery.yml');
+const setupContextModule = await import(
+  pathToFileURL(path.join(repoRoot, 'setup', 'dist', 'setup-context.js')).href
+);
+const deliveryBootstrapFiles = setupContextModule.DELIVERY_BOOTSTRAP_FILES;
+if (!Array.isArray(deliveryBootstrapFiles) || deliveryBootstrapFiles.length === 0) {
+  throw new Error('Compiled setup context does not export DELIVERY_BOOTSTRAP_FILES');
+}
+for (const relativePath of deliveryBootstrapFiles) {
+  copyFile(relativePath);
+}
 
 console.log(`Packaged resources prepared in ${outputRoot}`);

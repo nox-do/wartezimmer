@@ -5,7 +5,15 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { readEnvMap } from './env-file.js';
-import { migrateMaintenanceToken, resolveSetupContext } from './setup-context.js';
+import {
+  DELIVERY_BOOTSTRAP_FILES,
+  migrateMaintenanceToken,
+  resolveSetupContext,
+} from './setup-context.js';
+
+test('delivery bootstrap contract contains every restricted proxy overlay', () => {
+  assert.ok(DELIVERY_BOOTSTRAP_FILES.includes('docker-compose.proxy-restricted.delivery.yml'));
+});
 
 function withInstall(run: (home: string) => void): void {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-token-migration-'));

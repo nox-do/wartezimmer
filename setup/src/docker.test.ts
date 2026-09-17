@@ -93,6 +93,17 @@ test('validateStaffBindingEnv requires loopback app bind when proxy is enabled',
   );
 });
 
+test('validateStaffBindingEnv fails closed for an active non-local restricted address', () => {
+  const env = new Map([
+    ['PROXY_ENABLED', 'true'],
+    ['SETUP_LAN_APP_IP', '192.168.1.20'],
+    ['APP_BIND_ADDRESS', '127.0.0.1'],
+    ['SETUP_RESTRICTED_ENABLED', 'true'],
+    ['SETUP_RESTRICTED_APP_IP', '10.20.0.99'],
+  ]);
+  assert.match(validateStaffBindingEnv(env, interfaces) || '', /Restricted-Bindung gesperrt/);
+});
+
 test('resolveComposeFiles selects base file by delivery flag', () => {
   assert.deepEqual(
     resolveComposeFiles({
@@ -190,6 +201,33 @@ test('resolveComposeFiles stacks pebble lab overlays only for non-delivery TLS',
       'docker-compose.proxy.delivery.yml',
       'docker-compose.proxy-tls.delivery.yml',
     ],
+  );
+});
+
+test('resolveComposeFiles adds restricted publish only after the TLS proxy overlay', () => {
+  assert.deepEqual(
+    resolveComposeFiles({
+      projectRoot: '/tmp/example',
+      delivery: false,
+      proxyEnabled: true,
+      proxyTlsEnabled: true,
+      restrictedEnabled: true,
+    }),
+    [
+      'docker-compose.yml',
+      'docker-compose.proxy.yml',
+      'docker-compose.proxy-tls.yml',
+      'docker-compose.proxy-restricted.yml',
+    ],
+  );
+  assert.doesNotMatch(
+    resolveComposeFiles({
+      projectRoot: '/tmp/example',
+      delivery: false,
+      proxyEnabled: true,
+      restrictedEnabled: true,
+    }).join(' '),
+    /proxy-restricted/,
   );
 });
 

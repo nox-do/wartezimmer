@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { Resolver } from 'node:dns/promises';
 import {
   canRunGatewayCompose,
   composeLogs,
@@ -77,11 +78,15 @@ import type {
   LanCandidate,
   LoadDeliveryImagesResult,
   NormalizedSetupPlanInput,
+  NetworkInterfaceInfo,
   ProbeResult,
+  RestrictedNetworkInspectResult,
+  RestrictedNetworkPrepareInput,
   ResetStaffPinsResult,
   SetupPlan,
   StorageFoldersInput,
   StorageFoldersResult,
+  TlsStatus,
 } from '@praxis-flow/server-shared';
 import { resolveSecretsForEnv } from './secrets.js';
 import { resetStaffPinsInAppDatabase } from './staff-pin-reset.js';
@@ -113,9 +118,21 @@ import { dockerImageExists } from './delivery-images.js';
 import { SetupApiValidationError } from './setup-api-normalize.js';
 import type { SetupContext } from './setup-context.js';
 import type { ProxyConfigInput } from '@praxis-flow/server-shared';
-import { readTlsStatus, TLS_ENV_KEYS } from './host-tls.js';
+import { parseTlsDnsResolvers, readTlsStatus, TLS_ENV_KEYS } from './host-tls.js';
 import { PROXY_TLS_RUNTIME_ENV_KEYS } from './proxy-tls.js';
 import { tlsPreparationLanIpSyncUpdates } from './tls-env.js';
+import {
+  buildRestrictedNetworkCandidates,
+  buildRestrictedNetworkInspect,
+  buildRestrictedNetworkStatus,
+  RESTRICTED_NETWORK_ENABLED_ENV,
+  RESTRICTED_NETWORK_INTERFACE_ID_ENV,
+  RESTRICTED_NETWORK_IP_ENV,
+  RESTRICTED_NETWORK_SAME_INTERFACE_CONFIRMED_ENV,
+  RESTRICTED_NETWORK_WARNINGS_CONFIRMED_ENV,
+  restrictedCertificateCoversHostname,
+} from './restricted-network.js';
+import { auditRestrictedListeners } from './restricted-listener-probe.js';
 
 export type {
   ApplySetupOptions,
@@ -202,6 +219,10 @@ function failedStaffBindingAudit(input: {
     proxyHttpsEnabled:
       proxyMode === 'tls-managed' || proxyMode === 'tls-custom' || tlsState !== 'off',
     proxyHttpsPort: readPortEnv(input.env, 'PROXY_HTTPS_PORT', 443),
+    restrictedIp:
+      input.env.get('SETUP_RESTRICTED_ENABLED')?.trim().toLowerCase() === 'true'
+        ? input.env.get('SETUP_RESTRICTED_APP_IP')?.trim() || null
+        : null,
   });
   const required = new Set([
     'staff.binding.app',
@@ -682,6 +703,13 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     : [];
   const proxy = requireProxyConfig(envMap);
   const tls = readTlsStatus(envMap);
+  const restrictedNetwork = buildRestrictedNetworkStatus({
+    env: envMap,
+    interfaces: listNetworkInterfaces(),
+    staffIp: configuredLanIp,
+    tls,
+    compose,
+  });
 
   const deliveryImages = await auditDeliveryImages({
     projectRoot: root,
@@ -705,6 +733,7 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     appBaseUrl,
     configuredCanonicalBaseUrl,
     network,
+    restrictedNetwork,
     gateway,
     proxy: buildProxyStatus({
       proxy,
@@ -722,6 +751,309 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     deliveryImages,
     settingsFormatVersion,
   };
+}
+
+export async function inspectRestrictedNetwork(ctx: SetupContext) {
+  const envPath = path.join(ctx.home, '.env');
+  const envExists = fs.existsSync(envPath);
+  const envMap = envExists ? readEnvMap(envPath) : new Map<string, string>();
+  const docker = await detectDocker();
+  const compose = await readComposeForHost(ctx, envExists, docker, envMap);
+  const resolver = new Resolver({ timeout: 2_000, tries: 1 });
+  const publicDnsServers = parseTlsDnsResolvers(envMap.get('TLS_DNS_RESOLVERS'));
+  const resolvePublic4 = async (hostname: string): Promise<string[]> => {
+    const answers = await Promise.all(
+      publicDnsServers.map(async (server) => {
+        const publicResolver = new Resolver({ timeout: 2_000, tries: 1 });
+        publicResolver.setServers([server]);
+        return publicResolver.resolve4(hostname).catch((): string[] => []);
+      }),
+    );
+    return [...new Set(answers.flat())];
+  };
+  return buildRestrictedNetworkInspect({
+    env: envMap,
+    interfaces: listNetworkInterfaces(),
+    staffIp: pickLanIpFromEnv(envMap),
+    tls: readTlsStatus(envMap),
+    compose,
+    resolve4: (hostname) => resolver.resolve4(hostname),
+    resolvePublic4,
+  });
+}
+
+export async function prepareRestrictedNetwork(
+  ctx: SetupContext,
+  input: RestrictedNetworkPrepareInput,
+  deps: {
+    interfaces?: NetworkInterfaceInfo[];
+    platform?: string;
+    tls?: TlsStatus;
+    inspect?: () => Promise<RestrictedNetworkInspectResult>;
+  } = {},
+) {
+  const envPath = path.join(ctx.home, '.env');
+  if (!fs.existsSync(envPath)) {
+    throw new SetupApiValidationError('Setup muss vor dem Patientenzugang abgeschlossen sein.');
+  }
+  const envMap = readEnvMap(envPath);
+  if (envMap.get(RESTRICTED_NETWORK_ENABLED_ENV)?.trim().toLowerCase() === 'true') {
+    throw new SetupApiValidationError(
+      'Aktiven Patientenzugang zuerst entfernen, bevor die Netzwerkadresse geändert wird.',
+    );
+  }
+  const staffIp = pickLanIpFromEnv(envMap);
+  const interfaces = deps.interfaces ?? listNetworkInterfaces();
+  const candidates = buildRestrictedNetworkCandidates(interfaces, staffIp);
+  const candidate = candidates.find(
+    (item) => item.address === input.hostIp && item.interfaceId === input.interfaceId,
+  );
+  if (!candidate) {
+    throw new SetupApiValidationError(
+      'Die gewählte Restricted-IP ist nicht mehr lokal verfügbar oder nicht eindeutig zugeordnet.',
+    );
+  }
+  if (candidate.warnings.length > 0 && !input.warningsConfirmed) {
+    throw new SetupApiValidationError(
+      'Die Hinweise zur gewählten Netzwerkadresse müssen bestätigt werden.',
+    );
+  }
+  if ((deps.platform ?? process.platform) !== 'darwin') {
+    throw new SetupApiValidationError(
+      'Restricted-Binding ist auf dieser Hostplattform noch nicht freigegeben.',
+    );
+  }
+  const tls = deps.tls ?? readTlsStatus(envMap);
+  const portalHostname = tls.portalHostname?.trim() || '';
+  const portalCovered = restrictedCertificateCoversHostname(
+    portalHostname,
+    tls.certificate?.names ?? [],
+  );
+  if (!tls.cutoverApplied || !portalHostname || !portalCovered) {
+    throw new SetupApiValidationError(
+      'Zuerst HTTPS für den Portal-Hostnamen vollständig einrichten.',
+    );
+  }
+
+  updateEnvKeys(envPath, {
+    [RESTRICTED_NETWORK_IP_ENV]: candidate.address,
+    [RESTRICTED_NETWORK_INTERFACE_ID_ENV]: candidate.interfaceId,
+    [RESTRICTED_NETWORK_WARNINGS_CONFIRMED_ENV]: String(input.warningsConfirmed),
+    [RESTRICTED_NETWORK_SAME_INTERFACE_CONFIRMED_ENV]: String(
+      candidate.relationToStaff === 'same-interface' && input.warningsConfirmed,
+    ),
+  });
+  return deps.inspect ? deps.inspect() : inspectRestrictedNetwork(ctx);
+}
+
+type RestrictedNetworkMutationHooks = HostWriteRuntimeHooks & {
+  inspect?: () => Promise<RestrictedNetworkInspectResult>;
+  auditListeners?: typeof auditRestrictedListeners;
+};
+
+const RESTRICTED_NETWORK_PERSISTED_KEYS = [
+  RESTRICTED_NETWORK_ENABLED_ENV,
+  RESTRICTED_NETWORK_IP_ENV,
+  RESTRICTED_NETWORK_INTERFACE_ID_ENV,
+  RESTRICTED_NETWORK_WARNINGS_CONFIRMED_ENV,
+  RESTRICTED_NETWORK_SAME_INTERFACE_CONFIRMED_ENV,
+] as const;
+
+function restrictedPrerequisiteError(inspect: RestrictedNetworkInspectResult): string | null {
+  const required = new Set([
+    'restricted.platform',
+    'restricted.tls',
+    'restricted.portal-dns-public',
+    'restricted.portal-dns-local',
+    'restricted.local-ip',
+  ]);
+  const failed = inspect.checks.find((check) => required.has(check.id) && !check.ok);
+  if (!failed) return null;
+  return failed.detail ? `${failed.message}. ${failed.detail}` : failed.message;
+}
+
+async function mutateRestrictedNetwork(
+  ctx: SetupContext,
+  enable: boolean,
+  hooks: RestrictedNetworkMutationHooks = {},
+): Promise<RestrictedNetworkInspectResult> {
+  const inspect = hooks.inspect ?? (() => inspectRestrictedNetwork(ctx));
+  const before = await inspect();
+  const envPath = path.join(ctx.home, '.env');
+  if (!fs.existsSync(envPath)) {
+    throw new SetupApiValidationError('Setup muss vor dem Patientenzugang abgeschlossen sein.');
+  }
+  if (enable) {
+    if (!before.status.binding) {
+      throw new SetupApiValidationError('Zuerst eine Netzwerkadresse vorbereiten.');
+    }
+    const prerequisiteError = restrictedPrerequisiteError(before);
+    if (prerequisiteError) {
+      throw new SetupApiValidationError(
+        `Patientenzugang kann nicht aktiviert werden: ${prerequisiteError}`,
+      );
+    }
+    if (before.status.phase === 'applied' && before.status.health !== 'degraded') return before;
+  } else if (!before.status.binding) {
+    return before;
+  }
+
+  const existing = readEnvMap(envPath);
+  const proxy = requireProxyConfig(existing);
+  if (enable && (!proxy.enabled || !readTlsStatus(existing).cutoverApplied)) {
+    throw new SetupApiValidationError('Patientenzugang erfordert einen aktiven HTTPS-Proxy.');
+  }
+  if (!enable && !proxy.enabled) {
+    removeEnvKeys(envPath, [...RESTRICTED_NETWORK_PERSISTED_KEYS]);
+    return inspect();
+  }
+  const staffIp = pickLanIpFromEnv(existing);
+  if (!staffIp) {
+    throw new SetupApiValidationError(
+      'Patientenzugang kann ohne gespeicherte Staff-IP nicht geändert werden.',
+    );
+  }
+  assertStaffIpAvailable(staffIp, hooks);
+  await ensureProxyImageForCompose(existing, hooks);
+
+  const runOptions = resolveComposeRunOptions(ctx);
+  const runComposePs = hooks.composePs ?? composePs;
+  const runComposeRemove = hooks.composeRemoveServices ?? composeRemoveServices;
+  const runComposeUp = hooks.composeUp ?? composeUp;
+  const runComposeStop = hooks.composeStop ?? composeStop;
+  const composeBefore = await runComposePs(runOptions);
+  const stackWasRunning = composeBefore.running;
+  if (enable && !stackWasRunning) {
+    throw new SetupApiValidationError(
+      'Praxis Flow muss laufen, bevor der Patientenzugang aktiviert werden kann.',
+    );
+  }
+
+  const backup = backupEnvFile(ctx.home);
+  if (enable) {
+    updateEnvKeys(envPath, { [RESTRICTED_NETWORK_ENABLED_ENV]: 'true' });
+  } else {
+    removeEnvKeys(envPath, [RESTRICTED_NETWORK_ENABLED_ENV]);
+  }
+
+  const rollback = async (reason: string): Promise<never> => {
+    const failedOptions = resolveComposeRunOptions(ctx);
+    const cleanup = await runComposeRemove({ ...failedOptions, withProxy: true }, ['proxy']);
+    fs.copyFileSync(backup.backupPath, envPath);
+    let rollbackOk = cleanup.ok;
+    let rollbackLog = cleanup.log;
+    if (stackWasRunning) {
+      const restored = await runComposeUp({ ...runOptions, withProxy: true, build: false });
+      rollbackOk = rollbackOk && restored.ok;
+      rollbackLog = [rollbackLog, restored.log].filter(Boolean).join('\n');
+      if (rollbackOk) {
+        const health = await waitForExpectedStackHealth(
+          runComposePs,
+          { ...runOptions, withProxy: true },
+          hooks.stackHealthWaitOptions,
+        );
+        rollbackOk = health.ok;
+        if (!health.ok) rollbackLog = [rollbackLog, ...health.errors].filter(Boolean).join('\n');
+      }
+    } else {
+      const stopped = await runComposeStop({ ...runOptions, withProxy: true, services: ['proxy'] });
+      rollbackOk = rollbackOk && stopped.ok;
+      rollbackLog = [rollbackLog, stopped.log].filter(Boolean).join('\n');
+    }
+    throw new SetupApiValidationError(
+      [
+        reason,
+        rollbackOk
+          ? 'Der vorherige Patientenzugang wurde wiederhergestellt.'
+          : 'Rollback unvollständig; Praxis Flow bis zur Prüfung nicht als sicher gebunden behandeln.',
+        rollbackLog && `Rollback: ${rollbackLog}`,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
+  };
+
+  const configCheck = await (hooks.composeValidateConfig ?? composeValidateConfig)({
+    ...runOptions,
+    withProxy: true,
+  });
+  if (!configCheck.ok) {
+    fs.copyFileSync(backup.backupPath, envPath);
+    throw new SetupApiValidationError(
+      `Patientenzugang konnte nicht vorbereitet werden; die Laufzeit blieb unverändert. ${configCheck.log}`,
+    );
+  }
+
+  const removed = await runComposeRemove({ ...resolveComposeRunOptions(ctx), withProxy: true }, [
+    'proxy',
+  ]);
+  if (!removed.ok) await rollback(removed.log || 'Proxy konnte nicht neu erzeugt werden.');
+
+  if (stackWasRunning) {
+    const up = await runComposeUp({
+      ...resolveComposeRunOptions(ctx),
+      withProxy: true,
+      build: false,
+    });
+    if (!up.ok) await rollback(up.log || 'Proxy konnte nicht gestartet werden.');
+    const health = await waitForExpectedStackHealth(
+      runComposePs,
+      { ...resolveComposeRunOptions(ctx), withProxy: true },
+      hooks.stackHealthWaitOptions,
+    );
+    if (!health.ok) await rollback(health.errors.join('\n'));
+  }
+
+  const currentEnv = readEnvMap(envPath);
+  const currentCompose = await runComposePs(resolveComposeRunOptions(ctx));
+  const auditError = failedStaffBindingAudit({
+    compose: currentCompose,
+    env: currentEnv,
+    staffIp,
+    proxyEnabled: true,
+    hooks,
+  });
+  if (auditError) await rollback(`Runtime-Bindung unsicher: ${auditError}`);
+
+  if (enable) {
+    const binding = before.status.binding;
+    const tls = readTlsStatus(currentEnv);
+    const staffHostname = tls.staffHostname?.trim() || '';
+    const portalHostname = tls.portalHostname?.trim() || '';
+    if (!binding || !staffHostname || !portalHostname) {
+      await rollback('Listener-Prüfung konnte die Staff-/Portal-Identität nicht bestimmen.');
+    }
+    const listenerError = await (hooks.auditListeners ?? auditRestrictedListeners)({
+      staffIp,
+      restrictedIp: binding.hostIp,
+      staffHostname,
+      portalHostname,
+    });
+    if (listenerError) await rollback(`Listener-Prüfung fehlgeschlagen: ${listenerError}`);
+  }
+
+  if (!enable) {
+    removeEnvKeys(envPath, [...RESTRICTED_NETWORK_PERSISTED_KEYS]);
+  }
+  const result = await inspect();
+  if (enable && (result.status.phase !== 'applied' || result.status.health === 'degraded')) {
+    await rollback('Restricted-Publish wurde nach dem Start nicht eindeutig nachgewiesen.');
+  }
+  return result;
+}
+
+export async function applyRestrictedNetwork(
+  ctx: SetupContext,
+  hooks: RestrictedNetworkMutationHooks = {},
+): Promise<RestrictedNetworkInspectResult> {
+  return mutateRestrictedNetwork(ctx, true, hooks);
+}
+
+export async function removeRestrictedNetwork(
+  ctx: SetupContext,
+  hooks: RestrictedNetworkMutationHooks = {},
+): Promise<RestrictedNetworkInspectResult> {
+  return mutateRestrictedNetwork(ctx, false, hooks);
 }
 
 export function buildSetupPlan(

@@ -619,7 +619,10 @@ export function createMaintenanceController(
               patch({ pinResetStatusText: pinResetSuccessText(result.defaultPin) });
             } else {
               patch({ pinResetStatusText: '' });
-              setSurfaceError('pin', result.log || 'PIN-Reset fehlgeschlagen.');
+              setSurfaceError(
+                'pin',
+                'PIN-Reset fehlgeschlagen. Technische Details finden Sie im Bereich „Logs“.',
+              );
             }
           }
           if (result.ok) {

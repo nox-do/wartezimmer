@@ -1,7 +1,7 @@
 # Plan: Manager — eingeschränkter Netzwerkzugang
 
-Stand: 2026-09-16 · **TLS-Fundament, Proxy-Staff-Publishes und ausführbarer
-Restricted-Proxyvertrag umgesetzt; Manager und Restricted-Binding offen;
+Stand: 2026-09-16 · **TLS-Fundament, Proxy-Staff-Publishes, ausführbarer
+Restricted-Proxyvertrag sowie Manager-Apply/Remove umgesetzt; praktische Abnahme offen;
 Host-Firewall außerhalb des Produkts**
 
 Grundlage: [Eingeschränkter Netzwerkzugang für das Patientenportal](plan-portal-lan-isolation.md) ·
@@ -305,6 +305,11 @@ Apply, solange das PEM den Portal-Hostname nicht abdeckt. Der Restricted-
 Bereich zeigt diese Abhängigkeit, führt aber die TLS-Aktion über den bestehenden
 HTTPS-Vertrag aus.
 
+Der Portal-A-Record kann nicht vor der Restricted-IP-Auswahl angelegt werden,
+weil sein Ziel erst dann feststeht. Inspect behandelt einen fehlenden oder
+abweichenden Record als Blocker. Unter `lan.notaus.de` weist der Manager auf den
+Betreiber hin; bei einer eigenen Domain auf die DNS-Verantwortung der Praxis.
+
 ## 10. Umsetzungsschnitte
 
 Der ausführbare nächste Arbeitsblock ist in
@@ -414,21 +419,33 @@ kein Host-Firewall-Apply, keine Elevation. Details und Bestandsaufnahme:
 
 ### Schnitt 2 — Setup vertical slice (Restricted, offen)
 
-- DTOs und neue Operationsdeskriptoren;
-- Persistenz, Inspect, Prepare und Apply;
+- [x] DTOs, günstige `HostStatus`-Zusammenfassung und read-only
+      `inspectRestrictedNetwork()`-Descriptor;
+- [x] breite IPv4-Kandidateninventur mit Warnungen statt Topologie-Filterung;
+- [x] read-only Plattform-, TLS-/Zertifikats-, DNS- und lokaler IP-Check;
+- [x] Restricted-IP, Interface-Identität und Warnbestätigung als vorbereiteten
+      Zustand persistieren; Auswahl vor dem Schreiben erneut gegen lokale
+      Kandidaten und HTTPS prüfen;
+- [x] Apply und Remove mit explizitem Aktivierungsmarker, Compose-Validierung,
+      Runtime-Audit und Env-/Proxy-Rollback;
 - [x] getrennten internen Listener 444, strikte Host-/SNI-Prüfung und den
       Methoden-/Pfadvertrag `PORTAL_SURFACE_ROUTES` als generierte
       Proxy-Positivliste vorbereiten;
 - [x] separate Dev-/Delivery-Overlays für
       `<restricted-ip>:443 → proxy:444` ausliefern, ohne sie automatisch zu wählen;
-- Compose/Caddy-Transaktion und Rollback;
-- Fail-closed bei fehlender Restricted-IP.
+- [x] Compose/Caddy-Transaktion und Rollback;
+- [x] Fail-closed bei fehlender Restricted-IP.
 
 ### Schnitt 3 — Manager (Restricted, offen)
 
-- Bereich im Netzwerk-Tab;
-- Kandidatenauswahl und Same-NIC-Bestätigung;
-- Status, Apply und Binding entfernen;
+- [x] read-only Bereich im Netzwerk-Tab mit Status, Kandidaten, Prüfungen und
+      klarer Praxis-IT-Verantwortungsgrenze;
+- [x] getrennte Patientenzugang-Zusammenfassung auf Status und Netzwerk;
+- [x] Kandidatenauswahl und Bestätigung für Same-NIC, virtuelle Adapter und
+      überlappende Staff-Subnetze;
+- [x] Portal-DNS nach der Auswahl als Voraussetzung prüfen und fehlenden oder
+      abweichenden A-Record als Blocker anzeigen;
+- [x] Status, Apply und Binding entfernen;
 - HTTPS-Verweis bei TLS-/DNS-Blockern;
 - neue Zwei-Zonen-Topologie statt Captive-zentrierter Erklärung.
 

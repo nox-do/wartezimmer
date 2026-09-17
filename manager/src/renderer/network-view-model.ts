@@ -192,12 +192,8 @@ export function networkWarningText(running: boolean, changed: boolean): string |
   return null;
 }
 
-export function networkRestartFailureMessage(result: HostNetworkResult): string {
-  const detail = result.restartLog?.trim();
-  if (detail) {
-    return `Praxis Flow konnte nicht neu gestartet werden. ${summarizeTechnicalDetail(detail)}`;
-  }
-  return 'Praxis Flow konnte nicht neu gestartet werden. Bitte unter Status die Container prüfen.';
+export function networkRestartFailureMessage(_result: HostNetworkResult): string {
+  return 'Praxis Flow konnte nicht neu gestartet werden. Bitte unter Status die Dienste prüfen; technische Details finden Sie unter Wartung im Bereich „Logs“.';
 }
 
 export function networkSavedWhileStoppedMessage(): string {
@@ -228,10 +224,13 @@ export function dnsRebindHelp(baseUrl: string): string {
   let exception = 'den Praxis-Hostnamen';
   try {
     const hostname = new URL(baseUrl).hostname.toLowerCase().replace(/\.$/, '');
-    exception = hostname === 'lan.notaus.de' || hostname.endsWith('.lan.notaus.de')
-      ? 'lan.notaus.de'
-      : hostname;
-  } catch { /* Keep a neutral instruction if no valid address is available. */ }
+    exception =
+      hostname === 'lan.notaus.de' || hostname.endsWith('.lan.notaus.de')
+        ? 'lan.notaus.de'
+        : hostname;
+  } catch {
+    /* Keep a neutral instruction if no valid address is available. */
+  }
   return `DNS-Rebind-Schutz oder lokaler DNS-Filter möglich. Die lokale Namensauflösung scheitert, während ein öffentlicher DNS-Server eine private LAN-IP liefert. Prüfen Sie die DNS-Rebind-Ausnahmen im Router bzw. lokalen DNS-Filter und tragen Sie dort ${exception} als Ausnahme ein. Anschließend die Praxisadresse erneut prüfen.`;
 }
 
@@ -268,12 +267,4 @@ export function formatActiveReachabilityResult(
     ok: false,
     message: `Gespeichert. Praxis Flow wurde neu gestartet, ist aber noch nicht erreichbar (${baseUrl}). Bitte kurz warten und erneut prüfen.`,
   };
-}
-
-function summarizeTechnicalDetail(detail: string): string {
-  const oneLine = detail.replace(/\s+/g, ' ').trim();
-  if (oneLine.length <= 160) {
-    return oneLine;
-  }
-  return `${oneLine.slice(0, 157)}…`;
 }

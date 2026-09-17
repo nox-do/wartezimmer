@@ -20,7 +20,8 @@ export type SetupContext = {
   templateRoot: string;
 };
 
-const DELIVERY_BOOTSTRAP_FILES = [
+/** Single source for install-home bootstrap and Manager DMG template packaging. */
+export const DELIVERY_BOOTSTRAP_FILES = [
   '.env.example',
   'docker-compose.delivery.yml',
   'docker-compose.proxy.delivery.yml',
@@ -28,7 +29,7 @@ const DELIVERY_BOOTSTRAP_FILES = [
   'docker-compose.proxy-restricted.delivery.yml',
 ] as const;
 
-const DEV_BOOTSTRAP_FILES = [
+export const DEV_BOOTSTRAP_FILES = [
   '.env.example',
   'docker-compose.yml',
   'docker-compose.proxy.yml',

@@ -734,11 +734,13 @@ Hardwaretopologie zu erraten. Erkennbare virtuelle Adapter (docker, vEthernet,
 utun/VPN, Tethering) werden nicht ausgeblendet, tragen aber einen Warnhinweis
 und brauchen eine Bestätigung.
 
-Nicht angeboten werden Loopback und Link-Local, die Staff-IP, widersprüchlich
-belegte Adressen sowie Adressen auf einem anderen Interface mit überlappendem
-Staff-Subnetz. Bei einem anderen Interface bestätigt die Praxis dessen Nutzung
-für das Patientennetz. Eine zweite Adresse auf demselben Interface bleibt als
-Same-NIC-Warnpfad auswählbar und verlangt eine ausdrückliche Bestätigung.
+Nicht angeboten werden Loopback und Link-Local, die Staff-IP sowie nicht mehr
+lokal vorhandene Adressen. Weitere vom Betriebssystem gemeldete IPv4-Adressen
+bleiben bewusst auswählbar: überlappende Subnetze, erkennbare virtuelle Adapter
+und eine zweite Adresse auf demselben Interface erhalten deutliche Warnungen,
+werden aber nicht durch heuristische Filter verborgen. Der spätere Apply prüft
+die konkrete lokale Bindbarkeit erneut; Same-NIC und weitere Warnpfade verlangen
+eine ausdrückliche Bestätigung.
 
 Entscheidend ist nicht die Adapterbezeichnung, sondern der tatsächliche
 Bind-Test: Der Restricted-Host-Publish wird ausschließlich an die gewählte
@@ -1251,9 +1253,8 @@ genannte Kombination ist bestanden):
 
 Für den weiteren **Restricted-/Portal-Block** offen:
 
-- Restricted-IP persistieren, das separate Publish-Overlay transaktional
-  auswählen/anwenden/entfernen und die tatsächlichen Runtime-Bindings auditieren;
-- Manager-UI, Drift-/Repair-Pfad und reale Zwei-NIC-Abnahme ergänzen;
+- Drift-/Repair-Pfad und reale Zwei-NIC-Abnahme ergänzen;
+- Manager-Zwei-Zonen-Topologie und praktische DMG-Abnahme ergänzen;
 - nur bei gescheitertem F1-PoC: eigene Folgeentscheidung, ob ein nativer
   Edge-Proxy als separate Alternativarchitektur geplant wird oder die Plattform
   ohne Portal bleibt.
@@ -1276,10 +1277,40 @@ Listenern verwendet; die effektive Caddy-Konfiguration enthält weiterhin nur
 eine Automations-Policy für `*.<installationsraum>`. Dieser Block erzeugt weder
 einen Portal-A-Record noch eine zweite ACME-Order.
 
-Die nun tatsächlich geltende Sicherheitsgrenze ist zunächst ein **ausführbarer,
-getesteter Proxyvertrag**, noch kein aktives Restricted-Binding. Offen bleiben
-Restricted-IP-Persistenz und Kandidatenprüfung, transaktionales Apply/Remove und
-Rollback, Runtime-Audit beider Publishes, Manager-UI, Drift/Repair sowie die
-reale Abnahme mit zwei NICs. Host-Firewall, Routing und Netztrennung bleiben
-vollständig Aufgabe der Praxis-IT; aus dem IP-Binding allein folgt keine
-Isolationszusage.
+Dieser Block lieferte zunächst nur den **ausführbaren, getesteten
+Proxyvertrag**. Die darauf aufbauende Aktivierung und Entfernung beschreibt
+§13.4. Ohne erfolgreiches Apply besteht weiterhin kein aktives
+Restricted-Binding. Host-Firewall, Routing und Netztrennung bleiben vollständig
+Aufgabe der Praxis-IT; aus dem IP-Binding allein folgt keine Isolationszusage.
+
+### 13.4 Arbeitsblock 16.09.2026 — Restricted-Binding anwenden und entfernen
+
+Der Manager persistiert eine ausgewählte Restricted-IP zunächst ausschließlich
+als vorbereiteten Zustand. Erst die getrennt bestätigte Aktivierungsaktion setzt
+`SETUP_RESTRICTED_ENABLED=true` und nimmt das Restricted-Overlay in die zentrale
+Compose-Dateiauswahl auf. Dadurch kann ein allgemeiner Stack-Neustart einen nur
+vorbereiteten Entwurf nicht unbeabsichtigt veröffentlichen.
+
+Apply und Remove sichern die Env, validieren die resultierende Compose-
+Konfiguration, erzeugen den Proxy neu und rollen Env sowie vorherigen Proxy bei
+Fehlern zurück. Vor Erfolg werden die exakten App-/Sandbox-/Proxy-Publishes
+einschließlich `<restricted-ip>:443 → proxy:444` geprüft. Zusätzlich laufen
+HTTPS-Proben direkt gegen beide Ziel-IPs: Staff auf Staff und Portal auf
+Restricted müssen antworten; beide Kreuzkombinationen sowie unbekanntes SNI
+müssen abgewiesen werden. Ein Fehler in diesem Listener-Audit löst ebenfalls
+Rollback aus. Start/Recreate bleibt bei einer aktiv markierten, aber nicht mehr
+lokalen Restricted-IP fail-closed.
+
+Der Manager bietet nach grünem Prepare die Aktion „Patientenzugang aktivieren“
+mit Neustart-/Praxis-IT-Hinweis und im aktiven Zustand „Patientenzugang
+entfernen“. Öffentliche A-Record-Prüfung und lokale Auflösung werden getrennt;
+bei öffentlichem privaten A-Record ohne lokale Antwort erscheint ein Verdacht
+auf DNS-Rebind-Schutz, lokalen DNS-Filter oder negativen DNS-Cache.
+
+Damit gilt nach einem erfolgreichen Apply eine technisch geprüfte Hostgrenze:
+Der Docker-Proxy veröffentlicht die beiden HTTPS-Listener ausschließlich an den
+gewählten Ziel-IPs, und die Origin-Kreuztests werden lokal negativ bestätigt.
+Nicht zugesagt oder verwaltet werden weiterhin Host-Firewall, Routing und die
+tatsächliche Trennung der Praxisnetze. Offen bleiben insbesondere persistente
+Drift-/Repair-UX, praktische DMG- und reale Zwei-NIC-Abnahme, Neustart-/Reboot-
+Abnahme und Windows-Freigabe.

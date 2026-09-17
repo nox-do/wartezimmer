@@ -1,6 +1,9 @@
-import type { HostStatus } from '../shared/host-status.js';
 import { SETUP_API_PATH_PREFIX, type SetupApiCallRequest } from '../shared/ipc-channels.js';
-import { SETUP_MANAGER_TOKEN_HEADER, SETUP_TLS_ROUTES } from '@praxis-flow/server-shared/setup-api';
+import {
+  SETUP_MANAGER_TOKEN_HEADER,
+  SETUP_RESTRICTED_NETWORK_ROUTES,
+  SETUP_TLS_ROUTES,
+} from '@praxis-flow/server-shared/setup-api';
 
 const DEFAULT_SETUP_API_TIMEOUT_MS = 30_000;
 /** Erstinstallation: docker compose up --build kann deutlich länger als Status-Polls dauern. */
@@ -15,6 +18,54 @@ const UPDATE_APPLY_TIMEOUT_MS = 15 * 60 * 1000;
 const TLS_OBTAIN_TIMEOUT_MS = 6 * 60 * 1000;
 const TLS_LOCAL_CHECK_TIMEOUT_MS = 2 * 60 * 1000;
 const TLS_APPLY_TIMEOUT_MS = 3 * 60 * 1000;
+const RESTRICTED_NETWORK_MUTATION_TIMEOUT_MS = 3 * 60 * 1000;
+
+const IPC_ERROR_PREFIX = /^Error invoking remote method '[^']+':\s*(?:Error:\s*)?/;
+const SETUP_API_ERROR_PREFIX = /^Setup-API\s+\/api\/setup\/host\/[^:]+:\s*/;
+const TECHNICAL_ERROR_PATTERN =
+  /(?:Client network socket|ECONN[A-Z]*|EADDRINUSE|fetch failed|Container\s|docker compose|node:[a-z]|\bat\s+file:|\bat\s+\S+\s+\([^)]*:\d+:\d+\))/i;
+
+function setupActionFallback(path: string): string {
+  if (path.startsWith('/api/setup/host/restricted-network/')) {
+    return 'Der Patientenzugang konnte nicht geändert werden. Bitte prüfen Sie die Voraussetzungen und versuchen Sie es erneut.';
+  }
+  if (path.startsWith('/api/setup/host/tls/')) {
+    return 'Die HTTPS-Einstellung konnte nicht geändert werden. Bitte prüfen Sie die Voraussetzungen und versuchen Sie es erneut.';
+  }
+  return 'Die Aktion konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.';
+}
+
+/** Detailed process output stays in the main-process log, never in the renderer. */
+export function setupApiUserErrorMessage(
+  error: unknown,
+  request: Pick<SetupApiCallRequest, 'path'>,
+): string {
+  const raw = (error instanceof Error ? error.message : String(error))
+    .replace(IPC_ERROR_PREFIX, '')
+    .replace(SETUP_API_ERROR_PREFIX, '')
+    .trim();
+
+  if (/setup token required|maintenance token required/i.test(raw)) {
+    return 'Der Manager konnte sich nicht an der lokalen Setup-API anmelden. Bitte Manager und Praxis Flow mit demselben Installationsstand neu starten.';
+  }
+
+  if (raw.includes('Listener-Prüfung fehlgeschlagen')) {
+    const restored = raw.includes('wiederhergestellt');
+    return [
+      'Der Portalzugang war nach dem Start nicht über die gewählte Netzwerkadresse erreichbar.',
+      restored
+        ? 'Die Aktivierung wurde zurückgenommen; der Staff-Zugang bleibt unverändert.'
+        : 'Die Aktivierung konnte nicht sicher abgeschlossen werden.',
+      'Bitte prüfen Sie die Netzwerkadresse und versuchen Sie es erneut.',
+    ].join(' ');
+  }
+
+  const withoutRollbackLog = raw.split(/\nRollback:/, 1)[0]?.trim() ?? '';
+  if (!withoutRollbackLog || TECHNICAL_ERROR_PATTERN.test(withoutRollbackLog)) {
+    return setupActionFallback(request.path);
+  }
+  return withoutRollbackLog;
+}
 
 function isStructuredOperationResult(body: unknown): body is { ok: boolean } {
   return (
@@ -67,6 +118,14 @@ export function setupApiTimeoutMs(request: SetupApiCallRequest): number {
     return TLS_APPLY_TIMEOUT_MS;
   }
 
+  if (
+    request.method === 'POST' &&
+    (request.path === SETUP_RESTRICTED_NETWORK_ROUTES.apply ||
+      request.path === SETUP_RESTRICTED_NETWORK_ROUTES.remove)
+  ) {
+    return RESTRICTED_NETWORK_MUTATION_TIMEOUT_MS;
+  }
+
   if (request.method !== 'POST' || request.path !== '/api/setup/host/apply') {
     return DEFAULT_SETUP_API_TIMEOUT_MS;
   }
@@ -77,20 +136,6 @@ export function setupApiTimeoutMs(request: SetupApiCallRequest): number {
 
   const likelyBuild = request.body.composeBuild !== false && !request.body.preserveEnv;
   return likelyBuild ? FIRST_INSTALL_APPLY_TIMEOUT_MS : DEFAULT_SETUP_API_TIMEOUT_MS;
-}
-
-export async function fetchHostStatusFromApi(
-  apiBase: string,
-  token?: string | null,
-): Promise<HostStatus> {
-  return callSetupApi<HostStatus>(
-    apiBase,
-    {
-      method: 'GET',
-      path: '/api/setup/host/status',
-    },
-    token,
-  );
 }
 
 export function resolveSetupApiUrl(apiBase: string, requestPath: string): URL {

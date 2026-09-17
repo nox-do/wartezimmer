@@ -430,6 +430,59 @@ body {
   border-color: var(--bad);
 }
 
+.checklist li.is-warn {
+  color: var(--warn);
+}
+
+.checklist li.is-warn .checklist-mark {
+  color: #fff;
+  background: var(--warn);
+  border-color: var(--warn);
+}
+
+.restricted-candidate-list {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+}
+
+.restricted-candidate-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.restricted-candidate-option:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.restricted-candidate-option.is-warn {
+  color: var(--warn);
+}
+
+.restricted-candidate-option input,
+.restricted-warning-confirmation input {
+  margin-top: 0.2rem;
+}
+
+.restricted-warning-confirmation {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--banner-warn);
+  color: var(--warn);
+}
+
 .panel-section {
   margin-bottom: 1.25rem;
 }

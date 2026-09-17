@@ -203,7 +203,7 @@ test('storageSaveStatusText summarizes save outcome', () => {
   assert.match(needsRestart, /Neustart empfohlen/);
 });
 
-test('storageSaveErrorText surfaces restart failure log', () => {
+test('storageSaveErrorText hides restart process output', () => {
   assert.equal(
     storageSaveErrorText(
       minimalStorageResult({
@@ -213,7 +213,7 @@ test('storageSaveErrorText surfaces restart failure log', () => {
       }),
       true,
     ),
-    'compose down failed',
+    'Die Ordner wurden gespeichert, aber Praxis Flow konnte nicht neu gestartet werden. Technische Details finden Sie im Bereich „Logs“.',
   );
   assert.equal(storageSaveErrorText(minimalStorageResult(), false), null);
 });

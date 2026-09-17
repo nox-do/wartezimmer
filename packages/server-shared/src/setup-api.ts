@@ -35,6 +35,13 @@ export const SETUP_TLS_ROUTES = {
   renew: '/api/setup/host/tls/renew',
 } as const;
 
+export const SETUP_RESTRICTED_NETWORK_ROUTES = {
+  inspect: '/api/setup/host/restricted-network',
+  prepare: '/api/setup/host/restricted-network/prepare',
+  apply: '/api/setup/host/restricted-network/apply',
+  remove: '/api/setup/host/restricted-network/remove',
+} as const;
+
 /** PoC operator zone (product later: lan.praxis-flow.de). */
 export const TLS_OPERATOR_ZONE_DEFAULT = 'lan.notaus.de';
 export const TLS_OPERATOR_MAIL = 'cert@notaus.de';
@@ -478,6 +485,87 @@ export type HostNetworkStatus = {
   lanIpStale: boolean;
 };
 
+export type RestrictedNetworkPhase = 'unconfigured' | 'prepared' | 'applied';
+
+export type RestrictedNetworkHealth =
+  | 'not-configured'
+  | 'prepared'
+  | 'healthy'
+  | 'warning-shared-interface'
+  | 'blocked'
+  | 'degraded';
+
+export type RestrictedNetworkBinding = {
+  hostIp: string;
+  interfaceId: string;
+  interfaceName: string;
+  sameInterfaceConfirmed: boolean;
+  warningsConfirmed: boolean;
+};
+
+export type RestrictedNetworkPrepareInput = {
+  hostIp: string;
+  interfaceId: string;
+  warningsConfirmed: boolean;
+};
+
+export type RestrictedNetworkPrepareResult = RestrictedNetworkInspectResult;
+export type RestrictedNetworkActionResult = RestrictedNetworkInspectResult;
+
+/** Cheap config summary for HostStatus. Deep checks belong to the inspect route. */
+export type RestrictedNetworkStatus = {
+  phase: RestrictedNetworkPhase;
+  health: RestrictedNetworkHealth;
+  binding: RestrictedNetworkBinding | null;
+  exposedSurfaces: readonly ['patient-portal'];
+  portalHostname: string | null;
+  lastError: { code: string; message: string } | null;
+};
+
+export type RestrictedNetworkCandidateWarning =
+  | 'same-interface'
+  | 'overlapping-staff-subnet'
+  | 'virtual-interface';
+
+export type RestrictedNetworkCandidate = {
+  address: string;
+  cidr?: string;
+  interfaceId: string;
+  interfaceName: string;
+  mac?: string;
+  relationToStaff: 'different-interface' | 'same-interface' | 'unknown';
+  warnings: RestrictedNetworkCandidateWarning[];
+};
+
+export type RestrictedNetworkDnsObservation = {
+  state: 'not-applicable' | 'match' | 'missing' | 'mismatch' | 'local-unresolved';
+  hostname: string | null;
+  expectedIp: string | null;
+  /** Addresses returned by the host/system resolver used by devices in the local network. */
+  addresses: string[];
+  /** Combined answers from the configured public diagnostic resolvers. */
+  publicAddresses: string[];
+  reason?: 'dns-rebind';
+};
+
+export type RestrictedNetworkInspectResult = {
+  inspectedAt: string;
+  status: RestrictedNetworkStatus;
+  capabilities: {
+    platform: string;
+    supported: boolean;
+    message: string;
+  };
+  staff: {
+    hostIp: string | null;
+    interfaceName: string | null;
+  };
+  candidates: RestrictedNetworkCandidate[];
+  dns: RestrictedNetworkDnsObservation;
+  checks: NetworkBindingCheck[];
+  externalResponsibilities: string[];
+};
+
 export type DeviceUrls = {
   appBaseUrl: string;
   terminal: string;
@@ -615,6 +703,8 @@ export type HostStatus = {
   /** Raw CANONICAL_BASE_URL from .env when valid http(s) origin; null if unset/invalid. */
   configuredCanonicalBaseUrl: string | null;
   network: HostNetworkStatus;
+  /** Cheap Restricted-Network summary; detailed candidates/audit use the inspect route. */
+  restrictedNetwork?: RestrictedNetworkStatus;
   gateway: HostGatewayStatus | null;
   /** Always set: proxy is part of the host model; `enabled: false` / `mode: 'off'` is normal. */
   proxy: ProxyStatus;

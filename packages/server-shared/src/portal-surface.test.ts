@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  PORTAL_ENTRY_REDIRECT,
   PORTAL_INTERNAL_ROUTES,
   PORTAL_STATIC_SURFACE_ROUTES,
   PORTAL_SURFACE_ROUTES,
@@ -15,6 +16,15 @@ test('portal surface is explicit, unique and confined to the portal namespace', 
   assert.ok(
     PORTAL_INTERNAL_ROUTES.every((route) => !exposed.includes(`${route.method} ${route.path}`)),
   );
+});
+
+test('portal entry redirect is an exact safe-method convenience route', () => {
+  assert.deepEqual(PORTAL_ENTRY_REDIRECT, {
+    methods: ['GET', 'HEAD'],
+    path: '/',
+    location: '/portal',
+    statusCode: 308,
+  });
 });
 
 test('portal UI surface has exact navigation entries and a bounded static namespace', () => {

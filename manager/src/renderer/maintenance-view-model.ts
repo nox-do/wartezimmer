@@ -200,9 +200,14 @@ export function fileSharingHintText(hostPlatform: string): string | null {
 
 export function composeActionErrorMessage(
   action: 'start' | 'stop' | 'restart',
-  log: string | null | undefined,
+  _log: string | null | undefined,
 ): string {
-  return log || `Aktion „${action}“ fehlgeschlagen.`;
+  const labels = {
+    start: 'Praxis Flow konnte nicht gestartet werden.',
+    stop: 'Praxis Flow konnte nicht gestoppt werden.',
+    restart: 'Praxis Flow konnte nicht neu gestartet werden.',
+  } as const;
+  return `${labels[action]} Technische Details finden Sie im Bereich „Logs“.`;
 }
 
 export function storageSaveStatusText(
@@ -231,7 +236,7 @@ export function storageSaveErrorText(
   restartCompose: boolean,
 ): string | null {
   if (result.stackWasRunning && restartCompose && !result.composeRestarted) {
-    return result.restartLog || 'Stack-Neustart fehlgeschlagen.';
+    return 'Die Ordner wurden gespeichert, aber Praxis Flow konnte nicht neu gestartet werden. Technische Details finden Sie im Bereich „Logs“.';
   }
   return null;
 }

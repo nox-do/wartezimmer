@@ -4,12 +4,16 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
   applySetupPlan,
+  applyRestrictedNetwork,
   backupPf,
   buildSetupPlan,
   getComposeLogs,
   getComposeStatus,
   getHostRuntimeHealth,
   getHostStatus,
+  inspectRestrictedNetwork,
+  prepareRestrictedNetwork,
+  removeRestrictedNetwork,
   getNetworkSnapshot,
   getPfbackupInfo,
   inspectPfbackup,
@@ -42,6 +46,7 @@ import { resolveSetupApiError } from './api-error.js';
 import {
   normalizeApplySetupInput,
   normalizeHostNetworkInput,
+  normalizeRestrictedNetworkPrepareInput,
   normalizeSetupPlanInput,
   normalizeTlsCustomCertificateInput,
   normalizeTlsPrepareInput,
@@ -56,6 +61,7 @@ import {
   SETUP_API_PROTOCOL_VERSION,
   SETUP_MANAGER_TOKEN_HEADER,
   SETUP_READY_LOG_PREFIX,
+  SETUP_RESTRICTED_NETWORK_ROUTES,
   SETUP_TLS_ROUTES,
 } from '@praxis-flow/server-shared';
 
@@ -156,6 +162,19 @@ function createRuntimeRoutes(ctx: SetupContext, tlsDeps: TlsRuntimeDependencies)
       );
     },
     'GET /api/setup/host/runtime-health': async () => routeResult(await getHostRuntimeHealth(ctx)),
+    [`GET ${SETUP_RESTRICTED_NETWORK_ROUTES.inspect}`]: async () =>
+      routeResult(await inspectRestrictedNetwork(ctx)),
+    [`POST ${SETUP_RESTRICTED_NETWORK_ROUTES.prepare}`]: async (req) =>
+      routeResult(
+        await prepareRestrictedNetwork(
+          ctx,
+          normalizeRestrictedNetworkPrepareInput(await readJsonBody(req)),
+        ),
+      ),
+    [`POST ${SETUP_RESTRICTED_NETWORK_ROUTES.apply}`]: async () =>
+      routeResult(await applyRestrictedNetwork(ctx)),
+    [`POST ${SETUP_RESTRICTED_NETWORK_ROUTES.remove}`]: async () =>
+      routeResult(await removeRestrictedNetwork(ctx)),
     'GET /api/setup/host/network': () => routeResult(getNetworkSnapshot()),
     'POST /api/setup/host/network': async (req) => {
       const body = await readJsonBody(req);

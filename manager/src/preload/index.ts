@@ -28,6 +28,10 @@ import type {
   HostStatus,
   HostRuntimeHealth,
   NetworkSnapshot,
+  RestrictedNetworkInspectResult,
+  RestrictedNetworkActionResult,
+  RestrictedNetworkPrepareInput,
+  RestrictedNetworkPrepareResult,
   ResetStaffPinsResult,
   SetupPlan,
   SetupPlanInput,
@@ -38,7 +42,6 @@ import type {
   TlsVerifyDnsResult,
 } from '../shared/host-status.js';
 import {
-  IPC_FETCH_SETUP_STATUS,
   IPC_OPEN_EXTERNAL_URL,
   IPC_READ_PFBACKUP_FOR_VALIDATE,
   IPC_READ_TLS_SIDECAR,
@@ -52,8 +55,12 @@ import {
   IPC_RENEW_TLS_PEM,
   IPC_SETUP_API_CALL,
   type SetupApiCallRequest,
+  type SetupApiCallResponse,
 } from '../shared/ipc-channels.js';
-import { SETUP_TLS_ROUTES } from '@praxis-flow/server-shared/setup-api';
+import {
+  SETUP_RESTRICTED_NETWORK_ROUTES,
+  SETUP_TLS_ROUTES,
+} from '@praxis-flow/server-shared/setup-api';
 
 const managerVersion = managerPackage.version;
 
@@ -62,17 +69,20 @@ async function invokeMain<T>(channel: string, ...args: unknown[]): Promise<T> {
 }
 
 async function callSetupApi<T>(request: SetupApiCallRequest): Promise<T> {
-  return invokeMain<T>(IPC_SETUP_API_CALL, request);
+  const response = await invokeMain<SetupApiCallResponse<T>>(IPC_SETUP_API_CALL, request);
+  if (!response.ok) {
+    throw new Error(response.message);
+  }
+  return response.value;
 }
 
 async function fetchSetupStatus(options?: { includeProbes?: boolean }): Promise<HostStatus> {
-  if (options?.includeProbes) {
-    return callSetupApi<HostStatus>({
-      method: 'GET',
-      path: '/api/setup/host/status?include=probes',
-    });
-  }
-  return invokeMain<HostStatus>(IPC_FETCH_SETUP_STATUS);
+  return callSetupApi<HostStatus>({
+    method: 'GET',
+    path: options?.includeProbes
+      ? '/api/setup/host/status?include=probes'
+      : '/api/setup/host/status',
+  });
 }
 
 async function fetchRuntimeHealth(): Promise<HostRuntimeHealth> {
@@ -86,6 +96,39 @@ async function fetchSetupNetwork(): Promise<NetworkSnapshot> {
   return callSetupApi<NetworkSnapshot>({
     method: 'GET',
     path: '/api/setup/host/network',
+  });
+}
+
+async function inspectRestrictedNetwork(): Promise<RestrictedNetworkInspectResult> {
+  return callSetupApi<RestrictedNetworkInspectResult>({
+    method: 'GET',
+    path: SETUP_RESTRICTED_NETWORK_ROUTES.inspect,
+  });
+}
+
+async function prepareRestrictedNetwork(
+  body: RestrictedNetworkPrepareInput,
+): Promise<RestrictedNetworkPrepareResult> {
+  return callSetupApi<RestrictedNetworkPrepareResult>({
+    method: 'POST',
+    path: SETUP_RESTRICTED_NETWORK_ROUTES.prepare,
+    body,
+  });
+}
+
+async function applyRestrictedNetwork(): Promise<RestrictedNetworkActionResult> {
+  return callSetupApi<RestrictedNetworkActionResult>({
+    method: 'POST',
+    path: SETUP_RESTRICTED_NETWORK_ROUTES.apply,
+    body: {},
+  });
+}
+
+async function removeRestrictedNetwork(): Promise<RestrictedNetworkActionResult> {
+  return callSetupApi<RestrictedNetworkActionResult>({
+    method: 'POST',
+    path: SETUP_RESTRICTED_NETWORK_ROUTES.remove,
+    body: {},
   });
 }
 
@@ -349,6 +392,10 @@ contextBridge.exposeInMainWorld('praxisManager', {
   fetchSetupStatus,
   fetchRuntimeHealth,
   fetchSetupNetwork,
+  inspectRestrictedNetwork,
+  prepareRestrictedNetwork,
+  applyRestrictedNetwork,
+  removeRestrictedNetwork,
   fetchSetupPlan,
   applySetupPlan,
   getComposeStatus,

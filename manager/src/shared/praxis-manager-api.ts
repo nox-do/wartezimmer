@@ -25,6 +25,10 @@ import type {
   HostStatus,
   HostRuntimeHealth,
   NetworkSnapshot,
+  RestrictedNetworkInspectResult,
+  RestrictedNetworkActionResult,
+  RestrictedNetworkPrepareInput,
+  RestrictedNetworkPrepareResult,
   ResetStaffPinsResult,
   SetupPlan,
   SetupPlanInput,
@@ -40,6 +44,12 @@ export type PraxisManagerSetupApi = {
   fetchSetupStatus(options?: { includeProbes?: boolean }): Promise<HostStatus>;
   fetchRuntimeHealth(): Promise<HostRuntimeHealth>;
   fetchSetupNetwork(): Promise<NetworkSnapshot>;
+  inspectRestrictedNetwork(): Promise<RestrictedNetworkInspectResult>;
+  prepareRestrictedNetwork(
+    body: RestrictedNetworkPrepareInput,
+  ): Promise<RestrictedNetworkPrepareResult>;
+  applyRestrictedNetwork(): Promise<RestrictedNetworkActionResult>;
+  removeRestrictedNetwork(): Promise<RestrictedNetworkActionResult>;
   fetchSetupPlan(body: SetupPlanInput): Promise<SetupPlan>;
   applySetupPlan(body: ApplySetupInput): Promise<ApplySetupResult>;
   runSetupProbes(body: {

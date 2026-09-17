@@ -5,6 +5,7 @@ import type {
   HostNetworkInput,
   NormalizedSetupPlanInput,
   ProxyConfigInput,
+  RestrictedNetworkPrepareInput,
   SetupPlanInput,
   StorageFolderPaths,
   TlsCustomCertificateInput,
@@ -57,6 +58,20 @@ export function normalizeTlsPrepareInput(body: unknown): TlsPrepareInput {
     mode,
     lanIp: requireBodyString(record, 'lanIp'),
     ...(hostname ? { hostname } : {}),
+  };
+}
+
+export function normalizeRestrictedNetworkPrepareInput(
+  body: unknown,
+): RestrictedNetworkPrepareInput {
+  const record = coerceSetupRecord(body);
+  if (typeof record.warningsConfirmed !== 'boolean') {
+    throw new SetupApiValidationError('warningsConfirmed must be boolean');
+  }
+  return {
+    hostIp: requireBodyString(record, 'hostIp'),
+    interfaceId: requireBodyString(record, 'interfaceId'),
+    warningsConfirmed: record.warningsConfirmed,
   };
 }
 

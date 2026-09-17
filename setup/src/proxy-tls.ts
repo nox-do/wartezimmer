@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  PORTAL_ENTRY_REDIRECT,
   PORTAL_STATIC_SURFACE_ROUTES,
   PORTAL_SURFACE_ROUTES,
   PORTAL_UI_SURFACE_ROUTES,
@@ -9,7 +10,7 @@ import {
   type TlsStatus,
 } from '@praxis-flow/server-shared';
 
-export const GENERATED_CADDYFILE_MARKER = '# PRAXIS-FLOW-GENERATED LAN-TLS v3';
+export const GENERATED_CADDYFILE_MARKER = '# PRAXIS-FLOW-GENERATED LAN-TLS v4';
 
 export const PROXY_TLS_HOST_PATH_ENV_KEYS = [
   'PROXY_HTTPS_PORT',
@@ -210,6 +211,13 @@ function portalRestrictedSite(
     `\t\tpath ${staticPaths}`,
     '\t}',
     '\thandle @portalOrigin {',
+    '\t\t@portalEntry {',
+    `\t\t\tmethod ${PORTAL_ENTRY_REDIRECT.methods.join(' ')}`,
+    `\t\t\tpath ${PORTAL_ENTRY_REDIRECT.path}`,
+    '\t\t}',
+    '\t\thandle @portalEntry {',
+    `\t\t\tredir * ${PORTAL_ENTRY_REDIRECT.location} ${PORTAL_ENTRY_REDIRECT.statusCode}`,
+    '\t\t}',
     '\t\thandle @portalUi {',
     '\t\t\treverse_proxy app:8080',
     '\t\t}',

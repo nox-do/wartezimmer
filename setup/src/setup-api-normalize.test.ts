@@ -5,12 +5,36 @@ import {
   normalizeApplySetupInput,
   normalizeGatewayPlan,
   normalizeHostNetworkInput,
+  normalizeRestrictedNetworkPrepareInput,
   normalizeSetupPlanInput,
   normalizeTlsCustomCertificateInput,
   normalizeTlsPrepareInput,
   normalizeTlsRenewInput,
   SetupApiValidationError,
 } from './setup-api-normalize.js';
+
+test('normalizeRestrictedNetworkPrepareInput requires an explicit warning decision', () => {
+  assert.deepEqual(
+    normalizeRestrictedNetworkPrepareInput({
+      hostIp: ' 192.168.0.83 ',
+      interfaceId: ' mac:aa:bb:cc:dd:ee:ff ',
+      warningsConfirmed: true,
+    }),
+    {
+      hostIp: '192.168.0.83',
+      interfaceId: 'mac:aa:bb:cc:dd:ee:ff',
+      warningsConfirmed: true,
+    },
+  );
+  assert.throws(
+    () =>
+      normalizeRestrictedNetworkPrepareInput({
+        hostIp: '192.168.0.83',
+        interfaceId: 'name:en7',
+      }),
+    /warningsConfirmed/,
+  );
+});
 
 test('normalizeTlsPrepareInput validates managed/custom bodies', () => {
   assert.deepEqual(

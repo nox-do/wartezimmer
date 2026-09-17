@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import {
+  PORTAL_ENTRY_REDIRECT,
   PORTAL_INTERNAL_ROUTES,
   PORTAL_STATIC_SURFACE_ROUTES,
   PORTAL_SURFACE_ROUTES,
@@ -493,6 +494,16 @@ test('generated managed Caddyfile derives a strict restricted listener from the 
     assert.doesNotMatch(caddyfile, new RegExp(route.path));
 
   for (const route of PORTAL_UI_SURFACE_ROUTES) assert.match(caddyfile, new RegExp(route.path));
+  assert.ok(
+    caddyfile.includes(
+      `method ${PORTAL_ENTRY_REDIRECT.methods.join(' ')}\n\t\t\tpath ${PORTAL_ENTRY_REDIRECT.path}`,
+    ),
+  );
+  assert.ok(
+    caddyfile.includes(
+      `redir * ${PORTAL_ENTRY_REDIRECT.location} ${PORTAL_ENTRY_REDIRECT.statusCode}`,
+    ),
+  );
   for (const route of PORTAL_STATIC_SURFACE_ROUTES) {
     assert.ok(caddyfile.includes(route.path));
   }

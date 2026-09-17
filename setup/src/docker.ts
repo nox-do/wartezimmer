@@ -118,6 +118,7 @@ export function resolveComposeFiles(input: {
   proxyEnabled?: boolean;
   proxyTlsEnabled?: boolean;
   tlsLabEnabled?: boolean;
+  restrictedEnabled?: boolean;
   /** @deprecated Ignored — openNDS gateway compose removed. */
   gatewayEnabled?: boolean;
 }): string[] {
@@ -132,6 +133,13 @@ export function resolveComposeFiles(input: {
       );
       if (input.tlsLabEnabled && !useDelivery) {
         files.push('docker-compose.tls-lab.yml', 'docker-compose.tls-lab-proxy.yml');
+      }
+      if (input.restrictedEnabled) {
+        files.push(
+          useDelivery
+            ? 'docker-compose.proxy-restricted.delivery.yml'
+            : 'docker-compose.proxy-restricted.yml',
+        );
       }
     }
   }
@@ -167,6 +175,11 @@ function resolveComposeFileList(options: ComposeRunOptions): {
     wantsTlsLabCompose(options.projectRoot) &&
     fs.existsSync(path.join(options.projectRoot, 'docker-compose.tls-lab.yml')) &&
     fs.existsSync(path.join(options.projectRoot, 'docker-compose.tls-lab-proxy.yml'));
+  const envPath = path.join(options.projectRoot, '.env');
+  const restrictedEnabled =
+    proxyTlsEnabled &&
+    fs.existsSync(envPath) &&
+    readEnvMap(envPath).get('SETUP_RESTRICTED_ENABLED')?.trim().toLowerCase() === 'true';
   const gatewayWanted = wantsGatewayCompose(options.projectRoot, options.withGateway);
   const wantGateway = gatewayWanted && canRunGatewayCompose();
   const gatewaySkipped = gatewayWanted && !canRunGatewayCompose();
@@ -176,6 +189,7 @@ function resolveComposeFileList(options: ComposeRunOptions): {
     proxyEnabled,
     proxyTlsEnabled,
     tlsLabEnabled,
+    restrictedEnabled,
     gatewayEnabled: gatewayWanted,
   });
   return { files, wantGateway, gatewaySkipped };
@@ -190,6 +204,8 @@ function buildComposeEnv(composeProjectName: string): NodeJS.ProcessEnv {
   // Parent-shell overrides must not silently publish on another address.
   delete env.SETUP_LAN_APP_IP;
   delete env.APP_BIND_ADDRESS;
+  delete env.SETUP_RESTRICTED_APP_IP;
+  delete env.SETUP_RESTRICTED_ENABLED;
   return env;
 }
 
@@ -217,6 +233,21 @@ export function validateStaffBindingEnv(
   const appBind = env.get('APP_BIND_ADDRESS')?.trim() || '';
   if (appBind !== expectedAppBind) {
     return `Staff-Bindung gesperrt: APP_BIND_ADDRESS=${appBind || '<fehlt>'}, erwartet ${expectedAppBind}.`;
+  }
+  if (env.get('SETUP_RESTRICTED_ENABLED')?.trim().toLowerCase() === 'true') {
+    const restrictedIp = env.get('SETUP_RESTRICTED_APP_IP')?.trim() || '';
+    if (!restrictedIp) {
+      return 'Restricted-Bindung gesperrt: SETUP_RESTRICTED_APP_IP fehlt.';
+    }
+    if (restrictedIp === staffIp) {
+      return 'Restricted-Bindung gesperrt: Restricted-IP und Staff-IP dürfen nicht identisch sein.';
+    }
+    const restrictedIsLocal = interfaces.some((iface) =>
+      iface.addresses.some((address) => address.address === restrictedIp),
+    );
+    if (!restrictedIsLocal) {
+      return `Restricted-Bindung gesperrt: ${restrictedIp} ist an diesem Rechner nicht vorhanden.`;
+    }
   }
   return null;
 }

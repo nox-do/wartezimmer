@@ -51,6 +51,7 @@
   import DeviceAddressPreview from './DeviceAddressPreview.svelte';
   import { draftCanonicalBaseUrl, existingHttpHostname } from './reachability.js';
   import TlsNetworkPanel from './TlsNetworkPanel.svelte';
+  import RestrictedNetworkPanel from './RestrictedNetworkPanel.svelte';
   import { createTlsNetworkController, tlsNetworkLocksHost, type TlsNetworkController, type TlsNetworkState } from './tls-network-controller.js';
   import { tlsNetworkSubtitle } from './tls-network-view-model.js';
 
@@ -76,6 +77,8 @@
   let tlsController = $state<TlsNetworkController | null>(null);
   let tlsSnapshot = $state<TlsNetworkState | null>(null);
   let tlsOpen = $state(true);
+  let restrictedOpen = $state(true);
+  let restrictedMutating = $state(false);
 
   const viewLoading = $derived(managerShell.viewLoading.network);
   const configSnapshot = $derived(managerShell.configSnapshot);
@@ -171,11 +174,12 @@
     }),
   );
 
-  const busy = $derived(
+  const peerBusyForRestricted = $derived(
     Boolean(snapshot && networkIsBusy(snapshot.phase)) ||
       Boolean(controller?.isHostWriteInFlight()) ||
       Boolean(tlsSnapshot && tlsNetworkLocksHost(tlsSnapshot)),
   );
+  const busy = $derived(peerBusyForRestricted || restrictedMutating);
 
   const progressText = $derived(
     snapshot && busy ? networkPhaseProgressText(snapshot.phase) : '',
@@ -229,7 +233,7 @@
       onStateChange: syncSnapshot,
       isPeerMutating: () => {
         const tls = tlsController?.getState();
-        return Boolean(tls && tlsNetworkLocksHost(tls));
+        return Boolean(tls && tlsNetworkLocksHost(tls)) || restrictedMutating;
       },
     });
     tlsController = createTlsNetworkController({
@@ -243,7 +247,7 @@
       onAfterMutation,
       onStateChange: syncTlsSnapshot,
       requestConfirm,
-      isPeerMutating: () => Boolean(controller?.isHostWriteInFlight()),
+      isPeerMutating: () => Boolean(controller?.isHostWriteInFlight()) || restrictedMutating,
     });
     syncSnapshot();
     syncTlsSnapshot();
@@ -455,6 +459,22 @@
             />
           </MaintenanceSection>
         {/if}
+
+        <MaintenanceSection
+          open={restrictedOpen}
+          title="Portalzugang für Patienten"
+          subtitle="Separate Netzwerkadresse für das Patientennetz einrichten"
+          onToggle={() => {
+            restrictedOpen = !restrictedOpen;
+          }}
+        >
+          <RestrictedNetworkPanel
+            active={managerShell.activeView === 'network'}
+            {onAfterMutation}
+            peerMutating={peerBusyForRestricted}
+            onMutatingChange={(mutating) => { restrictedMutating = mutating; }}
+          />
+        </MaintenanceSection>
       </div>
 
       <div class="maintenance-accordion network-diagnose-accordion">

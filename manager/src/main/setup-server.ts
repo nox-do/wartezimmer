@@ -178,6 +178,7 @@ function logSetupChunk(chunk: Buffer, stream: 'stdout' | 'stderr'): void {
 function waitForSetupReady(child: ChildProcess, timeoutMs = STARTUP_TIMEOUT_MS): Promise<number> {
   return new Promise((resolve, reject) => {
     let settled = false;
+    let stderrTail = '';
     const stdoutLines = createLineAssembler();
     const stderrLines = createLineAssembler();
 
@@ -209,11 +210,15 @@ function waitForSetupReady(child: ChildProcess, timeoutMs = STARTUP_TIMEOUT_MS):
     };
 
     const onReadyStdout = (chunk: Buffer) => considerLines(stdoutLines.push(chunk));
-    const onReadyStderr = (chunk: Buffer) => considerLines(stderrLines.push(chunk));
+    const onReadyStderr = (chunk: Buffer) => {
+      stderrTail = `${stderrTail}${String(chunk)}`.slice(-4_000);
+      considerLines(stderrLines.push(chunk));
+    };
     const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+      const detail = stderrTail.trim();
       finish(
         new Error(
-          `Setup-Child beendet bevor die API bereit war (code=${code ?? 'null'}, signal=${signal ?? 'none'}).`,
+          `Setup-Child beendet bevor die API bereit war (code=${code ?? 'null'}, signal=${signal ?? 'none'}).${detail ? `\n${detail}` : ''}`,
         ),
       );
     };

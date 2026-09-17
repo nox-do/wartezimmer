@@ -1,4 +1,3 @@
-export const IPC_FETCH_SETUP_STATUS = 'praxis:fetch-setup-status';
 export const IPC_SETUP_API_CALL = 'praxis:setup-api-call';
 export const IPC_OPEN_EXTERNAL_URL = 'praxis:open-external-url';
 export const IPC_SAVE_PFBACKUP = 'praxis:save-pfbackup';
@@ -19,3 +18,7 @@ export type SetupApiCallRequest = {
   path: string;
   body?: unknown;
 };
+
+export type SetupApiCallResponse<T = unknown> =
+  | { ok: true; value: T }
+  | { ok: false; message: string };

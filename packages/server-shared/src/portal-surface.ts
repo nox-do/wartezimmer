@@ -8,6 +8,11 @@ export type PortalUiSurfaceRoute = {
   path: string;
 };
 
+export type PortalEntryRedirect = PortalUiSurfaceRoute & {
+  location: string;
+  statusCode: 308;
+};
+
 /**
  * Patient-facing API routes that may later be exposed on the restricted listener.
  * Sharing the namespace alone never exposes a new route; additions require an
@@ -32,6 +37,14 @@ export const PORTAL_SURFACE_ROUTES = [
 export const PORTAL_INTERNAL_ROUTES = [
   { method: 'POST', path: '/api/v1/portal/sessions/verify-ticket-code' },
 ] as const satisfies readonly PortalSurfaceRoute[];
+
+/** Restricted-listener entry convenience; this does not expose another UI route. */
+export const PORTAL_ENTRY_REDIRECT = {
+  methods: ['GET', 'HEAD'],
+  path: '/',
+  location: '/portal',
+  statusCode: 308,
+} as const satisfies PortalEntryRedirect;
 
 /**
  * Exact client-side navigation entries needed by the patient portal. The

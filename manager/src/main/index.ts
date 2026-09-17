@@ -2,7 +2,6 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  IPC_FETCH_SETUP_STATUS,
   IPC_OPEN_EXTERNAL_URL,
   IPC_READ_PFBACKUP_FOR_VALIDATE,
   IPC_READ_TLS_SIDECAR,
@@ -16,6 +15,7 @@ import {
   IPC_RENEW_TLS_PEM,
   IPC_SETUP_API_CALL,
   type SetupApiCallRequest,
+  type SetupApiCallResponse,
 } from '../shared/ipc-channels.js';
 import { selectFolderDialog } from './select-folder.js';
 import { selectReleaseArchiveDialog } from './select-release-archive.js';
@@ -23,7 +23,7 @@ import { selectPfupdateArchiveDialog } from './select-pfupdate-archive.js';
 import { renewTlsCertificateFromPicker, stageTlsCertificateFromPicker } from './select-tls-pem.js';
 import { installMacApplicationMenu } from './mac-app-menu.js';
 import { installNavigationGuards } from './navigation-guards.js';
-import { fetchHostStatusFromApi, callSetupApi } from './setup-api.js';
+import { callSetupApi, setupApiUserErrorMessage } from './setup-api.js';
 import {
   inspectPfbackupFile,
   readPfbackupFromDialog,
@@ -81,23 +81,16 @@ function acquireSingleInstanceLock(): boolean {
 }
 
 function registerSetupIpc(handle: SetupServerHandle): void {
-  ipcMain.handle(IPC_FETCH_SETUP_STATUS, async () => {
-    try {
-      return await fetchHostStatusFromApi(handle.apiBase, handle.token);
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      throw new Error(`Setup-API nicht erreichbar (${handle.apiBase}): ${detail}`, {
-        cause: error,
-      });
-    }
-  });
-
   ipcMain.handle(IPC_SETUP_API_CALL, async (_event, request: SetupApiCallRequest) => {
     try {
-      return await callSetupApi(handle.apiBase, request, handle.token);
+      const value = await callSetupApi(handle.apiBase, request, handle.token);
+      return { ok: true, value } satisfies SetupApiCallResponse;
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      throw new Error(detail, { cause: error });
+      console.error(`Setup-API ${request.method} ${request.path} fehlgeschlagen:`, error);
+      return {
+        ok: false,
+        message: setupApiUserErrorMessage(error, request),
+      } satisfies SetupApiCallResponse;
     }
   });
 

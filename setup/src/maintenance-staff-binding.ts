@@ -38,6 +38,9 @@ export function maintenanceStaffBindingRuntimeError(
     proxyHttpsEnabled:
       proxyMode === 'tls-managed' || proxyMode === 'tls-custom' || tlsState !== 'off',
     proxyHttpsPort: port(env, 'PROXY_HTTPS_PORT', 443),
+    restrictedIp: enabled(env.get('SETUP_RESTRICTED_ENABLED'))
+      ? env.get('SETUP_RESTRICTED_APP_IP')?.trim() || null
+      : null,
   });
   const required = new Set(['staff.binding.app', 'staff.binding.sandbox', 'staff.binding.proxy']);
   const failed = checks.find((check) => required.has(check.id) && !check.ok);

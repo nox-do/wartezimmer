@@ -138,6 +138,7 @@ export function auditStaffPublishedBindings(input: {
   proxyHttpPort?: number;
   proxyHttpsEnabled?: boolean;
   proxyHttpsPort?: number;
+  restrictedIp?: string | null;
 }): NetworkBindingCheck[] {
   if (!input.compose?.services.some((service) => service.state.toLowerCase().includes('running'))) {
     return [];
@@ -163,6 +164,16 @@ export function auditStaffPublishedBindings(input: {
                 hostIp: staffIp,
                 publishedPort: proxyHttpsPort,
                 targetPort: 443,
+                protocol: 'tcp',
+              },
+            ]
+          : []),
+        ...(input.restrictedIp
+          ? [
+              {
+                hostIp: input.restrictedIp,
+                publishedPort: 443,
+                targetPort: 444,
                 protocol: 'tcp',
               },
             ]
@@ -296,6 +307,10 @@ export async function auditNetworkBindings(input: {
       proxyHttpsEnabled:
         proxyMode === 'tls-managed' || proxyMode === 'tls-custom' || tlsState !== 'off',
       proxyHttpsPort,
+      restrictedIp:
+        input.env.get('SETUP_RESTRICTED_ENABLED')?.trim().toLowerCase() === 'true'
+          ? input.env.get('SETUP_RESTRICTED_APP_IP')?.trim() || null
+          : null,
     }),
   );
 

@@ -10,6 +10,7 @@
     "test": "node --import tsx --test src/*.test.ts",
     "cli": "tsx src/cli.ts",
     "serve": "tsx src/server.ts",
+    "regenerate-proxy-config": "node --import tsx src/regenerate-proxy-config-cli.ts",
     "reset": "tsx src/reset-cli.ts"
   },
   "dependencies": {

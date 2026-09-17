@@ -28,6 +28,14 @@ export function minimalHostStatus(overrides: Partial<HostStatus> = {}): HostStat
     appBaseUrl: 'http://192.168.1.10:8080',
     configuredCanonicalBaseUrl: null,
     network: { configuredLanIp: '192.168.1.10', currentLanCandidates: [], lanIpStale: false },
+    restrictedNetwork: {
+      phase: 'unconfigured',
+      health: 'not-configured',
+      binding: null,
+      exposedSurfaces: ['patient-portal'],
+      portalHostname: null,
+      lastError: null,
+    },
     gateway: null,
     proxy: {
       enabled: false,
