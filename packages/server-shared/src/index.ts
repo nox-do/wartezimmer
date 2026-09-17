@@ -199,6 +199,8 @@ export {
   type HostNetworkStatus,
   type HostRuntimeHealth,
   type HostStatus,
+  type HostLifecycle,
+  type HostOperatingMode,
   type HostStatusOptions,
   type RestrictedNetworkBinding,
   type RestrictedNetworkCandidate,

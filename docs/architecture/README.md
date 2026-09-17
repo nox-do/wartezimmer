@@ -31,6 +31,8 @@ Betrieb: [`../operations/`](../operations/) · Produkt/Abläufe: [`../product.md
 
 API-Vertrag (maschinenlesbar): `openapi/*.yaml` → `npm run generate:api` · Swagger Dev: `/api/docs`
 
+Manager: [Zentrale Ableitung der Betriebsmodi](manager-operating-modes.md).
+
 ## Nicht hier
 
 | Thema                         | Wohin                                                            |

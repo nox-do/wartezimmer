@@ -38,11 +38,16 @@ function formatEnvLine(key: string, value: string): string {
 }
 
 export function readEnvMap(envPath: string): Map<string, string> {
-  const map = new Map<string, string>();
   if (!fs.existsSync(envPath)) {
-    return map;
+    return new Map();
   }
-  const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+  return parseEnvMap(fs.readFileSync(envPath, 'utf8'));
+}
+
+/** Same parser for the installed env and the previous env in an operation journal. */
+export function parseEnvMap(content: string): Map<string, string> {
+  const map = new Map<string, string>();
+  const lines = content.split(/\r?\n/);
   for (const line of lines) {
     const parsed = parseEnvLine(line);
     if (parsed) {

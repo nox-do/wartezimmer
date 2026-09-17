@@ -1,4 +1,6 @@
 import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime-postcondition.js';
+import { readHostLifecycle, inspectLifecycleResidues } from './host-lifecycle-facts.js';
+import { hostLifecycleKey } from './host-lifecycle.js';
 import {
   beginRestrictedOperation,
   releaseRestrictedOperation,
@@ -631,6 +633,7 @@ export async function getHostRuntimeHealth(ctx: SetupContext): Promise<HostRunti
   const envExists = fs.existsSync(envPath);
   const docker = await detectDocker();
   const envMap = envExists ? readEnvMap(envPath) : new Map<string, string>();
+  const lifecycle = readHostLifecycle(root, envMap, envExists);
   const configuredLanIp = pickLanIpFromEnv(envMap);
   const lanAppBaseUrl = resolveCanonicalBaseUrl(envMap, configuredLanIp) ?? undefined;
 
@@ -666,6 +669,7 @@ export async function getHostRuntimeHealth(ctx: SetupContext): Promise<HostRunti
   }
 
   return {
+    lifecycleKey: hostLifecycleKey(lifecycle),
     checkedAt,
     envExists,
     configuredLanIp,
@@ -685,7 +689,9 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
   const envPath = path.join(root, '.env');
   const envExists = fs.existsSync(envPath);
   const docker = await detectDocker();
+  const residues = envExists ? 'none' : await inspectLifecycleResidues(ctx, docker.daemonRunning);
   const envMap = envExists ? readEnvMap(envPath) : new Map<string, string>();
+  const lifecycle = readHostLifecycle(root, envMap, envExists, residues);
   const network = buildHostNetworkStatus(envMap);
   const configuredLanIp = network.configuredLanIp;
   const configuredCanonicalBaseUrl = parseHttpBaseUrl(envMap.get('CANONICAL_BASE_URL'));
@@ -740,6 +746,8 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     : CURRENT_SETTINGS_FORMAT_VERSION;
 
   return {
+    lifecycle,
+    lifecycleKey: hostLifecycleKey(lifecycle),
     installHome: root,
     mode: ctx.mode,
     composeProjectName: ctx.composeProjectName,

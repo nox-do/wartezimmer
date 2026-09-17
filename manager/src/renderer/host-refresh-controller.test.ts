@@ -493,3 +493,27 @@ test('runtime poll cannot supersede a mutation config refresh', async () => {
     'http://192.168.1.10:8080/terminal',
   );
 });
+
+test('portal-only lifecycle change requests authoritative config without merging runtime into it', async () => {
+  const initial = minimalHostStatus();
+  initial.lifecycleKey = 'before-portal-commit';
+  const next = { ...initial, lifecycleKey: 'after-portal-commit' };
+  let fetches = 0;
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchSetupStatus: async () => (++fetches === 1 ? initial : next),
+        fetchRuntimeHealth: async () => minimalRuntime({ lifecycleKey: 'after-portal-commit' }),
+      }),
+    onConfig: () => {},
+    onRuntime: () => {},
+    onError: () => {},
+    schedule: () => 0,
+    clearSchedule: () => {},
+  });
+  await controller.refresh({ scope: 'config' });
+  await controller.refresh({ scope: 'runtime', silent: true });
+  assert.equal(fetches, 2);
+  assert.equal(controller.getLastConfig(), next);
+  assert.equal(initial.lifecycleKey, 'before-portal-commit');
+});

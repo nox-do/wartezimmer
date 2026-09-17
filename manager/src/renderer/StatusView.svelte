@@ -14,6 +14,7 @@
   import NetworkAccessSummary from './NetworkAccessSummary.svelte';
   import StatusGrid from './StatusGrid.svelte';
   import TlsResumeCard from './TlsResumeCard.svelte';
+  import HostLifecycleSummary from './HostLifecycleSummary.svelte';
 
   let {
     onSetupClick,
@@ -66,6 +67,9 @@
   {:else if configSnapshot}
     {#if statusError}
       <p id="error-message" class="error">{statusError}</p>
+    {/if}
+    {#if configSnapshot.lifecycle}
+      <HostLifecycleSummary lifecycle={configSnapshot.lifecycle} />
     {/if}
     {#if setupEntry}
       <SetupEntry

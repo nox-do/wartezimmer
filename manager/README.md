@@ -71,6 +71,8 @@ Ersteinrichtung ohne `.env` läuft fullscreen ohne Tabs; Re-Run eingebettet unte
 
 ### Status-Screen
 
+- Betriebsmodus aus der zentralen Setup-Auswertung, getrennt von Runtime und offenen
+  Portaländerungen; [Vertrag und Grenzen](../docs/architecture/manager-operating-modes.md)
 - Setup-Einstieg, wenn Einrichtung noch nicht fertig (Docker / Release / LAN)
 - DHCP-Hinweis bei `network.lanIpStale`
 - Interne Zugänge mit Kopieren / Öffnen; Portal ausdrücklich für interne Nutzung

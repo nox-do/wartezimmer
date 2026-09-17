@@ -168,7 +168,9 @@ export function createHostRefreshController(
           myGeneration === generation &&
           lastConfig &&
           lastRuntime &&
-          (lastRuntime.envExists !== lastConfig.envExists ||
+          ((lastRuntime.lifecycleKey !== undefined &&
+            lastRuntime.lifecycleKey !== lastConfig.lifecycleKey) ||
+            lastRuntime.envExists !== lastConfig.envExists ||
             lastRuntime.configuredLanIp !== lastConfig.network.configuredLanIp ||
             (lastRuntime.appBaseUrl !== null && lastRuntime.appBaseUrl !== lastConfig.appBaseUrl) ||
             (lastRuntime.proxyServer !== null &&

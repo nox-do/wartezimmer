@@ -690,7 +690,31 @@ export type NetworkSnapshot = {
   gatewayComposeSupported: boolean;
 };
 
+/** Configured operation, independent of Docker health and UI drafts. */
+export type HostOperatingMode =
+  | 'uninstalled'
+  | 'direct-http'
+  | 'proxy-http'
+  | 'https'
+  | 'https-portal';
+
+export type HostLifecycle = {
+  assessment: 'known' | 'inconsistent' | 'unknown';
+  mode: HostOperatingMode | null;
+  preparation: 'none' | 'https' | 'portal';
+  /** An open journal takes precedence over a tentatively written .env. */
+  operation: 'none' | 'portal-apply' | 'portal-remove' | 'unreadable';
+  issues: Array<{
+    code: string;
+    message: string;
+  }>;
+  recovery: 'none' | 'portal-disabled';
+};
+
 export type HostStatus = {
+  /** Additive during the Manager migration; old hosts may omit it. */
+  lifecycle?: HostLifecycle;
+  lifecycleKey?: string;
   installHome: string;
   mode: string;
   composeProjectName: string;
@@ -728,6 +752,8 @@ export type HostStatus = {
 
 /** Pollable stack/runtime snapshot — separate from config fields on `HostStatus`. */
 export type HostRuntimeHealth = {
+  /** Opaque comparison value; a change requests a new authoritative config snapshot. */
+  lifecycleKey?: string;
   checkedAt: string;
   envExists: boolean;
   configuredLanIp: string | null;
