@@ -9,7 +9,6 @@ import {
 import { durableWrite } from './restricted-operation.js';
 import { readTlsStatus } from './host-tls.js';
 import { resolveProxyTlsPaths, writeGeneratedTlsCaddyfile } from './proxy-tls.js';
-import { auditRestrictedListeners } from './restricted-listener-probe.js';
 import { composeExec, type ComposeRunOptions } from './docker.js';
 
 export function releasePortalContract(
@@ -59,25 +58,4 @@ export async function installReleaseProxyContract(
     args: ['caddy', 'validate', '--config', '/etc/caddy/Caddyfile'],
   });
   if (!result.ok) throw new Error(`Release-Proxyvertrag ungültig: ${result.log}`);
-}
-
-export async function auditReleaseProxyContract(
-  env: Map<string, string>,
-  contract: PortalProxyContract | null,
-  audit: typeof auditRestrictedListeners = auditRestrictedListeners,
-): Promise<void> {
-  if (env.get('SETUP_RESTRICTED_ENABLED') !== 'true') return;
-  const tls = readTlsStatus(env);
-  const staffIp = env.get('SETUP_LAN_APP_IP');
-  const restrictedIp = env.get('SETUP_RESTRICTED_APP_IP');
-  if (!contract || !staffIp || !restrictedIp || !tls.staffHostname || !tls.portalHostname)
-    throw new Error('Release-Listeneraudit: Restricted-Identität oder Vertrag fehlt.');
-  const error = await audit({
-    staffIp,
-    restrictedIp,
-    staffHostname: tls.staffHostname,
-    portalHostname: tls.portalHostname,
-    contract,
-  });
-  if (error) throw new Error(`Release-Listeneraudit fehlgeschlagen: ${error}`);
 }

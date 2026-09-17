@@ -1,3 +1,4 @@
+import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime-postcondition.js';
 import {
   beginRestrictedOperation,
   releaseRestrictedOperation,
@@ -1074,18 +1075,22 @@ async function mutateRestrictedNetwork(
           if (!health.ok) rollbackLog = [rollbackLog, ...health.errors].filter(Boolean).join('\n');
         }
         if (rollbackOk) {
-          const restoredEnv = readEnvMap(envPath);
-          const restoredCompose = await runComposePs(operationOptions);
-          const auditError = failedStaffBindingAudit({
-            compose: restoredCompose,
-            env: restoredEnv,
-            staffIp,
-            proxyEnabled: true,
-            hooks,
-          });
-          rollbackOk = !auditError;
-          if (auditError) {
-            rollbackLog = [rollbackLog, `Rollback-Runtime-Audit: ${auditError}`]
+          try {
+            const restoredEnv = readEnvMap(envPath);
+            const restoredCompose = await runComposePs(operationOptions);
+            const audit = await auditRuntimePostcondition(
+              createRuntimePostcondition(restoredEnv, readInstalledPortalContract(ctx.home)),
+              restoredCompose,
+              { auditListeners: hooks.auditListeners, auditBindings: hooks.auditStaffBindings },
+            );
+            rollbackOk = audit.ok;
+            if (!audit.ok) rollbackLog = [rollbackLog, ...audit.errors].filter(Boolean).join('\n');
+          } catch (error) {
+            rollbackOk = false;
+            rollbackLog = [
+              rollbackLog,
+              `Rollback-Runtime-Audit: ${error instanceof Error ? error.message : String(error)}`,
+            ]
               .filter(Boolean)
               .join('\n');
           }
@@ -1103,6 +1108,17 @@ async function mutateRestrictedNetwork(
         }
         rollbackOk = rollbackOk && stopped.ok;
         rollbackLog = [rollbackLog, stopped.log].filter(Boolean).join('\n');
+      }
+      if (!rollbackOk) {
+        try {
+          const closed = await runComposeRemove({ ...operationOptions, withProxy: true }, [
+            'proxy',
+          ]);
+          if (!closed.ok)
+            rollbackLog += `\nUnsicherer Rollback-Proxy konnte nicht entfernt werden: ${closed.log}`;
+        } catch (error) {
+          rollbackLog += `\nUnsicherer Rollback-Proxy konnte nicht entfernt werden: ${error instanceof Error ? error.message : String(error)}`;
+        }
       }
       if (rollbackOk) {
         if (stackWasRunning)
@@ -1166,33 +1182,12 @@ async function mutateRestrictedNetwork(
 
       const currentEnv = readEnvMap(candidateEnvPath);
       if (stackWasRunning) {
-        const currentCompose = await runComposePs(operationOptions);
-        const auditError = failedStaffBindingAudit({
-          compose: currentCompose,
-          env: currentEnv,
-          staffIp,
-          proxyEnabled: true,
-          hooks,
-        });
-        if (auditError) await rollback(`Runtime-Bindung unsicher: ${auditError}`);
-      }
-
-      if (enable) {
-        const binding = before.status.binding;
-        const tls = readTlsStatus(currentEnv);
-        const staffHostname = tls.staffHostname?.trim() || '';
-        const portalHostname = tls.portalHostname?.trim() || '';
-        if (!binding || !staffHostname || !portalHostname) {
-          await rollback('Listener-Prüfung konnte die Staff-/Portal-Identität nicht bestimmen.');
-        }
-        const listenerError = await (hooks.auditListeners ?? auditRestrictedListeners)({
-          staffIp,
-          restrictedIp: binding.hostIp,
-          staffHostname,
-          portalHostname,
-          contract: readInstalledPortalContract(ctx.home),
-        });
-        if (listenerError) await rollback(`Listener-Prüfung fehlgeschlagen: ${listenerError}`);
+        const audit = await auditRuntimePostcondition(
+          createRuntimePostcondition(currentEnv, readInstalledPortalContract(ctx.home)),
+          await runComposePs(operationOptions),
+          { auditListeners: hooks.auditListeners, auditBindings: hooks.auditStaffBindings },
+        );
+        if (!audit.ok) await rollback(audit.errors.join('\n'));
       }
 
       // Commit only after the tentative runtime and listener audits have passed.

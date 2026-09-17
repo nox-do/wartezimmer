@@ -1006,3 +1006,76 @@ test('restorePfbackup rejects a non-local target Staff address before stopping t
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+for (const failure of [null, 'listener', 'bindings'] as const)
+  test(`restricted restore audits the installed release contract: ${failure ?? 'success'}`, async () => {
+    const { DEFAULT_PORTAL_PROXY_CONTRACT } = await import('@praxis-flow/server-shared');
+    const { runtimeAuditEnv, runtimeAuditCompose, runtimeAuditInterfaces } =
+      await import('./runtime-postcondition-test-fixtures.js');
+    const source = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-audit-src-'));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-audit-dst-'));
+    try {
+      const { envPath, appDataDir } = seedInstallHome(dir);
+      const sidecarPath = path.join(source, 'sidecar.tgz');
+      packTlsSidecarArchive({
+        installHome: source,
+        installationId: runtimeAuditEnv.TLS_INSTALLATION_ID,
+        hostname: runtimeAuditEnv.TLS_HOSTNAME,
+        staffHostname: runtimeAuditEnv.TLS_STAFF_HOSTNAME,
+        portalHostname: runtimeAuditEnv.TLS_PORTAL_HOSTNAME,
+        installationDomain: runtimeAuditEnv.TLS_INSTALLATION_DOMAIN,
+        wildcardCertificateName: runtimeAuditEnv.TLS_WILDCARD_CERTIFICATE_NAME,
+        destinationPath: sidecarPath,
+      });
+      const contract = structuredClone(DEFAULT_PORTAL_PROXY_CONTRACT);
+      contract.api = [{ method: 'GET', path: '/api/v1/portal/installed-release' }];
+      const tlsDir = path.join(dir, 'state/tls');
+      fs.mkdirSync(tlsDir, { recursive: true });
+      fs.writeFileSync(path.join(tlsDir, 'portal-contract.json'), JSON.stringify(contract));
+      const settings = { ...sampleSettings, env: { ...sampleSettings.env, ...runtimeAuditEnv } };
+      let listenerCalls = 0;
+      let stops = 0;
+      const observed: unknown[] = [];
+      const result = await restorePfbackup(
+        buildArchiveContent(settings),
+        testSetupContext(dir),
+        { tlsSidecarBase64: fs.readFileSync(sidecarPath).toString('base64') },
+        {
+          ...successfulRestoreDeps(appDataDir),
+          networkInterfaces: runtimeAuditInterfaces,
+          stopStack: async () => {
+            stops++;
+            return { ok: true, log: '' };
+          },
+          composeStatus: async () => {
+            if (readEnvMap(envPath).get('SETUP_RESTRICTED_ENABLED') !== 'true')
+              return HEALTHY_COMPOSE;
+            const compose = runtimeAuditCompose();
+            if (failure === 'bindings')
+              compose.services[2]!.publishedBindings![0]!.hostIp = '0.0.0.0';
+            return compose;
+          },
+          auditProxyContract: async (input) => {
+            listenerCalls++;
+            observed.push(input.contract);
+            return failure === 'listener' ? 'wrong listener policy' : null;
+          },
+        },
+      );
+      assert.equal(result.ok, failure === null, JSON.stringify(result));
+      assert.equal(listenerCalls, failure === 'bindings' ? 0 : 1);
+      assert.deepEqual(observed, failure === 'bindings' ? [] : [contract]);
+      assert.equal(stops, failure ? 2 : 1);
+      if (!result.ok) {
+        assert.equal(result.failedPhase, RESTORE_PHASES.healthCheck);
+        assert.equal(result.rollbackSucceeded, true, JSON.stringify(result));
+        assert.equal(readEnvMap(envPath).has('SETUP_RESTRICTED_ENABLED'), false);
+      } else {
+        assert.equal(readEnvMap(envPath).get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:current');
+        assert.match(fs.readFileSync(path.join(tlsDir, 'Caddyfile'), 'utf8'), /installed-release/);
+      }
+    } finally {
+      fs.rmSync(source, { recursive: true, force: true });
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });

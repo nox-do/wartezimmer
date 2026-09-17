@@ -104,6 +104,7 @@ export async function auditRestrictedListeners(
     staffIp: string;
     restrictedIp: string;
     staffHostname: string;
+    staffHttpsPort?: number;
     portalHostname: string;
     contract?: PortalProxyContract;
   },
@@ -211,6 +212,7 @@ export async function auditRestrictedListeners(
         host: c.host,
         method: c.method,
         negative: c.expected === 'abort',
+        port: c.ip === input.staffIp ? (input.staffHttpsPort ?? 443) : 443,
       }),
     ),
   );

@@ -63,3 +63,15 @@ test('an application 404 without the proxy marker fails the path audit', async (
     null,
   );
 });
+
+test('all Staff probes use the configured HTTPS port while Restricted stays on 443', async () => {
+  const calls: Parameters<RestrictedHttpsProbe>[] = [];
+  assert.equal(
+    await auditRestrictedListeners({ ...input, staffHttpsPort: 8443 }, async (...args) => {
+      calls.push(args);
+      return correct(...args);
+    }),
+    null,
+  );
+  for (const call of calls) assert.equal(call[3]?.port, call[0] === input.staffIp ? 8443 : 443);
+});

@@ -812,3 +812,52 @@ test('apply commits the active marker only after listener audit', async () => {
     fs.rmSync(fixture.home, { recursive: true, force: true });
   }
 });
+
+for (const listenerFailure of [false, true])
+  test(`failed remove audits the restored active listener and retains recovery on failure: ${listenerFailure}`, async () => {
+    const fixture = restrictedMutationFixture();
+    let starts = 0;
+    let removals = 0;
+    let audits = 0;
+    try {
+      fs.appendFileSync(fixture.envPath, 'SETUP_RESTRICTED_ENABLED=true\n');
+      await assert.rejects(
+        () =>
+          removeRestrictedNetwork(
+            {
+              home: fixture.home,
+              mode: 'install',
+              composeProjectName: 'test',
+              templateRoot: fixture.home,
+            },
+            {
+              ...fixture.hooks,
+              composeUp: async () => ({
+                ok: ++starts !== 1,
+                log: 'restart failed',
+                gatewaySkipped: false,
+              }),
+              composeRemoveServices: async () => {
+                removals++;
+                return { ok: true, log: '' };
+              },
+              auditListeners: async () => {
+                audits++;
+                return listenerFailure ? 'unsafe restored listener' : null;
+              },
+            },
+          ),
+        listenerFailure
+          ? /Rollback unvollständig/
+          : /vorherige Patientenzugang wurde wiederhergestellt/,
+      );
+      assert.equal(audits, 1);
+      assert.equal(removals, listenerFailure ? 3 : 2);
+      assert.equal(
+        fs.existsSync(path.join(fixture.home, 'state/restricted-operation/journal.json')),
+        listenerFailure,
+      );
+    } finally {
+      fs.rmSync(fixture.home, { recursive: true, force: true });
+    }
+  });

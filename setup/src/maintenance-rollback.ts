@@ -8,13 +8,16 @@ import { MANAGER_STATE_FILE, managerStatePath } from './manager-state.js';
 import { runConnectionProbes } from './probes.js';
 import { resolveDeliveryImageConfig } from './delivery-images.js';
 import type { SetupContext } from './setup-context.js';
-import { resolveProxyTlsPaths } from './proxy-tls.js';
+import { resolveProxyTlsPaths, readInstalledPortalContract } from './proxy-tls.js';
+import { auditRestrictedListeners } from './restricted-listener-probe.js';
+import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime-postcondition.js';
 import { resolveCanonicalBaseUrl } from './urls.js';
 import { waitForExpectedStackHealth, type WaitForStackHealthOptions } from './stack-health.js';
 
 const TLS_STATE_ROLLBACK_DIR = 'tls-state';
 
 export type MaintenanceStackRuntime = {
+  auditProxyContract?: typeof auditRestrictedListeners;
   stopStack: (runOptions: ComposeRunOptions) => Promise<{ ok: boolean; log: string }>;
   startFullStack: (
     runOptions: ComposeRunOptions,
@@ -142,25 +145,39 @@ async function verifyMaintenanceRollback(
   errors: string[],
 ): Promise<void> {
   const runOptions = resolveMaintenanceComposeRunOptions(input.ctx, envMap);
-  const up = await input.runtime.startFullStack(runOptions);
-  if (!up.ok) {
-    errors.push(up.log || 'Stack konnte nach Rollback nicht gestartet werden.');
-  }
-  const stackHealth = await waitForExpectedStackHealth(
-    input.runtime.composeStatus,
-    runOptions,
-    input.runtime.stackHealthWaitOptions,
-  );
-  if (!stackHealth.ok) {
-    errors.push(...stackHealth.errors);
-    return;
-  }
-  const health = await input.runtime.runHealthChecks({
-    localAppBaseUrl: input.localAppBaseUrl,
-    lanAppBaseUrl: resolveCanonicalBaseUrl(envMap, envMap.get('SETUP_LAN_APP_IP')),
-  });
-  if (!health.ok) {
-    errors.push(...health.errors);
+  try {
+    const request = createRuntimePostcondition(envMap, readInstalledPortalContract(input.ctx.home));
+    const up = await input.runtime.startFullStack(runOptions);
+    if (!up.ok) throw new Error(up.log || 'Stack konnte nach Rollback nicht gestartet werden.');
+    const stackHealth = await waitForExpectedStackHealth(
+      input.runtime.composeStatus,
+      runOptions,
+      input.runtime.stackHealthWaitOptions,
+    );
+    if (!stackHealth.ok) throw new Error(stackHealth.errors.join('\n'));
+    const audit = await auditRuntimePostcondition(request, stackHealth.compose, {
+      auditListeners: input.runtime.auditProxyContract,
+    });
+    if (!audit.ok) throw new Error(audit.errors.join('\n'));
+    const health = await input.runtime.runHealthChecks({
+      localAppBaseUrl: input.localAppBaseUrl,
+      lanAppBaseUrl: resolveCanonicalBaseUrl(envMap, envMap.get('SETUP_LAN_APP_IP')),
+    });
+    if (!health.ok) throw new Error(health.errors.join('\n'));
+  } catch (error) {
+    errors.push(
+      `Rollback-Runtime-Audit: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    // A healthy app does not prove isolation. Do not leave an unverified rollback serving traffic.
+    await recordFailure(
+      errors,
+      'Unsicherer Rollback-Stack konnte nicht gestoppt werden.',
+      async () => {
+        const stop = await input.runtime.stopStack(runOptions);
+        if (!stop.ok)
+          throw new Error(`Unsicherer Rollback-Stack konnte nicht gestoppt werden: ${stop.log}`);
+      },
+    );
   }
 }
 

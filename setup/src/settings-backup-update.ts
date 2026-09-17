@@ -1,8 +1,5 @@
-import {
-  releasePortalContract,
-  installReleaseProxyContract,
-  auditReleaseProxyContract,
-} from './release-proxy-contract.js';
+import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime-postcondition.js';
+import { releasePortalContract, installReleaseProxyContract } from './release-proxy-contract.js';
 import { composeExec, recoverRestrictedOperation } from './docker.js';
 import { auditRestrictedListeners } from './restricted-listener-probe.js';
 import type { PortalProxyContract } from '@praxis-flow/server-shared';
@@ -61,10 +58,7 @@ import { maintenanceRequestHeaders } from './maintenance-auth.js';
 import { requirePackageFileExtension } from './package-file-extension.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
 import { listNetworkInterfaces } from './network.js';
-import {
-  maintenanceStaffBindingPreflightError,
-  maintenanceStaffBindingRuntimeError,
-} from './maintenance-staff-binding.js';
+import { maintenanceStaffBindingPreflightError } from './maintenance-staff-binding.js';
 import {
   captureMaintenanceRollback,
   executeMaintenanceRollback,
@@ -719,6 +713,7 @@ async function commitPreparedUpdate(input: {
       readHostEnvRecord(input.prepared.envPath),
     ),
   };
+  const postcondition = createRuntimePostcondition(envAfterWrite, input.prepared.portalContract);
   let cutoverResult;
   try {
     cutoverResult = await runFreshDbSettingsCutover(
@@ -756,26 +751,10 @@ async function commitPreparedUpdate(input: {
       cutoverResult.errors,
     );
   }
-  const runtimeBindingError = maintenanceStaffBindingRuntimeError(
-    envAfterWrite,
-    cutoverResult.compose,
-  );
-  if (runtimeBindingError) {
-    throw new UpdatePhaseError(UPDATE_PHASES.healthCheck, [
-      `Update-Runtime-Binding ungültig: ${runtimeBindingError}`,
-    ]);
-  }
-  try {
-    await auditReleaseProxyContract(
-      envAfterWrite,
-      input.prepared.portalContract,
-      input.runtime.auditProxyContract,
-    );
-  } catch (error) {
-    throw new UpdatePhaseError(UPDATE_PHASES.healthCheck, [
-      errorMessage(error, 'Release-Listeneraudit fehlgeschlagen.'),
-    ]);
-  }
+  const audit = await auditRuntimePostcondition(postcondition, cutoverResult.compose, {
+    auditListeners: input.runtime.auditProxyContract,
+  });
+  if (!audit.ok) throw new UpdatePhaseError(UPDATE_PHASES.healthCheck, audit.errors);
   return cutoverResult.compose;
 }
 

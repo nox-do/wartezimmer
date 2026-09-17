@@ -1,3 +1,5 @@
+import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime-postcondition.js';
+import { auditRestrictedListeners } from './restricted-listener-probe.js';
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -37,10 +39,7 @@ import {
 import type { SetupContext } from './setup-context.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
 import { listNetworkInterfaces } from './network.js';
-import {
-  maintenanceStaffBindingPreflightError,
-  maintenanceStaffBindingRuntimeError,
-} from './maintenance-staff-binding.js';
+import { maintenanceStaffBindingPreflightError } from './maintenance-staff-binding.js';
 import {
   captureMaintenanceRollback,
   executeMaintenanceRollback,
@@ -55,6 +54,7 @@ import {
   PROXY_TLS_HOST_PATH_ENV_KEYS,
   PROXY_TLS_RUNTIME_ENV_KEYS,
   resolveProxyTlsEnvUpdates,
+  readInstalledPortalContract,
   writeGeneratedTlsCaddyfile,
 } from './proxy-tls.js';
 import {
@@ -102,6 +102,8 @@ export type PfbackupRestoreTestHooks = {
 };
 
 export type PfbackupRestoreDeps = {
+  networkInterfaces?: typeof listNetworkInterfaces;
+  auditProxyContract?: typeof auditRestrictedListeners;
   validateArchive?: typeof validatePfbackupContent;
   validateSettings?: typeof validateSettingsSnapshotWithApp;
   stopStack?: MaintenanceStackRuntime['stopStack'];
@@ -121,6 +123,7 @@ export type PfbackupRestoreDeps = {
 };
 
 type RestoreRuntime = MaintenanceStackRuntime & {
+  networkInterfaces: typeof listNetworkInterfaces;
   validateArchive: typeof validatePfbackupContent;
   validateSettings: typeof validateSettingsSnapshotWithApp;
   startAppStack: NonNullable<PfbackupRestoreDeps['startAppStack']>;
@@ -319,6 +322,8 @@ function errorMessage(error: unknown, fallback: string): string {
 
 function resolveRestoreRuntime(deps: PfbackupRestoreDeps): RestoreRuntime {
   return {
+    networkInterfaces: deps.networkInterfaces ?? listNetworkInterfaces,
+    auditProxyContract: deps.auditProxyContract ?? auditRestrictedListeners,
     validateArchive: deps.validateArchive ?? validatePfbackupContent,
     validateSettings: deps.validateSettings ?? validateSettingsSnapshotWithApp,
     stopStack: deps.stopStack ?? composeStop,
@@ -526,9 +531,13 @@ async function commitRestore(input: {
     ]);
   }
 
+  const envAfterWrite = readEnvMap(input.prepared.envPath);
+  const postcondition = createRuntimePostcondition(
+    envAfterWrite,
+    readInstalledPortalContract(input.ctx.home),
+  );
   let cutover;
   try {
-    const envAfterWrite = readEnvMap(input.prepared.envPath);
     cutover = await runFreshDbSettingsCutover(
       {
         rollbackDir: input.rollback.rollbackDir,
@@ -569,12 +578,17 @@ async function commitRestore(input: {
   if (!cutover.ok) {
     throw new RestorePhaseError(restorePhaseFromCutover(cutover.failedPhase), cutover.errors);
   }
-  const envAfterCutover = readEnvMap(input.prepared.envPath);
-  const runtimeBindingError = maintenanceStaffBindingRuntimeError(envAfterCutover, cutover.compose);
-  if (runtimeBindingError) {
-    throw new RestorePhaseError(RESTORE_PHASES.healthCheck, [
-      `Restore-Runtime-Binding ungültig: ${runtimeBindingError}`,
-    ]);
+  try {
+    const audit = await auditRuntimePostcondition(postcondition, cutover.compose, {
+      auditListeners: input.runtime.auditProxyContract,
+    });
+    if (!audit.ok) throw new RestorePhaseError(RESTORE_PHASES.healthCheck, audit.errors);
+  } catch (error) {
+    throw restoreFailure(
+      error,
+      RESTORE_PHASES.healthCheck,
+      'Restore-Runtime-Audit fehlgeschlagen.',
+    );
   }
   return cutover;
 }
@@ -645,7 +659,7 @@ async function applyPreparedRestore(input: {
   const bindingError = maintenanceStaffBindingPreflightError({
     currentEnv: readEnvMap(input.prepared.envPath),
     targetEnv: new Map(Object.entries(input.prepared.restoreEnv)),
-    interfaces: listNetworkInterfaces(),
+    interfaces: input.runtime.networkInterfaces(),
   });
   if (bindingError) {
     return failureResult(

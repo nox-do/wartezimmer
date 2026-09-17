@@ -601,8 +601,12 @@ for (const failure of [null, 'validation', 'audit'] as const)
           },
           auditProxyContract: async (input) => {
             audits++;
-            assert.deepEqual(input.contract, target);
-            return failure === 'audit' ? 'policy not enforced' : null;
+            const isTarget = input.contract?.api.some((route) =>
+              route.path.endsWith('/new-release-route'),
+            );
+            assert.deepEqual(input.contract, isTarget ? target : DEFAULT_PORTAL_PROXY_CONTRACT);
+            assert.equal(isTarget, failure !== 'validation' && audits === 1);
+            return failure === 'audit' && isTarget ? 'policy not enforced' : null;
           },
           composeStatus: async () => ({
             running: true,
@@ -641,7 +645,8 @@ for (const failure of [null, 'validation', 'audit'] as const)
       );
       assert.equal(result.ok, failure === null, JSON.stringify(result));
       assert.equal(validations, 1);
-      assert.equal(audits, failure === 'validation' ? 0 : 1);
+      assert.equal(audits, failure === 'audit' ? 2 : 1);
+      if (!result.ok) assert.equal(result.rollbackSucceeded, true, JSON.stringify(result));
       if (failure) {
         assert.equal(
           fs.readFileSync(path.join(tlsDir, 'Caddyfile'), 'utf8'),
