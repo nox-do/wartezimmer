@@ -49,6 +49,7 @@ export const PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS = [
   'templates/docker-compose.proxy-tls.delivery.yml',
   'templates/docker-compose.proxy-restricted.delivery.yml',
   'templates/proxy/Caddyfile',
+  'templates/proxy/portal-contract.json',
 ] as const;
 
 /** Included by new releases; optional here so already-issued v1 packages remain valid. */

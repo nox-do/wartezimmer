@@ -257,6 +257,47 @@ test('restorePfbackup succeeds and preserves current image tags in .env', async 
   }
 });
 
+test('restore without restricted state removes the current activation as one unit', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-restricted-off-'));
+  const { envPath, appDataDir } = seedInstallHome(dir);
+  fs.appendFileSync(
+    envPath,
+    [
+      'SETUP_RESTRICTED_ENABLED=true',
+      'SETUP_RESTRICTED_APP_IP=10.20.0.2',
+      'SETUP_RESTRICTED_INTERFACE_ID=mac:aa:00:00:00:00:07',
+      'SETUP_RESTRICTED_WARNINGS_CONFIRMED=true',
+      '',
+    ].join('\n'),
+  );
+  try {
+    const result = await restorePfbackup(
+      buildArchiveContent(),
+      testSetupContext(dir),
+      {},
+      workingRestoreDeps(appDataDir, {
+        importSnapshot: async () => ({
+          ok: true,
+          routingMode: 'simple',
+          portalEnabled: true,
+          providerCredentialsSkipped: false,
+          disabledProviderIds: [],
+          errors: [],
+        }),
+      }),
+    );
+
+    assert.equal(result.ok, true);
+    const restored = readEnvMap(envPath);
+    assert.equal(restored.has('SETUP_RESTRICTED_ENABLED'), false);
+    assert.equal(restored.has('SETUP_RESTRICTED_APP_IP'), false);
+    assert.equal(restored.has('SETUP_RESTRICTED_INTERFACE_ID'), false);
+    assert.equal(restored.has('SETUP_RESTRICTED_WARNINGS_CONFIRMED'), false);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('restorePfbackup passes skipProviderCredentials to import', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-skip-'));
   const { appDataDir } = seedInstallHome(dir);

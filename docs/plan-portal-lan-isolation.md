@@ -1,7 +1,7 @@
 # Eingeschränkter Netzwerkzugang für das Patientenportal
 
-Stand: 2026-09-16 · **TLS-/Wildcard-Pfad, explizite Proxy-Staff-Publishes und
-ausführbarer Restricted-Proxyvertrag umgesetzt; Restricted-Binding offen;
+Stand: 2026-09-17 · **TLS-/Wildcard-Pfad, explizite Proxy-Staff-Publishes und
+Restricted-Binding mit Manager-Apply/Remove umgesetzt; reale Zwei-NIC-Abnahme offen;
 Host-Firewall außerhalb des Produkts**
 
 Verwandt: LAN-TLS [`operations/tls.md`](operations/tls.md) · Captive-Grenze
@@ -227,7 +227,7 @@ Managed TLS verwendet ein Zertifikat für den installationsbezogenen Wildcard:
 Das Zertifikat gilt damit für `staff.<installationsraum>` und
 `portal.<installationsraum>`. Let’s Encrypt stellt Wildcard-Zertifikate per
 DNS-01 aus; das passt zum bestehenden Caddy-/`acme-dns`-Weg. Pro Installation
-bleiben **ein Zertifikat, ein ACME-DNS-Account und ein Challenge-CNAME**:
+bleiben **ein öffentliches Wildcard-Zertifikat, ein ACME-DNS-Account und ein Challenge-CNAME**:
 
 ```text
 _acme-challenge.<installationsraum>
@@ -250,11 +250,13 @@ geprüft wird, ist noch festzulegen; der heutige lokale Mail-Korrelationswert
 leistet das nicht. Weil `portal.<raum>` schon
 unter `*.<raum>` liegt, ist dafür **kein** ACME-Renew und kein zweiter CNAME
 nötig. Ein Renew nur „weil Portal dazukommt“ wäre Verschwendung und
-Rate-Limit-Risiko. Custom-PEM muss beide Namen oder den Wildcard bereits vor
-der Einrichtung des Restricted-Bindings enthalten (§5.2 Gate); sonst neues PEM, kein Let’s-
-Encrypt-Renew.
+Rate-Limit-Risiko. Restricted Portal ist im aktuellen Produktstand nur mit
+Managed-Wildcard-TLS zulässig. Custom TLS bleibt ein Staff-Modus; eine spätere
+Portal-Unterstützung für Custom TLS ist ein eigener Produktblock.
 
-Die Zertifikatsautomatisierung darf dabei ausschließlich den Namen
+Für den internen TLS-Healthcheck auf `127.0.0.1` kommt ein internes PKI-Zertifikat hinzu; dies ist keine zusätzliche öffentliche ACME-Order und kein Portalzertifikat.
+
+Die öffentliche Zertifikatsautomatisierung darf dabei ausschließlich den Namen
 `*.<installationsraum>` bestellen und erneuern. `staff.<installationsraum>` und
 `portal.<installationsraum>` sind nur Host-/SNI-Matcher, keine eigenständigen
 ACME-Bestellnamen. Insbesondere darf der Generator nicht still ein Exact-Name-
@@ -264,10 +266,9 @@ beschriebenen CNAME nicht gedeckt. Der Pebble-Smoke prüft genau einen
 `newOrder`-Request und als einzigen Zertifikatsnamen `*.<installationsraum>`;
 er schlägt fehl, sobald daneben ein Exact-Name-Zertifikat beantragt wird.
 
-Für eine eigene Praxis-Domain (Custom) gilt das Zwei-Namen-PEM-Gate **erst bei
-Einrichtung des Restricted-Bindings**. Bis dahin reicht das eine heutige Zertifikat für den
-einen Staff-FQDN. Fehlt dabei der Portal-Name im PEM, blockiert
-der Manager; ein späterer TLS-Fehler ist dafür kein zulässiger Warnzustand.
+Für eine eigene Praxis-Domain (Custom) gibt es derzeit keinen
+Restricted-Portal-Vertrag. Setup blockiert Restricted-Prepare daher unabhängig
+von möglichen zusätzlichen SAN-Namen im PEM.
 
 Die Labels `staff` und `portal` sind im Manager, Setup und Operatorpfad für
 diese System-Origins reserviert und dürfen nicht als Installationslabel
@@ -288,15 +289,9 @@ heute. Es gibt dort keine erzwungenen `staff.`/`portal.`-Prefixes und kein
 Wildcard-PEM, solange kein Restricted-Binding eingerichtet ist. `CANONICAL_BASE_URL` bleibt
 `https://<der-eine-name>`.
 
-Bei der Einrichtung des eingeschränkten Zugangs bleibt dieser Staff-FQDN
-unverändert (kein Geräte-Recutover). Die Praxis wählt für dessen ersten
-Konsumenten einen zusätzlichen Host-Prefix
-(Vorschlag im Eingabefeld: `portal`); der Portal-Hostname ist
-`<prefix>.<bisheriger-fqdn>`. DNS trägt die Praxis selbst ein: **A-Record auf
-die Restricted-IP**. Ein CNAME auf den Staff-Namen würde Portal-Traffic auf die
-Staff-IP legen und ist unzulässig. Ob das Zertifikat ein Wildcard oder zwei
-konkrete SAN-Namen ist, bleibt Sache der Praxis. Der Manager prüft nur, dass
-das PEM beide Namen deckt. Namenskollisionen in ihrer Zone behandeln sie selbst.
+Eine spätere Custom-Portal-Unterstützung müsste Portal-Hostname, DNS-Vertrag und
+PEM-Abdeckung gemeinsam spezifizieren. Sie wird nicht aus zusätzlichen
+SAN-Namen eines vorhandenen PEM abgeleitet.
 
 Das Single-Hostname-Modell der Betreiberzone ist dafür seit 2026-09-13 auf
 folgenden persistenten TLS-Vertrag umgestellt (`TLS_HOSTNAME` und
@@ -309,7 +304,7 @@ portalHostname       (managed: portal.<raum>, auch bevor A-Record existiert;
                       custom: leer bis zur Einrichtung des Restricted-Bindings)
 wildcardCertificateName  (managed: *.<raum>; custom: leer)
 staffIp              (im TLS-Schritt weiterhin die bestätigte LAN-IP)
-restrictedBindIp     (noch nicht umgesetzt; folgt mit Restricted-Binding)
+restrictedBindIp     (durch Restricted-Prepare/Apply verwaltet)
 ```
 
 Neue **Managed**-Installationen erhalten Staff-Hostname und Wildcard-Zertifikat
@@ -321,10 +316,11 @@ Exact-Hostname gelesen und lösen nicht still eine neue Wildcard-Order aus.
 Testinstallationen können für das neue Zielbild manuell neu angelegt werden.
 
 Backup und Restore führen Installationsraum, beide Hostnamen und
-Wildcard-Identität bereits im Sidecar-Manifest v2 und prüfen sie beim Restore
-konsistent. Ausgewählte IP-Bindings und Restricted-Network-Zustand folgen mit
-dem Restricted-Binding. Ein Restore-Test mit aktivem Portal bleibt Teil der
-Produktfreigabe.
+Wildcard-Identität im Sidecar-Manifest v2 und prüfen sie beim Restore
+konsistent. Der Restricted-Network-Zustand wird als vollständige Einheit
+behandelt; ein Backup ohne Aktivierungsmarker erbt keinen aktuellen aktiven
+Zustand.
+Ein Restore-Test mit aktivem Portal bleibt Teil der Produktfreigabe.
 
 Die Operator-Strecke wird dafür inkrementell: Die Grundeinrichtung fordert
 Staff-A-Record und Wildcard-Challenge-CNAME an. Die spätere Einrichtung des
@@ -483,36 +479,36 @@ Staff-/Geräte-Session-Cookies bleiben host-only: Es wird kein
 `Domain=.<installationsraum>` gesetzt. Das entspricht dem heutigen Cookie-Code
 und wird als Regressionstest für die getrennten Origins festgeschrieben.
 
-Rate-Limits müssen hinter Caddy den ursprünglichen Client unterscheiden. Der
-heutige Fastify-Start ohne `trustProxy` würde andernfalls nur die gemeinsame
-Docker-/Caddy-Adresse als `request.ip` sehen. v1 vertraut Proxy-Header deshalb
-nur für den eindeutig festgelegten Caddy-Hop; Caddy überschreibt eingehende
-Forwarding-Header, bevor er die verifizierte Client-IP weitergibt. Eine globale
-Freigabe beliebiger `X-Forwarded-For`-Werte ist unzulässig. Integrationstests mit
-mindestens zwei Client-IPs sowie einem gespooften Header weisen nach, dass
-Limits weder praxisweit zusammenfallen noch umgangen werden können.
+Rate-Limits müssen hinter Caddy den ursprünglichen Client unterscheiden. Im
+Proxybetrieb vertraut Fastify deshalb genau einem Caddy-Hop; Caddy überschreibt
+eingehende Forwarding-Header, bevor er die verifizierte Client-IP weitergibt.
+Im direkten, proxyfreien Betrieb werden Forwarded-Header nicht vertraut und
+`request.ip` bleibt die Verbindungsadresse. Integrationstests mit mindestens
+zwei Client-IPs sowie einem gespooften Header weisen nach, dass Limits weder
+praxisweit zusammenfallen noch umgangen werden können.
 
-CORS bleibt zusätzliche Browser-Härtung, aber keine Zugriffsgrenze. Maßgeblich
-sind Ziel-IP, Interface, Host-Firewall, SNI/Host und die Proxy-Allowlist.
+CORS bleibt zusätzliche Browser-Härtung, aber keine Zugriffsgrenze. Die von
+Praxis Flow kontrollierte Grenze besteht aus Ziel-IP-Publishes, SNI/Host und
+Proxy-Allowlist. Interface-Topologie, Host-Firewall und Routing liegen außerhalb
+des Produkts.
 
 Die Umsetzungstests müssen die gekreuzte Matrix prüfen: Staff- und Portal-SNI
 jeweils gegen Staff- und Restricted-IP sowie unbekanntes SNI gegen beide IPs. Docker
 Port-Inspection und ein externer Scan müssen bestätigen, dass keine weitere
 Publish-Regel existiert.
 
-### 6.3 F1 — Erreichbarkeit erzwingen, nicht nur publizieren
+### 6.3 Plattformnachweis und externe Netzgrenze
 
 Die Praxis-Hosts sind **Windows und macOS mit Docker Desktop**. Portal, App,
 Sandbox und Proxy bleiben gemeinsam in diesem Stack; es ist weder ein
 Linux-Host noch ein ausgelagerter Portal-Rechner vorgesehen.
 `network_mode: host` ist nicht der Produktweg.
 
-**F1 (Produktanforderung):** Auf der freigegebenen Windows- und
-macOS-/Docker-Desktop-Kombination müssen Portal- und Staff-Endpunkte
-nachweisbar und fail-closed ausschließlich aus den vorgesehenen Segmenten
-erreichbar sein — unabhängig davon, wie Docker Desktop Port-Publishing intern
-umsetzt. Compose-Binding ist ein Mechanismus von F1, nicht die
-Sicherheitsarchitektur.
+**Produktanforderung:** Auf einer freigegebenen Host-/Docker-Desktop-
+Kombination müssen die expliziten Ziel-IP-Publishes und die Listenermatrix
+nachweisbar und fail-closed funktionieren. Ob ausschließlich das vorgesehene
+Netzsegment die Restricted-IP erreicht, ist eine separate Abnahme der
+Praxis-IT und keine Produktzusage.
 
 #### Binding ist Spezifikation, nicht Isolationsgrenze
 
@@ -539,7 +535,11 @@ ist das Bug/Regression und fällt durch F1 — nicht spezifikationskonform.
 Interface-/IP-Binding bleibt also nützlich, auf Docker Desktop aber **keine
 hinreichende Netzwerk-Isolationskontrolle**.
 
-#### Drei Ebenen
+#### Drei Ebenen der Gesamtinstallation
+
+Nur Ebene 1 wird von Praxis Flow konfiguriert. Ebene 2 und die physische oder
+logische Netztrennung werden von der Praxis-IT eingerichtet; Ebene 3 ist die
+gemeinsame reale Abnahme.
 
 ```text
                  Praxis-Host
@@ -564,7 +564,7 @@ Staff ─────┤ NIC / Staff-IP      │
 
 1. **Compose-Binding** — explizite Host-IP, interne Ports wie §6.2. Vermeidet
    unnötige Exposition; ohne passende Host-IP startet der Publish nicht.
-2. **Host-Firewall** — produktive Enforcement-Grenze am Eingang von
+2. **Host-Firewall der Praxis-IT** — optionale zusätzliche Enforcement-Grenze am Eingang von
    `com.docker.backend`. Restricted-NIC/IP: eingehend nur TCP 443 zum
    Restricted-Listener; Staff-Publishes auf dieser Adresse verboten. Staff-NIC/IP:
    Staff-HTTP/HTTPS wie vorgesehen; Portal-Listener dort verboten. Windows:
@@ -575,13 +575,9 @@ Staff ─────┤ NIC / Staff-IP      │
    und HTTPS-Proben von einem Patienten- und einem Staff-Client gegen die
    realen Host-IPs.
 
-Ohne stabile Ebene 2 gilt F1 auf dieser Plattform als nicht erfüllt, auch wenn
-Ebene 1 im PoC bindet. Schlägt F1 fehl, gibt es innerhalb dieses Plans keinen
-stillen Fallback. Ein plattformnativer Edge-Proxy wäre eine eigene
-Alternativarchitektur mit separater Entscheidung, Implementierung und Abnahme
-für Portbelegung, TLS, Rechte, Packaging, Updates und Rollback. Bis dahin wird
-die betroffene Plattform für das Portal nicht freigegeben; Linux ist keine
-automatische Rückfalllösung.
+Praxis Flow bewertet Ebene 2 nicht und meldet deshalb auch bei grünem
+Runtime-Audit keine bestätigte Netztrennung. Schlägt dagegen Ebene 1 fehl, wird
+die Host-/Docker-Kombination nicht für das Restricted-Binding freigegeben.
 
 #### Abnahmematrix (PoC und Freigabe)
 
@@ -608,13 +604,13 @@ IPv6-Adresse allein sperrt das Portal nicht.
 
 ---
 
-## 7. Keine Weiterleitung zwischen den Netzen
+## 7. Routing- und Firewall-Verantwortung der Praxis-IT
 
 „Ping geht nicht“ ist kein ausreichender Nachweis. ICMP kann blockiert sein,
 während TCP oder IPv6 weiterhin funktionieren. Außerdem besitzt ein Dual-Homed
 Host zwangsläufig lokale Routen zu beiden direkt angeschlossenen Subnetzen.
 
-Wir müssen stattdessen verhindern:
+Die Praxis-IT muss insbesondere ausschließen:
 
 - IPv4- und IPv6-Forwarding;
 - Betriebssystem-Netzwerkbrücken, an denen Staff- oder Restricted-Interface
@@ -627,7 +623,7 @@ Wir müssen stattdessen verhindern:
 - Antworten auf Staff-Dienste, wenn Pakete über das Patienten-Interface
   eintreffen.
 
-Die Host-Firewall (F1-Ebene 2) filtert nach **eingehendem Interface, lokaler
+Eine gegebenenfalls eingesetzte Host-Firewall filtert nach **eingehendem Interface, lokaler
 Zieladresse und Zielport**, nicht nur nach Ziel-IP. Das ist insbesondere bei
 Betriebssystemen mit schwachem Hostmodell wichtig, die lokal konfigurierte
 Adressen nicht strikt einem Eingangsinterface zuordnen. Sie muss den Verkehr
@@ -641,33 +637,28 @@ externe Scan aus beiden Netzen.
 
 ### 8.1 Lokale Prüfungen
 
-Setup prüft die Publish-Grenze bereits im Proxy-Staff-Betrieb und wiederholt die
-vollständigen Prüfungen beim Einrichten des Restricted-Bindings, bei jedem
-Stack-Start und nach erkannten Netzwerkänderungen. Der Manager zeigt Ergebnisse
-und Aktionen an, ist aber nicht selbst die Sicherheitsinstanz:
+Setup prüft seine Publish- und Listenergrenze im Proxy-Staff-Betrieb, beim
+Einrichten des Restricted-Bindings und beim Stack-Start. Der Manager zeigt
+Ergebnisse und Aktionen an, ist aber nicht selbst die Sicherheitsinstanz.
+Routing, Firewall und reale Netztrennung sind nicht Teil dieser automatischen
+Prüfung:
 
-1. freigegebene Kombination aus Windows/macOS und Docker-Desktop-Version;
-2. im Proxy-/Restricted-Betrieb keine IPv4-/IPv6-Docker-Publishes auf
+1. im Proxy-/Restricted-Betrieb keine IPv4-/IPv6-Docker-Publishes auf
    `0.0.0.0`, `[::]`/`:::` oder einer unerwarteten Host-IP;
-3. App ohne Proxy bewusst global, mit Proxy ausschließlich auf Loopback;
-4. stabile, eindeutig ausgewählte Staff- und Restricted-Adressen samt Interface-ID;
-5. ob die Restricted-IP auf einem anderen gemeldeten Interface liegt oder nur eine
+2. App ohne Proxy bewusst global, mit Proxy ausschließlich auf Loopback;
+3. stabile, eindeutig ausgewählte Staff- und Restricted-Adressen samt Interface-ID;
+4. ob die Restricted-IP auf einem anderen gemeldeten Interface liegt oder nur eine
    zweite Adresse des Staff-Interface ist;
-6. bei verschiedenen Interfaces: unterschiedliche, nicht überlappende
+5. bei verschiedenen Interfaces: unterschiedliche, nicht überlappende
    Subnetze; beim selben Interface: Überlappung als ausdrücklicher Warnzustand;
-7. Standardroute nur über die Staff-Konfiguration;
-8. kein zusätzliches Gateway und kein DNS durch die Restricted-Network-Konfiguration;
-9. kein IPv4-/IPv6-Forwarding und keine Bridge-/ICS-/NAT-Verbindung zwischen
-   den ausgewählten Staff- und Restricted-Interfaces; interne Docker-Desktop-Netze
-   sind kein Fehlerzustand;
-10. erwartete Host-Firewallregeln aktiv;
-11. tatsächliche Host-Publishes und getrennte Container-Listener je IP und Port;
-12. Portal-SNI nur auf Restricted-IP erfolgreich;
-13. Staff-SNI und bekannte Staff-/Admin-Pfade auf Restricted-IP abgewiesen;
-14. Portal-SNI auf der Staff-IP abgewiesen; `/portal` unter Staff-SNI bleibt
+6. kein zusätzliches Gateway und kein DNS durch die Restricted-Network-Konfiguration;
+7. tatsächliche Host-Publishes und getrennte Container-Listener je IP und Port;
+8. Portal-SNI nur auf Restricted-IP erfolgreich;
+9. Staff-SNI und bekannte Staff-/Admin-Pfade auf Restricted-IP abgewiesen;
+10. Portal-SNI auf der Staff-IP abgewiesen; `/portal` unter Staff-SNI bleibt
     als interne Vorschau erlaubt;
-15. Wildcard-Zertifikat gültig und für Staff- sowie Portal-Namen passend;
-16. weder am Staff- noch am Portal-Listener ein Default-Fallback ohne passendes
+11. Wildcard-Zertifikat gültig und für Staff- sowie Portal-Namen passend;
+12. weder am Staff- noch am Portal-Listener ein Default-Fallback ohne passendes
     SNI/`Host`.
 
 Eine nicht mehr bindbare oder nicht mehr eindeutig zuordenbare Restricted-IP ist
@@ -752,9 +743,10 @@ prüfen** liest die Kandidaten neu ein; eine Neuinstallation ist nicht nötig.
 
 1. Plattform-/Docker-Desktop-Freigabe, Phase-0-Publishes und TLS-Proxy prüfen.
 2. Restricted-IP auswählen und den getrennten oder Same-NIC-Pfad bestätigen.
-3. Host-Firewallregeln und lokale Publish-/Listenergrenze vorbereiten.
-4. Portal-A-Record auf die Restricted-IP ergänzen; vorhandenes Wildcard-
-   Zertifikat beziehungsweise Custom-PEM-Abdeckung prüfen.
+3. Portal-A-Record auf die Restricted-IP ergänzen und vorhandenes
+   Managed-Wildcard-Zertifikat prüfen.
+4. Praxis-IT bestätigt unabhängig davon Routing, Host-Firewall und reale
+   Netztrennung; Praxis Flow verändert diese nicht.
 5. Caddy- und Compose-Konfiguration sichern, erzeugen und offline validieren.
 6. `restricted-ip:443 → proxy:444` mit der festen Portal-Positivliste durch
    Neuerzeugen des Proxy-Containers transaktional anwenden.
@@ -763,11 +755,10 @@ prüfen** liest die Kandidaten neu ein; eine Neuinstallation ist nicht nötig.
 Offene DNS- oder Zertifikatsschritte verwerfen die gewählte Konfiguration
 nicht. Bis alle blockierenden Sicherheitsprüfungen erfolgreich sind und
 Warnungen bestätigt wurden, startet kein Restricted-Listener. Setup führt die
-Operation aus und persistiert ihren Fortschritt; der Renderer projiziert nur
-Zustand und Formularentwurf.
+Operation aus; der Renderer projiziert Zustand und Formularentwurf.
 
-Bei einem Fehler stellt Setup Compose-, Proxy- und Firewallzustand wieder her,
-erzeugt den Proxy erneut und prüft Staff. Eine kurze angekündigte Staff-
+Bei einem Fehler stellt Setup Env-, Caddy- und Proxyzustand wieder her,
+erzeugt den Proxy bei Bedarf erneut und prüft Staff. Eine kurze angekündigte Staff-
 Unterbrechung ist zulässig, ein dauerhafter Staff-Ausfall nicht.
 
 Der angezeigte Status unterscheidet mindestens:
@@ -784,8 +775,8 @@ Der angezeigte Status unterscheidet mindestens:
 ### 9.3 Binding entfernen und reparieren
 
 Das Restricted-Binding kann nachträglich entfernt werden. Setup entfernt
-transaktional Host-Publish, Restricted-/Portal-Listener und die von Praxis Flow
-verwalteten Firewallregeln. App, fachliches `portalEnabled`, Staff-Publishes,
+transaktional Host-Publish und Restricted-/Portal-Listener. Host-Firewallregeln
+verwaltet Praxis Flow nicht. App, fachliches `portalEnabled`, Staff-Publishes,
 Staff-Origin und Wildcard-Zertifikat bleiben unverändert. Der Portal-A-Record
 kann bestehen bleiben; ohne Listener antwortet der Host dort nicht.
 
@@ -924,8 +915,9 @@ Status der groben Blöcke:
       geprüft; automatisierte Plattformfreigabe und externe
       Produktabnahme bleiben offen; die Staff-UI ist überarbeitet. Der proxyfreie initiale Betrieb ist bewusst
       nicht NIC-isoliert.
-- [ ] **Restricted-Binding:** zweite IP, Portal-A-Record und getrennten
-      Portal-Listener anwenden. Der ausführbare Proxyvertrag ist vorbereitet:
+- [x] **Restricted-Binding:** zweite IP vorbereiten, Portal-A-Record prüfen und
+      getrennten Portal-Listener transaktional anwenden oder entfernen. Der
+      ausführbare Proxyvertrag enthält:
       interner Listener 444, strikte Host-/SNI-Prüfung, separate Publish-
       Overlays und generierte Positivliste. Die Portal-API ist unter
       `/api/v1/portal/*` gebündelt; der ausführbare Methoden-/Pfadvertrag
@@ -934,8 +926,8 @@ Status der groben Blöcke:
 - [ ] **Portal-Härtung und Freigabe:** App-Vertrag, Runtime-Härtung,
       Plattformmatrix, Betriebsabnahme und Release-Tests abschließen.
 
-Damit sind der TLS-Namensumbau und die Staff-Publish-Umstellung in Dev und
-Delivery implementiert. Die Restricted-Network-UI ist ein späterer Arbeitsblock. Vor
+Damit sind der TLS-Namensumbau, die Staff-Publish-Umstellung und die
+Restricted-Network-UI in Dev und Delivery implementiert. Vor
 der produktiven Ausrollung der Phase 0 muss Gate 0 auf der jeweiligen
 Betriebssystem-/Docker-Desktop-Kombination bestanden sein. Eine bestandene
 Plattformfreigabe entsperrt nicht automatisch eine andere Plattform.
@@ -1062,8 +1054,8 @@ deshalb die Ziel-IP-/Interface-Selektion dieses Hosts, aber keine Trennung
 zweier gerouteter Subnetze. macOS wird deshalb zunächst nur für die konkret
 nachgewiesene Kombination freigegeben; eine allgemeinere Mindestversion wird
 nicht abgeleitet. Der Windows-Nachweis ist zurückgestellt. Windows bleibt bis
-dahin für Staff- und Restricted-Binding **nicht freigegeben**; eine technische
-Windows-Sperre ist noch nicht umgesetzt. Das blockiert die weitere
+dahin für Staff- und Restricted-Binding **nicht freigegeben**; Restricted-
+Prepare wird auf Windows technisch abgewiesen. Das blockiert die weitere
 macOS-Umsetzung nicht.
 
 Einordnung für den nächsten Arbeitsblock (15.09.2026): Die dokumentierte
@@ -1261,7 +1253,7 @@ Für den weiteren **Restricted-/Portal-Block** offen:
 
 ### 13.3 Arbeitsblock 16.09.2026 — ausführbarer Restricted-Proxyvertrag
 
-Umgesetzt ist der noch nicht veröffentlichte Caddy-Server auf Container-Port 444. Der Staff-Server auf 443 und der Portal-Server auf 444 verlangen jeweils
+Umgesetzt ist der Caddy-Server auf Container-Port 444. Der Staff-Server auf 443 und der Portal-Server auf 444 verlangen jeweils
 den passenden Host **und** TLS-SNI. Falsche oder unbekannte Origins werden
 abgebrochen. Der Restricted-Server leitet nur die fünf inventarisierten
 Portal-SPA-Einstiege, die technisch benötigten Svelte-Assets und die direkt aus
@@ -1270,9 +1262,8 @@ Pfade, einschließlich `PORTAL_INTERNAL_ROUTES`, bleiben geschlossen.
 
 Separate Dev-/Delivery-Compose-Overlays bilden den späteren Publish-Vertrag
 `<restricted-ip>:443 → proxy:444` ab. Extern bleibt es damit bei normalem HTTPS
-auf 443; 444 ist kein Betreiber- oder Client-Port. Die Overlays werden bereits
-mit Release-/Update-Artefakten ausgeliefert, aber noch nicht automatisch vom
-Setup gewählt. Das bestehende Wildcard-Zertifikat wird auf beiden internen
+auf 443; 444 ist kein Betreiber- oder Client-Port. Setup wählt das Overlay nur
+bei aktivem Restricted-Marker. Das bestehende Wildcard-Zertifikat wird auf beiden internen
 Listenern verwendet; die effektive Caddy-Konfiguration enthält weiterhin nur
 eine Automations-Policy für `*.<installationsraum>`. Dieser Block erzeugt weder
 einen Portal-A-Record noch eine zweite ACME-Order.

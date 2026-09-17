@@ -1,3 +1,4 @@
+import { recoverRestrictedOperation } from './docker.js';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -43,6 +44,7 @@ import { readEnvMap } from './env-file.js';
 import { configureMaintenanceAuthHome } from './maintenance-auth.js';
 import { requirePackageFileExtension } from './package-file-extension.js';
 import { resolveSetupApiError } from './api-error.js';
+import { createHostMutationLock } from './host-mutation-lock.js';
 import {
   normalizeApplySetupInput,
   normalizeHostNetworkInput,
@@ -361,21 +363,58 @@ function createSetupRoutes(
   tlsDeps: TlsRuntimeDependencies = {},
   buildId = resolveSetupBuildId(),
 ): ReadonlyMap<string, RouteHandler> {
-  return new Map(
-    Object.entries({
-      'GET /api/setup/health': () =>
-        routeResult({
-          ok: true,
-          protocolVersion: SETUP_API_PROTOCOL_VERSION,
-          buildId,
-          installHome: ctx.home,
-          composeProjectName: ctx.composeProjectName,
+  const mutationLock = createHostMutationLock();
+  const entries = Object.entries({
+    'GET /api/setup/health': () =>
+      routeResult({
+        ok: true,
+        protocolVersion: SETUP_API_PROTOCOL_VERSION,
+        buildId,
+        installHome: ctx.home,
+        composeProjectName: ctx.composeProjectName,
+      }),
+    ...createRuntimeRoutes(ctx, tlsDeps),
+    ...createManagementRoutes(ctx),
+    ...createDeliveryRoutes(ctx),
+  });
+  const mutatingRoutes = new Set([
+    `POST ${SETUP_RESTRICTED_NETWORK_ROUTES.prepare}`,
+    `POST ${SETUP_RESTRICTED_NETWORK_ROUTES.apply}`,
+    `POST ${SETUP_RESTRICTED_NETWORK_ROUTES.remove}`,
+    'POST /api/setup/host/network',
+    `POST ${SETUP_TLS_ROUTES.prepare}`,
+    `POST ${SETUP_TLS_ROUTES.verifyDns}`,
+    `POST ${SETUP_TLS_ROUTES.obtainCertificate}`,
+    `POST ${SETUP_TLS_ROUTES.customCertificate}`,
+    `POST ${SETUP_TLS_ROUTES.checkCertificate}`,
+    `POST ${SETUP_TLS_ROUTES.apply}`,
+    `POST ${SETUP_TLS_ROUTES.repair}`,
+    `POST ${SETUP_TLS_ROUTES.reset}`,
+    `POST ${SETUP_TLS_ROUTES.renew}`,
+    'POST /api/setup/host/compose',
+    'POST /api/setup/host/backup/restore',
+    'POST /api/setup/host/reset-staff-pins',
+    'POST /api/setup/host/apply',
+    'POST /api/setup/host/storage',
+    'POST /api/setup/host/update/apply',
+    'POST /api/setup/host/images/load',
+  ]);
+  const routes: Array<[string, RouteHandler]> = entries.map(([route, rawHandler]) => {
+    const handler = rawHandler as RouteHandler;
+    if (!mutatingRoutes.has(route)) return [route, handler];
+    return [
+      route,
+      (req, url) =>
+        mutationLock.run(route, async () => {
+          await recoverRestrictedOperation({
+            projectRoot: ctx.home,
+            composeProjectName: ctx.composeProjectName,
+          });
+          return handler(req, url);
         }),
-      ...createRuntimeRoutes(ctx, tlsDeps),
-      ...createManagementRoutes(ctx),
-      ...createDeliveryRoutes(ctx),
-    }),
-  );
+    ];
+  });
+  return new Map(routes);
 }
 
 export function createSetupRequestHandler(
@@ -386,6 +425,12 @@ export function createSetupRequestHandler(
 ) {
   configureMaintenanceAuthHome(ctx.home, ctx.mode);
   const routes = createSetupRoutes(ctx, tlsDeps, options.buildId ?? resolveSetupBuildId());
+  let recovery: Promise<void> | null = recoverRestrictedOperation({
+    projectRoot: ctx.home,
+    composeProjectName: ctx.composeProjectName,
+  });
+  void recovery.catch(() => undefined); // reported on authenticated requests, not an unhandled rejection
+
   const managerToken =
     options.managerToken !== undefined ? options.managerToken : readSetupManagerTokenFromEnv();
   return async (req: http.IncomingMessage, res: http.ServerResponse) => {
@@ -398,6 +443,16 @@ export function createSetupRequestHandler(
       }
       if (!handler) {
         return sendJson(res, 404, { error: 'not found' });
+      }
+      recovery ??= recoverRestrictedOperation({
+        projectRoot: ctx.home,
+        composeProjectName: ctx.composeProjectName,
+      });
+      try {
+        await recovery;
+      } catch (error) {
+        recovery = null;
+        throw error;
       }
       const [status, body] = await handler(req, url);
       return sendJson(res, status, body);

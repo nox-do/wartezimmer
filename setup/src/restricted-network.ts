@@ -8,6 +8,8 @@ import type {
   TlsStatus,
 } from '@praxis-flow/server-shared';
 import { TLS_OPERATOR_ZONE_DEFAULT } from '@praxis-flow/server-shared';
+import { auditStaffPublishedBindings } from './network-bindings.js';
+import { networkInterfaceId } from './network.js';
 
 export const RESTRICTED_NETWORK_IP_ENV = 'SETUP_RESTRICTED_APP_IP';
 export const RESTRICTED_NETWORK_ENABLED_ENV = 'SETUP_RESTRICTED_ENABLED';
@@ -16,14 +18,17 @@ export const RESTRICTED_NETWORK_SAME_INTERFACE_CONFIRMED_ENV =
 export const RESTRICTED_NETWORK_INTERFACE_ID_ENV = 'SETUP_RESTRICTED_INTERFACE_ID';
 export const RESTRICTED_NETWORK_WARNINGS_CONFIRMED_ENV = 'SETUP_RESTRICTED_WARNINGS_CONFIRMED';
 
+export const RESTRICTED_NETWORK_PERSISTED_KEYS = [
+  RESTRICTED_NETWORK_ENABLED_ENV,
+  RESTRICTED_NETWORK_IP_ENV,
+  RESTRICTED_NETWORK_INTERFACE_ID_ENV,
+  RESTRICTED_NETWORK_WARNINGS_CONFIRMED_ENV,
+  RESTRICTED_NETWORK_SAME_INTERFACE_CONFIRMED_ENV,
+] as const;
+
 function normalizedMac(mac: string | undefined): string | null {
   const value = mac?.trim().toLowerCase();
   return value && value !== '00:00:00:00:00:00' ? value : null;
-}
-
-function interfaceId(iface: NetworkInterfaceInfo): string {
-  const mac = iface.addresses.map((address) => normalizedMac(address.mac)).find(Boolean);
-  return mac ? `mac:${mac}` : `name:${iface.name}`;
 }
 
 function isVirtualInterface(name: string): boolean {
@@ -62,13 +67,18 @@ function cidrsOverlap(left: string | undefined, right: string | undefined): bool
   return (a.network & mask) === (b.network & mask);
 }
 
+function findAddresses(interfaces: NetworkInterfaceInfo[], address: string | null) {
+  if (!address) return [];
+  return interfaces.flatMap((iface) =>
+    iface.addresses
+      .filter((candidate) => candidate.address === address)
+      .map((entry) => ({ iface, entry })),
+  );
+}
+
 function findAddress(interfaces: NetworkInterfaceInfo[], address: string | null) {
-  if (!address) return null;
-  for (const iface of interfaces) {
-    const entry = iface.addresses.find((candidate) => candidate.address === address);
-    if (entry) return { iface, entry };
-  }
-  return null;
+  const matches = findAddresses(interfaces, address);
+  return matches.length === 1 ? matches[0]! : null;
 }
 
 /**
@@ -80,7 +90,6 @@ export function buildRestrictedNetworkCandidates(
   staffIp: string | null,
 ): RestrictedNetworkCandidate[] {
   const staff = findAddress(interfaces, staffIp);
-  const seen = new Set<string>();
   const candidates: RestrictedNetworkCandidate[] = [];
 
   for (const iface of interfaces) {
@@ -89,12 +98,10 @@ export function buildRestrictedNetworkCandidates(
         address.internal ||
         address.address.startsWith('127.') ||
         address.address.startsWith('169.254.') ||
-        address.address === staffIp ||
-        seen.has(address.address)
+        address.address === staffIp
       ) {
         continue;
       }
-      seen.add(address.address);
       const sameInterface = Boolean(staff && staff.iface.name === iface.name);
       const warnings: RestrictedNetworkCandidate['warnings'] = [];
       if (sameInterface) warnings.push('same-interface');
@@ -102,10 +109,11 @@ export function buildRestrictedNetworkCandidates(
         warnings.push('overlapping-staff-subnet');
       }
       if (isVirtualInterface(iface.name)) warnings.push('virtual-interface');
+      if (findAddresses(interfaces, address.address).length > 1) warnings.push('ambiguous-address');
       candidates.push({
         address: address.address,
         cidr: address.cidr,
-        interfaceId: interfaceId(iface),
+        interfaceId: networkInterfaceId(iface),
         interfaceName: iface.name,
         mac: normalizedMac(address.mac) ?? undefined,
         relationToStaff: staff
@@ -167,7 +175,7 @@ export function buildRestrictedNetworkStatus(input: {
 
   const sameInterface = Boolean(location && staff && location.iface.name === staff.iface.name);
   const persistedInterfaceId = input.env.get(RESTRICTED_NETWORK_INTERFACE_ID_ENV)?.trim() || null;
-  const currentInterfaceId = location ? interfaceId(location.iface) : null;
+  const currentInterfaceId = location ? networkInterfaceId(location.iface) : null;
   const interfaceMatches = !persistedInterfaceId || persistedInterfaceId === currentInterfaceId;
   const binding = {
     hostIp,
@@ -183,7 +191,7 @@ export function buildRestrictedNetworkStatus(input: {
   const certificateReady = Boolean(
     portalHostname &&
     input.tls.certificate &&
-      restrictedCertificateCoversHostname(portalHostname, input.tls.certificate.names),
+    restrictedCertificateCoversHostname(portalHostname, input.tls.certificate.names),
   );
   const blocked =
     !platformSupported ||
@@ -210,10 +218,7 @@ export function buildRestrictedNetworkStatus(input: {
   };
 }
 
-export function restrictedCertificateCoversHostname(
-  hostname: string,
-  names: string[],
-): boolean {
+export function restrictedCertificateCoversHostname(hostname: string, names: string[]): boolean {
   const normalized = hostname.toLowerCase();
   return names.some((raw) => {
     const name = raw.trim().toLowerCase();
@@ -248,12 +253,11 @@ export async function buildRestrictedNetworkInspect(input: {
       : 'Restricted-Binding ist auf dieser Hostplattform noch nicht freigegeben',
   });
   const certificateReady = Boolean(
+    input.tls.mode === 'managed' &&
+    input.tls.wildcardCertificateName &&
     status.portalHostname &&
     input.tls.certificate &&
-      restrictedCertificateCoversHostname(
-        status.portalHostname,
-        input.tls.certificate.names,
-      ),
+    restrictedCertificateCoversHostname(status.portalHostname, input.tls.certificate.names),
   );
   checks.push({
     id: 'restricted.tls',
@@ -261,7 +265,9 @@ export async function buildRestrictedNetworkInspect(input: {
     message:
       input.tls.cutoverApplied && status.portalHostname && certificateReady
         ? 'HTTPS ist für den Portal-Hostnamen vorbereitet'
-        : 'Das eingerichtete HTTPS-Zertifikat deckt den Portal-Hostnamen nicht ab',
+        : input.tls.mode !== 'managed'
+          ? 'Der dedizierte Patientenzugang erfordert verwaltetes Wildcard-HTTPS'
+          : 'Das eingerichtete HTTPS-Zertifikat deckt den Portal-Hostnamen nicht ab',
   });
 
   let dns: RestrictedNetworkDnsObservation = {
@@ -276,17 +282,20 @@ export async function buildRestrictedNetworkInspect(input: {
       input.resolve4(status.portalHostname).catch((): string[] => []),
       input.resolvePublic4(status.portalHostname).catch((): string[] => []),
     ]);
-    const localMatches = addresses.includes(status.binding.hostIp);
-    const publicMatches = publicAddresses.includes(status.binding.hostIp);
+    const exactMatch = (resolved: string[]) =>
+      resolved.length > 0 && resolved.every((address) => address === status.binding!.hostIp);
+    const localMatches = exactMatch(addresses);
+    const publicMatches = exactMatch(publicAddresses);
     const localUnresolved = publicMatches && addresses.length === 0;
     dns = {
-      state: publicMatches && localMatches
-        ? 'match'
-        : localUnresolved
-          ? 'local-unresolved'
-          : publicAddresses.length > 0 || addresses.length > 0
-          ? 'mismatch'
-          : 'missing',
+      state:
+        publicMatches && localMatches
+          ? 'match'
+          : localUnresolved
+            ? 'local-unresolved'
+            : publicAddresses.length > 0 || addresses.length > 0
+              ? 'mismatch'
+              : 'missing',
       hostname: status.portalHostname,
       expectedIp: status.binding.hostIp,
       addresses,
@@ -296,18 +305,16 @@ export async function buildRestrictedNetworkInspect(input: {
     checks.push({
       id: 'restricted.portal-dns-public',
       ok: publicMatches,
-      message:
-        publicMatches
-          ? 'Portal-A-Record ist öffentlich vorhanden'
-          : publicAddresses.length > 0
-            ? 'Portal-A-Record zeigt öffentlich nicht auf die Restricted-IP'
-            : 'Portal-A-Record konnte öffentlich nicht bestätigt werden',
-      detail:
-        publicMatches
-          ? `${status.portalHostname} → ${status.binding.hostIp}`
-          : status.portalHostname.endsWith(`.${TLS_OPERATOR_ZONE_DEFAULT}`)
-            ? `Der Betreiber muss ${status.portalHostname} als A-Record auf ${status.binding.hostIp} setzen.`
-            : `In der eigenen DNS-Zone ${status.portalHostname} als A-Record auf ${status.binding.hostIp} setzen.`,
+      message: publicMatches
+        ? 'Portal-A-Record ist öffentlich vorhanden'
+        : publicAddresses.length > 0
+          ? 'Portal-A-Record zeigt öffentlich nicht auf die Restricted-IP'
+          : 'Portal-A-Record konnte öffentlich nicht bestätigt werden',
+      detail: publicMatches
+        ? `${status.portalHostname} → ${status.binding.hostIp}`
+        : status.portalHostname.endsWith(`.${TLS_OPERATOR_ZONE_DEFAULT}`)
+          ? `Der Betreiber muss ${status.portalHostname} als A-Record auf ${status.binding.hostIp} setzen.`
+          : `In der eigenen DNS-Zone ${status.portalHostname} als A-Record auf ${status.binding.hostIp} setzen.`,
     });
     checks.push({
       id: 'restricted.portal-dns-local',
@@ -329,7 +336,7 @@ export async function buildRestrictedNetworkInspect(input: {
 
   if (status.binding) {
     const local = findAddress(input.interfaces, status.binding.hostIp);
-    const currentInterfaceId = local ? interfaceId(local.iface) : null;
+    const currentInterfaceId = local ? networkInterfaceId(local.iface) : null;
     const bindingMatches = Boolean(local && currentInterfaceId === status.binding.interfaceId);
     checks.push({
       id: 'restricted.local-ip',
@@ -358,6 +365,40 @@ export async function buildRestrictedNetworkInspect(input: {
         message: hasRestrictedPublish(input.compose, status.binding.hostIp)
           ? 'Proxy veröffentlicht 443 der Restricted-IP ausschließlich auf Listener 444'
           : 'Restricted-Publish weicht vom vorgesehenen Binding ab',
+      });
+      const runtimeChecks = auditStaffPublishedBindings({
+        compose: input.compose,
+        staffIp: input.staffIp,
+        proxyEnabled: true,
+        proxyHttpPort: Number(input.env.get('PROXY_HTTP_PORT') || 80),
+        proxyHttpsEnabled: true,
+        proxyHttpsPort: Number(input.env.get('PROXY_HTTPS_PORT') || 443),
+        restrictedIp: status.binding.hostIp,
+      });
+      const requiredRuntimeChecks = new Set([
+        'staff.binding.app',
+        'staff.binding.sandbox',
+        'staff.binding.proxy',
+      ]);
+      const runtimeFailure = runtimeChecks.find(
+        (check) => requiredRuntimeChecks.has(check.id) && !check.ok,
+      );
+      const observedRuntimeChecks = new Set(runtimeChecks.map((check) => check.id));
+      const missingRuntimeCheck = [...requiredRuntimeChecks].find(
+        (id) => !observedRuntimeChecks.has(id),
+      );
+      checks.push({
+        id: 'restricted.binding.runtime-contract',
+        ok: !runtimeFailure && !missingRuntimeCheck,
+        message:
+          runtimeFailure || missingRuntimeCheck
+            ? 'Runtime-Publishes weichen vom vollständigen Binding-Vertrag ab'
+            : 'App, Sandbox und Proxy besitzen exakt die vorgesehenen Publishes',
+        detail:
+          runtimeFailure?.detail ??
+          (missingRuntimeCheck
+            ? `Runtime-Audit unvollständig: ${missingRuntimeCheck} fehlt.`
+            : undefined),
       });
     }
   }

@@ -62,6 +62,7 @@ import {
   unpackTlsSidecarBytes,
   wipeTlsStateRoot,
 } from './tls-backup-sidecar.js';
+import { RESTRICTED_NETWORK_PERSISTED_KEYS } from './restricted-network.js';
 
 export const RESTORE_PHASES = {
   validateArchive: 'validate_archive',
@@ -494,6 +495,10 @@ async function commitRestore(input: {
     if (input.testHooks.failWriteEnv) {
       throw new Error('ENV-Schreiben absichtlich fehlgeschlagen (Test).');
     }
+    // Restricted state is a complete backup-owned unit. Removing the current
+    // keys first prevents an absent or prepared backup from inheriting a live
+    // activation marker from the host being restored.
+    removeEnvKeys(input.prepared.envPath, [...RESTRICTED_NETWORK_PERSISTED_KEYS]);
     writeEnvRecordAtomically(input.prepared.envPath, input.prepared.restoreEnv);
     if (input.prepared.discardTlsPreparation) {
       removeEnvKeys(input.prepared.envPath, [

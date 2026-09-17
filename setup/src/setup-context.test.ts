@@ -7,12 +7,54 @@ import { fileURLToPath } from 'node:url';
 import { readEnvMap } from './env-file.js';
 import {
   DELIVERY_BOOTSTRAP_FILES,
+  ensureInstallHomeLayout,
   migrateMaintenanceToken,
   resolveSetupContext,
 } from './setup-context.js';
 
 test('delivery bootstrap contract contains every restricted proxy overlay', () => {
   assert.ok(DELIVERY_BOOTSTRAP_FILES.includes('docker-compose.proxy-restricted.delivery.yml'));
+});
+
+test('install bootstrap creates missing templates without overwriting installed versions', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-bootstrap-templates-'));
+  const installHome = path.join(root, 'install');
+  const templateRoot = path.join(root, 'templates');
+  fs.mkdirSync(installHome, { recursive: true });
+  fs.mkdirSync(templateRoot, { recursive: true });
+  const previousProfile = process.env.PRAXIS_FLOW_COMPOSE_PROFILE;
+  process.env.PRAXIS_FLOW_COMPOSE_PROFILE = 'dev';
+  try {
+    for (const relativePath of [
+      '.env.example',
+      'docker-compose.yml',
+      'docker-compose.proxy.yml',
+      'docker-compose.proxy-tls.yml',
+      'docker-compose.proxy-restricted.yml',
+      'proxy/Caddyfile',
+    ]) {
+      const source = path.join(templateRoot, relativePath);
+      fs.mkdirSync(path.dirname(source), { recursive: true });
+      fs.writeFileSync(source, `bundled:${relativePath}\n`);
+    }
+    fs.writeFileSync(path.join(installHome, 'docker-compose.yml'), 'installed:newer\n');
+
+    const copied = ensureInstallHomeLayout(installHome, templateRoot);
+
+    assert.equal(
+      fs.readFileSync(path.join(installHome, 'docker-compose.yml'), 'utf8'),
+      'installed:newer\n',
+    );
+    assert.equal(copied.includes('docker-compose.yml'), false);
+    assert.equal(
+      fs.readFileSync(path.join(installHome, 'docker-compose.proxy-restricted.yml'), 'utf8'),
+      'bundled:docker-compose.proxy-restricted.yml\n',
+    );
+  } finally {
+    if (previousProfile === undefined) delete process.env.PRAXIS_FLOW_COMPOSE_PROFILE;
+    else process.env.PRAXIS_FLOW_COMPOSE_PROFILE = previousProfile;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 function withInstall(run: (home: string) => void): void {

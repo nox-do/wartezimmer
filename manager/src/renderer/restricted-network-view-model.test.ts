@@ -95,3 +95,37 @@ test('restricted actions retain a message already sanitized at the IPC boundary'
     'Die Aktivierung wurde zurückgenommen; der Staff-Zugang bleibt unverändert.',
   );
 });
+
+test('refresh preserves a valid NIC draft and invalidates changed warning consent', async () => {
+  const { reconcileRestrictedDraft, restrictedCandidateKey } =
+    await import('./restricted-network-view-model.js');
+  type Snapshot = Parameters<typeof reconcileRestrictedDraft>[1];
+  const saved = { address: '10.20.0.2', interfaceId: 'nic-a', warnings: [] };
+  const draft = { address: '10.30.0.2', interfaceId: 'nic-b', warnings: ['same-interface'] };
+  const snapshot = {
+    status: {
+      binding: { hostIp: saved.address, interfaceId: saved.interfaceId, warningsConfirmed: false },
+    },
+    candidates: [saved, draft],
+  } as unknown as Snapshot;
+  const selected = restrictedCandidateKey(draft.address, draft.interfaceId);
+  assert.deepEqual(reconcileRestrictedDraft(snapshot, structuredClone(snapshot), selected, true), {
+    selectedKey: selected,
+    confirmed: true,
+  });
+  const changed = structuredClone(snapshot);
+  changed.candidates[1]!.warnings.push('virtual-interface');
+  assert.deepEqual(reconcileRestrictedDraft(snapshot, changed, selected, true), {
+    selectedKey: selected,
+    confirmed: false,
+  });
+  changed.candidates.pop();
+  assert.equal(
+    reconcileRestrictedDraft(snapshot, changed, selected, true).selectedKey,
+    restrictedCandidateKey(saved.address, saved.interfaceId),
+  );
+  assert.equal(
+    reconcileRestrictedDraft(null, snapshot, '', false).selectedKey,
+    restrictedCandidateKey(saved.address, saved.interfaceId),
+  );
+});

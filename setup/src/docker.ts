@@ -1,8 +1,16 @@
 import fs from 'node:fs';
+import {
+  durableWrite,
+  readRestrictedOperation,
+  restrictedOperationDir,
+  restrictedOperationEnv,
+  finishRestrictedOperation,
+  isRestrictedOperationActive,
+} from './restricted-operation.js';
 import path from 'node:path';
 import { runDockerCommand } from './docker-cli.js';
 import { readEnvMap, ensureEnvComposeEscaping } from './env-file.js';
-import { listNetworkInterfaces, type NetworkInterfaceInfo } from './network.js';
+import { listNetworkInterfaces, networkInterfaceId, type NetworkInterfaceInfo } from './network.js';
 import { resolveStorageFoldersFromSources, type StorageFolders } from './storage-folders.js';
 
 import type {
@@ -51,6 +59,7 @@ export function dockerInstallHints(): string {
 
 export type ComposeRunOptions = {
   projectRoot: string;
+  restrictedOperationId?: string;
   delivery?: boolean;
   withGateway?: boolean;
   withProxy?: boolean;
@@ -175,7 +184,7 @@ function resolveComposeFileList(options: ComposeRunOptions): {
     wantsTlsLabCompose(options.projectRoot) &&
     fs.existsSync(path.join(options.projectRoot, 'docker-compose.tls-lab.yml')) &&
     fs.existsSync(path.join(options.projectRoot, 'docker-compose.tls-lab-proxy.yml'));
-  const envPath = path.join(options.projectRoot, '.env');
+  const envPath = restrictedOperationEnv(options.projectRoot, options.restrictedOperationId);
   const restrictedEnabled =
     proxyTlsEnabled &&
     fs.existsSync(envPath) &&
@@ -192,6 +201,8 @@ function resolveComposeFileList(options: ComposeRunOptions): {
     restrictedEnabled,
     gatewayEnabled: gatewayWanted,
   });
+  if (options.restrictedOperationId)
+    files.push(path.join(restrictedOperationDir(options.projectRoot), 'compose.yml'));
   return { files, wantGateway, gatewaySkipped };
 }
 
@@ -242,11 +253,21 @@ export function validateStaffBindingEnv(
     if (restrictedIp === staffIp) {
       return 'Restricted-Bindung gesperrt: Restricted-IP und Staff-IP dürfen nicht identisch sein.';
     }
-    const restrictedIsLocal = interfaces.some((iface) =>
+    const restrictedLocations = interfaces.filter((iface) =>
       iface.addresses.some((address) => address.address === restrictedIp),
     );
-    if (!restrictedIsLocal) {
+    if (restrictedLocations.length === 0) {
       return `Restricted-Bindung gesperrt: ${restrictedIp} ist an diesem Rechner nicht vorhanden.`;
+    }
+    if (restrictedLocations.length > 1) {
+      return `Restricted-Bindung gesperrt: ${restrictedIp} ist mehreren Interfaces zugeordnet.`;
+    }
+    const expectedInterfaceId = env.get('SETUP_RESTRICTED_INTERFACE_ID')?.trim() || '';
+    if (
+      !expectedInterfaceId ||
+      networkInterfaceId(restrictedLocations[0]!) !== expectedInterfaceId
+    ) {
+      return `Restricted-Bindung gesperrt: ${restrictedIp} liegt nicht mehr auf dem gespeicherten Interface.`;
     }
   }
   return null;
@@ -274,8 +295,14 @@ export async function composeUp(options: ComposeUpOptions & { services?: string[
   log: string;
   gatewaySkipped: boolean;
 }> {
+  if (!options.restrictedOperationId) await recoverRestrictedOperation(options, false);
   const { files, wantGateway, gatewaySkipped } = resolveComposeFileList(options);
-  const bindingError = composeStaffBindingError(options.projectRoot);
+  const bindingError = options.restrictedOperationId
+    ? validateStaffBindingEnv(
+        readEnvMap(restrictedOperationEnv(options.projectRoot, options.restrictedOperationId)),
+        listNetworkInterfaces(),
+      )
+    : composeStaffBindingError(options.projectRoot);
   if (bindingError) {
     return { ok: false, log: bindingError, gatewaySkipped };
   }
@@ -293,7 +320,12 @@ export async function composeUp(options: ComposeUpOptions & { services?: string[
   if (useGatewayProfile) {
     args.push('--profile', 'gateway');
   }
-  args.push('--env-file', '.env', 'up', '-d');
+  args.push(
+    '--env-file',
+    restrictedOperationEnv(options.projectRoot, options.restrictedOperationId),
+    'up',
+    '-d',
+  );
   if (options.build) {
     args.push('--build');
   }
@@ -532,7 +564,11 @@ function buildComposeArgv(
   if (wantGateway) {
     args.push('--profile', 'gateway');
   }
-  args.push('--env-file', '.env', ...subcommand);
+  args.push(
+    '--env-file',
+    restrictedOperationEnv(options.projectRoot, options.restrictedOperationId),
+    ...subcommand,
+  );
 
   return {
     args,
@@ -577,6 +613,7 @@ export async function composeStop(
 export async function composeRestart(
   options: ComposeRunOptions & { services?: string[] },
 ): Promise<{ ok: boolean; log: string }> {
+  if (!options.restrictedOperationId) await recoverRestrictedOperation(options, false);
   const envPath = path.join(options.projectRoot, '.env');
   if (!fs.existsSync(envPath)) {
     return { ok: false, log: 'no .env — cannot restart compose stack' };
@@ -597,7 +634,7 @@ export async function composeRestart(
 }
 
 export async function composeExec(
-  options: ComposeRunOptions & { service: string; args: string[] },
+  options: ComposeRunOptions & { service: string; args: string[]; oneOff?: boolean },
 ): Promise<{ ok: boolean; log: string }> {
   const envPath = path.join(options.projectRoot, '.env');
   if (!fs.existsSync(envPath)) {
@@ -607,7 +644,20 @@ export async function composeExec(
   if (!service || options.args.length === 0) {
     return { ok: false, log: 'compose exec requires a service and command' };
   }
-  const result = await runComposeCommand(options, ['exec', '-T', service, ...options.args]);
+  const result = await runComposeCommand(
+    options,
+    options.oneOff
+      ? [
+          'run',
+          '--rm',
+          '--no-deps',
+          '--entrypoint',
+          options.args[0]!,
+          service,
+          ...options.args.slice(1),
+        ]
+      : ['exec', '-T', service, ...options.args],
+  );
   return { ok: result.ok, log: result.log };
 }
 
@@ -690,7 +740,12 @@ export async function composeDown(
   if (wantGateway) {
     args.push('--profile', 'gateway');
   }
-  args.push('--env-file', '.env', 'down', '-v');
+  args.push(
+    '--env-file',
+    restrictedOperationEnv(options.projectRoot, options.restrictedOperationId),
+    'down',
+    '-v',
+  );
 
   ensureEnvComposeEscaping(options.projectRoot);
 
@@ -722,4 +777,90 @@ export function ensureHomeFolders(projectRoot: string): {
     }
   }
   return { ...folders, created };
+}
+
+/** Close interrupted patient access before any ordinary managed start. */
+export async function recoverRestrictedOperation(
+  options: ComposeRunOptions,
+  restartStaff = true,
+): Promise<void> {
+  if (!fs.existsSync(restrictedOperationDir(options.projectRoot))) return;
+  let operation;
+  try {
+    operation = readRestrictedOperation(options.projectRoot);
+  } catch (error) {
+    await closeRecoveryProxy(options);
+    throw error;
+  }
+  if (!operation) return;
+  if (operation.pid !== process.pid || isRestrictedOperationActive(operation.id)) {
+    try {
+      process.kill(operation.pid, 0);
+      throw new Error('Restricted-Operation läuft bereits; paralleler Start ist gesperrt.');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+    }
+  }
+  await closeRecoveryProxy(options);
+  durableWrite(path.join(options.projectRoot, '.env'), operation.previousEnv);
+  const { removeEnvKeys } = await import('./env-file.js');
+  removeEnvKeys(path.join(options.projectRoot, '.env'), ['SETUP_RESTRICTED_ENABLED']);
+  durableWrite(
+    path.join(options.projectRoot, '.env'),
+    fs.readFileSync(path.join(options.projectRoot, '.env'), 'utf8'),
+  );
+  const env = readEnvMap(path.join(options.projectRoot, '.env'));
+  const { readTlsStatus } = await import('./host-tls.js');
+  const { writeGeneratedTlsCaddyfile } = await import('./proxy-tls.js');
+  writeGeneratedTlsCaddyfile(options.projectRoot, readTlsStatus(env), env);
+  durableWrite(
+    path.join(options.projectRoot, 'state/restricted-recovery.json'),
+    JSON.stringify({
+      recoveredAt: new Date().toISOString(),
+      action: operation.action,
+      message: 'Unterbrochener Patientenzugang geschlossen; erneut prüfen und aktivieren.',
+    }),
+  );
+  finishRestrictedOperation(options.projectRoot, operation.id);
+  if (restartStaff && operation.stackWasRunning) {
+    const staff = await composeUp({
+      ...options,
+      withProxy: true,
+      build: false,
+      services: ['proxy'],
+    });
+    if (!staff.ok)
+      throw new Error(
+        `Patientenzugang geschlossen; Staff-Proxy muss neu gestartet werden: ${staff.log}`,
+      );
+  }
+}
+
+export async function restoreProxyRestartPolicy(options: ComposeRunOptions): Promise<void> {
+  const status = await composePs(options);
+  const proxy = status.services.find((service) => service.service === 'proxy');
+  if (!proxy?.name) throw new Error('Proxy für bestätigten Autostart fehlt.');
+  const result = await runDockerCommand(['update', '--restart', 'unless-stopped', proxy.name]);
+  if (result.code !== 0)
+    throw new Error(result.stderr || 'Proxy-Autostart konnte nicht bestätigt werden.');
+}
+
+async function closeRecoveryProxy(options: ComposeRunOptions): Promise<void> {
+  // Do not depend on an interrupted .env write or broken Compose file to close access.
+  const found = await runDockerCommand([
+    'ps',
+    '-aq',
+    '--filter',
+    `label=com.docker.compose.project=${options.composeProjectName}`,
+    '--filter',
+    'label=com.docker.compose.service=proxy',
+  ]);
+  if (found.code !== 0)
+    throw new Error('Restricted-Recovery: Proxy-Container konnten nicht ermittelt werden.');
+  const ids = found.stdout.trim().split(/\s+/).filter(Boolean);
+  if (ids.some((id) => !/^[a-f0-9]{12,64}$/.test(id)))
+    throw new Error('Restricted-Recovery: ungültige Containerkennung.');
+  if (!ids.length) return;
+  const removed = await runDockerCommand(['rm', '-f', ...ids]);
+  if (removed.code !== 0) throw new Error('Restricted-Recovery konnte den Proxy nicht schließen.');
 }

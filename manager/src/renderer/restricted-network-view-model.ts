@@ -50,6 +50,7 @@ const warningLabels: Record<RestrictedNetworkCandidateWarning, string> = {
   'same-interface': 'gleiches Interface wie Staff',
   'overlapping-staff-subnet': 'überlappendes Staff-Subnetz',
   'virtual-interface': 'virtuelles oder getunneltes Interface',
+  'ambiguous-address': 'Adresse ist mehreren Interfaces zugeordnet',
 };
 
 export function restrictedCandidateWarningText(
@@ -89,4 +90,33 @@ export function restrictedActionErrorText(
     directMessage ||
     `Der Patientenzugang konnte nicht ${action} werden. Bitte erneut prüfen.`
   );
+}
+
+export const restrictedCandidateKey = (address: string, interfaceId: string): string =>
+  `${interfaceId}\u0000${address}`;
+
+export function reconcileRestrictedDraft(
+  previous: RestrictedNetworkInspectResult | null,
+  next: RestrictedNetworkInspectResult,
+  selectedKey: string,
+  confirmed: boolean,
+): { selectedKey: string; confirmed: boolean } {
+  const key = (candidate: RestrictedNetworkInspectResult['candidates'][number]) =>
+    restrictedCandidateKey(candidate.address, candidate.interfaceId);
+  const candidate = next.candidates.find((item) => key(item) === selectedKey);
+  if (previous && candidate) {
+    const old = previous.candidates.find((item) => key(item) === selectedKey);
+    const sameWarnings =
+      old && [...old.warnings].sort().join('|') === [...candidate.warnings].sort().join('|');
+    return { selectedKey, confirmed: Boolean(confirmed && sameWarnings) };
+  }
+  const saved = next.status.binding;
+  const savedCandidate =
+    saved &&
+    next.candidates.find(
+      (item) => item.address === saved.hostIp && item.interfaceId === saved.interfaceId,
+    );
+  return savedCandidate
+    ? { selectedKey: key(savedCandidate), confirmed: saved?.warningsConfirmed ?? false }
+    : { selectedKey: '', confirmed: false };
 }

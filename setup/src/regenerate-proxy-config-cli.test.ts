@@ -36,7 +36,7 @@ test('regenerates only the generated Caddyfile and keeps a backup', () => {
   const envBefore = fs.readFileSync(current.envPath);
   try {
     const result = regenerateProxyConfig(current.home, new Date('2026-09-17T12:00:00.000Z'));
-    assert.match(fs.readFileSync(current.caddyfilePath, 'utf8'), /:444 \{/);
+    assert.doesNotMatch(fs.readFileSync(current.caddyfilePath, 'utf8'), /:444 \{/);
     assert.equal(
       fs.readFileSync(result.backupPath!, 'utf8'),
       '# PRAXIS-FLOW-GENERATED LAN-TLS v2\n\n# staff only\n',
@@ -53,6 +53,17 @@ test('refuses to overwrite an operator-owned Caddyfile', () => {
     fs.writeFileSync(current.caddyfilePath, ':443 { respond "custom" }\n');
     assert.throws(() => regenerateProxyConfig(current.home), /nicht als Praxis-Flow-generiert/);
     assert.equal(fs.readFileSync(current.caddyfilePath, 'utf8'), ':443 { respond "custom" }\n');
+  } finally {
+    fs.rmSync(current.home, { recursive: true, force: true });
+  }
+});
+
+test('regeneration retains an explicitly enabled restricted listener', () => {
+  const current = fixture();
+  try {
+    fs.appendFileSync(current.envPath, 'SETUP_RESTRICTED_ENABLED=true\n');
+    regenerateProxyConfig(current.home);
+    assert.match(fs.readFileSync(current.caddyfilePath, 'utf8'), /:444 \{/);
   } finally {
     fs.rmSync(current.home, { recursive: true, force: true });
   }

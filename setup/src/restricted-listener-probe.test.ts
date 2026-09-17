@@ -11,23 +11,55 @@ const input = {
   staffHostname: 'staff.installation.example',
   portalHostname: 'portal.installation.example',
 };
-
-test('listener audit accepts only the intended hostname on each address', async () => {
-  const probe: RestrictedHttpsProbe = async (ip, hostname) => ({
-    status:
-      (ip === input.staffIp && hostname === input.staffHostname) ||
-      (ip === input.restrictedIp && hostname === input.portalHostname)
-        ? 200
-        : 404,
-    error: null,
-  });
-  assert.equal(await auditRestrictedListeners(input, probe), null);
+const correct: RestrictedHttpsProbe = async (_ip, _sni, path, options) => {
+  if (options?.negative) return { status: null, error: 'reset', transport: 'rejected' };
+  if (path === '/' || path === '/portal' || path.startsWith('/portal/'))
+    return { status: 200, error: null };
+  return { status: 404, error: null, rejection: 'portal-policy' };
+};
+test('audit checks independent Host/SNI, no SNI and forbidden path/method classes', async () => {
+  const calls: Parameters<RestrictedHttpsProbe>[] = [];
+  assert.equal(
+    await auditRestrictedListeners(input, async (...args) => {
+      calls.push(args);
+      return correct(...args);
+    }),
+    null,
+  );
+  assert.ok(calls.some((c) => c[1] === '' && c[3]?.host === input.portalHostname));
+  assert.ok(calls.some((c) => c[1] === input.portalHostname && c[3]?.host !== c[1]));
+  assert.ok(calls.some((c) => c[2].endsWith('/verify-ticket-code') && c[3]?.method === 'POST'));
+  assert.ok(calls.some((c) => c[2] === '/api/not-allowed'));
+  assert.ok(calls.some((c) => c[3]?.method === 'DELETE'));
 });
-
-test('listener audit rejects a cross-origin exposure', async () => {
-  const probe: RestrictedHttpsProbe = async () => ({ status: 200, error: null });
-  assert.match(
-    (await auditRestrictedListeners(input, probe)) ?? '',
-    /Staff-Hostname.*Restricted-IP/,
+test('arbitrary HTTP errors never prove rejection', async () => {
+  for (const status of [401, 404, 421, 500]) {
+    let count = 0;
+    assert.notEqual(
+      await auditRestrictedListeners(input, async () => ({
+        status: ++count <= 2 ? 200 : status,
+        error: null,
+      })),
+      null,
+    );
+  }
+});
+test('timeouts and certificate failures do not prove server rejection', async () => {
+  assert.notEqual(
+    await auditRestrictedListeners(input, async (...args) =>
+      args[3]?.negative
+        ? { status: null, error: 'timeout', transport: 'failed' }
+        : correct(...args),
+    ),
+    null,
+  );
+});
+test('an application 404 without the proxy marker fails the path audit', async () => {
+  assert.notEqual(
+    await auditRestrictedListeners(input, async (...args) => {
+      const result = await correct(...args);
+      return { ...result, rejection: undefined };
+    }),
+    null,
   );
 });

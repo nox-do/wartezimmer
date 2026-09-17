@@ -106,12 +106,6 @@ export function ensureInstallHomeLayout(installHome: string, templateRoot: strin
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.copyFileSync(source, target);
       copied.push(relativePath);
-    } else if (
-      relativePath.startsWith('docker-compose.') &&
-      fs.readFileSync(source, 'utf8') !== fs.readFileSync(target, 'utf8')
-    ) {
-      fs.copyFileSync(source, target);
-      copied.push(relativePath);
     }
   }
 

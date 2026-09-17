@@ -220,6 +220,7 @@ test('buildProxyEnvUpdates writes companion keys only when proxy is active or al
       PROXY_MODE: 'http',
       PROXY_HTTP_PORT: '80',
       APP_BIND_ADDRESS: '127.0.0.1',
+      TRUST_PROXY_HEADERS: 'true',
     },
   );
 
@@ -248,6 +249,7 @@ test('buildProxyEnvUpdates writes companion keys only when proxy is active or al
       PROXY_MODE: 'off',
       PROXY_HTTP_PORT: '80',
       APP_BIND_ADDRESS: '0.0.0.0',
+      TRUST_PROXY_HEADERS: 'false',
     },
   );
 });
@@ -275,6 +277,7 @@ test('buildProxyEnvUpdates covers enabled → disabled companion keys', () => {
       PROXY_MODE: 'off',
       PROXY_HTTP_PORT: '80',
       APP_BIND_ADDRESS: '0.0.0.0',
+      TRUST_PROXY_HEADERS: 'false',
     },
   );
 });

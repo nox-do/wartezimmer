@@ -21,10 +21,18 @@ import { resyncRecallWindowExpiryScheduler } from './shared/queue/recall-window-
 import { buildFastifyLoggerOptions } from '@praxis-flow/server-shared/logger';
 import { toStaffPinHashConfig } from './shared/db/database-auth-settings.js';
 import { registerSecurityHeaders } from './http/security-headers.js';
+import { trustProxyHeaders } from './http/trusted-proxy.js';
+
+export function resolveAppTrustProxy(): false | 1 {
+  return trustProxyHeaders() ? 1 : false;
+}
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
     ...buildFastifyLoggerOptions(),
+    // Proxy headers are trusted only in the explicitly configured Caddy mode.
+    // Exactly one hop then selects Caddy's right-most X-Forwarded-For entry.
+    trustProxy: resolveAppTrustProxy(),
   });
 
   await app.register(multipart, {

@@ -3,6 +3,13 @@ import type { NetworkAddress, NetworkInterfaceInfo } from '@praxis-flow/server-s
 
 export type { NetworkAddress, NetworkInterfaceInfo };
 
+export function networkInterfaceId(iface: NetworkInterfaceInfo): string {
+  const mac = iface.addresses
+    .map((address) => address.mac?.trim().toLowerCase())
+    .find((value) => value && value !== '00:00:00:00:00:00');
+  return mac ? `mac:${mac}` : `name:${iface.name}`;
+}
+
 export function listNetworkInterfaces(): NetworkInterfaceInfo[] {
   const raw = os.networkInterfaces();
   const result: NetworkInterfaceInfo[] = [];

@@ -34,6 +34,7 @@ export const PROXY_RUNTIME_ENV_KEYS = [
   'PROXY_MODE',
   'PROXY_HTTP_PORT',
   'APP_BIND_ADDRESS',
+  'TRUST_PROXY_HEADERS',
 ] as const;
 
 export type ProxyConfig = {
@@ -224,6 +225,7 @@ export function buildProxyEnvUpdates(proxy: ProxyConfig, env?: EnvLike): Record<
       PROXY_MODE: proxy.mode,
       PROXY_HTTP_PORT: String(proxy.httpPort),
       APP_BIND_ADDRESS: PROXY_APP_BIND_ADDRESS,
+      TRUST_PROXY_HEADERS: 'true',
     };
   }
   if (proxy.enabled && proxy.mode === 'http') {
@@ -232,6 +234,7 @@ export function buildProxyEnvUpdates(proxy: ProxyConfig, env?: EnvLike): Record<
       PROXY_MODE: 'http',
       PROXY_HTTP_PORT: String(proxy.httpPort),
       APP_BIND_ADDRESS: PROXY_APP_BIND_ADDRESS,
+      TRUST_PROXY_HEADERS: 'true',
     };
   }
 
@@ -239,7 +242,8 @@ export function buildProxyEnvUpdates(proxy: ProxyConfig, env?: EnvLike): Record<
     readEnvValue(env, 'PROXY_ENABLED') !== undefined ||
     readEnvValue(env, 'PROXY_MODE') !== undefined ||
     readEnvValue(env, 'PROXY_HTTP_PORT') !== undefined ||
-    readEnvValue(env, 'APP_BIND_ADDRESS') !== undefined;
+    readEnvValue(env, 'APP_BIND_ADDRESS') !== undefined ||
+    readEnvValue(env, 'TRUST_PROXY_HEADERS') !== undefined;
 
   if (!hadProxyConfig) {
     return {};
@@ -250,6 +254,7 @@ export function buildProxyEnvUpdates(proxy: ProxyConfig, env?: EnvLike): Record<
     PROXY_MODE: 'off',
     PROXY_HTTP_PORT: String(proxy.httpPort || DEFAULT_PROXY_HTTP_PORT),
     APP_BIND_ADDRESS: resolveAppBindAddress(false),
+    TRUST_PROXY_HEADERS: 'false',
   };
 }
 

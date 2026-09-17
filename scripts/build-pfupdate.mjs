@@ -369,6 +369,30 @@ try {
     'utf8',
   );
 
+  const portalModule = await import(
+    pathToFileURL(path.join(root, 'packages/server-shared/dist/portal-proxy-contract.js')).href
+  );
+  // Read from the shipped image, also for --no-build; never pair stale images with workspace rules.
+  const imageContract = JSON.parse(
+    runCapture('docker', [
+      'run',
+      '--rm',
+      '--network',
+      'none',
+      '--entrypoint',
+      'node',
+      appImage,
+      '--input-type=module',
+      '-e',
+      "import { DEFAULT_PORTAL_PROXY_CONTRACT } from '@praxis-flow/server-shared'; process.stdout.write(JSON.stringify(DEFAULT_PORTAL_PROXY_CONTRACT));",
+    ]),
+  );
+  portalModule.parsePortalProxyContract(imageContract);
+  fs.writeFileSync(
+    path.join(stagingRoot, portalModule.PORTAL_PROXY_CONTRACT_FILE),
+    JSON.stringify(imageContract, null, 2) + '\n',
+  );
+
   const packagedPaths = pfupdate.PFUPDATE_ALLOWED_FILE_PATHS.filter(
     (relativePath) => !pfupdate.PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS.includes(relativePath),
   );

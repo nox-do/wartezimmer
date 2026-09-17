@@ -6,6 +6,7 @@ import { readTlsStatus } from './host-tls.js';
 import { resolveInstallHome } from './install-home.js';
 import {
   generateTlsCaddyfile,
+  readInstalledPortalContract,
   GENERATED_CADDYFILE_MARKER,
   resolveProxyTlsPaths,
   writeGeneratedTlsCaddyfile,
@@ -40,9 +41,12 @@ export function regenerateProxyConfig(
     throw new Error('Staff- oder Portal-Hostname fehlt in der bestehenden HTTPS-Konfiguration.');
   }
 
-  const generated = generateTlsCaddyfile(tls, env);
-  if (!generated.startsWith(GENERATED_CADDYFILE_MARKER) || !generated.includes(':444 {')) {
-    throw new Error('Der aktuelle Proxy-Vertrag enthält keinen Restricted-Listener auf :444.');
+  const generated = generateTlsCaddyfile(tls, env, readInstalledPortalContract(installHome));
+  if (
+    !generated.startsWith(GENERATED_CADDYFILE_MARKER) ||
+    generated.includes(':444 {') !== (env.get('SETUP_RESTRICTED_ENABLED') === 'true')
+  ) {
+    throw new Error('Der aktuelle Proxy-Vertrag passt nicht zum Restricted-Aktivierungszustand.');
   }
 
   const caddyfilePath = resolveProxyTlsPaths(installHome).caddyfile;

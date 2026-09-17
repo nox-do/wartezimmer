@@ -3,6 +3,7 @@
   import ConfirmDialog from './ConfirmDialog.svelte';
   import {
     restrictedActionErrorText,
+    reconcileRestrictedDraft,
     restrictedCandidateWarningText,
     restrictedDnsStatusText,
     restrictedInspectHeadline,
@@ -24,15 +25,18 @@
   let loading = $state(false);
   let loadError = $state<string | null>(null);
   let actionError = $state<string | null>(null);
-  let loaded = $state(false);
-  let selectedAddress = $state('');
+  let loadAttempted = $state(false);
+  let selectedCandidateKey = $state('');
   let warningsConfirmed = $state(false);
   let notice = $state<string | null>(null);
   let pendingAction = $state<'apply' | 'remove' | null>(null);
   let generation = 0;
 
+  const candidateKey = (address: string, interfaceId: string): string => `${interfaceId}\u0000${address}`;
   const selectedCandidate = $derived(
-    inspect?.candidates.find((candidate) => candidate.address === selectedAddress) ?? null,
+    inspect?.candidates.find(
+      (candidate) => candidateKey(candidate.address, candidate.interfaceId) === selectedCandidateKey,
+    ) ?? null,
   );
   const selectedWarning = $derived(
     selectedCandidate ? restrictedCandidateWarningText(selectedCandidate.warnings) : null,
@@ -46,7 +50,7 @@
   const selectedMatchesBinding = $derived(
     Boolean(
       inspect?.status.binding &&
-        inspect.status.binding.hostIp === selectedAddress &&
+        inspect.status.binding.hostIp === selectedCandidate?.address &&
         inspect.status.binding.interfaceId === selectedCandidate?.interfaceId,
     ),
   );
@@ -66,15 +70,10 @@
   });
 
   function acceptInspect(result: RestrictedNetworkInspectResult): void {
+    const draft = reconcileRestrictedDraft(inspect, result, selectedCandidateKey, warningsConfirmed);
     inspect = result;
-    const saved = result.status.binding?.hostIp;
-    if (saved && result.candidates.some((candidate) => candidate.address === saved)) {
-      selectedAddress = saved;
-      warningsConfirmed = result.status.binding?.warningsConfirmed ?? false;
-    } else if (!result.candidates.some((candidate) => candidate.address === selectedAddress)) {
-      selectedAddress = '';
-      warningsConfirmed = false;
-    }
+    selectedCandidateKey = draft.selectedKey;
+    warningsConfirmed = draft.confirmed;
   }
 
   function notifyMutation(): void {
@@ -91,11 +90,12 @@
       const result = await window.praxisManager.inspectRestrictedNetwork();
       if (current === generation) {
         acceptInspect(result);
-        loaded = true;
+        loadAttempted = true;
       }
     } catch (cause) {
       if (current === generation) {
         loadError = cause instanceof Error ? cause.message : String(cause);
+        loadAttempted = true;
       }
     } finally {
       if (current === generation) loading = false;
@@ -118,7 +118,7 @@
       });
       if (current === generation) {
         acceptInspect(result);
-        loaded = true;
+        loadAttempted = true;
         notice = result.dns.state === 'match'
           ? 'Netzwerkadresse ist vorbereitet. Der Patientenzugang kann jetzt aktiviert werden.'
           : result.dns.state === 'local-unresolved'
@@ -149,7 +149,7 @@
         : await window.praxisManager.removeRestrictedNetwork();
       if (current === generation) {
         acceptInspect(result);
-        loaded = true;
+        loadAttempted = true;
         notice = action === 'apply'
           ? 'Patientenzugang ist auf der gewählten Netzwerkadresse aktiv.'
           : 'Patientenzugang und Restricted-Binding wurden entfernt.';
@@ -169,8 +169,13 @@
   }
 
   $effect(() => {
-    if (active && !loaded && !loading) void refresh();
-    if (!active) generation += 1;
+    if (active && !loadAttempted && !loading) void refresh();
+    if (!active) {
+      generation += 1;
+      loading = false;
+      loadAttempted = false;
+      onMutatingChange?.(false);
+    }
   });
 </script>
 
@@ -183,6 +188,9 @@
   <p role="status">Restricted-Network-Status wird geprüft …</p>
 {:else if loadError && !inspect}
   <p class="error" role="alert">Restricted-Network-Status konnte nicht geladen werden: {loadError}</p>
+  <button type="button" class="btn-secondary" disabled={loading || peerMutating} onclick={() => void refresh()}>
+    Erneut prüfen
+  </button>
 {:else if inspect}
   {#if loadError}
     <p class="notice is-warn" role="alert">
@@ -211,17 +219,17 @@
   </p>
   {#if inspect.candidates.length}
     <div class="restricted-candidate-list" role="radiogroup" aria-label="Netzwerkadresse für Patientenportal">
-      {#each inspect.candidates as candidate (candidate.address)}
+      {#each inspect.candidates as candidate (candidateKey(candidate.address, candidate.interfaceId))}
         {@const warning = restrictedCandidateWarningText(candidate.warnings)}
         <label class="restricted-candidate-option" class:is-warn={Boolean(warning)}>
           <input
             type="radio"
             name="restricted-network-candidate"
-            value={candidate.address}
-            checked={selectedAddress === candidate.address}
+            value={candidateKey(candidate.address, candidate.interfaceId)}
+            checked={selectedCandidateKey === candidateKey(candidate.address, candidate.interfaceId)}
             disabled={loading || peerMutating || !inspect.capabilities.supported || inspect.status.phase === 'applied'}
             onchange={() => {
-              selectedAddress = candidate.address;
+              selectedCandidateKey = candidateKey(candidate.address, candidate.interfaceId);
               warningsConfirmed = false;
               notice = null;
             }}

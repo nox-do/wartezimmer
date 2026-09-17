@@ -1,7 +1,7 @@
 # Plan: Manager — eingeschränkter Netzwerkzugang
 
-Stand: 2026-09-16 · **TLS-Fundament, Proxy-Staff-Publishes, ausführbarer
-Restricted-Proxyvertrag sowie Manager-Apply/Remove umgesetzt; praktische Abnahme offen;
+Stand: 2026-09-17 · **TLS-Fundament, Proxy-Staff-Publishes, ausführbarer
+Restricted-Proxyvertrag sowie Manager-Apply/Remove umgesetzt; reale Zwei-NIC-Abnahme offen;
 Host-Firewall außerhalb des Produkts**
 
 Grundlage: [Eingeschränkter Netzwerkzugang für das Patientenportal](plan-portal-lan-isolation.md) ·
@@ -70,8 +70,8 @@ Verantwortungsgrenzen:
   Formulare autorisieren.
 - **TLS:** Installationsraum, Staff-/Portal-Hostname, Zertifikatsname,
   Zertifikatsmaterial und DNS-Voraussetzungen.
-- **Setup:** Restricted-Binding künftig persistieren, prüfen und transaktional
-  auf Compose und Caddy anwenden.
+- **Setup:** Restricted-Binding persistieren, prüfen und transaktional auf
+  Compose und Caddy anwenden oder entfernen.
 - **Manager-Renderer:** Setup-Zustand darstellen, IP-Auswahl als Draft halten
   und Aktionen auslösen.
 
@@ -300,10 +300,10 @@ Portal-A-Records zu dieser IP. Es kopiert weder Zertifikatszustand noch
 ACME-Credentials in seinen eigenen Status.
 
 Managed TLS stellt den Wildcard bereits bei der Grundeinrichtung aus. Beim
-Restricted-Binding kommt nur der Portal-A-Record hinzu. Custom TLS blockiert
-Apply, solange das PEM den Portal-Hostname nicht abdeckt. Der Restricted-
-Bereich zeigt diese Abhängigkeit, führt aber die TLS-Aktion über den bestehenden
-HTTPS-Vertrag aus.
+Restricted-Binding kommt nur der Portal-A-Record hinzu; es gibt weder ein
+zweites Zertifikat noch eine zweite ACME-Order. Restricted Portal ist in diesem
+Produktstand ausschließlich mit Managed-Wildcard-TLS zulässig. Custom TLS
+bleibt für Staff unterstützt, ist aber kein Portalmodus.
 
 Der Portal-A-Record kann nicht vor der Restricted-IP-Auswahl angelegt werden,
 weil sein Ziel erst dann feststeht. Inspect behandelt einen fehlenden oder
@@ -337,7 +337,7 @@ erst mit dem beobachtbaren Staff-Binding.
 
 Das F1-Gate gilt je Plattform. Die macOS-Umsetzung darf auf der nachgewiesenen
 Kombination fortgesetzt werden; Windows bleibt bis zu seinem eigenen Nachweis
-nicht freigegeben. Eine technische Windows-Sperre ist noch nicht umgesetzt.
+nicht freigegeben. Setup weist Restricted-Prepare auf Windows technisch ab.
 
 Einordnung vom 15.09.2026: Für die nachgewiesene macOS-Kombination ist kein
 erneuter grundlegender Plattform-PoC als Vorbereitung des Portal-Blocks nötig.
@@ -417,7 +417,7 @@ und sind entsprechend beschriftet. Keine neue persistierte Netzwerkidentität,
 kein Host-Firewall-Apply, keine Elevation. Details und Bestandsaufnahme:
 [`reviews/manager-network-ux-2026-09-14.md`](reviews/manager-network-ux-2026-09-14.md).
 
-### Schnitt 2 — Setup vertical slice (Restricted, offen)
+### Schnitt 2 — Setup vertical slice (Restricted, umgesetzt; Praxisabnahme offen)
 
 - [x] DTOs, günstige `HostStatus`-Zusammenfassung und read-only
       `inspectRestrictedNetwork()`-Descriptor;
@@ -432,11 +432,12 @@ kein Host-Firewall-Apply, keine Elevation. Details und Bestandsaufnahme:
       Methoden-/Pfadvertrag `PORTAL_SURFACE_ROUTES` als generierte
       Proxy-Positivliste vorbereiten;
 - [x] separate Dev-/Delivery-Overlays für
-      `<restricted-ip>:443 → proxy:444` ausliefern, ohne sie automatisch zu wählen;
+      `<restricted-ip>:443 → proxy:444` ausliefern und nur bei aktivem
+      Restricted-Marker automatisch wählen;
 - [x] Compose/Caddy-Transaktion und Rollback;
 - [x] Fail-closed bei fehlender Restricted-IP.
 
-### Schnitt 3 — Manager (Restricted, offen)
+### Schnitt 3 — Manager (Restricted, umgesetzt; UX-Ergänzungen offen)
 
 - [x] read-only Bereich im Netzwerk-Tab mit Status, Kandidaten, Prüfungen und
       klarer Praxis-IT-Verantwortungsgrenze;

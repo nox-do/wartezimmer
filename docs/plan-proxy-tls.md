@@ -73,7 +73,8 @@ Harte Grenzen im heutigen Code (P2a):
 - `proxy/Caddyfile` ist `:80 { reverse_proxy app:8080 }` und wird bei Update nicht
   überschrieben
 - Delivery pinnt neue Pakete auf `praxis-flow-proxy:2.11.4-acmedns`; Legacy `caddy:2.11.4` bleibt gültig
-- `TRUST_PROXY_HEADERS` existiert, steht nicht in Compose
+- `TRUST_PROXY_HEADERS` wird im Proxybetrieb aktiviert und ohne Proxy
+  deaktiviert; die App vertraut dann genau einem Caddy-Hop
 - `.pfbackup` enthält Settings und `.env`, keinen Caddy-/ACME-State
 - Compose hängt das Overlay nur bei `PROXY_ENABLED=true` und `PROXY_MODE=http`
 - `POST /host/network` darf einen aktiven TLS-Modus nicht wieder auf HTTP setzen

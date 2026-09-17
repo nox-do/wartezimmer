@@ -104,6 +104,30 @@ test('validateStaffBindingEnv fails closed for an active non-local restricted ad
   assert.match(validateStaffBindingEnv(env, interfaces) || '', /Restricted-Bindung gesperrt/);
 });
 
+test('validateStaffBindingEnv requires the active restricted address on its persisted interface', () => {
+  const twoInterfaces = [
+    ...interfaces,
+    {
+      name: 'en0',
+      addresses: [{ family: 'IPv4' as const, address: '192.168.1.10', internal: false }],
+    },
+  ];
+  const env = new Map([
+    ['PROXY_ENABLED', 'true'],
+    ['SETUP_LAN_APP_IP', '192.168.1.20'],
+    ['APP_BIND_ADDRESS', '127.0.0.1'],
+    ['SETUP_RESTRICTED_ENABLED', 'true'],
+    ['SETUP_RESTRICTED_APP_IP', '192.168.1.20'],
+    ['SETUP_RESTRICTED_INTERFACE_ID', 'name:en7'],
+  ]);
+  assert.match(validateStaffBindingEnv(env, twoInterfaces) || '', /dürfen nicht identisch/);
+
+  env.set('SETUP_RESTRICTED_APP_IP', '192.168.1.10');
+  assert.match(validateStaffBindingEnv(env, twoInterfaces) || '', /gespeicherten Interface/);
+  env.set('SETUP_RESTRICTED_INTERFACE_ID', 'name:en0');
+  assert.equal(validateStaffBindingEnv(env, twoInterfaces), null);
+});
+
 test('resolveComposeFiles selects base file by delivery flag', () => {
   assert.deepEqual(
     resolveComposeFiles({

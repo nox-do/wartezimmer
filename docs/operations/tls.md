@@ -1,6 +1,6 @@
 # LAN-TLS (Produkt)
 
-Stand: 2026-09-16 · §1–10 ausgearbeitet (Ops-Ist LAN-TLS)
+Stand: 2026-09-17 · §1–10 ausgearbeitet (Ops-Ist LAN-TLS + Restricted Portal)
 
 **Scope:** Vertrauenswürdiges HTTPS im Praxis-LAN — Modell, Aktivierung, Betrieb, Grenzen.  
 **Ist:** Manager-Wizard (Schritt HTTPS) + Netzwerk-Tab; Setup-API `/api/setup/host/tls/*`; Proxy-Service mit Custom-Caddy-Image.
@@ -70,12 +70,12 @@ Warum HTTPS zusätzlich zur Vertraulichkeit: HTTP/2 über TLS umgeht Browser-Lim
 
 ## 2. Rollen & Verantwortlichkeiten
 
-| Rolle                                | Tut                                                                                                                                                         | Tut nicht                                                                           |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **Praxis / Praxis-IT**               | feste IPv4 oder DHCP-Reservierung; Rebind-Ausnahme; Mail an Betreiber (managed) bzw. A-Record + PEM (custom); nach Cutover Geräte-URLs/`CANONICAL_BASE_URL` | DNS-Zone des Betreibers pflegen; ACME-Credentials oder Private Keys in der UI sehen |
-| **Produktbetreiber**                 | Zone `lan.notaus.de` (heute); Staff-A-Record + Wildcard-Challenge-CNAME nach Mail; ACME-DNS-Infrastruktur                                                   | Portal-A-Record vor Restricted-Binding; Host vor Ort administrieren                 |
-| **Manager / Setup**                  | `prepare` (ID, Korrelationswert, Raum/Staff/Portal/Wildcard); Lease-Bestätigung; Mail-/PEM-Texte; `verify-dns`, Zertifikat, Cutover, Repair/Renew/Reset     | DNS schreiben; Portal-Listener vor Restricted-Binding öffnen                        |
-| **Client (Terminal/TV/MFA/Browser)** | normalen DNS + HTTPS zum Praxisserver im LAN                                                                                                                | Zertifikate installieren; Hosts-Datei im Happy Path                                 |
+| Rolle                                | Tut                                                                                                                                                                                        | Tut nicht                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| **Praxis / Praxis-IT**               | feste IPv4 oder DHCP-Reservierung; Rebind-Ausnahme; Mail an Betreiber (managed) bzw. A-Record + PEM (custom); nach Cutover Geräte-URLs/`CANONICAL_BASE_URL`                                | DNS-Zone des Betreibers pflegen; ACME-Credentials oder Private Keys in der UI sehen |
+| **Produktbetreiber**                 | Zone `lan.notaus.de` (heute); Staff-A-Record + Wildcard-Challenge-CNAME nach Mail; ACME-DNS-Infrastruktur                                                                                  | Portal-A-Record vor Restricted-Binding; Host vor Ort administrieren                 |
+| **Manager / Setup**                  | `prepare` (ID, Korrelationswert, Raum/Staff/Portal/Wildcard); Lease-Bestätigung; Mail-/PEM-Texte; `verify-dns`, Zertifikat, Cutover, Repair/Renew/Reset; Restricted-IP prüfen und anwenden | DNS schreiben; Host-Firewall, Routing oder Netztrennung verwalten                   |
+| **Client (Terminal/TV/MFA/Browser)** | normalen DNS + HTTPS zum Praxisserver im LAN                                                                                                                                               | Zertifikate installieren; Hosts-Datei im Happy Path                                 |
 
 **Happy Path (managed):** HTTP-Proxy **persistiert** (§3) → Installationsraum wählen → IPv4 bestätigen → Mail mit Staff-A-Record und Wildcard-CNAME an `cert@notaus.de` → Assistent geht mit **HTTP** weiter → unter **Netzwerk** warten/`verify-dns` → Wildcard-Zertifikat → Cutover auf `https://staff.<raum>`.
 **Custom:** PEM stagen + A-Record bei der eigenen Domain → `verify-dns` (A) → Checks → Cutover (`tls-custom`).
@@ -273,17 +273,19 @@ Ein `proxy`-Service, gestapelte Compose-Dateien. Setup wählt Overlays über `.e
 | Lab (nicht Produkt) | `docker-compose.tls-lab.yml` + `docker-compose.tls-lab-proxy.yml` | —                                              |
 
 **Regel:** TLS-Overlay nur **nach** Proxy-Overlay. Lab nur wenn TLS-Overlay an **und** `TLS_ACME_DIRECTORY=pebble` **und** Dev-Compose (nie Delivery). Gateway bleibt orthogonal.
-Das Restricted-Overlay ist bereits als ausführbarer Vertrag vorhanden, wird
-vom Setup aber noch nicht automatisch ausgewählt. Es darf erst nach der späteren
-Restricted-IP-Validierung und dem transaktionalen Apply ergänzt werden.
+Das Restricted-Overlay wird ausschließlich bei aktivem
+`SETUP_RESTRICTED_ENABLED=true` ausgewählt. Dieser Marker wird erst durch das
+transaktionale Restricted-Apply nach IP-, Interface-, TLS- und DNS-Prüfung
+gesetzt; ein nur vorbereiteter Entwurf veröffentlicht keinen Listener.
 
 ### 6.2 Wann welches Overlay
 
-| Bedingung (`.env`)                                       | Overlay                  |
-| -------------------------------------------------------- | ------------------------ |
-| `PROXY_ENABLED` aus / Mode `off`                         | nur Base                 |
-| Proxy an + Mode `http`/`tls-*`                           | + `proxy`                |
-| Mode `tls-managed`/`tls-custom` **oder** `TLS_STATE≠off` | zusätzlich + `proxy-tls` |
+| Bedingung (`.env`)                                       | Overlay                         |
+| -------------------------------------------------------- | ------------------------------- |
+| `PROXY_ENABLED` aus / Mode `off`                         | nur Base                        |
+| Proxy an + Mode `http`/`tls-*`                           | + `proxy`                       |
+| Mode `tls-managed`/`tls-custom` **oder** `TLS_STATE≠off` | zusätzlich + `proxy-tls`        |
+| Restricted aktiv (`SETUP_RESTRICTED_ENABLED=true`)       | zusätzlich + `proxy-restricted` |
 
 Wichtig: `proxy-tls` kommt schon **ab `prepare`** (`TLS_STATE` ≠ `off`), nicht erst beim Cutover. Bis Cutover bleibt `PROXY_MODE` typisch `http`; Port 443 und TLS-Mounts sind dennoch dran. HTTP-only-Betrieb (nie prepared) lädt `proxy-tls` **nicht**.
 
@@ -313,7 +315,7 @@ Pfade: `resolveProxyTlsPaths` → `{installHome}/state/tls/`. **Nicht** in Git, 
 
 | Pfad                                           | Inhalt                                                                                                                                                   |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Caddyfile`                                    | generiert (`writeGeneratedTlsCaddyfile`, Marker `# PRAXIS-FLOW-GENERATED LAN-TLS v3`) — ersetzt den Stock-`proxy/Caddyfile`-Mount, sobald Overlay an ist |
+| `Caddyfile`                                    | generiert (`writeGeneratedTlsCaddyfile`, Marker `# PRAXIS-FLOW-GENERATED LAN-TLS v6`) — ersetzt den Stock-`proxy/Caddyfile`-Mount, sobald Overlay an ist |
 | `caddy-data/`, `caddy-config/`                 | Caddy ACME/Storage (`/data`, `/config`)                                                                                                                  |
 | `acme-dns.json`                                | ACME-DNS-Credentials (managed); Custom: leeres `{}` damit Docker die Datei nicht als Dir anlegt                                                          |
 | `certs/fullchain.pem`, `certs/private-key.pem` | Custom-PEM                                                                                                                                               |
@@ -330,11 +332,12 @@ IP-Zugang auf `:80` zum Staff-FQDN umgeleitet; die App läuft regulär über 443
 Managed ist der Caddy-Site-Name ausschließlich `*.<raum>`, damit keine zweite
 Exact-Name-Order entsteht. Ein expliziter Host-Matcher leitet nur
 `staff.<raum>` zur App; der Fallback `abort` hält `portal.<raum>` und unbekannte
-Wildcard-Namen auf beiden Ports geschlossen. Custom/Legacy bleibt ein
-Exact-FQDN.
+Wildcard-Namen geschlossen. Explizite gemeinsame Host-/SNI-Matcher und abschließende Catch-all-
+Server weisen außerdem unbekannte Hosts/SNI außerhalb des Wildcard-Matchers ab.
+Custom/Legacy bleibt ein Exact-FQDN mit derselben Host-/SNI-Grenze.
 
-Der Generator enthält zusätzlich den noch nicht hostseitig veröffentlichten
-Restricted-Server auf dem internen Port 444. Er verwendet bei Managed TLS
+Der Generator enthält zusätzlich den Restricted-Server auf dem internen Port 444. Bei aktivem Restricted-Binding veröffentlicht das separate Overlay ihn als
+`<restricted-ip>:443 → proxy:444`. Er verwendet bei Managed TLS
 denselben Wildcard-Site-Namen und dieselbe TLS-Automations-Policy. Freigegeben
 sind dort nur Host **und** TLS-SNI `portal.<raum>`, die fünf Portal-SPA-Einstiege
 `/portal`, `/portal/`, `/portal/menu`, `/portal/upload`, `/portal/anamnese`, die
@@ -345,9 +348,13 @@ abgebrochen. `PORTAL_INTERNAL_ROUTES` wird nicht erzeugt. Der Staff-Server prüf
 ebenfalls Host und TLS-SNI gemeinsam; die interne Staff-Nutzung von `/portal`
 bleibt dadurch unverändert.
 
-Dieser interne Listener allein ist noch kein eingerichteter Restricted-Zugang:
-Es gibt weiterhin keinen automatisch ausgewählten Restricted-Publish, keinen
-Portal-A-Record und keinen Apply-/Remove-Zustand.
+Restricted Portal ist nur mit Managed-Wildcard-TLS zulässig. Der Manager prüft
+den extern verwalteten Portal-A-Record und die lokale Auflösung, legt aber
+keinen DNS-Eintrag an. Apply regeneriert und validiert das Caddyfile, setzt den
+Aktivierungsmarker, startet den Proxy neu und prüft Publishes sowie die
+Listenermatrix; Fehler führen zum Rollback. Remove entfernt den Sollzustand
+auch bei gestopptem Stack. Custom TLS bleibt für Staff unterstützt, ist aber
+kein Portalmodus.
 
 TLS-Status-Felder und Mode liegen parallel in `.env` (`TLS_*`, siehe §5). Overlay-Auswahl liest `TLS_STATE` / `PROXY_MODE`; Secrets liegen auf Disk unter `state/tls/`, nicht in der Status-API.
 
@@ -374,7 +381,10 @@ Nach erfolgreichem `tls/apply` ist HTTPS die Geräte-Identität. Fläche: **Netz
 | Geräte-/Portal-URLs HTTP      | Staff-FQDN (Portal-Vorschau weiter intern unter `/portal`)                  |
 | App im LAN ggf. `:8080`       | App nur Loopback hinter Proxy — Geräte nicht auf 8080                       |
 
-`TRUST_PROXY_HEADERS=true` nach Cutover. Sessions und Pairing sind ungültig (host-only Cookies, `SameSite=Strict`) — Terminal/TV/MFA **neu koppeln**, Browser-URLs aktualisieren.
+`TRUST_PROXY_HEADERS=true` gilt im Proxybetrieb bereits vor dem Cutover; ohne
+Proxy wird es explizit deaktiviert. Fastify vertraut genau einem Caddy-Hop.
+Sessions und Pairing sind nach dem Cutover ungültig (host-only Cookies,
+`SameSite=Strict`) — Terminal/TV/MFA **neu koppeln**, Browser-URLs aktualisieren.
 
 Karte im Manager: Hostname, Installations-ID, Aussteller, Ablauf — **kein** Token. Warnung gegen Portweiterleitung 80/443 bleibt sinnvoll, solange das Zertifikat existiert.
 
@@ -489,3 +499,32 @@ Gateway/Captive/Internet-Portal sind **andere** Themen → [`integrations.md`](i
 | [`../plan-backup-v2.md`](../plan-backup-v2.md)                                                 | Backup-Format v2 — **nicht** hier fortschreiben                      |
 
 Wenn Ist und Plan kollidieren: **Code + dieses Dokument**. Pläne nach und nach auf „übernommen / archivieren“ setzen, nicht parallel als zweite Ops-Wahrheit pflegen.
+
+### Restricted-Vertrag ab Generator v6
+
+Im konfigurierten TLS-Modus akzeptiert Port 80 nur den exakten Staff-Host;
+sonstige Hosts werden abgebrochen, auch vor dem Cutover. Ohne TLS-Konfiguration
+bleibt der HTTP-Einrichtungsbetrieb erhalten. Der TLS-Healthcheck verwendet ein
+zusätzliches internes Zertifikat für 127.0.0.1. Die Zusage eines einzelnen
+Zertifikats bezieht sich auf das öffentliche Wildcard-Zertifikat: Es gibt keine
+zusätzliche öffentliche ACME-Order und kein separates Portalzertifikat.
+
+Der interne Listener 444 wird nur bei SETUP_RESTRICTED_ENABLED=true generiert.
+Entfernen regeneriert und validiert Caddy ohne diesen Listener; der Staff-Listener
+bedient /portal weiterhin. Bei gestopptem Stack erfolgt die Validierung in einem
+kurzlebigen Compose-Container ohne Service-Portfreigaben. Das Proxy-Image muss
+hierfür verfügbar sein. Bei einem Validierungsfehler bleibt die alte Konfiguration
+erhalten; Runtime-Fehler durchlaufen den gemeinsamen Rollback.
+
+Der Audit trennt Transportabweisung von HTTP-Antworten und prüft Host und SNI
+unabhängig einschließlich fehlendem SNI. Für Negativproben darf der TLS-Client
+unbekannte Zertifikatsnamen annehmen, damit eine clientseitige Zertifikatsablehnung
+nicht mit einer serverseitigen Sperre verwechselt wird. Positivproben prüfen
+weiterhin Zertifikatsidentität und Vertrauen. Timeout/Verbindungsverweigerung
+beweisen keine funktionierende Zugangsgrenze. Verbotene Pfade und Methoden müssen
+404 mit dem Proxy-Marker X-Praxis-Flow-Rejection: portal-policy liefern; auf allen
+Portal-Upstream-Antworten wird dieser Header entfernt. Zulässige schreibende
+API-Aufrufe werden im Runtime-Audit nicht ausgeführt.
+
+NIC-Drafts, das persistente Apply-/Remove-Journal und der versionierte Vertrag aus
+Updatepaketen sind im [Restricted-Lifecycle](restricted-lifecycle.md) beschrieben.

@@ -544,3 +544,119 @@ test('applyPfupdate rejects a missing local Staff address before stopping the st
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+for (const failure of [null, 'validation', 'audit'] as const)
+  test(`TLS update installs target portal policy and restores it on ${failure ?? 'success'}`, async () => {
+    const { DEFAULT_PORTAL_PROXY_CONTRACT } = await import('@praxis-flow/server-shared');
+    const { readInstalledPortalContract, writeGeneratedTlsCaddyfile } =
+      await import('./proxy-tls.js');
+    const { readTlsStatus } = await import('./host-tls.js');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-policy-'));
+    try {
+      const { envPath, appDataDir, backupPath } = seedInstallHome(dir);
+      fs.appendFileSync(
+        envPath,
+        '\nPROXY_ENABLED=true\nPROXY_MODE=tls-managed\nAPP_BIND_ADDRESS=127.0.0.1\nSETUP_LAN_APP_IP=192.0.2.10\nTLS_MODE=managed\nTLS_STATE=active\nTLS_CUTOVER_APPLIED=true\nTLS_HOSTNAME=staff.installation.example\nTLS_STAFF_HOSTNAME=staff.installation.example\nTLS_PORTAL_HOSTNAME=portal.installation.example\nTLS_WILDCARD_CERTIFICATE_NAME=*.installation.example\nSETUP_RESTRICTED_ENABLED=true\nSETUP_RESTRICTED_APP_IP=192.0.2.20\nSETUP_RESTRICTED_INTERFACE_ID=name:patient\n',
+      );
+      const tlsDir = path.join(dir, 'state/tls');
+      fs.mkdirSync(tlsDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(tlsDir, 'Caddyfile'),
+        '# PRAXIS-FLOW-GENERATED LAN-TLS v5\nold policy\n',
+      );
+      const target = structuredClone(DEFAULT_PORTAL_PROXY_CONTRACT);
+      const former = target.api.find((route) => route.path.endsWith('/config'))!;
+      target.api = [
+        ...target.api.filter((route) => route !== former),
+        { method: 'GET', path: '/api/v1/portal/new-release-route' },
+      ];
+      target.internal = [...target.internal, former];
+      const archivePath = path.join(dir, 'update.pfupdate');
+      buildTestPfupdateArchive(archivePath, { portalContract: target });
+      let validations = 0;
+      let audits = 0;
+      const result = await applyPfupdate(
+        { archivePath, managerVersion: '0.5.0', settingsFormatVersion: 1 },
+        testCtx(dir),
+        {
+          ...mockDeps(appDataDir, backupPath),
+          networkInterfaces: () => [
+            {
+              name: 'staff',
+              addresses: [{ address: '192.0.2.10', family: 'IPv4', internal: false }],
+            },
+            {
+              name: 'patient',
+              addresses: [{ address: '192.0.2.20', family: 'IPv4', internal: false }],
+            },
+          ],
+          validateProxyContract: async (options) => {
+            validations++;
+            assert.equal(options.oneOff, true);
+            const config = fs.readFileSync(path.join(tlsDir, 'Caddyfile'), 'utf8');
+            assert.match(config, /new-release-route/);
+            assert.doesNotMatch(config, /path \/api\/v1\/portal\/config/);
+            assert.match(config, /PORTAL-CONTRACT v1 sha256:[a-f0-9]{64}/);
+            return { ok: failure !== 'validation', log: 'policy validation' };
+          },
+          auditProxyContract: async (input) => {
+            audits++;
+            assert.deepEqual(input.contract, target);
+            return failure === 'audit' ? 'policy not enforced' : null;
+          },
+          composeStatus: async () => ({
+            running: true,
+            services: [
+              {
+                name: 'app',
+                service: 'app',
+                state: 'running',
+                health: 'healthy',
+                publishedBindings: [
+                  { hostIp: '127.0.0.1', publishedPort: 8080, targetPort: 8080, protocol: 'tcp' },
+                  { hostIp: '127.0.0.1', publishedPort: 8082, targetPort: 8082, protocol: 'tcp' },
+                ],
+              },
+              {
+                name: 'sandbox',
+                service: 'sandbox',
+                state: 'running',
+                health: 'healthy',
+                publishedBindings: [],
+              },
+              {
+                name: 'proxy',
+                service: 'proxy',
+                state: 'running',
+                health: 'healthy',
+                publishedBindings: [
+                  { hostIp: '192.0.2.10', publishedPort: 80, targetPort: 80, protocol: 'tcp' },
+                  { hostIp: '192.0.2.10', publishedPort: 443, targetPort: 443, protocol: 'tcp' },
+                  { hostIp: '192.0.2.20', publishedPort: 443, targetPort: 444, protocol: 'tcp' },
+                ],
+              },
+            ],
+          }),
+        },
+      );
+      assert.equal(result.ok, failure === null, JSON.stringify(result));
+      assert.equal(validations, 1);
+      assert.equal(audits, failure === 'validation' ? 0 : 1);
+      if (failure) {
+        assert.equal(
+          fs.readFileSync(path.join(tlsDir, 'Caddyfile'), 'utf8'),
+          '# PRAXIS-FLOW-GENERATED LAN-TLS v5\nold policy\n',
+        );
+        assert.equal(fs.existsSync(path.join(tlsDir, 'portal-contract.json')), false);
+        assert.equal(readEnvMap(envPath).get('SETUP_RESTRICTED_ENABLED'), 'true');
+      } else {
+        assert.deepEqual(readInstalledPortalContract(dir), target);
+        // Later manager operations retain the target release policy.
+        const env = readEnvMap(envPath);
+        writeGeneratedTlsCaddyfile(dir, readTlsStatus(env), env);
+        assert.match(fs.readFileSync(path.join(tlsDir, 'Caddyfile'), 'utf8'), /new-release-route/);
+      }
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });

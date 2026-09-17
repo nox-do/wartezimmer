@@ -101,6 +101,30 @@ test('setup API user errors hide listener and rollback internals', () => {
   assert.doesNotMatch(message, /socket|Container|Rollback|praxis-flow-proxy/i);
 });
 
+test('setup API user errors preserve an incomplete rollback as a safety warning', () => {
+  const message = setupApiUserErrorMessage(
+    new Error(
+      'Setup-API /api/setup/host/restricted-network/apply: docker compose failed\nRollback unvollständig; Praxis Flow bis zur Prüfung nicht als sicher gebunden behandeln.\nRollback: Container output',
+    ),
+    { path: '/api/setup/host/restricted-network/apply' },
+  );
+  assert.match(message, /nicht vollständig wiederhergestellt/);
+  assert.match(message, /nicht als sicher gebunden/);
+  assert.doesNotMatch(message, /docker|Container|Rollback:/i);
+});
+
+test('incomplete rollback takes precedence over the original listener failure', () => {
+  const message = setupApiUserErrorMessage(
+    new Error(
+      'Setup-API /api/setup/host/restricted-network/apply: Listener-Prüfung fehlgeschlagen: Portal nicht erreichbar\nRollback unvollständig; Praxis Flow bis zur Prüfung nicht als sicher gebunden behandeln.\nRollback: Container output',
+    ),
+    { path: '/api/setup/host/restricted-network/apply' },
+  );
+  assert.match(message, /nicht vollständig wiederhergestellt/);
+  assert.match(message, /nicht als sicher gebunden/);
+  assert.doesNotMatch(message, /Portal nicht erreichbar|Container|Rollback:/i);
+});
+
 test('setup API user errors replace technical-only failures with an action fallback', () => {
   assert.equal(
     setupApiUserErrorMessage(new Error('connect ECONNREFUSED 127.0.0.1:9190'), {

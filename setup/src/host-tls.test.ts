@@ -439,11 +439,10 @@ test('generated Caddyfile keeps HTTP app before cutover and uses ACME-DNS withou
     wildcardCertificateName: '*.7fk3m2.lan.notaus.de',
     installationId: '7fk3m2q9',
   };
-  const caddyfile = generateTlsCaddyfile(status, new Map());
+  const caddyfile = generateTlsCaddyfile(status, new Map([['SETUP_RESTRICTED_ENABLED', 'true']]));
   assert.match(caddyfile, new RegExp(GENERATED_CADDYFILE_MARKER));
   assert.match(caddyfile, /:80 \{\n\t@staff host staff\.7fk3m2\.lan\.notaus\.de/);
-  assert.match(caddyfile, /@installationRoom host \*\.7fk3m2\.lan\.notaus\.de/);
-  assert.match(caddyfile, /handle @installationRoom \{\n\t\tabort/);
+  assert.match(caddyfile, /handle \{\n\t\tabort/);
   assert.match(caddyfile, /handle @staff \{\n\t\treverse_proxy app:8080/);
   assert.match(caddyfile, /dns acmedns \/run\/secrets\/acme-dns\.json/);
   assert.match(caddyfile, /disable_http_challenge/);
@@ -470,7 +469,7 @@ test('generated managed Caddyfile derives a strict restricted listener from the 
     installationId: '7fk3m2q9',
     cutoverApplied: true,
   };
-  const caddyfile = generateTlsCaddyfile(status, new Map());
+  const caddyfile = generateTlsCaddyfile(status, new Map([['SETUP_RESTRICTED_ENABLED', 'true']]));
 
   assert.match(caddyfile, /https:\/\/\*\.7fk3m2\.lan\.notaus\.de:444 \{/);
   assert.doesNotMatch(caddyfile, /https:\/\/portal\.7fk3m2\.lan\.notaus\.de:444/);
@@ -509,7 +508,10 @@ test('generated managed Caddyfile derives a strict restricted listener from the 
   }
   assert.doesNotMatch(caddyfile, /path \/api\/\*/);
   assert.doesNotMatch(caddyfile, /path \/\*/);
-  assert.match(caddyfile, /handle \{\n\t\t\trespond 404\n\t\t\}/);
+  assert.match(caddyfile, /header X-Praxis-Flow-Rejection portal-policy\n\t\t\trespond 404/);
+  assert.match(caddyfile, /servers \{\n\t\tprotocols h1 h2/);
+  assert.match(caddyfile, /:443 \{\n\tabort\n\}/);
+  assert.match(caddyfile, /https:\/\/:444 \{\n\tabort\n\}/);
 });
 
 test('portal parameter templates become anchored single-segment Caddy regexps', () => {
@@ -536,6 +538,28 @@ test('generated managed and custom Caddyfiles expose the dedicated internal TLS 
       /https:\/\/127\.0\.0\.1 \{\n\ttls internal\n\trespond \/__praxis-flow\/health "ok" 200\n\}/,
     );
   }
+});
+
+test('generated custom Caddyfile requires matching Staff host and SNI', () => {
+  const caddyfile = generateTlsCaddyfile(
+    {
+      ...emptyTlsStatus(),
+      state: 'active',
+      mode: 'custom',
+      hostname: 'flow.praxis.example',
+      staffHostname: 'flow.praxis.example',
+      portalHostname: null,
+      wildcardCertificateName: null,
+      cutoverApplied: true,
+    },
+    new Map(),
+  );
+  assert.match(caddyfile, /host flow\.praxis\.example/);
+  assert.match(
+    caddyfile,
+    /expression \{http\.request\.tls\.server_name\} == "flow\.praxis\.example"/,
+  );
+  assert.match(caddyfile, /handle \{\n\t\tabort/);
 });
 
 test('generated Caddyfile uses CoreDNS resolvers only in pebble directory mode', () => {

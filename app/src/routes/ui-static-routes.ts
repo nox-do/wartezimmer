@@ -4,10 +4,21 @@ import { fileURLToPath } from 'node:url';
 import fastifyStatic from '@fastify/static';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
-const SPA_EXCLUDED_PREFIXES = ['/api/', '/internal/'];
+const SPA_EXCLUDED_PREFIXES = ['/api/', '/internal/', '/_app/'];
+const SPA_EXCLUDED_PATHS = new Set(['/_app', '/favicon.ico', '/favicon.svg']);
 
 function shouldServeSpa(urlPath: string): boolean {
-  return !SPA_EXCLUDED_PREFIXES.some((prefix) => urlPath.startsWith(prefix));
+  // Static misses must never become a successful HTML bootstrap response,
+  // including URL-encoded asset paths forwarded by the restricted listener.
+  try {
+    const decodedPath = decodeURIComponent(urlPath);
+    return (
+      !SPA_EXCLUDED_PATHS.has(decodedPath) &&
+      !SPA_EXCLUDED_PREFIXES.some((prefix) => decodedPath.startsWith(prefix))
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function resolveUiStaticRoot(): string | null {

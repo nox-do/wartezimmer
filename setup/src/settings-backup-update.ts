@@ -1,3 +1,11 @@
+import {
+  releasePortalContract,
+  installReleaseProxyContract,
+  auditReleaseProxyContract,
+} from './release-proxy-contract.js';
+import { composeExec, recoverRestrictedOperation } from './docker.js';
+import { auditRestrictedListeners } from './restricted-listener-probe.js';
+import type { PortalProxyContract } from '@praxis-flow/server-shared';
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -75,6 +83,7 @@ export const UPDATE_PHASES = {
   stopStack: 'stop_stack',
   backupRollbackState: 'backup_rollback_state',
   installTemplates: 'install_templates',
+  prepareProxyContract: 'prepare_proxy_contract',
   writeReleaseState: 'write_release_state',
   moveDatabase: 'move_database',
   startTargetApp: 'start_target_app',
@@ -97,6 +106,9 @@ type UpdateRollbackArtifacts = MaintenanceRollbackArtifacts & {
 export type { PfupdateApplyInput };
 
 export type PfupdateApplyDeps = {
+  networkInterfaces?: typeof listNetworkInterfaces;
+  validateProxyContract?: typeof composeExec;
+  auditProxyContract?: typeof auditRestrictedListeners;
   extractArchive?: typeof extractPfupdateArchive;
   validatePackage?: typeof validateExtractedPfupdate;
   createSettingsBackup?: typeof createPfbackup;
@@ -134,6 +146,9 @@ type PrepareRuntime = {
 };
 
 type CutoverRuntime = {
+  networkInterfaces: typeof listNetworkInterfaces;
+  validateProxyContract: typeof composeExec;
+  auditProxyContract: typeof auditRestrictedListeners;
   stopStack: MaintenanceStackRuntime['stopStack'];
   startAppStack: NonNullable<PfupdateApplyDeps['startAppStack']>;
   startFullStack: MaintenanceStackRuntime['startFullStack'];
@@ -145,6 +160,7 @@ type CutoverRuntime = {
 };
 
 type PreparedUpdate = {
+  portalContract: PortalProxyContract | null;
   stagingDir: string;
   manifest: PfupdateManifestV1;
   outerArchiveSha256: string;
@@ -217,6 +233,9 @@ function resolvePrepareRuntime(deps: PfupdateApplyDeps): PrepareRuntime {
 
 function resolveCutoverRuntime(deps: PfupdateApplyDeps): CutoverRuntime {
   return {
+    networkInterfaces: deps.networkInterfaces ?? listNetworkInterfaces,
+    validateProxyContract: deps.validateProxyContract ?? composeExec,
+    auditProxyContract: deps.auditProxyContract ?? auditRestrictedListeners,
     stopStack: deps.stopStack ?? composeStop,
     startAppStack:
       deps.startAppStack ??
@@ -552,6 +571,7 @@ async function prepareUpdate(input: {
       settingsFormatVersion,
     });
     const manifest = requireCompatibleManifest(validation);
+    const portalContract = releasePortalContract(input.stagingDir, manifest, readEnvMap(envPath));
 
     phase = UPDATE_PHASES.createSettingsBackup;
     const backup = await input.runtime.createSettingsBackup(
@@ -597,6 +617,7 @@ async function prepareUpdate(input: {
 
     const envMap = readEnvMap(envPath);
     return {
+      portalContract,
       stagingDir: input.stagingDir,
       manifest,
       outerArchiveSha256,
@@ -677,6 +698,20 @@ async function commitPreparedUpdate(input: {
     ]);
   }
 
+  try {
+    await installReleaseProxyContract(
+      input.ctx.home,
+      input.prepared.portalContract,
+      envAfterWrite,
+      resolveMaintenanceComposeRunOptions(input.ctx, envAfterWrite),
+      input.runtime.validateProxyContract,
+    );
+  } catch (error) {
+    throw new UpdatePhaseError(UPDATE_PHASES.prepareProxyContract, [
+      errorMessage(error, 'Release-Proxyvertrag konnte nicht vorbereitet werden.'),
+    ]);
+  }
+
   const importPayload = {
     ...input.prepared.settings,
     env: mergeConfigRestoreEnv(
@@ -730,6 +765,17 @@ async function commitPreparedUpdate(input: {
       `Update-Runtime-Binding ungültig: ${runtimeBindingError}`,
     ]);
   }
+  try {
+    await auditReleaseProxyContract(
+      envAfterWrite,
+      input.prepared.portalContract,
+      input.runtime.auditProxyContract,
+    );
+  } catch (error) {
+    throw new UpdatePhaseError(UPDATE_PHASES.healthCheck, [
+      errorMessage(error, 'Release-Listeneraudit fehlgeschlagen.'),
+    ]);
+  }
   return cutoverResult.compose;
 }
 
@@ -755,7 +801,7 @@ async function applyPreparedUpdate(input: {
   const bindingError = maintenanceStaffBindingPreflightError({
     currentEnv,
     targetEnv,
-    interfaces: listNetworkInterfaces(),
+    interfaces: input.runtime.networkInterfaces(),
   });
   if (bindingError) {
     return failureResult(input.updateId, phase, [
@@ -838,6 +884,10 @@ export async function applyPfupdate(
   const previousVersion = readManagerState(ctx.home).release?.releaseVersion ?? null;
 
   try {
+    await recoverRestrictedOperation({
+      projectRoot: ctx.home,
+      composeProjectName: ctx.composeProjectName,
+    });
     const prepared = await prepareUpdate({
       applyInput: input,
       ctx,

@@ -1,16 +1,17 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
   PORTAL_ENTRY_REDIRECT,
-  PORTAL_STATIC_SURFACE_ROUTES,
-  PORTAL_SURFACE_ROUTES,
-  PORTAL_UI_SURFACE_ROUTES,
+  DEFAULT_PORTAL_PROXY_CONTRACT,
+  parsePortalProxyContract,
+  type PortalProxyContract,
   type PortalSurfaceRoute,
   type TlsMode,
   type TlsStatus,
 } from '@praxis-flow/server-shared';
 
-export const GENERATED_CADDYFILE_MARKER = '# PRAXIS-FLOW-GENERATED LAN-TLS v4';
+export const GENERATED_CADDYFILE_MARKER = '# PRAXIS-FLOW-GENERATED LAN-TLS v6';
 
 export const PROXY_TLS_HOST_PATH_ENV_KEYS = [
   'PROXY_HTTPS_PORT',
@@ -182,16 +183,19 @@ function portalRestrictedSite(
   status: TlsStatus,
   env: Map<string, string>,
   managedWildcard: string | null,
+  contract: PortalProxyContract,
 ): string[] {
   const portalHostname = status.portalHostname;
-  if (!portalHostname || !status.mode) return [];
+  if (!portalHostname || !status.mode || env.get('SETUP_RESTRICTED_ENABLED') !== 'true') return [];
   const siteAddress = managedWildcard ?? portalHostname;
-  const uiPaths = PORTAL_UI_SURFACE_ROUTES.map((route) => route.path).join(' ');
-  const staticPaths = PORTAL_STATIC_SURFACE_ROUTES.map((route) => route.path).join(' ');
-  const apiMatchers = PORTAL_SURFACE_ROUTES.flatMap((route, index) => [
+  const uiPaths = contract.ui.map((route) => route.path).join(' ');
+  const staticPaths = contract.assets.map((route) => route.path).join(' ');
+  const apiMatchers = contract.api.flatMap((route, index) => [
     ...portalApiCaddyMatcher(route, index),
     `\thandle @portalApi${index} {`,
-    '\t\treverse_proxy app:8080',
+    '\t\treverse_proxy app:8080 {',
+    '\t\t\theader_down -X-Praxis-Flow-Rejection',
+    '\t\t}',
     '\t}',
   ]);
   return [
@@ -219,13 +223,18 @@ function portalRestrictedSite(
     `\t\t\tredir * ${PORTAL_ENTRY_REDIRECT.location} ${PORTAL_ENTRY_REDIRECT.statusCode}`,
     '\t\t}',
     '\t\thandle @portalUi {',
-    '\t\t\treverse_proxy app:8080',
+    '\t\t\treverse_proxy app:8080 {',
+    '\t\t\t\theader_down -X-Praxis-Flow-Rejection',
+    '\t\t\t}',
     '\t\t}',
     '\t\thandle @portalStatic {',
-    '\t\t\treverse_proxy app:8080',
+    '\t\t\treverse_proxy app:8080 {',
+    '\t\t\t\theader_down -X-Praxis-Flow-Rejection',
+    '\t\t\t}',
     '\t\t}',
     ...apiMatchers.map((line) => `\t${line}`),
     '\t\thandle {',
+    '\t\t\theader X-Praxis-Flow-Rejection portal-policy',
     '\t\t\trespond 404',
     '\t\t}',
     '\t}',
@@ -241,7 +250,12 @@ function portalRestrictedSite(
  * cutover it is redirect-only. A managed config requires an xcaddy image containing
  * github.com/caddy-dns/acmedns; the stock HTTP image remains valid for customer tests.
  */
-export function generateTlsCaddyfile(status: TlsStatus, env: Map<string, string>): string {
+export function generateTlsCaddyfile(
+  status: TlsStatus,
+  env: Map<string, string>,
+  contract: PortalProxyContract = DEFAULT_PORTAL_PROXY_CONTRACT,
+): string {
+  parsePortalProxyContract(contract);
   if (!status.hostname || !status.mode) {
     return `${GENERATED_CADDYFILE_MARKER}\n\n:80 {\n\treverse_proxy app:8080\n}\n`;
   }
@@ -251,23 +265,17 @@ export function generateTlsCaddyfile(status: TlsStatus, env: Map<string, string>
   const httpApplicationAction = status.cutoverApplied
     ? `redir https://${staffHostname}{uri} permanent`
     : 'reverse_proxy app:8080';
-  const httpBlock = managedWildcard
-    ? [
-        ':80 {',
-        `\t@staff host ${staffHostname}`,
-        '\thandle @staff {',
-        `\t\t${httpApplicationAction}`,
-        '\t}',
-        `\t@installationRoom host ${managedWildcard}`,
-        '\thandle @installationRoom {',
-        '\t\tabort',
-        '\t}',
-        '\thandle {',
-        `\t\t${httpApplicationAction}`,
-        '\t}',
-        '}',
-      ].join('\n')
-    : `:80 {\n\t${httpApplicationAction}\n}`;
+  const httpBlock = [
+    ':80 {',
+    `\t@staff host ${staffHostname}`,
+    '\thandle @staff {',
+    `\t\t${httpApplicationAction}`,
+    '\t}',
+    '\thandle {',
+    '\t\tabort',
+    '\t}',
+    '}',
+  ].join('\n');
   const siteAddress = managedWildcard ?? staffHostname;
   const applicationHandlers = [
     '\t@setupTlsSse path /__praxis-flow/setup/tls-sse',
@@ -276,29 +284,32 @@ export function generateTlsCaddyfile(status: TlsStatus, env: Map<string, string>
     '\t\trespond "event: tick\\ndata: ok\\n\\n" 200',
     '\t}',
     '\thandle {',
-    '\t\treverse_proxy app:8080',
+    '\t\treverse_proxy app:8080 {',
+    '\t\t\theader_down -X-Praxis-Flow-Rejection',
+    '\t\t}',
     '\t}',
   ];
-  const siteHandlers = managedWildcard
-    ? [
-        '\t@staff {',
-        `\t\thost ${staffHostname}`,
-        `\t\texpression {http.request.tls.server_name} == "${staffHostname}"`,
-        '\t}',
-        '\thandle @staff {',
-        ...applicationHandlers.map((line) => `\t${line}`),
-        '\t}',
-        '\thandle {',
-        '\t\tabort',
-        '\t}',
-      ]
-    : applicationHandlers;
+  const siteHandlers = [
+    '\t@staff {',
+    `\t\thost ${staffHostname}`,
+    `\t\texpression {http.request.tls.server_name} == "${staffHostname}"`,
+    '\t}',
+    '\thandle @staff {',
+    ...applicationHandlers.map((line) => `\t${line}`),
+    '\t}',
+    '\thandle {',
+    '\t\tabort',
+    '\t}',
+  ];
   return [
     GENERATED_CADDYFILE_MARKER,
+    `# PORTAL-CONTRACT v${contract.formatVersion} sha256:${createHash('sha256').update(JSON.stringify(contract)).digest('hex')}`,
     '',
     '{',
     '\tservers {',
     '\t\tprotocols h1 h2',
+    // Explicit Host + SNI handlers below abort mismatches instead of generic HTTP 421.
+    '\t\tstrict_sni_host insecure_off',
     '\t}',
     '\tauto_https disable_redirects',
     '}',
@@ -314,7 +325,13 @@ export function generateTlsCaddyfile(status: TlsStatus, env: Map<string, string>
     tlsDirective(status.mode, env),
     ...siteHandlers,
     '}',
-    ...portalRestrictedSite(status, env, managedWildcard),
+    ...portalRestrictedSite(status, env, managedWildcard, contract),
+    '',
+    ':443 {',
+    '\tabort',
+    '}',
+    '',
+    ...(env.get('SETUP_RESTRICTED_ENABLED') === 'true' ? ['https://:444 {', '\tabort', '}'] : []),
     '',
   ].join('\n');
 }
@@ -325,15 +342,40 @@ export function writeGeneratedTlsCaddyfile(
   env: Map<string, string>,
 ): string {
   const paths = ensureProxyTlsPaths(installHome);
-  const content = generateTlsCaddyfile(status, env);
+  const content = generateTlsCaddyfile(status, env, readInstalledPortalContract(installHome));
   if (fs.existsSync(paths.caddyfile)) {
     // Docker file bind-mounts keep referring to the original inode. Replacing the
     // path via rename would leave a running Caddy container on the old config.
     fs.writeFileSync(paths.caddyfile, content, 'utf8');
+    const fd = fs.openSync(paths.caddyfile, 'r');
+    try {
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
     return paths.caddyfile;
   }
   const temporaryPath = `${paths.caddyfile}.tmp-${process.pid}-${Date.now()}`;
   fs.writeFileSync(temporaryPath, content, 'utf8');
+  const fd = fs.openSync(temporaryPath, 'r');
+  try {
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
   fs.renameSync(temporaryPath, paths.caddyfile);
+  const directory = fs.openSync(path.dirname(paths.caddyfile), 'r');
+  try {
+    fs.fsyncSync(directory);
+  } finally {
+    fs.closeSync(directory);
+  }
   return paths.caddyfile;
+}
+
+export function readInstalledPortalContract(home: string): PortalProxyContract {
+  const file = path.join(resolveProxyTlsPaths(home).root, 'portal-contract.json');
+  return fs.existsSync(file)
+    ? parsePortalProxyContract(JSON.parse(fs.readFileSync(file, 'utf8')))
+    : DEFAULT_PORTAL_PROXY_CONTRACT;
 }

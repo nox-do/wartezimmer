@@ -1,3 +1,4 @@
+export * from './portal-proxy-contract.js';
 export { isComplexRoutingLicensed } from './routing-license-stub.js';
 export {
   PORTAL_ENTRY_REDIRECT,

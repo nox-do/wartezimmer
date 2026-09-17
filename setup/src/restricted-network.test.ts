@@ -1,3 +1,5 @@
+import { restrictedOperationEnv } from './restricted-operation.js';
+import type { ComposeRunOptions } from './docker.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -213,6 +215,80 @@ test('public portal record with failed local resolution reports a rebind or cach
   assert.equal(result.status.health, 'blocked');
 });
 
+test('portal DNS rejects answer sets containing any additional target', async () => {
+  const result = await buildRestrictedNetworkInspect({
+    env: new Map([['SETUP_RESTRICTED_APP_IP', '10.20.0.2']]),
+    interfaces,
+    staffIp: '192.168.10.10',
+    tls,
+    compose: null,
+    platform: 'darwin',
+    resolve4: async () => ['10.20.0.2', '192.168.10.10'],
+    resolvePublic4: async () => ['10.20.0.2', '203.0.113.10'],
+  });
+
+  assert.equal(result.dns.state, 'mismatch');
+  assert.equal(
+    result.checks.find((check) => check.id === 'restricted.portal-dns-public')?.ok,
+    false,
+  );
+  assert.equal(
+    result.checks.find((check) => check.id === 'restricted.portal-dns-local')?.ok,
+    false,
+  );
+});
+
+test('duplicate local addresses remain visible but cannot be prepared as unambiguous bindings', async () => {
+  const duplicateInterfaces: NetworkInterfaceInfo[] = [
+    ...interfaces,
+    {
+      name: 'en9',
+      addresses: [
+        {
+          family: 'IPv4',
+          address: '10.20.0.2',
+          internal: false,
+          cidr: '10.20.0.2/24',
+          mac: 'aa:00:00:00:00:09',
+        },
+      ],
+    },
+  ];
+  const duplicateCandidates = buildRestrictedNetworkCandidates(
+    duplicateInterfaces,
+    '192.168.10.10',
+  ).filter((candidate) => candidate.address === '10.20.0.2');
+  assert.equal(duplicateCandidates.length, 2);
+  assert.ok(
+    duplicateCandidates.every((candidate) => candidate.warnings.includes('ambiguous-address')),
+  );
+
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restricted-ambiguous-'));
+  fs.writeFileSync(path.join(home, '.env'), 'SETUP_LAN_APP_IP=192.168.10.10\n');
+  try {
+    await assert.rejects(
+      () =>
+        prepareRestrictedNetwork(
+          {
+            home,
+            mode: 'install',
+            composeProjectName: 'pf-test',
+            templateRoot: home,
+          },
+          {
+            hostIp: '10.20.0.2',
+            interfaceId: duplicateCandidates[0]!.interfaceId,
+            warningsConfirmed: true,
+          },
+          { interfaces: duplicateInterfaces, platform: 'darwin', tls },
+        ),
+      /mehreren Interfaces/,
+    );
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
 test('inspect degrades an applied binding when the proxy also has a global publish', async () => {
   const result = await buildRestrictedNetworkInspect({
     env: new Map([
@@ -261,6 +337,24 @@ test('unsupported platforms are reported without hiding otherwise valid candidat
   assert.equal(result.capabilities.supported, false);
   assert.equal(result.candidates.length, 3);
   assert.equal(result.checks.find((check) => check.id === 'restricted.platform')?.ok, false);
+});
+
+test('custom TLS is not advertised as a prepared dedicated portal identity', async () => {
+  const result = await buildRestrictedNetworkInspect({
+    env: new Map([['SETUP_RESTRICTED_APP_IP', '10.20.0.2']]),
+    interfaces,
+    staffIp: '192.168.10.10',
+    tls: {
+      ...tls,
+      mode: 'custom',
+      wildcardCertificateName: null,
+    },
+    compose: null,
+    platform: 'darwin',
+  });
+  const tlsCheck = result.checks.find((check) => check.id === 'restricted.tls');
+  assert.equal(tlsCheck?.ok, false);
+  assert.match(tlsCheck?.message ?? '', /verwaltetes Wildcard-HTTPS/);
 });
 
 test('prepare persists the exact local IP/interface choice and then returns DNS inspect', async () => {
@@ -396,9 +490,12 @@ function restrictedMutationFixture() {
       'PROXY_MODE=tls-managed',
       'TLS_STATE=active',
       'TLS_MODE=managed',
+      'TLS_HOSTNAME=staff.installation.example',
+      'TLS_INSTALLATION_DOMAIN=installation.example',
       'TLS_CUTOVER_APPLIED=true',
       'TLS_STAFF_HOSTNAME=staff.installation.example',
       'TLS_PORTAL_HOSTNAME=portal.installation.example',
+      'TLS_WILDCARD_CERTIFICATE_NAME=*.installation.example',
       'TLS_CERT_ISSUER=Test CA',
       'TLS_CERT_NOT_BEFORE=2026-01-01T00:00:00Z',
       'TLS_CERT_NOT_AFTER=2027-01-01T00:00:00Z',
@@ -425,14 +522,19 @@ function restrictedMutationFixture() {
   };
   const hooks = {
     inspect,
-    composePs: async () => restrictedRuntimeCompose(readEnvMap(envPath)),
+    composePs: async (options: ComposeRunOptions) =>
+      restrictedRuntimeCompose(
+        readEnvMap(restrictedOperationEnv(options.projectRoot, options.restrictedOperationId)),
+      ),
     composeRemoveServices: async () => ({ ok: true, log: 'removed' }),
     composeStop: async () => ({ ok: true, log: 'stopped' }),
     composeUp: async () => ({ ok: true, log: 'started', gatewaySkipped: false }),
     composeValidateConfig: async () => ({ ok: true, log: '' }),
+    composeExec: async () => ({ ok: true, log: 'valid' }),
     ensureProxyImageAvailable: async () => ({ imageRef: 'proxy:test' }),
     validateStaffIp: () => null,
     auditListeners: async () => null,
+    restoreProxyRestartPolicy: async () => undefined,
     stackHealthWaitOptions: { timeoutMs: 10, intervalMs: 0 },
   };
   return { home, envPath, inspect, hooks };
@@ -451,9 +553,23 @@ test('apply and remove switch the restricted overlay transactionally', async () 
     assert.equal(applied.status.phase, 'applied');
     assert.equal(applied.status.health, 'healthy');
     assert.equal(readEnvMap(fixture.envPath).get('SETUP_RESTRICTED_ENABLED'), 'true');
+    const generatedCaddyfile = fs.readFileSync(
+      path.join(fixture.home, 'state', 'tls', 'Caddyfile'),
+      'utf8',
+    );
+    assert.match(generatedCaddyfile, /^# PRAXIS-FLOW-GENERATED LAN-TLS v6/m);
+    assert.match(generatedCaddyfile, /:444 \{/);
 
     const removed = await removeRestrictedNetwork(ctx, fixture.hooks);
     assert.equal(removed.status.phase, 'unconfigured');
+    assert.doesNotMatch(
+      fs.readFileSync(path.join(fixture.home, 'state/tls/Caddyfile'), 'utf8'),
+      /:444 \{/,
+    );
+    assert.match(
+      fs.readFileSync(path.join(fixture.home, 'state/tls/Caddyfile'), 'utf8'),
+      /host staff\.installation\.example/,
+    );
     const env = readEnvMap(fixture.envPath);
     assert.equal(env.has('SETUP_RESTRICTED_ENABLED'), false);
     assert.equal(env.has('SETUP_RESTRICTED_APP_IP'), false);
@@ -490,6 +606,41 @@ test('failed restricted apply restores the prepared env', async () => {
   }
 });
 
+test('failed restricted apply does not claim restoration when the rollback binding audit fails', async () => {
+  const fixture = restrictedMutationFixture();
+  const ctx = {
+    home: fixture.home,
+    mode: 'install' as const,
+    composeProjectName: 'pf-test',
+    templateRoot: fixture.home,
+  };
+  let upCalls = 0;
+  try {
+    await assert.rejects(
+      () =>
+        applyRestrictedNetwork(ctx, {
+          ...fixture.hooks,
+          composeUp: async () =>
+            ++upCalls === 1
+              ? { ok: false, log: 'bind failed', gatewaySkipped: false }
+              : { ok: true, log: 'restored', gatewaySkipped: false },
+          auditStaffBindings: () => [
+            {
+              id: 'staff.binding.proxy',
+              ok: false,
+              message: 'Proxy besitzt unerwartete Host-Bindings',
+              detail: 'unerwarteter globaler Publish',
+            },
+          ],
+        }),
+      /Rollback unvollständig/,
+    );
+    assert.equal(readEnvMap(fixture.envPath).has('SETUP_RESTRICTED_ENABLED'), false);
+  } finally {
+    fs.rmSync(fixture.home, { recursive: true, force: true });
+  }
+});
+
 test('failed listener audit rolls restricted apply back', async () => {
   const fixture = restrictedMutationFixture();
   const ctx = {
@@ -508,6 +659,155 @@ test('failed listener audit rolls restricted apply back', async () => {
       /Listener-Prüfung fehlgeschlagen/,
     );
     assert.equal(readEnvMap(fixture.envPath).has('SETUP_RESTRICTED_ENABLED'), false);
+  } finally {
+    fs.rmSync(fixture.home, { recursive: true, force: true });
+  }
+});
+
+test('unexpected compose exception rolls restricted apply and generated Caddyfile back', async () => {
+  const fixture = restrictedMutationFixture();
+  const ctx = {
+    home: fixture.home,
+    mode: 'install' as const,
+    composeProjectName: 'pf-test',
+    templateRoot: fixture.home,
+  };
+  const caddyfile = path.join(fixture.home, 'state', 'tls', 'Caddyfile');
+  fs.mkdirSync(path.dirname(caddyfile), { recursive: true });
+  fs.writeFileSync(caddyfile, '# PRAXIS-FLOW-GENERATED LAN-TLS v2\nold-contract\n');
+  let removeCalls = 0;
+  try {
+    await assert.rejects(
+      () =>
+        applyRestrictedNetwork(ctx, {
+          ...fixture.hooks,
+          composeRemoveServices: async () => {
+            removeCalls += 1;
+            if (removeCalls === 1) throw new Error('docker transport lost');
+            return { ok: true, log: 'rollback cleanup' };
+          },
+        }),
+      /vorherige Patientenzugang wurde wiederhergestellt/,
+    );
+    assert.equal(readEnvMap(fixture.envPath).has('SETUP_RESTRICTED_ENABLED'), false);
+    assert.equal(
+      fs.readFileSync(caddyfile, 'utf8'),
+      '# PRAXIS-FLOW-GENERATED LAN-TLS v2\nold-contract\n',
+    );
+  } finally {
+    fs.rmSync(fixture.home, { recursive: true, force: true });
+  }
+});
+
+test('remove clears an active restricted target while the stack is stopped', async () => {
+  const fixture = restrictedMutationFixture();
+  const ctx = {
+    home: fixture.home,
+    mode: 'install' as const,
+    composeProjectName: 'pf-test',
+    templateRoot: fixture.home,
+  };
+  fs.appendFileSync(fixture.envPath, 'SETUP_RESTRICTED_ENABLED=true\n');
+  let upCalls = 0;
+  try {
+    const removed = await removeRestrictedNetwork(ctx, {
+      ...fixture.hooks,
+      composePs: async () => ({ running: false, services: [] }),
+      composeExec: async (options) => {
+        assert.equal(options.oneOff, true);
+        return { ok: true, log: 'valid' };
+      },
+      composeUp: async () => {
+        upCalls += 1;
+        return { ok: true, log: 'unexpected', gatewaySkipped: false };
+      },
+      validateStaffIp: () => 'Staff-IP is currently absent',
+      ensureProxyImageAvailable: async () => {
+        throw new Error('image lookup must not run for stopped remove');
+      },
+    });
+
+    assert.equal(removed.status.phase, 'unconfigured');
+    assert.doesNotMatch(
+      fs.readFileSync(path.join(fixture.home, 'state/tls/Caddyfile'), 'utf8'),
+      /:444 \{/,
+    );
+    assert.match(
+      fs.readFileSync(path.join(fixture.home, 'state/tls/Caddyfile'), 'utf8'),
+      /host staff\.installation\.example/,
+    );
+    assert.equal(upCalls, 0);
+    const env = readEnvMap(fixture.envPath);
+    assert.equal(env.has('SETUP_RESTRICTED_ENABLED'), false);
+    assert.equal(env.has('SETUP_RESTRICTED_APP_IP'), false);
+  } finally {
+    fs.rmSync(fixture.home, { recursive: true, force: true });
+  }
+});
+
+test('failed remove validation preserves both active env and Caddyfile', async () => {
+  const fixture = restrictedMutationFixture();
+  const ctx = {
+    home: fixture.home,
+    mode: 'install' as const,
+    composeProjectName: 'pf-test',
+    templateRoot: fixture.home,
+  };
+  try {
+    await applyRestrictedNetwork(ctx, fixture.hooks);
+    const file = path.join(fixture.home, 'state/tls/Caddyfile');
+    const oldConfig = fs.readFileSync(file, 'utf8');
+    const oldEnv = fs.readFileSync(fixture.envPath, 'utf8');
+    await assert.rejects(
+      () =>
+        removeRestrictedNetwork(ctx, {
+          ...fixture.hooks,
+          composeExec: async () => {
+            assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /:444 \{/);
+            return { ok: false, log: 'validation failed' };
+          },
+          composeRemoveServices: async () => {
+            throw new Error('must not mutate runtime');
+          },
+        }),
+      /validation failed/,
+    );
+    assert.equal(fs.readFileSync(file, 'utf8'), oldConfig);
+    assert.equal(fs.readFileSync(fixture.envPath, 'utf8'), oldEnv);
+  } finally {
+    fs.rmSync(fixture.home, { recursive: true, force: true });
+  }
+});
+
+test('apply commits the active marker only after listener audit', async () => {
+  const fixture = restrictedMutationFixture();
+  try {
+    let audited = false;
+    await applyRestrictedNetwork(
+      {
+        home: fixture.home,
+        mode: 'install',
+        composeProjectName: 'test',
+        templateRoot: fixture.home,
+      },
+      {
+        ...fixture.hooks,
+        auditListeners: async () => {
+          assert.notEqual(readEnvMap(fixture.envPath).get('SETUP_RESTRICTED_ENABLED'), 'true');
+          assert.equal(
+            fs.existsSync(path.join(fixture.home, 'state/restricted-operation/journal.json')),
+            true,
+          );
+          audited = true;
+          return null;
+        },
+        restoreProxyRestartPolicy: async () => {
+          assert.equal(audited, true);
+          assert.equal(readEnvMap(fixture.envPath).get('SETUP_RESTRICTED_ENABLED'), 'true');
+        },
+      },
+    );
+    assert.equal(fs.existsSync(path.join(fixture.home, 'state/restricted-operation')), false);
   } finally {
     fs.rmSync(fixture.home, { recursive: true, force: true });
   }

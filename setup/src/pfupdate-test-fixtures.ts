@@ -5,6 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   buildPfupdateManifest,
+  DEFAULT_PORTAL_PROXY_CONTRACT,
+  PORTAL_PROXY_CONTRACT_FILE,
+  type PortalProxyContract,
   formatSha256Sums,
   PFUPDATE_ALLOWED_FILE_PATHS,
   PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS,
@@ -37,6 +40,7 @@ export type BuildTestPfupdateArchiveOptions = {
   withGateway?: boolean;
   /** Include optional offline proxy image + templates (P2c packages). */
   withProxy?: boolean;
+  portalContract?: PortalProxyContract;
 };
 
 export function buildTestPfupdateArchive(
@@ -80,9 +84,12 @@ export function buildTestPfupdateArchive(
 
     if (withProxy) {
       for (const relativePath of PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS) {
-        const content = relativePath.endsWith('Caddyfile')
-          ? ':80 {\n  reverse_proxy app:8080\n}\n'
-          : 'services: {}\n';
+        const content =
+          relativePath === PORTAL_PROXY_CONTRACT_FILE
+            ? JSON.stringify(options.portalContract ?? DEFAULT_PORTAL_PROXY_CONTRACT)
+            : relativePath.endsWith('Caddyfile')
+              ? ':80 {\n  reverse_proxy app:8080\n}\n'
+              : 'services: {}\n';
         fileEntries.push(writeFileDigest(staging, relativePath, content));
       }
       for (const relativePath of PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS) {

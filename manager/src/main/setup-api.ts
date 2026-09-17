@@ -49,6 +49,10 @@ export function setupApiUserErrorMessage(
     return 'Der Manager konnte sich nicht an der lokalen Setup-API anmelden. Bitte Manager und Praxis Flow mit demselben Installationsstand neu starten.';
   }
 
+  if (raw.includes('Rollback unvollständig')) {
+    return 'Die Änderung konnte nicht sicher abgeschlossen und der vorherige Zustand nicht vollständig wiederhergestellt werden. Bitte Praxis Flow bis zur erneuten Statusprüfung nicht als sicher gebunden behandeln.';
+  }
+
   if (raw.includes('Listener-Prüfung fehlgeschlagen')) {
     const restored = raw.includes('wiederhergestellt');
     return [

@@ -733,6 +733,42 @@ test('applySetupPlan without proxy wire preserves PROXY companion keys', async (
   });
 });
 
+test('applySetupPlan preserves prepared and active restricted state', async () => {
+  await withRoot(async (root) => {
+    writeExample(root, 'PROXY_ENABLED=true\nPROXY_MODE=tls-managed\nAPP_BIND_ADDRESS=127.0.0.1');
+    writeEnv(root, {
+      PRACTICE_DISPLAY_NAME: 'Praxis Nord',
+      AUTH_KEY_CAPTIVE: SECRET,
+      SANDBOX_INTERNAL_TOKEN: SECRET,
+      OPENNDS_FAS_KEY: SECRET,
+      SETUP_LAN_APP_IP: '192.168.1.10',
+      CANONICAL_BASE_URL: 'https://staff.installation.example',
+      ...proxyOn,
+      SETUP_RESTRICTED_ENABLED: 'true',
+      SETUP_RESTRICTED_APP_IP: '10.20.0.2',
+      SETUP_RESTRICTED_INTERFACE_ID: 'mac:aa:00:00:00:00:07',
+      SETUP_RESTRICTED_WARNINGS_CONFIRMED: 'true',
+      SETUP_RESTRICTED_SAME_INTERFACE_CONFIRMED: 'false',
+    });
+
+    await applySetupPlan(ctx(root), {
+      lanAppIp: '192.168.1.10',
+      practiceDisplayName: 'Praxis Nord',
+      gateway: gwOff('192.168.1.10'),
+      preserveEnv: true,
+      runCompose: false,
+      runProbes: false,
+    });
+
+    const map = env(root);
+    assert.equal(map.get('SETUP_RESTRICTED_ENABLED'), 'true');
+    assert.equal(map.get('SETUP_RESTRICTED_APP_IP'), '10.20.0.2');
+    assert.equal(map.get('SETUP_RESTRICTED_INTERFACE_ID'), 'mac:aa:00:00:00:00:07');
+    assert.equal(map.get('SETUP_RESTRICTED_WARNINGS_CONFIRMED'), 'true');
+    assert.equal(map.get('SETUP_RESTRICTED_SAME_INTERFACE_CONFIRMED'), 'false');
+  });
+});
+
 test('HTTP host apply preserves an in-progress TLS preparation', async () => {
   await withRoot(async (root) => {
     writeExample(root, 'PROXY_ENABLED=false\nPROXY_MODE=off\nAPP_BIND_ADDRESS=0.0.0.0');

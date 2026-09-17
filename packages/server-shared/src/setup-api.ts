@@ -525,7 +525,8 @@ export type RestrictedNetworkStatus = {
 export type RestrictedNetworkCandidateWarning =
   | 'same-interface'
   | 'overlapping-staff-subnet'
-  | 'virtual-interface';
+  | 'virtual-interface'
+  | 'ambiguous-address';
 
 export type RestrictedNetworkCandidate = {
   address: string;

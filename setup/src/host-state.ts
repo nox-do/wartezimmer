@@ -1,9 +1,19 @@
+import {
+  beginRestrictedOperation,
+  releaseRestrictedOperation,
+  durableWrite,
+  finishRestrictedOperation,
+  restrictedOperationEnv,
+  restrictedOperationDir,
+} from './restricted-operation.js';
+import { restoreProxyRestartPolicy, recoverRestrictedOperation } from './docker.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Resolver } from 'node:dns/promises';
 import {
   canRunGatewayCompose,
   composeLogs,
+  composeExec,
   composePs,
   composeRemoveServices,
   composeRestart,
@@ -119,7 +129,13 @@ import { SetupApiValidationError } from './setup-api-normalize.js';
 import type { SetupContext } from './setup-context.js';
 import type { ProxyConfigInput } from '@praxis-flow/server-shared';
 import { parseTlsDnsResolvers, readTlsStatus, TLS_ENV_KEYS } from './host-tls.js';
-import { PROXY_TLS_RUNTIME_ENV_KEYS } from './proxy-tls.js';
+import {
+  GENERATED_CADDYFILE_MARKER,
+  PROXY_TLS_RUNTIME_ENV_KEYS,
+  resolveProxyTlsPaths,
+  writeGeneratedTlsCaddyfile,
+  readInstalledPortalContract,
+} from './proxy-tls.js';
 import { tlsPreparationLanIpSyncUpdates } from './tls-env.js';
 import {
   buildRestrictedNetworkCandidates,
@@ -128,6 +144,7 @@ import {
   RESTRICTED_NETWORK_ENABLED_ENV,
   RESTRICTED_NETWORK_INTERFACE_ID_ENV,
   RESTRICTED_NETWORK_IP_ENV,
+  RESTRICTED_NETWORK_PERSISTED_KEYS,
   RESTRICTED_NETWORK_SAME_INTERFACE_CONFIRMED_ENV,
   RESTRICTED_NETWORK_WARNINGS_CONFIRMED_ENV,
   restrictedCertificateCoversHostname,
@@ -161,6 +178,7 @@ export type { ComposeStatus } from './docker.js';
 export type HostWriteRuntimeHooks = {
   stackHealthWaitOptions?: WaitForStackHealthOptions;
   composePs?: typeof composePs;
+  composeExec?: typeof composeExec;
   composeRemoveServices?: typeof composeRemoveServices;
   composeStop?: typeof composeStop;
   composeUp?: typeof composeUp;
@@ -753,7 +771,7 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
   };
 }
 
-export async function inspectRestrictedNetwork(ctx: SetupContext) {
+export async function inspectRestrictedNetwork(ctx: SetupContext, operationId?: string) {
   const envPath = path.join(ctx.home, '.env');
   const envExists = fs.existsSync(envPath);
   const envMap = envExists ? readEnvMap(envPath) : new Map<string, string>();
@@ -771,7 +789,7 @@ export async function inspectRestrictedNetwork(ctx: SetupContext) {
     );
     return [...new Set(answers.flat())];
   };
-  return buildRestrictedNetworkInspect({
+  const result = await buildRestrictedNetworkInspect({
     env: envMap,
     interfaces: listNetworkInterfaces(),
     staffIp: pickLanIpFromEnv(envMap),
@@ -780,6 +798,25 @@ export async function inspectRestrictedNetwork(ctx: SetupContext) {
     resolve4: (hostname) => resolver.resolve4(hostname),
     resolvePublic4,
   });
+  if (!operationId && fs.existsSync(restrictedOperationDir(ctx.home))) {
+    result.status.health = 'degraded';
+    result.checks.push({
+      id: 'restricted.pending-operation',
+      ok: false,
+      message:
+        'Restricted-Änderung ist noch nicht abgeschlossen; Start führt eine Wiederherstellung aus.',
+    });
+  }
+  const recoveryFile = path.join(ctx.home, 'state/restricted-recovery.json');
+  if (fs.existsSync(recoveryFile)) {
+    result.checks.push({
+      id: 'restricted.recovered-operation',
+      ok: true,
+      message:
+        'Eine unterbrochene Änderung wurde geschlossen. Patientenzugang bitte erneut prüfen und aktivieren.',
+    });
+  }
+  return result;
 }
 
 export async function prepareRestrictedNetwork(
@@ -813,6 +850,11 @@ export async function prepareRestrictedNetwork(
       'Die gewählte Restricted-IP ist nicht mehr lokal verfügbar oder nicht eindeutig zugeordnet.',
     );
   }
+  if (candidate.warnings.includes('ambiguous-address')) {
+    throw new SetupApiValidationError(
+      'Die gewählte Restricted-IP ist mehreren Interfaces zugeordnet und kann nicht eindeutig gebunden werden.',
+    );
+  }
   if (candidate.warnings.length > 0 && !input.warningsConfirmed) {
     throw new SetupApiValidationError(
       'Die Hinweise zur gewählten Netzwerkadresse müssen bestätigt werden.',
@@ -824,6 +866,11 @@ export async function prepareRestrictedNetwork(
     );
   }
   const tls = deps.tls ?? readTlsStatus(envMap);
+  if (tls.mode !== 'managed' || !tls.wildcardCertificateName) {
+    throw new SetupApiValidationError(
+      'Der dedizierte Patientenzugang ist derzeit nur mit verwaltetem Wildcard-HTTPS verfügbar.',
+    );
+  }
   const portalHostname = tls.portalHostname?.trim() || '';
   const portalCovered = restrictedCertificateCoversHostname(
     portalHostname,
@@ -849,15 +896,10 @@ export async function prepareRestrictedNetwork(
 type RestrictedNetworkMutationHooks = HostWriteRuntimeHooks & {
   inspect?: () => Promise<RestrictedNetworkInspectResult>;
   auditListeners?: typeof auditRestrictedListeners;
+  restoreProxyRestartPolicy?: typeof restoreProxyRestartPolicy;
 };
 
-const RESTRICTED_NETWORK_PERSISTED_KEYS = [
-  RESTRICTED_NETWORK_ENABLED_ENV,
-  RESTRICTED_NETWORK_IP_ENV,
-  RESTRICTED_NETWORK_INTERFACE_ID_ENV,
-  RESTRICTED_NETWORK_WARNINGS_CONFIRMED_ENV,
-  RESTRICTED_NETWORK_SAME_INTERFACE_CONFIRMED_ENV,
-] as const;
+const GENERATED_CADDYFILE_PATTERN = /^# PRAXIS-FLOW-GENERATED LAN-TLS v\d+\s*$/m;
 
 function restrictedPrerequisiteError(inspect: RestrictedNetworkInspectResult): string | null {
   const required = new Set([
@@ -877,7 +919,9 @@ async function mutateRestrictedNetwork(
   enable: boolean,
   hooks: RestrictedNetworkMutationHooks = {},
 ): Promise<RestrictedNetworkInspectResult> {
-  const inspect = hooks.inspect ?? (() => inspectRestrictedNetwork(ctx));
+  await recoverRestrictedOperation(resolveComposeRunOptions(ctx));
+  let operationId: string | undefined = undefined;
+  const inspect = hooks.inspect ?? (() => inspectRestrictedNetwork(ctx, operationId));
   const before = await inspect();
   const envPath = path.join(ctx.home, '.env');
   if (!fs.existsSync(envPath)) {
@@ -913,9 +957,6 @@ async function mutateRestrictedNetwork(
       'Patientenzugang kann ohne gespeicherte Staff-IP nicht geändert werden.',
     );
   }
-  assertStaffIpAvailable(staffIp, hooks);
-  await ensureProxyImageForCompose(existing, hooks);
-
   const runOptions = resolveComposeRunOptions(ctx);
   const runComposePs = hooks.composePs ?? composePs;
   const runComposeRemove = hooks.composeRemoveServices ?? composeRemoveServices;
@@ -928,118 +969,251 @@ async function mutateRestrictedNetwork(
       'Praxis Flow muss laufen, bevor der Patientenzugang aktiviert werden kann.',
     );
   }
+  if (enable || stackWasRunning) {
+    assertStaffIpAvailable(staffIp, hooks);
+    await ensureProxyImageForCompose(existing, hooks);
+  }
 
   const backup = backupEnvFile(ctx.home);
-  if (enable) {
-    updateEnvKeys(envPath, { [RESTRICTED_NETWORK_ENABLED_ENV]: 'true' });
-  } else {
-    removeEnvKeys(envPath, [RESTRICTED_NETWORK_ENABLED_ENV]);
-  }
-
-  const rollback = async (reason: string): Promise<never> => {
-    const failedOptions = resolveComposeRunOptions(ctx);
-    const cleanup = await runComposeRemove({ ...failedOptions, withProxy: true }, ['proxy']);
-    fs.copyFileSync(backup.backupPath, envPath);
-    let rollbackOk = cleanup.ok;
-    let rollbackLog = cleanup.log;
-    if (stackWasRunning) {
-      const restored = await runComposeUp({ ...runOptions, withProxy: true, build: false });
-      rollbackOk = rollbackOk && restored.ok;
-      rollbackLog = [rollbackLog, restored.log].filter(Boolean).join('\n');
-      if (rollbackOk) {
-        const health = await waitForExpectedStackHealth(
-          runComposePs,
-          { ...runOptions, withProxy: true },
-          hooks.stackHealthWaitOptions,
-        );
-        rollbackOk = health.ok;
-        if (!health.ok) rollbackLog = [rollbackLog, ...health.errors].filter(Boolean).join('\n');
-      }
-    } else {
-      const stopped = await runComposeStop({ ...runOptions, withProxy: true, services: ['proxy'] });
-      rollbackOk = rollbackOk && stopped.ok;
-      rollbackLog = [rollbackLog, stopped.log].filter(Boolean).join('\n');
+  const caddyfilePath = resolveProxyTlsPaths(ctx.home).caddyfile;
+  const previousCaddyfile = fs.existsSync(caddyfilePath) ? fs.readFileSync(caddyfilePath) : null;
+  const restoreCaddyfile = () => {
+    if (previousCaddyfile) {
+      fs.writeFileSync(caddyfilePath, previousCaddyfile);
+    } else if (fs.existsSync(caddyfilePath)) {
+      fs.unlinkSync(caddyfilePath);
     }
-    throw new SetupApiValidationError(
-      [
-        reason,
-        rollbackOk
-          ? 'Der vorherige Patientenzugang wurde wiederhergestellt.'
-          : 'Rollback unvollständig; Praxis Flow bis zur Prüfung nicht als sicher gebunden behandeln.',
-        rollbackLog && `Rollback: ${rollbackLog}`,
-      ]
-        .filter(Boolean)
-        .join('\n'),
-    );
   };
 
-  const configCheck = await (hooks.composeValidateConfig ?? composeValidateConfig)({
-    ...runOptions,
-    withProxy: true,
-  });
-  if (!configCheck.ok) {
-    fs.copyFileSync(backup.backupPath, envPath);
-    throw new SetupApiValidationError(
-      `Patientenzugang konnte nicht vorbereitet werden; die Laufzeit blieb unverändert. ${configCheck.log}`,
-    );
-  }
+  // All tentative runtime changes use a separate env and restart:no overlay.
+  const operation = beginRestrictedOperation(ctx.home, enable, stackWasRunning);
+  try {
+    operationId = operation.id;
+    const operationOptions = { ...runOptions, restrictedOperationId: operation.id };
+    const candidateEnvPath = restrictedOperationEnv(ctx.home, operation.id);
+    durableWrite(candidateEnvPath, operation.previousEnv);
+    updateEnvKeys(candidateEnvPath, { [RESTRICTED_NETWORK_ENABLED_ENV]: String(enable) });
+    const finish = () => finishRestrictedOperation(ctx.home, operation.id);
 
-  const removed = await runComposeRemove({ ...resolveComposeRunOptions(ctx), withProxy: true }, [
-    'proxy',
-  ]);
-  if (!removed.ok) await rollback(removed.log || 'Proxy konnte nicht neu erzeugt werden.');
-
-  if (stackWasRunning) {
-    const up = await runComposeUp({
-      ...resolveComposeRunOptions(ctx),
-      withProxy: true,
-      build: false,
-    });
-    if (!up.ok) await rollback(up.log || 'Proxy konnte nicht gestartet werden.');
-    const health = await waitForExpectedStackHealth(
-      runComposePs,
-      { ...resolveComposeRunOptions(ctx), withProxy: true },
-      hooks.stackHealthWaitOptions,
-    );
-    if (!health.ok) await rollback(health.errors.join('\n'));
-  }
-
-  const currentEnv = readEnvMap(envPath);
-  const currentCompose = await runComposePs(resolveComposeRunOptions(ctx));
-  const auditError = failedStaffBindingAudit({
-    compose: currentCompose,
-    env: currentEnv,
-    staffIp,
-    proxyEnabled: true,
-    hooks,
-  });
-  if (auditError) await rollback(`Runtime-Bindung unsicher: ${auditError}`);
-
-  if (enable) {
-    const binding = before.status.binding;
-    const tls = readTlsStatus(currentEnv);
-    const staffHostname = tls.staffHostname?.trim() || '';
-    const portalHostname = tls.portalHostname?.trim() || '';
-    if (!binding || !staffHostname || !portalHostname) {
-      await rollback('Listener-Prüfung konnte die Staff-/Portal-Identität nicht bestimmen.');
+    {
+      if (
+        previousCaddyfile &&
+        !GENERATED_CADDYFILE_PATTERN.test(previousCaddyfile.toString('utf8'))
+      ) {
+        finish();
+        throw new SetupApiValidationError(
+          'Die vorhandene Proxy-Konfiguration wird nicht von Praxis Flow verwaltet und kann nicht automatisch aktualisiert werden.',
+        );
+      }
+      try {
+        const targetEnv = new Map(existing);
+        targetEnv.set(RESTRICTED_NETWORK_ENABLED_ENV, String(enable));
+        writeGeneratedTlsCaddyfile(ctx.home, readTlsStatus(targetEnv), targetEnv);
+        const validateCaddy = hooks.composeExec ?? composeExec;
+        const validation = await validateCaddy({
+          ...operationOptions,
+          withProxy: true,
+          service: 'proxy',
+          args: ['caddy', 'validate', '--config', '/etc/caddy/Caddyfile'],
+          oneOff: !stackWasRunning,
+        });
+        if (!validation.ok) {
+          throw new Error(validation.log || 'Caddy-Konfiguration ist ungültig.');
+        }
+        const written = fs.readFileSync(caddyfilePath, 'utf8');
+        if (
+          !written.startsWith(GENERATED_CADDYFILE_MARKER) ||
+          written.includes(':444 {') !== enable
+        ) {
+          throw new Error('Der Restricted-Listener fehlt in der Proxy-Konfiguration.');
+        }
+      } catch (error) {
+        restoreCaddyfile();
+        finish();
+        throw new SetupApiValidationError(
+          `Patientenzugang konnte nicht vorbereitet werden; die Proxy-Konfiguration ist ungültig. ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
-    const listenerError = await (hooks.auditListeners ?? auditRestrictedListeners)({
-      staffIp,
-      restrictedIp: binding.hostIp,
-      staffHostname,
-      portalHostname,
-    });
-    if (listenerError) await rollback(`Listener-Prüfung fehlgeschlagen: ${listenerError}`);
-  }
 
-  if (!enable) {
-    removeEnvKeys(envPath, [...RESTRICTED_NETWORK_PERSISTED_KEYS]);
+    let rollbackAttempted = false;
+    const rollback = async (reason: string): Promise<never> => {
+      rollbackAttempted = true;
+      const failedOptions = operationOptions;
+      let cleanup: { ok: boolean; log: string };
+      try {
+        cleanup = await runComposeRemove({ ...failedOptions, withProxy: true }, ['proxy']);
+      } catch (error) {
+        cleanup = { ok: false, log: error instanceof Error ? error.message : String(error) };
+      }
+      fs.copyFileSync(backup.backupPath, envPath);
+      restoreCaddyfile();
+      durableWrite(candidateEnvPath, operation.previousEnv);
+      let rollbackOk = cleanup.ok;
+      let rollbackLog = cleanup.log;
+      if (stackWasRunning) {
+        let restored: Awaited<ReturnType<typeof composeUp>>;
+        try {
+          restored = await runComposeUp({ ...operationOptions, withProxy: true, build: false });
+        } catch (error) {
+          restored = {
+            ok: false,
+            log: error instanceof Error ? error.message : String(error),
+            gatewaySkipped: false,
+          };
+        }
+        rollbackOk = rollbackOk && restored.ok;
+        rollbackLog = [rollbackLog, restored.log].filter(Boolean).join('\n');
+        if (rollbackOk) {
+          const health = await waitForExpectedStackHealth(
+            runComposePs,
+            { ...operationOptions, withProxy: true },
+            hooks.stackHealthWaitOptions,
+          );
+          rollbackOk = health.ok;
+          if (!health.ok) rollbackLog = [rollbackLog, ...health.errors].filter(Boolean).join('\n');
+        }
+        if (rollbackOk) {
+          const restoredEnv = readEnvMap(envPath);
+          const restoredCompose = await runComposePs(operationOptions);
+          const auditError = failedStaffBindingAudit({
+            compose: restoredCompose,
+            env: restoredEnv,
+            staffIp,
+            proxyEnabled: true,
+            hooks,
+          });
+          rollbackOk = !auditError;
+          if (auditError) {
+            rollbackLog = [rollbackLog, `Rollback-Runtime-Audit: ${auditError}`]
+              .filter(Boolean)
+              .join('\n');
+          }
+        }
+      } else {
+        let stopped: Awaited<ReturnType<typeof composeStop>>;
+        try {
+          stopped = await runComposeStop({
+            ...operationOptions,
+            withProxy: true,
+            services: ['proxy'],
+          });
+        } catch (error) {
+          stopped = { ok: false, log: error instanceof Error ? error.message : String(error) };
+        }
+        rollbackOk = rollbackOk && stopped.ok;
+        rollbackLog = [rollbackLog, stopped.log].filter(Boolean).join('\n');
+      }
+      if (rollbackOk) {
+        if (stackWasRunning)
+          await (hooks.restoreProxyRestartPolicy ?? restoreProxyRestartPolicy)(operationOptions);
+        finish();
+      }
+      throw new SetupApiValidationError(
+        [
+          reason,
+          rollbackOk
+            ? 'Der vorherige Patientenzugang wurde wiederhergestellt.'
+            : 'Rollback unvollständig; Praxis Flow bis zur Prüfung nicht als sicher gebunden behandeln.',
+          rollbackLog && `Rollback: ${rollbackLog}`,
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      );
+    };
+
+    let configCheck: Awaited<ReturnType<typeof composeValidateConfig>>;
+    try {
+      configCheck = await (hooks.composeValidateConfig ?? composeValidateConfig)({
+        ...operationOptions,
+        withProxy: true,
+      });
+    } catch (error) {
+      fs.copyFileSync(backup.backupPath, envPath);
+      restoreCaddyfile();
+      finish();
+      throw new SetupApiValidationError(
+        `Patientenzugang konnte nicht vorbereitet werden; die Laufzeit blieb unverändert. ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    if (!configCheck.ok) {
+      fs.copyFileSync(backup.backupPath, envPath);
+      restoreCaddyfile();
+      finish();
+      throw new SetupApiValidationError(
+        `Patientenzugang konnte nicht vorbereitet werden; die Laufzeit blieb unverändert. ${configCheck.log}`,
+      );
+    }
+
+    try {
+      const removed = await runComposeRemove({ ...operationOptions, withProxy: true }, ['proxy']);
+      if (!removed.ok) await rollback(removed.log || 'Proxy konnte nicht neu erzeugt werden.');
+
+      if (stackWasRunning) {
+        const up = await runComposeUp({
+          ...operationOptions,
+          withProxy: true,
+          build: false,
+        });
+        if (!up.ok) await rollback(up.log || 'Proxy konnte nicht gestartet werden.');
+        const health = await waitForExpectedStackHealth(
+          runComposePs,
+          { ...operationOptions, withProxy: true },
+          hooks.stackHealthWaitOptions,
+        );
+        if (!health.ok) await rollback(health.errors.join('\n'));
+      }
+
+      const currentEnv = readEnvMap(candidateEnvPath);
+      if (stackWasRunning) {
+        const currentCompose = await runComposePs(operationOptions);
+        const auditError = failedStaffBindingAudit({
+          compose: currentCompose,
+          env: currentEnv,
+          staffIp,
+          proxyEnabled: true,
+          hooks,
+        });
+        if (auditError) await rollback(`Runtime-Bindung unsicher: ${auditError}`);
+      }
+
+      if (enable) {
+        const binding = before.status.binding;
+        const tls = readTlsStatus(currentEnv);
+        const staffHostname = tls.staffHostname?.trim() || '';
+        const portalHostname = tls.portalHostname?.trim() || '';
+        if (!binding || !staffHostname || !portalHostname) {
+          await rollback('Listener-Prüfung konnte die Staff-/Portal-Identität nicht bestimmen.');
+        }
+        const listenerError = await (hooks.auditListeners ?? auditRestrictedListeners)({
+          staffIp,
+          restrictedIp: binding.hostIp,
+          staffHostname,
+          portalHostname,
+          contract: readInstalledPortalContract(ctx.home),
+        });
+        if (listenerError) await rollback(`Listener-Prüfung fehlgeschlagen: ${listenerError}`);
+      }
+
+      // Commit only after the tentative runtime and listener audits have passed.
+      if (!enable) removeEnvKeys(candidateEnvPath, [...RESTRICTED_NETWORK_PERSISTED_KEYS]);
+      durableWrite(envPath, fs.readFileSync(candidateEnvPath, 'utf8'));
+      const result = await inspect();
+      if (enable && (result.status.phase !== 'applied' || result.status.health === 'degraded')) {
+        await rollback('Restricted-Publish wurde nach dem Start nicht eindeutig nachgewiesen.');
+      }
+      if (stackWasRunning)
+        await (hooks.restoreProxyRestartPolicy ?? restoreProxyRestartPolicy)(operationOptions);
+      fs.rmSync(path.join(ctx.home, 'state/restricted-recovery.json'), { force: true });
+      finish();
+      return result;
+    } catch (error) {
+      if (rollbackAttempted) throw error;
+      return rollback(error instanceof Error ? error.message : String(error));
+    }
+  } finally {
+    releaseRestrictedOperation(operation.id);
   }
-  const result = await inspect();
-  if (enable && (result.status.phase !== 'applied' || result.status.health === 'degraded')) {
-    await rollback('Restricted-Publish wurde nach dem Start nicht eindeutig nachgewiesen.');
-  }
-  return result;
 }
 
 export async function applyRestrictedNetwork(
@@ -1118,6 +1292,7 @@ export async function applySetupPlan(
     ...(writeProxyEnv ? [] : [...PROXY_RUNTIME_ENV_KEYS]),
     ...TLS_ENV_KEYS,
     ...PROXY_TLS_RUNTIME_ENV_KEYS,
+    ...RESTRICTED_NETWORK_PERSISTED_KEYS,
   ];
   const proxyWasEnabled = isProxyCurrentlyEnabled(existingBefore);
   const canonicalToWrite = resolveCanonicalBaseUrlForProxyPlan({
