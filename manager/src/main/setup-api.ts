@@ -26,6 +26,9 @@ const TECHNICAL_ERROR_PATTERN =
   /(?:Client network socket|ECONN[A-Z]*|EADDRINUSE|fetch failed|Container\s|docker compose|node:[a-z]|\bat\s+file:|\bat\s+\S+\s+\([^)]*:\d+:\d+\))/i;
 
 function setupActionFallback(path: string): string {
+  if (path === '/api/setup/host/rebuild') {
+    return 'Der Betrieb konnte nicht wiederhergestellt werden. Bitte den aktuellen Laufzustand und die Voraussetzungen prüfen.';
+  }
   if (path.startsWith('/api/setup/host/restricted-network/')) {
     return 'Der Patientenzugang konnte nicht geändert werden. Bitte prüfen Sie die Voraussetzungen und versuchen Sie es erneut.';
   }
@@ -47,6 +50,18 @@ export function setupApiUserErrorMessage(
 
   if (/setup token required|maintenance token required/i.test(raw)) {
     return 'Der Manager konnte sich nicht an der lokalen Setup-API anmelden. Bitte Manager und Praxis Flow mit demselben Installationsstand neu starten.';
+  }
+
+  // Preserve the rebuild's runtime outcome before filtering technical details or
+  // mapping listener failures to the separate portal-activation workflow.
+  if (request.path === '/api/setup/host/rebuild') {
+    if (raw.endsWith('Dienste konnten nicht vollständig gestoppt werden; Laufzustand prüfen.')) {
+      return 'Die Wiederherstellung ist fehlgeschlagen. Dienste konnten nicht vollständig gestoppt werden. Der Laufzustand ist ungeklärt; bitte vor weiterer Nutzung im Status prüfen.';
+    }
+    if (raw.endsWith('Dienste wurden gestoppt.')) {
+      return 'Die Wiederherstellung ist fehlgeschlagen. Die Dienste wurden gestoppt. Bitte Ursache und Status vor einem erneuten Start prüfen.';
+    }
+    if (raw.includes('Listener-Prüfung fehlgeschlagen')) return setupActionFallback(request.path);
   }
 
   if (raw.includes('Rollback unvollständig')) {
@@ -95,6 +110,7 @@ function errorDetailFromBody(body: unknown): string | null {
 }
 
 export function setupApiTimeoutMs(request: SetupApiCallRequest): number {
+  if (request.method === 'POST' && request.path === '/api/setup/host/rebuild') return 5 * 60 * 1000;
   if (request.method === 'POST' && request.path === '/api/setup/host/images/load') {
     return DOCKER_LOAD_TIMEOUT_MS;
   }

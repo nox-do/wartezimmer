@@ -141,3 +141,42 @@ test('setup API user errors translate a token mismatch without exposing token na
   assert.match(message, /demselben Installationsstand/);
   assert.doesNotMatch(message, /token/i);
 });
+
+test('rebuild timeout covers recreation and runtime audit', () => {
+  assert.equal(
+    setupApiTimeoutMs({ method: 'POST', path: '/api/setup/host/rebuild' }),
+    5 * 60 * 1000,
+  );
+});
+
+for (const cause of [
+  'Container konnten nicht wiederaufgebaut werden: docker compose failed',
+  'Listener-Prüfung fehlgeschlagen: Portal nicht erreichbar (ECONNRESET)',
+]) {
+  test(`rebuild preserves failed stop outcome after ${cause.split(':')[0]}`, () => {
+    const message = setupApiUserErrorMessage(
+      new Error(
+        `Setup-API /api/setup/host/rebuild: ${cause} Dienste konnten nicht vollständig gestoppt werden; Laufzustand prüfen.`,
+      ),
+      { path: '/api/setup/host/rebuild' },
+    );
+    assert.match(message, /nicht vollständig gestoppt/);
+    assert.match(message, /Laufzustand ist ungeklärt/);
+    assert.doesNotMatch(message, /Container|docker|ECONNRESET|Aktivierung/);
+  });
+  test(`rebuild preserves successful stop outcome after ${cause.split(':')[0]}`, () => {
+    const message = setupApiUserErrorMessage(new Error(`${cause} Dienste wurden gestoppt.`), {
+      path: '/api/setup/host/rebuild',
+    });
+    assert.match(message, /Dienste wurden gestoppt/);
+    assert.doesNotMatch(message, /Container|docker|ECONNRESET|Aktivierung/);
+  });
+}
+
+test('rebuild without a known stop result does not imply successful rollback or portal activation', () => {
+  const message = setupApiUserErrorMessage(new Error('Listener-Prüfung fehlgeschlagen'), {
+    path: '/api/setup/host/rebuild',
+  });
+  assert.match(message, /Laufzustand/);
+  assert.doesNotMatch(message, /Aktivierung|Dienste wurden gestoppt|Staff-Zugang bleibt/);
+});

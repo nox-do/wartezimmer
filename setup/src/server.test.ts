@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import http from 'node:http';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
-import { createSetupRequestHandler } from './server.js';
+import { createSetupRequestHandler, type SetupRequestHandlerOptions } from './server.js';
 import type { SetupContext } from './setup-context.js';
+import { testSetupContext } from './test-setup-context.js';
 import { SETUP_API_PROTOCOL_VERSION, SETUP_MANAGER_TOKEN_HEADER } from '@praxis-flow/server-shared';
 
 const testContext: SetupContext = {
@@ -12,9 +16,20 @@ const testContext: SetupContext = {
   templateRoot: '/unused',
 };
 
-async function startTestServer(options?: { managerToken?: string | null; buildId?: string }) {
+async function startTestServer(
+  options: SetupRequestHandlerOptions & { context?: SetupContext } = {},
+) {
+  const { context = testContext, ...handlerOptions } = options;
   const server = http.createServer(
-    createSetupRequestHandler(testContext, 9190, {}, { managerToken: null, ...options }),
+    createSetupRequestHandler(
+      context,
+      9190,
+      {},
+      {
+        managerToken: null,
+        ...handlerOptions,
+      },
+    ),
   );
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
@@ -131,4 +146,64 @@ test('setup server rejects requests without the configured manager token', async
   });
   assert.equal(authenticated.status, 200);
   assert.equal((await authenticated.json()).ok, true);
+});
+
+test('rebuild endpoint refuses a missing env without reconstructing an installation', async (t) => {
+  const server = await startTestServer();
+  t.after(server.close);
+  const response = await fetch(`${server.baseUrl}/api/setup/host/rebuild`, { method: 'POST' });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /\.env fehlt/);
+});
+
+test('HTTP rebuild waits for startup recovery before applying its open-journal lock', async (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-server-rebuild-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  fs.writeFileSync(
+    path.join(home, '.env'),
+    'SETUP_LAN_APP_IP=192.168.1.10\nPROXY_ENABLED=false\nPROXY_MODE=off\n',
+  );
+  fs.mkdirSync(path.join(home, 'state/restricted-operation'), { recursive: true });
+  fs.writeFileSync(
+    path.join(home, 'state/restricted-operation/journal.json'),
+    JSON.stringify({
+      version: 1,
+      id: 'pending',
+      pid: 123,
+      stackWasRunning: false,
+      action: 'pending-apply',
+      previousEnv: fs.readFileSync(path.join(home, '.env'), 'utf8'),
+      previousCaddyfile: null,
+    }),
+  );
+  let releaseRecovery!: () => void;
+  let recoveryCompleted = false;
+  const pendingRecovery = new Promise<void>((resolve) => {
+    releaseRecovery = () => {
+      recoveryCompleted = true;
+      resolve();
+    };
+  });
+  const server = await startTestServer({
+    context: testSetupContext(home),
+    recoverRestrictedOperation: async () => pendingRecovery,
+  });
+  t.after(server.close);
+
+  let responseFinished = false;
+  const responsePromise = fetch(`${server.baseUrl}/api/setup/host/rebuild`, {
+    method: 'POST',
+  }).then((response) => {
+    responseFinished = true;
+    return response;
+  });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(responseFinished, false);
+  releaseRecovery();
+  const response = await responsePromise;
+
+  assert.equal(recoveryCompleted, true);
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /Portaländerung ist noch offen/);
+  assert.ok(fs.existsSync(path.join(home, 'state/restricted-operation/journal.json')));
 });

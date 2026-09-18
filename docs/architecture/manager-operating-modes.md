@@ -59,9 +59,8 @@ Aktionsfreigaben und die vorhandenen Detailprüfungen bleiben unverändert.
 Wiederaufbau und erneute Einrichtung sind die bevorzugten weiteren Reparaturwege.
 Generierte Konfiguration und Container dürfen neu erzeugt werden; Praxisdaten,
 Zertifikate, private Schlüssel, ACME-Zugang und die zugehörige TLS-Identität müssen
-erhalten bleiben. Dieser Schritt bietet dafür noch keine neue Reparaturaktion an
-und darf insbesondere nicht auf den destruktiven Install-Reset verweisen.
+erhalten bleiben. Die Wartungsaktion [Betrieb wiederherstellen](../operations/rebuild.md) setzt eine
+vorhandene gültige `.env` und lokale Images voraus. Ohne `.env` wird abgebrochen.
+Sie verwendet den destruktiven Install-Reset nicht.
 
-Nächste Schritte: Einen ausdrücklich datenerhaltenden
-Wiederaufbau konkretisieren und anschließend vorhandene Übergangsprüfungen gemeinsam
-nutzen. Eigene Domains für den separaten Portalzugang bleiben ein eigener Funktionsausbau.
+Nächster Schritt: Vorhandene Übergangsprüfungen gemeinsam nutzen. Eigene Domains für den separaten Portalzugang bleiben ein eigener Funktionsausbau.

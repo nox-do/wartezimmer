@@ -104,3 +104,22 @@ test('writeEnvFromExample preserves keys that are only commented in the template
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('read-only escaping check finds unpaired dollars without exposing values', async () => {
+  const { envKeysNeedingComposeEscaping } = await import('./env-file.js');
+  assert.deepEqual(
+    envKeysNeedingComposeEscaping(
+      [
+        '# comment $ignored',
+        'PLAIN=unchanged',
+        'ESCAPED=keep$$literal',
+        'FOUR=keep$$$$literal',
+        'SECRET=keep$literal',
+        'ODD=keep$$$literal',
+        'BRACED=${literal}',
+        'TRAILING=keep$',
+      ].join('\n'),
+    ),
+    ['SECRET', 'ODD', 'BRACED', 'TRAILING'],
+  );
+});

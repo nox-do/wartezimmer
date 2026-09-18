@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import {
   buildComposeStatus,
+  runComposeCommand,
   COMPOSE_TLS_LAB_SERVICES,
   composeRestart,
   isWildcardPublishedHostIp,
@@ -449,6 +450,48 @@ test('composeRestart recreates services and ignores shell binding overrides', as
     else process.env.APP_BIND_ADDRESS = previousAppBind;
     if (previousStaffIp === undefined) delete process.env.SETUP_LAN_APP_IP;
     else process.env.SETUP_LAN_APP_IP = previousStaffIp;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('rebuild compose preflight preserves env bytes and ignores parent image overrides', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-rebuild-command-'));
+  const fakeDocker = path.join(root, 'docker');
+  const envPath = path.join(root, '.env');
+  const original = 'PROXY_ENABLED=false\nAUTH_KEY_CAPTIVE=keep$literal\n';
+  fs.writeFileSync(envPath, original);
+  fs.writeFileSync(path.join(root, 'docker-compose.yml'), 'services: {}');
+  const override = path.join(root, 'pinned-images.json');
+  fs.writeFileSync(override, '{}');
+  fs.writeFileSync(
+    fakeDocker,
+    '#!/bin/sh\nprintf "%s\\n%s" "$*" "${PRAXIS_FLOW_APP_IMAGE-unset}"\n',
+    { mode: 0o755 },
+  );
+  const previousCli = process.env.PRAXIS_FLOW_DOCKER_CLI;
+  const previousImage = process.env.PRAXIS_FLOW_APP_IMAGE;
+  process.env.PRAXIS_FLOW_DOCKER_CLI = fakeDocker;
+  process.env.PRAXIS_FLOW_APP_IMAGE = 'unintended:latest';
+  try {
+    const result = await runComposeCommand(
+      {
+        projectRoot: root,
+        composeProjectName: 'pf-test',
+        delivery: false,
+        preserveEnvFile: true,
+        overrideFiles: [override],
+      },
+      ['config', '--format', 'json'],
+    );
+    assert.equal(result.ok, true);
+    assert.equal(fs.readFileSync(envPath, 'utf8'), original);
+    assert.ok(result.stdout.includes(`-f ${override}`));
+    assert.match(result.stdout, /unset$/);
+  } finally {
+    if (previousCli === undefined) delete process.env.PRAXIS_FLOW_DOCKER_CLI;
+    else process.env.PRAXIS_FLOW_DOCKER_CLI = previousCli;
+    if (previousImage === undefined) delete process.env.PRAXIS_FLOW_APP_IMAGE;
+    else process.env.PRAXIS_FLOW_APP_IMAGE = previousImage;
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

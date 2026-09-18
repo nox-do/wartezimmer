@@ -873,3 +873,64 @@ test('path setter notifies once', () => {
   assert.equal(calls, 1);
   assert.equal(controller.getState().importsHostPath, '/draft');
 });
+
+test('rebuild is confirmed, serialized and displays the stopped-stack result', async () => {
+  let confirm: (() => void) | undefined;
+  let calls = 0;
+  let refreshed = 0;
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        rebuildHost: async () => {
+          calls += 1;
+          return {
+            ok: true,
+            compose: { running: false, services: [] },
+            log: 'Konfiguration wiederhergestellt; Laufzeit noch nicht geprüft.',
+          };
+        },
+      }),
+      {
+        requestConfirm: (_message, callback) => {
+          confirm = callback;
+        },
+        onAfterMutation: () => {
+          refreshed += 1;
+        },
+      },
+    ),
+  );
+  controller.rebuild();
+  assert.equal(calls, 0);
+  assert.ok(confirm);
+  confirm();
+  await flush();
+  assert.equal(calls, 1);
+  assert.equal(refreshed, 1);
+  assert.match(controller.getState().rebuildStatusText, /Laufzeit noch nicht geprüft/);
+  assert.equal(controller.getState().activeOperation, null);
+});
+
+test('rebuild errors remain visible and refresh the resulting stopped runtime', async () => {
+  let refreshed = 0;
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        rebuildHost: async () => {
+          throw new Error('Lokales Image fehlt');
+        },
+      }),
+      {
+        requestConfirm: (_message, confirm) => confirm(),
+        onAfterMutation: () => {
+          refreshed += 1;
+        },
+      },
+    ),
+  );
+  controller.rebuild();
+  await flush();
+  assert.equal(refreshed, 1);
+  assert.match(controller.getState().errors.stack!, /Lokales Image fehlt/);
+  assert.equal(controller.getState().rebuildStatusText, '');
+});

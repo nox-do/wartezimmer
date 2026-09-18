@@ -1,4 +1,5 @@
 import { recoverRestrictedOperation } from './docker.js';
+import { rebuildHost } from './rebuild-host.js';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -227,6 +228,7 @@ function createRuntimeRoutes(ctx: SetupContext, tlsDeps: TlsRuntimeDependencies)
       const result = await runComposeAction(ctx, action, { build: Boolean(body.build) });
       return routeResult(result, result.ok ? 200 : 500);
     },
+    'POST /api/setup/host/rebuild': async () => routeResult(await rebuildHost(ctx)),
   };
 }
 
@@ -345,6 +347,7 @@ function createDeliveryRoutes(ctx: SetupContext): Routes {
 export type SetupRequestHandlerOptions = {
   managerToken?: string | null;
   buildId?: string;
+  recoverRestrictedOperation?: typeof recoverRestrictedOperation;
 };
 
 function readProvidedSetupToken(req: http.IncomingMessage): string | undefined {
@@ -392,6 +395,7 @@ function createSetupRoutes(
     `POST ${SETUP_TLS_ROUTES.reset}`,
     `POST ${SETUP_TLS_ROUTES.renew}`,
     'POST /api/setup/host/compose',
+    'POST /api/setup/host/rebuild',
     'POST /api/setup/host/backup/restore',
     'POST /api/setup/host/reset-staff-pins',
     'POST /api/setup/host/apply',
@@ -406,10 +410,11 @@ function createSetupRoutes(
       route,
       (req, url) =>
         mutationLock.run(route, async () => {
-          await recoverRestrictedOperation({
-            projectRoot: ctx.home,
-            composeProjectName: ctx.composeProjectName,
-          });
+          if (route !== 'POST /api/setup/host/rebuild')
+            await recoverRestrictedOperation({
+              projectRoot: ctx.home,
+              composeProjectName: ctx.composeProjectName,
+            });
           return handler(req, url);
         }),
     ];
@@ -425,10 +430,12 @@ export function createSetupRequestHandler(
 ) {
   configureMaintenanceAuthHome(ctx.home, ctx.mode);
   const routes = createSetupRoutes(ctx, tlsDeps, options.buildId ?? resolveSetupBuildId());
-  let recovery: Promise<void> | null = recoverRestrictedOperation({
+  const recoveryOptions = {
     projectRoot: ctx.home,
     composeProjectName: ctx.composeProjectName,
-  });
+  };
+  const recover = options.recoverRestrictedOperation ?? recoverRestrictedOperation;
+  let recovery: Promise<void> | null = recover(recoveryOptions);
   void recovery.catch(() => undefined); // reported on authenticated requests, not an unhandled rejection
 
   const managerToken =
@@ -444,10 +451,9 @@ export function createSetupRequestHandler(
       if (!handler) {
         return sendJson(res, 404, { error: 'not found' });
       }
-      recovery ??= recoverRestrictedOperation({
-        projectRoot: ctx.home,
-        composeProjectName: ctx.composeProjectName,
-      });
+      // Rebuild never initiates recovery as a side effect of its preflight. It
+      // waits for the one recovery started when the setup handler was created.
+      if (url.pathname !== '/api/setup/host/rebuild') recovery ??= recover(recoveryOptions);
       try {
         await recovery;
       } catch (error) {

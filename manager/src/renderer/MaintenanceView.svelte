@@ -275,6 +275,8 @@
           error={snapshot.errors.stack}
           onToggle={(wantRunning) => controller?.handleStackToggle(wantRunning)}
           onRestart={() => controller?.restart()}
+          onRebuild={() => controller?.rebuild()}
+          rebuildStatus={snapshot.rebuildStatusText}
         />
         <hr class="panel-section-divider" />
         <SoftwareUpdatePanel

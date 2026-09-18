@@ -33,6 +33,18 @@ export function unescapeEnvValueFromCompose(value: string): string {
   return value.replace(/\$\$/g, '$');
 }
 
+/** Read-only counterpart of ensureEnvComposeEscaping; never returns secret values. */
+export function envKeysNeedingComposeEscaping(content: string): string[] {
+  const keys = new Set<string>();
+  for (const line of content.split(/\r?\n/)) {
+    const parsed = parseEnvLine(line);
+    if (!parsed) continue;
+    const rawValue = line.slice(line.indexOf('=') + 1).trim();
+    if (rawValue !== escapeEnvValueForCompose(parsed.value)) keys.add(parsed.key);
+  }
+  return [...keys];
+}
+
 function formatEnvLine(key: string, value: string): string {
   return `${key}=${escapeEnvValueForCompose(value)}`;
 }

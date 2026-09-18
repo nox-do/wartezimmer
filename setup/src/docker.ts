@@ -59,6 +59,10 @@ export function dockerInstallHints(): string {
 
 export type ComposeRunOptions = {
   projectRoot: string;
+  /** Internal, temporary overrides (e.g. locally pinned images during rebuild). */
+  overrideFiles?: string[];
+  /** Rebuild must not normalize or rewrite .env, even during preflight. */
+  preserveEnvFile?: boolean;
   restrictedOperationId?: string;
   delivery?: boolean;
   withGateway?: boolean;
@@ -203,6 +207,7 @@ function resolveComposeFileList(options: ComposeRunOptions): {
   });
   if (options.restrictedOperationId)
     files.push(path.join(restrictedOperationDir(options.projectRoot), 'compose.yml'));
+  files.push(...(options.overrideFiles ?? []));
   return { files, wantGateway, gatewaySkipped };
 }
 
@@ -570,19 +575,37 @@ function buildComposeArgv(
     ...subcommand,
   );
 
+  const env = buildComposeEnv(options.composeProjectName);
+  if (options.preserveEnvFile) {
+    // Rebuild uses saved settings, not an incidental Manager shell override.
+    for (const key of readEnvMap(path.join(options.projectRoot, '.env')).keys()) delete env[key];
+    for (const file of files) {
+      const content = fs.readFileSync(path.resolve(options.projectRoot, file), 'utf8');
+      for (const match of content.matchAll(/(?<!\$)\$\{?([A-Za-z_][A-Za-z0-9_]*)/g))
+        delete env[match[1]!];
+    }
+    for (const key of [
+      'PRAXIS_FLOW_APP_IMAGE',
+      'PRAXIS_FLOW_SANDBOX_IMAGE',
+      'PRAXIS_FLOW_PROXY_IMAGE',
+      'COMPOSE_PROFILES',
+    ])
+      delete env[key];
+    env.COMPOSE_PROJECT_NAME = options.composeProjectName;
+  }
   return {
     args,
     cwd: options.projectRoot,
-    env: buildComposeEnv(options.composeProjectName),
+    env,
   };
 }
 
-async function runComposeCommand(
+export async function runComposeCommand(
   options: ComposeRunOptions,
   subcommand: string[],
 ): Promise<{ ok: boolean; log: string; stdout: string }> {
   const envPath = path.join(options.projectRoot, '.env');
-  if (fs.existsSync(envPath)) {
+  if (!options.preserveEnvFile && fs.existsSync(envPath)) {
     ensureEnvComposeEscaping(options.projectRoot);
   }
   const { args, cwd, env } = buildComposeArgv(options, subcommand);

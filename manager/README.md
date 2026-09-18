@@ -99,6 +99,10 @@ ohne Lifecycle-Feld behalten die bisherige Einstiegslogik.
 
 - Stack: Start / Stop / Neustart (Stop ohne Volume-Löschung; Bestätigung bei Stop/Neustart)
 - **Neustart bei gestopptem Stack** = Start (`compose up -d`)
+- **Betrieb wiederherstellen:** vorhandene `.env` und lokale Images erforderlich;
+  Proxy-Konfiguration prüfen/neu erzeugen, laufende Container ohne Pull/Build
+  wiederaufbauen. Gestoppte Dienste bleiben gestoppt.
+  [Voraussetzungen und Erhalt](../docs/operations/rebuild.md).
 - Logs pro Service (`GET /compose/logs`)
 - Backup/Restore `.pfbackup` (`POST /backup`, validate, restore) — Vertrag: [`docs/operations/backup.md`](../docs/operations/backup.md)
 - Import-/Export-Hostordner (`POST /storage`)

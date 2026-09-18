@@ -8,12 +8,16 @@
     error = null,
     onToggle,
     onRestart,
+    onRebuild,
+    rebuildStatus = '',
   }: {
     compose: ComposeStatus | null;
     locked?: boolean;
     error?: string | null;
     onToggle: (wantRunning: boolean) => void;
     onRestart: () => void;
+    onRebuild: () => void;
+    rebuildStatus?: string;
   } = $props();
 
   const running = $derived(compose?.running ?? false);
@@ -45,8 +49,10 @@
       <span id="maintenance-stack-status" class="stack-toggle-status">{partial ? 'Teilweise gestartet' : stackStatusLabel(running)}</span>
     </label>
     <button type="button" class="btn-secondary" disabled={locked} onclick={onRestart}>Neustart</button>
+    <button type="button" class="btn-secondary" disabled={locked} onclick={onRebuild}>Betrieb wiederherstellen</button>
   </div>
   <p class="hint">Sind die Dienste gestoppt, entspricht Neustart einem Start.</p>
+  {#if rebuildStatus}<p class="notice is-ok" role="status">{rebuildStatus}</p>{/if}
   {#if error}
     <p class="error">{error}</p>
   {/if}

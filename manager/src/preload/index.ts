@@ -401,6 +401,8 @@ contextBridge.exposeInMainWorld('praxisManager', {
   getComposeStatus,
   getComposeLogs,
   runComposeAction,
+  rebuildHost: () =>
+    callSetupApi<ComposeActionResult>({ method: 'POST', path: '/api/setup/host/rebuild' }),
   createPfbackup,
   savePfbackup,
   saveTlsSidecar,

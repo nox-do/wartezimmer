@@ -42,6 +42,7 @@ export type MaintenanceState = {
   exportsHostPath: string;
   storageStatusText: string;
   softwareUpdateStatusText: string;
+  rebuildStatusText: string;
   pinResetStatusText: string;
   backupStatusText: string;
   tlsSidecarStatusText: string;
@@ -63,6 +64,7 @@ export type MaintenanceController = {
   browseExportsFolder: () => Promise<string | null>;
   handleStackToggle: (wantRunning: boolean) => void;
   restart: () => void;
+  rebuild: () => void;
   refreshLogs: (service?: string) => Promise<void>;
   requestLogsRefresh: (service?: string) => void;
   backupPf: () => void;
@@ -92,6 +94,7 @@ function createInitialState(): MaintenanceState {
     exportsHostPath: '',
     storageStatusText: '',
     softwareUpdateStatusText: '',
+    rebuildStatusText: '',
     pinResetStatusText: '',
     backupStatusText: '',
     tlsSidecarStatusText: '',
@@ -218,6 +221,7 @@ export function createMaintenanceController(
     if (!operationStarted && !startOperation('stack')) {
       return;
     }
+    patch({ rebuildStatusText: '' });
     const generation = lifecycleGeneration;
     try {
       const result = await deps.api.runComposeAction(action);
@@ -376,6 +380,33 @@ export function createMaintenanceController(
     },
     restart() {
       armStackConfirm('restart');
+    },
+    rebuild() {
+      if (!armOperation('stack')) return;
+      deps.requestConfirm(
+        'Betrieb mit den gespeicherten Einstellungen wiederherstellen? Laufende Dienste werden neu aufgebaut. Gestoppte Dienste bleiben gestoppt. Alle benötigten Images müssen lokal vorhanden sein. Praxisdaten und TLS-Identität bleiben erhalten.',
+        () => {
+          if (!startArmedOperation('stack')) return;
+          const generation = lifecycleGeneration;
+          patch({ rebuildStatusText: '' });
+          void (async () => {
+            try {
+              const result = await deps.api.rebuildHost();
+              if (still(generation)) {
+                patch({ compose: result.compose, rebuildStatusText: result.ok ? result.log : '' });
+                if (!result.ok) setSurfaceError('stack', result.log);
+              }
+            } catch (error) {
+              if (still(generation))
+                setSurfaceError('stack', errorMessage(error, 'Wiederherstellung fehlgeschlagen.'));
+            } finally {
+              deps.onAfterMutation?.();
+              endOperation('stack');
+            }
+          })();
+        },
+        () => cancelArmed('stack'),
+      );
     },
     refreshLogs,
     requestLogsRefresh(service) {
