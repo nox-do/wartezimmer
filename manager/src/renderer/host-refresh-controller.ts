@@ -4,7 +4,7 @@ import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 
 export type ManagerView = 'status' | 'maintenance' | 'network' | 'wizard';
 
-export type RefreshScope = 'full' | 'runtime' | 'config';
+export type RefreshScope = 'full' | 'runtime' | 'config' | 'mutation';
 
 export type RefreshErrorSource = 'config' | 'runtime';
 
@@ -141,6 +141,15 @@ export function createHostRefreshController(
       if (options.scope === 'config') {
         const status = await fetchConfig(myGeneration, options);
         configSucceeded = status !== null;
+        return status;
+      }
+
+      if (options.scope === 'mutation') {
+        const status = await fetchConfig(myGeneration, options);
+        configSucceeded = status !== null;
+        if (myGeneration === generation && (status ?? lastConfig)?.envExists) {
+          await fetchRuntime(myGeneration, options);
+        }
         return status;
       }
 

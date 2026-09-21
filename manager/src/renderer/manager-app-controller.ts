@@ -49,20 +49,18 @@ export type ManagerAppController = {
 export function createManagerAppController(deps: ManagerAppControllerDeps): ManagerAppController {
   const shell = deps.shell;
   const createHostRefresh = deps.createHostRefresh ?? createHostRefreshController;
+  let mutationRefreshChain: Promise<void> = Promise.resolve();
 
   function syncShell(view: ManagerView, options: NavigateOptions = {}): void {
     shell.applyShellNavigation(view, options);
   }
 
-  async function refreshAfterMutation(): Promise<void> {
-    await hostRefresh.refresh({ scope: 'config' });
-    if (hostRefresh.getLastConfig()?.envExists) {
-      await hostRefresh.refresh({ scope: 'runtime' });
-    }
-  }
-
-  async function loadReleaseArchiveFromStatus(): Promise<void> {
-    startSetupWizard();
+  function refreshAfterMutation(): Promise<void> {
+    const refresh = mutationRefreshChain.then(async () => {
+      await hostRefresh.refresh({ scope: 'mutation' });
+    });
+    mutationRefreshChain = refresh.catch(() => undefined);
+    return refresh;
   }
 
   function startSetupWizard(): void {
@@ -155,9 +153,7 @@ export function createManagerAppController(deps: ManagerAppControllerDeps): Mana
     },
     navigateTab,
     onStatusSetupClick: startSetupWizard,
-    onStatusLoadReleaseArchive: () => {
-      void loadReleaseArchiveFromStatus();
-    },
+    onStatusLoadReleaseArchive: startSetupWizard,
     onStatusOpenUrl: (url: string) => {
       void deps.api().openExternalUrl(url);
     },

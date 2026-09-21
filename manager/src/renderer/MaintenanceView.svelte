@@ -64,8 +64,10 @@
   let previousErrorsKey = $state('');
 
   const viewLoading = $derived(managerShell.viewLoading.maintenance);
+  const configStale = $derived(Boolean(managerShell.statusError));
   const maintenanceLocked = $derived(
-    Boolean(snapshot?.activeOperation) ||
+    configStale ||
+      Boolean(snapshot?.activeOperation) ||
       Boolean(restoreSnapshot?.busy) ||
       Boolean(pfupdateSnapshot?.busy),
   );
@@ -256,6 +258,13 @@
   aria-busy={viewLoading ? 'true' : 'false'}
 >
   <LoadingOverlay loading={viewLoading} />
+
+  {#if managerShell.statusError && managerShell.configSnapshot}
+    <p class="error" role="status">
+      Aktualisierung fehlgeschlagen – angezeigt wird der letzte bekannte Stand. Änderungen sind
+      vorübergehend gesperrt.
+    </p>
+  {/if}
 
   <p class="maintenance-page-intro">
     Vier Bereiche für den Alltag der Praxis-IT. Öffnen Sie einen Bereich, um die Details ein- oder

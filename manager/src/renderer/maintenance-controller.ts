@@ -549,8 +549,13 @@ export function createMaintenanceController(
       patch({ compose: health.compose });
     },
     applyConfigSnapshot(status) {
+      const draftWasDirty = storagePathsChanged(
+        state.importsHostPath,
+        state.exportsHostPath,
+        state.status?.folders,
+      );
       const next: Partial<MaintenanceState> = { status };
-      if (!state.activeOperation) {
+      if (!state.activeOperation && !draftWasDirty) {
         next.importsHostPath = status.folders.imports;
         next.exportsHostPath = status.folders.exports;
       }

@@ -278,6 +278,22 @@ test('tools mutation with .env fetches config then runtime immediately', async (
   assert.deepEqual(callLog, ['config', 'runtime', 'config', 'runtime']);
 });
 
+test('concurrent mutation notifications serialize config and runtime reconciliation', async () => {
+  let version = 0;
+  const callLog: CallLog = [];
+  const { controller, shell } = createTestController({
+    fetchSetupStatus: async () => minimalHostStatus({ practiceDisplayName: `Version ${version}` }),
+    callLog,
+  });
+
+  await controller.start();
+  version = 1;
+  await Promise.all([controller.onAfterMutation(), controller.onAfterMutation()]);
+
+  assert.equal(shell.configSnapshot?.practiceDisplayName, 'Version 1');
+  assert.deepEqual(callLog, ['config', 'runtime', 'config', 'runtime', 'config', 'runtime']);
+});
+
 test('later config without .env stops poll without changing the route', async () => {
   let envExists = true;
   const { controller, shell, timers, hostRefresh } = createTestController({

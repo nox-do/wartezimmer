@@ -49,7 +49,8 @@ Adresse. Während der TLS-Vorbereitung und nach dem Cutover bleibt die TLS-Ident
 
 ### Refresh / Poll
 
-- **Config-only** (`scope: 'config'`): nur `fetchSetupStatus` — erster Boot, Apply und andere Mutationen. Kein Runtime-Fetch als Nebeneffekt.
+- **Config-only** (`scope: 'config'`): nur `fetchSetupStatus` — insbesondere beim ersten Boot. Kein Runtime-Fetch als Nebeneffekt.
+- **Mutation** (`scope: 'mutation'`): Config und – sobald `.env` existiert – Runtime als eine gemeinsame Generation. Parallele Tab-Refreshes können die beiden Schritte dadurch nicht auseinanderreißen.
 - **Full refresh** (Tab-Wechsel): Config immer; Runtime parallel nur wenn der letzte erfolgreiche Config-Snapshot `.env` hat (`envExists`). Ein Fail verwirft den anderen nicht.
 - **Runtime-Poll** alle **12s** wenn `lastConfig.envExists` — **jede View**, einschließlich beider Wizard-Presentations. Ohne `.env` kein Timer. Config-Fehler am Start: kein Runtime, kein Poll; späterer Config-Fehler behält den letzten Snapshot und dessen Poll-Regel.
 - **Config** (`configSnapshot`): nur erfolgreicher Config-Fetch; Runtime-Poll schreibt nicht hinein
@@ -160,6 +161,10 @@ Im gepackten Modus startet der Manager die Setup-API aus diesen Ressourcen und n
 `~/Library/Application Support/PraxisFlow` als Install-Home.
 
 ## Dev-Hinweise
+
+**Electron-/IPC-Smoke-Test:** `npm run smoke:manager` baut den Manager, startet ihn mit
+einem temporären Install-Home und prüft den vollständigen Weg von Renderer über Preload
+und IPC bis zur Setup-API. Die Testinstanz beendet sich anschließend automatisch.
 
 **Zweite Manager-Instanz:** Produktiv eine Instanz. Im Dev-Modus gilt die Sperre **pro Install-Home** — parallele `PRAXIS_FLOW_HOME=…` bleiben möglich, zweimal dieselbe Home nicht.
 

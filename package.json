@@ -51,6 +51,7 @@
     "smoke:ops-stream": "node ./scripts/smoke-ops-stream.mjs",
     "smoke:ops-settings": "node ./scripts/smoke-ops-settings.mjs",
     "smoke:setup-host": "node ./scripts/smoke-setup-host.mjs",
+    "smoke:manager": "npm run -w @praxis-flow/manager smoke:electron",
     "smoke:proxy": "node ./scripts/smoke-proxy.mjs",
     "smoke:tls-lab": "node ./scripts/smoke-tls-lab.mjs",
     "smoke:tls-managed": "node ./scripts/smoke-tls-managed.mjs",

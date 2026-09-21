@@ -83,6 +83,7 @@
   let restrictedMutating = $state(false);
 
   const viewLoading = $derived(managerShell.viewLoading.network);
+  const configStale = $derived(Boolean(managerShell.statusError));
   const configSnapshot = $derived(managerShell.configSnapshot);
   const runtimeSnapshot = $derived(managerShell.runtimeSnapshot);
   const lifecycle = $derived(configSnapshot?.lifecycle);
@@ -177,7 +178,8 @@
   );
 
   const peerBusyForRestricted = $derived(
-    Boolean(snapshot && networkIsBusy(snapshot.phase)) ||
+    configStale ||
+      Boolean(snapshot && networkIsBusy(snapshot.phase)) ||
       Boolean(controller?.isHostWriteInFlight()) ||
       Boolean(tlsSnapshot && tlsNetworkLocksHost(tlsSnapshot)),
   );
@@ -299,6 +301,13 @@
   aria-busy={viewLoading ? 'true' : 'false'}
 >
   <LoadingOverlay loading={viewLoading} />
+
+  {#if managerShell.statusError && managerShell.configSnapshot}
+    <p class="error" role="status">
+      Aktualisierung fehlgeschlagen – angezeigt wird der letzte bekannte Stand. Änderungen sind
+      vorübergehend gesperrt.
+    </p>
+  {/if}
 
   {#if configSnapshot && snapshot}
     {#snippet draftCommitActions(host: 'lan' | 'proxy')}

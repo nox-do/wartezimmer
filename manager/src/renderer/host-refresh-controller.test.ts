@@ -95,6 +95,66 @@ test('config-only does not fetch runtime or start a poll timer', async () => {
   assert.equal(controller.getLastRuntime(), null);
 });
 
+test('mutation refresh applies config and runtime as one generation', async () => {
+  const configs: string[] = [];
+  const runtimes: string[] = [];
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchSetupStatus: async () => minimalHostStatus({ practiceDisplayName: 'Fresh config' }),
+        fetchRuntimeHealth: async () => minimalRuntime({ checkedAt: 'fresh-runtime' }),
+      }),
+    onConfig: (status) => configs.push(status.practiceDisplayName ?? ''),
+    onRuntime: (runtime) => runtimes.push(runtime.checkedAt),
+    onError: () => {},
+    schedule: () => 0,
+    clearSchedule: () => {},
+  });
+
+  await controller.refresh({ scope: 'mutation' });
+
+  assert.deepEqual(configs, ['Fresh config']);
+  assert.deepEqual(runtimes, ['fresh-runtime']);
+});
+
+test('newer full refresh supersedes an entire mutation refresh without losing config', async () => {
+  let releaseMutation!: () => void;
+  const mutationGate = new Promise<void>((resolve) => {
+    releaseMutation = resolve;
+  });
+  let configCalls = 0;
+  const configs: string[] = [];
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchSetupStatus: async () => {
+          configCalls += 1;
+          if (configCalls === 2) {
+            await mutationGate;
+            return minimalHostStatus({ practiceDisplayName: 'Stale mutation' });
+          }
+          return minimalHostStatus({
+            practiceDisplayName: configCalls === 1 ? 'Initial' : 'Fresh full refresh',
+          });
+        },
+      }),
+    onConfig: (status) => configs.push(status.practiceDisplayName ?? ''),
+    onRuntime: () => {},
+    onError: () => {},
+    schedule: () => 0,
+    clearSchedule: () => {},
+  });
+
+  await controller.refresh({ scope: 'config' });
+  const mutation = controller.refresh({ scope: 'mutation' });
+  const full = controller.refresh({ scope: 'full' });
+  releaseMutation();
+  await Promise.all([mutation, full]);
+
+  assert.deepEqual(configs, ['Initial', 'Fresh full refresh']);
+  assert.equal(controller.getLastConfig()?.practiceDisplayName, 'Fresh full refresh');
+});
+
 test('runtime refresh does not push config snapshot', async () => {
   const configs: HostStatus[] = [];
   const controller = createHostRefreshController({

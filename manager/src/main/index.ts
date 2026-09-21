@@ -177,6 +177,35 @@ function preloadScriptPath(): string {
   return path.join(moduleDir, '../preload/index.cjs');
 }
 
+function installSmokeCheck(window: BrowserWindow): void {
+  if (process.env.PRAXIS_FLOW_MANAGER_SMOKE !== '1') {
+    return;
+  }
+  window.webContents.once('did-finish-load', () => {
+    void window.webContents
+      .executeJavaScript(
+        `(async () => {
+        const api = window.praxisManager;
+        if (!api || typeof api.fetchSetupStatus !== 'function') {
+          throw new Error('Preload API missing');
+        }
+        const status = await api.fetchSetupStatus();
+        return { installationKind: status?.installation?.kind ?? null };
+      })()`,
+      )
+      .then((result: unknown) => {
+        console.log(`PRAXIS_FLOW_MANAGER_SMOKE_OK ${JSON.stringify(result)}`);
+        app.exit(0);
+      })
+      .catch((error: unknown) => {
+        console.error(
+          `PRAXIS_FLOW_MANAGER_SMOKE_FAILED ${error instanceof Error ? error.message : String(error)}`,
+        );
+        app.exit(1);
+      });
+  });
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 720,
@@ -193,6 +222,7 @@ function createWindow(): void {
   });
 
   installNavigationGuards(mainWindow.webContents);
+  installSmokeCheck(mainWindow);
 
   const rendererUrl = process.env.ELECTRON_RENDERER_URL;
   if (rendererUrl) {

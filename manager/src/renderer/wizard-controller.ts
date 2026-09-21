@@ -24,7 +24,6 @@ import {
   WIZARD_PROBE_WAIT_MESSAGE,
   type WizardAdvanceAfter,
   type WizardFlowState,
-  type WizardStep,
 } from './wizard-flow.js';
 import { tlsDraftMatchesPrepared } from './tls-identity.js';
 import { TLS_RESET_CONFIRM_MESSAGE, tlsErrorCopy } from './tls-network-view-model.js';
@@ -417,8 +416,6 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     deps.onHostMutated?.();
   }
 
-  async function enterStep(_step: WizardStep): Promise<void> {}
-
   return {
     getState: () => state,
     selectRecoveryBackup(id) {
@@ -522,7 +519,6 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
         }
 
         patch({ step: action.step, ...action.patch });
-        await enterStep(action.step);
         if (!still(generation)) {
           return;
         }
@@ -558,7 +554,6 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       }
       if (action.type === 'goto') {
         patch({ step: action.step, ...action.patch });
-        void enterStep(action.step);
       }
     },
 

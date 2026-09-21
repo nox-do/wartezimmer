@@ -395,7 +395,7 @@ test('requestLogsRefresh sets error when log fetch fails', async () => {
   assert.equal(controller.getState().activeOperation, null);
 });
 
-test('applyConfigSnapshot updates draft paths only when not busy', async () => {
+test('applyConfigSnapshot preserves a dirty storage draft across config refreshes', async () => {
   let resolveBackup!: () => void;
   const backupGate = new Promise<void>((resolve) => {
     resolveBackup = resolve;
@@ -435,7 +435,26 @@ test('applyConfigSnapshot updates draft paths only when not busy', async () => {
       folders: { imports: '/server/imports', exports: '/server/exports' },
     }),
   );
+  assert.equal(controller.getState().importsHostPath, '/draft/imports');
+});
+
+test('applyConfigSnapshot hydrates storage paths while the draft is clean', async () => {
+  const controller = createMaintenanceController(createControllerDeps(createMockApi()));
+  controller.show(
+    minimalHostStatus({
+      folders: { imports: '/data/imports', exports: '/data/exports' },
+    }),
+  );
+  await flush();
+
+  controller.applyConfigSnapshot(
+    minimalHostStatus({
+      folders: { imports: '/server/imports', exports: '/server/exports' },
+    }),
+  );
+
   assert.equal(controller.getState().importsHostPath, '/server/imports');
+  assert.equal(controller.getState().exportsHostPath, '/server/exports');
 });
 
 test('second show discards first bootstrap including logs', async () => {
