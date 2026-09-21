@@ -1,12 +1,5 @@
 /** Portable LAN-TLS backup inspect helpers (no DOM). */
 
-export {
-  TLS_SIDECAR_BASENAME_PREFIX,
-  TLS_SIDECAR_FILE_EXTENSION,
-  siblingTlsSidecarBasename,
-  tlsSidecarFileName,
-} from './backup-path-labels.js';
-
 const TLS_PREPARED_BACKUP_STATES = new Set([
   'preparing',
   'awaiting-operator-dns',
@@ -30,6 +23,13 @@ export function tlsInBackup(input: { canonicalBaseUrl?: unknown; proxyMode?: unk
   const canonical = String(input.canonicalBaseUrl ?? '');
   const mode = String(input.proxyMode ?? '');
   return canonical.startsWith('https://') || mode === 'tls-managed' || mode === 'tls-custom';
+}
+
+export function currentTlsClaimsHttps(env: Record<string, string>): boolean {
+  return (
+    tlsInBackup({ canonicalBaseUrl: env.CANONICAL_BASE_URL, proxyMode: env.PROXY_MODE }) ||
+    ['active', 'degraded'].includes(env.TLS_STATE ?? '')
+  );
 }
 
 /** Non-secret TLS_STATE marker: preparation exists, but Canonical is still HTTP. */
@@ -116,8 +116,8 @@ export function tlsRestoreSupported(input: {
   targetAppReachable: boolean;
   tlsMetadataConsistent: boolean;
   tlsClaimsHttps: boolean;
-  sidecarPresent: boolean;
-  sidecarMatches: boolean;
+  payloadPresent: boolean;
+  payloadMatches: boolean;
 }): boolean {
   if (
     !input.archiveValid ||
@@ -130,32 +130,32 @@ export function tlsRestoreSupported(input: {
   if (!input.tlsClaimsHttps) {
     return true;
   }
-  return Boolean(input.sidecarPresent && input.sidecarMatches);
+  return Boolean(input.payloadPresent && input.payloadMatches);
 }
 
 /** Prepare-only restore stays HTTP and may discard an unavailable staged journey. */
 export function tlsRestoreWarningCopy(input: {
   tlsMetadataConsistent: boolean;
   tlsPrepared: boolean;
-  sidecarPresent: boolean;
-  sidecarMatches: boolean;
+  payloadPresent: boolean;
+  payloadMatches: boolean;
 }): string | null {
   if (
     !input.tlsMetadataConsistent ||
     !input.tlsPrepared ||
-    (input.sidecarPresent && input.sidecarMatches)
+    (input.payloadPresent && input.payloadMatches)
   ) {
     return null;
   }
-  return 'Diese Sicherung enthält nur eine vorbereitete HTTPS-Einrichtung, noch kein aktives Zertifikat. Wiederherstellen bleibt möglich; ohne die dazugehörige Zertifikatsdatei wird die Vorbereitung verworfen.';
+  return 'Diese Sicherung enthält nur eine vorbereitete HTTPS-Einrichtung, noch kein aktives Zertifikat. Wiederherstellen bleibt möglich; ohne passende HTTPS-Daten wird die Vorbereitung verworfen.';
 }
 
 /** restoreInspectBlockedMessage when restoreSupported is false because of TLS. */
 export function tlsRestoreBlockedCopy(input: {
   tlsMetadataConsistent: boolean;
   tlsClaimsHttps: boolean;
-  sidecarPresent: boolean;
-  sidecarMatches: boolean;
+  payloadPresent: boolean;
+  payloadMatches: boolean;
 }): string | null {
   if (!input.tlsMetadataConsistent) {
     return 'Die HTTPS-Angaben in dieser Sicherung passen nicht zusammen. Wiederherstellen wird abgelehnt.';
@@ -163,11 +163,11 @@ export function tlsRestoreBlockedCopy(input: {
   if (!input.tlsClaimsHttps) {
     return null;
   }
-  if (!input.sidecarPresent) {
-    return 'Diese Sicherung erwartet HTTPS, aber die Zertifikatsdatei fehlt. Wiederherstellen würde Geräte auf https:// stellen ohne Zertifikat — deshalb abgelehnt.';
+  if (!input.payloadPresent) {
+    return 'Diese Sicherung erwartet HTTPS, aber die HTTPS-Daten fehlen. Wiederherstellen würde Geräte auf https:// stellen ohne Zertifikat — deshalb abgelehnt.';
   }
-  if (!input.sidecarMatches) {
-    return 'Die Zertifikatsdatei gehört zu einer anderen Installation oder einem anderen Hostnamen.';
+  if (!input.payloadMatches) {
+    return 'Die HTTPS-Daten gehören zu einer anderen Installation oder einem anderen Hostnamen.';
   }
   return null;
 }

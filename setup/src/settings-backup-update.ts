@@ -55,6 +55,7 @@ import { mergeConfigRestoreEnv } from './settings-backup-restore.js';
 import { resolveCurrentSettingsFormatVersion } from './settings-format-version.js';
 import { migrateMaintenanceToken, type SetupContext } from './setup-context.js';
 import { maintenanceRequestHeaders } from './maintenance-auth.js';
+import { assertHostLifecycleAction } from './host-lifecycle-guard.js';
 import { requirePackageFileExtension } from './package-file-extension.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
 import { listNetworkInterfaces } from './network.js';
@@ -863,6 +864,7 @@ export async function applyPfupdate(
   const previousVersion = readManagerState(ctx.home).release?.releaseVersion ?? null;
 
   try {
+    assertHostLifecycleAction(ctx, 'update');
     await recoverRestrictedOperation({
       projectRoot: ctx.home,
       composeProjectName: ctx.composeProjectName,

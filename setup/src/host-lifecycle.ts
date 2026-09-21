@@ -82,6 +82,8 @@ export function deriveHostLifecycle(facts: HostLifecycleFacts): HostLifecycle {
     issue('proxy-invalid', 'Die gespeicherten Proxy-Einstellungen sind widersprüchlich.');
     return result;
   }
+  // Require persisted installation markers, but do not compare them with the
+  // currently available NICs here. IP drift remains an action-specific check.
   if (!value('SETUP_LAN_APP_IP') && !value('APP_PORTAL_URL')) {
     issue('address-missing', 'Die Praxisadresse fehlt in der Einrichtung.');
   }

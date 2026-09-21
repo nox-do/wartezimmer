@@ -11,12 +11,8 @@ export type GeneratedSecrets = {
   OPENNDS_FAS_KEY: string;
 };
 
-export const SECRET_ENV_KEYS = [
-  'AUTH_KEY_CAPTIVE',
-  'MAINTENANCE_TOKEN',
-  'SANDBOX_INTERNAL_TOKEN',
-  'OPENNDS_FAS_KEY',
-] as const satisfies readonly (keyof GeneratedSecrets)[];
+import { SECRET_ENV_KEYS } from '@praxis-flow/server-shared';
+export { SECRET_ENV_KEYS };
 
 const WEAK_SECRET_VALUES = new Set(['change-me', 'change-me-captive-key']);
 

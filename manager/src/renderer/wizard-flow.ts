@@ -186,6 +186,11 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
   }
 
   if (step === 5) {
+    if (
+      state.status?.installation.kind === 'installing' &&
+      state.status.installation.operation.backupContainsTls !== null
+    )
+      return { type: 'goto', step: 7, patch: { plan: null }, after: 'loadPlan' };
     if (wizardUsesExistingTlsConfiguration(state.status)) {
       return { type: 'goto', step: 7, patch: { plan: null } };
     }
@@ -269,6 +274,12 @@ function planHttpsAdvance(state: WizardFlowState): WizardAdvanceAction {
 }
 
 export function planWizardBack(state: WizardFlowState): WizardAdvanceAction {
+  if (
+    state.step === 7 &&
+    state.status?.installation.kind === 'installing' &&
+    state.status.installation.operation.backupContainsTls !== null
+  )
+    return { type: 'goto', step: 5 };
   if (state.step === 7 && wizardHttpsPrepared(state.status)) {
     return { type: 'https-phase', phase: 'mail' };
   }

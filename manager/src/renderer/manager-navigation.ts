@@ -1,22 +1,14 @@
 import type { HostRefreshController, ManagerView } from './host-refresh-controller.js';
 import type { HostStatus } from '../shared/host-status.js';
-import { isSetupEntryStatus } from './status-view-model.js';
 
 export type WizardPresentation = 'fullscreen' | 'embedded';
 
 export function defaultWizardPresentation(status: HostStatus | null): WizardPresentation {
-  if (status?.lifecycle) {
-    return shouldAutoStartFullscreenWizard(status) ? 'fullscreen' : 'embedded';
-  }
-  return status && !isSetupEntryStatus(status) ? 'embedded' : 'fullscreen';
+  return status?.installation.kind === 'healthy' ? 'embedded' : 'fullscreen';
 }
 
-/** Only a confirmed fresh lifecycle auto-starts; old hosts retain their legacy fallback. */
 export function shouldAutoStartFullscreenWizard(status: HostStatus | null): boolean {
-  if (status?.lifecycle) {
-    return status.lifecycle.assessment === 'known' && status.lifecycle.mode === 'uninstalled';
-  }
-  return !status || isSetupEntryStatus(status);
+  return status?.installation.kind === 'fresh' || status?.installation.kind === 'installing';
 }
 
 export type NavigateOptions = {

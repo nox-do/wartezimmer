@@ -1,4 +1,5 @@
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
+import { evaluateHostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
 import type { ComposeStatus, HostStatus } from '../shared/host-status.js';
 import type { PfupdateApplyResult } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
@@ -22,10 +23,6 @@ import {
   type MaintenanceErrors,
   type MaintenanceOperation,
 } from './maintenance-view-model.js';
-import {
-  restoreInspectBlockedMessage,
-  restoreTlsInspectSummaryLine,
-} from './restore-wizard-flow.js';
 
 export type MaintenanceCallbacks = {
   onAfterMutation?: () => void;
@@ -37,7 +34,6 @@ export type MaintenanceState = {
   logsService: string;
   logsText: string;
   latestBackupPath: string | null;
-  latestTlsSidecarPath: string | null;
   importsHostPath: string;
   exportsHostPath: string;
   storageStatusText: string;
@@ -45,7 +41,6 @@ export type MaintenanceState = {
   rebuildStatusText: string;
   pinResetStatusText: string;
   backupStatusText: string;
-  tlsSidecarStatusText: string;
   activeOperation: MaintenanceOperation | null;
   errors: MaintenanceErrors;
 };
@@ -69,8 +64,6 @@ export type MaintenanceController = {
   requestLogsRefresh: (service?: string) => void;
   backupPf: () => void;
   validatePfbackup: () => void;
-  exportTlsSidecar: () => void;
-  inspectTlsSidecar: () => void;
   applyStorage: () => void;
   recordPfupdateSuccess: (result: Extract<PfupdateApplyResult, { ok: true }>) => void;
   executePinReset: () => void;
@@ -89,7 +82,6 @@ function createInitialState(): MaintenanceState {
     logsService: 'app',
     logsText: '',
     latestBackupPath: null,
-    latestTlsSidecarPath: null,
     importsHostPath: '',
     exportsHostPath: '',
     storageStatusText: '',
@@ -97,7 +89,6 @@ function createInitialState(): MaintenanceState {
     rebuildStatusText: '',
     pinResetStatusText: '',
     backupStatusText: '',
-    tlsSidecarStatusText: '',
     activeOperation: null,
     errors: emptyMaintenanceErrors(),
   };
@@ -221,9 +212,17 @@ export function createMaintenanceController(
     if (!operationStarted && !startOperation('stack')) {
       return;
     }
-    patch({ rebuildStatusText: '' });
     const generation = lifecycleGeneration;
     try {
+      const lifecycle = state.status?.lifecycle;
+      if (lifecycle) {
+        const decision = evaluateHostLifecycleAction(lifecycle, `stack-${action}`);
+        if (!decision.allowed) {
+          setSurfaceError('stack', decision.reason ?? 'Host-Aktion derzeit nicht erlaubt.');
+          return;
+        }
+      }
+      patch({ rebuildStatusText: '' });
       const result = await deps.api.runComposeAction(action);
       if (still(generation)) {
         patch({ compose: result.compose });
@@ -382,6 +381,14 @@ export function createMaintenanceController(
       armStackConfirm('restart');
     },
     rebuild() {
+      const lifecycle = state.status?.lifecycle;
+      if (lifecycle) {
+        const decision = evaluateHostLifecycleAction(lifecycle, 'rebuild');
+        if (!decision.allowed) {
+          setSurfaceError('stack', decision.reason ?? 'Host-Aktion derzeit nicht erlaubt.');
+          return;
+        }
+      }
       if (!armOperation('stack')) return;
       deps.requestConfirm(
         'Betrieb mit den gespeicherten Einstellungen wiederherstellen? Laufende Dienste werden neu aufgebaut. Gestoppte Dienste bleiben gestoppt. Alle benötigten Images müssen lokal vorhanden sein. Praxisdaten und TLS-Identität bleiben erhalten.',
@@ -436,7 +443,6 @@ export function createMaintenanceController(
           if (still(generation)) {
             patch({
               latestBackupPath: result.backupPath,
-              latestTlsSidecarPath: result.tlsSidecarPath ?? null,
             });
           }
           const saveResult = await deps.api.savePfbackup(result.backupPath);
@@ -514,95 +520,6 @@ export function createMaintenanceController(
         })
         .finally(() => {
           endOperation('backup');
-        });
-    },
-    exportTlsSidecar() {
-      const backupPath = state.latestTlsSidecarPath ?? state.latestBackupPath;
-      if (!backupPath) {
-        setSurfaceError(
-          'tlsSidecar',
-          'Noch keine Zertifikatsdatei. Zuerst ein Praxis-Backup erstellen.',
-        );
-        return;
-      }
-      if (!beginOperation('tlsSidecar')) {
-        return;
-      }
-      const generation = lifecycleGeneration;
-      patch({ tlsSidecarStatusText: 'Zertifikatsdatei wird gespeichert …' });
-      void deps.api
-        .saveTlsSidecar(backupPath)
-        .then((saveResult) => {
-          if (!still(generation)) {
-            return;
-          }
-          if (saveResult.canceled) {
-            patch({ tlsSidecarStatusText: '' });
-            return;
-          }
-          if (!saveResult.saved) {
-            patch({ tlsSidecarStatusText: '' });
-            setSurfaceError('tlsSidecar', 'Zertifikatsdatei konnte nicht gespeichert werden.');
-            return;
-          }
-          patch({ tlsSidecarStatusText: 'Zertifikatsdatei gespeichert.' });
-        })
-        .catch((error) => {
-          if (!still(generation)) {
-            return;
-          }
-          patch({ tlsSidecarStatusText: '' });
-          setSurfaceError(
-            'tlsSidecar',
-            errorMessage(error, 'Zertifikatsdatei konnte nicht gespeichert werden.'),
-          );
-        })
-        .finally(() => {
-          endOperation('tlsSidecar');
-        });
-    },
-    inspectTlsSidecar() {
-      if (!state.latestBackupPath) {
-        setSurfaceError('tlsSidecar', 'Kein Praxis-Backup zum Prüfen.');
-        return;
-      }
-      if (!beginOperation('tlsSidecar')) {
-        return;
-      }
-      const generation = lifecycleGeneration;
-      patch({ tlsSidecarStatusText: 'HTTPS-Sicherung wird geprüft …' });
-      void deps.api
-        .inspectPfbackupFile(state.latestBackupPath)
-        .then((inspect) => {
-          if (!still(generation)) {
-            return;
-          }
-          if (!inspect.compatibility.restoreSupported) {
-            patch({ tlsSidecarStatusText: '' });
-            setSurfaceError(
-              'tlsSidecar',
-              restoreInspectBlockedMessage(inspect) ??
-                'HTTPS-Sicherung konnte nicht geprüft werden.',
-            );
-            return;
-          }
-          const line = restoreTlsInspectSummaryLine(inspect.backup?.tls);
-          patch({
-            tlsSidecarStatusText: line ?? 'In dieser Sicherung ist kein HTTPS enthalten.',
-          });
-        })
-        .catch((error) => {
-          if (!still(generation)) {
-            return;
-          }
-          patch({ tlsSidecarStatusText: '' });
-          setSurfaceError(
-            'tlsSidecar',
-            errorMessage(error, 'HTTPS-Sicherung konnte nicht geprüft werden.'),
-          );
-        })
-        .finally(() => {
-          endOperation('tlsSidecar');
         });
     },
     applyStorage() {
@@ -702,14 +619,12 @@ export function createMaintenanceController(
         logsService: 'app',
         logsText: '',
         latestBackupPath: null,
-        latestTlsSidecarPath: null,
         importsHostPath: status.folders.imports,
         exportsHostPath: status.folders.exports,
         storageStatusText: '',
         softwareUpdateStatusText: '',
         pinResetStatusText: '',
         backupStatusText: '',
-        tlsSidecarStatusText: '',
         activeOperation: visibleOperation(),
         errors: emptyMaintenanceErrors(),
       });
@@ -730,7 +645,6 @@ export function createMaintenanceController(
           }
           patch({
             latestBackupPath: backupInfoResult.latestBackupPath,
-            latestTlsSidecarPath: backupInfoResult.latestTlsSidecarPath ?? null,
           });
         })
         .catch((error) => {

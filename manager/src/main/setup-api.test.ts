@@ -180,3 +180,10 @@ test('rebuild without a known stop result does not imply successful rollback or 
   assert.match(message, /Laufzustand/);
   assert.doesNotMatch(message, /Aktivierung|Dienste wurden gestoppt|Staff-Zugang bleibt/);
 });
+
+test('recovery finish gets the same timeout as manual restore', () => {
+  assert.equal(
+    setupApiTimeoutMs({ method: 'POST', path: '/api/setup/host/install/finish' }),
+    600_000,
+  );
+});

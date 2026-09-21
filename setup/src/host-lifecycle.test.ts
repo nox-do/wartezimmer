@@ -59,9 +59,28 @@ test('missing env with remnants or unavailable inspection is never classified as
   assert.equal(derive({}, { envExists: false, residues: 'unknown' }).assessment, 'unknown');
 });
 
+test('empty or comment-only env is not a known direct-http installation', () => {
+  for (const contents of ['', '# only a comment\n']) {
+    const result = deriveHostLifecycle({
+      env: new Map(),
+      envExists: true,
+      residues: 'present',
+      operation: 'none',
+      recovered: false,
+    });
+    assert.equal(result.assessment, 'inconsistent', contents);
+    assert.equal(result.mode, null, contents);
+    assert.ok(
+      result.issues.some((entry) => entry.code === 'address-missing'),
+      contents,
+    );
+  }
+});
+
 test('contradictory config never falls back to a healthy lower mode', () => {
   const configurations: Record<string, string>[] = [
     { PROXY_ENABLED: 'true', PROXY_MODE: 'off' },
+    { PROXY_MODE: 'tls-managed', TLS_MODE: 'managed', TLS_STATE: 'active' },
     { TLS_STATE: 'invalid' },
     { TLS_CUTOVER_APPLIED: 'perhaps' },
     { SETUP_RESTRICTED_ENABLED: 'true' },

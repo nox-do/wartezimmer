@@ -5,7 +5,6 @@ import {
 } from '@praxis-flow/server-shared';
 import { runDockerCommand } from './docker-cli.js';
 
-export const SANDBOX_CONTAINER_NAME = 'praxis-flow-sandbox';
 const FRESHCLAM_STATE_PATH = '/var/lib/clamav/freshclam-last-attempt.json';
 const EMPTY_FRESHCLAM_LOG = '(keine ClamAV-Logs)';
 export const SANDBOX_CLAMAV_LOG_HEADER = '--- ClamAV (Signaturen) ---';
@@ -135,17 +134,17 @@ export function mergeSandboxWithClamAvLogs(composeLog: string, clamavLog: string
 
 export async function appendSandboxClamAvLogSection(
   composeLog: string,
+  containerName: string,
   tail = 200,
-  containerName = SANDBOX_CONTAINER_NAME,
 ): Promise<string> {
-  const clamav = await fetchSandboxFreshclamLog(tail, containerName);
+  const clamav = await fetchSandboxFreshclamLog(containerName, tail);
   const section = clamav.ok ? clamav.log : `(ClamAV-Log nicht lesbar: ${clamav.log})`;
   return mergeSandboxWithClamAvLogs(composeLog, section);
 }
 
 export async function fetchSandboxFreshclamLog(
+  containerName: string,
   tail = 200,
-  containerName = SANDBOX_CONTAINER_NAME,
 ): Promise<{ ok: boolean; log: string }> {
   const result = await runDockerCommand([
     'exec',
@@ -174,7 +173,7 @@ export async function fetchSandboxFreshclamLog(
 
 export async function fetchSandboxScannerStatus(
   maxSignatureAgeHours: number,
-  containerName = SANDBOX_CONTAINER_NAME,
+  containerName: string,
 ): Promise<SandboxScannerStatus | null> {
   const result = await runDockerCommand([
     'exec',

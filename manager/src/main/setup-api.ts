@@ -111,11 +111,25 @@ function errorDetailFromBody(body: unknown): string | null {
 
 export function setupApiTimeoutMs(request: SetupApiCallRequest): number {
   if (request.method === 'POST' && request.path === '/api/setup/host/rebuild') return 5 * 60 * 1000;
+  if (request.method === 'POST' && request.path === '/api/setup/host/installation/start') {
+    return 3 * 60 * 1000;
+  }
   if (request.method === 'POST' && request.path === '/api/setup/host/images/load') {
     return DOCKER_LOAD_TIMEOUT_MS;
   }
+  if (
+    request.method === 'POST' &&
+    (request.path === '/api/setup/host/install/prepare' ||
+      request.path === '/api/setup/host/install/commit')
+  ) {
+    return DOCKER_LOAD_TIMEOUT_MS;
+  }
 
-  if (request.method === 'POST' && request.path === '/api/setup/host/backup/restore') {
+  if (
+    request.method === 'POST' &&
+    (request.path === '/api/setup/host/backup/restore' ||
+      request.path === '/api/setup/host/install/finish')
+  ) {
     return RESTORE_TIMEOUT_MS;
   }
 
@@ -189,7 +203,7 @@ export async function callSetupApi<T = unknown>(
     signal: AbortSignal.timeout(setupApiTimeoutMs(request)),
   };
   const headers: Record<string, string> = {};
-  if (request.method === 'POST') {
+  if (request.method !== 'GET') {
     headers['content-type'] = 'application/json';
     init.body = JSON.stringify(request.body ?? {});
   }

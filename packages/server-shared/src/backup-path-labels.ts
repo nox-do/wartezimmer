@@ -51,16 +51,3 @@ export function formatPfbackupLabel(backupPath: string, locale = 'de-DE'): strin
     timeStyle: 'short',
   }).format(date);
 }
-
-export const TLS_SIDECAR_BASENAME_PREFIX = 'praxis-flow-tls-';
-export const TLS_SIDECAR_FILE_EXTENSION = 'tgz';
-
-/** Sidecar next to `.pfbackup`, same timestamp token. Pilot; later inside the archive. */
-export function tlsSidecarFileName(timestamp: string): string {
-  return `${TLS_SIDECAR_BASENAME_PREFIX}${timestamp}.${TLS_SIDECAR_FILE_EXTENSION}`;
-}
-
-export function siblingTlsSidecarBasename(backupPath: string): string | null {
-  const timestamp = parsePfbackupTimestampTokenFromPath(backupPath);
-  return timestamp ? tlsSidecarFileName(timestamp) : null;
-}

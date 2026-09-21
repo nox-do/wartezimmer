@@ -23,6 +23,7 @@ export type RestoreWizardController = {
   openPreUpdate: (onComplete: () => void) => void;
   chooseRestore: (restore: boolean) => void;
   confirmRestore: () => void;
+  cancelHttpsConfirmation: () => void;
   retryRestore: () => void;
   skipAfterFailure: () => void;
   close: () => void;
@@ -73,7 +74,6 @@ export function createRestoreWizardController(
     patch({
       content: picked.content,
       filePath: picked.filePath,
-      tlsSidecarBase64: picked.tlsSidecarBase64 ?? null,
       phase: 'inspect',
       busy: true,
       statusText: 'Backup wird geprüft …',
@@ -90,19 +90,7 @@ export function createRestoreWizardController(
       return;
     }
     try {
-      let inspect = await deps.api.inspectPfbackup(state.content, {
-        tlsSidecarBase64: state.tlsSidecarBase64 ?? undefined,
-      });
-      if (inspect.backup?.tls?.inBackup && !inspect.backup.tls.sidecarPresent) {
-        patch({ statusText: 'Zertifikatsdatei wählen …' });
-        const sidecar = await deps.api.readTlsSidecar();
-        if (!sidecar.canceled) {
-          patch({ tlsSidecarBase64: sidecar.tlsSidecarBase64 });
-          inspect = await deps.api.inspectPfbackup(state.content, {
-            tlsSidecarBase64: sidecar.tlsSidecarBase64,
-          });
-        }
-      }
+      const inspect = await deps.api.inspectPfbackup(state.content);
       patch({
         inspect,
         phase: inspect.ok && inspect.compatibility.restoreSupported ? 'preview' : 'failed',
@@ -124,6 +112,28 @@ export function createRestoreWizardController(
     }
   }
 
+  async function pickAndInspect(): Promise<void> {
+    try {
+      if (await pickBackupFile()) await runInspect();
+    } catch (error) {
+      patch({
+        phase: 'failed',
+        busy: false,
+        statusText: '',
+        error: error instanceof Error ? error.message : 'Backup-Datei konnte nicht gelesen werden.',
+      });
+    }
+  }
+
+  function requestRestore(): void {
+    if (state.busy || !state.inspect?.compatibility.restoreSupported) return;
+    if (state.inspect.currentTlsClaimsHttps && state.inspect.backup?.tls?.inBackup) {
+      patch({ phase: 'confirm-https' });
+      return;
+    }
+    void runRestore();
+  }
+
   async function runRestore(): Promise<void> {
     if (!state.content) {
       patch({ phase: 'failed', error: 'Kein Backup-Inhalt.', busy: false });
@@ -139,7 +149,6 @@ export function createRestoreWizardController(
     try {
       const result = await deps.api.restorePfbackup(state.content, {
         skipProviderCredentials: state.skipProviderCredentials,
-        tlsSidecarBase64: state.tlsSidecarBase64 ?? undefined,
       });
       if (result.ok) {
         patch({
@@ -189,11 +198,7 @@ export function createRestoreWizardController(
         statusText: 'Backup-Datei wählen …',
       };
       notify();
-      void pickBackupFile().then((picked) => {
-        if (picked) {
-          void runInspect();
-        }
-      });
+      void pickAndInspect();
     },
 
     openPreUpdate(onComplete) {
@@ -216,37 +221,20 @@ export function createRestoreWizardController(
         statusText: 'Backup-Datei wählen …',
         error: null,
       });
-      void pickBackupFile().then((picked) => {
-        if (picked) {
-          void runInspect();
-        }
-      });
+      void pickAndInspect();
     },
 
     confirmRestore() {
-      void runRestore();
+      if (state.busy) return;
+      if (state.phase === 'confirm-https') void runRestore();
+      else if (state.phase === 'preview') requestRestore();
+    },
+    cancelHttpsConfirmation() {
+      if (state.phase === 'confirm-https') patch({ phase: 'preview' });
     },
 
     retryRestore() {
-      if (!canRetryRestoreAfterFailure(state.restoreResult)) {
-        return;
-      }
-      if (state.content) {
-        void runRestore();
-        return;
-      }
-      patch({
-        phase: 'inspect',
-        busy: true,
-        statusText: 'Backup-Datei wählen …',
-        error: null,
-        restoreResult: null,
-      });
-      void pickBackupFile().then((picked) => {
-        if (picked) {
-          void runInspect();
-        }
-      });
+      if (canRetryRestoreAfterFailure(state.restoreResult)) requestRestore();
     },
 
     skipAfterFailure() {

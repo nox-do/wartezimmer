@@ -61,7 +61,13 @@ export function networkDraftChanged(
 
   // Once TLS starts, reachability/proxy identity is owned by the TLS controller.
   // This draft may still save LAN-IP changes, but must not manufacture an HTTP diff.
-  if (status.tls && (status.tls.state !== 'off' || status.tls.cutoverApplied)) {
+  const lifecycle = status?.lifecycle;
+  if (
+    lifecycle &&
+    (lifecycle.preparation !== 'none' ||
+      lifecycle.mode === 'https' ||
+      lifecycle.mode === 'https-portal')
+  ) {
     return false;
   }
 
@@ -71,7 +77,11 @@ export function networkDraftChanged(
     return true;
   }
 
-  if (fields.proxyEnabled !== Boolean(status.proxy?.enabled)) {
+  if (
+    lifecycle &&
+    lifecycle.mode !== 'uninstalled' &&
+    fields.proxyEnabled !== (lifecycle.mode !== 'direct-http')
+  ) {
     return true;
   }
 

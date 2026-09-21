@@ -1,3 +1,4 @@
+import { buildPfbackupTlsInspectSummary } from './tls-backup-sidecar.js';
 import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime-postcondition.js';
 import { auditRestrictedListeners } from './restricted-listener-probe.js';
 import { randomBytes } from 'node:crypto';
@@ -5,7 +6,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   parsePfbackupArchive,
-  STACK_IMAGE_ENV_KEYS,
+  NON_RESTORABLE_INSTALL_ENV_KEYS,
+  currentTlsClaimsHttps,
   tlsRestoreBlockedCopy,
   tlsRestoreSupported,
   validateManagerStateForBackup,
@@ -25,10 +27,7 @@ import {
   runFreshDbSettingsCutover,
   type FreshDbCutoverPhase,
 } from './fresh-db-settings-cutover.js';
-import {
-  checkMaintenanceAppReachable,
-  buildPfbackupTlsInspectSummary,
-} from './settings-backup-inspect.js';
+import { checkMaintenanceAppReachable } from './settings-backup-inspect.js';
 import {
   fetchSettingsDbSnapshotFromApp,
   importSettingsSnapshotViaApp,
@@ -37,6 +36,7 @@ import {
   type SettingsSnapshotDbFromApp,
 } from './settings-backup.js';
 import type { SetupContext } from './setup-context.js';
+import { SetupApiValidationError } from './setup-api-normalize.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
 import { listNetworkInterfaces } from './network.js';
 import { maintenanceStaffBindingPreflightError } from './maintenance-staff-binding.js';
@@ -63,6 +63,10 @@ import {
   wipeTlsStateRoot,
 } from './tls-backup-sidecar.js';
 import { RESTRICTED_NETWORK_PERSISTED_KEYS } from './restricted-network.js';
+import {
+  checkHostLifecycleAction,
+  assertTargetHostLifecycleAction,
+} from './host-lifecycle-guard.js';
 
 export const RESTORE_PHASES = {
   validateArchive: 'validate_archive',
@@ -85,7 +89,6 @@ export type RestorePhase = (typeof RESTORE_PHASES)[keyof typeof RESTORE_PHASES];
 
 export type PfbackupRestoreOptions = {
   skipProviderCredentials?: boolean;
-  tlsSidecarBase64?: string;
 };
 
 export type PfbackupRestoreTestHooks = {
@@ -173,11 +176,13 @@ export function mergeConfigRestoreEnv(
   backupEnv: Record<string, string>,
   currentEnv: Record<string, string>,
 ): Record<string, string> {
-  const merged = { ...backupEnv };
-  for (const key of STACK_IMAGE_ENV_KEYS) {
+  const merged = { ...currentEnv, ...backupEnv };
+  for (const key of NON_RESTORABLE_INSTALL_ENV_KEYS) {
     const current = currentEnv[key]?.trim();
     if (current) {
       merged[key] = current;
+    } else {
+      delete merged[key];
     }
   }
   return merged;
@@ -245,6 +250,7 @@ function restorePhaseFromCutover(phase: FreshDbCutoverPhase): RestorePhase {
 function parseArchiveContent(content: string): {
   settings: Record<string, unknown>;
   managerState: ManagerState;
+  tlsArchiveBase64?: string;
 } {
   const archive = parsePfbackupArchive(JSON.parse(content));
   const settings = JSON.parse(archive.settingsJson) as Record<string, unknown>;
@@ -252,7 +258,11 @@ function parseArchiveContent(content: string): {
   if (!managerValidation.ok || !managerValidation.state) {
     throw new Error(managerValidation.errors.join(' '));
   }
-  return { settings, managerState: managerValidation.state };
+  return {
+    settings,
+    managerState: managerValidation.state,
+    tlsArchiveBase64: archive.tlsArchiveBase64,
+  };
 }
 
 async function backupRollbackArtifactsAfterStop(
@@ -355,6 +365,7 @@ function stripTlsPreparationKeys(env: Record<string, string>): void {
 }
 
 function applyTlsRestorePlan(input: {
+  currentEnv: Record<string, string>;
   backupEnv: Record<string, string>;
   restoreEnv: Record<string, string>;
   tlsSidecarBase64: string | undefined;
@@ -365,6 +376,29 @@ function applyTlsRestorePlan(input: {
   discardTlsPreparation: boolean;
 } {
   const tls = buildPfbackupTlsInspectSummary(input.backupEnv, input.tlsSidecarBase64);
+  if (tls && !tls.metadataConsistent)
+    throw new RestorePhaseError(RESTORE_PHASES.validateArchive, [
+      'Die HTTPS-Angaben in der Sicherung passen nicht zusammen.',
+    ]);
+  if (!tls?.inBackup && currentTlsClaimsHttps(input.currentEnv)) {
+    const restoreEnv = { ...input.restoreEnv };
+    const keys = new Set([
+      'CANONICAL_BASE_URL',
+      'SETUP_LAN_APP_IP',
+      'PROXY_ENABLED',
+      'PROXY_MODE',
+      'APP_BIND_ADDRESS',
+      ...TLS_ENV_KEYS,
+      ...PROXY_TLS_HOST_PATH_ENV_KEYS,
+      ...PROXY_TLS_RUNTIME_ENV_KEYS,
+      ...RESTRICTED_NETWORK_PERSISTED_KEYS,
+    ]);
+    for (const key of keys) {
+      delete restoreEnv[key];
+      if (input.currentEnv[key] !== undefined) restoreEnv[key] = input.currentEnv[key];
+    }
+    return { restoreEnv, tlsSidecarBytes: null, discardTlsPreparation: false };
+  }
   if (!tls) {
     return { restoreEnv: input.restoreEnv, tlsSidecarBytes: null, discardTlsPreparation: false };
   }
@@ -375,15 +409,15 @@ function applyTlsRestorePlan(input: {
     targetAppReachable: true,
     tlsMetadataConsistent: tls.metadataConsistent,
     tlsClaimsHttps: tls.inBackup,
-    sidecarPresent: tls.sidecarPresent,
-    sidecarMatches: tls.sidecarMatches,
+    payloadPresent: tls.payloadPresent,
+    payloadMatches: tls.payloadMatches,
   });
   if (!supported) {
     const blocked = tlsRestoreBlockedCopy({
       tlsMetadataConsistent: tls.metadataConsistent,
       tlsClaimsHttps: tls.inBackup,
-      sidecarPresent: tls.sidecarPresent,
-      sidecarMatches: tls.sidecarMatches,
+      payloadPresent: tls.payloadPresent,
+      payloadMatches: tls.payloadMatches,
     });
     throw new RestorePhaseError(RESTORE_PHASES.validateArchive, [
       blocked ?? 'HTTPS-Restore wird nicht unterstützt.',
@@ -391,15 +425,15 @@ function applyTlsRestorePlan(input: {
   }
 
   const sidecarBytes = decodeTlsSidecarBase64(input.tlsSidecarBase64);
-  const matchingSidecar = Boolean(tls.sidecarPresent && tls.sidecarMatches && sidecarBytes);
+  const matchingSidecar = Boolean(tls.payloadPresent && tls.payloadMatches && sidecarBytes);
   if (tls.inBackup && !matchingSidecar) {
     throw new RestorePhaseError(RESTORE_PHASES.validateArchive, [
       tlsRestoreBlockedCopy({
         tlsMetadataConsistent: tls.metadataConsistent,
         tlsClaimsHttps: true,
-        sidecarPresent: tls.sidecarPresent,
-        sidecarMatches: tls.sidecarMatches,
-      }) ?? 'Wiederherstellen ohne Zertifikatsdatei ist abgelehnt.',
+        payloadPresent: tls.payloadPresent,
+        payloadMatches: tls.payloadMatches,
+      }) ?? 'Wiederherstellen ohne HTTPS-Daten ist abgelehnt.',
     ]);
   }
 
@@ -417,12 +451,42 @@ function applyTlsRestorePlan(input: {
   return { restoreEnv, tlsSidecarBytes: null, discardTlsPreparation: false };
 }
 
+function removeKeys(record: Record<string, string>, keys: readonly string[]): void {
+  for (const key of keys) delete record[key];
+}
+
+function buildRestoreTargetEnv(input: {
+  backupEnv: Record<string, string>;
+  currentEnv: Record<string, string>;
+  tlsSidecarBase64: string | undefined;
+  installHome: string;
+}): ReturnType<typeof applyTlsRestorePlan> {
+  const backupProxyMode = input.backupEnv.PROXY_MODE?.trim().toLowerCase();
+  if (
+    backupProxyMode &&
+    backupProxyMode !== 'off' &&
+    input.backupEnv.PROXY_ENABLED?.trim().toLowerCase() !== 'true'
+  ) {
+    throw new RestorePhaseError(RESTORE_PHASES.validateArchive, [
+      'Backup-Proxykonfiguration ist unvollständig: PROXY_ENABLED=true fehlt.',
+    ]);
+  }
+  const restoreEnv = mergeConfigRestoreEnv(input.backupEnv, input.currentEnv);
+  // Restricted state is a complete backup-owned unit. An absent key in the
+  // backup must not inherit an active marker from the current installation.
+  removeKeys(restoreEnv, RESTRICTED_NETWORK_PERSISTED_KEYS);
+  for (const key of RESTRICTED_NETWORK_PERSISTED_KEYS) {
+    const value = input.backupEnv[key];
+    if (value !== undefined) restoreEnv[key] = value;
+  }
+  return applyTlsRestorePlan({ ...input, restoreEnv });
+}
+
 async function prepareRestore(input: {
   content: string;
   ctx: SetupContext;
   runtime: RestoreRuntime;
   localMaintenanceAppBaseUrl: string;
-  tlsSidecarBase64?: string;
 }): Promise<PreparedRestore> {
   const archiveResult = input.runtime.validateArchive(input.content);
   if (!archiveResult.archiveValid) {
@@ -459,10 +523,10 @@ async function prepareRestore(input: {
     !Array.isArray(parsed.settings.env)
       ? (parsed.settings.env as Record<string, string>)
       : {};
-  const tlsPlan = applyTlsRestorePlan({
+  const tlsPlan = buildRestoreTargetEnv({
     backupEnv,
-    restoreEnv: mergeConfigRestoreEnv(backupEnv, readHostEnvRecord(envPath)),
-    tlsSidecarBase64: input.tlsSidecarBase64,
+    currentEnv: readHostEnvRecord(envPath),
+    tlsSidecarBase64: parsed.tlsArchiveBase64,
     installHome: input.ctx.home,
   });
   return {
@@ -500,17 +564,13 @@ async function commitRestore(input: {
     if (input.testHooks.failWriteEnv) {
       throw new Error('ENV-Schreiben absichtlich fehlgeschlagen (Test).');
     }
-    // Restricted state is a complete backup-owned unit. Removing the current
-    // keys first prevents an absent or prepared backup from inheriting a live
-    // activation marker from the host being restored.
-    removeEnvKeys(input.prepared.envPath, [...RESTRICTED_NETWORK_PERSISTED_KEYS]);
+    const existingKeys = [...readEnvMap(input.prepared.envPath).keys()];
+    removeEnvKeys(
+      input.prepared.envPath,
+      existingKeys.filter((key) => !(key in input.prepared.restoreEnv)),
+    );
     writeEnvRecordAtomically(input.prepared.envPath, input.prepared.restoreEnv);
     if (input.prepared.discardTlsPreparation) {
-      removeEnvKeys(input.prepared.envPath, [
-        ...TLS_ENV_KEYS,
-        ...PROXY_TLS_HOST_PATH_ENV_KEYS,
-        ...PROXY_TLS_RUNTIME_ENV_KEYS,
-      ]);
       wipeTlsStateRoot(input.ctx.home);
     }
     if (input.prepared.tlsSidecarBytes) {
@@ -730,13 +790,25 @@ export async function restorePfbackup(
   const skipProviderCredentials = options.skipProviderCredentials === true;
   const runtime = resolveRestoreRuntime(deps);
   try {
+    const currentLifecycle = checkHostLifecycleAction(ctx, 'restore');
+    // A restore has an explicit, fully validated target. It may repair an
+    // inconsistent current projection, but never guesses through an unknown
+    // installation or a concurrent/unreadable operation.
+    if (
+      currentLifecycle.lifecycle.assessment === 'unknown' ||
+      currentLifecycle.lifecycle.operation !== 'none'
+    ) {
+      throw new SetupApiValidationError(
+        `Host-Aktion „restore“ gesperrt: ${currentLifecycle.reason ?? 'Der aktuelle Lifecycle ist nicht sicher bekannt.'}`,
+      );
+    }
     const prepared = await prepareRestore({
       content,
       ctx,
       runtime,
       localMaintenanceAppBaseUrl,
-      tlsSidecarBase64: options.tlsSidecarBase64,
     });
+    assertTargetHostLifecycleAction(new Map(Object.entries(prepared.restoreEnv)), 'restore');
     return applyPreparedRestore({
       restoreId,
       prepared,

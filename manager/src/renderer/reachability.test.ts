@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
+import { minimalHostStatus, knownLifecycle } from './test-fixtures/minimal-host-status.js';
 import { draftCanonicalBaseUrl, existingHttpHostname, lanProbeBaseUrl } from './reachability.js';
 
 for (const proxyEnabled of [false, true]) {
@@ -26,6 +26,8 @@ for (const proxyEnabled of [false, true]) {
 
 test('TLS preview preserves the saved identity while changing the selected IP', () => {
   const status = minimalHostStatus({ configuredCanonicalBaseUrl: 'https://staff.example.test' });
+  status.lifecycle = knownLifecycle('https');
+  status.proxy = { ...status.proxy, enabled: true, mode: 'tls-managed' };
   status.tls = {
     state: 'active',
     mode: 'managed',

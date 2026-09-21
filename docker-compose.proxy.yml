@@ -20,7 +20,6 @@ services:
   proxy:
     logging: *docker-logging
     image: ${PRAXIS_FLOW_PROXY_IMAGE:-caddy:2.11.4}
-    container_name: praxis-flow-proxy
     restart: unless-stopped
     environment:
       PROXY_MODE: ${PROXY_MODE:-http}

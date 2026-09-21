@@ -1,3 +1,4 @@
+import { readInstallOperation } from './install-operation.js';
 import crypto, { X509Certificate } from 'node:crypto';
 import { Resolver } from 'node:dns/promises';
 import fs from 'node:fs';
@@ -35,6 +36,7 @@ import {
 import { readProxyConfig } from './proxy.js';
 import { SetupApiValidationError } from './setup-api-normalize.js';
 import type { SetupContext } from './setup-context.js';
+import { assertHostLifecycleAction } from './host-lifecycle-guard.js';
 
 export { TLS_OPERATOR_ZONE_DEFAULT } from '@praxis-flow/server-shared';
 export const TLS_ACME_DNS_API_DEFAULT = 'https://auth.acme-dns.io';
@@ -968,6 +970,9 @@ export async function prepareHostTls(
   input: TlsPrepareInput,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsPrepareResult> {
+  if (readInstallOperation(ctx.home)?.backup)
+    throw new SetupApiValidationError('HTTPS wird im Recovery aus dem Backup übernommen.');
+  assertHostLifecycleAction(ctx, 'tls-prepare');
   const envPath = envPathOf(ctx);
   const env = readEnvMap(envPath);
   const proxy = readProxyConfig(env);
@@ -1068,6 +1073,7 @@ export async function verifyHostTlsDns(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsVerifyDnsResult> {
+  assertHostLifecycleAction(ctx, 'tls-verify');
   const envPath = envPathOf(ctx);
   const env = readEnvMap(envPath);
   let status = readTlsStatus(env);
@@ -1147,6 +1153,7 @@ export function stageCustomCertificate(
   ctx: SetupContext,
   input: TlsCustomCertificateInput,
 ): TlsActionResult {
+  assertHostLifecycleAction(ctx, 'tls-custom-certificate');
   const env = readEnvMap(envPathOf(ctx));
   const status = readTlsStatus(env);
   if (status.mode !== 'custom' || !status.hostname || status.cutoverApplied) {
@@ -1204,6 +1211,15 @@ export async function obtainManagedCertificate(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsActionResult> {
+  assertHostLifecycleAction(ctx, 'tls-obtain');
+  return obtainManagedCertificateForAuthorizedAction(ctx, deps);
+}
+
+/** Caller has already passed the public action guard for this same TLS identity. */
+async function obtainManagedCertificateForAuthorizedAction(
+  ctx: SetupContext,
+  deps: TlsRuntimeDependencies,
+): Promise<TlsActionResult> {
   let status = readTlsStatus(readEnvMap(envPathOf(ctx)));
   if (status.mode !== 'managed')
     throw new SetupApiValidationError('obtain-certificate ist nur für Managed TLS erlaubt.');
@@ -1231,6 +1247,7 @@ export async function checkCustomCertificate(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsActionResult> {
+  assertHostLifecycleAction(ctx, 'tls-check-certificate');
   let status = readTlsStatus(readEnvMap(envPathOf(ctx)));
   if (
     status.mode !== 'custom' ||
@@ -1273,6 +1290,7 @@ export async function applyHostTls(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsActionResult> {
+  assertHostLifecycleAction(ctx, 'tls-apply');
   const envPath = envPathOf(ctx);
   const env = readEnvMap(envPath);
   const current = readTlsStatus(env);
@@ -1329,6 +1347,7 @@ export async function repairHostTls(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsActionResult> {
+  assertHostLifecycleAction(ctx, 'tls-repair');
   const envPath = envPathOf(ctx);
   const env = readEnvMap(envPath);
   const current = readTlsStatus(env);
@@ -1383,6 +1402,7 @@ export async function resetHostTls(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsActionResult> {
+  assertHostLifecycleAction(ctx, 'tls-reset');
   const envPath = envPathOf(ctx);
   const env = readEnvMap(envPath);
   const current = readTlsStatus(env);
@@ -1412,7 +1432,7 @@ export async function resetHostTls(
   // Same identity and Canonical stay HTTPS. Re-issue runs through the normal managed runtime.
   const retry = { ...degraded, state: 'dns-verified' as const, applyReady: false, lastError: null };
   persistStatus(ctx, retry);
-  const result = await obtainManagedCertificate(ctx, deps);
+  const result = await obtainManagedCertificateForAuthorizedAction(ctx, deps);
   const active = { ...result.tls, state: 'active' as const, cutoverApplied: true };
   persistStatus(ctx, active);
   writeGeneratedTlsCaddyfile(ctx.home, active, readEnvMap(envPath));
@@ -1424,6 +1444,7 @@ export async function renewHostTls(
   input: TlsRenewInput = {},
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsActionResult> {
+  assertHostLifecycleAction(ctx, 'tls-renew');
   const envPath = envPathOf(ctx);
   const env = readEnvMap(envPath);
   const current = readTlsStatus(env);
@@ -1460,7 +1481,7 @@ export async function renewHostTls(
   }
   const retry = { ...current, state: 'dns-verified' as const, applyReady: false, lastError: null };
   persistStatus(ctx, retry);
-  const result = await obtainManagedCertificate(ctx, deps);
+  const result = await obtainManagedCertificateForAuthorizedAction(ctx, deps);
   const active = { ...result.tls, state: 'active' as const, cutoverApplied: true };
   persistStatus(ctx, active);
   writeGeneratedTlsCaddyfile(ctx.home, active, readEnvMap(envPath));

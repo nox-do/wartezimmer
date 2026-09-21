@@ -12,6 +12,7 @@ import {
   inspectPfbackup,
   providerCredentialsIncludedInSnapshot,
 } from './settings-backup-inspect.js';
+import { parseTlsSidecarManifestFromBytes } from './tls-backup-sidecar.js';
 import { testSetupContext } from './test-setup-context.js';
 
 const sampleSettings = {
@@ -263,22 +264,23 @@ function tlsSettings(overrides: Record<string, string>) {
   return settings;
 }
 
-function inspectContent(env: Record<string, string>) {
+function inspectContent(env: Record<string, string>, tlsArchiveBase64?: string) {
   return serializePfbackupArchive(
     buildPfbackupArchive({
       settings: tlsSettings(env),
+      tlsArchiveBase64,
       managerState: sampleManagerState,
       createdAt: '2026-07-12T10:00:00.000Z',
     }),
   );
 }
 
-function packSidecarBase64(installationId: string, hostname: string): string {
+function packSidecarBase64(installationId: string, hostname: string, formatVersion = 2): string {
   const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-tls-inspect-sidecar-'));
   const archivePath = path.join(staging, 'sidecar.tgz');
   fs.writeFileSync(
     path.join(staging, 'manifest.json'),
-    `${JSON.stringify({ formatVersion: 1, installationId, hostname }, null, 2)}\n`,
+    `${JSON.stringify({ formatVersion, installationId, hostname }, null, 2)}\n`,
   );
   const packed = spawnSync('tar', ['czf', archivePath, '-C', staging, 'manifest.json'], {
     encoding: 'utf8',
@@ -292,15 +294,10 @@ function packSidecarBase64(installationId: string, hostname: string): string {
 async function inspectTls(env: Record<string, string>, tlsSidecarBase64?: string) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-inspect-tls-'));
   try {
-    return await inspectPfbackup(
-      inspectContent(env),
-      testSetupContext(dir),
-      {
-        checkTargetAppReachable: async () => true,
-        validateSettingsSnapshot: async () => ({ ok: true, errors: [] }),
-      },
-      { tlsSidecarBase64 },
-    );
+    return await inspectPfbackup(inspectContent(env, tlsSidecarBase64), testSetupContext(dir), {
+      checkTargetAppReachable: async () => true,
+      validateSettingsSnapshot: async () => ({ ok: true, errors: [] }),
+    });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -317,9 +314,9 @@ test('inspectPfbackup blocks active HTTPS without sidecar', async () => {
   assert.equal(result.ok, false);
   assert.equal(result.compatibility.restoreSupported, false);
   assert.equal(result.backup?.tls?.inBackup, true);
-  assert.equal(result.backup?.tls?.sidecarPresent, false);
+  assert.equal(result.backup?.tls?.payloadPresent, false);
   assert.equal(result.backup?.tls?.metadataConsistent, true);
-  assert.match(result.errors?.join(' ') ?? '', /Zertifikatsdatei fehlt/);
+  assert.match(result.errors?.join(' ') ?? '', /HTTPS-Daten fehlen/);
 });
 
 test('inspectPfbackup warns on prepare-only TLS without sidecar and still allows restore', async () => {
@@ -334,7 +331,7 @@ test('inspectPfbackup warns on prepare-only TLS without sidecar and still allows
   assert.equal(result.compatibility.restoreSupported, true);
   assert.equal(result.backup?.tls?.preparedInBackup, true);
   assert.equal(result.backup?.tls?.inBackup, false);
-  assert.equal(result.backup?.tls?.sidecarPresent, false);
+  assert.equal(result.backup?.tls?.payloadPresent, false);
   assert.match(result.compatibility.warnings.join(' '), /Vorbereitung/);
 });
 
@@ -349,8 +346,8 @@ test('inspectPfbackup sidecar match needs installation id and hostname on both s
     },
     sidecar,
   );
-  assert.equal(missingHost.backup?.tls?.sidecarPresent, true);
-  assert.equal(missingHost.backup?.tls?.sidecarMatches, false);
+  assert.equal(missingHost.backup?.tls?.payloadPresent, true);
+  assert.equal(missingHost.backup?.tls?.payloadMatches, false);
   assert.equal(missingHost.compatibility.restoreSupported, false);
 
   const matched = await inspectTls(
@@ -363,7 +360,7 @@ test('inspectPfbackup sidecar match needs installation id and hostname on both s
     },
     sidecar,
   );
-  assert.equal(matched.backup?.tls?.sidecarMatches, true);
+  assert.equal(matched.backup?.tls?.payloadMatches, true);
   assert.equal(matched.compatibility.restoreSupported, true);
 });
 
@@ -378,7 +375,7 @@ test('inspectPfbackup treats unreadable sidecar bytes as missing', async () => {
     },
     Buffer.from('not-a-tarball').toString('base64'),
   );
-  assert.equal(result.backup?.tls?.sidecarPresent, false);
+  assert.equal(result.backup?.tls?.payloadPresent, false);
   assert.equal(result.compatibility.restoreSupported, false);
 });
 
@@ -393,4 +390,40 @@ test('inspectPfbackup blocks contradictory active TLS with HTTP canonical', asyn
   assert.equal(result.compatibility.restoreSupported, false);
   assert.equal(result.backup?.tls?.metadataConsistent, false);
   assert.match(result.errors?.join(' ') ?? '', /passen nicht zusammen/);
+});
+
+test('inspect HTTP backup on HTTPS target reports preservation without TLS discard warning', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-inspect-preserve-'));
+  try {
+    fs.writeFileSync(
+      path.join(dir, '.env'),
+      'TLS_STATE=degraded\nCANONICAL_BASE_URL=https://live.example.test\n',
+    );
+    const result = await inspectPfbackup(
+      inspectContent({
+        TLS_STATE: 'preparing',
+        PROXY_MODE: 'http',
+        CANONICAL_BASE_URL: 'http://192.168.1.50',
+      }),
+      testSetupContext(dir),
+      {
+        checkTargetAppReachable: async () => true,
+        validateSettingsSnapshot: async () => ({ ok: true, errors: [] }),
+      },
+    );
+    assert.equal(result.currentTlsClaimsHttps, true);
+    assert.equal(result.compatibility.restoreSupported, true);
+    assert.match(
+      result.compatibility.warnings.join(' '),
+      /HTTPS auf diesem Computer bleibt erhalten/,
+    );
+    assert.doesNotMatch(result.compatibility.warnings.join(' '), /Vorbereitung verworfen/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('TLS manifest v1 is rejected without legacy compatibility', () => {
+  const payload = packSidecarBase64('practice', 'practice.example.test', 1);
+  assert.equal(parseTlsSidecarManifestFromBytes(Buffer.from(payload, 'base64')), null);
 });

@@ -1,10 +1,13 @@
 # Plan: `.pfbackup` v2 — HTTPS im selben Archiv
 
-Stand: 2026-08-31
+Stand: 2026-09-21
 
-Status: **Äußeres Archiv bleibt JSON.** Branch `backup-v2`. Kein Code in diesem
-Dokument. Nächster Schritt: Schnitt 1. Vertrag ist dieses Dokument, nicht die
-HTTPS-Produktpläne.
+Status: **Durchgängiger Format-2-Cut umgesetzt.** Erstellen, Prüfen, Restore,
+Manager-Dateidialog und Pre-Update-Backup verwenden eine einzelne JSON-Datei
+mit eingebetteten HTTPS-Daten. Alte Backup-Formate werden abgelehnt; es gibt
+keine Migration. HTTPS-Überschreibbestätigung und Erhalt der Ziel-Secrets sind
+umgesetzt. Recovery-Discovery, Pinning und der Reinstall-Recovery-Assistent
+sind ebenfalls angebunden; siehe [Betriebsvertrag](operations/reinstall-recovery.md).
 
 Eine Installation, ein Backup, eine Datei. Altes Format (JSON ohne
 `tlsArchiveBase64`, Geschwister-`.tgz`) wird nicht gelesen. Nach dem Cut nur
@@ -58,7 +61,8 @@ Metadaten blocken.
 4. `tlsArchiveBase64` nur wenn `TLS_STATE != off` (ab Prepare, nicht erst nach
    Cutover). HTTP-only: Format 2 ohne dieses Feld.
 5. Innere Payload = heutiges tgz-Layout. Inneres `manifest.json`
-   `formatVersion: 1` (TLS-Payload, nicht der Container).
+   `formatVersion: 2` mit der bereits vorhandenen Managed-TLS-Identität
+   (TLS-Payload, nicht der Container).
 6. Restore-Gates unverändert (siehe Ziel). Setup bekommt weiterhin utf8-`content`
    der JSON-Datei, keinen Host-Pfad. Ab Schnitt 2 **kein** extra
    `tlsSidecarBase64` — die Bytes stehen in der Datei. Unpack nach

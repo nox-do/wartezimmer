@@ -35,6 +35,10 @@
     "./device-address": {
       "types": "./dist/device-address.d.ts",
       "import": "./dist/device-address.js"
+    },
+    "./host-lifecycle-policy": {
+      "types": "./dist/host-lifecycle-policy.d.ts",
+      "import": "./dist/host-lifecycle-policy.js"
     }
   },
   "scripts": {

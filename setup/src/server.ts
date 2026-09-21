@@ -1,3 +1,6 @@
+import { discoverRecoveryBackups } from './recovery-backup.js';
+import { previewInstallRecovery, finishInstallRecovery } from './install-recovery.js';
+import { readInstallOperation } from './install-operation.js';
 import { recoverRestrictedOperation } from './docker.js';
 import { rebuildHost } from './rebuild-host.js';
 import http from 'node:http';
@@ -27,6 +30,10 @@ import {
   runComposeAction,
   saveHostNetwork,
   saveStorageFolders,
+  startStoppedInstallation,
+  prepareInstallOperation,
+  commitPreparedInstallOperation,
+  abortInstallOperation,
   validatePfbackupFull,
 } from './host-state.js';
 import {
@@ -248,21 +255,13 @@ function createManagementRoutes(ctx: SetupContext): Routes {
     'POST /api/setup/host/backup/inspect': async (req) => {
       const body = readBodyRecord(await readJsonBody(req));
       const content = requireString(body, 'content', 'content is required');
-      return routeResult(
-        await inspectPfbackup(
-          content,
-          ctx,
-          {},
-          { tlsSidecarBase64: readOptionalString(body, 'tlsSidecarBase64') },
-        ),
-      );
+      return routeResult(await inspectPfbackup(content, ctx, {}));
     },
     'POST /api/setup/host/backup/restore': async (req) => {
       const body = readBodyRecord(await readJsonBody(req));
       const content = requireString(body, 'content', 'content is required');
       const result = await restorePfbackup(content, ctx, {
         skipProviderCredentials: body.skipProviderCredentials === true,
-        tlsSidecarBase64: readOptionalString(body, 'tlsSidecarBase64'),
       });
       return routeResult(result, result.ok ? 200 : 500);
     },
@@ -303,11 +302,72 @@ function createManagementRoutes(ctx: SetupContext): Routes {
 }
 
 function createDeliveryRoutes(ctx: SetupContext): Routes {
+  const assertUpdateEligible = async () => {
+    const status = await getHostStatus(ctx);
+    if (status.installation.kind !== 'healthy') {
+      throw new SetupApiValidationError(
+        `Update ist nur für eine gesunde Installation zulässig (aktuell: ${status.installation.kind}).`,
+      );
+    }
+  };
   return {
-    'POST /api/setup/host/update/inspect': async (req) =>
-      routeResult(await inspectPfupdate(await readPfupdateInput(req), ctx)),
+    'GET /api/setup/host/install/backups': () => routeResult(discoverRecoveryBackups(ctx.home)),
+    'POST /api/setup/host/install/preview': async (req) => {
+      const body = readBodyRecord(await readJsonBody(req));
+      return routeResult(await previewInstallRecovery(ctx, requireString(body, 'operationId')));
+    },
+    'POST /api/setup/host/install/finish': async (req) => {
+      const body = readBodyRecord(await readJsonBody(req));
+      if (body.action !== 'restore' && body.action !== 'without-backup')
+        throw new SetupApiValidationError('Invalid finish action');
+      return routeResult(
+        await finishInstallRecovery(ctx, {
+          operationId: requireString(body, 'operationId'),
+          action: body.action,
+        }),
+      );
+    },
+    'POST /api/setup/host/install/prepare': async (req) => {
+      const body = readBodyRecord(await readJsonBody(req));
+      const archivePath = requireString(body, 'archivePath');
+      const mode = body.mode;
+      if (mode !== 'fresh' && mode !== 'replace') {
+        throw new SetupApiValidationError('mode must be fresh or replace');
+      }
+      return routeResult(
+        await prepareInstallOperation(ctx, {
+          archivePath,
+          mode,
+          ...(typeof body.backupCandidateId === 'string'
+            ? { backupCandidateId: body.backupCandidateId }
+            : {}),
+        }),
+      );
+    },
+    'POST /api/setup/host/install/commit': async (req) => {
+      const body = readBodyRecord(await readJsonBody(req));
+      return routeResult(
+        await commitPreparedInstallOperation(ctx, {
+          operationId: requireString(body, 'operationId'),
+          replaceConfirmed: body.replaceConfirmed === true,
+        }),
+      );
+    },
+    'DELETE /api/setup/host/install/operation': async (req) => {
+      const body = readBodyRecord(await readJsonBody(req));
+      return routeResult(abortInstallOperation(ctx, requireString(body, 'operationId')));
+    },
+    'POST /api/setup/host/installation/start': async () =>
+      routeResult(await startStoppedInstallation(ctx)),
+    'POST /api/setup/host/update/inspect': async (req) => {
+      const input = await readPfupdateInput(req);
+      await assertUpdateEligible();
+      return routeResult(await inspectPfupdate(input, ctx));
+    },
     'POST /api/setup/host/update/apply': async (req) => {
-      const result = await applyPfupdate(await readPfupdateInput(req), ctx);
+      const input = await readPfupdateInput(req);
+      await assertUpdateEligible();
+      const result = await applyPfupdate(input, ctx);
       return routeResult(result, result.ok ? 200 : 500);
     },
     'POST /api/setup/host/images/load': async (req) => {
@@ -396,12 +456,19 @@ function createSetupRoutes(
     `POST ${SETUP_TLS_ROUTES.renew}`,
     'POST /api/setup/host/compose',
     'POST /api/setup/host/rebuild',
+    'POST /api/setup/host/backup',
     'POST /api/setup/host/backup/restore',
     'POST /api/setup/host/reset-staff-pins',
     'POST /api/setup/host/apply',
     'POST /api/setup/host/storage',
     'POST /api/setup/host/update/apply',
     'POST /api/setup/host/images/load',
+    'POST /api/setup/host/install/prepare',
+    'POST /api/setup/host/install/commit',
+    'POST /api/setup/host/install/finish',
+    'POST /api/setup/host/install/preview',
+    'DELETE /api/setup/host/install/operation',
+    'POST /api/setup/host/installation/start',
   ]);
   const routes: Array<[string, RouteHandler]> = entries.map(([route, rawHandler]) => {
     const handler = rawHandler as RouteHandler;
@@ -410,7 +477,26 @@ function createSetupRoutes(
       route,
       (req, url) =>
         mutationLock.run(route, async () => {
-          if (route !== 'POST /api/setup/host/rebuild')
+          const operation = readInstallOperation(ctx.home);
+          if (operation?.phase === 'prepared' && !route.includes('/install/'))
+            throw new SetupApiValidationError(
+              'Vorbereiteten Installationsvorgang zuerst bestätigen oder abbrechen.',
+            );
+          if (
+            [
+              'POST /api/setup/host/backup',
+              'POST /api/setup/host/backup/restore',
+              'POST /api/setup/host/reset-staff-pins',
+              'POST /api/setup/host/storage',
+              'POST /api/setup/host/rebuild',
+            ].includes(route)
+          ) {
+            if ((await getHostStatus(ctx)).installation.kind !== 'healthy')
+              throw new SetupApiValidationError(
+                'Wartung ist nur bei einer gesunden Installation verfügbar.',
+              );
+          }
+          if (route !== 'POST /api/setup/host/rebuild' && !route.includes('/install/'))
             await recoverRestrictedOperation({
               projectRoot: ctx.home,
               composeProjectName: ctx.composeProjectName,

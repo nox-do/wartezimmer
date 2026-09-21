@@ -16,6 +16,19 @@
     onLoadReleaseArchive: () => void;
   } = $props();
 
+  let startBusy = $state(false);
+  let startError = $state<string | null>(null);
+  let startFailed = $state(false);
+  async function startExisting(): Promise<void> {
+    startBusy = true; startError = null;
+    try {
+      const result = await window.praxisManager.startStoppedInstallation();
+      if (result.installation.kind === 'needs-reinstall') { startFailed = true; startError = result.installation.reasons.map(reason => reason.message).join(' '); }
+      else window.location.reload();
+    } catch (error) { startError = error instanceof Error ? error.message : String(error); }
+    finally { startBusy = false; }
+  }
+
   const tone = $derived(setupEntryTone(status));
   const content = $derived(setupEntryContent(status, tone));
   const checklist = $derived(setupChecklistItems(status));
@@ -50,7 +63,12 @@
         {content.note}
       {/if}
     </p>
+    {#if status.installation.kind === 'stopped' && !startFailed}
+      <button type="button" disabled={startBusy} onclick={() => void startExisting()}>Vorhandene Installation starten</button>
+    {/if}
+    {#if startError}<p class="error">{startError}</p>{/if}
     <button
+      disabled={startBusy || status.installation.kind === 'docker-unavailable'}
       type="button"
       id="setup-entry-start"
       class="setup-entry-start"

@@ -11,6 +11,7 @@ export type RestoreWizardPhase =
   | 'choose'
   | 'inspect'
   | 'preview'
+  | 'confirm-https'
   | 'restoring'
   | 'success'
   | 'failed';
@@ -24,7 +25,6 @@ export type RestoreWizardState = {
   inspect: PfbackupInspectResult | null;
   restoreResult: PfbackupRestoreResult | null;
   skipProviderCredentials: boolean;
-  tlsSidecarBase64: string | null;
   statusText: string;
   error: string | null;
 };
@@ -39,7 +39,6 @@ export function createInitialRestoreWizardState(): RestoreWizardState {
     inspect: null,
     restoreResult: null,
     skipProviderCredentials: false,
-    tlsSidecarBase64: null,
     statusText: '',
     error: null,
   };
@@ -67,22 +66,22 @@ export function restoreTlsInspectSummaryLine(
     return 'HTTPS: Angaben in der Sicherung passen nicht zusammen';
   }
   if (tls.preparedInBackup) {
-    if (!tls.sidecarPresent) {
-      return 'HTTPS war vorbereitet, Zertifikatsdatei fehlt — Vorbereitung wird verworfen';
+    if (!tls.payloadPresent) {
+      return 'HTTPS war vorbereitet, HTTPS-Daten fehlen — Vorbereitung wird verworfen';
     }
-    if (!tls.sidecarMatches) {
-      return 'Zertifikatsdatei passt nicht zu diesem Backup — Vorbereitung wird verworfen';
+    if (!tls.payloadMatches) {
+      return 'HTTPS-Daten passen nicht zu diesem Backup — Vorbereitung wird verworfen';
     }
-    return 'HTTPS ist vorbereitet; Zertifikatsdatei ist dabei';
+    return 'HTTPS ist vorbereitet; HTTPS-Daten sind enthalten';
   }
   if (!tls.inBackup) {
     return null;
   }
-  if (!tls.sidecarPresent) {
-    return 'HTTPS ist vorgesehen, aber die Zertifikatsdatei fehlt';
+  if (!tls.payloadPresent) {
+    return 'HTTPS ist vorgesehen, aber die HTTPS-Daten fehlen';
   }
-  if (!tls.sidecarMatches) {
-    return 'Zertifikatsdatei gehört nicht zu diesem Computer oder Hostnamen';
+  if (!tls.payloadMatches) {
+    return 'HTTPS-Daten gehören nicht zu diesem Computer oder Hostnamen';
   }
   return 'Zertifikat und HTTPS-Daten sind in der Sicherung enthalten';
 }
@@ -118,11 +117,11 @@ export function restoreInspectBlockedMessage(inspect: PfbackupInspectResult): st
   if (tls && !tls.metadataConsistent) {
     return 'Die HTTPS-Angaben in dieser Sicherung passen nicht zusammen. Wiederherstellen wird abgelehnt.';
   }
-  if (tls?.inBackup && !tls.sidecarPresent) {
-    return 'Diese Sicherung erwartet HTTPS, aber die Zertifikatsdatei fehlt. Wiederherstellen würde Geräte auf https:// stellen ohne Zertifikat — deshalb abgelehnt.';
+  if (tls?.inBackup && !tls.payloadPresent) {
+    return 'Diese Sicherung erwartet HTTPS, aber die HTTPS-Daten fehlen. Wiederherstellen würde Geräte auf https:// stellen ohne Zertifikat — deshalb abgelehnt.';
   }
-  if (tls?.inBackup && !tls.sidecarMatches) {
-    return 'Die Zertifikatsdatei gehört zu einer anderen Installation oder einem anderen Hostnamen.';
+  if (tls?.inBackup && !tls.payloadMatches) {
+    return 'Die HTTPS-Daten gehören zu einer anderen Installation oder einem anderen Hostnamen.';
   }
   const errors = inspect.errors ?? [];
   if (errors.length > 0) {
@@ -178,7 +177,7 @@ export function canSkipRestoreAfterFailure(result: PfbackupRestoreResult | null)
 }
 
 export function canRetryRestoreAfterFailure(result: PfbackupRestoreResult | null): boolean {
-  return !isRestoreRollbackFailed(result);
+  return result !== null && !result.ok && result.rollbackAttempted && result.rollbackSucceeded;
 }
 
 export function restoreSuccessSummary(
@@ -194,55 +193,15 @@ export function restoreSuccessSummary(
   return parts.join(' ');
 }
 
-const CREDENTIAL_ISSUE_IMPORT_PHASES = new Set([
-  'import_snapshot',
-  'import_settings',
-  'import',
-  'verify_export',
-  'verify_settings',
-]);
-
 function textSuggestsCredentialIssue(text: string): boolean {
-  const lower = text.toLowerCase();
-  return (
-    lower.includes('provider') ||
-    lower.includes('credential') ||
-    lower.includes('pin') ||
-    lower.includes('entschlüss') ||
-    lower.includes('decrypt') ||
-    lower.includes('messaging')
-  );
+  return /provider|credential|messaging/i.test(text);
 }
 
 export function shouldOfferCredentialSkip(input: {
   inspect: PfbackupInspectResult | null;
   restoreResult?: PfbackupRestoreResult | null;
 }): boolean {
-  const inspect = input.inspect;
-  if (!inspect?.backup) {
-    return false;
-  }
-  if (inspect.backup.providerCredentialsIncluded) {
-    return true;
-  }
-  const warnings = inspect.compatibility.warnings ?? [];
-  if (warnings.some((warning) => textSuggestsCredentialIssue(warning))) {
-    return true;
-  }
-  const restoreResult = input.restoreResult;
-  if (restoreResult && !restoreResult.ok) {
-    const combined = [restoreResult.failedPhase, ...restoreResult.errors].join(' ');
-    if (textSuggestsCredentialIssue(combined)) {
-      return true;
-    }
-    if (
-      inspect.backup.providerCredentialsIncluded &&
-      CREDENTIAL_ISSUE_IMPORT_PHASES.has(restoreResult.failedPhase)
-    ) {
-      return true;
-    }
-  }
-  return false;
+  return input.inspect?.backup?.providerCredentialsIncluded === true;
 }
 
 export function suggestCredentialSkipAfterRestoreFailure(input: {

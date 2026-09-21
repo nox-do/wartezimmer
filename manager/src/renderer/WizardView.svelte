@@ -15,6 +15,7 @@
     wizardNextButtonLabel,
   } from './wizard-view-model.js';
   import WizardStepIndicator from './WizardStepIndicator.svelte';
+  import InstallRecoveryPanel from './InstallRecoveryPanel.svelte';
   import WizardSteps from './WizardSteps.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
 
@@ -131,15 +132,18 @@
       <h1 id="wizard-title">Einrichtung</h1>
     </header>
 
+    {#if snapshot.error}
+      <p id="wizard-error" class="error">{snapshot.error}</p>
+    {/if}
+
+    {#if snapshot.recoveryPhase && snapshot.recoveryPhase !== 'setup' && controller}
+      <InstallRecoveryPanel {snapshot} {controller} />
+    {:else}
     <WizardStepIndicator
       current={snapshot.step}
       httpsPhase={snapshot.httpsPhase}
       proxyEnabled={snapshot.proxyEnabled}
     />
-
-    {#if snapshot.error}
-      <p id="wizard-error" class="error">{snapshot.error}</p>
-    {/if}
 
     {#if controller}
       <WizardSteps {snapshot} {controller} {hostPlatform} />
@@ -201,6 +205,7 @@
         </button>
       {/if}
     </footer>
+    {/if}
   {/if}
 
   <ConfirmDialog open={confirmOpen} onConfirm={confirmAndRun} onCancel={closeConfirm}>

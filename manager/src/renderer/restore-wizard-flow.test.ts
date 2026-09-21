@@ -17,6 +17,7 @@ import {
 function inspectFixture(overrides: Partial<PfbackupInspectResult> = {}): PfbackupInspectResult {
   return {
     ok: true,
+    currentTlsClaimsHttps: false,
     backup: {
       createdAt: '2026-07-12T12:00:00.000Z',
       settingsFormatVersion: 1,
@@ -58,8 +59,8 @@ test('restoreInspectSummaryLines keeps TLS detail when restore is blocked', () =
           state: 'active',
           inBackup: true,
           preparedInBackup: false,
-          sidecarPresent: false,
-          sidecarMatches: false,
+          payloadPresent: false,
+          payloadMatches: false,
           metadataConsistent: true,
         },
       },
@@ -72,7 +73,7 @@ test('restoreInspectSummaryLines keeps TLS detail when restore is blocked', () =
       },
     }),
   );
-  assert.match(lines.join(' '), /Zertifikatsdatei fehlt/);
+  assert.match(lines.join(' '), /HTTPS-Daten fehlen/);
 });
 
 test('restoreTlsInspectSummaryLine rejects contradictory TLS metadata', () => {
@@ -81,8 +82,8 @@ test('restoreTlsInspectSummaryLine rejects contradictory TLS metadata', () => {
       state: 'active',
       inBackup: false,
       preparedInBackup: false,
-      sidecarPresent: false,
-      sidecarMatches: false,
+      payloadPresent: false,
+      payloadMatches: false,
       metadataConsistent: false,
     }),
     'HTTPS: Angaben in der Sicherung passen nicht zusammen',
@@ -100,14 +101,14 @@ test('restoreInspectBlockedMessage explains missing active TLS sidecar', () => {
         state: 'active',
         inBackup: true,
         preparedInBackup: false,
-        sidecarPresent: false,
-        sidecarMatches: false,
+        payloadPresent: false,
+        payloadMatches: false,
         metadataConsistent: true,
       },
     },
     compatibility: { ...fixture.compatibility, restoreSupported: false },
   });
-  assert.match(message ?? '', /Zertifikatsdatei fehlt/);
+  assert.match(message ?? '', /HTTPS-Daten fehlen/);
 });
 
 test('restoreInspectBlockedMessage explains unreachable maintenance API', () => {
@@ -166,7 +167,7 @@ test('failed restore before mutation still allows skip', () => {
     errors: ['Settings ungültig'],
   };
   assert.equal(canSkipRestoreAfterFailure(failed), true);
-  assert.equal(canRetryRestoreAfterFailure(failed), true);
+  assert.equal(canRetryRestoreAfterFailure(failed), false);
 });
 
 test('successful rollback allows retry and skip', () => {
@@ -216,10 +217,10 @@ test('shouldOfferCredentialSkip after import failure with credential errors', ()
       restoreResult: {
         ok: false,
         restoreId: 'r1',
-        failedPhase: 'import_snapshot',
+        failedPhase: 'import',
         rollbackAttempted: true,
         rollbackSucceeded: true,
-        errors: ['Provider-Credentials konnten nicht entschlüsselt werden.'],
+        errors: ['Provider-Zugangsdaten sind ungültig.'],
       },
     }),
     true,
@@ -240,10 +241,10 @@ test('suggestCredentialSkipAfterRestoreFailure preselects skip on credential imp
   const failed = {
     ok: false as const,
     restoreId: 'r1',
-    failedPhase: 'import_snapshot',
+    failedPhase: 'import',
     rollbackAttempted: true,
     rollbackSucceeded: true,
-    errors: ['MFA-PIN passt nicht zu den Provider-Credentials im Backup.'],
+    errors: ['Provider-Zugangsdaten sind ungültig.'],
   };
   assert.equal(
     suggestCredentialSkipAfterRestoreFailure({
@@ -277,7 +278,7 @@ test('suggestCredentialSkipAfterRestoreFailure does not preselect on unrelated i
   const failed = {
     ok: false as const,
     restoreId: 'r1',
-    failedPhase: 'import_snapshot',
+    failedPhase: 'import',
     rollbackAttempted: true,
     rollbackSucceeded: true,
     errors: ['Catalog integrity check failed after import.'],

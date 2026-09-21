@@ -14,9 +14,11 @@ import {
   findLatestPfbackupPath,
   getPfbackupInfo,
   validatePfbackupContent,
+  validatePfbackupFull,
   validatePfbackupFile,
-  writeTlsSidecarBesideBackup,
+  buildTlsArchiveBase64,
 } from './settings-backup.js';
+import { configureMaintenanceAuthHome } from './maintenance-auth.js';
 import { testSetupContext } from './test-setup-context.js';
 import { parseTlsSidecarManifestFromBytes } from './tls-backup-sidecar.js';
 
@@ -80,7 +82,6 @@ test('getPfbackupInfo reports latest valid backup path', () => {
     const info = getPfbackupInfo(testSetupContext(dir));
     assert.equal(info.latestBackupPath, backupPath);
     assert.equal(info.envPath, path.join(dir, '.env'));
-    assert.equal(info.latestTlsSidecarPath, null);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -151,7 +152,7 @@ test('validatePfbackupFile reads archive from disk', () => {
   }
 });
 
-test('writeTlsSidecarBesideBackup writes timestamp sibling when tls is not off', () => {
+test('buildTlsArchiveBase64 returns embedded bytes without a sibling when tls is not off', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-tls-sidecar-write-'));
   const backupsDir = path.join(dir, 'backups');
   fs.mkdirSync(backupsDir, { recursive: true });
@@ -179,13 +180,10 @@ test('writeTlsSidecarBesideBackup writes timestamp sibling when tls is not off',
         '',
       ].join('\n'),
     );
-    const sidecarPath = writeTlsSidecarBesideBackup(testSetupContext(dir), backupPath);
-    assert.equal(
-      sidecarPath,
-      path.join(backupsDir, 'praxis-flow-tls-2026-07-12T10-15-30-123Z.tgz'),
-    );
-    assert.equal(fs.existsSync(sidecarPath!), true);
-    assert.deepEqual(parseTlsSidecarManifestFromBytes(fs.readFileSync(sidecarPath!)), {
+    const payload = buildTlsArchiveBase64(testSetupContext(dir));
+    assert.ok(payload);
+    assert.deepEqual(fs.readdirSync(backupsDir), [path.basename(backupPath)]);
+    assert.deepEqual(parseTlsSidecarManifestFromBytes(Buffer.from(payload, 'base64')), {
       formatVersion: 2,
       installationId: '7fk3m2q9',
       hostname: 'staff.7fk3m2.lan.notaus.de',
@@ -194,20 +192,109 @@ test('writeTlsSidecarBesideBackup writes timestamp sibling when tls is not off',
       portalHostname: 'portal.7fk3m2.lan.notaus.de',
       wildcardCertificateName: '*.7fk3m2.lan.notaus.de',
     });
-    assert.equal(getPfbackupInfo(testSetupContext(dir)).latestTlsSidecarPath, sidecarPath);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('writeTlsSidecarBesideBackup skips when tls is off', () => {
+test('buildTlsArchiveBase64 skips when tls is off', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-tls-sidecar-off-'));
   const backupPath = path.join(dir, 'praxis-flow-backup-2026-07-12T10-15-30-123Z.pfbackup');
   try {
     fs.writeFileSync(backupPath, '{}');
     fs.writeFileSync(path.join(dir, '.env'), 'TLS_STATE=off\n');
-    assert.equal(writeTlsSidecarBesideBackup(testSetupContext(dir), backupPath), null);
+    assert.equal(buildTlsArchiveBase64(testSetupContext(dir)), null);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+for (const tls of [false, true]) {
+  test(`createPfbackup writes one v2 file with embedded TLS=${tls}`, async (t) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-v2-create-'));
+    t.mock.method(
+      globalThis,
+      'fetch',
+      async (url: string) =>
+        new Response(
+          JSON.stringify(url.endsWith('/validate') ? { ok: true, errors: [] } : sampleDbSnapshot),
+        ),
+    );
+    try {
+      fs.writeFileSync(
+        path.join(dir, '.env'),
+        tls
+          ? 'TLS_STATE=preparing\nTLS_INSTALLATION_ID=practice\nTLS_HOSTNAME=practice.example.test\n'
+          : 'TLS_STATE=off\n',
+      );
+      configureMaintenanceAuthHome(dir, 'repo');
+      const { createPfbackup } = await import('./settings-backup.js');
+      const result = await createPfbackup(testSetupContext(dir));
+      const archive = JSON.parse(fs.readFileSync(result.backupPath, 'utf8'));
+      assert.equal(archive.manifest.pfbackupFormatVersion, 2);
+      assert.equal(typeof archive.tlsArchiveBase64 === 'string', tls);
+      assert.equal(validatePfbackupArchive(archive).archiveValid, true);
+      assert.deepEqual(fs.readdirSync(path.join(dir, 'backups')), [
+        path.basename(result.backupPath),
+      ]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+}
+
+test('TLS packing failure leaves no backup file', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-v2-pack-failure-'));
+  t.mock.method(
+    globalThis,
+    'fetch',
+    async (url: string) =>
+      new Response(
+        JSON.stringify(url.endsWith('/validate') ? { ok: true, errors: [] } : sampleDbSnapshot),
+      ),
+  );
+  try {
+    fs.writeFileSync(
+      path.join(dir, '.env'),
+      'TLS_STATE=preparing\nTLS_INSTALLATION_ID=practice\nTLS_HOSTNAME=practice.example.test\n',
+    );
+    fs.mkdirSync(path.join(dir, 'state/tls/caddy-data'), { recursive: true });
+    t.mock.method(fs, 'cpSync', () => {
+      throw new Error('TLS files unreadable');
+    });
+    configureMaintenanceAuthHome(dir, 'repo');
+    const { createPfbackup } = await import('./settings-backup.js');
+    await assert.rejects(createPfbackup(testSetupContext(dir)), /TLS files unreadable/);
+    assert.equal(fs.existsSync(path.join(dir, 'backups')), false);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('full validation rejects active HTTPS without its embedded TLS payload', async (t) => {
+  t.mock.method(
+    globalThis,
+    'fetch',
+    async () => new Response(JSON.stringify({ ok: true, errors: [] })),
+  );
+  const archive = buildPfbackupArchive({
+    settings: {
+      ...sampleDbSnapshot,
+      env: {
+        TLS_STATE: 'active',
+        TLS_MODE: 'managed',
+        TLS_INSTALLATION_ID: 'practice',
+        TLS_HOSTNAME: 'practice.example.test',
+        CANONICAL_BASE_URL: 'https://practice.example.test',
+        PROXY_ENABLED: 'true',
+        PROXY_MODE: 'tls-managed',
+        TLS_CUTOVER_APPLIED: 'true',
+      },
+    },
+    managerState: { release: null },
+  });
+  const result = await validatePfbackupFull(serializePfbackupArchive(archive));
+  assert.equal(result.archiveValid, true);
+  assert.equal(result.restoreValid, false);
+  assert.match(result.restoreErrors.join(' '), /HTTPS/);
 });

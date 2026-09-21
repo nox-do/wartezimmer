@@ -10,15 +10,11 @@ export function networkAccessSummary(
   runtime: HostRuntimeHealth | null = null,
   runtimeError: string | null = null,
 ) {
-  const lifecycle = status.lifecycle;
+  const lifecycle = status?.lifecycle;
   const mode = lifecycle?.assessment === 'known' ? lifecycle.mode : null;
   const configured = mode !== null && mode !== 'uninstalled';
-  const proxy = lifecycle ? (configured ? mode !== 'direct-http' : null) : status.proxy.enabled;
-  const tls = lifecycle
-    ? configured
-      ? mode === 'https' || mode === 'https-portal'
-      : null
-    : Boolean(status.tls?.cutoverApplied);
+  const proxy = configured ? mode !== 'direct-http' : null;
+  const tls = configured ? mode === 'https' || mode === 'https-portal' : null;
   const lifecycleSummary = lifecycle ? hostLifecycleSummary(lifecycle) : null;
   const ip = status.network.configuredLanIp;
   const adapter = status.network.currentLanCandidates.find((item) => item.address === ip);

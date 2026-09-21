@@ -8,7 +8,11 @@ import type {
   NetworkSnapshot,
 } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
-import { CONFIGURED_GATEWAY, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
+import {
+  CONFIGURED_GATEWAY,
+  minimalHostStatus,
+  knownLifecycle,
+} from './test-fixtures/minimal-host-status.js';
 import { hostNetworkChanged, networkDraftChanged } from './host-network-panels.js';
 import {
   buildHostNetworkSaveInput,
@@ -210,7 +214,13 @@ test('applyAndVerify is a no-op when unchanged', async () => {
 
 test('TLS cutover network save omits HTTP identity fields', () => {
   const config = minimalHostStatus({
+    lifecycle: knownLifecycle('https', 'none'),
     configuredCanonicalBaseUrl: 'https://praxis.lan.notaus.de',
+    proxy: {
+      ...minimalHostStatus().proxy,
+      enabled: true,
+      mode: 'tls-managed',
+    },
     tls: {
       state: 'active',
       mode: 'managed',
@@ -238,7 +248,9 @@ test('TLS cutover network save omits HTTP identity fields', () => {
 
 test('TLS preparation network save omits proxy and canonical fields', () => {
   const config = minimalHostStatus({
+    lifecycle: knownLifecycle('proxy-http', 'https'),
     configuredCanonicalBaseUrl: 'http://192.168.1.10',
+    proxy: { ...minimalHostStatus().proxy, enabled: true, mode: 'http' },
     tls: {
       state: 'awaiting-operator-dns',
       mode: 'managed',
@@ -282,7 +294,13 @@ test('HTTP-only network save includes proxy and canonical fields', () => {
 
 test('active TLS ignores HTTP reachability draft drift but keeps LAN drift', () => {
   const config = minimalHostStatus({
+    lifecycle: knownLifecycle('https', 'none'),
     configuredCanonicalBaseUrl: 'https://praxis.lan.notaus.de',
+    proxy: {
+      ...minimalHostStatus().proxy,
+      enabled: true,
+      mode: 'tls-managed',
+    },
     tls: {
       state: 'active',
       mode: 'managed',
@@ -327,7 +345,9 @@ test('re-enabling proxy recreates a running stack whose healthcheck is still sta
     config: minimalHostStatus({
       compose: {
         running: false,
-        services: [{ name: 'praxis-flow-app', service: 'app', state: 'running', health: 'starting' }],
+        services: [
+          { name: 'praxis-flow-app', service: 'app', state: 'running', health: 'starting' },
+        ],
       },
     }),
     requestConfirm: (_message, confirm) => {
@@ -967,13 +987,14 @@ test('hide() clears the UI phase but keeps the host-write latch until saveHostNe
 
 test('restoreProxy with active TLS preserves saved identity and does not call TLS issuance', async () => {
   const config = minimalHostStatus({
+    lifecycle: knownLifecycle('https', 'none'),
     configuredCanonicalBaseUrl: 'https://staff.example.test',
     appBaseUrl: 'https://staff.example.test',
   });
   config.proxy = {
     ...config.proxy,
     enabled: true,
-    mode: 'http',
+    mode: 'tls-managed',
     container: null,
   };
   config.tls = {

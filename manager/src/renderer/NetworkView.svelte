@@ -83,14 +83,14 @@
   const viewLoading = $derived(managerShell.viewLoading.network);
   const configSnapshot = $derived(managerShell.configSnapshot);
   const runtimeSnapshot = $derived(managerShell.runtimeSnapshot);
+  const lifecycle = $derived(configSnapshot?.lifecycle);
   const compose = $derived(effectiveCompose(configSnapshot, runtimeSnapshot));
-  const tlsCutoverApplied = $derived(configSnapshot?.tls?.cutoverApplied === true);
+  const tlsCutoverApplied = $derived(
+    lifecycle?.assessment === 'known' &&
+      (lifecycle.mode === 'https' || lifecycle.mode === 'https-portal'),
+  );
   const tlsPreparationActive = $derived(
-    Boolean(
-      configSnapshot?.tls &&
-        configSnapshot.tls.state !== 'off' &&
-        !configSnapshot.tls.cutoverApplied,
-    ),
+    lifecycle?.preparation === 'https' || lifecycle?.preparation === 'portal',
   );
 
   function requireApi(): PraxisManagerApi {
@@ -470,6 +470,7 @@
         >
           <RestrictedNetworkPanel
             active={managerShell.activeView === 'network'}
+            lifecycle={lifecycle ?? undefined}
             {onAfterMutation}
             peerMutating={peerBusyForRestricted}
             onMutatingChange={(mutating) => { restrictedMutating = mutating; }}
@@ -488,8 +489,9 @@
         >
           <NetworkTopologyDiagram labels={{
             lanIp: configSnapshot.network.configuredLanIp,
-            proxyEnabled: configSnapshot.proxy.enabled,
-            httpsEnabled: Boolean(configSnapshot.tls?.cutoverApplied),
+            proxyEnabled: lifecycle?.assessment === 'known' &&
+              lifecycle.mode !== 'uninstalled' && lifecycle.mode !== 'direct-http',
+            httpsEnabled: tlsCutoverApplied,
             baseUrl: savedUrl,
             operation: accessSummary?.operation,
             diagnosis: accessSummary?.diagnosis,

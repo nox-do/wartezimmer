@@ -6,6 +6,7 @@ import type {
   TlsStatus,
 } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import { evaluateHostLifecycleAction, type HostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
 import {
   tlsModeForNameMode,
   tlsNameValid,
@@ -124,6 +125,17 @@ export function createTlsNetworkController(deps: {
     return Boolean(deps.isPeerMutating?.());
   }
 
+  function lifecycleAllows(action: HostLifecycleAction): boolean {
+    const lifecycle = deps.getConfig()?.lifecycle;
+    if (!lifecycle) return true;
+    const decision = evaluateHostLifecycleAction(lifecycle, action);
+    if (!decision.allowed) {
+      set({ error: decision.reason ?? 'Host-Aktion derzeit nicht erlaubt.' });
+      return false;
+    }
+    return true;
+  }
+
   function beginHostMutation(): boolean {
     if (state.busy || state.hydrating || hostLockedByPeer()) {
       return false;
@@ -155,6 +167,7 @@ export function createTlsNetworkController(deps: {
   }
 
   async function runApply(): Promise<void> {
+    if (!lifecycleAllows('tls-apply')) return;
     if (!beginHostMutation()) {
       return;
     }
@@ -168,6 +181,7 @@ export function createTlsNetworkController(deps: {
   }
 
   async function runReset(): Promise<void> {
+    if (!lifecycleAllows('tls-reset')) return;
     if (!beginHostMutation()) {
       return;
     }
@@ -235,6 +249,7 @@ export function createTlsNetworkController(deps: {
         ...(identityChanged ? { operatorRequest: null, dnsChecks: null } : {}),
       });
       try {
+        if (!lifecycleAllows('tls-prepare')) return;
         const result = await deps.api.prepareHostTls({
           mode: 'managed',
           hostname: current.installationDomain || current.hostname,
@@ -342,6 +357,7 @@ export function createTlsNetworkController(deps: {
     },
 
     async verifyDns() {
+      if (!lifecycleAllows('tls-verify')) return;
       if (!beginHostMutation()) {
         return;
       }
@@ -360,6 +376,8 @@ export function createTlsNetworkController(deps: {
     },
 
     async obtainOrCheck() {
+      const action = tls()?.mode === 'custom' ? 'tls-check-certificate' : 'tls-obtain';
+      if (!lifecycleAllows(action)) return;
       if (!beginHostMutation()) {
         return;
       }
@@ -403,6 +421,7 @@ export function createTlsNetworkController(deps: {
     },
 
     async repair() {
+      if (!lifecycleAllows('tls-repair')) return;
       if (!beginHostMutation()) {
         return;
       }
@@ -437,6 +456,7 @@ export function createTlsNetworkController(deps: {
     },
 
     async renew() {
+      if (!lifecycleAllows('tls-renew')) return;
       if (!beginHostMutation()) {
         return;
       }
@@ -459,6 +479,7 @@ export function createTlsNetworkController(deps: {
     },
 
     async stageCustomCertificate() {
+      if (!lifecycleAllows('tls-custom-certificate')) return;
       if (!beginHostMutation()) {
         return;
       }

@@ -235,77 +235,41 @@ test('does not show wizard after leaving wizard before fetch resolves', async ()
   assert.equal(sessions.wizardShown.length, 0);
 });
 
-test('defaultWizardPresentation uses fullscreen before env exists', () => {
-  assert.equal(defaultWizardPresentation(null), 'fullscreen');
-  assert.equal(defaultWizardPresentation(minimalHostStatus({ envExists: false })), 'fullscreen');
-  assert.equal(defaultWizardPresentation(minimalHostStatus({ envExists: true })), 'embedded');
-});
-
-test('defaultWizardPresentation uses fullscreen while setup is incomplete', () => {
-  assert.equal(
-    defaultWizardPresentation(
-      minimalHostStatus({
-        deliveryImages: {
-          required: true,
-          configured: false,
-          appImage: null,
-          sandboxImage: null,
-          releaseVersion: null,
-          archiveSha256: null,
-          appPresent: false,
-          sandboxPresent: false,
-          ready: false,
-        },
-      }),
-    ),
-    'fullscreen',
-  );
-});
-
-test('shouldAutoStartFullscreenWizard for every incomplete setup', () => {
-  assert.equal(shouldAutoStartFullscreenWizard(null), true);
-  assert.equal(shouldAutoStartFullscreenWizard(minimalHostStatus({ envExists: false })), true);
-  assert.equal(
-    shouldAutoStartFullscreenWizard(
-      minimalHostStatus({
-        deliveryImages: {
-          required: true,
-          configured: false,
-          appImage: null,
-          sandboxImage: null,
-          releaseVersion: null,
-          archiveSha256: null,
-          appPresent: false,
-          sandboxPresent: false,
-          ready: false,
-        },
-      }),
-    ),
-    true,
-  );
-  assert.equal(shouldAutoStartFullscreenWizard(minimalHostStatus({ envExists: true })), false);
-});
-
-test('lifecycle only auto-starts the wizard for a confirmed fresh installation', () => {
-  const base = { preparation: 'none', operation: 'none', recovery: 'none', issues: [] } as const;
-  for (const assessment of ['known', 'inconsistent', 'unknown'] as const) {
-    const status = minimalHostStatus({ envExists: false });
-    status.lifecycle = {
-      ...base,
-      issues: [],
-      assessment,
-      mode: assessment === 'known' ? 'uninstalled' : null,
-    };
-    assert.equal(shouldAutoStartFullscreenWizard(status), assessment === 'known');
+test('installation state controls wizard presentation and auto-start', () => {
+  assert.equal(shouldAutoStartFullscreenWizard(null), false);
+  for (const kind of [
+    'fresh',
+    'healthy',
+    'stopped',
+    'needs-reinstall',
+    'docker-unavailable',
+    'installing',
+  ] as const) {
+    const installation =
+      kind === 'installing'
+        ? {
+            kind,
+            operation: {
+              id: 'test',
+              mode: 'replace' as const,
+              phase: 'prepared' as const,
+              createdAt: '',
+              releaseVersion: '1',
+              backupContainsTls: null,
+            },
+          }
+        : kind === 'needs-reinstall'
+          ? { kind, reasons: [] }
+          : kind === 'docker-unavailable'
+            ? { kind, reason: 'offline' }
+            : kind === 'healthy'
+              ? { kind, updateEligible: true as const }
+              : { kind };
+    const status = minimalHostStatus({ installation });
     assert.equal(
-      defaultWizardPresentation(status),
-      assessment === 'known' ? 'fullscreen' : 'embedded',
+      shouldAutoStartFullscreenWizard(status),
+      kind === 'fresh' || kind === 'installing',
     );
+    assert.equal(defaultWizardPresentation(status), kind === 'healthy' ? 'embedded' : 'fullscreen');
   }
-  const installed = minimalHostStatus({
-    docker: { installed: true, daemonRunning: false, composeAvailable: true, detail: null },
-  });
-  installed.lifecycle = { ...base, issues: [], assessment: 'known', mode: 'https' };
-  assert.equal(shouldAutoStartFullscreenWizard(installed), false);
-  assert.equal(defaultWizardPresentation(installed), 'embedded');
 });

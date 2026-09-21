@@ -4,7 +4,7 @@ import type { TlsPrepareInput, TlsStatus } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { createTlsNetworkController } from './tls-network-controller.js';
 import { TLS_CUTOVER_CONFIRM_MESSAGE, TLS_LEASE_STALE_LAN_COPY } from './tls-network-view-model.js';
-import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
+import { minimalHostStatus, knownLifecycle } from './test-fixtures/minimal-host-status.js';
 
 function tls(overrides: Partial<TlsStatus>): TlsStatus {
   return {
@@ -37,6 +37,10 @@ function createController(options: {
     api: options.api as PraxisManagerApi,
     getConfig: () =>
       minimalHostStatus({
+        lifecycle: knownLifecycle(
+          options.status.cutoverApplied ? 'https' : 'proxy-http',
+          !options.status.cutoverApplied && options.status.state !== 'off' ? 'https' : 'none',
+        ),
         tls: options.status,
         network: {
           configuredLanIp: options.configuredLanIp ?? '192.168.1.10',

@@ -1,6 +1,6 @@
 /**
  * Shared Pebble-lab Setup TLS smoke (prepare → verify-dns → obtain, optional apply).
- * Never uses TLS_RUNTIME_FAKE. Isolated runtimes; fixed container_names still collide.
+ * Never uses TLS_RUNTIME_FAKE. Product services are isolated by Compose project.
  */
 
 import { spawn, spawnSync } from 'node:child_process';
@@ -52,9 +52,7 @@ const COMPOSE_FILES = [
   'docker-compose.tls-lab-proxy.yml',
 ];
 const CLASHING_CONTAINERS = [
-  'praxis-flow-app',
-  'praxis-flow-sandbox',
-  'praxis-flow-proxy',
+  // The lab support compose still uses fixed names and therefore needs explicit cleanup.
   'praxis-flow-tls-lab-pebble',
   'praxis-flow-tls-lab-acme-dns',
   'praxis-flow-tls-lab-coredns',

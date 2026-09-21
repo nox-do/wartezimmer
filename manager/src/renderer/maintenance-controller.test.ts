@@ -24,14 +24,11 @@ function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManager
       backupPath: '/tmp/backups/praxis-flow-backup-2026-06-25T10-00-00-000Z.pfbackup',
     }),
     savePfbackup: async () => ({ saved: true, canceled: false, filePath: '/tmp/out.pfbackup' }),
-    saveTlsSidecar: async () => ({ saved: true, canceled: false, filePath: '/tmp/out.tgz' }),
     readPfbackupForValidate: async () => ({
       canceled: false,
       content: '{}',
       filePath: '/tmp/sample.pfbackup',
-      tlsSidecarBase64: null,
     }),
-    readTlsSidecar: async () => ({ canceled: true as const }),
     inspectPfbackupFile: async () => ({
       ok: true,
       backup: {
@@ -270,6 +267,46 @@ test('cancelling stack confirm unlocks the tab', async () => {
 
   controller.handleStackToggle(false);
   assert.equal(controller.getState().activeOperation, 'stack');
+});
+
+test('policy rejection after stack confirmation unlocks the tab', async () => {
+  let confirm: (() => void) | undefined;
+  let composeCalls = 0;
+  const controller = createMaintenanceController(
+    createControllerDeps(
+      createMockApi({
+        runComposeAction: async () => {
+          composeCalls += 1;
+          return { ok: true, log: '', compose: { running: true, services: [] } };
+        },
+      }),
+      {
+        requestConfirm: (_message, onConfirm) => {
+          confirm = onConfirm;
+        },
+      },
+    ),
+  );
+  controller.show(
+    minimalHostStatus({
+      lifecycle: {
+        assessment: 'inconsistent',
+        mode: null,
+        preparation: 'none',
+        operation: 'none',
+        issues: [{ code: 'test', message: 'widersprüchlich' }],
+        recovery: 'none',
+      },
+    }),
+  );
+  await flush();
+  controller.restart();
+  assert.equal(controller.getState().activeOperation, 'stack');
+  confirm?.();
+  await flush();
+  assert.equal(composeCalls, 0);
+  assert.equal(controller.getState().activeOperation, null);
+  assert.match(controller.getState().errors.stack ?? '', /widersprüchliche Konfiguration/);
 });
 
 test('hide clears a pending confirm lock', async () => {

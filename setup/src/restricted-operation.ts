@@ -20,10 +20,10 @@ export type RestrictedOperation = {
   previousCaddyfile: string | null;
 };
 
-export function durableWrite(file: string, content: string): void {
+export function durableWrite(file: string, content: string, mode = 0o600): void {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temporary = `${file}.${randomUUID()}.tmp`;
-  const fd = fs.openSync(temporary, 'wx', 0o600);
+  const fd = fs.openSync(temporary, 'wx', mode);
   try {
     fs.writeFileSync(fd, content);
     fs.fsyncSync(fd);

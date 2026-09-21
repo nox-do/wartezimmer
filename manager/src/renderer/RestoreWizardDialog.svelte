@@ -17,6 +17,7 @@
     snapshot,
     onChooseRestore,
     onConfirmRestore,
+    onCancelHttps,
     onRetry,
     onSkip,
     onClose,
@@ -25,6 +26,7 @@
     snapshot: RestoreWizardState;
     onChooseRestore: (restore: boolean) => void;
     onConfirmRestore: () => void;
+    onCancelHttps: () => void;
     onRetry: () => void;
     onSkip: () => void;
     onClose: () => void;
@@ -51,7 +53,8 @@
     if (snapshot.busy) {
       return;
     }
-    onClose();
+    if (snapshot.phase === 'confirm-https') onCancelHttps();
+    else onClose();
   }
 
   const inspectLines = $derived(
@@ -75,9 +78,8 @@
   bind:this={dialogEl}
   class="maintenance-dialog restore-wizard-dialog"
   oncancel={(event) => {
-    if (snapshot.busy) {
-      event.preventDefault();
-    }
+    event.preventDefault();
+    handleClose();
   }}
   onclose={handleClose}
   onclick={(event) => {
@@ -108,8 +110,24 @@
       <span class="spinner" aria-hidden="true"></span>
       {snapshot.statusText || 'Bitte warten …'}
     </p>
+  {:else if snapshot.phase === 'confirm-https'}
+    <h2>HTTPS-Einrichtung ersetzen?</h2>
+    <p>
+      HTTPS ist auf diesem Computer aktiv. Wiederherstellen ersetzt die aktuelle
+      HTTPS-Einrichtung durch die Sicherung.
+    </p>
+    <div class="actions-row actions-row--dialog">
+      <button type="button" onclick={onConfirmRestore}>HTTPS ersetzen und wiederherstellen</button>
+      <button type="button" class="btn-secondary" onclick={onCancelHttps}>Abbrechen</button>
+    </div>
   {:else if snapshot.phase === 'preview' && snapshot.inspect}
     <h2>Restore bestätigen</h2>
+    <p class="hint">
+      Diese Sicherung ist nicht verschlüsselt. API-Schlüssel für SMS und WhatsApp werden im
+      Klartext mitgesichert. Bei HTTPS kann sie private Schlüssel enthalten. Bewahren Sie die
+      Datei geschützt auf, möglichst auf einem verschlüsselten Datenträger, und geben Sie sie
+      nicht ungeschützt weiter.
+    </p>
     {#if snapshot.filePath}
       <p class="hint">{snapshot.filePath}</p>
     {/if}
@@ -193,7 +211,7 @@
           Provider-Credentials nicht importieren (SMS neu konfigurieren)
         </label>
         <p class="hint">
-          Wenn der Restore an Provider-Credentials oder der MFA-PIN scheiterte, können Sie den
+          Wenn der Restore an Provider-Zugangsdaten scheiterte, können Sie den
           Import ohne SMS-Credentials erneut versuchen und Provider später in Ops neu eintragen.
         </p>
       {/if}

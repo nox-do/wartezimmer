@@ -1,3 +1,9 @@
+import type {
+  RecoveryBackupCandidate,
+  InstallRecoveryPreview,
+  InstallFinishInput,
+  InstallFinishResult,
+} from '../shared/host-status.js';
 import { contextBridge, ipcRenderer } from 'electron';
 import managerPackage from '../../package.json' with { type: 'json' };
 import type {
@@ -27,6 +33,12 @@ import type {
   HostNetworkResult,
   HostStatus,
   HostRuntimeHealth,
+  InstallationStartResult,
+  InstallPrepareInput,
+  InstallPrepareResult,
+  InstallCommitInput,
+  InstallCommitResult,
+  InstallAbortResult,
   NetworkSnapshot,
   RestrictedNetworkInspectResult,
   RestrictedNetworkActionResult,
@@ -44,8 +56,6 @@ import type {
 import {
   IPC_OPEN_EXTERNAL_URL,
   IPC_READ_PFBACKUP_FOR_VALIDATE,
-  IPC_READ_TLS_SIDECAR,
-  IPC_SAVE_TLS_SIDECAR,
   IPC_INSPECT_PFBACKUP_FILE,
   IPC_SAVE_PFBACKUP,
   IPC_SELECT_FOLDER,
@@ -199,20 +209,9 @@ async function savePfbackup(backupPath: string): Promise<SavePfbackupResult> {
 }
 
 async function readPfbackupForValidate(): Promise<
-  | { canceled: true }
-  | { canceled: false; content: string; filePath: string; tlsSidecarBase64: string | null }
+  { canceled: true } | { canceled: false; content: string; filePath: string }
 > {
   return invokeMain(IPC_READ_PFBACKUP_FOR_VALIDATE);
-}
-
-async function readTlsSidecar(): Promise<
-  { canceled: true } | { canceled: false; tlsSidecarBase64: string }
-> {
-  return invokeMain(IPC_READ_TLS_SIDECAR);
-}
-
-async function saveTlsSidecar(backupPath: string): Promise<SavePfbackupResult> {
-  return invokeMain<SavePfbackupResult>(IPC_SAVE_TLS_SIDECAR, backupPath);
 }
 
 async function inspectPfbackupFile(backupPath: string): Promise<PfbackupInspectResult> {
@@ -227,23 +226,19 @@ async function validatePfbackup(content: string): Promise<PfbackupValidateResult
   });
 }
 
-async function inspectPfbackup(
-  content: string,
-  options: { tlsSidecarBase64?: string } = {},
-): Promise<PfbackupInspectResult> {
+async function inspectPfbackup(content: string): Promise<PfbackupInspectResult> {
   return callSetupApi<PfbackupInspectResult>({
     method: 'POST',
     path: '/api/setup/host/backup/inspect',
     body: {
       content,
-      ...(options.tlsSidecarBase64 ? { tlsSidecarBase64: options.tlsSidecarBase64 } : {}),
     },
   });
 }
 
 async function restorePfbackup(
   content: string,
-  options: { skipProviderCredentials?: boolean; tlsSidecarBase64?: string } = {},
+  options: { skipProviderCredentials?: boolean } = {},
 ): Promise<PfbackupRestoreResult> {
   return callSetupApi<PfbackupRestoreResult>({
     method: 'POST',
@@ -251,7 +246,6 @@ async function restorePfbackup(
     body: {
       content,
       skipProviderCredentials: options.skipProviderCredentials === true,
-      ...(options.tlsSidecarBase64 ? { tlsSidecarBase64: options.tlsSidecarBase64 } : {}),
     },
   });
 }
@@ -276,6 +270,38 @@ async function loadDeliveryImages(body: {
     method: 'POST',
     path: '/api/setup/host/images/load',
     body,
+  });
+}
+
+async function startStoppedInstallation(): Promise<InstallationStartResult> {
+  return callSetupApi<InstallationStartResult>({
+    method: 'POST',
+    path: '/api/setup/host/installation/start',
+    body: {},
+  });
+}
+
+async function prepareInstall(body: InstallPrepareInput): Promise<InstallPrepareResult> {
+  return callSetupApi<InstallPrepareResult>({
+    method: 'POST',
+    path: '/api/setup/host/install/prepare',
+    body,
+  });
+}
+
+async function commitInstall(body: InstallCommitInput): Promise<InstallCommitResult> {
+  return callSetupApi<InstallCommitResult>({
+    method: 'POST',
+    path: '/api/setup/host/install/commit',
+    body,
+  });
+}
+
+async function abortInstall(operationId: string): Promise<InstallAbortResult> {
+  return callSetupApi<InstallAbortResult>({
+    method: 'DELETE',
+    path: '/api/setup/host/install/operation',
+    body: { operationId },
   });
 }
 
@@ -392,6 +418,27 @@ contextBridge.exposeInMainWorld('praxisManager', {
   fetchSetupStatus,
   fetchRuntimeHealth,
   fetchSetupNetwork,
+  startStoppedInstallation,
+  prepareInstall,
+  commitInstall,
+  abortInstall,
+  discoverRecoveryBackups: () =>
+    callSetupApi<RecoveryBackupCandidate[]>({
+      method: 'GET',
+      path: '/api/setup/host/install/backups',
+    }),
+  previewInstallRecovery: (operationId: string) =>
+    callSetupApi<InstallRecoveryPreview>({
+      method: 'POST',
+      path: '/api/setup/host/install/preview',
+      body: { operationId },
+    }),
+  finishInstallRecovery: (body: InstallFinishInput) =>
+    callSetupApi<InstallFinishResult>({
+      method: 'POST',
+      path: '/api/setup/host/install/finish',
+      body,
+    }),
   inspectRestrictedNetwork,
   prepareRestrictedNetwork,
   applyRestrictedNetwork,
@@ -405,10 +452,8 @@ contextBridge.exposeInMainWorld('praxisManager', {
     callSetupApi<ComposeActionResult>({ method: 'POST', path: '/api/setup/host/rebuild' }),
   createPfbackup,
   savePfbackup,
-  saveTlsSidecar,
   inspectPfbackupFile,
   readPfbackupForValidate,
-  readTlsSidecar,
   validatePfbackup,
   inspectPfbackup,
   restorePfbackup,

@@ -26,17 +26,14 @@ export {
 export {
   PFBACKUP_BASENAME_PREFIX,
   PFBACKUP_FILE_EXTENSION,
-  TLS_SIDECAR_BASENAME_PREFIX,
-  TLS_SIDECAR_FILE_EXTENSION,
   formatPfbackupLabel,
   parsePfbackupTimestampFromPath,
   parsePfbackupTimestampTokenFromPath,
-  siblingTlsSidecarBasename,
-  tlsSidecarFileName,
 } from './backup-path-labels.js';
 export {
   tlsBackupMetadataConsistent,
   tlsInBackup,
+  currentTlsClaimsHttps,
   tlsPreparedInBackup,
   tlsRestoreBlockedCopy,
   tlsRestoreSupported,
@@ -47,6 +44,10 @@ export {
   PFBACKUP_FORMAT_VERSION,
   CURRENT_SETTINGS_FORMAT_VERSION,
   STACK_IMAGE_ENV_KEYS,
+  SECRET_ENV_KEYS,
+  NON_RESTORABLE_INSTALL_ENV_KEYS,
+  sha256HexBytes,
+  decodePfbackupTls,
   buildPfbackupArchive,
   buildPfbackupFilename,
   envRecordForSettingsExport,
@@ -61,9 +62,9 @@ export {
   type ManagerReleaseState,
   type ManagerState,
   type ManagerStateValidationResult,
-  type PfbackupArchiveV1,
-  type PfbackupManifestEntryV1,
-  type PfbackupManifestV1,
+  type PfbackupArchiveV2,
+  type PfbackupManifestEntryV2,
+  type PfbackupManifestV2,
   type PfbackupArchiveValidationResult,
   type PfbackupValidationSummary,
   type StackImageEnvKey,
@@ -202,6 +203,15 @@ export {
   type HostLifecycle,
   type HostOperatingMode,
   type HostStatusOptions,
+  type InstallationReason,
+  type InstallationStartResult,
+  type InstallationState,
+  type InstallOperationSummary,
+  type InstallPrepareInput,
+  type InstallPrepareResult,
+  type InstallCommitInput,
+  type InstallCommitResult,
+  type InstallAbortResult,
   type RestrictedNetworkBinding,
   type RestrictedNetworkCandidate,
   type RestrictedNetworkCandidateWarning,
@@ -257,5 +267,17 @@ export {
   type StorageFoldersInput,
   type StorageFoldersResult,
 } from './setup-api.js';
+export {
+  evaluateHostLifecycleAction,
+  type HostLifecycleAction,
+  type HostLifecycleGuard,
+} from './host-lifecycle-policy.js';
 
 export { deriveHttpDeviceAddress, persistedHttpHostname } from './device-address.js';
+
+export type {
+  RecoveryBackupCandidate,
+  InstallRecoveryPreview,
+  InstallFinishInput,
+  InstallFinishResult,
+} from './setup-api.js';

@@ -87,6 +87,7 @@
           {overallNotice.text}
         </p>
       {/if}
+      <button type="button" class="btn-secondary" onclick={onSetupClick}>Neu installieren …</button>
       <TlsResumeCard tls={configSnapshot.tls} onResume={onOpenNetwork} />
     {/if}
     <DeliveryImagesWarning

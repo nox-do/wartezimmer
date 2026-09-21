@@ -1,3 +1,8 @@
+import type {
+  RecoveryBackupCandidate,
+  InstallRecoveryPreview,
+  InstallOperationSummary,
+} from '../shared/host-status.js';
 import type { HostStatus } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import type { WizardPresentation } from './manager-navigation.js';
@@ -44,6 +49,11 @@ export type WizardControllerState = WizardFlowState & {
   probeStatusText: string | null;
   error: string | null;
   presentation: WizardPresentation;
+  recoveryPhase: 'choose' | 'prepared' | 'setup' | 'finish' | 'restart' | null;
+  recoveryCandidates: RecoveryBackupCandidate[];
+  backupCandidateId: string;
+  operation: InstallOperationSummary | null;
+  recoveryPreview: InstallRecoveryPreview | null;
 };
 
 export type WizardControllerDeps = WizardCallbacks & {
@@ -56,6 +66,11 @@ export type WizardControllerDeps = WizardCallbacks & {
 
 export type WizardController = {
   getState: () => Readonly<WizardControllerState>;
+  selectRecoveryBackup: (id: string) => void;
+  prepareRecovery: () => Promise<void>;
+  commitRecovery: () => void;
+  abortRecovery: () => Promise<void>;
+  finishRecovery: (action: 'restore' | 'without-backup') => Promise<void>;
   patchFields: (patch: Partial<WizardFlowState>) => void;
   show: (status: HostStatus | null, presentation?: WizardPresentation) => void;
   hide: () => void;
@@ -82,6 +97,11 @@ function createInitialState(
     probeStatusText: null,
     error: null,
     presentation,
+    recoveryPhase: status?.mode === 'install' ? 'choose' : null,
+    recoveryCandidates: [],
+    backupCandidateId: '',
+    operation: null,
+    recoveryPreview: null,
   };
 }
 
@@ -112,6 +132,87 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
 
   function beginSession(): void {
     lifecycleGeneration += 1;
+  }
+
+  async function recoveryAction(action: (generation: number) => Promise<void>): Promise<void> {
+    if (state.busy) return;
+    const generation = lifecycleGeneration;
+    patch({ busy: true, error: null });
+    try {
+      await action(generation);
+    } catch (error) {
+      if (still(generation)) setError(error instanceof Error ? error.message : String(error));
+    } finally {
+      if (still(generation)) setBusy(false);
+    }
+  }
+
+  async function loadRecovery(generation: number): Promise<void> {
+    const status = await deps.api.fetchSetupStatus();
+    if (!still(generation)) return;
+    const installation = status.installation;
+    const operation =
+      installation.kind === 'installing' || installation.kind === 'docker-unavailable'
+        ? (installation.operation ?? null)
+        : null;
+    patch({ status, operation });
+    if (installation.kind === 'docker-unavailable') {
+      setError(installation.reason);
+      return;
+    }
+    if (operation?.phase === 'prepared') {
+      patch({ recoveryPhase: 'prepared' });
+      return;
+    }
+    if (operation) {
+      patch({ recoveryPhase: 'restart' });
+      const preview = await deps.api.previewInstallRecovery(operation.id);
+      if (!still(generation)) return;
+      patch({
+        recoveryPreview: preview,
+        recoveryPhase: preview.baselineReady
+          ? 'finish'
+          : !status.network.configuredLanIp && status.deliveryImages.ready
+            ? 'setup'
+            : 'restart',
+      });
+      return;
+    }
+    const candidates = await deps.api.discoverRecoveryBackups();
+    if (still(generation)) patch({ recoveryCandidates: candidates, recoveryPhase: 'choose' });
+  }
+
+  async function finishRecovery(action: 'restore' | 'without-backup'): Promise<void> {
+    await recoveryAction(async (generation) => {
+      if (!state.operation) throw new Error('Kein Installationsvorgang.');
+      const result = await deps.api.finishInstallRecovery({
+        operationId: state.operation.id,
+        action,
+      });
+      if (!still(generation)) return;
+      if (!result.ok) throw new Error(result.errors.join(' '));
+      patch({ operation: null, recoveryPhase: null });
+      deps.onHostMutated?.();
+      deps.onComplete();
+    });
+  }
+
+  async function commitRecovery(): Promise<void> {
+    await recoveryAction(async (generation) => {
+      if (!state.operation) throw new Error('Kein Installationsvorgang.');
+      await deps.api.commitInstall({ operationId: state.operation.id, replaceConfirmed: true });
+      const status = await deps.api.fetchSetupStatus();
+      if (!still(generation)) return;
+      const operation =
+        status.installation.kind === 'installing' ? status.installation.operation : null;
+      patch({
+        ...createInitialState(status, state.presentation),
+        operation,
+        recoveryPhase: 'setup',
+        busy: true,
+      });
+      deps.onHostMutated?.();
+    });
   }
 
   async function browseFolder(
@@ -293,6 +394,10 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
         });
       }
     }
+    if (state.operation) {
+      const preview = await deps.api.previewInstallRecovery(state.operation.id);
+      if (still(generation)) patch({ recoveryPreview: preview, recoveryPhase: 'finish' });
+    }
     deps.onHostMutated?.();
   }
 
@@ -300,6 +405,50 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
 
   return {
     getState: () => state,
+    selectRecoveryBackup(id) {
+      if (!state.busy) patch({ backupCandidateId: id });
+    },
+    async prepareRecovery() {
+      await recoveryAction(async (generation) => {
+        const picked = await deps.api.selectReleaseArchive();
+        if (!still(generation) || picked.canceled || !picked.path) return;
+        const status = await deps.api.fetchSetupStatus();
+        if (!still(generation)) return;
+        const result = await deps.api.prepareInstall({
+          archivePath: picked.path,
+          mode: status.installation.kind === 'fresh' ? 'fresh' : 'replace',
+          ...(state.backupCandidateId ? { backupCandidateId: state.backupCandidateId } : {}),
+        });
+        if (!still(generation)) return;
+        patch({ operation: result.operation, recoveryPhase: 'prepared' });
+        deps.onHostMutated?.();
+      });
+    },
+    commitRecovery() {
+      if (state.busy || !state.operation) return;
+      const generation = lifecycleGeneration;
+      if (state.operation.mode === 'replace' || state.operation.phase === 'installing') {
+        deps.requestConfirm?.(
+          'Neu installieren? Alte Laufzeitdaten und Dokument-Intake werden gelöscht. Geräte müssen neu gekoppelt werden. Automatische Backups bleiben erhalten. HTTPS wird nur aus dem ausgewählten Backup übernommen.',
+          () => {
+            if (still(generation)) void commitRecovery();
+          },
+        );
+      } else {
+        void commitRecovery();
+      }
+    },
+    async abortRecovery() {
+      await recoveryAction(async (generation) => {
+        if (!state.operation) return;
+        await deps.api.abortInstall(state.operation.id);
+        if (!still(generation)) return;
+        patch({ operation: null, recoveryPhase: 'choose' });
+        await loadRecovery(lifecycleGeneration);
+        deps.onHostMutated?.();
+      });
+    },
+    finishRecovery,
 
     patchFields(partial) {
       patch(partial);
@@ -309,6 +458,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       beginSession();
       state = createInitialState(status, presentation);
       notify();
+      if (status?.mode === 'install') void recoveryAction(() => loadRecovery(lifecycleGeneration));
     },
 
     hide() {
@@ -318,6 +468,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     },
 
     async goNext() {
+      if (state.busy || (state.recoveryPhase && state.recoveryPhase !== 'setup')) return;
       const generation = lifecycleGeneration;
       setError(null);
       setBusy(true);
@@ -395,6 +546,10 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     },
 
     complete() {
+      if (state.operation) {
+        void finishRecovery('without-backup');
+        return;
+      }
       if (!state.busy) {
         deps.onComplete();
       }

@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import {
   buildPfbackupArchive,
@@ -8,8 +9,8 @@ import {
   parsePfbackupArchive,
   parsePfbackupTimestampFromPath,
   serializePfbackupArchive,
-  siblingTlsSidecarBasename,
   validatePfbackupArchive,
+  tlsRestoreBlockedCopy,
   type ManagerState,
   type PfbackupArchiveValidationResult,
   type PfbackupValidateResult,
@@ -18,7 +19,7 @@ import { LOCAL_MAINTENANCE_APP_BASE_URL } from './urls.js';
 import { readEnvMap } from './env-file.js';
 import { readManagerStateForBackup } from './manager-state.js';
 import type { SetupContext } from './setup-context.js';
-import { packTlsSidecarArchive } from './tls-backup-sidecar.js';
+import { packTlsSidecarArchive, buildPfbackupTlsInspectSummary } from './tls-backup-sidecar.js';
 import { maintenanceRequestHeaders } from './maintenance-auth.js';
 
 const DEFAULT_LOCAL_APP = LOCAL_MAINTENANCE_APP_BASE_URL;
@@ -284,7 +285,7 @@ function writePfbackupFileAtomically(backupDir: string, serialized: string): str
 export async function createPfbackup(
   ctx: SetupContext,
   localAppBaseUrl = DEFAULT_LOCAL_APP,
-): Promise<{ envPath: string; backupPath: string; tlsSidecarPath?: string | null }> {
+): Promise<{ envPath: string; backupPath: string }> {
   const envPath = path.join(ctx.home, '.env');
   if (!fs.existsSync(envPath)) {
     throw new Error('Keine .env — Setup zuerst ausführen.');
@@ -308,15 +309,15 @@ export async function createPfbackup(
   const archive = buildPfbackupArchive({
     settings: fullSnapshot,
     managerState,
+    tlsArchiveBase64: buildTlsArchiveBase64(ctx) ?? undefined,
   });
   const serialized = serializePfbackupArchive(archive);
   const backupPath = writePfbackupFileAtomically(backupsDirectory(ctx.home), serialized);
-  const tlsSidecarPath = writeTlsSidecarBesideBackup(ctx, backupPath);
 
-  return { envPath, backupPath, tlsSidecarPath };
+  return { envPath, backupPath };
 }
 
-export function writeTlsSidecarBesideBackup(ctx: SetupContext, backupPath: string): string | null {
+export function buildTlsArchiveBase64(ctx: SetupContext): string | null {
   const envPath = path.join(ctx.home, '.env');
   if (!fs.existsSync(envPath)) {
     return null;
@@ -326,39 +327,32 @@ export function writeTlsSidecarBesideBackup(ctx: SetupContext, backupPath: strin
   if (tlsState === 'off') {
     return null;
   }
-  const sidecarName = siblingTlsSidecarBasename(backupPath);
-  if (!sidecarName) {
-    throw new Error('Backup-Dateiname hat keinen Zeitstempel für das TLS-Sidecar.');
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-backup-tls-'));
+  const destinationPath = path.join(temporary, 'tls.tgz');
+  try {
+    packTlsSidecarArchive({
+      installHome: ctx.home,
+      installationId: env.TLS_INSTALLATION_ID?.trim() ?? '',
+      hostname: env.TLS_STAFF_HOSTNAME?.trim() || env.TLS_HOSTNAME?.trim() || '',
+      installationDomain: env.TLS_INSTALLATION_DOMAIN?.trim(),
+      staffHostname: env.TLS_STAFF_HOSTNAME?.trim(),
+      portalHostname: env.TLS_PORTAL_HOSTNAME?.trim(),
+      wildcardCertificateName: env.TLS_WILDCARD_CERTIFICATE_NAME?.trim(),
+      destinationPath,
+    });
+    return fs.readFileSync(destinationPath).toString('base64');
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
   }
-  const destinationPath = path.join(path.dirname(backupPath), sidecarName);
-  packTlsSidecarArchive({
-    installHome: ctx.home,
-    installationId: env.TLS_INSTALLATION_ID?.trim() ?? '',
-    hostname: env.TLS_STAFF_HOSTNAME?.trim() || env.TLS_HOSTNAME?.trim() || '',
-    installationDomain: env.TLS_INSTALLATION_DOMAIN?.trim(),
-    staffHostname: env.TLS_STAFF_HOSTNAME?.trim(),
-    portalHostname: env.TLS_PORTAL_HOSTNAME?.trim(),
-    wildcardCertificateName: env.TLS_WILDCARD_CERTIFICATE_NAME?.trim(),
-    destinationPath,
-  });
-  return destinationPath;
 }
 
 export function getPfbackupInfo(ctx: SetupContext): {
   envPath: string;
   latestBackupPath: string | null;
-  latestTlsSidecarPath: string | null;
 } {
-  const envPath = path.join(ctx.home, '.env');
-  const latestBackupPath = findLatestPfbackupPath(ctx.home);
-  const sidecarName = latestBackupPath ? siblingTlsSidecarBasename(latestBackupPath) : null;
-  const latestTlsSidecarPath =
-    latestBackupPath && sidecarName ? path.join(path.dirname(latestBackupPath), sidecarName) : null;
   return {
-    envPath,
-    latestBackupPath,
-    latestTlsSidecarPath:
-      latestTlsSidecarPath && fs.existsSync(latestTlsSidecarPath) ? latestTlsSidecarPath : null,
+    envPath: path.join(ctx.home, '.env'),
+    latestBackupPath: findLatestPfbackupPath(ctx.home),
   };
 }
 
@@ -395,8 +389,11 @@ export async function validatePfbackupFull(
   }
 
   let settingsJson: string;
+  let tlsArchiveBase64: string | undefined;
   try {
-    settingsJson = parsePfbackupArchive(JSON.parse(content)).settingsJson;
+    const archive = parsePfbackupArchive(JSON.parse(content));
+    settingsJson = archive.settingsJson;
+    tlsArchiveBase64 = archive.tlsArchiveBase64;
   } catch {
     return {
       archiveValid: false,
@@ -418,6 +415,25 @@ export async function validatePfbackupFull(
       summary: archiveResult.summary,
     };
   }
+
+  const env = (settingsSnapshot as { env?: Record<string, string> }).env ?? {};
+  const tls = buildPfbackupTlsInspectSummary(env, tlsArchiveBase64);
+  const tlsError = tls
+    ? tlsRestoreBlockedCopy({
+        tlsMetadataConsistent: tls.metadataConsistent,
+        tlsClaimsHttps: tls.inBackup,
+        payloadPresent: tls.payloadPresent,
+        payloadMatches: tls.payloadMatches,
+      })
+    : null;
+  if (tlsError)
+    return {
+      archiveValid: true,
+      restoreValid: false,
+      archiveErrors: [],
+      restoreErrors: [tlsError],
+      summary: archiveResult.summary,
+    };
 
   const restoreResult = await validateSettingsSnapshotWithApp(settingsSnapshot, localAppBaseUrl);
   return {

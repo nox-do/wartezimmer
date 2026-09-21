@@ -1,3 +1,5 @@
+import { pinRecoveryBackup, readPinnedRecoveryBackup } from './recovery-backup.js';
+import { attachInstallBackup } from './install-operation.js';
 import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime-postcondition.js';
 import { readHostLifecycle, inspectLifecycleResidues } from './host-lifecycle-facts.js';
 import { hostLifecycleKey } from './host-lifecycle.js';
@@ -46,7 +48,9 @@ import { inspectPfbackup } from './settings-backup-inspect.js';
 import { restorePfbackup } from './settings-backup-restore.js';
 import { applyPfupdate } from './settings-backup-update.js';
 import { inspectPfupdate } from './pfupdate-inspect.js';
-import { resolveCurrentSettingsFormatVersion } from './settings-format-version.js';
+import { inspectMaintenanceCompatibility } from './settings-format-version.js';
+import { coreInstallationServicesHealthy, deriveInstallationState } from './installation-state.js';
+import { inspectExistingAppDatabase, startExistingInstallation } from './installation-start.js';
 import {
   normalizeStorageFoldersInput,
   prepareStorageFoldersOnDisk,
@@ -61,9 +65,18 @@ import {
 } from './network-bindings.js';
 import {
   auditDeliveryImages,
-  loadDeliveryImagesFromArchive,
+  activatePreparedPfinstall,
+  extractPreparedPfinstallTemplates,
   isDeliveryProfile,
+  preparePfinstall,
 } from './delivery-images.js';
+import {
+  abortPreparedInstallOperation,
+  installOperationSummary,
+  markInstallOperationInstalling,
+  readInstallOperation,
+} from './install-operation.js';
+import { factoryResetInstallation } from './factory-reset.js';
 import { readManagerState, releaseEnvFromManagerState } from './manager-state.js';
 import {
   appendSandboxClamAvLogSection,
@@ -74,6 +87,7 @@ import {
 import {
   CURRENT_SETTINGS_FORMAT_VERSION,
   DEFAULT_STAFF_PIN,
+  evaluateHostLifecycleAction,
   SETUP_DEFAULT_GATEWAY_INTERFACE,
   SETUP_DEFAULT_GATEWAY_IP,
 } from '@praxis-flow/server-shared';
@@ -88,6 +102,12 @@ import type {
   HostNetworkStatus,
   HostRuntimeHealth,
   HostStatusOptions,
+  InstallationStartResult,
+  InstallPrepareInput,
+  InstallPrepareResult,
+  InstallCommitInput,
+  InstallCommitResult,
+  InstallAbortResult,
   LanCandidate,
   LoadDeliveryImagesResult,
   NormalizedSetupPlanInput,
@@ -108,6 +128,7 @@ import {
   buildGatewayEnv,
   fallbackCanonicalBaseUrl,
   GATEWAY_ENV_KEYS,
+  LOCAL_MAINTENANCE_APP_BASE_URL,
   LOCAL_SETUP_APP_BASE_URL,
   parseHttpBaseUrl,
   resolveCanonicalBaseUrl,
@@ -153,6 +174,7 @@ import {
   restrictedCertificateCoversHostname,
 } from './restricted-network.js';
 import { auditRestrictedListeners } from './restricted-listener-probe.js';
+import { assertHostLifecycleAction } from './host-lifecycle-guard.js';
 
 export type {
   ApplySetupOptions,
@@ -179,6 +201,7 @@ export type { ComposeStatus } from './docker.js';
 
 /** Optional runtime hooks for tests. */
 export type HostWriteRuntimeHooks = {
+  inspectLifecycleResidues?: () => Promise<'none' | 'present' | 'unknown'>;
   stackHealthWaitOptions?: WaitForStackHealthOptions;
   composePs?: typeof composePs;
   composeExec?: typeof composeExec;
@@ -344,6 +367,7 @@ export async function runComposeAction(
     composeRestart?: typeof composeRestart;
     composePs?: typeof composePs;
     auditStaffBindings?: typeof auditStaffPublishedBindings;
+    inspectExistingAppDatabase?: typeof inspectExistingAppDatabase;
   },
 ): Promise<{ ok: boolean; log: string; compose: ComposeStatus }> {
   const envPath = path.join(ctx.home, '.env');
@@ -351,35 +375,42 @@ export async function runComposeAction(
     throw new Error('ENV_MISSING');
   }
   const envMap = readEnvMap(envPath);
+  assertHostLifecycleAction(
+    ctx,
+    action === 'start' ? 'stack-start' : action === 'stop' ? 'stack-stop' : 'stack-restart',
+  );
   const runOptions = resolveComposeRunOptions(ctx);
   const runComposeUp = hooks?.composeUp ?? composeUp;
   const runComposeStop = hooks?.composeStop ?? composeStop;
   const runComposeRestart = hooks?.composeRestart ?? composeRestart;
   const runComposePs = hooks?.composePs ?? composePs;
 
+  const start = async () => {
+    const appImage =
+      envMap.get('PRAXIS_FLOW_APP_IMAGE')?.trim() ||
+      readManagerState(ctx.home).release?.appImage?.trim() ||
+      (ctx.mode === 'repo' ? `${ctx.composeProjectName}-app` : '');
+    const gate = await (hooks?.inspectExistingAppDatabase ?? inspectExistingAppDatabase)(
+      ctx.composeProjectName,
+      appImage,
+    );
+    if (!gate.ok) return { ok: false, log: gate.reason ?? 'App-Datenbank fehlt.' };
+    return runComposeUp({ ...runOptions, build: Boolean(options?.build) });
+  };
+
   let result: { ok: boolean; log: string };
   if (action === 'start') {
-    const up = await runComposeUp({
-      ...runOptions,
-      build: Boolean(options?.build),
-    });
-    result = { ok: up.ok, log: up.log };
+    result = await start();
   } else if (action === 'stop') {
     result = await runComposeStop(runOptions);
   } else {
     const current = await runComposePs(runOptions);
-    if (!current.running) {
-      const up = await runComposeUp({
-        ...runOptions,
-        build: Boolean(options?.build),
-      });
-      result = { ok: up.ok, log: up.log };
-    } else {
-      result = await runComposeRestart({
-        ...runOptions,
-        services: resolveProductComposeServices(runOptions),
-      });
-    }
+    result = !current.running
+      ? await start()
+      : await runComposeRestart({
+          ...runOptions,
+          services: resolveProductComposeServices(runOptions),
+        });
   }
 
   let compose = withExpectedStackRunning(await runComposePs(runOptions), runOptions);
@@ -431,7 +462,10 @@ export async function getComposeLogs(
     tail: options?.tail,
   });
   if (service === 'sandbox') {
-    const log = await appendSandboxClamAvLogSection(result.log, options?.tail);
+    const compose = await composePs(resolveComposeRunOptions(ctx));
+    const containerName = composeServiceContainerName(compose, 'sandbox');
+    if (!containerName) return result;
+    const log = await appendSandboxClamAvLogSection(result.log, containerName, options?.tail);
     return { ...result, log };
   }
   return result;
@@ -621,6 +655,16 @@ function isSandboxServiceRunning(compose: ComposeStatus | null): boolean {
   );
 }
 
+function composeServiceContainerName(
+  compose: ComposeStatus | null,
+  serviceName: string,
+): string | null {
+  return (
+    compose?.services.find((service) => (service.service || service.name) === serviceName)?.name ??
+    null
+  );
+}
+
 /** HTTP reachability probes only make sense when the stack claims to be up. */
 function shouldRunConnectionProbes(compose: ComposeStatus | null): boolean {
   return Boolean(compose?.running);
@@ -648,8 +692,12 @@ export async function getHostRuntimeHealth(ctx: SetupContext): Promise<HostRunti
   }
 
   let sandboxScanner: SandboxScannerStatus | null = null;
-  if (isSandboxServiceRunning(compose)) {
-    sandboxScanner = await fetchSandboxScannerStatus(resolveMaxSignatureAgeHours(envMap));
+  const sandboxContainerName = composeServiceContainerName(compose, 'sandbox');
+  if (isSandboxServiceRunning(compose) && sandboxContainerName) {
+    sandboxScanner = await fetchSandboxScannerStatus(
+      resolveMaxSignatureAgeHours(envMap),
+      sandboxContainerName,
+    );
   }
 
   let proxyServer: HostRuntimeHealth['proxyServer'] = null;
@@ -713,8 +761,12 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
   }
 
   let sandboxScanner: SandboxScannerStatus | null = null;
-  if (includeSandboxScanner && isSandboxServiceRunning(compose)) {
-    sandboxScanner = await fetchSandboxScannerStatus(resolveMaxSignatureAgeHours(envMap));
+  const sandboxContainerName = composeServiceContainerName(compose, 'sandbox');
+  if (includeSandboxScanner && isSandboxServiceRunning(compose) && sandboxContainerName) {
+    sandboxScanner = await fetchSandboxScannerStatus(
+      resolveMaxSignatureAgeHours(envMap),
+      sandboxContainerName,
+    );
   }
 
   const gateway = envExists ? readGatewayStatusFromEnv(envMap) : null;
@@ -726,7 +778,13 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
         gatewayComposeSupported: canRunGatewayCompose(),
       })
     : [];
-  const proxy = requireProxyConfig(envMap);
+  // A broken proxy configuration must still expose the reinstall entry point.
+  let proxy;
+  try {
+    proxy = readProxyConfig(envMap);
+  } catch {
+    proxy = readProxyConfig(new Map());
+  }
   const tls = readTlsStatus(envMap);
   const restrictedNetwork = buildRestrictedNetworkStatus({
     env: envMap,
@@ -741,13 +799,44 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     envMap,
     docker,
   });
-  const settingsFormatVersion = shouldRunConnectionProbes(compose)
-    ? await resolveCurrentSettingsFormatVersion()
-    : CURRENT_SETTINGS_FORMAT_VERSION;
+  const maintenance = coreInstallationServicesHealthy(compose)
+    ? await inspectMaintenanceCompatibility(LOCAL_MAINTENANCE_APP_BASE_URL)
+    : { authenticated: false, settingsFormatVersion: CURRENT_SETTINGS_FORMAT_VERSION };
+  const settingsFormatVersion = maintenance.settingsFormatVersion;
+  const managerState = readManagerState(root);
+  let activeInstallOperation;
+  let installOperationReadError = false;
+  try {
+    const operation = readInstallOperation(root);
+    activeInstallOperation = operation ? installOperationSummary(operation) : undefined;
+  } catch {
+    installOperationReadError = true;
+  }
+  let installation = deriveInstallationState({
+    docker,
+    lifecycle,
+    compose,
+    // Repository mode has no delivery release marker; installed products must have one.
+    releaseConfigured: ctx.mode === 'repo' || managerState.release !== null,
+    maintenanceAuthenticated: maintenance.authenticated,
+    operation: activeInstallOperation,
+  });
+  if (installOperationReadError && installation.kind !== 'docker-unavailable') {
+    installation = {
+      kind: 'needs-reinstall',
+      reasons: [
+        {
+          code: 'install-operation-invalid',
+          message: 'Der gespeicherte Installationsvorgang ist unlesbar oder ungültig.',
+        },
+      ],
+    };
+  }
 
   return {
     lifecycle,
     lifecycleKey: hostLifecycleKey(lifecycle),
+    installation,
     installHome: root,
     mode: ctx.mode,
     composeProjectName: ctx.composeProjectName,
@@ -778,6 +867,152 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     deliveryImages,
     settingsFormatVersion,
   };
+}
+
+export async function startStoppedInstallation(
+  ctx: SetupContext,
+): Promise<InstallationStartResult> {
+  const before = await getHostStatus(ctx);
+  if (before.installation.kind !== 'stopped') {
+    throw new SetupApiValidationError(
+      `Installation kann nur aus „stopped“ gestartet werden (aktuell: ${before.installation.kind}).`,
+    );
+  }
+
+  const env = readEnvMap(path.join(ctx.home, '.env'));
+  const release = readManagerState(ctx.home).release;
+  const appImage = env.get('PRAXIS_FLOW_APP_IMAGE')?.trim() || release?.appImage?.trim();
+  if (!appImage) {
+    return {
+      installation: {
+        kind: 'needs-reinstall',
+        reasons: [
+          {
+            code: 'app-image-missing',
+            message: 'Das lokale App-Image der Installation ist nicht festgelegt.',
+          },
+        ],
+      },
+      compose: before.compose,
+    };
+  }
+
+  const started = await startExistingInstallation(resolveComposeRunOptions(ctx), appImage);
+  if (!started.ok) {
+    return {
+      installation: {
+        kind: 'needs-reinstall',
+        reasons: [{ code: 'installation-start-failed', message: started.log }],
+      },
+      compose: started.compose,
+    };
+  }
+
+  const after = await getHostStatus(ctx);
+  return { installation: after.installation, compose: after.compose };
+}
+
+async function assertFreshInstallHost(ctx: SetupContext): Promise<void> {
+  const envPath = path.join(ctx.home, '.env');
+  const envExists = fs.existsSync(envPath);
+  const lifecycle = readHostLifecycle(
+    ctx.home,
+    envExists ? readEnvMap(envPath) : new Map<string, string>(),
+    envExists,
+    await inspectLifecycleResidues(ctx, true),
+  );
+  if (lifecycle.assessment !== 'known' || lifecycle.mode !== 'uninstalled') {
+    throw new SetupApiValidationError(
+      'Der Host ist nicht mehr leer; Fresh-Commit wurde abgewiesen.',
+    );
+  }
+}
+
+export async function prepareInstallOperation(
+  ctx: SetupContext,
+  input: InstallPrepareInput,
+): Promise<InstallPrepareResult> {
+  if (readInstallOperation(ctx.home)) {
+    throw new SetupApiValidationError('Es ist bereits ein Installationsvorgang aktiv.');
+  }
+  if (input.mode !== 'fresh' && input.mode !== 'replace') {
+    throw new SetupApiValidationError('mode muss fresh oder replace sein.');
+  }
+  const docker = await detectDocker();
+  if (!docker.installed || !docker.daemonRunning || !docker.composeAvailable) {
+    throw new SetupApiValidationError('Docker ist für die Installation nicht verfügbar.');
+  }
+  // Replacing a broken installation must not depend on its old proxy configuration.
+  if (input.mode === 'fresh') await assertFreshInstallHost(ctx);
+  const prepared = await preparePfinstall(ctx.home, input.archivePath, input.mode, docker);
+  if (input.backupCandidateId) {
+    try {
+      prepared.operation = attachInstallBackup(
+        ctx.home,
+        prepared.operation.id,
+        pinRecoveryBackup(ctx.home, prepared.operation.id, input.backupCandidateId),
+      );
+    } catch (error) {
+      abortPreparedInstallOperation(ctx.home, prepared.operation.id);
+      throw error;
+    }
+  }
+  return {
+    operation: installOperationSummary(prepared.operation),
+    loadedImages: prepared.loadedImages,
+  };
+}
+
+export async function commitPreparedInstallOperation(
+  ctx: SetupContext,
+  input: InstallCommitInput,
+): Promise<InstallCommitResult> {
+  let operation = readInstallOperation(ctx.home);
+  if (!operation || operation.id !== input.operationId) {
+    throw new SetupApiValidationError(
+      'Der vorbereitete Installationsvorgang wurde nicht gefunden.',
+    );
+  }
+  const resetRequired = operation.mode === 'replace' || operation.phase === 'installing';
+  if (resetRequired && input.replaceConfirmed !== true) {
+    throw new SetupApiValidationError('Die Neuinstallation muss ausdrücklich bestätigt werden.');
+  }
+  const docker = await detectDocker();
+  if (!docker.installed || !docker.daemonRunning || !docker.composeAvailable) {
+    throw new SetupApiValidationError('Docker ist für die Installation nicht verfügbar.');
+  }
+  if (operation.phase === 'prepared' && operation.mode === 'fresh') {
+    await assertFreshInstallHost(ctx);
+  }
+
+  if (operation.backup) readPinnedRecoveryBackup(ctx.home, operation);
+
+  // Persist the destructive boundary before touching containers, volumes or live host files.
+  operation = markInstallOperationInstalling(ctx.home, operation.id);
+  if (resetRequired) {
+    const staged = extractPreparedPfinstallTemplates(ctx.home, operation.id);
+    try {
+      await factoryResetInstallation(ctx, staged.templatesRoot);
+    } finally {
+      staged.cleanup();
+    }
+  }
+  activatePreparedPfinstall(ctx.home, operation.id);
+  const after = await getHostStatus(ctx);
+  return {
+    operation: installOperationSummary(operation),
+    installation: after.installation,
+  };
+}
+
+export function abortInstallOperation(ctx: SetupContext, operationId: string): InstallAbortResult {
+  try {
+    abortPreparedInstallOperation(ctx.home, operationId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new SetupApiValidationError(message);
+  }
+  return { operationId, aborted: true };
 }
 
 export async function inspectRestrictedNetwork(ctx: SetupContext, operationId?: string) {
@@ -842,6 +1077,9 @@ export async function prepareRestrictedNetwork(
   if (!fs.existsSync(envPath)) {
     throw new SetupApiValidationError('Setup muss vor dem Patientenzugang abgeschlossen sein.');
   }
+  // Preparation persists the binding draft only. TLS/DNS and platform gates
+  // below remain authoritative before anything is applied to Docker.
+  assertHostLifecycleAction(ctx, 'network-binding');
   const envMap = readEnvMap(envPath);
   if (envMap.get(RESTRICTED_NETWORK_ENABLED_ENV)?.trim().toLowerCase() === 'true') {
     throw new SetupApiValidationError(
@@ -929,6 +1167,7 @@ async function mutateRestrictedNetwork(
   hooks: RestrictedNetworkMutationHooks = {},
 ): Promise<RestrictedNetworkInspectResult> {
   await recoverRestrictedOperation(resolveComposeRunOptions(ctx));
+  assertHostLifecycleAction(ctx, enable ? 'restricted-apply' : 'restricted-remove');
   let operationId: string | undefined = undefined;
   const inspect = hooks.inspect ?? (() => inspectRestrictedNetwork(ctx, operationId));
   const before = await inspect();
@@ -1270,6 +1509,26 @@ export async function applySetupPlan(
 ) {
   const projectRoot = ctx.home;
   const envPathExisting = path.join(projectRoot, '.env');
+  const installOperation = readInstallOperation(projectRoot);
+  if (installOperation?.phase === 'prepared')
+    throw new SetupApiValidationError('Installation zuerst bestätigen.');
+  if (installOperation?.phase === 'installing') {
+    // The confirmed install commit intentionally materializes a minimal target
+    // env before the wizard writes its complete first configuration.
+  } else if (fs.existsSync(envPathExisting)) {
+    assertHostLifecycleAction(ctx, 'setup-apply');
+  } else {
+    const residues = hooks?.inspectLifecycleResidues
+      ? await hooks.inspectLifecycleResidues()
+      : await detectDocker().then((docker) => inspectLifecycleResidues(ctx, docker.daemonRunning));
+    const lifecycle = readHostLifecycle(projectRoot, new Map(), false, residues);
+    const decision = evaluateHostLifecycleAction(lifecycle, 'setup-apply');
+    if (!decision.allowed) {
+      throw new SetupApiValidationError(
+        `Host-Aktion „setup-apply“ gesperrt: ${decision.reason ?? 'Lifecycle-Prüfung fehlgeschlagen.'}`,
+      );
+    }
+  }
   const existingBefore = readEnvMap(envPathExisting);
   const preparedStorage = input.folders ? prepareStorageFoldersOnDisk(input.folders) : null;
   const {
@@ -1549,8 +1808,15 @@ export async function loadDeliveryImages(
   ctx: SetupContext,
   input: LoadDeliveryImagesInput,
 ): Promise<LoadDeliveryImagesResult> {
-  const docker = await detectDocker();
-  const result = await loadDeliveryImagesFromArchive(ctx.home, input.archivePath, docker);
+  const prepared = await prepareInstallOperation(ctx, {
+    archivePath: input.archivePath,
+    mode: 'fresh',
+  });
+  await commitPreparedInstallOperation(ctx, { operationId: prepared.operation.id });
+  const operation = readInstallOperation(ctx.home);
+  if (!operation || operation.id !== prepared.operation.id) {
+    throw new Error('INSTALL_OPERATION_NOT_FOUND_AFTER_COMMIT');
+  }
 
   let composeRestarted = false;
   let compose: ComposeStatus | null = null;
@@ -1567,8 +1833,21 @@ export async function loadDeliveryImages(
     compose = await composePs(runOptions);
   }
 
+  const status = await getHostStatus(ctx);
+  const appImage = `praxis-flow/app:${operation.package.releaseVersion}`;
+  const sandboxImage = `praxis-flow/sandbox:${operation.package.releaseVersion}`;
+
   return {
-    ...result,
+    envPath: path.join(ctx.home, '.env'),
+    backupPath: null,
+    loadedImages: prepared.loadedImages,
+    appImage,
+    sandboxImage,
+    deliveryImages: status.deliveryImages,
+    sha256Verified: true,
+    sha256: operation.package.sha256,
+    releaseVersion: operation.package.releaseVersion,
+    sha256Source: 'manifest.json',
     composeRestarted,
     compose,
     restartLog,
@@ -1593,6 +1872,7 @@ export async function saveHostNetwork(
   if (!fs.existsSync(envPath)) {
     throw new Error('ENV_MISSING');
   }
+  assertHostLifecycleAction(ctx, 'network-binding');
 
   const lanAppIp = input.lanAppIp.trim();
   const gateway: GatewayPlan = {

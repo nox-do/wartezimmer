@@ -1,3 +1,4 @@
+import type { HostLifecycle } from '@praxis-flow/server-shared';
 import type { HostStatus } from '../../shared/host-status.js';
 
 const CONFIGURED_GATEWAY = {
@@ -8,9 +9,24 @@ const CONFIGURED_GATEWAY = {
   authBridgeUrl: 'http://10.0.0.2:9100',
 } as const;
 
+export function knownLifecycle(
+  mode: HostLifecycle['mode'] = 'direct-http',
+  preparation: HostLifecycle['preparation'] = 'none',
+): HostLifecycle {
+  return {
+    assessment: 'known',
+    mode,
+    preparation,
+    operation: 'none',
+    recovery: 'none',
+    issues: [],
+  };
+}
+
 /** Shared HostStatus defaults for renderer unit tests (configured / maintenance host). */
 export function minimalHostStatus(overrides: Partial<HostStatus> = {}): HostStatus {
   return {
+    installation: { kind: 'healthy', updateEligible: true },
     installHome: '/tmp/pf',
     mode: 'install',
     composeProjectName: 'pf-test',
@@ -70,6 +86,8 @@ export function minimalHostStatus(overrides: Partial<HostStatus> = {}): HostStat
 /** Host before first setup: no .env, no LAN, release package still required. */
 export function freshInstallHostStatus(overrides: Partial<HostStatus> = {}): HostStatus {
   return minimalHostStatus({
+    lifecycle: knownLifecycle('uninstalled'),
+    installation: { kind: 'fresh' },
     mode: 'dev',
     envExists: false,
     practiceDisplayName: null,

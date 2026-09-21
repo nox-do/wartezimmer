@@ -21,6 +21,7 @@ test('setupEntryTone classifies fresh install', () => {
 
 test('setupEntryTone classifies docker gap', () => {
   const status = minimalHostStatus({
+    installation: { kind: 'docker-unavailable', reason: 'Docker down' },
     envExists: true,
     docker: { installed: true, daemonRunning: false, composeAvailable: true, detail: null },
   });
@@ -29,6 +30,7 @@ test('setupEntryTone classifies docker gap', () => {
 
 test('setupEntryTone classifies missing release package', () => {
   const status = minimalHostStatus({
+    installation: { kind: 'needs-reinstall', reasons: [] },
     envExists: true,
     docker: { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
     deliveryImages: {
@@ -43,7 +45,7 @@ test('setupEntryTone classifies missing release package', () => {
       ready: false,
     },
   });
-  assert.equal(setupEntryTone(status), 'needs-release');
+  assert.equal(setupEntryTone(status), 'review');
 });
 
 test('setupEntryTone classifies maintenance when setup is complete', () => {
@@ -224,8 +226,9 @@ test('installation ID is visible before TLS cutover', () => {
   );
 });
 
-test('configured HTTPS remains an operational status page when Docker is down', () => {
+test('Docker-unavailable is authoritative even for configured HTTPS', () => {
   const status = minimalHostStatus({
+    installation: { kind: 'docker-unavailable', reason: 'Docker down' },
     docker: { installed: true, daemonRunning: false, composeAvailable: true, detail: null },
   });
   status.lifecycle = {
@@ -236,12 +239,13 @@ test('configured HTTPS remains an operational status page when Docker is down', 
     recovery: 'none',
     issues: [],
   };
-  assert.equal(setupEntryTone(status), 'maintenance');
-  assert.equal(isSetupEntryStatus(status), false);
+  assert.equal(setupEntryTone(status), 'needs-docker');
+  assert.equal(isSetupEntryStatus(status), true);
 });
 
 test('missing env with residues offers a deliberate review, never fresh-install copy', () => {
   const status = freshInstallHostStatus();
+  status.installation = { kind: 'needs-reinstall', reasons: [] };
   status.lifecycle = {
     assessment: 'inconsistent',
     mode: null,
@@ -252,5 +256,5 @@ test('missing env with residues offers a deliberate review, never fresh-install 
   };
   assert.equal(setupEntryTone(status), 'review');
   assert.equal(isSetupEntryStatus(status), true);
-  assert.equal(setupEntryContent(status, 'review').startButtonLabel, 'Assistent öffnen');
+  assert.equal(setupEntryContent(status, 'review').startButtonLabel, 'Neu installieren …');
 });

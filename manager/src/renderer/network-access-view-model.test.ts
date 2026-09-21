@@ -2,13 +2,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { proxyNeedsRestore } from './network-view-model.js';
 import { networkAccessSummary } from './network-access-view-model.js';
-import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
+import { minimalHostStatus, knownLifecycle } from './test-fixtures/minimal-host-status.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 
 const service = { name: 'app', service: 'app', state: 'running', health: 'healthy' };
 
 test('initial HTTP use does not require HTTPS and keeps its open scope explicit', () => {
-  const status = minimalHostStatus({ compose: { running: true, services: [service] } });
+  const status = minimalHostStatus({
+    lifecycle: knownLifecycle(),
+    compose: { running: true, services: [service] },
+  });
   const view = networkAccessSummary(status);
   assert.equal(view.operation, 'Dienste laufen');
   assert.equal(view.needsAttention, false);
@@ -32,7 +35,8 @@ test('selected Ethernet adapter is matched by address, not candidate order', () 
 
 test('runtime missing proxy overrides saved running TLS container', () => {
   const status = minimalHostStatus();
-  status.proxy = { ...status.proxy, enabled: true, mode: 'http', container: service };
+  status.lifecycle = knownLifecycle('https');
+  status.proxy = { ...status.proxy, enabled: true, mode: 'tls-managed', container: service };
   status.tls = {
     state: 'active',
     mode: 'managed',

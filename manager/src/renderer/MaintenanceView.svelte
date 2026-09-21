@@ -330,10 +330,8 @@
           envExists={snapshot.status?.envExists}
           pinResetStatusText={snapshot.pinResetStatusText}
           backupStatusText={snapshot.backupStatusText}
-          tlsSidecarStatusText={snapshot.tlsSidecarStatusText}
           locked={maintenanceLocked}
           backupError={snapshot.errors.backup}
-          tlsSidecarError={snapshot.errors.tlsSidecar}
           pinError={snapshot.errors.pin}
           tlsEnabled={(snapshot.status?.tls?.state ?? 'off') !== 'off'}
           onBackup={() => controller?.backupPf()}
@@ -341,8 +339,6 @@
           onRestore={() => {
             restoreWizard?.openStandalone();
           }}
-          onExportTlsSidecar={() => controller?.exportTlsSidecar()}
-          onInspectTlsSidecar={() => controller?.inspectTlsSidecar()}
           onPinReset={() => {
             if (controller?.beginPinReset()) {
               pinResetOpen = true;
@@ -396,6 +392,7 @@
       onChooseRestore={(restore) => {
         restoreWizard?.chooseRestore(restore);
       }}
+      onCancelHttps={() => restoreWizard?.cancelHttpsConfirmation()}
       onConfirmRestore={() => {
         restoreWizard?.confirmRestore();
       }}

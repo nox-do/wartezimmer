@@ -1,9 +1,10 @@
 # Backup, Restore & Settings-Erhalt
 
-Stand: 2026-09-01 · am Code geprüft (`settings-backup*.ts`, `tls-backup*.ts`, Maintenance `:8082`)
+Stand: 2026-09-21 · am Code geprüft (`settings-backup*.ts`, `tls-backup*.ts`, Maintenance `:8082`)
 
-**Scope:** Was in `.pfbackup` liegt, Restore, TLS-Sidecar-Grenze, gemeinsames Fresh-DB-Muster mit Update.  
-Nicht: `.pfupdate`-Paketformat → [`delivery.md`](delivery.md) · LAN-TLS Betrieb → [`tls.md`](tls.md) · Backup v2 → [`../plan-backup-v2.md`](../plan-backup-v2.md) (**nicht** hier fortschreiben)
+**Scope:** Was in `.pfbackup` liegt, Restore, eingebettete HTTPS-Daten, gemeinsames Fresh-DB-Muster mit Update.
+
+Nicht: `.pfupdate`-Paketformat → [`delivery.md`](delivery.md) · LAN-TLS Betrieb → [`tls.md`](tls.md)
 
 ## 1. Prinzip
 
@@ -19,19 +20,19 @@ Eine Installation = **eine Praxis**, Stack lokal. Upgrade-/Restore-Vertrag: **Fr
 | **Projektion** (flow-core-Catalog)     | Nein                       | Neu generieren                                      |
 | **Runtime-DB**                         | Nein                       | Verwerfen; Gerätefreigaben nach Restore leer (§3.2) |
 
-**Sicherheitsmodell (Beta):** Keine anwendungsseitige Backup-Verschlüsselung, kein Cloud-KMS, keine MFA-PIN fürs Backup. Provider-API-Keys liegen in DB und `.pfbackup` im Klartext — Datei und Datenträger schützen. Nutzerhinweis vor Export: geplant in Backup v2, noch nicht Ist.
+**Sicherheitsmodell (Beta):** Keine anwendungsseitige Backup-Verschlüsselung, kein Cloud-KMS, keine MFA-PIN fürs Backup. Provider-API-Keys liegen in DB und `.pfbackup` im Klartext — Datei und Datenträger schützen. Ein Hinweis vor Erstellen/Export und in der Restore-Vorschau erklärt dies sowie mögliche private HTTPS-Schlüssel.
 
 ## 2. Artefakt `.pfbackup`
 
-`settingsFormatVersion: **1**`. Code: `setup/src/settings-backup*.ts`, App-Snapshot über Maintenance-API, Pack/Inspect in `packages/server-shared/src/pfbackup.ts`.
+JSON-Container mit `pfbackupFormatVersion: 2`, `settingsFormatVersion: 1`. Ältere Backup-Formate werden abgelehnt, ohne Migration. Code: `setup/src/settings-backup*.ts`, App-Snapshot über Maintenance-API, Pack/Inspect in `packages/server-shared/src/pfbackup.ts`.
 
 ### 2.1 Inhalt
 
-| Teil          | Rolle                                                            |
-| ------------- | ---------------------------------------------------------------- |
-| Settings-JSON | `opsSettings`, `authSettings`, `messagingProviderConfigs`, `env` |
-| Manifest      | Checksummen, `manager-state.json` (Release/Images)               |
-| optional      | DB-aside nur Rollback-Technik — **nicht** Patienten-Restore      |
+| Teil                        | Rolle                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| Settings-JSON               | `opsSettings`, `authSettings`, `messagingProviderConfigs`, `env`                |
+| Manifest                    | Checksummen, `manager-state.json` (Release/Images)                              |
+| optional `tlsArchiveBase64` | HTTPS-Archiv; `tls.tgz` im Manifest mit SHA-256 und Länge der dekodierten Bytes |
 
 Beispiel-Shape (Settings):
 
@@ -55,7 +56,7 @@ Snapshot / Validate / Import nur über zweiten App-Listener. Docker: `127.0.0.1:
 | Route                         | Zweck                                           |
 | ----------------------------- | ----------------------------------------------- |
 | `GET /api/setup/host/backup`  | Info letztes Backup                             |
-| `POST /api/setup/host/backup` | `.pfbackup` (+ TLS-Sidecar wenn nötig) erzeugen |
+| `POST /api/setup/host/backup` | eine `.pfbackup` inklusive HTTPS-Daten erzeugen |
 | `POST …/backup/validate`      | Archiv + Settings prüfen                        |
 | `POST …/backup/inspect`       | Vorschau, Kompatibilität, TLS-Gate              |
 | `POST …/backup/restore`       | Fresh-DB-Cutover + Settings-Import              |
@@ -85,9 +86,9 @@ Wahrheit fachlich: **`ops_settings`** (+ JSON-Felder), nicht der Catalog. Nach I
 `mergeConfigRestoreEnv` + `writeEnvRecordAtomically`:
 
 1. Backup-Werte gewinnen für Keys im Snapshot-`env`
-2. Aktuelle Image-Tags bleiben: `PRAXIS_FLOW_*_IMAGE` (app/sandbox/gateway/proxy) aus laufender `.env`
+2. Image-Tags und installationsinterne Secrets bleiben vom Ziel: `NON_RESTORABLE_INSTALL_ENV_KEYS` (Image-Keys plus `SECRET_ENV_KEYS`). Am Ziel fehlende interne Keys werden nicht aus dem Backup übernommen. Provider-Credentials bleiben Praxisdaten.
 3. Keys nur in der aktuellen `.env` bleiben (Write lässt unbekannte Zeilen stehen)
-4. Kein implizites Aufräumen: im Backup stehende, lokal gelöschte Keys kommen wieder
+4. Bei HTTPS am Ziel und einer Sicherung ohne aktives HTTPS bleiben Live-HTTPS-Konfiguration und Zertifikatsdateien erhalten.
 
 Host-Pfade bei Abweichung vom Zielsystem bestätigen.
 
@@ -102,23 +103,27 @@ Fläche **Wartung** → Praxis-Backup / Wiederherstellen (`BackupPanel`, Restore
 
 | Aktion             | Verhalten                                                                                                                      |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| Erstellen          | Stack oben; schreibt `.pfbackup` (typ. unter Install-Home `backups/`); bei `tls.state ≠ off` zusätzlich Sidecar                |
+| Erstellen          | Stack oben; schreibt `.pfbackup` (typ. unter Install-Home `backups/`); bei `tls.state ≠ off` mit eingebetteten HTTPS-Daten     |
 | Inspect / Vorschau | Archiv, Settings-Format, Release-Vergleich, TLS-Zusammenfassung                                                                |
 | Wiederherstellen   | Bestätigung; Queue/Runtime weg; Fresh-DB + Import **ohne** Gerätefreigaben; optional Credentials-Skip nach Fehlern vorschlagen |
 
-Keine „nur `.env`-Datei“-Produktstrecke mehr — Vertrag ist `.pfbackup` (+ Sidecar).
+Keine „nur `.env`-Datei“-Produktstrecke mehr — Vertrag ist einer `.pfbackup`.
 
-## 5. TLS-Grenze (v1)
+## 5. HTTPS in Backup v2
 
-Produktkontext: [`tls.md`](tls.md) §8. Helpers: `tls-backup.ts` / `tls-backup-sidecar.ts`.
+Produktkontext: [`tls.md`](tls.md) §8. HTTPS-Daten liegen als Base64-kodiertes
+internes tgz in derselben Datei: Caddy-Data/Config, `acme-dns.json`, `certs/`
+und TLS-Identität. HTTP-only lässt das Feld weg. Fehler beim Packen brechen
+die gesamte Backup-Erstellung ab.
 
-|                                       |                                                                                                        |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| In `.pfbackup`                        | höchstens nicht-geheime `TLS_*`-Marker + ggf. `PROXY_MODE` / HTTPS-Canonical                           |
-| Sidecar                               | `praxis-flow-tls-<timestamp>.tgz` neben der `.pfbackup` — Caddy-Data/Config, `acme-dns.json`, `certs/` |
-| Aktives HTTPS ohne passendes Sidecar  | Restore **abgelehnt** (`restoreSupported = false`)                                                     |
-| Nur Vorbereitung, Canonical noch HTTP | Restore erlaubt; ohne Sidecar Vorbereitung verwerfen                                                   |
-| v2                                    | TLS im selben Archiv — nur [`../plan-backup-v2.md`](../plan-backup-v2.md)                              |
+- Aktives HTTPS im Backup ohne passende Daten: Restore abgelehnt vor Stack-Stopp.
+- HTTPS am Ziel und im Backup: Bestätigung im bestehenden Restore-Assistenten.
+- HTTPS am Ziel, HTTP oder nur Vorbereitung im Backup: Live-HTTPS bleibt erhalten.
+- HTTP am Ziel: keine zusätzliche HTTPS-Bestätigung; vorbereitete Einrichtung
+  ohne passende Daten wird verworfen.
+
+Nur eine Dateiauswahl und ein Export; keine zusätzliche Zertifikatsdatei.
+Setup erhält `content`, Restore optional `skipProviderCredentials`.
 
 ## 6. Gemeinsames Cutover mit Update
 
@@ -128,3 +133,5 @@ Update-Phasen (Backup **vor** Stop über `:8082`, dann Cutover/Rollback): [`deli
 Pre-Update-`.pfbackup` bleibt als Datei; bei Fehler nach Rollback-Artefakten: `executeUpdateRollback()`.
 
 `manager-state` / Image-Tags am Ziel: Deployment bleibt auf dem **installierten** Release (Restore überschreibt Tags nicht; Update setzt Tags aus dem `.pfupdate`).
+
+Recovery nach Neuinstallation: [Ablauf und Fehlerfälle](reinstall-recovery.md).

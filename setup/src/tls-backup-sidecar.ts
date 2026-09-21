@@ -1,3 +1,11 @@
+import {
+  tlsBackupMetadataConsistent,
+  tlsInBackup,
+  tlsPreparedInBackup,
+  tlsSidecarMatches,
+  type PfbackupTlsInspectSummary,
+  type TlsState,
+} from '@praxis-flow/server-shared';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -6,7 +14,7 @@ import { listTarArchiveEntriesVerbose, type TarArchiveEntry } from './pfupdate-p
 import { resolveProxyTlsPaths } from './proxy-tls.js';
 
 export type TlsSidecarManifest = {
-  formatVersion: 1 | 2;
+  formatVersion: 2;
   installationId: string;
   /** Compatibility identity; equals staffHostname in format v2. */
   hostname: string;
@@ -55,17 +63,17 @@ function validateSidecarTarEntries(entries: TarArchiveEntry[]): void {
       continue;
     }
     if (entry.type !== 'file' && entry.type !== 'directory') {
-      throw new Error(`TLS-Sidecar enthält einen unzulässigen Eintrag: ${entry.rawName}`);
+      throw new Error(`HTTPS-Archiv enthält einen unzulässigen Eintrag: ${entry.rawName}`);
     }
     if (!isSafeRelativePath(entry.name)) {
-      throw new Error(`TLS-Sidecar enthält einen unsicheren Pfad: ${entry.rawName}`);
+      throw new Error(`HTTPS-Archiv enthält einen unsicheren Pfad: ${entry.rawName}`);
     }
     if (entry.name === MANIFEST_NAME && entry.type === 'file') {
       hasManifest = true;
     }
   }
   if (!hasManifest) {
-    throw new Error('TLS-Sidecar enthält kein manifest.json.');
+    throw new Error('HTTPS-Archiv enthält kein manifest.json.');
   }
 }
 
@@ -88,7 +96,7 @@ export function parseTlsSidecarManifestFromBytes(bytes: Buffer): TlsSidecarManif
       return null;
     }
     const parsed = JSON.parse(listed.stdout) as Partial<TlsSidecarManifest>;
-    if (parsed.formatVersion !== 1 && parsed.formatVersion !== 2) {
+    if (parsed.formatVersion !== 2) {
       return null;
     }
     const installationId =
@@ -128,25 +136,6 @@ function copyIfExists(source: string, destination: string): void {
   fs.cpSync(source, destination, { recursive: true });
 }
 
-export function restrictSecretPath(target: string): void {
-  if (!fs.existsSync(target)) {
-    return;
-  }
-  if (process.platform === 'win32') {
-    const user = process.env.USERNAME?.trim();
-    if (!user) {
-      return;
-    }
-    spawnSync('icacls', [target, '/inheritance:r', '/grant:r', `${user}:(OI)(CI)F`], {
-      encoding: 'utf8',
-      windowsHide: true,
-    });
-    return;
-  }
-  const stat = fs.lstatSync(target);
-  fs.chmodSync(target, stat.isDirectory() ? 0o700 : 0o600);
-}
-
 export function packTlsSidecarArchive(input: {
   installHome: string;
   installationId: string;
@@ -182,10 +171,9 @@ export function packTlsSidecarArchive(input: {
     });
     if (packed.status !== 0) {
       throw new Error(
-        packed.stderr || packed.stdout || 'TLS-Sidecar konnte nicht geschrieben werden.',
+        packed.stderr || packed.stdout || 'HTTPS-Archiv konnte nicht geschrieben werden.',
       );
     }
-    restrictSecretPath(input.destinationPath);
   } finally {
     fs.rmSync(staging, { recursive: true, force: true });
   }
@@ -197,7 +185,6 @@ function restoreCopiedTree(source: string, destination: string): void {
   }
   fs.mkdirSync(destination, { recursive: true });
   fs.cpSync(source, destination, { recursive: true });
-  restrictSecretPath(destination);
 }
 
 function rmIfExists(target: string): void {
@@ -230,7 +217,7 @@ export function unpackTlsSidecarBytes(bytes: Buffer, installHome: string): void 
     const extracted = spawnSync('tar', ['xzf', archivePath, '-C', staging], { encoding: 'utf8' });
     if (extracted.status !== 0) {
       throw new Error(
-        extracted.stderr || extracted.stdout || 'TLS-Sidecar konnte nicht entpackt werden.',
+        extracted.stderr || extracted.stdout || 'HTTPS-Archiv konnte nicht entpackt werden.',
       );
     }
     wipeTlsSidecarRestoreTargets(installHome);
@@ -244,12 +231,8 @@ export function unpackTlsSidecarBytes(bytes: Buffer, installHome: string): void 
     const creds = path.join(staging, 'acme-dns.json');
     if (fs.existsSync(creds) && fs.lstatSync(creds).isFile()) {
       fs.copyFileSync(creds, paths.acmeDnsCredentials);
-      restrictSecretPath(paths.acmeDnsCredentials);
     }
     restoreCopiedTree(path.join(staging, 'certs'), paths.certs);
-    for (const pem of [paths.customFullchain, paths.customPrivateKey]) {
-      restrictSecretPath(pem);
-    }
   } finally {
     if (fs.existsSync(archivePath)) {
       fs.unlinkSync(archivePath);
@@ -285,5 +268,68 @@ export function inspectTlsSidecarIdentity(tlsSidecarBase64: string | undefined):
     ...(manifest.wildcardCertificateName
       ? { wildcardCertificateName: manifest.wildcardCertificateName }
       : {}),
+  };
+}
+
+const TLS_STATES = new Set<TlsState>([
+  'off',
+  'preparing',
+  'awaiting-operator-dns',
+  'dns-verified',
+  'obtaining-certificate',
+  'active',
+  'degraded',
+  'error',
+]);
+
+function readTlsState(raw: unknown): TlsState {
+  const value = String(raw ?? 'off').trim();
+  return TLS_STATES.has(value as TlsState) ? (value as TlsState) : 'off';
+}
+
+export function buildPfbackupTlsInspectSummary(
+  backupEnv: Record<string, string>,
+  tlsSidecarBase64?: string,
+): PfbackupTlsInspectSummary | undefined {
+  const tlsStateRaw = backupEnv.TLS_STATE?.trim() || 'off';
+  const tlsClaimsHttps = tlsInBackup({
+    canonicalBaseUrl: backupEnv.CANONICAL_BASE_URL,
+    proxyMode: backupEnv.PROXY_MODE,
+  });
+  const preparedInBackup = tlsPreparedInBackup({
+    tlsState: tlsStateRaw,
+    tlsClaimsHttps,
+  });
+  if (tlsStateRaw === 'off' && !tlsClaimsHttps && !preparedInBackup) {
+    return undefined;
+  }
+
+  const sidecar = inspectTlsSidecarIdentity(tlsSidecarBase64);
+  const payloadMatches = tlsSidecarMatches({
+    backupInstallId: backupEnv.TLS_INSTALLATION_ID,
+    backupHostname: backupEnv.TLS_HOSTNAME,
+    backupInstallationDomain: backupEnv.TLS_INSTALLATION_DOMAIN,
+    backupStaffHostname: backupEnv.TLS_STAFF_HOSTNAME,
+    backupPortalHostname: backupEnv.TLS_PORTAL_HOSTNAME,
+    backupWildcardCertificateName: backupEnv.TLS_WILDCARD_CERTIFICATE_NAME,
+    sidecarInstallId: sidecar.installationId,
+    sidecarHostname: sidecar.hostname,
+    sidecarInstallationDomain: sidecar.installationDomain,
+    sidecarStaffHostname: sidecar.staffHostname,
+    sidecarPortalHostname: sidecar.portalHostname,
+    sidecarWildcardCertificateName: sidecar.wildcardCertificateName,
+  });
+  const metadataConsistent = tlsBackupMetadataConsistent({
+    tlsState: tlsStateRaw,
+    tlsClaimsHttps,
+  });
+
+  return {
+    state: readTlsState(tlsStateRaw),
+    inBackup: tlsClaimsHttps,
+    preparedInBackup,
+    payloadPresent: sidecar.present,
+    payloadMatches,
+    metadataConsistent,
   };
 }

@@ -13,6 +13,8 @@ import {
   classifyPraxisFlowImages,
   isDeliveryProfile,
   loadDeliveryImagesFromArchive,
+  preparePfinstall,
+  activatePreparedPfinstall,
   parseDockerLoadOutput,
   readExpectedSha256ForArchive,
   releaseStateFromLocalDeliveryImagePair,
@@ -22,6 +24,12 @@ import {
 } from './delivery-images.js';
 import { readEnvMap } from './env-file.js';
 import { managerStatePath, writeManagerReleaseState } from './manager-state.js';
+import {
+  installOperationMarkerPath,
+  markInstallOperationInstalling,
+  readInstallOperation,
+} from './install-operation.js';
+import { sha256File } from './sha256-file.js';
 
 function createBundleSource(): string {
   const bundleRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-unsafe-source-'));
@@ -281,6 +289,65 @@ test('writeDeliveryImageEnvFromState materializes compose image keys into env', 
   }
 });
 
+test('prepare pins verified bytes without mutating live installation files and activation uses the pin', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-pfinstall-prepare-'));
+  const source = createBundleSource();
+  try {
+    const archivePath = path.join(root, 'release.pfinstall');
+    packBundleSource(source, archivePath);
+    const sha256 = sha256File(archivePath);
+    let composeValidated = false;
+    const manifest = { ...testReleaseManifest(), sha256 };
+    const loaded = [manifest.images.app, manifest.images.sandbox, manifest.images.proxy];
+    const prepared = await preparePfinstall(
+      root,
+      archivePath,
+      'fresh',
+      { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
+      {
+        verifyReleaseArchiveSha256: () => ({
+          sha256,
+          expectedSha256: sha256,
+          sha256Source: 'manifest.json',
+          releaseVersion: manifest.version,
+          manifest,
+        }),
+        validateCompose: async () => {
+          composeValidated = true;
+        },
+        dockerLoadArchive: async () => ({ ok: true, loaded, log: '' }),
+        imageExists: async () => true,
+        inspectImage: async (ref) => ({
+          imageId: ref === manifest.images.proxy ? manifest.imageDigests.proxy.archiveImageId : ref,
+          platform: manifest.imageDigests.proxy.platform,
+        }),
+      },
+    );
+    assert.equal(composeValidated, true);
+    assert.equal(prepared.operation.phase, 'prepared');
+    assert.equal(fs.existsSync(path.join(root, '.env')), false);
+    assert.equal(fs.existsSync(managerStatePath(root)), false);
+    assert.equal(fs.existsSync(installOperationMarkerPath(root)), true);
+    fs.rmSync(archivePath);
+
+    assert.throws(
+      () => activatePreparedPfinstall(root, prepared.operation.id),
+      /INSTALL_OPERATION_NOT_COMMITTED/,
+    );
+    markInstallOperationInstalling(root, prepared.operation.id);
+    const activated = activatePreparedPfinstall(root, prepared.operation.id);
+    assert.equal(activated.releaseVersion, '1.4.2');
+    assert.equal(
+      readEnvMap(path.join(root, '.env')).get('PRAXIS_FLOW_APP_IMAGE'),
+      manifest.images.app,
+    );
+    assert.equal(readInstallOperation(root)?.phase, 'installing');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(source, { recursive: true, force: true });
+  }
+});
+
 test('loadDeliveryImagesFromArchive rejects image-only archives before docker load', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-image-only-'));
   const source = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-image-only-source-'));
@@ -313,12 +380,48 @@ test('loadDeliveryImagesFromArchive rejects image-only archives before docker lo
             },
           },
         ),
-      /RELEASE_BUNDLE_UNSUPPORTED/,
+      /PFINSTALL_TAR_ENTRY_UNEXPECTED|RELEASE_BUNDLE_UNSUPPORTED/,
     );
 
     assert.equal(dockerLoadCalled, false);
     assert.equal(fs.existsSync(path.join(root, '.env')), false);
     assert.equal(fs.existsSync(managerStatePath(root)), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(source, { recursive: true, force: true });
+  }
+});
+
+test('pfinstall rejects safe but undeclared archive paths before docker load', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-extra-'));
+  const source = createBundleSource();
+  let dockerLoadCalled = false;
+  try {
+    fs.writeFileSync(path.join(source, 'unexpected.txt'), 'not part of the package contract');
+    const archivePath = path.join(root, 'release.pfinstall');
+    packBundleSource(source, archivePath);
+    await assert.rejects(
+      loadDeliveryImagesFromArchive(
+        root,
+        archivePath,
+        { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
+        {
+          verifyReleaseArchiveSha256: () => ({
+            sha256: 'a'.repeat(64),
+            expectedSha256: 'a'.repeat(64),
+            sha256Source: 'manifest.json',
+            releaseVersion: '1.4.2',
+            manifest: testReleaseManifest(),
+          }),
+          dockerLoadArchive: async () => {
+            dockerLoadCalled = true;
+            return { ok: true, loaded: [], log: '' };
+          },
+        },
+      ),
+      /PFINSTALL_TAR_ENTRY_UNEXPECTED/,
+    );
+    assert.equal(dockerLoadCalled, false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
     fs.rmSync(source, { recursive: true, force: true });

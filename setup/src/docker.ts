@@ -747,7 +747,7 @@ export async function composeLogs(
 }
 
 export async function composeDown(
-  options: ComposeRunOptions,
+  options: ComposeRunOptions & { volumes?: boolean; removeOrphans?: boolean },
 ): Promise<{ ok: boolean; log: string }> {
   const envPath = path.join(options.projectRoot, '.env');
   if (!fs.existsSync(envPath)) {
@@ -763,12 +763,9 @@ export async function composeDown(
   if (wantGateway) {
     args.push('--profile', 'gateway');
   }
-  args.push(
-    '--env-file',
-    restrictedOperationEnv(options.projectRoot, options.restrictedOperationId),
-    'down',
-    '-v',
-  );
+  args.push('--env-file', restrictedOperationEnv(options.projectRoot, options.restrictedOperationId), 'down');
+  if (options.volumes ?? true) args.push('--volumes');
+  if (options.removeOrphans) args.push('--remove-orphans');
 
   ensureEnvComposeEscaping(options.projectRoot);
 

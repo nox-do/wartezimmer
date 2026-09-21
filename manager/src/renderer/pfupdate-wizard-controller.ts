@@ -1,4 +1,5 @@
 import type { HostStatus, PfupdateApplyResult } from '../shared/host-status.js';
+import { evaluateHostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import {
   createInitialPfupdateWizardState,
@@ -112,6 +113,19 @@ export function createPfupdateWizardController(
 
     try {
       const hostStatus = deps.getHostStatus?.();
+      const lifecycle = hostStatus?.lifecycle;
+      if (lifecycle) {
+        const decision = evaluateHostLifecycleAction(lifecycle, 'update');
+        if (!decision.allowed) {
+          patch({
+            phase: 'failed',
+            busy: false,
+            statusText: '',
+            error: decision.reason ?? 'Host-Aktion derzeit nicht erlaubt.',
+          });
+          return;
+        }
+      }
       const result = await deps.api.applyPfupdate({
         archivePath: state.filePath,
         settingsFormatVersion: hostStatus?.settingsFormatVersion,

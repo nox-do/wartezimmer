@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { PFBACKUP_BASENAME_PREFIX, PFBACKUP_FILE_EXTENSION } from './backup-path-labels.js';
 import { encodeEnvBackupTimestamp } from './env-backup.js';
 
-export const PFBACKUP_FORMAT_VERSION = 1 as const;
+export const PFBACKUP_FORMAT_VERSION = 2 as const;
 /** Settings snapshot schema version used by app export/import and `.pfbackup` / `.pfupdate` compatibility. */
 export const CURRENT_SETTINGS_FORMAT_VERSION = 1 as const;
 export { PFBACKUP_BASENAME_PREFIX, PFBACKUP_FILE_EXTENSION } from './backup-path-labels.js';
@@ -13,6 +13,17 @@ export const STACK_IMAGE_ENV_KEYS = [
   'PRAXIS_FLOW_SANDBOX_IMAGE',
   'PRAXIS_FLOW_GATEWAY_IMAGE',
   'PRAXIS_FLOW_PROXY_IMAGE',
+] as const;
+
+export const SECRET_ENV_KEYS = [
+  'AUTH_KEY_CAPTIVE',
+  'MAINTENANCE_TOKEN',
+  'SANDBOX_INTERNAL_TOKEN',
+  'OPENNDS_FAS_KEY',
+] as const;
+export const NON_RESTORABLE_INSTALL_ENV_KEYS = [
+  ...STACK_IMAGE_ENV_KEYS,
+  ...SECRET_ENV_KEYS,
 ] as const;
 
 export type StackImageEnvKey = (typeof STACK_IMAGE_ENV_KEYS)[number];
@@ -29,23 +40,24 @@ export type ManagerState = {
   release: ManagerReleaseState | null;
 };
 
-export type PfbackupManifestEntryV1 = {
-  name: 'settings.json' | 'manager-state.json';
+export type PfbackupManifestEntryV2 = {
+  name: 'settings.json' | 'manager-state.json' | 'tls.tgz';
   sha256: string;
   byteLength: number;
 };
 
-export type PfbackupManifestV1 = {
+export type PfbackupManifestV2 = {
   pfbackupFormatVersion: typeof PFBACKUP_FORMAT_VERSION;
   createdAt: string;
   settingsFormatVersion: number;
-  entries: PfbackupManifestEntryV1[];
+  entries: PfbackupManifestEntryV2[];
 };
 
-export type PfbackupArchiveV1 = {
-  manifest: PfbackupManifestV1;
+export type PfbackupArchiveV2 = {
+  manifest: PfbackupManifestV2;
   settingsJson: string;
   managerStateJson: string;
+  tlsArchiveBase64?: string;
 };
 
 export type PfbackupValidationSummary = {
@@ -62,6 +74,25 @@ export type PfbackupArchiveValidationResult = {
   errors: string[];
   summary?: PfbackupValidationSummary;
 };
+
+export function sha256HexBytes(content: Uint8Array): string {
+  return createHash('sha256').update(content).digest('hex');
+}
+
+export function decodePfbackupTls(value: string): Buffer {
+  if (
+    typeof value !== 'string' ||
+    !value ||
+    value.length % 4 !== 0 ||
+    !/^[A-Za-z0-9+/]+={0,2}$/.test(value)
+  ) {
+    throw new Error('Ungültige HTTPS-Daten im Backup.');
+  }
+  const bytes = Buffer.from(value, 'base64');
+  if (!bytes.length || bytes.toString('base64') !== value)
+    throw new Error('Ungültige HTTPS-Daten im Backup.');
+  return bytes;
+}
 
 export function sha256HexUtf8(content: string): string {
   return createHash('sha256').update(content, 'utf8').digest('hex');
@@ -256,45 +287,56 @@ export function buildPfbackupArchive(input: {
   settings: unknown;
   managerState: ManagerState;
   createdAt?: string;
-}): PfbackupArchiveV1 {
+  tlsArchiveBase64?: string;
+}): PfbackupArchiveV2 {
   const settingsJson = stableJsonStringify(input.settings);
   const managerStateJson = stableJsonStringify(input.managerState);
   const settingsRecord = input.settings as { settingsFormatVersion?: number };
   const settingsFormatVersion = Number(settingsRecord.settingsFormatVersion ?? 1);
 
-  const settingsEntry: PfbackupManifestEntryV1 = {
+  const settingsEntry: PfbackupManifestEntryV2 = {
     name: 'settings.json',
     sha256: sha256HexUtf8(settingsJson),
     byteLength: Buffer.byteLength(settingsJson, 'utf8'),
   };
-  const managerEntry: PfbackupManifestEntryV1 = {
+  const managerEntry: PfbackupManifestEntryV2 = {
     name: 'manager-state.json',
     sha256: sha256HexUtf8(managerStateJson),
     byteLength: Buffer.byteLength(managerStateJson, 'utf8'),
   };
 
+  const tlsBytes =
+    input.tlsArchiveBase64 === undefined ? null : decodePfbackupTls(input.tlsArchiveBase64);
+  const entries = [settingsEntry, managerEntry];
+  if (tlsBytes)
+    entries.push({
+      name: 'tls.tgz',
+      sha256: sha256HexBytes(tlsBytes),
+      byteLength: tlsBytes.length,
+    });
   return {
+    ...(tlsBytes ? { tlsArchiveBase64: input.tlsArchiveBase64 } : {}),
     manifest: {
       pfbackupFormatVersion: PFBACKUP_FORMAT_VERSION,
       createdAt: input.createdAt ?? new Date().toISOString(),
       settingsFormatVersion,
-      entries: [settingsEntry, managerEntry],
+      entries,
     },
     settingsJson,
     managerStateJson,
   };
 }
 
-export function serializePfbackupArchive(archive: PfbackupArchiveV1): string {
+export function serializePfbackupArchive(archive: PfbackupArchiveV2): string {
   return stableJsonStringify(archive);
 }
 
-export function parsePfbackupArchive(raw: unknown): PfbackupArchiveV1 {
+export function parsePfbackupArchive(raw: unknown): PfbackupArchiveV2 {
   if (!raw || typeof raw !== 'object') {
     throw new Error('PFBACKUP_INVALID');
   }
 
-  const candidate = raw as Partial<PfbackupArchiveV1>;
+  const candidate = raw as Partial<PfbackupArchiveV2>;
   if (!candidate.manifest || typeof candidate.manifest !== 'object') {
     throw new Error('PFBACKUP_MANIFEST_MISSING');
   }
@@ -305,24 +347,28 @@ export function parsePfbackupArchive(raw: unknown): PfbackupArchiveV1 {
     throw new Error('PFBACKUP_PAYLOAD_MISSING');
   }
 
+  if (candidate.tlsArchiveBase64 !== undefined) decodePfbackupTls(candidate.tlsArchiveBase64);
   return {
-    manifest: candidate.manifest as PfbackupManifestV1,
+    ...(candidate.tlsArchiveBase64 !== undefined
+      ? { tlsArchiveBase64: candidate.tlsArchiveBase64 }
+      : {}),
+    manifest: candidate.manifest as PfbackupManifestV2,
     settingsJson: candidate.settingsJson,
     managerStateJson: candidate.managerStateJson,
   };
 }
 
 function manifestEntry(
-  entries: PfbackupManifestEntryV1[],
-  name: PfbackupManifestEntryV1['name'],
-): PfbackupManifestEntryV1 | undefined {
+  entries: PfbackupManifestEntryV2[],
+  name: PfbackupManifestEntryV2['name'],
+): PfbackupManifestEntryV2 | undefined {
   return entries.find((entry) => entry.name === name);
 }
 
 export function validatePfbackupArchive(raw: unknown): PfbackupArchiveValidationResult {
   const errors: string[] = [];
 
-  let archive: PfbackupArchiveV1;
+  let archive: PfbackupArchiveV2;
   try {
     archive = parsePfbackupArchive(raw);
   } catch (error) {
@@ -339,7 +385,30 @@ export function validatePfbackupArchive(raw: unknown): PfbackupArchiveValidation
     );
   }
 
-  const settingsEntry = manifestEntry(manifest.entries ?? [], 'settings.json');
+  if (
+    !Array.isArray(manifest.entries) ||
+    manifest.entries.some((entry) => !entry || typeof entry !== 'object')
+  ) {
+    return { archiveValid: false, errors: ['Manifest-Einträge ungültig.'] };
+  }
+  const names = manifest.entries.map((entry) => entry.name);
+  if (
+    new Set(names).size !== names.length ||
+    names.some((name) => !['settings.json', 'manager-state.json', 'tls.tgz'].includes(name))
+  )
+    errors.push('Unbekannte oder doppelte Manifest-Einträge.');
+  const tlsEntry = manifestEntry(manifest.entries, 'tls.tgz');
+  const tlsBytes =
+    archive.tlsArchiveBase64 === undefined ? null : decodePfbackupTls(archive.tlsArchiveBase64);
+  if (Boolean(tlsEntry) !== Boolean(tlsBytes))
+    errors.push('HTTPS-Eintrag und HTTPS-Daten müssen gemeinsam vorhanden sein.');
+  if (
+    tlsEntry &&
+    tlsBytes &&
+    (tlsEntry.sha256 !== sha256HexBytes(tlsBytes) || tlsEntry.byteLength !== tlsBytes.length)
+  )
+    errors.push('Prüfsumme oder Größe für tls.tgz stimmt nicht.');
+  const settingsEntry = manifestEntry(manifest.entries, 'settings.json');
   const managerEntry = manifestEntry(manifest.entries ?? [], 'manager-state.json');
   if (!settingsEntry || !managerEntry) {
     errors.push('Manifest-Einträge unvollständig.');
@@ -367,7 +436,10 @@ export function validatePfbackupArchive(raw: unknown): PfbackupArchiveValidation
 
   let settingsParsed: Record<string, unknown> | null = null;
   try {
-    settingsParsed = JSON.parse(settingsJson) as Record<string, unknown>;
+    const parsed: unknown = JSON.parse(settingsJson);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+      throw new Error('invalid settings');
+    settingsParsed = parsed as Record<string, unknown>;
   } catch {
     errors.push('settings.json ist kein gültiges JSON.');
   }

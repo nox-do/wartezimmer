@@ -7,6 +7,7 @@ import { createRestoreWizardController } from './restore-wizard-controller.js';
 function inspectOk(overrides: Partial<PfbackupInspectResult> = {}): PfbackupInspectResult {
   return {
     ok: true,
+    currentTlsClaimsHttps: false,
     backup: {
       createdAt: '2026-07-12T12:00:00.000Z',
       settingsFormatVersion: 1,
@@ -44,10 +45,7 @@ function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManager
       canceled: false,
       content: 'backup-content',
       filePath: '/tmp/sample.pfbackup',
-      tlsSidecarBase64: null,
     }),
-    readTlsSidecar: async () => ({ canceled: true as const }),
-    saveTlsSidecar: async () => ({ saved: false, canceled: true, filePath: null }),
     inspectPfbackupFile: async () => inspectOk(),
     validatePfbackup: async () => ({
       archiveValid: true,
@@ -238,8 +236,8 @@ test('retry restore reuses backup content without file picker', async () => {
             ok: false,
             restoreId: 'restore-1',
             failedPhase: 'health',
-            rollbackAttempted: false,
-            rollbackSucceeded: false,
+            rollbackAttempted: true,
+            rollbackSucceeded: true,
             errors: ['Health check failed'],
           };
         }
@@ -297,7 +295,7 @@ test('credential import failure preselects skip for retry', async () => {
           failedPhase: 'import_snapshot',
           rollbackAttempted: true,
           rollbackSucceeded: true,
-          errors: ['Provider-Credentials konnten nicht entschlüsselt werden.'],
+          errors: ['Provider-Zugangsdaten sind ungültig.'],
         };
       },
     }),
@@ -318,86 +316,132 @@ test('credential import failure preselects skip for retry', async () => {
   assert.equal(restoreOptions?.skipProviderCredentials, true);
 });
 
-test('active HTTPS inspect without sidecar opens a second sidecar dialog', async () => {
-  let inspectCalls = 0;
-  let restoreSidecar: string | undefined;
-  const blocked = inspectOk({
-    ok: false,
-    backup: {
-      createdAt: '2026-07-12T12:00:00.000Z',
-      settingsFormatVersion: 1,
-      releaseVersion: null,
-      routingMode: 'simple',
-      portalEnabled: false,
-      providerCredentialsIncluded: false,
-      tls: {
-        state: 'active',
-        inBackup: true,
+for (const targetHttps of [false, true]) {
+  for (const backupHttps of [false, true]) {
+    test(`single-file restore confirmation target=${targetHttps} backup=${backupHttps}`, async () => {
+      let restores = 0;
+      let picks = 0;
+      const inspect = inspectOk({ currentTlsClaimsHttps: targetHttps });
+      inspect.backup!.tls = {
+        state: backupHttps ? 'active' : 'off',
+        inBackup: backupHttps,
         preparedInBackup: false,
-        sidecarPresent: false,
-        sidecarMatches: false,
+        payloadPresent: backupHttps,
+        payloadMatches: backupHttps,
         metadataConsistent: true,
-      },
-    },
-    compatibility: {
-      archiveValid: true,
-      settingsValid: true,
-      targetAppReachable: true,
-      restoreSupported: false,
-      warnings: [],
-    },
-  });
-  const okWithSidecar = inspectOk({
-    backup: {
-      createdAt: '2026-07-12T12:00:00.000Z',
-      settingsFormatVersion: 1,
-      releaseVersion: null,
-      routingMode: 'simple',
-      portalEnabled: false,
-      providerCredentialsIncluded: false,
-      tls: {
-        state: 'active',
-        inBackup: true,
-        preparedInBackup: false,
-        sidecarPresent: true,
-        sidecarMatches: true,
-        metadataConsistent: true,
-      },
-    },
-  });
+      };
+      const api = createMockApi();
+      const controller = createRestoreWizardController({
+        api: createMockApi({
+          readPfbackupForValidate: async () => {
+            picks++;
+            return { canceled: false, content: 'one-file', filePath: '/tmp/backup.pfbackup' };
+          },
+          inspectPfbackup: async () => inspect,
+          restorePfbackup: async (...args) => {
+            restores++;
+            assert.equal(args[0], 'one-file');
+            return api.restorePfbackup(...args);
+          },
+        }),
+      });
+      controller.openStandalone();
+      await flushMicrotasks();
+      controller.confirmRestore();
+      if (targetHttps && backupHttps) {
+        assert.equal(controller.getState().phase, 'confirm-https');
+        assert.equal(restores, 0);
+        controller.cancelHttpsConfirmation();
+        assert.equal(controller.getState().phase, 'preview');
+        controller.confirmRestore();
+        controller.confirmRestore();
+      }
+      await flushMicrotasks();
+      assert.equal(restores, 1);
+      assert.equal(picks, 1);
+      assert.equal(controller.getState().phase, 'success');
+    });
+  }
+}
+
+test('pre-update HTTPS restore and its retry require confirmation before calling Setup', async () => {
+  let calls = 0;
+  const inspect = inspectOk({ currentTlsClaimsHttps: true });
+  inspect.backup!.tls = {
+    state: 'active',
+    inBackup: true,
+    preparedInBackup: false,
+    payloadPresent: true,
+    payloadMatches: true,
+    metadataConsistent: true,
+  };
   const controller = createRestoreWizardController({
     api: createMockApi({
-      inspectPfbackup: async (_content, options) => {
-        inspectCalls += 1;
-        return options?.tlsSidecarBase64 ? okWithSidecar : blocked;
-      },
-      readTlsSidecar: async () => ({ canceled: false, tlsSidecarBase64: 'c2lkZWNhcg==' }),
-      restorePfbackup: async (_content, options) => {
-        restoreSidecar = options?.tlsSidecarBase64;
+      inspectPfbackup: async () => inspect,
+      restorePfbackup: async () => {
+        calls++;
         return {
-          ok: true,
-          restoreId: 'restore-1',
-          report: {
-            restoreId: 'restore-1',
-            routingMode: 'simple',
-            portalEnabled: false,
-            providerCredentialsSkipped: false,
-            disabledProviderIds: [],
-            compose: { running: true, services: [] },
-          },
+          ok: false,
+          restoreId: 'test',
+          failedPhase: 'import_snapshot',
+          rollbackAttempted: true,
+          rollbackSucceeded: true,
+          errors: ['Test failure'],
         };
       },
     }),
   });
-
-  controller.openStandalone();
+  controller.openPreUpdate(() => {});
+  controller.chooseRestore(true);
   await flushMicrotasks();
-  await flushMicrotasks();
-  assert.equal(inspectCalls, 2);
-  assert.equal(controller.getState().phase, 'preview');
-  assert.equal(controller.getState().tlsSidecarBase64, 'c2lkZWNhcg==');
-
+  controller.confirmRestore();
+  assert.equal(controller.getState().phase, 'confirm-https');
+  assert.equal(calls, 0);
   controller.confirmRestore();
   await flushMicrotasks();
-  assert.equal(restoreSidecar, 'c2lkZWNhcg==');
+  assert.equal(calls, 1);
+  assert.equal(controller.getState().phase, 'failed');
+  controller.retryRestore();
+  assert.equal(controller.getState().phase, 'confirm-https');
+  assert.equal(calls, 1);
+  controller.confirmRestore();
+  await flushMicrotasks();
+  assert.equal(calls, 2);
 });
+
+for (const stage of ['read', 'inspect']) {
+  test(`${stage} failure ends file selection without a stuck spinner or ineffective retry`, async () => {
+    let restores = 0;
+    const controller = createRestoreWizardController({
+      api: createMockApi({
+        ...(stage === 'read'
+          ? {
+              readPfbackupForValidate: async () => {
+                throw new Error('Datei nicht lesbar');
+              },
+            }
+          : {
+              inspectPfbackup: async () => {
+                throw new Error('Backup ungültig');
+              },
+            }),
+        restorePfbackup: async () => {
+          restores++;
+          throw new Error('must not restore');
+        },
+      }),
+    });
+    controller.openPreUpdate(() => {});
+    controller.chooseRestore(true);
+    await flushMicrotasks();
+    assert.equal(controller.getState().phase, 'failed');
+    assert.equal(controller.getState().busy, false);
+    assert.match(controller.getState().error ?? '', /Datei nicht lesbar|Backup ungültig/);
+    controller.retryRestore();
+    await flushMicrotasks();
+    assert.equal(restores, 0);
+    assert.equal(controller.getState().phase, 'failed');
+    controller.close();
+    assert.equal(controller.getState().phase, 'closed');
+  });
+}

@@ -136,3 +136,63 @@ test('validatePfbackupArchive rejects unknown pfbackup version', () => {
   assert.equal(result.archiveValid, false);
   assert.match(result.errors.join(' '), /Backup-Version/);
 });
+
+test('v2 embeds TLS bytes and validates raw-byte hashes, pairing and strict base64', () => {
+  const bytes = Buffer.from('TLS archive bytes');
+  const archive = buildPfbackupArchive({
+    settings: sampleSettings,
+    managerState: { release: null },
+    tlsArchiveBase64: bytes.toString('base64'),
+  });
+  assert.equal(archive.manifest.pfbackupFormatVersion, 2);
+  assert.equal(validatePfbackupArchive(archive).archiveValid, true);
+  const entry = archive.manifest.entries.find((item) => item.name === 'tls.tgz')!;
+  assert.equal(entry.byteLength, bytes.length);
+  const badHash = structuredClone(archive);
+  badHash.manifest.entries.find((item) => item.name === 'tls.tgz')!.sha256 = '0'.repeat(64);
+  assert.equal(validatePfbackupArchive(badHash).archiveValid, false);
+  assert.equal(
+    validatePfbackupArchive({ ...archive, tlsArchiveBase64: undefined }).archiveValid,
+    false,
+  );
+  assert.equal(
+    validatePfbackupArchive({
+      ...archive,
+      manifest: {
+        ...archive.manifest,
+        entries: archive.manifest.entries.filter((item) => item.name !== 'tls.tgz'),
+      },
+    }).archiveValid,
+    false,
+  );
+  assert.equal(
+    validatePfbackupArchive({ ...archive, tlsArchiveBase64: '%%%=' }).archiveValid,
+    false,
+  );
+  assert.equal(validatePfbackupArchive({ ...archive, tlsArchiveBase64: '' }).archiveValid, false);
+  assert.equal(
+    validatePfbackupArchive({
+      ...archive,
+      manifest: { ...archive.manifest, entries: [...archive.manifest.entries, entry] },
+    }).archiveValid,
+    false,
+  );
+});
+
+test('v2 HTTP backup has no TLS field and version 1 is rejected', () => {
+  const archive = buildPfbackupArchive({
+    settings: sampleSettings,
+    managerState: { release: null },
+  });
+  assert.equal('tlsArchiveBase64' in archive, false);
+  assert.deepEqual(
+    archive.manifest.entries.map((entry) => entry.name),
+    ['settings.json', 'manager-state.json'],
+  );
+  const old = { ...archive, manifest: { ...archive.manifest, pfbackupFormatVersion: 1 } };
+  assert.equal(validatePfbackupArchive(old).archiveValid, false);
+  assert.match(
+    validatePfbackupArchive(old).errors.join(' '),
+    /Nicht unterstützte Backup-Version 1/,
+  );
+});

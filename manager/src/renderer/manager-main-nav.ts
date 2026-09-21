@@ -1,7 +1,7 @@
 import type { ManagerView } from './host-refresh-controller.js';
 import type { HostStatus } from '../shared/host-status.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-import { effectiveDocker, effectiveEnvExists } from './host-snapshot-selectors.js';
+import { effectiveDocker } from './host-snapshot-selectors.js';
 
 export type MainNavTab = ManagerView;
 
@@ -22,9 +22,10 @@ export function setupReadyForTools(
   if (!config) {
     return false;
   }
-  const envExists = effectiveEnvExists(config, runtime);
   const docker = effectiveDocker(config, runtime);
-  return Boolean(envExists && docker?.installed && docker?.daemonRunning);
+  return (
+    config.installation.kind === 'healthy' && Boolean(docker?.installed && docker?.daemonRunning)
+  );
 }
 
 export function tabDisabled(

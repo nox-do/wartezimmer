@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { HostLifecycle } from '@praxis-flow/server-shared/setup-api';
+  import { evaluateHostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
   import type { RestrictedNetworkInspectResult } from '../shared/host-status.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import {
@@ -12,11 +14,13 @@
 
   let {
     active,
+    lifecycle,
     onAfterMutation,
     peerMutating = false,
     onMutatingChange,
   }: {
     active: boolean;
+    lifecycle?: HostLifecycle;
     onAfterMutation?: () => void | Promise<void>;
     peerMutating?: boolean;
     onMutatingChange?: (mutating: boolean) => void;
@@ -31,6 +35,14 @@
   let notice = $state<string | null>(null);
   let pendingAction = $state<'apply' | 'remove' | null>(null);
   let generation = 0;
+
+  function lifecycleAllows(action: 'network-binding' | 'restricted-apply' | 'restricted-remove') {
+    if (!lifecycle) return true;
+    const decision = evaluateHostLifecycleAction(lifecycle, action);
+    if (decision.allowed) return true;
+    actionError = decision.reason ?? 'Host-Aktion derzeit nicht erlaubt.';
+    return false;
+  }
 
   const candidateKey = (address: string, interfaceId: string): string => `${interfaceId}\u0000${address}`;
   const selectedCandidate = $derived(
@@ -105,6 +117,7 @@
 
   async function prepare(): Promise<void> {
     if (!selectedCandidate) return;
+    if (!lifecycleAllows('network-binding')) return;
     const current = ++generation;
     loading = true;
     onMutatingChange?.(true);
@@ -137,6 +150,7 @@
   }
 
   async function runAction(action: 'apply' | 'remove'): Promise<void> {
+    if (!lifecycleAllows(action === 'apply' ? 'restricted-apply' : 'restricted-remove')) return;
     const current = ++generation;
     loading = true;
     onMutatingChange?.(true);

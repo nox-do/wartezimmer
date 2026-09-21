@@ -27,6 +27,50 @@ const HEALTHY_COMPOSE = {
   ],
 };
 
+function healthyProxyCompose(https: boolean) {
+  return {
+    running: true,
+    services: [
+      {
+        name: 'app',
+        service: 'app',
+        state: 'running',
+        health: 'healthy',
+        publishedBindings: [
+          { hostIp: '127.0.0.1', publishedPort: 8080, targetPort: 8080, protocol: 'tcp' },
+          { hostIp: '127.0.0.1', publishedPort: 8082, targetPort: 8082, protocol: 'tcp' },
+        ],
+      },
+      {
+        name: 'sandbox',
+        service: 'sandbox',
+        state: 'running',
+        health: 'healthy',
+        publishedBindings: [],
+      },
+      {
+        name: 'proxy',
+        service: 'proxy',
+        state: 'running',
+        health: 'healthy',
+        publishedBindings: [
+          { hostIp: '192.168.1.50', publishedPort: 80, targetPort: 80, protocol: 'tcp' },
+          ...(https
+            ? [
+                {
+                  hostIp: '192.168.1.50',
+                  publishedPort: 443,
+                  targetPort: 443,
+                  protocol: 'tcp',
+                },
+              ]
+            : []),
+        ],
+      },
+    ],
+  };
+}
+
 const sampleSettings = {
   settingsFormatVersion: 1,
   exportedAt: '2026-07-12T12:00:00.000Z',
@@ -107,11 +151,15 @@ const currentManagerState = {
   },
 };
 
-function buildArchiveContent(settings: Record<string, unknown> = sampleSettings) {
+function buildArchiveContent(
+  settings: Record<string, unknown> = sampleSettings,
+  tlsArchiveBase64?: string,
+) {
   return serializePfbackupArchive(
     buildPfbackupArchive({
       settings,
       managerState: backupManagerState,
+      tlsArchiveBase64,
       createdAt: '2026-07-12T10:00:00.000Z',
     }),
   );
@@ -186,6 +234,67 @@ test('mergeConfigRestoreEnv keeps current stack image tags', () => {
   assert.equal(merged.PRAXIS_FLOW_APP_IMAGE, 'praxis-flow/app:current');
   assert.equal(merged.PRAXIS_FLOW_PROXY_IMAGE, 'caddy:2.11.4');
   assert.equal(merged.IMPORTS_HOST_PATH, '/data/imports');
+});
+
+test('mergeConfigRestoreEnv materializes current-only keys into the target', () => {
+  const merged = mergeConfigRestoreEnv(
+    { SETUP_LAN_APP_IP: '192.168.1.20' },
+    { PROXY_ENABLED: 'true', PROXY_MODE: 'off', CURRENT_ONLY: 'kept' },
+  );
+  assert.equal(merged.PROXY_ENABLED, 'true');
+  assert.equal(merged.PROXY_MODE, 'off');
+  assert.equal(merged.CURRENT_ONLY, 'kept');
+});
+
+test('restore validates the fully merged target before stopping the stack', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-target-'));
+  const { envPath, appDataDir } = seedInstallHome(dir);
+  let stopCalls = 0;
+  try {
+    fs.appendFileSync(envPath, 'PROXY_ENABLED=true\nPROXY_MODE=off\n');
+    const result = await restorePfbackup(
+      buildArchiveContent(),
+      testSetupContext(dir),
+      {},
+      workingRestoreDeps(appDataDir, {
+        stopStack: async () => {
+          stopCalls += 1;
+          return { ok: true, log: 'stopped' };
+        },
+      }),
+    );
+    assert.equal(result.ok, false);
+    assert.equal(stopCalls, 0);
+    assert.equal(readEnvMap(envPath).get('PROXY_MODE'), 'off');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('restore rejects an incomplete backup proxy contract instead of normalizing it', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-proxy-contract-'));
+  const { appDataDir } = seedInstallHome(dir);
+  let stopCalls = 0;
+  try {
+    const settings = structuredClone(sampleSettings);
+    settings.env = { ...settings.env, PROXY_MODE: 'http' } as typeof settings.env;
+    const result = await restorePfbackup(
+      buildArchiveContent(settings),
+      testSetupContext(dir),
+      {},
+      workingRestoreDeps(appDataDir, {
+        stopStack: async () => {
+          stopCalls += 1;
+          return { ok: true, log: 'stopped' };
+        },
+      }),
+    );
+    assert.equal(result.ok, false);
+    assert.equal(stopCalls, 0);
+    if (!result.ok) assert.match(result.errors.join(' '), /PROXY_ENABLED=true fehlt/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('mergeConfigRestoreManagerState keeps current release images', () => {
@@ -738,8 +847,17 @@ test('mergeConfigRestoreManagerState unit', () => {
   );
 });
 
-function successfulRestoreDeps(appDataDir: string): PfbackupRestoreDeps {
+function successfulRestoreDeps(appDataDir: string, proxyHttps?: boolean): PfbackupRestoreDeps {
   return workingRestoreDeps(appDataDir, {
+    networkInterfaces: () => [
+      {
+        name: 'staff',
+        addresses: [{ address: '192.168.1.50', family: 'IPv4', internal: false }],
+      },
+    ],
+    ...(proxyHttps === undefined
+      ? {}
+      : { composeStatus: async () => healthyProxyCompose(proxyHttps) }),
     importSnapshot: async () => ({
       ok: true,
       routingMode: 'simple',
@@ -778,16 +896,18 @@ test('restorePfbackup unpacks sidecar bytes and does not accept a host path', as
       TLS_CUTOVER_APPLIED: 'true',
       TLS_INSTALLATION_ID: '7fk3m2q9',
       TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+      PROXY_ENABLED: 'true',
       PROXY_MODE: 'tls-managed',
+      APP_BIND_ADDRESS: '127.0.0.1',
       CANONICAL_BASE_URL: 'https://7fk3m2.lan.notaus.de',
     } as typeof settings.env;
     const result = await restorePfbackup(
-      buildArchiveContent(settings),
+      buildArchiveContent(settings, tlsSidecarBase64),
       testSetupContext(dir),
-      { tlsSidecarBase64 },
-      successfulRestoreDeps(appDataDir),
+      {},
+      successfulRestoreDeps(appDataDir, true),
     );
-    assert.equal(result.ok, true);
+    assert.equal(result.ok, true, result.ok ? undefined : result.errors.join(' '));
     const env = readEnvMap(envPath);
     assert.equal(env.get('CANONICAL_BASE_URL'), 'https://7fk3m2.lan.notaus.de');
     assert.equal(env.get('TLS_INSTALLATION_ID'), '7fk3m2q9');
@@ -822,7 +942,10 @@ test('restorePfbackup discards prepare-only TLS without sidecar and keeps HTTP',
     TLS_STATE: 'awaiting-operator-dns',
     TLS_INSTALLATION_ID: '7fk3m2q9',
     TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+    TLS_MODE: 'managed',
+    PROXY_ENABLED: 'true',
     PROXY_MODE: 'http',
+    APP_BIND_ADDRESS: '127.0.0.1',
     CANONICAL_BASE_URL: 'http://192.168.1.50:8080',
   } as typeof settings.env;
   try {
@@ -830,9 +953,9 @@ test('restorePfbackup discards prepare-only TLS without sidecar and keeps HTTP',
       buildArchiveContent(settings),
       testSetupContext(dir),
       {},
-      successfulRestoreDeps(appDataDir),
+      successfulRestoreDeps(appDataDir, false),
     );
-    assert.equal(result.ok, true);
+    assert.equal(result.ok, true, result.ok ? undefined : result.errors.join(' '));
     const env = readEnvMap(envPath);
     assert.equal(env.get('CANONICAL_BASE_URL'), 'http://192.168.1.50:8080');
     assert.equal(env.has('TLS_STATE'), false);
@@ -866,13 +989,15 @@ test('restorePfbackup does not create TLS dirs before rollback when stop fails',
       TLS_CUTOVER_APPLIED: 'true',
       TLS_INSTALLATION_ID: '7fk3m2q9',
       TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+      PROXY_ENABLED: 'true',
       PROXY_MODE: 'tls-managed',
+      APP_BIND_ADDRESS: '127.0.0.1',
       CANONICAL_BASE_URL: 'https://7fk3m2.lan.notaus.de',
     } as typeof settings.env;
     const result = await restorePfbackup(
-      buildArchiveContent(settings),
+      buildArchiveContent(settings, fs.readFileSync(sidecarPath).toString('base64')),
       testSetupContext(dir),
-      { tlsSidecarBase64: fs.readFileSync(sidecarPath).toString('base64') },
+      {},
       {
         ...successfulRestoreDeps(appDataDir),
         stopStack: async () => ({ ok: false, log: 'stop failed' }),
@@ -896,7 +1021,9 @@ test('restorePfbackup rejects active HTTPS without sidecar before writing env', 
     TLS_STATE: 'active',
     TLS_INSTALLATION_ID: '7fk3m2q9',
     TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+    PROXY_ENABLED: 'true',
     PROXY_MODE: 'tls-managed',
+    APP_BIND_ADDRESS: '127.0.0.1',
     CANONICAL_BASE_URL: 'https://7fk3m2.lan.notaus.de',
   } as typeof settings.env;
   try {
@@ -914,7 +1041,7 @@ test('restorePfbackup rejects active HTTPS without sidecar before writing env', 
     );
     assert.equal(result.ok, false);
     assert.equal(stopped, false);
-    assert.match(result.ok ? '' : result.errors.join(' '), /Zertifikatsdatei fehlt/);
+    assert.match(result.ok ? '' : result.errors.join(' '), /HTTPS-Daten fehlen/);
     assert.equal(readEnvMap(envPath).get('CANONICAL_BASE_URL'), 'http://192.168.1.10:8080');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -947,16 +1074,19 @@ test('restorePfbackup rolls TLS state back after sidecar unpack if cutover fails
       TLS_CUTOVER_APPLIED: 'true',
       TLS_INSTALLATION_ID: '7fk3m2q9',
       TLS_HOSTNAME: '7fk3m2.lan.notaus.de',
+      PROXY_ENABLED: 'true',
       PROXY_MODE: 'tls-managed',
+      APP_BIND_ADDRESS: '127.0.0.1',
       CANONICAL_BASE_URL: 'https://7fk3m2.lan.notaus.de',
     } as typeof settings.env;
     const result = await restorePfbackup(
-      buildArchiveContent(settings),
+      buildArchiveContent(settings, fs.readFileSync(sidecarPath).toString('base64')),
       testSetupContext(dir),
-      { tlsSidecarBase64: fs.readFileSync(sidecarPath).toString('base64') },
-      workingRestoreDeps(appDataDir, {
+      {},
+      {
+        ...successfulRestoreDeps(appDataDir, true),
         importSnapshot: async () => ({ ok: false, errors: ['Import fehlgeschlagen.'] }),
-      }),
+      },
     );
     assert.equal(result.ok, false);
     assert.equal(
@@ -1037,9 +1167,9 @@ for (const failure of [null, 'listener', 'bindings'] as const)
       let stops = 0;
       const observed: unknown[] = [];
       const result = await restorePfbackup(
-        buildArchiveContent(settings),
+        buildArchiveContent(settings, fs.readFileSync(sidecarPath).toString('base64')),
         testSetupContext(dir),
-        { tlsSidecarBase64: fs.readFileSync(sidecarPath).toString('base64') },
+        {},
         {
           ...successfulRestoreDeps(appDataDir),
           networkInterfaces: runtimeAuditInterfaces,
@@ -1079,3 +1209,85 @@ for (const failure of [null, 'listener', 'bindings'] as const)
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+test('restore keeps target installation secrets and never imports missing internal keys', () => {
+  const backup = {
+    AUTH_KEY_CAPTIVE: 'old',
+    MAINTENANCE_TOKEN: 'old',
+    SANDBOX_INTERNAL_TOKEN: 'old',
+    OPENNDS_FAS_KEY: 'old',
+    PRAXIS_FLOW_APP_IMAGE: 'old',
+    PROVIDER_KEY: 'practice-key',
+  };
+  const current = {
+    AUTH_KEY_CAPTIVE: 'new',
+    MAINTENANCE_TOKEN: 'new',
+    SANDBOX_INTERNAL_TOKEN: 'new',
+    PRAXIS_FLOW_APP_IMAGE: 'new',
+  };
+  const merged = mergeConfigRestoreEnv(backup, current);
+  for (const key of Object.keys(current)) assert.equal(merged[key], 'new');
+  assert.equal(merged.OPENNDS_FAS_KEY, undefined);
+  assert.equal(merged.PROVIDER_KEY, 'practice-key');
+});
+
+for (const backupKind of ['http', 'prepared', 'prepared-with-payload'] as const) {
+  test(`restoring ${backupKind} on HTTPS preserves live TLS files and identity`, async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-v2-preserve-https-'));
+    const source = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-v2-other-tls-'));
+    const { envPath, appDataDir } = seedInstallHome(dir);
+    try {
+      fs.appendFileSync(
+        envPath,
+        '\nSETUP_LAN_APP_IP=192.168.1.50\nPROXY_ENABLED=true\nPROXY_MODE=tls-managed\nAPP_BIND_ADDRESS=127.0.0.1\nTLS_STATE=active\nTLS_MODE=managed\nTLS_CUTOVER_APPLIED=true\nTLS_INSTALLATION_ID=live\nTLS_HOSTNAME=live.example.test\nCANONICAL_BASE_URL=https://live.example.test\n',
+      );
+      const tlsPath = path.join(dir, 'state/tls/caddy-data');
+      fs.mkdirSync(tlsPath, { recursive: true });
+      fs.writeFileSync(path.join(tlsPath, 'keep.txt'), 'live-private-material');
+      const settings = structuredClone(sampleSettings);
+      settings.env.SETUP_LAN_APP_IP = '192.168.1.99';
+      settings.env.CANONICAL_BASE_URL = 'http://192.168.1.99:8080';
+      let payload: string | undefined;
+      if (backupKind !== 'http') {
+        Object.assign(settings.env, {
+          PROXY_ENABLED: 'true',
+          PROXY_MODE: 'http',
+          TLS_STATE: 'awaiting-operator-dns',
+          TLS_MODE: 'managed',
+          TLS_INSTALLATION_ID: 'backup',
+          TLS_HOSTNAME: 'backup.example.test',
+        });
+      }
+      if (backupKind === 'prepared-with-payload') {
+        const archive = path.join(source, 'tls.tgz');
+        packTlsSidecarArchive({
+          installHome: source,
+          installationId: 'backup',
+          hostname: 'backup.example.test',
+          destinationPath: archive,
+        });
+        payload = fs.readFileSync(archive).toString('base64');
+      }
+      const result = await restorePfbackup(
+        buildArchiveContent(settings, payload),
+        testSetupContext(dir),
+        {},
+        successfulRestoreDeps(appDataDir, true),
+      );
+      assert.equal(result.ok, true, result.ok ? undefined : result.errors.join(' '));
+      const env = readEnvMap(envPath);
+      assert.equal(env.get('TLS_INSTALLATION_ID'), 'live');
+      assert.equal(env.get('SETUP_LAN_APP_IP'), '192.168.1.50');
+      assert.equal(env.get('CANONICAL_BASE_URL'), 'https://live.example.test');
+      assert.equal(env.get('PROXY_ENABLED'), 'true');
+      assert.equal(env.get('PROXY_MODE'), 'tls-managed');
+      assert.equal(
+        fs.readFileSync(path.join(tlsPath, 'keep.txt'), 'utf8'),
+        'live-private-material',
+      );
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(source, { recursive: true, force: true });
+    }
+  });
+}

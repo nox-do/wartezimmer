@@ -26,6 +26,7 @@ import {
   isRetryableLocalCheckError,
   prepareHostTls,
   readTlsStatus,
+  renewHostTls,
   resetHostTls,
   stageCustomCertificate,
   TlsPermanentCheckError,
@@ -53,9 +54,13 @@ const certificate: TlsCertificateStatus = {
 };
 
 function writeEnv(root: string, entries: Record<string, string>) {
+  const completeEntries = {
+    SETUP_LAN_APP_IP: entries.TLS_LAN_IP ?? '192.168.178.112',
+    ...entries,
+  };
   fs.writeFileSync(
     path.join(root, '.env'),
-    `${Object.entries(entries)
+    `${Object.entries(completeEntries)
       .map(([key, value]) => `${key}=${value}`)
       .join('\n')}\n`,
   );
@@ -426,6 +431,38 @@ test('reset before cutover removes persisted identity and secret files', async (
     assert.equal(fs.existsSync(resolveProxyTlsPaths(root).root), false);
   });
 });
+
+function activeManagedEnv(): Record<string, string> {
+  return {
+    SETUP_LAN_APP_IP: '192.168.178.112',
+    PROXY_ENABLED: 'true',
+    PROXY_MODE: 'tls-managed',
+    CANONICAL_BASE_URL: 'https://staff.7fk3m2.lan.notaus.de',
+    TLS_RUNTIME_FAKE: 'true',
+    TLS_MODE: 'managed',
+    TLS_STATE: 'active',
+    TLS_CUTOVER_APPLIED: 'true',
+    TLS_HOSTNAME: 'staff.7fk3m2.lan.notaus.de',
+    TLS_STAFF_HOSTNAME: 'staff.7fk3m2.lan.notaus.de',
+    TLS_INSTALLATION_DOMAIN: '7fk3m2.lan.notaus.de',
+    TLS_WILDCARD_CERTIFICATE_NAME: '*.7fk3m2.lan.notaus.de',
+    TLS_INSTALLATION_ID: '7fk3m2q9',
+  };
+}
+
+for (const action of ['reset', 'renew'] as const) {
+  test(`managed TLS ${action} after cutover can internally re-obtain the same identity`, async () => {
+    await withRoot(async (root) => {
+      writeEnv(root, activeManagedEnv());
+      const ctx = testSetupContext(root);
+      const result = action === 'reset' ? await resetHostTls(ctx) : await renewHostTls(ctx);
+      assert.equal(result.tls.state, 'active');
+      assert.equal(result.tls.cutoverApplied, true);
+      assert.equal(result.tls.installationId, '7fk3m2q9');
+      assert.equal(readEnvMap(path.join(root, '.env')).get('TLS_STATE'), 'active');
+    });
+  });
+}
 
 test('generated Caddyfile keeps HTTP app before cutover and uses ACME-DNS without secrets', () => {
   const status = {

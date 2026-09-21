@@ -4,6 +4,7 @@ import type { HostStatus } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { createPfupdateWizardController } from './pfupdate-wizard-controller.js';
 import { pfupdateInspectSummaryLines } from './pfupdate-wizard-flow.js';
+import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 
 function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManagerApi {
   return {
@@ -80,7 +81,7 @@ test('pfupdate wizard inspects package before apply', async () => {
         };
       },
     }),
-    getHostStatus: () => ({ settingsFormatVersion: 1 }) as HostStatus,
+    getHostStatus: () => minimalHostStatus({ settingsFormatVersion: 1 }),
     onApplySuccess: () => {
       successCalled = true;
     },
@@ -202,7 +203,7 @@ test('confirmApply ignores duplicate calls while busy or outside preview', async
         };
       },
     }),
-    getHostStatus: () => ({ settingsFormatVersion: 1 }) as HostStatus,
+    getHostStatus: () => minimalHostStatus({ settingsFormatVersion: 1 }),
   });
 
   controller.open();

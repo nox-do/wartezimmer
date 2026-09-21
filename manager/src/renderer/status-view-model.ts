@@ -31,23 +31,16 @@ function mark(ok: boolean): string {
 }
 
 export function setupEntryTone(status: HostStatus): SetupEntryTone {
-  if (status.lifecycle) {
-    if (status.lifecycle.assessment !== 'known' || !status.lifecycle.mode) return 'review';
-    return status.lifecycle.mode === 'uninstalled' ? 'fresh' : 'maintenance';
+  switch (status.installation.kind) {
+    case 'healthy':
+      return 'maintenance';
+    case 'docker-unavailable':
+      return 'needs-docker';
+    case 'fresh':
+      return 'fresh';
+    default:
+      return 'review';
   }
-  if (!status.envExists) {
-    return 'fresh';
-  }
-  if (!status.docker.installed || !status.docker.daemonRunning || !status.docker.composeAvailable) {
-    return 'needs-docker';
-  }
-  if (needsDeliveryImages(status)) {
-    return 'needs-release';
-  }
-  if (!status.network.configuredLanIp) {
-    return 'needs-lan';
-  }
-  return 'maintenance';
 }
 
 export function isSetupEntryStatus(status: HostStatus): boolean {
@@ -108,12 +101,22 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
   const eyebrow = status.mode === 'install' ? 'Ersteinrichtung' : 'Entwicklungsmodus';
 
   if (tone === 'review') {
+    const installation = status.installation;
     return {
-      eyebrow: 'Einrichtung prüfen',
-      title: 'Einrichtungsstand prüfen',
-      copy: 'Der Betriebsmodus ist nicht sicher bestimmbar. Die Hinweise oben zeigen, welche Angaben fehlen oder widersprüchlich sind.',
-      note: 'Das Öffnen des Assistenten ändert noch keine Einstellungen.',
-      startButtonLabel: 'Assistent öffnen',
+      eyebrow: 'Installation',
+      title:
+        installation.kind === 'stopped'
+          ? 'Praxis Flow ist gestoppt'
+          : installation.kind === 'installing'
+            ? 'Installation fortsetzen'
+            : 'Neuinstallation erforderlich',
+      copy:
+        installation.kind === 'needs-reinstall'
+          ? installation.reasons.map((reason) => reason.message).join(' ')
+          : 'Der Assistent zeigt den nächsten Schritt. Vor einer Neuinstallation werden Sie ausdrücklich gefragt.',
+      note: 'Automatische Backups bleiben bei einer Neuinstallation erhalten.',
+      startButtonLabel:
+        installation.kind === 'installing' ? 'Vorgang öffnen' : 'Neu installieren …',
       showReleasePicker: false,
     };
   }

@@ -49,6 +49,7 @@ function seedInstallHome(dir: string): { envPath: string; appDataDir: string; ba
     envPath,
     [
       'BUSINESS_TZ=Europe/Berlin',
+      'SETUP_LAN_APP_IP=192.168.1.10',
       'PRAXIS_FLOW_APP_IMAGE=praxis-flow/app:2026.07.1',
       'PRAXIS_FLOW_SANDBOX_IMAGE=praxis-flow/sandbox:2026.07.1',
       'PRAXIS_FLOW_GATEWAY_IMAGE=praxis-flow/gateway:2026.07.1',

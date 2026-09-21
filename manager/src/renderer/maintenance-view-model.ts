@@ -19,7 +19,6 @@ export type MaintenanceOperation =
   | 'logs'
   | 'storage'
   | 'backup'
-  | 'tlsSidecar'
   | 'pin';
 
 export type MaintenanceErrorSurface =
@@ -27,7 +26,6 @@ export type MaintenanceErrorSurface =
   | 'logs'
   | 'storage'
   | 'backup'
-  | 'tlsSidecar'
   | 'pin';
 
 export type MaintenanceErrors = Record<MaintenanceErrorSurface, string | null>;
@@ -40,7 +38,6 @@ export function emptyMaintenanceErrors(): MaintenanceErrors {
     logs: null,
     storage: null,
     backup: null,
-    tlsSidecar: null,
     pin: null,
   };
 }
@@ -50,7 +47,6 @@ const MAINTENANCE_ERROR_SECTION: Record<MaintenanceErrorSurface, MaintenanceExpa
   logs: 'diagnostics',
   storage: 'practice',
   backup: 'security',
-  tlsSidecar: 'security',
   pin: 'security',
 };
 
@@ -58,7 +54,6 @@ const MAINTENANCE_ERROR_OPEN_ORDER: MaintenanceErrorSurface[] = [
   'stack',
   'storage',
   'backup',
-  'tlsSidecar',
   'pin',
   'logs',
 ];

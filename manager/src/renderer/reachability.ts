@@ -57,7 +57,13 @@ export function draftCanonicalBaseUrl(
   fields: ProxyFieldState & Pick<LanIpFieldState, 'lanAppIp' | 'customLanIp'>,
   status: HostStatus | null,
 ): string | null {
-  if (status?.tls && (status.tls.state !== 'off' || status.tls.cutoverApplied)) {
+  const lifecycle = status?.lifecycle;
+  if (
+    lifecycle &&
+    (lifecycle.preparation !== 'none' ||
+      lifecycle.mode === 'https' ||
+      lifecycle.mode === 'https-portal')
+  ) {
     return effectiveCanonicalBaseUrl(status);
   }
   const lanIp = resolvedLanIp(fields);

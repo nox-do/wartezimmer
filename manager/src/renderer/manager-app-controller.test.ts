@@ -340,8 +340,9 @@ test('boot with configured HTTPS and stopped Docker keeps status and starts runt
   assert.ok(timers.length > 0);
 });
 
-test('boot with remnants keeps diagnosis visible and explicit wizard entry embedded', async () => {
+test('boot with remnants keeps diagnosis visible and explicit recovery entry fullscreen', async () => {
   const status = freshInstallHostStatus();
+  status.installation = { kind: 'needs-reinstall', reasons: [] };
   status.lifecycle = {
     assessment: 'inconsistent',
     mode: null,
@@ -356,5 +357,5 @@ test('boot with remnants keeps diagnosis visible and explicit wizard entry embed
   assert.equal(shell.wizardSessions.length, 0);
   controller.onStatusSetupClick();
   assert.equal(shell.activeView, 'wizard');
-  assert.equal(shell.wizardPresentation, 'embedded');
+  assert.equal(shell.wizardPresentation, 'fullscreen');
 });

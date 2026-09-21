@@ -434,40 +434,31 @@ LAN-IP veraltet bei noch gültigem Cert: oft `degraded` — IP korrigieren bzw. 
 
 Kurz die TLS-Grenze; Tiefe (Export-Allowlist, Cutover mit Update, Manager-Wizard): [`backup.md`](backup.md). Code: `packages/server-shared/src/tls-backup.ts`, `setup/src/tls-backup-sidecar.ts`.
 
-### 8.1 Zwei Artefakte
+### 8.1 Eine Datei
 
-| Artefakt                                  | Enthält TLS?                                                                                               | Wann                                                        |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `.pfbackup`                               | **keinen** Caddy-/ACME-/PEM-State unter `state/tls/`                                                       | immer Settings-Backup                                       |
-| Sidecar `praxis-flow-tls-<timestamp>.tgz` | `caddy-data/`, `caddy-config/`, `acme-dns.json`, `certs/`, plus Manifest v2 mit ID und TLS-Namensidentität | sobald `tls.state ≠ off` (ab `prepare`, nicht erst Cutover) |
+`.pfbackup` Format 2 enthält ab `TLS_STATE != off` (auch Vorbereitung)
+die HTTPS-Daten als `tlsArchiveBase64`: `caddy-data/`, `caddy-config/`,
+`acme-dns.json`, `certs/` und Manifest mit TLS-Identität. HTTP-only hat kein
+TLS-Feld. Es gibt keine Geschwisterdatei und keinen zweiten Dateidialog.
 
-`.pfbackup` kann trotzdem nicht-geheime Marker tragen (`TLS_STATE`,
-`TLS_HOSTNAME`, `TLS_INSTALLATION_ID` und bei Managed die vier Felder für Raum,
-Staff, Portal und Wildcard) und nach Cutover `PROXY_MODE=tls-*` /
-`CANONICAL_BASE_URL=https://…`. Generiertes Caddyfile und `operator-token` sind
-**nicht** im Sidecar — nach Restore regeneriert Setup den Laufzeitzustand; der
-lokale Mail-Korrelationswert wird nicht restauriert. Sidecar-Manifeste v1
-bleiben lesbar; neue Sicherungen schreiben v2.
+Caddyfile und `operator-token` sind nicht im internen Archiv. Setup regeneriert
+das Caddyfile nach Restore. Die Checksummen im äußeren Manifest beziehen sich
+auf die dekodierten Bytes. Alte Backup-Container werden nicht unterstützt.
 
-Gleicher Timestamp wie die `.pfbackup`-Datei; Ablage im selben Backup-Ordner. Electron-Main findet Geschwisterdatei bzw. zweiten Dateidialog; Setup bekommt nur `tlsSidecarBase64` — **keinen** Host-Pfad.
+### 8.2 Inspect und Restore
 
-### 8.2 Inspect / Restore-Gate
+Aktives HTTPS im Backup erfordert übereinstimmende TLS-Identität und gültige
+Payload; fehlende oder widersprüchliche Daten blockieren vor dem Stack-Stopp.
 
-„Backup beansprucht aktives HTTPS“ = `CANONICAL_BASE_URL` beginnt mit `https://` **oder** `PROXY_MODE` ist `tls-*` — **nicht** allein `TLS_STATE` (`tlsInBackup`).
+- HTTPS auf Ziel und im Backup: Rückfrage im bestehenden Assistenten, dann ersetzen.
+- HTTPS auf Ziel, HTTP oder Prepare-only im Backup: HTTPS bleibt erhalten, kein
+  Entpacken oder Löschen der Live-Dateien.
+- HTTP auf Ziel: HTTPS darf übernommen werden; Prepare-only ohne passende
+  Payload wird mit Warnung verworfen.
 
-| Lage                                                                       | Restore                                                                       |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| aktives HTTPS, Sidecar fehlt oder TLS-Namensidentität stimmt nicht überein | **abgelehnt** (`restoreSupported = false`) — sonst Geräte auf https ohne Cert |
-| nur vorbereitet (`TLS_STATE` prepared, Canonical noch HTTP), Sidecar fehlt | **erlaubt** mit Warnung; Vorbereitung wird verworfen (`off`), HTTP bleibt     |
-| Metadaten widersprüchlich (z. B. `active` ohne HTTPS-Canonical)            | **abgelehnt**                                                                 |
-
-Match: `installationId` + Staff-Kompatibilitätshostname müssen übereinstimmen
-und nicht leer sein. Sobald Managed-v2-Felder vorhanden sind, müssen außerdem
-Installationsraum, Staff-, Portal- und Wildcard-Name vollständig übereinstimmen.
-
-### 8.3 v2
-
-TLS im **selben** Archiv = Format-Bump — nur Plan [`../plan-backup-v2.md`](../plan-backup-v2.md), hier nicht spezifizieren.
+Beim Identitätsvergleich müssen Installations-ID und Hostname nichtleer und
+gleich sein. Vorhandene Managed-Felder für Raum, Staff, Portal und Wildcard
+müssen vollständig übereinstimmen. Mehr zum Vertrag: [Backup v2](../plan-backup-v2.md).
 
 ## 9. Nicht Produkt / Lab
 

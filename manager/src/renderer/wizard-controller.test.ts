@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { HostStatus, TlsPrepareInput } from '../shared/host-status.js';
-import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
+import { minimalHostStatus as baseHostStatus } from './test-fixtures/minimal-host-status.js';
 import { createWizardController, wizardManagedPrepareErrorFooter } from './wizard-controller.js';
 import { TLS_LEASE_STALE_LAN_COPY, TLS_RESET_CONFIRM_MESSAGE } from './tls-network-view-model.js';
 import {
@@ -10,6 +10,10 @@ import {
   wizardNextButtonDisabled,
   wizardNextButtonLabel,
 } from './wizard-view-model.js';
+
+function minimalHostStatus(overrides: Partial<HostStatus> = {}): HostStatus {
+  return baseHostStatus({ mode: 'repo', ...overrides });
+}
 
 test('createWizardController initializes on show', () => {
   const controller = createWizardController({

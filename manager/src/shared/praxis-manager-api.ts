@@ -1,4 +1,10 @@
 import type {
+  RecoveryBackupCandidate,
+  InstallRecoveryPreview,
+  InstallFinishInput,
+  InstallFinishResult,
+} from './host-status.js';
+import type {
   ApplySetupInput,
   ApplySetupResult,
   ComposeActionResult,
@@ -24,6 +30,12 @@ import type {
   HostNetworkResult,
   HostStatus,
   HostRuntimeHealth,
+  InstallationStartResult,
+  InstallPrepareInput,
+  InstallPrepareResult,
+  InstallCommitInput,
+  InstallCommitResult,
+  InstallAbortResult,
   NetworkSnapshot,
   RestrictedNetworkInspectResult,
   RestrictedNetworkActionResult,
@@ -44,6 +56,13 @@ export type PraxisManagerSetupApi = {
   fetchSetupStatus(options?: { includeProbes?: boolean }): Promise<HostStatus>;
   fetchRuntimeHealth(): Promise<HostRuntimeHealth>;
   fetchSetupNetwork(): Promise<NetworkSnapshot>;
+  startStoppedInstallation(): Promise<InstallationStartResult>;
+  prepareInstall(body: InstallPrepareInput): Promise<InstallPrepareResult>;
+  commitInstall(body: InstallCommitInput): Promise<InstallCommitResult>;
+  discoverRecoveryBackups(): Promise<RecoveryBackupCandidate[]>;
+  previewInstallRecovery(operationId: string): Promise<InstallRecoveryPreview>;
+  finishInstallRecovery(input: InstallFinishInput): Promise<InstallFinishResult>;
+  abortInstall(operationId: string): Promise<InstallAbortResult>;
   inspectRestrictedNetwork(): Promise<RestrictedNetworkInspectResult>;
   prepareRestrictedNetwork(
     body: RestrictedNetworkPrepareInput,
@@ -76,20 +95,14 @@ export type PraxisManagerMaintenanceApi = {
   createPfbackup(): Promise<PfbackupResult>;
   savePfbackup(backupPath: string): Promise<SavePfbackupResult>;
   validatePfbackup(content: string): Promise<PfbackupValidateResult>;
-  inspectPfbackup(
-    content: string,
-    options?: { tlsSidecarBase64?: string },
-  ): Promise<PfbackupInspectResult>;
+  inspectPfbackup(content: string): Promise<PfbackupInspectResult>;
   restorePfbackup(
     content: string,
-    options?: { skipProviderCredentials?: boolean; tlsSidecarBase64?: string },
+    options?: { skipProviderCredentials?: boolean },
   ): Promise<PfbackupRestoreResult>;
   readPfbackupForValidate(): Promise<
-    | { canceled: true }
-    | { canceled: false; content: string; filePath: string; tlsSidecarBase64?: string | null }
+    { canceled: true } | { canceled: false; content: string; filePath: string }
   >;
-  readTlsSidecar(): Promise<{ canceled: true } | { canceled: false; tlsSidecarBase64: string }>;
-  saveTlsSidecar(backupPath: string): Promise<SavePfbackupResult>;
   inspectPfbackupFile(backupPath: string): Promise<PfbackupInspectResult>;
   saveStorageFolders(body: StorageFoldersInput): Promise<StorageFoldersResult>;
   saveHostNetwork(body: HostNetworkInput): Promise<HostNetworkResult>;

@@ -6,6 +6,7 @@ import type {
   NetworkSnapshot,
 } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import { evaluateHostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
 import type { LanIpFieldState, ProxyFieldState } from './host-network-panels.js';
 import {
   hostNetworkChanged,
@@ -102,7 +103,10 @@ function noticeFromVerified(verified: { ok: boolean; message: string }): Network
 
 /** Started TLS owns Canonical and proxy mode; `/host/network` may then save LAN only. */
 export function hostNetworkMustPreserveTlsIdentity(config: HostStatus | null): boolean {
-  return Boolean(config?.tls && (config.tls.state !== 'off' || config.tls.cutoverApplied === true));
+  const lifecycle = config?.lifecycle;
+  return lifecycle
+    ? evaluateHostLifecycleAction(lifecycle, 'network-binding').preserveTlsIdentity
+    : false;
 }
 
 export function buildHostNetworkSaveInput(input: {
@@ -253,7 +257,7 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     // stack still needs recreation when bindings or proxy mode change.
     return Boolean(
       compose?.running ||
-        compose?.services.some((service) => service.state.toLowerCase().includes('running')),
+      compose?.services.some((service) => service.state.toLowerCase().includes('running')),
     );
   }
 
@@ -303,8 +307,19 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
     if (!config) {
       return;
     }
+    const lifecycle = config?.lifecycle;
+    if (lifecycle) {
+      const decision = evaluateHostLifecycleAction(lifecycle, 'network-binding');
+      if (!decision.allowed) {
+        setErrorNotice(decision.reason ?? 'Host-Aktion derzeit nicht erlaubt.');
+        return;
+      }
+    }
     const preserveTlsIdentity = hostNetworkMustPreserveTlsIdentity(config);
-    const tlsCutoverApplied = config.tls?.cutoverApplied === true;
+    const tlsCutoverApplied = lifecycle
+      ? lifecycle.assessment === 'known' &&
+        (lifecycle.mode === 'https' || lifecycle.mode === 'https-portal')
+      : false;
     const canonicalBaseUrl = preserveTlsIdentity
       ? config.configuredCanonicalBaseUrl?.trim() || config.appBaseUrl.trim()
       : resolveDraftCanonical();

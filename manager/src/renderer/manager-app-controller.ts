@@ -10,7 +10,6 @@ import {
   shouldAutoStartFullscreenWizard,
 } from './manager-navigation.js';
 import type { NavigateOptions, WizardPresentation } from './manager-navigation.js';
-import { pickAndLoadReleaseArchive } from './delivery-images-flow.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import type { HostStatus } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
@@ -63,21 +62,7 @@ export function createManagerAppController(deps: ManagerAppControllerDeps): Mana
   }
 
   async function loadReleaseArchiveFromStatus(): Promise<void> {
-    try {
-      const result = await pickAndLoadReleaseArchive(deps.api());
-      if (result.canceled) {
-        return;
-      }
-      if (!result.ok) {
-        shell.applyStatusError(result.error ?? 'Release-Paket konnte nicht importiert werden.');
-        return;
-      }
-      await refreshAfterMutation();
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Release-Paket konnte nicht importiert werden.';
-      shell.applyStatusError(message);
-    }
+    startSetupWizard();
   }
 
   function startSetupWizard(): void {
@@ -127,11 +112,18 @@ export function createManagerAppController(deps: ManagerAppControllerDeps): Mana
       });
       return;
     }
+    if (
+      (tab === 'maintenance' || tab === 'network') &&
+      hostRefresh.getLastConfig()?.installation.kind !== 'healthy'
+    ) {
+      navigation.navigateTo('status');
+      return;
+    }
     navigation.navigateTo(tab);
   }
 
   function onWizardLeave(): void {
-    navigation.navigateTo('status', { refresh: false });
+    navigation.navigateTo('status');
   }
 
   return {

@@ -7,6 +7,7 @@ import { readEnvMap } from './env-file.js';
 import {
   applySetupPlan,
   buildSetupPlan,
+  commitPreparedInstallOperation,
   isLanIpStale,
   pickLanIpFromEnv,
   pickPracticeDisplayNameFromEnv,
@@ -17,6 +18,10 @@ import {
 } from './host-state.js';
 import { writeManagerReleaseState } from './manager-state.js';
 import { SetupApiValidationError } from './setup-api-normalize.js';
+import {
+  createPreparedInstallOperation,
+  markInstallOperationInstalling,
+} from './install-operation.js';
 
 const SECRET = 'existing-captive-key-32chars-long!!';
 
@@ -81,6 +86,50 @@ async function withRoot(run: (root: string) => Promise<void>) {
     fs.rmSync(root, { recursive: true, force: true });
   }
 }
+
+test('replace commit requires explicit confirmation before Docker or host mutation', async () => {
+  await withRoot(async (root) => {
+    const operation = createPreparedInstallOperation({
+      home: root,
+      mode: 'replace',
+      sha256: 'a'.repeat(64),
+      releaseVersion: '1.2.3',
+    });
+    await assert.rejects(
+      commitPreparedInstallOperation(ctx(root), { operationId: operation.id }),
+      /ausdrücklich bestätigt/,
+    );
+    assert.equal(fs.existsSync(path.join(root, 'operations/install/operation.json')), true);
+  });
+});
+
+test('confirmed installing operation may complete the first setup env', async () => {
+  await withRoot(async (root) => {
+    writeExample(root);
+    writeEnv(root, { PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:1.2.3' });
+    const operation = createPreparedInstallOperation({
+      home: root,
+      mode: 'fresh',
+      sha256: 'a'.repeat(64),
+      releaseVersion: '1.2.3',
+    });
+    markInstallOperationInstalling(root, operation.id);
+    await applySetupPlan(
+      ctx(root),
+      {
+        lanAppIp: '192.168.1.10',
+        practiceDisplayName: 'Praxis',
+        proxy: { enabled: false },
+        gateway: gwOff('192.168.1.10'),
+        preserveEnv: true,
+        runCompose: false,
+        runProbes: false,
+      },
+      { inspectLifecycleResidues: async () => 'present' },
+    );
+    assert.equal(env(root).get('SETUP_LAN_APP_IP'), '192.168.1.10');
+  });
+});
 
 test('runComposeAction stops a proxy stack when the post-start binding audit fails', async () => {
   await withRoot(async (root) => {
@@ -261,18 +310,49 @@ test('applySetupPlan materializes imported release images from manager state int
       archiveSha256: 'e'.repeat(64),
     });
 
-    await applySetupPlan(ctx(root), {
-      lanAppIp: '192.168.1.10',
-      practiceDisplayName: 'Praxis Nord',
-      gateway: gwOff('192.168.1.10'),
-      runCompose: false,
-      runProbes: false,
-    });
+    await applySetupPlan(
+      ctx(root),
+      {
+        lanAppIp: '192.168.1.10',
+        practiceDisplayName: 'Praxis Nord',
+        gateway: gwOff('192.168.1.10'),
+        runCompose: false,
+        runProbes: false,
+      },
+      { inspectLifecycleResidues: async () => 'none' },
+    );
 
     const map = env(root);
     assert.equal(map.get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:1.4.2');
     assert.equal(map.get('PRAXIS_FLOW_SANDBOX_IMAGE'), 'praxis-flow/sandbox:1.4.2');
     assert.equal(map.get('CANONICAL_BASE_URL'), 'http://192.168.1.10:8080');
+  });
+});
+
+test('applySetupPlan rejects an inconsistent lifecycle before its first write', async () => {
+  await withRoot(async (root) => {
+    writeExample(root);
+    writeEnv(root, {
+      SETUP_LAN_APP_IP: '192.168.1.10',
+      PROXY_ENABLED: 'true',
+      PROXY_MODE: 'http',
+      TLS_STATE: 'off',
+      TLS_CUTOVER_APPLIED: 'true',
+    });
+    const before = fs.readFileSync(path.join(root, '.env'), 'utf8');
+    await assert.rejects(
+      () =>
+        applySetupPlan(ctx(root), {
+          lanAppIp: '192.168.1.20',
+          practiceDisplayName: 'Praxis Nord',
+          gateway: gwOff('192.168.1.20'),
+          preserveEnv: true,
+          runCompose: false,
+          runProbes: false,
+        }),
+      /setup-apply.*gesperrt/,
+    );
+    assert.equal(fs.readFileSync(path.join(root, '.env'), 'utf8'), before);
   });
 });
 
@@ -305,6 +385,7 @@ test('applySetupPlan restores an existing env and stack when Staff binding compo
             runProbes: false,
           },
           {
+            inspectLifecycleResidues: async () => 'none',
             validateStaffIp: () => null,
             composePs: async () => healthyCompose(),
             composeRemoveServices: async () => ({ ok: true, log: 'cleaned' }),
@@ -355,6 +436,7 @@ test('applySetupPlan does not claim success when the runtime rollback fails', as
             runProbes: false,
           },
           {
+            inspectLifecycleResidues: async () => 'none',
             validateStaffIp: () => null,
             composePs: async () => healthyCompose(),
             composeRemoveServices: async () => ({ ok: true, log: 'cleaned' }),
@@ -393,6 +475,7 @@ test('applySetupPlan removes partial services when a fresh compose apply fails',
             runProbes: false,
           },
           {
+            inspectLifecycleResidues: async () => 'none',
             validateStaffIp: () => null,
             composePs: async () => ({ running: false, services: [] }),
             composeValidateConfig: async () => ({ ok: true, log: 'valid' }),
@@ -743,7 +826,17 @@ test('applySetupPlan preserves prepared and active restricted state', async () =
       OPENNDS_FAS_KEY: SECRET,
       SETUP_LAN_APP_IP: '192.168.1.10',
       CANONICAL_BASE_URL: 'https://staff.installation.example',
-      ...proxyOn,
+      PROXY_ENABLED: 'true',
+      PROXY_MODE: 'tls-managed',
+      APP_BIND_ADDRESS: '127.0.0.1',
+      TLS_STATE: 'active',
+      TLS_MODE: 'managed',
+      TLS_CUTOVER_APPLIED: 'true',
+      TLS_INSTALLATION_ID: 'installation',
+      TLS_HOSTNAME: 'staff.installation.example',
+      TLS_STAFF_HOSTNAME: 'staff.installation.example',
+      TLS_PORTAL_HOSTNAME: 'portal.installation.example',
+      TLS_WILDCARD_CERTIFICATE_NAME: '*.installation.example',
       SETUP_RESTRICTED_ENABLED: 'true',
       SETUP_RESTRICTED_APP_IP: '10.20.0.2',
       SETUP_RESTRICTED_INTERFACE_ID: 'mac:aa:00:00:00:00:07',
@@ -1193,6 +1286,7 @@ for (const operation of ['network', 'setup'] as const) {
         const initialCompose =
           initialState === 'partial' ? healthyCompose(false) : { running: false, services: [] };
         const hooks: HostWriteRuntimeHooks = {
+          inspectLifecycleResidues: async () => 'none',
           ...allowProxyPort,
           composePs: async () => initialCompose,
           ensureProxyImageAvailable: async () => {
@@ -1548,6 +1642,7 @@ for (const action of ['repair', 'disable', 'setup', 'fresh-setup', 'throw'] as c
         action === 'fresh-setup' ? null : fs.readFileSync(path.join(root, '.env'), 'utf8');
       const mutations: string[] = [];
       const hooks: HostWriteRuntimeHooks = {
+        inspectLifecycleResidues: async () => 'none',
         ...allowProxyPort,
         composePs: async () => healthyCompose(true),
         composeValidateConfig: async () => {
@@ -1603,6 +1698,56 @@ for (const action of ['repair', 'disable', 'setup', 'fresh-setup', 'throw'] as c
       assert.deepEqual(mutations, []);
       if (before === null) assert.equal(fs.existsSync(path.join(root, '.env')), false);
       else assert.equal(fs.readFileSync(path.join(root, '.env'), 'utf8'), before);
+    });
+  });
+}
+
+for (const action of ['start', 'restart'] as const) {
+  for (const missing of ['volume', 'database'] as const) {
+    test(`${action} refuses a missing ${missing} before compose up`, async () => {
+      await withRoot(async (root) => {
+        writeEnv(root, {
+          SETUP_LAN_APP_IP: '192.168.1.10',
+          PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:1.2.3',
+        });
+        let checked = false;
+        const result = await runComposeAction(ctx(root), action, undefined, {
+          composePs: async () => ({ running: false, services: [] }),
+          inspectExistingAppDatabase: async (project, image) => {
+            assert.equal(project, 'pf-test');
+            assert.equal(image, 'praxis-flow/app:1.2.3');
+            checked = true;
+            return { ok: false, reason: `${missing} fehlt` };
+          },
+          composeUp: async () => assert.fail('must not recreate an empty database'),
+        });
+        assert.equal(checked, true);
+        assert.equal(result.ok, false);
+        assert.match(result.log, /fehlt/);
+      });
+    });
+  }
+  test(`${action} checks the existing database before compose up`, async () => {
+    await withRoot(async (root) => {
+      writeEnv(root, {
+        SETUP_LAN_APP_IP: '192.168.1.10',
+        PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:1.2.3',
+      });
+      const calls: string[] = [];
+      const result = await runComposeAction(ctx(root), action, undefined, {
+        composePs: async () => ({ running: false, services: [] }),
+        inspectExistingAppDatabase: async () => {
+          calls.push('database');
+          return { ok: true };
+        },
+        composeUp: async () => {
+          calls.push('up');
+          return { ok: true, log: '', gatewaySkipped: false };
+        },
+        auditStaffBindings: () => [],
+      });
+      assert.equal(result.ok, true);
+      assert.deepEqual(calls, ['database', 'up']);
     });
   });
 }

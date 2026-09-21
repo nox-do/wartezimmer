@@ -1,26 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parsePfbackupTimestampTokenFromPath } from './backup-path-labels.js';
 import {
-  siblingTlsSidecarBasename,
   tlsBackupMetadataConsistent,
   tlsInBackup,
   tlsPreparedInBackup,
   tlsRestoreSupported,
-  tlsSidecarFileName,
   tlsSidecarMatches,
 } from './tls-backup.js';
-
-test('tlsSidecarFileName uses the same timestamp token as .pfbackup', () => {
-  const backupPath = '/tmp/backups/praxis-flow-backup-2026-07-12T10-15-30-123Z.pfbackup';
-  const token = parsePfbackupTimestampTokenFromPath(backupPath);
-  assert.equal(token, '2026-07-12T10-15-30-123Z');
-  assert.equal(tlsSidecarFileName(token!), 'praxis-flow-tls-2026-07-12T10-15-30-123Z.tgz');
-  assert.equal(
-    siblingTlsSidecarBasename(backupPath),
-    'praxis-flow-tls-2026-07-12T10-15-30-123Z.tgz',
-  );
-});
 
 test('sidecar match requires non-empty installation id and hostname on both sides', () => {
   assert.equal(
@@ -108,19 +94,19 @@ test('restore keeps current gates and adds TLS metadata and sidecar gates', () =
     targetAppReachable: true,
     tlsMetadataConsistent: true,
     tlsClaimsHttps: true,
-    sidecarPresent: true,
-    sidecarMatches: true,
+    payloadPresent: true,
+    payloadMatches: true,
   };
   assert.equal(tlsRestoreSupported(base), true);
   assert.equal(tlsRestoreSupported({ ...base, settingsValid: false }), false);
   assert.equal(tlsRestoreSupported({ ...base, tlsMetadataConsistent: false }), false);
-  assert.equal(tlsRestoreSupported({ ...base, sidecarMatches: false }), false);
+  assert.equal(tlsRestoreSupported({ ...base, payloadMatches: false }), false);
   assert.equal(
     tlsRestoreSupported({
       ...base,
       tlsClaimsHttps: false,
-      sidecarPresent: false,
-      sidecarMatches: false,
+      payloadPresent: false,
+      payloadMatches: false,
     }),
     true,
   );

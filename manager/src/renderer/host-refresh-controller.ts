@@ -171,6 +171,21 @@ export function createHostRefreshController(
           ((lastRuntime.lifecycleKey !== undefined &&
             lastRuntime.lifecycleKey !== lastConfig.lifecycleKey) ||
             lastRuntime.envExists !== lastConfig.envExists ||
+            lastRuntime.docker.daemonRunning !== lastConfig.docker.daemonRunning ||
+            JSON.stringify(
+              lastRuntime.compose?.services.map((service) => [
+                service.service,
+                service.state,
+                service.health,
+              ]),
+            ) !==
+              JSON.stringify(
+                lastConfig.compose?.services.map((service) => [
+                  service.service,
+                  service.state,
+                  service.health,
+                ]),
+              ) ||
             lastRuntime.configuredLanIp !== lastConfig.network.configuredLanIp ||
             (lastRuntime.appBaseUrl !== null && lastRuntime.appBaseUrl !== lastConfig.appBaseUrl) ||
             (lastRuntime.proxyServer !== null &&

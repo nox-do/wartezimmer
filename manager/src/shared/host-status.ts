@@ -29,6 +29,15 @@ export type {
   HostNetworkStatus,
   HostRuntimeHealth,
   HostStatus,
+  InstallationReason,
+  InstallationStartResult,
+  InstallationState,
+  InstallOperationSummary,
+  InstallPrepareInput,
+  InstallPrepareResult,
+  InstallCommitInput,
+  InstallCommitResult,
+  InstallAbortResult,
   RestrictedNetworkBinding,
   RestrictedNetworkActionResult,
   RestrictedNetworkCandidate,
@@ -105,3 +114,10 @@ export type SelectPfupdateArchiveResult = {
 export type TlsPemSetupResult =
   | { canceled: true }
   | { canceled: false; tls: TlsStatus; checks?: TlsLocalCheck[] };
+
+export type {
+  RecoveryBackupCandidate,
+  InstallRecoveryPreview,
+  InstallFinishInput,
+  InstallFinishResult,
+} from '@praxis-flow/server-shared';

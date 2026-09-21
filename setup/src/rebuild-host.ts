@@ -22,6 +22,7 @@ import { auditRuntimePostcondition, createRuntimePostcondition } from './runtime
 import { SetupApiValidationError } from './setup-api-normalize.js';
 import type { SetupContext } from './setup-context.js';
 import { listNetworkInterfaces } from './network.js';
+import { assertHostLifecycleAction } from './host-lifecycle-guard.js';
 import type { ComposeActionResult, PortalProxyContract } from '@praxis-flow/server-shared';
 
 export type RebuildHooks = {
@@ -87,14 +88,7 @@ export async function rebuildHost(
     );
   }
   const env = readEnvMap(envPath);
-  const lifecycle = readHostLifecycle(ctx.home, env, true);
-  if (lifecycle.assessment !== 'known' || !lifecycle.mode || lifecycle.mode === 'uninstalled') {
-    fail(
-      'Wiederherstellung abgebrochen: .env ist nicht ausreichend gültig. Einrichtung zuerst prüfen.',
-    );
-  }
-  if (lifecycle.operation !== 'none')
-    fail('Wiederherstellung abgebrochen: Eine Portaländerung ist noch offen.');
+  const { lifecycle } = assertHostLifecycleAction(ctx, 'rebuild');
   const bindingError = (
     hooks.validateBindings ?? ((values) => validateStaffBindingEnv(values, listNetworkInterfaces()))
   )(env);

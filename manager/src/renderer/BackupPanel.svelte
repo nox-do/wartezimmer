@@ -1,11 +1,4 @@
 <script lang="ts">
-  /**
-   * HTTPS-State (Pilot) when tls.state !== off — sidecar praxis-flow-tls-<timestamp>.tgz
-   * next to .pfbackup. Restore stays the existing wizard (sibling sidecar, else second file dialog).
-   * Electron-Main owns path/timestamp lookup; Setup receives tlsSidecarBase64,
-   * never a renderer-selected host path.
-   */
-  import { siblingTlsSidecarBasename } from '@praxis-flow/server-shared/backup-path-labels';
   import IconButton from './IconButton.svelte';
   import { backupInfoText } from './maintenance-view-model.js';
 
@@ -13,41 +6,29 @@
     latestBackupPath,
     envExists,
     backupStatusText = '',
-    tlsSidecarStatusText = '',
     pinResetStatusText = '',
     locked = false,
     backupError = null,
-    tlsSidecarError = null,
     pinError = null,
     tlsEnabled = false,
     onBackup,
     onValidateBackup,
     onRestore,
-    onExportTlsSidecar,
-    onInspectTlsSidecar,
     onPinReset,
   }: {
     latestBackupPath: string | null;
     envExists: boolean | undefined;
     backupStatusText?: string;
-    tlsSidecarStatusText?: string;
     pinResetStatusText?: string;
     locked?: boolean;
     backupError?: string | null;
-    tlsSidecarError?: string | null;
     pinError?: string | null;
     tlsEnabled?: boolean;
     onBackup: () => void;
     onValidateBackup: () => void;
     onRestore: () => void;
-    onExportTlsSidecar: () => void;
-    onInspectTlsSidecar: () => void;
     onPinReset: () => void;
   } = $props();
-
-  const sidecarName = $derived(
-    latestBackupPath ? siblingTlsSidecarBasename(latestBackupPath) : 'praxis-flow-tls-….tgz',
-  );
 </script>
 
 <div class="panel-section">
@@ -84,6 +65,12 @@
   {#if backupStatusText}
     <p class="maintenance-backup-status">{backupStatusText}</p>
   {/if}
+  <p class="hint">
+    Diese Sicherung ist nicht verschlüsselt. API-Schlüssel für SMS und WhatsApp werden im
+    Klartext mitgesichert. Bei HTTPS kann sie private Schlüssel enthalten. Bewahren Sie die
+    Datei geschützt auf, möglichst auf einem verschlüsselten Datenträger, und geben Sie sie
+    nicht ungeschützt weiter.
+  </p>
   <div class="maintenance-backup-actions">
     <button type="button" class="btn-secondary" disabled={locked} onclick={onBackup}>
       Backup erstellen
@@ -104,32 +91,9 @@
   <div class="panel-section">
     <h2>HTTPS-Zertifikat</h2>
     <p class="hint">
-      Das Praxis-Backup enthält die Einstellungen, aber nicht das Zertifikat. Dafür liegt eine
-      zweite Datei daneben (<code>{sidecarName}</code>). Beide Dateien zusammen aufbewahren — ohne
-      die Zertifikatsdatei lässt sich HTTPS nicht wiederherstellen.
+      Zertifikat und HTTPS-Einrichtung sind in der .pfbackup enthalten, sobald HTTPS vorbereitet
+      ist. Eine Datei genügt.
     </p>
-    <p class="hint">
-      Schon mit „Backup erstellen“ sichern, sobald HTTPS vorbereitet ist — nicht erst nach dem
-      Umstellen. Die Zertifikatsdatei entsteht automatisch neben der Backup-Datei (gewählter
-      Ordner und Installationsordner).
-    </p>
-    {#if false}
-      <!-- Pilot: extra Sidecar-Export/Prüfen. Backup erstellen schreibt beides. -->
-      {#if tlsSidecarStatusText}
-        <p class="maintenance-backup-status">{tlsSidecarStatusText}</p>
-      {/if}
-      {#if tlsSidecarError}
-        <p class="error">{tlsSidecarError}</p>
-      {/if}
-      <div class="maintenance-backup-actions">
-        <button type="button" class="btn-secondary" disabled={locked} onclick={onExportTlsSidecar}>
-          Zertifikat sichern
-        </button>
-        <button type="button" class="btn-secondary" disabled={locked} onclick={onInspectTlsSidecar}>
-          Zertifikat prüfen
-        </button>
-      </div>
-    {/if}
   </div>
 {/if}
 

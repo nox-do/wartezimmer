@@ -4,8 +4,6 @@ import { fileURLToPath } from 'node:url';
 import {
   IPC_OPEN_EXTERNAL_URL,
   IPC_READ_PFBACKUP_FOR_VALIDATE,
-  IPC_READ_TLS_SIDECAR,
-  IPC_SAVE_TLS_SIDECAR,
   IPC_INSPECT_PFBACKUP_FILE,
   IPC_SAVE_PFBACKUP,
   IPC_SELECT_FOLDER,
@@ -27,9 +25,7 @@ import { callSetupApi, setupApiUserErrorMessage } from './setup-api.js';
 import {
   inspectPfbackupFile,
   readPfbackupFromDialog,
-  readTlsSidecarFromDialog,
   savePfbackupToDisk,
-  saveTlsSidecarToDisk,
 } from './pfbackup-dialog.js';
 import { startSetupServer, stopSetupServer, type SetupServerHandle } from './setup-server.js';
 import { defaultOsInstallHome, expectedSetupInstallHome } from './setup-identity.js';
@@ -116,24 +112,6 @@ function registerSetupIpc(handle: SetupServerHandle): void {
   ipcMain.handle(IPC_READ_PFBACKUP_FOR_VALIDATE, async () => {
     try {
       return await readPfbackupFromDialog(mainWindow);
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      throw new Error(detail, { cause: error });
-    }
-  });
-
-  ipcMain.handle(IPC_READ_TLS_SIDECAR, async () => {
-    try {
-      return await readTlsSidecarFromDialog(mainWindow);
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      throw new Error(detail, { cause: error });
-    }
-  });
-
-  ipcMain.handle(IPC_SAVE_TLS_SIDECAR, async (_event, backupPath: string) => {
-    try {
-      return await saveTlsSidecarToDisk(mainWindow, backupPath);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new Error(detail, { cause: error });

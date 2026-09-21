@@ -103,6 +103,35 @@ test('setup server rejects package paths with the wrong extension', async (t) =>
   }
 });
 
+test('install operation routes validate prepare, commit and DELETE abort bodies', async (t) => {
+  const server = await startTestServer();
+  t.after(server.close);
+
+  const prepare = await fetch(`${server.baseUrl}/api/setup/host/install/prepare`, {
+    method: 'POST',
+    body: JSON.stringify({ archivePath: '/tmp/release.pfinstall', mode: 'unknown' }),
+    headers: { 'content-type': 'application/json' },
+  });
+  assert.equal(prepare.status, 400);
+  assert.deepEqual(await prepare.json(), { error: 'mode must be fresh or replace' });
+
+  const commit = await fetch(`${server.baseUrl}/api/setup/host/install/commit`, {
+    method: 'POST',
+    body: '{}',
+    headers: { 'content-type': 'application/json' },
+  });
+  assert.equal(commit.status, 400);
+  assert.deepEqual(await commit.json(), { error: 'operationId required' });
+
+  const abort = await fetch(`${server.baseUrl}/api/setup/host/install/operation`, {
+    method: 'DELETE',
+    body: '{}',
+    headers: { 'content-type': 'application/json' },
+  });
+  assert.equal(abort.status, 400);
+  assert.deepEqual(await abort.json(), { error: 'operationId required' });
+});
+
 test('TLS prepare route validates its contract before touching host state', async (t) => {
   const server = await startTestServer();
   t.after(server.close);
@@ -153,10 +182,10 @@ test('rebuild endpoint refuses a missing env without reconstructing an installat
   t.after(server.close);
   const response = await fetch(`${server.baseUrl}/api/setup/host/rebuild`, { method: 'POST' });
   assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /\.env fehlt/);
+  assert.match((await response.json()).error, /Wartung ist nur bei einer gesunden Installation/);
 });
 
-test('HTTP rebuild waits for startup recovery before applying its open-journal lock', async (t) => {
+test('HTTP rebuild waits for startup recovery and rejects an unhealthy installation', async (t) => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-server-rebuild-'));
   t.after(() => fs.rmSync(home, { recursive: true, force: true }));
   fs.writeFileSync(
@@ -204,6 +233,6 @@ test('HTTP rebuild waits for startup recovery before applying its open-journal l
 
   assert.equal(recoveryCompleted, true);
   assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /Portaländerung ist noch offen/);
+  assert.match((await response.json()).error, /Wartung ist nur bei einer gesunden Installation/);
   assert.ok(fs.existsSync(path.join(home, 'state/restricted-operation/journal.json')));
 });

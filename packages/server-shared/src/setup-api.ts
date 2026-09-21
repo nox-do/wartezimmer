@@ -131,13 +131,11 @@ export type ComposeLogsResult = {
 export type PfbackupResult = {
   envPath: string;
   backupPath: string;
-  tlsSidecarPath?: string | null;
 };
 
 export type PfbackupInfo = {
   envPath: string;
   latestBackupPath: string | null;
-  latestTlsSidecarPath?: string | null;
 };
 
 export type PfbackupValidateInput = {
@@ -160,17 +158,15 @@ export type PfbackupValidateResult = {
 
 export type PfbackupInspectInput = {
   content: string;
-  /** Future LAN-TLS sidecar bytes encoded for JSON transport; never a host path. */
-  tlsSidecarBase64?: string;
 };
 
-/** Optional LAN-TLS inspect data; absent for today's HTTP-only backups. */
+/** Optional HTTPS inspect data for the embedded backup payload. */
 export type PfbackupTlsInspectSummary = {
   state: TlsState;
   inBackup: boolean;
   preparedInBackup: boolean;
-  sidecarPresent: boolean;
-  sidecarMatches: boolean;
+  payloadPresent: boolean;
+  payloadMatches: boolean;
   metadataConsistent: boolean;
 };
 
@@ -191,7 +187,7 @@ export type PfbackupInspectEnvironment = {
 };
 
 /**
- * LAN-TLS later adds the optional backup.tls summary. Its restore gate is
+ * The optional backup.tls summary describes embedded HTTPS data. Its restore gate is
  * additional: archiveValid, settingsValid and targetAppReachable stay mandatory.
  */
 export type PfbackupInspectCompatibility = {
@@ -204,6 +200,7 @@ export type PfbackupInspectCompatibility = {
 
 export type PfbackupInspectResult = {
   ok: boolean;
+  currentTlsClaimsHttps: boolean;
   backup?: PfbackupInspectBackupSummary;
   environment?: PfbackupInspectEnvironment;
   compatibility: PfbackupInspectCompatibility;
@@ -213,8 +210,6 @@ export type PfbackupInspectResult = {
 export type PfbackupRestoreInput = {
   content: string;
   skipProviderCredentials?: boolean;
-  /** Future LAN-TLS sidecar bytes encoded for JSON transport; never a host path. */
-  tlsSidecarBase64?: string;
 };
 
 export type PfbackupRestoreReport = {
@@ -711,10 +706,38 @@ export type HostLifecycle = {
   recovery: 'none' | 'portal-disabled';
 };
 
+export type InstallationReason = {
+  code: string;
+  message: string;
+};
+
+export type InstallOperationSummary = {
+  id: string;
+  mode: 'fresh' | 'replace';
+  phase: 'prepared' | 'installing';
+  createdAt: string;
+  releaseVersion: string;
+  backupContainsTls: boolean | null;
+};
+
+/** Backend-owned product state. Proxy, TLS and gateway health are deliberately separate. */
+export type InstallationState =
+  | {
+      kind: 'docker-unavailable';
+      reason: string;
+      operation?: InstallOperationSummary;
+    }
+  | { kind: 'fresh' }
+  | { kind: 'installing'; operation: InstallOperationSummary }
+  | { kind: 'healthy'; updateEligible: true }
+  | { kind: 'stopped' }
+  | { kind: 'needs-reinstall'; reasons: InstallationReason[] };
+
 export type HostStatus = {
   /** Additive during the Manager migration; old hosts may omit it. */
   lifecycle?: HostLifecycle;
   lifecycleKey?: string;
+  installation: InstallationState;
   installHome: string;
   mode: string;
   composeProjectName: string;
@@ -748,6 +771,38 @@ export type HostStatus = {
   deliveryImages: DeliveryImagesStatus;
   /** Live settings schema from maintenance app when reachable; otherwise current build default. */
   settingsFormatVersion: number;
+};
+
+export type InstallationStartResult = {
+  installation: InstallationState;
+  compose: ComposeStatus | null;
+};
+
+export type InstallPrepareInput = {
+  archivePath: string;
+  mode: 'fresh' | 'replace';
+  backupCandidateId?: string;
+};
+
+export type InstallPrepareResult = {
+  operation: InstallOperationSummary;
+  loadedImages: string[];
+};
+
+export type InstallCommitInput = {
+  operationId: string;
+  /** Required for replace and for any restart of an installing operation. */
+  replaceConfirmed?: boolean;
+};
+
+export type InstallCommitResult = {
+  operation: InstallOperationSummary;
+  installation: InstallationState;
+};
+
+export type InstallAbortResult = {
+  operationId: string;
+  aborted: true;
 };
 
 /** Pollable stack/runtime snapshot — separate from config fields on `HostStatus`. */
@@ -830,4 +885,23 @@ export type NormalizedSetupPlanInput = {
   folders?: StorageFolderPaths;
   /** Present only when the wire body included `proxy`. */
   proxy?: ProxyConfigInput;
+};
+
+export type RecoveryBackupCandidate = {
+  id: string;
+  createdAt: string;
+  containsTls: boolean;
+  archiveUsable: true;
+};
+export type InstallRecoveryPreview = {
+  operation: InstallOperationSummary;
+  baselineReady: boolean;
+  backup: PfbackupInspectResult | null;
+  restoreCompatible: boolean;
+};
+export type InstallFinishInput = { operationId: string; action: 'restore' | 'without-backup' };
+export type InstallFinishResult = {
+  ok: boolean;
+  errors: string[];
+  restore?: PfbackupRestoreResult;
 };

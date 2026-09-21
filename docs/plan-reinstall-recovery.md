@@ -1,9 +1,11 @@
 # Plan: Einfache Neuinstallation mit optionaler Backup-Übernahme
 
-Stand: 2026-09-11
+Stand: 2026-09-21
 
-Status: **Plan, kein Code.** Baut auf `.pfbackup` v2 aus
-[`plan-backup-v2.md`](plan-backup-v2.md) auf.
+Status: **Implementiert.** Backup-v2-Discovery, Pinning, Prepare/Commit,
+HTTP-Baseline, Recovery-Abschluss und Manager-Wiedereinstieg sind verbunden.
+Aktueller Betriebsvertrag: [Neuinstallation und Recovery](operations/reinstall-recovery.md).
+Dieser Plan bleibt als Entwurfsreferenz erhalten.
 
 ---
 
@@ -197,11 +199,9 @@ Der Marker enthält keine frei verwendbaren Host-Pfade und keine Secrets. Die
 Paket- und Backup-Dateien liegen im Vorgangsverzeichnis und werden durch die
 gespeicherten Hashes an genau diese Bytes gebunden.
 
-Dateirechte:
-
-- Vorgangsverzeichnis `0700`
-- Dateien, insbesondere die unverschlüsselte Backup-Kopie, `0600`
-- keine Inhalte oder Secret-Werte in API-Antworten und Logs
+Dateien und Verzeichnisse verwenden die normalen Benutzerrechte (umask).
+Keine eigene Rechteprüfung oder Rechtekorrektur. Inhalte und Secret-Werte
+gehören weiterhin nicht in API-Antworten und Logs.
 
 ### Crash-Verhalten
 
@@ -284,9 +284,9 @@ Teardown stoppen den Commit, bevor Host-Dateien entfernt werden.
 ## 6. Docker-Besitz statt eigener Installationsforensik
 
 Produktinvariante: Der ausgelieferte Manager verwaltet genau eine Praxis-Flow-
-Installation pro Host/Benutzer und ein festes Install-Home. Dev- und
-Test-Instanzen dürfen über `PRAXIS_FLOW_HOME`, Compose-Projektnamen und eigene
-Host-Ports isoliert werden.
+Installation pro Host/Benutzer und ein festes Install-Home. Abweichende
+Compose-Projektnamen dienen ausschließlich der eindeutigen Besitzzuordnung;
+gleichzeitiger Betrieb mehrerer Produktstacks ist kein Produktziel.
 
 Die festen `container_name`-Einträge für App, Sandbox und Proxy werden aus den
 Compose-Dateien entfernt. Compose benennt und besitzt Ressourcen über den
@@ -297,10 +297,7 @@ Folgeänderungen:
 
 - `sandbox-health.ts` adressiert `sandbox` über Compose statt über
   `praxis-flow-sandbox`
-- Dev-/Test-Host-Ports für App, Maintenance und Proxy werden konfigurierbar
-- Produktiv bleiben die bisherigen Default-Ports bestehen
-- lokale App-/Maintenance-URLs werden aus dem Setup-Kontext abgeleitet und
-  verwenden bei Dev-/Test-Overrides nicht mehr blind `8080`/`8082`
+- Produktports bleiben fest: App `8080`, Maintenance `8082`, Proxy `80`/`443`
 - fremde Container oder Volumes ohne passenden Compose-Projektbesitz werden
   niemals automatisch entfernt
 - ein belegter Produkt-Port durch ein fremdes Projekt ist ein Konflikt, kein
@@ -328,9 +325,15 @@ Setup scannt ausschließlich `installHome/backups/`:
   niemals eines absoluten Pfads
 
 Die Candidate-ID gilt nur für dieses Backup-Verzeichnis. Beim Prepare wird die
-Datei sofort in den geschützten Vorgangsbereich kopiert, erneut geprüft und ihr
+Datei sofort in den lokalen Vorgangsbereich kopiert, erneut geprüft und ihr
 äußerer SHA-256 im Marker gespeichert. Vorschau und Restore prüfen denselben
 Digest erneut.
+
+**Vereinfachung vom 2026-09-21:** Ein fehlendes, beschädigtes oder verändertes
+Backup beendet den Recovery-Versuch mit verständlicher Fehlermeldung. Das gilt
+auch für manuell ausgewählte Sicherungen. Kein zusätzlicher Ausweg für beschädigte
+Staging-Dateien, keine automatische Reparatur und kein stilles Fortfahren ohne
+Backup. Die Wiederanlaufzusage setzt unverändert verfügbare vorbereitete Dateien voraus.
 
 Die zwei bekannten Prüfstufen bleiben:
 
@@ -426,6 +429,10 @@ paralleler Produktflags.
 
 Zusätzliche Endpunkte:
 
+- `GET /api/setup/host/install/backups`
+  - offline geprüfte Kandidaten mit opaken IDs
+- `POST /api/setup/host/install/preview`
+  - Operation-ID; Digest-Prüfung und Online-Vorschau auf gesunder Baseline
 - `POST /api/setup/host/install/prepare`
   - Body: `.pfinstall`-Pfad aus dem nativen Main-Dialog, gewünschter Modus
     `fresh` oder `replace`, optionale Backup-Candidate-ID
@@ -459,6 +466,8 @@ Recovery-Pfade.
 Ein fehlgeschlagener oder abgebrochener Vorgang darf die Neuinstallation nicht
 dauerhaft blockieren. In `installing` kann derselbe Vorgang mit den bereits
 geprüften und gepinnten Paket-/Backup-Bytes erneut von vorn gestartet werden.
+Ein erneuter Commit aus `installing` verlangt immer `replaceConfirmed: true`
+und setzt auch einen ursprünglich als `fresh` begonnenen Stack zuerst zurück.
 `backups/` bleibt dabei erhalten. Nach einem gesunden Abschluss und entferntem
 Marker kann wie gewohnt ein neues Paket oder ein anderes Backup gewählt
 werden.
@@ -500,8 +509,6 @@ werden.
 
 - globale `container_name`-Werte entfernen
 - Sandbox-Exec über Compose-Service ausführen
-- Dev-/Test-Ports konfigurierbar machen
-- `urls.ts` und Aufrufer auf kontextabhängige lokale Host-Ports umstellen
 - TLS-Smoke-/Lab-Skripte und Operations-Dokumentation von festen
   Container-Namen lösen
 
@@ -519,19 +526,18 @@ werden.
 
 - globale App-/Sandbox-/Proxy-Containernamen entfernen
 - Compose-Servicezugriffe anpassen
-- Dev-/Test-Ports konfigurierbar machen
 - diskriminierten Installationszustand im Backend ergänzen
 - sicheren Startversuch für `stopped`
 - Update-Gate auf `healthy`
 
-**Review-Gate:** Dev- und Delivery-Projekt übernehmen keine fremden Container.
+**Review-Gate:** Setup übernimmt keine fremden Container.
 Docker-Ausfall führt zu keiner Zustandsentscheidung. Status-Poll erzeugt kein
 Volume und keinen Utility-Container.
 
 ### Schnitt B — `.pfinstall` Prepare/Activate
 
 - heutigen Loader in zwei Phasen zerlegen
-- geschütztes Staging und atomaren Vorgangsmarker ergänzen
+- lokales Staging und atomaren Vorgangsmarker ergänzen
 - Compose-Konfiguration vor Commit validieren
 - Abbruch in `prepared`
 - vor der ersten Mutation atomar auf `installing` wechseln
@@ -612,11 +618,10 @@ gestartet werden.
 | Restore enthält alte Image-Tags                   | `.pfinstall`-Release bleibt aktiv                                                            |
 | Backup enthält TLS                                | keine neue TLS-Identität vor Restore                                                         |
 | Backup enthält kein TLS                           | frische HTTP-Installation                                                                    |
-| Dev- und Delivery-Projekt parallel                | keine Containerübernahme; Portkonflikt klar                                                  |
 | fremder Container auf Produkt-Port                | Konflikt, niemals automatisch löschen                                                        |
 
 Zusätzlich Fehler-Injektion nach jeder persistenten Phasengrenze und Tests für
-`0700`/`0600`, keine Secrets in Antworten/Logs sowie vollständiges Entfernen
+keine Secrets in Antworten/Logs sowie vollständiges Entfernen
 von App- und Sandbox-Volume.
 
 ---
