@@ -4,7 +4,7 @@ Stand: 2026-09-21
 
 Status: **Implementiert.** Backup-v2-Discovery, Pinning, Prepare/Commit,
 HTTP-Baseline, Recovery-Abschluss und Manager-Wiedereinstieg sind verbunden.
-Aktueller Betriebsvertrag: [Neuinstallation und Recovery](operations/reinstall-recovery.md).
+Aktueller Betriebsvertrag: [Neuinstallation und Recovery](../operations/reinstall-recovery.md).
 Dieser Plan bleibt als Entwurfsreferenz erhalten.
 
 ---

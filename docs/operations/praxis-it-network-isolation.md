@@ -1,17 +1,13 @@
 # Praxis-IT-Hinweise zur Netzwerkisolation
 
-Stand: 2026-09-14 · **Beratungsunterlage zum geplanten Restricted-Binding, kein umgesetzter Produktvertrag**
+Stand: 2026-09-21 · Betriebs- und Abnahmehinweise für das Restricted-Binding
 
-Das vorausgesetzte Wildcard-TLS-Namensmodell ist umgesetzt und per lokalem
-Pebble-Smoke geprüft. Explizite Proxy-Publishes an der Staff-IP und ihr
-Runtime-Audit sind umgesetzt; vollständige Manager-Diagnose
-und Restricted-Binding sind weiterhin offen. Der proxyfreie Demo-/Erststart
-bleibt bewusst auf allen Host-Interfaces erreichbar. Die Netzempfehlungen
-dürfen daher noch nicht als verfügbare Manager-Funktion verstanden werden.
-
-Produktplan: [Eingeschränkter Netzwerkzugang für das Patientenportal](../plan-portal-lan-isolation.md) ·
-Manager-Plan: [Restricted Network Access](../plan-manager-restricted-network-access.md) ·
-heutiger Betrieb: [`runtime.md`](runtime.md)
+Wildcard-TLS, explizite Proxy-Publishes, Runtime-Audit sowie Prepare, Apply und
+Remove des Restricted-Bindings sind umgesetzt. Der proxyfreie initiale Betrieb
+bleibt bewusst auf allen Host-Interfaces erreichbar. Die praktische
+Zwei-NIC-Abnahme und die Plattformfreigabe bleiben davon getrennte
+Rollout-Gates. Technischer Lebenszyklus: [`restricted-lifecycle.md`](restricted-lifecycle.md) ·
+TLS-Betrieb: [`tls.md`](tls.md) · Runtime: [`runtime.md`](runtime.md)
 
 ## Gültige Systemgrenze — Entscheidung vom 14.09.2026
 
@@ -45,12 +41,12 @@ verwaltet ausschließlich seine Docker-/Caddy-Konfiguration; der Manager gibt
 Hinweise und bestätigt keine Isolation des Praxisnetzes.
 
 Die Hinweise ersetzen weder eine Prüfung der konkreten Umgebung noch eine
-Sicherheitsfreigabe durch die verantwortliche IT. Aussagen zum Restricted-
-Binding gelten erst nach Umsetzung und Plattformfreigabe des Produktplans.
+Sicherheitsfreigabe durch die verantwortliche IT. Eine Plattform darf erst nach
+dem für sie dokumentierten Binding- und Netztest freigegeben werden.
 
-## 2. Technische Einordnung des geplanten Standardwegs
+## 2. Technische Einordnung des Standardwegs
 
-Der geplante Standardweg ist:
+Der Standardweg nach erfolgreicher Plattform- und Praxisabnahme ist:
 
 ```text
 Patienten-/Gastsegment
@@ -165,9 +161,9 @@ anbieten, nimmt das fremde Netz damit aber nicht ab.
 
 ## 4. Härtungsstufen
 
-### Stufe A — geplanter Produktstandard
+### Stufe A — Produktstandard nach Plattformfreigabe
 
-Ein gemeinsamer Windows- oder macOS-Host mit zwei NICs, expliziten Host-IP-
+Ein gemeinsamer freigegebener Host mit zwei NICs, expliziten Host-IP-
 Publishes, getrennten Proxy-Listenern, Host-Firewall, keinem Forwarding und
 Black-Box-Abnahme. Das begrenzt die eingehende Angriffsfläche, lässt Portal und
 Staff aber bewusst im selben App-Kern und auf demselben Host.
@@ -179,50 +175,6 @@ getrennten Host beziehungsweise Segment. Nur erforderliche Verbindungen werden
 freigegeben. Das reduziert den erreichbaren Bereich bei einer kompromittierten
 Anwendung, ohne die Software in zwei Laufzeiten zu teilen. Diese Stufe ist die
 sinnvollste zusätzliche Empfehlung an eine Praxis-IT.
-
-### Stufe C — getrennte Portal- und Core-VMs (Discovery)
-
-Für eine stärkere Workload-Grenze ist unter Windows ein späteres Hyper-V-
-Zielbild denkbar:
-
-```text
-UNTRUSTED                                                        TRUSTED
-Patientensegment                                               Staffsegment
-      │                                                              │
-physische NIC 2                                               physische NIC 1
-      │                                                              │
-externer vSwitch                                             externer vSwitch
-      │                                                              │
-Portal-VM ───────── privater vSwitch + enge API-Policy ─────────── Core-VM
-```
-
-- Die Portal-VM erhält nur eine externe Verbindung zum Patientensegment.
-- Die Core-VM erhält nur eine externe Verbindung zum Staffsegment.
-- Ein privater Hyper-V-Switch verbindet ausschließlich die beiden VMs.
-- Die Core-Firewall erlaubt von der Portal-VM nur den definierten Backend-
-  Endpunkt; Datenbank und Staff-Oberflächen werden nicht exponiert.
-- Wird beim externen Switch die gemeinsame Nutzung durch das Management-OS
-  deaktiviert, erhält Windows über diesen Switch keinen eigenen virtuellen
-  Netzwerkadapter. Das ist präziser als die Aussage, die physische NIC gehöre
-  vollständig einer einzelnen VM.
-
-Diese Stufe ist **heute keine Installationsvariante von Praxis Flow**. Der
-aktuelle gemeinsame App-Kern lässt sich nicht durch die Praxis-IT in Portal und
-Core aufteilen. Vor einer Produktentscheidung wären mindestens nötig:
-
-- eigener, minimaler Portal-zu-Core-API-Vertrag samt gegenseitiger
-  Authentisierung und Autorisierung;
-- Festlegung von Session-, Upload- und Datenverantwortung;
-- Fail-closed Firewall- und Routing-Regeln einschließlich IPv6;
-- automatisierte VM-Erstellung, Patchen, Monitoring und Zertifikatsbetrieb;
-- gemeinsames Update-, Backup-, Restore- und Disaster-Recovery-Konzept;
-- Ressourcen-, Lizenz- und Hardwareprüfung sowie Abnahme eines VM-/Hyper-V-
-  Escape-Risikos als verbleibendes Restrisiko.
-
-Hyper-V auf Windows-Clients setzt eine unterstützte Windows-Pro-/Enterprise-
-Edition und passende Hardwarevirtualisierung voraus. Zwei Linux-VMs erhöhen
-außerdem RAM-, Storage-, Patch- und Betriebsaufwand. Die Variante sollte daher
-nur als eigene Produkt-Discovery gegen Stufe B bewertet werden.
 
 ## 5. Produktseitige Härtung — Praxis Flow
 
@@ -238,8 +190,11 @@ kleine Portal-Angriffsfläche:
 - zeitnahe Updates, nachvollziehbare Logs ohne Gesundheitsdaten und
   wiederholbare Security-Tests.
 
-Diese Maßnahmen werden im Produktplan als Freigabekriterien geführt. Sie dürfen
-nicht auf die Praxis-IT verlagert werden.
+Diese Maßnahmen gehören zum Produktvertrag und dürfen nicht auf die Praxis-IT
+verlagert werden. Portal und Staff bleiben dabei bewusst in einem gemeinsamen
+Frontend- und App-Stack. Die Sicherheitsgrenze entsteht durch die
+Restricted-Proxy-Positivliste und die serverseitige API-Autorisierung, nicht
+durch getrennte Bundles oder Laufzeiten.
 
 ## 6. Informationen für die IT-Übergabe
 
@@ -263,6 +218,3 @@ Punkte geklärt sein:
 - Docker: [Docker-Desktop-Netzwerk und Backend-Prozess](https://docs.docker.com/desktop/features/networking/networking-how-tos/)
 - Docker: [`macvlan`-Plattformgrenzen](https://docs.docker.com/engine/network/drivers/macvlan/)
 - Docker: [Compose-Service-Härtungsoptionen](https://docs.docker.com/reference/compose-file/services/)
-- Microsoft: [Hyper-V-Switchtypen](https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/features-terminology)
-- Microsoft: [`New-VMSwitch` und `AllowManagementOS`](https://learn.microsoft.com/en-us/powershell/module/hyper-v/new-vmswitch)
-- Microsoft: [Hyper-V-Systemanforderungen](https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/host-hardware-requirements)

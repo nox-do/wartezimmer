@@ -3,11 +3,11 @@
 Stand: 2026-08-27
 
 Status: **Historischer Implementierungsplan; abgelöst.** Verbindlicher Ops-Ist und
-aktuelle UX: [`operations/tls.md`](operations/tls.md). Insbesondere die nachfolgend
+aktuelle UX: [`../operations/tls.md`](../operations/tls.md). Insbesondere die nachfolgend
 beschriebene TLS-Vorbereitung im Wizard wurde entfernt; die gesamte TLS-Strecke liegt
 heute unter **Netzwerk**.
 Architektur, Compose, Setup-API und ACME: [`plan-proxy-tls.md`](plan-proxy-tls.md).
-HTTP-Ist: [`../manager/README.md`](../manager/README.md), Netzwerk-Tab.
+HTTP-Ist: [`../../manager/README.md`](../../manager/README.md), Netzwerk-Tab.
 
 TLS ist keine Erweiterung der Port-80-Checkbox. Eigene Strecke, eigener Zustand.
 **Voraussetzung:** Port 80 (HTTP-Proxy) muss an sein. Ohne Proxy entfällt der

@@ -1,7 +1,8 @@
 # Neuinstallation und Recovery
 
-Stand: 2026-09-21. Diese Betriebsbeschreibung ist der aktuelle Vertrag; die
-Implementierungspläne dokumentieren die Entwurfsentscheidungen.
+Stand: 2026-09-21. Diese Betriebsbeschreibung ist der aktuelle Vertrag; der
+abgeschlossene [Implementierungsplan](../archive/plan-reinstall-recovery.md)
+dokumentiert nur noch die Entwurfsentscheidungen.
 
 ## Einstieg im Manager
 

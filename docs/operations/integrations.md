@@ -19,9 +19,9 @@ Nicht: LAN-TLS/Proxy → [`tls.md`](tls.md) · Compose-Alltag → [`runtime.md`]
 | **Lab**               | openNDS-Gateway-Stack **entfernt** aus dem Repo (Compose/`gateway/`); Historie: [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md); Adapter-Entwurf: [`../archive/roadmap-captive-portal-adapters.md`](../archive/roadmap-captive-portal-adapters.md) |
 
 WLAN-Hardware bleibt Praxis-IT. Internet-Portal/Whitelist = **nicht Produkt** (Outlook).
-Restricted-IP-/Listener-Grenze (Portal-v1) ist davon getrennt:
-[`plan-portal-lan-isolation.md`](../plan-portal-lan-isolation.md) und
-[`plan-manager-restricted-network-access.md`](../plan-manager-restricted-network-access.md).
+Restricted-IP-/Listener-Grenze (Portal-v1) ist davon getrennt und wird unter
+[`tls.md`](tls.md), [`restricted-lifecycle.md`](restricted-lifecycle.md) und
+[`praxis-it-network-isolation.md`](praxis-it-network-isolation.md) beschrieben.
 
 ## 2. SMS / WhatsApp — implementiert (teilweise)
 

@@ -7,7 +7,7 @@ Manager-Dateidialog und Pre-Update-Backup verwenden eine einzelne JSON-Datei
 mit eingebetteten HTTPS-Daten. Alte Backup-Formate werden abgelehnt; es gibt
 keine Migration. HTTPS-Überschreibbestätigung und Erhalt der Ziel-Secrets sind
 umgesetzt. Recovery-Discovery, Pinning und der Reinstall-Recovery-Assistent
-sind ebenfalls angebunden; siehe [Betriebsvertrag](operations/reinstall-recovery.md).
+sind ebenfalls angebunden; siehe [Betriebsvertrag](../operations/reinstall-recovery.md).
 
 Eine Installation, ein Backup, eine Datei. Altes Format (JSON ohne
 `tlsArchiveBase64`, Geschwister-`.tgz`) wird nicht gelesen. Nach dem Cut nur
@@ -116,9 +116,9 @@ Metadaten blocken.
 
 ## Sicherheit und Nutzerhinweis
 
-**Geplante Umsetzung in Schnitt 3/4, noch nicht implementiert.** Maßgeblich
-ist das am 2026-08-31 korrigierte Sicherheitsmodell in
-[`settings-backup-classification.md`](settings-backup-classification.md#sicherheitsmodell-entschieden-schlank).
+Dieser Abschnitt dokumentiert die damalige Entscheidung. Der geltende
+Sicherheits- und Backup-Vertrag steht in
+[`operations/backup.md`](../operations/backup.md).
 
 Provider-Credentials liegen als Klartext-JSON in `credentials_json` und werden
 unverändert gesichert. Es gibt keine Verschlüsselung über die MFA-PIN und

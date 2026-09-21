@@ -3,9 +3,9 @@
 Stand: 2026-09-13
 
 Status: **Historischer Ausgangsplan; Produkt umgesetzt.** Normativer Ops-Ist:
-[`operations/tls.md`](operations/tls.md). Der aktuelle Managed-Namensvertrag und
-die Reihenfolge vor dem Restricted-/Portal-Binding stehen in
-[`plan-portal-lan-isolation.md`](plan-portal-lan-isolation.md#52-ein-wildcard-zertifikat-pro-installation).
+[`../operations/tls.md`](../operations/tls.md). Der aktuelle Managed-Namensvertrag
+und das Restricted-/Portal-Binding stehen ebenfalls dort sowie in
+[`../operations/restricted-lifecycle.md`](../operations/restricted-lifecycle.md).
 Die nachfolgenden Single-Hostname-Beispiele dokumentieren den früheren
 Ausgangspunkt und sind kein aktueller Implementierungsvertrag.
 
@@ -16,8 +16,8 @@ ACME-Order für `*.<raum>`. Canonical ist `https://staff.<raum>`.
 unbekannte Wildcard-Host von Caddy abgebrochen. Custom und Legacy bleiben beim
 einzelnen Exact-FQDN.
 
-HTTP-Proxy auf Port 80 ist Ist — [`delivery.md`](operations/delivery.md),
-[`runtime.md`](operations/runtime.md).
+HTTP-Proxy auf Port 80 ist Ist — [`delivery.md`](../operations/delivery.md),
+[`runtime.md`](../operations/runtime.md).
 Die weiter unten genannten globalen Proxy-Publishes beschreiben ausschließlich
 den historischen Ausgangspunkt. Im aktuellen Produkt bindet der Proxy Port 80
 und 443 an `SETUP_LAN_APP_IP`; nur der proxyfreie Demo-/Erststart bleibt bewusst
@@ -87,7 +87,7 @@ Ziel:  Browser ── HTTPS/h2 ───> proxy:443 ─ HTTP/1.1 ──> app:808
 
 TLS schafft Vertraulichkeit. HTTP/2 über HTTPS beseitigt das Browserlimit für parallele
 lang laufende HTTP/1.1-Verbindungen (Queue- und Ops-SSE). `h2c` ist kein Produktweg;
-ein app-seitiges Connection-Budget bleibt separat — [`todo.md`](../todo.md).
+ein app-seitiges Connection-Budget blieb außerhalb dieses Plans.
 Caddy terminiert TLS und handelt `h2` aus; der Hop `proxy → app` bleibt HTTP/1.1.
 
 ## Zielarchitektur
@@ -517,7 +517,7 @@ Rebind ist **keine** `verify-dns`-Klasse — nur Praxis-Meldung nach Cutover.
 ## Backup und Restore
 
 Zwei Artefakte im Pilot, **kein** Formatbruch von `.pfbackup` v1
-([`backup.md`](operations/backup.md)):
+([`backup.md`](../operations/backup.md)):
 
 | Artefakt            | Inhalt                                                                                                                                                                                  | Wann                                                                        |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
@@ -617,8 +617,6 @@ Keine offenen Architektur-Punkte. Manager-Rest (zweites Gerät QR vs. Haken):
 - [Caddy ACME-DNS-Plugin](https://github.com/caddy-dns/acmedns)
 - [Let's Encrypt: Challenge Types](https://letsencrypt.org/docs/challenge-types/)
 - [Let's Encrypt Pebble](https://github.com/letsencrypt/pebble)
-- [`realtime.md`](architecture/realtime.md)
+- [`realtime.md`](../architecture/realtime.md)
 
 ## Umsetzung (historische Reihenfolge; TLS ist Produkt)
-
-Scope: [`roadmap.md`](roadmap.md).

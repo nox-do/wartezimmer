@@ -292,7 +292,7 @@ Patient kann den **generierten** Bogen im Portal **nicht** erneut öffnen oder s
 
 ---
 
-## Betrieb — Manager, Proxy, Gateway
+## Betrieb — Manager, Proxy und Integrationsgrenzen
 
 Kein Patienten-Flow — Rahmen für Installation und Erreichbarkeit. Fachliche Screens bleiben Flow 1–5.
 

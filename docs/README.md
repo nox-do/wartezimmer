@@ -33,20 +33,28 @@ LAN-TLS: [`operations/tls.md`](operations/tls.md).
 | [`operations/`](operations/)                   | IT / Release — Install, Compose, TLS, Backup   | [`operations/README.md`](operations/README.md)     |
 | [`../manager/README.md`](../manager/README.md) | Manager (Electron): Wizard, Setup-API, Wartung | —                                                  |
 
-## Intern — Pläne
+## Plattformstatus und offene Abnahme
 
-Arbeitsstände und Entwürfe. Historie: [`archive/README.md`](archive/README.md).  
-TLS-Ops-Ist: [`operations/tls.md`](operations/tls.md) — die TLS-Pläne unten sind Quellen bis zur Einarbeitung.
+Der aktuelle Betriebsvertrag steht unter [`operations/`](operations/);
+abgeschlossene Implementierungspläne und Labs liegen im
+[`Archiv`](archive/README.md). Für das Portal bleibt es bewusst bei einem
+gemeinsamen Frontend- und App-Stack. Die Sicherheitsgrenze bilden die
+Restricted-Proxy-Positivliste und die serverseitige API-Autorisierung.
 
-| Datei                                                                                    | Inhalt                                                                                                                            |
-| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| [`../todo.md`](../todo.md)                                                               | Aktuelle Arbeitsliste (intern)                                                                                                    |
-| [`plan-proxy-tls.md`](plan-proxy-tls.md)                                                 | LAN-TLS — Architektur (Quelle → `operations/tls.md`)                                                                              |
-| [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md)                                 | Manager-UX TLS (Quelle → `operations/tls.md`)                                                                                     |
-| [`plan-backup-v2.md`](plan-backup-v2.md)                                                 | `.pfbackup` v2 (Entwurf)                                                                                                          |
-| [`plan-portal-lan-isolation.md`](plan-portal-lan-isolation.md)                           | Produktentscheidung: eingeschränkte Netzwerkzone für das Portal · [Praxis-IT-Hinweise](operations/praxis-it-network-isolation.md) |
-| [`plan-manager-restricted-network-access.md`](plan-manager-restricted-network-access.md) | Manager-Umbau für Restricted-IP, Binding, Audit und UI                                                                            |
-| [`archive/README.md`](archive/README.md)                                                 | Auth-Slots, Manager-HTTPS-Aufräumen, Gateway-Lab, Captive-Adapter-Entwurf, Audit-OK-Liste, TLS-Lab                                |
+Die bisherige praktische Freigabe für explizite Staff-/Restricted-Bindings
+bezieht sich auf die dokumentierte macOS-/Docker-Desktop-Kombination. Vor einer
+Windows-Freigabe müssen noch nachgezogen werden:
+
+- Windows-Manager paketieren und installieren; unterstützte Windows- und
+  Docker-Desktop-Mindestversionen festlegen;
+- spezifische Host-IP-Publishes mit gleichzeitigem Staff- und
+  Restricted-Listener auf Port 443 nachweisen;
+- von getrennten Geräten beziehungsweise Netzen Staff positiv sowie
+  Kreuzzugriffe, globale Bindings und IPv6 negativ prüfen;
+- Docker-Neustart, Host-Reboot, Adressverlust und Repair mit aktivem TLS
+  einschließlich Fail-closed-Verhalten abnehmen;
+- Update, Restore und Rollback auf derselben Plattform prüfen und das Ergebnis
+  als Windows-Release-Gate automatisieren.
 
 ## API-Vertrag
 

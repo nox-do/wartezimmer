@@ -24,7 +24,11 @@ Eine Installation = **eine Praxis**, Stack lokal. Upgrade-/Restore-Vertrag: **Fr
 
 ## 2. Artefakt `.pfbackup`
 
-JSON-Container mit `pfbackupFormatVersion: 2`, `settingsFormatVersion: 1`. Ältere Backup-Formate werden abgelehnt, ohne Migration. Code: `setup/src/settings-backup*.ts`, App-Snapshot über Maintenance-API, Pack/Inspect in `packages/server-shared/src/pfbackup.ts`.
+Eine einzelne JSON-Datei mit `pfbackupFormatVersion: 2` und
+`settingsFormatVersion: 1`. Ältere Backup-Formate und separate TLS-Dateien
+werden abgelehnt, ohne Migration. Code: `setup/src/settings-backup*.ts`,
+App-Snapshot über Maintenance-API, Pack/Inspect in
+`packages/server-shared/src/pfbackup.ts`.
 
 ### 2.1 Inhalt
 
@@ -71,7 +75,8 @@ Wahrheit fachlich: **`ops_settings`** (+ JSON-Felder), nicht der Catalog. Nach I
   **Nicht:** `setup_last_step`, `waiting_room_full` (legacy-Spalte, Code ignoriert), `updated_at` / `id`
 - `auth_settings`: Staff-/Raum-PIN-**Hashes**
 - `messaging_provider_configs`: inkl. `credentials_json` (Klartext-Keys); IDs u. a. `mock`, `seven`, `seven_whatsapp`
-- `.env`: gesetzte Stack-Variablen Klartext (Praxis, Pfade, URLs, Gateway-Block wenn gesetzt, Tokens, Tuning)
+- `.env`: gesetzte Stack-Variablen Klartext (Praxis, Pfade, URLs, Tokens,
+  Tuning sowie gegebenenfalls noch vorhandene Legacy-Keys)
 
 ### 3.2 Nicht im Backup (Runtime)
 

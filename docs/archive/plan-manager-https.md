@@ -1,14 +1,14 @@
 # Plan: Manager — HTTPS aufräumen (archiviert)
 
 > **Archiv (2026-09-04).** Schnitte 1–3 erledigt. Nicht fortschreiben.
-> Ops-Ist: [`../operations/tls.md`](../operations/tls.md). Nächster TLS-Hebel:
-> Portal-Isolation [`../plan-portal-lan-isolation.md`](../plan-portal-lan-isolation.md).
+> Ops-Ist: [`../operations/tls.md`](../operations/tls.md). Restricted-Betrieb:
+> [`../operations/restricted-lifecycle.md`](../operations/restricted-lifecycle.md).
 
 Stand: 2026-08-29
 
 Status: **Schnitte 1–3 umgesetzt und reviewt.** Produkt-Happy-Path:
-[`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md). ACME/Compose/Caddy:
-[`../plan-proxy-tls.md`](../plan-proxy-tls.md).
+[`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md). ACME/Compose/Caddy:
+[`plan-proxy-tls.md`](plan-proxy-tls.md).
 
 Eine Installation, ein Betreiber, ein Manager. Kein Multi-Tenant, kein
 Zentral-Produkt, kein SMTP, kein Captive-Adapter.
@@ -41,7 +41,7 @@ gemeinsame Prepare-Komponente, Mock als zweiten Vertrag.
 4. Apply-Fail: Graph unverändert (`dns-verified` + `applyReady` + `lastError`).
    Sichtbar machen nur im Renderer. Keine `fail`-Transition dafür.
 5. Die neun `TlsErrorClass`-Werte bleiben Produktvertrag
-   ([`../plan-proxy-tls.md`](../plan-proxy-tls.md)). Offen ist nur, welche Copy die UI
+   ([`plan-proxy-tls.md`](plan-proxy-tls.md)). Offen ist nur, welche Copy die UI
    **bindet**. Union nicht streichen.
 6. Kein Boot-, View-Unmount- oder IPC-Mitnahme.
 7. `host-tls.ts` nicht „weil groß“ zerlegen.
@@ -253,10 +253,10 @@ Button „Fortsetzen“. Kein „unter Netzwerk“ in der Copy. Warte-Zusatz
 
 ## Abgrenzung zu den anderen Plänen
 
-| Dokument                                                       | Rolle                                                             |
-| -------------------------------------------------------------- | ----------------------------------------------------------------- |
-| [`../plan-proxy-tls.md`](../plan-proxy-tls.md)                 | Caddy, ACME-DNS, Overlay, Port 443; Klassenliste im Vertrag       |
-| [`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md) | Mailtext, Namenswahl, Cutover-Warnung, Flächen-Soll               |
-| **dieses (Archiv)**                                            | Drift Assistent/Netzwerk/Status; welche Klasse die UI wann zeigte |
+| Dokument                                                 | Rolle                                                             |
+| -------------------------------------------------------- | ----------------------------------------------------------------- |
+| [`plan-proxy-tls.md`](plan-proxy-tls.md)                 | Caddy, ACME-DNS, Overlay, Port 443; Klassenliste im Vertrag       |
+| [`plan-proxy-tls-manager.md`](plan-proxy-tls-manager.md) | Mailtext, Namenswahl, Cutover-Warnung, Flächen-Soll               |
+| **dieses (Archiv)**                                      | Drift Assistent/Netzwerk/Status; welche Klasse die UI wann zeigte |
 
 Konflikt: Ops-Ist und Produktpläne zuerst; dieses Dokument nicht fortschreiben.

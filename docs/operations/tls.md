@@ -1,14 +1,14 @@
 # LAN-TLS (Produkt)
 
-Stand: 2026-09-17 · §1–10 ausgearbeitet (Ops-Ist LAN-TLS + Restricted Portal)
+Stand: 2026-09-21 · Ops-Ist für Wildcard-LAN-TLS und Restricted Portal
 
 **Scope:** Vertrauenswürdiges HTTPS im Praxis-LAN — Modell, Aktivierung, Betrieb, Grenzen.  
 **Ist:** TLS-Einrichtung ausschließlich im Netzwerk-Tab; Setup-API `/api/setup/host/tls/*`; Proxy-Service mit Custom-Caddy-Image.
 
 Quellen (Historie; Ops-Ist ist dieses Dokument):
 
-- Architektur/ACME/Compose: [`../plan-proxy-tls.md`](../plan-proxy-tls.md)
-- Manager-UX: [`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md)
+- Architektur/ACME/Compose: [`../archive/plan-proxy-tls.md`](../archive/plan-proxy-tls.md)
+- Manager-UX: [`../archive/plan-proxy-tls-manager.md`](../archive/plan-proxy-tls-manager.md)
 - HTTPS-UI-Aufräumen (erledigt): [`../archive/plan-manager-https.md`](../archive/plan-manager-https.md)
 - Lab (Pebble): [`../archive/tls-lab.md`](../archive/tls-lab.md) — **nicht Produkt**
 - Code: `setup/src/host-tls.ts`, `proxy-tls.ts`, `docker.ts`; Manager `tls-network-controller.ts`; `SETUP_TLS_ROUTES` in `packages/server-shared/src/setup-api.ts`
@@ -105,7 +105,7 @@ verweigert Start oder Recreate, wenn diese Adresse fehlt oder nicht lokal ist.
 
 Compose-Stacking (`setup/src/docker.ts`): Base → `docker-compose.proxy(.delivery).yml` wenn `PROXY_ENABLED` + aktiver Mode → optional `proxy-tls(.delivery).yml` → Lab nur bei `TLS_ACME_DIRECTORY=pebble`.
 
-Image: `PRAXIS_FLOW_PROXY_IMAGE` (Delivery: `praxis-flow-proxy:…-acmedns`, sonst Default `caddy:2.11.4`); Delivery `pull_policy: never` (app/sandbox/proxy/gateway) — siehe [`delivery.md`](delivery.md) §3.
+Image: `PRAXIS_FLOW_PROXY_IMAGE` (Delivery: `praxis-flow-proxy:…-acmedns`, sonst Default `caddy:2.11.4`); Delivery `pull_policy: never` (app/sandbox/proxy) — siehe [`delivery.md`](delivery.md) §3.
 
 ### Env (Auszug)
 
@@ -257,7 +257,7 @@ Ein `proxy`-Service, gestapelte Compose-Dateien. Setup wählt Overlays über `.e
 | Restricted-Publish  | `docker-compose.proxy-restricted.yml`                             | `docker-compose.proxy-restricted.delivery.yml` |
 | Lab (nicht Produkt) | `docker-compose.tls-lab.yml` + `docker-compose.tls-lab-proxy.yml` | —                                              |
 
-**Regel:** TLS-Overlay nur **nach** Proxy-Overlay. Lab nur wenn TLS-Overlay an **und** `TLS_ACME_DIRECTORY=pebble` **und** Dev-Compose (nie Delivery). Gateway bleibt orthogonal.
+**Regel:** TLS-Overlay nur **nach** Proxy-Overlay. Lab nur wenn TLS-Overlay an **und** `TLS_ACME_DIRECTORY=pebble` **und** Dev-Compose (nie Delivery).
 Das Restricted-Overlay wird ausschließlich bei aktivem
 `SETUP_RESTRICTED_ENABLED=true` ausgewählt. Dieser Marker wird erst durch das
 transaktionale Restricted-Apply nach IP-, Interface-, TLS- und DNS-Prüfung
@@ -287,7 +287,7 @@ verwendeten Host-IP ist kein zusätzlicher Blocker.
 |                |                                                                                                                                        |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | Image          | `PRAXIS_FLOW_PROXY_IMAGE` — Delivery: `praxis-flow-proxy:…-acmedns` (xcaddy + `dns.providers.acmedns`); Fallback/Legacy `caddy:2.11.4` |
-| Delivery       | `pull_policy: never` auf app/sandbox/proxy (+ gateway) — kein Registry-Nachzug in der Praxis                                           |
+| Delivery       | `pull_policy: never` auf app/sandbox/proxy — kein Registry-Nachzug in der Praxis                                                       |
 | Port 80        | immer mit Proxy-Overlay (`PROXY_HTTP_PORT`, Default 80)                                                                                |
 | Port 443       | nur mit TLS-Overlay (`PROXY_HTTPS_PORT`, Default 443)                                                                                  |
 | Restricted 443 | separates Opt-in-Overlay: `<restricted-ip>:443 → proxy:444`; 444 ist nur containerintern                                               |
@@ -296,7 +296,9 @@ Managed-ACME braucht das Custom-Image. Stock-Caddy reicht für reines HTTP und k
 
 ### 6.4 Persistenz `state/tls/` (Install-Home)
 
-Pfade: `resolveProxyTlsPaths` → `{installHome}/state/tls/`. **Nicht** in Git, **nicht** im `.pfbackup` v1 (§8).
+Pfade: `resolveProxyTlsPaths` → `{installHome}/state/tls/`. **Nicht** in Git;
+bei `.pfbackup` v2 als internes TLS-Archiv in derselben Backup-Datei enthalten
+(§8).
 
 | Pfad                                           | Inhalt                                                                                                                                                   |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -415,7 +417,10 @@ LAN-IP veraltet bei noch gültigem Cert: oft `degraded` — IP korrigieren bzw. 
 
 ## 8. Backup & Restore
 
-Kurz die TLS-Grenze; Tiefe (Export-Allowlist, Cutover mit Update, Manager-Wizard): [`backup.md`](backup.md). Code: `packages/server-shared/src/tls-backup.ts`, `setup/src/tls-backup-sidecar.ts`.
+Kurz die TLS-Grenze; Tiefe (Export-Allowlist, Cutover mit Update,
+Restore-Assistent): [`backup.md`](backup.md). Der interne Modulname
+`setup/src/tls-backup-sidecar.ts` ist historisch; ausgeliefert wird keine
+separate Sidecar-Datei. Das TLS-Archiv steckt in derselben `.pfbackup`.
 
 ### 8.1 Eine Datei
 
@@ -441,7 +446,7 @@ Payload; fehlende oder widersprüchliche Daten blockieren vor dem Stack-Stopp.
 
 Beim Identitätsvergleich müssen Installations-ID und Hostname nichtleer und
 gleich sein. Vorhandene Managed-Felder für Raum, Staff, Portal und Wildcard
-müssen vollständig übereinstimmen. Mehr zum Vertrag: [Backup v2](../plan-backup-v2.md).
+müssen vollständig übereinstimmen. Mehr zum Vertrag: [Backup und Restore](backup.md).
 
 ## 9. Nicht Produkt / Lab
 
@@ -461,20 +466,21 @@ Produkt-Stack enthält **nie** Pebble / Lab-acme-dns / CoreDNS (`COMPOSE_TLS_LAB
 
 Gateway/Captive/Internet-Portal sind **andere** Themen → [`integrations.md`](integrations.md), nicht LAN-TLS.
 
-## 10. Abgrenzung zu Plänen
+## 10. Verbindliche und historische Dokumente
 
-| Dokument                                                                                       | Rolle                                                                |
-| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| **Dieses** (`operations/tls.md`)                                                               | **Ops-Ist** — was Betreiber/Support/Entwickler heute brauchen        |
-| [`../plan-proxy-tls.md`](../plan-proxy-tls.md)                                                 | Architektur-/Zielhistorie (ACME, Compose, State-Maschine)            |
-| [`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md)                                 | Manager-UX-Historie                                                  |
-| [`../archive/plan-manager-https.md`](../archive/plan-manager-https.md)                         | HTTPS-UI-Aufräumen (erledigt; Gates in Manager-View-Model)           |
-| [`../plan-portal-lan-isolation.md`](../plan-portal-lan-isolation.md)                           | Staff-/Wildcard-Basis umgesetzt; Restricted-/Portal-Listener geplant |
-| [`../plan-manager-restricted-network-access.md`](../plan-manager-restricted-network-access.md) | Zukunft: zusätzliche eingeschränkte Host-IP im Manager               |
-| [`../archive/tls-lab.md`](../archive/tls-lab.md)                                               | Lab, nicht Produkt                                                   |
-| [`../plan-backup-v2.md`](../plan-backup-v2.md)                                                 | Backup-Format v2 — **nicht** hier fortschreiben                      |
+| Dokument                                                                       | Rolle                                                      |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| **Dieses** (`operations/tls.md`)                                               | **Ops-Ist** für TLS und Restricted Listener                |
+| [`restricted-lifecycle.md`](restricted-lifecycle.md)                           | Apply/Remove, Crash-Recovery und Updatevertrag             |
+| [`praxis-it-network-isolation.md`](praxis-it-network-isolation.md)             | Verantwortungsgrenze und praktische Netzabnahme            |
+| [`backup.md`](backup.md)                                                       | Geltender `.pfbackup`-v2-Vertrag                           |
+| [`../archive/plan-proxy-tls.md`](../archive/plan-proxy-tls.md)                 | Architektur-/Zielhistorie (ACME, Compose, State-Maschine)  |
+| [`../archive/plan-proxy-tls-manager.md`](../archive/plan-proxy-tls-manager.md) | Manager-UX-Historie                                        |
+| [`../archive/plan-manager-https.md`](../archive/plan-manager-https.md)         | HTTPS-UI-Aufräumen (erledigt; Gates im Manager-View-Model) |
+| [`../archive/tls-lab.md`](../archive/tls-lab.md)                               | Lab, nicht Produkt                                         |
 
-Wenn Ist und Plan kollidieren: **Code + dieses Dokument**. Pläne nach und nach auf „übernommen / archivieren“ setzen, nicht parallel als zweite Ops-Wahrheit pflegen.
+Bei Abweichungen gelten **Code und diese Betriebsdokumentation**. Historische
+Pläne sind keine parallele Source of Truth.
 
 ### Restricted-Vertrag ab Generator v6
 

@@ -130,7 +130,7 @@ Setup-API (Manager-Child auf Loopback; CLI-Default `127.0.0.1:9190`):
 | GET     | `/api/setup/host/compose/logs`     | Log-Auszug                                                                                             |
 | POST    | `/api/setup/host/compose`          | `{ action: start\|stop\|restart }`                                                                     |
 | GET     | `/api/setup/host/backup`           | Info zum letzten `.pfbackup`                                                                           |
-| POST    | `/api/setup/host/backup`           | `.pfbackup` erzeugen (+ TLS-Sidecar wenn `tls.state ≠ off`)                                            |
+| POST    | `/api/setup/host/backup`           | eine `.pfbackup` v2 erzeugen (bei HTTPS mit eingebettetem TLS-Archiv)                                  |
 | POST    | `/api/setup/host/backup/validate`  | Archiv + Settings validieren                                                                           |
 | POST    | `/api/setup/host/backup/inspect`   | Inspect/Vorschau inkl. Kompatibilität & TLS-Gate                                                       |
 | POST    | `/api/setup/host/backup/restore`   | Fresh-DB-Cutover + Settings-Import                                                                     |
@@ -192,4 +192,6 @@ npm run -w @praxis-flow/manager typecheck
 npm run -w @praxis-flow/setup test
 ```
 
-LAN-TLS (Produkt): [`docs/operations/tls.md`](../docs/operations/tls.md). Detailquellen: [`docs/plan-proxy-tls.md`](../docs/plan-proxy-tls.md), [`docs/plan-proxy-tls-manager.md`](../docs/plan-proxy-tls-manager.md).
+LAN-TLS (Produkt): [`docs/operations/tls.md`](../docs/operations/tls.md).
+Historische Detailpläne: [`docs/archive/plan-proxy-tls.md`](../docs/archive/plan-proxy-tls.md),
+[`docs/archive/plan-proxy-tls-manager.md`](../docs/archive/plan-proxy-tls-manager.md).
