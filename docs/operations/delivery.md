@@ -91,17 +91,17 @@ Konstante im Code: `PRAXIS_FLOW_PROXY_IMAGE_REF` in `packages/server-shared/src/
 **Dev-Tags:**
 
 ```bash
-docker compose build                 # praxis-flow/app:local, sandbox:local
-npm run release:pfupdate:current     # packt :local ohne Rebuild
+docker compose build                                  # praxis-flow/app:local, sandbox:local
+npm run release:pfupdate:current -- --version local   # packt :local ohne Rebuild
 ```
 
 ### Build-Scripts (kurz)
 
-| Script                                    | Zweck                        |
-| ----------------------------------------- | ---------------------------- |
-| `release:images` / `:pack` / `:current`   | Erstinstall-Archiv           |
-| `release:pfupdate` / `:pack` / `:current` | Update-Paket (+ Validierung) |
-| `dist:manager:mac`                        | Manager-DMG                  |
+| Script                          | Zweck                                                         |
+| ------------------------------- | ------------------------------------------------------------- |
+| `release:images` / `:current`   | Erstinstall-Archiv; `:current` packt vorhandene lokale Images |
+| `release:pfupdate` / `:current` | Update-Paket; `:current` packt vorhandene lokale Images       |
+| `dist:manager:mac`              | Manager-DMG                                                   |
 
 Pipelines und Ausgabe-Layouts: [§6](#6-build-wie-die-artefakte-entstehen).
 

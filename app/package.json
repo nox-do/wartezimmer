@@ -10,8 +10,7 @@
     "start": "node dist/server.js",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "node ../scripts/run-node-tests.mjs --import tsx --root src --exclude src/routes/ops/ops-device-stream-routes.test.ts --exclude src/routes/ops/ops-stream-routes.test.ts --exclude src/routes/queue-stream-routes.test.ts",
-    "test:network": "node --import tsx --test src/routes/ops/ops-device-stream-routes.test.ts src/routes/ops/ops-stream-routes.test.ts src/routes/queue-stream-routes.test.ts",
-    "test:all": "npm run test && npm run test:network",
+    "test:network": "node --import tsx --test --test-reporter=dot src/routes/ops/ops-device-stream-routes.test.ts src/routes/ops/ops-stream-routes.test.ts src/routes/queue-stream-routes.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

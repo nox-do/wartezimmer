@@ -6,7 +6,7 @@
  *   npm run release:pfupdate
  *   npm run release:pfupdate -- --version 2026.08.0
  *   PRAXIS_FLOW_RELEASE_VERSION=2026.08.0 npm run release:pfupdate
- *   npm run release:pfupdate:pack -- --version 2026.08.0   # pack only, skip build
+ *   npm run release:pfupdate:current -- --version 2026.08.0   # pack only, skip build
  *
  * Output:
  *   dist/releases/praxis-flow-update-<version>.pfupdate
@@ -97,12 +97,6 @@ function parseArgs(argv) {
     if (arg === '--no-build') {
       noBuild = true;
       continue;
-    }
-    if (arg === '--with-gateway') {
-      console.error(
-        '--with-gateway was removed: the openNDS lab gateway stack is no longer in the product tree.',
-      );
-      process.exit(1);
     }
   }
 

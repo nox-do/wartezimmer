@@ -7,10 +7,9 @@
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test src/*.test.ts",
+    "test": "node --import tsx --test --test-reporter=dot src/*.test.ts",
     "cli": "tsx src/cli.ts",
     "serve": "tsx src/server.ts",
-    "regenerate-proxy-config": "node --import tsx src/regenerate-proxy-config-cli.ts",
     "reset": "tsx src/reset-cli.ts"
   },
   "dependencies": {

@@ -8,10 +8,9 @@
     "build": "vite build",
     "preview": "vite preview --port 5180",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "generate:openapi-types": "node ../scripts/generate-openapi-types.mjs",
     "typecheck": "npm run check",
     "lint": "eslint \"src/**/*.{ts,svelte}\"",
-    "test": "vitest run",
+    "test": "vitest run --reporter=dot",
     "test:watch": "vitest"
   },
   "devDependencies": {

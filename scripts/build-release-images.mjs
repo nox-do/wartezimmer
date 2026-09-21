@@ -9,7 +9,7 @@
  *   npm run release:images
  *   npm run release:images -- --version 1.4.2
  *   PRAXIS_FLOW_RELEASE_VERSION=1.4.2 npm run release:images
- *   npm run release:images:pack -- --version 1.4.2   # pack only, skip build
+ *   npm run release:images:current -- --version 1.4.2   # pack only, skip build
  *
  * Output (under dist/releases/praxis-flow-<version>/):
  *   praxis-flow-<version>.pfinstall (complete offline bundle)

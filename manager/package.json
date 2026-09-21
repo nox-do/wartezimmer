@@ -12,7 +12,7 @@
     "dist:mac": "npm run prepare:packaged && npm run build && electron-builder --mac dmg",
     "lint": "eslint \"src/**/*.{ts,svelte}\"",
     "smoke:electron": "npm run build && node scripts/smoke-electron.mjs",
-    "test": "node --import tsx --test src/**/*.test.ts",
+    "test": "node --import tsx --test --test-reporter=dot src/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit && svelte-check --tsconfig tsconfig.json"
   },
   "dependencies": {

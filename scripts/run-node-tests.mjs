@@ -62,9 +62,13 @@ if (files.length === 0) {
 }
 
 const nodeArgs = imports.flatMap((moduleName) => ['--import', moduleName]);
-const result = spawnSync(process.execPath, [...nodeArgs, '--test', ...files], {
-  stdio: 'inherit',
-});
+const result = spawnSync(
+  process.execPath,
+  [...nodeArgs, '--test', '--test-reporter=dot', ...files],
+  {
+    stdio: 'inherit',
+  },
+);
 
 if (result.error) {
   throw result.error;
