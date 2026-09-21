@@ -1,7 +1,7 @@
 {
   "name": "@praxis-flow/manager",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "productName": "Praxis Flow Manager",
   "type": "module",
   "main": "./out/main/index.js",

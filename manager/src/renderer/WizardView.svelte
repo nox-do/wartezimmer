@@ -26,7 +26,7 @@
   }: {
     onComplete: () => void;
     onCancel: () => void;
-    onHostMutated?: () => void;
+    onHostMutated?: () => void | Promise<void>;
   } = $props();
 
   let snapshot = $state<WizardControllerState | null>(null);

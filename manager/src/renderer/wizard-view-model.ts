@@ -125,8 +125,6 @@ export function wizardStepTitle(step: WizardStep): string {
       return 'Voraussetzungen';
     case 3:
       return 'Import & Export';
-    case 4:
-      return 'Praxisadresse und Gerätezugriff';
     case 5:
       return 'Zugriff im Praxisnetz';
     case 6:

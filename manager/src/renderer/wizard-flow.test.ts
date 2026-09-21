@@ -38,6 +38,8 @@ test('previousWizardStep walks back through wizard steps', () => {
   assert.equal(previousWizardStep(1), 1);
   assert.equal(previousWizardStep(3), 1);
   assert.equal(previousWizardStep(8), 7);
+  assert.equal(previousWizardStep(5), 3);
+  assert.equal(previousWizardStep(6), 5);
 });
 
 test('canLeaveWizardStep1 requires docker and delivery images', () => {
@@ -86,20 +88,25 @@ test('planWizardAdvance loads network when leaving folders', () => {
   state.exportsHostPath = '/exports';
   assert.deepEqual(planWizardAdvance(3, state), {
     type: 'goto',
-    step: 4,
+    step: 5,
     after: 'loadNetwork',
   });
 });
 
-test('planWizardAdvance validates LAN IP on network step 4', () => {
-  const state = createWizardFlowState(freshInstallHostStatus(), 4);
-  assert.equal(planWizardAdvance(4, state).type, 'validate-error');
+test('planWizardAdvance validates LAN IP on combined access step', () => {
+  const state = createWizardFlowState(freshInstallHostStatus(), 5);
+  assert.equal(planWizardAdvance(5, state).type, 'validate-error');
 });
 
-test('planWizardAdvance advances from network to access when LAN and reachability are set', () => {
-  const state = createWizardFlowState(minimalHostStatus(), 4);
+test('combined access step proceeds directly to preview without proxy', () => {
+  const state = createWizardFlowState(minimalHostStatus(), 5);
   state.lanAppIp = '192.168.1.10';
-  assert.deepEqual(planWizardAdvance(4, state), { type: 'goto', step: 5 });
+  assert.deepEqual(planWizardAdvance(5, state), {
+    type: 'goto',
+    step: 7,
+    patch: { plan: null },
+    after: 'loadPlan',
+  });
 });
 
 test('planWizardAdvance skips HTTPS without proxy and loads the plan', () => {
@@ -123,10 +130,10 @@ test('planWizardAdvance enters HTTPS when proxy is on', () => {
   });
 });
 
-test('planWizardAdvance skips prepare when HTTPS is deferred', () => {
+test('planWizardAdvance defaults to HTTP without preparing HTTPS', () => {
   const state = createWizardFlowState(minimalHostStatus(), 6);
   state.proxyEnabled = true;
-  state.httpsOfferChoice = 'later';
+  assert.equal(state.httpsOfferChoice, 'later');
   assert.deepEqual(planWizardAdvance(6, state), {
     type: 'goto',
     step: 7,
@@ -138,6 +145,7 @@ test('planWizardAdvance skips prepare when HTTPS is deferred', () => {
 test('planWizardAdvance walks HTTPS phases and prepares after the lease', () => {
   const state = createWizardFlowState(minimalHostStatus(), 6);
   state.proxyEnabled = true;
+  state.httpsOfferChoice = 'now';
   assert.deepEqual(planWizardAdvance(6, state), { type: 'https-phase', phase: 'hostname' });
 
   state.httpsPhase = 'hostname';
@@ -325,7 +333,7 @@ test('wizardProbeFailureHint distinguishes local startup from LAN issues', () =>
 
 for (const proxyEnabled of [false, true]) {
   test(`new setup derives device address from IP with proxy ${proxyEnabled}`, () => {
-    const state = createWizardFlowState(freshInstallHostStatus(), 4);
+    const state = createWizardFlowState(freshInstallHostStatus(), 5);
     state.lanAppIp = '192.168.1.25';
     state.proxyEnabled = proxyEnabled;
     state.network = {
@@ -346,7 +354,7 @@ test('network discovery preserves an existing HTTP name when the computer name c
     minimalHostStatus({
       configuredCanonicalBaseUrl: 'http://practice-server:8080',
     }),
-    4,
+    5,
   );
   state.lanAppIp = '192.168.1.25';
   for (const machineHostname of ['practice-server', 'renamed-server']) {

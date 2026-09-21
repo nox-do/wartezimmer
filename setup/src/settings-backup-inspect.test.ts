@@ -427,3 +427,32 @@ test('TLS manifest v1 is rejected without legacy compatibility', () => {
   const payload = packSidecarBase64('practice', 'practice.example.test', 1);
   assert.equal(parseTlsSidecarManifestFromBytes(Buffer.from(payload, 'base64')), null);
 });
+
+test('unchanged backup checks host mounts rather than the container lookup path', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-inspect-container-path-'));
+  try {
+    const env = {
+      IMPORTS_HOST_PATH: dir,
+      EXPORTS_HOST_PATH: dir,
+      CONTACT_LOOKUP_BASE_PATH: '/imports',
+    };
+    const input = {
+      backupEnv: env,
+      currentEnv: env,
+      backupManagerState: sampleManagerState,
+      currentManagerState: sampleManagerState,
+    };
+    assert.deepEqual(buildPfbackupInspectWarnings(input), []);
+    const missing = path.join(dir, 'missing');
+    const warnings = buildPfbackupInspectWarnings({
+      ...input,
+      backupEnv: { ...env, IMPORTS_HOST_PATH: missing },
+      currentEnv: { ...env, IMPORTS_HOST_PATH: missing },
+    });
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /IMPORTS_HOST_PATH.*nicht vorhandenes Verzeichnis/);
+    assert.doesNotMatch(warnings[0], /CONTACT_LOOKUP_BASE_PATH/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

@@ -14,8 +14,6 @@ import {
   composeActionErrorMessage,
   emptyMaintenanceErrors,
   pinResetSuccessText,
-  pfbackupValidateSuccessText,
-  pfbackupArchiveOnlyValidText,
   storagePathsChanged,
   storageSaveErrorText,
   storageSaveStatusText,
@@ -63,7 +61,6 @@ export type MaintenanceController = {
   refreshLogs: (service?: string) => Promise<void>;
   requestLogsRefresh: (service?: string) => void;
   backupPf: () => void;
-  validatePfbackup: () => void;
   applyStorage: () => void;
   recordPfupdateSuccess: (result: Extract<PfupdateApplyResult, { ok: true }>) => void;
   executePinReset: () => void;
@@ -466,57 +463,6 @@ export function createMaintenanceController(
           }
           patch({ backupStatusText: '' });
           setSurfaceError('backup', errorMessage(error, 'Backup fehlgeschlagen.'));
-        })
-        .finally(() => {
-          endOperation('backup');
-        });
-    },
-    validatePfbackup() {
-      if (!beginOperation('backup')) {
-        return;
-      }
-      const generation = lifecycleGeneration;
-      patch({ backupStatusText: 'Backup wird geprüft …' });
-      void deps.api
-        .readPfbackupForValidate()
-        .then(async (picked) => {
-          if (!still(generation)) {
-            return;
-          }
-          if (picked.canceled) {
-            patch({ backupStatusText: '' });
-            return;
-          }
-          const result = await deps.api.validatePfbackup(picked.content);
-          if (!still(generation)) {
-            return;
-          }
-          if (!result.archiveValid) {
-            patch({ backupStatusText: '' });
-            setSurfaceError('backup', result.archiveErrors.join(' ') || 'Backup-Datei ungültig.');
-            return;
-          }
-          if (!result.restoreValid) {
-            patch({ backupStatusText: pfbackupArchiveOnlyValidText() });
-            setSurfaceError(
-              'backup',
-              result.restoreErrors.join(' ') || 'Settings nicht importierbar.',
-            );
-            return;
-          }
-          patch({
-            backupStatusText: pfbackupValidateSuccessText({
-              routingMode: result.summary?.routingMode ?? null,
-              releaseVersion: result.summary?.releaseVersion ?? null,
-            }),
-          });
-        })
-        .catch((error) => {
-          if (!still(generation)) {
-            return;
-          }
-          patch({ backupStatusText: '' });
-          setSurfaceError('backup', errorMessage(error, 'Backup-Prüfung fehlgeschlagen.'));
         })
         .finally(() => {
           endOperation('backup');

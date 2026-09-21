@@ -28,7 +28,8 @@
     <span>Proxy aus</span>
   </label>
   <p class="hint">
-    Direkter Zugriff mit <code>:8080</code> in der Adresse. Praxis Flow ist auf allen Netzwerkkarten
-    erreichbar. Für HTTPS muss der Proxy eingeschaltet werden.
+    Direkter Zugriff mit <code>:8080</code> in der Adresse. Nach Abschluss der Installation ist
+    Praxis Flow über alle IPv4-Netzwerkanschlüsse dieses Rechners erreichbar, soweit Ihre lokalen
+    Netzwerk- und Firewall-Einstellungen dies zulassen. Für HTTPS muss der Proxy eingeschaltet werden.
   </p>
 </fieldset>

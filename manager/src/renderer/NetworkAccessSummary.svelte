@@ -31,26 +31,8 @@
     <dt>Zugang</dt><dd>{summary.access}</dd>
     <dt>Adresse / Adapter</dt><dd>{summary.adapter}</dd>
   </dl>
-  {#if summary.lifecycleNotice}
-    <p class="notice is-warn" role="status">{summary.lifecycleNotice}</p>
-  {/if}
-  <p class:notice={summary.needsAttention} class:is-warn={summary.needsAttention}>
-    Letzte Host-Prüfung: {summary.diagnosis}.
-  </p>
-  <p class="hint">
-    {#if summary.proxy}
-      Praxis Flow ist über die ausgewählte Praxisadresse erreichbar.
-    {:else if summary.proxy === false}
-      Praxis Flow ist auf allen Netzwerkkarten über Port 8080 erreichbar.
-    {/if}
-  </p>
-  {#if summary.dnsWarning}
-    <p class="notice is-warn" role="status">{summary.dnsWarning}</p>
-  {/if}
-  {#if summary.tls}
-    <p class="hint">Die Verbindung ist verschlüsselt.</p>
-  {:else if summary.tls === false}
-    <p class="hint">Bei HTTP kann der Browser „Nicht sicher“ anzeigen. HTTPS können Sie später einrichten.</p>
+  {#if !summary.needsAttention}
+    <p class="hint">Letzte Host-Prüfung: {summary.diagnosis}.</p>
   {/if}
 </section>
 
@@ -60,10 +42,6 @@
     <dt>Portaladresse</dt><dd>{restricted.portalAddress}</dd>
     <dt>Status</dt><dd>{summary.portalState ?? restricted.state}</dd>
     <dt>Adresse / Adapter</dt><dd>{restricted.binding}</dd>
-    <dt>Freigegeben</dt><dd>Nur Patientenportal</dd>
+    <dt>Freigegeben</dt><dd>{status.lifecycle?.assessment === 'known' && status.lifecycle.mode === 'https-portal' && status.restrictedNetwork?.phase === 'applied' ? 'Nur Patientenportal' : 'Keine separate Freigabe'}</dd>
   </dl>
-  <p class="hint">
-    Host-Firewall, Routing und tatsächliche Netztrennung bleiben Verantwortung der Praxis-IT.
-    Das IP-Binding allein belegt keine Isolation.
-  </p>
 </section>

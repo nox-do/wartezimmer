@@ -940,7 +940,7 @@ test('stale goNext after hide and show does not change the new run', async () =>
   const pending = controller.goNext();
   await Promise.resolve();
   assert.equal(controller.getState().busy, true);
-  assert.equal(controller.getState().step, 4);
+  assert.equal(controller.getState().step, 5);
 
   controller.hide();
   controller.show(minimalHostStatus(), 'embedded');
@@ -1295,4 +1295,87 @@ test('apply after hide still reports the host mutation once', async () => {
   assert.equal(controller.getState().applyResult, null);
   assert.equal(controller.getState().busy, false);
   assert.equal(controller.getState().step, 1);
+});
+
+test('recovery completion waits automatically for core health after successful HTTP probes', async () => {
+  const operation = {
+    id: 'recovery-test',
+    mode: 'fresh' as const,
+    phase: 'installing' as const,
+    createdAt: '2026-09-21',
+    releaseVersion: '0.6.0',
+    backupContainsTls: null,
+  };
+  const status = minimalHostStatus({
+    mode: 'install',
+    installation: { kind: 'installing', operation },
+    network: { configuredLanIp: null, currentLanCandidates: [], lanIpStale: false },
+  });
+  let applied = false;
+  let completionChecks = 0;
+  const controller: ReturnType<typeof createWizardController> = createWizardController({
+    api: {
+      fetchSetupStatus: async () => status,
+      applySetupPlan: async () => {
+        applied = true;
+        return minimalApplyResult();
+      },
+      runSetupProbes: async () => ({
+        probes: [{ id: 'app.health.local', ok: true, message: 'ok' }],
+      }),
+      previewInstallRecovery: async () => {
+        if (applied) {
+          completionChecks++;
+          assert.equal(controller.getState().busy, true);
+          assert.equal(controller.getState().recoveryPhase, 'setup');
+        }
+        const ready = completionChecks >= 2;
+        return {
+          operation,
+          baselineReady: ready,
+          baselineErrors: ready ? [] : ['Sandbox startet'],
+          backup: null,
+          restoreCompatible: false,
+        };
+      },
+    } as never,
+    onComplete() {},
+    onCancel() {},
+  });
+  controller.show(status);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(controller.getState().recoveryPhase, 'setup');
+  controller.patchFields({ step: 7, lanAppIp: '192.168.1.10' });
+  await controller.goNext();
+  assert.equal(completionChecks, 2);
+  assert.equal(controller.getState().recoveryPhase, 'finish');
+  assert.equal(controller.getState().recoveryPreview?.baselineReady, true);
+  assert.equal(controller.getState().busy, false);
+});
+
+test('combined access step suggests a discovered address without requiring proxy', async () => {
+  const controller = createWizardController({
+    api: {
+      fetchSetupNetwork: async () => ({
+        ...emptyNetwork,
+        lanCandidates: [
+          { address: '192.168.0.93', interfaceName: 'en0', label: '192.168.0.93 · WLAN' },
+        ],
+      }),
+    } as never,
+    onComplete() {},
+    onCancel() {},
+  });
+  controller.show(
+    minimalHostStatus({
+      network: { configuredLanIp: null, currentLanCandidates: [], lanIpStale: false },
+    }),
+  );
+  controller.patchFields({ step: 3 });
+  await controller.goNext();
+  assert.equal(controller.getState().step, 5);
+  assert.equal(controller.getState().lanAppIp, '192.168.0.93');
+  assert.equal(controller.getState().proxyEnabled, false);
+  controller.goBack();
+  assert.equal(controller.getState().step, 3);
 });

@@ -2,6 +2,7 @@ import type { HostStatus } from '../shared/host-status.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import { effectiveProxyContainer } from './host-snapshot-selectors.js';
 import { dnsRebindHelp } from './network-view-model.js';
+import { restrictedNetworkStatusSummary } from './restricted-network-view-model.js';
 import { hostLifecycleSummary } from './host-lifecycle-view-model.js';
 
 /** Presentation only: saved configuration and observed runtime remain separate. */
@@ -103,4 +104,24 @@ export function networkAccessSummary(
     proxy,
     tls,
   };
+}
+
+/** Actionable network findings stay visible even when network details are collapsed. */
+export function networkAccessAlerts(
+  status: HostStatus,
+  runtime: HostRuntimeHealth | null = null,
+  runtimeError: string | null = null,
+): string[] {
+  const summary = networkAccessSummary(status, runtime, runtimeError);
+  const alerts: string[] = [];
+  if (runtimeError) alerts.push(summary.operation);
+  else if (status.lifecycle && status.lifecycle.assessment !== 'known')
+    alerts.push(summary.operatingMode ?? 'Netzwerkkonfiguration nicht sicher bestimmbar');
+  else if (summary.needsAttention) alerts.push(summary.diagnosis);
+  if (summary.dnsWarning) alerts.push(summary.dnsWarning);
+  if (status.restrictedNetwork) {
+    const restricted = restrictedNetworkStatusSummary(status.restrictedNetwork);
+    if (restricted.needsAttention) alerts.push(`Patientenzugang: ${restricted.state}.`);
+  }
+  return [...new Set(alerts)];
 }

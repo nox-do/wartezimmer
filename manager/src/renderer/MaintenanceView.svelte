@@ -37,8 +37,10 @@
 
   let {
     onAfterMutation,
+    onReinstall,
   }: {
     onAfterMutation: () => void;
+    onReinstall: () => void;
   } = $props();
 
   let snapshot = $state<MaintenanceState | null>(null);
@@ -265,7 +267,7 @@
       <MaintenanceSection
         open={openSection === 'operations'}
         title="Betrieb & Updates"
-        subtitle="Stack · Software-Update"
+        subtitle="Stack · Software-Update · Neuinstallation"
         copy="Stack steuern und Software-Updates einspielen."
         onToggle={() => toggleSection('operations')}
       >
@@ -288,6 +290,12 @@
             pfupdateWizard?.open();
           }}
         />
+        <hr class="panel-section-divider" />
+        <section class="panel-section">
+          <h2>Neuinstallation</h2>
+          <p class="hint">Praxis Flow mit einem Software-Paket neu einrichten. Der Assistent führt durch die Vorbereitung und Bestätigung.</p>
+          <button type="button" class="btn-secondary" disabled={maintenanceLocked} onclick={onReinstall}>Neu installieren …</button>
+        </section>
       </MaintenanceSection>
 
       <MaintenanceSection
@@ -335,7 +343,6 @@
           pinError={snapshot.errors.pin}
           tlsEnabled={(snapshot.status?.tls?.state ?? 'off') !== 'off'}
           onBackup={() => controller?.backupPf()}
-          onValidateBackup={() => controller?.validatePfbackup()}
           onRestore={() => {
             restoreWizard?.openStandalone();
           }}

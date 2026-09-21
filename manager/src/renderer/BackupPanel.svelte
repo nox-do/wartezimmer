@@ -12,7 +12,6 @@
     pinError = null,
     tlsEnabled = false,
     onBackup,
-    onValidateBackup,
     onRestore,
     onPinReset,
   }: {
@@ -25,7 +24,6 @@
     pinError?: string | null;
     tlsEnabled?: boolean;
     onBackup: () => void;
-    onValidateBackup: () => void;
     onRestore: () => void;
     onPinReset: () => void;
   } = $props();
@@ -74,9 +72,6 @@
   <div class="maintenance-backup-actions">
     <button type="button" class="btn-secondary" disabled={locked} onclick={onBackup}>
       Backup erstellen
-    </button>
-    <button type="button" class="btn-secondary" disabled={locked} onclick={onValidateBackup}>
-      Backup prüfen
     </button>
     <button type="button" class="btn-secondary" disabled={locked} onclick={onRestore}>
       Wiederherstellen …

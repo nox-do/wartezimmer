@@ -42,6 +42,7 @@
   import LoadingOverlay from './LoadingOverlay.svelte';
   import MaintenanceSection from './MaintenanceSection.svelte';
   import NetworkAccessSummary from './NetworkAccessSummary.svelte';
+  import NetworkAccessNotices from './NetworkAccessNotices.svelte';
   import { networkAccessSummary } from './network-access-view-model.js';
   import NetworkTopologyDiagram from './NetworkTopologyDiagram.svelte';
   import NetworkBindingChecks from './NetworkBindingChecks.svelte';
@@ -67,6 +68,7 @@
   let confirmAction: (() => void) | null = null;
   let confirmCancel: (() => void) | null = null;
 
+  let summaryOpen = $state(false);
   let lanOpen = $state(false);
   let proxyOpen = $state(false);
   let topologyOpen = $state(false);
@@ -345,11 +347,17 @@
         {overall.text}
       </p>
     {/if}
-    <NetworkAccessSummary
-      status={configSnapshot}
-      runtime={runtimeSnapshot}
-      runtimeError={managerShell.runtimeError}
-    />
+    <NetworkAccessNotices status={configSnapshot} runtime={runtimeSnapshot} runtimeError={managerShell.runtimeError} />
+    {#if accessSummary?.lifecycleNotice}
+      <p class="notice is-warn" role="status">{accessSummary.lifecycleNotice}</p>
+    {/if}
+    <div class="panel-section">
+      <MaintenanceSection open={summaryOpen} title="Aktueller Netzwerkzugang"
+        subtitle="Betriebsmodus, Adressen und Patientenzugang"
+        onToggle={() => { summaryOpen = !summaryOpen; }}>
+        <NetworkAccessSummary status={configSnapshot} runtime={runtimeSnapshot} runtimeError={managerShell.runtimeError} />
+      </MaintenanceSection>
+    </div>
     {#if showProxyRestore}
       <section class="panel-section" aria-label="Zugriff wiederherstellen">
         <h2>Wiederherstellung des Zugangs</h2>

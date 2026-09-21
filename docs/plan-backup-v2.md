@@ -86,8 +86,7 @@ Metadaten blocken.
 15. Pre-Update-Backup ist dieselbe Format-2-Datei. Kein Extra-Hinweis im
     Update-Wizard. Dieselbe Rückfrage wie beim normalen Restore (nur wenn
     Praxis **und** Sicherung HTTPS).
-16. Sichtbarer Sicherheitshinweis vor Backup-Erstellung/Export und in der
-    Restore-Vorschau: `.pfbackup` ist unverschlüsselt und enthält bei
+16. Sichtbarer Sicherheitshinweis im Backup-Bereich vor Erstellung/Export: `.pfbackup` ist unverschlüsselt und enthält bei
     konfiguriertem Messaging API-Keys im Klartext; HTTPS-Payload kann private
     Schlüssel enthalten. Details unter „Sicherheit und Nutzerhinweis“.
 17. Ergänzung 2026-09-10: Installationsinterne Secrets der lebenden
@@ -134,9 +133,7 @@ die Datei ist trotzdem schützenswert, auch ohne Patientendaten.
 - Im bestehenden `BackupPanel` dauerhaft sichtbar vor den Aktionen zum
   Erstellen und Speichern/Exportieren der Sicherung, nicht erst als Toast
   nach dem Speichern. Der Hinweis gilt auch für HTTP-only-Sicherungen.
-- In der bestehenden Restore-Vorschau vor „Wiederherstellen“. Die Option
-  `skipProviderCredentials` bereinigt nur den Import, nicht die Backup-Datei;
-  der Hinweis bleibt deshalb auch bei ausgewählter Option sichtbar.
+- Keine Wiederholung des Aufbewahrungshinweises in der Restore-Vorschau oder beim Recovery-Abschluss.
 - Kein zusätzlicher Dialog, keine Checkbox und kein neues Restore-Gate.
   Bestehende HTTPS-Überschreibbestätigung unverändert. Kein zusätzlicher
   Hinweis im Update-Wizard; Pre-Update-Backups unterliegen demselben
@@ -402,7 +399,7 @@ Anpassen:
 - HTTPS-Block Copy: Zertifikat **in** der `.pfbackup`, sobald HTTPS
   vorbereitet ist; beide Dateien / Timestamp-Namen raus
 - Sicherheitshinweis gemäß „Sicherheit und Nutzerhinweis“ im `BackupPanel`
-  vor Erstellen/Export und in der Restore-Vorschau; unabhängig von HTTPS
+  vor Erstellen/Export im Backup-Bereich; unabhängig von HTTPS
   und `skipProviderCredentials`, ohne zusätzlichen Dialog oder Key-Werte
 - Restore-Wizard: Confirm vor `restorePfbackup` nur wenn `currentTlsClaimsHttps`
   **und** Sicherung `tlsInBackup`; Pre-Update und `retryRestore` dieselbe
@@ -418,8 +415,7 @@ mehr.
 
 **Review:** Wizard-Test ohne zweiten Dateidialog. Create+Save eine Datei.
 Keine toten IPC-Kanäle. Confirm nur bei Praxis **und** Sicherung HTTPS.
-Lesen bleibt utf8. Sicherheitshinweis vor Erstellen/Export und Restore
-sichtbar, auch bei HTTP-only und Restore ohne Provider-Credentials.
+Lesen bleibt utf8. Sicherheitshinweis vor Erstellen/Export sichtbar, auch bei HTTP-only. Kein Aufbewahrungshinweis im Restore.
 
 ### Schnitt 4 — Copy, Mock
 
@@ -504,9 +500,7 @@ Ohne öffentliche ACME-Anträge:
 - Manager: Restore-Wizard ein Dateidialog; kein `readTlsSidecar`; Confirm nur
   wenn Praxis und Sicherung HTTPS; `retryRestore` dieselbe Rückfrage;
   Abbrechen ohne `stopStack`; Datei wird utf8 gelesen
-- Copy/UI (Schnitt 3/4): Sicherheitshinweis vor Backup-Erstellung/Export und
-  in der Restore-Vorschau sichtbar — mit und ohne HTTPS, auch mit
-  `skipProviderCredentials`. Klartext-API-Keys und sichere Aufbewahrung
+- Copy/UI (Schnitt 3/4): Sicherheitshinweis im Backup-Bereich vor Erstellung/Export sichtbar — mit und ohne HTTPS. Klartext-API-Keys und sichere Aufbewahrung
   ausdrücklich genannt; keine konkreten Keys und keine behauptete
   PIN-Verschlüsselung. Kein neuer Dialog und kein zusätzliches Restore-Gate.
 

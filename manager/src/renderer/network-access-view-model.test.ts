@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { proxyNeedsRestore } from './network-view-model.js';
-import { networkAccessSummary } from './network-access-view-model.js';
+import { networkAccessAlerts, networkAccessSummary } from './network-access-view-model.js';
 import { minimalHostStatus, knownLifecycle } from './test-fixtures/minimal-host-status.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 
@@ -144,4 +144,26 @@ test('unknown configuration does not claim HTTP or open publication on all NICs'
   assert.equal(summary.connection, 'Nicht sicher bestimmbar');
   assert.equal(summary.needsAttention, true);
   assert.doesNotMatch(summary.access, /alle Netzwerkanschlüsse/);
+});
+
+test('compact status keeps actionable network warnings without routine explanations', () => {
+  const status = minimalHostStatus({ lifecycle: knownLifecycle() });
+  assert.deepEqual(networkAccessAlerts(status), []);
+  status.network.lanIpStale = true;
+  assert.match(networkAccessAlerts(status).join(' '), /Praxisadresse.*nicht vorhanden/);
+  assert.match(networkAccessAlerts(status, null, 'offline').join(' '), /Laufzustand/);
+});
+
+test('collapsed network details do not hide a blocked patient access', () => {
+  const status = minimalHostStatus({ lifecycle: knownLifecycle('https-portal') });
+  status.restrictedNetwork!.phase = 'applied';
+  status.restrictedNetwork!.health = 'blocked';
+  assert.match(networkAccessAlerts(status).join(' '), /Patientenzugang.*Gesperrt/);
+});
+
+test('unknown network configuration does not report a successful binding check', () => {
+  const status = minimalHostStatus({ lifecycle: { ...knownLifecycle(), assessment: 'unknown' } });
+  const alerts = networkAccessAlerts(status);
+  assert.match(alerts.join(' '), /nicht sicher bestimmbar/);
+  assert.doesNotMatch(alerts.join(' '), /Keine Abweichung/);
 });

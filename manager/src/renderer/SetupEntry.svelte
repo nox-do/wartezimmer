@@ -40,14 +40,16 @@
     <p id="setup-entry-eyebrow" class="setup-entry-eyebrow">{content.eyebrow}</p>
     <h1 id="setup-entry-title">{content.title}</h1>
     <p id="setup-entry-copy" class="setup-entry-copy">{content.copy}</p>
-    <ul id="setup-entry-checklist" class="checklist checklist--setup">
-      {#each checklist as item (item.label)}
-        <li class={item.done ? 'is-done' : item.muted ? 'is-muted' : 'is-open'}>
-          <span class="checklist-mark">{item.done ? '✓' : '○'}</span>
-          <span>{item.label}</span>
-        </li>
-      {/each}
-    </ul>
+    {#if checklist.length > 0}
+      <ul id="setup-entry-checklist" class="checklist checklist--setup">
+        {#each checklist as item (item.label)}
+          <li class={item.done ? 'is-done' : item.muted ? 'is-muted' : 'is-open'}>
+            <span class="checklist-mark">{item.done ? '✓' : '○'}</span>
+            <span>{item.label}</span>
+          </li>
+        {/each}
+      </ul>
+    {/if}
     <p id="setup-entry-note" class="setup-entry-note">
       {#if content.showReleasePicker}
         Release-Ordner vollständig herunterladen, dann die <code>.pfinstall</code> auswählen. Manifest
@@ -67,14 +69,16 @@
       <button type="button" disabled={startBusy} onclick={() => void startExisting()}>Vorhandene Installation starten</button>
     {/if}
     {#if startError}<p class="error">{startError}</p>{/if}
-    <button
-      disabled={startBusy || status.installation.kind === 'docker-unavailable'}
-      type="button"
-      id="setup-entry-start"
-      class="setup-entry-start"
-      onclick={onSetupClick}
-    >
-      {content.startButtonLabel}
-    </button>
+    {#if content.startButtonLabel}
+      <button
+        disabled={startBusy}
+        type="button"
+        id="setup-entry-start"
+        class="setup-entry-start"
+        onclick={onSetupClick}
+      >
+        {content.startButtonLabel}
+      </button>
+    {/if}
   </section>
 {/if}

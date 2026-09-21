@@ -24,19 +24,17 @@ import { createInitialWizardFields, resolvedLanIp } from './wizard-state.js';
 export const DISABLED_GATEWAY_PLAN = { enabled: false as const };
 
 /**
- * Order: warm-up → network → access → optional HTTPS (6) → preview → apply.
+ * Order: prerequisites → folders → access/address → optional HTTPS → preview → apply.
  * Practice display name belongs in Ops (/ops/setup), not host setup.
- * WLAN vendor selection is a placeholder on the complex network step until adapters exist.
  * HTTPS inner screens stay on the HTTPS step; verify-dns and cutover live on the Network tab.
  */
-export const WIZARD_STEPS = [1, 3, 4, 5, 6, 7, 8] as const;
+export const WIZARD_STEPS = [1, 3, 5, 6, 7, 8] as const;
 export type WizardStep = (typeof WIZARD_STEPS)[number];
 
 export const WIZARD_STEP_LABELS = [
   'Voraussetzungen',
   'Import & Export',
-  'Netzwerk',
-  'Zugang',
+  'Praxiszugriff',
   'HTTPS',
   'Vorschau',
   'Abschluss',
@@ -92,7 +90,7 @@ export function createWizardFlowState(
     applyResult: null,
     releaseImportStatus: null,
     httpsPhase: 'offer',
-    httpsOfferChoice: 'now',
+    httpsOfferChoice: 'later',
     nameMode: 'generated',
     customLabel: '',
     customDomain: '',
@@ -167,10 +165,10 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
     if (!state.importsHostPath.trim() || !state.exportsHostPath.trim()) {
       return { type: 'validate-error', message: 'Bitte Import- und Exportordner angeben.' };
     }
-    return { type: 'goto', step: 4, after: 'loadNetwork' };
+    return { type: 'goto', step: 5, after: 'loadNetwork' };
   }
 
-  if (step === 4) {
+  if (step === 5) {
     if (!resolvedLanIp(state)) {
       return { type: 'validate-error', message: 'Bitte eine LAN-IP wählen oder eingeben.' };
     }
@@ -182,10 +180,6 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
           'Die Geräteadresse konnte nicht gebildet werden. Bitte prüfen Sie die ausgewählte IP-Adresse.',
       };
     }
-    return { type: 'goto', step: 5 };
-  }
-
-  if (step === 5) {
     if (
       state.status?.installation.kind === 'installing' &&
       state.status.installation.operation.backupContainsTls !== null
@@ -360,9 +354,12 @@ export async function refreshWizardStatus(api: PraxisManagerApi): Promise<HostSt
 
 export const WIZARD_PROBE_WAIT_MESSAGE = 'App startet — Erreichbarkeit wird geprüft …';
 
-export async function refreshWizardStatusAfterApply(api: PraxisManagerApi): Promise<HostStatus> {
+export async function refreshWizardStatusAfterApply(
+  api: PraxisManagerApi,
+  options?: Parameters<typeof pollSetupProbes>[2],
+): Promise<HostStatus> {
   const status = await api.fetchSetupStatus();
-  const probes = await pollSetupProbes(api, buildSetupProbeInput(status));
+  const probes = await pollSetupProbes(api, buildSetupProbeInput(status), options);
   return { ...status, probes };
 }
 

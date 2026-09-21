@@ -297,3 +297,55 @@ test('selected recovery backup blocks creating a new TLS identity', async (t) =>
   );
   assert.equal(fs.existsSync(path.join(home, 'state/tls')), false);
 });
+
+for (const health of ['starting', 'unhealthy']) {
+  test(`recovery explains sandbox ${health} and permits completion after it becomes healthy`, async (t) => {
+    const home = fixture(t);
+    const operation = prepare(home);
+    markInstallOperationInstalling(home, operation.id);
+    const ctx = testSetupContext(home);
+    const status = await healthyDeps.status!(ctx);
+    status.compose!.services.find((service) => service.service === 'sandbox')!.health = health;
+    let maintenanceCalls = 0;
+    const deps: RecoveryDeps = {
+      ...healthyDeps,
+      status: async () => status,
+      maintenance: async () => {
+        maintenanceCalls++;
+        return { authenticated: true, settingsFormatVersion: 1 };
+      },
+    };
+    const before = await previewInstallRecovery(ctx, operation.id, deps);
+    assert.equal(before.baselineReady, false);
+    assert.equal(before.baselineErrors.length, 1);
+    assert.match(
+      before.baselineErrors[0],
+      health === 'starting' ? /Sandbox.*noch nicht/ : /Sandbox.*fehlgeschlagen/,
+    );
+    assert.equal(maintenanceCalls, 0);
+    const failed = await finishInstallRecovery(
+      ctx,
+      { operationId: operation.id, action: 'without-backup' },
+      deps,
+    );
+    assert.equal(failed.ok, false);
+    assert.deepEqual(failed.errors, before.baselineErrors);
+    assert.ok(readInstallOperation(home));
+    status.compose!.services.find((service) => service.service === 'sandbox')!.health = 'healthy';
+    const after = await previewInstallRecovery(ctx, operation.id, deps);
+    assert.equal(after.baselineReady, true);
+    assert.deepEqual(after.baselineErrors, []);
+  });
+}
+
+test('recovery reports an unavailable authenticated maintenance API', async (t) => {
+  const home = fixture(t);
+  const operation = prepare(home);
+  markInstallOperationInstalling(home, operation.id);
+  const result = await previewInstallRecovery(testSetupContext(home), operation.id, {
+    ...healthyDeps,
+    maintenance: async () => ({ authenticated: false, settingsFormatVersion: 1 }),
+  });
+  assert.equal(result.baselineReady, false);
+  assert.match(result.baselineErrors.join(' '), /Verwaltungs-API/);
+});

@@ -184,9 +184,6 @@ export function restoreSuccessSummary(
   result: Extract<PfbackupRestoreResult, { ok: true }>,
 ): string {
   const parts = ['Settings wurden wiederhergestellt.'];
-  if (result.report.routingMode) {
-    parts.push(`Routing: ${result.report.routingMode}.`);
-  }
   if (result.report.providerCredentialsSkipped) {
     parts.push('Provider-Credentials wurden übersprungen.');
   }

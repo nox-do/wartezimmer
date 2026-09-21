@@ -30,15 +30,31 @@ function requireOperation(ctx: SetupContext, id: string) {
   if (!operation || operation.id !== id) throw new Error('Installationsvorgang nicht gefunden.');
   return operation;
 }
-async function baselineReady(ctx: SetupContext, deps: RecoveryDeps): Promise<boolean> {
+async function baselineErrors(ctx: SetupContext, deps: RecoveryDeps): Promise<string[]> {
   const status = await (deps.status ?? getHostStatus)(ctx);
-  return (
-    status.docker.daemonRunning &&
-    status.docker.composeAvailable &&
-    coreInstallationServicesHealthy(status.compose) &&
-    status.compose?.running === true &&
-    (await (deps.maintenance ?? inspectMaintenanceCompatibility)()).authenticated
-  );
+  if (!status.docker.daemonRunning)
+    return ['Docker ist nicht erreichbar. Bitte Docker Desktop prüfen.'];
+  if (!status.docker.composeAvailable) return ['Docker Compose ist nicht verfügbar.'];
+  if (!coreInstallationServicesHealthy(status.compose)) {
+    return ['app', 'sandbox'].flatMap((name) => {
+      const service = status.compose?.services.find(
+        (entry) => (entry.service || entry.name) === name,
+      );
+      const label = name === 'app' ? 'App' : 'Sandbox';
+      if (!service?.state.toLowerCase().includes('running')) return [`${label} läuft noch nicht.`];
+      if (service.health?.toLowerCase() === 'healthy') return [];
+      return [
+        service.health?.toLowerCase() === 'unhealthy'
+          ? `${label}: Docker meldet einen fehlgeschlagenen Gesundheitscheck.`
+          : `${label}: Docker hat den Start noch nicht als gesund bestätigt.`,
+      ];
+    });
+  }
+  if (!(await (deps.maintenance ?? inspectMaintenanceCompatibility)()).authenticated)
+    return [
+      'Die lokale Verwaltungs-API ist noch nicht erreichbar oder akzeptiert den Installationszugang nicht.',
+    ];
+  return [];
 }
 export async function previewInstallRecovery(
   ctx: SetupContext,
@@ -47,7 +63,11 @@ export async function previewInstallRecovery(
 ): Promise<InstallRecoveryPreview> {
   const operation = requireOperation(ctx, id);
   const content = operation.backup ? readPinnedRecoveryBackup(ctx.home, operation) : null;
-  const ready = operation.phase === 'installing' && (await baselineReady(ctx, deps));
+  const errors =
+    operation.phase === 'installing'
+      ? await baselineErrors(ctx, deps)
+      : ['Installation zuerst bestätigen.'];
+  const ready = errors.length === 0;
   const backup = content && ready ? await (deps.inspect ?? inspectPfbackup)(content, ctx) : null;
   if (backup) {
     delete backup.environment;
@@ -60,6 +80,7 @@ export async function previewInstallRecovery(
   return {
     operation: installOperationSummary(operation),
     baselineReady: ready,
+    baselineErrors: errors,
     backup,
     restoreCompatible: backup?.compatibility.restoreSupported === true,
   };
@@ -73,13 +94,8 @@ export async function finishInstallRecovery(
   if (operation.phase !== 'installing') throw new Error('Installation zuerst bestätigen.');
   if (input.action !== 'restore' && input.action !== 'without-backup')
     throw new Error('Ungültige Abschlussaktion.');
-  if (!(await baselineReady(ctx, deps)))
-    return {
-      ok: false,
-      errors: [
-        'Die frische Installation ist noch nicht gesund. Einrichtung abschließen oder Neuinstallation erneut starten.',
-      ],
-    };
+  const errors = await baselineErrors(ctx, deps);
+  if (errors.length > 0) return { ok: false, errors };
   if (input.action === 'restore') {
     const content = readPinnedRecoveryBackup(ctx.home, operation);
     // Recovery always starts from HTTP. After a crash following TLS restore,
@@ -99,8 +115,8 @@ export async function finishInstallRecovery(
       };
     const restore = await (deps.restore ?? restorePfbackup)(content, ctx);
     if (!restore.ok) return { ok: false, errors: restore.errors, restore };
-    if (!(await baselineReady(ctx, deps)))
-      return { ok: false, errors: ['Abschlussprüfung fehlgeschlagen.'], restore };
+    const finalErrors = await baselineErrors(ctx, deps);
+    if (finalErrors.length > 0) return { ok: false, errors: finalErrors, restore };
     removeInstallOperation(ctx.home, operation.id);
     return { ok: true, errors: [], restore };
   }

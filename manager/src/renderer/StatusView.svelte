@@ -11,7 +11,9 @@
   import DeliveryImagesWarning from './DeliveryImagesWarning.svelte';
   import DeviceUrls from './DeviceUrls.svelte';
   import SetupEntry from './SetupEntry.svelte';
-  import NetworkAccessSummary from './NetworkAccessSummary.svelte';
+  import NetworkAccessNotices from './NetworkAccessNotices.svelte';
+  import { networkAccessSummary } from './network-access-view-model.js';
+  import { restrictedNetworkStatusSummary } from './restricted-network-view-model.js';
   import StatusGrid from './StatusGrid.svelte';
   import TlsResumeCard from './TlsResumeCard.svelte';
   import HostLifecycleSummary from './HostLifecycleSummary.svelte';
@@ -31,6 +33,10 @@
   /** Live stack/probes: HealthHeader tiles. Overall copy + facts live on this page. */
   const configSnapshot = $derived(managerShell.configSnapshot);
   const statusError = $derived(managerShell.statusError);
+  const patientAccess = $derived(configSnapshot
+    ? networkAccessSummary(configSnapshot, managerShell.runtimeSnapshot, managerShell.runtimeError).portalState
+      ?? (configSnapshot.restrictedNetwork ? restrictedNetworkStatusSummary(configSnapshot.restrictedNetwork).state : 'Nicht eingerichtet')
+    : null);
   const setupEntry = $derived(configSnapshot ? isSetupEntryStatus(configSnapshot) : false);
   const lanWarning = $derived(
     configSnapshot ? lanWarningText(configSnapshot, setupEntry) : null,
@@ -68,7 +74,7 @@
     {#if statusError}
       <p id="error-message" class="error">{statusError}</p>
     {/if}
-    {#if configSnapshot.lifecycle}
+    {#if configSnapshot.lifecycle && configSnapshot.installation.kind !== 'docker-unavailable'}
       <HostLifecycleSummary lifecycle={configSnapshot.lifecycle} />
     {/if}
     {#if setupEntry}
@@ -87,7 +93,6 @@
           {overallNotice.text}
         </p>
       {/if}
-      <button type="button" class="btn-secondary" onclick={onSetupClick}>Neu installieren …</button>
       <TlsResumeCard tls={configSnapshot.tls} onResume={onOpenNetwork} />
     {/if}
     <DeliveryImagesWarning
@@ -95,11 +100,12 @@
       {setupEntry}
       {onLoadReleaseArchive}
     />
-    {#if lanWarning}
+    {#if lanWarning && setupEntry}
       <p id="lan-warning" class="lan-warning">{lanWarning}</p>
     {/if}
     {#if !setupEntry}
-      <NetworkAccessSummary status={configSnapshot} runtime={managerShell.runtimeSnapshot} runtimeError={managerShell.runtimeError} />
+      <NetworkAccessNotices status={configSnapshot} runtime={managerShell.runtimeSnapshot} runtimeError={managerShell.runtimeError} {onOpenNetwork} />
+      <p>Patientenzugang: {patientAccess}</p>
     {/if}
     <DeviceUrls status={configSnapshot} {setupEntry} {onOpenUrl} />
     {#if !setupEntry}

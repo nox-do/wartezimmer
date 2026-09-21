@@ -193,3 +193,62 @@ test('pollSetupProbes with requireLan false returns LAN red after grace', async 
   assert.ok(elapsed >= 20);
   assert.equal(probes.find((probe) => probe.id === 'app.health.lan')?.ok, false);
 });
+
+test('wizard waits for core readiness even when HTTP is already reachable', async () => {
+  let checks = 0;
+  const probes = await pollSetupProbes(
+    {
+      runSetupProbes: async () => ({
+        probes: [{ id: 'app.health.local', ok: true, message: 'ok' }],
+      }),
+    },
+    {},
+    {
+      intervalMs: 1,
+      maxWaitMs: 100,
+      additionalReady: async () => ++checks >= 3,
+    },
+  );
+  assert.equal(checks, 3);
+  assert.equal(connectionProbesReady(probes), true);
+});
+
+test('additional completion check remains bounded and stops after leaving wizard', async () => {
+  let checks = 0;
+  await pollSetupProbes(
+    {
+      runSetupProbes: async () => ({
+        probes: [{ id: 'app.health.local', ok: true, message: 'ok' }],
+      }),
+    },
+    {},
+    {
+      intervalMs: 1,
+      maxWaitMs: 10,
+      additionalReady: async () => {
+        checks++;
+        return false;
+      },
+    },
+  );
+  assert.ok(checks > 0);
+  checks = 0;
+  await pollSetupProbes(
+    {
+      runSetupProbes: async () => ({
+        probes: [{ id: 'app.health.local', ok: true, message: 'ok' }],
+      }),
+    },
+    {},
+    {
+      intervalMs: 1,
+      maxWaitMs: 100,
+      shouldContinue: () => checks < 1,
+      additionalReady: async () => {
+        checks++;
+        return false;
+      },
+    },
+  );
+  assert.equal(checks, 1);
+});

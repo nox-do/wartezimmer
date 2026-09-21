@@ -92,9 +92,7 @@
 {#if !useCustom}
   {#if candidates.length > 0}
     <p class="lan-ip-prompt">
-      {candidates.length === 1
-        ? 'Eine Praxisadresse gefunden — für Terminal, TV und MFA verwenden:'
-        : 'Praxisadresse und damit die gewünschte Netzwerkkarte wählen:'}
+      {candidates.length === 1 ? 'Verfügbare IP-Adresse' : 'Verfügbare IP-Adressen'}
     </p>
     <fieldset class="wizard-fieldset">
       {#each candidates as candidate (candidate.address)}

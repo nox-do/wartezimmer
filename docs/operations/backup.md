@@ -20,7 +20,7 @@ Eine Installation = **eine Praxis**, Stack lokal. Upgrade-/Restore-Vertrag: **Fr
 | **Projektion** (flow-core-Catalog)     | Nein                       | Neu generieren                                      |
 | **Runtime-DB**                         | Nein                       | Verwerfen; Gerätefreigaben nach Restore leer (§3.2) |
 
-**Sicherheitsmodell (Beta):** Keine anwendungsseitige Backup-Verschlüsselung, kein Cloud-KMS, keine MFA-PIN fürs Backup. Provider-API-Keys liegen in DB und `.pfbackup` im Klartext — Datei und Datenträger schützen. Ein Hinweis vor Erstellen/Export und in der Restore-Vorschau erklärt dies sowie mögliche private HTTPS-Schlüssel.
+**Sicherheitsmodell (Beta):** Keine anwendungsseitige Backup-Verschlüsselung, kein Cloud-KMS, keine MFA-PIN fürs Backup. Provider-API-Keys liegen in DB und `.pfbackup` im Klartext — Datei und Datenträger schützen. Ein Hinweis im Backup-Bereich vor Erstellen/Export erklärt dies sowie mögliche private HTTPS-Schlüssel. Kein zusätzlicher Dialog und keine Wiederholung in der Restore-Vorschau.
 
 ## 2. Artefakt `.pfbackup`
 

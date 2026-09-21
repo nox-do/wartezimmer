@@ -30,12 +30,12 @@
     {/if}
     {@const skipped = stepNum === 6 && skippedHttps}
     {@const currentStep = !skipped && stepNum === current}
-    {@const done = !skipped && stepNum < current}
+    {@const done = stepNum < current}
     <li
       class="wizard-step-indicator"
       class:is-current={currentStep}
       class:is-done={done}
-      class:is-upcoming={skipped || stepNum > current}
+      class:is-upcoming={stepNum > current}
       aria-current={currentStep ? 'step' : undefined}
       title={skipped ? `${WIZARD_STEP_LABELS[index]} (übersprungen — kein Proxy)` : WIZARD_STEP_LABELS[index]}
     >

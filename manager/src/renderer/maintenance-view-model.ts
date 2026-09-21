@@ -120,24 +120,6 @@ export function backupInfoText(
   return 'Keine .env vorhanden.';
 }
 
-export function pfbackupValidateSuccessText(summary: {
-  routingMode: string | null;
-  releaseVersion: string | null;
-}): string {
-  const parts = ['Backup ist wiederherstellbar.'];
-  if (summary.routingMode) {
-    parts.push(`Routing: ${summary.routingMode}.`);
-  }
-  if (summary.releaseVersion) {
-    parts.push(`Release: ${summary.releaseVersion}.`);
-  }
-  return parts.join(' ');
-}
-
-export function pfbackupArchiveOnlyValidText(): string {
-  return 'Backup-Datei ist formal in Ordnung, aber Settings sind für Restore nicht importierbar.';
-}
-
 export function stackStatusLabel(running: boolean): string {
   return running ? 'Läuft' : 'Gestoppt';
 }

@@ -16,7 +16,7 @@ export type SetupEntryContent = {
   title: string;
   copy: string;
   note: string;
-  startButtonLabel: string;
+  startButtonLabel: string | null;
   showReleasePicker: boolean;
 };
 
@@ -69,6 +69,7 @@ export function configuredAdapterLabel(status: HostStatus): string | null {
 }
 
 export function setupChecklistItems(status: HostStatus): SetupChecklistItem[] {
+  if (status.installation.kind === 'docker-unavailable') return [];
   return [
     {
       label: status.docker.installed
@@ -134,13 +135,21 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
 
   if (tone === 'needs-docker') {
     return {
-      eyebrow,
-      title: 'Docker vorbereiten',
-      copy: 'Praxis Flow nutzt Docker Desktop für die lokalen Dienste. Sobald Docker läuft, kann die Einrichtung fortgesetzt werden.',
-      note: status.docker.installed
-        ? 'Docker Desktop ist installiert, der Daemon antwortet aber noch nicht. Kurz warten oder Docker Desktop öffnen.'
-        : 'Docker Desktop installieren und danach den Manager erneut öffnen.',
-      startButtonLabel: 'Einrichtung fortsetzen',
+      eyebrow: 'Status',
+      title: !status.docker.installed
+        ? 'Docker fehlt'
+        : !status.docker.daemonRunning
+          ? 'Docker ist nicht erreichbar'
+          : 'Docker Compose ist nicht verfügbar',
+      copy: 'Ohne Docker kann der Manager den Zustand der Praxis-Installation nicht prüfen.',
+      note: !status.docker.installed
+        ? 'Docker Desktop installieren und danach den Manager erneut öffnen.'
+        : !status.docker.daemonRunning
+          ? status.envExists
+            ? 'Docker Desktop öffnen und warten, bis es bereit ist. Der Manager prüft den Status erneut.'
+            : 'Docker Desktop öffnen und warten, bis es bereit ist. Danach den Manager erneut öffnen.'
+          : 'Docker Desktop prüfen: Docker Compose muss verfügbar sein. Danach den Manager erneut öffnen.',
+      startButtonLabel: null,
       showReleasePicker: false,
     };
   }

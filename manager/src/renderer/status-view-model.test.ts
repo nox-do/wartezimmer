@@ -258,3 +258,33 @@ test('missing env with residues offers a deliberate review, never fresh-install 
   assert.equal(isSetupEntryStatus(status), true);
   assert.equal(setupEntryContent(status, 'review').startButtonLabel, 'Neu installieren …');
 });
+
+for (const envExists of [false, true]) {
+  for (const gap of ['missing', 'daemon', 'compose'] as const) {
+    test(`Docker ${gap} with existing config=${envExists} never offers first setup or package import`, () => {
+      const status = minimalHostStatus({
+        envExists,
+        installation: { kind: 'docker-unavailable', reason: 'Unavailable' },
+        docker: {
+          installed: gap !== 'missing',
+          daemonRunning: gap === 'compose',
+          composeAvailable: false,
+          detail: null,
+        },
+      });
+      const content = setupEntryContent(status, setupEntryTone(status));
+      assert.equal(content.eyebrow, 'Status');
+      assert.equal(content.startButtonLabel, null);
+      assert.equal(content.showReleasePicker, false);
+      assert.deepEqual(setupChecklistItems(status), []);
+      assert.doesNotMatch(
+        content.copy + content.note,
+        /Ersteinrichtung|Einrichtung fortsetzen|Software-Paket/,
+      );
+      assert.match(
+        content.title,
+        gap === 'missing' ? /Docker fehlt/ : gap === 'daemon' ? /nicht erreichbar/ : /Compose/,
+      );
+    });
+  }
+}

@@ -17,6 +17,7 @@ const operation: InstallOperationSummary = {
 const preview = (baselineReady: boolean): InstallRecoveryPreview => ({
   operation: { ...operation, phase: 'installing' },
   baselineReady,
+  baselineErrors: baselineReady ? [] : ['Sandbox startet noch.'],
   backup: null,
   restoreCompatible: baselineReady,
 });
@@ -67,7 +68,7 @@ test('reinstall prepares without mutation and only commits after explicit confir
 });
 
 for (const ready of [true, false])
-  test(`reload uses backend operation and offers ${ready ? 'finish' : 'restart'}`, async () => {
+  test(`reload uses backend operation and offers ${'finish'}`, async () => {
     const status = minimalHostStatus({
       installation: { kind: 'installing', operation: { ...operation, phase: 'installing' } },
     });
@@ -83,7 +84,7 @@ for (const ready of [true, false])
     controller.show(minimalHostStatus());
     await tick();
     assert.equal(reads, 1);
-    assert.equal(controller.getState().recoveryPhase, ready ? 'finish' : 'restart');
+    assert.equal(controller.getState().recoveryPhase, 'finish');
   });
 
 test('recovery backup bypasses initial HTTPS offer in both directions', () => {
@@ -135,4 +136,93 @@ test('failed recovery can retry or finish without backup without losing operatio
   await controller.finishRecovery('without-backup');
   assert.deepEqual(actions, ['restore', 'restore', 'without-backup']);
   assert.equal(completed, true);
+});
+
+test('completion can recheck starting services without reinstalling', async () => {
+  const status = minimalHostStatus({
+    installation: { kind: 'installing', operation: { ...operation, phase: 'installing' } },
+  });
+  let ready = false;
+  let commits = 0;
+  const api = {
+    fetchSetupStatus: async () => status,
+    previewInstallRecovery: async () => preview(ready),
+    commitInstall: async () => {
+      commits++;
+    },
+  } as unknown as PraxisManagerApi;
+  const controller = createWizardController({ api, onComplete() {}, onCancel() {} });
+  controller.show(status);
+  await tick();
+  assert.equal(controller.getState().recoveryPhase, 'finish');
+  assert.equal(controller.getState().recoveryPreview?.baselineReady, false);
+  assert.deepEqual(controller.getState().recoveryPreview?.baselineErrors, [
+    'Sandbox startet noch.',
+  ]);
+  ready = true;
+  await controller.refreshRecovery();
+  assert.equal(controller.getState().recoveryPreview?.baselineReady, true);
+  assert.deepEqual(controller.getState().recoveryPreview?.baselineErrors, []);
+  assert.equal(commits, 0);
+});
+
+test('completion recheck does not overwrite a closed wizard session', async () => {
+  const status = minimalHostStatus({
+    installation: { kind: 'installing', operation: { ...operation, phase: 'installing' } },
+  });
+  let resolve: ((value: InstallRecoveryPreview) => void) | undefined;
+  let rechecking = false;
+  const api = {
+    fetchSetupStatus: async () => status,
+    previewInstallRecovery: async () =>
+      rechecking
+        ? new Promise<InstallRecoveryPreview>((done) => {
+            resolve = done;
+          })
+        : preview(false),
+  } as unknown as PraxisManagerApi;
+  const controller = createWizardController({ api, onComplete() {}, onCancel() {} });
+  controller.show(status);
+  await tick();
+  rechecking = true;
+  const pending = controller.refreshRecovery();
+  controller.hide();
+  const closed = controller.getState();
+  resolve!(preview(true));
+  await pending;
+  assert.deepEqual(controller.getState(), closed);
+});
+
+test('finish publishes the new installation status before leaving the wizard', async () => {
+  const status = minimalHostStatus({
+    installation: { kind: 'installing', operation: { ...operation, phase: 'installing' } },
+  });
+  let publish: (() => void) | undefined;
+  let completed = false;
+  const controller = createWizardController({
+    api: {
+      fetchSetupStatus: async () => status,
+      previewInstallRecovery: async () => preview(true),
+      finishInstallRecovery: async () => ({ ok: true, errors: [] }),
+    } as unknown as PraxisManagerApi,
+    onHostMutated: () =>
+      new Promise<void>((resolve) => {
+        publish = resolve;
+      }),
+    onComplete: () => {
+      completed = true;
+    },
+    onCancel() {},
+  });
+  controller.show(status);
+  await tick();
+  const pending = controller.finishRecovery('without-backup');
+  await tick();
+  assert.equal(completed, false);
+  assert.equal(controller.getState().busy, true);
+  assert.equal(controller.getState().recoveryPhase, 'finish');
+  publish!();
+  await pending;
+  assert.equal(completed, true);
+  assert.equal(controller.getState().operation, null);
 });

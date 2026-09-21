@@ -44,6 +44,9 @@ export async function pollSetupProbes(
     lanAppBaseUrl?: string;
   },
   options?: {
+    /** Additional completion checks, e.g. recovery core health and maintenance auth. */
+    additionalReady?: () => Promise<boolean>;
+    shouldContinue?: () => boolean;
     maxWaitMs?: number;
     intervalMs?: number;
     /**
@@ -63,13 +66,15 @@ export async function pollSetupProbes(
   let last: ProbeResult[] = [];
   let lanGraceDeadline: number | null = null;
 
-  while (Date.now() <= deadline) {
+  while (Date.now() <= deadline && (options?.shouldContinue?.() ?? true)) {
     const probeResult = await api.runSetupProbes(input);
     last = probeResult.probes;
-    if (connectionProbesReady(last)) {
+    if (options?.shouldContinue?.() === false) return last;
+    const additionalReady = (await options?.additionalReady?.()) ?? true;
+    if (connectionProbesReady(last) && additionalReady) {
       return last;
     }
-    if (!requireLan) {
+    if (!requireLan && additionalReady) {
       const local = last.find((probe) => probe.id === 'app.health.local');
       if (local?.ok) {
         if (lanGraceDeadline == null) {

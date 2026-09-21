@@ -60,7 +60,7 @@ export type WizardControllerDeps = WizardCallbacks & {
   api: PraxisManagerApi;
   onStateChange?: () => void;
   /** Nach Apply / Stack-Start — Health-Header und Shell-Status aktualisieren. */
-  onHostMutated?: () => void;
+  onHostMutated?: () => void | Promise<void>;
   requestConfirm?: (message: string, onConfirm: () => void, onCancel?: () => void) => void;
 };
 
@@ -70,6 +70,7 @@ export type WizardController = {
   prepareRecovery: () => Promise<void>;
   commitRecovery: () => void;
   abortRecovery: () => Promise<void>;
+  refreshRecovery: () => Promise<void>;
   finishRecovery: (action: 'restore' | 'without-backup') => Promise<void>;
   patchFields: (patch: Partial<WizardFlowState>) => void;
   show: (status: HostStatus | null, presentation?: WizardPresentation) => void;
@@ -174,7 +175,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
           ? 'finish'
           : !status.network.configuredLanIp && status.deliveryImages.ready
             ? 'setup'
-            : 'restart',
+            : 'finish',
       });
       return;
     }
@@ -191,8 +192,10 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       });
       if (!still(generation)) return;
       if (!result.ok) throw new Error(result.errors.join(' '));
+      // Publish the completed installation before navigation starts its own refresh.
+      await deps.onHostMutated?.();
+      if (!still(generation)) return;
       patch({ operation: null, recoveryPhase: null });
-      deps.onHostMutated?.();
       deps.onComplete();
     });
   }
@@ -367,6 +370,9 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       }
       patch({
         network,
+        ...(!resolvedLanIp(state) && network.lanCandidates[0]
+          ? { lanAppIp: network.lanCandidates[0].address, customLanIp: '' }
+          : {}),
       });
       return;
     }
@@ -378,26 +384,36 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       return;
     }
     const applyState = state;
+    const operation = state.operation;
     const applyResult = await applyWizardSetup(deps.api, applyState);
-    if (still(generation)) {
-      patch({
-        applyResult,
-        probeStatusText: WIZARD_PROBE_WAIT_MESSAGE,
-      });
+    if (!still(generation)) {
+      deps.onHostMutated?.();
+      return;
     }
-    if (still(generation)) {
-      const status = await refreshWizardStatusAfterApply(deps.api);
-      if (still(generation)) {
-        patch({
-          status,
-          probeStatusText: null,
-        });
-      }
+    patch({
+      applyResult,
+      probeStatusText: operation
+        ? 'App und Sandbox starten — Abschlussprüfung läuft …'
+        : WIZARD_PROBE_WAIT_MESSAGE,
+    });
+    let recoveryPreview: InstallRecoveryPreview | null = null;
+    const status = await refreshWizardStatusAfterApply(deps.api, {
+      shouldContinue: () => still(generation),
+      ...(operation
+        ? {
+            additionalReady: async () => {
+              recoveryPreview = await deps.api.previewInstallRecovery(operation.id);
+              return recoveryPreview.baselineReady;
+            },
+          }
+        : {}),
+    });
+    if (!still(generation)) {
+      deps.onHostMutated?.();
+      return;
     }
-    if (state.operation) {
-      const preview = await deps.api.previewInstallRecovery(state.operation.id);
-      if (still(generation)) patch({ recoveryPreview: preview, recoveryPhase: 'finish' });
-    }
+    patch({ status, probeStatusText: null });
+    if (operation) patch({ recoveryPreview, recoveryPhase: 'finish' });
     deps.onHostMutated?.();
   }
 
@@ -449,6 +465,13 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       });
     },
     finishRecovery,
+    async refreshRecovery() {
+      await recoveryAction(async (generation) => {
+        if (!state.operation) return;
+        const preview = await deps.api.previewInstallRecovery(state.operation.id);
+        if (still(generation)) patch({ recoveryPreview: preview, recoveryPhase: 'finish' });
+      });
+    },
 
     patchFields(partial) {
       patch(partial);

@@ -25,6 +25,7 @@
   import ProxySettings from './ProxySettings.svelte';
   import DeviceAddressPreview from './DeviceAddressPreview.svelte';
   import { draftCanonicalBaseUrl, existingHttpHostname } from './reachability.js';
+  import { resolvedLanIp } from './wizard-state.js';
   import WizardHttpsPanel from './WizardHttpsPanel.svelte';
 
   let {
@@ -157,40 +158,34 @@
           return controller.browseExportsFolder();
         }}
       />
-    {:else if snapshot.step === 4}
-      <p class="wizard-step-lead">
-        Wählen Sie die IP-Adresse dieses Rechners für Ihre Praxisgeräte. Die Geräteadresse wird daraus automatisch gebildet.
-      </p>
-
-      <section class="network-config-block">
-        <h3 class="network-config-subheading">Praxisadresse</h3>
-        <p class="hint">
-          Ohne Proxy bleibt Praxis Flow auch über die anderen Netzwerkanschlüsse erreichbar.
-        </p>
-        <LanIpPanel
-          state={snapshot}
-          network={snapshot.network}
-          status={snapshot.status}
-          disabled={snapshot.busy}
-          variant="wizard"
-          radioName="wizard-lan-ip"
-          idPrefix="wizard"
-          onChange={patchFields}
-        />
-      </section>
-
     {:else if snapshot.step === 5}
       <p class="wizard-step-lead">
         Wählen Sie den Zugang für den internen Praxisbetrieb. HTTPS kann anschließend oder später eingerichtet werden.
       </p>
 
       <section class="network-config-block">
-        <h3 class="network-config-subheading">Zugriff über ausgewählte Adresse</h3>
         <ProxySettings
           enabled={snapshot.proxyEnabled}
           disabled={snapshot.busy || wizardHttpsPrepared(snapshot.status)}
           onChange={(proxyEnabled) => patchFields({ proxyEnabled })}
         />
+        {#if snapshot.proxyEnabled}
+          <div class="network-address-choice">
+            <h3 class="network-config-subheading">Adresse für den Praxiszugang</h3>
+            <p class="hint">Der Proxy wird beim Anwenden an diese IP-Adresse gebunden.</p>
+            <LanIpPanel state={snapshot} network={snapshot.network} status={snapshot.status}
+              disabled={snapshot.busy} variant="wizard" radioName="wizard-lan-ip"
+              idPrefix="wizard" onChange={patchFields} />
+          </div>
+        {:else}
+          <details class="network-address-choice" open={snapshot.lanAppIp === '__custom__' || !resolvedLanIp(snapshot)}>
+            <summary>Adresse für Geräte-Links ändern</summary>
+            <p class="hint">Die Auswahl bestimmt die angezeigten Geräte-Links und die Erreichbarkeitsprüfung. Sie schränkt den Zugriff über andere Netzwerkanschlüsse nicht ein.</p>
+            <LanIpPanel state={snapshot} network={snapshot.network} status={snapshot.status}
+              disabled={snapshot.busy} variant="wizard" radioName="wizard-lan-ip"
+              idPrefix="wizard" onChange={patchFields} />
+          </details>
+        {/if}
         {#if !wizardHttpsPrepared(snapshot.status)}
           <DeviceAddressPreview
             address={draftCanonicalBaseUrl(snapshot, snapshot.status)}
@@ -337,3 +332,8 @@
     {/if}
   </div>
 </div>
+
+<style>
+  .network-address-choice { margin-top: 1rem; }
+  .network-address-choice summary { cursor: pointer; margin-bottom: 0.75rem; }
+</style>

@@ -122,12 +122,6 @@
     </div>
   {:else if snapshot.phase === 'preview' && snapshot.inspect}
     <h2>Restore bestätigen</h2>
-    <p class="hint">
-      Diese Sicherung ist nicht verschlüsselt. API-Schlüssel für SMS und WhatsApp werden im
-      Klartext mitgesichert. Bei HTTPS kann sie private Schlüssel enthalten. Bewahren Sie die
-      Datei geschützt auf, möglichst auf einem verschlüsselten Datenträger, und geben Sie sie
-      nicht ungeschützt weiter.
-    </p>
     {#if snapshot.filePath}
       <p class="hint">{snapshot.filePath}</p>
     {/if}

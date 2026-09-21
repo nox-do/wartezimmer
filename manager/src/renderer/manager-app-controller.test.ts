@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createWizardController } from './wizard-controller.js';
 import test from 'node:test';
 import type { HostRuntimeHealth } from '@praxis-flow/server-shared/setup-api';
 import type { HostStatus } from '../shared/host-status.js';
@@ -358,4 +359,44 @@ test('boot with remnants keeps diagnosis visible and explicit recovery entry ful
   controller.onStatusSetupClick();
   assert.equal(shell.activeView, 'wizard');
   assert.equal(shell.wizardPresentation, 'fullscreen');
+});
+
+test('recovery completion reaches healthy status without a stale installation card', async () => {
+  const operation = {
+    id: 'finish-test',
+    mode: 'fresh' as const,
+    phase: 'installing' as const,
+    createdAt: '2026-09-21',
+    releaseVersion: '0.6.0',
+    backupContainsTls: null,
+  };
+  let status = minimalHostStatus({ installation: { kind: 'installing', operation } });
+  const { controller, shell } = createTestController({ fetchSetupStatus: async () => status });
+  await controller.start();
+  const wizard = createWizardController({
+    api: {
+      fetchSetupStatus: async () => status,
+      previewInstallRecovery: async () => ({
+        operation,
+        baselineReady: true,
+        baselineErrors: [],
+        backup: null,
+        restoreCompatible: false,
+      }),
+      finishInstallRecovery: async () => {
+        status = minimalHostStatus();
+        return { ok: true, errors: [] };
+      },
+    } as never,
+    onHostMutated: controller.onAfterMutation,
+    onComplete: controller.onWizardComplete,
+    onCancel: controller.onWizardCancel,
+  });
+  wizard.show(status);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await wizard.finishRecovery('without-backup');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(shell.activeView, 'status');
+  assert.equal(shell.configSnapshot?.installation.kind, 'healthy');
+  assert.equal(chromeVisible(shell), true);
 });

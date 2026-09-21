@@ -23,7 +23,7 @@
     onStatusLoadReleaseArchive: () => void;
     onStatusOpenUrl: (url: string) => void;
     onOpenNetwork: () => void;
-    onAfterMutation: () => void;
+    onAfterMutation: () => void | Promise<void>;
     onWizardComplete: () => void;
     onWizardCancel: () => void;
   } = $props();
@@ -43,7 +43,7 @@
         onOpenUrl={onStatusOpenUrl}
         {onOpenNetwork}
       />
-      <MaintenanceView {onAfterMutation} />
+      <MaintenanceView {onAfterMutation} onReinstall={onStatusSetupClick} />
       <NetworkView {onAfterMutation} />
       <WizardView
         onComplete={onWizardComplete}

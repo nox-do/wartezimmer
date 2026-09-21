@@ -24,11 +24,8 @@ import { LOCAL_MAINTENANCE_APP_BASE_URL } from './urls.js';
 import { validatePfbackupContent, validateSettingsSnapshotWithApp } from './settings-backup.js';
 import { maintenanceRequestHeaders } from './maintenance-auth.js';
 
-const HOST_PATH_ENV_KEYS = [
-  'IMPORTS_HOST_PATH',
-  'EXPORTS_HOST_PATH',
-  'CONTACT_LOOKUP_BASE_PATH',
-] as const;
+// CONTACT_LOOKUP_BASE_PATH is a container path (/imports), not a host directory.
+const HOST_PATH_ENV_KEYS = ['IMPORTS_HOST_PATH', 'EXPORTS_HOST_PATH'] as const;
 
 const NETWORK_ENV_KEYS = [
   'SETUP_LAN_APP_IP',

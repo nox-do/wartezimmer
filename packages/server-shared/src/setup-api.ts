@@ -896,6 +896,7 @@ export type RecoveryBackupCandidate = {
 export type InstallRecoveryPreview = {
   operation: InstallOperationSummary;
   baselineReady: boolean;
+  baselineErrors: string[];
   backup: PfbackupInspectResult | null;
   restoreCompatible: boolean;
 };
