@@ -253,10 +253,13 @@ test('DNS filter help selects the correct exception without treating the suspici
     ['staff.praxis.example', 'staff.praxis.example'],
     ['staff.lan.notaus.de.other.example', 'staff.lan.notaus.de.other.example'],
   ]) {
-    const result = formatActiveReachabilityResult([
-      { id: 'app.health.local', ok: true, message: 'ok' },
-      { id: 'app.health.lan', ok: false, message: 'DNS', reason: 'dns-rebind' },
-    ], `https://${host}`);
+    const result = formatActiveReachabilityResult(
+      [
+        { id: 'app.health.local', ok: true, message: 'ok' },
+        { id: 'app.health.lan', ok: false, message: 'DNS', reason: 'dns-rebind' },
+      ],
+      `https://${host}`,
+    );
     assert.equal(result.ok, false);
     assert.match(result.message, /DNS-Rebind-Schutz.*möglich/);
     assert.ok(result.message.includes(`dort ${exception} als Ausnahme`));

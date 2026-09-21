@@ -139,11 +139,7 @@
     {#if snapshot.recoveryPhase && snapshot.recoveryPhase !== 'setup' && controller}
       <InstallRecoveryPanel {snapshot} {controller} />
     {:else}
-    <WizardStepIndicator
-      current={snapshot.step}
-      httpsPhase={snapshot.httpsPhase}
-      proxyEnabled={snapshot.proxyEnabled}
-    />
+    <WizardStepIndicator current={snapshot.step} />
 
     {#if controller}
       <WizardSteps {snapshot} {controller} {hostPlatform} />

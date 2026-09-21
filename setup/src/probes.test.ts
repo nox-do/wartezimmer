@@ -7,15 +7,21 @@ function resolverFactory(answers: Array<string[] | Error | null>) {
   let cancelled = 0;
   return {
     servers,
-    get cancelled() { return cancelled; },
+    get cancelled() {
+      return cancelled;
+    },
     createResolver: () => ({
-      setServers(value: readonly string[]) { servers.push([...value]); },
+      setServers(value: readonly string[]) {
+        servers.push([...value]);
+      },
       resolve4: (() => {
         const answer = answers.shift();
         if (answer === null) return new Promise<string[]>(() => {});
         return answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer ?? []);
       }) as import('node:dns/promises').Resolver['resolve4'],
-      cancel() { cancelled += 1; },
+      cancel() {
+        cancelled += 1;
+      },
     }),
   };
 }
@@ -37,25 +43,36 @@ test('public DNS diagnostic does not classify public, loopback or malformed addr
 });
 
 test('public DNS failures preserve generic diagnosis and deadline cancels pending queries', async () => {
-  assert.equal(await defaultDetectDnsRebind('staff.example.test', resolverFactory([
-    new Error('ENOTFOUND'), new Error('ETIMEOUT'),
-  ])), false);
+  assert.equal(
+    await defaultDetectDnsRebind(
+      'staff.example.test',
+      resolverFactory([new Error('ENOTFOUND'), new Error('ETIMEOUT')]),
+    ),
+    false,
+  );
   const deps = resolverFactory([null, null]);
-  assert.equal(await defaultDetectDnsRebind('staff.example.test', { ...deps, timeoutMs: 10 }), false);
+  assert.equal(
+    await defaultDetectDnsRebind('staff.example.test', { ...deps, timeoutMs: 10 }),
+    false,
+  );
   assert.equal(deps.cancelled, 2);
 });
 
 for (const code of ['ENOTFOUND', 'EAI_AGAIN']) {
   test(`${code} triggers secondary diagnosis and retains original error detail`, async () => {
-    const results = await runConnectionProbes({ lanAppBaseUrl: 'https://staff.example.test' }, {
-      fetchStatus: async (url) => url.includes('127.0.0.1')
-        ? { ok: true, status: 200, body: '' }
-        : { ok: false, status: 0, body: `getaddrinfo ${code} staff.example.test` },
-      detectDnsRebind: async (hostname) => {
-        assert.equal(hostname, 'staff.example.test');
-        return true;
+    const results = await runConnectionProbes(
+      { lanAppBaseUrl: 'https://staff.example.test' },
+      {
+        fetchStatus: async (url) =>
+          url.includes('127.0.0.1')
+            ? { ok: true, status: 200, body: '' }
+            : { ok: false, status: 0, body: `getaddrinfo ${code} staff.example.test` },
+        detectDnsRebind: async (hostname) => {
+          assert.equal(hostname, 'staff.example.test');
+          return true;
+        },
       },
-    });
+    );
     assert.equal(results[1].reason, 'dns-rebind');
     assert.equal(results[1].ok, false);
     assert.match(results[1].message, /möglich/);
@@ -70,19 +87,32 @@ test('successful requests, HTTP error bodies and connection errors do not trigge
     { ok: false, status: 0, body: 'ECONNREFUSED' },
     { ok: false, status: 0, body: 'timeout' },
   ]) {
-    await runConnectionProbes({ lanAppBaseUrl: 'https://staff.example.test' }, {
-      fetchStatus: async () => response,
-      detectDnsRebind: async () => { assert.fail('unexpected public query'); },
-    });
+    await runConnectionProbes(
+      { lanAppBaseUrl: 'https://staff.example.test' },
+      {
+        fetchStatus: async () => response,
+        detectDnsRebind: async () => {
+          assert.fail('unexpected public query');
+        },
+      },
+    );
   }
 });
 
 test('inconclusive secondary diagnosis leaves original failure unchanged', async () => {
-  for (const detectDnsRebind of [async () => false, async () => { throw new Error('blocked'); }]) {
-    const result = await runConnectionProbes({ lanAppBaseUrl: 'https://staff.example.test' }, {
-      fetchStatus: async () => ({ ok: false, status: 0, body: 'ENOTFOUND' }),
-      detectDnsRebind,
-    });
+  for (const detectDnsRebind of [
+    async () => false,
+    async () => {
+      throw new Error('blocked');
+    },
+  ]) {
+    const result = await runConnectionProbes(
+      { lanAppBaseUrl: 'https://staff.example.test' },
+      {
+        fetchStatus: async () => ({ ok: false, status: 0, body: 'ENOTFOUND' }),
+        detectDnsRebind,
+      },
+    );
     assert.equal(result[1].reason, undefined);
     assert.equal(result[1].detail, 'ENOTFOUND');
   }

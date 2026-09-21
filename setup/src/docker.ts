@@ -763,7 +763,11 @@ export async function composeDown(
   if (wantGateway) {
     args.push('--profile', 'gateway');
   }
-  args.push('--env-file', restrictedOperationEnv(options.projectRoot, options.restrictedOperationId), 'down');
+  args.push(
+    '--env-file',
+    restrictedOperationEnv(options.projectRoot, options.restrictedOperationId),
+    'down',
+  );
   if (options.volumes ?? true) args.push('--volumes');
   if (options.removeOrphans) args.push('--remove-orphans');
 

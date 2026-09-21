@@ -138,7 +138,11 @@ export async function runConnectionProbes(
 
   if (lanBase && lanHealth) {
     let rebind = false;
-    if (!lanHealth.ok && lanHealth.status === 0 && /\b(?:ENOTFOUND|EAI_AGAIN)\b/.test(lanHealth.body)) {
+    if (
+      !lanHealth.ok &&
+      lanHealth.status === 0 &&
+      /\b(?:ENOTFOUND|EAI_AGAIN)\b/.test(lanHealth.body)
+    ) {
       try {
         const lanHostname = new URL(lanBase).hostname;
         rebind = await doDetectRebind(lanHostname);

@@ -77,7 +77,7 @@ Routine zum Wegklicken solcher Warnungen etablieren.
 | Abschluss          | `.env geschrieben` und Docker Compose sind die ersten Erfolgssignale. Nächste fachliche Schritte und PIN-Hinweise stehen weit unten.                                        | „Interner Betrieb eingerichtet“ nur nach den vorhandenen Betriebsprüfungen; darunter „MFA öffnen“, „Geräteadressen anzeigen“ und „Administration öffnen“. Technisches Protokoll aufklappbar. |
 
 Belege: [WizardSteps.svelte](../../manager/src/renderer/WizardSteps.svelte),
-[WizardHttpsPanel.svelte](../../manager/src/renderer/WizardHttpsPanel.svelte),
+ehemals `WizardHttpsPanel.svelte` (inzwischen entfernt),
 [wizard-view-model.ts](../../manager/src/renderer/wizard-view-model.ts),
 [ProxySettings.svelte](../../manager/src/renderer/ProxySettings.svelte),
 [LanIpPanel.svelte](../../manager/src/renderer/LanIpPanel.svelte).

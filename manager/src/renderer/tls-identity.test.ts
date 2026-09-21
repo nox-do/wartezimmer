@@ -1,13 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  operatorZoneMailBody,
-  tlsDraftHostname,
-  tlsDraftMatchesPrepared,
-  tlsNameValid,
-  tlsPrepareHostname,
-  tlsWizardDisplayHostname,
-} from './tls-identity.js';
+import { operatorZoneMailBody, tlsNameValid, tlsPrepareHostname } from './tls-identity.js';
 
 test('tlsNameValid accepts generated and rejects reserved labels', () => {
   assert.equal(tlsNameValid({ nameMode: 'generated', customLabel: '', customDomain: '' }), true);
@@ -22,16 +15,9 @@ test('tlsNameValid accepts generated and rejects reserved labels', () => {
     tlsNameValid({ nameMode: 'domain', customLabel: '', customDomain: 'muster.lan.notaus.de' }),
     false,
   );
-});
-
-test('tlsDraftHostname keeps generated names anonymous until prepare', () => {
   assert.equal(
-    tlsDraftHostname({ nameMode: 'generated', customLabel: '', customDomain: '' }),
-    'staff.….lan.notaus.de',
-  );
-  assert.equal(
-    tlsDraftHostname({ nameMode: 'label', customLabel: 'Muster', customDomain: '' }),
-    'staff.muster.lan.notaus.de',
+    tlsNameValid({ nameMode: 'domain', customLabel: '', customDomain: 'lan.notaus.de' }),
+    false,
   );
 });
 
@@ -43,109 +29,6 @@ test('tlsPrepareHostname omits generated names so Setup mints the label', () => 
   assert.equal(
     tlsPrepareHostname({ nameMode: 'label', customLabel: 'Muster', customDomain: '' }),
     'muster.lan.notaus.de',
-  );
-});
-
-test('tlsDraftMatchesPrepared keeps generated identity and rejects a fork change', () => {
-  const prepared = {
-    state: 'awaiting-operator-dns',
-    mode: 'managed' as const,
-    hostname: 'staff.7fk3m2.lan.notaus.de',
-    installationDomain: '7fk3m2.lan.notaus.de',
-  };
-  assert.equal(
-    tlsDraftMatchesPrepared(
-      { nameMode: 'generated', customLabel: '', customDomain: '', preparedNameMode: null },
-      prepared,
-    ),
-    true,
-  );
-  assert.equal(
-    tlsDraftMatchesPrepared(
-      {
-        nameMode: 'generated',
-        customLabel: '',
-        customDomain: '',
-        preparedNameMode: 'generated',
-      },
-      prepared,
-    ),
-    true,
-  );
-  assert.equal(
-    tlsDraftMatchesPrepared(
-      {
-        nameMode: 'domain',
-        customLabel: '',
-        customDomain: 'flow.praxis-meyer.de',
-        preparedNameMode: 'generated',
-      },
-      prepared,
-    ),
-    false,
-  );
-  assert.equal(
-    tlsDraftMatchesPrepared(
-      {
-        nameMode: 'generated',
-        customLabel: '',
-        customDomain: '',
-        preparedNameMode: 'label',
-      },
-      prepared,
-    ),
-    false,
-  );
-  assert.equal(
-    tlsDraftMatchesPrepared(
-      {
-        nameMode: 'label',
-        customLabel: 'muster',
-        customDomain: '',
-        preparedNameMode: 'label',
-      },
-      {
-        state: 'awaiting-operator-dns',
-        mode: 'managed',
-        hostname: 'staff.muster.lan.notaus.de',
-        installationDomain: 'muster.lan.notaus.de',
-      },
-    ),
-    true,
-  );
-});
-
-test('tlsWizardDisplayHostname follows the draft after a fork change', () => {
-  const prepared = {
-    state: 'awaiting-operator-dns',
-    mode: 'managed' as const,
-    hostname: 'staff.7fk3m2.lan.notaus.de',
-    staffHostname: 'staff.7fk3m2.lan.notaus.de',
-    installationDomain: '7fk3m2.lan.notaus.de',
-  };
-  assert.equal(
-    tlsWizardDisplayHostname(
-      {
-        nameMode: 'generated',
-        customLabel: '',
-        customDomain: '',
-        preparedNameMode: 'generated',
-      },
-      prepared,
-    ),
-    'staff.7fk3m2.lan.notaus.de',
-  );
-  assert.equal(
-    tlsWizardDisplayHostname(
-      {
-        nameMode: 'domain',
-        customLabel: '',
-        customDomain: 'flow.praxis-meyer.de',
-        preparedNameMode: 'generated',
-      },
-      prepared,
-    ),
-    'flow.praxis-meyer.de',
   );
 });
 

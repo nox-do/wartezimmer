@@ -1213,43 +1213,6 @@ textarea.wizard-input.is-compact {
   font-size: 0.9rem;
 }
 
-/* HTTPS step 6 — sub-step dots in WizardStepIndicator */
-.wizard-step-progress {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  margin-left: 0.15rem;
-}
-
-.wizard-step-dot {
-  width: 0.38rem;
-  height: 0.38rem;
-  border-radius: 50%;
-  background: var(--border);
-}
-
-.wizard-step-dot.is-done,
-.wizard-step-dot.is-here {
-  background: var(--accent);
-}
-
-.wizard-step-dot.is-here {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, var(--border));
-}
-
-.wizard-nested {
-  margin-left: 1.55rem;
-  display: grid;
-  gap: 0.4rem;
-}
-
-.wizard-nested .wizard-field-label,
-.wizard-nested .wizard-input,
-.wizard-nested .hint,
-.wizard-nested .notice {
-  margin: 0;
-}
-
 .lan-ip-status {
   display: grid;
   gap: 0.45rem;

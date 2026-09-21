@@ -64,41 +64,76 @@ function createController(options: {
   });
 }
 
-test('submitLease prepares managed TLS without a client-minted hostname', async () => {
-  let prepared: TlsPrepareInput | null = null;
-  const controller = createController({
-    status: tls({ state: 'off' }),
-    api: {
-      prepareHostTls: async (body: TlsPrepareInput) => {
-        prepared = body;
-        return {
-          tls: tls({
-            state: 'awaiting-operator-dns',
-            mode: 'managed',
-            hostname: '7fk3m2.lan.notaus.de',
-            installationId: '7fk3m2q9',
-            acmeCnameTarget: 'uuid.auth.acme-dns.io',
-          }),
-          operatorRequest: {
-            installationId: '7fk3m2q9',
-            oneTimeToken: 'once',
-            aRecord: { name: '7fk3m2.lan.notaus.de', value: '192.168.1.10' },
-            acmeCname: {
-              name: '_acme-challenge.7fk3m2.lan.notaus.de',
-              value: 'uuid.auth.acme-dns.io',
-            },
-          },
-        };
+for (const prepareCase of [
+  {
+    name: 'generated operator name',
+    draft: { nameMode: 'generated' as const },
+    expected: { mode: 'managed', hostname: undefined, lanIp: '192.168.1.10' } as const,
+  },
+  {
+    name: 'chosen operator-zone label',
+    draft: { nameMode: 'label' as const, customLabel: 'Muster' },
+    expected: {
+      mode: 'managed',
+      hostname: 'muster.lan.notaus.de',
+      lanIp: '192.168.1.10',
+    } as const,
+  },
+  {
+    name: 'custom domain',
+    draft: { nameMode: 'domain' as const, customDomain: 'Flow.Praxis-Meyer.de.' },
+    expected: {
+      mode: 'custom',
+      hostname: 'flow.praxis-meyer.de',
+      lanIp: '192.168.1.10',
+    } as const,
+  },
+]) {
+  test(`submitLease prepares TLS for ${prepareCase.name}`, async () => {
+    let prepared: TlsPrepareInput | null = null;
+    const controller = createController({
+      status: tls({ state: 'off' }),
+      api: {
+        prepareHostTls: async (body: TlsPrepareInput) => {
+          prepared = body;
+          return {
+            tls: tls({
+              state: 'awaiting-operator-dns',
+              mode: body.mode,
+              hostname: body.hostname ?? 'staff.7fk3m2.lan.notaus.de',
+              installationId: '7fk3m2q9',
+              acmeCnameTarget: body.mode === 'managed' ? 'uuid.auth.acme-dns.io' : null,
+            }),
+            operatorRequest:
+              body.mode === 'managed'
+                ? {
+                    installationId: '7fk3m2q9',
+                    oneTimeToken: 'once',
+                    aRecord: {
+                      name: body.hostname ?? 'staff.7fk3m2.lan.notaus.de',
+                      value: '192.168.1.10',
+                    },
+                    acmeCname: {
+                      name: `_acme-challenge.${body.hostname ?? '7fk3m2.lan.notaus.de'}`,
+                      value: 'uuid.auth.acme-dns.io',
+                    },
+                  }
+                : null,
+          };
+        },
       },
-    },
-  });
+    });
 
-  controller.patchDraft({ ipv4Reserved: true, nameMode: 'generated' });
-  await controller.submitLease();
-  assert.deepEqual(prepared, { mode: 'managed', hostname: undefined, lanIp: '192.168.1.10' });
-  assert.equal(controller.getState().operatorRequest?.oneTimeToken, 'once');
-  assert.equal(controller.getState().revealOperatorRecords, true);
-});
+    controller.patchDraft({ ipv4Reserved: true, ...prepareCase.draft });
+    await controller.submitLease();
+    assert.deepEqual(prepared, prepareCase.expected);
+    assert.equal(controller.getState().revealOperatorRecords, true);
+    assert.equal(
+      controller.getState().operatorRequest?.oneTimeToken ?? null,
+      prepareCase.expected.mode === 'managed' ? 'once' : null,
+    );
+  });
+}
 
 test('submitLease refuses prepare while LAN IP is stale', async () => {
   let prepared = false;

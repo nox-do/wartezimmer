@@ -2,7 +2,10 @@
 
 Stand: 2026-08-27
 
-Status: **Produkt-UX im Manager.** Ops-Ist: [`operations/tls.md`](operations/tls.md). Dieses Dokument bleibt UX-/Anforderungsquelle bis zur Einarbeitung — kein „Kunden-Test“-Vorbehalt mehr.
+Status: **Historischer Implementierungsplan; abgelöst.** Verbindlicher Ops-Ist und
+aktuelle UX: [`operations/tls.md`](operations/tls.md). Insbesondere die nachfolgend
+beschriebene TLS-Vorbereitung im Wizard wurde entfernt; die gesamte TLS-Strecke liegt
+heute unter **Netzwerk**.
 Architektur, Compose, Setup-API und ACME: [`plan-proxy-tls.md`](plan-proxy-tls.md).
 HTTP-Ist: [`../manager/README.md`](../manager/README.md), Netzwerk-Tab.
 

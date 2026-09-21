@@ -3,7 +3,7 @@
 Stand: 2026-09-17 · §1–10 ausgearbeitet (Ops-Ist LAN-TLS + Restricted Portal)
 
 **Scope:** Vertrauenswürdiges HTTPS im Praxis-LAN — Modell, Aktivierung, Betrieb, Grenzen.  
-**Ist:** Manager-Wizard (Schritt HTTPS) + Netzwerk-Tab; Setup-API `/api/setup/host/tls/*`; Proxy-Service mit Custom-Caddy-Image.
+**Ist:** TLS-Einrichtung ausschließlich im Netzwerk-Tab; Setup-API `/api/setup/host/tls/*`; Proxy-Service mit Custom-Caddy-Image.
 
 Quellen (Historie; Ops-Ist ist dieses Dokument):
 
@@ -11,7 +11,7 @@ Quellen (Historie; Ops-Ist ist dieses Dokument):
 - Manager-UX: [`../plan-proxy-tls-manager.md`](../plan-proxy-tls-manager.md)
 - HTTPS-UI-Aufräumen (erledigt): [`../archive/plan-manager-https.md`](../archive/plan-manager-https.md)
 - Lab (Pebble): [`../archive/tls-lab.md`](../archive/tls-lab.md) — **nicht Produkt**
-- Code: `setup/src/host-tls.ts`, `proxy-tls.ts`, `docker.ts`; Manager `wizard-flow.ts`, `tls-network-controller.ts`; `SETUP_TLS_ROUTES` in `packages/server-shared/src/setup-api.ts`
+- Code: `setup/src/host-tls.ts`, `proxy-tls.ts`, `docker.ts`; Manager `tls-network-controller.ts`; `SETUP_TLS_ROUTES` in `packages/server-shared/src/setup-api.ts`
 
 Verwandt: Runtime/Compose → [`runtime.md`](runtime.md) · Backup-Grenze → [`backup.md`](backup.md) · Artefakte/Proxy-Image → [`delivery.md`](delivery.md)
 
@@ -79,14 +79,14 @@ Warum HTTPS zusätzlich zur Vertraulichkeit: HTTP/2 über TLS umgeht Browser-Lim
 | **Manager / Setup**                  | `prepare` (ID, Korrelationswert, Raum/Staff/Portal/Wildcard); Lease-Bestätigung; Mail-/PEM-Texte; `verify-dns`, Zertifikat, Cutover, Repair/Renew/Reset; Restricted-IP prüfen und anwenden | DNS schreiben; Host-Firewall, Routing oder Netztrennung verwalten                   |
 | **Client (Terminal/TV/MFA/Browser)** | normalen DNS + HTTPS zum Praxisserver im LAN                                                                                                                                               | Zertifikate installieren; Hosts-Datei im Happy Path                                 |
 
-**Happy Path (managed):** HTTP-Proxy **persistiert** (§3) → Installationsraum wählen → IPv4 bestätigen → Portal-Ziel-IP im Mailtext ergänzen → Mail mit Staff- und Portal-A-Record sowie Wildcard-CNAME an `cert@notaus.de` → Assistent geht mit **HTTP** weiter → unter **Netzwerk** warten/`verify-dns` → Wildcard-Zertifikat → Cutover auf `https://staff.<raum>`.
+**Happy Path (managed):** Wizard schließt den HTTP-/Proxy-Betrieb ab → unter **Netzwerk** Installationsraum wählen → IPv4 bestätigen → Portal-Ziel-IP im Mailtext ergänzen → Mail mit Staff- und Portal-A-Record sowie Wildcard-CNAME an `cert@notaus.de` → warten/`verify-dns` → Wildcard-Zertifikat → Cutover auf `https://staff.<raum>`.
 **Custom:** PEM stagen + A-Record bei der eigenen Domain → `verify-dns` (A) → Checks → Cutover (`tls-custom`).
 
 Detailstrecken UI/API: §4–5.
 
 ## 3. Voraussetzung: HTTP-Proxy (Port 80)
 
-TLS erweitert **denselben** `proxy`-Service (Caddy) — kein zweites System. Ohne Port-80-Proxy gibt es im Manager **keinen** HTTPS-Schritt und keinen TLS-Start unter Netzwerk (`wizardHttpsEligible(proxyEnabled)`).
+TLS erweitert **denselben** `proxy`-Service (Caddy) — kein zweites System. Ohne persistierten Port-80-Proxy bietet der Netzwerk-Tab keinen TLS-Start an.
 
 ### Was der Proxy tut
 
@@ -121,43 +121,26 @@ Ungültige Kombinationen (z. B. enabled + mode `off`) werden **abgelehnt**, nich
 
 ### Manager / Setup-Regeln
 
-- Wizard-Schritt **Zugang**: Proxy optional einschalten. Ohne Proxy → Sprung über HTTPS (§4). Die Checkbox steuert nur UI-Eligibilität (`wizardHttpsEligible`) — **nicht** die Setup-Gate.
-- `tls/prepare` (und die weitere TLS-API) verlangt **persistiertes** `PROXY_ENABLED=true` in `.env` (`prepareHostTls`). Geschrieben wird das erst durch Wizard-Apply (Schritt 8) oder `POST /host/network` mit Proxy an — nicht allein durch Anhaken in Schritt 5.
-- Praktisch: Bei reiner Erstinstallation ohne vorherigen Proxy-Apply HTTPS im Assistenten oft auf **später** lassen (oder Assistent zu Ende), Proxy mit Apply persistieren, dann HTTPS unter **Netzwerk** (oder erneut im Assistenten, wenn `.env` schon Proxy hat).
+- Wizard-Schritt **Zugang**: Proxy optional einschalten; der Wizard bleibt immer HTTP-only.
+- `tls/prepare` (und die weitere TLS-API) verlangt **persistiertes** `PROXY_ENABLED=true` in `.env` (`prepareHostTls`). Geschrieben wird das durch Wizard-Apply oder `POST /host/network` mit Proxy an.
+- Die vollständige HTTPS-Einrichtung beginnt erst danach unter **Netzwerk**. Damit stimmen UI-Reihenfolge und Backend-Gate überein.
 - `POST /host/network` setzt bei Proxy-an bewusst `PROXY_MODE=http` — darf einen **aktiven TLS-Mode weder ändern noch auf HTTP zurücksetzen**.
 - Während HTTPS-Vorbereitung (`TLS_STATE` vorbereitet): Netzwerk-Save darf den Proxy **nicht abschalten**.
 - TLS-Cutover schreibt Mode/`CANONICAL_BASE_URL` über die TLS-Routen (`tls/apply`), nicht über die reine Proxy-Checkbox.
 
 HTTP-Proxy allein ist gültiger Endzustand (ohne Zertifikat). TLS setzt ihn voraus.
 
-## 4. Aktivierungsstrecken (UI)
+## 4. Aktivierungsstrecke (UI)
 
-Zwei Flächen, eine Strecke: **Assistent bereitet vor**, **Netzwerk führt zu Ende** (DNS → Zertifikat → Cutover). Ohne Proxy-Eligibilität (§3) entfällt der HTTPS-Schritt; `tls/prepare` braucht zusätzlich **persistierten** HTTP-Proxy in `.env` (Checkbox allein reicht nicht).
+Eine Fläche, eine Strecke: **Netzwerk** führt Vorbereitung, DNS, Zertifikat und Cutover aus. `tls/prepare` braucht einen **persistierten** HTTP-Proxy in `.env`.
 
 Persistenz ab `prepare`: `GET /host/status` → `tls` (`TlsStatus`). Offenes HTTPS erkennt man **nicht** an `PROXY_MODE` (bleibt `http` bis Cutover).
 
-### 4.1 Assistent — Schritt HTTPS (Badge 6)
+### 4.1 Netzwerk-Tab — Vorbereitung / Resume / Betrieb
 
-Phasen: `offer` → `hostname` → `lease` → `mail` (`HTTPS_PHASES` / `wizard-flow.ts`).
+Status und Wartung verweisen hierher. Controller: `tls-network-controller.ts` / `TlsNetworkPanel.svelte`.
 
-| Phase        | Inhalt                                                                                                                                                                                                                                           |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **offer**    | Jetzt vorbereiten oder **später** → direkt Vorschau (Schritt 7), HTTP-only                                                                                                                                                                       |
-| **hostname** | Vorschlag / eigenes Label / eigene Domain (§1); Validierung `tlsNameValid`                                                                                                                                                                       |
-| **lease**    | feste IPv4 / DHCP-Reservierung bestätigen; blockiert bei `lanIpStale`                                                                                                                                                                            |
-| **mail**     | Beim Eintritt: `prepare` (`tls/prepare`) — ID, lokaler Korrelationswert und Hostname fest. Scheitert, wenn `.env` noch keinen aktiven Proxy hat (§3). Managed: Mail an `cert@notaus.de` bestätigen. Custom: PEM einlesen (`custom-certificate`). |
-
-Danach: Vorschau + Apply des **Stacks noch mit HTTP**-URLs. Hinweis: DNS/Zertifikat/Cutover folgen unter Netzwerk.
-
-Zurück von der Vorschau: wenn TLS schon prepared → wieder Mail-Phase; ohne Proxy-Eligibilität → Zugang (Schritt 5).
-
-Code: `WizardHttpsPanel.svelte`, `buildWizardPrepareTlsInput`, `planHttpsAdvance`.
-
-### 4.2 Netzwerk-Tab — Fortsetzung / Resume / Betrieb
-
-Einstieg auch nachträglich (Status/Wartung verweisen hierher, nicht zurück in den Assistenten). Controller: `tls-network-controller.ts` / `TlsNetworkPanel.svelte`.
-
-**Start von vorn** (TLS noch `off`, Proxy an): ähnliche Kurzstrecke offer → hostname → lease → `prepare`, dann Operator-Records.
+**Start von vorn** (TLS noch `off`, Proxy an): offer → hostname → lease → `prepare`, dann Operator-Records.
 
 **Weiter nach prepare** (typisch `awaiting-operator-dns` …):
 
@@ -176,7 +159,7 @@ Vor Cutover: Warnung **keine Portweiterleitung 80/443** (sonst ggf. Internet-Exp
 
 `POST /host/network` darf aktiven TLS-Mode nicht auf HTTP setzen (§3).
 
-### 4.3 Managed vs. Custom
+### 4.2 Managed vs. Custom
 
 |                 | Managed (Betreiber-Zone)        | Custom (eigene Domain)             |
 | --------------- | ------------------------------- | ---------------------------------- |

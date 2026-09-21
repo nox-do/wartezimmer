@@ -63,9 +63,11 @@ Adresse. Während der TLS-Vorbereitung und nach dem Cutover bleibt die TLS-Ident
 2. Import & Export (Kontakte / MFA-Exporte)
 3. Praxisadresse und Gerätezugriff (Adresse und zugehöriger Adapter)
 4. Zugriff im Praxisnetz: initialer interner HTTP-Betrieb oder Proxy an ausgewählter Adresse
-5. Optional HTTPS: Mail/PEM im Assistenten, Cutover unter Netzwerk ([`docs/operations/tls.md`](../docs/operations/tls.md))
-6. Zusammenfassung des internen Betriebs (`POST /plan`)
-7. Anwenden (`POST /apply`), Prüfung und Abschluss mit MFA-Einstieg
+5. Zusammenfassung des internen Betriebs (`POST /plan`)
+6. Anwenden (`POST /apply`), Prüfung und Abschluss mit MFA-Einstieg
+
+HTTPS wird nach der Host-Einrichtung vollständig unter **Netzwerk** vorbereitet und
+aktiviert ([`docs/operations/tls.md`](../docs/operations/tls.md)).
 
 Ops-Detail Erstinstall: [`docs/operations/delivery.md`](../docs/operations/delivery.md) §4.  
 Ein zentral als sauber nicht installiert erkannter Zustand startet den Assistenten

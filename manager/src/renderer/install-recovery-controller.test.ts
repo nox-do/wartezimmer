@@ -87,7 +87,7 @@ for (const ready of [true, false])
     assert.equal(controller.getState().recoveryPhase, 'finish');
   });
 
-test('recovery backup bypasses initial HTTPS offer in both directions', () => {
+test('recovery setup moves directly between access and preview', () => {
   const status = minimalHostStatus({
     installation: {
       kind: 'installing',

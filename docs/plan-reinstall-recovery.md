@@ -354,8 +354,9 @@ als sichere Rückfalllinie immer die erneut bestätigte Neuinstallation.
 
 ### Saubere Neuinstallation
 
-Der Wizard läuft normal einschließlich optionalem HTTPS. Nach erfolgreichem
-Full-Stack-Health wird der Vorgang abgeschlossen und entfernt.
+Der Wizard richtet die HTTP-Baseline ein. Nach erfolgreichem Full-Stack-Health wird
+der Vorgang abgeschlossen und entfernt. HTTPS wird anschließend unter Netzwerk
+eingerichtet.
 
 ### Neuinstallation mit Backup
 

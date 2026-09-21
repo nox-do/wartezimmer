@@ -6,7 +6,10 @@ import type {
   TlsStatus,
 } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
-import { evaluateHostLifecycleAction, type HostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
+import {
+  evaluateHostLifecycleAction,
+  type HostLifecycleAction,
+} from '@praxis-flow/server-shared/host-lifecycle-policy';
 import {
   tlsModeForNameMode,
   tlsNameValid,
@@ -48,7 +51,6 @@ export type TlsNetworkState = {
   localChecks: TlsLocalCheck[] | null;
   busy: boolean;
   error: string | null;
-  copyNotice: string | null;
 };
 
 const INITIAL: TlsNetworkState = {
@@ -66,7 +68,6 @@ const INITIAL: TlsNetworkState = {
   localChecks: null,
   busy: false,
   error: null,
-  copyNotice: null,
 };
 
 export type TlsNetworkController = {
@@ -288,7 +289,7 @@ export function createTlsNetworkController(deps: {
     },
 
     startPrepare() {
-      set({ startPhase: 'hostname', error: null, copyNotice: null });
+      set({ startPhase: 'hostname', error: null });
     },
 
     back() {
@@ -300,7 +301,7 @@ export function createTlsNetworkController(deps: {
     },
 
     patchDraft(patch) {
-      set({ ...patch, error: null, copyNotice: null });
+      set({ ...patch, error: null });
     },
 
     advanceHostname() {

@@ -5,44 +5,31 @@ import type {
   NetworkSnapshot,
   ProbeResult,
   SetupPlan,
-  TlsOperatorRequest,
 } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import { deliveryImagesReady } from './delivery-images-flow.js';
 import { buildSetupProbeInput, pollSetupProbes } from './setup-probes.js';
 import { draftCanonicalBaseUrl, isHttpOrigin } from './reachability.js';
-import {
-  tlsModeForNameMode,
-  tlsNameValid,
-  tlsPrepareHostname,
-  type TlsNameMode,
-} from './tls-identity.js';
-import { TLS_LEASE_STALE_LAN_COPY, tlsLeaseBlockedByStaleLan } from './tls-network-view-model.js';
 import { createInitialWizardFields, resolvedLanIp } from './wizard-state.js';
 
 /** Product boundary: no captive/gateway hardware in Manager — always disable. */
 export const DISABLED_GATEWAY_PLAN = { enabled: false as const };
 
 /**
- * Order: prerequisites → folders → access/address → optional HTTPS → preview → apply.
+ * Order: prerequisites → folders → access/address → preview → apply.
  * Practice display name belongs in Ops (/ops/setup), not host setup.
- * HTTPS inner screens stay on the HTTPS step; verify-dns and cutover live on the Network tab.
+ * HTTPS setup lives exclusively on the Network tab after host setup.
  */
-export const WIZARD_STEPS = [1, 3, 5, 6, 7, 8] as const;
+export const WIZARD_STEPS = [1, 3, 5, 7, 8] as const;
 export type WizardStep = (typeof WIZARD_STEPS)[number];
 
 export const WIZARD_STEP_LABELS = [
   'Voraussetzungen',
   'Import & Export',
   'Praxiszugriff',
-  'HTTPS',
   'Vorschau',
   'Abschluss',
 ] as const satisfies ReadonlyArray<string>;
-
-export const HTTPS_PHASES = ['offer', 'hostname', 'lease', 'mail'] as const;
-export type WizardHttpsPhase = (typeof HTTPS_PHASES)[number];
-export type WizardHttpsOfferChoice = 'now' | 'later';
 
 export type WizardFlowState = ReturnType<typeof createInitialWizardFields> & {
   step: WizardStep;
@@ -51,17 +38,6 @@ export type WizardFlowState = ReturnType<typeof createInitialWizardFields> & {
   plan: SetupPlan | null;
   applyResult: ApplySetupResult | null;
   releaseImportStatus: string | null;
-  httpsPhase: WizardHttpsPhase;
-  httpsOfferChoice: WizardHttpsOfferChoice;
-  nameMode: TlsNameMode;
-  customLabel: string;
-  customDomain: string;
-  ipv4Reserved: boolean;
-  mailAck: boolean;
-  customPemStaged: boolean;
-  operatorRequest: TlsOperatorRequest | null;
-  httpsCopyNotice: string | null;
-  httpsPreparedNameMode: TlsNameMode | null;
 };
 
 export type WizardAdvanceAfter = 'loadNetwork' | 'loadPlan' | 'apply-and-refresh';
@@ -74,7 +50,6 @@ export type WizardAdvanceAction =
       patch?: Partial<WizardFlowState>;
       after?: WizardAdvanceAfter;
     }
-  | { type: 'https-phase'; phase: WizardHttpsPhase; after?: 'prepareTls' }
   | { type: 'complete' };
 
 export function createWizardFlowState(
@@ -89,17 +64,6 @@ export function createWizardFlowState(
     plan: null,
     applyResult: null,
     releaseImportStatus: null,
-    httpsPhase: 'offer',
-    httpsOfferChoice: 'later',
-    nameMode: 'generated',
-    customLabel: '',
-    customDomain: '',
-    ipv4Reserved: false,
-    mailAck: false,
-    customPemStaged: false,
-    operatorRequest: null,
-    httpsCopyNotice: null,
-    httpsPreparedNameMode: null,
   };
 }
 
@@ -123,30 +87,7 @@ export function canLeaveWizardStep1(status: HostStatus | null, busy: boolean): b
   return dockerReady(status) && deliveryImagesReady(status) && !busy;
 }
 
-export function httpsPhaseIndex(phase: WizardHttpsPhase): number {
-  const index = HTTPS_PHASES.indexOf(phase);
-  return index < 0 ? 0 : index;
-}
-
-export function previousHttpsPhase(phase: WizardHttpsPhase): WizardHttpsPhase | null {
-  const index = httpsPhaseIndex(phase);
-  if (index <= 0) {
-    return null;
-  }
-  return HTTPS_PHASES[index - 1] ?? null;
-}
-
-export function wizardHttpsEligible(proxyEnabled: boolean): boolean {
-  return Boolean(proxyEnabled);
-}
-
-export function wizardHttpsMailReady(
-  state: Pick<WizardFlowState, 'nameMode' | 'mailAck' | 'customPemStaged'>,
-): boolean {
-  return state.nameMode === 'domain' ? state.customPemStaged : state.mailAck;
-}
-
-/** Lease checkbox is not prepare. Preview/back-to-mail follow Setup TLS status. */
+/** Existing preparation is read-only here and must be completed on the Network tab. */
 export function wizardHttpsPrepared(status: HostStatus | null): boolean {
   return Boolean(status?.tls && status.tls.state !== 'off');
 }
@@ -180,25 +121,10 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
           'Die Geräteadresse konnte nicht gebildet werden. Bitte prüfen Sie die ausgewählte IP-Adresse.',
       };
     }
-    if (
-      state.status?.installation.kind === 'installing' &&
-      state.status.installation.operation.backupContainsTls !== null
-    )
-      return { type: 'goto', step: 7, patch: { plan: null }, after: 'loadPlan' };
     if (wizardUsesExistingTlsConfiguration(state.status)) {
       return { type: 'goto', step: 7, patch: { plan: null } };
     }
-    if (!wizardHttpsEligible(state.proxyEnabled)) {
-      return { type: 'goto', step: 7, patch: { plan: null }, after: 'loadPlan' };
-    }
-    return { type: 'goto', step: 6, patch: { httpsPhase: 'offer' } };
-  }
-
-  if (step === 6) {
-    if (wizardUsesExistingTlsConfiguration(state.status)) {
-      return { type: 'goto', step: 7, patch: { plan: null } };
-    }
-    return planHttpsAdvance(state);
+    return { type: 'goto', step: 7, patch: { plan: null }, after: 'loadPlan' };
   }
 
   if (step === 7) {
@@ -223,83 +149,16 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
   return { type: 'validate-error', message: 'Unbekannter Schritt.' };
 }
 
-function planHttpsAdvance(state: WizardFlowState): WizardAdvanceAction {
-  const { httpsPhase } = state;
-  if (httpsPhase === 'offer') {
-    if (state.httpsOfferChoice === 'later') {
-      return { type: 'goto', step: 7, patch: { plan: null }, after: 'loadPlan' };
-    }
-    return { type: 'https-phase', phase: 'hostname' };
-  }
-  if (httpsPhase === 'hostname') {
-    if (!tlsNameValid(state)) {
-      return { type: 'validate-error', message: 'Bitte einen gültigen Namen wählen.' };
-    }
-    return { type: 'https-phase', phase: 'lease' };
-  }
-  if (httpsPhase === 'lease') {
-    if (tlsLeaseBlockedByStaleLan(state.status?.network.lanIpStale)) {
-      return {
-        type: 'validate-error',
-        message: TLS_LEASE_STALE_LAN_COPY,
-      };
-    }
-    if (!state.ipv4Reserved) {
-      return {
-        type: 'validate-error',
-        message: 'Bitte die feste IP oder DHCP-Reservierung bestätigen.',
-      };
-    }
-    return { type: 'https-phase', phase: 'mail', after: 'prepareTls' };
-  }
-  if (httpsPhase === 'mail') {
-    if (!wizardHttpsMailReady(state)) {
-      return {
-        type: 'validate-error',
-        message:
-          state.nameMode === 'domain'
-            ? 'Bitte das Zertifikat (PEM) einlesen.'
-            : 'Bitte bestätigen, dass die Mail an Praxis Flow raus ist.',
-      };
-    }
-    return { type: 'goto', step: 7, patch: { plan: null }, after: 'loadPlan' };
-  }
-  return { type: 'goto', step: 7, patch: { plan: null }, after: 'loadPlan' };
-}
-
 export function planWizardBack(state: WizardFlowState): WizardAdvanceAction {
-  if (
-    state.step === 7 &&
-    state.status?.installation.kind === 'installing' &&
-    state.status.installation.operation.backupContainsTls !== null
-  )
-    return { type: 'goto', step: 5 };
-  if (state.step === 7 && wizardHttpsPrepared(state.status)) {
-    return { type: 'https-phase', phase: 'mail' };
-  }
-  if (state.step === 7 && !wizardHttpsEligible(state.proxyEnabled)) {
-    return { type: 'goto', step: 5 };
-  }
-  if (state.step !== 6) {
-    return { type: 'goto', step: previousWizardStep(state.step) };
-  }
-  const previous = previousHttpsPhase(state.httpsPhase);
-  if (!previous) {
-    return { type: 'goto', step: 5 };
-  }
-  return { type: 'https-phase', phase: previous };
+  return { type: 'goto', step: previousWizardStep(state.step) };
 }
 
-export function buildWizardPrepareTlsInput(state: WizardFlowState): {
-  mode: 'managed' | 'custom';
-  hostname: string | undefined;
-  lanIp: string;
-} {
-  return {
-    mode: tlsModeForNameMode(state.nameMode),
-    hostname: tlsPrepareHostname(state),
-    lanIp: resolvedLanIp(state),
-  };
+/** True only for a real pre-existing configuration, not a staged fresh/replace install. */
+export function wizardPreservesExistingEnvironment(state: {
+  status: HostStatus | null;
+  operation?: unknown | null;
+}): boolean {
+  return Boolean(state.status?.envExists && !state.operation);
 }
 
 export function buildWizardPlanInput(state: WizardFlowState): {
@@ -317,11 +176,13 @@ export function buildWizardPlanInput(state: WizardFlowState): {
   };
 }
 
-export function buildWizardApplyInput(state: WizardFlowState): ApplySetupInput {
+export function buildWizardApplyInput(
+  state: WizardFlowState & { operation?: unknown | null },
+): ApplySetupInput {
   return {
     ...buildWizardPlanInput(state),
     runCompose: true,
-    preserveEnv: Boolean(state.status?.envExists),
+    preserveEnv: wizardPreservesExistingEnvironment(state),
     runProbes: false,
     folders: {
       imports: state.importsHostPath.trim(),
@@ -343,7 +204,7 @@ export async function loadWizardPlan(
 
 export async function applyWizardSetup(
   api: PraxisManagerApi,
-  state: WizardFlowState,
+  state: WizardFlowState & { operation?: unknown | null },
 ): Promise<ApplySetupResult> {
   return api.applySetupPlan(buildWizardApplyInput(state));
 }

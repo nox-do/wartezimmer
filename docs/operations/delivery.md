@@ -159,20 +159,21 @@ Beim ersten Start kopiert Setup fehlende Templates (`.env.example`, Delivery-Com
 
 Zurücksetzen (Dev/Support): `npm run setup:reset -- --yes` (löscht Install-Home-Inhalt nach Compose-Down — mit Bedacht).
 
-### 4.3 Manager-Assistent (8 Schritte)
+### 4.3 Manager-Assistent (5 Schritte)
 
 Labels: `WIZARD_STEP_LABELS` in `manager/src/renderer/wizard-flow.ts`.
 
-| #   | Schritt             | Inhalt                                                                                                                                                                  |
-| --- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Voraussetzungen** | Docker OK; Release-Paket laden falls `deliveryImages.required`; Netzwerk-Prerequisites (u. a. Port 8080). Weiter nur wenn `canLeaveWizardStep1`                         |
-| 2   | **Routing**         | Simple/Complex. **Kein** Praxis-Anzeigename hier — der gehört nach Ops `/ops/setup`                                                                                     |
-| 3   | **Import & Export** | Host-Pfade Pflicht (sonst Validierungsfehler)                                                                                                                           |
-| 4   | **Netzwerk**        | LAN-IP + Erreichbarkeit (LAN-IP / Rechnername / Custom-Host) → kanonische `http://`-URL                                                                                 |
-| 5   | **Zugang**          | Optional **Port 80** (HTTP-Proxy). Kein Captive-/Gateway-Wizard (`DISABLED_GATEWAY_PLAN`)                                                                               |
-| 6   | **HTTPS**           | Nur wenn Proxy an; sonst Sprung → 7. Phasen: offer → hostname → lease → mail/PEM. Assistent endet bei Mail/Staging — **DNS-Warten, Zertifikat, Cutover unter Netzwerk** |
-| 7   | **Vorschau**        | `POST /api/setup/host/plan` → Geräte-URLs                                                                                                                               |
-| 8   | **Abschluss**       | `POST /api/setup/host/apply` (`runCompose`), danach Probes / Links                                                                                                      |
+| #   | Schritt             | Inhalt                                                                                                 |
+| --- | ------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1   | **Voraussetzungen** | Docker OK; Release-Paket laden falls `deliveryImages.required`. Weiter nur, wenn `canLeaveWizardStep1` |
+| 2   | **Import & Export** | Host-Pfade Pflicht (sonst Validierungsfehler)                                                          |
+| 3   | **Praxiszugriff**   | LAN-IP und optional Port 80 (HTTP-Proxy). Kein Captive-/Gateway-Wizard (`DISABLED_GATEWAY_PLAN`)       |
+| 4   | **Vorschau**        | `POST /api/setup/host/plan` → Geräte-URLs                                                              |
+| 5   | **Abschluss**       | `POST /api/setup/host/apply` (`runCompose`), danach Probes und Links                                   |
+
+HTTPS gehört nicht zum Assistenten. Nach dem Abschluss wird die vollständige
+Strecke – Namenswahl, Lease-Bestätigung, Mail oder PEM, DNS-Prüfung, Zertifikat und
+Cutover – unter **Netzwerk** durchgeführt.
 
 Ersteinrichtung ohne `.env`: Assistent fullscreen. Späterer Re-Run: Tab „Assistent“.
 
@@ -205,11 +206,11 @@ Dev baut lokal (`docker-compose.yml`); Release-Paket oft nicht nötig.
 | Schritt 1 blockiert: Docker                  | Daemon aus / Compose fehlt           | Docker Desktop starten; Hinweise aus Setup                               |
 | „Release-Paket fehlt“ / Images nicht geladen | Delivery ohne `docker load`          | `.pfinstall` + passenden Sidecar wählen; Laden kann Minuten dauern       |
 | SHA256-Fehler beim Laden                     | Sidecar ≠ Archiv                     | Gleichen Release-Ordner verwenden, nicht mischen                         |
-| Port 8080 belegt                             | anderer Container/Prozess            | Docker-Fehler im Start-/Apply-Ergebnis prüfen; Portkonflikt beheben         |
+| Port 8080 belegt                             | anderer Container/Prozess            | Docker-Fehler im Start-/Apply-Ergebnis prüfen; Portkonflikt beheben      |
 | „Import- und Exportordner angeben“           | leere Pfade                          | Ordner anlegen; Docker File Sharing                                      |
 | Keine / falsche LAN-IP; `lanIpStale`         | DHCP-Wechsel, VPN, Adapter           | IP neu wählen; bei TLS-Lease erst IP klären (stale blockiert Lease)      |
-| Kein HTTPS-Schritt                           | Proxy aus                            | Port 80 in Schritt 5 aktivieren — sonst bewusst HTTP-only                |
-| HTTPS „fertig“, Geräte noch HTTP             | erwartet                             | Cutover erst unter **Netzwerk** nach DNS/Zertifikat — [`tls.md`](tls.md) |
+| HTTPS unter Netzwerk noch nicht startbar     | Proxy aus                            | Port 80 unter Netzwerk aktivieren und Einstellungen übernehmen           |
+| Geräte nach HTTPS-Vorbereitung noch auf HTTP | erwartet                             | Cutover erst nach DNS/Zertifikat unter **Netzwerk** — [`tls.md`](tls.md) |
 | LAN rot, lokal grün (Dev)                    | Shell-`HTTP_PROXY` leitet RFC1918 um | `NO_PROXY` um Privatnetze ergänzen; siehe Manager-README                 |
 | Praxisname fehlt im Wizard                   | Absicht                              | Ops `/ops/setup` nach dem ersten Start                                   |
 | Gateway im Manager nicht wählbar             | Absicht (Produktgrenze)              | Captive = Praxis-IT / Lab — [`integrations.md`](integrations.md)         |

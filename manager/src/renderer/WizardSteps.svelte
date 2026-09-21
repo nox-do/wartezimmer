@@ -7,6 +7,7 @@
   import {
     dockerReady,
     wizardHttpsPrepared,
+    wizardPreservesExistingEnvironment,
     wizardUsesExistingTlsConfiguration,
     wizardProbeFailureHint,
   } from './wizard-flow.js';
@@ -17,7 +18,6 @@
     wizardApplyResultItems,
     wizardCheckMark,
     wizardCompletionLeadText,
-    wizardHttpsDnsWaitCopy,
     wizardStepTitle,
   } from './wizard-view-model.js';
   import FolderPathField from './FolderPathField.svelte';
@@ -26,7 +26,6 @@
   import DeviceAddressPreview from './DeviceAddressPreview.svelte';
   import { draftCanonicalBaseUrl, existingHttpHostname } from './reachability.js';
   import { resolvedLanIp } from './wizard-state.js';
-  import WizardHttpsPanel from './WizardHttpsPanel.svelte';
 
   let {
     snapshot,
@@ -134,7 +133,7 @@
       {#if needsDockerFileSharingHint(hostPlatform)}
         <p class="hint">{DOCKER_FILE_SHARING_HINT}</p>
       {/if}
-      {#if snapshot.status?.envExists}
+      {#if wizardPreservesExistingEnvironment(snapshot)}
         <p class="hint">
           Die gespeicherten Ordner sind vorausgefüllt. Beim Anwenden werden sie in die Konfiguration
           übernommen.
@@ -197,8 +196,6 @@
         {/if}
       </section>
 
-    {:else if snapshot.step === 6}
-      <WizardHttpsPanel {snapshot} {controller} />
     {:else if snapshot.step === 7}
       {#if wizardUsesExistingTlsConfiguration(snapshot.status)}
         <p class="wizard-step-lead">Praxis Flow ist auf diesem Rechner bereits mit HTTPS eingerichtet.</p>
@@ -280,11 +277,10 @@
           Der Manager schreibt die technische Compose-Konfiguration, legt die Host-Ordner an und
           startet den lokalen Stack.
         </p>
-        {#if snapshot.status?.envExists}
+        {#if wizardPreservesExistingEnvironment(snapshot)}
           <p class="hint">
-            Bestehende technische Werte werden übernommen, soweit sie gültig sind.
-            Platzhalter-Secrets werden ersetzt; Staff-PINs liegen in der Datenbank und werden nicht
-            überschrieben.
+            Bestehende Konfigurationswerte und starke Secrets bleiben erhalten. Unsichere
+            Platzhalter-Secrets werden ersetzt; Staff-PINs bleiben unverändert.
           </p>
         {/if}
       {:else}
@@ -320,9 +316,9 @@
 
         <p>{wizardCompletionLeadText(snapshot)}</p>
         {#if wizardHttpsPrepared(snapshot.status)}
-          <p class="hint">HTTPS später unter Netzwerk. {wizardHttpsDnsWaitCopy(snapshot.status?.tls?.mode)}</p>
+          <p class="hint">Die bestehende HTTPS-Vorbereitung setzen Sie unter Netzwerk fort.</p>
         {:else if snapshot.proxyEnabled}
-          <p class="hint">HTTPS später unter Netzwerk.</p>
+          <p class="hint">HTTPS können Sie jetzt unter Netzwerk einrichten.</p>
         {/if}
         <p class="hint">
           MFA-, Ops- und Panel-PIN: Standard 0000 — MFA/Panel in MFA → Betrieb, Ops in System → PIN

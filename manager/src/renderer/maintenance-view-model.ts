@@ -13,20 +13,9 @@ export const MAINTENANCE_LOG_SERVICES = [
   { value: 'proxy', label: 'proxy' },
 ] as const;
 
-export type MaintenanceOperation =
-  | 'bootstrap'
-  | 'stack'
-  | 'logs'
-  | 'storage'
-  | 'backup'
-  | 'pin';
+export type MaintenanceOperation = 'bootstrap' | 'stack' | 'logs' | 'storage' | 'backup' | 'pin';
 
-export type MaintenanceErrorSurface =
-  | 'stack'
-  | 'logs'
-  | 'storage'
-  | 'backup'
-  | 'pin';
+export type MaintenanceErrorSurface = 'stack' | 'logs' | 'storage' | 'backup' | 'pin';
 
 export type MaintenanceErrors = Record<MaintenanceErrorSurface, string | null>;
 

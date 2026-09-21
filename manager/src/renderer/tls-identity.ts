@@ -18,10 +18,6 @@ export function normalizeTlsHostnameInput(value: string): string {
   return value.trim().toLowerCase().replace(/\.$/, '');
 }
 
-export function isOwnDomainNameMode(nameMode: TlsNameMode): boolean {
-  return nameMode === 'domain';
-}
-
 export function tlsModeForNameMode(nameMode: TlsNameMode): TlsMode {
   return nameMode === 'domain' ? 'custom' : 'managed';
 }
@@ -39,7 +35,12 @@ export function tlsNameValid(input: {
     return DNS_LABEL.test(label) && !RESERVED_LABELS.has(label);
   }
   const host = normalizeTlsHostnameInput(input.customDomain);
-  return DNS_HOSTNAME.test(host) && host.includes('.') && !host.endsWith(`.${TLS_OPERATOR_ZONE}`);
+  return (
+    DNS_HOSTNAME.test(host) &&
+    host.includes('.') &&
+    host !== TLS_OPERATOR_ZONE &&
+    !host.endsWith(`.${TLS_OPERATOR_ZONE}`)
+  );
 }
 
 /** Hostname to send on prepare. `undefined` lets Setup mint the 6-character label. */
@@ -55,86 +56,6 @@ export function tlsPrepareHostname(input: {
     return `${input.customLabel.trim().toLowerCase()}.${TLS_OPERATOR_ZONE}`;
   }
   return normalizeTlsHostnameInput(input.customDomain);
-}
-
-/** Preview before prepare mints a generated label. */
-export function tlsDraftHostname(input: {
-  nameMode: TlsNameMode;
-  customLabel: string;
-  customDomain: string;
-}): string {
-  if (input.nameMode === 'generated') {
-    return `staff.….${TLS_OPERATOR_ZONE}`;
-  }
-  if (input.nameMode === 'label') {
-    const label = input.customLabel.trim().toLowerCase() || '…';
-    return `staff.${label}.${TLS_OPERATOR_ZONE}`;
-  }
-  return normalizeTlsHostnameInput(input.customDomain) || 'flow.praxis.example';
-}
-
-/** Same fork and hostname as the prepared host identity (generated stays generated). */
-export function tlsDraftMatchesPrepared(
-  draft: {
-    nameMode: TlsNameMode;
-    customLabel: string;
-    customDomain: string;
-    preparedNameMode?: TlsNameMode | null;
-  },
-  tls:
-    | {
-        mode: TlsMode | null;
-        hostname: string | null;
-        installationDomain?: string | null;
-        state: string;
-      }
-    | null
-    | undefined,
-): boolean {
-  if (!tls || tls.state === 'off' || tls.mode == null) {
-    return false;
-  }
-  if (tlsModeForNameMode(draft.nameMode) !== tls.mode) {
-    return false;
-  }
-  const prepared = draft.preparedNameMode ?? null;
-  if (draft.nameMode === 'generated') {
-    return prepared === null || prepared === 'generated';
-  }
-  if (prepared && prepared !== draft.nameMode) {
-    return false;
-  }
-  const hostname = tlsPrepareHostname(draft);
-  const preparedIdentity = tls.mode === 'managed' ? tls.installationDomain : tls.hostname;
-  if (!hostname || !preparedIdentity) {
-    return false;
-  }
-  return normalizeTlsHostnameInput(preparedIdentity) === hostname;
-}
-
-/** Minted host while the draft still matches; otherwise the live draft preview. */
-export function tlsWizardDisplayHostname(
-  draft: {
-    nameMode: TlsNameMode;
-    customLabel: string;
-    customDomain: string;
-    preparedNameMode?: TlsNameMode | null;
-  },
-  tls:
-    | {
-        mode: TlsMode | null;
-        hostname: string | null;
-        staffHostname?: string | null;
-        installationDomain?: string | null;
-        state: string;
-      }
-    | null
-    | undefined,
-): string {
-  if (tlsDraftMatchesPrepared(draft, tls) && tls?.hostname) {
-    return tls.staffHostname || tls.hostname;
-  }
-  return tlsDraftHostname(draft);
 }
 
 export function operatorMailSubject(hostname: string): string {
