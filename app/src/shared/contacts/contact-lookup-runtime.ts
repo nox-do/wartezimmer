@@ -154,7 +154,11 @@ function candidateMatchesMfaQuery(
 }
 
 function candidateKey(candidate: ContactLookupCandidate): string {
-  return candidate.identityRef;
+  return JSON.stringify([
+    normalizeNameForSearch(candidate.identityRef),
+    candidate.birthDate ? canonicalizeBirthDate(candidate.birthDate) : '',
+    candidate.phoneNumber ? canonicalizePhone(candidate.phoneNumber) : '',
+  ]);
 }
 
 export async function rebuildContactLookupRuntimeCache(
@@ -317,19 +321,19 @@ async function lookupInListFileByNameDob(
   return matchRef;
 }
 
-function contactLookupIndexKey(row: string[], selectors: ResolvedSelectors): string | null {
+function contactLookupIndexKeys(row: string[], selectors: ResolvedSelectors): string[] {
   const phone = canonicalizePhone(row[selectors.mobile] ?? '');
   if (!phone) {
-    return null;
+    return [];
   }
+  const keys = [`phone:${phone}`];
   if (selectors.birthDate != null) {
     const birthDate = canonicalizeBirthDate(row[selectors.birthDate] ?? '');
-    if (!birthDate) {
-      return null;
+    if (birthDate) {
+      keys.push(`phone-dob:${phone}:${birthDate}`);
     }
-    return `${phone}:${birthDate}`;
   }
-  return phone;
+  return keys;
 }
 
 function contactLookupLookupKey(
@@ -341,14 +345,17 @@ function contactLookupLookupKey(
   if (!phone) {
     return null;
   }
-  if (birthDate && selectors.birthDate != null) {
+  if (birthDate) {
+    if (selectors.birthDate == null) {
+      return null;
+    }
     const normalizedBirthDate = canonicalizeBirthDate(birthDate);
     if (!normalizedBirthDate) {
       return null;
     }
-    return `${phone}:${normalizedBirthDate}`;
+    return `phone-dob:${phone}:${normalizedBirthDate}`;
   }
-  return phone;
+  return `phone:${phone}`;
 }
 
 async function buildPerPatientPhoneIndex(
@@ -364,18 +371,17 @@ async function buildPerPatientPhoneIndex(
     if (!row) {
       continue;
     }
-    const key = contactLookupIndexKey(row, selectors);
-    if (!key) {
+    const keys = contactLookupIndexKeys(row, selectors);
+    if (keys.length === 0) {
       continue;
     }
     const ref = buildIdentityRef(row, selectors);
-    if (!index.has(key)) {
-      index.set(key, ref);
-      continue;
-    }
-    const existing = index.get(key);
-    if (existing !== ref) {
-      index.set(key, null);
+    for (const key of keys) {
+      if (!index.has(key)) {
+        index.set(key, ref);
+      } else {
+        index.set(key, null);
+      }
     }
   }
   return index;

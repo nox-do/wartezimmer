@@ -542,13 +542,17 @@ export function arriveVisit(
   visitId: string,
   actingLocationId?: string,
   actorId?: string,
+  capacity?: { settings: OpsSettings; listQueue: () => QueueVisitRow[] },
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
   assertNoAbsentHostOverlay(db, visitId);
+  if (capacity && visit.targetLocationId) {
+    assertRoomHasCapacity(capacity.settings, capacity.listQueue(), visit.targetLocationId, visitId);
+  }
 
   const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
-  runVisitTransition(runtime, visitId, 'arrive', { actingLocationId, actorId });
-  return { fromStatus, toStatus: 'in_room' };
+  const after = runVisitTransition(runtime, visitId, 'arrive', { actingLocationId, actorId });
+  return { fromStatus, toStatus: visitStatusToQueueDisplayStatus(after.status) };
 }
 
 export function startVisit(
@@ -559,8 +563,8 @@ export function startVisit(
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
   const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
-  runVisitTransition(runtime, visitId, 'start', { actingLocationId, actorId });
-  return { fromStatus, toStatus: 'in_room' };
+  const after = runVisitTransition(runtime, visitId, 'start', { actingLocationId, actorId });
+  return { fromStatus, toStatus: visitStatusToQueueDisplayStatus(after.status) };
 }
 
 export function continueJourneyVisit(

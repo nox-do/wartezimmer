@@ -111,7 +111,7 @@ export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): v
           visitId: created.visitId,
           laneCode: resolveTicketLaneCodeFromSettings(db.getOpsSettings(), MFA_ASSIST_TOPIC_ID),
           number: created.number,
-          queueStatus: 'waiting',
+          queueStatus: created.queueStatus,
           createdAt: created.createdAt,
           destinationRoomLabel: created.destinationRoomLabel,
         });
@@ -234,7 +234,7 @@ export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): v
           visitId: created.visitId,
           laneCode,
           number: created.number,
-          queueStatus: 'waiting',
+          queueStatus: created.queueStatus,
           createdAt: created.createdAt,
           destinationRoomLabel,
         });

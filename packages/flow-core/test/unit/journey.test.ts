@@ -317,6 +317,41 @@ test('startNextJourneyStepPatch: Same-Target-Step setzt Warte-Hinweis ohne instr
   assert.equal(patch.terminalInstruction, 'Bitte warten Sie im Raum.');
 });
 
+test('startNextJourneyStepPatch: Same-Target arrive-Step wird implizit abgeschlossen', () => {
+  const completedAt = '2026-07-04T10:05:00.000Z';
+  const steps = [
+    {
+      sortOrder: 0,
+      targetLocationId: 'room_1',
+      queueId: null,
+      movementMode: 'call',
+      publicDisplayMode: 'hidden',
+      completedWhen: 'start',
+    },
+    {
+      sortOrder: 1,
+      targetLocationId: 'room_1',
+      queueId: null,
+      movementMode: 'call',
+      publicDisplayMode: 'hidden',
+      completedWhen: 'arrive',
+    },
+  ];
+  const visit = {
+    journeyTemplateId: 'journey_general',
+    journeyStepIndex: 0,
+    journeyStepCompletedAt: '2026-07-04T10:00:00.000Z',
+    effectiveEscortPolicy: 'none',
+    status: 'arrived',
+    lastKnownLocationId: 'room_1',
+  };
+
+  const patch = startNextJourneyStepPatch(visit, steps, { locations: [room1], completedAt });
+  assert.equal(patch.status, 'arrived');
+  assert.equal(patch.arrivedAt, completedAt);
+  assert.equal(patch.journeyStepCompletedAt, completedAt);
+});
+
 test('startNextJourneyStepPatch: ohne Journey-Cursor kein Patch', () => {
   assert.equal(
     startNextJourneyStepPatch({ journeyTemplateId: null, journeyStepIndex: null }, []),

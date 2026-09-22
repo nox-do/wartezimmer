@@ -34,7 +34,7 @@
   let lookupBusy = $state(false);
   let lookupError = $state('');
   let candidates = $state<MfaLookupCandidate[]>([]);
-  let selectedIdentityRef = $state('');
+  let selectedCandidateKey = $state('');
 
   let topicId = $state('');
   let lookupQuery = $state('');
@@ -59,7 +59,7 @@
     birthDateTrimmed.length > 0 && lookupQueryTrimmed.length === 0,
   );
   const selectedCandidate = $derived(
-    candidates.find((candidate) => candidate.identityRef === selectedIdentityRef) ?? null,
+    candidates.find((candidate) => candidateKey(candidate) === selectedCandidateKey) ?? null,
   );
   const selectedTopic = $derived(topics.find((topic) => topic.topicId === topicId) ?? null);
   const phoneLookupNeedsSelection = $derived(
@@ -76,7 +76,7 @@
     lookupError = '';
     lookupBusy = false;
     candidates = [];
-    selectedIdentityRef = '';
+    selectedCandidateKey = '';
   }
 
   async function ensureTopicsLoaded() {
@@ -105,6 +105,14 @@
     return full || candidate.identityRef;
   }
 
+  function candidateKey(candidate: MfaLookupCandidate): string {
+    return JSON.stringify([
+      candidate.identityRef,
+      candidate.birthDate ?? '',
+      candidate.phoneNumberExact ?? candidate.phoneNumberMasked ?? '',
+    ]);
+  }
+
   function candidateMeta(candidate: MfaLookupCandidate): string {
     const phone =
       candidate.phoneNumberExact?.trim() ??
@@ -120,13 +128,13 @@
 
     if (birthDateOnly) {
       candidates = [];
-      selectedIdentityRef = '';
+      selectedCandidateKey = '';
       lookupBusy = false;
       return;
     }
     if (!hasLookupInput) {
       candidates = [];
-      selectedIdentityRef = '';
+      selectedCandidateKey = '';
       lookupBusy = false;
       return;
     }
@@ -145,16 +153,16 @@
     if (!result.ok) {
       lookupError = result.error.message || t('mfa.checkinLookupError');
       candidates = [];
-      selectedIdentityRef = '';
+      selectedCandidateKey = '';
       return;
     }
     candidates = result.data.candidates;
     if (candidates.length === 1) {
-      selectedIdentityRef = candidates[0]!.identityRef;
+      selectedCandidateKey = candidateKey(candidates[0]!);
       return;
     }
-    if (!candidates.some((candidate) => candidate.identityRef === selectedIdentityRef)) {
-      selectedIdentityRef = '';
+    if (!candidates.some((candidate) => candidateKey(candidate) === selectedCandidateKey)) {
+      selectedCandidateKey = '';
     }
   }
 
@@ -244,7 +252,7 @@
     lookupRunId += 1;
     lookupError = '';
     candidates = [];
-    selectedIdentityRef = '';
+    selectedCandidateKey = '';
     if (birthDateOnly || !hasLookupInput) {
       lookupBusy = false;
       return;
@@ -329,15 +337,15 @@
     {:else if candidates.length > 0}
       <fieldset class="mfa-checkin-candidates" disabled={submitBusy}>
         <legend>{t('mfa.checkinLookupCandidates')}</legend>
-        {#each candidates as candidate (candidate.identityRef)}
+        {#each candidates as candidate (candidateKey(candidate))}
           <label class="mfa-checkin-candidate">
             <input
               type="radio"
               name="mfa-checkin-candidate"
-              value={candidate.identityRef}
-              checked={selectedIdentityRef === candidate.identityRef}
+              value={candidateKey(candidate)}
+              checked={selectedCandidateKey === candidateKey(candidate)}
               onchange={() => {
-                selectedIdentityRef = candidate.identityRef;
+                selectedCandidateKey = candidateKey(candidate);
               }}
             />
             <span class="mfa-checkin-candidate__texts">

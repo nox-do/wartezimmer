@@ -206,6 +206,93 @@ Monika;Mustermann;0172222222;15.06.1975
   });
 });
 
+test('per-patient phone index supports phone-only lookup when birth date is mapped', async () => {
+  await withTempImportsDir(async (folderPath) => {
+    fs.writeFileSync(
+      path.join(folderPath, 'max.csv'),
+      `vorname;nachname;mobil;geburtsdatum
+Max;Mustermann;0172111111;01.01.1980
+`,
+      'utf8',
+    );
+    fs.writeFileSync(
+      path.join(folderPath, 'monika.csv'),
+      `vorname;nachname;mobil;geburtsdatum
+Monika;Mustermann;0172222222;15.06.1975
+`,
+      'utf8',
+    );
+
+    const identityRef = await lookupIdentityRefByPhoneFromContactLookup(
+      {
+        folderPath,
+        delimiterMode: 'semicolon',
+        hasHeader: true,
+        mapping,
+      },
+      '0172111111',
+    );
+
+    assert.equal(identityRef, 'Max Mustermann');
+  });
+});
+
+test('per-patient phone index requires a birth-date mapping when birth date is supplied', async () => {
+  await withTempImportsDir(async (folderPath) => {
+    fs.writeFileSync(
+      path.join(folderPath, 'max.csv'),
+      `vorname;nachname;mobil
+Max;Mustermann;0172111111
+`,
+      'utf8',
+    );
+
+    const identityRef = await lookupIdentityRefByPhoneFromContactLookup(
+      {
+        folderPath,
+        delimiterMode: 'semicolon',
+        hasHeader: true,
+        mapping: { mobile: 'mobil', firstName: 'vorname', lastName: 'nachname' },
+      },
+      '0172111111',
+      '01.01.1980',
+    );
+
+    assert.equal(identityRef, null);
+  });
+});
+
+test('per-patient phone index treats duplicate phone matches as ambiguous even for equal names', async () => {
+  await withTempImportsDir(async (folderPath) => {
+    fs.writeFileSync(
+      path.join(folderPath, 'max-a.csv'),
+      `vorname;nachname;mobil;geburtsdatum
+Max;Mustermann;0172111111;01.01.1980
+`,
+      'utf8',
+    );
+    fs.writeFileSync(
+      path.join(folderPath, 'max-b.csv'),
+      `vorname;nachname;mobil;geburtsdatum
+Max;Mustermann;0172111111;15.06.1975
+`,
+      'utf8',
+    );
+
+    const settings = {
+      folderPath,
+      delimiterMode: 'semicolon' as const,
+      hasHeader: true,
+      mapping,
+    };
+    assert.equal(await lookupIdentityRefByPhoneFromContactLookup(settings, '0172111111'), null);
+    assert.equal(
+      await lookupIdentityRefByPhoneFromContactLookup(settings, '0172111111', '01.01.1980'),
+      'Max Mustermann',
+    );
+  });
+});
+
 test('lookupIdentityRefByPhoneFromContactLookup rejects wrong birth date for same phone', async () => {
   await withTempImportsDir(async (folderPath) => {
     fs.writeFileSync(
@@ -307,7 +394,7 @@ Monika;Mustermann;0172222222;01.01.1980
   });
 });
 
-test('searchContactLookupCandidates returns each identityRef only once', async () => {
+test('searchContactLookupCandidates keeps different patients with the same display name', async () => {
   await withTempImportsDir(async (folderPath, csvPath) => {
     fs.writeFileSync(
       csvPath,
@@ -329,8 +416,11 @@ Max;Mustermann;0172222222;15.06.1975
       20,
     );
 
-    assert.equal(candidates.length, 1);
+    assert.equal(candidates.length, 2);
     assert.equal(candidates[0]?.identityRef, 'Max Mustermann');
+    assert.equal(candidates[0]?.birthDate, '01.01.1980');
+    assert.equal(candidates[1]?.identityRef, 'Max Mustermann');
+    assert.equal(candidates[1]?.birthDate, '15.06.1975');
   });
 });
 

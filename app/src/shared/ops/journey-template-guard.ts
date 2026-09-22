@@ -24,6 +24,26 @@ export function validateJourneySettingsEditable(
   | { ok: false; code: string; message: string; templateId: string; openVisitCount: number } {
   const currentById = new Map(current.templates.map((template) => [template.id, template]));
   const nextById = new Map(next.templates.map((template) => [template.id, template]));
+  const currentStepOwners = new Map(
+    current.templates.flatMap((template) =>
+      template.steps.map((step) => [step.id, template.id] as const),
+    ),
+  );
+
+  for (const template of next.templates) {
+    for (const step of template.steps) {
+      const currentOwner = currentStepOwners.get(step.id);
+      if (currentOwner && currentOwner !== template.id) {
+        return {
+          ok: false,
+          code: 'JOURNEY_STEP_ID_CONFLICT',
+          message: `Journey step "${step.id}" already belongs to template "${currentOwner}".`,
+          templateId: currentOwner,
+          openVisitCount: countOpenVisitsForJourneyTemplate(db, currentOwner),
+        };
+      }
+    }
+  }
 
   for (const template of next.templates) {
     const previous = currentById.get(template.id);

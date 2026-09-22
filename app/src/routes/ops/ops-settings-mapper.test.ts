@@ -91,6 +91,41 @@ test('buildOpsSettingsUpdate normalizes journeySettings patch', async () => {
   assert.equal(result.journeySettings?.templates[0]?.steps[0]?.movementMode, 'call');
 });
 
+test('buildOpsSettingsUpdate does not revalidate an unchanged unavailable contact import', async () => {
+  const db = {
+    getOpsSettings: () => ({
+      ...mockDb().getOpsSettings(),
+      contactLookupFolderPath: '/unavailable/contact-import',
+    }),
+  } as unknown as CoreDatabase;
+
+  const result = await buildOpsSettingsUpdate(db, { emergencyEnabled: false });
+
+  assert.ok(result && !('code' in result));
+  if (!result || 'code' in result) {
+    return;
+  }
+  assert.equal(result.emergencyEnabled, false);
+});
+
+test('buildOpsSettingsUpdate still validates an explicitly changed contact import', async () => {
+  const db = {
+    getOpsSettings: () => ({
+      ...mockDb().getOpsSettings(),
+      contactLookupFolderPath: '/unavailable/contact-import',
+    }),
+  } as unknown as CoreDatabase;
+
+  const result = await buildOpsSettingsUpdate(db, { contactLookupDelimiterMode: 'semicolon' });
+
+  assert.ok(result && 'code' in result);
+  if (!result || !('code' in result)) {
+    return;
+  }
+  assert.equal(result.code, 'INVALID_ARGUMENT');
+  assert.match(result.message, /contact lookup/i);
+});
+
 test('buildOpsSettingsUpdate rejects invalid journeySettings patch', async () => {
   const result = await buildOpsSettingsUpdate(mockDb(), {
     journeySettings: {

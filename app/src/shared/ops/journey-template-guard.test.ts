@@ -106,6 +106,25 @@ test('validateJourneySettingsEditable allows unchanged templates with open visit
   assert.deepEqual(validateJourneySettingsEditable(db, current, current), { ok: true });
 });
 
+test('validateJourneySettingsEditable rejects moving an existing step to another template', () => {
+  const db = openDb();
+  const current: JourneySettings = { templates: [sampleTemplate()] };
+  const movedStep = sampleTemplate().steps[0]!;
+  const next: JourneySettings = {
+    templates: [
+      sampleTemplate({ steps: [] }),
+      sampleTemplate({ id: 'journey-other', name: 'Other', steps: [movedStep] }),
+    ],
+  };
+
+  const result = validateJourneySettingsEditable(db, current, next);
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.code, 'JOURNEY_STEP_ID_CONFLICT');
+    assert.equal(result.templateId, TEMPLATE_ID);
+  }
+});
+
 test('validateJourneySettingsEditable blocks template edits with open visits', () => {
   const db = openDb();
   insertOpenVisitForTemplate(db, TEMPLATE_ID);

@@ -220,44 +220,42 @@ export async function buildOpsSettingsUpdate(
     }
   }
 
-  let currentMapping: CsvContactLookupMapping;
-  try {
-    currentMapping = parseContactLookupMappingJsonStrict(current.contactLookupMappingJson);
-  } catch {
-    return {
-      code: 'INVALID_ARGUMENT',
-      message: 'CSV contact lookup mapping in database is invalid.',
-    };
-  }
-  const nextFolderPath = body.contactLookupFolderPath ?? current.contactLookupFolderPath;
-  const nextDelimiterMode = body.contactLookupDelimiterMode ?? current.contactLookupDelimiterMode;
-  const nextHasHeader = body.contactLookupHasHeader ?? current.contactLookupHasHeader;
-  let nextMapping: CsvContactLookupMapping;
-  try {
-    nextMapping = body.contactLookupMapping
-      ? parseCsvContactLookupMappingOrThrow(body.contactLookupMapping)
-      : currentMapping;
-  } catch {
-    return {
-      code: 'INVALID_ARGUMENT',
-      message: 'CSV contact lookup mapping is invalid.',
-    };
-  }
-
-  if (nextFolderPath) {
+  const contactLookupChanged =
+    body.contactLookupFolderPath !== undefined ||
+    body.contactLookupDelimiterMode !== undefined ||
+    body.contactLookupHasHeader !== undefined ||
+    body.contactLookupMapping !== undefined;
+  let nextMapping: CsvContactLookupMapping | undefined;
+  if (contactLookupChanged) {
+    let currentMapping: CsvContactLookupMapping;
     try {
-      await validateCsvContactLookupSettings({
-        folderPath: nextFolderPath,
-        delimiterMode: nextDelimiterMode,
-        hasHeader: nextHasHeader,
-        mapping: nextMapping,
-      });
+      currentMapping = parseContactLookupMappingJsonStrict(current.contactLookupMappingJson);
+      nextMapping = body.contactLookupMapping
+        ? parseCsvContactLookupMappingOrThrow(body.contactLookupMapping)
+        : currentMapping;
     } catch {
       return {
         code: 'INVALID_ARGUMENT',
-        message:
-          'CSV contact lookup settings are invalid or import folder is not readable with the selected mapping.',
+        message: 'CSV contact lookup mapping is invalid.',
       };
+    }
+
+    const nextFolderPath = body.contactLookupFolderPath ?? current.contactLookupFolderPath;
+    if (nextFolderPath) {
+      try {
+        await validateCsvContactLookupSettings({
+          folderPath: nextFolderPath,
+          delimiterMode: body.contactLookupDelimiterMode ?? current.contactLookupDelimiterMode,
+          hasHeader: body.contactLookupHasHeader ?? current.contactLookupHasHeader,
+          mapping: nextMapping,
+        });
+      } catch {
+        return {
+          code: 'INVALID_ARGUMENT',
+          message:
+            'CSV contact lookup settings are invalid or import folder is not readable with the selected mapping.',
+        };
+      }
     }
   }
 
@@ -330,7 +328,8 @@ export async function buildOpsSettingsUpdate(
     contactLookupFolderPath: body.contactLookupFolderPath,
     contactLookupDelimiterMode: body.contactLookupDelimiterMode,
     contactLookupHasHeader: body.contactLookupHasHeader,
-    contactLookupMappingJson: body.contactLookupMapping ? JSON.stringify(nextMapping) : undefined,
+    contactLookupMappingJson:
+      body.contactLookupMapping && nextMapping ? JSON.stringify(nextMapping) : undefined,
     emergencyEnabled: body.emergencyEnabled,
     terminalWlanPromoEnabled: body.terminalWlanPromoEnabled,
     terminalAuthPhoneEnabled: body.terminalAuthPhoneEnabled,

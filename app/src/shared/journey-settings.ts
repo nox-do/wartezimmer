@@ -104,12 +104,19 @@ export function normalizeJourneySettings(parsed: unknown): JourneySettings {
   const templates = parsed.templates
     .map((entry, index) => normalizeJourneyTemplate(entry, index))
     .filter((entry): entry is JourneyTemplateSetting => entry != null);
-  const seenIds = new Set<string>();
+  const seenTemplateIds = new Set<string>();
+  const seenStepIds = new Set<string>();
   for (const template of templates) {
-    if (seenIds.has(template.id)) {
+    if (seenTemplateIds.has(template.id)) {
       throw new Error(`JOURNEY_SETTINGS_INVALID: duplicate template id ${template.id}.`);
     }
-    seenIds.add(template.id);
+    seenTemplateIds.add(template.id);
+    for (const step of template.steps) {
+      if (seenStepIds.has(step.id)) {
+        throw new Error(`JOURNEY_SETTINGS_INVALID: duplicate step id ${step.id}.`);
+      }
+      seenStepIds.add(step.id);
+    }
   }
   return { templates };
 }

@@ -50,6 +50,7 @@ function fakeCheckinDb(overrides?: {
       return {
         visitId: '20260617-O-001',
         number: 1,
+        queueStatus: 'directed',
         createdAt: '2026-06-17T12:00:00.000Z',
         destinationRoomLabel: 'Empfang',
       };
@@ -74,6 +75,26 @@ test('POST /api/v1/checkins rejects disabled terminal auth path', async () => {
 
   assert.equal(response.statusCode, 409);
   assert.equal(response.json().code, 'CHECKIN_AUTH_PATH_DISABLED');
+  await app.close();
+});
+
+test('POST /api/v1/checkins returns the effective queue status', async () => {
+  const app = Fastify({ logger: false });
+  registerCheckinRoutes(app, fakeCheckinDb());
+
+  await app.ready();
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/checkins',
+    payload: {
+      topicId: 'offen',
+      authPath: 'phone_dob',
+      phoneNumber: '+4915123456789',
+    },
+  });
+
+  assert.equal(response.statusCode, 201);
+  assert.equal(response.json().queueStatus, 'directed');
   await app.close();
 });
 

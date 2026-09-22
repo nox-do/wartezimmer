@@ -342,6 +342,18 @@ test('continueJourneyVisit applies next call hop from completed step', () => {
   assert.equal(visit?.status, 'waiting');
 });
 
+test('arriveVisit returns the persisted status after automatic journey progression', () => {
+  const { db, settings, visitId, runtime, listQueue } = setupComplexVisitFlow();
+  db.prepare("UPDATE journey_steps SET movement_mode = 'self_go' WHERE id = 'step_blut_1'").run();
+
+  callVisit(db, runtime, settings, listQueue, visitId, 'mfa-tresen', 'Empfang');
+  const arrived = arriveVisit(db, runtime, visitId, 'mfa-tresen');
+
+  assert.deepEqual(arrived, { fromStatus: 'called', toStatus: 'directed' });
+  assert.equal(runtime.visits().find((visit) => visit.id === visitId)?.status, 'directed');
+  assert.equal(listQueue()[0]?.status, 'directed');
+});
+
 test('continueJourneyVisit accepts a DnD target for the next hop', () => {
   const { db, settings, visitId, runtime, listQueue } = setupComplexVisitFlow();
 
@@ -515,6 +527,36 @@ test('arriveVisit accepts waiting pickup via core transition rules', () => {
 
   const arrive = arriveVisit(db, runtime, visitId, 'labor');
   assert.deepEqual(arrive, { fromStatus: 'waiting', toStatus: 'in_room' });
+});
+
+test('arriveVisit enforces room capacity for directed arrivals', () => {
+  const { db, visitId, runtime, settings, listQueue } = setupVisitFlow();
+  const labor = settings.rooms.find((room) => room.roomId === 'labor');
+  assert.ok(labor);
+  labor.maxOccupancy = 1;
+
+  const second = createVisitCheckInInDb(buildDeps(db, settings), {
+    topicId: 'blut',
+    authPath: 'phone_dob',
+    identityRef: 'Second Visit',
+  });
+  for (const id of [visitId, second.visitId]) {
+    runtime.redirect(id, {
+      queueId: null,
+      targetLocationId: 'labor',
+      movementMode: 'self_go',
+      publicDisplayMode: 'visible',
+      actorSurfaceId: 'pf_mfa_dashboard',
+    });
+  }
+
+  const capacity = { settings, listQueue };
+  arriveVisit(db, runtime, visitId, 'labor', undefined, capacity);
+  assert.throws(
+    () => arriveVisit(db, runtime, second.visitId, 'labor', undefined, capacity),
+    (error: unknown) => error instanceof DomainError && error.domainCode === 'ROOM_AT_CAPACITY',
+  );
+  assert.equal(runtime.visits().find((visit) => visit.id === second.visitId)?.status, 'directed');
 });
 
 test('reassignVisitRoom delegates tactical target change to flow-core', () => {

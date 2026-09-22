@@ -52,7 +52,7 @@ export type JourneyVisitPatch = {
   terminalInstruction?: string;
   calledAt?: null;
   startedAt?: null;
-  arrivedAt?: null;
+  arrivedAt?: string | null;
   journeyStepIndex?: number | null;
   journeyStepCompletedAt?: string | null;
   journeyState?: 'completed';
@@ -117,7 +117,7 @@ export function isStepCompletedByAction(
 export function startNextJourneyStepPatch(
   visit: Visit,
   steps: JourneyStep[],
-  options: { locations?: Location[]; targetLocationId?: string } = {},
+  options: { locations?: Location[]; targetLocationId?: string; completedAt?: string } = {},
 ): (JourneyVisitPatch & { journeyStepIndex: number }) | JourneyCompletedPatch | null {
   if (visit.journeyTemplateId == null || visit.journeyStepIndex == null) return null;
 
@@ -149,6 +149,10 @@ export function startNextJourneyStepPatch(
   // H7: Patient bereits am Ziel des naechsten Hops — kein erneuter waiting/call-Zyklus.
   if (visit.lastKnownLocationId === effectiveStep.targetLocationId) {
     patch.status = 'arrived';
+    patch.arrivedAt = options.completedAt ?? new Date().toISOString();
+    if (effectiveStep.completedWhen === 'arrive') {
+      patch.journeyStepCompletedAt = patch.arrivedAt;
+    }
     if (!nextStep.instructionText?.trim()) {
       patch.terminalInstruction = 'Bitte warten Sie im Raum.';
     }

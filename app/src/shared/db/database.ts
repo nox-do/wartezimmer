@@ -619,6 +619,7 @@ export class CoreDatabase {
   createTicket(input: CreateTicketCallerInput): {
     visitId: string;
     number: number;
+    queueStatus: QueueDisplayStatus;
     createdAt: string;
     destinationRoomLabel: string | null;
   } {
@@ -879,6 +880,7 @@ export class CoreDatabase {
         visitId,
         actingRoomId,
         actorId,
+        { settings: this.getOpsSettings(), listQueue: () => this.listQueue() },
       );
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,

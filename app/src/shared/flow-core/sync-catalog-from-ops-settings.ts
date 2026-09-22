@@ -373,7 +373,31 @@ function journeySettingsFrom(
   return settings.journeySettings ?? EMPTY_JOURNEY_SETTINGS;
 }
 
+function assertJourneyStepOwnership(db: DatabaseSync, settings: OpsSettings): void {
+  const desiredOwners = new Map<string, string>();
+  for (const template of journeySettingsFrom(settings).templates) {
+    for (const step of template.steps) {
+      const desiredOwner = desiredOwners.get(step.id);
+      if (desiredOwner && desiredOwner !== template.id) {
+        throw new Error(`JOURNEY_STEP_ID_CONFLICT: ${step.id}`);
+      }
+      desiredOwners.set(step.id, template.id);
+    }
+  }
+
+  const existingSteps = db
+    .prepare('SELECT id, template_id AS templateId FROM journey_steps')
+    .all() as Array<{ id: string; templateId: string }>;
+  for (const step of existingSteps) {
+    const desiredOwner = desiredOwners.get(step.id);
+    if (desiredOwner && desiredOwner !== step.templateId) {
+      throw new Error(`JOURNEY_STEP_ID_CONFLICT: ${step.id}`);
+    }
+  }
+}
+
 export function syncJourneyTemplatesFromOpsSettings(db: DatabaseSync, settings: OpsSettings): void {
+  assertJourneyStepOwnership(db, settings);
   const desiredTemplateIds: string[] = [];
   const desiredStepIds: string[] = [];
 

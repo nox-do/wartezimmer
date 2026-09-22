@@ -10,6 +10,30 @@ test('normalizeJourneySettings defaults to empty templates', () => {
   assert.deepEqual(normalizeJourneySettings(null), EMPTY_JOURNEY_SETTINGS);
 });
 
+test('normalizeJourneySettings rejects step ids reused across templates', () => {
+  const step = {
+    id: 'shared-step',
+    sortOrder: 0,
+    targetLocationId: 'labor',
+    queueId: null,
+    movementMode: 'call',
+    publicDisplayMode: 'visible',
+    completedWhen: 'arrive',
+    instructionText: null,
+  };
+
+  assert.throws(
+    () =>
+      normalizeJourneySettings({
+        templates: [
+          { id: 'journey-a', name: 'A', steps: [step] },
+          { id: 'journey-b', name: 'B', steps: [step] },
+        ],
+      }),
+    /duplicate step id shared-step/,
+  );
+});
+
 test('validateTopicJourneyAssignments rejects unknown template', () => {
   const result = validateTopicJourneyAssignments(
     [{ topicId: 'blut', journeyTemplateId: 'missing' }],

@@ -116,6 +116,7 @@ test('createVisitCheckInInDb writes a visit and exposes it in the queue list', (
 
   assert.match(created.visitId, /^\d{8}-L-\d{3}$/);
   assert.ok(created.number >= 1);
+  assert.equal(created.queueStatus, 'directed');
   assert.equal(created.destinationRoomLabel, 'Empfang');
 
   const queueRows = listVisitQueueRows(getFlowCoreRuntime(db), settings, getBusinessDay());

@@ -14,6 +14,7 @@ import {
   buildSimpleRoutingRuleRow,
   isSimpleRoutingMode,
   syncCatalogFromOpsSettings,
+  syncJourneyTemplatesFromOpsSettings,
 } from './sync-catalog-from-ops-settings.js';
 import type { OpsSettings } from '../db/db-types.js';
 import { EMPTY_JOURNEY_SETTINGS } from '../journey-settings.js';
@@ -468,6 +469,45 @@ test('syncCatalogFromOpsSettings in complex mode: mixed topics with and without 
   assert.equal(rezeptRule?.journeyTemplateId, null);
 
   validateCatalogIntegrity(loadCatalog(db));
+});
+
+test('journey catalog sync rejects moving an existing step id to another template', () => {
+  const db = openTestFlowCoreDb();
+  const base = sampleOpsSettings();
+  const step = {
+    id: 'shared_step',
+    sortOrder: 0,
+    targetLocationId: 'labor',
+    queueId: PF_FLOW_QUEUE_GENERAL,
+    movementMode: 'call' as const,
+    publicDisplayMode: 'visible' as const,
+    completedWhen: 'arrive' as const,
+    instructionText: null,
+  };
+  const first: OpsSettings = {
+    ...base,
+    journeySettings: {
+      templates: [{ id: 'journey_a', name: 'A', topicId: 'blut', active: true, steps: [step] }],
+    },
+  };
+  syncCatalogFromOpsSettings(db, base);
+  syncJourneyTemplatesFromOpsSettings(db, first);
+
+  const moved: OpsSettings = {
+    ...base,
+    journeySettings: {
+      templates: [{ id: 'journey_b', name: 'B', topicId: 'blut', active: true, steps: [step] }],
+    },
+  };
+  assert.throws(
+    () => syncJourneyTemplatesFromOpsSettings(db, moved),
+    /JOURNEY_STEP_ID_CONFLICT: shared_step/,
+  );
+
+  const persisted = db
+    .prepare('SELECT template_id AS templateId FROM journey_steps WHERE id = ?')
+    .get(step.id) as { templateId: string } | undefined;
+  assert.equal(persisted?.templateId, 'journey_a');
 });
 
 test('complex mixed mode check-in uses journey step 0 for journey topic', () => {

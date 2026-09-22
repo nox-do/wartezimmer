@@ -211,6 +211,7 @@ export function createVisitService(params: {
     const journeyPatch = startNextJourneyStepPatch(record, steps, {
       locations: catalog.locations,
       targetLocationId,
+      completedAt: new Date().toISOString(),
     });
     if (!journeyPatch || journeyPatch.journeyState === 'completed') {
       throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
