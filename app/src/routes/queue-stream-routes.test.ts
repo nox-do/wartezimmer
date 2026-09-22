@@ -141,6 +141,45 @@ test('TV queue stream marks streamConnected only while the SSE connection is ope
   await app.close();
 });
 
+test('MFA queue stream closes when its staff session expires', async () => {
+  enableTestAuth();
+  const app = Fastify({ logger: false });
+  const sessions = createStaffSessionManager({ sessionTtlMs: 150, sessionIdleTtlMs: 150 });
+  const { token } = sessions.createStaffSession('mfa');
+
+  registerClientAuth(app, { staffSessions: sessions });
+  registerQueueStreamRoutes(app, fakeQueueDb(), sessions);
+
+  await app.listen({ host: '127.0.0.1', port: 0 });
+  const address = app.server.address();
+  assert.equal(typeof address, 'object');
+  assert.ok(address);
+  const port = (address as AddressInfo).port;
+  const streamUrl = `http://127.0.0.1:${port}/api/v1/queue/stream`;
+  const headers = {
+    cookie: `${getStaffSessionCookieName('mfa')}=${token}`,
+    'x-client-role': 'mfa',
+  };
+
+  const response = await fetch(streamUrl, { headers });
+  assert.equal(response.status, 200);
+  const streamBody = await Promise.race([
+    response.text(),
+    new Promise<never>((_resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('STAFF_STREAM_EXPIRY_TIMEOUT')), 1000);
+      timeout.unref();
+    }),
+  ]);
+  assert.match(streamBody, /event: snapshot/);
+
+  const reconnect = await fetch(streamUrl, { headers });
+  assert.equal(reconnect.status, 401);
+  await reconnect.body?.cancel();
+
+  app.server.closeAllConnections();
+  await app.close();
+});
+
 test('room-panel stream stays open without staff session expiry', async () => {
   enableTestAuth();
   const app = Fastify({ logger: false });

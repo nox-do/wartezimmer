@@ -239,6 +239,44 @@ test('ops stream sends initial emergency, presence, and pairing snapshots', asyn
   await closeSseTest(app);
 });
 
+test('ops stream closes when its staff session expires', async () => {
+  enableTestAuth();
+  const app = Fastify({ logger: false });
+  const sessions = createStaffSessionManager({ sessionTtlMs: 150, sessionIdleTtlMs: 150 });
+  const { token } = sessions.createStaffSession('mfa');
+
+  registerClientAuth(app, { staffSessions: sessions });
+  registerOpsStreamRoutes(app, fakeOpsDb(), sessions);
+
+  await app.listen({ host: '127.0.0.1', port: 0 });
+  const address = app.server.address();
+  assert.equal(typeof address, 'object');
+  assert.ok(address);
+  const port = (address as AddressInfo).port;
+  const streamUrl = `http://127.0.0.1:${port}/api/v1/ops/stream`;
+  const headers = {
+    cookie: `${getStaffSessionCookieName('mfa')}=${token}`,
+    'x-client-role': 'mfa',
+  };
+
+  const response = await fetch(streamUrl, { headers });
+  assert.equal(response.status, 200);
+  const streamBody = await Promise.race([
+    response.text(),
+    new Promise<never>((_resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('STAFF_STREAM_EXPIRY_TIMEOUT')), 1000);
+      timeout.unref();
+    }),
+  ]);
+  assert.match(streamBody, /event: emergency/);
+
+  const reconnect = await fetch(streamUrl, { headers });
+  assert.equal(reconnect.status, 401);
+  await reconnect.body?.cancel();
+
+  await closeSseTest(app);
+});
+
 test('ops stream pushes device.presence updates to open MFA connections', async () => {
   enableTestAuth();
   const app = Fastify({ logger: false });

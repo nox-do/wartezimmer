@@ -213,6 +213,17 @@ test('production startup fails when AUTH_ENABLED is false', () => {
   assert.throws(() => registerClientAuth(app), /AUTH_DISABLED_IN_PRODUCTION/);
 });
 
+test('startup rejects invalid AUTH_ENABLED values instead of disabling auth', () => {
+  process.env.NODE_ENV = 'production';
+  process.env.AUTH_KEY_CAPTIVE = 'test-captive-key-long-enough-for-production';
+
+  for (const value of ['TRUE', '1', 'yes', 'typo']) {
+    process.env.AUTH_ENABLED = value;
+    const app = Fastify({ logger: false });
+    assert.throws(() => registerClientAuth(app), /AUTH_ENABLED_INVALID/, value);
+  }
+});
+
 test('production startup fails when captive bearer is a weak default', () => {
   process.env.NODE_ENV = 'production';
   process.env.AUTH_ENABLED = 'true';
@@ -379,6 +390,21 @@ test('staff session idle sliding does not extend absolute expiry', () => {
     session.sessionId,
   );
   assert.equal(manager.getSession(token, new Date(now.getTime() + 10_000)), null);
+});
+
+test('staff session expiry actively notifies revocation listeners without a later lookup', async () => {
+  const manager = createStaffSessionManager({ sessionTtlMs: 30, sessionIdleTtlMs: 30 });
+  const { token, session } = manager.createStaffSession('mfa');
+
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('SESSION_EXPIRY_NOTIFICATION_TIMEOUT')), 500);
+    manager.subscribeSessionRevocation(session.sessionId, () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+  });
+
+  assert.equal(manager.getSession(token), null);
 });
 
 test('room-panel grant revoke can target one room placement without affecting siblings', () => {

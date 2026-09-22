@@ -38,7 +38,6 @@ type AuthConfig = {
   captiveKey: string;
   localTvOrigin: string | null;
   missingRoleKeys: ClientRole[];
-  productionAuthDisabled: boolean;
 };
 
 type RegisterClientAuthOptions = {
@@ -49,16 +48,29 @@ type RegisterClientAuthOptions = {
 const DEFAULT_CAPTIVE_KEYS = new Set(['change-me-captive-key']);
 const MIN_PRODUCTION_CAPTIVE_KEY_LENGTH = 32;
 
+function readOptionalBooleanEnv(name: string): boolean | undefined {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    return undefined;
+  }
+  if (value === 'true') {
+    return true;
+  }
+  if (value === 'false') {
+    return false;
+  }
+  throw new Error(`${name}_INVALID`);
+}
+
 function getAuthConfig(): AuthConfig {
-  const explicitAuthEnabled = process.env.AUTH_ENABLED?.trim();
+  const explicitAuthEnabled = readOptionalBooleanEnv('AUTH_ENABLED');
   const nodeEnv = process.env.NODE_ENV ?? 'development';
-  const enabled = explicitAuthEnabled ? explicitAuthEnabled === 'true' : nodeEnv !== 'development';
-  const productionAuthDisabled = nodeEnv === 'production' && explicitAuthEnabled === 'false';
+  const enabled = explicitAuthEnabled ?? nodeEnv !== 'development';
   const captiveKey = process.env.AUTH_KEY_CAPTIVE?.trim() ?? '';
   const localTvOrigin = normalizeOrigin(process.env.TV_LOCAL_ORIGIN);
   const missingRoleKeys: ClientRole[] = captiveKey.length === 0 ? ['captive'] : [];
 
-  if (productionAuthDisabled) {
+  if (nodeEnv === 'production' && !enabled) {
     throw new Error('AUTH_DISABLED_IN_PRODUCTION');
   }
 
@@ -75,7 +87,7 @@ function getAuthConfig(): AuthConfig {
     }
   }
 
-  return { enabled, captiveKey, localTvOrigin, missingRoleKeys, productionAuthDisabled };
+  return { enabled, captiveKey, localTvOrigin, missingRoleKeys };
 }
 
 function normalizeOrigin(value: string | undefined): string | null {

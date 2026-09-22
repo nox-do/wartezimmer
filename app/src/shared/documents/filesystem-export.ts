@@ -1,4 +1,3 @@
-import { createWriteStream } from 'node:fs';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
@@ -60,8 +59,26 @@ export class DocumentNotScannedError extends DomainError {
 
 async function writeExportStream(targetFilePath: string, source: Readable): Promise<void> {
   const tempFilePath = `${targetFilePath}.part`;
-  await pipeline(source, createWriteStream(tempFilePath, { flags: 'wx' }));
-  await fs.rename(tempFilePath, targetFilePath);
+  const tempFile = await fs.open(tempFilePath, 'wx');
+  try {
+    await pipeline(source, tempFile.createWriteStream());
+    await fs.rename(tempFilePath, targetFilePath);
+  } finally {
+    await tempFile.close().catch(() => undefined);
+    try {
+      await fs.unlink(tempFilePath);
+    } catch (error) {
+      if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) {
+        log.warn(
+          {
+            filePath: tempFilePath,
+            error: error instanceof Error ? error.message : 'UNKNOWN_ERROR',
+          },
+          'Failed to remove partial export file.',
+        );
+      }
+    }
+  }
 }
 
 async function streamSandboxSourceToExport(
@@ -145,11 +162,13 @@ export async function exportDocumentToFilesystem(
     };
     await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
     writtenPaths.push(metadataPath);
-
-    await purgeDocumentArtifacts(documentId);
-    return info;
   } catch (error) {
     await removeExportPaths(writtenPaths);
     throw error;
   }
+
+  // Once both export artifacts exist, they are the durable copy. Sandbox deletion can
+  // have succeeded even when its response is lost, so it must not trigger compensation.
+  await purgeDocumentArtifacts(documentId);
+  return info;
 }

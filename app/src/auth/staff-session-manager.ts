@@ -11,6 +11,7 @@ export function createStaffSessionManager(options: {
 }): StaffSessionManager {
   const sessionsByTokenHash = new Map<string, StaffSession>();
   const revocationListenersBySessionId = new Map<string, Set<() => void>>();
+  const expiryTimersByTokenHash = new Map<string, ReturnType<typeof setTimeout>>();
   const sessionIdleTtlMs = options.sessionIdleTtlMs ?? options.sessionTtlMs;
 
   function notifySessionRevoked(sessionId: string): void {
@@ -26,8 +27,48 @@ export function createStaffSessionManager(options: {
   }
 
   function deleteSession(tokenHash: string, session: StaffSession): void {
+    const expiryTimer = expiryTimersByTokenHash.get(tokenHash);
+    if (expiryTimer) {
+      clearTimeout(expiryTimer);
+      expiryTimersByTokenHash.delete(tokenHash);
+    }
     sessionsByTokenHash.delete(tokenHash);
     notifySessionRevoked(session.sessionId);
+  }
+
+  function scheduleSessionExpiry(tokenHash: string, session: StaffSession, now: Date): void {
+    const previousTimer = expiryTimersByTokenHash.get(tokenHash);
+    if (previousTimer) {
+      clearTimeout(previousTimer);
+    }
+
+    const expiresAtMs = Math.min(Date.parse(session.expiresAt), Date.parse(session.idleExpiresAt));
+    const delayMs = Math.max(0, Math.min(expiresAtMs - now.getTime(), 2_147_483_647));
+    const timer = setTimeout(() => {
+      if (expiryTimersByTokenHash.get(tokenHash) !== timer) {
+        return;
+      }
+      expiryTimersByTokenHash.delete(tokenHash);
+
+      const current = sessionsByTokenHash.get(tokenHash);
+      if (!current) {
+        return;
+      }
+
+      const currentTime = new Date();
+      if (
+        Date.parse(current.expiresAt) <= currentTime.getTime() ||
+        Date.parse(current.idleExpiresAt) <= currentTime.getTime()
+      ) {
+        deleteSession(tokenHash, current);
+        return;
+      }
+
+      // Re-schedule after a backwards wall-clock adjustment or a clamped long timeout.
+      scheduleSessionExpiry(tokenHash, current, currentTime);
+    }, delayMs);
+    timer.unref();
+    expiryTimersByTokenHash.set(tokenHash, timer);
   }
 
   function idleExpiryFor(now: Date, absoluteExpiresAt: string): string {
@@ -62,6 +103,7 @@ export function createStaffSessionManager(options: {
 
     session.lastSeenAt = now.toISOString();
     session.idleExpiresAt = idleExpiryFor(now, session.expiresAt);
+    scheduleSessionExpiry(tokenHash, session, now);
     return session;
   }
 
@@ -81,7 +123,9 @@ export function createStaffSessionManager(options: {
         idleExpiresAt,
         expiresAt,
       };
-      sessionsByTokenHash.set(sha256(token), session);
+      const tokenHash = sha256(token);
+      sessionsByTokenHash.set(tokenHash, session);
+      scheduleSessionExpiry(tokenHash, session, now);
       return { token, session };
     },
 
