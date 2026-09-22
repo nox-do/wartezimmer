@@ -3,6 +3,7 @@ import type { DayClosePhase, DayLifecycleState } from './db-types.js';
 import { getBusinessDayVisitStatsFromDb } from './database-business-day-stats.js';
 import { domainError } from '../errors/domain-error.js';
 import { executeResetKernel } from './database-reset-kernel.js';
+import { isSandboxResetPendingFromStmt } from './database-sandbox-reset-state.js';
 
 type DayCloseStateRow =
   | { locked?: number; phase?: string; lastResetBusinessDay?: string }
@@ -21,6 +22,7 @@ type DayLifecycleStatements = {
   maxWaitMsByBusinessDayStmt: StatementSync;
   topicCountsByBusinessDayStmt: StatementSync;
   listOpenVisitsByBusinessDayStmt: StatementSync;
+  sandboxResetPendingStmt?: StatementSync;
 };
 
 type DayLifecycleHelpers = {
@@ -71,7 +73,12 @@ export function isEffectiveCheckinLockedFromRow(
 /** Patient check-in blocked until MFA resets the business day or unlocks after reset. */
 export function isEffectiveCheckinLockedFromDb(deps: DayLifecycleDeps): boolean {
   const row = deps.dayCloseStateStmt.get() as DayCloseStateRow;
-  return isEffectiveCheckinLockedFromRow(deps, row);
+  return (
+    isEffectiveCheckinLockedFromRow(deps, row) ||
+    Boolean(
+      deps.sandboxResetPendingStmt && isSandboxResetPendingFromStmt(deps.sandboxResetPendingStmt),
+    )
+  );
 }
 
 function executeBusinessDayReset(deps: DayLifecycleDeps, resetVisitCount: number): DayResetResult {
@@ -98,7 +105,11 @@ export function getDayLifecycleStateFromDb(deps: DayLifecycleDeps): DayLifecycle
   const row = deps.dayCloseStateStmt.get() as DayCloseStateRow;
   const lastResetBusinessDay = row?.lastResetBusinessDay ?? businessDay;
 
-  const needsDayStartHint = resolveNeedsDayStartHint(deps, row);
+  const needsDayStartHint =
+    resolveNeedsDayStartHint(deps, row) ||
+    Boolean(
+      deps.sandboxResetPendingStmt && isSandboxResetPendingFromStmt(deps.sandboxResetPendingStmt),
+    );
   const lastDayStats = needsDayStartHint
     ? getBusinessDayVisitStatsFromDb(deps, lastResetBusinessDay)
     : null;

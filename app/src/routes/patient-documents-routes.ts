@@ -28,6 +28,7 @@ import {
 import { errorResponseSchema } from '../http/schemas.js';
 import { publishTvQueueUpdate } from '../shared/queue/queue-stream-hub.js';
 import { getSandboxClient } from '../shared/sandbox/sandbox-client.js';
+import { withSandboxIntakeOperation } from '../shared/sandbox/sandbox-intake-gate.js';
 import { isRecord } from '../shared/type-guards.js';
 import {
   createRequirePatientSessionPreHandler,
@@ -289,6 +290,12 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
     }),
     async (request, reply) => {
       const token = getPatientSessionToken(request);
+      if (db.isSandboxResetPending()) {
+        return reply.code(409).send({
+          code: 'CHECKIN_LOCKED',
+          message: 'Document intake is paused until sandbox cleanup is confirmed.',
+        });
+      }
       const rawItems = request.body.items ?? [];
       if (!Array.isArray(rawItems)) {
         return reply
@@ -341,10 +348,15 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
       }
 
       try {
-        const created = await intakePatientFormDocuments(db, token, items);
-        db.submitPatientSession(token);
-        publishTvQueueUpdate(db);
-        return reply.code(201).send({ items: created });
+        return await withSandboxIntakeOperation(
+          async () => {
+            const created = await intakePatientFormDocuments(db, token, items);
+            db.submitPatientSession(token);
+            publishTvQueueUpdate(db);
+            return reply.code(201).send({ items: created });
+          },
+          () => db.isSandboxResetPending(),
+        );
       } catch (error) {
         if (isSessionUnauthorizedError(error)) {
           sendSessionUnauthorized(reply);
@@ -366,12 +378,19 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
           201: patientDocumentSchema,
           400: errorResponseSchema,
           401: errorResponseSchema,
+          409: errorResponseSchema,
           502: errorResponseSchema,
         },
       },
     }),
     async (request, reply) => {
       const token = getPatientSessionToken(request);
+      if (db.isSandboxResetPending()) {
+        return reply.code(409).send({
+          code: 'CHECKIN_LOCKED',
+          message: 'Document intake is paused until sandbox cleanup is confirmed.',
+        });
+      }
 
       if (!isMultipartIntake(request.headers['content-type'])) {
         return reply.code(400).send({
@@ -399,38 +418,47 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
         });
       }
 
-      const documentId = randomUUID();
-      const sandbox = getSandboxClient();
-      let intake;
       try {
-        intake = await sandbox.putDocumentIntake(documentId, buffer, { fileName, mimeType });
+        return await withSandboxIntakeOperation(
+          async () => {
+            const documentId = randomUUID();
+            const sandbox = getSandboxClient();
+            const intake = await sandbox.putDocumentIntake(documentId, buffer, {
+              fileName,
+              mimeType,
+            });
+            const status = mapSandboxIntakeScanStatus(intake.scanStatus);
+
+            try {
+              const created = db.intakePatientDocument(token, {
+                documentId,
+                fileName,
+                mimeType,
+                sizeBytes: intake.sizeBytes,
+                status,
+              });
+              publishTvQueueUpdate(db);
+              return reply.code(201).send(created);
+            } catch (error) {
+              await purgeSandboxDocumentBestEffort(documentId);
+              if (isSessionUnauthorizedError(error)) {
+                sendSessionUnauthorized(reply);
+                return;
+              }
+              throw error;
+            }
+          },
+          () => db.isSandboxResetPending(),
+        );
       } catch (error) {
         if (
           sendResolvedDomainError(reply, error, {
-            byApiCode: { SANDBOX_UNAVAILABLE: 'Document intake service is currently unavailable.' },
+            byApiCode: {
+              SANDBOX_UNAVAILABLE: 'Document intake service is currently unavailable.',
+              CHECKIN_LOCKED: 'Document intake is paused while the new day is started.',
+            },
           })
         ) {
-          return;
-        }
-        throw error;
-      }
-
-      const status = mapSandboxIntakeScanStatus(intake.scanStatus);
-
-      try {
-        const created = db.intakePatientDocument(token, {
-          documentId,
-          fileName,
-          mimeType,
-          sizeBytes: intake.sizeBytes,
-          status,
-        });
-        publishTvQueueUpdate(db);
-        return reply.code(201).send(created);
-      } catch (error) {
-        await purgeSandboxDocumentBestEffort(documentId);
-        if (isSessionUnauthorizedError(error)) {
-          sendSessionUnauthorized(reply);
           return;
         }
         throw error;

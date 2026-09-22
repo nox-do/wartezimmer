@@ -263,7 +263,7 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
-        /** @description Document template metadata consistency check failed */
+        /** @description Document template metadata consistency check failed or intake is locked during sandbox reset */
         409: {
           headers: {
             [name: string]: unknown;
@@ -684,6 +684,24 @@ export interface paths {
         };
         /** @description Unauthorized session token */
         401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+        /** @description Document intake is locked during sandbox reset */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+        /** @description Sandbox intake unavailable */
+        502: {
           headers: {
             [name: string]: unknown;
           };
@@ -1285,6 +1303,7 @@ export interface components {
       | 'DOCUMENT_NOT_SCANNED'
       | 'EXPORT_BLOCKED_MALWARE'
       | 'OPS_SETTINGS_INVALID'
+      | 'OPS_SETTINGS_STALE'
       | 'EMERGENCY_DISABLED'
       | 'EMERGENCY_NOT_FOUND'
       | 'SETUP_INCOMPLETE'

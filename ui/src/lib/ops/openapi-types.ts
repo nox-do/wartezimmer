@@ -13,6 +13,7 @@ export type OpsPatchSettingsBody =
 /** MFA-editable subset — mirrors app `MFA_PATCH_KEYS`. */
 export type MfaPatchOpsSettingsBody = Pick<
   OpsPatchSettingsBody,
+  | 'expectedUpdatedAt'
   | 'returnWindowMinutes'
   | 'practiceOpenFrom'
   | 'practiceOpenTo'
@@ -31,6 +32,7 @@ export type MfaPatchOpsSettingsBody = Pick<
 /** Ops-editable subset — mirrors app `OPS_PATCH_KEYS`. */
 export type OpsPatchSystemSettingsBody = Pick<
   OpsPatchSettingsBody,
+  | 'expectedUpdatedAt'
   | 'routingMode'
   | 'contactLookupFolderPath'
   | 'contactLookupDelimiterMode'

@@ -130,3 +130,21 @@ test('exportDocumentToFilesystem removes partial file after interrupted content 
   await exportDocumentToFilesystem(db as never, baseInfo.documentId);
   assert.equal(await readFile(paths.targetFilePath, 'utf8'), 'pdf-bytes');
 });
+
+test('exportDocumentToFilesystem removes a crash-orphaned partial file and retries', async () => {
+  const exportBasePath = await mkdtemp(path.join(os.tmpdir(), 'pf-export-'));
+  const paths = resolveDocumentExportPaths(baseInfo, exportBasePath);
+  await mkdir(paths.targetDir, { recursive: true });
+  const orphanPath = `${paths.targetFilePath}.previous-process.part`;
+  await writeFile(orphanPath, 'partial-pdf');
+  const db = {
+    getDocumentExportInfo: () => baseInfo,
+    getOpsSettings: () => ({ exportBasePath }),
+  };
+
+  sandboxBehavior = 'success';
+  await exportDocumentToFilesystem(db as never, baseInfo.documentId);
+
+  await assert.rejects(access(orphanPath), { code: 'ENOENT' });
+  assert.equal(await readFile(paths.targetFilePath, 'utf8'), 'pdf-bytes');
+});

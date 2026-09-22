@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import type { StatementSync } from 'node:sqlite';
 import test from 'node:test';
 import { DEFAULT_ROOM_PANELS_SETTINGS } from '@praxis-flow/domain';
-import { getOpsSettingsFromDb, updateOpsSettingsInDb } from './database-ops-settings.js';
+import {
+  getOpsSettingsFromDb,
+  nextOpsSettingsUpdatedAt,
+  updateOpsSettingsInDb,
+} from './database-ops-settings.js';
 import { OpsSettingsValidationError, opsSettingsInvalidHttpStatus } from './ops-settings-errors.js';
 
 function minimalOpsSettingsRow(overrides?: Record<string, unknown>) {
@@ -27,6 +31,17 @@ function minimalOpsSettingsRow(overrides?: Record<string, unknown>) {
     ...overrides,
   };
 }
+
+test('nextOpsSettingsUpdatedAt is strictly monotonic when clock values collide', () => {
+  assert.equal(
+    nextOpsSettingsUpdatedAt('2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'),
+    '2026-01-01T00:00:00.001Z',
+  );
+  assert.equal(
+    nextOpsSettingsUpdatedAt('2026-01-01T00:00:00.001Z', '2026-01-01T00:00:00.000Z'),
+    '2026-01-01T00:00:00.002Z',
+  );
+});
 
 test('getOpsSettingsFromDb maps sqlite booleans strictly as value === 1', () => {
   const settings = getOpsSettingsFromDb({
@@ -106,6 +121,26 @@ test('updateOpsSettingsInDb persists routingMode and returns the saved value', (
   assert.equal(settings.routingMode, 'complex');
   assert.equal(savedArgs.length, 1);
   assert.equal(savedArgs[0]?.[0], 'complex');
+});
+
+test('updateOpsSettingsInDb persists an explicitly cleared contact import path', () => {
+  const savedArgs: unknown[][] = [];
+  const settings = updateOpsSettingsInDb(
+    {
+      getOpsSettingsStmt: {
+        get: () => minimalOpsSettingsRow({ contactLookupFolderPath: '/configured/contact-import' }),
+      } as StatementSync,
+      updateOpsSettingsStmt: {
+        run: (...args: unknown[]) => savedArgs.push(args),
+      } as StatementSync,
+      nowIso: () => '2026-01-01T01:00:00.000Z',
+      configuredExportBasePath: null,
+    },
+    { contactLookupFolderPath: null },
+  );
+
+  assert.equal(settings.contactLookupFolderPath, null);
+  assert.equal(savedArgs[0]?.[9], null);
 });
 
 test('updateOpsSettingsInDb persists only an enabled post-waiting target', () => {

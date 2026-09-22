@@ -5,6 +5,7 @@ export type NetworkTopologyLabels = {
   baseUrl?: string | null;
   operation?: string;
   diagnosis?: string;
+  portalState?: string | null;
 };
 
 /** Saved configuration only; observed health is labelled separately. No network-isolation claim. */
@@ -16,6 +17,7 @@ export function mountNetworkTopologyDiagram(
   const ip = labels.lanIp?.trim() || 'noch nicht gewählt';
   const proxy = Boolean(labels.proxyEnabled);
   const tls = Boolean(labels.httpsEnabled);
+  const portalState = labels.portalState?.trim() || 'Nicht eingerichtet';
   const section = document.createElement('section');
   section.className = 'net-scenario net-scenario--internal';
   section.innerHTML = `
@@ -52,8 +54,8 @@ export function mountNetworkTopologyDiagram(
   future.className = 'net-scenario net-scenario--portal';
   future.innerHTML = `
     <h3 class="net-scenario-title">Separater Patientenzugang</h3>
-    <p class="net-scenario-lead">Ein separater Patientenzugang ist derzeit noch nicht verfügbar. HTTPS schützt die Verbindung, trennt den Patienten- und den internen Praxiszugang aber nicht.</p>
-    <p class="hint">Für eine spätere Bereitstellung sind HTTPS und eine von der Praxis-IT eingerichtete, getrennte Netzwerkzone erforderlich. Empfohlen wird ein eigenes Applikationssegment oder eine DMZ mit ausschließlich notwendigen Freigaben zum Praxisnetz.</p>
+    <p class="net-scenario-lead">Aktueller Status: ${escapeHtml(portalState)}. HTTPS schützt die Verbindung; die tatsächliche Trennung des Patienten- und Praxisnetzes richtet die Praxis-IT ein.</p>
+    <p class="hint">Für einen getrennten Patientenzugang sind HTTPS und eine von der Praxis-IT eingerichtete Netzwerkzone erforderlich. Empfohlen wird ein eigenes Applikationssegment oder eine DMZ mit ausschließlich notwendigen Freigaben zum Praxisnetz.</p>
     <p class="hint">Mitarbeitende können die Portalfunktion intern immer nutzen. Die Aktivierung erfolgt in den OPS-Einstellungen.</p>
   `;
   host.append(future);

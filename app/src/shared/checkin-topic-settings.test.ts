@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   resolveDestinationRoomForTopic,
-  resolveDestinationRoomLabelForTopic,
   resolveCheckInDestinationRoomLabel,
 } from './checkin-topic-settings.js';
 
@@ -39,14 +38,6 @@ const settings = {
   ],
 };
 
-test('resolveDestinationRoomLabelForTopic returns topic default room label', () => {
-  assert.equal(resolveDestinationRoomLabelForTopic(settings, 'blut'), 'Labor');
-});
-
-test('resolveDestinationRoomLabelForTopic returns default call target for MFA assist', () => {
-  assert.equal(resolveDestinationRoomLabelForTopic(settings, 'mfa'), 'Empfang');
-});
-
 test('resolveDestinationRoomForTopic resolves waiting defaults without a pseudo room', () => {
   const waitingSettings = {
     ...settings,
@@ -62,14 +53,6 @@ test('resolveDestinationRoomForTopic resolves waiting defaults without a pseudo 
     roomId: 'pf_waiting',
     roomLabel: 'Wartezimmer',
   });
-});
-
-test('resolveDestinationRoomLabelForTopic falls back to default call target when topic room is missing', () => {
-  const staleTopicSettings = {
-    ...settings,
-    topics: [{ ...settings.topics[0], defaultRoomId: 'unknown-room' }],
-  };
-  assert.equal(resolveDestinationRoomLabelForTopic(staleTopicSettings, 'blut'), 'Empfang');
 });
 
 test('resolveCheckInDestinationRoomLabel uses visit target only', () => {

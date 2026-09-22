@@ -197,6 +197,23 @@ test('boot with .env opens status then fetches runtime and starts poll', async (
   assert.ok(shell.events.indexOf('nav:status:') < shell.events.indexOf('bootReady'));
 });
 
+test('runtime failure exposes a controlled stale-data warning instead of technical details', async () => {
+  const { controller, shell } = createTestController({
+    fetchSetupStatus: async () => minimalHostStatus(),
+    fetchRuntimeHealth: async () => {
+      throw new Error('connect ECONNREFUSED 127.0.0.1:49152');
+    },
+  });
+
+  await controller.start();
+
+  assert.equal(
+    shell.runtimeError,
+    'Laufzustand konnte nicht aktualisiert werden. Die angezeigten Betriebsdaten können veraltet sein.',
+  );
+  assert.doesNotMatch(shell.runtimeError ?? '', /ECONNREFUSED|127\.0\.0\.1/);
+});
+
 test('boot config error shows status error without wizard or poll', async () => {
   const callLog: CallLog = [];
   const { controller, shell, timers } = createTestController({

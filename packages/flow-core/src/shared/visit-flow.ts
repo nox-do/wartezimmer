@@ -52,6 +52,9 @@ export function assertTransitionAllowed(
   action: TransitionAction,
   context: TransitionContext = {},
 ): void {
+  if (TERMINAL_VISIT_STATUSES.has(visit.status as TerminalVisitStatus)) {
+    throw new Error('VISIT_TERMINAL');
+  }
   switch (action) {
     case 'call':
       if (!['waiting', 'directed'].includes(visit.status))
@@ -92,7 +95,8 @@ export function assertTransitionAllowed(
       if (
         visit.journeyTemplateId == null ||
         visit.journeyStepIndex == null ||
-        !visit.journeyStepCompletedAt
+        !visit.journeyStepCompletedAt ||
+        visit.journeyState !== 'active'
       ) {
         throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
       }

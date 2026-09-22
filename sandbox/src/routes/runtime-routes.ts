@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { SANDBOX_RUNTIME_INSTANCE_ID } from '../runtime-instance.js';
 
 export function registerRuntimeRoutes(app: FastifyInstance): void {
   app.post<{ Body: { reason?: string } }>('/internal/runtime/restart', async (request) => {
@@ -19,6 +20,7 @@ export function registerRuntimeRoutes(app: FastifyInstance): void {
 
     return {
       status: 'restarting',
+      instanceId: SANDBOX_RUNTIME_INSTANCE_ID,
       initiatedAt,
       reason: reason || undefined,
     };

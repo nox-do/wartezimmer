@@ -43,7 +43,7 @@ components:
         destinationRoomLabel:
           type: string
           nullable: true
-          description: Patient-facing hint — default room for the chosen topic (wayfinding at check-in).
+          description: Patient-facing hint from the visit's operative routing or journey target.
     TerminalTopic:
       type: object
       required:

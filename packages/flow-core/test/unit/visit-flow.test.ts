@@ -75,7 +75,34 @@ test('assertTransitionAllowed: return_to_waiting erlaubt aktive und begleitete R
   );
   assert.throws(
     () => assertTransitionAllowed({ ...base, status: 'done' }, 'return_to_waiting'),
-    /RETURN_TO_WAITING_NOT_ALLOWED/,
+    /VISIT_TERMINAL/,
+  );
+});
+
+test('assertTransitionAllowed: Journey-Fortsetzung verlangt aktive nichtterminale Journey', () => {
+  const visit = {
+    status: 'arrived' as const,
+    movementMode: 'call' as const,
+    needsAssistance: false,
+    journeyTemplateId: 'journey_general',
+    journeyStepIndex: 0,
+    journeyStepCompletedAt: '2026-09-22T12:00:00.000Z',
+    journeyState: 'active' as const,
+  };
+
+  assert.doesNotThrow(() => assertTransitionAllowed(visit, 'start_next_journey_step'));
+  assert.throws(
+    () =>
+      assertTransitionAllowed(
+        { ...visit, status: 'cancelled', journeyState: 'abandoned' },
+        'start_next_journey_step',
+      ),
+    /VISIT_TERMINAL/,
+  );
+  assert.throws(
+    () =>
+      assertTransitionAllowed({ ...visit, journeyState: 'abandoned' }, 'start_next_journey_step'),
+    /START_NEXT_JOURNEY_STEP_NOT_ALLOWED/,
   );
 });
 

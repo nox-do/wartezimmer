@@ -1,10 +1,8 @@
-import { promises as fs } from 'node:fs';
 import type { ContactLookupScan, CsvContactLookupSettings } from './contact-lookup-config.js';
 import { clearCsvEncodingCache } from './csv-encoding.js';
 
 export type CachedContactLookup = {
   settingsKey: string;
-  folderSignature: string;
   scannedAt: string;
   scan: ContactLookupScan;
 };
@@ -23,17 +21,6 @@ export function buildContactLookupSettingsKey(settings: CsvContactLookupSettings
     hasHeader: settings.hasHeader,
     mapping: settings.mapping,
   });
-}
-
-export async function buildFolderSignature(csvFiles: string[]): Promise<string> {
-  let maxMtime = 0;
-  let totalSize = 0;
-  for (const filePath of csvFiles) {
-    const stat = await fs.stat(filePath);
-    maxMtime = Math.max(maxMtime, stat.mtimeMs);
-    totalSize += stat.size;
-  }
-  return `${csvFiles.length}:${totalSize}:${maxMtime}`;
 }
 
 export function getContactLookupCache(): CachedContactLookup | null {

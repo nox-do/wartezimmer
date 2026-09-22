@@ -40,12 +40,12 @@ Auth: interner Token (`SANDBOX_INTERNAL_TOKEN`). MFA spricht **nur** `app`; Embe
 
 ## 2. Sandbox-Container
 
-| Grenze             | Ist                                                                                                                                      |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Erreichbarkeit     | nur Compose-Netz, kein Host-Port                                                                                                         |
-| Fachentscheidungen | App (Discard/Export)                                                                                                                     |
-| ClamAV             | lokal in Sandbox; Signaturen Volume `clamav_db`                                                                                          |
-| Lifecycle          | `restart: unless-stopped`; kein Spawn pro Login/Dokument; Neustart bei Deploy/Crash/Admin/**Tagesreset** (`purge-day` + Runtime-Restart) |
+| Grenze             | Ist                                                                                                                                                                                                                                |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Erreichbarkeit     | nur Compose-Netz, kein Host-Port                                                                                                                                                                                                   |
+| Fachentscheidungen | App (Discard/Export)                                                                                                                                                                                                               |
+| ClamAV             | lokal in Sandbox; Signaturen Volume `clamav_db`                                                                                                                                                                                    |
+| Lifecycle          | `restart: unless-stopped`; kein Spawn pro Login/Dokument; Neustart bei Deploy/Crash/Admin/**Tagesreset** (synchron bestätigtes `purge-day`, danach Runtime-Restart; bei ungewissem Purge bleibt der persistente Intake-Lock aktiv) |
 
 **Pipeline:** MFA Preview → App bindet Session → Sandbox Scan → `interactive_pdf` oder Fallback → Embed via App-Proxy → Auto-Replace bei neuem Dokument derselben Session.
 

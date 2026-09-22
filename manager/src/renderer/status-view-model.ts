@@ -1,13 +1,7 @@
 import type { HostStatus } from '../shared/host-status.js';
 import { deliveryImagesSummary, needsDeliveryImages } from './delivery-images-flow.js';
 
-export type SetupEntryTone =
-  | 'fresh'
-  | 'needs-docker'
-  | 'needs-release'
-  | 'needs-lan'
-  | 'review'
-  | 'maintenance';
+export type SetupEntryTone = 'fresh' | 'needs-docker' | 'review' | 'maintenance';
 
 export type SetupChecklistItem = { label: string; done: boolean; muted?: boolean };
 
@@ -154,23 +148,12 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
     };
   }
 
-  if (tone === 'needs-release') {
-    return {
-      eyebrow,
-      title: 'Einrichtung fortsetzen',
-      copy: 'Diese Installation hat bereits einen lokalen Installationsstand. Für den nächsten Schritt fehlt noch das passende Release-Paket, damit app und sandbox geladen werden können.',
-      note: '',
-      startButtonLabel: 'Einrichtung fortsetzen',
-      showReleasePicker: status.docker.daemonRunning,
-    };
-  }
-
   return {
-    eyebrow,
-    title: 'Einrichtung fortsetzen',
-    copy: 'Die Grundlagen sind da. Als Nächstes wird die erreichbare Host-Adresse für Terminal, TV und MFA festgelegt.',
+    eyebrow: 'Status',
+    title: 'Praxis Flow',
+    copy: 'Die Einrichtung ist abgeschlossen.',
     note: '',
-    startButtonLabel: 'Einrichtung fortsetzen',
+    startButtonLabel: null,
     showReleasePicker: false,
   };
 }

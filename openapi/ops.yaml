@@ -134,7 +134,7 @@ components:
         sandboxRestartInitiated:
           type: boolean
           const: true
-          description: Sandbox purge/restart was queued asynchronously (not a success guarantee).
+          description: Sandbox intake purge succeeded and the subsequent runtime restart was queued asynchronously.
     BusinessDayResetRequest:
       type: object
       required:
@@ -1602,6 +1602,10 @@ paths:
               minProperties: 1
               additionalProperties: false
               properties:
+                expectedUpdatedAt:
+                  type: string
+                  format: date-time
+                  description: Reject the update when settings changed since this revision was read.
                 routingMode:
                   type: string
                   enum: [simple, complex]
@@ -1877,7 +1881,7 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
         '409':
-          description: Routing mode change blocked while waiting numbers are still open
+          description: Settings revision conflict or routing mode change blocked while waiting numbers are still open
           content:
             application/json:
               schema:
@@ -2307,7 +2311,10 @@ paths:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     post:
       summary: Execute ops runtime reset (ops role)
-      description: Clears visits, outbox, active emergency; preserves practice settings and messaging credentials.
+      description: >-
+        Purges sandbox intake synchronously, then clears visits, outbox, and active emergency;
+        preserves practice settings and messaging credentials. On purge failure the reset is not committed
+        and check-in remains locked.
       requestBody:
         required: true
         content:
@@ -2323,6 +2330,18 @@ paths:
                 $ref: '#/components/schemas/RuntimeResetResponse'
         '400':
           description: Invalid confirm phrase or request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Another reset is already in progress
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '503':
+          description: Sandbox intake purge failed; the persistent reset lock remains active and the runtime reset is not committed
           content:
             application/json:
               schema:
@@ -2359,8 +2378,8 @@ paths:
     post:
       summary: Reset runtime for a new business day
       description: >-
-        Clears visits and outbox runtime data, locks check-in, stamps lastResetBusinessDay,
-        and queues sandbox purge/restart. Settings are preserved. This is the MFA „Neuen Tag starten“
+        Locks check-in and document intake, purges sandbox intake synchronously, then clears visits and
+        outbox runtime data, stamps lastResetBusinessDay, and queues a sandbox runtime restart. Settings are preserved. This is the MFA „Neuen Tag starten“
         action — not the same as starting day-close (Tagesabschluss).
       requestBody:
         required: true
@@ -2377,6 +2396,18 @@ paths:
                 $ref: '#/components/schemas/BusinessDayResetResponse'
         '400':
           description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Another reset is already in progress
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '503':
+          description: Sandbox intake purge failed; the persistent reset lock remains active and the business-day reset is not committed
           content:
             application/json:
               schema:

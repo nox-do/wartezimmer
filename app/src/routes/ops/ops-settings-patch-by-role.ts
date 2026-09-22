@@ -2,6 +2,7 @@ import type { ClientRole } from '../../auth/client-auth.js';
 import type { PatchOpsSettingsBody } from '../../api/ops-openapi-types.js';
 
 const MFA_PATCH_KEYS = new Set([
+  'expectedUpdatedAt',
   'returnWindowMinutes',
   'practiceOpenFrom',
   'practiceOpenTo',
@@ -18,6 +19,7 @@ const MFA_PATCH_KEYS = new Set([
 ]);
 
 const OPS_PATCH_KEYS = new Set([
+  'expectedUpdatedAt',
   'routingMode',
   'contactLookupFolderPath',
   'contactLookupDelimiterMode',

@@ -17,6 +17,48 @@ function visitRepositoryFor(db: ReturnType<typeof openDb>) {
   return createVisitRepository(db, catalogRepository);
 }
 
+test('checkIn speichert is_anonymous mit der richtigen Boolean-Semantik', () => {
+  const db = openDb({ path: ':memory:' });
+  const runtime = createRuntime(db);
+  const named = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Benannte Person',
+    surfaceId: 'terminal_1',
+  });
+  const anonymous = runtime.checkIn({ topicId: 'general', surfaceId: 'terminal_1' });
+
+  const readFlag = (visitId: string) =>
+    (
+      db
+        .prepare(
+          `SELECT patients.is_anonymous AS isAnonymous
+           FROM visits JOIN patients ON patients.id = visits.patient_id
+           WHERE visits.id = ?`,
+        )
+        .get(visitId) as { isAnonymous: number }
+    ).isAnonymous;
+
+  assert.equal(readFlag(named.id), 0);
+  assert.equal(readFlag(anonymous.id), 1);
+});
+
+test('Visit-Projektion behaelt den Themenname vom Check-in', () => {
+  const db = openDb({ path: ':memory:' });
+  const runtime = createRuntime(db);
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Themen-Snapshot',
+    surfaceId: 'terminal_1',
+  });
+  const originalLabel = created.topic?.name;
+  db.prepare("UPDATE topics SET name = 'Umbenannt' WHERE id = 'general'").run();
+
+  assert.equal(
+    runtime.visits().find((visit) => visit.id === created.id)?.topic?.name,
+    originalLabel,
+  );
+});
+
 test('updateVisit: fehlender Key behaelt staffNote und journeyTemplateId', () => {
   const db = openDb({ path: ':memory:' });
   const runtime = createRuntime(db);

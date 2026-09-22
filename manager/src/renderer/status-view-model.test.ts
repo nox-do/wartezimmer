@@ -69,15 +69,10 @@ test('setupEntryTone classifies maintenance when setup is complete', () => {
   assert.equal(isSetupEntryStatus(status), false);
 });
 
-test('setupEntryContent adapts copy for release gap', () => {
-  const status = minimalHostStatus({
-    envExists: true,
-    docker: { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
-  });
-  const content = setupEntryContent(status, 'needs-release');
-  assert.equal(content.title, 'Einrichtung fortsetzen');
-  assert.match(content.copy, /lokalen Installationsstand/);
-  assert.equal(content.showReleasePicker, true);
+test('setupEntryContent keeps completed maintenance state action-free', () => {
+  const content = setupEntryContent(minimalHostStatus(), 'maintenance');
+  assert.equal(content.startButtonLabel, null);
+  assert.equal(content.showReleasePicker, false);
 });
 
 test('setupChecklistItems marks docker step open when daemon is down', () => {

@@ -157,6 +157,23 @@ test('pfupdate wizard stops on inspect failure', async () => {
   assert.match(controller.getState().error ?? '', /Checksumme fehlgeschlagen/);
 });
 
+test('pfupdate wizard turns a rejected file picker into a visible failure', async () => {
+  const controller = createPfupdateWizardController({
+    api: createMockApi({
+      selectPfupdateArchive: async () => {
+        throw new Error('Dateidialog fehlgeschlagen');
+      },
+    }),
+  });
+
+  controller.open();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(controller.getState().phase, 'failed');
+  assert.equal(controller.getState().busy, false);
+  assert.match(controller.getState().error ?? '', /Dateidialog fehlgeschlagen/);
+});
+
 test('confirmApply ignores duplicate calls while busy or outside preview', async () => {
   let applyCalls = 0;
   let resolveApply!: () => void;

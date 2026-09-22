@@ -167,6 +167,8 @@ export interface Visit {
   patientDisplayName?: string;
   status: VisitStatus;
   primaryTopicId?: string;
+  /** Themenname zum Check-in-Zeitpunkt; aus dem unveraenderlichen checked_in-Event. */
+  primaryTopicLabel?: string;
   appliedRoutingRuleId?: string;
   lastKnownLocationId?: string;
   targetLocationId?: string;

@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { ensureFlowCoreSchema } from '../flow-core/flow-core-schema.js';
 import { ensureAuthSettingsSchema } from './database-auth-settings.js';
 import { ensureOpsSetupSchema } from './database-ops-setup.js';
+import { ensureSandboxResetStateSchema } from './database-sandbox-reset-state.js';
 import { runMigrations } from './migrations-runner.js';
 
 /** Current production schema generation — not a migration history counter. */
@@ -56,6 +57,7 @@ export function runTransitionSchemaEnsures(db: DatabaseSync): void {
   ensureOpsSetupSchema(db);
   ensureAuthSettingsSchema(db);
   ensureFlowCoreSchema(db);
+  ensureSandboxResetStateSchema(db);
 }
 
 /**

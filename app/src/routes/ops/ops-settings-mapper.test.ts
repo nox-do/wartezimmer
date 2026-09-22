@@ -126,6 +126,23 @@ test('buildOpsSettingsUpdate still validates an explicitly changed contact impor
   assert.match(result.message, /contact lookup/i);
 });
 
+test('buildOpsSettingsUpdate allows clearing the contact import path explicitly', async () => {
+  const db = {
+    getOpsSettings: () => ({
+      ...mockDb().getOpsSettings(),
+      contactLookupFolderPath: '/unavailable/contact-import',
+    }),
+  } as unknown as CoreDatabase;
+
+  const result = await buildOpsSettingsUpdate(db, { contactLookupFolderPath: null });
+
+  assert.ok(result && !('code' in result));
+  if (!result || 'code' in result) {
+    return;
+  }
+  assert.equal(result.contactLookupFolderPath, null);
+});
+
 test('buildOpsSettingsUpdate rejects invalid journeySettings patch', async () => {
   const result = await buildOpsSettingsUpdate(mockDb(), {
     journeySettings: {

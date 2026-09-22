@@ -208,15 +208,33 @@ export function createVisitService(params: {
     if (targetLocationId) {
       assertCallTargetLocation(catalog, targetLocationId);
     }
-    const journeyPatch = startNextJourneyStepPatch(record, steps, {
-      locations: catalog.locations,
-      targetLocationId,
-      completedAt: new Date().toISOString(),
-    });
-    if (!journeyPatch || journeyPatch.journeyState === 'completed') {
-      throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
+    let current = record;
+    let overrideTargetLocationId = targetLocationId;
+    for (let remaining = steps.length + 1; remaining > 0; remaining -= 1) {
+      const journeyPatch = startNextJourneyStepPatch(current, steps, {
+        locations: catalog.locations,
+        targetLocationId: overrideTargetLocationId,
+        completedAt: new Date().toISOString(),
+      });
+      if (!journeyPatch) {
+        throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
+      }
+
+      const after = applyJourneyPatch(visitId, current, journeyPatch, steps, catalog, actorId);
+      if (
+        journeyPatch.journeyState === 'completed' ||
+        !('journeyStepCompletedAt' in journeyPatch) ||
+        !journeyPatch.journeyStepCompletedAt
+      ) {
+        return after;
+      }
+
+      // Same-location arrive steps complete immediately. Continue through consecutive
+      // steps so the last one reaches journey_completed in the same transaction.
+      current = visitRecordById(visitId)!;
+      overrideTargetLocationId = undefined;
     }
-    return applyJourneyPatch(visitId, record, journeyPatch, steps, catalog, actorId);
+    throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
   };
 
   const checkIn = (body: CheckInBody): VisitView | undefined =>
@@ -721,7 +739,7 @@ export function createVisitService(params: {
       updateVisit(record, {
         status: 'cancelled',
         finishedAt: now,
-        ...(wasOnJourney ? { journeyState: 'abandoned' } : {}),
+        ...(wasOnJourney ? { journeyState: 'abandoned', journeyStepCompletedAt: null } : {}),
       });
 
       if (wasOnJourney) {

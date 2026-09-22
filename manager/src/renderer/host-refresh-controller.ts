@@ -10,7 +10,7 @@ export type RefreshErrorSource = 'config' | 'runtime';
 
 export type RefreshOptions = {
   scope: RefreshScope;
-  /** Poll / background — errors are ignored. */
+  /** Poll / background — keeps foreground refresh sequencing independent. */
   silent?: boolean;
 };
 
@@ -88,17 +88,11 @@ export function createHostRefreshController(
     }, pollIntervalMs);
   }
 
-  function reportError(options: RefreshOptions, source: RefreshErrorSource, error: unknown): void {
-    if (options.silent) {
-      return;
-    }
+  function reportError(source: RefreshErrorSource, error: unknown): void {
     deps.onError(errorMessage(error), currentView, source);
   }
 
-  async function fetchConfig(
-    myGeneration: number,
-    options: RefreshOptions,
-  ): Promise<HostStatus | null> {
+  async function fetchConfig(myGeneration: number): Promise<HostStatus | null> {
     try {
       const status = await deps.api().fetchSetupStatus();
       if (myGeneration !== generation) {
@@ -111,12 +105,12 @@ export function createHostRefreshController(
       if (myGeneration !== generation) {
         return null;
       }
-      reportError(options, 'config', error);
+      reportError('config', error);
       return null;
     }
   }
 
-  async function fetchRuntime(myGeneration: number, options: RefreshOptions): Promise<void> {
+  async function fetchRuntime(myGeneration: number): Promise<void> {
     try {
       const runtime = await deps.api().fetchRuntimeHealth();
       if (myGeneration !== generation) {
@@ -128,7 +122,7 @@ export function createHostRefreshController(
       if (myGeneration !== generation) {
         return;
       }
-      reportError(options, 'runtime', error);
+      reportError('runtime', error);
     }
   }
 
@@ -139,30 +133,30 @@ export function createHostRefreshController(
     let configSucceeded = false;
     try {
       if (options.scope === 'config') {
-        const status = await fetchConfig(myGeneration, options);
+        const status = await fetchConfig(myGeneration);
         configSucceeded = status !== null;
         return status;
       }
 
       if (options.scope === 'mutation') {
-        const status = await fetchConfig(myGeneration, options);
+        const status = await fetchConfig(myGeneration);
         configSucceeded = status !== null;
         if (myGeneration === generation && (status ?? lastConfig)?.envExists) {
-          await fetchRuntime(myGeneration, options);
+          await fetchRuntime(myGeneration);
         }
         return status;
       }
 
       if (options.scope === 'full') {
         if (!envExistsForRuntime()) {
-          const status = await fetchConfig(myGeneration, options);
+          const status = await fetchConfig(myGeneration);
           configSucceeded = status !== null;
           return status;
         }
         let configResult: HostStatus | null = null;
         await Promise.all([
-          fetchRuntime(myGeneration, options),
-          fetchConfig(myGeneration, options).then((status) => {
+          fetchRuntime(myGeneration),
+          fetchConfig(myGeneration).then((status) => {
             configResult = status;
           }),
         ]);
@@ -170,7 +164,7 @@ export function createHostRefreshController(
       }
 
       if (envExistsForRuntime()) {
-        await fetchRuntime(myGeneration, options);
+        await fetchRuntime(myGeneration);
         // A runtime poll may supersede a mutation's config refresh. Reconcile by
         // fetching authoritative config, never by mixing runtime fields into it.
         if (
@@ -200,7 +194,7 @@ export function createHostRefreshController(
             (lastRuntime.proxyServer !== null &&
               lastRuntime.proxyServer.enabled !== lastConfig.proxy.enabled))
         ) {
-          await fetchConfig(myGeneration, options);
+          await fetchConfig(myGeneration);
         }
       }
       return lastConfig;

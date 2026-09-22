@@ -26,6 +26,17 @@ INSERT INTO ops_state (id, checkin_locked, day_close_phase, last_reset_business_
 SELECT 'singleton', 0, 'open', date('now', 'localtime'), CURRENT_TIMESTAMP
 WHERE NOT EXISTS (SELECT 1 FROM ops_state WHERE id = 'singleton');
 
+CREATE TABLE IF NOT EXISTS sandbox_reset_state (
+  id TEXT PRIMARY KEY CHECK (id = 'singleton'),
+  pending INTEGER NOT NULL DEFAULT 0 CHECK (pending IN (0, 1)),
+  started_at TEXT,
+  updated_at TEXT NOT NULL
+);
+
+INSERT INTO sandbox_reset_state (id, pending, started_at, updated_at)
+SELECT 'singleton', 0, NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+WHERE NOT EXISTS (SELECT 1 FROM sandbox_reset_state WHERE id = 'singleton');
+
 CREATE TABLE IF NOT EXISTS outbox_events (
   id TEXT PRIMARY KEY,
   event_type TEXT NOT NULL,

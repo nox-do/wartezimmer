@@ -308,10 +308,6 @@ function resolveDefaultCallDestination(
   return room ? { roomId: room.roomId, roomLabel: room.roomLabel.trim() } : null;
 }
 
-function resolveDefaultCallRoomLabel(settings: Pick<OpsSettings, 'rooms'>): string | null {
-  return resolveDefaultCallDestination(settings)?.roomLabel || null;
-}
-
 export function resolveDestinationRoomForTopic(
   settings: Pick<OpsSettings, 'topics' | 'rooms'>,
   topicId: string,
@@ -330,23 +326,6 @@ export function resolveDestinationRoomForTopic(
   }
 
   return resolveDefaultCallDestination(settings);
-}
-
-/** Room label shown on the terminal confirmation screen after check-in. */
-export function resolveDestinationRoomLabelForTopic(
-  settings: Pick<OpsSettings, 'topics' | 'rooms'>,
-  topicId: string,
-): string | null {
-  if (topicId === MFA_ASSIST_TOPIC_ID) {
-    return resolveDefaultCallRoomLabel(settings);
-  }
-
-  const topic = settings.topics.find((entry) => entry.topicId === topicId);
-  if (topic?.defaultRoomId === WAITING_ROOM_LOCATION_ID) {
-    return WAITING_ROOM_LABEL;
-  }
-  const room = resolveDefaultRoomForTopic(settings, topicId);
-  return room?.roomLabel.trim() || resolveDefaultCallRoomLabel(settings);
 }
 
 /**

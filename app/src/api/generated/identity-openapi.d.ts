@@ -244,6 +244,7 @@ export interface components {
       | 'DOCUMENT_NOT_SCANNED'
       | 'EXPORT_BLOCKED_MALWARE'
       | 'OPS_SETTINGS_INVALID'
+      | 'OPS_SETTINGS_STALE'
       | 'EMERGENCY_DISABLED'
       | 'EMERGENCY_NOT_FOUND'
       | 'SETUP_INCOMPLETE'

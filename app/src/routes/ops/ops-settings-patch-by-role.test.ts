@@ -8,6 +8,12 @@ test('ops may patch routingMode', () => {
   });
 });
 
+test('settings revision token is allowed for both staff roles', () => {
+  const body = { expectedUpdatedAt: '2026-09-22T12:00:00.000Z' };
+  assert.deepEqual(assertPatchOpsSettingsAllowedForRole('mfa', body), { ok: true });
+  assert.deepEqual(assertPatchOpsSettingsAllowedForRole('ops', body), { ok: true });
+});
+
 test('mfa may not patch routingMode', () => {
   assert.deepEqual(assertPatchOpsSettingsAllowedForRole('mfa', { routingMode: 'complex' }), {
     ok: false,

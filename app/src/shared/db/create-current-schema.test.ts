@@ -117,11 +117,13 @@ test('CoreDatabase ensures additive columns for an existing current-generation d
     const existing = new DatabaseSync(dbPath);
     createCurrentSchema(existing);
     existing.exec('ALTER TABLE ops_settings DROP COLUMN post_waiting_call_target_id');
+    existing.exec('DROP TABLE sandbox_reset_state');
     assert.equal(readSchemaGeneration(existing), SCHEMA_GENERATION);
     existing.close();
 
     const core = new CoreDatabase(dbPath);
     assert.equal(core.getOpsSettings().postWaitingCallTargetId, 'mfa-tresen');
+    assert.equal(core.isSandboxResetPending(), false);
   } finally {
     if (previousNodeEnv === undefined) {
       delete process.env.NODE_ENV;

@@ -110,18 +110,10 @@ export type SetupServerHandle = {
 };
 
 function resolvePackagedSetupServerEntry(): string {
-  const override = process.env.PRAXIS_FLOW_SETUP_SERVER_ENTRY?.trim();
-  if (override) {
-    return path.resolve(override);
-  }
   return path.join(process.resourcesPath, 'setup', 'dist', 'server.js');
 }
 
 function resolvePackagedTemplateRoot(): string {
-  const override = process.env.PRAXIS_FLOW_TEMPLATE_ROOT?.trim();
-  if (override) {
-    return path.resolve(override);
-  }
   return path.join(process.resourcesPath, 'templates');
 }
 
@@ -159,6 +151,7 @@ function startDevSetupServer(
   return spawn(npmExecutable(), ['run', '-w', '@praxis-flow/setup', 'serve'], {
     cwd: repoRoot,
     env: childEnv(port, token, buildId),
+    shell: process.platform === 'win32',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 }
@@ -266,7 +259,7 @@ export async function startSetupServer(): Promise<SetupServerHandle> {
     installHome: expectedSetupInstallHome(isPackaged, moduleDir),
   };
 
-  if (isAttachExistingSetupEnabled()) {
+  if (!isPackaged && isAttachExistingSetupEnabled()) {
     const port = getAttachSetupPort();
     const apiBase = getSetupApiBase(port);
     const token = readEnvToken();

@@ -6,8 +6,13 @@ import { notifyEmergencyChanged } from '../../shared/ops/ops-emergency-events.js
 import { publishTvQueueUpdate } from '../../shared/queue/queue-stream-hub.js';
 import { resyncRecallWindowExpiryScheduler } from '../../shared/queue/recall-window-expiry-scheduler.js';
 import { scheduleContactLookupCacheRefreshAfterBusinessDayReset } from '../../shared/contacts/contact-lookup-day-refresh.js';
+import { sendApiError } from '../../http/domain-error-mapper.js';
+import { withSandboxIntakePaused } from '../../shared/sandbox/sandbox-intake-gate.js';
 import { handleOpsRouteError } from './ops-errors.js';
-import { requestSandboxRestartForDayReset } from './ops-sandbox-restart.js';
+import {
+  purgeSandboxIntakeForDayReset,
+  requestSandboxRestartForDayReset,
+} from './ops-sandbox-restart.js';
 
 function notifyTvQueueChanged(db: CoreDatabase): void {
   publishTvQueueUpdate(db);
@@ -59,12 +64,45 @@ export function registerOpsDayLifecycleRoutes(app: FastifyInstance, db: CoreData
         response: {
           200: opsSchemas.POST_api_v1_ops_day_lifecycle_resetResponse200,
           400: opsSchemas.POST_api_v1_ops_day_lifecycle_resetResponse400,
+          409: opsSchemas.POST_api_v1_ops_day_lifecycle_resetResponse409,
+          503: opsSchemas.POST_api_v1_ops_day_lifecycle_resetResponse503,
         },
       },
     },
     async (_request, reply) => {
       try {
-        return completeBusinessDayReset(app, db, 'day-lifecycle-reset');
+        const recoveringUncertainPurge = db.isSandboxResetPending();
+        db.beginSandboxReset();
+        notifyTvQueueChanged(db);
+
+        return await withSandboxIntakePaused(async () => {
+          if (recoveringUncertainPurge) {
+            const recovered = await requestSandboxRestartForDayReset(
+              app,
+              'day-lifecycle-reset-recovery',
+            );
+            if (!recovered) {
+              sendApiError(reply, 503, {
+                code: 'SANDBOX_UNAVAILABLE',
+                message:
+                  'Sandbox-Neustart konnte nicht bestätigt werden. Der Tagesreset bleibt unvollständig und gesperrt.',
+              });
+              return;
+            }
+          }
+          try {
+            await purgeSandboxIntakeForDayReset(app, 'day-lifecycle-reset');
+          } catch {
+            await requestSandboxRestartForDayReset(app, 'day-lifecycle-reset-recovery');
+            sendApiError(reply, 503, {
+              code: 'SANDBOX_UNAVAILABLE',
+              message:
+                'Sandbox-Bereinigung fehlgeschlagen. Der Tagesreset wurde nicht abgeschlossen; Check-in bleibt gesperrt.',
+            });
+            return;
+          }
+          return completeBusinessDayReset(app, db, 'day-lifecycle-reset');
+        });
       } catch (error) {
         const handled = handleOpsRouteError(reply, error, {});
         if (handled) {

@@ -173,13 +173,24 @@ export function registerOpsSettingsRoutes(app: FastifyInstance, db: CoreDatabase
 
       return serializeSettingsUpdate(async () => {
         const previousSettings = db.getOpsSettings();
+        if (
+          request.body.expectedUpdatedAt !== undefined &&
+          request.body.expectedUpdatedAt !== previousSettings.updatedAt
+        ) {
+          return reply.code(409).send({
+            code: 'OPS_SETTINGS_STALE',
+            message: 'Settings changed since they were loaded. Reload and try again.',
+          });
+        }
         const patch = await buildOpsSettingsUpdate(db, request.body);
         if ('code' in patch) {
           return reply.code(400).send(patch);
         }
 
         try {
-          const updated = db.updateOpsSettings(patch);
+          const updated = db.updateOpsSettings(patch, {
+            expectedUpdatedAt: request.body.expectedUpdatedAt,
+          });
           if (request.body.rooms !== undefined) {
             applyRoomPanelSettingsEffects({
               previous: previousSettings,

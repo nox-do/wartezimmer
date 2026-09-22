@@ -14,6 +14,7 @@
   let topics = $state<PracticeTopicSetting[]>([]);
   let postWaitingCallTargetId = $state<string | null>(null);
   let routingCapabilities = $state<RoutingCapabilities | null>(null);
+  let settingsUpdatedAt = $state('');
 
   function handleRoomsChange(nextRooms: PracticeRoomWithPanels[]) {
     // Do not remap topic defaultRoomId here — persist blocks remove/rename while topics still reference the room.
@@ -30,6 +31,7 @@
     topics = result.topics;
     postWaitingCallTargetId = result.postWaitingCallTargetId;
     routingCapabilities = result.routingCapabilities;
+    settingsUpdatedAt = result.updatedAt;
   }
 
   async function persistSettings(options?: {
@@ -39,6 +41,8 @@
     saving = true;
     const result = await persistTopicsRoomsSettings(rooms, topics, {
       ...options,
+      section: 'rooms',
+      expectedUpdatedAt: settingsUpdatedAt,
       routingCapabilities,
       postWaitingCallTargetId:
         routingCapabilities?.routingMode === 'simple' ? postWaitingCallTargetId : undefined,
@@ -51,6 +55,7 @@
     rooms = result.rooms;
     topics = result.topics;
     postWaitingCallTargetId = result.postWaitingCallTargetId;
+    settingsUpdatedAt = result.updatedAt;
     return true;
   }
 

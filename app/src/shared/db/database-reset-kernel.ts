@@ -7,6 +7,7 @@ type ResetKernelStatements = {
   updateCheckinLockStmt: StatementSync;
   updateDayClosePhaseStmt: StatementSync;
   updateLastResetBusinessDayStmt: StatementSync;
+  clearSandboxResetPendingStmt?: StatementSync;
 };
 
 type ResetKernelHelpers = {
@@ -40,6 +41,7 @@ export function executeResetKernel(deps: ResetKernelDeps): ResetKernelResult {
   deps.updateCheckinLockStmt.run(1, updatedAt);
   deps.updateDayClosePhaseStmt.run('open', updatedAt);
   deps.updateLastResetBusinessDayStmt.run(lastResetBusinessDay, updatedAt);
+  deps.clearSandboxResetPendingStmt?.run(updatedAt);
 
   return {
     updatedAt,

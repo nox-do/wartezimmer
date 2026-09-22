@@ -13,7 +13,12 @@ const bool = (value: unknown) => Boolean(value);
 const opt = <T>(value: T | null | undefined) => value ?? undefined;
 const str = (value: unknown) => String(value);
 
-const VISIT_SELECT_SQL = `SELECT visits.*, patients.display_name AS patient_display_name
+const VISIT_PROJECTION_SQL = `visits.*, patients.display_name AS patient_display_name,
+  (SELECT note FROM visit_events
+   WHERE visit_events.visit_id = visits.id AND visit_events.type = 'checked_in'
+   ORDER BY visit_events.sequence LIMIT 1) AS primary_topic_label`;
+
+const VISIT_SELECT_SQL = `SELECT ${VISIT_PROJECTION_SQL}
 FROM visits
 JOIN patients ON patients.id = visits.patient_id
 WHERE visits.id = ?`;
@@ -86,6 +91,7 @@ function mapVisit(row: SqlRow): Visit {
     patientDisplayName: opt(row.patient_display_name as string | null),
     status: row.status as Visit['status'],
     primaryTopicId: opt(row.primary_topic_id as string | null),
+    primaryTopicLabel: opt(row.primary_topic_label as string | null),
     appliedRoutingRuleId: opt(row.applied_routing_rule_id as string | null),
     lastKnownLocationId: opt(row.last_known_location_id as string | null),
     targetLocationId: opt(row.target_location_id as string | null),
@@ -158,9 +164,13 @@ export function toVisitView(
   const steps = visitRow.journeyTemplateId
     ? stepsForTemplateFn(visitRow.journeyTemplateId, catalog.journeySteps)
     : [];
+  const currentTopic = catalog.topics.find((item) => item.id === visitRow.primaryTopicId);
   return {
     ...visitRow,
-    topic: catalog.topics.find((item) => item.id === visitRow.primaryTopicId),
+    topic:
+      currentTopic && visitRow.primaryTopicLabel
+        ? { ...currentTopic, name: visitRow.primaryTopicLabel }
+        : currentTopic,
     queue: catalog.queues.find((item) => item.id === visitRow.queueId),
     lastKnownLocation: catalog.locations.find((item) => item.id === visitRow.lastKnownLocationId),
     targetLocation: catalog.locations.find((item) => item.id === visitRow.targetLocationId),
@@ -186,7 +196,7 @@ export function insertCheckInAggregate(
   db.prepare('INSERT INTO patients VALUES (?, ?, ?, ?)').run(
     patient.id,
     patient.displayName,
-    patient.isAnonymous ? 0 : 1,
+    patient.isAnonymous ? 1 : 0,
     patient.createdAt,
   );
   db.prepare(CHECKIN_VISIT_INSERT_SQL).run(
@@ -388,7 +398,7 @@ export function createVisitRepository(db: DatabaseSync, catalogRepository: Catal
     const activeStatuses = [...ACTIVE_VISIT_STATUSES];
     const rows = db
       .prepare(
-        `SELECT visits.*, patients.display_name AS patient_display_name
+        `SELECT ${VISIT_PROJECTION_SQL}
        FROM visits
        JOIN patients ON patients.id = visits.patient_id
        WHERE visits.status IN (${sqlIn(activeStatuses)})

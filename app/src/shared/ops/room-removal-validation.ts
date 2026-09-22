@@ -7,6 +7,9 @@ export const ROOM_BLOCKED_TOPICS = 'ROOM_BLOCKED_TOPICS';
 export const ROOM_BLOCKED_QUEUE = 'ROOM_BLOCKED_QUEUE';
 export { ROOM_BLOCKED_CAPACITY } from './room-capacity.js';
 
+type QueueTicketRoomReference = Pick<QueueVisitRow, 'laneCode' | 'number' | 'roomId' | 'status'> &
+  Partial<Pick<QueueVisitRow, 'destinationRoomId'>>;
+
 export function removedRoomIds(
   currentRooms: OpsSettings['rooms'],
   nextRooms: OpsSettings['rooms'],
@@ -25,12 +28,29 @@ export function disabledRoomIds(
     .map((room) => room.roomId);
 }
 
+function changedExistingRoomIds(
+  currentRooms: OpsSettings['rooms'],
+  nextRooms: OpsSettings['rooms'],
+): string[] {
+  const nextById = new Map(nextRooms.map((room) => [room.roomId, room]));
+  return currentRooms
+    .filter((room) => {
+      const next = nextById.get(room.roomId);
+      return next != null && JSON.stringify(next) !== JSON.stringify(room);
+    })
+    .map((room) => room.roomId);
+}
+
 function queueTicketsForRoomIds(
   roomIds: ReadonlySet<string>,
-  queueTickets: readonly Pick<QueueVisitRow, 'laneCode' | 'number' | 'roomId' | 'status'>[],
+  queueTickets: readonly QueueTicketRoomReference[],
 ): string[] {
   return queueTickets
-    .filter((ticket) => ticket.roomId && roomIds.has(ticket.roomId))
+    .filter(
+      (ticket) =>
+        (ticket.roomId != null && roomIds.has(ticket.roomId)) ||
+        (ticket.destinationRoomId != null && roomIds.has(ticket.destinationRoomId)),
+    )
     .map((ticket) => formatTicketCode(ticket.laneCode, ticket.number));
 }
 
@@ -45,7 +65,7 @@ export function validateRoomSettingsChange(input: {
   currentRooms: OpsSettings['rooms'];
   nextRooms: OpsSettings['rooms'];
   topics: readonly TopicSetting[];
-  queueTickets: readonly Pick<QueueVisitRow, 'laneCode' | 'number' | 'roomId' | 'status'>[];
+  queueTickets: readonly QueueTicketRoomReference[];
 }): { ok: true } | RoomSettingsGuardFailure {
   const removed = removedRoomIds(input.currentRooms, input.nextRooms);
   if (removed.length > 0) {
@@ -93,6 +113,19 @@ export function validateRoomSettingsChange(input: {
   });
   if (!capacityGuard.ok) {
     return capacityGuard;
+  }
+
+  const changed = changedExistingRoomIds(input.currentRooms, input.nextRooms);
+  if (changed.length > 0) {
+    const ticketCodes = queueTicketsForRoomIds(new Set(changed), input.queueTickets);
+    if (ticketCodes.length > 0) {
+      return {
+        ok: false,
+        code: ROOM_BLOCKED_QUEUE,
+        message: 'Room cannot be changed while queue tickets are assigned to it.',
+        details: { tickets: ticketCodes.join(', ') },
+      };
+    }
   }
 
   return { ok: true };

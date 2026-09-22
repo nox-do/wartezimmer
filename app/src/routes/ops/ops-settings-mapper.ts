@@ -240,7 +240,10 @@ export async function buildOpsSettingsUpdate(
       };
     }
 
-    const nextFolderPath = body.contactLookupFolderPath ?? current.contactLookupFolderPath;
+    const nextFolderPath =
+      body.contactLookupFolderPath === undefined
+        ? current.contactLookupFolderPath
+        : body.contactLookupFolderPath;
     if (nextFolderPath) {
       try {
         await validateCsvContactLookupSettings({

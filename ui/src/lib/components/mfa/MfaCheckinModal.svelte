@@ -28,7 +28,7 @@
 
   let topics = $state<{ topicId: string; label: string }[]>([]);
   let topicsLoading = $state(false);
-  let topicsLoaded = $state(false);
+  let topicsLoadRunId = 0;
 
   let submitBusy = $state(false);
   let lookupBusy = $state(false);
@@ -79,23 +79,22 @@
     selectedCandidateKey = '';
   }
 
-  async function ensureTopicsLoaded() {
-    if (topicsLoaded || topicsLoading) {
+  async function loadTopicsForOpenModal() {
+    const runId = ++topicsLoadRunId;
+    topicsLoading = true;
+    topics = [];
+    topicId = '';
+    const result = await fetchMfaCheckinTopics();
+    if (runId !== topicsLoadRunId) {
       return;
     }
-
-    topicsLoading = true;
-    const result = await fetchMfaCheckinTopics();
     topicsLoading = false;
-    topicsLoaded = true;
     if (!result.ok) {
       toastStore.error(result.error.message || t('mfa.checkinTopicLoadError'));
       return;
     }
     topics = result.data.topics.map((topic) => ({ topicId: topic.topicId, label: topic.label }));
-    if (!topicId && topics.length > 0) {
-      topicId = topics[0]!.topicId;
-    }
+    topicId = topics[0]?.topicId ?? '';
   }
 
   function candidateLabel(candidate: MfaLookupCandidate): string {
@@ -234,13 +233,15 @@
 
   $effect(() => {
     if (!open) {
+      topicsLoadRunId += 1;
+      topicsLoading = false;
       lookupRunId += 1;
       return;
     }
 
     // Check-in eligibility (practice open / topic windows) stays on the server —
     // always load the picker list from `/api/v1/checkins/topics`.
-    void ensureTopicsLoaded();
+    void loadTopicsForOpenModal();
   });
 
   $effect(() => {

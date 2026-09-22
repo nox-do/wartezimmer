@@ -88,6 +88,7 @@ import {
   type OpsSettingsPatch,
 } from './database-ops-settings.js';
 import { validateRoomSettingsChange } from '../ops/room-removal-validation.js';
+import { validateTopicSettingsChange } from '../ops/topic-settings-guard.js';
 import {
   countOpenVisits,
   validateComplexRoutingLicenseChange,
@@ -116,6 +117,7 @@ import {
 } from '../queue/recall-window-expiry-scheduler.js';
 import { placeVisitInRoom as runPlaceVisitInRoom } from '../queue/place-visit-in-room.js';
 import type { PlacementTransition } from '../queue/place-visit-in-room.js';
+import { isSandboxResetPendingFromStmt } from './database-sandbox-reset-state.js';
 import {
   resolveMarkAbsenceTicket,
   type MarkAbsenceLookupDeps,
@@ -322,6 +324,9 @@ export class CoreDatabase {
   private readonly updateDocumentStatusStmt: StatementSync;
   private readonly updateDocumentFileNameStmt: StatementSync;
   private readonly listDocumentsByVisitStmt: StatementSync;
+  private readonly sandboxResetPendingStmt: StatementSync;
+  private readonly markSandboxResetPendingStmt: StatementSync;
+  private readonly clearSandboxResetPendingStmt: StatementSync;
   private readonly deviceAuthorizationDeps: DeviceAuthorizationDeps;
 
   constructor(dbPath: string) {
@@ -392,6 +397,9 @@ export class CoreDatabase {
       updateDocumentStatusStmt: this.updateDocumentStatusStmt,
       updateDocumentFileNameStmt: this.updateDocumentFileNameStmt,
       listDocumentsByVisitStmt: this.listDocumentsByVisitStmt,
+      sandboxResetPendingStmt: this.sandboxResetPendingStmt,
+      markSandboxResetPendingStmt: this.markSandboxResetPendingStmt,
+      clearSandboxResetPendingStmt: this.clearSandboxResetPendingStmt,
     } = prepareCoreDatabaseStatements(this.db));
     this.deviceAuthorizationDeps = createDeviceAuthorizationDeps(this.db, nowIso);
 
@@ -482,6 +490,7 @@ export class CoreDatabase {
       updateCheckinLockStmt: this.updateCheckinLockStmt,
       updateDayClosePhaseStmt: this.updateDayClosePhaseStmt,
       updateLastResetBusinessDayStmt: this.updateLastResetBusinessDayStmt,
+      clearSandboxResetPendingStmt: this.clearSandboxResetPendingStmt,
       getOpsSettingsStmt: this.getOpsSettingsStmt,
       updateOpsSettingsStmt: this.updateOpsSettingsStmt,
       nowIso: common.nowIso,
@@ -498,6 +507,7 @@ export class CoreDatabase {
       updateCheckinLockStmt: this.updateCheckinLockStmt,
       updateDayClosePhaseStmt: this.updateDayClosePhaseStmt,
       updateLastResetBusinessDayStmt: this.updateLastResetBusinessDayStmt,
+      clearSandboxResetPendingStmt: this.clearSandboxResetPendingStmt,
       deleteAllOutboxEventsStmt: this.deleteAllOutboxEventsStmt,
       clearEmergencyStateStmt: this.clearEmergencyStateStmt,
       emergencyStateStmt: this.emergencyStateStmt,
@@ -506,6 +516,7 @@ export class CoreDatabase {
       maxWaitMsByBusinessDayStmt: this.maxWaitMsByBusinessDayStmt,
       topicCountsByBusinessDayStmt: this.topicCountsByBusinessDayStmt,
       listOpenVisitsByBusinessDayStmt: this.listOpenVisitsByBusinessDayStmt,
+      sandboxResetPendingStmt: this.sandboxResetPendingStmt,
       nowIso: common.nowIso,
       getBusinessDay: common.getBusinessDay,
       normalizeDayClosePhase,
@@ -580,6 +591,7 @@ export class CoreDatabase {
       touchPatientSessionStmt: this.touchPatientSessionStmt,
       expirePatientSessionStmt: this.expirePatientSessionStmt,
       revokePatientSessionStmt: this.revokePatientSessionStmt,
+      sandboxResetPendingStmt: this.sandboxResetPendingStmt,
       nowIso: common.nowIso,
       getBusinessDay: common.getBusinessDay,
       getBusinessTimeZone: resolveBusinessTimeZone,
@@ -1335,6 +1347,19 @@ export class CoreDatabase {
     );
   }
 
+  beginSandboxReset(): { checkinLocked: true; updatedAt: string } {
+    return this.withTransaction('beginSandboxReset', () => {
+      const updatedAt = nowIso();
+      this.updateCheckinLockStmt.run(1, updatedAt);
+      this.markSandboxResetPendingStmt.run(updatedAt, updatedAt);
+      return { checkinLocked: true as const, updatedAt };
+    });
+  }
+
+  isSandboxResetPending(): boolean {
+    return isSandboxResetPendingFromStmt(this.sandboxResetPendingStmt);
+  }
+
   getOpsState(): { checkinLocked: boolean; dayClosePhase: DayClosePhase } {
     return getOpsStateFromDb(this.checkinSessionDeps());
   }
@@ -1505,9 +1530,33 @@ export class CoreDatabase {
     return resolveRoutingCapabilities(this.getOpsSettings(), countOpenVisits(this.db));
   }
 
-  updateOpsSettings(patch: OpsSettingsPatch): OpsSettings {
+  updateOpsSettings(
+    patch: OpsSettingsPatch,
+    options: { expectedUpdatedAt?: string } = {},
+  ): OpsSettings {
     return this.withTransaction('updateOpsSettings', () => {
       const current = this.getOpsSettings();
+      if (
+        options.expectedUpdatedAt !== undefined &&
+        options.expectedUpdatedAt !== current.updatedAt
+      ) {
+        throw new OpsSettingsValidationError('Settings changed since they were loaded.', {
+          apiCode: 'OPS_SETTINGS_STALE',
+        });
+      }
+      if (patch.topics) {
+        const guard = validateTopicSettingsChange({
+          db: this.db,
+          currentTopics: current.topics,
+          nextTopics: patch.topics,
+        });
+        if (!guard.ok) {
+          throw new OpsSettingsValidationError(guard.message, {
+            apiCode: guard.code,
+            details: guard.details,
+          });
+        }
+      }
       if (patch.rooms) {
         const nextRooms = ensureSingleDefaultCallTarget(patch.rooms);
         const guard = validateRoomSettingsChange({

@@ -173,6 +173,33 @@ test('runtime refresh does not push config snapshot', async () => {
   assert.equal(configs.length, configCount);
 });
 
+test('silent runtime poll reports failure so the last healthy snapshot is not presented as current', async () => {
+  let runtimeCalls = 0;
+  const errors: Array<{ message: string; source: string }> = [];
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchRuntimeHealth: async () => {
+          runtimeCalls += 1;
+          if (runtimeCalls === 1) return minimalRuntime({ checkedAt: 'healthy' });
+          throw new Error('runtime unavailable');
+        },
+      }),
+    onRuntime: () => {},
+    onConfig: () => {},
+    onError: (message, _view, source) => errors.push({ message, source }),
+    schedule: () => 0,
+    clearSchedule: () => {},
+  });
+
+  await controller.refresh({ scope: 'config' });
+  await controller.refresh({ scope: 'runtime', silent: true });
+  await controller.refresh({ scope: 'runtime', silent: true });
+
+  assert.equal(controller.getLastRuntime()?.checkedAt, 'healthy');
+  assert.deepEqual(errors, [{ message: 'runtime unavailable', source: 'runtime' }]);
+});
+
 test('stale refresh result is discarded when a newer refresh starts', async () => {
   let resolveSlow!: () => void;
   const slow = new Promise<void>((resolve) => {

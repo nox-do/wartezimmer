@@ -408,7 +408,7 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
         '409':
-          description: Document template metadata consistency check failed
+          description: Document template metadata consistency check failed or intake is locked during sandbox reset
           content:
             application/json:
               schema:
@@ -713,6 +713,18 @@ paths:
                 $ref: './common.yaml#/components/schemas/Error'
         '401':
           description: Unauthorized session token
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '409':
+          description: Document intake is locked during sandbox reset
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '502':
+          description: Sandbox intake unavailable
           content:
             application/json:
               schema:

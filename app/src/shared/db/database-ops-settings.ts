@@ -34,6 +34,15 @@ import {
 
 export { ensureSingleDefaultCallTarget };
 
+export function nextOpsSettingsUpdatedAt(currentUpdatedAt: string, now: string): string {
+  const currentMs = Date.parse(currentUpdatedAt);
+  const nowMs = Date.parse(now);
+  if (!Number.isFinite(currentMs) || !Number.isFinite(nowMs) || nowMs > currentMs) {
+    return now;
+  }
+  return new Date(currentMs + 1).toISOString();
+}
+
 function isStringSetMember<T extends string>(values: ReadonlySet<T>, value: unknown): value is T {
   return typeof value === 'string' && values.has(value as T);
 }
@@ -441,7 +450,10 @@ export function updateOpsSettingsInDb(
     topics,
     journeySettings,
     rooms,
-    contactLookupFolderPath: patch.contactLookupFolderPath ?? current.contactLookupFolderPath,
+    contactLookupFolderPath:
+      patch.contactLookupFolderPath === undefined
+        ? current.contactLookupFolderPath
+        : patch.contactLookupFolderPath,
     contactLookupDelimiterMode:
       patch.contactLookupDelimiterMode ?? current.contactLookupDelimiterMode,
     contactLookupHasHeader: patch.contactLookupHasHeader ?? current.contactLookupHasHeader,
@@ -457,7 +469,7 @@ export function updateOpsSettingsInDb(
       : current.terminalPatientLocales,
     smsProvider: patch.smsProvider ?? current.smsProvider,
     exportBasePath: current.exportBasePath,
-    updatedAt: params.nowIso(),
+    updatedAt: nextOpsSettingsUpdatedAt(current.updatedAt, params.nowIso()),
   };
 
   params.updateOpsSettingsStmt.run(

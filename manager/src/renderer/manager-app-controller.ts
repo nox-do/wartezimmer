@@ -46,6 +46,9 @@ export type ManagerAppController = {
   onWizardCancel: () => void;
 };
 
+const RUNTIME_REFRESH_ERROR =
+  'Laufzustand konnte nicht aktualisiert werden. Die angezeigten Betriebsdaten können veraltet sein.';
+
 export function createManagerAppController(deps: ManagerAppControllerDeps): ManagerAppController {
   const shell = deps.shell;
   const createHostRefresh = deps.createHostRefresh ?? createHostRefreshController;
@@ -83,7 +86,7 @@ export function createManagerAppController(deps: ManagerAppControllerDeps): Mana
       if (source === 'config') {
         shell.applyStatusError(message);
       } else {
-        shell.applyRuntimeError(message);
+        shell.applyRuntimeError(RUNTIME_REFRESH_ERROR);
       }
     },
   });

@@ -53,7 +53,19 @@ export function createPfupdateWizardController(
   }
 
   async function pickAndInspect(): Promise<boolean> {
-    const picked = await deps.api.selectPfupdateArchive();
+    let picked: Awaited<ReturnType<PraxisManagerApi['selectPfupdateArchive']>>;
+    try {
+      picked = await deps.api.selectPfupdateArchive();
+    } catch (error) {
+      patch({
+        phase: 'failed',
+        busy: false,
+        statusText: '',
+        error:
+          error instanceof Error ? error.message : 'Update-Paket konnte nicht ausgewählt werden.',
+      });
+      return false;
+    }
     if (picked.canceled || !picked.path) {
       patch(createInitialPfupdateWizardState());
       return false;

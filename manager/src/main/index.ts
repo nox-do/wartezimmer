@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { createModuleLogger } from '@praxis-flow/server-shared/logger';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -32,6 +33,7 @@ import { defaultOsInstallHome, expectedSetupInstallHome } from './setup-identity
 import { prepareManagerProfile } from './manager-profile.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const logger = createModuleLogger('manager.main');
 
 // Affects internal paths / user agent; macOS menu bar still reads CFBundleName from Electron.app in dev.
 app.setName('Praxis Flow');
@@ -82,7 +84,10 @@ function registerSetupIpc(handle: SetupServerHandle): void {
       const value = await callSetupApi(handle.apiBase, request, handle.token);
       return { ok: true, value } satisfies SetupApiCallResponse;
     } catch (error) {
-      console.error(`Setup-API ${request.method} ${request.path} fehlgeschlagen:`, error);
+      logger.error(
+        { err: error, method: request.method, path: request.path },
+        'Setup-API-Aufruf fehlgeschlagen',
+      );
       return {
         ok: false,
         message: setupApiUserErrorMessage(error, request),
@@ -206,7 +211,7 @@ function installSmokeCheck(window: BrowserWindow): void {
   });
 }
 
-function createWindow(): void {
+async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow({
     width: 720,
     height: 820,
@@ -224,11 +229,11 @@ function createWindow(): void {
   installNavigationGuards(mainWindow.webContents);
   installSmokeCheck(mainWindow);
 
-  const rendererUrl = process.env.ELECTRON_RENDERER_URL;
+  const rendererUrl = app.isPackaged ? null : process.env.ELECTRON_RENDERER_URL;
   if (rendererUrl) {
-    void mainWindow.loadURL(rendererUrl);
+    await mainWindow.loadURL(rendererUrl);
   } else {
-    void mainWindow.loadFile(path.join(moduleDir, '../renderer/index.html'));
+    await mainWindow.loadFile(path.join(moduleDir, '../renderer/index.html'));
   }
 
   mainWindow.on('closed', () => {
@@ -240,7 +245,7 @@ async function bootstrap(): Promise<void> {
   try {
     setupHandle = await startSetupServer();
     registerSetupIpc(setupHandle);
-    createWindow();
+    await createWindow();
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Setup-API konnte nicht gestartet werden.';
@@ -269,6 +274,10 @@ app.on('before-quit', () => {
 
 app.on('activate', () => {
   if (mainWindow === null && setupHandle !== null) {
-    createWindow();
+    void createWindow().catch((error: unknown) => {
+      const message =
+        error instanceof Error ? error.message : 'Manager-Fenster konnte nicht geladen werden.';
+      dialog.showErrorBox('Praxis Flow Manager', message);
+    });
   }
 });

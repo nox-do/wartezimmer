@@ -220,6 +220,11 @@ export interface paths {
       requestBody: {
         content: {
           'application/json': {
+            /**
+             * Format: date-time
+             * @description Reject the update when settings changed since this revision was read.
+             */
+            expectedUpdatedAt?: string;
             /** @enum {string} */
             routingMode?: 'simple' | 'complex';
             postWaitingCallTargetId?: string | null;
@@ -347,7 +352,7 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
-        /** @description Routing mode change blocked while waiting numbers are still open */
+        /** @description Settings revision conflict or routing mode change blocked while waiting numbers are still open */
         409: {
           headers: {
             [name: string]: unknown;
@@ -1254,7 +1259,7 @@ export interface paths {
     put?: never;
     /**
      * Execute ops runtime reset (ops role)
-     * @description Clears visits, outbox, active emergency; preserves practice settings and messaging credentials.
+     * @description Purges sandbox intake synchronously, then clears visits, outbox, and active emergency; preserves practice settings and messaging credentials. On purge failure the reset is not committed and check-in remains locked.
      */
     post: {
       parameters: {
@@ -1283,6 +1288,24 @@ export interface paths {
         };
         /** @description Invalid confirm phrase or request */
         400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+        /** @description Another reset is already in progress */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+        /** @description Sandbox intake purge failed; the persistent reset lock remains active and the runtime reset is not committed */
+        503: {
           headers: {
             [name: string]: unknown;
           };
@@ -1402,7 +1425,7 @@ export interface paths {
     put?: never;
     /**
      * Reset runtime for a new business day
-     * @description Clears visits and outbox runtime data, locks check-in, stamps lastResetBusinessDay, and queues sandbox purge/restart. Settings are preserved. This is the MFA „Neuen Tag starten“ action — not the same as starting day-close (Tagesabschluss).
+     * @description Locks check-in and document intake, purges sandbox intake synchronously, then clears visits and outbox runtime data, stamps lastResetBusinessDay, and queues a sandbox runtime restart. Settings are preserved. This is the MFA „Neuen Tag starten“ action — not the same as starting day-close (Tagesabschluss).
      */
     post: {
       parameters: {
@@ -1431,6 +1454,24 @@ export interface paths {
         };
         /** @description Invalid request */
         400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+        /** @description Another reset is already in progress */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+        /** @description Sandbox intake purge failed; the persistent reset lock remains active and the business-day reset is not committed */
+        503: {
           headers: {
             [name: string]: unknown;
           };
@@ -1840,7 +1881,7 @@ export interface components {
       /** @constant */
       sandboxRestartRequired: true;
       /**
-       * @description Sandbox purge/restart was queued asynchronously (not a success guarantee).
+       * @description Sandbox intake purge succeeded and the subsequent runtime restart was queued asynchronously.
        * @constant
        */
       sandboxRestartInitiated: true;
@@ -2363,6 +2404,7 @@ export interface components {
       | 'DOCUMENT_NOT_SCANNED'
       | 'EXPORT_BLOCKED_MALWARE'
       | 'OPS_SETTINGS_INVALID'
+      | 'OPS_SETTINGS_STALE'
       | 'EMERGENCY_DISABLED'
       | 'EMERGENCY_NOT_FOUND'
       | 'SETUP_INCOMPLETE'

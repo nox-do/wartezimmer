@@ -105,6 +105,7 @@ type SandboxFormRenderResponse = {
 
 type SandboxRuntimeRestartResponse = {
   status: 'restarting';
+  instanceId: string;
   initiatedAt: string;
   reason?: string;
 };
@@ -165,11 +166,15 @@ function parseSandboxRuntimeRestartResponse(payload: unknown): SandboxRuntimeRes
   }
   const body = payload;
   const status = body.status;
+  const instanceId = body.instanceId;
   const initiatedAt = body.initiatedAt;
   const reason = body.reason;
 
   if (status !== 'restarting') {
     throw new Error('SANDBOX_RUNTIME_RESTART_FAILED:INVALID_STATUS');
+  }
+  if (typeof instanceId !== 'string' || instanceId.length === 0) {
+    throw new Error('SANDBOX_RUNTIME_RESTART_FAILED:INVALID_INSTANCE_ID');
   }
   if (typeof initiatedAt !== 'string' || Number.isNaN(Date.parse(initiatedAt))) {
     throw new Error('SANDBOX_RUNTIME_RESTART_FAILED:INVALID_INITIATED_AT');
@@ -180,6 +185,7 @@ function parseSandboxRuntimeRestartResponse(payload: unknown): SandboxRuntimeRes
 
   return {
     status: 'restarting',
+    instanceId,
     initiatedAt,
     reason: typeof reason === 'string' ? reason : undefined,
   };
@@ -503,6 +509,27 @@ export class SandboxClient {
     if (!response.ok) {
       throw new Error(`SANDBOX_PURGE_FAILED:${response.status}`);
     }
+  }
+
+  async getRuntimeInstanceId(): Promise<string> {
+    let response: Response;
+    try {
+      response = await this.fetchWithTimeout(`${this.baseUrl}/internal/health/live`, {
+        method: 'GET',
+      });
+    } catch (error) {
+      throw new Error('SANDBOX_HEALTH_UNREACHABLE', { cause: error });
+    }
+    if (!response.ok) {
+      throw new Error(`SANDBOX_HEALTH_FAILED:${response.status}`);
+    }
+    const payload: unknown = await response.json().catch((error: unknown) => {
+      throw new Error('SANDBOX_HEALTH_FAILED:INVALID_JSON', { cause: error });
+    });
+    if (!isRecord(payload) || typeof payload.instanceId !== 'string' || !payload.instanceId) {
+      throw new Error('SANDBOX_HEALTH_FAILED:INVALID_INSTANCE_ID');
+    }
+    return payload.instanceId;
   }
 
   async requestRuntimeRestart(reason: string): Promise<SandboxRuntimeRestartResponse> {

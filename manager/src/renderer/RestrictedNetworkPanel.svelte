@@ -27,6 +27,7 @@
   } = $props();
   let inspect = $state<RestrictedNetworkInspectResult | null>(null);
   let loading = $state(false);
+  let mutationInFlight = $state(false);
   let loadError = $state<string | null>(null);
   let actionError = $state<string | null>(null);
   let loadAttempted = $state(false);
@@ -35,6 +36,7 @@
   let notice = $state<string | null>(null);
   let pendingAction = $state<'apply' | 'remove' | null>(null);
   let generation = 0;
+  const busy = $derived(loading || mutationInFlight);
 
   function lifecycleAllows(action: 'network-binding' | 'restricted-apply' | 'restricted-remove') {
     if (!lifecycle) return true;
@@ -120,6 +122,7 @@
     if (!lifecycleAllows('network-binding')) return;
     const current = ++generation;
     loading = true;
+    mutationInFlight = true;
     onMutatingChange?.(true);
     actionError = null;
     notice = null;
@@ -144,6 +147,7 @@
         actionError = restrictedPrepareErrorText(cause);
       }
     } finally {
+      mutationInFlight = false;
       onMutatingChange?.(false);
       if (current === generation) loading = false;
     }
@@ -153,6 +157,7 @@
     if (!lifecycleAllows(action === 'apply' ? 'restricted-apply' : 'restricted-remove')) return;
     const current = ++generation;
     loading = true;
+    mutationInFlight = true;
     onMutatingChange?.(true);
     actionError = null;
     notice = null;
@@ -177,18 +182,18 @@
         );
       }
     } finally {
+      mutationInFlight = false;
       onMutatingChange?.(false);
       if (current === generation) loading = false;
     }
   }
 
   $effect(() => {
-    if (active && !loadAttempted && !loading) void refresh();
+    if (active && !loadAttempted && !busy) void refresh();
     if (!active) {
       generation += 1;
       loading = false;
       loadAttempted = false;
-      onMutatingChange?.(false);
     }
   });
 </script>
@@ -202,7 +207,7 @@
   <p role="status">Restricted-Network-Status wird geprüft …</p>
 {:else if loadError && !inspect}
   <p class="error" role="alert">Restricted-Network-Status konnte nicht geladen werden: {loadError}</p>
-  <button type="button" class="btn-secondary" disabled={loading || peerMutating} onclick={() => void refresh()}>
+  <button type="button" class="btn-secondary" disabled={busy || peerMutating} onclick={() => void refresh()}>
     Erneut prüfen
   </button>
 {:else if inspect}
@@ -293,31 +298,31 @@
       <button
         type="button"
         class="btn-secondary"
-        disabled={loading || peerMutating}
+        disabled={busy || peerMutating}
         onclick={() => { pendingAction = 'remove'; }}
       >
-        {loading ? 'Wird entfernt …' : 'Patientenzugang entfernen'}
+        {busy ? 'Wird entfernt …' : 'Patientenzugang entfernen'}
       </button>
     {:else if activationReady}
       <button
         type="button"
-        disabled={loading || peerMutating}
+        disabled={busy || peerMutating}
         onclick={() => { pendingAction = 'apply'; }}
       >
-        {loading ? 'Wird aktiviert …' : 'Patientenzugang aktivieren'}
+        {busy ? 'Wird aktiviert …' : 'Patientenzugang aktivieren'}
       </button>
     {:else}
       <button
         type="button"
         class="btn-secondary"
-        disabled={loading || peerMutating || !selectedCandidate || !prerequisitesReady || Boolean(selectedWarning && !warningsConfirmed)}
+        disabled={busy || peerMutating || !selectedCandidate || !prerequisitesReady || Boolean(selectedWarning && !warningsConfirmed)}
         onclick={() => void prepare()}
       >
-        {loading ? 'Bereitet vor …' : selectedMatchesBinding ? 'Netzwerkadresse erneut vorbereiten' : 'Netzwerkadresse vorbereiten'}
+        {busy ? 'Bereitet vor …' : selectedMatchesBinding ? 'Netzwerkadresse erneut vorbereiten' : 'Netzwerkadresse vorbereiten'}
       </button>
     {/if}
-    <button type="button" class="btn-secondary" disabled={loading || peerMutating} onclick={() => void refresh()}>
-      {loading ? 'Prüft …' : 'Erneut prüfen'}
+    <button type="button" class="btn-secondary" disabled={busy || peerMutating} onclick={() => void refresh()}>
+      {busy ? 'Prüft …' : 'Erneut prüfen'}
     </button>
   </div>
 {/if}

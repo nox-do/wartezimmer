@@ -81,6 +81,7 @@ export const errorLabels: Record<string, string> = {
   DONE_ONLY_WHEN_IN_PROGRESS: 'Abschluss nur während Behandlung (status = in_progress).',
   START_NEXT_JOURNEY_STEP_NOT_ALLOWED:
     'Nächster Journey-Schritt kann in diesem Status nicht gestartet werden.',
+  VISIT_TERMINAL: 'Abgeschlossene Visits können nicht erneut aktiviert werden.',
   VISIT_NOT_FOUND: 'Visit nicht gefunden.',
   TOPIC_OR_ROUTING_RULE_MISSING: 'Topic oder RoutingRule fehlt.',
   CHECKIN_TOPIC_OR_MFA_ASSIST_REQUIRED: 'Check-in braucht ein Thema oder den Hilfe-Button.',

@@ -30,8 +30,20 @@ function fixture() {
     'scripts',
     'proxy',
     'openapi',
+    'docs/architecture',
   ])
     fs.mkdirSync(path.join(root, directory), { recursive: true });
+  for (const name of [
+    'README.md',
+    'docs/flows.md',
+    'docs/architecture/README.md',
+    'docs/architecture/apis.md',
+    'docs/architecture/domain.md',
+    'docs/architecture/realtime.md',
+    'docs/architecture/routing.md',
+    'docs/architecture/system.md',
+  ])
+    fs.writeFileSync(path.join(root, name), '# Fixture\n');
   return root;
 }
 function write(root, name, value = 'export const value = 1;\r\n') {
@@ -41,8 +53,19 @@ function write(root, name, value = 'export const value = 1;\r\n') {
 
 test('parses known areas and rejects unknown arguments', () => {
   assert.equal(parseArea(['manager']), 'manager');
+  assert.equal(parseArea(['review']), 'review');
   assert.throws(() => parseArea([]), /Unknown area/);
   assert.throws(() => parseArea(['nope']), /Unknown area/);
+});
+
+test('review selection is focused, deterministic, and includes evidence tests', () => {
+  const paths = selectPaths('review');
+  assert.deepEqual(paths, [...paths].sort());
+  assert.equal(new Set(paths).size, paths.length);
+  assert.ok(paths.includes('app/src/shared/documents/filesystem-export.ts'));
+  assert.ok(paths.includes('app/src/shared/documents/filesystem-export.test.ts'));
+  assert.ok(paths.includes('app/src/shared/sandbox/sandbox-intake-gate.test.ts'));
+  assert.ok(!paths.includes('package-lock.json'));
 });
 
 test('all selection is unique and deterministic', () => {
@@ -53,6 +76,21 @@ test('all selection is unique and deterministic', () => {
   assert.ok(paths.includes('packages/flow-core'));
 });
 
+test('core selection contains the host, UI, contracts, architecture and shared packages', () => {
+  const paths = selectPaths('core');
+  for (const expected of [
+    'app',
+    'ui',
+    'openapi',
+    'packages/domain',
+    'packages/flow-core',
+    'packages/server-shared',
+    'docs/architecture/system.md',
+  ])
+    assert.ok(paths.includes(expected), `missing ${expected}`);
+  assert.ok(!paths.includes('package-lock.json'));
+});
+
 test('excludes tests, artifacts, secrets and binary files', () => {
   const root = fixture();
   write(root, 'manager/src/keep.ts');
@@ -60,6 +98,7 @@ test('excludes tests, artifacts, secrets and binary files', () => {
   write(root, 'manager/src/keep.spec.ts');
   write(root, 'manager/test/helper.ts');
   write(root, 'manager/dist/built.js');
+  write(root, 'manager/src/generated/client.ts');
   write(root, 'manager/.env', 'PASSWORD=secret');
   write(root, 'manager/.env.backup-1', 'PASSWORD=secret');
   write(root, 'manager/runtime.sqlite', 'local database');
@@ -75,6 +114,16 @@ test('excludes tests, artifacts, secrets and binary files', () => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
+test('excludes the generated OpenAPI bundle but keeps source contracts', () => {
+  const root = fixture();
+  write(root, 'openapi/bundle.json', '{}');
+  write(root, 'openapi/queue.yaml', 'openapi: 3.1.0\n');
+  const result = collectFiles(root, 'core');
+  assert.ok(!result.files.includes('openapi/bundle.json'));
+  assert.ok(result.files.includes('openapi/queue.yaml'));
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
 test('writes sorted headers, normalizes CRLF, and will not overwrite', () => {
   const root = fixture();
   write(root, 'manager/src/z.ts', 'z\r\n');
@@ -86,6 +135,24 @@ test('writes sorted headers, normalizes CRLF, and will not overwrite', () => {
   assert.match(output, /#\/manager\/src\/a\.ts\na\n/);
   assert.doesNotMatch(output, /\r/);
   assert.throws(() => writeDump(root, 'manager', '2026-09-10'), /Refusing to overwrite/);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('review dump places decision context before each selected file', () => {
+  const root = fixture();
+  for (const relativePath of selectPaths('review')) write(root, relativePath);
+
+  const result = writeDump(root, 'review', '2026-09-22');
+  const output = fs.readFileSync(result.outputPath, 'utf8');
+  assert.match(output, /^# Praxis Flow focused remediation review/m);
+  assert.match(
+    output,
+    /#\/app\/src\/shared\/documents\/filesystem-export\.ts\n# REVIEW-NOTE: F-01:/,
+  );
+  assert.match(
+    output,
+    /#\/app\/src\/shared\/sandbox\/sandbox-intake-gate\.test\.ts\n# REVIEW-NOTE: Day-reset follow-up:/,
+  );
   fs.rmSync(root, { recursive: true, force: true });
 });
 

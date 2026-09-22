@@ -44,6 +44,7 @@
   import NetworkAccessSummary from './NetworkAccessSummary.svelte';
   import NetworkAccessNotices from './NetworkAccessNotices.svelte';
   import { networkAccessSummary } from './network-access-view-model.js';
+  import { restrictedNetworkStatusSummary } from './restricted-network-view-model.js';
   import NetworkTopologyDiagram from './NetworkTopologyDiagram.svelte';
   import NetworkBindingChecks from './NetworkBindingChecks.svelte';
   import ProxySettings from './ProxySettings.svelte';
@@ -512,6 +513,10 @@
             baseUrl: savedUrl,
             operation: accessSummary?.operation,
             diagnosis: accessSummary?.diagnosis,
+            portalState: accessSummary?.portalState ??
+              (configSnapshot.restrictedNetwork
+                ? restrictedNetworkStatusSummary(configSnapshot.restrictedNetwork).state
+                : 'Nicht eingerichtet'),
           }} />
         </MaintenanceSection>
       </div>

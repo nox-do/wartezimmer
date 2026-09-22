@@ -119,7 +119,7 @@ Crash-resilient tagsüber, absichtlich flüchtig über den Praxistag:
 
 **Tagesabschluss** (`POST /ops/day-close/start`): Phase gestartet, Check-in gesperrt — kein Runtime-Reset (API für späteren Export-/Archiv-Flow).
 
-**Tagesreset** (`POST /ops/day-lifecycle/reset`, MFA „Neuen Tag starten“): Tickets/Outbox leer, `lastResetBusinessDay`, Sandbox purge/restart; **Settings und Gerätefreigaben bleiben**. SQLite-Datei bleibt. Export-Ordner auf dem Host unangetastet. Kein vorheriger Day-Close nötig.
+**Tagesreset** (`POST /ops/day-lifecycle/reset`, MFA „Neuen Tag starten“): Check-in und Dokument-Intake werden gesperrt, laufende Intake-Vorgänge beendet und der Sandbox-Intake synchron geleert. Die Reset-Sperre liegt persistent in SQLite und übersteht einen App-Neustart. Erst nach bestätigtem Purge werden Tickets/Outbox geleert, `lastResetBusinessDay` gesetzt und die Sperre aufgehoben; ein ungewisser Purge-Ausgang lässt Check-in und Intake gesperrt und startet die Sandbox zur Beendigung einer möglicherweise noch laufenden Bereinigung neu. **Settings und Gerätefreigaben bleiben**. SQLite-Datei bleibt. Export-Ordner auf dem Host unangetastet. Kein vorheriger Day-Close nötig.
 
 Nach Crash: Wiederherstellung aus persistierter Runtime — Reset nur bewusst über MFA.
 

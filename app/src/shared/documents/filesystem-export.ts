@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
+import { randomUUID } from 'node:crypto';
 import type { CoreDatabase, DocumentExportInfo } from '../db/database.js';
 import { createModuleLogger } from '@praxis-flow/server-shared/logger';
 import { getSandboxClient } from '../sandbox/sandbox-client.js';
@@ -9,6 +10,7 @@ import { purgeDocumentArtifacts } from './sandbox-document-cleanup.js';
 import { DomainError, domainError } from '../errors/domain-error.js';
 
 const log = createModuleLogger('documents.export');
+const activeExportTargets = new Set<string>();
 
 function sanitizePathSegment(value: string): string {
   const normalized = value.trim().replace(/[^a-zA-Z0-9._-]+/g, '_');
@@ -58,13 +60,30 @@ export class DocumentNotScannedError extends DomainError {
 }
 
 async function writeExportStream(targetFilePath: string, source: Readable): Promise<void> {
-  const tempFilePath = `${targetFilePath}.part`;
-  const tempFile = await fs.open(tempFilePath, 'wx');
+  if (activeExportTargets.has(targetFilePath)) {
+    throw domainError('INVALID_TRANSITION');
+  }
+  activeExportTargets.add(targetFilePath);
+
+  const tempPrefix = `${path.basename(targetFilePath)}.`;
+  const tempFilePath = `${targetFilePath}.${randomUUID()}.part`;
+  let tempFile: Awaited<ReturnType<typeof fs.open>> | null = null;
   try {
+    const entries = await fs.readdir(path.dirname(targetFilePath));
+    await Promise.all(
+      entries
+        .filter((entry) => entry.startsWith(tempPrefix) && entry.endsWith('.part'))
+        .map((entry) =>
+          fs.unlink(path.join(path.dirname(targetFilePath), entry)).catch(() => null),
+        ),
+    );
+
+    tempFile = await fs.open(tempFilePath, 'wx');
     await pipeline(source, tempFile.createWriteStream());
     await fs.rename(tempFilePath, targetFilePath);
   } finally {
-    await tempFile.close().catch(() => undefined);
+    activeExportTargets.delete(targetFilePath);
+    await tempFile?.close().catch(() => undefined);
     try {
       await fs.unlink(tempFilePath);
     } catch (error) {

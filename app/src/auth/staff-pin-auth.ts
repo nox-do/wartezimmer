@@ -69,17 +69,6 @@ export function getAuthSettingsSeedConfig(): StaffPinHashConfig {
   return config;
 }
 
-export function usesDefaultStaffPinHash(hash: string): boolean {
-  return hash === DEFAULT_STAFF_PIN_HASH;
-}
-
-export function pinConfigUsesDefaultStaffPins(config: StaffPinHashConfig): boolean {
-  return (
-    usesDefaultStaffPinHash(config.pinHashesByRole.mfa) &&
-    usesDefaultStaffPinHash(config.pinHashesByRole.ops)
-  );
-}
-
 export function assertStaffPinHashConfigSafeForStartup(config: StaffPinHashConfig): void {
   parsePinHash(config.pinHashesByRole.mfa);
   parsePinHash(config.pinHashesByRole.ops);

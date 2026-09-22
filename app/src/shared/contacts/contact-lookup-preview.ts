@@ -1,10 +1,6 @@
 import { canonicalizeBirthDate } from './canonicalize-birth-date.js';
 import { canonicalizePhone } from '../phone/canonicalize-phone.js';
-import {
-  buildContactLookupSettingsKey,
-  buildFolderSignature,
-  setContactLookupCache,
-} from './contact-lookup-cache.js';
+import { buildContactLookupSettingsKey, setContactLookupCache } from './contact-lookup-cache.js';
 import {
   delimiterModeToChar,
   suggestContactLookupMapping,
@@ -111,10 +107,8 @@ export async function validateCsvContactLookupSettings(
     assertSampleBirthDateReadable(sampleDataRows, selectors.birthDate);
   }
 
-  const folderSignature = await buildFolderSignature(scan.csvFiles);
   setContactLookupCache({
     settingsKey: buildContactLookupSettingsKey(settings),
-    folderSignature,
     scannedAt: new Date().toISOString(),
     scan,
   });

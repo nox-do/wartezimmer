@@ -22,6 +22,7 @@ import {
   isTopicAvailableAt,
 } from '../practice-time-windows.js';
 import { domainError } from '../errors/domain-error.js';
+import { isSandboxResetPendingFromStmt } from './database-sandbox-reset-state.js';
 
 type CheckinSessionStatements = {
   findTicketByCodeStmt: StatementSync;
@@ -37,6 +38,7 @@ type CheckinSessionStatements = {
   touchPatientSessionStmt: StatementSync;
   expirePatientSessionStmt: StatementSync;
   revokePatientSessionStmt: StatementSync;
+  sandboxResetPendingStmt?: StatementSync;
 };
 
 type CheckinSessionHelpers = {
@@ -85,6 +87,13 @@ export function setCheckinLockInDb(
     throw domainError('CHECKIN_LOCKED');
   }
   if (!locked && dayClosePhase === 'started') {
+    throw domainError('DAY_CLOSE_IN_PROGRESS');
+  }
+  if (
+    !locked &&
+    deps.sandboxResetPendingStmt &&
+    isSandboxResetPendingFromStmt(deps.sandboxResetPendingStmt)
+  ) {
     throw domainError('DAY_CLOSE_IN_PROGRESS');
   }
 

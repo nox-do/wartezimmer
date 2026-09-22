@@ -6,7 +6,10 @@ import { RUNTIME_RESET_CONFIRM_PHRASE } from '../../shared/ops/runtime-reset-con
 import { notifyEmergencyChanged } from '../../shared/ops/ops-emergency-events.js';
 import { publishTvQueueUpdate } from '../../shared/queue/queue-stream-hub.js';
 import { sendApiError } from '../../http/domain-error-mapper.js';
+import { withSandboxIntakePaused } from '../../shared/sandbox/sandbox-intake-gate.js';
 import { requestSandboxRestartForDayReset } from './ops-sandbox-restart.js';
+import { purgeSandboxIntakeForDayReset } from './ops-sandbox-restart.js';
+import { handleOpsRouteError } from './ops-errors.js';
 
 export function registerOpsMaintenanceRoutes(app: FastifyInstance, db: CoreDatabase): void {
   app.get(
@@ -34,6 +37,8 @@ export function registerOpsMaintenanceRoutes(app: FastifyInstance, db: CoreDatab
         response: {
           200: opsSchemas.POST_api_v1_ops_maintenance_runtime_resetResponse200,
           400: opsSchemas.POST_api_v1_ops_maintenance_runtime_resetResponse400,
+          409: opsSchemas.POST_api_v1_ops_maintenance_runtime_resetResponse409,
+          503: opsSchemas.POST_api_v1_ops_maintenance_runtime_resetResponse503,
         },
       },
     },
@@ -46,21 +51,61 @@ export function registerOpsMaintenanceRoutes(app: FastifyInstance, db: CoreDatab
         });
       }
 
-      const reset = db.executeRuntimeReset();
-      if (reset.emergencyCleared) {
-        notifyEmergencyChanged(db);
-      }
+      const recoveringUncertainPurge = db.isSandboxResetPending();
+      db.beginSandboxReset();
       publishTvQueueUpdate(db);
-      void requestSandboxRestartForDayReset(app, 'runtime-reset').then((restartOk) => {
-        if (!restartOk) {
-          app.log.warn('Sandbox restart after runtime-reset was not confirmed.');
-        }
-      });
 
-      return {
-        ...reset,
-        sandboxRestartInitiated: true as const,
-      };
+      try {
+        return await withSandboxIntakePaused(async () => {
+          if (recoveringUncertainPurge) {
+            const recovered = await requestSandboxRestartForDayReset(app, 'runtime-reset-recovery');
+            if (!recovered) {
+              sendApiError(reply, 503, {
+                code: 'SANDBOX_UNAVAILABLE',
+                message:
+                  'Sandbox-Neustart konnte nicht bestätigt werden. Der Runtime-Reset bleibt unvollständig und gesperrt.',
+              });
+              return;
+            }
+          }
+          try {
+            await purgeSandboxIntakeForDayReset(app, 'runtime-reset');
+          } catch {
+            await requestSandboxRestartForDayReset(app, 'runtime-reset-recovery');
+            sendApiError(reply, 503, {
+              code: 'SANDBOX_UNAVAILABLE',
+              message:
+                'Sandbox-Bereinigung fehlgeschlagen. Der Runtime-Reset wurde nicht abgeschlossen; Check-in bleibt gesperrt.',
+            });
+            return;
+          }
+
+          const reset = db.executeRuntimeReset();
+          if (reset.emergencyCleared) {
+            notifyEmergencyChanged(db);
+          }
+          publishTvQueueUpdate(db);
+          void requestSandboxRestartForDayReset(app, 'runtime-reset').then((restartOk) => {
+            if (!restartOk) {
+              app.log.warn('Sandbox restart after runtime-reset was not confirmed.');
+            }
+          });
+
+          return {
+            ...reset,
+            sandboxRestartInitiated: true as const,
+          };
+        });
+      } catch (error) {
+        if (
+          handleOpsRouteError(reply, error, {
+            dayCloseInProgressMessage: 'Ein anderer Reset läuft bereits.',
+          })
+        ) {
+          return;
+        }
+        throw error;
+      }
     },
   );
 }

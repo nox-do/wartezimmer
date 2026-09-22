@@ -121,6 +121,29 @@ test('validateRoomSettingsChange blocks disabled room with queue tickets', () =>
   }
 });
 
+test('validateRoomSettingsChange blocks renaming a room with assigned absent tickets', () => {
+  const result = validateRoomSettingsChange({
+    currentRooms: baseRooms,
+    nextRooms: [baseRooms[0]!, { ...baseRooms[1]!, roomLabel: 'Neues Labor' }],
+    topics: [],
+    queueTickets: [
+      {
+        laneCode: 'L',
+        number: 4,
+        roomId: null,
+        destinationRoomId: 'labor',
+        status: 'absent_return_later',
+      },
+    ],
+  });
+
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.code, ROOM_BLOCKED_QUEUE);
+    assert.equal(result.details.tickets, 'L-004');
+  }
+});
+
 test('validateRoomSettingsChange blocks when maxOccupancy is below current occupancy', () => {
   const result = validateRoomSettingsChange({
     currentRooms: baseRooms,

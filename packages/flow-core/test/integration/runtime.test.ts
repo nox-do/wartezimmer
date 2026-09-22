@@ -261,6 +261,31 @@ test('Journey next step: letzter Schritt setzt journeyStepIndex auf null', () =>
   assert.ok(visitEvents.some((event) => event.type === 'journey_completed'));
 });
 
+test('Journey next step: letzter Same-Location-arrive-Schritt beendet die Journey sofort', () => {
+  const { db, runtime } = testRuntime();
+  db.prepare(
+    "UPDATE journey_steps SET completed_when = 'arrive' WHERE id = 'step_general_2'",
+  ).run();
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Same Location Done',
+    surfaceId: 'terminal_1',
+  });
+  runtime.transition(created.id, 'call');
+  runtime.transition(created.id, 'arrive');
+  runtime.transition(created.id, 'start_next_journey_step');
+  runtime.transition(created.id, 'call');
+  runtime.transition(created.id, 'arrive');
+
+  const completed = runtime.transition(created.id, 'start_next_journey_step');
+
+  assert.equal(completed.status, 'arrived');
+  assert.equal(completed.journeyState, 'completed');
+  assert.equal(completed.journeyStepIndex, undefined);
+  assert.equal(completed.journeyStepCompletedAt, undefined);
+  assert.ok(runtime.events(created.id).some((event) => event.type === 'journey_completed'));
+});
+
 test('Journey next step: optionales Ziel überschreibt nur den gestarteten Hop', () => {
   const { runtime } = testRuntime();
   const created = runtime.checkIn({
@@ -754,10 +779,7 @@ test('transition return_to_waiting: done blockiert', () => {
   runtime.transition(created.id, 'arrive', { actingLocationId: 'room_1' });
   runtime.transition(created.id, 'done', { actingLocationId: 'room_1' });
 
-  assert.throws(
-    () => runtime.transition(created.id, 'return_to_waiting'),
-    /RETURN_TO_WAITING_NOT_ALLOWED/,
-  );
+  assert.throws(() => runtime.transition(created.id, 'return_to_waiting'), /VISIT_TERMINAL/);
 });
 
 test('cancel: beendet Visit und aktive Journey mit korrelierter Historie', () => {
@@ -772,12 +794,31 @@ test('cancel: beendet Visit und aktive Journey mit korrelierter Historie', () =>
 
   assert.equal(cancelled.status, 'cancelled');
   assert.equal(cancelled.journeyState, 'abandoned');
+  assert.equal(cancelled.journeyStepCompletedAt, undefined);
   assert.ok(cancelled.finishedAt);
   const events = runtime.events(created.id);
   const abandoned = events.find((event) => event.type === 'journey_abandoned');
   const cancelEvent = events.find((event) => event.type === 'cancelled');
   assert.ok(abandoned?.correlationId);
   assert.equal(abandoned?.correlationId, cancelEvent?.correlationId);
+});
+
+test('cancel: abgeschlossener Journey-Step kann den Visit nicht reaktivieren', () => {
+  const { runtime } = testRuntime();
+  const created = runtime.checkIn({
+    topicId: 'general',
+    displayName: 'Cancel Pending Journey',
+    surfaceId: 'terminal_1',
+  });
+  runtime.transition(created.id, 'call');
+  const arrived = runtime.transition(created.id, 'arrive');
+  assert.ok(arrived.journeyStepCompletedAt);
+
+  runtime.cancel(created.id);
+
+  assert.throws(() => runtime.transition(created.id, 'start_next_journey_step'), /VISIT_TERMINAL/);
+  const cancelled = runtime.visits().find((visit) => visit.id === created.id);
+  assert.equal(cancelled, undefined);
 });
 
 test('reassignTarget: ändert nur den operativen Hop und hält Journey aktiv', () => {

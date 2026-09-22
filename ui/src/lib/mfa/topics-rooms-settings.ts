@@ -37,9 +37,12 @@ export type TopicsRoomsSettings = {
   journeySettings: JourneySettings;
   routingCapabilities: RoutingCapabilities;
   savedTopicsSnapshot: string;
+  updatedAt: string;
 };
 
 export type PersistTopicsRoomsOptions = {
+  section: 'rooms' | 'topics';
+  expectedUpdatedAt: string;
   silent?: boolean;
   postWaitingCallTargetId?: string | null;
   routingCapabilities?: RoutingCapabilities | null;
@@ -77,13 +80,14 @@ export async function loadTopicsRoomsSettings(): Promise<TopicsRoomsSettings | n
     journeySettings: structuredClone(result.data.journeySettings),
     routingCapabilities: capabilitiesResult.data,
     savedTopicsSnapshot: JSON.stringify(normalizeTopicsForSave(topics)),
+    updatedAt: result.data.updatedAt,
   };
 }
 
 export async function persistTopicsRoomsSettings(
   rooms: PracticeRoomWithPanels[],
   topics: PracticeTopicSetting[],
-  options?: PersistTopicsRoomsOptions,
+  options: PersistTopicsRoomsOptions,
 ): Promise<TopicsRoomsSettings | null> {
   const normalizedRooms = normalizeRoomsForSave(rooms);
   const normalizedTopics = normalizeTopicsForSave(topics);
@@ -162,12 +166,12 @@ export async function persistTopicsRoomsSettings(
     }
   }
 
-  const postWaitingCallTargetId = options?.postWaitingCallTargetId;
+  const postWaitingCallTargetId = options.postWaitingCallTargetId;
   const waitingRoomIsDefault = !normalizedRooms.some(
     (room) => room.enabled && room.defaultCallTarget,
   );
   if (
-    options?.routingCapabilities?.routingMode === 'simple' &&
+    options.routingCapabilities?.routingMode === 'simple' &&
     waitingRoomIsDefault &&
     postWaitingCallTargetId === null
   ) {
@@ -182,23 +186,30 @@ export async function persistTopicsRoomsSettings(
     return null;
   }
 
-  const result = await patchOpsSettings({
-    rooms: normalizedRooms,
-    topics: normalizedTopics,
-    ...(postWaitingCallTargetId === undefined ? {} : { postWaitingCallTargetId }),
-  });
+  const result = await patchOpsSettings(
+    options.section === 'rooms'
+      ? {
+          expectedUpdatedAt: options.expectedUpdatedAt,
+          rooms: normalizedRooms,
+          ...(postWaitingCallTargetId === undefined ? {} : { postWaitingCallTargetId }),
+        }
+      : {
+          expectedUpdatedAt: options.expectedUpdatedAt,
+          topics: normalizedTopics,
+        },
+  );
   if (!result.ok) {
     toastStore.error(
-      roomGuardErrorMessage(result.error, options?.roomQueueGuardContext ?? 'remove'),
+      roomGuardErrorMessage(result.error, options.roomQueueGuardContext ?? 'remove'),
     );
-    return loadTopicsRoomsSettings();
+    return null;
   }
 
   const nextTopics = sortedTopics(result.data.topics);
   applyMfaPracticeRooms(result.data.rooms);
   applyMfaPracticeTopics(nextTopics);
 
-  if (!options?.silent) {
+  if (!options.silent) {
     toastStore.success(t('mfa.settings.saveSuccess'));
   }
 
@@ -208,9 +219,10 @@ export async function persistTopicsRoomsSettings(
     postWaitingCallTargetId: result.data.postWaitingCallTargetId,
     journeySettings: structuredClone(result.data.journeySettings),
     routingCapabilities: await loadRoutingCapabilitiesAfterSave(
-      options?.routingCapabilities ?? null,
+      options.routingCapabilities ?? null,
     ),
     savedTopicsSnapshot: JSON.stringify(normalizeTopicsForSave(nextTopics)),
+    updatedAt: result.data.updatedAt,
   };
 }
 

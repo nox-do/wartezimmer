@@ -40,6 +40,36 @@ test('a failed settings update does not block the next update', async () => {
   assert.equal(await next, 'completed');
 });
 
+test('PATCH /api/v1/ops/settings rejects a stale settings revision', async () => {
+  const app = Fastify({ logger: false });
+  app.addHook('preHandler', async (request) => {
+    request.clientRole = 'mfa';
+  });
+  let updateCalled = false;
+  registerOpsSettingsRoutes(app, {
+    getOpsSettings: () => ({ updatedAt: '2026-09-22T12:00:00.000Z' }),
+    updateOpsSettings: () => {
+      updateCalled = true;
+      throw new Error('must not update');
+    },
+  } as unknown as CoreDatabase);
+
+  await app.ready();
+  const response = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/ops/settings',
+    payload: {
+      expectedUpdatedAt: '2026-09-22T11:59:00.000Z',
+      topics: [],
+    },
+  });
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.json().code, 'OPS_SETTINGS_STALE');
+  assert.equal(updateCalled, false);
+  await app.close();
+});
+
 test('GET /api/v1/ops/settings/capabilities returns simple routing capabilities', async () => {
   const app = Fastify({ logger: false });
   registerOpsSettingsRoutes(app, {

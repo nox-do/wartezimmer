@@ -16,6 +16,7 @@
   let journeySettings = $state<JourneySettings>({ templates: [] });
   let routingCapabilities = $state<RoutingCapabilities | null>(null);
   let savedTopicsSnapshot = $state('');
+  let settingsUpdatedAt = $state('');
 
   const enabledRooms = $derived(listEnabledRooms(rooms));
   const savedTopicIds = $derived(
@@ -35,12 +36,15 @@
     journeySettings = result.journeySettings;
     routingCapabilities = result.routingCapabilities;
     savedTopicsSnapshot = result.savedTopicsSnapshot;
+    settingsUpdatedAt = result.updatedAt;
   }
 
   async function persistSettings(options?: { silent?: boolean }): Promise<boolean> {
     saving = true;
     const result = await persistTopicsRoomsSettings(rooms, topics, {
       ...options,
+      section: 'topics',
+      expectedUpdatedAt: settingsUpdatedAt,
       routingCapabilities,
     });
     saving = false;
@@ -53,6 +57,7 @@
     journeySettings = result.journeySettings;
     routingCapabilities = result.routingCapabilities;
     savedTopicsSnapshot = result.savedTopicsSnapshot;
+    settingsUpdatedAt = result.updatedAt;
     return true;
   }
 
