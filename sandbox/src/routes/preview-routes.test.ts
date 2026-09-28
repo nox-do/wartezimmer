@@ -72,3 +72,42 @@ test('image preview embed serves a fit-to-screen HTML viewer and raw image asset
     await rm(basePath, { recursive: true, force: true });
   }
 });
+
+test('deleting a document releases its preview session and missing source has a distinct status', async () => {
+  const basePath = await mkdtemp(path.join(tmpdir(), 'praxis-flow-preview-cleanup-'));
+  const app = buildSandboxApp(testConfig(basePath));
+  try {
+    await app.inject({
+      method: 'PUT',
+      url: '/internal/documents/doc/intake',
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-file-name': 'doc.pdf',
+        'x-mime-type': 'application/pdf',
+      },
+      payload: Buffer.from('pdf-content'),
+    });
+    await app.inject({
+      method: 'PUT',
+      url: '/internal/preview/sessions/session/document',
+      payload: { documentRef: 'doc', mimeType: 'application/pdf' },
+    });
+    assert.equal(
+      (await app.inject({ method: 'DELETE', url: '/internal/documents/doc' })).statusCode,
+      204,
+    );
+    assert.equal(
+      (await app.inject({ method: 'GET', url: '/internal/preview/sessions/session' })).statusCode,
+      404,
+    );
+    const missing = await app.inject({
+      method: 'PUT',
+      url: '/internal/preview/sessions/session/document',
+      payload: { documentRef: 'doc', mimeType: 'application/pdf' },
+    });
+    assert.equal(missing.json().status, 'source_unavailable');
+  } finally {
+    await app.close();
+    await rm(basePath, { recursive: true, force: true });
+  }
+});

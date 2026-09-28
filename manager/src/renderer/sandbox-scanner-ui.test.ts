@@ -70,3 +70,17 @@ test('sandboxClamAvChip: not started is red', () => {
 test('sandboxClamAvChip: healthy', () => {
   assert.deepEqual(sandboxClamAvChip(scanner()), { label: 'ClamAV', ok: true });
 });
+
+test('shows overdue check warning before the scanner is blocked', () => {
+  assert.deepEqual(
+    sandboxClamAvChip(
+      scanner({
+        updateWarning: true,
+        ready: true,
+        definitionsAgeHours: 25,
+        maxSignatureAgeHours: 48,
+      }),
+    ),
+    { label: 'Updatecheck überfällig', ok: false, warn: true },
+  );
+});

@@ -55,7 +55,7 @@
   const showPreviewFrame = $derived(Boolean(embedSrc && !previewStatusKey));
   const canGoPrev = $derived(activeIndex > 0);
   const canGoNext = $derived(activeIndex >= 0 && activeIndex < items.length - 1);
-  const canExport = $derived(activeDocument?.status === 'preview_requested');
+  const canExport = $derived(activeDocument?.status === 'preview_requested' && activePreview?.preview?.status === 'ready');
   const canRename = $derived(activeDocument?.status === 'preview_requested');
   const ticketLabel = $derived(formatTicketCode(context.laneCode, context.number));
   const topicLabel = $derived.by(() => {

@@ -24,7 +24,7 @@ function waitForIntakeToDrain(): Promise<void> {
   });
 }
 
-/** Prevents a day reset from racing with uploads or generated form documents. */
+/** Prevents a day reset from racing with uploads, form generation, previews, exports or deletion. */
 export async function withSandboxIntakeOperation<T>(
   operation: () => Promise<T>,
   isPersistentlyBlocked: () => boolean = () => false,

@@ -2,6 +2,8 @@ export function previewSandboxStatusMessage(status: string | undefined): string 
   switch (status) {
     case 'ready':
       return null;
+    case 'source_unavailable':
+      return 'previewSourceUnavailable';
     case 'render_error':
       return 'previewRenderError';
     case 'blocked_malware':

@@ -38,6 +38,7 @@ export function sandboxClamAvChip(
   if (!scanner.signaturesFreshEnough) {
     return { label: 'outdated', ok: false, warn: true };
   }
+  if (scanner.updateWarning) return { label: 'Updatecheck überfällig', ok: false, warn: true };
   return { label: 'ClamAV', ok: true };
 }
 
@@ -48,14 +49,14 @@ export function sandboxSignatureAgeNotice(
     !scanner?.enabled ||
     !scanner.engineVersion ||
     scanner.freshclamLastAttemptOk === false ||
-    scanner.signaturesFreshEnough ||
+    (scanner.signaturesFreshEnough && !scanner.updateWarning) ||
     scanner.definitionsAgeHours == null ||
     !Number.isFinite(scanner.definitionsAgeHours)
   )
     return null;
 
   const hours = (value: number) => value.toLocaleString('de-DE', { maximumFractionDigits: 1 });
-  const message = `Virensignaturen älter als vorgesehen: ${hours(scanner.definitionsAgeHours)} Stunden (Grenzwert: ${hours(scanner.maxSignatureAgeHours)} Stunden).`;
+  const message = `Letzte erfolgreiche Aktualitätsprüfung: ${hours(scanner.definitionsAgeHours)} Stunden her (Sperre nach: ${hours(scanner.maxSignatureAgeHours)} Stunden).`;
   const attempt = scanner.freshclamLastAttemptAt ? new Date(scanner.freshclamLastAttemptAt) : null;
   if (!attempt || !Number.isFinite(attempt.getTime())) return message;
   const timestamp = attempt.toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });

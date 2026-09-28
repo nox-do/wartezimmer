@@ -12,11 +12,14 @@ export type SandboxScannerStatus = {
   freshclamLastAttemptAt: string | null;
   freshclamLastAttemptOk: boolean | null;
   freshclamLastAttemptMessage: string | null;
-  freshclamLastAttemptSource: 'startup' | 'manual' | null;
+  freshclamLastAttemptSource: 'startup' | 'manual' | 'scheduled' | null;
+  lastSuccessfulCheckAt?: string | null;
+  checkAgeHours?: number | null;
+  updateWarning?: boolean;
   freshclamLogTail: string | null;
 };
 
 export function resolveMaxSignatureAgeHours(raw: string | undefined | null): number {
   const parsed = Number.parseInt(raw?.trim() ?? '', 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 24;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 48;
 }

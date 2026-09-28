@@ -106,6 +106,7 @@ async function streamSandboxSourceToExport(
 ): Promise<void> {
   const sandbox = getSandboxClient();
   const response = await sandbox.getDocumentContent(info.documentId);
+  if (response.status === 404) throw domainError('DOCUMENT_NOT_FOUND');
   if (response.status === 409) {
     throw domainError('EXPORT_BLOCKED_MALWARE');
   }

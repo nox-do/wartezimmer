@@ -57,21 +57,18 @@ export function registerOpsMaintenanceRoutes(app: FastifyInstance, db: CoreDatab
 
       try {
         return await withSandboxIntakePaused(async () => {
-          if (recoveringUncertainPurge) {
-            const recovered = await requestSandboxRestartForDayReset(app, 'runtime-reset-recovery');
-            if (!recovered) {
-              sendApiError(reply, 503, {
-                code: 'SANDBOX_UNAVAILABLE',
-                message:
-                  'Sandbox-Neustart konnte nicht bestätigt werden. Der Runtime-Reset bleibt unvollständig und gesperrt.',
-              });
-              return;
-            }
+          if (
+            recoveringUncertainPurge &&
+            !(await requestSandboxRestartForDayReset(app, 'runtime-reset-recovery'))
+          ) {
+            return sendApiError(reply, 503, {
+              code: 'SANDBOX_UNAVAILABLE',
+              message: 'Sandbox-Neustart konnte nicht bestätigt werden. Der Reset bleibt gesperrt.',
+            });
           }
           try {
             await purgeSandboxIntakeForDayReset(app, 'runtime-reset');
           } catch {
-            await requestSandboxRestartForDayReset(app, 'runtime-reset-recovery');
             sendApiError(reply, 503, {
               code: 'SANDBOX_UNAVAILABLE',
               message:
@@ -80,16 +77,18 @@ export function registerOpsMaintenanceRoutes(app: FastifyInstance, db: CoreDatab
             return;
           }
 
+          if (!(await requestSandboxRestartForDayReset(app, 'runtime-reset'))) {
+            return sendApiError(reply, 503, {
+              code: 'SANDBOX_UNAVAILABLE',
+              message:
+                'Sandbox-Neustart konnte nicht bestätigt werden. Der Reset bleibt gesperrt und kann erneut versucht werden.',
+            });
+          }
           const reset = db.executeRuntimeReset();
           if (reset.emergencyCleared) {
             notifyEmergencyChanged(db);
           }
           publishTvQueueUpdate(db);
-          void requestSandboxRestartForDayReset(app, 'runtime-reset').then((restartOk) => {
-            if (!restartOk) {
-              app.log.warn('Sandbox restart after runtime-reset was not confirmed.');
-            }
-          });
 
           return {
             ...reset,

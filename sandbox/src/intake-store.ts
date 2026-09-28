@@ -71,7 +71,15 @@ export class IntakeStore {
     const dir = this.documentDir(documentId);
     await fs.mkdir(dir, { recursive: true });
     const sourcePath = await this.sourcePathFor(documentId, fileName, mimeType);
-    await fs.writeFile(sourcePath, buffer, { flag: 'wx' });
+    const handle = await fs.open(sourcePath, 'wx');
+    try {
+      await handle.writeFile(buffer);
+    } catch (error) {
+      await fs.rm(sourcePath, { force: true });
+      throw error;
+    } finally {
+      await handle.close();
+    }
     const sha256 = createHash('sha256').update(buffer).digest('hex');
     return { sourcePath, sha256 };
   }

@@ -16374,7 +16374,7 @@
       ],
       "post": {
         "summary": "Execute ops runtime reset (ops role)",
-        "description": "Purges sandbox intake synchronously, then clears visits, outbox, and active emergency; preserves practice settings and messaging credentials. On purge failure the reset is not committed and check-in remains locked.",
+        "description": "Purges sandbox intake synchronously and confirms the sandbox runtime restart before clearing visits, outbox, and active emergency; preserves practice settings and messaging credentials. On purge or restart failure the reset is not committed and check-in remains locked.",
         "requestBody": {
           "required": true,
           "content": {
@@ -16625,7 +16625,7 @@
             }
           },
           "503": {
-            "description": "Sandbox intake purge failed; the persistent reset lock remains active and the runtime reset is not committed",
+            "description": "Sandbox intake purge or restart failed; the persistent reset lock remains active and the runtime reset is not committed",
             "content": {
               "application/json": {
                 "schema": {
@@ -16928,7 +16928,7 @@
       ],
       "post": {
         "summary": "Reset runtime for a new business day",
-        "description": "Locks check-in and document intake, purges sandbox intake synchronously, then clears visits and outbox runtime data, stamps lastResetBusinessDay, and queues a sandbox runtime restart. Settings are preserved. This is the MFA „Neuen Tag starten“ action — not the same as starting day-close (Tagesabschluss).",
+        "description": "Locks check-in and document processing, purges sandbox intake synchronously and confirms its runtime restart. Only then clears visits and outbox runtime data and stamps lastResetBusinessDay. Settings are preserved. This is the MFA „Neuen Tag starten“ action — not the same as starting day-close (Tagesabschluss).",
         "requestBody": {
           "required": true,
           "content": {
@@ -16949,7 +16949,7 @@
         },
         "responses": {
           "200": {
-            "description": "Business-day reset completed, sandbox restart requested",
+            "description": "Business-day reset completed after confirmed sandbox restart",
             "content": {
               "application/json": {
                 "schema": {
@@ -16987,7 +16987,7 @@
                     "sandboxRestartInitiated": {
                       "type": "boolean",
                       "const": true,
-                      "description": "Sandbox intake purge succeeded and the subsequent runtime restart was queued asynchronously."
+                      "description": "Sandbox intake purge and subsequent runtime restart were confirmed before completing the reset."
                     }
                   }
                 }
@@ -17157,7 +17157,7 @@
             }
           },
           "503": {
-            "description": "Sandbox intake purge failed; the persistent reset lock remains active and the business-day reset is not committed",
+            "description": "Sandbox intake purge or restart failed; the persistent reset lock remains active and the business-day reset is not committed",
             "content": {
               "application/json": {
                 "schema": {
@@ -21564,7 +21564,7 @@
           "sandboxRestartInitiated": {
             "type": "boolean",
             "const": true,
-            "description": "Sandbox intake purge succeeded and the subsequent runtime restart was queued asynchronously."
+            "description": "Sandbox intake purge and subsequent runtime restart were confirmed before completing the reset."
           }
         }
       },

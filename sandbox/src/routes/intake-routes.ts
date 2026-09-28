@@ -1,3 +1,4 @@
+import type { PreviewStore } from '../preview-store.js';
 import type { FastifyInstance } from 'fastify';
 import type { SandboxConfig } from '../sandbox-config.js';
 import {
@@ -21,6 +22,7 @@ export function registerIntakeRoutes(
   app: FastifyInstance,
   config: Pick<SandboxConfig, 'intakeBasePath'>,
   scanner: ScannerService,
+  previews?: PreviewStore,
 ): void {
   const intakeStore = new IntakeStore(config.intakeBasePath);
 
@@ -145,6 +147,7 @@ export function registerIntakeRoutes(
         });
       }
       await intakeStore.deleteDocument(documentId);
+      previews?.deleteDocument(documentId);
       return reply.code(204).send();
     },
   );
@@ -153,6 +156,7 @@ export function registerIntakeRoutes(
     '/internal/documents/purge-day',
     async (request, reply) => {
       const removed = await intakeStore.purgeAll();
+      previews?.clear();
       const purgedAt = new Date().toISOString();
       request.log.warn(
         {

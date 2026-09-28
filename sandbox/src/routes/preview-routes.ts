@@ -240,7 +240,9 @@ export function registerPreviewRoutes(
         ? 'ready'
         : scanStatus === 'blocked_malware'
           ? 'blocked_malware'
-          : 'render_error';
+          : scanStatus === 'source_unavailable'
+            ? 'source_unavailable'
+            : 'render_error';
     const updatedAt = new Date().toISOString();
     const session: PreviewSession = {
       previewSessionId,

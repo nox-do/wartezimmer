@@ -6,7 +6,7 @@ export function registerRuntimeRoutes(app: FastifyInstance): void {
     const initiatedAt = new Date().toISOString();
     const reason = request.body?.reason?.trim();
 
-    // Return first so callers can persist workflow success before restart happens.
+    // Acknowledge first; callers wait for a changed instance before committing the reset.
     setTimeout(() => {
       app.log.warn(
         {

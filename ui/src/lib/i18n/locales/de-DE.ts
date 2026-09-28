@@ -531,6 +531,8 @@ export const dict = {
     documentsContextMissing: 'Bitte Dokumente über die Warteliste öffnen.',
     previewTitle: 'Sandbox-Vorschau',
     previewLoading: 'Vorschau wird geladen…',
+    previewSourceUnavailable:
+      'Das Dokument ist nicht mehr verfügbar, beispielsweise nach einem Neustart. Bitte erneut hochladen oder das Formular erneut absenden.',
     previewUnavailable: 'Vorschau konnte nicht geladen werden.',
     previewRenderError:
       'Datei konnte in der Sandbox nicht gerendert werden. Bitte erneut hochladen oder das MFA-Team informieren.',

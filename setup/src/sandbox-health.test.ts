@@ -7,8 +7,8 @@ import {
   resolveMaxSignatureAgeHours,
 } from './sandbox-health.js';
 
-test('resolveMaxSignatureAgeHours falls back to 24h', () => {
-  assert.equal(resolveMaxSignatureAgeHours(new Map()), 24);
+test('resolveMaxSignatureAgeHours falls back to 48h', () => {
+  assert.equal(resolveMaxSignatureAgeHours(new Map()), 48);
   assert.equal(
     resolveMaxSignatureAgeHours(new Map([['CLAMAV_MAX_SIGNATURE_AGE_HOURS', '24']])),
     24,

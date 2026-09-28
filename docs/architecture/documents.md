@@ -1,6 +1,6 @@
 # Dokumente — Sandbox & Anamnese-Vorlagen
 
-Stand: 2026-08-31 · Ist (Sandbox-Client, Compose-Volumes, `app/src/shared/forms/`)
+Stand: 2026-09-28 · Ist (Sandbox-Client, Compose-Volumes, `app/src/shared/forms/`)
 
 **Scope:** App↔Sandbox-Vertrag, Container/Pipeline, Formular-Template-Konvention.  
 Nicht: Compose-Ports allgemein → [`../operations/runtime.md`](../operations/runtime.md) · API-Rollen → [`apis.md`](apis.md)
@@ -14,10 +14,10 @@ Nicht: Compose-Ports allgemein → [`../operations/runtime.md`](../operations/ru
 
 ### App-API (MFA)
 
-| Aktion          | Endpoint                       | Wirkung                                                                                                                               |
-| --------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Vorschau wählen | `POST /documents/{id}/preview` | Scan + Render-Vorbereitung; Status im Response (`scanning` / `ready` / `blocked_malware` / `render_error`) inkl. `preview`-Embed-Info |
-| Verwerfen       | `POST /documents/{id}/discard` | zuerst `DELETE /internal/documents/{ref}`; bei Sandbox-Fehler `502 SANDBOX_UNAVAILABLE`, DB unverändert                               |
+| Aktion          | Endpoint                       | Wirkung                                                                                                                                                      |
+| --------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Vorschau wählen | `POST /documents/{id}/preview` | Scan + Render-Vorbereitung; Status im Response (`scanning` / `ready` / `blocked_malware` / `render_error` / `source_unavailable`) inkl. `preview`-Embed-Info |
+| Verwerfen       | `POST /documents/{id}/discard` | zuerst `DELETE /internal/documents/{ref}`; bei Sandbox-Fehler `502 SANDBOX_UNAVAILABLE`, DB unverändert                                                      |
 
 Kein separates Preview-Status-GET — Status kommt aus dem Preview-POST.
 
@@ -40,16 +40,22 @@ Auth: interner Token (`SANDBOX_INTERNAL_TOKEN`). MFA spricht **nur** `app`; Embe
 
 ## 2. Sandbox-Container
 
-| Grenze             | Ist                                                                                                                                                                                                                                |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Erreichbarkeit     | nur Compose-Netz, kein Host-Port                                                                                                                                                                                                   |
-| Fachentscheidungen | App (Discard/Export)                                                                                                                                                                                                               |
-| ClamAV             | lokal in Sandbox; Signaturen Volume `clamav_db`                                                                                                                                                                                    |
-| Lifecycle          | `restart: unless-stopped`; kein Spawn pro Login/Dokument; Neustart bei Deploy/Crash/Admin/**Tagesreset** (synchron bestätigtes `purge-day`, danach Runtime-Restart; bei ungewissem Purge bleibt der persistente Intake-Lock aktiv) |
+| Grenze             | Ist                                                                                                                                                                                                                                                             |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Erreichbarkeit     | nur Compose-Netz, kein Host-Port                                                                                                                                                                                                                                |
+| Fachentscheidungen | App (Discard/Export)                                                                                                                                                                                                                                            |
+| ClamAV             | lokal in Sandbox; Signaturen Volume `clamav_db`                                                                                                                                                                                                                 |
+| Lifecycle          | `restart: unless-stopped`; kein Spawn pro Login/Dokument; Neustart bei Deploy/Crash/Admin/**Tagesreset** (synchron bestätigtes `purge-day`, danach bestätigter Runtime-Restart vor dem DB-Reset; bei ungewissem Purge bleibt der persistente Intake-Lock aktiv) |
 
 **Pipeline:** MFA Preview → App bindet Session → Sandbox Scan → `interactive_pdf` oder Fallback → Embed via App-Proxy → Auto-Replace bei neuem Dokument derselben Session.
 
-Volumes: `sandbox_intake_data` (Custody), `clamav_db`; Preview-Artefakte ephemer. App `SANDBOX_DOCS_BASE_PATH` = Allowlist für Embed-Proxy (kein Shared-Volume nötig). MIME-Allowlist + Größenlimit; Egress minimal (Signaturupdates).
+Die Sandbox läuft mit schreibgeschütztem Root-Dateisystem und ohne Docker-Socket. Es gibt keinen zusätzlichen Controller und keine Abhängigkeit vom Manager im Tagesbetrieb. Der Tagesreset nutzt die vorhandene Docker-Restart-Policy; das Image wird dabei weder neu gebaut noch der Container ersetzt.
+
+Persistentes Volume: ausschließlich `clamav_db`. Dokument-Intake liegt in `tmpfs` (Standard 256 MiB, `SANDBOX_INTAKE_TMPFS_SIZE`), Arbeitsdateien unter `/tmp` (64 MiB), ClamAV-Logs unter `/var/log/clamav` (8 MiB). Vorschau-Sessions liegen im Prozessspeicher. Docker-Logs rotieren separat (Standard 5 × 10 MB). Ein Container-Neustart verliert noch nicht exportierte Dokumente; die Vorschau meldet `source_unavailable` mit Hinweis auf erneutes Hochladen bzw. erneutes Absenden des Formulars. Export ist dann in der Oberfläche gesperrt. Erfolgreicher Export/Verwerfen löscht Intake-Datei, Sandbox-Metadaten und zugehörige Vorschau-Sessions. Der fachliche Abschlussstatus in der App bleibt bis zum Tagesreset erhalten.
+
+Signaturen werden beim Start und anschließend alle zwei Stunden geprüft. Der letzte **erfolgreiche Aktualitätscheck** bleibt auch nach fehlgeschlagenen Versuchen erhalten; „bereits aktuell“ zählt als Erfolg. Nach 24 Stunden ohne Bestätigung wird gewarnt, nach standardmäßig 48 Stunden wird im Scan-Pfad gesperrt (`CLAMAV_MAX_SIGNATURE_AGE_HOURS`). Fehlende Datenbanken sperren sofort. Das Dateidatum ist kein Aktualitätsnachweis. Updates laufen serialisiert und zeitlich begrenzt; abgebrochene ClamAV-Updateverzeichnisse werden nach 24 Stunden vor dem nächsten Update bereinigt. Wiederholte automatische Updatefehler werden nur bei Zustandswechsel oder nach 24 Stunden erneut geloggt.
+
+App `SANDBOX_DOCS_BASE_PATH` = Allowlist für Embed-Proxy (kein Shared-Volume nötig). MIME-Allowlist + Größenlimit; Egress minimal (Signaturupdates).
 
 Ops-Volumes/Compose: [`../operations/runtime.md`](../operations/runtime.md) § Persistenz.
 

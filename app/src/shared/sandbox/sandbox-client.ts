@@ -13,7 +13,7 @@ type SandboxPreviewRequest = {
 type SandboxPreviewResponse = {
   previewSessionId: string;
   documentId: string;
-  status: 'scanning' | 'ready' | 'blocked_malware' | 'render_error';
+  status: 'scanning' | 'ready' | 'blocked_malware' | 'render_error' | 'source_unavailable';
   previewMode?: 'interactive_pdf' | 'raster_fallback';
   embedUrl?: string;
   scannedAt?: string;
@@ -39,7 +39,8 @@ function parseSandboxPreviewResponse(payload: unknown): SandboxPreviewResponse {
     (status !== 'scanning' &&
       status !== 'ready' &&
       status !== 'blocked_malware' &&
-      status !== 'render_error') ||
+      status !== 'render_error' &&
+      status !== 'source_unavailable') ||
     typeof updatedAt !== 'string' ||
     Number.isNaN(Date.parse(updatedAt))
   ) {

@@ -14,6 +14,9 @@ export type { SandboxScannerStatus };
 type ReadyHealthBody = {
   status?: string;
   scanner?: {
+    lastSuccessfulCheckAt?: string | null;
+    checkAgeHours?: number | null;
+    updateWarning?: boolean;
     enabled?: boolean;
     ready?: boolean;
     signaturesFreshEnough?: boolean;
@@ -57,6 +60,9 @@ export function parseSandboxScannerStatus(
         : null;
 
   return {
+    lastSuccessfulCheckAt: scanner.lastSuccessfulCheckAt ?? null,
+    checkAgeHours: scanner.checkAgeHours ?? null,
+    updateWarning: scanner.updateWarning === true,
     enabled: Boolean(scanner.enabled),
     ready: Boolean(scanner.ready),
     signaturesFreshEnough: Boolean(scanner.signaturesFreshEnough),
@@ -75,11 +81,13 @@ export function parseSandboxScannerStatus(
         ? scanner.freshclamLastAttemptMessage
         : null,
     freshclamLastAttemptSource:
-      scanner.freshclamLastAttemptSource === 'manual'
-        ? 'manual'
-        : scanner.freshclamLastAttemptSource === 'startup'
-          ? 'startup'
-          : null,
+      scanner.freshclamLastAttemptSource === 'scheduled'
+        ? 'scheduled'
+        : scanner.freshclamLastAttemptSource === 'manual'
+          ? 'manual'
+          : scanner.freshclamLastAttemptSource === 'startup'
+            ? 'startup'
+            : null,
     freshclamLogTail:
       typeof scanner.freshclamLogTail === 'string' ? scanner.freshclamLogTail : null,
   };
@@ -105,8 +113,14 @@ export function formatFreshclamAttemptLog(raw: string): string | null {
     if (typeof parsed.attemptedAt === 'string') {
       lines.push(`Letzter Versuch: ${parsed.attemptedAt}`);
     }
-    if (parsed.source === 'manual' || parsed.source === 'startup') {
-      lines.push(`Quelle: ${parsed.source === 'manual' ? 'manuell' : 'beim Start'}`);
+    if (
+      parsed.source === 'manual' ||
+      parsed.source === 'startup' ||
+      parsed.source === 'scheduled'
+    ) {
+      lines.push(
+        `Quelle: ${parsed.source === 'manual' ? 'manuell' : parsed.source === 'scheduled' ? 'automatisch (alle zwei Stunden)' : 'beim Start'}`,
+      );
     }
     if (typeof parsed.exitCode === 'number') {
       lines.push(`Exit-Code: ${parsed.exitCode}`);

@@ -1,3 +1,4 @@
+import { cleanSignatureUpdateResidue } from './signature-cache.js';
 import { execFile } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
@@ -24,7 +25,10 @@ export type ScannerStatus = {
   freshclamLastAttemptAt: string | null;
   freshclamLastAttemptOk: boolean | null;
   freshclamLastAttemptMessage: string | null;
-  freshclamLastAttemptSource: 'startup' | 'manual' | null;
+  freshclamLastAttemptSource: 'startup' | 'manual' | 'scheduled' | null;
+  lastSuccessfulCheckAt?: string | null;
+  checkAgeHours?: number | null;
+  updateWarning?: boolean;
   freshclamLogTail: string | null;
 };
 
@@ -36,7 +40,9 @@ export type ScanResult = {
 export type ScannerService = {
   readStatus: () => Promise<ScannerStatus>;
   scanDocumentAtPath: (sourcePath: string) => Promise<ScanResult>;
-  updateSignatures: () => Promise<{ stdout: string; stderr: string }>;
+  updateSignatures: (
+    source?: FreshclamAttemptRecord['source'],
+  ) => Promise<{ stdout: string; stderr: string }>;
 };
 
 function emptyFreshclamFields(): Pick<
@@ -87,6 +93,7 @@ export function createScannerService(
     SandboxConfig,
     'scanEnabled' | 'scannerDbPath' | 'scanTimeoutMs' | 'maxSignatureAgeHours'
   >,
+  run: typeof execFileAsync = execFileAsync,
 ): ScannerService {
   async function recordAttempt(
     source: FreshclamAttemptRecord['source'],
@@ -120,7 +127,10 @@ export function createScannerService(
 
     let engineVersion: string;
     try {
-      const { stdout } = await execFileAsync('clamscan', ['--version']);
+      const { stdout } = await run('clamscan', ['--database', config.scannerDbPath, '--version'], {
+        timeout: config.scanTimeoutMs,
+        maxBuffer: 64 * 1024,
+      });
       engineVersion = stdout.trim().split('\n')[0]?.trim() || 'unknown';
     } catch {
       return {
@@ -134,45 +144,37 @@ export function createScannerService(
       };
     }
 
-    const definitionCandidates = [
-      'daily.cld',
-      'daily.cvd',
-      'main.cld',
-      'main.cvd',
-      'bytecode.cld',
-      'bytecode.cvd',
-    ];
-    const mtimes: number[] = [];
-    for (const fileName of definitionCandidates) {
-      try {
-        const stats = await fs.stat(path.join(config.scannerDbPath, fileName));
-        mtimes.push(stats.mtimeMs);
-      } catch {
-        // ignore missing file; check others
+    const attempt = await readFreshclamAttempt(config.scannerDbPath);
+    const lastSuccessfulCheckAt = attempt?.lastSuccessfulCheckAt ?? null;
+    const checkedAt = lastSuccessfulCheckAt ? Date.parse(lastSuccessfulCheckAt) : NaN;
+    const checkAgeHours =
+      Number.isFinite(checkedAt) && checkedAt <= Date.now()
+        ? (Date.now() - checkedAt) / 3_600_000
+        : null;
+    // A recent successful check is not enough if the databases have disappeared.
+    const hasDatabase = async (name: string) => {
+      for (const extension of ['cld', 'cvd']) {
+        try {
+          const stat = await fs.stat(path.join(config.scannerDbPath, `${name}.${extension}`));
+          if (stat.isFile() && stat.size > 0) return true;
+        } catch {
+          /* Missing database is handled by the readiness gate. */
+        }
       }
-    }
-
-    if (mtimes.length === 0) {
-      return {
-        enabled: true,
-        engineVersion,
-        definitionsUpdatedAt: null,
-        definitionsAgeHours: null,
-        signaturesFreshEnough: false,
-        ready: false,
-        ...telemetry,
-      };
-    }
-
-    const newest = Math.max(...mtimes);
-    const definitionsUpdatedAt = new Date(newest).toISOString();
-    const definitionsAgeHours = Math.max(0, (Date.now() - newest) / (1000 * 60 * 60));
-    const signaturesFreshEnough = definitionsAgeHours <= config.maxSignatureAgeHours;
+      return false;
+    };
+    const databasesPresent = (await hasDatabase('daily')) && (await hasDatabase('main'));
+    const signaturesFreshEnough =
+      databasesPresent && checkAgeHours !== null && checkAgeHours < config.maxSignatureAgeHours;
     return {
       enabled: true,
       engineVersion,
-      definitionsUpdatedAt,
-      definitionsAgeHours,
+      // Kept for older clients; these now describe the confirmed currency, not file mtime.
+      definitionsUpdatedAt: lastSuccessfulCheckAt,
+      definitionsAgeHours: checkAgeHours,
+      lastSuccessfulCheckAt,
+      checkAgeHours,
+      updateWarning: checkAgeHours === null || checkAgeHours >= 24,
       signaturesFreshEnough,
       ready: signaturesFreshEnough,
       ...telemetry,
@@ -186,9 +188,14 @@ export function createScannerService(
     }
 
     try {
-      await execFileAsync('clamscan', ['--no-summary', '--infected', sourcePath], {
-        timeout: config.scanTimeoutMs,
-      });
+      if (!(await readStatus()).ready) return { status: 'scan_error', scannedAt };
+      await run(
+        'clamscan',
+        ['--database', config.scannerDbPath, '--no-summary', '--infected', sourcePath],
+        {
+          timeout: config.scanTimeoutMs,
+        },
+      );
       return { status: 'clean', scannedAt };
     } catch (error) {
       if (isExecFileFailure(error) && error.code === 1) {
@@ -198,20 +205,34 @@ export function createScannerService(
     }
   }
 
-  async function updateSignatures(): Promise<{ stdout: string; stderr: string }> {
+  let updating: Promise<{ stdout: string; stderr: string }> | null = null;
+  async function performUpdate(
+    source: FreshclamAttemptRecord['source'],
+  ): Promise<{ stdout: string; stderr: string }> {
     try {
-      const result = await execFileAsync('freshclam', []);
-      await recordAttempt('manual', 0, result.stdout, result.stderr);
+      await cleanSignatureUpdateResidue(config.scannerDbPath);
+      const result = await run('freshclam', ['--datadir', config.scannerDbPath], {
+        timeout: 300_000,
+        maxBuffer: 256 * 1024,
+      });
+      await recordAttempt(source, 0, result.stdout, result.stderr);
       return result;
     } catch (error) {
       if (isExecFileFailure(error)) {
         const exitCode = typeof error.code === 'number' ? error.code : 1;
-        await recordAttempt('manual', exitCode, error.stdout ?? '', error.stderr ?? '');
+        await recordAttempt(source, exitCode, error.stdout ?? '', error.stderr ?? '');
       } else {
-        await recordAttempt('manual', 1, '', error instanceof Error ? error.message : '');
+        await recordAttempt(source, 1, '', error instanceof Error ? error.message : '');
       }
       throw error;
     }
+  }
+
+  function updateSignatures(source: FreshclamAttemptRecord['source'] = 'manual') {
+    updating ??= performUpdate(source).finally(() => {
+      updating = null;
+    });
+    return updating;
   }
 
   return {

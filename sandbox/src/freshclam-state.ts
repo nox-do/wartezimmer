@@ -10,7 +10,8 @@ export type FreshclamAttemptRecord = {
   attemptedAt: string;
   ok: boolean;
   exitCode: number | null;
-  source: 'startup' | 'manual';
+  source: 'startup' | 'manual' | 'scheduled';
+  lastSuccessfulCheckAt?: string | null;
   message: string | null;
 };
 
@@ -47,9 +48,16 @@ export async function readFreshclamAttempt(
     }
     return {
       attemptedAt: parsed.attemptedAt,
-      ok: Boolean(parsed.ok),
+      ok: parsed.ok === true,
       exitCode: typeof parsed.exitCode === 'number' ? parsed.exitCode : null,
-      source: parsed.source === 'manual' ? 'manual' : 'startup',
+      source:
+        parsed.source === 'manual' || parsed.source === 'scheduled' ? parsed.source : 'startup',
+      lastSuccessfulCheckAt:
+        typeof parsed.lastSuccessfulCheckAt === 'string'
+          ? parsed.lastSuccessfulCheckAt
+          : parsed.ok === true
+            ? parsed.attemptedAt
+            : null,
       message: typeof parsed.message === 'string' ? parsed.message : null,
     };
   } catch {
@@ -62,7 +70,16 @@ export async function writeFreshclamAttempt(
   record: FreshclamAttemptRecord,
 ): Promise<void> {
   await fs.mkdir(scannerDbPath, { recursive: true });
-  await fs.writeFile(stateFilePath(scannerDbPath), `${JSON.stringify(record)}\n`, 'utf8');
+  const previous = await readFreshclamAttempt(scannerDbPath);
+  const next = {
+    ...record,
+    lastSuccessfulCheckAt: record.ok
+      ? record.attemptedAt
+      : (previous?.lastSuccessfulCheckAt ?? null),
+  };
+  const target = stateFilePath(scannerDbPath);
+  await fs.writeFile(`${target}.tmp`, `${JSON.stringify(next)}\n`, 'utf8');
+  await fs.rename(`${target}.tmp`, target);
 }
 
 export async function readFreshclamLogTail(

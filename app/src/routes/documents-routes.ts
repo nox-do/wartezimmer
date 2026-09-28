@@ -1,3 +1,4 @@
+import { withSandboxIntakeOperation } from '../shared/sandbox/sandbox-intake-gate.js';
 import type { FastifyInstance } from 'fastify';
 import type { CoreDatabase } from '../shared/db/database.js';
 import { exportDocumentToFilesystem } from '../shared/documents/filesystem-export.js';
@@ -61,6 +62,8 @@ const mfaPreviewResponseSchema = {
 
 const DOCUMENT_ROUTE_MESSAGES = {
   byApiCode: {
+    DOCUMENT_NOT_FOUND:
+      'Das Dokument ist nicht mehr verfügbar. Bitte erneut hochladen oder das Formular erneut absenden.',
     INVALID_TRANSITION: 'Document transition is not allowed.',
     DOCUMENT_NOT_SCANNED: 'Document export requires a successful intake scan and sandbox artifact.',
     EXPORT_BLOCKED_MALWARE: 'Document export is blocked because malware was detected.',
@@ -147,49 +150,56 @@ export function registerDocumentRoutes(app: FastifyInstance, db: CoreDatabase): 
     },
     async (request, reply) => {
       try {
-        const documentId = request.params.documentId.trim();
-        const current = db.getDocumentForPreviewRequest(documentId);
-        const sandbox = getSandboxClient();
-        const previewInput = {
-          previewSessionId: current.sessionId,
-          documentId: current.id,
-          mimeType: current.mimeType,
-        };
-        const preview = await sandbox.ensurePreviewSessionDocument(previewInput, {
-          allowCached:
-            current.status === 'preview_requested' || current.status === 'export_requested',
-        });
+        return await withSandboxIntakeOperation(
+          async () => {
+            const documentId = request.params.documentId.trim();
+            const current = db.getDocumentForPreviewRequest(documentId);
+            const sandbox = getSandboxClient();
+            const previewInput = {
+              previewSessionId: current.sessionId,
+              documentId: current.id,
+              mimeType: current.mimeType,
+            };
+            const preview = await sandbox.ensurePreviewSessionDocument(previewInput, {
+              allowCached:
+                current.status === 'preview_requested' || current.status === 'export_requested',
+            });
 
-        if (preview.status === 'blocked_malware') {
-          await purgeDocumentArtifacts(documentId);
-          const purged = db.discardDocumentAfterMalware(documentId);
-          publishTvQueueUpdate(db);
-          return {
-            ...purged,
-            preview,
-          };
-        }
+            if (preview.status === 'source_unavailable') return { ...current, preview };
 
-        let updated;
-        try {
-          updated = db.requestDocumentPreview(documentId);
-        } catch (error) {
-          if (readDomainCode(error) === 'INVALID_TRANSITION') {
-            const latest = db.getDocumentById(documentId);
-            if (latest.status === 'preview_requested' || latest.status === 'export_requested') {
-              updated = latest;
-            } else {
-              await purgeSandboxPreviewSessionBestEffort(current.sessionId);
-              throw error;
+            if (preview.status === 'blocked_malware') {
+              await purgeDocumentArtifacts(documentId);
+              const purged = db.discardDocumentAfterMalware(documentId);
+              publishTvQueueUpdate(db);
+              return {
+                ...purged,
+                preview,
+              };
             }
-          } else {
-            throw error;
-          }
-        }
-        return {
-          ...updated,
-          preview: withSecuredEmbedUrl(preview),
-        };
+
+            let updated;
+            try {
+              updated = db.requestDocumentPreview(documentId);
+            } catch (error) {
+              if (readDomainCode(error) === 'INVALID_TRANSITION') {
+                const latest = db.getDocumentById(documentId);
+                if (latest.status === 'preview_requested' || latest.status === 'export_requested') {
+                  updated = latest;
+                } else {
+                  await purgeSandboxPreviewSessionBestEffort(current.sessionId);
+                  throw error;
+                }
+              } else {
+                throw error;
+              }
+            }
+            return {
+              ...updated,
+              preview: withSecuredEmbedUrl(preview),
+            };
+          },
+          () => db.isSandboxResetPending(),
+        );
       } catch (error) {
         if (sendResolvedDomainError(reply, error, DOCUMENT_ROUTE_MESSAGES)) {
           return;
@@ -271,10 +281,15 @@ export function registerDocumentRoutes(app: FastifyInstance, db: CoreDatabase): 
     async (request, reply) => {
       const documentId = request.params.documentId.trim();
       try {
-        await purgeDocumentArtifacts(documentId);
-        const discarded = db.discardDocumentByMfa(documentId);
-        publishTvQueueUpdate(db);
-        return discarded;
+        return await withSandboxIntakeOperation(
+          async () => {
+            await purgeDocumentArtifacts(documentId);
+            const discarded = db.discardDocumentByMfa(documentId);
+            publishTvQueueUpdate(db);
+            return discarded;
+          },
+          () => db.isSandboxResetPending(),
+        );
       } catch (error) {
         if (sendResolvedDomainError(reply, error, DOCUMENT_ROUTE_MESSAGES)) {
           return;
@@ -306,31 +321,36 @@ export function registerDocumentRoutes(app: FastifyInstance, db: CoreDatabase): 
     async (request, reply) => {
       const documentId = request.params.documentId.trim();
       try {
-        const current = db.getDocumentById(documentId);
-        if (current.status !== 'preview_requested' && current.status !== 'export_requested') {
-          return reply.code(409).send({
-            code: 'INVALID_TRANSITION',
-            message: 'Document transition is not allowed.',
-          });
-        }
+        return await withSandboxIntakeOperation(
+          async () => {
+            const current = db.getDocumentById(documentId);
+            if (current.status !== 'preview_requested' && current.status !== 'export_requested') {
+              return reply.code(409).send({
+                code: 'INVALID_TRANSITION',
+                message: 'Document transition is not allowed.',
+              });
+            }
 
-        if (current.status === 'preview_requested') {
-          db.requestDocumentExport(documentId);
-        }
+            if (current.status === 'preview_requested') {
+              db.requestDocumentExport(documentId);
+            }
 
-        let exportPhaseComplete = false;
-        try {
-          await exportDocumentToFilesystem(db, documentId);
-          exportPhaseComplete = true;
-          const exported = db.completeDocumentExport(documentId);
-          publishTvQueueUpdate(db);
-          return exported;
-        } catch (exportError) {
-          if (!exportPhaseComplete) {
-            db.rollbackDocumentExportRequest(documentId);
-          }
-          throw exportError;
-        }
+            let exportPhaseComplete = false;
+            try {
+              await exportDocumentToFilesystem(db, documentId);
+              exportPhaseComplete = true;
+              const exported = db.completeDocumentExport(documentId);
+              publishTvQueueUpdate(db);
+              return exported;
+            } catch (exportError) {
+              if (!exportPhaseComplete) {
+                db.rollbackDocumentExportRequest(documentId);
+              }
+              throw exportError;
+            }
+          },
+          () => db.isSandboxResetPending(),
+        );
       } catch (error) {
         if (sendResolvedDomainError(reply, error, DOCUMENT_ROUTE_MESSAGES)) {
           return;
