@@ -37,6 +37,7 @@ export type TlsStartPhase = 'offer' | 'hostname' | 'lease';
 export type TlsNetworkState = {
   startPhase: TlsStartPhase;
   nameMode: TlsNameMode;
+  certificateMode: 'managed' | 'custom';
   customLabel: string;
   customDomain: string;
   ipv4Reserved: boolean;
@@ -56,6 +57,7 @@ export type TlsNetworkState = {
 const INITIAL: TlsNetworkState = {
   startPhase: 'offer',
   nameMode: 'generated',
+  certificateMode: 'managed',
   customLabel: '',
   customDomain: '',
   ipv4Reserved: false,
@@ -79,7 +81,10 @@ export type TlsNetworkController = {
   back(): void;
   patchDraft(
     patch: Partial<
-      Pick<TlsNetworkState, 'nameMode' | 'customLabel' | 'customDomain' | 'ipv4Reserved'>
+      Pick<
+        TlsNetworkState,
+        'nameMode' | 'certificateMode' | 'customLabel' | 'customDomain' | 'ipv4Reserved'
+      >
     >,
   ): void;
   advanceHostname(): void;
@@ -342,7 +347,7 @@ export function createTlsNetworkController(deps: {
       set({ busy: true, error: null });
       try {
         const result = await deps.api.prepareHostTls({
-          mode: tlsModeForNameMode(state.nameMode),
+          mode: tlsModeForNameMode(state.nameMode, state.certificateMode),
           hostname: tlsPrepareHostname(state),
           lanIp,
         });

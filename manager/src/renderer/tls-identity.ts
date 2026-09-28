@@ -18,8 +18,11 @@ export function normalizeTlsHostnameInput(value: string): string {
   return value.trim().toLowerCase().replace(/\.$/, '');
 }
 
-export function tlsModeForNameMode(nameMode: TlsNameMode): TlsMode {
-  return nameMode === 'domain' ? 'custom' : 'managed';
+export function tlsModeForNameMode(
+  nameMode: TlsNameMode,
+  certificateMode: TlsMode = 'managed',
+): TlsMode {
+  return nameMode === 'domain' ? certificateMode : 'managed';
 }
 
 export function tlsNameValid(input: {
@@ -112,6 +115,30 @@ export function operatorZoneMailBody(input: {
         ]
       : []),
     'Der abschließende Punkt kennzeichnet einen vollständigen DNS-Namen. Falls Ihr DNS-Anbieter diesen im Eingabeformular nicht akzeptiert, lassen Sie nur den letzten Punkt weg.',
+  ].join('\n');
+}
+
+export function tlsUsesOperatorDns(hostname: string): boolean {
+  return hostname.endsWith(`.${TLS_OPERATOR_ZONE}`);
+}
+
+export function practiceDnsBody(input: {
+  hostname: string;
+  lanIp: string;
+  installationDomain?: string | null;
+  portalHostname?: string | null;
+  acmeCnameTarget?: string | null;
+}): string {
+  return [
+    practiceARecordBody(input.hostname, input.lanIp),
+    ...(input.portalHostname
+      ? [practiceARecordBody(input.portalHostname, '<PORTAL-ZIEL-IP>')]
+      : []),
+    ...(input.acmeCnameTarget
+      ? [
+          `_acme-challenge.${input.installationDomain || input.hostname}.   CNAME  ${input.acmeCnameTarget.replace(/\.$/, '')}.`,
+        ]
+      : []),
   ].join('\n');
 }
 

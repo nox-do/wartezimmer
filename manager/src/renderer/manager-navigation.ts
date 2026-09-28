@@ -4,7 +4,9 @@ import type { HostStatus } from '../shared/host-status.js';
 export type WizardPresentation = 'fullscreen' | 'embedded';
 
 export function defaultWizardPresentation(status: HostStatus | null): WizardPresentation {
-  return status?.installation.kind === 'healthy' ? 'embedded' : 'fullscreen';
+  return status?.installation.kind === 'healthy' || status?.installation.kind === 'starting'
+    ? 'embedded'
+    : 'fullscreen';
 }
 
 export function shouldAutoStartFullscreenWizard(status: HostStatus | null): boolean {

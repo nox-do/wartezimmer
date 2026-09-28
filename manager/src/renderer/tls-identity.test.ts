@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { operatorZoneMailBody, tlsNameValid, tlsPrepareHostname } from './tls-identity.js';
+import {
+  operatorZoneMailBody,
+  tlsNameValid,
+  tlsPrepareHostname,
+  practiceDnsBody,
+  tlsModeForNameMode,
+  tlsUsesOperatorDns,
+} from './tls-identity.js';
 
 test('tlsNameValid accepts generated and rejects reserved labels', () => {
   assert.equal(tlsNameValid({ nameMode: 'generated', customLabel: '', customDomain: '' }), true);
@@ -55,4 +62,27 @@ test('operatorZoneMailBody redacts the token after consumption', () => {
   assert.match(consumed, /Zertifikatsname: +\*\.7fk3m2\.lan\.notaus\.de/);
   assert.match(consumed, /_acme-challenge\.7fk3m2\.lan\.notaus\.de\./);
   assert.match(consumed, /CNAME {2}uuid\.auth\.acme-dns\.io\./);
+});
+
+test('own-domain ACME DNS instructions include staff, portal and the base-domain challenge', () => {
+  const body = practiceDnsBody({
+    hostname: 'staff.flow.example.org',
+    installationDomain: 'flow.example.org',
+    portalHostname: 'portal.flow.example.org',
+    lanIp: '192.168.1.10',
+    acmeCnameTarget: 'id.auth.acme-dns.io.',
+  });
+  assert.match(body, /staff\.flow\.example\.org\. +A +192\.168\.1\.10/);
+  assert.match(body, /portal\.flow\.example\.org\. +A +<PORTAL-ZIEL-IP>/);
+  assert.match(body, /_acme-challenge\.flow\.example\.org\. +CNAME +id\.auth\.acme-dns\.io\./);
+  assert.doesNotMatch(body, /_acme-challenge\.staff/);
+  assert.equal(tlsUsesOperatorDns('staff.flow.example.org'), false);
+  assert.equal(tlsUsesOperatorDns('staff.example.lan.notaus.de'), true);
+  assert.equal(tlsModeForNameMode('domain'), 'managed');
+  assert.equal(tlsModeForNameMode('domain', 'custom'), 'custom');
+  assert.equal(tlsModeForNameMode('generated', 'custom'), 'managed');
+  assert.equal(
+    practiceDnsBody({ hostname: 'flow.example.org', lanIp: '192.168.1.10' }),
+    'flow.example.org.                   A      192.168.1.10',
+  );
 });

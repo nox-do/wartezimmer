@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import {
   resolveBusinessDay as defaultResolveBusinessDay,
   type ResolveBusinessDay,
+  type ReturnToWaitingDestination,
 } from '@praxis-flow/flow-core';
 import { createCatalogRepository } from './catalog-repository.js';
 import { createVisitRepository } from './visit-repository.js';
@@ -16,6 +17,7 @@ export function createRuntime(
   options: {
     testHooks?: { failAfter?: string };
     resolveBusinessDay?: ResolveBusinessDay;
+    returnToWaitingDestination?: ReturnToWaitingDestination;
   } = {},
 ) {
   const maybeFail = createFailureInjector(options.testHooks?.failAfter);
@@ -29,6 +31,7 @@ export function createRuntime(
     visitRepository,
     maybeFail,
     resolveBusinessDay,
+    returnToWaitingDestination: options.returnToWaitingDestination,
   });
   const adminService = createAdminService({ db, catalogRepository, maybeFail });
 

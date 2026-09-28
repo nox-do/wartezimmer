@@ -240,6 +240,7 @@ test('installation state controls wizard presentation and auto-start', () => {
   for (const kind of [
     'fresh',
     'healthy',
+    'starting',
     'stopped',
     'needs-reinstall',
     'docker-unavailable',
@@ -270,6 +271,9 @@ test('installation state controls wizard presentation and auto-start', () => {
       shouldAutoStartFullscreenWizard(status),
       kind === 'fresh' || kind === 'installing',
     );
-    assert.equal(defaultWizardPresentation(status), kind === 'healthy' ? 'embedded' : 'fullscreen');
+    assert.equal(
+      defaultWizardPresentation(status),
+      kind === 'healthy' || kind === 'starting' ? 'embedded' : 'fullscreen',
+    );
   }
 });

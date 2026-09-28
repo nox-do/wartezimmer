@@ -69,6 +69,17 @@ test('setupEntryTone classifies maintenance when setup is complete', () => {
   assert.equal(isSetupEntryStatus(status), false);
 });
 
+test('starting services show a transient status without a reinstall action', () => {
+  const status = minimalHostStatus({ installation: { kind: 'starting' } });
+  const tone = setupEntryTone(status);
+  const content = setupEntryContent(status, tone);
+  assert.equal(tone, 'starting');
+  assert.equal(isSetupEntryStatus(status), true);
+  assert.match(content.title, /gestartet/);
+  assert.equal(content.startButtonLabel, null);
+  assert.deepEqual(setupChecklistItems(status), []);
+});
+
 test('setupEntryContent keeps completed maintenance state action-free', () => {
   const content = setupEntryContent(minimalHostStatus(), 'maintenance');
   assert.equal(content.startButtonLabel, null);

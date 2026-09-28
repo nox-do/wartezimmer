@@ -107,6 +107,60 @@ test('optional proxy health does not affect the healthy installation gate', () =
   assert.equal(state.kind, 'healthy');
 });
 
+test('a starting core healthcheck is a transient state, not a reinstall requirement', () => {
+  const state = deriveInstallationState({
+    docker,
+    lifecycle,
+    compose: {
+      running: false,
+      services: [
+        healthyCompose.services[0]!,
+        {
+          name: 'project-sandbox-1',
+          service: 'sandbox',
+          state: 'running',
+          health: 'starting',
+        },
+      ],
+    },
+    releaseConfigured: true,
+    maintenanceAuthenticated: true,
+  });
+  assert.deepEqual(state, { kind: 'starting' });
+});
+
+test('an unhealthy core service or restart loop still requires repair', () => {
+  for (const stateName of ['running', 'restarting']) {
+    const state = deriveInstallationState({
+      docker,
+      lifecycle,
+      compose: {
+        running: false,
+        services: [
+          healthyCompose.services[0]!,
+          {
+            name: 'project-sandbox-1',
+            service: 'sandbox',
+            state: stateName,
+            health: 'unhealthy',
+          },
+        ],
+      },
+      releaseConfigured: true,
+      maintenanceAuthenticated: true,
+    });
+    assert.deepEqual(state, {
+      kind: 'needs-reinstall',
+      reasons: [
+        {
+          code: 'core-stack-unhealthy',
+          message: 'App und Sandbox sind nicht gemeinsam gesund gestartet.',
+        },
+      ],
+    });
+  }
+});
+
 test('a configured installation with no running core services is stopped', () => {
   const state = deriveInstallationState({
     docker,

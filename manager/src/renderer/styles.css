@@ -235,6 +235,15 @@ body {
   border-radius: 10px;
 }
 
+.setup-entry.is-starting {
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
+  background: var(--banner-warn);
+}
+
+.setup-entry.is-starting .setup-entry-eyebrow {
+  color: var(--warn);
+}
+
 .setup-entry-eyebrow {
   margin: 0 0 0.2rem;
   color: var(--accent);

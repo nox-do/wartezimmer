@@ -80,8 +80,17 @@ for (const prepareCase of [
     } as const,
   },
   {
-    name: 'custom domain',
+    name: 'own domain with automatic ACME',
     draft: { nameMode: 'domain' as const, customDomain: 'Flow.Praxis-Meyer.de.' },
+    expected: { mode: 'managed', hostname: 'flow.praxis-meyer.de', lanIp: '192.168.1.10' } as const,
+  },
+  {
+    name: 'custom domain',
+    draft: {
+      nameMode: 'domain' as const,
+      certificateMode: 'custom' as const,
+      customDomain: 'Flow.Praxis-Meyer.de.',
+    },
     expected: {
       mode: 'custom',
       hostname: 'flow.praxis-meyer.de',

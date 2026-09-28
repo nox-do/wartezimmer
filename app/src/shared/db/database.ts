@@ -1040,7 +1040,16 @@ export class CoreDatabase {
     return this.withTransaction('checkOutRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
-      const transition = completeVisit(getFlowCoreRuntime(this.db), visitId, actingRoomId, actorId);
+      const transition = completeVisit(
+        getFlowCoreRuntime(this.db),
+        visitId,
+        actingRoomId,
+        actorId,
+        {
+          settings: this.getOpsSettings(),
+          listQueue: () => this.listQueue(),
+        },
+      );
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
         fromStatus: transition.fromStatus,

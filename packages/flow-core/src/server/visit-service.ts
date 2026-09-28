@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import type {
   Catalog,
   ResolveBusinessDay,
+  ReturnToWaitingDestination,
   TransitionAction,
   Visit,
   VisitEvent,
@@ -62,6 +63,8 @@ type CheckInBody = {
 };
 
 type VisitTransitionContext = TransitionRequestBody & {
+  /** Host-Pruefung des tatsaechlichen Folgeziels, innerhalb der Transition-Transaktion. */
+  assertJourneyDestination?: (locationId: string) => void;
   /** Host-injizierte Audit-Identitaet — nicht aus HTTP-Body. */
   actorId?: string;
 };
@@ -85,6 +88,7 @@ export function createVisitService(params: {
   visitRepository: VisitRepository;
   maybeFail: (label: string) => void;
   resolveBusinessDay: ResolveBusinessDay;
+  returnToWaitingDestination?: ReturnToWaitingDestination;
 }) {
   const { db, catalogRepository, visitRepository, maybeFail, resolveBusinessDay } = params;
   const { loadCatalog, stepsForTemplate } = catalogRepository;
@@ -102,8 +106,11 @@ export function createVisitService(params: {
     patch: JourneyProgressionPatch,
     steps: ReturnType<typeof stepsForTemplate>,
     catalog: Catalog,
-    actorId?: string,
+    context: VisitTransitionContext = {},
   ): VisitView => {
+    if ('targetLocationId' in patch && patch.targetLocationId) {
+      context.assertJourneyDestination?.(patch.targetLocationId);
+    }
     maybeFail('journeyProgression:update');
     updateVisit(current, patch);
     const afterRecord = visitRecordById(visitId)!;
@@ -129,7 +136,7 @@ export function createVisitService(params: {
           fromLocationName: fromLocation?.name,
           toLocationName: toLocation?.name,
         }),
-        { actorId },
+        { actorId: context.actorId },
       );
     } else if ('journeyStepIndex' in patch) {
       addEvent(
@@ -149,7 +156,7 @@ export function createVisitService(params: {
           fromLocationName: fromLocation?.name,
           toLocationName: toLocation?.name,
         }),
-        { actorId },
+        { actorId: context.actorId },
       );
     } else if ('journeyStepCompletedAt' in patch) {
       addEvent(
@@ -163,7 +170,7 @@ export function createVisitService(params: {
         afterRecord.queueId,
         'system',
         `Journey Schritt ${journeyStepLabel(steps, current.journeyStepIndex) ?? ''} erledigt`.trim(),
-        { actorId },
+        { actorId: context.actorId },
       );
     }
     return after;
@@ -174,7 +181,7 @@ export function createVisitService(params: {
     action: TransitionAction,
     completedAt: string,
     catalog: Catalog,
-    actorId?: string,
+    context: VisitTransitionContext = {},
   ): VisitView | undefined => {
     const record = visitRecordById(visitId);
     if (!record?.journeyTemplateId || record.journeyStepIndex == null) {
@@ -187,14 +194,14 @@ export function createVisitService(params: {
       locations: catalog.locations,
     });
     if (!journeyPatch) return toVisitView(record, catalog);
-    return applyJourneyPatch(visitId, record, journeyPatch, steps, catalog, actorId);
+    return applyJourneyPatch(visitId, record, journeyPatch, steps, catalog, context);
   };
 
   const startNextJourneyStep = (
     visitId: string,
     catalog: Catalog,
     targetLocationId?: string,
-    actorId?: string,
+    context: VisitTransitionContext = {},
   ): VisitView | undefined => {
     const record = visitRecordById(visitId);
     if (
@@ -220,7 +227,7 @@ export function createVisitService(params: {
         throw new Error('START_NEXT_JOURNEY_STEP_NOT_ALLOWED');
       }
 
-      const after = applyJourneyPatch(visitId, current, journeyPatch, steps, catalog, actorId);
+      const after = applyJourneyPatch(visitId, current, journeyPatch, steps, catalog, context);
       if (
         journeyPatch.journeyState === 'completed' ||
         !('journeyStepCompletedAt' in journeyPatch) ||
@@ -464,7 +471,7 @@ export function createVisitService(params: {
           visitId,
           catalog,
           context.targetLocationId ?? undefined,
-          context.actorId,
+          context,
         );
       }
       if (action === 'call') {
@@ -596,7 +603,7 @@ export function createVisitService(params: {
           null,
           { actorId: context.actorId },
         );
-        const progressed = applyJourneyProgression(visitId, action, now, catalog, context.actorId);
+        const progressed = applyJourneyProgression(visitId, action, now, catalog, context);
         // Terminal done mid-Journey: abandon (Cancel-Parität). Normales Journey-Ende
         // (completedWhen: done, letzter Hop) setzt vorher journeyState=completed.
         const afterDone = visitRecordById(visitId);
@@ -621,7 +628,11 @@ export function createVisitService(params: {
         }
         return progressed;
       } else if (action === 'return_to_waiting') {
-        const returnPatch = resolveReturnToWaitingVisitPatch(record, catalog);
+        const returnPatch = resolveReturnToWaitingVisitPatch(
+          record,
+          catalog,
+          params.returnToWaitingDestination,
+        );
         const nextStatus = returnPatch.status ?? record.status;
         const nextLastKnown = returnPatch.lastKnownLocationId ?? record.lastKnownLocationId;
         const nextQueueId = returnPatch.queueId ?? record.queueId;
@@ -644,7 +655,7 @@ export function createVisitService(params: {
       } else {
         throw new Error('UNKNOWN_ACTION');
       }
-      return applyJourneyProgression(visitId, action, now, catalog, context.actorId);
+      return applyJourneyProgression(visitId, action, now, catalog, context);
     });
 
   const redirect = (

@@ -396,13 +396,19 @@ function buildTlsIdentity(input: {
   const label = installationDomain.endsWith(suffix)
     ? installationDomain.slice(0, -suffix.length)
     : '';
-  if (!label || label.includes('.')) {
+  const inOperatorZone =
+    installationDomain === input.operatorZone || installationDomain.endsWith(suffix);
+  if (inOperatorZone && (!label || label.includes('.'))) {
     throw new SetupApiValidationError(
       `Managed TLS erfordert genau ein DNS-Label unter ${input.operatorZone}.`,
     );
   }
-  if (RESERVED_OPERATOR_LABELS.has(label)) {
+  if (inOperatorZone && RESERVED_OPERATOR_LABELS.has(label)) {
     throw new SetupApiValidationError(`Das DNS-Label ${label} ist reserviert.`);
+  }
+  // Leave room for the longest generated DNS label (portal / _acme-challenge).
+  if (`_acme-challenge.${installationDomain}`.length > 253) {
+    throw new SetupApiValidationError('Die Domain ist für die ACME-Subdomain zu lang.');
   }
   const staffHostname = `staff.${installationDomain}`;
   return {
@@ -733,7 +739,7 @@ export function validateCustomCertificate(
   }
   const certPublic = certificate.publicKey.export({ type: 'spki', format: 'der' });
   const keyPublic = crypto.createPublicKey(privateKey).export({ type: 'spki', format: 'der' });
-  if (!crypto.timingSafeEqual(certPublic, keyPublic)) {
+  if (certPublic.length !== keyPublic.length || !crypto.timingSafeEqual(certPublic, keyPublic)) {
     throw new TlsCertificateError('cert-name', 'Privater Schlüssel passt nicht zum Zertifikat.');
   }
   if (!certificate.checkHost(hostname)) {
@@ -1460,8 +1466,9 @@ export async function renewHostTls(
       current.hostname,
     );
     const paths = ensureProxyTlsPaths(ctx.home);
-    writeSecretFileAtomically(paths.customFullchain, `${input.fullchainPem.trim()}\n`);
-    writeSecretFileAtomically(paths.customPrivateKey, `${input.privateKeyPem.trim()}\n`);
+    // Keep the working pair until the replacement passes the live HTTPS checks.
+    const previousFullchain = fs.readFileSync(paths.customFullchain, 'utf8');
+    const previousPrivateKey = fs.readFileSync(paths.customPrivateKey, 'utf8');
     const candidate = {
       ...current,
       state: 'active' as const,
@@ -1469,15 +1476,31 @@ export async function renewHostTls(
       lastError: null,
       applyReady: true,
     };
-    writeGeneratedTlsCaddyfile(ctx.home, candidate, env);
-    if (!fakeRuntimeEnabled(env)) await (deps.reloadProxy ?? reloadProxyDefault)(ctx);
-    const checked = await runChecks(readEnvMap(envPath), current.hostname, deps);
-    if (!allChecksPass(checked.checks))
-      throw new TlsRuntimeUnavailableError(
-        'Erneuertes Custom-Zertifikat besteht die lokalen Prüfungen nicht.',
-      );
-    persistStatus(ctx, candidate);
-    return { tls: candidate, checks: checked.checks };
+    try {
+      writeSecretFileAtomically(paths.customFullchain, `${input.fullchainPem.trim()}\n`);
+      writeSecretFileAtomically(paths.customPrivateKey, `${input.privateKeyPem.trim()}\n`);
+      writeGeneratedTlsCaddyfile(ctx.home, candidate, env);
+      if (!fakeRuntimeEnabled(env)) await (deps.reloadProxy ?? reloadProxyDefault)(ctx);
+      const checked = await runChecks(readEnvMap(envPath), current.hostname, deps);
+      persistStatus(ctx, candidate);
+      return { tls: candidate, checks: checked.checks };
+    } catch (error) {
+      let message = error instanceof Error ? error.message : String(error);
+      try {
+        writeSecretFileAtomically(paths.customFullchain, previousFullchain);
+        writeSecretFileAtomically(paths.customPrivateKey, previousPrivateKey);
+        writeGeneratedTlsCaddyfile(ctx.home, current, env);
+        if (!fakeRuntimeEnabled(env)) await (deps.reloadProxy ?? reloadProxyDefault)(ctx);
+      } catch (rollbackError) {
+        message += ` Wiederherstellung fehlgeschlagen: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`;
+      }
+      persistStatus(ctx, {
+        ...current,
+        state: 'degraded',
+        lastError: { class: 'cert-name', message },
+      });
+      throw new TlsRuntimeUnavailableError(message);
+    }
   }
   const retry = { ...current, state: 'dns-verified' as const, applyReady: false, lastError: null };
   persistStatus(ctx, retry);

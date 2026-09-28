@@ -263,6 +263,10 @@ export function callMfaTicket(visitId: string) {
   // Call announcement reachability is server-authoritative (presence registry).
   // UI may warn via SSE status; do not pre-block the request here.
   const item = queueItem(visitId);
+  if (item?.journeyStepCompletedAt && canMfaCallTransition(item)) {
+    // Ohne manuelle Raumwahl gilt das Ziel des naechsten Journey-Schritts.
+    return runMfaQueueAction(visitId, () => callVisit(visitId));
+  }
   const callTargetOptions = mfaCallRoomTargetOptions();
   const room = resolveCallRoomTarget(item, callTargetOptions);
   if (!item || !canMfaCallVisit(item, mfaPracticeContext.practiceRooms, room?.roomId)) {

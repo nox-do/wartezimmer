@@ -392,7 +392,7 @@ export type TlsStatus = {
   mode: TlsMode | null;
   /** Compatibility alias for staffHostname while existing Manager clients migrate. */
   hostname: string | null;
-  /** Managed TLS parent below the operator zone; null for custom and legacy identities. */
+  /** Managed TLS parent in the operator zone or an own domain; null for PEM and legacy identities. */
   installationDomain?: string | null;
   /** Canonical Staff/device origin. Equals hostname for compatibility. */
   staffHostname?: string | null;
@@ -729,6 +729,7 @@ export type InstallationState =
     }
   | { kind: 'fresh' }
   | { kind: 'installing'; operation: InstallOperationSummary }
+  | { kind: 'starting' }
   | { kind: 'healthy'; updateEligible: true }
   | { kind: 'stopped' }
   | { kind: 'needs-reinstall'; reasons: InstallationReason[] };

@@ -137,13 +137,22 @@ export function resolveReturnToWaitingTargetLocationId(
   return visit.targetLocationId ?? rule?.initialTargetLocationId;
 }
 
+export type ReturnToWaitingDestination = {
+  locationId: string;
+  queueId: string;
+};
+
 /**
- * Patch fuer return_to_waiting: Warteliste + Wartebereich aus RoutingRule, Aufruf-Timestamps geloescht.
+ * Patch fuer return_to_waiting: festes Host-Ziel, sonst RoutingRule als Legacy-Fallback.
  * Bewusst kein Redirect — Journey bleibt active (Patient verlaesst nur den Aufruf-Zyklus, nicht die Route).
  */
-export function resolveReturnToWaitingVisitPatch(visit: Visit, catalog: Catalog): VisitPatch {
+export function resolveReturnToWaitingVisitPatch(
+  visit: Visit,
+  catalog: Catalog,
+  destination?: ReturnToWaitingDestination,
+): VisitPatch {
   const rule = catalog.routingRules.find((item) => item.id === visit.appliedRoutingRuleId);
-  const waitingQueueId = rule?.initialQueueId ?? visit.queueId;
+  const waitingQueueId = destination?.queueId ?? rule?.initialQueueId ?? visit.queueId;
   const waitingQueue = catalog.queues.find((item) => item.id === waitingQueueId);
   const waitingQueueLocationId =
     waitingQueue?.homeLocationId &&
@@ -154,7 +163,8 @@ export function resolveReturnToWaitingVisitPatch(visit: Visit, catalog: Catalog)
   // "Zurueck ins Wartezimmer" is a physical staff action. Prefer the queue's
   // waiting area over the rule's original check-in location (for M that is the
   // entrance), otherwise a returned assistance ticket looks like a new terminal call.
-  const waitingLocationId = waitingQueueLocationId ?? rule?.initialLastKnownLocationId;
+  const waitingLocationId =
+    destination?.locationId ?? waitingQueueLocationId ?? rule?.initialLastKnownLocationId;
   const queueMovementMode =
     waitingQueue?.defaultMovementMode === 'self_go'
       ? 'call'

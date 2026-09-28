@@ -7,7 +7,9 @@
     mailtoHref,
     operatorMailSubject,
     operatorZoneMailBody,
-    practiceARecordBody,
+    practiceDnsBody,
+    tlsUsesOperatorDns,
+    tlsPrepareHostname,
     tlsNameValid,
   } from './tls-identity.js';
   import {
@@ -68,6 +70,9 @@
       status.network.currentLanCandidates.find((item) => item.address === lanIp) ??
       null,
   );
+  const ownDns = $derived(Boolean(tls?.hostname && !tlsUsesOperatorDns(tls.hostname)));
+  const dnsBody = $derived(tls?.hostname && lanIp ? practiceDnsBody({ ...tls, hostname: tls.hostname, lanIp }) : '');
+  const draftDomain = $derived(tlsPrepareHostname(state) || '…');
   const mail = $derived(mailModel(tls, state.operatorRequest, lanIp));
 
   function mailModel(
@@ -155,7 +160,7 @@
         disabled={busy}
         onchange={() => controller.patchDraft({ nameMode: 'domain' })}
       />
-      <span>Eigene Domain mit vorhandenem Zertifikat (PEM)</span>
+      <span>Eigene Domain</span>
     </label>
     {#if state.nameMode === 'domain'}
       <input
@@ -165,6 +170,31 @@
         placeholder="flow.praxis-meyer.de"
         oninput={(event) => controller.patchDraft({ customDomain: event.currentTarget.value })}
       />
+      <label class="wizard-radio">
+        <input type="radio" name="tls-certificate-mode" checked={state.certificateMode === 'managed'} disabled={busy}
+          onchange={() => controller.patchDraft({ certificateMode: 'managed' })} />
+        <span>Automatisch mit Let's Encrypt (ACME, empfohlen)</span>
+      </label>
+      <label class="wizard-radio">
+        <input type="radio" name="tls-certificate-mode" checked={state.certificateMode === 'custom'} disabled={busy}
+          onchange={() => controller.patchDraft({ certificateMode: 'custom' })} />
+        <span>Vorhandenes Zertifikat einlesen (PEM)</span>
+      </label>
+      {#if state.certificateMode === 'managed'}
+        <p class="hint">Eine eigene Unterdomain wie <code>flow.praxis-meyer.de</code> verwenden.
+          Einmal A- und CNAME-Einträge bei Ihrem DNS-Anbieter setzen; Ausstellung und Erneuerung laufen danach automatisch.
+          Keine Portweiterleitung erforderlich.</p>
+        {#if tlsNameValid(state)}
+          <p class="hint">Praxisgeräte: <code>staff.{draftDomain}</code><br />
+            Separater Portalzugang: <code>portal.{draftDomain}</code> (später aktivieren)<br />
+            Zertifikat: <code>*.{draftDomain}</code>. Die eingegebene Basisdomain selbst wird nicht als Geräteadresse verwendet.</p>
+        {/if}
+      {:else}
+        <p class="hint">Die eingegebene Domain ist die vollständige Adresse für Praxisgeräte.
+          Das Zertifikat muss genau diesen Namen abdecken; ein Wildcard-Zertifikat gilt nur für eine zusätzliche Namensebene.
+          Vollständige PEM-Zertifikatskette und passenden unverschlüsselten privaten Schlüssel bereithalten.
+          Erneuerung erfolgt manuell. Ein separater Portalzugang wird mit PEM derzeit nicht unterstützt.</p>
+      {/if}
     {/if}
   </fieldset>
   <div class="actions-row">
@@ -205,7 +235,17 @@
     <p class="hint hint--preview"><code>https://{tls.hostname}</code></p>
   {/if}
   {#if tlsShowsDnsWaitCopy(tls)}
-    <p class="hint">{tlsDnsWaitCopy(tls.mode)}</p>
+    <p class="hint">{ownDns && tls.mode === 'managed' ? 'A- und ACME-CNAME-Einträge bei Ihrem DNS-Anbieter anlegen. Die DNS-Übernahme kann bis zu 48 Stunden dauern. HTTP bleibt erreichbar.' : tlsDnsWaitCopy(tls.mode)}</p>
+  {/if}
+
+  {#if tls.mode === 'custom'}
+    <p class="hint">Benötigter Zertifikatsname: <code>{tls.hostname}</code> (SAN oder passender Wildcard).
+      PEM-Kette und passender unverschlüsselter privater Schlüssel erforderlich. Manuelle Erneuerung;
+      kein separater Portalzugang mit PEM.</p>
+  {:else if tls.wildcardCertificateName}
+    <p class="hint">Automatisches Zertifikat: <code>{tls.wildcardCertificateName}</code><br />
+      Praxisgeräte: <code>{tls.staffHostname}</code><br />
+      Separater Portalzugang: <code>{tls.portalHostname}</code> (eigene Ziel-IP und spätere Aktivierung erforderlich).</p>
   {/if}
 
   {#if tls.cutoverApplied}
@@ -330,7 +370,7 @@
             Zertifikat einlesen (PEM)
           </button>
         {/if}
-        <button type="button" disabled={busy} onclick={() => void controller.obtainOrCheck()}>
+        <button type="button" disabled={busy || (tls.mode === 'custom' && !tls.certificate)} onclick={() => void controller.obtainOrCheck()}>
           {tls.mode === 'custom' ? 'Lokal prüfen' : 'Zertifikat anfordern'}
         </button>
         <button type="button" class="btn-secondary" disabled={busy} onclick={() => controller.reset()}>
@@ -343,19 +383,17 @@
           : 'Holt das Zertifikat, während die Praxis weiter über HTTP arbeitet. Umstellen ist ein eigener Schritt.'}
       </p>
     {:else if tlsCanVerifyDns(tls)}
-      {#if tls.mode === 'custom'}
-        <div class="actions-row">
+      <div class="actions-row tls-dns-actions">
+        {#if tls.mode === 'custom'}
           <button
             type="button"
             class="btn-secondary"
             disabled={busy}
             onclick={() => void controller.stageCustomCertificate()}
           >
-            {state.customPemStaged ? 'Zertifikat erneut einlesen (PEM)' : 'Zertifikat einlesen (PEM)'}
+            {tls.certificate ? 'Zertifikat erneut einlesen (PEM)' : 'Zertifikat einlesen (PEM)'}
           </button>
-        </div>
-      {/if}
-      <div class="actions-row">
+        {/if}
         <button type="button" disabled={busy} onclick={() => void controller.verifyDns()}>DNS prüfen</button>
         <button type="button" class="btn-secondary" disabled={busy} onclick={() => controller.reset()}>
           HTTPS-Vorbereitung verwerfen
@@ -363,19 +401,25 @@
       </div>
     {/if}
 
-    {#if tls.mode === 'custom' && tls.hostname && lanIp}
+    {#if ownDns && tls.hostname && lanIp}
       <details
         open={state.revealOperatorRecords}
         ontoggle={(event) =>
           controller.setRevealOperatorRecords(event.currentTarget.open)}
       >
         <summary>DNS-Einträge anzeigen</summary>
-        <textarea class="wizard-input is-monospace is-compact" readonly>{practiceARecordBody(tls.hostname, lanIp)}</textarea>
+        {#if tls.portalHostname}
+          <p class="hint">Für den späteren separaten Portalzugang <code>&lt;PORTAL-ZIEL-IP&gt;</code> durch die mit Ihrer Praxis-IT festgelegte private IPv4 ersetzen. Der DNS-Eintrag allein aktiviert den Zugang nicht.</p>
+        {/if}
+        {#if tls.mode === 'managed'}
+          <p class="hint">Den ACME-CNAME dauerhaft beibehalten: Er ermöglicht auch die automatische Erneuerung.</p>
+        {/if}
+        <textarea class="wizard-input is-monospace is-compact" readonly>{dnsBody}</textarea>
         <div class="actions-row">
           <button
             type="button"
             class="btn-secondary"
-            onclick={() => void navigator.clipboard.writeText(practiceARecordBody(tls.hostname ?? '', lanIp))}
+            onclick={() => void navigator.clipboard.writeText(dnsBody)}
           >
             In Zwischenablage kopieren
           </button>
@@ -406,3 +450,9 @@
 {#if tlsNetworkShowsGenericErrorFooter(tls, state.error)}
   <p class="error">{state.error}</p>
 {/if}
+
+<style>
+  .tls-dns-actions {
+    margin-block: 1rem;
+  }
+</style>

@@ -354,18 +354,19 @@ test('arriveVisit returns the persisted status after automatic journey progressi
   assert.equal(listQueue()[0]?.status, 'directed');
 });
 
-test('continueJourneyVisit accepts a DnD target for the next hop', () => {
+test('callVisit respects the chosen room after returning a completed Journey step to waiting', () => {
   const { db, settings, visitId, runtime, listQueue } = setupComplexVisitFlow();
 
   callVisit(db, runtime, settings, listQueue, visitId, 'mfa-tresen', 'Empfang');
   arriveVisit(db, runtime, visitId, 'mfa-tresen');
-  const continued = continueJourneyVisit(runtime, settings, listQueue, visitId, 'mfa-tresen');
+  returnVisitToWaiting(runtime, visitId);
+  const continued = callVisit(db, runtime, settings, listQueue, visitId, 'mfa-tresen');
 
-  assert.deepEqual(continued, { fromStatus: 'in_room', toStatus: 'in_room' });
+  assert.deepEqual(continued, { fromStatus: 'waiting', toStatus: 'called' });
   const visit = runtime.visits().find((entry) => entry.id === visitId);
   assert.equal(visit?.journeyStepIndex, 1);
   assert.equal(visit?.targetLocationId, 'mfa-tresen');
-  assert.equal(visit?.status, 'arrived');
+  assert.equal(visit?.status, 'called');
 });
 
 test('callVisit starts pending next call journey step before calling', () => {
@@ -384,8 +385,8 @@ test('callVisit starts pending next call journey step before calling', () => {
     settings,
     listQueue,
     visitId,
-    'mfa-tresen',
-    'Empfang',
+    undefined,
+    undefined,
     'mfa-session-journey',
   );
   assert.deepEqual(call, { fromStatus: 'in_room', toStatus: 'called' });
@@ -404,6 +405,37 @@ test('callVisit starts pending next call journey step before calling', () => {
   );
   assert.ok(compositeEvents.every((event) => event.actorId === 'mfa-session-journey'));
 });
+
+for (const action of ['call', 'continue', 'arrive'] as const) {
+  test(`Journey ${action} rejects a full next room without changing the visit or events`, () => {
+    const { db, settings, visitId, runtime, listQueue } = setupComplexVisitFlow();
+    callVisit(db, runtime, settings, listQueue, visitId, 'mfa-tresen');
+    if (action !== 'arrive') arriveVisit(db, runtime, visitId);
+    db.prepare("UPDATE journey_steps SET movement_mode = 'self_go' WHERE id = 'step_blut_1'").run();
+    settings.rooms.find((room) => room.roomId === 'labor')!.maxOccupancy = 1;
+    const fullQueue = () => [
+      ...listQueue(),
+      { ...listQueue()[0], id: 'other-patient', roomId: 'labor', status: 'in_room' as const },
+    ];
+    const before = runtime.visits();
+    const events = runtime.events(visitId);
+
+    assert.throws(
+      () => {
+        if (action === 'call') callVisit(db, runtime, settings, fullQueue, visitId);
+        else if (action === 'continue') continueJourneyVisit(runtime, settings, fullQueue, visitId);
+        else
+          arriveVisit(db, runtime, visitId, undefined, undefined, {
+            settings,
+            listQueue: fullQueue,
+          });
+      },
+      (error: unknown) => error instanceof DomainError && error.domainCode === 'ROOM_AT_CAPACITY',
+    );
+    assert.deepEqual(runtime.visits(), before);
+    assert.deepEqual(runtime.events(visitId), events);
+  });
+}
 
 test('callVisit advances to pickup hop without chaining call', () => {
   const db = new DatabaseSync(':memory:');
@@ -463,7 +495,7 @@ test('callVisit advances to pickup hop without chaining call', () => {
   arriveVisit(db, runtime, visitId, 'mfa-tresen');
   assert.ok(runtime.visits().find((entry) => entry.id === visitId)?.journeyStepCompletedAt);
 
-  const advanced = callVisit(db, runtime, settings, listQueue, visitId, 'mfa-tresen', 'Empfang');
+  const advanced = callVisit(db, runtime, settings, listQueue, visitId);
   assert.deepEqual(advanced, { fromStatus: 'in_room', toStatus: 'waiting' });
 
   const visit = runtime.visits().find((entry) => entry.id === visitId);
@@ -697,6 +729,24 @@ test('returnVisitToWaiting: recall emits no journey_abandoned event', () => {
     !runtime.events(visitId).some((event) => event.type === 'journey_abandoned'),
     'recall must not abandon journey',
   );
+});
+
+test('returnVisitToWaiting ignores a different routing-rule queue', () => {
+  const { db, runtime, settings, listQueue, visitId } = setupVisitFlow();
+  callVisit(db, runtime, settings, listQueue, visitId, 'labor', 'Labor');
+  db.exec(`
+    INSERT INTO queues (id, name, home_location_id, type, sort_policy, call_policy, default_movement_mode, active, sort_order)
+    SELECT 'other_queue', 'Andere Warteliste', 'labor', type, sort_policy, call_policy, 'call', active, sort_order
+    FROM queues WHERE id = 'pf_general_queue';
+    UPDATE routing_rules SET initial_queue_id = 'other_queue', initial_last_known_location_id = 'labor'
+    WHERE topic_id = 'blut';
+  `);
+
+  returnVisitToWaiting(runtime, visitId);
+
+  const visit = runtime.visits().find((entry) => entry.id === visitId)!;
+  assert.equal(visit.lastKnownLocationId, 'pf_waiting');
+  assert.equal(visit.queueId, 'pf_general_queue');
 });
 
 test('setVisitAbsent overlays absent_wait_here on waiting visit', () => {

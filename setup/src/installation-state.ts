@@ -25,8 +25,26 @@ function serviceHealthy(compose: ComposeStatus | null, serviceName: 'app' | 'san
   );
 }
 
+function serviceStarting(compose: ComposeStatus | null, serviceName: 'app' | 'sandbox'): boolean {
+  const service = compose?.services.find(
+    (candidate) => (candidate.service || candidate.name) === serviceName,
+  );
+  if (!service) return false;
+  const state = service.state.toLowerCase();
+  const health = service.health?.toLowerCase() ?? '';
+  return state.includes('running') && health === 'starting';
+}
+
 export function coreInstallationServicesHealthy(compose: ComposeStatus | null): boolean {
   return serviceHealthy(compose, 'app') && serviceHealthy(compose, 'sandbox');
+}
+
+function coreInstallationServicesStarting(compose: ComposeStatus | null): boolean {
+  const appReadyOrStarting = serviceHealthy(compose, 'app') || serviceStarting(compose, 'app');
+  const sandboxReadyOrStarting =
+    serviceHealthy(compose, 'sandbox') || serviceStarting(compose, 'sandbox');
+  const transitionObserved = serviceStarting(compose, 'app') || serviceStarting(compose, 'sandbox');
+  return appReadyOrStarting && sandboxReadyOrStarting && transitionObserved;
 }
 
 function reason(code: string, message: string): InstallationReason {
@@ -75,6 +93,13 @@ export function deriveInstallationState(facts: InstallationStateFacts): Installa
   const coreHealthy = coreInstallationServicesHealthy(facts.compose);
   if (reasons.length === 0 && coreHealthy && facts.maintenanceAuthenticated) {
     return { kind: 'healthy', updateEligible: true };
+  }
+
+  // Docker healthchecks already provide the grace period: `starting` is a
+  // normal transition, while a service that exhausts its retries becomes
+  // `unhealthy` and falls through to the repair-required state below.
+  if (reasons.length === 0 && coreInstallationServicesStarting(facts.compose)) {
+    return { kind: 'starting' };
   }
 
   const anyCoreRunning =

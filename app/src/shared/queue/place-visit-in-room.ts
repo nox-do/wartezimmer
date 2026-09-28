@@ -87,7 +87,10 @@ export function placeVisitInRoom(input: {
 
   // H7 can finish the placement while starting the next Journey hop.
   if (visit.status !== 'arrived') {
-    arriveVisit(input.db, input.runtime, input.visitId, input.actingRoomId, input.actorId);
+    arriveVisit(input.db, input.runtime, input.visitId, input.actingRoomId, input.actorId, {
+      settings: input.settings,
+      listQueue: input.listQueue,
+    });
     visit = requireUpdatedVisit(input.runtime, input.visitId);
   }
 

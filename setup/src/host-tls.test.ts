@@ -33,6 +33,7 @@ import {
   TLS_DNS_RESOLVERS_DEFAULT,
   transitionTlsStatus,
   verifyHostTlsDns,
+  validateCustomCertificate,
   wildcardProbeHostname,
 } from './host-tls.js';
 import {
@@ -381,6 +382,78 @@ test('custom PEM is staged inactive and becomes applyReady only after local chec
     assert.equal(checked.tls.state, 'dns-verified');
     assert.equal(checked.tls.applyReady, true);
     assert.equal(readEnvMap(path.join(root, '.env')).get('PROXY_MODE'), 'http');
+    const applied = await applyHostTls(ctx);
+    assert.equal(applied.tls.state, 'active');
+    assert.equal(
+      readEnvMap(path.join(root, '.env')).get('CANONICAL_BASE_URL'),
+      'https://flow.praxis-meyer.de',
+    );
+    const renewed = await renewHostTls(ctx, {
+      fullchainPem: fs.readFileSync(certPath, 'utf8'),
+      privateKeyPem: fs.readFileSync(keyPath, 'utf8'),
+    });
+    assert.equal(renewed.tls.state, 'active');
+    assert.equal(renewed.tls.portalHostname, null);
+    const paths = resolveProxyTlsPaths(root);
+    const oldFullchain = fs.readFileSync(paths.customFullchain, 'utf8');
+    const oldKey = fs.readFileSync(paths.customPrivateKey, 'utf8');
+    const oldStatus = readTlsStatus(readEnvMap(path.join(root, '.env')));
+    // New valid pair; the live chain/connection check can still fail after reload.
+    execFileSync(
+      'openssl',
+      [
+        'req',
+        '-x509',
+        '-newkey',
+        'rsa:2048',
+        '-nodes',
+        '-subj',
+        '/CN=flow.praxis-meyer.de',
+        '-addext',
+        'subjectAltName=DNS:flow.praxis-meyer.de',
+        '-days',
+        '3',
+        '-keyout',
+        keyPath,
+        '-out',
+        certPath,
+      ],
+      { stdio: 'ignore' },
+    );
+    fs.appendFileSync(path.join(root, '.env'), '\nTLS_RUNTIME_FAKE=false\n');
+    let reloads = 0;
+    await assert.rejects(
+      () =>
+        renewHostTls(
+          ctx,
+          {
+            fullchainPem: fs.readFileSync(certPath, 'utf8'),
+            privateKeyPem: fs.readFileSync(keyPath, 'utf8'),
+          },
+          {
+            reloadProxy: async () => {
+              reloads++;
+            },
+            runLocalChecks: async () => {
+              throw new Error('replacement chain not trusted');
+            },
+          },
+        ),
+      /replacement chain not trusted/,
+    );
+    assert.equal(reloads, 2);
+    assert.equal(fs.readFileSync(paths.customFullchain, 'utf8'), oldFullchain);
+    assert.equal(fs.readFileSync(paths.customPrivateKey, 'utf8'), oldKey);
+    const rolledBack = readTlsStatus(readEnvMap(path.join(root, '.env')));
+    assert.deepEqual(rolledBack.certificate, oldStatus.certificate);
+    assert.equal(rolledBack.state, 'degraded');
+    assert.equal(rolledBack.cutoverApplied, true);
+    assert.equal(
+      readEnvMap(path.join(root, '.env')).get('CANONICAL_BASE_URL'),
+      'https://flow.praxis-meyer.de',
+    );
+
+    await assert.rejects(() => resetHostTls(ctx), /Custom|custom|Cutover/);
   });
 });
 
@@ -1140,3 +1213,188 @@ test('check-certificate does not poll ACME readiness', async () => {
     assert.equal(slept, false);
   });
 });
+
+test('own-domain ACME keeps wildcard identity through resume, obtain, apply and renewal', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, {
+      PROXY_ENABLED: 'true',
+      PROXY_MODE: 'http',
+      PROXY_HTTP_PORT: '80',
+      APP_BIND_ADDRESS: '127.0.0.1',
+      CANONICAL_BASE_URL: 'http://192.168.178.112',
+      TLS_RUNTIME_FAKE: 'true',
+    });
+    const ctx = testSetupContext(root);
+    const deps = {
+      randomBytes: ((size: number) =>
+        Buffer.alloc(size, 2)) as typeof import('node:crypto').randomBytes,
+      registerAcmeDns: async () => ({
+        username: 'account',
+        password: 'password',
+        subdomain: 'challenge-id',
+        fulldomain: 'challenge-id.auth.acme-dns.io',
+        serverUrl: 'https://auth.acme-dns.io',
+      }),
+    };
+
+    const prepared = await prepareHostTls(
+      ctx,
+      {
+        mode: 'managed',
+        hostname: 'flow.praxis-meyer.de',
+        lanIp: '192.168.178.112',
+      },
+      deps,
+    );
+    assert.equal(prepared.tls.state, 'awaiting-operator-dns');
+    assert.equal(prepared.tls.installationDomain, 'flow.praxis-meyer.de');
+    assert.equal(prepared.tls.staffHostname, 'staff.flow.praxis-meyer.de');
+    assert.equal(prepared.tls.hostname, 'staff.flow.praxis-meyer.de');
+    assert.equal(prepared.tls.portalHostname, 'portal.flow.praxis-meyer.de');
+    assert.equal(prepared.tls.wildcardCertificateName, '*.flow.praxis-meyer.de');
+    assert.equal(prepared.operatorRequest?.aRecord.name, 'staff.flow.praxis-meyer.de');
+    assert.equal(prepared.operatorRequest?.acmeCname.name, '_acme-challenge.flow.praxis-meyer.de');
+    assert.ok(prepared.operatorRequest?.oneTimeToken);
+    assert.equal(readEnvMap(path.join(root, '.env')).get('PROXY_MODE'), 'http');
+
+    const resumed = await prepareHostTls(
+      ctx,
+      { mode: 'managed', hostname: 'flow.praxis-meyer.de', lanIp: '192.168.178.112' },
+      {
+        registerAcmeDns: async () => {
+          throw new Error('must reuse registration');
+        },
+      },
+    );
+    assert.deepEqual(resumed.operatorRequest, prepared.operatorRequest);
+    const missingCname = await verifyHostTlsDns(ctx, {
+      verifyDns: async () => ({ aRecords: ['192.168.178.112'], cnameRecords: [] }),
+    });
+    assert.equal(missingCname.tls.state, 'awaiting-operator-dns');
+    assert.equal(missingCname.checks.find((c) => c.id === 'acme-cname')?.ok, false);
+
+    const verified = await verifyHostTlsDns(ctx, {
+      verifyDns: async () => ({
+        aRecords: ['192.168.178.112'],
+        cnameRecords: ['challenge-id.auth.acme-dns.io'],
+      }),
+    });
+    assert.equal(verified.tls.state, 'dns-verified');
+    assert.equal(verified.checks.length, 3);
+
+    const obtained = await obtainManagedCertificate(ctx);
+    assert.equal(obtained.tls.state, 'dns-verified');
+    assert.equal(obtained.tls.applyReady, true);
+    assert.equal(obtained.tls.tokenConsumed, true);
+    assert.deepEqual(obtained.tls.certificate?.names, ['*.flow.praxis-meyer.de']);
+    assert.equal(fs.existsSync(resolveProxyTlsPaths(root).operatorToken), false);
+    assert.equal(readEnvMap(path.join(root, '.env')).get('PROXY_MODE'), 'http');
+
+    const applied = await applyHostTls(ctx);
+    assert.equal(applied.tls.state, 'active');
+    const env = readEnvMap(path.join(root, '.env'));
+    assert.equal(env.get('PROXY_MODE'), 'tls-managed');
+    assert.equal(env.get('CANONICAL_BASE_URL'), 'https://staff.flow.praxis-meyer.de');
+    assert.equal(env.get('TLS_INSTALLATION_DOMAIN'), 'flow.praxis-meyer.de');
+    assert.equal(env.get('TLS_STAFF_HOSTNAME'), 'staff.flow.praxis-meyer.de');
+    assert.equal(env.get('TLS_PORTAL_HOSTNAME'), 'portal.flow.praxis-meyer.de');
+    assert.equal(env.get('TLS_WILDCARD_CERTIFICATE_NAME'), '*.flow.praxis-meyer.de');
+    assert.equal(env.get('TRUST_PROXY_HEADERS'), 'true');
+    const caddyfile = fs.readFileSync(resolveProxyTlsPaths(root).caddyfile, 'utf8');
+    assert.match(caddyfile, /redir https:\/\/staff\.flow\.praxis-meyer\.de\{uri\} permanent/);
+    assert.match(caddyfile, /\*\.flow\.praxis-meyer\.de \{/);
+    assert.match(caddyfile, /@staff host staff\.flow\.praxis-meyer\.de/);
+    assert.doesNotMatch(caddyfile, /\nstaff\.flow\.praxis-meyer\.de \{/);
+    assert.match(caddyfile, /\n\t\tabort\n/);
+    assert.match(caddyfile, /https:\/\/127\.0\.0\.1 \{/);
+    const renewed = await renewHostTls(ctx);
+    assert.equal(renewed.tls.state, 'active');
+    assert.equal(renewed.tls.hostname, 'staff.flow.praxis-meyer.de');
+    assert.deepEqual(renewed.tls.certificate?.names, ['*.flow.praxis-meyer.de']);
+    assert.match(caddyfile, /respond \/__praxis-flow\/health "ok" 200/);
+  });
+});
+
+test('PEM validation rejects wrong names, validity dates and a mismatched key of different length', async () => {
+  await withRoot(async (root) => {
+    const certPath = path.join(root, 'cert.pem');
+    const keyPath = path.join(root, 'key.pem');
+    execFileSync(
+      'openssl',
+      [
+        'req',
+        '-x509',
+        '-newkey',
+        'rsa:2048',
+        '-nodes',
+        '-subj',
+        '/CN=unused.example.org',
+        '-addext',
+        'subjectAltName=DNS:*.praxis-meyer.de',
+        '-days',
+        '2',
+        '-keyout',
+        keyPath,
+        '-out',
+        certPath,
+      ],
+      { stdio: 'ignore' },
+    );
+    const input = {
+      fullchainPem: fs.readFileSync(certPath, 'utf8'),
+      privateKeyPem: fs.readFileSync(keyPath, 'utf8'),
+    };
+    assert.deepEqual(validateCustomCertificate(input, 'flow.praxis-meyer.de').names, [
+      '*.praxis-meyer.de',
+    ]);
+    assert.throws(
+      () => validateCustomCertificate(input, 'staff.flow.praxis-meyer.de'),
+      /gilt nicht/,
+    );
+    assert.throws(() => validateCustomCertificate(input, 'praxis-meyer.de'), /gilt nicht/);
+    assert.throws(
+      () => validateCustomCertificate(input, 'flow.praxis-meyer.de', new Date('2000-01-01')),
+      /noch nicht gültig/,
+    );
+    assert.throws(
+      () => validateCustomCertificate(input, 'flow.praxis-meyer.de', new Date('2100-01-01')),
+      /abgelaufen/,
+    );
+    execFileSync(
+      'openssl',
+      ['ecparam', '-name', 'prime256v1', '-genkey', '-noout', '-out', keyPath],
+      { stdio: 'ignore' },
+    );
+    assert.throws(
+      () =>
+        validateCustomCertificate(
+          { ...input, privateKeyPem: fs.readFileSync(keyPath, 'utf8') },
+          'flow.praxis-meyer.de',
+        ),
+      /Privater Schlüssel passt nicht/,
+    );
+    assert.throws(
+      () =>
+        validateCustomCertificate({ ...input, privateKeyPem: 'invalid' }, 'flow.praxis-meyer.de'),
+      /kein gültiges PEM/,
+    );
+  });
+});
+
+for (const hostname of ['lan.notaus.de', 'staff.lan.notaus.de', 'nested.label.lan.notaus.de']) {
+  test(`managed operator zone still rejects invalid installation name ${hostname}`, async () => {
+    await withRoot(async (root) => {
+      writeEnv(root, { PROXY_ENABLED: 'true', PROXY_MODE: 'http' });
+      await assert.rejects(
+        () =>
+          prepareHostTls(testSetupContext(root), {
+            mode: 'managed',
+            hostname,
+            lanIp: '192.168.178.112',
+          }),
+        /DNS-Label|reserviert/,
+      );
+      assert.equal(readTlsStatus(readEnvMap(path.join(root, '.env'))).state, 'off');
+    });
+  });
+}

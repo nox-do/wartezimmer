@@ -5,6 +5,7 @@
 
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import http from 'node:http';
 import http2 from 'node:http2';
 import https from 'node:https';
 import net from 'node:net';
@@ -67,6 +68,7 @@ function printHelp() {
 Runs Setup TLS prepare → verify-dns → obtain-certificate against Pebble/acme-dns.
 ${applyNote} Requires Docker and ${PROXY_IMAGE}.
 
+  --own-domain test ACME with an installation outside the operator zone
   --keep       leave compose containers and runtime files after success; Setup stops
   --cleanup    docker compose down for ${PROJECT} and remove ${RUNTIME}
   --help       show this help`);
@@ -87,13 +89,15 @@ function parseArgs(argv) {
   let keep = process.env.TLS_LAB_SMOKE_KEEP === '1';
   let cleanupOnly = false;
   let showHelp = false;
+  let ownDomain = false;
   for (const arg of argv) {
     if (arg === '--keep') keep = true;
+    else if (arg === '--own-domain') ownDomain = true;
     else if (arg === '--cleanup') cleanupOnly = true;
     else if (arg === '--help' || arg === '-h') showHelp = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
-  return { keep, cleanupOnly, showHelp };
+  return { keep, cleanupOnly, showHelp, ownDomain };
 }
 
 function assert(condition, message) {
@@ -359,7 +363,7 @@ function assertSinglePebbleWildcardOrder(certificateNames) {
   console.log(`OK  Pebble received exactly one ACME order for ${WILDCARD_CERTIFICATE_NAME}`);
 }
 
-function writeRuntimeEnv(lanIp) {
+function writeRuntimeEnv(lanIp, ownDomain) {
   const tlsRoot = path.join(RUNTIME, 'state', 'tls');
   const dirs = [
     path.join(tlsRoot, 'caddy-data'),
@@ -404,7 +408,7 @@ function writeRuntimeEnv(lanIp) {
     'TLS_ACME_DIRECTORY=pebble',
     'TLS_ACME_DNS_API=http://127.0.0.1:8053',
     'TLS_ACME_DNS_CREDENTIALS_SERVER_URL=http://acme-dns:80',
-    'TLS_OPERATOR_ZONE=lan.tls.lab',
+    `TLS_OPERATOR_ZONE=${ownDomain ? 'operator.example.org' : 'lan.tls.lab'}`,
     'TLS_DNS_RESOLVERS=127.0.0.1:9053',
     `TLS_PEBBLE_ROOT_CA_PATH=${PEBBLE_ROOT}`,
     ...Object.entries(labVolumeEnv()).map(([key, value]) => `${key}=${value}`),
@@ -549,19 +553,30 @@ function cleanupRuntime(startedCompose) {
 }
 
 async function assertHttpRedirectsToHttps(lanIp) {
-  const response = await fetch(`http://${lanIp}/`, {
-    method: 'GET',
-    redirect: 'manual',
-    headers: {
-      Host: STAFF_HOSTNAME,
-      'User-Agent': 'praxis-flow-tls-pebble-smoke/1.0',
-    },
+  // Node fetch can replace Host with the URL authority. The strict Staff
+  // listener needs the actual Staff Host while connecting to the selected IP.
+  const response = await new Promise((resolve, reject) => {
+    const request = http.get(
+      {
+        hostname: lanIp,
+        port: 80,
+        path: '/',
+        headers: { Host: STAFF_HOSTNAME, 'User-Agent': 'praxis-flow-tls-pebble-smoke/1.0' },
+        timeout: 8000,
+      },
+      (response) => {
+        response.resume();
+        resolve({ status: response.statusCode, location: response.headers.location || '' });
+      },
+    );
+    request.once('timeout', () => request.destroy(new Error('Staff HTTP redirect timeout')));
+    request.once('error', reject);
   });
   assert(
     response.status === 301 || response.status === 308,
     `port 80 expected HTTPS redirect, got HTTP ${response.status}`,
   );
-  const location = response.headers.get('location') || '';
+  const location = response.location;
   assert(
     location.startsWith(`https://${STAFF_HOSTNAME}`),
     `port 80 Location is not HTTPS canonical: ${location}`,
@@ -781,7 +796,7 @@ async function applyCutoverAndAssert(lanIp) {
 
 export async function runTlsPebbleSetupSmoke(kind) {
   configureSmoke(kind);
-  const { keep, cleanupOnly, showHelp } = parseArgs(process.argv.slice(2));
+  const { keep, cleanupOnly, showHelp, ownDomain } = parseArgs(process.argv.slice(2));
   if (showHelp) {
     printHelp();
     return;
@@ -806,7 +821,7 @@ export async function runTlsPebbleSetupSmoke(kind) {
   console.log(`OK  lab LAN IP ${lanIp}`);
   copyComposeTree();
   writeRuntimeZone(lanIp);
-  writeRuntimeEnv(lanIp);
+  writeRuntimeEnv(lanIp, ownDomain);
 
   let composeAttempted = false;
   let startedCompose = false;

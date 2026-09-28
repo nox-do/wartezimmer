@@ -1,7 +1,7 @@
 import type { HostStatus } from '../shared/host-status.js';
 import { deliveryImagesSummary, needsDeliveryImages } from './delivery-images-flow.js';
 
-export type SetupEntryTone = 'fresh' | 'needs-docker' | 'review' | 'maintenance';
+export type SetupEntryTone = 'fresh' | 'needs-docker' | 'starting' | 'review' | 'maintenance';
 
 export type SetupChecklistItem = { label: string; done: boolean; muted?: boolean };
 
@@ -28,6 +28,8 @@ export function setupEntryTone(status: HostStatus): SetupEntryTone {
   switch (status.installation.kind) {
     case 'healthy':
       return 'maintenance';
+    case 'starting':
+      return 'starting';
     case 'docker-unavailable':
       return 'needs-docker';
     case 'fresh':
@@ -63,7 +65,12 @@ export function configuredAdapterLabel(status: HostStatus): string | null {
 }
 
 export function setupChecklistItems(status: HostStatus): SetupChecklistItem[] {
-  if (status.installation.kind === 'docker-unavailable') return [];
+  if (
+    status.installation.kind === 'docker-unavailable' ||
+    status.installation.kind === 'starting'
+  ) {
+    return [];
+  }
   return [
     {
       label: status.docker.installed
@@ -94,6 +101,17 @@ export function setupChecklistItems(status: HostStatus): SetupChecklistItem[] {
 
 export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): SetupEntryContent {
   const eyebrow = status.mode === 'install' ? 'Ersteinrichtung' : 'Entwicklungsmodus';
+
+  if (tone === 'starting') {
+    return {
+      eyebrow: 'Status',
+      title: 'Dienste werden gestartet',
+      copy: 'Praxis Flow wartet auf die laufenden Gesundheitsprüfungen. Das kann kurz dauern.',
+      note: 'Wenn ein Dienst nicht erfolgreich startet, wechselt der Status automatisch zur Fehlerdiagnose.',
+      startButtonLabel: null,
+      showReleasePicker: false,
+    };
+  }
 
   if (tone === 'review') {
     const installation = status.installation;

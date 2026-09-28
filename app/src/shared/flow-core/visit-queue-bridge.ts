@@ -141,7 +141,7 @@ function runVisitTransition(
   runtime: Runtime,
   visitId: string,
   action: TransitionAction,
-  context: { actingLocationId?: string; targetLocationId?: string; actorId?: string } = {},
+  context: NonNullable<Parameters<Runtime['transition']>[2]> = {},
 ): VisitView {
   try {
     const updated = runtime.transition(visitId, action, context);
@@ -483,6 +483,22 @@ export function returnAbsentVisitToQueue(
   return { fromStatus, toStatus };
 }
 
+type RoomCapacityContext = { settings: OpsSettings; listQueue: () => QueueVisitRow[] };
+
+function journeyDestinationGuard(capacity: RoomCapacityContext | undefined, visitId: string) {
+  return capacity
+    ? (locationId: string) => {
+        if (
+          locationId !== PF_FLOW_LOC_WAITING &&
+          !resolveCallRoomForVisit(capacity.settings, locationId)
+        ) {
+          throw domainError('ROOM_REQUIRED');
+        }
+        assertRoomHasCapacity(capacity.settings, capacity.listQueue(), locationId, visitId);
+      }
+    : undefined;
+}
+
 export function callVisit(
   db: DatabaseSync,
   runtime: Runtime,
@@ -500,7 +516,8 @@ export function callVisit(
     const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
     const startedNextJourneyStep = Boolean(visit.journeyStepCompletedAt);
     if (startedNextJourneyStep) {
-      visit = runVisitTransition(runtime, visitId, 'start_next_journey_step', { actorId });
+      continueJourneyVisit(runtime, settings, listQueue, visitId, roomId, actorId);
+      visit = requireVisit(runtime, visitId);
     }
     assertNoAbsentHostOverlay(db, visitId);
 
@@ -543,7 +560,7 @@ export function arriveVisit(
   visitId: string,
   actingLocationId?: string,
   actorId?: string,
-  capacity?: { settings: OpsSettings; listQueue: () => QueueVisitRow[] },
+  capacity?: RoomCapacityContext,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
   assertNoAbsentHostOverlay(db, visitId);
@@ -552,7 +569,11 @@ export function arriveVisit(
   }
 
   const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
-  const after = runVisitTransition(runtime, visitId, 'arrive', { actingLocationId, actorId });
+  const after = runVisitTransition(runtime, visitId, 'arrive', {
+    actingLocationId,
+    actorId,
+    assertJourneyDestination: journeyDestinationGuard(capacity, visitId),
+  });
   return { fromStatus, toStatus: visitStatusToQueueDisplayStatus(after.status) };
 }
 
@@ -578,18 +599,10 @@ export function continueJourneyVisit(
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
   const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
-  if (targetLocationId) {
-    const configuredRoom = settings.rooms.find(
-      (room) => room.enabled && room.roomId === targetLocationId,
-    );
-    if (!configuredRoom) {
-      throw domainError('ROOM_REQUIRED');
-    }
-    assertRoomHasCapacity(settings, listQueue(), targetLocationId, visitId);
-  }
   const after = runVisitTransition(runtime, visitId, 'start_next_journey_step', {
     targetLocationId,
     actorId,
+    assertJourneyDestination: journeyDestinationGuard({ settings, listQueue }, visitId),
   });
   return { fromStatus, toStatus: visitStatusToQueueDisplayStatus(after.status) };
 }
@@ -599,13 +612,18 @@ export function completeVisit(
   visitId: string,
   actingLocationId?: string,
   actorId?: string,
+  capacity?: RoomCapacityContext,
 ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
   const visit = requireVisit(runtime, visitId);
   const fromStatus = visitStatusToQueueDisplayStatus(visit.status);
   if (!actingLocationId && visit.status === 'arrived') {
     runVisitTransition(runtime, visitId, 'start', { actorId });
   }
-  const afterDone = runVisitTransition(runtime, visitId, 'done', { actingLocationId, actorId });
+  const afterDone = runVisitTransition(runtime, visitId, 'done', {
+    actingLocationId,
+    actorId,
+    assertJourneyDestination: journeyDestinationGuard(capacity, visitId),
+  });
   return { fromStatus, toStatus: visitStatusToQueueDisplayStatus(afterDone.status) };
 }
 

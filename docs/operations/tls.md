@@ -1,6 +1,6 @@
 # LAN-TLS (Produkt)
 
-Stand: 2026-09-21 · Ops-Ist für Wildcard-LAN-TLS und Restricted Portal
+Stand: 2026-09-28 · Ops-Ist für Wildcard-LAN-TLS und Restricted Portal
 
 **Scope:** Vertrauenswürdiges HTTPS im Praxis-LAN — Modell, Aktivierung, Betrieb, Grenzen.  
 **Ist:** TLS-Einrichtung ausschließlich im Netzwerk-Tab; Setup-API `/api/setup/host/tls/*`; Proxy-Service mit Custom-Caddy-Image.
@@ -20,7 +20,7 @@ Verwandt: Runtime/Compose → [`runtime.md`](runtime.md) · Backup-Grenze → [`
 ## 1. Entscheidung (Produktmodell)
 
 Pro Managed-Installation gibt es einen stabilen **Installationsraum**
-`<id>.<zone>`. Der aktive Staff-Hostname ist `staff.<installationsraum>`; sein
+`<id>.<zone>` oder eine eigene Domain wie `flow.praxis-meyer.de`. Der aktive Staff-Hostname ist `staff.<installationsraum>`; sein
 A-Record zeigt auf die **feste private IPv4** des Praxisservers. Caddy holt
 ausschließlich `*.<installationsraum>` per **ACME DNS-01**. Der damit bereits
 abgedeckte Name `portal.<installationsraum>` bleibt ohne Restricted-Binding
@@ -54,7 +54,26 @@ Browser (LAN) ── HTTP      ──► proxy:80  ── 301 → HTTPS   (nach 
 | ------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------- |
 | Vorschlag     | Installationsraum aus 6-Zeichen-Label + `.<zone>`; Staff unter `staff.<raum>`                        | managed / ACME, nur `*.<raum>`    |
 | Eigenes Label | `label.<zone>` als Raum (RFC-1123; reserviert u. a. `staff`, `portal`, `lan`, `acme`, `www`, `mail`) | managed / ACME, nur `*.<raum>`    |
-| Eigene Domain | voller Hostname außerhalb der Betreiber-Zone                                                         | **custom** / PEM, kein ACME-CNAME |
+| Eigene Domain / ACME (Standard) | eigene Basisdomain außerhalb der Betreiber-Zone; Staff und Portal darunter | managed / ACME, nur `*.<raum>` |
+| Eigene Domain / PEM | voller Gerätehostname außerhalb der Betreiber-Zone | **custom** / PEM, kein ACME-CNAME |
+
+Bei einer eigenen Domain zeigt der Manager die DNS-Einträge zum Kopieren für die
+Praxis-IT bzw. den eigenen DNS-Anbieter an; es gibt keine Mail an den Betreiber.
+ACME benötigt den Staff-A-Record auf die feste private Server-IP und einen
+permanenten CNAME `_acme-challenge.<raum>` auf die bei der Vorbereitung erzeugte
+acme-dns-Adresse. Der Portal-A-Record bekommt die separat festgelegte private
+Portal-IP; der Zugang wird erst später aktiviert. Ausstellung und Erneuerung
+laufen wie in der Betreiber-Zone über DNS-01, ohne eingehende Internetports.
+Die Basisdomain selbst ist keine Geräteadresse und nicht vom Wildcard abgedeckt.
+
+PEM bleibt ein einzelner vollständiger Gerätehostname. Die Zertifikatskette muss
+diesen Namen per SAN oder passendem Wildcard abdecken; `*.example.org` deckt
+`flow.example.org`, aber weder `example.org` noch `staff.flow.example.org` ab.
+Der private Schlüssel muss passen und unverschlüsselt sein. Der Import prüft
+Name, Schlüsselpaar und Laufzeit; die lokale HTTPS-Prüfung prüft anschließend das
+Vertrauen in die ausgelieferte Kette. Erneuerung erfolgt manuell. Ein separater
+Portalzugang mit PEM wird weiterhin nicht unterstützt und wird im Manager so
+benannt. Bestehende PEM-Installationen behalten ihre Adresse.
 
 Installations-ID: zufällig, stabil, kein Geheimnis. Der heute als
 `oneTimeToken` bezeichnete Zufallswert wird im Mailtext mitgeführt und lokal
@@ -510,3 +529,31 @@ API-Aufrufe werden im Runtime-Audit nicht ausgeführt.
 
 NIC-Drafts, das persistente Apply-/Remove-Journal und der versionierte Vertrag aus
 Updatepaketen sind im [Restricted-Lifecycle](restricted-lifecycle.md) beschrieben.
+
+### Review und Regressionstests für eigene Domains
+
+`setup/src/host-tls.test.ts` prüft eigene Domains mit ACME einschließlich
+Wiederaufnahme, fehlendem CNAME, Ausstellung, Cutover und Erneuerung mit
+simulierter Runtime. PEM wird mit OpenSSL-Zertifikaten auf Namen/Wildcards,
+Laufzeit und unpassende Schlüssel geprüft; der simulierte Lebenszyklus reicht
+vom Import über lokale Prüfung und Cutover bis zur Erneuerung. Scheitert die
+lokale Prüfung einer PEM-Erneuerung, werden die bisherige Kette und der Schlüssel
+wiederhergestellt und Caddy erneut geladen. Der Status bleibt mit Fehlerhinweis
+auf `degraded`, damit die Erneuerung erneut versucht werden kann. Manager-Tests
+prüfen beide Vorbereitungsmodi und die DNS-Anleitung.
+
+Der echte Pebble-/Caddy-Test für ACME außerhalb der Betreiber-Zone ist
+`npm run smoke:tls-cutover -- --own-domain`. Er verwendet dieselben isolierten
+Lab-Adressen und setzt eine abweichende Betreiber-Zone. Damit werden echte
+DNS-01-Ausstellung, Wildcard und HTTP/HTTPS-Cutover geprüft, ohne eine produktive
+Domain oder Let's Encrypt zu verändern. Produktions-DNS und das Vertrauen auf
+den tatsächlichen Praxisgeräten bleiben Teil der Vor-Ort-Abnahme.
+
+Prüfstand 2026-09-28: Manager- und Setup-Tests, Typprüfungen, gezieltes Linting
+und Manager-Build erfolgreich. Die TLS-Oberfläche wurde in einer isolierten
+Komponentenvorschau einschließlich schmalem Fenster geprüft.
+`TLS_LAB_LAN_IP=192.168.0.100 npm run smoke:tls-cutover -- --own-domain` lief
+mit echter Pebble-/Caddy-Runtime erfolgreich durch: genau eine Wildcard-Order,
+DNS, Portbindung, abgewiesene Portal-/Fremdhosts, HTTPS-Cutover, HTTP-Redirect,
+HTTP/2 und SSE. Dafür wurde der laufende Praxis-Stack vorübergehend gestoppt
+und nach dem Aufräumen der Testcontainer wieder gestartet.
