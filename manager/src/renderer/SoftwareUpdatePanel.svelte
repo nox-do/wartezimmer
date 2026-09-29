@@ -27,9 +27,8 @@
   <div class="panel-section">
     <h2>Software-Update</h2>
     <p class="hint">
-      Release-Update aus Ihrer Praxis-Flow-Freigabe einspielen (eine
-      <code>.pfupdate</code>-Datei). Praxis-Settings werden automatisch gesichert; die laufende
-      Warteschlange geht beim Versionswechsel verloren.
+      Für ein Update benötigen Sie eine <code>.pfupdate</code>-Datei. Mit dem Update wird ein Backup
+      automatisch durchgeführt.
     </p>
     <dl class="status-grid maintenance-software-info">
       {#each rows as row (row.label)}

@@ -42,7 +42,6 @@
     tlsShowsStructuredLastErrorNotice,
   } from './tls-network-view-model.js';
   import {
-    NETWORK_APPLY_BUTTON_LABEL,
     NETWORK_PROXY_EXPANDER_TITLE,
   } from './network-view-model.js';
 
@@ -119,8 +118,7 @@
   <p class="hint">Hoständerungen sind gesperrt. Statusdetails bleiben im Statusbereich verfügbar.</p>
 {:else if !eligible && tlsIsOff(tls)}
   <p class="hint">
-    Für HTTPS zuerst unter „{NETWORK_PROXY_EXPANDER_TITLE}“ „Proxy an“ auswählen und
-    „{NETWORK_APPLY_BUTTON_LABEL}“ wählen. Der interne HTTP-Betrieb bleibt bis dahin möglich.
+    Für HTTPS zuerst unter „{NETWORK_PROXY_EXPANDER_TITLE}“ „Proxy an“ auswählen (aktivieren).
   </p>
 {:else if tlsIsOff(tls) && state.startPhase === 'offer'}
   <p class="hint">HTTPS verschlüsselt die Verbindung Ihrer Praxisgeräte. Während der Vorbereitung bleibt der bisherige HTTP-Zugang bestehen.</p>

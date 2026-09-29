@@ -277,11 +277,6 @@
     </p>
   {/if}
 
-  <p class="maintenance-page-intro">
-    Vier Bereiche für den Alltag der Praxis-IT. Öffnen Sie einen Bereich, um die Details ein- oder
-    auszuklappen.
-  </p>
-
   {#if snapshot}
     <div class="maintenance-accordion" id="maintenance-accordion">
       <MaintenanceSection

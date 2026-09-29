@@ -19,8 +19,8 @@
     <span>Proxy an</span>
   </label>
   <p class="hint">
-    Zugriff ohne Portangabe in der Adresse (HTTP-Port 80 statt 8080), ausschließlich über die
-    ausgewählte Praxisadresse. HTTPS kann anschließend eingerichtet werden.
+    Zugriff ohne Portangabe in der Adresse (HTTP-Port 80 statt 8080). Auch Voraussetzung für die
+    optionale, spätere "HTTPS" Nutzung.
   </p>
 
   <label class="wizard-radio">
@@ -28,8 +28,6 @@
     <span>Proxy aus</span>
   </label>
   <p class="hint">
-    Direkter Zugriff mit <code>:8080</code> in der Adresse. Nach Abschluss der Installation ist
-    Praxis Flow über alle IPv4-Netzwerkanschlüsse dieses Rechners erreichbar, soweit Ihre lokalen
-    Netzwerk- und Firewall-Einstellungen dies zulassen. Für HTTPS muss der Proxy eingeschaltet werden.
+    Zugriff mit <code>:8080</code> in der Adressleiste.
   </p>
 </fieldset>

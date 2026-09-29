@@ -389,8 +389,6 @@
         >
           <p class="hint">
             Wählen Sie die IP-Adresse dieses Rechners, über die Ihre Praxisgeräte zugreifen sollen.
-            Bei eingeschaltetem Proxy wird der Zugriff an diese Adresse gebunden. Ohne Proxy bleibt
-            Port 8080 auf allen Netzwerkkarten erreichbar.
           </p>
           <LanIpPanel
             state={snapshot}

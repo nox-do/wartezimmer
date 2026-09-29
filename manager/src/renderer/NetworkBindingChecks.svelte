@@ -8,8 +8,8 @@
   <p class="hint">Die Bindung von Adresse und Ports wurde noch nicht geprüft.</p>
 {:else}
   <p class="hint">
-    Diese Prüfung kontrolliert Adresse und Ports auf diesem Rechner. Prüfen Sie zusätzlich
-    auf einem Praxisgerät, ob sich die angezeigte Praxisadresse öffnen lässt.
+    Diese Prüfung kontrolliert Adresse und Ports auf diesem Rechner. Etwaige Abweichungen die der
+    Manager feststellt werden hier angezeigt.
   </p>
   <ul class="checklist network-bindings-list" id="network-bindings-panel">
     {#each checks as check (check.id)}
