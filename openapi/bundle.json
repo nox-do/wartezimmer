@@ -13628,7 +13628,11 @@
       "get": {
         "summary": "Export DB settings snapshot (maintenance listener)",
         "description": "Exports ops, auth, and messaging provider settings from SQLite without host `.env`.\nServed on the maintenance HTTP listener (host loopback, e.g. port 8082). No session auth.\n",
-        "security": [],
+        "security": [
+          {
+            "maintenanceBearer": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "DB-only settings snapshot",
@@ -13701,6 +13705,87 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing or invalid maintenance token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "OPS_SETTINGS_STALE",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -13709,92 +13794,86 @@
       "post": {
         "summary": "Validate settings snapshot for restore (maintenance listener)",
         "description": "Parses and validates a full settings snapshot (including `env` when present).\nMaintenance listener only; used by Setup for `.pfbackup` / `.pfupdate` compatibility checks.\n",
-        "security": [],
+        "security": [
+          {
+            "maintenanceBearer": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "allOf": [
-                  {
+                "type": "object",
+                "required": [
+                  "settingsFormatVersion",
+                  "exportedAt",
+                  "opsSettings",
+                  "authSettings",
+                  "messagingProviderConfigs"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "settingsFormatVersion": {
+                    "type": "integer",
+                    "const": 1
+                  },
+                  "exportedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "opsSettings": {
                     "type": "object",
-                    "required": [
-                      "settingsFormatVersion",
-                      "exportedAt",
-                      "opsSettings",
-                      "authSettings",
-                      "messagingProviderConfigs"
-                    ],
+                    "additionalProperties": true,
+                    "description": "Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.)."
+                  },
+                  "authSettings": {
+                    "type": "object",
+                    "required": ["staffPinHashMfa", "staffPinHashOps", "roomPanelPinHash"],
                     "additionalProperties": false,
                     "properties": {
-                      "settingsFormatVersion": {
-                        "type": "integer",
-                        "const": 1
+                      "staffPinHashMfa": {
+                        "type": "string"
                       },
-                      "exportedAt": {
-                        "type": "string",
-                        "format": "date-time"
+                      "staffPinHashOps": {
+                        "type": "string"
                       },
-                      "opsSettings": {
-                        "type": "object",
-                        "additionalProperties": true,
-                        "description": "Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.)."
-                      },
-                      "authSettings": {
-                        "type": "object",
-                        "required": ["staffPinHashMfa", "staffPinHashOps", "roomPanelPinHash"],
-                        "additionalProperties": false,
-                        "properties": {
-                          "staffPinHashMfa": {
-                            "type": "string"
-                          },
-                          "staffPinHashOps": {
-                            "type": "string"
-                          },
-                          "roomPanelPinHash": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "messagingProviderConfigs": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "required": ["providerId", "channel", "enabled", "credentialsJson"],
-                          "additionalProperties": false,
-                          "properties": {
-                            "providerId": {
-                              "type": "string"
-                            },
-                            "channel": {
-                              "type": "string",
-                              "enum": ["sms", "messenger"]
-                            },
-                            "enabled": {
-                              "type": "boolean"
-                            },
-                            "credentialsJson": {
-                              "type": "string"
-                            }
-                          }
-                        }
+                      "roomPanelPinHash": {
+                        "type": "string"
                       }
                     }
                   },
-                  {
-                    "type": "object",
-                    "required": ["env"],
-                    "additionalProperties": false,
-                    "properties": {
-                      "env": {
-                        "type": "object",
-                        "additionalProperties": {
+                  "messagingProviderConfigs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["providerId", "channel", "enabled", "credentialsJson"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "providerId": {
+                          "type": "string"
+                        },
+                        "channel": {
+                          "type": "string",
+                          "enum": ["sms", "messenger"]
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "credentialsJson": {
                           "type": "string"
                         }
                       }
                     }
+                  },
+                  "env": {
+                    "type": "object",
+                    "description": "Optional host environment. The app ignores it during DB-only imports.",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
                   }
-                ]
+                }
               }
             }
           }
@@ -13832,6 +13911,87 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing or invalid maintenance token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "OPS_SETTINGS_STALE",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -13840,7 +14000,11 @@
       "post": {
         "summary": "Import settings snapshot into SQLite (maintenance listener)",
         "description": "Replaces ops/auth/messaging settings in the app database. Maintenance listener only.\nHost `.env` is not modified — Setup merges env when building `.pfbackup`.\n",
-        "security": [],
+        "security": [
+          {
+            "maintenanceBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "skipProviderCredentials",
@@ -13858,86 +14022,76 @@
           "content": {
             "application/json": {
               "schema": {
-                "allOf": [
-                  {
+                "type": "object",
+                "required": [
+                  "settingsFormatVersion",
+                  "exportedAt",
+                  "opsSettings",
+                  "authSettings",
+                  "messagingProviderConfigs"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "settingsFormatVersion": {
+                    "type": "integer",
+                    "const": 1
+                  },
+                  "exportedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "opsSettings": {
                     "type": "object",
-                    "required": [
-                      "settingsFormatVersion",
-                      "exportedAt",
-                      "opsSettings",
-                      "authSettings",
-                      "messagingProviderConfigs"
-                    ],
+                    "additionalProperties": true,
+                    "description": "Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.)."
+                  },
+                  "authSettings": {
+                    "type": "object",
+                    "required": ["staffPinHashMfa", "staffPinHashOps", "roomPanelPinHash"],
                     "additionalProperties": false,
                     "properties": {
-                      "settingsFormatVersion": {
-                        "type": "integer",
-                        "const": 1
+                      "staffPinHashMfa": {
+                        "type": "string"
                       },
-                      "exportedAt": {
-                        "type": "string",
-                        "format": "date-time"
+                      "staffPinHashOps": {
+                        "type": "string"
                       },
-                      "opsSettings": {
-                        "type": "object",
-                        "additionalProperties": true,
-                        "description": "Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.)."
-                      },
-                      "authSettings": {
-                        "type": "object",
-                        "required": ["staffPinHashMfa", "staffPinHashOps", "roomPanelPinHash"],
-                        "additionalProperties": false,
-                        "properties": {
-                          "staffPinHashMfa": {
-                            "type": "string"
-                          },
-                          "staffPinHashOps": {
-                            "type": "string"
-                          },
-                          "roomPanelPinHash": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "messagingProviderConfigs": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "required": ["providerId", "channel", "enabled", "credentialsJson"],
-                          "additionalProperties": false,
-                          "properties": {
-                            "providerId": {
-                              "type": "string"
-                            },
-                            "channel": {
-                              "type": "string",
-                              "enum": ["sms", "messenger"]
-                            },
-                            "enabled": {
-                              "type": "boolean"
-                            },
-                            "credentialsJson": {
-                              "type": "string"
-                            }
-                          }
-                        }
+                      "roomPanelPinHash": {
+                        "type": "string"
                       }
                     }
                   },
-                  {
-                    "type": "object",
-                    "required": ["env"],
-                    "additionalProperties": false,
-                    "properties": {
-                      "env": {
-                        "type": "object",
-                        "additionalProperties": {
+                  "messagingProviderConfigs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["providerId", "channel", "enabled", "credentialsJson"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "providerId": {
+                          "type": "string"
+                        },
+                        "channel": {
+                          "type": "string",
+                          "enum": ["sms", "messenger"]
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "credentialsJson": {
                           "type": "string"
                         }
                       }
                     }
+                  },
+                  "env": {
+                    "type": "object",
+                    "description": "Optional host environment. The app ignores it during DB-only imports.",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
                   }
-                ]
+                }
               }
             }
           }
@@ -14120,6 +14274,216 @@
                       }
                     }
                   ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid maintenance token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "OPS_SETTINGS_STALE",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ops/maintenance/info": {
+      "get": {
+        "summary": "Read the authenticated maintenance protocol and snapshot capabilities",
+        "description": "Lightweight compatibility handshake on the host-loopback maintenance listener.",
+        "security": [
+          {
+            "maintenanceBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Maintenance protocol identity and supported settings formats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "protocolVersion",
+                    "stackVersion",
+                    "snapshotExportFormatVersion",
+                    "snapshotImportFormatVersions"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "protocolVersion": {
+                      "type": "integer",
+                      "const": 1
+                    },
+                    "stackVersion": {
+                      "type": ["string", "null"]
+                    },
+                    "snapshotExportFormatVersion": {
+                      "type": "integer"
+                    },
+                    "snapshotImportFormatVersions": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid maintenance token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "OPS_SETTINGS_STALE",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
                 }
               }
             }
@@ -14336,7 +14700,11 @@
       "post": {
         "summary": "Import active device authorizations (maintenance listener)",
         "description": "Writes hashed device grants into the fresh SQLite after settings import.\nUsed only by `.pfupdate` cutover. Restore must not call this endpoint.\nMaintenance listener only; no session auth.\n",
-        "security": [],
+        "security": [
+          {
+            "maintenanceBearer": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -14434,6 +14802,87 @@
           },
           "400": {
             "description": "Invalid rows or constraint failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "OPS_SETTINGS_STALE",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid maintenance token",
             "content": {
               "application/json": {
                 "schema": {
@@ -22866,86 +23315,104 @@
         }
       },
       "SettingsSnapshotV1": {
-        "allOf": [
-          {
+        "type": "object",
+        "required": [
+          "settingsFormatVersion",
+          "exportedAt",
+          "opsSettings",
+          "authSettings",
+          "messagingProviderConfigs"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "settingsFormatVersion": {
+            "type": "integer",
+            "const": 1
+          },
+          "exportedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "opsSettings": {
             "type": "object",
-            "required": [
-              "settingsFormatVersion",
-              "exportedAt",
-              "opsSettings",
-              "authSettings",
-              "messagingProviderConfigs"
-            ],
+            "additionalProperties": true,
+            "description": "Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.)."
+          },
+          "authSettings": {
+            "type": "object",
+            "required": ["staffPinHashMfa", "staffPinHashOps", "roomPanelPinHash"],
             "additionalProperties": false,
             "properties": {
-              "settingsFormatVersion": {
-                "type": "integer",
-                "const": 1
+              "staffPinHashMfa": {
+                "type": "string"
               },
-              "exportedAt": {
-                "type": "string",
-                "format": "date-time"
+              "staffPinHashOps": {
+                "type": "string"
               },
-              "opsSettings": {
-                "type": "object",
-                "additionalProperties": true,
-                "description": "Ops settings catalog snapshot (topics, rooms, journeys, terminal flags, etc.)."
-              },
-              "authSettings": {
-                "type": "object",
-                "required": ["staffPinHashMfa", "staffPinHashOps", "roomPanelPinHash"],
-                "additionalProperties": false,
-                "properties": {
-                  "staffPinHashMfa": {
-                    "type": "string"
-                  },
-                  "staffPinHashOps": {
-                    "type": "string"
-                  },
-                  "roomPanelPinHash": {
-                    "type": "string"
-                  }
-                }
-              },
-              "messagingProviderConfigs": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "required": ["providerId", "channel", "enabled", "credentialsJson"],
-                  "additionalProperties": false,
-                  "properties": {
-                    "providerId": {
-                      "type": "string"
-                    },
-                    "channel": {
-                      "type": "string",
-                      "enum": ["sms", "messenger"]
-                    },
-                    "enabled": {
-                      "type": "boolean"
-                    },
-                    "credentialsJson": {
-                      "type": "string"
-                    }
-                  }
-                }
+              "roomPanelPinHash": {
+                "type": "string"
               }
             }
           },
-          {
-            "type": "object",
-            "required": ["env"],
-            "additionalProperties": false,
-            "properties": {
-              "env": {
-                "type": "object",
-                "additionalProperties": {
+          "messagingProviderConfigs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["providerId", "channel", "enabled", "credentialsJson"],
+              "additionalProperties": false,
+              "properties": {
+                "providerId": {
+                  "type": "string"
+                },
+                "channel": {
+                  "type": "string",
+                  "enum": ["sms", "messenger"]
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "credentialsJson": {
                   "type": "string"
                 }
               }
             }
+          },
+          "env": {
+            "type": "object",
+            "description": "Optional host environment. The app ignores it during DB-only imports.",
+            "additionalProperties": {
+              "type": "string"
+            }
           }
-        ]
+        }
+      },
+      "MaintenanceApiInfo": {
+        "type": "object",
+        "required": [
+          "protocolVersion",
+          "stackVersion",
+          "snapshotExportFormatVersion",
+          "snapshotImportFormatVersions"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "protocolVersion": {
+            "type": "integer",
+            "const": 1
+          },
+          "stackVersion": {
+            "type": ["string", "null"]
+          },
+          "snapshotExportFormatVersion": {
+            "type": "integer"
+          },
+          "snapshotImportFormatVersions": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
       },
       "SettingsSnapshotValidationResult": {
         "type": "object",
@@ -24035,6 +24502,11 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "Session token"
+      },
+      "maintenanceBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Installation-specific token used only on the host-loopback maintenance listener."
       }
     }
   }

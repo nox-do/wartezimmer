@@ -17,6 +17,20 @@ if (!hash) {
 
 const dbPath = '/var/lib/praxis-flow/app/praxis-flow.db';
 const db = new DatabaseSync(dbPath);
+const requiredColumns = new Set([
+  'id',
+  'staff_pin_hash_mfa',
+  'staff_pin_hash_ops',
+  'room_panel_pin_hash',
+  'updated_at',
+]);
+const existingColumns = new Set(
+  db.prepare('PRAGMA table_info(auth_settings)').all().map((row) => row.name),
+);
+const missingColumns = [...requiredColumns].filter((name) => !existingColumns.has(name));
+if (existingColumns.size > 0 && missingColumns.length > 0) {
+  throw new Error('AUTH_SETTINGS_SCHEMA_UNSUPPORTED: missing ' + missingColumns.join(', '));
+}
 const exists = db
   .prepare("SELECT 1 AS n FROM auth_settings WHERE id = 'singleton' LIMIT 1")
   .get();

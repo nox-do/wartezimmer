@@ -14,7 +14,6 @@ import {
   findLatestPfbackupPath,
   getPfbackupInfo,
   validatePfbackupContent,
-  validatePfbackupFile,
   buildTlsArchiveBase64,
 } from './settings-backup.js';
 import { configureMaintenanceAuthHome } from './maintenance-auth.js';
@@ -129,26 +128,6 @@ test('validatePfbackupContent accepts built archive', () => {
   });
   const result = validatePfbackupContent(serializePfbackupArchive(archive));
   assert.equal(result.archiveValid, true);
-});
-
-test('validatePfbackupFile reads archive from disk', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-pfbackup-validate-'));
-  const filePath = path.join(dir, 'sample.pfbackup');
-  try {
-    const archive = buildPfbackupArchive({
-      settings: sampleSettings,
-      managerState: { release: null },
-    });
-    fs.writeFileSync(filePath, serializePfbackupArchive(archive));
-    const result = validatePfbackupFile(filePath);
-    assert.equal(result.archiveValid, true);
-    assert.equal(
-      validatePfbackupArchive(JSON.parse(fs.readFileSync(filePath, 'utf8'))).archiveValid,
-      true,
-    );
-  } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
 });
 
 test('buildTlsArchiveBase64 returns embedded bytes without a sibling when tls is not off', () => {

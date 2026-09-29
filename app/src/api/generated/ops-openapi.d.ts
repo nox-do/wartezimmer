@@ -437,6 +437,15 @@ export interface paths {
             'application/json': components['schemas']['SettingsSnapshotDbV1'];
           };
         };
+        /** @description Missing or invalid maintenance token */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
       };
     };
     put?: never;
@@ -481,6 +490,15 @@ export interface paths {
           };
           content: {
             'application/json': components['schemas']['SettingsSnapshotValidationResult'];
+          };
+        };
+        /** @description Missing or invalid maintenance token */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
           };
         };
       };
@@ -541,8 +559,65 @@ export interface paths {
               | components['schemas']['Error'];
           };
         };
+        /** @description Missing or invalid maintenance token */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
       };
     };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/ops/maintenance/info': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read the authenticated maintenance protocol and snapshot capabilities
+     * @description Lightweight compatibility handshake on the host-loopback maintenance listener.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Maintenance protocol identity and supported settings formats */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MaintenanceApiInfo'];
+          };
+        };
+        /** @description Missing or invalid maintenance token */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -686,6 +761,15 @@ export interface paths {
         };
         /** @description Invalid rows or constraint failure */
         400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
+        /** @description Missing or invalid maintenance token */
+        401: {
           headers: {
             [name: string]: unknown;
           };
@@ -2133,10 +2217,25 @@ export interface components {
       authSettings: components['schemas']['SettingsSnapshotAuthSettingsV1'];
       messagingProviderConfigs: components['schemas']['SettingsSnapshotMessagingProviderConfigV1'][];
     };
-    SettingsSnapshotV1: components['schemas']['SettingsSnapshotDbV1'] & {
-      env: {
+    SettingsSnapshotV1: {
+      /** @constant */
+      settingsFormatVersion: 1;
+      /** Format: date-time */
+      exportedAt: string;
+      opsSettings: components['schemas']['SettingsSnapshotOpsSettingsV1'];
+      authSettings: components['schemas']['SettingsSnapshotAuthSettingsV1'];
+      messagingProviderConfigs: components['schemas']['SettingsSnapshotMessagingProviderConfigV1'][];
+      /** @description Optional host environment. The app ignores it during DB-only imports. */
+      env?: {
         [key: string]: string;
       };
+    };
+    MaintenanceApiInfo: {
+      /** @constant */
+      protocolVersion: 1;
+      stackVersion: string | null;
+      snapshotExportFormatVersion: number;
+      snapshotImportFormatVersions: number[];
     };
     SettingsSnapshotValidationResult: {
       ok: boolean;

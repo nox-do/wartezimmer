@@ -7,12 +7,11 @@ import {
   PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY,
   PRAXIS_FLOW_PROXY_IMAGE_REF,
   PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
-  pickLoadedProxyImageRef,
   type DeliveryImagesStatus,
 } from '@praxis-flow/server-shared';
 import type { DockerStatus } from './docker.js';
 import { runDockerCommand } from './docker-cli.js';
-import { backupEnvFile, readEnvMap, updateEnvKeys } from './env-file.js';
+import { updateEnvKeys } from './env-file.js';
 import {
   readManagerState,
   managerStatePath,
@@ -477,7 +476,6 @@ export async function auditDeliveryImages(input: {
 export type LoadDeliveryImagesDeps = {
   verifyReleaseArchiveSha256?: typeof verifyReleaseArchiveSha256;
   dockerLoadArchive?: typeof dockerLoadArchive;
-  auditDeliveryImages?: typeof auditDeliveryImages;
   imageExists?: typeof dockerImageExists;
   inspectImage?: typeof inspectDockerImage;
   validateCompose?: (templatesRoot: string) => Promise<void>;
@@ -567,6 +565,7 @@ export async function preparePfinstall(
     throw new Error('RELEASE_ARCHIVE_NOT_FOUND');
   }
   if (mode !== 'fresh' && mode !== 'replace') throw new Error('INSTALL_MODE_INVALID');
+  if (mode === 'fresh') assertFreshInstallation(projectRoot);
 
   const verifySha = deps.verifyReleaseArchiveSha256 ?? verifyReleaseArchiveSha256;
   const dockerLoad = deps.dockerLoadArchive ?? dockerLoadArchive;
@@ -771,141 +770,5 @@ function assertFreshInstallation(projectRoot: string): void {
     fs.existsSync(managerStatePath(projectRoot))
   ) {
     throw new Error('PFINSTALL_EXISTING_INSTALLATION: use .pfupdate for an installed system');
-  }
-}
-
-export async function loadDeliveryImagesFromArchive(
-  projectRoot: string,
-  archivePath: string,
-  docker: DockerStatus,
-  deps: LoadDeliveryImagesDeps = {},
-): Promise<LoadDeliveryImagesCoreResult> {
-  requirePackageFileExtension(archivePath, '.pfinstall');
-  if (!docker.installed || !docker.daemonRunning) {
-    throw new Error('DOCKER_NOT_READY');
-  }
-
-  const resolvedArchive = path.resolve(archivePath);
-  if (!fs.existsSync(resolvedArchive) || !fs.statSync(resolvedArchive).isFile()) {
-    throw new Error('RELEASE_ARCHIVE_NOT_FOUND');
-  }
-
-  assertFreshInstallation(projectRoot);
-
-  const verifySha = deps.verifyReleaseArchiveSha256 ?? verifyReleaseArchiveSha256;
-  const dockerLoad = deps.dockerLoadArchive ?? dockerLoadArchive;
-  const auditImages = deps.auditDeliveryImages ?? auditDeliveryImages;
-  const imageExists = deps.imageExists ?? dockerImageExists;
-  const inspectImage = deps.inspectImage ?? inspectDockerImage;
-
-  const shaCheck = verifySha(resolvedArchive);
-  const manifest = shaCheck.manifest;
-  if (!manifest) throw new Error('PFINSTALL_MANIFEST_REQUIRED');
-  const expectedApp = `praxis-flow/app:${manifest.version}`;
-  const expectedSandbox = `praxis-flow/sandbox:${manifest.version}`;
-  if (
-    manifest.installFormatVersion !== 1 ||
-    manifest.images?.app !== expectedApp ||
-    manifest.images?.sandbox !== expectedSandbox ||
-    manifest.images?.proxy !== PRAXIS_FLOW_PROXY_IMAGE_REF ||
-    manifest.imageDigests?.proxy?.registryDigest?.toLowerCase() !==
-      PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST
-  ) {
-    throw new Error('PFINSTALL_IMAGE_CONTRACT_INVALID');
-  }
-
-  const bundle = prepareReleaseBundle(resolvedArchive);
-  let loadedImages: string[] = [];
-  try {
-    const loadResult = await dockerLoad(bundle.dockerArchivePath);
-    loadedImages = loadResult.loaded;
-    if (!loadResult.ok) {
-      throw new Error(`DOCKER_LOAD_FAILED: ${loadResult.log || 'unknown error'}`);
-    }
-
-    const appImage = manifest.images.app;
-    const sandboxImage = manifest.images.sandbox;
-    for (const ref of [appImage, sandboxImage, manifest.images.proxy]) {
-      if (!loadResult.loaded.includes(ref)) {
-        throw new Error(`PFINSTALL_EXPECTED_IMAGE_MISSING: ${ref}`);
-      }
-    }
-
-    if (!(await imageExists(appImage)) || !(await imageExists(sandboxImage))) {
-      throw new Error('RELEASE_IMAGES_NOT_PRESENT_AFTER_LOAD');
-    }
-    const inspections = await inspectImagesForHostPlatform(
-      [appImage, sandboxImage, manifest.images.proxy],
-      inspectImage,
-      'PFINSTALL_PLATFORM_MISMATCH',
-    );
-    const proxyInspection = inspections.get(manifest.images.proxy)!;
-    if (
-      proxyInspection.imageId !== manifest.imageDigests?.proxy?.archiveImageId?.toLowerCase() ||
-      proxyInspection.platform !== manifest.imageDigests?.proxy?.platform?.toLowerCase()
-    ) {
-      throw new Error('PFINSTALL_PROXY_DIGEST_CONTRACT_INVALID');
-    }
-
-    const hostSnapshot = snapshotHostFiles(projectRoot);
-    try {
-      installBundleTemplatesAtomically(projectRoot, bundle.stagingDir!);
-      const envPathTarget = path.join(projectRoot, '.env');
-      const envExistedBeforeImport = fs.existsSync(envPathTarget);
-      const envPath = ensureEnvFromExample(projectRoot);
-      let backupPath: string | null = null;
-      if (envExistedBeforeImport) {
-        backupPath = backupEnvFile(projectRoot).backupPath;
-      }
-
-      writeManagerReleaseState(projectRoot, {
-        releaseVersion: shaCheck.releaseVersion,
-        appImage,
-        sandboxImage,
-        archiveSha256: shaCheck.sha256,
-      });
-      writeDeliveryImageEnvFromState(projectRoot);
-
-      const loadedProxyImage = pickLoadedProxyImageRef(loadResult.loaded);
-      if (loadedProxyImage) {
-        updateEnvKeys(envPath, {
-          [PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY]: loadedProxyImage,
-        });
-      }
-
-      const envMap = readEnvMap(envPath);
-      const deliveryImages = await auditImages({ projectRoot, envMap, docker });
-      if (!deliveryImages.ready) {
-        throw new Error('RELEASE_IMAGE_AUDIT_FAILED');
-      }
-
-      return {
-        envPath,
-        backupPath,
-        loadedImages: loadResult.loaded,
-        appImage,
-        sandboxImage,
-        deliveryImages,
-        sha256Verified: true,
-        sha256: shaCheck.sha256,
-        releaseVersion: shaCheck.releaseVersion,
-        sha256Source: shaCheck.sha256Source,
-      };
-    } catch (error) {
-      restoreHostFiles(hostSnapshot);
-      throw error;
-    }
-  } catch (error) {
-    if (loadedImages.length > 0) {
-      const message = error instanceof Error ? error.message : 'PFINSTALL_FAILED';
-      throw new Error(`${message}; loaded Docker images were retained as unreferenced cache`, {
-        cause: error,
-      });
-    }
-    throw error;
-  } finally {
-    if (bundle.stagingDir) {
-      fs.rmSync(bundle.stagingDir, { recursive: true, force: true });
-    }
   }
 }

@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const name = `pf-sandbox-check-${randomUUID().slice(0, 8)}`;
 const volume = `${name}-signatures`;
-const image = process.env.SANDBOX_TEST_IMAGE || 'praxis-flow/sandbox:0.9.0';
+const image = process.env.SANDBOX_TEST_IMAGE || 'praxis-flow/sandbox:6.1.0';
 const docker = (...args) =>
   execFileSync('docker', args, {
     encoding: 'utf8',

@@ -77,6 +77,11 @@ export const ROUTE_ACCESS_RULES: RouteAccessRule[] = [
   { method: 'GET', path: '/api/v1/ops/settings/capabilities', roles: ['mfa', 'ops'] },
   {
     method: 'GET',
+    path: '/api/v1/ops/maintenance/info',
+    maintenanceListenerOnly: true,
+  },
+  {
+    method: 'GET',
     path: '/api/v1/ops/settings/snapshot',
     maintenanceListenerOnly: true,
   },

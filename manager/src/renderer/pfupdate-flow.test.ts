@@ -26,7 +26,7 @@ test('formatPfupdateFailure reports rollback recovery id', () => {
     rollbackSucceeded: false,
     errors: ['import failed'],
   });
-  assert.match(text, /Recovery-ID: recovery-123/);
+  assert.match(text, /Vorgangsnummer: recovery-123/);
   assert.match(text, /keine weiteren Wartungsaktionen/i);
 });
 

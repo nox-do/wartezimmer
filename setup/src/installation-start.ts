@@ -1,11 +1,15 @@
 import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
-import { createModuleLogger } from '@praxis-flow/server-shared/logger';
+import { createModuleLogger } from './logger.js';
 import type { InstallationStartFailure } from './installation-state.js';
 import type { ComposeStatus } from '@praxis-flow/server-shared';
 import { composePs, composeUp, type ComposeRunOptions } from './docker.js';
 import { runDockerCommand } from './docker-cli.js';
 import { coreInstallationServicesHealthy } from './installation-state.js';
-import { inspectMaintenanceCompatibility } from './settings-format-version.js';
+import {
+  inspectMaintenanceCompatibility,
+  maintenanceFailureCodes,
+  type MaintenanceCompatibility,
+} from './settings-format-version.js';
 import { APP_DB_PATH, appDataVolumeName } from './staff-pin-reset.js';
 
 const logger = createModuleLogger('setup.installation-start');
@@ -89,7 +93,7 @@ export async function startExistingInstallation(
 ): Promise<
   {
     compose: ComposeStatus | null;
-    maintenanceAuthenticated: boolean;
+    maintenanceStatus: MaintenanceCompatibility['status'];
   } & ({ ok: true } | { ok: false; code: InstallationStartFailure })
 > {
   const gate = await inspectExistingAppDatabase(
@@ -102,7 +106,7 @@ export async function startExistingInstallation(
       ok: false,
       code: gate.code,
       compose: null,
-      maintenanceAuthenticated: false,
+      maintenanceStatus: 'unreachable',
     };
   }
 
@@ -113,7 +117,7 @@ export async function startExistingInstallation(
       ok: false,
       code: 'compose-start-failed',
       compose: null,
-      maintenanceAuthenticated: false,
+      maintenanceStatus: 'unreachable',
     };
   }
 
@@ -135,16 +139,19 @@ export async function startExistingInstallation(
       ok: false,
       code: 'health-timeout',
       compose,
-      maintenanceAuthenticated: false,
+      maintenanceStatus: 'unreachable',
     };
   }
 
   const maintenance = await (deps.inspectMaintenance ?? inspectMaintenanceCompatibility)();
   return {
-    ...(maintenance.authenticated
+    ...(maintenance.status === 'compatible'
       ? { ok: true as const }
-      : { ok: false as const, code: 'maintenance-auth-failed' as const }),
+      : {
+          ok: false as const,
+          code: maintenanceFailureCodes[maintenance.status],
+        }),
     compose,
-    maintenanceAuthenticated: maintenance.authenticated,
+    maintenanceStatus: maintenance.status,
   };
 }

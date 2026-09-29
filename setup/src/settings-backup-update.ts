@@ -1,10 +1,11 @@
+import { waitForCompatibleMaintenanceApp } from './settings-format-version.js';
 import { syncMaintenanceHostFiles } from './maintenance-files.js';
 import { atPhase, needsRollback as operationNeedsRollback } from './operation-journal.js';
 import { assertNoTlsOperation } from './tls-operation.js';
 import { assertNoRestoreOperation } from './restore-operation.js';
 import { assertMaintenancePredecessors } from './maintenance-operation-guard.js';
 import { hostMutationLock } from './host-mutation-lock.js';
-import { createModuleLogger } from '@praxis-flow/server-shared/logger';
+import { createModuleLogger } from './logger.js';
 import {
   assertNoUpdateOperation,
   readUpdateOperation,
@@ -73,7 +74,7 @@ import { copyDeviceAuthorizationsFromAsideViaApp } from './device-authorizations
 import { mergeConfigRestoreEnv } from './settings-backup-restore.js';
 import { resolveCurrentSettingsFormatVersion } from './settings-format-version.js';
 import { migrateMaintenanceToken, type SetupContext } from './setup-context.js';
-import { maintenanceRequestHeaders } from './maintenance-auth.js';
+
 import { assertHostLifecycleAction } from './host-lifecycle-guard.js';
 import { requirePackageFileExtension } from './package-file-extension.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
@@ -202,29 +203,6 @@ function createUpdateId(now = new Date()): string {
   return `${stamp}-${randomBytes(4).toString('hex')}`;
 }
 
-async function defaultWaitForMaintenanceApp(
-  localAppBaseUrl: string,
-  timeoutMs = 120_000,
-  intervalMs = 2_000,
-): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(
-        `${localAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/settings/capabilities`,
-        { headers: maintenanceRequestHeaders(), signal: AbortSignal.timeout(5_000) },
-      );
-      if (response.ok) {
-        return true;
-      }
-    } catch {
-      // retry
-    }
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
-  }
-  return false;
-}
-
 function resolvePrepareRuntime(deps: PfupdateApplyDeps): PrepareRuntime {
   return {
     extractArchive: deps.extractArchive ?? extractPfupdateArchive,
@@ -252,7 +230,7 @@ function resolveCutoverRuntime(deps: PfupdateApplyDeps): CutoverRuntime {
     startFullStack:
       deps.startFullStack ?? ((runOptions) => composeUp({ ...runOptions, build: false })),
     waitForMaintenanceApp:
-      deps.waitForMaintenanceApp ?? ((baseUrl) => defaultWaitForMaintenanceApp(baseUrl)),
+      deps.waitForMaintenanceApp ?? ((baseUrl) => waitForCompatibleMaintenanceApp(baseUrl)),
     importSnapshot: deps.importSnapshot ?? importSettingsSnapshotViaApp,
     exportDbSnapshot:
       deps.exportDbSnapshot ?? ((baseUrl) => fetchSettingsDbSnapshotFromApp(baseUrl)),

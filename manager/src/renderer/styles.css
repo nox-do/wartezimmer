@@ -7,13 +7,7 @@
   --border: #d8dee6;
   --accent: #0b6e4f;
   --accent-hover: #095a40;
-  --nav-bg: var(--accent-hover);
-  --nav-text: rgba(255, 255, 255, 0.78);
-  --nav-text-hover: rgba(255, 255, 255, 0.95);
-  --nav-hover-bg: rgba(255, 255, 255, 0.1);
-  --nav-divider: rgba(255, 255, 255, 0.14);
-  --nav-active-bg: color-mix(in srgb, var(--accent) 16%, var(--bg));
-  --nav-active-bg-hover: color-mix(in srgb, var(--accent) 22%, var(--bg));
+  --nav-bg: color-mix(in srgb, var(--accent) 7%, var(--bg));
   --ok: #1f7a3f;
   --warn: #9a6700;
   --bad: #b42318;
@@ -50,9 +44,9 @@ body {
 
 .app-chrome {
   width: 100%;
-  padding: 0.75rem 1.5rem 0;
-  background: var(--surface);
-  border-bottom: none;
+  padding: 0;
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--border);
 }
 
 .app-chrome[hidden] {
@@ -962,25 +956,22 @@ textarea.wizard-input.is-compact {
 
 .main-nav {
   display: flex;
-  width: auto;
-  margin: 0 -1.5rem;
-  padding: 0;
-  border: none;
-  border-top: 1px solid color-mix(in srgb, var(--nav-bg) 88%, #000);
-  border-radius: 0;
-  overflow: hidden;
-  background: var(--nav-bg);
+  gap: 0.5rem;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
 }
 
 .main-nav-tab {
-  flex: 1 1 0;
+  position: relative;
+  flex: 0 0 auto;
   appearance: none;
   border: 0;
-  border-right: 1px solid var(--nav-divider);
-  border-radius: 0;
+  border-radius: 0.375rem 0.375rem 0 0;
   background: transparent;
-  color: var(--nav-text);
-  padding: 0.62rem 0.4rem;
+  color: var(--muted);
+  min-height: 44px;
+  padding: 0.75rem 1rem;
   font: inherit;
   font-size: 0.88rem;
   font-weight: 600;
@@ -988,28 +979,33 @@ textarea.wizard-input.is-compact {
   text-align: center;
 }
 
-.main-nav-tab:last-child {
-  border-right: 0;
-}
-
 .main-nav-tab:hover:not(:disabled) {
-  background: var(--nav-hover-bg);
-  color: var(--nav-text-hover);
+  background: color-mix(in srgb, var(--accent) 6%, var(--nav-bg));
+  color: var(--accent);
 }
 
 .main-nav-tab.is-active {
-  background: var(--nav-active-bg);
-  color: var(--text);
-  box-shadow: inset 0 -2px 0 var(--accent);
+  color: var(--accent);
 }
 
-.main-nav-tab.is-active:hover:not(:disabled) {
-  background: var(--nav-active-bg-hover);
-  color: var(--text);
+.main-nav-tab.is-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 1rem;
+  right: 1rem;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
+}
+
+.main-nav-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
 }
 
 .main-nav-tab:disabled {
-  opacity: 0.42;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 

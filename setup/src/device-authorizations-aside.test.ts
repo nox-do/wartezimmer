@@ -44,6 +44,22 @@ test('copyDeviceAuthorizationsFromAsideViaApp skips HTTP when aside has no grant
   }
 });
 
+test('readActiveDeviceAuthorizationsFromAside rejects an unknown source schema explicitly', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'aside-old-schema-'));
+  try {
+    const db = new DatabaseSync(join(dir, APP_DB_BASENAME));
+    db.exec('CREATE TABLE device_authorizations (authorization_id TEXT PRIMARY KEY)');
+    db.close();
+
+    assert.throws(
+      () => readActiveDeviceAuthorizationsFromAside(dir),
+      /DEVICE_AUTHORIZATION_SCHEMA_UNSUPPORTED/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('readActiveDeviceAuthorizationsFromAside copies only active rows', () => {
   const dir = mkdtempSync(join(tmpdir(), 'aside-active-'));
   try {

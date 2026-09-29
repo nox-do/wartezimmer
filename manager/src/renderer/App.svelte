@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { ManagerView } from './host-refresh-controller.js';
-  import HealthHeader from './HealthHeader.svelte';
   import MainNav from './MainNav.svelte';
   import StatusView from './StatusView.svelte';
   import MaintenanceView from './MaintenanceView.svelte';
@@ -31,7 +30,6 @@
 
 <div class="app-root" id="app-shell" class:is-wizard-fullscreen={wizardFullscreen(managerShell)}>
   <div class="app-chrome" id="app-chrome" hidden={!showChrome(managerShell)}>
-    <HealthHeader />
     <MainNav onNavigate={onNavigateTab} />
   </div>
 

@@ -93,6 +93,13 @@
         <li>{line}</li>
       {/each}
     </ul>
+    {#if inspect.package}
+      <details>
+        <summary>Technische Paketdetails</summary>
+        <p>Unterstützte Einstellungsformate: {inspect.package.supportedSettingsFormatVersions.join(', ')}</p>
+        <p>Datenbankschema nach dem Update: {inspect.package.targetSchemaVersion}</p>
+      </details>
+    {/if}
     {#if inspectWarnings.length > 0}
       <div class="pfupdate-wizard-warnings">
         <p><strong>Hinweise</strong></p>

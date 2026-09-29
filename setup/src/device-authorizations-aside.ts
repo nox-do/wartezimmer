@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { maintenanceRequestHeaders } from './maintenance-auth.js';
 import { APP_DB_BASENAME } from './app-data-volume.js';
+import { MaintenanceClientError, requestMaintenanceJson } from './maintenance-client.js';
 
 export type DeviceAuthorizationAsideRow = {
   authorizationId: string;
@@ -23,6 +23,31 @@ function tableExists(db: DatabaseSync, name: string): boolean {
   return row?.existsFlag === 1;
 }
 
+const DEVICE_AUTHORIZATION_ASIDE_COLUMNS = [
+  'authorization_id',
+  'role',
+  'device_id',
+  'room_id',
+  'placement',
+  'token_hash',
+  'created_at',
+  'last_seen_at',
+  'updated_at',
+  'revoked_at',
+] as const;
+
+function assertDeviceAuthorizationAsideSchema(db: DatabaseSync): void {
+  const columns = new Set(
+    (
+      db.prepare('PRAGMA table_info(device_authorizations)').all() as Array<{ name?: unknown }>
+    ).flatMap((row) => (typeof row.name === 'string' ? [row.name] : [])),
+  );
+  const missing = DEVICE_AUTHORIZATION_ASIDE_COLUMNS.filter((column) => !columns.has(column));
+  if (missing.length > 0) {
+    throw new Error(`DEVICE_AUTHORIZATION_SCHEMA_UNSUPPORTED: missing ${missing.join(', ')}`);
+  }
+}
+
 export function readActiveDeviceAuthorizationsFromAside(
   asideDir: string,
 ): DeviceAuthorizationAsideRow[] {
@@ -36,6 +61,7 @@ export function readActiveDeviceAuthorizationsFromAside(
     if (!tableExists(db, 'device_authorizations')) {
       return [];
     }
+    assertDeviceAuthorizationAsideSchema(db);
     const rows = db
       .prepare(
         `SELECT
@@ -108,23 +134,18 @@ export async function copyDeviceAuthorizationsFromAsideViaApp(
   }
 
   try {
-    const response = await fetch(
-      `${localMaintenanceAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/device-authorizations/import`,
-      {
-        method: 'POST',
-        headers: maintenanceRequestHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ authorizations: rows }),
-        signal: AbortSignal.timeout(30_000),
-      },
+    const body = await requestMaintenanceJson(
+      '/api/v1/ops/device-authorizations/import',
+      localMaintenanceAppBaseUrl,
+      { method: 'POST', body: { authorizations: rows }, timeoutMs: 30_000 },
     );
-    const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-    if (!response.ok || body.ok !== true) {
+    if (body.ok !== true) {
       return {
         ok: false,
         errors: [
           typeof body.message === 'string'
             ? body.message
-            : `Gerätefreigaben-Import fehlgeschlagen (${response.status}).`,
+            : 'Gerätefreigaben-Import wurde abgelehnt.',
         ],
       };
     }
@@ -133,12 +154,15 @@ export async function copyDeviceAuthorizationsFromAsideViaApp(
       imported: typeof body.imported === 'number' ? body.imported : rows.length,
     };
   } catch (error) {
+    const responseBody = error instanceof MaintenanceClientError ? error.responseBody : undefined;
     return {
       ok: false,
       errors: [
-        error instanceof Error
-          ? error.message
-          : 'Gerätefreigaben-Import über die Maintenance-API ist fehlgeschlagen.',
+        typeof responseBody?.message === 'string'
+          ? responseBody.message
+          : error instanceof Error
+            ? error.message
+            : 'Gerätefreigaben-Import über die Maintenance-API ist fehlgeschlagen.',
       ],
     };
   }

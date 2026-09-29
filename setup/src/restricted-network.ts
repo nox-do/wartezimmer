@@ -251,8 +251,8 @@ export async function buildRestrictedNetworkInspect(input: {
     id: 'restricted.platform',
     ok: supported,
     message: supported
-      ? 'Hostplattform für den vorbereiteten Restricted-Pfad freigegeben'
-      : 'Restricted-Binding ist auf dieser Hostplattform noch nicht freigegeben',
+      ? 'Der separate Patientenzugang wird unter macOS unterstützt.'
+      : 'Der separate Patientenzugang wird derzeit nur unter macOS unterstützt.',
   });
   const certificateReady = Boolean(
     input.tls.mode === 'managed' &&
@@ -268,7 +268,7 @@ export async function buildRestrictedNetworkInspect(input: {
       input.tls.cutoverApplied && status.portalHostname && certificateReady
         ? 'HTTPS ist für den Portal-Hostnamen vorbereitet'
         : input.tls.mode !== 'managed'
-          ? 'Der dedizierte Patientenzugang erfordert verwaltetes Wildcard-HTTPS'
+          ? 'Richten Sie zuerst unter „HTTPS“ ein automatisch verwaltetes Zertifikat ein. Dieses wird auch für den Patientenzugang benötigt.'
           : 'Das eingerichtete HTTPS-Zertifikat deckt den Portal-Hostnamen nicht ab',
   });
 

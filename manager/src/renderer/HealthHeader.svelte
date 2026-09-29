@@ -6,9 +6,7 @@
   } from './health-header.js';
   import { runtimeObservationNotice } from './runtime-observation.js';
   import { managerShell } from './manager-shell-state.svelte.js';
-  import { managerStatusViewModel } from './manager-status-view-model.js';
 
-  const overall = $derived(managerStatusViewModel(managerShell.configSnapshot, managerShell.runtimeObservation));
   const tiles = $derived(collectObservedHealthTiles(managerShell.runtimeObservation));
   const errorMessage = $derived(runtimeObservationNotice(managerShell.runtimeObservation));
 
@@ -35,7 +33,6 @@
 </script>
 
 <header id="health-header" class="health-header">
-  <p class={overall.noticeClass} role="status">{overall.primary.summary}</p>
   <div id="health-tiles" class="health-tiles">
     {#if errorMessage}
       <article class="health-tile health-tile-error">{errorMessage}</article>

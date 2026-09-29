@@ -1429,85 +1429,103 @@ export const SettingsSnapshotDbV1 = {
 } as const;
 
 export const SettingsSnapshotV1 = {
-  allOf: [
-    {
+  type: 'object',
+  required: [
+    'settingsFormatVersion',
+    'exportedAt',
+    'opsSettings',
+    'authSettings',
+    'messagingProviderConfigs',
+  ],
+  additionalProperties: false,
+  properties: {
+    settingsFormatVersion: {
+      type: 'integer',
+      const: 1,
+    },
+    exportedAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    opsSettings: {
       type: 'object',
-      required: [
-        'settingsFormatVersion',
-        'exportedAt',
-        'opsSettings',
-        'authSettings',
-        'messagingProviderConfigs',
-      ],
+      additionalProperties: true,
+    },
+    authSettings: {
+      type: 'object',
+      required: ['staffPinHashMfa', 'staffPinHashOps', 'roomPanelPinHash'],
       additionalProperties: false,
       properties: {
-        settingsFormatVersion: {
-          type: 'integer',
-          const: 1,
-        },
-        exportedAt: {
+        staffPinHashMfa: {
           type: 'string',
-          format: 'date-time',
         },
-        opsSettings: {
-          type: 'object',
-          additionalProperties: true,
+        staffPinHashOps: {
+          type: 'string',
         },
-        authSettings: {
-          type: 'object',
-          required: ['staffPinHashMfa', 'staffPinHashOps', 'roomPanelPinHash'],
-          additionalProperties: false,
-          properties: {
-            staffPinHashMfa: {
-              type: 'string',
-            },
-            staffPinHashOps: {
-              type: 'string',
-            },
-            roomPanelPinHash: {
-              type: 'string',
-            },
-          },
-        },
-        messagingProviderConfigs: {
-          type: 'array',
-          items: {
-            type: 'object',
-            required: ['providerId', 'channel', 'enabled', 'credentialsJson'],
-            additionalProperties: false,
-            properties: {
-              providerId: {
-                type: 'string',
-              },
-              channel: {
-                type: 'string',
-                enum: ['sms', 'messenger'],
-              },
-              enabled: {
-                type: 'boolean',
-              },
-              credentialsJson: {
-                type: 'string',
-              },
-            },
-          },
+        roomPanelPinHash: {
+          type: 'string',
         },
       },
     },
-    {
-      type: 'object',
-      required: ['env'],
-      additionalProperties: false,
-      properties: {
-        env: {
-          type: 'object',
-          additionalProperties: {
+    messagingProviderConfigs: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['providerId', 'channel', 'enabled', 'credentialsJson'],
+        additionalProperties: false,
+        properties: {
+          providerId: {
+            type: 'string',
+          },
+          channel: {
+            type: 'string',
+            enum: ['sms', 'messenger'],
+          },
+          enabled: {
+            type: 'boolean',
+          },
+          credentialsJson: {
             type: 'string',
           },
         },
       },
     },
+    env: {
+      type: 'object',
+      additionalProperties: {
+        type: 'string',
+      },
+    },
+  },
+} as const;
+
+export const MaintenanceApiInfo = {
+  type: 'object',
+  required: [
+    'protocolVersion',
+    'stackVersion',
+    'snapshotExportFormatVersion',
+    'snapshotImportFormatVersions',
   ],
+  additionalProperties: false,
+  properties: {
+    protocolVersion: {
+      type: 'integer',
+      const: 1,
+    },
+    stackVersion: {
+      type: ['string', 'null'],
+    },
+    snapshotExportFormatVersion: {
+      type: 'integer',
+    },
+    snapshotImportFormatVersions: {
+      type: 'array',
+      items: {
+        type: 'integer',
+      },
+    },
+  },
 } as const;
 
 export const SettingsSnapshotValidationResult = {
@@ -4499,86 +4517,148 @@ export const GET_api_v1_ops_settings_snapshotResponse200 = {
   },
 } as const;
 
-export const POST_api_v1_ops_settings_snapshot_validateRequestBody = {
-  allOf: [
-    {
-      type: 'object',
-      required: [
-        'settingsFormatVersion',
-        'exportedAt',
-        'opsSettings',
-        'authSettings',
-        'messagingProviderConfigs',
+export const GET_api_v1_ops_settings_snapshotResponse401 = {
+  type: 'object',
+  required: ['code', 'message'],
+  properties: {
+    code: {
+      type: 'string',
+      enum: [
+        'INVALID_ARGUMENT',
+        'INTERNAL_ERROR',
+        'NOT_FOUND',
+        'AUTH_UNAUTHORIZED',
+        'AUTH_FORBIDDEN',
+        'RATE_LIMITED',
+        'VISIT_NOT_FOUND',
+        'DOCUMENT_NOT_FOUND',
+        'DOCUMENT_FORBIDDEN',
+        'INVALID_TRANSITION',
+        'ROOM_REQUIRED',
+        'MISSING_CALLBACK_PHONE',
+        'CHECKIN_LOCK_REQUIRED',
+        'DAY_CLOSE_IN_PROGRESS',
+        'INVALID_DAY_CLOSE_PHASE',
+        'DAY_CLOSE_NOT_STARTED',
+        'UNKNOWN_MESSAGING_PROVIDER',
+        'CHECKIN_LOCKED',
+        'CHECKIN_AUTH_PATH_DISABLED',
+        'CHECKIN_CLOSED',
+        'TOPIC_DISABLED',
+        'TOPIC_CLOSED',
+        'DOCUMENT_NOT_SCANNED',
+        'EXPORT_BLOCKED_MALWARE',
+        'OPS_SETTINGS_INVALID',
+        'OPS_SETTINGS_STALE',
+        'EMERGENCY_DISABLED',
+        'EMERGENCY_NOT_FOUND',
+        'SETUP_INCOMPLETE',
+        'SETUP_ALREADY_COMPLETED',
+        'SESSION_INVALID_TICKET',
+        'SESSION_TICKET_NOT_ACTIVE',
+        'SESSION_ALREADY_ACTIVE',
+        'SESSION_UNAUTHORIZED',
+        'SESSION_EXPIRED',
+        'FORM_TEMPLATE_NOT_FOUND',
+        'DOCUMENT_INTAKE_BLOCKED',
+        'DOCUMENT_TEMPLATE_METADATA_INVALID',
+        'DOCUMENT_SCHEMA_OUTDATED',
+        'SANDBOX_UNAVAILABLE',
+        'CAPTIVE_CLIENT_MISSING',
+        'CAPTIVE_AUTH_FAILED',
+        'CALL_ANNOUNCEMENT_OFFLINE',
+        'ROOM_AT_CAPACITY',
+        'ROOM_BLOCKED_TOPICS',
+        'ROOM_BLOCKED_QUEUE',
+        'ROOM_BLOCKED_CAPACITY',
+        'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+        'RECALL_WINDOW_EXPIRED',
+        'UNKNOWN_TOPIC',
+        'TERMINAL_OFFLINE',
+        'TERMINAL_PHONE_INVALID',
+        'TERMINAL_BIRTH_DATE_INVALID',
+        'TERMINAL_LAST_NAME_INVALID',
       ],
+    },
+    message: {
+      type: 'string',
+    },
+    details: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+} as const;
+
+export const POST_api_v1_ops_settings_snapshot_validateRequestBody = {
+  type: 'object',
+  required: [
+    'settingsFormatVersion',
+    'exportedAt',
+    'opsSettings',
+    'authSettings',
+    'messagingProviderConfigs',
+  ],
+  additionalProperties: false,
+  properties: {
+    settingsFormatVersion: {
+      type: 'integer',
+      const: 1,
+    },
+    exportedAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    opsSettings: {
+      type: 'object',
+      additionalProperties: true,
+    },
+    authSettings: {
+      type: 'object',
+      required: ['staffPinHashMfa', 'staffPinHashOps', 'roomPanelPinHash'],
       additionalProperties: false,
       properties: {
-        settingsFormatVersion: {
-          type: 'integer',
-          const: 1,
-        },
-        exportedAt: {
+        staffPinHashMfa: {
           type: 'string',
-          format: 'date-time',
         },
-        opsSettings: {
-          type: 'object',
-          additionalProperties: true,
+        staffPinHashOps: {
+          type: 'string',
         },
-        authSettings: {
-          type: 'object',
-          required: ['staffPinHashMfa', 'staffPinHashOps', 'roomPanelPinHash'],
-          additionalProperties: false,
-          properties: {
-            staffPinHashMfa: {
-              type: 'string',
-            },
-            staffPinHashOps: {
-              type: 'string',
-            },
-            roomPanelPinHash: {
-              type: 'string',
-            },
-          },
-        },
-        messagingProviderConfigs: {
-          type: 'array',
-          items: {
-            type: 'object',
-            required: ['providerId', 'channel', 'enabled', 'credentialsJson'],
-            additionalProperties: false,
-            properties: {
-              providerId: {
-                type: 'string',
-              },
-              channel: {
-                type: 'string',
-                enum: ['sms', 'messenger'],
-              },
-              enabled: {
-                type: 'boolean',
-              },
-              credentialsJson: {
-                type: 'string',
-              },
-            },
-          },
+        roomPanelPinHash: {
+          type: 'string',
         },
       },
     },
-    {
-      type: 'object',
-      required: ['env'],
-      additionalProperties: false,
-      properties: {
-        env: {
-          type: 'object',
-          additionalProperties: {
+    messagingProviderConfigs: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['providerId', 'channel', 'enabled', 'credentialsJson'],
+        additionalProperties: false,
+        properties: {
+          providerId: {
+            type: 'string',
+          },
+          channel: {
+            type: 'string',
+            enum: ['sms', 'messenger'],
+          },
+          enabled: {
+            type: 'boolean',
+          },
+          credentialsJson: {
             type: 'string',
           },
         },
       },
     },
-  ],
+    env: {
+      type: 'object',
+      additionalProperties: {
+        type: 'string',
+      },
+    },
+  },
 } as const;
 
 export const POST_api_v1_ops_settings_snapshot_validateResponse200 = {
@@ -4608,86 +4688,148 @@ export const POST_api_v1_ops_settings_snapshot_validateResponse200 = {
   },
 } as const;
 
-export const POST_api_v1_ops_settings_snapshot_importRequestBody = {
-  allOf: [
-    {
-      type: 'object',
-      required: [
-        'settingsFormatVersion',
-        'exportedAt',
-        'opsSettings',
-        'authSettings',
-        'messagingProviderConfigs',
+export const POST_api_v1_ops_settings_snapshot_validateResponse401 = {
+  type: 'object',
+  required: ['code', 'message'],
+  properties: {
+    code: {
+      type: 'string',
+      enum: [
+        'INVALID_ARGUMENT',
+        'INTERNAL_ERROR',
+        'NOT_FOUND',
+        'AUTH_UNAUTHORIZED',
+        'AUTH_FORBIDDEN',
+        'RATE_LIMITED',
+        'VISIT_NOT_FOUND',
+        'DOCUMENT_NOT_FOUND',
+        'DOCUMENT_FORBIDDEN',
+        'INVALID_TRANSITION',
+        'ROOM_REQUIRED',
+        'MISSING_CALLBACK_PHONE',
+        'CHECKIN_LOCK_REQUIRED',
+        'DAY_CLOSE_IN_PROGRESS',
+        'INVALID_DAY_CLOSE_PHASE',
+        'DAY_CLOSE_NOT_STARTED',
+        'UNKNOWN_MESSAGING_PROVIDER',
+        'CHECKIN_LOCKED',
+        'CHECKIN_AUTH_PATH_DISABLED',
+        'CHECKIN_CLOSED',
+        'TOPIC_DISABLED',
+        'TOPIC_CLOSED',
+        'DOCUMENT_NOT_SCANNED',
+        'EXPORT_BLOCKED_MALWARE',
+        'OPS_SETTINGS_INVALID',
+        'OPS_SETTINGS_STALE',
+        'EMERGENCY_DISABLED',
+        'EMERGENCY_NOT_FOUND',
+        'SETUP_INCOMPLETE',
+        'SETUP_ALREADY_COMPLETED',
+        'SESSION_INVALID_TICKET',
+        'SESSION_TICKET_NOT_ACTIVE',
+        'SESSION_ALREADY_ACTIVE',
+        'SESSION_UNAUTHORIZED',
+        'SESSION_EXPIRED',
+        'FORM_TEMPLATE_NOT_FOUND',
+        'DOCUMENT_INTAKE_BLOCKED',
+        'DOCUMENT_TEMPLATE_METADATA_INVALID',
+        'DOCUMENT_SCHEMA_OUTDATED',
+        'SANDBOX_UNAVAILABLE',
+        'CAPTIVE_CLIENT_MISSING',
+        'CAPTIVE_AUTH_FAILED',
+        'CALL_ANNOUNCEMENT_OFFLINE',
+        'ROOM_AT_CAPACITY',
+        'ROOM_BLOCKED_TOPICS',
+        'ROOM_BLOCKED_QUEUE',
+        'ROOM_BLOCKED_CAPACITY',
+        'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+        'RECALL_WINDOW_EXPIRED',
+        'UNKNOWN_TOPIC',
+        'TERMINAL_OFFLINE',
+        'TERMINAL_PHONE_INVALID',
+        'TERMINAL_BIRTH_DATE_INVALID',
+        'TERMINAL_LAST_NAME_INVALID',
       ],
+    },
+    message: {
+      type: 'string',
+    },
+    details: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+} as const;
+
+export const POST_api_v1_ops_settings_snapshot_importRequestBody = {
+  type: 'object',
+  required: [
+    'settingsFormatVersion',
+    'exportedAt',
+    'opsSettings',
+    'authSettings',
+    'messagingProviderConfigs',
+  ],
+  additionalProperties: false,
+  properties: {
+    settingsFormatVersion: {
+      type: 'integer',
+      const: 1,
+    },
+    exportedAt: {
+      type: 'string',
+      format: 'date-time',
+    },
+    opsSettings: {
+      type: 'object',
+      additionalProperties: true,
+    },
+    authSettings: {
+      type: 'object',
+      required: ['staffPinHashMfa', 'staffPinHashOps', 'roomPanelPinHash'],
       additionalProperties: false,
       properties: {
-        settingsFormatVersion: {
-          type: 'integer',
-          const: 1,
-        },
-        exportedAt: {
+        staffPinHashMfa: {
           type: 'string',
-          format: 'date-time',
         },
-        opsSettings: {
-          type: 'object',
-          additionalProperties: true,
+        staffPinHashOps: {
+          type: 'string',
         },
-        authSettings: {
-          type: 'object',
-          required: ['staffPinHashMfa', 'staffPinHashOps', 'roomPanelPinHash'],
-          additionalProperties: false,
-          properties: {
-            staffPinHashMfa: {
-              type: 'string',
-            },
-            staffPinHashOps: {
-              type: 'string',
-            },
-            roomPanelPinHash: {
-              type: 'string',
-            },
-          },
-        },
-        messagingProviderConfigs: {
-          type: 'array',
-          items: {
-            type: 'object',
-            required: ['providerId', 'channel', 'enabled', 'credentialsJson'],
-            additionalProperties: false,
-            properties: {
-              providerId: {
-                type: 'string',
-              },
-              channel: {
-                type: 'string',
-                enum: ['sms', 'messenger'],
-              },
-              enabled: {
-                type: 'boolean',
-              },
-              credentialsJson: {
-                type: 'string',
-              },
-            },
-          },
+        roomPanelPinHash: {
+          type: 'string',
         },
       },
     },
-    {
-      type: 'object',
-      required: ['env'],
-      additionalProperties: false,
-      properties: {
-        env: {
-          type: 'object',
-          additionalProperties: {
+    messagingProviderConfigs: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['providerId', 'channel', 'enabled', 'credentialsJson'],
+        additionalProperties: false,
+        properties: {
+          providerId: {
+            type: 'string',
+          },
+          channel: {
+            type: 'string',
+            enum: ['sms', 'messenger'],
+          },
+          enabled: {
+            type: 'boolean',
+          },
+          credentialsJson: {
             type: 'string',
           },
         },
       },
     },
-  ],
+    env: {
+      type: 'object',
+      additionalProperties: {
+        type: 'string',
+      },
+    },
+  },
 } as const;
 
 export const POST_api_v1_ops_settings_snapshot_importResponse200 = {
@@ -4855,6 +4997,181 @@ export const POST_api_v1_ops_settings_snapshot_importResponse400 = {
       },
     },
   ],
+} as const;
+
+export const POST_api_v1_ops_settings_snapshot_importResponse401 = {
+  type: 'object',
+  required: ['code', 'message'],
+  properties: {
+    code: {
+      type: 'string',
+      enum: [
+        'INVALID_ARGUMENT',
+        'INTERNAL_ERROR',
+        'NOT_FOUND',
+        'AUTH_UNAUTHORIZED',
+        'AUTH_FORBIDDEN',
+        'RATE_LIMITED',
+        'VISIT_NOT_FOUND',
+        'DOCUMENT_NOT_FOUND',
+        'DOCUMENT_FORBIDDEN',
+        'INVALID_TRANSITION',
+        'ROOM_REQUIRED',
+        'MISSING_CALLBACK_PHONE',
+        'CHECKIN_LOCK_REQUIRED',
+        'DAY_CLOSE_IN_PROGRESS',
+        'INVALID_DAY_CLOSE_PHASE',
+        'DAY_CLOSE_NOT_STARTED',
+        'UNKNOWN_MESSAGING_PROVIDER',
+        'CHECKIN_LOCKED',
+        'CHECKIN_AUTH_PATH_DISABLED',
+        'CHECKIN_CLOSED',
+        'TOPIC_DISABLED',
+        'TOPIC_CLOSED',
+        'DOCUMENT_NOT_SCANNED',
+        'EXPORT_BLOCKED_MALWARE',
+        'OPS_SETTINGS_INVALID',
+        'OPS_SETTINGS_STALE',
+        'EMERGENCY_DISABLED',
+        'EMERGENCY_NOT_FOUND',
+        'SETUP_INCOMPLETE',
+        'SETUP_ALREADY_COMPLETED',
+        'SESSION_INVALID_TICKET',
+        'SESSION_TICKET_NOT_ACTIVE',
+        'SESSION_ALREADY_ACTIVE',
+        'SESSION_UNAUTHORIZED',
+        'SESSION_EXPIRED',
+        'FORM_TEMPLATE_NOT_FOUND',
+        'DOCUMENT_INTAKE_BLOCKED',
+        'DOCUMENT_TEMPLATE_METADATA_INVALID',
+        'DOCUMENT_SCHEMA_OUTDATED',
+        'SANDBOX_UNAVAILABLE',
+        'CAPTIVE_CLIENT_MISSING',
+        'CAPTIVE_AUTH_FAILED',
+        'CALL_ANNOUNCEMENT_OFFLINE',
+        'ROOM_AT_CAPACITY',
+        'ROOM_BLOCKED_TOPICS',
+        'ROOM_BLOCKED_QUEUE',
+        'ROOM_BLOCKED_CAPACITY',
+        'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+        'RECALL_WINDOW_EXPIRED',
+        'UNKNOWN_TOPIC',
+        'TERMINAL_OFFLINE',
+        'TERMINAL_PHONE_INVALID',
+        'TERMINAL_BIRTH_DATE_INVALID',
+        'TERMINAL_LAST_NAME_INVALID',
+      ],
+    },
+    message: {
+      type: 'string',
+    },
+    details: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+} as const;
+
+export const GET_api_v1_ops_maintenance_infoResponse200 = {
+  type: 'object',
+  required: [
+    'protocolVersion',
+    'stackVersion',
+    'snapshotExportFormatVersion',
+    'snapshotImportFormatVersions',
+  ],
+  additionalProperties: false,
+  properties: {
+    protocolVersion: {
+      type: 'integer',
+      const: 1,
+    },
+    stackVersion: {
+      type: ['string', 'null'],
+    },
+    snapshotExportFormatVersion: {
+      type: 'integer',
+    },
+    snapshotImportFormatVersions: {
+      type: 'array',
+      items: {
+        type: 'integer',
+      },
+    },
+  },
+} as const;
+
+export const GET_api_v1_ops_maintenance_infoResponse401 = {
+  type: 'object',
+  required: ['code', 'message'],
+  properties: {
+    code: {
+      type: 'string',
+      enum: [
+        'INVALID_ARGUMENT',
+        'INTERNAL_ERROR',
+        'NOT_FOUND',
+        'AUTH_UNAUTHORIZED',
+        'AUTH_FORBIDDEN',
+        'RATE_LIMITED',
+        'VISIT_NOT_FOUND',
+        'DOCUMENT_NOT_FOUND',
+        'DOCUMENT_FORBIDDEN',
+        'INVALID_TRANSITION',
+        'ROOM_REQUIRED',
+        'MISSING_CALLBACK_PHONE',
+        'CHECKIN_LOCK_REQUIRED',
+        'DAY_CLOSE_IN_PROGRESS',
+        'INVALID_DAY_CLOSE_PHASE',
+        'DAY_CLOSE_NOT_STARTED',
+        'UNKNOWN_MESSAGING_PROVIDER',
+        'CHECKIN_LOCKED',
+        'CHECKIN_AUTH_PATH_DISABLED',
+        'CHECKIN_CLOSED',
+        'TOPIC_DISABLED',
+        'TOPIC_CLOSED',
+        'DOCUMENT_NOT_SCANNED',
+        'EXPORT_BLOCKED_MALWARE',
+        'OPS_SETTINGS_INVALID',
+        'OPS_SETTINGS_STALE',
+        'EMERGENCY_DISABLED',
+        'EMERGENCY_NOT_FOUND',
+        'SETUP_INCOMPLETE',
+        'SETUP_ALREADY_COMPLETED',
+        'SESSION_INVALID_TICKET',
+        'SESSION_TICKET_NOT_ACTIVE',
+        'SESSION_ALREADY_ACTIVE',
+        'SESSION_UNAUTHORIZED',
+        'SESSION_EXPIRED',
+        'FORM_TEMPLATE_NOT_FOUND',
+        'DOCUMENT_INTAKE_BLOCKED',
+        'DOCUMENT_TEMPLATE_METADATA_INVALID',
+        'DOCUMENT_SCHEMA_OUTDATED',
+        'SANDBOX_UNAVAILABLE',
+        'CAPTIVE_CLIENT_MISSING',
+        'CAPTIVE_AUTH_FAILED',
+        'CALL_ANNOUNCEMENT_OFFLINE',
+        'ROOM_AT_CAPACITY',
+        'ROOM_BLOCKED_TOPICS',
+        'ROOM_BLOCKED_QUEUE',
+        'ROOM_BLOCKED_CAPACITY',
+        'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+        'RECALL_WINDOW_EXPIRED',
+        'UNKNOWN_TOPIC',
+        'TERMINAL_OFFLINE',
+        'TERMINAL_PHONE_INVALID',
+        'TERMINAL_BIRTH_DATE_INVALID',
+        'TERMINAL_LAST_NAME_INVALID',
+      ],
+    },
+    message: {
+      type: 'string',
+    },
+    details: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
 } as const;
 
 export const GET_api_v1_ops_device_authorizationsResponse200 = {
@@ -5079,6 +5396,79 @@ export const POST_api_v1_ops_device_authorizations_importResponse200 = {
 } as const;
 
 export const POST_api_v1_ops_device_authorizations_importResponse400 = {
+  type: 'object',
+  required: ['code', 'message'],
+  properties: {
+    code: {
+      type: 'string',
+      enum: [
+        'INVALID_ARGUMENT',
+        'INTERNAL_ERROR',
+        'NOT_FOUND',
+        'AUTH_UNAUTHORIZED',
+        'AUTH_FORBIDDEN',
+        'RATE_LIMITED',
+        'VISIT_NOT_FOUND',
+        'DOCUMENT_NOT_FOUND',
+        'DOCUMENT_FORBIDDEN',
+        'INVALID_TRANSITION',
+        'ROOM_REQUIRED',
+        'MISSING_CALLBACK_PHONE',
+        'CHECKIN_LOCK_REQUIRED',
+        'DAY_CLOSE_IN_PROGRESS',
+        'INVALID_DAY_CLOSE_PHASE',
+        'DAY_CLOSE_NOT_STARTED',
+        'UNKNOWN_MESSAGING_PROVIDER',
+        'CHECKIN_LOCKED',
+        'CHECKIN_AUTH_PATH_DISABLED',
+        'CHECKIN_CLOSED',
+        'TOPIC_DISABLED',
+        'TOPIC_CLOSED',
+        'DOCUMENT_NOT_SCANNED',
+        'EXPORT_BLOCKED_MALWARE',
+        'OPS_SETTINGS_INVALID',
+        'OPS_SETTINGS_STALE',
+        'EMERGENCY_DISABLED',
+        'EMERGENCY_NOT_FOUND',
+        'SETUP_INCOMPLETE',
+        'SETUP_ALREADY_COMPLETED',
+        'SESSION_INVALID_TICKET',
+        'SESSION_TICKET_NOT_ACTIVE',
+        'SESSION_ALREADY_ACTIVE',
+        'SESSION_UNAUTHORIZED',
+        'SESSION_EXPIRED',
+        'FORM_TEMPLATE_NOT_FOUND',
+        'DOCUMENT_INTAKE_BLOCKED',
+        'DOCUMENT_TEMPLATE_METADATA_INVALID',
+        'DOCUMENT_SCHEMA_OUTDATED',
+        'SANDBOX_UNAVAILABLE',
+        'CAPTIVE_CLIENT_MISSING',
+        'CAPTIVE_AUTH_FAILED',
+        'CALL_ANNOUNCEMENT_OFFLINE',
+        'ROOM_AT_CAPACITY',
+        'ROOM_BLOCKED_TOPICS',
+        'ROOM_BLOCKED_QUEUE',
+        'ROOM_BLOCKED_CAPACITY',
+        'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+        'RECALL_WINDOW_EXPIRED',
+        'UNKNOWN_TOPIC',
+        'TERMINAL_OFFLINE',
+        'TERMINAL_PHONE_INVALID',
+        'TERMINAL_BIRTH_DATE_INVALID',
+        'TERMINAL_LAST_NAME_INVALID',
+      ],
+    },
+    message: {
+      type: 'string',
+    },
+    details: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+} as const;
+
+export const POST_api_v1_ops_device_authorizations_importResponse401 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -7980,6 +8370,7 @@ export const opsSchemas = {
   SettingsSnapshotOpsSettingsV1,
   SettingsSnapshotDbV1,
   SettingsSnapshotV1,
+  MaintenanceApiInfo,
   SettingsSnapshotValidationResult,
   DeviceAuthorizationCopyRow,
   DeviceAuthorizationImportRequest,
@@ -8013,11 +8404,16 @@ export const opsSchemas = {
   PATCH_api_v1_ops_settingsResponse409,
   GET_api_v1_ops_settings_capabilitiesResponse200,
   GET_api_v1_ops_settings_snapshotResponse200,
+  GET_api_v1_ops_settings_snapshotResponse401,
   POST_api_v1_ops_settings_snapshot_validateRequestBody,
   POST_api_v1_ops_settings_snapshot_validateResponse200,
+  POST_api_v1_ops_settings_snapshot_validateResponse401,
   POST_api_v1_ops_settings_snapshot_importRequestBody,
   POST_api_v1_ops_settings_snapshot_importResponse200,
   POST_api_v1_ops_settings_snapshot_importResponse400,
+  POST_api_v1_ops_settings_snapshot_importResponse401,
+  GET_api_v1_ops_maintenance_infoResponse200,
+  GET_api_v1_ops_maintenance_infoResponse401,
   GET_api_v1_ops_device_authorizationsResponse200,
   POST_api_v1_ops_device_authorizations_authorizationId_revokeParams,
   POST_api_v1_ops_device_authorizations_authorizationId_revokeResponse200,
@@ -8025,6 +8421,7 @@ export const opsSchemas = {
   POST_api_v1_ops_device_authorizations_importRequestBody,
   POST_api_v1_ops_device_authorizations_importResponse200,
   POST_api_v1_ops_device_authorizations_importResponse400,
+  POST_api_v1_ops_device_authorizations_importResponse401,
   POST_api_v1_ops_settings_onboarding_verifyResponse200,
   POST_api_v1_ops_settings_onboarding_verifyResponse403,
   GET_api_v1_ops_settings_onboardingResponse200,

@@ -8,7 +8,7 @@ import { readUpdateOperationStatus } from './update-operation.js';
 import { recoverUpdateOperation } from './settings-backup-update.js';
 import type { HostMutationLock } from './host-mutation-lock.js';
 import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
-import { createModuleLogger } from '@praxis-flow/server-shared/logger';
+import { createModuleLogger } from './logger.js';
 import { discoverRecoveryBackups } from './recovery-backup.js';
 import { previewInstallRecovery, finishInstallRecovery } from './install-recovery.js';
 import { readInstallOperation } from './install-operation.js';

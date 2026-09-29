@@ -85,7 +85,7 @@ export function createOperationJournal<T extends { id: string; phase: string }>(
         retryable: pending,
         message: pending
           ? `Ein ${label}-Vorgang ist noch offen. Bitte warten und den Status erneut prüfen.`
-          : `${label}-Recovery ungeklärt. Bitte die Setup-Diagnose prüfen.`,
+          : `${label} konnte nicht abgeschlossen werden. Bitte öffnen Sie die Diagnose im Status-Tab.`,
       });
     },
     finish(home: string, op: T): void {

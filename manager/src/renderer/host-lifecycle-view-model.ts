@@ -36,7 +36,7 @@ export function hostLifecycleSummary(lifecycle: HostLifecycle) {
         : null,
     repair:
       lifecycle.assessment === 'inconsistent'
-        ? 'Einrichtung prüfen und bei Bedarf erneut durchführen. Praxisdaten und vorhandenes TLS-Material müssen dabei erhalten bleiben.'
+        ? 'Bitte prüfen Sie die Hinweise unter „Technische Installationsdetails“, bevor Sie die Einrichtung ändern.'
         : null,
   };
 }

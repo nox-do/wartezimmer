@@ -51,21 +51,21 @@ export function restoreWizardProgress(state: RestoreWizardState): string {
     case 'inspect':
       return 'Backup wird geprüft …';
     case 'restoring':
-      return 'Wiederherstellung läuft — Stack wird gestoppt und neu gestartet …';
+      return 'Einstellungen werden wiederhergestellt — Praxis Flow wird neu gestartet …';
     default:
       return '';
   }
 }
 
 export function restoreWizardChooseTitle(mode: RestoreWizardMode): string {
-  return mode === 'pre-update' ? 'Vor dem Software-Update' : 'Settings wiederherstellen';
+  return mode === 'pre-update' ? 'Vor dem Software-Update' : 'Einstellungen wiederherstellen';
 }
 
 export function restoreWizardChooseLead(mode: RestoreWizardMode): string {
   if (mode === 'pre-update') {
-    return 'Soll vor dem Update ein Praxis-Backup (.pfbackup) wiederhergestellt werden? Der Stack wird dabei kurz gestoppt; Patientendaten in der laufenden DB werden verworfen und Settings aus dem Backup importiert.';
+    return 'Soll vor dem Update ein Praxis-Backup (.pfbackup) wiederhergestellt werden? Praxis Flow wird dabei angehalten. Die aktuelle Warteschlange und die darin gespeicherten Patientendaten werden gelöscht; die gesicherten Einstellungen werden übernommen.';
   }
-  return 'Praxis-Backup (.pfbackup) auswählen und Settings in eine frische Datenbank importieren. Der Stack wird kurz offline sein.';
+  return 'Wählen Sie ein Praxis-Backup (.pfbackup), um die gesicherten Einstellungen wiederherzustellen. Praxis Flow ist währenddessen nicht verfügbar.';
 }
 
 /** Pure renderer copy for the optional Setup-owned TLS inspect result. */
@@ -109,10 +109,10 @@ export function restoreInspectSummaryLines(inspect: PfbackupInspectResult): stri
     `Portal: ${inspect.backup.portalEnabled ? 'an' : 'aus'}`,
   ];
   if (inspect.backup.releaseVersion) {
-    lines.push(`Release im Backup: ${inspect.backup.releaseVersion}`);
+    lines.push(`Software-Version im Backup: ${inspect.backup.releaseVersion}`);
   }
   if (inspect.backup.providerCredentialsIncluded) {
-    lines.push('SMS-Provider-Credentials im Backup enthalten.');
+    lines.push('SMS-Zugangsdaten sind im Backup enthalten.');
   }
   const tlsLine = restoreTlsInspectSummaryLine(inspect.backup.tls);
   if (tlsLine) {
@@ -144,30 +144,49 @@ export function restoreInspectBlockedMessage(inspect: PfbackupInspectResult): st
     return 'Backup-Archiv ist ungültig.';
   }
   if (!inspect.compatibility.settingsValid) {
-    return 'Settings sind für Restore nicht importierbar.';
+    return 'Die Einstellungen aus diesem Backup können nicht übernommen werden.';
   }
   if (!inspect.compatibility.targetAppReachable) {
-    return 'Maintenance-API (Port 8082) ist nicht erreichbar.';
+    return 'Der Manager kann die App zurzeit nicht erreichen.';
   }
-  return 'Restore wird nicht unterstützt.';
+  return 'Dieses Backup kann nicht wiederhergestellt werden.';
+}
+
+function restoreStepFailure(phase: string): string {
+  const steps: Record<string, string> = {
+    validate_archive: 'Das Backup konnte nicht geprüft werden.',
+    validate_settings: 'Die gesicherten Einstellungen konnten nicht geprüft werden.',
+    backup_rollback_state: 'Der bisherige Zustand konnte nicht gesichert werden.',
+    stop_stack: 'Praxis Flow konnte nicht angehalten werden.',
+    write_env: 'Die Konfiguration konnte nicht gespeichert werden.',
+    write_manager_state: 'Die Installationseinstellungen konnten nicht gespeichert werden.',
+    move_database: 'Die bisherige Datenbank konnte nicht gesichert werden.',
+    start_app: 'Die App konnte nicht gestartet werden.',
+    wait_maintenance: 'Der Manager konnte keine Verbindung zur App herstellen.',
+    import_snapshot: 'Die gesicherten Einstellungen konnten nicht übernommen werden.',
+    verify_export: 'Die übernommenen Einstellungen konnten nicht bestätigt werden.',
+    start_full_stack: 'Praxis Flow konnte nicht vollständig gestartet werden.',
+    health_check: 'Die abschließende Funktionsprüfung ist fehlgeschlagen.',
+  };
+  return steps[phase] ?? 'Die Wiederherstellung ist fehlgeschlagen.';
 }
 
 export function restoreFailureSummary(
   result: Extract<PfbackupRestoreResult, { ok: false }>,
 ): string {
-  const parts = [`Fehler in Phase „${result.failedPhase}“.`, ...result.errors];
+  const parts = [restoreStepFailure(result.failedPhase), ...result.errors];
   if (result.rollbackAttempted) {
     parts.push(
       result.rollbackSucceeded
-        ? 'Automatischer Rollback wurde ausgeführt.'
-        : 'Automatischer Rollback ist fehlgeschlagen — manuelle Recovery nötig.',
+        ? 'Der vorherige Zustand wurde automatisch wiederhergestellt.'
+        : 'Der vorherige Zustand konnte nicht wiederhergestellt werden. Bitte wenden Sie sich an Ihre IT-Betreuung.',
     );
   }
   return parts.join(' ');
 }
 
 export const RESTORE_ROLLBACK_FAILED_RECOVERY_MESSAGE =
-  'Automatische Wiederherstellung des vorherigen Zustands ist fehlgeschlagen. Software-Update nicht fortsetzen. Bitte Recovery-Details prüfen.';
+  'Automatische Wiederherstellung des vorherigen Zustands ist fehlgeschlagen. Software-Update nicht fortsetzen. Bitte öffnen Sie die Diagnose im Status-Tab und wenden Sie sich an Ihre IT-Betreuung.';
 
 export function isRestoreRollbackFailed(result: PfbackupRestoreResult | null): boolean {
   return (
@@ -196,9 +215,9 @@ export function canRetryRestoreAfterFailure(result: PfbackupRestoreResult | null
 export function restoreSuccessSummary(
   result: Extract<PfbackupRestoreResult, { ok: true }>,
 ): string {
-  const parts = ['Settings wurden wiederhergestellt.'];
+  const parts = ['Die Einstellungen wurden wiederhergestellt.'];
   if (result.report.providerCredentialsSkipped) {
-    parts.push('Provider-Credentials wurden übersprungen.');
+    parts.push('Die SMS-Zugangsdaten wurden nicht übernommen.');
   }
   return parts.join(' ');
 }

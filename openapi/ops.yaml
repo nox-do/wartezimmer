@@ -23,6 +23,10 @@ components:
       type: apiKey
       in: cookie
       name: pf_terminal_device_session
+    maintenanceBearer:
+      type: http
+      scheme: bearer
+      description: Installation-specific token used only on the host-loopback maintenance listener.
   schemas:
     RoomPanelPlacementConfig:
       type: object
@@ -840,17 +844,54 @@ components:
           items:
             $ref: '#/components/schemas/SettingsSnapshotMessagingProviderConfigV1'
     SettingsSnapshotV1:
-      allOf:
-        - $ref: '#/components/schemas/SettingsSnapshotDbV1'
-        - type: object
-          required:
-            - env
-          additionalProperties: false
-          properties:
-            env:
-              type: object
-              additionalProperties:
-                type: string
+      type: object
+      required:
+        - settingsFormatVersion
+        - exportedAt
+        - opsSettings
+        - authSettings
+        - messagingProviderConfigs
+      additionalProperties: false
+      properties:
+        settingsFormatVersion:
+          type: integer
+          const: 1
+        exportedAt:
+          type: string
+          format: date-time
+        opsSettings:
+          $ref: '#/components/schemas/SettingsSnapshotOpsSettingsV1'
+        authSettings:
+          $ref: '#/components/schemas/SettingsSnapshotAuthSettingsV1'
+        messagingProviderConfigs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettingsSnapshotMessagingProviderConfigV1'
+        env:
+          type: object
+          description: Optional host environment. The app ignores it during DB-only imports.
+          additionalProperties:
+            type: string
+    MaintenanceApiInfo:
+      type: object
+      required:
+        - protocolVersion
+        - stackVersion
+        - snapshotExportFormatVersion
+        - snapshotImportFormatVersions
+      additionalProperties: false
+      properties:
+        protocolVersion:
+          type: integer
+          const: 1
+        stackVersion:
+          type: [string, 'null']
+        snapshotExportFormatVersion:
+          type: integer
+        snapshotImportFormatVersions:
+          type: array
+          items:
+            type: integer
     SettingsSnapshotValidationResult:
       type: object
       required:
@@ -1904,7 +1945,8 @@ paths:
       description: |
         Exports ops, auth, and messaging provider settings from SQLite without host `.env`.
         Served on the maintenance HTTP listener (host loopback, e.g. port 8082). No session auth.
-      security: []
+      security:
+        - maintenanceBearer: []
       responses:
         '200':
           description: DB-only settings snapshot
@@ -1912,13 +1954,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SettingsSnapshotDbV1'
+        '401':
+          description: Missing or invalid maintenance token
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/settings/snapshot/validate:
     post:
       summary: Validate settings snapshot for restore (maintenance listener)
       description: |
         Parses and validates a full settings snapshot (including `env` when present).
         Maintenance listener only; used by Setup for `.pfbackup` / `.pfupdate` compatibility checks.
-      security: []
+      security:
+        - maintenanceBearer: []
       requestBody:
         required: true
         content:
@@ -1932,13 +1981,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SettingsSnapshotValidationResult'
+        '401':
+          description: Missing or invalid maintenance token
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/settings/snapshot/import:
     post:
       summary: Import settings snapshot into SQLite (maintenance listener)
       description: |
         Replaces ops/auth/messaging settings in the app database. Maintenance listener only.
         Host `.env` is not modified — Setup merges env when building `.pfbackup`.
-      security: []
+      security:
+        - maintenanceBearer: []
       parameters:
         - name: skipProviderCredentials
           in: query
@@ -1968,6 +2024,31 @@ paths:
                 oneOf:
                   - $ref: '#/components/schemas/SettingsSnapshotImportError'
                   - $ref: './common.yaml#/components/schemas/Error'
+        '401':
+          description: Missing or invalid maintenance token
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+  /api/v1/ops/maintenance/info:
+    get:
+      summary: Read the authenticated maintenance protocol and snapshot capabilities
+      description: Lightweight compatibility handshake on the host-loopback maintenance listener.
+      security:
+        - maintenanceBearer: []
+      responses:
+        '200':
+          description: Maintenance protocol identity and supported settings formats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceApiInfo'
+        '401':
+          description: Missing or invalid maintenance token
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
   /api/v1/ops/device-authorizations:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'
@@ -2013,7 +2094,8 @@ paths:
         Writes hashed device grants into the fresh SQLite after settings import.
         Used only by `.pfupdate` cutover. Restore must not call this endpoint.
         Maintenance listener only; no session auth.
-      security: []
+      security:
+        - maintenanceBearer: []
       requestBody:
         required: true
         content:
@@ -2029,6 +2111,12 @@ paths:
                 $ref: '#/components/schemas/DeviceAuthorizationImportReport'
         '400':
           description: Invalid rows or constraint failure
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '401':
+          description: Missing or invalid maintenance token
           content:
             application/json:
               schema:

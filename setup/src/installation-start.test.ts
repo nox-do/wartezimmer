@@ -25,7 +25,13 @@ const dependencies: InstallationStartDependencies = {
       { name: 'proxy', service: 'proxy', state: 'exited', health: 'unhealthy' },
     ],
   }),
-  inspectMaintenance: async () => ({ authenticated: true, settingsFormatVersion: 1 }),
+  inspectMaintenance: async () => ({
+    authenticated: true,
+    compatible: true,
+    status: 'compatible',
+    settingsFormatVersion: 1,
+    stackVersion: '1.0.0',
+  }),
   timeoutMs: 0,
 };
 
@@ -62,7 +68,7 @@ test('missing image, volume or database aborts with a code before compose starts
       },
       composeUp: async () => assert.fail('must not start compose with missing substance'),
     });
-    assert.deepEqual(result, { ok: false, code, compose: null, maintenanceAuthenticated: false });
+    assert.deepEqual(result, { ok: false, code, compose: null, maintenanceStatus: 'unreachable' });
     assert.equal(calls.at(-1), command);
   }
 });
@@ -78,7 +84,27 @@ test('start classifies Compose, health and authentication failures without expos
     ['health-timeout', { composePs: async () => ({ running: false, services: [] }) }],
     [
       'maintenance-auth-failed',
-      { inspectMaintenance: async () => ({ authenticated: false, settingsFormatVersion: 1 }) },
+      {
+        inspectMaintenance: async () => ({
+          authenticated: false,
+          compatible: false,
+          status: 'unauthorized',
+          settingsFormatVersion: null,
+          stackVersion: null,
+        }),
+      },
+    ],
+    [
+      'maintenance-incompatible',
+      {
+        inspectMaintenance: async () => ({
+          authenticated: true,
+          compatible: false,
+          status: 'incompatible',
+          settingsFormatVersion: 999,
+          stackVersion: '999.0.0',
+        }),
+      },
     ],
   ] satisfies Array<[string, InstallationStartDependencies]>) {
     const result = await startExistingInstallation(runOptions, appImage, {
@@ -117,6 +143,6 @@ test('failed Docker queries or utility container execution never prove missing s
 test('start requires healthy core services and authenticated maintenance API', async () => {
   const result = await startExistingInstallation(runOptions, appImage, dependencies);
   assert.equal(result.ok, true);
-  assert.equal(result.maintenanceAuthenticated, true);
+  assert.equal(result.maintenanceStatus, 'compatible');
   assert.equal('log' in result, false);
 });

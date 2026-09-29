@@ -371,7 +371,7 @@ test('custom TLS is not advertised as a prepared dedicated portal identity', asy
   });
   const tlsCheck = result.checks.find((check) => check.id === 'restricted.tls');
   assert.equal(tlsCheck?.ok, false);
-  assert.match(tlsCheck?.message ?? '', /verwaltetes Wildcard-HTTPS/);
+  assert.match(tlsCheck?.message ?? '', /automatisch verwaltetes Zertifikat/);
 });
 
 test('prepare persists the exact local IP/interface choice and then returns DNS inspect', async () => {

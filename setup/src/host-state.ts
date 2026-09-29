@@ -1,4 +1,4 @@
-import { createModuleLogger } from '@praxis-flow/server-shared/logger';
+import { createModuleLogger } from './logger.js';
 import {
   beginBindingOperation,
   readBindingOperation,
@@ -105,7 +105,6 @@ import {
   type SandboxScannerStatus,
 } from './sandbox-health.js';
 import {
-  CURRENT_SETTINGS_FORMAT_VERSION,
   DEFAULT_STAFF_PIN,
   evaluateHostLifecycleAction,
   SETUP_DEFAULT_GATEWAY_INTERFACE,
@@ -985,7 +984,10 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
   let sandboxScanner: SandboxScannerStatus | null = null;
   let maintenance: Awaited<ReturnType<typeof inspectMaintenanceCompatibility>> = {
     authenticated: false,
-    settingsFormatVersion: CURRENT_SETTINGS_FORMAT_VERSION,
+    compatible: false,
+    status: 'unreachable',
+    settingsFormatVersion: null,
+    stackVersion: null,
   };
   try {
     compose = await readComposeForHost(ctx, envExists, docker, envMap);
@@ -1059,7 +1061,7 @@ export async function getHostStatus(ctx: SetupContext, options: HostStatusOption
     compose,
     // Repository mode has no delivery release marker; installed products must have one.
     releaseConfigured: ctx.mode === 'repo' || managerState.release !== null,
-    maintenanceAuthenticated: maintenance.authenticated,
+    maintenanceStatus: maintenance.status,
     operation: activeInstallOperation,
     operationUnreadable: installOperationReadError,
   });
@@ -1130,7 +1132,7 @@ export async function startStoppedInstallation(
           lifecycle: before.lifecycle!,
           releaseConfigured: true,
           compose: started.compose,
-          maintenanceAuthenticated: started.maintenanceAuthenticated,
+          maintenanceStatus: started.maintenanceStatus,
           startFailure: started.code,
         }),
         compose: started.compose,
@@ -1362,7 +1364,7 @@ export async function prepareRestrictedNetwork(
     }
     if ((deps.platform ?? process.platform) !== 'darwin') {
       throw new SetupApiValidationError(
-        'Restricted-Binding ist auf dieser Hostplattform noch nicht freigegeben.',
+        'Der separate Patientenzugang wird derzeit nur unter macOS unterstützt.',
       );
     }
     const tls = deps.tls ?? readTlsStatus(envMap);

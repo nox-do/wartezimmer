@@ -70,7 +70,13 @@ const healthyDeps: RecoveryDeps = {
       })),
     },
   })) as unknown as RecoveryDeps['status'],
-  maintenance: async () => ({ authenticated: true, settingsFormatVersion: 1 }),
+  maintenance: async () => ({
+    authenticated: true,
+    compatible: true,
+    status: 'compatible',
+    settingsFormatVersion: 1,
+    stackVersion: '1.0.0',
+  }),
   inspect: async () => ({
     ok: true,
     currentTlsClaimsHttps: false,
@@ -238,7 +244,13 @@ test('incompatible backup never reaches restore; unhealthy baseline cannot finis
     ).ok,
     false,
   );
-  deps.maintenance = async () => ({ authenticated: false, settingsFormatVersion: 1 });
+  deps.maintenance = async () => ({
+    authenticated: false,
+    compatible: false,
+    status: 'unauthorized',
+    settingsFormatVersion: null,
+    stackVersion: null,
+  });
   assert.equal(
     (
       await finishInstallRecovery(
@@ -312,7 +324,13 @@ for (const health of ['starting', 'unhealthy']) {
       status: async () => status,
       maintenance: async () => {
         maintenanceCalls++;
-        return { authenticated: true, settingsFormatVersion: 1 };
+        return {
+          authenticated: true,
+          compatible: true,
+          status: 'compatible',
+          settingsFormatVersion: 1,
+          stackVersion: '1.0.0',
+        };
       },
     };
     const before = await previewInstallRecovery(ctx, operation.id, deps);
@@ -344,7 +362,13 @@ test('recovery reports an unavailable authenticated maintenance API', async (t) 
   markInstallOperationInstalling(home, operation.id);
   const result = await previewInstallRecovery(testSetupContext(home), operation.id, {
     ...healthyDeps,
-    maintenance: async () => ({ authenticated: false, settingsFormatVersion: 1 }),
+    maintenance: async () => ({
+      authenticated: false,
+      compatible: false,
+      status: 'unreachable',
+      settingsFormatVersion: null,
+      stackVersion: null,
+    }),
   });
   assert.equal(result.baselineReady, false);
   assert.match(result.baselineErrors.join(' '), /Verwaltungs-API/);

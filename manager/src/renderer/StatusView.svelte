@@ -1,4 +1,5 @@
 <script lang="ts">
+  import HealthHeader from './HealthHeader.svelte';
   import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
   import type { HostStatus } from '../shared/host-status.js';
   import {
@@ -99,6 +100,7 @@
   class="app"
   hidden={managerShell.activeView !== 'status' || !managerShell.bootReady}
 >
+  <HealthHeader />
   {#if statusError && !configSnapshot}
     <p id="error-message" class="error">
       {statusError || 'Setup-API nicht erreichbar — bitte Manager neu starten.'}

@@ -22,7 +22,7 @@ import { readManagerState } from './manager-state.js';
 import type { SetupContext } from './setup-context.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL } from './urls.js';
 import { validatePfbackupContent, validateSettingsSnapshotWithApp } from './settings-backup.js';
-import { maintenanceRequestHeaders } from './maintenance-auth.js';
+import { inspectMaintenanceCompatibility } from './settings-format-version.js';
 
 // CONTACT_LOOKUP_BASE_PATH is a container path (/imports), not a host directory.
 const HOST_PATH_ENV_KEYS = ['IMPORTS_HOST_PATH', 'EXPORTS_HOST_PATH'] as const;
@@ -248,11 +248,7 @@ export async function checkMaintenanceAppReachable(
   localAppBaseUrl: string = LOCAL_MAINTENANCE_APP_BASE_URL,
 ): Promise<boolean> {
   try {
-    const response = await fetch(
-      `${localAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/settings/capabilities`,
-      { headers: maintenanceRequestHeaders(), signal: AbortSignal.timeout(5_000) },
-    );
-    return response.ok;
+    return (await inspectMaintenanceCompatibility(localAppBaseUrl)).compatible;
   } catch {
     return false;
   }

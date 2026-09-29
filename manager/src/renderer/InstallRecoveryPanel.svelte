@@ -40,7 +40,7 @@
   {:else if snapshot.recoveryPhase === 'finish'}
     <h2>Einrichtung abschließen</h2>
     {#if preview?.baselineReady}
-      <p>App und Sandbox sind bereit.{hasBackup ? ' Prüfen Sie das Backup vor dem Wiederherstellen.' : ' Sie können die Einrichtung jetzt abschließen.'}</p>
+      <p>Praxis Flow ist bereit.{hasBackup ? ' Prüfen Sie das Backup vor dem Wiederherstellen.' : ' Sie können die Einrichtung jetzt abschließen.'}</p>
       {#if hasBackup}
         <ul class="recovery-details">{#each lines as line (line)}<li>{line}</li>{/each}</ul>
         {#each preview?.backup?.compatibility.warnings ?? [] as warning, index (index)}
@@ -86,7 +86,7 @@
   {#if snapshot.recoveryPhase === 'restart' || (snapshot.recoveryPhase === 'finish' && preview && !preview.baselineReady)}
     <details class="recovery-restart">
       <summary>Neuinstallation erneut starten</summary>
-      <p>Das geprüfte Software-Paket wird erneut installiert. Dabei werden die bisher angelegten Laufzeitdaten gelöscht.</p>
+      <p>Das geprüfte Software-Paket wird erneut installiert. Dabei werden die aktuelle Warteschlange und die darin gespeicherten Patientendaten gelöscht.</p>
       <button type="button" class="btn-secondary" disabled={wizardIsBusy(snapshot)} onclick={() => controller.commitRecovery()}>Neuinstallation erneut starten …</button>
     </details>
   {/if}

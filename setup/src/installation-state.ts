@@ -1,3 +1,8 @@
+import {
+  maintenanceFailureCodes,
+  maintenanceFailureMessages,
+  type MaintenanceCompatibility,
+} from './settings-format-version.js';
 import type {
   ComposeStatus,
   DockerStatus,
@@ -13,8 +18,7 @@ export const installationStartFailureMessages = {
   'database-missing': 'Die erwartete Praxis-Flow-Datenbank fehlt im App-Datenvolume.',
   'compose-start-failed': 'Die vorhandene Installation konnte nicht gestartet werden.',
   'health-timeout': 'App und Sandbox wurden nicht rechtzeitig gemeinsam gesund.',
-  'maintenance-auth-failed':
-    'Die Maintenance-API ist mit dem Token der Zielinstallation nicht authentifizierbar.',
+  ...maintenanceFailureMessages,
 } as const;
 
 export type InstallationStartFailure = keyof typeof installationStartFailureMessages;
@@ -24,7 +28,7 @@ export type InstallationStateFacts = {
   lifecycle: HostLifecycle;
   compose: ComposeStatus | null;
   releaseConfigured: boolean;
-  maintenanceAuthenticated: boolean;
+  maintenanceStatus: MaintenanceCompatibility['status'];
   operation?: InstallOperationSummary;
   operationUnreadable?: boolean;
   startFailure?: InstallationStartFailure;
@@ -135,7 +139,7 @@ export function deriveInstallationState(facts: InstallationStateFacts): Installa
   if (!facts.compose) return null;
 
   const coreHealthy = coreInstallationServicesHealthy(facts.compose);
-  if (coreHealthy && facts.maintenanceAuthenticated) {
+  if (coreHealthy && facts.maintenanceStatus === 'compatible') {
     return { kind: 'healthy', updateEligible: true };
   }
 
@@ -160,13 +164,9 @@ export function deriveInstallationState(facts: InstallationStateFacts): Installa
     reasons.push(
       reason('core-stack-unhealthy', 'App und Sandbox sind nicht gemeinsam gesund gestartet.'),
     );
-  } else if (!facts.maintenanceAuthenticated) {
-    reasons.push(
-      reason(
-        'maintenance-auth-failed',
-        'Die Maintenance-API ist mit dem Token der Zielinstallation nicht authentifizierbar.',
-      ),
-    );
+  } else if (facts.maintenanceStatus !== 'compatible') {
+    const code = maintenanceFailureCodes[facts.maintenanceStatus];
+    reasons.push(reason(code, maintenanceFailureMessages[code]));
   }
   return { kind: 'needs-repair', reasons };
 }

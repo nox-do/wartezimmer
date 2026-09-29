@@ -1,6 +1,7 @@
+import { waitForCompatibleMaintenanceApp } from './settings-format-version.js';
 import { atPhase } from './operation-journal.js';
 import { assertNoTlsOperation } from './tls-operation.js';
-import { createModuleLogger } from '@praxis-flow/server-shared/logger';
+import { createModuleLogger } from './logger.js';
 import {
   assertNoMaintenanceOperation,
   assertMaintenancePredecessors,
@@ -49,7 +50,7 @@ import {
   runFreshDbSettingsCutover,
   type FreshDbCutoverPhase,
 } from './fresh-db-settings-cutover.js';
-import { checkMaintenanceAppReachable } from './settings-backup-inspect.js';
+
 import {
   fetchSettingsDbSnapshotFromApp,
   importSettingsSnapshotViaApp,
@@ -234,21 +235,6 @@ export function mergeConfigRestoreManagerState(
   };
 }
 
-async function defaultWaitForMaintenanceApp(
-  localAppBaseUrl: string,
-  timeoutMs = 120_000,
-  intervalMs = 2_000,
-): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (await checkMaintenanceAppReachable(localAppBaseUrl)) {
-      return true;
-    }
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
-  }
-  return false;
-}
-
 function restorePhaseFromCutover(phase: FreshDbCutoverPhase): RestorePhase {
   switch (phase) {
     case FRESH_DB_CUTOVER_PHASES.moveDatabase:
@@ -352,7 +338,7 @@ function resolveRestoreRuntime(deps: PfbackupRestoreDeps): RestoreRuntime {
     startFullStack:
       deps.startFullStack ?? (async (runOptions) => composeUp({ ...runOptions, build: false })),
     waitForMaintenanceApp:
-      deps.waitForMaintenanceApp ?? ((baseUrl) => defaultWaitForMaintenanceApp(baseUrl)),
+      deps.waitForMaintenanceApp ?? ((baseUrl) => waitForCompatibleMaintenanceApp(baseUrl)),
     importSnapshot: deps.importSnapshot ?? importSettingsSnapshotViaApp,
     exportDbSnapshot:
       deps.exportDbSnapshot ?? ((baseUrl) => fetchSettingsDbSnapshotFromApp(baseUrl)),

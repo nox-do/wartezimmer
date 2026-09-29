@@ -104,7 +104,7 @@ test('pfupdate wizard inspects package before apply', async () => {
   }
 });
 
-test('pfupdate summary labels stay technical and local builds are not mistaken for real releases', () => {
+test('pfupdate summary shows versions and identifies local builds', () => {
   const lines = pfupdateInspectSummaryLines({
     ok: true,
     currentReleaseVersion: 'local',
@@ -129,11 +129,9 @@ test('pfupdate summary labels stay technical and local builds are not mistaken f
   });
 
   assert.deepEqual(lines, [
-    'Target release: 2026.08.0',
-    'Current: local build',
-    'Minimum manager: 0.2.0',
-    'Settings formats: 1',
-    'DB schema after update: 1',
+    'Neue Version: 2026.08.0',
+    'Installierte Version: Lokale Version',
+    'Benötigte Manager-Version: 0.2.0',
   ]);
 });
 

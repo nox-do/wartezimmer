@@ -351,7 +351,6 @@
         {/if}
       {/if}
     {/snippet}
-    <p class={overall.noticeClass} role="status">{overall.primary.summary}</p>
     <NetworkAccessNotices status={configSnapshot} runtime={runtimeSnapshot} runtimeError={runtimeNotice} />
     <div class="panel-section">
       <MaintenanceSection open={summaryOpen} title="Aktueller Netzwerkzugang"

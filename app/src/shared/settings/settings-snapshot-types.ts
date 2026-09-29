@@ -1,4 +1,6 @@
-export const SETTINGS_FORMAT_VERSION = 1 as const;
+import { CURRENT_SETTINGS_FORMAT_VERSION } from '@praxis-flow/server-shared';
+
+export const SETTINGS_FORMAT_VERSION = CURRENT_SETTINGS_FORMAT_VERSION;
 
 export type SettingsSnapshotV1 = {
   settingsFormatVersion: typeof SETTINGS_FORMAT_VERSION;

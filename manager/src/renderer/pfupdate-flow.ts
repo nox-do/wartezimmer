@@ -8,7 +8,7 @@ export function formatPfupdateFailure(result: Extract<PfupdateApplyResult, { ok:
     parts.push(
       'Update und automatische Wiederherstellung sind fehlgeschlagen. Bitte keine weiteren Wartungsaktionen ausführen.',
     );
-    parts.push(`Recovery-ID: ${result.updateId}`);
+    parts.push(`Vorgangsnummer: ${result.updateId}`);
   } else {
     parts.push('Update fehlgeschlagen.');
   }

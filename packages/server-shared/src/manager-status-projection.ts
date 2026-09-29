@@ -119,7 +119,7 @@ export function projectManagerStatus(
   }
   for (const [operation, prefix, label] of [
     [status?.bindingOperation, 'binding', 'Netzwerkänderung'],
-    [status?.tlsOperation, 'tls-operation', 'TLS-Vorgang'],
+    [status?.tlsOperation, 'tls-operation', 'HTTPS-Einrichtung'],
     [status?.restoreOperation, 'restore', 'Wiederherstellung'],
     [status?.updateOperation, 'update', 'Updatevorgang'],
   ] as const) {
@@ -131,10 +131,10 @@ export function projectManagerStatus(
       'operation',
       blocked ? 'error' : 'info',
       blocked ? 'inspect-configuration' : 'retry-observation',
-      blocked ? `${label}: Recovery ungeklärt` : `${label} noch offen`,
+      blocked ? `${label} konnte nicht abgeschlossen werden` : `${label} noch offen`,
       blocked
-        ? 'Hoständerungen sind gesperrt. Bitte die Setup-Diagnose prüfen.'
-        : 'Bitte warten und den Status erneut prüfen. Ein offenes Journal bestätigt keinen laufenden Prozess.',
+        ? 'Weitere Änderungen sind vorerst gesperrt. Bitte öffnen Sie die Diagnose im Status-Tab.'
+        : 'Der Vorgang ist noch nicht abgeschlossen. Bitte warten Sie kurz und prüfen Sie den Status erneut.',
     );
   }
   const installation = status?.installation;
@@ -164,7 +164,7 @@ export function projectManagerStatus(
       hasBlockingMaintenanceOperation(status) ? 'info' : 'warning',
       hasBlockingMaintenanceOperation(status) ? 'wait' : 'continue-operation',
       hasBlockingMaintenanceOperation(status)
-        ? 'Installationsabschluss wartet auf Hoständerung'
+        ? 'Vor dem Installationsabschluss muss die laufende Änderung abgeschlossen werden'
         : 'Installation fortsetzen',
     );
   if (portalOpen)

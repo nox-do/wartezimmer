@@ -448,7 +448,7 @@ export function validatePfbackupArchive(raw: unknown): PfbackupArchiveValidation
     if (settingsParsed.settingsFormatVersion !== manifest.settingsFormatVersion) {
       errors.push('settingsFormatVersion im Manifest und Snapshot weichen ab.');
     }
-    if (settingsParsed.settingsFormatVersion !== 1) {
+    if (settingsParsed.settingsFormatVersion !== CURRENT_SETTINGS_FORMAT_VERSION) {
       errors.push(
         `Nicht unterstützte Settings-Version ${String(settingsParsed.settingsFormatVersion)}.`,
       );

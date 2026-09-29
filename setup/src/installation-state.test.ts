@@ -31,7 +31,7 @@ test('Docker unavailability remains explicit when no durable finding takes prior
     lifecycle,
     compose: null,
     releaseConfigured: true,
-    maintenanceAuthenticated: false,
+    maintenanceStatus: 'unauthorized',
   });
   assert.equal(state?.kind, 'docker-unavailable');
 });
@@ -42,7 +42,7 @@ test('only a confirmed uninstalled lifecycle is fresh', () => {
     lifecycle: { ...lifecycle, mode: 'uninstalled' },
     compose: null,
     releaseConfigured: false,
-    maintenanceAuthenticated: false,
+    maintenanceStatus: 'unauthorized',
   });
   assert.deepEqual(state, { kind: 'fresh' });
 });
@@ -62,7 +62,7 @@ test('an active prepared operation is exposed as installing without inventing an
       lifecycle,
       compose: healthyCompose,
       releaseConfigured: true,
-      maintenanceAuthenticated: true,
+      maintenanceStatus: 'compatible',
       operation,
     }),
     { kind: 'installing', operation },
@@ -76,7 +76,7 @@ test('healthy requires core services, release state and maintenance authenticati
       lifecycle,
       compose: healthyCompose,
       releaseConfigured: true,
-      maintenanceAuthenticated: true,
+      maintenanceStatus: 'compatible',
     }),
     { kind: 'healthy', updateEligible: true },
   );
@@ -85,7 +85,7 @@ test('healthy requires core services, release state and maintenance authenticati
     lifecycle,
     compose: healthyCompose,
     releaseConfigured: true,
-    maintenanceAuthenticated: false,
+    maintenanceStatus: 'unauthorized',
   });
   assert.equal(unauthenticated?.kind, 'needs-repair');
 });
@@ -102,7 +102,7 @@ test('optional proxy health does not affect the healthy installation gate', () =
       ],
     },
     releaseConfigured: true,
-    maintenanceAuthenticated: true,
+    maintenanceStatus: 'compatible',
   });
   assert.equal(state?.kind, 'healthy');
 });
@@ -124,7 +124,7 @@ test('a starting core healthcheck is a transient state, not a reinstall requirem
       ],
     },
     releaseConfigured: true,
-    maintenanceAuthenticated: true,
+    maintenanceStatus: 'compatible',
   });
   assert.deepEqual(state, { kind: 'starting' });
 });
@@ -147,7 +147,7 @@ test('an unhealthy core service or restart loop still requires repair', () => {
         ],
       },
       releaseConfigured: true,
-      maintenanceAuthenticated: true,
+      maintenanceStatus: 'compatible',
     });
     assert.deepEqual(state, {
       kind: 'needs-repair',
@@ -167,7 +167,7 @@ test('a configured installation with no running core services is stopped', () =>
     lifecycle,
     compose: { running: false, services: [] },
     releaseConfigured: true,
-    maintenanceAuthenticated: false,
+    maintenanceStatus: 'unauthorized',
   });
   assert.deepEqual(state, { kind: 'stopped' });
 });
@@ -183,7 +183,7 @@ test('inconsistent lifecycle is never presented as stopped or healthy', () => {
     },
     compose: null,
     releaseConfigured: true,
-    maintenanceAuthenticated: false,
+    maintenanceStatus: 'unauthorized',
   });
   assert.deepEqual(state, {
     kind: 'inconsistent',
@@ -193,7 +193,11 @@ test('inconsistent lifecycle is never presented as stopped or healthy', () => {
 
 test('diagnosis distinguishes runtime failure, inconsistent evidence and proven missing substance', () => {
   const cases: Array<[Partial<InstallationStateFacts>, string, string]> = [
-    [{ maintenanceAuthenticated: false }, 'needs-repair', 'maintenance-auth-failed'],
+    [{ maintenanceStatus: 'unauthorized' }, 'needs-repair', 'maintenance-auth-failed'],
+    [{ maintenanceStatus: 'incompatible' }, 'needs-repair', 'maintenance-incompatible'],
+    [{ maintenanceStatus: 'unreachable' }, 'needs-repair', 'maintenance-unreachable'],
+    [{ maintenanceStatus: 'invalid-response' }, 'needs-repair', 'maintenance-invalid-response'],
+    [{ maintenanceStatus: 'http-error' }, 'needs-repair', 'maintenance-http-error'],
     [
       { compose: { running: true, services: [healthyCompose.services[0]!] } },
       'needs-repair',
@@ -221,7 +225,14 @@ test('diagnosis distinguishes runtime failure, inconsistent evidence and proven 
           string,
         ],
     ),
-    ...(['compose-start-failed', 'health-timeout', 'maintenance-auth-failed'] as const).map(
+    ...(
+      [
+        'compose-start-failed',
+        'health-timeout',
+        'maintenance-auth-failed',
+        'maintenance-incompatible',
+      ] as const
+    ).map(
       (code) =>
         [{ startFailure: code }, 'needs-repair', code] as [
           Partial<InstallationStateFacts>,
@@ -236,7 +247,7 @@ test('diagnosis distinguishes runtime failure, inconsistent evidence and proven 
       lifecycle,
       compose: healthyCompose,
       releaseConfigured: true,
-      maintenanceAuthenticated: true,
+      maintenanceStatus: 'compatible',
       ...overrides,
     });
     assert.ok(result);
@@ -252,7 +263,7 @@ test('missing Compose evidence preserves durable findings without inventing runt
     lifecycle,
     compose: null,
     releaseConfigured: true,
-    maintenanceAuthenticated: false,
+    maintenanceStatus: 'unauthorized',
   };
   assert.equal(deriveInstallationState(facts), null);
   assert.equal(

@@ -15,7 +15,11 @@ import { readPinnedRecoveryBackup } from './recovery-backup.js';
 import { inspectPfbackup } from './settings-backup-inspect.js';
 import { restorePfbackup } from './settings-backup-restore.js';
 import { coreInstallationServicesHealthy } from './installation-state.js';
-import { inspectMaintenanceCompatibility } from './settings-format-version.js';
+import {
+  inspectMaintenanceCompatibility,
+  maintenanceFailureCodes,
+  maintenanceFailureMessages,
+} from './settings-format-version.js';
 import { getHostStatus } from './host-state.js';
 import { readEnvMap } from './env-file.js';
 import type { SetupContext } from './setup-context.js';
@@ -51,10 +55,9 @@ async function baselineErrors(ctx: SetupContext, deps: RecoveryDeps): Promise<st
       ];
     });
   }
-  if (!(await (deps.maintenance ?? inspectMaintenanceCompatibility)()).authenticated)
-    return [
-      'Die lokale Verwaltungs-API ist noch nicht erreichbar oder akzeptiert den Installationszugang nicht.',
-    ];
+  const maintenance = await (deps.maintenance ?? inspectMaintenanceCompatibility)();
+  if (maintenance.status !== 'compatible')
+    return [maintenanceFailureMessages[maintenanceFailureCodes[maintenance.status]]];
   return [];
 }
 export async function previewInstallRecovery(

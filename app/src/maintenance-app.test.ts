@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -98,17 +98,82 @@ test('maintenance listener rejects missing and incorrect tokens', async () => {
 
   const missing = await app.inject({
     method: 'GET',
-    url: '/api/v1/ops/settings/capabilities',
+    url: '/api/v1/ops/maintenance/info',
   });
   const incorrect = await app.inject({
     method: 'GET',
-    url: '/api/v1/ops/settings/capabilities',
+    url: '/api/v1/ops/maintenance/info',
     headers: { authorization: 'Bearer wrong-token' },
   });
 
   assert.equal(missing.statusCode, 401);
   assert.equal(incorrect.statusCode, 401);
   await app.close();
+});
+
+test('maintenance listener exposes a lightweight authenticated compatibility handshake', async (t) => {
+  const previousVersion = process.env.PRAXIS_FLOW_STACK_VERSION;
+  process.env.PRAXIS_FLOW_STACK_VERSION = '2.1.0';
+  t.after(() => {
+    if (previousVersion === undefined) delete process.env.PRAXIS_FLOW_STACK_VERSION;
+    else process.env.PRAXIS_FLOW_STACK_VERSION = previousVersion;
+  });
+
+  const app = Fastify({ logger: false });
+  registerOpsManagerMaintenanceRoutes(app, {} as CoreDatabase);
+  await app.ready();
+
+  const response = await app.inject({
+    method: 'GET',
+    url: '/api/v1/ops/maintenance/info',
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json(), {
+    protocolVersion: 1,
+    stackVersion: '2.1.0',
+    snapshotExportFormatVersion: 1,
+    snapshotImportFormatVersions: [1],
+  });
+  await app.close();
+});
+
+test('the Setup client accepts the real maintenance handshake contract', async (t) => {
+  const setupClientUrl = new URL('../../setup/src/maintenance-client.ts', import.meta.url).href;
+  const setupAuthUrl = new URL('../../setup/src/maintenance-auth.ts', import.meta.url).href;
+  const [{ fetchMaintenanceApiInfo }, { configureMaintenanceAuthHome }] = await Promise.all([
+    import(setupClientUrl),
+    import(setupAuthUrl),
+  ]);
+  const home = mkdtempSync(join(tmpdir(), 'maintenance-client-contract-'));
+  t.after(() => rmSync(home, { recursive: true, force: true }));
+  writeFileSync(join(home, '.env'), `MAINTENANCE_TOKEN=${TEST_MAINTENANCE_TOKEN}\n`);
+  configureMaintenanceAuthHome(home, 'install');
+
+  const app = Fastify({ logger: false });
+  registerMaintenanceRoutes(app, {} as CoreDatabase, TEST_MAINTENANCE_TOKEN);
+  await app.ready();
+  t.after(() => app.close());
+
+  const info = await fetchMaintenanceApiInfo(
+    'http://maintenance.test',
+    async (url: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+      const requestUrl = new URL(String(url));
+      const response = await app.inject({
+        method: 'GET',
+        url: `${requestUrl.pathname}${requestUrl.search}`,
+        headers: Object.fromEntries(new Headers(init?.headers).entries()),
+      });
+      return new Response(response.body, {
+        status: response.statusCode,
+        headers: { 'content-type': 'application/json' },
+      });
+    },
+  );
+
+  assert.equal(info.protocolVersion, 1);
+  assert.equal(info.snapshotExportFormatVersion, 1);
+  assert.deepEqual(info.snapshotImportFormatVersions, [1]);
 });
 
 test('maintenance listener exports settings snapshot with its installation token', async (t) => {
@@ -195,33 +260,6 @@ test('maintenance listener does not expose a settings patch route', async () => 
   });
 
   assert.equal(response.statusCode, 404);
-  await app.close();
-});
-
-test('maintenance capabilities are readable without session', async () => {
-  const app = Fastify({ logger: false });
-  registerOpsManagerMaintenanceRoutes(app, {
-    getRoutingCapabilities: () => ({
-      routingMode: 'complex',
-      openVisitCount: 0,
-      features: {
-        complexRouting: true,
-        journeyDesigner: true,
-        routingSimulator: true,
-        complexRoutingLicensed: true,
-      },
-    }),
-  } as unknown as CoreDatabase);
-
-  await app.ready();
-  const response = await app.inject({
-    method: 'GET',
-    url: '/api/v1/ops/settings/capabilities',
-    remoteAddress: '172.18.0.1',
-  });
-
-  assert.equal(response.statusCode, 200);
-  assert.equal(response.json().routingMode, 'complex');
   await app.close();
 });
 

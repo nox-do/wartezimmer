@@ -30,14 +30,14 @@ export function pfupdateWizardProgress(state: PfupdateWizardState): string {
 
 export function formatPfupdateVersionLabel(version: string | null | undefined): string {
   if (!version) {
-    return 'unknown';
+    return 'Unbekannt';
   }
   const value = version.trim();
   if (!value) {
-    return 'unknown';
+    return 'Unbekannt';
   }
   if (value.toLowerCase() === 'local') {
-    return 'local build';
+    return 'Lokale Version';
   }
   return value;
 }
@@ -46,13 +46,11 @@ export function pfupdateInspectSummaryLines(inspect: PfupdateInspectResult): str
   if (!inspect.package) {
     return [];
   }
-  const lines = [`Target release: ${formatPfupdateVersionLabel(inspect.package.releaseVersion)}`];
-  lines.push(`Current: ${formatPfupdateVersionLabel(inspect.currentReleaseVersion)}`);
+  const lines = [`Neue Version: ${formatPfupdateVersionLabel(inspect.package.releaseVersion)}`];
+  lines.push(`Installierte Version: ${formatPfupdateVersionLabel(inspect.currentReleaseVersion)}`);
   lines.push(
-    `Minimum manager: ${formatPfupdateVersionLabel(inspect.package.minimumManagerVersion)}`,
+    `Benötigte Manager-Version: ${formatPfupdateVersionLabel(inspect.package.minimumManagerVersion)}`,
   );
-  lines.push(`Settings formats: ${inspect.package.supportedSettingsFormatVersions.join(', ')}`);
-  lines.push(`DB schema after update: ${inspect.package.targetSchemaVersion}`);
   return lines;
 }
 
@@ -72,7 +70,7 @@ export function pfupdateInspectBlockedMessage(inspect: PfupdateInspectResult): s
 }
 
 export function pfupdateApplyConfirmHint(): string {
-  return 'Vor dem Cutover wird automatisch ein Praxis-Backup erstellt. Praxis ist während des Updates kurz offline; die laufende Warteschlange geht verloren.';
+  return 'Vor dem Update wird automatisch ein Praxis-Backup erstellt. Praxis Flow ist während des Updates vorübergehend nicht verfügbar; die laufende Warteschlange geht verloren.';
 }
 
 export const PFUPDATE_APPLY_LOADING_MESSAGE =

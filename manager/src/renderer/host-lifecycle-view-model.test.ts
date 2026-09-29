@@ -29,5 +29,5 @@ test('unknown and inconsistent installations are never described as uninstalled'
   );
   const broken = hostLifecycleSummary({ ...lifecycle, assessment: 'inconsistent', mode: null });
   assert.match(broken.title, /widersprüchlich/);
-  assert.match(broken.repair!, /TLS-Material/);
+  assert.match(broken.repair!, /Technische Installationsdetails/);
 });

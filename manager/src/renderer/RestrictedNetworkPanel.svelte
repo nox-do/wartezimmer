@@ -276,7 +276,7 @@
 
   <h3 class="wizard-subheading">Voraussetzungen prüfen</h3>
   <ul class="checklist">
-    {#each inspect.checks as check (check.id)}
+    {#each inspect.checks.filter((check) => check.id !== 'restricted.platform' || !check.ok) as check (check.id)}
       <li class:is-bad={!check.ok} class:is-done={check.ok}>
         <span class="checklist-mark" aria-hidden="true">{check.ok ? '✓' : '!'}</span>
         <span>{check.message}{check.detail ? ` – ${check.detail}` : ''}</span>
@@ -292,8 +292,7 @@
   {/if}
 
   <p class="hint">
-    Nicht durch Praxis Flow geprüft oder verwaltet: {inspect.externalResponsibilities.join('; ')}.
-    Ein IP-Binding allein ist keine Zusage zur Netztrennung.
+    Das Patientennetz sollte vom Praxisnetz getrennt eingerichtet werden. Praxis Flow übernimmt diese Netztrennung nicht. Lassen Sie Ihre IT-Betreuung die Einrichtung und den Zugriff aus dem Patientennetz prüfen.
   </p>
   <div class="actions-row">
     {#if inspect.status.phase === 'applied'}

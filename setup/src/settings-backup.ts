@@ -18,7 +18,7 @@ import { readEnvMap } from './env-file.js';
 import { readManagerStateForBackup } from './manager-state.js';
 import type { SetupContext } from './setup-context.js';
 import { packTlsSidecarArchive } from './tls-backup-sidecar.js';
-import { maintenanceRequestHeaders } from './maintenance-auth.js';
+import { MaintenanceClientError, requestMaintenanceJson } from './maintenance-client.js';
 
 const DEFAULT_LOCAL_APP = LOCAL_MAINTENANCE_APP_BASE_URL;
 
@@ -77,23 +77,7 @@ export function findLatestPfbackupPath(installHome: string): string | null {
 export async function fetchSettingsDbSnapshotFromApp(
   localAppBaseUrl = DEFAULT_LOCAL_APP,
 ): Promise<SettingsSnapshotDbFromApp> {
-  const response = await fetch(
-    `${localAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/settings/snapshot`,
-    {
-      method: 'GET',
-      headers: maintenanceRequestHeaders(),
-      signal: AbortSignal.timeout(15_000),
-    },
-  );
-
-  const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!response.ok) {
-    const message =
-      typeof body.message === 'string'
-        ? body.message
-        : `App-API-Fehler (${response.status}) beim Settings-Export.`;
-    throw new Error(message);
-  }
+  const body = await requestMaintenanceJson('/api/v1/ops/settings/snapshot', localAppBaseUrl);
 
   if (typeof body.settingsFormatVersion !== 'number') {
     throw new Error('Ungültige Settings-Snapshot-Antwort der App.');
@@ -144,47 +128,33 @@ export async function validateSettingsSnapshotWithApp(
   localAppBaseUrl = DEFAULT_LOCAL_APP,
 ): Promise<{ ok: boolean; errors: string[]; code?: string }> {
   try {
-    const response = await fetch(
-      `${localAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/settings/snapshot/validate`,
-      {
-        method: 'POST',
-        headers: {
-          ...maintenanceRequestHeaders({ 'content-type': 'application/json' }),
-        },
-        body: JSON.stringify(snapshot),
-        signal: AbortSignal.timeout(15_000),
-      },
-    );
-
-    const body = (await response.json().catch(() => ({}))) as {
+    const body = (await requestMaintenanceJson(
+      '/api/v1/ops/settings/snapshot/validate',
+      localAppBaseUrl,
+      { method: 'POST', body: snapshot },
+    )) as {
       ok?: boolean;
       errors?: string[];
       code?: string;
       message?: string;
     };
 
-    if (!response.ok) {
-      return {
-        ok: false,
-        errors: [
-          typeof body.message === 'string'
-            ? body.message
-            : `App-Validierung fehlgeschlagen (${response.status}).`,
-        ],
-      };
-    }
-
     return {
       ok: body.ok === true,
       errors: Array.isArray(body.errors) ? body.errors : [],
       code: typeof body.code === 'string' ? body.code : undefined,
     };
-  } catch {
+  } catch (error) {
+    const responseBody = error instanceof MaintenanceClientError ? error.responseBody : undefined;
+    const responseErrors = responseBody?.errors;
     return {
       ok: false,
       errors: [
-        'Praxis Flow Maintenance-API ist nicht erreichbar (Port 8082) — Restore-Validierung nicht möglich.',
+        ...(Array.isArray(responseErrors)
+          ? responseErrors.filter((entry): entry is string => typeof entry === 'string')
+          : [error instanceof Error ? error.message : 'Restore-Validierung nicht möglich.']),
       ],
+      code: typeof responseBody?.code === 'string' ? responseBody.code : undefined,
     };
   }
 }
@@ -207,29 +177,11 @@ export async function importSettingsSnapshotViaApp(
   const query = skipProviderCredentials ? '?skipProviderCredentials=true' : '';
 
   try {
-    const response = await fetch(
-      `${localAppBaseUrl.replace(/\/$/, '')}/api/v1/ops/settings/snapshot/import${query}`,
-      {
-        method: 'POST',
-        headers: {
-          ...maintenanceRequestHeaders({ 'content-type': 'application/json' }),
-        },
-        body: JSON.stringify(snapshot),
-        signal: AbortSignal.timeout(60_000),
-      },
+    const body = await requestMaintenanceJson(
+      `/api/v1/ops/settings/snapshot/import${query}`,
+      localAppBaseUrl,
+      { method: 'POST', body: snapshot, timeoutMs: 60_000 },
     );
-
-    const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-    if (!response.ok) {
-      const errors = Array.isArray(body.errors)
-        ? body.errors.filter((entry): entry is string => typeof entry === 'string')
-        : [
-            typeof body.message === 'string'
-              ? body.message
-              : `Settings-Import fehlgeschlagen (${response.status}).`,
-          ];
-      return { ok: false, errors };
-    }
 
     if (body.ok !== true) {
       const errors = Array.isArray(body.errors)
@@ -248,11 +200,15 @@ export async function importSettingsSnapshotViaApp(
         : [],
       errors: [],
     };
-  } catch {
+  } catch (error) {
+    const responseBody = error instanceof MaintenanceClientError ? error.responseBody : undefined;
+    const responseErrors = responseBody?.errors;
     return {
       ok: false,
       errors: [
-        'Praxis Flow Maintenance-API ist nicht erreichbar (Port 8082) — Import nicht möglich.',
+        ...(Array.isArray(responseErrors)
+          ? responseErrors.filter((entry): entry is string => typeof entry === 'string')
+          : [error instanceof Error ? error.message : 'Settings-Import nicht möglich.']),
       ],
     };
   }
@@ -364,13 +320,6 @@ export function validatePfbackupContent(content: string): PfbackupArchiveValidat
     return { archiveValid: false, errors: ['Datei ist kein gültiges JSON.'] };
   }
   return validatePfbackupArchive(parsed);
-}
-
-export function validatePfbackupFile(backupPath: string): PfbackupArchiveValidationResult {
-  if (!fs.existsSync(backupPath)) {
-    return { archiveValid: false, errors: ['Backup-Datei nicht gefunden.'] };
-  }
-  return validatePfbackupContent(fs.readFileSync(backupPath, 'utf8'));
 }
 
 export { formatPfbackupLabel };

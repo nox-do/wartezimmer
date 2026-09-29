@@ -117,7 +117,7 @@
       </button>
     </div>
   {:else if snapshot.phase === 'select' || snapshot.phase === 'inspect' || snapshot.phase === 'restoring'}
-    <h2>Settings wiederherstellen</h2>
+    <h2>Einstellungen wiederherstellen</h2>
     <p class="wizard-progress is-active" role="status">
       <span class="spinner" aria-hidden="true"></span>
       {restoreWizardProgress(snapshot) || 'Bitte warten …'}
@@ -160,12 +160,13 @@
           disabled={busy}
           onchange={(event) => onToggleCredentialSkip(event.currentTarget.checked)}
         />
-        Provider-Credentials nicht importieren (SMS neu konfigurieren)
+        SMS-Zugangsdaten nicht übernehmen (SMS anschließend neu einrichten)
       </label>
     {/if}
     <p class="hint">
-      Der Stack wird gestoppt, die Runtime-DB verworfen und Settings importiert. Terminal und MFA
-      sind kurz offline.
+      Praxis Flow wird angehalten und die gesicherten Einstellungen werden übernommen.
+      Die aktuelle Warteschlange und die darin gespeicherten Patientendaten werden gelöscht.
+      Terminal und Anmeldung sind währenddessen nicht verfügbar.
     </p>
     <div class="actions-row actions-row--dialog">
       <button type="button" disabled={busy} onclick={onConfirmRestore}>
@@ -213,7 +214,7 @@
             disabled={busy}
             onchange={(event) => onToggleCredentialSkip(event.currentTarget.checked)}
           />
-          Provider-Credentials nicht importieren (SMS neu konfigurieren)
+          SMS-Zugangsdaten nicht übernehmen (SMS anschließend neu einrichten)
         </label>
         <p class="hint">
           Wenn der Restore an Provider-Zugangsdaten scheiterte, können Sie den

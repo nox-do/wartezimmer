@@ -11,6 +11,11 @@ import {
 import { SettingsSnapshotError } from '../../shared/settings/settings-snapshot-types.js';
 import { createSerializedExecutor } from './ops-settings-routes.js';
 import { parseDeviceAuthorizationCopyRows } from '../../shared/db/database-device-authorizations.js';
+import {
+  MAINTENANCE_API_PROTOCOL_VERSION,
+  CURRENT_SETTINGS_FORMAT_VERSION,
+} from '@praxis-flow/server-shared';
+import { resolveStackVersion } from '../../shared/stack-version.js';
 
 /**
  * Manager maintenance API on a separate listener (e.g. host loopback :8082 via Docker publish).
@@ -43,33 +48,54 @@ export function registerOpsManagerMaintenanceRoutes(
   const serializeSettingsUpdate = createSerializedExecutor();
 
   app.get(
-    '/api/v1/ops/settings/capabilities',
+    '/api/v1/ops/maintenance/info',
     {
       schema: {
         response: {
-          200: opsSchemas.GET_api_v1_ops_settings_capabilitiesResponse200,
+          200: opsSchemas.GET_api_v1_ops_maintenance_infoResponse200,
         },
       },
     },
-    async () => db.getRoutingCapabilities(),
+    async () => ({
+      protocolVersion: MAINTENANCE_API_PROTOCOL_VERSION,
+      stackVersion: resolveStackVersion(),
+      snapshotExportFormatVersion: CURRENT_SETTINGS_FORMAT_VERSION,
+      snapshotImportFormatVersions: [CURRENT_SETTINGS_FORMAT_VERSION],
+    }),
   );
 
-  app.get('/api/v1/ops/settings/snapshot', async () => db.exportSettingsDbSnapshot());
+  app.get(
+    '/api/v1/ops/settings/snapshot',
+    {
+      schema: {
+        response: {
+          200: opsSchemas.GET_api_v1_ops_settings_snapshotResponse200,
+        },
+      },
+    },
+    async () => db.exportSettingsDbSnapshot(),
+  );
 
-  app.post('/api/v1/ops/settings/snapshot/validate', async (request) =>
-    validateSettingsSnapshotForRestore(request.body),
+  app.post(
+    '/api/v1/ops/settings/snapshot/validate',
+    {
+      schema: {
+        body: opsSchemas.POST_api_v1_ops_settings_snapshot_validateRequestBody,
+        response: {
+          200: opsSchemas.POST_api_v1_ops_settings_snapshot_validateResponse200,
+        },
+      },
+    },
+    async (request) => validateSettingsSnapshotForRestore(request.body),
   );
 
   app.post<{ Querystring: { skipProviderCredentials?: string } }>(
     '/api/v1/ops/settings/snapshot/import',
     {
       schema: {
-        querystring: {
-          type: 'object',
-          properties: {
-            skipProviderCredentials: { type: 'string', enum: ['true', 'false'] },
-          },
-          additionalProperties: false,
+        body: opsSchemas.POST_api_v1_ops_settings_snapshot_importRequestBody,
+        response: {
+          200: opsSchemas.POST_api_v1_ops_settings_snapshot_importResponse200,
         },
       },
     },

@@ -138,6 +138,12 @@ export {
   type SettingsDbSnapshotRestoreContent,
 } from './settings-db-snapshot.js';
 export {
+  MAINTENANCE_API_INFO_PATH,
+  MAINTENANCE_API_PROTOCOL_VERSION,
+  parseMaintenanceApiInfo,
+  type MaintenanceApiInfo,
+} from './maintenance-api.js';
+export {
   FRESHCLAM_LOG_PATH,
   resolveMaxSignatureAgeHours,
   type SandboxScannerStatus,

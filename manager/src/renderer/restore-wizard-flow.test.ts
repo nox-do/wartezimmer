@@ -38,7 +38,7 @@ function inspectFixture(overrides: Partial<PfbackupInspectResult> = {}): Pfbacku
 
 test('restoreWizardChooseLead differs for pre-update vs standalone', () => {
   assert.match(restoreWizardChooseLead('pre-update'), /vor dem Update/i);
-  assert.match(restoreWizardChooseLead('standalone'), /frische Datenbank/);
+  assert.match(restoreWizardChooseLead('standalone'), /gesicherten Einstellungen/);
 });
 
 test('restoreInspectSummaryLines includes backup metadata', () => {
@@ -123,7 +123,7 @@ test('restoreInspectBlockedMessage explains unreachable maintenance API', () => 
       },
     }),
   );
-  assert.match(message ?? '', /8082/);
+  assert.match(message ?? '', /App zurzeit nicht erreichen/);
 });
 
 test('restoreSuccessSummary mentions skipped provider credentials', () => {
@@ -139,7 +139,7 @@ test('restoreSuccessSummary mentions skipped provider credentials', () => {
       compose: { running: true, services: [] },
     },
   });
-  assert.match(summary, /Provider-Credentials/);
+  assert.match(summary, /SMS-Zugangsdaten/);
 });
 
 test('rollback failure blocks retry and pre-update skip', () => {

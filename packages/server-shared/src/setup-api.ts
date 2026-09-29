@@ -841,8 +841,8 @@ export type HostStatus = {
    */
   networkPrerequisites: NetworkBindingCheck[];
   deliveryImages: DeliveryImagesStatus;
-  /** Live settings schema from maintenance app when reachable; otherwise current build default. */
-  settingsFormatVersion: number;
+  /** Live settings schema from the maintenance app; null when it cannot be established. */
+  settingsFormatVersion: number | null;
 };
 
 export type InstallationStartResult = {
