@@ -20,7 +20,8 @@
   }));
 </script>
 
-<section class="panel-section" aria-label="Aktueller Zugang">
+<div class="network-columns">
+<section class="network-column" aria-label="Aktueller Zugang">
   <h2>Interner Praxisbetrieb</h2>
   <dl class="status-grid wizard-summary-grid">
     {#if summary.operatingMode}
@@ -28,15 +29,20 @@
     {/if}
     <dt>Praxisadresse</dt><dd>{summary.address}</dd>
     <dt>Verbindung</dt><dd>{summary.connection}</dd>
-    <dt>Zugang</dt><dd>{summary.access}</dd>
-    <dt>Adresse / Adapter</dt><dd>{summary.adapter}</dd>
   </dl>
+  <details>
+    <summary>Technische Details</summary>
+    <dl class="status-grid">
+      <dt>Zugang</dt><dd>{summary.access}</dd>
+      <dt>Adresse / Adapter</dt><dd>{summary.adapter}</dd>
+    </dl>
+  </details>
   {#if !summary.needsAttention}
     <p class="hint">Letzte Host-Prüfung: {summary.diagnosis}.</p>
   {/if}
 </section>
 
-<section class="panel-section" aria-label="Patientenzugang">
+<section class="network-column" aria-label="Patientenzugang">
   <h2>Patientenzugang</h2>
   <dl class="status-grid wizard-summary-grid">
     <dt>Portaladresse</dt><dd>{restricted.portalAddress}</dd>
@@ -45,3 +51,5 @@
     <dt>Freigegeben</dt><dd>{status.lifecycle?.assessment === 'known' && status.lifecycle.mode === 'https-portal' && status.restrictedNetwork?.phase === 'applied' ? 'Nur Patientenportal' : 'Keine separate Freigabe'}</dd>
   </dl>
 </section>
+
+</div>

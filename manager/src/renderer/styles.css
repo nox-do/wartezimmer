@@ -1,5 +1,9 @@
 :root {
   color-scheme: light;
+  --font-body: 0.9375rem;
+  --font-small: 0.875rem;
+  --font-heading: 1rem;
+  --content-width: 1000px;
   --bg: #f4f6f8;
   --surface: #ffffff;
   --text: #1a2332;
@@ -37,7 +41,7 @@ body {
 }
 
 .app-shell {
-  max-width: 640px;
+  max-width: var(--content-width);
   margin: 0 auto;
   padding: 0 1.5rem 2rem;
 }
@@ -957,7 +961,7 @@ textarea.wizard-input.is-compact {
 .main-nav {
   display: flex;
   gap: 0.5rem;
-  max-width: 640px;
+  max-width: var(--content-width);
   margin: 0 auto;
   padding: 0 1.5rem;
 }
@@ -1015,12 +1019,6 @@ textarea.wizard-input.is-compact {
 
 .wizard.is-embedded .wizard-page-header {
   display: none;
-}
-
-.maintenance-page-intro {
-  margin: 0 0 1rem;
-  color: var(--muted);
-  font-size: 0.92rem;
 }
 
 .maintenance-accordion {
@@ -1160,18 +1158,6 @@ textarea.wizard-input.is-compact {
 
 .network-diagnose-accordion {
   margin-top: 1.25rem;
-}
-
-.network-bindings-list {
-  margin-top: 0.35rem;
-}
-
-.network-binding-detail {
-  list-style: none;
-  margin: -0.15rem 0 0.35rem 1.1rem;
-  padding-left: 0.5rem;
-  color: var(--muted);
-  font-size: 0.82rem;
 }
 
 .panel-section-heading {

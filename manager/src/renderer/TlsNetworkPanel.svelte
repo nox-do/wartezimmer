@@ -236,6 +236,9 @@
     </button>
   </div>
 {:else if tls && !tlsIsOff(tls)}
+  <div class="network-columns">
+  <div class="network-column">
+  <h3 class="network-heading">Adresse und Zertifikat</h3>
   {#if tls.hostname}
     <p class="hint hint--preview"><code>https://{tls.hostname}</code></p>
   {/if}
@@ -254,9 +257,6 @@
   {/if}
 
   {#if tls.cutoverApplied}
-    <p class="hint">
-      Konfigurierte Geräteadresse: <code>https://{tls.hostname}</code>. Den aktuellen Laufzustand sehen Sie unter „Interner Praxisbetrieb“.
-    </p>
     <dl class="status-grid wizard-summary-grid">
       <dt>Hostname</dt>
       <dd><code>{tls.hostname}</code></dd>
@@ -267,6 +267,15 @@
       <dt>Gültig bis</dt>
       <dd>{formatCertNotAfter(tls.certificate)}</dd>
     </dl>
+  {/if}
+  </div>
+  <div class="network-column">
+  <h3 class="network-heading">Status und Aktionen</h3>
+  {#if tls.cutoverApplied}
+    <p class="hint">
+      HTTPS ist eingerichtet. Den aktuellen Laufzustand sehen Sie unter „Interner Praxisbetrieb“.
+    </p>
+
     {#if tlsExpiryKind(tls.certificate) === 'soon'}
       <p class="notice is-warn">Das Zertifikat läuft bald ab (≤ 21 Tage).</p>
     {:else if tlsExpiryKind(tls.certificate) === 'expired'}
@@ -450,6 +459,8 @@
       </details>
     {/if}
   {/if}
+  </div>
+  </div>
 {/if}
 
 {#if tlsNetworkShowsGenericErrorFooter(tls, tlsNetworkError(state))}

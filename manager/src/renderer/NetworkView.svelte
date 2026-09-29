@@ -387,6 +387,9 @@
             lanOpen = !lanOpen;
           }}
         >
+          <div class="network-columns">
+          <div class="network-column">
+          <h3 class="network-heading">Netzwerkadresse</h3>
           <p class="hint">
             Wählen Sie die IP-Adresse dieses Rechners, über die Ihre Praxisgeräte zugreifen sollen.
           </p>
@@ -397,6 +400,9 @@
             disabled={busy}
             onChange={patchFields}
           />
+          </div>
+          <div class="network-column">
+          <h3 class="network-heading">Zugriff und Prüfung</h3>
           <DeviceAddressPreview
             address={tlsPreparationActive || tlsCutoverApplied ? savedUrl : draftCanonicalBaseUrl(snapshot, configSnapshot)}
             savedAddress={savedUrl}
@@ -410,8 +416,9 @@
               controller?.verifyActiveConfiguration(savedUrl);
             }}
           />
-          <h3 class="wizard-subheading">Prüfungen für Adresse und Ports</h3>
           <NetworkBindingChecks checks={hostChecks} />
+          </div>
+          </div>
           {#if commitPlacement.lan}
             {@render draftCommitActions('lan')}
           {/if}

@@ -13,21 +13,14 @@
 
 <fieldset class="wizard-fieldset" {disabled}>
   <legend class="lan-ip-prompt">Wie möchten Sie Praxis Flow erreichen?</legend>
-
-  <label class="wizard-radio">
-    <input type="radio" name={groupName} checked={enabled} onchange={() => onChange(true)} />
-    <span>Proxy an</span>
-  </label>
-  <p class="hint">
-    Zugriff ohne Portangabe in der Adresse (HTTP-Port 80 statt 8080). Auch Voraussetzung für die
-    optionale, spätere "HTTPS" Nutzung.
-  </p>
-
-  <label class="wizard-radio">
-    <input type="radio" name={groupName} checked={!enabled} onchange={() => onChange(false)} />
-    <span>Proxy aus</span>
-  </label>
-  <p class="hint">
-    Zugriff mit <code>:8080</code> in der Adressleiste.
-  </p>
+  <div class="network-columns">
+    <label class="wizard-radio network-column network-radio">
+      <input type="radio" name={groupName} checked={enabled} onchange={() => onChange(true)} />
+      <span><strong>Proxy an · Port 80</strong><span class="network-option-hint">Zugriff ohne Portangabe. Voraussetzung für HTTPS.</span></span>
+    </label>
+    <label class="wizard-radio network-column network-radio">
+      <input type="radio" name={groupName} checked={!enabled} onchange={() => onChange(false)} />
+      <span><strong>Proxy aus · Port 8080</strong><span class="network-option-hint">Direkter Zugriff mit <code>:8080</code> in der Adresse.</span></span>
+    </label>
+  </div>
 </fieldset>

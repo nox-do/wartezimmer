@@ -220,6 +220,9 @@
     </p>
   {/if}
 
+  <div class="network-columns">
+  <div class="network-column">
+  <h3 class="network-heading">Adresse und Freigabe</h3>
   <dl class="status-grid wizard-summary-grid">
     <dt>Status</dt><dd>{restrictedInspectHeadline(inspect)}</dd>
     <dt>Staff-Adresse</dt><dd>{inspect.staff.hostIp ?? 'Nicht gewählt'}{inspect.staff.interfaceName ? ` (${inspect.staff.interfaceName})` : ''}</dd>
@@ -234,10 +237,10 @@
   {/if}
 
   <h3 class="wizard-subheading">Netzwerkadresse auswählen</h3>
-  <p class="hint">
-    Die Liste bleibt bewusst breit. Hinweise markieren mögliche Risiken, sperren eine Adresse
-    aber nicht automatisch. Loopback, Link-Local und die Staff-IP werden nicht angeboten.
-  </p>
+  <details class="network-selection-help">
+    <summary>Hinweise zur Adressauswahl</summary>
+    <p class="hint">Hinweise markieren mögliche Risiken. Loopback, Link-Local und die Praxis-IP werden nicht angeboten.</p>
+  </details>
   {#if inspect.candidates.length}
     <div class="restricted-candidate-list" role="radiogroup" aria-label="Netzwerkadresse für Patientenportal">
       {#each inspect.candidates as candidate (candidateKey(candidate.address, candidate.interfaceId))}
@@ -274,7 +277,9 @@
     </label>
   {/if}
 
-  <h3 class="wizard-subheading">Voraussetzungen prüfen</h3>
+  </div>
+  <div class="network-column">
+  <h3 class="network-heading">Voraussetzungen und Aktionen</h3>
   <ul class="checklist">
     {#each inspect.checks.filter((check) => check.id !== 'restricted.platform' || !check.ok) as check (check.id)}
       <li class:is-bad={!check.ok} class:is-done={check.ok}>
@@ -325,6 +330,8 @@
     <button type="button" class="btn-secondary" disabled={busy || peerMutating} onclick={() => void refresh()}>
       {busy ? 'Prüft …' : 'Erneut prüfen'}
     </button>
+  </div>
+  </div>
   </div>
 {/if}
 

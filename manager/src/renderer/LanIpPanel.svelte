@@ -56,14 +56,17 @@
   <div class="lan-ip-status">
     {#if hasEnv && configuredLanIp}
       <div class="lan-ip-status-row">
-        <span class="lan-ip-status-label">Praxisadresse</span>
+        <span class="lan-ip-status-label">Gespeichert</span>
         <span class="lan-ip-status-value">{configuredLanIp}</span>
+        {#if !stale && candidateMatchesConfigured()}
+          <span class="lan-ip-status-badge lan-ip-status-badge-ok">Am Rechner vorhanden</span>
+        {/if}
         {#if stale}
           <span class="lan-ip-status-badge lan-ip-status-badge-warn">abweichend</span>
         {/if}
       </div>
     {/if}
-    {#if candidates.length > 0}
+    {#if candidates.length > 0 && (stale || !candidateMatchesConfigured())}
       <div class="lan-ip-status-row">
         <span class="lan-ip-status-label">Aktuell am Rechner</span>
         <span class="lan-ip-status-value">{candidates.map((c) => c.label).join(' · ')}</span>
@@ -73,7 +76,7 @@
           <span class="lan-ip-status-badge lan-ip-status-badge-ok">stimmt überein</span>
         {/if}
       </div>
-    {:else if hasEnv}
+    {:else if hasEnv && candidates.length === 0}
       <div class="lan-ip-status-row">
         <span class="lan-ip-status-label">Aktuell am Rechner</span>
         <span class="lan-ip-status-value">keine LAN-Adresse erkannt</span>

@@ -1,0 +1,156 @@
+/* Network layout contract: identical 50/50 divider in every expanded section.
+ * Below 800px, columns stack in DOM order. Values wrap instead of truncating.
+ * Type scale: 15px body, 14px secondary, 16px headings; weight 400/600/700.
+ */
+.network {
+  font-size: var(--font-body);
+}
+
+.network-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  align-items: start;
+}
+
+.network-column {
+  min-width: 0;
+  padding-right: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.network-column + .network-column {
+  padding-right: 0;
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--border);
+}
+
+.network :is(.network-heading, .wizard-subheading, h2) {
+  font-size: var(--font-body);
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+.network .wizard-subheading:not(:first-child) {
+  margin-top: 1rem;
+}
+
+.network :is(.hint, .lan-ip-prompt, .status-grid dt, .network-option-hint, .maintenance-expander-subtitle) {
+  font-size: var(--font-small);
+}
+
+.network .maintenance-expander-title {
+  font-size: var(--font-heading);
+}
+
+.network :is(.status-grid, .lan-ip-status) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.network .status-grid {
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 0.5rem 0.75rem;
+}
+
+.network .lan-ip-status-row {
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 0.25rem 0.75rem;
+  align-items: start;
+}
+
+.network .lan-ip-status-badge {
+  grid-column: 2;
+  white-space: normal;
+  font-size: var(--font-small);
+}
+
+.network :is(code, .lan-ip-status-value, .maintenance-backup-status) {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.network code {
+  font-size: var(--font-small);
+}
+
+.network .wizard-input.is-monospace {
+  font-size: var(--font-small);
+}
+
+.network-radio {
+  align-items: flex-start;
+}
+
+.network-radio input {
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.network-option-hint {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.network-checks {
+  margin-top: 1rem;
+}
+
+.network-bindings-list {
+  margin-top: 0.5rem;
+}
+
+.network-check-detail {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+
+.network summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+
+.network details[open] > summary {
+  margin-bottom: 0.5rem;
+}
+
+.network-selection-help {
+  margin-bottom: 0.75rem;
+}
+
+.network .panel-section {
+  margin-bottom: 0.75rem;
+}
+
+.network :is(button, summary, input, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.network input {
+  accent-color: var(--accent);
+}
+
+@media (max-width: 799px) {
+  .network-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .network-column {
+    padding-right: 0;
+  }
+
+  .network-column + .network-column {
+    padding-left: 0;
+    padding-top: 1rem;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}

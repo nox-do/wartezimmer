@@ -201,7 +201,7 @@ function installSmokeCheck(window: BrowserWindow): void {
 
 async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow({
-    width: 720,
+    width: 1000,
     height: 820,
     minWidth: 480,
     minHeight: 520,
