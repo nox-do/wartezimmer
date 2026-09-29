@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
 import {
   restrictedCandidateWarningText,
   restrictedDnsStatusText,
@@ -59,40 +60,47 @@ test('same-interface and virtual candidates remain visible as warnings', () => {
 test('temporarily unavailable selected address gets an actionable preparation error', () => {
   assert.equal(
     restrictedPrepareErrorText(
-      new Error(
-        "Error invoking remote method 'praxis:setup-api-call': Error: Setup-API /api/setup/host/restricted-network/prepare: Die gewählte Restricted-IP ist nicht mehr lokal verfügbar oder nicht eindeutig zugeordnet.",
-      ),
+      new ManagerApiError({
+        code: 'restricted_address_unavailable',
+        category: 'validation',
+        message:
+          'Die gewählte Restricted-IP ist nicht mehr lokal verfügbar oder nicht eindeutig zugeordnet.',
+        retryable: false,
+      }),
     ),
     'Die gewählte Netzwerkadresse ist derzeit nicht am Computer verfügbar. Prüfen Sie die Netzwerkverbindung und wählen Sie die Adresse nach der Wiederherstellung erneut aus.',
   );
 });
 
-test('unexpected preparation failures do not expose IPC details', () => {
+test('unexpected preparation failures use generic guidance', () => {
   assert.equal(
-    restrictedPrepareErrorText(new Error("Error invoking remote method 'praxis:setup-api-call'")),
+    restrictedPrepareErrorText(new Error('private transport failure')),
     'Die Netzwerkadresse konnte nicht vorbereitet werden. Bitte prüfen Sie die Voraussetzungen erneut.',
   );
 });
 
-test('restricted actions retain the setup diagnosis without the IPC wrapper', () => {
+test('restricted actions use the structured public setup diagnosis', () => {
   assert.equal(
     restrictedActionErrorText(
-      new Error(
-        "Error invoking remote method 'praxis:setup-api-call': Error: Setup-API /api/setup/host/restricted-network/apply: Runtime-Bindung unsicher. Der vorherige Zustand wurde wiederhergestellt.",
-      ),
+      new ManagerApiError({
+        code: 'restricted_apply_failed',
+        category: 'operation-failed',
+        message: 'Runtime-Bindung unsicher. Der vorherige Zustand wurde wiederhergestellt.',
+        retryable: false,
+      }),
       'aktiviert',
     ),
     'Runtime-Bindung unsicher. Der vorherige Zustand wurde wiederhergestellt.',
   );
 });
 
-test('restricted actions retain a message already sanitized at the IPC boundary', () => {
+test('unknown restricted action errors do not expose transport text', () => {
   assert.equal(
     restrictedActionErrorText(
       new Error('Die Aktivierung wurde zurückgenommen; der Staff-Zugang bleibt unverändert.'),
       'aktiviert',
     ),
-    'Die Aktivierung wurde zurückgenommen; der Staff-Zugang bleibt unverändert.',
+    'Der Patientenzugang konnte nicht aktiviert werden. Bitte erneut prüfen.',
   );
 });
 

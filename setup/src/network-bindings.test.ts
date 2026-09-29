@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { ComposeStatus } from '@praxis-flow/server-shared';
 import type { NetworkInterfaceInfo } from './network.js';
 import {
   auditNetworkBindings,
@@ -19,6 +20,26 @@ const sampleInterfaces: NetworkInterfaceInfo[] = [
     addresses: [{ family: 'IPv4', address: '192.168.88.1', internal: false }],
   },
 ];
+
+function proxyCompose(...ports: number[]): ComposeStatus {
+  return {
+    running: true,
+    services: [
+      {
+        name: 'proxy',
+        service: 'proxy',
+        state: 'running',
+        health: 'healthy',
+        publishedBindings: ports.map((port) => ({
+          hostIp: '192.168.1.13',
+          publishedPort: port,
+          targetPort: port,
+          protocol: 'tcp',
+        })),
+      },
+    ],
+  };
+}
 
 test('interfaceExists finds configured gateway interface', () => {
   assert.equal(interfaceExists(sampleInterfaces, 'eth1'), true);
@@ -92,6 +113,29 @@ test('auditStaffPublishedBindings accepts exact TLS proxy, app and sandbox bindi
       ['staff.binding.proxy', true],
     ],
   );
+});
+
+test('host audit treats port 443 as optional only during TLS commissioning', async () => {
+  const cases = [
+    ['commissioning without 443', 'http', 'awaiting-operator-dns', [80], true],
+    ['commissioning with 443', 'http', 'awaiting-operator-dns', [80, 443], true],
+    ['commissioning with unrelated port', 'http', 'awaiting-operator-dns', [80, 444], false],
+    ['TLS cutover without 443', 'tls-custom', 'active', [80], false],
+  ] as const;
+
+  for (const [name, proxyMode, tlsState, ports, expected] of cases) {
+    const checks = await auditNetworkBindings({
+      env: new Map([
+        ['PROXY_ENABLED', 'true'],
+        ['PROXY_MODE', proxyMode],
+        ['TLS_STATE', tlsState],
+      ]),
+      compose: proxyCompose(...ports),
+      configuredLanIp: '192.168.1.13',
+      interfaces: sampleInterfaces,
+    });
+    assert.equal(checks.find((check) => check.id === 'staff.binding.proxy')?.ok, expected, name);
+  }
 });
 
 test('auditStaffPublishedBindings accepts the proxy-free demo bind but rejects unknown bindings', () => {

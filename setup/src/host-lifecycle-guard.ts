@@ -1,3 +1,5 @@
+import { assertNoMaintenanceOperation } from './maintenance-operation-guard.js';
+import { hostMutationLock } from './host-mutation-lock.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -39,6 +41,8 @@ export function assertHostLifecycleAction(
   ctx: SetupContext,
   action: HostLifecycleAction,
 ): HostLifecycleActionCheck {
+  hostMutationLock(ctx.home).assertAvailable();
+  assertNoMaintenanceOperation(ctx.home);
   const check = checkHostLifecycleAction(ctx, action);
   if (!check.allowed) {
     throw new SetupApiValidationError(

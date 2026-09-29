@@ -1,66 +1,10 @@
-import type { ComposeServiceStatus, ComposeStatus, ProbeResult } from '../shared/host-status.js';
+import { runtimeSnapshot, type RuntimeObservation } from './runtime-observation.js';
+import type { ComposeServiceStatus, ProbeResult } from '../shared/host-status.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import { probeLabel } from './probe-label.js';
 import { sandboxClamAvChip } from './sandbox-scanner-ui.js';
 
-type OverallLevel = 'ok' | 'warn' | 'bad';
-
 type ReachabilityStatus = 'ok' | 'warn' | 'bad' | null;
-
-function findProbe(probes: ProbeResult[], id: string): ProbeResult | undefined {
-  return probes.find((probe) => probe.id === id);
-}
-
-export function deriveOverallStatus(
-  runtime: HostRuntimeHealth,
-  compose: ComposeStatus | null = runtime.compose,
-): { text: string; level: OverallLevel } {
-  const probes = runtime.probes;
-  const localProbe = findProbe(probes, 'app.health.local');
-  const lanProbe = findProbe(probes, 'app.health.lan');
-  const localOk = localProbe?.ok ?? false;
-  const lanOk = lanProbe?.ok ?? false;
-  const ready =
-    runtime.envExists &&
-    runtime.docker.installed &&
-    runtime.docker.daemonRunning &&
-    runtime.docker.composeAvailable &&
-    localOk &&
-    lanOk;
-
-  if (ready) {
-    return { text: 'Betrieb', level: 'ok' };
-  }
-
-  if (!runtime.envExists || !runtime.docker.installed) {
-    return { text: 'Nicht eingerichtet', level: 'bad' };
-  }
-
-  if (!runtime.configuredLanIp) {
-    return { text: 'LAN noch nicht konfiguriert', level: 'warn' };
-  }
-
-  const setupComplete =
-    runtime.envExists &&
-    runtime.docker.installed &&
-    runtime.docker.daemonRunning &&
-    runtime.docker.composeAvailable;
-
-  if (setupComplete && compose && !compose.running) {
-    return { text: 'Gestoppt', level: 'warn' };
-  }
-
-  // Configured proxy without a running container — LAN probe usually fails on :80.
-  if (setupComplete && runtime.proxyServer?.enabled && !runtime.proxyServer.container) {
-    return { text: 'Proxy-Server fehlt', level: 'warn' };
-  }
-
-  if (setupComplete && localOk && lanProbe && !lanOk) {
-    return { text: 'LAN nicht erreichbar', level: 'warn' };
-  }
-
-  return { text: 'Einrichtung unvollständig', level: 'warn' };
-}
 
 function sandboxChips(scanner: HostRuntimeHealth['sandboxScanner']): HealthTileChip[] | undefined {
   const chip = sandboxClamAvChip(scanner);
@@ -174,7 +118,12 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
   if (services.length === 0 && !useProxyEntry) {
     tiles.push({
       name: 'Stack',
-      detail: probesPending ? 'Wird geprüft …' : 'Keine Container',
+      detail:
+        runtime.compose === null
+          ? 'Containerstatus nicht prüfbar'
+          : probesPending
+            ? 'Wird geprüft …'
+            : 'Keine Container',
       status: null,
     });
     return tiles;
@@ -264,4 +213,18 @@ export function collectHealthTiles(runtime: HostRuntimeHealth): HealthTileSpec[]
   }
 
   return tiles;
+}
+
+/** Retain last-known tiles, but never present stale evidence with a green light. */
+export function collectObservedHealthTiles(observation: RuntimeObservation): HealthTileSpec[] {
+  const snapshot = runtimeSnapshot(observation);
+  if (!snapshot) return [];
+  const tiles = collectHealthTiles(snapshot);
+  if (observation.kind !== 'stale') return tiles;
+  return tiles.map((tile) => ({
+    ...tile,
+    status: null,
+    detail: `Veraltet — ${tile.detail}`,
+    chips: tile.chips?.map((chip) => ({ ...chip, neutral: true })),
+  }));
 }

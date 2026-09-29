@@ -1,3 +1,5 @@
+import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
+import { restoreWizardIsBusy, restoreWizardProgress } from './restore-wizard-flow.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { PfbackupInspectResult, PfbackupRestoreResult } from '../shared/host-status.js';
@@ -30,9 +32,7 @@ function inspectOk(overrides: Partial<PfbackupInspectResult> = {}): PfbackupInsp
 function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManagerApi {
   return {
     hostPlatform: 'linux',
-    fetchSetupStatus: async () => {
-      throw new Error('not used');
-    },
+    fetchSetupStatus: async () => minimalHostStatus(),
     getComposeLogs: async () => ({ log: '' }),
     runComposeAction: async () => ({
       ok: true,
@@ -41,24 +41,10 @@ function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManager
     }),
     createPfbackup: async () => ({ envPath: '/tmp/.env', backupPath: '/tmp/x.pfbackup' }),
     savePfbackup: async () => ({ saved: true, canceled: false, filePath: '/tmp/x.pfbackup' }),
-    readPfbackupForValidate: async () => ({
+    selectPfbackupForRestore: async () => ({
       canceled: false,
       content: 'backup-content',
       filePath: '/tmp/sample.pfbackup',
-    }),
-    inspectPfbackupFile: async () => inspectOk(),
-    validatePfbackup: async () => ({
-      archiveValid: true,
-      restoreValid: true,
-      archiveErrors: [],
-      restoreErrors: [],
-      summary: {
-        createdAt: '2026-07-12T12:00:00.000Z',
-        settingsFormatVersion: 1,
-        exportedAt: '2026-07-12T12:00:00.000Z',
-        releaseVersion: null,
-        routingMode: 'simple',
-      },
     }),
     inspectPfbackup: async () => inspectOk(),
     restorePfbackup: async () =>
@@ -103,8 +89,13 @@ test('openPreUpdate starts on choose phase and skip continues update', async () 
   controller.openPreUpdate(() => {
     completed = true;
   });
+  await flushMicrotasks();
   assert.equal(controller.getState().phase, 'choose');
-  assert.equal(controller.getState().mode, 'pre-update');
+  assert.equal(
+    (controller.getState() as Extract<ReturnType<typeof controller.getState>, { phase: 'choose' }>)
+      .mode,
+    'pre-update',
+  );
 
   controller.chooseRestore(false);
   assert.equal(controller.getState().phase, 'closed');
@@ -120,6 +111,7 @@ test('pre-update restore success closes wizard and continues update', async () =
   controller.openPreUpdate(() => {
     completed = true;
   });
+  await flushMicrotasks();
   controller.chooseRestore(true);
   await flushMicrotasks();
   assert.equal(controller.getState().phase, 'preview');
@@ -127,6 +119,10 @@ test('pre-update restore success closes wizard and continues update', async () =
   controller.confirmRestore();
   await flushMicrotasks();
   assert.equal(controller.getState().phase, 'success');
+  {
+    const completed = controller.getState();
+    if (completed.phase === 'success') assert.equal(completed.restoreResult.ok, true);
+  }
 
   controller.close();
   assert.equal(controller.getState().phase, 'closed');
@@ -151,6 +147,7 @@ test('restore failure in pre-update can be skipped to continue update', async ()
   controller.openPreUpdate(() => {
     completed = true;
   });
+  await flushMicrotasks();
   controller.chooseRestore(true);
   await flushMicrotasks();
   controller.confirmRestore();
@@ -184,6 +181,7 @@ test('failed rollback blocks skip and retry in pre-update', async () => {
   controller.openPreUpdate(() => {
     completed = true;
   });
+  await flushMicrotasks();
   controller.chooseRestore(true);
   await flushMicrotasks();
   controller.confirmRestore();
@@ -202,16 +200,18 @@ test('pre-update file dialog cancel returns to choose without continuing update'
   let completed = false;
   const controller = createRestoreWizardController({
     api: createMockApi({
-      readPfbackupForValidate: async () => ({ canceled: true }),
+      selectPfbackupForRestore: async () => ({ canceled: true }),
     }),
   });
 
   controller.openPreUpdate(() => {
     completed = true;
   });
+  await flushMicrotasks();
   controller.chooseRestore(true);
   await flushMicrotasks();
 
+  await flushMicrotasks();
   assert.equal(controller.getState().phase, 'choose');
   assert.equal(completed, false);
 });
@@ -221,7 +221,7 @@ test('retry restore reuses backup content without file picker', async () => {
   let restoreCalls = 0;
   const controller = createRestoreWizardController({
     api: createMockApi({
-      readPfbackupForValidate: async () => {
+      selectPfbackupForRestore: async () => {
         readCalls += 1;
         return {
           canceled: false,
@@ -270,9 +270,13 @@ test('retry restore reuses backup content without file picker', async () => {
   assert.equal(readCalls, 1);
   assert.equal(restoreCalls, 2);
   assert.equal(controller.getState().phase, 'success');
+  {
+    const completed = controller.getState();
+    if (completed.phase === 'success') assert.equal(completed.restoreResult.ok, true);
+  }
 });
 
-test('credential import failure preselects skip for retry', async () => {
+test('credential import failure preserves the explicit user choice', async () => {
   let restoreOptions: { skipProviderCredentials?: boolean } | undefined;
   const controller = createRestoreWizardController({
     api: createMockApi({
@@ -302,15 +306,24 @@ test('credential import failure preselects skip for retry', async () => {
   });
 
   controller.openPreUpdate(() => {});
+  await flushMicrotasks();
   controller.chooseRestore(true);
   await flushMicrotasks();
   controller.confirmRestore();
   await flushMicrotasks();
 
   assert.equal(controller.getState().phase, 'failed');
-  assert.equal(controller.getState().skipProviderCredentials, true);
+  assert.equal(
+    (controller.getState() as Extract<ReturnType<typeof controller.getState>, { phase: 'failed' }>)
+      .backup?.draft.skipProviderCredentials,
+    false,
+  );
   assert.equal(restoreOptions?.skipProviderCredentials, false);
 
+  controller.retryRestore();
+  await flushMicrotasks();
+  assert.equal(restoreOptions?.skipProviderCredentials, false);
+  controller.setSkipProviderCredentials(true);
   controller.retryRestore();
   await flushMicrotasks();
   assert.equal(restoreOptions?.skipProviderCredentials, true);
@@ -333,7 +346,7 @@ for (const targetHttps of [false, true]) {
       const api = createMockApi();
       const controller = createRestoreWizardController({
         api: createMockApi({
-          readPfbackupForValidate: async () => {
+          selectPfbackupForRestore: async () => {
             picks++;
             return { canceled: false, content: 'one-file', filePath: '/tmp/backup.pfbackup' };
           },
@@ -360,6 +373,10 @@ for (const targetHttps of [false, true]) {
       assert.equal(restores, 1);
       assert.equal(picks, 1);
       assert.equal(controller.getState().phase, 'success');
+      {
+        const completed = controller.getState();
+        if (completed.phase === 'success') assert.equal(completed.restoreResult.ok, true);
+      }
     });
   }
 }
@@ -392,6 +409,7 @@ test('pre-update HTTPS restore and its retry require confirmation before calling
     }),
   });
   controller.openPreUpdate(() => {});
+  await flushMicrotasks();
   controller.chooseRestore(true);
   await flushMicrotasks();
   controller.confirmRestore();
@@ -416,7 +434,7 @@ for (const stage of ['read', 'inspect']) {
       api: createMockApi({
         ...(stage === 'read'
           ? {
-              readPfbackupForValidate: async () => {
+              selectPfbackupForRestore: async () => {
                 throw new Error('Datei nicht lesbar');
               },
             }
@@ -432,11 +450,20 @@ for (const stage of ['read', 'inspect']) {
       }),
     });
     controller.openPreUpdate(() => {});
+    await flushMicrotasks();
     controller.chooseRestore(true);
     await flushMicrotasks();
     assert.equal(controller.getState().phase, 'failed');
-    assert.equal(controller.getState().busy, false);
-    assert.match(controller.getState().error ?? '', /Datei nicht lesbar|Backup ungültig/);
+    assert.equal(restoreWizardIsBusy(controller.getState()), false);
+    assert.match(
+      (
+        controller.getState() as Extract<
+          ReturnType<typeof controller.getState>,
+          { phase: 'failed' }
+        >
+      ).error,
+      /Datei nicht lesbar|Backup ungültig/,
+    );
     controller.retryRestore();
     await flushMicrotasks();
     assert.equal(restores, 0);
@@ -445,3 +472,124 @@ for (const stage of ['read', 'inspect']) {
     assert.equal(controller.getState().phase, 'closed');
   });
 }
+
+for (const stage of ['read', 'inspect', 'restore'] as const) {
+  for (const reopen of [false, true]) {
+    test(`restore ignores late ${stage} after ${reopen ? 'reopening' : 'closing'}`, async () => {
+      const base = createMockApi();
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let first = true;
+      let refreshes = 0;
+      async function waitOnce() {
+        if (first) {
+          first = false;
+          await gate;
+        }
+      }
+      const controller = createRestoreWizardController({
+        refreshHost: async () => {
+          refreshes++;
+        },
+        api: createMockApi({
+          selectPfbackupForRestore: async () => {
+            if (stage === 'read') await waitOnce();
+            return base.selectPfbackupForRestore();
+          },
+          inspectPfbackup: async (content) => {
+            if (stage === 'inspect') await waitOnce();
+            return base.inspectPfbackup(content);
+          },
+          restorePfbackup: async (...args) => {
+            if (stage === 'restore') await waitOnce();
+            return base.restorePfbackup(...args);
+          },
+        }),
+      });
+      controller.openStandalone();
+      await flushMicrotasks();
+      if (stage === 'restore') controller.confirmRestore();
+      await flushMicrotasks();
+      controller.close();
+      if (reopen) {
+        controller.openStandalone();
+        await flushMicrotasks();
+      }
+      const before = controller.getState();
+      const refreshesBefore = refreshes;
+      release();
+      await flushMicrotasks();
+      assert.deepEqual(controller.getState(), before);
+      assert.equal(refreshes - refreshesBefore, stage === 'restore' ? 1 : 0);
+    });
+  }
+}
+
+for (const throws of [false, true]) {
+  test(`failed restore reconciles the journal before releasing controls (exception=${throws})`, async () => {
+    let host = minimalHostStatus();
+    let release!: () => void;
+    let refreshes = 0;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const controller = createRestoreWizardController({
+      api: createMockApi({
+        restorePfbackup: async () => {
+          if (throws) throw new Error('provider credentials message must not select the checkbox');
+          return {
+            ok: false,
+            restoreId: 'r',
+            failedPhase: 'import',
+            errors: ['provider credential failure'],
+            rollbackAttempted: true,
+            rollbackSucceeded: true,
+          };
+        },
+      }),
+      getHostStatus: () => host,
+      refreshHost: async () => {
+        refreshes++;
+        if (refreshes === 2) {
+          await gate;
+          host = minimalHostStatus({ restoreOperation: { kind: 'unreadable' } });
+        }
+      },
+    });
+    controller.openStandalone();
+    await flushMicrotasks();
+    controller.confirmRestore();
+    await flushMicrotasks();
+    assert.equal(restoreWizardIsBusy(controller.getState()), true);
+    release();
+    await flushMicrotasks();
+    const failed = controller.getState();
+    assert.equal(failed.phase, 'failed');
+    assert.equal(restoreWizardIsBusy(failed), false);
+    controller.retryRestore();
+    assert.deepEqual(controller.getState(), failed);
+    assert.equal(refreshes, 2);
+  });
+}
+
+test('local progress and locks follow the active variants', async () => {
+  const controller = createRestoreWizardController({ api: createMockApi() });
+  const states = [controller.getState()];
+  controller.openStandalone();
+  states.push(controller.getState());
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  states.push(controller.getState());
+  controller.confirmRestore();
+  states.push(controller.getState());
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  states.push(controller.getState());
+  for (const state of states) {
+    assert.equal(restoreWizardIsBusy(state), restoreWizardProgress(state) !== '');
+  }
+  assert.deepEqual(
+    states.map((state) => state.phase),
+    ['closed', 'select', 'preview', 'restoring', 'success'],
+  );
+});

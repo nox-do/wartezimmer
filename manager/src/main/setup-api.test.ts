@@ -1,6 +1,7 @@
+import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveSetupApiUrl, setupApiTimeoutMs, setupApiUserErrorMessage } from './setup-api.js';
+import { resolveSetupApiUrl, setupApiTimeoutMs, callSetupApi, setupApiError } from './setup-api.js';
 
 test('resolveSetupApiUrl keeps normalized host routes and query parameters', () => {
   const url = resolveSetupApiUrl('http://127.0.0.1:9190', '/api/setup/host/status?include=probes');
@@ -78,70 +79,6 @@ test('setupApiTimeoutMs keeps default timeout for backup inspect', () => {
   );
 });
 
-test('setup API user errors preserve an operator-facing validation message', () => {
-  assert.equal(
-    setupApiUserErrorMessage(
-      new Error(
-        'Setup-API /api/setup/host/restricted-network/apply: Zuerst eine Netzwerkadresse vorbereiten.',
-      ),
-      { path: '/api/setup/host/restricted-network/apply' },
-    ),
-    'Zuerst eine Netzwerkadresse vorbereiten.',
-  );
-});
-
-test('setup API user errors hide listener and rollback internals', () => {
-  const message = setupApiUserErrorMessage(
-    new Error(
-      'Setup-API /api/setup/host/restricted-network/apply: Listener-Prüfung fehlgeschlagen: Portal auf Restricted-IP nicht erreichbar (Client network socket disconnected before secure TLS connection was established)\nDer vorherige Patientenzugang wurde wiederhergestellt.\nRollback: Container praxis-flow-proxy Removed',
-    ),
-    { path: '/api/setup/host/restricted-network/apply' },
-  );
-  assert.match(message, /Aktivierung wurde zurückgenommen/);
-  assert.doesNotMatch(message, /socket|Container|Rollback|praxis-flow-proxy/i);
-});
-
-test('setup API user errors preserve an incomplete rollback as a safety warning', () => {
-  const message = setupApiUserErrorMessage(
-    new Error(
-      'Setup-API /api/setup/host/restricted-network/apply: docker compose failed\nRollback unvollständig; Praxis Flow bis zur Prüfung nicht als sicher gebunden behandeln.\nRollback: Container output',
-    ),
-    { path: '/api/setup/host/restricted-network/apply' },
-  );
-  assert.match(message, /nicht vollständig wiederhergestellt/);
-  assert.match(message, /nicht als sicher gebunden/);
-  assert.doesNotMatch(message, /docker|Container|Rollback:/i);
-});
-
-test('incomplete rollback takes precedence over the original listener failure', () => {
-  const message = setupApiUserErrorMessage(
-    new Error(
-      'Setup-API /api/setup/host/restricted-network/apply: Listener-Prüfung fehlgeschlagen: Portal nicht erreichbar\nRollback unvollständig; Praxis Flow bis zur Prüfung nicht als sicher gebunden behandeln.\nRollback: Container output',
-    ),
-    { path: '/api/setup/host/restricted-network/apply' },
-  );
-  assert.match(message, /nicht vollständig wiederhergestellt/);
-  assert.match(message, /nicht als sicher gebunden/);
-  assert.doesNotMatch(message, /Portal nicht erreichbar|Container|Rollback:/i);
-});
-
-test('setup API user errors replace technical-only failures with an action fallback', () => {
-  assert.equal(
-    setupApiUserErrorMessage(new Error('connect ECONNREFUSED 127.0.0.1:9190'), {
-      path: '/api/setup/host/tls/apply',
-    }),
-    'Die HTTPS-Einstellung konnte nicht geändert werden. Bitte prüfen Sie die Voraussetzungen und versuchen Sie es erneut.',
-  );
-});
-
-test('setup API user errors translate a token mismatch without exposing token names', () => {
-  const message = setupApiUserErrorMessage(new Error('maintenance token required'), {
-    path: '/api/setup/host/update/apply',
-  });
-  assert.match(message, /demselben Installationsstand/);
-  assert.doesNotMatch(message, /token/i);
-});
-
 test('rebuild timeout covers recreation and runtime audit', () => {
   assert.equal(
     setupApiTimeoutMs({ method: 'POST', path: '/api/setup/host/rebuild' }),
@@ -149,41 +86,88 @@ test('rebuild timeout covers recreation and runtime audit', () => {
   );
 });
 
-for (const cause of [
-  'Container konnten nicht wiederaufgebaut werden: docker compose failed',
-  'Listener-Prüfung fehlgeschlagen: Portal nicht erreichbar (ECONNRESET)',
-]) {
-  test(`rebuild preserves failed stop outcome after ${cause.split(':')[0]}`, () => {
-    const message = setupApiUserErrorMessage(
-      new Error(
-        `Setup-API /api/setup/host/rebuild: ${cause} Dienste konnten nicht vollständig gestoppt werden; Laufzustand prüfen.`,
-      ),
-      { path: '/api/setup/host/rebuild' },
-    );
-    assert.match(message, /nicht vollständig gestoppt/);
-    assert.match(message, /Laufzustand ist ungeklärt/);
-    assert.doesNotMatch(message, /Container|docker|ECONNRESET|Aktivierung/);
-  });
-  test(`rebuild preserves successful stop outcome after ${cause.split(':')[0]}`, () => {
-    const message = setupApiUserErrorMessage(new Error(`${cause} Dienste wurden gestoppt.`), {
-      path: '/api/setup/host/rebuild',
-    });
-    assert.match(message, /Dienste wurden gestoppt/);
-    assert.doesNotMatch(message, /Container|docker|ECONNRESET|Aktivierung/);
-  });
-}
-
-test('rebuild without a known stop result does not imply successful rollback or portal activation', () => {
-  const message = setupApiUserErrorMessage(new Error('Listener-Prüfung fehlgeschlagen'), {
-    path: '/api/setup/host/rebuild',
-  });
-  assert.match(message, /Laufzustand/);
-  assert.doesNotMatch(message, /Aktivierung|Dienste wurden gestoppt|Staff-Zugang bleibt/);
-});
-
 test('recovery finish gets the same timeout as manual restore', () => {
   assert.equal(
     setupApiTimeoutMs({ method: 'POST', path: '/api/setup/host/install/finish' }),
     600_000,
+  );
+});
+
+const backendError = {
+  code: 'tls_check_failed',
+  category: 'operation-failed' as const,
+  message: 'Prüfung fehlgeschlagen',
+  retryable: false,
+  detail: 'Zertifikat prüfen',
+  phase: 'check',
+};
+
+test('main preserves backend error identity and operation results', async (t) => {
+  const fetchMock = t.mock.method(
+    globalThis,
+    'fetch',
+    async () => new Response(JSON.stringify({ error: backendError }), { status: 422 }),
+  );
+  await assert.rejects(
+    callSetupApi('http://127.0.0.1:9190', {
+      method: 'POST',
+      path: '/api/setup/host/tls/check-certificate',
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof ManagerApiError);
+      assert.deepEqual(error.toJSON(), backendError);
+      return true;
+    },
+  );
+  for (const path of ['/api/setup/host/backup/restore', '/api/setup/host/update/apply']) {
+    const result = { ok: false, failedPhase: 'import', rollbackAttempted: true };
+    fetchMock.mock.mockImplementation(async () => new Response(JSON.stringify(result)));
+    assert.deepEqual(await callSetupApi('http://127.0.0.1:9190', { method: 'POST', path }), result);
+  }
+});
+
+test('main classifies native timeouts, fetch causes and unexpected errors', async (t) => {
+  for (const [error, category, retryable] of [
+    [new DOMException('native timeout', 'TimeoutError'), 'timeout', false],
+    [
+      new TypeError('fetch failed', {
+        cause: Object.assign(new Error('connect details'), { code: 'ECONNREFUSED' }),
+      }),
+      'unavailable',
+      true,
+    ],
+    [new SyntaxError('secret response'), 'internal', false],
+  ] as const) {
+    const fetchMock = t.mock.method(globalThis, 'fetch', async () => {
+      throw error;
+    });
+    await assert.rejects(
+      callSetupApi('http://127.0.0.1:9190', { method: 'GET', path: '/api/setup/host/status' }),
+      (caught: unknown) => {
+        assert.ok(caught instanceof ManagerApiError);
+        assert.equal(caught.category, category);
+        assert.equal(caught.retryable, retryable);
+        assert.equal(caught.cause, error);
+        assert.notEqual(caught.message, error.message);
+        return true;
+      },
+    );
+    fetchMock.mock.restore();
+  }
+  assert.equal(setupApiError(new Error('arbitrary'), true).category, 'timeout');
+});
+
+test('malformed HTTP error bodies are internal errors, never operation results', async (t) => {
+  t.mock.method(
+    globalThis,
+    'fetch',
+    async () => new Response(JSON.stringify({ ok: false }), { status: 500 }),
+  );
+  await assert.rejects(
+    callSetupApi('http://127.0.0.1:9190', {
+      method: 'POST',
+      path: '/api/setup/host/backup/restore',
+    }),
+    { category: 'internal' },
   );
 });

@@ -1,3 +1,4 @@
+import { durableWrite } from './restricted-operation.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ComposeStatus } from '@praxis-flow/server-shared';
@@ -106,14 +107,14 @@ async function restoreMaintenanceFiles(
   input.beforeRestore?.();
   const rollbackEnv = path.join(input.rollback.rollbackDir, '.env');
   if (fs.existsSync(rollbackEnv)) {
-    fs.copyFileSync(rollbackEnv, path.join(input.ctx.home, '.env'));
+    durableWrite(path.join(input.ctx.home, '.env'), fs.readFileSync(rollbackEnv, 'utf8'));
   } else {
     errors.push('Rollback-.env fehlt.');
   }
 
   const rollbackManager = path.join(input.rollback.rollbackDir, MANAGER_STATE_FILE);
   if (fs.existsSync(rollbackManager)) {
-    fs.copyFileSync(rollbackManager, input.rollback.managerStatePath);
+    durableWrite(input.rollback.managerStatePath, fs.readFileSync(rollbackManager, 'utf8'));
   } else if (fs.existsSync(input.rollback.managerStatePath)) {
     fs.unlinkSync(input.rollback.managerStatePath);
   }
@@ -139,8 +140,11 @@ async function restoreMaintenanceFiles(
   return readEnvMap(path.join(input.ctx.home, '.env'));
 }
 
-async function verifyMaintenanceRollback(
-  input: Parameters<typeof executeMaintenanceRollback>[0],
+export async function verifyMaintenanceRollback(
+  input: Pick<
+    Parameters<typeof executeMaintenanceRollback>[0],
+    'ctx' | 'runtime' | 'localAppBaseUrl'
+  >,
   envMap: Map<string, string>,
   errors: string[],
 ): Promise<void> {
@@ -201,7 +205,7 @@ export async function executeMaintenanceRollback(input: {
     }
 
     const envAfter = await restoreMaintenanceFiles(input, errors);
-    await verifyMaintenanceRollback(input, envAfter, errors);
+    if (errors.length === 0) await verifyMaintenanceRollback(input, envAfter, errors);
   } catch (error) {
     errors.push(error instanceof Error ? error.message : 'Rollback ist unerwartet fehlgeschlagen.');
   }

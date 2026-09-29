@@ -23,7 +23,7 @@ import {
 } from './maintenance-view-model.js';
 
 export type MaintenanceCallbacks = {
-  onAfterMutation?: () => void;
+  onAfterMutation?: () => void | Promise<void>;
 };
 
 export type MaintenanceState = {
@@ -202,6 +202,14 @@ export function createMaintenanceController(
     patch({ logsText: result.log });
   }
 
+  async function refreshAfterMutation(): Promise<void> {
+    try {
+      await deps.onAfterMutation?.();
+    } catch {
+      /* Shell owns refresh diagnostics. */
+    }
+  }
+
   async function runAction(
     action: 'start' | 'stop' | 'restart',
     operationStarted = false,
@@ -227,7 +235,6 @@ export function createMaintenanceController(
           setSurfaceError('stack', composeActionErrorMessage(action, result.log));
         }
       }
-      deps.onAfterMutation?.();
       if (action !== 'stop') {
         try {
           await refreshLogs(undefined, generation);
@@ -242,6 +249,7 @@ export function createMaintenanceController(
         setSurfaceError('stack', errorMessage(error, `Aktion „${action}“ fehlgeschlagen.`));
       }
     } finally {
+      await refreshAfterMutation();
       endOperation('stack');
     }
   }
@@ -284,7 +292,6 @@ export function createMaintenanceController(
             setSurfaceError('storage', storageError);
           }
         }
-        deps.onAfterMutation?.();
       })
       .catch((error) => {
         if (!still(generation)) {
@@ -293,7 +300,8 @@ export function createMaintenanceController(
         patch({ storageStatusText: '' });
         setSurfaceError('storage', errorMessage(error, 'Speichern der Ordner fehlgeschlagen.'));
       })
-      .finally(() => {
+      .finally(async () => {
+        await refreshAfterMutation();
         endOperation('storage');
       });
   }
@@ -404,7 +412,7 @@ export function createMaintenanceController(
               if (still(generation))
                 setSurfaceError('stack', errorMessage(error, 'Wiederherstellung fehlgeschlagen.'));
             } finally {
-              deps.onAfterMutation?.();
+              await refreshAfterMutation();
               endOperation('stack');
             }
           })();
@@ -525,7 +533,6 @@ export function createMaintenanceController(
                 setSurfaceError('pin', errorMessage(error, 'Logs konnten nicht geladen werden.'));
               }
             });
-            deps.onAfterMutation?.();
           }
         })
         .catch((error) => {
@@ -535,7 +542,8 @@ export function createMaintenanceController(
           patch({ pinResetStatusText: '' });
           setSurfaceError('pin', errorMessage(error, 'PIN-Reset fehlgeschlagen.'));
         })
-        .finally(() => {
+        .finally(async () => {
+          await refreshAfterMutation();
           endOperation('pin');
         });
     },

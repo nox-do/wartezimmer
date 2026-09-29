@@ -1,8 +1,9 @@
+import { ManagerApiError, type ManagerError } from '@praxis-flow/server-shared/setup-api';
+
 export const IPC_SETUP_API_CALL = 'praxis:setup-api-call';
 export const IPC_OPEN_EXTERNAL_URL = 'praxis:open-external-url';
 export const IPC_SAVE_PFBACKUP = 'praxis:save-pfbackup';
-export const IPC_READ_PFBACKUP_FOR_VALIDATE = 'praxis:read-pfbackup-for-validate';
-export const IPC_INSPECT_PFBACKUP_FILE = 'praxis:inspect-pfbackup-file';
+export const IPC_SELECT_PFBACKUP_FOR_RESTORE = 'praxis:select-pfbackup-for-restore';
 export const IPC_SELECT_FOLDER = 'praxis:select-folder';
 export const IPC_SELECT_RELEASE_ARCHIVE = 'praxis:select-release-archive';
 export const IPC_SELECT_PFUPDATE_ARCHIVE = 'praxis:select-pfupdate-archive';
@@ -19,4 +20,9 @@ export type SetupApiCallRequest = {
 
 export type SetupApiCallResponse<T = unknown> =
   | { ok: true; value: T }
-  | { ok: false; message: string };
+  | { ok: false; error: ManagerError };
+
+export function unwrapSetupApiResponse<T>(response: SetupApiCallResponse<T>): T {
+  if (!response.ok) throw new ManagerApiError(response.error);
+  return response.value;
+}

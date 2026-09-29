@@ -1,3 +1,5 @@
+import type { ManagerError } from '@praxis-flow/server-shared/setup-api';
+import { failedRuntimeObservation, type RuntimeObservation } from './runtime-observation.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import type { HostStatus } from '../shared/host-status.js';
 import type { ManagerView } from './host-refresh-controller.js';
@@ -25,8 +27,7 @@ export type ManagerShellState = {
   /** Last full-refresh config — never patched by runtime poll. */
   configSnapshot: HostStatus | null;
   /** Last runtime poll — live compose/probes/docker/…. */
-  runtimeSnapshot: HostRuntimeHealth | null;
-  runtimeError: string | null;
+  runtimeObservation: RuntimeObservation;
   statusError: string | null;
   viewLoading: {
     maintenance: boolean;
@@ -49,8 +50,7 @@ export const managerShell = $state<ManagerShellState>({
   wizardPresentation: 'embedded',
   bootReady: false,
   configSnapshot: null,
-  runtimeSnapshot: null,
-  runtimeError: null,
+  runtimeObservation: { kind: 'idle' },
   statusError: null,
   viewLoading: {
     maintenance: false,
@@ -85,8 +85,7 @@ export function applyShellNavigation(
 
 /** Runtime poll only — must not mutate configSnapshot. */
 export function applyRuntimeSnapshot(runtime: HostRuntimeHealth): void {
-  managerShell.runtimeSnapshot = runtime;
-  managerShell.runtimeError = null;
+  managerShell.runtimeObservation = { kind: 'current', snapshot: runtime };
 }
 
 export function applyConfigSnapshot(status: HostStatus): void {
@@ -94,8 +93,11 @@ export function applyConfigSnapshot(status: HostStatus): void {
   clearStatusError();
 }
 
-export function applyRuntimeError(message: string): void {
-  managerShell.runtimeError = message;
+export function applyRuntimeError(error: ManagerError): void {
+  managerShell.runtimeObservation = failedRuntimeObservation(
+    managerShell.runtimeObservation,
+    error,
+  );
 }
 
 export function applyStatusError(message: string): void {

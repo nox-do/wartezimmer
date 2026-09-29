@@ -1,3 +1,77 @@
+export type ManagerErrorCategory =
+  | 'validation'
+  | 'conflict'
+  | 'unavailable'
+  | 'timeout'
+  | 'operation-failed'
+  | 'inconsistent'
+  | 'internal';
+
+export type ManagerError = {
+  code: string;
+  category: ManagerErrorCategory;
+  message: string;
+  retryable: boolean;
+  detail?: string;
+  phase?: string;
+};
+
+export type SetupApiErrorResponse = { error: ManagerError };
+
+/** The same public error identity in backend, main and preload. */
+export class ManagerApiError extends Error implements ManagerError {
+  readonly code: string;
+  readonly category: ManagerErrorCategory;
+  readonly retryable: boolean;
+  readonly detail?: string;
+  readonly phase?: string;
+
+  constructor(error: ManagerError, options?: ErrorOptions) {
+    super(error.message, options);
+    this.name = 'ManagerApiError';
+    this.code = error.code;
+    this.category = error.category;
+    this.retryable = error.retryable;
+    this.detail = error.detail;
+    this.phase = error.phase;
+  }
+
+  /** Explicit plain DTO: never transport stack, cause or subclass internals. */
+  toJSON(): ManagerError {
+    return {
+      code: this.code,
+      category: this.category,
+      message: this.message,
+      retryable: this.retryable,
+      ...(this.detail !== undefined ? { detail: this.detail } : {}),
+      ...(this.phase !== undefined ? { phase: this.phase } : {}),
+    };
+  }
+}
+
+export function isManagerError(value: unknown): value is ManagerError {
+  if (value === null || typeof value !== 'object') return false;
+  const error = value as Record<string, unknown>;
+  return (
+    typeof error.code === 'string' &&
+    error.code.length > 0 &&
+    typeof error.message === 'string' &&
+    typeof error.retryable === 'boolean' &&
+    typeof error.category === 'string' &&
+    [
+      'validation',
+      'conflict',
+      'unavailable',
+      'timeout',
+      'operation-failed',
+      'inconsistent',
+      'internal',
+    ].includes(error.category) &&
+    (error.detail === undefined || typeof error.detail === 'string') &&
+    (error.phase === undefined || typeof error.phase === 'string')
+  );
+}
+
 /** Shared Setup Host API DTOs — contract for `setup serve` and Praxis Flow Manager. */
 
 import type { SandboxScannerStatus } from './sandbox-scanner.js';
@@ -5,7 +79,7 @@ import type { SandboxScannerStatus } from './sandbox-scanner.js';
 export type { SandboxScannerStatus } from './sandbox-scanner.js';
 
 /** Bumped when the Setup health handshake or host-API shape is incompatible. */
-export const SETUP_API_PROTOCOL_VERSION = 1;
+export const SETUP_API_PROTOCOL_VERSION = 2;
 
 export const SETUP_API_HEALTH_PATH = '/api/setup/health';
 export const SETUP_MANAGER_TOKEN_HEADER = 'x-praxis-setup-token';
@@ -136,24 +210,6 @@ export type PfbackupResult = {
 export type PfbackupInfo = {
   envPath: string;
   latestBackupPath: string | null;
-};
-
-export type PfbackupValidateInput = {
-  content: string;
-};
-
-export type PfbackupValidateResult = {
-  archiveValid: boolean;
-  restoreValid: boolean;
-  archiveErrors: string[];
-  restoreErrors: string[];
-  summary?: {
-    createdAt: string;
-    settingsFormatVersion: number;
-    exportedAt: string | null;
-    releaseVersion: string | null;
-    routingMode: string | null;
-  };
 };
 
 export type PfbackupInspectInput = {
@@ -510,7 +566,8 @@ export type RestrictedNetworkActionResult = RestrictedNetworkInspectResult;
 /** Cheap config summary for HostStatus. Deep checks belong to the inspect route. */
 export type RestrictedNetworkStatus = {
   phase: RestrictedNetworkPhase;
-  health: RestrictedNetworkHealth;
+  /** No runtime health assessment without a successful Compose observation. */
+  health: RestrictedNetworkHealth | null;
   binding: RestrictedNetworkBinding | null;
   exposedSurfaces: readonly ['patient-portal'];
   portalHostname: string | null;
@@ -725,20 +782,34 @@ export type InstallationState =
   | {
       kind: 'docker-unavailable';
       reason: string;
-      operation?: InstallOperationSummary;
     }
   | { kind: 'fresh' }
   | { kind: 'installing'; operation: InstallOperationSummary }
   | { kind: 'starting' }
   | { kind: 'healthy'; updateEligible: true }
   | { kind: 'stopped' }
+  | { kind: 'needs-repair'; reasons: InstallationReason[] }
+  | { kind: 'inconsistent'; reasons: InstallationReason[] }
   | { kind: 'needs-reinstall'; reasons: InstallationReason[] };
 
+/** Public journal evidence; payloads and recovery secrets remain in Setup. */
+export type HostOperationStatus =
+  | { kind: 'unreadable' }
+  | { kind: 'pending' | 'recovery-failed'; id: string; phase: string };
+export type UpdateOperationStatus = HostOperationStatus;
+export type RestoreOperationStatus = HostOperationStatus;
+export type TlsOperationStatus = HostOperationStatus;
+
 export type HostStatus = {
+  bindingOperation?: HostOperationStatus | null;
+  tlsOperation?: TlsOperationStatus | null;
+  restoreOperation?: RestoreOperationStatus | null;
+  updateOperation?: UpdateOperationStatus | null;
   /** Additive during the Manager migration; old hosts may omit it. */
   lifecycle?: HostLifecycle;
   lifecycleKey?: string;
-  installation: InstallationState;
+  /** Null when there is no durable finding and runtime could not be assessed. */
+  installation: InstallationState | null;
   installHome: string;
   mode: string;
   composeProjectName: string;
@@ -775,7 +846,7 @@ export type HostStatus = {
 };
 
 export type InstallationStartResult = {
-  installation: InstallationState;
+  installation: InstallationState | null;
   compose: ComposeStatus | null;
 };
 
@@ -798,7 +869,7 @@ export type InstallCommitInput = {
 
 export type InstallCommitResult = {
   operation: InstallOperationSummary;
-  installation: InstallationState;
+  installation: InstallationState | null;
 };
 
 export type InstallAbortResult = {
@@ -810,6 +881,7 @@ export type InstallAbortResult = {
 export type HostRuntimeHealth = {
   /** Opaque comparison value; a change requests a new authoritative config snapshot. */
   lifecycleKey?: string;
+  /** Successful backend observation time, not the Manager cache quality or last attempt. */
   checkedAt: string;
   envExists: boolean;
   configuredLanIp: string | null;
@@ -828,6 +900,13 @@ export type HostRuntimeHealth = {
     container: ComposeServiceStatus | null;
   } | null;
 };
+
+/** Cache quality is local to the Manager; checkedAt belongs to the successful observation. */
+export type RuntimeObservation =
+  | { kind: 'idle' }
+  | { kind: 'current'; snapshot: HostRuntimeHealth }
+  | { kind: 'stale'; snapshot: HostRuntimeHealth; error: ManagerError; failedAt: string }
+  | { kind: 'unavailable'; error: ManagerError; failedAt: string };
 
 export type HostStatusOptions = {
   includeProbes?: boolean;

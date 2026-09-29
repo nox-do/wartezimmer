@@ -3,8 +3,7 @@ import { dialog } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { PFBACKUP_FILE_EXTENSION, PFBACKUP_BASENAME_PREFIX } from '@praxis-flow/server-shared';
-import type { PfbackupInspectResult, SavePfbackupResult } from '../shared/host-status.js';
-import { callSetupApi } from './setup-api.js';
+import type { SavePfbackupResult } from '../shared/host-status.js';
 
 function assertAllowedPfbackupPath(backupPath: string): string {
   if (typeof backupPath !== 'string' || !backupPath.trim()) {
@@ -52,13 +51,13 @@ export async function savePfbackupToDisk(
   return { saved: true, canceled: false, filePath };
 }
 
-export async function readPfbackupFromDialog(
+export async function selectPfbackupForRestore(
   parentWindow: BrowserWindow | null,
 ): Promise<
   { canceled: true; content: null } | { canceled: false; content: string; filePath: string }
 > {
   const dialogOptions: OpenDialogOptions = {
-    title: 'Praxis-Backup prüfen',
+    title: 'Praxis-Backup auswählen',
     properties: ['openFile'],
     filters: [
       { name: 'Praxis Flow Backup', extensions: [PFBACKUP_FILE_EXTENSION] },
@@ -88,24 +87,4 @@ export async function readPfbackupFromDialog(
     content,
     filePath,
   };
-}
-
-export async function inspectPfbackupFile(
-  apiBase: string,
-  backupPath: string,
-  token?: string | null,
-): Promise<PfbackupInspectResult> {
-  const sourcePath = assertAllowedPfbackupPath(backupPath);
-  const content = await fs.promises.readFile(sourcePath, 'utf8');
-  return callSetupApi<PfbackupInspectResult>(
-    apiBase,
-    {
-      method: 'POST',
-      path: '/api/setup/host/backup/inspect',
-      body: {
-        content,
-      },
-    },
-    token,
-  );
 }

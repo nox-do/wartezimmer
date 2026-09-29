@@ -1,3 +1,4 @@
+import { wizardIsBusy, wizardProgress } from './wizard-controller.js';
 import type { ApplySetupResult } from '../shared/host-status.js';
 import {
   canLeaveWizardStep1,
@@ -42,17 +43,17 @@ export function wizardNextButtonLabel(state: WizardControllerState): string {
     if (state.applyResult) {
       return 'Zum Status';
     }
-    return state.busy ? 'Bitte warten …' : 'Anwenden';
+    return wizardIsBusy(state) ? 'Bitte warten …' : 'Anwenden';
   }
   return 'Weiter';
 }
 
 export function wizardNextButtonDisabled(state: WizardControllerState): boolean {
-  if (state.busy) {
+  if (wizardIsBusy(state)) {
     return true;
   }
   if (state.step === 1) {
-    return !canLeaveWizardStep1(state.status, state.busy);
+    return !canLeaveWizardStep1(state.status, wizardIsBusy(state));
   }
   if (state.step === 8) {
     return Boolean(state.applyResult);
@@ -70,7 +71,7 @@ export function wizardApplyResultItems(result: ApplySetupResult): string[] {
 }
 
 export function wizardCompletionLeadText(state: WizardControllerState): string {
-  if (!state.status || state.probeStatusText) {
+  if (!state.status || wizardProgress(state)) {
     return 'Host-Einrichtung wird abgeschlossen …';
   }
   return wizardCompletionLead(state.status.probes);

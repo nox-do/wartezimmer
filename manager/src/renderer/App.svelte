@@ -42,6 +42,8 @@
         onLoadReleaseArchive={onStatusLoadReleaseArchive}
         onOpenUrl={onStatusOpenUrl}
         {onOpenNetwork}
+        onOpenMaintenance={() => onNavigateTab('maintenance')}
+        onRefresh={onAfterMutation}
       />
       <MaintenanceView {onAfterMutation} onReinstall={onStatusSetupClick} />
       <NetworkView {onAfterMutation} />

@@ -1,7 +1,11 @@
 <script lang="ts">
+  import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+  import { managerShell } from './manager-shell-state.svelte.js';
+  import { managerStatusViewModel } from './manager-status-view-model.js';
   import {
     pfupdateApplyConfirmHint,
-    pfupdateInspectBlockedMessage,
+    pfupdateWizardIsBusy,
+    pfupdateWizardProgress,
     pfupdateInspectSummaryLines,
     type PfupdateWizardState,
   } from './pfupdate-wizard-flow.js';
@@ -17,6 +21,10 @@
     onClose: () => void;
   } = $props();
 
+  const blocked = $derived(hasBlockingMaintenanceOperation(managerShell.configSnapshot));
+  const diagnosis = $derived(managerStatusViewModel(managerShell.configSnapshot, managerShell.runtimeObservation));
+  const busy = $derived(pfupdateWizardIsBusy(snapshot));
+  const inspect = $derived('inspect' in snapshot ? snapshot.inspect : undefined);
   const open = $derived(snapshot.phase !== 'closed');
   let dialogEl = $state<HTMLDialogElement | null>(null);
 
@@ -34,43 +42,48 @@
   });
 
   function handleClose(): void {
-    if (snapshot.busy) {
+    if (busy) {
       return;
     }
     onClose();
   }
 
   const inspectLines = $derived(
-    snapshot.inspect ? pfupdateInspectSummaryLines(snapshot.inspect) : [],
+    inspect ? pfupdateInspectSummaryLines(inspect) : [],
   );
-  const inspectWarnings = $derived(snapshot.inspect?.compatibility.warnings ?? []);
+  const inspectWarnings = $derived(inspect?.compatibility.warnings ?? []);
   const successText = $derived(
-    snapshot.applyResult?.ok ? formatPfupdateSuccess(snapshot.applyResult) : '',
+    snapshot.phase === 'success' ? formatPfupdateSuccess(snapshot.applyResult) : '',
   );
 </script>
 
 <dialog
   bind:this={dialogEl}
   class="maintenance-dialog pfupdate-wizard-dialog"
+  aria-busy={busy}
   oncancel={(event) => {
-    if (snapshot.busy) {
+    if (busy) {
       event.preventDefault();
     }
   }}
   onclose={handleClose}
   onclick={(event) => {
-    if (event.target === dialogEl && !snapshot.busy) {
+    if (event.target === dialogEl && !busy) {
       handleClose();
     }
   }}
 >
-  {#if snapshot.phase === 'inspect' || snapshot.phase === 'applying'}
+  {#if blocked && !busy}
+    <p class={diagnosis.noticeClass}>{diagnosis.primary.summary}</p>
+    <p>{diagnosis.primary.detail}</p>
+    <button type="button" class="btn-secondary" onclick={onClose}>Schließen</button>
+  {:else if snapshot.phase === 'select' || snapshot.phase === 'inspect' || snapshot.phase === 'applying'}
     <h2>Software-Update</h2>
     <p class="wizard-progress is-active" role="status">
       <span class="spinner" aria-hidden="true"></span>
-      {snapshot.statusText || 'Bitte warten …'}
+      {pfupdateWizardProgress(snapshot) || 'Bitte warten …'}
     </p>
-  {:else if snapshot.phase === 'preview' && snapshot.inspect}
+  {:else if snapshot.phase === 'preview' && inspect}
     <h2>Update bestätigen</h2>
     {#if snapshot.filePath}
       <p class="hint">{snapshot.filePath}</p>
@@ -92,14 +105,14 @@
     {/if}
     <p class="hint">{pfupdateApplyConfirmHint()}</p>
     <div class="actions-row actions-row--dialog">
-      <button type="button" disabled={snapshot.busy} onclick={onConfirmApply}>
+      <button type="button" disabled={busy} onclick={onConfirmApply}>
         Update einspielen
       </button>
-      <button type="button" class="btn-secondary" disabled={snapshot.busy} onclick={handleClose}>
+      <button type="button" class="btn-secondary" disabled={busy} onclick={handleClose}>
         Abbrechen
       </button>
     </div>
-  {:else if snapshot.phase === 'success' && snapshot.applyResult?.ok}
+  {:else if snapshot.phase === 'success'}
     <h2>Update abgeschlossen</h2>
     <p>{successText}</p>
     <div class="actions-row actions-row--dialog">
@@ -109,11 +122,10 @@
     <h2>Update fehlgeschlagen</h2>
     {#if snapshot.error}
       <p class="error">{snapshot.error}</p>
-    {:else if snapshot.inspect}
-      <p class="error">{pfupdateInspectBlockedMessage(snapshot.inspect)}</p>
+
     {/if}
     <div class="actions-row actions-row--dialog">
-      <button type="button" class="btn-secondary" disabled={snapshot.busy} onclick={handleClose}>
+      <button type="button" class="btn-secondary" disabled={busy} onclick={handleClose}>
         Schließen
       </button>
     </div>

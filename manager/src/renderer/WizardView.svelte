@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { wizardError, wizardIsBusy } from './wizard-controller.js';
+
+  import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+  import { managerStatusViewModel } from './manager-status-view-model.js';
   import { onMount } from 'svelte';
   import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
   import { managerShell } from './manager-shell-state.svelte.js';
@@ -38,6 +42,9 @@
   let confirmAction = $state<(() => void) | null>(null);
   let confirmCancel = $state<(() => void) | null>(null);
 
+  const blocked = $derived(hasBlockingMaintenanceOperation(managerShell.configSnapshot) || hasBlockingMaintenanceOperation(snapshot?.status));
+  const diagnosis = $derived(managerStatusViewModel(managerShell.configSnapshot ?? snapshot?.status ?? null, managerShell.runtimeObservation));
+
   function requestConfirm(message: string, onConfirm: () => void, onCancel?: () => void): void {
     confirmMessage = message;
     confirmAction = onConfirm;
@@ -60,7 +67,7 @@
     confirmMessage = '';
     confirmAction = null;
     confirmCancel = null;
-    action?.();
+    if (!blocked) action?.();
   }
 
   function requireApi(): PraxisManagerApi {
@@ -125,18 +132,22 @@
   class="app wizard"
   class:is-embedded={embedded}
   hidden={managerShell.activeView !== 'wizard'}
-  aria-busy={snapshot?.busy ? 'true' : 'false'}
+  aria-busy={wizardIsBusy(snapshot) ? 'true' : 'false'}
 >
   {#if snapshot}
     <header class="app-header wizard-page-header" id="wizard-page-header" hidden={embedded}>
       <h1 id="wizard-title">Einrichtung</h1>
     </header>
 
-    {#if snapshot.error}
-      <p id="wizard-error" class="error">{snapshot.error}</p>
+    {#if wizardError(snapshot)}
+      <p id="wizard-error" class="error">{wizardError(snapshot)}</p>
     {/if}
 
-    {#if snapshot.recoveryPhase && snapshot.recoveryPhase !== 'setup' && controller}
+    {#if blocked}
+      <p class={diagnosis.noticeClass}>{diagnosis.primary.summary}</p>
+      <p>{diagnosis.primary.detail}</p>
+      <button type="button" class="btn-secondary" onclick={onCancel}>Zum Status</button>
+    {:else if snapshot.recoveryPhase && snapshot.recoveryPhase !== 'setup' && controller}
       <InstallRecoveryPanel {snapshot} {controller} />
     {:else}
     <WizardStepIndicator current={snapshot.step} />
@@ -150,19 +161,19 @@
         <button
           type="button"
           id="wizard-complete-status"
-          disabled={snapshot.busy}
+          disabled={wizardIsBusy(snapshot)}
           onclick={() => controller?.complete()}
         >
           Zum Status
         </button>
         {#if snapshot.status?.deviceUrls?.mfa}
-          <button type="button" disabled={snapshot.busy} onclick={() => void requireApi().openExternalUrl(snapshot!.status!.deviceUrls!.mfa)}>MFA öffnen</button>
+          <button type="button" disabled={wizardIsBusy(snapshot)} onclick={() => void requireApi().openExternalUrl(snapshot!.status!.deviceUrls!.mfa)}>MFA öffnen</button>
         {/if}
         <button
           type="button"
           id="wizard-complete-it-settings"
           class="btn-secondary"
-          disabled={snapshot.busy || !itSettingsUrl}
+          disabled={wizardIsBusy(snapshot) || !itSettingsUrl}
           onclick={() => controller?.openItSettings()}
         >
           Administration öffnen
@@ -173,7 +184,7 @@
           id="wizard-back"
           class="btn-secondary"
           hidden={wizardBackHidden(snapshot)}
-          disabled={snapshot.busy}
+          disabled={wizardIsBusy(snapshot)}
           onclick={() => {
             controller?.goBack();
           }}
@@ -194,7 +205,7 @@
           type="button"
           id="wizard-cancel"
           class="btn-link"
-          disabled={snapshot.busy}
+          disabled={wizardIsBusy(snapshot)}
           onclick={() => controller?.cancel()}
         >
           Abbrechen
@@ -204,7 +215,7 @@
     {/if}
   {/if}
 
-  <ConfirmDialog open={confirmOpen} onConfirm={confirmAndRun} onCancel={closeConfirm}>
+  <ConfirmDialog open={confirmOpen && !blocked} onConfirm={confirmAndRun} onCancel={closeConfirm}>
     <p>{confirmMessage}</p>
   </ConfirmDialog>
 </div>

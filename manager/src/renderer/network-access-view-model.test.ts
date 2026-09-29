@@ -13,7 +13,6 @@ test('initial HTTP use does not require HTTPS and keeps its open scope explicit'
     compose: { running: true, services: [service] },
   });
   const view = networkAccessSummary(status);
-  assert.equal(view.operation, 'Dienste laufen');
   assert.equal(view.needsAttention, false);
   assert.match(view.access, /alle Netzwerkanschlüsse/);
   assert.match(view.connection, /HTTP · nicht verschlüsselt/);
@@ -62,27 +61,8 @@ test('runtime missing proxy overrides saved running TLS container', () => {
   };
   const view = networkAccessSummary(status, runtime);
   assert.equal(view.connection, 'HTTPS eingerichtet');
-  assert.match(view.operation, /Proxy-Dienst läuft nicht/);
-  assert.match(networkAccessSummary(status, runtime, 'offline').operation, /nicht aktualisiert/);
-  assert.match(
-    networkAccessSummary(status, { ...runtime, compose: null }).operation,
-    /Laufzustand unbekannt/,
-  );
   assert.equal(proxyNeedsRestore(status, { ...runtime, compose: null }), false);
 });
-
-for (const [state, health, expected] of [
-  ['exited', '', 'gestoppt'],
-  ['running', 'starting', 'starten'],
-  ['running', 'unhealthy', 'Störung'],
-]) {
-  test(`runtime distinguishes ${state}/${health}`, () => {
-    const status = minimalHostStatus({
-      compose: { running: false, services: [{ ...service, state, health }] },
-    });
-    assert.match(networkAccessSummary(status).operation, new RegExp(expected));
-  });
-}
 
 test('missing, non-local and failed binding checks remain visible', () => {
   const status = minimalHostStatus();
@@ -151,7 +131,10 @@ test('compact status keeps actionable network warnings without routine explanati
   assert.deepEqual(networkAccessAlerts(status), []);
   status.network.lanIpStale = true;
   assert.match(networkAccessAlerts(status).join(' '), /Praxisadresse.*nicht vorhanden/);
-  assert.match(networkAccessAlerts(status, null, 'offline').join(' '), /Laufzustand/);
+  assert.match(
+    networkAccessAlerts(status, null, 'Laufzustand nicht prüfbar').join(' '),
+    /Laufzustand nicht prüfbar/,
+  );
 });
 
 test('collapsed network details do not hide a blocked patient access', () => {
@@ -166,4 +149,16 @@ test('unknown network configuration does not report a successful binding check',
   const alerts = networkAccessAlerts(status);
   assert.match(alerts.join(' '), /nicht sicher bestimmbar/);
   assert.doesNotMatch(alerts.join(' '), /Keine Abweichung/);
+});
+
+test('inconsistent installation does not expose a purported confirmed operating mode', () => {
+  const status = minimalHostStatus({
+    lifecycle: knownLifecycle('https'),
+    installation: { kind: 'inconsistent', reasons: [] },
+  });
+  const summary = networkAccessSummary(status);
+  assert.equal(summary.operatingMode, null);
+  assert.equal(summary.tls, null);
+  assert.equal(summary.proxy, null);
+  assert.equal(summary.connection, 'Nicht sicher bestimmbar');
 });

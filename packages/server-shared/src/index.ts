@@ -181,8 +181,6 @@ export {
   type DockerStatus,
   type PfbackupInfo,
   type PfbackupResult,
-  type PfbackupValidateInput,
-  type PfbackupValidateResult,
   type PfbackupInspectInput,
   type PfbackupInspectBackupSummary,
   type PfbackupInspectCompatibility,
@@ -199,7 +197,10 @@ export {
   type HostNetworkResult,
   type HostNetworkStatus,
   type HostRuntimeHealth,
+  type RuntimeObservation,
   type HostStatus,
+  type RestoreOperationStatus,
+  type TlsOperationStatus,
   type HostLifecycle,
   type HostOperatingMode,
   type HostStatusOptions,
@@ -281,3 +282,13 @@ export type {
   InstallFinishInput,
   InstallFinishResult,
 } from './setup-api.js';
+
+export {
+  ManagerApiError,
+  isManagerError,
+  type ManagerError,
+  type ManagerErrorCategory,
+  type SetupApiErrorResponse,
+} from './setup-api.js';
+
+export * from './manager-status-projection.js';

@@ -1,3 +1,14 @@
+import { recoverTlsOperation } from './host-tls.js';
+import { captureTlsRollback } from './tls-operation-files.js';
+import {
+  tlsIdentityReference,
+  readTlsOperation,
+  readTlsOperationStatus,
+  writeTlsOperation,
+  tlsOperationPath,
+  tlsRollbackDirectory,
+  type TlsOperation,
+} from './tls-operation.js';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -284,14 +295,16 @@ test('apply rolls back Canonical and Caddyfile when proxy reload fails', async (
       },
     });
     assert.equal(checkedConnectHost, '192.168.178.112');
+    assert.equal(readTlsOperation(root), null);
     await assert.rejects(
       () =>
         applyHostTls(ctx, {
+          stopProxy: async () => undefined,
           reloadProxy: async () => {
             throw new Error('Caddy konnte nicht neu geladen werden.');
           },
         }),
-      /Caddy konnte nicht neu geladen werden/,
+      /TLS-Recovery ungeklärt/,
     );
     const env = readEnvMap(path.join(root, '.env'));
     assert.equal(env.get('PROXY_MODE'), 'http');
@@ -299,7 +312,7 @@ test('apply rolls back Canonical and Caddyfile when proxy reload fails', async (
     assert.equal(env.get('TLS_STATE'), 'dns-verified');
     assert.equal(env.get('TLS_APPLY_READY'), 'true');
     assert.equal(env.get('TLS_CUTOVER_APPLIED'), 'false');
-    assert.equal(env.get('TLS_LAST_ERROR_CLASS'), 'firewall');
+    assert.equal(readTlsOperation(root)?.phase, 'recovery-failed');
     const caddyfile = fs.readFileSync(resolveProxyTlsPaths(root).caddyfile, 'utf8');
     assert.match(caddyfile, /reverse_proxy app:8080/);
     assert.doesNotMatch(caddyfile, /redir https:/);
@@ -431,22 +444,24 @@ test('custom PEM is staged inactive and becomes applyReady only after local chec
             privateKeyPem: fs.readFileSync(keyPath, 'utf8'),
           },
           {
+            stopProxy: async () => undefined,
             reloadProxy: async () => {
               reloads++;
             },
-            runLocalChecks: async () => {
-              throw new Error('replacement chain not trusted');
+            verifyAccess: async () => {
+              if (reloads === 1) throw new Error('replacement chain not trusted');
             },
           },
         ),
-      /replacement chain not trusted/,
+      /bisherige Zugang wurde wiederhergestellt/,
     );
     assert.equal(reloads, 2);
     assert.equal(fs.readFileSync(paths.customFullchain, 'utf8'), oldFullchain);
     assert.equal(fs.readFileSync(paths.customPrivateKey, 'utf8'), oldKey);
     const rolledBack = readTlsStatus(readEnvMap(path.join(root, '.env')));
     assert.deepEqual(rolledBack.certificate, oldStatus.certificate);
-    assert.equal(rolledBack.state, 'degraded');
+    assert.equal(rolledBack.state, oldStatus.state);
+    assert.equal(readTlsOperation(root), null);
     assert.equal(rolledBack.cutoverApplied, true);
     assert.equal(
       readEnvMap(path.join(root, '.env')).get('CANONICAL_BASE_URL'),
@@ -945,7 +960,7 @@ test('pebbleLocalCheckCa is ignored outside pebble and rejects missing or invali
             ['TLS_PEBBLE_ROOT_CA_PATH', path.join(os.tmpdir(), 'missing-pebble-ca.pem')],
           ]),
         ),
-      /nicht auf eine lesbare Datei/,
+      /TLS-Prüfkonfiguration ist unvollständig/,
     );
     const invalidPath = path.join(os.tmpdir(), `pf-pebble-ca-invalid-${process.pid}.pem`);
     fs.writeFileSync(invalidPath, 'not a cert\n');
@@ -958,7 +973,7 @@ test('pebbleLocalCheckCa is ignored outside pebble and rejects missing or invali
               ['TLS_PEBBLE_ROOT_CA_PATH', invalidPath],
             ]),
           ),
-        /kein PEM-Zertifikat/,
+        /TLS-Prüfkonfiguration ist ungültig/,
       );
     } finally {
       fs.rmSync(invalidPath, { force: true });
@@ -1064,7 +1079,7 @@ test('obtain-certificate timeout keeps the last local-check cause', async () => 
             throw new Error('UNABLE_TO_VERIFY_LEAF_SIGNATURE');
           },
         }),
-      /nach 50ms nicht grün: UNABLE_TO_VERIFY_LEAF_SIGNATURE/,
+      /nicht rechtzeitig erfolgreich/,
     );
   });
 });
@@ -1134,11 +1149,12 @@ test('obtain-certificate does not retry pebble CA config errors', async () => {
           runLocalChecks: async () => {
             attempts += 1;
             throw new TlsPermanentCheckError(
-              'TLS_PEBBLE_ROOT_CA_PATH zeigt nicht auf eine lesbare Datei: /missing.pem',
+              'Die lokale TLS-Prüfkonfiguration ist unvollständig.',
+              { cause: new Error('TLS_PEBBLE_ROOT_CA_PATH ist nicht lesbar: /missing.pem') },
             );
           },
         }),
-      /TLS_PEBBLE_ROOT_CA_PATH zeigt nicht auf eine lesbare Datei/,
+      /TLS-Prüfkonfiguration ist unvollständig/,
     );
     assert.equal(attempts, 1);
     assert.equal(slept, false);
@@ -1398,3 +1414,267 @@ for (const hostname of ['lan.notaus.de', 'staff.lan.notaus.de', 'nested.label.la
     });
   });
 }
+
+function tlsJournal(root: string, phase: TlsOperation['phase'] = 'prepared'): TlsOperation {
+  const base = {
+    schemaVersion: 1 as const,
+    id: 'tls-crash-boundary-0001',
+    createdAt: new Date().toISOString(),
+    action: 'renew' as const,
+    identity: tlsIdentityReference(readEnvMap(path.join(root, '.env'))),
+  };
+  return phase === 'recovery-failed'
+    ? { ...base, phase, recovery: 'rollback' }
+    : { ...base, phase };
+}
+
+test('TLS recovery before cutover checks the confirmed HTTP configuration, ignoring incomplete snapshots', async () => {
+  for (const phase of ['prepared', 'rollback-ready'] as const) {
+    await withRoot(async (root) => {
+      writeEnv(root, {
+        ...activeManagedEnv(),
+        TLS_RUNTIME_FAKE: 'false',
+        PROXY_MODE: 'http',
+        TLS_STATE: 'dns-verified',
+        TLS_CUTOVER_APPLIED: 'false',
+        CANONICAL_BASE_URL: 'http://192.168.178.112',
+      });
+      const ctx = testSetupContext(root);
+      const oldEnv = fs.readFileSync(path.join(root, '.env'), 'utf8');
+      writeGeneratedTlsCaddyfile(
+        root,
+        readTlsStatus(readEnvMap(path.join(root, '.env'))),
+        readEnvMap(path.join(root, '.env')),
+      );
+      const operation = { ...tlsJournal(root, phase), action: 'cutover' as const };
+      writeTlsOperation(root, operation);
+      if (phase === 'rollback-ready') captureTlsRollback(root, operation);
+      else {
+        fs.mkdirSync(tlsRollbackDirectory(root, operation.id), { recursive: true });
+        fs.writeFileSync(path.join(tlsRollbackDirectory(root, operation.id), '.env'), 'partial');
+      }
+      let checked = false;
+      const result = await recoverTlsOperation(ctx, {
+        stopProxy: async () => assert.fail('no rollback before cutover'),
+        reloadProxy: async () => {
+          assert.doesNotMatch(
+            fs.readFileSync(resolveProxyTlsPaths(root).caddyfile, 'utf8'),
+            /redir https:/,
+          );
+        },
+        verifyAccess: async (_ctx, env) => {
+          checked = true;
+          assert.equal(env.get('PROXY_MODE'), 'http');
+        },
+      });
+      assert.equal(result.ok, true);
+      assert.equal(checked, true);
+      assert.equal(fs.readFileSync(path.join(root, '.env'), 'utf8'), oldEnv);
+      assert.equal(readTlsOperation(root), null);
+    });
+  }
+});
+
+test('TLS rollback retains old custom keys and managed data across interrupted recovery without HTTP downgrade', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, {
+      ...activeManagedEnv(),
+      TLS_MODE: 'custom',
+      PROXY_MODE: 'tls-custom',
+      TLS_RUNTIME_FAKE: 'false',
+    });
+    const ctx = testSetupContext(root);
+    const paths = resolveProxyTlsPaths(root);
+    writeGeneratedTlsCaddyfile(
+      root,
+      readTlsStatus(readEnvMap(path.join(root, '.env'))),
+      readEnvMap(path.join(root, '.env')),
+    );
+    writeSecretFileAtomically(paths.customFullchain, 'previous certificate');
+    writeSecretFileAtomically(paths.customPrivateKey, 'previous private key');
+    fs.writeFileSync(path.join(paths.caddyData, 'account'), 'old managed account');
+    const operation = tlsJournal(root, 'cutover');
+    captureTlsRollback(root, operation);
+    writeTlsOperation(root, operation);
+    writeSecretFileAtomically(paths.customPrivateKey, 'partial replacement');
+    let calls = 0;
+    const deps = {
+      stopProxy: async () => undefined,
+      reloadProxy: async () => undefined,
+      verifyAccess: async (_ctx: unknown, env: Map<string, string>) => {
+        calls++;
+        assert.equal(env.get('PROXY_MODE'), 'tls-custom');
+        assert.equal(env.get('TLS_CUTOVER_APPLIED'), 'true');
+        assert.equal(fs.readFileSync(paths.customPrivateKey, 'utf8'), 'previous private key');
+        if (calls === 1) throw new Error('private recovery diagnostic');
+      },
+    };
+    assert.equal((await recoverTlsOperation(ctx, deps)).ok, false);
+    assert.deepEqual(readTlsOperation(root), {
+      ...operation,
+      phase: 'recovery-failed',
+      recovery: 'rollback',
+    });
+    assert.match(readEnvMap(path.join(root, '.env')).get('CANONICAL_BASE_URL')!, /^https:/);
+    assert.doesNotMatch(
+      fs.readFileSync(tlsOperationPath(root), 'utf8'),
+      /private|certificate|account/,
+    );
+    await assert.rejects(() => renewHostTls(ctx), { code: 'tls_operation_inconsistent' });
+    // A second interruption may leave any subset of files replaced. The source is reusable.
+    fs.rmSync(paths.certs, { recursive: true });
+    fs.writeFileSync(path.join(paths.caddyData, 'account'), 'partial account');
+    assert.equal((await recoverTlsOperation(ctx, deps)).ok, true);
+    assert.equal(fs.readFileSync(paths.customFullchain, 'utf8'), 'previous certificate');
+    assert.equal(fs.readFileSync(paths.customPrivateKey, 'utf8'), 'previous private key');
+    assert.equal(
+      fs.readFileSync(path.join(paths.caddyData, 'account'), 'utf8'),
+      'old managed account',
+    );
+    assert.equal(readTlsOperation(root), null);
+    assert.equal(calls, 2);
+  });
+});
+
+test('terminal TLS markers only clean artifacts and never reload or change access', async () => {
+  for (const phase of ['committed', 'recovered'] as const)
+    await withRoot(async (root) => {
+      writeEnv(root, { ...activeManagedEnv(), TLS_RUNTIME_FAKE: 'false' });
+      const operation = tlsJournal(root, phase);
+      captureTlsRollback(root, operation);
+      writeTlsOperation(root, operation);
+      const before = fs.readFileSync(path.join(root, '.env'), 'utf8');
+      const unexpected = async () => assert.fail('terminal recovery cannot mutate runtime');
+      assert.equal(
+        (
+          await recoverTlsOperation(testSetupContext(root), {
+            stopProxy: unexpected,
+            reloadProxy: unexpected,
+            verifyAccess: unexpected,
+          })
+        ).ok,
+        true,
+      );
+      assert.equal(fs.readFileSync(path.join(root, '.env'), 'utf8'), before);
+      assert.equal(fs.existsSync(tlsRollbackDirectory(root, operation.id)), false);
+      assert.equal(readTlsOperation(root), null);
+    });
+});
+
+test('unreadable TLS evidence remains intact and direct mutation cannot overtake recovery', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, { ...activeManagedEnv(), TLS_RUNTIME_FAKE: 'false' });
+    const ctx = testSetupContext(root);
+    writeTlsOperation(root, tlsJournal(root));
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const recovery = recoverTlsOperation(ctx, {
+      reloadProxy: async () => pending,
+      verifyAccess: async () => undefined,
+    });
+    try {
+      await assert.rejects(() => resetHostTls(ctx), { code: 'host_mutation_conflict' });
+      assert.equal(readTlsOperationStatus(root)?.kind, 'pending');
+    } finally {
+      release();
+      await recovery;
+    }
+    fs.writeFileSync(tlsOperationPath(root), '{secret diagnostic');
+    await assert.rejects(() => recoverTlsOperation(ctx));
+    await assert.rejects(() => resetHostTls(ctx), { code: 'tls_operation_inconsistent' });
+    assert.deepEqual(readTlsOperationStatus(root), { kind: 'unreadable' });
+    assert.equal(fs.readFileSync(tlsOperationPath(root), 'utf8'), '{secret diagnostic');
+  });
+});
+
+test('TLS cutover journals and synchronizes the original files before touching active access', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, {
+      ...activeManagedEnv(),
+      TLS_RUNTIME_FAKE: 'false',
+      PROXY_MODE: 'http',
+      TLS_CUTOVER_APPLIED: 'false',
+      TLS_STATE: 'dns-verified',
+      TLS_APPLY_READY: 'true',
+      CANONICAL_BASE_URL: 'http://192.168.178.112',
+    });
+    const ctx = testSetupContext(root);
+    writeGeneratedTlsCaddyfile(
+      root,
+      readTlsStatus(readEnvMap(path.join(root, '.env'))),
+      readEnvMap(path.join(root, '.env')),
+    );
+    await applyHostTls(ctx, {
+      stopProxy: async () => {
+        assert.equal(readTlsOperation(root)?.phase, 'prepared');
+      },
+      reloadProxy: async () => {
+        const op = readTlsOperation(root)!;
+        assert.equal(op.phase, 'cutover');
+        const snapshot = tlsRollbackDirectory(root, op.id);
+        assert.equal(readEnvMap(path.join(snapshot, '.env')).get('PROXY_MODE'), 'http');
+        assert.ok(fs.existsSync(path.join(snapshot, 'manifest.json')));
+        assert.equal(fs.statSync(snapshot).mode & 0o777, 0o700);
+        assert.equal(readEnvMap(path.join(root, '.env')).get('PROXY_MODE'), 'tls-managed');
+      },
+      verifyAccess: async () => undefined,
+    });
+    assert.equal(readTlsOperation(root), null);
+    assert.equal(readTlsStatus(readEnvMap(path.join(root, '.env'))).cutoverApplied, true);
+  });
+});
+
+test('failed pre-cutover recovery persists restart direction without applying the prepared target', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, {
+      ...activeManagedEnv(),
+      TLS_RUNTIME_FAKE: 'false',
+      PROXY_MODE: 'http',
+      TLS_CUTOVER_APPLIED: 'false',
+      TLS_STATE: 'dns-verified',
+      CANONICAL_BASE_URL: 'http://192.168.178.112',
+    });
+    const ctx = testSetupContext(root);
+    const op = { ...tlsJournal(root), action: 'cutover' as const };
+    writeTlsOperation(root, op);
+    const before = fs.readFileSync(path.join(root, '.env'), 'utf8');
+    const result = await recoverTlsOperation(ctx, {
+      reloadProxy: async () => {
+        throw new Error('private proxy diagnostic');
+      },
+    });
+    assert.equal(result.ok, false);
+    assert.deepEqual(readTlsOperation(root), {
+      ...op,
+      phase: 'recovery-failed',
+      recovery: 'restart',
+    });
+    assert.equal(fs.readFileSync(path.join(root, '.env'), 'utf8'), before);
+    assert.equal(
+      (
+        await recoverTlsOperation(ctx, {
+          reloadProxy: async () => undefined,
+          verifyAccess: async () => undefined,
+        })
+      ).ok,
+      true,
+    );
+    assert.equal(fs.readFileSync(path.join(root, '.env'), 'utf8'), before);
+  });
+});
+
+test('TLS mutations reject redirected Caddy mounts before stopping or journaling', async () => {
+  await withRoot(async (root) => {
+    writeEnv(root, { ...activeManagedEnv(), PROXY_CADDY_DATA_HOST_PATH: '/external-caddy-data' });
+    await assert.rejects(
+      () =>
+        resetHostTls(testSetupContext(root), {
+          stopProxy: async () => assert.fail('invalid paths must not stop the proxy'),
+        }),
+      /TLS-Dateipfade/,
+    );
+    assert.equal(readTlsOperation(root), null);
+  });
+});

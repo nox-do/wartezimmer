@@ -63,3 +63,19 @@ test('setupReadyForTools prefers runtime docker/env over stale config when confi
   assert.equal(setupReadyForTools(config, runtime), true);
   assert.equal(tabDisabled('network', config, runtime), null);
 });
+
+test('diagnosis states keep mutation tabs closed and reinstall remains accessible', () => {
+  for (const kind of ['needs-repair', 'inconsistent'] as const) {
+    const status = minimalHostStatus({ installation: { kind, reasons: [] } });
+    assert.equal(tabDisabled('status', status), null);
+    for (const tab of ['wizard', 'network', 'maintenance'] as const)
+      assert.ok(tabDisabled(tab, status));
+  }
+  assert.equal(
+    tabDisabled(
+      'wizard',
+      minimalHostStatus({ installation: { kind: 'needs-reinstall', reasons: [] } }),
+    ),
+    null,
+  );
+});

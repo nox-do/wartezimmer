@@ -9,6 +9,7 @@ import {
   readEnvMap,
   unescapeEnvValueFromCompose,
   writeEnvFromExample,
+  writeEnvRecordAtomically,
 } from './env-file.js';
 
 test('findLatestEnvBackupPath returns newest backup by timestamp suffix', () => {
@@ -122,4 +123,18 @@ test('read-only escaping check finds unpaired dollars without exposing values', 
     ),
     ['SECRET', 'ODD', 'BRACED', 'TRAILING'],
   );
+});
+
+test('atomic TLS status update cannot be overridden by a duplicate stale env key', (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-env-atomic-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const file = path.join(home, '.env');
+  fs.writeFileSync(
+    file,
+    '# preserved\nTLS_STATE=error\nSECRET=keep$$literal\nTLS_STATE=degraded\n',
+  );
+  writeEnvRecordAtomically(file, { TLS_STATE: 'active' });
+  assert.equal(readEnvMap(file).get('TLS_STATE'), 'active');
+  assert.equal(readEnvMap(file).get('SECRET'), 'keep$literal');
+  assert.match(fs.readFileSync(file, 'utf8'), /^# preserved/);
 });

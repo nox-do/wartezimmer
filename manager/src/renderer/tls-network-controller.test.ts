@@ -1,3 +1,8 @@
+import {
+  tlsNetworkPendingObtain,
+  tlsNetworkError,
+  tlsNetworkLocksHost,
+} from './tls-network-controller.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { TlsPrepareInput, TlsStatus } from '../shared/host-status.js';
@@ -161,7 +166,7 @@ test('submitLease refuses prepare while LAN IP is stale', async () => {
   controller.patchDraft({ ipv4Reserved: true, nameMode: 'generated' });
   await controller.submitLease();
   assert.equal(prepared, false);
-  assert.equal(controller.getState().error, TLS_LEASE_STALE_LAN_COPY);
+  assert.equal(tlsNetworkError(controller.getState()), TLS_LEASE_STALE_LAN_COPY);
 });
 
 test('hydrateOperatorRequest replays prepare to recover the unused token', async () => {
@@ -230,7 +235,7 @@ test('verifyDns keeps TLS lastError off the footer error slot', async () => {
     },
   });
   await controller.verifyDns();
-  assert.equal(controller.getState().error, null);
+  assert.equal(tlsNetworkError(controller.getState()), null);
   assert.equal(controller.getState().dnsChecks?.[0]?.ok, false);
 });
 
@@ -274,7 +279,40 @@ test('failed apply refreshes host status and keeps the API error if refresh thro
   });
   await controller.apply();
   assert.equal(afterMutationCalls, 1);
-  assert.equal(controller.getState().error, 'apply rolled back');
+  assert.equal(tlsNetworkError(controller.getState()), 'apply rolled back');
+});
+
+test('failed active TLS mutations refresh durable operation status', async () => {
+  for (const action of ['repair', 'reset', 'renew'] as const) {
+    let afterMutationCalls = 0;
+    const failure = `${action} recovery failed`;
+    const status = tls({
+      state: action === 'repair' ? 'degraded' : 'active',
+      mode: 'managed',
+      cutoverApplied: true,
+      applyReady: true,
+    });
+    const controller = createController({
+      status,
+      onAfterMutation: async () => {
+        afterMutationCalls += 1;
+      },
+      api: {
+        repairHostTls: async () => {
+          throw new Error(failure);
+        },
+        resetHostTls: async () => {
+          throw new Error(failure);
+        },
+        renewHostTls: async () => {
+          throw new Error(failure);
+        },
+      },
+    });
+    await controller[action]();
+    assert.equal(afterMutationCalls, 1, action);
+    assert.equal(tlsNetworkError(controller.getState()), failure, action);
+  }
 });
 
 test('obtainOrCheck sets pendingObtain until the request settles', async () => {
@@ -295,10 +333,10 @@ test('obtainOrCheck sets pendingObtain until the request settles', async () => {
     },
   });
   const running = controller.obtainOrCheck();
-  assert.equal(controller.getState().pendingObtain, true);
+  assert.equal(tlsNetworkPendingObtain(controller.getState()), true);
   release();
   await running;
-  assert.equal(controller.getState().pendingObtain, false);
+  assert.equal(tlsNetworkPendingObtain(controller.getState()), false);
 });
 
 test('failed obtain refreshes host status', async () => {
@@ -316,8 +354,8 @@ test('failed obtain refreshes host status', async () => {
   });
   await controller.obtainOrCheck();
   assert.equal(afterMutationCalls, 1);
-  assert.equal(controller.getState().error, 'acme obtain failed');
-  assert.equal(controller.getState().pendingObtain, false);
+  assert.equal(tlsNetworkError(controller.getState()), 'acme obtain failed');
+  assert.equal(tlsNetworkPendingObtain(controller.getState()), false);
 });
 
 test('failed custom certificate check refreshes host status', async () => {
@@ -335,7 +373,7 @@ test('failed custom certificate check refreshes host status', async () => {
   });
   await controller.obtainOrCheck();
   assert.equal(afterMutationCalls, 1);
-  assert.equal(controller.getState().error, 'PEM clock rejected');
+  assert.equal(tlsNetworkError(controller.getState()), 'PEM clock rejected');
 });
 
 test('failed prepare refreshes host status', async () => {
@@ -354,7 +392,7 @@ test('failed prepare refreshes host status', async () => {
   controller.patchDraft({ ipv4Reserved: true, nameMode: 'generated' });
   await controller.submitLease();
   assert.equal(afterMutationCalls, 1);
-  assert.equal(controller.getState().error, 'acme register failed');
+  assert.equal(tlsNetworkError(controller.getState()), 'acme register failed');
 });
 
 test('client validation does not refresh host status', async () => {
@@ -373,7 +411,7 @@ test('client validation does not refresh host status', async () => {
   });
   stale.patchDraft({ ipv4Reserved: true, nameMode: 'generated' });
   await stale.submitLease();
-  assert.equal(stale.getState().error, TLS_LEASE_STALE_LAN_COPY);
+  assert.equal(tlsNetworkError(stale.getState()), TLS_LEASE_STALE_LAN_COPY);
 
   const unnamed = createController({
     status: tls({ state: 'off' }),
@@ -383,7 +421,7 @@ test('client validation does not refresh host status', async () => {
   });
   unnamed.patchDraft({ ipv4Reserved: true, nameMode: 'label', customLabel: '' });
   await unnamed.submitLease();
-  assert.equal(unnamed.getState().error, 'Bitte einen gültigen Namen wählen.');
+  assert.equal(tlsNetworkError(unnamed.getState()), 'Bitte einen gültigen Namen wählen.');
 
   const noLan = createController({
     status: tls({ state: 'off' }),
@@ -394,7 +432,10 @@ test('client validation does not refresh host status', async () => {
   });
   noLan.patchDraft({ ipv4Reserved: true, nameMode: 'generated' });
   await noLan.submitLease();
-  assert.equal(noLan.getState().error, 'Bitte zuerst die Adresse dieses Rechners speichern.');
+  assert.equal(
+    tlsNetworkError(noLan.getState()),
+    'Bitte zuerst die Adresse dieses Rechners speichern.',
+  );
 
   const noLease = createController({
     status: tls({ state: 'off' }),
@@ -404,11 +445,14 @@ test('client validation does not refresh host status', async () => {
   });
   noLease.patchDraft({ ipv4Reserved: false, nameMode: 'generated' });
   await noLease.submitLease();
-  assert.equal(noLease.getState().error, 'Bitte die feste IP oder DHCP-Reservierung bestätigen.');
+  assert.equal(
+    tlsNetworkError(noLease.getState()),
+    'Bitte die feste IP oder DHCP-Reservierung bestätigen.',
+  );
 
   assert.equal(afterMutationCalls, 0);
 });
-test('failed verify-dns does not refresh host status', async () => {
+test('failed verify-dns refreshes host status', async () => {
   let afterMutationCalls = 0;
   const controller = createController({
     status: tls({ state: 'awaiting-operator-dns', mode: 'managed' }),
@@ -422,8 +466,8 @@ test('failed verify-dns does not refresh host status', async () => {
     },
   });
   await controller.verifyDns();
-  assert.equal(afterMutationCalls, 0);
-  assert.equal(controller.getState().error, 'resolver down');
+  assert.equal(afterMutationCalls, 1);
+  assert.equal(tlsNetworkError(controller.getState()), 'resolver down');
 });
 
 function awaitingManagedReplay() {
@@ -611,5 +655,67 @@ test('TLS host mutations do not start while LAN is mutating', async () => {
   });
   await controller.obtainOrCheck();
   assert.equal(obtained, false);
-  assert.equal(controller.getState().busy, false);
+  assert.equal(tlsNetworkLocksHost(controller.getState()), false);
 });
+
+for (const fails of [false, true]) {
+  test(`departed TLS mutation stays locked through host refresh (${fails})`, async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let releaseRefresh!: () => void;
+    const refreshGate = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+    let refreshing!: () => void;
+    const refreshStarted = new Promise<void>((resolve) => {
+      refreshing = resolve;
+    });
+    let repairs = 0;
+    let refreshed = 0;
+    const controller = createController({
+      status: tls({
+        state: 'degraded',
+        mode: 'managed',
+        cutoverApplied: true,
+        hostname: 'staff.example.test',
+      }),
+      api: {
+        repairHostTls: async () => {
+          repairs++;
+          await gate;
+          if (fails) throw new Error('old failure');
+          return { tls: tls({ state: 'active' }), checks: [] };
+        },
+      },
+      onAfterMutation: async () => {
+        refreshed++;
+        refreshing();
+        await refreshGate;
+        // Refresh failures must not strand the lock either.
+        if (fails) throw new Error('refresh unavailable');
+      },
+    });
+    const pending = controller.repair();
+    controller.abandonSession();
+    const departed = controller.getState();
+    assert.equal(tlsNetworkLocksHost(departed), true);
+    await controller.repair();
+    assert.equal(repairs, 1);
+    release();
+    await refreshStarted;
+    assert.equal(tlsNetworkLocksHost(controller.getState()), true);
+    controller.abandonSession();
+    await controller.repair();
+    assert.equal(repairs, 1);
+    releaseRefresh();
+    await pending;
+    assert.deepEqual(controller.getState(), { ...departed, action: { kind: 'idle' } });
+    assert.equal(refreshed, 1);
+    controller.patchDraft({ customDomain: 'new.example.test' });
+    assert.equal(controller.getState().customDomain, 'new.example.test');
+    await controller.repair();
+    assert.equal(repairs, 2);
+  });
+}

@@ -1,5 +1,7 @@
 import { SETUP_API_PATH_PREFIX, type SetupApiCallRequest } from '../shared/ipc-channels.js';
 import {
+  ManagerApiError,
+  isManagerError,
   SETUP_MANAGER_TOKEN_HEADER,
   SETUP_RESTRICTED_NETWORK_ROUTES,
   SETUP_TLS_ROUTES,
@@ -20,93 +22,72 @@ const TLS_LOCAL_CHECK_TIMEOUT_MS = 2 * 60 * 1000;
 const TLS_APPLY_TIMEOUT_MS = 3 * 60 * 1000;
 const RESTRICTED_NETWORK_MUTATION_TIMEOUT_MS = 3 * 60 * 1000;
 
-const IPC_ERROR_PREFIX = /^Error invoking remote method '[^']+':\s*(?:Error:\s*)?/;
-const SETUP_API_ERROR_PREFIX = /^Setup-API\s+\/api\/setup\/host\/[^:]+:\s*/;
-const TECHNICAL_ERROR_PATTERN =
-  /(?:Client network socket|ECONN[A-Z]*|EADDRINUSE|fetch failed|Container\s|docker compose|node:[a-z]|\bat\s+file:|\bat\s+\S+\s+\([^)]*:\d+:\d+\))/i;
-
-function setupActionFallback(path: string): string {
-  if (path === '/api/setup/host/rebuild') {
-    return 'Der Betrieb konnte nicht wiederhergestellt werden. Bitte den aktuellen Laufzustand und die Voraussetzungen prüfen.';
+/** Transport classification uses native abort state and fetch/system cause codes. */
+export function setupApiError(error: unknown, timedOut = false): ManagerApiError {
+  if (error instanceof ManagerApiError) return error;
+  const cause = error instanceof Error ? error.cause : undefined;
+  const code =
+    cause !== null && typeof cause === 'object' && 'code' in cause
+      ? cause.code
+      : error !== null && typeof error === 'object' && 'code' in error
+        ? error.code
+        : undefined;
+  if (
+    timedOut ||
+    (error instanceof DOMException && error.name === 'TimeoutError') ||
+    code === 'ETIMEDOUT' ||
+    code === 'UND_ERR_CONNECT_TIMEOUT' ||
+    code === 'UND_ERR_HEADERS_TIMEOUT' ||
+    code === 'UND_ERR_BODY_TIMEOUT'
+  ) {
+    return new ManagerApiError(
+      {
+        code: 'setup_api_timeout',
+        category: 'timeout',
+        retryable: false,
+        message:
+          'Die Setup-API hat nicht rechtzeitig geantwortet. Bitte zuerst den Operationsstatus prüfen.',
+      },
+      { cause: error },
+    );
   }
-  if (path.startsWith('/api/setup/host/restricted-network/')) {
-    return 'Der Patientenzugang konnte nicht geändert werden. Bitte prüfen Sie die Voraussetzungen und versuchen Sie es erneut.';
+  if (
+    [
+      'ECONNREFUSED',
+      'ECONNRESET',
+      'ENOTFOUND',
+      'EAI_AGAIN',
+      'EHOSTUNREACH',
+      'ENETUNREACH',
+      'EPIPE',
+      'UND_ERR_SOCKET',
+    ].includes(String(code))
+  ) {
+    return new ManagerApiError(
+      {
+        code: 'setup_api_unavailable',
+        category: 'unavailable',
+        retryable: true,
+        message: 'Die lokale Setup-API ist vorübergehend nicht erreichbar.',
+      },
+      { cause: error },
+    );
   }
-  if (path.startsWith('/api/setup/host/tls/')) {
-    return 'Die HTTPS-Einstellung konnte nicht geändert werden. Bitte prüfen Sie die Voraussetzungen und versuchen Sie es erneut.';
-  }
-  return 'Die Aktion konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.';
-}
-
-/** Detailed process output stays in the main-process log, never in the renderer. */
-export function setupApiUserErrorMessage(
-  error: unknown,
-  request: Pick<SetupApiCallRequest, 'path'>,
-): string {
-  const raw = (error instanceof Error ? error.message : String(error))
-    .replace(IPC_ERROR_PREFIX, '')
-    .replace(SETUP_API_ERROR_PREFIX, '')
-    .trim();
-
-  if (/setup token required|maintenance token required/i.test(raw)) {
-    return 'Der Manager konnte sich nicht an der lokalen Setup-API anmelden. Bitte Manager und Praxis Flow mit demselben Installationsstand neu starten.';
-  }
-
-  // Preserve the rebuild's runtime outcome before filtering technical details or
-  // mapping listener failures to the separate portal-activation workflow.
-  if (request.path === '/api/setup/host/rebuild') {
-    if (raw.endsWith('Dienste konnten nicht vollständig gestoppt werden; Laufzustand prüfen.')) {
-      return 'Die Wiederherstellung ist fehlgeschlagen. Dienste konnten nicht vollständig gestoppt werden. Der Laufzustand ist ungeklärt; bitte vor weiterer Nutzung im Status prüfen.';
-    }
-    if (raw.endsWith('Dienste wurden gestoppt.')) {
-      return 'Die Wiederherstellung ist fehlgeschlagen. Die Dienste wurden gestoppt. Bitte Ursache und Status vor einem erneuten Start prüfen.';
-    }
-    if (raw.includes('Listener-Prüfung fehlgeschlagen')) return setupActionFallback(request.path);
-  }
-
-  if (raw.includes('Rollback unvollständig')) {
-    return 'Die Änderung konnte nicht sicher abgeschlossen und der vorherige Zustand nicht vollständig wiederhergestellt werden. Bitte Praxis Flow bis zur erneuten Statusprüfung nicht als sicher gebunden behandeln.';
-  }
-
-  if (raw.includes('Listener-Prüfung fehlgeschlagen')) {
-    const restored = raw.includes('wiederhergestellt');
-    return [
-      'Der Portalzugang war nach dem Start nicht über die gewählte Netzwerkadresse erreichbar.',
-      restored
-        ? 'Die Aktivierung wurde zurückgenommen; der Staff-Zugang bleibt unverändert.'
-        : 'Die Aktivierung konnte nicht sicher abgeschlossen werden.',
-      'Bitte prüfen Sie die Netzwerkadresse und versuchen Sie es erneut.',
-    ].join(' ');
-  }
-
-  const withoutRollbackLog = raw.split(/\nRollback:/, 1)[0]?.trim() ?? '';
-  if (!withoutRollbackLog || TECHNICAL_ERROR_PATTERN.test(withoutRollbackLog)) {
-    return setupActionFallback(request.path);
-  }
-  return withoutRollbackLog;
-}
-
-function isStructuredOperationResult(body: unknown): body is { ok: boolean } {
-  return (
-    body !== null && typeof body === 'object' && typeof (body as { ok?: unknown }).ok === 'boolean'
+  return new ManagerApiError(
+    {
+      code: 'setup_api_internal_error',
+      category: 'internal',
+      retryable: false,
+      message: 'Die Aktion konnte wegen eines internen Fehlers nicht abgeschlossen werden.',
+    },
+    { cause: error },
   );
-}
-
-function returnsStructuredOperationResult(path: string): boolean {
-  return path === '/api/setup/host/backup/restore' || path === '/api/setup/host/update/apply';
 }
 
 function isSetupApplyBody(
   body: unknown,
 ): body is { runCompose?: boolean; preserveEnv?: boolean; composeBuild?: boolean } {
   return body !== null && typeof body === 'object';
-}
-
-function errorDetailFromBody(body: unknown): string | null {
-  if (body === null || typeof body !== 'object' || !('error' in body)) {
-    return null;
-  }
-  return String(body.error);
 }
 
 export function setupApiTimeoutMs(request: SetupApiCallRequest): number {
@@ -196,38 +177,34 @@ export async function callSetupApi<T = unknown>(
   request: SetupApiCallRequest,
   token?: string | null,
 ): Promise<T> {
-  const url = resolveSetupApiUrl(apiBase, request.path);
-
-  const init: RequestInit = {
-    method: request.method,
-    signal: AbortSignal.timeout(setupApiTimeoutMs(request)),
-  };
-  const headers: Record<string, string> = {};
-  if (request.method !== 'GET') {
-    headers['content-type'] = 'application/json';
-    init.body = JSON.stringify(request.body ?? {});
-  }
-  if (token) {
-    headers[SETUP_MANAGER_TOKEN_HEADER] = token;
-  }
-  if (Object.keys(headers).length > 0) {
-    init.headers = headers;
-  }
-
-  const response = await fetch(url, init);
-  const text = await response.text();
-  let body: unknown = null;
-  if (text.trim()) {
-    body = JSON.parse(text) as unknown;
-  }
-
-  if (!response.ok) {
-    if (returnsStructuredOperationResult(request.path) && isStructuredOperationResult(body)) {
-      return body as T;
+  const signal = AbortSignal.timeout(setupApiTimeoutMs(request));
+  try {
+    const url = resolveSetupApiUrl(apiBase, request.path);
+    const headers: Record<string, string> = {};
+    const init: RequestInit = { method: request.method, signal };
+    if (request.method !== 'GET') {
+      headers['content-type'] = 'application/json';
+      init.body = JSON.stringify(request.body ?? {});
     }
-    const detail = errorDetailFromBody(body) ?? `HTTP ${response.status}`;
-    throw new Error(`Setup-API ${request.path}: ${detail}`);
-  }
+    if (token) headers[SETUP_MANAGER_TOKEN_HEADER] = token;
+    init.headers = headers;
 
-  return body as T;
+    const response = await fetch(url, init);
+    const text = await response.text();
+    const body: unknown = text.trim() ? JSON.parse(text) : null;
+    if (!response.ok) {
+      if (
+        body !== null &&
+        typeof body === 'object' &&
+        'error' in body &&
+        isManagerError(body.error)
+      ) {
+        throw new ManagerApiError(body.error);
+      }
+      throw new Error(`Invalid Setup-API error response (HTTP ${response.status})`);
+    }
+    return body as T;
+  } catch (error) {
+    throw setupApiError(error, signal.aborted);
+  }
 }

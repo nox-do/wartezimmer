@@ -1,6 +1,6 @@
 # Neuinstallation und Recovery
 
-Stand: 2026-09-21. Diese Betriebsbeschreibung ist der aktuelle Vertrag; der
+Stand: 2026-09-28. Diese Betriebsbeschreibung ist der aktuelle Vertrag; der
 abgeschlossene [Implementierungsplan](../archive/plan-reinstall-recovery.md)
 dokumentiert nur noch die Entwurfsentscheidungen.
 
@@ -10,13 +10,23 @@ Der Manager verwendet `HostStatus.installation` vom Setup-Backend:
 
 - `fresh`: Installation beginnen.
 - `healthy`: Wartung und Update; Neuinstallation bleibt ausdrücklich wählbar.
-- `stopped`: vorhandene Installation sicher starten oder neu installieren.
-- `needs-reinstall`: Gründe anzeigen und Neuinstallation anbieten.
+- `stopped`: vorhandene Installation sicher starten.
+- `needs-reinstall`: belegtes Fehlen von App-Image, Datenvolume oder Datenbank; Gründe
+  anzeigen und Neuinstallation anbieten.
+- `needs-repair`: Betriebs- oder Authentifizierungsstörung; Gründe anzeigen und
+  gezielte Prüfung verlangen, ohne Neuinstallationsaufforderung.
+- `inconsistent`: Konfiguration, Release-State oder Installationsmarker nicht
+  belastbar; Gründe anzeigen und gezielte Wiederherstellung verlangen.
+- `starting`: Gesundheitsprüfungen laufen; auf deren Abschluss warten.
 - `installing`: den gespeicherten Vorgang öffnen.
 - `docker-unavailable`: Docker bereitstellen; keine Installation fortsetzen.
 
-Vor einem Start aus `stopped` prüft Setup das vorhandene App-Volume und die
-Datenbank. Statusabfragen erzeugen keine Volumes und starten keine Container.
+Vor einem Start aus `stopped` prüft Setup das lokale App-Image, das vorhandene
+App-Volume und die Datenbank. Erfolgreiche Docker-Bestandsabfragen belegen fehlende
+Images/Volumes; der Prüfcontainer meldet eine fehlende Datenbank mit eigenem
+Exit-Code. Fehler bei Compose-Start, Health-Timeout oder Maintenance-Authentifizierung
+führen zu `needs-repair`. Technische Prüffehler bleiben strukturierte API-Fehler;
+Docker-Ausgaben werden nicht als öffentliche Gründe transportiert. Statusabfragen erzeugen keine Volumes und starten keine Container.
 Wartung und Update werden auch im Backend auf eine gesunde Installation begrenzt.
 Fehler optionaler Dienste werden getrennt angezeigt.
 

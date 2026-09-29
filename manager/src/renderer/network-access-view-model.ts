@@ -1,6 +1,5 @@
 import type { HostStatus } from '../shared/host-status.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-import { effectiveProxyContainer } from './host-snapshot-selectors.js';
 import { dnsRebindHelp } from './network-view-model.js';
 import { restrictedNetworkStatusSummary } from './restricted-network-view-model.js';
 import { hostLifecycleSummary } from './host-lifecycle-view-model.js';
@@ -11,7 +10,7 @@ export function networkAccessSummary(
   runtime: HostRuntimeHealth | null = null,
   runtimeError: string | null = null,
 ) {
-  const lifecycle = status?.lifecycle;
+  const lifecycle = status.installation?.kind === 'inconsistent' ? undefined : status.lifecycle;
   const mode = lifecycle?.assessment === 'known' ? lifecycle.mode : null;
   const configured = mode !== null && mode !== 'uninstalled';
   const proxy = configured ? mode !== 'direct-http' : null;
@@ -19,31 +18,6 @@ export function networkAccessSummary(
   const lifecycleSummary = lifecycle ? hostLifecycleSummary(lifecycle) : null;
   const ip = status.network.configuredLanIp;
   const adapter = status.network.currentLanCandidates.find((item) => item.address === ip);
-  const compose = runtime ? runtime.compose : status.compose;
-  const docker = runtime ? runtime.docker : status.docker;
-  const container = effectiveProxyContainer(status, runtime);
-  const services = compose?.services ?? [];
-  let operation = 'Laufzustand unbekannt';
-  if (runtimeError) operation = 'Laufzustand konnte nicht aktualisiert werden';
-  else if (!docker.daemonRunning) operation = 'Docker ist nicht erreichbar';
-  else if (!compose)
-    operation = 'Laufzustand unbekannt – Docker-Dienste konnten nicht geprüft werden';
-  else if (services.some((service) => service.health?.toLowerCase() === 'starting'))
-    operation = 'Dienste starten – Prüfung läuft';
-  else if (services.some((service) => service.health?.toLowerCase() === 'unhealthy'))
-    operation = 'Ein Dienst meldet eine Störung';
-  else if (
-    services.length > 0 &&
-    services.every((service) => !service.state.toLowerCase().includes('running'))
-  )
-    operation = 'Praxis Flow ist gestoppt';
-  else if (proxy && !container?.state.toLowerCase().includes('running'))
-    operation = 'Zugriff eingerichtet – Proxy-Dienst läuft nicht';
-  else if (compose?.running) operation = 'Dienste laufen';
-  else if (services.some((service) => service.state.toLowerCase().includes('running')))
-    operation = 'Dienste sind teilweise gestartet';
-  else if (compose) operation = 'Praxis Flow ist gestoppt';
-
   const checks = status.networkBindings.filter((check) => !check.id.startsWith('gateway.'));
   const failure = checks.find((check) => !check.ok);
   const diagnosis = !ip
@@ -54,7 +28,6 @@ export function networkAccessSummary(
         (checks.length ? 'Keine Abweichung erkannt' : 'Host-Bindings noch nicht geprüft'));
   return {
     operatingMode: lifecycleSummary?.title ?? null,
-    lifecycleNotice: lifecycleSummary?.operation ?? lifecycleSummary?.preparation ?? null,
     portalState: lifecycle
       ? (lifecycleSummary?.operation ??
         (!configured
@@ -74,7 +47,6 @@ export function networkAccessSummary(
             runtime?.appBaseUrl || status.configuredCanonicalBaseUrl || status.appBaseUrl,
           )
         : null,
-    operation,
     diagnosis,
     needsAttention: Boolean(
       runtimeError ||
@@ -114,7 +86,7 @@ export function networkAccessAlerts(
 ): string[] {
   const summary = networkAccessSummary(status, runtime, runtimeError);
   const alerts: string[] = [];
-  if (runtimeError) alerts.push(summary.operation);
+  if (runtimeError) alerts.push(runtimeError);
   else if (status.lifecycle && status.lifecycle.assessment !== 'known')
     alerts.push(summary.operatingMode ?? 'Netzwerkkonfiguration nicht sicher bestimmbar');
   else if (summary.needsAttention) alerts.push(summary.diagnosis);

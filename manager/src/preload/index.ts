@@ -1,3 +1,4 @@
+import { serializeManagerApiErrors } from '../shared/manager-api-bridge.js';
 import type {
   RecoveryBackupCandidate,
   InstallRecoveryPreview,
@@ -14,7 +15,6 @@ import type {
   ComposeStatus,
   PfbackupInfo,
   PfbackupResult,
-  PfbackupValidateResult,
   PfbackupInspectResult,
   PfbackupRestoreResult,
   SavePfbackupResult,
@@ -55,8 +55,7 @@ import type {
 } from '../shared/host-status.js';
 import {
   IPC_OPEN_EXTERNAL_URL,
-  IPC_READ_PFBACKUP_FOR_VALIDATE,
-  IPC_INSPECT_PFBACKUP_FILE,
+  IPC_SELECT_PFBACKUP_FOR_RESTORE,
   IPC_SAVE_PFBACKUP,
   IPC_SELECT_FOLDER,
   IPC_SELECT_RELEASE_ARCHIVE,
@@ -64,6 +63,7 @@ import {
   IPC_STAGE_TLS_PEM,
   IPC_RENEW_TLS_PEM,
   IPC_SETUP_API_CALL,
+  unwrapSetupApiResponse,
   type SetupApiCallRequest,
   type SetupApiCallResponse,
 } from '../shared/ipc-channels.js';
@@ -80,10 +80,7 @@ async function invokeMain<T>(channel: string, ...args: unknown[]): Promise<T> {
 
 async function callSetupApi<T>(request: SetupApiCallRequest): Promise<T> {
   const response = await invokeMain<SetupApiCallResponse<T>>(IPC_SETUP_API_CALL, request);
-  if (!response.ok) {
-    throw new Error(response.message);
-  }
-  return response.value;
+  return unwrapSetupApiResponse(response);
 }
 
 async function fetchSetupStatus(options?: { includeProbes?: boolean }): Promise<HostStatus> {
@@ -208,22 +205,10 @@ async function savePfbackup(backupPath: string): Promise<SavePfbackupResult> {
   return invokeMain<SavePfbackupResult>(IPC_SAVE_PFBACKUP, backupPath);
 }
 
-async function readPfbackupForValidate(): Promise<
+async function selectPfbackupForRestore(): Promise<
   { canceled: true } | { canceled: false; content: string; filePath: string }
 > {
-  return invokeMain(IPC_READ_PFBACKUP_FOR_VALIDATE);
-}
-
-async function inspectPfbackupFile(backupPath: string): Promise<PfbackupInspectResult> {
-  return invokeMain<PfbackupInspectResult>(IPC_INSPECT_PFBACKUP_FILE, backupPath);
-}
-
-async function validatePfbackup(content: string): Promise<PfbackupValidateResult> {
-  return callSetupApi<PfbackupValidateResult>({
-    method: 'POST',
-    path: '/api/setup/host/backup/validate',
-    body: { content },
-  });
+  return invokeMain(IPC_SELECT_PFBACKUP_FOR_RESTORE);
 }
 
 async function inspectPfbackup(content: string): Promise<PfbackupInspectResult> {
@@ -359,7 +344,9 @@ async function obtainHostTlsCertificate(): Promise<TlsActionResult> {
 }
 
 async function stageHostTlsCertificate(): Promise<TlsPemSetupResult> {
-  return invokeMain<TlsPemSetupResult>(IPC_STAGE_TLS_PEM);
+  return unwrapSetupApiResponse(
+    await invokeMain<SetupApiCallResponse<TlsPemSetupResult>>(IPC_STAGE_TLS_PEM),
+  );
 }
 
 async function checkHostTlsCertificate(): Promise<TlsActionResult> {
@@ -387,7 +374,9 @@ async function renewHostTls(): Promise<TlsActionResult> {
 }
 
 async function renewHostTlsFromPem(): Promise<TlsPemSetupResult> {
-  return invokeMain<TlsPemSetupResult>(IPC_RENEW_TLS_PEM);
+  return unwrapSetupApiResponse(
+    await invokeMain<SetupApiCallResponse<TlsPemSetupResult>>(IPC_RENEW_TLS_PEM),
+  );
 }
 
 async function runSetupProbes(body: {
@@ -413,7 +402,7 @@ async function openExternalUrl(url: string): Promise<void> {
   await invokeMain<void>(IPC_OPEN_EXTERNAL_URL, url);
 }
 
-contextBridge.exposeInMainWorld('praxisManager', {
+const api = serializeManagerApiErrors({
   hostPlatform: process.platform,
   fetchSetupStatus,
   fetchRuntimeHealth,
@@ -452,9 +441,7 @@ contextBridge.exposeInMainWorld('praxisManager', {
     callSetupApi<ComposeActionResult>({ method: 'POST', path: '/api/setup/host/rebuild' }),
   createPfbackup,
   savePfbackup,
-  inspectPfbackupFile,
-  readPfbackupForValidate,
-  validatePfbackup,
+  selectPfbackupForRestore,
   inspectPfbackup,
   restorePfbackup,
   selectFolder,
@@ -480,3 +467,5 @@ contextBridge.exposeInMainWorld('praxisManager', {
   runSetupProbes,
   openExternalUrl,
 });
+
+contextBridge.exposeInMainWorld('praxisManagerBridge', api);

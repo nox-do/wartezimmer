@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { readEnvMap } from './env-file.js';
 import {
+  readComposeForHost,
   applySetupPlan,
   buildSetupPlan,
   commitPreparedInstallOperation,
@@ -13,15 +14,26 @@ import {
   pickPracticeDisplayNameFromEnv,
   resolveComposeBuild,
   runComposeAction,
-  saveHostNetwork,
+  saveHostNetwork as saveHostNetworkWithRuntime,
   type HostWriteRuntimeHooks,
 } from './host-state.js';
 import { writeManagerReleaseState } from './manager-state.js';
 import { SetupApiValidationError } from './setup-api-normalize.js';
+import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
 import {
   createPreparedInstallOperation,
   markInstallOperationInstalling,
 } from './install-operation.js';
+
+// Config-write tests explicitly observe a stopped stack unless they supply runtime hooks.
+function saveHostNetwork(
+  ...[context, input, hooks]: Parameters<typeof saveHostNetworkWithRuntime>
+) {
+  return saveHostNetworkWithRuntime(context, input, {
+    composePs: async () => ({ running: false, services: [] }),
+    ...hooks,
+  });
+}
 
 const SECRET = 'existing-captive-key-32chars-long!!';
 
@@ -451,7 +463,7 @@ test('applySetupPlan does not claim success when the runtime rollback fails', as
             },
           },
         ),
-      /Env wurde restauriert, die Laufzeit jedoch nicht vollständig wiederhergestellt/,
+      /vorheriger Zustand wurde nicht vollständig wiederhergestellt/,
     );
     assert.equal(composeUpCalls, 2);
   });
@@ -1020,7 +1032,7 @@ test('saveHostNetwork removes partial services when repair of a stopped stack fa
             composeUp: async () => ({ ok: false, log: 'proxy failed', gatewaySkipped: false }),
           },
         ),
-      /Konfiguration und Laufzeit wurden wiederhergestellt/,
+      /vorheriger Zustand wurde wiederhergestellt/,
     );
 
     assert.ok(psCalls >= 2);
@@ -1124,7 +1136,7 @@ test('saveHostNetwork restores env and previous stack when compose apply fails',
             },
           },
         ),
-      /vorherige Konfiguration und Laufzeit wurden wiederhergestellt/,
+      /vorheriger Zustand wurde wiederhergestellt/,
     );
 
     assert.deepEqual(composeBindings, ['0.0.0.0', '0.0.0.0']);
@@ -1167,7 +1179,7 @@ test('saveHostNetwork reports an incomplete runtime rollback truthfully', async 
             },
           },
         ),
-      /Env wurde restauriert, die Laufzeit jedoch nicht vollständig wiederhergestellt/,
+      /vorheriger Zustand wurde nicht vollständig wiederhergestellt/,
     );
     assert.equal(composeUpCalls, 2);
   });
@@ -1213,7 +1225,7 @@ test('saveHostNetwork removes a newly enabled proxy before rolling back a failed
             },
           },
         ),
-      /vorherige Konfiguration und Laufzeit wurden wiederhergestellt/,
+      /vorheriger Zustand wurde wiederhergestellt/,
     );
 
     assert.deepEqual(removed, [['app', 'sandbox', 'proxy']]);
@@ -1328,7 +1340,16 @@ for (const operation of ['network', 'setup'] as const) {
                   },
                   hooks,
                 ),
-          /Laufzeit blieb unverändert.*proxy image missing/,
+          (error: unknown) => {
+            assert.ok(error instanceof ManagerApiError);
+            assert.match(error.message, /Laufzeit blieb unverändert/);
+            assert.doesNotMatch(error.message, /proxy image missing/);
+            assert.match(
+              error.cause instanceof Error ? error.cause.message : '',
+              /proxy image missing/,
+            );
+            return true;
+          },
         );
         assert.equal(fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : null, before);
       });
@@ -1412,7 +1433,7 @@ for (const operation of ['network', 'setup'] as const) {
           outcome === 'healthy'
             ? /wurde[n]? wiederhergestellt/
             : outcome === 'timeout'
-              ? /nicht vollständig wiederhergestellt[\s\S]*nicht healthy.*starting/
+              ? /nicht vollständig wiederhergestellt/
               : /nicht vollständig wiederhergestellt/,
         );
         assert.equal(upCalls, 2);
@@ -1461,7 +1482,7 @@ test('saveHostNetwork rolls back when runtime binding audit rejects compose resu
             ],
           },
         ),
-      /unerwartete Host-Bindings/,
+      /nicht vollständig wiederhergestellt/,
     );
 
     assert.equal(composeUpCalls, 2);
@@ -1470,65 +1491,60 @@ test('saveHostNetwork rolls back when runtime binding audit rejects compose resu
   });
 });
 
-test('disable cutover aborts when compose remove fails (network + apply)', async () => {
-  await withRoot(async (root) => {
-    writeEnv(root, {
-      PRACTICE_DISPLAY_NAME: 'Praxis Nord',
-      SETUP_LAN_APP_IP: '192.168.1.50',
-      CANONICAL_BASE_URL: 'http://192.168.1.50',
-      ...proxyOn,
+test('failed disable cleanup retains its journal and blocks further changes (network + apply)', async () => {
+  const { readBindingOperation } = await import('./binding-operation.js');
+  const { readConfirmedHostConfig } = await import('./confirmed-host-config.js');
+  for (const operation of ['network', 'setup']) {
+    await withRoot(async (root) => {
+      writeExample(root);
+      writeEnv(root, {
+        PRACTICE_DISPLAY_NAME: 'Praxis Nord',
+        AUTH_KEY_CAPTIVE: SECRET,
+        SANDBOX_INTERNAL_TOKEN: SECRET,
+        OPENNDS_FAS_KEY: SECRET,
+        SETUP_LAN_APP_IP: '192.168.1.50',
+        CANONICAL_BASE_URL: 'http://192.168.1.50',
+        ...proxyOn,
+      });
+      const change = () =>
+        operation === 'network'
+          ? saveHostNetwork(
+              ctx(root),
+              {
+                lanAppIp: '192.168.1.50',
+                proxy: { enabled: false },
+                restartCompose: true,
+                gateway: gwOff('192.168.1.50'),
+              },
+              removeFails,
+            )
+          : applySetupPlan(
+              ctx(root),
+              {
+                lanAppIp: '192.168.1.50',
+                practiceDisplayName: 'Praxis Nord',
+                proxy: { enabled: false },
+                gateway: gwOff('192.168.1.50'),
+                preserveEnv: true,
+                runCompose: true,
+                runProbes: false,
+              },
+              removeFails,
+            );
+      await assert.rejects(
+        change,
+        (error: unknown) =>
+          error instanceof ManagerApiError && error.code === 'staff_binding_rollback_incomplete',
+      );
+      assert.equal(readBindingOperation(root)?.phase, 'recovery-failed');
+      assert.equal(readConfirmedHostConfig(root).env.get('PROXY_ENABLED'), 'true');
+      await assert.rejects(
+        change,
+        (error: unknown) =>
+          error instanceof ManagerApiError && error.code === 'binding_operation_inconsistent',
+      );
     });
-
-    await assert.rejects(
-      () =>
-        saveHostNetwork(
-          ctx(root),
-          {
-            lanAppIp: '192.168.1.50',
-            proxy: { enabled: false },
-            restartCompose: true,
-            gateway: gwOff('192.168.1.50'),
-          },
-          removeFails,
-        ),
-      (error: unknown) =>
-        error instanceof SetupApiValidationError &&
-        /Laufzeit jedoch nicht vollständig wiederhergestellt/.test(error.message),
-    );
-    assert.equal(env(root).get('PROXY_ENABLED'), 'true');
-
-    writeExample(root);
-    writeEnv(root, {
-      PRACTICE_DISPLAY_NAME: 'Praxis Nord',
-      AUTH_KEY_CAPTIVE: SECRET,
-      SANDBOX_INTERNAL_TOKEN: SECRET,
-      OPENNDS_FAS_KEY: SECRET,
-      SETUP_LAN_APP_IP: '192.168.1.50',
-      CANONICAL_BASE_URL: 'http://192.168.1.50',
-      ...proxyOn,
-    });
-
-    await assert.rejects(
-      () =>
-        applySetupPlan(
-          ctx(root),
-          {
-            lanAppIp: '192.168.1.50',
-            practiceDisplayName: 'Praxis Nord',
-            proxy: { enabled: false },
-            gateway: gwOff('192.168.1.50'),
-            preserveEnv: true,
-            runCompose: true,
-            runProbes: false,
-          },
-          removeFails,
-        ),
-      (error: unknown) =>
-        error instanceof SetupApiValidationError &&
-        /Laufzeit jedoch nicht vollständig wiederhergestellt/.test(error.message),
-    );
-    assert.equal(env(root).get('PROXY_ENABLED'), 'true');
-  });
+  }
 });
 
 for (const mode of ['managed', 'custom', 'legacy'] as const) {
@@ -1717,7 +1733,10 @@ for (const action of ['start', 'restart'] as const) {
             assert.equal(project, 'pf-test');
             assert.equal(image, 'praxis-flow/app:1.2.3');
             checked = true;
-            return { ok: false, reason: `${missing} fehlt` };
+            return {
+              ok: false,
+              code: missing === 'volume' ? 'data-volume-missing' : 'database-missing',
+            };
           },
           composeUp: async () => assert.fail('must not recreate an empty database'),
         });
@@ -1751,3 +1770,78 @@ for (const action of ['start', 'restart'] as const) {
     });
   });
 }
+
+test('readComposeForHost preserves a safe structured Compose error', async (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-observation-'));
+  const cli = path.join(home, 'docker');
+  const previous = process.env.PRAXIS_FLOW_DOCKER_CLI;
+  t.after(() => {
+    if (previous === undefined) delete process.env.PRAXIS_FLOW_DOCKER_CLI;
+    else process.env.PRAXIS_FLOW_DOCKER_CLI = previous;
+    fs.rmSync(home, { recursive: true, force: true });
+  });
+  process.env.PRAXIS_FLOW_DOCKER_CLI = cli;
+  fs.writeFileSync(path.join(home, '.env'), 'SETUP_LAN_APP_IP=192.168.1.10\n');
+  fs.writeFileSync(
+    cli,
+    '#!/bin/sh\ncase "$*" in *"ps --all"*) echo private-docker-detail >&2; exit 1;; *) echo ok;; esac\n',
+    { mode: 0o755 },
+  );
+  const docker = { installed: true, daemonRunning: true, composeAvailable: true, detail: null };
+  await assert.rejects(
+    () => readComposeForHost(ctx(home), true, docker, new Map()),
+    (error) => {
+      assert.ok(error instanceof ManagerApiError);
+      assert.equal(error.code, 'compose_status_unavailable');
+      assert.equal(error.category, 'unavailable');
+      assert.equal(error.retryable, true);
+      assert.ok(error.cause instanceof Error);
+      assert.doesNotMatch(JSON.stringify(error.toJSON()), /private-docker-detail/);
+      return true;
+    },
+  );
+});
+
+test('interrupted binding change restores confirmed env and only touches runtime after cutover', async () => {
+  const { beginBindingOperation, writeBindingOperation, readBindingOperation } =
+    await import('./binding-operation.js');
+  const { recoverBindingOperation } = await import('./host-state.js');
+  const { readConfirmedHostConfig } = await import('./confirmed-host-config.js');
+  for (const phase of ['prepared', 'cutover', 'committed'] as const) {
+    await withRoot(async (root) => {
+      writeEnv(root, { SETUP_LAN_APP_IP: '192.168.1.10', PROXY_ENABLED: 'false' });
+      const op = beginBindingOperation(root, true, false);
+      writeBindingOperation(root, { ...op, phase, runtimeChanged: phase !== 'prepared' });
+      writeEnv(root, { SETUP_LAN_APP_IP: '192.168.1.20', PROXY_ENABLED: 'false' });
+      assert.equal(
+        readConfirmedHostConfig(root).env.get('SETUP_LAN_APP_IP'),
+        phase === 'committed' ? '192.168.1.20' : '192.168.1.10',
+      );
+      await assert.rejects(
+        () =>
+          saveHostNetwork(ctx(root), { lanAppIp: '192.168.1.30', gateway: gwOff('192.168.1.30') }),
+        (error: unknown) =>
+          error instanceof ManagerApiError && error.code === 'binding_operation_pending',
+      );
+      const calls: string[] = [];
+      const result = await recoverBindingOperation(ctx(root), {
+        composeRemoveServices: async () => {
+          calls.push('remove');
+          return { ok: true, log: '' };
+        },
+        composeUp: async () => {
+          calls.push('up');
+          return { ok: true, log: '', gatewaySkipped: false };
+        },
+        composePs: async () => healthyCompose(false),
+      });
+      assert.equal(result.ok, true, result.errors.join('\n'));
+      assert.deepEqual(calls, phase === 'cutover' ? ['remove', 'up'] : []);
+      assert.equal(
+        readEnvMap(path.join(root, '.env')).get('SETUP_LAN_APP_IP'),
+        phase === 'committed' ? '192.168.1.20' : '192.168.1.10',
+      );
+      assert.equal(readBindingOperation(root), null);
+    });
+  }
+});

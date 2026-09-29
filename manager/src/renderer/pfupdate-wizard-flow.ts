@@ -1,33 +1,31 @@
 import type { PfupdateApplyResult, PfupdateInspectResult } from '../shared/host-status.js';
 
-export type PfupdateWizardPhase =
-  | 'closed'
-  | 'inspect'
-  | 'preview'
-  | 'applying'
-  | 'success'
-  | 'failed';
-
-export type PfupdateWizardState = {
-  phase: PfupdateWizardPhase;
-  busy: boolean;
-  filePath: string | null;
-  inspect: PfupdateInspectResult | null;
-  applyResult: PfupdateApplyResult | null;
-  statusText: string;
-  error: string | null;
-};
+export type PfupdateWizardState =
+  | { phase: 'closed' | 'select' }
+  | { phase: 'inspect'; filePath: string }
+  | { phase: 'preview' | 'applying'; filePath: string; inspect: PfupdateInspectResult }
+  | { phase: 'success'; applyResult: Extract<PfupdateApplyResult, { ok: true }> }
+  | { phase: 'failed'; error: string; applyResult?: Extract<PfupdateApplyResult, { ok: false }> };
 
 export function createInitialPfupdateWizardState(): PfupdateWizardState {
-  return {
-    phase: 'closed',
-    busy: false,
-    filePath: null,
-    inspect: null,
-    applyResult: null,
-    statusText: '',
-    error: null,
-  };
+  return { phase: 'closed' };
+}
+
+export function pfupdateWizardIsBusy(state: PfupdateWizardState): boolean {
+  return ['select', 'inspect', 'applying'].includes(state.phase);
+}
+
+export function pfupdateWizardProgress(state: PfupdateWizardState): string {
+  switch (state.phase) {
+    case 'select':
+      return 'Update-Paket wählen …';
+    case 'inspect':
+      return 'Update-Paket wird geprüft …';
+    case 'applying':
+      return PFUPDATE_APPLY_LOADING_MESSAGE;
+    default:
+      return '';
+  }
 }
 
 export function formatPfupdateVersionLabel(version: string | null | undefined): string {

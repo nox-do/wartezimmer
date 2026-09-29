@@ -1,7 +1,14 @@
+import { collectObservedHealthTiles } from './health-header.js';
+import {
+  failedRuntimeObservation,
+  managerRefreshError,
+  runtimeObservationNotice,
+  type RuntimeObservation,
+} from './runtime-observation.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
-import { collectHealthTiles, deriveOverallStatus } from './health-header.js';
+import { collectHealthTiles } from './health-header.js';
 
 function runtime(overrides: Partial<HostRuntimeHealth> = {}): HostRuntimeHealth {
   return {
@@ -235,39 +242,6 @@ test('collectHealthTiles with disabled leftover proxy keeps entry on App', () =>
   assert.match(app.detail, /Einstieg nicht erreichbar/);
 });
 
-test('deriveOverallStatus is Betrieb when local and LAN probes are green', () => {
-  assert.deepEqual(deriveOverallStatus(runtime()), { text: 'Betrieb', level: 'ok' });
-});
-
-test('deriveOverallStatus prefers Proxy-Server fehlt over generic incomplete', () => {
-  assert.deepEqual(
-    deriveOverallStatus(
-      runtime({
-        probes: [
-          { id: 'app.health.local', ok: true, message: 'ok' },
-          { id: 'app.health.lan', ok: false, message: 'down' },
-        ],
-        proxyServer: { enabled: true, container: null },
-      }),
-    ),
-    { text: 'Proxy-Server fehlt', level: 'warn' },
-  );
-});
-
-test('deriveOverallStatus reports LAN nicht erreichbar when probe fails', () => {
-  assert.deepEqual(
-    deriveOverallStatus(
-      runtime({
-        probes: [
-          { id: 'app.health.local', ok: true, message: 'ok' },
-          { id: 'app.health.lan', ok: false, message: 'down' },
-        ],
-      }),
-    ),
-    { text: 'LAN nicht erreichbar', level: 'warn' },
-  );
-});
-
 test('collectHealthTiles shows Keine Container without waiting when stack is down', () => {
   const tiles = collectHealthTiles(
     runtime({
@@ -294,4 +268,42 @@ test('DNS filter suspicion appears on the entry tile as a warning with and witho
     assert.match(tile.detail, /DNS-Rebind-Schutz.*möglich/);
     assert.doesNotMatch(tile.detail, /Einstieg nicht erreichbar/);
   }
+});
+
+test('observation failures preserve last known evidence, mark tiles stale and recover', () => {
+  const snapshot = runtime();
+  const error = managerRefreshError(new Error('secret technical detail'));
+  let observation: RuntimeObservation = { kind: 'idle' };
+  assert.equal(collectObservedHealthTiles(observation).length, 0);
+  observation = failedRuntimeObservation(observation, error, 'first-failure');
+  assert.equal(observation.kind, 'unavailable');
+  assert.equal(collectObservedHealthTiles(observation).length, 0);
+  assert.doesNotMatch(runtimeObservationNotice(observation)!, /secret/);
+  observation = { kind: 'current', snapshot };
+  const originalTiles = collectObservedHealthTiles(observation);
+  observation = failedRuntimeObservation(observation, error, 'second-failure');
+  assert.equal(observation.kind, 'stale');
+  assert.ok('snapshot' in observation);
+  assert.equal(observation.snapshot, snapshot);
+  assert.equal(observation.failedAt, 'second-failure');
+  const tiles = collectObservedHealthTiles(observation);
+  assert.deepEqual(
+    tiles.map((tile) => tile.name),
+    originalTiles.map((tile) => tile.name),
+  );
+  assert.ok(tiles.every((tile) => tile.status === null && tile.detail.startsWith('Veraltet')));
+  assert.ok(runtimeObservationNotice(observation)?.includes(snapshot.checkedAt));
+  const repeated = failedRuntimeObservation(observation, error, 'third-failure');
+  assert.ok('snapshot' in repeated);
+  assert.equal(repeated.snapshot, snapshot);
+  assert.ok('failedAt' in repeated);
+  assert.equal(repeated.failedAt, 'third-failure');
+  observation = { kind: 'current', snapshot: { ...snapshot, checkedAt: 'recovered' } };
+  assert.equal(runtimeObservationNotice(observation), null);
+  assert.deepEqual(collectObservedHealthTiles(observation), originalTiles);
+});
+
+test('missing Compose evidence never displays an observed empty stack', () => {
+  const tiles = collectHealthTiles(runtime({ compose: null, proxyServer: null }));
+  assert.equal(tiles[0]?.detail, 'Containerstatus nicht prüfbar');
 });

@@ -106,3 +106,7 @@ test('effectiveProxyContainer: runtime snapshot wins including proxyServer null'
   );
   assert.equal(effectiveProxyContainer(config, null)?.name, 'config-proxy');
 });
+
+test('runtime compose null never revives older config compose evidence', () => {
+  assert.equal(effectiveCompose(minimalHostStatus(), minimalRuntime({ compose: null })), null);
+});

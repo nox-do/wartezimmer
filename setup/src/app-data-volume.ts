@@ -65,7 +65,8 @@ function moveIfPresentScript(source: string, target: string): string {
 function restoreOneFileScript(volumePath: string, rollbackPath: string): string {
   return [
     `rm -f ${shellQuote(volumePath)}`,
-    `if [ -f ${shellQuote(rollbackPath)} ]; then mv ${shellQuote(rollbackPath)} ${shellQuote(volumePath)}; fi`,
+    `if [ -f ${shellQuote(rollbackPath)} ]; then cp ${shellQuote(rollbackPath)} ${shellQuote(volumePath)}; fi`,
+    'sync',
   ].join('; ');
 }
 
@@ -98,7 +99,20 @@ export function createLocalAppDataAccess(dataDir: string): AppDataVolumeAccess {
         if (fs.existsSync(target)) {
           fs.unlinkSync(target);
         }
-        moveFileIfExists(source, target);
+        if (copyFileIfExists(source, target)) {
+          const fd = fs.openSync(target, 'r');
+          try {
+            fs.fsyncSync(fd);
+          } finally {
+            fs.closeSync(fd);
+          }
+        }
+      }
+      const directory = fs.openSync(dataDir, 'r');
+      try {
+        fs.fsyncSync(directory);
+      } finally {
+        fs.closeSync(directory);
       }
     },
 

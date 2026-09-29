@@ -1,3 +1,5 @@
+import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+import { tabDisabled } from './manager-main-nav.js';
 import type {
   RecoveryBackupCandidate,
   InstallRecoveryPreview,
@@ -32,9 +34,10 @@ export type WizardCallbacks = {
 };
 
 export type WizardControllerState = WizardFlowState & {
-  busy: boolean;
-  probeStatusText: string | null;
-  error: string | null;
+  action:
+    | { kind: 'idle' }
+    | { kind: 'working'; progress?: string }
+    | { kind: 'failed'; error: string };
   presentation: WizardPresentation;
   recoveryPhase: 'choose' | 'prepared' | 'setup' | 'finish' | 'restart' | null;
   recoveryCandidates: RecoveryBackupCandidate[];
@@ -79,9 +82,7 @@ function createInitialState(
 ): WizardControllerState {
   return {
     ...createWizardFlowState(status),
-    busy: false,
-    probeStatusText: null,
-    error: null,
+    action: { kind: 'idle' },
     presentation,
     recoveryPhase: status?.mode === 'install' ? 'choose' : null,
     recoveryCandidates: [],
@@ -109,21 +110,36 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
   }
 
   function setBusy(busy: boolean): void {
-    patch({ busy });
+    if (busy) patch({ action: { kind: 'working' } });
+    else if (state.action.kind === 'working') patch({ action: { kind: 'idle' } });
   }
-
   function setError(message: string | null): void {
-    patch({ error: message });
+    patch({ action: message ? { kind: 'failed', error: message } : { kind: 'idle' } });
   }
 
   function beginSession(): void {
     lifecycleGeneration += 1;
   }
 
-  async function recoveryAction(action: (generation: number) => Promise<void>): Promise<void> {
-    if (state.busy) return;
+  async function refreshHostAfterMutation(): Promise<void> {
+    try {
+      await deps.onHostMutated?.();
+    } catch {
+      /* Keep action errors separate from shell observation errors. */
+    }
+  }
+
+  async function recoveryAction(
+    action: (generation: number) => Promise<void>,
+    mutating = true,
+  ): Promise<void> {
+    if (mutating && hasBlockingMaintenanceOperation(state.status)) {
+      setError(tabDisabled('wizard', state.status));
+      return;
+    }
+    if (wizardIsBusy(state)) return;
     const generation = lifecycleGeneration;
-    patch({ busy: true, error: null });
+    patch({ action: { kind: 'working' } });
     try {
       await action(generation);
     } catch (error) {
@@ -136,13 +152,16 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
   async function loadRecovery(generation: number): Promise<void> {
     const status = await deps.api.fetchSetupStatus();
     if (!still(generation)) return;
+    patch({ status });
     const installation = status.installation;
-    const operation =
-      installation.kind === 'installing' || installation.kind === 'docker-unavailable'
-        ? (installation.operation ?? null)
-        : null;
+    const blocked = tabDisabled('wizard', status);
+    if (blocked) {
+      setError(blocked);
+      return;
+    }
+    const operation = installation?.kind === 'installing' ? installation.operation : null;
     patch({ status, operation });
-    if (installation.kind === 'docker-unavailable') {
+    if (installation?.kind === 'docker-unavailable') {
       setError(installation.reason);
       return;
     }
@@ -171,15 +190,14 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
   async function finishRecovery(action: 'restore' | 'without-backup'): Promise<void> {
     await recoveryAction(async (generation) => {
       if (!state.operation) throw new Error('Kein Installationsvorgang.');
-      const result = await deps.api.finishInstallRecovery({
-        operationId: state.operation.id,
-        action,
-      });
+      const result = await deps.api
+        .finishInstallRecovery({
+          operationId: state.operation.id,
+          action,
+        })
+        .finally(refreshHostAfterMutation);
       if (!still(generation)) return;
       if (!result.ok) throw new Error(result.errors.join(' '));
-      // Publish the completed installation before navigation starts its own refresh.
-      await deps.onHostMutated?.();
-      if (!still(generation)) return;
       patch({ operation: null, recoveryPhase: null });
       deps.onComplete();
     });
@@ -188,18 +206,19 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
   async function commitRecovery(): Promise<void> {
     await recoveryAction(async (generation) => {
       if (!state.operation) throw new Error('Kein Installationsvorgang.');
-      await deps.api.commitInstall({ operationId: state.operation.id, replaceConfirmed: true });
+      await deps.api
+        .commitInstall({ operationId: state.operation.id, replaceConfirmed: true })
+        .finally(refreshHostAfterMutation);
       const status = await deps.api.fetchSetupStatus();
       if (!still(generation)) return;
       const operation =
-        status.installation.kind === 'installing' ? status.installation.operation : null;
+        status.installation?.kind === 'installing' ? status.installation.operation : null;
       patch({
         ...createInitialState(status, state.presentation),
         operation,
         recoveryPhase: 'setup',
-        busy: true,
+        action: { kind: 'working' },
       });
-      deps.onHostMutated?.();
     });
   }
 
@@ -240,44 +259,48 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       }
       return;
     }
-    const applyState = state;
-    const operation = state.operation;
-    const applyResult = await applyWizardSetup(deps.api, applyState);
-    if (!still(generation)) {
-      deps.onHostMutated?.();
-      return;
+    try {
+      const applyState = state;
+      const operation = state.operation;
+      const applyResult = await applyWizardSetup(deps.api, applyState);
+      if (!still(generation)) {
+        return;
+      }
+      patch({
+        applyResult,
+        action: {
+          kind: 'working',
+          progress: operation
+            ? 'App und Sandbox starten — Abschlussprüfung läuft …'
+            : WIZARD_PROBE_WAIT_MESSAGE,
+        },
+      });
+      let recoveryPreview: InstallRecoveryPreview | null = null;
+      const status = await refreshWizardStatusAfterApply(deps.api, {
+        shouldContinue: () => still(generation),
+        ...(operation
+          ? {
+              additionalReady: async () => {
+                recoveryPreview = await deps.api.previewInstallRecovery(operation.id);
+                return recoveryPreview.baselineReady;
+              },
+            }
+          : {}),
+      });
+      if (!still(generation)) {
+        return;
+      }
+      patch({ status });
+      if (operation) patch({ recoveryPreview, recoveryPhase: 'finish' });
+    } finally {
+      await refreshHostAfterMutation();
     }
-    patch({
-      applyResult,
-      probeStatusText: operation
-        ? 'App und Sandbox starten — Abschlussprüfung läuft …'
-        : WIZARD_PROBE_WAIT_MESSAGE,
-    });
-    let recoveryPreview: InstallRecoveryPreview | null = null;
-    const status = await refreshWizardStatusAfterApply(deps.api, {
-      shouldContinue: () => still(generation),
-      ...(operation
-        ? {
-            additionalReady: async () => {
-              recoveryPreview = await deps.api.previewInstallRecovery(operation.id);
-              return recoveryPreview.baselineReady;
-            },
-          }
-        : {}),
-    });
-    if (!still(generation)) {
-      deps.onHostMutated?.();
-      return;
-    }
-    patch({ status, probeStatusText: null });
-    if (operation) patch({ recoveryPreview, recoveryPhase: 'finish' });
-    deps.onHostMutated?.();
   }
 
   return {
     getState: () => state,
     selectRecoveryBackup(id) {
-      if (!state.busy) patch({ backupCandidateId: id });
+      if (!wizardIsBusy(state)) patch({ backupCandidateId: id });
     },
     async prepareRecovery() {
       await recoveryAction(async (generation) => {
@@ -285,18 +308,25 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
         if (!still(generation) || picked.canceled || !picked.path) return;
         const status = await deps.api.fetchSetupStatus();
         if (!still(generation)) return;
-        const result = await deps.api.prepareInstall({
-          archivePath: picked.path,
-          mode: status.installation.kind === 'fresh' ? 'fresh' : 'replace',
-          ...(state.backupCandidateId ? { backupCandidateId: state.backupCandidateId } : {}),
-        });
+        const blocked = tabDisabled('wizard', status);
+        if (blocked) {
+          setError(blocked);
+          return;
+        }
+        const result = await deps.api
+          .prepareInstall({
+            archivePath: picked.path,
+            mode: status.installation?.kind === 'fresh' ? 'fresh' : 'replace',
+            ...(state.backupCandidateId ? { backupCandidateId: state.backupCandidateId } : {}),
+          })
+          .finally(refreshHostAfterMutation);
         if (!still(generation)) return;
         patch({ operation: result.operation, recoveryPhase: 'prepared' });
-        deps.onHostMutated?.();
       });
     },
     commitRecovery() {
-      if (state.busy || !state.operation) return;
+      if (wizardIsBusy(state) || !state.operation || hasBlockingMaintenanceOperation(state.status))
+        return;
       const generation = lifecycleGeneration;
       if (state.operation.mode === 'replace' || state.operation.phase === 'installing') {
         deps.requestConfirm?.(
@@ -312,20 +342,17 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     async abortRecovery() {
       await recoveryAction(async (generation) => {
         if (!state.operation) return;
-        await deps.api.abortInstall(state.operation.id);
+        await deps.api.abortInstall(state.operation.id).finally(refreshHostAfterMutation);
         if (!still(generation)) return;
         patch({ operation: null, recoveryPhase: 'choose' });
         await loadRecovery(lifecycleGeneration);
-        deps.onHostMutated?.();
       });
     },
     finishRecovery,
     async refreshRecovery() {
       await recoveryAction(async (generation) => {
-        if (!state.operation) return;
-        const preview = await deps.api.previewInstallRecovery(state.operation.id);
-        if (still(generation)) patch({ recoveryPreview: preview, recoveryPhase: 'finish' });
-      });
+        await loadRecovery(generation);
+      }, false);
     },
 
     patchFields(partial) {
@@ -336,7 +363,8 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       beginSession();
       state = createInitialState(status, presentation);
       notify();
-      if (status?.mode === 'install') void recoveryAction(() => loadRecovery(lifecycleGeneration));
+      if (status?.mode === 'install')
+        void recoveryAction(() => loadRecovery(lifecycleGeneration), false);
     },
 
     hide() {
@@ -346,7 +374,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     },
 
     async goNext() {
-      if (state.busy || (state.recoveryPhase && state.recoveryPhase !== 'setup')) return;
+      if (wizardIsBusy(state) || (state.recoveryPhase && state.recoveryPhase !== 'setup')) return;
       const generation = lifecycleGeneration;
       setError(null);
       setBusy(true);
@@ -381,7 +409,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     },
 
     goBack() {
-      if (state.step <= 1 || state.busy) {
+      if (state.step <= 1 || wizardIsBusy(state)) {
         return;
       }
       if (
@@ -398,7 +426,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     },
 
     cancel() {
-      if (!state.busy) {
+      if (!wizardIsBusy(state)) {
         deps.onCancel();
       }
     },
@@ -408,19 +436,20 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
         void finishRecovery('without-backup');
         return;
       }
-      if (!state.busy) {
+      if (!wizardIsBusy(state)) {
         deps.onComplete();
       }
     },
 
     openItSettings() {
       const url = state.status?.deviceUrls?.opsSetup ?? state.plan?.deviceUrls.opsSetup ?? null;
-      if (url && !state.busy) {
+      if (url && !wizardIsBusy(state)) {
         void deps.api.openExternalUrl(url);
       }
     },
 
     async refreshPrerequisites() {
+      if (wizardIsBusy(state)) return;
       const generation = lifecycleGeneration;
       setBusy(true);
       try {
@@ -442,6 +471,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     },
 
     async loadReleaseArchive() {
+      if (wizardIsBusy(state)) return;
       const generation = lifecycleGeneration;
       setError(null);
       setBusy(true);
@@ -479,6 +509,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
           setError(error instanceof Error ? error.message : String(error));
         }
       } finally {
+        await refreshHostAfterMutation();
         if (still(generation)) {
           setBusy(false);
         }
@@ -488,4 +519,14 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     browseImportsFolder: () => browseFolder('importsHostPath'),
     browseExportsFolder: () => browseFolder('exportsHostPath'),
   };
+}
+
+export function wizardIsBusy(state: WizardControllerState | null): boolean {
+  return state?.action.kind === 'working';
+}
+export function wizardError(state: WizardControllerState): string | null {
+  return state.action.kind === 'failed' ? state.action.error : null;
+}
+export function wizardProgress(state: WizardControllerState): string | null {
+  return state.action.kind === 'working' ? (state.action.progress ?? null) : null;
 }

@@ -1,3 +1,5 @@
+import { tabDisabled } from './manager-main-nav.js';
+import type { ManagerError } from '@praxis-flow/server-shared/setup-api';
 import {
   createHostRefreshController,
   type HostRefreshController,
@@ -17,7 +19,7 @@ import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 export type ManagerAppShell = {
   applyConfigSnapshot: (status: HostStatus) => void;
   applyRuntimeSnapshot: (runtime: HostRuntimeHealth) => void;
-  applyRuntimeError: (message: string) => void;
+  applyRuntimeError: (error: ManagerError) => void;
   applyStatusError: (message: string) => void;
   markBootReady: () => void;
   applyShellNavigation: (view: ManagerView, options?: NavigateOptions) => void;
@@ -46,9 +48,6 @@ export type ManagerAppController = {
   onWizardCancel: () => void;
 };
 
-const RUNTIME_REFRESH_ERROR =
-  'Laufzustand konnte nicht aktualisiert werden. Die angezeigten Betriebsdaten können veraltet sein.';
-
 export function createManagerAppController(deps: ManagerAppControllerDeps): ManagerAppController {
   const shell = deps.shell;
   const createHostRefresh = deps.createHostRefresh ?? createHostRefreshController;
@@ -68,6 +67,10 @@ export function createManagerAppController(deps: ManagerAppControllerDeps): Mana
 
   function startSetupWizard(): void {
     const status = hostRefresh.getLastConfig();
+    if (tabDisabled('wizard', status)) {
+      navigation.navigateTo('status');
+      return;
+    }
     navigation.navigateTo('wizard', {
       wizardPresentation: defaultWizardPresentation(status),
       ...(status ? { status } : {}),
@@ -82,11 +85,11 @@ export function createManagerAppController(deps: ManagerAppControllerDeps): Mana
     onConfig(status) {
       shell.applyConfigSnapshot(status);
     },
-    onError(message, _view, source) {
+    onError(message, _view, source, error) {
       if (source === 'config') {
         shell.applyStatusError(message);
       } else {
-        shell.applyRuntimeError(RUNTIME_REFRESH_ERROR);
+        shell.applyRuntimeError(error);
       }
     },
   });
@@ -106,16 +109,12 @@ export function createManagerAppController(deps: ManagerAppControllerDeps): Mana
 
   function navigateTab(tab: ManagerView): void {
     if (tab === 'wizard') {
-      const status = hostRefresh.getLastConfig();
-      navigation.navigateTo('wizard', {
-        wizardPresentation: defaultWizardPresentation(status),
-        ...(status ? { status } : {}),
-      });
+      startSetupWizard();
       return;
     }
     if (
       (tab === 'maintenance' || tab === 'network') &&
-      hostRefresh.getLastConfig()?.installation.kind !== 'healthy'
+      hostRefresh.getLastConfig()?.installation?.kind !== 'healthy'
     ) {
       navigation.navigateTo('status');
       return;
@@ -141,7 +140,7 @@ export function createManagerAppController(deps: ManagerAppControllerDeps): Mana
         }
         navigation.navigateTo('status', { refresh: false });
         shell.markBootReady();
-        if (hostRefresh.getLastConfig()?.envExists) {
+        if (hostRefresh.getLastConfig()?.envExists !== false) {
           await hostRefresh.refresh({ scope: 'runtime' });
         }
       } catch (error) {

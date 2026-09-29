@@ -1,24 +1,21 @@
-import type { HostStatus, PfupdateApplyResult } from '../shared/host-status.js';
+import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
 import { evaluateHostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
+import type { HostStatus, PfupdateApplyResult } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import {
   createInitialPfupdateWizardState,
-  PFUPDATE_APPLY_LOADING_MESSAGE,
+  pfupdateInspectBlockedMessage,
   type PfupdateWizardState,
 } from './pfupdate-wizard-flow.js';
 import { formatPfupdateFailure } from './pfupdate-flow.js';
 
-export type PfupdateWizardCallbacks = {
-  onAfterMutation?: () => void;
-  onApplySuccess?: (result: Extract<PfupdateApplyResult, { ok: true }>) => void;
-};
-
-export type PfupdateWizardControllerDeps = PfupdateWizardCallbacks & {
+export type PfupdateWizardControllerDeps = {
   api: PraxisManagerApi;
+  refreshHost?: () => void | Promise<void>;
   getHostStatus?: () => HostStatus | null;
+  onApplySuccess?: (result: Extract<PfupdateApplyResult, { ok: true }>) => void;
   onStateChange?: () => void;
 };
-
 export type PfupdateWizardController = {
   getState: () => Readonly<PfupdateWizardState>;
   open: () => void;
@@ -26,169 +23,102 @@ export type PfupdateWizardController = {
   close: () => void;
 };
 
-function inspectErrorMessage(state: PfupdateWizardState): string {
-  const inspect = state.inspect;
-  if (!inspect) {
-    return state.error ?? 'Update-Paket konnte nicht geprüft werden.';
-  }
-  const errors = inspect.errors ?? [];
-  if (errors.length > 0) {
-    return errors.join(' ');
-  }
-  return inspect.compatibility.warnings.join(' ') || 'Update-Paket ist nicht kompatibel.';
-}
-
 export function createPfupdateWizardController(
   deps: PfupdateWizardControllerDeps,
 ): PfupdateWizardController {
   let state = createInitialPfupdateWizardState();
-
-  function notify(): void {
+  let generation = 0;
+  const blocked = () => hasBlockingMaintenanceOperation(deps.getHostStatus?.());
+  const refreshHost = () => (deps.refreshHost ? deps.refreshHost() : deps.api.fetchSetupStatus());
+  function set(next: PfupdateWizardState): void {
+    state = next;
     deps.onStateChange?.();
   }
-
-  function patch(partial: Partial<PfupdateWizardState>): void {
-    state = { ...state, ...partial };
-    notify();
-  }
-
-  async function pickAndInspect(): Promise<boolean> {
-    let picked: Awaited<ReturnType<PraxisManagerApi['selectPfupdateArchive']>>;
+  async function open(): Promise<void> {
+    const session = ++generation;
+    set({ phase: 'select' });
     try {
-      picked = await deps.api.selectPfupdateArchive();
-    } catch (error) {
-      patch({
-        phase: 'failed',
-        busy: false,
-        statusText: '',
-        error:
-          error instanceof Error ? error.message : 'Update-Paket konnte nicht ausgewählt werden.',
-      });
-      return false;
-    }
-    if (picked.canceled || !picked.path) {
-      patch(createInitialPfupdateWizardState());
-      return false;
-    }
-
-    patch({
-      filePath: picked.path,
-      phase: 'inspect',
-      busy: true,
-      statusText: 'Update-Paket wird geprüft …',
-      error: null,
-      inspect: null,
-      applyResult: null,
-    });
-
-    try {
-      const hostStatus = deps.getHostStatus?.();
-      const inspect = await deps.api.inspectPfupdate({
-        archivePath: picked.path,
-        settingsFormatVersion: hostStatus?.settingsFormatVersion,
-      });
-      patch({
-        inspect,
-        phase: inspect.ok && inspect.compatibility.updateSupported ? 'preview' : 'failed',
-        busy: false,
-        statusText: '',
-        error:
-          inspect.ok && inspect.compatibility.updateSupported
-            ? null
-            : inspectErrorMessage({ ...state, inspect }),
-      });
-      return true;
-    } catch (error) {
-      patch({
-        phase: 'failed',
-        busy: false,
-        statusText: '',
-        error: error instanceof Error ? error.message : 'Update-Paket konnte nicht geprüft werden.',
-      });
-      return true;
-    }
-  }
-
-  async function runApply(): Promise<void> {
-    if (!state.filePath) {
-      patch({ phase: 'failed', busy: false, error: 'Kein Update-Paket ausgewählt.' });
-      return;
-    }
-
-    patch({
-      phase: 'applying',
-      busy: true,
-      statusText: PFUPDATE_APPLY_LOADING_MESSAGE,
-      error: null,
-      applyResult: null,
-    });
-
-    try {
-      const hostStatus = deps.getHostStatus?.();
-      const lifecycle = hostStatus?.lifecycle;
-      if (lifecycle) {
-        const decision = evaluateHostLifecycleAction(lifecycle, 'update');
-        if (!decision.allowed) {
-          patch({
-            phase: 'failed',
-            busy: false,
-            statusText: '',
-            error: decision.reason ?? 'Host-Aktion derzeit nicht erlaubt.',
-          });
-          return;
-        }
-      }
-      const result = await deps.api.applyPfupdate({
-        archivePath: state.filePath,
-        settingsFormatVersion: hostStatus?.settingsFormatVersion,
-      });
-
-      if (result.ok) {
-        patch({
-          phase: 'success',
-          busy: false,
-          statusText: '',
-          applyResult: result,
-          error: null,
-        });
-        deps.onApplySuccess?.(result);
-        deps.onAfterMutation?.();
+      await refreshHost();
+      if (session !== generation) return;
+      if (blocked()) {
+        set({ phase: 'failed', error: 'Offenen Hostvorgang zuerst klären.' });
         return;
       }
-
-      patch({
-        phase: 'failed',
-        busy: false,
-        statusText: '',
-        applyResult: result,
-        error: formatPfupdateFailure(result),
+      const picked = await deps.api.selectPfupdateArchive();
+      if (session !== generation) return;
+      if (picked.canceled || !picked.path) {
+        set({ phase: 'closed' });
+        return;
+      }
+      set({ phase: 'inspect', filePath: picked.path });
+      const inspect = await deps.api.inspectPfupdate({
+        archivePath: picked.path,
+        settingsFormatVersion: deps.getHostStatus?.()?.settingsFormatVersion,
       });
+      if (session !== generation) return;
+      const error = pfupdateInspectBlockedMessage(inspect);
+      set(
+        inspect.ok && inspect.compatibility.updateSupported
+          ? { phase: 'preview', filePath: picked.path, inspect }
+          : { phase: 'failed', error: error || 'Update-Paket ist nicht kompatibel.' },
+      );
     } catch (error) {
-      patch({
-        phase: 'failed',
-        busy: false,
-        statusText: '',
-        error: error instanceof Error ? error.message : 'Software-Update fehlgeschlagen.',
-      });
+      if (session === generation)
+        set({
+          phase: 'failed',
+          error: message(error, 'Update-Paket konnte nicht geprüft werden.'),
+        });
     }
   }
-
+  async function apply(): Promise<void> {
+    if (state.phase !== 'preview' || blocked()) return;
+    const preview = state;
+    const session = generation;
+    const status = deps.getHostStatus?.();
+    if (status?.lifecycle) {
+      const decision = evaluateHostLifecycleAction(status.lifecycle, 'update');
+      if (!decision.allowed) {
+        set({ phase: 'failed', error: decision.reason ?? 'Host-Aktion derzeit nicht erlaubt.' });
+        return;
+      }
+    }
+    set({ ...preview, phase: 'applying' });
+    let completed: PfupdateWizardState;
+    try {
+      const result = await deps.api.applyPfupdate({
+        archivePath: preview.filePath,
+        settingsFormatVersion: status?.settingsFormatVersion,
+      });
+      completed = result.ok
+        ? { phase: 'success', applyResult: result }
+        : { phase: 'failed', applyResult: result, error: formatPfupdateFailure(result) };
+    } catch (error) {
+      completed = { phase: 'failed', error: message(error, 'Software-Update fehlgeschlagen.') };
+    } finally {
+      try {
+        await refreshHost();
+      } catch {
+        /* Shell owns refresh errors; keep the backend result. */
+      }
+    }
+    if (session !== generation) return;
+    set(completed);
+    if (completed.phase === 'success') deps.onApplySuccess?.(completed.applyResult);
+  }
   return {
     getState: () => state,
     open() {
-      void pickAndInspect();
+      void open();
     },
     confirmApply() {
-      if (state.busy || state.phase !== 'preview' || !state.filePath) {
-        return;
-      }
-      void runApply();
+      void apply();
     },
     close() {
-      if (state.busy) {
-        return;
-      }
-      patch(createInitialPfupdateWizardState());
+      generation++;
+      set(createInitialPfupdateWizardState());
     },
   };
+}
+function message(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }

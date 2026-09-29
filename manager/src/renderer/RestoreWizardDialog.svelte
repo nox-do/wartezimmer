@@ -1,9 +1,13 @@
 <script lang="ts">
+  import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+  import { managerShell } from './manager-shell-state.svelte.js';
+  import { managerStatusViewModel } from './manager-status-view-model.js';
   import {
     canRetryRestoreAfterFailure,
     canSkipRestoreAfterFailure,
     isRestoreRollbackFailed,
-    restoreInspectBlockedMessage,
+    restoreWizardIsBusy,
+    restoreWizardProgress,
     restoreInspectSummaryLines,
     RESTORE_ROLLBACK_FAILED_RECOVERY_MESSAGE,
     restoreSuccessSummary,
@@ -33,6 +37,12 @@
     onToggleCredentialSkip: (value: boolean) => void;
   } = $props();
 
+  const blocked = $derived(hasBlockingMaintenanceOperation(managerShell.configSnapshot));
+  const diagnosis = $derived(managerStatusViewModel(managerShell.configSnapshot, managerShell.runtimeObservation));
+  const busy = $derived(restoreWizardIsBusy(snapshot));
+  const backup = $derived('backup' in snapshot ? snapshot.backup : undefined);
+  const mode = $derived('mode' in snapshot ? snapshot.mode : 'standalone');
+  const result = $derived('restoreResult' in snapshot ? snapshot.restoreResult ?? null : null);
   const open = $derived(snapshot.phase !== 'closed');
   let dialogEl = $state<HTMLDialogElement | null>(null);
 
@@ -50,7 +60,7 @@
   });
 
   function handleClose(): void {
-    if (snapshot.busy) {
+    if (busy) {
       return;
     }
     if (snapshot.phase === 'confirm-https') onCancelHttps();
@@ -58,57 +68,59 @@
   }
 
   const inspectLines = $derived(
-    snapshot.inspect ? restoreInspectSummaryLines(snapshot.inspect) : [],
+    backup?.inspect ? restoreInspectSummaryLines(backup?.inspect) : [],
   );
-  const inspectWarnings = $derived(snapshot.inspect?.compatibility.warnings ?? []);
-  const rollbackFailed = $derived(isRestoreRollbackFailed(snapshot.restoreResult));
-  const showRetry = $derived(canRetryRestoreAfterFailure(snapshot.restoreResult));
+  const inspectWarnings = $derived(backup?.inspect?.compatibility.warnings ?? []);
+  const rollbackFailed = $derived(isRestoreRollbackFailed(result));
+  const showRetry = $derived(canRetryRestoreAfterFailure(result));
   const showSkip = $derived(
-    snapshot.mode === 'pre-update' && canSkipRestoreAfterFailure(snapshot.restoreResult),
+    mode === 'pre-update' && canSkipRestoreAfterFailure(result),
   );
   const showCredentialSkip = $derived(
-    shouldOfferCredentialSkip({
-      inspect: snapshot.inspect,
-      restoreResult: snapshot.restoreResult,
-    }),
+    shouldOfferCredentialSkip(backup?.inspect),
   );
 </script>
 
 <dialog
   bind:this={dialogEl}
   class="maintenance-dialog restore-wizard-dialog"
+  aria-busy={busy}
   oncancel={(event) => {
     event.preventDefault();
     handleClose();
   }}
   onclose={handleClose}
   onclick={(event) => {
-    if (event.target === dialogEl && !snapshot.busy) {
+    if (event.target === dialogEl && !busy) {
       handleClose();
     }
   }}
 >
-  {#if snapshot.phase === 'choose'}
-    <h2>{restoreWizardChooseTitle(snapshot.mode)}</h2>
-    <p>{restoreWizardChooseLead(snapshot.mode)}</p>
+  {#if blocked && !busy}
+    <p class={diagnosis.noticeClass}>{diagnosis.primary.summary}</p>
+    <p>{diagnosis.primary.detail}</p>
+    <button type="button" class="btn-secondary" onclick={onClose}>Schließen</button>
+  {:else if snapshot.phase === 'choose'}
+    <h2>{restoreWizardChooseTitle(mode)}</h2>
+    <p>{restoreWizardChooseLead(mode)}</p>
     <div class="actions-row actions-row--dialog">
-      <button type="button" disabled={snapshot.busy} onclick={() => onChooseRestore(true)}>
+      <button type="button" disabled={busy} onclick={() => onChooseRestore(true)}>
         Ja, Backup wiederherstellen
       </button>
       <button
         type="button"
         class="btn-secondary"
-        disabled={snapshot.busy}
+        disabled={busy}
         onclick={() => onChooseRestore(false)}
       >
-        {snapshot.mode === 'pre-update' ? 'Nein, Update ohne Restore' : 'Abbrechen'}
+        {mode === 'pre-update' ? 'Nein, Update ohne Restore' : 'Abbrechen'}
       </button>
     </div>
-  {:else if snapshot.phase === 'inspect' || snapshot.phase === 'restoring'}
+  {:else if snapshot.phase === 'select' || snapshot.phase === 'inspect' || snapshot.phase === 'restoring'}
     <h2>Settings wiederherstellen</h2>
     <p class="wizard-progress is-active" role="status">
       <span class="spinner" aria-hidden="true"></span>
-      {snapshot.statusText || 'Bitte warten …'}
+      {restoreWizardProgress(snapshot) || 'Bitte warten …'}
     </p>
   {:else if snapshot.phase === 'confirm-https'}
     <h2>HTTPS-Einrichtung ersetzen?</h2>
@@ -120,10 +132,10 @@
       <button type="button" onclick={onConfirmRestore}>HTTPS ersetzen und wiederherstellen</button>
       <button type="button" class="btn-secondary" onclick={onCancelHttps}>Abbrechen</button>
     </div>
-  {:else if snapshot.phase === 'preview' && snapshot.inspect}
+  {:else if snapshot.phase === 'preview' && backup?.inspect}
     <h2>Restore bestätigen</h2>
-    {#if snapshot.filePath}
-      <p class="hint">{snapshot.filePath}</p>
+    {#if backup?.filePath}
+      <p class="hint">{backup?.filePath}</p>
     {/if}
     <ul class="restore-wizard-summary">
       {#each inspectLines as line (line)}
@@ -144,8 +156,8 @@
       <label class="restore-wizard-checkbox">
         <input
           type="checkbox"
-          checked={snapshot.skipProviderCredentials}
-          disabled={snapshot.busy}
+          checked={backup?.draft.skipProviderCredentials}
+          disabled={busy}
           onchange={(event) => onToggleCredentialSkip(event.currentTarget.checked)}
         />
         Provider-Credentials nicht importieren (SMS neu konfigurieren)
@@ -156,14 +168,14 @@
       sind kurz offline.
     </p>
     <div class="actions-row actions-row--dialog">
-      <button type="button" disabled={snapshot.busy} onclick={onConfirmRestore}>
+      <button type="button" disabled={busy} onclick={onConfirmRestore}>
         Wiederherstellen
       </button>
-      <button type="button" class="btn-secondary" disabled={snapshot.busy} onclick={handleClose}>
+      <button type="button" class="btn-secondary" disabled={busy} onclick={handleClose}>
         Abbrechen
       </button>
     </div>
-  {:else if snapshot.phase === 'success' && snapshot.restoreResult?.ok}
+  {:else if snapshot.phase === 'success'}
     <h2>Wiederherstellung abgeschlossen</h2>
     <p>{restoreSuccessSummary(snapshot.restoreResult)}</p>
     <div class="actions-row actions-row--dialog">
@@ -171,7 +183,7 @@
     </div>
   {:else if snapshot.phase === 'failed'}
     <h2>Restore fehlgeschlagen</h2>
-    {#if snapshot.inspect && inspectLines.length > 0}
+    {#if backup?.inspect && inspectLines.length > 0}
       <ul class="restore-wizard-summary">
         {#each inspectLines as line (line)}
           <li>{line}</li>
@@ -184,22 +196,21 @@
         <p class="hint">{snapshot.error}</p>
       {/if}
       <div class="actions-row actions-row--dialog">
-        <button type="button" disabled={snapshot.busy} onclick={handleClose}>
+        <button type="button" disabled={busy} onclick={handleClose}>
           Schließen
         </button>
       </div>
     {:else}
       {#if snapshot.error}
         <p class="error">{snapshot.error}</p>
-      {:else if snapshot.inspect}
-        <p class="error">{restoreInspectBlockedMessage(snapshot.inspect)}</p>
+
       {/if}
       {#if showCredentialSkip}
         <label class="restore-wizard-checkbox">
           <input
             type="checkbox"
-            checked={snapshot.skipProviderCredentials}
-            disabled={snapshot.busy}
+            checked={backup?.draft.skipProviderCredentials}
+            disabled={busy}
             onchange={(event) => onToggleCredentialSkip(event.currentTarget.checked)}
           />
           Provider-Credentials nicht importieren (SMS neu konfigurieren)
@@ -211,16 +222,16 @@
       {/if}
       <div class="actions-row actions-row--dialog">
         {#if showRetry}
-          <button type="button" disabled={snapshot.busy} onclick={onRetry}>
+          <button type="button" disabled={busy} onclick={onRetry}>
             Erneut versuchen
           </button>
         {/if}
         {#if showSkip}
-          <button type="button" class="btn-secondary" disabled={snapshot.busy} onclick={onSkip}>
+          <button type="button" class="btn-secondary" disabled={busy} onclick={onSkip}>
             Restore überspringen und fortfahren
           </button>
-        {:else if snapshot.mode !== 'pre-update'}
-          <button type="button" class="btn-secondary" disabled={snapshot.busy} onclick={handleClose}>
+        {:else if mode !== 'pre-update'}
+          <button type="button" class="btn-secondary" disabled={busy} onclick={handleClose}>
             Schließen
           </button>
         {/if}

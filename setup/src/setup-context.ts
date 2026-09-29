@@ -1,3 +1,6 @@
+import { readTlsOperationStatus } from './tls-operation.js';
+import { readRestoreOperationStatus } from './restore-operation.js';
+import { readUpdateOperationStatus } from './update-operation.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -92,6 +95,13 @@ export function migrateMaintenanceToken(
 }
 
 export function ensureInstallHomeLayout(installHome: string, templateRoot: string): string[] {
+  // An interrupted update owns the templates, including deliberate absences.
+  if (
+    readTlsOperationStatus(installHome) ||
+    readUpdateOperationStatus(installHome) ||
+    readRestoreOperationStatus(installHome)
+  )
+    return [];
   fs.mkdirSync(installHome, { recursive: true });
   fs.mkdirSync(path.join(installHome, 'state'), { recursive: true });
 

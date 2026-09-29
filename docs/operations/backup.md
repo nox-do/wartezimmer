@@ -1,6 +1,6 @@
 # Backup, Restore & Settings-Erhalt
 
-Stand: 2026-09-21 · am Code geprüft (`settings-backup*.ts`, `tls-backup*.ts`, Maintenance `:8082`)
+Stand: 2026-09-29 · am Code geprüft (`settings-backup*.ts`, `tls-backup*.ts`, Maintenance `:8082`)
 
 **Scope:** Was in `.pfbackup` liegt, Restore, eingebettete HTTPS-Daten, gemeinsames Fresh-DB-Muster mit Update.
 
@@ -61,7 +61,6 @@ Snapshot / Validate / Import nur über zweiten App-Listener. Docker: `127.0.0.1:
 | ----------------------------- | ----------------------------------------------- |
 | `GET /api/setup/host/backup`  | Info letztes Backup                             |
 | `POST /api/setup/host/backup` | eine `.pfbackup` inklusive HTTPS-Daten erzeugen |
-| `POST …/backup/validate`      | Archiv + Settings prüfen                        |
 | `POST …/backup/inspect`       | Vorschau, Kompatibilität, TLS-Gate              |
 | `POST …/backup/restore`       | Fresh-DB-Cutover + Settings-Import              |
 
@@ -106,11 +105,11 @@ Host-Pfade bei Abweichung vom Zielsystem bestätigen.
 
 Fläche **Wartung** → Praxis-Backup / Wiederherstellen (`BackupPanel`, Restore-Wizard).
 
-| Aktion             | Verhalten                                                                                                                      |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| Erstellen          | Stack oben; schreibt `.pfbackup` (typ. unter Install-Home `backups/`); bei `tls.state ≠ off` mit eingebetteten HTTPS-Daten     |
-| Inspect / Vorschau | Archiv, Settings-Format, Release-Vergleich, TLS-Zusammenfassung                                                                |
-| Wiederherstellen   | Bestätigung; Queue/Runtime weg; Fresh-DB + Import **ohne** Gerätefreigaben; optional Credentials-Skip nach Fehlern vorschlagen |
+| Aktion             | Verhalten                                                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Erstellen          | Stack oben; schreibt `.pfbackup` (typ. unter Install-Home `backups/`); bei `tls.state ≠ off` mit eingebetteten HTTPS-Daten  |
+| Inspect / Vorschau | Archiv, Settings-Format, Release-Vergleich, TLS-Zusammenfassung                                                             |
+| Wiederherstellen   | Bestätigung; Queue/Runtime weg; Fresh-DB + Import **ohne** Gerätefreigaben; Credentials-Skip nur durch Benutzerentscheidung |
 
 Keine „nur `.env`-Datei“-Produktstrecke mehr — Vertrag ist einer `.pfbackup`.
 

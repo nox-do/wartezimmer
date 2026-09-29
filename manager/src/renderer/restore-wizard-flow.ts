@@ -6,42 +6,55 @@ import type {
 
 export type RestoreWizardMode = 'standalone' | 'pre-update';
 
-export type RestoreWizardPhase =
-  | 'closed'
-  | 'choose'
-  | 'inspect'
-  | 'preview'
-  | 'confirm-https'
-  | 'restoring'
-  | 'success'
-  | 'failed';
-
-export type RestoreWizardState = {
-  phase: RestoreWizardPhase;
-  mode: RestoreWizardMode;
-  busy: boolean;
-  content: string | null;
-  filePath: string | null;
-  inspect: PfbackupInspectResult | null;
-  restoreResult: PfbackupRestoreResult | null;
-  skipProviderCredentials: boolean;
-  statusText: string;
-  error: string | null;
+export type RestoreBackup = {
+  content: string;
+  filePath: string;
+  inspect: PfbackupInspectResult;
+  draft: { skipProviderCredentials: boolean };
 };
 
+export type RestoreWizardState =
+  | { phase: 'closed' }
+  | { phase: 'choose'; mode: 'pre-update' }
+  | { phase: 'select'; mode: RestoreWizardMode }
+  | { phase: 'inspect'; mode: RestoreWizardMode; filePath: string }
+  | {
+      phase: 'preview' | 'confirm-https' | 'restoring';
+      mode: RestoreWizardMode;
+      backup: RestoreBackup;
+    }
+  | {
+      phase: 'success';
+      mode: RestoreWizardMode;
+      restoreResult: Extract<PfbackupRestoreResult, { ok: true }>;
+    }
+  | {
+      phase: 'failed';
+      mode: RestoreWizardMode;
+      error: string;
+      backup?: RestoreBackup;
+      restoreResult?: Extract<PfbackupRestoreResult, { ok: false }>;
+    };
+
 export function createInitialRestoreWizardState(): RestoreWizardState {
-  return {
-    phase: 'closed',
-    mode: 'standalone',
-    busy: false,
-    content: null,
-    filePath: null,
-    inspect: null,
-    restoreResult: null,
-    skipProviderCredentials: false,
-    statusText: '',
-    error: null,
-  };
+  return { phase: 'closed' };
+}
+
+export function restoreWizardIsBusy(state: RestoreWizardState): boolean {
+  return ['select', 'inspect', 'restoring'].includes(state.phase);
+}
+
+export function restoreWizardProgress(state: RestoreWizardState): string {
+  switch (state.phase) {
+    case 'select':
+      return 'Backup-Datei wählen …';
+    case 'inspect':
+      return 'Backup wird geprüft …';
+    case 'restoring':
+      return 'Wiederherstellung läuft — Stack wird gestoppt und neu gestartet …';
+    default:
+      return '';
+  }
 }
 
 export function restoreWizardChooseTitle(mode: RestoreWizardMode): string {
@@ -190,28 +203,6 @@ export function restoreSuccessSummary(
   return parts.join(' ');
 }
 
-function textSuggestsCredentialIssue(text: string): boolean {
-  return /provider|credential|messaging/i.test(text);
-}
-
-export function shouldOfferCredentialSkip(input: {
-  inspect: PfbackupInspectResult | null;
-  restoreResult?: PfbackupRestoreResult | null;
-}): boolean {
-  return input.inspect?.backup?.providerCredentialsIncluded === true;
-}
-
-export function suggestCredentialSkipAfterRestoreFailure(input: {
-  inspect: PfbackupInspectResult | null;
-  restoreResult: Extract<PfbackupRestoreResult, { ok: false }>;
-  skipProviderCredentials: boolean;
-}): boolean {
-  if (input.skipProviderCredentials) {
-    return false;
-  }
-  if (!shouldOfferCredentialSkip({ inspect: input.inspect, restoreResult: input.restoreResult })) {
-    return false;
-  }
-  const combined = [input.restoreResult.failedPhase, ...input.restoreResult.errors].join(' ');
-  return textSuggestsCredentialIssue(combined);
+export function shouldOfferCredentialSkip(inspect: PfbackupInspectResult | undefined): boolean {
+  return inspect?.backup?.providerCredentialsIncluded === true;
 }

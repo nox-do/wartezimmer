@@ -1,26 +1,39 @@
-export function resolveSetupApiError(error: unknown): { status: number; error: string } {
-  const message = error instanceof Error ? error.message : 'internal error';
-  if (error instanceof Error && error.name === 'TlsRuntimeUnavailableError') {
-    return { status: 501, error: message };
-  }
-  if (error instanceof Error && error.name === 'TlsPermanentCheckError') {
-    return { status: 501, error: message };
-  }
-  if (
-    message === 'ENV_MISSING' ||
-    message === 'ENV_EXAMPLE_MISSING' ||
-    message === 'INVALID_FOLDER_PATH' ||
-    message === 'FOLDER_PATH_NOT_DIRECTORY' ||
-    message === 'DOCKER_NOT_READY' ||
-    message === 'RELEASE_ARCHIVE_NOT_FOUND' ||
-    message === 'RELEASE_ARCHIVE_NOT_FOUND' ||
-    message === 'RELEASE_SHA256_MISSING' ||
-    message.startsWith('RELEASE_SHA256_MISMATCH') ||
-    message.startsWith('RELEASE_MANIFEST_ARCHIVE_MISMATCH') ||
-    message.startsWith('RELEASE_IMAGES_UNRECOGNIZED') ||
-    message.startsWith('DOCKER_LOAD_FAILED')
-  ) {
-    return { status: 400, error: message };
-  }
-  return { status: 500, error: message };
+import {
+  ManagerApiError,
+  type ManagerErrorCategory,
+  type SetupApiErrorResponse,
+} from '@praxis-flow/server-shared/setup-api';
+
+const statusByCategory: Record<ManagerErrorCategory, number> = {
+  validation: 400,
+  conflict: 409,
+  unavailable: 503,
+  timeout: 504,
+  // The request was understood, but the host operation could not be completed.
+  'operation-failed': 422,
+  inconsistent: 409,
+  internal: 500,
+};
+
+export function resolveSetupApiError(error: unknown): {
+  status: number;
+  body: SetupApiErrorResponse;
+} {
+  const publicError =
+    error instanceof ManagerApiError
+      ? error.toJSON()
+      : {
+          code: 'internal_error',
+          category: 'internal' as const,
+          message: 'Die Aktion konnte wegen eines internen Fehlers nicht abgeschlossen werden.',
+          retryable: false,
+        };
+  // HTTP protocol errors keep their specific status without adding public categories.
+  const status =
+    publicError.code === 'setup_auth_required'
+      ? 401
+      : publicError.code === 'setup_route_not_found'
+        ? 404
+        : statusByCategory[publicError.category];
+  return { status, body: { error: publicError } };
 }

@@ -14,7 +14,6 @@ import {
   findLatestPfbackupPath,
   getPfbackupInfo,
   validatePfbackupContent,
-  validatePfbackupFull,
   validatePfbackupFile,
   buildTlsArchiveBase64,
 } from './settings-backup.js';
@@ -269,32 +268,4 @@ test('TLS packing failure leaves no backup file', async (t) => {
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
-});
-
-test('full validation rejects active HTTPS without its embedded TLS payload', async (t) => {
-  t.mock.method(
-    globalThis,
-    'fetch',
-    async () => new Response(JSON.stringify({ ok: true, errors: [] })),
-  );
-  const archive = buildPfbackupArchive({
-    settings: {
-      ...sampleDbSnapshot,
-      env: {
-        TLS_STATE: 'active',
-        TLS_MODE: 'managed',
-        TLS_INSTALLATION_ID: 'practice',
-        TLS_HOSTNAME: 'practice.example.test',
-        CANONICAL_BASE_URL: 'https://practice.example.test',
-        PROXY_ENABLED: 'true',
-        PROXY_MODE: 'tls-managed',
-        TLS_CUTOVER_APPLIED: 'true',
-      },
-    },
-    managerState: { release: null },
-  });
-  const result = await validatePfbackupFull(serializePfbackupArchive(archive));
-  assert.equal(result.archiveValid, true);
-  assert.equal(result.restoreValid, false);
-  assert.match(result.restoreErrors.join(' '), /HTTPS/);
 });

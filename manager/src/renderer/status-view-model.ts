@@ -1,3 +1,5 @@
+import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+import { projectManagerStatus } from '@praxis-flow/server-shared/manager-status-projection';
 import type { HostStatus } from '../shared/host-status.js';
 import { deliveryImagesSummary, needsDeliveryImages } from './delivery-images-flow.js';
 
@@ -7,10 +9,8 @@ export type SetupChecklistItem = { label: string; done: boolean; muted?: boolean
 
 export type SetupEntryContent = {
   eyebrow: string;
-  title: string;
   copy: string;
   note: string;
-  startButtonLabel: string | null;
   showReleasePicker: boolean;
 };
 
@@ -25,7 +25,9 @@ function mark(ok: boolean): string {
 }
 
 export function setupEntryTone(status: HostStatus): SetupEntryTone {
-  switch (status.installation.kind) {
+  if (hasBlockingMaintenanceOperation(status)) return 'review';
+  switch (status.installation?.kind) {
+    case undefined:
     case 'healthy':
       return 'maintenance';
     case 'starting':
@@ -66,8 +68,12 @@ export function configuredAdapterLabel(status: HostStatus): string | null {
 
 export function setupChecklistItems(status: HostStatus): SetupChecklistItem[] {
   if (
-    status.installation.kind === 'docker-unavailable' ||
-    status.installation.kind === 'starting'
+    hasBlockingMaintenanceOperation(status) ||
+    !status.installation ||
+    status.installation?.kind === 'docker-unavailable' ||
+    status.installation?.kind === 'starting' ||
+    status.installation?.kind === 'needs-repair' ||
+    status.installation?.kind === 'inconsistent'
   ) {
     return [];
   }
@@ -100,36 +106,52 @@ export function setupChecklistItems(status: HostStatus): SetupChecklistItem[] {
 }
 
 export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): SetupEntryContent {
+  if (hasBlockingMaintenanceOperation(status)) {
+    const finding = projectManagerStatus(status, { kind: 'idle' }).primary;
+    return {
+      eyebrow: 'Wartung',
+      copy: finding.summary,
+      note: finding.detail ?? '',
+      showReleasePicker: false,
+    };
+  }
   const eyebrow = status.mode === 'install' ? 'Ersteinrichtung' : 'Entwicklungsmodus';
 
   if (tone === 'starting') {
     return {
       eyebrow: 'Status',
-      title: 'Dienste werden gestartet',
       copy: 'Praxis Flow wartet auf die laufenden Gesundheitsprüfungen. Das kann kurz dauern.',
       note: 'Wenn ein Dienst nicht erfolgreich startet, wechselt der Status automatisch zur Fehlerdiagnose.',
-      startButtonLabel: null,
       showReleasePicker: false,
     };
   }
 
   if (tone === 'review') {
     const installation = status.installation;
+    if (installation?.kind === 'needs-repair' || installation?.kind === 'inconsistent') {
+      return {
+        eyebrow: 'Installation',
+        copy: installation.reasons.map((reason) => reason.message).join(' '),
+        note: 'Bitte die genannten Ursachen prüfen und gezielt beheben. Danach den Status erneut prüfen.',
+        showReleasePicker: false,
+      };
+    }
+    if (installation?.kind === 'stopped') {
+      return {
+        eyebrow: 'Installation',
+        copy: 'Die vorhandene Installation bleibt erhalten. Der aktuelle Laufzustand steht oben.',
+        note: '',
+        showReleasePicker: false,
+      };
+    }
+
     return {
       eyebrow: 'Installation',
-      title:
-        installation.kind === 'stopped'
-          ? 'Praxis Flow ist gestoppt'
-          : installation.kind === 'installing'
-            ? 'Installation fortsetzen'
-            : 'Neuinstallation erforderlich',
       copy:
-        installation.kind === 'needs-reinstall'
+        installation?.kind === 'needs-reinstall'
           ? installation.reasons.map((reason) => reason.message).join(' ')
           : 'Der Assistent zeigt den nächsten Schritt. Vor einer Neuinstallation werden Sie ausdrücklich gefragt.',
       note: 'Automatische Backups bleiben bei einer Neuinstallation erhalten.',
-      startButtonLabel:
-        installation.kind === 'installing' ? 'Vorgang öffnen' : 'Neu installieren …',
       showReleasePicker: false,
     };
   }
@@ -137,10 +159,8 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
   if (tone === 'fresh') {
     return {
       eyebrow,
-      title: 'Praxis Flow einrichten',
       copy: 'Wir führen Schritt für Schritt durch Docker, Software-Paket, Host-Adresse im Praxisnetz und Start des lokalen Praxis-Stacks.',
       note: '',
-      startButtonLabel: 'Einrichtung starten',
       showReleasePicker: false,
     };
   }
@@ -148,11 +168,6 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
   if (tone === 'needs-docker') {
     return {
       eyebrow: 'Status',
-      title: !status.docker.installed
-        ? 'Docker fehlt'
-        : !status.docker.daemonRunning
-          ? 'Docker ist nicht erreichbar'
-          : 'Docker Compose ist nicht verfügbar',
       copy: 'Ohne Docker kann der Manager den Zustand der Praxis-Installation nicht prüfen.',
       note: !status.docker.installed
         ? 'Docker Desktop installieren und danach den Manager erneut öffnen.'
@@ -161,17 +176,14 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
             ? 'Docker Desktop öffnen und warten, bis es bereit ist. Der Manager prüft den Status erneut.'
             : 'Docker Desktop öffnen und warten, bis es bereit ist. Danach den Manager erneut öffnen.'
           : 'Docker Desktop prüfen: Docker Compose muss verfügbar sein. Danach den Manager erneut öffnen.',
-      startButtonLabel: null,
       showReleasePicker: false,
     };
   }
 
   return {
     eyebrow: 'Status',
-    title: 'Praxis Flow',
     copy: 'Die Einrichtung ist abgeschlossen.',
     note: '',
-    startButtonLabel: null,
     showReleasePicker: false,
   };
 }
@@ -214,20 +226,6 @@ export function lanWarningText(status: HostStatus, setupEntry: boolean): string 
     return 'LAN noch nicht konfiguriert — Einrichtung ausführen, damit Terminal, TV und MFA den Host im WLAN erreichen.';
   }
   return null;
-}
-
-export function statusOverallNoticeClass(level: 'ok' | 'warn' | 'bad'): string {
-  if (level === 'bad') {
-    return 'notice is-bad';
-  }
-  if (level === 'warn') {
-    return 'notice is-warn';
-  }
-  return 'notice is-ok';
-}
-
-export function showStatusOverallNotice(setupEntry: boolean, text: string | undefined): boolean {
-  return !setupEntry && Boolean(text) && text !== '…';
 }
 
 export function deviceUrlEntries(status: HostStatus): DeviceUrlEntry[] | null {

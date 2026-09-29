@@ -1,16 +1,20 @@
+import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
 import type { HostRefreshController, ManagerView } from './host-refresh-controller.js';
 import type { HostStatus } from '../shared/host-status.js';
 
 export type WizardPresentation = 'fullscreen' | 'embedded';
 
 export function defaultWizardPresentation(status: HostStatus | null): WizardPresentation {
-  return status?.installation.kind === 'healthy' || status?.installation.kind === 'starting'
+  return status?.installation?.kind === 'healthy' || status?.installation?.kind === 'starting'
     ? 'embedded'
     : 'fullscreen';
 }
 
 export function shouldAutoStartFullscreenWizard(status: HostStatus | null): boolean {
-  return status?.installation.kind === 'fresh' || status?.installation.kind === 'installing';
+  return (
+    !hasBlockingMaintenanceOperation(status) &&
+    (status?.installation?.kind === 'fresh' || status?.installation?.kind === 'installing')
+  );
 }
 
 export type NavigateOptions = {

@@ -1,3 +1,4 @@
+import { readUpdateOperation, updateRollbackDirectory } from './update-operation.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -166,10 +167,12 @@ test('applyPfupdate succeeds and writes new image tags', async () => {
           return { envPath: '', backupPath };
         },
         stopStack: async () => {
+          assert.equal(readUpdateOperation(dir)?.phase, 'prepared');
           assert.equal(readEnvMap(envPath).has('MAINTENANCE_TOKEN'), false);
           return { ok: true, log: 'stopped' };
         },
         startAppStack: async (...args: Parameters<typeof deps.startAppStack>) => {
+          assert.equal(readUpdateOperation(dir)?.phase, 'cutover');
           assert.equal((readEnvMap(envPath).get('MAINTENANCE_TOKEN')?.length ?? 0) >= 32, true);
           return deps.startAppStack(...args);
         },
@@ -177,6 +180,9 @@ test('applyPfupdate succeeds and writes new image tags', async () => {
     );
 
     assert.equal(result.ok, true);
+    assert.equal(readUpdateOperation(dir), null);
+    assert.equal(fs.existsSync(updateRollbackDirectory(dir, result.updateId)), false);
+    assert.equal(fs.existsSync(backupPath), true);
     if (result.ok) {
       assert.equal(result.report.previousVersion, '2026.07.1');
       assert.equal(result.report.targetVersion, '2026.08.0');

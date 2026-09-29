@@ -380,10 +380,12 @@ function ensureEnvFromExample(projectRoot: string): string {
 }
 
 export function resolveDeliveryImageConfig(input: {
+  release?: ManagerReleaseState | null;
   projectRoot: string;
   envMap: Map<string, string>;
 }): ManagerReleaseState | null {
-  const release = readManagerState(input.projectRoot).release;
+  const release =
+    input.release !== undefined ? input.release : readManagerState(input.projectRoot).release;
   if (release) {
     return release;
   }
@@ -417,6 +419,8 @@ export function writeDeliveryImageEnvFromState(projectRoot: string): {
 }
 
 export async function auditDeliveryImages(input: {
+  /** Already-read confirmed release during an open operation. */
+  release?: ManagerReleaseState | null;
   projectRoot: string;
   envMap: Map<string, string>;
   docker: DockerStatus;

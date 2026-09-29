@@ -1,3 +1,25 @@
+import { atPhase } from './operation-journal.js';
+import { assertNoTlsOperation } from './tls-operation.js';
+import { createModuleLogger } from '@praxis-flow/server-shared/logger';
+import {
+  assertNoMaintenanceOperation,
+  assertMaintenancePredecessors,
+} from './maintenance-operation-guard.js';
+import { hostMutationLock } from './host-mutation-lock.js';
+import { managerStatePath } from './manager-state.js';
+import {
+  assertMaintenanceRollbackComplete,
+  syncMaintenanceArtifacts,
+  syncMaintenanceHostFiles,
+} from './maintenance-files.js';
+import {
+  readRestoreOperation,
+  restoreNeedsRollback,
+  writeRestoreOperation,
+  finishRestoreOperation,
+  restoreRollbackDirectory as rollbackDirectory,
+  type RestoreOperation,
+} from './restore-operation.js';
 import { buildPfbackupTlsInspectSummary } from './tls-backup-sidecar.js';
 import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime-postcondition.js';
 import { auditRestrictedListeners } from './restricted-listener-probe.js';
@@ -20,7 +42,7 @@ import {
   type AppDataVolumeAccess,
 } from './app-data-volume.js';
 import { composePs, composeStop, composeUp, type ComposeRunOptions } from './docker.js';
-import { readEnvMap, writeEnvRecordAtomically, removeEnvKeys } from './env-file.js';
+import { readEnvMap, writeEnvRecordAtomically } from './env-file.js';
 import { readManagerState, writeManagerStateAtomically } from './manager-state.js';
 import {
   FRESH_DB_CUTOVER_PHASES,
@@ -46,6 +68,7 @@ import {
   readHostEnvRecord,
   resolveMaintenanceComposeRunOptions,
   runDefaultMaintenanceHealthChecks,
+  verifyMaintenanceRollback,
   type MaintenanceRollbackArtifacts,
   type MaintenanceStackRuntime,
 } from './maintenance-rollback.js';
@@ -67,6 +90,9 @@ import {
   checkHostLifecycleAction,
   assertTargetHostLifecycleAction,
 } from './host-lifecycle-guard.js';
+import { assertNoUpdateOperation } from './update-operation.js';
+
+const logger = createModuleLogger('setup.restore');
 
 export const RESTORE_PHASES = {
   validateArchive: 'validate_archive',
@@ -89,6 +115,8 @@ export type RestorePhase = (typeof RESTORE_PHASES)[keyof typeof RESTORE_PHASES];
 
 export type PfbackupRestoreOptions = {
   skipProviderCredentials?: boolean;
+  /** Only the owning install completion may nest a restore. */
+  installationOperationId?: string;
 };
 
 export type PfbackupRestoreTestHooks = {
@@ -159,10 +187,6 @@ class RestorePhaseError extends Error {
 function createRestoreId(now = new Date()): string {
   const stamp = now.toISOString().replace(/[:.]/g, '-');
   return `${stamp}-${randomBytes(4).toString('hex')}`;
-}
-
-function rollbackDirectory(installHome: string, restoreId: string): string {
-  return path.join(installHome, 'rollback', restoreId);
 }
 
 /**
@@ -270,28 +294,12 @@ async function backupRollbackArtifactsAfterStop(
   restoreId: string,
   appDataAccess: AppDataVolumeAccess,
 ): Promise<MaintenanceRollbackArtifacts> {
-  return captureMaintenanceRollback(ctx, rollbackDirectory(ctx.home, restoreId), appDataAccess);
-}
-
-async function executeRollback(input: {
-  ctx: SetupContext;
-  rollback: MaintenanceRollbackArtifacts;
-  appDataAccess: AppDataVolumeAccess;
-  runtime: RestoreRuntime;
-  localAppBaseUrl: string;
-  failRollback?: boolean;
-}): Promise<{ ok: boolean; errors: string[] }> {
-  if (input.failRollback) {
-    return { ok: false, errors: ['Rollback absichtlich fehlgeschlagen (Test).'] };
-  }
-  return executeMaintenanceRollback({
-    ctx: input.ctx,
-    rollback: input.rollback,
-    appDataAccess: input.appDataAccess,
-    runtime: input.runtime,
-    localAppBaseUrl: input.localAppBaseUrl,
-    failedDbDirName: 'failed-restore-db',
-  });
+  const dir = rollbackDirectory(ctx.home, restoreId);
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const rollback = await captureMaintenanceRollback(ctx, dir, appDataAccess);
+  assertMaintenanceRollbackComplete(dir);
+  syncMaintenanceArtifacts(dir, ctx.home);
+  return rollback;
 }
 
 function failureResult(
@@ -564,12 +572,7 @@ async function commitRestore(input: {
     if (input.testHooks.failWriteEnv) {
       throw new Error('ENV-Schreiben absichtlich fehlgeschlagen (Test).');
     }
-    const existingKeys = [...readEnvMap(input.prepared.envPath).keys()];
-    removeEnvKeys(
-      input.prepared.envPath,
-      existingKeys.filter((key) => !(key in input.prepared.restoreEnv)),
-    );
-    writeEnvRecordAtomically(input.prepared.envPath, input.prepared.restoreEnv);
+    writeEnvRecordAtomically(input.prepared.envPath, input.prepared.restoreEnv, { replace: true });
     if (input.prepared.discardTlsPreparation) {
       wipeTlsStateRoot(input.ctx.home);
     }
@@ -659,24 +662,78 @@ function restoreFailure(error: unknown, phase: RestorePhase, fallback: string): 
     : new RestorePhaseError(phase, [errorMessage(error, fallback)]);
 }
 
-async function restartAfterBackupFailure(
-  runtime: RestoreRuntime,
-  runOptions: ComposeRunOptions,
-  error: unknown,
-): Promise<string[]> {
-  const errors = [errorMessage(error, 'Rollback-Sicherung fehlgeschlagen.')];
-  try {
-    const restart = await runtime.startFullStack(runOptions);
-    if (!restart.ok) {
-      errors.push(
-        restart.log ||
-          'Stack konnte nach fehlgeschlagener Rollback-Sicherung nicht neu gestartet werden.',
-      );
+/** Repeat the previous-state decision, never the selected backup import. */
+export async function recoverRestoreOperation(
+  ctx: SetupContext,
+  deps: PfbackupRestoreDeps = {},
+): Promise<{ ok: boolean; errors: string[] }> {
+  return hostMutationLock(ctx.home).run('restore-recovery', async () => {
+    const operation = readRestoreOperation(ctx.home);
+    if (!operation) return { ok: true, errors: [] };
+    if (operation.phase === 'committed' || operation.phase === 'recovered') {
+      finishRestoreOperation(ctx.home, operation);
+      return { ok: true, errors: [] };
     }
-  } catch (restartError) {
-    errors.push(errorMessage(restartError, 'Stack konnte nicht neu gestartet werden.'));
-  }
-  return errors;
+    const rollbackRequired = restoreNeedsRollback(operation);
+    const runtime = resolveRestoreRuntime(deps);
+    const localAppBaseUrl = deps.localAppBaseUrl ?? LOCAL_SETUP_APP_BASE_URL;
+    let result: { ok: boolean; errors: string[] };
+    try {
+      assertNoTlsOperation(ctx.home);
+      assertNoUpdateOperation(ctx.home);
+      assertMaintenancePredecessors(ctx.home, operation.installationId);
+      if (rollbackRequired) {
+        writeRestoreOperation(ctx.home, atPhase(operation, 'rolling-back'));
+        const rollbackDir = rollbackDirectory(ctx.home, operation.id);
+        assertMaintenanceRollbackComplete(rollbackDir);
+        result = await executeMaintenanceRollback({
+          ctx,
+          runtime,
+          localAppBaseUrl,
+          rollback: {
+            rollbackDir,
+            managerStatePath: managerStatePath(ctx.home),
+            appDataDir: path.join(rollbackDir, 'app-data'),
+          },
+          appDataAccess:
+            deps.appDataAccess ??
+            createDockerAppDataAccess(ctx.composeProjectName, operation.utilityImage ?? ''),
+          failedDbDirName: 'failed-restore-db',
+        });
+      } else {
+        const errors: string[] = [];
+        await verifyMaintenanceRollback(
+          { ctx, runtime, localAppBaseUrl },
+          readEnvMap(path.join(ctx.home, '.env')),
+          errors,
+        );
+        result = { ok: errors.length === 0, errors };
+      }
+      if (result.ok) syncMaintenanceHostFiles(ctx.home);
+    } catch (error) {
+      result = { ok: false, errors: [errorMessage(error, 'Restore-Recovery fehlgeschlagen.')] };
+    }
+    if (!result.ok) {
+      writeRestoreOperation(ctx.home, {
+        ...operation,
+        phase: 'recovery-failed',
+        recovery: rollbackRequired ? 'rollback' : 'restart',
+      });
+      logger.error(
+        { errors: result.errors, restoreId: operation.id },
+        'Restore-Recovery fehlgeschlagen',
+      );
+      return result;
+    }
+    const recovered = atPhase(operation, 'recovered');
+    writeRestoreOperation(ctx.home, recovered);
+    try {
+      finishRestoreOperation(ctx.home, recovered);
+    } catch (error) {
+      logger.error({ err: error }, 'Restore-Cleanup wird beim Start erneut versucht');
+    }
+    return result;
+  });
 }
 
 function successfulRestoreResult(
@@ -708,6 +765,7 @@ function successfulRestoreResult(
 
 async function applyPreparedRestore(input: {
   restoreId: string;
+  installationId: string | null;
   prepared: PreparedRestore;
   ctx: SetupContext;
   runtime: RestoreRuntime;
@@ -730,50 +788,89 @@ async function applyPreparedRestore(input: {
       false,
     );
   }
-  const stop = await input.runtime.stopStack(input.prepared.runOptions);
-  if (!stop.ok) {
-    return failureResult(
-      input.restoreId,
-      RESTORE_PHASES.stopStack,
-      [stop.log || 'Stack konnte nicht gestoppt werden.'],
-      false,
-      false,
-    );
-  }
-
-  let rollback: MaintenanceRollbackArtifacts;
+  assertNoMaintenanceOperation(input.ctx.home);
+  assertMaintenancePredecessors(input.ctx.home, input.installationId);
+  let operation: RestoreOperation = {
+    schemaVersion: 1,
+    id: input.restoreId,
+    createdAt: new Date().toISOString(),
+    utilityImage: readEnvMap(input.prepared.envPath).get('PRAXIS_FLOW_APP_IMAGE')?.trim() || null,
+    installationId: input.installationId,
+    phase: 'prepared',
+  };
+  writeRestoreOperation(input.ctx.home, operation);
+  let phase: RestorePhase = RESTORE_PHASES.stopStack;
+  let completed: Awaited<ReturnType<typeof commitRestore>> | undefined;
   try {
-    rollback = await backupRollbackArtifactsAfterStop(
+    const stop = await input.runtime.stopStack(input.prepared.runOptions);
+    if (!stop.ok)
+      throw new RestorePhaseError(phase, [stop.log || 'Stack konnte nicht gestoppt werden.']);
+    phase = RESTORE_PHASES.backupRollbackState;
+    const rollback = await backupRollbackArtifactsAfterStop(
       input.ctx,
       input.restoreId,
       input.prepared.appDataAccess,
     );
+    operation = atPhase(operation, 'rollback-ready');
+    writeRestoreOperation(input.ctx.home, operation);
     await input.testHooks.afterBackupRollbackState?.();
+    operation = atPhase(operation, 'cutover');
+    writeRestoreOperation(input.ctx.home, operation);
+    phase = RESTORE_PHASES.cutover;
+    completed = await commitRestore({ ...input, rollback });
+    syncMaintenanceHostFiles(input.ctx.home);
+    operation = atPhase(operation, 'committed');
+    writeRestoreOperation(input.ctx.home, operation);
   } catch (error) {
-    const errors = await restartAfterBackupFailure(input.runtime, input.prepared.runOptions, error);
-    return failureResult(input.restoreId, RESTORE_PHASES.backupRollbackState, errors, false, false);
+    // Read durable evidence even when a phase write threw after its rename.
+    const durable = readRestoreOperation(input.ctx.home);
+    if (!(durable?.phase === 'committed' && completed)) {
+      const failure = restoreFailure(error, phase, 'Restore ist fehlgeschlagen.');
+      const rollbackAttempted = durable ? restoreNeedsRollback(durable) : false;
+      let recovery: { ok: boolean; errors: string[] };
+      try {
+        recovery = await recoverRestoreOperation(input.ctx, {
+          ...input.runtime,
+          appDataAccess: input.prepared.appDataAccess,
+          localAppBaseUrl: input.localAppBaseUrl,
+          ...(input.testHooks.failRollback
+            ? {
+                stopStack: async () => ({
+                  ok: false,
+                  log: 'Rollback absichtlich fehlgeschlagen (Test).',
+                }),
+              }
+            : {}),
+        });
+      } catch (recoveryError) {
+        logger.error({ err: recoveryError }, 'Restore-Recovery-Abschluss ungeklärt');
+        recovery = {
+          ok: false,
+          errors: ['Restore-Recovery-Abschluss ungeklärt. Bitte Setup-Diagnose prüfen.'],
+        };
+      }
+      return rollbackAttempted
+        ? failureWithRollback(input.restoreId, failure.phase, failure.errors, recovery)
+        : failureResult(
+            input.restoreId,
+            failure.phase,
+            [...failure.errors, ...recovery.errors],
+            false,
+            false,
+          );
+    }
   }
-
   try {
-    const cutover = await commitRestore({ ...input, rollback });
-    return successfulRestoreResult(
-      input.restoreId,
-      input.prepared.settings,
-      input.skipProviderCredentials,
-      cutover,
-    );
+    finishRestoreOperation(input.ctx.home, operation);
   } catch (error) {
-    const failure = restoreFailure(error, RESTORE_PHASES.cutover, 'Restore ist fehlgeschlagen.');
-    const rollbackResult = await executeRollback({
-      ctx: input.ctx,
-      rollback,
-      appDataAccess: input.prepared.appDataAccess,
-      runtime: input.runtime,
-      localAppBaseUrl: input.localAppBaseUrl,
-      failRollback: input.testHooks.failRollback,
-    });
-    return failureWithRollback(input.restoreId, failure.phase, failure.errors, rollbackResult);
+    logger.error({ err: error }, 'Restore-Cleanup wird beim Start erneut versucht');
   }
+  return successfulRestoreResult(
+    input.restoreId,
+    input.prepared.settings,
+    input.skipProviderCredentials,
+    completed!,
+  );
 }
 
 export async function restorePfbackup(
@@ -783,50 +880,56 @@ export async function restorePfbackup(
   deps: PfbackupRestoreDeps = {},
   testHooks: PfbackupRestoreTestHooks = {},
 ): Promise<PfbackupRestoreResult> {
-  const restoreId = createRestoreId(deps.now?.());
-  const localMaintenanceAppBaseUrl =
-    deps.localMaintenanceAppBaseUrl ?? LOCAL_MAINTENANCE_APP_BASE_URL;
-  const localAppBaseUrl = deps.localAppBaseUrl ?? LOCAL_SETUP_APP_BASE_URL;
-  const skipProviderCredentials = options.skipProviderCredentials === true;
-  const runtime = resolveRestoreRuntime(deps);
-  try {
-    const currentLifecycle = checkHostLifecycleAction(ctx, 'restore');
-    // A restore has an explicit, fully validated target. It may repair an
-    // inconsistent current projection, but never guesses through an unknown
-    // installation or a concurrent/unreadable operation.
-    if (
-      currentLifecycle.lifecycle.assessment === 'unknown' ||
-      currentLifecycle.lifecycle.operation !== 'none'
-    ) {
-      throw new SetupApiValidationError(
-        `Host-Aktion „restore“ gesperrt: ${currentLifecycle.reason ?? 'Der aktuelle Lifecycle ist nicht sicher bekannt.'}`,
+  return hostMutationLock(ctx.home).run('restorePfbackup', async () => {
+    const restoreId = createRestoreId(deps.now?.());
+    const localMaintenanceAppBaseUrl =
+      deps.localMaintenanceAppBaseUrl ?? LOCAL_MAINTENANCE_APP_BASE_URL;
+    const localAppBaseUrl = deps.localAppBaseUrl ?? LOCAL_SETUP_APP_BASE_URL;
+    const skipProviderCredentials = options.skipProviderCredentials === true;
+    const runtime = resolveRestoreRuntime(deps);
+    try {
+      // Keep the backend entry point safe even when it is called without the HTTP route guard.
+      assertNoMaintenanceOperation(ctx.home);
+      assertMaintenancePredecessors(ctx.home, options.installationOperationId ?? null);
+      const currentLifecycle = checkHostLifecycleAction(ctx, 'restore');
+      // A restore has an explicit, fully validated target. It may repair an
+      // inconsistent current projection, but never guesses through an unknown
+      // installation or a concurrent/unreadable operation.
+      if (
+        currentLifecycle.lifecycle.assessment === 'unknown' ||
+        currentLifecycle.lifecycle.operation !== 'none'
+      ) {
+        throw new SetupApiValidationError(
+          `Host-Aktion „restore“ gesperrt: ${currentLifecycle.reason ?? 'Der aktuelle Lifecycle ist nicht sicher bekannt.'}`,
+        );
+      }
+      const prepared = await prepareRestore({
+        content,
+        ctx,
+        runtime,
+        localMaintenanceAppBaseUrl,
+      });
+      assertTargetHostLifecycleAction(new Map(Object.entries(prepared.restoreEnv)), 'restore');
+      return applyPreparedRestore({
+        restoreId,
+        installationId: options.installationOperationId ?? null,
+        prepared,
+        ctx,
+        runtime,
+        skipProviderCredentials,
+        localAppBaseUrl,
+        localMaintenanceAppBaseUrl,
+        testHooks,
+      });
+    } catch (error) {
+      const failure = restoreFailure(
+        error,
+        RESTORE_PHASES.validateArchive,
+        'Restore-Vorbereitung ist fehlgeschlagen.',
       );
+      return failureResult(restoreId, failure.phase, failure.errors, false, false);
     }
-    const prepared = await prepareRestore({
-      content,
-      ctx,
-      runtime,
-      localMaintenanceAppBaseUrl,
-    });
-    assertTargetHostLifecycleAction(new Map(Object.entries(prepared.restoreEnv)), 'restore');
-    return applyPreparedRestore({
-      restoreId,
-      prepared,
-      ctx,
-      runtime,
-      skipProviderCredentials,
-      localAppBaseUrl,
-      localMaintenanceAppBaseUrl,
-      testHooks,
-    });
-  } catch (error) {
-    const failure = restoreFailure(
-      error,
-      RESTORE_PHASES.validateArchive,
-      'Restore-Vorbereitung ist fehlgeschlagen.',
-    );
-    return failureResult(restoreId, failure.phase, failure.errors, false, false);
-  }
+  });
 }
 
 export { createLocalAppDataAccess, type AppDataVolumeAccess };

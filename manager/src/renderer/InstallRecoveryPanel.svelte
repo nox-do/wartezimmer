@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { wizardError, wizardIsBusy } from './wizard-controller.js';
+
   import type { WizardController, WizardControllerState } from './wizard-controller.js';
   import { restoreInspectSummaryLines } from './restore-wizard-flow.js';
 
@@ -12,14 +14,14 @@
   const hasBackup = $derived(operation?.backupContainsTls != null);
 </script>
 
-<section class="wizard-panel recovery-panel" aria-busy={snapshot.busy}>
+<section class="wizard-panel recovery-panel" aria-busy={wizardIsBusy(snapshot)}>
   {#if snapshot.recoveryPhase === 'choose'}
-    <h2>{snapshot.status?.installation.kind === 'fresh' ? 'Praxis Flow installieren' : 'Praxis Flow neu installieren'}</h2>
+    <h2>{snapshot.status?.installation?.kind === 'fresh' ? 'Praxis Flow installieren' : 'Praxis Flow neu installieren'}</h2>
     <p>Wählen Sie ein Software-Paket. Optional übernehmen Sie danach die Einstellungen aus einem automatischen Backup.</p>
     <div class="recovery-backup-field">
       <label for="recovery-backup">Backup wiederherstellen (optional)</label>
       <select class="wizard-input" id="recovery-backup" value={snapshot.backupCandidateId}
-        disabled={snapshot.busy} onchange={(event) => controller.selectRecoveryBackup(event.currentTarget.value)}>
+        disabled={wizardIsBusy(snapshot)} onchange={(event) => controller.selectRecoveryBackup(event.currentTarget.value)}>
         <option value="">Ohne Backup neu einrichten</option>
         {#each snapshot.recoveryCandidates as candidate (candidate.id)}
           <option value={candidate.id}>{new Date(candidate.createdAt).toLocaleString('de-DE')}{candidate.containsTls ? ' · mit HTTPS' : ''}</option>
@@ -59,33 +61,33 @@
     {/if}
   {/if}
 
-  {#if snapshot.busy}<p class="wizard-progress is-active" role="status"><span class="spinner" aria-hidden="true"></span>Bitte warten …</p>{/if}
+  {#if wizardIsBusy(snapshot)}<p class="wizard-progress is-active" role="status"><span class="spinner" aria-hidden="true"></span>Bitte warten …</p>{/if}
 
   <footer class="actions-row actions-row--footer">
     {#if snapshot.recoveryPhase === 'choose'}
-      <button type="button" disabled={snapshot.busy || snapshot.status?.installation.kind === 'docker-unavailable'} onclick={() => void controller.prepareRecovery()}>Software-Paket wählen und prüfen</button>
+      <button type="button" disabled={wizardIsBusy(snapshot) || snapshot.status?.installation?.kind === 'docker-unavailable'} onclick={() => void controller.prepareRecovery()}>Software-Paket wählen und prüfen</button>
     {:else if snapshot.recoveryPhase === 'prepared'}
-      <button type="button" disabled={snapshot.busy} onclick={() => controller.commitRecovery()}>{operation?.mode === 'replace' ? 'Neu installieren …' : 'Installation beginnen'}</button>
-      <button type="button" class="btn-secondary" disabled={snapshot.busy} onclick={() => void controller.abortRecovery()}>Vorbereitung abbrechen</button>
+      <button type="button" disabled={wizardIsBusy(snapshot)} onclick={() => controller.commitRecovery()}>{operation?.mode === 'replace' ? 'Neu installieren …' : 'Installation beginnen'}</button>
+      <button type="button" class="btn-secondary" disabled={wizardIsBusy(snapshot)} onclick={() => void controller.abortRecovery()}>Vorbereitung abbrechen</button>
     {:else if snapshot.recoveryPhase === 'finish' || snapshot.recoveryPhase === 'restart'}
       {#if preview?.baselineReady}
         {#if hasBackup}
-          <button type="button" disabled={snapshot.busy || !preview.restoreCompatible || preview.backup?.currentTlsClaimsHttps} onclick={() => void controller.finishRecovery('restore')}>Backup wiederherstellen und abschließen</button>
+          <button type="button" disabled={wizardIsBusy(snapshot) || !preview.restoreCompatible || preview.backup?.currentTlsClaimsHttps} onclick={() => void controller.finishRecovery('restore')}>Backup wiederherstellen und abschließen</button>
         {/if}
-        <button type="button" class:btn-secondary={hasBackup} disabled={snapshot.busy} onclick={() => void controller.finishRecovery('without-backup')}>{hasBackup ? 'Ohne weitere Backup-Übernahme abschließen' : 'Einrichtung abschließen'}</button>
+        <button type="button" class:btn-secondary={hasBackup} disabled={wizardIsBusy(snapshot)} onclick={() => void controller.finishRecovery('without-backup')}>{hasBackup ? 'Ohne weitere Backup-Übernahme abschließen' : 'Einrichtung abschließen'}</button>
       {:else}
-        <button type="button" disabled={snapshot.busy} onclick={() => void controller.refreshRecovery()}>Status erneut prüfen</button>
+        <button type="button" disabled={wizardIsBusy(snapshot)} onclick={() => void controller.refreshRecovery()}>Status erneut prüfen</button>
       {/if}
     {/if}
-    {#if !preview?.baselineReady && (snapshot.recoveryPhase === 'finish' || snapshot.recoveryPhase === 'restart' || snapshot.error)}
-      <button type="button" class="btn-secondary" disabled={snapshot.busy} onclick={() => controller.cancel()}>Zum Status</button>
+    {#if !preview?.baselineReady && (snapshot.recoveryPhase === 'finish' || snapshot.recoveryPhase === 'restart' || wizardError(snapshot))}
+      <button type="button" class="btn-secondary" disabled={wizardIsBusy(snapshot)} onclick={() => controller.cancel()}>Zum Status</button>
     {/if}
   </footer>
   {#if snapshot.recoveryPhase === 'restart' || (snapshot.recoveryPhase === 'finish' && preview && !preview.baselineReady)}
     <details class="recovery-restart">
       <summary>Neuinstallation erneut starten</summary>
       <p>Das geprüfte Software-Paket wird erneut installiert. Dabei werden die bisher angelegten Laufzeitdaten gelöscht.</p>
-      <button type="button" class="btn-secondary" disabled={snapshot.busy} onclick={() => controller.commitRecovery()}>Neuinstallation erneut starten …</button>
+      <button type="button" class="btn-secondary" disabled={wizardIsBusy(snapshot)} onclick={() => controller.commitRecovery()}>Neuinstallation erneut starten …</button>
     </details>
   {/if}
 </section>

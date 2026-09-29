@@ -1,3 +1,14 @@
+import { readBindingOperationStatus } from './binding-operation.js';
+import { readTlsOperationStatus } from './tls-operation.js';
+import { recoverTlsOperation } from './host-tls.js';
+import { assertNoMaintenanceOperation } from './maintenance-operation-guard.js';
+import { readRestoreOperationStatus } from './restore-operation.js';
+import { recoverRestoreOperation } from './settings-backup-restore.js';
+import { readUpdateOperationStatus } from './update-operation.js';
+import { recoverUpdateOperation } from './settings-backup-update.js';
+import type { HostMutationLock } from './host-mutation-lock.js';
+import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { createModuleLogger } from '@praxis-flow/server-shared/logger';
 import { discoverRecoveryBackups } from './recovery-backup.js';
 import { previewInstallRecovery, finishInstallRecovery } from './install-recovery.js';
 import { readInstallOperation } from './install-operation.js';
@@ -9,6 +20,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
   applySetupPlan,
+  recoverBindingOperation,
   applyRestrictedNetwork,
   backupPf,
   buildSetupPlan,
@@ -34,7 +46,6 @@ import {
   prepareInstallOperation,
   commitPreparedInstallOperation,
   abortInstallOperation,
-  validatePfbackupFull,
 } from './host-state.js';
 import {
   applyHostTls,
@@ -52,7 +63,7 @@ import { readEnvMap } from './env-file.js';
 import { configureMaintenanceAuthHome } from './maintenance-auth.js';
 import { requirePackageFileExtension } from './package-file-extension.js';
 import { resolveSetupApiError } from './api-error.js';
-import { createHostMutationLock } from './host-mutation-lock.js';
+import { hostMutationLock } from './host-mutation-lock.js';
 import {
   normalizeApplySetupInput,
   normalizeHostNetworkInput,
@@ -66,7 +77,7 @@ import {
 import { resolveSetupContext, type SetupContext } from './setup-context.js';
 import { resolveSetupBuildId } from './setup-build-id.js';
 import { readSetupManagerTokenFromEnv, setupManagerTokensMatch } from './setup-token.js';
-import { LOCAL_MAINTENANCE_APP_BASE_URL, LOCAL_SETUP_APP_BASE_URL } from './urls.js';
+import { LOCAL_SETUP_APP_BASE_URL } from './urls.js';
 import {
   SETUP_API_PROTOCOL_VERSION,
   SETUP_MANAGER_TOKEN_HEADER,
@@ -76,6 +87,7 @@ import {
 } from '@praxis-flow/server-shared';
 
 const DEFAULT_PORT = 9190;
+const logger = createModuleLogger('setup.server');
 
 type RouteResult = [status: number, body: unknown];
 type RouteHandler = (req: http.IncomingMessage, url: URL) => RouteResult | Promise<RouteResult>;
@@ -119,8 +131,9 @@ function sendJson(res: http.ServerResponse, status: number, body: unknown) {
   res.end(JSON.stringify(body));
 }
 
-function routeResult(body: unknown, status = 200): RouteResult {
-  return [status, body];
+function routeResult(body: unknown): RouteResult {
+  // A returned operation result is successful HTTP processing, even when ok is false.
+  return [200, body];
 }
 
 function requireString(
@@ -221,7 +234,18 @@ function createRuntimeRoutes(ctx: SetupContext, tlsDeps: TlsRuntimeDependencies)
         service,
         tail: Number.isFinite(tail) ? tail : undefined,
       });
-      return routeResult(result, result.ok ? 200 : 500);
+      if (!result.ok) {
+        throw new ManagerApiError(
+          {
+            code: 'compose_logs_failed',
+            category: 'operation-failed',
+            message: 'Logs konnten nicht geladen werden.',
+            retryable: true,
+          },
+          { cause: new Error(result.log || 'Compose-Logs fehlgeschlagen.') },
+        );
+      }
+      return routeResult(result);
     },
     'POST /api/setup/host/compose': async (req) => {
       const body = readBodyRecord(await readJsonBody(req));
@@ -233,7 +257,7 @@ function createRuntimeRoutes(ctx: SetupContext, tlsDeps: TlsRuntimeDependencies)
         throw new SetupApiValidationError('build is only allowed for start or restart');
       }
       const result = await runComposeAction(ctx, action, { build: Boolean(body.build) });
-      return routeResult(result, result.ok ? 200 : 500);
+      return routeResult(result);
     },
     'POST /api/setup/host/rebuild': async () => routeResult(await rebuildHost(ctx)),
   };
@@ -243,15 +267,6 @@ function createManagementRoutes(ctx: SetupContext): Routes {
   return {
     'GET /api/setup/host/backup': () => routeResult(getPfbackupInfo(ctx)),
     'POST /api/setup/host/backup': async () => routeResult(await backupPf(ctx)),
-    'POST /api/setup/host/backup/validate': async (req) => {
-      const body = readBodyRecord(await readJsonBody(req));
-      return routeResult(
-        await validatePfbackupFull(
-          requireString(body, 'content', 'content is required'),
-          LOCAL_MAINTENANCE_APP_BASE_URL,
-        ),
-      );
-    },
     'POST /api/setup/host/backup/inspect': async (req) => {
       const body = readBodyRecord(await readJsonBody(req));
       const content = requireString(body, 'content', 'content is required');
@@ -263,11 +278,11 @@ function createManagementRoutes(ctx: SetupContext): Routes {
       const result = await restorePfbackup(content, ctx, {
         skipProviderCredentials: body.skipProviderCredentials === true,
       });
-      return routeResult(result, result.ok ? 200 : 500);
+      return routeResult(result);
     },
     'POST /api/setup/host/reset-staff-pins': async () => {
       const result = await resetStaffPinsAndRestart(ctx);
-      return routeResult(result, result.ok ? 200 : 500);
+      return routeResult(result);
     },
     'POST /api/setup/host/plan': async (req) => {
       const body = await readJsonBody(req);
@@ -304,9 +319,9 @@ function createManagementRoutes(ctx: SetupContext): Routes {
 function createDeliveryRoutes(ctx: SetupContext): Routes {
   const assertUpdateEligible = async () => {
     const status = await getHostStatus(ctx);
-    if (status.installation.kind !== 'healthy') {
+    if (status.installation?.kind !== 'healthy') {
       throw new SetupApiValidationError(
-        `Update ist nur für eine gesunde Installation zulässig (aktuell: ${status.installation.kind}).`,
+        `Update ist nur für eine gesunde Installation zulässig (aktuell: ${status.installation?.kind ?? 'nicht prüfbar'}).`,
       );
     }
   };
@@ -368,7 +383,7 @@ function createDeliveryRoutes(ctx: SetupContext): Routes {
       const input = await readPfupdateInput(req);
       await assertUpdateEligible();
       const result = await applyPfupdate(input, ctx);
-      return routeResult(result, result.ok ? 200 : 500);
+      return routeResult(result);
     },
     'POST /api/setup/host/images/load': async (req) => {
       const body = readBodyRecord(await readJsonBody(req));
@@ -408,6 +423,9 @@ export type SetupRequestHandlerOptions = {
   managerToken?: string | null;
   buildId?: string;
   recoverRestrictedOperation?: typeof recoverRestrictedOperation;
+  recoverUpdateOperation?: typeof recoverUpdateOperation;
+  recoverTlsOperation?: typeof recoverTlsOperation;
+  recoverRestoreOperation?: typeof recoverRestoreOperation;
 };
 
 function readProvidedSetupToken(req: http.IncomingMessage): string | undefined {
@@ -425,8 +443,8 @@ function createSetupRoutes(
   ctx: SetupContext,
   tlsDeps: TlsRuntimeDependencies = {},
   buildId = resolveSetupBuildId(),
+  mutationLock: HostMutationLock = hostMutationLock(ctx.home),
 ): ReadonlyMap<string, RouteHandler> {
-  const mutationLock = createHostMutationLock();
   const entries = Object.entries({
     'GET /api/setup/health': () =>
       routeResult({
@@ -477,6 +495,7 @@ function createSetupRoutes(
       route,
       (req, url) =>
         mutationLock.run(route, async () => {
+          assertNoMaintenanceOperation(ctx.home);
           const operation = readInstallOperation(ctx.home);
           if (operation?.phase === 'prepared' && !route.includes('/install/'))
             throw new SetupApiValidationError(
@@ -491,7 +510,7 @@ function createSetupRoutes(
               'POST /api/setup/host/rebuild',
             ].includes(route)
           ) {
-            if ((await getHostStatus(ctx)).installation.kind !== 'healthy')
+            if ((await getHostStatus(ctx)).installation?.kind !== 'healthy')
               throw new SetupApiValidationError(
                 'Wartung ist nur bei einer gesunden Installation verfügbar.',
               );
@@ -515,14 +534,42 @@ export function createSetupRequestHandler(
   options: SetupRequestHandlerOptions = {},
 ) {
   configureMaintenanceAuthHome(ctx.home, ctx.mode);
-  const routes = createSetupRoutes(ctx, tlsDeps, options.buildId ?? resolveSetupBuildId());
-  const recoveryOptions = {
-    projectRoot: ctx.home,
-    composeProjectName: ctx.composeProjectName,
-  };
-  const recover = options.recoverRestrictedOperation ?? recoverRestrictedOperation;
-  let recovery: Promise<void> | null = recover(recoveryOptions);
-  void recovery.catch(() => undefined); // reported on authenticated requests, not an unhandled rejection
+  const mutationLock = hostMutationLock(ctx.home);
+  const routes = createSetupRoutes(
+    ctx,
+    tlsDeps,
+    options.buildId ?? resolveSetupBuildId(),
+    mutationLock,
+  );
+  const bindingPending = readBindingOperationStatus(ctx.home);
+  const tlsPending = readTlsOperationStatus(ctx.home);
+  const restorePending = readRestoreOperationStatus(ctx.home);
+  const updatePending = readUpdateOperationStatus(ctx.home);
+  let recovery: Promise<void> = Promise.resolve();
+  if (bindingPending || tlsPending || restorePending || updatePending) {
+    void mutationLock
+      .run('maintenance-recovery', async () => {
+        const result = bindingPending
+          ? await recoverBindingOperation(ctx)
+          : tlsPending
+            ? await (options.recoverTlsOperation ?? recoverTlsOperation)(ctx, tlsDeps)
+            : restorePending
+              ? await (options.recoverRestoreOperation ?? recoverRestoreOperation)(ctx)
+              : await (options.recoverUpdateOperation ?? recoverUpdateOperation)(ctx);
+        if (!result.ok) logger.error({ errors: result.errors }, 'Host-Recovery fehlgeschlagen');
+      })
+      .catch((error: unknown) => logger.error({ err: error }, 'Host-Recovery ungeklärt'));
+  } else {
+    recovery = mutationLock.run('restricted-recovery', () =>
+      (options.recoverRestrictedOperation ?? recoverRestrictedOperation)({
+        projectRoot: ctx.home,
+        composeProjectName: ctx.composeProjectName,
+      }),
+    );
+    void recovery.catch((error: unknown) =>
+      logger.error({ err: error }, 'Restricted-Recovery ungeklärt'),
+    );
+  }
 
   const managerToken =
     options.managerToken !== undefined ? options.managerToken : readSetupManagerTokenFromEnv();
@@ -532,28 +579,35 @@ export function createSetupRequestHandler(
 
     try {
       if (!setupManagerTokensMatch(managerToken, readProvidedSetupToken(req))) {
-        return sendJson(res, 401, { error: 'setup token required' });
+        throw new ManagerApiError({
+          code: 'setup_auth_required',
+          category: 'validation',
+          message:
+            'Der Manager konnte sich nicht an der lokalen Setup-API anmelden. Bitte Manager und Praxis Flow mit demselben Installationsstand neu starten.',
+          retryable: false,
+        });
       }
       if (!handler) {
-        return sendJson(res, 404, { error: 'not found' });
+        throw new ManagerApiError({
+          code: 'setup_route_not_found',
+          category: 'validation',
+          message: 'not found',
+          retryable: false,
+        });
       }
-      // Rebuild never initiates recovery as a side effect of its preflight. It
-      // waits for the one recovery started when the setup handler was created.
-      if (url.pathname !== '/api/setup/host/rebuild') recovery ??= recover(recoveryOptions);
-      try {
-        await recovery;
-      } catch (error) {
-        recovery = null;
-        throw error;
-      }
+      // Reads never trigger or wait for recovery. Mutations cannot overtake startup.
+      if (req.method !== 'GET') await recovery;
       const [status, body] = await handler(req, url);
       return sendJson(res, status, body);
     } catch (error) {
-      if (error instanceof SetupApiValidationError) {
-        return sendJson(res, 400, { error: error.message });
+      if (
+        !(error instanceof ManagerApiError) ||
+        (error.category !== 'validation' && error.category !== 'conflict')
+      ) {
+        logger.error({ err: error }, 'Setup-API-Anfrage fehlgeschlagen');
       }
-      const { status, error: message } = resolveSetupApiError(error);
-      return sendJson(res, status, { error: message });
+      const { status, body } = resolveSetupApiError(error);
+      return sendJson(res, status, body);
     }
   };
 }

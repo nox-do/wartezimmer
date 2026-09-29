@@ -131,7 +131,6 @@ Setup-API (Manager-Child auf Loopback; CLI-Default `127.0.0.1:9190`):
 | POST    | `/api/setup/host/compose`          | `{ action: start\|stop\|restart }`                                                                     |
 | GET     | `/api/setup/host/backup`           | Info zum letzten `.pfbackup`                                                                           |
 | POST    | `/api/setup/host/backup`           | eine `.pfbackup` v2 erzeugen (bei HTTPS mit eingebettetem TLS-Archiv)                                  |
-| POST    | `/api/setup/host/backup/validate`  | Archiv + Settings validieren                                                                           |
 | POST    | `/api/setup/host/backup/inspect`   | Inspect/Vorschau inkl. Kompatibilität & TLS-Gate                                                       |
 | POST    | `/api/setup/host/backup/restore`   | Fresh-DB-Cutover + Settings-Import                                                                     |
 | POST    | `/api/setup/host/storage`          | `{ importsHostPath, exportsHostPath, restartCompose? }`                                                |

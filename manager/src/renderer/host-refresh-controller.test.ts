@@ -1,3 +1,4 @@
+import { ManagerApiError, type ManagerError } from '@praxis-flow/server-shared/setup-api';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { HostRuntimeHealth } from '@praxis-flow/server-shared/setup-api';
@@ -61,6 +62,34 @@ test('refresh applies runtime and config on full scope once ops snapshot exists'
   assert.equal(runtimes.length, 1);
   assert.equal(runtimes[0]?.configuredLanIp, '192.168.1.10');
   assert.equal(runtimes[0]?.checkedAt, runtime.checkedAt);
+});
+
+test('full refresh reconciles config when only its runtime enrichment was unavailable', async () => {
+  const healthy = minimalHostStatus();
+  const unenriched = minimalHostStatus({ installation: null, compose: null });
+  let configCalls = 0;
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchSetupStatus: async () => {
+          configCalls += 1;
+          return configCalls === 2 ? unenriched : healthy;
+        },
+        fetchRuntimeHealth: async () => minimalRuntime(),
+      }),
+    onRuntime: () => {},
+    onConfig: () => {},
+    onError: () => {},
+    schedule: () => 0,
+    clearSchedule: () => {},
+  });
+
+  await controller.refresh({ scope: 'config' });
+  const result = await controller.refresh({ scope: 'full' });
+
+  assert.equal(configCalls, 3);
+  assert.equal(result?.installation?.kind, 'healthy');
+  assert.equal(controller.getLastConfig()?.installation?.kind, 'healthy');
 });
 
 test('config-only does not fetch runtime or start a poll timer', async () => {
@@ -603,4 +632,77 @@ test('portal-only lifecycle change requests authoritative config without merging
   assert.equal(fetches, 2);
   assert.equal(controller.getLastConfig(), next);
   assert.equal(initial.lifecycleKey, 'before-portal-commit');
+});
+
+test('a configuration failure preserves snapshots without changing runtime quality', async () => {
+  const status = minimalHostStatus();
+  const snapshot = minimalRuntime();
+  const error = new ManagerApiError({
+    code: 'compose_status_unavailable',
+    category: 'unavailable',
+    message: 'Containerstatus nicht prüfbar',
+    retryable: true,
+  });
+  let fail = false;
+  const errors: ManagerError[] = [];
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchSetupStatus: async () => {
+          if (fail) throw error;
+          return status;
+        },
+        fetchRuntimeHealth: async () => snapshot,
+      }),
+    onRuntime: () => {},
+    onConfig: () => {},
+    onError: (_message, _view, source, error) => {
+      if (source === 'runtime') errors.push(error);
+    },
+    schedule: () => 0,
+    clearSchedule: () => {},
+  });
+  await controller.refresh({ scope: 'config' });
+  await controller.refresh({ scope: 'runtime' });
+  fail = true;
+  await controller.refresh({ scope: 'config' });
+  assert.equal(controller.getLastConfig(), status);
+  assert.equal(controller.getLastRuntime(), snapshot);
+  assert.deepEqual(errors, []);
+});
+
+test('runtime polls reconcile an open operation even when runtime does not change', async () => {
+  for (const field of [
+    'updateOperation',
+    'restoreOperation',
+    'tlsOperation',
+    'bindingOperation',
+  ] as const) {
+    for (const envExists of [true, false]) {
+      const completed = minimalHostStatus({ envExists });
+      let scheduled = 0;
+      let reads = 0;
+      const controller = createHostRefreshController({
+        api: () =>
+          mockApi({
+            fetchSetupStatus: async () =>
+              ++reads === 1
+                ? { ...completed, [field]: { kind: 'pending', id: 'operation', phase: 'prepared' } }
+                : completed,
+          }),
+        onRuntime: () => {},
+        onConfig: () => {},
+        onError: () => {},
+        schedule: () => ++scheduled,
+        clearSchedule: () => {},
+      });
+      await controller.refresh({ scope: 'config' });
+      assert.equal(scheduled, 1, 'pending recovery polls even before an env exists');
+      await controller.refresh({ scope: 'runtime', silent: true });
+      assert.equal(reads, 2);
+      assert.equal(controller.getLastConfig()?.[field], undefined);
+      await controller.refresh({ scope: 'runtime', silent: true });
+      assert.equal(reads, 2, 'ordinary runtime polling stays cheap');
+    }
+  }
 });

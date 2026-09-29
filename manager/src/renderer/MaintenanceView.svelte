@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { restoreWizardIsBusy } from './restore-wizard-flow.js';
+  import { pfupdateWizardIsBusy } from './pfupdate-wizard-flow.js';
+  import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
   import { onMount } from 'svelte';
   import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
   import type { HostStatus } from '../shared/host-status.js';
@@ -39,7 +42,7 @@
     onAfterMutation,
     onReinstall,
   }: {
-    onAfterMutation: () => void;
+    onAfterMutation: () => void | Promise<void>;
     onReinstall: () => void;
   } = $props();
 
@@ -65,11 +68,14 @@
 
   const viewLoading = $derived(managerShell.viewLoading.maintenance);
   const configStale = $derived(Boolean(managerShell.statusError));
+  const runtimeStale = $derived(managerShell.runtimeObservation.kind !== 'current');
   const maintenanceLocked = $derived(
+    Boolean(hasBlockingMaintenanceOperation(managerShell.configSnapshot)) ||
     configStale ||
+      runtimeStale ||
       Boolean(snapshot?.activeOperation) ||
-      Boolean(restoreSnapshot?.busy) ||
-      Boolean(pfupdateSnapshot?.busy),
+      Boolean(restoreSnapshot && restoreWizardIsBusy(restoreSnapshot)) ||
+      Boolean(pfupdateSnapshot && pfupdateWizardIsBusy(pfupdateSnapshot)),
   );
 
   function requireApi(): PraxisManagerApi {
@@ -115,7 +121,7 @@
   function confirmAndRun(): void {
     const action = confirmAction;
     closeConfirm(false);
-    action?.();
+    if (!hasBlockingMaintenanceOperation(managerShell.configSnapshot)) action?.();
   }
 
   function closePinReset(runCancel: boolean): void {
@@ -130,7 +136,7 @@
 
   function confirmPinReset(): void {
     closePinReset(false);
-    controller?.executePinReset();
+    if (!hasBlockingMaintenanceOperation(managerShell.configSnapshot)) controller?.executePinReset();
   }
 
   function toggleSection(id: MaintenanceExpanderId): void {
@@ -157,13 +163,14 @@
     });
     restoreWizard = createRestoreWizardController({
       api,
-      onAfterMutation,
+      refreshHost: onAfterMutation,
+      getHostStatus: () => managerShell.configSnapshot,
       onStateChange: syncRestoreSnapshot,
     });
     pfupdateWizard = createPfupdateWizardController({
       api,
-      onAfterMutation,
-      getHostStatus: () => controller?.getState().status ?? null,
+      refreshHost: onAfterMutation,
+      getHostStatus: () => managerShell.configSnapshot,
       onApplySuccess: (result) => {
         controller?.recordPfupdateSuccess(result);
       },
@@ -186,6 +193,8 @@
         closeConfirm(true);
         closePinReset(true);
         c.hide();
+        restoreWizard?.abandonSession();
+        pfupdateWizard?.close();
         lastSessionGeneration = null;
         sessionOpenConfig = null;
       }
@@ -201,7 +210,8 @@
       sessionOpenConfig = status;
       c.show(status);
       // Live compose from runtime — do not rely on config.compose after Shell merge removal.
-      const runtime = managerShell.runtimeSnapshot;
+      const observation = managerShell.runtimeObservation;
+      const runtime = observation.kind === 'current' ? observation.snapshot : null;
       if (runtime) {
         c.applyRuntimeHealth(runtime);
       }
@@ -224,7 +234,8 @@
 
   $effect(() => {
     const c = controller;
-    const health = managerShell.runtimeSnapshot;
+    const observation = managerShell.runtimeObservation;
+    const health = observation.kind === 'current' ? observation.snapshot : null;
     const session = managerShell.maintenanceSession;
     if (!c || !health || !session || managerShell.activeView !== 'maintenance') {
       return;
@@ -294,7 +305,7 @@
           status={snapshot.status}
           statusText={snapshot.softwareUpdateStatusText}
           locked={maintenanceLocked}
-          updateRunning={pfupdateSnapshot?.busy ?? false}
+          updateRunning={Boolean(pfupdateSnapshot && pfupdateWizardIsBusy(pfupdateSnapshot))}
           onImport={() => {
             pfupdateWizard?.open();
           }}
@@ -383,7 +394,7 @@
   {/if}
 
   <ConfirmDialog
-    open={confirmOpen}
+    open={confirmOpen && !hasBlockingMaintenanceOperation(managerShell.configSnapshot)}
     onConfirm={confirmAndRun}
     onCancel={() => closeConfirm(true)}
   >
@@ -391,7 +402,7 @@
   </ConfirmDialog>
 
   <ConfirmDialog
-    open={pinResetOpen}
+    open={pinResetOpen && !hasBlockingMaintenanceOperation(managerShell.configSnapshot)}
     confirmLabel="Zurücksetzen & neu starten"
     onConfirm={confirmPinReset}
     onCancel={() => closePinReset(true)}

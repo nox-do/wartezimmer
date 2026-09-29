@@ -11,7 +11,6 @@ import {
   restoreSuccessSummary,
   restoreWizardChooseLead,
   shouldOfferCredentialSkip,
-  suggestCredentialSkipAfterRestoreFailure,
 } from './restore-wizard-flow.js';
 
 function inspectFixture(overrides: Partial<PfbackupInspectResult> = {}): PfbackupInspectResult {
@@ -183,113 +182,18 @@ test('successful rollback allows retry and skip', () => {
   assert.equal(canRetryRestoreAfterFailure(failed), true);
 });
 
-test('shouldOfferCredentialSkip when backup includes provider credentials', () => {
-  assert.equal(
-    shouldOfferCredentialSkip({
-      inspect: inspectFixture({
-        backup: {
-          createdAt: '2026-07-12T12:00:00.000Z',
-          settingsFormatVersion: 1,
-          releaseVersion: null,
-          routingMode: 'simple',
-          portalEnabled: false,
-          providerCredentialsIncluded: true,
-        },
-      }),
-    }),
-    true,
-  );
-});
-
-test('shouldOfferCredentialSkip after import failure with credential errors', () => {
-  assert.equal(
-    shouldOfferCredentialSkip({
-      inspect: inspectFixture({
-        backup: {
-          createdAt: '2026-07-12T12:00:00.000Z',
-          settingsFormatVersion: 1,
-          releaseVersion: null,
-          routingMode: 'simple',
-          portalEnabled: false,
-          providerCredentialsIncluded: true,
-        },
-      }),
-      restoreResult: {
-        ok: false,
-        restoreId: 'r1',
-        failedPhase: 'import',
-        rollbackAttempted: true,
-        rollbackSucceeded: true,
-        errors: ['Provider-Zugangsdaten sind ungültig.'],
-      },
-    }),
-    true,
-  );
-});
-
-test('suggestCredentialSkipAfterRestoreFailure preselects skip on credential import failure', () => {
-  const inspect = inspectFixture({
-    backup: {
-      createdAt: '2026-07-12T12:00:00.000Z',
-      settingsFormatVersion: 1,
-      releaseVersion: null,
-      routingMode: 'simple',
-      portalEnabled: false,
-      providerCredentialsIncluded: true,
-    },
+for (const included of [false, true]) {
+  test(`credential checkbox follows backup metadata: ${included}`, () => {
+    assert.equal(
+      shouldOfferCredentialSkip(
+        inspectFixture({
+          backup: {
+            ...inspectFixture().backup!,
+            providerCredentialsIncluded: included,
+          },
+        }),
+      ),
+      included,
+    );
   });
-  const failed = {
-    ok: false as const,
-    restoreId: 'r1',
-    failedPhase: 'import',
-    rollbackAttempted: true,
-    rollbackSucceeded: true,
-    errors: ['Provider-Zugangsdaten sind ungültig.'],
-  };
-  assert.equal(
-    suggestCredentialSkipAfterRestoreFailure({
-      inspect,
-      restoreResult: failed,
-      skipProviderCredentials: false,
-    }),
-    true,
-  );
-  assert.equal(
-    suggestCredentialSkipAfterRestoreFailure({
-      inspect,
-      restoreResult: failed,
-      skipProviderCredentials: true,
-    }),
-    false,
-  );
-});
-
-test('suggestCredentialSkipAfterRestoreFailure does not preselect on unrelated import errors', () => {
-  const inspect = inspectFixture({
-    backup: {
-      createdAt: '2026-07-12T12:00:00.000Z',
-      settingsFormatVersion: 1,
-      releaseVersion: null,
-      routingMode: 'simple',
-      portalEnabled: false,
-      providerCredentialsIncluded: true,
-    },
-  });
-  const failed = {
-    ok: false as const,
-    restoreId: 'r1',
-    failedPhase: 'import',
-    rollbackAttempted: true,
-    rollbackSucceeded: true,
-    errors: ['Catalog integrity check failed after import.'],
-  };
-  assert.equal(shouldOfferCredentialSkip({ inspect, restoreResult: failed }), true);
-  assert.equal(
-    suggestCredentialSkipAfterRestoreFailure({
-      inspect,
-      restoreResult: failed,
-      skipProviderCredentials: false,
-    }),
-    false,
-  );
-});
+}

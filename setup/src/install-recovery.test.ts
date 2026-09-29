@@ -120,7 +120,7 @@ test('replace prepares and commits despite a broken old proxy configuration', as
     const before = 'SETUP_LAN_APP_IP=192.168.1.10\nPROXY_ENABLED=true\nPROXY_MODE=off\n';
     fs.writeFileSync(path.join(home, '.env'), before);
     const ctx = testSetupContext(home);
-    assert.equal((await getHostStatus(ctx)).installation.kind, 'needs-reinstall');
+    assert.equal((await getHostStatus(ctx)).installation?.kind, 'inconsistent');
     const prepared = await prepareInstallOperation(ctx, { archivePath, mode: 'replace' });
     assert.equal(prepared.operation.phase, 'prepared');
     assert.equal(fs.readFileSync(path.join(home, '.env'), 'utf8'), before);

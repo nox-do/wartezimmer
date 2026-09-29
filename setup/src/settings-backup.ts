@@ -1,3 +1,4 @@
+import { runHostMutation } from './maintenance-operation-guard.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -6,20 +7,17 @@ import {
   buildPfbackupFilename,
   envRecordForSettingsExport,
   formatPfbackupLabel,
-  parsePfbackupArchive,
   parsePfbackupTimestampFromPath,
   serializePfbackupArchive,
   validatePfbackupArchive,
-  tlsRestoreBlockedCopy,
   type ManagerState,
   type PfbackupArchiveValidationResult,
-  type PfbackupValidateResult,
 } from '@praxis-flow/server-shared';
 import { LOCAL_MAINTENANCE_APP_BASE_URL } from './urls.js';
 import { readEnvMap } from './env-file.js';
 import { readManagerStateForBackup } from './manager-state.js';
 import type { SetupContext } from './setup-context.js';
-import { packTlsSidecarArchive, buildPfbackupTlsInspectSummary } from './tls-backup-sidecar.js';
+import { packTlsSidecarArchive } from './tls-backup-sidecar.js';
 import { maintenanceRequestHeaders } from './maintenance-auth.js';
 
 const DEFAULT_LOCAL_APP = LOCAL_MAINTENANCE_APP_BASE_URL;
@@ -286,35 +284,37 @@ export async function createPfbackup(
   ctx: SetupContext,
   localAppBaseUrl = DEFAULT_LOCAL_APP,
 ): Promise<{ envPath: string; backupPath: string }> {
-  const envPath = path.join(ctx.home, '.env');
-  if (!fs.existsSync(envPath)) {
-    throw new Error('Keine .env — Setup zuerst ausführen.');
-  }
+  return runHostMutation(ctx.home, 'createPfbackup', async () => {
+    const envPath = path.join(ctx.home, '.env');
+    if (!fs.existsSync(envPath)) {
+      throw new Error('Keine .env — Setup zuerst ausführen.');
+    }
 
-  const dbSnapshot = await fetchSettingsDbSnapshotFromApp(localAppBaseUrl);
-  const fullSnapshot = buildFullSettingsSnapshot(dbSnapshot, envPath);
+    const dbSnapshot = await fetchSettingsDbSnapshotFromApp(localAppBaseUrl);
+    const fullSnapshot = buildFullSettingsSnapshot(dbSnapshot, envPath);
 
-  const restoreValidation = await validateSettingsSnapshotWithApp(fullSnapshot, localAppBaseUrl);
-  if (!restoreValidation.ok) {
-    throw new Error(
-      restoreValidation.errors.join(' ') ||
-        'Settings sind für Restore nicht importierbar — Backup abgebrochen.',
+    const restoreValidation = await validateSettingsSnapshotWithApp(fullSnapshot, localAppBaseUrl);
+    if (!restoreValidation.ok) {
+      throw new Error(
+        restoreValidation.errors.join(' ') ||
+          'Settings sind für Restore nicht importierbar — Backup abgebrochen.',
+      );
+    }
+
+    const managerState: ManagerState = enrichManagerStateForStackBackup(
+      readManagerStateForBackup(ctx.home),
+      hostEnvRecord(envPath),
     );
-  }
+    const archive = buildPfbackupArchive({
+      settings: fullSnapshot,
+      managerState,
+      tlsArchiveBase64: buildTlsArchiveBase64(ctx) ?? undefined,
+    });
+    const serialized = serializePfbackupArchive(archive);
+    const backupPath = writePfbackupFileAtomically(backupsDirectory(ctx.home), serialized);
 
-  const managerState: ManagerState = enrichManagerStateForStackBackup(
-    readManagerStateForBackup(ctx.home),
-    hostEnvRecord(envPath),
-  );
-  const archive = buildPfbackupArchive({
-    settings: fullSnapshot,
-    managerState,
-    tlsArchiveBase64: buildTlsArchiveBase64(ctx) ?? undefined,
+    return { envPath, backupPath };
   });
-  const serialized = serializePfbackupArchive(archive);
-  const backupPath = writePfbackupFileAtomically(backupsDirectory(ctx.home), serialized);
-
-  return { envPath, backupPath };
 }
 
 export function buildTlsArchiveBase64(ctx: SetupContext): string | null {
@@ -371,78 +371,6 @@ export function validatePfbackupFile(backupPath: string): PfbackupArchiveValidat
     return { archiveValid: false, errors: ['Backup-Datei nicht gefunden.'] };
   }
   return validatePfbackupContent(fs.readFileSync(backupPath, 'utf8'));
-}
-
-export async function validatePfbackupFull(
-  content: string,
-  localAppBaseUrl = DEFAULT_LOCAL_APP,
-): Promise<PfbackupValidateResult> {
-  const archiveResult = validatePfbackupContent(content);
-  if (!archiveResult.archiveValid) {
-    return {
-      archiveValid: false,
-      restoreValid: false,
-      archiveErrors: archiveResult.errors,
-      restoreErrors: [],
-      summary: archiveResult.summary,
-    };
-  }
-
-  let settingsJson: string;
-  let tlsArchiveBase64: string | undefined;
-  try {
-    const archive = parsePfbackupArchive(JSON.parse(content));
-    settingsJson = archive.settingsJson;
-    tlsArchiveBase64 = archive.tlsArchiveBase64;
-  } catch {
-    return {
-      archiveValid: false,
-      restoreValid: false,
-      archiveErrors: ['Backup-Archiv konnte nicht gelesen werden.'],
-      restoreErrors: [],
-    };
-  }
-
-  let settingsSnapshot: unknown;
-  try {
-    settingsSnapshot = JSON.parse(settingsJson);
-  } catch {
-    return {
-      archiveValid: true,
-      restoreValid: false,
-      archiveErrors: [],
-      restoreErrors: ['settings.json ist kein gültiges JSON.'],
-      summary: archiveResult.summary,
-    };
-  }
-
-  const env = (settingsSnapshot as { env?: Record<string, string> }).env ?? {};
-  const tls = buildPfbackupTlsInspectSummary(env, tlsArchiveBase64);
-  const tlsError = tls
-    ? tlsRestoreBlockedCopy({
-        tlsMetadataConsistent: tls.metadataConsistent,
-        tlsClaimsHttps: tls.inBackup,
-        payloadPresent: tls.payloadPresent,
-        payloadMatches: tls.payloadMatches,
-      })
-    : null;
-  if (tlsError)
-    return {
-      archiveValid: true,
-      restoreValid: false,
-      archiveErrors: [],
-      restoreErrors: [tlsError],
-      summary: archiveResult.summary,
-    };
-
-  const restoreResult = await validateSettingsSnapshotWithApp(settingsSnapshot, localAppBaseUrl);
-  return {
-    archiveValid: true,
-    restoreValid: restoreResult.ok,
-    archiveErrors: [],
-    restoreErrors: restoreResult.errors,
-    summary: archiveResult.summary,
-  };
 }
 
 export { formatPfbackupLabel };

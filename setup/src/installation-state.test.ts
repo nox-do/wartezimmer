@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ComposeStatus, DockerStatus, HostLifecycle } from '@praxis-flow/server-shared';
-import { deriveInstallationState } from './installation-state.js';
+import { deriveInstallationState, type InstallationStateFacts } from './installation-state.js';
 
 const docker: DockerStatus = {
   installed: true,
@@ -25,7 +25,7 @@ const healthyCompose: ComposeStatus = {
   ],
 };
 
-test('docker availability has priority over all installation conclusions', () => {
+test('Docker unavailability remains explicit when no durable finding takes priority', () => {
   const state = deriveInstallationState({
     docker: { ...docker, daemonRunning: false },
     lifecycle,
@@ -33,7 +33,7 @@ test('docker availability has priority over all installation conclusions', () =>
     releaseConfigured: true,
     maintenanceAuthenticated: false,
   });
-  assert.equal(state.kind, 'docker-unavailable');
+  assert.equal(state?.kind, 'docker-unavailable');
 });
 
 test('only a confirmed uninstalled lifecycle is fresh', () => {
@@ -87,7 +87,7 @@ test('healthy requires core services, release state and maintenance authenticati
     releaseConfigured: true,
     maintenanceAuthenticated: false,
   });
-  assert.equal(unauthenticated.kind, 'needs-reinstall');
+  assert.equal(unauthenticated?.kind, 'needs-repair');
 });
 
 test('optional proxy health does not affect the healthy installation gate', () => {
@@ -104,7 +104,7 @@ test('optional proxy health does not affect the healthy installation gate', () =
     releaseConfigured: true,
     maintenanceAuthenticated: true,
   });
-  assert.equal(state.kind, 'healthy');
+  assert.equal(state?.kind, 'healthy');
 });
 
 test('a starting core healthcheck is a transient state, not a reinstall requirement', () => {
@@ -150,7 +150,7 @@ test('an unhealthy core service or restart loop still requires repair', () => {
       maintenanceAuthenticated: true,
     });
     assert.deepEqual(state, {
-      kind: 'needs-reinstall',
+      kind: 'needs-repair',
       reasons: [
         {
           code: 'core-stack-unhealthy',
@@ -186,7 +186,100 @@ test('inconsistent lifecycle is never presented as stopped or healthy', () => {
     maintenanceAuthenticated: false,
   });
   assert.deepEqual(state, {
-    kind: 'needs-reinstall',
+    kind: 'inconsistent',
     reasons: [{ code: 'broken', message: 'Widerspruch' }],
   });
+});
+
+test('diagnosis distinguishes runtime failure, inconsistent evidence and proven missing substance', () => {
+  const cases: Array<[Partial<InstallationStateFacts>, string, string]> = [
+    [{ maintenanceAuthenticated: false }, 'needs-repair', 'maintenance-auth-failed'],
+    [
+      { compose: { running: true, services: [healthyCompose.services[0]!] } },
+      'needs-repair',
+      'core-stack-unhealthy',
+    ],
+    [{ releaseConfigured: false }, 'inconsistent', 'release-state-missing'],
+    [
+      {
+        operationUnreadable: true,
+        docker: { ...docker, daemonRunning: false },
+      },
+      'inconsistent',
+      'install-operation-invalid',
+    ],
+    [
+      { lifecycle: { ...lifecycle, assessment: 'unknown', mode: null } },
+      'inconsistent',
+      'installation-state-unknown',
+    ],
+    ...(['app-image-missing', 'data-volume-missing', 'database-missing'] as const).map(
+      (code) =>
+        [{ startFailure: code }, 'needs-reinstall', code] as [
+          Partial<InstallationStateFacts>,
+          string,
+          string,
+        ],
+    ),
+    ...(['compose-start-failed', 'health-timeout', 'maintenance-auth-failed'] as const).map(
+      (code) =>
+        [{ startFailure: code }, 'needs-repair', code] as [
+          Partial<InstallationStateFacts>,
+          string,
+          string,
+        ],
+    ),
+  ];
+  for (const [overrides, kind, code] of cases) {
+    const result = deriveInstallationState({
+      docker,
+      lifecycle,
+      compose: healthyCompose,
+      releaseConfigured: true,
+      maintenanceAuthenticated: true,
+      ...overrides,
+    });
+    assert.ok(result);
+    assert.equal(result.kind, kind, code);
+    assert.ok('reasons' in result);
+    assert.equal(result.reasons[0]?.code, code);
+  }
+});
+
+test('missing Compose evidence preserves durable findings without inventing runtime states', () => {
+  const facts: InstallationStateFacts = {
+    docker,
+    lifecycle,
+    compose: null,
+    releaseConfigured: true,
+    maintenanceAuthenticated: false,
+  };
+  assert.equal(deriveInstallationState(facts), null);
+  assert.equal(
+    deriveInstallationState({ ...facts, operationUnreadable: true })?.kind,
+    'inconsistent',
+  );
+  assert.equal(
+    deriveInstallationState({ ...facts, releaseConfigured: false })?.kind,
+    'inconsistent',
+  );
+  assert.equal(
+    deriveInstallationState({ ...facts, startFailure: 'database-missing' })?.kind,
+    'needs-reinstall',
+  );
+  assert.equal(
+    deriveInstallationState({
+      ...facts,
+      operation: {
+        id: 'op',
+        mode: 'fresh',
+        phase: 'prepared',
+        createdAt: '',
+        releaseVersion: '1',
+        backupContainsTls: null,
+      },
+      docker: { ...docker, daemonRunning: false },
+    })?.kind,
+    'installing',
+  );
 });

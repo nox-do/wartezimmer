@@ -1,3 +1,4 @@
+import { restoreManagerApiErrors } from '../shared/manager-api-bridge.js';
 import { mount } from 'svelte';
 import App from './App.svelte';
 import { createManagerAppController } from './manager-app-controller.js';
@@ -15,6 +16,10 @@ import {
   clearInactiveViewSessions,
   setDeferredViewLoading,
 } from './manager-shell-state.svelte.js';
+
+if (window.praxisManagerBridge) {
+  window.praxisManager = restoreManagerApiErrors(window.praxisManagerBridge);
+}
 
 const svelteRoot = document.getElementById('svelte-app');
 if (!svelteRoot) {

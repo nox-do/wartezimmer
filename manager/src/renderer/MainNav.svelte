@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { runtimeSnapshot as observedSnapshot } from './runtime-observation.js';
   import type { ManagerView } from './host-refresh-controller.js';
   import { managerShell } from './manager-shell-state.svelte.js';
   import { TAB_LABELS, TAB_ORDER, tabDisabled } from './manager-main-nav.js';
@@ -11,7 +12,7 @@
     {@const disabledReason = tabDisabled(
       tab,
       managerShell.configSnapshot,
-      managerShell.runtimeSnapshot,
+      observedSnapshot(managerShell.runtimeObservation),
     )}
     <button
       type="button"

@@ -20,9 +20,11 @@ import {
 } from '@praxis-flow/server-shared';
 import { DEFAULT_PROXY_HTTP_PORT } from './network-bindings.js';
 
-export class SetupApiValidationError extends Error {
-  constructor(message: string) {
-    super(message);
+import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+
+export class SetupApiValidationError extends ManagerApiError {
+  constructor(message: string, code = 'validation_failed') {
+    super({ code, category: 'validation', message, retryable: false });
     this.name = 'SetupApiValidationError';
   }
 }

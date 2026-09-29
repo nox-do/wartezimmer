@@ -15,7 +15,7 @@ export function effectiveCompose(
   config: HostStatus | null,
   runtime: HostRuntimeHealth | null,
 ): ComposeStatus | null {
-  return runtime?.compose ?? config?.compose ?? null;
+  return runtime ? runtime.compose : (config?.compose ?? null);
 }
 
 export function effectiveDocker(
@@ -44,9 +44,9 @@ export function effectiveConfiguredLanIp(
 }
 
 /**
- * Proxy container is runtime; HostStatus.proxy.container is legacy until Etappe 4.
- * Once a runtime snapshot exists, its proxyServer (including null) is authoritative —
- * do not revive a stale config.proxy.container.
+ * Proxy container state is runtime evidence. HostStatus can contain optional
+ * enrichment from the config fetch; once a runtime snapshot exists, its
+ * proxyServer (including null) is authoritative.
  */
 export function effectiveProxyContainer(
   config: HostStatus | null,

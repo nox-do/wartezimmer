@@ -17,7 +17,6 @@ export type {
   DockerStatus,
   PfbackupInfo,
   PfbackupResult,
-  PfbackupValidateResult,
   PfbackupInspectResult,
   PfbackupTlsInspectSummary,
   PfbackupRestoreResult,

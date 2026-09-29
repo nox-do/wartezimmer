@@ -10,9 +10,7 @@ import {
   setupEntryContent,
   setupEntryTone,
   showDeliveryImagesWarning,
-  showStatusOverallNotice,
   statusGridRows,
-  statusOverallNoticeClass,
 } from './status-view-model.js';
 
 test('setupEntryTone classifies fresh install', () => {
@@ -28,9 +26,9 @@ test('setupEntryTone classifies docker gap', () => {
   assert.equal(setupEntryTone(status), 'needs-docker');
 });
 
-test('setupEntryTone classifies missing release package', () => {
+test('setupEntryTone classifies missing release state', () => {
   const status = minimalHostStatus({
-    installation: { kind: 'needs-reinstall', reasons: [] },
+    installation: { kind: 'inconsistent', reasons: [] },
     envExists: true,
     docker: { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
     deliveryImages: {
@@ -69,20 +67,16 @@ test('setupEntryTone classifies maintenance when setup is complete', () => {
   assert.equal(isSetupEntryStatus(status), false);
 });
 
-test('starting services show a transient status without a reinstall action', () => {
+test('starting installation retains its detail layout without a checklist', () => {
   const status = minimalHostStatus({ installation: { kind: 'starting' } });
   const tone = setupEntryTone(status);
-  const content = setupEntryContent(status, tone);
   assert.equal(tone, 'starting');
   assert.equal(isSetupEntryStatus(status), true);
-  assert.match(content.title, /gestartet/);
-  assert.equal(content.startButtonLabel, null);
   assert.deepEqual(setupChecklistItems(status), []);
 });
 
-test('setupEntryContent keeps completed maintenance state action-free', () => {
+test('completed maintenance details do not show a release picker', () => {
   const content = setupEntryContent(minimalHostStatus(), 'maintenance');
-  assert.equal(content.startButtonLabel, null);
   assert.equal(content.showReleasePicker, false);
 });
 
@@ -184,13 +178,6 @@ test('lanWarningText covers stale lan and missing lan', () => {
   assert.match(lanWarningText(missing, false) ?? '', /LAN noch nicht konfiguriert/);
 });
 
-test('showStatusOverallNotice skips setup entry and loading placeholder', () => {
-  assert.equal(showStatusOverallNotice(true, 'Betrieb'), false);
-  assert.equal(showStatusOverallNotice(false, '…'), false);
-  assert.equal(showStatusOverallNotice(false, 'Proxy-Server fehlt'), true);
-  assert.equal(statusOverallNoticeClass('warn'), 'notice is-warn');
-});
-
 test('deviceUrlEntries maps device urls with tv kiosk tip', () => {
   const entries = deviceUrlEntries(
     minimalHostStatus({
@@ -251,7 +238,7 @@ test('Docker-unavailable is authoritative even for configured HTTPS', () => {
 
 test('missing env with residues offers a deliberate review, never fresh-install copy', () => {
   const status = freshInstallHostStatus();
-  status.installation = { kind: 'needs-reinstall', reasons: [] };
+  status.installation = { kind: 'inconsistent', reasons: [] };
   status.lifecycle = {
     assessment: 'inconsistent',
     mode: null,
@@ -262,7 +249,6 @@ test('missing env with residues offers a deliberate review, never fresh-install 
   };
   assert.equal(setupEntryTone(status), 'review');
   assert.equal(isSetupEntryStatus(status), true);
-  assert.equal(setupEntryContent(status, 'review').startButtonLabel, 'Neu installieren …');
 });
 
 for (const envExists of [false, true]) {
@@ -280,17 +266,26 @@ for (const envExists of [false, true]) {
       });
       const content = setupEntryContent(status, setupEntryTone(status));
       assert.equal(content.eyebrow, 'Status');
-      assert.equal(content.startButtonLabel, null);
       assert.equal(content.showReleasePicker, false);
       assert.deepEqual(setupChecklistItems(status), []);
       assert.doesNotMatch(
         content.copy + content.note,
         /Ersteinrichtung|Einrichtung fortsetzen|Software-Paket/,
       );
-      assert.match(
-        content.title,
-        gap === 'missing' ? /Docker fehlt/ : gap === 'daemon' ? /nicht erreichbar/ : /Compose/,
-      );
     });
   }
 }
+
+test('installation detail copy preserves reasons and repair checklist behavior', () => {
+  for (const kind of ['needs-reinstall', 'needs-repair', 'inconsistent'] as const) {
+    const status = minimalHostStatus({
+      installation: { kind, reasons: [{ code: 'test', message: 'Konkreter Grund' }] },
+    });
+    const content = setupEntryContent(status, setupEntryTone(status));
+    assert.equal(content.copy, 'Konkreter Grund');
+    if (kind !== 'needs-reinstall') {
+      assert.doesNotMatch(content.note, /Neuinstallation|Backup/);
+      assert.deepEqual(setupChecklistItems(status), []);
+    }
+  }
+});

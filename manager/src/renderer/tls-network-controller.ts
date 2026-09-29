@@ -1,3 +1,4 @@
+import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
 import type {
   HostStatus,
   TlsDnsCheck,
@@ -24,8 +25,22 @@ import {
   tlsOperatorRecordsAreTheTask,
 } from './tls-network-view-model.js';
 
-export function tlsNetworkLocksHost(state: Pick<TlsNetworkState, 'busy' | 'hydrating'>): boolean {
-  return state.busy || state.hydrating;
+export type TlsLocalAction =
+  | { kind: 'idle' | 'hydrating' }
+  | {
+      kind: 'running';
+      name: 'prepare' | 'dns' | 'obtain' | 'apply' | 'repair' | 'reset' | 'renew' | 'stage';
+    }
+  | { kind: 'failed'; error: string };
+
+export function tlsNetworkLocksHost(state: Pick<TlsNetworkState, 'action'>): boolean {
+  return state.action.kind === 'running' || state.action.kind === 'hydrating';
+}
+export function tlsNetworkPendingObtain(state: Pick<TlsNetworkState, 'action'>): boolean {
+  return state.action.kind === 'running' && state.action.name === 'obtain';
+}
+export function tlsNetworkError(state: Pick<TlsNetworkState, 'action'>): string | null {
+  return state.action.kind === 'failed' ? state.action.error : null;
 }
 
 function operatorHydrateKey(hostname: string, lanIp: string): string {
@@ -45,13 +60,9 @@ export type TlsNetworkState = {
   operatorRequest: TlsOperatorRequest | null;
   /** Open Mailtext / DNS-Records once the operator must send or copy them. */
   revealOperatorRecords: boolean;
-  /** True while obtain/check-certificate is in flight (UI wait before status refresh). */
-  pendingObtain: boolean;
-  hydrating: boolean;
+  action: TlsLocalAction;
   dnsChecks: TlsDnsCheck[] | null;
   localChecks: TlsLocalCheck[] | null;
-  busy: boolean;
-  error: string | null;
 };
 
 const INITIAL: TlsNetworkState = {
@@ -64,12 +75,9 @@ const INITIAL: TlsNetworkState = {
   customPemStaged: false,
   operatorRequest: null,
   revealOperatorRecords: false,
-  pendingObtain: false,
-  hydrating: false,
+  action: { kind: 'idle' },
   dnsChecks: null,
   localChecks: null,
-  busy: false,
-  error: null,
 };
 
 export type TlsNetworkController = {
@@ -128,78 +136,68 @@ export function createTlsNetworkController(deps: {
   }
 
   function hostLockedByPeer(): boolean {
-    return Boolean(deps.isPeerMutating?.());
+    return hasBlockingMaintenanceOperation(deps.getConfig()) || Boolean(deps.isPeerMutating?.());
   }
 
   function lifecycleAllows(action: HostLifecycleAction): boolean {
+    if (tlsNetworkLocksHost(state) && state.action.kind !== 'hydrating') return false;
     const lifecycle = deps.getConfig()?.lifecycle;
     if (!lifecycle) return true;
     const decision = evaluateHostLifecycleAction(lifecycle, action);
     if (!decision.allowed) {
-      set({ error: decision.reason ?? 'Host-Aktion derzeit nicht erlaubt.' });
+      set({
+        action: { kind: 'failed', error: decision.reason ?? 'Host-Aktion derzeit nicht erlaubt.' },
+      });
       return false;
     }
     return true;
   }
 
   function beginHostMutation(): boolean {
-    if (state.busy || state.hydrating || hostLockedByPeer()) {
+    if (tlsNetworkLocksHost(state) || hostLockedByPeer()) {
       return false;
     }
     return true;
   }
 
-  function fail(error: unknown): void {
-    set({
-      busy: false,
-      pendingObtain: false,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-
-  /** Apply / obtain / prepare persistieren `lastError` oft trotz geworfener API-Exception. */
-  async function failThenRefreshHost(error: unknown): Promise<void> {
-    fail(error);
+  async function runAction(
+    name: Extract<TlsLocalAction, { kind: 'running' }>['name'],
+    action: () => Promise<Partial<TlsNetworkState>>,
+  ): Promise<void> {
+    if (!beginHostMutation()) return;
+    const session = sessionGeneration;
+    set({ action: { kind: 'running', name } });
+    let outcome: Partial<TlsNetworkState>;
     try {
-      await deps.onAfterMutation();
-    } catch {
-      /* Keep the mutation error; a later poll can still catch up. */
+      outcome = { ...(await action()), action: { kind: 'idle' } };
+    } catch (error) {
+      outcome = {
+        action: { kind: 'failed', error: error instanceof Error ? error.message : String(error) },
+      };
+    } finally {
+      try {
+        await deps.onAfterMutation();
+      } catch {
+        /* Preserve the action result; shell owns refresh errors. */
+      }
     }
-  }
-
-  async function afterOk(extra: Partial<TlsNetworkState> = {}): Promise<void> {
-    set({ busy: false, error: null, ...extra });
-    await deps.onAfterMutation();
+    // Leaving the view invalidates its result, not the in-flight mutation lock.
+    set(session === sessionGeneration ? outcome : { action: { kind: 'idle' } });
   }
 
   async function runApply(): Promise<void> {
     if (!lifecycleAllows('tls-apply')) return;
-    if (!beginHostMutation()) {
-      return;
-    }
-    set({ busy: true, error: null });
-    try {
+    await runAction('apply', async () => {
       const result = await deps.api.applyHostTls();
-      await afterOk({ localChecks: result.checks ?? state.localChecks });
-    } catch (error) {
-      await failThenRefreshHost(error);
-    }
+      return { localChecks: result.checks ?? null };
+    });
   }
-
   async function runReset(): Promise<void> {
     if (!lifecycleAllows('tls-reset')) return;
-    if (!beginHostMutation()) {
-      return;
-    }
-    set({ busy: true, error: null });
-    try {
+    await runAction('reset', async () => {
       await deps.api.resetHostTls();
-      state = { ...INITIAL };
-      emit();
-      await deps.onAfterMutation();
-    } catch (error) {
-      fail(error);
-    }
+      return { ...INITIAL };
+    });
   }
 
   return {
@@ -215,9 +213,8 @@ export function createTlsNetworkController(deps: {
       sessionGeneration += 1;
       hydrateGeneration += 1;
       hydrateInFlightKey = null;
-      if (state.hydrating) {
-        set({ hydrating: false });
-      }
+      lastHydrateKey = null;
+      if (state.action.kind !== 'running') set({ action: { kind: 'idle' } });
     },
 
     async hydrateOperatorRequest() {
@@ -240,7 +237,7 @@ export function createTlsNetworkController(deps: {
       if (hydrateInFlightKey === key || lastHydrateKey === key) {
         return;
       }
-      if (state.busy) {
+      if (state.action.kind === 'running') {
         return;
       }
       if (hostLockedByPeer()) {
@@ -251,7 +248,7 @@ export function createTlsNetworkController(deps: {
       const identityChanged = lastHydrateKey !== null && lastHydrateKey !== key;
       hydrateInFlightKey = key;
       set({
-        hydrating: true,
+        action: { kind: 'hydrating' },
         ...(identityChanged ? { operatorRequest: null, dnsChecks: null } : {}),
       });
       try {
@@ -275,134 +272,119 @@ export function createTlsNetworkController(deps: {
         }
         lastHydrateKey = key;
         if (result.operatorRequest) {
-          set({ operatorRequest: result.operatorRequest, hydrating: false });
+          set({ operatorRequest: result.operatorRequest, action: { kind: 'idle' } });
           return;
         }
-        set({ hydrating: false });
+        set({ action: { kind: 'idle' } });
       } catch {
         if (generation === hydrateGeneration) {
-          set({ hydrating: false });
+          set({ action: { kind: 'idle' } });
         }
       } finally {
         if (generation === hydrateGeneration) {
           hydrateInFlightKey = null;
-          if (state.hydrating) {
-            set({ hydrating: false });
+          if (state.action.kind === 'hydrating') {
+            set({ action: { kind: 'idle' } });
           }
         }
       }
     },
 
     startPrepare() {
-      set({ startPhase: 'hostname', error: null });
+      if (tlsNetworkLocksHost(state)) return;
+      set({ startPhase: 'hostname', action: { kind: 'idle' } });
     },
 
     back() {
+      if (tlsNetworkLocksHost(state)) return;
       if (state.startPhase === 'lease') {
-        set({ startPhase: 'hostname', error: null });
+        set({ startPhase: 'hostname', action: { kind: 'idle' } });
         return;
       }
-      set({ startPhase: 'offer', error: null });
+      set({ startPhase: 'offer', action: { kind: 'idle' } });
     },
 
     patchDraft(patch) {
-      set({ ...patch, error: null });
+      if (tlsNetworkLocksHost(state)) return;
+      set({ ...patch, action: { kind: 'idle' } });
     },
 
     advanceHostname() {
+      if (tlsNetworkLocksHost(state)) return;
       if (!tlsNameValid(state)) {
-        set({ error: 'Bitte einen gültigen Namen wählen.' });
+        set({ action: { kind: 'failed', error: 'Bitte einen gültigen Namen wählen.' } });
         return;
       }
-      set({ startPhase: 'lease', error: null });
+      set({ startPhase: 'lease', action: { kind: 'idle' } });
     },
 
     async submitLease() {
+      if (tlsNetworkLocksHost(state)) return;
       const current = tls();
       const lanIp = deps.lanIp()?.trim();
       const network = deps.getConfig()?.network;
       if (tlsLeaseBlockedByStaleLan(network?.lanIpStale)) {
-        set({ error: TLS_LEASE_STALE_LAN_COPY });
+        set({ action: { kind: 'failed', error: TLS_LEASE_STALE_LAN_COPY } });
         return;
       }
       if (!state.ipv4Reserved) {
-        set({ error: 'Bitte die feste IP oder DHCP-Reservierung bestätigen.' });
+        set({
+          action: {
+            kind: 'failed',
+            error: 'Bitte die feste IP oder DHCP-Reservierung bestätigen.',
+          },
+        });
         return;
       }
       if (!tlsNameValid(state)) {
-        set({ error: 'Bitte einen gültigen Namen wählen.' });
+        set({ action: { kind: 'failed', error: 'Bitte einen gültigen Namen wählen.' } });
         return;
       }
       if (!lanIp) {
-        set({ error: 'Bitte zuerst die Adresse dieses Rechners speichern.' });
+        set({
+          action: { kind: 'failed', error: 'Bitte zuerst die Adresse dieses Rechners speichern.' },
+        });
         return;
       }
       if (current && current.state !== 'off') {
-        set({ error: 'HTTPS ist bereits vorbereitet.' });
+        set({ action: { kind: 'failed', error: 'HTTPS ist bereits vorbereitet.' } });
         return;
       }
       if (!beginHostMutation()) {
         return;
       }
-      set({ busy: true, error: null });
-      try {
+      await runAction('prepare', async () => {
         const result = await deps.api.prepareHostTls({
           mode: tlsModeForNameMode(state.nameMode, state.certificateMode),
           hostname: tlsPrepareHostname(state),
           lanIp,
         });
-        await afterOk({
+        return {
           operatorRequest: result.operatorRequest,
           startPhase: 'offer',
           ipv4Reserved: true,
           revealOperatorRecords: true,
-        });
-      } catch (error) {
-        await failThenRefreshHost(error);
-      }
+        };
+      });
     },
 
     async verifyDns() {
       if (!lifecycleAllows('tls-verify')) return;
-      if (!beginHostMutation()) {
-        return;
-      }
-      set({ busy: true, error: null });
-      try {
-        const result = await deps.api.verifyHostTlsDns();
-        set({
-          busy: false,
-          error: null,
-          dnsChecks: result.checks,
-        });
-        await deps.onAfterMutation();
-      } catch (error) {
-        fail(error);
-      }
+      await runAction('dns', async () => ({
+        dnsChecks: (await deps.api.verifyHostTlsDns()).checks,
+      }));
     },
 
     async obtainOrCheck() {
-      const action = tls()?.mode === 'custom' ? 'tls-check-certificate' : 'tls-obtain';
-      if (!lifecycleAllows(action)) return;
-      if (!beginHostMutation()) {
+      if (!lifecycleAllows(tls()?.mode === 'custom' ? 'tls-check-certificate' : 'tls-obtain'))
         return;
-      }
-      set({ busy: true, pendingObtain: true, error: null });
-      try {
+      await runAction('obtain', async () => {
         const result =
           tls()?.mode === 'custom'
             ? await deps.api.checkHostTlsCertificate()
             : await deps.api.obtainHostTlsCertificate();
-        set({
-          busy: false,
-          pendingObtain: false,
-          error: null,
-          localChecks: result.checks ?? null,
-        });
-        await deps.onAfterMutation();
-      } catch (error) {
-        await failThenRefreshHost(error);
-      }
+        return { localChecks: result.checks ?? null };
+      });
     },
 
     apply() {
@@ -428,16 +410,9 @@ export function createTlsNetworkController(deps: {
 
     async repair() {
       if (!lifecycleAllows('tls-repair')) return;
-      if (!beginHostMutation()) {
-        return;
-      }
-      set({ busy: true, error: null });
-      try {
-        const result = await deps.api.repairHostTls();
-        await afterOk({ localChecks: result.checks ?? null });
-      } catch (error) {
-        fail(error);
-      }
+      await runAction('repair', async () => ({
+        localChecks: (await deps.api.repairHostTls()).checks ?? null,
+      }));
     },
 
     reset() {
@@ -463,43 +438,21 @@ export function createTlsNetworkController(deps: {
 
     async renew() {
       if (!lifecycleAllows('tls-renew')) return;
-      if (!beginHostMutation()) {
-        return;
-      }
-      set({ busy: true, error: null });
-      try {
+      await runAction('renew', async () => {
         if (tls()?.mode === 'custom') {
           const picked = await deps.api.renewHostTlsFromPem();
-          if (picked.canceled) {
-            set({ busy: false });
-            return;
-          }
-          await afterOk({ localChecks: picked.checks ?? null });
-          return;
+          return picked.canceled ? {} : { localChecks: picked.checks ?? null };
         }
-        const result = await deps.api.renewHostTls();
-        await afterOk({ localChecks: result.checks ?? null });
-      } catch (error) {
-        fail(error);
-      }
+        return { localChecks: (await deps.api.renewHostTls()).checks ?? null };
+      });
     },
 
     async stageCustomCertificate() {
       if (!lifecycleAllows('tls-custom-certificate')) return;
-      if (!beginHostMutation()) {
-        return;
-      }
-      set({ busy: true, error: null });
-      try {
+      await runAction('stage', async () => {
         const picked = await deps.api.stageHostTlsCertificate();
-        if (picked.canceled) {
-          set({ busy: false });
-          return;
-        }
-        await afterOk({ customPemStaged: true, localChecks: picked.checks ?? null });
-      } catch (error) {
-        fail(error);
-      }
+        return picked.canceled ? {} : { customPemStaged: true, localChecks: picked.checks ?? null };
+      });
     },
   };
 }

@@ -1,10 +1,17 @@
 <script lang="ts">
+  import { tlsNetworkPendingObtain } from './tls-network-controller.js';
+  import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+  import { managerStatusViewModel } from './manager-status-view-model.js';
+  import {
+    runtimeSnapshot as observedSnapshot,
+    runtimeObservationNotice,
+  } from './runtime-observation.js';
   /**
    * Network tab layout:
    * 1 IP und Geräteadresse inklusive Prüfungen → 2 Proxy → 3 HTTPS → 4 Erläuterung
    * Draft apply lives in the open LAN / Proxy expander.
    *
-   * Shell: configSnapshot + runtimeSnapshot via $derived / selectors.
+   * Shell: configSnapshot + runtimeObservation via $derived / selectors.
    * Controller: draft + phase/notice + network snapshot; hydration via syncFromConfig.
    * One lifecycle $effect for session open/close and config refresh.
    */
@@ -36,8 +43,6 @@
   import { effectiveCompose, effectiveConfiguredLanIp } from './host-snapshot-selectors.js';
   import { resolvedLanIp } from './wizard-state.js';
   import { managerShell } from './manager-shell-state.svelte.js';
-  import { deriveOverallStatus } from './health-header.js';
-  import { statusOverallNoticeClass } from './status-view-model.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import LoadingOverlay from './LoadingOverlay.svelte';
   import MaintenanceSection from './MaintenanceSection.svelte';
@@ -85,8 +90,9 @@
 
   const viewLoading = $derived(managerShell.viewLoading.network);
   const configStale = $derived(Boolean(managerShell.statusError));
+  const runtimeNotice = $derived(runtimeObservationNotice(managerShell.runtimeObservation));
   const configSnapshot = $derived(managerShell.configSnapshot);
-  const runtimeSnapshot = $derived(managerShell.runtimeSnapshot);
+  const runtimeSnapshot = $derived(observedSnapshot(managerShell.runtimeObservation));
   const lifecycle = $derived(configSnapshot?.lifecycle);
   const compose = $derived(effectiveCompose(configSnapshot, runtimeSnapshot));
   const tlsCutoverApplied = $derived(
@@ -148,7 +154,7 @@
     confirmMessage = '';
     confirmAction = null;
     confirmCancel = null;
-    action?.();
+    if (!hasBlockingMaintenanceOperation(configSnapshot)) action?.();
   }
 
   function patchFields(patch: Parameters<NetworkController['patchFields']>[0]): void {
@@ -179,7 +185,7 @@
   );
 
   const peerBusyForRestricted = $derived(
-    configStale ||
+    hasBlockingMaintenanceOperation(configSnapshot) || configStale ||
       Boolean(snapshot && networkIsBusy(snapshot.phase)) ||
       Boolean(controller?.isHostWriteInFlight()) ||
       Boolean(tlsSnapshot && tlsNetworkLocksHost(tlsSnapshot)),
@@ -212,15 +218,8 @@
       : null,
   );
 
-  const accessSummary = $derived(configSnapshot ? networkAccessSummary(configSnapshot, runtimeSnapshot, managerShell.runtimeError) : null);
-
-  const overall = $derived(
-    managerShell.runtimeError
-      ? ({ text: 'Unbekannt', level: 'bad' } as const)
-      : runtimeSnapshot
-        ? deriveOverallStatus(runtimeSnapshot)
-        : null,
-  );
+  const overall = $derived(managerStatusViewModel(configSnapshot, managerShell.runtimeObservation));
+  const accessSummary = $derived(configSnapshot ? networkAccessSummary(configSnapshot, runtimeSnapshot, runtimeNotice) : null);
 
   const savedUrl = $derived(savedDeviceBaseUrl(configSnapshot));
 
@@ -232,7 +231,7 @@
     controller = createNetworkController({
       api: requireApi(),
       getConfig: () => managerShell.configSnapshot,
-      getRuntime: () => managerShell.runtimeSnapshot,
+      getRuntime: () => observedSnapshot(managerShell.runtimeObservation),
       onAfterMutation,
       requestConfirm,
       onStateChange: syncSnapshot,
@@ -248,7 +247,7 @@
         resolvedLanIp(
           controller?.getState() ?? { lanAppIp: '', customLanIp: '' },
         ) ||
-        effectiveConfiguredLanIp(managerShell.configSnapshot, managerShell.runtimeSnapshot),
+        effectiveConfiguredLanIp(managerShell.configSnapshot, observedSnapshot(managerShell.runtimeObservation)),
       onAfterMutation,
       onStateChange: syncTlsSnapshot,
       requestConfirm,
@@ -352,27 +351,20 @@
         {/if}
       {/if}
     {/snippet}
-    {#if overall && overall.level !== 'ok'}
-      <p class={statusOverallNoticeClass(overall.level)} aria-live="polite">
-        {overall.text}
-      </p>
-    {/if}
-    <NetworkAccessNotices status={configSnapshot} runtime={runtimeSnapshot} runtimeError={managerShell.runtimeError} />
-    {#if accessSummary?.lifecycleNotice}
-      <p class="notice is-warn" role="status">{accessSummary.lifecycleNotice}</p>
-    {/if}
+    <p class={overall.noticeClass} role="status">{overall.primary.summary}</p>
+    <NetworkAccessNotices status={configSnapshot} runtime={runtimeSnapshot} runtimeError={runtimeNotice} />
     <div class="panel-section">
       <MaintenanceSection open={summaryOpen} title="Aktueller Netzwerkzugang"
         subtitle="Betriebsmodus, Adressen und Patientenzugang"
         onToggle={() => { summaryOpen = !summaryOpen; }}>
-        <NetworkAccessSummary status={configSnapshot} runtime={runtimeSnapshot} runtimeError={managerShell.runtimeError} />
+        <NetworkAccessSummary status={configSnapshot} runtime={runtimeSnapshot} runtimeError={runtimeNotice} />
       </MaintenanceSection>
     </div>
     {#if showProxyRestore}
       <section class="panel-section" aria-label="Zugriff wiederherstellen">
         <h2>Wiederherstellung des Zugangs</h2>
         <ProxyRecoveryAction
-          disabled={busy || dirty || Boolean(managerShell.runtimeError)}
+          disabled={busy || dirty || Boolean(runtimeNotice)}
           onRestore={() => {
             draftOutcomeHost = 'repair';
             controller?.restoreProxy();
@@ -461,7 +453,7 @@
           <MaintenanceSection
             open={tlsOpen}
             title="HTTPS"
-            subtitle={tlsNetworkSubtitle(configSnapshot.tls, tlsSnapshot.pendingObtain)}
+            subtitle={tlsNetworkSubtitle(configSnapshot.tls, tlsNetworkPendingObtain(tlsSnapshot))}
             onToggle={() => {
               tlsOpen = !tlsOpen;
             }}
@@ -507,11 +499,10 @@
         >
           <NetworkTopologyDiagram labels={{
             lanIp: configSnapshot.network.configuredLanIp,
-            proxyEnabled: lifecycle?.assessment === 'known' &&
-              lifecycle.mode !== 'uninstalled' && lifecycle.mode !== 'direct-http',
-            httpsEnabled: tlsCutoverApplied,
+            proxyEnabled: accessSummary?.proxy === true,
+            httpsEnabled: accessSummary?.tls === true,
             baseUrl: savedUrl,
-            operation: accessSummary?.operation,
+            operation: overall.runtimeSummary ?? undefined,
             diagnosis: accessSummary?.diagnosis,
             portalState: accessSummary?.portalState ??
               (configSnapshot.restrictedNetwork
@@ -523,7 +514,7 @@
     </section>
   {/if}
 
-  <ConfirmDialog open={confirmOpen} onConfirm={confirmAndRun} onCancel={closeConfirm}>
+  <ConfirmDialog open={confirmOpen && !hasBlockingMaintenanceOperation(configSnapshot)} onConfirm={confirmAndRun} onCancel={closeConfirm}>
     <p>{confirmMessage}</p>
   </ConfirmDialog>
 </div>

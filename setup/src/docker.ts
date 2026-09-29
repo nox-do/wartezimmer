@@ -1,3 +1,5 @@
+import { runHostMutation } from './maintenance-operation-guard.js';
+import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
 import fs from 'node:fs';
 import {
   durableWrite,
@@ -395,8 +397,16 @@ export function parseComposePsOutput(stdout: string): ComposeServiceStatus[] {
         continue;
       }
       row = parsed;
-    } catch {
-      continue;
+    } catch (cause) {
+      throw new ManagerApiError(
+        {
+          code: 'compose_status_unavailable',
+          category: 'unavailable',
+          retryable: true,
+          message: 'Der Containerstatus konnte nicht geprüft werden. Bitte erneut versuchen.',
+        },
+        { cause },
+      );
     }
     services.push(mapComposePsRow(row));
   }
@@ -692,8 +702,16 @@ export async function composePs(options: ComposeRunOptions): Promise<ComposeStat
 
   // --all: include stopped/exited services (needed for "proxy enabled but stopped").
   const result = await runComposeCommand(options, ['ps', '--all', '--format', 'json']);
-  if (!result.ok && !result.stdout) {
-    return { running: false, services: [] };
+  if (!result.ok) {
+    throw new ManagerApiError(
+      {
+        code: 'compose_status_unavailable',
+        category: 'unavailable',
+        retryable: true,
+        message: 'Der Containerstatus konnte nicht geprüft werden. Bitte erneut versuchen.',
+      },
+      { cause: new Error(result.log) },
+    );
   }
   const parsed = parseComposePsOutput(result.stdout);
   const services = await Promise.all(
@@ -809,55 +827,57 @@ export async function recoverRestrictedOperation(
   restartStaff = true,
 ): Promise<void> {
   if (!fs.existsSync(restrictedOperationDir(options.projectRoot))) return;
-  let operation;
-  try {
-    operation = readRestrictedOperation(options.projectRoot);
-  } catch (error) {
-    await closeRecoveryProxy(options);
-    throw error;
-  }
-  if (!operation) return;
-  if (operation.pid !== process.pid || isRestrictedOperationActive(operation.id)) {
+  return runHostMutation(options.projectRoot, 'restricted-recovery', async () => {
+    let operation;
     try {
-      process.kill(operation.pid, 0);
-      throw new Error('Restricted-Operation läuft bereits; paralleler Start ist gesperrt.');
+      operation = readRestrictedOperation(options.projectRoot);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+      await closeRecoveryProxy(options);
+      throw error;
     }
-  }
-  await closeRecoveryProxy(options);
-  durableWrite(path.join(options.projectRoot, '.env'), operation.previousEnv);
-  const { removeEnvKeys } = await import('./env-file.js');
-  removeEnvKeys(path.join(options.projectRoot, '.env'), ['SETUP_RESTRICTED_ENABLED']);
-  durableWrite(
-    path.join(options.projectRoot, '.env'),
-    fs.readFileSync(path.join(options.projectRoot, '.env'), 'utf8'),
-  );
-  const env = readEnvMap(path.join(options.projectRoot, '.env'));
-  const { readTlsStatus } = await import('./host-tls.js');
-  const { writeGeneratedTlsCaddyfile } = await import('./proxy-tls.js');
-  writeGeneratedTlsCaddyfile(options.projectRoot, readTlsStatus(env), env);
-  durableWrite(
-    path.join(options.projectRoot, 'state/restricted-recovery.json'),
-    JSON.stringify({
-      recoveredAt: new Date().toISOString(),
-      action: operation.action,
-      message: 'Unterbrochener Patientenzugang geschlossen; erneut prüfen und aktivieren.',
-    }),
-  );
-  finishRestrictedOperation(options.projectRoot, operation.id);
-  if (restartStaff && operation.stackWasRunning) {
-    const staff = await composeUp({
-      ...options,
-      withProxy: true,
-      build: false,
-      services: ['proxy'],
-    });
-    if (!staff.ok)
-      throw new Error(
-        `Patientenzugang geschlossen; Staff-Proxy muss neu gestartet werden: ${staff.log}`,
-      );
-  }
+    if (!operation) return;
+    if (operation.pid !== process.pid || isRestrictedOperationActive(operation.id)) {
+      try {
+        process.kill(operation.pid, 0);
+        throw new Error('Restricted-Operation läuft bereits; paralleler Start ist gesperrt.');
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+      }
+    }
+    await closeRecoveryProxy(options);
+    durableWrite(path.join(options.projectRoot, '.env'), operation.previousEnv);
+    const { removeEnvKeys } = await import('./env-file.js');
+    removeEnvKeys(path.join(options.projectRoot, '.env'), ['SETUP_RESTRICTED_ENABLED']);
+    durableWrite(
+      path.join(options.projectRoot, '.env'),
+      fs.readFileSync(path.join(options.projectRoot, '.env'), 'utf8'),
+    );
+    const env = readEnvMap(path.join(options.projectRoot, '.env'));
+    const { readTlsStatus } = await import('./host-tls.js');
+    const { writeGeneratedTlsCaddyfile } = await import('./proxy-tls.js');
+    writeGeneratedTlsCaddyfile(options.projectRoot, readTlsStatus(env), env);
+    durableWrite(
+      path.join(options.projectRoot, 'state/restricted-recovery.json'),
+      JSON.stringify({
+        recoveredAt: new Date().toISOString(),
+        action: operation.action,
+        message: 'Unterbrochener Patientenzugang geschlossen; erneut prüfen und aktivieren.',
+      }),
+    );
+    finishRestrictedOperation(options.projectRoot, operation.id);
+    if (restartStaff && operation.stackWasRunning) {
+      const staff = await composeUp({
+        ...options,
+        withProxy: true,
+        build: false,
+        services: ['proxy'],
+      });
+      if (!staff.ok)
+        throw new Error(
+          `Patientenzugang geschlossen; Staff-Proxy muss neu gestartet werden: ${staff.log}`,
+        );
+    }
+  });
 }
 
 export async function restoreProxyRestartPolicy(options: ComposeRunOptions): Promise<void> {

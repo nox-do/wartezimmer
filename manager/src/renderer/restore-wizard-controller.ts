@@ -1,19 +1,23 @@
+import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+import type { HostStatus } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
 import {
   canRetryRestoreAfterFailure,
   canSkipRestoreAfterFailure,
   createInitialRestoreWizardState,
+  restoreFailureSummary,
   restoreInspectBlockedMessage,
-  suggestCredentialSkipAfterRestoreFailure,
+  shouldOfferCredentialSkip,
+  type RestoreBackup,
+  type RestoreWizardMode,
   type RestoreWizardState,
 } from './restore-wizard-flow.js';
 
-export type RestoreWizardCallbacks = {
-  onAfterMutation?: () => void;
-};
-
-export type RestoreWizardControllerDeps = RestoreWizardCallbacks & {
+export type RestoreWizardControllerDeps = {
   api: PraxisManagerApi;
+  /** Refresh the authoritative shell snapshot, including failed host operations. */
+  refreshHost?: () => void | Promise<void>;
+  getHostStatus?: () => HostStatus | null;
   onStateChange?: () => void;
 };
 
@@ -27,6 +31,7 @@ export type RestoreWizardController = {
   retryRestore: () => void;
   skipAfterFailure: () => void;
   close: () => void;
+  abandonSession: () => void;
   setSkipProviderCredentials: (value: boolean) => void;
 };
 
@@ -34,251 +39,172 @@ export function createRestoreWizardController(
   deps: RestoreWizardControllerDeps,
 ): RestoreWizardController {
   let state = createInitialRestoreWizardState();
+  let generation = 0;
   let preUpdateComplete: (() => void) | null = null;
-
-  function notify(): void {
+  const blocked = () => hasBlockingMaintenanceOperation(deps.getHostStatus?.());
+  const refreshHost = () => (deps.refreshHost ? deps.refreshHost() : deps.api.fetchSetupStatus());
+  function set(next: RestoreWizardState): void {
+    state = next;
     deps.onStateChange?.();
   }
-
-  function patch(partial: Partial<RestoreWizardState>): void {
-    state = { ...state, ...partial };
-    notify();
-  }
-
-  function finishPreUpdateFlow(): void {
-    const complete = preUpdateComplete;
+  function close(continueUpdate = false): void {
+    const complete = continueUpdate && !blocked() ? preUpdateComplete : null;
+    generation++;
     preUpdateComplete = null;
-    patch(createInitialRestoreWizardState());
+    set(createInitialRestoreWizardState());
     complete?.();
   }
-
-  async function pickBackupFile(): Promise<boolean> {
-    const picked = await deps.api.readPfbackupForValidate();
-    if (picked.canceled) {
-      if (state.mode === 'pre-update') {
-        patch({
-          phase: 'choose',
-          busy: false,
-          statusText: '',
-          content: null,
-          filePath: null,
-          error: null,
-          inspect: null,
-          restoreResult: null,
-        });
-      } else {
-        patch(createInitialRestoreWizardState());
-      }
-      return false;
-    }
-    patch({
-      content: picked.content,
-      filePath: picked.filePath,
-      phase: 'inspect',
-      busy: true,
-      statusText: 'Backup wird geprüft …',
-      error: null,
-      inspect: null,
-      restoreResult: null,
-    });
-    return true;
-  }
-
-  async function runInspect(): Promise<void> {
-    if (!state.content) {
-      patch({ error: 'Kein Backup-Inhalt.', phase: 'failed', busy: false });
-      return;
-    }
+  async function open(mode: RestoreWizardMode): Promise<void> {
+    const session = ++generation;
+    set({ phase: 'select', mode });
     try {
-      const inspect = await deps.api.inspectPfbackup(state.content);
-      patch({
-        inspect,
-        phase: inspect.ok && inspect.compatibility.restoreSupported ? 'preview' : 'failed',
-        busy: false,
-        statusText: '',
-        error:
-          inspect.ok && inspect.compatibility.restoreSupported
-            ? null
-            : restoreInspectError(inspect),
-        restoreResult: null,
-      });
-    } catch (error) {
-      patch({
-        phase: 'failed',
-        busy: false,
-        statusText: '',
-        error: error instanceof Error ? error.message : 'Backup-Prüfung fehlgeschlagen.',
-      });
-    }
-  }
-
-  async function pickAndInspect(): Promise<void> {
-    try {
-      if (await pickBackupFile()) await runInspect();
-    } catch (error) {
-      patch({
-        phase: 'failed',
-        busy: false,
-        statusText: '',
-        error: error instanceof Error ? error.message : 'Backup-Datei konnte nicht gelesen werden.',
-      });
-    }
-  }
-
-  function requestRestore(): void {
-    if (state.busy || !state.inspect?.compatibility.restoreSupported) return;
-    if (state.inspect.currentTlsClaimsHttps && state.inspect.backup?.tls?.inBackup) {
-      patch({ phase: 'confirm-https' });
-      return;
-    }
-    void runRestore();
-  }
-
-  async function runRestore(): Promise<void> {
-    if (!state.content) {
-      patch({ phase: 'failed', error: 'Kein Backup-Inhalt.', busy: false });
-      return;
-    }
-    patch({
-      phase: 'restoring',
-      busy: true,
-      statusText: 'Wiederherstellung läuft — Stack wird gestoppt und neu gestartet …',
-      error: null,
-      restoreResult: null,
-    });
-    try {
-      const result = await deps.api.restorePfbackup(state.content, {
-        skipProviderCredentials: state.skipProviderCredentials,
-      });
-      if (result.ok) {
-        patch({
-          phase: 'success',
-          busy: false,
-          statusText: '',
-          restoreResult: result,
-          error: null,
-        });
-        deps.onAfterMutation?.();
+      await refreshHost();
+      if (session !== generation) return;
+      if (blocked()) {
+        set({ phase: 'failed', mode, error: 'Offenen Hostvorgang zuerst klären.' });
         return;
       }
-      patch({
-        phase: 'failed',
-        busy: false,
-        statusText: '',
-        restoreResult: result,
-        error: formatRestoreFailure(result),
-        skipProviderCredentials: suggestCredentialSkipAfterRestoreFailure({
-          inspect: state.inspect,
-          restoreResult: result,
-          skipProviderCredentials: state.skipProviderCredentials,
-        })
-          ? true
-          : state.skipProviderCredentials,
-      });
+      if (mode === 'pre-update') set({ phase: 'choose', mode });
+      else await pickAndInspect(mode, session);
     } catch (error) {
-      patch({
-        phase: 'failed',
-        busy: false,
-        statusText: '',
-        error: error instanceof Error ? error.message : 'Restore fehlgeschlagen.',
-      });
+      if (session === generation)
+        set({
+          phase: 'failed',
+          mode,
+          error: message(error, 'Hoststatus konnte nicht geladen werden.'),
+        });
     }
   }
-
+  async function pickAndInspect(mode: RestoreWizardMode, session: number): Promise<void> {
+    set({ phase: 'select', mode });
+    try {
+      const picked = await deps.api.selectPfbackupForRestore();
+      if (session !== generation) return;
+      if (picked.canceled) {
+        if (mode === 'pre-update') set({ phase: 'choose', mode });
+        else close();
+        return;
+      }
+      set({ phase: 'inspect', mode, filePath: picked.filePath });
+      const inspect = await deps.api.inspectPfbackup(picked.content);
+      if (session !== generation) return;
+      const error = restoreInspectBlockedMessage(inspect);
+      if (!inspect.ok || !inspect.compatibility.restoreSupported)
+        set({ phase: 'failed', mode, error: error || 'Backup ist für Restore nicht geeignet.' });
+      else
+        set({
+          phase: 'preview',
+          mode,
+          backup: {
+            content: picked.content,
+            filePath: picked.filePath,
+            inspect,
+            draft: { skipProviderCredentials: false },
+          },
+        });
+    } catch (error) {
+      if (session === generation)
+        set({
+          phase: 'failed',
+          mode,
+          error: message(error, 'Backup-Datei konnte nicht geprüft werden.'),
+        });
+    }
+  }
+  function requestRestore(mode: RestoreWizardMode, backup: RestoreBackup): void {
+    if (blocked()) return;
+    if (backup.inspect.currentTlsClaimsHttps && backup.inspect.backup?.tls?.inBackup)
+      set({ phase: 'confirm-https', mode, backup });
+    else void runRestore(mode, backup);
+  }
+  async function runRestore(mode: RestoreWizardMode, backup: RestoreBackup): Promise<void> {
+    if (blocked()) return;
+    const session = generation;
+    set({ phase: 'restoring', mode, backup });
+    let completed: RestoreWizardState;
+    try {
+      const result = await deps.api.restorePfbackup(backup.content, backup.draft);
+      completed = result.ok
+        ? { phase: 'success', mode, restoreResult: result }
+        : {
+            phase: 'failed',
+            mode,
+            backup,
+            restoreResult: result,
+            error: restoreFailureSummary(result),
+          };
+    } catch (error) {
+      completed = {
+        phase: 'failed',
+        mode,
+        backup,
+        error: message(error, 'Restore fehlgeschlagen.'),
+      };
+    } finally {
+      // Even a departed UI session must reconcile the durable backend operation.
+      try {
+        await refreshHost();
+      } catch {
+        /* Shell owns status-fetch errors; preserve the mutation result. */
+      }
+    }
+    if (session === generation) set(completed);
+  }
   return {
     getState: () => state,
-
     openStandalone() {
       preUpdateComplete = null;
-      state = {
-        ...createInitialRestoreWizardState(),
-        mode: 'standalone',
-        phase: 'inspect',
-        busy: true,
-        statusText: 'Backup-Datei wählen …',
-      };
-      notify();
-      void pickAndInspect();
+      void open('standalone');
     },
-
     openPreUpdate(onComplete) {
       preUpdateComplete = onComplete;
-      patch({
-        ...createInitialRestoreWizardState(),
-        mode: 'pre-update',
-        phase: 'choose',
-      });
+      void open('pre-update');
     },
-
     chooseRestore(restore) {
-      if (!restore) {
-        finishPreUpdateFlow();
-        return;
-      }
-      patch({
-        phase: 'inspect',
-        busy: true,
-        statusText: 'Backup-Datei wählen …',
-        error: null,
-      });
-      void pickAndInspect();
+      if (state.phase !== 'choose' || blocked()) return;
+      if (!restore) close(true);
+      else void pickAndInspect(state.mode, generation);
     },
-
     confirmRestore() {
-      if (state.busy) return;
-      if (state.phase === 'confirm-https') void runRestore();
-      else if (state.phase === 'preview') requestRestore();
+      if (state.phase === 'preview') requestRestore(state.mode, state.backup);
+      else if (state.phase === 'confirm-https') void runRestore(state.mode, state.backup);
     },
     cancelHttpsConfirmation() {
-      if (state.phase === 'confirm-https') patch({ phase: 'preview' });
+      if (state.phase === 'confirm-https') set({ ...state, phase: 'preview' });
     },
-
     retryRestore() {
-      if (canRetryRestoreAfterFailure(state.restoreResult)) requestRestore();
+      if (
+        state.phase === 'failed' &&
+        state.backup &&
+        canRetryRestoreAfterFailure(state.restoreResult ?? null)
+      )
+        requestRestore(state.mode, state.backup);
     },
-
     skipAfterFailure() {
-      if (!canSkipRestoreAfterFailure(state.restoreResult)) {
-        return;
-      }
-      if (state.mode === 'pre-update') {
-        finishPreUpdateFlow();
-        return;
-      }
-      patch(createInitialRestoreWizardState());
+      if (
+        state.phase === 'failed' &&
+        !blocked() &&
+        canSkipRestoreAfterFailure(state.restoreResult ?? null)
+      )
+        close(state.mode === 'pre-update');
     },
-
     close() {
-      if (state.mode === 'pre-update' && state.phase === 'success') {
-        finishPreUpdateFlow();
-        return;
-      }
-      preUpdateComplete = null;
-      patch(createInitialRestoreWizardState());
+      close(state.phase === 'success' && state.mode === 'pre-update');
     },
-
+    abandonSession() {
+      close();
+    },
     setSkipProviderCredentials(value) {
-      patch({ skipProviderCredentials: value });
+      if (
+        (state.phase === 'preview' || state.phase === 'failed') &&
+        state.backup &&
+        shouldOfferCredentialSkip(state.backup.inspect)
+      )
+        set({ ...state, backup: { ...state.backup, draft: { skipProviderCredentials: value } } });
     },
   };
 }
 
-function restoreInspectError(
-  inspect: Awaited<ReturnType<PraxisManagerApi['inspectPfbackup']>>,
-): string {
-  return restoreInspectBlockedMessage(inspect) ?? 'Backup ist für Restore nicht geeignet.';
-}
-
-function formatRestoreFailure(
-  result: Extract<Awaited<ReturnType<PraxisManagerApi['restorePfbackup']>>, { ok: false }>,
-): string {
-  const lines = [...result.errors];
-  if (result.rollbackAttempted) {
-    lines.push(
-      result.rollbackSucceeded
-        ? 'Automatischer Rollback wurde ausgeführt.'
-        : 'Automatischer Rollback fehlgeschlagen.',
-    );
-  }
-  return lines.join(' ');
+function message(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }

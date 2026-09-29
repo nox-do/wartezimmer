@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { tlsNetworkPendingObtain, tlsNetworkError } from './tls-network-controller.js';
+  import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+  import { managerShell } from './manager-shell-state.svelte.js';
+  import { managerStatusViewModel } from './manager-status-view-model.js';
   import type { HostStatus, NetworkSnapshot, TlsOperatorRequest, TlsStatus } from '../shared/host-status.js';
   import type { TlsNetworkController, TlsNetworkState } from './tls-network-controller.js';
   import {
@@ -110,7 +114,10 @@
   }
 </script>
 
-{#if !eligible && tlsIsOff(tls)}
+{#if hasBlockingMaintenanceOperation(status)}
+  <p class="hint" role="status">{managerStatusViewModel(status, managerShell.runtimeObservation).primary.summary}</p>
+  <p class="hint">Hoständerungen sind gesperrt. Statusdetails bleiben im Statusbereich verfügbar.</p>
+{:else if !eligible && tlsIsOff(tls)}
   <p class="hint">
     Für HTTPS zuerst unter „{NETWORK_PROXY_EXPANDER_TITLE}“ „Proxy an“ auswählen und
     „{NETWORK_APPLY_BUTTON_LABEL}“ wählen. Der interne HTTP-Betrieb bleibt bis dahin möglich.
@@ -303,7 +310,7 @@
           </button>
         {/if}
       </div>
-    {:else if tlsShowsObtainWait(tls, state.pendingObtain)}
+    {:else if tlsShowsObtainWait(tls, tlsNetworkPendingObtain(state))}
       <p class="notice is-ok">
         {tls.mode === 'custom'
           ? 'Zertifikat wird geprüft — HTTP bleibt erreichbar.'
@@ -447,8 +454,8 @@
   {/if}
 {/if}
 
-{#if tlsNetworkShowsGenericErrorFooter(tls, state.error)}
-  <p class="error">{state.error}</p>
+{#if tlsNetworkShowsGenericErrorFooter(tls, tlsNetworkError(state))}
+  <p class="error">{tlsNetworkError(state)}</p>
 {/if}
 
 <style>

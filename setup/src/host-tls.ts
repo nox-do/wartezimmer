@@ -1,3 +1,23 @@
+import { atPhase } from './operation-journal.js';
+import { waitForExpectedStackHealth } from './stack-health.js';
+import { assertMaintenancePredecessors, runHostMutation } from './maintenance-operation-guard.js';
+import { hostMutationLock } from './host-mutation-lock.js';
+import { assertNoUpdateOperation } from './update-operation.js';
+import { assertNoRestoreOperation } from './restore-operation.js';
+import {
+  tlsIdentityReference,
+  readTlsOperation,
+  writeTlsOperation,
+  finishTlsOperation,
+  tlsNeedsRollback,
+  type TlsOperation,
+} from './tls-operation.js';
+import { captureTlsRollback, restoreTlsRollback } from './tls-operation-files.js';
+import { syncMaintenanceHostFiles } from './maintenance-files.js';
+import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime-postcondition.js';
+import { runDefaultMaintenanceHealthChecks } from './maintenance-rollback.js';
+import { LOCAL_SETUP_APP_BASE_URL, resolveCanonicalBaseUrl } from './urls.js';
+import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
 import { readInstallOperation } from './install-operation.js';
 import crypto, { X509Certificate } from 'node:crypto';
 import { Resolver } from 'node:dns/promises';
@@ -23,13 +43,15 @@ import type {
   TlsVerifyDnsResult,
 } from '@praxis-flow/server-shared';
 import { TLS_OPERATOR_ZONE_DEFAULT } from '@praxis-flow/server-shared';
-import { composeExec, composePs, composeUp } from './docker.js';
-import { readEnvMap, removeEnvKeys, updateEnvKeys } from './env-file.js';
+import { composeExec, composePs, composeUp, composeRemoveServices } from './docker.js';
+import { readEnvMap, removeEnvKeys, writeEnvRecordAtomically } from './env-file.js';
 import {
+  readInstalledPortalContract,
   buildProxyTlsEnvUpdates,
   ensureProxyTlsPaths,
   PROXY_TLS_HOST_PATH_ENV_KEYS,
   resolveProxyTlsPaths,
+  resolveProxyTlsEnvUpdates,
   writeGeneratedTlsCaddyfile,
   writeSecretFileAtomically,
 } from './proxy-tls.js';
@@ -105,19 +127,29 @@ const PRE_CUTOVER_DNS_WAIT_CLASSES = new Set<TlsErrorClass>([
   'dns-filter',
 ]);
 
-export class TlsRuntimeUnavailableError extends Error {
-  constructor(message: string) {
-    super(message);
+export class TlsRuntimeUnavailableError extends ManagerApiError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(
+      { code: 'tls_runtime_unavailable', category: 'unavailable', message, retryable: true },
+      options,
+    );
     this.name = 'TlsRuntimeUnavailableError';
   }
 }
 
 /** Config/PEM errors — do not retry as ACME readiness. */
-export class TlsPermanentCheckError extends TlsRuntimeUnavailableError {
-  constructor(message: string) {
-    super(message);
+export class TlsPermanentCheckError extends ManagerApiError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(
+      { code: 'tls_check_failed', category: 'operation-failed', message, retryable: false },
+      options,
+    );
     this.name = 'TlsPermanentCheckError';
   }
+}
+
+function tlsPublicErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof ManagerApiError ? error.message : fallback;
 }
 
 export class TlsCertificateError extends SetupApiValidationError {
@@ -332,7 +364,7 @@ function persistStatus(
   status: TlsStatus,
   extra: Record<string, string> = {},
 ): void {
-  updateEnvKeys(envPathOf(ctx), { ...statusEnv(status), ...extra });
+  writeEnvRecordAtomically(envPathOf(ctx), { ...statusEnv(status), ...extra });
 }
 
 function createInstallationId(randomBytes = crypto.randomBytes): string {
@@ -523,15 +555,15 @@ export function pebbleLocalCheckCa(env: Map<string, string>): Buffer | undefined
     return undefined;
   }
   if (!fs.existsSync(caPath) || !fs.statSync(caPath).isFile()) {
-    throw new TlsPermanentCheckError(
-      `TLS_PEBBLE_ROOT_CA_PATH zeigt nicht auf eine lesbare Datei: ${caPath}`,
-    );
+    throw new TlsPermanentCheckError('Die lokale TLS-Prüfkonfiguration ist unvollständig.', {
+      cause: new Error(`TLS_PEBBLE_ROOT_CA_PATH ist nicht lesbar: ${caPath}`),
+    });
   }
   const pem = fs.readFileSync(caPath);
   if (!pem.toString('utf8').includes('-----BEGIN CERTIFICATE-----')) {
-    throw new TlsPermanentCheckError(
-      `TLS_PEBBLE_ROOT_CA_PATH enthält kein PEM-Zertifikat: ${caPath}`,
-    );
+    throw new TlsPermanentCheckError('Die lokale TLS-Prüfkonfiguration ist ungültig.', {
+      cause: new Error(`TLS_PEBBLE_ROOT_CA_PATH enthält kein PEM-Zertifikat: ${caPath}`),
+    });
   }
   return pem;
 }
@@ -575,6 +607,8 @@ export type TlsRuntimeDependencies = {
     managedInstallationDomain?: string,
   ) => Promise<TlsDnsObservation>;
   createDnsResolver?: () => DnsResolverLike;
+  stopProxy?: (ctx: SetupContext) => Promise<void>;
+  verifyAccess?: (ctx: SetupContext, env: Map<string, string>) => Promise<void>;
   reloadProxy?: (ctx: SetupContext) => Promise<void>;
   runLocalChecks?: (
     hostname: string,
@@ -594,9 +628,9 @@ async function registerAcmeDnsDefault(serverUrl: string): Promise<AcmeDnsRegistr
       signal: AbortSignal.timeout(10_000),
     });
   } catch (error) {
-    throw new TlsRuntimeUnavailableError(
-      `ACME-DNS-Registrierung nicht erreichbar: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw new TlsRuntimeUnavailableError('ACME-DNS-Registrierung ist derzeit nicht erreichbar.', {
+      cause: error,
+    });
   }
   if (!response.ok)
     throw new TlsRuntimeUnavailableError(
@@ -671,9 +705,6 @@ export function isRetryableLocalCheckError(error: unknown): boolean {
   if (error instanceof TlsPermanentCheckError) return false;
   if (error instanceof TlsCertificateError) return false;
   if (error instanceof SetupApiValidationError) return false;
-  const message = error instanceof Error ? error.message : String(error);
-  if (/TLS_PEBBLE_ROOT_CA_PATH/.test(message)) return false;
-  if (/kein PEM-Zertifikat/.test(message)) return false;
   return true;
 }
 
@@ -691,7 +722,9 @@ async function reloadProxyDefault(ctx: SetupContext): Promise<void> {
   );
   const result = await composeUp(options);
   if (!result.ok)
-    throw new TlsRuntimeUnavailableError(result.log || 'Caddy konnte nicht gestartet werden.');
+    throw new TlsRuntimeUnavailableError('HTTPS-Proxy konnte nicht gestartet werden.', {
+      cause: new Error(result.log || 'Caddy konnte nicht gestartet werden.'),
+    });
   if (planProxyReloadAfterUp({ proxyWasRunning, upLog: result.log }) === 'none') return;
   const reloaded = await composeExec({
     ...options,
@@ -705,9 +738,9 @@ async function reloadProxyDefault(ctx: SetupContext): Promise<void> {
     args: ['kill', '-USR1', '1'],
   });
   if (!signalled.ok) {
-    throw new TlsRuntimeUnavailableError(
-      reloaded.log || signalled.log || 'Caddy konnte nicht neu geladen werden.',
-    );
+    throw new TlsRuntimeUnavailableError('HTTPS-Proxy konnte nicht neu geladen werden.', {
+      cause: new Error(reloaded.log || signalled.log || 'Caddy konnte nicht neu geladen werden.'),
+    });
   }
 }
 
@@ -802,9 +835,9 @@ async function localChecksDefault(
     });
   }).catch((error) => {
     socket.destroy();
-    throw new TlsRuntimeUnavailableError(
-      `TLS auf Port ${httpsPort} nicht erreichbar: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw new TlsRuntimeUnavailableError(`TLS auf Port ${httpsPort} ist nicht erreichbar.`, {
+      cause: error,
+    });
   });
   const certificate = readPeerCertificate(socket);
   const alpnOk = socket.alpnProtocol === 'h2';
@@ -942,10 +975,9 @@ async function runChecksUntilReady(
       await sleep(intervalMs);
     }
   }
-  const lastMessage =
-    lastError instanceof Error ? lastError.message : lastError ? String(lastError) : 'unbekannt';
   throw new TlsRuntimeUnavailableError(
-    `Lokale TLS-Prüfungen sind nach ${timeoutMs}ms nicht grün: ${lastMessage}`,
+    'Lokale TLS-Prüfungen wurden nicht rechtzeitig erfolgreich.',
+    { cause: lastError },
   );
 }
 
@@ -976,183 +1008,189 @@ export async function prepareHostTls(
   input: TlsPrepareInput,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsPrepareResult> {
-  if (readInstallOperation(ctx.home)?.backup)
-    throw new SetupApiValidationError('HTTPS wird im Recovery aus dem Backup übernommen.');
-  assertHostLifecycleAction(ctx, 'tls-prepare');
-  const envPath = envPathOf(ctx);
-  const env = readEnvMap(envPath);
-  const proxy = readProxyConfig(env);
-  if (!proxy.enabled)
-    throw new SetupApiValidationError('HTTPS setzt einen aktivierten HTTP-Proxy voraus.');
-  const existing = readTlsStatus(env);
-  const lanIp = requirePrivateLanIpv4(input.lanIp);
+  return runHostMutation(ctx.home, 'prepareHostTls', async () => {
+    if (readInstallOperation(ctx.home)?.backup)
+      throw new SetupApiValidationError('HTTPS wird im Recovery aus dem Backup übernommen.');
+    assertHostLifecycleAction(ctx, 'tls-prepare');
+    const envPath = envPathOf(ctx);
+    const env = readEnvMap(envPath);
+    const proxy = readProxyConfig(env);
+    if (!proxy.enabled)
+      throw new SetupApiValidationError('HTTPS setzt einen aktivierten HTTP-Proxy voraus.');
+    const existing = readTlsStatus(env);
+    const lanIp = requirePrivateLanIpv4(input.lanIp);
 
-  if (existing.state !== 'off') {
-    const requestedIdentity = input.hostname ? normalizeTlsHostname(input.hostname) : null;
-    const existingRequestedIdentity =
-      existing.mode === 'managed'
-        ? (existing.installationDomain ?? existing.hostname)
-        : existing.hostname;
-    if (
-      existing.mode !== input.mode ||
-      (requestedIdentity && existingRequestedIdentity !== requestedIdentity)
-    ) {
-      throw new SetupApiValidationError(
-        'HTTPS ist bereits mit einer anderen Identität vorbereitet.',
-      );
-    }
-    const tokenPath = resolveProxyTlsPaths(ctx.home).operatorToken;
-    const token =
-      !existing.tokenConsumed && fs.existsSync(tokenPath)
-        ? fs.readFileSync(tokenPath, 'utf8').trim()
-        : '';
-    const cname = env.get('TLS_ACME_CNAME_TARGET')?.trim() || '';
-    return {
-      tls: existing,
-      operatorRequest:
-        existing.mode === 'managed' && token && cname
-          ? buildOperatorRequest(existing, env.get('TLS_LAN_IP') || lanIp, token, cname)
-          : null,
-    };
-  }
-
-  const installationId = createInstallationId(deps.randomBytes);
-  const zone = normalizeTlsHostname(
-    env.get('TLS_OPERATOR_ZONE')?.trim() || TLS_OPERATOR_ZONE_DEFAULT,
-  );
-  const identity = buildTlsIdentity({
-    mode: input.mode,
-    requestedHostname: input.hostname,
-    installationId,
-    operatorZone: zone,
-  });
-
-  let status = transitionTlsStatus(existing, {
-    type: 'prepare-started',
-    mode: input.mode,
-    ...identity,
-    installationId,
-  });
-  persistStatus(ctx, status, { TLS_LAN_IP: lanIp, ...buildProxyTlsEnvUpdates(ctx.home, 443) });
-  const paths = ensureProxyTlsPaths(ctx.home);
-  let operatorRequest: TlsOperatorRequest | null = null;
-  try {
-    if (input.mode === 'managed') {
-      const token = createOneTimeToken(deps.randomBytes);
-      writeSecretFileAtomically(paths.operatorToken, `${token}\n`);
-      const serverUrl = requireTlsHttpUrl(
-        env.get('TLS_ACME_DNS_API')?.trim() || TLS_ACME_DNS_API_DEFAULT,
-        'TLS_ACME_DNS_API',
-      );
-      resolveAcmeDnsCredentialsServerUrl(env, serverUrl);
-      const registration = await (deps.registerAcmeDns ?? registerAcmeDnsDefault)(serverUrl);
-      writeAcmeDnsCredentials(
-        paths.acmeDnsCredentials,
-        registration,
-        resolveAcmeDnsCredentialsServerUrl(env, registration.serverUrl),
-      );
-      operatorRequest = buildOperatorRequest(status, lanIp, token, registration.fulldomain);
-      persistStatus(ctx, status, { TLS_ACME_CNAME_TARGET: registration.fulldomain });
-      status = {
-        ...transitionTlsStatus(status, { type: 'prepared' }),
-        acmeCnameTarget: registration.fulldomain,
+    if (existing.state !== 'off') {
+      const requestedIdentity = input.hostname ? normalizeTlsHostname(input.hostname) : null;
+      const existingRequestedIdentity =
+        existing.mode === 'managed'
+          ? (existing.installationDomain ?? existing.hostname)
+          : existing.hostname;
+      if (
+        existing.mode !== input.mode ||
+        (requestedIdentity && existingRequestedIdentity !== requestedIdentity)
+      ) {
+        throw new SetupApiValidationError(
+          'HTTPS ist bereits mit einer anderen Identität vorbereitet.',
+        );
+      }
+      const tokenPath = resolveProxyTlsPaths(ctx.home).operatorToken;
+      const token =
+        !existing.tokenConsumed && fs.existsSync(tokenPath)
+          ? fs.readFileSync(tokenPath, 'utf8').trim()
+          : '';
+      const cname = env.get('TLS_ACME_CNAME_TARGET')?.trim() || '';
+      return {
+        tls: existing,
+        operatorRequest:
+          existing.mode === 'managed' && token && cname
+            ? buildOperatorRequest(existing, env.get('TLS_LAN_IP') || lanIp, token, cname)
+            : null,
       };
-    } else {
-      status = transitionTlsStatus(status, { type: 'prepared' });
     }
-    const currentEnv = readEnvMap(envPath);
-    writeGeneratedTlsCaddyfile(ctx.home, status, currentEnv);
-    persistStatus(ctx, status);
-    return { tls: status, operatorRequest };
-  } catch (error) {
-    status = transitionTlsStatus(status, {
-      type: 'fail',
-      errorClass: 'acme',
-      message: error instanceof Error ? error.message : String(error),
+
+    const installationId = createInstallationId(deps.randomBytes);
+    const zone = normalizeTlsHostname(
+      env.get('TLS_OPERATOR_ZONE')?.trim() || TLS_OPERATOR_ZONE_DEFAULT,
+    );
+    const identity = buildTlsIdentity({
+      mode: input.mode,
+      requestedHostname: input.hostname,
+      installationId,
+      operatorZone: zone,
     });
-    persistStatus(ctx, status, { TLS_RETRY_STATE: 'preparing' });
-    throw error;
-  }
+
+    let status = transitionTlsStatus(existing, {
+      type: 'prepare-started',
+      mode: input.mode,
+      ...identity,
+      installationId,
+    });
+    persistStatus(ctx, status, { TLS_LAN_IP: lanIp, ...buildProxyTlsEnvUpdates(ctx.home, 443) });
+    const paths = ensureProxyTlsPaths(ctx.home);
+    let operatorRequest: TlsOperatorRequest | null = null;
+    try {
+      if (input.mode === 'managed') {
+        const token = createOneTimeToken(deps.randomBytes);
+        writeSecretFileAtomically(paths.operatorToken, `${token}\n`);
+        const serverUrl = requireTlsHttpUrl(
+          env.get('TLS_ACME_DNS_API')?.trim() || TLS_ACME_DNS_API_DEFAULT,
+          'TLS_ACME_DNS_API',
+        );
+        resolveAcmeDnsCredentialsServerUrl(env, serverUrl);
+        const registration = await (deps.registerAcmeDns ?? registerAcmeDnsDefault)(serverUrl);
+        writeAcmeDnsCredentials(
+          paths.acmeDnsCredentials,
+          registration,
+          resolveAcmeDnsCredentialsServerUrl(env, registration.serverUrl),
+        );
+        operatorRequest = buildOperatorRequest(status, lanIp, token, registration.fulldomain);
+        persistStatus(ctx, status, { TLS_ACME_CNAME_TARGET: registration.fulldomain });
+        status = {
+          ...transitionTlsStatus(status, { type: 'prepared' }),
+          acmeCnameTarget: registration.fulldomain,
+        };
+      } else {
+        status = transitionTlsStatus(status, { type: 'prepared' });
+      }
+      const currentEnv = readEnvMap(envPath);
+      writeGeneratedTlsCaddyfile(ctx.home, status, currentEnv);
+      persistStatus(ctx, status);
+      return { tls: status, operatorRequest };
+    } catch (error) {
+      status = transitionTlsStatus(status, {
+        type: 'fail',
+        errorClass: 'acme',
+        message: tlsPublicErrorMessage(error, 'HTTPS konnte nicht vorbereitet werden.'),
+      });
+      persistStatus(ctx, status, { TLS_RETRY_STATE: 'preparing' });
+      throw error;
+    }
+  });
 }
 
 export async function verifyHostTlsDns(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsVerifyDnsResult> {
-  assertHostLifecycleAction(ctx, 'tls-verify');
-  const envPath = envPathOf(ctx);
-  const env = readEnvMap(envPath);
-  let status = readTlsStatus(env);
-  if (!status.mode || !status.hostname)
-    throw new SetupApiValidationError('HTTPS ist nicht vorbereitet.');
-  if (status.state !== 'awaiting-operator-dns' && status.state !== 'error') {
-    throw new SetupApiValidationError(`DNS-Prüfung ist im Zustand ${status.state} nicht erlaubt.`);
-  }
-  const lanIp = env.get('TLS_LAN_IP')?.trim() || '';
-  const resolverServers = parseTlsDnsResolvers(env.get('TLS_DNS_RESOLVERS'));
-  let observation: TlsDnsObservation;
-  try {
-    observation = await (
-      deps.verifyDns ??
-      ((name, mode, installationDomain) =>
-        verifyDnsDefault(name, mode, resolverServers, deps.createDnsResolver, installationDomain))
-    )(status.hostname, status.mode, status.installationDomain ?? undefined);
-  } catch (error) {
-    observation = {
-      aRecords: [],
-      cnameRecords: [],
-      errorClass: 'a-record',
-      message: error instanceof Error ? error.message : String(error),
-    };
-  }
-  const checks: TlsDnsCheck[] = [
-    {
-      id: 'server-ipv4',
-      ok: Boolean(lanIp),
-      message: lanIp ? `Bestätigte LAN-IP: ${lanIp}` : 'Bestätigte LAN-IP fehlt',
-    },
-  ];
-  const aMatches = observation.aRecords.includes(lanIp);
-  const seenAddresses = observation.aRecords.join(', ');
-  const wildcard = Boolean(observation.wildcard) && observation.aRecords.length > 0 && !aMatches;
-  const aRecordMessage = aMatches
-    ? `A-Record zeigt auf ${lanIp}`
-    : observation.aRecords.length === 0
-      ? 'A-Record fehlt'
-      : wildcard
-        ? `Kein eigener A-Record — Catch-all der Zone zeigt auf ${seenAddresses}`
-        : `A-Record zeigt auf ${seenAddresses}, nicht auf ${lanIp}`;
-  checks.push({
-    id: 'a-record',
-    ok: aMatches,
-    message: aRecordMessage,
-  });
-  let cnameMatches = true;
-  if (status.mode === 'managed') {
-    const expected = (env.get('TLS_ACME_CNAME_TARGET') || '').replace(/\.$/, '').toLowerCase();
-    cnameMatches = observation.cnameRecords.some(
-      (value) => value.replace(/\.$/, '').toLowerCase() === expected,
-    );
+  return runHostMutation(ctx.home, 'verifyHostTlsDns', async () => {
+    assertHostLifecycleAction(ctx, 'tls-verify');
+    const envPath = envPathOf(ctx);
+    const env = readEnvMap(envPath);
+    let status = readTlsStatus(env);
+    if (!status.mode || !status.hostname)
+      throw new SetupApiValidationError('HTTPS ist nicht vorbereitet.');
+    if (status.state !== 'awaiting-operator-dns' && status.state !== 'error') {
+      throw new SetupApiValidationError(
+        `DNS-Prüfung ist im Zustand ${status.state} nicht erlaubt.`,
+      );
+    }
+    const lanIp = env.get('TLS_LAN_IP')?.trim() || '';
+    const resolverServers = parseTlsDnsResolvers(env.get('TLS_DNS_RESOLVERS'));
+    let observation: TlsDnsObservation;
+    try {
+      observation = await (
+        deps.verifyDns ??
+        ((name, mode, installationDomain) =>
+          verifyDnsDefault(name, mode, resolverServers, deps.createDnsResolver, installationDomain))
+      )(status.hostname, status.mode, status.installationDomain ?? undefined);
+    } catch (error) {
+      observation = {
+        aRecords: [],
+        cnameRecords: [],
+        errorClass: 'a-record',
+        message: error instanceof Error ? error.message : String(error),
+      };
+    }
+    const checks: TlsDnsCheck[] = [
+      {
+        id: 'server-ipv4',
+        ok: Boolean(lanIp),
+        message: lanIp ? `Bestätigte LAN-IP: ${lanIp}` : 'Bestätigte LAN-IP fehlt',
+      },
+    ];
+    const aMatches = observation.aRecords.includes(lanIp);
+    const seenAddresses = observation.aRecords.join(', ');
+    const wildcard = Boolean(observation.wildcard) && observation.aRecords.length > 0 && !aMatches;
+    const aRecordMessage = aMatches
+      ? `A-Record zeigt auf ${lanIp}`
+      : observation.aRecords.length === 0
+        ? 'A-Record fehlt'
+        : wildcard
+          ? `Kein eigener A-Record — Catch-all der Zone zeigt auf ${seenAddresses}`
+          : `A-Record zeigt auf ${seenAddresses}, nicht auf ${lanIp}`;
     checks.push({
-      id: 'acme-cname',
-      ok: cnameMatches,
-      message: cnameMatches
-        ? 'ACME-CNAME stimmt'
-        : 'ACME-CNAME fehlt oder zeigt auf ein anderes Ziel',
-      detail: observation.cnameRecords.length ? observation.cnameRecords.join(', ') : undefined,
+      id: 'a-record',
+      ok: aMatches,
+      message: aRecordMessage,
     });
-  }
-  if (observation.errorClass || !aMatches || !cnameMatches) {
-    const waiting =
-      status.state === 'error'
-        ? transitionTlsStatus(status, { type: 'repair', retryState: 'awaiting-operator-dns' })
-        : { ...status, state: 'awaiting-operator-dns' as const, lastError: null };
-    persistStatus(ctx, waiting, { TLS_RETRY_STATE: 'awaiting-operator-dns' });
-    return { tls: waiting, checks };
-  }
-  status = transitionTlsStatus(status, { type: 'dns-verified' });
-  persistStatus(ctx, status, { TLS_RETRY_STATE: 'dns-verified' });
-  return { tls: status, checks };
+    let cnameMatches = true;
+    if (status.mode === 'managed') {
+      const expected = (env.get('TLS_ACME_CNAME_TARGET') || '').replace(/\.$/, '').toLowerCase();
+      cnameMatches = observation.cnameRecords.some(
+        (value) => value.replace(/\.$/, '').toLowerCase() === expected,
+      );
+      checks.push({
+        id: 'acme-cname',
+        ok: cnameMatches,
+        message: cnameMatches
+          ? 'ACME-CNAME stimmt'
+          : 'ACME-CNAME fehlt oder zeigt auf ein anderes Ziel',
+        detail: observation.cnameRecords.length ? observation.cnameRecords.join(', ') : undefined,
+      });
+    }
+    if (observation.errorClass || !aMatches || !cnameMatches) {
+      const waiting =
+        status.state === 'error'
+          ? transitionTlsStatus(status, { type: 'repair', retryState: 'awaiting-operator-dns' })
+          : { ...status, state: 'awaiting-operator-dns' as const, lastError: null };
+      persistStatus(ctx, waiting, { TLS_RETRY_STATE: 'awaiting-operator-dns' });
+      return { tls: waiting, checks };
+    }
+    status = transitionTlsStatus(status, { type: 'dns-verified' });
+    persistStatus(ctx, status, { TLS_RETRY_STATE: 'dns-verified' });
+    return { tls: status, checks };
+  });
 }
 
 export function stageCustomCertificate(
@@ -1217,8 +1255,10 @@ export async function obtainManagedCertificate(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsActionResult> {
-  assertHostLifecycleAction(ctx, 'tls-obtain');
-  return obtainManagedCertificateForAuthorizedAction(ctx, deps);
+  return runHostMutation(ctx.home, 'obtainManagedCertificate', async () => {
+    assertHostLifecycleAction(ctx, 'tls-obtain');
+    return obtainManagedCertificateForAuthorizedAction(ctx, deps);
+  });
 }
 
 /** Caller has already passed the public action guard for this same TLS identity. */
@@ -1242,7 +1282,7 @@ async function obtainManagedCertificateForAuthorizedAction(
     status = transitionTlsStatus(status, {
       type: 'fail',
       errorClass: 'acme',
-      message: error instanceof Error ? error.message : String(error),
+      message: tlsPublicErrorMessage(error, 'Das TLS-Zertifikat konnte nicht abgerufen werden.'),
     });
     persistStatus(ctx, status, { TLS_RETRY_STATE: 'dns-verified' });
     throw error;
@@ -1253,196 +1293,184 @@ export async function checkCustomCertificate(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsActionResult> {
-  assertHostLifecycleAction(ctx, 'tls-check-certificate');
-  let status = readTlsStatus(readEnvMap(envPathOf(ctx)));
-  if (
-    status.mode !== 'custom' ||
-    !status.hostname ||
-    status.state !== 'dns-verified' ||
-    status.applyReady
-  ) {
-    throw new SetupApiValidationError('check-certificate erfordert DNS-verifiziertes Custom TLS.');
-  }
-  const paths = resolveProxyTlsPaths(ctx.home);
-  if (!fs.existsSync(paths.customFullchain) || !fs.existsSync(paths.customPrivateKey)) {
-    throw new SetupApiValidationError('Gestagtes Custom-Zertifikat fehlt.');
-  }
-  const metadata = validateCustomCertificate(
-    {
-      fullchainPem: fs.readFileSync(paths.customFullchain, 'utf8'),
-      privateKeyPem: fs.readFileSync(paths.customPrivateKey, 'utf8'),
-    },
-    status.hostname,
-  );
-  try {
-    const checked = await prepareRuntimeAndCheck(ctx, { ...status, certificate: metadata }, deps, {
-      waitUntilReady: false,
-    });
-    status = checked.status;
-    persistStatus(ctx, status);
-    return { tls: status, checks: checked.checks };
-  } catch (error) {
-    status = transitionTlsStatus(status, {
-      type: 'fail',
-      errorClass: error instanceof TlsCertificateError ? error.errorClass : 'firewall',
-      message: error instanceof Error ? error.message : String(error),
-    });
-    persistStatus(ctx, status, { TLS_RETRY_STATE: 'dns-verified' });
-    throw error;
-  }
+  return runHostMutation(ctx.home, 'checkCustomCertificate', async () => {
+    assertHostLifecycleAction(ctx, 'tls-check-certificate');
+    let status = readTlsStatus(readEnvMap(envPathOf(ctx)));
+    if (
+      status.mode !== 'custom' ||
+      !status.hostname ||
+      status.state !== 'dns-verified' ||
+      status.applyReady
+    ) {
+      throw new SetupApiValidationError(
+        'check-certificate erfordert DNS-verifiziertes Custom TLS.',
+      );
+    }
+    const paths = resolveProxyTlsPaths(ctx.home);
+    if (!fs.existsSync(paths.customFullchain) || !fs.existsSync(paths.customPrivateKey)) {
+      throw new SetupApiValidationError('Gestagtes Custom-Zertifikat fehlt.');
+    }
+    const metadata = validateCustomCertificate(
+      {
+        fullchainPem: fs.readFileSync(paths.customFullchain, 'utf8'),
+        privateKeyPem: fs.readFileSync(paths.customPrivateKey, 'utf8'),
+      },
+      status.hostname,
+    );
+    try {
+      const checked = await prepareRuntimeAndCheck(
+        ctx,
+        { ...status, certificate: metadata },
+        deps,
+        {
+          waitUntilReady: false,
+        },
+      );
+      status = checked.status;
+      persistStatus(ctx, status);
+      return { tls: status, checks: checked.checks };
+    } catch (error) {
+      status = transitionTlsStatus(status, {
+        type: 'fail',
+        errorClass: error instanceof TlsCertificateError ? error.errorClass : 'firewall',
+        message: tlsPublicErrorMessage(error, 'Die lokale TLS-Prüfung ist fehlgeschlagen.'),
+      });
+      persistStatus(ctx, status, { TLS_RETRY_STATE: 'dns-verified' });
+      throw error;
+    }
+  });
 }
 
 export async function applyHostTls(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsActionResult> {
-  assertHostLifecycleAction(ctx, 'tls-apply');
-  const envPath = envPathOf(ctx);
-  const env = readEnvMap(envPath);
-  const current = readTlsStatus(env);
-  if (!current.hostname || !current.mode)
-    throw new SetupApiValidationError('HTTPS ist nicht vorbereitet.');
-  const hostname = current.hostname;
-  const status = transitionTlsStatus(current, { type: 'apply' });
-  writeGeneratedTlsCaddyfile(ctx.home, status, env);
-  const cutoverEnv = {
-    PROXY_ENABLED: 'true',
-    PROXY_MODE: `tls-${status.mode}`,
-    APP_BIND_ADDRESS: '127.0.0.1',
-    CANONICAL_BASE_URL: `https://${hostname}`,
-    TRUST_PROXY_HEADERS: 'true',
-  };
-  try {
-    let checks: TlsLocalCheck[] | undefined;
-    if (!fakeRuntimeEnabled(env)) {
-      await (deps.reloadProxy ?? reloadProxyDefault)(ctx);
-      const checked = await runChecks(readEnvMap(envPath), hostname, deps);
-      if (!allChecksPass(checked.checks)) {
-        throw new TlsRuntimeUnavailableError(
-          'Lokale TLS-Prüfungen sind nach dem Cutover nicht vollständig grün.',
-        );
-      }
-      checks = checked.checks;
-    }
-    persistStatus(ctx, status, cutoverEnv);
-    return { tls: status, checks };
-  } catch (error) {
-    writeGeneratedTlsCaddyfile(ctx.home, current, env);
-    if (!fakeRuntimeEnabled(env)) {
-      await (deps.reloadProxy ?? reloadProxyDefault)(ctx).catch(() => undefined);
-    }
-    persistStatus(
-      ctx,
-      {
-        ...current,
-        lastError: {
-          class: 'firewall',
-          message: error instanceof Error ? error.message : String(error),
-        },
-      },
-      { TLS_RETRY_STATE: 'dns-verified' },
-    );
-    if (error instanceof TlsRuntimeUnavailableError || error instanceof SetupApiValidationError) {
-      throw error;
-    }
-    throw new TlsRuntimeUnavailableError(error instanceof Error ? error.message : String(error));
-  }
+  return runHostMutation(ctx.home, 'applyHostTls', async () => {
+    assertHostLifecycleAction(ctx, 'tls-apply');
+    const current = readTlsStatus(readEnvMap(envPathOf(ctx)));
+    if (!current.hostname || !current.mode)
+      throw new SetupApiValidationError('HTTPS ist nicht vorbereitet.');
+    const status = transitionTlsStatus(current, { type: 'apply' });
+    return runTlsOperation(ctx, 'cutover', deps, async () => {
+      persistStatus(ctx, status, {
+        PROXY_ENABLED: 'true',
+        PROXY_MODE: `tls-${status.mode}`,
+        APP_BIND_ADDRESS: '127.0.0.1',
+        CANONICAL_BASE_URL: `https://${current.hostname}`,
+        TRUST_PROXY_HEADERS: 'true',
+      });
+      writeGeneratedTlsCaddyfile(ctx.home, status, readEnvMap(envPathOf(ctx)));
+      return { tls: status };
+    });
+  });
 }
 
 export async function repairHostTls(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsActionResult> {
-  assertHostLifecycleAction(ctx, 'tls-repair');
-  const envPath = envPathOf(ctx);
-  const env = readEnvMap(envPath);
-  const current = readTlsStatus(env);
-  const rawRetry = env.get('TLS_RETRY_STATE')?.trim() as TlsState | undefined;
-  const retryState = rawRetry && RETRY_STATES.has(rawRetry) ? rawRetry : undefined;
-  let status = transitionTlsStatus(current, { type: 'repair', retryState });
-  if (status.state === 'preparing' && status.mode === 'managed') {
-    const paths = ensureProxyTlsPaths(ctx.home);
-    const token = fs.existsSync(paths.operatorToken)
-      ? fs.readFileSync(paths.operatorToken, 'utf8').trim()
-      : createOneTimeToken(deps.randomBytes);
-    if (!fs.existsSync(paths.operatorToken)) {
-      writeSecretFileAtomically(paths.operatorToken, `${token}\n`);
-    }
-    const serverUrl = requireTlsHttpUrl(
-      env.get('TLS_ACME_DNS_API')?.trim() || TLS_ACME_DNS_API_DEFAULT,
-      'TLS_ACME_DNS_API',
-    );
-    resolveAcmeDnsCredentialsServerUrl(env, serverUrl);
-    try {
-      const registration = await (deps.registerAcmeDns ?? registerAcmeDnsDefault)(serverUrl);
-      writeAcmeDnsCredentials(
-        paths.acmeDnsCredentials,
-        registration,
-        resolveAcmeDnsCredentialsServerUrl(env, registration.serverUrl),
+  return runHostMutation(ctx.home, 'repairHostTls', async () => {
+    assertHostLifecycleAction(ctx, 'tls-repair');
+    const envPath = envPathOf(ctx);
+    const env = readEnvMap(envPath);
+    const current = readTlsStatus(env);
+    const rawRetry = env.get('TLS_RETRY_STATE')?.trim() as TlsState | undefined;
+    const retryState = rawRetry && RETRY_STATES.has(rawRetry) ? rawRetry : undefined;
+    let status = transitionTlsStatus(current, { type: 'repair', retryState });
+    if (status.state === 'preparing' && status.mode === 'managed') {
+      const paths = ensureProxyTlsPaths(ctx.home);
+      const token = fs.existsSync(paths.operatorToken)
+        ? fs.readFileSync(paths.operatorToken, 'utf8').trim()
+        : createOneTimeToken(deps.randomBytes);
+      if (!fs.existsSync(paths.operatorToken)) {
+        writeSecretFileAtomically(paths.operatorToken, `${token}\n`);
+      }
+      const serverUrl = requireTlsHttpUrl(
+        env.get('TLS_ACME_DNS_API')?.trim() || TLS_ACME_DNS_API_DEFAULT,
+        'TLS_ACME_DNS_API',
       );
-      status = transitionTlsStatus(status, { type: 'prepared' });
-      persistStatus(ctx, status, {
-        TLS_ACME_CNAME_TARGET: registration.fulldomain,
-        TLS_RETRY_STATE: 'awaiting-operator-dns',
-      });
+      resolveAcmeDnsCredentialsServerUrl(env, serverUrl);
+      try {
+        const registration = await (deps.registerAcmeDns ?? registerAcmeDnsDefault)(serverUrl);
+        writeAcmeDnsCredentials(
+          paths.acmeDnsCredentials,
+          registration,
+          resolveAcmeDnsCredentialsServerUrl(env, registration.serverUrl),
+        );
+        status = transitionTlsStatus(status, { type: 'prepared' });
+        persistStatus(ctx, status, {
+          TLS_ACME_CNAME_TARGET: registration.fulldomain,
+          TLS_RETRY_STATE: 'awaiting-operator-dns',
+        });
+        writeGeneratedTlsCaddyfile(ctx.home, status, readEnvMap(envPath));
+        return { tls: status };
+      } catch (error) {
+        const failed = transitionTlsStatus(status, {
+          type: 'fail',
+          errorClass: 'acme',
+          message: tlsPublicErrorMessage(error, 'HTTPS konnte nicht erneut vorbereitet werden.'),
+        });
+        persistStatus(ctx, failed, { TLS_RETRY_STATE: 'preparing' });
+        throw error;
+      }
+    }
+    const apply = async () => {
+      persistStatus(ctx, status);
       writeGeneratedTlsCaddyfile(ctx.home, status, readEnvMap(envPath));
       return { tls: status };
-    } catch (error) {
-      const failed = transitionTlsStatus(status, {
-        type: 'fail',
-        errorClass: 'acme',
-        message: error instanceof Error ? error.message : String(error),
-      });
-      persistStatus(ctx, failed, { TLS_RETRY_STATE: 'preparing' });
-      throw error;
-    }
-  }
-  persistStatus(ctx, status);
-  writeGeneratedTlsCaddyfile(ctx.home, status, readEnvMap(envPath));
-  if (status.cutoverApplied && !fakeRuntimeEnabled(env))
-    await (deps.reloadProxy ?? reloadProxyDefault)(ctx);
-  return { tls: status };
+    };
+    return status.cutoverApplied ? runTlsOperation(ctx, 'repair', deps, apply) : apply();
+  });
 }
 
 export async function resetHostTls(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsActionResult> {
-  assertHostLifecycleAction(ctx, 'tls-reset');
-  const envPath = envPathOf(ctx);
-  const env = readEnvMap(envPath);
-  const current = readTlsStatus(env);
-  if (!current.cutoverApplied) {
-    const status = transitionTlsStatus(current, { type: 'reset-before-cutover' });
-    removeEnvKeys(envPath, [...TLS_ENV_KEYS, ...PROXY_TLS_HOST_PATH_ENV_KEYS]);
-    const paths = resolveProxyTlsPaths(ctx.home);
-    if (fs.existsSync(paths.root)) fs.rmSync(paths.root, { recursive: true, force: true });
-    return { tls: status };
-  }
-  if (current.mode === 'custom') {
-    throw new SetupApiValidationError(
-      'Aktives Custom TLS kann nur mit einem neuen PEM über renew ersetzt werden; HTTP-Rollback ist gesperrt.',
-    );
-  }
-  const paths = resolveProxyTlsPaths(ctx.home);
-  for (const directory of [paths.caddyData, paths.caddyConfig, paths.certs]) {
-    if (fs.existsSync(directory)) fs.rmSync(directory, { recursive: true, force: true });
-    fs.mkdirSync(directory, { recursive: true });
-  }
-  const degraded = transitionTlsStatus(current, {
-    type: 'degrade',
-    errorClass: 'acme',
-    message: 'TLS-State wird für dieselbe Identität neu ausgestellt.',
+  return runHostMutation(ctx.home, 'resetHostTls', async () => {
+    assertHostLifecycleAction(ctx, 'tls-reset');
+    const envPath = envPathOf(ctx);
+    const env = readEnvMap(envPath);
+    const current = readTlsStatus(env);
+    if (!current.cutoverApplied) {
+      const status = transitionTlsStatus(current, { type: 'reset-before-cutover' });
+      removeEnvKeys(envPath, [...TLS_ENV_KEYS, ...PROXY_TLS_HOST_PATH_ENV_KEYS]);
+      const paths = resolveProxyTlsPaths(ctx.home);
+      if (fs.existsSync(paths.root)) fs.rmSync(paths.root, { recursive: true, force: true });
+      return { tls: status };
+    }
+    if (current.mode === 'custom') {
+      throw new SetupApiValidationError(
+        'Aktives Custom TLS kann nur mit einem neuen PEM über renew ersetzt werden; HTTP-Rollback ist gesperrt.',
+      );
+    }
+    return runTlsOperation(ctx, 'reset', deps, async () => {
+      const paths = resolveProxyTlsPaths(ctx.home);
+      for (const directory of [paths.caddyData, paths.caddyConfig, paths.certs]) {
+        if (fs.existsSync(directory)) fs.rmSync(directory, { recursive: true, force: true });
+        fs.mkdirSync(directory, { recursive: true });
+      }
+      const degraded = transitionTlsStatus(current, {
+        type: 'degrade',
+        errorClass: 'acme',
+        message: 'TLS-State wird für dieselbe Identität neu ausgestellt.',
+      });
+      persistStatus(ctx, degraded, { TLS_RETRY_STATE: 'active' });
+      // Same identity and Canonical stay HTTPS. Re-issue runs through the normal managed runtime.
+      const retry = {
+        ...degraded,
+        state: 'dns-verified' as const,
+        applyReady: false,
+        lastError: null,
+      };
+      persistStatus(ctx, retry);
+      const result = await obtainManagedCertificateForAuthorizedAction(ctx, deps);
+      const active = { ...result.tls, state: 'active' as const, cutoverApplied: true };
+      persistStatus(ctx, active);
+      writeGeneratedTlsCaddyfile(ctx.home, active, readEnvMap(envPath));
+      return { ...result, tls: active };
+    });
   });
-  persistStatus(ctx, degraded, { TLS_RETRY_STATE: 'active' });
-  // Same identity and Canonical stay HTTPS. Re-issue runs through the normal managed runtime.
-  const retry = { ...degraded, state: 'dns-verified' as const, applyReady: false, lastError: null };
-  persistStatus(ctx, retry);
-  const result = await obtainManagedCertificateForAuthorizedAction(ctx, deps);
-  const active = { ...result.tls, state: 'active' as const, cutoverApplied: true };
-  persistStatus(ctx, active);
-  writeGeneratedTlsCaddyfile(ctx.home, active, readEnvMap(envPath));
-  return { ...result, tls: active };
 }
 
 export async function renewHostTls(
@@ -1450,63 +1478,207 @@ export async function renewHostTls(
   input: TlsRenewInput = {},
   deps: TlsRuntimeDependencies = {},
 ): Promise<TlsActionResult> {
-  assertHostLifecycleAction(ctx, 'tls-renew');
-  const envPath = envPathOf(ctx);
-  const env = readEnvMap(envPath);
-  const current = readTlsStatus(env);
-  if (!current.cutoverApplied || !current.mode || !current.hostname) {
-    throw new SetupApiValidationError('renew ist erst nach dem HTTPS-Cutover erlaubt.');
-  }
-  if (current.mode === 'custom') {
-    if (!input.fullchainPem || !input.privateKeyPem) {
-      throw new SetupApiValidationError('Custom renew erfordert fullchainPem und privateKeyPem.');
+  return runHostMutation(ctx.home, 'renewHostTls', async () => {
+    assertHostLifecycleAction(ctx, 'tls-renew');
+    const env = readEnvMap(envPathOf(ctx));
+    const current = readTlsStatus(env);
+    if (!current.cutoverApplied || !current.mode || !current.hostname)
+      throw new SetupApiValidationError('renew ist erst nach dem HTTPS-Cutover erlaubt.');
+    // Invalid user input never starts an operation or interrupts the confirmed proxy.
+    let certificate: TlsCertificateStatus | null = null;
+    if (current.mode === 'custom') {
+      if (!input.fullchainPem || !input.privateKeyPem)
+        throw new SetupApiValidationError('Custom renew erfordert fullchainPem und privateKeyPem.');
+      certificate = validateCustomCertificate(
+        { fullchainPem: input.fullchainPem, privateKeyPem: input.privateKeyPem },
+        current.hostname,
+      );
     }
-    const certificate = validateCustomCertificate(
-      { fullchainPem: input.fullchainPem, privateKeyPem: input.privateKeyPem },
-      current.hostname,
-    );
-    const paths = ensureProxyTlsPaths(ctx.home);
-    // Keep the working pair until the replacement passes the live HTTPS checks.
-    const previousFullchain = fs.readFileSync(paths.customFullchain, 'utf8');
-    const previousPrivateKey = fs.readFileSync(paths.customPrivateKey, 'utf8');
-    const candidate = {
-      ...current,
-      state: 'active' as const,
-      certificate,
-      lastError: null,
-      applyReady: true,
-    };
-    try {
-      writeSecretFileAtomically(paths.customFullchain, `${input.fullchainPem.trim()}\n`);
-      writeSecretFileAtomically(paths.customPrivateKey, `${input.privateKeyPem.trim()}\n`);
-      writeGeneratedTlsCaddyfile(ctx.home, candidate, env);
-      if (!fakeRuntimeEnabled(env)) await (deps.reloadProxy ?? reloadProxyDefault)(ctx);
-      const checked = await runChecks(readEnvMap(envPath), current.hostname, deps);
-      persistStatus(ctx, candidate);
-      return { tls: candidate, checks: checked.checks };
-    } catch (error) {
-      let message = error instanceof Error ? error.message : String(error);
-      try {
-        writeSecretFileAtomically(paths.customFullchain, previousFullchain);
-        writeSecretFileAtomically(paths.customPrivateKey, previousPrivateKey);
-        writeGeneratedTlsCaddyfile(ctx.home, current, env);
-        if (!fakeRuntimeEnabled(env)) await (deps.reloadProxy ?? reloadProxyDefault)(ctx);
-      } catch (rollbackError) {
-        message += ` Wiederherstellung fehlgeschlagen: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`;
+    return runTlsOperation(ctx, 'renew', deps, async () => {
+      if (certificate) {
+        const paths = resolveProxyTlsPaths(ctx.home);
+        writeSecretFileAtomically(paths.customFullchain, `${input.fullchainPem!.trim()}\n`);
+        writeSecretFileAtomically(paths.customPrivateKey, `${input.privateKeyPem!.trim()}\n`);
+        const candidate = {
+          ...current,
+          state: 'active' as const,
+          certificate,
+          lastError: null,
+          applyReady: true,
+        };
+        persistStatus(ctx, candidate);
+        writeGeneratedTlsCaddyfile(ctx.home, candidate, readEnvMap(envPathOf(ctx)));
+        return { tls: candidate };
       }
-      persistStatus(ctx, {
-        ...current,
-        state: 'degraded',
-        lastError: { class: 'cert-name', message },
-      });
-      throw new TlsRuntimeUnavailableError(message);
-    }
+      persistStatus(ctx, { ...current, state: 'dns-verified', applyReady: false, lastError: null });
+      const result = await obtainManagedCertificateForAuthorizedAction(ctx, deps);
+      const active = { ...result.tls, state: 'active' as const, cutoverApplied: true };
+      persistStatus(ctx, active);
+      writeGeneratedTlsCaddyfile(ctx.home, active, readEnvMap(envPathOf(ctx)));
+      return { ...result, tls: active };
+    });
+  });
+}
+
+async function stopTlsProxy(ctx: SetupContext, deps: TlsRuntimeDependencies): Promise<void> {
+  if (fakeRuntimeEnabled(readEnvMap(envPathOf(ctx)))) return;
+  if (deps.stopProxy) return deps.stopProxy(ctx);
+  // Removal also releases file/directory bind mounts before repeatable restoration.
+  const result = await composeRemoveServices(
+    { projectRoot: ctx.home, composeProjectName: ctx.composeProjectName, withProxy: true },
+    ['proxy'],
+  );
+  if (!result.ok)
+    throw new TlsRuntimeUnavailableError('TLS-Proxy konnte nicht angehalten werden.', {
+      cause: new Error(result.log),
+    });
+}
+
+async function verifyTlsAccess(
+  ctx: SetupContext,
+  deps: TlsRuntimeDependencies,
+): Promise<TlsLocalCheck[] | undefined> {
+  const env = readEnvMap(envPathOf(ctx));
+  if (fakeRuntimeEnabled(env)) return;
+  await (deps.reloadProxy ?? reloadProxyDefault)(ctx);
+  if (deps.verifyAccess) {
+    await deps.verifyAccess(ctx, env);
+    return;
   }
-  const retry = { ...current, state: 'dns-verified' as const, applyReady: false, lastError: null };
-  persistStatus(ctx, retry);
-  const result = await obtainManagedCertificateForAuthorizedAction(ctx, deps);
-  const active = { ...result.tls, state: 'active' as const, cutoverApplied: true };
-  persistStatus(ctx, active);
-  writeGeneratedTlsCaddyfile(ctx.home, active, readEnvMap(envPath));
-  return { ...result, tls: active };
+  let checks: TlsLocalCheck[] | undefined;
+  const status = readTlsStatus(env);
+  if (status.cutoverApplied) {
+    if (!status.hostname || !env.get('CANONICAL_BASE_URL')?.startsWith('https://'))
+      throw new Error('TLS_CONFIRMED_IDENTITY_INVALID');
+    checks = (await runChecksUntilReady(env, status.hostname, deps)).checks;
+  }
+  const healthState = await waitForExpectedStackHealth(composePs, {
+    projectRoot: ctx.home,
+    composeProjectName: ctx.composeProjectName,
+    withProxy: true,
+  });
+  if (!healthState.ok) throw new Error(healthState.errors.join('\n'));
+  const audit = await auditRuntimePostcondition(
+    createRuntimePostcondition(env, readInstalledPortalContract(ctx.home)),
+    healthState.compose,
+  );
+  if (!audit.ok) throw new Error(audit.errors.join('\n'));
+  const health = await runDefaultMaintenanceHealthChecks({
+    localAppBaseUrl: LOCAL_SETUP_APP_BASE_URL,
+    lanAppBaseUrl: resolveCanonicalBaseUrl(env, env.get('SETUP_LAN_APP_IP')),
+  });
+  if (!health.ok) throw new Error(health.errors.join('\n'));
+  return checks;
+}
+
+/** Only TLS access mutations enter here; preparation keeps its existing state graph. */
+async function runTlsOperation(
+  ctx: SetupContext,
+  action: TlsOperation['action'],
+  deps: TlsRuntimeDependencies,
+  mutate: () => Promise<TlsActionResult>,
+): Promise<TlsActionResult> {
+  assertMaintenancePredecessors(ctx.home);
+  const previousEnv = readEnvMap(envPathOf(ctx));
+  // The mutation helpers own exactly these mounts. Never snapshot one directory
+  // while a manually redirected Caddy mount writes certificates somewhere else.
+  for (const [key, expected] of Object.entries(resolveProxyTlsEnvUpdates(ctx.home))) {
+    if (!key.endsWith('_HOST_PATH')) continue;
+    const actual = previousEnv.get(key)?.trim();
+    if (actual && path.resolve(actual) !== path.resolve(expected))
+      throw new SetupApiValidationError(
+        'TLS-Dateipfade weichen von den verwalteten Recovery-Pfaden ab. Bitte die Setup-Konfiguration prüfen.',
+      );
+  }
+  let operation: TlsOperation = {
+    schemaVersion: 1,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    action,
+    identity: tlsIdentityReference(previousEnv),
+    phase: 'prepared',
+  };
+  writeTlsOperation(ctx.home, operation);
+  let committed = false;
+  try {
+    await stopTlsProxy(ctx, deps);
+    captureTlsRollback(ctx.home, operation);
+    operation = atPhase(operation, 'rollback-ready');
+    writeTlsOperation(ctx.home, operation);
+    operation = atPhase(operation, 'cutover');
+    writeTlsOperation(ctx.home, operation);
+    const result = await mutate();
+    const checks = await verifyTlsAccess(ctx, deps);
+    syncMaintenanceHostFiles(ctx.home);
+    operation = atPhase(operation, 'committed');
+    writeTlsOperation(ctx.home, operation);
+    committed = true;
+    // Cleanup failure retains a terminal marker; never roll back a committed target.
+    finishTlsOperation(ctx.home, operation);
+    return checks ? { ...result, checks } : result;
+  } catch (error) {
+    const stored = readTlsOperation(ctx.home);
+    if (committed || stored?.phase === 'committed')
+      throw new ManagerApiError(
+        {
+          code: 'tls_cleanup_pending',
+          category: 'conflict',
+          retryable: true,
+          message: 'TLS ist bestätigt; der Vorgangsabschluss muss noch aufgeräumt werden.',
+        },
+        { cause: error },
+      );
+    const recovery = await recoverTlsOperation(ctx, deps);
+    throw new ManagerApiError(
+      {
+        code: recovery.ok ? 'tls_operation_failed' : 'tls_recovery_failed',
+        category: recovery.ok ? 'operation-failed' : 'inconsistent',
+        retryable: false,
+        message: recovery.ok
+          ? 'TLS-Änderung fehlgeschlagen. Der bisherige Zugang wurde wiederhergestellt.'
+          : 'TLS-Recovery ungeklärt. Hoständerungen bleiben gesperrt.',
+      },
+      { cause: error },
+    );
+  }
+}
+
+export async function recoverTlsOperation(
+  ctx: SetupContext,
+  deps: TlsRuntimeDependencies = {},
+): Promise<{ ok: boolean; errors: string[] }> {
+  return hostMutationLock(ctx.home).run('tls-recovery', async () => {
+    const operation = readTlsOperation(ctx.home); // Unreadable evidence is never rewritten.
+    if (!operation) return { ok: true, errors: [] };
+    if (operation.phase === 'committed' || operation.phase === 'recovered') {
+      finishTlsOperation(ctx.home, operation);
+      return { ok: true, errors: [] };
+    }
+    const rollback = tlsNeedsRollback(operation);
+    try {
+      assertNoUpdateOperation(ctx.home);
+      assertNoRestoreOperation(ctx.home);
+      assertMaintenancePredecessors(ctx.home);
+      if (rollback) {
+        writeTlsOperation(ctx.home, atPhase(operation, 'rolling-back'));
+        await stopTlsProxy(ctx, deps);
+        restoreTlsRollback(ctx.home, operation);
+      }
+      if (tlsIdentityReference(readEnvMap(envPathOf(ctx))) !== operation.identity)
+        throw new Error('TLS_RECOVERY_IDENTITY_INVALID');
+      await verifyTlsAccess(ctx, deps);
+      syncMaintenanceHostFiles(ctx.home);
+    } catch (error) {
+      writeTlsOperation(ctx.home, {
+        ...atPhase(operation, 'prepared'),
+        phase: 'recovery-failed',
+        recovery: rollback ? 'rollback' : 'restart',
+      });
+      return { ok: false, errors: [error instanceof Error ? error.message : String(error)] };
+    }
+    const recovered = atPhase(operation, 'recovered');
+    writeTlsOperation(ctx.home, recovered);
+    finishTlsOperation(ctx.home, recovered);
+    return { ok: true, errors: [] };
+  });
 }

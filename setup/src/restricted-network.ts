@@ -205,11 +205,13 @@ export function buildRestrictedNetworkStatus(input: {
     health: blocked
       ? 'blocked'
       : applied
-        ? !published
-          ? 'degraded'
-          : sameInterface
-            ? 'warning-shared-interface'
-            : 'healthy'
+        ? !input.compose
+          ? null
+          : !published
+            ? 'degraded'
+            : sameInterface
+              ? 'warning-shared-interface'
+              : 'healthy'
         : 'prepared',
     binding,
     exposedSurfaces: ['patient-portal'],

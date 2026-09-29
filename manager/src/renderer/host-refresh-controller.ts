@@ -1,3 +1,6 @@
+import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+import type { ManagerError } from '@praxis-flow/server-shared/setup-api';
+import { managerRefreshError } from './runtime-observation.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import type { HostStatus } from '../shared/host-status.js';
 import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
@@ -22,7 +25,12 @@ export type HostRefreshControllerDeps = {
   pollIntervalMs?: number;
   onRuntime: (runtime: HostRuntimeHealth) => void;
   onConfig: (status: HostStatus, view: ManagerView) => void;
-  onError: (message: string, view: ManagerView, source: RefreshErrorSource) => void;
+  onError: (
+    message: string,
+    view: ManagerView,
+    source: RefreshErrorSource,
+    error: ManagerError,
+  ) => void;
   schedule?: ScheduleFn;
   clearSchedule?: ClearScheduleFn;
 };
@@ -64,7 +72,11 @@ export function createHostRefreshController(
   let foregroundRefreshes = 0;
 
   function envExistsForRuntime(): boolean {
-    return lastConfig?.envExists === true;
+    return (lastConfig?.envExists ?? lastRuntime?.envExists) === true;
+  }
+
+  function shouldPoll(): boolean {
+    return envExistsForRuntime() || hasBlockingMaintenanceOperation(lastConfig);
   }
 
   function stopPollTimer(): void {
@@ -79,7 +91,7 @@ export function createHostRefreshController(
     if (myGeneration !== generation) {
       return;
     }
-    if (!envExistsForRuntime()) {
+    if (!shouldPoll()) {
       return;
     }
     pollTimerId = schedule(() => {
@@ -89,7 +101,7 @@ export function createHostRefreshController(
   }
 
   function reportError(source: RefreshErrorSource, error: unknown): void {
-    deps.onError(errorMessage(error), currentView, source);
+    deps.onError(errorMessage(error), currentView, source, managerRefreshError(error));
   }
 
   async function fetchConfig(myGeneration: number): Promise<HostStatus | null> {
@@ -110,20 +122,64 @@ export function createHostRefreshController(
     }
   }
 
-  async function fetchRuntime(myGeneration: number): Promise<void> {
+  async function fetchRuntime(myGeneration: number): Promise<boolean> {
     try {
       const runtime = await deps.api().fetchRuntimeHealth();
       if (myGeneration !== generation) {
-        return;
+        return false;
       }
       lastRuntime = runtime;
       deps.onRuntime(runtime);
+      return true;
     } catch (error) {
       if (myGeneration !== generation) {
-        return;
+        return false;
       }
       reportError('runtime', error);
+      return false;
     }
+  }
+
+  function runtimeDiffersFromConfig(): boolean {
+    if (!lastConfig || !lastRuntime) return false;
+    return (
+      (lastRuntime.lifecycleKey !== undefined &&
+        lastRuntime.lifecycleKey !== lastConfig.lifecycleKey) ||
+      lastRuntime.envExists !== lastConfig.envExists ||
+      lastRuntime.docker.daemonRunning !== lastConfig.docker.daemonRunning ||
+      JSON.stringify(
+        lastRuntime.compose?.services.map((service) => [
+          service.service,
+          service.state,
+          service.health,
+        ]),
+      ) !==
+        JSON.stringify(
+          lastConfig.compose?.services.map((service) => [
+            service.service,
+            service.state,
+            service.health,
+          ]),
+        ) ||
+      lastRuntime.configuredLanIp !== lastConfig.network.configuredLanIp ||
+      (lastRuntime.appBaseUrl !== null && lastRuntime.appBaseUrl !== lastConfig.appBaseUrl) ||
+      (lastRuntime.proxyServer !== null &&
+        lastRuntime.proxyServer.enabled !== lastConfig.proxy.enabled)
+    );
+  }
+
+  async function reconcileConfigAfterRuntime(
+    myGeneration: number,
+    runtimeSucceeded: boolean,
+  ): Promise<HostStatus | null> {
+    if (
+      runtimeSucceeded &&
+      myGeneration === generation &&
+      (hasBlockingMaintenanceOperation(lastConfig) || runtimeDiffersFromConfig())
+    ) {
+      return fetchConfig(myGeneration);
+    }
+    return lastConfig;
   }
 
   async function performRefresh(
@@ -141,8 +197,9 @@ export function createHostRefreshController(
       if (options.scope === 'mutation') {
         const status = await fetchConfig(myGeneration);
         configSucceeded = status !== null;
-        if (myGeneration === generation && (status ?? lastConfig)?.envExists) {
-          await fetchRuntime(myGeneration);
+        if (myGeneration === generation && status?.envExists !== false) {
+          const runtimeSucceeded = await fetchRuntime(myGeneration);
+          return (await reconcileConfigAfterRuntime(myGeneration, runtimeSucceeded)) ?? status;
         }
         return status;
       }
@@ -151,58 +208,42 @@ export function createHostRefreshController(
         if (!envExistsForRuntime()) {
           const status = await fetchConfig(myGeneration);
           configSucceeded = status !== null;
+          if (myGeneration === generation && status?.envExists !== false) {
+            const runtimeSucceeded = await fetchRuntime(myGeneration);
+            return (await reconcileConfigAfterRuntime(myGeneration, runtimeSucceeded)) ?? status;
+          }
           return status;
         }
         let configResult: HostStatus | null = null;
-        await Promise.all([
+        const [runtimeSucceeded] = await Promise.all([
           fetchRuntime(myGeneration),
           fetchConfig(myGeneration).then((status) => {
             configResult = status;
           }),
         ]);
-        return configResult;
+        return (await reconcileConfigAfterRuntime(myGeneration, runtimeSucceeded)) ?? configResult;
       }
 
       if (envExistsForRuntime()) {
-        await fetchRuntime(myGeneration);
+        const runtimeSucceeded = await fetchRuntime(myGeneration);
         // A runtime poll may supersede a mutation's config refresh. Reconcile by
         // fetching authoritative config, never by mixing runtime fields into it.
-        if (
-          myGeneration === generation &&
-          lastConfig &&
-          lastRuntime &&
-          ((lastRuntime.lifecycleKey !== undefined &&
-            lastRuntime.lifecycleKey !== lastConfig.lifecycleKey) ||
-            lastRuntime.envExists !== lastConfig.envExists ||
-            lastRuntime.docker.daemonRunning !== lastConfig.docker.daemonRunning ||
-            JSON.stringify(
-              lastRuntime.compose?.services.map((service) => [
-                service.service,
-                service.state,
-                service.health,
-              ]),
-            ) !==
-              JSON.stringify(
-                lastConfig.compose?.services.map((service) => [
-                  service.service,
-                  service.state,
-                  service.health,
-                ]),
-              ) ||
-            lastRuntime.configuredLanIp !== lastConfig.network.configuredLanIp ||
-            (lastRuntime.appBaseUrl !== null && lastRuntime.appBaseUrl !== lastConfig.appBaseUrl) ||
-            (lastRuntime.proxyServer !== null &&
-              lastRuntime.proxyServer.enabled !== lastConfig.proxy.enabled))
-        ) {
-          await fetchConfig(myGeneration);
-        }
+        await reconcileConfigAfterRuntime(myGeneration, runtimeSucceeded);
+      } else if (hasBlockingMaintenanceOperation(lastConfig)) {
+        await fetchConfig(myGeneration);
       }
       return lastConfig;
     } finally {
-      if (myGeneration === generation && envExistsForRuntime()) {
-        // Successful config-only: caller starts runtime (boot / mutation). Failed
-        // config-only must resume an existing ops poll — refresh() already stopped it.
-        if (!(options.scope === 'config' && configSucceeded)) {
+      if (myGeneration === generation && shouldPoll()) {
+        // Boot callers start runtime after config. Open journals must also poll
+        // without an env (e.g. interrupted first setup); failed config resumes polling.
+        if (
+          !(
+            options.scope === 'config' &&
+            configSucceeded &&
+            !hasBlockingMaintenanceOperation(lastConfig)
+          )
+        ) {
           schedulePollTimer(myGeneration);
         }
       }

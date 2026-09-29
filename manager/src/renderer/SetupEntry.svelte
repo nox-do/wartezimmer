@@ -8,26 +8,11 @@
 
   let {
     status,
-    onSetupClick,
     onLoadReleaseArchive,
   }: {
     status: HostStatus;
-    onSetupClick: () => void;
     onLoadReleaseArchive: () => void;
   } = $props();
-
-  let startBusy = $state(false);
-  let startError = $state<string | null>(null);
-  let startFailed = $state(false);
-  async function startExisting(): Promise<void> {
-    startBusy = true; startError = null;
-    try {
-      const result = await window.praxisManager.startStoppedInstallation();
-      if (result.installation.kind === 'needs-reinstall') { startFailed = true; startError = result.installation.reasons.map(reason => reason.message).join(' '); }
-      else window.location.reload();
-    } catch (error) { startError = error instanceof Error ? error.message : String(error); }
-    finally { startBusy = false; }
-  }
 
   const tone = $derived(setupEntryTone(status));
   const content = $derived(setupEntryContent(status, tone));
@@ -38,7 +23,6 @@
 {#if visible}
   <section id="setup-entry" class={`setup-entry is-${tone}`}>
     <p id="setup-entry-eyebrow" class="setup-entry-eyebrow">{content.eyebrow}</p>
-    <h1 id="setup-entry-title">{content.title}</h1>
     <p id="setup-entry-copy" class="setup-entry-copy">{content.copy}</p>
     {#if checklist.length > 0}
       <ul id="setup-entry-checklist" class="checklist checklist--setup">
@@ -65,20 +49,5 @@
         {content.note}
       {/if}
     </p>
-    {#if status.installation.kind === 'stopped' && !startFailed}
-      <button type="button" disabled={startBusy} onclick={() => void startExisting()}>Vorhandene Installation starten</button>
-    {/if}
-    {#if startError}<p class="error">{startError}</p>{/if}
-    {#if content.startButtonLabel}
-      <button
-        disabled={startBusy}
-        type="button"
-        id="setup-entry-start"
-        class="setup-entry-start"
-        onclick={onSetupClick}
-      >
-        {content.startButtonLabel}
-      </button>
-    {/if}
   </section>
 {/if}

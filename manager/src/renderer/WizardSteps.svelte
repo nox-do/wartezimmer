@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { wizardIsBusy, wizardProgress } from './wizard-controller.js';
+
   import { dockerPrerequisitesHints } from '../shared/docker-prerequisites-ui.js';
   import {
     DOCKER_FILE_SHARING_HINT,
@@ -80,7 +82,7 @@
             <button
               type="button"
               class="btn-secondary wizard-install-link"
-              disabled={snapshot.busy}
+              disabled={wizardIsBusy(snapshot)}
               onclick={() => {
                 void window.praxisManager?.openExternalUrl(hints.installLink!.url);
               }}
@@ -91,12 +93,12 @@
           <button
             type="button"
             class="btn-secondary wizard-install-link"
-            disabled={snapshot.busy}
+            disabled={wizardIsBusy(snapshot)}
             onclick={() => {
               void controller.refreshPrerequisites();
             }}
           >
-            {snapshot.busy ? 'Prüfe …' : 'Erneut prüfen'}
+            {wizardIsBusy(snapshot) ? 'Prüfe …' : 'Erneut prüfen'}
           </button>
         {:else if needsDeliveryImages(snapshot.status)}
           <p class="hint">
@@ -106,16 +108,16 @@
           <button
             type="button"
             class="btn-secondary wizard-install-link"
-            disabled={snapshot.busy}
+            disabled={wizardIsBusy(snapshot)}
             onclick={() => {
               void controller.loadReleaseArchive();
             }}
           >
-            {snapshot.busy ? 'Import läuft …' : 'Installationsdatei wählen …'}
+            {wizardIsBusy(snapshot) ? 'Import läuft …' : 'Installationsdatei wählen …'}
           </button>
         {/if}
 
-        {#if snapshot.releaseImportStatus && snapshot.busy}
+        {#if snapshot.releaseImportStatus && wizardIsBusy(snapshot)}
           <p class="wizard-progress is-active" role="status">
             <span class="spinner" aria-hidden="true"></span>
             {snapshot.releaseImportStatus}
@@ -142,7 +144,7 @@
       <FolderPathField
         label="Importordner (Kontakte, CSV)"
         value={snapshot.importsHostPath}
-        disabled={snapshot.busy}
+        disabled={wizardIsBusy(snapshot)}
         onChange={(value) => patchFields({ importsHostPath: value })}
         onBrowse={async () => {
           return controller.browseImportsFolder();
@@ -151,7 +153,7 @@
       <FolderPathField
         label="Exportordner (Dokumente aus MFA)"
         value={snapshot.exportsHostPath}
-        disabled={snapshot.busy}
+        disabled={wizardIsBusy(snapshot)}
         onChange={(value) => patchFields({ exportsHostPath: value })}
         onBrowse={async () => {
           return controller.browseExportsFolder();
@@ -165,7 +167,7 @@
       <section class="network-config-block">
         <ProxySettings
           enabled={snapshot.proxyEnabled}
-          disabled={snapshot.busy || wizardHttpsPrepared(snapshot.status)}
+          disabled={wizardIsBusy(snapshot) || wizardHttpsPrepared(snapshot.status)}
           onChange={(proxyEnabled) => patchFields({ proxyEnabled })}
         />
         {#if snapshot.proxyEnabled}
@@ -173,7 +175,7 @@
             <h3 class="network-config-subheading">Adresse für den Praxiszugang</h3>
             <p class="hint">Der Proxy wird beim Anwenden an diese IP-Adresse gebunden.</p>
             <LanIpPanel state={snapshot} network={snapshot.network} status={snapshot.status}
-              disabled={snapshot.busy} variant="wizard" radioName="wizard-lan-ip"
+              disabled={wizardIsBusy(snapshot)} variant="wizard" radioName="wizard-lan-ip"
               idPrefix="wizard" onChange={patchFields} />
           </div>
         {:else}
@@ -181,7 +183,7 @@
             <summary>Adresse für Geräte-Links ändern</summary>
             <p class="hint">Die Auswahl bestimmt die angezeigten Geräte-Links und die Erreichbarkeitsprüfung. Sie schränkt den Zugriff über andere Netzwerkanschlüsse nicht ein.</p>
             <LanIpPanel state={snapshot} network={snapshot.network} status={snapshot.status}
-              disabled={snapshot.busy} variant="wizard" radioName="wizard-lan-ip"
+              disabled={wizardIsBusy(snapshot)} variant="wizard" radioName="wizard-lan-ip"
               idPrefix="wizard" onChange={patchFields} />
           </details>
         {/if}
@@ -295,10 +297,10 @@
         {/if}
 
         <h3 class="wizard-subheading">Prüfen</h3>
-        {#if snapshot.probeStatusText}
+        {#if wizardProgress(snapshot)}
           <p class="wizard-progress is-active" role="status">
             <span class="spinner" aria-hidden="true"></span>
-            {snapshot.probeStatusText}
+            {wizardProgress(snapshot)}
           </p>
         {:else if snapshot.status}
           <ul class="checklist">

@@ -4,6 +4,7 @@ import type {
   RestrictedNetworkInspectResult,
   RestrictedNetworkStatus,
 } from '../shared/host-status.js';
+import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
 
 export function restrictedDnsStatusText(dns: RestrictedNetworkDnsObservation): string {
   switch (dns.state) {
@@ -65,11 +66,10 @@ export function restrictedInspectHeadline(inspect: RestrictedNetworkInspectResul
 }
 
 export function restrictedPrepareErrorText(error: unknown): string {
-  const detail = error instanceof Error ? error.message : String(error);
   if (
-    detail.includes(
-      'Die gewählte Restricted-IP ist nicht mehr lokal verfügbar oder nicht eindeutig zugeordnet.',
-    )
+    error instanceof ManagerApiError &&
+    (error.code === 'restricted_address_unavailable' ||
+      error.code === 'restricted_address_ambiguous')
   ) {
     return 'Die gewählte Netzwerkadresse ist derzeit nicht am Computer verfügbar. Prüfen Sie die Netzwerkverbindung und wählen Sie die Adresse nach der Wiederherstellung erneut aus.';
   }
@@ -80,16 +80,9 @@ export function restrictedActionErrorText(
   error: unknown,
   action: 'aktiviert' | 'entfernt',
 ): string {
-  const detail = error instanceof Error ? error.message : String(error);
-  const apiMessage = /Setup-API\s+\/api\/setup\/host\/restricted-network\/[^:]+:\s*([\s\S]+)$/
-    .exec(detail)?.[1]
-    ?.trim();
-  const directMessage = detail.includes('Error invoking remote method') ? null : detail.trim();
-  return (
-    apiMessage ||
-    directMessage ||
-    `Der Patientenzugang konnte nicht ${action} werden. Bitte erneut prüfen.`
-  );
+  return error instanceof ManagerApiError
+    ? error.message
+    : `Der Patientenzugang konnte nicht ${action} werden. Bitte erneut prüfen.`;
 }
 
 export const restrictedCandidateKey = (address: string, interfaceId: string): string =>

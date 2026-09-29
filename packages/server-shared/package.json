@@ -39,6 +39,10 @@
     "./host-lifecycle-policy": {
       "types": "./dist/host-lifecycle-policy.d.ts",
       "import": "./dist/host-lifecycle-policy.js"
+    },
+    "./manager-status-projection": {
+      "types": "./dist/manager-status-projection.d.ts",
+      "import": "./dist/manager-status-projection.js"
     }
   },
   "scripts": {

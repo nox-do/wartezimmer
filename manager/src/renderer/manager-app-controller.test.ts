@@ -1,9 +1,19 @@
+import { projectManagerStatus } from '@praxis-flow/server-shared/manager-status-projection';
+import {
+  failedRuntimeObservation,
+  runtimeSnapshot,
+  type RuntimeObservation,
+} from './runtime-observation.js';
 import assert from 'node:assert/strict';
 import { createWizardController } from './wizard-controller.js';
 import test from 'node:test';
 import type { HostRuntimeHealth } from '@praxis-flow/server-shared/setup-api';
 import type { HostStatus } from '../shared/host-status.js';
-import { freshInstallHostStatus, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
+import {
+  freshInstallHostStatus,
+  minimalHostStatus,
+  knownLifecycle,
+} from './test-fixtures/minimal-host-status.js';
 import { createHostRefreshController } from './host-refresh-controller.js';
 import type { HostRefreshController } from './host-refresh-controller.js';
 import type { ManagerView } from './host-refresh-controller.js';
@@ -33,9 +43,8 @@ function createFakeShell(): ManagerAppShell & {
   wizardPresentation: WizardPresentation;
   bootReady: boolean;
   configSnapshot: HostStatus | null;
-  runtimeSnapshot: HostRuntimeHealth | null;
+  runtimeObservation: RuntimeObservation;
   statusError: string | null;
-  runtimeError: string | null;
   events: string[];
   wizardSessions: Array<{ status: HostStatus | null; presentation: WizardPresentation }>;
 } {
@@ -44,9 +53,8 @@ function createFakeShell(): ManagerAppShell & {
     wizardPresentation: 'embedded' as WizardPresentation,
     bootReady: false,
     configSnapshot: null as HostStatus | null,
-    runtimeSnapshot: null as HostRuntimeHealth | null,
+    runtimeObservation: { kind: 'idle' } as RuntimeObservation,
     statusError: null as string | null,
-    runtimeError: null as string | null,
     events: [] as string[],
     wizardSessions: [] as Array<{
       status: HostStatus | null;
@@ -63,14 +71,10 @@ function createFakeShell(): ManagerAppShell & {
       this.statusError = null;
     },
     applyRuntimeSnapshot(runtime) {
-      state.runtimeSnapshot = runtime;
-      state.runtimeError = null;
-      this.runtimeSnapshot = runtime;
-      this.runtimeError = null;
+      this.runtimeObservation = { kind: 'current', snapshot: runtime };
     },
-    applyRuntimeError(message) {
-      state.runtimeError = message;
-      this.runtimeError = message;
+    applyRuntimeError(error) {
+      this.runtimeObservation = failedRuntimeObservation(this.runtimeObservation, error);
     },
     applyStatusError(message) {
       state.statusError = message;
@@ -174,7 +178,7 @@ test('boot without .env opens wizard fullscreen without runtime or poll', async 
   assert.equal(chromeVisible(shell), false);
   assert.deepEqual(callLog, ['config']);
   assert.equal(timers.length, 0);
-  assert.equal(shell.runtimeSnapshot, null);
+  assert.equal(runtimeSnapshot(shell.runtimeObservation), null);
   assert.equal(shell.wizardSessions[0]?.status, setup);
   assert.ok(shell.events.indexOf('nav:wizard:fullscreen') < shell.events.indexOf('bootReady'));
 });
@@ -193,7 +197,7 @@ test('boot with .env opens status then fetches runtime and starts poll', async (
   assert.equal(chromeVisible(shell), true);
   assert.deepEqual(callLog, ['config', 'runtime']);
   assert.equal(timers.length, 1);
-  assert.ok(shell.runtimeSnapshot);
+  assert.ok(runtimeSnapshot(shell.runtimeObservation));
   assert.ok(shell.events.indexOf('nav:status:') < shell.events.indexOf('bootReady'));
 });
 
@@ -207,11 +211,13 @@ test('runtime failure exposes a controlled stale-data warning instead of technic
 
   await controller.start();
 
+  assert.equal(shell.runtimeObservation.kind, 'unavailable');
+  assert.ok('error' in shell.runtimeObservation);
   assert.equal(
-    shell.runtimeError,
+    shell.runtimeObservation.error.message,
     'Laufzustand konnte nicht aktualisiert werden. Die angezeigten Betriebsdaten können veraltet sein.',
   );
-  assert.doesNotMatch(shell.runtimeError ?? '', /ECONNREFUSED|127\.0\.0\.1/);
+  assert.doesNotMatch(shell.runtimeObservation.error.message, /ECONNREFUSED|127\.0\.0\.1/);
 });
 
 test('boot config error shows status error without wizard or poll', async () => {
@@ -232,7 +238,7 @@ test('boot config error shows status error without wizard or poll', async () => 
   assert.equal(shell.wizardSessions.length, 0);
   assert.deepEqual(callLog, ['config']);
   assert.equal(timers.length, 0);
-  assert.equal(shell.runtimeSnapshot, null);
+  assert.equal(runtimeSnapshot(shell.runtimeObservation), null);
 });
 
 test('cancel fullscreen without .env lands on status with chrome and does not re-hijack', async () => {
@@ -279,7 +285,7 @@ test('apply is one config-only then runtime as soon as .env exists, still on wiz
   assert.equal(shell.wizardPresentation, 'fullscreen');
   assert.deepEqual(callLog, ['config', 'config', 'runtime']);
   assert.equal(shell.configSnapshot?.envExists, true);
-  assert.ok(shell.runtimeSnapshot);
+  assert.ok(runtimeSnapshot(shell.runtimeObservation));
   assert.equal(timers.length, 1);
 });
 
@@ -374,17 +380,9 @@ test('boot with configured HTTPS and stopped Docker keeps status and starts runt
   assert.ok(timers.length > 0);
 });
 
-test('boot with remnants keeps diagnosis visible and explicit recovery entry fullscreen', async () => {
+test('confirmed missing substance keeps explicit recovery entry fullscreen', async () => {
   const status = freshInstallHostStatus();
   status.installation = { kind: 'needs-reinstall', reasons: [] };
-  status.lifecycle = {
-    assessment: 'inconsistent',
-    mode: null,
-    preparation: 'none',
-    operation: 'none',
-    recovery: 'none',
-    issues: [],
-  };
   const { controller, shell } = createTestController({ fetchSetupStatus: async () => status });
   await controller.start();
   assert.equal(shell.activeView, 'status');
@@ -430,6 +428,107 @@ test('recovery completion reaches healthy status without a stale installation ca
   await wizard.finishRecovery('without-backup');
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(shell.activeView, 'status');
-  assert.equal(shell.configSnapshot?.installation.kind, 'healthy');
+  assert.equal(shell.configSnapshot?.installation?.kind, 'healthy');
   assert.equal(chromeVisible(shell), true);
+});
+
+test('runtime failure keeps config and last snapshot stale; a later success recovers', async () => {
+  const status = minimalHostStatus();
+  const first = minimalRuntime();
+  const second = minimalRuntime({ checkedAt: 'later-success' });
+  let attempt = 0;
+  const { controller, shell } = createTestController({
+    fetchSetupStatus: async () => status,
+    fetchRuntimeHealth: async () => {
+      attempt += 1;
+      if (attempt === 2 || attempt === 3) throw new Error('private detail');
+      return attempt === 1 ? first : second;
+    },
+  });
+  assert.equal(String(shell.runtimeObservation.kind), 'idle');
+  await controller.start();
+  assert.equal(String(shell.runtimeObservation.kind), 'current');
+  for (let i = 0; i < 2; i += 1) {
+    await controller.onAfterMutation();
+    assert.equal(shell.runtimeObservation.kind, 'stale');
+    assert.equal(runtimeSnapshot(shell.runtimeObservation), first);
+    assert.equal(shell.configSnapshot, status);
+    assert.ok('failedAt' in shell.runtimeObservation);
+    assert.ok(Number.isFinite(Date.parse(shell.runtimeObservation.failedAt)));
+  }
+  await controller.onAfterMutation();
+  assert.deepEqual(shell.runtimeObservation, { kind: 'current', snapshot: second });
+});
+
+test('diagnosis states do not enter the wizard through tabs or setup callbacks', async () => {
+  for (const kind of ['needs-repair', 'inconsistent'] as const) {
+    const status = minimalHostStatus({ installation: { kind, reasons: [] } });
+    const { controller, shell } = createTestController({ fetchSetupStatus: async () => status });
+    await controller.start();
+    controller.navigateTab('wizard');
+    controller.onStatusSetupClick();
+    controller.onStatusLoadReleaseArchive();
+    assert.equal(shell.activeView, 'status');
+    assert.equal(shell.wizardSessions.length, 0);
+  }
+});
+
+test('cold start retains configured HTTP and HTTPS through unavailable, stale and recovery', async () => {
+  for (const mode of ['proxy-http', 'https'] as const) {
+    let fail = true;
+    let revision = 0;
+    const config = () =>
+      minimalHostStatus({
+        lifecycle: knownLifecycle(mode),
+        installation: fail ? null : { kind: 'stopped' },
+        compose: fail ? null : { running: false, services: [] },
+        practiceDisplayName: `Config ${revision}`,
+      });
+    const snapshot = minimalRuntime({ compose: { running: false, services: [] } });
+    const { controller, shell, hostRefresh } = createTestController({
+      fetchSetupStatus: async () => config(),
+      fetchRuntimeHealth: async () => {
+        if (fail) throw new Error('Compose failed');
+        return snapshot;
+      },
+    });
+    await controller.start();
+    assert.equal(shell.bootReady, true);
+    assert.equal(shell.activeView, 'status');
+    assert.equal(shell.configSnapshot?.lifecycle?.mode, mode);
+    assert.equal(shell.runtimeObservation.kind, 'unavailable');
+    const projection = projectManagerStatus(shell.configSnapshot, shell.runtimeObservation);
+    assert.equal(projection.primary.summary, 'Laufzustand nicht prüfbar');
+    assert.deepEqual(
+      projection.findings.map((finding) => finding.code),
+      ['observation-unavailable'],
+    );
+    assert.equal(shell.statusError, null);
+    controller.onStatusSetupClick();
+    assert.equal(shell.activeView, 'status');
+    assert.equal(shell.wizardSessions.length, 0);
+
+    fail = false;
+    await hostRefresh.refresh({ scope: 'runtime', silent: true });
+    assert.equal(String(shell.runtimeObservation.kind), 'current');
+    assert.equal(
+      projectManagerStatus(shell.configSnapshot, shell.runtimeObservation).primary.code,
+      'runtime-stopped',
+    );
+
+    fail = true;
+    revision += 1;
+    await hostRefresh.refresh({ scope: 'full' });
+    assert.equal(String(shell.runtimeObservation.kind), 'stale');
+    assert.equal(runtimeSnapshot(shell.runtimeObservation), snapshot);
+    assert.equal(shell.configSnapshot?.practiceDisplayName, 'Config 1');
+    assert.equal(
+      projectManagerStatus(shell.configSnapshot, shell.runtimeObservation).primary.code,
+      'observation-stale',
+    );
+
+    fail = false;
+    await hostRefresh.refresh({ scope: 'runtime', silent: true });
+    assert.equal(String(shell.runtimeObservation.kind), 'current');
+  }
 });

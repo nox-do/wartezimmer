@@ -4,8 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   IPC_OPEN_EXTERNAL_URL,
-  IPC_READ_PFBACKUP_FOR_VALIDATE,
-  IPC_INSPECT_PFBACKUP_FILE,
+  IPC_SELECT_PFBACKUP_FOR_RESTORE,
   IPC_SAVE_PFBACKUP,
   IPC_SELECT_FOLDER,
   IPC_SELECT_RELEASE_ARCHIVE,
@@ -22,12 +21,8 @@ import { selectPfupdateArchiveDialog } from './select-pfupdate-archive.js';
 import { renewTlsCertificateFromPicker, stageTlsCertificateFromPicker } from './select-tls-pem.js';
 import { installMacApplicationMenu } from './mac-app-menu.js';
 import { installNavigationGuards } from './navigation-guards.js';
-import { callSetupApi, setupApiUserErrorMessage } from './setup-api.js';
-import {
-  inspectPfbackupFile,
-  readPfbackupFromDialog,
-  savePfbackupToDisk,
-} from './pfbackup-dialog.js';
+import { callSetupApi, setupApiError } from './setup-api.js';
+import { selectPfbackupForRestore, savePfbackupToDisk } from './pfbackup-dialog.js';
 import { startSetupServer, stopSetupServer, type SetupServerHandle } from './setup-server.js';
 import { defaultOsInstallHome, expectedSetupInstallHome } from './setup-identity.js';
 import { prepareManagerProfile } from './manager-profile.js';
@@ -90,7 +85,7 @@ function registerSetupIpc(handle: SetupServerHandle): void {
       );
       return {
         ok: false,
-        message: setupApiUserErrorMessage(error, request),
+        error: setupApiError(error).toJSON(),
       } satisfies SetupApiCallResponse;
     }
   });
@@ -114,18 +109,9 @@ function registerSetupIpc(handle: SetupServerHandle): void {
     }
   });
 
-  ipcMain.handle(IPC_READ_PFBACKUP_FOR_VALIDATE, async () => {
+  ipcMain.handle(IPC_SELECT_PFBACKUP_FOR_RESTORE, async () => {
     try {
-      return await readPfbackupFromDialog(mainWindow);
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      throw new Error(detail, { cause: error });
-    }
-  });
-
-  ipcMain.handle(IPC_INSPECT_PFBACKUP_FILE, async (_event, backupPath: string) => {
-    try {
-      return await inspectPfbackupFile(handle.apiBase, backupPath, handle.token);
+      return await selectPfbackupForRestore(mainWindow);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new Error(detail, { cause: error });
@@ -161,19 +147,21 @@ function registerSetupIpc(handle: SetupServerHandle): void {
 
   ipcMain.handle(IPC_STAGE_TLS_PEM, async () => {
     try {
-      return await stageTlsCertificateFromPicker(mainWindow, handle.apiBase, handle.token);
+      const value = await stageTlsCertificateFromPicker(mainWindow, handle.apiBase, handle.token);
+      return { ok: true, value } satisfies SetupApiCallResponse;
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      throw new Error(detail, { cause: error });
+      logger.error({ err: error }, 'TLS-Setup-Aufruf fehlgeschlagen');
+      return { ok: false, error: setupApiError(error).toJSON() } satisfies SetupApiCallResponse;
     }
   });
 
   ipcMain.handle(IPC_RENEW_TLS_PEM, async () => {
     try {
-      return await renewTlsCertificateFromPicker(mainWindow, handle.apiBase, handle.token);
+      const value = await renewTlsCertificateFromPicker(mainWindow, handle.apiBase, handle.token);
+      return { ok: true, value } satisfies SetupApiCallResponse;
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      throw new Error(detail, { cause: error });
+      logger.error({ err: error }, 'TLS-Setup-Aufruf fehlgeschlagen');
+      return { ok: false, error: setupApiError(error).toJSON() } satisfies SetupApiCallResponse;
     }
   });
 }

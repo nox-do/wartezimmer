@@ -1,3 +1,4 @@
+import { durableWrite } from './restricted-operation.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildEnvBackupPath, ENV_BACKUP_BASENAME_PREFIX } from '@praxis-flow/server-shared';
@@ -164,6 +165,7 @@ export function writeEnvFromExample(
 export function writeEnvRecordAtomically(
   envPath: string,
   record: Record<string, string>,
+  options: { replace?: boolean } = {},
 ): { keysWritten: string[] } {
   const recordMap = new Map(Object.entries(record));
   const keysWritten: string[] = [];
@@ -174,6 +176,8 @@ export function writeEnvRecordAtomically(
     const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
     for (const line of lines) {
       const parsed = parseEnvLine(line);
+      if (parsed && keysSeen.has(parsed.key)) continue;
+      if (options.replace && parsed && !Object.hasOwn(record, parsed.key)) continue;
       if (!parsed || !recordMap.has(parsed.key)) {
         output.push(line);
         continue;
@@ -192,10 +196,7 @@ export function writeEnvRecordAtomically(
     keysSeen.add(key);
   }
 
-  const tempPath = `${envPath}.tmp-${process.pid}-${Date.now()}`;
-  fs.mkdirSync(path.dirname(envPath), { recursive: true });
-  fs.writeFileSync(tempPath, `${output.join('\n')}\n`, 'utf8');
-  fs.renameSync(tempPath, envPath);
+  durableWrite(envPath, `${output.join('\n')}\n`);
   return { keysWritten };
 }
 

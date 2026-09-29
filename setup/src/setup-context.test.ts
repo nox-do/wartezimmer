@@ -147,3 +147,34 @@ test('resolving an install context does not rotate the running stack token', () 
     }
   });
 });
+
+test('bootstrap leaves templates untouched while an unreadable update journal exists', async (t) => {
+  const { updateOperationPath } = await import('./update-operation.js');
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-update-bootstrap-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  fs.mkdirSync(path.dirname(updateOperationPath(home)), { recursive: true });
+  fs.writeFileSync(updateOperationPath(home), '{broken');
+  assert.deepEqual(ensureInstallHomeLayout(home, '/unused-template-root'), []);
+  assert.deepEqual(fs.readdirSync(home), ['operations']);
+  assert.equal(fs.readFileSync(updateOperationPath(home), 'utf8'), '{broken');
+});
+
+test('bootstrap leaves restore recovery state untouched, including an unreadable journal', async (t) => {
+  const { restoreOperationPath } = await import('./restore-operation.js');
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-bootstrap-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  fs.mkdirSync(path.dirname(restoreOperationPath(home)), { recursive: true });
+  fs.writeFileSync(restoreOperationPath(home), '{broken');
+  assert.deepEqual(ensureInstallHomeLayout(home, '/unused-template-root'), []);
+  assert.deepEqual(fs.readdirSync(home), ['operations']);
+});
+
+test('bootstrap leaves tls recovery state untouched, including an unreadable journal', async (t) => {
+  const { tlsOperationPath } = await import('./tls-operation.js');
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-tls-bootstrap-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  fs.mkdirSync(path.dirname(tlsOperationPath(home)), { recursive: true });
+  fs.writeFileSync(tlsOperationPath(home), '{broken');
+  assert.deepEqual(ensureInstallHomeLayout(home, '/unused-template-root'), []);
+  assert.deepEqual(fs.readdirSync(home), ['operations']);
+});

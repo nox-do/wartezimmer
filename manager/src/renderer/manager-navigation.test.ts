@@ -243,6 +243,8 @@ test('installation state controls wizard presentation and auto-start', () => {
     'starting',
     'stopped',
     'needs-reinstall',
+    'needs-repair',
+    'inconsistent',
     'docker-unavailable',
     'installing',
   ] as const) {
@@ -259,7 +261,7 @@ test('installation state controls wizard presentation and auto-start', () => {
               backupContainsTls: null,
             },
           }
-        : kind === 'needs-reinstall'
+        : kind === 'needs-reinstall' || kind === 'needs-repair' || kind === 'inconsistent'
           ? { kind, reasons: [] }
           : kind === 'docker-unavailable'
             ? { kind, reason: 'offline' }

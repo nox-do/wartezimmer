@@ -5,7 +5,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import type { NetworkInterfaceInfo, TlsStatus } from '@praxis-flow/server-shared';
+import {
+  ManagerApiError,
+  type NetworkInterfaceInfo,
+  type TlsStatus,
+} from '@praxis-flow/server-shared';
 import {
   buildRestrictedNetworkCandidates,
   buildRestrictedNetworkInspect,
@@ -134,6 +138,18 @@ test('configured restricted binding remains prepared until the exact proxy publi
   });
   assert.equal(applied.phase, 'applied');
   assert.equal(applied.health, 'healthy');
+
+  const unobserved = buildRestrictedNetworkStatus({
+    env: new Map([...env, ['SETUP_RESTRICTED_ENABLED', 'true']]),
+    interfaces,
+    staffIp: '192.168.10.10',
+    tls,
+    platform: 'darwin',
+    compose: null,
+  });
+  assert.equal(unobserved.phase, 'applied');
+  assert.equal(unobserved.health, null);
+  assert.deepEqual(unobserved.binding, applied.binding);
 });
 
 test('inspect verifies the portal A record and HTTPS coverage', async () => {
@@ -282,7 +298,8 @@ test('duplicate local addresses remain visible but cannot be prepared as unambig
           },
           { interfaces: duplicateInterfaces, platform: 'darwin', tls },
         ),
-      /mehreren Interfaces/,
+      (error: unknown) =>
+        error instanceof ManagerApiError && error.code === 'restricted_address_ambiguous',
     );
   } finally {
     fs.rmSync(home, { recursive: true, force: true });
@@ -656,7 +673,7 @@ test('failed listener audit rolls restricted apply back', async () => {
           ...fixture.hooks,
           auditListeners: async () => 'Staff-Hostname wird auf der Restricted-IP akzeptiert',
         }),
-      /Listener-Prüfung fehlgeschlagen/,
+      /vorherige Patientenzugang wurde wiederhergestellt/,
     );
     assert.equal(readEnvMap(fixture.envPath).has('SETUP_RESTRICTED_ENABLED'), false);
   } finally {
@@ -770,7 +787,7 @@ test('failed remove validation preserves both active env and Caddyfile', async (
             throw new Error('must not mutate runtime');
           },
         }),
-      /validation failed/,
+      /Proxy-Konfiguration ist ungültig/,
     );
     assert.equal(fs.readFileSync(file, 'utf8'), oldConfig);
     assert.equal(fs.readFileSync(fixture.envPath, 'utf8'), oldEnv);

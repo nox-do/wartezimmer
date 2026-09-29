@@ -1,3 +1,4 @@
+import { wizardIsBusy, wizardError } from './wizard-controller.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ApplySetupInput, HostStatus } from '../shared/host-status.js';
@@ -109,11 +110,11 @@ test('wizardNextButtonLabel adapts to step', () => {
   assert.equal(wizardNextButtonLabel({ ...base, step: 5, proxyEnabled: true }), 'Vorschau laden');
   assert.equal(wizardNextButtonLabel({ ...base, step: 7 }), 'Anwenden');
   assert.equal(
-    wizardNextButtonLabel({ ...base, step: 8, applyResult: null, busy: true }),
+    wizardNextButtonLabel({ ...base, step: 8, applyResult: null, action: { kind: 'working' } }),
     'Bitte warten …',
   );
   assert.equal(
-    wizardNextButtonLabel({ ...base, step: 8, applyResult: null, busy: false }),
+    wizardNextButtonLabel({ ...base, step: 8, applyResult: null, action: { kind: 'idle' } }),
     'Anwenden',
   );
 });
@@ -184,7 +185,7 @@ test('wizardNextButtonDisabled allows apply retry after a failed apply', () => {
       ...base,
       step: 8,
       applyResult: null,
-      busy: true,
+      action: { kind: 'working' },
     }),
     true,
   );
@@ -193,7 +194,7 @@ test('wizardNextButtonDisabled allows apply retry after a failed apply', () => {
       ...base,
       step: 8,
       applyResult: null,
-      busy: false,
+      action: { kind: 'idle' },
     }),
     false,
   );
@@ -237,7 +238,7 @@ test('stale goNext after hide and show does not change the new run', async () =>
   controller.patchFields({ step: 3 });
   const pending = controller.goNext();
   await Promise.resolve();
-  assert.equal(controller.getState().busy, true);
+  assert.equal(wizardIsBusy(controller.getState()), true);
   assert.equal(controller.getState().step, 5);
 
   controller.hide();
@@ -246,7 +247,7 @@ test('stale goNext after hide and show does not change the new run', async () =>
   await pending;
 
   assert.equal(controller.getState().step, 1);
-  assert.equal(controller.getState().busy, false);
+  assert.equal(wizardIsBusy(controller.getState()), false);
   assert.equal(controller.getState().network, null);
 });
 
@@ -274,16 +275,16 @@ test('stale goNext finally does not clear busy on a new run', async () => {
   controller.patchFields({ step: 3 });
   const fresh = controller.goNext();
   await Promise.resolve();
-  assert.equal(controller.getState().busy, true);
+  assert.equal(wizardIsBusy(controller.getState()), true);
 
   first.resolve({ ...emptyNetwork, machineHostname: 'stale-host' });
   await stale;
-  assert.equal(controller.getState().busy, true);
+  assert.equal(wizardIsBusy(controller.getState()), true);
   assert.notEqual(controller.getState().network?.machineHostname, 'stale-host');
 
   second.resolve({ ...emptyNetwork, machineHostname: 'fresh-host' });
   await fresh;
-  assert.equal(controller.getState().busy, false);
+  assert.equal(wizardIsBusy(controller.getState()), false);
   assert.equal(controller.getState().network?.machineHostname, 'fresh-host');
 });
 
@@ -305,7 +306,7 @@ test('stale prerequisite refresh after hide and show does not change the new run
   status.resolve(minimalHostStatus({ practiceDisplayName: 'stale-refresh' }));
   await pending;
 
-  assert.equal(controller.getState().busy, false);
+  assert.equal(wizardIsBusy(controller.getState()), false);
   assert.equal(controller.getState().status?.practiceDisplayName, 'Test');
 });
 
@@ -329,7 +330,7 @@ test('stale release import after hide and show does not change the new run', asy
   loaded.resolve({ ok: true });
   await pending;
 
-  assert.equal(controller.getState().busy, false);
+  assert.equal(wizardIsBusy(controller.getState()), false);
   assert.equal(controller.getState().releaseImportStatus, null);
   assert.equal(controller.getState().status?.practiceDisplayName, 'Test');
 });
@@ -388,8 +389,8 @@ test('failed apply on step 8 can be retried without leaving the step', async () 
 
   assert.equal(controller.getState().step, 8);
   assert.equal(controller.getState().applyResult, null);
-  assert.equal(controller.getState().busy, false);
-  assert.equal(controller.getState().error, 'Compose konnte nicht gestartet werden.');
+  assert.equal(wizardIsBusy(controller.getState()), false);
+  assert.equal(wizardError(controller.getState()), 'Compose konnte nicht gestartet werden.');
   assert.equal(wizardNextButtonDisabled(controller.getState()), false);
   assert.equal(wizardNextButtonLabel(controller.getState()), 'Anwenden');
 
@@ -397,7 +398,7 @@ test('failed apply on step 8 can be retried without leaving the step', async () 
   assert.equal(applies, 2);
   assert.equal(controller.getState().step, 8);
   assert.equal(controller.getState().applyResult?.compose?.ok, true);
-  assert.equal(controller.getState().error, null);
+  assert.equal(wizardError(controller.getState()), null);
 });
 
 test('active TLS configuration completes without calling setup plan or apply', async () => {
@@ -422,12 +423,12 @@ test('active TLS configuration completes without calling setup plan or apply', a
   await controller.goNext();
 
   assert.equal(controller.getState().step, 7);
-  assert.equal(controller.getState().error, null);
+  assert.equal(wizardError(controller.getState()), null);
   assert.equal(setupCalls, 0);
 
   await controller.goNext();
   assert.equal(controller.getState().step, 8);
-  assert.equal(controller.getState().error, null);
+  assert.equal(wizardError(controller.getState()), null);
   assert.equal(wizardIsCompleted(controller.getState()), true);
   assert.equal(setupCalls, 0);
 });
@@ -448,9 +449,9 @@ test('release import still reports a status refresh failure', async () => {
   controller.show(minimalHostStatus(), 'embedded');
   await controller.loadReleaseArchive();
 
-  assert.equal(controller.getState().busy, false);
+  assert.equal(wizardIsBusy(controller.getState()), false);
   assert.equal(controller.getState().releaseImportStatus, null);
-  assert.equal(controller.getState().error, 'Status nach dem Import nicht lesbar.');
+  assert.equal(wizardError(controller.getState()), 'Status nach dem Import nicht lesbar.');
 });
 
 test('apply after hide still reports the host mutation once', async () => {
@@ -481,7 +482,7 @@ test('apply after hide still reports the host mutation once', async () => {
 
   assert.equal(mutateCount, 1);
   assert.equal(controller.getState().applyResult, null);
-  assert.equal(controller.getState().busy, false);
+  assert.equal(wizardIsBusy(controller.getState()), false);
   assert.equal(controller.getState().step, 1);
 });
 
@@ -516,7 +517,7 @@ test('recovery completion waits automatically for core health after successful H
       previewInstallRecovery: async () => {
         if (applied) {
           completionChecks++;
-          assert.equal(controller.getState().busy, true);
+          assert.equal(wizardIsBusy(controller.getState()), true);
           assert.equal(controller.getState().recoveryPhase, 'setup');
         }
         const ready = completionChecks >= 2;
@@ -541,7 +542,7 @@ test('recovery completion waits automatically for core health after successful H
   assert.equal(completionChecks, 2);
   assert.equal(controller.getState().recoveryPhase, 'finish');
   assert.equal(controller.getState().recoveryPreview?.baselineReady, true);
-  assert.equal(controller.getState().busy, false);
+  assert.equal(wizardIsBusy(controller.getState()), false);
 });
 
 test('combined access step suggests a discovered address without requiring proxy', async () => {

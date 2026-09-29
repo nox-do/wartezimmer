@@ -1,3 +1,13 @@
+import { recoverRestoreOperation } from './settings-backup-restore.js';
+import {
+  readRestoreOperation,
+  readRestoreOperationStatus,
+  writeRestoreOperation,
+  restoreOperationPath,
+  restoreRollbackDirectory,
+  type RestoreOperation,
+} from './restore-operation.js';
+import { captureMaintenanceRollback } from './maintenance-rollback.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -651,15 +661,17 @@ test('restorePfbackup backs up db wal and shm into rollback directory', async ()
   try {
     const result = await restorePfbackup(buildArchiveContent(), testSetupContext(dir), {}, deps, {
       afterBackupRollbackState: async () => {
-        const rollbackRoot = path.join(dir, 'rollback');
+        assert.equal(readRestoreOperation(dir)?.phase, 'rollback-ready');
+        const rollbackRoot = path.join(dir, 'rollback/restore');
         const [restoreId] = fs.readdirSync(rollbackRoot);
         capturedRollbackDir = path.join(rollbackRoot, restoreId, 'app-data');
+        for (const name of APP_DB_RELATED_FILES)
+          assert.equal(fs.existsSync(path.join(capturedRollbackDir, name)), true);
       },
     });
     assert.equal(result.ok, true);
-    for (const name of APP_DB_RELATED_FILES) {
-      assert.equal(fs.existsSync(path.join(capturedRollbackDir, name)), true);
-    }
+    assert.equal(fs.existsSync(capturedRollbackDir), false);
+    assert.equal(readRestoreOperation(dir), null);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -1291,3 +1303,275 @@ for (const backupKind of ['http', 'prepared', 'prepared-with-payload'] as const)
     }
   });
 }
+
+function recoveryFixture(t: test.TestContext) {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-recovery-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const { appDataDir, envPath } = seedInstallHome(home);
+  const ctx = testSetupContext(home);
+  const deps = workingRestoreDeps(appDataDir);
+  const operation: RestoreOperation = {
+    schemaVersion: 1,
+    id: '2026-09-29-restore-test',
+    createdAt: new Date().toISOString(),
+    phase: 'prepared',
+    utilityImage: 'praxis-flow/app:current',
+    installationId: null,
+  };
+  return { home, appDataDir, envPath, ctx, deps, operation };
+}
+
+for (const phase of ['prepared', 'rollback-ready'] as const) {
+  test(`restore interruption in ${phase} only restarts and checks the old stack`, async (t) => {
+    const f = recoveryFixture(t);
+    const before = fs.readFileSync(f.envPath, 'utf8');
+    const dir = restoreRollbackDirectory(f.home, f.operation.id);
+    if (phase === 'rollback-ready')
+      await captureMaintenanceRollback(f.ctx, dir, f.deps.appDataAccess!);
+    else {
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, '.env'), 'partial');
+    }
+    writeRestoreOperation(f.home, { ...f.operation, phase });
+    const calls: string[] = [];
+    const result = await recoverRestoreOperation(f.ctx, {
+      ...f.deps,
+      startFullStack: async () => {
+        calls.push('start');
+        return { ok: true, log: '', gatewaySkipped: false };
+      },
+      runHealthChecks: async () => {
+        calls.push('verify');
+        return { ok: true, errors: [] };
+      },
+      appDataAccess: {
+        ...f.deps.appDataAccess!,
+        restoreDbFiles: async () => assert.fail('must not restore before cutover'),
+      },
+      importSnapshot: async () => assert.fail('must not resume restore'),
+    });
+    assert.equal(result.ok, true);
+    assert.deepEqual(calls, ['start', 'verify']);
+    assert.equal(fs.readFileSync(f.envPath, 'utf8'), before);
+    assert.equal(readRestoreOperation(f.home), null);
+    assert.equal(fs.existsSync(dir), false);
+  });
+}
+
+test('failed immediate rollback survives a second interruption; runtime audit decides completion', async (t) => {
+  const f = recoveryFixture(t);
+  const tls = resolveProxyTlsPaths(f.home).root;
+  fs.mkdirSync(tls, { recursive: true });
+  fs.writeFileSync(path.join(tls, 'test-key'), 'old-secret');
+  const env = fs.readFileSync(f.envPath, 'utf8');
+  const manager = fs.readFileSync(path.join(f.home, 'manager-state.json'), 'utf8');
+  const result = await restorePfbackup(buildArchiveContent(), f.ctx, {}, f.deps, {
+    failRollback: true,
+  });
+  assert.equal(result.ok, false);
+  assert.equal(readRestoreOperation(f.home)?.phase, 'recovery-failed');
+  const active = readRestoreOperation(f.home)!;
+  const dir = restoreRollbackDirectory(f.home, active.id);
+  const failed = await recoverRestoreOperation(f.ctx, {
+    ...f.deps,
+    appDataAccess: {
+      ...f.deps.appDataAccess!,
+      restoreDbFiles: async (source) => {
+        await f.deps.appDataAccess!.restoreDbFiles(source);
+        throw new Error('private simulated interrupted copy');
+      },
+    },
+  });
+  assert.equal(failed.ok, false);
+  assert.equal(
+    fs.readFileSync(path.join(dir, 'app-data/praxis-flow.db'), 'utf8'),
+    'seed-praxis-flow.db',
+  );
+  // Persisted rolling-back is also sufficient if the process never reached its catch block.
+  writeRestoreOperation(f.home, { ...f.operation, id: active.id, phase: 'rolling-back' });
+  const auditFailure = await recoverRestoreOperation(f.ctx, {
+    ...f.deps,
+    runHealthChecks: async () => ({ ok: false, errors: ['secret technical output'] }),
+  });
+  assert.equal(auditFailure.ok, false);
+  assert.equal(readRestoreOperationStatus(f.home)?.kind, 'recovery-failed');
+  assert.doesNotMatch(
+    JSON.stringify(readRestoreOperationStatus(f.home)),
+    /secret|technical|utilityImage|installationId/,
+  );
+  assert.equal((await recoverRestoreOperation(f.ctx, f.deps)).ok, true);
+  assert.equal(fs.readFileSync(f.envPath, 'utf8'), env);
+  assert.equal(fs.readFileSync(path.join(f.home, 'manager-state.json'), 'utf8'), manager);
+  assert.equal(fs.readFileSync(path.join(tls, 'test-key'), 'utf8'), 'old-secret');
+  for (const file of APP_DB_RELATED_FILES)
+    assert.equal(fs.readFileSync(path.join(f.appDataDir, file), 'utf8'), `seed-${file}`);
+  assert.equal(readRestoreOperation(f.home), null);
+  assert.equal(fs.existsSync(dir), false);
+  assert.equal((await recoverRestoreOperation(f.ctx, f.deps)).ok, true);
+});
+
+for (const phase of ['committed', 'recovered'] as const) {
+  test(`${phase} only cleans remaining artifacts and preserves the selected user backup`, async (t) => {
+    const f = recoveryFixture(t);
+    const dir = restoreRollbackDirectory(f.home, f.operation.id);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, '.env'), 'partial leftover');
+    const backup = path.join(f.home, 'selected.pfbackup');
+    fs.writeFileSync(backup, buildArchiveContent());
+    const before = fs.readFileSync(f.envPath, 'utf8');
+    writeRestoreOperation(f.home, { ...f.operation, phase });
+    const result = await recoverRestoreOperation(f.ctx, {
+      ...f.deps,
+      stopStack: async () => assert.fail('must not stop'),
+      startFullStack: async () => assert.fail('must not start'),
+    });
+    assert.equal(result.ok, true);
+    assert.equal(fs.readFileSync(f.envPath, 'utf8'), before);
+    assert.equal(fs.readFileSync(backup, 'utf8'), buildArchiveContent());
+    assert.equal(fs.existsSync(dir), false);
+    assert.equal(readRestoreOperation(f.home), null);
+  });
+}
+
+test('restart failure retains the restart decision and ignores partial rollback artifacts', async (t) => {
+  const f = recoveryFixture(t);
+  writeRestoreOperation(f.home, f.operation);
+  assert.equal(
+    (
+      await recoverRestoreOperation(f.ctx, {
+        ...f.deps,
+        startFullStack: async () => {
+          throw new Error('private unreachable');
+        },
+      })
+    ).ok,
+    false,
+  );
+  const operation = readRestoreOperation(f.home);
+  assert.ok(operation?.phase === 'recovery-failed' && operation.recovery === 'restart');
+  assert.equal((await recoverRestoreOperation(f.ctx, f.deps)).ok, true);
+});
+
+test('unreadable restore blocks direct backend entry points and never rewrites the journal', async (t) => {
+  const f = recoveryFixture(t);
+  const { prepareInstallOperation, saveStorageFolders, applyRestrictedNetwork } =
+    await import('./host-state.js');
+  const { stageCustomCertificate } = await import('./host-tls.js');
+  writeRestoreOperation(f.home, f.operation);
+  for (const text of [
+    '{private broken',
+    JSON.stringify({ ...f.operation, phase: 'unknown' }),
+    JSON.stringify({ ...f.operation, phase: 'recovery-failed' }),
+  ]) {
+    fs.writeFileSync(restoreOperationPath(f.home), text);
+    await assert.rejects(recoverRestoreOperation(f.ctx, f.deps));
+    const restored = await restorePfbackup(buildArchiveContent(), f.ctx, {}, f.deps);
+    assert.equal(restored.ok, false);
+    await assert.rejects(
+      prepareInstallOperation(f.ctx, { archivePath: '/unused', mode: 'replace' }),
+      { code: 'restore_operation_inconsistent' },
+    );
+    await assert.rejects(
+      saveStorageFolders(f.ctx, { importsHostPath: '/unused', exportsHostPath: '/unused' }),
+      { code: 'restore_operation_inconsistent' },
+    );
+    await assert.rejects(applyRestrictedNetwork(f.ctx), { code: 'restore_operation_inconsistent' });
+    assert.throws(
+      () => stageCustomCertificate(f.ctx, {} as Parameters<typeof stageCustomCertificate>[1]),
+      { code: 'restore_operation_inconsistent' },
+    );
+    assert.equal(fs.readFileSync(restoreOperationPath(f.home), 'utf8'), text);
+    assert.deepEqual(readRestoreOperationStatus(f.home), { kind: 'unreadable' });
+  }
+});
+
+test('direct restore holds the existing host lock during validation before its journal exists', async (t) => {
+  const f = recoveryFixture(t);
+  const { prepareInstallOperation } = await import('./host-state.js');
+  const { applyPfupdate } = await import('./settings-backup-update.js');
+  let finish!: () => void;
+  let entered!: () => void;
+  const entry = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const restore = restorePfbackup(
+    buildArchiveContent(),
+    f.ctx,
+    {},
+    {
+      ...f.deps,
+      validateSettings: async () => {
+        entered();
+        await pending;
+        return { ok: false, errors: ['validation stopped'] };
+      },
+    },
+  );
+  await entry;
+  assert.equal(readRestoreOperation(f.home), null);
+  try {
+    await assert.rejects(
+      prepareInstallOperation(f.ctx, { archivePath: '/unused', mode: 'replace' }),
+      { code: 'host_mutation_conflict' },
+    );
+    await assert.rejects(
+      applyPfupdate({ archivePath: '/unused.pfupdate', managerVersion: '1' }, f.ctx),
+      { code: 'host_mutation_conflict' },
+    );
+  } finally {
+    finish();
+    await restore;
+  }
+  const { hostMutationLock } = await import('./host-mutation-lock.js');
+  assert.equal(
+    await hostMutationLock(f.home).run('after-restore', async () => 'available'),
+    'available',
+  );
+});
+
+test('restore never overtakes installation; the explicit owning install can recover its nested restore', async (t) => {
+  const f = recoveryFixture(t);
+  const { createPreparedInstallOperation, markInstallOperationInstalling, readInstallOperation } =
+    await import('./install-operation.js');
+  const install = createPreparedInstallOperation({
+    home: f.home,
+    mode: 'fresh',
+    releaseVersion: '1',
+    sha256: 'a'.repeat(64),
+  });
+  assert.equal((await restorePfbackup(buildArchiveContent(), f.ctx, {}, f.deps)).ok, false);
+  assert.equal(readRestoreOperation(f.home), null);
+  markInstallOperationInstalling(f.home, install.id);
+  assert.equal((await restorePfbackup(buildArchiveContent(), f.ctx, {}, f.deps)).ok, false);
+  const failed = await restorePfbackup(
+    buildArchiveContent(),
+    f.ctx,
+    { installationOperationId: install.id },
+    f.deps,
+    { failRollback: true },
+  );
+  assert.equal(failed.ok, false);
+  assert.equal(readRestoreOperation(f.home)?.installationId, install.id);
+  assert.equal((await recoverRestoreOperation(f.ctx, f.deps)).ok, true);
+  assert.equal(readRestoreOperation(f.home), null);
+  assert.equal(readInstallOperation(f.home)?.id, install.id);
+});
+
+test('restore never recovers or overwrites a separate restricted operation', async (t) => {
+  const f = recoveryFixture(t);
+  const directory = path.join(f.home, 'state/restricted-operation');
+  fs.mkdirSync(directory, { recursive: true });
+  fs.writeFileSync(path.join(directory, 'journal.json'), '{private broken restricted');
+  const before = fs.readFileSync(f.envPath, 'utf8');
+  const result = await restorePfbackup(buildArchiveContent(), f.ctx, {}, f.deps);
+  assert.equal(result.ok, false);
+  assert.equal(readRestoreOperation(f.home), null);
+  assert.equal(fs.readFileSync(f.envPath, 'utf8'), before);
+  assert.equal(
+    fs.readFileSync(path.join(directory, 'journal.json'), 'utf8'),
+    '{private broken restricted',
+  );
+});

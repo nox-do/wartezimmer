@@ -1,3 +1,22 @@
+import { syncMaintenanceHostFiles } from './maintenance-files.js';
+import { atPhase, needsRollback as operationNeedsRollback } from './operation-journal.js';
+import { assertNoTlsOperation } from './tls-operation.js';
+import { assertNoRestoreOperation } from './restore-operation.js';
+import { assertMaintenancePredecessors } from './maintenance-operation-guard.js';
+import { hostMutationLock } from './host-mutation-lock.js';
+import { createModuleLogger } from '@praxis-flow/server-shared/logger';
+import {
+  assertNoUpdateOperation,
+  readUpdateOperation,
+  writeUpdateOperation,
+  finishUpdateOperation,
+  syncUpdateArtifacts,
+  updateRollbackDirectory as rollbackDirectory,
+  updateStagingDirectory as stagingDirectory,
+  type UpdateOperation,
+} from './update-operation.js';
+import { managerStatePath } from './manager-state.js';
+import { durableWrite } from './restricted-operation.js';
 import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime-postcondition.js';
 import { releasePortalContract, installReleaseProxyContract } from './release-proxy-contract.js';
 import { composeExec, recoverRestrictedOperation } from './docker.js';
@@ -66,9 +85,12 @@ import {
   readHostEnvRecord,
   resolveMaintenanceComposeRunOptions,
   runDefaultMaintenanceHealthChecks,
+  verifyMaintenanceRollback,
   type MaintenanceRollbackArtifacts,
   type MaintenanceStackRuntime,
 } from './maintenance-rollback.js';
+
+const logger = createModuleLogger('setup.update');
 
 export const UPDATE_PHASES = {
   validatePackage: 'validate_package',
@@ -178,14 +200,6 @@ class UpdatePhaseError extends Error {
 function createUpdateId(now = new Date()): string {
   const stamp = now.toISOString().replace(/[:.]/g, '-');
   return `${stamp}-${randomBytes(4).toString('hex')}`;
-}
-
-function rollbackDirectory(installHome: string, updateId: string): string {
-  return path.join(installHome, 'rollback', 'update', updateId);
-}
-
-function stagingDirectory(installHome: string, updateId: string): string {
-  return path.join(installHome, 'updates', 'staging', updateId);
 }
 
 async function defaultWaitForMaintenanceApp(
@@ -359,14 +373,7 @@ function composeTemplateFilesForRollback(): readonly string[] {
 }
 
 function copyFileAtomically(source: string, target: string): void {
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  const temporaryPath = `${target}.pfupdate-${process.pid}-${Date.now()}`;
-  try {
-    fs.copyFileSync(source, temporaryPath);
-    fs.renameSync(temporaryPath, target);
-  } finally {
-    if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
-  }
+  durableWrite(target, fs.readFileSync(source, 'utf8'));
 }
 
 const CADDYFILE_WAS_ABSENT_MARKER = 'caddyfile-was-absent';
@@ -444,9 +451,7 @@ function installComposeTemplates(stagingDir: string, home: string): void {
 }
 
 function restoreComposeTemplates(composeTemplatesDir: string, home: string): void {
-  if (!fs.existsSync(composeTemplatesDir)) {
-    return;
-  }
+  if (!fs.existsSync(composeTemplatesDir)) throw new Error('UPDATE_TEMPLATES_BACKUP_MISSING');
   for (const fileName of composeTemplateFilesForRollback()) {
     const source = path.join(composeTemplatesDir, fileName);
     const target = path.join(home, fileName);
@@ -470,21 +475,33 @@ function restoreComposeTemplates(composeTemplatesDir: string, home: string): voi
     }
   } else if (fs.existsSync(caddyBackup)) {
     fs.mkdirSync(path.dirname(caddyTarget), { recursive: true });
-    fs.copyFileSync(caddyBackup, caddyTarget);
+    copyFileAtomically(caddyBackup, caddyTarget);
   }
+}
+
+/** A durable terminal marker must never precede the files whose state it confirms. */
+function syncUpdateHostFiles(home: string): void {
+  syncMaintenanceHostFiles(home, [...composeTemplateFilesForRollback(), 'proxy']);
 }
 
 async function backupUpdateRollbackArtifacts(
   ctx: SetupContext,
   updateId: string,
-  preUpdateBackupPath: string,
   appDataAccess: AppDataVolumeAccess,
 ): Promise<UpdateRollbackArtifacts> {
   const rollbackDir = rollbackDirectory(ctx.home, updateId);
+  fs.mkdirSync(rollbackDir, { recursive: true, mode: 0o700 });
   const rollback = await captureMaintenanceRollback(ctx, rollbackDir, appDataAccess);
   const composeTemplatesDir = path.join(rollbackDir, 'compose-templates');
   backupComposeTemplates(ctx.home, composeTemplatesDir);
-  fs.copyFileSync(preUpdateBackupPath, path.join(rollbackDir, path.basename(preUpdateBackupPath)));
+  if (
+    !fs.existsSync(path.join(rollbackDir, '.env')) ||
+    !fs.existsSync(path.join(rollback.appDataDir, 'praxis-flow.db'))
+  ) {
+    throw new Error('UPDATE_BACKUP_INCOMPLETE');
+  }
+  // The regular pre-update backup is retained separately from temporary recovery files.
+  syncUpdateArtifacts(rollbackDir, ctx.home);
   return { ...rollback, composeTemplatesDir };
 }
 
@@ -634,14 +651,79 @@ async function prepareUpdate(input: {
   }
 }
 
-async function safeUpdateRollback(
-  input: Parameters<typeof executeUpdateRollback>[0],
+/** One recovery path for caught failures and startup; never resumes the target update. */
+export async function recoverUpdateOperation(
+  ctx: SetupContext,
+  deps: PfupdateApplyDeps = {},
 ): Promise<{ ok: boolean; errors: string[] }> {
-  try {
-    return await executeUpdateRollback(input);
-  } catch (error) {
-    return { ok: false, errors: [errorMessage(error, 'Rollback ist unerwartet fehlgeschlagen.')] };
-  }
+  return hostMutationLock(ctx.home).run('recoverUpdateOperation', async () => {
+    assertNoTlsOperation(ctx.home);
+    assertNoRestoreOperation(ctx.home);
+    assertMaintenancePredecessors(ctx.home);
+    const operation = readUpdateOperation(ctx.home); // Unreadable evidence is never overwritten.
+    if (!operation) return { ok: true, errors: [] };
+    if (operation.phase === 'committed' || operation.phase === 'recovered') {
+      finishUpdateOperation(ctx.home, operation);
+      return { ok: true, errors: [] };
+    }
+    const needsRollback = operationNeedsRollback(operation);
+    const runtime = resolveCutoverRuntime(deps);
+    const localAppBaseUrl = deps.localAppBaseUrl ?? LOCAL_SETUP_APP_BASE_URL;
+    const rollbackDir = rollbackDirectory(ctx.home, operation.id);
+    const rollback: UpdateRollbackArtifacts = {
+      rollbackDir,
+      managerStatePath: managerStatePath(ctx.home),
+      appDataDir: path.join(rollbackDir, 'app-data'),
+      composeTemplatesDir: path.join(rollbackDir, 'compose-templates'),
+    };
+    let result: { ok: boolean; errors: string[] };
+    try {
+      if (needsRollback) {
+        writeUpdateOperation(ctx.home, atPhase(operation, 'rolling-back'));
+        // Do not turn a missing recovery snapshot into an empty database/configuration.
+        for (const file of ['.env', 'app-data/praxis-flow.db', 'compose-templates']) {
+          if (!fs.existsSync(path.join(rollbackDir, file)))
+            throw new Error('UPDATE_BACKUP_INCOMPLETE');
+        }
+        result = await executeUpdateRollback({
+          ctx,
+          rollback,
+          runtime,
+          localAppBaseUrl,
+          appDataAccess:
+            deps.appDataAccess ??
+            createDockerAppDataAccess(ctx.composeProjectName, operation.utilityImage),
+        });
+      } else {
+        const errors: string[] = [];
+        await verifyMaintenanceRollback(
+          { ctx, runtime, localAppBaseUrl },
+          readEnvMap(path.join(ctx.home, '.env')),
+          errors,
+        );
+        result = { ok: errors.length === 0, errors };
+      }
+      if (result.ok) syncUpdateHostFiles(ctx.home);
+    } catch (error) {
+      result = { ok: false, errors: [errorMessage(error, 'Update-Recovery fehlgeschlagen.')] };
+    }
+    if (!result.ok) {
+      writeUpdateOperation(ctx.home, {
+        ...operation,
+        phase: 'recovery-failed',
+        recovery: needsRollback ? 'rollback' : 'restart',
+      });
+      logger.error(
+        { errors: result.errors, updateId: operation.id },
+        'Update-Recovery fehlgeschlagen',
+      );
+      return result;
+    }
+    const recovered = atPhase(operation, 'recovered');
+    writeUpdateOperation(ctx.home, recovered);
+    finishUpdateOperation(ctx.home, recovered);
+    return result;
+  });
 }
 
 function cleanupStaging(stagingDir: string): void {
@@ -769,8 +851,6 @@ async function applyPreparedUpdate(input: {
   localMaintenanceAppBaseUrl: string;
 }): Promise<PfupdateApplyResult> {
   let phase: UpdatePhase = UPDATE_PHASES.stopStack;
-  let stackStopped = false;
-  let rollback: UpdateRollbackArtifacts | null = null;
 
   const currentEnv = readEnvMap(input.prepared.envPath);
   const targetEnv = new Map(
@@ -789,19 +869,32 @@ async function applyPreparedUpdate(input: {
     ]);
   }
 
+  let operation: UpdateOperation = {
+    schemaVersion: 1,
+    id: input.updateId,
+    createdAt: new Date().toISOString(),
+    targetVersion: input.prepared.manifest.releaseVersion,
+    utilityImage: input.prepared.manifest.images.app,
+    phase: 'prepared',
+  };
+  assertNoUpdateOperation(input.ctx.home);
+  writeUpdateOperation(input.ctx.home, operation);
   try {
     const stop = await input.runtime.stopStack(input.prepared.runOptions);
     if (!stop.ok) {
       throw new UpdatePhaseError(phase, [stop.log || 'Stack konnte nicht gestoppt werden.']);
     }
-    stackStopped = true;
     phase = UPDATE_PHASES.backupRollbackState;
-    rollback = await backupUpdateRollbackArtifacts(
+    const rollback = await backupUpdateRollbackArtifacts(
       input.ctx,
       input.updateId,
-      input.prepared.preUpdateBackupPath,
       input.prepared.appDataAccess,
     );
+
+    operation = { ...operation, phase: 'rollback-ready' };
+    writeUpdateOperation(input.ctx.home, operation);
+    operation = { ...operation, phase: 'cutover' };
+    writeUpdateOperation(input.ctx.home, operation);
 
     // Rotating this token while the app is running immediately breaks the
     // maintenance API used by backup/restore. Migrate only after the
@@ -809,6 +902,15 @@ async function applyPreparedUpdate(input: {
     migrateMaintenanceToken(input.ctx.home);
 
     const compose = await commitPreparedUpdate({ ...input, rollback });
+    syncUpdateHostFiles(input.ctx.home);
+    operation = { ...operation, phase: 'committed' };
+    writeUpdateOperation(input.ctx.home, operation);
+    // Cleanup failure cannot invalidate the durable commit or trigger rollback.
+    try {
+      finishUpdateOperation(input.ctx.home, operation);
+    } catch (error) {
+      logger.error({ err: error }, 'Update-Cleanup wird beim Start erneut versucht');
+    }
     return {
       ok: true,
       updateId: input.updateId,
@@ -825,29 +927,34 @@ async function applyPreparedUpdate(input: {
         ? error
         : new UpdatePhaseError(phase, [errorMessage(error, 'Update ist fehlgeschlagen.')]);
 
-    if (rollback) {
-      const rollbackResult = await safeUpdateRollback({
-        ctx: input.ctx,
-        rollback,
+    // The durable phase, not the in-memory assignment before a possibly failed
+    // journal write, determines which recovery path is actually attempted.
+    let rollbackAttempted = false;
+    try {
+      rollbackAttempted = operationNeedsRollback(readUpdateOperation(input.ctx.home));
+    } catch {
+      // An unreadable journal cannot prove that rollback was attempted.
+    }
+    let recovery: { ok: boolean; errors: string[] };
+    try {
+      recovery = await recoverUpdateOperation(input.ctx, {
+        ...input.runtime,
         appDataAccess: input.prepared.appDataAccess,
-        runtime: input.runtime,
         localAppBaseUrl: input.localAppBaseUrl,
       });
-      return failureResult(input.updateId, failure.phase, failure.errors, rollbackResult);
+    } catch (recoveryError) {
+      logger.error({ err: recoveryError }, 'Update-Recovery-Abschluss ungeklärt');
+      recovery = {
+        ok: false,
+        errors: ['Update-Recovery-Abschluss ungeklärt. Bitte Setup-Diagnose prüfen.'],
+      };
     }
-
-    const errors = [...failure.errors];
-    if (stackStopped) {
-      try {
-        const restart = await input.runtime.startFullStack(input.prepared.runOptions);
-        if (!restart.ok) {
-          errors.push(restart.log || 'Stack konnte nicht neu gestartet werden.');
-        }
-      } catch (restartError) {
-        errors.push(errorMessage(restartError, 'Stack konnte nicht neu gestartet werden.'));
-      }
-    }
-    return failureResult(input.updateId, failure.phase, errors);
+    return failureResult(
+      input.updateId,
+      failure.phase,
+      rollbackAttempted ? failure.errors : [...failure.errors, ...recovery.errors],
+      rollbackAttempted ? recovery : undefined,
+    );
   }
 }
 
@@ -856,44 +963,54 @@ export async function applyPfupdate(
   ctx: SetupContext,
   deps: PfupdateApplyDeps = {},
 ): Promise<PfupdateApplyResult> {
-  const updateId = createUpdateId(deps.now?.());
-  const stagingDir = stagingDirectory(ctx.home, updateId);
-  const localMaintenanceAppBaseUrl =
-    deps.localMaintenanceAppBaseUrl ?? LOCAL_MAINTENANCE_APP_BASE_URL;
-  const localAppBaseUrl = deps.localAppBaseUrl ?? LOCAL_SETUP_APP_BASE_URL;
-  const previousVersion = readManagerState(ctx.home).release?.releaseVersion ?? null;
+  return hostMutationLock(ctx.home).run('applyPfupdate', async () => {
+    const updateId = createUpdateId(deps.now?.());
+    const stagingDir = stagingDirectory(ctx.home, updateId);
+    const localMaintenanceAppBaseUrl =
+      deps.localMaintenanceAppBaseUrl ?? LOCAL_MAINTENANCE_APP_BASE_URL;
+    const localAppBaseUrl = deps.localAppBaseUrl ?? LOCAL_SETUP_APP_BASE_URL;
+    const previousVersion = readManagerState(ctx.home).release?.releaseVersion ?? null;
 
-  try {
-    assertHostLifecycleAction(ctx, 'update');
-    await recoverRestrictedOperation({
-      projectRoot: ctx.home,
-      composeProjectName: ctx.composeProjectName,
-    });
-    const prepared = await prepareUpdate({
-      applyInput: input,
-      ctx,
-      stagingDir,
-      localMaintenanceAppBaseUrl,
-      runtime: resolvePrepareRuntime(deps),
-    });
-    return await applyPreparedUpdate({
-      updateId,
-      previousVersion,
-      prepared,
-      ctx,
-      runtime: resolveCutoverRuntime(deps),
-      localAppBaseUrl,
-      localMaintenanceAppBaseUrl,
-    });
-  } catch (error) {
-    const failure =
-      error instanceof UpdatePhaseError
-        ? error
-        : new UpdatePhaseError(UPDATE_PHASES.validatePackage, [
-            errorMessage(error, 'Update-Vorbereitung ist fehlgeschlagen.'),
-          ]);
-    return failureResult(updateId, failure.phase, failure.errors);
-  } finally {
-    cleanupStaging(stagingDir);
-  }
+    try {
+      assertNoTlsOperation(ctx.home);
+      assertNoRestoreOperation(ctx.home);
+      assertMaintenancePredecessors(ctx.home);
+      assertNoUpdateOperation(ctx.home);
+      assertHostLifecycleAction(ctx, 'update');
+      await recoverRestrictedOperation({
+        projectRoot: ctx.home,
+        composeProjectName: ctx.composeProjectName,
+      });
+      const prepared = await prepareUpdate({
+        applyInput: input,
+        ctx,
+        stagingDir,
+        localMaintenanceAppBaseUrl,
+        runtime: resolvePrepareRuntime(deps),
+      });
+      return await applyPreparedUpdate({
+        updateId,
+        previousVersion,
+        prepared,
+        ctx,
+        runtime: resolveCutoverRuntime(deps),
+        localAppBaseUrl,
+        localMaintenanceAppBaseUrl,
+      });
+    } catch (error) {
+      const failure =
+        error instanceof UpdatePhaseError
+          ? error
+          : new UpdatePhaseError(UPDATE_PHASES.validatePackage, [
+              errorMessage(error, 'Update-Vorbereitung ist fehlgeschlagen.'),
+            ]);
+      return failureResult(updateId, failure.phase, failure.errors);
+    } finally {
+      try {
+        cleanupStaging(stagingDir);
+      } catch (error) {
+        logger.error({ err: error }, 'Update-Staging konnte nicht entfernt werden');
+      }
+    }
+  });
 }

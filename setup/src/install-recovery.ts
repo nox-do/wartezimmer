@@ -1,3 +1,4 @@
+import { runHostMutation } from './maintenance-operation-guard.js';
 import type {
   InstallFinishInput,
   InstallFinishResult,
@@ -90,36 +91,40 @@ export async function finishInstallRecovery(
   input: InstallFinishInput,
   deps: RecoveryDeps = {},
 ): Promise<InstallFinishResult> {
-  const operation = requireOperation(ctx, input.operationId);
-  if (operation.phase !== 'installing') throw new Error('Installation zuerst bestätigen.');
-  if (input.action !== 'restore' && input.action !== 'without-backup')
-    throw new Error('Ungültige Abschlussaktion.');
-  const errors = await baselineErrors(ctx, deps);
-  if (errors.length > 0) return { ok: false, errors };
-  if (input.action === 'restore') {
-    const content = readPinnedRecoveryBackup(ctx.home, operation);
-    // Recovery always starts from HTTP. After a crash following TLS restore,
-    // offer completion or a clean restart instead of silently overwriting HTTPS.
-    if (currentTlsClaimsHttps(Object.fromEntries(readEnvMap(path.join(ctx.home, '.env')))))
-      return {
-        ok: false,
-        errors: [
-          'HTTPS ist bereits aktiv. Installation abschließen oder für eine erneute Übernahme neu installieren.',
-        ],
-      };
-    const preview = await (deps.inspect ?? inspectPfbackup)(content, ctx);
-    if (!preview.compatibility.restoreSupported)
-      return {
-        ok: false,
-        errors: preview.errors ?? ['Backup ist mit der Ziel-App nicht kompatibel.'],
-      };
-    const restore = await (deps.restore ?? restorePfbackup)(content, ctx);
-    if (!restore.ok) return { ok: false, errors: restore.errors, restore };
-    const finalErrors = await baselineErrors(ctx, deps);
-    if (finalErrors.length > 0) return { ok: false, errors: finalErrors, restore };
+  return runHostMutation(ctx.home, 'finishInstallRecovery', async () => {
+    const operation = requireOperation(ctx, input.operationId);
+    if (operation.phase !== 'installing') throw new Error('Installation zuerst bestätigen.');
+    if (input.action !== 'restore' && input.action !== 'without-backup')
+      throw new Error('Ungültige Abschlussaktion.');
+    const errors = await baselineErrors(ctx, deps);
+    if (errors.length > 0) return { ok: false, errors };
+    if (input.action === 'restore') {
+      const content = readPinnedRecoveryBackup(ctx.home, operation);
+      // Recovery always starts from HTTP. After a crash following TLS restore,
+      // offer completion or a clean restart instead of silently overwriting HTTPS.
+      if (currentTlsClaimsHttps(Object.fromEntries(readEnvMap(path.join(ctx.home, '.env')))))
+        return {
+          ok: false,
+          errors: [
+            'HTTPS ist bereits aktiv. Installation abschließen oder für eine erneute Übernahme neu installieren.',
+          ],
+        };
+      const preview = await (deps.inspect ?? inspectPfbackup)(content, ctx);
+      if (!preview.compatibility.restoreSupported)
+        return {
+          ok: false,
+          errors: preview.errors ?? ['Backup ist mit der Ziel-App nicht kompatibel.'],
+        };
+      const restore = await (deps.restore ?? restorePfbackup)(content, ctx, {
+        installationOperationId: operation.id,
+      });
+      if (!restore.ok) return { ok: false, errors: restore.errors, restore };
+      const finalErrors = await baselineErrors(ctx, deps);
+      if (finalErrors.length > 0) return { ok: false, errors: finalErrors, restore };
+      removeInstallOperation(ctx.home, operation.id);
+      return { ok: true, errors: [], restore };
+    }
     removeInstallOperation(ctx.home, operation.id);
-    return { ok: true, errors: [], restore };
-  }
-  removeInstallOperation(ctx.home, operation.id);
-  return { ok: true, errors: [] };
+    return { ok: true, errors: [] };
+  });
 }

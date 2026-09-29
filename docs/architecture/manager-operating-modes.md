@@ -1,16 +1,20 @@
 # Betriebsmodi im Manager
 
+Die hier beschriebenen Klassifikationen bilden den aktuellen Implementierungsstand ab.
+
 Zentrale, lesende Einordnung im Setup-Backend mit Darstellung und Navigation im Manager.
 Es gibt keinen zusätzlich gespeicherten Betriebsmodus und keine Datenmigration.
 
 Der Betriebsmodus ist nicht der Installationszustand. `HostStatus.installation` wird
 ebenfalls ausschließlich im Setup-Backend abgeleitet und unterscheidet
-`docker-unavailable`, `fresh`, `healthy`, `stopped` und `needs-reinstall`. Der
+`docker-unavailable`, `fresh`, `starting`, `healthy`, `stopped`, `needs-repair`,
+`inconsistent` und `needs-reinstall`. Der
 Zustand `installing` trägt den persistenten Installationsvorgang. `healthy` verlangt
 gesunde App und Sandbox sowie
 eine mit dem Installations-Token authentifizierte Maintenance-API. Störungen von
 Proxy, TLS oder Gateway ändern den Installationszustand nicht; sie bleiben eigene
-Dienstzustände.
+Dienstzustände. `starting` beschreibt den erwarteten Übergang, wenn App und Sandbox
+jeweils gesund oder startend sind und mindestens einer der Dienste noch startet.
 
 | Modus                            | Bestätigte Konfiguration                                                                                          |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -30,14 +34,16 @@ sind keine Betriebsmodi. Ihre vorhandenen Prüfungen bleiben zuständig.
 - `setup/src/host-lifecycle.ts`: reine Ableitung und kleine Konsistenzprüfung.
 - `setup/src/host-lifecycle-facts.ts`: lesender Adapter für Journal und lokale
   Installationsmerkmale; ohne `.env` zusätzlich Suche nach Docker-Projektresten.
-- `HostStatus.lifecycle`: additive fachliche Sicht. Alte API-Felder bleiben erhalten.
+- `HostStatus.lifecycle`: fachliche Sicht auf Installations- und Recovery-Befunde;
+  Laufzeitbeobachtungen bleiben davon getrennt.
 - `lifecycleKey` in Config und Runtime: Vergleich ausschließlich öffentlicher
   abgeleiteter Metadaten. Änderungen lösen einen Config-Refresh aus, auch wenn
   Praxisadresse und Proxy-Flag unverändert bleiben. Runtime überschreibt Config nicht.
 - `HostLifecycleSummary`: Anzeige auf der Statusseite; UI-Entwürfe bleiben lokal.
 - Navigation: `installation` ist maßgeblich. `fresh` und `installing` öffnen den
   Assistenten; `stopped` bietet den sicheren Start. `needs-reinstall` und
-  Docker-Ausfall bleiben auf der Statusseite. Wartung und Netzwerk sind bei
+  `needs-repair`, `inconsistent` und Docker-Ausfall bleiben auf der Statusseite.
+  Die beiden Diagnosezustände öffnen keinen Assistenten und keine Mutationsflächen. Wartung und Netzwerk sind bei
   `healthy` zugänglich. Core-Servicewechsel im Runtime-Poll lösen einen erneuten
   Config-Refresh aus.
 - Netzwerkübersicht: Verbindung und Publikationsumfang folgen dem bestätigten Modus.
@@ -61,7 +67,8 @@ Container/Volumes mit Compose-Projektlabel; sie ist keine vollständige Datentr�
 
 Der Lifecycle beschreibt die Netzwerkkonfiguration, `InstallationState` den
 Installationszustand. Eine ungültige Proxy-Konfiguration verhindert die Statusantwort
-nicht: Der Manager kann weiterhin Diagnose und Neuinstallation anbieten.
+nicht: Der Manager zeigt `inconsistent` mit konkreten Gründen, ohne Neuinstallation
+zu empfehlen. Betriebs- und Authentifizierungsstörungen ergeben `needs-repair`.
 
 Der aktuelle Recovery-Vertrag steht unter
 [Neuinstallation und Recovery](../operations/reinstall-recovery.md).
@@ -70,11 +77,13 @@ Backups und der aktive Vorgang bleiben erhalten. Der vorhandene Restore-Core kan
 auf die gesunde frische Installation zurückrollen.
 
 Eine `stopped`-Installation wird nicht durch einen Status-Poll gestartet. Der
-mutierende Start-Endpunkt prüft zuerst das erwartete Compose-App-Volume mit
-`docker volume inspect` und danach `praxis-flow.db` in einem netzwerklosen,
+mutierende Start-Endpunkt prüft zuerst das lokale App-Image und das erwartete
+Compose-App-Volume mit erfolgreichen Docker-Bestandsabfragen und danach `praxis-flow.db` in einem netzwerklosen,
 read-only Utility-Container. Erst anschließend startet er Compose und verlangt
 gesunde App/Sandbox sowie erfolgreiche Maintenance-Authentifizierung. Fehlt das
-Volume oder die Datenbank, wird `needs-reinstall` zurückgegeben.
+Image, Volume oder Datenbank, wird `needs-reinstall` zurückgegeben. Compose-Start-,
+Health- und Auth-Fehler ergeben `needs-repair`; technische Prüffehler bleiben
+strukturierte API-Fehler. Die Klassifikation verwendet Codes, keine Logtexte.
 
 Produktservices besitzen keine globalen `container_name`-Werte. Besitz und Zugriff
 laufen über Compose-Projekt und Servicenamen. Die Produktports bleiben unverändert

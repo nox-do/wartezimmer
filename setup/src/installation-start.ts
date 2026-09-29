@@ -1,9 +1,14 @@
+import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { createModuleLogger } from '@praxis-flow/server-shared/logger';
+import type { InstallationStartFailure } from './installation-state.js';
 import type { ComposeStatus } from '@praxis-flow/server-shared';
 import { composePs, composeUp, type ComposeRunOptions } from './docker.js';
 import { runDockerCommand } from './docker-cli.js';
 import { coreInstallationServicesHealthy } from './installation-state.js';
 import { inspectMaintenanceCompatibility } from './settings-format-version.js';
 import { APP_DB_PATH, appDataVolumeName } from './staff-pin-reset.js';
+
+const logger = createModuleLogger('setup.installation-start');
 
 export type InstallationStartDependencies = {
   runDocker?: typeof runDockerCommand;
@@ -20,15 +25,45 @@ export async function inspectExistingAppDatabase(
   composeProjectName: string,
   appImage: string,
   runDocker: typeof runDockerCommand = runDockerCommand,
-): Promise<{ ok: boolean; reason?: string }> {
-  if (!appImage) return { ok: false, reason: 'Das lokale App-Image ist nicht festgelegt.' };
+): Promise<{ ok: true } | { ok: false; code: InstallationStartFailure }> {
+  if (!appImage) {
+    throw new ManagerApiError({
+      code: 'app_image_unconfigured',
+      category: 'inconsistent',
+      message: 'Das App-Image ist nicht konfiguriert. Bitte die Installation prüfen.',
+      retryable: false,
+    });
+  }
+  const checkedDocker: typeof runDockerCommand = async (args, options) => {
+    try {
+      const result = await runDocker(args, options);
+      if (result.code !== 0 && !(args[0] === 'run' && result.code === 42)) {
+        throw new Error('Docker-Prüfung fehlgeschlagen', { cause: result });
+      }
+      return result;
+    } catch (cause) {
+      if (cause instanceof ManagerApiError) throw cause;
+      throw new ManagerApiError(
+        {
+          code: 'installation_inspection_failed',
+          category: 'unavailable',
+          message: 'Die Installationsdaten konnten nicht geprüft werden. Bitte erneut versuchen.',
+          retryable: true,
+        },
+        { cause },
+      );
+    }
+  };
+  // Only successful inventory queries prove absence; inspect failures do not.
+  const images = await checkedDocker(['image', 'ls', '--quiet', appImage]);
+  if (!images.stdout.trim()) return { ok: false, code: 'app-image-missing' };
   const volume = appDataVolumeName(composeProjectName);
-  const inspected = await runDocker(['volume', 'inspect', volume]);
-  if (inspected.code !== 0) {
-    return { ok: false, reason: `App-Datenvolume ${volume} fehlt.` };
+  const volumes = await checkedDocker(['volume', 'ls', '--format', '{{.Name}}']);
+  if (!volumes.stdout.split('\n').includes(volume)) {
+    return { ok: false, code: 'data-volume-missing' };
   }
 
-  const database = await runDocker([
+  const database = await checkedDocker([
     'run',
     '--rm',
     '--pull=never',
@@ -41,11 +76,9 @@ export async function inspectExistingAppDatabase(
     `${volume}:/var/lib/praxis-flow/app:ro`,
     appImage,
     '-c',
-    `test -f ${APP_DB_PATH}`,
+    `test -r /var/lib/praxis-flow/app && test -x /var/lib/praxis-flow/app || exit 43; if test -f ${APP_DB_PATH}; then exit 0; elif test ! -e ${APP_DB_PATH}; then exit 42; else exit 43; fi`,
   ]);
-  if (database.code !== 0) {
-    return { ok: false, reason: `App-Datenbank ${APP_DB_PATH} fehlt im Volume ${volume}.` };
-  }
+  if (database.code === 42) return { ok: false, code: 'database-missing' };
   return { ok: true };
 }
 
@@ -53,12 +86,12 @@ export async function startExistingInstallation(
   runOptions: ComposeRunOptions,
   appImage: string,
   deps: InstallationStartDependencies = {},
-): Promise<{
-  ok: boolean;
-  log: string;
-  compose: ComposeStatus | null;
-  maintenanceAuthenticated: boolean;
-}> {
+): Promise<
+  {
+    compose: ComposeStatus | null;
+    maintenanceAuthenticated: boolean;
+  } & ({ ok: true } | { ok: false; code: InstallationStartFailure })
+> {
   const gate = await inspectExistingAppDatabase(
     runOptions.composeProjectName,
     appImage,
@@ -67,7 +100,7 @@ export async function startExistingInstallation(
   if (!gate.ok) {
     return {
       ok: false,
-      log: gate.reason ?? 'App-Datenbank fehlt.',
+      code: gate.code,
       compose: null,
       maintenanceAuthenticated: false,
     };
@@ -75,7 +108,13 @@ export async function startExistingInstallation(
 
   const up = await (deps.composeUp ?? composeUp)({ ...runOptions, build: false });
   if (!up.ok) {
-    return { ok: false, log: up.log, compose: null, maintenanceAuthenticated: false };
+    logger.error({ composeLog: up.log }, 'Start der vorhandenen Installation fehlgeschlagen');
+    return {
+      ok: false,
+      code: 'compose-start-failed',
+      compose: null,
+      maintenanceAuthenticated: false,
+    };
   }
 
   const readCompose = deps.composePs ?? composePs;
@@ -94,7 +133,7 @@ export async function startExistingInstallation(
   if (!coreInstallationServicesHealthy(compose)) {
     return {
       ok: false,
-      log: 'App und Sandbox wurden nicht gemeinsam gesund.',
+      code: 'health-timeout',
       compose,
       maintenanceAuthenticated: false,
     };
@@ -102,10 +141,9 @@ export async function startExistingInstallation(
 
   const maintenance = await (deps.inspectMaintenance ?? inspectMaintenanceCompatibility)();
   return {
-    ok: maintenance.authenticated,
-    log: maintenance.authenticated
-      ? up.log
-      : 'Maintenance-API lehnt den Token der Installation ab.',
+    ...(maintenance.authenticated
+      ? { ok: true as const }
+      : { ok: false as const, code: 'maintenance-auth-failed' as const }),
     compose,
     maintenanceAuthenticated: maintenance.authenticated,
   };

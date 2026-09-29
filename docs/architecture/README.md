@@ -27,11 +27,13 @@ Betrieb: [`../operations/`](../operations/) · Produkt/Abläufe: [`../product.md
 | 7       | [`i18n.md`](i18n.md)           | ausgearbeitet |
 | 8       | [`logging.md`](logging.md)     | ausgearbeitet |
 
-**Stil:** Ist-Stand formulieren — kein „Zielbild“/„Leitdokument“ für Umgesetztes; Ausblick nur als Nicht-Produkt oder Discovery.
+**Stil:** Implementationsdokumente beschreiben den Ist-Stand. Verbindliche
+Architekturentscheidungen dürfen ein ausdrücklich gekennzeichnetes Zielmodell
+festlegen; sonstiger Ausblick bleibt Nicht-Produkt oder Discovery.
 
 API-Vertrag (maschinenlesbar): `openapi/*.yaml` → `npm run generate:api` · Swagger Dev: `/api/docs`
 
-Manager: [Zentrale Ableitung der Betriebsmodi](manager-operating-modes.md).
+Manager: [Betriebsmodi und Action-Policy (Ist-Stand)](manager-operating-modes.md).
 
 ## Nicht hier
 

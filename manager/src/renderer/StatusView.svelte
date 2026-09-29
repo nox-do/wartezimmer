@@ -1,12 +1,18 @@
 <script lang="ts">
+  import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+  import type { HostStatus } from '../shared/host-status.js';
+  import {
+    runtimeSnapshot as observedSnapshot,
+    runtimeObservationNotice,
+  } from './runtime-observation.js';
   import { managerShell } from './manager-shell-state.svelte.js';
-  import { deriveOverallStatus } from './health-header.js';
+  import { tabDisabled } from './manager-main-nav.js';
+  import { managerStatusViewModel } from './manager-status-view-model.js';
+  import { evaluateHostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
   import { sandboxSignatureAgeNotice } from './sandbox-scanner-ui.js';
   import {
     isSetupEntryStatus,
     lanWarningText,
-    showStatusOverallNotice,
-    statusOverallNoticeClass,
   } from './status-view-model.js';
   import DeliveryImagesWarning from './DeliveryImagesWarning.svelte';
   import DeviceUrls from './DeviceUrls.svelte';
@@ -23,18 +29,34 @@
     onLoadReleaseArchive,
     onOpenUrl,
     onOpenNetwork,
+    onOpenMaintenance,
+    onRefresh,
   }: {
     onSetupClick: () => void;
     onLoadReleaseArchive: () => void;
     onOpenUrl: (url: string) => void;
     onOpenNetwork: () => void;
+    onOpenMaintenance: () => void;
+    onRefresh: () => void | Promise<void>;
   } = $props();
 
   /** Live stack/probes: HealthHeader tiles. Overall copy + facts live on this page. */
+  const runtimeSnapshot = $derived(observedSnapshot(managerShell.runtimeObservation));
+  const runtimeNotice = $derived(runtimeObservationNotice(managerShell.runtimeObservation));
   const configSnapshot = $derived(managerShell.configSnapshot);
+  let startInstallation = $state<HostStatus['installation']>(null);
+  const projectionStatus = $derived(
+    configSnapshot && startInstallation
+      ? { ...configSnapshot, installation: startInstallation }
+      : configSnapshot,
+  );
+  $effect(() => {
+    configSnapshot;
+    startInstallation = null;
+  });
   const statusError = $derived(managerShell.statusError);
   const patientAccess = $derived(configSnapshot
-    ? networkAccessSummary(configSnapshot, managerShell.runtimeSnapshot, managerShell.runtimeError).portalState
+    ? networkAccessSummary(configSnapshot, runtimeSnapshot, runtimeNotice).portalState
       ?? (configSnapshot.restrictedNetwork ? restrictedNetworkStatusSummary(configSnapshot.restrictedNetwork).state : 'Nicht eingerichtet')
     : null);
   const setupEntry = $derived(configSnapshot ? isSetupEntryStatus(configSnapshot) : false);
@@ -42,23 +64,34 @@
     configSnapshot ? lanWarningText(configSnapshot, setupEntry) : null,
   );
   const overall = $derived(
-    managerShell.runtimeError
-      ? ({ text: 'Unbekannt', level: 'bad' } as const)
-      : managerShell.runtimeSnapshot
-        ? deriveOverallStatus(managerShell.runtimeSnapshot)
-        : null,
+    managerStatusViewModel(projectionStatus, managerShell.runtimeObservation),
   );
-  const signatureNotice = $derived(
-    sandboxSignatureAgeNotice(managerShell.runtimeSnapshot?.sandboxScanner),
-  );
-  const overallNotice = $derived(
-    overall?.level === 'ok' && signatureNotice
-      ? { text: signatureNotice, level: 'warn' as const }
-      : overall,
-  );
-  const showOverall = $derived(
-    showStatusOverallNotice(setupEntry, overallNotice?.text),
-  );
+  const primary = $derived(overall.primary);
+  const signatureNotice = $derived(sandboxSignatureAgeNotice(runtimeSnapshot?.sandboxScanner));
+  const startGuard = $derived(configSnapshot?.lifecycle
+    ? evaluateHostLifecycleAction(configSnapshot.lifecycle, 'stack-start') : null);
+  let diagnosisOpen = $state(false);
+  const networkDisabled = $derived(tabDisabled('network', configSnapshot, runtimeSnapshot));
+  let actionBusy = $state(false);
+  let actionError = $state<string | null>(null);
+  async function runAction(action: () => void | Promise<void>) {
+    actionBusy = true;
+    actionError = null;
+    try { await action(); } catch (error) {
+      actionError = error instanceof Error ? error.message : String(error);
+    } finally { actionBusy = false; }
+  }
+  async function startExisting() {
+    const result = await window.praxisManager.startStoppedInstallation();
+    if (!result.installation || result.installation.kind === 'healthy') await onRefresh();
+    else startInstallation = result.installation;
+  }
+  function openDiagnosis() {
+    const target = primary.area === 'network' || primary.area === 'tls' || primary.code === 'proxy-unavailable' ? 'network' : 'maintenance';
+    if (tabDisabled(target, configSnapshot, runtimeSnapshot)) diagnosisOpen = true;
+    else if (target === 'network') onOpenNetwork();
+    else onOpenMaintenance();
+  }
 </script>
 
 <div
@@ -74,44 +107,50 @@
     {#if statusError}
       <p id="error-message" class="error">{statusError}</p>
     {/if}
-    {#if configSnapshot.lifecycle && configSnapshot.installation.kind !== 'docker-unavailable'}
+    <p id="status-overall" class={overall.noticeClass} aria-live="polite">{primary.summary}</p>
+    {#if primary.detail && !setupEntry}<p>{primary.detail}</p>{/if}
+    {#if primary.recommendedAction === 'install' || primary.recommendedAction === 'reinstall' || primary.code === 'installation-open'}
+      <button type="button" onclick={onSetupClick}>{primary.recommendedAction === 'install' ? 'Einrichtung starten' : primary.recommendedAction === 'reinstall' ? 'Neu installieren …' : 'Vorgang öffnen'}</button>
+    {:else if primary.recommendedAction === 'start'}
+      <button type="button" disabled={actionBusy || !startGuard?.allowed} onclick={() => void runAction(startExisting)}>Vorhandene Installation starten</button>
+      {#if startGuard?.reason}<p class="hint">{startGuard.reason}</p>{/if}
+    {:else if primary.recommendedAction === 'retry-observation'}
+      <button type="button" disabled={actionBusy} onclick={() => void runAction(onRefresh)}>Status erneut prüfen</button>
+    {:else if primary.recommendedAction === 'continue-operation'}
+      <button type="button" disabled={Boolean(networkDisabled)} onclick={onOpenNetwork}>Vorgang öffnen</button>
+      {#if networkDisabled}<p class="hint">{networkDisabled}</p>{/if}
+    {:else if primary.recommendedAction === 'repair' || primary.recommendedAction === 'inspect-configuration'}
+      <button type="button" onclick={openDiagnosis}>Diagnose öffnen</button>
+    {/if}
+    {#if actionError}<p class="error">{actionError}</p>{/if}
+    {#if configSnapshot.lifecycle && configSnapshot.installation?.kind !== 'inconsistent'}
       <HostLifecycleSummary lifecycle={configSnapshot.lifecycle} />
     {/if}
     {#if setupEntry}
       <SetupEntry
-        status={configSnapshot}
-        {onSetupClick}
+        status={projectionStatus ?? configSnapshot}
         {onLoadReleaseArchive}
       />
-    {:else}
-      {#if showOverall && overallNotice}
-        <p
-          id="status-overall"
-          class={statusOverallNoticeClass(overallNotice.level)}
-          aria-live="polite"
-        >
-          {overallNotice.text}
-        </p>
-      {/if}
-      <TlsResumeCard tls={configSnapshot.tls} onResume={onOpenNetwork} />
     {/if}
-    <DeliveryImagesWarning
-      status={configSnapshot}
-      {setupEntry}
-      {onLoadReleaseArchive}
-    />
+    {#if signatureNotice}<p class="hint">{signatureNotice}</p>{/if}
+    {#if !hasBlockingMaintenanceOperation(configSnapshot)}
+      <TlsResumeCard tls={configSnapshot.tls} onResume={onOpenNetwork} />
+      <DeliveryImagesWarning
+        status={configSnapshot}
+        {setupEntry}
+        {onLoadReleaseArchive}
+      />
+    {/if}
     {#if lanWarning && setupEntry}
       <p id="lan-warning" class="lan-warning">{lanWarning}</p>
     {/if}
     {#if !setupEntry}
-      <NetworkAccessNotices status={configSnapshot} runtime={managerShell.runtimeSnapshot} runtimeError={managerShell.runtimeError} {onOpenNetwork} />
+      <NetworkAccessNotices status={configSnapshot} runtime={runtimeSnapshot} runtimeError={runtimeNotice} {onOpenNetwork} />
       <p>Patientenzugang: {patientAccess}</p>
     {/if}
     <DeviceUrls status={configSnapshot} {setupEntry} {onOpenUrl} />
-    {#if !setupEntry}
-      <details><summary>Technische Installationsdetails</summary>
-        <StatusGrid status={configSnapshot} {setupEntry} />
-      </details>
-    {/if}
+    <details open={diagnosisOpen}><summary>Technische Installationsdetails</summary>
+      <StatusGrid status={configSnapshot} setupEntry={false} />
+    </details>
   {/if}
 </div>

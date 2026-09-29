@@ -1,3 +1,4 @@
+import { pfupdateWizardIsBusy, pfupdateWizardProgress } from './pfupdate-wizard-flow.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { HostStatus } from '../shared/host-status.js';
@@ -97,6 +98,10 @@ test('pfupdate wizard inspects package before apply', async () => {
   assert.equal(applyCalled, true);
   assert.equal(successCalled, true);
   assert.equal(controller.getState().phase, 'success');
+  {
+    const completed = controller.getState();
+    if (completed.phase === 'success') assert.equal(completed.applyResult.ok, true);
+  }
 });
 
 test('pfupdate summary labels stay technical and local builds are not mistaken for real releases', () => {
@@ -154,7 +159,11 @@ test('pfupdate wizard stops on inspect failure', async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   assert.equal(controller.getState().phase, 'failed');
-  assert.match(controller.getState().error ?? '', /Checksumme fehlgeschlagen/);
+  assert.match(
+    (controller.getState() as Extract<ReturnType<typeof controller.getState>, { phase: 'failed' }>)
+      .error,
+    /Checksumme fehlgeschlagen/,
+  );
 });
 
 test('pfupdate wizard turns a rejected file picker into a visible failure', async () => {
@@ -170,8 +179,12 @@ test('pfupdate wizard turns a rejected file picker into a visible failure', asyn
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   assert.equal(controller.getState().phase, 'failed');
-  assert.equal(controller.getState().busy, false);
-  assert.match(controller.getState().error ?? '', /Dateidialog fehlgeschlagen/);
+  assert.equal(pfupdateWizardIsBusy(controller.getState()), false);
+  assert.match(
+    (controller.getState() as Extract<ReturnType<typeof controller.getState>, { phase: 'failed' }>)
+      .error,
+    /Dateidialog fehlgeschlagen/,
+  );
 });
 
 test('confirmApply ignores duplicate calls while busy or outside preview', async () => {
@@ -232,4 +245,116 @@ test('confirmApply ignores duplicate calls while busy or outside preview', async
   await new Promise((resolve) => setTimeout(resolve, 0));
   controller.confirmApply();
   assert.equal(applyCalls, 1);
+});
+
+for (const stage of ['select', 'inspect', 'apply'] as const) {
+  for (const reopen of [false, true]) {
+    test(`update ignores late ${stage} after ${reopen ? 'reopening' : 'closing'}`, async () => {
+      const base = createMockApi();
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let first = true;
+      let refreshes = 0;
+      let successes = 0;
+      async function waitOnce() {
+        if (first) {
+          first = false;
+          await gate;
+        }
+      }
+      const controller = createPfupdateWizardController({
+        refreshHost: async () => {
+          refreshes++;
+        },
+        onApplySuccess: () => {
+          successes++;
+        },
+        api: createMockApi({
+          selectPfupdateArchive: async () => {
+            if (stage === 'select') await waitOnce();
+            return base.selectPfupdateArchive();
+          },
+          inspectPfupdate: async (input) => {
+            if (stage === 'inspect') await waitOnce();
+            return base.inspectPfupdate(input);
+          },
+          applyPfupdate: async (input) => {
+            if (stage === 'apply') await waitOnce();
+            return base.applyPfupdate(input);
+          },
+        }),
+      });
+      controller.open();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      if (stage === 'apply') controller.confirmApply();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      controller.close();
+      if (reopen) {
+        controller.open();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      const before = controller.getState();
+      const refreshesBefore = refreshes;
+      release();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      assert.deepEqual(controller.getState(), before);
+      assert.equal(successes, 0);
+      assert.equal(refreshes - refreshesBefore, stage === 'apply' ? 1 : 0);
+    });
+  }
+}
+
+for (const throws of [false, true]) {
+  test(`failed update reconciles host status (exception=${throws})`, async () => {
+    let refreshes = 0;
+    const controller = createPfupdateWizardController({
+      refreshHost: async () => {
+        refreshes++;
+      },
+      api: createMockApi({
+        applyPfupdate: async () => {
+          if (throws) throw new Error('transport failed');
+          return {
+            ok: false,
+            updateId: 'u',
+            failedPhase: 'health',
+            errors: ['health failed'],
+            rollbackAttempted: true,
+            rollbackSucceeded: false,
+          };
+        },
+      }),
+    });
+    controller.open();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.confirmApply();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const state = controller.getState();
+    assert.equal(state.phase, 'failed');
+    assert.equal(pfupdateWizardIsBusy(state), false);
+    if (state.phase === 'failed') assert.equal(state.applyResult?.ok, throws ? undefined : false);
+    assert.equal(refreshes, 2);
+  });
+}
+
+test('local progress and locks follow the active variants', async () => {
+  const controller = createPfupdateWizardController({ api: createMockApi() });
+  const states = [controller.getState()];
+  controller.open();
+  states.push(controller.getState());
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  states.push(controller.getState());
+  controller.confirmApply();
+  states.push(controller.getState());
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  states.push(controller.getState());
+  for (const state of states) {
+    assert.equal(pfupdateWizardIsBusy(state), pfupdateWizardProgress(state) !== '');
+  }
+  assert.deepEqual(
+    states.map((state) => state.phase),
+    ['closed', 'select', 'preview', 'applying', 'success'],
+  );
 });

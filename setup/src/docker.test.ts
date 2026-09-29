@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
 import {
   buildComposeStatus,
   runComposeCommand,
@@ -275,6 +276,13 @@ test('productComposeServices never includes TLS lab or removed gateway', () => {
 test('parseComposePsOutput handles empty stdout', () => {
   assert.deepEqual(parseComposePsOutput(''), []);
   assert.deepEqual(parseComposePsOutput('   \n'), []);
+});
+
+test('parseComposePsOutput rejects output that cannot be observed reliably', () => {
+  assert.throws(
+    () => parseComposePsOutput('invalid-json'),
+    (error) => error instanceof ManagerApiError && error.code === 'compose_status_unavailable',
+  );
 });
 
 test('parseComposePsOutput parses line-delimited json rows', () => {

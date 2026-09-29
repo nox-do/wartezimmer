@@ -1,3 +1,4 @@
+import { wizardIsBusy, wizardError } from './wizard-controller.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { InstallOperationSummary, InstallRecoveryPreview } from '../shared/host-status.js';
@@ -186,6 +187,7 @@ test('completion recheck does not overwrite a closed wizard session', async () =
   await tick();
   rechecking = true;
   const pending = controller.refreshRecovery();
+  await tick(); // Refresh now reconciles host journals before requesting the preview.
   controller.hide();
   const closed = controller.getState();
   resolve!(preview(true));
@@ -219,10 +221,60 @@ test('finish publishes the new installation status before leaving the wizard', a
   const pending = controller.finishRecovery('without-backup');
   await tick();
   assert.equal(completed, false);
-  assert.equal(controller.getState().busy, true);
+  assert.equal(wizardIsBusy(controller.getState()), true);
   assert.equal(controller.getState().recoveryPhase, 'finish');
   publish!();
   await pending;
   assert.equal(completed, true);
   assert.equal(controller.getState().operation, null);
+});
+
+test('recovery rechecks diagnosis before discovering backups or preparing replacement', async () => {
+  for (const kind of ['needs-repair', 'inconsistent'] as const) {
+    const status = minimalHostStatus({ installation: { kind, reasons: [] } });
+    const controller = createWizardController({
+      api: {
+        fetchSetupStatus: async () => status,
+        discoverRecoveryBackups: async () => assert.fail('diagnosis must not enter recovery'),
+        selectReleaseArchive: async () => ({ canceled: false, path: '/release.pfinstall' }),
+        prepareInstall: async () => assert.fail('diagnosis must not prepare replacement'),
+      } as unknown as PraxisManagerApi,
+      onComplete() {},
+      onCancel() {},
+    });
+    controller.show(status);
+    await tick();
+    await controller.prepareRecovery();
+    assert.match(wizardError(controller.getState()) ?? '', /prüfen/);
+    assert.equal(controller.getState().operation, null);
+  }
+});
+
+test('failed installation finish refreshes host evidence while preserving its error', async () => {
+  const status = minimalHostStatus({
+    installation: { kind: 'installing', operation: { ...operation, phase: 'installing' } },
+  });
+  let refreshes = 0;
+  const controller = createWizardController({
+    api: {
+      fetchSetupStatus: async () => status,
+      previewInstallRecovery: async () => preview(true),
+      finishInstallRecovery: async () => {
+        throw new Error('finish failed');
+      },
+    } as unknown as PraxisManagerApi,
+    onHostMutated: () => {
+      refreshes++;
+    },
+    onComplete() {
+      assert.fail('failure must not complete installation');
+    },
+    onCancel() {},
+  });
+  controller.show(status);
+  await tick();
+  await controller.finishRecovery('restore');
+  assert.equal(refreshes, 1);
+  assert.equal(wizardIsBusy(controller.getState()), false);
+  assert.equal(wizardError(controller.getState()), 'finish failed');
 });

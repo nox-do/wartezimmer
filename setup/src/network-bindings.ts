@@ -99,6 +99,7 @@ function checkServiceBindings(input: {
   serviceLabel: string;
   checkId: string;
   expected: ComposePublishedBinding[];
+  optional?: ComposePublishedBinding[];
 }): NetworkBindingCheck[] {
   if (!input.service) {
     return [];
@@ -115,9 +116,14 @@ function checkServiceBindings(input: {
     ];
   }
   const expectedKeys = new Set(input.expected.map(bindingKey));
+  const allowedKeys = new Set([...input.expected, ...(input.optional ?? [])].map(bindingKey));
   const actualKeys = new Set(actual.map(bindingKey));
   const matches =
-    expectedKeys.size === actualKeys.size && [...expectedKeys].every((key) => actualKeys.has(key));
+    [...expectedKeys].every((key) => actualKeys.has(key)) &&
+    [...actualKeys].every((key) => allowedKeys.has(key));
+  const optionalDetail = input.optional?.length
+    ? ` Während der HTTPS-Inbetriebnahme zusätzlich zulässig: ${describeBindings(input.optional)}.`
+    : '';
   return [
     {
       id: input.checkId,
@@ -125,7 +131,7 @@ function checkServiceBindings(input: {
       message: matches
         ? `${input.serviceLabel} ist nur an die vorgesehenen Host-Adressen gebunden`
         : `${input.serviceLabel} besitzt unerwartete Host-Bindings`,
-      detail: `Ist: ${describeBindings(actual)}. Soll: ${describeBindings(input.expected)}.`,
+      detail: `Ist: ${describeBindings(actual)}. Soll: ${describeBindings(input.expected)}.${optionalDetail}`,
     },
   ];
 }
@@ -137,6 +143,8 @@ export function auditStaffPublishedBindings(input: {
   proxyEnabled: boolean;
   proxyHttpPort?: number;
   proxyHttpsEnabled?: boolean;
+  /** During TLS commissioning, 443 may already be published but is not required yet. */
+  proxyHttpsOptional?: boolean;
   proxyHttpsPort?: number;
   restrictedIp?: string | null;
 }): NetworkBindingCheck[] {
@@ -146,6 +154,14 @@ export function auditStaffPublishedBindings(input: {
   const staffIp = input.staffIp?.trim() || null;
   const proxyHttpPort = input.proxyHttpPort ?? DEFAULT_PROXY_HTTP_PORT;
   const proxyHttpsPort = input.proxyHttpsPort ?? DEFAULT_PROXY_HTTPS_PORT;
+  const proxyHttpsBinding: ComposePublishedBinding | null = staffIp
+    ? {
+        hostIp: staffIp,
+        publishedPort: proxyHttpsPort,
+        targetPort: 443,
+        protocol: 'tcp',
+      }
+    : null;
   const appExpected: ComposePublishedBinding[] = [
     {
       hostIp: input.proxyEnabled ? '127.0.0.1' : '0.0.0.0',
@@ -158,16 +174,7 @@ export function auditStaffPublishedBindings(input: {
   const proxyExpected: ComposePublishedBinding[] = staffIp
     ? [
         { hostIp: staffIp, publishedPort: proxyHttpPort, targetPort: 80, protocol: 'tcp' },
-        ...(input.proxyHttpsEnabled
-          ? [
-              {
-                hostIp: staffIp,
-                publishedPort: proxyHttpsPort,
-                targetPort: 443,
-                protocol: 'tcp',
-              },
-            ]
-          : []),
+        ...(input.proxyHttpsEnabled && proxyHttpsBinding ? [proxyHttpsBinding] : []),
         ...(input.restrictedIp
           ? [
               {
@@ -218,6 +225,10 @@ export function auditStaffPublishedBindings(input: {
           serviceLabel: 'Proxy',
           checkId: 'staff.binding.proxy',
           expected: proxyExpected,
+          optional:
+            input.proxyHttpsOptional && !input.proxyHttpsEnabled && proxyHttpsBinding
+              ? [proxyHttpsBinding]
+              : undefined,
         }),
       );
     }
@@ -296,6 +307,7 @@ export async function auditNetworkBindings(input: {
   );
   const proxyMode = input.env.get('PROXY_MODE')?.trim().toLowerCase() || 'off';
   const tlsState = input.env.get('TLS_STATE')?.trim().toLowerCase() || 'off';
+  const proxyHttpsEnabled = proxyMode === 'tls-managed' || proxyMode === 'tls-custom';
   const proxyHttpPort = readEnvPort(input.env, 'PROXY_HTTP_PORT', DEFAULT_PROXY_HTTP_PORT);
   const proxyHttpsPort = readEnvPort(input.env, 'PROXY_HTTPS_PORT', DEFAULT_PROXY_HTTPS_PORT);
   checks.push(
@@ -304,8 +316,8 @@ export async function auditNetworkBindings(input: {
       staffIp: input.configuredLanIp,
       proxyEnabled,
       proxyHttpPort,
-      proxyHttpsEnabled:
-        proxyMode === 'tls-managed' || proxyMode === 'tls-custom' || tlsState !== 'off',
+      proxyHttpsEnabled,
+      proxyHttpsOptional: !proxyHttpsEnabled && tlsState !== 'off',
       proxyHttpsPort,
       restrictedIp:
         input.env.get('SETUP_RESTRICTED_ENABLED')?.trim().toLowerCase() === 'true'
@@ -380,7 +392,7 @@ export async function auditNetworkBindings(input: {
         ? 'Praxis Flow kann nach gültiger Wartenummer die Freigabe auslösen.'
         : 'Gateway läuft, aber der Freigabe-Port ist nicht offen.',
     });
-  } else if (gateway.enabled) {
+  } else if (gateway.enabled && input.compose) {
     checks.push({
       id: 'gateway.compose',
       ok: false,

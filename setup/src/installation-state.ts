@@ -7,6 +7,18 @@ import type {
   InstallOperationSummary,
 } from '@praxis-flow/server-shared';
 
+export const installationStartFailureMessages = {
+  'app-image-missing': 'Das benötigte lokale App-Image fehlt.',
+  'data-volume-missing': 'Das erwartete App-Datenvolume fehlt.',
+  'database-missing': 'Die erwartete Praxis-Flow-Datenbank fehlt im App-Datenvolume.',
+  'compose-start-failed': 'Die vorhandene Installation konnte nicht gestartet werden.',
+  'health-timeout': 'App und Sandbox wurden nicht rechtzeitig gemeinsam gesund.',
+  'maintenance-auth-failed':
+    'Die Maintenance-API ist mit dem Token der Zielinstallation nicht authentifizierbar.',
+} as const;
+
+export type InstallationStartFailure = keyof typeof installationStartFailureMessages;
+
 export type InstallationStateFacts = {
   docker: DockerStatus;
   lifecycle: HostLifecycle;
@@ -14,6 +26,8 @@ export type InstallationStateFacts = {
   releaseConfigured: boolean;
   maintenanceAuthenticated: boolean;
   operation?: InstallOperationSummary;
+  operationUnreadable?: boolean;
+  startFailure?: InstallationStartFailure;
 };
 
 function serviceHealthy(compose: ComposeStatus | null, serviceName: 'app' | 'sandbox'): boolean {
@@ -51,17 +65,18 @@ function reason(code: string, message: string): InstallationReason {
   return { code, message };
 }
 
-export function deriveInstallationState(facts: InstallationStateFacts): InstallationState {
-  if (!facts.docker.installed || !facts.docker.daemonRunning || !facts.docker.composeAvailable) {
-    const unavailable = !facts.docker.installed
-      ? 'Docker ist nicht installiert.'
-      : !facts.docker.daemonRunning
-        ? 'Docker ist nicht erreichbar.'
-        : 'Docker Compose ist nicht verfügbar.';
+/** Persistent configuration and operation evidence precedes runtime-dependent findings. */
+export function deriveInstallationState(facts: InstallationStateFacts): InstallationState | null {
+  // A corrupt durable operation outranks observation gaps such as Docker being offline.
+  if (facts.operationUnreadable) {
     return {
-      kind: 'docker-unavailable',
-      reason: unavailable,
-      ...(facts.operation ? { operation: facts.operation } : {}),
+      kind: 'inconsistent',
+      reasons: [
+        reason(
+          'install-operation-invalid',
+          'Der gespeicherte Installationsvorgang ist unlesbar oder ungültig.',
+        ),
+      ],
     };
   }
 
@@ -90,15 +105,44 @@ export function deriveInstallationState(facts: InstallationStateFacts): Installa
     );
   }
 
+  if (reasons.length > 0) return { kind: 'inconsistent', reasons };
+
+  if (facts.startFailure) {
+    const code = facts.startFailure;
+    return {
+      kind:
+        code === 'app-image-missing' ||
+        code === 'data-volume-missing' ||
+        code === 'database-missing'
+          ? 'needs-reinstall'
+          : 'needs-repair',
+      reasons: [reason(code, installationStartFailureMessages[code])],
+    };
+  }
+
+  if (!facts.docker.installed || !facts.docker.daemonRunning || !facts.docker.composeAvailable) {
+    const unavailable = !facts.docker.installed
+      ? 'Docker ist nicht installiert.'
+      : !facts.docker.daemonRunning
+        ? 'Docker ist nicht erreichbar.'
+        : 'Docker Compose ist nicht verfügbar.';
+    return {
+      kind: 'docker-unavailable',
+      reason: unavailable,
+    };
+  }
+
+  if (!facts.compose) return null;
+
   const coreHealthy = coreInstallationServicesHealthy(facts.compose);
-  if (reasons.length === 0 && coreHealthy && facts.maintenanceAuthenticated) {
+  if (coreHealthy && facts.maintenanceAuthenticated) {
     return { kind: 'healthy', updateEligible: true };
   }
 
   // Docker healthchecks already provide the grace period: `starting` is a
   // normal transition, while a service that exhausts its retries becomes
   // `unhealthy` and falls through to the repair-required state below.
-  if (reasons.length === 0 && coreInstallationServicesStarting(facts.compose)) {
+  if (coreInstallationServicesStarting(facts.compose)) {
     return { kind: 'starting' };
   }
 
@@ -108,12 +152,8 @@ export function deriveInstallationState(facts: InstallationStateFacts): Installa
         (service.service === 'app' || service.service === 'sandbox') &&
         service.state.toLowerCase().includes('running'),
     ) ?? false;
-  if (reasons.length === 0 && !anyCoreRunning) {
+  if (!anyCoreRunning) {
     return { kind: 'stopped' };
-  }
-
-  if (reasons.length > 0) {
-    return { kind: 'needs-reinstall', reasons };
   }
 
   if (!coreHealthy) {
@@ -128,5 +168,5 @@ export function deriveInstallationState(facts: InstallationStateFacts): Installa
       ),
     );
   }
-  return { kind: 'needs-reinstall', reasons };
+  return { kind: 'needs-repair', reasons };
 }

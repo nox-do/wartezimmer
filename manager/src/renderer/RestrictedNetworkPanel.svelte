@@ -26,8 +26,7 @@
     onMutatingChange?: (mutating: boolean) => void;
   } = $props();
   let inspect = $state<RestrictedNetworkInspectResult | null>(null);
-  let loading = $state(false);
-  let mutationInFlight = $state(false);
+  let action = $state<'idle' | 'refreshing' | 'mutating'>('idle');
   let loadError = $state<string | null>(null);
   let actionError = $state<string | null>(null);
   let loadAttempted = $state(false);
@@ -36,7 +35,7 @@
   let notice = $state<string | null>(null);
   let pendingAction = $state<'apply' | 'remove' | null>(null);
   let generation = 0;
-  const busy = $derived(loading || mutationInFlight);
+  const busy = $derived(action !== 'idle');
 
   function lifecycleAllows(action: 'network-binding' | 'restricted-apply' | 'restricted-remove') {
     if (!lifecycle) return true;
@@ -90,13 +89,14 @@
     warningsConfirmed = draft.confirmed;
   }
 
-  function notifyMutation(): void {
-    if (onAfterMutation) void Promise.resolve(onAfterMutation()).catch(() => undefined);
+  async function notifyMutation(): Promise<void> {
+    try { await onAfterMutation?.(); } catch { /* Keep the action error; shell owns refresh diagnostics. */ }
   }
 
   async function refresh(): Promise<void> {
+    if (busy || peerMutating) return;
     const current = ++generation;
-    loading = true;
+    action = 'refreshing';
     loadError = null;
     actionError = null;
     notice = null;
@@ -112,17 +112,17 @@
         loadAttempted = true;
       }
     } finally {
-      if (current === generation) loading = false;
+      if (current === generation) action = 'idle';
     }
   }
 
 
   async function prepare(): Promise<void> {
+    if (busy || peerMutating) return;
     if (!selectedCandidate) return;
     if (!lifecycleAllows('network-binding')) return;
     const current = ++generation;
-    loading = true;
-    mutationInFlight = true;
+    action = 'mutating';
     onMutatingChange?.(true);
     actionError = null;
     notice = null;
@@ -140,51 +140,53 @@
           : result.dns.state === 'local-unresolved'
             ? 'Netzwerkadresse ist vorbereitet. Der öffentliche A-Record stimmt, die lokale DNS-Auflösung muss noch freigegeben werden.'
             : 'Netzwerkadresse ist vorbereitet. Der Portal-A-Record muss noch geprüft oder korrigiert werden.';
-        notifyMutation();
+
       }
     } catch (cause) {
       if (current === generation) {
         actionError = restrictedPrepareErrorText(cause);
       }
     } finally {
-      mutationInFlight = false;
+      await notifyMutation();
+      // The mutation owns its lock until completion, even after leaving the view.
+      action = 'idle';
       onMutatingChange?.(false);
-      if (current === generation) loading = false;
     }
   }
 
-  async function runAction(action: 'apply' | 'remove'): Promise<void> {
-    if (!lifecycleAllows(action === 'apply' ? 'restricted-apply' : 'restricted-remove')) return;
+  async function runAction(request: 'apply' | 'remove'): Promise<void> {
+    if (busy || peerMutating) return;
+    if (!lifecycleAllows(request === 'apply' ? 'restricted-apply' : 'restricted-remove')) return;
     const current = ++generation;
-    loading = true;
-    mutationInFlight = true;
+    action = 'mutating';
     onMutatingChange?.(true);
     actionError = null;
     notice = null;
     pendingAction = null;
     try {
-      const result = action === 'apply'
+      const result = request === 'apply'
         ? await window.praxisManager.applyRestrictedNetwork()
         : await window.praxisManager.removeRestrictedNetwork();
       if (current === generation) {
         acceptInspect(result);
         loadAttempted = true;
-        notice = action === 'apply'
+        notice = request === 'apply'
           ? 'Patientenzugang ist auf der gewählten Netzwerkadresse aktiv.'
           : 'Patientenzugang und Restricted-Binding wurden entfernt.';
-        notifyMutation();
+
       }
     } catch (cause) {
       if (current === generation) {
         actionError = restrictedActionErrorText(
           cause,
-          action === 'apply' ? 'aktiviert' : 'entfernt',
+          request === 'apply' ? 'aktiviert' : 'entfernt',
         );
       }
     } finally {
-      mutationInFlight = false;
+      await notifyMutation();
+      // The mutation owns its lock until completion, even after leaving the view.
+      action = 'idle';
       onMutatingChange?.(false);
-      if (current === generation) loading = false;
     }
   }
 
@@ -192,7 +194,7 @@
     if (active && !loadAttempted && !busy) void refresh();
     if (!active) {
       generation += 1;
-      loading = false;
+      if (action !== 'mutating') action = 'idle';
       loadAttempted = false;
     }
   });
@@ -203,7 +205,7 @@
   das Patientenportal erreichen. Die tatsächliche Netztrennung richtet die Praxis-IT ein.
 </p>
 
-{#if loading && !inspect}
+{#if action === 'refreshing' && !inspect}
   <p role="status">Restricted-Network-Status wird geprüft …</p>
 {:else if loadError && !inspect}
   <p class="error" role="alert">Restricted-Network-Status konnte nicht geladen werden: {loadError}</p>
@@ -246,7 +248,7 @@
             name="restricted-network-candidate"
             value={candidateKey(candidate.address, candidate.interfaceId)}
             checked={selectedCandidateKey === candidateKey(candidate.address, candidate.interfaceId)}
-            disabled={loading || peerMutating || !inspect.capabilities.supported || inspect.status.phase === 'applied'}
+            disabled={busy || peerMutating || !inspect.capabilities.supported || inspect.status.phase === 'applied'}
             onchange={() => {
               selectedCandidateKey = candidateKey(candidate.address, candidate.interfaceId);
               warningsConfirmed = false;
@@ -267,7 +269,7 @@
 
   {#if selectedWarning}
     <label class="restricted-warning-confirmation">
-      <input type="checkbox" bind:checked={warningsConfirmed} disabled={loading || peerMutating} />
+      <input type="checkbox" bind:checked={warningsConfirmed} disabled={busy || peerMutating} />
       <span>Die Hinweise zu dieser Adresse wurden mit der Praxis-IT geprüft und die Verwendung wurde bestätigt.</span>
     </label>
   {/if}
@@ -328,11 +330,11 @@
 {/if}
 
 <ConfirmDialog
-  open={pendingAction !== null}
+  open={pendingAction !== null && !peerMutating}
   confirmLabel={pendingAction === 'remove' ? 'Entfernen' : 'Aktivieren'}
   onConfirm={() => {
     const action = pendingAction;
-    if (action) void runAction(action);
+    if (action && !peerMutating) void runAction(action);
   }}
   onCancel={() => { pendingAction = null; }}
 >

@@ -12,7 +12,6 @@ import type {
   ComposeStatus,
   PfbackupInfo,
   PfbackupResult,
-  PfbackupValidateResult,
   PfbackupInspectResult,
   PfbackupRestoreResult,
   PfupdateApplyInput,
@@ -94,16 +93,14 @@ export type PraxisManagerMaintenanceApi = {
   rebuildHost(): Promise<ComposeActionResult>;
   createPfbackup(): Promise<PfbackupResult>;
   savePfbackup(backupPath: string): Promise<SavePfbackupResult>;
-  validatePfbackup(content: string): Promise<PfbackupValidateResult>;
   inspectPfbackup(content: string): Promise<PfbackupInspectResult>;
   restorePfbackup(
     content: string,
     options?: { skipProviderCredentials?: boolean },
   ): Promise<PfbackupRestoreResult>;
-  readPfbackupForValidate(): Promise<
+  selectPfbackupForRestore(): Promise<
     { canceled: true } | { canceled: false; content: string; filePath: string }
   >;
-  inspectPfbackupFile(backupPath: string): Promise<PfbackupInspectResult>;
   saveStorageFolders(body: StorageFoldersInput): Promise<StorageFoldersResult>;
   saveHostNetwork(body: HostNetworkInput): Promise<HostNetworkResult>;
   prepareHostTls(body: TlsPrepareInput): Promise<TlsPrepareResult>;

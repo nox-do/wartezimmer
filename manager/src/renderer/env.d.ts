@@ -11,6 +11,7 @@ declare global {
 
   interface Window {
     praxisManager: PraxisManagerApi;
+    praxisManagerBridge: PraxisManagerApi;
   }
 }
 
