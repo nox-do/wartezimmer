@@ -30,16 +30,6 @@
     <dt>Praxisadresse</dt><dd>{summary.address}</dd>
     <dt>Verbindung</dt><dd>{summary.connection}</dd>
   </dl>
-  <details>
-    <summary>Technische Details</summary>
-    <dl class="status-grid">
-      <dt>Zugang</dt><dd>{summary.access}</dd>
-      <dt>Adresse / Adapter</dt><dd>{summary.adapter}</dd>
-    </dl>
-  </details>
-  {#if !summary.needsAttention}
-    <p class="hint">Letzte Host-Prüfung: {summary.diagnosis}.</p>
-  {/if}
 </section>
 
 <section class="network-column" aria-label="Patientenzugang">
@@ -47,7 +37,6 @@
   <dl class="status-grid wizard-summary-grid">
     <dt>Portaladresse</dt><dd>{restricted.portalAddress}</dd>
     <dt>Status</dt><dd>{summary.portalState ?? restricted.state}</dd>
-    <dt>Adresse / Adapter</dt><dd>{restricted.binding}</dd>
     <dt>Freigegeben</dt><dd>{status.lifecycle?.assessment === 'known' && status.lifecycle.mode === 'https-portal' && status.restrictedNetwork?.phase === 'applied' ? 'Nur Patientenportal' : 'Keine separate Freigabe'}</dd>
   </dl>
 </section>

@@ -289,3 +289,15 @@ test('installation detail copy preserves reasons and repair checklist behavior',
     }
   }
 });
+
+
+test('installation facts and optional diagnostics have distinct contents', () => {
+  const status = minimalHostStatus();
+  const facts = statusGridRows(status, 'installation');
+  const diagnostics = statusGridRows(status, 'diagnosis');
+  assert.deepEqual(facts.map((row) => row.label), ['Installations-ID', 'Installationsordner']);
+  assert.deepEqual(diagnostics.map((row) => row.label), ['Konfiguration (.env)', 'Compose-Projekt', 'Docker']);
+  assert.equal(facts.length + diagnostics.length, statusGridRows(status).length);
+  const versioned = minimalHostStatus({ deliveryImages: { ...status.deliveryImages, releaseVersion: '6.1.0' } });
+  assert.equal(statusGridRows(versioned, 'installation').find((row) => row.label === 'Software-Version')?.value, '6.1.0');
+});

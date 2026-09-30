@@ -153,98 +153,32 @@ test('networkHostChecksForDisplay keeps Staff runtime binding failures', () => {
   );
 });
 
-test('networkExpanderDefaults opens LAN and proxy when host checks are degraded', () => {
-  const defaults = networkExpanderDefaults({
-    status: minimalHostStatus({
-      networkBindings: [{ id: 'app.port', ok: false, message: 'down' }],
-      proxy: {
-        enabled: true,
-        mode: 'http',
-        canonicalBaseUrl: 'http://192.168.1.10',
-        httpPort: 80,
-        appBindAddress: '127.0.0.1',
-        container: null,
-      },
-    }),
-    proxyEnabled: true,
+test('every network expander starts collapsed in a new session', () => {
+  assert.deepEqual(networkExpanderDefaults(), {
+    summaryOpen: false,
+    lanOpen: false,
+    proxyOpen: false,
+    topologyOpen: false,
+    tlsOpen: false,
+    restrictedOpen: false,
   });
-  assert.equal(defaults.lanOpen, true);
-  assert.equal(defaults.proxyOpen, true);
-  assert.equal(defaults.topologyOpen, false);
 });
 
-test('networkExpanderDefaults: TLS off opens proxy and closes device address', () => {
-  const defaults = networkExpanderDefaults({
-    status: minimalHostStatus(),
-    proxyEnabled: false,
-  });
-  assert.equal(defaults.tlsOpen, false);
-  assert.equal(defaults.proxyOpen, true);
-  assert.equal(defaults.lanOpen, false);
-});
-
-test('networkExpanderDefaults: TLS active does not force-open proxy', () => {
-  const defaults = networkExpanderDefaults({
-    status: minimalHostStatus({
-      tls: {
-        state: 'awaiting-operator-dns',
-        mode: 'managed',
-        hostname: 'demo.lan.notaus.de',
-        installationId: 'id',
-        tokenConsumed: false,
-        applyReady: false,
-        cutoverApplied: false,
-        certificate: null,
-        lastError: null,
-        acmeCnameTarget: null,
-      },
-      proxy: {
-        enabled: true,
-        mode: 'http',
-        canonicalBaseUrl: 'http://192.168.1.10',
-        httpPort: 80,
-        appBindAddress: '127.0.0.1',
-        container: {
-          name: 'up',
-          service: 'proxy',
-          state: 'running',
-          health: 'healthy',
-        },
-      },
-    }),
-    proxyEnabled: true,
-  });
-  assert.equal(defaults.proxyOpen, false);
-});
-
-test('networkDraftCommitPlacement follows open, rendered draft expanders', () => {
-  assert.deepEqual(
-    networkDraftCommitPlacement({
-      dirty: true,
-      lanOpen: false,
-      proxyOpen: true,
-      httpDraftExpandersRendered: false,
-    }),
-    { lan: false, proxy: false },
-  );
-  assert.deepEqual(
-    networkDraftCommitPlacement({
-      dirty: true,
-      lanOpen: false,
-      proxyOpen: true,
-      httpDraftExpandersRendered: true,
-    }),
-    { lan: false, proxy: true },
-  );
-  assert.deepEqual(
-    networkDraftCommitPlacement({
-      dirty: false,
-      lanOpen: true,
-      proxyOpen: true,
-      httpDraftExpandersRendered: true,
-    }),
-    { lan: false, proxy: false },
-  );
+test('network actions follow the changed fields while retaining a shared save', () => {
+  const status = minimalHostStatus();
+  const draft = { lanAppIp: status.network.configuredLanIp!, customLanIp: '', proxyEnabled: false };
+  const input = { status, draft, dirty: true, lanOpen: true, proxyOpen: true, httpDraftExpandersRendered: true };
+  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: { ...draft, lanAppIp: '192.168.1.20' } }), { lan: true, proxy: false });
+  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: { ...draft, proxyEnabled: true } }), { lan: false, proxy: true });
+  const both = { ...draft, lanAppIp: '192.168.1.20', proxyEnabled: true };
+  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: both }), { lan: true, proxy: true });
+  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: both, dirty: false }), { lan: false, proxy: false });
+  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: both, lanOpen: false, httpDraftExpandersRendered: false }), { lan: false, proxy: false });
+  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: { ...draft, lanAppIp: '__custom__', customLanIp: ' 192.168.1.20 ' } }), { lan: true, proxy: false });
+  // Returning to saved values hides actions, even after editing both sections.
+  assert.deepEqual(networkDraftCommitPlacement({ ...input, dirty: false }), { lan: false, proxy: false });
+  // A legacy binding repair still has a place to apply, without proxy actions.
+  assert.deepEqual(networkDraftCommitPlacement(input), { lan: true, proxy: false });
 });
 
 test('DNS filter help selects the correct exception without treating the suspicion as proof', () => {

@@ -148,10 +148,12 @@
     {/if}
     {#if !setupEntry}
       <NetworkAccessNotices status={configSnapshot} runtime={runtimeSnapshot} runtimeError={runtimeNotice} {onOpenNetwork} />
-      <p>Patientenzugang: {patientAccess}</p>
+      {#if configSnapshot.restrictedNetwork?.phase === 'applied'}
+        <p>Patientenzugang: {patientAccess}</p>
+      {/if}
     {/if}
     <DeviceUrls status={configSnapshot} {setupEntry} {onOpenUrl} />
-    <details open={diagnosisOpen}><summary>Technische Installationsdetails</summary>
+    <details bind:open={diagnosisOpen}><summary>Technische Installationsdetails</summary>
       <StatusGrid status={configSnapshot} setupEntry={false} />
     </details>
   {/if}

@@ -126,36 +126,23 @@ export function networkProxySubtitle(
   return 'Proxy an · HTTP ohne Portangabe';
 }
 
-export function networkExpanderDefaults(input: {
-  status: HostStatus;
-  proxyEnabled: boolean;
-  runtime?: HostRuntimeHealth | null;
-}): {
-  lanOpen: boolean;
-  proxyOpen: boolean;
-  topologyOpen: boolean;
-  tlsOpen: boolean;
-} {
-  const checks = networkHostChecksForDisplay(input.status.networkBindings);
-  const tls = input.status.tls;
-  const tlsActive = Boolean(tls && tls.state !== 'off');
-  const proxyNeedsRepair =
-    input.proxyEnabled && proxyNeedsRestore(input.status, input.runtime ?? null);
+/** A new network session starts collapsed; notices remain visible above the panels. */
+export function networkExpanderDefaults() {
   return {
-    lanOpen:
-      Boolean(input.status.network.lanIpStale) ||
-      !input.status.network.configuredLanIp ||
-      networkHostChecksHaveFailures(checks),
-    // TLS off: Port-80 checkbox + commit in one glance. While TLS is active, only restore.
-    proxyOpen: !tlsActive || proxyNeedsRepair,
+    summaryOpen: false,
+    lanOpen: false,
+    proxyOpen: false,
     topologyOpen: false,
-    tlsOpen: tlsActive,
+    tlsOpen: false,
+    restrictedOpen: false,
   };
 }
 
-/** Same draft save: shown in each open, rendered config expander. No tab-wide row. */
+/** Shared save, but actions are only shown next to the changed draft fields. */
 export function networkDraftCommitPlacement(input: {
   dirty: boolean;
+  draft: NetworkDraft | null;
+  status: HostStatus | null;
   lanOpen: boolean;
   proxyOpen: boolean;
   httpDraftExpandersRendered: boolean;
@@ -163,12 +150,16 @@ export function networkDraftCommitPlacement(input: {
   lan: boolean;
   proxy: boolean;
 } {
-  if (!input.dirty) {
+  if (!input.dirty || !input.draft || !input.status) {
     return { lan: false, proxy: false };
   }
+  const lanChanged = resolvedLanIp(input.draft) !== (input.status.network.configuredLanIp?.trim() ?? '');
+  const proxyChanged = input.draft.proxyEnabled !== Boolean(input.status.proxy?.enabled);
+  // Legacy binding/canonical repairs can require a save without a field edit.
+  const bindingRepair = !lanChanged && !proxyChanged;
   return {
-    lan: input.lanOpen,
-    proxy: input.httpDraftExpandersRendered && input.proxyOpen,
+    lan: input.lanOpen && (lanChanged || bindingRepair),
+    proxy: input.httpDraftExpandersRendered && input.proxyOpen && proxyChanged,
   };
 }
 

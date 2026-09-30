@@ -10,12 +10,14 @@
     setupEntry: boolean;
   } = $props();
 
-  const rows = $derived(statusGridRows(status));
+  const rows = $derived(statusGridRows(status, 'installation'));
+  const diagnostics = $derived(statusGridRows(status, 'diagnosis'));
+  let diagnosticsOpen = $state(false);
 </script>
 
 {#if !setupEntry}
   <section class="status-facts" id="status-facts">
-    <h2 id="status-grid-heading">Installation und Laufzeit</h2>
+    <h2 id="status-grid-heading">Installation</h2>
     <div class="lan-ip-status" id="status-grid">
       {#each rows as row (row.label)}
         <div class="lan-ip-status-row">
@@ -24,5 +26,16 @@
         </div>
       {/each}
     </div>
+    <details bind:open={diagnosticsOpen}>
+      <summary>Technische Diagnose</summary>
+      <div class="lan-ip-status">
+        {#each diagnostics as row (row.label)}
+          <div class="lan-ip-status-row">
+            <span class="lan-ip-status-label">{row.label}</span>
+            <span class="lan-ip-status-value">{row.value}</span>
+          </div>
+        {/each}
+      </div>
+    </details>
   </section>
 {/if}

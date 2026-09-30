@@ -201,8 +201,8 @@
 </script>
 
 <p class="hint">
-  Hier bereiten Sie eine zusätzliche Adresse vor, über die Geräte im Patientennetz ausschließlich
-  das Patientenportal erreichen. Die tatsächliche Netztrennung richtet die Praxis-IT ein.
+  Hier bereiten Sie eine zusätzliche IP-Adresse vor, über die ausschließlich das Patientenportal
+  erreichbar ist. Die tatsächliche Netztrennung richtet die Praxis-IT ein.
 </p>
 
 {#if action === 'refreshing' && !inspect}
@@ -237,10 +237,6 @@
   {/if}
 
   <h3 class="wizard-subheading">Netzwerkadresse auswählen</h3>
-  <details class="network-selection-help">
-    <summary>Hinweise zur Adressauswahl</summary>
-    <p class="hint">Hinweise markieren mögliche Risiken. Loopback, Link-Local und die Praxis-IP werden nicht angeboten.</p>
-  </details>
   {#if inspect.candidates.length}
     <div class="restricted-candidate-list" role="radiogroup" aria-label="Netzwerkadresse für Patientenportal">
       {#each inspect.candidates as candidate (candidateKey(candidate.address, candidate.interfaceId))}
@@ -267,7 +263,7 @@
       {/each}
     </div>
   {:else}
-    <p class="notice is-warn">Keine zusätzliche lokale IPv4-Adresse gefunden.</p>
+    <p class="notice is-warn">Keine zusätzliche lokale IPv4-Adresse gefunden. Lassen Sie Ihre Praxis-IT eine zusätzliche IP-Adresse am Rechner einrichten und wählen Sie anschließend „Erneut prüfen“.</p>
   {/if}
 
   {#if selectedWarning}

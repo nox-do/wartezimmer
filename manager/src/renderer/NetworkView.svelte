@@ -84,8 +84,8 @@
   let lastSessionGeneration = $state<number | null>(null);
   let tlsController = $state<TlsNetworkController | null>(null);
   let tlsSnapshot = $state<TlsNetworkState | null>(null);
-  let tlsOpen = $state(true);
-  let restrictedOpen = $state(true);
+  let tlsOpen = $state(false);
+  let restrictedOpen = $state(false);
   let restrictedMutating = $state(false);
 
   const viewLoading = $derived(managerShell.viewLoading.network);
@@ -117,19 +117,14 @@
     snapshot = controller ? { ...controller.getState() } : null;
   }
 
-  function applyExpanderDefaults(draft: NetworkState): void {
-    if (!configSnapshot) {
-      return;
-    }
-    const defaults = networkExpanderDefaults({
-      status: configSnapshot,
-      proxyEnabled: draft.proxyEnabled,
-      runtime: runtimeSnapshot,
-    });
+  function applyExpanderDefaults(): void {
+    const defaults = networkExpanderDefaults();
+    summaryOpen = defaults.summaryOpen;
     lanOpen = defaults.lanOpen;
     proxyOpen = defaults.proxyOpen;
     topologyOpen = defaults.topologyOpen;
     tlsOpen = defaults.tlsOpen;
+    restrictedOpen = defaults.restrictedOpen;
   }
 
   function requestConfirm(message: string, onConfirm: () => void, onCancel?: () => void): void {
@@ -178,6 +173,8 @@
   const commitPlacement = $derived(
     networkDraftCommitPlacement({
       dirty,
+      draft: snapshot,
+      status: configSnapshot,
       lanOpen,
       proxyOpen,
       httpDraftExpandersRendered: !tlsCutoverApplied,
@@ -282,7 +279,7 @@
       }
       lastSessionGeneration = session.generation;
       c.show();
-      applyExpanderDefaults(c.getState());
+      applyExpanderDefaults();
       void tls?.hydrateOperatorRequest();
       return;
     }
@@ -403,6 +400,12 @@
           </div>
           <div class="network-column">
           <h3 class="network-heading">Zugriff und Prüfung</h3>
+          {#if accessSummary}
+            <dl class="status-grid">
+              <dt>Aktuelle Bindung</dt><dd>{accessSummary.access}</dd>
+              <dt>Adresse / Adapter</dt><dd>{accessSummary.adapter}</dd>
+            </dl>
+          {/if}
           <DeviceAddressPreview
             address={tlsPreparationActive || tlsCutoverApplied ? savedUrl : draftCanonicalBaseUrl(snapshot, configSnapshot)}
             savedAddress={savedUrl}

@@ -56,7 +56,7 @@ export function mountNetworkTopologyDiagram(
     <h3 class="net-scenario-title">Separater Patientenzugang</h3>
     <p class="net-scenario-lead">Aktueller Status: ${escapeHtml(portalState)}. HTTPS schützt die Verbindung; die tatsächliche Trennung des Patienten- und Praxisnetzes richtet die Praxis-IT ein.</p>
     <p class="hint">Für einen getrennten Patientenzugang sind HTTPS und eine von der Praxis-IT eingerichtete Netzwerkzone erforderlich. Empfohlen wird ein eigenes Applikationssegment oder eine DMZ mit ausschließlich notwendigen Freigaben zum Praxisnetz.</p>
-    <p class="hint">Mitarbeitende können die Portalfunktion intern immer nutzen. Die Aktivierung erfolgt in den OPS-Einstellungen.</p>
+    <p class="hint">Mitarbeiter können die Portalfunktion intern immer nutzen. Die Aktivierung erfolgt in den OPS-Einstellungen.</p>
   `;
   host.append(future);
 }

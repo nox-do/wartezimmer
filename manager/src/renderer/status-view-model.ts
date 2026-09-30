@@ -188,27 +188,31 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
   };
 }
 
-export function statusGridRows(status: HostStatus): StatusGridRow[] {
-  const rows: StatusGridRow[] = [
+export function statusGridRows(
+  status: HostStatus,
+  group: 'all' | 'installation' | 'diagnosis' = 'all',
+): StatusGridRow[] {
+  const installation: StatusGridRow[] = [
     {
       label: 'Installations-ID',
       value: status.tls?.installationId?.trim() || 'Noch nicht vergeben',
     },
     { label: 'Installationsordner', value: status.installHome },
+  ];
+  if (status.deliveryImages.releaseVersion) {
+    installation.push({ label: 'Software-Version', value: status.deliveryImages.releaseVersion });
+  }
+  const diagnosis: StatusGridRow[] = [
     { label: 'Konfiguration (.env)', value: status.envExists ? '✓ vorhanden' : '✗ fehlt' },
   ];
-
-  if (status.deliveryImages.releaseVersion) {
-    rows.push({ label: 'Software-Version', value: status.deliveryImages.releaseVersion });
-  }
   if (status.deliveryImages.required) {
-    rows.push({ label: 'Docker-Images', value: deliveryImagesSummary(status) });
+    diagnosis.push({ label: 'Docker-Images', value: deliveryImagesSummary(status) });
   }
-  rows.push(
+  diagnosis.push(
     { label: 'Compose-Projekt', value: status.composeProjectName },
     { label: 'Docker', value: dockerSummary(status) },
   );
-  return rows;
+  return group === 'installation' ? installation : group === 'diagnosis' ? diagnosis : [...installation, ...diagnosis];
 }
 
 export const DELIVERY_IMAGES_WARNING_TEXT =
