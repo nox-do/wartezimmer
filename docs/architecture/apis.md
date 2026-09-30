@@ -26,6 +26,71 @@ Auth-Mechanismen:
 
 SoT der ACL: `app/src/auth/route-access-rules.ts` (nicht diese Datei).
 
+### Auth-Slots und Login-Verhalten
+
+#### Cookie-Slots
+
+Eine Cookie-Rolle besitzt genau einen Slot. Der Header `X-Client-Role` wählt diesen Slot,
+verleiht aber keine Rolle; maßgeblich bleibt die serverseitige Session.
+
+| Rolle        | Cookie                       | Erzeugung        |
+| ------------ | ---------------------------- | ---------------- |
+| `mfa`        | `pf_mfa_session`             | Staff-PIN-Login  |
+| `ops`        | `pf_ops_session`             | Staff-PIN-Login  |
+| `room-panel` | `pf_room_panel_session`      | Room-Panel-Login |
+| `tv`         | `pf_tv_device_session`       | Device-Pairing   |
+| `terminal`   | `pf_terminal_device_session` | Device-Pairing   |
+
+`pf_staff_session` ist ein nicht mehr akzeptierter Legacy-Name; der Resolver liest ihn nicht
+(`401 AUTH_UNAUTHORIZED`).
+
+Room-Panel, MFA, Ops, TV und Terminal können mit ihren getrennten Slots im selben Browser
+koexistieren. Mehrere Room-Panel-Sessions im selben Browser bleiben bewusst ausgeschlossen,
+weil sie weiterhin einen gemeinsamen Slot verwenden.
+
+#### Guard
+
+Die Auflösungsreihenfolge ist fest:
+
+1. Gültigen Captive-Bearer auswerten; Cookies und Rollenheader werden dann ignoriert.
+2. Unveränderten Local-TV-Bypass prüfen.
+3. Bei Cookie-Authentifizierung den ausschließlich durch `X-Client-Role` gewählten Slot lesen.
+4. Session-Art und serverseitige Rolle gegen den gewählten Slot und die Route prüfen.
+
+| Fall                                                                        | Ergebnis                  |
+| --------------------------------------------------------------------------- | ------------------------- |
+| Geschützte Route mit Session-Cookie, aber ohne/mit unbekanntem Rollenheader | `400 INVALID_ARGUMENT`    |
+| Bekannter Slot ohne gültige passende Session                                | `401 AUTH_UNAUTHORIZED`   |
+| Gültige Session, aber Rolle für Route nicht zugelassen                      | `403 AUTH_FORBIDDEN`      |
+| Gültiger Captive-Bearer ohne Rollenheader                                   | unverändert zugelassen    |
+| `AUTH_ENABLED=false`                                                        | kein Cookie-/Header-Check |
+
+Unsafe Cookie-Mutationen behalten den Origin-Check. Es gibt keinen Fallback auf einen anderen
+Cookie-Slot und keine implizite Auswahl, wenn nur ein Cookie vorhanden ist.
+
+#### Login und Logout
+
+Staff-Login verlangt `{ role: "mfa" | "ops", pin }` und schreibt ausschließlich den
+passenden Slot.
+
+`POST /api/v1/auth/logout` ist scoped und idempotent:
+
+- `X-Client-Role` ist erforderlich; fehlend oder unbekannt ergibt `400 INVALID_ARGUMENT`.
+- Nur der gewählte Slot wird widerrufen und dessen Cookie gelöscht.
+- Fehlende, abgelaufene oder bereits widerrufene Sessions ergeben weiterhin `200 { ok: true }`.
+- Room-Panel-Logout beendet dadurch keine MFA-/Ops-Session mehr.
+
+#### UI und OpenAPI
+
+- `staffAuthSlots.mfa` und `staffAuthSlots.ops` halten den UI-Auth-State unabhängig.
+- MFA-Module verwenden `mfaAuthFetch`, Ops-Module `opsAuthFetch`; ein `401` setzt nur
+  den zugehörigen Slot auf anonym.
+- Geräte und Room-Panel senden ihre feste Rolle weiterhin explizit.
+- `/queue/stream` und `/ops/stream` im MFA-Dashboard senden `X-Client-Role: mfa`.
+- `loadAuthSession(role)` prüft den angeforderten Slot auch beim Wechsel zwischen MFA und Ops.
+- OpenAPI beschreibt Cookie-Scheme, Rollenheader und tatsächliche ACL pro Operation;
+  Documents verwendet für MFA keinen alten API-Key-Bearer mehr.
+
 ## 2. Codegen (nach OpenAPI-Änderung)
 
 **Source of Truth:** `openapi/*.yaml` (nicht die generierten Dateien handeditieren).

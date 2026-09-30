@@ -1,37 +1,31 @@
-# Betrieb & Installation
+# Betrieb und Installation
 
-Eine Installation = **eine Praxis**, ein Stack auf einem Host. Operative Hülle: **Praxis Flow Manager** (Setup-API). CLI/`docker compose` nur Support-Fallback.
+Eine Installation = eine Praxis, ein Stack auf einem Host. Der Manager ist die
+operative Oberfläche; CLI und manuelle Compose-Aufrufe sind Support-Fallback.
 
-Technik/Internals: [`../architecture/`](../architecture/) · Manager-UI: [`../../manager/README.md`](../../manager/README.md)
+| Aufgabe                                                      | Verbindliches Dokument                              |
+| ------------------------------------------------------------ | --------------------------------------------------- |
+| Pakete bauen, ausliefern und Software aktualisieren          | [Delivery](delivery.md)                             |
+| Erst-/Neuinstallation, Backup-Übernahme und Recovery         | [Installation und Recovery](reinstall-recovery.md)  |
+| Tagesbetrieb, Compose, Ports und Volumes                     | [Runtime](runtime.md)                               |
+| Bestehenden Betrieb ohne Neuinstallation wiederaufbauen      | [Betrieb wiederherstellen](rebuild.md)              |
+| HTTPS einrichten und betreiben                               | [TLS](tls.md)                                       |
+| Patientenzugang: Apply/Remove, Crash-Recovery, Updatevertrag | [Restricted-Lifecycle](restricted-lifecycle.md)     |
+| Netzplanung und Vor-Ort-Prüfung durch die Praxis-IT          | [Netzwerkisolation](praxis-it-network-isolation.md) |
+| Sicherung und Restore                                        | [Backup](backup.md)                                 |
+| SMS, CSV und Grenzen weiterer Integrationen                  | [Integrationen](integrations.md)                    |
 
-## Roter Faden (Lifecycle)
+Noch fehlende Produkt-/Plattformnachweise: [Offene Abnahmen](../open-items.md).
+Betriebsvertrag und Abnahmestatus sind getrennt; eine beschriebene Funktion ist
+kein Nachweis ihrer Freigabe auf jeder Plattform.
 
-```text
-1. Ausliefern     Artefakte, Versionen
-2. Erstinstall    Wizard → Images → Compose up
-3. Betreiben      Start/Stop, Health, Volumes, Tagesreset
-4. Proxy / TLS    Port 80, LAN-HTTPS (Produkt)
-5. Sichern        eine .pfbackup v2 inkl. optional eingebettetem TLS-Archiv
-6. Aktualisieren  .pfupdate (Fresh-DB + Settings wie Restore)
-7. Anbinden       SMS / CSV / Portal-Hook vs. Nicht-Ziele
-```
+## Andere Leser
 
-| Schritt       | Dokument                                                           | Status                                                    |
-| ------------- | ------------------------------------------------------------------ | --------------------------------------------------------- |
-| 1–2, 6        | [`delivery.md`](delivery.md)                                       | ausgearbeitet (Prinzip → Install → Update → Build)        |
-| 3             | [`runtime.md`](runtime.md)                                         | ausgearbeitet inkl. Demo-/Proxy-Binding-Vertrag           |
-| 4             | [`tls.md`](tls.md)                                                 | ausgearbeitet inkl. explizitem Proxy-Staff-Binding        |
-| 5 (+ Cutover) | [`backup.md`](backup.md)                                           | ausgearbeitet (Prinzip → Artefakt → TLS-Grenze → Cutover) |
-| 7             | [`integrations.md`](integrations.md)                               | ausgearbeitet (WLAN/SMS/CSV/eGK + Verweise)               |
-| 7 (Netz)      | [`praxis-it-network-isolation.md`](praxis-it-network-isolation.md) | Restricted-Grenze, Praxis-IT-Verantwortung und Abnahme    |
+- [Manager-Bedienung und Entwicklung](../../manager/README.md)
+- [Architektur](../architecture/README.md)
+- [Fachliche Abläufe](../flows.md)
+- [TLS-Lab für Entwickler](../development/tls-lab.md)
 
-**Status:** Die Lifecycle-Dokumente sind die geltende Betriebsdokumentation.
-Abgeschlossene TLS-, Backup- und Recovery-Pläne liegen nur noch im
-[`Archiv`](../archive/README.md) und sind keine parallele Source of Truth.
-
-## Nicht hier
-
-- Fachliche Patienten-/MFA-Abläufe → [`../flows.md`](../flows.md)
-- API/SSE/Domain → [`../architecture/`](../architecture/)
-- Reinstall/Recovery → [`reinstall-recovery.md`](reinstall-recovery.md)
-- TLS-Lab (Pebble) → [`../archive/tls-lab.md`](../archive/tls-lab.md)
+Abgelöste Implementierungspläne werden nicht parallel fortgeschrieben; ihre
+Historie bleibt in Git. Das [Archiv](../archive/README.md) enthält nur noch
+historische Nicht-Produkt-Entwürfe.

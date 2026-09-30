@@ -210,7 +210,7 @@ Wirkung: neues operatives Ziel/Movement/Queue; Call-/Arrive-/Start-Zeiten clear;
 Rollen:
 
 - MFA: Topics + `journeySettings` (wenn Capabilities)
-- Ops: `routingMode`; die Manager-API bleibt nur als Kompatibilitätsroute bestehen
+- Ops: `routingMode` über `/api/v1/ops/settings`; keine Routing-Konfiguration im Manager
 
 Transaktionen: Check-in / Transition / Redirect / Cancel mit `BEGIN IMMEDIATE` (flow-core).  
 Tagesreset leert Visits; Mode, Topics, Journeys bleiben ([`system.md`](system.md) §5).
@@ -233,7 +233,6 @@ Tagesreset leert Visits; Mode, Topics, Journeys bleiben ([`system.md`](system.md
 | `app/src/shared/queue/place-visit-in-room.ts`                                       | Atomare explizite Raumplatzierung |
 | `packages/flow-core/src/shared/{journey,visit-flow,redirect-flow,routing-scope}.ts` | Domain-Algorithmen                |
 | `packages/flow-core/src/server/visit-service.ts`                                    | Check-in / Transition / Redirect  |
-| `setup/src/routing-mode.ts` · Manager Maintenance                                   | Mode lesen/setzen                 |
 | `ui/src/lib/queue/queue-drop-resolver.ts`                                           | Drop-Geste → UI-Kommando          |
 | `ui/.../mfa/settings/topics-rooms/journeys/`                                        | Journey-Designer                  |
 

@@ -5,15 +5,12 @@ Stand: 2026-09-28 · Ops-Ist für Wildcard-LAN-TLS und Restricted Portal
 **Scope:** Vertrauenswürdiges HTTPS im Praxis-LAN — Modell, Aktivierung, Betrieb, Grenzen.  
 **Ist:** TLS-Einrichtung ausschließlich im Netzwerk-Tab; Setup-API `/api/setup/host/tls/*`; Proxy-Service mit Custom-Caddy-Image.
 
-Quellen (Historie; Ops-Ist ist dieses Dokument):
+Verwandte Dokumentation:
 
-- Architektur/ACME/Compose: [`../archive/plan-proxy-tls.md`](../archive/plan-proxy-tls.md)
-- Manager-UX: [`../archive/plan-proxy-tls-manager.md`](../archive/plan-proxy-tls-manager.md)
-- HTTPS-UI-Aufräumen (erledigt): [`../archive/plan-manager-https.md`](../archive/plan-manager-https.md)
-- Lab (Pebble): [`../archive/tls-lab.md`](../archive/tls-lab.md) — **nicht Produkt**
-- Code: `setup/src/host-tls.ts`, `proxy-tls.ts`, `docker.ts`; Manager `tls-network-controller.ts`; `SETUP_TLS_ROUTES` in `packages/server-shared/src/setup-api.ts`
-
-Verwandt: Runtime/Compose → [`runtime.md`](runtime.md) · Backup-Grenze → [`backup.md`](backup.md) · Artefakte/Proxy-Image → [`delivery.md`](delivery.md)
+- Bedienung: [Manager](../../manager/README.md)
+- Technischer Patienten-Zugangsvertrag: [Restricted-Lifecycle](restricted-lifecycle.md)
+- Lab (kein Produktbetrieb): [TLS-Lab](../development/tls-lab.md)
+- Freigaben und ausstehende Nachweise: [Offene Abnahmen](../open-items.md)
 
 ---
 
@@ -50,12 +47,12 @@ Browser (LAN) ── HTTP      ──► proxy:80  ── 301 → HTTPS   (nach 
 
 **Namenswahl (Manager, ein Schritt):**
 
-| Modus         | Ergebnis                                                                                             | Zertifikat                        |
-| ------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------- |
-| Vorschlag     | Installationsraum aus 6-Zeichen-Label + `.<zone>`; Staff unter `staff.<raum>`                        | managed / ACME, nur `*.<raum>`    |
-| Eigenes Label | `label.<zone>` als Raum (RFC-1123; reserviert u. a. `staff`, `portal`, `lan`, `acme`, `www`, `mail`) | managed / ACME, nur `*.<raum>`    |
-| Eigene Domain / ACME (Standard) | eigene Basisdomain außerhalb der Betreiber-Zone; Staff und Portal darunter | managed / ACME, nur `*.<raum>` |
-| Eigene Domain / PEM | voller Gerätehostname außerhalb der Betreiber-Zone | **custom** / PEM, kein ACME-CNAME |
+| Modus                           | Ergebnis                                                                                             | Zertifikat                        |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------- |
+| Vorschlag                       | Installationsraum aus 6-Zeichen-Label + `.<zone>`; Staff unter `staff.<raum>`                        | managed / ACME, nur `*.<raum>`    |
+| Eigenes Label                   | `label.<zone>` als Raum (RFC-1123; reserviert u. a. `staff`, `portal`, `lan`, `acme`, `www`, `mail`) | managed / ACME, nur `*.<raum>`    |
+| Eigene Domain / ACME (Standard) | eigene Basisdomain außerhalb der Betreiber-Zone; Staff und Portal darunter                           | managed / ACME, nur `*.<raum>`    |
+| Eigene Domain / PEM             | voller Gerätehostname außerhalb der Betreiber-Zone                                                   | **custom** / PEM, kein ACME-CNAME |
 
 Bei einer eigenen Domain zeigt der Manager die DNS-Einträge zum Kopieren für die
 Praxis-IT bzw. den eigenen DNS-Anbieter an; es gibt keine Mail an den Betreiber.
@@ -473,7 +470,7 @@ Produkt-Stack enthält **nie** Pebble / Lab-acme-dns / CoreDNS (`COMPOSE_TLS_LAB
 
 - Env: `TLS_ACME_DIRECTORY=pebble` (+ typ. Lab-URLs)
 - Compose: `docker-compose.tls-lab.yml` + `docker-compose.tls-lab-proxy.yml` — nur non-Delivery und nur wenn TLS-Overlay an (§6)
-- Doku/Smokes: [`../archive/tls-lab.md`](../archive/tls-lab.md),
+- Doku/Smokes: [tls-lab.md](../development/tls-lab.md),
   `scripts/smoke-tls-managed.mjs` und `scripts/smoke-tls-cutover.mjs`. Beide
   prüfen genau eine Pebble-Order und als einzigen Zertifikatsnamen `*.<raum>`.
   Die Lab-Zone enthält nur den Staff-A-Record und
@@ -485,18 +482,15 @@ Produkt-Stack enthält **nie** Pebble / Lab-acme-dns / CoreDNS (`COMPOSE_TLS_LAB
 
 Gateway/Captive/Internet-Portal sind **andere** Themen → [`integrations.md`](integrations.md), nicht LAN-TLS.
 
-## 10. Verbindliche und historische Dokumente
+## 10. Weiterführende Dokumente
 
-| Dokument                                                                       | Rolle                                                      |
-| ------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| **Dieses** (`operations/tls.md`)                                               | **Ops-Ist** für TLS und Restricted Listener                |
-| [`restricted-lifecycle.md`](restricted-lifecycle.md)                           | Apply/Remove, Crash-Recovery und Updatevertrag             |
-| [`praxis-it-network-isolation.md`](praxis-it-network-isolation.md)             | Verantwortungsgrenze und praktische Netzabnahme            |
-| [`backup.md`](backup.md)                                                       | Geltender `.pfbackup`-v2-Vertrag                           |
-| [`../archive/plan-proxy-tls.md`](../archive/plan-proxy-tls.md)                 | Architektur-/Zielhistorie (ACME, Compose, State-Maschine)  |
-| [`../archive/plan-proxy-tls-manager.md`](../archive/plan-proxy-tls-manager.md) | Manager-UX-Historie                                        |
-| [`../archive/plan-manager-https.md`](../archive/plan-manager-https.md)         | HTTPS-UI-Aufräumen (erledigt; Gates im Manager-View-Model) |
-| [`../archive/tls-lab.md`](../archive/tls-lab.md)                               | Lab, nicht Produkt                                         |
+| Dokument                                                           | Rolle                                           |
+| ------------------------------------------------------------------ | ----------------------------------------------- |
+| **Dieses** (`operations/tls.md`)                                   | **Ops-Ist** für TLS und Restricted Listener     |
+| [`restricted-lifecycle.md`](restricted-lifecycle.md)               | Apply/Remove, Crash-Recovery und Updatevertrag  |
+| [`praxis-it-network-isolation.md`](praxis-it-network-isolation.md) | Verantwortungsgrenze und praktische Netzabnahme |
+| [`backup.md`](backup.md)                                           | Geltender `.pfbackup`-v2-Vertrag                |
+| [tls-lab.md](../development/tls-lab.md)                            | Lab, nicht Produkt                              |
 
 Bei Abweichungen gelten **Code und diese Betriebsdokumentation**. Historische
 Pläne sind keine parallele Source of Truth.

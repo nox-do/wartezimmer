@@ -39,7 +39,7 @@ Hubs: `app/src/shared/ops/ops-event-hub.ts`, `app/src/shared/queue/queue-stream-
 
 Mehrere MFA-Tabs = Vielfaches von 2. Unter **HTTP/1.1** (Direkt `:8080` oder HTTP-only-Proxy) kann das browserseitige Per-Origin-Limit REST verzögern, während SSE offen bleibt.
 
-**LAN-TLS:** Browser ↔ Proxy oft **HTTP/2** (Caddy `protocols h1 h2`) — multiplexed die Browser-Seite; Hop Proxy → App bleibt HTTP/1.1 ([`../operations/tls.md`](../operations/tls.md)). Ohne TLS/h2 gilt weiter das HTTP/1.1-Bild. Multi-Tab-Budget-Optimierung (BroadcastChannel o. ä.) ist **optional**, messungsgetrieben — [`../archive/plan-auth-session-slots.md`](../archive/plan-auth-session-slots.md) §5.
+**LAN-TLS:** Browser ↔ Proxy oft **HTTP/2** (Caddy `protocols h1 h2`) — multiplexed die Browser-Seite; Hop Proxy → App bleibt HTTP/1.1 ([`../operations/tls.md`](../operations/tls.md)). Ohne TLS/h2 gilt weiter das HTTP/1.1-Bild. Multi-Tab-Budget-Optimierung (BroadcastChannel o. ä.) ist **optional**, messungsgetrieben — [offene technische Folgeentscheidungen](../open-items.md#ui--und-technische-folgeentscheidungen-keine-release-zusage).
 
 ### Ops Wire-Format
 
@@ -92,6 +92,28 @@ Device-Cookie aus Pairing-GET — deshalb Poll am Gerät; MFA-Prompt ist Push.
 
 - **Ops:** eine SSE-Verbindung, getrennte Handler/Stores (`emergency` / `presence` / `pairing`). Quicksettings liest dieselben Stores — kein REST-Poll für Devices/Pairing-Prompt.
 - **Queue:** eigener SSE (`connectMfaQueueStream`). Zusätzlich **Stale-Fallback:** alle 3s prüft der Client, ob seit dem letzten Snapshot zu lange Stille herrscht — sichtbar **25s**, Tab hidden **5s** — dann `GET /api/v1/queue` (`ui/src/lib/mfa/queue-stream.ts`). Das ist Sicherheitsnetz neben dem Stream, kein Ersatz für Ops-Stores.
+
+### Wiederanlauf nach Backend-Unterbrechung
+
+`MfaOpsStreamHost` behält zwei getrennte SSE-Kanäle bei:
+
+- `/queue/stream` für Queue-Snapshots,
+- `/ops/stream` für Emergency, Device-Presence und Pairing.
+
+Die Server-Hubs und Stores bleiben getrennt; nur ihr Client-Lifecycle wird gemeinsam im Host
+koordiniert.
+
+Nach einer vorübergehenden Backend-Unterbrechung:
+
+1. reconnecten beide SSE-Clients weiterhin selbstständig,
+2. schließt `handleMfaBackendRecovered` transiente Queue-/Dokumentzustände,
+3. wird nur der aktive MFA-Routeninhalt remountet,
+4. laufen dadurch dessen vorhandene Loader erneut,
+5. bleiben Stream-Verbindungen, Emergency- und Assist-Host außerhalb des Remounts bestehen.
+
+Bei einem vollständigen Host-Mount wird `mfaQueueDisplay` einschließlich lokaler Revision
+zurückgesetzt. Damit werden nach Backend-Neustart und erneutem SPA-Login auch Snapshots mit
+einer wieder bei null beginnenden Server-Revision akzeptiert.
 
 ## 6. Outbox (Audit, nicht Push)
 

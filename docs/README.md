@@ -36,25 +36,14 @@ LAN-TLS: [`operations/tls.md`](operations/tls.md).
 ## Plattformstatus und offene Abnahme
 
 Der aktuelle Betriebsvertrag steht unter [`operations/`](operations/);
-abgeschlossene Implementierungspläne und Labs liegen im
-[`Archiv`](archive/README.md). Für das Portal bleibt es bewusst bei einem
+historische Nicht-Produkt-Entwürfe liegen im
+[`Archiv`](archive/README.md); abgeschlossene Implementierungspläne sind über Git nachvollziehbar. Für das Portal bleibt es bewusst bei einem
 gemeinsamen Frontend- und App-Stack. Die Sicherheitsgrenze bilden die
 Restricted-Proxy-Positivliste und die serverseitige API-Autorisierung.
 
-Die bisherige praktische Freigabe für explizite Staff-/Restricted-Bindings
-bezieht sich auf die dokumentierte macOS-/Docker-Desktop-Kombination. Vor einer
-Windows-Freigabe müssen noch nachgezogen werden:
-
-- Windows-Manager paketieren und installieren; unterstützte Windows- und
-  Docker-Desktop-Mindestversionen festlegen;
-- spezifische Host-IP-Publishes mit gleichzeitigem Staff- und
-  Restricted-Listener auf Port 443 nachweisen;
-- von getrennten Geräten beziehungsweise Netzen Staff positiv sowie
-  Kreuzzugriffe, globale Bindings und IPv6 negativ prüfen;
-- Docker-Neustart, Host-Reboot, Adressverlust und Repair mit aktivem TLS
-  einschließlich Fail-closed-Verhalten abnehmen;
-- Update, Restore und Rollback auf derselben Plattform prüfen und das Ergebnis
-  als Windows-Release-Gate automatisieren.
+Plattformfreigaben und noch fehlende praktische Nachweise stehen zentral in
+[Offene Abnahmen und Entscheidungen](open-items.md). Windows ist weiterhin nicht
+freigegeben. Entwicklung und aktive Labs: [Entwicklerwerkzeuge](development/README.md).
 
 ## API-Vertrag
 

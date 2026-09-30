@@ -1,17 +1,16 @@
-# TLS Lab (Arbeitspaket 2–4)
+# TLS-Lab für Entwickler
 
-> **Archiviert (2026-08-31).** Opt-in Lab-Doku. Compose/Smoke bleiben im Repo.
-> Produkt-TLS: [`../operations/tls.md`](../operations/tls.md); historischer
-> Ausgangsplan: [`plan-proxy-tls.md`](plan-proxy-tls.md).
+> Aktive, optionale Entwicklerumgebung. Kein Produktbetrieb.
+> Produkt-TLS: [`../operations/tls.md`](../operations/tls.md).
 
-Opt-in DNS-01 lab: Pebble + local acme-dns + CoreDNS. Work package 3 wires Setup
-`prepare` → `verify-dns` → `obtain-certificate`. Work package 4 adds HTTPS cutover via
+Opt-in DNS-01 lab: Pebble + local acme-dns + CoreDNS. Setup wires
+`prepare` → `verify-dns` → `obtain-certificate`. HTTPS cutover uses
 `POST /api/setup/host/tls/apply`. Canonical and device URLs stay HTTP until apply.
 
 ## Prerequisites
 
 - Docker Engine / Desktop
-- Custom Caddy image with `dns.providers.acmedns` (AP1)
+- Custom Caddy image with `dns.providers.acmedns`
 - A single private LAN IPv4, or an explicit override (see below)
 - Ports free: `80`, `443`, `8080`, loopback `14000`, `15000`, `8053`, `9053`
 - Fixed `container_name` values: run `docker compose down` for the default stack and any other TLS lab first (`stop` is not enough)

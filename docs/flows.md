@@ -2,9 +2,9 @@
 
 > Runtime-UI deckt Happy Paths ab. Betrieb/TLS: [`operations/`](operations/).
 
-## Implementierungsstand Runtime-UI (2026-06)
+## Funktionsübersicht der Runtime-UI
 
-Abgleich Svelte-Apps (`ui/`) gegen diese Flows — **ohne** eGK-Hardware, SMS/Messenger-Konfiguration und Settings-Editor.
+Die Tabelle beschreibt die vorhandenen Oberflächen. Als geplant oder Discovery bezeichnete Punkte sind keine Produktzusage; [offene Fragen](open-items.md#fachliche-fragen-und-optionale-produktideen) werden getrennt geführt.
 
 | Bereich             | In Runtime-UI                                                                                                                                                                                                                                                                                                                                                                                                                     | Nur Backend/Mocks                                        |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
@@ -14,7 +14,7 @@ Abgleich Svelte-Apps (`ui/`) gegen diese Flows — **ohne** eGK-Hardware, SMS/Me
 | Raum-Panel          | Login pro Placement (`/room-panel`), Live-Snapshot (SSE), Ankunft/Entlassen/Aufruf aus `actions`, getrennte `callCandidates`-Liste                                                                                                                                                                                                                                                                                                | —                                                        |
 | TV                  | SSE, Aufruf, Chime, Pagination, Device-Pairing                                                                                                                                                                                                                                                                                                                                                                                    | —                                                        |
 
-**Echtzeit-Zielbild:** `docs/architecture/realtime.md` — Presence (offline) und Pairing (Code) sind getrennte SSE-Events; REST nur fuer Aktionen.
+**Echtzeit-Vertrag:** `docs/architecture/realtime.md` — Presence (offline) und Pairing (Code) sind getrennte SSE-Events; REST nur fuer Aktionen.
 
 Details und offene fachliche Punkte siehe Abschnitte pro Flow unten.
 
@@ -175,9 +175,7 @@ Patient weiß: **jetzt oder bald** ist offene Sprechstunde. Thema `offen` verhä
 
 **Bewusst nicht in v1:** persistiertes Setting `waitingRoomFull`, Terminal-Anzeige „mindestens X Min.“, Handynummer-Erfassung am Terminal für Rückruf, Bon mit Wiederkomm-Hinweis; Terminal bei vollem WZ mit drei Patienten-Optionen.
 
-**Noch offen (optional):** dedizierter Terminal-Screen „Offene Sprechstunde jetzt nicht“ statt leerer Themenliste / Toast außerhalb des Zeitfensters.
-
-**DSGVO (später):** AV-Vertrag SMS-Anbieter, Speicherdauer Nummer für diesen Besuch, Zweckbindung Rückruf-SMS.
+Optionale Terminal-Anzeigen und Voraussetzungen für den SMS-Rollout: [offene fachliche Fragen](open-items.md#fachliche-fragen-und-optionale-produktideen).
 
 ### Prioritaet / Sortierung
 
@@ -281,14 +279,11 @@ Patient kann den **generierten** Bogen im Portal **nicht** erneut öffnen oder s
 - Upload ja, Löschen ja (durch Patient) — **nur selbst hochgeladene** Dateien
 - **Erstanamnese-PDF:** vom System erzeugt, Verarbeitung nur MFA
 - Einsehen / Download durch Praxis im Portal: **nein**
-- Wo landen die Dateien? MFS / PVS / separates Postfach? `?`
-- Aufbewahrungsdauer? `?`
+- Exportierte Dokumente: Zielsystem und Aufbewahrung sind [offene fachliche Fragen](open-items.md#fachliche-fragen-und-optionale-produktideen); temporärer Intake folgt dem dokumentierten Tagesreset.
 
-### Offene Punkte
+### Weitere Produktentscheidungen
 
-- Captive-Adapter: später erweiterbare Liste + Manager-Auswahl — nicht Portal-v1 ([`integrations.md`](operations/integrations.md))
-- Rate-Limits Upload / Fehlversuche Wartenummer
-- Fragenkatalog Erstanamnese mit Praxis finalisieren
+Captive-Adapter, Limits und Fragenkatalog: [offene fachliche Fragen](open-items.md#fachliche-fragen-und-optionale-produktideen).
 
 ---
 
@@ -316,7 +311,7 @@ Mit aktivem Proxy/TLS sind Geräte-/Portal-URLs über `CANONICAL_BASE_URL` kanon
 - **Raum-Board:** Im Simple Routing kann ein Raum temporär als Aufrufziel nach dem Wartezimmer markiert werden; der ausgewählte Raum ist hervorgehoben.
 - **Überlast (Offene Sprechstunde):** Terminal sperren — keine neuen Check-ins; Empfang + gelbe Zone/Rückholen für laufende Fälle
 
-1. **Grün — noch in der Praxis:** nach **Aufrufen** nacheinander **Check-in** (ein Button) → **Check-out** (ersetzt Check-in, mit Rückfrage-Modal); mehrere Räume möglich. **Ausnahme:** MFA kann Patient **zurück ins Wartezimmer** (Warteschlange) — z. B. Rückfrage, falsches Zimmer, nochmal warten (s. unten). **MFA darf Check-in/out ohne Raum-Einschränkung**; späteres Raum-Panel nur im zugewiesenen Raum (s. unten).
+1. **Grün — noch in der Praxis:** nach **Aufrufen** nacheinander **Check-in** (ein Button) → **Check-out** (ersetzt Check-in, mit Rückfrage-Modal); mehrere Räume möglich. **Ausnahme:** MFA kann Patient **zurück ins Wartezimmer** (Warteschlange) — z. B. Rückfrage, falsches Zimmer, nochmal warten (s. unten). **MFA darf Check-in/out ohne Raum-Einschränkung**; Raum-Panel nur im zugewiesenen Raum (s. unten).
 2. **Gelb — abwesend / rausgegangen:** MFA markiert abwesend (`absent_wait_here` / `absent_return_later`); **Rückholen** startet optional Rückhol-SMS und Countdown bis `returnUntil`. **Nach Ablauf des Countdowns** verschiebt das Backend die Wartenummer automatisch wieder in die **Warteschlange** (`waiting`) — kein Check-in, Patient muss physisch erscheinen und wird dann normal aufgerufen.
 3. **Warteschlange:** **Längste Wartezeit oben** (Eintreffen) — MFA **Aufrufen** pro Zeile (Monitor), bewusst nicht nur strikt der Reihe nach
 4. **Rote Soll-Linie** (fest **25 Min.** in der UI, nicht konfigurierbar): alle **darüber** = länger wartend → reagieren
@@ -439,10 +434,9 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 | Terminal | Notfall-Alarm                                         |
 | PVS `?`  | Termin, Raum                                          |
 
-### Offene Punkte
+### Weitere Produktentscheidungen
 
-- PVS-Integration Detail
-- Wer darf Uploads klinisch öffnen (Arzt vs. MFA)
+PVS-Anbindung und klinische Zuständigkeit: [offene fachliche Fragen](open-items.md#fachliche-fragen-und-optionale-produktideen).
 
 ---
 

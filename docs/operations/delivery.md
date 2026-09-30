@@ -123,7 +123,7 @@ CI: `.github/workflows/release-images.yml` baut bei Tag `v*` das Erstinstall-Art
 | **Manager** (DMG oder `npm run dev:manager`)                                  | Operative Hülle; startet die Setup-API als eigenen Child auf Loopback (ephemerer Port, nicht still `:9190`)                             |
 | **Release-Paket** `.pfinstall` + Sidecar (`manifest.json` / `SHA256SUMS.txt`) | Delivery: Images laden (`POST /api/setup/host/images/load`). Dev-Profil (`PRAXIS_FLOW_COMPOSE_PROFILE=dev`): oft **nicht** erforderlich |
 | **Freie Ports**                                                               | App intern am Host immer **8080** (ohne Proxy offen, mit Proxy nur Loopback); Proxy zusätzlich **80** und bei TLS **443**               |
-| **Import- & Export-Ordner** auf dem Host                                      | Wizard-Schritt 3; unter Docker Desktop: File Sharing für diese Pfade                                                                    |
+| **Import- & Export-Ordner** auf dem Host                                      | Wizard-Schritt 2; unter Docker Desktop: File Sharing für diese Pfade                                                                    |
 | **Feste LAN-IPv4** / DHCP-Reservierung                                        | Für Demo ohne Proxy optional; für Proxy-Staff-Binding, Geräte-URLs und TLS verbindlich                                                  |
 
 Setup-API und Manager sprechen nur Loopback — kein Setup aus dem Praxis-LAN.
@@ -159,23 +159,14 @@ Beim ersten Start kopiert Setup fehlende Templates (`.env.example`, Delivery-Com
 
 Zurücksetzen (Dev/Support): `npm run setup:reset -- --yes` (löscht Install-Home-Inhalt nach Compose-Down — mit Bedacht).
 
-### 4.3 Manager-Assistent (5 Schritte)
+### 4.3 Erstinstallation im Manager
 
-Labels: `WIZARD_STEP_LABELS` in `manager/src/renderer/wizard-flow.ts`.
-
-| #   | Schritt             | Inhalt                                                                                                 |
-| --- | ------------------- | ------------------------------------------------------------------------------------------------------ |
-| 1   | **Voraussetzungen** | Docker OK; Release-Paket laden falls `deliveryImages.required`. Weiter nur, wenn `canLeaveWizardStep1` |
-| 2   | **Import & Export** | Host-Pfade Pflicht (sonst Validierungsfehler)                                                          |
-| 3   | **Praxiszugriff**   | LAN-IP und optional Port 80 (HTTP-Proxy). Kein Captive-/Gateway-Wizard (`DISABLED_GATEWAY_PLAN`)       |
-| 4   | **Vorschau**        | `POST /api/setup/host/plan` → Geräte-URLs                                                              |
-| 5   | **Abschluss**       | `POST /api/setup/host/apply` (`runCompose`), danach Probes und Links                                   |
-
-HTTPS gehört nicht zum Assistenten. Nach dem Abschluss wird die vollständige
-Strecke – Namenswahl, Lease-Bestätigung, Mail oder PEM, DNS-Prüfung, Zertifikat und
-Cutover – unter **Netzwerk** durchgeführt.
-
-Ersteinrichtung ohne `.env`: Assistent fullscreen. Späterer Re-Run: Tab „Assistent“.
+Der verbindliche Ablauf einschließlich Prepare/Commit, Bestätigung bei
+Neuinstallation, Backup-Übernahme und Fehlerbehandlung steht unter
+[Neuinstallation und Recovery](reinstall-recovery.md).
+Die fünf aktuellen Assistentenschritte beschreibt das
+[Manager-README](../../manager/README.md#install-wizard-assistent).
+HTTPS wird anschließend ausschließlich unter Netzwerk eingerichtet.
 
 Nach Apply: MFA/Ops-PIN Standard **`0000`** (änderbar in der App; Reset im Manager → Wartung).
 

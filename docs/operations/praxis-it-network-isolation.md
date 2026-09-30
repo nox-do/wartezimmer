@@ -6,7 +6,7 @@ Wildcard-TLS, explizite Proxy-Publishes, Runtime-Audit sowie Prepare, Apply und
 Remove des Restricted-Bindings sind umgesetzt. Der proxyfreie initiale Betrieb
 bleibt bewusst auf allen Host-Interfaces erreichbar. Die praktische
 Zwei-NIC-Abnahme und die Plattformfreigabe bleiben davon getrennte
-Rollout-Gates. Technischer Lebenszyklus: [`restricted-lifecycle.md`](restricted-lifecycle.md) ·
+[Rollout-Gates](../open-items.md). Technischer Lebenszyklus: [`restricted-lifecycle.md`](restricted-lifecycle.md) ·
 TLS-Betrieb: [`tls.md`](tls.md) · Runtime: [`runtime.md`](runtime.md)
 
 ## Gültige Systemgrenze — Entscheidung vom 14.09.2026

@@ -1,8 +1,6 @@
 # Neuinstallation und Recovery
 
-Stand: 2026-09-28. Diese Betriebsbeschreibung ist der aktuelle Vertrag; der
-abgeschlossene [Implementierungsplan](../archive/plan-reinstall-recovery.md)
-dokumentiert nur noch die Entwurfsentscheidungen.
+Stand: 2026-09-30. Diese Betriebsbeschreibung ist der aktuelle Vertrag für Erstinstallation, Neuinstallation und Recovery.
 
 ## Einstieg im Manager
 
@@ -42,12 +40,13 @@ Fehler optionaler Dienste werden getrennt angezeigt.
    Replace die eigenen Compose-Ressourcen und verwalteten Hostdateien und aktiviert
    das vorbereitete Release. Externe Speicherordner bleiben erhalten.
 5. Der vorhandene Einrichtungsassistent startet den frischen Stack.
-6. Mit gewähltem Backup wird die initiale HTTPS-Einrichtung übersprungen. Erst auf
-   einer gesunden HTTP-Baseline erscheint die Online-Vorschau. Nach Bestätigung
+6. Mit gewähltem Backup erscheint erst auf einer gesunden HTTP-Baseline die
+   Online-Vorschau. Nach Bestätigung
    übernimmt der gemeinsame Restore-Core Einstellungen und gegebenenfalls HTTPS.
 7. Erst nach erfolgreicher Health-Prüfung wird der Vorgang entfernt.
 
-Ohne gewähltes Backup bleibt die normale optionale HTTPS-Einrichtung verfügbar.
+Der Assistent richtet die HTTP-Baseline ein und hat keinen HTTPS-Schritt.
+Ohne gewähltes Backup kann HTTPS nach dem Abschluss unter **Netzwerk** eingerichtet werden.
 Externe Backups können nach dem Abschluss im manuellen Restore unter Wartung
 gewählt werden. Es gibt keine Unterstützung für Backup v1 oder separate TLS-Dateien.
 
@@ -120,5 +119,5 @@ Dateiauswahl- und Prüffehler beenden den Vorgang mit einer Meldung. Wiederholen
 wird nur nach erfolgreichem Rollback angeboten. Das eingebettete TLS-Manifest
 akzeptiert ausschließlich Version 2; eigene chmod-/ACL-Sonderbehandlung entfällt.
 
-Automatisierte Tests, Typprüfung, Lint und Manager-Build sind geprüft. Der
-abschließende E2E-Durchlauf im Manager mit echtem Docker-Stack steht noch aus.
+Automatisierte Tests, Typprüfung, Lint und Manager-Build sind geprüft.
+Der verbleibende E2E-Nachweis wird unter [offene Abnahmen](../open-items.md) geführt.

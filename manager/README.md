@@ -61,15 +61,15 @@ Adresse. Während der TLS-Vorbereitung und nach dem Cutover bleibt die TLS-Ident
 
 1. Voraussetzungen (Docker, ggf. Release-Paket, lokale Port-Checks)
 2. Import & Export (Kontakte / MFA-Exporte)
-3. Praxisadresse und Gerätezugriff (Adresse und zugehöriger Adapter)
-4. Zugriff im Praxisnetz: initialer interner HTTP-Betrieb oder Proxy an ausgewählter Adresse
-5. Zusammenfassung des internen Betriebs (`POST /plan`)
-6. Anwenden (`POST /apply`), Prüfung und Abschluss mit MFA-Einstieg
+3. Praxiszugriff (IP-Adresse und HTTP-Zugriffsart gemeinsam)
+4. Vorschau (`POST /plan`)
+5. Abschluss (`POST /apply`), Prüfung und MFA-Einstieg
 
 HTTPS wird nach der Host-Einrichtung vollständig unter **Netzwerk** vorbereitet und
 aktiviert ([`docs/operations/tls.md`](../docs/operations/tls.md)).
 
-Ops-Detail Erstinstall: [`docs/operations/delivery.md`](../docs/operations/delivery.md) §4.  
+Erst-/Neuinstallation und Recovery: [`docs/operations/reinstall-recovery.md`](../docs/operations/reinstall-recovery.md).
+
 Ein zentral als sauber nicht installiert erkannter Zustand startet den Assistenten
 fullscreen ohne Tabs. Unklare oder unvollständige Installationen bleiben auf der
 Statusseite und öffnen den Assistenten auf Wunsch eingebettet. Ältere Setup-Hosts
@@ -83,9 +83,8 @@ ohne Lifecycle-Feld behalten die bisherige Einstiegslogik.
   Docker-Ausfall einer bestehenden Installation bleibt ein Betriebsproblem
 - DHCP-Hinweis bei `network.lanIpStale`
 - Interne Zugänge mit Kopieren / Öffnen; Portal ausdrücklich für interne Nutzung
-- Zugangszusammenfassung: Praxisadresse/Adapter, HTTP/HTTPS, Publikationsumfang,
-  Laufzustand und letzte Host-Prüfung; Patientenzugang bleibt separat noch nicht eingerichtet
-- Installationsdetails aufklappbar: Install-Home, Compose-Projektname, Docker, `.env`
+- Betriebsmodus als kompakte, neutrale Karte; zusätzliche Vorgangs-/Fehlermeldungen darunter. Patientenzugang wird im Status nur bei angewendetem Restricted-Binding aufgeführt.
+- Installationsdetails: Installations-ID, Installationsordner und verfügbare Software-Version. `.env`, Docker/Images und Compose-Projekt unter zusätzlicher technischer Diagnose. Öffnungszustände bleiben bei Refresh erhalten.
 - **Stack läuft / gestoppt** und Probe-Kacheln: Health-Header (aus Runtime-Poll)
 
 ### Netzwerk-Tab
@@ -97,6 +96,18 @@ ohne Lifecycle-Feld behalten die bisherige Einstiegslogik.
 - Proxy-Wiederherstellung auch nach HTTPS-Cutover; offene Entwürfe zuerst übernehmen/verwerfen
 - Docker/Caddy als Produktgrenze; Host-Firewall und Netztrennung bleiben bei Praxis-IT
 - „HTTPS eingerichtet“ wird nicht mit einem tatsächlich laufenden Proxy gleichgesetzt
+
+### Layout und Netzwerkaktionen
+
+- Standardfenster 1000 px breit, Mindestbreite 480 px. Inhaltsfläche und Navigation verwenden dieselbe Maximalbreite.
+- Netzwerkbereiche teilen ein 50/50-Raster mit 20 px Abstand an der Trennlinie; unter 800 px werden sie einspaltig. Keine festen Höhen oder abgeschnittenen Adressen.
+- Systemschrift: Netzwerk-Inhalt 15 px, Hinweise/technische Werte 14 px, Expander-Titel 16 px. Netzwerk-CSS in `src/renderer/network.css`.
+- Neue Netzwerk-Sessions starten mit allen Expandern eingeklappt. Übergeordnete Störungshinweise bleiben sichtbar.
+- Übersicht: Betriebsmodus, Adressen, Verbindung und Patientenfreigabe. Aktuelle Bindung und Adapter stehen bei Praxisadresse; keine zusätzliche technische Disclosure in der Übersicht.
+- Erfolgreiche Binding-Prüfungen sind aufklappbar, Abweichungen direkt sichtbar.
+- Übernehmen/Verwerfen nur im jeweils geänderten Bereich (Praxisadresse oder Proxy). Beide nutzen weiterhin denselben Entwurf und gemeinsamen Save/Discard. Sind beide geändert, verschwinden nach erfolgreichem Speichern beide Leisten. HTTPS und Patientenfreigabe haben getrennte Aktionen.
+- IP-Risiken stehen direkt am Kandidaten; leere Patienten-IP-Auswahl erklärt den nächsten Schritt. Netztrennung bleibt Aufgabe der Praxis-IT.
+- Button-Farbhierarchie ist noch nicht abschließend abgestimmt; [offene Entscheidung](../docs/open-items.md).
 
 ### Wartung
 
@@ -192,5 +203,3 @@ npm run -w @praxis-flow/setup test
 ```
 
 LAN-TLS (Produkt): [`docs/operations/tls.md`](../docs/operations/tls.md).
-Historische Detailpläne: [`docs/archive/plan-proxy-tls.md`](../docs/archive/plan-proxy-tls.md),
-[`docs/archive/plan-proxy-tls-manager.md`](../docs/archive/plan-proxy-tls-manager.md).

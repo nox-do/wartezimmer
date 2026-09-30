@@ -35,6 +35,9 @@ API-Vertrag (maschinenlesbar): `openapi/*.yaml` → `npm run generate:api` · Sw
 
 Manager: [Betriebsmodi und Action-Policy (Ist-Stand)](manager-operating-modes.md).
 
+Bewusste Abgrenzungen und Gründe gegen pauschale Zusammenlegungen:
+[Modulentscheidungen](design-decisions.md).
+
 ## Nicht hier
 
 | Thema                         | Wohin                                                            |

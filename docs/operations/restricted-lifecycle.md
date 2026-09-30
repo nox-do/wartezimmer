@@ -76,8 +76,7 @@ Trennung von vorläufigem und bestätigtem Env, Autostart-Overlay, Commit erst n
 Audit, Zielrelease-Routenwechsel und Update-Rollback bei Validierungs-/Auditfehlern.
 Die isolierte Caddy-Integration prüft echte Host-/SNI-/Methodenabweisungen.
 
-Reale Zwei-NIC-Tests mit Docker-/Host-Neustart und physischem Stromausfall bleiben
-Produktabnahme. Portal und Staff verwenden bewusst denselben Frontend- und
+Reale Netzwerk-/Neustartabnahmen werden zentral unter [offene Abnahmen](../open-items.md) geführt. Portal und Staff verwenden bewusst denselben Frontend- und
 App-Stack. Die Restricted-Grenze wird durch die Proxy-Positivliste sowie die
 serverseitige API-Autorisierung erzwungen; ein separates Portal-Bundle ist nicht
 geplant.

@@ -8,7 +8,7 @@
  *   npm run smoke:tls-lab -- --cleanup
  *
  * Alternatives to a manual `docker compose -f docker-compose.tls-lab.yml up`
- * (see docs/archive/tls-lab.md). If lab containers are already running, this smoke reuses
+ * (see docs/development/tls-lab.md). If lab containers are already running, this smoke reuses
  * them instead of starting a second stack (fixed container_name).
  */
 
