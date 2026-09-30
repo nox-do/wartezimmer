@@ -167,16 +167,52 @@ test('every network expander starts collapsed in a new session', () => {
 test('network actions follow the changed fields while retaining a shared save', () => {
   const status = minimalHostStatus();
   const draft = { lanAppIp: status.network.configuredLanIp!, customLanIp: '', proxyEnabled: false };
-  const input = { status, draft, dirty: true, lanOpen: true, proxyOpen: true, httpDraftExpandersRendered: true };
-  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: { ...draft, lanAppIp: '192.168.1.20' } }), { lan: true, proxy: false });
-  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: { ...draft, proxyEnabled: true } }), { lan: false, proxy: true });
+  const input = {
+    status,
+    draft,
+    dirty: true,
+    lanOpen: true,
+    proxyOpen: true,
+    httpDraftExpandersRendered: true,
+  };
+  assert.deepEqual(
+    networkDraftCommitPlacement({ ...input, draft: { ...draft, lanAppIp: '192.168.1.20' } }),
+    { lan: true, proxy: false },
+  );
+  assert.deepEqual(
+    networkDraftCommitPlacement({ ...input, draft: { ...draft, proxyEnabled: true } }),
+    { lan: false, proxy: true },
+  );
   const both = { ...draft, lanAppIp: '192.168.1.20', proxyEnabled: true };
-  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: both }), { lan: true, proxy: true });
-  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: both, dirty: false }), { lan: false, proxy: false });
-  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: both, lanOpen: false, httpDraftExpandersRendered: false }), { lan: false, proxy: false });
-  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: { ...draft, lanAppIp: '__custom__', customLanIp: ' 192.168.1.20 ' } }), { lan: true, proxy: false });
+  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: both }), {
+    lan: true,
+    proxy: true,
+  });
+  assert.deepEqual(networkDraftCommitPlacement({ ...input, draft: both, dirty: false }), {
+    lan: false,
+    proxy: false,
+  });
+  assert.deepEqual(
+    networkDraftCommitPlacement({
+      ...input,
+      draft: both,
+      lanOpen: false,
+      httpDraftExpandersRendered: false,
+    }),
+    { lan: false, proxy: false },
+  );
+  assert.deepEqual(
+    networkDraftCommitPlacement({
+      ...input,
+      draft: { ...draft, lanAppIp: '__custom__', customLanIp: ' 192.168.1.20 ' },
+    }),
+    { lan: true, proxy: false },
+  );
   // Returning to saved values hides actions, even after editing both sections.
-  assert.deepEqual(networkDraftCommitPlacement({ ...input, dirty: false }), { lan: false, proxy: false });
+  assert.deepEqual(networkDraftCommitPlacement({ ...input, dirty: false }), {
+    lan: false,
+    proxy: false,
+  });
   // A legacy binding repair still has a place to apply, without proxy actions.
   assert.deepEqual(networkDraftCommitPlacement(input), { lan: true, proxy: false });
 });

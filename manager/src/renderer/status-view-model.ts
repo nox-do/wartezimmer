@@ -212,7 +212,11 @@ export function statusGridRows(
     { label: 'Compose-Projekt', value: status.composeProjectName },
     { label: 'Docker', value: dockerSummary(status) },
   );
-  return group === 'installation' ? installation : group === 'diagnosis' ? diagnosis : [...installation, ...diagnosis];
+  return group === 'installation'
+    ? installation
+    : group === 'diagnosis'
+      ? diagnosis
+      : [...installation, ...diagnosis];
 }
 
 export const DELIVERY_IMAGES_WARNING_TEXT =

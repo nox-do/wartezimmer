@@ -153,7 +153,8 @@ export function networkDraftCommitPlacement(input: {
   if (!input.dirty || !input.draft || !input.status) {
     return { lan: false, proxy: false };
   }
-  const lanChanged = resolvedLanIp(input.draft) !== (input.status.network.configuredLanIp?.trim() ?? '');
+  const lanChanged =
+    resolvedLanIp(input.draft) !== (input.status.network.configuredLanIp?.trim() ?? '');
   const proxyChanged = input.draft.proxyEnabled !== Boolean(input.status.proxy?.enabled);
   // Legacy binding/canonical repairs can require a save without a field edit.
   const bindingRepair = !lanChanged && !proxyChanged;

@@ -371,5 +371,5 @@ test('recovery reports an unavailable authenticated maintenance API', async (t) 
     }),
   });
   assert.equal(result.baselineReady, false);
-  assert.match(result.baselineErrors.join(' '), /Verwaltungs-API/);
+  assert.deepEqual(result.baselineErrors, ['Der Manager kann die App zurzeit nicht erreichen.']);
 });

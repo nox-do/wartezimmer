@@ -35,7 +35,14 @@
   margin-top: 1rem;
 }
 
-.network :is(.hint, .lan-ip-prompt, .status-grid dt, .network-option-hint, .maintenance-expander-subtitle) {
+.network
+  :is(
+    .hint,
+    .lan-ip-prompt,
+    .status-grid dt,
+    .network-option-hint,
+    .maintenance-expander-subtitle
+  ) {
   font-size: var(--font-small);
 }
 
