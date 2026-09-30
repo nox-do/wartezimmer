@@ -40,7 +40,10 @@ export function dockerPrerequisitesHints(
       'Nach der Installation Docker Desktop starten und hier erneut prüfen.',
     );
   } else if (!docker.daemonRunning) {
-    hints.push('Docker Desktop starten und hier erneut prüfen.');
+    hints.push(
+      'Docker Desktop starten und hier erneut prüfen.',
+      'Falls Docker Desktop bereits geöffnet ist: Warten Sie, bis die Engine gestartet ist. Wenn der Start fehlschlägt, prüfen Sie die Fehlermeldung in Docker Desktop.',
+    );
   } else if (!docker.composeAvailable) {
     installLink = dockerInstallLink(platform);
     hints.push(
@@ -49,4 +52,38 @@ export function dockerPrerequisitesHints(
   }
 
   return { installLink, hints };
+}
+
+/** Labels describe the observed result, not an unmet target such as “läuft”. */
+export function dockerPrerequisiteChecks(
+  docker: Pick<DockerStatus, 'installed' | 'daemonRunning' | 'composeAvailable'>,
+): { id: string; state: 'is-done' | 'is-bad' | 'is-muted'; mark: string; label: string }[] {
+  return [
+    {
+      id: 'cli',
+      state: docker.installed ? 'is-done' : 'is-bad',
+      mark: docker.installed ? '✓' : '✗',
+      label: docker.installed ? 'Docker installiert' : 'Docker nicht gefunden',
+    },
+    {
+      id: 'daemon',
+      state: !docker.installed ? 'is-muted' : docker.daemonRunning ? 'is-done' : 'is-bad',
+      mark: !docker.installed ? '–' : docker.daemonRunning ? '✓' : '✗',
+      label: !docker.installed
+        ? 'Docker-Daemon: noch nicht prüfbar'
+        : docker.daemonRunning
+          ? 'Docker-Daemon erreichbar'
+          : 'Docker-Daemon nicht erreichbar – Einrichtung blockiert',
+    },
+    {
+      id: 'compose',
+      state: !docker.installed ? 'is-muted' : docker.composeAvailable ? 'is-done' : 'is-bad',
+      mark: !docker.installed ? '–' : docker.composeAvailable ? '✓' : '✗',
+      label: !docker.installed
+        ? 'Docker Compose: noch nicht prüfbar'
+        : docker.composeAvailable
+          ? 'Docker Compose verfügbar'
+          : 'Docker Compose nicht verfügbar oder nicht unterstützt',
+    },
+  ];
 }

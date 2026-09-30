@@ -1,3 +1,4 @@
+import { replaceFile } from './maintenance-files.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -51,7 +52,7 @@ export function writeManagerStateAtomically(installHome: string, state: ManagerS
   const tempPath = `${statePath}.tmp-${process.pid}-${Date.now()}`;
   fs.mkdirSync(installHome, { recursive: true });
   fs.writeFileSync(tempPath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
-  fs.renameSync(tempPath, statePath);
+  replaceFile(tempPath, statePath);
 }
 
 export function writeManagerReleaseState(

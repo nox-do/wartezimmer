@@ -175,7 +175,16 @@ export function isPfupdateRelativePath(path: string): boolean {
     return false;
   }
   const segments = path.split('/');
-  return segments.every((segment) => segment.length > 0 && segment !== '.' && segment !== '..');
+  return segments.every(
+    (segment) =>
+      segment.length > 0 &&
+      segment !== '.' &&
+      segment !== '..' &&
+      !/[<>:"|?*]/.test(segment) &&
+      ![...segment].some((character) => character.charCodeAt(0) < 32) &&
+      !/[. ]$/.test(segment) &&
+      !/^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(segment),
+  );
 }
 
 export function compareSemver(left: string, right: string): -1 | 0 | 1 {

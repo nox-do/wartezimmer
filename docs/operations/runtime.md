@@ -154,3 +154,55 @@ Vor der erstmaligen Umstellung alle offenen Dokumente exportieren oder verwerfen
 Das bisherige benannte Volume `sandbox_intake_data` wird nicht mehr eingebunden. Docker entfernt es beim Wechsel nicht automatisch. Nach abgeschlossener Umstellung anhand der Compose-Projekt- und Volume-Labels das zu dieser Installation gehörende alte Volume ermitteln und gezielt entfernen; niemals pauschal `docker volume prune` oder `compose down -v` verwenden. Die übrigen Datenvolumes und Exporte bleiben erhalten. Es werden durch tägliche Neustarts keine neuen Images oder Container angesammelt; die Aufbewahrung alter Release-Images gehört zum Softwareupdate, nicht zum Tagesreset.
 
 Verifikation ohne Änderung der Installation: `npm run build:server-shared`, `npm run -w @praxis-flow/sandbox build`, anschließend `SANDBOX_TEST_IMAGE=praxis-flow/sandbox:<lokaler-Tag> node scripts/smoke-sandbox-lifecycle.mjs`. Der Test erzeugt ausschließlich einen eigenen kurzlebigen Container samt Testvolume und entfernt beides anschließend. Er prüft Schreibschutz, Dokumentverlust beim Neustart, erhaltenen Cache und die Schreibrechte des realen FreshClam-Updaters offline.
+
+## Windows-Betriebsgrenzen (Vorbereitung)
+
+Der Manager läuft als native Windows-Anwendung; Docker führt die ausgelieferten
+Linux/amd64-Container in Docker Desktop aus. Ein Windows-Hostpfad wie
+`C:\Praxis\Import` ist die Quelle eines Mounts, `/imports` sein Containerziel.
+`/mnt/c`, WSL-UNC-Pfade und Linux-Socket-Kontexte sind keine austauschbaren
+Hostpfade. Windows akzeptiert nur lokale feste Laufwerke, keine Netzlaufwerke,
+UNC-/Device-Pfade oder Symlink-/Junction-Vorfahren. Hostpfad-Eingaben sind auf
+220 Zeichen begrenzt; damit wird keine beliebige Long-Path-Unterstützung von
+Docker/tar/Windows zugesagt. Leerzeichen und Unicode sind zulässig, reservierte
+Windows-Namen, Steuerzeichen, `#` und nachgestellte Punkte/Leerzeichen nicht.
+Eine bereits existierende Netzwerkfreigabe wird nicht als lokale Freigabe angenommen.
+
+Docker-Suche berücksichtigt PATH sowie System- und Benutzerinstallation von
+Docker Desktop. Abweichende Installationsorte über `PRAXIS_FLOW_DOCKER_CLI`
+angeben. Windows-Aufrufe prüfen den lokalen Named-Pipe-Endpunkt und Linux-Modus
+vor der eigentlichen Operation. Compose-Mindestversion 2.24.4 wird im Status
+geprüft. Kontext und Backend werden niemals automatisch umgeschaltet.
+Der Manager installiert/startet Docker Desktop nicht selbst; nach dessen Start
+Status erneut laden. Auch beim Host-Neustart muss Docker Desktop verfügbar sein.
+Ein Manager-Autostart ersetzt weder Docker-Login noch Recovery.
+
+Physische Staff-Adresse bewusst wählen: Windows zeigt auch WSL-, Hyper-V-,
+VPN- und virtuelle Adapter. Ein IP-Binding garantiert keine Isolation nach
+Eingangsinterface. 80/443, ohne Proxy auch 8080, unterliegen Windows-Firewall und
+Netzprofil; 8082 und Setup bleiben Loopback. Keine automatischen Firewallregeln
+und keine zusätzliche Manager-Elevation. Netzwerk-/Wiederstart-Abnahme und
+unterstützte Versionsmatrix: [offene Windows-Prüfungen](../open-items.md#windows-abnahmeprotokoll).
+
+### CSV-Kontakte unter Windows: Hostordner und Containerpfad
+
+Der Manager konfiguriert mit `IMPORTS_HOST_PATH` einen lokalen Windows-Ordner
+(zum Beispiel `C:\Praxis\Kontakte`). Compose bindet ihn im Linux-App-Container
+unter `/imports` ein; die Kontaktkonfiguration in der App verwendet `/imports`
+oder dessen Unterordner, niemals den Windows-Hostpfad. Großgeschriebene `.CSV`-
+Endungen werden vom Scanner berücksichtigt.
+
+UNC-/SMB-Quellen wie `\\server\kontakte` und verbundene Netzlaufwerke sind aktuell
+nicht unterstützt. Ein lokaler Ordner, der zusätzlich per SMB freigegeben ist,
+ist davon zu unterscheiden: Der Manager verwendet dessen lokalen Laufwerkspfad.
+Die Windows-Freigabe und ihre Berechtigungen richtet die Praxis-IT separat ein.
+Bei einer entfernten Exportquelle ist ein gesondert eingerichteter Transfer in
+den lokalen Importordner erforderlich; der Manager enthält keine Synchronisation.
+Dateien erst vollständig übertragen und anschließend unter ihrem endgültigen
+CSV-Namen bereitstellen, damit der Scanner keine halbfertigen Exporte liest.
+
+Abnahme mit synthetischen Kontakten: Hostdatei im gewählten Ordner erzeugen,
+im Container unter `/imports` nachweisen und in der App Vorschau und Suche
+prüfen. Anschließend Datei ersetzen, den erneuten Einlesevorgang auslösen und
+geänderten Kontakt prüfen; nach Docker-/Host-Neustart wiederholen. Reale
+Windows-Mounts, Zugriffsrechte und Aktualisierung sind noch nicht abgenommen.

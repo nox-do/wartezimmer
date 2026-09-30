@@ -10,7 +10,7 @@ import {
   SETUP_MANAGER_TOKEN_HEADER,
 } from '@praxis-flow/server-shared/setup-api';
 import { findProjectRoot } from './project-root.js';
-import { npmExecutable } from './process-command.js';
+import { devSetupArguments } from './process-command.js';
 import {
   createLineAssembler,
   evaluateSetupHealthIdentity,
@@ -133,10 +133,12 @@ function startPackagedSetupServer(port: number, token: string, buildId: string):
   return spawn(process.execPath, [serverEntry], {
     env: {
       ...childEnv(port, token, buildId),
+      PRAXIS_FLOW_HOME: expectedSetupInstallHome(true, ''),
       ELECTRON_RUN_AS_NODE: '1',
       PRAXIS_FLOW_TEMPLATE_ROOT: templateRoot,
     },
-    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
 }
 
@@ -148,11 +150,11 @@ function startDevSetupServer(
 ): ChildProcess {
   const repoRoot = findProjectRoot(moduleDir);
 
-  return spawn(npmExecutable(), ['run', '-w', '@praxis-flow/setup', 'serve'], {
+  return spawn(process.execPath, devSetupArguments(repoRoot), {
     cwd: repoRoot,
-    env: childEnv(port, token, buildId),
-    shell: process.platform === 'win32',
-    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...childEnv(port, token, buildId), ELECTRON_RUN_AS_NODE: '1' },
+    windowsHide: true,
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
 }
 
@@ -283,9 +285,8 @@ export async function startSetupServer(): Promise<SetupServerHandle> {
     await waitForMatchingHealth(apiBase, token, expected);
     return { port, apiBase, reusedExisting: false, child, token };
   } catch (error) {
-    if (!child.killed) {
-      child.kill('SIGTERM');
-    }
+    if (child.connected) child.disconnect();
+    else if (!child.killed) child.kill('SIGTERM');
     throw error;
   }
 }
@@ -294,5 +295,6 @@ export function stopSetupServer(handle: SetupServerHandle | null): void {
   if (!handle?.child || handle.child.killed) {
     return;
   }
-  handle.child.kill('SIGTERM');
+  if (handle.child.connected) handle.child.disconnect();
+  else handle.child.kill('SIGTERM');
 }

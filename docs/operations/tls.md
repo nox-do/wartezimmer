@@ -551,3 +551,15 @@ mit echter Pebble-/Caddy-Runtime erfolgreich durch: genau eine Wildcard-Order,
 DNS, Portbindung, abgewiesene Portal-/Fremdhosts, HTTPS-Cutover, HTTP-Redirect,
 HTTP/2 und SSE. Dafür wurde der laufende Praxis-Stack vorübergehend gestoppt
 und nach dem Aufräumen der Testcontainer wieder gestartet.
+
+### Windows-Manager ist keine Restricted-Freigabe
+
+Die Windows-Vorbereitung lässt die macOS-Gates in `restricted-network.ts` und
+`host-state.ts` bestehen. Sie schützen die Freigabe des separaten Portal-
+Listeners einschließlich Ziel-IP-Publishes und Host-/SNI-Policy; sie sind keine
+Dateipfadprüfung. Windows blockiert außerdem einen bereits gespeicherten
+aktiven Restricted-Marker beim verwalteten Start sowie dessen Backup-Restore
+vor Cutover. `host-tls.ts` und `proxy-tls.ts` bieten Staff-HTTPS; dessen reale
+Windows-Abnahme bleibt separat offen. Paralleles 443-Publishing, gekreuzte
+Hosts/SNI, fehlendes SNI, IPv6 und Adressverlust dürfen nicht aus erfolgreichen
+Windows-Pfadtests abgeleitet werden. [Abnahmeprotokoll](../open-items.md#windows-abnahmeprotokoll).

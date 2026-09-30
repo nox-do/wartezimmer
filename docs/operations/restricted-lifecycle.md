@@ -80,3 +80,8 @@ Reale Netzwerk-/Neustartabnahmen werden zentral unter [offene Abnahmen](../open-
 App-Stack. Die Restricted-Grenze wird durch die Proxy-Positivliste sowie die
 serverseitige API-Autorisierung erzwungen; ein separates Portal-Bundle ist nicht
 geplant.
+
+Windows-Vorbereitung: Manager-Paketierung hebt das macOS-Plattformgate nicht
+auf. Ein kopiertes aktives Binding autorisiert keinen Windows-Stackstart;
+aktive Restricted-Backups werden vor Restore-Cutover abgewiesen. Die reale
+Freigabematrix bleibt unter [Windows-Abnahme](../open-items.md#windows-abnahmeprotokoll).

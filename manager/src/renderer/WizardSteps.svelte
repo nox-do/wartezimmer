@@ -1,7 +1,7 @@
 <script lang="ts">
   import { wizardIsBusy, wizardProgress } from './wizard-controller.js';
 
-  import { dockerPrerequisitesHints } from '../shared/docker-prerequisites-ui.js';
+  import { dockerPrerequisitesHints, dockerPrerequisiteChecks } from '../shared/docker-prerequisites-ui.js';
   import {
     DOCKER_FILE_SHARING_HINT,
     needsDockerFileSharingHint,
@@ -53,19 +53,13 @@
         <p>Status wird geladen …</p>
       {:else}
         <ul class="checklist">
-          <li class={snapshot.status.docker.installed ? 'is-done' : 'is-open'}>
-            <span class="checklist-mark">{snapshot.status.docker.installed ? '✓' : '○'}</span>
-            <span>Docker installiert</span>
-          </li>
-          <li class={snapshot.status.docker.daemonRunning ? 'is-done' : 'is-open'}>
-            <span class="checklist-mark">{snapshot.status.docker.daemonRunning ? '✓' : '○'}</span>
-            <span>Docker-Daemon läuft</span>
-          </li>
-          <li class={snapshot.status.docker.composeAvailable ? 'is-done' : 'is-open'}>
-            <span class="checklist-mark">{snapshot.status.docker.composeAvailable ? '✓' : '○'}</span>
-            <span>Docker Compose verfügbar</span>
-          </li>
-          {#if snapshot.status.deliveryImages.required}
+          {#each dockerPrerequisiteChecks(snapshot.status.docker) as check (check.id)}
+            <li class={check.state}>
+              <span class="checklist-mark" aria-hidden="true">{check.mark}</span>
+              <span>{check.label}</span>
+            </li>
+          {/each}
+        {#if snapshot.status.deliveryImages.required}
             <li class={deliveryImagesReady(snapshot.status) ? 'is-done' : 'is-open'}>
               <span class="checklist-mark">{deliveryImagesReady(snapshot.status) ? '✓' : '○'}</span>
               <span>Software-Paket (app + sandbox)</span>

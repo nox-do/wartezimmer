@@ -1,0 +1,51 @@
+name: Manager Windows compatibility
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.2'
+          cache: npm
+      - run: npm ci
+      - run: npm run build:server-shared
+      - run: npm run -w @praxis-flow/manager test:packaging
+      - run: npm run -w @praxis-flow/setup typecheck
+      - run: npm run -w @praxis-flow/manager typecheck
+      - run: npm run -w @praxis-flow/setup lint
+      - run: npm run -w @praxis-flow/manager lint
+      - name: Native filesystem, argv, archive and recovery regression tests
+        run: >-
+          node --import tsx --test
+          setup/src/windows-compatibility.test.ts
+          setup/src/installation-state.test.ts
+          manager/src/renderer/manager-navigation.test.ts
+          manager/src/renderer/wizard-controller.test.ts
+          setup/src/env-file.test.ts
+          setup/src/install-operation.test.ts
+          setup/src/installation-start.test.ts
+          setup/src/host-mutation-lock.test.ts
+          setup/src/update-operation.test.ts
+          setup/src/recovery-backup.test.ts
+          setup/src/pfupdate-package.test.ts
+          manager/src/main/process-command.test.ts
+          manager/src/main/setup-identity.test.ts
+          manager/src/main/manager-profile.test.ts
+      - name: Compose binding environment regression
+        run: node --import tsx --test --test-name-pattern="Compose bindings cannot" setup/src/docker.test.ts
+      - name: Build internal x64 NSIS installer (never publish)
+        run: npm run dist:manager:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Packaged Electron runtime without external Node/npm on PATH
+        run: node manager/scripts/smoke-packaged-setup.mjs 'manager/dist/win-unpacked/PraxisFlowManager.exe' manager/dist/win-unpacked/resources
+      - name: Disposable NSIS install, reinstall, uninstall and data preservation
+        shell: pwsh
+        run: ./manager/scripts/test-windows-installer.ps1

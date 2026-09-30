@@ -370,7 +370,7 @@ licenses/caddy/LICENSE.txt
 
 1. `prepare:packaged` (`manager/scripts/prepare-packaged-resources.mjs`): Setup-`dist` + `server-shared` nach `manager/build-resources/setup/` (Imports umschreiben, Production-Strip); Delivery-Templates + `.env.example` nach `build-resources/templates/`. Das Basis-Caddyfile kommt aus dem importierten Release-Bundle.
 2. `electron-vite build` (Main, Preload CJS, Renderer)
-3. `electron-builder --mac dmg` → `manager/dist/Praxis Flow Manager-<managerVersion>-<arch>.dmg`
+3. `electron-builder --mac dmg` → `manager/dist/PraxisFlowManager-<managerVersion>-<arch>.dmg`
 
 Gepackter Manager startet Setup-API aus `resources/setup/`; Default-Install-Home macOS: `~/Library/Application Support/PraxisFlow`. Aktuell unsigned / nicht notarisiert.
 
@@ -392,3 +392,132 @@ Gepackter Manager startet Setup-API aus `resources/setup/`; Default-Install-Home
 - Backup-Vertrag: [`backup.md`](backup.md)
 - Manager: [`../../manager/README.md`](../../manager/README.md)
 - `.pfupdate`-Validierung: `packages/server-shared/src/pfupdate.ts`
+
+## 8. Windows-Vorbereitung (2026-09-30, noch keine Plattformfreigabe)
+
+Zielkonfiguration: Windows 11 x64 auf einem von Microsoft und Docker noch
+unterstützten Stand (Abnahmekandidat: Pro/Enterprise 24H2 oder neuer), ein
+festes Betriebskonto, lokaler Docker Desktop mit WSL2 und Linux/amd64-Images.
+Compose muss mindestens 2.24.4 unterstützen. Windows ARM64, Windows Server,
+Remote-Docker, Hyper-V/VMM als freigegebene Produktkonfiguration sowie
+Mehrbenutzerbetrieb sind nicht zugesagt. Der Server-Runner der CI prüft
+Windows-Dateisystem und Paketbau, nicht Docker Desktop auf Windows Server.
+Die konkrete Docker-Desktop-/WSL-/Windows-Version wird erst mit der realen
+Abnahme festgeschrieben; die Hersteller-Mindestanforderungen sind keine
+Praxis-Flow-Freigabe.
+
+### Build und Installationsgrenze
+
+`npm run dist:manager:win` baut einen NSIS-x64-Installer unter
+`manager/dist/PraxisFlowManager-<version>-windows-x64-setup.exe`.
+Der Installer ist benutzerbezogen, fordert keine Elevation an und legt
+Desktop-/Startmenü-Verknüpfungen an. Keine automatische Veröffentlichung,
+kein Auto-Updater und keine Firewalländerung. Ohne bereitgestellte
+Signieridentität ist dies ein interner unsignierter Build. Vor externer
+Auslieferung: Authenticode-Zertifikat, geschützte Signierpipeline,
+Zeitstempel und Prüfung von EXE **und** Installer festlegen; SmartScreen-
+Verhalten auf sauberem Host prüfen. Keine privaten Signierschlüssel im Repo.
+
+Programmdateien/ASAR und Daten sind getrennt. Neue Windows-Installationen
+verwenden `%LOCALAPPDATA%\PraxisFlow`; ein vorhandenes
+`%ProgramData%\PraxisFlow` bleibt als Legacy-Home erhalten und wird nicht
+still migriert. `PRAXIS_FLOW_HOME` überschreibt bewusst diese Auswahl.
+Das Betriebskonto muss Schreibrechte haben; kein automatischer UAC-Fallback.
+Installer-Upgrade und Deinstallation dürfen dieses Home, externe Ordner und
+Docker-Volumes nicht entfernen. Die NSIS-Konfiguration setzt
+`deleteAppDataOnUninstall: false`; der reale Erhalt ist noch abzunehmen.
+Ein NSIS-Upgrade ersetzt nur den Manager. Stack-Updates bleiben `.pfupdate`.
+
+Setup startet direkt mit der mitgelieferten Electron-Node-Runtime und
+absolutem Einstiegspfad; Node/npm werden beim Kunden nicht benötigt.
+`resources/setup` enthält kompilierten Server und vendortes `server-shared`,
+`resources/templates` die zentrale `DELIVERY_BOOTSTRAP_FILES`-Liste samt
+`.env.example`. Das Basis-Caddyfile kommt weiterhin aus `.pfinstall`.
+Der Build prüft den Import außerhalb des Repositories. Der zusätzliche
+`manager/scripts/smoke-packaged-setup.mjs` prüft mit Electron Token,
+Loopback-Handshake, Bootstrap, Wiederstart und IPC-Verlust bei reduziertem
+PATH und fremdem Arbeitsverzeichnis. `runAsNode` darf nicht per Electron-Fuse
+deaktiviert werden, solange dieser Startpfad verwendet wird.
+
+### Priorisierte Code-Bestandsaufnahme
+
+| Priorität / Einordnung | Konkrete Fundstelle und Befund                                                                                                                                                                | Umsetzung / verbleibender Nachweis                                                                                                                                                                                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0 bestätigt           | `setup/src/restricted-operation.ts:durableWrite`, `maintenance-files.ts:syncParents`, `proxy-tls.ts:writeGeneratedTlsCaddyfile`, `app-data-volume.ts:restoreDbFiles`: POSIX-Verzeichnis-fsync | Windows überspringt nur Directory-fsync; Dateien werden weiter geflusht, Fehler nicht pauschal geschluckt. Stromausfall-Durabilität auf NTFS bleibt reale Abnahme.                                                                                                              |
+| P0 bestätigt           | `packages/server-shared/src/pfupdate.ts:isPfupdateRelativePath`, `setup/src/tls-backup-sidecar.ts`: Windows-Laufwerke, ADS und Gerätenamen nicht vollständig ausgeschlossen                   | Portable Archivnamen, Link-Ablehnung, Groß-/Kleinschreibungs-Kollisionen und unsichere Leerzeichen geprüft. `assertPathInsideRoot` prüft reale Vorfahren statt Textpräfixe.                                                                                                     |
+| P1 bestätigt           | `manager/package.json`, `manager/src/main/setup-server.ts:startDevSetupServer`: nur DMG, npm-/Shell-Prozesskette                                                                              | NSIS x64; Dev und Paket starten Electron direkt mit Argumentarray. IPC-Verlust beendet Setup; `setup/src/child-lifecycle.ts` beendet laufende Windows-CLI-Prozessbäume, nicht Docker Desktop oder Container.                                                                    |
+| P1 bestätigt           | `manager/src/main/setup-server.ts:startPackagedSetupServer`, `setup/src/server.ts`: geerbtes cwd und nicht kanonisierter Einstieg                                                             | Paket übergibt Install-Home explizit; Server erkennt realen Einstieg auch unter Symlink-Vorfahren. Isolierter Smoke erfolgreich auf macOS.                                                                                                                                      |
+| P1 bestätigt           | `setup/src/docker-cli.ts:resolveDockerCli`, `docker.ts:detectDocker`: Unix-Suchpfade, kein Kontext-/OS-Gate, keine Compose-Mindestversion                                                     | docker.exe, Docker-Desktop-Pfade für System/Benutzer, eindeutiger PATH, Named-Pipe-/Linux-Prüfung unter Windows und Compose ≥2.24.4. Keine automatische Kontextumschaltung.                                                                                                     |
+| P1 bestätigt           | `setup/src/install-home.ts`, `storage-folders.ts`, `settings-backup-restore.ts`: zu breite Windows-Pfadannahmen                                                                               | Lokale feste Laufwerke, absolute Pfade, beide Separatoren; UNC/WSL/Netzlaufwerke/Junctions/ungültige Namen und überlange Eingaben bewusst abweisen. Restore prüft Windows-Hostpfade vor Cutover.                                                                                |
+| P1 bestätigt           | `setup/src/maintenance-files.ts:replaceFile`: unmittelbarer Rename-Fehler bei kurzzeitiger Sperre                                                                                             | Begrenzte Wiederholung nur bei Windows-Sperrfehlern; kein Löschen des alten Ziels als Ersatz für Rename. Fehler lassen Recovery-Evidenz bestehen. Nativer Windows-Sperrtest in CI.                                                                                              |
+| P1 prüfbedürftig       | `install-operation.ts`, `install-recovery.ts`, `restore-operation.ts`, `settings-backup-update.ts`, `tls-operation-files.ts`: Journal-/Snapshot-Lebenszyklus                                  | Bestehende Recovery-Phasen erhalten; Windows-CI prüft Dateivorgänge/Update-Recovery. Echte Docker-Cutover, Abbruch und Rollback bleiben Abnahmepflicht. Install-`installing` verspricht keine Fortsetzung jeder Einzelaktion.                                                   |
+| P1 prüfbedürftig       | `restricted-network.ts:buildRestrictedNetworkStatus`, `host-state.ts:prepareRestrictedNetwork / applyRestrictedNetwork`, `docker.ts:validateStaffBindingEnv`, `host-tls.ts`, `proxy-tls.ts`   | macOS-Gates schützen den separaten Patientenzugang und dessen Listener-/Binding-Nachweis. Sie bleiben bestehen; Windows blockiert zusätzlich persistierte aktive Bindings beim Start und Restore vor Cutover. Staff-HTTPS ist eine separate Abnahme, keine Restricted-Freigabe. |
+| P1 Betriebsbedingung   | `tls-operation-files.ts:captureTlsRollback`, `.env`, temporäre TLS-Archive                                                                                                                    | chmod 0600/0700 ist unter Windows keine ACL. Privates Betriebskonto, geschützte NTFS-Vererbung und Backup-Ziel durch IT prüfen; keine neue automatische ACL-/Firewallverwaltung.                                                                                                |
+| P2 Komfort             | `setup/src/network.ts:listLanIpv4Candidates`: virtuelle Adapter/VPNs erscheinen ebenfalls                                                                                                     | Keine heuristische automatische Auswahl einer „richtigen“ NIC. Physische Staff-IP samt Erreichbarkeit durch IT wählen; bessere Adapterbeschriftung kann später folgen.                                                                                                          |
+
+`/bin/sh`, `/tmp`, `/imports`, `/exports` und `/var/lib/praxis-flow/app` in
+Docker-Argumenten sind Linux-**Container**pfade, keine Windows-Hostfehler.
+Externe Import-/Exportordner bleiben bei Reset/Recovery außerhalb der
+verwalteten Löschgrenze. Der Host-Mutex bleibt pro Prozess; der Manager ist
+Einzelinstanz. Parallele manuelle Setup-Server sind kein unterstützter Betrieb.
+
+### Automatisierung und Prüfnachweis
+
+`.github/workflows/manager-windows.yml` führt auf einem Windows-x64-Runner
+gezielte native Datei-, Argument-, Archiv-, Journal- und Recoverytests,
+Typprüfung, Lint, NSIS-Build und den Smoke mit der **gebauten EXE** aus.
+Ein separater PowerShell-Test installiert den NSIS-Build im Wegwerf-Runner,
+installiert dieselbe Version erneut, prüft die installierte Runtime und
+deinstalliert sie; ein Datenmarker muss erhalten bleiben. Das ist kein
+Nachweis eines Upgrades von einer älteren Produktversion oder eines Standardkontos.
+Kein Release und kein Artefakt-Upload. Die Auswahl ist ausdrücklich keine
+Behauptung, die gesamte bestehende POSIX-Testfixturesuite laufe unter Windows.
+`path.win32`-Fälle laufen zusätzlich auf macOS, ersetzen aber keinen nativen Lauf.
+GUI-Installation, Docker Desktop/WSL und physische Netzwerkadapter sind nicht
+Teil dieser Hosted-CI. Offene Schritte und erwartete Ergebnisse stehen zentral
+in [open-items.md](../open-items.md#windows-abnahmeprotokoll).
+
+### Geprüfte Versionsquellen
+
+- [Electron 44.4.3](https://releases.electronjs.org/release/v44.4.3) enthält Node 24.21.0; lokal mit `process.versions` bestätigt. [Node-24-Prozessvertrag](https://nodejs.org/download/release/v24.21.0/docs/api/child_process.html) erklärt Windows-Shell-Shims, PATH-Großschreibung und Prozessbeendigung. [Electron Node-Modus](https://www.electronjs.org/docs/latest/api/environment-variables#electron_run_as_node) verlangt das aktive `runAsNode`-Fuse.
+- [Node-24-Dateisystemvertrag](https://nodejs.org/docs/latest-v24.x/api/fs.html): Windows-Dateimodi sind keine POSIX-Zugriffskontrolle. File-flush und Rename sind von Directory-fsync und Stromausfallgarantien zu unterscheiden.
+- [Docker Windows-Anforderungen](https://docs.docker.com/desktop/setup/install/windows-install/): WSL2-Anforderungen, unterstützte Client-Windows-Stände und Installationsarten. [Compose-Merge](https://docs.docker.com/reference/compose-file/merge/#replace-value) belegt 2.24.4 für `!override`.
+- [Docker-Kontexte](https://docs.docker.com/engine/manage-resources/contexts/) und [Bind-Mounts](https://docs.docker.com/engine/storage/bind-mounts/) erklären, warum lokale Hostpfade keinen Remote-Daemon unterstützen. [NSIS-Optionen](https://www.electron.build/nsis/) wurden zusätzlich gegen die installierte electron-builder-Implementierung geprüft.
+
+### Lokaler Prüfstand dieses Arbeitsstands
+
+2026-09-30, macOS arm64 (Darwin 25.5.0): Setup-, Manager- und
+server-shared-Tests erfolgreich; der Windows-exklusive Dateisperrtest ist hier
+übersprungen. Typprüfungen dieser drei Workspaces, deren Lint sowie Lint der
+geänderten Manager-Skripte erfolgreich. Setup-/Shared-Build,
+`prepare:packaged` mit isoliertem Import und Manager-Build erfolgreich.
+
+`electron-builder --mac dir --publish never` konnte im eingeschränkten Netz
+Electron nicht erneut herunterladen. Mit der bereits installierten identischen
+Distribution (`--config.electronDist=../node_modules/electron/dist`) wurde die
+unsignierte `.app` erfolgreich paketiert. Der GUI/IPC-Smoke und der isolierte
+Token-/Bootstrap-/Restart-/Disconnect-Smoke bestanden auch mit dieser gebauten
+App und ihren tatsächlichen Ressourcen. Kein DMG-Release, keine Veröffentlichung
+und keine destruktive Prüfung einer bestehenden Installation.
+
+Windows-NSIS, PowerShell-Installerprüfung und Windows-Runner sind in diesem
+Arbeitsstand **vorbereitet, nicht ausgeführt**. Reale Docker-/WSL-/Netzabnahmen
+bleiben offen; maßgeblich ist das [Abnahmeprotokoll](../open-items.md#windows-abnahmeprotokoll).
+
+### Windows-NSIS-Integrität beim macOS-Cross-Build
+
+Der auf macOS erzeugte erste Testinstaller enthielt einen Deinstaller mit falscher
+CRC, obwohl die äußere Setup.exe ihre Prüfung bestand. Ursache im verwendeten
+electron-builder 26.15.3: `UninstallerReader` kopiert den Installer-Stub ohne die
+Uninstaller-Icon-Patches. Der lokale Buildwrapper rekonstruiert diese gemäß
+[NSIS EW_WRITEUNINSTALLER](https://github.com/kichik/nsis/blob/v304/Source/exehead/exec.c)
+und validiert die bestehende CRC, statt sie neu zu schreiben. Der Builder ist auf
+diese Version festgelegt; ein Versionswechsel erfordert erneute Prüfung.
+
+`npm run dist:manager:win` prüft anschließend die fertige Setup.exe und den
+extrahierten Deinstaller auf allen Buildhosts. Ein Prüffehler bedeutet einen
+fehlgeschlagenen Build, keine Freigabe. Die zusätzlich erzeugte `.exe.sha256`
+dient zum Vergleich nach Kopieren per SMB oder Download (`Get-FileHash -Algorithm
+SHA256` unter Windows). Alte Testdateien mit Leerzeichen im Namen sind nicht der
+korrigierte Build. Die Prüfsumme bestätigt Dateiintegrität, keine Signierung und
+keine erfolgreiche Windows-Laufzeitabnahme.

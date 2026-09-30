@@ -50,7 +50,8 @@ export function createHostMutationLock(reentrant = false): HostMutationLock {
 // One exclusion domain per host for HTTP, direct callers and startup recovery.
 const hostLocks = new Map<string, HostMutationLock>();
 export function hostMutationLock(home: string): HostMutationLock {
-  const key = path.resolve(home);
+  const resolved = path.resolve(home);
+  const key = process.platform === 'win32' ? resolved.toLowerCase() : resolved;
   let lock = hostLocks.get(key);
   if (!lock) {
     lock = createHostMutationLock(true);

@@ -139,3 +139,30 @@ Pre-Update-`.pfbackup` bleibt als Datei; bei Fehler nach Rollback-Artefakten: `e
 `manager-state` / Image-Tags am Ziel: Deployment bleibt auf dem **installierten** Release (Restore überschreibt Tags nicht; Update setzt Tags aus dem `.pfupdate`).
 
 Recovery nach Neuinstallation: [Ablauf und Fehlerfälle](reinstall-recovery.md).
+
+## Windows: Dateisicherheit und Wiederherstellung
+
+Die Windows-Vorbereitung ändert weder Backup-Format noch Löschgrenzen externer
+Import-/Exportordner. Vor Restore-Cutover werden übernommene Windows-Hostpfade
+auf unterstützte lokale Pfade geprüft. Ein aktiver Restricted-Zugang aus einem
+Backup bleibt unter Windows gesperrt. Cross-OS-Backups mit macOS-/WSL-/UNC-
+Hostpfaden sind damit nicht still unverändert einspielbar.
+
+TLS-Archive und Release-Archive verwerfen auch Windows-Gerätenamen,
+Laufwerkspräfixe, ADS-Doppelpunkte, Backslashes, Links und Namenskollisionen
+nach Groß-/Kleinschreibung. Unter Windows wird das System-`tar.exe` verwendet;
+sein echter Roundtrip ist Bestandteil der Windows-CI/Abnahme.
+
+POSIX-Modi 0600/0700 beweisen unter Windows **keine** private ACL. Home,
+Rollback-Snapshots und temporäre TLS-Dateien müssen im geschützten Profil des
+Betriebskontos liegen; Backup-Exporte erben die Rechte ihres Zielordners.
+Bestehende ProgramData- oder benutzerdefinierte Homes durch die IT prüfen.
+Die Anwendung ändert keine Windows-ACLs. Temporäre TLS-Archive werden exklusiv
+angelegt; Secret-Inhalte werden nicht in die API übernommen.
+
+Dateien werden vor Journal-Commit geflusht. Windows kann über diese Node-API
+kein POSIX-Directory-fsync leisten. Kurze Rename-Sperren werden begrenzt erneut
+versucht, ohne das alte Ziel vorher zu löschen. Dauerhafte Sperren brechen ab;
+Journale und Snapshots bleiben Grundlage des Wiederanlaufs. Ein bestandener
+Unit-Test ersetzt keinen NTFS-/Antivirus-/Stromausfallnachweis. Konkrete Schritte:
+[Windows-Abnahme](../open-items.md#windows-abnahmeprotokoll).

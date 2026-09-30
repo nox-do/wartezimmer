@@ -1,3 +1,5 @@
+import { replaceFile } from './maintenance-files.js';
+import { archiveTool } from './pfupdate-package.js';
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
@@ -266,8 +268,9 @@ function prepareReleaseBundle(archivePath: string): PreparedReleaseBundle {
   }
 
   const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'praxis-flow-release-'));
-  const extracted = spawnSync('tar', ['-xzf', archivePath, '-C', stagingDir], {
+  const extracted = spawnSync(archiveTool(), ['-xzf', archivePath, '-C', stagingDir], {
     encoding: 'utf8',
+    windowsHide: true,
   });
   if (extracted.status !== 0) {
     fs.rmSync(stagingDir, { recursive: true, force: true });
@@ -745,7 +748,7 @@ function restoreHostFiles(snapshot: HostFileSnapshot[]): void {
     fs.mkdirSync(path.dirname(file.path), { recursive: true });
     const tempPath = `${file.path}.rollback-${process.pid}-${Date.now()}`;
     fs.writeFileSync(tempPath, file.content);
-    fs.renameSync(tempPath, file.path);
+    replaceFile(tempPath, file.path);
   }
 }
 
@@ -757,7 +760,7 @@ function installBundleTemplatesAtomically(projectRoot: string, stagingDir: strin
     const tempPath = `${targetPath}.pfinstall-${process.pid}-${Date.now()}`;
     try {
       fs.copyFileSync(sourcePath, tempPath);
-      fs.renameSync(tempPath, targetPath);
+      replaceFile(tempPath, targetPath);
     } finally {
       if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
     }

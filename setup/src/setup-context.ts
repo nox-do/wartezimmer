@@ -1,3 +1,4 @@
+import { assertWindowsHostPath } from './windows-host-path.js';
 import { readTlsOperationStatus } from './tls-operation.js';
 import { readRestoreOperationStatus } from './restore-operation.js';
 import { readUpdateOperationStatus } from './update-operation.js';
@@ -95,6 +96,7 @@ export function migrateMaintenanceToken(
 }
 
 export function ensureInstallHomeLayout(installHome: string, templateRoot: string): string[] {
+  assertWindowsHostPath(installHome);
   // An interrupted update owns the templates, including deliberate absences.
   if (
     readTlsOperationStatus(installHome) ||

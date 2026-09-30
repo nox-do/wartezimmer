@@ -306,7 +306,7 @@ test('host config survives Compose failure while runtime endpoints retain safe e
   fs.writeFileSync(path.join(home, '.env'), 'SETUP_LAN_APP_IP=192.168.1.10\n');
   fs.writeFileSync(
     cli,
-    '#!/bin/sh\ncase "$*" in *"ps --all"*) echo private-docker-detail >&2; exit 1;; *) echo ok;; esac\n',
+    '#!/bin/sh\ncase "$*" in *"ps --all"*) echo private-docker-detail >&2; exit 1;; *"compose version"*) echo 2.24.4;; *) echo ok;; esac\n',
     { mode: 0o755 },
   );
   const server = await startTestServer({ context: { ...testSetupContext(home), mode: 'repo' } });

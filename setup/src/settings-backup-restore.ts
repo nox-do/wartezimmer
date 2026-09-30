@@ -1,3 +1,4 @@
+import { assertWindowsHostPath } from './windows-host-path.js';
 import { waitForCompatibleMaintenanceApp } from './settings-format-version.js';
 import { atPhase } from './operation-journal.js';
 import { assertNoTlsOperation } from './tls-operation.js';
@@ -466,6 +467,15 @@ function buildRestoreTargetEnv(input: {
     ]);
   }
   const restoreEnv = mergeConfigRestoreEnv(input.backupEnv, input.currentEnv);
+  if (process.platform === 'win32') {
+    for (const key of ['IMPORTS_HOST_PATH', 'EXPORTS_HOST_PATH']) {
+      if (restoreEnv[key]) assertWindowsHostPath(restoreEnv[key]);
+    }
+    if (input.backupEnv.SETUP_RESTRICTED_ENABLED === 'true')
+      throw new RestorePhaseError(RESTORE_PHASES.validateArchive, [
+        'Aktiver Patientenzugang aus dieser Sicherung ist unter Windows nicht freigegeben. Bitte auf einem freigegebenen Host wiederherstellen.',
+      ]);
+  }
   // Restricted state is a complete backup-owned unit. An absent key in the
   // backup must not inherit an active marker from the current installation.
   removeKeys(restoreEnv, RESTRICTED_NETWORK_PERSISTED_KEYS);

@@ -294,3 +294,35 @@ test('missing Compose evidence preserves durable findings without inventing runt
     'installing',
   );
 });
+
+test('offline first launch opens prerequisites without claiming fresh or missing release corruption', () => {
+  const facts: InstallationStateFacts = {
+    docker: { ...docker, daemonRunning: false },
+    lifecycle: {
+      ...lifecycle,
+      assessment: 'unknown',
+      mode: null,
+      issues: [{ code: 'installation-unchecked', message: 'Docker probe unavailable' }],
+    },
+    compose: null,
+    releaseConfigured: false,
+    maintenanceStatus: 'unauthorized',
+  };
+  assert.equal(deriveInstallationState(facts)?.kind, 'docker-unavailable');
+  assert.equal(deriveInstallationState({ ...facts, docker })?.kind, 'inconsistent');
+  assert.equal(
+    deriveInstallationState({ ...facts, operationUnreadable: true })?.kind,
+    'inconsistent',
+  );
+  assert.equal(
+    deriveInstallationState({
+      ...facts,
+      lifecycle: {
+        ...facts.lifecycle,
+        assessment: 'inconsistent',
+        issues: [{ code: 'installation-remnants', message: 'TLS files' }],
+      },
+    })?.kind,
+    'inconsistent',
+  );
+});

@@ -1,3 +1,4 @@
+import { syncDirectory, replaceFile } from './maintenance-files.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -30,12 +31,11 @@ export function durableWrite(file: string, content: string, mode = 0o600): void 
   } finally {
     fs.closeSync(fd);
   }
-  fs.renameSync(temporary, file);
-  const directory = fs.openSync(path.dirname(file), 'r');
   try {
-    fs.fsyncSync(directory);
+    replaceFile(temporary, file);
+    syncDirectory(path.dirname(file));
   } finally {
-    fs.closeSync(directory);
+    fs.rmSync(temporary, { force: true });
   }
 }
 
@@ -66,12 +66,7 @@ export function beginRestrictedOperation(
   const directory = restrictedOperationDir(home);
   fs.mkdirSync(path.dirname(directory), { recursive: true });
   fs.mkdirSync(directory); // Exclusive across setup processes; never overwrite another operation.
-  const parent = fs.openSync(path.dirname(directory), 'r');
-  try {
-    fs.fsyncSync(parent);
-  } finally {
-    fs.closeSync(parent);
-  }
+  syncDirectory(path.dirname(directory));
   const caddyfile = path.join(home, 'state/tls/Caddyfile');
   const operation: RestrictedOperation = {
     version: 1,
@@ -100,13 +95,8 @@ export function finishRestrictedOperation(home: string, id: string): void {
     throw new Error('Restricted-Journal wurde verändert.');
   // Atomic rename makes completion unambiguous even if cleanup is interrupted.
   const completed = `${restrictedOperationDir(home)}.completed-${id}`;
-  fs.renameSync(restrictedOperationDir(home), completed);
-  const parent = fs.openSync(path.dirname(completed), 'r');
-  try {
-    fs.fsyncSync(parent);
-  } finally {
-    fs.closeSync(parent);
-  }
+  replaceFile(restrictedOperationDir(home), completed);
+  syncDirectory(path.dirname(completed));
   activeOperations.delete(id);
   try {
     fs.rmSync(completed, { recursive: true, force: true });

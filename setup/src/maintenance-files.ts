@@ -1,14 +1,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+export function syncDirectory(directory: string): void {
+  // Node cannot open directory handles for fsync on Windows. File flushes remain mandatory.
+  if (process.platform === 'win32') return;
+  const fd = fs.openSync(directory, 'r');
+  try {
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
 export function syncParents(directory: string, home: string): void {
   for (let current = directory; ; current = path.dirname(current)) {
-    const fd = fs.openSync(current, 'r');
-    try {
-      fs.fsyncSync(fd);
-    } finally {
-      fs.closeSync(fd);
-    }
+    syncDirectory(current);
     if (current === home || current === path.dirname(current)) break;
   }
 }
@@ -20,7 +26,7 @@ export function syncMaintenanceArtifacts(directory: string, home = path.dirname(
     if (entry.isDirectory()) syncMaintenanceArtifacts(file, home);
     else {
       if (!entry.isFile()) throw new Error('MAINTENANCE_ARTIFACT_INVALID');
-      const fd = fs.openSync(file, 'r');
+      const fd = fs.openSync(file, process.platform === 'win32' ? 'r+' : 'r');
       try {
         fs.fsyncSync(fd);
       } finally {
@@ -40,7 +46,7 @@ export function syncMaintenanceHostFiles(home: string, additionalPaths: string[]
       syncMaintenanceArtifacts(file, home);
       continue;
     }
-    const fd = fs.openSync(file, 'r');
+    const fd = fs.openSync(file, process.platform === 'win32' ? 'r+' : 'r');
     try {
       fs.fsyncSync(fd);
     } finally {
@@ -57,5 +63,24 @@ export function assertMaintenanceRollbackComplete(rollbackDir: string): void {
   for (const file of ['.env', 'app-data/praxis-flow.db']) {
     if (!fs.statSync(path.join(rollbackDir, file)).isFile())
       throw new Error('MAINTENANCE_BACKUP_INCOMPLETE');
+  }
+}
+
+/** Brief AV/indexer locks may clear; never unlink the old destination to force replacement. */
+export function replaceFile(source: string, destination: string): void {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      fs.renameSync(source, destination);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (
+        process.platform !== 'win32' ||
+        attempt >= 4 ||
+        !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '')
+      )
+        throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50 * (attempt + 1));
+    }
   }
 }

@@ -1,3 +1,4 @@
+import { trackCommand, stopCommand } from './child-lifecycle.js';
 import { spawn } from 'node:child_process';
 
 export type CommandResult = { code: number; stdout: string; stderr: string };
@@ -17,9 +18,12 @@ export function runProcessCommand(
   return new Promise((resolve) => {
     const child = spawn(command, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+      shell: false,
       cwd: options?.cwd,
       env: options?.env ?? process.env,
     });
+    trackCommand(child);
     let stdout = '';
     let stderr = '';
     let settled = false;
@@ -38,7 +42,7 @@ export function runProcessCommand(
 
     if (options?.timeoutMs && options.timeoutMs > 0) {
       timer = setTimeout(() => {
-        child.kill('SIGKILL');
+        stopCommand(child);
         finish({
           code: 124,
           stdout: stdout.trim(),
@@ -56,8 +60,12 @@ export function runProcessCommand(
     child.on('close', (code) => {
       finish({ code: code ?? 1, stdout: stdout.trim(), stderr: stderr.trim() });
     });
-    child.on('error', () => {
-      finish({ code: 127, stdout: '', stderr: 'spawn failed' });
+    child.on('error', (error) => {
+      finish({
+        code: 127,
+        stdout: '',
+        stderr: `Prozess konnte nicht gestartet werden (${command}): ${error.message}`,
+      });
     });
   });
 }

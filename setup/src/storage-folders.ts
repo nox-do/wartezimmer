@@ -1,3 +1,4 @@
+import { assertWindowsHostPath } from './windows-host-path.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { backupEnvFile, updateEnvKeys } from './env-file.js';
@@ -19,7 +20,7 @@ export const INVALID_FOLDER_PATH = 'INVALID_FOLDER_PATH';
 export const FOLDER_PATH_NOT_DIRECTORY = 'FOLDER_PATH_NOT_DIRECTORY';
 
 export function normalizeHostFolderPath(value: string): string {
-  const trimmed = value.trim();
+  const trimmed = process.platform === 'win32' ? value : value.trim();
   if (!trimmed) {
     throw new Error(INVALID_FOLDER_PATH);
   }
@@ -39,7 +40,8 @@ export function normalizeHostFolderPath(value: string): string {
     expanded = home;
   }
 
-  if (!path.isAbsolute(expanded)) {
+  assertWindowsHostPath(expanded);
+  if (!path.isAbsolute(expanded) || /[\r\n\0]/.test(expanded)) {
     throw new Error(INVALID_FOLDER_PATH);
   }
 

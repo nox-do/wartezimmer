@@ -14,6 +14,7 @@ const templatesOutput = path.join(outputRoot, 'templates');
 const serverSharedOutput = path.join(setupOutput, 'vendor', 'server-shared');
 
 function copyFile(relativePath) {
+  fs.mkdirSync(path.dirname(path.join(templatesOutput, relativePath)), { recursive: true });
   fs.copyFileSync(path.join(repoRoot, relativePath), path.join(templatesOutput, relativePath));
 }
 

@@ -279,3 +279,12 @@ test('installation state controls wizard presentation and auto-start', () => {
     );
   }
 });
+
+test('first launch without Docker enters wizard; existing offline installation stays on status', () => {
+  const status = minimalHostStatus({
+    envExists: false,
+    installation: { kind: 'docker-unavailable', reason: 'offline' },
+  });
+  assert.equal(shouldAutoStartFullscreenWizard(status), true);
+  assert.equal(shouldAutoStartFullscreenWizard({ ...status, envExists: true }), false);
+});

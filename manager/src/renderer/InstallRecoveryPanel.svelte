@@ -1,10 +1,12 @@
 <script lang="ts">
+  import { dockerPrerequisitesHints, dockerPrerequisiteChecks } from '../shared/docker-prerequisites-ui.js';
   import { wizardError, wizardIsBusy } from './wizard-controller.js';
 
   import type { WizardController, WizardControllerState } from './wizard-controller.js';
   import { restoreInspectSummaryLines } from './restore-wizard-flow.js';
 
-  let { snapshot, controller }: {
+  let { snapshot, controller, hostPlatform }: {
+    hostPlatform: string;
     snapshot: WizardControllerState;
     controller: WizardController;
   } = $props();
@@ -15,7 +17,24 @@
 </script>
 
 <section class="wizard-panel recovery-panel" aria-busy={wizardIsBusy(snapshot)}>
-  {#if snapshot.recoveryPhase === 'choose'}
+  {#if snapshot.recoveryPhase === 'prerequisites' && snapshot.status}
+    <h2>Docker vorbereiten</h2>
+    <p>Für die Einrichtung muss Docker Desktop bereit sein. Danach prüfen wir, ob bereits eine Installation vorhanden ist.</p>
+    <ul class="checklist">
+          {#each dockerPrerequisiteChecks(snapshot.status.docker) as check (check.id)}
+            <li class={check.state}>
+              <span class="checklist-mark" aria-hidden="true">{check.mark}</span>
+              <span>{check.label}</span>
+            </li>
+          {/each}
+        </ul>
+    {@const hints = dockerPrerequisitesHints(snapshot.status.docker, hostPlatform)}
+    {#each hints.hints as hint (hint)}<p class="hint">{hint}</p>{/each}
+    {#if hints.installLink}
+      <button type="button" class="btn-secondary" onclick={() => void window.praxisManager?.openExternalUrl(hints.installLink!.url)}>{hints.installLink.buttonLabel}</button>
+    {/if}
+    {#if snapshot.status.docker.detail}<details><summary>Docker-Details</summary><pre>{snapshot.status.docker.detail}</pre></details>{/if}
+  {:else if snapshot.recoveryPhase === 'choose'}
     <h2>{snapshot.status?.installation?.kind === 'fresh' ? 'Praxis Flow installieren' : 'Praxis Flow neu installieren'}</h2>
     <p>Wählen Sie ein Software-Paket. Optional übernehmen Sie danach die Einstellungen aus einem automatischen Backup.</p>
     <div class="recovery-backup-field">
@@ -64,7 +83,9 @@
   {#if wizardIsBusy(snapshot)}<p class="wizard-progress is-active" role="status"><span class="spinner" aria-hidden="true"></span>Bitte warten …</p>{/if}
 
   <footer class="actions-row actions-row--footer">
-    {#if snapshot.recoveryPhase === 'choose'}
+    {#if snapshot.recoveryPhase === 'prerequisites'}
+      <button type="button" disabled={wizardIsBusy(snapshot)} onclick={() => void controller.refreshRecovery()}>Voraussetzungen erneut prüfen</button>
+    {:else if snapshot.recoveryPhase === 'choose'}
       <button type="button" disabled={wizardIsBusy(snapshot) || snapshot.status?.installation?.kind === 'docker-unavailable'} onclick={() => void controller.prepareRecovery()}>Software-Paket wählen und prüfen</button>
     {:else if snapshot.recoveryPhase === 'prepared'}
       <button type="button" disabled={wizardIsBusy(snapshot)} onclick={() => controller.commitRecovery()}>{operation?.mode === 'replace' ? 'Neu installieren …' : 'Installation beginnen'}</button>

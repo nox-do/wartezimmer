@@ -19,3 +19,10 @@ Grund für eine gemeinsame Abstraktion.
 Produktentscheidungen stehen bei ihren jeweiligen Verträgen: [API/Auth](apis.md),
 [Echtzeit](realtime.md), [Betriebsmodi](manager-operating-modes.md) und
 [Betriebsdokumentation](../operations/README.md).
+
+Windows-Vorbereitung (2026-09-30): Plattformdetails bleiben an Prozess-, Docker-
+und Dateisystemgrenzen (`process-command`, `docker-cli`, `maintenance-files`,
+`windows-host-path`). Keine allgemeine Betriebssystemabstraktion. NSIS x64
+und privates Benutzer-Home sind vom Docker-Datenlebenszyklus getrennt.
+Bestehende macOS-Defaults bleiben erhalten. Restricted-Plattformfreigabe ist
+weiterhin ein eigener Netzwerknachweis; [Audit und Betrieb](../operations/delivery.md#8-windows-vorbereitung-2026-09-30-noch-keine-plattformfreigabe).

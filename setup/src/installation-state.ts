@@ -92,6 +92,24 @@ export function deriveInstallationState(facts: InstallationStateFacts): Installa
     return { kind: 'fresh' };
   }
 
+  // Missing configuration plus an offline residue probe is an observation gap,
+  // not evidence of a broken installation. Never call this state fresh.
+  if (
+    facts.lifecycle.assessment === 'unknown' &&
+    facts.lifecycle.mode === null &&
+    facts.lifecycle.operation === 'none' &&
+    facts.lifecycle.issues.length === 1 &&
+    facts.lifecycle.issues[0]?.code === 'installation-unchecked' &&
+    (!facts.docker.installed || !facts.docker.daemonRunning || !facts.docker.composeAvailable)
+  ) {
+    return {
+      kind: 'docker-unavailable',
+      reason: !facts.docker.installed
+        ? 'Docker Desktop zuerst installieren und starten. Danach die Voraussetzungen erneut prüfen.'
+        : 'Docker Desktop ist nicht bereit. Nach dem Start erneut prüfen; erst dann können vorhandene Installationen sicher erkannt werden.',
+    };
+  }
+
   const reasons: InstallationReason[] = [];
   if (facts.lifecycle.assessment !== 'known' || facts.lifecycle.mode === null) {
     reasons.push(...facts.lifecycle.issues.map((issue) => reason(issue.code, issue.message)));

@@ -218,3 +218,9 @@ Punkte geklärt sein:
 - Docker: [Docker-Desktop-Netzwerk und Backend-Prozess](https://docs.docker.com/desktop/features/networking/networking-how-tos/)
 - Docker: [`macvlan`-Plattformgrenzen](https://docs.docker.com/engine/network/drivers/macvlan/)
 - Docker: [Compose-Service-Härtungsoptionen](https://docs.docker.com/reference/compose-file/services/)
+
+Windows-Manager-Paketierung ist inzwischen vorbereitet; die Aussage zur noch
+fehlenden Windows-Binding-Freigabe bleibt gültig. Windows-Firewall, Netzprofil,
+VPN-/WSL-Adapter und physische Quellnetze müssen durch die IT geprüft werden.
+Der Manager öffnet keine Firewallports und fordert dafür keine Administratorrechte.
+[Konkrete Windows-Abnahmeschritte](../open-items.md#windows-abnahmeprotokoll).

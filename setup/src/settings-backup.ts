@@ -1,3 +1,4 @@
+import { replaceFile } from './maintenance-files.js';
 import { runHostMutation } from './maintenance-operation-guard.js';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -226,7 +227,7 @@ function writePfbackupFileAtomically(backupDir: string, serialized: string): str
     if (!validation.archiveValid) {
       throw new Error(validation.errors.join(' ') || 'Backup-Archiv ungültig nach Schreiben.');
     }
-    fs.renameSync(tempPath, finalPath);
+    replaceFile(tempPath, finalPath);
     return finalPath;
   } catch (error) {
     if (fs.existsSync(tempPath)) {

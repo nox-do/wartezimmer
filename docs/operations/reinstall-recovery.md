@@ -121,3 +121,15 @@ akzeptiert ausschließlich Version 2; eigene chmod-/ACL-Sonderbehandlung entfäl
 
 Automatisierte Tests, Typprüfung, Lint und Manager-Build sind geprüft.
 Der verbleibende E2E-Nachweis wird unter [offene Abnahmen](../open-items.md) geführt.
+
+## Windows-Vorbereitung
+
+Manager-Installer-Upgrade/-Deinstallation und fachliche Neuinstallation sind
+getrennte Vorgänge. NSIS entfernt keine Praxisdaten und führt keinen Setup-Reset
+aus. Die vorhandenen Phasen `prepared`/`installing` sowie Update-/Restore-/TLS-
+Journale bleiben maßgeblich. Beim Schließen oder Absturz des Managers endet
+seine Setup-API über den IPC-Lebenszyklus; bereits an Docker übergebene Aufträge
+sind damit nicht garantiert abgebrochen. Nach Wiederstart Zustand erneut lesen
+und die vorhandene Recovery verwenden. Kein Löschen ungeklärter Journale.
+Windows-Dateisperren und Recovery mit echten Containern sind noch abzunehmen:
+[Protokoll](../open-items.md#windows-abnahmeprotokoll).

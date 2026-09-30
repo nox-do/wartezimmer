@@ -571,3 +571,37 @@ test('combined access step suggests a discovered address without requiring proxy
   controller.goBack();
   assert.equal(controller.getState().step, 3);
 });
+
+test('packaged first launch waits for Docker then discovers installation choices', async () => {
+  let status = minimalHostStatus({
+    mode: 'install',
+    envExists: false,
+    installation: { kind: 'docker-unavailable', reason: 'offline' },
+    docker: { installed: true, daemonRunning: false, composeAvailable: true, detail: 'not ready' },
+  });
+  let discoveries = 0;
+  const controller = createWizardController({
+    api: {
+      fetchSetupStatus: async () => status,
+      discoverRecoveryBackups: async () => {
+        discoveries++;
+        return [];
+      },
+    } as never,
+    onComplete: () => {},
+    onCancel: () => {},
+  });
+  controller.show(status, 'fullscreen');
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(controller.getState().recoveryPhase, 'prerequisites');
+  assert.equal(wizardError(controller.getState()), null);
+  assert.equal(discoveries, 0);
+  status = {
+    ...status,
+    installation: { kind: 'fresh' },
+    docker: { ...status.docker, daemonRunning: true },
+  };
+  await controller.refreshRecovery();
+  assert.equal(controller.getState().recoveryPhase, 'choose');
+  assert.equal(discoveries, 1);
+});

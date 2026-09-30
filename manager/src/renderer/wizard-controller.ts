@@ -39,7 +39,7 @@ export type WizardControllerState = WizardFlowState & {
     | { kind: 'working'; progress?: string }
     | { kind: 'failed'; error: string };
   presentation: WizardPresentation;
-  recoveryPhase: 'choose' | 'prepared' | 'setup' | 'finish' | 'restart' | null;
+  recoveryPhase: 'prerequisites' | 'choose' | 'prepared' | 'setup' | 'finish' | 'restart' | null;
   recoveryCandidates: RecoveryBackupCandidate[];
   backupCandidateId: string;
   operation: InstallOperationSummary | null;
@@ -84,7 +84,12 @@ function createInitialState(
     ...createWizardFlowState(status),
     action: { kind: 'idle' },
     presentation,
-    recoveryPhase: status?.mode === 'install' ? 'choose' : null,
+    recoveryPhase:
+      status?.mode === 'install'
+        ? status.installation?.kind === 'docker-unavailable'
+          ? 'prerequisites'
+          : 'choose'
+        : null,
     recoveryCandidates: [],
     backupCandidateId: '',
     operation: null,
@@ -162,7 +167,8 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     const operation = installation?.kind === 'installing' ? installation.operation : null;
     patch({ status, operation });
     if (installation?.kind === 'docker-unavailable') {
-      setError(installation.reason);
+      patch({ recoveryPhase: 'prerequisites' });
+      setError(null);
       return;
     }
     if (operation?.phase === 'prepared') {

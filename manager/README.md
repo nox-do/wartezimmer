@@ -166,7 +166,7 @@ Vom Repo-Root:
 npm run dist:manager:mac
 ```
 
-Der Build erzeugt `manager/dist/Praxis Flow Manager-<version>-<arch>.dmg`.
+Der Build erzeugt `manager/dist/PraxisFlowManager-<version>-<arch>.dmg`.
 Dieser erste Phase-4a-Build ist bewusst unsigned/notarisiert **nicht**; er ist für interne Tests.
 Beim Packaging werden der kompilierte Setup-Server und die Delivery-Templates in die App-Ressourcen gelegt.
 Im gepackten Modus startet der Manager die Setup-API aus diesen Ressourcen und nutzt standardmäßig
@@ -203,3 +203,48 @@ npm run -w @praxis-flow/setup test
 ```
 
 LAN-TLS (Produkt): [`docs/operations/tls.md`](../docs/operations/tls.md).
+
+## Windows (vorbereitet, Abnahme offen)
+
+`npm run dist:manager:win` erzeugt einen internen NSIS-Installer für x64.
+Ziel: Windows 11, lokaler Docker Desktop mit WSL2/Linux-Containern und Compose
+ab 2.24.4. Keine ARM64-Zusage. Der benutzerbezogene Manager braucht kein
+separates Node/npm und fordert keine Administratorrechte an.
+
+Neue Daten liegen unter `%LOCALAPPDATA%\PraxisFlow`, außerhalb von Programm
+und ASAR; ein vorhandenes `%ProgramData%\PraxisFlow` bleibt erhalten.
+Das Betriebskonto bleibt über Installation, Docker-Betrieb und Updates gleich.
+Deinstallation darf Praxisdaten nicht entfernen. Windows-Pfadgrenzen,
+Signierung, Audit und Nachweise: [Delivery §8](../docs/operations/delivery.md#8-windows-vorbereitung-2026-09-30-noch-keine-plattformfreigabe).
+Der separate Patientenzugang bleibt unter Windows gesperrt.
+
+Isolierter Runtime-Smoke nach `prepare:packaged`:
+
+```powershell
+node manager/scripts/smoke-packaged-setup.mjs
+# Nach Windows-Packaging tatsächlich die gebaute EXE prüfen:
+node manager/scripts/smoke-packaged-setup.mjs "manager/dist/win-unpacked/PraxisFlowManager.exe" manager/dist/win-unpacked/resources
+```
+
+Der Smoke verändert keinen Docker-Stack. Die verbleibenden Installer-/Docker-/
+GUI-Tests stehen im [Windows-Abnahmeprotokoll](../docs/open-items.md#windows-abnahmeprotokoll).
+
+Windows verwendet die technischen Namen `PraxisFlowManager.exe`,
+`UninstallPraxisFlowManager.exe` und
+`PraxisFlowManager-<version>-windows-x64-setup.exe`. Bei einer frischen
+Installation heißt der Programmordner `%LOCALAPPDATA%\Programs\PraxisFlowManager`.
+Der sichtbare Produktname bleibt „Praxis Flow Manager“; Versionen bleiben in
+Dateimetadaten und im Setup-Dateinamen. App-ID und Datenordner bleiben unverändert.
+NSIS kann bei Updates einen registrierten bisherigen Installationspfad übernehmen;
+ein alter Ordner mit Leerzeichen wird nicht automatisch umbenannt.
+Der Windows-Build läuft über `scripts/build-windows.mjs`. Der macOS-Workaround
+für den festgelegten electron-builder 26.15.3 übernimmt die NSIS-Uninstaller-
+Icon-Patches, die dessen `UninstallerReader` auslässt. Die ursprüngliche CRC
+bleibt unverändert und muss passen; die Integritätsprüfung wird nicht deaktiviert.
+Nach dem Build werden sowohl die Setup.exe als auch der daraus extrahierte
+Deinstaller geprüft. Fehler lassen den Build scheitern. Nur nach erfolgreicher
+Prüfung entsteht zusätzlich eine `.exe.sha256`-Datei für den Transfervergleich.
+Bei einem Builder-Versionswechsel muss der Workaround neu bewertet werden.
+`npm run -w @praxis-flow/manager test:packaging` prüft Rekonstruktion und negative
+CRC-/Grenzfälle. Die echte Windows-Installations-/Deinstallationsabnahme bleibt
+trotz bestandener Dateiprüfung erforderlich.

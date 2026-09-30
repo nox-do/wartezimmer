@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
 import {
+  buildComposeEnv,
   buildComposeStatus,
   runComposeCommand,
   COMPOSE_TLS_LAB_SERVICES,
@@ -18,6 +19,35 @@ import {
   validateStaffBindingEnv,
   withInspectedPublishedBindings,
 } from './docker.js';
+
+import { buildDockerEnv } from './docker-cli.js';
+
+test('Compose bindings cannot be overridden by mixed-case inherited variables', () => {
+  const source = {
+    Setup_Lan_App_Ip: '0.0.0.0',
+    APP_BIND_ADDRESS: '0.0.0.0',
+    App_Bind_Address: '::',
+    setup_restricted_app_ip: '0.0.0.0',
+    Setup_Restricted_Enabled: 'true',
+    DOCKER_CONTEXT: 'desktop-linux',
+  };
+  for (const platform of ['win32', 'darwin'] as const) {
+    const env = buildDockerEnv(buildComposeEnv('test-project', source), platform);
+    for (const key of Object.keys(env)) {
+      assert.ok(
+        ![
+          'SETUP_LAN_APP_IP',
+          'APP_BIND_ADDRESS',
+          'SETUP_RESTRICTED_APP_IP',
+          'SETUP_RESTRICTED_ENABLED',
+        ].includes(key.toUpperCase()),
+      );
+    }
+    assert.equal(env.DOCKER_CONTEXT, 'desktop-linux');
+    assert.equal(env.COMPOSE_PROJECT_NAME, 'test-project');
+  }
+  assert.equal(source.Setup_Lan_App_Ip, '0.0.0.0');
+});
 
 const interfaces = [
   {

@@ -1,4 +1,6 @@
+import { archiveTool } from './pfupdate-package.js';
 import {
+  isPfupdateRelativePath,
   tlsBackupMetadataConsistent,
   tlsInBackup,
   tlsPreparedInBackup,
@@ -10,7 +12,11 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { listTarArchiveEntriesVerbose, type TarArchiveEntry } from './pfupdate-package.js';
+import {
+  validateTarArchiveEntries,
+  listTarArchiveEntriesVerbose,
+  type TarArchiveEntry,
+} from './pfupdate-package.js';
 import { resolveProxyTlsPaths } from './proxy-tls.js';
 
 export type TlsSidecarManifest = {
@@ -46,7 +52,7 @@ export function decodeTlsSidecarBase64(tlsSidecarBase64: string | undefined): Bu
 }
 
 function isSafeRelativePath(value: string): boolean {
-  if (!value || value.startsWith('/') || value.includes('..')) {
+  if (!isPfupdateRelativePath(value)) {
     return false;
   }
   if (/^[a-zA-Z]:/.test(value) || value.includes('\\')) {
@@ -57,6 +63,7 @@ function isSafeRelativePath(value: string): boolean {
 }
 
 function validateSidecarTarEntries(entries: TarArchiveEntry[]): void {
+  validateTarArchiveEntries(entries);
   let hasManifest = false;
   for (const entry of entries) {
     if (!entry.name) {
@@ -82,7 +89,7 @@ function writeTempSidecarArchive(bytes: Buffer): string {
     os.tmpdir(),
     `praxis-flow-tls-sidecar-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.tgz`,
   );
-  fs.writeFileSync(tempPath, bytes);
+  fs.writeFileSync(tempPath, bytes, { flag: 'wx', mode: 0o600 });
   return tempPath;
 }
 
@@ -91,7 +98,9 @@ export function parseTlsSidecarManifestFromBytes(bytes: Buffer): TlsSidecarManif
   try {
     const entries = listTarArchiveEntriesVerbose(archivePath);
     validateSidecarTarEntries(entries);
-    const listed = spawnSync('tar', ['-xOf', archivePath, MANIFEST_NAME], { encoding: 'utf8' });
+    const listed = spawnSync(archiveTool(), ['-xOf', archivePath, MANIFEST_NAME], {
+      encoding: 'utf8',
+    });
     if (listed.status !== 0) {
       return null;
     }
@@ -166,8 +175,9 @@ export function packTlsSidecarArchive(input: {
     copyIfExists(paths.acmeDnsCredentials, path.join(staging, 'acme-dns.json'));
     copyIfExists(paths.certs, path.join(staging, 'certs'));
     fs.mkdirSync(path.dirname(input.destinationPath), { recursive: true });
-    const packed = spawnSync('tar', ['czf', input.destinationPath, '-C', staging, '.'], {
+    const packed = spawnSync(archiveTool(), ['czf', input.destinationPath, '-C', staging, '.'], {
       encoding: 'utf8',
+      windowsHide: true,
     });
     if (packed.status !== 0) {
       throw new Error(
@@ -214,7 +224,9 @@ export function unpackTlsSidecarBytes(bytes: Buffer, installHome: string): void 
   try {
     const entries = listTarArchiveEntriesVerbose(archivePath);
     validateSidecarTarEntries(entries);
-    const extracted = spawnSync('tar', ['xzf', archivePath, '-C', staging], { encoding: 'utf8' });
+    const extracted = spawnSync(archiveTool(), ['xzf', archivePath, '-C', staging], {
+      encoding: 'utf8',
+    });
     if (extracted.status !== 0) {
       throw new Error(
         extracted.stderr || extracted.stdout || 'HTTPS-Archiv konnte nicht entpackt werden.',

@@ -1,3 +1,4 @@
+import { syncDirectory, replaceFile } from './maintenance-files.js';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -109,7 +110,7 @@ export function writeSecretFileAtomically(filePath: string, content: string): vo
   } else {
     const temporaryPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
     fs.writeFileSync(temporaryPath, content, { encoding: 'utf8', mode: 0o600 });
-    fs.renameSync(temporaryPath, filePath);
+    replaceFile(temporaryPath, filePath);
   }
   if (process.platform !== 'win32') {
     fs.chmodSync(filePath, 0o600);
@@ -347,7 +348,7 @@ export function writeGeneratedTlsCaddyfile(
     // Docker file bind-mounts keep referring to the original inode. Replacing the
     // path via rename would leave a running Caddy container on the old config.
     fs.writeFileSync(paths.caddyfile, content, 'utf8');
-    const fd = fs.openSync(paths.caddyfile, 'r');
+    const fd = fs.openSync(paths.caddyfile, process.platform === 'win32' ? 'r+' : 'r');
     try {
       fs.fsyncSync(fd);
     } finally {
@@ -357,19 +358,14 @@ export function writeGeneratedTlsCaddyfile(
   }
   const temporaryPath = `${paths.caddyfile}.tmp-${process.pid}-${Date.now()}`;
   fs.writeFileSync(temporaryPath, content, 'utf8');
-  const fd = fs.openSync(temporaryPath, 'r');
+  const fd = fs.openSync(temporaryPath, process.platform === 'win32' ? 'r+' : 'r');
   try {
     fs.fsyncSync(fd);
   } finally {
     fs.closeSync(fd);
   }
-  fs.renameSync(temporaryPath, paths.caddyfile);
-  const directory = fs.openSync(path.dirname(paths.caddyfile), 'r');
-  try {
-    fs.fsyncSync(directory);
-  } finally {
-    fs.closeSync(directory);
-  }
+  replaceFile(temporaryPath, paths.caddyfile);
+  syncDirectory(path.dirname(paths.caddyfile));
   return paths.caddyfile;
 }
 

@@ -14,8 +14,9 @@ let settled = false;
 let successSeen = false;
 let timer;
 
-const child = spawn(electronPath, ['.'], {
-  cwd: managerRoot,
+const packagedExecutable = process.argv[2] ? path.resolve(process.argv[2]) : null;
+const child = spawn(packagedExecutable || electronPath, packagedExecutable ? [] : ['.'], {
+  cwd: packagedExecutable ? installHome : managerRoot,
   env: {
     ...process.env,
     ELECTRON_RUN_AS_NODE: '',

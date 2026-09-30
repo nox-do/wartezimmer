@@ -13,7 +13,9 @@ export function defaultWizardPresentation(status: HostStatus | null): WizardPres
 export function shouldAutoStartFullscreenWizard(status: HostStatus | null): boolean {
   return (
     !hasBlockingMaintenanceOperation(status) &&
-    (status?.installation?.kind === 'fresh' || status?.installation?.kind === 'installing')
+    (status?.installation?.kind === 'fresh' ||
+      status?.installation?.kind === 'installing' ||
+      (status?.installation?.kind === 'docker-unavailable' && !status.envExists))
   );
 }
 

@@ -18,6 +18,13 @@ import { sha256File } from './sha256-file.js';
 
 export { sha256File };
 
+/** Windows ships bsdtar; do not depend on the shortcut PATH. */
+export function archiveTool(): string {
+  return process.platform === 'win32'
+    ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe')
+    : 'tar';
+}
+
 export const PFUPDATE_COMPOSE_TEMPLATE_FILES = ['docker-compose.delivery.yml'] as const;
 
 /** Installed from .pfupdate when present (lab/legacy); rolled back with other compose templates. */
@@ -54,10 +61,21 @@ export type TarArchiveEntry = {
 };
 
 export function assertPathInsideRoot(root: string, target: string): void {
-  const resolvedRoot = path.resolve(root);
-  const resolvedTarget = path.resolve(target);
+  const canonical = (value: string): string => {
+    const absolute = path.resolve(value);
+    try {
+      return fs.realpathSync(absolute);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      const parent = path.dirname(absolute);
+      if (parent === absolute) throw error;
+      return path.join(canonical(parent), path.basename(absolute));
+    }
+  };
+  const resolvedRoot = canonical(root);
+  const resolvedTarget = canonical(target);
   const relative = path.relative(resolvedRoot, resolvedTarget);
-  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
     throw new Error(`PFUPDATE_PATH_ESCAPE: ${target}`);
   }
 }
@@ -101,6 +119,8 @@ function extractTarEntryNameFromVerboseLine(line: string): string | null {
 }
 
 export function parseVerboseTarListLine(line: string): TarArchiveEntry | null {
+  if (/\s$/.test(line.replace(/\r$/, '')))
+    throw new Error('PFUPDATE_TAR_PATH_UNSAFE: trailing whitespace');
   const trimmed = line.trim();
   if (!trimmed) {
     return null;
@@ -202,7 +222,7 @@ export function validateExtractedPfupdate(
 }
 
 export function normalizeTarEntryName(entry: string): string {
-  let name = entry.trim();
+  let name = entry;
   if (name.startsWith('./')) {
     name = name.slice(2);
   }
@@ -213,13 +233,19 @@ export function normalizeTarEntryName(entry: string): string {
 }
 
 export function validateTarArchiveEntries(entries: TarArchiveEntry[]): void {
+  const seen = new Set<string>();
   for (const entry of entries) {
     if (!entry.name) {
+      if (entry.type !== 'directory' || entry.rawName !== './')
+        throw new Error(`PFUPDATE_TAR_PATH_UNSAFE: ${entry.rawName}`);
       continue;
     }
     if (entry.type !== 'file' && entry.type !== 'directory') {
       throw new Error(`PFUPDATE_TAR_ENTRY_UNSUPPORTED: ${entry.type} ${entry.rawName}`);
     }
+    const key = entry.name.toLowerCase();
+    if (seen.has(key)) throw new Error(`PFUPDATE_TAR_DUPLICATE: ${entry.rawName}`);
+    seen.add(key);
     if (!isPfupdateRelativePath(entry.name)) {
       throw new Error(`PFUPDATE_TAR_PATH_UNSAFE: ${entry.rawName}`);
     }
@@ -233,7 +259,7 @@ export function parseTarVerboseListOutput(stdout: string): TarArchiveEntry[] {
     if (!trimmed) {
       continue;
     }
-    const parsed = parseVerboseTarListLine(trimmed);
+    const parsed = parseVerboseTarListLine(line.replace(/\r$/, ''));
     if (!parsed) {
       throw new Error(`PFUPDATE_TAR_LIST_UNPARSEABLE: ${trimmed}`);
     }
@@ -244,7 +270,10 @@ export function parseTarVerboseListOutput(stdout: string): TarArchiveEntry[] {
 
 export function listTarArchiveEntriesVerbose(archivePath: string): TarArchiveEntry[] {
   const resolvedArchive = path.resolve(archivePath);
-  const result = spawnSync('tar', ['-tvzf', resolvedArchive], { encoding: 'utf8' });
+  const result = spawnSync(archiveTool(), ['-tvzf', resolvedArchive], {
+    encoding: 'utf8',
+    windowsHide: true,
+  });
   if (result.status !== 0) {
     const detail = [result.stderr, result.stdout].filter(Boolean).join('\n').trim();
     throw new Error(detail || 'PFUPDATE_LIST_FAILED');
@@ -269,7 +298,7 @@ export function extractPfupdateArchive(archivePath: string, stagingDir: string):
 
   fs.mkdirSync(stagingDir, { recursive: true });
 
-  const result = spawnSync('tar', ['xzf', resolvedArchive, '-C', stagingDir], {
+  const result = spawnSync(archiveTool(), ['xzf', resolvedArchive, '-C', stagingDir], {
     encoding: 'utf8',
   });
   if (result.status !== 0) {

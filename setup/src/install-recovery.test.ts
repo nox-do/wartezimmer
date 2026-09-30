@@ -84,6 +84,7 @@ async function withInstallFixture(
       `#!${process.execPath}
 const fs = require('node:fs');
 const args = process.argv.slice(2);
+if (args[0] === 'compose' && args[1] === 'version') console.log('2.24.4');
 fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify(args) + '\\n');
 if (args.includes('down') && fs.existsSync(${JSON.stringify(failDown)})) process.exit(1);
 if (args[0] === 'volume' && args[1] === 'inspect') process.exit(1);

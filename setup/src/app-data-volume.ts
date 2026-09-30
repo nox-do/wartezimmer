@@ -1,3 +1,4 @@
+import { syncDirectory, replaceFile } from './maintenance-files.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { runDockerCommand, type CommandResult } from './docker-cli.js';
@@ -36,7 +37,7 @@ function moveFileIfExists(source: string, target: string): boolean {
     return false;
   }
   ensureDir(path.dirname(target));
-  fs.renameSync(source, target);
+  replaceFile(source, target);
   return true;
 }
 
@@ -100,7 +101,7 @@ export function createLocalAppDataAccess(dataDir: string): AppDataVolumeAccess {
           fs.unlinkSync(target);
         }
         if (copyFileIfExists(source, target)) {
-          const fd = fs.openSync(target, 'r');
+          const fd = fs.openSync(target, process.platform === 'win32' ? 'r+' : 'r');
           try {
             fs.fsyncSync(fd);
           } finally {
@@ -108,12 +109,7 @@ export function createLocalAppDataAccess(dataDir: string): AppDataVolumeAccess {
           }
         }
       }
-      const directory = fs.openSync(dataDir, 'r');
-      try {
-        fs.fsyncSync(directory);
-      } finally {
-        fs.closeSync(directory);
-      }
+      syncDirectory(dataDir);
     },
 
     async listPresentDbFiles(): Promise<string[]> {

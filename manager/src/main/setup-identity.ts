@@ -53,8 +53,13 @@ export function parseSetupReadyLine(line: string): number | null {
 
 export function defaultOsInstallHome(): string {
   if (process.platform === 'win32') {
-    const programData = process.env.ProgramData?.trim() || 'C:\\ProgramData';
-    return path.join(programData, 'PraxisFlow');
+    const legacy = path.join(process.env.ProgramData?.trim() || 'C:\\ProgramData', 'PraxisFlow');
+    // Never silently abandon an existing Windows installation.
+    if (fs.existsSync(legacy)) return legacy;
+    return path.join(
+      process.env.LOCALAPPDATA?.trim() || path.join(os.homedir(), 'AppData', 'Local'),
+      'PraxisFlow',
+    );
   }
   if (process.platform === 'darwin') {
     return path.join(os.homedir(), 'Library', 'Application Support', 'PraxisFlow');
@@ -65,6 +70,8 @@ export function defaultOsInstallHome(): string {
 export function expectedSetupInstallHome(isPackaged: boolean, moduleDir: string): string {
   const fromEnv = process.env.PRAXIS_FLOW_HOME?.trim();
   if (fromEnv) {
+    if (process.platform === 'win32' && !/^[a-z]:[\\/]/i.test(fromEnv))
+      throw new Error('PRAXIS_FLOW_HOME benötigt einen absoluten lokalen Windows-Laufwerkspfad.');
     return path.resolve(fromEnv);
   }
   if (isPackaged) {
@@ -90,7 +97,10 @@ export function expectedSetupBuildId(isPackaged: boolean, moduleDir: string): st
 }
 
 export function managerInstanceUserDataKey(installHome: string): string {
-  return createHash('sha256').update(installHome).digest('hex').slice(0, 12);
+  return createHash('sha256')
+    .update(process.platform === 'win32' ? path.resolve(installHome).toLowerCase() : installHome)
+    .digest('hex')
+    .slice(0, 12);
 }
 
 export function evaluateSetupHealthIdentity(
@@ -113,7 +123,9 @@ export function evaluateSetupHealthIdentity(
   if (typeof health.installHome !== 'string') {
     return 'Setup-API Health ohne installHome.';
   }
-  if (path.resolve(health.installHome) !== path.resolve(expected.installHome)) {
+  const normalize = (value: string) =>
+    process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
+  if (normalize(health.installHome) !== normalize(expected.installHome)) {
     return `Setup-API Install-Home ${expected.installHome} erwartet, erhalten: ${health.installHome}.`;
   }
   return null;

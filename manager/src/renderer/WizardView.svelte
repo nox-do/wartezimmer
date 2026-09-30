@@ -148,7 +148,7 @@
       <p>{diagnosis.primary.detail}</p>
       <button type="button" class="btn-secondary" onclick={onCancel}>Zum Status</button>
     {:else if snapshot.recoveryPhase && snapshot.recoveryPhase !== 'setup' && controller}
-      <InstallRecoveryPanel {snapshot} {controller} />
+      <InstallRecoveryPanel {snapshot} {controller} {hostPlatform} />
     {:else}
     <WizardStepIndicator current={snapshot.step} />
 

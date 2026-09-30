@@ -12,8 +12,10 @@
     "dist:mac": "npm run prepare:packaged && npm run build && electron-builder --mac dmg",
     "lint": "eslint \"src/**/*.{ts,svelte}\"",
     "smoke:electron": "npm run build && node scripts/smoke-electron.mjs",
-    "test": "node --import tsx --test --test-reporter=dot src/**/*.test.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit && svelte-check --tsconfig tsconfig.json"
+    "test": "node --import tsx --test --test-reporter=dot src/**/*.test.ts && npm run test:packaging",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit && svelte-check --tsconfig tsconfig.json",
+    "dist:win": "npm run prepare:packaged && npm run build && node scripts/build-windows.mjs",
+    "test:packaging": "node --test scripts/nsis-integrity.test.mjs"
   },
   "dependencies": {
     "@praxis-flow/server-shared": "*"
@@ -23,7 +25,7 @@
     "@types/node": "^25.9.1",
     "cross-env": "^7.0.3",
     "electron": "44.4.3",
-    "electron-builder": "^26.15.3",
+    "electron-builder": "26.15.3",
     "electron-vite": "^3.1.0",
     "svelte": "^5.35.5",
     "svelte-check": "^4.3.6",
@@ -70,7 +72,31 @@
       ]
     },
     "dmg": {
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "PraxisFlowManager-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "PraxisFlowManager-${version}-windows-${arch}-setup.${ext}",
+      "executableName": "PraxisFlowManager"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": false,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": false,
+      "uninstallDisplayName": "Praxis Flow Manager",
+      "include": "build/installer.nsh"
     }
   }
 }

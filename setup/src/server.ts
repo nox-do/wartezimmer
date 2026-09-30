@@ -635,6 +635,11 @@ export function startSetupServer(port = Number(process.env.SETUP_HOST_PORT ?? DE
   return server;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href) {
+  // IPC disconnect also fires when the manager crashes or is force-closed.
+  if (process.send) {
+    process.once('disconnect', () => process.exit(0));
+    if (!process.connected) process.exit(0);
+  }
   startSetupServer();
 }

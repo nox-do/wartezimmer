@@ -1,3 +1,4 @@
+import { assertWindowsHostPath } from './windows-host-path.js';
 import { runHostMutation } from './maintenance-operation-guard.js';
 import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
 import fs from 'node:fs';
@@ -24,6 +25,13 @@ import type {
 
 export type { DockerStatus, ComposeServiceStatus, ComposeStatus } from '@praxis-flow/server-shared';
 
+export function supportedComposeVersion(value: string): boolean {
+  const match = value.trim().match(/^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/);
+  if (!match) return false;
+  const [, major, minor, patch] = match.map(Number);
+  return major! > 2 || (major === 2 && (minor! > 24 || (minor === 24 && patch! >= 4)));
+}
+
 export async function detectDocker(): Promise<DockerStatus> {
   const version = await runDockerCommand(['--version'], { timeoutMs: 3_000 });
   if (version.code !== 0) {
@@ -40,11 +48,17 @@ export async function detectDocker(): Promise<DockerStatus> {
   });
   const compose = await runDockerCommand(['compose', 'version', '--short'], { timeoutMs: 3_000 });
 
+  const composeAvailable = compose.code === 0 && supportedComposeVersion(compose.stdout);
   return {
     installed: true,
     daemonRunning: info.code === 0,
-    composeAvailable: compose.code === 0,
-    detail: info.code === 0 ? info.stdout : info.stderr || version.stdout,
+    composeAvailable,
+    detail:
+      info.code !== 0
+        ? info.stderr || version.stdout
+        : !composeAvailable
+          ? 'Docker Compose ab 2.24.4 erforderlich (!override für sichere Portbindungen). Bitte Docker Desktop aktualisieren.'
+          : info.stdout,
   };
 }
 
@@ -213,24 +227,37 @@ function resolveComposeFileList(options: ComposeRunOptions): {
   return { files, wantGateway, gatewaySkipped };
 }
 
-function buildComposeEnv(composeProjectName: string): NodeJS.ProcessEnv {
+export function buildComposeEnv(
+  composeProjectName: string,
+  source: NodeJS.ProcessEnv = process.env,
+): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
-    ...process.env,
+    ...source,
     COMPOSE_PROJECT_NAME: composeProjectName,
   };
   // Persisted setup state is authoritative for security-sensitive host binds.
   // Parent-shell overrides must not silently publish on another address.
-  delete env.SETUP_LAN_APP_IP;
-  delete env.APP_BIND_ADDRESS;
-  delete env.SETUP_RESTRICTED_APP_IP;
-  delete env.SETUP_RESTRICTED_ENABLED;
+  const protectedKeys = new Set([
+    'SETUP_LAN_APP_IP',
+    'APP_BIND_ADDRESS',
+    'SETUP_RESTRICTED_APP_IP',
+    'SETUP_RESTRICTED_ENABLED',
+  ]);
+  // Plain objects are case-sensitive even on Windows. Remove every spelling
+  // before buildDockerEnv canonicalizes keys for the child process.
+  for (const key of Object.keys(env)) {
+    if (protectedKeys.has(key.toUpperCase())) delete env[key];
+  }
   return env;
 }
 
 export function validateStaffBindingEnv(
   env: Map<string, string>,
   interfaces: NetworkInterfaceInfo[],
+  platform: NodeJS.Platform = process.platform,
 ): string | null {
+  if (platform === 'win32' && env.get('SETUP_RESTRICTED_ENABLED')?.trim().toLowerCase() === 'true')
+    return 'Patientenzugang unter Windows gesperrt: Der erforderliche Binding- und Netzwerknachweis fehlt. Restricted-Zugang vor dem Start entfernen.';
   const proxyEnabled = ['1', 'true', 'yes', 'on'].includes(
     (env.get('PROXY_ENABLED')?.trim() || '').toLowerCase(),
   );
@@ -302,6 +329,11 @@ export async function composeUp(options: ComposeUpOptions & { services?: string[
   log: string;
   gatewaySkipped: boolean;
 }> {
+  if (process.platform === 'win32') {
+    const folders = resolveHomeFolders(options.projectRoot);
+    assertWindowsHostPath(folders.imports);
+    assertWindowsHostPath(folders.exports);
+  }
   if (!options.restrictedOperationId) await recoverRestrictedOperation(options, false);
   const { files, wantGateway, gatewaySkipped } = resolveComposeFileList(options);
   const bindingError = options.restrictedOperationId
@@ -646,6 +678,11 @@ export async function composeStop(
 export async function composeRestart(
   options: ComposeRunOptions & { services?: string[] },
 ): Promise<{ ok: boolean; log: string }> {
+  if (process.platform === 'win32') {
+    const folders = resolveHomeFolders(options.projectRoot);
+    assertWindowsHostPath(folders.imports);
+    assertWindowsHostPath(folders.exports);
+  }
   if (!options.restrictedOperationId) await recoverRestrictedOperation(options, false);
   const envPath = path.join(options.projectRoot, '.env');
   if (!fs.existsSync(envPath)) {
