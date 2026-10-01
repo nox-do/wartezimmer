@@ -144,10 +144,10 @@ function tlsDirective(mode: TlsMode, env: Map<string, string>): string {
   if (mode === 'custom') {
     return '\ttls /certs/fullchain.pem /certs/private-key.pem';
   }
-  const pebbleResolvers =
+  const acmeResolvers =
     (env.get('TLS_ACME_DIRECTORY')?.trim().toLowerCase() || '') === 'pebble'
       ? ['\t\t\tresolvers coredns:53']
-      : [];
+      : ['\t\t\tresolvers 1.1.1.1:53'];
   return [
     '\ttls {',
     '\t\tissuer acme {',
@@ -155,7 +155,7 @@ function tlsDirective(mode: TlsMode, env: Map<string, string>): string {
     '\t\t\tdisable_http_challenge',
     '\t\t\tdisable_tlsalpn_challenge',
     '\t\t\tdns acmedns /run/secrets/acme-dns.json',
-    ...pebbleResolvers,
+    ...acmeResolvers,
     '\t\t}',
     '\t}',
   ].join('\n');

@@ -574,6 +574,7 @@ test('generated Caddyfile keeps HTTP app before cutover and uses ACME-DNS withou
   assert.match(caddyfile, /disable_tlsalpn_challenge/);
   assert.doesNotMatch(caddyfile, /password|oneTimeToken/);
   assert.doesNotMatch(caddyfile, /resolvers coredns/);
+  assert.match(caddyfile, /resolvers 1\.1\.1\.1:53/);
   assert.match(caddyfile, /\*\.7fk3m2\.lan\.notaus\.de \{/);
   assert.match(caddyfile, /@staff host staff\.7fk3m2\.lan\.notaus\.de/);
   assert.doesNotMatch(caddyfile, /\nstaff\.7fk3m2\.lan\.notaus\.de \{/);
@@ -698,6 +699,7 @@ test('generated Caddyfile uses CoreDNS resolvers only in pebble directory mode',
   const caddyfile = generateTlsCaddyfile(status, new Map([['TLS_ACME_DIRECTORY', 'pebble']]));
   assert.match(caddyfile, /dir https:\/\/pebble:14000\/dir/);
   assert.match(caddyfile, /resolvers coredns:53/);
+  assert.doesNotMatch(caddyfile, /resolvers 1\.1\.1\.1/);
 });
 
 test('parseTlsDnsResolvers uses public defaults when unset', () => {
@@ -1677,4 +1679,19 @@ test('TLS mutations reject redirected Caddy mounts before stopping or journaling
     );
     assert.equal(readTlsOperation(root), null);
   });
+});
+
+test('managed production and staging ACME use explicit public DNS; custom PEM does not', () => {
+  const status = {
+    ...emptyTlsStatus(),
+    state: 'dns-verified' as const,
+    mode: 'managed' as const,
+    hostname: 'staff.test.lan.notaus.de',
+    installationId: 'test',
+  };
+  for (const directory of ['production', 'staging']) {
+    const env = new Map([['TLS_ACME_DIRECTORY', directory]]);
+    assert.match(generateTlsCaddyfile(status, env), /resolvers 1\.1\.1\.1:53/);
+    assert.doesNotMatch(generateTlsCaddyfile({ ...status, mode: 'custom' }, env), /resolvers /);
+  }
 });

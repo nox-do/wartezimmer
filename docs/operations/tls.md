@@ -563,3 +563,21 @@ vor Cutover. `host-tls.ts` und `proxy-tls.ts` bieten Staff-HTTPS; dessen reale
 Windows-Abnahme bleibt separat offen. Paralleles 443-Publishing, gekreuzte
 Hosts/SNI, fehlendes SNI, IPv6 und Adressverlust dürfen nicht aus erfolgreichen
 Windows-Pfadtests abgeleitet werden. [Abnahmeprotokoll](../open-items.md#windows-abnahmeprotokoll).
+
+
+### Windows-DNS-Teilnachweis vom 2026-10-01
+
+Anwenderseitig bestätigt: Docker-DNS `127.0.0.11` lieferte bei der TXT-Abfrage
+über den Challenge-CNAME NXDOMAIN, während die direkte Abfrage über `1.1.1.1`
+CNAME und TXT korrekt lieferte. Auch der autoritative Zielserver war erreichbar.
+Nach Ergänzung von `resolvers 1.1.1.1:53` im ACME-Issuer und Caddy-Reload wurde
+das Wildcard-Zertifikat erfolgreich ausgestellt. Welcher vorgeschaltete lokale
+Resolver oder Filter den Fehler verursacht hat, ist damit nicht bewiesen.
+
+Der Generator setzt diesen Resolver nun für Managed ACME (Produktion und Staging)
+auf allen Hosts explizit. Ausgehende DNS-Abfragen zu `1.1.1.1:53` müssen im
+Betriebsnetz erlaubt sein; es wird keine Firewallregel automatisch geöffnet.
+Die Einstellung betrifft ACME-DNS-Prüfungen, nicht die DNS-Auflösung der Clients.
+Der Pebble-Prüfstand behält `coredns:53`; Custom-PEM erhält keine ACME-Resolver.
+Die Propagationsprüfung bleibt eingeschaltet. Zertifikatsausstellung ist ein
+Teilnachweis, keine vollständige HTTPS-Cutover-/Restricted-Abnahme.

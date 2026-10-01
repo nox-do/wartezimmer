@@ -22,6 +22,11 @@ Die genaue Windows-/Docker-Version und der Umfang der geprüften Abläufe wurden
 noch nicht protokolliert; dies ist keine vollständige Installations-, Update-,
 Recovery- oder Netzwerkabnahme.
 
+Windows-TLS-Teilnachweis am 2026-10-01: Anwender bestätigt erfolgreiche
+Wildcard-Zertifikatsausstellung nach explizitem ACME-Resolver `1.1.1.1:53`.
+Generator-Fix und Regressionstests übernommen; HTTPS-Cutover, Browserzugriff,
+Erneuerung und Restricted-Abnahme bleiben separat offen. Details: [TLS](operations/tls.md#windows-dns-teilnachweis-vom-2026-10-01).
+
 Nachweise jeweils mit Datum, Plattformversionen, Szenario und Ergebnis ergänzen.
 Ein erledigter Teiltest schließt nicht automatisch die gesamte Zeile.
 
