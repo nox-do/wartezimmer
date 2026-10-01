@@ -15,14 +15,14 @@ export function appImageRef(version) {
   return `${APP_IMAGE_REPOSITORY}:${tag}`;
 }
 
-export function appDockerBuildArgs(version) {
+export function appDockerBuildArgs(version, platform) {
   const tag = String(version ?? '').trim();
   if (!tag) {
     throw new Error('appDockerBuildArgs: version is required');
   }
 
   return [
-    'build',
+    ...(platform ? ['buildx', 'build', '--load', '--platform', platform] : ['build']),
     '-f',
     'app/Dockerfile',
     '-t',

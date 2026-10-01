@@ -42,7 +42,7 @@ test('both release scripts build the app image via the shared helper', () => {
     );
     assert.match(
       source,
-      /appDockerBuildArgs\(version\)/,
+      /appDockerBuildArgs\(version(?:, platform)?\)/,
       `${fileName} must call appDockerBuildArgs`,
     );
     assert.equal(

@@ -651,7 +651,7 @@ export type LoadDeliveryImagesResult = {
   sha256Verified: boolean;
   sha256: string;
   releaseVersion: string | null;
-  sha256Source: 'manifest.json' | 'SHA256SUMS.txt';
+  sha256Source: 'manifest.json';
   composeRestarted: boolean;
   compose: ComposeStatus | null;
   restartLog: string | null;

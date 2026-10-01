@@ -66,7 +66,7 @@ npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 
 | Artefakt                   | Build                      | Manager-Weg               | Inhalt (Produkt)                                                           |
 | -------------------------- | -------------------------- | ------------------------- | -------------------------------------------------------------------------- |
-| **`.pfinstall` + Sidecar** | `npm run release:images`   | Wizard → Release-Paket    | Images, Compose-Templates, Basis-Caddyfile, Manifest, SHA256, Caddy-Lizenz |
+| **`.pfinstall`** | `npm run release:images`   | Wizard → Release-Paket    | Images, Compose-Templates, Basis-Caddyfile, Manifest, SHA256, Caddy-Lizenz |
 | **`.pfupdate`**            | `npm run release:pfupdate` | Wartung → Software-Update | dasselbe plus Compose-Templates, `.env.example`; Cutover/Rollback          |
 | **Manager-DMG**            | `npm run dist:manager:mac` | Installation der Hülle    | Electron + eingebettete Setup-API/Templates; eigener Versionszyklus        |
 
@@ -121,7 +121,7 @@ CI: `.github/workflows/release-images.yml` baut bei Tag `v*` das Erstinstall-Art
 | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | **Docker** (Desktop oder Engine) + Compose v2, Daemon läuft                   | Stack starten; Wizard-Schritt 1 prüft Installation/Daemon/Compose                                                                       |
 | **Manager** (DMG oder `npm run dev:manager`)                                  | Operative Hülle; startet die Setup-API als eigenen Child auf Loopback (ephemerer Port, nicht still `:9190`)                             |
-| **Release-Paket** `.pfinstall` + Sidecar (`manifest.json` / `SHA256SUMS.txt`) | Delivery: Images laden (`POST /api/setup/host/images/load`). Dev-Profil (`PRAXIS_FLOW_COMPOSE_PROFILE=dev`): oft **nicht** erforderlich |
+| **Release-Paket** `.pfinstall` (internes Manifest und Inhaltsprüfsummen) | Delivery: Images laden (`POST /api/setup/host/images/load`). Dev-Profil (`PRAXIS_FLOW_COMPOSE_PROFILE=dev`): oft **nicht** erforderlich |
 | **Freie Ports**                                                               | App intern am Host immer **8080** (ohne Proxy offen, mit Proxy nur Loopback); Proxy zusätzlich **80** und bei TLS **443**               |
 | **Import- & Export-Ordner** auf dem Host                                      | Wizard-Schritt 2; unter Docker Desktop: File Sharing für diese Pfade                                                                    |
 | **Feste LAN-IPv4** / DHCP-Reservierung                                        | Für Demo ohne Proxy optional; für Proxy-Staff-Binding, Geräte-URLs und TLS verbindlich                                                  |
@@ -195,8 +195,8 @@ Dev baut lokal (`docker-compose.yml`); Release-Paket oft nicht nötig.
 | Symptom                                      | Typische Ursache                     | Was tun                                                                  |
 | -------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------ |
 | Schritt 1 blockiert: Docker                  | Daemon aus / Compose fehlt           | Docker Desktop starten; Hinweise aus Setup                               |
-| „Release-Paket fehlt“ / Images nicht geladen | Delivery ohne `docker load`          | `.pfinstall` + passenden Sidecar wählen; Laden kann Minuten dauern       |
-| SHA256-Fehler beim Laden                     | Sidecar ≠ Archiv                     | Gleichen Release-Ordner verwenden, nicht mischen                         |
+| „Release-Paket fehlt“ / Images nicht geladen | Delivery ohne `docker load`          | `.pfinstall` wählen (Format 2); Laden kann Minuten dauern       |
+| SHA256-Fehler beim Laden                     | Paket beschädigt                     | Paket erneut kopieren oder mit aktuellem Build-Script neu erstellen                         |
 | Port 8080 belegt                             | anderer Container/Prozess            | Docker-Fehler im Start-/Apply-Ergebnis prüfen; Portkonflikt beheben      |
 | „Import- und Exportordner angeben“           | leere Pfade                          | Ordner anlegen; Docker File Sharing                                      |
 | Keine / falsche LAN-IP; `lanIpStale`         | DHCP-Wechsel, VPN, Adapter           | IP neu wählen; bei TLS-Lease erst IP klären (stale blockiert Lease)      |
@@ -321,16 +321,65 @@ Proxy-Schritt (beide Stack-Pakete): Beim Build Base `caddy:2.11.4@<Registry-Dige
 
 App/Sandbox-Build: `scripts/release-app-image.mjs` (u. a. Build-Arg `PRAXIS_FLOW_STACK_VERSION`); Release-Builds mit SBOM + Provenance (`--sbom=true`, `--provenance=mode=max`).
 
+Beide Paket-Builds verwenden `scripts/release-archive.mjs`. Unter macOS werden
+AppleDouble-Metadaten und Extended Attributes beim Verpacken deaktiviert
+(`--no-mac-metadata`, `--no-xattrs`, `COPYFILE_DISABLE=1`). Damit entstehen keine
+zusätzlichen `._*`-Einträge wie `._.`, die der Windows-Import zu Recht ablehnt.
+Bei `PFUPDATE_TAR_PATH_UNSAFE: ._.` das Paket mit den aktuellen Scripts neu bauen;
+der Importfilter wird dafür nicht gelockert. Ein Regressionstest setzt auf macOS
+reale Extended Attributes auf Staging-Verzeichnis und Datei und prüft beide Pakettypen.
+
 ### 6.1 Erstinstall — `npm run release:images`
 
 Script: `scripts/build-release-images.mjs`
+
+`npm run release:images` baut standardmäßig **beide** Plattformen, jeweils App,
+Sandbox und Proxy. Getrennte Ausgaben:
+
+- `dist/releases/praxis-flow-<ver>/linux-amd64/praxis-flow-<ver>-linux-amd64.pfinstall` — Intel/AMD x64
+- `dist/releases/praxis-flow-<ver>/linux-arm64/praxis-flow-<ver>-linux-arm64.pfinstall` — ARM64, unter anderem Apple Silicon
+
+Nur eine Plattform: `npm run release:images -- --platform amd64` bzw. `--platform arm64`.
+Auch `linux/amd64`, `linux/arm64` und `all` sind gültig. Pack-only:
+`npm run release:images:current -- --platform amd64`; vorhandene Architektur-Tags
+(`:<version>-amd64`/`-arm64`, entsprechend beim Proxy) werden bevorzugt und vor
+Export geprüft. Ohne Auswahl werden auch bei Pack-only beide Plattformen erwartet.
+Nach dem Build zeigen die ursprünglichen Tags auf die zuletzt gebaute Plattform;
+die zusätzlichen Architektur-Tags erhalten beide Varianten für spätere Pack-only-Läufe.
+
+Der Build verwendet explizites `buildx build --load --platform` und exportiert mit
+`docker save --platform`. Voraussetzung auf dem **Build-Rechner**: Docker API ≥ 1.49,
+Buildx und native Builder oder funktionierende Emulation für beide Architekturen.
+Docker Desktop unterstützt [Multi-Plattform-Builds per Emulation](https://docs.docker.com/build/building/multi-platform/).
+[Inspect mit Plattformauswahl](https://docs.docker.com/reference/cli/docker/image/inspect/)
+benötigt API 1.49, [Save mit Plattformauswahl](https://docs.docker.com/reference/cli/docker/image/save/)
+API 1.48. Cross-Builds können deutlich länger dauern; fehlende Emulation bricht den Build ab.
+
+Der Manager vergleicht die Paketplattform vor dem Docker-Import mit der Architektur
+der Docker-Engine, anschließend zusätzlich jedes importierte Image. Eine falsche
+Architektur ergibt einen verständlichen API-Validierungsfehler mit passendem
+Dateinamenssuffix. ARM64-Images sind keine Freigabe des Windows-ARM64-Managers
+oder des Restricted-Zugangs; deren reale Abnahmen bleiben erforderlich.
 
 1. Optional: `docker build` → `praxis-flow/app:<ver>`, `praxis-flow/sandbox:<ver>`
 2. Proxy-Image wie oben vorbereiten
 3. `docker save` der drei Images → `images/praxis-flow-images.tar`
 4. Compose-Templates und `proxy/Caddyfile` nach `templates/` kopieren
-5. Bundle → `praxis-flow-<ver>.pfinstall`
-6. Sidecar daneben: `manifest.json`, `SHA256SUMS.txt`, `THIRD_PARTY_NOTICES.txt`, `licenses/caddy/LICENSE.txt`
+5. Lizenznachweise und internes `manifest.json` mit `installFormatVersion: 2`, Image-Metadaten und SHA256 pro Nutzdatei einbetten
+6. Bundle → `praxis-flow-<ver>-linux-<arch>.pfinstall`; externe Build-Metadaten und `SHA256SUMS.txt` bleiben optional für Transferkontrollen
+
+Für die Weitergabe genügt die einzelne `.pfinstall`. Der aktualisierte Manager prüft
+Archivpfade, Dateitypen, die vollständige Dateiliste und Inhaltsprüfsummen vor Compose-Prüfung
+und Docker-Import. Auch ein umbenanntes Paket ist lesbar. Fehlerhafte interne Metadaten
+führen zum Abbruch, niemals zum Rückgriff auf eine externe Datei. Lizenznachweise liegen
+im Archiv. Die SHA256 des Gesamtarchivs wird lokal für die gepinnte Installationsoperation
+berechnet und vor Aktivierung erneut geprüft. Interne Hashes erkennen Beschädigungen,
+sind aber keine Herausgebersignatur.
+
+Nur `installFormatVersion: 2` mit internem Manifest wird unterstützt. Pakete ohne internes
+Manifest und Format 1 werden abgelehnt; externe Begleitdateien ermöglichen keinen Import.
+Alte Manager können das neue Format nicht lesen: zuerst den Manager aktualisieren.
+Bestehende Pakete werden nicht nachträglich umgewandelt; für das Ein-Datei-Format neu bauen.
 
 **Ausgabe:** `dist/releases/praxis-flow-<ver>/`
 
@@ -521,3 +570,62 @@ dient zum Vergleich nach Kopieren per SMB oder Download (`Get-FileHash -Algorith
 SHA256` unter Windows). Alte Testdateien mit Leerzeichen im Namen sind nicht der
 korrigierte Build. Die Prüfsumme bestätigt Dateiintegrität, keine Signierung und
 keine erfolgreiche Windows-Laufzeitabnahme.
+
+### Recherche Windows ARM64 / Snapdragon (2026-09-30)
+
+Ergebnis: technisch plausibel als native Kombination Windows-ARM64-Manager +
+Docker Desktop ARM/WSL2 + Linux-ARM64-Images; noch keine Produktionsfreigabe.
+Docker führt Windows ARM auch in den aktuellen
+[Release Notes](https://docs.docker.com/desktop/release-notes/) als Early Access.
+Die [Windows-Anforderungen](https://docs.docker.com/desktop/setup/install/windows-install/)
+führen WSL2 für ARM und keine Windows-Container auf. Ziel für einen Pilotversuch:
+physisches Snapdragon-Gerät, unterstütztes Windows 11, lokaler Linux-Daemon,
+ein festes Betriebskonto und lokale Import-/Exportordner. Die Fusion-ARM-VM ist
+kein Ersatz für die Docker-Abnahme auf dieser Hardware.
+
+Konkrete Codebefunde:
+
+- Electron 44 unterstützt native Windows-ARM64-Binaries
+  ([Electron 44](https://www.electronjs.org/blog/electron-44-0)). Manager und
+  paketierte Setup-API zeigen keine zusätzlich erforderlichen nativen
+  Drittanbieter-Addons im untersuchten Startpfad. Dennoch tatsächlichen
+  ARM64-Paketimport/IPC-Start prüfen. `manager/package.json`,
+  `manager/scripts/build-windows.mjs`, Smoke-/Installer-Skripte und CI sind
+  derzeit ausdrücklich x64. NSIS unterstützt grundsätzlich auch kombinierte
+  x64/ARM64-Installer ([Builder-Dokumentation](https://www.electron.build/docs/nsis/));
+  zunächst getrennte architekturspezifische Testinstaller bevorzugen.
+- Die `.pfinstall`-Prüfung verwendet jetzt die Architektur des Docker-Daemons und
+  normalisiert `x86_64`/`aarch64`. Die Updateprüfung verwendet weiterhin
+  `hostDockerPlatform`/`process.arch`; diese sowie Restore/Rollback sind vor einer
+  Freigabe des emulierten x64-Managers auf Snapdragon gesondert abzusichern.
+- `release:images` baut beide Architekturen explizit, mit getrennten Dateinamen,
+  Ausgabeordnern und geprüftem Export (siehe Abschnitt 6.1). `release:pfupdate`
+  verwendet weiterhin die lokale Build-Plattform; durchgängige Architekturauswahl
+  und Benennung für Updatepakete bleiben als separater Folgepunkt offen.
+- Lokal rein lesend geprüft: `praxis-flow/app:6.1.0`,
+  `praxis-flow/sandbox:6.1.0` und `praxis-flow-proxy:2.11.4-acmedns` melden jeweils
+  `linux/arm64`. Das belegt vorhandene ARM-Images, keine Windows-Laufzeitabnahme.
+  App/Flow-Core verwenden `node:sqlite`; Sandbox enthält ClamAV und libunrar;
+  Proxy baut Caddy mit acmedns. ARM64-Pakete sind verfügbar
+  ([ClamAV/libunrar](https://pkgs.alpinelinux.org/package/v3.24/community/aarch64/clamav-libunrar),
+  [Caddy](https://hub.docker.com/_/caddy)). Scan, Signaturupdate, SQLite und
+  Caddy-Modul müssen trotzdem mit den tatsächlichen Release-Images getestet werden.
+- App und Sandbox basieren auf `node:22-alpine`. Die
+  [Node-Image-Dokumentation](https://github.com/nodejs/docker-node#musl-builds-for-alpine)
+  weist auf fehlende Vorabtests für ARM64-musl hin. Für belastbare Freigabe
+  eigene ARM-Laufzeittests verbindlich machen; Debian/glibc als gesonderte
+  Alternative bewerten, nicht im Rahmen dieser Recherche ungeprüft umstellen.
+- TLS-Labor-Compose enthält ausdrücklich amd64-only-Testimages; daher nicht
+  automatisch als native ARM-Abnahme verwenden. Restricted bleibt unabhängig
+  vom Manager-Build ohne separaten Netzwerknachweis unter Windows gesperrt.
+
+Prüfpfad vor Freigabe: native Manager-/NSIS-Tests auf einem
+[Windows-ARM-Runner](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
+und Linux-ARM64-Image-Tests getrennt ausführen. Anschließend auf echtem Snapdragon
+Installation/Update/Deinstallation, CSV-Dateiwechsel im Windows-Bind-Mount,
+SQLite/Backup/Restore, ClamAV mit synthetischen Prüfdaten, Staff-HTTPS,
+Docker-/Host-Neustart und Energiesparmodus prüfen. Falsche Architektur muss vor
+dem Installations-Cutover verständlich abgewiesen werden. Ein x64-Manager auf
+ARM soll dieselbe Daemonarchitektur erkennen wie ein nativer ARM64-Manager.
+Kein neuer ARM-Build, Containerstart oder Installationsversuch erfolgte bei
+dieser Recherche; es wurden Code, Herstellerquellen und vorhandene Image-Metadaten geprüft.

@@ -1,3 +1,4 @@
+import { assertReleasePlatform } from './release-platforms.mjs';
 const SHA256_PATTERN = /^sha256:[a-f0-9]{64}$/;
 
 export const PROXY_DOCKERFILE = 'proxy/Dockerfile';
@@ -45,8 +46,16 @@ export function pinnedImageRef(imageRef, registryDigest) {
   return `${normalizedRef}@${normalizedDigest}`;
 }
 
-function inspectImage(runCapture, imageRef) {
-  return parseImageInspection(runCapture('docker', ['image', 'inspect', imageRef]), imageRef);
+function inspectImage(runCapture, imageRef, platform) {
+  return parseImageInspection(
+    runCapture('docker', [
+      'image',
+      'inspect',
+      ...(platform ? ['--platform', platform] : []),
+      imageRef,
+    ]),
+    imageRef,
+  );
 }
 
 /**
@@ -62,6 +71,7 @@ export function prepareDeliveryProxyImage({
   dockerfile = PROXY_DOCKERFILE,
   context = '.',
   skipBuild = false,
+  platform,
   run,
   runCapture,
 }) {
@@ -69,8 +79,16 @@ export function prepareDeliveryProxyImage({
 
   if (skipBuild) {
     console.log(`Skipping proxy rebuild (--no-build); using local ${imageRef}.`);
-    const custom = inspectImage(runCapture, imageRef);
-    const modules = runCapture('docker', ['run', '--rm', imageRef, 'caddy', 'list-modules']);
+    const custom = inspectImage(runCapture, imageRef, platform);
+    if (platform) assertReleasePlatform(custom.platform, platform, imageRef);
+    const modules = runCapture('docker', [
+      'run',
+      '--rm',
+      ...(platform ? ['--platform', platform] : []),
+      imageRef,
+      'caddy',
+      'list-modules',
+    ]);
     if (!String(modules).includes(PROXY_ACMEDNS_MODULE)) {
       throw new Error(`${imageRef} fehlt Modul ${PROXY_ACMEDNS_MODULE}.`);
     }
@@ -86,11 +104,11 @@ export function prepareDeliveryProxyImage({
   }
 
   console.log(`Pulling approved Caddy base ${sourceRef} …`);
-  run('docker', ['pull', sourceRef]);
+  run('docker', ['pull', ...(platform ? ['--platform', platform] : []), sourceRef]);
 
-  const source = inspectImage(runCapture, sourceRef);
+  const source = inspectImage(runCapture, sourceRef, platform);
   run('docker', ['image', 'tag', sourceRef, baseImageRef]);
-  const tagged = inspectImage(runCapture, baseImageRef);
+  const tagged = inspectImage(runCapture, baseImageRef, platform);
 
   if (source.imageId !== tagged.imageId || source.platform !== tagged.platform) {
     throw new Error(
@@ -100,11 +118,26 @@ export function prepareDeliveryProxyImage({
 
   if (!skipBuild) {
     console.log(`Building delivery proxy ${imageRef} from ${dockerfile} …`);
-    run('docker', ['build', '-f', dockerfile, '-t', imageRef, context]);
+    run('docker', [
+      ...(platform ? ['buildx', 'build', '--load', '--platform', platform] : ['build']),
+      '-f',
+      dockerfile,
+      '-t',
+      imageRef,
+      context,
+    ]);
   }
 
-  const custom = inspectImage(runCapture, imageRef);
-  const modules = runCapture('docker', ['run', '--rm', imageRef, 'caddy', 'list-modules']);
+  const custom = inspectImage(runCapture, imageRef, platform);
+  if (platform) assertReleasePlatform(custom.platform, platform, imageRef);
+  const modules = runCapture('docker', [
+    'run',
+    '--rm',
+    ...(platform ? ['--platform', platform] : []),
+    imageRef,
+    'caddy',
+    'list-modules',
+  ]);
   if (!String(modules).includes(PROXY_ACMEDNS_MODULE)) {
     throw new Error(`${imageRef} fehlt Modul ${PROXY_ACMEDNS_MODULE}.`);
   }

@@ -50,8 +50,6 @@ async function withInstallFixture(
       fs.copyFileSync(path.resolve(import.meta.dirname, '../..', relative), target);
     }
     const archivePath = path.join(root, 'release.pfinstall');
-    const packed = spawnSync('tar', ['-czf', archivePath, '-C', bundle, '.'], { encoding: 'utf8' });
-    assert.equal(packed.status, 0, packed.stderr);
     const images = {
       app: 'praxis-flow/app:1.4.2',
       sandbox: 'praxis-flow/sandbox:1.4.2',
@@ -59,13 +57,27 @@ async function withInstallFixture(
     };
     const imageId = `sha256:${'d'.repeat(64)}`;
     const arch = process.arch === 'x64' ? 'amd64' : process.arch;
+    for (const relative of ['THIRD_PARTY_NOTICES.txt', 'licenses/caddy/LICENSE.txt']) {
+      const file = path.join(bundle, relative);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, 'license fixture');
+    }
+    const files = Object.fromEntries(
+      fs
+        .readdirSync(bundle, { recursive: true })
+        .map(String)
+        .filter((relative) => fs.statSync(path.join(bundle, relative)).isFile())
+        .map((relative) => [
+          relative.split(path.sep).join('/'),
+          sha256File(path.join(bundle, relative)),
+        ]),
+    );
     fs.writeFileSync(
-      path.join(root, 'manifest.json'),
+      path.join(bundle, 'manifest.json'),
       JSON.stringify({
-        installFormatVersion: 1,
+        installFormatVersion: 2,
         version: '1.4.2',
-        archive: 'release.pfinstall',
-        sha256: sha256File(archivePath),
+        files,
         images,
         imageDigests: {
           proxy: {
@@ -76,6 +88,8 @@ async function withInstallFixture(
         },
       }),
     );
+    const packed = spawnSync('tar', ['-czf', archivePath, '-C', bundle, '.'], { encoding: 'utf8' });
+    assert.equal(packed.status, 0, packed.stderr);
     const log = path.join(root, 'docker-calls.jsonl');
     const failDown = path.join(root, 'fail-down');
     const cli = path.join(root, 'docker');
@@ -84,6 +98,7 @@ async function withInstallFixture(
       `#!${process.execPath}
 const fs = require('node:fs');
 const args = process.argv.slice(2);
+if (args[0] === 'info' && args.includes('{{.OSType}}/{{.Architecture}}')) console.log(${JSON.stringify(`linux/${arch}`)});
 if (args[0] === 'compose' && args[1] === 'version') console.log('2.24.4');
 fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify(args) + '\\n');
 if (args.includes('down') && fs.existsSync(${JSON.stringify(failDown)})) process.exit(1);

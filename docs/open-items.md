@@ -16,6 +16,12 @@ keine Abnahme der konkreten Host-/Netzwerkkombination.
 | Proxy-Reparatur                    | Praktischer Repair-Smoke mit bestehender TLS-Identität; automatisierte Identitätserhaltung allein beweist keinen erfolgreichen Container-Neustart ohne neue ACME-Ausstellung                                                                  | [TLS](operations/tls.md)                                       |
 | Manager-Zugänglichkeit             | Native Tastaturbedienung, Fokus nach aufklappender Diagnose und Fehlerankündigungen im Electron-Manager prüfen                                                                                                                                | [Manager](../manager/README.md)                                |
 
+Erster positiver Windows-Praxistest am 2026-10-01: Rückmeldung des Anwenders
+„unter Windows sieht es erstmal gut aus“ nach den Paket- und Architekturkorrekturen.
+Die genaue Windows-/Docker-Version und der Umfang der geprüften Abläufe wurden
+noch nicht protokolliert; dies ist keine vollständige Installations-, Update-,
+Recovery- oder Netzwerkabnahme.
+
 Nachweise jeweils mit Datum, Plattformversionen, Szenario und Ergebnis ergänzen.
 Ein erledigter Teiltest schließt nicht automatisch die gesamte Zeile.
 
@@ -23,6 +29,26 @@ Bereits dokumentierter Teilnachweis: Eigene ACME-Domain mit Pebble/Caddy am
 2026-09-28 erfolgreich geprüft (Wildcard, DNS, Bindings, HTTPS-Cutover,
 HTTP-Redirect, HTTP/2 und SSE); siehe [TLS-Prüfstand](operations/tls.md#review-und-regressionstests-für-eigene-domains).
 Das ersetzt weder Windows- noch reale Zwei-NIC-Abnahme.
+
+Ein-Datei-Installation (`.pfinstall`, Format 2): Builder-/Reader-Regressionen prüfen
+interne Prüfsummen und die Ablehnung des Altformats. Reale Windows-Abnahme offen:
+aktuellen Manager installieren, neu gebautes Paket für die Hostarchitektur **allein** in
+einen lokalen Ordner kopieren, im Wizard wählen; erwartet: Vorbereitung ohne Sidecar
+und erfolgreicher Installationsstart. Eine Nutzdatei im Archiv verändern und neu packen;
+erwartet: verständlicher Paketfehler vor Docker-Import. Danach unverändertes Paket erneut
+wählen; erwartet: erneute Vorbereitung möglich. Zusätzlich beide Pakettypen auf macOS mit den
+aktuellen Build-Scripts erzeugen und unter Windows importieren; erwartet: keine
+AppleDouble-Einträge (`._.`/`._*`), kein `PFUPDATE_TAR_PATH_UNSAFE` aufgrund von
+macOS-Metadaten. Der lokale macOS-Test mit echten Extended Attributes ist grün;
+der reale Windows-Importnachweis steht noch aus.
+
+Architekturpakete: `release:images` baut standardmäßig AMD64 und ARM64 mit
+Architektur im Dateinamen; ein CLI-Test mit simulierter Docker-CLI prüft beide
+Build-/Exportpfade, echte Dual-Architektur-Builds und Laufzeittests stehen noch aus.
+Auf Intel-Windows zuerst das ARM64-Paket wählen: erwartet klare Architekturmeldung
+vor Docker-Import. Danach AMD64 wählen: erwartet Vorbereitung erfolgreich.
+Auf Apple Silicon analog ARM64 erfolgreich, AMD64 abgelehnt. Updatepakete benötigen
+noch die entsprechende explizite Architekturauswahl; Windows-ARM64 ist nicht freigegeben.
 
 ## UI- und technische Folgeentscheidungen (keine Release-Zusage)
 
@@ -108,3 +134,14 @@ und Schließen, Wiederholungsinstallation, Deinstallation. Erwartet: keine CRC-
 Meldung, keine verbleibenden Manager-/Setup-Prozesse, Praxisdaten bleiben erhalten.
 Die frühere Meldung „Manager kann nicht geschlossen werden“ ist separat offen;
 ihre Ursache ist durch die CRC-Korrektur nicht nachgewiesen oder behoben.
+
+### Windows ARM64 / Snapdragon: Recherche abgeschlossen, Umsetzung offen
+
+Siehe [konkrete Befunde und Prüfpfad](operations/delivery.md#recherche-windows-arm64--snapdragon-2026-09-30).
+Native ARM64-Images für App, Sandbox und Proxy sind lokal vorhanden. Noch nötig:
+Daemon- statt Prozessarchitektur auch für die Updateprüfung, ARM64-Manager/NSIS/CI,
+eindeutige AMD64-/ARM64-Updatepakete und reale Snapdragon-Abnahme.
+Die Installationsprüfung nutzt bereits die Daemon-Architektur; `release:images`
+erzeugt getrennte AMD64-/ARM64-Installationspakete. Docker Desktop Windows ARM ist weiterhin Early Access; derzeit nur
+Pilot-Ziel, keine Produktionszusage. Bestehende Windows-x64-Freigabegrenzen und
+Restricted-Sperre bleiben unverändert.

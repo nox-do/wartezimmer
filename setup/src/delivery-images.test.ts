@@ -1,3 +1,4 @@
+import { resolveSetupApiError } from './api-error.js';
 import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -15,10 +16,10 @@ import {
   preparePfinstall,
   activatePreparedPfinstall,
   parseDockerLoadOutput,
-  readExpectedSha256ForArchive,
+  assertPackagePlatform,
+  detectDockerPlatform,
   releaseStateFromLocalDeliveryImagePair,
   selectLocalDeliveryImagePair,
-  verifyReleaseArchiveSha256,
   writeDeliveryImageEnvFromState,
 } from './delivery-images.js';
 import { readEnvMap } from './env-file.js';
@@ -48,6 +49,7 @@ function createBundleSource(): string {
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.writeFileSync(targetPath, `${relativePath}\n`);
   }
+  addEmbeddedManifest(bundleRoot);
   return bundleRoot;
 }
 
@@ -60,10 +62,8 @@ function packBundleSource(bundleRoot: string, archivePath: string): void {
 
 function testReleaseManifest() {
   return {
-    installFormatVersion: 1 as const,
+    installFormatVersion: 2 as const,
     version: '1.4.2',
-    archive: 'release.pfinstall',
-    sha256: 'a'.repeat(64),
     images: {
       app: 'praxis-flow/app:1.4.2',
       sandbox: 'praxis-flow/sandbox:1.4.2',
@@ -137,53 +137,6 @@ test('isDeliveryProfile is true when only delivery compose exists', () => {
     assert.equal(isDeliveryProfile(root), true);
     fs.writeFileSync(path.join(root, 'docker-compose.yml'), 'services: {}\n');
     assert.equal(isDeliveryProfile(root), false);
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
-});
-
-test('readExpectedSha256ForArchive reads manifest.json', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-sha-'));
-  try {
-    const archiveName = 'praxis-flow-1.4.2.pfinstall';
-    const archivePath = path.join(root, archiveName);
-    fs.writeFileSync(archivePath, 'dummy');
-    fs.writeFileSync(
-      path.join(root, 'manifest.json'),
-      JSON.stringify({
-        version: '1.4.2',
-        archive: archiveName,
-        sha256: 'a'.repeat(64),
-      }),
-    );
-    const meta = readExpectedSha256ForArchive(archivePath);
-    assert.equal(meta.expectedSha256, 'a'.repeat(64));
-    assert.equal(meta.source, 'manifest.json');
-    assert.equal(meta.releaseVersion, '1.4.2');
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
-});
-
-test('verifyReleaseArchiveSha256 rejects mismatch', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-sha-mismatch-'));
-  try {
-    const archiveName = 'pkg.tar.gz';
-    const archivePath = path.join(root, archiveName);
-    fs.writeFileSync(archivePath, 'other-content');
-    fs.writeFileSync(path.join(root, 'SHA256SUMS.txt'), `${'b'.repeat(64)}  ${archiveName}\n`);
-    assert.throws(() => verifyReleaseArchiveSha256(archivePath), /RELEASE_SHA256_MISMATCH/);
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
-});
-
-test('readExpectedSha256ForArchive throws when checksum files missing', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-sha-missing-'));
-  try {
-    const archivePath = path.join(root, 'pkg.tar.gz');
-    fs.writeFileSync(archivePath, 'x');
-    assert.throws(() => readExpectedSha256ForArchive(archivePath), /RELEASE_SHA256_MISSING/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -294,9 +247,8 @@ test('prepare pins verified bytes without mutating live installation files and a
   try {
     const archivePath = path.join(root, 'release.pfinstall');
     packBundleSource(source, archivePath);
-    const sha256 = sha256File(archivePath);
     let composeValidated = false;
-    const manifest = { ...testReleaseManifest(), sha256 };
+    const manifest = testReleaseManifest();
     const loaded = [manifest.images.app, manifest.images.sandbox, manifest.images.proxy];
     const prepared = await preparePfinstall(
       root,
@@ -304,13 +256,7 @@ test('prepare pins verified bytes without mutating live installation files and a
       'fresh',
       { installed: true, daemonRunning: true, composeAvailable: true, detail: null },
       {
-        verifyReleaseArchiveSha256: () => ({
-          sha256,
-          expectedSha256: sha256,
-          sha256Source: 'manifest.json',
-          releaseVersion: manifest.version,
-          manifest,
-        }),
+        detectDockerPlatform: async () => testReleaseManifest().imageDigests.proxy.platform,
         validateCompose: async () => {
           composeValidated = true;
         },
@@ -347,24 +293,6 @@ test('prepare pins verified bytes without mutating live installation files and a
   }
 });
 
-function verifiedPfinstallDeps(
-  archivePath: string,
-  overrides: NonNullable<Parameters<typeof preparePfinstall>[4]> = {},
-): NonNullable<Parameters<typeof preparePfinstall>[4]> {
-  const sha256 = sha256File(archivePath);
-  return {
-    verifyReleaseArchiveSha256: () => ({
-      sha256,
-      expectedSha256: sha256,
-      sha256Source: 'manifest.json',
-      releaseVersion: '1.4.2',
-      manifest: testReleaseManifest(),
-    }),
-    validateCompose: async () => {},
-    ...overrides,
-  };
-}
-
 const readyDocker = {
   installed: true,
   daemonRunning: true,
@@ -386,13 +314,13 @@ test('prepare rejects image-only archives before docker load', async () => {
 
     await assert.rejects(
       preparePfinstall(root, archivePath, 'fresh', readyDocker, {
-        ...verifiedPfinstallDeps(archivePath),
+        ...embeddedDeps(),
         dockerLoadArchive: async () => {
           dockerLoadCalled = true;
           return { ok: true, loaded: [], log: 'unexpected load' };
         },
       }),
-      /PFINSTALL_TAR_ENTRY_UNEXPECTED|RELEASE_BUNDLE_UNSUPPORTED/,
+      /Das Installationspaket enthält kein internes Manifest/,
     );
 
     assert.equal(dockerLoadCalled, false);
@@ -415,7 +343,7 @@ test('prepare rejects safe but undeclared archive paths before docker load', asy
 
     await assert.rejects(
       preparePfinstall(root, archivePath, 'fresh', readyDocker, {
-        ...verifiedPfinstallDeps(archivePath),
+        ...embeddedDeps(),
         dockerLoadArchive: async () => {
           dockerLoadCalled = true;
           return { ok: true, loaded: [], log: '' };
@@ -453,13 +381,7 @@ test('prepare rejects unsafe tar entry types before extract', async () => {
       const archivePath = path.join(root, 'release.pfinstall');
       packBundleSource(bundleRoot, archivePath);
       await assert.rejects(
-        preparePfinstall(
-          root,
-          archivePath,
-          'fresh',
-          readyDocker,
-          verifiedPfinstallDeps(archivePath),
-        ),
+        preparePfinstall(root, archivePath, 'fresh', readyDocker, embeddedDeps()),
         /PFUPDATE_TAR_ENTRY_UNSUPPORTED/,
       );
       assert.equal(fs.existsSync(path.join(root, 'proxy', 'Caddyfile')), false);
@@ -481,7 +403,7 @@ test('prepare leaves live templates unchanged when docker load fails', async () 
 
     await assert.rejects(
       preparePfinstall(root, archivePath, 'replace', readyDocker, {
-        ...verifiedPfinstallDeps(archivePath),
+        ...embeddedDeps(),
         dockerLoadArchive: async () => ({ ok: false, loaded: [], log: 'load failed' }),
       }),
       /DOCKER_LOAD_FAILED/,
@@ -515,4 +437,254 @@ test('fresh prepare rejects an existing installation before docker load', async 
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+function addEmbeddedManifest(source: string): void {
+  for (const file of ['THIRD_PARTY_NOTICES.txt', 'licenses/caddy/LICENSE.txt']) {
+    fs.mkdirSync(path.dirname(path.join(source, file)), { recursive: true });
+    fs.writeFileSync(path.join(source, file), 'license fixture');
+  }
+  // Exercise the production build writer against the runtime reader.
+  const writer = new URL('../../scripts/release-install-manifest.mjs', import.meta.url).href;
+  const result = spawnSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      `import { writeInstallManifest } from ${JSON.stringify(writer)};
+     writeInstallManifest(${JSON.stringify(source)}, ${JSON.stringify(testReleaseManifest())});`,
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.equal(result.status, 0, result.stderr);
+}
+
+function embeddedDeps(): NonNullable<Parameters<typeof preparePfinstall>[4]> {
+  const manifest = testReleaseManifest();
+  return {
+    detectDockerPlatform: async () => manifest.imageDigests.proxy.platform,
+    validateCompose: async () => {},
+    dockerLoadArchive: async () => ({ ok: true, loaded: Object.values(manifest.images), log: '' }),
+    imageExists: async () => true,
+    inspectImage: async () => ({
+      imageId: manifest.imageDigests.proxy.archiveImageId,
+      platform: manifest.imageDigests.proxy.platform,
+    }),
+  };
+}
+
+test('build-format v2 installs from a renamed single file and activates the pinned package', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-single-file-'));
+  const source = createBundleSource();
+  try {
+    const archive = path.join(root, 'Kopie mit Umlaut ä.pfinstall');
+    packBundleSource(source, archive);
+    // Unrelated stale sidecars must not override internal metadata.
+    fs.writeFileSync(path.join(root, 'manifest.json'), 'broken old sidecar');
+    const prepared = await preparePfinstall(root, archive, 'fresh', readyDocker, embeddedDeps());
+    assert.equal(prepared.operation.package.sha256, sha256File(archive));
+    fs.rmSync(archive);
+    fs.rmSync(path.join(root, 'manifest.json'));
+    markInstallOperationInstalling(root, prepared.operation.id);
+    assert.equal(activatePreparedPfinstall(root, prepared.operation.id).releaseVersion, '1.4.2');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(source, { recursive: true, force: true });
+  }
+});
+
+test('embedded metadata and payload failures stop before compose validation or Docker load', async (t) => {
+  const cases: [string, (source: string) => void, string][] = [
+    [
+      'broken JSON',
+      (source) => fs.writeFileSync(path.join(source, 'manifest.json'), '{'),
+      'PFINSTALL_MANIFEST_INVALID',
+    ],
+    [
+      'changed image',
+      (source) => fs.appendFileSync(path.join(source, 'images/praxis-flow-images.tar'), 'corrupt'),
+      'PFINSTALL_CONTENT_MISMATCH',
+    ],
+    [
+      'changed template',
+      (source) => fs.appendFileSync(path.join(source, 'templates/proxy/Caddyfile'), 'corrupt'),
+      'PFINSTALL_CONTENT_MISMATCH',
+    ],
+    [
+      'missing license',
+      (source) => fs.rmSync(path.join(source, 'licenses/caddy/LICENSE.txt')),
+      'PFINSTALL_CONTENT_MISMATCH',
+    ],
+    ...[
+      'version',
+      'old version',
+      'missing checksum',
+      'invalid checksum',
+      'extra checksum',
+      'bad metadata',
+    ].map((kind): [string, (source: string) => void, string] => [
+      kind,
+      (source) => {
+        const file = path.join(source, 'manifest.json');
+        const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (kind === 'version') manifest.installFormatVersion = 99;
+        if (kind === 'old version') manifest.installFormatVersion = 1;
+        if (kind === 'missing checksum') delete manifest.files['templates/proxy/Caddyfile'];
+        if (kind === 'invalid checksum') manifest.files['templates/proxy/Caddyfile'] = 'xyz';
+        if (kind === 'extra checksum') manifest.files['../outside'] = 'a'.repeat(64);
+        if (kind === 'bad metadata') manifest.imageDigests.proxy.registryDigest = 5;
+        fs.writeFileSync(file, JSON.stringify(manifest));
+      },
+      kind === 'bad metadata' ? 'PFINSTALL_IMAGE_CONTRACT_INVALID' : 'PFINSTALL_MANIFEST_INVALID',
+    ]),
+  ];
+  for (const [name, mutate, code] of cases)
+    await t.test(name, async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-single-invalid-'));
+      const source = createBundleSource();
+      try {
+        mutate(source);
+        const archive = path.join(root, 'release.pfinstall');
+        packBundleSource(source, archive);
+        const deps = embeddedDeps();
+        deps.validateCompose = async () => assert.fail('must reject before compose');
+        deps.dockerLoadArchive = async () => assert.fail('must reject before docker load');
+        await assert.rejects(
+          preparePfinstall(root, archive, 'fresh', readyDocker, deps),
+          (error: unknown) => {
+            const resolved = resolveSetupApiError(error);
+            assert.equal(resolved.status, 400);
+            assert.equal(resolved.body.error.code, code);
+            return true;
+          },
+        );
+        assert.equal(readInstallOperation(root), null);
+        assert.equal(fs.existsSync(path.join(root, '.env')), false);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+        fs.rmSync(source, { recursive: true, force: true });
+      }
+    });
+});
+
+test('legacy format is rejected even with valid external checksums', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-legacy-manifest-'));
+  const source = createBundleSource();
+  try {
+    const archive = path.join(root, 'release.pfinstall');
+    fs.rmSync(path.join(source, 'manifest.json'));
+    packBundleSource(source, archive);
+    fs.writeFileSync(
+      path.join(root, 'manifest.json'),
+      JSON.stringify({
+        ...testReleaseManifest(),
+        installFormatVersion: 1,
+        archive: 'release.pfinstall',
+        sha256: sha256File(archive),
+      }),
+    );
+    fs.writeFileSync(
+      path.join(root, 'SHA256SUMS.txt'),
+      `${sha256File(archive)}  release.pfinstall\n`,
+    );
+    const deps = embeddedDeps();
+    deps.dockerLoadArchive = async () => assert.fail('must not import legacy images');
+    await assert.rejects(preparePfinstall(root, archive, 'fresh', readyDocker, deps), {
+      code: 'PFINSTALL_MANIFEST_REQUIRED',
+    });
+    assert.equal(readInstallOperation(root), null);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(source, { recursive: true, force: true });
+  }
+});
+
+test('wrong architecture returns an actionable API error before importing images', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-architecture-'));
+  const source = createBundleSource();
+  try {
+    const archive = path.join(root, 'wrong.pfinstall');
+    packBundleSource(source, archive);
+    const deps = embeddedDeps();
+    const wrongHost =
+      testReleaseManifest().imageDigests.proxy.platform === 'linux/arm64'
+        ? 'linux/amd64'
+        : 'linux/arm64';
+    deps.detectDockerPlatform = async () => wrongHost;
+    deps.dockerLoadArchive = async () => assert.fail('must reject before loading');
+    await assert.rejects(preparePfinstall(root, archive, 'fresh', readyDocker, deps), (error) => {
+      const response = resolveSetupApiError(error);
+      assert.equal(response.status, 400);
+      assert.equal(response.body.error.code, 'PFINSTALL_PLATFORM_MISMATCH');
+      assert.match(response.body.error.message, /Falsche Architektur gewählt/);
+      assert.match(response.body.error.message, /AMD64.*ARM64|ARM64.*AMD64/);
+      return true;
+    });
+    assert.equal(readInstallOperation(root), null);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(source, { recursive: true, force: true });
+  }
+});
+
+test('post-load platform mismatch retains its public error instead of becoming internal_error', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-architecture-postload-'));
+  const source = createBundleSource();
+  try {
+    const archive = path.join(root, 'wrong-content.pfinstall');
+    packBundleSource(source, archive);
+    const deps = embeddedDeps();
+    const expected = testReleaseManifest().imageDigests.proxy.platform;
+    deps.inspectImage = async () => ({
+      imageId: 'test',
+      platform: expected === 'linux/arm64' ? 'linux/amd64' : 'linux/arm64',
+    });
+    await assert.rejects(preparePfinstall(root, archive, 'fresh', readyDocker, deps), (error) => {
+      assert.equal(resolveSetupApiError(error).body.error.code, 'PFINSTALL_PLATFORM_MISMATCH');
+      return true;
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(source, { recursive: true, force: true });
+  }
+});
+
+test('platform labels distinguish Intel/AMD x64 from ARM64 in both directions', () => {
+  for (const [actual, expected] of [
+    ['linux/arm64', 'linux/amd64'],
+    ['linux/amd64', 'linux/arm64'],
+  ]) {
+    assert.throws(
+      () => assertPackagePlatform(actual, expected),
+      (error) => {
+        const response = resolveSetupApiError(error);
+        assert.equal(response.status, 400);
+        assert.ok(response.body.error.message.includes(expected.replace('/', '-')));
+        return true;
+      },
+    );
+    assert.doesNotThrow(() => assertPackagePlatform(expected, expected));
+  }
+});
+
+test('Docker engine architecture aliases are normalized independently of the manager process', async () => {
+  for (const [raw, expected] of [
+    ['linux/x86_64', 'linux/amd64'],
+    ['linux/aarch64', 'linux/arm64'],
+    ['linux/amd64', 'linux/amd64'],
+    ['linux/arm64', 'linux/arm64'],
+  ]) {
+    assert.equal(
+      await detectDockerPlatform(async () => ({ code: 0, stdout: raw, stderr: '' })),
+      expected,
+    );
+  }
+  await assert.rejects(
+    detectDockerPlatform(async () => ({ code: 0, stdout: 'windows/amd64', stderr: '' })),
+    { code: 'DOCKER_PLATFORM_UNSUPPORTED' },
+  );
+  await assert.rejects(
+    detectDockerPlatform(async () => ({ code: 1, stdout: '', stderr: 'offline' })),
+    { code: 'DOCKER_PLATFORM_UNSUPPORTED' },
+  );
 });

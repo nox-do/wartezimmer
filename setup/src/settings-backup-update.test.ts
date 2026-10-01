@@ -361,7 +361,7 @@ test('applyPfupdate rejects a wrong app platform before stopping the stack', asy
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.equal(result.failedPhase, UPDATE_PHASES.loadImages);
-      assert.match(result.errors.join(' '), /PFUPDATE_PLATFORM_MISMATCH.*praxis-flow\/app/);
+      assert.match(result.errors.join(' '), /Falsche Architektur gewählt/);
     }
     assert.equal(stopCalls, 0);
   } finally {

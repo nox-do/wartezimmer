@@ -5,6 +5,14 @@ on:
 permissions:
   contents: read
 jobs:
+  macos-release-archive:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.2'
+      - run: node --test scripts/release-archive.test.mjs
   windows:
     runs-on: windows-2022
     timeout-minutes: 25
@@ -14,6 +22,7 @@ jobs:
         with:
           node-version: '22.22.2'
           cache: npm
+      - run: node --test scripts/release-archive.test.mjs
       - run: npm ci
       - run: npm run build:server-shared
       - run: npm run -w @praxis-flow/manager test:packaging
@@ -38,6 +47,11 @@ jobs:
           manager/src/main/process-command.test.ts
           manager/src/main/setup-identity.test.ts
           manager/src/main/manager-profile.test.ts
+      - name: Single-file installation package and legacy rejection
+        run: >-
+          node --import tsx --test
+          --test-name-pattern="build-format v2|embedded metadata|legacy format|wrong architecture|post-load platform|platform labels|Docker engine architecture"
+          setup/src/delivery-images.test.ts
       - name: Compose binding environment regression
         run: node --import tsx --test --test-name-pattern="Compose bindings cannot" setup/src/docker.test.ts
       - name: Build internal x64 NSIS installer (never publish)

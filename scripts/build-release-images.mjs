@@ -11,8 +11,8 @@
  *   PRAXIS_FLOW_RELEASE_VERSION=1.4.2 npm run release:images
  *   npm run release:images:current -- --version 1.4.2   # pack only, skip build
  *
- * Output (under dist/releases/praxis-flow-<version>/):
- *   praxis-flow-<version>.pfinstall (complete offline bundle)
+ * Output (under dist/releases/praxis-flow-<version>/linux-<arch>/):
+ *   praxis-flow-<version>-linux-<arch>.pfinstall (complete offline bundle)
  *   manifest.json
  *   SHA256SUMS.txt
  *   THIRD_PARTY_NOTICES.txt
@@ -27,7 +27,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  releasePlatforms,
+  releaseArchiveName,
+  architectureTag,
+  assertReleasePlatform,
+} from './release-platforms.mjs';
 import { appDockerBuildArgs } from './release-app-image.mjs';
+import { packReleaseArchive } from './release-archive.mjs';
+import { writeInstallManifest } from './release-install-manifest.mjs';
 import { prepareDeliveryProxyImage } from './release-proxy-image.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -38,7 +46,8 @@ function printHelp(proxyImage) {
 Options:
   --version <semver>   Release tag (default: package.json version or PRAXIS_FLOW_RELEASE_VERSION)
   --output <dir>       Output directory (default: dist/releases)
-  --no-build           Skip docker build; package existing local tags only
+  --platform <arch>   amd64, arm64, linux/amd64, linux/arm64, all (default: all)
+  --no-build           Package existing architecture-tagged images only
   --help               Show this help
 
 Images tagged as:
@@ -51,6 +60,7 @@ Images tagged as:
 function parseArgs(argv) {
   let version = process.env.PRAXIS_FLOW_RELEASE_VERSION?.trim() || null;
   let noBuild = false;
+  let platformSelection;
   let outputRoot = path.join(root, 'dist', 'releases');
   let showHelp = false;
 
@@ -70,9 +80,16 @@ function parseArgs(argv) {
       index += 1;
       continue;
     }
+    if (arg === '--platform') {
+      platformSelection = argv[++index];
+      if (!platformSelection) throw new Error('--platform benötigt amd64, arm64 oder all.');
+      continue;
+    }
     if (arg === '--no-build') {
       noBuild = true;
+      continue;
     }
+    throw new Error(`Unbekanntes Argument: ${arg}`);
   }
 
   if (!showHelp) {
@@ -87,7 +104,7 @@ function parseArgs(argv) {
     }
   }
 
-  return { version, noBuild, outputRoot, showHelp };
+  return { version, noBuild, outputRoot, showHelp, platforms: releasePlatforms(platformSelection) };
 }
 
 function run(command, args, options = {}) {
@@ -128,16 +145,20 @@ function assertImageExists(imageRef) {
   runCapture('docker', ['image', 'inspect', imageRef, '--format', '{{.Id}}']);
 }
 
-function buildReleaseImages(version) {
+function buildReleaseImages(version, platform) {
   const appImage = `praxis-flow/app:${version}`;
   const sandboxImage = `praxis-flow/sandbox:${version}`;
 
   console.log(`Building ${appImage} …`);
-  run('docker', appDockerBuildArgs(version));
+  run('docker', appDockerBuildArgs(version, platform));
 
   console.log(`Building ${sandboxImage} …`);
   run('docker', [
+    'buildx',
     'build',
+    '--load',
+    '--platform',
+    platform,
     '-f',
     'sandbox/Dockerfile',
     '-t',
@@ -179,10 +200,10 @@ function copyThirdPartyNotices(outputDir) {
   return relativePaths;
 }
 
-async function packImages(archivePath, imageRefs) {
+async function packImages(archivePath, imageRefs, platform) {
   await fs.promises.mkdir(path.dirname(archivePath), { recursive: true });
 
-  const docker = spawn('docker', ['save', ...imageRefs], {
+  const docker = spawn('docker', ['save', '--platform', platform, ...imageRefs], {
     cwd: root,
     stdio: ['ignore', 'pipe', 'inherit'],
   });
@@ -203,11 +224,11 @@ async function packImages(archivePath, imageRefs) {
   }
 }
 
-async function packReleaseBundle(archivePath, imageRefs) {
+async function packReleaseBundle(archivePath, imageRefs, metadata) {
   const stagingRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'praxis-flow-release-'));
   try {
     const imagesPath = path.join(stagingRoot, 'images', 'praxis-flow-images.tar');
-    await packImages(imagesPath, imageRefs);
+    await packImages(imagesPath, imageRefs, metadata.platform);
 
     for (const relativePath of [
       '.env.example',
@@ -222,14 +243,10 @@ async function packReleaseBundle(archivePath, imageRefs) {
       fs.copyFileSync(path.join(root, relativePath), targetPath);
     }
 
-    const result = spawnSync('tar', ['-czf', archivePath, '-C', stagingRoot, '.'], {
-      cwd: root,
-      encoding: 'utf8',
-    });
-    if (result.status !== 0) {
-      const detail = [result.stderr, result.stdout].filter(Boolean).join('\n').trim();
-      throw new Error(detail || 'RELEASE_BUNDLE_PACK_FAILED');
-    }
+    copyThirdPartyNotices(stagingRoot);
+    writeInstallManifest(stagingRoot, metadata);
+
+    packReleaseArchive(archivePath, stagingRoot);
   } finally {
     await fs.promises.rm(stagingRoot, { recursive: true, force: true });
   }
@@ -246,7 +263,7 @@ async function loadProxyReleaseConfig() {
   };
 }
 
-const { version, noBuild, outputRoot, showHelp } = parseArgs(process.argv.slice(2));
+const { version, noBuild, outputRoot, showHelp, platforms } = parseArgs(process.argv.slice(2));
 const proxyRelease = await loadProxyReleaseConfig();
 const proxyImage = proxyRelease.imageRef;
 
@@ -257,89 +274,121 @@ if (showHelp) {
 
 const appImage = `praxis-flow/app:${version}`;
 const sandboxImage = `praxis-flow/sandbox:${version}`;
-const releaseDir = path.join(outputRoot, `praxis-flow-${version}`);
-const archiveName = `praxis-flow-${version}.pfinstall`;
-const archivePath = path.join(releaseDir, archiveName);
-
 assertDockerReady();
-
-if (noBuild) {
-  console.log('Skipping build (--no-build). Checking local tags …');
-  assertImageExists(appImage);
-  assertImageExists(sandboxImage);
-  assertImageExists(proxyImage);
-} else {
-  buildReleaseImages(version);
+const api = runCapture('docker', ['version', '--format', '{{.Server.APIVersion}}']);
+const [apiMajor, apiMinor] = api.split('.').map(Number);
+if (!(apiMajor > 1 || (apiMajor === 1 && apiMinor >= 49))) {
+  throw new Error(
+    'Für plattformspezifische Release-Pakete ist Docker API 1.49 oder neuer erforderlich. Bitte Docker Desktop bzw. die Build-Engine aktualisieren.',
+  );
 }
+for (const platform of platforms) {
+  const releaseDir = path.join(outputRoot, `praxis-flow-${version}`, platform.replace('/', '-'));
+  const archiveName = releaseArchiveName(version, platform);
+  const archivePath = path.join(releaseDir, archiveName);
 
-const proxyImageDigest = prepareDeliveryProxyImage({
-  imageRef: proxyImage,
-  baseImageRef: proxyRelease.baseImageRef,
-  registryDigest: proxyRelease.registryDigest,
-  skipBuild: noBuild,
-  run,
-  runCapture,
-});
+  if (noBuild) {
+    console.log('Skipping build (--no-build). Checking local tags …');
+    for (const ref of [appImage, sandboxImage, proxyImage]) {
+      const archivedRef = architectureTag(ref, platform);
+      const exists = spawnSync('docker', ['image', 'inspect', archivedRef], { stdio: 'ignore' });
+      if (exists.status === 0) run('docker', ['image', 'tag', archivedRef, ref]);
+      assertImageExists(ref);
+    }
+  } else {
+    buildReleaseImages(version, platform);
+  }
 
-fs.rmSync(releaseDir, { recursive: true, force: true });
-fs.mkdirSync(releaseDir, { recursive: true });
+  const proxyImageDigest = prepareDeliveryProxyImage({
+    imageRef: proxyImage,
+    baseImageRef: proxyRelease.baseImageRef,
+    registryDigest: proxyRelease.registryDigest,
+    skipBuild: noBuild,
+    platform,
+    run,
+    runCapture,
+  });
 
-console.log(`Packing ${archivePath} …`);
-await packReleaseBundle(archivePath, [appImage, sandboxImage, proxyImage]);
+  for (const ref of [appImage, sandboxImage, proxyImage]) {
+    const actual = runCapture('docker', [
+      'image',
+      'inspect',
+      '--platform',
+      platform,
+      ref,
+      '--format',
+      '{{.Os}}/{{.Architecture}}',
+    ]);
+    assertReleasePlatform(actual, platform, ref);
+    run('docker', ['image', 'tag', ref, architectureTag(ref, platform)]);
+  }
 
-const archiveSha256 = sha256File(archivePath);
-const archiveBytes = fs.statSync(archivePath).size;
-const thirdPartyNoticePaths = copyThirdPartyNotices(releaseDir);
-const manifest = {
-  installFormatVersion: 1,
-  version,
-  createdAt: new Date().toISOString(),
-  images: {
-    app: appImage,
-    sandbox: sandboxImage,
-    proxy: proxyImage,
-  },
-  imageDigests: {
-    proxy: proxyImageDigest,
-  },
-  thirdPartyNotices: thirdPartyNoticePaths,
-  archive: archiveName,
-  sha256: archiveSha256,
-  envExample: {
-    PRAXIS_FLOW_APP_IMAGE: appImage,
-    PRAXIS_FLOW_SANDBOX_IMAGE: sandboxImage,
-    PRAXIS_FLOW_PROXY_IMAGE: proxyImage,
-  },
-  notes: {
-    proxyImageSizeHintMb: 85,
-    proxyImageGzipHintMb: 22,
-    proxyRuntimeDefault: 'disabled',
-  },
-};
+  fs.rmSync(releaseDir, { recursive: true, force: true });
+  fs.mkdirSync(releaseDir, { recursive: true });
 
-writeManifest(releaseDir, manifest);
-writeSha256Sums(releaseDir, [
-  [archiveName, archiveSha256],
-  ...thirdPartyNoticePaths.map((relativePath) => [
-    relativePath,
-    sha256File(path.join(releaseDir, relativePath)),
-  ]),
-]);
+  console.log(`Packing ${archivePath} …`);
+  await packReleaseBundle(archivePath, [appImage, sandboxImage, proxyImage], {
+    version,
+    platform,
+    images: { app: appImage, sandbox: sandboxImage, proxy: proxyImage },
+    imageDigests: { proxy: proxyImageDigest },
+  });
 
-console.log('');
-console.log('Release package ready:');
-console.log(`  ${releaseDir}/`);
-console.log(`    ${archiveName} (${(archiveBytes / (1024 * 1024)).toFixed(1)} MB)`);
-console.log('    manifest.json');
-console.log('    SHA256SUMS.txt');
-console.log('    THIRD_PARTY_NOTICES.txt + licenses/caddy/LICENSE.txt');
-console.log('');
-console.log(`Includes optional offline proxy image ${proxyImage} (xcaddy + acmedns).`);
-console.log('Proxy stays disabled until explicitly enabled in Manager/Setup.');
-console.log('');
-console.log('Upload to customer share (e.g. Google Drive):');
-console.log(`  kompletter Ordner praxis-flow-${version} (inkl. Lizenznachweise)`);
-console.log('');
-console.log(
-  'Manager import expects one .pfinstall containing images, Compose templates, and Caddy.',
-);
+  const archiveSha256 = sha256File(archivePath);
+  const archiveBytes = fs.statSync(archivePath).size;
+  const thirdPartyNoticePaths = copyThirdPartyNotices(releaseDir);
+  const manifest = {
+    installFormatVersion: 2,
+    version,
+    platform,
+    createdAt: new Date().toISOString(),
+    images: {
+      app: appImage,
+      sandbox: sandboxImage,
+      proxy: proxyImage,
+    },
+    imageDigests: {
+      proxy: proxyImageDigest,
+    },
+    thirdPartyNotices: thirdPartyNoticePaths,
+    archive: archiveName,
+    sha256: archiveSha256,
+    envExample: {
+      PRAXIS_FLOW_APP_IMAGE: appImage,
+      PRAXIS_FLOW_SANDBOX_IMAGE: sandboxImage,
+      PRAXIS_FLOW_PROXY_IMAGE: proxyImage,
+    },
+    notes: {
+      proxyImageSizeHintMb: 85,
+      proxyImageGzipHintMb: 22,
+      proxyRuntimeDefault: 'disabled',
+    },
+  };
+
+  writeManifest(releaseDir, manifest);
+  writeSha256Sums(releaseDir, [
+    [archiveName, archiveSha256],
+    ...thirdPartyNoticePaths.map((relativePath) => [
+      relativePath,
+      sha256File(path.join(releaseDir, relativePath)),
+    ]),
+  ]);
+
+  console.log('');
+  console.log('Release package ready:');
+  console.log(`  ${releaseDir}/`);
+  console.log(`    ${archiveName} (${(archiveBytes / (1024 * 1024)).toFixed(1)} MB)`);
+  console.log('    manifest.json (optional build metadata)');
+  console.log('    SHA256SUMS.txt (optional transfer checksum)');
+  console.log('    THIRD_PARTY_NOTICES.txt + licenses/caddy/LICENSE.txt');
+  console.log('');
+  console.log(`Includes optional offline proxy image ${proxyImage} (xcaddy + acmedns).`);
+  console.log('Proxy stays disabled until explicitly enabled in Manager/Setup.');
+  console.log('');
+  console.log('Upload to customer share (e.g. Google Drive):');
+  console.log(`  ${archiveName} (Manifest, Prüfsummen und Lizenznachweise enthalten)`);
+  console.log('');
+  console.log(
+    'Manager import expects one .pfinstall containing images, Compose templates, and Caddy.',
+  );
+}

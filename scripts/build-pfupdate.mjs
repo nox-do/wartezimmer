@@ -12,6 +12,7 @@
  *   dist/releases/praxis-flow-update-<version>.pfupdate
  */
 
+import { packReleaseArchive } from './release-archive.mjs';
 import { createHash } from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
@@ -427,7 +428,7 @@ try {
   );
 
   console.log(`Packing ${archivePath} …`);
-  run('tar', ['czf', archivePath, '-C', stagingRoot, '.']);
+  packReleaseArchive(archivePath, stagingRoot);
 
   await validateBuiltPackage(archivePath);
 

@@ -1,3 +1,4 @@
+import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
 import { replaceFile } from './maintenance-files.js';
 import { archiveTool } from './pfupdate-package.js';
 import { spawnSync } from 'node:child_process';
@@ -55,7 +56,7 @@ export type LoadDeliveryImagesCoreResult = {
   sha256Verified: boolean;
   sha256: string;
   releaseVersion: string | null;
-  sha256Source: 'manifest.json' | 'SHA256SUMS.txt';
+  sha256Source: 'manifest.json';
 };
 
 export function isDeliveryProfile(projectRoot: string): boolean {
@@ -202,13 +203,13 @@ const RELEASE_BUNDLE_TEMPLATE_PATHS = [
 type PreparedReleaseBundle = {
   dockerArchivePath: string;
   stagingDir: string | null;
+  manifest: ReleaseManifest;
 };
 
 type ReleaseManifest = {
-  installFormatVersion: 1;
+  installFormatVersion: 2;
   version: string;
-  archive: string;
-  sha256: string;
+  platform?: string;
   images: { app: string; sandbox: string; proxy: string };
   imageDigests: {
     proxy: { registryDigest: string; archiveImageId: string; platform: string };
@@ -221,21 +222,54 @@ export function hostDockerPlatform(arch = process.arch): string {
   return `linux/${arch === 'x64' ? 'amd64' : arch}`;
 }
 
+export async function detectDockerPlatform(run = runDockerCommand): Promise<string> {
+  const result = await run(['info', '--format', '{{.OSType}}/{{.Architecture}}'], {
+    timeoutMs: 5_000,
+  });
+  const normalized = result.stdout
+    .trim()
+    .toLowerCase()
+    .replace(/\/x86_64$/, '/amd64')
+    .replace(/\/aarch64$/, '/arm64');
+  if (result.code !== 0 || !['linux/amd64', 'linux/arm64'].includes(normalized)) {
+    throw releaseValidationError(
+      'DOCKER_PLATFORM_UNSUPPORTED',
+      'Die Docker-Architektur konnte nicht als Linux AMD64 oder ARM64 erkannt werden. Bitte Docker Desktop im Linux-Containerbetrieb starten und erneut prüfen.',
+    );
+  }
+  return normalized;
+}
+
+export function assertPackagePlatform(
+  actual: string,
+  expected: string,
+  code = 'PFINSTALL_PLATFORM_MISMATCH',
+): void {
+  if (actual.toLowerCase() === expected) return;
+  const label = (platform: string) =>
+    platform === 'linux/amd64'
+      ? 'AMD64 (Intel/AMD, x64)'
+      : platform === 'linux/arm64'
+        ? 'ARM64 (Apple Silicon/Snapdragon)'
+        : platform;
+  const suffix = expected.split('/')[1];
+  throw releaseValidationError(
+    code,
+    `Falsche Architektur gewählt: Dieses Paket ist für ${label(actual)}. Ihre Docker-Engine benötigt ${label(expected)}. Bitte das Paket mit „linux-${suffix}“ im Dateinamen auswählen.`,
+  );
+}
+
 export async function inspectImagesForHostPlatform(
   refs: readonly string[],
   inspectImage: (ref: string) => Promise<DockerImageInspection> = inspectDockerImage,
   errorCode = 'DOCKER_IMAGE_PLATFORM_MISMATCH',
+  expected = hostDockerPlatform(),
 ): Promise<Map<string, DockerImageInspection>> {
   const inspections = await Promise.all(
     refs.map(async (ref) => [ref, await inspectImage(ref)] as const),
   );
-  const expected = hostDockerPlatform();
-  for (const [ref, inspection] of inspections) {
-    if (inspection.platform.toLowerCase() !== expected) {
-      throw new Error(
-        `${errorCode}: ${ref} is ${inspection.platform || 'unknown'}, expected ${expected}`,
-      );
-    }
+  for (const [, inspection] of inspections) {
+    assertPackagePlatform(inspection.platform, expected, errorCode);
   }
   return new Map(inspections);
 }
@@ -251,10 +285,33 @@ export async function inspectDockerImage(ref: string): Promise<DockerImageInspec
 }
 
 function prepareReleaseBundle(archivePath: string): PreparedReleaseBundle {
-  const entries = listTarArchiveEntriesVerbose(archivePath);
-  validateTarArchiveEntries(entries);
+  const entries = (() => {
+    try {
+      const result = listTarArchiveEntriesVerbose(archivePath);
+      validateTarArchiveEntries(result);
+      return result;
+    } catch (cause) {
+      const detail = cause instanceof Error ? cause.message.split(':')[0] : 'TAR_INVALID';
+      throw releaseValidationError(
+        'PFINSTALL_ARCHIVE_INVALID',
+        `Das Installationspaket ist beschädigt oder enthält unzulässige Archiv-Einträge (${detail}). Bitte die .pfinstall-Datei erneut beziehen.`,
+      );
+    }
+  })();
   const dockerArchive = 'images/praxis-flow-images.tar';
-  const allowedFiles = new Set<string>([dockerArchive, ...RELEASE_BUNDLE_TEMPLATE_PATHS]);
+  if (!entries.some((entry) => entry.name === 'manifest.json')) {
+    throw releaseValidationError(
+      'PFINSTALL_MANIFEST_REQUIRED',
+      'Das Installationspaket enthält kein internes Manifest. Das alte Paketformat wird nicht mehr unterstützt. Bitte die .pfinstall-Datei mit dem aktuellen Build-Script neu erstellen.',
+    );
+  }
+  const payloadFiles = [
+    dockerArchive,
+    ...RELEASE_BUNDLE_TEMPLATE_PATHS,
+    'THIRD_PARTY_NOTICES.txt',
+    'licenses/caddy/LICENSE.txt',
+  ];
+  const allowedFiles = new Set<string>([...payloadFiles, 'manifest.json']);
   for (const entry of entries) {
     if (!entry.name) continue;
     const allowed =
@@ -274,98 +331,77 @@ function prepareReleaseBundle(archivePath: string): PreparedReleaseBundle {
   });
   if (extracted.status !== 0) {
     fs.rmSync(stagingDir, { recursive: true, force: true });
-    const detail = [extracted.stderr, extracted.stdout].filter(Boolean).join('\n').trim();
-    throw new Error(detail || 'RELEASE_BUNDLE_EXTRACT_FAILED');
-  }
-
-  for (const relativePath of RELEASE_BUNDLE_TEMPLATE_PATHS) {
-    try {
-      assertRegularFileInStaging(stagingDir, relativePath);
-    } catch {
-      fs.rmSync(stagingDir, { recursive: true, force: true });
-      throw new Error(`RELEASE_BUNDLE_TEMPLATE_MISSING: ${relativePath}`);
-    }
-  }
-  assertRegularFileInStaging(stagingDir, dockerArchive);
-
-  return {
-    dockerArchivePath: path.join(stagingDir, dockerArchive),
-    stagingDir,
-  };
-}
-
-export function readExpectedSha256ForArchive(archivePath: string): {
-  expectedSha256: string;
-  source: 'manifest.json' | 'SHA256SUMS.txt';
-  releaseVersion: string | null;
-  manifest: ReleaseManifest | null;
-} {
-  const dir = path.dirname(archivePath);
-  const fileName = path.basename(archivePath);
-
-  const manifestPath = path.join(dir, 'manifest.json');
-  if (fs.existsSync(manifestPath)) {
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as ReleaseManifest;
-    const expectedSha256 = manifest.sha256?.trim().toLowerCase();
-    if (expectedSha256) {
-      if (manifest.archive && manifest.archive !== fileName) {
-        throw new Error(
-          `RELEASE_MANIFEST_ARCHIVE_MISMATCH: manifest archive=${manifest.archive}, selected=${fileName}`,
-        );
-      }
-      return {
-        expectedSha256,
-        source: 'manifest.json',
-        releaseVersion: manifest.version?.trim() || null,
-        manifest,
-      };
-    }
-  }
-
-  const sumsPath = path.join(dir, 'SHA256SUMS.txt');
-  if (fs.existsSync(sumsPath)) {
-    for (const line of fs.readFileSync(sumsPath, 'utf8').split(/\r?\n/)) {
-      const match = line.match(/^([a-fA-F0-9]{64})\s{1,2}(.+)$/);
-      if (!match) {
-        continue;
-      }
-      const expectedSha256 = match[1].toLowerCase();
-      const listedFile = match[2].trim();
-      if (listedFile === fileName) {
-        return {
-          expectedSha256,
-          source: 'SHA256SUMS.txt',
-          releaseVersion: null,
-          manifest: null,
-        };
-      }
-    }
-  }
-
-  throw new Error('RELEASE_SHA256_MISSING');
-}
-
-export function verifyReleaseArchiveSha256(archivePath: string): {
-  sha256: string;
-  expectedSha256: string;
-  sha256Source: 'manifest.json' | 'SHA256SUMS.txt';
-  releaseVersion: string | null;
-  manifest: ReleaseManifest | null;
-} {
-  const meta = readExpectedSha256ForArchive(archivePath);
-  const actualSha256 = sha256File(archivePath);
-  if (actualSha256 !== meta.expectedSha256) {
-    throw new Error(
-      `RELEASE_SHA256_MISMATCH: expected ${meta.expectedSha256}, got ${actualSha256}`,
+    throw releaseValidationError(
+      'PFINSTALL_EXTRACT_FAILED',
+      'Das Installationspaket kann nicht entpackt werden. Bitte freien Speicherplatz und Zugriffsrechte prüfen und die .pfinstall-Datei erneut kopieren.',
     );
   }
-  return {
-    sha256: actualSha256,
-    expectedSha256: meta.expectedSha256,
-    sha256Source: meta.source,
-    releaseVersion: meta.releaseVersion,
-    manifest: meta.manifest,
-  };
+
+  try {
+    for (const relativePath of RELEASE_BUNDLE_TEMPLATE_PATHS) {
+      try {
+        assertRegularFileInStaging(stagingDir, relativePath);
+      } catch {
+        throw releaseValidationError(
+          'PFINSTALL_CONTENT_MISMATCH',
+          `Das Installationspaket ist unvollständig (${relativePath}). Bitte die .pfinstall-Datei erneut beziehen.`,
+        );
+      }
+    }
+    assertRegularFileInStaging(stagingDir, dockerArchive);
+    const manifest = validateEmbeddedManifest(stagingDir, payloadFiles);
+    return { dockerArchivePath: path.join(stagingDir, dockerArchive), stagingDir, manifest };
+  } catch (error) {
+    fs.rmSync(stagingDir, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+function validateEmbeddedManifest(root: string, payloadFiles: string[]): ReleaseManifest {
+  const invalid = () =>
+    releaseValidationError(
+      'PFINSTALL_MANIFEST_INVALID',
+      'Das interne Manifest des Installationspakets fehlt, ist beschädigt oder hat ein nicht unterstütztes Format. Bitte das Paket erneut beziehen und einen aktuellen Manager verwenden.',
+    );
+  let parsed: unknown;
+  try {
+    assertRegularFileInStaging(root, 'manifest.json');
+    const manifestPath = path.join(root, 'manifest.json');
+    if (fs.statSync(manifestPath).size > 1024 * 1024) throw invalid();
+    parsed = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  } catch {
+    throw invalid();
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw invalid();
+  const manifest = parsed as ReleaseManifest & { files?: Record<string, unknown> };
+  if (
+    manifest.installFormatVersion !== 2 ||
+    !manifest.files ||
+    typeof manifest.files !== 'object' ||
+    Array.isArray(manifest.files) ||
+    Object.keys(manifest.files).length !== payloadFiles.length ||
+    !payloadFiles.every((file) => Object.hasOwn(manifest.files!, file))
+  )
+    throw invalid();
+  validatePfinstallManifest(manifest);
+  for (const file of payloadFiles) {
+    const checksum = manifest.files[file];
+    if (typeof checksum !== 'string' || !/^[a-f0-9]{64}$/i.test(checksum)) throw invalid();
+    try {
+      assertRegularFileInStaging(root, file);
+      if (sha256File(path.join(root, file)) !== checksum.toLowerCase()) throw new Error('digest');
+    } catch {
+      throw releaseValidationError(
+        'PFINSTALL_CONTENT_MISMATCH',
+        `Das Installationspaket ist unvollständig oder beschädigt (${file}). Bitte die .pfinstall-Datei erneut kopieren oder herunterladen.`,
+      );
+    }
+  }
+  return manifest;
+}
+
+function releaseValidationError(code: string, message: string): ManagerApiError {
+  return new ManagerApiError({ code, category: 'validation', message, retryable: false });
 }
 
 function ensureEnvFromExample(projectRoot: string): string {
@@ -477,11 +513,11 @@ export async function auditDeliveryImages(input: {
 }
 
 export type LoadDeliveryImagesDeps = {
-  verifyReleaseArchiveSha256?: typeof verifyReleaseArchiveSha256;
   dockerLoadArchive?: typeof dockerLoadArchive;
   imageExists?: typeof dockerImageExists;
   inspectImage?: typeof inspectDockerImage;
   validateCompose?: (templatesRoot: string) => Promise<void>;
+  detectDockerPlatform?: typeof detectDockerPlatform;
 };
 
 export type PreparePfinstallResult = {
@@ -534,19 +570,29 @@ async function validatePreparedCompose(templatesRoot: string): Promise<void> {
   }
 }
 
-function validatePfinstallManifest(manifest: ReleaseManifest | null): ReleaseManifest {
-  if (!manifest) throw new Error('PFINSTALL_MANIFEST_REQUIRED');
+function validatePfinstallManifest(manifest: ReleaseManifest): ReleaseManifest {
   const expectedApp = `praxis-flow/app:${manifest.version}`;
   const expectedSandbox = `praxis-flow/sandbox:${manifest.version}`;
   if (
-    manifest.installFormatVersion !== 1 ||
+    manifest.installFormatVersion !== 2 ||
+    (manifest.platform !== undefined &&
+      !['linux/amd64', 'linux/arm64'].includes(manifest.platform)) ||
+    typeof manifest.version !== 'string' ||
+    !/^[0-9A-Za-z][0-9A-Za-z._-]*$/.test(manifest.version) ||
+    typeof manifest.imageDigests?.proxy?.registryDigest !== 'string' ||
+    typeof manifest.imageDigests?.proxy?.archiveImageId !== 'string' ||
+    !/^sha256:[a-f0-9]{64}$/i.test(manifest.imageDigests.proxy.archiveImageId) ||
+    typeof manifest.imageDigests?.proxy?.platform !== 'string' ||
     manifest.images?.app !== expectedApp ||
     manifest.images?.sandbox !== expectedSandbox ||
     manifest.images?.proxy !== PRAXIS_FLOW_PROXY_IMAGE_REF ||
     manifest.imageDigests?.proxy?.registryDigest?.toLowerCase() !==
       PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST
   ) {
-    throw new Error('PFINSTALL_IMAGE_CONTRACT_INVALID');
+    throw releaseValidationError(
+      'PFINSTALL_IMAGE_CONTRACT_INVALID',
+      'Das Installationspaket enthält ungültige oder inkompatible Image-Metadaten. Bitte ein passendes Paket und einen aktuellen Manager verwenden.',
+    );
   }
   return manifest;
 }
@@ -570,25 +616,30 @@ export async function preparePfinstall(
   if (mode !== 'fresh' && mode !== 'replace') throw new Error('INSTALL_MODE_INVALID');
   if (mode === 'fresh') assertFreshInstallation(projectRoot);
 
-  const verifySha = deps.verifyReleaseArchiveSha256 ?? verifyReleaseArchiveSha256;
   const dockerLoad = deps.dockerLoadArchive ?? dockerLoadArchive;
   const imageExists = deps.imageExists ?? dockerImageExists;
   const inspectImage = deps.inspectImage ?? inspectDockerImage;
   const validateCompose = deps.validateCompose ?? validatePreparedCompose;
-  const shaCheck = verifySha(resolvedArchive);
-  const manifest = validatePfinstallManifest(shaCheck.manifest);
+  const archiveSha256 = sha256File(resolvedArchive);
   const operationId = randomUUID();
   const operationDir = installOperationDirectory(projectRoot, operationId);
   fs.mkdirSync(operationDir, { recursive: true });
   const pinnedArchive = pinnedReleasePath(projectRoot, operationId);
-  fs.copyFileSync(resolvedArchive, pinnedArchive);
 
   let loadedImages: string[] = [];
   let bundle: PreparedReleaseBundle | null = null;
   try {
-    if (sha256File(pinnedArchive) !== shaCheck.sha256)
+    fs.copyFileSync(resolvedArchive, pinnedArchive);
+    if (sha256File(pinnedArchive) !== archiveSha256)
       throw new Error('PFINSTALL_PIN_DIGEST_MISMATCH');
     bundle = prepareReleaseBundle(pinnedArchive);
+    const manifest = bundle.manifest;
+    const expectedPlatform = await (deps.detectDockerPlatform ?? detectDockerPlatform)();
+    assertPackagePlatform(
+      manifest.platform ?? manifest.imageDigests.proxy.platform,
+      expectedPlatform,
+    );
+    assertPackagePlatform(manifest.imageDigests.proxy.platform, expectedPlatform);
     await validateCompose(path.join(bundle.stagingDir!, 'templates'));
     const loadResult = await dockerLoad(bundle.dockerArchivePath);
     loadedImages = loadResult.loaded;
@@ -607,6 +658,7 @@ export async function preparePfinstall(
       [manifest.images.app, manifest.images.sandbox, manifest.images.proxy],
       inspectImage,
       'PFINSTALL_PLATFORM_MISMATCH',
+      expectedPlatform,
     );
     const proxyInspection = inspections.get(manifest.images.proxy)!;
     if (
@@ -618,13 +670,14 @@ export async function preparePfinstall(
     const operation = createPreparedInstallOperation({
       home: projectRoot,
       mode,
-      sha256: shaCheck.sha256,
+      sha256: archiveSha256,
       releaseVersion: manifest.version,
       id: operationId,
     });
     return { operation, loadedImages };
   } catch (error) {
     fs.rmSync(operationDir, { recursive: true, force: true });
+    if (error instanceof ManagerApiError) throw error;
     if (loadedImages.length > 0) {
       const message = error instanceof Error ? error.message : 'PFINSTALL_PREPARE_FAILED';
       throw new Error(`${message}; loaded Docker images were retained as unreferenced cache`, {
