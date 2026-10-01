@@ -1,3 +1,6 @@
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/inter/wght-italic.css';
+
 :root {
   color-scheme: light;
   --font-body: 0.9375rem;
@@ -19,6 +22,7 @@
   --banner-warn: #fff4e5;
   --banner-bad: #fdecea;
   font-family:
+    'Inter Variable',
     'Segoe UI',
     system-ui,
     -apple-system,

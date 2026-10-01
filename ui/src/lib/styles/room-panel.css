@@ -1,6 +1,8 @@
 /* Room panel route — scoped under .room-panel-page */
 
 .room-panel-page {
+  /* Preserve the established display typography independently of the UI font. */
+  font-family: var(--font-system);
   min-height: 100dvh;
   height: 100dvh;
   background: #f7f7f4;

@@ -13,3 +13,16 @@ License text: licenses/caddy/LICENSE.txt
 
 Caddy is included as an optional offline reverse proxy. It remains disabled
 until proxy/TLS operation is explicitly enabled through Praxis Flow Manager.
+
+Inter
+-----
+
+Package: @fontsource-variable/inter 5.3.0
+Upstream source: https://github.com/rsms/inter
+Package source: https://www.npmjs.com/package/@fontsource-variable/inter
+License: SIL Open Font License 1.1
+License text: licenses/inter/LICENSE.txt
+
+Inter is bundled locally with the web UI and Manager. No external font service
+is contacted. Each renderer includes licenses/inter/LICENSE.txt in its output.
+TV and room-panel displays retain their existing system-font typography.

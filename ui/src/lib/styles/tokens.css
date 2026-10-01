@@ -140,7 +140,8 @@
   --radius-3xs: calc(var(--radius-xs) - 4px);
   --radius-pill: 999px;
   --radius-full: 50%;
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-system: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Inter Variable', var(--font-system);
   --text-2xs: 0.65rem;
   --text-xs: 0.72rem;
   --text-sm: 0.82rem;
