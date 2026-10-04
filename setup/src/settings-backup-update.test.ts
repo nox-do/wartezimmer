@@ -113,6 +113,7 @@ function mockDeps(appDataDir: string, backupPath: string) {
     createSettingsBackup: async () => ({ envPath: '', backupPath }),
     dockerLoad: async () => ({ ok: true, loaded: [], log: 'loaded' }),
     imageExists: async () => true,
+    detectDockerPlatform: async () => `linux/${process.arch === 'x64' ? 'amd64' : process.arch}`,
     inspectImage: async () => ({
       imageId: `sha256:${'d'.repeat(64)}`,
       platform: `linux/${process.arch === 'x64' ? 'amd64' : process.arch}`,
@@ -672,3 +673,52 @@ for (const failure of [null, 'validation', 'audit'] as const)
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+test('update rejects package architecture before backup, Docker import and cutover', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-preflight-'));
+  try {
+    const archivePath = path.join(dir, 'update.pfupdate');
+    const { appDataDir, backupPath } = seedInstallHome(dir);
+    buildTestPfupdateArchive(archivePath, { platform: 'linux/arm64' });
+    const result = await applyPfupdate(
+      { archivePath, managerVersion: '0.2.0', settingsFormatVersion: 1 },
+      testCtx(dir),
+      {
+        ...mockDeps(appDataDir, backupPath),
+        detectDockerPlatform: async () => 'linux/amd64',
+        createSettingsBackup: async () => assert.fail('no backup before platform check'),
+        dockerLoad: async () => assert.fail('no image import'),
+        stopStack: async () => assert.fail('no cutover'),
+      },
+    );
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.failedPhase, UPDATE_PHASES.validatePackage);
+      assert.match(result.errors.join(' '), /Falsche Architektur.*linux-amd64/);
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('update uses daemon architecture even when manager process has another architecture', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-daemon-'));
+  try {
+    const archivePath = path.join(dir, 'update.pfupdate');
+    const { appDataDir, backupPath } = seedInstallHome(dir);
+    const platform = process.arch === 'arm64' ? 'linux/amd64' : 'linux/arm64';
+    buildTestPfupdateArchive(archivePath, { platform });
+    const result = await applyPfupdate(
+      { archivePath, managerVersion: '0.2.0', settingsFormatVersion: 1 },
+      testCtx(dir),
+      {
+        ...mockDeps(appDataDir, backupPath),
+        detectDockerPlatform: async () => platform,
+        inspectImage: async () => ({ imageId: `sha256:${'d'.repeat(64)}`, platform }),
+      },
+    );
+    assert.equal(result.ok, true, JSON.stringify(result));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

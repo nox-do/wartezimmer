@@ -5,6 +5,15 @@ Konsolidiert am 2026-09-30 aus den bisherigen Reviews und Betriebsdokumenten.
 ist in den geprüften Unterlagen nicht dokumentiert. Automatisierte Tests ersetzen
 keine Abnahme der konkreten Host-/Netzwerkkombination.
 
+Abgleich am 2026-10-04: Die früher als P0/P1 bestätigten Windows-Codebefunde
+sind überwiegend umgesetzt; ihre historischen Prioritäten sind keine Liste
+heutiger offener Defekte. Aktuelle Einstufung und Fundstellen stehen in
+[Delivery](operations/delivery.md#aktuelle-code-bestandsaufnahme-abgleich-2026-10-04).
+Für Produktionsfreigabe stehen insbesondere reale Update-/Recovery-/Datenerhalt-/HTTPS-
+und ACL-Nachweise aus; explizite Architekturwahl für Updatepakete ist umgesetzt.
+Direkte UNC-CSV-Quellen und Restricted auf Windows bleiben Grenzen
+des unterstützten Umfangs; gemappte Laufwerke sind jetzt für Import/Export zugelassen; nur bei entsprechender Anforderung sind sie Einsatzstopper.
+
 ## Release- und Plattformabnahmen
 
 | Thema                              | Noch zu dokumentierender Nachweis                                                                                                                                                                                                             | Aktueller Vertrag                                              |
@@ -52,8 +61,7 @@ Architektur im Dateinamen; ein CLI-Test mit simulierter Docker-CLI prüft beide
 Build-/Exportpfade, echte Dual-Architektur-Builds und Laufzeittests stehen noch aus.
 Auf Intel-Windows zuerst das ARM64-Paket wählen: erwartet klare Architekturmeldung
 vor Docker-Import. Danach AMD64 wählen: erwartet Vorbereitung erfolgreich.
-Auf Apple Silicon analog ARM64 erfolgreich, AMD64 abgelehnt. Updatepakete benötigen
-noch die entsprechende explizite Architekturauswahl; Windows-ARM64 ist nicht freigegeben.
+Auf Apple Silicon analog ARM64 erfolgreich, AMD64 abgelehnt. Updatepakete besitzen dieselbe explizite Architekturauswahl und prüfen die Daemon-Plattform; Windows-ARM64 ist nicht freigegeben.
 
 ## UI- und technische Folgeentscheidungen (keine Release-Zusage)
 
@@ -105,8 +113,10 @@ Signierung und konkrete Mindestversionen bleiben vor externer Auslieferung offen
 ### CSV-Quelle bei Windows-Abnahme
 
 Vor dem Praxistest klären, ob der Export lokal, in einem lokal freigegebenen
-Ordner oder auf einem entfernten SMB-Server liegt. UNC und Netzlaufwerke bleiben
-gesperrt; für entfernte Quellen ist ein gesonderter Transfer erforderlich.
+Ordner oder auf einem entfernten SMB-Server liegt. UNC bleibt gesperrt; ein im
+Betriebskonto gemapptes Netzlaufwerk ist für Import/Export zugelassen. Die Praxis-IT
+verantwortet Verbindung und Zugangsdaten. Docker-Mount, CSV-Wechsel, Export,
+Verbindungsverlust und Wiederverbindung nach Host-Neustart real testen.
 Hostordner → `/imports` → App-Vorschau/Suche einschließlich Dateiwechsel und
 Neustart nach [Runtime-Vertrag](operations/runtime.md) tatsächlich prüfen.
 
@@ -144,8 +154,8 @@ ihre Ursache ist durch die CRC-Korrektur nicht nachgewiesen oder behoben.
 
 Siehe [konkrete Befunde und Prüfpfad](operations/delivery.md#recherche-windows-arm64--snapdragon-2026-09-30).
 Native ARM64-Images für App, Sandbox und Proxy sind lokal vorhanden. Noch nötig:
-Daemon- statt Prozessarchitektur auch für die Updateprüfung, ARM64-Manager/NSIS/CI,
-eindeutige AMD64-/ARM64-Updatepakete und reale Snapdragon-Abnahme.
+ARM64-Manager/NSIS/CI und reale Snapdragon-Abnahme. Updatepakete haben explizite
+Architekturauswahl und verwenden bei der Prüfung die Docker-Daemon-Architektur.
 Die Installationsprüfung nutzt bereits die Daemon-Architektur; `release:images`
 erzeugt getrennte AMD64-/ARM64-Installationspakete. Docker Desktop Windows ARM ist weiterhin Early Access; derzeit nur
 Pilot-Ziel, keine Produktionszusage. Bestehende Windows-x64-Freigabegrenzen und

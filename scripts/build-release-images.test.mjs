@@ -73,9 +73,17 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
         assert.equal(parsed.imageDigests.proxy.platform, platform);
         assert.equal(Object.keys(parsed.files).length, 9);
       }
+      const updatePackage = path.join(
+        output,
+        'praxis-flow-test',
+        'linux-amd64',
+        'existing.pfupdate',
+      );
+      fs.writeFileSync(updatePackage, 'keep update package');
       fs.writeFileSync(log, '');
       const dedicated = invoke(['--no-build', '--platform', 'amd64']);
       assert.equal(dedicated.status, 0, dedicated.stderr);
+      assert.equal(fs.readFileSync(updatePackage, 'utf8'), 'keep update package');
       const dedicatedCalls = fs.readFileSync(log, 'utf8').trim().split('\n').map(JSON.parse);
       assert.equal(dedicatedCalls.filter((args) => args[0] === 'save').length, 1);
       assert.ok(!dedicatedCalls.some((args) => args[0] === 'buildx'));

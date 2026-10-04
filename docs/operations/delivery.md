@@ -64,11 +64,11 @@ npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 
 ## 3. Artefakte
 
-| Artefakt                   | Build                      | Manager-Weg               | Inhalt (Produkt)                                                           |
-| -------------------------- | -------------------------- | ------------------------- | -------------------------------------------------------------------------- |
+| Artefakt         | Build                      | Manager-Weg               | Inhalt (Produkt)                                                           |
+| ---------------- | -------------------------- | ------------------------- | -------------------------------------------------------------------------- |
 | **`.pfinstall`** | `npm run release:images`   | Wizard → Release-Paket    | Images, Compose-Templates, Basis-Caddyfile, Manifest, SHA256, Caddy-Lizenz |
-| **`.pfupdate`**            | `npm run release:pfupdate` | Wartung → Software-Update | dasselbe plus Compose-Templates, `.env.example`; Cutover/Rollback          |
-| **Manager-DMG**            | `npm run dist:manager:mac` | Installation der Hülle    | Electron + eingebettete Setup-API/Templates; eigener Versionszyklus        |
+| **`.pfupdate`**  | `npm run release:pfupdate` | Wartung → Software-Update | dasselbe plus Compose-Templates, `.env.example`; Cutover/Rollback          |
+| **Manager-DMG**  | `npm run dist:manager:mac` | Installation der Hülle    | Electron + eingebettete Setup-API/Templates; eigener Versionszyklus        |
 
 - Updates laufen **nur** über `.pfupdate`. Das Wizard-`.pfinstall` ist Erstinstall (kein Update-Cutover).
 - Manager-DMG selten neu; unsigned/nicht notarisiert (interne Auslieferung).
@@ -117,14 +117,14 @@ CI: `.github/workflows/release-images.yml` baut bei Tag `v*` das Erstinstall-Art
 
 ### 4.1 Voraussetzungen
 
-| Bedarf                                                                        | Warum                                                                                                                                   |
-| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| **Docker** (Desktop oder Engine) + Compose v2, Daemon läuft                   | Stack starten; Wizard-Schritt 1 prüft Installation/Daemon/Compose                                                                       |
-| **Manager** (DMG oder `npm run dev:manager`)                                  | Operative Hülle; startet die Setup-API als eigenen Child auf Loopback (ephemerer Port, nicht still `:9190`)                             |
+| Bedarf                                                                   | Warum                                                                                                                                   |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Docker** (Desktop oder Engine) + Compose v2, Daemon läuft              | Stack starten; Wizard-Schritt 1 prüft Installation/Daemon/Compose                                                                       |
+| **Manager** (DMG oder `npm run dev:manager`)                             | Operative Hülle; startet die Setup-API als eigenen Child auf Loopback (ephemerer Port, nicht still `:9190`)                             |
 | **Release-Paket** `.pfinstall` (internes Manifest und Inhaltsprüfsummen) | Delivery: Images laden (`POST /api/setup/host/images/load`). Dev-Profil (`PRAXIS_FLOW_COMPOSE_PROFILE=dev`): oft **nicht** erforderlich |
-| **Freie Ports**                                                               | App intern am Host immer **8080** (ohne Proxy offen, mit Proxy nur Loopback); Proxy zusätzlich **80** und bei TLS **443**               |
-| **Import- & Export-Ordner** auf dem Host                                      | Wizard-Schritt 2; unter Docker Desktop: File Sharing für diese Pfade                                                                    |
-| **Feste LAN-IPv4** / DHCP-Reservierung                                        | Für Demo ohne Proxy optional; für Proxy-Staff-Binding, Geräte-URLs und TLS verbindlich                                                  |
+| **Freie Ports**                                                          | App intern am Host immer **8080** (ohne Proxy offen, mit Proxy nur Loopback); Proxy zusätzlich **80** und bei TLS **443**               |
+| **Import- & Export-Ordner** auf dem Host                                 | Wizard-Schritt 2; unter Docker Desktop: File Sharing für diese Pfade                                                                    |
+| **Feste LAN-IPv4** / DHCP-Reservierung                                   | Für Demo ohne Proxy optional; für Proxy-Staff-Binding, Geräte-URLs und TLS verbindlich                                                  |
 
 Setup-API und Manager sprechen nur Loopback — kein Setup aus dem Praxis-LAN.
 
@@ -195,8 +195,8 @@ Dev baut lokal (`docker-compose.yml`); Release-Paket oft nicht nötig.
 | Symptom                                      | Typische Ursache                     | Was tun                                                                  |
 | -------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------ |
 | Schritt 1 blockiert: Docker                  | Daemon aus / Compose fehlt           | Docker Desktop starten; Hinweise aus Setup                               |
-| „Release-Paket fehlt“ / Images nicht geladen | Delivery ohne `docker load`          | `.pfinstall` wählen (Format 2); Laden kann Minuten dauern       |
-| SHA256-Fehler beim Laden                     | Paket beschädigt                     | Paket erneut kopieren oder mit aktuellem Build-Script neu erstellen                         |
+| „Release-Paket fehlt“ / Images nicht geladen | Delivery ohne `docker load`          | `.pfinstall` wählen (Format 2); Laden kann Minuten dauern                |
+| SHA256-Fehler beim Laden                     | Paket beschädigt                     | Paket erneut kopieren oder mit aktuellem Build-Script neu erstellen      |
 | Port 8080 belegt                             | anderer Container/Prozess            | Docker-Fehler im Start-/Apply-Ergebnis prüfen; Portkonflikt beheben      |
 | „Import- und Exportordner angeben“           | leere Pfade                          | Ordner anlegen; Docker File Sharing                                      |
 | Keine / falsche LAN-IP; `lanIpStale`         | DHCP-Wechsel, VPN, Adapter           | IP neu wählen; bei TLS-Lease erst IP klären (stale blockiert Lease)      |
@@ -389,13 +389,23 @@ Kein Gateway im Produkt-Archiv. Compose-Templates und Basis-Caddyfile kommen aus
 
 Script: `scripts/build-pfupdate.mjs`
 
+Wie bei `release:images` werden standardmäßig AMD64 **und** ARM64 gebaut.
+Eine Plattform: `npm run release:pfupdate -- --platform amd64` bzw. `--platform arm64`.
+Pack-only: `npm run release:pfupdate:current -- --platform amd64`.
+Ausgabe: `dist/releases/praxis-flow-<ver>/linux-<arch>/praxis-flow-update-<ver>-linux-<arch>.pfupdate`.
+Build, Proxy-Modulprobe, App-Vertragsprobe, Inspektion und Export verwenden die
+gewählte Plattform explizit (Build-Engine API ≥ 1.49). Der Manager prüft die
+Manifest-Plattform gegen den Docker-Daemon bereits vor Backup und Image-Import;
+nach dem Import prüft er zusätzlich jedes Image gegen dieselbe Daemon-Plattform.
+Die vorhandene Manifestversion und der Proxy-Digestvertrag bleiben erhalten.
+
 1. Optional: `docker build` app + sandbox
 2. Proxy-Image wie oben
 3. Staging: `docker save` → **unkomprimiertes** `images/praxis-flow-images.tar`
 4. Templates kopieren: `docker-compose.delivery.yml`, `docker-compose.proxy.delivery.yml`, `docker-compose.proxy-tls.delivery.yml`, `proxy/Caddyfile`, generiertes `templates/.env.example` (Image-Tags gesetzt)
 5. `manifest.json` inkl. `minimumManagerVersion` (Default = aktuelle `manager/package.json`-Version), `imageDigests.proxy`, Dateiliste
 6. `SHA256SUMS.txt` + Lizenzen/Notices
-7. `tar czf` → `dist/releases/praxis-flow-update-<ver>.pfupdate`
+7. `tar czf` → `dist/releases/praxis-flow-<ver>/linux-<arch>/praxis-flow-update-<ver>-linux-<arch>.pfupdate`
 8. Roundtrip: `validatePfupdatePackage()` — bricht bei Fehler ab
 
 **Layout nach Extraktion (Produkt):**
@@ -488,21 +498,50 @@ Loopback-Handshake, Bootstrap, Wiederstart und IPC-Verlust bei reduziertem
 PATH und fremdem Arbeitsverzeichnis. `runAsNode` darf nicht per Electron-Fuse
 deaktiviert werden, solange dieser Startpfad verwendet wird.
 
-### Priorisierte Code-Bestandsaufnahme
+### Aktuelle Code-Bestandsaufnahme (Abgleich 2026-10-04)
 
-| Priorität / Einordnung | Konkrete Fundstelle und Befund                                                                                                                                                                | Umsetzung / verbleibender Nachweis                                                                                                                                                                                                                                              |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P0 bestätigt           | `setup/src/restricted-operation.ts:durableWrite`, `maintenance-files.ts:syncParents`, `proxy-tls.ts:writeGeneratedTlsCaddyfile`, `app-data-volume.ts:restoreDbFiles`: POSIX-Verzeichnis-fsync | Windows überspringt nur Directory-fsync; Dateien werden weiter geflusht, Fehler nicht pauschal geschluckt. Stromausfall-Durabilität auf NTFS bleibt reale Abnahme.                                                                                                              |
-| P0 bestätigt           | `packages/server-shared/src/pfupdate.ts:isPfupdateRelativePath`, `setup/src/tls-backup-sidecar.ts`: Windows-Laufwerke, ADS und Gerätenamen nicht vollständig ausgeschlossen                   | Portable Archivnamen, Link-Ablehnung, Groß-/Kleinschreibungs-Kollisionen und unsichere Leerzeichen geprüft. `assertPathInsideRoot` prüft reale Vorfahren statt Textpräfixe.                                                                                                     |
-| P1 bestätigt           | `manager/package.json`, `manager/src/main/setup-server.ts:startDevSetupServer`: nur DMG, npm-/Shell-Prozesskette                                                                              | NSIS x64; Dev und Paket starten Electron direkt mit Argumentarray. IPC-Verlust beendet Setup; `setup/src/child-lifecycle.ts` beendet laufende Windows-CLI-Prozessbäume, nicht Docker Desktop oder Container.                                                                    |
-| P1 bestätigt           | `manager/src/main/setup-server.ts:startPackagedSetupServer`, `setup/src/server.ts`: geerbtes cwd und nicht kanonisierter Einstieg                                                             | Paket übergibt Install-Home explizit; Server erkennt realen Einstieg auch unter Symlink-Vorfahren. Isolierter Smoke erfolgreich auf macOS.                                                                                                                                      |
-| P1 bestätigt           | `setup/src/docker-cli.ts:resolveDockerCli`, `docker.ts:detectDocker`: Unix-Suchpfade, kein Kontext-/OS-Gate, keine Compose-Mindestversion                                                     | docker.exe, Docker-Desktop-Pfade für System/Benutzer, eindeutiger PATH, Named-Pipe-/Linux-Prüfung unter Windows und Compose ≥2.24.4. Keine automatische Kontextumschaltung.                                                                                                     |
-| P1 bestätigt           | `setup/src/install-home.ts`, `storage-folders.ts`, `settings-backup-restore.ts`: zu breite Windows-Pfadannahmen                                                                               | Lokale feste Laufwerke, absolute Pfade, beide Separatoren; UNC/WSL/Netzlaufwerke/Junctions/ungültige Namen und überlange Eingaben bewusst abweisen. Restore prüft Windows-Hostpfade vor Cutover.                                                                                |
-| P1 bestätigt           | `setup/src/maintenance-files.ts:replaceFile`: unmittelbarer Rename-Fehler bei kurzzeitiger Sperre                                                                                             | Begrenzte Wiederholung nur bei Windows-Sperrfehlern; kein Löschen des alten Ziels als Ersatz für Rename. Fehler lassen Recovery-Evidenz bestehen. Nativer Windows-Sperrtest in CI.                                                                                              |
-| P1 prüfbedürftig       | `install-operation.ts`, `install-recovery.ts`, `restore-operation.ts`, `settings-backup-update.ts`, `tls-operation-files.ts`: Journal-/Snapshot-Lebenszyklus                                  | Bestehende Recovery-Phasen erhalten; Windows-CI prüft Dateivorgänge/Update-Recovery. Echte Docker-Cutover, Abbruch und Rollback bleiben Abnahmepflicht. Install-`installing` verspricht keine Fortsetzung jeder Einzelaktion.                                                   |
-| P1 prüfbedürftig       | `restricted-network.ts:buildRestrictedNetworkStatus`, `host-state.ts:prepareRestrictedNetwork / applyRestrictedNetwork`, `docker.ts:validateStaffBindingEnv`, `host-tls.ts`, `proxy-tls.ts`   | macOS-Gates schützen den separaten Patientenzugang und dessen Listener-/Binding-Nachweis. Sie bleiben bestehen; Windows blockiert zusätzlich persistierte aktive Bindings beim Start und Restore vor Cutover. Staff-HTTPS ist eine separate Abnahme, keine Restricted-Freigabe. |
-| P1 Betriebsbedingung   | `tls-operation-files.ts:captureTlsRollback`, `.env`, temporäre TLS-Archive                                                                                                                    | chmod 0600/0700 ist unter Windows keine ACL. Privates Betriebskonto, geschützte NTFS-Vererbung und Backup-Ziel durch IT prüfen; keine neue automatische ACL-/Firewallverwaltung.                                                                                                |
-| P2 Komfort             | `setup/src/network.ts:listLanIpv4Candidates`: virtuelle Adapter/VPNs erscheinen ebenfalls                                                                                                     | Keine heuristische automatische Auswahl einer „richtigen“ NIC. Physische Staff-IP samt Erreichbarkeit durch IT wählen; bessere Adapterbeschriftung kann später folgen.                                                                                                          |
+Die frühere P0/P1-Spalte bezeichnete den **ursprünglichen Fehler vor der Umsetzung**,
+nicht dessen aktuellen Status. Die folgenden Korrekturen sind im Code vorhanden.
+Fehlende Windows-Nachweise sind gesonderte Freigabepunkte, keine erneut bestätigten
+Codefehler. Grundlage: Codeabgleich, vollständiger lokaler Test-/Lint-/Prettier-Lauf
+auf macOS am 2026-10-04 und die unten abgegrenzten Anwenderberichte. Ein erfolgreicher
+Windows-CI-Lauf ist in diesen Unterlagen weiterhin nicht belegt.
+
+| Thema / ursprüngliche Priorität            | Aktueller Codebefund                                                                                                                                                                                          | Verbleibende Relevanz                                                                                                                                                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Directory-fsync (P0)                       | Behoben: `maintenance-files.ts:syncDirectory` überspringt nur Verzeichnis-fsync unter Windows; `restricted-operation.ts:durableWrite`, `proxy-tls.ts` und `app-data-volume.ts` flushen weiterhin Dateien.     | Kein bekannter ursprünglicher Startfehler mehr. Prozessabbruch-/Recovery-Nachweis vor Produktionsbetrieb erforderlich; ein Prozess-Kill belegt keine NTFS-Stromausfall-Durabilität.                          |
+| Archiv-/Pfadgrenzen (P0)                   | Behoben: `server-shared/src/pfupdate.ts:isPfupdateRelativePath`, `pfupdate-package.ts` und `tls-backup-sidecar.ts` prüfen portable Namen, Links und Kollisionen; reale Pfadgrenzen statt String-Präfixe.      | Kein offener P0 aus dem damaligen Befund. Regressionen vorhanden; nativen Windows-Lauf protokollieren.                                                                                                       |
+| Installer und Prozesskette (P1)            | Implementiert: NSIS x64 in `manager/package.json`, direkter Electron-Node-Start in `setup-server.ts`, IPC-/Kindprozess-Lebenszyklus. NSIS-CRC-Fix inklusive Prüfung des eingebetteten Deinstallers vorhanden. | Erneute Installation/Versionsupgrade/Deinstallation mit Datenerhalt real nachweisen. Frühere Meldung „Manager kann nicht geschlossen werden“ ist nicht durch den CRC-Fix allein erklärt.                     |
+| Paketierter Start / cwd (P1)               | Behoben: explizites Install-Home, absoluter Setup-Einstieg und mitgelieferte Runtime/Templates.                                                                                                               | Windows-Start im Anwenderbericht positiv; vollständiger Standardkonto-/PATH-/Neustart-Nachweis noch offen.                                                                                                   |
+| Docker-Erkennung (P1)                      | Behoben: `docker-cli.ts` kennt Windows-Pfade, prüft lokale Named-Pipe-Kontexte und Linux-Daemon; `docker.ts` prüft Compose ≥2.24.4.                                                                           | Start bei ausgeschaltetem Docker, Docker-/Host-Neustart und Fehlkontexte weiterhin real abnehmen. Kein belegter offener Erkennungsfehler.                                                                    |
+| Windows-Hostpfade (P1)                     | Install-Home bleibt lokal. Import/Export, Docker-Start und Restore akzeptieren zusätzlich gemappte Netzlaufwerke; UNC-/WSL-Pfade und Junctions bleiben gesperrt.                                              | Praxis-IT stellt Mapping, Anmeldung und Erreichbarkeit bereit. Realen CSV-/Docker-Mount-Test samt Verbindungsverlust und Neustart nachweisen; Aufhebung der Sperre allein ist kein Kompatibilitätsnachweis.  |
+| Gesperrte Dateien / Rename (P1)            | Behoben: `maintenance-files.ts:replaceFile` wiederholt begrenzt bei EPERM/EACCES/EBUSY; löscht das alte Ziel nicht als Ersatz. Windows-exklusiver Sperrtest vorhanden.                                        | Nativen Sperrtest und Recovery nach einer länger bestehenden Sperre nachweisen; macOS überspringt den exklusiven Windows-Test.                                                                               |
+| Install/Update/Restore-Recovery (P1)       | Journal-/Snapshot-Pfade und Regressionstests vorhanden (`install-recovery.ts`, `restore-operation.ts`, `settings-backup-update.ts`, `tls-operation-files.ts`).                                                | **Freigabestopper für unbeaufsichtigten Produktivbetrieb, solange reale Windows-Cutover-/Abbruch-/Rollback-Tests fehlen.** Kein durch diesen Abgleich neu bestätigter Datenverlustfehler.                    |
+| Restricted-Patientenzugang (P1)            | Gates bleiben aktiv (`restricted-network.ts`, `host-state.ts`, `docker.ts`, Restore); Windows darf aktive Restricted-Bindings nicht starten.                                                                  | Kein Stopper für den Staff-Manager. **Stopper, wenn Restricted auf Windows Bestandteil des zugesagten Umfangs ist.** Separate Zwei-NIC-/Host-/SNI-/IPv6-/Fail-closed-Abnahme nötig.                          |
+| Secrets / NTFS-ACLs (P1 Betriebsbedingung) | Keine automatische ACL-Verwaltung; POSIX-Modi ersetzen keine Windows-Zugriffsprüfung.                                                                                                                         | Vor echten Praxisdaten Zugriff als zweites Standardkonto auf Home, Secrets, Temp und Backup testen. Unzureichende ACLs sind ein Einsatzstopper; sie sind hier nicht als tatsächlich fehlerhaft nachgewiesen. |
+| Virtuelle Adapter / VPN (P2)               | `network.ts:listLanIpv4Candidates` lässt die bewusste Auswahl bei der IT.                                                                                                                                     | Bessere Beschriftung ist Komfort. Die korrekte Staff-IP und Bindings müssen unabhängig davon abgenommen werden.                                                                                              |
+
+### Zusätzliche aktuelle Freigabepunkte
+
+1. **Updatepakete für Intel-Windows:** Architekturwahl, getrennte Dateinamen und
+   Daemon- statt Prozessarchitektur sind umgesetzt. CLI-Regressionen mit simulierter
+   Docker-CLI und Update-Regressionen prüfen beide Plattformen und frühe Ablehnung
+   falscher Pakete. Echte Cross-Build-/Windows-Update-/Rollback-Abnahme bleibt offen.
+2. **Staff-HTTPS:** Erfolgreiche Wildcard-Ausstellung unter Windows nach dem
+   Resolver-Fix ist bestätigt. Browserzugriff, vollständiger HTTPS-Cutover,
+   Loopback-Abschirmung, Zertifikatserneuerung und TLS-Restore sind dadurch nicht
+   nachgewiesen. `1.1.1.1:53` muss für ACME aus dem Container erreichbar sein.
+   Die pauschale 90-Sekunden-Timeoutmeldung in `host-tls.ts` bleibt eine Diagnose-
+   schwäche; sie erklärt nicht jeden noch möglichen TLS-Fehler.
+3. **Externe Auslieferung:** Signierung ist gemäß dem bestehenden Liefervertrag
+   noch festzulegen; sie ist kein technischer Startstopper für interne Tests.
+   Die konkrete Windows-/WSL-/Docker-Version und ein erfolgreiches natives
+   CI-/Installer-/Daten-Erhalt-Protokoll fehlen weiterhin als vollständiger Nachweis.
+
+Praktische Reihenfolge: zuerst den benötigten CSV-Speicherort festlegen, dann auf dem vorhandenen Intel-Windows-Rechner
+Backup/Restore/Update samt erzwungenem Abbruch prüfen, anschließend HTTPS-/Netz-
+und ACL-Abnahme. Die ausführlichen Schritte bleiben im bestehenden
+[Windows-Abnahmeprotokoll](../open-items.md#windows-abnahmeprotokoll).
 
 `/bin/sh`, `/tmp`, `/imports`, `/exports` und `/var/lib/praxis-flow/app` in
 Docker-Argumenten sind Linux-**Container**pfade, keine Windows-Hostfehler.
@@ -549,9 +588,11 @@ Token-/Bootstrap-/Restart-/Disconnect-Smoke bestanden auch mit dieser gebauten
 App und ihren tatsächlichen Ressourcen. Kein DMG-Release, keine Veröffentlichung
 und keine destruktive Prüfung einer bestehenden Installation.
 
-Windows-NSIS, PowerShell-Installerprüfung und Windows-Runner sind in diesem
-Arbeitsstand **vorbereitet, nicht ausgeführt**. Reale Docker-/WSL-/Netzabnahmen
-bleiben offen; maßgeblich ist das [Abnahmeprotokoll](../open-items.md#windows-abnahmeprotokoll).
+Aktualisierung 2026-10-04: Windows-NSIS wurde inzwischen mehrfach auf macOS
+gebaut; Installer- und eingebettete Uninstaller-CRC wurden erfolgreich geprüft.
+Der Anwender meldet positiven Windows-Betrieb sowie erfolgreiche ACME-Ausstellung
+nach Resolver-Korrektur. Ein vollständiger PowerShell-Installer-/Windows-CI-Lauf
+und die reale Docker-/WSL-/Netz-/Recovery-Matrix sind weiterhin nicht protokolliert; maßgeblich ist das [Abnahmeprotokoll](../open-items.md#windows-abnahmeprotokoll).
 
 ### Windows-NSIS-Integrität beim macOS-Cross-Build
 
@@ -594,14 +635,10 @@ Konkrete Codebefunde:
   derzeit ausdrücklich x64. NSIS unterstützt grundsätzlich auch kombinierte
   x64/ARM64-Installer ([Builder-Dokumentation](https://www.electron.build/docs/nsis/));
   zunächst getrennte architekturspezifische Testinstaller bevorzugen.
-- Die `.pfinstall`-Prüfung verwendet jetzt die Architektur des Docker-Daemons und
-  normalisiert `x86_64`/`aarch64`. Die Updateprüfung verwendet weiterhin
-  `hostDockerPlatform`/`process.arch`; diese sowie Restore/Rollback sind vor einer
-  Freigabe des emulierten x64-Managers auf Snapdragon gesondert abzusichern.
-- `release:images` baut beide Architekturen explizit, mit getrennten Dateinamen,
-  Ausgabeordnern und geprüftem Export (siehe Abschnitt 6.1). `release:pfupdate`
-  verwendet weiterhin die lokale Build-Plattform; durchgängige Architekturauswahl
-  und Benennung für Updatepakete bleiben als separater Folgepunkt offen.
+- Installation und Update prüfen jetzt die Architektur des Docker-Daemons statt
+  des Manager-Prozesses. Emulierter x64-Betrieb auf Snapdragon bleibt real abzunehmen.
+- `release:images` und `release:pfupdate` bauen beide Architekturen explizit,
+  mit getrennten Dateinamen, Ausgabeordnern und geprüftem Export (Abschnitt 6).
 - Lokal rein lesend geprüft: `praxis-flow/app:6.1.0`,
   `praxis-flow/sandbox:6.1.0` und `praxis-flow-proxy:2.11.4-acmedns` melden jeweils
   `linux/arm64`. Das belegt vorhandene ARM-Images, keine Windows-Laufzeitabnahme.
@@ -629,3 +666,18 @@ dem Installations-Cutover verständlich abgewiesen werden. Ein x64-Manager auf
 ARM soll dieselbe Daemonarchitektur erkennen wie ein nativer ARM64-Manager.
 Kein neuer ARM-Build, Containerstart oder Installationsversuch erfolgte bei
 dieser Recherche; es wurden Code, Herstellerquellen und vorhandene Image-Metadaten geprüft.
+
+### Gemappte SMB-Laufwerke für Import/Export
+
+Seit 2026-10-04 sind verbundene Netzlaufwerke wie `Z:\Kontakte` für Import/Export
+zugelassen. Die Praxis-IT verantwortet Mapping im Betriebskonto, Zugangsdaten,
+Rechte und Wiederverbindung. Direkte UNC-Eingaben bleiben gesperrt; Install-Home,
+Journale und TLS-Dateien bleiben auf lokalem festen Speicher. Windows prüft weiter
+Laufwerkstyp, Pfadsyntax und Junctions; ein nicht erkennbares Laufwerk wird abgewiesen.
+
+Ein Laufwerksbuchstabe macht SMB nicht lokal: [Windows-Laufwerkszuordnungen](https://learn.microsoft.com/en-us/windows/win32/services/services-and-redirected-drives)
+sind an Anmeldesitzungen gebunden, [Docker-Bind-Mounts](https://docs.docker.com/engine/storage/bind-mounts/)
+werden durch den Daemon in der Linux-VM bereitgestellt. Deshalb unter dem realen
+Betriebskonto Host-/Container-Dateiinhalt, CSV-Wechsel, Schreibrechte für Export,
+Verbindungsverlust und Docker-/Host-Neustart prüfen. Die Freigabe im Validator
+ist keine Aussage, dass jede Docker-/SMB-Konfiguration ohne weitere IT-Einrichtung funktioniert.

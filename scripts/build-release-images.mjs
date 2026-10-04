@@ -323,7 +323,7 @@ for (const platform of platforms) {
     run('docker', ['image', 'tag', ref, architectureTag(ref, platform)]);
   }
 
-  fs.rmSync(releaseDir, { recursive: true, force: true });
+  // Keep update packages already built for this version and architecture.
   fs.mkdirSync(releaseDir, { recursive: true });
 
   console.log(`Packing ${archivePath} …`);

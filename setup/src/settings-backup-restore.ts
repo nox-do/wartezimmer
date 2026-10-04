@@ -469,7 +469,7 @@ function buildRestoreTargetEnv(input: {
   const restoreEnv = mergeConfigRestoreEnv(input.backupEnv, input.currentEnv);
   if (process.platform === 'win32') {
     for (const key of ['IMPORTS_HOST_PATH', 'EXPORTS_HOST_PATH']) {
-      if (restoreEnv[key]) assertWindowsHostPath(restoreEnv[key]);
+      if (restoreEnv[key]) assertWindowsHostPath(restoreEnv[key], { allowMappedDrive: true });
     }
     if (input.backupEnv.SETUP_RESTRICTED_ENABLED === 'true')
       throw new RestorePhaseError(RESTORE_PHASES.validateArchive, [

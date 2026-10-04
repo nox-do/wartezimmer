@@ -35,6 +35,7 @@ function writeFileDigest(root: string, relativePath: string, content: string) {
 
 export type BuildTestPfupdateArchiveOptions = {
   version?: string;
+  platform?: string;
   manifestContent?: string;
   /** Include optional openNDS gateway image + compose template (lab/legacy packages). */
   withGateway?: boolean;
@@ -117,7 +118,8 @@ export function buildTestPfupdateArchive(
               proxy: {
                 registryDigest: PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
                 archiveImageId: `sha256:${'d'.repeat(64)}`,
-                platform: `linux/${process.arch === 'x64' ? 'amd64' : process.arch}`,
+                platform:
+                  options.platform ?? `linux/${process.arch === 'x64' ? 'amd64' : process.arch}`,
               },
             },
           }

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-/** Supported host storage is a local fixed drive, never WSL/UNC/device namespaces. */
+/** Drive-letter paths only; UNC, WSL and device namespaces stay unsupported. */
 export function normalizeWindowsHostPath(value: string): string {
   if (
     !/^[a-z]:[\\/]/i.test(value) ||
@@ -12,7 +12,7 @@ export function normalizeWindowsHostPath(value: string): string {
     [...value].some((character) => character.charCodeAt(0) < 32)
   )
     throw pathError(
-      'Windows-Pfad nicht unterstützt: absoluten lokalen Laufwerkspfad bis 220 Zeichen ohne # verwenden; keine UNC-, WSL- oder relativen Pfade.',
+      'Windows-Pfad nicht unterstützt: absoluten Laufwerkspfad bis 220 Zeichen ohne # verwenden; keine UNC-, WSL- oder relativen Pfade.',
     );
   const parts = value.slice(3).split(/[\\/]/).filter(Boolean);
   if (
@@ -29,7 +29,19 @@ export function normalizeWindowsHostPath(value: string): string {
   return path.win32.normalize(value);
 }
 
-export function assertWindowsHostPath(value: string): void {
+export function assertWindowsDriveType(type: string, allowMappedDrive = false): void {
+  if (type === 'Fixed' || (allowMappedDrive && type === 'Network')) return;
+  throw pathError(
+    allowMappedDrive
+      ? 'Laufwerk nicht verfügbar oder nicht unterstützt. Bitte das Netzlaufwerk im Betriebskonto verbinden oder einen lokalen Ordner wählen.'
+      : 'Das Installationsverzeichnis muss auf einem lokalen festen Windows-Laufwerk liegen.',
+  );
+}
+
+export function assertWindowsHostPath(
+  value: string,
+  options: { allowMappedDrive?: boolean } = {},
+): void {
   if (process.platform !== 'win32') return;
   const normalized = normalizeWindowsHostPath(value);
   const drive = path.parse(normalized).root;
@@ -59,13 +71,10 @@ export function assertWindowsHostPath(value: string): void {
     ).trim();
   } catch {
     throw pathError(
-      'Windows-Laufwerk nicht prüfbar. Bitte lokales Laufwerk und Windows PowerShell-Verfügbarkeit prüfen.',
+      'Windows-Laufwerk nicht prüfbar. Bitte Laufwerksverbindung im Betriebskonto und Windows PowerShell-Verfügbarkeit prüfen.',
     );
   }
-  if (type !== 'Fixed')
-    throw pathError(
-      'Nur lokale feste Windows-Laufwerke sind freigegeben. Netzlaufwerke bitte durch einen lokalen Import-/Exportordner ersetzen.',
-    );
+  assertWindowsDriveType(type, options.allowMappedDrive);
   for (let current = normalized; ; current = path.dirname(current)) {
     try {
       if (fs.lstatSync(current).isSymbolicLink())

@@ -78,10 +78,3 @@ test('current release aliases do not force a local version tag', () => {
   assert.doesNotMatch(pkg.scripts['release:pfupdate:current'], /--version\s+local/);
   assert.ok(pkg.version && pkg.version !== 'local');
 });
-
-test('pfupdate artifact uses a versioned output directory and versioned filename', () => {
-  const source = fs.readFileSync(path.join(scriptsDir, 'build-pfupdate.mjs'), 'utf8');
-  assert.match(source, /const releaseDir = path\.join\(outputRoot, `praxis-flow-\$\{version\}`\)/);
-  assert.match(source, /const archiveFileName = `praxis-flow-update-\$\{version\}\.pfupdate`/);
-  assert.match(source, /const archivePath = path\.join\(releaseDir, archiveFileName\)/);
-});

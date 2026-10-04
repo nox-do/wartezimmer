@@ -40,7 +40,7 @@ export function normalizeHostFolderPath(value: string): string {
     expanded = home;
   }
 
-  assertWindowsHostPath(expanded);
+  assertWindowsHostPath(expanded, { allowMappedDrive: true });
   if (!path.isAbsolute(expanded) || /[\r\n\0]/.test(expanded)) {
     throw new Error(INVALID_FOLDER_PATH);
   }

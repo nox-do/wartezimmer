@@ -3,7 +3,11 @@ import test from 'node:test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { normalizeWindowsHostPath, assertWindowsHostPath } from './windows-host-path.js';
+import {
+  normalizeWindowsHostPath,
+  assertWindowsHostPath,
+  assertWindowsDriveType,
+} from './windows-host-path.js';
 import { buildDockerEnv, fallbackDockerCliDirs, windowsDockerEndpointError } from './docker-cli.js';
 import { runProcessCommand } from './command-runner.js';
 import { durableWrite } from './restricted-operation.js';
@@ -189,4 +193,16 @@ test('Compose capability requires the version that supports !override', async ()
     assert.equal(supportedComposeVersion(version), true);
   for (const version of ['1.29.0', '2.24.3', '2.20.0', 'unknown'])
     assert.equal(supportedComposeVersion(version), false);
+});
+
+test('mapped drives are accepted for import/export but not for install-home', () => {
+  assert.equal(normalizeWindowsHostPath('Z:/Kontakte'), 'Z:\\Kontakte');
+  assert.doesNotThrow(() => assertWindowsDriveType('Network', true));
+  assert.doesNotThrow(() => assertWindowsDriveType('Fixed', true));
+  assert.doesNotThrow(() => assertWindowsDriveType('Fixed'));
+  assert.throws(() => assertWindowsDriveType('Network'), /Installationsverzeichnis/);
+  for (const type of ['NoRootDirectory', 'Unknown', 'Removable', 'CDRom']) {
+    assert.throws(() => assertWindowsDriveType(type, true), /Laufwerk/);
+  }
+  assert.throws(() => normalizeWindowsHostPath('\\\\server\\share'), /UNC/);
 });

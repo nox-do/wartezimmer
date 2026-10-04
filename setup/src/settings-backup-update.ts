@@ -40,6 +40,8 @@ import {
   dockerImageExists,
   dockerLoadArchive,
   inspectImagesForHostPlatform,
+  detectDockerPlatform,
+  assertPackagePlatform,
   inspectDockerImage,
   type DockerImageInspection,
 } from './delivery-images.js';
@@ -132,6 +134,7 @@ export type PfupdateApplyDeps = {
   createSettingsBackup?: typeof createPfbackup;
   dockerLoad?: typeof dockerLoadArchive;
   imageExists?: (ref: string) => Promise<boolean>;
+  detectDockerPlatform?: typeof detectDockerPlatform;
   inspectImage?: (ref: string) => Promise<DockerImageInspection>;
   stopStack?: MaintenanceStackRuntime['stopStack'];
   startAppStack?: (
@@ -159,6 +162,7 @@ type PrepareRuntime = {
   validateSettings: typeof validateSettingsSnapshotWithApp;
   dockerLoad: typeof dockerLoadArchive;
   imageExists: (ref: string) => Promise<boolean>;
+  detectDockerPlatform: typeof detectDockerPlatform;
   inspectImage: (ref: string) => Promise<DockerImageInspection>;
   appDataAccess?: AppDataVolumeAccess;
 };
@@ -213,6 +217,7 @@ function resolvePrepareRuntime(deps: PfupdateApplyDeps): PrepareRuntime {
     validateSettings: deps.validateSettings ?? validateSettingsSnapshotWithApp,
     dockerLoad: deps.dockerLoad ?? dockerLoadArchive,
     imageExists: deps.imageExists ?? dockerImageExists,
+    detectDockerPlatform: deps.detectDockerPlatform ?? detectDockerPlatform,
     inspectImage: deps.inspectImage ?? inspectDockerImage,
     appDataAccess: deps.appDataAccess,
   };
@@ -561,6 +566,14 @@ async function prepareUpdate(input: {
       settingsFormatVersion,
     });
     const manifest = requireCompatibleManifest(validation);
+    const expectedPlatform = await input.runtime.detectDockerPlatform();
+    if (manifest.imageDigests?.proxy?.platform) {
+      assertPackagePlatform(
+        manifest.imageDigests.proxy.platform,
+        expectedPlatform,
+        'PFUPDATE_PLATFORM_MISMATCH',
+      );
+    }
     const portalContract = releasePortalContract(input.stagingDir, manifest, readEnvMap(envPath));
 
     phase = UPDATE_PHASES.createSettingsBackup;
@@ -593,6 +606,7 @@ async function prepareUpdate(input: {
       [manifest.images.app, manifest.images.sandbox, manifest.images.proxy!],
       input.runtime.inspectImage,
       'PFUPDATE_PLATFORM_MISMATCH',
+      expectedPlatform,
     );
     const proxyInspection = inspectedImages.get(manifest.images.proxy!)!;
     if (

@@ -564,7 +564,6 @@ Windows-Abnahme bleibt separat offen. Paralleles 443-Publishing, gekreuzte
 Hosts/SNI, fehlendes SNI, IPv6 und Adressverlust dürfen nicht aus erfolgreichen
 Windows-Pfadtests abgeleitet werden. [Abnahmeprotokoll](../open-items.md#windows-abnahmeprotokoll).
 
-
 ### Windows-DNS-Teilnachweis vom 2026-10-01
 
 Anwenderseitig bestätigt: Docker-DNS `127.0.0.11` lieferte bei der TXT-Abfrage

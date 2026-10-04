@@ -331,8 +331,8 @@ export async function composeUp(options: ComposeUpOptions & { services?: string[
 }> {
   if (process.platform === 'win32') {
     const folders = resolveHomeFolders(options.projectRoot);
-    assertWindowsHostPath(folders.imports);
-    assertWindowsHostPath(folders.exports);
+    assertWindowsHostPath(folders.imports, { allowMappedDrive: true });
+    assertWindowsHostPath(folders.exports, { allowMappedDrive: true });
   }
   if (!options.restrictedOperationId) await recoverRestrictedOperation(options, false);
   const { files, wantGateway, gatewaySkipped } = resolveComposeFileList(options);
@@ -680,8 +680,8 @@ export async function composeRestart(
 ): Promise<{ ok: boolean; log: string }> {
   if (process.platform === 'win32') {
     const folders = resolveHomeFolders(options.projectRoot);
-    assertWindowsHostPath(folders.imports);
-    assertWindowsHostPath(folders.exports);
+    assertWindowsHostPath(folders.imports, { allowMappedDrive: true });
+    assertWindowsHostPath(folders.exports, { allowMappedDrive: true });
   }
   if (!options.restrictedOperationId) await recoverRestrictedOperation(options, false);
   const envPath = path.join(options.projectRoot, '.env');
