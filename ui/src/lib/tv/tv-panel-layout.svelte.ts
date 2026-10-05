@@ -155,8 +155,16 @@ export function mountTvPanelLayout<T>(
         return;
       }
 
+      let layoutFrame: number | null = null;
       const onLayoutChange = () => {
-        requestSync(false);
+        if (layoutFrame !== null) {
+          return;
+        }
+        // Layout writes must run outside ResizeObserver's current delivery cycle.
+        layoutFrame = requestAnimationFrame(() => {
+          layoutFrame = null;
+          requestSync(false);
+        });
       };
 
       const layoutObserver = new ResizeObserver(onLayoutChange);
@@ -167,6 +175,9 @@ export function mountTvPanelLayout<T>(
       return () => {
         layoutObserver.disconnect();
         window.removeEventListener('resize', onLayoutChange);
+        if (layoutFrame !== null) {
+          cancelAnimationFrame(layoutFrame);
+        }
       };
     });
 

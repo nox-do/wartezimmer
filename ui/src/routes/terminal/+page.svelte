@@ -15,6 +15,7 @@
   import { locale, t, tf } from '$lib/i18n/i18nStore.svelte';
   import { terminalOps } from '$lib/terminal/terminal-ops-runtime.svelte';
   import {
+    fetchTerminalTopics,
     createAssistanceCheckin,
     createCheckin,
     mapCheckinErrorMessage,
@@ -24,6 +25,7 @@
   import { toastStore } from '$lib/stores/toastStore';
 
   let busy = $state(false);
+  let receptionRegistrationBlocked = $state(false);
   let assistanceConfirmOpen = $state(false);
   let privacyModalOpen = $state(false);
   let practiceProfile = $state(getPracticeProfileFallback());
@@ -38,10 +40,21 @@
   const authEgkEnabled = $derived(terminalOps.terminalAuthEgkEnabled);
 
   onMount(() => {
+    let cancelled = false;
+    async function refreshAvailability() {
+      const result = await fetchTerminalTopics();
+      if (!cancelled && result.ok) {
+        receptionRegistrationBlocked = result.data.receptionRegistrationBlocked;
+      }
+    }
+    void refreshAvailability();
+    const availabilityTimer = setInterval(() => void refreshAvailability(), 30_000);
     const stopProfile = mountPracticeProfileSync((profile) => {
       practiceProfile = profile;
     });
     return () => {
+      cancelled = true;
+      clearInterval(availabilityTimer);
       stopProfile();
     };
   });
@@ -162,7 +175,7 @@
         </a>
       {/if}
 
-      <button type="button" class="terminal-card" disabled={busy} onclick={createReceptionCheckin}>
+      <button type="button" class="terminal-card" disabled={busy || receptionRegistrationBlocked} onclick={createReceptionCheckin}>
         <span class="terminal-card__icon" aria-hidden="true">
           <Users size={26} />
         </span>
@@ -176,7 +189,7 @@
       <button
         type="button"
         class="terminal-card terminal-card--assistance"
-        disabled={busy}
+        disabled={busy || receptionRegistrationBlocked}
         onclick={() => (assistanceConfirmOpen = true)}
       >
         <span class="terminal-card__icon" aria-hidden="true">
@@ -189,6 +202,10 @@
         <ChevronRight class="terminal-card__chevron" aria-hidden="true" />
       </button>
     </div>
+
+    {#if receptionRegistrationBlocked}
+      <p class="terminal-lead" role="status">{t('terminal.registrationLimitReached')}</p>
+    {/if}
 
     {#if wlanPromoEnabled}
       <TerminalWlanPromoBanner />

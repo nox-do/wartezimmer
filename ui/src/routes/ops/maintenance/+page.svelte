@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SettingsHeader from '$lib/components/shared/SettingsHeader.svelte';
   import { onMount } from 'svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import StaffSettingsShell from '$lib/components/shared/StaffSettingsShell.svelte';
@@ -79,8 +80,7 @@
 <StaffSettingsShell title={t('ops.maintenanceTitle')} lead={t('ops.maintenanceLead')}>
   {#if setupCompleted}
     <section class="panel">
-      <h2 class="panel__title">{t('ops.maintenanceSetupTitle')}</h2>
-      <p class="text-desc">{t('ops.maintenanceSetupLead')}</p>
+      <SettingsHeader layout="plain" title={t('ops.maintenanceSetupTitle')} description={t('ops.maintenanceSetupLead')} />
       <div class="staff-actions">
         <Button
           type="button"
@@ -102,13 +102,12 @@
     <p class="text-desc">{t('ops.loadError')}</p>
   {:else if preview}
     <section class="panel">
-      <h2 class="panel__title">{t('ops.maintenanceHintsTitle')}</h2>
-      <p class="text-desc">{t('ops.maintenanceMfaHint')}</p>
+      <SettingsHeader layout="plain" title={t('ops.maintenanceHintsTitle')} description={t('ops.maintenanceMfaHint')} />
       <p class="text-desc">{t('ops.maintenanceStaffPinHint')}</p>
     </section>
 
     <section class="panel panel--danger">
-      <h2 class="panel__title">{t('ops.maintenanceResetTitle')}</h2>
+      <SettingsHeader layout="plain" title={t('ops.maintenanceResetTitle')} />
 
       <h3 class="ops-maintenance-subtitle">{t('ops.maintenanceWillDeleteTitle')}</h3>
       <ul class="ops-maintenance-list">

@@ -6,6 +6,7 @@ import { registerCheckinRoutes } from './checkin-routes.js';
 
 function fakeCheckinDb(overrides?: {
   terminalAuthPhoneEnabled?: boolean;
+  registrationBlocked?: boolean;
   terminalAuthNameDobEnabled?: boolean;
   onCreateTicket?: (input: {
     topicId: string;
@@ -42,6 +43,7 @@ function fakeCheckinDb(overrides?: {
       practiceOpenFrom: '00:00',
       practiceOpenTo: '23:59',
     }),
+    isRegistrationBlocked: () => overrides?.registrationBlocked ?? false,
     isCheckinLocked: () => false,
     isEffectiveCheckinLocked: () => false,
     listQueue: () => [],
@@ -298,4 +300,46 @@ test('POST /api/v1/checkins/assistance creates an M ticket with Assistance-Flag'
   assert.equal(capturedTopicId, 'mfa');
   assert.equal(capturedNeedsAssistance, true);
   await app.close();
+});
+
+test('topics API supplies lane blocking state including reception without hiding topics', async () => {
+  const app = Fastify({ logger: false });
+  registerCheckinRoutes(app, fakeCheckinDb({ registrationBlocked: true }));
+  try {
+    const response = await app.inject({ method: 'GET', url: '/api/v1/checkins/topics' });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.json().receptionRegistrationBlocked, true);
+    assert.equal(response.json().topics[0].registrationBlocked, true);
+    assert.equal(response.json().topics[0].topicId, 'offen');
+  } finally {
+    await app.close();
+  }
+});
+
+test('registration limit returns 409 and the agreed hint for regular and assistance check-ins', async () => {
+  const app = Fastify({ logger: false });
+  registerCheckinRoutes(
+    app,
+    fakeCheckinDb({
+      onCreateTicket: () => {
+        throw new Error('REGISTRATION_LIMIT_REACHED');
+      },
+    }),
+  );
+  try {
+    for (const [url, payload] of [
+      ['/api/v1/checkins', { topicId: 'mfa', authPath: 'none' }],
+      ['/api/v1/checkins/assistance', {}],
+    ] as const) {
+      const response = await app.inject({ method: 'POST', url, payload });
+      assert.equal(response.statusCode, 409);
+      assert.equal(response.json().code, 'REGISTRATION_LIMIT_REACHED');
+      assert.equal(
+        response.json().message,
+        'Technisch bedingt sind pro Kennbuchstabe der Themen nur 999 Anmeldungen pro Praxistag möglich.',
+      );
+    }
+  } finally {
+    await app.close();
+  }
 });

@@ -36,7 +36,14 @@ function changedExistingRoomIds(
   return currentRooms
     .filter((room) => {
       const next = nextById.get(room.roomId);
-      return next != null && JSON.stringify(next) !== JSON.stringify(room);
+      // Panel configuration does not change the room used by an active visit.
+      return (
+        next != null &&
+        (next.roomLabel !== room.roomLabel ||
+          next.enabled !== room.enabled ||
+          next.defaultCallTarget !== room.defaultCallTarget ||
+          next.maxOccupancy !== room.maxOccupancy)
+      );
     })
     .map((room) => room.roomId);
 }

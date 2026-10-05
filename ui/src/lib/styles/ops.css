@@ -21,23 +21,6 @@
   gap: 8px;
 }
 
-.staff-settings .ops-setup-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
-  font-size: var(--text-base);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.staff-settings .ops-setup-toggle input {
-  width: auto;
-  max-width: none;
-  margin: 0;
-  flex-shrink: 0;
-}
-
 .ops-setup-process {
   display: flex;
   align-items: flex-start;
@@ -124,22 +107,6 @@
   margin: 0 0 12px;
   padding-left: 1.2rem;
   line-height: 1.5;
-}
-
-.ops-setup-fieldset {
-  border: 0;
-  margin: 0 0 12px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.ops-setup-radio {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-base);
 }
 
 .ops-setup-nav {
@@ -323,4 +290,20 @@
 
 .ops-maintenance-list li + li {
   margin-top: 0.25rem;
+}
+
+.ops-routing__option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  cursor: pointer;
+}
+
+.ops-routing__option input {
+  margin-top: 0.2rem;
 }

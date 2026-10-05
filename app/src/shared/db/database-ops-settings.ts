@@ -1,3 +1,7 @@
+import {
+  DEFAULT_LONG_WAIT_THRESHOLD_MINUTES,
+  isValidLongWaitThreshold,
+} from './database-wait-settings.js';
 import type { StatementSync } from 'node:sqlite';
 import {
   ensureSingleDefaultCallTarget,
@@ -51,6 +55,7 @@ type OpsSettingsRow = {
   routingMode?: string;
   postWaitingCallTargetId?: string | null;
   returnWindowMinutes?: number;
+  longWaitThresholdMinutes?: number;
   practiceOpenFrom?: string;
   practiceOpenTo?: string;
   practiceProfileJson?: string;
@@ -78,6 +83,7 @@ export type OpsSettingsPatch = Partial<
     | 'routingMode'
     | 'postWaitingCallTargetId'
     | 'returnWindowMinutes'
+    | 'longWaitThresholdMinutes'
     | 'practiceOpenFrom'
     | 'practiceOpenTo'
     | 'practiceProfileJson'
@@ -364,6 +370,7 @@ export function getOpsSettingsFromDb(params: {
     routingMode: normalizeRoutingMode(row.routingMode),
     postWaitingCallTargetId: normalizePostWaitingCallTargetId(row.postWaitingCallTargetId, rooms),
     returnWindowMinutes: row.returnWindowMinutes ?? 15,
+    longWaitThresholdMinutes: row.longWaitThresholdMinutes ?? DEFAULT_LONG_WAIT_THRESHOLD_MINUTES,
     practiceOpenFrom: row.practiceOpenFrom,
     practiceOpenTo: row.practiceOpenTo,
     practiceProfileJson: row.practiceProfileJson ?? '{}',
@@ -399,6 +406,13 @@ export function updateOpsSettingsInDb(
     getOpsSettingsStmt: params.getOpsSettingsStmt,
     configuredExportBasePath: params.configuredExportBasePath,
   });
+
+  if (
+    patch.longWaitThresholdMinutes !== undefined &&
+    !isValidLongWaitThreshold(patch.longWaitThresholdMinutes)
+  ) {
+    throw new OpsSettingsValidationError('longWaitThresholdMinutes must be between 1 and 240.');
+  }
 
   const topics = patch.topics ?? current.topics;
   const journeySettings = patch.journeySettings ?? current.journeySettings;
@@ -444,6 +458,7 @@ export function updateOpsSettingsInDb(
     routingMode: nextRoutingMode,
     postWaitingCallTargetId,
     returnWindowMinutes: patch.returnWindowMinutes ?? current.returnWindowMinutes,
+    longWaitThresholdMinutes: patch.longWaitThresholdMinutes ?? current.longWaitThresholdMinutes,
     practiceOpenFrom: patch.practiceOpenFrom ?? current.practiceOpenFrom,
     practiceOpenTo: patch.practiceOpenTo ?? current.practiceOpenTo,
     practiceProfileJson: patch.practiceProfileJson ?? current.practiceProfileJson,
@@ -476,6 +491,7 @@ export function updateOpsSettingsInDb(
     next.routingMode,
     next.postWaitingCallTargetId,
     next.returnWindowMinutes,
+    next.longWaitThresholdMinutes,
     next.practiceOpenFrom,
     next.practiceOpenTo,
     next.practiceProfileJson,

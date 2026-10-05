@@ -1,6 +1,7 @@
 <script lang="ts">
   import { DragDropProvider, PointerSensor } from '@dnd-kit/svelte';
   import { isInteractiveElement } from '@dnd-kit/dom/utilities';
+  import SettingsHeader from '$lib/components/shared/SettingsHeader.svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import TopicEditorModal from '$lib/components/mfa/TopicEditorModal.svelte';
   import TopicSortableRow from '$lib/components/mfa/TopicSortableRow.svelte';
@@ -103,7 +104,7 @@
         if (!(target instanceof Element)) {
           return false;
         }
-        if (target.closest('.mfa-editor-list-item__actions')) {
+        if (target.closest('.settings-row__actions')) {
           return true;
         }
         if (target === source.element || target === source.handle) {
@@ -289,15 +290,13 @@
 </script>
 
 <div class="panel topics-editor">
-  <div class="mfa-editor-head">
-    <div>
-      <h2 class="panel__title">{t('mfa.settings.topicsPanelTitle')}</h2>
-      <p class="text-desc">{t('mfa.settings.topicsPanelDesc')}</p>
-    </div>
-    <Button variant="outline" size="sm" disabled={busy || enabledRooms.length === 0} onclick={openAdd}>
-      {t('mfa.settings.topicAdd')}
-    </Button>
-  </div>
+  <SettingsHeader title={t('mfa.settings.topicsPanelTitle')} description={t('mfa.settings.topicsPanelDesc')}>
+    {#snippet actions()}
+      <Button variant="outline" size="sm" disabled={busy || enabledRooms.length === 0} onclick={openAdd}>
+        {t('mfa.settings.topicAdd')}
+      </Button>
+    {/snippet}
+  </SettingsHeader>
 
   <DragDropProvider
     sensors={sortDragSensors}

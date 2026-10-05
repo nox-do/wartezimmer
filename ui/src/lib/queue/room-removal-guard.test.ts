@@ -17,13 +17,22 @@ describe('roomGuardErrorMessage', () => {
     ).toBe('mfa.settings.roomDisableBlockedQueue:{"tickets":"A-1"}');
   });
 
-  it('maps ROOM_BLOCKED_QUEUE with remove context by default', () => {
+  it('maps ROOM_BLOCKED_QUEUE with edit context by default', () => {
     expect(
       roomGuardErrorMessage({
         code: 'ROOM_BLOCKED_QUEUE',
         message: 'fallback',
         details: { tickets: 'A-1' },
       }),
+    ).toBe('mfa.settings.roomEditBlockedQueue:{"tickets":"A-1"}');
+  });
+
+  it('uses removal copy only for an explicit removal', () => {
+    expect(
+      roomGuardErrorMessage(
+        { code: 'ROOM_BLOCKED_QUEUE', message: 'fallback', details: { tickets: 'A-1' } },
+        'remove',
+      ),
     ).toBe('mfa.settings.roomRemoveBlockedQueue:{"tickets":"A-1"}');
   });
 

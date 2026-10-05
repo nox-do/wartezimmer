@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FormField from '$lib/components/forms/FormField.svelte';
   import { UserPlus } from '@lucide/svelte';
   import { formatTicketCode } from '@praxis-flow/domain';
   import Modal from '$lib/components/Modal.svelte';
@@ -288,43 +289,48 @@
   <form class="modal-form" onsubmit={(event) => submit(event)}>
     <p class="modal-subtitle">{t('mfa.checkinModalDesc')}</p>
 
-    <label class="modal-form-field">
-      <span>{t('mfa.checkinTopicLabel')}</span>
-      <select class="form-select" bind:value={topicId} disabled={topicsLoading || submitBusy}>
-        {#if topics.length === 0}
-          <option value="">{t('mfa.checkinTopicPlaceholder')}</option>
-        {:else}
-          {#each topics as topic (topic.topicId)}
-            <option value={topic.topicId}>{topic.label}</option>
-          {/each}
-        {/if}
-      </select>
-    </label>
+    <FormField label={t('mfa.checkinTopicLabel')}>
+      {#snippet children(field)}
+        <select {...field} class="form-select" bind:value={topicId} disabled={topicsLoading || submitBusy}>
+          {#if topics.length === 0}
+            <option value="">{t('mfa.checkinTopicPlaceholder')}</option>
+          {:else}
+            {#each topics as topic (topic.topicId)}
+              <option value={topic.topicId}>{topic.label}</option>
+            {/each}
+          {/if}
+        </select>
+      {/snippet}
+    </FormField>
 
-    <label class="modal-form-field">
-      <span>{t('mfa.checkinLookupLabel')}</span>
-      <input
-        class="form-input"
-        type="text"
-        inputmode="text"
-        autocomplete="off"
-        placeholder={t('mfa.checkinLookupPlaceholder')}
-        bind:value={lookupQuery}
-        disabled={submitBusy}
-      />
-    </label>
-    <label class="modal-form-field">
-      <span>{t('mfa.checkinBirthDateLabel')}</span>
-      <input
-        class="form-input"
-        type="text"
-        inputmode="numeric"
-        autocomplete="off"
-        placeholder={t('mfa.checkinBirthDatePlaceholder')}
-        bind:value={birthDate}
-        disabled={submitBusy}
-      />
-    </label>
+    <FormField label={t('mfa.checkinLookupLabel')}>
+      {#snippet children(field)}
+        <input
+          {...field}
+          class="form-input"
+          type="text"
+          inputmode="text"
+          autocomplete="off"
+          placeholder={t('mfa.checkinLookupPlaceholder')}
+          bind:value={lookupQuery}
+          disabled={submitBusy}
+        />
+      {/snippet}
+    </FormField>
+    <FormField label={t('mfa.checkinBirthDateLabel')}>
+      {#snippet children(field)}
+        <input
+          {...field}
+          class="form-input"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          placeholder={t('mfa.checkinBirthDatePlaceholder')}
+          bind:value={birthDate}
+          disabled={submitBusy}
+        />
+      {/snippet}
+    </FormField>
     <p class="text-desc mfa-checkin-hint">{t('mfa.checkinPhoneHint')}</p>
 
     {#if birthDateOnly}

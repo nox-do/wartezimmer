@@ -47,6 +47,7 @@ components:
     TerminalTopic:
       type: object
       required:
+        - registrationBlocked
         - topicId
         - label
         - sortOrder
@@ -55,6 +56,9 @@ components:
         - availableFrom
         - availableTo
       properties:
+        registrationBlocked:
+          type: boolean
+          description: Host registration policy blocks this lane for the current practice day.
         topicId:
           type: string
         label:
@@ -89,7 +93,11 @@ paths:
                 type: object
                 required:
                   - topics
+                  - receptionRegistrationBlocked
                 properties:
+                  receptionRegistrationBlocked:
+                    type: boolean
+                    description: Registration policy blocks the reserved reception/assistance lane.
                   topics:
                     type: array
                     items:

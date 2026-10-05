@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FormField from '$lib/components/forms/FormField.svelte';
   import { ArrowRightLeft } from '@lucide/svelte';
   import { formatTicketCode } from '@praxis-flow/domain';
   import Modal from '$lib/components/Modal.svelte';
@@ -147,15 +148,16 @@
       {#if topics.length === 0}
         <p class="text-muted">{t('mfa.supersedeNoTopics')}</p>
       {:else}
-        <label class="modal-form-field">
-          <span>{t('mfa.supersedeTopicLabel')}</span>
-          <select class="form-select" bind:value={topicId} disabled={submitBusy} required>
-            <option value="" disabled>{t('mfa.supersedeTopicPlaceholder')}</option>
-            {#each topics as topic (topic.topicId)}
-              <option value={topic.topicId}>{topic.label}</option>
-            {/each}
-          </select>
-        </label>
+        <FormField label={t('mfa.supersedeTopicLabel')}>
+          {#snippet children(field)}
+            <select {...field} class="form-select" bind:value={topicId} disabled={submitBusy} required>
+              <option value="" disabled>{t('mfa.supersedeTopicPlaceholder')}</option>
+              {#each topics as topic (topic.topicId)}
+                <option value={topic.topicId}>{topic.label}</option>
+              {/each}
+            </select>
+          {/snippet}
+        </FormField>
       {/if}
 
       <div class="form-actions form-actions--split form-actions--nowrap">

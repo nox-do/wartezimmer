@@ -94,7 +94,7 @@
 
   const liveWaitMs = $derived(computeWaitMs(item.arrivedAt, nowMs));
   const showLongWait = $derived(
-    zone === 'waiting' && isLongWait(liveWaitMs),
+    zone === 'waiting' && isLongWait(liveWaitMs, mfaPracticeContext.longWaitThresholdMinutes),
   );
   const hasDocuments = $derived(item.documentCount > 0);
   const inRoomPrimary = $derived(resolveMfaInRoomPrimaryAction(item));

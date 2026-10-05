@@ -1,4 +1,7 @@
 <script lang="ts">
+  import ChoiceGroup from '$lib/components/forms/ChoiceGroup.svelte';
+  import ChoiceField from '$lib/components/forms/ChoiceField.svelte';
+  import SettingsHeader from '$lib/components/shared/SettingsHeader.svelte';
   import { onMount } from 'svelte';
   import { fetchOpsOnboarding, patchOpsOnboarding } from '$lib/ops/ops-system-api';
   import { t } from '$lib/i18n/i18nStore.svelte';
@@ -65,9 +68,8 @@
 {#if loading}
   <p class="text-muted">{t('ui.loading')}</p>
 {:else}
-  <fieldset class="ops-setup-fieldset" disabled={disabled || saving} aria-busy={saving}>
-    <legend class="sr-only">{t('ops.setup.portalTitle')}</legend>
-    <label class="ops-setup-radio">
+  <ChoiceGroup label={t('ops.setup.portalTitle')} disabled={disabled || saving} busy={saving}>
+    <ChoiceField label={t('ops.setup.portalOff')} variant="radio">
       <input
         type="radio"
         name="portal-enabled-settings"
@@ -75,9 +77,8 @@
         checked={!portalEnabled}
         onchange={() => void setPortalEnabled(false)}
       />
-      {t('ops.setup.portalOff')}
-    </label>
-    <label class="ops-setup-radio">
+    </ChoiceField>
+    <ChoiceField label={t('ops.setup.portalOn')} variant="radio">
       <input
         type="radio"
         name="portal-enabled-settings"
@@ -85,14 +86,12 @@
         checked={portalEnabled}
         onchange={() => void setPortalEnabled(true)}
       />
-      {t('ops.setup.portalOn')}
-    </label>
-  </fieldset>
+    </ChoiceField>
+  </ChoiceGroup>
   {#if portalEnabled}
     <p class="text-desc">{t('ops.setup.portalOnHint')}</p>
     <div class="ops-setup-host-hint">
-      <h3 class="panel__title">{t('ops.setup.portalHostTitle')}</h3>
-      <p class="text-desc">{t('ops.setup.portalHostBody')}</p>
+      <SettingsHeader layout="plain" level={3} title={t('ops.setup.portalHostTitle')} description={t('ops.setup.portalHostBody')} />
     </div>
   {:else}
     <p class="text-desc">{t('ops.setup.portalOffNote')}</p>

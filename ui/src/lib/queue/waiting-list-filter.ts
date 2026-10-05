@@ -1,5 +1,5 @@
 import { formatTicketCode } from '@praxis-flow/domain';
-import { computeWaitMs, isLongWait } from './format-wait-duration';
+import { computeWaitMs, isLongWait, LONG_WAIT_THRESHOLD_MINUTES } from './format-wait-duration';
 import type { QueueItem } from './types';
 
 /** Local MFA waiting-list filter — search XOR lane, never both. */
@@ -76,9 +76,17 @@ export function uniqueWaitingLanes(items: QueueItem[]): string[] {
   return lanes;
 }
 
-export function buildWaitingRows(waiting: QueueItem[], nowMs: number): WaitingRow[] {
-  const longWait = waiting.filter((item) => isLongWait(computeWaitMs(item.arrivedAt, nowMs)));
-  const shortWait = waiting.filter((item) => !isLongWait(computeWaitMs(item.arrivedAt, nowMs)));
+export function buildWaitingRows(
+  waiting: QueueItem[],
+  nowMs: number,
+  thresholdMinutes = LONG_WAIT_THRESHOLD_MINUTES,
+): WaitingRow[] {
+  const longWait = waiting.filter((item) =>
+    isLongWait(computeWaitMs(item.arrivedAt, nowMs), thresholdMinutes),
+  );
+  const shortWait = waiting.filter(
+    (item) => !isLongWait(computeWaitMs(item.arrivedAt, nowMs), thresholdMinutes),
+  );
   const rows: WaitingRow[] = [];
 
   for (const item of longWait) {

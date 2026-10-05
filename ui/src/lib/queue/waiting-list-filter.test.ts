@@ -96,4 +96,29 @@ describe('waiting-list-filter', () => {
       'fresh',
     ]);
   });
+  it('uses the configured threshold including its exact boundary', () => {
+    const now = Date.parse('2026-10-05T10:00:00Z');
+    const patient = item({
+      visitId: 'patient',
+      laneCode: 'A',
+      number: 1,
+      arrivedAt: new Date(now - 20 * 60_000).toISOString(),
+    });
+    const fresh = item({
+      visitId: 'fresh',
+      laneCode: 'A',
+      number: 2,
+      arrivedAt: new Date(now).toISOString(),
+    });
+    expect(
+      buildWaitingRows([fresh, patient], now, 20).map((row) =>
+        row.kind === 'divider' ? 'divider' : row.item.visitId,
+      ),
+    ).toEqual(['patient', 'divider', 'fresh']);
+    expect(
+      buildWaitingRows([fresh, patient], now, 21).map((row) =>
+        row.kind === 'divider' ? 'divider' : row.item.visitId,
+      ),
+    ).toEqual(['fresh', 'patient']);
+  });
 });

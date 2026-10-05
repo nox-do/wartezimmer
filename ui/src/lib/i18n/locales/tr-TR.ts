@@ -90,7 +90,8 @@ export const dict = {
     anamnesePrivacyOpen: 'Gizlilik bildirimini oku',
     anamneseConsentCheckbox:
       'Gizlilik bildirimini okudum ve belirtilen amaç için sağlık verileri dahil bilgilerimin işlenmesine onay veriyorum. Onayımı istediğim zaman geri çekebilirim.',
-    anamneseConsentRequired: 'Anamnez formunu göndermek için lütfen bilgilerinizin işlenmesine izin verin.',
+    anamneseConsentRequired:
+      'Anamnez formunu göndermek için lütfen bilgilerinizin işlenmesine izin verin.',
   },
   terminal: {
     langPickerAria: 'Dil seçin',
@@ -223,6 +224,8 @@ export const dict = {
     checkinLocked: 'Terminalden kayıt şu anda mümkün değil.',
     checkinClosed: 'Kayıt şu anda kullanılamıyor. Lütfen danışmaya gidin.',
     topicDisabled: 'Bu konu şu anda kullanılamıyor.',
+    registrationLimitReached:
+      'Teknik nedenlerle, her konu harfi için muayenehane günü başına yalnızca 999 kayıt mümkündür.',
     topicClosed: 'Bu konu şu anki zaman penceresinin dışında.',
     authPathDisabled: 'Bu giriş yöntemi terminalde devre dışı.',
     invalidArgument: 'Giriş eksik veya geçersiz.',

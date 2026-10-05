@@ -88,7 +88,7 @@
     {#if snapshot.filePath}
       <p class="hint">{snapshot.filePath}</p>
     {/if}
-    <ul class="pfupdate-wizard-summary">
+    <ul class="wizard-dialog-summary">
       {#each inspectLines as line (line)}
         <li>{line}</li>
       {/each}
@@ -101,7 +101,7 @@
       </details>
     {/if}
     {#if inspectWarnings.length > 0}
-      <div class="pfupdate-wizard-warnings">
+      <div class="wizard-dialog-warnings">
         <p><strong>Hinweise</strong></p>
         <ul>
           {#each inspectWarnings as warning (warning)}
@@ -138,17 +138,3 @@
     </div>
   {/if}
 </dialog>
-
-<style>
-  .pfupdate-wizard-summary {
-    margin: 0.75rem 0;
-    padding-left: 1.25rem;
-  }
-
-  .pfupdate-wizard-warnings {
-    margin: 0.75rem 0;
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    background: var(--surface-muted, rgba(0, 0, 0, 0.04));
-  }
-</style>

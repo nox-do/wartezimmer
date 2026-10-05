@@ -15,6 +15,7 @@ export type MfaPatchOpsSettingsBody = Pick<
   OpsPatchSettingsBody,
   | 'expectedUpdatedAt'
   | 'returnWindowMinutes'
+  | 'longWaitThresholdMinutes'
   | 'practiceOpenFrom'
   | 'practiceOpenTo'
   | 'topics'

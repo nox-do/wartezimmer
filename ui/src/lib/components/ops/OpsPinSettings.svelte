@@ -2,6 +2,7 @@
   import { tick } from 'svelte';
   import Modal from '$lib/components/Modal.svelte';
   import Button from '$lib/components/forms/Button.svelte';
+  import FormField from '$lib/components/forms/FormField.svelte';
   import { changeAuthPin } from '$lib/auth/session-client';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { toastStore } from '$lib/stores/toastStore';
@@ -91,62 +92,68 @@
   onClose={closeDialog}
 >
   <form
-    class="modal-form"
+    class="modal-form modal-form--compact"
     onsubmit={(event) => {
       event.preventDefault();
       void submitDialog();
     }}
   >
-    <label class="modal-form-field">
-      <span>{t('ops.pinCurrentLabel')}</span>
-      <input
-        bind:this={currentPinInput}
-        class="form-input"
-        type="password"
-        inputmode="numeric"
-        autocomplete="current-password"
-        spellcheck="false"
-        autocapitalize="off"
-        bind:value={form.currentPin}
-        onfocus={(event) => event.currentTarget.select()}
-        required
-        minlength="4"
-        pattern={'[0-9]{4,}'}
-        disabled={busy}
-      />
-    </label>
+    <FormField label={t('ops.pinCurrentLabel')}>
+      {#snippet children(field)}
+        <input
+          {...field}
+          bind:this={currentPinInput}
+          class="form-input"
+          type="password"
+          inputmode="numeric"
+          autocomplete="current-password"
+          spellcheck="false"
+          autocapitalize="off"
+          bind:value={form.currentPin}
+          onfocus={(event) => event.currentTarget.select()}
+          required
+          minlength="4"
+          pattern={'[0-9]{4,}'}
+          disabled={busy}
+        />
+      {/snippet}
+    </FormField>
 
-    <label class="modal-form-field">
-      <span>{t('ops.pinNewLabel')}</span>
-      <input
-        class="form-input"
-        type="password"
-        inputmode="numeric"
-        autocomplete="new-password"
-        bind:value={form.newPin}
-        onfocus={(event) => event.currentTarget.select()}
-        required
-        minlength="4"
-        pattern={'[0-9]{4,}'}
-        disabled={busy}
-      />
-    </label>
+    <FormField label={t('ops.pinNewLabel')}>
+      {#snippet children(field)}
+        <input
+          {...field}
+          class="form-input"
+          type="password"
+          inputmode="numeric"
+          autocomplete="new-password"
+          bind:value={form.newPin}
+          onfocus={(event) => event.currentTarget.select()}
+          required
+          minlength="4"
+          pattern={'[0-9]{4,}'}
+          disabled={busy}
+        />
+      {/snippet}
+    </FormField>
 
-    <label class="modal-form-field">
-      <span>{t('ops.pinRepeatLabel')}</span>
-      <input
-        class="form-input"
-        type="password"
-        inputmode="numeric"
-        autocomplete="new-password"
-        bind:value={form.confirmNewPin}
-        onfocus={(event) => event.currentTarget.select()}
-        required
-        minlength="4"
-        pattern={'[0-9]{4,}'}
-        disabled={busy}
-      />
-    </label>
+    <FormField label={t('ops.pinRepeatLabel')}>
+      {#snippet children(field)}
+        <input
+          {...field}
+          class="form-input"
+          type="password"
+          inputmode="numeric"
+          autocomplete="new-password"
+          bind:value={form.confirmNewPin}
+          onfocus={(event) => event.currentTarget.select()}
+          required
+          minlength="4"
+          pattern={'[0-9]{4,}'}
+          disabled={busy}
+        />
+      {/snippet}
+    </FormField>
 
     <div class="form-actions">
       <Button type="button" variant="outline" disabled={busy} onclick={closeDialog}>
@@ -158,11 +165,3 @@
     </div>
   </form>
 </Modal>
-
-<style>
-  .modal-form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-</style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FormField from '$lib/components/forms/FormField.svelte';
   import { onMount, tick } from 'svelte';
   import { page } from '$app/state';
   import { gotoResolved } from '$lib/navigation/kit-paths';
@@ -83,23 +84,25 @@
   <p class="field-hint">{t('auth.loginPinHint')}</p>
 
   <form class="auth-form" onsubmit={(event) => { event.preventDefault(); void handleSubmit(); }}>
-    <label class="modal-form-field">
-      {t('auth.pinLabel')}
-      <input
-        bind:this={pinInput}
-        class="form-input"
-        type="password"
-        inputmode="numeric"
-        autocomplete="current-password"
-        spellcheck="false"
-        autocapitalize="off"
-        aria-invalid={formError ? 'true' : undefined}
-        aria-describedby={formError ? 'auth-login-error' : undefined}
-        bind:value={pin}
-        onfocus={(event) => event.currentTarget.select()}
-        required
-      />
-    </label>
+    <FormField label={t('auth.pinLabel')}>
+      {#snippet children(field)}
+        <input
+          {...field}
+          bind:this={pinInput}
+          class="form-input"
+          type="password"
+          inputmode="numeric"
+          autocomplete="current-password"
+          spellcheck="false"
+          autocapitalize="off"
+          aria-invalid={formError ? 'true' : undefined}
+          aria-describedby={formError ? 'auth-login-error' : undefined}
+          bind:value={pin}
+          onfocus={(event) => event.currentTarget.select()}
+          required
+        />
+      {/snippet}
+    </FormField>
 
     {#if formError}
       <p id="auth-login-error" class="auth-error" role="alert">{formError}</p>

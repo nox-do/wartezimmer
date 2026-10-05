@@ -90,7 +90,8 @@ export const dict = {
     anamnesePrivacyOpen: 'Read privacy notice',
     anamneseConsentCheckbox:
       'I have read the privacy notice and consent to the processing of my information, including health data, for the stated purpose. I may withdraw my consent at any time.',
-    anamneseConsentRequired: 'Please consent to the processing of your information to submit the medical history form.',
+    anamneseConsentRequired:
+      'Please consent to the processing of your information to submit the medical history form.',
   },
   terminal: {
     langPickerAria: 'Choose language',
@@ -222,6 +223,8 @@ export const dict = {
     checkinLocked: 'Check-in at this terminal is currently unavailable.',
     checkinClosed: 'Check-in is currently unavailable. Please go to reception.',
     topicDisabled: 'This topic is currently unavailable.',
+    registrationLimitReached:
+      'For technical reasons, only 999 registrations per topic letter are possible per practice day.',
     topicClosed: 'This topic is outside its available time window.',
     authPathDisabled: 'This check-in method is disabled on the terminal.',
     invalidArgument: 'Input incomplete or invalid.',

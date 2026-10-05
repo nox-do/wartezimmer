@@ -117,7 +117,7 @@
   .recovery-panel {
     padding: 1.25rem;
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: var(--radius-xl);
     background: var(--surface);
   }
   .recovery-backup-field { margin: 1rem 0; }

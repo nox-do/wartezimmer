@@ -71,7 +71,8 @@
     "dev:manager": "npm run -w @praxis-flow/manager dev",
     "dist:manager:mac": "npm run -w @praxis-flow/manager dist:mac",
     "dump": "node ./scripts/dump.mjs",
-    "dist:manager:win": "npm run -w @praxis-flow/manager dist:win"
+    "dist:manager:win": "npm run -w @praxis-flow/manager dist:win",
+    "dev:seed": "node scripts/dev-seed.mjs"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "^12.1.0",

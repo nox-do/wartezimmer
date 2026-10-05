@@ -71,9 +71,11 @@ export function registerCheckinRoutes(app: FastifyInstance, db: CoreDatabase): v
     async () => {
       const settings = db.getOpsSettings();
       return {
+        receptionRegistrationBlocked: db.isRegistrationBlocked(MFA_ASSIST_TOPIC_ID),
         topics: terminalTopicsForUi(settings).map(
           ({ topicId, label, sortOrder, iconId, accentColor, availableFrom, availableTo }) => ({
             topicId,
+            registrationBlocked: db.isRegistrationBlocked(topicId),
             label,
             sortOrder,
             iconId,

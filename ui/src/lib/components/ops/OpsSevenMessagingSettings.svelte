@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ChoiceField from '$lib/components/forms/ChoiceField.svelte';
+  import FormField from '$lib/components/forms/FormField.svelte';
   import { onMount } from 'svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import {
@@ -165,19 +167,20 @@
   {/if}
 
   <section class="panel">
-    <div class="staff-form-row">
-      <label for="seven-shared-api-key">{t('ops.messagingSevenApiKeyLabel')}</label>
-      <input
-        id="seven-shared-api-key"
-        class="form-input"
-        type="password"
-        bind:value={sharedApiKey}
-        placeholder={t('ops.messagingApiKeyPlaceholder')}
-        disabled={disabled || savingTarget != null}
-        autocomplete="off"
-      />
-    </div>
-    <p class="text-desc text-desc text-desc--tight">{t('ops.messagingSevenApiKeyHint')}</p>
+    <FormField layout="row" label={t('ops.messagingSevenApiKeyLabel')} id="seven-shared-api-key">
+      {#snippet children(field)}
+        <input
+          {...field}
+          class="form-input"
+          type="password"
+          bind:value={sharedApiKey}
+          placeholder={t('ops.messagingApiKeyPlaceholder')}
+          disabled={disabled || savingTarget != null}
+          autocomplete="off"
+        />
+      {/snippet}
+    </FormField>
+    <p class="text-desc text-desc--tight">{t('ops.messagingSevenApiKeyHint')}</p>
   </section>
 
   <section class="panel">
@@ -196,17 +199,16 @@
           </span>
         {/if}
       </h3>
-      <p class="text-desc text-desc text-desc--tight">{t('ops.messagingSmsSectionHint')}</p>
+      <p class="text-desc text-desc--tight">{t('ops.messagingSmsSectionHint')}</p>
 
-      <label class="ops-setup-toggle">
+      <ChoiceField label={t('ops.messagingEnabledLabel')} variant="toggle">
         <input type="checkbox" bind:checked={smsEnabled} disabled={disabled || savingTarget != null} />
-        <span>{t('ops.messagingEnabledLabel')}</span>
-      </label>
+      </ChoiceField>
 
-      <div class="staff-form-row">
-        <label for="seven-sms-from">{t('ops.messagingSmsFromLabel')}</label>
+      <FormField layout="row" label={t('ops.messagingSmsFromLabel')} id="seven-sms-from">
+      {#snippet children(field)}
         <input
-          id="seven-sms-from"
+          {...field}
           class="form-input"
           type="text"
           bind:value={smsFrom}
@@ -214,7 +216,8 @@
           disabled={disabled || savingTarget != null}
           autocomplete="off"
         />
-      </div>
+      {/snippet}
+    </FormField>
 
       <div class="staff-actions">
         <Button
@@ -247,47 +250,49 @@
             </span>
           {/if}
         </h3>
-        <p class="text-desc text-desc text-desc--tight">{t('ops.messagingWhatsappSectionHint')}</p>
+        <p class="text-desc text-desc--tight">{t('ops.messagingWhatsappSectionHint')}</p>
 
-        <label class="ops-setup-toggle">
+        <ChoiceField label={t('ops.messagingEnabledLabel')} variant="toggle">
           <input type="checkbox" bind:checked={whatsappEnabled} disabled={disabled || savingTarget != null} />
-          <span>{t('ops.messagingEnabledLabel')}</span>
-        </label>
+        </ChoiceField>
 
-        <div class="staff-form-row">
-          <label for="seven-wa-from">{t('ops.messagingWhatsappFromLabel')}</label>
-          <input
-            id="seven-wa-from"
-            class="form-input"
-            type="text"
-            bind:value={whatsappFrom}
-            disabled={disabled || savingTarget != null}
-            autocomplete="off"
-          />
-        </div>
-        <div class="staff-form-row">
-          <label for="seven-wa-template">{t('ops.messagingWhatsappTemplateLabel')}</label>
-          <input
-            id="seven-wa-template"
-            class="form-input"
-            type="text"
-            bind:value={whatsappTemplate}
-            disabled={disabled || savingTarget != null}
-            autocomplete="off"
-          />
-        </div>
-        <div class="staff-form-row">
-          <label for="seven-wa-language">{t('ops.messagingWhatsappLanguageLabel')}</label>
-          <input
-            id="seven-wa-language"
-            class="form-input"
-            type="text"
-            bind:value={whatsappLanguage}
-            placeholder="de"
-            disabled={disabled || savingTarget != null}
-            autocomplete="off"
-          />
-        </div>
+        <FormField layout="row" label={t('ops.messagingWhatsappFromLabel')} id="seven-wa-from">
+      {#snippet children(field)}
+        <input
+          {...field}
+          class="form-input"
+          type="text"
+          bind:value={whatsappFrom}
+          disabled={disabled || savingTarget != null}
+          autocomplete="off"
+        />
+      {/snippet}
+    </FormField>
+        <FormField layout="row" label={t('ops.messagingWhatsappTemplateLabel')} id="seven-wa-template">
+      {#snippet children(field)}
+        <input
+          {...field}
+          class="form-input"
+          type="text"
+          bind:value={whatsappTemplate}
+          disabled={disabled || savingTarget != null}
+          autocomplete="off"
+        />
+      {/snippet}
+    </FormField>
+        <FormField layout="row" label={t('ops.messagingWhatsappLanguageLabel')} id="seven-wa-language">
+      {#snippet children(field)}
+        <input
+          {...field}
+          class="form-input"
+          type="text"
+          bind:value={whatsappLanguage}
+          placeholder="de"
+          disabled={disabled || savingTarget != null}
+          autocomplete="off"
+        />
+      {/snippet}
+    </FormField>
 
         <div class="staff-actions">
           <Button

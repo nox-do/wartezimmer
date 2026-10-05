@@ -20,6 +20,7 @@ import {
   verifyTicketCodeInDb,
 } from './database-checkin-sessions.js';
 import { intakePatientDocumentInDb, type DocumentDeps } from './database-documents.js';
+import { ensureWaitSettingsSchema } from './database-wait-settings.js';
 import { prepareCoreDatabaseStatements } from './database-statements.js';
 import type { OpsSettings } from './db-types.js';
 
@@ -34,6 +35,7 @@ function sampleSettings(): OpsSettings {
   return {
     routingMode: 'simple',
     returnWindowMinutes: 15,
+    longWaitThresholdMinutes: 25,
     practiceOpenFrom: '00:00',
     practiceOpenTo: '23:59',
     practiceProfileJson: '{}',
@@ -82,6 +84,7 @@ function buildCheckinDeps(
   settings: OpsSettings,
 ): { deps: CheckinSessionDeps; stmts: ReturnType<typeof prepareCoreDatabaseStatements> } {
   seedOpsState(db);
+  ensureWaitSettingsSchema(db);
   const stmts = prepareCoreDatabaseStatements(db);
   const deps: CheckinSessionDeps = {
     ...stmts,

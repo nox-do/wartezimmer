@@ -5,6 +5,7 @@
 @import './lib/styles/pairing.css';
 @import './lib/styles/components.css';
 @import './lib/styles/staff.css';
+@import './lib/styles/settings.css';
 @import './lib/styles/utilities.css';
 
 *,
@@ -66,12 +67,7 @@ textarea {
 
 .app-main[data-surface='terminal'],
 .app-main[data-surface='tv'],
-.app-main[data-surface='room-panel'] {
-  max-width: none;
-  width: 100%;
-  padding: 0;
-}
-
+.app-main[data-surface='room-panel'],
 .app-main[data-surface='portal'] {
   max-width: none;
   width: 100%;

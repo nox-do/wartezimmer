@@ -280,3 +280,32 @@ test('settings snapshot roundtrip on file db', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('waiting threshold survives backup and legacy backups use 25 minutes', () => {
+  const source = openFreshDb();
+  const target = openFreshDb();
+  try {
+    source.exec('UPDATE ops_settings SET long_wait_threshold_minutes = 40');
+    const snapshot = exportSettingsSnapshotFromDb(source, sampleEnv());
+    importSettingsSnapshotIntoDb(target, snapshot);
+    assert.equal(
+      exportSettingsSnapshotFromDb(target, sampleEnv()).opsSettings.longWaitThresholdMinutes,
+      40,
+    );
+    delete snapshot.opsSettings.longWaitThresholdMinutes;
+    importSettingsSnapshotIntoDb(target, snapshot);
+    assert.equal(
+      exportSettingsSnapshotFromDb(target, sampleEnv()).opsSettings.longWaitThresholdMinutes,
+      25,
+    );
+    snapshot.opsSettings.longWaitThresholdMinutes = 241;
+    assert.throws(() => importSettingsSnapshotIntoDb(target, snapshot), SettingsSnapshotError);
+    assert.equal(
+      exportSettingsSnapshotFromDb(target, sampleEnv()).opsSettings.longWaitThresholdMinutes,
+      25,
+    );
+  } finally {
+    source.close();
+    target.close();
+  }
+});

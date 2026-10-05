@@ -1,3 +1,5 @@
+import { isRegistrationLaneBlocked } from '../queue/registration-number-limit.js';
+import { resolveTicketLaneCodeFromSettings } from '../checkin-topic-settings.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
@@ -626,6 +628,13 @@ export class CoreDatabase {
 
   isEffectiveCheckinLocked(): boolean {
     return isEffectiveCheckinLockedFromDb(this.dayLifecycleDeps());
+  }
+
+  isRegistrationBlocked(topicId: string): boolean {
+    return isRegistrationLaneBlocked(
+      this.db,
+      resolveTicketLaneCodeFromSettings(this.getOpsSettings(), topicId),
+    );
   }
 
   createTicket(input: CreateTicketCallerInput): {

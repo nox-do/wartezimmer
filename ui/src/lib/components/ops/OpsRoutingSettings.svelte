@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ChoiceField from '$lib/components/forms/ChoiceField.svelte';
   import { onMount } from 'svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import { t } from '$lib/i18n/i18nStore.svelte';
@@ -93,7 +94,13 @@
 {:else}
   <div class="ops-routing__stack">
     <div class="ops-routing__options" role="radiogroup" aria-label={t('ops.routing.title')}>
-      <label class="ops-routing__option">
+      <ChoiceField variant="custom" class="ops-routing__option">
+        {#snippet label()}
+          <span class="ops-routing__meta">
+            <strong>{t('ops.routing.simpleTitle')}</strong>
+            <span>{t('ops.routing.simpleBody')}</span>
+          </span>
+        {/snippet}
         <input
           type="radio"
           name="routingMode"
@@ -104,13 +111,15 @@
             selectedMode = 'simple';
           }}
         />
-        <span class="ops-routing__meta">
-          <strong>{t('ops.routing.simpleTitle')}</strong>
-          <span>{t('ops.routing.simpleBody')}</span>
-        </span>
-      </label>
+      </ChoiceField>
 
-      <label class="ops-routing__option">
+      <ChoiceField variant="custom" class="ops-routing__option">
+        {#snippet label()}
+          <span class="ops-routing__meta">
+            <strong>{t('ops.routing.complexTitle')}</strong>
+            <span>{t('ops.routing.complexBody')}</span>
+          </span>
+        {/snippet}
         <input
           type="radio"
           name="routingMode"
@@ -121,11 +130,7 @@
             selectedMode = 'complex';
           }}
         />
-        <span class="ops-routing__meta">
-          <strong>{t('ops.routing.complexTitle')}</strong>
-          <span>{t('ops.routing.complexBody')}</span>
-        </span>
-      </label>
+      </ChoiceField>
     </div>
 
     <p class="text-muted">{t('ops.routing.globalHint')}</p>
@@ -160,22 +165,6 @@
   .ops-routing__options {
     display: grid;
     gap: 0.75rem;
-  }
-
-  .ops-routing__option {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 0.75rem;
-    align-items: flex-start;
-    padding: 0.9rem 1rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--panel);
-    cursor: pointer;
-  }
-
-  .ops-routing__option input {
-    margin-top: 0.2rem;
   }
 
   .ops-routing__meta {

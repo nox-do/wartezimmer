@@ -1083,3 +1083,30 @@ test('GET /api/v1/queue with tv role returns explainVisibility-filtered items', 
 
   await app.close();
 });
+
+test('supersede returns registration limit as 409 with the host hint', async () => {
+  const app = Fastify({ logger: false });
+  registerQueueRoutes(
+    app,
+    buildQueueRouteDb({
+      supersedeVisit: () => {
+        throw new DomainError('REGISTRATION_LIMIT_REACHED');
+      },
+    }),
+  );
+  try {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/queue/M-001/supersede',
+      payload: { topicId: 'blut' },
+    });
+    assert.equal(response.statusCode, 409);
+    assert.equal(response.json().code, 'REGISTRATION_LIMIT_REACHED');
+    assert.equal(
+      response.json().message,
+      'Technisch bedingt sind pro Kennbuchstabe der Themen nur 999 Anmeldungen pro Praxistag möglich.',
+    );
+  } finally {
+    await app.close();
+  }
+});

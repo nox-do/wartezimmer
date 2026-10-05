@@ -155,6 +155,7 @@ export type OpsSettings = {
   routingMode: RoutingMode;
   postWaitingCallTargetId: string | null;
   returnWindowMinutes: number;
+  longWaitThresholdMinutes: number;
   practiceOpenFrom: string;
   practiceOpenTo: string;
   practiceProfileJson: string;

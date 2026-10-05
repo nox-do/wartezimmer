@@ -34,6 +34,8 @@ export interface paths {
           };
           content: {
             'application/json': {
+              /** @description Registration policy blocks the reserved reception/assistance lane. */
+              receptionRegistrationBlocked: boolean;
               topics: components['schemas']['TerminalTopic'][];
             };
           };
@@ -223,6 +225,8 @@ export interface components {
       destinationRoomLabel?: string | null;
     };
     TerminalTopic: {
+      /** @description Host registration policy blocks this lane for the current practice day. */
+      registrationBlocked: boolean;
       topicId: string;
       label: string;
       sortOrder: number;
@@ -264,6 +268,7 @@ export interface components {
       | 'INVALID_DAY_CLOSE_PHASE'
       | 'DAY_CLOSE_NOT_STARTED'
       | 'UNKNOWN_MESSAGING_PROVIDER'
+      | 'REGISTRATION_LIMIT_REACHED'
       | 'CHECKIN_LOCKED'
       | 'CHECKIN_AUTH_PATH_DISABLED'
       | 'CHECKIN_CLOSED'

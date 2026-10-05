@@ -137,13 +137,13 @@
     {#if backup?.filePath}
       <p class="hint">{backup?.filePath}</p>
     {/if}
-    <ul class="restore-wizard-summary">
+    <ul class="wizard-dialog-summary">
       {#each inspectLines as line (line)}
         <li>{line}</li>
       {/each}
     </ul>
     {#if inspectWarnings.length > 0}
-      <div class="restore-wizard-warnings">
+      <div class="wizard-dialog-warnings">
         <p><strong>Hinweise</strong></p>
         <ul>
           {#each inspectWarnings as warning (warning)}
@@ -185,7 +185,7 @@
   {:else if snapshot.phase === 'failed'}
     <h2>Restore fehlgeschlagen</h2>
     {#if backup?.inspect && inspectLines.length > 0}
-      <ul class="restore-wizard-summary">
+      <ul class="wizard-dialog-summary">
         {#each inspectLines as line (line)}
           <li>{line}</li>
         {/each}
@@ -242,18 +242,6 @@
 </dialog>
 
 <style>
-  .restore-wizard-summary {
-    margin: 0.75rem 0;
-    padding-left: 1.25rem;
-  }
-
-  .restore-wizard-warnings {
-    margin: 0.75rem 0;
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    background: var(--surface-muted, rgba(0, 0, 0, 0.04));
-  }
-
   .restore-wizard-checkbox {
     display: flex;
     gap: 0.5rem;

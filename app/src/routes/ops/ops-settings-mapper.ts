@@ -1,3 +1,4 @@
+import { isValidLongWaitThreshold } from '../../shared/db/database-wait-settings.js';
 import type { CoreDatabase } from '../../shared/db/database.js';
 import type { PatchOpsSettingsBody } from '../../api/ops-openapi-types.js';
 export type { PatchOpsOnboardingBody, PatchOpsSettingsBody } from '../../api/ops-openapi-types.js';
@@ -41,6 +42,7 @@ export function toOpsSettingsResponse(settings: ReturnType<CoreDatabase['getOpsS
     routingMode: settings.routingMode,
     postWaitingCallTargetId: settings.postWaitingCallTargetId,
     returnWindowMinutes: settings.returnWindowMinutes,
+    longWaitThresholdMinutes: settings.longWaitThresholdMinutes,
     practiceOpenFrom: settings.practiceOpenFrom,
     practiceOpenTo: settings.practiceOpenTo,
     topics: settings.topics,
@@ -286,6 +288,16 @@ export async function buildOpsSettingsUpdate(
     practiceProfileJson = serializePracticeProfile(mergedProfile);
   }
 
+  if (
+    body.longWaitThresholdMinutes != null &&
+    !isValidLongWaitThreshold(body.longWaitThresholdMinutes)
+  ) {
+    return {
+      code: 'INVALID_ARGUMENT',
+      message: 'longWaitThresholdMinutes must be between 1 and 240.',
+    };
+  }
+
   if (body.returnWindowMinutes != null) {
     const value = body.returnWindowMinutes;
     if (!Number.isInteger(value) || value < 1 || value > 240) {
@@ -322,6 +334,7 @@ export async function buildOpsSettingsUpdate(
         ? undefined
         : body.postWaitingCallTargetId?.trim() || null,
     returnWindowMinutes: body.returnWindowMinutes,
+    longWaitThresholdMinutes: body.longWaitThresholdMinutes,
     practiceOpenFrom: body.practiceOpenFrom,
     practiceOpenTo: body.practiceOpenTo,
     practiceProfileJson,

@@ -621,8 +621,7 @@ export const dict = {
       topicJourneySelectNone: 'Keine Journey (Simple Routing)',
       navJourneys: 'Journeys',
       journeysPanelTitle: 'Journeys',
-      journeysPanelDesc:
-        'Mehrstufige Abläufe für Complex Routing.',
+      journeysPanelDesc: 'Mehrstufige Abläufe für Complex Routing.',
       journeyComplexModeRequired: 'Journey-Verwaltung ist nur im Complex Routing Mode verfügbar.',
       journeySelectTemplate: 'Journey-Vorlage',
       journeyNoTemplates: 'Keine Vorlagen',
@@ -769,6 +768,14 @@ export const dict = {
       terminalPatientLocaleUkLabel: 'Ukrainisch',
       terminalPatientLocaleUkDesc: 'Ukrainische Oberfläche und Kyrillisch-Tastatur.',
       terminalPatientLocalesSaved: 'Sprachen gespeichert.',
+      longWaitPanelTitle: 'Lange Wartezeit',
+      longWaitPanelDesc:
+        'Legt fest, ab wann Patienten im Wartezimmer als länger wartend angezeigt werden.',
+      longWaitLabel: 'Lange Wartezeit ab (Minuten)',
+      longWaitHint:
+        'Standard: 25 Minuten. Gilt für die rote Zeitangabe und die Trennlinie im Wartezimmer.',
+      longWaitInvalid: 'Bitte eine ganze Zahl zwischen 1 und 240 Minuten eingeben.',
+      longWaitSaved: 'Wartezeit-Grenze gespeichert.',
       returnWindowPanelTitle: 'Rückkehrfrist',
       returnWindowPanelDesc:
         'Hier können Sie festlegen, wie viele Minuten ab der Rückholung vergehen dürfen, bis eine Wartenummer automatisch wieder ins Wartezimmer zurückgesetzt wird.',
@@ -903,6 +910,8 @@ export const dict = {
         'Raum kann nicht entfernt werden — noch Wartenummern zugeordnet: {tickets}. Bitte zuerst in der Warteliste umverteilen oder abschließen.',
       roomDisableBlockedQueue:
         'Raum kann nicht deaktiviert werden — noch Wartenummern zugeordnet: {tickets}. Bitte zuerst in der Warteliste umverteilen oder abschließen.',
+      roomEditBlockedQueue:
+        'Raum kann nicht geändert werden — noch Wartenummern zugeordnet: {tickets}. Bitte zuerst in der Warteliste umverteilen oder abschließen.',
       roomCapacityBlockedQueue:
         'Kapazität zu niedrig — noch belegt durch: {tickets}. Bitte zuerst in der Warteliste umverteilen oder abschließen.',
       roomRemoveQueueCheckError: 'Warteliste konnte nicht geprüft werden.',
@@ -1037,7 +1046,8 @@ export const dict = {
     anamnesePrivacyOpen: 'Datenschutzhinweise lesen',
     anamneseConsentCheckbox:
       'Ich habe die Datenschutzhinweise gelesen und willige in die Verarbeitung meiner Angaben, einschließlich Gesundheitsdaten, zum genannten Zweck ein. Ich kann meine Einwilligung jederzeit widerrufen.',
-    anamneseConsentRequired: 'Bitte willigen Sie in die Verarbeitung Ihrer Angaben ein, um den Anamnesebogen zu übermitteln.',
+    anamneseConsentRequired:
+      'Bitte willigen Sie in die Verarbeitung Ihrer Angaben ein, um den Anamnesebogen zu übermitteln.',
   },
   tv: {
     queueStreamError: 'Wartezimmer-Stream konnte nicht verbunden werden.',
@@ -1198,6 +1208,8 @@ export const dict = {
     checkinLocked: 'Die Anmeldung am Terminal ist derzeit nicht möglich.',
     checkinClosed: 'Check-in ist derzeit nicht verfügbar. Bitte wenden Sie sich an den Empfang.',
     topicDisabled: 'Dieses Anliegen ist derzeit nicht verfügbar.',
+    registrationLimitReached:
+      'Technisch bedingt sind pro Kennbuchstabe der Themen nur 999 Anmeldungen pro Praxistag möglich.',
     topicClosed: 'Dieses Anliegen ist aktuell außerhalb des Zeitfensters.',
     authPathDisabled: 'Dieser Anmeldeweg ist am Terminal deaktiviert.',
     invalidArgument: 'Eingabe unvollständig oder ungültig.',

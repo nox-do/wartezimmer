@@ -1,4 +1,6 @@
 <script lang="ts">
+  import SettingsHeader from '$lib/components/shared/SettingsHeader.svelte';
+  import FormField from '$lib/components/forms/FormField.svelte';
   import { onMount, tick } from 'svelte';
   import Modal from '$lib/components/Modal.svelte';
   import MfaBooleanSettingToggle from '$lib/components/mfa/MfaBooleanSettingToggle.svelte';
@@ -7,6 +9,7 @@
   import { changeAuthPin, type AuthPinTarget } from '$lib/auth/session-client';
   import { fetchOpsSettings, patchOpsSettings } from '$lib/queue/ops-settings-api';
   import { t } from '$lib/i18n/i18nStore.svelte';
+  import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
   import { toastStore } from '$lib/stores/toastStore';
   import {
     isTerminalPatientLocaleEnabled,
@@ -44,6 +47,9 @@
   let loading = $state(true);
   let promoBusy = $state(false);
   let returnWindowBusy = $state(false);
+  let longWaitBusy = $state(false);
+  let longWaitMinutes = $state(25);
+  let longWaitDraft = $state('25');
   let authBusyKey = $state<AuthToggleKey | null>(null);
   let localeBusyKey = $state<OptionalPatientLocale | null>(null);
   let terminalWlanPromoEnabled = $state(false);
@@ -79,6 +85,8 @@
     terminalPatientLocales = settingsResult.data.terminalPatientLocales;
     returnWindowMinutes = settingsResult.data.returnWindowMinutes;
     returnWindowDraft = String(returnWindowMinutes);
+    longWaitMinutes = settingsResult.data.longWaitThresholdMinutes;
+    longWaitDraft = String(longWaitMinutes);
   }
 
   async function handleWlanPromoToggle(nextEnabled: boolean) {
@@ -182,6 +190,32 @@
     }
   }
 
+  async function saveLongWaitMinutes() {
+    if (longWaitBusy) return;
+    const parsed = Number(longWaitDraft);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 240) {
+      toastStore.error(t('mfa.settings.longWaitInvalid'));
+      longWaitDraft = String(longWaitMinutes);
+      return;
+    }
+    if (parsed === longWaitMinutes) return;
+    longWaitBusy = true;
+    try {
+      const result = await patchOpsSettings({ longWaitThresholdMinutes: parsed });
+      if (!result.ok) {
+        toastStore.error(result.error.message || t('mfa.settings.settingsSaveError'));
+        longWaitDraft = String(longWaitMinutes);
+        return;
+      }
+      longWaitMinutes = result.data.longWaitThresholdMinutes;
+      longWaitDraft = String(longWaitMinutes);
+      mfaPracticeContext.longWaitThresholdMinutes = longWaitMinutes;
+      toastStore.success(t('mfa.settings.longWaitSaved'));
+    } finally {
+      longWaitBusy = false;
+    }
+  }
+
   function openPinDialog(target: MfaPinTarget) {
     if (pinBusyTarget != null) {
       return;
@@ -276,11 +310,31 @@
   <p class="text-muted">{t('ui.loading')}</p>
 {:else}
   <div class="panel">
-    <h2 class="panel__title">{t('mfa.settings.returnWindowPanelTitle')}</h2>
-      <p class="text-desc">{t('mfa.settings.returnWindowPanelDesc')}</p>
-      <label class="modal-form-field modal-form-field--narrow">
-        {t('mfa.settings.returnWindowLabel')}
+    <SettingsHeader layout="plain" level={2} title={t('mfa.settings.longWaitPanelTitle')} description={t('mfa.settings.longWaitPanelDesc')} />
+    <FormField label={t('mfa.settings.longWaitLabel')} hint={t('mfa.settings.longWaitHint')} class="modal-form-field--narrow">
+      {#snippet children(field)}
         <input
+          {...field}
+          class="form-input"
+          type="number"
+          min="1"
+          max="240"
+          step="1"
+          inputmode="numeric"
+          bind:value={longWaitDraft}
+          disabled={longWaitBusy}
+          onchange={() => void saveLongWaitMinutes()}
+        />
+      {/snippet}
+    </FormField>
+  </div>
+
+  <div class="panel">
+    <SettingsHeader layout="plain" level={2} title={t('mfa.settings.returnWindowPanelTitle')} description={t('mfa.settings.returnWindowPanelDesc')} />
+    <FormField label={t('mfa.settings.returnWindowLabel')} hint={t('mfa.settings.returnWindowHint')} class="modal-form-field--narrow">
+      {#snippet children(field)}
+        <input
+          {...field}
           class="form-input"
           type="number"
           min={RETURN_WINDOW_MIN}
@@ -291,13 +345,12 @@
           disabled={returnWindowBusy}
           onchange={() => void saveReturnWindowMinutes()}
         />
-        <span class="field-hint">{t('mfa.settings.returnWindowHint')}</span>
-      </label>
-    </div>
+      {/snippet}
+    </FormField>
+  </div>
 
   <div class="panel">
-    <h2 class="panel__title">{t('mfa.settings.pinSecurityPanelTitle')}</h2>
-      <p class="text-desc">{t('mfa.settings.pinSecurityPanelDesc')}</p>
+    <SettingsHeader layout="plain" level={2} title={t('mfa.settings.pinSecurityPanelTitle')} description={t('mfa.settings.pinSecurityPanelDesc')} />
       <div class="pin-change-actions">
         <div class="pin-change-card">
           <h3>{t('mfa.settings.pinNewMfaLabel')}</h3>
@@ -328,8 +381,7 @@
     </div>
 
   <div class="panel">
-    <h2 class="panel__title">{t('mfa.settings.terminalAuthPanelTitle')}</h2>
-      <p class="text-desc">{t('mfa.settings.terminalAuthPanelDesc')}</p>
+    <SettingsHeader layout="plain" level={2} title={t('mfa.settings.terminalAuthPanelTitle')} description={t('mfa.settings.terminalAuthPanelDesc')} />
       <MfaBooleanSettingToggle
         label={t('mfa.settings.terminalAuthPhoneLabel')}
         checked={terminalAuthPhoneEnabled}
@@ -354,8 +406,7 @@
     </div>
 
   <div class="panel">
-    <h2 class="panel__title">{t('mfa.settings.terminalPatientLocalesPanelTitle')}</h2>
-      <p class="text-desc">{t('mfa.settings.terminalPatientLocalesPanelDesc')}</p>
+    <SettingsHeader layout="plain" level={2} title={t('mfa.settings.terminalPatientLocalesPanelTitle')} description={t('mfa.settings.terminalPatientLocalesPanelDesc')} />
       <MfaBooleanSettingToggle
         label={t('mfa.settings.terminalPatientLocaleDeLabel')}
         checked={true}
@@ -375,8 +426,7 @@
     </div>
 
   <div class="panel">
-    <h2 class="panel__title">{t('mfa.settings.terminalWlanPromoPanelTitle')}</h2>
-      <p class="text-desc">{t('mfa.settings.terminalWlanPromoPanelDesc')}</p>
+    <SettingsHeader layout="plain" level={2} title={t('mfa.settings.terminalWlanPromoPanelTitle')} description={t('mfa.settings.terminalWlanPromoPanelDesc')} />
       <MfaBooleanSettingToggle
         label={t('mfa.settings.terminalWlanPromoLabel')}
         description={t('mfa.settings.terminalWlanPromoDesc')}
@@ -405,66 +455,70 @@
   onClose={closePinDialog}
 >
   <form
-    class="modal-form"
+    class="modal-form modal-form--compact"
     onsubmit={(event) => {
       event.preventDefault();
       void submitPinDialog();
     }}
   >
-    <label class="modal-form-field">
-      <span>{t('mfa.settings.pinCurrentLabel')}</span>
-      <input
-        bind:this={currentPinInput}
-        class="form-input"
-        type="password"
-        inputmode="numeric"
-        autocomplete="current-password"
-        spellcheck="false"
-        autocapitalize="off"
-        bind:value={pinDialogForm.currentPin}
-        onfocus={(event) => event.currentTarget.select()}
-        required
-        minlength="4"
-        pattern={'[0-9]{4,}'}
-        disabled={pinBusyTarget != null}
-      />
-    </label>
+    <FormField label={t('mfa.settings.pinCurrentLabel')}>
+      {#snippet children(field)}
+        <input
+          {...field}
+          bind:this={currentPinInput}
+          class="form-input"
+          type="password"
+          inputmode="numeric"
+          autocomplete="current-password"
+          spellcheck="false"
+          autocapitalize="off"
+          bind:value={pinDialogForm.currentPin}
+          onfocus={(event) => event.currentTarget.select()}
+          required
+          minlength="4"
+          pattern={'[0-9]{4,}'}
+          disabled={pinBusyTarget != null}
+        />
+      {/snippet}
+    </FormField>
 
-    <label class="modal-form-field">
-      <span>
-        {pinDialogTarget === 'room-panel'
+    <FormField label={pinDialogTarget === 'room-panel'
           ? t('mfa.settings.pinNewPanelLabel')
-          : t('mfa.settings.pinNewMfaLabel')}
-      </span>
-      <input
-        class="form-input"
-        type="password"
-        inputmode="numeric"
-        autocomplete="new-password"
-        bind:value={pinDialogForm.newPin}
-        onfocus={(event) => event.currentTarget.select()}
-        required
-        minlength="4"
-        pattern={'[0-9]{4,}'}
-        disabled={pinBusyTarget != null}
-      />
-    </label>
+          : t('mfa.settings.pinNewMfaLabel')}>
+      {#snippet children(field)}
+        <input
+          {...field}
+          class="form-input"
+          type="password"
+          inputmode="numeric"
+          autocomplete="new-password"
+          bind:value={pinDialogForm.newPin}
+          onfocus={(event) => event.currentTarget.select()}
+          required
+          minlength="4"
+          pattern={'[0-9]{4,}'}
+          disabled={pinBusyTarget != null}
+        />
+      {/snippet}
+    </FormField>
 
-    <label class="modal-form-field">
-      <span>{t('mfa.settings.pinRepeatLabel')}</span>
-      <input
-        class="form-input"
-        type="password"
-        inputmode="numeric"
-        autocomplete="new-password"
-        bind:value={pinDialogForm.confirmNewPin}
-        onfocus={(event) => event.currentTarget.select()}
-        required
-        minlength="4"
-        pattern={'[0-9]{4,}'}
-        disabled={pinBusyTarget != null}
-      />
-    </label>
+    <FormField label={t('mfa.settings.pinRepeatLabel')}>
+      {#snippet children(field)}
+        <input
+          {...field}
+          class="form-input"
+          type="password"
+          inputmode="numeric"
+          autocomplete="new-password"
+          bind:value={pinDialogForm.confirmNewPin}
+          onfocus={(event) => event.currentTarget.select()}
+          required
+          minlength="4"
+          pattern={'[0-9]{4,}'}
+          disabled={pinBusyTarget != null}
+        />
+      {/snippet}
+    </FormField>
 
     <div class="form-actions">
       <Button type="button" variant="outline" disabled={pinBusyTarget != null} onclick={closePinDialog}>
@@ -492,7 +546,7 @@
     gap: 0.75rem;
     padding: 1rem;
     border: 1px solid var(--border);
-    border-radius: 0.875rem;
+    border-radius: var(--pin-change-card-radius);
     background: color-mix(in oklab, var(--card) 90%, var(--background));
   }
 
@@ -501,9 +555,4 @@
     font-size: 1rem;
   }
 
-  .modal-form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
 </style>

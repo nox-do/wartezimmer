@@ -3,12 +3,12 @@
   margin-bottom: 1rem;
   padding: 0.85rem 0.9rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--surface-raised, rgba(255, 255, 255, 0.02));
 }
 
 .net-scenario--portal {
-  border-color: color-mix(in srgb, var(--accent, #3b82f6) 35%, var(--border));
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
 }
 
 .net-scenario-header {
@@ -40,16 +40,16 @@
   width: 100%;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   text-align: center;
   font-size: 0.88rem;
   line-height: 1.35;
-  background: var(--surface, rgba(0, 0, 0, 0.08));
+  background: var(--surface);
 }
 
 .net-flow-step--ours {
-  border-color: color-mix(in srgb, var(--accent, #3b82f6) 40%, var(--border));
-  background: color-mix(in srgb, var(--accent, #3b82f6) 8%, var(--surface, rgba(0, 0, 0, 0.08)));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
 }
 
 .net-flow-step-label {

@@ -167,7 +167,7 @@
     justify-content: center;
     width: 3.25rem;
     height: 3.25rem;
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     border: 3px solid var(--border);
     background: var(--card);
     font-size: 1.65rem;

@@ -18,6 +18,7 @@ export const mfaPracticeContext = $state({
   postWaitingCallTargetId: null as string | null,
   callRoomOverrideId: null as string | null,
   returnWindowMinutes: 15,
+  longWaitThresholdMinutes: 25,
 });
 
 /** Single write path for MFA topic catalog + practice context topics. */
@@ -93,6 +94,7 @@ export function resetMfaPracticeContext() {
   mfaPracticeContext.postWaitingCallTargetId = null;
   mfaPracticeContext.callRoomOverrideId = null;
   mfaPracticeContext.returnWindowMinutes = 15;
+  mfaPracticeContext.longWaitThresholdMinutes = 25;
   setPracticeTopicCatalog([]);
 }
 
@@ -120,4 +122,5 @@ export async function loadMfaPracticeContext() {
       : null,
   );
   mfaPracticeContext.returnWindowMinutes = settingsResult.data.returnWindowMinutes ?? 15;
+  mfaPracticeContext.longWaitThresholdMinutes = settingsResult.data.longWaitThresholdMinutes ?? 25;
 }

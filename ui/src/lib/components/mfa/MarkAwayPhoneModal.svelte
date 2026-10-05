@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FormField from '$lib/components/forms/FormField.svelte';
   import { formatTicketCode } from '@praxis-flow/domain';
   import { Pause } from '@lucide/svelte';
   import Modal from '$lib/components/Modal.svelte';
@@ -83,18 +84,20 @@
         {/if}
       </p>
 
-      <label class="modal-form-field">
-        <span>{t('mfa.markAwayPhoneLabel')}</span>
-        <input
-          class="form-input"
-          type="tel"
-          inputmode="tel"
-          autocomplete="off"
-          placeholder={t('mfa.markAwayPhonePlaceholder')}
-          bind:value={phoneNumber}
-          disabled={busy}
-        />
-      </label>
+      <FormField label={t('mfa.markAwayPhoneLabel')}>
+        {#snippet children(field)}
+          <input
+            {...field}
+            class="form-input"
+            type="tel"
+            inputmode="tel"
+            autocomplete="off"
+            placeholder={t('mfa.markAwayPhonePlaceholder')}
+            bind:value={phoneNumber}
+            disabled={busy}
+          />
+        {/snippet}
+      </FormField>
 
       <div class="form-actions">
         <Button type="button" variant="outline" disabled={busy} onclick={handleClose}>{t('ui.cancel')}</Button>

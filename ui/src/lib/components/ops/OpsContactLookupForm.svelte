@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FormField from '$lib/components/forms/FormField.svelte';
   import { onMount } from 'svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import {
@@ -410,56 +411,58 @@
   {/if}
 
   <div class="staff-form-grid">
-    <div class="staff-form-row">
-      <label for="{idPrefix}-folder-select">{t('ops.contactsFolderLabel')}</label>
-      {#if folderHostLabel}
-        <p class="contact-lookup-folder-hint text-desc">
-          {t('ops.contactsFolderHostHint')}
-          <code>{folderHostLabel}</code>.
-          {t('ops.contactsFolderHostHintSub')}
-        </p>
-      {/if}
-      {#if importFolders.length === 0}
-        <p class="text-desc">{t('ops.contactsFolderEmpty')}</p>
-      {:else}
+    <FormField layout="row" label={t('ops.contactsFolderLabel')} id="{idPrefix}-folder-select">
+      {#snippet children(field)}
+        {#if folderHostLabel}
+          <p class="contact-lookup-folder-hint text-desc">
+            {t('ops.contactsFolderHostHint')}
+            <code>{folderHostLabel}</code>.
+            {t('ops.contactsFolderHostHintSub')}
+          </p>
+        {/if}
+        {#if importFolders.length === 0}
+          <p class="text-desc">{t('ops.contactsFolderEmpty')}</p>
+        {:else}
+          <select
+            {...field}
+            class="form-select"
+            bind:value={selectedFolderPath}
+            disabled={fieldDisabled}
+            onchange={() => {
+              resetScanState();
+              void runPreview();
+            }}
+          >
+            {#each importFolders as folder (folder.containerPath)}
+              <option value={folder.containerPath}>{folder.label}</option>
+            {/each}
+          </select>
+        {/if}
+      {/snippet}
+    </FormField>
+
+    <FormField layout="row" label={t('ops.contactsDelimiterLabel')} id="{idPrefix}-delimiter">
+      {#snippet children(field)}
         <select
-          id="{idPrefix}-folder-select"
+          {...field}
           class="form-select"
-          bind:value={selectedFolderPath}
+          bind:value={delimiterMode}
           disabled={fieldDisabled}
           onchange={() => {
-            resetScanState();
+            allowAutoApplySuggestions = true;
+            resetValidationState();
             void runPreview();
           }}
         >
-          {#each importFolders as folder (folder.containerPath)}
-            <option value={folder.containerPath}>{folder.label}</option>
-          {/each}
+          <option value="auto">auto</option>
+          <option value="semicolon">;</option>
+          <option value="comma">,</option>
+          <option value="tab">Tab</option>
         </select>
-      {/if}
-    </div>
+      {/snippet}
+    </FormField>
 
-    <div class="staff-form-row">
-      <label for="{idPrefix}-delimiter">{t('ops.contactsDelimiterLabel')}</label>
-      <select
-        id="{idPrefix}-delimiter"
-        class="form-select"
-        bind:value={delimiterMode}
-        disabled={fieldDisabled}
-        onchange={() => {
-          allowAutoApplySuggestions = true;
-          resetValidationState();
-          void runPreview();
-        }}
-      >
-        <option value="auto">auto</option>
-        <option value="semicolon">;</option>
-        <option value="comma">,</option>
-        <option value="tab">Tab</option>
-      </select>
-    </div>
-
-    <div class="staff-form-row staff-form-row staff-form-row--inline">
+    <div class="staff-form-row staff-form-row--inline">
       <input
         id="{idPrefix}-has-header"
         type="checkbox"

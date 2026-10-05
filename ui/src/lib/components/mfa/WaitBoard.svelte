@@ -5,7 +5,7 @@
   import QueueDropZone from './QueueDropZone.svelte';
   import QueueEntry from './QueueEntry.svelte';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
-  import { LONG_WAIT_THRESHOLD_MINUTES } from '$lib/queue/format-wait-duration';
+  import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
   import { listEnabledRooms, type PracticeRoom } from '$lib/queue/ops-settings-api';
   import { readQueueDropTarget, type QueueDropTarget } from '$lib/queue/queue-drop-resolver';
   import { buildWaitingRows } from '$lib/queue/waiting-list-filter';
@@ -86,9 +86,9 @@
     return queueFilterActive ? t('mfa.waitingFilterEmpty') : t(fallbackKey);
   }
 
-  const waitingRows = $derived(buildWaitingRows(waiting, nowMs));
+  const waitingRows = $derived(buildWaitingRows(waiting, nowMs, mfaPracticeContext.longWaitThresholdMinutes));
 
-  const waitThresholdMinutes = LONG_WAIT_THRESHOLD_MINUTES;
+  const waitThresholdMinutes = $derived(mfaPracticeContext.longWaitThresholdMinutes);
 
   const queueDragSensors = [
     PointerSensor.configure({

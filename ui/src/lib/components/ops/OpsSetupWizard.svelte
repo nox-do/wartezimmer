@@ -1,4 +1,7 @@
 <script lang="ts">
+  import ChoiceGroup from '$lib/components/forms/ChoiceGroup.svelte';
+  import ChoiceField from '$lib/components/forms/ChoiceField.svelte';
+  import SettingsHeader from '$lib/components/shared/SettingsHeader.svelte';
   import { onMount, tick } from 'svelte';
   import { gotoResolved } from '$lib/navigation/kit-paths';
   import Button from '$lib/components/forms/Button.svelte';
@@ -455,14 +458,12 @@
 
   {#if step === 'welcome'}
     <section class="panel">
-      <h2 class="panel__title">{t('ops.setup.welcomeTitle')}</h2>
-      <h3 class="panel__title">{t('ops.setup.hostAgentTitle')}</h3>
-      <p class="text-desc">{t('ops.setup.hostAgentBody')}</p>
+      <SettingsHeader layout="plain" title={t('ops.setup.welcomeTitle')} />
+      <SettingsHeader layout="plain" level={3} title={t('ops.setup.hostAgentTitle')} description={t('ops.setup.hostAgentBody')} />
     </section>
   {:else if step === 'practice'}
     <section class="panel">
-      <h2 class="panel__title">{t('ops.practice.title')}</h2>
-      <p class="text-desc">{t('ops.setup.practiceHint')}</p>
+      <SettingsHeader layout="plain" level={2} title={t('ops.practice.title')} description={t('ops.setup.practiceHint')} />
       <OpsPracticeProfileForm
         bind:this={practiceForm}
         variant="setup"
@@ -474,8 +475,7 @@
     </section>
   {:else if step === 'storage'}
     <section class="panel">
-      <h2 class="panel__title">{t('ops.storageTitle')}</h2>
-      <p class="text-desc">{t('ops.setup.storageIntro')}</p>
+      <SettingsHeader layout="plain" level={2} title={t('ops.storageTitle')} description={t('ops.setup.storageIntro')} />
       <ul class="ops-setup-list">
         <li>
           <code>{status.userFolders.imports}</code> — {t('ops.setup.storageImports')}
@@ -510,11 +510,9 @@
     </section>
   {:else if step === 'contacts'}
     <section class="panel">
-      <h2 class="panel__title">{t('ops.contactsTitle')}</h2>
-      <p class="text-desc">{t('ops.setup.contactsQuestion')}</p>
-      <fieldset class="ops-setup-fieldset">
-        <legend class="sr-only">{t('ops.contactsTitle')}</legend>
-        <label class="ops-setup-radio">
+      <SettingsHeader layout="plain" level={2} title={t('ops.contactsTitle')} description={t('ops.setup.contactsQuestion')} />
+      <ChoiceGroup label={t('ops.contactsTitle')}>
+        <ChoiceField label={t('ops.setup.contactsOwn')} variant="radio">
           <input
             type="radio"
             name="contact-mode"
@@ -522,9 +520,8 @@
             checked={contactMode === 'own'}
             onchange={() => void setContactMode('own')}
           />
-          {t('ops.setup.contactsOwn')}
-        </label>
-        <label class="ops-setup-radio">
+        </ChoiceField>
+        <ChoiceField label={t('ops.setup.contactsSample')} variant="radio">
           <input
             type="radio"
             name="contact-mode"
@@ -532,9 +529,8 @@
             checked={contactMode === 'sample'}
             onchange={() => void setContactMode('sample')}
           />
-          {t('ops.setup.contactsSample')}
-        </label>
-      </fieldset>
+        </ChoiceField>
+      </ChoiceGroup>
 
       {#if contactMode === 'sample'}
         <p class="text-desc">{t('ops.setup.contactsSampleHint')}</p>
@@ -559,19 +555,17 @@
     </section>
   {:else if step === 'messaging'}
     <section class="panel">
-      <h2 class="panel__title">{t('ops.messagingTitle')}</h2>
+      <SettingsHeader layout="plain" title={t('ops.messagingTitle')} />
       <OpsSevenMessagingSettings disabled={busy} setupMode />
     </section>
   {:else if step === 'portal'}
     <section class="panel">
-      <h2 class="panel__title">{t('ops.setup.portalTitle')}</h2>
-      <p class="text-desc">{t('ops.setup.portalLead')}</p>
+      <SettingsHeader layout="plain" level={2} title={t('ops.setup.portalTitle')} description={t('ops.setup.portalLead')} />
       <OpsPortalSettings bind:portalEnabled disabled={busy} showSaveToast={false} loadOnMount={false} />
     </section>
   {:else if step === 'verify'}
     <section class="panel">
-      <h2 class="panel__title">{t('ops.setup.verifyTitle')}</h2>
-      <p class="text-desc">{t('ops.setup.verifyBody')}</p>
+      <SettingsHeader layout="plain" level={2} title={t('ops.setup.verifyTitle')} description={t('ops.setup.verifyBody')} />
       {@render setupChecklist()}
       {#if busy && !verifyMessage}
         <p class="text-muted">{t('ops.setup.verifyRunning')}</p>

@@ -1,3 +1,7 @@
+import {
+  DEFAULT_LONG_WAIT_THRESHOLD_MINUTES,
+  isValidLongWaitThreshold,
+} from '../db/database-wait-settings.js';
 import type { DatabaseSync } from 'node:sqlite';
 import { settingsDbSnapshotsEquivalentForRestore } from '@praxis-flow/server-shared';
 import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
@@ -229,6 +233,10 @@ function parseOpsSettingsSnapshot(raw: unknown): OpsSettingsSnapshotV1 {
           : null
         : assertString(raw.postWaitingCallTargetId, 'opsSettings.postWaitingCallTargetId'),
     returnWindowMinutes: assertNumber(raw.returnWindowMinutes, 'opsSettings.returnWindowMinutes'),
+    longWaitThresholdMinutes:
+      raw.longWaitThresholdMinutes === undefined
+        ? DEFAULT_LONG_WAIT_THRESHOLD_MINUTES
+        : assertNumber(raw.longWaitThresholdMinutes, 'opsSettings.longWaitThresholdMinutes'),
     practiceOpenFrom: assertString(raw.practiceOpenFrom, 'opsSettings.practiceOpenFrom'),
     practiceOpenTo: assertString(raw.practiceOpenTo, 'opsSettings.practiceOpenTo'),
     practiceProfileJson: assertString(raw.practiceProfileJson, 'opsSettings.practiceProfileJson'),
@@ -288,6 +296,14 @@ function parseTopicsFromSnapshot(raw: unknown): OpsSettings['topics'] {
 }
 
 function validateOpsSettingsSnapshot(snapshot: OpsSettingsSnapshotV1): OpsSettings {
+  const longWaitThresholdMinutes =
+    snapshot.longWaitThresholdMinutes ?? DEFAULT_LONG_WAIT_THRESHOLD_MINUTES;
+  if (!isValidLongWaitThreshold(longWaitThresholdMinutes)) {
+    throw new SettingsSnapshotError(
+      'OPS_SETTINGS_INVALID',
+      'longWaitThresholdMinutes must be between 1 and 240.',
+    );
+  }
   const topics = parseTopicsFromSnapshot(snapshot.topics);
   const rooms = parseRoomSettingsFromSnapshot(snapshot.rooms);
   const topicValidation = validateTopicSettings(topics, rooms);
@@ -334,6 +350,7 @@ function validateOpsSettingsSnapshot(snapshot: OpsSettingsSnapshotV1): OpsSettin
       return rooms.some((room) => room.enabled && room.roomId === targetId) ? targetId : null;
     })(),
     returnWindowMinutes: snapshot.returnWindowMinutes,
+    longWaitThresholdMinutes,
     practiceOpenFrom: snapshot.practiceOpenFrom,
     practiceOpenTo: snapshot.practiceOpenTo,
     practiceProfileJson: snapshot.practiceProfileJson,
@@ -391,6 +408,7 @@ function writeOpsSettingsSnapshot(
       routing_mode = ?,
       post_waiting_call_target_id = ?,
       return_window_minutes = ?,
+      long_wait_threshold_minutes = ?,
       practice_open_from = ?,
       practice_open_to = ?,
       practice_profile_json = ?,
@@ -419,6 +437,7 @@ function writeOpsSettingsSnapshot(
     opsSettings.routingMode,
     opsSettings.postWaitingCallTargetId,
     opsSettings.returnWindowMinutes,
+    opsSettings.longWaitThresholdMinutes,
     opsSettings.practiceOpenFrom,
     opsSettings.practiceOpenTo,
     opsSettings.practiceProfileJson,

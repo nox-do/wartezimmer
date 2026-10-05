@@ -1,3 +1,4 @@
+import { assertRegistrationNumberAllowed } from '../queue/registration-number-limit.js';
 import type { DatabaseSync } from 'node:sqlite';
 import type { AuthPath } from '@praxis-flow/flow-core';
 import type { CreateTicketCallerInput, QueueDisplayStatus } from '../db/db-types.js';
@@ -47,6 +48,8 @@ export function createVisitCheckInInDb(
   if (!visit) {
     throw new Error('CHECKIN_FAILED');
   }
+
+  assertRegistrationNumberAllowed(visit.queueSequence);
 
   const topicLabel = visit.topic?.name ?? resolveTopicLabelFromSettings(settings, input.topicId);
   const createdAt = visit.checkedInAt ?? visit.createdAt;

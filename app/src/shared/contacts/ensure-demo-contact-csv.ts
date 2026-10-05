@@ -9,6 +9,9 @@ export const DEMO_CONTACT_CSV_FILENAME = 'kontakte.csv';
 const DEMO_CONTACT_CSV = `vorname;nachname;mobil;geburtsdatum
 Max;Mustermann;0172 111111;01.01.1980
 Monika;Mustermann;0172 222222;15.06.1975
+Lena;Sommer;0176 00000011;12.03.1985
+Paul;Winter;0176 00000022;24.09.1972
+Nora;Berg;0176 00000033;07.11.1994
 `;
 
 export const DEMO_CONTACT_LOOKUP_MAPPING_JSON = JSON.stringify({

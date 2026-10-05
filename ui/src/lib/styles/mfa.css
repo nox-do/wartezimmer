@@ -172,13 +172,13 @@ button.queue-ticket {
 .queue-assist-mark {
   display: inline-flex;
   align-items: center;
-  color: var(--amber-700, #b45309);
+  color: var(--amber-assist-mark);
 }
 
 .queue-directed-mark {
   display: inline-flex;
   align-items: center;
-  color: var(--teal-700, #0f766e);
+  color: var(--teal-pairing);
 }
 
 .queue-info {
@@ -436,7 +436,9 @@ button.queue-ticket {
   line-height: 1.25;
 }
 
-.wait-zone-empty {
+.wait-zone-empty,
+.active-room-group-note,
+.active-room-group-empty {
   margin: 0;
   font-size: var(--text-xs);
   color: var(--mfa-muted);
@@ -520,7 +522,7 @@ button.queue-ticket {
   justify-content: center;
   padding: 2px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: var(--radius-control);
   background: transparent;
   cursor: pointer;
 }
@@ -569,7 +571,7 @@ button.queue-ticket {
   flex: 1;
   height: 2px;
   background: var(--red-error-border-strong);
-  border-radius: 1px;
+  border-radius: var(--radius-indicator);
 }
 
 .wait-soll-divider-label {
@@ -638,14 +640,8 @@ button.queue-ticket {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  border-color: var(--blue-info-border, var(--border)) !important;
-  background: var(--blue-info-bg-glass, var(--card-glass-65)) !important;
-}
-
-.active-room-group-note {
-  margin: 0;
-  font-size: var(--text-xs);
-  color: var(--mfa-muted);
+  border-color: var(--blue-info-border) !important;
+  background: var(--card-glass-65) !important;
 }
 
 .active-room-group-title {
@@ -674,12 +670,6 @@ button.queue-ticket {
 .active-room-group--unassigned .active-room-group-title,
 .terminal-lock-status--off {
   color: var(--amber-warning-ink);
-}
-
-.active-room-group-empty {
-  margin: 0;
-  font-size: var(--text-xs);
-  color: var(--mfa-muted);
 }
 
 .queue-drop-zone {
@@ -833,15 +823,6 @@ button.queue-ticket {
   }
 }
 
-.mfa-editor-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
 .topic-editor-active-check {
   width: fit-content;
   padding: 0.5rem 0.75rem;
@@ -875,57 +856,44 @@ button.queue-ticket {
   padding: 0;
   border: none;
   list-style: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--green-success);
   pointer-events: none;
   z-index: 2;
 }
 
-.mfa-editor-list-item,
-.topic-icon-option {
-  border: 1px solid var(--mfa-border);
-  border-radius: var(--radius-sm);
-  background: var(--card);
-}
-
-.mfa-editor-list-item__main--sortable {
+.topic-sort-surface--sortable {
   cursor: grab;
   touch-action: none;
 }
 
-.mfa-editor-list-item__main--sortable:active {
+.topic-sort-surface--sortable:active {
   cursor: grabbing;
 }
 
-.mfa-editor-list-item--sortable .mfa-editor-sort-grip {
+.topic-sort-row--sortable .topic-sort-grip {
   flex-shrink: 0;
   margin: 0;
   pointer-events: none;
 }
 
-.mfa-editor-list-item__main--sortable:hover .mfa-editor-sort-grip {
+.topic-sort-surface--sortable:hover .topic-sort-grip {
   color: var(--mfa-muted);
   opacity: 1;
 }
 
-.mfa-editor-list-item--dragging {
+.topic-sort-row--dragging {
   opacity: 0.55;
 }
 
-.mfa-editor-list--sorting .mfa-editor-list-item:not(.mfa-editor-list-item--dragging) {
+.mfa-editor-list--sorting .topic-sort-row:not(.topic-sort-row--dragging) {
   transition: opacity 120ms ease;
 }
 
-.mfa-editor-list-item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-}
-
 .topic-icon-option {
+  border: 1px solid var(--mfa-border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -933,47 +901,6 @@ button.queue-ticket {
   padding: 10px 8px;
   cursor: pointer;
   min-height: 5.5rem;
-}
-
-.mfa-editor-list-item--inactive {
-  background: var(--zinc-50);
-  opacity: 0.92;
-}
-
-.mfa-editor-list-item__main {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  flex: 1;
-}
-
-.mfa-editor-list-item__text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.mfa-editor-list-item__label {
-  font-size: var(--text-md);
-  font-weight: 700;
-  color: var(--mfa-ink);
-  line-height: 1.25;
-}
-
-.mfa-editor-list-item__meta {
-  font-size: var(--text-sm);
-  color: var(--mfa-muted);
-  line-height: 1.35;
-}
-
-.mfa-editor-list-item__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
 }
 
 .room-panel-settings-grid {
@@ -989,91 +916,6 @@ button.queue-ticket {
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-
-.room-expander {
-  border: 1px solid var(--mfa-border);
-  border-radius: var(--radius-sm);
-  background: var(--card);
-}
-
-.room-expander--inactive {
-  background: var(--zinc-50);
-  opacity: 0.92;
-}
-
-.room-expander__trigger {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 12px;
-  border: none;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.room-expander__trigger:hover {
-  background: color-mix(in srgb, var(--mfa-border) 10%, transparent);
-}
-
-.room-expander__icon {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: var(--radius-xs);
-  background: var(--mfa-surface);
-  color: var(--zinc-700);
-  font-size: 0.95rem;
-}
-
-.room-expander__summary {
-  min-width: 0;
-  flex: 1;
-}
-
-.room-expander__label {
-  display: block;
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--mfa-ink);
-}
-
-.room-expander__meta {
-  display: block;
-  margin-top: 2px;
-  font-size: 0.8125rem;
-  color: var(--mfa-muted);
-}
-
-.room-expander__badges {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.room-expander__chevron {
-  flex-shrink: 0;
-  color: var(--mfa-muted);
-  font-size: 0.875rem;
-  transition: transform 140ms ease;
-}
-
-.room-expander.is-open .room-expander__chevron {
-  transform: rotate(180deg);
-}
-
-.room-expander__panel {
-  padding: 0 12px 12px;
-  border-top: 1px solid var(--mfa-border);
 }
 
 .room-expander-form {

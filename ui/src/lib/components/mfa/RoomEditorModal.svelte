@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FormField from '$lib/components/forms/FormField.svelte';
   import Modal from '$lib/components/Modal.svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import type { PracticeRoomWithPanels } from '$lib/queue/ops-settings-api';
@@ -108,23 +109,22 @@
       handleApply();
     }}
   >
-    <label class="modal-form-field">
-      <span>{t('mfa.settings.roomLabel')}</span>
-      <input
-        class="form-input"
-        type="text"
-        value={draft.roomLabel}
-        placeholder={t('mfa.settings.roomDefaultLabel')}
-        disabled={busy}
-        oninput={(event) => {
-          draft = { ...draft, roomLabel: (event.currentTarget as HTMLInputElement).value };
-          labelError = '';
-        }}
-      />
-      {#if labelError}
-        <span class="modal-form-error">{labelError}</span>
-      {/if}
-    </label>
+    <FormField label={t('mfa.settings.roomLabel')} error={labelError}>
+      {#snippet children(field)}
+        <input
+          {...field}
+          class="form-input"
+          type="text"
+          value={draft.roomLabel}
+          placeholder={t('mfa.settings.roomDefaultLabel')}
+          disabled={busy}
+          oninput={(event) => {
+            draft = { ...draft, roomLabel: (event.currentTarget as HTMLInputElement).value };
+            labelError = '';
+          }}
+        />
+      {/snippet}
+    </FormField>
 
     <div class="form-actions">
       <div class="form-actions__end">

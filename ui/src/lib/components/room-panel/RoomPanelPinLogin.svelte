@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FormField from '$lib/components/forms/FormField.svelte';
   import { LogIn } from '@lucide/svelte';
   import TerminalDobNumpad from '$lib/components/terminal/TerminalDobNumpad.svelte';
   import Button from '$lib/components/forms/Button.svelte';
@@ -107,16 +108,17 @@
   {:else if rooms.length === 0}
     <p class="room-panel-login__error">{t('roomPanel.noRooms')}</p>
   {:else}
-    <label class="modal-form-field">
-      <span>{t('roomPanel.roomLabel')}</span>
-      <select class="form-select" bind:value={selectedLoginKey} disabled={submitting}>
-        {#each rooms as room (roomPanelLoginKey(room))}
-          <option value={roomPanelLoginKey(room)}>
-            {room.roomLabel} – {t(`mfa.settings.roomPanelPlacementShort_${room.placement}`)}
-          </option>
-        {/each}
-      </select>
-    </label>
+    <FormField label={t('roomPanel.roomLabel')}>
+      {#snippet children(field)}
+        <select {...field} class="form-select" bind:value={selectedLoginKey} disabled={submitting}>
+          {#each rooms as room (roomPanelLoginKey(room))}
+            <option value={roomPanelLoginKey(room)}>
+              {room.roomLabel} – {t(`mfa.settings.roomPanelPlacementShort_${room.placement}`)}
+            </option>
+          {/each}
+        </select>
+      {/snippet}
+    </FormField>
 
     {#if pinRequired}
       <div class="room-panel-pin-login__pin-field">

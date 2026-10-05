@@ -42,7 +42,7 @@
   .topic-icon-display--accent {
     width: 2rem;
     height: 2rem;
-    border-radius: 8px;
+    border-radius: var(--radius-xs);
   }
 
   .topic-icon-display__letter {
@@ -51,7 +51,7 @@
     justify-content: center;
     width: 2rem;
     height: 2rem;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--card-glass-12);
     font-size: 1rem;
     font-weight: 800;

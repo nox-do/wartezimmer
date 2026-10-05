@@ -228,6 +228,7 @@ export interface paths {
             /** @enum {string} */
             routingMode?: 'simple' | 'complex';
             postWaitingCallTargetId?: string | null;
+            longWaitThresholdMinutes?: number;
             returnWindowMinutes?: number;
             practiceOpenFrom?: string;
             practiceOpenTo?: string;
@@ -2115,6 +2116,8 @@ export interface components {
       routingMode: 'simple' | 'complex';
       /** @description Simple-routing target used when a non-assisted patient waits at pf_waiting and is called without an explicit room selection. */
       postWaitingCallTargetId: string | null;
+      /** @description Waiting-time threshold in minutes for the MFA red indicator and divider. Defaults to 25; MFA-editable under Betrieb settings. */
+      longWaitThresholdMinutes: number;
       /** @description Single recall window for countdown, SMS text, and return with/without phone. MFA-editable under Betrieb settings. */
       returnWindowMinutes: number;
       /** @description Daily check-in window start (BUSINESS_TZ local time, HH:mm). */
@@ -2495,6 +2498,7 @@ export interface components {
       | 'INVALID_DAY_CLOSE_PHASE'
       | 'DAY_CLOSE_NOT_STARTED'
       | 'UNKNOWN_MESSAGING_PROVIDER'
+      | 'REGISTRATION_LIMIT_REACHED'
       | 'CHECKIN_LOCKED'
       | 'CHECKIN_AUTH_PATH_DISABLED'
       | 'CHECKIN_CLOSED'

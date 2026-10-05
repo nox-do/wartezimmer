@@ -1,6 +1,6 @@
 import { t, tf } from '$lib/i18n/i18nStore.svelte';
 
-/** Fixed MFA threshold for the waiting-list Soll divider (red line). Not settings-driven. */
+/** Default for older settings responses; live MFA presentation uses the saved preference. */
 export const LONG_WAIT_THRESHOLD_MINUTES = 25;
 
 export function formatWaitDuration(waitMs: number): string {

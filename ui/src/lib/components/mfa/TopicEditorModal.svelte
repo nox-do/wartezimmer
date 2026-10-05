@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ChoiceField from '$lib/components/forms/ChoiceField.svelte';
+  import FormField from '$lib/components/forms/FormField.svelte';
   import Modal from '$lib/components/Modal.svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import TopicIconDisplay from '$lib/components/topics/TopicIconDisplay.svelte';
@@ -184,22 +186,21 @@
       handleApply();
     }}
   >
-    <label class="modal-form-field">
-      <span>{t('mfa.settings.colTopic')}</span>
-      <input
-        class="form-input"
-        type="text"
-        value={draft.label}
-        placeholder={t('mfa.settings.topicDefaultLabel')}
-        disabled={busy}
-        oninput={(event) => updateLabel((event.currentTarget as HTMLInputElement).value)}
-      />
-      {#if labelError}
-        <span class="modal-form-error">{labelError}</span>
-      {/if}
-    </label>
+    <FormField label={t('mfa.settings.colTopic')} error={labelError}>
+      {#snippet children(field)}
+        <input
+          {...field}
+          class="form-input"
+          type="text"
+          value={draft.label}
+          placeholder={t('mfa.settings.topicDefaultLabel')}
+          disabled={busy}
+          oninput={(event) => updateLabel((event.currentTarget as HTMLInputElement).value)}
+        />
+      {/snippet}
+    </FormField>
 
-    <label class="modal-form-check topic-editor-active-check">
+    <ChoiceField label={t('mfa.settings.colEnabled')} class="topic-editor-active-check">
       <input
         type="checkbox"
         checked={draft.enabled}
@@ -207,8 +208,7 @@
         onchange={(event) =>
           (draft = { ...draft, enabled: (event.currentTarget as HTMLInputElement).checked })}
       />
-      <span>{t('mfa.settings.colEnabled')}</span>
-    </label>
+    </ChoiceField>
 
     <div class="modal-form-field">
       <span>{t('mfa.settings.colIcon')}</span>
@@ -226,26 +226,25 @@
       </button>
     </div>
 
-    <label class="modal-form-field">
-      <span>{t('mfa.settings.colLaneCode')}</span>
-      <div class="modal-form-lane-row">
-        <TopicLaneBadge laneCode={draft.laneCode} accentColor={draft.accentColor} />
-        <input
-          class="form-input modal-form-lane"
-          type="text"
-          maxlength="1"
-          value={draft.laneCode}
-          disabled={busy}
-          oninput={(event) => {
-            draft = { ...draft, laneCode: (event.currentTarget as HTMLInputElement).value.toUpperCase() };
-            laneError = '';
-          }}
-        />
-      </div>
-      {#if laneError}
-        <span class="modal-form-error">{laneError}</span>
-      {/if}
-    </label>
+    <FormField label={t('mfa.settings.colLaneCode')} error={laneError}>
+      {#snippet children(field)}
+        <div class="modal-form-lane-row">
+          <TopicLaneBadge laneCode={draft.laneCode} accentColor={draft.accentColor} />
+          <input
+            {...field}
+            class="form-input modal-form-lane"
+            type="text"
+            maxlength="1"
+            value={draft.laneCode}
+            disabled={busy}
+            oninput={(event) => {
+              draft = { ...draft, laneCode: (event.currentTarget as HTMLInputElement).value.toUpperCase() };
+              laneError = '';
+            }}
+          />
+        </div>
+      {/snippet}
+    </FormField>
 
     <div class="modal-form-field">
       <span>{t('mfa.settings.colAccentColor')}</span>
@@ -262,57 +261,52 @@
       <legend>{t('mfa.settings.topicRoutingTitle')}</legend>
 
       {#if showSimpleRoutingSection}
-        <label class="modal-form-field modal-form-field--nested">
-          <span>{t('mfa.settings.colDefaultRoom')}</span>
-          <select
-            class="form-input"
-            value={draft.defaultRoomId}
-            disabled={busy}
-            onchange={(event) => {
-              draft = { ...draft, defaultRoomId: (event.currentTarget as HTMLSelectElement).value };
-              roomError = '';
-            }}
-          >
-            <option value={WAITING_ROOM_LOCATION_ID}>{WAITING_ROOM_LABEL}</option>
-            {#each enabledRooms as room (room.roomId)}
-              <option value={room.roomId}>{room.roomLabel}</option>
-            {/each}
-          </select>
-          <p class="modal-form-hint">
-            {draft.defaultRoomId === WAITING_ROOM_LOCATION_ID
+        <FormField label={t('mfa.settings.colDefaultRoom')} hint={draft.defaultRoomId === WAITING_ROOM_LOCATION_ID
               ? t('mfa.settings.topicWaitingRoomHint')
-              : t('mfa.settings.topicPracticeRoomHint')}
-          </p>
-          {#if roomError}
-            <span class="modal-form-error">{roomError}</span>
-          {/if}
-        </label>
+              : t('mfa.settings.topicPracticeRoomHint')} error={roomError}>
+          {#snippet children(field)}
+            <select
+              {...field}
+              class="form-input"
+              value={draft.defaultRoomId}
+              disabled={busy}
+              onchange={(event) => {
+                draft = { ...draft, defaultRoomId: (event.currentTarget as HTMLSelectElement).value };
+                roomError = '';
+              }}
+            >
+              <option value={WAITING_ROOM_LOCATION_ID}>{WAITING_ROOM_LABEL}</option>
+              {#each enabledRooms as room (room.roomId)}
+                <option value={room.roomId}>{room.roomLabel}</option>
+              {/each}
+            </select>
+          {/snippet}
+        </FormField>
       {/if}
 
       {#if showComplexRoutingSection}
-        <label class="modal-form-field">
-          <span>{t('mfa.settings.topicJourneySelect')}</span>
-          <select
-            class="form-input"
-            disabled={busy}
-            value={draftJourneyTemplateId ?? ''}
-            onchange={(event) => {
-              const value = (event.currentTarget as HTMLSelectElement).value;
-              draft = {
-                ...draft,
-                journeyTemplateId: value.length > 0 ? value : null,
-              };
-            }}
-          >
-            <option value="">{t('mfa.settings.topicJourneySelectNone')}</option>
-            {#each journeySelectOptions as template (template.id)}
-              <option value={template.id}>{template.name}</option>
-            {/each}
-          </select>
-          {#if !draftJourneyTemplateId}
-            <p class="modal-form-hint">{t('mfa.settings.topicJourneyFallbackHint')}</p>
-          {/if}
-        </label>
+        <FormField label={t('mfa.settings.topicJourneySelect')} hint={!draftJourneyTemplateId ? (t('mfa.settings.topicJourneyFallbackHint')) : undefined}>
+          {#snippet children(field)}
+            <select
+              {...field}
+              class="form-input"
+              disabled={busy}
+              value={draftJourneyTemplateId ?? ''}
+              onchange={(event) => {
+                const value = (event.currentTarget as HTMLSelectElement).value;
+                draft = {
+                  ...draft,
+                  journeyTemplateId: value.length > 0 ? value : null,
+                };
+              }}
+            >
+              <option value="">{t('mfa.settings.topicJourneySelectNone')}</option>
+              {#each journeySelectOptions as template (template.id)}
+                <option value={template.id}>{template.name}</option>
+              {/each}
+            </select>
+          {/snippet}
+        </FormField>
       {/if}
     </fieldset>
 

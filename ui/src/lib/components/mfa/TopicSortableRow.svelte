@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createDraggable, createDroppable } from '@dnd-kit/svelte';
+  import SettingsRow from '$lib/components/shared/SettingsRow.svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import TopicIconDisplay from '$lib/components/topics/TopicIconDisplay.svelte';
   import TopicLaneBadge from '$lib/components/topics/TopicLaneBadge.svelte';
@@ -76,55 +77,54 @@
 </script>
 
 <li
-  class="mfa-editor-list-item"
-  class:mfa-editor-list-item--inactive={!topic.enabled}
-  class:mfa-editor-list-item--dragging={showDragging}
-  class:mfa-editor-list-item--sortable={canDrag}
+  class="settings-item settings-item--row topic-sort-row"
+  class:settings-item--inactive={!topic.enabled}
+  class:topic-sort-row--dragging={showDragging}
+  class:topic-sort-row--sortable={canDrag}
   data-topic-sort-index={index}
   role="listitem"
   {@attach attachDropTarget}
 >
-  <div
-    class="mfa-editor-list-item__main"
-    class:mfa-editor-list-item__main--sortable={canDrag}
-    title={canDrag ? t('mfa.settings.topicDragHandleAria') : undefined}
-    {@attach attachDragSurface}
+  <SettingsRow
+    title={topic.label.trim() || t('mfa.settings.topicDefaultLabel')}
+    description={topicMeta}
+    mainClass={canDrag ? 'topic-sort-surface topic-sort-surface--sortable' : 'topic-sort-surface'}
+    mainTitle={canDrag ? t('mfa.settings.topicDragHandleAria') : undefined}
+    mainAttachment={attachDragSurface}
   >
-    {#if canDrag}
-      <span class="queue-drag-grip mfa-editor-sort-grip" aria-hidden="true">
-        <span></span><span></span><span></span><span></span>
-      </span>
-    {:else if persistent}
-      <span
-        class="queue-drag-grip queue-drag-grip--spacer mfa-editor-sort-grip"
-        aria-hidden="true"
-      >
-        <span></span><span></span><span></span><span></span>
-      </span>
-    {/if}
-    <TopicLaneBadge laneCode={topic.laneCode} accentColor={topic.accentColor} />
-    <TopicIconDisplay
-      iconId={topic.iconId}
-      label={iconFallbackLabel ?? topic.label}
-      size={22}
-      accentColor={topic.accentColor}
-    />
-    <div class="mfa-editor-list-item__text">
-      <span class="mfa-editor-list-item__label">{topic.label.trim() || t('mfa.settings.topicDefaultLabel')}</span>
-      <span class="mfa-editor-list-item__meta">{topicMeta}</span>
-    </div>
-  </div>
-  <div class="mfa-editor-list-item__actions">
-    {#if persistent}
-      <span class="pill pill--caps pill--ok">{t('mfa.settings.topicPersistent')}</span>
-    {/if}
-    {#if !topic.enabled}
-      <span class="pill pill--caps">{t('mfa.settings.topicInactive')}</span>
-    {/if}
-    {#if onEdit}
-      <Button variant="outline" size="sm" disabled={busy} onclick={onEdit}>
-        {t('mfa.settings.topicEdit')}
-      </Button>
-    {/if}
-  </div>
+    {#snippet leading()}
+      {#if canDrag}
+        <span class="queue-drag-grip topic-sort-grip" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </span>
+      {:else if persistent}
+        <span
+          class="queue-drag-grip queue-drag-grip--spacer topic-sort-grip"
+          aria-hidden="true"
+        >
+          <span></span><span></span><span></span><span></span>
+        </span>
+      {/if}
+      <TopicLaneBadge laneCode={topic.laneCode} accentColor={topic.accentColor} />
+      <TopicIconDisplay
+        iconId={topic.iconId}
+        label={iconFallbackLabel ?? topic.label}
+        size={22}
+        accentColor={topic.accentColor}
+      />
+    {/snippet}
+    {#snippet trailing()}
+      {#if persistent}
+        <span class="pill pill--caps pill--ok">{t('mfa.settings.topicPersistent')}</span>
+      {/if}
+      {#if !topic.enabled}
+        <span class="pill pill--caps">{t('mfa.settings.topicInactive')}</span>
+      {/if}
+      {#if onEdit}
+        <Button variant="outline" size="sm" disabled={busy} onclick={onEdit}>
+          {t('mfa.settings.topicEdit')}
+        </Button>
+      {/if}
+    {/snippet}
+  </SettingsRow>
 </li>

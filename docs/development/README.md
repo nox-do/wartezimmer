@@ -1,5 +1,6 @@
 # Entwicklung und Review-Werkzeuge
 
+- [Demo-Belegung](demo-data.md): wiederholbar Räume und fiktive Patienten im lokalen Docker-Stack anlegen.
 - [TLS-Lab](tls-lab.md): isolierte Pebble-/acme-dns-/Caddy-Umgebung für TLS-Smokes.
 - [Core-Stack-Review-Prompt](../../scripts/prompts/core-stack-review.md): optionale Vorlage für einen Review eines Quelldumps; kein Produktvertrag.
 - [Architektur](../architecture/README.md): aktueller Systemaufbau und Regeln.

@@ -34,3 +34,13 @@ test('unknown roles may not patch routingMode', () => {
     forbiddenKeys: ['routingMode'],
   });
 });
+
+test('MFA may configure the long-wait threshold', () => {
+  assert.deepEqual(assertPatchOpsSettingsAllowedForRole('mfa', { longWaitThresholdMinutes: 40 }), {
+    ok: true,
+  });
+  assert.deepEqual(assertPatchOpsSettingsAllowedForRole('ops', { longWaitThresholdMinutes: 40 }), {
+    ok: false,
+    forbiddenKeys: ['longWaitThresholdMinutes'],
+  });
+});

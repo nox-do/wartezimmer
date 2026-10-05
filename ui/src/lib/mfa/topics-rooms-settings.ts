@@ -199,9 +199,7 @@ export async function persistTopicsRoomsSettings(
         },
   );
   if (!result.ok) {
-    toastStore.error(
-      roomGuardErrorMessage(result.error, options.roomQueueGuardContext ?? 'remove'),
-    );
+    toastStore.error(roomGuardErrorMessage(result.error, options.roomQueueGuardContext ?? 'edit'));
     return null;
   }
 

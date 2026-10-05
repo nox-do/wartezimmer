@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FormField from '$lib/components/forms/FormField.svelte';
   import { browser } from '$app/environment';
   import Modal from '$lib/components/Modal.svelte';
   import Button from '$lib/components/forms/Button.svelte';
@@ -127,10 +128,11 @@
       <p class="modal-form-hint">{t('terminal.printSettingsChromeLead')}</p>
     </div>
 
-    <label class="modal-form-field">
-      <span>{t('terminal.printSettingsLauncherUrlLabel')}</span>
-      <input class="form-input modal-form-id-input" readonly value={terminalKioskUrl} />
-    </label>
+    <FormField label={t('terminal.printSettingsLauncherUrlLabel')}>
+      {#snippet children(field)}
+        <input {...field} class="form-input modal-form-id-input" readonly value={terminalKioskUrl} />
+      {/snippet}
+    </FormField>
 
     <p class="modal-form-hint">{t('terminal.printSettingsLauncherNote')}</p>
     <div class="terminal-print-downloads">

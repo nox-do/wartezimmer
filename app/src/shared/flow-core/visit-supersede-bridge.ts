@@ -1,3 +1,4 @@
+import { assertRegistrationNumberAllowed } from '../queue/registration-number-limit.js';
 import type { DatabaseSync } from 'node:sqlite';
 import type { Runtime } from '@praxis-flow/flow-core/server';
 import { domainError } from '../errors/domain-error.js';
@@ -101,6 +102,7 @@ export function supersedeVisitTopic(params: {
   }
 
   const newVisit = result.visit;
+  assertRegistrationNumberAllowed(newVisit.queueSequence);
   const oldHost = getVisitHostState(db, visitId);
   if (oldHost) {
     upsertVisitHostState(

@@ -1,3 +1,4 @@
+import { ensureWaitSettingsSchema } from './database-wait-settings.js';
 import type { DatabaseSync } from 'node:sqlite';
 import { ensureFlowCoreSchema } from '../flow-core/flow-core-schema.js';
 import { ensureAuthSettingsSchema } from './database-auth-settings.js';
@@ -55,6 +56,7 @@ export function assertForeignKeyIntegrity(db: DatabaseSync): void {
 /** Release A transition path for legacy databases (user_version 0). */
 export function runTransitionSchemaEnsures(db: DatabaseSync): void {
   ensureOpsSetupSchema(db);
+  ensureWaitSettingsSchema(db);
   ensureAuthSettingsSchema(db);
   ensureFlowCoreSchema(db);
   ensureSandboxResetStateSchema(db);

@@ -58,7 +58,7 @@
   flex-shrink: 0;
   width: 1.75rem;
   height: 1.75rem;
-  border-radius: 0.375rem;
+  border-radius: var(--staff-settings-mark-radius);
   background: var(--green-success);
 }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SettingsHeader from '$lib/components/shared/SettingsHeader.svelte';
   import { onMount } from 'svelte';
   import StaffSettingsShell from '$lib/components/shared/StaffSettingsShell.svelte';
   import { fetchDeploymentStorage, fetchOpsSystemSettings, type DeploymentStorageSnapshot } from '$lib/ops/ops-system-api';
@@ -37,12 +38,11 @@
     <p class="text-muted">{t('ui.loading')}</p>
   {:else if storage}
     <section class="panel">
-      <h2 class="panel__title">{t('ops.storageExplainTitle')}</h2>
-      <p class="text-desc">{t('ops.storageExplainBody')}</p>
+      <SettingsHeader layout="plain" title={t('ops.storageExplainTitle')} description={t('ops.storageExplainBody')} />
     </section>
 
     <section class="panel">
-      <h2 class="panel__title">{t('ops.storageImportsLabel')}</h2>
+      <SettingsHeader layout="plain" title={t('ops.storageImportsLabel')} />
       <div class="ops-folder-block panel panel--inset">
         <code>{storage.imports.userFolderLabel}</code>
         <span
@@ -65,7 +65,7 @@
         <p class="text-desc">{t('ops.storageImportsConfigureHint')}</p>
       </div>
 
-      <h2 class="panel__title">{t('ops.storageExportsLabel')}</h2>
+      <SettingsHeader layout="plain" title={t('ops.storageExportsLabel')} />
       <div class="ops-folder-block panel panel--inset">
         <code>{storage.exports.userFolderLabel}</code>
         <span

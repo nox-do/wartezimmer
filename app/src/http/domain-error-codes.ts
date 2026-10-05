@@ -1,3 +1,4 @@
+import { REGISTRATION_LIMIT_MESSAGE } from '../shared/queue/registration-number-limit.js';
 import type { FastifyReply } from 'fastify';
 import { API_ERROR_CODES, type ApiErrorCode, type ApiErrorPayload } from './api-errors.js';
 import { readDomainCode } from '../shared/errors/domain-error.js';
@@ -9,6 +10,11 @@ type DomainErrorHttpSpec = {
 };
 
 const DOMAIN_ERROR_HTTP = {
+  REGISTRATION_LIMIT_REACHED: {
+    status: 409,
+    code: 'REGISTRATION_LIMIT_REACHED',
+    message: REGISTRATION_LIMIT_MESSAGE,
+  },
   VISIT_NOT_FOUND: { status: 404, code: 'VISIT_NOT_FOUND', message: 'Visit not found.' },
   DOCUMENT_NOT_FOUND: { status: 404, code: 'DOCUMENT_NOT_FOUND', message: 'Document not found.' },
   DOCUMENT_FORBIDDEN: {

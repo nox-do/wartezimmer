@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FormField from '$lib/components/forms/FormField.svelte';
   import { onMount } from 'svelte';
   import { gotoResolved, replaceStateResolved } from '$lib/navigation/kit-paths';
   import Button from '$lib/components/forms/Button.svelte';
@@ -137,23 +138,25 @@
       </label>
     </div>
 
-    <label class="modal-form-field" for="portal-ticket-input">
-      {t('portal.ticketInputLabel')}
-      <input
-        id="portal-ticket-input"
-        class="form-input portal-ticket-input"
-        type="text"
-        value={ticketInput}
-        oninput={handleTicketInput}
-        placeholder={t('portal.ticketInputPlaceholder')}
-        autocomplete="off"
-        spellcheck="false"
-        autocapitalize="characters"
-        inputmode="text"
-        maxlength="6"
-        disabled={submitting}
-      />
-    </label>
+    <FormField label={t('portal.ticketInputLabel')} id="portal-ticket-input">
+      {#snippet children(field)}
+        <input
+          {...field}
+          id="portal-ticket-input"
+          class="form-input portal-ticket-input"
+          type="text"
+          value={ticketInput}
+          oninput={handleTicketInput}
+          placeholder={t('portal.ticketInputPlaceholder')}
+          autocomplete="off"
+          spellcheck="false"
+          autocapitalize="characters"
+          inputmode="text"
+          maxlength="6"
+          disabled={submitting}
+        />
+      {/snippet}
+    </FormField>
 
     <Button type="submit" variant="primary" fullWidth disabled={submitting}>
       {submitting ? t('portal.indexSubmitting') : t('portal.indexContinue')}

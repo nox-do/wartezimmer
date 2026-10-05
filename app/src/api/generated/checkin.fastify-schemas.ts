@@ -42,6 +42,7 @@ export const VisitCreated = {
 export const TerminalTopic = {
   type: 'object',
   required: [
+    'registrationBlocked',
     'topicId',
     'label',
     'sortOrder',
@@ -51,6 +52,9 @@ export const TerminalTopic = {
     'availableTo',
   ],
   properties: {
+    registrationBlocked: {
+      type: 'boolean',
+    },
     topicId: {
       type: 'string',
     },
@@ -78,13 +82,17 @@ export const TerminalTopic = {
 
 export const GET_api_v1_checkins_topicsResponse200 = {
   type: 'object',
-  required: ['topics'],
+  required: ['topics', 'receptionRegistrationBlocked'],
   properties: {
+    receptionRegistrationBlocked: {
+      type: 'boolean',
+    },
     topics: {
       type: 'array',
       items: {
         type: 'object',
         required: [
+          'registrationBlocked',
           'topicId',
           'label',
           'sortOrder',
@@ -94,6 +102,9 @@ export const GET_api_v1_checkins_topicsResponse200 = {
           'availableTo',
         ],
         properties: {
+          registrationBlocked: {
+            type: 'boolean',
+          },
           topicId: {
             type: 'string',
           },
@@ -215,6 +226,7 @@ export const POST_api_v1_checkinsResponse400 = {
         'INVALID_DAY_CLOSE_PHASE',
         'DAY_CLOSE_NOT_STARTED',
         'UNKNOWN_MESSAGING_PROVIDER',
+        'REGISTRATION_LIMIT_REACHED',
         'CHECKIN_LOCKED',
         'CHECKIN_AUTH_PATH_DISABLED',
         'CHECKIN_CLOSED',
@@ -288,6 +300,7 @@ export const POST_api_v1_checkinsResponse409 = {
         'INVALID_DAY_CLOSE_PHASE',
         'DAY_CLOSE_NOT_STARTED',
         'UNKNOWN_MESSAGING_PROVIDER',
+        'REGISTRATION_LIMIT_REACHED',
         'CHECKIN_LOCKED',
         'CHECKIN_AUTH_PATH_DISABLED',
         'CHECKIN_CLOSED',
@@ -361,6 +374,7 @@ export const POST_api_v1_checkinsResponse500 = {
         'INVALID_DAY_CLOSE_PHASE',
         'DAY_CLOSE_NOT_STARTED',
         'UNKNOWN_MESSAGING_PROVIDER',
+        'REGISTRATION_LIMIT_REACHED',
         'CHECKIN_LOCKED',
         'CHECKIN_AUTH_PATH_DISABLED',
         'CHECKIN_CLOSED',
@@ -470,6 +484,7 @@ export const POST_api_v1_checkins_assistanceResponse400 = {
         'INVALID_DAY_CLOSE_PHASE',
         'DAY_CLOSE_NOT_STARTED',
         'UNKNOWN_MESSAGING_PROVIDER',
+        'REGISTRATION_LIMIT_REACHED',
         'CHECKIN_LOCKED',
         'CHECKIN_AUTH_PATH_DISABLED',
         'CHECKIN_CLOSED',
@@ -543,6 +558,7 @@ export const POST_api_v1_checkins_assistanceResponse409 = {
         'INVALID_DAY_CLOSE_PHASE',
         'DAY_CLOSE_NOT_STARTED',
         'UNKNOWN_MESSAGING_PROVIDER',
+        'REGISTRATION_LIMIT_REACHED',
         'CHECKIN_LOCKED',
         'CHECKIN_AUTH_PATH_DISABLED',
         'CHECKIN_CLOSED',
@@ -616,6 +632,7 @@ export const POST_api_v1_checkins_assistanceResponse500 = {
         'INVALID_DAY_CLOSE_PHASE',
         'DAY_CLOSE_NOT_STARTED',
         'UNKNOWN_MESSAGING_PROVIDER',
+        'REGISTRATION_LIMIT_REACHED',
         'CHECKIN_LOCKED',
         'CHECKIN_AUTH_PATH_DISABLED',
         'CHECKIN_CLOSED',

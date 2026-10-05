@@ -19,6 +19,7 @@ export type OpsSettingsSnapshotV1 = {
   /** Optional for backwards-compatible import of v1 snapshots created before this setting. */
   postWaitingCallTargetId?: string | null;
   returnWindowMinutes: number;
+  longWaitThresholdMinutes?: number;
   practiceOpenFrom: string;
   practiceOpenTo: string;
   practiceProfileJson: string;

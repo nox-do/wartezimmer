@@ -121,6 +121,7 @@ function settingsToPatch(settings: OpsSettings): OpsSettingsPatch {
     routingMode: settings.routingMode,
     postWaitingCallTargetId: settings.postWaitingCallTargetId,
     returnWindowMinutes: settings.returnWindowMinutes,
+    longWaitThresholdMinutes: settings.longWaitThresholdMinutes,
     practiceOpenFrom: settings.practiceOpenFrom,
     practiceOpenTo: settings.practiceOpenTo,
     practiceProfileJson: settings.practiceProfileJson,

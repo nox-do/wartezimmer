@@ -592,3 +592,14 @@ test('buildOpsSettingsUpdate rejects practiceProfile with empty displayName', as
   assert.equal(result.code, 'INVALID_ARGUMENT');
   assert.match(result.message, /displayName/i);
 });
+
+test('waiting threshold accepts whole minutes and rejects out-of-range or fractional values', async () => {
+  const valid = await buildOpsSettingsUpdate(mockDb(), { longWaitThresholdMinutes: 40 });
+  assert.ok(!('code' in valid));
+  if (!('code' in valid)) assert.equal(valid.longWaitThresholdMinutes, 40);
+  for (const value of [0, 241, 1.5]) {
+    const result = await buildOpsSettingsUpdate(mockDb(), { longWaitThresholdMinutes: value });
+    assert.ok('code' in result);
+    if ('code' in result) assert.equal(result.code, 'INVALID_ARGUMENT');
+  }
+});

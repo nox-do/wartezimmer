@@ -20,7 +20,11 @@ const allowlistPath = path.join(repoRoot, 'scripts/unused-css-allowlist.json');
 const targets = [
   {
     name: 'manager',
-    css: ['manager/src/renderer/styles.css', 'manager/src/renderer/network-topology.css'],
+    css: [
+      'manager/src/renderer/styles.css',
+      'manager/src/renderer/network-topology.css',
+      'manager/src/renderer/network.css',
+    ],
     content: ['manager/src/renderer/**/*.{svelte,html,ts}'],
     safelist: {
       // Dynamic state / BEM modifiers built in TS (`net-flow-step--${variant}`, `is-${level}`, …).

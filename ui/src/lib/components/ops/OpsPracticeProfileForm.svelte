@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Button from '$lib/components/forms/Button.svelte';
+  import FormField from '$lib/components/forms/FormField.svelte';
   import {
     fetchOpsSystemSettings,
     patchOpsSystemSettings,
@@ -116,46 +117,54 @@
   </Button>
 {:else}
   <div class="modal-form">
-    <label class="modal-form-field">
-      {t('ops.practice.displayNameLabel')}
-      <input class="form-input" bind:value={profile.displayName} disabled={fieldDisabled} required />
-    </label>
+    <FormField label={t('ops.practice.displayNameLabel')}>
+      {#snippet children(field)}
+        <input {...field} class="form-input" bind:value={profile.displayName} disabled={fieldDisabled} required />
+      {/snippet}
+    </FormField>
 
-    <label class="modal-form-field">
-      {t('ops.practice.streetLabel')}
-      <input class="form-input" bind:value={profile.street} disabled={fieldDisabled} />
-    </label>
+    <FormField label={t('ops.practice.streetLabel')}>
+      {#snippet children(field)}
+        <input {...field} class="form-input" bind:value={profile.street} disabled={fieldDisabled} />
+      {/snippet}
+    </FormField>
 
     <div class="ops-practice-form__row">
-      <label class="modal-form-field">
-        {t('ops.practice.postalCodeLabel')}
-        <input class="form-input" bind:value={profile.postalCode} disabled={fieldDisabled} />
-      </label>
-      <label class="modal-form-field">
-        {t('ops.practice.cityLabel')}
-        <input class="form-input" bind:value={profile.city} disabled={fieldDisabled} />
-      </label>
+      <FormField label={t('ops.practice.postalCodeLabel')}>
+        {#snippet children(field)}
+          <input {...field} class="form-input" bind:value={profile.postalCode} disabled={fieldDisabled} />
+        {/snippet}
+      </FormField>
+      <FormField label={t('ops.practice.cityLabel')}>
+        {#snippet children(field)}
+          <input {...field} class="form-input" bind:value={profile.city} disabled={fieldDisabled} />
+        {/snippet}
+      </FormField>
     </div>
 
-    <label class="modal-form-field">
-      {t('ops.practice.phoneLabel')}
-      <input class="form-input" bind:value={profile.phone} disabled={fieldDisabled} />
-    </label>
+    <FormField label={t('ops.practice.phoneLabel')}>
+      {#snippet children(field)}
+        <input {...field} class="form-input" bind:value={profile.phone} disabled={fieldDisabled} />
+      {/snippet}
+    </FormField>
 
-    <label class="modal-form-field">
-      {t('ops.practice.emailLabel')}
-      <input class="form-input" type="email" bind:value={profile.email} disabled={fieldDisabled} />
-    </label>
+    <FormField label={t('ops.practice.emailLabel')}>
+      {#snippet children(field)}
+        <input {...field} class="form-input" type="email" bind:value={profile.email} disabled={fieldDisabled} />
+      {/snippet}
+    </FormField>
 
-    <label class="modal-form-field">
-      {t('ops.practice.dpoLabel')}
-      <input class="form-input" bind:value={profile.dataProtectionOfficer} disabled={fieldDisabled} />
-    </label>
+    <FormField label={t('ops.practice.dpoLabel')}>
+      {#snippet children(field)}
+        <input {...field} class="form-input" bind:value={profile.dataProtectionOfficer} disabled={fieldDisabled} />
+      {/snippet}
+    </FormField>
 
-    <label class="modal-form-field">
-      {t('ops.practice.websiteLabel')}
-      <input class="form-input" bind:value={profile.website} disabled={fieldDisabled} />
-    </label>
+    <FormField label={t('ops.practice.websiteLabel')}>
+      {#snippet children(field)}
+        <input {...field} class="form-input" bind:value={profile.website} disabled={fieldDisabled} />
+      {/snippet}
+    </FormField>
 
     {#if variant === 'settings'}
       <Button type="button" variant="primary" loading={busy} disabled={fieldDisabled} onclick={() => void save()}>

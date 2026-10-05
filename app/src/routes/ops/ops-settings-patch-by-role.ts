@@ -4,6 +4,7 @@ import type { PatchOpsSettingsBody } from '../../api/ops-openapi-types.js';
 const MFA_PATCH_KEYS = new Set([
   'expectedUpdatedAt',
   'returnWindowMinutes',
+  'longWaitThresholdMinutes',
   'practiceOpenFrom',
   'practiceOpenTo',
   'topics',

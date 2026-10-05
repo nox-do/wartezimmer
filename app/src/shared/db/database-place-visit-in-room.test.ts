@@ -50,6 +50,143 @@ function seedPlacementVisit(core: CoreDatabase): string {
   }).visitId;
 }
 
+test('panel toggles persist while an occupied room and its visit stay intact', () => {
+  const { core, cleanup } = openCoreDatabase();
+  try {
+    const visitId = seedPlacementVisit(core);
+    core.placeVisitInRoom(visitId, 'labor', 'Labor');
+    const before = core.listQueue().find((entry) => entry.id === visitId);
+    for (const placement of ['inside', 'outside'] as const) {
+      for (const enabled of [true, false]) {
+        const current = core.getOpsSettings();
+        const updated = core.updateOpsSettings({
+          rooms: current.rooms.map((room) =>
+            room.roomId !== 'labor'
+              ? room
+              : {
+                  ...room,
+                  panels: {
+                    ...room.panels!,
+                    [placement]: { ...room.panels![placement], enabled },
+                  },
+                },
+          ),
+        });
+        assert.equal(
+          updated.rooms.find((room) => room.roomId === 'labor')?.panels?.[placement].enabled,
+          enabled,
+        );
+        assert.deepEqual(
+          core.listQueue().find((entry) => entry.id === visitId),
+          before,
+        );
+      }
+    }
+    assert.throws(() =>
+      core.updateOpsSettings({
+        rooms: core
+          .getOpsSettings()
+          .rooms.map((room) => (room.roomId === 'labor' ? { ...room, enabled: false } : room)),
+      }),
+    );
+    assert.equal(
+      core.getOpsSettings().rooms.find((room) => room.roomId === 'labor')?.enabled,
+      true,
+    );
+  } finally {
+    cleanup();
+  }
+});
+
+test('panel toggles preserve an active journey and its subsequent room transition', () => {
+  const { core, cleanup } = openCoreDatabase();
+  try {
+    core.resetBusinessDay();
+    core.setCheckinLock(false);
+    const initial = core.getOpsSettings();
+    const firstRoom = initial.rooms.find((room) => room.enabled)!;
+    const configured = core.updateOpsSettings({
+      routingMode: 'complex',
+      rooms: [
+        ...initial.rooms,
+        { ...firstRoom, roomId: 'labor', roomLabel: 'Labor', defaultCallTarget: false },
+      ],
+      topics: initial.topics.map((topic) =>
+        topic.topicId === 'blut' ? { ...topic, journeyTemplateId: 'panel-test-journey' } : topic,
+      ),
+      journeySettings: {
+        templates: [
+          {
+            id: 'panel-test-journey',
+            name: 'Panel Test',
+            topicId: 'blut',
+            active: true,
+            steps: [firstRoom.roomId, 'labor'].map((targetLocationId, index) => ({
+              id: `panel-test-step-${index}`,
+              sortOrder: index,
+              targetLocationId,
+              queueId: null,
+              movementMode: 'call',
+              publicDisplayMode: 'visible',
+              completedWhen: 'done',
+              instructionText: null,
+            })),
+          },
+        ],
+      },
+    });
+    const { visitId } = core.createTicket({
+      topicId: 'blut',
+      authPath: 'phone_dob',
+      identityRef: 'Panel Journey Test',
+      needsAssistance: false,
+    });
+    const runtime = core.getFlowCoreRuntimeInstance();
+    const visitsBefore = runtime.visits();
+    const visitBefore = visitsBefore.find((visit) => visit.id === visitId)!;
+    assert.equal(visitBefore.journeyState, 'active');
+    assert.equal(visitBefore.journeyStepIndex, 0);
+    const eventsBefore = runtime.events(visitId);
+    const catalogBefore = runtime.catalog();
+
+    for (const placement of ['inside', 'outside'] as const) {
+      for (const enabled of [true, false]) {
+        const current = core.getOpsSettings();
+        core.updateOpsSettings({
+          rooms: current.rooms.map((room) => ({
+            ...room,
+            panels: { ...room.panels!, [placement]: { ...room.panels![placement], enabled } },
+          })),
+        });
+        assert.deepEqual(runtime.visits(), visitsBefore);
+        assert.deepEqual(runtime.events(visitId), eventsBefore);
+        assert.deepEqual(core.getOpsSettings().journeySettings, configured.journeySettings);
+        assert.deepEqual(runtime.catalog().locations, catalogBefore.locations);
+      }
+    }
+    // A later journey destination remains protected, even before the patient arrives.
+    for (const rooms of [
+      core.getOpsSettings().rooms.filter((room) => room.roomId !== 'labor'),
+      core
+        .getOpsSettings()
+        .rooms.map((room) => (room.roomId === 'labor' ? { ...room, enabled: false } : room)),
+    ]) {
+      assert.throws(() => core.updateOpsSettings({ rooms }));
+      assert.deepEqual(core.getOpsSettings().rooms, configured.rooms);
+    }
+    core.placeVisitInRoom(visitId, firstRoom.roomId, firstRoom.roomLabel);
+    core.checkOutRoom(visitId, firstRoom.roomId);
+    assert.ok(runtime.visits().find((visit) => visit.id === visitId)?.journeyStepCompletedAt);
+    core.continueJourney(visitId, 'labor');
+    const advanced = runtime.visits().find((visit) => visit.id === visitId)!;
+    assert.equal(advanced.journeyState, 'active');
+    assert.equal(advanced.journeyStepIndex, 1);
+    assert.equal(advanced.targetLocationId, 'labor');
+  } finally {
+    cleanup();
+  }
+});
+
 test('placeVisitInRoom reports the full waiting-to-room transition and keeps audit actors', () => {
   const { core, cleanup } = openCoreDatabase();
   try {

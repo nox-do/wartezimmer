@@ -130,7 +130,7 @@
   display: grid;
   place-items: center;
   border: 2px solid color-mix(in oklch, var(--mfa-ink) 28%, var(--mfa-border));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--background);
   color: var(--mfa-ink);
   font-size: 0.875rem;

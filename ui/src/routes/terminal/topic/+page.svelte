@@ -106,23 +106,27 @@
 
     let cancelled = false;
 
-    void (async () => {
+    async function refreshTopics() {
       const result = await fetchTerminalTopics();
-      if (cancelled) {
-        return;
-      }
-
-      loading = false;
+      if (cancelled) return;
       if (!result.ok) {
-        loadFailed = true;
-        toastStore.error(result.error.message || t('terminal.topicLoadError'));
+        if (loading) {
+          loading = false;
+          loadFailed = true;
+          toastStore.error(result.error.message || t('terminal.topicLoadError'));
+        }
         return;
       }
+      loading = false;
+      loadFailed = false;
       topics = result.data.topics;
-    })();
+    }
+    void refreshTopics();
+    const availabilityTimer = setInterval(() => void refreshTopics(), 30_000);
 
     return () => {
       cancelled = true;
+      clearInterval(availabilityTimer);
     };
   });
 </script>
@@ -148,7 +152,7 @@
             type="button"
             class="terminal-card"
             class:terminal-card--busy={busyTopicId != null}
-            disabled={busyTopicId != null}
+            disabled={busyTopicId != null || topic.registrationBlocked}
             onclick={() => void selectTopic(topic)}
           >
             <span class="terminal-card__icon terminal-card__icon--topic" aria-hidden="true">
@@ -161,6 +165,9 @@
             </span>
             <span class="terminal-card__text">
               <strong>{displayLabel(topic.label)}</strong>
+              {#if topic.registrationBlocked}
+                <span class="terminal-card__meta">{t('terminal.registrationLimitReached')}</span>
+              {/if}
               {#if meta}
                 <span class="terminal-card__meta">{meta}</span>
               {/if}

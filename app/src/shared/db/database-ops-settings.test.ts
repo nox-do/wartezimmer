@@ -140,7 +140,7 @@ test('updateOpsSettingsInDb persists an explicitly cleared contact import path',
   );
 
   assert.equal(settings.contactLookupFolderPath, null);
-  assert.equal(savedArgs[0]?.[9], null);
+  assert.equal(savedArgs[0]?.[10], null);
 });
 
 test('updateOpsSettingsInDb persists only an enabled post-waiting target', () => {

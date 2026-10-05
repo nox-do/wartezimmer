@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { DEFAULT_ROOM_PANELS_SETTINGS } from '@praxis-flow/domain';
 import {
   disabledRoomIds,
   removedRoomIds,
@@ -171,5 +172,78 @@ test('validateRoomSettingsChange blocks when maxOccupancy is below current occup
   assert.equal(result.ok, false);
   if (!result.ok) {
     assert.equal(result.code, ROOM_BLOCKED_CAPACITY);
+  }
+});
+
+test('panel changes are allowed for occupied and destination rooms in both placements', () => {
+  for (const placement of ['inside', 'outside'] as const) {
+    for (const enabled of [false, true]) {
+      const currentRooms = baseRooms.map((room) => ({
+        ...room,
+        panels: {
+          ...DEFAULT_ROOM_PANELS_SETTINGS,
+          [placement]: { ...DEFAULT_ROOM_PANELS_SETTINGS[placement], enabled: !enabled },
+        },
+      }));
+      const nextRooms = currentRooms.map((room) => ({
+        ...room,
+        panels: {
+          ...room.panels,
+          [placement]: { ...room.panels[placement], enabled, showPatientNames: true },
+        },
+      }));
+      const input = {
+        currentRooms,
+        nextRooms,
+        topics: [],
+        queueTickets: [
+          { laneCode: 'L', number: 1, roomId: 'labor', status: 'in_room' as const },
+          {
+            laneCode: 'L',
+            number: 2,
+            roomId: null,
+            destinationRoomId: 'empfang',
+            status: 'waiting' as const,
+          },
+        ],
+      };
+      assert.deepEqual(validateRoomSettingsChange(input), { ok: true });
+      assert.equal(
+        validateRoomSettingsChange({
+          ...input,
+          nextRooms: nextRooms.map((room) => ({ ...room, enabled: false })),
+        }).ok,
+        false,
+      );
+    }
+  }
+});
+
+test('panel changes do not bypass any existing room-field lock', () => {
+  const room = { ...baseRooms[1]!, panels: DEFAULT_ROOM_PANELS_SETTINGS };
+  for (const patch of [
+    { roomId: 'labor-neu' },
+    { roomLabel: 'Labor neu' },
+    { enabled: false },
+    { defaultCallTarget: true },
+    { maxOccupancy: 10 },
+  ]) {
+    const result = validateRoomSettingsChange({
+      currentRooms: [room],
+      nextRooms: [
+        {
+          ...room,
+          ...patch,
+          panels: {
+            ...room.panels,
+            inside: { ...room.panels.inside, enabled: true },
+          },
+        },
+      ],
+      topics: [],
+      queueTickets: [{ laneCode: 'L', number: 1, roomId: 'labor', status: 'in_room' }],
+    });
+    assert.equal(result.ok, false, JSON.stringify(patch));
+    if (!result.ok) assert.equal(result.code, ROOM_BLOCKED_QUEUE);
   }
 });

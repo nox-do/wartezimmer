@@ -71,6 +71,8 @@ export async function raiseTerminalEmergency() {
 
 export function mapCheckinErrorMessage(code: string | undefined, fallback: string): string {
   switch (code) {
+    case 'REGISTRATION_LIMIT_REACHED':
+      return t('terminal.registrationLimitReached');
     case 'CHECKIN_LOCKED':
       return t('terminal.checkinLocked');
     case 'CHECKIN_CLOSED':

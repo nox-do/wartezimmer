@@ -30,7 +30,7 @@
     justify-content: center;
     width: 1.5rem;
     height: 1.5rem;
-    border-radius: 5px;
+    border-radius: var(--radius-badge);
     font-size: 0.7rem;
     font-weight: 800;
     line-height: 1;
