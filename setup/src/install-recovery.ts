@@ -50,7 +50,7 @@ async function baselineErrors(ctx: SetupContext, deps: RecoveryDeps): Promise<st
       if (service.health?.toLowerCase() === 'healthy') return [];
       return [
         service.health?.toLowerCase() === 'unhealthy'
-          ? `${label}: Docker meldet einen fehlgeschlagenen Gesundheitscheck.`
+          ? `${label}: Docker meldet eine fehlgeschlagene Bereitschaftsprüfung.`
           : `${label}: Docker hat den Start noch nicht als gesund bestätigt.`,
       ];
     });

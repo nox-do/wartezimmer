@@ -120,7 +120,7 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
   if (tone === 'starting') {
     return {
       eyebrow: 'Status',
-      copy: 'Praxis Flow wartet auf die laufenden Gesundheitsprüfungen. Das kann kurz dauern.',
+      copy: 'Praxis Flow prüft, ob alle Dienste bereit sind. Das kann kurz dauern.',
       note: 'Wenn ein Dienst nicht erfolgreich startet, wechselt der Status automatisch zur Fehlerdiagnose.',
       showReleasePicker: false,
     };
