@@ -1,4 +1,4 @@
-# Windows-Patientenzugang: Beta 6.1.2-beta.4
+# Windows-Patientenzugang: Beta 6.1.2-beta.5
 
 Stand: 2026-10-05 · Branch `codex/windows-patient-portal-beta`
 
@@ -33,7 +33,7 @@ einem älteren Stand stehen. Externe DNS-Änderungen können weiterhin über
 
 ## Installation und Test
 
-1. Windows-x64-Installer `PraxisFlowManager-6.1.2-beta.4-windows-x64-setup.exe`
+1. Windows-x64-Installer `PraxisFlowManager-6.1.2-beta.5-windows-x64-setup.exe`
    installieren; Docker Desktop mit lokalem Linux-Daemon starten.
 2. Bestehenden Stack starten und verwaltetes Wildcard-HTTPS prüfen.
 3. Im Manager unter Patientenzugang die zweite lokale IPv4-Adresse auswählen,
@@ -125,3 +125,10 @@ Der Statusbereich heißt „Zugänge“. Bei aktiviertem separatem Patientenzuga
 mit vorhandenem Portalhostnamen erscheint zusätzlich „Portal - extern“ mit
 HTTPS-Link auf `/portal` und derselben Kopierfunktion wie bei internen Zugängen.
 Vorbereitung allein zeigt den Link noch nicht; Entfernen des Zugangs blendet ihn aus.
+
+## Kompakte Voraussetzungen in Beta 5
+
+Der Portalbereich bündelt erfolgreiche Prüfungen in HTTPS, Adresse und DNS sowie
+Netzwerkfreigabe. Fehlerdetails und zusätzliche Recovery-Hinweise bleiben direkt
+sichtbar. Alle Einzelmeldungen stehen unverändert unter „Technische Prüfergebnisse“.
+Fehlende Prüfungen gelten als offen; die Aktivierungsbedingungen bleiben unverändert.

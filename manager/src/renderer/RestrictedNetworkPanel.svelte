@@ -5,6 +5,7 @@
   import ConfirmDialog from './ConfirmDialog.svelte';
   import {
     restrictedActionErrorText,
+    restrictedCheckSummary,
     reconcileRestrictedDraft,
     restrictedCandidateWarningText,
     restrictedDnsStatusText,
@@ -39,6 +40,7 @@
   let pendingAction = $state<'apply' | 'remove' | null>(null);
   let generation = 0;
   const busy = $derived(action !== 'idle');
+  const checkSummary = $derived(inspect ? restrictedCheckSummary(inspect) : null);
 
   function lifecycleAllows(action: 'network-binding' | 'restricted-apply' | 'restricted-remove') {
     if (!lifecycle) return true;
@@ -282,14 +284,39 @@
   </div>
   <div class="network-column">
   <h3 class="network-heading">Voraussetzungen und Aktionen</h3>
-  <ul class="checklist">
-    {#each inspect.checks.filter((check) => check.id !== 'restricted.platform' || !check.ok) as check (check.id)}
-      <li class:is-bad={!check.ok} class:is-done={check.ok}>
-        <span class="checklist-mark" aria-hidden="true">{check.ok ? '✓' : '!'}</span>
-        <span>{check.message}{check.detail ? ` – ${check.detail}` : ''}</span>
-      </li>
-    {/each}
-  </ul>
+  {#if checkSummary}
+    <ul class="checklist" aria-label="Zusammenfassung der Portalprüfungen">
+      {#each checkSummary.groups as group (group.id)}
+        <li class:is-bad={group.state === 'failed'} class:is-done={group.state === 'passed'} class:is-muted={group.state === 'pending'}>
+          <span class="checklist-mark" aria-hidden="true">{group.state === 'passed' ? '✓' : group.state === 'failed' ? '!' : '–'}</span>
+          <span><strong>{group.label}</strong>: {group.message}</span>
+        </li>
+        {#each group.failures as check (check.id)}
+          <li class="is-bad">
+            <span class="checklist-mark" aria-hidden="true">!</span>
+            <span>{check.message}{check.detail ? ` – ${check.detail}` : ''}</span>
+          </li>
+        {/each}
+      {/each}
+      {#each checkSummary.additional as check (check.id)}
+        <li class:is-bad={!check.ok} class:is-done={check.ok}>
+          <span class="checklist-mark" aria-hidden="true">{check.ok ? '✓' : '!'}</span>
+          <span>{check.message}{check.detail ? ` – ${check.detail}` : ''}</span>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+  <details>
+    <summary>Technische Prüfergebnisse ({inspect.checks.length})</summary>
+    <ul class="checklist">
+      {#each inspect.checks as check (check.id)}
+        <li class:is-bad={!check.ok} class:is-done={check.ok}>
+          <span class="checklist-mark" aria-hidden="true">{check.ok ? '✓' : '!'}</span>
+          <span>{check.message}{check.detail ? ` – ${check.detail}` : ''}</span>
+        </li>
+      {/each}
+    </ul>
+  </details>
 
   {#if notice}
     <p class="maintenance-backup-status" role="status">{notice}</p>

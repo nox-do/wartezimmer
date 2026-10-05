@@ -137,3 +137,43 @@ test('refresh preserves a valid NIC draft and invalidates changed warning consen
     restrictedCandidateKey(saved.address, saved.interfaceId),
   );
 });
+
+test('portal summary distinguishes missing checks and preserves actionable details', async () => {
+  const { restrictedCheckSummary } = await import('./restricted-network-view-model.js');
+  type Input = Parameters<typeof restrictedCheckSummary>[0];
+  const snapshot = {
+    status: { phase: 'prepared', binding: { hostIp: '10.20.0.2' } },
+    checks: [
+      { id: 'restricted.tls', ok: true, message: 'TLS ready' },
+      { id: 'restricted.local-ip', ok: true, message: 'IP assigned' },
+      { id: 'restricted.portal-dns-public', ok: true, message: 'Public DNS ready' },
+      {
+        id: 'restricted.portal-dns-local',
+        ok: false,
+        message: 'Local DNS mismatch',
+        detail: 'Expected 10.20.0.2',
+      },
+      { id: 'restricted.recovered-operation', ok: true, message: 'Please reactivate' },
+    ],
+  } as unknown as Input;
+  let summary = restrictedCheckSummary(snapshot);
+  assert.deepEqual(
+    summary.groups.map((group) => group.state),
+    ['passed', 'failed', 'pending'],
+  );
+  assert.equal(summary.groups[1].failures[0].detail, 'Expected 10.20.0.2');
+  assert.equal(summary.additional[0].message, 'Please reactivate');
+  snapshot.checks.pop();
+  snapshot.checks.pop();
+  summary = restrictedCheckSummary(snapshot);
+  assert.equal(summary.groups[1].state, 'pending');
+  snapshot.status.phase = 'applied';
+  assert.equal(restrictedCheckSummary(snapshot).groups[2].state, 'pending');
+  for (const id of [
+    'restricted.binding.no-global-publish',
+    'restricted.binding.proxy',
+    'restricted.binding.runtime-contract',
+  ])
+    snapshot.checks.push({ id, ok: true, message: 'OK' });
+  assert.equal(restrictedCheckSummary(snapshot).groups[2].state, 'passed');
+});

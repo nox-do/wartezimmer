@@ -113,3 +113,63 @@ export function reconcileRestrictedDraft(
     ? { selectedKey: key(savedCandidate), confirmed: saved?.warningsConfirmed ?? false }
     : { selectedKey: '', confirmed: false };
 }
+
+/** Presentation only: never used to decide whether activation is allowed. */
+export function restrictedCheckSummary(inspect: RestrictedNetworkInspectResult) {
+  const definitions = [
+    {
+      id: 'https',
+      label: 'HTTPS',
+      ids: ['restricted.tls'],
+      pending: 'Noch nicht geprüft',
+      success: 'Für das Portal eingerichtet',
+    },
+    {
+      id: 'address',
+      label: 'Adresse und DNS',
+      ids: ['restricted.local-ip', 'restricted.portal-dns-public', 'restricted.portal-dns-local'],
+      pending: inspect.status.binding
+        ? 'Prüfung noch unvollständig'
+        : 'Zuerst eine Netzwerkadresse vorbereiten',
+      success: 'IP zugeordnet, DNS stimmt lokal und öffentlich',
+    },
+    {
+      id: 'binding',
+      label: 'Netzwerkfreigabe',
+      ids: [
+        'restricted.binding.no-global-publish',
+        'restricted.binding.proxy',
+        'restricted.binding.runtime-contract',
+      ],
+      pending:
+        inspect.status.phase === 'applied'
+          ? 'Prüfung noch unvollständig'
+          : 'Wird nach Aktivierung geprüft',
+      success: 'Portfreigaben entsprechen der Konfiguration',
+    },
+  ];
+  const groupedIds = new Set(definitions.flatMap((group) => group.ids));
+  return {
+    groups: definitions.map((group) => {
+      const checks = inspect.checks.filter((check) => group.ids.includes(check.id));
+      const failures = checks.filter((check) => !check.ok);
+      const complete = group.ids.every((id) => checks.some((check) => check.id === id));
+      const state = failures.length ? 'failed' : complete ? 'passed' : 'pending';
+      return {
+        id: group.id,
+        label: group.label,
+        state,
+        message:
+          state === 'passed'
+            ? group.success
+            : state === 'failed'
+              ? 'Handlungsbedarf'
+              : group.pending,
+        failures,
+      };
+    }),
+    additional: inspect.checks.filter(
+      (check) => !groupedIds.has(check.id) && check.id !== 'restricted.platform',
+    ),
+  };
+}
