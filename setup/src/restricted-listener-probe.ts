@@ -1,4 +1,3 @@
-import { restrictedDiagnostic } from './restricted-diagnostics.js';
 import https from 'node:https';
 import fs from 'node:fs';
 import {
@@ -225,19 +224,7 @@ export async function auditRestrictedListeners(
         : c.expected === 'abort'
           ? result.status === null && result.transport === 'rejected'
           : result.status === 404 && result.rejection === 'portal-policy';
-    restrictedDiagnostic('listener.probe', {
-      targetIp: c.ip,
-      sni: c.sni,
-      host: c.host,
-      method: c.method,
-      path: c.path,
-      port: c.ip === input.staffIp ? (input.staffHttpsPort ?? 443) : 443,
-      expected: c.expected,
-      ok,
-      status: result.status,
-      transport: result.transport ?? null,
-      rejection: result.rejection === 'portal-policy' ? 'portal-policy' : null,
-    });
+
     return ok
       ? []
       : [`${c.label}: erwartete ${c.expected}-Grenze nicht nachgewiesen (${describe(result)})`];

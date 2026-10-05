@@ -123,14 +123,6 @@ for (const entry of ['start', 'restart', 'existing'] as const) {
         assert.equal(stopped, outcome === 'remove-fails' || outcome === 'closure-throws' ? 1 : 0);
       }
       assert.equal(probes, outcome === 'unhealthy' ? 0 : 1);
-      const rows = fs
-        .readFileSync(path.join(home, 'logs/restricted-beta.jsonl'), 'utf8')
-        .trim()
-        .split('\n')
-        .map((line) => JSON.parse(line));
-      assert.equal(new Set(rows.map((row) => row.id)).size, 1);
-      assert.equal(rows.at(-1).ok, outcome === 'valid');
-      if (outcome !== 'unhealthy') assert.ok(rows.some((row) => row.event === 'runtime.audit'));
     });
   }
 }

@@ -126,7 +126,7 @@ test('archives reject Windows aliases, drives, streams, links and case collision
   );
 });
 
-test('Windows beta still rejects an active Restricted binding without a local address', async () => {
+test('Windows still rejects an active Restricted binding without a local address', async () => {
   const { validateStaffBindingEnv } = await import('./docker.js');
   assert.match(
     validateStaffBindingEnv(

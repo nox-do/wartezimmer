@@ -81,8 +81,7 @@ App-Stack. Die Restricted-Grenze wird durch die Proxy-Positivliste sowie die
 serverseitige API-Autorisierung erzwungen; ein separates Portal-Bundle ist nicht
 geplant.
 
-Windows-Beta ab Manager 6.1.2-beta.1: Einrichtung und Start sind freigegeben,
-mit unveränderten TLS-, DNS-, Binding- und Listenerprüfungen. Strukturierte,
-rotierende Diagnoseprotokolle unterstützen die reale Windows-Abnahme.
-Details und Testablauf: [Windows-Portal-Beta](windows-portal-beta.md).
-Eine allgemeine Produktionsfreigabe folgt daraus nicht.
+Windows ab Manager 6.1.2: Einrichtung und Start sind mit TLS-, DNS-, Binding-
+und Listenerprüfungen freigegeben. Das zusätzliche Betatest-Logging ist entfernt.
+Betrieb und historische Abnahme: [Windows-Patientenzugang](windows-portal-beta.md).
+Die reale Netzabnahme bleibt Bestandteil der jeweiligen Installation.

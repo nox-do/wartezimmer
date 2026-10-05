@@ -1,4 +1,3 @@
-import { withRestrictedDiagnostics } from './restricted-diagnostics.js';
 import { auditRestrictedStart, type RestrictedStartAuditHooks } from './restricted-start-audit.js';
 import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
 import { createModuleLogger } from './logger.js';
@@ -89,16 +88,6 @@ export async function inspectExistingAppDatabase(
 }
 
 export async function startExistingInstallation(
-  runOptions: ComposeRunOptions,
-  appImage: string,
-  deps: InstallationStartDependencies = {},
-) {
-  return withRestrictedDiagnostics(runOptions.projectRoot, 'start-existing', () =>
-    startExistingInstallationInternal(runOptions, appImage, deps),
-  );
-}
-
-async function startExistingInstallationInternal(
   runOptions: ComposeRunOptions,
   appImage: string,
   deps: InstallationStartDependencies = {},

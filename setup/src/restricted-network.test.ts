@@ -891,6 +891,6 @@ for (const platform of ['darwin', 'win32']) {
     });
     assert.equal(result.capabilities.supported, true);
     assert.equal(result.checks.find((check) => check.id === 'restricted.platform')?.ok, true);
-    if (platform === 'win32') assert.match(result.capabilities.message, /Windows-Beta/);
+    if (platform === 'win32') assert.match(result.capabilities.message, /unter Windows unterstützt/);
   });
 }

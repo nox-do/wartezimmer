@@ -1,4 +1,3 @@
-import { restrictedDiagnostic, withRestrictedDiagnostics } from './restricted-diagnostics.js';
 import { restrictedPlatformSupported } from './restricted-platform.js';
 import { assertWindowsHostPath } from './windows-host-path.js';
 import { runHostMutation } from './maintenance-operation-guard.js';
@@ -50,11 +49,6 @@ export async function detectDocker(): Promise<DockerStatus> {
   });
   const compose = await runDockerCommand(['compose', 'version', '--short'], { timeoutMs: 3_000 });
 
-  restrictedDiagnostic('docker.versions', {
-    cli: version.code === 0 ? version.stdout.trim() : null,
-    engine: info.code === 0 ? info.stdout.trim() : null,
-    compose: compose.code === 0 ? compose.stdout.trim() : null,
-  });
   const composeAvailable = compose.code === 0 && supportedComposeVersion(compose.stdout);
   return {
     installed: true,
@@ -334,13 +328,7 @@ export function canRunGatewayCompose(): boolean {
   return process.platform === 'linux';
 }
 
-export async function composeUp(options: ComposeUpOptions & { services?: string[] }) {
-  return withRestrictedDiagnostics(options.projectRoot, 'compose-up', () =>
-    composeUpInternal(options),
-  );
-}
-
-async function composeUpInternal(options: ComposeUpOptions & { services?: string[] }): Promise<{
+export async function composeUp(options: ComposeUpOptions & { services?: string[] }): Promise<{
   ok: boolean;
   log: string;
   gatewaySkipped: boolean;
@@ -359,7 +347,6 @@ async function composeUpInternal(options: ComposeUpOptions & { services?: string
       )
     : composeStaffBindingError(options.projectRoot);
   if (bindingError) {
-    restrictedDiagnostic('compose.binding-rejected', { reason: bindingError });
     return { ok: false, log: bindingError, gatewaySkipped };
   }
   // Gateway profile only when not targeting a subset of services.
@@ -398,7 +385,7 @@ async function composeUpInternal(options: ComposeUpOptions & { services?: string
     cwd: options.projectRoot,
     env: buildComposeEnv(options.composeProjectName),
   });
-  restrictedDiagnostic('compose.result', { ok: result.code === 0, exitCode: result.code });
+
   const log = [result.stdout, result.stderr].filter(Boolean).join('\n');
   return { ok: result.code === 0, log, gatewaySkipped };
 }

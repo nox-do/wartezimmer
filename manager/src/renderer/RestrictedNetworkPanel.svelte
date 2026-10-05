@@ -240,7 +240,7 @@
     <dt>Freigabe</dt><dd>Patientenportal</dd>
   </dl>
 
-  {#if !inspect.capabilities.supported || inspect.capabilities.platform === 'win32'}
+  {#if !inspect.capabilities.supported}
     <p class="notice is-warn">{inspect.capabilities.message}</p>
   {/if}
 

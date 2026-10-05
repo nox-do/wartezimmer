@@ -1,5 +1,9 @@
 # Offene Abnahmen und Entscheidungen
 
+Release 6.1.2: Beta-Kennzeichnung und zusätzliches JSONL-Logging entfernt.
+Windows-Portal-Unterstützung und Sicherheitsprüfungen bleiben bestehen.
+Die folgenden Beta-Protokolle sind historische Nachweise.
+
 Windows-Praxistest (2026-10-05): Aktivierung, Portalzugriff, Neustarts laut Anwender
 und Wiederherstellung nach WLAN-Ausfall erfolgreich erprobt. Zwei Aktivierungen
 mit insgesamt 208 erfolgreichen Listenerproben protokolliert. Details und Grenzen:

@@ -1,4 +1,3 @@
-import { withRestrictedDiagnostics } from './restricted-diagnostics.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import path from 'node:path';
 import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
@@ -55,12 +54,7 @@ export function hostMutationLock(home: string): HostMutationLock {
   const key = process.platform === 'win32' ? resolved.toLowerCase() : resolved;
   let lock = hostLocks.get(key);
   if (!lock) {
-    const inner = createHostMutationLock(true);
-    lock = {
-      assertAvailable: inner.assertAvailable,
-      run: (operation, action) =>
-        withRestrictedDiagnostics(resolved, operation, () => inner.run(operation, action)),
-    };
+    lock = createHostMutationLock(true);
     hostLocks.set(key, lock);
   }
   return lock;

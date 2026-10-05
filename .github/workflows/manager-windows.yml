@@ -34,8 +34,6 @@ jobs:
         run: >-
           node --import tsx --test
           setup/src/windows-compatibility.test.ts
-          setup/src/restricted-diagnostics.test.ts
-          setup/src/docker-preflight-diagnostics.test.ts
           setup/src/restricted-start-audit.test.ts
           setup/src/restricted-network.test.ts
           setup/src/restricted-listener-probe.test.ts

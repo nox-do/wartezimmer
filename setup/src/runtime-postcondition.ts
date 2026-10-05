@@ -1,4 +1,3 @@
-import { restrictedDiagnostic } from './restricted-diagnostics.js';
 import type { ComposeStatus, PortalProxyContract } from '@praxis-flow/server-shared';
 import { readTlsStatus } from './host-tls.js';
 import { auditStaffPublishedBindings } from './network-bindings.js';
@@ -108,16 +107,6 @@ export async function auditRuntimePostcondition(
       }
     }
   }
-  restrictedDiagnostic('runtime.audit', {
-    expectedBindings: request.bindings,
-    services:
-      compose?.services.map((service) => ({
-        service: service.service,
-        state: service.state,
-        publishedBindings: service.publishedBindings,
-      })) ?? null,
-    ok: errors.length === 0,
-    errors,
-  });
+
   return { ok: errors.length === 0, errors };
 }

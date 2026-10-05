@@ -1,6 +1,6 @@
 import { auditRestrictedStart, type RestrictedStartAuditHooks } from './restricted-start-audit.js';
 import { restrictedPlatformSupported, restrictedPlatformMessage } from './restricted-platform.js';
-import { withRestrictedDiagnostics, restrictedDiagnostic } from './restricted-diagnostics.js';
+
 import { createModuleLogger } from './logger.js';
 import {
   beginBindingOperation,
@@ -1272,23 +1272,11 @@ export function abortInstallOperation(ctx: SetupContext, operationId: string): I
 }
 
 export async function inspectRestrictedNetwork(ctx: SetupContext, operationId?: string) {
-  return withRestrictedDiagnostics(ctx.home, 'inspect', async () => {
-    const result = await inspectRestrictedNetworkInternal(ctx, operationId);
-    restrictedDiagnostic('inspect.snapshot', { inspect: result });
-    return result;
-  });
-}
-
-async function inspectRestrictedNetworkInternal(ctx: SetupContext, operationId?: string) {
   const envPath = path.join(ctx.home, '.env');
   const envExists = fs.existsSync(envPath);
   const envMap = envExists ? readEnvMap(envPath) : new Map<string, string>();
   const docker = await detectDocker();
-  restrictedDiagnostic('docker.status', {
-    installed: docker.installed,
-    daemonRunning: docker.daemonRunning,
-    composeAvailable: docker.composeAvailable,
-  });
+
   const compose = await readComposeForHost(ctx, envExists, docker, envMap);
   const resolver = new Resolver({ timeout: 2_000, tries: 1 });
   const publicDnsServers = parseTlsDnsResolvers(envMap.get('TLS_DNS_RESOLVERS'));
@@ -1342,77 +1330,75 @@ export async function prepareRestrictedNetwork(
     inspect?: () => Promise<RestrictedNetworkInspectResult>;
   } = {},
 ) {
-  return withRestrictedDiagnostics(ctx.home, 'prepare', () =>
-    runHostMutation(ctx.home, 'prepareRestrictedNetwork', async () => {
-      const envPath = path.join(ctx.home, '.env');
-      if (!fs.existsSync(envPath)) {
-        throw new SetupApiValidationError('Setup muss vor dem Patientenzugang abgeschlossen sein.');
-      }
-      // Preparation persists the binding draft only. TLS/DNS and platform gates
-      // below remain authoritative before anything is applied to Docker.
-      assertHostLifecycleAction(ctx, 'network-binding');
-      const envMap = readEnvMap(envPath);
-      if (envMap.get(RESTRICTED_NETWORK_ENABLED_ENV)?.trim().toLowerCase() === 'true') {
-        throw new SetupApiValidationError(
-          'Aktiven Patientenzugang zuerst entfernen, bevor die Netzwerkadresse geändert wird.',
-        );
-      }
-      const staffIp = pickLanIpFromEnv(envMap);
-      const interfaces = deps.interfaces ?? listNetworkInterfaces();
-      const candidates = buildRestrictedNetworkCandidates(interfaces, staffIp);
-      const candidate = candidates.find(
-        (item) => item.address === input.hostIp && item.interfaceId === input.interfaceId,
+  return runHostMutation(ctx.home, 'prepareRestrictedNetwork', async () => {
+    const envPath = path.join(ctx.home, '.env');
+    if (!fs.existsSync(envPath)) {
+      throw new SetupApiValidationError('Setup muss vor dem Patientenzugang abgeschlossen sein.');
+    }
+    // Preparation persists the binding draft only. TLS/DNS and platform gates
+    // below remain authoritative before anything is applied to Docker.
+    assertHostLifecycleAction(ctx, 'network-binding');
+    const envMap = readEnvMap(envPath);
+    if (envMap.get(RESTRICTED_NETWORK_ENABLED_ENV)?.trim().toLowerCase() === 'true') {
+      throw new SetupApiValidationError(
+        'Aktiven Patientenzugang zuerst entfernen, bevor die Netzwerkadresse geändert wird.',
       );
-      if (!candidate) {
-        throw new SetupApiValidationError(
-          'Die gewählte Restricted-IP ist nicht mehr lokal verfügbar oder nicht eindeutig zugeordnet.',
-          'restricted_address_unavailable',
-        );
-      }
-      if (candidate.warnings.includes('ambiguous-address')) {
-        throw new SetupApiValidationError(
-          'Die gewählte Restricted-IP ist mehreren Interfaces zugeordnet und kann nicht eindeutig gebunden werden.',
-          'restricted_address_ambiguous',
-        );
-      }
-      if (candidate.warnings.length > 0 && !input.warningsConfirmed) {
-        throw new SetupApiValidationError(
-          'Die Hinweise zur gewählten Netzwerkadresse müssen bestätigt werden.',
-        );
-      }
-      if (!restrictedPlatformSupported(deps.platform ?? process.platform)) {
-        throw new SetupApiValidationError(
-          restrictedPlatformMessage(deps.platform ?? process.platform),
-        );
-      }
-      const tls = deps.tls ?? readTlsStatus(envMap);
-      if (tls.mode !== 'managed' || !tls.wildcardCertificateName) {
-        throw new SetupApiValidationError(
-          'Der dedizierte Patientenzugang ist derzeit nur mit verwaltetem Wildcard-HTTPS verfügbar.',
-        );
-      }
-      const portalHostname = tls.portalHostname?.trim() || '';
-      const portalCovered = restrictedCertificateCoversHostname(
-        portalHostname,
-        tls.certificate?.names ?? [],
+    }
+    const staffIp = pickLanIpFromEnv(envMap);
+    const interfaces = deps.interfaces ?? listNetworkInterfaces();
+    const candidates = buildRestrictedNetworkCandidates(interfaces, staffIp);
+    const candidate = candidates.find(
+      (item) => item.address === input.hostIp && item.interfaceId === input.interfaceId,
+    );
+    if (!candidate) {
+      throw new SetupApiValidationError(
+        'Die gewählte Restricted-IP ist nicht mehr lokal verfügbar oder nicht eindeutig zugeordnet.',
+        'restricted_address_unavailable',
       );
-      if (!tls.cutoverApplied || !portalHostname || !portalCovered) {
-        throw new SetupApiValidationError(
-          'Zuerst HTTPS für den Portal-Hostnamen vollständig einrichten.',
-        );
-      }
+    }
+    if (candidate.warnings.includes('ambiguous-address')) {
+      throw new SetupApiValidationError(
+        'Die gewählte Restricted-IP ist mehreren Interfaces zugeordnet und kann nicht eindeutig gebunden werden.',
+        'restricted_address_ambiguous',
+      );
+    }
+    if (candidate.warnings.length > 0 && !input.warningsConfirmed) {
+      throw new SetupApiValidationError(
+        'Die Hinweise zur gewählten Netzwerkadresse müssen bestätigt werden.',
+      );
+    }
+    if (!restrictedPlatformSupported(deps.platform ?? process.platform)) {
+      throw new SetupApiValidationError(
+        restrictedPlatformMessage(deps.platform ?? process.platform),
+      );
+    }
+    const tls = deps.tls ?? readTlsStatus(envMap);
+    if (tls.mode !== 'managed' || !tls.wildcardCertificateName) {
+      throw new SetupApiValidationError(
+        'Der dedizierte Patientenzugang ist derzeit nur mit verwaltetem Wildcard-HTTPS verfügbar.',
+      );
+    }
+    const portalHostname = tls.portalHostname?.trim() || '';
+    const portalCovered = restrictedCertificateCoversHostname(
+      portalHostname,
+      tls.certificate?.names ?? [],
+    );
+    if (!tls.cutoverApplied || !portalHostname || !portalCovered) {
+      throw new SetupApiValidationError(
+        'Zuerst HTTPS für den Portal-Hostnamen vollständig einrichten.',
+      );
+    }
 
-      updateEnvKeys(envPath, {
-        [RESTRICTED_NETWORK_IP_ENV]: candidate.address,
-        [RESTRICTED_NETWORK_INTERFACE_ID_ENV]: candidate.interfaceId,
-        [RESTRICTED_NETWORK_WARNINGS_CONFIRMED_ENV]: String(input.warningsConfirmed),
-        [RESTRICTED_NETWORK_SAME_INTERFACE_CONFIRMED_ENV]: String(
-          candidate.relationToStaff === 'same-interface' && input.warningsConfirmed,
-        ),
-      });
-      return deps.inspect ? deps.inspect() : inspectRestrictedNetwork(ctx);
-    }),
-  );
+    updateEnvKeys(envPath, {
+      [RESTRICTED_NETWORK_IP_ENV]: candidate.address,
+      [RESTRICTED_NETWORK_INTERFACE_ID_ENV]: candidate.interfaceId,
+      [RESTRICTED_NETWORK_WARNINGS_CONFIRMED_ENV]: String(input.warningsConfirmed),
+      [RESTRICTED_NETWORK_SAME_INTERFACE_CONFIRMED_ENV]: String(
+        candidate.relationToStaff === 'same-interface' && input.warningsConfirmed,
+      ),
+    });
+    return deps.inspect ? deps.inspect() : inspectRestrictedNetwork(ctx);
+  });
 }
 
 type RestrictedNetworkMutationHooks = HostWriteRuntimeHooks & {
@@ -1446,7 +1432,7 @@ async function mutateRestrictedNetwork(
   let operationId: string | undefined = undefined;
   const inspect = hooks.inspect ?? (() => inspectRestrictedNetwork(ctx, operationId));
   const before = await inspect();
-  restrictedDiagnostic('inspect.before', { inspect: before });
+
   const envPath = path.join(ctx.home, '.env');
   if (!fs.existsSync(envPath)) {
     throw new SetupApiValidationError('Setup muss vor dem Patientenzugang abgeschlossen sein.');
@@ -1541,7 +1527,7 @@ async function mutateRestrictedNetwork(
           args: ['caddy', 'validate', '--config', '/etc/caddy/Caddyfile'],
           oneOff: !stackWasRunning,
         });
-        restrictedDiagnostic('caddy.validation', { ok: validation.ok });
+
         if (!validation.ok) {
           throw new Error(validation.log || 'Caddy-Konfiguration ist ungültig.');
         }
@@ -1566,7 +1552,7 @@ async function mutateRestrictedNetwork(
     let rollbackAttempted = false;
     const rollback = async (reason: string): Promise<never> => {
       rollbackAttempted = true;
-      restrictedDiagnostic('rollback.begin', {});
+
       const failedOptions = operationOptions;
       let cleanup: { ok: boolean; log: string };
       try {
@@ -1652,7 +1638,7 @@ async function mutateRestrictedNetwork(
           await (hooks.restoreProxyRestartPolicy ?? restoreProxyRestartPolicy)(operationOptions);
         finish();
       }
-      restrictedDiagnostic('rollback.end', { ok: rollbackOk });
+
       throw hostOperationError(
         rollbackOk ? 'restricted_apply_failed' : 'restricted_rollback_incomplete',
         rollbackOk
@@ -1679,7 +1665,7 @@ async function mutateRestrictedNetwork(
         error,
       );
     }
-    restrictedDiagnostic('compose.validation', { ok: configCheck.ok });
+
     if (!configCheck.ok) {
       fs.copyFileSync(backup.backupPath, envPath);
       restoreCaddyfile();
@@ -1724,7 +1710,7 @@ async function mutateRestrictedNetwork(
       if (!enable) removeEnvKeys(candidateEnvPath, [...RESTRICTED_NETWORK_PERSISTED_KEYS]);
       durableWrite(envPath, fs.readFileSync(candidateEnvPath, 'utf8'));
       const result = await inspect();
-      restrictedDiagnostic('inspect.after', { inspect: result });
+
       if (enable && (result.status.phase !== 'applied' || result.status.health === 'degraded')) {
         await rollback('Restricted-Publish wurde nach dem Start nicht eindeutig nachgewiesen.');
       }
@@ -1746,22 +1732,18 @@ export async function applyRestrictedNetwork(
   ctx: SetupContext,
   hooks: RestrictedNetworkMutationHooks = {},
 ): Promise<RestrictedNetworkInspectResult> {
-  return withRestrictedDiagnostics(ctx.home, 'apply', () =>
-    runHostMutation(ctx.home, 'applyRestrictedNetwork', async () => {
-      return mutateRestrictedNetwork(ctx, true, hooks);
-    }),
-  );
+  return runHostMutation(ctx.home, 'applyRestrictedNetwork', async () => {
+    return mutateRestrictedNetwork(ctx, true, hooks);
+  });
 }
 
 export async function removeRestrictedNetwork(
   ctx: SetupContext,
   hooks: RestrictedNetworkMutationHooks = {},
 ): Promise<RestrictedNetworkInspectResult> {
-  return withRestrictedDiagnostics(ctx.home, 'remove', () =>
-    runHostMutation(ctx.home, 'removeRestrictedNetwork', async () => {
-      return mutateRestrictedNetwork(ctx, false, hooks);
-    }),
-  );
+  return runHostMutation(ctx.home, 'removeRestrictedNetwork', async () => {
+    return mutateRestrictedNetwork(ctx, false, hooks);
+  });
 }
 
 export function buildSetupPlan(

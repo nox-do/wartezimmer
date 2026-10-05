@@ -1,4 +1,3 @@
-import { restrictedDiagnostic } from './restricted-diagnostics.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { runProcessCommand, type CommandResult, type RunCommandOptions } from './command-runner.js';
@@ -87,28 +86,16 @@ export function buildDockerEnv(
 export async function runDockerCommand(
   args: string[],
   options?: RunCommandOptions,
-  deps: { platform?: NodeJS.Platform; run?: typeof runProcessCommand } = {},
 ): Promise<CommandResult> {
-  const started = Date.now();
-  const execute = deps.run ?? runProcessCommand;
-  const finish = (result: CommandResult, step: string, failure: string | null) => {
-    restrictedDiagnostic('docker.command', {
-      command: args[0],
-      step,
-      exitCode: result.code,
-      durationMs: Date.now() - started,
-      failure,
-    });
-    return result;
-  };
   const cli = resolveDockerCli();
   const env = buildDockerEnv(options?.env);
   if (
-    (deps.platform ?? process.platform) === 'win32' &&
+    process.platform === 'win32' &&
     args[0] !== '--version' &&
     !(args[0] === 'compose' && args[1] === 'version')
   ) {
-    const run = (arguments_: string[]) => execute(cli, arguments_, { env, timeoutMs: 5000 });
+    const run = (arguments_: string[]) =>
+      runProcessCommand(cli, arguments_, { env, timeoutMs: 5000 });
     let endpoint = env.DOCKER_CONTEXT ? '' : env.DOCKER_HOST?.trim() || '';
     if (!endpoint) {
       const context = await run([
@@ -118,64 +105,29 @@ export async function runDockerCommand(
         '--format',
         '{{.Endpoints.docker.Host}}',
       ]);
-      if (context.code !== 0) return finish(context, 'context', 'context-inspection-failed');
+      if (context.code !== 0) return context;
       endpoint = context.stdout;
     }
     const endpointError = windowsDockerEndpointError(endpoint);
-    if (endpointError)
-      return finish(
-        { code: 1, stdout: '', stderr: endpointError },
-        'endpoint',
-        'endpoint-unsupported',
-      );
+    if (endpointError) return { code: 1, stdout: '', stderr: endpointError };
     const info = await run(['info', '--format', '{{.OSType}}']);
     if (info.code !== 0)
-      return finish(
-        {
-          ...info,
-          stderr: `Docker Desktop ist nicht bereit. Bitte starten und erneut versuchen. ${info.stderr}`,
-        },
-        'daemon',
-        'daemon-unavailable',
-      );
+      return {
+        ...info,
+        stderr: `Docker Desktop ist nicht bereit. Bitte starten und erneut versuchen. ${info.stderr}`,
+      };
     if (info.stdout.trim() !== 'linux')
-      return finish(
-        {
-          code: 1,
-          stdout: '',
-          stderr: 'Bitte Docker Desktop auf Linux-Container (WSL2) umstellen.',
-        },
-        'engine',
-        'linux-containers-required',
-      );
+      return {
+        code: 1,
+        stdout: '',
+        stderr: 'Bitte Docker Desktop auf Linux-Container (WSL2) umstellen.',
+      };
   }
-  const result = await execute(cli, args, {
+  return runProcessCommand(cli, args, {
     cwd: options?.cwd,
     env: buildDockerEnv(options?.env),
     timeoutMs: options?.timeoutMs,
   });
-  restrictedDiagnostic('docker.command', {
-    command: args[0],
-    step: 'execute',
-    // Never record argv or raw output: compose/env/config may contain credentials.
-    exitCode: result.code,
-    durationMs: Date.now() - started,
-    failure:
-      result.code === 0
-        ? null
-        : /address already in use|port is already allocated|ports are not available/i.test(
-              result.stderr,
-            )
-          ? 'port-unavailable'
-          : /cannot assign requested address|not valid in its context/i.test(result.stderr)
-            ? 'address-unavailable'
-            : /permission denied|access is denied/i.test(result.stderr)
-              ? 'access-denied'
-              : /cannot connect|daemon is not running|pipe.*not found/i.test(result.stderr)
-                ? 'daemon-unavailable'
-                : 'command-failed',
-  });
-  return result;
 }
 
 /** Host paths and IP probes only describe this Windows host, never a remote daemon. */
