@@ -1,5 +1,17 @@
 # Offene Abnahmen und Entscheidungen
 
+Windows-Praxistest (2026-10-05): Aktivierung, Portalzugriff, Neustarts laut Anwender
+und Wiederherstellung nach WLAN-Ausfall erfolgreich erprobt. Zwei Aktivierungen
+mit insgesamt 208 erfolgreichen Listenerproben protokolliert. Details und Grenzen:
+[Windows-Portal-Beta](operations/windows-portal-beta.md#windows-praxistest-vom-2026-10-05).
+
+Windows-Portal-Beta (2026-10-05): Auf dem Branch
+`codex/windows-patient-portal-beta` hebt Manager `6.1.2-beta.1` die pauschale
+Windows-Sperre auf. TLS-/DNS-/Binding-/Listenerprüfungen bleiben aktiv.
+Die bisherige Erwartung „Windows bleibt gesperrt“ in der Abnahmematrix gilt
+für diese Beta nicht mehr. Stattdessen reale Zwei-NIC-Abnahme mit
+[Diagnoseprotokollen](operations/windows-portal-beta.md) durchführen.
+
 Konsolidiert am 2026-09-30 aus den bisherigen Reviews und Betriebsdokumenten.
 „Offen“ bedeutet hier: Ein abschließender Nachweis beziehungsweise eine Entscheidung
 ist in den geprüften Unterlagen nicht dokumentiert. Automatisierte Tests ersetzen

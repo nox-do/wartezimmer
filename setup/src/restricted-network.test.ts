@@ -349,7 +349,7 @@ test('unsupported platforms are reported without hiding otherwise valid candidat
     staffIp: '192.168.10.10',
     tls,
     compose: null,
-    platform: 'win32',
+    platform: 'linux',
   });
   assert.equal(result.capabilities.supported, false);
   assert.equal(result.candidates.length, 3);
@@ -398,7 +398,7 @@ test('prepare persists the exact local IP/interface choice and then returns DNS 
       },
       {
         interfaces,
-        platform: 'darwin',
+        platform: 'win32',
         tls,
         inspect: () =>
           buildRestrictedNetworkInspect({
@@ -878,3 +878,19 @@ for (const listenerFailure of [false, true])
       fs.rmSync(fixture.home, { recursive: true, force: true });
     }
   });
+
+for (const platform of ['darwin', 'win32']) {
+  test(`${platform} supports restricted access while retaining TLS prerequisites`, async () => {
+    const result = await buildRestrictedNetworkInspect({
+      env: new Map(),
+      interfaces,
+      staffIp: '192.168.10.10',
+      tls,
+      compose: null,
+      platform,
+    });
+    assert.equal(result.capabilities.supported, true);
+    assert.equal(result.checks.find((check) => check.id === 'restricted.platform')?.ok, true);
+    if (platform === 'win32') assert.match(result.capabilities.message, /Windows-Beta/);
+  });
+}

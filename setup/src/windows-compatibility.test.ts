@@ -126,11 +126,18 @@ test('archives reject Windows aliases, drives, streams, links and case collision
   );
 });
 
-test('Windows cannot start a persisted Restricted binding without platform approval', async () => {
+test('Windows beta still rejects an active Restricted binding without a local address', async () => {
   const { validateStaffBindingEnv } = await import('./docker.js');
   assert.match(
-    validateStaffBindingEnv(new Map([['SETUP_RESTRICTED_ENABLED', 'true']]), [], 'win32')!,
-    /Windows gesperrt/,
+    validateStaffBindingEnv(
+      new Map([
+        ['SETUP_RESTRICTED_ENABLED', 'true'],
+        ['PROXY_ENABLED', 'true'],
+      ]),
+      [],
+      'win32',
+    )!,
+    /SETUP_LAN_APP_IP fehlt/,
   );
 });
 

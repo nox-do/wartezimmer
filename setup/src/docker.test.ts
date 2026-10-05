@@ -157,7 +157,11 @@ test('validateStaffBindingEnv requires the active restricted address on its pers
   env.set('SETUP_RESTRICTED_APP_IP', '192.168.1.10');
   assert.match(validateStaffBindingEnv(env, twoInterfaces) || '', /gespeicherten Interface/);
   env.set('SETUP_RESTRICTED_INTERFACE_ID', 'name:en0');
-  assert.equal(validateStaffBindingEnv(env, twoInterfaces), null);
+  assert.equal(validateStaffBindingEnv(env, twoInterfaces, 'darwin'), null);
+  assert.equal(validateStaffBindingEnv(env, twoInterfaces, 'win32'), null);
+  assert.match(validateStaffBindingEnv(env, twoInterfaces, 'linux') ?? '', /nicht unterstützt/);
+  env.set('SETUP_RESTRICTED_APP_IP', '10.99.99.99');
+  assert.match(validateStaffBindingEnv(env, twoInterfaces, 'win32') ?? '', /nicht vorhanden/);
 });
 
 test('resolveComposeFiles selects base file by delivery flag', () => {

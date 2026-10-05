@@ -22,7 +22,9 @@ Die Auswahl eines Adapters über seine lokale IPv4-Adresse garantiert keine
 Filterung nach eingehendem Interface und keine Isolation des Praxisnetzes.
 Ein grüner Docker-/Listener-Status darf daher nicht „Netz sicher isoliert“ bedeuten.
 IPv6 bleibt ein Negativtest auf unbeabsichtigte Erreichbarkeit, kein angebotener
-Zugangspfad. Windows bleibt bis zu einem eigenen Binding-Nachweis zurückgestellt.
+Zugangspfad. Windows ist ab Manager 6.1.2-beta.1 für einen protokollierten
+Betatest freigegeben; der reale Binding-Nachweis bleibt offen. Siehe
+[Windows-Portal-Beta](windows-portal-beta.md).
 
 Diese Entscheidung ersetzt die frühere Planung einer produktverwalteten
 Host-Firewall einschließlich Elevation, Apply/Rollback und Firewall-Release-Gates.

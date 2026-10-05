@@ -486,6 +486,7 @@
           }}
         >
           <RestrictedNetworkPanel
+            {configSnapshot}
             active={managerShell.activeView === 'network'}
             lifecycle={lifecycle ?? undefined}
             {onAfterMutation}

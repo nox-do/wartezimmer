@@ -81,7 +81,8 @@ App-Stack. Die Restricted-Grenze wird durch die Proxy-Positivliste sowie die
 serverseitige API-Autorisierung erzwungen; ein separates Portal-Bundle ist nicht
 geplant.
 
-Windows-Vorbereitung: Manager-Paketierung hebt das macOS-Plattformgate nicht
-auf. Ein kopiertes aktives Binding autorisiert keinen Windows-Stackstart;
-aktive Restricted-Backups werden vor Restore-Cutover abgewiesen. Die reale
-Freigabematrix bleibt unter [Windows-Abnahme](../open-items.md#windows-abnahmeprotokoll).
+Windows-Beta ab Manager 6.1.2-beta.1: Einrichtung und Start sind freigegeben,
+mit unveränderten TLS-, DNS-, Binding- und Listenerprüfungen. Strukturierte,
+rotierende Diagnoseprotokolle unterstützen die reale Windows-Abnahme.
+Details und Testablauf: [Windows-Portal-Beta](windows-portal-beta.md).
+Eine allgemeine Produktionsfreigabe folgt daraus nicht.

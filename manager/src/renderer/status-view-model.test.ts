@@ -312,3 +312,36 @@ test('installation facts and optional diagnostics have distinct contents', () =>
     '6.1.0',
   );
 });
+
+test('external portal URL appears only after activation and disappears after removal', () => {
+  const status = minimalHostStatus({
+    deviceUrls: {
+      appBaseUrl: 'https://staff.example.test',
+      terminal: 'https://staff.example.test/terminal',
+      tv: 'https://staff.example.test/tv',
+      mfa: 'https://staff.example.test/mfa',
+      portal: 'https://staff.example.test/portal',
+      ops: 'https://staff.example.test/ops',
+      opsSetup: 'https://staff.example.test/ops/setup',
+    },
+  });
+  const portal = status.restrictedNetwork!;
+  portal.portalHostname = 'portal.example.test';
+  portal.phase = 'prepared';
+  assert.equal(
+    deviceUrlEntries(status)?.some((entry) => entry.label === 'Portal - extern'),
+    false,
+  );
+  portal.phase = 'applied';
+  assert.deepEqual(deviceUrlEntries(status)?.at(-1), {
+    label: 'Portal - extern',
+    url: 'https://portal.example.test/portal',
+    showKioskTip: false,
+  });
+  assert.ok(deviceUrlEntries(status)?.some((entry) => entry.url === status.deviceUrls!.portal));
+  portal.portalHostname = null;
+  assert.equal(deviceUrlEntries(status)?.length, 5);
+  portal.portalHostname = 'portal.example.test';
+  portal.phase = 'unconfigured';
+  assert.equal(deviceUrlEntries(status)?.length, 5);
+});

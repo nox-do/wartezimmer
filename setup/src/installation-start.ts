@@ -1,3 +1,5 @@
+import { withRestrictedDiagnostics } from './restricted-diagnostics.js';
+import { auditRestrictedStart, type RestrictedStartAuditHooks } from './restricted-start-audit.js';
 import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
 import { createModuleLogger } from './logger.js';
 import type { InstallationStartFailure } from './installation-state.js';
@@ -14,7 +16,7 @@ import { APP_DB_PATH, appDataVolumeName } from './staff-pin-reset.js';
 
 const logger = createModuleLogger('setup.installation-start');
 
-export type InstallationStartDependencies = {
+export type InstallationStartDependencies = RestrictedStartAuditHooks & {
   runDocker?: typeof runDockerCommand;
   composeUp?: typeof composeUp;
   composePs?: typeof composePs;
@@ -90,6 +92,16 @@ export async function startExistingInstallation(
   runOptions: ComposeRunOptions,
   appImage: string,
   deps: InstallationStartDependencies = {},
+) {
+  return withRestrictedDiagnostics(runOptions.projectRoot, 'start-existing', () =>
+    startExistingInstallationInternal(runOptions, appImage, deps),
+  );
+}
+
+async function startExistingInstallationInternal(
+  runOptions: ComposeRunOptions,
+  appImage: string,
+  deps: InstallationStartDependencies = {},
 ): Promise<
   {
     compose: ComposeStatus | null;
@@ -120,6 +132,11 @@ export async function startExistingInstallation(
       maintenanceStatus: 'unreachable',
     };
   }
+
+  await auditRestrictedStart(runOptions, {
+    ...deps,
+    stackHealthWaitOptions: deps.stackHealthWaitOptions ?? deps,
+  });
 
   const readCompose = deps.composePs ?? composePs;
   const now = deps.now ?? Date.now;

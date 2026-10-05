@@ -1,3 +1,4 @@
+import { restrictedPlatformSupported, restrictedPlatformMessage } from './restricted-platform.js';
 import type {
   ComposeStatus,
   NetworkInterfaceInfo,
@@ -187,7 +188,7 @@ export function buildRestrictedNetworkStatus(input: {
   };
   const applied = input.env.get(RESTRICTED_NETWORK_ENABLED_ENV) === 'true';
   const published = hasRestrictedPublish(input.compose, hostIp);
-  const platformSupported = (input.platform ?? process.platform) === 'darwin';
+  const platformSupported = restrictedPlatformSupported(input.platform ?? process.platform);
   const certificateReady = Boolean(
     portalHostname &&
     input.tls.certificate &&
@@ -246,13 +247,11 @@ export async function buildRestrictedNetworkInspect(input: {
   const staff = findAddress(input.interfaces, input.staffIp);
   const candidates = buildRestrictedNetworkCandidates(input.interfaces, input.staffIp);
   const checks: RestrictedNetworkInspectResult['checks'] = [];
-  const supported = platform === 'darwin';
+  const supported = restrictedPlatformSupported(platform);
   checks.push({
     id: 'restricted.platform',
     ok: supported,
-    message: supported
-      ? 'Der separate Patientenzugang wird unter macOS unterstützt.'
-      : 'Der separate Patientenzugang wird derzeit nur unter macOS unterstützt.',
+    message: restrictedPlatformMessage(platform),
   });
   const certificateReady = Boolean(
     input.tls.mode === 'managed' &&
@@ -423,9 +422,7 @@ export async function buildRestrictedNetworkInspect(input: {
     capabilities: {
       platform,
       supported,
-      message: supported
-        ? 'macOS-Pfad verfügbar; reale Zwei-NIC-Abnahme bleibt erforderlich.'
-        : 'Windows und weitere Hostplattformen sind noch nicht freigegeben.',
+      message: restrictedPlatformMessage(platform),
     },
     staff: { hostIp: input.staffIp, interfaceName: staff?.iface.name ?? null },
     candidates,

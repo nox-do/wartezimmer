@@ -249,9 +249,19 @@ export function deviceUrlEntries(status: HostStatus): DeviceUrlEntry[] | null {
     status.deviceUrls.ops,
   ];
 
-  return DEVICE_URL_LABELS.map((label, index) => ({
+  const entries: DeviceUrlEntry[] = DEVICE_URL_LABELS.map((label, index) => ({
     label,
     url: urls[index],
     showKioskTip: label === 'TV',
   }));
+  const portal = status.restrictedNetwork;
+  const hostname = portal?.portalHostname?.trim();
+  if (portal?.phase === 'applied' && hostname) {
+    entries.push({
+      label: 'Portal - extern',
+      url: `https://${hostname}/portal`,
+      showKioskTip: false,
+    });
+  }
+  return entries;
 }

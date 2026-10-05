@@ -144,8 +144,9 @@ Recovery nach Neuinstallation: [Ablauf und Fehlerfälle](reinstall-recovery.md).
 
 Die Windows-Vorbereitung ändert weder Backup-Format noch Löschgrenzen externer
 Import-/Exportordner. Vor Restore-Cutover werden übernommene Windows-Hostpfade
-auf unterstützte lokale Pfade geprüft. Ein aktiver Restricted-Zugang aus einem
-Backup bleibt unter Windows gesperrt. Cross-OS-Backups mit macOS-/WSL-/UNC-
+auf unterstützte lokale Pfade geprüft. In der Windows-Beta ab Manager
+6.1.2-beta.1 wird ein aktiver Restricted-Zugang über die bestehenden lokalen
+Binding- und Runtime-Prüfungen validiert; die pauschale Windows-Sperre entfällt. Cross-OS-Backups mit macOS-/WSL-/UNC-
 Hostpfaden sind damit nicht still unverändert einspielbar.
 
 TLS-Archive und Release-Archive verwerfen auch Windows-Gerätenamen,

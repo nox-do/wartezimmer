@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { HostLifecycle } from '@praxis-flow/server-shared/setup-api';
   import { evaluateHostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
-  import type { RestrictedNetworkInspectResult } from '../shared/host-status.js';
+  import type { HostStatus, RestrictedNetworkInspectResult } from '../shared/host-status.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import {
     restrictedActionErrorText,
@@ -15,12 +15,14 @@
   let {
     active,
     lifecycle,
+    configSnapshot,
     onAfterMutation,
     peerMutating = false,
     onMutatingChange,
   }: {
     active: boolean;
     lifecycle?: HostLifecycle;
+    configSnapshot?: HostStatus | null;
     onAfterMutation?: () => void | Promise<void>;
     peerMutating?: boolean;
     onMutatingChange?: (mutating: boolean) => void;
@@ -30,6 +32,7 @@
   let loadError = $state<string | null>(null);
   let actionError = $state<string | null>(null);
   let loadAttempted = $state(false);
+  let inspectedConfig = $state.raw<HostStatus | null | undefined>(undefined);
   let selectedCandidateKey = $state('');
   let warningsConfirmed = $state(false);
   let notice = $state<string | null>(null);
@@ -97,6 +100,7 @@
     if (busy || peerMutating) return;
     const current = ++generation;
     action = 'refreshing';
+    inspectedConfig = configSnapshot;
     loadError = null;
     actionError = null;
     notice = null;
@@ -191,7 +195,9 @@
   }
 
   $effect(() => {
-    if (active && !loadAttempted && !busy) void refresh();
+    // HTTPS and adapter edits update the shell configuration while this panel stays mounted.
+    // Wait for host mutations to finish, then replace the cached prerequisite checks.
+    if (active && !busy && !peerMutating && (!loadAttempted || inspectedConfig !== configSnapshot)) void refresh();
     if (!active) {
       generation += 1;
       if (action !== 'mutating') action = 'idle';
@@ -232,7 +238,7 @@
     <dt>Freigabe</dt><dd>Patientenportal</dd>
   </dl>
 
-  {#if !inspect.capabilities.supported}
+  {#if !inspect.capabilities.supported || inspect.capabilities.platform === 'win32'}
     <p class="notice is-warn">{inspect.capabilities.message}</p>
   {/if}
 
