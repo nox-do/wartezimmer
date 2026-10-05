@@ -132,6 +132,31 @@
   --shadow-color-modal: color-mix(in srgb, var(--foreground) 18%, transparent);
   --shadow-color-pairing: color-mix(in srgb, var(--foreground) 12%, transparent);
 
+  /* Room-panel palette: keep its warm neutrals and distinct state contrast. */
+  --room-panel-background: #f7f7f4;
+  --room-panel-surface: var(--card);
+  --room-panel-ink: #151713;
+  --room-panel-subtext: #3f453b;
+  --room-panel-label: #52564d;
+  --room-panel-muted: #6b7268;
+  --room-panel-placeholder: #8a9187;
+  --room-panel-border: #deded6;
+  --room-panel-input-border: #c7cdc4;
+  --room-panel-pressed: #eef1eb;
+  --room-panel-success: var(--green-chip-ink);
+  --room-panel-success-background: #e7f5e7;
+  --room-panel-section-background: #f3f6f2;
+  --room-panel-section-border: #d8e3d4;
+  --room-panel-warning: #9a3412;
+  --room-panel-warning-background: var(--amber-warning-bg);
+  --room-panel-warning-badge-background: #fff4de;
+  --room-panel-error: var(--ops-danger);
+  --room-panel-error-background: var(--destructive-light);
+  --room-panel-error-border: #e8b4b0;
+  --room-panel-success-highlight: color-mix(in srgb, var(--room-panel-success) 8%, transparent);
+  --room-panel-warning-highlight: color-mix(in srgb, var(--room-panel-warning) 10%, transparent);
+  --room-panel-login-shadow: 0 10px 30px color-mix(in srgb, var(--room-panel-ink) 8%, transparent);
+
   --radius: 12px;
   --radius-lg: calc(var(--radius) + 2px);
   --radius-sm: calc(var(--radius) - 2px);

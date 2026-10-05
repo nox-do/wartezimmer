@@ -5,6 +5,7 @@ import type { HostRuntimeHealth } from '@praxis-flow/server-shared/setup-api';
 import type { HostStatus } from '../shared/host-status.js';
 import { freshInstallHostStatus, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import { createHostRefreshController } from './host-refresh-controller.js';
+import { networkAccessAlerts } from './network-access-view-model.js';
 
 function minimalRuntime(overrides: Partial<HostRuntimeHealth> = {}): HostRuntimeHealth {
   const status = minimalHostStatus();
@@ -33,6 +34,49 @@ function mockApi(
     fetchRuntimeHealth: overrides.fetchRuntimeHealth ?? (async () => minimalRuntime()),
   } as never;
 }
+
+test('runtime polling reconciles a recovered or lost local IP without config or service changes', async () => {
+  let status = minimalHostStatus();
+  let reads = 0;
+  const controller = createHostRefreshController({
+    api: () =>
+      mockApi({
+        fetchSetupStatus: async () => {
+          reads += 1;
+          return status;
+        },
+        fetchRuntimeHealth: async () => minimalRuntime({ network: status.network }),
+      }),
+    onRuntime: () => {},
+    onConfig: () => {},
+    onError: () => {},
+    schedule: () => 0,
+    clearSchedule: () => {},
+  });
+  await controller.refresh({ scope: 'config' });
+  for (const unavailable of [true, false]) {
+    status = minimalHostStatus({
+      network: {
+        configuredLanIp: status.network.configuredLanIp,
+        currentLanCandidates: unavailable
+          ? []
+          : [{ address: '192.168.1.10', interfaceName: 'en0' }],
+        lanIpStale: unavailable,
+      },
+    });
+    await controller.refresh({ scope: 'runtime', silent: true });
+    assert.equal(controller.getLastConfig()?.network.lanIpStale, unavailable);
+    assert.equal(
+      networkAccessAlerts(controller.getLastConfig()!).some((alert) =>
+        alert.includes('nicht vorhanden'),
+      ),
+      unavailable,
+    );
+  }
+  assert.equal(reads, 3);
+  await controller.refresh({ scope: 'runtime', silent: true });
+  assert.equal(reads, 3, 'unchanged adapters do not require another full status');
+});
 
 test('refresh applies runtime and config on full scope once ops snapshot exists', async () => {
   const status = minimalHostStatus();

@@ -944,46 +944,55 @@ test('applyAndVerify does not save while TLS is mutating', async () => {
   assert.equal(controller.getState().phase, 'idle');
 });
 
-test('hide() clears the UI phase but keeps the host-write latch until saveHostNetwork settles', async () => {
-  const held = { resolve() {} };
-  const gate = new Promise<void>((resolve) => {
-    held.resolve = resolve;
-  });
-  const { controller } = createController({
-    config: minimalHostStatus({
-      configuredCanonicalBaseUrl: 'http://192.168.1.10:8080',
-      compose: { running: false, services: [] },
-      network: {
-        configuredLanIp: '192.168.1.10',
-        currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
-        lanIpStale: false,
+for (const fails of [false, true]) {
+  test(`leaving during save keeps the host lock and refreshes global status (failure=${fails})`, async () => {
+    let refreshes = 0;
+    const held = { resolve() {} };
+    const gate = new Promise<void>((resolve) => {
+      held.resolve = resolve;
+    });
+    const { controller } = createController({
+      onAfterMutation: () => {
+        refreshes += 1;
       },
-    }),
-    api: {
-      saveHostNetwork: async () => {
-        await gate;
-        return saveResult({
-          composeRestarted: false,
-          stackWasRunning: false,
-          compose: { running: false, services: [] },
-        });
+      config: minimalHostStatus({
+        configuredCanonicalBaseUrl: 'http://192.168.1.10:8080',
+        compose: { running: false, services: [] },
+        network: {
+          configuredLanIp: '192.168.1.10',
+          currentLanCandidates: [{ address: '192.168.1.10', interfaceName: 'en0' }],
+          lanIpStale: false,
+        },
+      }),
+      api: {
+        saveHostNetwork: async () => {
+          await gate;
+          if (fails) throw new Error('restart failed after persisting');
+          return saveResult({
+            composeRestarted: false,
+            stackWasRunning: false,
+            compose: { running: false, services: [] },
+          });
+        },
       },
-    },
+    });
+    controller.show();
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.patchFields({ lanAppIp: '192.168.1.20' });
+    controller.applyAndVerify();
+    await Promise.resolve();
+    assert.equal(controller.isHostWriteInFlight(), true);
+    controller.hide();
+    assert.equal(controller.getState().phase, 'idle');
+    assert.equal(controller.isHostWriteInFlight(), true);
+    held.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(controller.isHostWriteInFlight(), false);
+    assert.equal(refreshes, 1, 'leaving only invalidates local UI, never the global refresh');
+    assert.equal(controller.getState().notice, null);
   });
-  controller.show();
-  await Promise.resolve();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  controller.patchFields({ lanAppIp: '192.168.1.20' });
-  controller.applyAndVerify();
-  await Promise.resolve();
-  assert.equal(controller.isHostWriteInFlight(), true);
-  controller.hide();
-  assert.equal(controller.getState().phase, 'idle');
-  assert.equal(controller.isHostWriteInFlight(), true);
-  held.resolve();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.equal(controller.isHostWriteInFlight(), false);
-});
+}
 
 test('restoreProxy with active TLS preserves saved identity and does not call TLS issuance', async () => {
   const config = minimalHostStatus({

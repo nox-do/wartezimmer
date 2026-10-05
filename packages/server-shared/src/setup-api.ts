@@ -885,6 +885,8 @@ export type HostRuntimeHealth = {
   checkedAt: string;
   envExists: boolean;
   configuredLanIp: string | null;
+  /** Live local adapters and IP availability; changes request authoritative HostStatus. */
+  network?: HostNetworkStatus;
   /** Effective product base used for LAN probes (canonical or IP fallback). */
   appBaseUrl: string | null;
   docker: DockerStatus;

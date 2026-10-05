@@ -115,8 +115,8 @@
         {#if assistance}
           <p class="terminal-confirmed-room-name">{t('terminal.assistanceConfirmedWaitHere')}</p>
         {:else}
-          <p class="terminal-callout-label">{t('terminal.confirmedRoomLabel')}</p>
           {#if destinationRoomLabel}
+            <p class="terminal-callout-label">{t('terminal.confirmedRoomLabel')}</p>
             <p class="terminal-confirmed-room-name">
               <BrowserTranslatedText text={destinationRoomLabel} />
             </p>
@@ -128,7 +128,9 @@
     </div>
 
     <p class="terminal-confirmed-topic">{t('terminal.confirmedTopicLabel')}: <strong><BrowserTranslatedText text={topicLabel} /></strong></p>
-    <p class="terminal-confirmed-lead">{assistance ? t('terminal.assistanceConfirmedLead') : t('terminal.confirmedLead')}</p>
+    {#if assistance}
+      <p class="terminal-confirmed-lead">{t('terminal.assistanceConfirmedLead')}</p>
+    {/if}
 
     {#if wlanPromoEnabled && !assistance}
       <TerminalWlanPromoBanner ticketCode={ticketCode} />

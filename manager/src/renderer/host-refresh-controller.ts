@@ -162,6 +162,8 @@ export function createHostRefreshController(
           ]),
         ) ||
       lastRuntime.configuredLanIp !== lastConfig.network.configuredLanIp ||
+      (lastRuntime.network !== undefined &&
+        JSON.stringify(lastRuntime.network) !== JSON.stringify(lastConfig.network)) ||
       (lastRuntime.appBaseUrl !== null && lastRuntime.appBaseUrl !== lastConfig.appBaseUrl) ||
       (lastRuntime.proxyServer !== null &&
         lastRuntime.proxyServer.enabled !== lastConfig.proxy.enabled)

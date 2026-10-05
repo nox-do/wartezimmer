@@ -357,10 +357,9 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
           }),
         );
       } catch (error) {
-        if (generation !== actionGeneration) {
-          return;
+        if (generation === actionGeneration) {
+          saveSubmittedDraft = null;
         }
-        saveSubmittedDraft = null;
         // The backend may have persisted the proxy setting before a restart or
         // the request failed. Refresh the saved config so HTTPS eligibility does
         // not remain stale until the next tab navigation.
@@ -378,11 +377,12 @@ export function createNetworkController(deps: NetworkControllerDeps): NetworkCon
         return;
       }
 
-      if (generation !== actionGeneration) {
-        return;
+      // Leaving the tab invalidates local notices, not the completed host write.
+      try {
+        await deps.onAfterMutation?.();
+      } catch {
+        // Shell owns refresh diagnostics; keep the saved operation's result.
       }
-
-      await deps.onAfterMutation?.();
       if (generation !== actionGeneration) {
         return;
       }

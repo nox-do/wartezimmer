@@ -893,7 +893,8 @@ export async function getHostRuntimeHealth(ctx: SetupContext): Promise<HostRunti
   const docker = await detectDocker();
   const envMap = envExists ? readEnvMap(envPath) : new Map<string, string>();
   const lifecycle = readHostLifecycle(root, envMap, envExists);
-  const configuredLanIp = pickLanIpFromEnv(envMap);
+  const network = buildHostNetworkStatus(envMap);
+  const configuredLanIp = network.configuredLanIp;
   const lanAppBaseUrl = resolveCanonicalBaseUrl(envMap, configuredLanIp) ?? undefined;
 
   const compose = await readComposeForHost(ctx, envExists, docker, envMap);
@@ -936,6 +937,7 @@ export async function getHostRuntimeHealth(ctx: SetupContext): Promise<HostRunti
     checkedAt,
     envExists,
     configuredLanIp,
+    network,
     appBaseUrl: lanAppBaseUrl ?? null,
     docker,
     compose,
