@@ -4,6 +4,7 @@
 **/node_modules
 **/dist
 **/coverage
+**/*.tsbuildinfo
 ui/build
 ui/.svelte-kit
 
@@ -21,6 +22,7 @@ ui/.env
 .DS_Store
 .github
 .vscode
+.continue
 
 # Local/runtime data not needed for image builds
 data
@@ -28,6 +30,12 @@ logs
 docs_data
 .tmp
 .exports-host
+state
+backups
+dumps
+praxis-flow-source-*.tar.gz
+**/*.pfinstall
+**/*.pfupdate
 seed
 lab
 

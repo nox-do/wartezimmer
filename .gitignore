@@ -1,33 +1,39 @@
+# Dependencies and generated build outputs (all workspaces)
 node_modules/
 dist/
 coverage/
+*.tsbuildinfo
+
+# Local logs and OS/editor artifacts
 *.log
 .DS_Store
+*.swp
+*.swo
+*~
+/.continue/
 
+# Local environment files; keep documented examples in Git
 .env
-.env.backup-*
-ui/.env
+.env.*
+!.env.example
 
-app/node_modules/
-app/dist/
-
-sandbox/node_modules/
-sandbox/dist/
-
-ui/node_modules/
+# SvelteKit build outputs
 ui/build/
 ui/.svelte-kit/
 
+# Runtime data and local scratch directories
 data/
 logs/
 docs_data/
 .tmp/
 .exports-host/
 
-# Runtime TLS secrets and generated Caddyfile
-state/tls/
+# Host runtime state, including TLS secrets and recovery journals
+/state/
 
 # Local backup, diagnostic, and source export artifacts
 backups/
 dumps/
 praxis-flow-source-*.tar.gz
+*.pfinstall
+*.pfupdate
