@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Create a text-only, reproducible source dump for a Praxis Flow workspace area.
+ * Create a text-only, reproducible source dump for a Wartezimmer workspace area.
  * Existing dumps are never overwritten; remove or rename one deliberately first.
  */
 import fs from 'node:fs';
@@ -225,7 +225,7 @@ const REVIEW_SECTIONS = [
 ];
 
 const REVIEW_PATHS = [...new Set(REVIEW_SECTIONS.flatMap((section) => section.paths))].sort();
-const REVIEW_PREAMBLE = `# Praxis Flow focused remediation review
+const REVIEW_PREAMBLE = `# Wartezimmer focused remediation review
 #
 # Scope: F-01 through F-16 plus the synchronous sandbox purge/day-reset follow-up.
 # This packet is intentionally curated and includes focused tests that broad dumps omit.

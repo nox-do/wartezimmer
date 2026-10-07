@@ -104,9 +104,9 @@ Shared-Module (Domain, ohne DB) — vollständige Liste siehe `src/index.ts`.
 - `schema.sql` → Migration in Host-DB
 - `resolveBusinessDay()` → Host injiziert Praxis-Tagesgrenze via `createRuntime(db, { resolveBusinessDay })` (Default: UTC-Kalendertag)
 
-**Praxis-Flow-Mapping (Check-in / Ticket):**
+**Wartezimmer-Mapping (Check-in / Ticket):**
 
-| Flow Core                         | Praxis Flow                              | Anmerkung                                      |
+| Flow Core                         | Wartezimmer                              | Anmerkung                                      |
 | --------------------------------- | ---------------------------------------- | ---------------------------------------------- |
 | `checkInPath: 'topic'`            | Routing-Kontext Standard-Themen-Check-in |                                                |
 | `checkInPath: 'mfa_assist'`       | Routing-Kontext Hilfe-Button             |                                                |

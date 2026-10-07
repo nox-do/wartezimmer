@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Build delivery images (app + sandbox) and pack a release archive for
- * Praxis Flow Manager **Erstinstallation** (Setup-Wizard: Release-Paket wählen).
+ * Wartezimmer Manager **Erstinstallation** (Setup-Wizard: Release-Paket wählen).
  *
  * Für Software-Updates in der Wartung: scripts/build-pfupdate.mjs → eine .pfupdate-Datei.
  *
@@ -41,7 +41,7 @@ import { prepareDeliveryProxyImage } from './release-proxy-image.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function printHelp(proxyImage) {
-  console.log(`build-release-images — Praxis Flow delivery release package
+  console.log(`build-release-images — Wartezimmer delivery release package
 
 Options:
   --version <semver>   Release tag (default: package.json version or PRAXIS_FLOW_RELEASE_VERSION)

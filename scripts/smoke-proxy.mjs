@@ -4,7 +4,7 @@
  *
  * Uses the real repo Caddyfile (`proxy/Caddyfile` → reverse_proxy app:8080) against a
  * throwaway upstream on the same Docker network (alias `app`), so we do not need the
- * full Praxis Flow stack.
+ * full Wartezimmer stack.
  *
  *   npm run smoke:proxy              # pull if needed, probe, tear down
  *   npm run smoke:proxy -- --keep    # leave containers up for manual curl

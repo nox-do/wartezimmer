@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build architecture-specific Praxis Flow update packages (.pfupdate) for Manager maintenance updates.
+ * Build architecture-specific Wartezimmer update packages (.pfupdate) for Manager maintenance updates.
  *
  * Usage:
  *   npm run release:pfupdate
@@ -38,7 +38,7 @@ function readManagerVersion() {
 }
 
 function printHelp() {
-  console.log(`build-pfupdate — Praxis Flow .pfupdate release package
+  console.log(`build-pfupdate — Wartezimmer .pfupdate release package
 
 Liefert eine Datei je Architektur für: Manager → Wartung → Software-Update → Update-Paket wählen.
 

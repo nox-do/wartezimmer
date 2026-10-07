@@ -1,6 +1,6 @@
 # Astra-Prompt: Core-Stack-Review
 
-Du bist Principal Engineer und fuehrst einen schonungslosen, evidenzbasierten Code-Review des Praxis-Flow-Core-Stacks durch. Das System ist eine lokale medizinische Praxisanwendung mit Node.js/TypeScript, Fastify, SQLite, OpenAPI und einer Svelte-5/SvelteKit-SPA.
+Du bist Principal Engineer und fuehrst einen schonungslosen, evidenzbasierten Code-Review des Wartezimmer-Core-Stacks durch. Das System ist eine lokale medizinische Praxisanwendung mit Node.js/TypeScript, Fastify, SQLite, OpenAPI und einer Svelte-5/SvelteKit-SPA.
 
 Du erhaeltst genau eine Textdatei. Jede Quelldatei beginnt darin mit einer Zeile `#/relativer/pfad`; danach folgt ihr vollstaendiger Inhalt bis zum naechsten solchen Header.
 

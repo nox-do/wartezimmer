@@ -6,7 +6,7 @@ export function compactBusinessDay(businessDay: string): string {
   return businessDay.replaceAll('-', '');
 }
 
-/** Oeffentliche Visit-ID wie Praxis Flow: `20260602-A-017`. */
+/** Oeffentliche Visit-ID wie Wartezimmer: `20260602-A-017`. */
 export function formatVisitId(businessDay: string, laneCode: string, sequence: number): string {
   return `${compactBusinessDay(businessDay)}-${formatTicketCode(laneCode, sequence)}`;
 }

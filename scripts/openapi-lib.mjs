@@ -56,7 +56,7 @@ export async function loadAndMergeOpenApi(root) {
   const merged = {
     openapi: '3.1.0',
     info: {
-      title: 'Praxis Flow API',
+      title: 'Wartezimmer API',
       version: '0.4.0',
       description: 'Single-praxis REST API. Source of truth for Fastify validation and UI types.',
     },
@@ -263,7 +263,7 @@ export async function loadDomainSpec(root, specFile) {
     const common = parseYaml(fs.readFileSync(filePath, 'utf8'));
     return {
       openapi: '3.1.0',
-      info: common.info ?? { title: 'Praxis Flow Common Schemas', version: '0.0.0' },
+      info: common.info ?? { title: 'Wartezimmer Common Schemas', version: '0.0.0' },
       paths: {},
       components: {
         schemas: common.components?.schemas ?? {},
