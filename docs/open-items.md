@@ -81,6 +81,7 @@ Auf Apple Silicon analog ARM64 erfolgreich, AMD64 abgelehnt. Updatepakete besitz
 
 ## UI- und technische Folgeentscheidungen (keine Release-Zusage)
 
+- Mehrfach-Check-in zum selben Thema (2026-10-07): Terminal und MFA können derzeit weitere Visits mit neuen Wartenummern für denselben Patienten und dasselbe Thema anlegen. Bekanntes Verhalten, kein Showstopper und kein Release-Gate; Umsetzung später. Empfohlen sind eine stabile Kontaktidentität und ein gemeinsamer serverseitiger Guard mit Hinweis auf die bestehende Wartenummer. Details zu Einbaupunkt, Themenwechsel und Grenzen anonymer Anmeldungen: [Check-in-Guards](architecture/apis.md#bekanntes-verhalten-mehrfach-check-in-zum-selben-thema).
 - Manager-Buttonfarben: Grün für Hauptaktionen und hellgraue Sekundärbuttons wurden vorgeschlagen, aber noch nicht bestätigt oder umgesetzt. Die lokale Anzeige der Übernehmen-Buttons je geändertem Netzwerkbereich ist bereits umgesetzt.
 - Erweiterte Domain-/PEM-Einrichtung: weitere Vereinfachung bei Bedarf. HTTPS lebt bereits ausschließlich unter Netzwerk; kein zusätzlicher Wizard-HTTPS-Schritt.
 - Multi-Tab-SSE: vor einer BroadcastChannel-/Leader-Lösung Browserlimit, Verbindungen und REST-Verzögerung messen. Keine rollenübergreifende Koordination oder Weitergabe von Auth-Tokens. Direkte SSE-Verbindungen müssen als Fallback möglich bleiben; siehe [Echtzeit](architecture/realtime.md).

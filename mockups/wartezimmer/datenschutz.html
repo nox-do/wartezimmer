@@ -10,23 +10,63 @@
     />
     <title>Datenschutz – Wartezimmer</title>
     <meta name="description" content="Datenschutz zur Website Wartezimmer." />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="describedby" href="./llms.txt" type="text/plain" />
+    <link rel="stylesheet" href="./styles.css?v=e594a326" />
   </head>
   <body>
-    <div id="wz-concept">
+    <div id="wz-concept" lang="de" aria-label="Wartezimmer">
       <header class="w-wrap w-nav">
-        <a class="w-brand" href="./index.html">Wartezimmer</a
-        ><a href="./index.html">Zur Startseite</a>
+        <a
+          class="w-brand w-brand-lockup"
+          href="./index.html#wz-home"
+          aria-label="Wartezimmer – zur Startseite"
+        >
+          <span class="w-brandline"
+            ><span class="w-brandmark" aria-hidden="true"
+              ><span></span><span></span><span></span></span
+            ><span>Wartezimmer</span></span
+          >
+          <span class="w-brand-subtitle">Für Einzel- und Gemeinschaftspraxen</span>
+        </a>
+        <nav class="w-navlinks" aria-label="Seitennavigation">
+          <a href="./index.html#wz-ablauf">So funktioniert’s</a>
+          <a class="w-nav-optional" href="./index.html#wz-funktionen">Funktionen</a>
+          <a class="w-nav-optional" href="./index.html#wz-downloads">Downloads</a>
+          <a class="w-nav-optional" href="./technik.html">Technik</a>
+          <a class="w-pill" href="./index.html#wz-einfuehrung"
+            >Einführung
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M7 7h10v10" />
+              <path d="M7 17 17 7" /></svg
+          ></a>
+        </nav>
       </header>
       <main class="w-wrap w-section w-legal">
         <h1>Datenschutz</h1>
-        <p class="w-draft">
-          Vorbereitung: Verantwortlichen und Kontaktangaben ergänzen; die Angaben zum Hosting vor
-          der Veröffentlichung abschließend prüfen.
-        </p>
         <h2>Verantwortlicher</h2>
-        <p data-publish-placeholder="privacy-controller">
-          [Name, Anschrift und Kontakt des Verantwortlichen wie im Impressum]
+        <p>
+          Daniel Deuter, Schickenberg 41, 42489 Wülfrath, Deutschland.<br />Telefon:
+          <a href="tel:+4915678647114">+49 15678 647114</a>. E-Mail:
+          <a href="mailto:info@notaus.de">info@notaus.de</a>. Weitere Angaben finden Sie im
+          <a href="./impressum.html">Impressum</a>.
+        </p>
+        <h2>Geltungsbereich</h2>
+        <p>
+          Diese Erklärung betrifft die öffentliche Informationswebsite von Wartezimmer und ihr
+          interaktives Beispiel. Für den Betrieb der Software in einer Praxis und die dortige
+          Verarbeitung von Patientendaten sind die jeweiligen Verantwortlichkeiten und Informationen
+          gesondert festzulegen.
         </p>
         <h2>Bereitstellung über GitHub Pages</h2>
         <p>
@@ -38,7 +78,7 @@
             >Datenschutzerklärung von GitHub</a
           >.
         </p>
-        <p data-publish-placeholder="hosting-review">
+        <p hidden data-publish-placeholder="hosting-review">
           [Vertragspartner, Rechtsgrundlage, Speicherdauer und Informationen zu möglichen
           Drittlandübermittlungen für das tatsächlich verwendete Hosting ergänzen.]
         </p>
@@ -54,8 +94,14 @@
           Wenn Sie uns per E-Mail kontaktieren, verarbeiten wir die übermittelten Angaben zur
           Bearbeitung Ihrer Anfrage.
         </p>
-        <p data-publish-placeholder="contact-privacy-review">
+        <p hidden data-publish-placeholder="contact-privacy-review">
           [Rechtsgrundlage und Löschfristen für Kontaktanfragen ergänzen.]
+        </p>
+        <h2>Externe Links</h2>
+        <p>
+          Links zu Docker, anderen Herstellern und Dokumentationen führen auf externe Websites. Erst
+          beim Aufruf dieser Links stellt Ihr Browser eine Verbindung zum jeweiligen Anbieter her.
+          Dort gelten dessen Datenschutzhinweise.
         </p>
         <h2>Ihre Rechte</h2>
         <p>
@@ -65,11 +111,20 @@
           beschweren. Soweit eine Verarbeitung auf Ihrer Einwilligung beruht, können Sie diese für
           die Zukunft widerrufen.
         </p>
+        <p>
+          Für Datenschutzanfragen nutzen Sie bitte die Kontaktangaben im
+          <a href="./impressum.html">Impressum</a>. Sie können sich beispielsweise an die
+          <a href="https://www.ldi.nrw.de/"
+            >Landesbeauftragte für Datenschutz und Informationsfreiheit Nordrhein-Westfalen</a
+          >
+          wenden.
+        </p>
+        <p>Stand: Oktober 2026.</p>
       </main>
       <footer class="w-wrap w-footer">
-        <nav class="w-footer-links" aria-label="Rechtliche Informationen">
-          <a href="./impressum.html">Impressum</a><a href="./datenschutz.html">Datenschutz</a
-          ><a href="./lizenzen.html">Lizenzen</a>
+        <nav class="w-footer-links" aria-label="Weitere Informationen">
+          <a href="./technik.html">Technik</a><a href="./impressum.html">Impressum</a
+          ><a href="./datenschutz.html">Datenschutz</a><a href="./lizenzen.html">Lizenzen</a>
         </nav>
       </footer>
     </div>

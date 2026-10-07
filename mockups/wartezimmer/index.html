@@ -13,28 +13,31 @@
       name="description"
       content="Anmeldung, Warteliste und Aufruf für Einzel- und Gemeinschaftspraxen. Lokal betrieben, mit einem gemeinsamen Überblick für Ihr Team."
     />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="describedby" href="./llms.txt" type="text/plain" />
+    <link rel="stylesheet" href="./styles.css?v=e594a326" />
   </head>
-  <body>
+  <body id="wz-home">
     <div id="wz-concept" lang="de" aria-label="Wartezimmer">
       <header class="w-wrap w-nav">
         <a
-          class="w-brand w-brand-lockup cursor-interaction"
-          href="#wz-home"
+          class="w-brand w-brand-lockup"
+          href="./index.html#wz-home"
           aria-label="Wartezimmer – zur Startseite"
         >
           <span class="w-brandline"
             ><span class="w-brandmark" aria-hidden="true"
               ><span></span><span></span><span></span></span
-            ><span data-w-name>Wartezimmer</span></span
+            ><span>Wartezimmer</span></span
           >
           <span class="w-brand-subtitle">Für Einzel- und Gemeinschaftspraxen</span>
         </a>
         <nav class="w-navlinks" aria-label="Seitennavigation">
-          <a class="cursor-interaction" href="#wz-ablauf">So funktioniert’s</a>
-          <a class="w-nav-optional cursor-interaction" href="#wz-funktionen">Funktionen</a>
-          <a class="w-pill cursor-interaction" href="#wz-einfuehrung"
-            >Für Ihre Praxis
+          <a href="./index.html#wz-ablauf">So funktioniert’s</a>
+          <a class="w-nav-optional" href="./index.html#wz-funktionen">Funktionen</a>
+          <a class="w-nav-optional" href="./index.html#wz-downloads">Downloads</a>
+          <a class="w-nav-optional" href="./technik.html">Technik</a>
+          <a class="w-pill" href="./index.html#wz-einfuehrung"
+            >Einführung
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -53,19 +56,20 @@
         </nav>
       </header>
 
-      <main id="wz-home">
+      <main>
         <section class="w-wrap w-hero" aria-label="Mehr Ruhe im Praxisalltag">
           <div>
             <h1 id="wz-headline">
               Mehr Ruhe.<br />Für Ihr Team,<br /><em>für Ihre Patienten.</em>
             </h1>
+            <p class="w-hero-start">In 15 Minuten eingerichtet. Bereit für Ihren Praxisalltag.</p>
             <p class="w-herotext" id="wz-herocopy">
               Klare Abläufe nehmen Unsicherheit und helfen Patienten, entspannter zu warten. Eine
-              gemeinsame Warteliste und eindeutige Aufrufe geben Orientierung – und entlasten Ihr
-              Team bei Rückfragen und Abstimmung.
+              gemeinsame Warteliste gibt Orientierung und entlastet Ihr Team bei Rückfragen und
+              Abstimmung.
             </p>
             <div class="w-actions">
-              <a class="w-button cursor-interaction" href="#wz-ablauf"
+              <a class="w-button" href="#wz-ablauf"
                 >Ablauf ausprobieren
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -82,69 +86,49 @@
                   <path d="M5 12h14" />
                   <path d="m12 5 7 7-7 7" /></svg
               ></a>
+              <a class="w-text-link" href="#wz-funktionen"
+                >Passenden Einstieg finden <span aria-hidden="true">↓</span></a
+              >
             </div>
           </div>
-          <div class="w-hero-visual" aria-label="Beispiel: Warteliste und Wartenummer">
+          <div
+            class="w-hero-visual w-real-hero"
+            aria-label="Praxisübersicht und persönlicher Aufruf"
+          >
             <div class="w-visual-back"></div>
-            <div class="w-app-preview">
-              <div class="w-appbar">
-                <span class="w-preview-brand"
-                  ><span class="w-dot"></span><span data-w-name>Wartezimmer</span></span
-                ><span class="w-status">Praxisübersicht · Beispiel</span>
-              </div>
-              <div class="w-preview-body">
-                <div class="w-preview-top">
-                  <strong>Alles im Blick.</strong><span>09:41 Uhr</span>
-                </div>
-                <div class="w-preview-labels"><span>WARTENDE</span><span>NÄCHSTES ZIEL</span></div>
-                <div class="w-person-row">
-                  <span class="w-mini-ticket">A–014</span>
-                  <div class="w-person-topic">
-                    Sprechstunde<span>Im Wartezimmer · 12 Min.</span>
-                  </div>
-                  <span class="w-room-tag">Zimmer 2</span>
-                </div>
-                <div class="w-person-row">
-                  <span class="w-mini-ticket">L–008</span>
-                  <div class="w-person-topic">Blutabnahme<span>Im Wartezimmer · 7 Min.</span></div>
-                  <span class="w-room-tag">Labor</span>
-                </div>
-                <div class="w-person-row">
-                  <span class="w-mini-ticket">M–003</span>
-                  <div class="w-person-topic">
-                    Hilfe bei der Anmeldung<span>Im Wartezimmer · 3 Min.</span>
-                  </div>
-                  <span class="w-room-tag">Empfang</span>
-                </div>
-                <div class="w-path">
-                  <span>Anmeldung ✓</span><span>→</span><b>Wartezimmer</b><span>→</span
-                  ><span>Behandlungsraum</span>
-                </div>
-              </div>
-            </div>
-            <div class="w-floating-note">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
+            <figure class="w-real-dashboard">
+              <figcaption>
+                <span class="w-dot"></span> Für Ihr Team <span>Praxisübersicht</span>
+              </figcaption>
+              <img
+                src="images/praxis-detail.webp"
+                width="504"
+                height="414"
+                alt="Ausschnitte der echten Praxisübersicht: Wartende mit verschiedenen Anliegen und ein Patient bei Dr. Jonas Bergmann."
+                fetchpriority="high"
+              />
+            </figure>
+            <figure class="w-real-ticket">
+              <figcaption>Für Ihre Patienten</figcaption>
+              <img
+                src="images/wartenummer.webp"
+                width="190"
+                height="56"
+                alt="Ihre Wartenummer: L–006."
+              />
+              <p class="w-ticket-instruction">Bitte gehen Sie jetzt zu</p>
+              <div
+                class="w-ticket-destination"
+                role="img"
+                aria-label="Beispielziele: Wartezimmer, Empfang und Infektion 1."
               >
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-              Angemeldet. Im Blick.
-            </div>
-            <div class="w-paper-ticket">
-              <div class="w-ticket-top">IHRE WARTENUMMER</div>
-              <div class="w-ticket-number">A–014</div>
-              <div class="w-ticket-cut"></div>
-              <div class="w-ticket-note">Sie werden aufgerufen.<br />Schön, dass Sie da sind.</div>
-            </div>
+                <div class="w-ticket-destination-track" aria-hidden="true">
+                  <span>Wartezimmer</span><span>Empfang</span><span>Infektion 1</span
+                  ><span>Wartezimmer</span>
+                </div>
+              </div>
+            </figure>
+            <p class="w-real-note">Ein gemeinsamer Überblick.<br />Ein klarer nächster Schritt.</p>
           </div>
         </section>
 
@@ -233,6 +217,341 @@
           </div>
         </div>
 
+        <section
+          class="w-wrap w-section w-downloads"
+          id="wz-downloads"
+          aria-labelledby="wz-download-heading"
+        >
+          <div class="w-download-expander-head">
+            <div>
+              <span class="w-kicker">Downloads</span>
+              <h2 id="wz-download-heading">
+                <button
+                  class="w-download-toggle"
+                  type="button"
+                  aria-expanded="false"
+                  aria-controls="wz-download-panel"
+                  id="wz-download-toggle"
+                >
+                  Alles für Einstieg und Updates.<svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+              </h2>
+            </div>
+            <button
+              class="w-button"
+              type="button"
+              id="wz-download-open"
+              aria-expanded="false"
+              aria-controls="wz-download-panel"
+            >
+              Downloads
+            </button>
+          </div>
+          <div id="wz-download-panel" hidden>
+            <p class="w-download-intro">
+              Für den Start benötigen Sie den Manager und ein Installationspaket. Für eine
+              bestehende Installation wählen Sie das passende Updatepaket.
+            </p>
+            <div class="w-download-table-wrap">
+              <table
+                class="w-download-table"
+                role="table"
+                aria-label="Downloads nach Prozessorarchitektur"
+              >
+                <thead role="rowgroup">
+                  <tr role="row">
+                    <th scope="col" role="columnheader">Download</th>
+                    <th scope="col" role="columnheader">Version</th>
+                    <th scope="col" role="columnheader">
+                      AMD64<span class="w-download-detail">Intel / AMD · x64</span>
+                    </th>
+                    <th scope="col" role="columnheader">
+                      ARM64<span class="w-download-detail">Mac mit Apple Silicon</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody role="rowgroup">
+                  <tr role="row">
+                    <th scope="row" role="rowheader">
+                      <strong>Docker Desktop</strong
+                      ><span class="w-download-detail">Die Laufzeitumgebung für Wartezimmer.</span>
+                    </th>
+                    <td role="cell" class="w-download-version">
+                      <span class="w-download-mobile-label" aria-hidden="true">Version</span>Beim
+                      Anbieter
+                    </td>
+                    <td role="cell" colspan="2" class="w-download-shared">
+                      <a
+                        class="w-button w-download-external"
+                        href="https://www.docker.com/products/docker-desktop/"
+                        >Zur Docker-Downloadseite ↗</a
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+                <tbody role="rowgroup">
+                  <tr role="row">
+                    <th scope="row" role="rowheader">
+                      <strong>Manager für Mac</strong
+                      ><span class="w-download-detail">Für Einrichtung, Betrieb und Updates.</span
+                      ><code class="w-download-file">.dmg</code>
+                    </th>
+                    <td role="cell" class="w-download-version">
+                      <span class="w-download-mobile-label" aria-hidden="true">Version</span>6.1.1
+                    </td>
+                    <td role="cell">
+                      <span class="w-download-mobile-label" aria-hidden="true">AMD64</span
+                      ><button
+                        class="w-button w-download-pending"
+                        type="button"
+                        data-publish-placeholder="download-url"
+                        disabled
+                        aria-label="Mac-Manager für AMD64 herunterladen"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <path d="m7 10 5 5 5-5" />
+                          <path d="M12 15V3" /></svg
+                        >Herunterladen
+                      </button>
+                    </td>
+                    <td role="cell">
+                      <span class="w-download-mobile-label" aria-hidden="true">ARM64</span
+                      ><button
+                        class="w-button w-download-pending"
+                        type="button"
+                        data-publish-placeholder="download-url"
+                        disabled
+                        aria-label="Mac-Manager für ARM64 herunterladen"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <path d="m7 10 5 5 5-5" />
+                          <path d="M12 15V3" /></svg
+                        >Herunterladen
+                      </button>
+                    </td>
+                  </tr>
+                  <tr role="row">
+                    <th scope="row" role="rowheader">
+                      <strong>Manager für Windows</strong
+                      ><span class="w-download-detail">Für Einrichtung, Betrieb und Updates.</span
+                      ><code class="w-download-file">.exe</code>
+                    </th>
+                    <td role="cell" class="w-download-version">
+                      <span class="w-download-mobile-label" aria-hidden="true">Version</span>6.1.2
+                    </td>
+                    <td role="cell">
+                      <span class="w-download-mobile-label" aria-hidden="true">AMD64</span
+                      ><button
+                        class="w-button w-download-pending"
+                        type="button"
+                        data-publish-placeholder="download-url"
+                        disabled
+                        aria-label="Windows-Manager für AMD64 herunterladen"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <path d="m7 10 5 5 5-5" />
+                          <path d="M12 15V3" /></svg
+                        >Herunterladen
+                      </button>
+                    </td>
+                    <td role="cell">
+                      <span class="w-download-mobile-label" aria-hidden="true">ARM64</span
+                      ><span class="w-download-unavailable">Nicht unterstützt</span>
+                    </td>
+                  </tr>
+                </tbody>
+                <tbody role="rowgroup">
+                  <tr role="row">
+                    <th scope="row" role="rowheader">
+                      <strong>Erstinstallation</strong
+                      ><span class="w-download-detail"
+                        >Wartezimmer erstmals im Manager installieren.</span
+                      ><code class="w-download-file">.pfinstall</code>
+                    </th>
+                    <td role="cell" class="w-download-version">
+                      <span class="w-download-mobile-label" aria-hidden="true">Version</span>6.1.1
+                    </td>
+                    <td role="cell">
+                      <span class="w-download-mobile-label" aria-hidden="true">AMD64</span
+                      ><button
+                        class="w-button w-download-pending"
+                        type="button"
+                        data-publish-placeholder="download-url"
+                        disabled
+                        aria-label="Erstinstallation für AMD64 herunterladen"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <path d="m7 10 5 5 5-5" />
+                          <path d="M12 15V3" /></svg
+                        >Herunterladen
+                      </button>
+                    </td>
+                    <td role="cell">
+                      <span class="w-download-mobile-label" aria-hidden="true">ARM64</span
+                      ><button
+                        class="w-button w-download-pending"
+                        type="button"
+                        data-publish-placeholder="download-url"
+                        disabled
+                        aria-label="Erstinstallation für ARM64 herunterladen"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <path d="m7 10 5 5 5-5" />
+                          <path d="M12 15V3" /></svg
+                        >Herunterladen
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+                <tbody role="rowgroup">
+                  <tr role="row">
+                    <th scope="row" role="rowheader">
+                      <strong>Update</strong
+                      ><span class="w-download-detail"
+                        >Im Manager unter Wartung → Software-Update einspielen.</span
+                      ><code class="w-download-file">.pfupdate</code>
+                    </th>
+                    <td role="cell" class="w-download-version">
+                      <span class="w-download-mobile-label" aria-hidden="true">Version</span>6.1.1
+                    </td>
+                    <td role="cell">
+                      <span class="w-download-mobile-label" aria-hidden="true">AMD64</span
+                      ><button
+                        class="w-button w-download-pending"
+                        type="button"
+                        data-publish-placeholder="download-url"
+                        disabled
+                        aria-label="Update für AMD64 herunterladen"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <path d="m7 10 5 5 5-5" />
+                          <path d="M12 15V3" /></svg
+                        >Herunterladen
+                      </button>
+                    </td>
+                    <td role="cell">
+                      <span class="w-download-mobile-label" aria-hidden="true">ARM64</span
+                      ><button
+                        class="w-button w-download-pending"
+                        type="button"
+                        data-publish-placeholder="download-url"
+                        disabled
+                        aria-label="Update für ARM64 herunterladen"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <path d="m7 10 5 5 5-5" />
+                          <path d="M12 15V3" /></svg
+                        >Herunterladen
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="w-download-help">
+              <a class="w-text-link" href="./technik.html"
+                >Systemvoraussetzungen &amp; Installation →</a
+              >
+            </div>
+          </div>
+        </section>
+
         <section class="w-wrap w-section" aria-labelledby="wz-benefit-heading">
           <div class="w-section-head">
             <div>
@@ -244,6 +563,28 @@
               welcher Raum als Nächstes dran ist.
             </p>
           </div>
+          <figure class="w-product-overview">
+            <a
+              href="images/praxis-uebersicht.webp"
+              target="_blank"
+              rel="noopener"
+              aria-label="Praxisübersicht in voller Größe öffnen (neuer Tab)"
+            >
+              <img
+                src="images/praxis-uebersicht.webp"
+                width="1684"
+                height="686"
+                loading="lazy"
+                alt="Praxisübersicht mit Wartezimmer, abwesendem Patienten und der Belegung von Empfang, Arztzimmer, Untersuchung, Labor und Infekt-Wartezimmer."
+              />
+            </a>
+            <figcaption>
+              <span>Wartende, Räume und Abwesenheiten in einer Übersicht.</span>
+              <a href="images/praxis-uebersicht.webp" target="_blank" rel="noopener"
+                >Ansicht vergrößern ↗</a
+              >
+            </figcaption>
+          </figure>
           <div class="w-practice-fit" aria-label="Für Einzel- und Gemeinschaftspraxen">
             <article class="w-practice-case">
               <div class="w-practice-symbol" aria-hidden="true">
@@ -372,6 +713,262 @@
           </p>
         </section>
 
+        <section class="w-wrap w-section w-product-surfaces" aria-labelledby="wz-surfaces-heading">
+          <div class="w-section-head">
+            <div>
+              <span class="w-kicker">Vom Ankommen bis zum Aufruf</span>
+              <h2 id="wz-surfaces-heading">Orientierung.<br />Bei jedem Schritt.</h2>
+            </div>
+            <p class="w-section-aside">
+              Patienten melden sich an. Ihr Team behält den Überblick. Der Aufruf zeigt das nächste
+              Ziel.
+            </p>
+          </div>
+          <div
+            class="w-carousel"
+            data-w-carousel
+            role="region"
+            aria-roledescription="Karussell"
+            aria-labelledby="wz-surfaces-heading"
+          >
+            <div class="w-carousel-navigation" data-w-carousel-controls hidden>
+              <div class="w-carousel-topics" aria-label="Thema wählen">
+                <button
+                  type="button"
+                  data-w-slide="0"
+                  aria-pressed="true"
+                  aria-controls="wz-surface-1"
+                >
+                  Anmeldung
+                </button>
+                <button
+                  type="button"
+                  data-w-slide="1"
+                  aria-pressed="false"
+                  aria-controls="wz-surface-2"
+                >
+                  Hardware &amp; Bon
+                </button>
+                <button
+                  type="button"
+                  data-w-slide="2"
+                  aria-pressed="false"
+                  aria-controls="wz-surface-3"
+                >
+                  Aufruf
+                </button>
+                <button
+                  type="button"
+                  data-w-slide="3"
+                  aria-pressed="false"
+                  aria-controls="wz-surface-4"
+                >
+                  Wege &amp; Routing
+                </button>
+                <button
+                  type="button"
+                  data-w-slide="4"
+                  aria-pressed="false"
+                  aria-controls="wz-surface-5"
+                >
+                  Raum-Panels
+                </button>
+              </div>
+              <div class="w-carousel-arrows">
+                <button type="button" data-w-carousel-prev aria-label="Vorheriges Thema">←</button>
+                <span data-w-carousel-count aria-live="polite" aria-atomic="true">1 / 5</span>
+                <button type="button" data-w-carousel-next aria-label="Nächstes Thema">→</button>
+              </div>
+            </div>
+            <div class="w-carousel-viewport" data-w-carousel-viewport>
+              <article
+                class="w-carousel-slide"
+                id="wz-surface-1"
+                data-w-slide-panel="0"
+                role="group"
+                aria-roledescription="Folie"
+                aria-label="1 von 5: Anmeldung"
+              >
+                <div class="w-carousel-copy">
+                  <span class="w-kicker">01 · Anmeldung</span>
+                  <h3>In Ruhe ankommen.</h3>
+                  <p>
+                    Am Terminal anmelden oder persönlich zum Empfang gehen. Die Sprachwahl ist
+                    direkt erreichbar.
+                  </p>
+                  <p class="w-carousel-detail">
+                    Die Anmeldung erscheint in der gemeinsamen Übersicht. Ihr Team sieht, wer da ist
+                    und welches Anliegen mitgebracht wird.
+                  </p>
+                </div>
+                <div class="w-carousel-visual">
+                  <div class="w-terminal-frame">
+                    <div class="w-terminal-title">Anmeldung</div>
+                    <img
+                      src="images/anmeldung.webp"
+                      width="640"
+                      height="593"
+                      loading="lazy"
+                      alt="Anmeldeterminal mit verschiedenen Anmeldewegen und Sprachwahl am rechten Rand."
+                    />
+                  </div>
+                </div>
+              </article>
+              <article
+                class="w-carousel-slide"
+                id="wz-surface-2"
+                data-w-slide-panel="1"
+                role="group"
+                aria-roledescription="Folie"
+                aria-label="2 von 5: Hardware und Bon"
+              >
+                <div class="w-carousel-copy">
+                  <span class="w-kicker">02 · Terminal-Hardware &amp; Bondrucker</span>
+                  <h3>Eine Nummer.<br />Auch zum Mitnehmen.</h3>
+                  <p>
+                    Ein Touchscreen am Eingang macht die Anmeldung direkt erreichbar. Ein optionaler
+                    Bondrucker gibt die Wartenummer auf Papier aus.
+                  </p>
+                  <p class="w-carousel-detail">
+                    Terminal, Rechner und Drucker werden passend zum Standort eingerichtet. Der Bon
+                    begleitet den Patienten bis zum Aufruf.
+                  </p>
+                  <a class="w-text-link" href="technik.html"
+                    >Mehr zur Einrichtung <span aria-hidden="true">→</span></a
+                  >
+                </div>
+                <div
+                  class="w-carousel-visual w-hardware-example"
+                  role="img"
+                  aria-label="Schematische Darstellung eines Anmeldeterminals mit Bondrucker und einem Bon mit der Wartenummer L–006."
+                >
+                  <div class="w-hardware-screen" aria-hidden="true">
+                    <span>Anmeldung</span>
+                    <div>Willkommen<br />in Ihrer Praxis</div>
+                    <b>Anmelden →</b>
+                  </div>
+                  <div class="w-hardware-stand" aria-hidden="true"></div>
+                  <div class="w-hardware-printer" aria-hidden="true">
+                    <div class="w-hardware-receipt">
+                      <small>IHRE WARTENUMMER</small><strong>L–006</strong
+                      ><span>Bitte im Wartezimmer<br />auf Aufruf warten.</span>
+                    </div>
+                    <div class="w-printer-slot"></div>
+                    <span class="w-printer-light"></span>
+                  </div>
+                  <span class="w-illustration-label" aria-hidden="true"
+                    >Terminal mit optionalem Bondrucker · Beispiel</span
+                  >
+                </div>
+              </article>
+              <article
+                class="w-carousel-slide"
+                id="wz-surface-3"
+                data-w-slide-panel="2"
+                role="group"
+                aria-roledescription="Folie"
+                aria-label="3 von 5: Aufruf"
+              >
+                <div class="w-carousel-copy">
+                  <span class="w-kicker">03 · Wartezimmer-TV</span>
+                  <h3>Wissen, wohin es geht.</h3>
+                  <p>
+                    Auf dem Wartezimmer-TV erscheinen die Wartenummer und das Ziel. Namen bleiben
+                    auf dieser Ansicht verborgen.
+                  </p>
+                  <p class="w-carousel-detail">
+                    Ihr Team löst den Aufruf aus. Patienten sehen klar, wann sie an der Reihe sind
+                    und in welchen Raum es weitergeht.
+                  </p>
+                </div>
+                <div class="w-carousel-visual">
+                  <div class="w-tv-frame">
+                    <img
+                      src="images/wartezimmer-tv.webp"
+                      width="1856"
+                      height="598"
+                      loading="lazy"
+                      alt="Wartezimmer-TV mit wartenden Nummern und zwei Aufrufen zum Empfang: A–004 und A–005."
+                    />
+                  </div>
+                </div>
+              </article>
+              <article
+                class="w-carousel-slide"
+                id="wz-surface-4"
+                data-w-slide-panel="3"
+                role="group"
+                aria-roledescription="Folie"
+                aria-label="4 von 5: Wege und Routing"
+              >
+                <div class="w-carousel-copy">
+                  <span class="w-kicker">04 · Wege &amp; Routing</span>
+                  <h3>Der passende Weg.<br />Für jedes Anliegen.</h3>
+                  <p>
+                    Eine Blutabnahme braucht einen anderen Ablauf als eine Sprechstunde. Anliegen
+                    können passende Ziele und aufeinanderfolgende Stationen erhalten.
+                  </p>
+                  <p class="w-carousel-detail">
+                    Vom Wartezimmer über das Labor bis zum Arztzimmer: Ihr Team sieht den Aufenthalt
+                    und den nächsten Schritt des Besuchs.
+                  </p>
+                </div>
+                <div class="w-carousel-visual w-routing-example">
+                  <div class="w-route-heading">
+                    <span class="w-kicker">Beispiel eines Besuchs</span
+                    ><strong>L–006 · Blutabnahme &amp; Sprechstunde</strong>
+                  </div>
+                  <ol class="w-route-stations">
+                    <li>
+                      <span>01</span>
+                      <div>Wartezimmer<small>Angemeldet · wartet auf den Aufruf</small></div>
+                    </li>
+                    <li class="is-current">
+                      <span>02</span>
+                      <div>Labor<small>Blutabnahme · aktuell im Raum</small></div>
+                    </li>
+                    <li>
+                      <span>03</span>
+                      <div>Dr. Jonas Bergmann<small>Sprechstunde · nächstes Ziel</small></div>
+                    </li>
+                  </ol>
+                  <p class="w-illustration-label">Schematischer Beispielablauf</p>
+                </div>
+              </article>
+              <article
+                class="w-carousel-slide"
+                id="wz-surface-5"
+                data-w-slide-panel="4"
+                role="group"
+                aria-roledescription="Folie"
+                aria-label="5 von 5: Raum-Panels"
+              >
+                <div class="w-carousel-copy">
+                  <span class="w-kicker">05 · Raum-Panels</span>
+                  <h3>Orientierung an der Tür.<br />Überblick im Raum.</h3>
+                  <p>
+                    Ein Panel an der Tür zeigt den Aufruf und gibt Orientierung. Im Raum kann Ihr
+                    Team die Ankunft bestätigen, Patienten aufrufen und den Besuch abschließen.
+                  </p>
+                  <p class="w-carousel-detail">
+                    Anzeige und Bedienung lassen sich je Raum einrichten. So bleibt der nächste
+                    Schritt auch abseits des Empfangs sichtbar.
+                  </p>
+                </div>
+                <div class="w-carousel-visual w-panel-example">
+                  <div class="w-door-line" aria-hidden="true"></div>
+                  <div class="w-room-panel">
+                    <span class="w-kicker">Untersuchung 1</span><strong>A–004</strong
+                    ><span>Bitte eintreten.</span>
+                    <div><span class="w-dot"></span> Aufgerufen</div>
+                  </div>
+                  <p class="w-illustration-label">Tür-Panel · schematisches Beispiel</p>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
         <section class="w-demo-section" id="wz-ablauf" aria-labelledby="wz-demo-heading">
           <div class="w-wrap w-section">
             <div class="w-section-head">
@@ -387,36 +984,21 @@
             <div class="w-demo-layout">
               <div>
                 <div class="w-steps" aria-label="Schritte des Beispielbesuchs">
-                  <button
-                    type="button"
-                    class="w-step cursor-interaction"
-                    data-w-step="0"
-                    aria-pressed="true"
-                  >
+                  <button type="button" class="w-step" data-w-step="0" aria-pressed="true">
                     <span class="w-step-num">01</span
                     ><span
                       ><strong>Ankommen</strong
                       ><small>Anliegen wählen und eine Wartenummer erhalten.</small></span
                     >
                   </button>
-                  <button
-                    type="button"
-                    class="w-step cursor-interaction"
-                    data-w-step="1"
-                    aria-pressed="false"
-                  >
+                  <button type="button" class="w-step" data-w-step="1" aria-pressed="false">
                     <span class="w-step-num">02</span
                     ><span
                       ><strong>Warten</strong
                       ><small>Das Team behält Wartende und nächste Ziele im Blick.</small></span
                     >
                   </button>
-                  <button
-                    type="button"
-                    class="w-step cursor-interaction"
-                    data-w-step="2"
-                    aria-pressed="false"
-                  >
+                  <button type="button" class="w-step" data-w-step="2" aria-pressed="false">
                     <span class="w-step-num">03</span
                     ><span
                       ><strong>Aufgerufen</strong
@@ -431,19 +1013,8 @@
               <div class="w-demo-panel">
                 <div class="w-demo-toolbar">
                   <div class="w-view-switch" aria-label="Ansicht wählen">
-                    <button
-                      type="button"
-                      class="cursor-interaction"
-                      data-w-view="team"
-                      aria-pressed="true"
-                    >
-                      Praxisteam</button
-                    ><button
-                      type="button"
-                      class="cursor-interaction"
-                      data-w-view="patient"
-                      aria-pressed="false"
-                    >
+                    <button type="button" data-w-view="team" aria-pressed="true">Praxisteam</button
+                    ><button type="button" data-w-view="patient" aria-pressed="false">
                       Patienten
                     </button>
                   </div>
@@ -483,8 +1054,7 @@
                   </div>
                   <div class="w-patient-screen" id="wz-patient-screen" hidden>
                     <div class="w-screen-head">
-                      <strong data-w-name>Wartezimmer</strong
-                      ><span id="wz-patient-place">Anmeldeterminal</span>
+                      <strong>Wartezimmer</strong><span id="wz-patient-place">Anmeldeterminal</span>
                     </div>
                     <div class="w-patient-message" id="wz-patient-message">
                       Sie sind angemeldet.
@@ -502,7 +1072,7 @@
                   <p class="w-demo-caption" id="wz-demo-caption">
                     Eine Nummer begleitet den Besuch.
                   </p>
-                  <button type="button" id="wz-demo-advance" class="w-button cursor-interaction">
+                  <button type="button" id="wz-demo-advance" class="w-button">
                     <span id="wz-demo-button-label">Weiter zum Warten</span
                     ><svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -537,189 +1107,324 @@
               Ihren Praxisalltag.
             </p>
           </div>
-          <ol class="w-staircase" aria-label="Vom internen Überblick bis zum Patientenportal">
+          <p class="w-module-instruction">
+            Wählen Sie eine Stufe und entdecken Sie, wie sie Ihr Team unterstützt.
+          </p>
+          <ol class="w-staircase" aria-label="Einstieg und optionale Erweiterungen">
             <li class="w-stair-step">
-              <div class="w-stair-top">
-                <span class="w-stair-number">01</span
-                ><svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect width="20" height="14" x="2" y="3" rx="2" />
-                  <line x1="8" x2="16" y1="21" y2="21" />
-                  <line x1="12" x2="12" y1="17" y2="21" />
-                </svg>
-              </div>
-              <span class="w-stair-trigger">Wenn der Überblick fehlt</span>
-              <h3>Intern starten.</h3>
-              <p>
-                Ihr Team erfasst Wartende am Arbeitsplatz, ordnet Räume zu und stimmt den nächsten
-                Aufruf ab. Der Einstieg funktioniert ohne Terminal.
-              </p>
-              <span class="w-stair-label">Gemeinsame Warteliste</span>
+              <button
+                type="button"
+                class="w-module-button"
+                data-w-module="0"
+                aria-label="Stufe 1: Intern starten"
+                aria-controls="wz-module-1"
+                aria-pressed="true"
+              >
+                <span class="w-stair-top">
+                  <span class="w-stair-number">01</span
+                  ><svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect width="20" height="14" x="2" y="3" rx="2" />
+                    <line x1="8" x2="16" y1="21" y2="21" />
+                    <line x1="12" x2="12" y1="17" y2="21" />
+                  </svg> </span
+                ><span class="w-stair-kind">Ihr Einstieg</span
+                ><span class="w-stair-title">Intern starten.</span
+                ><span class="w-stair-label">Gemeinsame Warteliste</span>
+              </button>
             </li>
             <li class="w-stair-step">
-              <div class="w-stair-top">
-                <span class="w-stair-number">02</span
-                ><svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M16 2v2" />
-                  <path d="M17.915 22a6 6 0 0 0-12 0" />
-                  <path d="M8 2v2" />
-                  <circle cx="12" cy="12" r="4" />
-                  <rect x="3" y="4" width="18" height="18" rx="2" />
-                </svg>
-              </div>
-              <span class="w-stair-trigger">Wenn Daten erneut gesucht werden</span>
-              <h3>Kontakte zuordnen.</h3>
-              <p>
-                Vorhandene Kontaktdaten per CSV einbinden und bei der Anmeldung abgleichen. Ihr Team
-                kann passende Einträge direkt auswählen.
-              </p>
-              <span class="w-stair-label">Optionaler Kontaktabgleich</span>
+              <button
+                type="button"
+                class="w-module-button"
+                data-w-module="1"
+                aria-label="Stufe 2: Kontakte zuordnen"
+                aria-controls="wz-module-2"
+                aria-pressed="false"
+              >
+                <span class="w-stair-top">
+                  <span class="w-stair-number">02</span
+                  ><svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M16 2v2" />
+                    <path d="M17.915 22a6 6 0 0 0-12 0" />
+                    <path d="M8 2v2" />
+                    <circle cx="12" cy="12" r="4" />
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                  </svg> </span
+                ><span class="w-stair-kind">Nach Bedarf</span
+                ><span class="w-stair-title">Kontakte zuordnen.</span
+                ><span class="w-stair-label">Optionaler Kontaktabgleich</span>
+              </button>
             </li>
             <li class="w-stair-step">
-              <div class="w-stair-top">
-                <span class="w-stair-number">03</span
-                ><svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
-                  <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" />
-                  <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" />
-                  <path
-                    d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"
-                  />
-                </svg>
-              </div>
-              <span class="w-stair-trigger">Wenn sich am Empfang alles staut</span>
-              <h3>Anmeldung verteilen.</h3>
-              <p>
-                Patienten wählen ihr Anliegen selbst am Terminal und erhalten eine Wartenummer. Die
-                Anmeldung erscheint direkt in der gemeinsamen Übersicht.
-              </p>
-              <span class="w-stair-label">Anmeldeterminal</span>
+              <button
+                type="button"
+                class="w-module-button"
+                data-w-module="2"
+                aria-label="Stufe 3: Anmeldung am Terminal"
+                aria-controls="wz-module-3"
+                aria-pressed="false"
+              >
+                <span class="w-stair-top">
+                  <span class="w-stair-number">03</span
+                  ><svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
+                    <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" />
+                    <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" />
+                    <path
+                      d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"
+                    />
+                  </svg> </span
+                ><span class="w-stair-kind">Nach Bedarf</span
+                ><span class="w-stair-title">Anmeldung verteilen.</span
+                ><span class="w-stair-label">Anmeldeterminal</span>
+              </button>
             </li>
             <li class="w-stair-step">
-              <div class="w-stair-top">
-                <span class="w-stair-number">04</span
-                ><svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M11 20H2" />
-                  <path
-                    d="M11 4.562v16.157a1 1 0 0 0 1.242.97L19 20V5.562a2 2 0 0 0-1.515-1.94l-4-1A2 2 0 0 0 11 4.561z"
-                  />
-                  <path d="M11 4H8a2 2 0 0 0-2 2v14" />
-                  <path d="M14 12h.01" />
-                  <path d="M22 20h-3" />
-                </svg>
-              </div>
-              <span class="w-stair-trigger">Wenn Wege und Rückfragen zunehmen</span>
-              <h3>Räume einbinden.</h3>
-              <p>
-                Panels an der Tür geben Orientierung. Im Raum kann Ihr Team Ankunft bestätigen,
-                Patienten aufrufen und den Besuch abschließen.
-              </p>
-              <span class="w-stair-label">Raum-Panels</span>
+              <button
+                type="button"
+                class="w-module-button"
+                data-w-module="3"
+                aria-label="Stufe 4: Räume einbinden"
+                aria-controls="wz-module-4"
+                aria-pressed="false"
+              >
+                <span class="w-stair-top">
+                  <span class="w-stair-number">04</span
+                  ><svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M11 20H2" />
+                    <path
+                      d="M11 4.562v16.157a1 1 0 0 0 1.242.97L19 20V5.562a2 2 0 0 0-1.515-1.94l-4-1A2 2 0 0 0 11 4.561z"
+                    />
+                    <path d="M11 4H8a2 2 0 0 0-2 2v14" />
+                    <path d="M14 12h.01" />
+                    <path d="M22 20h-3" />
+                  </svg> </span
+                ><span class="w-stair-kind">Nach Bedarf</span
+                ><span class="w-stair-title">Räume einbinden.</span
+                ><span class="w-stair-label">Raum-Panels</span>
+              </button>
             </li>
             <li class="w-stair-step">
-              <div class="w-stair-top">
-                <span class="w-stair-number">05</span
-                ><svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"
-                  />
-                </svg>
-              </div>
-              <span class="w-stair-trigger">Wenn das Wartezimmer voll wird</span>
-              <h3>Gezielt zurückholen.</h3>
-              <p>
-                Patienten können zwischenzeitlich die Praxis verlassen. Ihr Team vermerkt die
-                Abwesenheit und holt sie bei Bedarf per SMS oder WhatsApp zurück.
-              </p>
-              <span class="w-stair-label">SMS &amp; WhatsApp</span>
+              <button
+                type="button"
+                class="w-module-button"
+                data-w-module="4"
+                aria-label="Stufe 5: Per SMS oder WhatsApp zurückholen"
+                aria-controls="wz-module-5"
+                aria-pressed="false"
+              >
+                <span class="w-stair-top">
+                  <span class="w-stair-number">05</span
+                  ><svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"
+                    />
+                  </svg> </span
+                ><span class="w-stair-kind">Nach Bedarf</span
+                ><span class="w-stair-title">Gezielt zurückholen.</span
+                ><span class="w-stair-label">SMS &amp; WhatsApp</span>
+              </button>
             </li>
             <li class="w-stair-step">
-              <div class="w-stair-top">
-                <span class="w-stair-number">06</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
-                  />
-                  <path d="M14 2v5a1 1 0 0 0 1 1h5" />
-                  <path d="M12 12v6" />
-                  <path d="m15 15-3-3-3 3" />
-                </svg>
-              </div>
-              <span class="w-stair-trigger">Wenn Unterlagen und Formulare Zeit kosten</span>
-              <h3>Unterlagen digital übergeben.</h3>
-              <p>
-                Mit ihrer Wartenummer laden Patienten Unterlagen hoch und füllen den
-                Erstanamnesebogen im Browser aus. Ihr Team erhält die Dokumente beim passenden
-                Besuch, prüft sie und kann sie exportieren.
-              </p>
-              <span class="w-stair-label">Patientenportal</span>
+              <button
+                type="button"
+                class="w-module-button"
+                data-w-module="5"
+                aria-label="Stufe 6: Patientenportal"
+                aria-controls="wz-module-6"
+                aria-pressed="false"
+              >
+                <span class="w-stair-top">
+                  <span class="w-stair-number">06</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+                    />
+                    <path d="M14 2v5a1 1 0 0 0 1 1h5" />
+                    <path d="M12 12v6" />
+                    <path d="m15 15-3-3-3 3" />
+                  </svg> </span
+                ><span class="w-stair-kind">Nach Bedarf</span
+                ><span class="w-stair-title">Unterlagen digital übergeben.</span
+                ><span class="w-stair-label">Patientenportal</span>
+              </button>
             </li>
           </ol>
+          <div class="w-module-details" aria-live="polite" aria-atomic="true">
+            <section
+              class="w-module-panel"
+              id="wz-module-1"
+              data-w-module-panel="0"
+              aria-labelledby="wz-module-title-1"
+            >
+              <div class="w-module-context">
+                <span class="w-kicker">Ihr Einstieg · 01</span>
+                <h3 id="wz-module-title-1">Wenn der Überblick fehlt</h3>
+              </div>
+              <div class="w-module-copy">
+                <p>
+                  Ihr Team erfasst Wartende am Arbeitsplatz, ordnet Räume zu und stimmt den nächsten
+                  Aufruf ab. Der Einstieg funktioniert ohne Terminal.
+                </p>
+                <p class="w-module-help">
+                  Die gemeinsame Warteliste ist die Basis. Weitere Funktionen ergänzen Sie dort, wo
+                  Ihr Team Unterstützung braucht.
+                </p>
+              </div>
+            </section>
+            <section
+              class="w-module-panel"
+              id="wz-module-2"
+              data-w-module-panel="1"
+              aria-labelledby="wz-module-title-2"
+            >
+              <div class="w-module-context">
+                <span class="w-kicker">Passend erweitern · 02</span>
+                <h3 id="wz-module-title-2">Wenn Daten erneut gesucht werden</h3>
+              </div>
+              <div class="w-module-copy">
+                <p>
+                  Vorhandene Kontaktdaten per CSV einbinden und bei der Anmeldung abgleichen. Ihr
+                  Team kann passende Einträge direkt auswählen.
+                </p>
+              </div>
+            </section>
+            <section
+              class="w-module-panel"
+              id="wz-module-3"
+              data-w-module-panel="2"
+              aria-labelledby="wz-module-title-3"
+            >
+              <div class="w-module-context">
+                <span class="w-kicker">Passend erweitern · 03</span>
+                <h3 id="wz-module-title-3">Wenn sich am Empfang alles staut</h3>
+              </div>
+              <div class="w-module-copy">
+                <p>
+                  Patienten wählen ihr Anliegen selbst am Terminal und erhalten eine Wartenummer.
+                  Die Anmeldung erscheint direkt in der gemeinsamen Übersicht.
+                </p>
+              </div>
+            </section>
+            <section
+              class="w-module-panel"
+              id="wz-module-4"
+              data-w-module-panel="3"
+              aria-labelledby="wz-module-title-4"
+            >
+              <div class="w-module-context">
+                <span class="w-kicker">Passend erweitern · 04</span>
+                <h3 id="wz-module-title-4">Wenn Wege und Rückfragen zunehmen</h3>
+              </div>
+              <div class="w-module-copy">
+                <p>
+                  Panels an der Tür geben Orientierung. Im Raum kann Ihr Team Ankunft bestätigen,
+                  Patienten aufrufen und den Besuch abschließen.
+                </p>
+              </div>
+            </section>
+            <section
+              class="w-module-panel"
+              id="wz-module-5"
+              data-w-module-panel="4"
+              aria-labelledby="wz-module-title-5"
+            >
+              <div class="w-module-context">
+                <span class="w-kicker">Passend erweitern · 05</span>
+                <h3 id="wz-module-title-5">Wenn das Wartezimmer voll wird</h3>
+              </div>
+              <div class="w-module-copy">
+                <p>
+                  Patienten können zwischenzeitlich die Praxis verlassen. Ihr Team vermerkt die
+                  Abwesenheit und holt sie bei Bedarf per SMS oder WhatsApp zurück.
+                </p>
+              </div>
+            </section>
+            <section
+              class="w-module-panel"
+              id="wz-module-6"
+              data-w-module-panel="5"
+              aria-labelledby="wz-module-title-6"
+            >
+              <div class="w-module-context">
+                <span class="w-kicker">Passend erweitern · 06</span>
+                <h3 id="wz-module-title-6">Wenn Unterlagen und Formulare Zeit kosten</h3>
+              </div>
+              <div class="w-module-copy">
+                <p>
+                  Mit ihrer Wartenummer laden Patienten Unterlagen hoch und füllen den
+                  Erstanamnesebogen im Browser aus. Ihr Team erhält die Dokumente beim passenden
+                  Besuch, prüft sie und kann sie exportieren.
+                </p>
+              </div>
+            </section>
+          </div>
           <div class="w-stair-notes">
             <p>
               <strong>Ihr Bedarf bestimmt den nächsten Schritt.</strong> Kontaktabgleich, Terminal,
@@ -740,8 +1445,8 @@
               <h2 id="wz-local-heading">Offen. Unabhängig.<br />Für Ihre Praxis.</h2>
               <p>
                 Ihre Praxis soll den Alltag gestalten können – auch bei der Software. Wartezimmer
-                läuft lokal und wird als Open Source veröffentlicht. Sie entscheiden, wer es
-                betreibt und an Ihre Abläufe anpasst.
+                läuft lokal und ist Open Source. Sie entscheiden, wer es betreibt und an Ihre
+                Abläufe anpasst.
               </p>
             </div>
             <ul class="w-local-list">
@@ -759,9 +1464,7 @@
                   aria-hidden="true"
                 >
                   <path d="M20 6 9 17l-5-5" /></svg
-                ><span
-                  >Den gesamten aktuellen Funktionsumfang veröffentlichen wir als Open Source.</span
-                >
+                ><span>Der gesamte Funktionsumfang ist als Open Source verfügbar.</span>
               </li>
               <li>
                 <svg
@@ -819,7 +1522,7 @@
                 Praxis-IT.
               </p>
               <details>
-                <summary class="cursor-interaction">Was dazugehört</summary>
+                <summary>Was dazugehört</summary>
                 <p>
                   Räume und Anliegen abstimmen, Geräte einrichten und den Ablauf gemeinsam testen.
                 </p>
@@ -830,7 +1533,7 @@
               <h3>Zu Ihnen passen.</h3>
               <p>Individuelle Anpassungen für Ihre Abläufe. Mit vorab vereinbartem Umfang.</p>
               <details>
-                <summary class="cursor-interaction">Was möglich ist</summary>
+                <summary>Was möglich ist</summary>
                 <p>
                   Texte, Formulare oder zusätzliche Abläufe. Schnittstellen nach Prüfung des
                   Zielsystems.
@@ -845,13 +1548,30 @@
                 Leistungsumfang.
               </p>
               <details>
-                <summary class="cursor-interaction">Wie wir begleiten</summary>
+                <summary>Wie wir begleiten</summary>
                 <p>
                   Unterstützung für Ihr Team und Ihre Praxis-IT bei Fragen und Veränderungen im
                   laufenden Betrieb.
                 </p>
               </details>
             </article>
+          </div>
+        </section>
+
+        <section class="w-wrap w-section" aria-labelledby="wz-tech-heading">
+          <div class="w-tech-teaser">
+            <div>
+              <span class="w-kicker w-section-label">Passt auch technisch</span>
+              <h2 id="wz-tech-heading">Auf dem Rechner,<br />den Sie schon haben.</h2>
+            </div>
+            <div>
+              <p>
+                Wartezimmer ist für den Betrieb auf einem vorhandenen Praxisrechner ausgelegt. We
+                love Mac – und unterstützen Windows ebenso. Ihr Team nutzt die Software im Browser
+                im Praxisnetz.
+              </p>
+              <a class="w-text-link" href="./technik.html">Technik &amp; Systemvoraussetzungen →</a>
+            </div>
           </div>
         </section>
 
@@ -862,9 +1582,7 @@
           </div>
           <div>
             <details>
-              <summary class="cursor-interaction">
-                Wie arbeitet Wartezimmer mit unserem PVS zusammen?
-              </summary>
+              <summary>Wie arbeitet Wartezimmer mit unserem PVS zusammen?</summary>
               <p>
                 Ihr PVS bleibt der Ort für Patientenverwaltung und Dokumentation. Wartezimmer
                 organisiert Anmeldung und Aufruf. Patientendaten lassen sich per CSV importieren,
@@ -873,7 +1591,7 @@
               </p>
             </details>
             <details>
-              <summary class="cursor-interaction">Wie melden sich Patienten an?</summary>
+              <summary>Wie melden sich Patienten an?</summary>
               <p>
                 Patienten melden sich bei Ihrer MFA oder selbst am Terminal an und erhalten eine
                 Wartenummer. Für Unterlagen und Erstanamnese können Sie zusätzlich das
@@ -881,7 +1599,7 @@
               </p>
             </details>
             <details>
-              <summary class="cursor-interaction">Wer entscheidet über die Reihenfolge?</summary>
+              <summary>Wer entscheidet über die Reihenfolge?</summary>
               <p>
                 Ihr Praxisteam entscheidet über den Aufruf und berücksichtigt dabei Anliegen und
                 medizinische Prioritäten. Die Wartenummer ordnet den Aufruf dem Besuch zu; die
@@ -889,9 +1607,7 @@
               </p>
             </details>
             <details>
-              <summary class="cursor-interaction">
-                Wer kann die Software betreiben und betreuen?
-              </summary>
+              <summary>Wer kann die Software betreiben und betreuen?</summary>
               <p>
                 Sie können Wartezimmer selbst betreiben, Ihre Praxis-IT einbinden oder einen
                 Dienstleister wählen. Wir bieten Einrichtung, Wartung und individuelle Anpassungen
@@ -905,7 +1621,7 @@
           <p>
             Anmeldung, Warteliste und Aufruf – passend zu Ihrer Einzel- oder Gemeinschaftspraxis.
           </p>
-          <a href="#wz-einfuehrung" class="w-button cursor-interaction"
+          <a href="#wz-einfuehrung" class="w-button"
             >Einführung ansehen
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -927,16 +1643,16 @@
       <footer class="w-wrap w-footer">
         <div class="w-brand">
           <span class="w-brandmark" aria-hidden="true"><span></span><span></span><span></span></span
-          ><span data-w-name>Wartezimmer</span>
+          ><span>Wartezimmer</span>
         </div>
         <p>Lokale Software für Anmeldung, Aufruf und Koordination.</p>
-        <nav class="w-footer-links" aria-label="Rechtliche Informationen">
-          <a href="./impressum.html">Impressum</a><a href="./datenschutz.html">Datenschutz</a
-          ><a href="./lizenzen.html">Lizenzen</a>
+        <nav class="w-footer-links" aria-label="Weitere Informationen">
+          <a href="./technik.html">Technik</a><a href="./impressum.html">Impressum</a
+          ><a href="./datenschutz.html">Datenschutz</a><a href="./lizenzen.html">Lizenzen</a>
         </nav>
       </footer>
     </div>
 
-    <script src="./demo.js" defer></script>
+    <script src="./demo.js?v=71e3b2ab" defer></script>
   </body>
 </html>

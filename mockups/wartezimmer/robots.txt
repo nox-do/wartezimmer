@@ -1,0 +1,6 @@
+# Wartezimmer – öffentliche Informationswebsite
+User-agent: *
+Allow: /
+
+# Maschinenlesbare Produktübersicht: llms.txt im selben Website-Verzeichnis.
+# Bei Veröffentlichung ergänzt der Build die Sitemap-Adresse.
