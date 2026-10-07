@@ -66,6 +66,7 @@
 }
 
 .device-pairing-kicker {
+  justify-content: center;
   letter-spacing: 0.08em;
   color: var(--teal-pairing);
 }

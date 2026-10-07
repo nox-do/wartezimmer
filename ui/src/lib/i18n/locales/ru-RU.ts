@@ -127,7 +127,7 @@ export const dict = {
     assistanceConfirmBusy: 'Создаётся номер очереди…',
     assistanceTicketTopic: 'Сопровождение от терминала',
     pairingTitle: 'Подключить терминал',
-    pairingHint: 'Введите этот код на стойке в панели Praxis Flow.',
+    pairingHint: 'Введите этот код на стойке в панели Wartezimmer.',
     pairingExpires: 'Код действителен до {expiresAt}.',
     pairingExpired: 'Срок действия кода истёк. Создаётся новый код.',
     pairingStartError: 'Не удалось начать подключение.',

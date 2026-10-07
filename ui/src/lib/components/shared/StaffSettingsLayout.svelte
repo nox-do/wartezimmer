@@ -5,6 +5,8 @@
   import { resolvedHref } from '$lib/navigation/kit-paths';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import type { TranslationKey } from '$lib/i18n/core/translation-keys';
+  import { PRODUCT_NAME } from '$lib/brand';
+  import ProductMark from './ProductMark.svelte';
   import {
     isStaffSettingsHrefActive,
     isStaffSettingsItemActive,
@@ -85,9 +87,9 @@
       {/if}
 
       <div class="staff-settings-sidebar__brand">
-        <span class="staff-settings-sidebar__mark" aria-hidden="true"></span>
+        <ProductMark />
         <div>
-          <strong class="staff-settings-sidebar__title">Praxis Flow</strong>
+          <strong class="staff-settings-sidebar__title">{PRODUCT_NAME}</strong>
           <span class="staff-settings-sidebar__subtitle">{t(subtitleKey)}</span>
         </div>
       </div>

@@ -127,7 +127,7 @@ export const dict = {
     assistanceConfirmBusy: 'Sıra numarası oluşturuluyor…',
     assistanceTicketTopic: 'Terminalden refakat',
     pairingTitle: 'Terminali eşleştir',
-    pairingHint: 'Bu kodu resepsiyondaki Praxis Flow panosuna girin.',
+    pairingHint: 'Bu kodu resepsiyondaki Wartezimmer panosuna girin.',
     pairingExpires: 'Bu kod {expiresAt} saatine kadar geçerli.',
     pairingExpired: 'Terminal kodunun süresi doldu. Yeni kod oluşturuluyor.',
     pairingStartError: 'Eşleştirme başlatılamadı.',

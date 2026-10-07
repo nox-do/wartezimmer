@@ -5,6 +5,7 @@
     mountPracticeProfileSync,
   } from '$lib/practice/practice-profile-client';
   import { t } from '$lib/i18n/i18nStore.svelte';
+  import ProductMark from '$lib/components/shared/ProductMark.svelte';
 
   type Props = {
     titleKey: string;
@@ -33,7 +34,7 @@
   {/if}
 
   <section class="device-pairing" aria-live="polite">
-    <p class="auth-kicker device-pairing-kicker">{t('auth.kicker')}</p>
+    <p class="auth-kicker device-pairing-kicker"><ProductMark />{t('auth.kicker')}</p>
     <h1>{t(titleKey)}</h1>
 
     {#if loading}

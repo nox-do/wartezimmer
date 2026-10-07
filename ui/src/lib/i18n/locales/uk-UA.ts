@@ -126,7 +126,7 @@ export const dict = {
     assistanceConfirmBusy: 'Створюється номер черги…',
     assistanceTicketTopic: 'Супровід від термінала',
     pairingTitle: 'Підключити термінал',
-    pairingHint: 'Введіть цей код на стійці в панелі Praxis Flow.',
+    pairingHint: 'Введіть цей код на стійці в панелі Wartezimmer.',
     pairingExpires: 'Код дійсний до {expiresAt}.',
     pairingExpired: 'Термін дії коду минув. Створюється новий код.',
     pairingStartError: 'Не вдалося почати підключення.',

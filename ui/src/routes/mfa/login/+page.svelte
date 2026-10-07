@@ -10,6 +10,7 @@
     practiceDisplayLabel,
   } from '$lib/practice/practice-profile-client';
   import { t } from '$lib/i18n/i18nStore.svelte';
+  import ProductMark from '$lib/components/shared/ProductMark.svelte';
   import { staffAuthSlots, submitAuthLogin } from '$lib/auth/session-state.svelte';
 
   let practiceProfile = $state(getPracticeProfileFallback());
@@ -78,7 +79,7 @@
 </script>
 
 <section class="card auth-shell">
-  <p class="auth-kicker">{t('auth.kicker')}</p>
+  <p class="auth-kicker"><ProductMark />{t('auth.kicker')}</p>
   <h1 class="page-title">{practiceName}</h1>
   <p class="page-lead">{loginLead}</p>
   <p class="field-hint">{t('auth.loginPinHint')}</p>

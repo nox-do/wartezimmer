@@ -11,7 +11,7 @@ export function resolveTerminalKioskUrl(origin = ''): string {
 export function buildWindowsBatLauncher(terminalUrl: string): string {
   const escapedUrl = terminalUrl.replace(/"/g, '""');
   return `@echo off
-rem Praxis Flow — Terminal Kiosk (Chrome Vollbild + stiller Bondruck)
+rem Wartezimmer — Terminal Kiosk (Chrome Vollbild + stiller Bondruck)
 rem URL: ${terminalUrl}
 rem Vor dem Start andere Chrome-Fenster schliessen, sonst startet ggf. eine zweite Instanz.
 
@@ -29,7 +29,7 @@ start "" "%CHROME%" --kiosk --kiosk-printing --noerrdialogs --disable-session-cr
 
 export function buildWindowsPs1Launcher(terminalUrl: string): string {
   const escapedUrl = terminalUrl.replace(/'/g, "''");
-  return `# Praxis Flow — Terminal Kiosk (Chrome Vollbild + stiller Bondruck)
+  return `# Wartezimmer — Terminal Kiosk (Chrome Vollbild + stiller Bondruck)
 # URL: ${terminalUrl}
 # Vor dem Start andere Chrome-Fenster schliessen, sonst startet ggf. eine zweite Instanz.
 
@@ -78,9 +78,9 @@ export function downloadTextFile(
 }
 
 export function downloadWindowsBatLauncher(terminalUrl: string): void {
-  downloadTextFile('praxis-flow-terminal.bat', buildWindowsBatLauncher(terminalUrl));
+  downloadTextFile('wartezimmer-terminal.bat', buildWindowsBatLauncher(terminalUrl));
 }
 
 export function downloadWindowsPs1Launcher(terminalUrl: string): void {
-  downloadTextFile('praxis-flow-terminal.ps1', buildWindowsPs1Launcher(terminalUrl));
+  downloadTextFile('wartezimmer-terminal.ps1', buildWindowsPs1Launcher(terminalUrl));
 }

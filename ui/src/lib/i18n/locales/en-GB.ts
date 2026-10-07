@@ -126,7 +126,7 @@ export const dict = {
     assistanceConfirmBusy: 'Creating your ticket…',
     assistanceTicketTopic: 'Escort from the terminal',
     pairingTitle: 'Pair terminal',
-    pairingHint: 'Enter this code at reception in the Praxis Flow dashboard.',
+    pairingHint: 'Enter this code at reception in the Wartezimmer dashboard.',
     pairingExpires: 'This code is valid until {expiresAt}.',
     pairingExpired: 'The terminal code has expired. A new code is being created.',
     pairingStartError: 'Pairing could not be started.',

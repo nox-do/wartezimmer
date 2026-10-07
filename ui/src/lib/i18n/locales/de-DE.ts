@@ -14,11 +14,11 @@ export const dict = {
     modalTitleFallback: 'Datenschutzhinweise',
   },
   nav: {
-    home: 'Praxis Flow',
-    mfa: 'MFA',
+    home: 'Wartezimmer',
+    mfa: 'Praxisübersicht',
     terminal: 'Terminal',
-    tv: 'Wartezimmer-TV',
-    portal: 'Patientenportal',
+    tv: 'Anzeige',
+    portal: 'Portal',
     ops: 'System',
   },
   home: {
@@ -32,14 +32,14 @@ export const dict = {
     navQuick: 'Schnellzugriffe',
     navRooms: 'Raum-Panels',
     stackVersion: 'Version {version}',
-    quickMfaLead: 'Dashboard',
+    quickMfaLead: 'Warteliste und Aufruf',
     quickTerminalLead: 'Anmeldung',
     quickTvLead: 'Aufrufe',
     quickPortalLead: 'Dokumente',
     quickOpsLead: 'Einstellungen',
   },
   auth: {
-    kicker: 'Praxis Flow',
+    kicker: 'Wartezimmer',
     loadingSession: 'Sitzung wird geprüft…',
     loginRequiredTitle: 'Anmeldung erforderlich',
     loginLeadMfa: 'Melden Sie sich als Empfangsteam (MFA) an.',
@@ -67,12 +67,12 @@ export const dict = {
     },
     portalTitle: 'Portalfunktion',
     portalLead:
-      'Steuert, ob Patienten das Portal (Wartenummer, Upload, Erstanamnese) nutzen können. Technische Gast-WLAN-Einrichtung erfolgt im Praxis Flow Manager.',
+      'Steuert, ob Patienten das Portal (Wartenummer, Upload, Erstanamnese) nutzen können. Technische Gast-WLAN-Einrichtung erfolgt im Wartezimmer Manager.',
     portalSaveOk: 'Portal-Einstellung gespeichert.',
     securityTitle: 'PIN & Sicherheit',
     securityLead: 'Anmelde-PIN für die Systemeinstellungen.',
     pinSecurityDesc:
-      'Nach Ersteinrichtung startet die Ops-PIN mit 0000. Hier ändern Sie sie mit der aktuellen Ops-PIN. Vergessene MFA- oder Ops-PIN: Praxis Flow Manager → Wartung.',
+      'Nach Ersteinrichtung startet die Ops-PIN mit 0000. Hier ändern Sie sie mit der aktuellen Ops-PIN. Vergessene MFA- oder Ops-PIN: Wartezimmer Manager → Wartung.',
     pinCurrentLabel: 'Aktuelle Ops-PIN',
     pinNewLabel: 'Neue Ops-PIN',
     pinRepeatLabel: 'Neue PIN wiederholen',
@@ -82,7 +82,7 @@ export const dict = {
     pinChangeCurrentInvalid: 'Aktuelle Ops-PIN ist falsch.',
     pinChangeSaved: 'Ops-PIN geändert.',
     storageTitle: 'Dateien auf dem Rechner',
-    storageLead: 'Wo Praxis Flow Dateien ablegt — ohne Docker-Pfade konfigurieren.',
+    storageLead: 'Wo Wartezimmer Dateien ablegt — ohne Docker-Pfade konfigurieren.',
     storageExplainTitle: 'So funktioniert das',
     storageExplainBody:
       'Im Manager unter Import & Export werden die Ordner angelegt und die Pfade geändert. Unten sehen Sie diese Pfade auf dem Rechner. Der Status daneben sagt, ob die Anwendung den Ordner nutzen kann: Bereit = erreichbar, Nicht erreichbar = Docker-Freigabe oder Pfad im Manager prüfen.',
@@ -173,7 +173,7 @@ export const dict = {
     maintenanceMfaHint:
       'Hängende Nummern am neuen Tag → MFA → „Neuen Tag starten“. Dieser Reset nur, wenn Warteliste, Portal oder Jobs hängen.',
     maintenanceStaffPinHint:
-      'PIN vergessen → Praxis Flow Manager → Wartung → Staff-PINs. Ops-PIN danach unter Sicherheit neu setzen.',
+      'PIN vergessen → Wartezimmer Manager → Wartung → Staff-PINs. Ops-PIN danach unter Sicherheit neu setzen.',
     maintenanceResetTitle: 'Laufzeit leeren',
     maintenanceWillDeleteTitle: 'Wird gelöscht',
     maintenanceTickets: '{count} Wartenummern & Sessions',
@@ -232,12 +232,12 @@ export const dict = {
       welcomeTitle: 'Willkommen',
       hostAgentTitle: 'Zuerst auf diesem Rechner (Docker & Netz)',
       hostAgentBody:
-        'Netz, Pfade und Secrets legt der Praxis Flow Manager in der .env im Installationsordner ab. Diese Datei wird für Start, Update und Backup weiter gebraucht — bitte nicht löschen. Staff-PINs liegen in der Datenbank (Standard 0000).',
-      storageIntro: 'Praxis Flow nutzt zwei Ordner auf dem Server-Rechner (nicht im Container).',
+        'Netz, Pfade und Secrets legt der Wartezimmer Manager in der .env im Installationsordner ab. Diese Datei wird für Start, Update und Backup weiter gebraucht — bitte nicht löschen. Staff-PINs liegen in der Datenbank (Standard 0000).',
+      storageIntro: 'Wartezimmer nutzt zwei Ordner auf dem Server-Rechner (nicht im Container).',
       storageImports: 'Kontakt-CSV und Importe',
       storageExports: 'Dokument-Exporte für MFA',
       storageHint:
-        'Beide Ordner müssen lesbar bzw. schreibbar sein. Der Pfad kann über den Praxis Flow Manager → Wartung → Import & Export geändert werden.',
+        'Beide Ordner müssen lesbar bzw. schreibbar sein. Der Pfad kann über den Wartezimmer Manager → Wartung → Import & Export geändert werden.',
       practiceHint:
         'Name und Kontaktdaten erscheinen am Terminal, im Patientenportal und in Datenschutzhinweisen. Bereits hinterlegte Werte werden vorausgefüllt.',
       storagePending: 'Noch nicht geprüft',
@@ -270,7 +270,7 @@ export const dict = {
         'Die Portalfunktion kann intern durch Mitarbeitende genutzt werden. Das Einschalten richtet keinen separaten Patientenzugang ein.',
       portalHostTitle: 'Interne Nutzung und Patientenzugang',
       portalHostBody:
-        'Die interne Praxisadresse verwalten Sie im Praxis Flow Manager. Ein getrennter Zugang für Patienten ist noch nicht eingerichtet. Dieser Hinweis ist keine technische Zugangssperre; die Trennung der Praxisnetze verantwortet Ihre Praxis-IT.',
+        'Die interne Praxisadresse verwalten Sie im Wartezimmer Manager. Ein getrennter Zugang für Patienten ist noch nicht eingerichtet. Dieser Hinweis ist keine technische Zugangssperre; die Trennung der Praxisnetze verantwortet Ihre Praxis-IT.',
       portalOffNote:
         'Terminal, MFA und TV funktionieren ohne Portal. Sie können das Portal später jederzeit aktivieren.',
       summaryBlocked:
@@ -360,9 +360,9 @@ export const dict = {
       'Patienten oberhalb dieser Linie warten länger als {minutes} Minuten; darunter kürzer',
     actionCall: 'Aufrufen',
     actionEditName: 'Namen bearbeiten',
-    actionCallOfflineHint: 'Aufrufen — Wartezimmer-TV scheint offline',
+    actionCallOfflineHint: 'Aufrufen — Wartezimmer Anzeige scheint offline',
     callAnnouncementOffline:
-      'Wartezimmer-TV scheint offline. Aufruf wird vom Server geprüft — bitte Gerät prüfen oder koppeln.',
+      'Wartezimmer Anzeige scheint offline. Aufruf wird vom Server geprüft — bitte Gerät prüfen oder koppeln.',
     callBlockedRoomRequired:
       'Kein gültiges Aufrufziel festgelegt. Bitte den Patienten per Drag & Drop einem Raum zuweisen.',
     temporaryCallTarget: 'Temporär als Aufrufziel verwenden',
@@ -477,7 +477,7 @@ export const dict = {
     deviceUnpairBusy: 'Wird entkoppelt…',
     deviceUnpairError: 'Entkoppeln fehlgeschlagen.',
     deviceDisconnectedHint: 'Gekoppelt, derzeit nicht erreichbar.',
-    qsTv: 'Wartezimmer-TV',
+    qsTv: 'Wartezimmer Anzeige',
     qsPanels: 'Raum-Panels',
     devicePanelOutside: 'außen',
     devicePanelInside: 'innen',
@@ -652,8 +652,8 @@ export const dict = {
         pickup: 'Personal holt Patient ab und begleitet zum Ziel.',
       },
       journeyDisplayHint: {
-        visible: 'Ticket dauerhaft im Wartezimmer-TV sichtbar.',
-        hidden: 'Ticket erscheint nicht im Wartezimmer-TV.',
+        visible: 'Ticket dauerhaft im Wartezimmer Anzeige sichtbar.',
+        hidden: 'Ticket erscheint nicht im Wartezimmer Anzeige.',
         call_only: 'Ticket nur sichtbar, solange der Patient aufgerufen ist.',
       },
       journeyCompletedWhenHint: {
@@ -786,7 +786,7 @@ export const dict = {
       returnWindowSaved: 'Rückkehrfrist gespeichert.',
       pinSecurityPanelTitle: 'PINs',
       pinSecurityPanelDesc:
-        'Nach Ersteinrichtung starten MFA- und Ops-PIN mit 0000 (getrennte Logins). Hier ändern Sie MFA- und Panel-PIN (aktuelle MFA-PIN erforderlich). Ops-PIN: System → PIN & Sicherheit. Vergessene MFA- oder Ops-PIN: Praxis Flow Manager → Wartung. Der Reset dort betrifft nicht die Raum-Panel-PIN.',
+        'Nach Ersteinrichtung starten MFA- und Ops-PIN mit 0000 (getrennte Logins). Hier ändern Sie MFA- und Panel-PIN (aktuelle MFA-PIN erforderlich). Ops-PIN: System → PIN & Sicherheit. Vergessene MFA- oder Ops-PIN: Wartezimmer Manager → Wartung. Der Reset dort betrifft nicht die Raum-Panel-PIN.',
       pinCurrentLabel: 'Aktuelle MFA-PIN',
       pinNewMfaLabel: 'Neue MFA-PIN',
       pinNewPanelLabel: 'Neue Panel-PIN',
@@ -943,9 +943,9 @@ export const dict = {
     actionArrived: 'Angekommen',
     actionDone: 'Entlassen',
     actionCall: 'Aufrufen',
-    actionCallOfflineHint: 'Aufrufen — Wartezimmer-TV scheint offline',
+    actionCallOfflineHint: 'Aufrufen — Wartezimmer Anzeige scheint offline',
     callAnnouncementOffline:
-      'Wartezimmer-TV scheint offline. Aufruf wird vom Server geprüft — bitte Gerät prüfen oder koppeln.',
+      'Wartezimmer Anzeige scheint offline. Aufruf wird vom Server geprüft — bitte Gerät prüfen oder koppeln.',
     callSectionTitle: 'Aufrufen',
     callSectionAria: 'Aufrufbare Patienten',
     itemsSectionTitle: 'Im Raum',
@@ -1053,12 +1053,12 @@ export const dict = {
     queueStreamError: 'Wartezimmer-Stream konnte nicht verbunden werden.',
     connecting: 'Verbinde…',
     pairingTitle: 'TV koppeln',
-    pairingHint: 'Geben Sie diesen Code am Empfang in das Praxis Flow Dashboard ein.',
+    pairingHint: 'Geben Sie diesen Code am Empfang in die Wartezimmer Praxisübersicht ein.',
     pairingExpires: 'Gültig bis {time}.',
     pairingExpired: 'Der Kopplungscode ist abgelaufen. Bitte laden Sie die TV-Seite neu.',
     pairingStartError: 'Kopplung konnte nicht gestartet werden.',
     pairingStatusError: 'Kopplungsstatus konnte nicht geladen werden.',
-    pairingMfaKicker: 'Wartezimmer-TV',
+    pairingMfaKicker: 'Wartezimmer Anzeige',
     pairingMfaTitle: 'TV koppeln',
     pairingMfaLead: 'Geben Sie den vierstelligen Code ein, der auf dem TV angezeigt wird.',
     pairingCodeLabel: 'TV-Code',
@@ -1109,7 +1109,7 @@ export const dict = {
     assistanceConfirmBusy: 'Wartenummer wird erstellt…',
     assistanceTicketTopic: 'Begleitung ab Terminal',
     pairingTitle: 'Terminal koppeln',
-    pairingHint: 'Geben Sie diesen Code am Empfang in das Praxis Flow Dashboard ein.',
+    pairingHint: 'Geben Sie diesen Code am Empfang in die Wartezimmer Praxisübersicht ein.',
     pairingExpires: 'Dieser Code ist bis {expiresAt} gültig.',
     pairingExpired: 'Der Terminal-Code ist abgelaufen. Ein neuer Code wird erstellt.',
     pairingStartError: 'Kopplung konnte nicht gestartet werden.',

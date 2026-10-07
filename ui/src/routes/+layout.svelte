@@ -6,11 +6,18 @@
   import { getAppInitialLocale } from '$lib/i18n/patient-locale';
   import { getAppSurface } from '$lib/layout/app-surface';
   import { page } from '$app/state';
+  import { APP_TITLES, PRODUCT_NAME } from '$lib/brand';
 
   let { children } = $props();
   let bootstrapped = $state(false);
 
   const surface = $derived(getAppSurface(page.url.pathname));
+  const titleSurface = $derived(
+    page.url.pathname === '/mfa/login' && page.url.searchParams.get('role') === 'ops'
+      ? 'ops'
+      : page.url.pathname.split('/')[1],
+  );
+  const appTitle = $derived(APP_TITLES[titleSurface] ?? PRODUCT_NAME);
 
   $effect(() => {
     const pathname = page.url.pathname;
@@ -19,6 +26,11 @@
     });
   });
 </script>
+
+<svelte:head>
+  <title>{appTitle}</title>
+  <meta name="application-name" content={PRODUCT_NAME} />
+</svelte:head>
 
 <div class="app-shell">
   <main class="app-main" data-surface={surface ?? undefined}>
