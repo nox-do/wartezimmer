@@ -111,7 +111,7 @@ CI: `.github/workflows/release-images.yml` baut bei Tag `v*` das Erstinstall-Art
 
 ## 4. Erstinstallation
 
-**Kundenweg:** Praxis Flow Manager (Assistent).
+**Kundenweg:** Wartezimmer Manager (Assistent).
 **Support-Fallback:** CLI `npm run setup`.
 **TLS-Details** (Schritt HTTPS + später Cutover): [`tls.md`](tls.md).
 
@@ -133,7 +133,7 @@ Setup-API und Manager sprechen nur Loopback — kein Setup aus dem Praxis-LAN.
 | Plattform | Default ohne `PRAXIS_FLOW_HOME`            |
 | --------- | ------------------------------------------ |
 | macOS     | `~/Library/Application Support/PraxisFlow` |
-| Windows   | `%ProgramData%\PraxisFlow`                 |
+| Windows   | `%LOCALAPPDATA%\PraxisFlow` (Legacy: `%ProgramData%\PraxisFlow`) |
 | Linux     | `~/.local/share/PraxisFlow`                |
 
 Override: `PRAXIS_FLOW_HOME` (absolut). Compose-Projektname: Default-Install-Home → `praxis-flow`; abweichender Basename → `pf-<basename>`; Override `COMPOSE_PROJECT_NAME` — isoliert parallele Test-Installs.
@@ -429,7 +429,7 @@ licenses/caddy/LICENSE.txt
 
 1. `prepare:packaged` (`manager/scripts/prepare-packaged-resources.mjs`): Setup-`dist` + `server-shared` nach `manager/build-resources/setup/` (Imports umschreiben, Production-Strip); Delivery-Templates + `.env.example` nach `build-resources/templates/`. Das Basis-Caddyfile kommt aus dem importierten Release-Bundle.
 2. `electron-vite build` (Main, Preload CJS, Renderer)
-3. `electron-builder --mac dmg` → `manager/dist/PraxisFlowManager-<managerVersion>-<arch>.dmg`
+3. `electron-builder --mac dmg` → `manager/dist/WartezimmerManager-<managerVersion>-<arch>.dmg`
 
 Gepackter Manager startet Setup-API aus `resources/setup/`; Default-Install-Home macOS: `~/Library/Application Support/PraxisFlow`. Aktuell unsigned / nicht notarisiert.
 
@@ -463,12 +463,12 @@ Mehrbenutzerbetrieb sind nicht zugesagt. Der Server-Runner der CI prüft
 Windows-Dateisystem und Paketbau, nicht Docker Desktop auf Windows Server.
 Die konkrete Docker-Desktop-/WSL-/Windows-Version wird erst mit der realen
 Abnahme festgeschrieben; die Hersteller-Mindestanforderungen sind keine
-Praxis-Flow-Freigabe.
+Wartezimmer-Freigabe.
 
 ### Build und Installationsgrenze
 
 `npm run dist:manager:win` baut einen NSIS-x64-Installer unter
-`manager/dist/PraxisFlowManager-<version>-windows-x64-setup.exe`.
+`manager/dist/WartezimmerManager-<version>-windows-x64-setup.exe`.
 Der Installer ist benutzerbezogen, fordert keine Elevation an und legt
 Desktop-/Startmenü-Verknüpfungen an. Keine automatische Veröffentlichung,
 kein Auto-Updater und keine Firewalländerung. Ohne bereitgestellte

@@ -2,7 +2,7 @@
 
 Stand: 2026-09-04 · Abgleich [`product.md`](../product.md), Code/Manager, Archive
 
-**Scope:** Was Praxis Flow anbindet oder bewusst **nicht** ist.  
+**Scope:** Was Wartezimmer anbindet oder bewusst **nicht** ist.
 Status: **implementiert** · **geplant** · **Discovery**
 
 Nicht: LAN-TLS/Proxy → [`tls.md`](tls.md) · Compose-Alltag → [`runtime.md`](runtime.md)

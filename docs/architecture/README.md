@@ -1,6 +1,6 @@
 # Architektur (Entwickler)
 
-Wie Praxis Flow **technisch intern** aufgebaut ist.  
+Wie Wartezimmer **technisch intern** aufgebaut ist.
 Betrieb: [`../operations/`](../operations/) · Produkt/Abläufe: [`../product.md`](../product.md), [`../flows.md`](../flows.md)
 
 ## Roter Faden

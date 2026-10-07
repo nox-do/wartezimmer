@@ -34,7 +34,7 @@ https://portal.<installationsraum>  ──► Portal-Session
       └──── optional Internet ◄── Freigabe am Controller
 ```
 
-Praxis Flow wird dabei weder Gateway noch Captive-Datenpfad. Wir liefern nur
+Wartezimmer wird dabei weder Gateway noch Captive-Datenpfad. Wir liefern nur
 das lokale Portal und später einen dünnen Adapter, der nach erfolgreicher
 Portal-Session eine Freigabe beim vorhandenen Controller anfordert.
 
@@ -53,7 +53,7 @@ Ein Anbieter ist für den LAN-only-Standardweg geeignet, wenn:
   funktioniert und keine DNS-Rebind-Sperre die Antwort verwirft;
 - der Controller eine dokumentierte, serverseitig nutzbare API oder einen
   verifizierbaren Callback für Freigabe und möglichst auch Widerruf anbietet;
-- der Anbieter keine öffentlich aus dem Internet erreichbare Praxis-Flow-URL
+- der Anbieter keine öffentlich aus dem Internet erreichbare Wartezimmer-URL
   voraussetzt.
 
 Cloud-Captive-Produkte, die das externe Portal selbst abrufen, auf einem
@@ -106,9 +106,9 @@ Restricted-Binding und eine gültige Portal-URL vorhanden sind. Sie ist auch
 später jederzeit aktivierbar und unterscheidet klar:
 
 - **Kein Captive:** Portal direkt im Patientennetz; keine Internetfreigabe durch
-  Praxis Flow.
+  Wartezimmer.
 - **Drittanbieter-Captive:** Praxis beziehungsweise Praxis-IT betreibt AP,
-  Gateway und Controller; Praxis Flow konfiguriert nur den ausgewählten
+  Gateway und Controller; Wartezimmer konfiguriert nur den ausgewählten
   Adapter.
 
 Ohne zusätzliche Warnung wird Captive nur auf einem aktiven

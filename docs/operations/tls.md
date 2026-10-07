@@ -39,11 +39,11 @@ Browser (LAN) ── HTTP      ──► proxy:80  ── 301 → HTTPS   (nach 
 | Wer erzeugt ID + Korrelationswert | **Manager/Setup** bei `tls/prepare`; derzeit keine Authentifizierung oder serverseitige Prüfung            |
 | Wer schreibt DNS                  | **Betreiber** (managed Zone) bzw. Praxis (eigene Domain); Mailtext aus dem Manager                         |
 | Router-DNS-Rebind                 | Praxis richtet **gezielte** Ausnahme ein, falls der Router öffentliche Namen mit privaten Zielen blockiert |
-| Eigener Resolver von Praxis Flow  | **nein**                                                                                                   |
+| Eigener Resolver von Wartezimmer  | **nein**                                                                                                   |
 | TLS ohne HTTP-Proxy               | **nein** — Port 80 ist Voraussetzung (siehe §3)                                                            |
 | App terminiert TLS                | **nein** — nur Caddy/`proxy`                                                                               |
 
-**Zone heute (Code):** `TLS_OPERATOR_ZONE_DEFAULT = lan.notaus.de`, Betreiber-Mail `cert@notaus.de` (`packages/server-shared/src/setup-api.ts`). Das ist die **aktuelle Betreiber-/Testzone**, nicht die spätere Marken-Domain (`*.lan.praxis-flow.de` nur Zielbild in den Plänen).
+**Zone heute (Code):** `TLS_OPERATOR_ZONE_DEFAULT = lan.notaus.de`, Betreiber-Mail `cert@notaus.de` (`packages/server-shared/src/setup-api.ts`). Das ist die **aktuelle Betreiber-/Testzone**. Eine spätere Marken-Domain ist noch festzulegen.
 
 **Namenswahl (Manager, ein Schritt):**
 
@@ -393,7 +393,7 @@ Karte im Manager: Hostname, Installations-ID, Aussteller, Ablauf — **kein** To
 
 ### 7.2 Erneuerung
 
-Caddy renewt managed-Zertifikate im Normalfall **selbst**. Praxis Flow setzt kein eigenes Intervall: Caddy-Default ≈ Erneuerung bei **⅓ Restlaufzeit** (Let's Encrypt typisch ~90 Tage → ca. **30 Tage vor Ablauf**; CA-ARI kann das Fenster verschieben). Die Manager-UI warnt später (`TLS_EXPIRY_SOON_DAYS = 21`) — im Happy Path greift Auto-Renew oft schon vor der Warnung. `tls/renew` ist expliziter Fallback.
+Caddy renewt managed-Zertifikate im Normalfall **selbst**. Wartezimmer setzt kein eigenes Intervall: Caddy-Default ≈ Erneuerung bei **⅓ Restlaufzeit** (Let's Encrypt typisch ~90 Tage → ca. **30 Tage vor Ablauf**; CA-ARI kann das Fenster verschieben). Die Manager-UI warnt später (`TLS_EXPIRY_SOON_DAYS = 21`) — im Happy Path greift Auto-Renew oft schon vor der Warnung. `tls/renew` ist expliziter Fallback.
 
 | Lage                        | typ. `tls.state` | Aktion                                                       |
 | --------------------------- | ---------------- | ------------------------------------------------------------ |

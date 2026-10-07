@@ -2052,7 +2052,7 @@ export interface components {
         | 'portal'
         | 'summary'
         | 'verify';
-      /** @description Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Praxis Flow Manager. */
+      /** @description Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Wartezimmer Manager. */
       portalEnabled: boolean;
       /** @enum {string} */
       setupContactMode: 'unset' | 'sample' | 'own';

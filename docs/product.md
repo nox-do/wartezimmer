@@ -1,4 +1,4 @@
-# Praxis Flow — Produktinfo
+# Wartezimmer — Produktinfo
 
 Kurz: Was das Produkt ist, was es kann, und was bewusst **nicht** dazugehört.  
 Detailabläufe: [`flows.md`](flows.md) · Technik: [`architecture/system.md`](architecture/system.md) · Integrationen: [`integrations.md`](operations/integrations.md)

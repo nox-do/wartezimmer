@@ -15159,7 +15159,7 @@
                     },
                     "portalEnabled": {
                       "type": "boolean",
-                      "description": "Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Praxis Flow Manager."
+                      "description": "Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Wartezimmer Manager."
                     },
                     "setupContactMode": {
                       "type": "string",
@@ -15355,7 +15355,7 @@
                     },
                     "portalEnabled": {
                       "type": "boolean",
-                      "description": "Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Praxis Flow Manager."
+                      "description": "Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Wartezimmer Manager."
                     },
                     "setupContactMode": {
                       "type": "string",
@@ -15497,7 +15497,7 @@
                     },
                     "portalEnabled": {
                       "type": "boolean",
-                      "description": "Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Praxis Flow Manager."
+                      "description": "Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Wartezimmer Manager."
                     },
                     "setupContactMode": {
                       "type": "string",
@@ -16565,7 +16565,7 @@
                     },
                     "portalEnabled": {
                       "type": "boolean",
-                      "description": "Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Praxis Flow Manager."
+                      "description": "Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Wartezimmer Manager."
                     },
                     "setupContactMode": {
                       "type": "string",
@@ -22442,7 +22442,7 @@
           },
           "portalEnabled": {
             "type": "boolean",
-            "description": "Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Praxis Flow Manager."
+            "description": "Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Wartezimmer Manager."
           },
           "setupContactMode": {
             "type": "string",

@@ -78,7 +78,7 @@ Staff-IP und prüft nach dem Apply die tatsächlichen Docker-Publishes.
 
 ## 6. Tagesbetrieb
 
-**Produktweg:** Praxis Flow Manager → Status / Wartung.
+**Produktweg:** Wartezimmer Manager → Status / Wartung.
 
 | Aktion                  | Bedeutung                                                                                   |
 | ----------------------- | ------------------------------------------------------------------------------------------- |

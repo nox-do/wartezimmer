@@ -11,7 +11,7 @@ TLS-Betrieb: [`tls.md`](tls.md) · Runtime: [`runtime.md`](runtime.md)
 
 ## Gültige Systemgrenze — Entscheidung vom 14.09.2026
 
-Praxis Flow verwaltet seine Docker-/Compose-Konfiguration, Caddy-Listener,
+Wartezimmer verwaltet seine Docker-/Compose-Konfiguration, Caddy-Listener,
 TLS und den tatsächlichen Runtime-Publish-Vertrag. Host-Firewall, Routing,
 Forwarding und die Trennung der Praxisnetze verantwortet die Praxis-IT.
 Der Manager ändert keine Host-Firewallregeln und benötigt dafür keine
@@ -36,9 +36,9 @@ Firewall-PoCs bleiben als Versuchsprotokolle erhalten, nicht als Produktfunktion
 
 Dieses Dokument bündelt Hinweise, die wir der Praxis beziehungsweise ihrer IT
 für Netzplanung, Abnahme und eine mögliche spätere Härtung mitgeben können.
-Praxis Flow unterstützt mit Produktinformationen und Prüfhinweisen. Planung,
+Wartezimmer unterstützt mit Produktinformationen und Prüfhinweisen. Planung,
 Konfiguration und Betrieb von Switches, VLANs, WLAN, Router, DHCP, DNS und
-Host- und Praxis-Firewalls bleiben Aufgabe der Praxis-IT. Praxis Flow
+Host- und Praxis-Firewalls bleiben Aufgabe der Praxis-IT. Wartezimmer
 verwaltet ausschließlich seine Docker-/Caddy-Konfiguration; der Manager gibt
 Hinweise und bestätigt keine Isolation des Praxisnetzes.
 
@@ -57,7 +57,7 @@ Patienten-/Gastsegment
         ▼
 NIC 2 ─ Restricted-IP ─ Host-Firewall ─ Portal-Listener
                                            │
-                                      Praxis-Flow-App
+                                      Wartezimmer-App
                                            │
 NIC 1 ───── Staff-IP ─── Host-Firewall ─ Staff-Listener
         ▲
@@ -85,13 +85,13 @@ auf Windows und macOS nicht unterstützt.
 Auch getrennte Docker-Bridge-Netze lösen die physische Zonengrenze nicht. Sie
 trennen direkte Containerkommunikation, verhindern aber nicht automatisch
 Verbindungen eines Containers zum Host oder zu vom Host erreichbaren Netzen.
-Für Praxis Flow kommt hinzu, dass Portal und Staff heute denselben App-Kern
+Für Wartezimmer kommt hinzu, dass Portal und Staff heute denselben App-Kern
 verwenden; zwei Docker-Netze machen daraus keine getrennten Security-Domains.
 
 Folgerung für die Kommunikation:
 
 > Der Portal-Service wird ausschließlich über die Restricted-IP exponiert.
-> Praxis Flow routet auf dem Host nicht zwischen Patienten- und Staffsegment.
+> Wartezimmer routet auf dem Host nicht zwischen Patienten- und Staffsegment.
 
 Nicht zugesagt werden sollte:
 
@@ -107,7 +107,7 @@ Empfohlen wird eine Behandlung als DMZ-/Applikationslösung:
 - eigenes Patienten-/Gastsegment mit eigener SSID und eigenem Subnetz;
 - zweite physische NIC oder ein von der IT eindeutig bereitgestellter,
   untagged VLAN-Port für die Restricted-IP;
-- Praxis-Flow-Host nach Möglichkeit in einem eigenen Applikationssegment statt
+- Wartezimmer-Host nach Möglichkeit in einem eigenen Applikationssegment statt
   in einem pauschal vertrauenswürdigen Praxis-LAN;
 - keine Bridge, kein Internet Connection Sharing, kein RRAS/NAT und kein IP-
   Forwarding zwischen Restricted- und Staff-Interface;
@@ -130,8 +130,8 @@ Als Ausgangspunkt für die Praxis-Firewall:
 | Patientensegment                | Staff-IP und Praxisnetze             | alle                    | sperren                                                                         |
 | Patientensegment                | Management von AP, Switch und Router | alle                    | sperren                                                                         |
 | Staffsegment                    | Staff-IP                             | benötigte Staff-Dienste | erlauben                                                                        |
-| Praxis-Flow-Applikationssegment | PVS/NAS/Drucker                      | alle                    | standardmäßig sperren; nur konkrete Integration freigeben                       |
-| Praxis-Flow-Host                | Internet                             | alle                    | nach Bedarf minimieren; Update-, DNS-, Zeit- und Zertifikatsziele dokumentieren |
+| Wartezimmer-Applikationssegment | PVS/NAS/Drucker                      | alle                    | standardmäßig sperren; nur konkrete Integration freigeben                       |
+| Wartezimmer-Host                | Internet                             | alle                    | nach Bedarf minimieren; Update-, DNS-, Zeit- und Zertifikatsziele dokumentieren |
 
 IPv6 braucht dieselbe Policy wie IPv4. Ist im Patientenpfad kein IPv6
 vorgesehen, sollte die IT es dort bewusst deaktivieren oder vollständig
@@ -158,7 +158,7 @@ Docker-, Firewall- oder Listener-Ausgaben:
 | Restricted-NIC oder Restricted-IP entfernt                  | Portal fail-closed, Staff bleibt verfügbar    |
 
 Die Praxis-IT sollte Ergebnis, Testgerät, Quellsegment, Datum sowie relevante
-Firewall-/VLAN-Änderungen dokumentieren. Praxis Flow kann dafür eine Prüfhilfe
+Firewall-/VLAN-Änderungen dokumentieren. Wartezimmer kann dafür eine Prüfhilfe
 anbieten, nimmt das fremde Netz damit aber nicht ab.
 
 ## 4. Härtungsstufen
@@ -172,15 +172,15 @@ Staff aber bewusst im selben App-Kern und auf demselben Host.
 
 ### Stufe B — dedizierter Host oder Applikationssegment
 
-Praxis Flow läuft auf einem dedizierten, von PVS, NAS, Druckern und Clients
+Wartezimmer läuft auf einem dedizierten, von PVS, NAS, Druckern und Clients
 getrennten Host beziehungsweise Segment. Nur erforderliche Verbindungen werden
 freigegeben. Das reduziert den erreichbaren Bereich bei einer kompromittierten
 Anwendung, ohne die Software in zwei Laufzeiten zu teilen. Diese Stufe ist die
 sinnvollste zusätzliche Empfehlung an eine Praxis-IT.
 
-## 5. Produktseitige Härtung — Praxis Flow
+## 5. Produktseitige Härtung — Wartezimmer
 
-Unabhängig von der Netzvariante bleibt Praxis Flow verantwortlich für eine
+Unabhängig von der Netzvariante bleibt Wartezimmer verantwortlich für eine
 kleine Portal-Angriffsfläche:
 
 - feste Portal-Routen-Positivliste und kein Default-VHost;
@@ -209,7 +209,7 @@ Punkte geklärt sein:
 - Staff-IP, Restricted-IP, Reservierung und erlaubte Standardroute;
 - DNS-Zuordnung für Staff- und Portal-Hostname;
 - gewünschter Internetzugang im Patientensegment;
-- konkrete interne Integrationsziele von Praxis Flow;
+- konkrete interne Integrationsziele von Wartezimmer;
 - vorgesehene Firewallregeln und Logging/Aufbewahrung;
 - Patch-, Backup-, Restore- und Notfallverantwortung;
 - Testplan, Abnahmeergebnis und Verfahren bei NIC-/Adressänderungen.

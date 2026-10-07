@@ -1,6 +1,6 @@
 # Guest-WLAN & Captive Portal — Lab-Referenz (archiviert)
 
-> **Produktgrenze (2026-07):** Praxis Flow stellt **keine** Router, APs oder Captive-Hardware her.
+> **Produktgrenze (2026-07):** Wartezimmer stellt **keine** Router, APs oder Captive-Hardware her.
 > Produktkern: Portal + Wartenummer-Prüfung; Captive-Adapter später — siehe [`../operations/integrations.md`](../operations/integrations.md).
 > Dieses Dokument beschreibt den früheren **openNDS-`gateway`-Lab-Pfad** (Referenz, nicht Produktkern).
 
@@ -49,7 +49,7 @@ Empfohlen, wenn Patienten das Portal über Gast-WLAN nutzen sollen:
 
 - **Dediziertes Gast-Netz / VLAN** für Gast-Traffic und die vom Portal erreichbaren Dienste
 - **Firewall / ACL** der Praxis-IT: Gäste nur zum Portal (typisch App-Adresse/`/portal` + nötige API), nicht zu Ops, MFA, Terminal-Admin, Docker-Ports oder Host-Shares
-- Praxis Flow ist nach bestem Wissen für den Praxisbetrieb entwickelt — es **ersetzt keine Netzwerksicherheit** und ist kein gehärtetes Perimeter-Produkt
+- Wartezimmer ist nach bestem Wissen für den Praxisbetrieb entwickelt — es **ersetzt keine Netzwerksicherheit** und ist kein gehärtetes Perimeter-Produkt
 
 Access Point / Router bleiben Sache der Praxis-IT (nicht unser Produkt).
 
@@ -222,7 +222,7 @@ Details: `gateway/README.md`.
 
 [Praxis-LAN]
     |
-[Praxis-Flow-PC, oft Windows]
+[Wartezimmer-PC, oft Windows]
   └─ Docker Desktop
        ├─ app :8080     ← Portal-UI + Session-API
        └─ sandbox :8081 (intern)

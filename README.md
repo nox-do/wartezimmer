@@ -1,4 +1,4 @@
-# Praxis Flow
+# Wartezimmer
 
 Lokales Praxis-System: Check-in am Terminal, Warteschlange (MFA), Wartezimmer-TV, Patient-Portal (Upload/Anamnese), Dokument-Export — als Docker-Stack ohne Cloud.
 

@@ -12,7 +12,7 @@ Nicht: Domänendetail → [`domain.md`](domain.md) · SSE → [`realtime.md`](re
 - Frontend: Svelte + TypeScript + Vite (`ui/` → statisch in `app`)
 - Backend: TypeScript-Monolith (Node LTS) im `app`-Container
 - Runtime: Docker, kein Kubernetes — Auslieferung [`../operations/delivery.md`](../operations/delivery.md)
-- Portal (`/portal/*`) + Session-API im `app`; Captive-/WLAN-Hardware liefert Praxis Flow **nicht** ([`../operations/integrations.md`](../operations/integrations.md))
+- Portal (`/portal/*`) + Session-API im `app`; Captive-/WLAN-Hardware liefert Wartezimmer **nicht** ([`../operations/integrations.md`](../operations/integrations.md))
 - SMS-Rückruf: Provider `seven` / `mock` (Ops)
 
 Kritische Daten bleiben logisch von unkritischen Betriebsdaten getrennt (§2).

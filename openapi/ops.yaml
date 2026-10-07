@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Praxis Flow Ops API
+  title: Wartezimmer Ops API
   version: 0.2.0
 security:
   - mfaSessionCookie: []
@@ -351,7 +351,7 @@ components:
             - verify
         portalEnabled:
           type: boolean
-          description: Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Praxis Flow Manager.
+          description: Whether the practice offers the patient portal (Gast-WLAN / Captive flow). Host gateway setup is via Wartezimmer Manager.
         setupContactMode:
           type: string
           enum:

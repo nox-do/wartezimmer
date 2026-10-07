@@ -173,4 +173,4 @@ The image is `linux/amd64` (Apple Silicon uses emulation).
 ## Non-goals (later)
 
 Manager, Wizard, Release / `.pfupdate`, production Let's Encrypt,
-`auth.acme.praxis-flow.de`, Backup-Sidecar.
+a future production ACME domain, Backup-Sidecar.

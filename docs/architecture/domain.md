@@ -43,7 +43,7 @@ flowchart TB
 
 1. Pro Geschäftstag + Nummernkreis höchstens eine Laufnummer (z. B. `20260602-A-017`).
 2. Mehrere Anmeldgründe dürfen denselben Nummernkreis teilen.
-   PraxisFlow erlaubt pro Nummernkreis und Praxistag maximal 999 vergebene Nummern.
+   Wartezimmer erlaubt pro Nummernkreis und Praxistag maximal 999 vergebene Nummern.
    Die Grenze liegt im Host-Adapter: Check-in und Topic-Supersede rollen ihre gesamte
    Transaktion zurück, wenn der Core eine höhere Nummer vergibt. Abgeschlossene oder
    abgebrochene Besuche geben keine Nummern frei. Der wiederverwendbare Core hat
