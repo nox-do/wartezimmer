@@ -3,7 +3,7 @@
   import { pfupdateWizardIsBusy } from './pfupdate-wizard-flow.js';
   import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
   import { onMount } from 'svelte';
-  import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+  import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
   import type { HostStatus } from '../shared/host-status.js';
   import { managerShell } from './manager-shell-state.svelte.js';
   import {
@@ -78,8 +78,8 @@
       Boolean(pfupdateSnapshot && pfupdateWizardIsBusy(pfupdateSnapshot)),
   );
 
-  function requireApi(): PraxisManagerApi {
-    const api = window.praxisManager;
+  function requireApi(): WartezimmerManagerApi {
+    const api = window.wartezimmerManager;
     if (!api) {
       throw new Error(
         'Preload nicht geladen — Manager neu starten. (Hinweis: DevTools → Console nach Preload-Fehlern prüfen.)',
@@ -308,7 +308,7 @@
         <hr class="panel-section-divider" />
         <section class="panel-section">
           <h2>Neuinstallation</h2>
-          <p class="hint">Praxis Flow mit einem Software-Paket neu einrichten. Der Assistent führt durch die Vorbereitung und Bestätigung.</p>
+          <p class="hint">Wartezimmer mit einem Software-Paket neu einrichten. Der Assistent führt durch die Vorbereitung und Bestätigung.</p>
           <button type="button" class="btn-secondary" disabled={maintenanceLocked} onclick={onReinstall}>Neu installieren …</button>
         </section>
       </MaintenanceSection>

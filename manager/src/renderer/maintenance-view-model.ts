@@ -84,7 +84,7 @@ export function maintenanceSectionToOpenForErrorChange(
 export type MaintenanceInfoRow = { label: string; value: string };
 
 export const STACK_OFFLINE_CONFIRM_MESSAGE =
-  'Praxis offline — Terminal und MFA sind während Stop/Neustart nicht erreichbar. Fortfahren?';
+  'Wartezimmer offline — Terminal und MFA sind während Stop/Neustart nicht erreichbar. Fortfahren?';
 
 export const STORAGE_PATHS_RESTART_CONFIRM_MESSAGE =
   'Die neuen Import-/Export-Ordner werden erst nach einem Stack-Neustart aktiv. Pfade speichern und Stack jetzt neu starten?';
@@ -169,9 +169,9 @@ export function composeActionErrorMessage(
   _log: string | null | undefined,
 ): string {
   const labels = {
-    start: 'Praxis Flow konnte nicht gestartet werden.',
-    stop: 'Praxis Flow konnte nicht gestoppt werden.',
-    restart: 'Praxis Flow konnte nicht neu gestartet werden.',
+    start: 'Wartezimmer konnte nicht gestartet werden.',
+    stop: 'Wartezimmer konnte nicht gestoppt werden.',
+    restart: 'Wartezimmer konnte nicht neu gestartet werden.',
   } as const;
   return `${labels[action]} Technische Details finden Sie im Bereich „Logs“.`;
 }
@@ -202,7 +202,7 @@ export function storageSaveErrorText(
   restartCompose: boolean,
 ): string | null {
   if (result.stackWasRunning && restartCompose && !result.composeRestarted) {
-    return 'Die Ordner wurden gespeichert, aber Praxis Flow konnte nicht neu gestartet werden. Technische Details finden Sie im Bereich „Logs“.';
+    return 'Die Ordner wurden gespeichert, aber Wartezimmer konnte nicht neu gestartet werden. Technische Details finden Sie im Bereich „Logs“.';
   }
   return null;
 }

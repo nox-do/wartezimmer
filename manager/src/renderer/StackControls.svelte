@@ -25,7 +25,7 @@
 </script>
 
 <div class="panel-section">
-  <h2>Praxis-Flow-Dienste</h2>
+  <h2>Wartezimmer-Dienste</h2>
   <div class="actions-row">
     <label class="stack-toggle">
       <span class="toggle-switch">

@@ -52,7 +52,7 @@ export function regenerateProxyConfig(
   const caddyfilePath = resolveProxyTlsPaths(installHome).caddyfile;
   const previous = fs.existsSync(caddyfilePath) ? fs.readFileSync(caddyfilePath) : null;
   if (previous && !GENERATED_MARKER_PATTERN.test(previous.toString('utf8'))) {
-    throw new Error('Das vorhandene Caddyfile ist nicht als Praxis-Flow-generiert markiert.');
+    throw new Error('Das vorhandene Caddyfile ist nicht als Wartezimmer-generiert markiert.');
   }
   const backupPath = previous ? `${caddyfilePath}.backup-${timestampForPath(now)}` : null;
   if (backupPath && previous) {

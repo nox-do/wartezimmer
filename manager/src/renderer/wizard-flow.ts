@@ -6,7 +6,7 @@ import type {
   ProbeResult,
   SetupPlan,
 } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 import { deliveryImagesReady } from './delivery-images-flow.js';
 import { buildSetupProbeInput, pollSetupProbes } from './setup-probes.js';
 import { draftCanonicalBaseUrl, isHttpOrigin } from './reachability.js';
@@ -191,32 +191,32 @@ export function buildWizardApplyInput(
   };
 }
 
-export async function loadWizardNetwork(api: PraxisManagerApi): Promise<NetworkSnapshot> {
+export async function loadWizardNetwork(api: WartezimmerManagerApi): Promise<NetworkSnapshot> {
   return api.fetchSetupNetwork();
 }
 
 export async function loadWizardPlan(
-  api: PraxisManagerApi,
+  api: WartezimmerManagerApi,
   state: WizardFlowState,
 ): Promise<SetupPlan> {
   return api.fetchSetupPlan(buildWizardPlanInput(state));
 }
 
 export async function applyWizardSetup(
-  api: PraxisManagerApi,
+  api: WartezimmerManagerApi,
   state: WizardFlowState & { operation?: unknown | null },
 ): Promise<ApplySetupResult> {
   return api.applySetupPlan(buildWizardApplyInput(state));
 }
 
-export async function refreshWizardStatus(api: PraxisManagerApi): Promise<HostStatus> {
+export async function refreshWizardStatus(api: WartezimmerManagerApi): Promise<HostStatus> {
   return api.fetchSetupStatus({ includeProbes: true });
 }
 
 export const WIZARD_PROBE_WAIT_MESSAGE = 'App startet — Erreichbarkeit wird geprüft …';
 
 export async function refreshWizardStatusAfterApply(
-  api: PraxisManagerApi,
+  api: WartezimmerManagerApi,
   options?: Parameters<typeof pollSetupProbes>[2],
 ): Promise<HostStatus> {
   const status = await api.fetchSetupStatus();
@@ -230,7 +230,7 @@ export function wizardCompletionLead(probes: ProbeResult[]): string {
   const lanOk = lanProbe ? lanProbe.ok : true;
 
   if (localOk && lanOk) {
-    return 'Host-Einrichtung abgeschlossen. Weitere fachliche Einstellungen (Räume, Themen, Portal) konfigurieren Sie in Praxis Flow.';
+    return 'Host-Einrichtung abgeschlossen. Weitere fachliche Einstellungen (Räume, Themen, Portal) konfigurieren Sie in Wartezimmer.';
   }
 
   if (!localOk) {

@@ -217,7 +217,7 @@ test('writeDeliveryImageEnvFromState materializes compose image keys into env', 
     fs.writeFileSync(
       path.join(root, '.env.example'),
       [
-        'PRACTICE_DISPLAY_NAME=Praxis Flow',
+        'PRACTICE_DISPLAY_NAME=Wartezimmer',
         '# PRAXIS_FLOW_APP_IMAGE=ghcr.io/example/app:v1',
         '# PRAXIS_FLOW_SANDBOX_IMAGE=ghcr.io/example/sandbox:v1',
         '',

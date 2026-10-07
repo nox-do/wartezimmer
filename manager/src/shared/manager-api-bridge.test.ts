@@ -3,7 +3,7 @@ import test from 'node:test';
 import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
 import { serializeManagerApiErrors, restoreManagerApiErrors } from './manager-api-bridge.js';
 import { unwrapSetupApiResponse } from './ipc-channels.js';
-import type { PraxisManagerApi } from './praxis-manager-api.js';
+import type { WartezimmerManagerApi } from './wartezimmer-manager-api.js';
 
 test('contextBridge transports plain rejection data and renderer reconstructs the Error', async () => {
   const error = {
@@ -17,7 +17,7 @@ test('contextBridge transports plain rejection data and renderer reconstructs th
   const preload = serializeManagerApiErrors({
     hostPlatform: 'darwin',
     checkHostTlsCertificate: async () => unwrapSetupApiResponse({ ok: false, error }),
-  } as PraxisManagerApi);
+  } as WartezimmerManagerApi);
   const bridge = {
     ...preload,
     checkHostTlsCertificate: async () => {

@@ -62,7 +62,7 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - name: Packaged Electron runtime without external Node/npm on PATH
-        run: node manager/scripts/smoke-packaged-setup.mjs 'manager/dist/win-unpacked/PraxisFlowManager.exe' manager/dist/win-unpacked/resources
+        run: node manager/scripts/smoke-packaged-setup.mjs 'manager/dist/win-unpacked/WartezimmerManager.exe' manager/dist/win-unpacked/resources
       - name: Disposable NSIS install, reinstall, uninstall and data preservation
         shell: pwsh
         run: ./manager/scripts/test-windows-installer.ps1

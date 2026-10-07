@@ -223,7 +223,7 @@ export function projectManagerStatus(
     );
   }
   if (installation?.kind === 'fresh')
-    add('installation-fresh', 3, 'installation', 'info', 'install', 'Praxis Flow einrichten');
+    add('installation-fresh', 3, 'installation', 'info', 'install', 'Wartezimmer einrichten');
   if (installation?.kind === 'needs-reinstall')
     add(
       'installation-reinstall',
@@ -370,7 +370,7 @@ export function projectManagerStatus(
       if (starting)
         add('runtime-starting', 6, 'runtime', 'info', 'wait', 'Dienste werden gestartet');
       if (stopped)
-        add('runtime-stopped', 6, 'runtime', 'info', 'start', 'Praxis Flow ist gestoppt');
+        add('runtime-stopped', 6, 'runtime', 'info', 'start', 'Wartezimmer ist gestoppt');
       const ready =
         compose.running &&
         core.length >= 2 &&

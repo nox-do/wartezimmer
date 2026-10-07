@@ -28,7 +28,7 @@ const metadata = JSON.parse(await fs.readFile(path.join(root, 'package.json'), '
 const expectedInstaller = path.join(
   root,
   'dist',
-  `PraxisFlowManager-${metadata.version}-windows-x64-setup.exe`,
+  `WartezimmerManager-${metadata.version}-windows-x64-setup.exe`,
 );
 // A failed rebuild must not retain a success checksum from an earlier artifact.
 await fs.rm(`${expectedInstaller}.sha256`, { force: true });
@@ -45,10 +45,10 @@ try {
   inspectNsis(await fs.readFile(installer));
   execFileSync(
     await getPath7za(),
-    ['e', installer, '$R0/UninstallPraxisFlowManager.exe', `-o${temporary}`, '-y'],
+    ['e', installer, '$R0/UninstallWartezimmerManager.exe', `-o${temporary}`, '-y'],
     { stdio: 'pipe' },
   );
-  const uninstaller = await fs.readFile(path.join(temporary, 'UninstallPraxisFlowManager.exe'));
+  const uninstaller = await fs.readFile(path.join(temporary, 'UninstallWartezimmerManager.exe'));
   if (!(inspectNsis(uninstaller).flags & 1)) throw new Error('Expected NSIS uninstaller');
   const digest = createHash('sha256')
     .update(await fs.readFile(installer))

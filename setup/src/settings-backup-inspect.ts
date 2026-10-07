@@ -366,7 +366,7 @@ export async function inspectPfbackup(
 
   if (!targetAppReachable) {
     warnings.push(
-      'Praxis Flow Maintenance-API (Port 8082) ist nicht erreichbar — fachliche Validierung nicht möglich.',
+      'Wartezimmer Maintenance-API (Port 8082) ist nicht erreichbar — fachliche Validierung nicht möglich.',
     );
   } else if (!settingsValid) {
     warnings.push(...settingsValidation.errors);

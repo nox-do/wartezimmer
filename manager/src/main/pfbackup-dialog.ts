@@ -31,10 +31,10 @@ export async function savePfbackupToDisk(
   const defaultName = path.basename(sourcePath);
 
   const dialogOptions: SaveDialogOptions = {
-    title: 'Praxis-Backup sichern',
+    title: 'Wartezimmer-Backup sichern',
     defaultPath: defaultName,
     filters: [
-      { name: 'Praxis Flow Backup', extensions: [PFBACKUP_FILE_EXTENSION] },
+      { name: 'Wartezimmer Backup', extensions: [PFBACKUP_FILE_EXTENSION] },
       { name: 'Alle Dateien', extensions: ['*'] },
     ],
   };
@@ -57,10 +57,10 @@ export async function selectPfbackupForRestore(
   { canceled: true; content: null } | { canceled: false; content: string; filePath: string }
 > {
   const dialogOptions: OpenDialogOptions = {
-    title: 'Praxis-Backup auswählen',
+    title: 'Wartezimmer-Backup auswählen',
     properties: ['openFile'],
     filters: [
-      { name: 'Praxis Flow Backup', extensions: [PFBACKUP_FILE_EXTENSION] },
+      { name: 'Wartezimmer Backup', extensions: [PFBACKUP_FILE_EXTENSION] },
       { name: 'Alle Dateien', extensions: ['*'] },
     ],
   };

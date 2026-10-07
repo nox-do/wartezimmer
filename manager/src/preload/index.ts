@@ -468,4 +468,4 @@ const api = serializeManagerApiErrors({
   openExternalUrl,
 });
 
-contextBridge.exposeInMainWorld('praxisManagerBridge', api);
+contextBridge.exposeInMainWorld('wartezimmerManagerBridge', api);

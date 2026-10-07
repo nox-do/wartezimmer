@@ -6,6 +6,8 @@
   import NetworkView from './NetworkView.svelte';
   import WizardView from './WizardView.svelte';
   import { managerShell, showChrome, wizardFullscreen } from './manager-shell-state.svelte.js';
+  import logoUrl from '../../build/icons/logo.svg?url';
+  import { MANAGER_USER_DISPLAY_NAME } from '../shared/manager-display-name.js';
 
   let {
     onNavigateTab,
@@ -29,6 +31,11 @@
 </script>
 
 <div class="app-root" id="app-shell" class:is-wizard-fullscreen={wizardFullscreen(managerShell)}>
+  <header class="manager-brand">
+    <img src={logoUrl} alt="" width="40" height="40" />
+    <strong>{MANAGER_USER_DISPLAY_NAME}</strong>
+    <span>Manager</span>
+  </header>
   <div class="app-chrome" id="app-chrome" hidden={!showChrome(managerShell)}>
     <MainNav onNavigate={onNavigateTab} />
   </div>

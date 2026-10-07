@@ -1,4 +1,4 @@
-# Praxis Flow Manager
+# Wartezimmer Manager
 
 Electron-Hülle für Host-Setup, Status und Wartung. Docker-Stack steuern (Start/Stop/Neustart), Container/Logs, `.pfbackup`, Erreichbarkeit (Poll) — alles über Setup-API + IPC.
 
@@ -21,7 +21,7 @@ npm run setup:reset -- --yes
 npm run dev:manager
 ```
 
-**macOS-Menü „Electron“:** Im Dev-Modus startet die generische `Electron.app`; der sichtbare Menüname kommt aus deren `Info.plist`, nicht aus `app.setName()`. `npm run dev:manager` patcht das lokal automatisch auf **Praxis Flow** (wird bei `npm install electron` zurückgesetzt). Dauerhaft korrekt erst nach Packaging mit `productName`.
+**macOS-Menü „Electron“:** Im Dev-Modus startet die generische `Electron.app`; der sichtbare Menüname kommt aus deren `Info.plist`, nicht aus `app.setName()`. `npm run dev:manager` patcht das lokal automatisch auf **Wartezimmer Manager** (wird bei `npm install electron` zurückgesetzt). Dauerhaft korrekt erst nach Packaging mit `productName`.
 
 ## Geräteadresse
 
@@ -166,7 +166,7 @@ Vom Repo-Root:
 npm run dist:manager:mac
 ```
 
-Der Build erzeugt `manager/dist/PraxisFlowManager-<version>-<arch>.dmg`.
+Der Build erzeugt `manager/dist/WartezimmerManager-<version>-<arch>.dmg`.
 Dieser erste Phase-4a-Build ist bewusst unsigned/notarisiert **nicht**; er ist für interne Tests.
 Beim Packaging werden der kompilierte Setup-Server und die Delivery-Templates in die App-Ressourcen gelegt.
 Im gepackten Modus startet der Manager die Setup-API aus diesen Ressourcen und nutzt standardmäßig
@@ -223,17 +223,17 @@ Isolierter Runtime-Smoke nach `prepare:packaged`:
 ```powershell
 node manager/scripts/smoke-packaged-setup.mjs
 # Nach Windows-Packaging tatsächlich die gebaute EXE prüfen:
-node manager/scripts/smoke-packaged-setup.mjs "manager/dist/win-unpacked/PraxisFlowManager.exe" manager/dist/win-unpacked/resources
+node manager/scripts/smoke-packaged-setup.mjs "manager/dist/win-unpacked/WartezimmerManager.exe" manager/dist/win-unpacked/resources
 ```
 
 Der Smoke verändert keinen Docker-Stack. Die verbleibenden Installer-/Docker-/
 GUI-Tests stehen im [Windows-Abnahmeprotokoll](../docs/open-items.md#windows-abnahmeprotokoll).
 
-Windows verwendet die technischen Namen `PraxisFlowManager.exe`,
-`UninstallPraxisFlowManager.exe` und
-`PraxisFlowManager-<version>-windows-x64-setup.exe`. Bei einer frischen
-Installation heißt der Programmordner `%LOCALAPPDATA%\Programs\PraxisFlowManager`.
-Der sichtbare Produktname bleibt „Praxis Flow Manager“; Versionen bleiben in
+Windows verwendet die technischen Namen `WartezimmerManager.exe`,
+`UninstallWartezimmerManager.exe` und
+`WartezimmerManager-<version>-windows-x64-setup.exe`. Bei einer frischen
+Installation heißt der Programmordner `%LOCALAPPDATA%\Programs\WartezimmerManager`.
+Der sichtbare Produktname bleibt „Wartezimmer Manager“; Versionen bleiben in
 Dateimetadaten und im Setup-Dateinamen. App-ID und Datenordner bleiben unverändert.
 NSIS kann bei Updates einen registrierten bisherigen Installationspfad übernehmen;
 ein alter Ordner mit Leerzeichen wird nicht automatisch umbenannt.
@@ -248,3 +248,28 @@ Bei einem Builder-Versionswechsel muss der Workaround neu bewertet werden.
 `npm run -w @praxis-flow/manager test:packaging` prüft Rekonstruktion und negative
 CRC-/Grenzfälle. Die echte Windows-Installations-/Deinstallationsabnahme bleibt
 trotz bestandener Dateiprüfung erforderlich.
+
+## Marke und App-Icons
+
+Der Manager heißt **Wartezimmer Manager**. Das Logo basiert auf den drei Balken
+aus `mockups/wartezimmer/index.html`: Grün `#2d5941`, Orange `#eea978`.
+Die Vektorvorlage liegt unter `build/icons/logo.svg`; die abgerundete helle
+Fläche bildet das App-Icon. `icon.icns` wird für macOS verwendet, `icon.ico`
+für die Windows-App sowie Installation und Deinstallation. `icon.png` dient
+als Fenster-Icon. Der Manager zeigt dieselbe Vorlage in seiner Kopfzeile.
+
+Bei Änderungen an der Vorlage: `python3 scripts/generate-icons.py` aus dem
+Manager-Verzeichnis ausführen (Python mit Pillow; in Codex über
+`load_workspace_dependencies` verfügbar). Die erzeugten Icons sind eingecheckt;
+der reguläre Build braucht Python nicht.
+
+Die bisherige App-ID `de.praxisflow.manager`, die npm-Paketnamen und die
+Installations-/Datenpfade bleiben für die Kompatibilität mit bestehenden
+Installationen erhalten. Die technische Umbenennung des Stacks folgt separat.
+
+Die internen Electron-Namen heißen `WartezimmerManagerApi`,
+`window.wartezimmerManager` und `window.wartezimmerManagerBridge`; die
+IPC-Kanäle verwenden `wartezimmer:*`. Main, Preload und Renderer werden
+gemeinsam ausgeliefert. Der GUI-Starttest nutzt `WARTEZIMMER_MANAGER_SMOKE`.
+Die von Setup und Proxy geteilten `PRAXIS_FLOW_*`-Variablen, HTTP-Header und
+Archivformate werden zusammen mit dem Stack migriert.

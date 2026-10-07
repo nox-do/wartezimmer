@@ -66,7 +66,7 @@ export async function requestMaintenanceJson(
   } catch (error) {
     throw new MaintenanceClientError(
       'unreachable',
-      'Praxis Flow Maintenance-API ist nicht erreichbar.',
+      'Wartezimmer Maintenance-API ist nicht erreichbar.',
       undefined,
       undefined,
       { cause: error },

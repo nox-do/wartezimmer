@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 import { createMaintenanceController } from './maintenance-controller.js';
 import {
   STACK_OFFLINE_CONFIRM_MESSAGE,
@@ -9,7 +9,7 @@ import {
   STORAGE_PATHS_VALIDATION_ERROR,
 } from './maintenance-view-model.js';
 
-function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManagerApi {
+function createMockApi(overrides: Partial<WartezimmerManagerApi> = {}): WartezimmerManagerApi {
   return {
     hostPlatform: 'linux',
     fetchSetupStatus: async () => minimalHostStatus(),
@@ -93,11 +93,11 @@ function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManager
       },
     }),
     ...overrides,
-  } as PraxisManagerApi;
+  } as WartezimmerManagerApi;
 }
 
 function createControllerDeps(
-  api: PraxisManagerApi,
+  api: WartezimmerManagerApi,
   overrides: {
     requestConfirm?: (message: string, onConfirm: () => void, onCancel?: () => void) => void;
     onAfterMutation?: () => void;

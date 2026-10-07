@@ -6,7 +6,7 @@ import type {
   TlsOperatorRequest,
   TlsStatus,
 } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 import {
   evaluateHostLifecycleAction,
   type HostLifecycleAction,
@@ -107,7 +107,7 @@ export type TlsNetworkController = {
 };
 
 export function createTlsNetworkController(deps: {
-  api: PraxisManagerApi;
+  api: WartezimmerManagerApi;
   getConfig: () => HostStatus | null;
   lanIp: () => string | null;
   onAfterMutation: () => void | Promise<void>;

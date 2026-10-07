@@ -1,6 +1,6 @@
 import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
 import type { HostStatus } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 import {
   canRetryRestoreAfterFailure,
   canSkipRestoreAfterFailure,
@@ -14,7 +14,7 @@ import {
 } from './restore-wizard-flow.js';
 
 export type RestoreWizardControllerDeps = {
-  api: PraxisManagerApi;
+  api: WartezimmerManagerApi;
   /** Refresh the authoritative shell snapshot, including failed host operations. */
   refreshHost?: () => void | Promise<void>;
   getHostStatus?: () => HostStatus | null;

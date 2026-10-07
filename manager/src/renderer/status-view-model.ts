@@ -120,7 +120,7 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
   if (tone === 'starting') {
     return {
       eyebrow: 'Status',
-      copy: 'Praxis Flow prüft, ob alle Dienste bereit sind. Das kann kurz dauern.',
+      copy: 'Wartezimmer prüft, ob alle Dienste bereit sind. Das kann kurz dauern.',
       note: 'Wenn ein Dienst nicht erfolgreich startet, wechselt der Status automatisch zur Fehlerdiagnose.',
       showReleasePicker: false,
     };
@@ -159,7 +159,7 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
   if (tone === 'fresh') {
     return {
       eyebrow,
-      copy: 'Wir führen Schritt für Schritt durch Docker, Software-Paket, Host-Adresse im Praxisnetz und Start des lokalen Praxis-Stacks.',
+      copy: 'Wir führen Schritt für Schritt durch Docker, Software-Paket, Host-Adresse im Praxisnetz und Start des lokalen Wartezimmer-Stacks.',
       note: '',
       showReleasePicker: false,
     };
@@ -168,7 +168,7 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
   if (tone === 'needs-docker') {
     return {
       eyebrow: 'Status',
-      copy: 'Ohne Docker kann der Manager den Zustand der Praxis-Installation nicht prüfen.',
+      copy: 'Ohne Docker kann der Manager den Zustand der Wartezimmer-Installation nicht prüfen.',
       note: !status.docker.installed
         ? 'Docker Desktop installieren und danach den Manager erneut öffnen.'
         : !status.docker.daemonRunning

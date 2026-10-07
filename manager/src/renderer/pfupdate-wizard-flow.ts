@@ -70,8 +70,8 @@ export function pfupdateInspectBlockedMessage(inspect: PfupdateInspectResult): s
 }
 
 export function pfupdateApplyConfirmHint(): string {
-  return 'Vor dem Update wird automatisch ein Praxis-Backup erstellt. Praxis Flow ist während des Updates vorübergehend nicht verfügbar; die laufende Warteschlange geht verloren.';
+  return 'Vor dem Update wird automatisch ein Wartezimmer-Backup erstellt. Wartezimmer ist während des Updates vorübergehend nicht verfügbar; die laufende Warteschlange geht verloren.';
 }
 
 export const PFUPDATE_APPLY_LOADING_MESSAGE =
-  'Update läuft — Praxis ist kurz offline. Das kann auf langsameren Rechnern einige Minuten dauern.';
+  'Update läuft — Wartezimmer ist kurz offline. Das kann auf langsameren Rechnern einige Minuten dauern.';

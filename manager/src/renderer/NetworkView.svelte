@@ -16,7 +16,7 @@
    * One lifecycle $effect for session open/close and config refresh.
    */
   import { onMount } from 'svelte';
-  import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+  import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
   import { hostNetworkChanged } from './host-network-panels.js';
   import {
     createNetworkController,
@@ -103,8 +103,8 @@
     lifecycle?.preparation === 'https' || lifecycle?.preparation === 'portal',
   );
 
-  function requireApi(): PraxisManagerApi {
-    const api = window.praxisManager;
+  function requireApi(): WartezimmerManagerApi {
+    const api = window.wartezimmerManager;
     if (!api) {
       throw new Error(
         'Preload nicht geladen — Manager neu starten. (Hinweis: DevTools → Console nach Preload-Fehlern prüfen.)',

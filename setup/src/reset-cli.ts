@@ -12,7 +12,7 @@ async function main() {
   const ctx = resolveSetupContext();
   const targets = describeInstallHomeTargets();
 
-  p.intro('Praxis Flow — Install zurücksetzen');
+  p.intro('Wartezimmer — Install zurücksetzen');
 
   if (ctx.mode === 'repo' && !targets.envOverride) {
     p.log.warn(

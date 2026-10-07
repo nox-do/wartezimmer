@@ -2,7 +2,7 @@ import { wizardIsBusy, wizardError } from './wizard-controller.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { InstallOperationSummary, InstallRecoveryPreview } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import { createWizardController } from './wizard-controller.js';
 import { createWizardFlowState, planWizardAdvance, planWizardBack } from './wizard-flow.js';
@@ -45,7 +45,7 @@ test('reinstall prepares without mutation and only commits after explicit confir
         installation: { kind: 'installing', operation: { ...operation, phase: 'installing' } },
       });
     },
-  } as unknown as PraxisManagerApi;
+  } as unknown as WartezimmerManagerApi;
   const controller = createWizardController({
     api,
     onComplete() {},
@@ -80,7 +80,7 @@ for (const ready of [true, false])
         return status;
       },
       previewInstallRecovery: async () => preview(ready),
-    } as unknown as PraxisManagerApi;
+    } as unknown as WartezimmerManagerApi;
     const controller = createWizardController({ api, onComplete() {}, onCancel() {} });
     controller.show(minimalHostStatus());
     await tick();
@@ -120,7 +120,7 @@ test('failed recovery can retry or finish without backup without losing operatio
         ? { ok: false, errors: ['Restore failed'] }
         : { ok: true, errors: [] };
     },
-  } as unknown as PraxisManagerApi;
+  } as unknown as WartezimmerManagerApi;
   const controller = createWizardController({
     api,
     onComplete() {
@@ -151,7 +151,7 @@ test('completion can recheck starting services without reinstalling', async () =
     commitInstall: async () => {
       commits++;
     },
-  } as unknown as PraxisManagerApi;
+  } as unknown as WartezimmerManagerApi;
   const controller = createWizardController({ api, onComplete() {}, onCancel() {} });
   controller.show(status);
   await tick();
@@ -181,7 +181,7 @@ test('completion recheck does not overwrite a closed wizard session', async () =
             resolve = done;
           })
         : preview(false),
-  } as unknown as PraxisManagerApi;
+  } as unknown as WartezimmerManagerApi;
   const controller = createWizardController({ api, onComplete() {}, onCancel() {} });
   controller.show(status);
   await tick();
@@ -206,7 +206,7 @@ test('finish publishes the new installation status before leaving the wizard', a
       fetchSetupStatus: async () => status,
       previewInstallRecovery: async () => preview(true),
       finishInstallRecovery: async () => ({ ok: true, errors: [] }),
-    } as unknown as PraxisManagerApi,
+    } as unknown as WartezimmerManagerApi,
     onHostMutated: () =>
       new Promise<void>((resolve) => {
         publish = resolve;
@@ -238,7 +238,7 @@ test('recovery rechecks diagnosis before discovering backups or preparing replac
         discoverRecoveryBackups: async () => assert.fail('diagnosis must not enter recovery'),
         selectReleaseArchive: async () => ({ canceled: false, path: '/release.pfinstall' }),
         prepareInstall: async () => assert.fail('diagnosis must not prepare replacement'),
-      } as unknown as PraxisManagerApi,
+      } as unknown as WartezimmerManagerApi,
       onComplete() {},
       onCancel() {},
     });
@@ -262,7 +262,7 @@ test('failed installation finish refreshes host evidence while preserving its er
       finishInstallRecovery: async () => {
         throw new Error('finish failed');
       },
-    } as unknown as PraxisManagerApi,
+    } as unknown as WartezimmerManagerApi,
     onHostMutated: () => {
       refreshes++;
     },

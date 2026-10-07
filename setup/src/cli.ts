@@ -10,7 +10,7 @@ function isCancel<T>(value: T | symbol): value is symbol {
 }
 
 async function main() {
-  p.intro('Praxis Flow — Einrichtung (Host)');
+  p.intro('Wartezimmer — Einrichtung (Host)');
 
   const ctx = resolveSetupContext();
   p.log.message(`Install: ${ctx.home} (${ctx.mode}, compose=${ctx.composeProjectName})`);
@@ -68,7 +68,7 @@ async function main() {
   }
 
   p.log.info(
-    'MFA- und Ops-Anmeldung: Standard-PIN 0000 (MFA/Panel: MFA → Betrieb; Ops: System → PIN & Sicherheit; Reset: Praxis Flow Manager → Wartung).',
+    'MFA- und Ops-Anmeldung: Standard-PIN 0000 (MFA/Panel: MFA → Betrieb; Ops: System → PIN & Sicherheit; Reset: Wartezimmer Manager → Wartung).',
   );
 
   const gatewayEnabled = false;
@@ -153,7 +153,7 @@ async function main() {
         `Ops:       ${urls.opsSetup}`,
         '',
         'Anmeldung MFA/Ops: Standard-PIN 0000 (Datenbank, nicht .env).',
-        'MFA/Panel unter MFA → Betrieb; Ops unter System → PIN & Sicherheit; bei Vergessen: Praxis Flow Manager → Wartung → Staff-PINs.',
+        'MFA/Panel unter MFA → Betrieb; Ops unter System → PIN & Sicherheit; bei Vergessen: Wartezimmer Manager → Wartung → Staff-PINs.',
         '',
         'Server-Secrets stehen in .env (AUTH_KEY_CAPTIVE, SANDBOX_INTERNAL_TOKEN).',
         '',

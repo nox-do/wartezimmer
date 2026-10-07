@@ -2,12 +2,12 @@ import { pfupdateWizardIsBusy, pfupdateWizardProgress } from './pfupdate-wizard-
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { HostStatus } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 import { createPfupdateWizardController } from './pfupdate-wizard-controller.js';
 import { pfupdateInspectSummaryLines } from './pfupdate-wizard-flow.js';
 import { minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 
-function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManagerApi {
+function createMockApi(overrides: Partial<WartezimmerManagerApi> = {}): WartezimmerManagerApi {
   return {
     hostPlatform: 'linux',
     fetchSetupStatus: async () =>
@@ -51,7 +51,7 @@ function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManager
       },
     }),
     ...overrides,
-  } as PraxisManagerApi;
+  } as WartezimmerManagerApi;
 }
 
 test('pfupdate wizard inspects package before apply', async () => {
@@ -65,7 +65,7 @@ test('pfupdate wizard inspects package before apply', async () => {
         inspectCalled = true;
         assert.equal(body.settingsFormatVersion, 1);
         return (await createMockApi().inspectPfupdate!(body)) as Awaited<
-          ReturnType<PraxisManagerApi['inspectPfupdate']>
+          ReturnType<WartezimmerManagerApi['inspectPfupdate']>
         >;
       },
       applyPfupdate: async () => {

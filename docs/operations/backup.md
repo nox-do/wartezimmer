@@ -103,7 +103,7 @@ Host-Pfade bei Abweichung vom Zielsystem bestätigen.
 
 ## 4. Manager-Flows
 
-Fläche **Wartung** → Praxis-Backup / Wiederherstellen (`BackupPanel`, Restore-Wizard).
+Fläche **Wartung** → Wartezimmer-Backup / Wiederherstellen (`BackupPanel`, Restore-Wizard).
 
 | Aktion             | Verhalten                                                                                                                   |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |

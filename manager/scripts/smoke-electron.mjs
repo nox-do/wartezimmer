@@ -8,7 +8,7 @@ import electronPath from 'electron';
 
 const managerRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const installHome = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-manager-smoke-'));
-const marker = 'PRAXIS_FLOW_MANAGER_SMOKE_OK ';
+const marker = 'WARTEZIMMER_MANAGER_SMOKE_OK ';
 let output = '';
 let settled = false;
 let successSeen = false;
@@ -21,7 +21,7 @@ const child = spawn(packagedExecutable || electronPath, packagedExecutable ? [] 
     ...process.env,
     ELECTRON_RUN_AS_NODE: '',
     PRAXIS_FLOW_HOME: installHome,
-    PRAXIS_FLOW_MANAGER_SMOKE: '1',
+    WARTEZIMMER_MANAGER_SMOKE: '1',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });

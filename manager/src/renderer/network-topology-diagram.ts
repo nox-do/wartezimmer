@@ -31,9 +31,9 @@ export function mountNetworkTopologyDiagram(
       ${flowStep('Freigegebene Adresse und Ports', { variant: 'ours', detail: proxy ? `Ausgewählte IPv4: ${ip}` : 'Alle Host-Netzwerkanschlüsse · HTTP :8080' })}
       ${proxy ? flowArrow() + flowStep('Proxy-Dienst', { variant: 'ours', detail: tls ? 'HTTPS :443 · HTTP-Weiterleitung :80' : 'HTTP :80' }) : ''}
       ${flowArrow()}
-      ${flowStep('Praxis Flow', { variant: 'ours', detail: 'App · interne Portalfunktion', note: 'Sandbox nur intern erreichbar' })}
+      ${flowStep('Wartezimmer', { variant: 'ours', detail: 'App · interne Portalfunktion', note: 'Sandbox nur intern erreichbar' })}
     </div>
-    <p class="net-flow-footnote">Praxis Flow konfiguriert Docker, Proxy und App. Welche Geräte im Praxisnetz diese Adresse erreichen können, legt Ihre Praxis-IT fest.</p>
+    <p class="net-flow-footnote">Wartezimmer konfiguriert Docker, Proxy und App. Welche Geräte im Praxisnetz diese Adresse erreichen können, legt Ihre Praxis-IT fest.</p>
     <p class="hint">Laufzustand: ${escapeHtml(labels.operation || 'nicht geprüft')}.<br>Letzte Host-Prüfung: ${escapeHtml(labels.diagnosis || 'nicht geprüft')}.</p>
   `;
   host.append(section);

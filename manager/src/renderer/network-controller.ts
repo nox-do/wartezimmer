@@ -5,7 +5,7 @@ import type {
   HostStatus,
   NetworkSnapshot,
 } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 import { evaluateHostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
 import type { LanIpFieldState, ProxyFieldState } from './host-network-panels.js';
 import {
@@ -49,7 +49,7 @@ export type NetworkState = NetworkDraft & {
 };
 
 export type NetworkControllerDeps = NetworkCallbacks & {
-  api: PraxisManagerApi;
+  api: WartezimmerManagerApi;
   getConfig: () => HostStatus | null;
   getRuntime: () => HostRuntimeHealth | null;
   onStateChange?: () => void;

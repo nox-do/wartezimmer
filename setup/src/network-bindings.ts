@@ -280,7 +280,7 @@ export async function auditNetworkBindings(input: {
       id: 'app.port',
       ok: appListenOk,
       message: appListenOk
-        ? 'Praxis Flow erreichbar auf Port 8080'
+        ? 'Wartezimmer erreichbar auf Port 8080'
         : 'Port 8080 am Rechner nicht erreichbar',
       // CAUTION: with proxy enabled, product entry is :80 — this check is still the
       // local app publish / loopback path, not the Praxis-Gerät URL.
@@ -389,7 +389,7 @@ export async function auditNetworkBindings(input: {
         ? `Internetfreigabe erreichbar auf Port ${bridgePort}`
         : `Internetfreigabe (Port ${bridgePort}) nicht erreichbar`,
       detail: bridgeOk
-        ? 'Praxis Flow kann nach gültiger Wartenummer die Freigabe auslösen.'
+        ? 'Wartezimmer kann nach gültiger Wartenummer die Freigabe auslösen.'
         : 'Gateway läuft, aber der Freigabe-Port ist nicht offen.',
     });
   } else if (gateway.enabled && input.compose) {

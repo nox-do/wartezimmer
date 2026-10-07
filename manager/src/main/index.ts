@@ -26,12 +26,13 @@ import { selectPfbackupForRestore, savePfbackupToDisk } from './pfbackup-dialog.
 import { startSetupServer, stopSetupServer, type SetupServerHandle } from './setup-server.js';
 import { defaultOsInstallHome, expectedSetupInstallHome } from './setup-identity.js';
 import { prepareManagerProfile } from './manager-profile.js';
+import { MANAGER_WINDOW_TITLE } from '../shared/manager-display-name.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const logger = createModuleLogger('manager.main');
 
 // Affects internal paths / user agent; macOS menu bar still reads CFBundleName from Electron.app in dev.
-app.setName('Praxis Flow');
+app.setName(MANAGER_WINDOW_TITLE);
 
 let setupHandle: SetupServerHandle | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -50,7 +51,7 @@ function acquireSingleInstanceLock(): boolean {
     app.setAppLogsPath(path.join(profile, 'logs'));
   } catch (error) {
     dialog.showErrorBox(
-      'Praxis Flow Manager',
+      MANAGER_WINDOW_TITLE,
       `Manager-Profil konnte nicht eingerichtet werden: ${error instanceof Error ? error.message : String(error)}`,
     );
     app.quit();
@@ -171,28 +172,34 @@ function preloadScriptPath(): string {
 }
 
 function installSmokeCheck(window: BrowserWindow): void {
-  if (process.env.PRAXIS_FLOW_MANAGER_SMOKE !== '1') {
+  if (process.env.WARTEZIMMER_MANAGER_SMOKE !== '1') {
     return;
   }
   window.webContents.once('did-finish-load', () => {
     void window.webContents
       .executeJavaScript(
         `(async () => {
-        const api = window.praxisManager;
+        const api = window.wartezimmerManager;
         if (!api || typeof api.fetchSetupStatus !== 'function') {
           throw new Error('Preload API missing');
         }
         const status = await api.fetchSetupStatus();
-        return { installationKind: status?.installation?.kind ?? null };
+        if (document.title !== ${JSON.stringify(MANAGER_WINDOW_TITLE)}) {
+          throw new Error('Manager title missing');
+        }
+        const logo = document.querySelector('.manager-brand img');
+        if (!(logo instanceof HTMLImageElement)) throw new Error('Manager logo missing');
+        await logo.decode();
+        return { installationKind: status?.installation?.kind ?? null, title: document.title };
       })()`,
       )
       .then((result: unknown) => {
-        console.log(`PRAXIS_FLOW_MANAGER_SMOKE_OK ${JSON.stringify(result)}`);
+        console.log(`WARTEZIMMER_MANAGER_SMOKE_OK ${JSON.stringify(result)}`);
         app.exit(0);
       })
       .catch((error: unknown) => {
         console.error(
-          `PRAXIS_FLOW_MANAGER_SMOKE_FAILED ${error instanceof Error ? error.message : String(error)}`,
+          `WARTEZIMMER_MANAGER_SMOKE_FAILED ${error instanceof Error ? error.message : String(error)}`,
         );
         app.exit(1);
       });
@@ -205,7 +212,8 @@ async function createWindow(): Promise<void> {
     height: 820,
     minWidth: 480,
     minHeight: 520,
-    title: 'Praxis Flow Manager',
+    title: MANAGER_WINDOW_TITLE,
+    icon: path.join(app.getAppPath(), 'build/icons/icon.png'),
     webPreferences: {
       preload: preloadScriptPath(),
       nodeIntegration: false,
@@ -237,7 +245,7 @@ async function bootstrap(): Promise<void> {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Setup-API konnte nicht gestartet werden.';
-    dialog.showErrorBox('Praxis Flow Manager', message);
+    dialog.showErrorBox(MANAGER_WINDOW_TITLE, message);
     app.quit();
   }
 }
@@ -265,7 +273,7 @@ app.on('activate', () => {
     void createWindow().catch((error: unknown) => {
       const message =
         error instanceof Error ? error.message : 'Manager-Fenster konnte nicht geladen werden.';
-      dialog.showErrorBox('Praxis Flow Manager', message);
+      dialog.showErrorBox(MANAGER_WINDOW_TITLE, message);
     });
   }
 });

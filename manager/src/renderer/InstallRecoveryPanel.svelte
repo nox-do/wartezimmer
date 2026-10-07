@@ -31,11 +31,11 @@
     {@const hints = dockerPrerequisitesHints(snapshot.status.docker, hostPlatform)}
     {#each hints.hints as hint (hint)}<p class="hint">{hint}</p>{/each}
     {#if hints.installLink}
-      <button type="button" class="btn-secondary" onclick={() => void window.praxisManager?.openExternalUrl(hints.installLink!.url)}>{hints.installLink.buttonLabel}</button>
+      <button type="button" class="btn-secondary" onclick={() => void window.wartezimmerManager?.openExternalUrl(hints.installLink!.url)}>{hints.installLink.buttonLabel}</button>
     {/if}
     {#if snapshot.status.docker.detail}<details><summary>Docker-Details</summary><pre>{snapshot.status.docker.detail}</pre></details>{/if}
   {:else if snapshot.recoveryPhase === 'choose'}
-    <h2>{snapshot.status?.installation?.kind === 'fresh' ? 'Praxis Flow installieren' : 'Praxis Flow neu installieren'}</h2>
+    <h2>{snapshot.status?.installation?.kind === 'fresh' ? 'Wartezimmer installieren' : 'Wartezimmer neu installieren'}</h2>
     <p>Wählen Sie ein Software-Paket. Optional übernehmen Sie danach die Einstellungen aus einem automatischen Backup.</p>
     <div class="recovery-backup-field">
       <label for="recovery-backup">Backup wiederherstellen (optional)</label>
@@ -59,7 +59,7 @@
   {:else if snapshot.recoveryPhase === 'finish'}
     <h2>Einrichtung abschließen</h2>
     {#if preview?.baselineReady}
-      <p>Praxis Flow ist bereit.{hasBackup ? ' Prüfen Sie das Backup vor dem Wiederherstellen.' : ' Sie können die Einrichtung jetzt abschließen.'}</p>
+      <p>Wartezimmer ist bereit.{hasBackup ? ' Prüfen Sie das Backup vor dem Wiederherstellen.' : ' Sie können die Einrichtung jetzt abschließen.'}</p>
       {#if hasBackup}
         <ul class="recovery-details">{#each lines as line (line)}<li>{line}</li>{/each}</ul>
         {#each preview?.backup?.compatibility.warnings ?? [] as warning, index (index)}

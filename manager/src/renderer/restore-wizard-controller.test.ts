@@ -3,7 +3,7 @@ import { restoreWizardIsBusy, restoreWizardProgress } from './restore-wizard-flo
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { PfbackupInspectResult, PfbackupRestoreResult } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 import { createRestoreWizardController } from './restore-wizard-controller.js';
 
 function inspectOk(overrides: Partial<PfbackupInspectResult> = {}): PfbackupInspectResult {
@@ -29,7 +29,7 @@ function inspectOk(overrides: Partial<PfbackupInspectResult> = {}): PfbackupInsp
   };
 }
 
-function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManagerApi {
+function createMockApi(overrides: Partial<WartezimmerManagerApi> = {}): WartezimmerManagerApi {
   return {
     hostPlatform: 'linux',
     fetchSetupStatus: async () => minimalHostStatus(),
@@ -73,7 +73,7 @@ function createMockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManager
     }),
     selectFolder: async () => ({ canceled: true, path: null }),
     ...overrides,
-  } as PraxisManagerApi;
+  } as WartezimmerManagerApi;
 }
 
 async function flushMicrotasks(): Promise<void> {

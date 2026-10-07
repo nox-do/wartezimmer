@@ -1,4 +1,6 @@
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+/// <reference types="vite/client" />
+
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 
 declare global {
   interface ImportMetaEnv {
@@ -10,8 +12,8 @@ declare global {
   }
 
   interface Window {
-    praxisManager: PraxisManagerApi;
-    praxisManagerBridge: PraxisManagerApi;
+    wartezimmerManager: WartezimmerManagerApi;
+    wartezimmerManagerBridge: WartezimmerManagerApi;
   }
 }
 

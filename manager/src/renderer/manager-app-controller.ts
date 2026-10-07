@@ -14,7 +14,7 @@ import {
 import type { NavigateOptions, WizardPresentation } from './manager-navigation.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import type { HostStatus } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 
 export type ManagerAppShell = {
   applyConfigSnapshot: (status: HostStatus) => void;
@@ -31,7 +31,7 @@ export type ManagerAppShell = {
 };
 
 export type ManagerAppControllerDeps = {
-  api: () => PraxisManagerApi;
+  api: () => WartezimmerManagerApi;
   shell: ManagerAppShell;
   createHostRefresh?: (deps: HostRefreshControllerDeps) => HostRefreshController;
 };

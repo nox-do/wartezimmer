@@ -78,7 +78,7 @@
               class="btn-secondary wizard-install-link"
               disabled={wizardIsBusy(snapshot)}
               onclick={() => {
-                void window.praxisManager?.openExternalUrl(hints.installLink!.url);
+                void window.wartezimmerManager?.openExternalUrl(hints.installLink!.url);
               }}
             >
               {hints.installLink.buttonLabel}
@@ -123,7 +123,7 @@
         Ordner für Kontakt-Import und Dokument-Export auf diesem Rechner.
       </p>
       <p>
-        Praxis Flow liest Kontaktdateien aus dem Importordner und legt Dokumente aus MFA
+        Wartezimmer liest Kontaktdateien aus dem Importordner und legt Dokumente aus MFA
         im Exportordner ab.
       </p>
       {#if needsDockerFileSharingHint(hostPlatform)}
@@ -194,7 +194,7 @@
 
     {:else if snapshot.step === 7}
       {#if wizardUsesExistingTlsConfiguration(snapshot.status)}
-        <p class="wizard-step-lead">Praxis Flow ist auf diesem Rechner bereits mit HTTPS eingerichtet.</p>
+        <p class="wizard-step-lead">Wartezimmer ist auf diesem Rechner bereits mit HTTPS eingerichtet.</p>
         <p class="notice">
           Die bestehende Host- und TLS-Konfiguration bleibt unverändert. Änderungen daran nehmen Sie
           gezielt im Tab Netzwerk vor.
@@ -265,7 +265,7 @@
       {#if wizardUsesExistingTlsConfiguration(snapshot.status)}
         <h3 class="wizard-subheading">Einrichtung bereits abgeschlossen</h3>
         <p>
-          Die aktive HTTPS-Konfiguration wurde erkannt und nicht erneut geschrieben. Praxis Flow
+          Die aktive HTTPS-Konfiguration wurde erkannt und nicht erneut geschrieben. Wartezimmer
           kann mit den bestehenden Einstellungen weiterverwendet werden.
         </p>
       {:else if !snapshot.applyResult}

@@ -346,7 +346,7 @@ export type EnsureProxyImageResult = {
 /**
  * Ensure the release-supplied proxy image is present before compose up.
  * Runtime code deliberately never pulls Caddy from a registry: upgrades must arrive
- * through a digest-verified Praxis Flow release package.
+ * through a digest-verified Wartezimmer release package.
  */
 export async function ensureProxyImageAvailable(
   env?: EnvLike,
@@ -367,7 +367,7 @@ export async function ensureProxyImageAvailable(
 
   throw new ProxyConfigError(
     `Proxy-Image fehlt lokal (${imageRef}). ` +
-      'Ein geprüftes Praxis-Flow-Release-Paket mit Caddy importieren; ' +
+      'Ein geprüftes Wartezimmer-Release-Paket mit Caddy importieren; ' +
       'automatische Registry-Downloads sind deaktiviert.',
   );
 }

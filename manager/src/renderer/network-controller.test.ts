@@ -7,7 +7,7 @@ import type {
   HostStatus,
   NetworkSnapshot,
 } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 import {
   CONFIGURED_GATEWAY,
   minimalHostStatus,
@@ -42,11 +42,11 @@ function minimalRuntime(config: HostStatus): HostRuntimeHealth {
   };
 }
 
-function mockApi(overrides: Partial<PraxisManagerApi> = {}): PraxisManagerApi {
+function mockApi(overrides: Partial<WartezimmerManagerApi> = {}): WartezimmerManagerApi {
   return {
     fetchSetupNetwork: async () => emptyNetwork,
     ...overrides,
-  } as PraxisManagerApi;
+  } as WartezimmerManagerApi;
 }
 
 function saveResult(overrides: Partial<HostNetworkResult> = {}): HostNetworkResult {
@@ -75,7 +75,7 @@ function saveResult(overrides: Partial<HostNetworkResult> = {}): HostNetworkResu
 function createController(options: {
   config: HostStatus;
   runtime?: HostRuntimeHealth | null;
-  api?: Partial<PraxisManagerApi>;
+  api?: Partial<WartezimmerManagerApi>;
   requestConfirm?: (message: string, onConfirm: () => void) => void;
   verifyProbeOptions?: { maxWaitMs?: number; intervalMs?: number; lanGraceMs?: number };
   onAfterMutation?: () => void | Promise<void>;
@@ -746,7 +746,7 @@ test('applyAndVerify without running stack saves and skips probe', async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(controller.getState().phase, 'idle');
   assert.equal(controller.getState().notice?.tone, 'warning');
-  assert.match(controller.getState().notice?.message ?? '', /sobald Praxis Flow gestartet/);
+  assert.match(controller.getState().notice?.message ?? '', /sobald Wartezimmer gestartet/);
 });
 
 test('restart failure keeps save marker so config refresh still hydrates', async () => {

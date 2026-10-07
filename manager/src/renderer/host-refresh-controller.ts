@@ -3,7 +3,7 @@ import type { ManagerError } from '@praxis-flow/server-shared/setup-api';
 import { managerRefreshError } from './runtime-observation.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import type { HostStatus } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 
 export type ManagerView = 'status' | 'maintenance' | 'network' | 'wizard';
 
@@ -21,7 +21,7 @@ export type ScheduleFn = (callback: () => void, delayMs: number) => unknown;
 export type ClearScheduleFn = (id: unknown) => void;
 
 export type HostRefreshControllerDeps = {
-  api: () => PraxisManagerApi;
+  api: () => WartezimmerManagerApi;
   pollIntervalMs?: number;
   onRuntime: (runtime: HostRuntimeHealth) => void;
   onConfig: (status: HostStatus, view: ManagerView) => void;

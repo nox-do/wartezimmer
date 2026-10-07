@@ -72,7 +72,7 @@ export function isManagerError(value: unknown): value is ManagerError {
   );
 }
 
-/** Shared Setup Host API DTOs — contract for `setup serve` and Praxis Flow Manager. */
+/** Shared Setup Host API DTOs — contract for `setup serve` and Wartezimmer Manager. */
 
 import type { SandboxScannerStatus } from './sandbox-scanner.js';
 

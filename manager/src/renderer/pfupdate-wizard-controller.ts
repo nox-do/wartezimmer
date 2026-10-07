@@ -1,7 +1,7 @@
 import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
 import { evaluateHostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
 import type { HostStatus, PfupdateApplyResult } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 import {
   createInitialPfupdateWizardState,
   pfupdateInspectBlockedMessage,
@@ -10,7 +10,7 @@ import {
 import { formatPfupdateFailure } from './pfupdate-flow.js';
 
 export type PfupdateWizardControllerDeps = {
-  api: PraxisManagerApi;
+  api: WartezimmerManagerApi;
   refreshHost?: () => void | Promise<void>;
   getHostStatus?: () => HostStatus | null;
   onApplySuccess?: (result: Extract<PfupdateApplyResult, { ok: true }>) => void;

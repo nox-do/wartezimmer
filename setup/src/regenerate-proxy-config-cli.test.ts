@@ -51,7 +51,7 @@ test('refuses to overwrite an operator-owned Caddyfile', () => {
   const current = fixture();
   try {
     fs.writeFileSync(current.caddyfilePath, ':443 { respond "custom" }\n');
-    assert.throws(() => regenerateProxyConfig(current.home), /nicht als Praxis-Flow-generiert/);
+    assert.throws(() => regenerateProxyConfig(current.home), /nicht als Wartezimmer-generiert/);
     assert.equal(fs.readFileSync(current.caddyfilePath, 'utf8'), ':443 { respond "custom" }\n');
   } finally {
     fs.rmSync(current.home, { recursive: true, force: true });

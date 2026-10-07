@@ -17,8 +17,8 @@ import {
   setDeferredViewLoading,
 } from './manager-shell-state.svelte.js';
 
-if (window.praxisManagerBridge) {
-  window.praxisManager = restoreManagerApiErrors(window.praxisManagerBridge);
+if (window.wartezimmerManagerBridge) {
+  window.wartezimmerManager = restoreManagerApiErrors(window.wartezimmerManagerBridge);
 }
 
 const svelteRoot = document.getElementById('svelte-app');
@@ -26,8 +26,8 @@ if (!svelteRoot) {
   throw new Error('Svelte mount point #svelte-app missing');
 }
 
-function requirePraxisManager(): Window['praxisManager'] {
-  const api = window.praxisManager;
+function requireWartezimmerManager(): Window['wartezimmerManager'] {
+  const api = window.wartezimmerManager;
   if (!api) {
     throw new Error(
       'Preload nicht geladen — Manager neu starten. (Hinweis: DevTools → Console nach Preload-Fehlern prüfen.)',
@@ -37,7 +37,7 @@ function requirePraxisManager(): Window['praxisManager'] {
 }
 
 const controller = createManagerAppController({
-  api: requirePraxisManager,
+  api: requireWartezimmerManager,
   shell: {
     applyConfigSnapshot,
     applyRuntimeSnapshot,

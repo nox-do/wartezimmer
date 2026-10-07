@@ -213,7 +213,7 @@ test('storageSaveErrorText hides restart process output', () => {
       }),
       true,
     ),
-    'Die Ordner wurden gespeichert, aber Praxis Flow konnte nicht neu gestartet werden. Technische Details finden Sie im Bereich „Logs“.',
+    'Die Ordner wurden gespeichert, aber Wartezimmer konnte nicht neu gestartet werden. Technische Details finden Sie im Bereich „Logs“.',
   );
   assert.equal(storageSaveErrorText(minimalStorageResult(), false), null);
 });

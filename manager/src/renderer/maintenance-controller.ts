@@ -2,7 +2,7 @@ import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import { evaluateHostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
 import type { ComposeStatus, HostStatus } from '../shared/host-status.js';
 import type { PfupdateApplyResult } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 import { formatPfupdateSuccess } from './pfupdate-flow.js';
 import {
   PIN_RESET_PROGRESS_TEXT,
@@ -44,7 +44,7 @@ export type MaintenanceState = {
 };
 
 export type MaintenanceControllerDeps = MaintenanceCallbacks & {
-  api: PraxisManagerApi;
+  api: WartezimmerManagerApi;
   onStateChange?: () => void;
   requestConfirm: (message: string, onConfirm: () => void, onCancel?: () => void) => void;
 };

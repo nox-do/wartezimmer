@@ -12,7 +12,7 @@
 </script>
 
 <fieldset class="wizard-fieldset" {disabled}>
-  <legend class="lan-ip-prompt">Wie möchten Sie Praxis Flow erreichen?</legend>
+  <legend class="lan-ip-prompt">Wie möchten Sie Wartezimmer erreichen?</legend>
   <div class="network-columns">
     <label class="wizard-radio network-column network-radio">
       <input type="radio" name={groupName} checked={enabled} onchange={() => onChange(true)} />

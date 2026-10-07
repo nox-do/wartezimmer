@@ -62,7 +62,7 @@ function writeExample(root: string, extra = '') {
   fs.writeFileSync(
     path.join(root, '.env.example'),
     [
-      'PRACTICE_DISPLAY_NAME=Praxis Flow',
+      'PRACTICE_DISPLAY_NAME=Wartezimmer',
       'AUTH_KEY_CAPTIVE=change-me',
       'SANDBOX_INTERNAL_TOKEN=change-me',
       'OPENNDS_FAS_KEY=change-me',

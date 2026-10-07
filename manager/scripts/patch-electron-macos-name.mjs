@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const APP_NAME = 'Praxis Flow';
+const APP_NAME = 'Wartezimmer Manager';
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const managerRoot = path.resolve(scriptDir, '..');
 

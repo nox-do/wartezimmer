@@ -230,7 +230,7 @@ Apply-Timeout im Manager: **15 Minuten** (`UPDATE_APPLY_TIMEOUT_MS` / gleich fü
 1. `.pfupdate` wählen
 2. **Inspect** — `POST /api/setup/host/update/inspect` (Struktur, Checksummen, Kompatibilität, Release-Vergleich)
 3. **Vorschau** — Ziel-/Ist-Release, Mindest-Manager, Settings-Formate, Schema
-4. **Bestätigen** — automatisches Praxis-Backup; Queue geht verloren; Praxis kurz offline
+4. **Bestätigen** — automatisches Wartezimmer-Backup; Queue geht verloren; Wartezimmer kurz offline
 5. **Apply** — `POST /api/setup/host/update/apply`
 
 UI-Phasen: `inspect` → `preview` → `applying` → `success` | `failed` (`pfupdate-wizard-flow.ts`).

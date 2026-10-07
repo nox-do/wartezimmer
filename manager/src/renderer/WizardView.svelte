@@ -4,7 +4,7 @@
   import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
   import { managerStatusViewModel } from './manager-status-view-model.js';
   import { onMount } from 'svelte';
-  import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+  import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
   import { managerShell } from './manager-shell-state.svelte.js';
   import {
     createWizardController,
@@ -70,8 +70,8 @@
     if (!blocked) action?.();
   }
 
-  function requireApi(): PraxisManagerApi {
-    const api = window.praxisManager;
+  function requireApi(): WartezimmerManagerApi {
+    const api = window.wartezimmerManager;
     if (!api) {
       throw new Error(
         'Preload nicht geladen — Manager neu starten. (Hinweis: DevTools → Console nach Preload-Fehlern prüfen.)',

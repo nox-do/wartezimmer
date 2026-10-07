@@ -15,7 +15,7 @@ import type {
 export const installationStartFailureMessages = {
   'app-image-missing': 'Das benötigte lokale App-Image fehlt.',
   'data-volume-missing': 'Das erwartete App-Datenvolume fehlt.',
-  'database-missing': 'Die erwartete Praxis-Flow-Datenbank fehlt im App-Datenvolume.',
+  'database-missing': 'Die erwartete Wartezimmer-Datenbank fehlt im App-Datenvolume.',
   'compose-start-failed': 'Die vorhandene Installation konnte nicht gestartet werden.',
   'health-timeout': 'App und Sandbox wurden nicht rechtzeitig gemeinsam gesund.',
   ...maintenanceFailureMessages,

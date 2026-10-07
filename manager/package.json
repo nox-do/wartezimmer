@@ -2,7 +2,7 @@
   "name": "@praxis-flow/manager",
   "private": true,
   "version": "6.1.2",
-  "productName": "Praxis Flow Manager",
+  "productName": "Wartezimmer Manager",
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
@@ -36,14 +36,15 @@
   },
   "build": {
     "appId": "de.praxisflow.manager",
-    "productName": "Praxis Flow Manager",
+    "productName": "Wartezimmer Manager",
     "asar": true,
     "directories": {
       "output": "dist"
     },
     "files": [
       "out/**/*",
-      "package.json"
+      "package.json",
+      "build/icons/icon.png"
     ],
     "extraResources": [
       {
@@ -70,10 +71,11 @@
       ],
       "target": [
         "dmg"
-      ]
+      ],
+      "icon": "build/icons/icon.icns"
     },
     "dmg": {
-      "artifactName": "PraxisFlowManager-${version}-${arch}.${ext}"
+      "artifactName": "WartezimmerManager-${version}-${arch}.${ext}"
     },
     "win": {
       "target": [
@@ -84,8 +86,9 @@
           ]
         }
       ],
-      "artifactName": "PraxisFlowManager-${version}-windows-${arch}-setup.${ext}",
-      "executableName": "PraxisFlowManager"
+      "artifactName": "WartezimmerManager-${version}-windows-${arch}-setup.${ext}",
+      "executableName": "WartezimmerManager",
+      "icon": "build/icons/icon.ico"
     },
     "nsis": {
       "oneClick": false,
@@ -96,8 +99,10 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "runAfterFinish": false,
-      "uninstallDisplayName": "Praxis Flow Manager",
-      "include": "build/installer.nsh"
+      "uninstallDisplayName": "Wartezimmer Manager",
+      "include": "build/installer.nsh",
+      "installerIcon": "build/icons/icon.ico",
+      "uninstallerIcon": "build/icons/icon.ico"
     }
   }
 }

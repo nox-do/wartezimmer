@@ -6,7 +6,7 @@ import type {
   InstallOperationSummary,
 } from '../shared/host-status.js';
 import type { HostStatus } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 import type { WizardPresentation } from './manager-navigation.js';
 import {
   pickAndLoadReleaseArchive,
@@ -47,7 +47,7 @@ export type WizardControllerState = WizardFlowState & {
 };
 
 export type WizardControllerDeps = WizardCallbacks & {
-  api: PraxisManagerApi;
+  api: WartezimmerManagerApi;
   onStateChange?: () => void;
   /** Nach Apply / Stack-Start — Health-Header und Shell-Status aktualisieren. */
   onHostMutated?: () => void | Promise<void>;

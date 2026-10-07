@@ -6,9 +6,9 @@ export async function selectReleaseArchiveDialog(
   parentWindow: BrowserWindow | null,
 ): Promise<SelectReleaseArchiveResult> {
   const dialogOptions: OpenDialogOptions = {
-    title: 'Praxis-Flow Release-Paket wählen',
+    title: 'Wartezimmer Release-Paket wählen',
     properties: ['openFile'],
-    filters: [{ name: 'Praxis Flow Erstinstallation', extensions: ['pfinstall'] }],
+    filters: [{ name: 'Wartezimmer Erstinstallation', extensions: ['pfinstall'] }],
   };
 
   const result = parentWindow

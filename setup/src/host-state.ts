@@ -1478,7 +1478,7 @@ async function mutateRestrictedNetwork(
   const stackWasRunning = composeBefore.running;
   if (enable && !stackWasRunning) {
     throw new SetupApiValidationError(
-      'Praxis Flow muss laufen, bevor der Patientenzugang aktiviert werden kann.',
+      'Wartezimmer muss laufen, bevor der Patientenzugang aktiviert werden kann.',
     );
   }
   if (enable || stackWasRunning) {
@@ -1514,7 +1514,7 @@ async function mutateRestrictedNetwork(
       ) {
         finish();
         throw new SetupApiValidationError(
-          'Die vorhandene Proxy-Konfiguration wird nicht von Praxis Flow verwaltet und kann nicht automatisch aktualisiert werden.',
+          'Die vorhandene Proxy-Konfiguration wird nicht von Wartezimmer verwaltet und kann nicht automatisch aktualisiert werden.',
         );
       }
       try {
@@ -1645,7 +1645,7 @@ async function mutateRestrictedNetwork(
         rollbackOk ? 'restricted_apply_failed' : 'restricted_rollback_incomplete',
         rollbackOk
           ? 'Patientenzugang konnte nicht geändert werden. Der vorherige Patientenzugang wurde wiederhergestellt.'
-          : 'Rollback unvollständig; Praxis Flow bis zur Prüfung nicht als sicher gebunden behandeln.',
+          : 'Rollback unvollständig; Wartezimmer bis zur Prüfung nicht als sicher gebunden behandeln.',
         new Error([reason, rollbackLog].filter(Boolean).join('\n')),
         rollbackOk ? 'operation-failed' : 'inconsistent',
       );

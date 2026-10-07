@@ -1,5 +1,5 @@
 import type { HostStatus, ProbeResult } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 import { lanProbeBaseUrl } from './reachability.js';
 
 export const DEFAULT_PROBE_WAIT_MS = 45_000;
@@ -38,7 +38,7 @@ export function buildSetupProbeInput(
 }
 
 export async function pollSetupProbes(
-  api: Pick<PraxisManagerApi, 'runSetupProbes'>,
+  api: Pick<WartezimmerManagerApi, 'runSetupProbes'>,
   input: {
     localAppBaseUrl?: string;
     lanAppBaseUrl?: string;

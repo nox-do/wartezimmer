@@ -1,6 +1,6 @@
 import { Menu, type MenuItemConstructorOptions } from 'electron';
 
-const APP_NAME = 'Praxis Flow';
+import { MANAGER_WINDOW_TITLE as APP_NAME } from '../shared/manager-display-name.js';
 
 export function installMacApplicationMenu(): void {
   if (process.platform !== 'darwin') {

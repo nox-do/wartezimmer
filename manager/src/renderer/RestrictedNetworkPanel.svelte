@@ -107,7 +107,7 @@
     actionError = null;
     notice = null;
     try {
-      const result = await window.praxisManager.inspectRestrictedNetwork();
+      const result = await window.wartezimmerManager.inspectRestrictedNetwork();
       if (current === generation) {
         acceptInspect(result);
         loadAttempted = true;
@@ -133,7 +133,7 @@
     actionError = null;
     notice = null;
     try {
-      const result = await window.praxisManager.prepareRestrictedNetwork({
+      const result = await window.wartezimmerManager.prepareRestrictedNetwork({
         hostIp: selectedCandidate.address,
         interfaceId: selectedCandidate.interfaceId,
         warningsConfirmed,
@@ -171,8 +171,8 @@
     pendingAction = null;
     try {
       const result = request === 'apply'
-        ? await window.praxisManager.applyRestrictedNetwork()
-        : await window.praxisManager.removeRestrictedNetwork();
+        ? await window.wartezimmerManager.applyRestrictedNetwork()
+        : await window.wartezimmerManager.removeRestrictedNetwork();
       if (current === generation) {
         acceptInspect(result);
         loadAttempted = true;
@@ -326,7 +326,7 @@
   {/if}
 
   <p class="hint">
-    Das Patientennetz sollte vom Praxisnetz getrennt eingerichtet werden. Praxis Flow übernimmt diese Netztrennung nicht. Lassen Sie Ihre IT-Betreuung die Einrichtung und den Zugriff aus dem Patientennetz prüfen.
+    Das Patientennetz sollte vom Praxisnetz getrennt eingerichtet werden. Wartezimmer übernimmt diese Netztrennung nicht. Lassen Sie Ihre IT-Betreuung die Einrichtung und den Zugriff aus dem Patientennetz prüfen.
   </p>
   <div class="actions-row">
     {#if inspect.status.phase === 'applied'}

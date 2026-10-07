@@ -62,7 +62,7 @@ export function tlsPrepareHostname(input: {
 }
 
 export function operatorMailSubject(hostname: string): string {
-  return `Praxis Flow TLS-DNS — ${hostname}`;
+  return `Wartezimmer TLS-DNS — ${hostname}`;
 }
 
 export function operatorZoneMailBody(input: {

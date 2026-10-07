@@ -1,5 +1,5 @@
 import type { HostStatus, LoadDeliveryImagesResult } from '../shared/host-status.js';
-import type { PraxisManagerApi } from '../shared/praxis-manager-api.js';
+import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
 
 export const WIZARD_RELEASE_IMPORT_LOADING_MESSAGE =
   'Release-Paket wird geprüft und geladen. Das kann auf langsameren Rechnern einige Minuten dauern.';
@@ -42,7 +42,7 @@ export function deliveryImagesSummary(status: HostStatus): string {
 }
 
 export async function pickAndLoadReleaseArchive(
-  api: PraxisManagerApi,
+  api: WartezimmerManagerApi,
   options?: {
     restartCompose?: boolean;
     loadingMessage?: string;

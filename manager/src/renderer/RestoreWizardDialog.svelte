@@ -164,7 +164,7 @@
       </label>
     {/if}
     <p class="hint">
-      Praxis Flow wird angehalten und die gesicherten Einstellungen werden übernommen.
+      Wartezimmer wird angehalten und die gesicherten Einstellungen werden übernommen.
       Die aktuelle Warteschlange und die darin gespeicherten Patientendaten werden gelöscht.
       Terminal und Anmeldung sind währenddessen nicht verfügbar.
     </p>

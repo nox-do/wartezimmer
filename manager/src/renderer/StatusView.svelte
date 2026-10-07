@@ -83,7 +83,7 @@
     } finally { actionBusy = false; }
   }
   async function startExisting() {
-    const result = await window.praxisManager.startStoppedInstallation();
+    const result = await window.wartezimmerManager.startStoppedInstallation();
     if (!result.installation || result.installation.kind === 'healthy') await onRefresh();
     else startInstallation = result.installation;
   }

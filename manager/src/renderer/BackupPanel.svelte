@@ -31,11 +31,11 @@
 
 <div class="panel-section">
   <div class="panel-section-heading">
-    <h2>Praxis-Backup (.pfbackup)</h2>
+    <h2>Wartezimmer-Backup (.pfbackup)</h2>
     <IconButton
       icon="info"
       class="btn-icon-muted info-tip-trigger"
-      ariaLabel="Hilfe zum Praxis-Backup"
+      ariaLabel="Hilfe zum Wartezimmer-Backup"
       describedBy="maintenance-backup-tip"
     />
     <div id="maintenance-backup-tip" class="info-tip-panel" role="tooltip">
@@ -56,7 +56,7 @@
     </div>
   </div>
   <p class="hint">
-    Praxis Flow schreibt das Backup außerdem in den Installationsordner
+    Wartezimmer schreibt das Backup außerdem in den Installationsordner
     (<code>backups/</code>). Der Speichern-Dialog ist eine Kopie davon.
   </p>
   <p class="maintenance-backup-status">{backupInfoText(latestBackupPath, envExists)}</p>

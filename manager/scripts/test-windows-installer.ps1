@@ -4,7 +4,7 @@ if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_OS -ne 'Windows') {
   throw 'Installer test is restricted to a disposable Windows CI runner.'
 }
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-$installDirectory = Join-Path $env:RUNNER_TEMP 'Praxis Manager Test'
+$installDirectory = Join-Path $env:RUNNER_TEMP 'Wartezimmer Manager Test'
 $dataDirectory = Join-Path $env:LOCALAPPDATA 'PraxisFlow'
 if ((Test-Path $installDirectory) -or (Test-Path $dataDirectory)) {
   throw 'Refusing installer test: test install or data directory already exists.'
@@ -14,7 +14,7 @@ if ($installer.Count -ne 1) { throw 'Expected exactly one x64 installer.' }
 New-Item -ItemType Directory $dataDirectory | Out-Null
 $marker = Join-Path $dataDirectory 'ci-preserve.txt'
 Set-Content -Path $marker -Value 'preserve-on-uninstall' -Encoding utf8
-$executable = Join-Path $installDirectory 'PraxisFlowManager.exe'
+$executable = Join-Path $installDirectory 'WartezimmerManager.exe'
 for ($attempt = 0; $attempt -lt 2; $attempt++) {
   # NSIS /D must be the final argument, without quoting the path itself.
   $process = Start-Process -FilePath $installer[0].FullName -ArgumentList @('/S', '/currentuser', "/D=$installDirectory") -Wait -PassThru

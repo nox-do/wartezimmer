@@ -58,7 +58,7 @@ test('networkRestartFailureMessage hides raw compose noise when empty', () => {
     restartLog: null,
   } as HostNetworkResult;
   assert.match(networkRestartFailureMessage(result), /nicht neu gestartet/);
-  assert.match(networkSavedWhileStoppedMessage(), /sobald Praxis Flow gestartet/);
+  assert.match(networkSavedWhileStoppedMessage(), /sobald Wartezimmer gestartet/);
 });
 
 test('networkProxyMissingAfterRestart detects enabled-but-missing container', () => {

@@ -51,7 +51,7 @@ import type {
   TlsVerifyDnsResult,
 } from './host-status.js';
 
-export type PraxisManagerSetupApi = {
+export type WartezimmerManagerSetupApi = {
   fetchSetupStatus(options?: { includeProbes?: boolean }): Promise<HostStatus>;
   fetchRuntimeHealth(): Promise<HostRuntimeHealth>;
   fetchSetupNetwork(): Promise<NetworkSnapshot>;
@@ -86,7 +86,7 @@ export type PraxisManagerSetupApi = {
   inspectPfupdate(body: PfupdateInspectInput): Promise<PfupdateInspectResult>;
 };
 
-export type PraxisManagerMaintenanceApi = {
+export type WartezimmerManagerMaintenanceApi = {
   getComposeStatus(): Promise<ComposeStatus>;
   getComposeLogs(service?: string, tail?: number): Promise<ComposeLogsResult>;
   runComposeAction(action: 'start' | 'stop' | 'restart'): Promise<ComposeActionResult>;
@@ -117,8 +117,8 @@ export type PraxisManagerMaintenanceApi = {
   resetStaffPins(): Promise<ResetStaffPinsResult>;
 };
 
-export type PraxisManagerApi = PraxisManagerSetupApi &
-  PraxisManagerMaintenanceApi & {
+export type WartezimmerManagerApi = WartezimmerManagerSetupApi &
+  WartezimmerManagerMaintenanceApi & {
     /** Host OS where the Manager runs (`process.platform` from main). */
     hostPlatform: string;
   };

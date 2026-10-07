@@ -215,7 +215,7 @@ test('setup server rejects requests without the configured manager token', async
       code: 'setup_auth_required',
       category: 'validation',
       message:
-        'Der Manager konnte sich nicht an der lokalen Setup-API anmelden. Bitte Manager und Praxis Flow mit demselben Installationsstand neu starten.',
+        'Der Manager konnte sich nicht an der lokalen Setup-API anmelden. Bitte Manager und Wartezimmer mit demselben Installationsstand neu starten.',
       retryable: false,
     },
   });

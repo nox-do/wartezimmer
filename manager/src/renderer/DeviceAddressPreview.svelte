@@ -41,7 +41,7 @@
     <p class="hint">Geräteadresse: <code>{current}</code></p>
     <div class="actions-row">
       <button type="button" class="btn-secondary" {disabled}
-        onclick={() => void window.praxisManager.openExternalUrl(current)}>Öffnen</button>
+        onclick={() => void window.wartezimmerManager.openExternalUrl(current)}>Öffnen</button>
       <button type="button" class="btn-secondary" {disabled}
         onclick={() => void copyAddress()}>{copied ? 'Kopiert' : 'Kopieren'}</button>
       {#if onVerify}

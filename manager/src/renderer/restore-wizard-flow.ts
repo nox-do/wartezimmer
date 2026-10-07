@@ -51,7 +51,7 @@ export function restoreWizardProgress(state: RestoreWizardState): string {
     case 'inspect':
       return 'Backup wird geprüft …';
     case 'restoring':
-      return 'Einstellungen werden wiederhergestellt — Praxis Flow wird neu gestartet …';
+      return 'Einstellungen werden wiederhergestellt — Wartezimmer wird neu gestartet …';
     default:
       return '';
   }
@@ -63,9 +63,9 @@ export function restoreWizardChooseTitle(mode: RestoreWizardMode): string {
 
 export function restoreWizardChooseLead(mode: RestoreWizardMode): string {
   if (mode === 'pre-update') {
-    return 'Soll vor dem Update ein Praxis-Backup (.pfbackup) wiederhergestellt werden? Praxis Flow wird dabei angehalten. Die aktuelle Warteschlange und die darin gespeicherten Patientendaten werden gelöscht; die gesicherten Einstellungen werden übernommen.';
+    return 'Soll vor dem Update ein Wartezimmer-Backup (.pfbackup) wiederhergestellt werden? Wartezimmer wird dabei angehalten. Die aktuelle Warteschlange und die darin gespeicherten Patientendaten werden gelöscht; die gesicherten Einstellungen werden übernommen.';
   }
-  return 'Wählen Sie ein Praxis-Backup (.pfbackup), um die gesicherten Einstellungen wiederherzustellen. Praxis Flow ist währenddessen nicht verfügbar.';
+  return 'Wählen Sie ein Wartezimmer-Backup (.pfbackup), um die gesicherten Einstellungen wiederherzustellen. Wartezimmer ist währenddessen nicht verfügbar.';
 }
 
 /** Pure renderer copy for the optional Setup-owned TLS inspect result. */
@@ -157,7 +157,7 @@ function restoreStepFailure(phase: string): string {
     validate_archive: 'Das Backup konnte nicht geprüft werden.',
     validate_settings: 'Die gesicherten Einstellungen konnten nicht geprüft werden.',
     backup_rollback_state: 'Der bisherige Zustand konnte nicht gesichert werden.',
-    stop_stack: 'Praxis Flow konnte nicht angehalten werden.',
+    stop_stack: 'Wartezimmer konnte nicht angehalten werden.',
     write_env: 'Die Konfiguration konnte nicht gespeichert werden.',
     write_manager_state: 'Die Installationseinstellungen konnten nicht gespeichert werden.',
     move_database: 'Die bisherige Datenbank konnte nicht gesichert werden.',
@@ -165,7 +165,7 @@ function restoreStepFailure(phase: string): string {
     wait_maintenance: 'Der Manager konnte keine Verbindung zur App herstellen.',
     import_snapshot: 'Die gesicherten Einstellungen konnten nicht übernommen werden.',
     verify_export: 'Die übernommenen Einstellungen konnten nicht bestätigt werden.',
-    start_full_stack: 'Praxis Flow konnte nicht vollständig gestartet werden.',
+    start_full_stack: 'Wartezimmer konnte nicht vollständig gestartet werden.',
     health_check: 'Die abschließende Funktionsprüfung ist fehlgeschlagen.',
   };
   return steps[phase] ?? 'Die Wiederherstellung ist fehlgeschlagen.';

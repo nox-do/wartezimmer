@@ -6,9 +6,9 @@ export async function selectPfupdateArchiveDialog(
   parentWindow: BrowserWindow | null,
 ): Promise<SelectPfupdateArchiveResult> {
   const dialogOptions: OpenDialogOptions = {
-    title: 'Praxis-Flow Update-Paket wählen',
+    title: 'Wartezimmer Update-Paket wählen',
     properties: ['openFile'],
-    filters: [{ name: 'Praxis Flow Update', extensions: ['pfupdate'] }],
+    filters: [{ name: 'Wartezimmer Update', extensions: ['pfupdate'] }],
   };
 
   const result = parentWindow

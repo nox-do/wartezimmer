@@ -1,8 +1,8 @@
 import { isManagerError, ManagerApiError } from '@praxis-flow/server-shared/setup-api';
-import type { PraxisManagerApi } from './praxis-manager-api.js';
+import type { WartezimmerManagerApi } from './wartezimmer-manager-api.js';
 
 /** Electron drops custom Error properties. Reject with a plain DTO across contextBridge. */
-export function serializeManagerApiErrors(api: PraxisManagerApi): PraxisManagerApi {
+export function serializeManagerApiErrors(api: WartezimmerManagerApi): WartezimmerManagerApi {
   return Object.fromEntries(
     Object.entries(api).map(([key, value]) => [
       key,
@@ -17,11 +17,11 @@ export function serializeManagerApiErrors(api: PraxisManagerApi): PraxisManagerA
             }
           },
     ]),
-  ) as PraxisManagerApi;
+  ) as WartezimmerManagerApi;
 }
 
 /** Recreate the same Error class in the receiving renderer context. */
-export function restoreManagerApiErrors(api: PraxisManagerApi): PraxisManagerApi {
+export function restoreManagerApiErrors(api: WartezimmerManagerApi): WartezimmerManagerApi {
   return Object.fromEntries(
     Object.entries(api).map(([key, value]) => [
       key,
@@ -36,5 +36,5 @@ export function restoreManagerApiErrors(api: PraxisManagerApi): PraxisManagerApi
             }
           },
     ]),
-  ) as PraxisManagerApi;
+  ) as WartezimmerManagerApi;
 }

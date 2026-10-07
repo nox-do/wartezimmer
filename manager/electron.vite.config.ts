@@ -32,6 +32,8 @@ export default defineConfig({
     root: resolve(__dirname, 'src/renderer'),
     plugins: [svelte({ configFile: resolve(__dirname, 'svelte.config.js') })],
     build: {
+      // Keep the logo on the same origin for the renderer's strict CSP.
+      assetsInlineLimit: 0,
       sourcemap: false,
       rollupOptions: {
         input: {

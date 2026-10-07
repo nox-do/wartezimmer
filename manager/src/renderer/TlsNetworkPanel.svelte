@@ -172,7 +172,7 @@
         class="wizard-input is-monospace"
         value={state.customDomain}
         disabled={busy}
-        placeholder="flow.praxis-meyer.de"
+        placeholder="wartezimmer.praxis-meyer.de"
         oninput={(event) => controller.patchDraft({ customDomain: event.currentTarget.value })}
       />
       <label class="wizard-radio">
@@ -186,7 +186,7 @@
         <span>Vorhandenes Zertifikat einlesen (PEM)</span>
       </label>
       {#if state.certificateMode === 'managed'}
-        <p class="hint">Eine eigene Unterdomain wie <code>flow.praxis-meyer.de</code> verwenden.
+        <p class="hint">Eine eigene Unterdomain wie <code>wartezimmer.praxis-meyer.de</code> verwenden.
           Einmal A- und CNAME-Einträge bei Ihrem DNS-Anbieter setzen; Ausstellung und Erneuerung laufen danach automatisch.
           Keine Portweiterleitung erforderlich.</p>
         {#if tlsNameValid(state)}
@@ -226,7 +226,7 @@
       onchange={(event) => controller.patchDraft({ ipv4Reserved: event.currentTarget.checked })}
     />
     <span>
-      Ich bestätige, dass der Praxis-Flow-Server entweder eine statische IP oder einen statischen DHCP-Eintrag hat.
+      Ich bestätige, dass der Wartezimmer-Server entweder eine statische IP oder einen statischen DHCP-Eintrag hat.
     </span>
   </label>
   <div class="actions-row">
@@ -394,7 +394,7 @@
       <p class="hint">
         {tls.mode === 'custom'
           ? 'Prüft das Zertifikat und die HTTPS-Verbindung einschließlich laufender Aktualisierungen. HTTP bleibt dabei bestehen.'
-          : 'Holt das Zertifikat, während die Praxis weiter über HTTP arbeitet. Umstellen ist ein eigener Schritt.'}
+          : 'Holt das Zertifikat, während Wartezimmer weiter über HTTP erreichbar ist. Umstellen ist ein eigener Schritt.'}
       </p>
     {:else if tlsCanVerifyDns(tls)}
       <div class="actions-row tls-dns-actions">

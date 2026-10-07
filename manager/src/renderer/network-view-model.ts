@@ -22,15 +22,15 @@ export type NetworkDraft = LanIpFieldState & ProxyFieldState;
 export const NETWORK_LAN_REQUIRED_ERROR =
   'Bitte eine Adresse dieses Rechners wählen oder eingeben.';
 export const NETWORK_RESTART_CONFIRM_MESSAGE =
-  'Einstellungen speichern und Praxis Flow neu starten, damit die Änderung wirksam wird?';
+  'Einstellungen speichern und Wartezimmer neu starten, damit die Änderung wirksam wird?';
 export const NETWORK_RESTART_CONFIRM_PROXY_MESSAGE =
-  'Einstellungen speichern und Praxis Flow neu starten? Der Zugriff über Port 80 wird dabei mitgestartet.';
+  'Einstellungen speichern und Wartezimmer neu starten? Der Zugriff über Port 80 wird dabei mitgestartet.';
 export const NETWORK_PROXY_RESTORE_CONFIRM_MESSAGE =
-  'Proxy-Dienst prüfen und starten? Praxis Flow wird dafür neu gestartet.';
+  'Proxy-Dienst prüfen und starten? Wartezimmer wird dafür neu gestartet.';
 export const NETWORK_PROXY_RESTORE_HINT =
   'Der Zugang ist eingerichtet, aber der Proxy-Dienst läuft nicht. Wiederherstellen verwendet die gespeicherte Einrichtung einschließlich vorhandenem HTTPS.';
 export const NETWORK_STACK_STOPPED_VERIFY_HINT =
-  'Praxis Flow ist gestoppt. Unter Wartung starten und danach erneut prüfen.';
+  'Wartezimmer ist gestoppt. Unter Wartung starten und danach erneut prüfen.';
 export const NETWORK_PROBE_FAILED_MESSAGE =
   'Die Erreichbarkeit konnte nicht geprüft werden. Bitte kurz warten und erneut versuchen.';
 export const NETWORK_PROXY_EXPANDER_TITLE = 'Zugriff über ausgewählte IP-Adresse (Proxy)';
@@ -50,7 +50,7 @@ export function networkPhaseProgressText(phase: NetworkPhase): string {
     case 'saving':
       return 'Einstellungen werden gespeichert …';
     case 'restarting':
-      return 'Praxis Flow wird neu gestartet …';
+      return 'Wartezimmer wird neu gestartet …';
     case 'checking':
       return 'Gespeicherte Geräte-Adresse wird geprüft …';
     default:
@@ -179,17 +179,17 @@ export function savedDeviceBaseUrl(status: HostStatus | null | undefined): strin
 
 export function networkWarningText(running: boolean, changed: boolean): string | null {
   if (running && changed) {
-    return 'Änderungen werden erst wirksam, wenn Praxis Flow neu gestartet wird. Beim Übernehmen wird danach gefragt.';
+    return 'Änderungen werden erst wirksam, wenn Wartezimmer neu gestartet wird. Beim Übernehmen wird danach gefragt.';
   }
   return null;
 }
 
 export function networkRestartFailureMessage(_result: HostNetworkResult): string {
-  return 'Praxis Flow konnte nicht neu gestartet werden. Bitte unter Status die Dienste prüfen; technische Details finden Sie unter Wartung im Bereich „Logs“.';
+  return 'Wartezimmer konnte nicht neu gestartet werden. Bitte unter Status die Dienste prüfen; technische Details finden Sie unter Wartung im Bereich „Logs“.';
 }
 
 export function networkSavedWhileStoppedMessage(): string {
-  return 'Gespeichert. Die Erreichbarkeit kann geprüft werden, sobald Praxis Flow gestartet ist.';
+  return 'Gespeichert. Die Erreichbarkeit kann geprüft werden, sobald Wartezimmer gestartet ist.';
 }
 
 export function networkProxyStartFailureMessage(): string {
@@ -237,7 +237,7 @@ export function formatActiveReachabilityResult(
     return {
       ok: false,
       message:
-        'Praxis Flow antwortet lokal noch nicht. Bitte kurz warten und die gespeicherte Adresse erneut prüfen.',
+        'Wartezimmer antwortet lokal noch nicht. Bitte kurz warten und die gespeicherte Adresse erneut prüfen.',
     };
   }
 
@@ -257,6 +257,6 @@ export function formatActiveReachabilityResult(
 
   return {
     ok: false,
-    message: `Gespeichert. Praxis Flow wurde neu gestartet, ist aber noch nicht erreichbar (${baseUrl}). Bitte kurz warten und erneut prüfen.`,
+    message: `Gespeichert. Wartezimmer wurde neu gestartet, ist aber noch nicht erreichbar (${baseUrl}). Bitte kurz warten und erneut prüfen.`,
   };
 }

@@ -894,7 +894,7 @@ function fakeRuntimeEnabled(env: Map<string, string>): boolean {
 function fakeCertificate(certificateName: string): TlsCertificateStatus {
   const now = Date.now();
   return {
-    issuer: 'Praxis Flow TLS Fake (kein Produktzertifikat)',
+    issuer: 'Wartezimmer TLS Fake (kein Produktzertifikat)',
     notBefore: new Date(now - 60_000).toISOString(),
     notAfter: new Date(now + 30 * 86_400_000).toISOString(),
     names: [certificateName],

@@ -35,7 +35,7 @@ function walkProjectRoot(startDir: string): string | null {
 export function findProjectRoot(startDir: string): string {
   const root = walkProjectRoot(startDir);
   if (!root) {
-    throw new Error('Monorepo-Root nicht gefunden (praxis_flow/package.json)');
+    throw new Error('Monorepo-Root nicht gefunden (package.json)');
   }
   return root;
 }
