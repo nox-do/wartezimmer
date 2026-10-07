@@ -48,5 +48,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wartezimmer-release-${{ steps.version.outputs.value }}
-          path: dist/releases/wartezimmer-${{ steps.version.outputs.value }}/
+          path: dist/releases/${{ steps.version.outputs.value }}/
           retention-days: 90

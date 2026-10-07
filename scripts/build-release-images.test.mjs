@@ -48,6 +48,10 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
       const result = invoke([]);
       assert.equal(result.status, 0, result.stderr + result.stdout);
       const calls = fs.readFileSync(log, 'utf8').trim().split('\n').map(JSON.parse);
+      assert.deepEqual(fs.readdirSync(path.join(output, 'test')).sort(), [
+        'wartezimmer-test-linux-amd64.pfinstall',
+        'wartezimmer-test-linux-arm64.pfinstall',
+      ]);
       for (const arch of ['amd64', 'arm64']) {
         const platform = `linux/${arch}`;
         assert.equal(
@@ -58,12 +62,7 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
           calls.filter((args) => args[0] === 'save' && args.includes(platform)).length,
           1,
         );
-        const archive = path.join(
-          output,
-          'wartezimmer-test',
-          `linux-${arch}`,
-          `wartezimmer-test-linux-${arch}.pfinstall`,
-        );
+        const archive = path.join(output, 'test', `wartezimmer-test-linux-${arch}.pfinstall`);
         const manifest = spawnSync('tar', ['-xOf', archive, './manifest.json'], {
           encoding: 'utf8',
         });
@@ -73,12 +72,7 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
         assert.equal(parsed.imageDigests.proxy.platform, platform);
         assert.equal(Object.keys(parsed.files).length, 9);
       }
-      const updatePackage = path.join(
-        output,
-        'wartezimmer-test',
-        'linux-amd64',
-        'existing.pfupdate',
-      );
+      const updatePackage = path.join(output, 'test', 'existing.pfupdate');
       fs.writeFileSync(updatePackage, 'keep update package');
       fs.writeFileSync(log, '');
       const dedicated = invoke(['--no-build', '--platform', 'amd64']);

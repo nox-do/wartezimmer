@@ -9,7 +9,7 @@ $dataDirectory = Join-Path $env:LOCALAPPDATA 'Wartezimmer'
 if ((Test-Path $installDirectory) -or (Test-Path $dataDirectory)) {
   throw 'Refusing installer test: test install or data directory already exists.'
 }
-$installer = @(Get-ChildItem (Join-Path $repo 'manager/dist/*-windows-x64-setup.exe'))
+$installer = @(Get-ChildItem (Join-Path $repo '.tmp/build/manager/*-windows-x64-setup.exe'))
 if ($installer.Count -ne 1) { throw 'Expected exactly one x64 installer.' }
 New-Item -ItemType Directory $dataDirectory | Out-Null
 $marker = Join-Path $dataDirectory 'ci-preserve.txt'

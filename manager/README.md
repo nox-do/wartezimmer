@@ -166,7 +166,12 @@ Vom Repo-Root:
 npm run dist:manager:mac
 ```
 
-Der Build erzeugt `manager/dist/WartezimmerManager-<version>-<arch>.dmg`.
+Der Build erzeugt `dist/releases/<releaseVersion>/WartezimmerManager-<managerVersion>-<arch>.dmg`.
+Der gemeinsame Release-Ordner wird über `WARTEZIMMER_RELEASE_VERSION` gewählt
+(Standard: Root-Version aus `package.json`). Der Manager behält seine eigene
+Version im Dateinamen. Entpackte Apps und Builder-Dateien liegen ausschließlich
+unter `.tmp/build/manager/`.
+
 Dieser erste Phase-4a-Build ist bewusst unsigned/notarisiert **nicht**; er ist für interne Tests.
 Beim Packaging werden der kompilierte Setup-Server und die Delivery-Templates in die App-Ressourcen gelegt.
 Im gepackten Modus startet der Manager die Setup-API aus diesen Ressourcen und nutzt standardmäßig
@@ -223,7 +228,7 @@ Isolierter Runtime-Smoke nach `prepare:packaged`:
 ```powershell
 node manager/scripts/smoke-packaged-setup.mjs
 # Nach Windows-Packaging tatsächlich die gebaute EXE prüfen:
-node manager/scripts/smoke-packaged-setup.mjs "manager/dist/win-unpacked/WartezimmerManager.exe" manager/dist/win-unpacked/resources
+node manager/scripts/smoke-packaged-setup.mjs ".tmp/build/manager/win-unpacked/WartezimmerManager.exe" .tmp/build/manager/win-unpacked/resources
 ```
 
 Der Smoke verändert keinen Docker-Stack. Die verbleibenden Installer-/Docker-/
@@ -243,7 +248,8 @@ Icon-Patches, die dessen `UninstallerReader` auslässt. Die ursprüngliche CRC
 bleibt unverändert und muss passen; die Integritätsprüfung wird nicht deaktiviert.
 Nach dem Build werden sowohl die Setup.exe als auch der daraus extrahierte
 Deinstaller geprüft. Fehler lassen den Build scheitern. Nur nach erfolgreicher
-Prüfung entsteht zusätzlich eine `.exe.sha256`-Datei für den Transfervergleich.
+Prüfung wird die Setup.exe in den gemeinsamen Release-Ordner kopiert.
+Eine zusätzliche `.exe.sha256`-Datei wird nicht erzeugt.
 Bei einem Builder-Versionswechsel muss der Workaround neu bewertet werden.
 `npm run -w @wartezimmer/manager test:packaging` prüft Rekonstruktion und negative
 CRC-/Grenzfälle. Die echte Windows-Installations-/Deinstallationsabnahme bleibt

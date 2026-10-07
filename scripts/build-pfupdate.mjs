@@ -9,7 +9,7 @@
  *   npm run release:pfupdate:current -- --version 2026.08.0   # pack only, skip build
  *
  * Output:
- *   dist/releases/wartezimmer-<version>/linux-<arch>/wartezimmer-update-<version>-linux-<arch>.pfupdate
+ *   dist/releases/<version>/wartezimmer-update-<version>-linux-<arch>.pfupdate
  */
 
 import { releasePlatforms, architectureTag, assertReleasePlatform } from './release-platforms.mjs';
@@ -24,6 +24,7 @@ import { pipeline } from 'node:stream/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { appDockerBuildArgs } from './release-app-image.mjs';
 import { prepareDeliveryProxyImage } from './release-proxy-image.mjs';
+import { releaseDirectory } from './release-output.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -327,7 +328,7 @@ const pfupdate = await loadPfupdateValidation();
 const proxyImage = pfupdate.WARTEZIMMER_PROXY_IMAGE_REF;
 for (const platform of platforms) {
   const architecture = platform.replace('/', '-');
-  const releaseDir = path.join(outputRoot, `wartezimmer-${version}`, architecture);
+  const releaseDir = releaseDirectory(version, outputRoot);
   const archiveFileName = `wartezimmer-update-${version}-${architecture}.pfupdate`;
   const archivePath = path.join(releaseDir, archiveFileName);
 

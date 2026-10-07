@@ -9,3 +9,4 @@ manager/build-resources/setup/vendor/
 **/generated/
 openapi/bundle.json
 ui/src/lib/mfa/vendor/
+.tmp/

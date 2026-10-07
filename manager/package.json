@@ -9,7 +9,7 @@
     "dev": "node scripts/patch-electron-macos-name.mjs && cross-env ELECTRON_RUN_AS_NODE= electron-vite dev",
     "build": "cross-env ELECTRON_RUN_AS_NODE= electron-vite build",
     "prepare:packaged": "npm run --prefix .. build:server-shared && npm run --prefix ../setup build && node scripts/prepare-packaged-resources.mjs",
-    "dist:mac": "npm run prepare:packaged && npm run build && electron-builder --mac dmg",
+    "dist:mac": "npm run prepare:packaged && npm run build && node scripts/build-macos.mjs",
     "lint": "eslint \"src/**/*.{ts,svelte}\"",
     "smoke:electron": "npm run build && node scripts/smoke-electron.mjs",
     "test": "node --import tsx --test --test-reporter=dot src/**/*.test.ts && npm run test:packaging",
@@ -39,7 +39,7 @@
     "productName": "Wartezimmer Manager",
     "asar": true,
     "directories": {
-      "output": "dist"
+      "output": "../.tmp/build/manager"
     },
     "files": [
       "out/**/*",

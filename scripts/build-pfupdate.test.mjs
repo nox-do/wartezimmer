@@ -51,6 +51,10 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
       const result = invoke([]);
       assert.equal(result.status, 0, result.stderr + result.stdout);
       const calls = fs.readFileSync(log, 'utf8').trim().split('\n').map(JSON.parse);
+      assert.deepEqual(fs.readdirSync(path.join(output, '1.2.3')).sort(), [
+        'wartezimmer-update-1.2.3-linux-amd64.pfupdate',
+        'wartezimmer-update-1.2.3-linux-arm64.pfupdate',
+      ]);
       for (const arch of ['amd64', 'arm64']) {
         const platform = `linux/${arch}`;
         assert.equal(
@@ -63,8 +67,7 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
         );
         const archive = path.join(
           output,
-          'wartezimmer-1.2.3',
-          `linux-${arch}`,
+          '1.2.3',
           `wartezimmer-update-1.2.3-linux-${arch}.pfupdate`,
         );
         const manifest = spawnSync('tar', ['-xOf', archive, './manifest.json'], {

@@ -11,15 +11,11 @@
  *   WARTEZIMMER_RELEASE_VERSION=1.4.2 npm run release:images
  *   npm run release:images:current -- --version 1.4.2   # pack only, skip build
  *
- * Output (under dist/releases/wartezimmer-<version>/linux-<arch>/):
+ * Output (under dist/releases/<version>/):
  *   wartezimmer-<version>-linux-<arch>.pfinstall (complete offline bundle)
- *   manifest.json
- *   SHA256SUMS.txt
- *   THIRD_PARTY_NOTICES.txt
- *   licenses/caddy/LICENSE.txt
+ *   Metadata, checksums and license notices are embedded in the package.
  */
 
-import { createHash } from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
 import fs from 'node:fs';
@@ -37,6 +33,7 @@ import { appDockerBuildArgs } from './release-app-image.mjs';
 import { packReleaseArchive } from './release-archive.mjs';
 import { writeInstallManifest } from './release-install-manifest.mjs';
 import { prepareDeliveryProxyImage } from './release-proxy-image.mjs';
+import { releaseDirectory } from './release-output.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -171,25 +168,6 @@ function buildReleaseImages(version, platform) {
   return { appImage, sandboxImage };
 }
 
-function sha256File(filePath) {
-  const hash = createHash('sha256');
-  hash.update(fs.readFileSync(filePath));
-  return hash.digest('hex');
-}
-
-function writeManifest(outputDir, manifest) {
-  fs.writeFileSync(
-    path.join(outputDir, 'manifest.json'),
-    `${JSON.stringify(manifest, null, 2)}\n`,
-    'utf8',
-  );
-}
-
-function writeSha256Sums(outputDir, entries) {
-  const lines = entries.map(([fileName, digest]) => `${digest}  ${fileName}`);
-  fs.writeFileSync(path.join(outputDir, 'SHA256SUMS.txt'), `${lines.join('\n')}\n`, 'utf8');
-}
-
 function copyThirdPartyNotices(outputDir) {
   const relativePaths = ['THIRD_PARTY_NOTICES.txt', 'licenses/caddy/LICENSE.txt'];
   for (const relativePath of relativePaths) {
@@ -283,7 +261,7 @@ if (!(apiMajor > 1 || (apiMajor === 1 && apiMinor >= 49))) {
   );
 }
 for (const platform of platforms) {
-  const releaseDir = path.join(outputRoot, `wartezimmer-${version}`, platform.replace('/', '-'));
+  const releaseDir = releaseDirectory(version, outputRoot);
   const archiveName = releaseArchiveName(version, platform);
   const archivePath = path.join(releaseDir, archiveName);
 
@@ -334,53 +312,11 @@ for (const platform of platforms) {
     imageDigests: { proxy: proxyImageDigest },
   });
 
-  const archiveSha256 = sha256File(archivePath);
   const archiveBytes = fs.statSync(archivePath).size;
-  const thirdPartyNoticePaths = copyThirdPartyNotices(releaseDir);
-  const manifest = {
-    installFormatVersion: 2,
-    version,
-    platform,
-    createdAt: new Date().toISOString(),
-    images: {
-      app: appImage,
-      sandbox: sandboxImage,
-      proxy: proxyImage,
-    },
-    imageDigests: {
-      proxy: proxyImageDigest,
-    },
-    thirdPartyNotices: thirdPartyNoticePaths,
-    archive: archiveName,
-    sha256: archiveSha256,
-    envExample: {
-      WARTEZIMMER_APP_IMAGE: appImage,
-      WARTEZIMMER_SANDBOX_IMAGE: sandboxImage,
-      WARTEZIMMER_PROXY_IMAGE: proxyImage,
-    },
-    notes: {
-      proxyImageSizeHintMb: 85,
-      proxyImageGzipHintMb: 22,
-      proxyRuntimeDefault: 'disabled',
-    },
-  };
-
-  writeManifest(releaseDir, manifest);
-  writeSha256Sums(releaseDir, [
-    [archiveName, archiveSha256],
-    ...thirdPartyNoticePaths.map((relativePath) => [
-      relativePath,
-      sha256File(path.join(releaseDir, relativePath)),
-    ]),
-  ]);
-
   console.log('');
   console.log('Release package ready:');
   console.log(`  ${releaseDir}/`);
   console.log(`    ${archiveName} (${(archiveBytes / (1024 * 1024)).toFixed(1)} MB)`);
-  console.log('    manifest.json (optional build metadata)');
-  console.log('    SHA256SUMS.txt (optional transfer checksum)');
-  console.log('    THIRD_PARTY_NOTICES.txt + licenses/caddy/LICENSE.txt');
   console.log('');
   console.log(`Includes optional offline proxy image ${proxyImage} (xcaddy + acmedns).`);
   console.log('Proxy stays disabled until explicitly enabled in Manager/Setup.');

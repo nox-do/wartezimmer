@@ -326,15 +326,24 @@ Bei `PFUPDATE_TAR_PATH_UNSAFE: ._.` das Paket mit den aktuellen Scripts neu baue
 der Importfilter wird dafür nicht gelockert. Ein Regressionstest setzt auf macOS
 reale Extended Attributes auf Staging-Verzeichnis und Datei und prüft beide Pakettypen.
 
+Alle fertigen Downloads eines Releases liegen direkt unter `dist/releases/<releaseVersion>/`:
+Manager-DMG/Setup.exe, `.pfinstall` und `.pfupdate` für beide Architekturen.
+Es gibt keine Plattform-Unterordner, externen Manifeste oder Prüfsummendateien.
+Die Architektur und die jeweilige Komponentenversion stehen im Dateinamen.
+`WARTEZIMMER_RELEASE_VERSION` wählt auch für Manager-Builds den gemeinsamen Ordner;
+ohne Override gilt die Root-Version aus `package.json`. Die Manager-Version bleibt
+unabhängig und kommt weiterhin aus `manager/package.json`.
+Entpackte Manager-Apps, Blockmaps und Builder-Diagnose liegen unter `.tmp/build/manager/`.
+
 ### 6.1 Erstinstall — `npm run release:images`
 
 Script: `scripts/build-release-images.mjs`
 
 `npm run release:images` baut standardmäßig **beide** Plattformen, jeweils App,
-Sandbox und Proxy. Getrennte Ausgaben:
+Sandbox und Proxy. Beide Architekturen liegen im gemeinsamen Release-Ordner:
 
-- `dist/releases/wartezimmer-<ver>/linux-amd64/wartezimmer-<ver>-linux-amd64.pfinstall` — Intel/AMD x64
-- `dist/releases/wartezimmer-<ver>/linux-arm64/wartezimmer-<ver>-linux-arm64.pfinstall` — ARM64, unter anderem Apple Silicon
+- `dist/releases/<ver>/wartezimmer-<ver>-linux-amd64.pfinstall` — Intel/AMD x64
+- `dist/releases/<ver>/wartezimmer-<ver>-linux-arm64.pfinstall` — ARM64, unter anderem Apple Silicon
 
 Nur eine Plattform: `npm run release:images -- --platform amd64` bzw. `--platform arm64`.
 Auch `linux/amd64`, `linux/arm64` und `all` sind gültig. Pack-only:
@@ -363,7 +372,7 @@ oder des Restricted-Zugangs; deren reale Abnahmen bleiben erforderlich.
 3. `docker save` der drei Images → `images/wartezimmer-images.tar`
 4. Compose-Templates und `proxy/Caddyfile` nach `templates/` kopieren
 5. Lizenznachweise und internes `manifest.json` mit `installFormatVersion: 2`, Image-Metadaten und SHA256 pro Nutzdatei einbetten
-6. Bundle → `wartezimmer-<ver>-linux-<arch>.pfinstall`; externe Build-Metadaten und `SHA256SUMS.txt` bleiben optional für Transferkontrollen
+6. Bundle → `wartezimmer-<ver>-linux-<arch>.pfinstall`; Manifest, Inhaltsprüfsummen und Lizenzen liegen ausschließlich im Paket
 
 Für die Weitergabe genügt die einzelne `.pfinstall`. Der aktualisierte Manager prüft
 Archivpfade, Dateitypen, die vollständige Dateiliste und Inhaltsprüfsummen vor Compose-Prüfung
@@ -378,7 +387,7 @@ Manifest und Format 1 werden abgelehnt; externe Begleitdateien ermöglichen kein
 Alte Manager können das neue Format nicht lesen: zuerst den Manager aktualisieren.
 Bestehende Pakete werden nicht nachträglich umgewandelt; für das Ein-Datei-Format neu bauen.
 
-**Ausgabe:** `dist/releases/wartezimmer-<ver>/`
+**Ausgabe:** `dist/releases/<ver>/`
 
 Kein Gateway im Produkt-Archiv. Compose-Templates und Basis-Caddyfile kommen aus diesem vollständigen Release-Bundle; das TLS-Caddyfile wird später aus dem Installationszustand erzeugt.
 
@@ -389,7 +398,7 @@ Script: `scripts/build-pfupdate.mjs`
 Wie bei `release:images` werden standardmäßig AMD64 **und** ARM64 gebaut.
 Eine Plattform: `npm run release:pfupdate -- --platform amd64` bzw. `--platform arm64`.
 Pack-only: `npm run release:pfupdate:current -- --platform amd64`.
-Ausgabe: `dist/releases/wartezimmer-<ver>/linux-<arch>/wartezimmer-update-<ver>-linux-<arch>.pfupdate`.
+Ausgabe: `dist/releases/<ver>/wartezimmer-update-<ver>-linux-<arch>.pfupdate`.
 Build, Proxy-Modulprobe, App-Vertragsprobe, Inspektion und Export verwenden die
 gewählte Plattform explizit (Build-Engine API ≥ 1.49). Der Manager prüft die
 Manifest-Plattform gegen den Docker-Daemon bereits vor Backup und Image-Import;
@@ -402,7 +411,7 @@ Die vorhandene Manifestversion und der Proxy-Digestvertrag bleiben erhalten.
 4. Templates kopieren: `docker-compose.delivery.yml`, `docker-compose.proxy.delivery.yml`, `docker-compose.proxy-tls.delivery.yml`, `proxy/Caddyfile`, generiertes `templates/.env.example` (Image-Tags gesetzt)
 5. `manifest.json` inkl. `minimumManagerVersion` (Default = aktuelle `manager/package.json`-Version), `imageDigests.proxy`, Dateiliste
 6. `SHA256SUMS.txt` + Lizenzen/Notices
-7. `tar czf` → `dist/releases/wartezimmer-<ver>/linux-<arch>/wartezimmer-update-<ver>-linux-<arch>.pfupdate`
+7. `tar czf` → `dist/releases/<ver>/wartezimmer-update-<ver>-linux-<arch>.pfupdate`
 8. Roundtrip: `validatePfupdatePackage()` — bricht bei Fehler ab
 
 **Layout nach Extraktion (Produkt):**
@@ -426,7 +435,7 @@ licenses/caddy/LICENSE.txt
 
 1. `prepare:packaged` (`manager/scripts/prepare-packaged-resources.mjs`): Setup-`dist` + `server-shared` nach `manager/build-resources/setup/` (Imports umschreiben, Production-Strip); Delivery-Templates + `.env.example` nach `build-resources/templates/`. Das Basis-Caddyfile kommt aus dem importierten Release-Bundle.
 2. `electron-vite build` (Main, Preload CJS, Renderer)
-3. `electron-builder --mac dmg` → `manager/dist/WartezimmerManager-<managerVersion>-<arch>.dmg`
+3. `electron-builder --mac dmg` → `dist/releases/<releaseVersion>/WartezimmerManager-<managerVersion>-<arch>.dmg`
 
 Gepackter Manager startet Setup-API aus `resources/setup/`; Default-Install-Home macOS: `~/Library/Application Support/Wartezimmer`. Aktuell unsigned / nicht notarisiert.
 
@@ -465,7 +474,7 @@ Wartezimmer-Freigabe.
 ### Build und Installationsgrenze
 
 `npm run dist:manager:win` baut einen NSIS-x64-Installer unter
-`manager/dist/WartezimmerManager-<version>-windows-x64-setup.exe`.
+`dist/releases/<releaseVersion>/WartezimmerManager-<managerVersion>-windows-x64-setup.exe`.
 Der Installer ist benutzerbezogen, fordert keine Elevation an und legt
 Desktop-/Startmenü-Verknüpfungen an. Keine automatische Veröffentlichung,
 kein Auto-Updater und keine Firewalländerung. Ohne bereitgestellte
@@ -602,11 +611,10 @@ diese Version festgelegt; ein Versionswechsel erfordert erneute Prüfung.
 
 `npm run dist:manager:win` prüft anschließend die fertige Setup.exe und den
 extrahierten Deinstaller auf allen Buildhosts. Ein Prüffehler bedeutet einen
-fehlgeschlagenen Build, keine Freigabe. Die zusätzlich erzeugte `.exe.sha256`
-dient zum Vergleich nach Kopieren per SMB oder Download (`Get-FileHash -Algorithm
-SHA256` unter Windows). Alte Testdateien mit Leerzeichen im Namen sind nicht der
-korrigierte Build. Die Prüfsumme bestätigt Dateiintegrität, keine Signierung und
-keine erfolgreiche Windows-Laufzeitabnahme.
+fehlgeschlagenen Build, keine Freigabe. Erst nach erfolgreicher Prüfung wird
+die Setup.exe in den gemeinsamen Release-Ordner kopiert. Eine externe
+`.exe.sha256`-Datei wird nicht erzeugt. Die CRC-Prüfung bestätigt Dateiintegrität,
+keine Signierung und keine erfolgreiche Windows-Laufzeitabnahme.
 
 ### Recherche Windows ARM64 / Snapdragon (2026-09-30)
 
